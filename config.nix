@@ -4,7 +4,7 @@
 
 ledger = self.callPackage /Users/johnw/Projects/ledger {};
 
-myProjects = cp: (self: {
+myProjects = cp: (self: super: {
   bugs          = cp /Users/johnw/Projects/bugs {};
   consistent    = cp /Users/johnw/Projects/consistent {};
   findConduit   = cp /Users/johnw/Projects/find-conduit {};
@@ -22,55 +22,56 @@ myProjects = cp: (self: {
   gitlibLibgit2 = cp /Users/johnw/Projects/gitlib/gitlib-libgit2 {};
   gitMonitor    = cp /Users/johnw/Projects/gitlib/git-monitor {};
 
-  shelly        = cp /Users/johnw/src/shelly {};
-  shellyExtra   = cp /Users/johnw/src/shelly/shelly-extra {};
-
   newartisans   = cp /Users/johnw/src/newartisans {};
 
-  lensHEAD      = cp /Users/johnw/src/lens {};
-
+  shellyHEAD             = cp /Users/johnw/src/shelly {};
+  shellyExtraHEAD        = cp /Users/johnw/src/shelly/shelly-extra {};
+  lensHEAD               = cp /Users/johnw/src/lens {};
+  exceptionsHEAD         = cp /Users/johnw/Projects/exceptions {};
   conduitHEAD            = cp /Users/johnw/Projects/conduit/conduit {};
+  conduitExtraHEAD       = cp /Users/johnw/Projects/conduit/conduit-extra {};
   conduitCombinatorsHEAD = cp /Users/johnw/Projects/conduit-combinators {};
 
   # The nixpkgs expression is too out-of-date to build with 7.8.2.
   hdevtools     = cp /Users/johnw/Projects/hdevtools {};
 });
 
-myDependencies = hsPkgs: with hsPkgs;
-  pkgs.stdenv.lib.concatMap (self: self.propagatedUserEnvPkgs) [
-    hdevtools
-    
-    bugs
-    consistent
-    findConduit
-    gitAll
-    hours
-    loggingHEAD
-    pushme
-    simpleMirror
-    theseHEAD
-    tryhaskell
-    
-    #gitlib
-    #gitlibTest
-    #hlibgit2
-    #gitlibLibgit2
-    #gitMonitor
+myDependencies = hsPkgs: [
+    ledger
+  ] ++ (with hsPkgs;
+    pkgs.stdenv.lib.concatMap (self: self.propagatedUserEnvPkgs) [
+      hdevtools
 
-    shelly
-    #shellyExtra
+      bugs
+      consistent
+      findConduit
+      gitAll
+      hours
+      loggingHEAD
+      pushme
+      simpleMirror
+      theseHEAD
+      tryhaskell
 
-    lensHEAD
-    
-    conduitHEAD
-    conduitCombinatorsHEAD
-    
-    newartisans
-  ];
+      gitlib
+      #gitlibTest
+      hlibgit2
+      #gitlibLibgit2
+      #gitMonitor
+
+      shellyHEAD
+      #shellyExtraHEAD
+      lensHEAD
+      #conduitHEAD
+      #conduitExtraHEAD
+      #conduitCombinatorsHEAD
+
+      newartisans
+    ]);
 
 ##############################################################################
 
-haskellTools = ghcEnv: (([ 
+haskellTools = ghcEnv: (([
     ghcEnv.ghc
     sloccount
     coq
@@ -82,13 +83,12 @@ haskellTools = ghcEnv: (([
     ghcMod
     hdevtools
     hlint
-    (hoogleLocal ghcEnv.hsPkgs)
+    (hoogleLocal ghcEnv)
   ]) ++ (with haskellPackages_ghc782; [
     hobbes
     simpleMirror
   ]) ++ (with haskellPackages_ghc763; [
-    Agda
-    AgdaStdlib
+    Agda AgdaStdlib
     cabal2nix
     hasktags
     #hsenv
@@ -99,7 +99,7 @@ haskellTools = ghcEnv: (([
 buildToolsEnv = pkgs.buildEnv {
     name = "buildTools";
     paths = [
-      cmake ninja gnumake automake autoconf global
+      ninja global gcc48 autoconf automake gnumake
     ];
   };
 
@@ -113,7 +113,7 @@ emacsToolsEnv = pkgs.buildEnv {
 gitToolsEnv = pkgs.buildEnv {
     name = "gitTools";
     paths = [
-      git diffutils patchutils bup
+      git diffutils patchutils bup dar
 
       pkgs.gitAndTools.gitAnnex
       pkgs.gitAndTools.hub
@@ -126,9 +126,9 @@ gitToolsEnv = pkgs.buildEnv {
 systemToolsEnv = pkgs.buildEnv {
     name = "systemTools";
     paths = [
-      coreutils findutils gnused gnutar httrack iperf mosh mtr multitail
-      p7zip parallel pdnsd gnupg pinentry pv rsync silver-searcher socat
-      stow watch xz youtubeDL exiv2 gnuplot
+      findutils gnused gnutar httrack iperf mosh mtr multitail p7zip parallel
+      gnupg pinentry pv rsync silver-searcher socat stow watch xz youtubeDL
+      exiv2 gnuplot
 
       haskellPackages.pushme
       haskellPackages.sizes
@@ -136,27 +136,29 @@ systemToolsEnv = pkgs.buildEnv {
     ];
   };
 
-emailToolsEnv = pkgs.buildEnv {
-    name = "emailTools";
+mailToolsEnv = pkgs.buildEnv {
+    name = "mailTools";
     paths = [
       leafnode dovecot22 dovecot_pigeonhole fetchmail procmail w3m
     ];
   };
 
-serviceToolsEnv = pkgs.myEnvFun {
+serviceToolsEnv = pkgs.buildEnv {
     name = "serviceTools";
-    buildInputs = [
-      nginx postgresql redis
+    paths = [
+      nginx postgresql redis pdnsd
     ];
   };
 
-# findConduitEnv = pkgs.myEnvFun {
-#     name = "findConduit";
-#     buildInputs = 
-#          haskellPackages_ghc782.findConduit.propagatedUserEnvPkgs
-#       ++ ghcEnv_782.nativeBuildInputs
-#       ;
-#   };
+clangEnv = pkgs.myEnvFun {
+    name = "clang";
+    buildInputs = [ clang llvm ];
+  };
+
+appleEnv = pkgs.myEnvFun {
+    name = "gccApple";
+    buildInputs = [ gccApple ];
+  };
 
 ##############################################################################
 
@@ -166,25 +168,35 @@ ghc = self.ghc // {
     ghcHEAD = pkgs.callPackage /Users/johnw/Projects/ghc {};
   };
 
-hoogleLocal = hsPkgs: hsPkgs.hoogleLocal.override {
-    packages = myPackages hsPkgs;
+hoogleLocal = ghcEnv: ghcEnv.hsPkgs.hoogleLocal.override {
+    packages = myPackages ghcEnv;
   };
 
-coq = self.coq.override {
-    lablgtk = null;
-  };
+coq = self.coq.override { lablgtk = null; };
 
 ghcTools = ghcEnv: pkgs.myEnvFun {
     name = ghcEnv.name;
     buildInputs = haskellTools ghcEnv
-      ++ myPackages ghcEnv.hsPkgs
+      ++ myPackages ghcEnv
       ++ myDependencies ghcEnv.hsPkgs;
+  };
+
+haskellPackages_ghc742 =
+  let callPackage = self.lib.callPackageWith haskellPackages_ghc742;
+  in self.recurseIntoAttrs (self.haskellPackages_ghc742.override {
+      extension = myProjects callPackage;
+    });
+
+ghcEnv_742 = ghcTools {
+    name   = "ghc742";
+    ghc    = ghc.ghc742;
+    hsPkgs = haskellPackages_ghc742;
   };
 
 haskellPackages_ghc763 =
   let callPackage = self.lib.callPackageWith haskellPackages_ghc763;
   in self.recurseIntoAttrs (self.haskellPackages_ghc763.override {
-      extraPrefs = myProjects callPackage;
+      extension = myProjects callPackage;
     });
 
 ghcEnv_763 = ghcTools {
@@ -193,10 +205,22 @@ ghcEnv_763 = ghcTools {
     hsPkgs = haskellPackages_ghc763;
   };
 
+haskellPackages_ghc763_profiling =
+  let callPackage = self.lib.callPackageWith haskellPackages_ghc763_profiling;
+  in self.recurseIntoAttrs (self.haskellPackages_ghc763_profiling.override {
+      extension = myProjects callPackage;
+    });
+
+ghcEnv_763_profiling = ghcTools {
+    name   = "ghc763-prof";
+    ghc    = ghc.ghc763;
+    hsPkgs = haskellPackages_ghc763_profiling;
+  };
+
 haskellPackages_ghc782 =
   let callPackage = self.lib.callPackageWith haskellPackages_ghc782;
   in self.recurseIntoAttrs (self.haskellPackages_ghc782.override {
-      extraPrefs = myProjects callPackage;
+      extension = myProjects callPackage;
     });
 
 ghcEnv_782 = ghcTools {
@@ -205,10 +229,24 @@ ghcEnv_782 = ghcTools {
     hsPkgs = haskellPackages_ghc782;
   };
 
+haskellPackages_ghc782_profiling =
+  let callPackage = self.lib.callPackageWith haskellPackages_ghc782_profiling;
+  in self.recurseIntoAttrs (self.haskellPackages_ghc782_profiling.override {
+      extension = myProjects callPackage;
+    });
+
+ghcEnv_782_profiling = ghcTools {
+    name   = "ghc782-prof";
+    ghc    = ghc.ghc782;
+    hsPkgs = haskellPackages_ghc782_profiling;
+  };
+
 haskellPackages_ghcHEAD =
   let callPackage = self.lib.callPackageWith haskellPackages_ghcHEAD;
   in self.recurseIntoAttrs (self.haskellPackages_ghcHEAD.override {
-      extraPrefs = myProjects callPackage;
+      # jww (2014-05-12): What goes here?
+      # ghcPath = /Users/johnw/Projects/ghc;
+      extension = myProjects callPackage;
     });
 
 ghcEnv_HEAD = ghcTools {
@@ -217,13 +255,23 @@ ghcEnv_HEAD = ghcTools {
     hsPkgs = haskellPackages_ghcHEAD;
   };
 
+# haskellPackages_ghcHEAD_profiling =
+#   let callPackage = self.lib.callPackageWith haskellPackages_ghcHEAD_profiling;
+#   in self.recurseIntoAttrs (self.haskellPackages_ghcHEAD_profiling.override {
+#       extension = myProjects callPackage;
+#     });
+
+# ghcEnv_HEAD_profiling = ghcTools {
+#     name   = "ghcHEAD-prof";
+#     ghc    = ghc.ghcHEAD;
+#     hsPkgs = haskellPackages_ghcHEAD_profiling;
+#   };
+
 ##############################################################################
 
-myPackages = hsPkgs: with hsPkgs; [
+myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     Boolean
     CCdelcont
-    Crypto
-    DAV
     HTTP
     HUnit
     IfElse
@@ -235,20 +283,12 @@ myPackages = hsPkgs: with hsPkgs; [
     abstractPar
     adjunctions
     aeson
-    annotatedWlPprint
-    ansiTerminal
-    ansiWlPprint
-    appar
     arithmoi
-    asn1Encoding
-    asn1Parse
-    asn1Types
     async
     attempt
     attoparsec
     attoparsecConduit
     attoparsecEnumerator
-    authenticate
     base16Bytestring
     base64Bytestring
     baseUnicodeSymbols
@@ -271,11 +311,8 @@ myPackages = hsPkgs: with hsPkgs; [
     charset
     cheapskate
     chunkedData
-    cipherAes
-    cipherRc4
     classyPrelude
     classyPreludeConduit
-    clientsession
     cmdargs
     comonad
     comonadTransformers
@@ -286,28 +323,11 @@ myPackages = hsPkgs: with hsPkgs; [
     conduitCombinators
     conduitExtra
     configurator
-    connection
     contravariant
     convertible
-    cookie
     cpphs
-    cprngAes
-    cryptoApi
-    cryptoCipherTypes
-    cryptoNumbers
-    cryptoPubkey
-    cryptoPubkeyTypes
-    cryptoRandom
-    cryptohash
-    cryptohashConduit
     cssText
     dataDefault
-    dataDefaultClass
-    dataDefaultInstancesBase
-    dataDefaultInstancesContainers
-    dataDefaultInstancesDlist
-    dataDefaultInstancesOldLocale
-    dataenc
     derive
     distributive
     dlist
@@ -315,31 +335,22 @@ myPackages = hsPkgs: with hsPkgs; [
     dns
     doctest
     doctestProp
-    editDistance
     either
     #ekg
-    emailValidate
     enclosedExceptions
-    entropy
-    enumerator
     errors
     esqueleto
     exceptions
     extensibleExceptions
     failure
     fastLogger
-    feed
     fgl
     fileEmbed
     filepath
     fingertree
     free
-    #geniplate
     ghcPaths
-    gnuidn
-    gnutls
     groups
-    gsasl
     hamlet
     hashable
     hashtables
@@ -349,28 +360,19 @@ myPackages = hsPkgs: with hsPkgs; [
     haskellSrcExts
     haskellSrcMeta
     hfsevents
-    hjsmin
     hslogger
     hspec
     hspecExpectations
     html
     httpClient
-    httpClientTls
-    httpConduit
     httpDate
     httpTypes
-    hxt
-    hxtCharproperties
-    hxtRegexXmlschema
-    hxtUnicode
-    iproute
     json
     kanExtensions
     keys
     languageJava
     languageJavascript
     lens
-    libxmlSax
     liftedAsync
     liftedBase
     linear
@@ -453,6 +455,11 @@ myPackages = hsPkgs: with hsPkgs; [
     xhtml
     xmlLens
     zlib
-  ];
+  ]
+
+  ++ (if (ghcEnv.name == "ghc782-prof")
+      then []
+      else [ httpClientTls httpConduit ])
+  ;
 
 }; }
