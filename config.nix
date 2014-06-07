@@ -2,9 +2,19 @@
 
 { packageOverrides = self: with pkgs; rec {
 
+#stdenv = pkgs.clangStdenv;
+emacs  = pkgs.emacs24Macport;
+coq    = self.coq.override { lablgtk = null; };
+
 ledger = self.callPackage /Users/johnw/Projects/ledger {};
 
 myProjects = cp: (self: super: {
+  narwhal       = cp /Users/johnw/Projects/nrwhl {
+    callPackage = cp;
+    nodePackages = pkgs.nodePackages;
+  };
+
+  c2hsc         = cp /Users/johnw/Projects/c2hsc {};
   bugs          = cp /Users/johnw/Projects/bugs {};
   consistent    = cp /Users/johnw/Projects/consistent {};
   findConduit   = cp /Users/johnw/Projects/find-conduit {};
@@ -14,7 +24,8 @@ myProjects = cp: (self: super: {
   pushme        = cp /Users/johnw/Projects/pushme {};
   simpleMirror  = cp /Users/johnw/Projects/simple-mirror {};
   theseHEAD     = cp /Users/johnw/Projects/these {};
-  tryhaskell    = cp /Users/johnw/Projects/tryhaskell {};
+  simpleConduit = cp /Users/johnw/Projects/simple-conduit {};
+  fuzzcheck     = cp /Users/johnw/Projects/fuzzcheck {};
 
   gitlib        = cp /Users/johnw/Projects/gitlib/gitlib {};
   gitlibTest    = cp /Users/johnw/Projects/gitlib/gitlib-test {};
@@ -22,11 +33,14 @@ myProjects = cp: (self: super: {
   gitlibLibgit2 = cp /Users/johnw/Projects/gitlib/gitlib-libgit2 {};
   gitMonitor    = cp /Users/johnw/Projects/gitlib/git-monitor {};
 
-  newartisans   = cp /Users/johnw/src/newartisans {};
+  newartisans   = cp /Users/johnw/src/newartisans {
+    yuicompressor = pkgs.yuicompressor;
+  };
 
   shellyHEAD             = cp /Users/johnw/src/shelly {};
   shellyExtraHEAD        = cp /Users/johnw/src/shelly/shelly-extra {};
   lensHEAD               = cp /Users/johnw/src/lens {};
+  machinesHEAD           = cp /Users/johnw/src/machines {};
   exceptionsHEAD         = cp /Users/johnw/Projects/exceptions {};
   conduitHEAD            = cp /Users/johnw/Projects/conduit/conduit {};
   conduitExtraHEAD       = cp /Users/johnw/Projects/conduit/conduit-extra {};
@@ -36,38 +50,35 @@ myProjects = cp: (self: super: {
   hdevtools     = cp /Users/johnw/Projects/hdevtools {};
 });
 
-myDependencies = hsPkgs: [
-    ledger
-  ] ++ (with hsPkgs;
-    pkgs.stdenv.lib.concatMap (self: self.propagatedUserEnvPkgs) [
-      hdevtools
+myDependencies = hsPkgs: with hsPkgs;
+  pkgs.stdenv.lib.concatMap (self: self.propagatedUserEnvPkgs) [
+    hdevtools
 
-      bugs
-      consistent
-      findConduit
-      gitAll
-      hours
-      loggingHEAD
-      pushme
-      simpleMirror
-      theseHEAD
-      tryhaskell
+    bugs
+    consistent
+    findConduit
+    gitAll
+    hours
+    loggingHEAD
+    pushme
+    simpleMirror
+    theseHEAD
 
-      gitlib
-      #gitlibTest
-      hlibgit2
-      #gitlibLibgit2
-      #gitMonitor
+    gitlib
+    #gitlibTest
+    hlibgit2
+    #gitlibLibgit2
+    #gitMonitor
 
-      shellyHEAD
-      #shellyExtraHEAD
-      lensHEAD
-      #conduitHEAD
-      #conduitExtraHEAD
-      #conduitCombinatorsHEAD
+    shellyHEAD
+    #shellyExtraHEAD
+    lensHEAD
+    #conduitHEAD
+    #conduitExtraHEAD
+    #conduitCombinatorsHEAD
 
-      newartisans
-    ]);
+    newartisans
+  ];
 
 ##############################################################################
 
@@ -77,13 +88,13 @@ haskellTools = ghcEnv: (([
     coq
   ]) ++ (with ghcEnv.hsPkgs; [
     #cabalBounds
-    cabalInstall_1_20_0_1
+    cabalInstall_1_20_0_2
     #codex
     ghcCore
     ghcMod
     hdevtools
     hlint
-    (hoogleLocal ghcEnv)
+    (myHoogleLocal ghcEnv)
   ]) ++ (with haskellPackages_ghc782; [
     hobbes
     simpleMirror
@@ -96,10 +107,28 @@ haskellTools = ghcEnv: (([
     threadscope
   ]));
 
-buildToolsEnv = pkgs.buildEnv {
+buildToolsEnv = pkgs.myEnvFun {
     name = "buildTools";
-    paths = [
-      ninja global gcc48 autoconf automake gnumake
+    buildInputs = [
+      ninja global autoconf automake gnumake
+      boost
+      ccache
+      cvs
+      cvsps
+      darcs
+      diffstat
+      doxygen
+      erlang
+      fcgi
+      flex
+      gdb
+      htmlTidy
+      jenkins
+      lcov
+      mercurial
+      patch
+      subversion
+      swiProlog
     ];
   };
 
@@ -113,9 +142,11 @@ emacsToolsEnv = pkgs.buildEnv {
 gitToolsEnv = pkgs.buildEnv {
     name = "gitTools";
     paths = [
-      git diffutils patchutils bup dar
+      diffutils patchutils bup dar
 
       pkgs.gitAndTools.gitAnnex
+      pkgs.gitAndTools.gitFull
+      pkgs.gitAndTools.gitflow
       pkgs.gitAndTools.hub
       pkgs.gitAndTools.topGit
 
@@ -126,13 +157,65 @@ gitToolsEnv = pkgs.buildEnv {
 systemToolsEnv = pkgs.buildEnv {
     name = "systemTools";
     paths = [
-      findutils gnused gnutar httrack iperf mosh mtr multitail p7zip parallel
-      gnupg pinentry pv rsync silver-searcher socat stow watch xz youtubeDL
-      exiv2 gnuplot
-
       haskellPackages.pushme
       haskellPackages.sizes
       haskellPackages.una
+
+      bashInteractive
+      bashCompletion
+      exiv2
+      expect
+      figlet
+      findutils
+      gnugrep
+      gnupg
+      gnuplot
+      gnused
+      gnutar
+      graphviz
+      guile
+      imagemagick
+      less
+      multitail
+      p7zip
+      parallel
+      pinentry
+      pv
+      recutils
+      rlwrap
+      screen
+      silver-searcher
+      sqlite
+      stow
+      time
+      tmux
+      tree
+      unarj
+      unrar
+      unzip
+      watch
+      xz
+      zip
+    ];
+  };
+
+networkToolsEnv = pkgs.buildEnv {
+    name = "networkTools";
+    paths = [
+      cacert
+      fping
+      httrack
+      iperf
+      mosh
+      mtr
+      #openssh
+      openssl
+      rsync
+      s3cmd
+      socat
+      spiped
+      wget
+      youtubeDL
     ];
   };
 
@@ -140,19 +223,54 @@ mailToolsEnv = pkgs.buildEnv {
     name = "mailTools";
     paths = [
       leafnode dovecot22 dovecot_pigeonhole fetchmail procmail w3m
+      mairix
+      mutt
     ];
   };
 
 serviceToolsEnv = pkgs.buildEnv {
     name = "serviceTools";
     paths = [
-      nginx postgresql redis pdnsd
+      nginx postgresql redis pdnsd mysql55
+    ];
+  };
+
+perlToolsEnv = pkgs.buildEnv {
+    name = "perlTools";
+    paths = [
+      perl
+    ];
+  };
+
+pythonToolsEnv = pkgs.buildEnv {
+    name = "pythonTools";
+    paths = [
+      python27Full #python32
+    ];
+  };
+
+rubyToolsEnv = pkgs.buildEnv {
+    name = "rubyTools";
+    paths = [
+      ruby2 #ruby
+    ];
+  };
+
+lispToolsEnv = pkgs.buildEnv {
+    name = "lispTools";
+    paths = [
+      sbcl
     ];
   };
 
 clangEnv = pkgs.myEnvFun {
     name = "clang";
     buildInputs = [ clang llvm ];
+  };
+
+gccEnv = pkgs.myEnvFun {
+    name = "gcc";
+    buildInputs = [ gcc gfortran ];
   };
 
 appleEnv = pkgs.myEnvFun {
@@ -162,17 +280,13 @@ appleEnv = pkgs.myEnvFun {
 
 ##############################################################################
 
-emacs = pkgs.emacs24Macport;
-
 ghc = self.ghc // {
     ghcHEAD = pkgs.callPackage /Users/johnw/Projects/ghc {};
   };
 
-hoogleLocal = ghcEnv: ghcEnv.hsPkgs.hoogleLocal.override {
+myHoogleLocal = ghcEnv: ghcEnv.hsPkgs.hoogleLocal.override {
     packages = myPackages ghcEnv;
   };
-
-coq = self.coq.override { lablgtk = null; };
 
 ghcTools = ghcEnv: pkgs.myEnvFun {
     name = ghcEnv.name;
@@ -289,6 +403,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     attoparsec
     attoparsecConduit
     attoparsecEnumerator
+    BlogLiterately
     base16Bytestring
     base64Bytestring
     baseUnicodeSymbols
@@ -301,11 +416,12 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     blazeHtml
     blazeMarkup
     blazeTextual
+    boolExtras
     byteable
     byteorder
     bytestringMmap
     caseInsensitive
-    #categories
+    cassava
     cereal
     cerealConduit
     charset
@@ -316,8 +432,8 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     cmdargs
     comonad
     comonadTransformers
-    #compdata
     composition
+    compressed
     cond
     conduit
     conduitCombinators
@@ -326,6 +442,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     contravariant
     convertible
     cpphs
+    criterion
     cssText
     dataDefault
     derive
@@ -351,6 +468,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     free
     ghcPaths
     groups
+    hakyll
     hamlet
     hashable
     hashtables
@@ -367,6 +485,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     httpClient
     httpDate
     httpTypes
+    ioStorage
     json
     kanExtensions
     keys
@@ -389,6 +508,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     monadStm
     monadloc
     monoidExtras
+    monoTraversable
     mtl
     multimap
     network
@@ -396,6 +516,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     numbers
     operational
     optparseApplicative
+    pandoc
     parallel
     parallelIo
     parsec
@@ -408,7 +529,6 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     prettyShow
     profunctors
     random
-    #recursionSchemes
     reducers
     reflection
     regexApplicative
@@ -441,11 +561,13 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     tar
     temporary
     text
+    textFormat
     these
     thyme
     time
     transformers
     transformersBase
+    #units
     unixCompat
     unorderedContainers
     vector
@@ -454,12 +576,21 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     warp
     xhtml
     xmlLens
+    yaml
     zlib
   ]
 
-  ++ (if (ghcEnv.name == "ghc782-prof")
-      then []
-      else [ httpClientTls httpConduit ])
+  ++ pkgs.stdenv.lib.optionals
+       (pkgs.stdenv.lib.versionOlder "7.7" ghcEnv.ghc.version)
+       [ compdata singletons ]
+
+  ++ pkgs.stdenv.lib.optionals 
+       (pkgs.stdenv.lib.versionOlder ghcEnv.ghc.version "7.7")
+       [ recursionSchemes ]
+
+  ++ pkgs.stdenv.lib.optionals
+       (ghcEnv.name != "ghc782-prof" && ghcEnv.name != "ghc742")
+       [ httpClientTls httpConduit yesod ]
   ;
 
 }; }
