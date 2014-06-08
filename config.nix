@@ -1,19 +1,11 @@
-{ pkgs }:
+{ pkgs }: {
 
-{ packageOverrides = self: with pkgs; rec {
+packageOverrides = self: with pkgs; rec {
 
-#stdenv = pkgs.clangStdenv;
 emacs  = pkgs.emacs24Macport;
-coq    = self.coq.override { lablgtk = null; };
-
 ledger = self.callPackage /Users/johnw/Projects/ledger {};
 
 myProjects = cp: (self: super: {
-  narwhal       = cp /Users/johnw/Projects/nrwhl {
-    callPackage = cp;
-    nodePackages = pkgs.nodePackages;
-  };
-
   c2hsc         = cp /Users/johnw/Projects/c2hsc {};
   bugs          = cp /Users/johnw/Projects/bugs {};
   consistent    = cp /Users/johnw/Projects/consistent {};
@@ -47,7 +39,7 @@ myProjects = cp: (self: super: {
   conduitCombinatorsHEAD = cp /Users/johnw/Projects/conduit-combinators {};
 
   # The nixpkgs expression is too out-of-date to build with 7.8.2.
-  hdevtools     = cp /Users/johnw/Projects/hdevtools {};
+  hdevtools = cp /Users/johnw/Projects/hdevtools {};
 });
 
 myDependencies = hsPkgs: with hsPkgs;
@@ -596,4 +588,8 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
        [ httpClientTls httpConduit yesod ]
   ;
 
-}; }
+}; 
+
+allowUnfree = true;
+
+}
