@@ -85,7 +85,7 @@ myDependencies = hsPkgs: with hsPkgs;
 haskellTools = ghcEnv: (([
     ghcEnv.ghc
     sloccount
-    coq
+    coq prooftree
   ]) ++ (with ghcEnv.hsPkgs; [
     #cabalBounds
     cabalInstall_1_20_0_2
@@ -176,6 +176,7 @@ systemToolsEnv = pkgs.buildEnv {
       guile
       imagemagick
       less
+      macvim
       multitail
       p7zip
       parallel
@@ -419,6 +420,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     boolExtras
     byteable
     byteorder
+    bytes
     bytestringMmap
     caseInsensitive
     cassava
@@ -442,8 +444,8 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     contravariant
     convertible
     cpphs
-    criterion
     cssText
+    dataChecked
     dataDefault
     derive
     distributive
@@ -465,6 +467,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     fileEmbed
     filepath
     fingertree
+    foldl
     free
     ghcPaths
     groups
@@ -582,7 +585,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
 
   ++ pkgs.stdenv.lib.optionals
        (pkgs.stdenv.lib.versionOlder "7.7" ghcEnv.ghc.version)
-       [ compdata singletons ]
+       [ compdata singletons criterion ]
 
   ++ pkgs.stdenv.lib.optionals 
        (pkgs.stdenv.lib.versionOlder ghcEnv.ghc.version "7.7")
