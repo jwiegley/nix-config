@@ -39,6 +39,7 @@ haskellProjects = { self, super, callPackage }: {
   gitlibSample  = callPackage /Users/johnw/Projects/gitlib/gitlib-sample {};
 
   rhubarb       = callPackage /Users/johnw/Projects/rhubarb {};
+  AgdaPrelude   = callPackage /Users/johnw/Projects/agda-prelude {};
 
   newartisans   = callPackage /Users/johnw/Documents/newartisans {
     yuicompressor = pkgs.yuicompressor;
@@ -101,6 +102,8 @@ haskellTools = ghcEnv: (([
     cabalDb
   ]) ++ (with haskellPackages_ghc763; [
     cabal2nix
+    #cabalDev
+    cabalMeta
     hasktags
     #hsenv
     lambdabot djinn mueval
@@ -111,6 +114,7 @@ buildToolsEnv = pkgs.myEnvFun {
     name = "buildTools";
     buildInputs = [
       ninja global autoconf automake gnumake
+      bazaar bazaarTools
       ccache gcc gccApple
       cvs cvsps
       darcs
@@ -184,10 +188,21 @@ langToolsEnv = pkgs.buildEnv {
     paths = [
       clang llvm boost
       coq prooftree
+      sbcl
       erlang
       swiProlog
-      haskellPackages_ghc782.AgdaStdlib_0_8
+      #haskellPackages_ghc782.AgdaStdlib_0_8
+      haskellPackages_ghc782.AgdaPrelude
       haskellPackages_ghc782.idris emacs24Packages.idris
+      pythonDocs.pdf_letter.python27 pythonDocs.html.python27
+      yuicompressor
+    ];
+  };
+
+gameToolsEnv = pkgs.buildEnv {
+    name = "gameTools";
+    paths = [
+      chessdb craftyFull eboard gnugo
     ];
   };
 
@@ -197,6 +212,8 @@ gitToolsEnv = pkgs.buildEnv {
       diffutils patchutils bup dar
 
       pkgs.gitAndTools.gitAnnex
+      haskellPackages.gitGpush
+      haskellPackages.gitMonitor
       haskellPackages.githubBackup
       pkgs.gitAndTools.gitFull
       pkgs.gitAndTools.gitflow
@@ -282,6 +299,13 @@ mailToolsEnv = pkgs.buildEnv {
     ];
   };
 
+publishToolsEnv = pkgs.buildEnv {
+    name = "publishTools";
+    paths = [
+      texLiveFull djvu2pdf ghostscript
+    ];
+  };
+
 serviceToolsEnv = pkgs.buildEnv {
     name = "serviceTools";
     paths = [
@@ -334,9 +358,9 @@ appleEnv = pkgs.myEnvFun {
 
 ##############################################################################
 
-#ghc = self.ghc // {
-#    ghcHEAD = pkgs.callPackage /Users/johnw/Contracts/OSS/Projects/ghc {};
-#  };
+ghc = self.ghc // {
+    ghcHEAD = pkgs.callPackage /Users/johnw/Contracts/OSS/Projects/ghc {};
+  };
 
 myHoogleLocal = ghcEnv: ghcEnv.hsPkgs.hoogleLocal.override {
     packages = myPackages ghcEnv;
