@@ -20,6 +20,7 @@ haskellProjects = { self, super, callPackage }: {
   theseHEAD     = callPackage /Users/johnw/Projects/these {};
   simpleConduit = callPackage /Users/johnw/Projects/simple-conduit {};
   fuzzcheck     = callPackage /Users/johnw/Projects/fuzzcheck {};
+  hnix          = callPackage /Users/johnw/Projects/hnix {};
 
   gitlib        = callPackage /Users/johnw/Projects/gitlib/gitlib {};
   gitlibTest    = callPackage /Users/johnw/Projects/gitlib/gitlib-test {};
@@ -89,7 +90,7 @@ haskellTools = ghcEnv: (([
     sloccount
   ]) ++ (with ghcEnv.hsPkgs; [
     #cabalBounds
-    cabalInstall_1_20_0_2
+    cabalInstall_1_20_0_3
     #codex
     ghcCore
     ghcMod
@@ -188,10 +189,12 @@ langToolsEnv = pkgs.buildEnv {
     paths = [
       clang llvm boost
       coq prooftree
+      compcert
+      rust
       sbcl
       erlang
       swiProlog
-      #haskellPackages_ghc782.AgdaStdlib_0_8
+      haskellPackages_ghc782.AgdaStdlib_0_8
       haskellPackages_ghc782.AgdaPrelude
       haskellPackages_ghc782.idris emacs24Packages.idris
       pythonDocs.pdf_letter.python27 pythonDocs.html.python27
@@ -426,7 +429,7 @@ haskellPackages_ghcHEAD_profiling = haskell.packages_ghcHEAD.profiling;
 ghcEnv_HEAD = pkgs.myEnvFun {
     name = "ghcHEAD";
     buildInputs = with haskellPackages_ghcHEAD; [
-      pkgs.ghc.ghcHEAD cabalInstall_1_20_0_2
+      pkgs.ghc.ghcHEAD cabalInstall_1_20_0_3
     ];
   };
 
@@ -511,6 +514,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     fileEmbed
     filepath
     fingertree
+    fmlist
     foldl
     free
     #freeOperational
@@ -533,6 +537,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     httpClient
     httpDate
     httpTypes
+    ioMemoize
     ioStorage
     json
     kanExtensions
@@ -632,7 +637,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   ++ pkgs.stdenv.lib.optionals
        (pkgs.stdenv.lib.versionOlder "7.5" ghcEnv.ghc.version)
        # Packages that only work in 7.6+
-       [ linear lens xmlLens ]
+       [ folds linear lens xmlLens trifecta parsers ]
 
   ++ pkgs.stdenv.lib.optionals 
        (pkgs.stdenv.lib.versionOlder ghcEnv.ghc.version "7.9")
