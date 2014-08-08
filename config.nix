@@ -7,20 +7,28 @@ emacs24Packages = recurseIntoAttrs (emacsPackages emacs24Macport pkgs.emacs24Pac
 
 ledger = self.callPackage /Users/johnw/Projects/ledger {};
 
-haskellProjects = { self, super, callPackage }: {
+haskellProjects = { self, super, callPackage }: rec {
   c2hsc         = callPackage /Users/johnw/Projects/c2hsc {};
   bugs          = callPackage /Users/johnw/Projects/bugs {};
   consistent    = callPackage /Users/johnw/Projects/consistent {};
   findConduit   = callPackage /Users/johnw/Projects/find-conduit {};
+  taskPool      = callPackage /Users/johnw/Projects/taskpool {};
   gitAll        = callPackage /Users/johnw/Projects/git-all {};
   hours         = callPackage /Users/johnw/Projects/hours {};
   loggingHEAD   = callPackage /Users/johnw/Projects/logging {};
   pushme        = callPackage /Users/johnw/Projects/pushme {};
   simpleMirror  = callPackage /Users/johnw/Projects/simple-mirror {};
   theseHEAD     = callPackage /Users/johnw/Projects/these {};
-  simpleConduit = callPackage /Users/johnw/Projects/simple-conduit {};
+  simpleConduitHEAD = callPackage /Users/johnw/Projects/simple-conduit {};
+  HsToGallinaHEAD = callPackage /Users/johnw/Contracts/OSS/Projects/hs-to-gallina {
+    uuagc = pkgs.haskellPackages_ghc763.uuagc.override {
+      haskellSrcExts = pkgs.haskellPackages_ghc763.haskellSrcExts_1_13_5;
+    };
+    haskellSrcExts = pkgs.haskellPackages_ghc763.haskellSrcExts_1_13_5;
+  };
   fuzzcheck     = callPackage /Users/johnw/Projects/fuzzcheck {};
   hnix          = callPackage /Users/johnw/Projects/hnix {};
+  commodities   = callPackage /Users/johnw/Projects/ledger/new/commodities {};
 
   gitlib        = callPackage /Users/johnw/Projects/gitlib/gitlib {};
   gitlibTest    = callPackage /Users/johnw/Projects/gitlib/gitlib-test {};
@@ -46,6 +54,7 @@ haskellProjects = { self, super, callPackage }: {
     yuicompressor = pkgs.yuicompressor;
   };
 
+  foldlHEAD              = callPackage /Users/johnw/Contracts/OSS/Projects/Haskell-Foldl-Library {};
   shellyHEAD             = callPackage /Users/johnw/src/shelly {};
   shellyExtraHEAD        = callPackage /Users/johnw/src/shelly/shelly-extra {};
   lensHEAD               = callPackage /Users/johnw/Contracts/OSS/Projects/lens {};
@@ -60,8 +69,11 @@ haskellProjects = { self, super, callPackage }: {
   cabalNoLinks = self.cabal.override { enableHyperlinkSource = false; };
   disableLinks = x: x.override { cabal = self.cabalNoLinks; };
 
-  # This expression is too out-of-date to build with 7.8.2.
+  # This expression is too out-of-date to build with 7.8.x.
   hdevtools = callPackage /Users/johnw/Contracts/OSS/Projects/hdevtools {};
+  ghcMod = callPackage /Users/johnw/Contracts/OSS/Projects/ghc-mod {
+    emacs = pkgs.emacs24Macport;
+  };
 
   systemFileio = self.disableTest  super.systemFileio;
   shake        = self.disableTest  super.shake;
@@ -85,22 +97,25 @@ haskellProjects = { self, super, callPackage }: {
 
 ##############################################################################
 
-haskellTools = ghcEnv: (([
+haskellTools = ghcEnv: ([
     ghcEnv.ghc
     sloccount
-  ]) ++ (with ghcEnv.hsPkgs; [
+    emacs24Packages.idris
+  ] ++ (with ghcEnv.hsPkgs; [
     #cabalBounds
     cabalInstall_1_20_0_3
-    #codex
     ghcCore
     ghcMod
     hdevtools
     hlint
     (myHoogleLocal ghcEnv)
-  ]) ++ (with haskellPackages_ghc782; [
+  ]) ++ (with haskellPackages_ghc783; [
+    codex
     hobbes
     simpleMirror
     cabalDb
+    Agda AgdaStdlib #AgdaPrelude
+    idris
   ]) ++ (with haskellPackages_ghc763; [
     cabal2nix
     #cabalDev
@@ -111,96 +126,101 @@ haskellTools = ghcEnv: (([
     threadscope
   ]));
 
+agdaEnv = pkgs.myEnvFun {
+  name = "agda";
+  buildInputs = [
+    haskellPackages.Agda
+    haskellPackages.AgdaStdlib
+    #haskellPackages.AgdaPrelude
+  ];
+};
+
 buildToolsEnv = pkgs.myEnvFun {
-    name = "buildTools";
-    buildInputs = [
-      ninja global autoconf automake gnumake
-      bazaar bazaarTools
-      ccache gcc gccApple
-      cvs cvsps
-      darcs
-      diffstat
-      doxygen
-      fcgi
-      flex
-      gdb
-      htmlTidy
-      jenkins
-      lcov
-      mercurial
-      patch
-      subversion
-    ];
-  };
+  name = "buildTools";
+  buildInputs = [
+    ninja global autoconf automake
+    bazaar bazaarTools
+    ccache gcc gccApple
+    cvs cvsps
+    darcs
+    diffstat
+    doxygen
+    fcgi
+    flex
+    gdb
+    htmlTidy
+    jenkins
+    lcov
+    mercurial
+    patch
+    subversion
+  ];
+};
 
 emacsToolsEnv = pkgs.buildEnv {
-    name = "emacsTools";
-    paths = [ emacs aspell aspellDicts.en ] ++
-      (with self.emacs24Packages; [
-        autoComplete
-        bbdb
-        coffee
-        colorTheme
-        cryptol
-        cua
-        darcsum
-        #emacsClangCompleteAsync
-        emacsSessionManagement
-        emacsw3m
-        #emms
-        ess
-        flymakeCursor
-        gh
-        graphvizDot
-        gist
-        jade
-        js2
-        stratego
-        haskellMode
-        ocamlMode
-        structuredHaskellMode
-        hol_light_mode
-        htmlize
-        logito
-        loremIpsum
-        #magit
-        maudeMode
-        org
-        org2blog
-        pcache
-        phpMode
-        prologMode
-        proofgeneral_4_3_pre
-        quack
-        rectMark
-        remember
-        rudel
-        sbtMode
-        scalaMode1
-        scalaMode2
-        sunriseCommander
-        writeGood
-        xmlRpc
-      ]);
-  };
+  name = "emacsTools";
+  paths = [ emacs aspell aspellDicts.en ] ++
+    (with self.emacs24Packages; [
+      autoComplete
+      bbdb
+      coffee
+      colorTheme
+      cryptol
+      cua
+      darcsum
+      #emacsClangCompleteAsync
+      emacsSessionManagement
+      emacsw3m
+      #emms
+      ess
+      flymakeCursor
+      gh
+      graphvizDot
+      gist
+      jade
+      js2
+      stratego
+      haskellMode
+      ocamlMode
+      structuredHaskellMode
+      hol_light_mode
+      htmlize
+      logito
+      loremIpsum
+      #magit
+      maudeMode
+      # org
+      # org2blog
+      pcache
+      phpMode
+      prologMode
+      quack
+      rectMark
+      remember
+      rudel
+      sbtMode
+      sunriseCommander
+      writeGood
+      xmlRpc
+    ]);
+};
 
 langToolsEnv = pkgs.buildEnv {
-    name = "langTools";
-    paths = [
-      clang llvm boost
-      coq prooftree
-      compcert
-      rust
-      sbcl
-      erlang
-      swiProlog
-      haskellPackages_ghc782.AgdaStdlib_0_8
-      haskellPackages_ghc782.AgdaPrelude
-      haskellPackages_ghc782.idris emacs24Packages.idris
-      pythonDocs.pdf_letter.python27 pythonDocs.html.python27
-      yuicompressor
-    ];
-  };
+  name = "langTools";
+  paths = [
+    clang llvm boost
+    #coq prooftree emacs24Packages.proofgeneral_4_3_pre
+    coq_HEAD prooftree emacs24Packages.proofgeneral_4_3_pre
+    gnumake
+    compcert
+    rust
+    sbcl
+    erlang
+    swiProlog
+    pythonDocs.pdf_letter.python27 pythonDocs.html.python27
+    yuicompressor
+  ];
+ };
 
 gameToolsEnv = pkgs.buildEnv {
     name = "gameTools";
@@ -231,7 +251,7 @@ systemToolsEnv = pkgs.buildEnv {
     name = "systemTools";
     paths = [
       haskellPackages.pushme
-      haskellPackages.sizes
+      haskellPackages_ghc763.sizes
       haskellPackages.una
 
       bashInteractive
@@ -268,6 +288,7 @@ systemToolsEnv = pkgs.buildEnv {
       unrar
       unzip
       watch
+      watchman
       xz
       zip
     ];
@@ -286,7 +307,7 @@ networkToolsEnv = pkgs.buildEnv {
       openssl
       rsync
       s3cmd
-      socat
+      socat2pre
       spiped
       wget
       youtubeDL
@@ -305,7 +326,7 @@ mailToolsEnv = pkgs.buildEnv {
 publishToolsEnv = pkgs.buildEnv {
     name = "publishTools";
     paths = [
-      texLiveFull djvu2pdf ghostscript
+      texLiveFull djvu2pdf ghostscript librsvg
     ];
   };
 
@@ -335,28 +356,6 @@ rubyToolsEnv = pkgs.buildEnv {
     paths = [
       ruby2 #ruby
     ];
-  };
-
-lispToolsEnv = pkgs.buildEnv {
-    name = "lispTools";
-    paths = [
-      sbcl
-    ];
-  };
-
-clangEnv = pkgs.myEnvFun {
-    name = "clang";
-    buildInputs = [ clang llvm ];
-  };
-
-gccEnv = pkgs.myEnvFun {
-    name = "gcc";
-    buildInputs = [ gcc gfortran ];
-  };
-
-appleEnv = pkgs.myEnvFun {
-    name = "gccApple";
-    buildInputs = [ gccApple ];
   };
 
 ##############################################################################
@@ -392,7 +391,7 @@ ghcEnv_742 = ghcTools {
 
 haskellPackages_ghc763 = haskellPackages_wrapper self.haskellPackages_ghc763;
 haskellPackages_ghc763_profiling =
-  haskellPackages_wrapper self.haskellPackages_ghc763_profiling;
+  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc763.profiling);
 
 ghcEnv_763 = ghcTools {
     name   = "ghc763";
@@ -405,20 +404,20 @@ ghcEnv_763_profiling = ghcTools {
     hsPkgs = haskellPackages_ghc763_profiling;
   };
 
-haskellPackages_ghc782 =
-  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc782.noProfiling);
-haskellPackages_ghc782_profiling =
-  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc782.profiling);
+haskellPackages_ghc783 =
+  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc783.noProfiling);
+haskellPackages_ghc783_profiling =
+  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc783.profiling);
 
-ghcEnv_782 = ghcTools {
-    name   = "ghc782";
-    ghc    = ghc.ghc782;
-    hsPkgs = haskellPackages_ghc782;
+ghcEnv_783 = ghcTools {
+    name   = "ghc783";
+    ghc    = ghc.ghc783;
+    hsPkgs = haskellPackages_ghc783;
   };
-ghcEnv_782_profiling = ghcTools {
-    name   = "ghc782-prof";
-    ghc    = ghc.ghc782;
-    hsPkgs = haskellPackages_ghc782_profiling;
+ghcEnv_783_profiling = ghcTools {
+    name   = "ghc783-prof";
+    ghc    = ghc.ghc783;
+    hsPkgs = haskellPackages_ghc783_profiling;
   };
 
 # We can't add our entire package set for GHC HEAD, there are always too many
@@ -473,6 +472,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     bytestringMmap
     caseInsensitive
     cassava
+    #categories
     cereal
     cerealConduit
     charset
@@ -490,9 +490,11 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     conduitCombinators
     conduitExtra
     configurator
+    constraints
     contravariant
     convertible
     cpphs
+    cryptohash
     cssText
     dataChecked
     dataDefault
@@ -540,13 +542,14 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     ioMemoize
     ioStorage
     json
-    kanExtensions
     keys
     languageJava
     languageJavascript
     liftedAsync
     liftedBase
     listExtras
+    logict
+    machines
     mimeMail
     mimeTypes
     mmorph
@@ -626,13 +629,14 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
     warp
     xhtml
     yaml
+    zippers
     zlib
   ]
 
   ++ pkgs.stdenv.lib.optionals
        (pkgs.stdenv.lib.versionOlder "7.7" ghcEnv.ghc.version)
        # Packages that only work in 7.8+
-       [ compdata singletons criterion ]
+       [ compdata singletons criterion kanExtensions ]
 
   ++ pkgs.stdenv.lib.optionals
        (pkgs.stdenv.lib.versionOlder "7.5" ghcEnv.ghc.version)
@@ -654,7 +658,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
        [ recursionSchemes ]
 
   ++ pkgs.stdenv.lib.optionals
-       (ghcEnv.name != "ghc782-prof" && ghcEnv.name != "ghc742")
+       (ghcEnv.name != "ghc783-prof" && ghcEnv.name != "ghc742")
        # Packages that do not work in specific versions
        [ httpClientTls httpConduit yesod ]
   ;
