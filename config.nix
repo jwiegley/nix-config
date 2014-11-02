@@ -2,9 +2,9 @@
 
 packageOverrides = self: with pkgs; rec {
 
-emacs = pkgs.emacs24Macport;
+emacs = pkgs.emacs24Macport_24_3;
 emacs24Packages =
-  recurseIntoAttrs (emacsPackages emacs24Macport pkgs.emacs24Packages)
+  recurseIntoAttrs (emacsPackages emacs24Macport_24_3 pkgs.emacs24Packages)
     // { proofgeneral = pkgs.emacs24Packages.proofgeneral_4_3_pre; };
 
 ledger = self.callPackage /Users/johnw/Projects/ledger {};
@@ -69,7 +69,7 @@ haskellProjects = { self, super, callPackage }: rec {
 
   hdevtools = callPackage /Users/johnw/Contracts/OSS/Projects/hdevtools {};
   ghcMod = callPackage /Users/johnw/Contracts/OSS/Projects/ghc-mod {
-    emacs = pkgs.emacs24Macport;
+    emacs = pkgs.emacs24Macport_24_3;
   };
 
   systemFileio = self.disableTest  super.systemFileio;
@@ -124,16 +124,13 @@ buildToolsEnv = pkgs.buildEnv {
     autoconf automake
     bazaar bazaarTools
     ccache
-    # gcc
     cvs cvsps
     darcs
     diffstat
     doxygen
     fcgi
     flex
-    #gdb
     htmlTidy
-    # jenkins
     lcov
     mercurial
     patch
@@ -193,7 +190,7 @@ coqToolsEnv = pkgs.buildEnv {
     ocaml
     ocamlPackages.camlp5_transitional
     coq
-    # coqPackages.bedrock
+    #coqPackages.bedrock
     # coqPackages.containers     # jww: tarball missing
     coqPackages.coqExtLib
     #coqPackages.domains         # jww: joelteon broken (fetchdarcs)
@@ -213,12 +210,11 @@ langToolsEnv = pkgs.buildEnv {
   name = "langTools";
   paths = [
     clang llvm boost
-    isabelle
+    ott isabelle
     gnumake
-    # compcert
+    compcert #verasco
     rust
-    #sbcl                        # jww: joelteon broken
-    ott
+    sbcl
     erlang
     swiProlog
     yuicompressor
@@ -234,8 +230,8 @@ gitToolsEnv = pkgs.buildEnv {
     name = "gitTools";
     paths = [
       diffutils patchutils
-      # bup
-      # dar
+      # bup                       # jww: joelteon broken
+      # dar                       # jww: joelteon broken
 
       pkgs.gitAndTools.gitAnnex
       # haskellPackages.gitGpush # jww (2014-10-14): broken
@@ -261,7 +257,7 @@ systemToolsEnv = pkgs.buildEnv {
     bashCompletion
     exiv2
     expect
-    # figlet
+    figlet
     findutils
     gnugrep
     gnupg
@@ -272,7 +268,7 @@ systemToolsEnv = pkgs.buildEnv {
     guile
     imagemagick
     less
-    #macvim                      # jww (2014-08-09): currently broken
+    macvim
     multitail
     p7zip
     parallel
@@ -300,7 +296,7 @@ systemToolsEnv = pkgs.buildEnv {
 networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
-    #arcanist                    # jww (2014-08-09): currently broken
+    arcanist
     cacert
     fping
     httrack

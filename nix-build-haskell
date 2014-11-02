@@ -1,0 +1,2 @@
+#!/bin/bash
+exec nix-build -E 'let pkgs=import <nixpkgs> {}; in (pkgs.newScope pkgs.haskellPackages) ./default.nix {}'
