@@ -50,8 +50,6 @@ haskellProjects = { self, super, callPackage }: rec {
   gitlibS3      = callPackage /Users/johnw/Projects/gitlib/gitlib-S3 {};
   gitlibSample  = callPackage /Users/johnw/Projects/gitlib/gitlib-sample {};
 
-  # rhubarb       = callPackage /Users/johnw/Projects/rhubarb {};
-
   newartisans   = callPackage /Users/johnw/Documents/newartisans {
     yuicompressor = pkgs.yuicompressor;
   };
@@ -90,20 +88,21 @@ haskellTools = ghcEnv: ([
   ghcMod
   hdevtools
   hlint
+  ihaskell
   (myHoogleLocal ghcEnv)
 ]) ++ (with haskellPackages_ghc783; [
   cabal2nix
   codex
   hobbes
   simpleMirror
+  hasktags
   hakyll
+  cabalMeta
+  djinn mueval
   idris
+  threadscope
 ]) ++ (with haskellPackages_ghc763; [
-  #cabalMeta                     # jww: joelteon broken
-  #hasktags                      # jww: joelteon broken
   #lambdabot                     # jww: joelteon broken
-  #djinn mueval                  # jww: joelteon broken
-  #threadscope                   # jww (2014-08-09): cairo is broken
 ]));
 
 agdaEnv = pkgs.myEnvFun {
@@ -142,8 +141,9 @@ emacsToolsEnv = pkgs.buildEnv {
   name = "emacsTools";
   paths = [ emacs aspell aspellDicts.en ] ++
     (with self.emacs24Packages; [
+      auctex
       autoComplete
-      #bbdb                      # jww: joelteon broken
+      bbdb
       coffee
       colorTheme
       cryptol
@@ -160,7 +160,7 @@ emacsToolsEnv = pkgs.buildEnv {
       stratego
       haskellMode
       ocamlMode
-      #structuredHaskellMode     # jww (2014-10-14): broken
+      structuredHaskellMode
       htmlize
       logito
       loremIpsum
@@ -170,7 +170,7 @@ emacsToolsEnv = pkgs.buildEnv {
       prologMode
       quack
       rectMark
-      #remember                  # jww: joelteon broken
+      remember
       rudel
       sbtMode
       sunriseCommander
@@ -181,7 +181,7 @@ emacsToolsEnv = pkgs.buildEnv {
 
 coqEnv = pkgs.myEnvFun {
   name = "coqHEAD";
-  buildInputs = [ coq_HEAD ];
+  buildInputs = [ coq_HEAD emacs24Macport_24_4 ];
 };
 
 coqToolsEnv = pkgs.buildEnv {
@@ -191,9 +191,9 @@ coqToolsEnv = pkgs.buildEnv {
     ocamlPackages.camlp5_transitional
     coq
     #coqPackages.bedrock
-    # coqPackages.containers     # jww: tarball missing
+    coqPackages.containers
     coqPackages.coqExtLib
-    #coqPackages.domains         # jww: joelteon broken (fetchdarcs)
+    coqPackages.domains
     coqPackages.flocq
     coqPackages.heq
     coqPackages.mathcomp
@@ -308,7 +308,8 @@ networkToolsEnv = pkgs.buildEnv {
     s3cmd
     socat2pre
     spiped
-    # wget
+    #swaks
+    #wget                        # jww: joelteon broken
     youtubeDL
   ];
 };

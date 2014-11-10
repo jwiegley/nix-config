@@ -7,7 +7,7 @@ if [[ ! -f default.nix ]]; then
     sed -i 's#sha.*#src = builtins.filterSource (path: type: type != "unknown") ./.;#' default.nix
 fi
 
-if [[ ! -f Setup.hs ]]; then
+if [[ ! -f Setup.hs && ! -f Setup.lhs ]]; then
     cat > Setup.hs <<EOF
 import Distribution.Simple
 main = defaultMain
