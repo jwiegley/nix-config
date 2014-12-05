@@ -2,7 +2,7 @@
 
 packageOverrides = self: with pkgs; rec {
 
-emacs = pkgs.emacs24Macport_24_3;
+emacs = pkgs.emacs24Macport_24_4;
 emacs24Packages =
   recurseIntoAttrs (emacsPackages emacs24Macport_24_3 pkgs.emacs24Packages)
     // { proofgeneral = pkgs.emacs24Packages.proofgeneral_4_3_pre; };
@@ -181,7 +181,13 @@ emacsToolsEnv = pkgs.buildEnv {
 
 coqEnv = pkgs.myEnvFun {
   name = "coqHEAD";
-  buildInputs = [ coq_HEAD emacs24Macport_24_4 ];
+  buildInputs = [
+    coq_HEAD
+    emacs24Macport_24_4
+    # (coqPackages.ssreflect.override {
+    #   coq = coq_HEAD;
+    # })
+  ];
 };
 
 coqToolsEnv = pkgs.buildEnv {
@@ -191,8 +197,9 @@ coqToolsEnv = pkgs.buildEnv {
     ocamlPackages.camlp5_transitional
     coq
     #coqPackages.bedrock
-    coqPackages.containers
-    coqPackages.coqExtLib
+    #coqPackages.containers
+    #coqPackages.coqExtLib
+    coqPackages.coqeal
     coqPackages.domains
     coqPackages.flocq
     coqPackages.heq
@@ -268,7 +275,7 @@ systemToolsEnv = pkgs.buildEnv {
     guile
     imagemagick
     less
-    macvim
+    # macvim                # jww: joelteon broken
     multitail
     p7zip
     parallel
