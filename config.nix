@@ -12,7 +12,7 @@ ledger = self.callPackage /Users/johnw/Projects/ledger {};
 haskellProjects = { self, super, callPackage }: rec {
   sizes         = callPackage /Users/johnw/Projects/sizes {};
   c2hsc         = callPackage /Users/johnw/Projects/c2hsc {};
-  bugs          = callPackage /Users/johnw/Projects/bugs {};
+  # bugs          = callPackage /Users/johnw/Projects/bugs {};
   consistent    = callPackage /Users/johnw/Projects/consistent {};
   findConduit   = callPackage /Users/johnw/Projects/find-conduit {};
   asyncPool     = callPackage /Users/johnw/Projects/async-pool {};
@@ -23,12 +23,12 @@ haskellProjects = { self, super, callPackage }: rec {
   simpleMirror  = callPackage /Users/johnw/Projects/simple-mirror {};
   # theseHEAD     = callPackage /Users/johnw/Projects/these {};
   simpleConduitHEAD = callPackage /Users/johnw/Projects/simple-conduit {};
-  HsToGallinaHEAD = callPackage /Users/johnw/Contracts/OSS/Projects/hs-to-gallina {
-    uuagc = pkgs.haskellPackages_ghc763.uuagc.override {
-      haskellSrcExts = pkgs.haskellPackages_ghc763.haskellSrcExts_1_13_5;
-    };
-    haskellSrcExts = pkgs.haskellPackages_ghc763.haskellSrcExts_1_13_5;
-  };
+  # HsToGallinaHEAD = callPackage /Users/johnw/Contracts/OSS/Projects/hs-to-gallina {
+  #   uuagc = pkgs.haskellPackages_ghc763.uuagc.override {
+  #     haskellSrcExts = pkgs.haskellPackages_ghc763.haskellSrcExts_1_13_5;
+  #   };
+  #   haskellSrcExts = pkgs.haskellPackages_ghc763.haskellSrcExts_1_13_5;
+  # };
   fuzzcheck     = callPackage /Users/johnw/Projects/fuzzcheck {};
   hnix          = callPackage /Users/johnw/Projects/hnix {};
   commodities   = callPackage /Users/johnw/Projects/ledger/new/commodities {};
@@ -56,9 +56,9 @@ haskellProjects = { self, super, callPackage }: rec {
 
   # shellyHEAD             = callPackage /Users/johnw/src/shelly {};
   # shellyExtraHEAD        = callPackage /Users/johnw/src/shelly/shelly-extra {};
-  lensHEAD               = callPackage /Users/johnw/Contracts/OSS/Projects/lens {};
-  machinesHEAD           = callPackage /Users/johnw/Contracts/OSS/Projects/machines {};
-  exceptionsHEAD         = callPackage /Users/johnw/Contracts/OSS/Projects/exceptions {};
+  # lensHEAD               = callPackage /Users/johnw/Contracts/OSS/Projects/lens {};
+  # machinesHEAD           = callPackage /Users/johnw/Contracts/OSS/Projects/machines {};
+  # exceptionsHEAD         = callPackage /Users/johnw/Contracts/OSS/Projects/exceptions {};
 
   ########## nixpkgs overrides ##########
 
@@ -66,9 +66,9 @@ haskellProjects = { self, super, callPackage }: rec {
   disableLinks = x: x.override { cabal = self.cabalNoLinks; };
 
   hdevtools = callPackage /Users/johnw/Contracts/OSS/Projects/hdevtools {};
-  ghcMod = callPackage /Users/johnw/Contracts/OSS/Projects/ghc-mod {
-    emacs = pkgs.emacs24Macport_24_3;
-  };
+  # ghcMod = callPackage /Users/johnw/Contracts/OSS/Projects/ghc-mod {
+  #   emacs = pkgs.emacs24Macport_24_3;
+  # };
 
   systemFileio = self.disableTest  super.systemFileio;
   shake        = self.disableTest  super.shake;
@@ -83,14 +83,16 @@ haskellTools = ghcEnv: ([
   emacs24Packages.idris
 ] ++ (with ghcEnv.hsPkgs; [
   cabalBounds
-  cabalInstall_1_20_0_3
+  cabalInstall_1_20_0_4
   ghcCore
   ghcMod
   hdevtools
+  liquidhaskell cvc4
   hlint
   ihaskell
+  timeplot splot
   (myHoogleLocal ghcEnv)
-]) ++ (with haskellPackages_ghc783; [
+]) ++ (with haskellPackages_ghc784; [
   cabal2nix
   codex
   hobbes
@@ -259,6 +261,7 @@ systemToolsEnv = pkgs.buildEnv {
     haskellPackages.sizes
     haskellPackages.una
 
+    # apg
     cabextract
     bashInteractive
     bashCompletion
@@ -361,9 +364,9 @@ rubyToolsEnv = pkgs.buildEnv {
 
 ##############################################################################
 
-ghc = self.ghc // {
-  ghcHEAD = pkgs.callPackage /Users/johnw/Contracts/OSS/Projects/ghc {};
-};
+# ghc = self.ghc // {
+#   ghcHEAD = pkgs.callPackage /Users/johnw/Contracts/OSS/Projects/ghc {};
+# };
 
 myHoogleLocal = ghcEnv: ghcEnv.hsPkgs.hoogleLocal.override {
   packages = myPackages ghcEnv;
@@ -405,20 +408,20 @@ ghcEnv_763_profiling = ghcTools {
   hsPkgs = haskellPackages_ghc763_profiling;
 };
 
-haskellPackages_ghc783 =
-  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc783.noProfiling);
-haskellPackages_ghc783_profiling =
-  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc783.profiling);
+haskellPackages_ghc784 =
+  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc784.noProfiling);
+haskellPackages_ghc784_profiling =
+  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc784.profiling);
 
-ghcEnv_783 = ghcTools {
-  name   = "ghc783";
-  ghc    = ghc.ghc783;
-  hsPkgs = haskellPackages_ghc783;
+ghcEnv_784 = ghcTools {
+  name   = "ghc784";
+  ghc    = ghc.ghc784;
+  hsPkgs = haskellPackages_ghc784;
 };
-ghcEnv_783_profiling = ghcTools {
-  name   = "ghc783-prof";
-  ghc    = ghc.ghc783;
-  hsPkgs = haskellPackages_ghc783_profiling;
+ghcEnv_784_profiling = ghcTools {
+  name   = "ghc784-prof";
+  ghc    = ghc.ghc784;
+  hsPkgs = haskellPackages_ghc784_profiling;
 };
 
 # We can't add our entire package set for GHC HEAD, there are always too many
@@ -513,6 +516,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   enclosedExceptions
   errors
   esqueleto
+  exceptions
   extensibleExceptions
   failure
   fastLogger
@@ -587,18 +591,19 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
 
   pipes
   # pipesAeson
-  # pipesAttoparsec
-  # pipesBinary
-  # pipesBytestring
+  pipesAttoparsec
+  pipesBinary
+  pipesBytestring
   # pipesConcurrency
   # pipesCsv
-  # pipesGroup
-  # pipesHttp
-  # pipesNetwork
-  # pipesParse
+  pipesGroup
+  pipesHttp
+  pipesNetwork
+  pipesParse
   # pipesPostgresqlSimple
-  # pipesSafe
-  # pipesText
+  pipesSafe
+  pipesShell
+  pipesText
   # pipesZlib
 
   pointed
@@ -632,6 +637,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   stmConduit
   stmStats
   strict
+  strptime
   systemFileio
   systemFilepath
   tagged
@@ -642,10 +648,13 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   these
   thyme
   time
+  timeparsers
+  timeRecurrence
   transformers
   transformersBase
   unixCompat
   unorderedContainers
+  uuid
   vector
   void
   wai
@@ -674,6 +683,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
      [ folds
        linear
        lens
+       lensDatetime
      ]
 
 ++ pkgs.stdenv.lib.optionals
@@ -692,7 +702,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
      ]
 
 ++ pkgs.stdenv.lib.optionals
-     (ghcEnv.name != "ghc783-prof" && ghcEnv.name != "ghc742")
+     (ghcEnv.name != "ghc784-prof" && ghcEnv.name != "ghc742")
      # Packages that do not work in specific versions
      [ httpClientTls
        httpConduit
