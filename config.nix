@@ -12,7 +12,6 @@ ledger = self.callPackage /Users/johnw/Projects/ledger {};
 haskellProjects = { self, super, callPackage }: rec {
   sizes         = callPackage /Users/johnw/Projects/sizes {};
   c2hsc         = callPackage /Users/johnw/Projects/c2hsc {};
-  # bugs          = callPackage /Users/johnw/Projects/bugs {};
   consistent    = callPackage /Users/johnw/Projects/consistent {};
   findConduit   = callPackage /Users/johnw/Projects/find-conduit {};
   asyncPool     = callPackage /Users/johnw/Projects/async-pool {};
@@ -21,14 +20,7 @@ haskellProjects = { self, super, callPackage }: rec {
   loggingHEAD   = callPackage /Users/johnw/Projects/logging {};
   pushme        = callPackage /Users/johnw/Projects/pushme {};
   simpleMirror  = callPackage /Users/johnw/Projects/simple-mirror {};
-  # theseHEAD     = callPackage /Users/johnw/Projects/these {};
   simpleConduitHEAD = callPackage /Users/johnw/Projects/simple-conduit {};
-  # HsToGallinaHEAD = callPackage /Users/johnw/Contracts/OSS/Projects/hs-to-gallina {
-  #   uuagc = pkgs.haskellPackages_ghc763.uuagc.override {
-  #     haskellSrcExts = pkgs.haskellPackages_ghc763.haskellSrcExts_1_13_5;
-  #   };
-  #   haskellSrcExts = pkgs.haskellPackages_ghc763.haskellSrcExts_1_13_5;
-  # };
   fuzzcheck     = callPackage /Users/johnw/Projects/fuzzcheck {};
   hnix          = callPackage /Users/johnw/Projects/hnix {};
   commodities   = callPackage /Users/johnw/Projects/ledger/new/commodities {};
@@ -54,22 +46,12 @@ haskellProjects = { self, super, callPackage }: rec {
     yuicompressor = pkgs.yuicompressor;
   };
 
-  # shellyHEAD             = callPackage /Users/johnw/src/shelly {};
-  # shellyExtraHEAD        = callPackage /Users/johnw/src/shelly/shelly-extra {};
-  # lensHEAD               = callPackage /Users/johnw/Contracts/OSS/Projects/lens {};
-  # machinesHEAD           = callPackage /Users/johnw/Contracts/OSS/Projects/machines {};
-  # exceptionsHEAD         = callPackage /Users/johnw/Contracts/OSS/Projects/exceptions {};
+  hdevtools    = callPackage /Users/johnw/Contracts/OSS/Projects/hdevtools {};
 
   ########## nixpkgs overrides ##########
 
   cabalNoLinks = self.cabal.override { enableHyperlinkSource = false; };
   disableLinks = x: x.override { cabal = self.cabalNoLinks; };
-
-  hdevtools = callPackage /Users/johnw/Contracts/OSS/Projects/hdevtools {};
-  # ghcMod = callPackage /Users/johnw/Contracts/OSS/Projects/ghc-mod {
-  #   emacs = pkgs.emacs24Macport_24_3;
-  # };
-
   systemFileio = self.disableTest  super.systemFileio;
   shake        = self.disableTest  super.shake;
   unlambda     = self.disableLinks super.unlambda;
@@ -83,14 +65,17 @@ haskellTools = ghcEnv: ([
   emacs24Packages.idris
 ] ++ (with ghcEnv.hsPkgs; [
   cabalBounds
-  cabalInstall_1_20_0_4
+  cabalInstall
   ghcCore
   ghcMod
   hdevtools
-  liquidhaskell cvc4
+  # liquidhaskell
+  cvc4
   hlint
   ihaskell
   timeplot splot
+  hours
+  newartisans
   (myHoogleLocal ghcEnv)
 ]) ++ (with haskellPackages_ghc784; [
   cabal2nix
@@ -183,13 +168,7 @@ emacsToolsEnv = pkgs.buildEnv {
 
 coqEnv = pkgs.myEnvFun {
   name = "coqHEAD";
-  buildInputs = [
-    coq_HEAD
-    emacs24Macport_24_4
-    # (coqPackages.ssreflect.override {
-    #   coq = coq_HEAD;
-    # })
-  ];
+  buildInputs = [ coq_HEAD ];
 };
 
 coqToolsEnv = pkgs.buildEnv {
@@ -280,7 +259,9 @@ systemToolsEnv = pkgs.buildEnv {
     less
     # macvim                # jww: joelteon broken
     multitail
+    nixbang
     p7zip
+    haskellPackages.pandoc
     parallel
     pinentry
     pv
@@ -319,7 +300,7 @@ networkToolsEnv = pkgs.buildEnv {
     socat2pre
     spiped
     #swaks
-    #wget                        # jww: joelteon broken
+    wget
     youtubeDL
   ];
 };
@@ -538,6 +519,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   haskellSrcExts
   haskellSrcMeta
   hfsevents
+  hoopl
   hslogger
   hspec
   hspecExpectations
@@ -706,7 +688,6 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
      # Packages that do not work in specific versions
      [ httpClientTls
        httpConduit
-       yesod
      ]
 ;
 
