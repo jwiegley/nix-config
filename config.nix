@@ -1,3 +1,29 @@
+# Last login: Thu Jan  8 23:34:58 on ttys001
+# 00:11:34 Vulcan:~ $ nix-env -q
+# buildTools
+# cabal2nix-1.73
+# coqTools
+# coreutils-8.23
+# emacsTools
+# env-agda
+# env-coqHEAD
+# env-ghc784
+# gitTools
+# langTools
+# ledger-3.1.0.20141005
+# mailTools
+# networkTools
+# nix-1.8
+# nix-prefetch-scripts
+# nix-repl-1.8-f924081
+# perlTools
+# publishTools
+# pythonTools
+# rubyTools
+# serviceTools
+# systemTools
+# xquartz
+
 { pkgs }: {
 
 packageOverrides = self: with pkgs; rec {
@@ -69,7 +95,7 @@ haskellTools = ghcEnv: ([
   ghcCore
   ghcMod
   hdevtools
-  # liquidhaskell
+  liquidhaskell
   cvc4
   hlint
   ihaskell
@@ -218,8 +244,8 @@ gitToolsEnv = pkgs.buildEnv {
     name = "gitTools";
     paths = [
       diffutils patchutils
-      # bup                       # jww: joelteon broken
-      # dar                       # jww: joelteon broken
+      #bup                       # jww: joelteon broken
+      dar
 
       pkgs.gitAndTools.gitAnnex
       # haskellPackages.gitGpush # jww (2014-10-14): broken
@@ -257,7 +283,7 @@ systemToolsEnv = pkgs.buildEnv {
     guile
     imagemagick
     less
-    # macvim                # jww: joelteon broken
+    #macvim                # jww: joelteon broken
     multitail
     nixbang
     p7zip
@@ -291,7 +317,7 @@ networkToolsEnv = pkgs.buildEnv {
     cacert
     fping
     httrack
-    #iperf                       # jww: joelteon broken
+    iperf
     mosh
     mtr
     openssl
@@ -299,7 +325,7 @@ networkToolsEnv = pkgs.buildEnv {
     s3cmd
     socat2pre
     spiped
-    #swaks
+    #zswaks
     wget
     youtubeDL
   ];
@@ -576,7 +602,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   pipesAttoparsec
   pipesBinary
   pipesBytestring
-  # pipesConcurrency
+  pipesConcurrency
   # pipesCsv
   pipesGroup
   pipesHttp
