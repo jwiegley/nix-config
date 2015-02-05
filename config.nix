@@ -28,10 +28,12 @@
 
 packageOverrides = self: with pkgs; rec {
 
-emacs = pkgs.emacs24Macport_24_4;
+emacs = if self.stdenv.isDarwin then pkgs.emacs24Macport_24_4 else pkgs.emacs;
 emacs24Packages =
-  recurseIntoAttrs (emacsPackages emacs24Macport_24_3 pkgs.emacs24Packages)
-    // { proofgeneral = pkgs.emacs24Packages.proofgeneral_4_3_pre; };
+  if self.stdenv.isDarwin
+  then recurseIntoAttrs (emacsPackages emacs24Macport_24_3 pkgs.emacs24Packages)
+    // { proofgeneral = pkgs.emacs24Packages.proofgeneral_4_3_pre; }
+  else pkgs.emacs24Packages;
 
 ledger = self.callPackage /Users/johnw/Projects/ledger {};
 
@@ -51,22 +53,22 @@ haskellProjects = { self, super, callPackage }: rec {
   hnix          = callPackage /Users/johnw/Projects/hnix {};
   commodities   = callPackage /Users/johnw/Projects/ledger/new/commodities {};
 
-  gitlib        = callPackage /Users/johnw/Projects/gitlib/gitlib {};
-  gitlibTest    = callPackage /Users/johnw/Projects/gitlib/gitlib-test {};
-  hlibgit2      = callPackage /Users/johnw/Projects/gitlib/hlibgit2 {};
-  gitlibLibgit2 = callPackage /Users/johnw/Projects/gitlib/gitlib-libgit2 {};
+  # gitlib        = callPackage /Users/johnw/Projects/gitlib/gitlib {};
+  # gitlibTest    = callPackage /Users/johnw/Projects/gitlib/gitlib-test {};
+  # hlibgit2      = callPackage /Users/johnw/Projects/gitlib/hlibgit2 {};
+  # gitlibLibgit2 = callPackage /Users/johnw/Projects/gitlib/gitlib-libgit2 {};
   gitMonitor    = callPackage /Users/johnw/Projects/gitlib/git-monitor {};
-  gitGpush      = callPackage /Users/johnw/Projects/gitlib/git-gpush {};
-  gitlibCmdline = callPackage /Users/johnw/Projects/gitlib/gitlib-cmdline {
-    git = gitAndTools.git;
-  };
-  gitlibCross   = callPackage /Users/johnw/Projects/gitlib/gitlib-cross {
-    git = gitAndTools.git;
-  };
-  gitlibHit     = callPackage /Users/johnw/Projects/gitlib/gitlib-hit {};
-  gitlibLens    = callPackage /Users/johnw/Projects/gitlib/gitlib-lens {};
-  gitlibS3      = callPackage /Users/johnw/Projects/gitlib/gitlib-S3 {};
-  gitlibSample  = callPackage /Users/johnw/Projects/gitlib/gitlib-sample {};
+  # gitGpush      = callPackage /Users/johnw/Projects/gitlib/git-gpush {};
+  # gitlibCmdline = callPackage /Users/johnw/Projects/gitlib/gitlib-cmdline {
+  #   git = gitAndTools.git;
+  # };
+  # gitlibCross   = callPackage /Users/johnw/Projects/gitlib/gitlib-cross {
+  #   git = gitAndTools.git;
+  # };
+  # gitlibHit     = callPackage /Users/johnw/Projects/gitlib/gitlib-hit {};
+  # gitlibLens    = callPackage /Users/johnw/Projects/gitlib/gitlib-lens {};
+  # gitlibS3      = callPackage /Users/johnw/Projects/gitlib/gitlib-S3 {};
+  # gitlibSample  = callPackage /Users/johnw/Projects/gitlib/gitlib-sample {};
 
   newartisans   = callPackage /Users/johnw/Documents/newartisans {
     yuicompressor = pkgs.yuicompressor;
@@ -89,19 +91,17 @@ haskellTools = ghcEnv: ([
   ghcEnv.ghc
   sloccount
   emacs24Packages.idris
+  z3
 ] ++ (with ghcEnv.hsPkgs; [
   cabalBounds
   cabalInstall
   ghcCore
   ghcMod
   hdevtools
-  liquidhaskell
-  cvc4
+  liquidhaskell cvc4
   hlint
   ihaskell
   timeplot splot
-  hours
-  newartisans
   (myHoogleLocal ghcEnv)
 ]) ++ (with haskellPackages_ghc784; [
   cabal2nix
@@ -109,11 +109,12 @@ haskellTools = ghcEnv: ([
   hobbes
   simpleMirror
   hasktags
-  hakyll
   cabalMeta
   djinn mueval
   idris
   threadscope
+]) ++ (with haskellngPackages; [
+  hakyll
 ]) ++ (with haskellPackages_ghc763; [
   #lambdabot                     # jww: joelteon broken
 ]));
@@ -127,6 +128,24 @@ agdaEnv = pkgs.myEnvFun {
   ];
 };
 
+ryanEnv = pkgs.myEnvFun {
+  name = "ryan";
+  buildInputs = [
+    haskellPackages.HList
+    haskellPackages.dataDefault
+    haskellPackages.dependentMap
+    haskellPackages.dependentSum
+    haskellPackages.ghcjsDom
+    haskellPackages.lens
+    haskellPackages.mtl
+    haskellPackages.safe
+    haskellPackages.semigroups
+    haskellPackages.text
+    haskellPackages.these
+    haskellPackages.transformers
+  ];
+};
+
 buildToolsEnv = pkgs.buildEnv {
   name = "buildTools";
   paths = [
@@ -137,9 +156,10 @@ buildToolsEnv = pkgs.buildEnv {
     bazaar bazaarTools
     ccache
     cvs cvsps
-    darcs
+    # darcs
     diffstat
     doxygen
+    haskellPackages.newartisans
     fcgi
     flex
     htmlTidy
@@ -197,6 +217,15 @@ coqEnv = pkgs.myEnvFun {
   buildInputs = [ coq_HEAD ];
 };
 
+coq85Env = pkgs.myEnvFun {
+  name = "coq85";
+  buildInputs = [
+    coq_8_5beta1
+    coqPackages.mathcomp_1_5_for_8_5beta1
+    coqPackages.ssreflect_1_5_for_8_5beta1
+  ];
+};
+
 coqToolsEnv = pkgs.buildEnv {
   name = "coqTools";
   paths = [
@@ -208,6 +237,7 @@ coqToolsEnv = pkgs.buildEnv {
     #coqPackages.coqExtLib
     coqPackages.coqeal
     coqPackages.domains
+    coqPackages.fiat
     coqPackages.flocq
     coqPackages.heq
     coqPackages.mathcomp
@@ -227,8 +257,9 @@ langToolsEnv = pkgs.buildEnv {
     ott isabelle
     gnumake
     compcert #verasco
-    rust
-    sbcl
+    # fsharp
+    #rustc                # jww (2015-02-01): now needs procps?
+    # sbcl
     erlang
     swiProlog
     yuicompressor
@@ -247,9 +278,9 @@ gitToolsEnv = pkgs.buildEnv {
       #bup                       # jww: joelteon broken
       dar
 
-      pkgs.gitAndTools.gitAnnex
+      pkgs.haskellngPackages.git-annex
       # haskellPackages.gitGpush # jww (2014-10-14): broken
-      haskellPackages.gitMonitor
+      pkgs.haskellngPackages.git-monitor
       pkgs.gitAndTools.gitFull
       pkgs.gitAndTools.gitflow
       pkgs.gitAndTools.hub
@@ -281,6 +312,7 @@ systemToolsEnv = pkgs.buildEnv {
     gnutar
     graphviz
     guile
+    haskellPackages.hours
     imagemagick
     less
     #macvim                # jww: joelteon broken
@@ -361,6 +393,7 @@ pythonToolsEnv = pkgs.buildEnv {
     python27Full
     pythonDocs.pdf_letter.python27
     pythonDocs.html.python27
+    python27Packages.ipython
   ];
 };
 
@@ -433,15 +466,15 @@ ghcEnv_784_profiling = ghcTools {
 
 # We can't add our entire package set for GHC HEAD, there are always too many
 # that don't build yet.
-haskellPackages_ghcHEAD = haskell.packages_ghcHEAD.noProfiling;
-haskellPackages_ghcHEAD_profiling = haskell.packages_ghcHEAD.profiling;
+#haskellPackages_ghcHEAD = haskell.packages_ghcHEAD.noProfiling;
+#haskellPackages_ghcHEAD_profiling = haskell.packages_ghcHEAD.profiling;
 
-ghcEnv_HEAD = pkgs.myEnvFun {
-  name = "ghcHEAD";
-  buildInputs = with haskellPackages_ghcHEAD; [
-    pkgs.ghc.ghcHEAD cabalInstall_1_20_0_3
-  ];
-};
+#ghcEnv_HEAD = pkgs.myEnvFun {
+#  name = "ghcHEAD";
+#  buildInputs = with haskellPackages_ghcHEAD; [
+#    pkgs.ghc.ghcHEAD cabalInstall_1_20_0_3
+#  ];
+#};
 
 ##############################################################################
 
@@ -522,7 +555,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   #ekg
   enclosedExceptions
   errors
-  esqueleto
+  # esqueleto
   exceptions
   extensibleExceptions
   failure
@@ -564,7 +597,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   liftedAsync
   liftedBase
   listExtras
-  logging
+  # logging
   logict
   machines
   mimeMail
@@ -572,7 +605,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   mmorph
   monadControl
   monadCoroutine
-  monadLogger
+  # monadLogger
   monadLoops
   monadPar
   monadParExtras
@@ -592,10 +625,10 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   parallel
   parallelIo
   parsec
-  persistent
-  persistentPostgresql
-  persistentSqlite
-  persistentTemplate
+  # persistent
+  # persistentPostgresql
+  # persistentSqlite
+  # persistentTemplate
 
   pipes
   # pipesAeson
@@ -626,11 +659,13 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   regexCompat
   regexPosix
   regular
-  resourcePool
+  # resourcePool
   resourcet
   retry
   rex
   safe
+  sbv
+  scotty
   semigroupoids
   semigroups
   shake
@@ -642,10 +677,11 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   spoon
   stm
   stmChans
-  stmConduit
+  # stmConduit
   stmStats
   strict
   strptime
+  syb
   systemFileio
   systemFilepath
   tagged
@@ -669,6 +705,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   warp
   xhtml
   yaml
+  # z3
   zippers
   zlib
 ]
