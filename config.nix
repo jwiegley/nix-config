@@ -159,7 +159,7 @@ buildToolsEnv = pkgs.buildEnv {
     # darcs
     diffstat
     doxygen
-    haskellPackages.newartisans
+    # haskellPackages.newartisans
     fcgi
     flex
     htmlTidy
@@ -367,8 +367,7 @@ mailToolsEnv = pkgs.buildEnv {
   name = "mailTools";
   paths = [
     leafnode dovecot22 dovecot_pigeonhole fetchmail procmail w3m
-    mairix
-    mutt
+    mairix mutt msmtp
   ];
 };
 
