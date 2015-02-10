@@ -1,5 +1,3 @@
-# Last login: Thu Jan  8 23:34:58 on ttys001
-# 00:11:34 Vulcan:~ $ nix-env -q
 # buildTools
 # cabal2nix-1.73
 # coqTools
@@ -13,7 +11,7 @@
 # ledger-3.1.0.20141005
 # mailTools
 # networkTools
-# nix-1.8
+# nix-1.9pre4028_0d1dafa
 # nix-prefetch-scripts
 # nix-repl-1.8-f924081
 # perlTools
@@ -128,24 +126,6 @@ agdaEnv = pkgs.myEnvFun {
   ];
 };
 
-ryanEnv = pkgs.myEnvFun {
-  name = "ryan";
-  buildInputs = [
-    haskellPackages.HList
-    haskellPackages.dataDefault
-    haskellPackages.dependentMap
-    haskellPackages.dependentSum
-    haskellPackages.ghcjsDom
-    haskellPackages.lens
-    haskellPackages.mtl
-    haskellPackages.safe
-    haskellPackages.semigroups
-    haskellPackages.text
-    haskellPackages.these
-    haskellPackages.transformers
-  ];
-};
-
 buildToolsEnv = pkgs.buildEnv {
   name = "buildTools";
   paths = [
@@ -153,7 +133,7 @@ buildToolsEnv = pkgs.buildEnv {
     scons
     global
     autoconf automake
-    bazaar bazaarTools
+    # bazaar bazaarTools
     ccache
     cvs cvsps
     # darcs
@@ -176,38 +156,38 @@ emacsToolsEnv = pkgs.buildEnv {
     (with self.emacs24Packages; [
       auctex
       autoComplete
-      bbdb
-      coffee
-      colorTheme
-      cryptol
-      cua
-      emacsSessionManagement
-      emacsw3m
-      ess
-      flymakeCursor
-      gh
-      graphvizDot
+      # bbdb
+      # coffee
+      # colorTheme
+      # cryptol
+      # cua
+      # emacsSessionManagement
+      # emacsw3m
+      # ess
+      # flymakeCursor
+      # gh
+      # graphvizDot
       gist
-      jade
-      js2
-      stratego
+      # jade
+      # js2
+      # stratego
       haskellMode
-      ocamlMode
-      structuredHaskellMode
-      htmlize
-      logito
-      loremIpsum
-      maudeMode
-      pcache
-      phpMode
-      prologMode
-      quack
-      rectMark
-      remember
-      rudel
-      sbtMode
+      # ocamlMode
+      # structuredHaskellMode
+      # htmlize
+      # logito
+      # loremIpsum
+      # maudeMode
+      # pcache
+      # phpMode
+      # prologMode
+      # quack
+      # rectMark
+      # remember
+      # rudel
+      # sbtMode
       sunriseCommander
-      writeGood
+      # writeGood
       xmlRpc
     ]);
 };
