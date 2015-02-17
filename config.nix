@@ -96,10 +96,8 @@ haskellTools = ghcEnv: ([
   ghcCore
   ghcMod
   hdevtools
-  liquidhaskell cvc4
   hlint
   ihaskell
-  timeplot splot
   (myHoogleLocal ghcEnv)
 ]) ++ (with haskellPackages_ghc784; [
   cabal2nix
@@ -111,10 +109,12 @@ haskellTools = ghcEnv: ([
   djinn mueval
   idris
   threadscope
+  timeplot splot
+  liquidhaskell cvc4
 ]) ++ (with haskellngPackages; [
   hakyll
 ]) ++ (with haskellPackages_ghc763; [
-  #lambdabot                     # jww: joelteon broken
+  #lambdabot
 ]));
 
 agdaEnv = pkgs.myEnvFun {
@@ -132,7 +132,7 @@ buildToolsEnv = pkgs.buildEnv {
     ninja
     scons
     global
-    autoconf automake
+    autoconf automake114x
     # bazaar bazaarTools
     ccache
     cvs cvsps
@@ -239,7 +239,7 @@ langToolsEnv = pkgs.buildEnv {
     compcert #verasco
     # fsharp
     #rustc                # jww (2015-02-01): now needs procps?
-    # sbcl
+    sbcl acl2
     erlang
     swiProlog
     yuicompressor
@@ -277,6 +277,7 @@ systemToolsEnv = pkgs.buildEnv {
     haskellPackages.sizes
     haskellPackages.una
 
+    ack
     # apg
     cabextract
     bashInteractive
@@ -347,7 +348,7 @@ mailToolsEnv = pkgs.buildEnv {
   name = "mailTools";
   paths = [
     leafnode dovecot22 dovecot_pigeonhole fetchmail procmail w3m
-    mairix mutt msmtp
+    mairix mutt msmtp lbdb contacts
   ];
 };
 
@@ -622,7 +623,6 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   pipesParse
   # pipesPostgresqlSimple
   pipesSafe
-  pipesShell
   pipesText
   # pipesZlib
 
@@ -665,6 +665,10 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   systemFilepath
   tagged
   tar
+  tasty
+  tastyHunit
+  tastySmallcheck
+  tastyQuickcheck
   temporary
   text
   textFormat
@@ -699,6 +703,8 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
        units
        criterion
        kanExtensions
+       pipesShell
+       tastyHspec
      ]
 
 ++ pkgs.stdenv.lib.optionals
