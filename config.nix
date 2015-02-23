@@ -50,6 +50,7 @@ haskellProjects = { self, super, callPackage }: rec {
   fuzzcheck     = callPackage /Users/johnw/Projects/fuzzcheck {};
   hnix          = callPackage /Users/johnw/Projects/hnix {};
   commodities   = callPackage /Users/johnw/Projects/ledger/new/commodities {};
+  linearscan    = callPackage /Users/johnw/Contracts/BAE/Projects/linearscan {};
 
   # gitlib        = callPackage /Users/johnw/Projects/gitlib/gitlib {};
   # gitlibTest    = callPackage /Users/johnw/Projects/gitlib/gitlib-test {};
@@ -89,7 +90,6 @@ haskellTools = ghcEnv: ([
   ghcEnv.ghc
   sloccount
   emacs24Packages.idris
-  z3
 ] ++ (with ghcEnv.hsPkgs; [
   cabalBounds
   cabalInstall
@@ -155,40 +155,6 @@ emacsToolsEnv = pkgs.buildEnv {
   paths = [ emacs aspell aspellDicts.en ] ++
     (with self.emacs24Packages; [
       auctex
-      autoComplete
-      # bbdb
-      # coffee
-      # colorTheme
-      # cryptol
-      # cua
-      # emacsSessionManagement
-      # emacsw3m
-      # ess
-      # flymakeCursor
-      # gh
-      # graphvizDot
-      gist
-      # jade
-      # js2
-      # stratego
-      haskellMode
-      # ocamlMode
-      # structuredHaskellMode
-      # htmlize
-      # logito
-      # loremIpsum
-      # maudeMode
-      # pcache
-      # phpMode
-      # prologMode
-      # quack
-      # rectMark
-      # remember
-      # rudel
-      # sbtMode
-      sunriseCommander
-      # writeGood
-      xmlRpc
     ]);
 };
 
@@ -291,7 +257,7 @@ systemToolsEnv = pkgs.buildEnv {
     gnuplot
     gnused
     gnutar
-    graphviz
+    #graphviz
     guile
     haskellPackages.hours
     imagemagick
@@ -319,7 +285,9 @@ systemToolsEnv = pkgs.buildEnv {
     watch
     watchman
     xz
+    z3
     zip
+    zsh
   ];
 };
 
@@ -327,6 +295,7 @@ networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
     arcanist
+    aria
     cacert
     fping
     httrack
@@ -348,7 +317,7 @@ mailToolsEnv = pkgs.buildEnv {
   name = "mailTools";
   paths = [
     leafnode dovecot22 dovecot_pigeonhole fetchmail procmail w3m
-    mairix mutt msmtp lbdb contacts
+    mairix mutt msmtp lbdb contacts spamassassin
   ];
 };
 
@@ -546,6 +515,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   fmlist
   foldl
   free
+  fsnotify
   #freeOperational
   ghcPaths
   groups
@@ -713,6 +683,8 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
      [ folds
        linear
        lens
+       lensFamily
+       lensFamilyCore
        lensDatetime
      ]
 
