@@ -26,7 +26,10 @@
 
 packageOverrides = self: with pkgs; rec {
 
-emacs = if self.stdenv.isDarwin then pkgs.emacs24Macport_24_4 else pkgs.emacs;
+emacs = if self.stdenv.isDarwin
+        then pkgs.emacs24Macport_24_4
+        else pkgs.emacs;
+
 emacs24Packages =
   if self.stdenv.isDarwin
   then recurseIntoAttrs (emacsPackages emacs24Macport_24_3 pkgs.emacs24Packages)
