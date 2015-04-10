@@ -26,15 +26,26 @@
 
 packageOverrides = self: with pkgs; rec {
 
+# Used "self" and "pkgs" in a fashion consistent with
+# https://github.com/jwiegley/nix-config/blob/master/config.nix
+youtube-dl = self.stdenv.lib.overrideDerivation self.youtube-dl (attrs: {
+  ffmpeg = null;
+  postInstall = "";
+});
+
+idutils = self.stdenv.lib.overrideDerivation self.idutils (attrs: {
+  doCheck = false;
+});
+
 emacs = if self.stdenv.isDarwin
         then pkgs.emacs24Macport_24_4
         else pkgs.emacs;
 
 emacs24Packages =
   if self.stdenv.isDarwin
-  then recurseIntoAttrs (emacsPackages emacs24Macport_24_3 pkgs.emacs24Packages)
-    // { proofgeneral = pkgs.emacs24Packages.proofgeneral_4_3_pre; }
-  else pkgs.emacs24Packages;
+  then recurseIntoAttrs self.emacs24Packages
+    // { proofgeneral = self.emacs24Packages.proofgeneral_4_3_pre; }
+  else self.emacs24Packages;
 
 ledger = self.callPackage /Users/johnw/Projects/ledger {};
 
@@ -59,7 +70,7 @@ haskellProjects = { self, super, callPackage }: rec {
   # gitlibTest    = callPackage /Users/johnw/Projects/gitlib/gitlib-test {};
   # hlibgit2      = callPackage /Users/johnw/Projects/gitlib/hlibgit2 {};
   # gitlibLibgit2 = callPackage /Users/johnw/Projects/gitlib/gitlib-libgit2 {};
-  gitMonitor    = callPackage /Users/johnw/Projects/gitlib/git-monitor {};
+  # gitMonitor    = callPackage /Users/johnw/Projects/gitlib/git-monitor {};
   # gitGpush      = callPackage /Users/johnw/Projects/gitlib/git-gpush {};
   # gitlibCmdline = callPackage /Users/johnw/Projects/gitlib/gitlib-cmdline {
   #   git = gitAndTools.git;
@@ -116,8 +127,8 @@ haskellTools = ghcEnv: ([
   liquidhaskell cvc4
 ]) ++ (with haskellngPackages; [
   hakyll
-]) ++ (with haskellPackages_ghc763; [
-  #lambdabot
+]) ++ (with haskell-ng.packages.ghc763; [
+  # lambdabot
 ]));
 
 agdaEnv = pkgs.myEnvFun {
@@ -134,12 +145,12 @@ buildToolsEnv = pkgs.buildEnv {
   paths = [
     ninja
     scons
-    global
+    global idutils
     autoconf automake114x
-    # bazaar bazaarTools
+    bazaar bazaarTools
     ccache
     cvs cvsps
-    # darcs
+    darcs
     diffstat
     doxygen
     # haskellPackages.newartisans
@@ -181,7 +192,7 @@ coqToolsEnv = pkgs.buildEnv {
     ocaml
     ocamlPackages.camlp5_transitional
     coq
-    #coqPackages.bedrock
+    coqPackages.bedrock
     #coqPackages.containers
     #coqPackages.coqExtLib
     coqPackages.coqeal
@@ -209,7 +220,7 @@ langToolsEnv = pkgs.buildEnv {
     # fsharp
     #rustc                # jww (2015-02-01): now needs procps?
     sbcl acl2
-    erlang
+    # erlang
     swiProlog
     yuicompressor
   ];
@@ -247,7 +258,7 @@ systemToolsEnv = pkgs.buildEnv {
     haskellPackages.una
 
     ack
-    # apg
+    #apg                                # jww (2015-03-09): needs gcc
     cabextract
     bashInteractive
     bashCompletion
@@ -260,12 +271,12 @@ systemToolsEnv = pkgs.buildEnv {
     gnuplot
     gnused
     gnutar
-    #graphviz
+    graphviz
     guile
     haskellPackages.hours
-    imagemagick
+    imagemagick_light
     less
-    #macvim                # jww: joelteon broken
+    macvim
     multitail
     nixbang
     p7zip
@@ -282,7 +293,7 @@ systemToolsEnv = pkgs.buildEnv {
     time
     tmux
     tree
-    #unarj                       # jww: joelteon broken (no gcc)
+    #unarj
     unrar
     unzip
     watch
@@ -310,7 +321,6 @@ networkToolsEnv = pkgs.buildEnv {
     s3cmd
     socat2pre
     spiped
-    #zswaks
     wget
     youtubeDL
   ];
@@ -326,12 +336,26 @@ mailToolsEnv = pkgs.buildEnv {
 
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
-  paths = [ texLiveFull djvu2pdf ghostscript librsvg ];
+  paths = [ 
+    texLiveFull
+    # djvu2pdf                                # jww (2015-03-29): broken
+    ghostscript
+    # librsvg                                 # jww (2015-03-29): broken
+    poppler poppler_data
+    libpng
+  ];
 };
 
 serviceToolsEnv = pkgs.buildEnv {
   name = "serviceTools";
-  paths = [ nginx postgresql redis pdnsd mysql55 nodejs ];
+  paths = [
+    nginx
+    postgresql
+    redis
+    pdnsd
+    mysql
+    nodejs
+  ];
 };
 
 perlToolsEnv = pkgs.buildEnv {
@@ -346,6 +370,7 @@ pythonToolsEnv = pkgs.buildEnv {
     pythonDocs.pdf_letter.python27
     pythonDocs.html.python27
     python27Packages.ipython
+    python27Packages.pygments
   ];
 };
 
@@ -468,7 +493,6 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   bytestringMmap
   caseInsensitive
   cassava
-  #categories
   cereal
   cerealConduit
   charset
@@ -504,10 +528,8 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   doctest
   doctestProp
   either
-  #ekg
   enclosedExceptions
   errors
-  # esqueleto
   exceptions
   extensibleExceptions
   failure
@@ -515,11 +537,11 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   fileEmbed
   filepath
   fingertree
+  # fixplate
   fmlist
   foldl
   free
   fsnotify
-  #freeOperational
   ghcPaths
   groups
   hamlet
@@ -547,10 +569,10 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   languageC
   languageJava
   languageJavascript
+  lattices
   liftedAsync
   liftedBase
   listExtras
-  # logging
   logict
   machines
   mimeMail
@@ -558,7 +580,6 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   mmorph
   monadControl
   monadCoroutine
-  # monadLogger
   monadLoops
   monadPar
   monadParExtras
@@ -574,30 +595,23 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   numbers
   operational
   optparseApplicative
+  # orgmodeParse
   pandoc
   parallel
   parallelIo
   parsec
-  # persistent
-  # persistentPostgresql
-  # persistentSqlite
-  # persistentTemplate
 
   pipes
-  # pipesAeson
   pipesAttoparsec
   pipesBinary
   pipesBytestring
   pipesConcurrency
-  # pipesCsv
   pipesGroup
   pipesHttp
   pipesNetwork
   pipesParse
-  # pipesPostgresqlSimple
   pipesSafe
   pipesText
-  # pipesZlib
 
   pointed
   posixPaths
@@ -611,7 +625,6 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   regexCompat
   regexPosix
   regular
-  # resourcePool
   resourcet
   retry
   rex
@@ -629,7 +642,6 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   spoon
   stm
   stmChans
-  # stmConduit
   stmStats
   strict
   strptime
@@ -653,6 +665,7 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   transformers
   transformersBase
   unixCompat
+  uniplate
   unorderedContainers
   uuid
   vector
@@ -661,7 +674,6 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   warp
   xhtml
   yaml
-  # z3
   zippers
   zlib
 ]
@@ -704,13 +716,6 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
      (pkgs.stdenv.lib.versionOlder ghcEnv.ghc.version "7.7")
      # Packages that do not work in 7.8+
      [ recursionSchemes
-     ]
-
-++ pkgs.stdenv.lib.optionals
-     (ghcEnv.name != "ghc784-prof" && ghcEnv.name != "ghc742")
-     # Packages that do not work in specific versions
-     [ httpClientTls
-       httpConduit
      ]
 ;
 
