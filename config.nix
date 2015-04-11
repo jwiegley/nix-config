@@ -24,30 +24,29 @@
 
 { pkgs }: {
 
-packageOverrides = self: with pkgs; rec {
+packageOverrides = super: with pkgs; rec {
 
-# Used "self" and "pkgs" in a fashion consistent with
+# Used "super" and "pkgs" in a fashion consistent with
 # https://github.com/jwiegley/nix-config/blob/master/config.nix
-youtube-dl = self.stdenv.lib.overrideDerivation self.youtube-dl (attrs: {
+youtube-dl = super.stdenv.lib.overrideDerivation super.youtube-dl (attrs: {
   ffmpeg = null;
   postInstall = "";
 });
 
-idutils = self.stdenv.lib.overrideDerivation self.idutils (attrs: {
+idutils = super.stdenv.lib.overrideDerivation super.idutils (attrs: {
   doCheck = false;
 });
 
-emacs = if self.stdenv.isDarwin
-        then pkgs.emacs24Macport_24_4
-        else pkgs.emacs;
+emacs = if super.stdenv.isDarwin
+        then super.emacs24Macport_24_5
+        else super.emacs;
 
 emacs24Packages =
-  if self.stdenv.isDarwin
-  then recurseIntoAttrs self.emacs24Packages
-    // { proofgeneral = self.emacs24Packages.proofgeneral_4_3_pre; }
-  else self.emacs24Packages;
+  recurseIntoAttrs super.emacs24Packages
+    // { proofgeneral = pkgs.emacs24Packages.proofgeneral_4_3_pre;
+         emacs = pkgs.emacs; };
 
-ledger = self.callPackage /Users/johnw/Projects/ledger {};
+ledger = super.callPackage /Users/johnw/Projects/ledger {};
 
 haskellProjects = { self, super, callPackage }: rec {
   sizes         = callPackage /Users/johnw/Projects/sizes {};
@@ -167,7 +166,7 @@ buildToolsEnv = pkgs.buildEnv {
 emacsToolsEnv = pkgs.buildEnv {
   name = "emacsTools";
   paths = [ emacs aspell aspellDicts.en ] ++
-    (with self.emacs24Packages; [
+    (with emacs24Packages; [
       auctex
     ]);
 };
@@ -254,8 +253,8 @@ systemToolsEnv = pkgs.buildEnv {
   name = "systemTools";
   paths = [
     haskellPackages.pushme
-    haskellPackages.sizes
-    haskellPackages.una
+    haskellngPackages.sizes
+    haskellngPackages.una
 
     ack
     #apg                                # jww (2015-03-09): needs gcc
@@ -280,7 +279,7 @@ systemToolsEnv = pkgs.buildEnv {
     multitail
     nixbang
     p7zip
-    haskellPackages.pandoc
+    haskellngPackages.pandoc
     parallel
     pinentry
     pv
@@ -394,15 +393,15 @@ ghcTools = ghcEnv: pkgs.myEnvFun {
   buildInputs = haskellTools ghcEnv ++ myPackages ghcEnv;
 };
 
-haskellPackages_wrapper = hp: self.recurseIntoAttrs (hp.override {
-  extension = this: super: haskellProjects {
+haskellPackages_wrapper = hp: super.recurseIntoAttrs (hp.override {
+  extension = this: sup: haskellProjects {
     self = this;
-    super = super;
-    callPackage = self.lib.callPackageWith this;
+    super = sup;
+    callPackage = super.lib.callPackageWith this;
   };
 });
 
-haskellPackages_ghc742 = haskellPackages_wrapper self.haskellPackages_ghc742;
+haskellPackages_ghc742 = haskellPackages_wrapper super.haskellPackages_ghc742;
 
 ghcEnv_742 = ghcTools {
   name   = "ghc742";
@@ -410,7 +409,7 @@ ghcEnv_742 = ghcTools {
   hsPkgs = haskellPackages_ghc742;
 };
 
-haskellPackages_ghc763 = haskellPackages_wrapper self.haskellPackages_ghc763;
+haskellPackages_ghc763 = haskellPackages_wrapper super.haskellPackages_ghc763;
 haskellPackages_ghc763_profiling =
   haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc763.profiling);
 
