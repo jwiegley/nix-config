@@ -1,271 +1,108 @@
-# buildTools
-# cabal2nix-1.73
-# coqTools
-# coreutils-8.23
-# emacsTools
-# env-agda
-# env-coqHEAD
-# env-ghc784
-# gitTools
-# langTools
-# ledger-3.1.0.20141005
-# mailTools
-# networkTools
-# nix-1.9pre4028_0d1dafa
-# nix-prefetch-scripts
-# nix-repl-1.8-f924081
-# perlTools
-# publishTools
-# pythonTools
-# rubyTools
-# serviceTools
-# systemTools
-# xquartz
-
 { pkgs }: {
 
-packageOverrides = super: with pkgs; rec {
+packageOverrides = super: let self = super.pkgs; in with self; rec {
 
-# Used "super" and "pkgs" in a fashion consistent with
-# https://github.com/jwiegley/nix-config/blob/master/config.nix
-youtube-dl = super.stdenv.lib.overrideDerivation super.youtube-dl (attrs: {
-  ffmpeg = null;
-  postInstall = "";
-});
+myHaskellPackages = hp: hp.override {
+  overrides = self: super: with pkgs.haskell-ng.lib; {
+    linearscan = self.callPackage ~/bae/linearscan {};
+  
+    newartisans = self.callPackage ~/doc/newartisans {
+      yuicompressor = pkgs.yuicompressor;
+    };
+  
+    c2hsc         = self.callPackage ~/Projects/c2hsc {};
+    git-all       = self.callPackage ~/Projects/git-all {};
+    hours         = self.callPackage ~/Projects/hours {};
+    pushme        = self.callPackage ~/Projects/pushme {};
+    rehoo         = self.callPackage ~/Projects/rehoo {};
+    simple-mirror = self.callPackage ~/Projects/simple-mirror {};
+    sizes         = self.callPackage ~/Projects/sizes {};
+    una           = self.callPackage ~/Projects/una {};
+  
+    async-pool     = self.callPackage ~/Projects/async-pool {};
+    bindings-DSL   = self.callPackage ~/Projects/bindings-dsl {};
+    commodities    = self.callPackage ~/Projects/ledger/new/commodities {};
+    consistent     = self.callPackage ~/Projects/consistent {};
+    find-conduit   = self.callPackage ~/Projects/find-conduit {};
+    fuzzcheck      = self.callPackage ~/Projects/fuzzcheck {};
+    github         = self.callPackage ~/Projects/github {};
+    hnix           = self.callPackage ~/Projects/hnix {};
+    ipcvar         = self.callPackage ~/Projects/ipcvar {};
+    logging        = self.callPackage ~/Projects/logging {};
+    monad-extras   = self.callPackage ~/Projects/monad-extras {};
+    rest-client    = self.callPackage ~/Projects/rest-client {};
+    simple-conduit = self.callPackage ~/Projects/simple-conduit {};
+  
+    gitlib         = self.callPackage ~/Projects/gitlib/gitlib {};
+    gitlib-test    = self.callPackage ~/Projects/gitlib/gitlib-test {};
+    hlibgit2       = self.callPackage ~/Projects/gitlib/hlibgit2 {};
+    gitlib-libgit2 = self.callPackage ~/Projects/gitlib/gitlib-libgit2 {};
+    gitlib-cmdline = self.callPackage ~/Projects/gitlib/gitlib-cmdline {
+      git = gitAndTools.git;
+    };
+    gitlib-cross   = self.callPackage ~/Projects/gitlib/gitlib-cross {
+      git = gitAndTools.git;
+    };
+    gitlib-hit     = self.callPackage ~/Projects/gitlib/gitlib-hit {};
+    gitlib-lens    = self.callPackage ~/Projects/gitlib/gitlib-lens {};
+    gitlib-s3      = self.callPackage ~/Projects/gitlib/gitlib-S3 {};
+    gitlib-sample  = self.callPackage ~/Projects/gitlib/gitlib-sample {};
+    git-monitor    = self.callPackage ~/Projects/gitlib/git-monitor {};
+    git-gpush      = self.callPackage ~/Projects/gitlib/git-gpush {};
+  
+    hdevtools = self.callPackage ~/oss/hdevtools {};
+  
+    systemFileio = dontCheck super.systemFileio;
+    shake        = dontCheck super.shake;
+    singletons   = dontCheck super.singletons;
+  
+    cabalNoLinks = self.cabal.override { enableHyperlinkSource = false; };
+    disableLinks = x: x.override { cabal = self.cabalNoLinks; };
+    unlambda     = self.disableLinks super.unlambda;
+  };
+};
 
-idutils = super.stdenv.lib.overrideDerivation super.idutils (attrs: {
-  doCheck = false;
-});
+haskellngPackages  = myHaskellPackages super.haskellngPackages;
+haskell784Packages = myHaskellPackages super.haskell-ng.packages.ghc784;
+haskell763Packages = myHaskellPackages super.haskell-ng.packages.ghc763;
+haskell742Packages = myHaskellPackages super.haskell-ng.packages.ghc742;
+
+ledger = super.callPackage ~/Projects/ledger {};
 
 emacs = if super.stdenv.isDarwin
         then super.emacs24Macport_24_5
         else super.emacs;
 
-emacs24Packages =
-  recurseIntoAttrs super.emacs24Packages
-    // { proofgeneral = pkgs.emacs24Packages.proofgeneral_4_3_pre;
-         emacs = pkgs.emacs; };
-
-ledger = super.callPackage /Users/johnw/Projects/ledger {};
-
-haskellProjects = { self, super, callPackage }: rec {
-  sizes         = callPackage /Users/johnw/Projects/sizes {};
-  c2hsc         = callPackage /Users/johnw/Projects/c2hsc {};
-  consistent    = callPackage /Users/johnw/Projects/consistent {};
-  findConduit   = callPackage /Users/johnw/Projects/find-conduit {};
-  asyncPool     = callPackage /Users/johnw/Projects/async-pool {};
-  gitAll        = callPackage /Users/johnw/Projects/git-all {};
-  hours         = callPackage /Users/johnw/Projects/hours {};
-  loggingHEAD   = callPackage /Users/johnw/Projects/logging {};
-  pushme        = callPackage /Users/johnw/Projects/pushme {};
-  simpleMirror  = callPackage /Users/johnw/Projects/simple-mirror {};
-  simpleConduitHEAD = callPackage /Users/johnw/Projects/simple-conduit {};
-  fuzzcheck     = callPackage /Users/johnw/Projects/fuzzcheck {};
-  hnix          = callPackage /Users/johnw/Projects/hnix {};
-  commodities   = callPackage /Users/johnw/Projects/ledger/new/commodities {};
-  linearscan    = callPackage /Users/johnw/Contracts/BAE/Projects/linearscan {};
-
-  # gitlib        = callPackage /Users/johnw/Projects/gitlib/gitlib {};
-  # gitlibTest    = callPackage /Users/johnw/Projects/gitlib/gitlib-test {};
-  # hlibgit2      = callPackage /Users/johnw/Projects/gitlib/hlibgit2 {};
-  # gitlibLibgit2 = callPackage /Users/johnw/Projects/gitlib/gitlib-libgit2 {};
-  # gitMonitor    = callPackage /Users/johnw/Projects/gitlib/git-monitor {};
-  # gitGpush      = callPackage /Users/johnw/Projects/gitlib/git-gpush {};
-  # gitlibCmdline = callPackage /Users/johnw/Projects/gitlib/gitlib-cmdline {
-  #   git = gitAndTools.git;
-  # };
-  # gitlibCross   = callPackage /Users/johnw/Projects/gitlib/gitlib-cross {
-  #   git = gitAndTools.git;
-  # };
-  # gitlibHit     = callPackage /Users/johnw/Projects/gitlib/gitlib-hit {};
-  # gitlibLens    = callPackage /Users/johnw/Projects/gitlib/gitlib-lens {};
-  # gitlibS3      = callPackage /Users/johnw/Projects/gitlib/gitlib-S3 {};
-  # gitlibSample  = callPackage /Users/johnw/Projects/gitlib/gitlib-sample {};
-
-  newartisans   = callPackage /Users/johnw/Documents/newartisans {
-    yuicompressor = pkgs.yuicompressor;
+emacs24Packages = recurseIntoAttrs super.emacs24Packages //
+  { proofgeneral = pkgs.emacs24Packages.proofgeneral_4_3_pre;
+    emacs = pkgs.emacs; 
   };
-
-  hdevtools    = callPackage /Users/johnw/Contracts/OSS/Projects/hdevtools {};
-
-  ########## nixpkgs overrides ##########
-
-  cabalNoLinks = self.cabal.override { enableHyperlinkSource = false; };
-  disableLinks = x: x.override { cabal = self.cabalNoLinks; };
-  systemFileio = self.disableTest  super.systemFileio;
-  shake        = self.disableTest  super.shake;
-  unlambda     = self.disableLinks super.unlambda;
-};
-
-##############################################################################
-
-haskellTools = ghcEnv: ([
-  ghcEnv.ghc
-  sloccount
-  emacs24Packages.idris
-# ] ++ (with ghcEnv.hs-pkgs; [
-#   (my-hoogle-local ghcEnv)
-] ++ (with ghcEnv.hsPkgs; [
-  cabalBounds
-  cabalInstall
-  ghcCore
-  ghcMod
-  hdevtools
-  hlint
-  ihaskell
-  (myHoogleLocal ghcEnv)
-]) ++ (with haskellPackages_ghc784; [
-  cabal2nix
-  codex
-  hobbes
-  simpleMirror
-  hasktags
-  cabalMeta
-  djinn mueval
-  idris
-  threadscope
-  timeplot splot
-  liquidhaskell cvc4
-]) ++ (with haskellngPackages; [
-  hakyll
-]) ++ (with haskell-ng.packages.ghc763; [
-  # lambdabot
-]));
-
-agdaEnv = pkgs.myEnvFun {
-  name = "agda";
-  buildInputs = [
-    haskellPackages.Agda
-    AgdaStdlib
-    #haskellPackages.AgdaPrelude
-  ];
-};
-
-buildToolsEnv = pkgs.buildEnv {
-  name = "buildTools";
-  paths = [
-    ninja
-    scons
-    global idutils
-    autoconf automake114x
-    bazaar bazaarTools
-    ccache
-    cvs cvsps
-    darcs
-    diffstat
-    doxygen
-    # haskellPackages.newartisans
-    fcgi
-    flex
-    htmlTidy
-    lcov
-    mercurial
-    patch
-    subversion
-  ];
-};
 
 emacsToolsEnv = pkgs.buildEnv {
   name = "emacsTools";
-  paths = [ emacs aspell aspellDicts.en ] ++
-    (with emacs24Packages; [
-      auctex
-    ]);
-};
-
-coqEnv = pkgs.myEnvFun {
-  name = "coqHEAD";
-  buildInputs = [ coq_HEAD ];
-};
-
-coq85Env = pkgs.myEnvFun {
-  name = "coq85";
-  buildInputs = [
-    coq_8_5beta1
-    coqPackages.mathcomp_1_5_for_8_5beta1
-    coqPackages.ssreflect_1_5_for_8_5beta1
+  paths = with emacsPackagesNgGen emacs; [
+    emacs
+    aspell
+    aspellDicts.en
+    auctex
   ];
 };
-
-coqToolsEnv = pkgs.buildEnv {
-  name = "coqTools";
-  paths = [
-    ocaml
-    ocamlPackages.camlp5_transitional
-    coq
-    coqPackages.bedrock
-    #coqPackages.containers
-    #coqPackages.coqExtLib
-    coqPackages.coqeal
-    coqPackages.domains
-    coqPackages.fiat
-    coqPackages.flocq
-    coqPackages.heq
-    coqPackages.mathcomp
-    coqPackages.paco
-    coqPackages.ssreflect
-    coqPackages.tlc
-    coqPackages.ynot
-    prooftree
-    emacs24Packages.proofgeneral_4_3_pre
-  ];
-};
-
-langToolsEnv = pkgs.buildEnv {
-  name = "langTools";
-  paths = [
-    clang llvm boost
-    ott isabelle
-    gnumake
-    compcert #verasco
-    # fsharp
-    #rustc                # jww (2015-02-01): now needs procps?
-    sbcl acl2
-    # erlang
-    swiProlog
-    yuicompressor
-  ];
- };
-
-gameToolsEnv = pkgs.buildEnv {
-    name = "gameTools";
-    paths = [ chessdb craftyFull eboard gnugo ];
-  };
-
-gitToolsEnv = pkgs.buildEnv {
-    name = "gitTools";
-    paths = [
-      diffutils patchutils
-      #bup                       # jww: joelteon broken
-      dar
-
-      pkgs.haskellngPackages.git-annex
-      # haskellPackages.gitGpush # jww (2014-10-14): broken
-      pkgs.haskellngPackages.git-monitor
-      pkgs.gitAndTools.gitFull
-      pkgs.gitAndTools.gitflow
-      pkgs.gitAndTools.hub
-      pkgs.gitAndTools.topGit
-
-      haskellPackages.gitAll
-    ];
-  };
 
 systemToolsEnv = pkgs.buildEnv {
   name = "systemTools";
   paths = [
-    haskellPackages.pushme
+    haskellngPackages.pushme
     haskellngPackages.sizes
     haskellngPackages.una
 
-    ack
-    #apg                                # jww (2015-03-09): needs gcc
-    cabextract
+    # ack
+    # apg
+    # cabextract
     bashInteractive
     bashCompletion
     exiv2
-    expect
-    figlet
+    # expect
+    # figlet
     findutils
     gnugrep
     gnupg
@@ -273,32 +110,34 @@ systemToolsEnv = pkgs.buildEnv {
     gnused
     gnutar
     graphviz
-    guile
-    haskellPackages.hours
+    # guile
+    haskell784Packages.hours
     imagemagick_light
     less
-    macvim
-    multitail
-    nixbang
-    p7zip
-    haskellngPackages.pandoc
+    # macvim
+    # multitail
+    haskell784Packages.newartisans
+    # nixbang
+    # p7zip
+    haskell784Packages.pandoc
     parallel
     pinentry
     pv
-    recutils
-    rlwrap
+    # recutils
+    # rlwrap
     screen
     silver-searcher
+    haskellngPackages.simple-mirror
     sqlite
     stow
     time
-    tmux
-    tree
-    #unarj
+    # tmux
+    # tree
+    # unarj
     unrar
     unzip
     watch
-    watchman
+    # watchman
     xz
     z3
     zip
@@ -306,43 +145,72 @@ systemToolsEnv = pkgs.buildEnv {
   ];
 };
 
+gitToolsEnv = pkgs.buildEnv {
+    name = "gitTools";
+    paths = [
+      diffutils patchutils
+      # bup
+      dar
+
+      haskell784Packages.git-annex
+      # pkgs.haskellngPackages.git-gpush
+      haskellngPackages.git-monitor
+      pkgs.gitAndTools.gitFull
+      pkgs.gitAndTools.gitflow
+      pkgs.gitAndTools.hub
+      pkgs.gitAndTools.topGit
+
+      # pkgs.haskellngPackages.git-all
+    ];
+  };
+
 networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
     # arcanist
     aria
     cacert
-    fping
+    # fping
     httrack
     iperf
     mosh
     mtr
     openssl
     rsync
-    s3cmd
+    # s3cmd
     socat2pre
-    spiped
+    # spiped
     wget
-    youtubeDL
+    # youtubeDL
   ];
 };
 
 mailToolsEnv = pkgs.buildEnv {
   name = "mailTools";
   paths = [
-    leafnode dovecot22 dovecot_pigeonhole fetchmail procmail w3m
-    mairix mutt msmtp lbdb contacts spamassassin
+    dovecot22
+    dovecot_pigeonhole
+    leafnode
+    fetchmail
+    procmail
+    # w3m
+    # mairix
+    # mutt
+    # msmtp
+    # lbdb
+    # contacts
+    # spamassassin
   ];
 };
 
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
   paths = [ 
-    texLiveFull
-    # djvu2pdf                                # jww (2015-03-29): broken
+    # texLiveFull
+    # djvu2pdf
     ghostscript
-    # librsvg                                 # jww (2015-03-29): broken
-    poppler poppler_data
+    # librsvg
+    # poppler poppler_data
     libpng
   ];
 };
@@ -350,7 +218,7 @@ publishToolsEnv = pkgs.buildEnv {
 serviceToolsEnv = pkgs.buildEnv {
   name = "serviceTools";
   paths = [
-    nginx
+    # nginx
     postgresql
     redis
     pdnsd
@@ -370,7 +238,7 @@ pythonToolsEnv = pkgs.buildEnv {
     python27Full
     pythonDocs.pdf_letter.python27
     pythonDocs.html.python27
-    python27Packages.ipython
+    # python27Packages.ipython
     python27Packages.pygments
   ];
 };
@@ -380,228 +248,363 @@ rubyToolsEnv = pkgs.buildEnv {
   paths = [ ruby_2_1_2 ];
 };
 
-##############################################################################
-
-# ghc = self.ghc // {
-#   ghcHEAD = pkgs.callPackage /Users/johnw/Contracts/OSS/Projects/ghc {};
-# };
-
-myHoogleLocal = ghcEnv: ghcEnv.hsPkgs.hoogleLocal.override {
-  packages = myPackages ghcEnv;
+buildToolsEnv = pkgs.buildEnv {
+  name = "buildTools";
+  paths = [
+    ninja
+    # scons
+    global idutils
+    autoconf automake114x
+    bazaar bazaarTools
+    # ccache
+    cvs cvsps
+    # darcs
+    diffstat
+    doxygen
+    fcgi
+    flex
+    htmlTidy
+    # lcov
+    mercurial
+    patch
+    subversion
+  ];
 };
 
-# my-hoogle-local = ghcEnv: ghcEnv.hs-pkgs.hoogle-local.override {
-#   packages = my-packages ghcEnv;
+langToolsEnv = pkgs.buildEnv {
+  name = "langTools";
+  paths = [
+    clang llvm boost
+    ott isabelle
+    gnumake
+    # compcert # verasco
+    # fsharp
+    # rustc
+    sbcl acl2
+    # erlang
+    sloccount
+    # swiProlog
+    yuicompressor
+  ];
+ };
+
+# coqEnv = pkgs.myEnvFun {
+#   name = "coqHEAD";
+#   buildInputs = [ coq_HEAD ];
 # };
 
-ghcTools = ghcEnv: pkgs.myEnvFun {
-  name = ghcEnv.name;
-  buildInputs = haskellTools ghcEnv ++ myPackages ghcEnv;
+coq85Env = pkgs.myEnvFun {
+  name = "coq85";
+  buildInputs = [
+    coq_8_5
+    coqPackages_8_5.mathcomp
+    coqPackages_8_5.ssreflect
+  ];
 };
 
-haskellPackages_wrapper = hp: super.recurseIntoAttrs (hp.override {
-  extension = this: sup: haskellProjects {
-    self = this;
-    super = sup;
-    callPackage = super.lib.callPackageWith this;
-  };
+coqToolsEnv = pkgs.buildEnv {
+  name = "coqTools";
+  paths = [
+    ocaml
+    ocamlPackages.camlp5_transitional
+    coq
+    # coq_8_5
+    # coqPackages.bedrock
+    # coqPackages.containers
+    # coqPackages.coqExtLib
+    # coqPackages.coqeal
+    # coqPackages.domains
+    # coqPackages.fiat
+    # coqPackages.flocq
+    # coqPackages.heq
+    coqPackages.mathcomp
+    # coqPackages.paco
+    coqPackages.ssreflect
+    # coqPackages.tlc
+    # coqPackages.ynot
+    prooftree
+  ];
+};
+
+agdaEnv = pkgs.myEnvFun {
+  name = "agda";
+  buildInputs = [
+    haskell784Packages.Agda
+    haskell784Packages.Agda-executable
+  ];
+};
+
+gameToolsEnv = pkgs.buildEnv {
+  name = "gameTools";
+  paths = [ 
+    chessdb 
+    craftyFull
+    eboard
+    gnugo
+  ];
+};
+
+youtube-dl = super.stdenv.lib.overrideDerivation super.youtube-dl (attrs: {
+  ffmpeg = null;
+  postInstall = "";
 });
 
-haskellPackages_ghc742 = haskellPackages_wrapper super.haskellPackages_ghc742;
+idutils = super.stdenv.lib.overrideDerivation super.idutils (attrs: {
+  doCheck = false;
+});
 
-ghcEnv_742 = ghcTools {
-  name    = "ghc742";
-  ghc     = ghc.ghc742;
-  hsPkgs  = haskellPackages_ghc742;
-  # hs-pkgs = haskell-ng.packages.ghc742;
+ghc784Env = pkgs.myEnvFun {
+  name = "ghc784";
+  buildInputs = with haskell784Packages; [
+    (haskell784Packages.ghcWithPackages my-packages)
+    (hoogle-local my-packages haskell784Packages)
+
+    cabal-install
+    ghc-core
+    ghc-mod
+    hdevtools
+    hlint
+    hasktags
+    cabal-meta
+    djinn mueval
+    idris
+    threadscope
+    timeplot splot
+    liquidhaskell
+    hakyll
+  ];
 };
 
-# package.overrideScope (self: super: { mkDerivation = expr:
-#   super.mkDerivation (expr // { enableLibraryProfiling = true; }); })
-# if you want to do all of them, it's packages.ghcVer.override {
-#   overrides = self: super: { mkDerivation = ...; }; }
+ghc742Env = pkgs.myEnvFun {
+  name = "ghc742";
+  buildInputs = with haskell742Packages; [
+    (haskell742Packages.ghcWithPackages my-packages)
+    (hoogle-local my-packages haskell742Packages)
 
-haskellPackages_ghc763 = haskellPackages_wrapper super.haskellPackages_ghc763;
-haskellPackages_ghc763_profiling =
-  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc763.profiling);
-
-ghcEnv_763 = ghcTools {
-  name    = "ghc763";
-  ghc     = ghc.ghc763;
-  hsPkgs  = haskellPackages_ghc763;
-  # hs-pkgs = haskell-ng.packages.ghc763;
-};
-ghcEnv_763_profiling = ghcTools {
-  name    = "ghc763-prof";
-  ghc     = ghc.ghc763;
-  hsPkgs  = haskellPackages_ghc763_profiling;
-  # hs-pkgs = haskell-ng.packages.ghc763.profiling;
-};
-
-haskellPackages_ghc784 =
-  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc784.noProfiling);
-haskellPackages_ghc784_profiling =
-  haskellPackages_wrapper (recurseIntoAttrs haskell.packages_ghc784.profiling);
-
-ghcEnv_784 = ghcTools {
-  name    = "ghc784";
-  ghc     = ghc.ghc784;
-  hsPkgs  = haskellPackages_ghc784;
-  # hs-pkgs = haskell-ng.packages.ghc784;
-};
-ghcEnv_784_profiling = ghcTools {
-  name    = "ghc784-prof";
-  ghc     = ghc.ghc784;
-  hsPkgs  = haskellPackages_ghc784_profiling;
-  # hs-pkgs = haskell-ng.packages.ghc784.profiling;
+    cabal-install
+    ghc-core
+    ghc-mod
+    hdevtools
+    hlint
+    hasktags
+    cabal-meta
+    djinn mueval
+    idris
+    threadscope
+    timeplot splot
+    liquidhaskell
+    hakyll
+  ];
 };
 
-# We can't add our entire package set for GHC HEAD, there are always too many
-# that don't build yet.
-#haskellPackages_ghcHEAD = haskell.packages_ghcHEAD.noProfiling;
-#haskellPackages_ghcHEAD_profiling = haskell.packages_ghcHEAD.profiling;
+ghc763Env = pkgs.myEnvFun {
+  name = "ghc763";
+  buildInputs = with haskell763Packages; [
+    (haskell763Packages.ghcWithPackages my-packages-763)
+    (hoogle-local my-packages-763 haskell763Packages)
 
-#ghcEnv_HEAD = pkgs.myEnvFun {
-#  name = "ghcHEAD";
-#  buildInputs = with haskellPackages_ghcHEAD; [
-#    pkgs.ghc.ghcHEAD cabalInstall_1_20_0_3
-#  ];
-#};
+    cabal-install
+    ghc-core
+    ghc-mod
+    hdevtools
+    hlint
+    hasktags
+    cabal-meta
+    djinn mueval
+    idris
+    threadscope
+    timeplot splot
+    liquidhaskell
+    hakyll
+  ];
+};
 
-##############################################################################
+ghc7101Env = pkgs.myEnvFun {
+  name = "ghc7101";
+  buildInputs = with haskellngPackages; [
+    (haskellngPackages.ghcWithPackages my-packages-next)
+    (hoogle-local my-packages-next haskellngPackages)
 
-myPackages = ghcEnv: with ghcEnv.hsPkgs; [
+    cabal-install
+    ghc-core
+    # ghc-mod
+    # hdevtools
+    hlint
+    simple-mirror
+    hasktags
+    cabal-meta
+    djinn # mueval
+    # idris
+    threadscope
+    # timeplot splot
+    # liquidhaskell
+    # hakyll
+  ];
+};
+
+hoogle-local = f: pkgs: with pkgs;
+  import <nixpkgs/pkgs/development/libraries/haskell/hoogle/local.nix> {
+    inherit stdenv hoogle rehoo ghc;
+    packages = f pkgs ++ [ cheapskate trifecta ];
+  };
+
+haskellFilterSource = paths: src: builtins.filterSource (path: type:
+    let baseName = baseNameOf path; in
+    !( type == "unknown"
+    || builtins.elem baseName
+         ([".hdevtools.sock" ".git" ".cabal-sandbox" "dist"] ++ paths)
+    || stdenv.lib.hasSuffix ".hi" path
+    || stdenv.lib.hasSuffix ".hi-boot" path
+    || stdenv.lib.hasSuffix ".o" path
+    || stdenv.lib.hasSuffix ".o-boot" path
+    || stdenv.lib.hasSuffix ".dyn_o" path
+    || stdenv.lib.hasSuffix ".p_o" path))
+  src;
+
+my-packages = hp: with hp; [
+  # fixplate
+  # orgmode-parse
   Boolean
-  CCdelcont
+  CC-delcont
   HTTP
   HUnit
   IfElse
   MemoTrie
   MissingH
-  MonadCatchIOTransformers
+  MonadCatchIO-transformers
   QuickCheck
-  abstractDeque
-  abstractPar
+  abstract-deque
+  abstract-par
   adjunctions
   aeson
+  arithmoi
   async
   attempt
   attoparsec
-  attoparsecConduit
-  attoparsecEnumerator
-  base16Bytestring
-  base64Bytestring
-  baseUnicodeSymbols
-  basicPrelude
+  attoparsec-conduit
+  attoparsec-enumerator
+  base-unicode-symbols
+  base16-bytestring
+  base64-bytestring
+  basic-prelude
   bifunctors
-  bindingsDSL
-  blazeBuilder
-  blazeBuilderConduit
-  blazeBuilderEnumerator
-  blazeHtml
-  blazeMarkup
-  blazeTextual
-  boolExtras
+  bindings-DSL
+  blaze-builder
+  blaze-builder-conduit
+  blaze-builder-enumerator
+  blaze-html
+  blaze-markup
+  blaze-textual
+  bool-extras
   byteable
   byteorder
   bytes
-  bytestringMmap
-  caseInsensitive
+  bytestring-mmap
+  case-insensitive
   cassava
+  categories
   cereal
-  cerealConduit
+  cereal-conduit
   charset
-  cheapskate
-  chunkedData
-  classyPrelude
-  classyPreludeConduit
+  chunked-data
+  classy-prelude
+  classy-prelude-conduit
   cmdargs
   comonad
-  comonadTransformers
+  comonad-transformers
+  compdata
   composition
   compressed
   cond
   conduit
-  conduitCombinators
-  conduitExtra
+  conduit-combinators
+  conduit-extra
   configurator
   constraints
   contravariant
   convertible
   cpphs
+  criterion
   cryptohash
-  cssText
-  dataChecked
-  dataDefault
-  dataFin
-  dataFix
+  css-text
+  data-checked
+  data-default
+  data-fin
+  data-fix
   derive
   distributive
   dlist
-  dlistInstances
+  dlist-instances
   dns
   doctest
-  doctestProp
+  doctest-prop
   either
-  enclosedExceptions
+  enclosed-exceptions
   errors
   exceptions
-  extensibleExceptions
+  exceptions
+  extensible-exceptions
   failure
-  fastLogger
-  fileEmbed
+  fast-logger
+  fgl
+  file-embed
   filepath
   fingertree
-  # fixplate
   fmlist
   foldl
+  folds
   free
   fsnotify
-  ghcPaths
+  ghc-paths
   groups
   hamlet
   hashable
   hashtables
   haskeline
-  haskellLexer
-  haskellSrc
-  haskellSrcExts
-  haskellSrcMeta
+  haskell-lexer
+  haskell-src
+  haskell-src-exts
+  haskell-src-meta
   hfsevents
   hoopl
   hslogger
   hspec
-  hspecExpectations
-  HStringTemplate
+  hspec-expectations
   html
-  httpClient
-  httpDate
-  httpTypes
-  ioMemoize
-  ioStorage
+  http-client
+  http-date
+  http-types
+  io-memoize
+  io-storage
   json
+  kan-extensions
   keys
-  languageC
-  languageJava
-  languageJavascript
+  language-c
+  language-java
+  language-javascript
   lattices
-  liftedAsync
-  liftedBase
-  listExtras
+  lens
+  lens-datetime
+  lens-family
+  lens-family-core
+  lifted-async
+  lifted-base
+  linear
+  list-extras
   logict
   machines
-  mimeMail
-  mimeTypes
+  mime-mail
+  mime-types
   mmorph
-  monadControl
-  monadCoroutine
-  monadLoops
-  monadPar
-  monadParExtras
-  monadStm
+  monad-control
+  monad-coroutine
+  monad-loops
+  monad-par
+  monad-par-extras
+  monad-stm
   monadloc
-  monoidExtras
-  monoTraversable
+  mono-traversable
+  monoid-extras
   mtl
   multimap
   multirec
@@ -609,36 +612,37 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   newtype
   numbers
   operational
-  optparseApplicative
-  # orgmodeParse
+  optparse-applicative
   pandoc
   parallel
-  parallelIo
+  parallel-io
   parsec
-
+  parsers
   pipes
-  pipesAttoparsec
-  pipesBinary
-  pipesBytestring
-  pipesConcurrency
-  pipesGroup
-  pipesHttp
-  pipesNetwork
-  pipesParse
-  pipesSafe
-  pipesText
-
+  pipes-attoparsec
+  pipes-binary
+  pipes-bytestring
+  pipes-concurrency
+  pipes-group
+  pipes-http
+  pipes-network
+  pipes-parse
+  pipes-safe
+  pipes-shell
+  pipes-text
   pointed
-  posixPaths
-  prettyShow
+  posix-paths
+  postgresql-simple
+  pretty-show
   profunctors
   random
+  recursion-schemes
   reducers
   reflection
-  regexApplicative
-  regexBase
-  regexCompat
-  regexPosix
+  regex-applicative
+  regex-base
+  regex-compat
+  regex-posix
   regular
   resourcet
   retry
@@ -651,37 +655,41 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   shake
   shakespeare
   shelly
-  simpleReflect
+  simple-reflect
+  singletons
   speculation
   split
   spoon
   stm
-  stmChans
-  stmStats
+  stm-chans
+  stm-stats
   strict
+  stringsearch
   strptime
   syb
-  systemFileio
-  systemFilepath
+  system-fileio
+  system-filepath
   tagged
   tar
   tasty
-  tastyHunit
-  tastySmallcheck
-  tastyQuickcheck
+  tasty-hspec
+  tasty-hunit
+  tasty-quickcheck
+  tasty-smallcheck
   temporary
   text
-  textFormat
+  text-format
   these
   thyme
   time
+  time-recurrence
   timeparsers
-  timeRecurrence
   transformers
-  transformersBase
-  unixCompat
+  transformers-base
   uniplate
-  unorderedContainers
+  units
+  unix-compat
+  unordered-containers
   uuid
   vector
   void
@@ -691,312 +699,487 @@ myPackages = ghcEnv: with ghcEnv.hsPkgs; [
   yaml
   zippers
   zlib
-]
+];
 
-++ pkgs.stdenv.lib.optionals
-     (pkgs.stdenv.lib.versionOlder "7.7" ghcEnv.ghc.version)
-     # Packages that only work in 7.8+
-     [ trifecta
-       parsers
-       compdata
-       singletons
-       units
-       criterion
-       kanExtensions
-       pipesShell
-       tastyHspec
-     ]
+my-packages-next = hp: with hp; [
+  # fixplate
+  # orgmode-parse
+  Boolean
+  # CC-delcont
+  HTTP
+  HUnit
+  IfElse
+  MemoTrie
+  MissingH
+  MonadCatchIO-transformers
+  QuickCheck
+  abstract-deque
+  abstract-par
+  adjunctions
+  aeson
+  # arithmoi
+  async
+  attempt
+  attoparsec
+  attoparsec-conduit
+  attoparsec-enumerator
+  base-unicode-symbols
+  base16-bytestring
+  base64-bytestring
+  basic-prelude
+  bifunctors
+  bindings-DSL
+  blaze-builder
+  blaze-builder-conduit
+  blaze-builder-enumerator
+  blaze-html
+  blaze-markup
+  blaze-textual
+  bool-extras
+  byteable
+  byteorder
+  bytes
+  bytestring-mmap
+  case-insensitive
+  cassava
+  categories
+  cereal
+  cereal-conduit
+  charset
+  chunked-data
+  classy-prelude
+  classy-prelude-conduit
+  cmdargs
+  comonad
+  comonad-transformers
+  # compdata
+  composition
+  compressed
+  cond
+  conduit
+  conduit-combinators
+  conduit-extra
+  configurator
+  constraints
+  contravariant
+  convertible
+  cpphs
+  criterion
+  cryptohash
+  css-text
+  data-checked
+  data-default
+  data-fin
+  data-fix
+  derive
+  distributive
+  dlist
+  dlist-instances
+  dns
+  doctest
+  # doctest-prop
+  either
+  enclosed-exceptions
+  errors
+  exceptions
+  exceptions
+  extensible-exceptions
+  failure
+  fast-logger
+  fgl
+  file-embed
+  filepath
+  fingertree
+  fmlist
+  foldl
+  folds
+  free
+  fsnotify
+  ghc-paths
+  groups
+  hamlet
+  hashable
+  hashtables
+  haskeline
+  haskell-lexer
+  haskell-src
+  haskell-src-exts
+  haskell-src-meta
+  hfsevents
+  hoopl
+  hslogger
+  hspec
+  hspec-expectations
+  html
+  http-client
+  http-date
+  http-types
+  io-memoize
+  io-storage
+  json
+  kan-extensions
+  keys
+  language-c
+  language-java
+  language-javascript
+  lattices
+  lens
+  lens-datetime
+  lens-family
+  lens-family-core
+  lifted-async
+  lifted-base
+  linear
+  list-extras
+  logict
+  # machines
+  mime-mail
+  mime-types
+  mmorph
+  monad-control
+  monad-coroutine
+  monad-loops
+  monad-par
+  monad-par-extras
+  monad-stm
+  monadloc
+  mono-traversable
+  monoid-extras
+  mtl
+  multimap
+  multirec
+  network
+  newtype
+  numbers
+  operational
+  optparse-applicative
+  # pandoc
+  parallel
+  parallel-io
+  parsec
+  parsers
+  pipes
+  pipes-attoparsec
+  pipes-binary
+  pipes-bytestring
+  pipes-concurrency
+  pipes-group
+  pipes-http
+  pipes-network
+  pipes-parse
+  pipes-safe
+  pipes-shell
+  pipes-text
+  pointed
+  posix-paths
+  postgresql-simple
+  pretty-show
+  profunctors
+  random
+  # recursion-schemes
+  reducers
+  reflection
+  regex-applicative
+  regex-base
+  regex-compat
+  regex-posix
+  regular
+  resourcet
+  retry
+  rex
+  safe
+  sbv
+  scotty
+  semigroupoids
+  semigroups
+  shake
+  shakespeare
+  shelly
+  simple-reflect
+  # singletons
+  speculation
+  split
+  spoon
+  stm
+  stm-chans
+  stm-stats
+  strict
+  stringsearch
+  strptime
+  syb
+  system-fileio
+  system-filepath
+  tagged
+  tar
+  tasty
+  tasty-hspec
+  tasty-hunit
+  tasty-quickcheck
+  tasty-smallcheck
+  temporary
+  text
+  text-format
+  these
+  # thyme
+  time
+  # time-recurrence
+  # timeparsers
+  transformers
+  transformers-base
+  uniplate
+  # units
+  unix-compat
+  unordered-containers
+  uuid
+  vector
+  void
+  wai
+  warp
+  xhtml
+  yaml
+  zippers
+  zlib
+];
 
-++ pkgs.stdenv.lib.optionals
-     (pkgs.stdenv.lib.versionOlder "7.5" ghcEnv.ghc.version)
-     # Packages that only work in 7.6+
-     [ folds
-       linear
-       lens
-       lensFamily
-       lensFamilyCore
-       lensDatetime
-     ]
-
-++ pkgs.stdenv.lib.optionals
-     (pkgs.stdenv.lib.versionOlder ghcEnv.ghc.version "7.9")
-     # Packages that do not work in 7.10+
-     [ stringsearch
-       exceptions
-       arithmoi
-       fgl
-     ]
-
-++ pkgs.stdenv.lib.optionals
-     (pkgs.stdenv.lib.versionOlder ghcEnv.ghc.version "7.7")
-     # Packages that do not work in 7.8+
-     [ recursionSchemes
-     ]
-;
-
-# my-packages = ghcEnv: with ghcEnv.hs-pkgs; [
-#   Boolean
-#   CCdelcont
-#   HTTP
-#   HUnit
-#   IfElse
-#   MemoTrie
-#   MissingH
-#   MonadCatchIOTransformers
-#   QuickCheck
-#   abstract-deque
-#   abstract-par
-#   adjunctions
-#   aeson
-#   async
-#   attempt
-#   attoparsec
-#   attoparsec-conduit
-#   attoparsec-enumerator
-#   base16-bytestring
-#   base64-bytestring
-#   base-unicode-symbols
-#   basic-prelude
-#   bifunctors
-#   bindings-DSL
-#   blaze-builder
-#   blaze-builder-conduit
-#   blaze-builder-enumerator
-#   blaze-html
-#   blaze-markup
-#   blaze-textual
-#   bool-extras
-#   byteable
-#   byteorder
-#   bytes
-#   bytestring-mmap
-#   case-insensitive
-#   cassava
-#   cereal
-#   cereal-conduit
-#   charset
-#   cheapskate
-#   chunked-data
-#   classy-prelude
-#   classy-prelude-conduit
-#   cmdargs
-#   comonad
-#   comonad-transformers
-#   composition
-#   compressed
-#   cond
-#   conduit
-#   conduit-combinators
-#   conduit-extra
-#   configurator
-#   constraints
-#   contravariant
-#   convertible
-#   cpphs
-#   cryptohash
-#   css-text
-#   data-checked
-#   data-default
-#   data-fin
-#   data-fix
-#   derive
-#   distributive
-#   dlist
-#   dlist-instances
-#   dns
-#   doctest
-#   doctest-prop
-#   either
-#   enclosed-exceptions
-#   errors
-#   exceptions
-#   extensible-exceptions
-#   failure
-#   fast-logger
-#   file-embed
-#   filepath
-#   fingertree
-#   # fixplate
-#   fmlist
-#   foldl
-#   free
-#   fsnotify
-#   ghc-paths
-#   groups
-#   hamlet
-#   hashable
-#   hashtables
-#   haskeline
-#   haskell-lexer
-#   haskell-src
-#   haskell-src-exts
-#   haskell-src-meta
-#   hfsevents
-#   hoopl
-#   hslogger
-#   hspec
-#   hspec-expectations
-#   hstring-template
-#   html
-#   http-client
-#   http-date
-#   http-types
-#   io-memoize
-#   io-storage
-#   json
-#   keys
-#   language-c
-#   language-java
-#   language-javascript
-#   lattices
-#   lifted-async
-#   lifted-base
-#   list-extras
-#   logict
-#   machines
-#   mime-mail
-#   mime-types
-#   mmorph
-#   monad-control
-#   monad-coroutine
-#   monad-loops
-#   monad-par
-#   monad-par-extras
-#   monad-stm
-#   monadloc
-#   monoid-extras
-#   mono-traversable
-#   mtl
-#   multimap
-#   multirec
-#   network
-#   newtype
-#   numbers
-#   operational
-#   optparse-applicative
-#   # orgmode-parse
-#   pandoc
-#   parallel
-#   parallel-io
-#   parsec
-
-#   pipes
-#   pipes-attoparsec
-#   pipes-binary
-#   pipes-bytestring
-#   pipes-concurrency
-#   pipes-group
-#   pipes-http
-#   pipes-network
-#   pipes-parse
-#   pipes-safe
-#   pipes-text
-
-#   pointed
-#   posix-paths
-#   pretty-show
-#   profunctors
-#   random
-#   reducers
-#   reflection
-#   regex-applicative
-#   regex-base
-#   regex-compat
-#   regex-posix
-#   regular
-#   resourcet
-#   retry
-#   rex
-#   safe
-#   sbv
-#   scotty
-#   semigroupoids
-#   semigroups
-#   shake
-#   shakespeare
-#   shelly
-#   simple-reflect
-#   speculation
-#   split
-#   spoon
-#   stm
-#   stm-chans
-#   stm-stats
-#   strict
-#   strptime
-#   syb
-#   system-fileio
-#   system-filepath
-#   tagged
-#   tar
-#   tasty
-#   tasty-hunit
-#   tasty-smallcheck
-#   tasty-quickcheck
-#   temporary
-#   text
-#   text-format
-#   these
-#   thyme
-#   time
-#   timeparsers
-#   time-recurrence
-#   transformers
-#   transformers-base
-#   unix-compat
-#   uniplate
-#   unordered-containers
-#   uuid
-#   vector
-#   void
-#   wai
-#   warp
-#   xhtml
-#   yaml
-#   zippers
-#   zlib
-# ]
-
-# ++ pkgs.stdenv.lib.optionals
-#      (pkgs.stdenv.lib.version-Older "7.7" ghc-Env.ghc.version)
-#      # Packages that only work in 7.8+
-#      [ trifecta
-#        parsers
-#        compdata
-#        singletons
-#        units
-#        criterion
-#        kan-extensions
-#        pipes-shell
-#        tasty-hspec
-#      ]
-
-# ++ pkgs.stdenv.lib.optionals
-#      (pkgs.stdenv.lib.version-Older "7.5" ghc-Env.ghc.version)
-#      # Packages that only work in 7.6+
-#      [ folds
-#        linear
-#        lens
-#        lens-family
-#        lens-family-core
-#        lens-datetime
-#      ]
-
-# ++ pkgs.stdenv.lib.optionals
-#      (pkgs.stdenv.lib.version-Older ghc-Env.ghc.version "7.9")
-#      # Packages that do not work in 7.10+
-#      [ stringsearch
-#        exceptions
-#        arithmoi
-#        fgl
-#      ]
-
-# ++ pkgs.stdenv.lib.optionals
-#      (pkgs.stdenv.lib.version-Older ghc-Env.ghc.version "7.7")
-#      # Packages that do not work in 7.8+
-#      [ recursion-schemes
-#      ]
-# ;
+my-packages-763 = hp: with hp; [
+  # fixplate
+  # orgmode-parse
+  Boolean
+  CC-delcont
+  HTTP
+  HUnit
+  IfElse
+  MemoTrie
+  MissingH
+  MonadCatchIO-transformers
+  QuickCheck
+  abstract-deque
+  abstract-par
+  adjunctions
+  aeson
+  arithmoi
+  async
+  attempt
+  attoparsec
+  attoparsec-conduit
+  attoparsec-enumerator
+  base-unicode-symbols
+  base16-bytestring
+  base64-bytestring
+  basic-prelude
+  bifunctors
+  bindings-DSL
+  blaze-builder
+  blaze-builder-conduit
+  blaze-builder-enumerator
+  blaze-html
+  blaze-markup
+  blaze-textual
+  bool-extras
+  byteable
+  byteorder
+  bytes
+  bytestring-mmap
+  case-insensitive
+  cassava
+  categories
+  cereal
+  cereal-conduit
+  charset
+  chunked-data
+  classy-prelude
+  classy-prelude-conduit
+  cmdargs
+  comonad
+  comonad-transformers
+  compdata
+  composition
+  compressed
+  cond
+  conduit
+  conduit-combinators
+  conduit-extra
+  configurator
+  constraints
+  contravariant
+  convertible
+  cpphs
+  criterion
+  cryptohash
+  css-text
+  data-checked
+  data-default
+  data-fin
+  data-fix
+  derive
+  distributive
+  dlist
+  dlist-instances
+  dns
+  doctest
+  doctest-prop
+  either
+  enclosed-exceptions
+  errors
+  exceptions
+  exceptions
+  extensible-exceptions
+  failure
+  fast-logger
+  fgl
+  file-embed
+  filepath
+  fingertree
+  fmlist
+  foldl
+  folds
+  free
+  fsnotify
+  ghc-paths
+  groups
+  hamlet
+  hashable
+  hashtables
+  haskeline
+  haskell-lexer
+  haskell-src
+  haskell-src-exts
+  haskell-src-meta
+  hfsevents
+  hoopl
+  hslogger
+  hspec
+  hspec-expectations
+  html
+  http-client
+  http-date
+  http-types
+  io-memoize
+  io-storage
+  json
+  kan-extensions
+  keys
+  language-c
+  language-java
+  language-javascript
+  lattices
+  lens
+  lens-datetime
+  lens-family
+  lens-family-core
+  lifted-async
+  lifted-base
+  linear
+  list-extras
+  logict
+  machines
+  mime-mail
+  mime-types
+  mmorph
+  monad-control
+  monad-coroutine
+  monad-loops
+  monad-par
+  monad-par-extras
+  monad-stm
+  monadloc
+  mono-traversable
+  monoid-extras
+  mtl
+  multimap
+  multirec
+  network
+  newtype
+  numbers
+  operational
+  optparse-applicative
+  pandoc
+  parallel
+  parallel-io
+  parsec
+  parsers
+  pipes
+  pipes-attoparsec
+  pipes-binary
+  pipes-bytestring
+  pipes-concurrency
+  pipes-group
+  pipes-http
+  pipes-network
+  pipes-parse
+  pipes-safe
+  pipes-shell
+  pipes-text
+  pointed
+  posix-paths
+  postgresql-simple
+  pretty-show
+  profunctors
+  random
+  recursion-schemes
+  reducers
+  reflection
+  regex-applicative
+  regex-base
+  regex-compat
+  regex-posix
+  regular
+  resourcet
+  retry
+  rex
+  safe
+  sbv
+  scotty
+  semigroupoids
+  semigroups
+  shake
+  shakespeare
+  shelly
+  simple-reflect
+  singletons
+  speculation
+  split
+  spoon
+  stm
+  stm-chans
+  stm-stats
+  strict
+  stringsearch
+  strptime
+  syb
+  system-fileio
+  system-filepath
+  tagged
+  tar
+  tasty
+  tasty-hspec
+  tasty-hunit
+  tasty-quickcheck
+  tasty-smallcheck
+  temporary
+  text
+  text-format
+  these
+  thyme
+  time
+  time-recurrence
+  timeparsers
+  transformers
+  transformers-base
+  uniplate
+  units
+  unix-compat
+  unordered-containers
+  uuid
+  vector
+  void
+  wai
+  warp
+  xhtml
+  yaml
+  zippers
+  zlib
+];
 
 };
 
