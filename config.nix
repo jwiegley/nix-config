@@ -10,45 +10,46 @@ myHaskellPackages = hp: hp.override {
       yuicompressor = pkgs.yuicompressor;
     };
   
-    c2hsc         = self.callPackage ~/Projects/c2hsc {};
-    git-all       = self.callPackage ~/Projects/git-all {};
-    hours         = self.callPackage ~/Projects/hours {};
-    pushme        = self.callPackage ~/Projects/pushme {};
-    rehoo         = self.callPackage ~/Projects/rehoo {};
-    simple-mirror = self.callPackage ~/Projects/simple-mirror {};
-    sizes         = self.callPackage ~/Projects/sizes {};
-    una           = self.callPackage ~/Projects/una {};
+    ghc-issues    = self.callPackage ~/src/ghc-issues {};
+    c2hsc         = self.callPackage ~/src/c2hsc {};
+    git-all       = self.callPackage ~/src/git-all {};
+    hours         = self.callPackage ~/src/hours {};
+    pushme        = self.callPackage ~/src/pushme {};
+    rehoo         = self.callPackage ~/src/rehoo {};
+    simple-mirror = self.callPackage ~/src/simple-mirror {};
+    sizes         = self.callPackage ~/src/sizes {};
+    una           = self.callPackage ~/src/una {};
   
-    async-pool     = self.callPackage ~/Projects/async-pool {};
-    bindings-DSL   = self.callPackage ~/Projects/bindings-dsl {};
-    commodities    = self.callPackage ~/Projects/ledger/new/commodities {};
-    consistent     = self.callPackage ~/Projects/consistent {};
-    find-conduit   = self.callPackage ~/Projects/find-conduit {};
-    fuzzcheck      = self.callPackage ~/Projects/fuzzcheck {};
-    github         = self.callPackage ~/Projects/github {};
-    hnix           = self.callPackage ~/Projects/hnix {};
-    ipcvar         = self.callPackage ~/Projects/ipcvar {};
-    logging        = self.callPackage ~/Projects/logging {};
-    monad-extras   = self.callPackage ~/Projects/monad-extras {};
-    rest-client    = self.callPackage ~/Projects/rest-client {};
-    simple-conduit = self.callPackage ~/Projects/simple-conduit {};
+    async-pool     = self.callPackage ~/src/async-pool {};
+    bindings-DSL   = self.callPackage ~/src/bindings-dsl {};
+    commodities    = self.callPackage ~/src/ledger/new/commodities {};
+    consistent     = self.callPackage ~/src/consistent {};
+    find-conduit   = self.callPackage ~/src/find-conduit {};
+    fuzzcheck      = self.callPackage ~/src/fuzzcheck {};
+    github         = self.callPackage ~/src/github {};
+    hnix           = self.callPackage ~/src/hnix {};
+    ipcvar         = self.callPackage ~/src/ipcvar {};
+    logging        = self.callPackage ~/src/logging {};
+    monad-extras   = self.callPackage ~/src/monad-extras {};
+    rest-client    = self.callPackage ~/src/rest-client {};
+    simple-conduit = self.callPackage ~/src/simple-conduit {};
   
-    gitlib         = self.callPackage ~/Projects/gitlib/gitlib {};
-    gitlib-test    = self.callPackage ~/Projects/gitlib/gitlib-test {};
-    hlibgit2       = self.callPackage ~/Projects/gitlib/hlibgit2 {};
-    gitlib-libgit2 = self.callPackage ~/Projects/gitlib/gitlib-libgit2 {};
-    gitlib-cmdline = self.callPackage ~/Projects/gitlib/gitlib-cmdline {
+    gitlib         = self.callPackage ~/src/gitlib/gitlib {};
+    gitlib-test    = self.callPackage ~/src/gitlib/gitlib-test {};
+    hlibgit2       = self.callPackage ~/src/gitlib/hlibgit2 {};
+    gitlib-libgit2 = self.callPackage ~/src/gitlib/gitlib-libgit2 {};
+    gitlib-cmdline = self.callPackage ~/src/gitlib/gitlib-cmdline {
       git = gitAndTools.git;
     };
-    gitlib-cross   = self.callPackage ~/Projects/gitlib/gitlib-cross {
+    gitlib-cross   = self.callPackage ~/src/gitlib/gitlib-cross {
       git = gitAndTools.git;
     };
-    gitlib-hit     = self.callPackage ~/Projects/gitlib/gitlib-hit {};
-    gitlib-lens    = self.callPackage ~/Projects/gitlib/gitlib-lens {};
-    gitlib-s3      = self.callPackage ~/Projects/gitlib/gitlib-S3 {};
-    gitlib-sample  = self.callPackage ~/Projects/gitlib/gitlib-sample {};
-    git-monitor    = self.callPackage ~/Projects/gitlib/git-monitor {};
-    git-gpush      = self.callPackage ~/Projects/gitlib/git-gpush {};
+    gitlib-hit     = self.callPackage ~/src/gitlib/gitlib-hit {};
+    gitlib-lens    = self.callPackage ~/src/gitlib/gitlib-lens {};
+    gitlib-s3      = self.callPackage ~/src/gitlib/gitlib-S3 {};
+    gitlib-sample  = self.callPackage ~/src/gitlib/gitlib-sample {};
+    git-monitor    = self.callPackage ~/src/gitlib/git-monitor {};
+    git-gpush      = self.callPackage ~/src/gitlib/git-gpush {};
   
     hdevtools = self.callPackage ~/oss/hdevtools {};
   
@@ -65,9 +66,8 @@ myHaskellPackages = hp: hp.override {
 haskellngPackages  = myHaskellPackages super.haskellngPackages;
 haskell784Packages = myHaskellPackages super.haskell-ng.packages.ghc784;
 haskell763Packages = myHaskellPackages super.haskell-ng.packages.ghc763;
-haskell742Packages = myHaskellPackages super.haskell-ng.packages.ghc742;
 
-ledger = super.callPackage ~/Projects/ledger {};
+ledger = super.callPackage ~/src/ledger {};
 
 emacs = if super.stdenv.isDarwin
         then super.emacs24Macport_24_5
@@ -85,17 +85,18 @@ emacsToolsEnv = pkgs.buildEnv {
     aspell
     aspellDicts.en
     auctex
+    emacs24Packages.proofgeneral
   ];
 };
 
 systemToolsEnv = pkgs.buildEnv {
   name = "systemTools";
   paths = [
-    haskellngPackages.pushme
+    # haskellngPackages.pushme
     haskellngPackages.sizes
     haskellngPackages.una
 
-    # ack
+    ack
     # apg
     # cabextract
     bashInteractive
@@ -119,12 +120,12 @@ systemToolsEnv = pkgs.buildEnv {
     haskell784Packages.newartisans
     # nixbang
     # p7zip
-    haskell784Packages.pandoc
+    haskellngPackages.pandoc
     parallel
     pinentry
     pv
     # recutils
-    # rlwrap
+    rlwrap
     screen
     silver-searcher
     haskellngPackages.simple-mirror
@@ -132,7 +133,7 @@ systemToolsEnv = pkgs.buildEnv {
     stow
     time
     # tmux
-    # tree
+    tree
     # unarj
     unrar
     unzip
@@ -159,14 +160,16 @@ gitToolsEnv = pkgs.buildEnv {
       pkgs.gitAndTools.gitflow
       pkgs.gitAndTools.hub
       pkgs.gitAndTools.topGit
+      pkgs.gitAndTools.git-imerge
 
-      # pkgs.haskellngPackages.git-all
+      pkgs.haskellngPackages.git-all
     ];
   };
 
 networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
+    ansible
     # arcanist
     aria
     cacert
@@ -177,11 +180,11 @@ networkToolsEnv = pkgs.buildEnv {
     mtr
     openssl
     rsync
-    # s3cmd
+    s3cmd
     socat2pre
-    # spiped
+    spiped
     wget
-    # youtubeDL
+    youtubeDL
   ];
 };
 
@@ -206,11 +209,11 @@ mailToolsEnv = pkgs.buildEnv {
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
   paths = [ 
-    # texLiveFull
+    texLiveFull
     # djvu2pdf
     ghostscript
     # librsvg
-    # poppler poppler_data
+    poppler poppler_data
     libpng
   ];
 };
@@ -308,20 +311,19 @@ coqToolsEnv = pkgs.buildEnv {
     ocaml
     ocamlPackages.camlp5_transitional
     coq
-    # coq_8_5
-    # coqPackages.bedrock
+    coqPackages.fiat coqPackages.bedrock
     # coqPackages.containers
     # coqPackages.coqExtLib
     # coqPackages.coqeal
     # coqPackages.domains
-    # coqPackages.fiat
     # coqPackages.flocq
     # coqPackages.heq
     coqPackages.mathcomp
     # coqPackages.paco
+    coqPackages.QuickChick
     coqPackages.ssreflect
-    # coqPackages.tlc
-    # coqPackages.ynot
+    coqPackages.tlc
+    coqPackages.ynot
     prooftree
   ];
 };
@@ -346,6 +348,7 @@ gameToolsEnv = pkgs.buildEnv {
 
 youtube-dl = super.stdenv.lib.overrideDerivation super.youtube-dl (attrs: {
   ffmpeg = null;
+  pandoc = null;
   postInstall = "";
 });
 
@@ -365,34 +368,13 @@ ghc784Env = pkgs.myEnvFun {
     hdevtools
     hlint
     hasktags
+    # hpack
     cabal-meta
-    djinn mueval
-    idris
-    threadscope
+    djinn #mueval
+    # idris
+    # threadscope
     timeplot splot
-    liquidhaskell
-    hakyll
-  ];
-};
-
-ghc742Env = pkgs.myEnvFun {
-  name = "ghc742";
-  buildInputs = with haskell742Packages; [
-    (haskell742Packages.ghcWithPackages my-packages)
-    (hoogle-local my-packages haskell742Packages)
-
-    cabal-install
-    ghc-core
-    ghc-mod
-    hdevtools
-    hlint
-    hasktags
-    cabal-meta
-    djinn mueval
-    idris
-    threadscope
-    timeplot splot
-    liquidhaskell
+    # liquidhaskell
     hakyll
   ];
 };
@@ -409,6 +391,7 @@ ghc763Env = pkgs.myEnvFun {
     hdevtools
     hlint
     hasktags
+    # hpack
     cabal-meta
     djinn mueval
     idris
@@ -432,6 +415,7 @@ ghc7101Env = pkgs.myEnvFun {
     hlint
     simple-mirror
     hasktags
+    # hpack
     cabal-meta
     djinn # mueval
     # idris
@@ -443,7 +427,7 @@ ghc7101Env = pkgs.myEnvFun {
 };
 
 hoogle-local = f: pkgs: with pkgs;
-  import <nixpkgs/pkgs/development/libraries/haskell/hoogle/local.nix> {
+  import ~/.nixpkgs/local.nix {
     inherit stdenv hoogle rehoo ghc;
     packages = f pkgs ++ [ cheapskate trifecta ];
   };
@@ -453,6 +437,7 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
     !( type == "unknown"
     || builtins.elem baseName
          ([".hdevtools.sock" ".git" ".cabal-sandbox" "dist"] ++ paths)
+    || stdenv.lib.hasSuffix ".sock" path
     || stdenv.lib.hasSuffix ".hi" path
     || stdenv.lib.hasSuffix ".hi-boot" path
     || stdenv.lib.hasSuffix ".o" path
@@ -512,7 +497,7 @@ my-packages = hp: with hp; [
   cmdargs
   comonad
   comonad-transformers
-  compdata
+  # compdata
   composition
   compressed
   cond
@@ -636,7 +621,7 @@ my-packages = hp: with hp; [
   pretty-show
   profunctors
   random
-  recursion-schemes
+  # recursion-schemes
   reducers
   reflection
   regex-applicative
@@ -1116,7 +1101,7 @@ my-packages-763 = hp: with hp; [
   pretty-show
   profunctors
   random
-  recursion-schemes
+  # recursion-schemes
   reducers
   reflection
   regex-applicative
