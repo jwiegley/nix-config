@@ -4,12 +4,15 @@ packageOverrides = super: let self = super.pkgs; in with self; rec {
 
 myHaskellPackages = hp: hp.override {
   overrides = self: super: with pkgs.haskell-ng.lib; {
-    linearscan = self.callPackage ~/bae/linearscan {};
+    linearscan       = self.callPackage ~/bae/linearscan {};
+    linearscan-hoopl = self.callPackage ~/bae/linearscan-hoopl {};
   
     newartisans = self.callPackage ~/doc/newartisans {
       yuicompressor = pkgs.yuicompressor;
     };
   
+    recursion-schemes = self.callPackage ~/src/recursion-schemes {};
+
     ghc-issues    = self.callPackage ~/src/ghc-issues {};
     c2hsc         = self.callPackage ~/src/c2hsc {};
     git-all       = self.callPackage ~/src/git-all {};
@@ -92,7 +95,7 @@ emacsToolsEnv = pkgs.buildEnv {
 systemToolsEnv = pkgs.buildEnv {
   name = "systemTools";
   paths = [
-    # haskellngPackages.pushme
+    haskellngPackages.pushme
     haskellngPackages.sizes
     haskellngPackages.una
 
@@ -117,7 +120,7 @@ systemToolsEnv = pkgs.buildEnv {
     less
     # macvim
     # multitail
-    haskell784Packages.newartisans
+    # haskell784Packages.newartisans
     # nixbang
     # p7zip
     haskellngPackages.pandoc
@@ -184,7 +187,7 @@ networkToolsEnv = pkgs.buildEnv {
     socat2pre
     spiped
     wget
-    youtubeDL
+    youtubeDL ffmpeg
   ];
 };
 
@@ -221,7 +224,7 @@ publishToolsEnv = pkgs.buildEnv {
 serviceToolsEnv = pkgs.buildEnv {
   name = "serviceTools";
   paths = [
-    # nginx
+    nginx
     postgresql
     redis
     pdnsd
@@ -261,13 +264,13 @@ buildToolsEnv = pkgs.buildEnv {
     bazaar bazaarTools
     # ccache
     cvs cvsps
-    # darcs
+    darcs
     diffstat
     doxygen
     fcgi
     flex
     htmlTidy
-    # lcov
+    lcov
     mercurial
     patch
     subversion
@@ -371,9 +374,10 @@ ghc784Env = pkgs.myEnvFun {
     # hpack
     cabal-meta
     djinn #mueval
+    pointfree
     # idris
     # threadscope
-    timeplot splot
+    # timeplot splot
     # liquidhaskell
     hakyll
   ];
@@ -608,6 +612,7 @@ my-packages = hp: with hp; [
   pipes-binary
   pipes-bytestring
   pipes-concurrency
+  pipes-extras
   pipes-group
   pipes-http
   pipes-network
@@ -656,6 +661,7 @@ my-packages = hp: with hp; [
   system-filepath
   tagged
   tar
+  tardis
   tasty
   tasty-hspec
   tasty-hunit
@@ -848,6 +854,7 @@ my-packages-next = hp: with hp; [
   pipes-binary
   pipes-bytestring
   pipes-concurrency
+  pipes-extras
   pipes-group
   pipes-http
   pipes-network
@@ -896,6 +903,7 @@ my-packages-next = hp: with hp; [
   system-filepath
   tagged
   tar
+  tardis
   tasty
   tasty-hspec
   tasty-hunit
@@ -1088,6 +1096,7 @@ my-packages-763 = hp: with hp; [
   pipes-binary
   pipes-bytestring
   pipes-concurrency
+  pipes-extras
   pipes-group
   pipes-http
   pipes-network
