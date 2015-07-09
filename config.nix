@@ -4,8 +4,9 @@ packageOverrides = super: let self = super.pkgs; in with self; rec {
 
 myHaskellPackages = hp: hp.override {
   overrides = self: super: with pkgs.haskell-ng.lib; {
-    linearscan       = self.callPackage ~/bae/linearscan {};
-    linearscan-hoopl = self.callPackage ~/bae/linearscan-hoopl {};
+    coq-haskell      = self.callPackage ~/src/linearscan/Hask {};
+    linearscan       = self.callPackage ~/src/linearscan {};
+    linearscan-hoopl = self.callPackage ~/src/linearscan-hoopl {};
   
     newartisans = self.callPackage ~/doc/newartisans {
       yuicompressor = pkgs.yuicompressor;
@@ -13,15 +14,15 @@ myHaskellPackages = hp: hp.override {
   
     recursion-schemes = self.callPackage ~/src/recursion-schemes {};
 
-    ghc-issues    = self.callPackage ~/src/ghc-issues {};
-    c2hsc         = self.callPackage ~/src/c2hsc {};
-    git-all       = self.callPackage ~/src/git-all {};
-    hours         = self.callPackage ~/src/hours {};
-    pushme        = self.callPackage ~/src/pushme {};
-    rehoo         = self.callPackage ~/src/rehoo {};
-    simple-mirror = self.callPackage ~/src/simple-mirror {};
-    sizes         = self.callPackage ~/src/sizes {};
-    una           = self.callPackage ~/src/una {};
+    ghc-issues     = self.callPackage ~/src/ghc-issues {};
+    c2hsc          = self.callPackage ~/src/c2hsc {};
+    git-all        = self.callPackage ~/src/git-all {};
+    hours          = self.callPackage ~/src/hours {};
+    pushme         = self.callPackage ~/src/pushme {};
+    rehoo          = self.callPackage ~/src/rehoo {};
+    simple-mirror  = self.callPackage ~/src/simple-mirror {};
+    sizes          = self.callPackage ~/src/sizes {};
+    una            = self.callPackage ~/src/una {};
   
     async-pool     = self.callPackage ~/src/async-pool {};
     bindings-DSL   = self.callPackage ~/src/bindings-dsl {};
@@ -54,20 +55,172 @@ myHaskellPackages = hp: hp.override {
     git-monitor    = self.callPackage ~/src/gitlib/git-monitor {};
     git-gpush      = self.callPackage ~/src/gitlib/git-gpush {};
   
-    hdevtools = self.callPackage ~/oss/hdevtools {};
+    hdevtools    = self.callPackage ~/oss/hdevtools {};
   
     systemFileio = dontCheck super.systemFileio;
     shake        = dontCheck super.shake;
     singletons   = dontCheck super.singletons;
-  
-    cabalNoLinks = self.cabal.override { enableHyperlinkSource = false; };
-    disableLinks = x: x.override { cabal = self.cabalNoLinks; };
-    unlambda     = self.disableLinks super.unlambda;
   };
 };
 
-haskellngPackages  = myHaskellPackages super.haskellngPackages;
-haskell784Packages = myHaskellPackages super.haskell-ng.packages.ghc784;
+myHaskellPackages763 = hp: hp.override {
+  overrides = self: super: with pkgs.haskell-ng.lib; {
+    IOSpec = appendPatch (doJailbreak super.IOSpec) ./IOSpec.patch;
+    random = dontHaddock super.random;
+    regex-posix = dontHaddock super.regex-posix;
+    ansi-terminal = dontHaddock super.ansi-terminal;
+    hostname = dontHaddock super.hostname;
+    ansi-wl-pprint = dontHaddock super.ansi-wl-pprint;
+    test-framework = dontHaddock super.test-framework;
+    primitive = dontHaddock super.primitive;
+    tf-random = dontHaddock super.tf-random;
+    QuickCheck = dontHaddock super.QuickCheck;
+    QuickCheck-safe = dontHaddock super.QuickCheck-safe;
+    stm = dontHaddock super.stm;
+    extensible-exceptions = dontHaddock super.extensible-exceptions;
+    test-framework-quickcheck2 = dontHaddock super.test-framework-quickcheck2;
+    exceptions = dontHaddock super.exceptions;
+    temporary = dontHaddock super.temporary;
+    MonadRandom = dontHaddock super.MonadRandom;
+    random-shuffle = dontHaddock super.random-shuffle;
+    terminfo = dontHaddock super.terminfo;
+    HUnit = dontHaddock super.HUnit;
+    syb = dontHaddock super.syb;
+    ChasingBottoms = dontHaddock super.ChasingBottoms;
+    test-framework-hunit = dontHaddock super.test-framework-hunit;
+    unordered-containers = dontHaddock super.unordered-containers;
+    semigroups = dontHaddock super.semigroups;
+    void = dontHaddock super.void;
+    MemoTrie = dontHaddock super.MemoTrie;
+    vector-space = dontHaddock super.vector-space;
+    th-extras = dontHaddock super.th-extras;
+    dependent-sum-template = dontHaddock super.dependent-sum-template;
+    dlist = dontHaddock super.dlist;
+    utf8-string = dontHaddock super.utf8-string;
+    blaze-builder = dontHaddock super.blaze-builder;
+    tagged = dontHaddock super.tagged;
+    optparse-applicative = dontHaddock super.optparse-applicative;
+    parsec = dontHaddock super.parsec;
+    regex-tdfa-rc = dontHaddock super.regex-tdfa-rc;
+    async = dontHaddock super.async;
+    tasty = dontHaddock super.tasty;
+    tasty-hunit = dontHaddock super.tasty-hunit;
+    pcre-light = dontHaddock super.pcre-light;
+    tasty-quickcheck = dontHaddock super.tasty-quickcheck;
+    tasty-smallcheck = dontHaddock super.tasty-smallcheck;
+    generic-deriving = dontHaddock super.generic-deriving;
+    tasty-ant-xml = dontHaddock super.tasty-ant-xml;
+    scientific = dontHaddock super.scientific;
+    quickcheck-unicode = dontHaddock super.quickcheck-unicode;
+    vector = dontHaddock super.vector;
+    attoparsec = dontHaddock super.attoparsec;
+    aeson = dontHaddock super.aeson;
+    quickcheck-io = dontHaddock super.quickcheck-io;
+    hspec-expectations = dontHaddock super.hspec-expectations;
+    hspec-meta = dontHaddock super.hspec-meta;
+    hspec-discover = dontHaddock super.hspec-discover;
+    data-default-instances-dlist = dontHaddock super.data-default-instances-dlist;
+    hspec-core = dontHaddock super.hspec-core;
+    hspec = dontHaddock super.hspec;
+    base-compat = dontHaddock super.base-compat;
+    stringbuilder = dontHaddock super.stringbuilder;
+    doctest = dontHaddock super.doctest;
+    network = dontHaddock super.network;
+    network-uri = dontHaddock super.network-uri;
+    HTTP = dontHaddock super.HTTP;
+    js-flot = dontHaddock super.js-flot;
+    language-haskell-extract = dontHaddock super.language-haskell-extract;
+    StateVar = dontHaddock super.StateVar;
+    contravariant = dontHaddock super.contravariant;
+    oeis = dontHaddock super.oeis;
+    data-default = dontHaddock super.data-default;
+    vector-th-unbox = dontHaddock super.vector-th-unbox;
+    ghc-mtl = dontHaddock super.ghc-mtl;
+    hint = dontHaddock super.hint;
+    show = dontHaddock super.show;
+    mueval = dontHaddock super.mueval;
+    hslogger = dontHaddock super.hslogger;
+    cereal = dontHaddock super.cereal;
+    stateref = dontHaddock super.stateref;
+    mwc-random = dontHaddock super.mwc-random;
+    flexible-defaults = dontHaddock super.flexible-defaults;
+    mersenne-random-pure64 = dontHaddock super.mersenne-random-pure64;
+    random-source = dontHaddock super.random-source;
+    math-functions = dontHaddock super.math-functions;
+    bytes = dontHaddock super.bytes;
+    base-orphans = dontHaddock super.base-orphans;
+    bifunctors = dontHaddock super.bifunctors;
+    distributive = dontHaddock super.distributive;
+    comonad = dontHaddock super.comonad;
+    semigroupoids = dontHaddock super.semigroupoids;
+    profunctors = dontHaddock super.profunctors;
+    reflection = dontHaddock super.reflection;
+    prelude-extras = dontHaddock super.prelude-extras;
+    free = dontHaddock super.free;
+    parallel = dontHaddock super.parallel;
+    adjunctions = dontHaddock super.adjunctions;
+    kan-extensions = dontHaddock super.kan-extensions;
+    polyparse = dontHaddock super.polyparse;
+    cpphs = dontHaddock super.cpphs;
+    temporary-rc = dontHaddock super.temporary-rc;
+    tasty-golden = dontHaddock super.tasty-golden;
+    haskell-src-exts = dontHaddock super.haskell-src-exts;
+    test-framework-th = dontHaddock super.test-framework-th;
+    extra = dontHaddock super.extra;
+    uniplate = dontHaddock super.uniplate;
+    hlint = dontHaddock super.hlint;
+    lens = dontHaddock super.lens;
+    lens-action = dontHaddock super.lens-action;
+    quickcheck-instances = dontHaddock super.quickcheck-instances;
+    safecopy = dontHaddock super.safecopy;
+    hashable-extras = dontHaddock super.hashable-extras;
+    log-domain = dontHaddock super.log-domain;
+    rvar = dontHaddock super.rvar;
+    random-fu = dontHaddock super.random-fu;
+    Stream = dontHaddock super.Stream;
+    zlib = dontHaddock super.zlib;
+    streaming-commons = dontHaddock super.streaming-commons;
+    hstatsd = dontHaddock super.hstatsd;
+    lambdabot-trusted = dontHaddock super.lambdabot-trusted;
+    SafeSemaphore = dontHaddock super.SafeSemaphore;
+    case-insensitive = dontHaddock super.case-insensitive;
+    http-types = dontHaddock super.http-types;
+    simple-sendfile = dontHaddock super.simple-sendfile;
+    vault = dontHaddock super.vault;
+    wai = dontHaddock super.wai;
+    http-date = dontHaddock super.http-date;
+    iproute = dontHaddock super.iproute;
+    warp = dontHaddock super.warp;
+    transformers-base = dontHaddock super.transformers-base;
+    monad-control = dontHaddock super.monad-control;
+    lifted-base = dontHaddock super.lifted-base;
+    resourcet = dontHaddock super.resourcet;
+    conduit = dontHaddock super.conduit;
+    vector-algorithms = dontHaddock super.vector-algorithms;
+    shake = dontHaddock super.shake;
+    hoogle = dontHaddock super.hoogle;
+    haskeline = dontHaddock super.haskeline;
+    edit-distance = dontHaddock super.edit-distance;
+    split = dontHaddock super.split;
+    regex-tdfa = dontHaddock super.regex-tdfa;
+    lambdabot-core = dontHaddock super.lambdabot-core;
+    lambdabot-reference-plugins = dontHaddock super.lambdabot-reference-plugins;
+    regex-pcre = dontHaddock super.regex-pcre;
+    misfortune = dontHaddock super.misfortune;
+    numbers = dontHaddock super.numbers;
+    arrows = dontHaddock super.arrows;
+    lambdabot-haskell-plugins = dontHaddock super.lambdabot-haskell-plugins;
+    dice = dontHaddock super.dice;
+    lambdabot-misc-plugins = dontHaddock super.lambdabot-misc-plugins;
+    lambdabot-novelty-plugins = dontHaddock super.lambdabot-novelty-plugins;
+    lambdabot-social-plugins = dontHaddock super.lambdabot-social-plugins;
+    lambdabot-irc-plugins = dontHaddock super.lambdabot-irc-plugins;
+  };
+};
+
+haskell7101Packages = myHaskellPackages super.haskell-ng.packages.ghc7101;
+haskell784Packages  = myHaskellPackages super.haskell-ng.packages.ghc784;
+haskell763Packages  = myHaskellPackages763 super.haskell-ng.packages.ghc763;
 
 ledger = super.callPackage ~/src/ledger {};
 
@@ -94,9 +247,9 @@ emacsToolsEnv = pkgs.buildEnv {
 systemToolsEnv = pkgs.buildEnv {
   name = "systemTools";
   paths = [
-    haskellngPackages.pushme
-    haskellngPackages.sizes
-    haskellngPackages.una
+    haskell7101Packages.pushme
+    haskell7101Packages.sizes
+    haskell7101Packages.una
 
     ack
     # apg
@@ -122,7 +275,7 @@ systemToolsEnv = pkgs.buildEnv {
     # haskell784Packages.newartisans
     # nixbang
     # p7zip
-    haskellngPackages.pandoc
+    haskell7101Packages.pandoc
     parallel
     pinentry
     pv
@@ -130,7 +283,7 @@ systemToolsEnv = pkgs.buildEnv {
     rlwrap
     screen
     silver-searcher
-    haskellngPackages.simple-mirror
+    haskell7101Packages.simple-mirror
     sqlite
     stow
     time
@@ -155,16 +308,17 @@ gitToolsEnv = pkgs.buildEnv {
       # bup
       dar
 
+      haskell763Packages.lambdabot
       haskell784Packages.git-annex
-      # pkgs.haskellngPackages.git-gpush
-      haskellngPackages.git-monitor
+      # pkgs.haskell7101Packages.git-gpush
+      haskell7101Packages.git-monitor
       pkgs.gitAndTools.gitFull
       pkgs.gitAndTools.gitflow
       pkgs.gitAndTools.hub
       pkgs.gitAndTools.topGit
       pkgs.gitAndTools.git-imerge
 
-      pkgs.haskellngPackages.git-all
+      pkgs.haskell7101Packages.git-all
     ];
   };
 
@@ -384,9 +538,9 @@ ghc784Env = pkgs.myEnvFun {
 
 ghc7101Env = pkgs.myEnvFun {
   name = "ghc7101";
-  buildInputs = with haskellngPackages; [
-    (haskellngPackages.ghcWithPackages my-packages-next)
-    (hoogle-local my-packages-next haskellngPackages)
+  buildInputs = with haskell7101Packages; [
+    (haskell7101Packages.ghcWithPackages my-packages-next)
+    (hoogle-local my-packages-next haskell7101Packages)
 
     cabal-install
     ghc-core
