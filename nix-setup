@@ -1,0 +1,14 @@
+#!/bin/bash -xe
+
+curl https://nixos.org/nix/install | sudo sh
+
+cd ~
+git clone git://github.com/joelteon/nixpkgs.git
+
+export PATH=$HOME/.nix-profile/bin:$PATH
+
+nix-channel --remove nixpkgs
+cd ~/.nix-defexpr
+rm -rf *
+ln -s ~/nixpkgs .
+echo "export NIX_PATH=$HOME/nixpkgs:nixpkgs=$HOME/nixpkgs" >> ~/.bashrc

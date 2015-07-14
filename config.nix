@@ -40,7 +40,7 @@ myHaskellPackages = hp: hp.override {
   
     gitlib         = self.callPackage ~/src/gitlib/gitlib {};
     gitlib-test    = self.callPackage ~/src/gitlib/gitlib-test {};
-    hlibgit2       = self.callPackage ~/src/gitlib/hlibgit2 {};
+    hlibgit2       = dontCheck (self.callPackage ~/src/gitlib/hlibgit2 {});
     gitlib-libgit2 = self.callPackage ~/src/gitlib/gitlib-libgit2 {};
     gitlib-cmdline = self.callPackage ~/src/gitlib/gitlib-cmdline {
       git = gitAndTools.git;

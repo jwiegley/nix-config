@@ -13,4 +13,4 @@ main = defaultMain
 EOF
 fi
 
-nix-shell '<nixpkgs>' -A haskellngPackages.$(basename $(pwd)).env "$@"
+nix-shell '<nixpkgs>' -A haskell784Packages.$(basename $(pwd)).env "$@"
