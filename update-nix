@@ -1,0 +1,27 @@
+#!/bin/bash -ex
+
+nix-env --set-flag priority 10 networkTools
+nix-env --set-flag priority 100 langTools
+nix-env --set-flag priority 500 buildTools
+nix-env --set-flag priority 1000 publishTools
+nix-env --set-flag priority 2000 perlTools
+nix-env -q | egrep -v '(xquartz|langTools|publishTools|perlTools)' | sed 's/-[0-9].*//' \
+    | xargs nix-env "$@" -u
+
+nix-env --set-flag priority 10 networkTools
+nix-env --set-flag priority 100 langTools
+nix-env --set-flag priority 500 buildTools
+nix-env --set-flag priority 1000 publishTools
+nix-env --set-flag priority 2000 perlTools
+nix-env -q | egrep -v '(xquartz|perlTools)' | sed 's/-[0-9].*//' \
+    | xargs nix-env "$@" -u
+
+nix-env --set-flag priority 10 networkTools
+nix-env --set-flag priority 100 langTools
+nix-env --set-flag priority 500 buildTools
+nix-env --set-flag priority 1000 publishTools
+nix-env --set-flag priority 2000 perlTools
+nix-env -q | egrep -v '(xquartz)' | sed 's/-[0-9].*//' \
+    | xargs nix-env "$@" -u
+
+nix-env -q | sed 's/-[0-9].*//' | xargs nix-env "$@" -u

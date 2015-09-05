@@ -12,20 +12,33 @@ myHaskellPackages = hp: hp.override {
       yuicompressor = pkgs.yuicompressor;
     };
   
-    recursion-schemes = self.callPackage ~/src/recursion-schemes {};
-
     ghc-issues     = self.callPackage ~/src/ghc-issues {};
     c2hsc          = self.callPackage ~/src/c2hsc {};
     git-all        = self.callPackage ~/src/git-all {};
     hours          = self.callPackage ~/src/hours {};
     pushme         = self.callPackage ~/src/pushme {};
     rehoo          = self.callPackage ~/src/rehoo {};
-    simple-mirror  = self.callPackage ~/src/simple-mirror {};
+    simple-mirror  = self.callPackage ~/src/hackage-mirror {};
     sizes          = self.callPackage ~/src/sizes {};
     una            = self.callPackage ~/src/una {};
+    hierarchy      = self.callPackage ~/src/hierarchy {};
+    pipes-files    = self.callPackage ~/src/pipes-files {};
+    pipes-fusion   = self.callPackage ~/src/pipes-fusion {};
+    fusion         = self.callPackage ~/src/fusion {};
+    # fusion         = (self.callPackage ~/src/fusion {})
+    #   .overrideScope (self: super: {
+    #     inherit stdenv;
+    #     mkDerivation = drv: super.mkDerivation
+    #       (drv // { enableLibraryProfiling = true; });
+    #   });
+
+    streaming-tests = self.callPackage ~/src/streaming-tests {};
+
+    pipes          = self.callPackage ~/Contracts/OSS/Projects/pipes {};
+    pipes-safe     = self.callPackage ~/Contracts/OSS/Projects/pipes-safe {};
   
     async-pool     = self.callPackage ~/src/async-pool {};
-    bindings-DSL   = self.callPackage ~/src/bindings-dsl {};
+    bindings-DSL   = self.callPackage ~/oss/bindings-dsl {};
     commodities    = self.callPackage ~/src/ledger/new/commodities {};
     consistent     = self.callPackage ~/src/consistent {};
     find-conduit   = self.callPackage ~/src/find-conduit {};
@@ -63,164 +76,8 @@ myHaskellPackages = hp: hp.override {
   };
 };
 
-myHaskellPackages763 = hp: hp.override {
-  overrides = self: super: with pkgs.haskell-ng.lib; {
-    IOSpec = appendPatch (doJailbreak super.IOSpec) ./IOSpec.patch;
-    random = dontHaddock super.random;
-    regex-posix = dontHaddock super.regex-posix;
-    ansi-terminal = dontHaddock super.ansi-terminal;
-    hostname = dontHaddock super.hostname;
-    ansi-wl-pprint = dontHaddock super.ansi-wl-pprint;
-    test-framework = dontHaddock super.test-framework;
-    primitive = dontHaddock super.primitive;
-    tf-random = dontHaddock super.tf-random;
-    QuickCheck = dontHaddock super.QuickCheck;
-    QuickCheck-safe = dontHaddock super.QuickCheck-safe;
-    stm = dontHaddock super.stm;
-    extensible-exceptions = dontHaddock super.extensible-exceptions;
-    test-framework-quickcheck2 = dontHaddock super.test-framework-quickcheck2;
-    exceptions = dontHaddock super.exceptions;
-    temporary = dontHaddock super.temporary;
-    MonadRandom = dontHaddock super.MonadRandom;
-    random-shuffle = dontHaddock super.random-shuffle;
-    terminfo = dontHaddock super.terminfo;
-    HUnit = dontHaddock super.HUnit;
-    syb = dontHaddock super.syb;
-    ChasingBottoms = dontHaddock super.ChasingBottoms;
-    test-framework-hunit = dontHaddock super.test-framework-hunit;
-    unordered-containers = dontHaddock super.unordered-containers;
-    semigroups = dontHaddock super.semigroups;
-    void = dontHaddock super.void;
-    MemoTrie = dontHaddock super.MemoTrie;
-    vector-space = dontHaddock super.vector-space;
-    th-extras = dontHaddock super.th-extras;
-    dependent-sum-template = dontHaddock super.dependent-sum-template;
-    dlist = dontHaddock super.dlist;
-    utf8-string = dontHaddock super.utf8-string;
-    blaze-builder = dontHaddock super.blaze-builder;
-    tagged = dontHaddock super.tagged;
-    optparse-applicative = dontHaddock super.optparse-applicative;
-    parsec = dontHaddock super.parsec;
-    regex-tdfa-rc = dontHaddock super.regex-tdfa-rc;
-    async = dontHaddock super.async;
-    tasty = dontHaddock super.tasty;
-    tasty-hunit = dontHaddock super.tasty-hunit;
-    pcre-light = dontHaddock super.pcre-light;
-    tasty-quickcheck = dontHaddock super.tasty-quickcheck;
-    tasty-smallcheck = dontHaddock super.tasty-smallcheck;
-    generic-deriving = dontHaddock super.generic-deriving;
-    tasty-ant-xml = dontHaddock super.tasty-ant-xml;
-    scientific = dontHaddock super.scientific;
-    quickcheck-unicode = dontHaddock super.quickcheck-unicode;
-    vector = dontHaddock super.vector;
-    attoparsec = dontHaddock super.attoparsec;
-    aeson = dontHaddock super.aeson;
-    quickcheck-io = dontHaddock super.quickcheck-io;
-    hspec-expectations = dontHaddock super.hspec-expectations;
-    hspec-meta = dontHaddock super.hspec-meta;
-    hspec-discover = dontHaddock super.hspec-discover;
-    data-default-instances-dlist = dontHaddock super.data-default-instances-dlist;
-    hspec-core = dontHaddock super.hspec-core;
-    hspec = dontHaddock super.hspec;
-    base-compat = dontHaddock super.base-compat;
-    stringbuilder = dontHaddock super.stringbuilder;
-    doctest = dontHaddock super.doctest;
-    network = dontHaddock super.network;
-    network-uri = dontHaddock super.network-uri;
-    HTTP = dontHaddock super.HTTP;
-    js-flot = dontHaddock super.js-flot;
-    language-haskell-extract = dontHaddock super.language-haskell-extract;
-    StateVar = dontHaddock super.StateVar;
-    contravariant = dontHaddock super.contravariant;
-    oeis = dontHaddock super.oeis;
-    data-default = dontHaddock super.data-default;
-    vector-th-unbox = dontHaddock super.vector-th-unbox;
-    ghc-mtl = dontHaddock super.ghc-mtl;
-    hint = dontHaddock super.hint;
-    show = dontHaddock super.show;
-    mueval = dontHaddock super.mueval;
-    hslogger = dontHaddock super.hslogger;
-    cereal = dontHaddock super.cereal;
-    stateref = dontHaddock super.stateref;
-    mwc-random = dontHaddock super.mwc-random;
-    flexible-defaults = dontHaddock super.flexible-defaults;
-    mersenne-random-pure64 = dontHaddock super.mersenne-random-pure64;
-    random-source = dontHaddock super.random-source;
-    math-functions = dontHaddock super.math-functions;
-    bytes = dontHaddock super.bytes;
-    base-orphans = dontHaddock super.base-orphans;
-    bifunctors = dontHaddock super.bifunctors;
-    distributive = dontHaddock super.distributive;
-    comonad = dontHaddock super.comonad;
-    semigroupoids = dontHaddock super.semigroupoids;
-    profunctors = dontHaddock super.profunctors;
-    reflection = dontHaddock super.reflection;
-    prelude-extras = dontHaddock super.prelude-extras;
-    free = dontHaddock super.free;
-    parallel = dontHaddock super.parallel;
-    adjunctions = dontHaddock super.adjunctions;
-    kan-extensions = dontHaddock super.kan-extensions;
-    polyparse = dontHaddock super.polyparse;
-    cpphs = dontHaddock super.cpphs;
-    temporary-rc = dontHaddock super.temporary-rc;
-    tasty-golden = dontHaddock super.tasty-golden;
-    haskell-src-exts = dontHaddock super.haskell-src-exts;
-    test-framework-th = dontHaddock super.test-framework-th;
-    extra = dontHaddock super.extra;
-    uniplate = dontHaddock super.uniplate;
-    hlint = dontHaddock super.hlint;
-    lens = dontHaddock super.lens;
-    lens-action = dontHaddock super.lens-action;
-    quickcheck-instances = dontHaddock super.quickcheck-instances;
-    safecopy = dontHaddock super.safecopy;
-    hashable-extras = dontHaddock super.hashable-extras;
-    log-domain = dontHaddock super.log-domain;
-    rvar = dontHaddock super.rvar;
-    random-fu = dontHaddock super.random-fu;
-    Stream = dontHaddock super.Stream;
-    zlib = dontHaddock super.zlib;
-    streaming-commons = dontHaddock super.streaming-commons;
-    hstatsd = dontHaddock super.hstatsd;
-    lambdabot-trusted = dontHaddock super.lambdabot-trusted;
-    SafeSemaphore = dontHaddock super.SafeSemaphore;
-    case-insensitive = dontHaddock super.case-insensitive;
-    http-types = dontHaddock super.http-types;
-    simple-sendfile = dontHaddock super.simple-sendfile;
-    vault = dontHaddock super.vault;
-    wai = dontHaddock super.wai;
-    http-date = dontHaddock super.http-date;
-    iproute = dontHaddock super.iproute;
-    warp = dontHaddock super.warp;
-    transformers-base = dontHaddock super.transformers-base;
-    monad-control = dontHaddock super.monad-control;
-    lifted-base = dontHaddock super.lifted-base;
-    resourcet = dontHaddock super.resourcet;
-    conduit = dontHaddock super.conduit;
-    vector-algorithms = dontHaddock super.vector-algorithms;
-    shake = dontHaddock super.shake;
-    hoogle = dontHaddock super.hoogle;
-    haskeline = dontHaddock super.haskeline;
-    edit-distance = dontHaddock super.edit-distance;
-    split = dontHaddock super.split;
-    regex-tdfa = dontHaddock super.regex-tdfa;
-    lambdabot-core = dontHaddock super.lambdabot-core;
-    lambdabot-reference-plugins = dontHaddock super.lambdabot-reference-plugins;
-    regex-pcre = dontHaddock super.regex-pcre;
-    misfortune = dontHaddock super.misfortune;
-    numbers = dontHaddock super.numbers;
-    arrows = dontHaddock super.arrows;
-    lambdabot-haskell-plugins = dontHaddock super.lambdabot-haskell-plugins;
-    dice = dontHaddock super.dice;
-    lambdabot-misc-plugins = dontHaddock super.lambdabot-misc-plugins;
-    lambdabot-novelty-plugins = dontHaddock super.lambdabot-novelty-plugins;
-    lambdabot-social-plugins = dontHaddock super.lambdabot-social-plugins;
-    lambdabot-irc-plugins = dontHaddock super.lambdabot-irc-plugins;
-  };
-};
-
-haskell7101Packages = myHaskellPackages super.haskell-ng.packages.ghc7101;
+haskell7102Packages = myHaskellPackages super.haskell-ng.packages.ghc7102;
 haskell784Packages  = myHaskellPackages super.haskell-ng.packages.ghc784;
-haskell763Packages  = myHaskellPackages763 super.haskell-ng.packages.ghc763;
 
 ledger = super.callPackage ~/src/ledger {};
 
@@ -239,7 +96,7 @@ emacsToolsEnv = pkgs.buildEnv {
     emacs
     aspell
     aspellDicts.en
-    auctex
+    pkgs.auctex
     emacs24Packages.proofgeneral
   ];
 };
@@ -247,9 +104,9 @@ emacsToolsEnv = pkgs.buildEnv {
 systemToolsEnv = pkgs.buildEnv {
   name = "systemTools";
   paths = [
-    haskell7101Packages.pushme
-    haskell7101Packages.sizes
-    haskell7101Packages.una
+    haskell7102Packages.pushme
+    haskell7102Packages.sizes
+    haskell7102Packages.una
 
     ack
     # apg
@@ -257,8 +114,6 @@ systemToolsEnv = pkgs.buildEnv {
     bashInteractive
     bashCompletion
     exiv2
-    # expect
-    # figlet
     findutils
     gnugrep
     gnupg
@@ -266,34 +121,28 @@ systemToolsEnv = pkgs.buildEnv {
     gnused
     gnutar
     graphviz
-    # guile
     haskell784Packages.hours
     imagemagick_light
     less
-    # macvim
-    # multitail
-    # haskell784Packages.newartisans
     # nixbang
-    # p7zip
-    haskell7101Packages.pandoc
-    parallel
+    p7zip
+    haskell7102Packages.pandoc
+    # parallel
     pinentry
     pv
-    # recutils
     rlwrap
-    screen
+    # screen
     silver-searcher
-    haskell7101Packages.simple-mirror
+    haskell7102Packages.simple-mirror
+    # reptyr
     sqlite
     stow
     time
-    # tmux
     tree
     # unarj
     unrar
     unzip
     watch
-    # watchman
     xz
     z3
     zip
@@ -305,20 +154,17 @@ gitToolsEnv = pkgs.buildEnv {
     name = "gitTools";
     paths = [
       diffutils patchutils
-      # bup
-      dar
 
-      haskell763Packages.lambdabot
       haskell784Packages.git-annex
-      # pkgs.haskell7101Packages.git-gpush
-      haskell7101Packages.git-monitor
+      # pkgs.haskell7102Packages.git-gpush
+      haskell7102Packages.git-monitor
       pkgs.gitAndTools.gitFull
       pkgs.gitAndTools.gitflow
-      pkgs.gitAndTools.hub
+      # pkgs.gitAndTools.hub
       pkgs.gitAndTools.topGit
       pkgs.gitAndTools.git-imerge
 
-      pkgs.haskell7101Packages.git-all
+      pkgs.haskell7102Packages.git-all
     ];
   };
 
@@ -326,7 +172,7 @@ networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
     ansible
-    # arcanist
+    arcanist
     aria
     cacert
     # fping
@@ -341,6 +187,8 @@ networkToolsEnv = pkgs.buildEnv {
     spiped
     wget
     youtubeDL ffmpeg
+    znc
+    openssh
   ];
 };
 
@@ -352,13 +200,13 @@ mailToolsEnv = pkgs.buildEnv {
     leafnode
     fetchmail
     procmail
-    # w3m
-    # mairix
-    # mutt
-    # msmtp
-    # lbdb
-    # contacts
-    # spamassassin
+    imapfilter
+    mairix
+    mutt
+    msmtp
+    lbdb
+    contacts
+    spamassassin
   ];
 };
 
@@ -366,11 +214,12 @@ publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
   paths = [ 
     texLiveFull
-    # djvu2pdf
+    djvu2pdf
     ghostscript
     # librsvg
     poppler poppler_data
     libpng
+    haskell7102Packages.newartisans
   ];
 };
 
@@ -397,7 +246,7 @@ pythonToolsEnv = pkgs.buildEnv {
     python27Full
     pythonDocs.pdf_letter.python27
     pythonDocs.html.python27
-    # python27Packages.ipython
+    python27Packages.ipython
     python27Packages.pygments
   ];
 };
@@ -411,7 +260,6 @@ buildToolsEnv = pkgs.buildEnv {
   name = "buildTools";
   paths = [
     ninja
-    # scons
     global idutils
     autoconf automake114x
     bazaar bazaarTools
@@ -436,10 +284,11 @@ langToolsEnv = pkgs.buildEnv {
     clang llvm boost
     ott isabelle
     gnumake
-    # compcert # verasco
+    guile
+    compcert #verasco
     # fsharp
     # rustc
-    sbcl acl2
+    sbcl #acl2
     # erlang
     sloccount
     # swiProlog
@@ -452,34 +301,42 @@ langToolsEnv = pkgs.buildEnv {
 #   buildInputs = [ coq_HEAD ];
 # };
 
-coq85Env = pkgs.myEnvFun {
-  name = "coq85";
+coq84Env = pkgs.myEnvFun {
+  name = "coq84";
   buildInputs = [
-    coq_8_5
-    coqPackages_8_5.mathcomp
-    coqPackages_8_5.ssreflect
-  ];
-};
-
-coqToolsEnv = pkgs.buildEnv {
-  name = "coqTools";
-  paths = [
     ocaml
     ocamlPackages.camlp5_transitional
     coq
     coqPackages.fiat coqPackages.bedrock
-    # coqPackages.containers
-    # coqPackages.coqExtLib
-    # coqPackages.coqeal
-    # coqPackages.domains
-    # coqPackages.flocq
-    # coqPackages.heq
     coqPackages.mathcomp
-    # coqPackages.paco
-    coqPackages.QuickChick
     coqPackages.ssreflect
+    coqPackages.QuickChick
     coqPackages.tlc
     coqPackages.ynot
+    prooftree
+  ];
+};
+
+coq85Env = pkgs.myEnvFun {
+  name = "coq85";
+  buildInputs = [
+    ocaml
+    ocamlPackages.camlp5_transitional
+    coq_8_5
+    (coqPackages.mathcomp.override { coq = coq_8_5; })
+    (coqPackages.ssreflect.override { coq = coq_8_5; })
+    prooftree
+  ];
+};
+
+coqHEADEnv = pkgs.myEnvFun {
+  name = "coqHEAD";
+  buildInputs = [
+    ocaml
+    ocamlPackages.camlp5_transitional
+    coq_HEAD
+    (coqPackages.mathcomp.override { coq = coq_HEAD; })
+    (coqPackages.ssreflect.override { coq = coq_HEAD; })
     prooftree
   ];
 };
@@ -515,48 +372,46 @@ idutils = super.stdenv.lib.overrideDerivation super.idutils (attrs: {
 ghc784Env = pkgs.myEnvFun {
   name = "ghc784";
   buildInputs = with haskell784Packages; [
-    (haskell784Packages.ghcWithPackages my-packages)
-    (hoogle-local my-packages haskell784Packages)
+    (haskell784Packages.ghcWithPackages my-packages-784)
+    (hoogle-local my-packages-784 haskell784Packages)
 
+    alex happy
     cabal-install
     ghc-core
-    ghc-mod
+    # ghc-mod
     hdevtools
     hlint
     hasktags
-    # hpack
     cabal-meta
-    djinn #mueval
+    # lambdabot djinn mueval
     pointfree
     # idris
     # threadscope
     # timeplot splot
     # liquidhaskell
-    hakyll
   ];
 };
 
-ghc7101Env = pkgs.myEnvFun {
-  name = "ghc7101";
-  buildInputs = with haskell7101Packages; [
-    (haskell7101Packages.ghcWithPackages my-packages-next)
-    (hoogle-local my-packages-next haskell7101Packages)
+ghc7102Env = pkgs.myEnvFun {
+  name = "ghc7102";
+  buildInputs = with haskell7102Packages; [
+    (haskell7102Packages.ghcWithPackages my-packages-7102)
+    (hoogle-local my-packages-7102 haskell7102Packages)
 
+    alex happy
     cabal-install
     ghc-core
-    # ghc-mod
+    ghc-mod
     # hdevtools
     hlint
     simple-mirror
     hasktags
-    # hpack
     cabal-meta
-    djinn # mueval
-    # idris
-    threadscope
+    # lambdabot djinn mueval
+    idris
+    # threadscope
     # timeplot splot
-    # liquidhaskell
-    # hakyll
+    liquidhaskell
   ];
 };
 
@@ -580,7 +435,7 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
     || stdenv.lib.hasSuffix ".p_o" path))
   src;
 
-my-packages = hp: with hp; [
+my-packages-784 = hp: with hp; [
   # fixplate
   # orgmode-parse
   Boolean
@@ -659,7 +514,7 @@ my-packages = hp: with hp; [
   doctest-prop
   either
   enclosed-exceptions
-  errors
+  # errors
   exceptions
   exceptions
   extensible-exceptions
@@ -695,6 +550,7 @@ my-packages = hp: with hp; [
   http-types
   io-memoize
   io-storage
+  io-streams
   json
   kan-extensions
   keys
@@ -703,13 +559,18 @@ my-packages = hp: with hp; [
   language-javascript
   lattices
   lens
+  lens-action
+  lens-aeson
   lens-datetime
   lens-family
   lens-family-core
   lifted-async
   lifted-base
   linear
+  # linearscan
+  # linearscan-hoopl
   list-extras
+  list-t
   logict
   machines
   mime-mail
@@ -783,6 +644,8 @@ my-packages = hp: with hp; [
   stm
   stm-chans
   stm-stats
+  streaming
+  streaming-bytestring
   strict
   stringsearch
   strptime
@@ -800,13 +663,14 @@ my-packages = hp: with hp; [
   temporary
   text
   text-format
-  these
+  # these
   thyme
   time
   time-recurrence
   timeparsers
   transformers
   transformers-base
+  turtle
   uniplate
   units
   unix-compat
@@ -822,7 +686,7 @@ my-packages = hp: with hp; [
   zlib
 ];
 
-my-packages-next = hp: with hp; [
+my-packages-7102 = hp: with hp; [
   # fixplate
   # orgmode-parse
   Boolean
@@ -901,7 +765,7 @@ my-packages-next = hp: with hp; [
   # doctest-prop
   either
   enclosed-exceptions
-  errors
+  # errors
   exceptions
   exceptions
   extensible-exceptions
@@ -937,6 +801,7 @@ my-packages-next = hp: with hp; [
   http-types
   io-memoize
   io-storage
+  io-streams
   json
   kan-extensions
   keys
@@ -945,13 +810,18 @@ my-packages-next = hp: with hp; [
   language-javascript
   lattices
   lens
+  lens-action
+  lens-aeson
   lens-datetime
   lens-family
   lens-family-core
   lifted-async
   lifted-base
   linear
+  # linearscan
+  # linearscan-hoopl
   list-extras
+  list-t
   logict
   # machines
   mime-mail
@@ -1025,6 +895,8 @@ my-packages-next = hp: with hp; [
   stm
   stm-chans
   stm-stats
+  streaming
+  streaming-bytestring
   strict
   stringsearch
   strptime
@@ -1042,13 +914,14 @@ my-packages-next = hp: with hp; [
   temporary
   text
   text-format
-  these
+  # these
   # thyme
   time
   # time-recurrence
   # timeparsers
   transformers
   transformers-base
+  turtle
   uniplate
   # units
   unix-compat
