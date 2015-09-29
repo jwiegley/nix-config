@@ -1,5 +1,7 @@
 { pkgs }: {
 
+# replaceStdenv = { pkgs }: pkgs.allStdenvs.stdenvDarwinPure;
+
 packageOverrides = super: let self = super.pkgs; in with self; rec {
 
 myHaskellPackages = hp: hp.override {
@@ -12,8 +14,10 @@ myHaskellPackages = hp: hp.override {
       yuicompressor = pkgs.yuicompressor;
     };
   
+    MoodlerLib     = self.callPackage ~/oss/Moodler/MoodlerLib {};
+
     ghc-issues     = self.callPackage ~/src/ghc-issues {};
-    c2hsc          = self.callPackage ~/src/c2hsc {};
+    c2hsc          = dontCheck (self.callPackage ~/src/c2hsc {});
     git-all        = self.callPackage ~/src/git-all {};
     hours          = self.callPackage ~/src/hours {};
     pushme         = self.callPackage ~/src/pushme {};
@@ -73,11 +77,31 @@ myHaskellPackages = hp: hp.override {
     systemFileio = dontCheck super.systemFileio;
     shake        = dontCheck super.shake;
     singletons   = dontCheck super.singletons;
+
+    time-recurrence = dontCheck (self.callPackage ~/oss/time-recurrence {});
+    timeparsers = dontCheck (self.callPackage ~/oss/timeparsers {});
   };
 };
 
 haskell7102Packages = myHaskellPackages super.haskell-ng.packages.ghc7102;
+profiledHaskell7102Packages = haskell7102Packages.override {
+  overrides = self: super: {
+    mkDerivation = args: super.mkDerivation (args // {
+      enableLibraryProfiling = true;
+      enableSharedExecutables = false;
+    });
+  };
+};
+
 haskell784Packages  = myHaskellPackages super.haskell-ng.packages.ghc784;
+profiledHaskell784Packages = haskell784Packages.override {
+  overrides = self: super: {
+    mkDerivation = args: super.mkDerivation (args // {
+      enableLibraryProfiling = true;
+      enableSharedExecutables = false;
+    });
+  };
+};
 
 ledger = super.callPackage ~/src/ledger {};
 
@@ -121,7 +145,7 @@ systemToolsEnv = pkgs.buildEnv {
     gnused
     gnutar
     graphviz
-    haskell784Packages.hours
+    haskell7102Packages.hours
     imagemagick_light
     less
     # nixbang
@@ -146,7 +170,7 @@ systemToolsEnv = pkgs.buildEnv {
     xz
     z3
     zip
-    zsh
+    # zsh
   ];
 };
 
@@ -155,7 +179,7 @@ gitToolsEnv = pkgs.buildEnv {
     paths = [
       diffutils patchutils
 
-      haskell784Packages.git-annex
+      haskell7102Packages.git-annex
       # pkgs.haskell7102Packages.git-gpush
       haskell7102Packages.git-monitor
       pkgs.gitAndTools.gitFull
@@ -172,7 +196,7 @@ networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
     ansible
-    arcanist
+    #arcanist
     aria
     cacert
     # fping
@@ -246,7 +270,7 @@ pythonToolsEnv = pkgs.buildEnv {
     python27Full
     pythonDocs.pdf_letter.python27
     pythonDocs.html.python27
-    python27Packages.ipython
+    # python27Packages.ipython
     python27Packages.pygments
   ];
 };
@@ -281,7 +305,7 @@ buildToolsEnv = pkgs.buildEnv {
 langToolsEnv = pkgs.buildEnv {
   name = "langTools";
   paths = [
-    clang llvm boost
+    clang llvm boost libcxx
     ott isabelle
     gnumake
     guile
@@ -319,14 +343,30 @@ coq84Env = pkgs.myEnvFun {
 
 coq85Env = pkgs.myEnvFun {
   name = "coq85";
-  buildInputs = [
-    ocaml
-    ocamlPackages.camlp5_transitional
-    coq_8_5
-    (coqPackages.mathcomp.override { coq = coq_8_5; })
-    (coqPackages.ssreflect.override { coq = coq_8_5; })
-    prooftree
-  ];
+  buildInputs = 
+    let mpath = /Users/johnw/.nix-defexpr/nixpkgs/pkgs/development/coq-modules; in
+    let ssreflect_8_5 = callPackage (mpath + /ssreflect/generic.nix) {
+        coq = coq_8_5;
+        src = fetchurl {
+          url = http://ssr.msr-inria.inria.fr/FTP/ssreflect-1.5.coq85beta2.tar.gz;
+          sha256 = "084l9xd5vgb8jml0dkm66g8cil5rsf04w821pjhn2qk9mdbwaagf";
+        };
+        patches = [ (mpath + /ssreflect/threads.patch) ];
+      }; in
+
+    let mathcomp_8_5 = callPackage (mpath + /mathcomp/generic.nix) {
+        coq = coq_8_5;
+        src = fetchurl {
+          url = http://ssr.msr-inria.inria.fr/FTP/mathcomp-1.5.coq85beta2.tar.gz;
+          sha256 = "03bnq44ym43x8shi7whc02l0g5vy6rx8f1imjw478chlgwcxazqy";
+        };
+        ssreflect = ssreflect_8_5;
+      }; in
+
+    [ ocaml ocamlPackages.camlp5_transitional
+      coq_8_5 mathcomp_8_5 ssreflect_8_5
+      prooftree
+    ];
 };
 
 coqHEADEnv = pkgs.myEnvFun {
@@ -373,7 +413,7 @@ ghc784Env = pkgs.myEnvFun {
   name = "ghc784";
   buildInputs = with haskell784Packages; [
     (haskell784Packages.ghcWithPackages my-packages-784)
-    (hoogle-local my-packages-784 haskell784Packages)
+    # (hoogle-local my-packages-784 haskell784Packages)
 
     alex happy
     cabal-install
@@ -455,7 +495,7 @@ my-packages-784 = hp: with hp; [
   async
   attempt
   attoparsec
-  attoparsec-conduit
+  # attoparsec-conduit
   attoparsec-enumerator
   base-unicode-symbols
   base16-bytestring
@@ -464,7 +504,7 @@ my-packages-784 = hp: with hp; [
   bifunctors
   bindings-DSL
   blaze-builder
-  blaze-builder-conduit
+  # blaze-builder-conduit
   blaze-builder-enumerator
   blaze-html
   blaze-markup
@@ -478,11 +518,11 @@ my-packages-784 = hp: with hp; [
   cassava
   categories
   cereal
-  cereal-conduit
+  # cereal-conduit
   charset
   chunked-data
-  classy-prelude
-  classy-prelude-conduit
+  # classy-prelude
+  # classy-prelude-conduit
   cmdargs
   comonad
   comonad-transformers
@@ -490,9 +530,9 @@ my-packages-784 = hp: with hp; [
   composition
   compressed
   cond
-  conduit
-  conduit-combinators
-  conduit-extra
+  # conduit
+  # conduit-combinators
+  # conduit-extra
   configurator
   constraints
   contravariant
@@ -509,7 +549,7 @@ my-packages-784 = hp: with hp; [
   distributive
   dlist
   dlist-instances
-  dns
+  # dns
   doctest
   doctest-prop
   either
@@ -593,7 +633,7 @@ my-packages-784 = hp: with hp; [
   numbers
   operational
   optparse-applicative
-  pandoc
+  # pandoc
   parallel
   parallel-io
   parsec
@@ -644,8 +684,8 @@ my-packages-784 = hp: with hp; [
   stm
   stm-chans
   stm-stats
-  streaming
-  streaming-bytestring
+  #streaming
+  #streaming-bytestring
   strict
   stringsearch
   strptime
@@ -668,6 +708,7 @@ my-packages-784 = hp: with hp; [
   time
   time-recurrence
   timeparsers
+  total
   transformers
   transformers-base
   turtle
@@ -681,7 +722,7 @@ my-packages-784 = hp: with hp; [
   wai
   warp
   xhtml
-  yaml
+  # yaml
   zippers
   zlib
 ];
@@ -844,7 +885,7 @@ my-packages-7102 = hp: with hp; [
   numbers
   operational
   optparse-applicative
-  # pandoc
+  pandoc
   parallel
   parallel-io
   parsec
@@ -895,8 +936,8 @@ my-packages-7102 = hp: with hp; [
   stm
   stm-chans
   stm-stats
-  streaming
-  streaming-bytestring
+  #streaming
+  #streaming-bytestring
   strict
   stringsearch
   strptime
@@ -919,6 +960,7 @@ my-packages-7102 = hp: with hp; [
   time
   # time-recurrence
   # timeparsers
+  total
   transformers
   transformers-base
   turtle
