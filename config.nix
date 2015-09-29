@@ -14,72 +14,63 @@ myHaskellPackages = hp: hp.override {
       yuicompressor = pkgs.yuicompressor;
     };
   
-    MoodlerLib     = self.callPackage ~/oss/Moodler/MoodlerLib {};
-
-    ghc-issues     = self.callPackage ~/src/ghc-issues {};
-    c2hsc          = dontCheck (self.callPackage ~/src/c2hsc {});
-    git-all        = self.callPackage ~/src/git-all {};
-    hours          = self.callPackage ~/src/hours {};
-    pushme         = self.callPackage ~/src/pushme {};
-    rehoo          = self.callPackage ~/src/rehoo {};
-    simple-mirror  = self.callPackage ~/src/hackage-mirror {};
-    sizes          = self.callPackage ~/src/sizes {};
-    una            = self.callPackage ~/src/una {};
-    hierarchy      = self.callPackage ~/src/hierarchy {};
-    pipes-files    = self.callPackage ~/src/pipes-files {};
-    pipes-fusion   = self.callPackage ~/src/pipes-fusion {};
-    fusion         = self.callPackage ~/src/fusion {};
-    # fusion         = (self.callPackage ~/src/fusion {})
-    #   .overrideScope (self: super: {
-    #     inherit stdenv;
-    #     mkDerivation = drv: super.mkDerivation
-    #       (drv // { enableLibraryProfiling = true; });
-    #   });
-
+    ghc-issues      = self.callPackage ~/src/ghc-issues {};
+    c2hsc           = dontCheck (self.callPackage ~/src/c2hsc {});
+    git-all         = self.callPackage ~/src/git-all {};
+    hours           = self.callPackage ~/src/hours {};
+    pushme          = self.callPackage ~/src/pushme {};
+    rehoo           = self.callPackage ~/src/rehoo {};
+    simple-mirror   = self.callPackage ~/src/hackage-mirror {};
+    sizes           = self.callPackage ~/src/sizes {};
+    una             = self.callPackage ~/src/una {};
+    hierarchy       = self.callPackage ~/src/hierarchy {};
+    pipes-files     = self.callPackage ~/src/pipes-files {};
+    pipes-fusion    = self.callPackage ~/src/pipes-fusion {};
+    fusion          = self.callPackage ~/src/fusion {};
     streaming-tests = self.callPackage ~/src/streaming-tests {};
 
-    pipes          = self.callPackage ~/Contracts/OSS/Projects/pipes {};
-    pipes-safe     = self.callPackage ~/Contracts/OSS/Projects/pipes-safe {};
+    pipes           = self.callPackage ~/Contracts/OSS/Projects/pipes {};
+    pipes-safe      = self.callPackage ~/Contracts/OSS/Projects/pipes-safe {};
   
-    async-pool     = self.callPackage ~/src/async-pool {};
-    bindings-DSL   = self.callPackage ~/oss/bindings-dsl {};
-    commodities    = self.callPackage ~/src/ledger/new/commodities {};
-    consistent     = self.callPackage ~/src/consistent {};
-    find-conduit   = self.callPackage ~/src/find-conduit {};
-    fuzzcheck      = self.callPackage ~/src/fuzzcheck {};
-    github         = self.callPackage ~/src/github {};
-    hnix           = self.callPackage ~/src/hnix {};
-    ipcvar         = self.callPackage ~/src/ipcvar {};
-    logging        = self.callPackage ~/src/logging {};
-    monad-extras   = self.callPackage ~/src/monad-extras {};
-    rest-client    = self.callPackage ~/src/rest-client {};
-    simple-conduit = self.callPackage ~/src/simple-conduit {};
+    async-pool      = self.callPackage ~/src/async-pool {};
+    bindings-DSL    = self.callPackage ~/oss/bindings-dsl {};
+    commodities     = self.callPackage ~/src/ledger/new/commodities {};
+    consistent      = self.callPackage ~/src/consistent {};
+    find-conduit    = self.callPackage ~/src/find-conduit {};
+    fuzzcheck       = self.callPackage ~/src/fuzzcheck {};
+    github          = self.callPackage ~/src/github {};
+    hnix            = self.callPackage ~/src/hnix {};
+    ipcvar          = self.callPackage ~/src/ipcvar {};
+    logging         = self.callPackage ~/src/logging {};
+    monad-extras    = self.callPackage ~/src/monad-extras {};
+    rest-client     = self.callPackage ~/src/rest-client {};
+    simple-conduit  = self.callPackage ~/src/simple-conduit {};
   
-    gitlib         = self.callPackage ~/src/gitlib/gitlib {};
-    gitlib-test    = self.callPackage ~/src/gitlib/gitlib-test {};
-    hlibgit2       = dontCheck (self.callPackage ~/src/gitlib/hlibgit2 {});
-    gitlib-libgit2 = self.callPackage ~/src/gitlib/gitlib-libgit2 {};
-    gitlib-cmdline = self.callPackage ~/src/gitlib/gitlib-cmdline {
+    gitlib          = self.callPackage ~/src/gitlib/gitlib {};
+    gitlib-test     = self.callPackage ~/src/gitlib/gitlib-test {};
+    hlibgit2        = dontCheck (self.callPackage ~/src/gitlib/hlibgit2 {});
+    gitlib-libgit2  = self.callPackage ~/src/gitlib/gitlib-libgit2 {};
+    gitlib-cmdline  = self.callPackage ~/src/gitlib/gitlib-cmdline {
       git = gitAndTools.git;
     };
-    gitlib-cross   = self.callPackage ~/src/gitlib/gitlib-cross {
+    gitlib-cross    = self.callPackage ~/src/gitlib/gitlib-cross {
       git = gitAndTools.git;
     };
-    gitlib-hit     = self.callPackage ~/src/gitlib/gitlib-hit {};
-    gitlib-lens    = self.callPackage ~/src/gitlib/gitlib-lens {};
-    gitlib-s3      = self.callPackage ~/src/gitlib/gitlib-S3 {};
-    gitlib-sample  = self.callPackage ~/src/gitlib/gitlib-sample {};
-    git-monitor    = self.callPackage ~/src/gitlib/git-monitor {};
-    git-gpush      = self.callPackage ~/src/gitlib/git-gpush {};
+    gitlib-hit      = self.callPackage ~/src/gitlib/gitlib-hit {};
+    gitlib-lens     = self.callPackage ~/src/gitlib/gitlib-lens {};
+    gitlib-s3       = self.callPackage ~/src/gitlib/gitlib-S3 {};
+    gitlib-sample   = self.callPackage ~/src/gitlib/gitlib-sample {};
+    git-monitor     = self.callPackage ~/src/gitlib/git-monitor {};
+    git-gpush       = self.callPackage ~/src/gitlib/git-gpush {};
   
-    hdevtools    = self.callPackage ~/oss/hdevtools {};
+    hdevtools       = self.callPackage ~/oss/hdevtools {};
   
-    systemFileio = dontCheck super.systemFileio;
-    shake        = dontCheck super.shake;
-    singletons   = dontCheck super.singletons;
+    systemFileio    = dontCheck super.systemFileio;
+    shake           = dontCheck super.shake;
+    singletons      = dontCheck super.singletons;
 
     time-recurrence = dontCheck (self.callPackage ~/oss/time-recurrence {});
-    timeparsers = dontCheck (self.callPackage ~/oss/timeparsers {});
+    timeparsers     = dontCheck (self.callPackage ~/oss/timeparsers {});
   };
 };
 
