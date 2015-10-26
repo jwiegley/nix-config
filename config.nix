@@ -96,6 +96,19 @@ profiledHaskell784Packages = haskell784Packages.override {
 
 ledger = super.callPackage ~/src/ledger {};
 
+emacsHEAD = super.callPackage ~/.emacs.d/devel {
+  # use override to enable additional features
+  libXaw = xorg.libXaw;
+  Xaw3d = null;
+  gconf = null;
+  alsaLib = null;
+  imagemagick = null;
+  acl = null;
+  gpm = null;
+  inherit (darwin.apple_sdk.frameworks) AppKit Foundation;
+  inherit (darwin) libobjc;
+};
+
 emacs = if super.stdenv.isDarwin
         then super.emacs24Macport_24_5
         else super.emacs;
@@ -123,11 +136,11 @@ systemToolsEnv = pkgs.buildEnv {
     haskell7102Packages.sizes
     haskell7102Packages.una
 
-    ack
+    # ack
     # apg
     # cabextract
-    bashInteractive
-    bashCompletion
+    # bashInteractive
+    # bashCompletion
     exiv2
     findutils
     gnugrep
@@ -142,7 +155,7 @@ systemToolsEnv = pkgs.buildEnv {
     # nixbang
     p7zip
     haskell7102Packages.pandoc
-    # parallel
+    parallel
     pinentry
     pv
     rlwrap
@@ -161,7 +174,7 @@ systemToolsEnv = pkgs.buildEnv {
     xz
     z3
     zip
-    # zsh
+    zsh
   ];
 };
 
@@ -186,9 +199,9 @@ gitToolsEnv = pkgs.buildEnv {
 networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
-    ansible
+    # ansible
     #arcanist
-    aria
+    # aria
     cacert
     # fping
     httrack
@@ -197,13 +210,13 @@ networkToolsEnv = pkgs.buildEnv {
     mtr
     openssl
     rsync
-    s3cmd
+    # s3cmd
     socat2pre
-    spiped
+    # spiped
     wget
     youtubeDL ffmpeg
-    znc
-    openssh
+    # znc
+    # openssh
   ];
 };
 
@@ -214,14 +227,14 @@ mailToolsEnv = pkgs.buildEnv {
     dovecot_pigeonhole
     leafnode
     fetchmail
-    procmail
-    imapfilter
-    mairix
-    mutt
-    msmtp
-    lbdb
+    # procmail
+    # imapfilter
+    # mairix
+    # mutt
+    # msmtp
+    # lbdb
     contacts
-    spamassassin
+    # spamassassin
   ];
 };
 
@@ -229,10 +242,10 @@ publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
   paths = [ 
     texLiveFull
-    djvu2pdf
+    # djvu2pdf
     ghostscript
     # librsvg
-    poppler poppler_data
+    # poppler poppler_data
     libpng
     haskell7102Packages.newartisans
   ];
@@ -241,12 +254,12 @@ publishToolsEnv = pkgs.buildEnv {
 serviceToolsEnv = pkgs.buildEnv {
   name = "serviceTools";
   paths = [
-    nginx
-    postgresql
-    redis
+    # nginx
+    # postgresql
+    # redis
     pdnsd
     # mysql
-    nodejs
+    # nodejs
   ];
 };
 
@@ -268,7 +281,9 @@ pythonToolsEnv = pkgs.buildEnv {
 
 rubyToolsEnv = pkgs.buildEnv {
   name = "rubyTools";
-  paths = [ ruby_2_1_2 ];
+  paths = [ 
+    # ruby_2_1_2 
+  ];
 };
 
 buildToolsEnv = pkgs.buildEnv {
@@ -276,34 +291,34 @@ buildToolsEnv = pkgs.buildEnv {
   paths = [
     ninja
     global idutils
-    autoconf automake114x
-    bazaar bazaarTools
+    # autoconf automake114x
+    # bazaar bazaarTools
     # ccache
-    cvs cvsps
-    darcs
+    # cvs cvsps
+    # darcs
     diffstat
-    doxygen
-    fcgi
-    flex
+    # doxygen
+    # fcgi
+    # flex
     htmlTidy
     lcov
-    mercurial
+    # mercurial
     patch
-    subversion
+    # subversion
   ];
 };
 
 langToolsEnv = pkgs.buildEnv {
   name = "langTools";
   paths = [
-    clang llvm boost libcxx
-    ott isabelle
+    # clang llvm boost libcxx
+    # ott isabelle
     gnumake
-    guile
-    compcert #verasco
+    # guile
+    # compcert #verasco
     # fsharp
     # rustc
-    sbcl #acl2
+    # sbcl #acl2
     # erlang
     sloccount
     # swiProlog
@@ -322,12 +337,12 @@ coq84Env = pkgs.myEnvFun {
     ocaml
     ocamlPackages.camlp5_transitional
     coq
-    coqPackages.fiat coqPackages.bedrock
+    # coqPackages.fiat coqPackages.bedrock
     coqPackages.mathcomp
     coqPackages.ssreflect
     coqPackages.QuickChick
-    coqPackages.tlc
-    coqPackages.ynot
+    # coqPackages.tlc
+    # coqPackages.ynot
     prooftree
   ];
 };
