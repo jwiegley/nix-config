@@ -1,11 +1,18 @@
 { pkgs }: {
 
-# replaceStdenv = { pkgs }: pkgs.allStdenvs.stdenvDarwinPure;
+# replaceStdenv = { pkgs }: pkgs.allStdenvs.stdenvDarwin;
 
 packageOverrides = super: let self = super.pkgs; in with self; rec {
 
+riscv-llvm  = self.callPackage ~/bae/riscv-llvm {};
+riscv-clang = self.callPackage ~/bae/riscv-clang {
+  llvm = riscv-llvm;
+};
+  
 myHaskellPackages = hp: hp.override {
   overrides = self: super: with pkgs.haskell-ng.lib; {
+    callgraph        = self.callPackage ~/bae/seu {};
+
     coq-haskell      = self.callPackage ~/src/linearscan/Hask {};
     linearscan       = self.callPackage ~/src/linearscan {};
     linearscan-hoopl = self.callPackage ~/src/linearscan-hoopl {};
@@ -64,7 +71,7 @@ myHaskellPackages = hp: hp.override {
     git-gpush       = self.callPackage ~/src/gitlib/git-gpush {};
   
     hdevtools       = self.callPackage ~/oss/hdevtools {};
-  
+
     systemFileio    = dontCheck super.systemFileio;
     shake           = dontCheck super.shake;
     singletons      = dontCheck super.singletons;
@@ -97,7 +104,6 @@ profiledHaskell784Packages = haskell784Packages.override {
 ledger = super.callPackage ~/src/ledger {};
 
 emacsHEAD = super.callPackage ~/.emacs.d/devel {
-  # use override to enable additional features
   libXaw = xorg.libXaw;
   Xaw3d = null;
   gconf = null;
@@ -136,11 +142,6 @@ systemToolsEnv = pkgs.buildEnv {
     haskell7102Packages.sizes
     haskell7102Packages.una
 
-    # ack
-    # apg
-    # cabextract
-    # bashInteractive
-    # bashCompletion
     exiv2
     findutils
     gnugrep
@@ -152,22 +153,18 @@ systemToolsEnv = pkgs.buildEnv {
     haskell7102Packages.hours
     imagemagick_light
     less
-    # nixbang
     p7zip
     haskell7102Packages.pandoc
     parallel
     pinentry
     pv
     rlwrap
-    # screen
     silver-searcher
     haskell7102Packages.simple-mirror
-    # reptyr
     sqlite
     stow
     time
     tree
-    # unarj
     unrar
     unzip
     watch
@@ -188,7 +185,7 @@ gitToolsEnv = pkgs.buildEnv {
       haskell7102Packages.git-monitor
       pkgs.gitAndTools.gitFull
       pkgs.gitAndTools.gitflow
-      # pkgs.gitAndTools.hub
+      ## pkgs.gitAndTools.hub
       pkgs.gitAndTools.topGit
       pkgs.gitAndTools.git-imerge
 
@@ -199,24 +196,16 @@ gitToolsEnv = pkgs.buildEnv {
 networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
-    # ansible
-    #arcanist
-    # aria
+    ## aria
     cacert
-    # fping
     httrack
     iperf
-    mosh
     mtr
     openssl
     rsync
-    # s3cmd
     socat2pre
-    # spiped
     wget
     youtubeDL ffmpeg
-    # znc
-    # openssh
   ];
 };
 
@@ -227,14 +216,8 @@ mailToolsEnv = pkgs.buildEnv {
     dovecot_pigeonhole
     leafnode
     fetchmail
-    # procmail
-    # imapfilter
-    # mairix
-    # mutt
-    # msmtp
-    # lbdb
-    contacts
-    # spamassassin
+    imapfilter
+    ## contacts
   ];
 };
 
@@ -242,10 +225,7 @@ publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
   paths = [ 
     texLiveFull
-    # djvu2pdf
     ghostscript
-    # librsvg
-    # poppler poppler_data
     libpng
     haskell7102Packages.newartisans
   ];
@@ -254,12 +234,12 @@ publishToolsEnv = pkgs.buildEnv {
 serviceToolsEnv = pkgs.buildEnv {
   name = "serviceTools";
   paths = [
-    # nginx
-    # postgresql
-    # redis
+    nginx
+    postgresql
+    redis
     pdnsd
-    # mysql
-    # nodejs
+    mysql
+    nodejs
   ];
 };
 
@@ -282,7 +262,7 @@ pythonToolsEnv = pkgs.buildEnv {
 rubyToolsEnv = pkgs.buildEnv {
   name = "rubyTools";
   paths = [ 
-    # ruby_2_1_2 
+    ruby
   ];
 };
 
@@ -291,37 +271,30 @@ buildToolsEnv = pkgs.buildEnv {
   paths = [
     ninja
     global idutils
-    # autoconf automake114x
-    # bazaar bazaarTools
-    # ccache
-    # cvs cvsps
-    # darcs
+    autoconf automake114x
+    cvs cvsps
+    darcs
     diffstat
-    # doxygen
-    # fcgi
-    # flex
+    ## doxygen
     htmlTidy
     lcov
-    # mercurial
+    mercurial
     patch
-    # subversion
+    subversion
   ];
 };
 
 langToolsEnv = pkgs.buildEnv {
   name = "langTools";
   paths = [
-    # clang llvm boost libcxx
-    # ott isabelle
+    clang llvm boost libcxx
+    ## ott isabelle
     gnumake
-    # guile
-    # compcert #verasco
-    # fsharp
+    guile
+    compcert #verasco
     # rustc
-    # sbcl #acl2
-    # erlang
+    ## sbcl #acl2
     sloccount
-    # swiProlog
     yuicompressor
   ];
  };
@@ -341,8 +314,8 @@ coq84Env = pkgs.myEnvFun {
     coqPackages.mathcomp
     coqPackages.ssreflect
     coqPackages.QuickChick
-    # coqPackages.tlc
-    # coqPackages.ynot
+    coqPackages.tlc
+    coqPackages.ynot
     prooftree
   ];
 };
@@ -683,7 +656,7 @@ my-packages-784 = hp: with hp; [
   shakespeare
   shelly
   simple-reflect
-  singletons
+  # singletons
   speculation
   split
   spoon
@@ -719,7 +692,7 @@ my-packages-784 = hp: with hp; [
   transformers-base
   turtle
   uniplate
-  units
+  # units
   unix-compat
   unordered-containers
   uuid
@@ -784,7 +757,7 @@ my-packages-7102 = hp: with hp; [
   cmdargs
   comonad
   comonad-transformers
-  # compdata
+  compdata
   composition
   compressed
   cond
@@ -812,7 +785,7 @@ my-packages-7102 = hp: with hp; [
   # doctest-prop
   either
   enclosed-exceptions
-  # errors
+  errors
   exceptions
   exceptions
   extensible-exceptions
@@ -870,7 +843,7 @@ my-packages-7102 = hp: with hp; [
   list-extras
   list-t
   logict
-  # machines
+  machines
   mime-mail
   mime-types
   mmorph
@@ -915,7 +888,7 @@ my-packages-7102 = hp: with hp; [
   pretty-show
   profunctors
   random
-  # recursion-schemes
+  recursion-schemes
   reducers
   reflection
   regex-applicative
@@ -942,8 +915,8 @@ my-packages-7102 = hp: with hp; [
   stm
   stm-chans
   stm-stats
-  #streaming
-  #streaming-bytestring
+  streaming
+  streaming-bytestring
   strict
   stringsearch
   strptime
@@ -961,11 +934,11 @@ my-packages-7102 = hp: with hp; [
   temporary
   text
   text-format
-  # these
-  # thyme
+  these
+  thyme
   time
-  # time-recurrence
-  # timeparsers
+  time-recurrence
+  timeparsers
   total
   transformers
   transformers-base
