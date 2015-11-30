@@ -4,15 +4,8 @@
 
 packageOverrides = super: let self = super.pkgs; in with self; rec {
 
-riscv-llvm  = self.callPackage ~/bae/riscv-llvm {};
-riscv-clang = self.callPackage ~/bae/riscv-clang {
-  llvm = riscv-llvm;
-};
-  
 myHaskellPackages = hp: hp.override {
-  overrides = self: super: with pkgs.haskell-ng.lib; {
-    callgraph        = self.callPackage ~/bae/seu {};
-
+  overrides = self: super: with pkgs.haskell.lib; {
     coq-haskell      = self.callPackage ~/src/linearscan/Hask {};
     linearscan       = self.callPackage ~/src/linearscan {};
     linearscan-hoopl = self.callPackage ~/src/linearscan-hoopl {};
@@ -81,7 +74,7 @@ myHaskellPackages = hp: hp.override {
   };
 };
 
-haskell7102Packages = myHaskellPackages super.haskell-ng.packages.ghc7102;
+haskell7102Packages = myHaskellPackages super.haskell.packages.ghc7102;
 profiledHaskell7102Packages = haskell7102Packages.override {
   overrides = self: super: {
     mkDerivation = args: super.mkDerivation (args // {
@@ -91,7 +84,7 @@ profiledHaskell7102Packages = haskell7102Packages.override {
   };
 };
 
-haskell784Packages  = myHaskellPackages super.haskell-ng.packages.ghc784;
+haskell784Packages  = myHaskellPackages super.haskell.packages.ghc784;
 profiledHaskell784Packages = haskell784Packages.override {
   overrides = self: super: {
     mkDerivation = args: super.mkDerivation (args // {
@@ -103,7 +96,7 @@ profiledHaskell784Packages = haskell784Packages.override {
 
 ledger = super.callPackage ~/src/ledger {};
 
-emacsHEAD = super.callPackage ~/.emacs.d/devel {
+emacsHEAD = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   libXaw = xorg.libXaw;
   Xaw3d = null;
   gconf = null;
@@ -135,6 +128,11 @@ emacsToolsEnv = pkgs.buildEnv {
   ];
 };
 
+x11ToolsEnv = pkgs.buildEnv {
+  name = "x11Tools";
+  paths = [ xquartz xorg.xhost xorg.xauth ratpoison ];
+};
+
 systemToolsEnv = pkgs.buildEnv {
   name = "systemTools";
   paths = [
@@ -144,12 +142,13 @@ systemToolsEnv = pkgs.buildEnv {
 
     exiv2
     findutils
+    monkeysphere
+    # gnupg
     gnugrep
-    gnupg
     gnuplot
     gnused
     gnutar
-    graphviz
+    # graphviz
     haskell7102Packages.hours
     imagemagick_light
     less
@@ -202,8 +201,10 @@ networkToolsEnv = pkgs.buildEnv {
     iperf
     mtr
     openssl
+    openvpn
     rsync
     socat2pre
+    stunnel
     wget
     youtubeDL ffmpeg
   ];
@@ -238,7 +239,7 @@ serviceToolsEnv = pkgs.buildEnv {
     postgresql
     redis
     pdnsd
-    mysql
+    #mysql
     nodejs
   ];
 };
@@ -287,7 +288,7 @@ buildToolsEnv = pkgs.buildEnv {
 langToolsEnv = pkgs.buildEnv {
   name = "langTools";
   paths = [
-    clang llvm boost libcxx
+    clang llvm boost155.dev boost155.lib libcxx
     ## ott isabelle
     gnumake
     guile
@@ -557,7 +558,7 @@ my-packages-784 = hp: with hp; [
   haskell-lexer
   haskell-src
   haskell-src-exts
-  haskell-src-meta
+  # haskell-src-meta
   hfsevents
   hoopl
   hslogger
@@ -646,7 +647,7 @@ my-packages-784 = hp: with hp; [
   regular
   resourcet
   retry
-  rex
+  # rex
   safe
   sbv
   scotty
@@ -801,6 +802,7 @@ my-packages-7102 = hp: with hp; [
   free
   fsnotify
   ghc-paths
+  # graphviz
   groups
   hamlet
   hashable
@@ -809,7 +811,7 @@ my-packages-7102 = hp: with hp; [
   haskell-lexer
   haskell-src
   haskell-src-exts
-  haskell-src-meta
+  # haskell-src-meta
   hfsevents
   hoopl
   hslogger
@@ -898,7 +900,7 @@ my-packages-7102 = hp: with hp; [
   regular
   resourcet
   retry
-  rex
+  # rex
   safe
   sbv
   scotty
