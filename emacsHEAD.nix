@@ -2,7 +2,7 @@
 , pkgconfig, gettext, libXft, dbus, libpng, libjpeg, libungif
 , libtiff, librsvg, texinfo, gconf, libxml2, imagemagick, gnutls
 , alsaLib, cairo, acl, gpm, AppKit, Foundation, libobjc
-, autoconf, automake
+, autoconf, automake, git
 , withX ? !stdenv.isDarwin
 , withGTK3 ? false, gtk3 ? null
 , withGTK2 ? true, gtk2
@@ -27,7 +27,7 @@ stdenv.mkDerivation rec {
 
   builder = ./builder.sh;
 
-  src = /Users/johnw/.emacs.d/devel;
+  src = ~/.emacs.d/devel;
 
   patches = stdenv.lib.optionals stdenv.isDarwin [
     ./at-fdcwd.patch
@@ -39,7 +39,7 @@ stdenv.mkDerivation rec {
 
   buildInputs =
     [ ncurses gconf libxml2 gnutls alsaLib pkgconfig texinfo acl gpm gettext
-      autoconf automake ]
+      autoconf automake git ]
     ++ stdenv.lib.optional stdenv.isLinux dbus
     ++ stdenv.lib.optionals withX
       [ xlibsWrapper libXaw Xaw3d libXpm libpng libjpeg libungif libtiff librsvg libXft
@@ -64,6 +64,11 @@ stdenv.mkDerivation rec {
 
   NIX_CFLAGS_COMPILE = stdenv.lib.optionalString (stdenv.isDarwin && withX)
     "-I${cairo}/include/cairo";
+
+  preBuild = ''
+    find . -name '*.elc' -delete
+    git clean -dfx
+  '';
 
   postInstall = ''
     mkdir -p $out/share/emacs/site-lisp/

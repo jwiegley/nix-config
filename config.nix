@@ -1,51 +1,44 @@
 { pkgs }: {
 
-# replaceStdenv = { pkgs }: pkgs.allStdenvs.stdenvDarwin;
-
 packageOverrides = super: let self = super.pkgs; in with self; rec {
 
 myHaskellPackages = hp: hp.override {
   overrides = self: super: with pkgs.haskell.lib; {
-    coq-haskell      = self.callPackage ~/src/linearscan/Hask {};
-    linearscan       = self.callPackage ~/src/linearscan {};
-    linearscan-hoopl = self.callPackage ~/src/linearscan-hoopl {};
-  
     newartisans = self.callPackage ~/doc/newartisans {
       yuicompressor = pkgs.yuicompressor;
     };
-  
-    ghc-issues      = self.callPackage ~/src/ghc-issues {};
-    c2hsc           = dontCheck (self.callPackage ~/src/c2hsc {});
-    git-all         = self.callPackage ~/src/git-all {};
-    hours           = self.callPackage ~/src/hours {};
-    pushme          = self.callPackage ~/src/pushme {};
-    rehoo           = self.callPackage ~/src/rehoo {};
-    simple-mirror   = self.callPackage ~/src/hackage-mirror {};
-    sizes           = self.callPackage ~/src/sizes {};
-    una             = self.callPackage ~/src/una {};
-    hierarchy       = self.callPackage ~/src/hierarchy {};
-    pipes-files     = self.callPackage ~/src/pipes-files {};
-    pipes-fusion    = self.callPackage ~/src/pipes-fusion {};
-    fusion          = self.callPackage ~/src/fusion {};
-    streaming-tests = self.callPackage ~/src/streaming-tests {};
 
-    pipes           = self.callPackage ~/Contracts/OSS/Projects/pipes {};
-    pipes-safe      = self.callPackage ~/Contracts/OSS/Projects/pipes-safe {};
-  
+    firestone       = self.callPackage /tmp/firestone {};
+    coq-haskell      = self.callPackage ~/src/linearscan/Hask {};
+    linearscan       = self.callPackage ~/src/linearscan {};
+    linearscan-hoopl = self.callPackage ~/src/linearscan-hoopl {};
     async-pool      = self.callPackage ~/src/async-pool {};
-    bindings-DSL    = self.callPackage ~/oss/bindings-dsl {};
+    c2hsc           = dontCheck (self.callPackage ~/src/c2hsc {});
     commodities     = self.callPackage ~/src/ledger/new/commodities {};
     consistent      = self.callPackage ~/src/consistent {};
     find-conduit    = self.callPackage ~/src/find-conduit {};
+    fusion          = self.callPackage ~/src/fusion {};
     fuzzcheck       = self.callPackage ~/src/fuzzcheck {};
+    ghc-issues      = self.callPackage ~/src/ghc-issues {};
+    git-all         = self.callPackage ~/src/git-all {};
     github          = self.callPackage ~/src/github {};
+    hierarchy       = self.callPackage ~/src/hierarchy {};
     hnix            = self.callPackage ~/src/hnix {};
+    hours           = self.callPackage ~/src/hours {};
     ipcvar          = self.callPackage ~/src/ipcvar {};
     logging         = self.callPackage ~/src/logging {};
     monad-extras    = self.callPackage ~/src/monad-extras {};
+    pipes-files     = self.callPackage ~/src/pipes-files {};
+    pipes-fusion    = self.callPackage ~/src/pipes-fusion {};
+    pushme          = self.callPackage ~/src/pushme {};
+    rehoo           = self.callPackage ~/src/rehoo {};
     rest-client     = self.callPackage ~/src/rest-client {};
     simple-conduit  = self.callPackage ~/src/simple-conduit {};
-  
+    simple-mirror   = self.callPackage ~/src/hackage-mirror {};
+    sizes           = self.callPackage ~/src/sizes {};
+    streaming-tests = self.callPackage ~/src/streaming-tests {};
+    una             = self.callPackage ~/src/una {};
+
     gitlib          = self.callPackage ~/src/gitlib/gitlib {};
     gitlib-test     = self.callPackage ~/src/gitlib/gitlib-test {};
     hlibgit2        = dontCheck (self.callPackage ~/src/gitlib/hlibgit2 {});
@@ -62,15 +55,17 @@ myHaskellPackages = hp: hp.override {
     gitlib-sample   = self.callPackage ~/src/gitlib/gitlib-sample {};
     git-monitor     = self.callPackage ~/src/gitlib/git-monitor {};
     git-gpush       = self.callPackage ~/src/gitlib/git-gpush {};
-  
-    hdevtools       = self.callPackage ~/oss/hdevtools {};
+
+    # hdevtools       = self.callPackage ~/oss/hdevtools {};
+    pipes           = self.callPackage ~/oss/pipes {};
+    pipes-safe      = self.callPackage ~/oss/pipes-safe {};
+    bindings-DSL    = self.callPackage ~/oss/bindings-dsl {};
+    time-recurrence = dontCheck (self.callPackage ~/oss/time-recurrence {});
+    timeparsers     = dontCheck (self.callPackage ~/oss/timeparsers {});
 
     systemFileio    = dontCheck super.systemFileio;
     shake           = dontCheck super.shake;
     singletons      = dontCheck super.singletons;
-
-    time-recurrence = dontCheck (self.callPackage ~/oss/time-recurrence {});
-    timeparsers     = dontCheck (self.callPackage ~/oss/timeparsers {});
   };
 };
 
@@ -96,7 +91,7 @@ profiledHaskell784Packages = haskell784Packages.override {
 
 ledger = super.callPackage ~/src/ledger {};
 
-emacsHEAD = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
+emacsHEAD_base = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   libXaw = xorg.libXaw;
   Xaw3d = null;
   gconf = null;
@@ -108,13 +103,15 @@ emacsHEAD = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   inherit (darwin) libobjc;
 };
 
+emacsHEAD = super.stdenv.lib.overrideDerivation emacsHEAD_base (attrs: { doCheck = false; });
+
 emacs = if super.stdenv.isDarwin
         then super.emacs24Macport_24_5
         else super.emacs;
 
 emacs24Packages = recurseIntoAttrs super.emacs24Packages //
   { proofgeneral = pkgs.emacs24Packages.proofgeneral_4_3_pre;
-    emacs = pkgs.emacs; 
+    emacs = pkgs.emacs;
   };
 
 emacsToolsEnv = pkgs.buildEnv {
@@ -196,17 +193,24 @@ networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
     ## aria
+    autossh
     cacert
     httrack
     iperf
     mtr
+    openssh
     openssl
-    openvpn
+    # openvpn
+    # opensc
     rsync
     socat2pre
+    httptunnel
     stunnel
+    tor torsocks
+    # yubico-piv-tool
+    # yubikey-personalization
     wget
-    youtubeDL ffmpeg
+    # youtubeDL ffmpeg
   ];
 };
 
@@ -224,7 +228,7 @@ mailToolsEnv = pkgs.buildEnv {
 
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
-  paths = [ 
+  paths = [
     texLiveFull
     ghostscript
     libpng
@@ -257,12 +261,13 @@ pythonToolsEnv = pkgs.buildEnv {
     pythonDocs.html.python27
     # python27Packages.ipython
     python27Packages.pygments
+    python27Packages.certifi
   ];
 };
 
 rubyToolsEnv = pkgs.buildEnv {
   name = "rubyTools";
-  paths = [ 
+  paths = [
     ruby
   ];
 };
@@ -271,7 +276,7 @@ buildToolsEnv = pkgs.buildEnv {
   name = "buildTools";
   paths = [
     ninja
-    global idutils
+    global idutils ctags
     autoconf automake114x
     cvs cvsps
     darcs
@@ -312,40 +317,43 @@ coq84Env = pkgs.myEnvFun {
     ocamlPackages.camlp5_transitional
     coq
     # coqPackages.fiat coqPackages.bedrock
+    coqPackages.flocq
     coqPackages.mathcomp
     coqPackages.ssreflect
     coqPackages.QuickChick
     coqPackages.tlc
     coqPackages.ynot
-    prooftree
+    # prooftree
   ];
 };
 
 coq85Env = pkgs.myEnvFun {
   name = "coq85";
-  buildInputs = 
-    let mpath = /Users/johnw/.nix-defexpr/nixpkgs/pkgs/development/coq-modules; in
-    let ssreflect_8_5 = callPackage (mpath + /ssreflect/generic.nix) {
-        coq = coq_8_5;
-        src = fetchurl {
-          url = http://ssr.msr-inria.inria.fr/FTP/ssreflect-1.5.coq85beta2.tar.gz;
-          sha256 = "084l9xd5vgb8jml0dkm66g8cil5rsf04w821pjhn2qk9mdbwaagf";
-        };
-        patches = [ (mpath + /ssreflect/threads.patch) ];
-      }; in
+  buildInputs =
+    # let mpath = /Users/johnw/.nix-defexpr/nixpkgs/pkgs/development/coq-modules; in
+    # let ssreflect_8_5 = callPackage (mpath + /ssreflect/generic.nix) {
+    #     coq = coq_8_5;
+    #     src = fetchurl {
+    #       url = http://ssr.msr-inria.inria.fr/FTP/ssreflect-1.5.coq85beta2.tar.gz;
+    #       sha256 = "084l9xd5vgb8jml0dkm66g8cil5rsf04w821pjhn2qk9mdbwaagf";
+    #     };
+    #     patches = [ (mpath + /ssreflect/threads.patch) ];
+    #   }; in
 
-    let mathcomp_8_5 = callPackage (mpath + /mathcomp/generic.nix) {
-        coq = coq_8_5;
-        src = fetchurl {
-          url = http://ssr.msr-inria.inria.fr/FTP/mathcomp-1.5.coq85beta2.tar.gz;
-          sha256 = "03bnq44ym43x8shi7whc02l0g5vy6rx8f1imjw478chlgwcxazqy";
-        };
-        ssreflect = ssreflect_8_5;
-      }; in
+    # let mathcomp_8_5 = callPackage (mpath + /mathcomp/generic.nix) {
+    #     coq = coq_8_5;
+    #     src = fetchurl {
+    #       url = http://ssr.msr-inria.inria.fr/FTP/mathcomp-1.5.coq85beta2.tar.gz;
+    #       sha256 = "03bnq44ym43x8shi7whc02l0g5vy6rx8f1imjw478chlgwcxazqy";
+    #     };
+    #     ssreflect = ssreflect_8_5;
+    #   }; in
 
     [ ocaml ocamlPackages.camlp5_transitional
-      coq_8_5 mathcomp_8_5 ssreflect_8_5
-      prooftree
+      coq_8_5
+      coqPackages_8_5.ssreflect
+      coqPackages_8_5.mathcomp
+      # prooftree
     ];
 };
 
@@ -357,22 +365,22 @@ coqHEADEnv = pkgs.myEnvFun {
     coq_HEAD
     (coqPackages.mathcomp.override { coq = coq_HEAD; })
     (coqPackages.ssreflect.override { coq = coq_HEAD; })
-    prooftree
+    # prooftree
   ];
 };
 
 agdaEnv = pkgs.myEnvFun {
   name = "agda";
   buildInputs = [
-    haskell784Packages.Agda
-    haskell784Packages.Agda-executable
+    haskell7102Packages.Agda
+    haskell7102Packages.Agda-executable
   ];
 };
 
 gameToolsEnv = pkgs.buildEnv {
   name = "gameTools";
-  paths = [ 
-    chessdb 
+  paths = [
+    chessdb
     craftyFull
     eboard
     gnugo
@@ -398,17 +406,8 @@ ghc784Env = pkgs.myEnvFun {
     alex happy
     cabal-install
     ghc-core
-    # ghc-mod
-    hdevtools
     hlint
     hasktags
-    cabal-meta
-    # lambdabot djinn mueval
-    pointfree
-    # idris
-    # threadscope
-    # timeplot splot
-    # liquidhaskell
   ];
 };
 
@@ -426,8 +425,9 @@ ghc7102Env = pkgs.myEnvFun {
     hlint
     simple-mirror
     hasktags
-    cabal-meta
+    # cabal-meta
     # lambdabot djinn mueval
+    pointfree
     idris
     # threadscope
     # timeplot splot
@@ -514,7 +514,7 @@ my-packages-784 = hp: with hp; [
   # conduit-combinators
   # conduit-extra
   configurator
-  constraints
+  # constraints
   contravariant
   convertible
   cpphs
