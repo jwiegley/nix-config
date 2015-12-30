@@ -2,15 +2,25 @@
 
 cabal=$(echo *.cabal)
 
+profiling=no
+if [[ "$1" == "prof" ]]; then
+    profiling=yes
+    shift 1
+fi
+
 if [[ ! -f default.nix ]]; then
     cabal2nix . > default.nix
 fi
 
-if [[ ! -f Setup.hs ]]; then
+if [[ ! -f Setup.hs && ! -f Setup.lhs ]]; then
     cat > Setup.hs <<EOF
 import Distribution.Simple
 main = defaultMain
 EOF
 fi
 
-nix-shell '<nixpkgs>' -A haskellngPackages.$(basename $(pwd)).env "$@"
+if [[ $profiling == yes ]]; then
+    nix-shell '<nixpkgs>' -A profiledHaskell7102Packages.$(basename $(pwd)).env "$@"
+else
+    nix-shell '<nixpkgs>' -A haskell7102Packages.$(basename $(pwd)).env "$@"
+fi

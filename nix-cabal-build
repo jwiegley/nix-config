@@ -2,6 +2,12 @@
 
 cabal=$(echo *.cabal)
 
+profiling=no
+if [[ "$1" == "prof" ]]; then
+    profiling=yes
+    shift 1
+fi
+
 if [[ ! -f default.nix ]]; then
     cabal2nix . > default.nix
 fi
@@ -13,4 +19,8 @@ main = defaultMain
 EOF
 fi
 
-nix-build "$@" -E 'let pkgs = import <nixpkgs> {}; in pkgs.stdenv.lib.callPackageWith (pkgs // pkgs.haskellngPackages) ./default.nix {}'
+if [[ $profiling == yes ]]; then
+    nix-build "$@" -E 'let pkgs = import <nixpkgs> {}; in pkgs.stdenv.lib.callPackageWith (pkgs // pkgs.profiledHaskell7102Packages) ./default.nix {}'
+else
+    nix-build "$@" -E 'let pkgs = import <nixpkgs> {}; in pkgs.stdenv.lib.callPackageWith (pkgs // pkgs.haskell7102Packages) ./default.nix {}'
+fi

@@ -1,2 +1,2 @@
 #!/bin/bash
-exec nix-env -Q --max-jobs 4 -k -i "$@"
+exec nix-env -Q -j$(ncpu) -k -i "$@"
