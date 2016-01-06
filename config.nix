@@ -114,9 +114,19 @@ emacs24Packages = recurseIntoAttrs super.emacs24Packages //
     emacs = pkgs.emacs;
   };
 
-emacsToolsEnv = pkgs.buildEnv {
-  name = "emacsTools";
-  paths = with emacsPackagesNgGen emacs; [
+emacsHEADEnv = pkgs.myEnvFun {
+  name = "emacsHEAD";
+  buildInputs = [ emacsHEAD ];
+};
+
+# emacs25Env = pkgs.myEnvFun {
+#   name = "emacs25";
+#   buildInputs = [ emacs25 ];
+# };
+
+emacs24Env = pkgs.myEnvFun {
+  name = "emacs24";
+  buildInputs = with emacsPackagesNgGen emacs; [
     emacs
     aspell
     aspellDicts.en

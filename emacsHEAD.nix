@@ -48,8 +48,7 @@ stdenv.mkDerivation rec {
     ++ stdenv.lib.optional (withX && withGTK3) gtk3
     ++ stdenv.lib.optional (stdenv.isDarwin && withX) cairo;
 
-  propagatedBuildInputs = stdenv.lib.optionals stdenv.isDarwin [ AppKit Foundation libobjc
-  ];
+  propagatedBuildInputs = stdenv.lib.optionals stdenv.isDarwin [ AppKit Foundation libobjc ];
 
   NIX_LDFLAGS = stdenv.lib.optional stdenv.isDarwin
     "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation";
@@ -65,9 +64,14 @@ stdenv.mkDerivation rec {
   NIX_CFLAGS_COMPILE = stdenv.lib.optionalString (stdenv.isDarwin && withX)
     "-I${cairo}/include/cairo";
 
-  preBuild = ''
+  preConfigure = ''
     find . -name '*.elc' -delete
     git clean -dfx
+  '';
+
+  installPhase = ''
+    set -x
+    make install
   '';
 
   postInstall = ''
