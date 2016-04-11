@@ -31,10 +31,15 @@ stdenv.mkDerivation rec {
 
   patches = stdenv.lib.optionals stdenv.isDarwin [
     ./at-fdcwd.patch
+    ./exclude-tramp-tests.patch
   ];
 
   postPatch = ''
-    sed -i 's|/usr/share/locale|${gettext}/share/locale|g' lisp/international/mule-cmds.el
+    sed -i 's|/usr/share/locale|${gettext}/share/locale|g' \
+      lisp/international/mule-cmds.el
+    find . -name '*.elc' -delete
+    git clean -dfx
+    sh autogen.sh
   '';
 
   buildInputs =
@@ -55,24 +60,18 @@ stdenv.mkDerivation rec {
 
   configureFlags =
     if stdenv.isDarwin
-      then [ "--with-ns" "--disable-ns-self-contained" ]
+      # then [ "--with-ns" "--disable-ns-self-contained" ]
+      then [ "--with-ns" "--disable-ns-self-contained"
+             "--enable-checking=yes"
+             "--enable-check-lisp-object-type=yes" ]
     else if withX
       then [ "--with-x-toolkit=${toolkit}" "--with-xft" ]
       else [ "--with-x=no" "--with-xpm=no" "--with-jpeg=no" "--with-png=no"
              "--with-gif=no" "--with-tiff=no" ];
 
-  NIX_CFLAGS_COMPILE = stdenv.lib.optionalString (stdenv.isDarwin && withX)
-    "-I${cairo}/include/cairo";
-
-  preConfigure = ''
-    find . -name '*.elc' -delete
-    git clean -dfx
-  '';
-
-  installPhase = ''
-    set -x
-    make install
-  '';
+  NIX_CFLAGS_COMPILE = "-O0 -g3" + 
+    stdenv.lib.optionalString (stdenv.isDarwin && withX)
+      "-I${cairo}/include/cairo";
 
   postInstall = ''
     mkdir -p $out/share/emacs/site-lisp/
