@@ -56,7 +56,6 @@ myHaskellPackages = self: super: with pkgs.haskell.lib; {
   git-monitor     = self.callPackage ~/src/gitlib/git-monitor {};
   git-gpush       = self.callPackage ~/src/gitlib/git-gpush {};
 
-  # hdevtools       = self.callPackage ~/oss/hdevtools {};
   pipes           = self.callPackage ~/oss/pipes {};
   pipes-safe      = self.callPackage ~/oss/pipes-safe {};
   bindings-DSL    = self.callPackage ~/oss/bindings-dsl {};
@@ -96,8 +95,9 @@ emacsHEAD_base = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   inherit (darwin) libobjc;
 };
 
-emacsHEAD = super.stdenv.lib.overrideDerivation emacsHEAD_base (attrs: { doCheck = false; });
-#emacsHEAD = super.stdenv.lib.overrideDerivation emacsHEAD_base (attrs: { doCheck = true; });
+emacsHEAD = super.stdenv.lib.overrideDerivation emacsHEAD_base (attrs: { 
+  doCheck = false; 
+});
 
 emacs = if super.stdenv.isDarwin
         then super.emacs24Macport_24_5
@@ -114,6 +114,13 @@ emacsHEADEnv = pkgs.myEnvFun {
     emacsHEAD
     pkgs.auctex
     pkgs.emacs24Packages.proofgeneral_HEAD
+  ];
+};
+
+emacsHEADAltEnv = pkgs.myEnvFun {
+  name = "emacsHEADalt";
+  buildInputs = with emacsPackagesNgGen emacs; [
+    emacsHEAD
   ];
 };
 
@@ -150,7 +157,6 @@ systemToolsEnv = pkgs.buildEnv {
     exiv2
     findutils
     monkeysphere
-    # gnupg
     gnugrep
     gnuplot
     gnused
@@ -159,7 +165,7 @@ systemToolsEnv = pkgs.buildEnv {
     haskell7103Packages.hours
     imagemagick_light
     less
-    p7zip
+    # p7zip
     haskell7103Packages.pandoc
     parallel
     pinentry
@@ -186,7 +192,7 @@ gitToolsEnv = pkgs.buildEnv {
     paths = [
       diffutils patchutils
 
-      # pkgs.haskell7103Packages.git-gpush
+      (haskell.lib.dontCheck pkgs.haskell7103Packages.git-annex)
       haskell7103Packages.git-monitor
       pkgs.gitAndTools.gitFull
       pkgs.gitAndTools.gitflow
@@ -204,21 +210,19 @@ networkToolsEnv = pkgs.buildEnv {
     aria
     autossh
     cacert
-    httrack
+    #httrack
     iperf
     mtr
     openssh
     openssl
-    # openvpn
-    # opensc
+    # pdnsd does not build with IPv6 on Darwin
+    (super.stdenv.lib.overrideDerivation pdnsd (attrs: { configureFlags = []; }))
     rsync
     socat2pre
     httptunnel
     stunnel
     tor torsocks
-    yubico-piv-tool
-    yubikey-personalization
-    w3m
+    # yubikey-personalization
     wget
     youtubeDL ffmpeg
   ];
@@ -249,10 +253,10 @@ publishToolsEnv = pkgs.buildEnv {
 serviceToolsEnv = pkgs.buildEnv {
   name = "serviceTools";
   paths = [
-    nginx
+    #nginx
     postgresql
     redis
-    mysql
+    #mysql
     nodejs
   ];
 };
@@ -286,8 +290,8 @@ buildToolsEnv = pkgs.buildEnv {
   paths = [
     ninja
     global idutils ctags
-    autoconf automake114x
-    cvs cvsps
+    autoconf automake114x libtool pkgconfig
+    cvs #cvsps
     darcs
     diffstat
     doxygen
@@ -302,18 +306,24 @@ buildToolsEnv = pkgs.buildEnv {
 langToolsEnv = pkgs.buildEnv {
   name = "langTools";
   paths = [
-    clang llvm boost.dev boost.lib libcxx
+    clang llvm boost libcxx
     libxml2
-    ott isabelle
+    # isabelle
+    ott
     gnumake
     guile
-    compcert #verasco
-    rustc
-    sbcl #acl2
+    compcert # verasco
+    # rustc
+    sbcl # acl2
     sloccount
     yuicompressor
   ];
  };
+
+myCoq84 = super.callPackage ~/.nixpkgs/coq84.nix {
+  inherit (ocamlPackages_4_01_0) ocaml findlib lablgtk;
+  camlp5 = ocamlPackages_4_01_0.camlp5_transitional;
+};
 
 coq84Env = pkgs.myEnvFun {
   name = "coq84";
@@ -321,7 +331,6 @@ coq84Env = pkgs.myEnvFun {
     ocaml
     ocamlPackages.camlp5_transitional
     coq
-    # coqPackages.fiat coqPackages.bedrock
     coqPackages.flocq
     coqPackages.mathcomp
     coqPackages.ssreflect
@@ -339,7 +348,6 @@ coq85Env = pkgs.myEnvFun {
       coq_8_5
       coqPackages_8_5.ssreflect
       coqPackages_8_5.mathcomp
-      # prooftree
     ];
 };
 
@@ -351,7 +359,6 @@ coqHEADEnv = pkgs.myEnvFun {
     coq_HEAD
     (coqPackages.mathcomp.override { coq = coq_HEAD; })
     (coqPackages.ssreflect.override { coq = coq_HEAD; })
-    # prooftree
   ];
 };
 
@@ -366,9 +373,9 @@ agdaEnv = pkgs.myEnvFun {
 gameToolsEnv = pkgs.buildEnv {
   name = "gameTools";
   paths = [
-    chessdb
+    # chessdb
     craftyFull
-    eboard
+    # eboard
     gnugo
   ];
 };
@@ -393,25 +400,23 @@ ghc710Env = pkgs.myEnvFun {
     cabal-install
     ghc-core
     ghc-mod
-    # hdevtools
     hlint
     simple-mirror
     hasktags
-    # cabal-meta
-    #lambdabot
     djinn mueval
     pointfree
-    idris
     threadscope
     timeplot splot
-    liquidhaskell
+    # lambdabot
+    # idris
+    # liquidhaskell
   ];
 };
 
 hoogle-local = f: pkgs: with pkgs;
   import ~/.nixpkgs/local.nix {
     inherit stdenv hoogle rehoo ghc;
-    packages = f pkgs ++ [ cheapskate trifecta ];
+    packages = f pkgs ++ [ trifecta ];
   };
 
 haskellFilterSource = paths: src: builtins.filterSource (path: type:
@@ -430,7 +435,6 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
 
 my-packages-7103 = hp: with hp; [
   Boolean
-  CC-delcont
   HTTP
   HUnit
   IfElse
@@ -488,7 +492,7 @@ my-packages-7103 = hp: with hp; [
   contravariant
   convertible
   cpphs
-  criterion
+  # criterion                # jww (2016-07-08): NYI
   cryptohash
   css-text
   curl
@@ -517,7 +521,6 @@ my-packages-7103 = hp: with hp; [
   fingertree
   fmlist
   foldl
-  folds
   free
   fsnotify
   ghc-paths
@@ -559,8 +562,6 @@ my-packages-7103 = hp: with hp; [
   lifted-async
   lifted-base
   linear
-  # linearscan
-  # linearscan-hoopl
   list-extras
   list-t
   logict

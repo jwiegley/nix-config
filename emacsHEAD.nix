@@ -60,16 +60,16 @@ stdenv.mkDerivation rec {
 
   configureFlags =
     if stdenv.isDarwin
-      # then [ "--with-ns" "--disable-ns-self-contained" ]
-      then [ "--with-ns" "--disable-ns-self-contained"
-             "--enable-checking=yes"
-             "--enable-check-lisp-object-type=yes" ]
+      then [ "--with-ns" "--disable-ns-self-contained" ]
+      # then [ "--with-ns" "--disable-ns-self-contained"
+      #        "--enable-checking=yes"
+      #        "--enable-check-lisp-object-type=yes" ]
     else if withX
       then [ "--with-x-toolkit=${toolkit}" "--with-xft" ]
       else [ "--with-x=no" "--with-xpm=no" "--with-jpeg=no" "--with-png=no"
              "--with-gif=no" "--with-tiff=no" ];
 
-  NIX_CFLAGS_COMPILE = "-O0 -g3" + 
+  NIX_CFLAGS_COMPILE = "-O3 -g3" + 
     stdenv.lib.optionalString (stdenv.isDarwin && withX)
       "-I${cairo}/include/cairo";
 
