@@ -7,65 +7,81 @@ myHaskellPackages = self: super: with pkgs.haskell.lib; {
     yuicompressor = pkgs.yuicompressor;
   };
 
-  emacs-bugs      = self.callPackage ~/src/emacs-bugs {};
-  firestone       = self.callPackage /tmp/firestone {};
+  johnwiegley = self.callPackage ~/doc/johnwiegley {
+    yuicompressor = pkgs.yuicompressor;
+  };
+  convert = self.callPackage ~/doc/johnwiegley/convert {};
+
+  hsmedl = self.callPackage ~/bae/smedl/hsmedl {};
+  bytestring-fiat = self.callPackage ~/src/bytestring/src {};
+
+  emacs-bugs       = self.callPackage ~/src/emacs-bugs {};
   coq-haskell      = self.callPackage ~/src/coq-haskell {};
   linearscan       = self.callPackage ~/src/linearscan {};
   linearscan-hoopl = self.callPackage ~/src/linearscan-hoopl {};
-  async-pool      = self.callPackage ~/src/async-pool {};
-  c2hsc           = dontCheck (self.callPackage ~/src/c2hsc {});
-  commodities     = self.callPackage ~/src/ledger/new/commodities {};
-  consistent      = self.callPackage ~/src/consistent {};
-  find-conduit    = self.callPackage ~/src/find-conduit {};
-  fusion          = self.callPackage ~/src/fusion {};
-  fuzzcheck       = self.callPackage ~/src/fuzzcheck {};
-  ghc-issues      = self.callPackage ~/src/ghc-issues {};
-  git-all         = self.callPackage ~/src/git-all {};
-  github          = self.callPackage ~/src/github {};
-  hierarchy       = self.callPackage ~/src/hierarchy {};
-  hnix            = self.callPackage ~/src/hnix {};
-  hours           = self.callPackage ~/src/hours {};
-  ipcvar          = self.callPackage ~/src/ipcvar {};
-  logging         = self.callPackage ~/src/logging {};
-  monad-extras    = self.callPackage ~/src/monad-extras {};
-  pipes-files     = self.callPackage ~/src/pipes-files {};
-  pipes-fusion    = self.callPackage ~/src/pipes-fusion {};
-  pushme          = self.callPackage ~/src/pushme {};
-  rehoo           = self.callPackage ~/src/rehoo {};
-  rest-client     = self.callPackage ~/src/rest-client {};
-  simple-conduit  = self.callPackage ~/src/simple-conduit {};
-  simple-mirror   = self.callPackage ~/src/hackage-mirror {};
-  sizes           = self.callPackage ~/src/sizes {};
-  streaming-tests = self.callPackage ~/src/streaming-tests {};
-  una             = self.callPackage ~/src/una {};
+  async-pool       = self.callPackage ~/src/async-pool {};
+  c2hsc            = dontCheck (self.callPackage ~/src/c2hsc {});
+  commodities      = self.callPackage ~/src/ledger/new/commodities {};
+  consistent       = self.callPackage ~/src/consistent {};
+  find-conduit     = self.callPackage ~/src/find-conduit {};
+  fusion           = self.callPackage ~/src/fusion {};
+  fuzzcheck        = self.callPackage ~/src/fuzzcheck {};
+  ghc-issues       = self.callPackage ~/src/ghc-issues {};
+  git-all          = self.callPackage ~/src/git-all {};
+  github           = self.callPackage ~/src/github {};
+  hierarchy        = self.callPackage ~/src/hierarchy {};
+  hnix             = self.callPackage ~/src/hnix {};
+  hours            = self.callPackage ~/src/hours {};
+  ipcvar           = self.callPackage ~/src/ipcvar {};
+  logging          = self.callPackage ~/src/logging {};
+  monad-extras     = self.callPackage ~/src/monad-extras {};
+  pipes-files      = self.callPackage ~/src/pipes-files {};
+  pipes-fusion     = self.callPackage ~/src/pipes-fusion {};
+  pushme           = self.callPackage ~/src/pushme {};
+  rehoo            = self.callPackage ~/src/rehoo {};
+  rest-client      = self.callPackage ~/src/rest-client {};
+  simple-conduit   = self.callPackage ~/src/simple-conduit {};
+  simple-mirror    = self.callPackage ~/src/hackage-mirror {};
+  sizes            = self.callPackage ~/src/sizes {};
+  streaming-tests  = self.callPackage ~/src/streaming-tests {};
+  una              = self.callPackage ~/src/una {};
 
-  gitlib          = self.callPackage ~/src/gitlib/gitlib {};
-  gitlib-test     = self.callPackage ~/src/gitlib/gitlib-test {};
-  hlibgit2        = dontCheck (self.callPackage ~/src/gitlib/hlibgit2 {});
-  gitlib-libgit2  = self.callPackage ~/src/gitlib/gitlib-libgit2 {};
-  gitlib-cmdline  = self.callPackage ~/src/gitlib/gitlib-cmdline {
+  # gitlib
+  gitlib           = self.callPackage ~/src/gitlib/gitlib {};
+  gitlib-test      = self.callPackage ~/src/gitlib/gitlib-test {};
+  hlibgit2         = dontCheck (self.callPackage ~/src/gitlib/hlibgit2 {});
+  gitlib-libgit2   = self.callPackage ~/src/gitlib/gitlib-libgit2 {};
+  gitlib-cmdline   = self.callPackage ~/src/gitlib/gitlib-cmdline {
     git = gitAndTools.git;
   };
-  gitlib-cross    = self.callPackage ~/src/gitlib/gitlib-cross {
+  gitlib-cross     = self.callPackage ~/src/gitlib/gitlib-cross {
     git = gitAndTools.git;
   };
-  gitlib-hit      = self.callPackage ~/src/gitlib/gitlib-hit {};
-  gitlib-lens     = self.callPackage ~/src/gitlib/gitlib-lens {};
-  gitlib-s3       = self.callPackage ~/src/gitlib/gitlib-S3 {};
-  gitlib-sample   = self.callPackage ~/src/gitlib/gitlib-sample {};
-  git-monitor     = self.callPackage ~/src/gitlib/git-monitor {};
-  git-gpush       = self.callPackage ~/src/gitlib/git-gpush {};
+  gitlib-hit       = self.callPackage ~/src/gitlib/gitlib-hit {};
+  gitlib-lens      = self.callPackage ~/src/gitlib/gitlib-lens {};
+  gitlib-s3        = self.callPackage ~/src/gitlib/gitlib-S3 {};
+  gitlib-sample    = self.callPackage ~/src/gitlib/gitlib-sample {};
+  git-monitor      = self.callPackage ~/src/gitlib/git-monitor {};
+  git-gpush        = self.callPackage ~/src/gitlib/git-gpush {};
 
-  pipes           = self.callPackage ~/oss/pipes {};
-  pipes-safe      = self.callPackage ~/oss/pipes-safe {};
-  bindings-DSL    = self.callPackage ~/oss/bindings-dsl {};
-  time-recurrence = dontCheck (self.callPackage ~/oss/time-recurrence {});
-  timeparsers     = dontCheck (self.callPackage ~/oss/timeparsers {});
-  scalpel         = self.callPackage ~/oss/scalpel {};
+  # community packages
+  pipes            = self.callPackage ~/oss/pipes {};
+  # pipes-safe       = self.callPackage ~/oss/pipes-safe {};
+  bindings-DSL     = self.callPackage ~/oss/bindings-dsl {};
+  time-recurrence  = dontCheck (self.callPackage ~/oss/time-recurrence {});
+  timeparsers      = dontCheck (self.callPackage ~/oss/timeparsers {});
+  # scalpel          = self.callPackage ~/oss/scalpel {};
+  docker-hs        = self.callPackage ~/oss/docker-hs {};
+  apis             = dontCheck (self.callPackage ~/bae/spv-deliverable/rings-dashboard/mitll/brass-platform/apis {});
+  parameter-dsl = self.callPackage ~/bae/spv-deliverable/rings-dashboard/mitll/brass-platform/parameter-dsl {};
 
-  systemFileio    = dontCheck super.systemFileio;
-  shake           = dontCheck super.shake;
-  singletons      = dontCheck super.singletons;
+  # systemFileio     = dontCheck super.systemFileio;
+  # shake            = dontCheck super.shake;
+  # singletons       = dontCheck super.singletons;
+
+  hackage-root-tool = self.callPackage ~/oss/hackage-security/hackage-root-tool {};
+  hackage-security  = self.callPackage ~/oss/hackage-security/hackage-security {};
+  cryptohash-sha256 = self.callPackage ~/oss/hackage-security/cryptohash-sha256.nix {};
 };
 
 haskell7103Packages = super.haskell.packages.ghc7103.override {
@@ -79,6 +95,60 @@ profiledHaskell7103Packages = super.haskell.packages.ghc7103.override {
       enableExecutableProfiling = true;
     });
   };
+};
+
+ghc710Env = pkgs.myEnvFun {
+  name = "ghc710";
+  buildInputs = with haskell7103Packages; [
+    haskell7103Packages.ghc
+    alex happy
+    cabal-install
+    ghc-core
+    # ghc-mod
+    hlint
+    # hasktags
+    pointfree
+    # threadscope
+    # timeplot splot
+    # lambdabot djinn mueval
+    # idris
+    # liquidhaskell
+    # Agda Agda-executable
+  ];
+};
+
+haskell801Packages = super.haskell.packages.ghc801.override {
+  overrides = myHaskellPackages;
+};
+
+profiledHaskell801Packages = super.haskell.packages.ghc801.override {
+  overrides = self: super: myHaskellPackages self super // {
+    mkDerivation = args: super.mkDerivation (args // {
+      enableLibraryProfiling = true;
+      enableExecutableProfiling = true;
+    });
+  };
+};
+
+ghc80Env = pkgs.myEnvFun {
+  name = "ghc80";
+  buildInputs = with haskell801Packages; [
+    haskell801Packages.ghc
+    alex happy
+    cabal-install
+    ghc-core
+    # ghc-mod
+    hlint
+    simple-mirror
+    hasktags
+    pointfree
+    # threadscope
+    # timeplot splot
+    # lambdabot djinn mueval
+    # idris
+    # liquidhaskell
+    # Agda Agda-executable
+  ];
 };
 
 ledger = super.callPackage ~/src/ledger {};
@@ -95,49 +165,20 @@ emacsHEAD_base = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   inherit (darwin) libobjc;
 };
 
-emacsHEAD = super.stdenv.lib.overrideDerivation emacsHEAD_base (attrs: { 
-  doCheck = false; 
+emacsHEAD = super.stdenv.lib.overrideDerivation emacsHEAD_base (attrs: {
+  doCheck = false;
 });
 
-emacs = if super.stdenv.isDarwin
-        then super.emacs24Macport_24_5
-        else super.emacs;
-
-emacs24Packages = recurseIntoAttrs super.emacs24Packages //
-  { proofgeneral = pkgs.emacs24Packages.proofgeneral_4_3_pre;
-    emacs = pkgs.emacs;
-  };
+emacs = emacsHEAD;
 
 emacsHEADEnv = pkgs.myEnvFun {
   name = "emacsHEAD";
-  buildInputs = with emacsPackagesNgGen emacs; [
-    emacsHEAD
-    pkgs.auctex
-    pkgs.emacs24Packages.proofgeneral_HEAD
-  ];
+  buildInputs = with emacsPackagesNgGen emacs; [ emacsHEAD ];
 };
 
 emacsHEADAltEnv = pkgs.myEnvFun {
   name = "emacsHEADalt";
-  buildInputs = with emacsPackagesNgGen emacs; [
-    emacsHEAD
-  ];
-};
-
-emacs24Env = pkgs.myEnvFun {
-  name = "emacs24";
-  buildInputs = with emacsPackagesNgGen emacs; [
-    emacs
-    pkgs.auctex
-    emacs24Packages.proofgeneral
-  ];
-};
-
-emacs24AltEnv = pkgs.myEnvFun {
-  name = "emacs24alt";
-  buildInputs = with emacsPackagesNgGen emacs; [
-    emacs
-  ];
+  buildInputs = with emacsPackagesNgGen emacs; [ emacsHEAD ];
 };
 
 x11ToolsEnv = pkgs.buildEnv {
@@ -148,31 +189,31 @@ x11ToolsEnv = pkgs.buildEnv {
 systemToolsEnv = pkgs.buildEnv {
   name = "systemTools";
   paths = [
-    haskell7103Packages.pushme
-    haskell7103Packages.sizes
-    haskell7103Packages.una
+    haskell801Packages.pushme
+    haskell801Packages.sizes
+    haskell801Packages.una
 
     aspell
     aspellDicts.en
     exiv2
     findutils
-    monkeysphere
     gnugrep
     gnuplot
     gnused
     gnutar
     graphviz
-    haskell7103Packages.hours
-    imagemagick_light
+    haskell801Packages.hours
+    # imagemagick_light
     less
     # p7zip
-    haskell7103Packages.pandoc
+    haskell801Packages.pandoc
     parallel
     pinentry
     pv
+    # ripgrep
     rlwrap
     silver-searcher
-    haskell7103Packages.simple-mirror
+    haskell801Packages.simple-mirror
     sqlite
     stow
     time
@@ -190,25 +231,21 @@ systemToolsEnv = pkgs.buildEnv {
 gitToolsEnv = pkgs.buildEnv {
     name = "gitTools";
     paths = [
-      diffutils patchutils
+      diffutils diffstat patchutils patch
 
-      (haskell.lib.dontCheck pkgs.haskell7103Packages.git-annex)
-      haskell7103Packages.git-monitor
+      haskell801Packages.git-monitor
+      haskell801Packages.git-all
+
+      pkgs.gitAndTools.hub
       pkgs.gitAndTools.gitFull
       pkgs.gitAndTools.gitflow
-      ## pkgs.gitAndTools.hub
-      pkgs.gitAndTools.topGit
       pkgs.gitAndTools.git-imerge
-
-      haskell7103Packages.git-all
     ];
   };
 
 networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
-    aria
-    autossh
     cacert
     #httrack
     iperf
@@ -217,22 +254,18 @@ networkToolsEnv = pkgs.buildEnv {
     openssl
     # pdnsd does not build with IPv6 on Darwin
     (super.stdenv.lib.overrideDerivation pdnsd (attrs: { configureFlags = []; }))
+    # dnscrypt-proxy
     rsync
     socat2pre
-    httptunnel
-    stunnel
-    tor torsocks
-    # yubikey-personalization
     wget
-    youtubeDL ffmpeg
+    znc
   ];
 };
 
 mailToolsEnv = pkgs.buildEnv {
   name = "mailTools";
   paths = [
-    pkgs.dovecot22 or dovecot
-    dovecot_pigeonhole
+    (pkgs.dovecot22 or dovecot) dovecot_pigeonhole
     leafnode
     fetchmail
     imapfilter
@@ -240,35 +273,10 @@ mailToolsEnv = pkgs.buildEnv {
   ];
 };
 
-publishToolsEnv = pkgs.buildEnv {
-  name = "publishTools";
-  paths = [
-    texLiveFull
-    ghostscript
-    libpng
-    haskell7103Packages.newartisans
-  ];
-};
-
-serviceToolsEnv = pkgs.buildEnv {
-  name = "serviceTools";
-  paths = [
-    #nginx
-    postgresql
-    redis
-    #mysql
-    nodejs
-  ];
-};
-
-perlToolsEnv = pkgs.buildEnv {
-  name = "perlTools";
-  paths = [ perl ];
-};
-
 pythonToolsEnv = pkgs.buildEnv {
   name = "pythonTools";
   paths = [
+    python3
     python27Full
     pythonDocs.pdf_letter.python27
     pythonDocs.html.python27
@@ -278,29 +286,13 @@ pythonToolsEnv = pkgs.buildEnv {
   ];
 };
 
-rubyToolsEnv = pkgs.buildEnv {
-  name = "rubyTools";
-  paths = [
-    ruby
-  ];
-};
+idutils = super.stdenv.lib.overrideDerivation super.idutils (attrs: {
+  doCheck = false;
+});
 
 buildToolsEnv = pkgs.buildEnv {
   name = "buildTools";
-  paths = [
-    ninja
-    global idutils ctags
-    autoconf automake114x libtool pkgconfig
-    cvs #cvsps
-    darcs
-    diffstat
-    doxygen
-    htmlTidy
-    lcov
-    mercurial
-    patch
-    subversion
-  ];
+  paths = [ global idutils ctags htmlTidy autoconf automake114x libtool ];
 };
 
 langToolsEnv = pkgs.buildEnv {
@@ -308,13 +300,12 @@ langToolsEnv = pkgs.buildEnv {
   paths = [
     clang llvm boost libcxx
     libxml2
-    # isabelle
-    ott
+    #isabelle
+    #ott
     gnumake
-    guile
-    compcert # verasco
-    # rustc
-    sbcl # acl2
+    #compcert
+    #verasco
+    #sbcl
     sloccount
     yuicompressor
   ];
@@ -362,62 +353,12 @@ coqHEADEnv = pkgs.myEnvFun {
   ];
 };
 
-agdaEnv = pkgs.myEnvFun {
-  name = "agda";
-  buildInputs = [
-    haskell7103Packages.Agda
-    haskell7103Packages.Agda-executable
-  ];
-};
-
 gameToolsEnv = pkgs.buildEnv {
   name = "gameTools";
   paths = [
-    # chessdb
-    craftyFull
-    # eboard
-    gnugo
+    chessdb craftyFull eboard gnugo
   ];
 };
-
-youtube-dl = super.stdenv.lib.overrideDerivation super.youtube-dl (attrs: {
-  ffmpeg = null;
-  pandoc = null;
-  postInstall = "";
-});
-
-idutils = super.stdenv.lib.overrideDerivation super.idutils (attrs: {
-  doCheck = false;
-});
-
-ghc710Env = pkgs.myEnvFun {
-  name = "ghc710";
-  buildInputs = with haskell7103Packages; [
-    (haskell7103Packages.ghcWithPackages my-packages-7103)
-    (hoogle-local my-packages-7103 haskell7103Packages)
-
-    alex happy
-    cabal-install
-    ghc-core
-    ghc-mod
-    hlint
-    simple-mirror
-    hasktags
-    djinn mueval
-    pointfree
-    threadscope
-    timeplot splot
-    # lambdabot
-    # idris
-    # liquidhaskell
-  ];
-};
-
-hoogle-local = f: pkgs: with pkgs;
-  import ~/.nixpkgs/local.nix {
-    inherit stdenv hoogle rehoo ghc;
-    packages = f pkgs ++ [ trifecta ];
-  };
 
 haskellFilterSource = paths: src: builtins.filterSource (path: type:
     let baseName = baseNameOf path; in
@@ -432,254 +373,6 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
     || stdenv.lib.hasSuffix ".dyn_o" path
     || stdenv.lib.hasSuffix ".p_o" path))
   src;
-
-my-packages-7103 = hp: with hp; [
-  Boolean
-  HTTP
-  HUnit
-  IfElse
-  MemoTrie
-  MissingH
-  MonadCatchIO-transformers
-  QuickCheck
-  abstract-deque
-  abstract-par
-  adjunctions
-  aeson
-  async
-  attempt
-  attoparsec
-  attoparsec-conduit
-  attoparsec-enumerator
-  base-unicode-symbols
-  base16-bytestring
-  base64-bytestring
-  basic-prelude
-  bifunctors
-  bindings-DSL
-  blaze-builder
-  blaze-builder-conduit
-  blaze-builder-enumerator
-  blaze-html
-  blaze-markup
-  blaze-textual
-  bool-extras
-  byteable
-  byteorder
-  bytes
-  bytestring-mmap
-  case-insensitive
-  cassava
-  categories
-  cereal
-  cereal-conduit
-  charset
-  chunked-data
-  classy-prelude
-  classy-prelude-conduit
-  cmdargs
-  comonad
-  comonad-transformers
-  compdata
-  composition
-  compressed
-  cond
-  conduit
-  conduit-combinators
-  conduit-extra
-  configurator
-  constraints
-  contravariant
-  convertible
-  cpphs
-  # criterion                # jww (2016-07-08): NYI
-  cryptohash
-  css-text
-  curl
-  data-checked
-  data-default
-  data-fin
-  data-fix
-  derive
-  distributive
-  dlist
-  dlist-instances
-  dns
-  doctest
-  doctest-prop
-  either
-  enclosed-exceptions
-  errors
-  exceptions
-  exceptions
-  extensible-exceptions
-  failure
-  fast-logger
-  fgl
-  file-embed
-  filepath
-  fingertree
-  fmlist
-  foldl
-  free
-  fsnotify
-  ghc-paths
-  graphviz
-  groups
-  hamlet
-  hashable
-  hashtables
-  haskeline
-  haskell-lexer
-  haskell-src
-  haskell-src-exts
-  hfsevents
-  hoopl
-  hslogger
-  hspec
-  hspec-expectations
-  hspec-wai
-  html
-  http-client
-  http-date
-  http-types
-  io-memoize
-  io-storage
-  io-streams
-  json
-  kan-extensions
-  keys
-  language-c
-  language-java
-  language-javascript
-  lattices
-  lens
-  lens-action
-  lens-aeson
-  lens-datetime
-  lens-family
-  lens-family-core
-  lifted-async
-  lifted-base
-  linear
-  list-extras
-  list-t
-  logict
-  machines
-  mime-mail
-  mime-types
-  mmorph
-  monad-control
-  monad-coroutine
-  monad-loops
-  monad-par
-  monad-par-extras
-  monad-stm
-  monadloc
-  mono-traversable
-  monoid-extras
-  mtl
-  multimap
-  multirec
-  network
-  newtype
-  numbers
-  operational
-  optparse-applicative
-  pandoc
-  parallel
-  parallel-io
-  parsec
-  parsers
-  pipes
-  pipes-attoparsec
-  pipes-binary
-  pipes-bytestring
-  pipes-concurrency
-  pipes-extras
-  pipes-files
-  pipes-group
-  pipes-http
-  pipes-network
-  pipes-parse
-  pipes-safe
-  pipes-shell
-  pipes-text
-  pointed
-  posix-paths
-  postgresql-simple
-  pretty-show
-  profunctors
-  random
-  recursion-schemes
-  reducers
-  reflection
-  regex-applicative
-  regex-base
-  regex-compat
-  regex-posix
-  regular
-  resourcet
-  retry
-  safe
-  sbv
-  scalpel
-  scotty
-  semigroupoids
-  semigroups
-  shake
-  shakespeare
-  shelly
-  simple-reflect
-  singletons
-  speculation
-  split
-  spoon
-  stm
-  stm-chans
-  stm-stats
-  streaming
-  streaming-bytestring
-  strict
-  stringsearch
-  strptime
-  syb
-  system-fileio
-  system-filepath
-  tagged
-  tar
-  tardis
-  tasty
-  tasty-hspec
-  tasty-hunit
-  tasty-quickcheck
-  tasty-smallcheck
-  temporary
-  text
-  text-format
-  these
-  thyme
-  time
-  time-recurrence
-  timeparsers
-  total
-  transformers
-  transformers-base
-  turtle
-  uniplate
-  units
-  unix-compat
-  unordered-containers
-  uuid
-  vector
-  void
-  wai
-  warp
-  xhtml
-  yaml
-  zippers
-  zlib
-];
 
 };
 
