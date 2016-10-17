@@ -2,83 +2,80 @@
 
 packageOverrides = super: let self = super.pkgs; in with self; rec {
 
+haskellPackages = super.haskellPackages.override {
+  overrides = self: super: {
+    mkDerivation = pkg: super.mkDerivation (pkg // {
+      src = pkgs.fetchurl {
+        url = "file:///Volumes/Hackage/package/${pkg.pname}-${pkg.version}.tar.gz";
+        inherit (pkg) sha256;
+      };
+    });
+  };
+};
+
 myHaskellPackages = self: super: with pkgs.haskell.lib; {
-  newartisans = self.callPackage ~/doc/newartisans {
-    yuicompressor = pkgs.yuicompressor;
-  };
+  newartisans       = self.callPackage ~/doc/newartisans { yuicompressor = pkgs.yuicompressor; };
+  johnwiegley       = self.callPackage ~/doc/johnwiegley { yuicompressor = pkgs.yuicompressor; };
+  convert           = self.callPackage ~/doc/johnwiegley/convert {};
 
-  johnwiegley = self.callPackage ~/doc/johnwiegley {
-    yuicompressor = pkgs.yuicompressor;
-  };
-  convert = self.callPackage ~/doc/johnwiegley/convert {};
+  hsmedl            = self.callPackage ~/bae/hsmedl {};
+  parsec            = self.callPackage ~/oss/parsec {};
+  parsec-free       = self.callPackage ~/src/parsec-free {};
+  bytestring-fiat   = self.callPackage ~/src/bytestring/src {};
 
-  hsmedl = self.callPackage ~/bae/smedl/hsmedl {};
-  bytestring-fiat = self.callPackage ~/src/bytestring/src {};
+  emacs-bugs        = self.callPackage ~/src/emacs-bugs {};
+  coq-haskell       = self.callPackage ~/src/coq-haskell {};
+  linearscan        = self.callPackage ~/src/linearscan {};
+  linearscan-hoopl  = self.callPackage ~/src/linearscan-hoopl {};
+  async-pool        = self.callPackage ~/src/async-pool {};
+  c2hsc             = dontCheck (self.callPackage ~/src/c2hsc {});
+  commodities       = self.callPackage ~/src/ledger/new/commodities {};
+  consistent        = self.callPackage ~/src/consistent {};
+  find-conduit      = self.callPackage ~/src/find-conduit {};
+  fusion            = self.callPackage ~/src/fusion {};
+  fuzzcheck         = self.callPackage ~/src/fuzzcheck {};
+  ghc-issues        = self.callPackage ~/src/ghc-issues {};
+  git-all           = self.callPackage ~/src/git-all {};
+  github            = self.callPackage ~/src/github {};
+  hierarchy         = self.callPackage ~/src/hierarchy {};
+  hnix              = self.callPackage ~/src/hnix {};
+  hours             = self.callPackage ~/src/hours {};
+  ipcvar            = self.callPackage ~/src/ipcvar {};
+  logging           = self.callPackage ~/src/logging {};
+  monad-extras      = self.callPackage ~/src/monad-extras {};
+  pipes-files       = self.callPackage ~/src/pipes-files {};
+  pipes-fusion      = self.callPackage ~/src/pipes-fusion {};
+  pushme            = self.callPackage ~/src/pushme {};
+  rehoo             = self.callPackage ~/src/rehoo {};
+  rest-client       = self.callPackage ~/src/rest-client {};
+  simple-conduit    = self.callPackage ~/src/simple-conduit {};
+  simple-mirror     = self.callPackage ~/src/hackage-mirror {};
+  sizes             = self.callPackage ~/src/sizes {};
+  streaming-tests   = self.callPackage ~/src/streaming-tests {};
+  una               = self.callPackage ~/src/una {};
 
-  emacs-bugs       = self.callPackage ~/src/emacs-bugs {};
-  coq-haskell      = self.callPackage ~/src/coq-haskell {};
-  linearscan       = self.callPackage ~/src/linearscan {};
-  linearscan-hoopl = self.callPackage ~/src/linearscan-hoopl {};
-  async-pool       = self.callPackage ~/src/async-pool {};
-  c2hsc            = dontCheck (self.callPackage ~/src/c2hsc {});
-  commodities      = self.callPackage ~/src/ledger/new/commodities {};
-  consistent       = self.callPackage ~/src/consistent {};
-  find-conduit     = self.callPackage ~/src/find-conduit {};
-  fusion           = self.callPackage ~/src/fusion {};
-  fuzzcheck        = self.callPackage ~/src/fuzzcheck {};
-  ghc-issues       = self.callPackage ~/src/ghc-issues {};
-  git-all          = self.callPackage ~/src/git-all {};
-  github           = self.callPackage ~/src/github {};
-  hierarchy        = self.callPackage ~/src/hierarchy {};
-  hnix             = self.callPackage ~/src/hnix {};
-  hours            = self.callPackage ~/src/hours {};
-  ipcvar           = self.callPackage ~/src/ipcvar {};
-  logging          = self.callPackage ~/src/logging {};
-  monad-extras     = self.callPackage ~/src/monad-extras {};
-  pipes-files      = self.callPackage ~/src/pipes-files {};
-  pipes-fusion     = self.callPackage ~/src/pipes-fusion {};
-  pushme           = self.callPackage ~/src/pushme {};
-  rehoo            = self.callPackage ~/src/rehoo {};
-  rest-client      = self.callPackage ~/src/rest-client {};
-  simple-conduit   = self.callPackage ~/src/simple-conduit {};
-  simple-mirror    = self.callPackage ~/src/hackage-mirror {};
-  sizes            = self.callPackage ~/src/sizes {};
-  streaming-tests  = self.callPackage ~/src/streaming-tests {};
-  una              = self.callPackage ~/src/una {};
-
-  # gitlib
-  gitlib           = self.callPackage ~/src/gitlib/gitlib {};
-  gitlib-test      = self.callPackage ~/src/gitlib/gitlib-test {};
-  hlibgit2         = dontCheck (self.callPackage ~/src/gitlib/hlibgit2 {});
-  gitlib-libgit2   = self.callPackage ~/src/gitlib/gitlib-libgit2 {};
-  gitlib-cmdline   = self.callPackage ~/src/gitlib/gitlib-cmdline {
-    git = gitAndTools.git;
-  };
-  gitlib-cross     = self.callPackage ~/src/gitlib/gitlib-cross {
-    git = gitAndTools.git;
-  };
-  gitlib-hit       = self.callPackage ~/src/gitlib/gitlib-hit {};
-  gitlib-lens      = self.callPackage ~/src/gitlib/gitlib-lens {};
-  gitlib-s3        = self.callPackage ~/src/gitlib/gitlib-S3 {};
-  gitlib-sample    = self.callPackage ~/src/gitlib/gitlib-sample {};
-  git-monitor      = self.callPackage ~/src/gitlib/git-monitor {};
-  git-gpush        = self.callPackage ~/src/gitlib/git-gpush {};
+  gitlib            = self.callPackage ~/src/gitlib/gitlib {};
+  gitlib-test       = self.callPackage ~/src/gitlib/gitlib-test {};
+  hlibgit2          = dontCheck (self.callPackage ~/src/gitlib/hlibgit2 {});
+  gitlib-libgit2    = self.callPackage ~/src/gitlib/gitlib-libgit2 {};
+  gitlib-cmdline    = self.callPackage ~/src/gitlib/gitlib-cmdline { git = gitAndTools.git; };
+  gitlib-cross      = self.callPackage ~/src/gitlib/gitlib-cross { git = gitAndTools.git; };
+  gitlib-hit        = self.callPackage ~/src/gitlib/gitlib-hit {};
+  gitlib-lens       = self.callPackage ~/src/gitlib/gitlib-lens {};
+  gitlib-s3         = self.callPackage ~/src/gitlib/gitlib-S3 {};
+  gitlib-sample     = self.callPackage ~/src/gitlib/gitlib-sample {};
+  git-monitor       = self.callPackage ~/src/gitlib/git-monitor {};
+  git-gpush         = self.callPackage ~/src/gitlib/git-gpush {};
 
   # community packages
-  pipes            = self.callPackage ~/oss/pipes {};
-  # pipes-safe       = self.callPackage ~/oss/pipes-safe {};
-  bindings-DSL     = self.callPackage ~/oss/bindings-dsl {};
-  time-recurrence  = dontCheck (self.callPackage ~/oss/time-recurrence {});
-  timeparsers      = dontCheck (self.callPackage ~/oss/timeparsers {});
-  # scalpel          = self.callPackage ~/oss/scalpel {};
-  docker-hs        = self.callPackage ~/oss/docker-hs {};
-  apis             = dontCheck (self.callPackage ~/bae/spv-deliverable/rings-dashboard/mitll/brass-platform/apis {});
-  parameter-dsl = self.callPackage ~/bae/spv-deliverable/rings-dashboard/mitll/brass-platform/parameter-dsl {};
-
-  # systemFileio     = dontCheck super.systemFileio;
-  # shake            = dontCheck super.shake;
-  # singletons       = dontCheck super.singletons;
-
+  pipes             = self.callPackage ~/oss/pipes {};
+  pipes-safe        = self.callPackage ~/oss/pipes-safe {};
+  bindings-DSL      = self.callPackage ~/oss/bindings-dsl {};
+  time-recurrence   = dontCheck (self.callPackage ~/oss/time-recurrence {});
+  timeparsers       = dontCheck (self.callPackage ~/oss/timeparsers {});
+  docker-hs         = self.callPackage ~/oss/docker-hs {};
+  apis              = dontCheck (self.callPackage ~/bae/spv-deliverable/rings-dashboard/mitll/brass-platform/apis {});
+  parameter-dsl     = self.callPackage ~/bae/spv-deliverable/rings-dashboard/mitll/brass-platform/parameter-dsl {};
   hackage-root-tool = self.callPackage ~/oss/hackage-security/hackage-root-tool {};
   hackage-security  = self.callPackage ~/oss/hackage-security/hackage-security {};
   cryptohash-sha256 = self.callPackage ~/oss/hackage-security/cryptohash-sha256.nix {};
@@ -100,20 +97,8 @@ profiledHaskell7103Packages = super.haskell.packages.ghc7103.override {
 ghc710Env = pkgs.myEnvFun {
   name = "ghc710";
   buildInputs = with haskell7103Packages; [
-    haskell7103Packages.ghc
-    alex happy
-    cabal-install
-    ghc-core
-    # ghc-mod
-    hlint
-    # hasktags
-    pointfree
-    # threadscope
-    # timeplot splot
-    # lambdabot djinn mueval
-    # idris
-    # liquidhaskell
-    # Agda Agda-executable
+    haskell7103Packages.ghc alex happy cabal-install
+    ghc-core hlint pointfree
   ];
 };
 
@@ -125,7 +110,7 @@ profiledHaskell801Packages = super.haskell.packages.ghc801.override {
   overrides = self: super: myHaskellPackages self super // {
     mkDerivation = args: super.mkDerivation (args // {
       enableLibraryProfiling = true;
-      enableExecutableProfiling = true;
+      enableExecutableProfiling = false;
     });
   };
 };
@@ -133,21 +118,27 @@ profiledHaskell801Packages = super.haskell.packages.ghc801.override {
 ghc80Env = pkgs.myEnvFun {
   name = "ghc80";
   buildInputs = with haskell801Packages; [
-    haskell801Packages.ghc
-    alex happy
-    cabal-install
-    ghc-core
-    # ghc-mod
-    hlint
-    simple-mirror
+    haskell801Packages.ghc alex happy cabal-install
+    ghc-core hlint pointfree
     hasktags
-    pointfree
+    simple-mirror
+    # ghc-mod
     # threadscope
     # timeplot splot
-    # lambdabot djinn mueval
-    # idris
+    lambdabot djinn mueval
+    idris
     # liquidhaskell
-    # Agda Agda-executable
+    Agda # Agda-executable
+  ];
+};
+
+ghc80ProfEnv = pkgs.myEnvFun {
+  name = "ghc80prof";
+  buildInputs = with profiledHaskell801Packages; [
+    profiledHaskell801Packages.ghc alex happy cabal-install
+    ghc-core hlint pointfree
+    hasktags
+    simple-mirror
   ];
 };
 
@@ -203,14 +194,14 @@ systemToolsEnv = pkgs.buildEnv {
     gnutar
     graphviz
     haskell801Packages.hours
-    # imagemagick_light
+    imagemagick_light
     less
-    # p7zip
+    p7zip
     haskell801Packages.pandoc
     parallel
     pinentry
     pv
-    # ripgrep
+    ripgrep
     rlwrap
     silver-searcher
     haskell801Packages.simple-mirror
@@ -247,14 +238,13 @@ networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
     cacert
-    #httrack
-    iperf
+    httrack
+    # iperf
     mtr
     openssh
     openssl
     # pdnsd does not build with IPv6 on Darwin
     (super.stdenv.lib.overrideDerivation pdnsd (attrs: { configureFlags = []; }))
-    # dnscrypt-proxy
     rsync
     socat2pre
     wget
@@ -270,6 +260,7 @@ mailToolsEnv = pkgs.buildEnv {
     fetchmail
     imapfilter
     contacts
+    msmtp
   ];
 };
 
@@ -300,12 +291,11 @@ langToolsEnv = pkgs.buildEnv {
   paths = [
     clang llvm boost libcxx
     libxml2
-    #isabelle
-    #ott
+    # isabelle
+    ott
     gnumake
-    #compcert
-    #verasco
-    #sbcl
+    verasco # compcert
+    sbcl
     sloccount
     yuicompressor
   ];
