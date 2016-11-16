@@ -10,6 +10,7 @@ myHaskellPackages = libProf: self: super: with pkgs.haskell.lib; {
   consistent        = self.callPackage ~/src/consistent {};
   convert           = self.callPackage ~/doc/johnwiegley/convert {};
   features          = self.callPackage ~/bae/rings/problems/xhtml/features {};
+  rings-dashboard   = dontHaddock (self.callPackage ~/bae/dashboard {});
   coq-haskell       = self.callPackage ~/src/coq-haskell {};
   emacs-bugs        = self.callPackage ~/src/emacs-bugs {};
   find-conduit      = self.callPackage ~/src/find-conduit {};
@@ -58,9 +59,12 @@ myHaskellPackages = libProf: self: super: with pkgs.haskell.lib; {
   blaze-builder-enumerator  = doJailbreak super.blaze-builder-enumerator;
   lambdabot-haskell-plugins = doJailbreak super.lambdabot-haskell-plugins;
 
+  Agda              = dontHaddock super.Agda;
   ReadArgs          = dontCheck super.ReadArgs;
-  apis              = dontCheck (self.callPackage ~/bae/spv-deliverable/rings-dashboard/mitll/brass-platform/apis {});
+  STMonadTrans      = dontCheck super.STMonadTrans;
+  apis              = dontCheck (self.callPackage ~/bae/dashboard/mitll/brass-platform/apis {});
   bindings-DSL      = self.callPackage ~/oss/bindings-dsl {};
+  cabal-install     = doJailbreak super.cabal-install;
   compressed        = doJailbreak super.compressed;
   cryptohash-sha256 = self.callPackage ~/oss/hackage-security/cryptohash-sha256.nix {};
   docker-hs         = self.callPackage ~/oss/docker-hs {};
@@ -68,7 +72,7 @@ myHaskellPackages = libProf: self: super: with pkgs.haskell.lib; {
   hackage-root-tool = self.callPackage ~/oss/hackage-security/hackage-root-tool {};
   hackage-security  = self.callPackage ~/oss/hackage-security/hackage-security {};
   hoogle            = doJailbreak super.hoogle;
-  parameter-dsl     = self.callPackage ~/bae/spv-deliverable/rings-dashboard/mitll/brass-platform/parameter-dsl {};
+  parameter-dsl     = self.callPackage ~/bae/dashboard/mitll/brass-platform/parameter-dsl {};
   pipes             = self.callPackage ~/oss/pipes {};
   pipes-binary      = doJailbreak super.pipes-binary;
   pipes-safe        = self.callPackage ~/oss/pipes-safe {};
@@ -77,8 +81,6 @@ myHaskellPackages = libProf: self: super: with pkgs.haskell.lib; {
   time-recurrence   = dontCheck (self.callPackage ~/oss/time-recurrence {});
   timeparsers       = dontCheck (self.callPackage ~/oss/timeparsers {});
   total             = doJailbreak super.total;
-  STMonadTrans      = dontCheck super.STMonadTrans;
-  cabal-install     = doJailbreak super.cabal-install;
 
   mkDerivation = pkg: super.mkDerivation (pkg // {
     # src = pkgs.fetchurl {
@@ -120,6 +122,8 @@ profiledHaskell801Packages = super.haskell.packages.ghc801.override {
   overrides = myHaskellPackages true;
 };
 
+haskPkgs = haskell801Packages;
+
 ghc80Env = pkgs.myEnvFun {
   name = "ghc80";
   buildInputs = with haskell801Packages; [
@@ -145,13 +149,28 @@ ghc80ProfEnv = pkgs.myEnvFun {
   ];
 };
 
+ledger_HEAD = super.callPackage ~/src/ledger {};
+ledger_HEAD_python3 = super.callPackage ~/src/ledger {
+  boost = self.boost_with_python3;
+};
+
+ledgerPy2Env = pkgs.myEnvFun {
+  name = "ledger-py2";
+  buildInputs = [
+    cmake boost gmp mpfr libedit python texinfo gnused ninja clang doxygen
+  ];
+};
+
 boost_with_python3 = super.boost160.override {
   python = python3;
 };
 
-ledger_HEAD = super.callPackage ~/src/ledger {};
-ledger_HEAD_python3 = super.callPackage ~/src/ledger {
-  boost = self.boost_with_python3;
+ledgerPy3Env = pkgs.myEnvFun {
+  name = "ledger-py3";
+  buildInputs = [
+    cmake boost_with_python3 gmp mpfr libedit python texinfo gnused ninja
+    clang doxygen
+  ];
 };
 
 emacsHEAD_base = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
@@ -190,9 +209,9 @@ x11ToolsEnv = pkgs.buildEnv {
 systemToolsEnv = pkgs.buildEnv {
   name = "systemTools";
   paths = [
-    haskell801Packages.pushme
-    haskell801Packages.sizes
-    haskell801Packages.una
+    haskPkgs.pushme
+    haskPkgs.sizes
+    haskPkgs.una
 
     aspell
     aspellDicts.en
@@ -203,19 +222,19 @@ systemToolsEnv = pkgs.buildEnv {
     gnused
     gnutar
     graphviz
-    haskell801Packages.hours
+    haskPkgs.hours
     # imagemagick_light
     multitail
     less
     p7zip
-    haskell801Packages.pandoc
+    haskPkgs.pandoc
     parallel
     pinentry
     pv
     ripgrep
     rlwrap
     silver-searcher
-    haskell801Packages.simple-mirror
+    haskPkgs.simple-mirror
     sqlite
     stow
     time
@@ -235,8 +254,8 @@ gitToolsEnv = pkgs.buildEnv {
   paths = [
     diffutils diffstat patchutils patch
 
-    haskell801Packages.git-monitor
-    haskell801Packages.git-all
+    haskPkgs.git-monitor
+    haskPkgs.git-all
 
     pkgs.gitAndTools.hub
     pkgs.gitAndTools.gitFull
@@ -376,6 +395,17 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
     || stdenv.lib.hasSuffix ".dyn_o" path
     || stdenv.lib.hasSuffix ".p_o" path))
   src;
+
+publishToolsEnv = pkgs.buildEnv {
+  name = "publishTools";
+  paths = [
+    haskPkgs.johnwiegley
+    haskPkgs.newartisans
+    texlive.combined.scheme-full
+    texinfo
+    doxygen
+  ];
+};
 
 };
 
