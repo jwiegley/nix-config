@@ -66,7 +66,7 @@ myHaskellPackages = libProf: self: super:
   idris             = dontHaddock super.idris;
   ReadArgs          = dontCheck super.ReadArgs;
   STMonadTrans      = dontCheck super.STMonadTrans;
-  apis              = dontCheck (pkg ~/bae/dashboard/mitll/brass-platform/apis {});
+  apis              = dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/apis {});
   bindings-DSL      = pkg ~/oss/bindings-dsl {};
   cabal-install     = doJailbreak super.cabal-install;
   compressed        = doJailbreak super.compressed;
@@ -76,7 +76,7 @@ myHaskellPackages = libProf: self: super:
   hackage-root-tool = pkg ~/oss/hackage-security/hackage-root-tool {};
   hackage-security  = pkg ~/oss/hackage-security/hackage-security {};
   hoogle            = doJailbreak super.hoogle;
-  parameter-dsl     = pkg ~/bae/dashboard/mitll/brass-platform/parameter-dsl {};
+  parameter-dsl     = pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/parameter-dsl {};
   pipes             = pkg ~/oss/pipes {};
   pipes-binary      = doJailbreak super.pipes-binary;
   pipes-safe        = pkg ~/oss/pipes-safe {};
@@ -107,7 +107,10 @@ ghc710Env = pkgs.myEnvFun {
   name = "ghc710";
   buildInputs = with haskell7103Packages; [
     haskell7103Packages.ghc alex happy cabal-install
-    ghc-core hlint pointfree hasktags
+    ghc-core
+    hlint
+    pointfree
+    hasktags
   ];
 };
 
@@ -115,7 +118,10 @@ ghc710ProfEnv = pkgs.myEnvFun {
   name = "ghc710prof";
   buildInputs = with profiledHaskell7103Packages; [
     profiledHaskell7103Packages.ghc alex happy cabal-install
-    ghc-core hlint pointfree hasktags
+    ghc-core
+    hlint
+    pointfree
+    hasktags
   ];
 };
 
@@ -133,10 +139,14 @@ ghc80Env = pkgs.myEnvFun {
   buildInputs = with haskell801Packages; [
     (ghcWithHoogle (import ~/src/hoogle-local/package-list.nix))
     alex happy cabal-install
-    ghc-core hlint pointfree hasktags
-    simple-mirror ghc-mod
-    # lambdabot djinn mueval
-    # threadscope
+    ghc-core
+    hlint
+    pointfree
+    hasktags
+    simple-mirror 
+    ghc-mod
+    lambdabot djinn mueval
+    threadscope
     # timeplot splot
     # liquidhaskell
     idris
@@ -149,8 +159,37 @@ ghc80ProfEnv = pkgs.myEnvFun {
   name = "ghc80prof";
   buildInputs = with profiledHaskell801Packages; [
     profiledHaskell801Packages.ghc alex happy cabal-install
-    ghc-core hlint pointfree hasktags
+    ghc-core
+    hlint
+    pointfree
+    hasktags
   ];
+};
+
+smedl = with pkgs.pythonPackages; buildPythonApplication rec {
+  name = "smedl-${version}";
+  version = "1.0.0rc2";
+
+  src = ~/bae/smedl;
+
+  buildInputs = with self; [
+    grako
+    Jinja2
+    MarkupSafe
+    mccabe
+    nose2
+    pyelftools
+    pika
+    libconf
+    pyparsing
+ ];
+
+  meta = {
+    homepage = https://github.com/ContinuumIO/datashape;
+    description = "The SMEDL monitor definition language";
+    license = licenses.mit;
+    maintainers = with maintainers; [ jwiegley ];
+  };
 };
 
 ledger_HEAD = super.callPackage ~/src/ledger {};
@@ -236,7 +275,7 @@ systemToolsEnv = pkgs.buildEnv {
     graphviz
     haskPkgs.hours
     jq
-    # imagemagick_light
+    imagemagick_light
     multitail
     less
     p7zip
@@ -285,7 +324,7 @@ networkToolsEnv = pkgs.buildEnv {
   paths = [
     cacert
     httrack
-    # iperf
+    iperf
     mtr
     openssh
     openssl
@@ -317,6 +356,7 @@ pythonToolsEnv = pkgs.buildEnv {
     python27
     pythonDocs.pdf_letter.python27
     pythonDocs.html.python27
+    python27Packages.setuptools
     python27Packages.ipython
     python27Packages.pygments
     python27Packages.certifi
@@ -328,7 +368,7 @@ idutils = super.stdenv.lib.overrideDerivation super.idutils (attrs: {
 });
 
 devToolsEnv = pkgs.myEnvFun {
-  name = "dev";
+  name = "devTools";
   buildInputs = [
     autoconf automake libtool pkgconfig clang llvm
   ];
@@ -383,16 +423,28 @@ coq85Env = pkgs.myEnvFun {
     ];
 };
 
+coq86Env = pkgs.myEnvFun {
+  name = "coq86";
+  buildInputs =
+    [ ocaml ocamlPackages.camlp5_transitional
+      coq_8_6
+      # coqPackages_8_6.ssreflect
+      # coqPackages_8_6.mathcomp
+    ];
+};
+
 coqHEADEnv = pkgs.myEnvFun {
   name = "coqHEAD";
   buildInputs = [
     ocaml
     ocamlPackages.camlp5_transitional
     coq_HEAD
-    (coqPackages.mathcomp.override { coq = coq_HEAD; })
-    (coqPackages.ssreflect.override { coq = coq_HEAD; })
+    # (coqPackages.mathcomp.override { coq = coq_HEAD; })
+    # (coqPackages.ssreflect.override { coq = coq_HEAD; })
   ];
 };
+
+fiat_HEAD = super.callPackage ~/oss/fiat {};
 
 gameToolsEnv = pkgs.buildEnv {
   name = "gameTools";
