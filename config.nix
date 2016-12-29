@@ -11,7 +11,7 @@ myHaskellPackages = libProf: self: super:
   commodities       = pkg ~/src/ledger/new/commodities {};
   consistent        = pkg ~/src/consistent {};
   convert           = pkg ~/doc/johnwiegley/convert {};
-  features          = pkg ~/bae/rings/problems/xhtml/features {};
+  xhtml-comparator  = pkg ~/bae/xhtml-deliverable/xhtml/comparator {};
   rings-dashboard   = dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard {});
   coq-haskell       = pkg ~/src/coq-haskell {};
   emacs-bugs        = pkg ~/src/emacs-bugs {};
@@ -26,12 +26,11 @@ myHaskellPackages = libProf: self: super:
   hours             = pkg ~/src/hours {};
   hsmedl            = pkg ~/bae/hsmedl {};
   ipcvar            = pkg ~/src/ipcvar {};
-  johnwiegley       = pkg ~/doc/johnwiegley { yuicompressor = pkgs.yuicompressor; };
+  sitebuilder       = pkg ~/doc/sitebuilder { yuicompressor = pkgs.yuicompressor; };
   linearscan        = pkg ~/src/linearscan {};
   linearscan-hoopl  = pkg ~/src/linearscan-hoopl {};
   logging           = pkg ~/src/logging {};
   monad-extras      = pkg ~/src/monad-extras {};
-  newartisans       = pkg ~/doc/newartisans { yuicompressor = pkgs.yuicompressor; };
   parsec            = pkg ~/oss/parsec {};
   parsec-free       = pkg ~/src/parsec-free {};
   pipes-files       = pkg ~/src/pipes-files {};
@@ -145,7 +144,8 @@ ghc80Env = pkgs.myEnvFun {
     hasktags
     simple-mirror 
     ghc-mod
-    lambdabot djinn mueval
+    djinn mueval
+    # lambdabot
     threadscope
     # timeplot splot
     # liquidhaskell
@@ -219,7 +219,7 @@ ledgerPy3Env = pkgs.myEnvFun {
 ringsEnv = pkgs.myEnvFun {
   name = "rings";
   buildInputs = [
-    rabbitmq-c libconfig
+    autoconf automake libtool pkgconfig clang llvm rabbitmq-c libconfig
   ];
 };
 
@@ -275,13 +275,14 @@ systemToolsEnv = pkgs.buildEnv {
     graphviz
     haskPkgs.hours
     jq
-    imagemagick_light
+    # imagemagick_light
     multitail
     less
     p7zip
     haskPkgs.pandoc
     parallel
     pinentry_mac
+    postgresql96
     pv
     ripgrep
     rlwrap
@@ -326,6 +327,7 @@ networkToolsEnv = pkgs.buildEnv {
     httrack
     iperf
     mtr
+    dnsutils
     openssh
     openssl
     # pdnsd does not build with IPv6 on Darwin
@@ -346,6 +348,7 @@ mailToolsEnv = pkgs.buildEnv {
     imapfilter
     contacts
     msmtp
+    pflogsumm
   ];
 };
 
@@ -400,37 +403,44 @@ myCoq84 = super.callPackage ~/.nixpkgs/coq84.nix {
 coq84Env = pkgs.myEnvFun {
   name = "coq84";
   buildInputs = [
-    ocaml
-    ocamlPackages.camlp5_transitional
-    coq
-    coqPackages.flocq
-    coqPackages.mathcomp
-    coqPackages.ssreflect
-    coqPackages.QuickChick
-    coqPackages.tlc
-    coqPackages.ynot
+    ocaml ocamlPackages.camlp5_transitional
+    coq_8_4
+    coqPackages_8_4.flocq
+    coqPackages_8_4.mathcomp
+    coqPackages_8_4.ssreflect
+    coqPackages_8_4.QuickChick
+    coqPackages_8_4.tlc
+    coqPackages_8_4.ynot
     prooftree
   ];
 };
 
 coq85Env = pkgs.myEnvFun {
   name = "coq85";
-  buildInputs =
-    [ ocaml ocamlPackages.camlp5_transitional
-      coq_8_5
-      coqPackages_8_5.ssreflect
-      coqPackages_8_5.mathcomp
-    ];
+  buildInputs = [
+    ocaml ocamlPackages.camlp5_transitional
+    coq_8_5
+    coqPackages_8_5.flocq
+    coqPackages_8_5.mathcomp
+    coqPackages_8_5.ssreflect
+    # coqPackages_8_5.QuickChick
+    # coqPackages_8_5.tlc
+    # coqPackages_8_5.ynot
+  ];
 };
 
 coq86Env = pkgs.myEnvFun {
   name = "coq86";
-  buildInputs =
-    [ ocaml ocamlPackages.camlp5_transitional
-      coq_8_6
-      # coqPackages_8_6.ssreflect
-      # coqPackages_8_6.mathcomp
-    ];
+  buildInputs = [
+    ocaml ocamlPackages.camlp5_transitional
+    coq_8_6
+    # coqPackages_8_6.flocq
+    # coqPackages_8_6.mathcomp
+    # coqPackages_8_6.ssreflect
+    # coqPackages_8_6.QuickChick
+    # coqPackages_8_6.tlc
+    # coqPackages_8_6.ynot
+  ];
 };
 
 coqHEADEnv = pkgs.myEnvFun {
@@ -439,12 +449,10 @@ coqHEADEnv = pkgs.myEnvFun {
     ocaml
     ocamlPackages.camlp5_transitional
     coq_HEAD
-    # (coqPackages.mathcomp.override { coq = coq_HEAD; })
-    # (coqPackages.ssreflect.override { coq = coq_HEAD; })
   ];
 };
 
-fiat_HEAD = super.callPackage ~/oss/fiat {};
+fiat_HEAD = super.callPackage ~/oss/fiat/8.5 {};
 
 gameToolsEnv = pkgs.buildEnv {
   name = "gameTools";
@@ -473,8 +481,7 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
   paths = [
-    haskPkgs.johnwiegley
-    haskPkgs.newartisans
+    haskPkgs.sitebuilder
     texlive.combined.scheme-full
     texinfo
     doxygen
