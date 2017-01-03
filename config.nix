@@ -5,14 +5,14 @@ packageOverrides = super: let self = super.pkgs; in with self; rec {
 myHaskellPackages = libProf: self: super:
   with pkgs.haskell.lib;
   let pkg = self.callPackage; in {
+
+  # Packages that I work on, or have written
   async-pool        = pkg ~/src/async-pool {};
   bytestring-fiat   = pkg ~/src/bytestring/src {};
   c2hsc             = dontCheck (pkg ~/src/c2hsc {});
   commodities       = pkg ~/src/ledger/new/commodities {};
   consistent        = pkg ~/src/consistent {};
   convert           = pkg ~/doc/johnwiegley/convert {};
-  xhtml-comparator  = pkg ~/bae/xhtml-deliverable/xhtml/comparator {};
-  rings-dashboard   = dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard {});
   coq-haskell       = pkg ~/src/coq-haskell {};
   emacs-bugs        = pkg ~/src/emacs-bugs {};
   find-conduit      = pkg ~/src/find-conduit {};
@@ -24,27 +24,36 @@ myHaskellPackages = libProf: self: super:
   hierarchy         = pkg ~/src/hierarchy {};
   hnix              = pkg ~/src/hnix {};
   hours             = pkg ~/src/hours {};
-  hsmedl            = pkg ~/bae/hsmedl {};
   ipcvar            = pkg ~/src/ipcvar {};
-  sitebuilder       = pkg ~/doc/sitebuilder { yuicompressor = pkgs.yuicompressor; };
   linearscan        = pkg ~/src/linearscan {};
   linearscan-hoopl  = pkg ~/src/linearscan-hoopl {};
   logging           = pkg ~/src/logging {};
   monad-extras      = pkg ~/src/monad-extras {};
   parsec            = pkg ~/oss/parsec {};
   parsec-free       = pkg ~/src/parsec-free {};
+  pipes-async       = pkg ~/src/pipes-async {};
   pipes-files       = pkg ~/src/pipes-files {};
   pipes-fusion      = pkg ~/src/pipes-fusion {};
   pushme            = pkg ~/src/pushme {};
   rehoo             = pkg ~/src/rehoo {};
   rest-client       = pkg ~/src/rest-client {};
+  runmany           = pkg ~/src/runmany {};
   shake-docker      = pkg ~/src/shake-docker {};
   simple-conduit    = pkg ~/src/simple-conduit {};
   simple-mirror     = pkg ~/src/hackage-mirror {};
+  sitebuilder       = pkg ~/doc/sitebuilder { yuicompressor = pkgs.yuicompressor; };
   sizes             = pkg ~/src/sizes {};
   streaming-tests   = pkg ~/src/streaming-tests {};
   una               = pkg ~/src/una {};
 
+  # BAE Haskell packages
+  apis              = dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/apis {});
+  hsmedl            = pkg ~/bae/hsmedl {};
+  parameter-dsl     = pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/parameter-dsl {};
+  rings-dashboard   = dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard {});
+  xhtml-comparator  = pkg ~/bae/xhtml-deliverable/xhtml/comparator {};
+
+  # Gitlib
   git-gpush         = pkg ~/src/gitlib/git-gpush {};
   git-monitor       = pkg ~/src/gitlib/git-monitor {};
   gitlib            = pkg ~/src/gitlib/gitlib {};
@@ -58,15 +67,11 @@ myHaskellPackages = libProf: self: super:
   gitlib-test       = pkg ~/src/gitlib/gitlib-test {};
   hlibgit2          = dontCheck (pkg ~/src/gitlib/hlibgit2 {});
 
-  blaze-builder-enumerator  = doJailbreak super.blaze-builder-enumerator;
-  lambdabot-haskell-plugins = doJailbreak super.lambdabot-haskell-plugins;
-
-  Agda              = dontHaddock super.Agda;
-  idris             = dontHaddock super.idris;
-  ReadArgs          = dontCheck super.ReadArgs;
+  # Hackage packages
   STMonadTrans      = dontCheck super.STMonadTrans;
-  apis              = dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/apis {});
+  agdaBase          = dontHaddock super.agdaBase;
   bindings-DSL      = pkg ~/oss/bindings-dsl {};
+  blaze-builder-enumerator  = doJailbreak super.blaze-builder-enumerator;
   cabal-install     = doJailbreak super.cabal-install;
   compressed        = doJailbreak super.compressed;
   cryptohash-sha256 = pkg ~/oss/hackage-security/cryptohash-sha256.nix {};
@@ -75,7 +80,8 @@ myHaskellPackages = libProf: self: super:
   hackage-root-tool = pkg ~/oss/hackage-security/hackage-root-tool {};
   hackage-security  = pkg ~/oss/hackage-security/hackage-security {};
   hoogle            = doJailbreak super.hoogle;
-  parameter-dsl     = pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/parameter-dsl {};
+  idris             = dontHaddock super.idris;
+  lambdabot-haskell-plugins = doJailbreak super.lambdabot-haskell-plugins;
   pipes             = pkg ~/oss/pipes {};
   pipes-binary      = doJailbreak super.pipes-binary;
   pipes-safe        = pkg ~/oss/pipes-safe {};
@@ -94,6 +100,8 @@ myHaskellPackages = libProf: self: super:
     enableExecutableProfiling = false;
   });
 };
+
+haskPkgs = haskell801Packages;
 
 haskell7103Packages = super.haskell.packages.ghc7103.override {
   overrides = myHaskellPackages false;
@@ -131,11 +139,11 @@ profiledHaskell801Packages = super.haskell.packages.ghc801.override {
   overrides = myHaskellPackages true;
 };
 
-haskPkgs = haskell801Packages;
-
 ghc80Env = pkgs.myEnvFun {
   name = "ghc80";
   buildInputs = with haskell801Packages; [
+    (stdenv.lib.attrsets.mapAttrsToList (name: value: "haskell801Packages." + name)
+       (myHaskellPackages false haskell801Packages haskell801Packages))
     (ghcWithHoogle (import ~/src/hoogle-local/package-list.nix))
     alex happy cabal-install
     ghc-core
@@ -158,7 +166,10 @@ ghc80Env = pkgs.myEnvFun {
 ghc80ProfEnv = pkgs.myEnvFun {
   name = "ghc80prof";
   buildInputs = with profiledHaskell801Packages; [
-    profiledHaskell801Packages.ghc alex happy cabal-install
+    # (stdenv.lib.attrsets.mapAttrsToList (name: value: "profiledHaskell801Packages." + name)
+    #    (myHaskellPackages true profiledHaskell801Packages profiledHaskell801Packages))
+    profiledHaskell801Packages.ghc 
+    alex happy cabal-install
     ghc-core
     hlint
     pointfree
@@ -166,31 +177,19 @@ ghc80ProfEnv = pkgs.myEnvFun {
   ];
 };
 
-smedl = with pkgs.pythonPackages; buildPythonApplication rec {
-  name = "smedl-${version}";
-  version = "1.0.0rc2";
-
-  src = ~/bae/smedl;
-
-  buildInputs = with self; [
-    grako
-    Jinja2
-    MarkupSafe
-    mccabe
-    nose2
-    pyelftools
-    pika
-    libconf
-    pyparsing
- ];
-
-  meta = {
-    homepage = https://github.com/ContinuumIO/datashape;
-    description = "The SMEDL monitor definition language";
-    license = licenses.mit;
-    maintainers = with maintainers; [ jwiegley ];
-  };
-};
+haskellFilterSource = paths: src: builtins.filterSource (path: type:
+    let baseName = baseNameOf path; in
+    !( type == "unknown"
+    || builtins.elem baseName
+         ([".hdevtools.sock" ".git" ".cabal-sandbox" "dist"] ++ paths)
+    || stdenv.lib.hasSuffix ".sock" path
+    || stdenv.lib.hasSuffix ".hi" path
+    || stdenv.lib.hasSuffix ".hi-boot" path
+    || stdenv.lib.hasSuffix ".o" path
+    || stdenv.lib.hasSuffix ".o-boot" path
+    || stdenv.lib.hasSuffix ".dyn_o" path
+    || stdenv.lib.hasSuffix ".p_o" path))
+  src;
 
 ledger_HEAD = super.callPackage ~/src/ledger {};
 ledger_HEAD_python3 = super.callPackage ~/src/ledger {
@@ -223,6 +222,12 @@ ringsEnv = pkgs.myEnvFun {
   ];
 };
 
+emacs = emacsHEAD;
+
+emacsHEAD = super.stdenv.lib.overrideDerivation emacsHEAD_base (attrs: {
+  doCheck = false;
+});
+
 emacsHEAD_base = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   libXaw = xorg.libXaw;
   Xaw3d = null;
@@ -234,12 +239,6 @@ emacsHEAD_base = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   inherit (darwin.apple_sdk.frameworks) AppKit Foundation;
   inherit (darwin) libobjc;
 };
-
-emacsHEAD = super.stdenv.lib.overrideDerivation emacsHEAD_base (attrs: {
-  doCheck = false;
-});
-
-emacs = emacsHEAD;
 
 emacsHEADEnv = pkgs.myEnvFun {
   name = "emacsHEAD";
@@ -274,8 +273,9 @@ systemToolsEnv = pkgs.buildEnv {
     gnutar
     graphviz
     haskPkgs.hours
+    haskPkgs.runmany
     jq
-    # imagemagick_light
+    imagemagick_light
     multitail
     less
     p7zip
@@ -463,20 +463,6 @@ gameToolsEnv = pkgs.buildEnv {
     gnugo
   ];
 };
-
-haskellFilterSource = paths: src: builtins.filterSource (path: type:
-    let baseName = baseNameOf path; in
-    !( type == "unknown"
-    || builtins.elem baseName
-         ([".hdevtools.sock" ".git" ".cabal-sandbox" "dist"] ++ paths)
-    || stdenv.lib.hasSuffix ".sock" path
-    || stdenv.lib.hasSuffix ".hi" path
-    || stdenv.lib.hasSuffix ".hi-boot" path
-    || stdenv.lib.hasSuffix ".o" path
-    || stdenv.lib.hasSuffix ".o-boot" path
-    || stdenv.lib.hasSuffix ".dyn_o" path
-    || stdenv.lib.hasSuffix ".p_o" path))
-  src;
 
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
