@@ -3,8 +3,7 @@
 packageOverrides = super: let self = super.pkgs; in with self; rec {
 
 myHaskellPackages = libProf: self: super:
-  with pkgs.haskell.lib;
-  let pkg = self.callPackage; in {
+  with pkgs.haskell.lib; let pkg = self.callPackage; in {
 
   # Packages that I work on, or have written
   async-pool        = pkg ~/src/async-pool {};
@@ -20,8 +19,20 @@ myHaskellPackages = libProf: self: super:
   fuzzcheck         = pkg ~/src/fuzzcheck {};
   ghc-issues        = pkg ~/src/ghc-issues {};
   git-all           = pkg ~/src/git-all {};
+  git-gpush         = pkg ~/src/gitlib/git-gpush {};
+  git-monitor       = pkg ~/src/gitlib/git-monitor {};
   github            = pkg ~/src/github {};
+  gitlib            = pkg ~/src/gitlib/gitlib {};
+  gitlib-cmdline    = pkg ~/src/gitlib/gitlib-cmdline { git = gitAndTools.git; };
+  gitlib-cross      = pkg ~/src/gitlib/gitlib-cross { git = gitAndTools.git; };
+  gitlib-hit        = pkg ~/src/gitlib/gitlib-hit {};
+  gitlib-lens       = pkg ~/src/gitlib/gitlib-lens {};
+  gitlib-libgit2    = pkg ~/src/gitlib/gitlib-libgit2 {};
+  gitlib-s3         = pkg ~/src/gitlib/gitlib-S3 {};
+  gitlib-sample     = pkg ~/src/gitlib/gitlib-sample {};
+  gitlib-test       = pkg ~/src/gitlib/gitlib-test {};
   hierarchy         = pkg ~/src/hierarchy {};
+  hlibgit2          = dontCheck (pkg ~/src/gitlib/hlibgit2 {});
   hnix              = pkg ~/src/hnix {};
   hours             = pkg ~/src/hours {};
   ipcvar            = pkg ~/src/ipcvar {};
@@ -29,12 +40,12 @@ myHaskellPackages = libProf: self: super:
   linearscan-hoopl  = pkg ~/src/linearscan-hoopl {};
   logging           = pkg ~/src/logging {};
   monad-extras      = pkg ~/src/monad-extras {};
-  parsec            = pkg ~/oss/parsec {};
   parsec-free       = pkg ~/src/parsec-free {};
   pipes-async       = pkg ~/src/pipes-async {};
   pipes-files       = pkg ~/src/pipes-files {};
   pipes-fusion      = pkg ~/src/pipes-fusion {};
   pushme            = pkg ~/src/pushme {};
+  recursors         = pkg ~/src/recursors {};
   rehoo             = pkg ~/src/rehoo {};
   rest-client       = pkg ~/src/rest-client {};
   runmany           = pkg ~/src/runmany {};
@@ -47,47 +58,50 @@ myHaskellPackages = libProf: self: super:
   una               = pkg ~/src/una {};
 
   # BAE Haskell packages
-  apis              = dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/apis {});
-  hsmedl            = pkg ~/bae/hsmedl {};
-  parameter-dsl     = pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/parameter-dsl {};
+  hmon              = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon {});
+  hsmedl            = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {});
+  apis              = dontHaddock (dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/apis {}));
+  parameter-dsl     = dontHaddock (dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/parameter-dsl {}));
   rings-dashboard   = dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard {});
-  xhtml-comparator  = pkg ~/bae/xhtml-deliverable/xhtml/comparator {};
-
-  # Gitlib
-  git-gpush         = pkg ~/src/gitlib/git-gpush {};
-  git-monitor       = pkg ~/src/gitlib/git-monitor {};
-  gitlib            = pkg ~/src/gitlib/gitlib {};
-  gitlib-cmdline    = pkg ~/src/gitlib/gitlib-cmdline { git = gitAndTools.git; };
-  gitlib-cross      = pkg ~/src/gitlib/gitlib-cross { git = gitAndTools.git; };
-  gitlib-hit        = pkg ~/src/gitlib/gitlib-hit {};
-  gitlib-lens       = pkg ~/src/gitlib/gitlib-lens {};
-  gitlib-libgit2    = pkg ~/src/gitlib/gitlib-libgit2 {};
-  gitlib-s3         = pkg ~/src/gitlib/gitlib-S3 {};
-  gitlib-sample     = pkg ~/src/gitlib/gitlib-sample {};
-  gitlib-test       = pkg ~/src/gitlib/gitlib-test {};
-  hlibgit2          = dontCheck (pkg ~/src/gitlib/hlibgit2 {});
+  comparator        = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/comparator {});
 
   # Hackage packages
+  Agda              = doJailbreak (dontHaddock super.Agda);
+  ReadArgs          = dontCheck super.ReadArgs;
   STMonadTrans      = dontCheck super.STMonadTrans;
-  agdaBase          = dontHaddock super.agdaBase;
   bindings-DSL      = pkg ~/oss/bindings-dsl {};
-  blaze-builder-enumerator  = doJailbreak super.blaze-builder-enumerator;
+  blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
+  cabal-helper      = doJailbreak super.cabal-helper;
   cabal-install     = doJailbreak super.cabal-install;
   compressed        = doJailbreak super.compressed;
+  concurrent-output = doJailbreak super.concurrent-output;
   cryptohash-sha256 = pkg ~/oss/hackage-security/cryptohash-sha256.nix {};
   docker-hs         = pkg ~/oss/docker-hs {};
   ghc-mod           = doJailbreak super.ghc-mod;
+  gtk2hs-buildtools = doJailbreak super.gtk2hs-buildtools;
   hackage-root-tool = pkg ~/oss/hackage-security/hackage-root-tool {};
-  hackage-security  = pkg ~/oss/hackage-security/hackage-security {};
+  hackage-security  = doJailbreak (pkg ~/oss/hackage-security/hackage-security {});
+  hakyll            = doJailbreak super.hakyll;
+  hasktags          = doJailbreak super.hasktags;
   hoogle            = doJailbreak super.hoogle;
   idris             = dontHaddock super.idris;
-  lambdabot-haskell-plugins = doJailbreak super.lambdabot-haskell-plugins;
-  pipes             = pkg ~/oss/pipes {};
+  language-ecmascript = doJailbreak super.language-ecmascript;
+  machines          = doJailbreak super.machines;
+  pandoc            = doJailbreak super.pandoc;
   pipes-binary      = doJailbreak super.pipes-binary;
-  pipes-safe        = pkg ~/oss/pipes-safe {};
   pipes-shell       = pkg ~/oss/pipes-shell {};
+  pipes-zlib        = dontCheck super.pipes-zlib;
+  servant           = super.servant_0_9_1_1;
+  servant-client    = super.servant-client_0_9_1_1;
+  servant-docs      = super.servant-docs_0_9_1_1;
+  servant-foreign   = super.servant-foreign_0_9_1_1;
+  servant-js        = super.servant-js_0_9;
+  servant-server    = super.servant-server_0_9_1_1;
+  shake             = doJailbreak super.shake;
+  shelly            = doJailbreak (dontHaddock (dontCheck (pkg ~/oss/Shelly.hs {})));
+  turtle            = doJailbreak super.turtle;
   swagger2          = dontHaddock (dontCheck super.swagger2);
-  time-recurrence   = dontCheck (pkg ~/oss/time-recurrence {});
+  time-recurrence   = doJailbreak super.time-recurrence;
   timeparsers       = dontCheck (pkg ~/oss/timeparsers {});
   total             = doJailbreak super.total;
 
@@ -101,7 +115,7 @@ myHaskellPackages = libProf: self: super:
   });
 };
 
-haskPkgs = haskell801Packages;
+haskPkgs = haskell802Packages;
 
 haskell7103Packages = super.haskell.packages.ghc7103.override {
   overrides = myHaskellPackages false;
@@ -132,18 +146,16 @@ ghc710ProfEnv = pkgs.myEnvFun {
   ];
 };
 
-haskell801Packages = super.haskell.packages.ghc801.override {
+haskell802Packages = super.haskell.packages.ghc802.override {
   overrides = myHaskellPackages false;
 };
-profiledHaskell801Packages = super.haskell.packages.ghc801.override {
+profiledHaskell802Packages = super.haskell.packages.ghc802.override {
   overrides = myHaskellPackages true;
 };
 
 ghc80Env = pkgs.myEnvFun {
   name = "ghc80";
-  buildInputs = with haskell801Packages; [
-    (stdenv.lib.attrsets.mapAttrsToList (name: value: "haskell801Packages." + name)
-       (myHaskellPackages false haskell801Packages haskell801Packages))
+  buildInputs = with haskell802Packages; [
     (ghcWithHoogle (import ~/src/hoogle-local/package-list.nix))
     alex happy cabal-install
     ghc-core
@@ -154,21 +166,19 @@ ghc80Env = pkgs.myEnvFun {
     ghc-mod
     djinn mueval
     # lambdabot
-    threadscope
+    # threadscope
     # timeplot splot
     # liquidhaskell
     idris
     jhc
-    Agda
+    # Agda
   ];
 };
 
 ghc80ProfEnv = pkgs.myEnvFun {
   name = "ghc80prof";
-  buildInputs = with profiledHaskell801Packages; [
-    # (stdenv.lib.attrsets.mapAttrsToList (name: value: "profiledHaskell801Packages." + name)
-    #    (myHaskellPackages true profiledHaskell801Packages profiledHaskell801Packages))
-    profiledHaskell801Packages.ghc 
+  buildInputs = with profiledHaskell802Packages; [
+    profiledHaskell802Packages.ghc 
     alex happy cabal-install
     ghc-core
     hlint
@@ -258,10 +268,6 @@ x11ToolsEnv = pkgs.buildEnv {
 systemToolsEnv = pkgs.buildEnv {
   name = "systemTools";
   paths = [
-    haskPkgs.pushme
-    haskPkgs.sizes
-    haskPkgs.una
-
     aspell
     aspellDicts.en
     exiv2
@@ -273,13 +279,17 @@ systemToolsEnv = pkgs.buildEnv {
     gnutar
     graphviz
     haskPkgs.hours
-    haskPkgs.runmany
-    jq
-    imagemagick_light
-    multitail
-    less
-    p7zip
     haskPkgs.pandoc
+    haskPkgs.pushme
+    haskPkgs.runmany
+    haskPkgs.simple-mirror
+    haskPkgs.sizes
+    haskPkgs.una
+    imagemagick_light
+    jq
+    less
+    multitail
+    p7zip
     parallel
     pinentry_mac
     postgresql96
@@ -287,7 +297,6 @@ systemToolsEnv = pkgs.buildEnv {
     ripgrep
     rlwrap
     silver-searcher
-    haskPkgs.simple-mirror
     sqlite
     stow
     time
@@ -302,27 +311,54 @@ systemToolsEnv = pkgs.buildEnv {
   ];
 };
 
+ghi = buildRubyGem rec {
+  inherit ruby;
+
+  name = "${gemName}-${version}";
+  gemName = "ghi";
+  version = "1.2.0";
+
+  sha256 = "05cirb2ndhh0i8laqrfwijprqy63gmxmd8agqkayvqpjs26gdbwi";
+
+  buildInputs = [bundler];
+};
+
+gist = buildRubyGem rec {
+  inherit ruby;
+
+  name = "${gemName}-${version}";
+  gemName = "gist";
+  version = "4.5.0";
+
+  sha256 = "0k9bgjdmnr14whmjx6c8d5ak1dpazirj96hk5ds69rl5d9issw0l";
+
+  buildInputs = [bundler];
+};
+
 gitToolsEnv = pkgs.buildEnv {
   name = "gitTools";
   paths = [
-    diffutils diffstat patchutils patch
-
-    haskPkgs.git-monitor
-    haskPkgs.git-all
-
-    pkgs.gitAndTools.hub
-    pkgs.gitAndTools.gitFull
-    pkgs.gitAndTools.gitflow
-    pkgs.gitAndTools.git-imerge
-    pkgs.gitAndTools.diff-so-fancy
-
+    diffstat
+    diffutils
+    ghi
+    gist
     git-lfs
+    gitAndTools.diff-so-fancy
+    gitAndTools.git-imerge
+    gitAndTools.gitFull
+    gitAndTools.gitflow
+    gitAndTools.hub
+    haskPkgs.git-all
+    haskPkgs.git-monitor
+    patch
+    patchutils
   ];
 };
 
 networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
+    aria2
     cacert
     httrack
     iperf
@@ -330,8 +366,10 @@ networkToolsEnv = pkgs.buildEnv {
     dnsutils
     openssh
     openssl
-    # pdnsd does not build with IPv6 on Darwin
-    (super.stdenv.lib.overrideDerivation pdnsd (attrs: { configureFlags = []; }))
+    (super.stdenv.lib.overrideDerivation pdnsd (attrs: { 
+       # pdnsd does not build with IPv6 on Darwin
+       configureFlags = [];
+     }))
     rsync
     socat2pre
     wget
@@ -343,12 +381,23 @@ mailToolsEnv = pkgs.buildEnv {
   name = "mailTools";
   paths = [
     (pkgs.dovecot22 or dovecot) dovecot_pigeonhole
-    leafnode
+    contacts
     fetchmail
     imapfilter
-    contacts
+    leafnode
     msmtp
     pflogsumm
+  ];
+};
+
+jsToolsEnv = pkgs.buildEnv {
+  name = "jsTools";
+  paths = [
+    nodejs
+    nodePackages.eslint
+    nodePackages.csslint
+    nodePackages.jsontool
+    jquery
   ];
 };
 
@@ -366,31 +415,84 @@ pythonToolsEnv = pkgs.buildEnv {
   ];
 };
 
+_grako = with python35Packages; buildPythonPackage {
+  name = "grako-3.14.0";
+  src = fetchurl {
+    url = "https://pypi.python.org/packages/a0/f4/3b4fdf6db1d8809d344e85e714eea2ac450563d2269a1a490beba6ad5a58/grako-3.14.0.tar.gz";
+    sha256 = "0dylh12sa4bfi88kvhr0pfrxgahq1g9c766wd5zsizn8m1ypydsj";
+  };
+  doCheck = false;
+};
+
+_libconf = with python35Packages; buildPythonPackage {
+  name = "libconf-1.0.0";
+  src = fetchurl {
+    url = "https://pypi.python.org/packages/07/6a/4e31b8f805741db44812dccb8d4d5837d2c35a47061d5ecb5920c9b59814/libconf-1.0.0.zip";
+    sha256 = "1sspqygnmc756sc0p84ihqb0v3zyzw44ysxs2gha132mb5hipr5v";
+  };
+};
+
+_pyev = with python35Packages; pyev.override rec {
+  postPatch = ''
+    libev_so=${pkgs.libev}/lib/libev.4.dylib
+    test -f "$libev_so" || { echo "ERROR: File $libev_so does not exist, please fix nix expression for pyev"; exit 1; }
+    sed -i -e "s|libev_dll_name = find_library(\"ev\")|libev_dll_name = \"$libev_so\"|" setup.py
+  '';
+};
+
+_pika = with python35Packages; pika.override rec {
+  buildInputs = with self; [ nose mock pyyaml unittest2 _pyev ]
+    ++ stdenv.lib.optionals (!isPy3k) [ twisted tornado ];
+};
+
+smedl = with python35Packages; buildPythonPackage rec {
+  name = "smedl-${version}";
+  version = "1.0.0rc2";
+  src = ~/bae/atif-deliverable/monitors/smon/smedl;
+  buildInputs = with python35Packages; [
+    jinja2
+    markupsafe
+    _grako
+    _libconf
+    mccabe
+    nose2
+    pyelftools
+    _pika
+    pyparsing
+  ];
+
+  doCheck = false; # currently uses hard-coded user/host names
+
+  meta = {
+    description = "SMEDL distributing monitoring";
+    maintainers = with maintainers; [ jwiegley ];
+  };
+};
+
 idutils = super.stdenv.lib.overrideDerivation super.idutils (attrs: {
   doCheck = false;
 });
 
-devToolsEnv = pkgs.myEnvFun {
-  name = "devTools";
-  buildInputs = [
-    autoconf automake libtool pkgconfig clang llvm
-  ];
-};
-
 langToolsEnv = pkgs.buildEnv {
   name = "langTools";
   paths = [
-    global
-    idutils
-    ctags
-    htmlTidy
+    autoconf
+    automake
+    haskPkgs.bench
     cabal2nix
+    clang
+    ctags
+    global
     gnumake
-    # isabelle
+    htmlTidy
+    idutils
+    libtool
+    llvm
     ott
-    verasco # compcert
+    pkgconfig
     sbcl
     sloccount
+    verasco # compcert
     yuicompressor
   ];
  };
@@ -467,11 +569,11 @@ gameToolsEnv = pkgs.buildEnv {
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
   paths = [
-    haskPkgs.sitebuilder
-    texlive.combined.scheme-full
-    texinfo
     doxygen
     ffmpeg
+    haskPkgs.sitebuilder
+    texinfo
+    texlive.combined.scheme-full
   ];
 };
 
