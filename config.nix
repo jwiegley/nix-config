@@ -557,6 +557,7 @@ coq85Env = pkgs.myEnvFun {
     coqPackages_8_5.flocq
     coqPackages_8_5.mathcomp
     coqPackages_8_5.ssreflect
+    compcert
     # coqPackages_8_5.QuickChick
     # coqPackages_8_5.tlc
     # coqPackages_8_5.ynot
