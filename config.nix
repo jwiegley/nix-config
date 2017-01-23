@@ -31,6 +31,38 @@ myHaskellPackages = libProf: self: super:
   gitlib-s3         = pkg ~/src/gitlib/gitlib-S3 {};
   gitlib-sample     = pkg ~/src/gitlib/gitlib-sample {};
   gitlib-test       = pkg ~/src/gitlib/gitlib-test {};
+  gitlib_v4         = pkg ~/src/gitlib/v4/gitlib;
+  gitlib-cmdline_v4 = pkg ~/src/gitlib/v4/gitlib-cmdline {
+    git = gitAndTools.git;
+    gitlib = gitlib_v4;
+    gitlib-test = gitlib-test_v4;
+  };
+  gitlib-cross_v4   = pkg ~/src/gitlib/v4/gitlib-cross {
+    git = gitAndTools.git;
+  };
+  gitlib-hit_v4     = pkg ~/src/gitlib/v4/gitlib-hit {
+    gitlib = gitlib_v4;
+    gitlib-test = gitlib-test_v4;
+  };
+  gitlib-lens_v4    = pkg ~/src/gitlib/v4/gitlib-lens {
+    gitlib = gitlib_v4;
+    gitlib-libgit2 = gitlib-test_v4;
+  };
+  gitlib-libgit2_v4 = pkg ~/src/gitlib/v4/gitlib-libgit2 {
+    gitlib = gitlib_v4;
+    gitlib-test = gitlib-test_v4;
+  };
+  gitlib-s3_v4      = pkg ~/src/gitlib/v4/gitlib-S3 {
+    gitlib = gitlib_v4;
+    gitlib-test = gitlib-test_v4;
+    gitlib-libgit2 = gitlib-test_v4;
+  };
+  gitlib-sample_v4  = pkg ~/src/gitlib/v4/gitlib-sample {
+    gitlib = gitlib_v4;
+  };
+  gitlib-test_v4    = pkg ~/src/gitlib/v4/gitlib-test {
+    gitlib = gitlib_v4;
+  };
   hierarchy         = pkg ~/src/hierarchy {};
   hlibgit2          = dontCheck (pkg ~/src/gitlib/hlibgit2 {});
   hnix              = pkg ~/src/hnix {};
