@@ -3,15 +3,15 @@
 packageOverrides = super: let self = super.pkgs; in with self; rec {
 
 myHaskellPackages = libProf: self: super:
-  with pkgs.haskell.lib; let pkg = self.callPackage; in {
+  with pkgs.haskell.lib; let pkg = self.callPackage; in rec {
 
-  # Packages that I work on, or have written
+  ## Personal packages
+
   async-pool        = pkg ~/src/async-pool {};
   bytestring-fiat   = pkg ~/src/bytestring/src {};
   c2hsc             = dontCheck (pkg ~/src/c2hsc {});
-  commodities       = pkg ~/src/ledger/new/commodities {};
+  commodities       = pkg ~/src/ledger4/commodities {};
   consistent        = pkg ~/src/consistent {};
-  convert           = pkg ~/doc/johnwiegley/convert {};
   coq-haskell       = pkg ~/src/coq-haskell {};
   emacs-bugs        = pkg ~/src/emacs-bugs {};
   find-conduit      = pkg ~/src/find-conduit {};
@@ -19,9 +19,9 @@ myHaskellPackages = libProf: self: super:
   fuzzcheck         = pkg ~/src/fuzzcheck {};
   ghc-issues        = pkg ~/src/ghc-issues {};
   git-all           = pkg ~/src/git-all {};
+  git-du            = pkg ~/src/git-du {};
   git-gpush         = pkg ~/src/gitlib/git-gpush {};
   git-monitor       = pkg ~/src/gitlib/git-monitor {};
-  github            = pkg ~/src/github {};
   gitlib            = pkg ~/src/gitlib/gitlib {};
   gitlib-cmdline    = pkg ~/src/gitlib/gitlib-cmdline { git = gitAndTools.git; };
   gitlib-cross      = pkg ~/src/gitlib/gitlib-cross { git = gitAndTools.git; };
@@ -79,7 +79,6 @@ myHaskellPackages = libProf: self: super:
   pushme            = pkg ~/src/pushme {};
   recursors         = pkg ~/src/recursors {};
   rehoo             = pkg ~/src/rehoo {};
-  rest-client       = pkg ~/src/rest-client {};
   runmany           = pkg ~/src/runmany {};
   shake-docker      = pkg ~/src/shake-docker {};
   simple-conduit    = pkg ~/src/simple-conduit {};
@@ -89,7 +88,8 @@ myHaskellPackages = libProf: self: super:
   streaming-tests   = pkg ~/src/streaming-tests {};
   una               = pkg ~/src/una {};
 
-  # BAE Haskell packages
+  ### BAE packages
+
   hmon              = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon {});
   hsmedl            = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {});
   apis              = dontHaddock (dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/apis {}));
@@ -97,8 +97,9 @@ myHaskellPackages = libProf: self: super:
   rings-dashboard   = dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard {});
   comparator        = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/comparator {});
 
-  # Hackage packages
-  Agda              = doJailbreak (dontHaddock super.Agda);
+  ### Hackage overrides
+
+  Agda_2_5_2        = dontHaddock super.Agda_2_5_2;
   ReadArgs          = dontCheck super.ReadArgs;
   STMonadTrans      = dontCheck super.STMonadTrans;
   bindings-DSL      = pkg ~/oss/bindings-dsl {};
@@ -121,7 +122,6 @@ myHaskellPackages = libProf: self: super:
   machines          = doJailbreak super.machines;
   pandoc            = doJailbreak super.pandoc;
   pipes-binary      = doJailbreak super.pipes-binary;
-  pipes-shell       = pkg ~/oss/pipes-shell {};
   pipes-zlib        = dontCheck super.pipes-zlib;
   servant           = super.servant_0_9_1_1;
   servant-client    = super.servant-client_0_9_1_1;
@@ -194,7 +194,7 @@ ghc80Env = pkgs.myEnvFun {
     hlint
     pointfree
     hasktags
-    simple-mirror 
+    simple-mirror
     ghc-mod
     djinn mueval
     # lambdabot
@@ -203,14 +203,14 @@ ghc80Env = pkgs.myEnvFun {
     # liquidhaskell
     idris
     jhc
-    # Agda
+    # Agda_2_5_2
   ];
 };
 
 ghc80ProfEnv = pkgs.myEnvFun {
   name = "ghc80prof";
   buildInputs = with profiledHaskell802Packages; [
-    profiledHaskell802Packages.ghc 
+    profiledHaskell802Packages.ghc
     alex happy cabal-install
     ghc-core
     hlint
@@ -398,7 +398,7 @@ networkToolsEnv = pkgs.buildEnv {
     dnsutils
     openssh
     openssl
-    (super.stdenv.lib.overrideDerivation pdnsd (attrs: { 
+    (super.stdenv.lib.overrideDerivation pdnsd (attrs: {
        # pdnsd does not build with IPv6 on Darwin
        configureFlags = [];
      }))
@@ -524,7 +524,7 @@ langToolsEnv = pkgs.buildEnv {
     pkgconfig
     sbcl
     sloccount
-    verasco # compcert
+    verasco
     yuicompressor
   ];
  };
