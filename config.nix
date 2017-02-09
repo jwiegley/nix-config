@@ -11,11 +11,9 @@ myHaskellPackages = libProf: self: super:
   bytestring-fiat   = pkg ~/src/bytestring/src {};
   c2hsc             = dontCheck (pkg ~/src/c2hsc {});
   commodities       = pkg ~/src/ledger4/commodities {};
-  consistent        = pkg ~/src/consistent {};
+  consistent        = dontCheck (pkg ~/src/consistent {});
   coq-haskell       = pkg ~/src/coq-haskell {};
   emacs-bugs        = pkg ~/src/emacs-bugs {};
-  find-conduit      = pkg ~/src/find-conduit {};
-  fusion            = pkg ~/src/fusion {};
   fuzzcheck         = pkg ~/src/fuzzcheck {};
   ghc-issues        = pkg ~/src/ghc-issues {};
   git-all           = pkg ~/src/git-all {};
@@ -67,21 +65,20 @@ myHaskellPackages = libProf: self: super:
   hlibgit2          = dontCheck (pkg ~/src/gitlib/hlibgit2 {});
   hnix              = pkg ~/src/hnix {};
   hours             = pkg ~/src/hours {};
-  ipcvar            = pkg ~/src/ipcvar {};
+  ipcvar            = dontCheck (pkg ~/src/ipcvar {});
   linearscan        = pkg ~/src/linearscan {};
-  linearscan-hoopl  = pkg ~/src/linearscan-hoopl {};
+  linearscan-hoopl  = dontCheck (pkg ~/src/linearscan-hoopl {});
   logging           = pkg ~/src/logging {};
   monad-extras      = pkg ~/src/monad-extras {};
   parsec-free       = pkg ~/src/parsec-free {};
   pipes-async       = pkg ~/src/pipes-async {};
-  pipes-files       = pkg ~/src/pipes-files {};
+  pipes-files       = dontCheck (pkg ~/src/pipes-files {});
   pipes-fusion      = pkg ~/src/pipes-fusion {};
   pushme            = pkg ~/src/pushme {};
   recursors         = pkg ~/src/recursors {};
   rehoo             = pkg ~/src/rehoo {};
   runmany           = pkg ~/src/runmany {};
   shake-docker      = pkg ~/src/shake-docker {};
-  simple-conduit    = pkg ~/src/simple-conduit {};
   simple-mirror     = pkg ~/src/hackage-mirror {};
   sitebuilder       = pkg ~/doc/sitebuilder { yuicompressor = pkgs.yuicompressor; };
   sizes             = pkg ~/src/sizes {};
@@ -92,50 +89,68 @@ myHaskellPackages = libProf: self: super:
 
   hmon              = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon {});
   hsmedl            = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {});
-  apis              = dontHaddock (dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/apis {}));
-  parameter-dsl     = dontHaddock (dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/brass-platform/parameter-dsl {}));
+  apis              = dontHaddock (dontCheck (doJailbreak (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/apis {
+    aeson = super.aeson_1_0_2_1;
+    http-client = super.http-client_0_5_5;
+    lens = super.lens_4_15_1;
+  })));
+  parameter-dsl     = dontHaddock (dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/parameter-dsl {}));
   rings-dashboard   = dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard {});
+  rings-dashboard-api = dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard/rings-dashboard-api {});
   comparator        = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/comparator {});
 
   ### Hackage overrides
 
-  Agda_2_5_2        = dontHaddock super.Agda_2_5_2;
-  ReadArgs          = dontCheck super.ReadArgs;
-  STMonadTrans      = dontCheck super.STMonadTrans;
-  bindings-DSL      = pkg ~/oss/bindings-dsl {};
+  Agda              = dontHaddock super.Agda_2_5_2;
+  # ReadArgs          = dontCheck super.ReadArgs;
+  # STMonadTrans      = dontCheck super.STMonadTrans;
+  # bindings-DSL      = pkg ~/oss/bindings-dsl {};
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
-  cabal-helper      = doJailbreak super.cabal-helper;
-  cabal-install     = doJailbreak super.cabal-install;
+  # cabal-helper      = doJailbreak super.cabal-helper;
+  # cabal-install     = doJailbreak super.cabal-install;
   compressed        = doJailbreak super.compressed;
-  concurrent-output = doJailbreak super.concurrent-output;
-  cryptohash-sha256 = pkg ~/oss/hackage-security/cryptohash-sha256.nix {};
-  docker-hs         = pkg ~/oss/docker-hs {};
-  ghc-mod           = doJailbreak super.ghc-mod;
-  gtk2hs-buildtools = doJailbreak super.gtk2hs-buildtools;
-  hackage-root-tool = pkg ~/oss/hackage-security/hackage-root-tool {};
-  hackage-security  = doJailbreak (pkg ~/oss/hackage-security/hackage-security {});
-  hakyll            = doJailbreak super.hakyll;
+  # concurrent-output = doJailbreak super.concurrent-output;
+  # cryptohash-sha256 = pkg ~/oss/hackage-security/cryptohash-sha256.nix {};
+  # dependent-sum     = super.dependent-sum_0_4;
+  # dependent-sum-template = doJailbreak super.dependent-sum-template;
+  # docker-hs         = pkg ~/oss/docker-hs {};
+  # ghc-mod           = doJailbreak super.ghc-mod;
+  # gtk2hs-buildtools = doJailbreak super.gtk2hs-buildtools;
+  # hackage-root-tool = pkg ~/oss/hackage-security/hackage-root-tool {};
+  # hackage-security  = doJailbreak (pkg ~/oss/hackage-security/hackage-security {});
+  # hakyll            = doJailbreak super.hakyll;
   hasktags          = doJailbreak super.hasktags;
-  hoogle            = doJailbreak super.hoogle;
-  idris             = dontHaddock super.idris;
+  # hoogle            = doJailbreak super.hoogle;
+  # idris             = dontHaddock super.idris;
+  # lambdabot-core    = doJailbreak super.lambdabot-core;
   language-ecmascript = doJailbreak super.language-ecmascript;
+  lens                = super.lens_4_15_1;
+  # liquid-fixpoint   = pkg ~/oss/liquidhaskell/liquid-fixpoint {};
+  # liquiddesugar     = doJailbreak (pkg ~/oss/liquidhaskell/liquiddesugar {});
+  # liquidhaskell     = pkg ~/oss/liquidhaskell {};
   machines          = doJailbreak super.machines;
   pandoc            = doJailbreak super.pandoc;
   pipes-binary      = doJailbreak super.pipes-binary;
   pipes-zlib        = dontCheck super.pipes-zlib;
-  servant           = super.servant_0_9_1_1;
-  servant-client    = super.servant-client_0_9_1_1;
-  servant-docs      = super.servant-docs_0_9_1_1;
-  servant-foreign   = super.servant-foreign_0_9_1_1;
-  servant-js        = super.servant-js_0_9;
-  servant-server    = super.servant-server_0_9_1_1;
-  shake             = doJailbreak super.shake;
-  shelly            = doJailbreak (dontHaddock (dontCheck (pkg ~/oss/Shelly.hs {})));
-  turtle            = doJailbreak super.turtle;
-  swagger2          = dontHaddock (dontCheck super.swagger2);
+  # # servant           = super.servant_0_9_1_1;
+  # # servant-client    = super.servant-client_0_9_1_1;
+  # # servant-docs      = super.servant-docs_0_9_1_1;
+  # # servant-foreign   = super.servant-foreign_0_9_1_1;
+  # # servant-js        = super.servant-js_0_9;
+  # # servant-server    = super.servant-server_0_9_1_1;
+  # servant           = super.servant_0_10;
+  # servant-client    = super.servant-client_0_10;
+  # servant-docs      = super.servant-docs_0_10;
+  # servant-foreign   = super.servant-foreign_0_9_1_1;
+  # servant-js        = super.servant-js_0_9_1;
+  # servant-server    = super.servant-server_0_10;
+  # shake             = doJailbreak super.shake;
+  # shelly            = doJailbreak (dontHaddock (dontCheck (pkg ~/oss/Shelly.hs {})));
+  # swagger2          = dontHaddock (dontCheck super.swagger2);
   time-recurrence   = doJailbreak super.time-recurrence;
   timeparsers       = dontCheck (pkg ~/oss/timeparsers {});
   total             = doJailbreak super.total;
+  turtle            = doJailbreak super.turtle;
 
   mkDerivation = pkg: super.mkDerivation (pkg // {
     # src = pkgs.fetchurl {
@@ -159,7 +174,7 @@ profiledHaskell7103Packages = super.haskell.packages.ghc7103.override {
 ghc710Env = pkgs.myEnvFun {
   name = "ghc710";
   buildInputs = with haskell7103Packages; [
-    haskell7103Packages.ghc alex happy cabal-install
+    ghc alex happy cabal-install
     ghc-core
     hlint
     pointfree
@@ -170,7 +185,7 @@ ghc710Env = pkgs.myEnvFun {
 ghc710ProfEnv = pkgs.myEnvFun {
   name = "ghc710prof";
   buildInputs = with profiledHaskell7103Packages; [
-    profiledHaskell7103Packages.ghc alex happy cabal-install
+    ghc alex happy cabal-install
     ghc-core
     hlint
     pointfree
@@ -199,11 +214,11 @@ ghc80Env = pkgs.myEnvFun {
     djinn mueval
     # lambdabot
     # threadscope
-    # timeplot splot
-    # liquidhaskell
+    timeplot splot
+    # liquidhaskell liquidhaskell-cabal
     idris
     jhc
-    # Agda_2_5_2
+    Agda
   ];
 };
 
@@ -211,6 +226,18 @@ ghc80ProfEnv = pkgs.myEnvFun {
   name = "ghc80prof";
   buildInputs = with profiledHaskell802Packages; [
     profiledHaskell802Packages.ghc
+    alex happy cabal-install
+    ghc-core
+    hlint
+    pointfree
+    hasktags
+  ];
+};
+
+ghc80EmptyEnv = pkgs.myEnvFun {
+  name = "ghc80empty";
+  buildInputs = with profiledHaskell802Packages; [
+    haskell802Packages.ghc
     alex happy cabal-install
     ghc-core
     hlint
@@ -328,10 +355,12 @@ systemToolsEnv = pkgs.buildEnv {
     pv
     ripgrep
     rlwrap
+    screen
     silver-searcher
     sqlite
     stow
     time
+    tmux
     tree
     unrar
     unzip
