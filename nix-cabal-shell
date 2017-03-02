@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 cabal=$(echo *.cabal)
 
@@ -19,8 +19,12 @@ main = defaultMain
 EOF
 fi
 
-if [[ $profiling == yes ]]; then
-    nix-shell '<nixpkgs>' -A profiledHaskell7102Packages.$(basename $(pwd)).env "$@"
-else
-    nix-shell '<nixpkgs>' -A haskell7102Packages.$(basename $(pwd)).env "$@"
+PKG=$(basename $(pwd))
+
+if [[ "$1" == --dir ]]; then
+    shift 1
+    PKG=$1
+    shift 1
 fi
+
+exec nix-shell '<nixpkgs>' -A haskPkgs.$PKG.env "$@"

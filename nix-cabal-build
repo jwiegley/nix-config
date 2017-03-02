@@ -20,7 +20,7 @@ EOF
 fi
 
 if [[ $profiling == yes ]]; then
-    nix-build "$@" -E 'let pkgs = import <nixpkgs> {}; in pkgs.stdenv.lib.callPackageWith (pkgs // pkgs.profiledHaskell7102Packages) ./default.nix {}'
+    nix-build "$@" -E 'let pkgs = import <nixpkgs> {}; in pkgs.stdenv.lib.callPackageWith (pkgs // pkgs.profiledHaskell7103Packages) ./default.nix {}'
 else
-    nix-build "$@" -E 'let pkgs = import <nixpkgs> {}; in pkgs.stdenv.lib.callPackageWith (pkgs // pkgs.haskell7102Packages) ./default.nix {}'
+    nix-build "$@" -E 'let pkgs = import <nixpkgs> {}; in pkgs.stdenv.lib.callPackageWith (pkgs // pkgs.haskPkgs) ./default.nix {}'
 fi

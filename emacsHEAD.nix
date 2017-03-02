@@ -27,7 +27,9 @@ stdenv.mkDerivation rec {
 
   builder = ./builder.sh;
 
-  src = ~/.emacs.d/devel;
+  src = builtins.filterSource (path: type:
+      type != "directory" || baseNameOf path != ".git")
+    ~/.emacs.d/devel;
 
   patches = stdenv.lib.optionals stdenv.isDarwin [
     ./at-fdcwd.patch
@@ -37,8 +39,6 @@ stdenv.mkDerivation rec {
   postPatch = ''
     sed -i 's|/usr/share/locale|${gettext}/share/locale|g' \
       lisp/international/mule-cmds.el
-    find . -name '*.elc' -delete
-    git clean -dfx
     sh autogen.sh
   '';
 

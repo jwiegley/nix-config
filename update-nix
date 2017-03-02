@@ -1,27 +1,25 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
-nix-env --set-flag priority 10 networkTools
-nix-env --set-flag priority 100 langTools
-nix-env --set-flag priority 500 buildTools
-nix-env --set-flag priority 1000 publishTools
-nix-env --set-flag priority 2000 perlTools
-nix-env -q | egrep -v '(xquartz|langTools|publishTools|perlTools)' | sed 's/-[0-9].*//' \
-    | xargs nix-env "$@" -u
+# nix-env --set-flag priority 10 networkTools
+# nix-env --set-flag priority 100 langTools
+# nix-env --set-flag priority 500 buildTools
+# nix-env -q | egrep -v '(langTools)' | sed 's/-[0-9].*//' \
+#     | xargs nix-env -f '<nixpkgs>' "$@" -u
 
-nix-env --set-flag priority 10 networkTools
-nix-env --set-flag priority 100 langTools
-nix-env --set-flag priority 500 buildTools
-nix-env --set-flag priority 1000 publishTools
-nix-env --set-flag priority 2000 perlTools
-nix-env -q | egrep -v '(xquartz|perlTools)' | sed 's/-[0-9].*//' \
-    | xargs nix-env "$@" -u
+# nix-env --set-flag priority 10 networkTools
+# nix-env --set-flag priority 100 langTools
+# nix-env --set-flag priority 500 buildTools
 
-nix-env --set-flag priority 10 networkTools
-nix-env --set-flag priority 100 langTools
-nix-env --set-flag priority 500 buildTools
-nix-env --set-flag priority 1000 publishTools
-nix-env --set-flag priority 2000 perlTools
-nix-env -q | egrep -v '(xquartz)' | sed 's/-[0-9].*//' \
-    | xargs nix-env "$@" -u
-
-nix-env -q | sed 's/-[0-9].*//' | xargs nix-env "$@" -u
+if [[ "$1" == "-a" ]]; then
+    shift 1
+    cd ~/.nix-defexpr/nixpkgs-next
+    git remote update
+    git pull && git pull --tags
+    git gc && git prune
+    nix-env -f '<nixpkgs-next>' -u "$@"
+    rsync -a --delete ~/.nix-defexpr/nixpkgs-next/ ~/.nix-defexpr/nixpkgs/
+    # push-nix
+    copy-nix hermes --leq -Q -j4
+else
+    nix-env -q | sed 's/-[0-9].*//' | xargs nix-env -f '<nixpkgs>' -u "$@"
+fi

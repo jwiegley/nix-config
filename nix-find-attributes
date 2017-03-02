@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+if [ ! -f packages.txt ]; then
+  echo "building package list..." >&2
+  nix-env -f '<nixpkgs>' -qaP \* --out-path > packages.txt
+fi
+nix-store -qR "$@" | xargs -n1 -I% grep % packages.txt | awk '{print $1}'

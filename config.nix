@@ -164,16 +164,18 @@ ghc80EmptyEnv = pkgs.myEnvFun {
 
 haskellFilterSource = paths: src: builtins.filterSource (path: type:
     let baseName = baseNameOf path; in
+    !( type == "directory"
+       && builtins.elem baseName ([".git" ".cabal-sandbox" "dist"] ++ paths))
+    &&
     !( type == "unknown"
-    || builtins.elem baseName
-         ([".hdevtools.sock" ".git" ".cabal-sandbox" "dist"] ++ paths)
-    || stdenv.lib.hasSuffix ".sock" path
-    || stdenv.lib.hasSuffix ".hi" path
-    || stdenv.lib.hasSuffix ".hi-boot" path
-    || stdenv.lib.hasSuffix ".o" path
-    || stdenv.lib.hasSuffix ".o-boot" path
-    || stdenv.lib.hasSuffix ".dyn_o" path
-    || stdenv.lib.hasSuffix ".p_o" path))
+       || stdenv.lib.hasSuffix ".hdevtools.sock" path
+       || stdenv.lib.hasSuffix ".sock" path
+       || stdenv.lib.hasSuffix ".hi" path
+       || stdenv.lib.hasSuffix ".hi-boot" path
+       || stdenv.lib.hasSuffix ".o" path
+       || stdenv.lib.hasSuffix ".o-boot" path
+       || stdenv.lib.hasSuffix ".dyn_o" path
+       || stdenv.lib.hasSuffix ".p_o" path))
   src;
 
 ledger_HEAD = super.callPackage ~/src/ledger {};
@@ -216,10 +218,6 @@ ringsEnv = pkgs.myEnvFun {
 
 emacs = emacsHEAD;
 
-emacsHEAD = super.stdenv.lib.overrideDerivation emacsHEAD_base (attrs: {
-  doCheck = false;
-});
-
 emacsHEAD_base = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   libXaw = xorg.libXaw;
   Xaw3d = null;
@@ -231,6 +229,10 @@ emacsHEAD_base = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   inherit (darwin.apple_sdk.frameworks) AppKit Foundation;
   inherit (darwin) libobjc;
 };
+
+emacsHEAD = super.stdenv.lib.overrideDerivation emacsHEAD_base (attrs: {
+  doCheck = false;
+});
 
 emacsHEADEnv = pkgs.myEnvFun {
   name = "emacsHEAD";
