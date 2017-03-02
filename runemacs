@@ -1,0 +1,21 @@
+#!/bin/sh -e
+
+if [[ "$1" == --alt ]]; then
+    export EMACSVER=HEADalt
+    shift 1
+fi
+
+EMACSPATH=../Applications/Emacs.app/Contents/MacOS/Emacs
+EMACSBIN="\$(dirname \$(which emacs))/$EMACSPATH"
+
+if [[ "$1" == --debug ]]; then
+    exec load-env-coq$COQVER \
+         load-env-ghc$GHCVER \
+         load-env-emacs$EMACSVER \
+         bash -c "unset TZ ; lldb -o run -f $EMACSBIN -- --debug-init"
+else
+    exec load-env-coq$COQVER \
+         load-env-ghc$GHCVER \
+         load-env-emacs$EMACSVER \
+         bash -c "unset TZ ; $EMACSBIN --debug-init"
+fi

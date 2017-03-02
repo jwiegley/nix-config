@@ -4,7 +4,7 @@ CACHE=/Volumes/mybook/Products/nix-binary-cache
 
 if [[ -d $CACHE ]]; then
     nix-push --dest $CACHE                                                      \
-             --key-file ~/.nix/sk                                               \
+             --key-file ~/.nixpkgs/sk                                           \
              --url-prefix http://ftp.newartisans.com/pub/nix-binary-cache       \
              $(readlink -f ~/.nix-profile)
 

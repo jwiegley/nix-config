@@ -58,6 +58,7 @@ myHaskellPackages = libProf: self: super:
     dontHaddock
       (dontCheck
          (doJailbreak (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/apis {})));
+  ll-api            = apis;
   parameter-dsl     =
     dontHaddock
       (dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/parameter-dsl {}));
@@ -108,6 +109,7 @@ myHaskellPackages = libProf: self: super:
 };
 
 haskPkgs = haskell802Packages;
+haskellPackages = haskPkgs;
 
 haskell802Packages = super.haskell.packages.ghc802.override {
   overrides = myHaskellPackages false;
@@ -414,6 +416,7 @@ langToolsEnv = pkgs.buildEnv {
     automake
     haskPkgs.bench
     cabal2nix
+    cabal-install
     clang
     ctags
     global
