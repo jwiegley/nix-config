@@ -10,11 +10,11 @@ myHaskellPackages = libProf: self: super:
   async-pool        = pkg ~/src/async-pool {};
   bytestring-fiat   = pkg ~/src/bytestring/src {};
   c2hsc             = dontCheck (pkg ~/src/c2hsc {});
-  commodities       = pkg ~/src/ledger4/commodities {};
-  consistent        = dontCheck (pkg ~/src/consistent {});
+  commodities       = pkg ~/src/old/ledger4/commodities {};
+  consistent        = dontCheck (pkg ~/src/old/consistent {});
   coq-haskell       = pkg ~/src/coq-haskell {};
   emacs-bugs        = pkg ~/src/emacs-bugs {};
-  fuzzcheck         = pkg ~/src/fuzzcheck {};
+  fuzzcheck         = pkg ~/src/old/fuzzcheck {};
   ghc-issues        = pkg ~/src/ghc-issues {};
   git-all           = pkg ~/src/git-all {};
   git-du            = pkg ~/src/git-du {};
@@ -22,50 +22,14 @@ myHaskellPackages = libProf: self: super:
   git-monitor       = pkg ~/src/gitlib/git-monitor {};
   gitlib            = pkg ~/src/gitlib/gitlib {};
   gitlib-cmdline    = pkg ~/src/gitlib/gitlib-cmdline { git = gitAndTools.git; };
-  gitlib-cross      = pkg ~/src/gitlib/gitlib-cross { git = gitAndTools.git; };
   gitlib-hit        = pkg ~/src/gitlib/gitlib-hit {};
-  gitlib-lens       = pkg ~/src/gitlib/gitlib-lens {};
   gitlib-libgit2    = pkg ~/src/gitlib/gitlib-libgit2 {};
-  gitlib-s3         = pkg ~/src/gitlib/gitlib-S3 {};
-  gitlib-sample     = pkg ~/src/gitlib/gitlib-sample {};
   gitlib-test       = pkg ~/src/gitlib/gitlib-test {};
-  gitlib_v4         = pkg ~/src/gitlib/v4/gitlib {};
-  gitlib-cmdline_v4 = pkg ~/src/gitlib/v4/gitlib-cmdline {
-    git = gitAndTools.git;
-    gitlib = gitlib_v4;
-    gitlib-test = gitlib-test_v4;
-  };
-  gitlib-cross_v4   = pkg ~/src/gitlib/v4/gitlib-cross {
-    git = gitAndTools.git;
-  };
-  gitlib-hit_v4     = pkg ~/src/gitlib/v4/gitlib-hit {
-    gitlib = gitlib_v4;
-    gitlib-test = gitlib-test_v4;
-  };
-  gitlib-lens_v4    = pkg ~/src/gitlib/v4/gitlib-lens {
-    gitlib = gitlib_v4;
-    gitlib-libgit2 = gitlib-test_v4;
-  };
-  gitlib-libgit2_v4 = pkg ~/src/gitlib/v4/gitlib-libgit2 {
-    gitlib = gitlib_v4;
-    gitlib-test = gitlib-test_v4;
-  };
-  gitlib-s3_v4      = pkg ~/src/gitlib/v4/gitlib-S3 {
-    gitlib = gitlib_v4;
-    gitlib-test = gitlib-test_v4;
-    gitlib-libgit2 = gitlib-test_v4;
-  };
-  gitlib-sample_v4  = pkg ~/src/gitlib/v4/gitlib-sample {
-    gitlib = gitlib_v4;
-  };
-  gitlib-test_v4    = pkg ~/src/gitlib/v4/gitlib-test {
-    gitlib = gitlib_v4;
-  };
   hierarchy         = doJailbreak (pkg ~/src/hierarchy {});
   hlibgit2          = dontCheck (pkg ~/src/gitlib/hlibgit2 {});
   hnix              = pkg ~/src/hnix {};
   hours             = pkg ~/src/hours {};
-  ipcvar            = dontCheck (pkg ~/src/ipcvar {});
+  ipcvar            = dontCheck (pkg ~/src/old/ipcvar {});
   linearscan        = pkg ~/src/linearscan {};
   linearscan-hoopl  = dontCheck (pkg ~/src/linearscan-hoopl {});
   logging           = pkg ~/src/logging {};
@@ -101,14 +65,13 @@ myHaskellPackages = libProf: self: super:
   rings-dashboard-api =
     dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard/rings-dashboard-api {});
   comparator        = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/comparator {});
+  generator         = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/generator {});
 
   ### Hackage overrides
 
   Agda                     = dontHaddock super.Agda;
-  # QuickCheck               = doJailbreak super.QuickCheck;
   QuickCheck-safe          = doJailbreak super.QuickCheck-safe;
   bench                    = doJailbreak super.bench;
-  # bindings-DSL             = pkg ~/oss/bindings-dsl {};
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   compressed               = doJailbreak super.compressed;
   dependent-sum-template   = doJailbreak super.dependent-sum-template;
@@ -117,7 +80,6 @@ myHaskellPackages = libProf: self: super:
   hasktags                 = doJailbreak super.hasktags;
   idris                    = doJailbreak super.idris;
   language-ecmascript      = doJailbreak super.language-ecmascript;
-  # lens                     = dontCheck super.lens;
   # liquid-fixpoint          = pkg ~/oss/liquidhaskell/liquid-fixpoint {};
   # liquiddesugar            = doJailbreak (pkg ~/oss/liquidhaskell/liquiddesugar {});
   # liquidhaskell            = pkg ~/oss/liquidhaskell {};
@@ -242,6 +204,13 @@ ringsEnv = pkgs.myEnvFun {
   name = "rings";
   buildInputs = [
     autoconf automake libtool pkgconfig clang llvm rabbitmq-c libconfig
+
+    haskPkgs.hmon
+    haskPkgs.hsmedl
+    haskPkgs.apis
+    haskPkgs.parameter-dsl
+    haskPkgs.rings-dashboard-api
+    haskPkgs.comparator
   ];
 };
 
@@ -299,7 +268,7 @@ systemToolsEnv = pkgs.buildEnv {
     haskPkgs.sizes
     haskPkgs.una
     imagemagick_light
-    jq
+    jenkins
     less
     multitail
     p7zip
@@ -370,6 +339,11 @@ gitToolsEnv = pkgs.buildEnv {
   ];
 };
 
+# pdnsd does not build with IPv6 on Darwin
+pdnsd = super.stdenv.lib.overrideDerivation super.pdnsd (attrs: {
+  configureFlags = [];
+});
+
 networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
   paths = [
@@ -381,10 +355,7 @@ networkToolsEnv = pkgs.buildEnv {
     dnsutils
     openssh
     openssl
-    (super.stdenv.lib.overrideDerivation pdnsd (attrs: {
-       # pdnsd does not build with IPv6 on Darwin
-       configureFlags = [];
-     }))
+    pdnsd
     rsync
     socat2pre
     wget
@@ -400,14 +371,14 @@ mailToolsEnv = pkgs.buildEnv {
     fetchmail
     imapfilter
     leafnode
-    msmtp
-    pflogsumm
+    # msmtp
   ];
 };
 
 jsToolsEnv = pkgs.buildEnv {
   name = "jsTools";
   paths = [
+    jq
     nodejs
     nodePackages.eslint
     nodePackages.csslint
@@ -428,60 +399,6 @@ pythonToolsEnv = pkgs.buildEnv {
     python27Packages.pygments
     python27Packages.certifi
   ];
-};
-
-_grako = with python35Packages; buildPythonPackage {
-  name = "grako-3.14.0";
-  src = fetchurl {
-    url = "https://pypi.python.org/packages/a0/f4/3b4fdf6db1d8809d344e85e714eea2ac450563d2269a1a490beba6ad5a58/grako-3.14.0.tar.gz";
-    sha256 = "0dylh12sa4bfi88kvhr0pfrxgahq1g9c766wd5zsizn8m1ypydsj";
-  };
-  doCheck = false;
-};
-
-_libconf = with python35Packages; buildPythonPackage {
-  name = "libconf-1.0.0";
-  src = fetchurl {
-    url = "https://pypi.python.org/packages/07/6a/4e31b8f805741db44812dccb8d4d5837d2c35a47061d5ecb5920c9b59814/libconf-1.0.0.zip";
-    sha256 = "1sspqygnmc756sc0p84ihqb0v3zyzw44ysxs2gha132mb5hipr5v";
-  };
-};
-
-_pyev = with python35Packages; pyev.override rec {
-  postPatch = ''
-    libev_so=${pkgs.libev}/lib/libev.4.dylib
-    test -f "$libev_so" || { echo "ERROR: File $libev_so does not exist, please fix nix expression for pyev"; exit 1; }
-    sed -i -e "s|libev_dll_name = find_library(\"ev\")|libev_dll_name = \"$libev_so\"|" setup.py
-  '';
-};
-
-_pika = with python35Packages; pika.override rec {
-  buildInputs = with self; [ nose mock pyyaml unittest2 _pyev ]
-    ++ stdenv.lib.optionals (!isPy3k) [ twisted tornado ];
-};
-
-smedl = with python35Packages; buildPythonPackage rec {
-  name = "smedl-${version}";
-  version = "1.0.0rc2";
-  src = ~/bae/atif-deliverable/monitors/smon/smedl;
-  buildInputs = with python35Packages; [
-    jinja2
-    markupsafe
-    _grako
-    _libconf
-    mccabe
-    nose2
-    pyelftools
-    _pika
-    pyparsing
-  ];
-
-  doCheck = false; # currently uses hard-coded user/host names
-
-  meta = {
-    description = "SMEDL distributing monitoring";
-    maintainers = with maintainers; [ jwiegley ];
-  };
 };
 
 idutils = super.stdenv.lib.overrideDerivation super.idutils (attrs: {
@@ -537,9 +454,11 @@ coq85Env = pkgs.myEnvFun {
   buildInputs = [
     ocaml ocamlPackages.camlp5_transitional
     coq_8_5
+    coqPackages_8_5.dpdgraph
     coqPackages_8_5.flocq
     coqPackages_8_5.mathcomp
     coqPackages_8_5.ssreflect
+    coqPackages_8_5.coq-ext-lib
     compcert
   ];
 };
@@ -549,27 +468,6 @@ coq86Env = pkgs.myEnvFun {
   buildInputs = [
     ocaml ocamlPackages.camlp5_transitional
     coq_8_6
-  ];
-};
-
-coqHEADEnv = pkgs.myEnvFun {
-  name = "coqHEAD";
-  buildInputs = [
-    ocaml
-    ocamlPackages.camlp5_transitional
-    coq_HEAD
-  ];
-};
-
-fiat_HEAD = super.callPackage ~/oss/fiat/8.5 {};
-
-gameToolsEnv = pkgs.buildEnv {
-  name = "gameTools";
-  paths = [
-    # chessdb
-    # crafty
-    # eboard
-    gnugo
   ];
 };
 
