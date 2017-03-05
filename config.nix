@@ -336,6 +336,7 @@ gitToolsEnv = pkgs.buildEnv {
     gitAndTools.gitFull
     gitAndTools.gitflow
     gitAndTools.hub
+    gitAndTools.tig
     haskPkgs.git-all
     haskPkgs.git-monitor
     patch
@@ -355,6 +356,7 @@ networkToolsEnv = pkgs.buildEnv {
     cacert
     httrack
     iperf
+    nmap
     mtr
     dnsutils
     openssh
