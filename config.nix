@@ -222,7 +222,7 @@ ringsEnv = pkgs.myEnvFun {
 
 emacs = emacsHEAD;
 
-emacsHEAD_base = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
+emacsHEAD = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   libXaw = xorg.libXaw;
   Xaw3d = null;
   gconf = null;
@@ -234,8 +234,8 @@ emacsHEAD_base = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   inherit (darwin) libobjc;
 };
 
-emacsHEAD = super.stdenv.lib.overrideDerivation emacsHEAD_base (attrs: {
-  doCheck = false;
+emacsHEAD_test = super.stdenv.lib.overrideDerivation emacsHEAD (attrs: {
+  doCheck = true;
 });
 
 emacsHEADEnv = pkgs.myEnvFun {
@@ -245,7 +245,13 @@ emacsHEADEnv = pkgs.myEnvFun {
 
 emacsHEADAltEnv = pkgs.myEnvFun {
   name = "emacsHEADalt";
-  buildInputs = with emacsPackagesNgGen emacs; [ emacsHEAD ];
+  buildInputs = with emacsPackagesNgGen emacs; [
+    (emacsHEAD.override {
+       appName = "ERC";
+       bundleName = "nextstep/ERC.app";
+       iconFile = "/Users/johnw/.nixpkgs/ERC.icns";
+     })
+  ];
 };
 
 x11ToolsEnv = pkgs.buildEnv {

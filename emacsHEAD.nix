@@ -6,6 +6,9 @@
 , withX ? !stdenv.isDarwin
 , withGTK3 ? false, gtk3 ? null
 , withGTK2 ? true, gtk2
+, bundleName ? "nextstep/Emacs.app"
+, appName ? "Emacs"
+, iconFile ? ""
 }:
 
 assert (libXft != null) -> libpng != null;      # probably a bug
@@ -39,6 +42,18 @@ stdenv.mkDerivation rec {
   postPatch = ''
     sed -i 's|/usr/share/locale|${gettext}/share/locale|g' \
       lisp/international/mule-cmds.el
+    sed -i 's|nextstep/Emacs\.app|${bundleName}|' configure.ac
+    sed -i 's|>Emacs<|>${appName}<|' nextstep/templates/Info.plist.in
+    sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Info.plist.in
+    sed -i 's|org\.gnu\.Emacs|org.gnu.${appName}|' nextstep/templates/Info.plist.in
+    sed -i 's|Emacs @version@|${appName} @version@|' nextstep/templates/Info.plist.in
+    sed -i 's|EmacsApp|${appName}App|' nextstep/templates/Info.plist.in
+    if [ -n "${iconFile}" ]; then
+      sed -i 's|Emacs\.icns|${appName}.icns|' nextstep/templates/Info.plist.in
+    fi
+    sed -i 's|Name=Emacs|Name=${appName}|' nextstep/templates/Emacs.desktop.in
+    sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Emacs.desktop.in
+    sed -i 's|"Emacs|"${appName}|' nextstep/templates/InfoPlist.strings.in
     sh autogen.sh
   '';
 
@@ -78,10 +93,14 @@ stdenv.mkDerivation rec {
     cp ${./site-start.el} $out/share/emacs/site-lisp/site-start.el
   '' + stdenv.lib.optionalString stdenv.isDarwin ''
     mkdir -p $out/Applications
-    mv nextstep/Emacs.app $out/Applications
+    mv ${bundleName}/Contents/MacOS/Emacs ${bundleName}/Contents/MacOS/${appName}
+    if [ -n "${iconFile}" ]; then
+      cp "${iconFile}" ${bundleName}/Contents/Resources/${appName}.icns
+    fi
+    mv ${bundleName} $out/Applications
   '';
 
-  doCheck = true;
+  doCheck = false;
 
   meta = with stdenv.lib; {
     description = "GNU Emacs 24, the extensible, customizable text editor";

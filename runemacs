@@ -1,11 +1,14 @@
 #!/bin/sh -e
 
+EMACSAPP=Emacs
+
 if [[ "$1" == --alt ]]; then
     export EMACSVER=HEADalt
+    EMACSAPP=ERC
     shift 1
 fi
 
-EMACSPATH=../Applications/Emacs.app/Contents/MacOS/Emacs
+EMACSPATH=../Applications/${EMACSAPP}.app/Contents/MacOS/${EMACSAPP}
 EMACSBIN="\$(dirname \$(which emacs))/$EMACSPATH"
 
 if [[ "$1" == --debug ]]; then
