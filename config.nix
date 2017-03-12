@@ -51,6 +51,7 @@ myHaskellPackages = libProf: self: super:
 
   ### BAE packages
 
+  concerto          = dontHaddock (pkg ~/src/haskell-concerto {});
   extract           = dontHaddock (pkg ~/src/bytestring/extract {});
   hmon              = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon {});
   hsmedl            = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {});
@@ -84,6 +85,7 @@ myHaskellPackages = libProf: self: super:
   # liquid-fixpoint          = pkg ~/oss/liquidhaskell/liquid-fixpoint {};
   # liquiddesugar            = doJailbreak (pkg ~/oss/liquidhaskell/liquiddesugar {});
   # liquidhaskell            = pkg ~/oss/liquidhaskell {};
+  machinecell              = doJailbreak super.machinecell;
   machines                 = doJailbreak super.machines;
   pipes-binary             = doJailbreak super.pipes-binary;
   pipes-zlib               = doJailbreak (dontCheck super.pipes-zlib);
@@ -330,7 +332,7 @@ gitToolsEnv = pkgs.buildEnv {
     diffutils
     ghi
     gist
-    git-lfs
+    # git-lfs
     gitAndTools.diff-so-fancy
     gitAndTools.git-imerge
     gitAndTools.gitFull
@@ -485,7 +487,7 @@ publishToolsEnv = pkgs.buildEnv {
     ffmpeg
     haskPkgs.sitebuilder
     texinfo
-    texlive.combined.scheme-full
+    (texlive.combine { inherit (texlive) scheme-full texdoc; })
   ];
 };
 
