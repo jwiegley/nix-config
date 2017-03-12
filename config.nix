@@ -100,13 +100,32 @@ myHaskellPackages = libProf: self: super:
   timeparsers              = dontCheck (pkg ~/oss/timeparsers {});
   total                    = doJailbreak super.total;
 
-  mkDerivation = pkg: super.mkDerivation (pkg // {
+  mkDerivation = args: super.mkDerivation (args // {
     # src = pkgs.fetchurl {
     #   url = "file:///Volumes/Hackage/package/${pkg.pname}-${pkg.version}.tar.gz";
     #   inherit (pkg) sha256;
     # };
     enableLibraryProfiling = libProf;
     enableExecutableProfiling = false;
+
+    # postCompileBuildDriver = ''
+    #   echo "Patching dynamic library dependencies"
+    #   # 1. Link all dylibs from 'dynamic-library-dirs's in package confs to
+    #   # $out/lib/links
+    #   mkdir -p $out/lib/links
+    #   for d in $(grep dynamic-library-dirs $packageConfDir/*|awk '{print $2}'); do
+    #     ln -s $d/*.dylib $out/lib/links
+    #   done
+
+    #   # 2. Patch 'dynamic-library-dirs' in package confs to point to the
+    #   # symlink dir
+    #   for f in $packageConfDir/*.conf; do
+    #     sed -i "s,dynamic-library-dirs: .*,dynamic-library-dirs: $out/lib/links," $f
+    #   done
+
+    #   # 3. Recache package database
+    #   ghc-pkg --package-db="$packageConfDir" recache
+    # '';
   });
 };
 
