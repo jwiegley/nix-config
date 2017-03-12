@@ -290,7 +290,6 @@ systemToolsEnv = pkgs.buildEnv {
     gnuplot
     gnused
     gnutar
-    graphviz
     haskPkgs.hours
     haskPkgs.pandoc
     haskPkgs.pushme
@@ -511,6 +510,8 @@ publishToolsEnv = pkgs.buildEnv {
     doxygen
     ffmpeg
     haskPkgs.sitebuilder
+    graphviz-nox
+    dot2tex
     texinfo
     (texlive.combine { inherit (texlive) scheme-full texdoc; })
   ];
