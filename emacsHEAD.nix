@@ -93,7 +93,9 @@ stdenv.mkDerivation rec {
     cp ${./site-start.el} $out/share/emacs/site-lisp/site-start.el
   '' + stdenv.lib.optionalString stdenv.isDarwin ''
     mkdir -p $out/Applications
-    mv ${bundleName}/Contents/MacOS/Emacs ${bundleName}/Contents/MacOS/${appName}
+    if [ "${appName}" != "Emacs" ]; then
+        mv ${bundleName}/Contents/MacOS/Emacs ${bundleName}/Contents/MacOS/${appName}
+    fi
     if [ -n "${iconFile}" ]; then
       cp "${iconFile}" ${bundleName}/Contents/Resources/${appName}.icns
     fi
