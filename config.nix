@@ -49,9 +49,13 @@ myHaskellPackages = libProf: self: super:
   streaming-tests   = pkg ~/src/streaming-tests {};
   una               = pkg ~/src/una {};
 
+  putting-lenses-to-work = pkg ~/doc/papers/putting-lenses-to-work {};
+
   ### BAE packages
 
-  concerto          = dontHaddock (pkg ~/src/haskell-concerto {});
+  concat            = dontCheck (dontHaddock (pkg ~/oss/concat {}));
+  categorical       = dontCheck (dontHaddock (pkg ~/src/categorical {}));
+  concerto          = dontHaddock (pkg ~/bae/haskell-concerto {});
   extract           = dontHaddock (pkg ~/src/bytestring/extract {});
   hmon              = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon {});
   hsmedl            = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {});
@@ -148,6 +152,7 @@ ghc80Env = pkgs.myEnvFun {
     hlint
     # pointfree
     hasktags
+    hpack
     simple-mirror
     ghc-mod
     djinn mueval
@@ -268,7 +273,7 @@ emacsHEADAltEnv = pkgs.myEnvFun {
     (emacsHEAD.override {
        appName = "ERC";
        bundleName = "nextstep/ERC.app";
-       iconFile = "/Users/johnw/.nixpkgs/ERC.icns";
+       iconFile = "/Users/johnw/.nixpkgs/Chat.icns";
      })
   ];
 };
@@ -357,6 +362,7 @@ gitToolsEnv = pkgs.buildEnv {
     ghi
     gist
     # git-lfs
+    gitRepo
     gitAndTools.diff-so-fancy
     gitAndTools.git-imerge
     gitAndTools.gitFull
@@ -443,8 +449,7 @@ langToolsEnv = pkgs.buildEnv {
     autoconf
     automake
     haskPkgs.bench
-    cabal2nix
-    cabal-install
+    cabal2nix cabal-install haskPkgs.hpack
     clang
     ctags
     global
@@ -503,6 +508,10 @@ coq86Env = pkgs.myEnvFun {
     coq_8_6
   ];
 };
+
+coq_8_4 = super.coq_8_4.override { csdp = null; };
+coq_8_5 = super.coq_8_5.override { csdp = null; };
+coq_8_6 = super.coq_8_6.override { csdp = null; };
 
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";

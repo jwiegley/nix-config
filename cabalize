@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [[ -f package.yaml ]]; then
+   hpack
+fi
+
+cabal2nix . > default.nix
+cabal2nix --shell . > shell.nix
+
+nix-shell --command 'cabal configure --enable-tests'
