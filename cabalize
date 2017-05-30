@@ -5,6 +5,7 @@ if [[ -f package.yaml ]]; then
 fi
 
 cabal2nix . > default.nix
-cabal2nix --shell . > shell.nix
+# cabal2nix --shell . > shell.nix
 
-nix-shell --command 'cabal configure --enable-tests'
+cabal clean
+nix-shell --command 'cabal configure --enable-tests --enable-benchmarks'

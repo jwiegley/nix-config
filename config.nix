@@ -7,71 +7,77 @@ myHaskellPackages = libProf: self: super:
 
   ## Personal packages
 
-  async-pool        = pkg ~/src/async-pool {};
-  bytestring-fiat   = pkg ~/src/bytestring/src {};
-  c2hsc             = dontCheck (pkg ~/src/c2hsc {});
-  commodities       = pkg ~/src/old/ledger4/commodities {};
-  consistent        = dontCheck (pkg ~/src/old/consistent {});
-  coq-haskell       = pkg ~/src/coq-haskell {};
-  emacs-bugs        = pkg ~/src/emacs-bugs {};
-  fuzzcheck         = pkg ~/src/old/fuzzcheck {};
-  ghc-issues        = pkg ~/src/ghc-issues {};
-  git-all           = pkg ~/src/git-all {};
-  git-du            = pkg ~/src/git-du {};
-  git-gpush         = pkg ~/src/gitlib/git-gpush {};
-  git-monitor       = pkg ~/src/gitlib/git-monitor {};
-  gitlib            = pkg ~/src/gitlib/gitlib {};
-  gitlib-cmdline    = pkg ~/src/gitlib/gitlib-cmdline { git = gitAndTools.git; };
-  gitlib-hit        = pkg ~/src/gitlib/gitlib-hit {};
-  gitlib-libgit2    = pkg ~/src/gitlib/gitlib-libgit2 {};
-  gitlib-test       = pkg ~/src/gitlib/gitlib-test {};
-  hierarchy         = doJailbreak (pkg ~/src/hierarchy {});
-  hlibgit2          = dontCheck (pkg ~/src/gitlib/hlibgit2 {});
-  hnix              = pkg ~/src/hnix {};
-  hours             = pkg ~/src/hours {};
-  ipcvar            = dontCheck (pkg ~/src/old/ipcvar {});
-  linearscan        = pkg ~/src/linearscan {};
-  linearscan-hoopl  = dontCheck (pkg ~/src/linearscan-hoopl {});
-  logging           = pkg ~/src/logging {};
-  monad-extras      = pkg ~/src/monad-extras {};
-  parsec-free       = pkg ~/src/parsec-free {};
-  pipes-async       = pkg ~/src/pipes-async {};
-  pipes-files       = dontCheck (pkg ~/src/pipes-files {});
-  pipes-fusion      = pkg ~/src/pipes-fusion {};
-  pushme            = doJailbreak (pkg ~/src/pushme {});
-  recursors         = doJailbreak (pkg ~/src/recursors {});
-  rehoo             = pkg ~/src/rehoo {};
-  runmany           = pkg ~/src/runmany {};
-  shake-docker      = pkg ~/src/shake-docker {};
-  simple-mirror     = pkg ~/src/hackage-mirror {};
-  sitebuilder       = pkg ~/doc/sitebuilder { yuicompressor = pkgs.yuicompressor; };
-  sizes             = pkg ~/src/sizes {};
-  streaming-tests   = pkg ~/src/streaming-tests {};
-  una               = pkg ~/src/una {};
+  async-pool       = pkg ~/src/async-pool {};
+  bytestring-fiat  = pkg ~/src/bytestring/src {};
+  c2hsc            = dontCheck (pkg ~/src/c2hsc {});
+  # commodities      = pkg ~/src/old/ledger4/commodities {};
+  # consistent       = dontCheck (pkg ~/src/old/consistent {});
+  coq-haskell      = pkg ~/src/coq-haskell {};
+  emacs-bugs       = pkg ~/src/emacs-bugs {};
+  # fuzzcheck        = pkg ~/src/old/fuzzcheck {};
+  ghc-issues       = pkg ~/src/ghc-issues {};
+  git-all          = pkg ~/src/git-all {};
+  git-du           = pkg ~/src/git-du {};
+  git-gpush        = pkg ~/src/gitlib/git-gpush {};
+  git-monitor      = pkg ~/src/gitlib/git-monitor {};
+  gitlib           = pkg ~/src/gitlib/gitlib {};
+  gitlib-cmdline   = pkg ~/src/gitlib/gitlib-cmdline { git = gitAndTools.git; };
+  gitlib-hit       = pkg ~/src/gitlib/gitlib-hit {};
+  gitlib-libgit2   = pkg ~/src/gitlib/gitlib-libgit2 {};
+  gitlib-test      = pkg ~/src/gitlib/gitlib-test {};
+  hierarchy        = doJailbreak (pkg ~/src/hierarchy {});
+  hlibgit2         = dontCheck (pkg ~/src/gitlib/hlibgit2 {});
+  hnix             = pkg ~/src/hnix {};
+  hours            = pkg ~/src/hours {};
+  # ipcvar           = dontCheck (pkg ~/src/old/ipcvar {});
+  linearscan       = pkg ~/src/linearscan {};
+  linearscan-hoopl = dontCheck (pkg ~/src/linearscan-hoopl {});
+  logging          = pkg ~/src/logging {};
+  monad-extras     = pkg ~/src/monad-extras {};
+  parsec-free      = pkg ~/src/parsec-free {};
+  pipes-async      = pkg ~/src/pipes-async {};
+  pipes-files      = dontCheck (pkg ~/src/pipes-files {});
+  pipes-fusion     = pkg ~/src/pipes-fusion {};
+  pushme           = doJailbreak (pkg ~/src/pushme {});
+  recursors        = doJailbreak (pkg ~/src/recursors {});
+  rehoo            = pkg ~/src/rehoo {};
+  runmany          = pkg ~/src/runmany {};
+  shake-docker     = pkg ~/src/shake-docker {};
+  simple-mirror    = pkg ~/src/hackage-mirror {};
+  sitebuilder      = pkg ~/doc/sitebuilder { yuicompressor = pkgs.yuicompressor; };
+  sizes            = pkg ~/src/sizes {};
+  streaming-tests  = pkg ~/src/streaming-tests {};
+  una              = pkg ~/src/una {};
+  z3cat            = pkg ~/src/z3cat {};
 
   putting-lenses-to-work = pkg ~/doc/papers/putting-lenses-to-work {};
 
+  ### Open Source
+
+  superconstraints = pkg ~/oss/superconstraints {};
+  morphdb          = pkg ~/oss/morphdb {};
+
   ### BAE packages
 
-  concat            = dontCheck (dontHaddock (pkg ~/oss/concat {}));
-  categorical       = dontCheck (dontHaddock (pkg ~/src/categorical {}));
-  concerto          = dontHaddock (pkg ~/bae/haskell-concerto {});
-  extract           = dontHaddock (pkg ~/src/bytestring/extract {});
-  hmon              = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon {});
-  hsmedl            = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {});
-  apis              =
+  concat           = dontCheck (dontHaddock (pkg ~/oss/concat {}));
+  categorical      = dontCheck (dontHaddock (pkg ~/src/categorical {}));
+  solver           = doJailbreak (dontHaddock (pkg ~/bae/concerto/solver {}));
+  extract          = dontHaddock (pkg ~/src/bytestring/extract {});
+  hmon             = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon {});
+  hsmedl           = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {});
+  apis             =
     dontHaddock
       (dontCheck
          (doJailbreak (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/apis {})));
-  ll-api            = apis;
-  parameter-dsl     =
+  ll-api           = apis;
+  parameter-dsl    =
     dontHaddock
       (dontCheck (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/parameter-dsl {}));
-  rings-dashboard   = dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard {});
+  rings-dashboard  = dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard {});
   rings-dashboard-api =
     dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard/rings-dashboard-api {});
-  comparator        = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/comparator {});
-  generator         = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/generator {});
+  comparator       = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/comparator {});
+  generator        = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/generator {});
 
   ### Hackage overrides
 
@@ -111,25 +117,6 @@ myHaskellPackages = libProf: self: super:
     # };
     enableLibraryProfiling = libProf;
     enableExecutableProfiling = false;
-
-    # postCompileBuildDriver = ''
-    #   echo "Patching dynamic library dependencies"
-    #   # 1. Link all dylibs from 'dynamic-library-dirs's in package confs to
-    #   # $out/lib/links
-    #   mkdir -p $out/lib/links
-    #   for d in $(grep dynamic-library-dirs $packageConfDir/*|awk '{print $2}'); do
-    #     ln -s $d/*.dylib $out/lib/links
-    #   done
-
-    #   # 2. Patch 'dynamic-library-dirs' in package confs to point to the
-    #   # symlink dir
-    #   for f in $packageConfDir/*.conf; do
-    #     sed -i "s,dynamic-library-dirs: .*,dynamic-library-dirs: $out/lib/links," $f
-    #   done
-
-    #   # 3. Recache package database
-    #   ghc-pkg --package-db="$packageConfDir" recache
-    # '';
   });
 };
 
@@ -150,7 +137,7 @@ ghc80Env = pkgs.myEnvFun {
     alex happy cabal-install
     ghc-core
     hlint
-    # pointfree
+    pointfree
     hasktags
     hpack
     simple-mirror
@@ -173,7 +160,7 @@ ghc80ProfEnv = pkgs.myEnvFun {
     alex happy cabal-install
     ghc-core
     hlint
-    # pointfree
+    pointfree
     hasktags
   ];
 };
@@ -185,7 +172,7 @@ ghc80EmptyEnv = pkgs.myEnvFun {
     alex happy cabal-install
     ghc-core
     hlint
-    # pointfree
+    pointfree
     hasktags
   ];
 };
@@ -244,6 +231,17 @@ ringsEnv = pkgs.myEnvFun {
   ];
 };
 
+concertoEnv = pkgs.myEnvFun {
+  name = "concerto";
+  buildInputs = [
+    autoconf automake libtool pkgconfig clang llvm rabbitmq-c libconfig
+
+    haskPkgs.concat
+    haskPkgs.categorical
+    haskPkgs.solver
+  ];
+};
+
 emacs = emacsHEAD;
 
 emacsHEAD = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
@@ -295,13 +293,13 @@ systemToolsEnv = pkgs.buildEnv {
     gnuplot
     gnused
     gnutar
-    haskPkgs.hours
-    haskPkgs.pandoc
-    haskPkgs.pushme
-    haskPkgs.runmany
-    haskPkgs.simple-mirror
-    haskPkgs.sizes
-    haskPkgs.una
+    (haskell.lib.justStaticExecutables haskPkgs.hours)
+    (haskell.lib.justStaticExecutables haskPkgs.pandoc)
+    (haskell.lib.justStaticExecutables haskPkgs.pushme)
+    (haskell.lib.justStaticExecutables haskPkgs.runmany)
+    (haskell.lib.justStaticExecutables haskPkgs.simple-mirror)
+    (haskell.lib.justStaticExecutables haskPkgs.sizes)
+    (haskell.lib.justStaticExecutables haskPkgs.una)
     imagemagick_light
     jenkins
     less
@@ -369,8 +367,8 @@ gitToolsEnv = pkgs.buildEnv {
     gitAndTools.gitflow
     gitAndTools.hub
     gitAndTools.tig
-    haskPkgs.git-all
-    haskPkgs.git-monitor
+    (haskell.lib.justStaticExecutables haskPkgs.git-all)
+    (haskell.lib.justStaticExecutables haskPkgs.git-monitor)
     patch
     patchutils
   ];
@@ -397,6 +395,7 @@ networkToolsEnv = pkgs.buildEnv {
     rsync
     socat2pre
     wget
+    youtube-dl
     znc
   ];
 };
@@ -409,7 +408,7 @@ mailToolsEnv = pkgs.buildEnv {
     fetchmail
     imapfilter
     leafnode
-    # msmtp
+    msmtp
   ];
 };
 
@@ -433,7 +432,6 @@ pythonToolsEnv = pkgs.buildEnv {
     pythonDocs.pdf_letter.python27
     pythonDocs.html.python27
     python27Packages.setuptools
-    python27Packages.ipython
     python27Packages.pygments
     python27Packages.certifi
   ];
@@ -448,8 +446,9 @@ langToolsEnv = pkgs.buildEnv {
   paths = [
     autoconf
     automake
-    haskPkgs.bench
-    cabal2nix cabal-install haskPkgs.hpack
+    cabal2nix cabal-install 
+    (haskell.lib.justStaticExecutables haskPkgs.bench)
+    (haskell.lib.justStaticExecutables haskPkgs.hpack)
     clang
     ctags
     global
@@ -480,7 +479,6 @@ coq84Env = pkgs.myEnvFun {
     coqPackages_8_4.flocq
     coqPackages_8_4.mathcomp
     coqPackages_8_4.ssreflect
-    coqPackages_8_4.QuickChick
     coqPackages_8_4.tlc
     coqPackages_8_4.ynot
     prooftree
@@ -506,6 +504,14 @@ coq86Env = pkgs.myEnvFun {
   buildInputs = [
     ocaml ocamlPackages.camlp5_transitional
     coq_8_6
+    coqPackages_8_6.dpdgraph
+    coqPackages_8_6.flocq
+    coqPackages_8_6.mathcomp
+    coqPackages_8_6.ssreflect
+    coqPackages_8_6.QuickChick
+    coqPackages_8_6.coq-ext-lib
+    coqPackages_8_6.coquelicot
+    compcert
   ];
 };
 
@@ -513,14 +519,31 @@ coq_8_4 = super.coq_8_4.override { csdp = null; };
 coq_8_5 = super.coq_8_5.override { csdp = null; };
 coq_8_6 = super.coq_8_6.override { csdp = null; };
 
+coq_HEAD = super.stdenv.lib.overrideDerivation super.coq_HEAD (attrs: {
+  src = fetchgit {
+    url = git://scm.gforge.inria.fr/coq/coq.git;
+    rev = "9c8cdd5f6c1cb4bda2f8558c17df3ffe69c49264";
+    sha256 = "0yw8f5pyvsdjgi2v6lyc5mdgimcy1aslab9b19hhlgwwpgg67fal";
+  };
+});
+
+coqHEADEnv = pkgs.myEnvFun {
+  name = "coqHEAD";
+  buildInputs = [
+    ocaml ocamlPackages.camlp5_transitional
+    coq_HEAD
+  ];
+};
+
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
   paths = [
     doxygen
     ffmpeg
-    haskPkgs.sitebuilder
+    (haskell.lib.justStaticExecutables haskPkgs.sitebuilder)
     graphviz-nox
     dot2tex
+    biber
     texinfo
     (texlive.combine { inherit (texlive) scheme-full texdoc; })
   ];
