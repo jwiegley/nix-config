@@ -8,13 +8,13 @@ myHaskellPackages = libProf: self: super:
   ## Personal packages
 
   async-pool       = pkg ~/src/async-pool {};
-  bytestring-fiat  = pkg ~/src/bytestring/src {};
+  bytestring-fiat  = pkg ~/src/bytestring/extract {};
   c2hsc            = dontCheck (pkg ~/src/c2hsc {});
-  # commodities      = pkg ~/src/old/ledger4/commodities {};
-  # consistent       = dontCheck (pkg ~/src/old/consistent {});
+  commodities      = pkg ~/src/ledger4/commodities {};
+  consistent       = dontCheck (pkg ~/src/consistent {});
   coq-haskell      = pkg ~/src/coq-haskell {};
   emacs-bugs       = pkg ~/src/emacs-bugs {};
-  # fuzzcheck        = pkg ~/src/old/fuzzcheck {};
+  fuzzcheck        = pkg ~/src/fuzzcheck {};
   ghc-issues       = pkg ~/src/ghc-issues {};
   git-all          = pkg ~/src/git-all {};
   git-du           = pkg ~/src/git-du {};
@@ -29,7 +29,7 @@ myHaskellPackages = libProf: self: super:
   hlibgit2         = dontCheck (pkg ~/src/gitlib/hlibgit2 {});
   hnix             = pkg ~/src/hnix {};
   hours            = pkg ~/src/hours {};
-  # ipcvar           = dontCheck (pkg ~/src/old/ipcvar {});
+  ipcvar           = dontCheck (pkg ~/src/ipcvar {});
   linearscan       = pkg ~/src/linearscan {};
   linearscan-hoopl = dontCheck (pkg ~/src/linearscan-hoopl {});
   logging          = pkg ~/src/logging {};
@@ -49,6 +49,10 @@ myHaskellPackages = libProf: self: super:
   streaming-tests  = pkg ~/src/streaming-tests {};
   una              = pkg ~/src/una {};
   z3cat            = pkg ~/src/z3cat {};
+
+  una_fiat       = (pkg ~/src/una {}).override {
+    bytestring = bytestring-fiat;
+  };
 
   putting-lenses-to-work = pkg ~/doc/papers/putting-lenses-to-work {};
 
@@ -140,8 +144,9 @@ ghc80Env = pkgs.myEnvFun {
     pointfree
     hasktags
     hpack
+    c2hsc
     simple-mirror
-    ghc-mod
+    # ghc-mod
     djinn mueval
     # lambdabot
     # threadscope
@@ -323,6 +328,7 @@ systemToolsEnv = pkgs.buildEnv {
     watch
     xz
     z3
+    cvc4
     zip
     zsh
   ];
@@ -367,6 +373,8 @@ gitToolsEnv = pkgs.buildEnv {
     gitAndTools.gitflow
     gitAndTools.hub
     gitAndTools.tig
+    #gitAndTools.git-annex
+    #gitAndTools.git-annex-remote-rclone
     (haskell.lib.justStaticExecutables haskPkgs.git-all)
     (haskell.lib.justStaticExecutables haskPkgs.git-monitor)
     patch
@@ -385,6 +393,7 @@ networkToolsEnv = pkgs.buildEnv {
     aria2
     cacert
     httrack
+    mercurial
     iperf
     nmap
     mtr
@@ -392,6 +401,7 @@ networkToolsEnv = pkgs.buildEnv {
     openssh
     openssl
     pdnsd
+    rclone
     rsync
     socat2pre
     wget
@@ -407,6 +417,7 @@ mailToolsEnv = pkgs.buildEnv {
     contacts
     fetchmail
     imapfilter
+    # imapsync
     leafnode
     msmtp
   ];
@@ -520,11 +531,7 @@ coq_8_5 = super.coq_8_5.override { csdp = null; };
 coq_8_6 = super.coq_8_6.override { csdp = null; };
 
 coq_HEAD = super.stdenv.lib.overrideDerivation super.coq_HEAD (attrs: {
-  src = fetchgit {
-    url = git://scm.gforge.inria.fr/coq/coq.git;
-    rev = "9c8cdd5f6c1cb4bda2f8558c17df3ffe69c49264";
-    sha256 = "0yw8f5pyvsdjgi2v6lyc5mdgimcy1aslab9b19hhlgwwpgg67fal";
-  };
+  src = ~/oss/coq;
 });
 
 coqHEADEnv = pkgs.myEnvFun {
