@@ -3,7 +3,8 @@
 EMACSAPP=Emacs
 
 if [[ "$1" == --alt ]]; then
-    export EMACSVER=HEADalt
+    # export EMACSVER=${EMACSVER}alt
+    export EMACSVER=HEAD
     EMACSAPP=ERC
     shift 1
 fi
@@ -16,6 +17,11 @@ if [[ "$1" == --debug ]]; then
          load-env-ghc$GHCVER \
          load-env-emacs$EMACSVER \
          bash -c "unset TZ ; lldb -o run -f $EMACSBIN -- --debug-init"
+elif [[ "$1" == --dsss17 ]]; then
+    exec load-env-dsss17 \
+         load-env-ghc$GHCVER \
+         load-env-emacs$EMACSVER \
+         bash -c "unset TZ ; $EMACSBIN --debug-init"
 else
     exec load-env-coq$COQVER \
          load-env-ghc$GHCVER \

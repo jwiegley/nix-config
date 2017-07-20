@@ -6,8 +6,8 @@
 {stdenv, fetchgit, writeText, pkgconfig, ocamlPackages_4_02, ncurses, buildIde ? true, csdp ? null}:
 
 let
-  version = "2017-07-07";
-  coq-version = "8.8";
+  version = "2017-07-11";
+  coq-version = "8.7-Fiat";
   ideFlags = if buildIde then "-lablgtkdir ${ocamlPackages_4_02.lablgtk}/lib/ocaml/*/site-lib/lablgtk2 -coqide opt" else "";
   csdpPatch = if csdp != null then ''
     substituteInPlace plugins/micromega/sos.ml --replace "; csdp" "; ${csdp}/bin/csdp"
@@ -25,7 +25,7 @@ stdenv.mkDerivation {
   inherit coq-version;
   inherit ocaml camlp5 findlib;
 
-  src = /Users/johnw/oss/coq;
+  src = /Users/johnw/oss/coq-fiat;
 
   buildInputs = [ pkgconfig ocaml findlib camlp5 ncurses lablgtk ];
 

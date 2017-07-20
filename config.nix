@@ -10,10 +10,12 @@ myHaskellPackages = libProf: self: super:
   async-pool       = pkg ~/src/async-pool {};
   bytestring-fiat  = pkg ~/src/bytestring/extract {};
   c2hsc            = dontCheck (pkg ~/src/c2hsc {});
+  categorical      = dontCheck (dontHaddock (pkg ~/src/categorical {}));
   commodities      = pkg ~/src/ledger4/commodities {};
   consistent       = dontCheck (pkg ~/src/consistent {});
   coq-haskell      = pkg ~/src/coq-haskell {};
   emacs-bugs       = pkg ~/src/emacs-bugs {};
+  extract          = dontHaddock (pkg ~/src/bytestring/extract {});
   fuzzcheck        = pkg ~/src/fuzzcheck {};
   ghc-issues       = pkg ~/src/ghc-issues {};
   git-all          = pkg ~/src/git-all {};
@@ -50,29 +52,27 @@ myHaskellPackages = libProf: self: super:
   una              = pkg ~/src/una {};
   z3cat            = pkg ~/src/z3cat {};
 
-  una_fiat       = (pkg ~/src/una {}).override {
-    bytestring = bytestring-fiat;
-  };
-
   putting-lenses-to-work = pkg ~/doc/papers/putting-lenses-to-work {};
 
   ### Open Source
 
-  superconstraints = pkg ~/oss/superconstraints {};
+  concat-classes   = dontCheck (dontHaddock (pkg ~/oss/concat/classes {}));
+  concat-examples  = dontCheck (dontHaddock (pkg ~/oss/concat/examples {}));
+  concat-plugin    = dontCheck (dontHaddock (pkg ~/oss/concat/plugin {}));
+  hs-to-coq        = pkg ~/oss/hs-to-coq/hs-to-coq {};
   morphdb          = pkg ~/oss/morphdb {};
+  superconstraints = pkg ~/oss/superconstraints {};
 
   ### BAE packages
 
-  concat           = dontCheck (dontHaddock (pkg ~/oss/concat {}));
-  categorical      = dontCheck (dontHaddock (pkg ~/src/categorical {}));
-  solver           = doJailbreak (dontHaddock (pkg ~/bae/concerto/solver {}));
-  extract          = dontHaddock (pkg ~/src/bytestring/extract {});
-  hmon             = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon {});
-  hsmedl           = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {});
   apis             =
     dontHaddock
       (dontCheck
          (doJailbreak (pkg ~/bae/xhtml-deliverable/rings-dashboard/mitll/apis {})));
+  comparator       = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/comparator {});
+  generator        = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/generator {});
+  hmon             = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon {});
+  hsmedl           = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {});
   ll-api           = apis;
   parameter-dsl    =
     dontHaddock
@@ -80,8 +80,7 @@ myHaskellPackages = libProf: self: super:
   rings-dashboard  = dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard {});
   rings-dashboard-api =
     dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard/rings-dashboard-api {});
-  comparator       = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/comparator {});
-  generator        = dontHaddock (pkg ~/bae/xhtml-deliverable/xhtml/generator {});
+  solver           = doJailbreak (dontHaddock (pkg ~/bae/concerto/solver {}));
 
   ### Hackage overrides
 
@@ -96,20 +95,18 @@ myHaskellPackages = libProf: self: super:
   hasktags                 = doJailbreak super.hasktags;
   idris                    = doJailbreak super.idris;
   language-ecmascript      = doJailbreak super.language-ecmascript;
-  # liquid-fixpoint          = pkg ~/oss/liquidhaskell/liquid-fixpoint {};
-  # liquiddesugar            = doJailbreak (pkg ~/oss/liquidhaskell/liquiddesugar {});
-  # liquidhaskell            = pkg ~/oss/liquidhaskell {};
   machinecell              = doJailbreak super.machinecell;
   machines                 = doJailbreak super.machines;
   pipes-binary             = doJailbreak super.pipes-binary;
   pipes-zlib               = doJailbreak (dontCheck super.pipes-zlib);
   pointfree                = doJailbreak super.pointfree;
   process-extras           = dontCheck super.process-extras;
-  # servant                  = super.servant_0_10;
-  # servant-client           = super.servant-client_0_10;
-  # servant-docs             = super.servant-docs_0_10;
-  # servant-foreign          = super.servant-foreign_0_10;
-  # servant-server           = super.servant-server_0_10;
+  sbv                      = doJailbreak (pkg ~/oss/sbv {});
+  # servant                  = super.servant_0_11;
+  # servant-client           = super.servant-client_0_11;
+  # servant-docs             = super.servant-docs_0_11;
+  # servant-foreign          = super.servant-foreign_0_11;
+  # servant-server           = super.servant-server_0_11;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = dontCheck (pkg ~/oss/timeparsers {});
   total                    = doJailbreak super.total;
@@ -141,19 +138,19 @@ ghc80Env = pkgs.myEnvFun {
     alex happy cabal-install
     ghc-core
     hlint
+    ghc-mod
+    hdevtools
     pointfree
     hasktags
     hpack
     c2hsc
     simple-mirror
-    # ghc-mod
     djinn mueval
-    # lambdabot
-    # threadscope
+    lambdabot
+    threadscope
     timeplot splot
-    # liquidhaskell liquidhaskell-cabal
+    liquidhaskell
     idris
-    # jhc
     Agda
   ];
 };
@@ -164,21 +161,47 @@ ghc80ProfEnv = pkgs.myEnvFun {
     profiledHaskell802Packages.ghc
     alex happy cabal-install
     ghc-core
-    hlint
-    pointfree
-    hasktags
   ];
 };
 
-ghc80EmptyEnv = pkgs.myEnvFun {
-  name = "ghc80empty";
-  buildInputs = with profiledHaskell802Packages; [
-    haskell802Packages.ghc
-    alex happy cabal-install
+haskell821Packages = super.haskell.packages.ghc821.override {
+  overrides = myHaskellPackages false;
+};
+profiledHaskell821Packages = super.haskell.packages.ghc821.override {
+  overrides = myHaskellPackages true;
+};
+
+ghc82Env = pkgs.myEnvFun {
+  name = "ghc82";
+  buildInputs = with haskell821Packages; [
+    haskell821Packages.ghc
+    alex happy # cabal-install
     ghc-core
-    hlint
-    pointfree
-    hasktags
+  ];
+};
+
+ghc82ProfEnv = pkgs.myEnvFun {
+  name = "ghc82prof";
+  buildInputs = with profiledHaskell821Packages; [
+    profiledHaskell821Packages.ghc
+    alex happy # cabal-install
+    ghc-core
+  ];
+};
+
+haskellHEADPackages = super.haskell.packages.ghcHEAD.override {
+  overrides = myHaskellPackages false;
+};
+profiledHaskellHEADPackages = super.haskell.packages.ghcHEAD.override {
+  overrides = myHaskellPackages true;
+};
+
+ghcHEADEnv = pkgs.myEnvFun {
+  name = "ghcHEAD";
+  buildInputs = with haskellHEADPackages; [
+    haskellHEADPackages.ghc
+    alex happy # cabal-install
+    ghc-core
   ];
 };
 
@@ -239,15 +262,37 @@ ringsEnv = pkgs.myEnvFun {
 concertoEnv = pkgs.myEnvFun {
   name = "concerto";
   buildInputs = [
-    autoconf automake libtool pkgconfig clang llvm rabbitmq-c libconfig
+    autoconf automake libtool pkgconfig clang llvm libconfig cmake fftw
 
-    haskPkgs.concat
+    haskPkgs.concat-plugin
+    haskPkgs.concat-classes
     haskPkgs.categorical
     haskPkgs.solver
   ];
 };
 
-emacs = emacsHEAD;
+emacs = emacs25;
+
+emacs25 = super.callPackage ~/.nixpkgs/emacs25.nix {
+  libXaw = xorg.libXaw;
+  Xaw3d = null;
+  gconf = null;
+  alsaLib = null;
+  imagemagick = null;
+  acl = null;
+  gpm = null;
+  inherit (darwin.apple_sdk.frameworks) AppKit Foundation;
+  inherit (darwin) libobjc;
+};
+
+emacs25_test = super.stdenv.lib.overrideDerivation emacs25 (attrs: {
+  doCheck = true;
+});
+
+emacs25Env = pkgs.myEnvFun {
+  name = "emacs25";
+  buildInputs = with emacsPackagesNgGen emacs; [ emacs25 ];
+};
 
 emacsHEAD = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
   libXaw = xorg.libXaw;
@@ -267,11 +312,6 @@ emacsHEAD_test = super.stdenv.lib.overrideDerivation emacsHEAD (attrs: {
 
 emacsHEADEnv = pkgs.myEnvFun {
   name = "emacsHEAD";
-  buildInputs = with emacsPackagesNgGen emacs; [ emacsHEAD ];
-};
-
-emacsHEADAltEnv = pkgs.myEnvFun {
-  name = "emacsHEADalt";
   buildInputs = with emacsPackagesNgGen emacs; [
     (emacsHEAD.override {
        appName = "ERC";
@@ -365,9 +405,7 @@ gitToolsEnv = pkgs.buildEnv {
     diffutils
     ghi
     gist
-    # git-lfs
     gitRepo
-    gitAndTools.diff-so-fancy
     gitAndTools.git-imerge
     gitAndTools.gitFull
     gitAndTools.gitflow
@@ -401,9 +439,12 @@ networkToolsEnv = pkgs.buildEnv {
     openssh
     openssl
     pdnsd
+    privoxy
     rclone
     rsync
+    sipcalc
     socat2pre
+    spiped
     wget
     youtube-dl
     znc
@@ -417,7 +458,6 @@ mailToolsEnv = pkgs.buildEnv {
     contacts
     fetchmail
     imapfilter
-    # imapsync
     leafnode
     msmtp
   ];
@@ -510,29 +550,59 @@ coq85Env = pkgs.myEnvFun {
   ];
 };
 
+withSrc = path: deriv: super.stdenv.lib.overrideDerivation deriv (attrs: {
+  src = path;
+});
+
 coq86Env = pkgs.myEnvFun {
   name = "coq86";
   buildInputs = [
     ocaml ocamlPackages.camlp5_transitional
+    ocamlPackages.findlib
     coq_8_6
+    coqPackages_8_6.autosubst
     coqPackages_8_6.dpdgraph
     coqPackages_8_6.flocq
+    coqPackages_8_6.heq
     coqPackages_8_6.mathcomp
     coqPackages_8_6.ssreflect
-    coqPackages_8_6.QuickChick
+    (withSrc ~/oss/QuickChick coqPackages_8_6.QuickChick)
     coqPackages_8_6.coq-ext-lib
     coqPackages_8_6.coquelicot
-    compcert
+    coqPackages_8_6.math-classes
+    coqPackages_8_6.CoLoR
+    # coqPackages_8_6.metalib
+    coqPackages_8_6.paco
+    compcert ocamlPackages.menhir
   ];
 };
+
+dsss17 = super.callPackage ~/src/dsss17 {};
+dsss17Env = dsss17.env;
 
 coq_8_4 = super.coq_8_4.override { csdp = null; };
 coq_8_5 = super.coq_8_5.override { csdp = null; };
 coq_8_6 = super.coq_8_6.override { csdp = null; };
 
-coq_HEAD = super.stdenv.lib.overrideDerivation super.coq_HEAD (attrs: {
-  src = ~/oss/coq;
-});
+coq_8_7  = super.callPackage ~/.nixpkgs/coq87.nix {};
+coq_Fiat = super.callPackage ~/.nixpkgs/coqFiat.nix {};
+coq_HEAD = super.callPackage ~/.nixpkgs/coqHEAD.nix {};
+
+coq87Env = pkgs.myEnvFun {
+  name = "coq87";
+  buildInputs = [
+    ocaml ocamlPackages.camlp5_transitional
+    coq_8_7
+  ];
+};
+
+coqFiatEnv = pkgs.myEnvFun {
+  name = "coqFiat";
+  buildInputs = [
+    ocaml ocamlPackages.camlp5_transitional
+    coq_Fiat
+  ];
+};
 
 coqHEADEnv = pkgs.myEnvFun {
   name = "coqHEAD";

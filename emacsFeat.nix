@@ -26,13 +26,13 @@ let
 in
 
 stdenv.mkDerivation rec {
-  name = "emacsHEAD";
+  name = "emacsFeat";
 
   builder = ./builder.sh;
 
   src = builtins.filterSource (path: type:
       type != "directory" || baseNameOf path != ".git")
-    ~/.emacs.d/master;
+    ~/.emacs.d/feature;
 
   patches = stdenv.lib.optionals stdenv.isDarwin [
     ./at-fdcwd.patch

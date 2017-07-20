@@ -26,16 +26,17 @@ let
 in
 
 stdenv.mkDerivation rec {
-  name = "emacsHEAD";
+  name = "emacs25";
 
   builder = ./builder.sh;
 
   src = builtins.filterSource (path: type:
       type != "directory" || baseNameOf path != ".git")
-    ~/.emacs.d/master;
+    ~/.emacs.d/release;
 
   patches = stdenv.lib.optionals stdenv.isDarwin [
     ./at-fdcwd.patch
+    ./exclude-tramp-tests.patch
   ];
 
   postPatch = ''
