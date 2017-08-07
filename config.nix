@@ -14,13 +14,10 @@ myHaskellPackages = libProf: self: super:
   commodities      = pkg ~/src/ledger4/commodities {};
   consistent       = dontCheck (pkg ~/src/consistent {});
   coq-haskell      = pkg ~/src/coq-haskell {};
-  emacs-bugs       = pkg ~/src/emacs-bugs {};
   extract          = dontHaddock (pkg ~/src/bytestring/extract {});
   fuzzcheck        = pkg ~/src/fuzzcheck {};
-  ghc-issues       = pkg ~/src/ghc-issues {};
   git-all          = pkg ~/src/git-all {};
   git-du           = pkg ~/src/git-du {};
-  git-gpush        = pkg ~/src/gitlib/git-gpush {};
   git-monitor      = pkg ~/src/gitlib/git-monitor {};
   gitlib           = pkg ~/src/gitlib/gitlib {};
   gitlib-cmdline   = pkg ~/src/gitlib/gitlib-cmdline { git = gitAndTools.git; };
@@ -39,16 +36,12 @@ myHaskellPackages = libProf: self: super:
   parsec-free      = pkg ~/src/parsec-free {};
   pipes-async      = pkg ~/src/pipes-async {};
   pipes-files      = dontCheck (pkg ~/src/pipes-files {});
-  pipes-fusion     = pkg ~/src/pipes-fusion {};
   pushme           = doJailbreak (pkg ~/src/pushme {});
   recursors        = doJailbreak (pkg ~/src/recursors {});
-  rehoo            = pkg ~/src/rehoo {};
   runmany          = pkg ~/src/runmany {};
-  shake-docker     = pkg ~/src/shake-docker {};
   simple-mirror    = pkg ~/src/hackage-mirror {};
   sitebuilder      = pkg ~/doc/sitebuilder { yuicompressor = pkgs.yuicompressor; };
   sizes            = pkg ~/src/sizes {};
-  streaming-tests  = pkg ~/src/streaming-tests {};
   una              = pkg ~/src/una {};
   z3cat            = pkg ~/src/z3cat {};
 
@@ -60,8 +53,6 @@ myHaskellPackages = libProf: self: super:
   concat-examples  = dontCheck (dontHaddock (pkg ~/oss/concat/examples {}));
   concat-plugin    = dontCheck (dontHaddock (pkg ~/oss/concat/plugin {}));
   hs-to-coq        = pkg ~/oss/hs-to-coq/hs-to-coq {};
-  morphdb          = pkg ~/oss/morphdb {};
-  superconstraints = pkg ~/oss/superconstraints {};
 
   ### BAE packages
 
@@ -81,6 +72,7 @@ myHaskellPackages = libProf: self: super:
   rings-dashboard-api =
     dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard/rings-dashboard-api {});
   solver           = doJailbreak (dontHaddock (pkg ~/bae/concerto/solver {}));
+  # z3               = pkg ~/bae/concerto/solver/z3-haskell { z3 = pkgs.z3; };
 
   ### Hackage overrides
 
@@ -90,7 +82,6 @@ myHaskellPackages = libProf: self: super:
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   compressed               = doJailbreak super.compressed;
   dependent-sum-template   = doJailbreak super.dependent-sum-template;
-  derive                   = doJailbreak (pkg ~/oss/derive {});
   newtype-generics         = doJailbreak super.newtype-generics;
   hasktags                 = doJailbreak super.hasktags;
   idris                    = doJailbreak super.idris;
@@ -101,7 +92,7 @@ myHaskellPackages = libProf: self: super:
   pipes-zlib               = doJailbreak (dontCheck super.pipes-zlib);
   pointfree                = doJailbreak super.pointfree;
   process-extras           = dontCheck super.process-extras;
-  sbv                      = doJailbreak (pkg ~/oss/sbv {});
+  sbv                      = dontCheck (doJailbreak (pkg ~/oss/sbv {}));
   # servant                  = super.servant_0_11;
   # servant-client           = super.servant-client_0_11;
   # servant-docs             = super.servant-docs_0_11;
@@ -143,11 +134,11 @@ ghc80Env = pkgs.myEnvFun {
     pointfree
     hasktags
     hpack
-    c2hsc
+    # c2hsc
     simple-mirror
     djinn mueval
     lambdabot
-    threadscope
+    # threadscope
     timeplot splot
     liquidhaskell
     idris
@@ -158,7 +149,7 @@ ghc80Env = pkgs.myEnvFun {
 ghc80ProfEnv = pkgs.myEnvFun {
   name = "ghc80prof";
   buildInputs = with profiledHaskell802Packages; [
-    profiledHaskell802Packages.ghc
+    (ghcWithPackages (import ~/src/hoogle-local/package-list.nix))
     alex happy cabal-install
     ghc-core
   ];
@@ -176,7 +167,24 @@ ghc82Env = pkgs.myEnvFun {
   buildInputs = with haskell821Packages; [
     haskell821Packages.ghc
     alex happy # cabal-install
-    ghc-core
+    # ghc-core
+
+    # (ghcWithHoogle (import ~/src/hoogle-local/package-list.nix))
+    # hlint
+    # ghc-mod
+    # hdevtools
+    # pointfree
+    # hasktags
+    # hpack
+    # c2hsc
+    # simple-mirror
+    # djinn mueval
+    # lambdabot
+    # threadscope
+    # timeplot splot
+    # liquidhaskell
+    # idris
+    # Agda
   ];
 };
 
@@ -262,7 +270,8 @@ ringsEnv = pkgs.myEnvFun {
 concertoEnv = pkgs.myEnvFun {
   name = "concerto";
   buildInputs = [
-    autoconf automake libtool pkgconfig clang llvm libconfig cmake fftw
+    autoconf automake libtool pkgconfig clang llvm libconfig cmake 
+    fftwSinglePrec
 
     haskPkgs.concat-plugin
     haskPkgs.concat-classes
@@ -500,7 +509,7 @@ langToolsEnv = pkgs.buildEnv {
     cabal2nix cabal-install 
     (haskell.lib.justStaticExecutables haskPkgs.bench)
     (haskell.lib.justStaticExecutables haskPkgs.hpack)
-    clang
+    clang libcxx libcxxabi
     ctags
     global
     gnumake
@@ -560,6 +569,7 @@ coq86Env = pkgs.myEnvFun {
     ocaml ocamlPackages.camlp5_transitional
     ocamlPackages.findlib
     coq_8_6
+    # coq2html
     coqPackages_8_6.autosubst
     coqPackages_8_6.dpdgraph
     coqPackages_8_6.flocq
@@ -569,8 +579,8 @@ coq86Env = pkgs.myEnvFun {
     (withSrc ~/oss/QuickChick coqPackages_8_6.QuickChick)
     coqPackages_8_6.coq-ext-lib
     coqPackages_8_6.coquelicot
-    coqPackages_8_6.math-classes
-    coqPackages_8_6.CoLoR
+    # coqPackages_8_6.math-classes
+    # coqPackages_8_6.CoLoR
     # coqPackages_8_6.metalib
     coqPackages_8_6.paco
     compcert ocamlPackages.menhir
