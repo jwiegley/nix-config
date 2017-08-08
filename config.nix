@@ -277,6 +277,7 @@ concertoEnv = pkgs.myEnvFun {
     haskPkgs.concat-classes
     haskPkgs.categorical
     haskPkgs.solver
+    haskPkgs.silently
   ];
 };
 
