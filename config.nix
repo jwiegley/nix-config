@@ -72,35 +72,34 @@ myHaskellPackages = libProf: self: super:
   rings-dashboard-api =
     dontHaddock (pkg ~/bae/xhtml-deliverable/rings-dashboard/rings-dashboard-api {});
   solver           = doJailbreak (dontHaddock (pkg ~/bae/concerto/solver {}));
-  # z3               = pkg ~/bae/concerto/solver/z3-haskell { z3 = pkgs.z3; };
 
   ### Hackage overrides
 
   Agda                     = dontHaddock super.Agda;
-  QuickCheck-safe          = doJailbreak super.QuickCheck-safe;
-  bench                    = doJailbreak super.bench;
+  aeson_0_11_3_0           = super.aeson_0_11_3_0.override {
+    base-orphans = pkg
+      ({ mkDerivation, base, ghc-prim, hspec, QuickCheck }:
+       mkDerivation {
+         pname = "base-orphans";
+         version = "0.5.4";
+         sha256 = "0qv20n4yabg7sc3rs2dd46a53c7idnd88by7n3s36dkbc21m41q4";
+         libraryHaskellDepends = [ base ghc-prim ];
+         testHaskellDepends = [ base hspec QuickCheck ];
+         homepage = "https://github.com/haskell-compat/base-orphans#readme";
+         description = "Backwards-compatible orphan instances for base";
+         license = stdenv.lib.licenses.mit;
+       }) {};
+  };
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   compressed               = doJailbreak super.compressed;
-  dependent-sum-template   = doJailbreak super.dependent-sum-template;
-  newtype-generics         = doJailbreak super.newtype-generics;
-  hasktags                 = doJailbreak super.hasktags;
-  idris                    = doJailbreak super.idris;
-  language-ecmascript      = doJailbreak super.language-ecmascript;
-  machinecell              = doJailbreak super.machinecell;
-  machines                 = doJailbreak super.machines;
+  derive-storable            = dontCheck super.derive-storable;
+  liquidhaskell            = super.liquidhaskell.override {
+    aeson = aeson_0_11_3_0;
+  };
   pipes-binary             = doJailbreak super.pipes-binary;
   pipes-zlib               = doJailbreak (dontCheck super.pipes-zlib);
-  pointfree                = doJailbreak super.pointfree;
-  process-extras           = dontCheck super.process-extras;
-  sbv                      = dontCheck (doJailbreak (pkg ~/oss/sbv {}));
-  # servant                  = super.servant_0_11;
-  # servant-client           = super.servant-client_0_11;
-  # servant-docs             = super.servant-docs_0_11;
-  # servant-foreign          = super.servant-foreign_0_11;
-  # servant-server           = super.servant-server_0_11;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = dontCheck (pkg ~/oss/timeparsers {});
-  total                    = doJailbreak super.total;
 
   mkDerivation = args: super.mkDerivation (args // {
     # src = pkgs.fetchurl {
@@ -143,6 +142,37 @@ ghc80Env = pkgs.myEnvFun {
     liquidhaskell
     idris
     Agda
+
+    ### Personal packages
+
+    hnix
+    async-pool
+    categorical
+    commodities
+    concat-classes
+    concat-plugin
+    concat-examples
+    consistent
+    fuzzcheck
+    gitlib
+    gitlib-cmdline
+    gitlib-libgit2
+    gitlib-sample
+    gitlib-test
+    # gitlib-hit
+    # gitlib-lens
+    # gitlib-s3
+    hierarchy
+    hlibgit2
+    ipcvar
+    linearscan
+    linearscan-hoopl
+    logging
+    monad-extras
+    pipes-async
+    pipes-files
+    recursors
+    z3cat
   ];
 };
 
@@ -152,6 +182,7 @@ ghc80ProfEnv = pkgs.myEnvFun {
     (ghcWithPackages (import ~/src/hoogle-local/package-list.nix))
     alex happy cabal-install
     ghc-core
+    darwin.apple_sdk.frameworks.Cocoa
   ];
 };
 
@@ -168,23 +199,6 @@ ghc82Env = pkgs.myEnvFun {
     haskell821Packages.ghc
     alex happy # cabal-install
     # ghc-core
-
-    # (ghcWithHoogle (import ~/src/hoogle-local/package-list.nix))
-    # hlint
-    # ghc-mod
-    # hdevtools
-    # pointfree
-    # hasktags
-    # hpack
-    # c2hsc
-    # simple-mirror
-    # djinn mueval
-    # lambdabot
-    # threadscope
-    # timeplot splot
-    # liquidhaskell
-    # idris
-    # Agda
   ];
 };
 
@@ -258,19 +272,19 @@ ringsEnv = pkgs.myEnvFun {
   buildInputs = [
     autoconf automake libtool pkgconfig clang llvm rabbitmq-c libconfig
 
-    haskPkgs.hmon
-    haskPkgs.hsmedl
-    haskPkgs.apis
-    haskPkgs.parameter-dsl
-    haskPkgs.rings-dashboard-api
-    haskPkgs.comparator
+    # haskPkgs.hmon
+    # haskPkgs.hsmedl
+    # haskPkgs.apis
+    # haskPkgs.parameter-dsl
+    # haskPkgs.rings-dashboard-api
+    # haskPkgs.comparator
   ];
 };
 
 concertoEnv = pkgs.myEnvFun {
   name = "concerto";
   buildInputs = [
-    autoconf automake libtool pkgconfig clang llvm libconfig cmake 
+    autoconf automake libtool pkgconfig clang llvm libconfig cmake
     fftwSinglePrec
 
     haskPkgs.concat-plugin
@@ -341,6 +355,8 @@ systemToolsEnv = pkgs.buildEnv {
   paths = [
     aspell
     aspellDicts.en
+    bashInteractive
+    ctop
     exiv2
     findutils
     gnugrep
@@ -364,6 +380,7 @@ systemToolsEnv = pkgs.buildEnv {
     pinentry_mac
     postgresql96
     pv
+    qemu
     ripgrep
     rlwrap
     screen
@@ -507,7 +524,7 @@ langToolsEnv = pkgs.buildEnv {
   paths = [
     autoconf
     automake
-    cabal2nix cabal-install 
+    cabal2nix cabal-install
     (haskell.lib.justStaticExecutables haskPkgs.bench)
     (haskell.lib.justStaticExecutables haskPkgs.hpack)
     clang libcxx libcxxabi
@@ -570,7 +587,7 @@ coq86Env = pkgs.myEnvFun {
     ocaml ocamlPackages.camlp5_transitional
     ocamlPackages.findlib
     coq_8_6
-    # coq2html
+    coq2html
     coqPackages_8_6.autosubst
     coqPackages_8_6.dpdgraph
     coqPackages_8_6.flocq
@@ -580,8 +597,8 @@ coq86Env = pkgs.myEnvFun {
     (withSrc ~/oss/QuickChick coqPackages_8_6.QuickChick)
     coqPackages_8_6.coq-ext-lib
     coqPackages_8_6.coquelicot
-    # coqPackages_8_6.math-classes
-    # coqPackages_8_6.CoLoR
+    coqPackages_8_6.math-classes
+    coqPackages_8_6.CoLoR
     # coqPackages_8_6.metalib
     coqPackages_8_6.paco
     compcert ocamlPackages.menhir
