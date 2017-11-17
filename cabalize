@@ -8,4 +8,4 @@ cabal2nix . > default.nix
 cabal2nix --shell . > shell.nix
 
 cabal clean
-nix-shell --command 'cabal configure --enable-tests --enable-benchmarks'
+nix-shell --command "cabal configure --enable-tests --enable-benchmarks $@"
