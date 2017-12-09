@@ -1,0 +1,2 @@
+#!/bin/bash
+exec perl -ne 'while (m/name = "([^"]+)"/g) { print $1, "\n"; } ' ~/.nix-profile/manifest.nix

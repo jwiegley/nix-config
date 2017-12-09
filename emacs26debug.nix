@@ -26,13 +26,13 @@ let
 in
 
 stdenv.mkDerivation rec {
-  name = "emacsHEAD";
+  name = "emacs26";
 
   builder = ./builder.sh;
 
   src = builtins.filterSource (path: type:
       type != "directory" || baseNameOf path != ".git")
-    ~/.emacs.d/master;
+    ~/.emacs.d/release;
 
   patches = stdenv.lib.optionals stdenv.isDarwin [
     ./at-fdcwd.patch
@@ -76,13 +76,17 @@ stdenv.mkDerivation rec {
     if stdenv.isDarwin
       then [ "--with-ns" "--disable-ns-self-contained"
              "--enable-checking=yes,glyphs"
-             "--enable-check-lisp-object-type=yes" ]
+             "--enable-check-lisp-object-type" ]
     else if withX
       then [ "--with-x-toolkit=${toolkit}" "--with-xft" ]
       else [ "--with-x=no" "--with-xpm=no" "--with-jpeg=no" "--with-png=no"
              "--with-gif=no" "--with-tiff=no" ];
 
-  NIX_CFLAGS_COMPILE = "-O0 -g3" +
+  CFLAGS = "-O0 -g3" +
+    stdenv.lib.optionalString (stdenv.isDarwin && withX)
+      "-I${cairo}/include/cairo";
+
+  NIX_CFLAGS_COMPILE = "-O0 -g3" + 
     stdenv.lib.optionalString (stdenv.isDarwin && withX)
       "-I${cairo}/include/cairo";
 

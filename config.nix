@@ -9,7 +9,7 @@ myHaskellPackages = libProf: self: super:
 
   async-pool       = pkg ~/src/async-pool {};
   bytestring-fiat  = pkg ~/src/bytestring/extract {};
-  c2hsc            = dontCheck (pkg ~/src/c2hsc {});
+  c2hsc            = pkg ~/src/c2hsc {};
   categorical      = dontCheck (dontHaddock (pkg ~/src/categorical {}));
   commodities      = pkg ~/src/ledger4/commodities {};
   consistent       = dontCheck (pkg ~/src/consistent {});
@@ -76,15 +76,20 @@ myHaskellPackages = libProf: self: super:
   Diff                     = dontCheck super.Diff;
   bindings-DSL             = pkg ~/oss/bindings-DSL {};
   bindings-posix           = pkg ~/oss/bindings-DSL/bindings-posix {};
+  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
   foundation               = dontCheck super.foundation;
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   compressed               = doJailbreak super.compressed;
   derive-storable          = dontCheck super.derive-storable;
+  freer-effects            = pkg ~/oss/freer-effects {};
   liquidhaskell            = doJailbreak super.liquidhaskell;
+  hakyll                   = doJailbreak super.hakyll;
+  pandoc-citeproc          = pkg ~/oss/pandoc-citeproc {};
   pipes-binary             = doJailbreak super.pipes-binary;
   pipes-zlib               = doJailbreak (dontCheck super.pipes-zlib);
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = dontCheck (pkg ~/oss/timeparsers {});
+  testing-feat             = doJailbreak super.testing-feat;
 
   mkDerivation = args: super.mkDerivation (args // {
     # src = pkgs.fetchurl {
@@ -108,8 +113,8 @@ profiledHaskell802Packages = super.haskell.packages.ghc802.override {
 
 ghc80Env = pkgs.myEnvFun {
   name = "ghc80";
-  buildInputs = with haskell802Packages; [
-    (ghcWithHoogle (import ~/src/hoogle-local/package-list.nix))
+  buildInputs = with pkgs.haskell.lib; with haskell802Packages; [
+    (ghcWithHoogle ((import ~/src/hoogle-local/package-list.nix) pkgs))
     alex happy cabal-install
     ghc-core
     hlint
@@ -119,14 +124,14 @@ ghc80Env = pkgs.myEnvFun {
     pointfree
     hasktags
     hpack
-    # c2hsc
+    c2hsc
     simple-mirror
     djinn mueval
     lambdabot
     # threadscope
     timeplot splot
     # liquidhaskell
-    idris
+    # idris
     Agda
 
     # Personal packages
@@ -164,8 +169,8 @@ ghc80Env = pkgs.myEnvFun {
 
 ghc80ProfEnv = pkgs.myEnvFun {
   name = "ghc80prof";
-  buildInputs = with profiledHaskell802Packages; [
-    (ghcWithHoogle (import ~/src/hoogle-local/package-list.nix))
+  buildInputs = with pkgs.haskell.lib; with profiledHaskell802Packages; [
+    (ghcWithHoogle ((import ~/src/hoogle-local/package-list.nix) pkgs))
     alex happy cabal-install
     ghc-core
     hlint
@@ -175,14 +180,14 @@ ghc80ProfEnv = pkgs.myEnvFun {
     pointfree
     hasktags
     hpack
-    # c2hsc
+    c2hsc
     simple-mirror
     djinn mueval
     lambdabot
     # threadscope
     timeplot splot
     # liquidhaskell
-    idris
+    # idris
     Agda
 
     # Personal packages
@@ -218,76 +223,122 @@ ghc80ProfEnv = pkgs.myEnvFun {
   ];
 };
 
-haskell821Packages = super.haskell.packages.ghc821.override {
+haskell822Packages = super.haskell.packages.ghc822.override {
   overrides = myHaskellPackages false;
 };
-profiledHaskell821Packages = super.haskell.packages.ghc821.override {
+profiledHaskell822Packages = super.haskell.packages.ghc822.override {
   overrides = myHaskellPackages true;
 };
 
 ghc82Env = pkgs.myEnvFun {
   name = "ghc82";
-  buildInputs = with haskell821Packages; [
-    ghc
-    # (ghcWithHoogle (import ~/src/hoogle-local-82/package-list.nix))
+  buildInputs = with pkgs.haskell.lib; with haskell822Packages; [
+    (ghcWithHoogle ((import ~/src/hoogle-local-82/package-list.nix) pkgs))
     alex happy # cabal-install
     ghc-core
-    # hlint
-    # stylish-haskell
+    hlint
+    stylish-haskell
     # ghc-mod
     # hdevtools
-    # pointfree
-    # hasktags
-    # hpack
-    # # c2hsc
-    # simple-mirror
-    # djinn mueval
-    # lambdabot
-    # # threadscope
+    (doJailbreak pointfree)
+    hasktags
+    hpack
+    c2hsc
+    simple-mirror
+    djinn mueval
+    lambdabot
+    # threadscope
     # timeplot splot
     # liquidhaskell
     # idris
-    # Agda
+    Agda
 
     # # Personal packages
 
-    # hnix
-    # async-pool
+    hnix
+    async-pool
     # categorical
-    # commodities
+    commodities
     # concat-classes
     # concat-plugin
     # concat-examples
     # consistent
-    # fuzzcheck
-    # gitlib
+    fuzzcheck
+    gitlib
     # gitlib-cmdline
     # gitlib-libgit2
-    # gitlib-sample
-    # gitlib-test
-    # # gitlib-hit
-    # # gitlib-lens
-    # # gitlib-s3
+    gitlib-sample
+    gitlib-test
+    # gitlib-hit
+    # gitlib-lens
+    # gitlib-s3
     # hierarchy
-    # hlibgit2
-    # ipcvar
-    # linearscan
-    # linearscan-hoopl
-    # logging
-    # monad-extras
-    # pipes-async
+    hlibgit2
+    ipcvar
+    linearscan
+    linearscan-hoopl
+    logging
+    monad-extras
+    pipes-async
     # pipes-files
-    # recursors
+    recursors
     # z3cat
   ];
 };
 
 ghc82ProfEnv = pkgs.myEnvFun {
   name = "ghc82prof";
-  buildInputs = with profiledHaskell821Packages; [
-    profiledHaskell821Packages.ghc
+  buildInputs = with pkgs.haskell.lib; with profiledHaskell822Packages; [
+    (ghcWithHoogle ((import ~/src/hoogle-local-82/package-list.nix) pkgs))
     alex happy # cabal-install
     ghc-core
+    hlint
+    stylish-haskell
+    # ghc-mod
+    # hdevtools
+    (doJailbreak pointfree)
+    hasktags
+    hpack
+    c2hsc
+    simple-mirror
+    djinn mueval
+    lambdabot
+    # threadscope
+    # timeplot splot
+    # liquidhaskell
+    # idris
+    Agda
+
+    # # Personal packages
+
+    hnix
+    async-pool
+    # categorical
+    commodities
+    # concat-classes
+    # concat-plugin
+    # concat-examples
+    # consistent
+    fuzzcheck
+    gitlib
+    # gitlib-cmdline
+    # gitlib-libgit2
+    gitlib-sample
+    gitlib-test
+    # gitlib-hit
+    # gitlib-lens
+    # gitlib-s3
+    # hierarchy
+    hlibgit2
+    ipcvar
+    linearscan
+    linearscan-hoopl
+    logging
+    monad-extras
+    pipes-async
+    # pipes-files
+    recursors
+    # z3cat
   ];
 };
 
@@ -396,6 +447,18 @@ emacs25Env = pkgs.myEnvFun {
   buildInputs = with emacsPackagesNgGen emacs; [ emacs25 ];
 };
 
+emacs26debug = super.callPackage ~/.nixpkgs/emacs26debug.nix {
+  libXaw = xorg.libXaw;
+  Xaw3d = null;
+  gconf = null;
+  alsaLib = null;
+  imagemagick = null;
+  acl = null;
+  gpm = null;
+  inherit (darwin.apple_sdk.frameworks) AppKit Foundation;
+  inherit (darwin) libobjc;
+};
+
 emacs26 = super.callPackage ~/.nixpkgs/emacs26.nix {
   libXaw = xorg.libXaw;
   Xaw3d = null;
@@ -416,7 +479,13 @@ emacs26Env = pkgs.myEnvFun {
   name = "emacs26";
   buildInputs = with emacsPackagesNgGen emacs; [ 
     emacs26 
-    emacsPackagesNg.melpaPackages.pdf-tools
+  ];
+};
+
+emacs26DebugEnv = pkgs.myEnvFun {
+  name = "emacs26debug";
+  buildInputs = with emacsPackagesNgGen emacs; [ 
+    emacs26debug 
   ];
 };
 
@@ -458,9 +527,13 @@ systemToolsEnv = pkgs.buildEnv {
     aspell
     aspellDicts.en
     bashInteractive
+    bash-completion
+    nix-bash-completions
     ctop
     exiv2
     findutils
+    fzf
+    gawk
     gnugrep
     gnupg paperkey
     gnuplot
@@ -477,13 +550,13 @@ systemToolsEnv = pkgs.buildEnv {
     jenkins
     less
     multitail
+    renameutils
     p7zip
     parallel
     pinentry_mac
     postgresql96
     pv
     # qemu
-    recutils
     ripgrep
     rlwrap
     screen
@@ -565,7 +638,7 @@ networkToolsEnv = pkgs.buildEnv {
     backblaze-b2
     cacert
     httrack
-    mercurial
+    mercurialFull
     iperf
     nmap
     lftp
@@ -580,6 +653,7 @@ networkToolsEnv = pkgs.buildEnv {
     sipcalc
     socat2pre
     spiped
+    w3m
     wget
     youtube-dl
     znc
@@ -638,6 +712,7 @@ langToolsEnv = pkgs.buildEnv {
     cmake ninja gnumake
     cabal2nix cabal-install
     ctags
+    rtags
     gmp mpfr
     htmlTidy
     idutils
@@ -748,27 +823,33 @@ coqHEADEnv = pkgs.myEnvFun {
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
   paths = [
-    highlight
-    sourceHighlight
-    doxygen
-    (haskell.lib.justStaticExecutables haskPkgs.sitebuilder)
-    (haskell.lib.justStaticExecutables haskPkgs.lhs2tex)
-    graphviz-nox
-    dot2tex
+    hugo
     biber
+    dot2tex
+    doxygen
+    graphviz-nox
+    highlight
+    poppler
+    sourceHighlight
     texinfo
-    (texlive.combine { inherit (texlive) scheme-full texdoc; })
     yuicompressor
+    (haskell.lib.justStaticExecutables haskPkgs.lhs2tex)
+    (haskell.lib.justStaticExecutables haskPkgs.sitebuilder)
+    (texlive.combine {
+       inherit (texlive) scheme-full texdoc latex2e-help-texinfo;
+       pkgFilter = pkg:
+          pkg.tlType == "run"
+       || pkg.tlType == "bin"
+       || pkg.pname == "latex2e-help-texinfo";
+     })
   ];
 };
 
-withSrc = path: deriv: super.stdenv.lib.overrideDerivation deriv (attrs: {
-  src = path;
-});
+withSrc = path: deriv: 
+  super.stdenv.lib.overrideDerivation deriv (attrs: { src = path; });
 
-withName = arg: deriv: super.stdenv.lib.overrideDerivation deriv (attrs: {
-  name = arg;
-});
+withName = arg: deriv: 
+  super.stdenv.lib.overrideDerivation deriv (attrs: { name = arg; });
 
 };
 
