@@ -24,6 +24,7 @@ myHaskellPackages = libProf: self: super:
   gitlib-hit       = pkg ~/src/gitlib/gitlib-hit {};
   gitlib-libgit2   = pkg ~/src/gitlib/gitlib-libgit2 {};
   gitlib-test      = pkg ~/src/gitlib/gitlib-test {};
+  # z3               = pkg ~/src/haskell-z3 {};
   hierarchy        = doJailbreak (pkg ~/src/hierarchy {});
   hlibgit2         = dontCheck (pkg ~/src/gitlib/hlibgit2 {});
   hnix             = pkg ~/src/hnix {};
@@ -72,24 +73,24 @@ myHaskellPackages = libProf: self: super:
   # Hackage overrides
 
   Agda                     = dontHaddock super.Agda;
-  Glob                     = dontCheck super.Glob;
   Diff                     = dontCheck super.Diff;
+  Glob                     = dontCheck super.Glob;
   bindings-DSL             = pkg ~/oss/bindings-DSL {};
   bindings-posix           = pkg ~/oss/bindings-DSL/bindings-posix {};
-  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
-  foundation               = dontCheck super.foundation;
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   compressed               = doJailbreak super.compressed;
   derive-storable          = dontCheck super.derive-storable;
+  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
+  foundation               = dontCheck super.foundation;
   freer-effects            = pkg ~/oss/freer-effects {};
-  liquidhaskell            = doJailbreak super.liquidhaskell;
   hakyll                   = doJailbreak super.hakyll;
+  liquidhaskell            = doJailbreak super.liquidhaskell;
   pandoc-citeproc          = pkg ~/oss/pandoc-citeproc {};
   pipes-binary             = doJailbreak super.pipes-binary;
   pipes-zlib               = doJailbreak (dontCheck super.pipes-zlib);
+  testing-feat             = doJailbreak super.testing-feat;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = dontCheck (pkg ~/oss/timeparsers {});
-  testing-feat             = doJailbreak super.testing-feat;
 
   mkDerivation = args: super.mkDerivation (args // {
     # src = pkgs.fetchurl {
@@ -98,18 +99,30 @@ myHaskellPackages = libProf: self: super:
     # };
     enableLibraryProfiling = libProf;
     enableExecutableProfiling = false;
+    # executableToolDepends = 
+    #   if stdenv.lib.hasAttr "executableToolDepends" args
+    #   then args.executableToolDepends ++ [ darwin.apple_sdk.frameworks.Cocoa ]
+    #   else [ darwin.apple_sdk.frameworks.Cocoa ];
   });
 };
 
+haskell802Packages =
+  super.haskell.packages.ghc802.extend (myHaskellPackages false);
+profiledHaskell802Packages =
+  super.haskell.packages.ghc802.extend (myHaskellPackages true);
+
+haskell822Packages = 
+  super.haskell.packages.ghc822.extend (myHaskellPackages false);
+profiledHaskell822Packages = 
+  super.haskell.packages.ghc822.extend (myHaskellPackages true);
+
+haskellHEADPackages =
+  super.haskell.packages.ghcHEAD.extend (myHaskellPackages false);
+profiledHaskellHEADPackages =
+  super.haskell.packages.ghcHEAD.extend (myHaskellPackages true);
+
 haskPkgs = haskell802Packages;
 haskellPackages = haskPkgs;
-
-haskell802Packages = super.haskell.packages.ghc802.override {
-  overrides = myHaskellPackages false;
-};
-profiledHaskell802Packages = super.haskell.packages.ghc802.override {
-  overrides = myHaskellPackages true;
-};
 
 ghc80Env = pkgs.myEnvFun {
   name = "ghc80";
@@ -133,8 +146,6 @@ ghc80Env = pkgs.myEnvFun {
     # liquidhaskell
     # idris
     Agda
-
-    # Personal packages
 
     hnix
     async-pool
@@ -190,8 +201,6 @@ ghc80ProfEnv = pkgs.myEnvFun {
     # idris
     Agda
 
-    # Personal packages
-
     hnix
     async-pool
     categorical
@@ -223,13 +232,6 @@ ghc80ProfEnv = pkgs.myEnvFun {
   ];
 };
 
-haskell822Packages = super.haskell.packages.ghc822.override {
-  overrides = myHaskellPackages false;
-};
-profiledHaskell822Packages = super.haskell.packages.ghc822.override {
-  overrides = myHaskellPackages true;
-};
-
 ghc82Env = pkgs.myEnvFun {
   name = "ghc82";
   buildInputs = with pkgs.haskell.lib; with haskell822Packages; [
@@ -252,8 +254,6 @@ ghc82Env = pkgs.myEnvFun {
     # liquidhaskell
     # idris
     Agda
-
-    # # Personal packages
 
     hnix
     async-pool
@@ -309,8 +309,6 @@ ghc82ProfEnv = pkgs.myEnvFun {
     # idris
     Agda
 
-    # # Personal packages
-
     hnix
     async-pool
     # categorical
@@ -342,13 +340,6 @@ ghc82ProfEnv = pkgs.myEnvFun {
   ];
 };
 
-haskellHEADPackages = super.haskell.packages.ghcHEAD.override {
-  overrides = myHaskellPackages false;
-};
-profiledHaskellHEADPackages = super.haskell.packages.ghcHEAD.override {
-  overrides = myHaskellPackages true;
-};
-
 ghcHEADEnv = pkgs.myEnvFun {
   name = "ghcHEAD";
   buildInputs = with haskellHEADPackages; [
@@ -374,6 +365,10 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
        || stdenv.lib.hasSuffix ".p_o" path))
   src;
 
+boost_with_python3 = super.boost160.override {
+  python = python3;
+};
+
 ledger_HEAD = super.callPackage ~/src/ledger {};
 ledger_HEAD_python3 = super.callPackage ~/src/ledger {
   boost = self.boost_with_python3;
@@ -384,10 +379,6 @@ ledgerPy2Env = pkgs.myEnvFun {
   buildInputs = [
     cmake boost gmp mpfr libedit python texinfo gnused ninja clang doxygen
   ];
-};
-
-boost_with_python3 = super.boost160.override {
-  python = python3;
 };
 
 ledgerPy3Env = pkgs.myEnvFun {
@@ -424,55 +415,101 @@ concertoEnv = pkgs.myEnvFun {
   ];
 };
 
-emacs = emacs25;
-
-emacs25 = super.callPackage ~/.nixpkgs/emacs25.nix {
-  libXaw = xorg.libXaw;
-  Xaw3d = null;
-  gconf = null;
-  alsaLib = null;
-  imagemagick = null;
-  acl = null;
-  gpm = null;
-  inherit (darwin.apple_sdk.frameworks) AppKit Foundation;
-  inherit (darwin) libobjc;
-};
-
-emacs25_test = super.stdenv.lib.overrideDerivation emacs25 (attrs: {
-  doCheck = true;
-});
-
 emacs25Env = pkgs.myEnvFun {
   name = "emacs25";
   buildInputs = with emacsPackagesNgGen emacs; [ emacs25 ];
 };
 
-emacs26debug = super.callPackage ~/.nixpkgs/emacs26debug.nix {
-  libXaw = xorg.libXaw;
-  Xaw3d = null;
-  gconf = null;
-  alsaLib = null;
-  imagemagick = null;
-  acl = null;
-  gpm = null;
-  inherit (darwin.apple_sdk.frameworks) AppKit Foundation;
-  inherit (darwin) libobjc;
+emacs26 = super.stdenv.lib.overrideDerivation
+  (super.emacs25.override { srcRepo = true; }) (attrs: rec {
+  name = "emacs-${version}${versionModifier}";
+  version = "26.0";
+  versionModifier = ".90";
+
+  buildInputs = super.emacs25.buildInputs ++ [ git ];
+
+  patches = lib.optional stdenv.isDarwin ./at-fdcwd.patch;
+
+  CFLAGS = "-Ofast -momit-leaf-frame-pointer";
+
+  src = builtins.filterSource (path: type:
+      type != "directory" || baseNameOf path != ".git")
+    ~/.emacs.d/release;
+
+  postInstall = ''
+    mkdir -p $out/share/emacs/site-lisp
+    cp ${./site-start.el} $out/share/emacs/site-lisp/site-start.el
+    $out/bin/emacs --batch -f batch-byte-compile $out/share/emacs/site-lisp/site-start.el
+
+    rm -rf $out/var
+    rm -rf $out/share/emacs/${version}/site-lisp
+
+    for srcdir in src lisp lwlib ; do
+      dstdir=$out/share/emacs/${version}/$srcdir
+      mkdir -p $dstdir
+      find $srcdir -name "*.[chm]" -exec cp {} $dstdir \;
+      cp $srcdir/TAGS $dstdir
+      echo '((nil . ((tags-file-name . "TAGS"))))' > $dstdir/.dir-locals.el
+    done
+  '' + lib.optionalString stdenv.isDarwin ''
+    mkdir -p $out/Applications
+    mv nextstep/Emacs.app $out/Applications
+  '';
+});
+
+emacs26debug = super.stdenv.lib.overrideDerivation emacs26 (attrs: rec {
+  name = "emacs-26.0.90-debug";
+  # doCheck = true;
+  CFLAGS = "-O0 -g3";
+  configureFlags = [ "--with-modules" ] ++
+   [ "--with-ns" "--disable-ns-self-contained"
+     "--enable-checking=yes,glyphs"
+     "--enable-check-lisp-object-type" ];
+});
+
+emacs25x11 = super.emacs25.override { 
+  srcRepo = true; 
+  withX = true; 
+  withGTK2 = true; 
+  withGTK3 = false;
 };
 
-emacs26 = super.callPackage ~/.nixpkgs/emacs26.nix {
-  libXaw = xorg.libXaw;
-  Xaw3d = null;
-  gconf = null;
-  alsaLib = null;
-  imagemagick = null;
-  acl = null;
-  gpm = null;
-  inherit (darwin.apple_sdk.frameworks) AppKit Foundation;
-  inherit (darwin) libobjc;
-};
+emacs26x11 = super.stdenv.lib.overrideDerivation emacs25x11 (attrs: rec {
+  name = "emacs-${version}${versionModifier}-x11";
+  version = "26.0";
+  versionModifier = ".90";
 
-emacs26_test = super.stdenv.lib.overrideDerivation emacs26 (attrs: {
-  doCheck = true;
+  buildInputs = emacs25x11.buildInputs ++ [ git ];
+
+  patches = lib.optional stdenv.isDarwin ./at-fdcwd.patch;
+
+  src = builtins.filterSource (path: type:
+      type != "directory" || baseNameOf path != ".git")
+    ~/.emacs.d/release;
+
+  configureFlags = [ "--with-modules" ] ++
+    [ "--without-ns --disable-ns-self-contained"
+      "--with-x --with-x-toolkit=gtk2 --with-xft" ];
+
+  postInstall = ''
+    mkdir -p $out/share/emacs/site-lisp
+    cp ${./site-start.el} $out/share/emacs/site-lisp/site-start.el
+    $out/bin/emacs --batch -f batch-byte-compile $out/share/emacs/site-lisp/site-start.el
+
+    rm -rf $out/var
+    rm -rf $out/share/emacs/${version}/site-lisp
+  '' + lib.optionalString withCsrc ''
+    for srcdir in src lisp lwlib ; do
+      dstdir=$out/share/emacs/${version}/$srcdir
+      mkdir -p $dstdir
+      find $srcdir -name "*.[chm]" -exec cp {} $dstdir \;
+      cp $srcdir/TAGS $dstdir
+      echo '((nil . ((tags-file-name . "TAGS"))))' > $dstdir/.dir-locals.el
+    done
+  '' + lib.optionalString stdenv.isDarwin ''
+    mkdir -p $out/Applications
+    mv nextstep/Emacs.app $out/Applications
+  '';
 });
 
 emacs26Env = pkgs.myEnvFun {
@@ -489,30 +526,88 @@ emacs26DebugEnv = pkgs.myEnvFun {
   ];
 };
 
-emacsHEAD = super.callPackage ~/.nixpkgs/emacsHEAD.nix {
-  libXaw = xorg.libXaw;
-  Xaw3d = null;
-  gconf = null;
-  alsaLib = null;
-  imagemagick = null;
-  acl = null;
-  gpm = null;
-  inherit (darwin.apple_sdk.frameworks) AppKit Foundation;
-  inherit (darwin) libobjc;
+emacs26X11Env = pkgs.myEnvFun {
+  name = "emacs26x11";
+  buildInputs = with emacsPackagesNgGen emacs; [ 
+    emacs26x11
+  ];
 };
 
-emacsHEAD_test = super.stdenv.lib.overrideDerivation emacsHEAD (attrs: {
-  doCheck = true;
+emacsHEAD = super.stdenv.lib.overrideDerivation
+  (super.emacs25.override { srcRepo = true; }) (attrs: rec {
+  name = "emacs-${version}${versionModifier}";
+  version = "27.0";
+  versionModifier = ".50";
+
+  appName = "ERC";
+  bundleName = "nextstep/ERC.app";
+  iconFile = "/Users/johnw/.nixpkgs/Chat.icns";
+
+  buildInputs = super.emacs25.buildInputs ++ [ git ];
+
+  patches = lib.optional stdenv.isDarwin ./at-fdcwd.patch;
+
+  CFLAGS = "-O0 -g3";
+  # doCheck = true;
+
+  configureFlags = [ "--with-modules" ] ++
+   [ "--with-ns" "--disable-ns-self-contained"
+     "--enable-checking=yes,glyphs"
+     "--enable-check-lisp-object-type" ];
+
+  src = builtins.filterSource (path: type:
+      type != "directory" || baseNameOf path != ".git")
+    ~/.emacs.d/master;
+
+  postPatch = ''
+    sed -i 's|/usr/share/locale|${gettext}/share/locale|g' \
+      lisp/international/mule-cmds.el
+    sed -i 's|nextstep/Emacs\.app|${bundleName}|' configure.ac
+    sed -i 's|>Emacs<|>${appName}<|' nextstep/templates/Info.plist.in
+    sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Info.plist.in
+    sed -i 's|org\.gnu\.Emacs|org.gnu.${appName}|' nextstep/templates/Info.plist.in
+    sed -i 's|Emacs @version@|${appName} @version@|' nextstep/templates/Info.plist.in
+    sed -i 's|EmacsApp|${appName}App|' nextstep/templates/Info.plist.in
+    if [ -n "${iconFile}" ]; then
+      sed -i 's|Emacs\.icns|${appName}.icns|' nextstep/templates/Info.plist.in
+    fi
+    sed -i 's|Name=Emacs|Name=${appName}|' nextstep/templates/Emacs.desktop.in
+    sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Emacs.desktop.in
+    sed -i 's|"Emacs|"${appName}|' nextstep/templates/InfoPlist.strings.in
+    sh autogen.sh
+  '';
+
+  postInstall = ''
+    mkdir -p $out/share/emacs/site-lisp
+    cp ${./site-start.el} $out/share/emacs/site-lisp/site-start.el
+    $out/bin/emacs --batch -f batch-byte-compile $out/share/emacs/site-lisp/site-start.el
+
+    rm -rf $out/var
+    rm -rf $out/share/emacs/${version}/site-lisp
+
+    for srcdir in src lisp lwlib ; do
+      dstdir=$out/share/emacs/${version}/$srcdir
+      mkdir -p $dstdir
+      find $srcdir -name "*.[chm]" -exec cp {} $dstdir \;
+      cp $srcdir/TAGS $dstdir
+      echo '((nil . ((tags-file-name . "TAGS"))))' > $dstdir/.dir-locals.el
+    done
+
+    mkdir -p $out/Applications
+    if [ "${appName}" != "Emacs" ]; then
+        mv ${bundleName}/Contents/MacOS/Emacs ${bundleName}/Contents/MacOS/${appName}
+    fi
+    if [ -n "${iconFile}" ]; then
+      cp "${iconFile}" ${bundleName}/Contents/Resources/${appName}.icns
+    fi
+    mv ${bundleName} $out/Applications
+  '';
 });
 
 emacsHEADEnv = pkgs.myEnvFun {
   name = "emacsHEAD";
   buildInputs = with emacsPackagesNgGen emacs; [
-    (emacsHEAD.override {
-       appName = "ERC";
-       bundleName = "nextstep/ERC.app";
-       iconFile = "/Users/johnw/.nixpkgs/Chat.icns";
-     })
+    emacsHEAD
   ];
 };
 
@@ -552,6 +647,7 @@ systemToolsEnv = pkgs.buildEnv {
     multitail
     renameutils
     p7zip
+    pass
     parallel
     pinentry_mac
     postgresql96
@@ -624,8 +720,8 @@ gitToolsEnv = pkgs.buildEnv {
   ];
 };
 
-# pdnsd does not build with IPv6 on Darwin
 pdnsd = super.stdenv.lib.overrideDerivation super.pdnsd (attrs: {
+  # pdnsd does not build with IPv6 on Darwin
   configureFlags = [];
 });
 
@@ -723,24 +819,25 @@ langToolsEnv = pkgs.buildEnv {
   ];
  };
 
-coq_8_4  = super.coq_8_4.override { csdp = null; };
+# coqPackages_8_4 = mkCoqPackages coqPackages_8_4 coq_8_4;
+
+# coq_8_4  = super.coq_8_4.override { csdp = null; };
 coq_8_5  = super.coq_8_5.override { csdp = null; };
 coq_8_6  = super.coq_8_6.override { csdp = null; };
 coq_8_7  = super.coq_8_7.override { csdp = null; };
-coq_HEAD = super.callPackage ~/.nixpkgs/coqHEAD.nix {};
 
-coq84Env = pkgs.myEnvFun {
-  name = "coq84";
-  buildInputs = [
-    ocaml ocamlPackages.camlp5_transitional
-    coq_8_4
-    prooftree
-  ] ++ (with coqPackages_8_4; [
-    interval
-    mathcomp
-    ssreflect
-  ]);
-};
+# coq84Env = pkgs.myEnvFun {
+#   name = "coq84";
+#   buildInputs = [
+#     ocaml ocamlPackages.camlp5_transitional
+#     coq_8_4
+#     prooftree
+#   ] ++ (with coqPackages_8_4; [
+#     interval
+#     mathcomp
+#     ssreflect
+#   ]);
+# };
 
 coq85Env = pkgs.myEnvFun {
   name = "coq85";
@@ -810,14 +907,6 @@ coq87Env = pkgs.myEnvFun {
     paco
     ssreflect
   ]);
-};
-
-coqHEADEnv = pkgs.myEnvFun {
-  name = "coqHEAD";
-  buildInputs = [
-    ocaml ocamlPackages.camlp5_transitional
-    coq_HEAD
-  ];
 };
 
 publishToolsEnv = pkgs.buildEnv {
