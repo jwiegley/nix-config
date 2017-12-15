@@ -573,7 +573,7 @@ coq87Env = pkgs.myEnvFun {
   buildInputs = [ coq_8_7 ] ++ myCoqPackages pkgs.coqPackages_8_7 ++
     (with pkgs.coqPackages_8_7; [
        CoLoR
-       # category-theory
+       category-theory
        equations
        math-classes
        metalib
@@ -584,7 +584,7 @@ coq86Env = pkgs.myEnvFun {
   name = "coq86";
   buildInputs = [ coq_8_6 ] ++ myCoqPackages pkgs.coqPackages_8_6 ++
     (with pkgs.coqPackages_8_6; [
-       # category-theory
+       category-theory
        equations
        ssreflect
      ]);
@@ -607,22 +607,6 @@ coq84Env = pkgs.myEnvFun {
 ##############################################################################
 
 emacs = emacs26;
-
-emacsPackageOverrides = super: super.melpaPackages // {
-  org = super.elpaBuild {
-    pname = "org";
-    version = "20160421";
-    src = pkgs.fetchFromGitHub {
-      url = git://github.com/jwiegley/org-mode.git;
-      sha256 = "0q8s074brh7ky34nbfwgagc1sdpihsk9ypa8b6i1dxc9dsryjdxj";
-    };
-    packageRequires = [];
-    meta = {
-      homepage = "https://elpa.gnu.org/packages/org.html";
-      license = pkgs.stdenv.lib.licenses.free;
-    };
-  };
-};
 
 emacsFromUrl = pkgname: pkgsrc: pkgdeps: with pkgs; stdenv.mkDerivation rec {
   name = pkgname;
@@ -648,9 +632,23 @@ emacsFromUrl = pkgname: pkgsrc: pkgdeps: with pkgs; stdenv.mkDerivation rec {
   };
 };
 
-emacsPackages = emacs:
-  let emacsPkgs = pkgs.emacsPackagesNgGen emacs; in
-  with emacsPkgs; emacsPkgs // rec {
+emacsPackageOverrides = super: with super; {
+  org = super.elpaBuild {
+    pname = "org";
+    version = "20160421";
+    src = pkgs.fetchFromGitHub {
+      url = git://github.com/jwiegley/org-mode.git;
+      sha256 = "0q8s074brh7ky34nbfwgagc1sdpihsk9ypa8b6i1dxc9dsryjdxj";
+    };
+    packageRequires = [];
+    meta = {
+      homepage = "https://elpa.gnu.org/packages/org.html";
+      license = pkgs.stdenv.lib.licenses.free;
+    };
+  };
+};
+
+myEmacsPackages = super: with super; rec {
   ascii = emacsFromUrl "ascii.el" (pkgs.fetchurl {
     url = https://www.emacswiki.org/emacs/download/ascii.el;
     sha256 = "05fjsj5nmc05cmsi0qj914dqdwk8rll1d4dwhn0crw36p2ivql75";
@@ -1097,354 +1095,10 @@ emacsPackages = emacs:
   }) [];
 };
 
-myEmacsPackages = emacs: with emacsPackages emacs; [
-  ace-link
-  ace-window
-  agda2-mode
-  aggressive-indent
-  alert
-  anaphora
-  apiwrap
-  ascii
-  asoc
-  async
-  auctex
-  auth-password-store
-  auto-compile
-  auto-yasnippet
-  avy
-  avy-zap
-  back-button
-  backup-each-save
-  bbdb
-  bbdb-vcard
-  beacon
-  biblio
-  bm
-  bookmark-plus
-  browse-at-remote
-  browse-kill-ring
-  browse-kill-ring-plus
-  button-lock
-  bytecomp-simplify
-  calfw
-  change-inner
-  chess
-  circe
-  cldoc
-  clipmon
-  cmake-font-lock
-  cmake-mode
-  col-highlight
-  color-moccur
-  command-log-mode
-  company
-  company-auctex
-  company-coq
-  company-ghc
-  company-math
-  company-quickhelp
-  copy-as-format
-  counsel
-  counsel-gtags
-  counsel-projectile
-  crosshairs
-  crux
-  csv-mode
-  ctable
-  cursor-chg
-  dash
-  dash-at-point
-  debbugs
-  dedicated
-  deferred
-  deft
-  diff-hl
-  difflib
-  diffview
-  diminish
-  dired-hacks-utils
-  dired-plus
-  dired-ranger
-  dired-toggle
-  discover
-  discover-my-major
-  docker
-  docker-compose-mode
-  docker-tramp
-  dockerfile-mode
-  doxymacs
-  dumb-jump
-  easy-kill
-  ebdb
-  edit-indirect
-  el-mock
-  elisp-depend
-  elisp-docstring-mode
-  elisp-refs
-  elisp-slime-nav
-  elmacro
-  emojify
-  enh-ruby-mode
-  epc
-  epl
-  erc-highlight-nicknames
-  erc-yank
-  erefactor
-  esh-buf-stack
-  esh-help
-  eshell-autojump
-  eshell-bookmark
-  eshell-up
-  eshell-z
-  esxml
-  eval-expr
-  eval-in-repl
-  evil
-  expand-region
-  eyebrowse
-  f
-  fancy-narrow
-  fence-edit
-  flycheck
-  flycheck-haskell
-  flycheck-hdevtools
-  flycheck-package
-  fn
-  focus
-  font-lock-studio
-  free-keys
-  fringe-helper
-  fullframe
-  fuzzy
-  ggtags
-  gh
-  ghc
-  ghub
-  ghub-plus
-  git-annex
-  git-link
-  git-modes
-  git-timemachine
-  git-undo
-  github-pullrequest
-  gitpatch
-  gnus-alias
-  gnus-harvest
-  google-this
-  goto-last-change
-  graphviz-dot-mode
-  haskell-mode
-  helm
-  helm-bibtex
-  helm-dash
-  helm-descbinds
-  helm-describe-modes
-  helm-firefox
-  helm-google
-  helm-navi
-  helm-pass
-  helpful
-  highlight
-  highlight-cl
-  highlight-defined
-  highlight-numbers
-  hl-line-plus
-  ht
-  hydra
-  hyperbole
-  iedit
-  iflipb
-  imenu-list
-  indent-shift
-  inf-ruby
-  info-lookmore
-  initsplit
-  ipcalc
-  ivy
-  ivy-hydra
-  ivy-pass
-  ivy-rich
-  jq-mode
-  js2-mode
-  js3-mode
-  json-mode
-  json-reformat
-  json-snatcher
-  key-chord
-  know-your-http-well
-  kv
-  ledger-mode
-  lentic
-  lispy
-  list-utils
-  llvm-mode
-  logito
-  loop
-  lsp-haskell
-  lsp-mode
-  lua-mode
-  lusty-explorer
-  m-buffer
-  macrostep
-  magit
-  magit-imerge
-  magithub
-  makefile-runner
-  makey
-  malyon
-  markdown-mode
-  markdown-preview-mode
-  marshal
-  math-symbol-lists
-  mc-extras
-  mediawiki
-  memory-usage
-  message-x
-  mic-paren
-  minimap
-  moccur-edit
-  monitor
-  mudel
-  multi-compile
-  multi-term
-  multifiles
-  multiple-cursors
-  muse
-  names
-  navi-mode
-  nf-procmail-mode
-  nginx-mode
-  nix-buffer
-  nix-mode
-  noflet
-  nov
-  oauth2
-  ob-restclient
-  olivetti
-  org
-  org-bookmark-heading
-  orgit
-  org-opml
-  # org-parser
-  org-ref
-  org-super-agenda
-  org-web-tools
-  orgaggregate
-  origami
-  outorg
-  outshine
-  ov
-  ox-texinfo-plus
-  package-lint
-  packed
-  pandoc-mode
-  paradox
-  paredit
-  parent-mode
-  parinfer
-  parsebib
-  parsec
-  parsec
-  pass
-  password-store
-  pcache
-  pcre2el
-  pdf-tools
-  per-window-point
-  persistent-scratch
-  peval
-  pfuture
-  phi-search
-  phi-search-mc
-  pkg-info
-  po-mode
-  popup
-  popup-pos-tip
-  popup-ruler
-  popwin
-  pos-tip
-  pp-c-l
-  prodigy
-  projectile
-  proof-general
-  purpose
-  python-mode
-  rainbow-delimiters
-  rainbow-mode
-  redshank
-  regex-tool
-  repl-toggle
-  request
-  restclient
-  reveal-in-osx-finder
-  rich-minority
-  riscv-mode
-  rs-gnus-summary
-  s
-  selected
-  shackle
-  shift-number
-  slime
-  smart-jump
-  smart-mode-line
-  smart-newline
-  smartparens
-  smartscan
-  smex
-  sort-words
-  sos
-  spinner
-  springboard
-  sql-indent
-  stopwatch
-  string-edit
-  string-inflection
-  super-save
-  supercite
-  swiper
-  tablegen-mode
-  tablist
-  tagedit
-  tidy
-  transpose-mark
-  treemacs
-  tuareg
-  typo
-  undo-tree
-  use-package
-  uuidgen
-  vdiff
-  vimish-fold
-  visual-fill-column
-  visual-regexp
-  visual-regexp-steroids
-  vline
-  w3m
-  web
-  web-mode
-  web-server
-  websocket
-  wgrep
-  which-key
-  whitespace-cleanup-mode
-  with-editor
-  word-count-mode
-  worf
-  writeroom-mode
-  ws-butler
-  xml-rpc
-  xray
-  yaml-mode
-  yaoddmuse
-  yasnippet
-  yasnippet-snippets
-  z3-mode
-  zencoding-mode
-  zoom
-  zoutline
-  ztree
-];
+emacs26PackagesNg   = pkgs.emacsPackagesNgGen emacs26;
+emacs26WithPackages = emacs26PackagesNg.emacsWithPackages;
+emacsPackagesNg     = emacs26PackagesNg;
+emacsWithPackages   = emacsPackagesNg.emacsWithPackages;
 
 emacsHEAD = with pkgs; pkgs.stdenv.lib.overrideDerivation
   (pkgs.emacs25.override { srcRepo = true; }) (attrs: rec {
@@ -1560,9 +1214,361 @@ emacs26 = with pkgs; pkgs.stdenv.lib.overrideDerivation
   '';
 });
 
+emacs26BareEnv = pkgs.myEnvFun {
+  name = "emacs26bare";
+  buildInputs = [ emacs26 ];
+};
+
 emacs26Env = pkgs.buildEnv {
   name = "emacs26";
-  paths = [ emacs26 ] ++ myEmacsPackages emacs26;
+  paths = [ (emacs26WithPackages (with emacs26PackagesNg // myEmacsPackages emacs26PackagesNg; [
+    ace-link
+    ace-window
+    agda2-mode
+    aggressive-indent
+    alert
+    anaphora
+    apiwrap
+    ascii
+    asoc
+    async
+    auctex
+    auth-password-store
+    auto-compile
+    auto-yasnippet
+    avy
+    avy-zap
+    back-button
+    backup-each-save
+    bbdb
+    bbdb-vcard
+    beacon
+    biblio
+    bm
+    bookmark-plus
+    browse-at-remote
+    browse-kill-ring
+    browse-kill-ring-plus
+    button-lock
+    bytecomp-simplify
+    calfw
+    change-inner
+    chess
+    circe
+    cldoc
+    clipmon
+    cmake-font-lock
+    cmake-mode
+    col-highlight
+    color-moccur
+    command-log-mode
+    company
+    company-auctex
+    company-coq
+    company-ghc
+    company-math
+    company-quickhelp
+    copy-as-format
+    counsel
+    counsel-gtags
+    counsel-projectile
+    crosshairs
+    crux
+    csv-mode
+    ctable
+    cursor-chg
+    dash
+    dash-at-point
+    debbugs
+    dedicated
+    deferred
+    deft
+    diff-hl
+    difflib
+    diffview
+    diminish
+    dired-hacks-utils
+    dired-plus
+    dired-ranger
+    dired-toggle
+    discover
+    discover-my-major
+    docker
+    docker-compose-mode
+    docker-tramp
+    dockerfile-mode
+    doxymacs
+    dumb-jump
+    easy-kill
+    ebdb
+    edit-indirect
+    el-mock
+    elisp-depend
+    elisp-docstring-mode
+    elisp-refs
+    elisp-slime-nav
+    elmacro
+    emojify
+    enh-ruby-mode
+    epc
+    epl
+    erc-highlight-nicknames
+    erc-yank
+    erefactor
+    esh-buf-stack
+    esh-help
+    eshell-autojump
+    eshell-bookmark
+    eshell-up
+    eshell-z
+    esxml
+    eval-expr
+    eval-in-repl
+    evil
+    expand-region
+    eyebrowse
+    f
+    fancy-narrow
+    fence-edit
+    flycheck
+    flycheck-haskell
+    flycheck-hdevtools
+    flycheck-package
+    fn
+    focus
+    font-lock-studio
+    free-keys
+    fringe-helper
+    fullframe
+    fuzzy
+    ggtags
+    gh
+    ghc
+    ghub
+    ghub-plus
+    git-annex
+    git-link
+    git-modes
+    git-timemachine
+    git-undo
+    github-pullrequest
+    gitpatch
+    gnus-alias
+    gnus-harvest
+    google-this
+    goto-last-change
+    graphviz-dot-mode
+    haskell-mode
+    helm
+    helm-bibtex
+    helm-dash
+    helm-descbinds
+    helm-describe-modes
+    helm-firefox
+    helm-google
+    helm-navi
+    helm-pass
+    helpful
+    highlight
+    highlight-cl
+    highlight-defined
+    highlight-numbers
+    hl-line-plus
+    ht
+    hydra
+    hyperbole
+    iedit
+    iflipb
+    imenu-list
+    indent-shift
+    inf-ruby
+    info-lookmore
+    initsplit
+    ipcalc
+    ivy
+    ivy-hydra
+    ivy-pass
+    ivy-rich
+    jq-mode
+    js2-mode
+    js3-mode
+    json-mode
+    json-reformat
+    json-snatcher
+    key-chord
+    know-your-http-well
+    kv
+    ledger-mode
+    lentic
+    lispy
+    list-utils
+    llvm-mode
+    logito
+    loop
+    lsp-haskell
+    lsp-mode
+    lua-mode
+    lusty-explorer
+    m-buffer
+    macrostep
+    magit
+    magit-imerge
+    magithub
+    makefile-runner
+    makey
+    malyon
+    markdown-mode
+    markdown-preview-mode
+    marshal
+    math-symbol-lists
+    mc-extras
+    mediawiki
+    memory-usage
+    message-x
+    mic-paren
+    minimap
+    moccur-edit
+    monitor
+    mudel
+    multi-compile
+    multi-term
+    multifiles
+    multiple-cursors
+    muse
+    names
+    navi-mode
+    nf-procmail-mode
+    nginx-mode
+    nix-buffer
+    nix-mode
+    noflet
+    nov
+    oauth2
+    ob-restclient
+    olivetti
+    org
+    org-bookmark-heading
+    orgit
+    org-opml
+    # org-parser
+    org-ref
+    org-super-agenda
+    org-web-tools
+    orgaggregate
+    origami
+    outorg
+    outshine
+    ov
+    ox-texinfo-plus
+    package-lint
+    packed
+    pandoc-mode
+    paradox
+    paredit
+    parent-mode
+    parinfer
+    parsebib
+    parsec
+    parsec
+    pass
+    password-store
+    pcache
+    pcre2el
+    pdf-tools
+    per-window-point
+    persistent-scratch
+    peval
+    pfuture
+    phi-search
+    phi-search-mc
+    pkg-info
+    po-mode
+    popup
+    popup-pos-tip
+    popup-ruler
+    popwin
+    pos-tip
+    pp-c-l
+    prodigy
+    projectile
+    proof-general
+    purpose
+    python-mode
+    rainbow-delimiters
+    rainbow-mode
+    redshank
+    regex-tool
+    repl-toggle
+    request
+    restclient
+    reveal-in-osx-finder
+    rich-minority
+    riscv-mode
+    rs-gnus-summary
+    s
+    selected
+    shackle
+    shift-number
+    slime
+    smart-jump
+    smart-mode-line
+    smart-newline
+    smartparens
+    smartscan
+    smex
+    sort-words
+    sos
+    spinner
+    springboard
+    sql-indent
+    stopwatch
+    string-edit
+    string-inflection
+    super-save
+    supercite
+    swiper
+    tablegen-mode
+    tablist
+    tagedit
+    tidy
+    transpose-mark
+    treemacs
+    tuareg
+    typo
+    undo-tree
+    use-package
+    uuidgen
+    vdiff
+    vimish-fold
+    visual-fill-column
+    visual-regexp
+    visual-regexp-steroids
+    vline
+    w3m
+    web
+    web-mode
+    web-server
+    websocket
+    wgrep
+    which-key
+    whitespace-cleanup-mode
+    with-editor
+    word-count-mode
+    worf
+    writeroom-mode
+    ws-butler
+    xml-rpc
+    xray
+    yaml-mode
+    yaoddmuse
+    yasnippet
+    yasnippet-snippets
+    z3-mode
+    zencoding-mode
+    zoom
+    zoutline
+    ztree
+  ])) ];
 };
 
 emacs26debug = pkgs.stdenv.lib.overrideDerivation emacs26 (attrs: rec {
