@@ -1,8 +1,0 @@
-#!/bin/bash
-
-HOST=$1
-shift 1
-
-nix-copy-closure --to $HOST $(readlink -f ~/.nix-profile)
-pushme -f Projects,Contracts,home $HOST --from vulcan
-exec ssh $HOST update-nix "$@"
