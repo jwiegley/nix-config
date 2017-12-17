@@ -34,7 +34,7 @@ myHaskellPackageOverrides = libProf: self: super:
   gitlib-hit       = pkg ~/src/gitlib/gitlib-hit {};
   gitlib-libgit2   = pkg ~/src/gitlib/gitlib-libgit2 {};
   gitlib-test      = pkg ~/src/gitlib/gitlib-test {};
-  z3               = pkg ~/src/haskell-z3 { z3 = pkgs.z3_4_5_0; };
+  z3               = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
   z3-generate-api  = pkg ~/src/z3-generate-api { };
   z3-api-4_5_0     = pkg ~/src/z3-generate-api/api/4.5.0 { };
   hierarchy        = doJailbreak (pkg ~/src/hierarchy {});
@@ -284,7 +284,6 @@ myHaskellPackages = haskellPackages:
   kan-extensions
   kdt
   keys
-  lambdabot
   language-c
   lattices
   lens
@@ -442,8 +441,8 @@ myHaskellPackages = haskellPackages:
   x509-store
   x509-system
   yaml
-  # z3
-  # z3-generate-api
+  z3
+  z3-generate-api
   zippers
   zlib
 ];
@@ -469,6 +468,7 @@ profiledHaskellPackages_8_0 =
 ghcHEADEnv = pkgs.myEnvFun {
   name = "ghcHEAD";
   buildInputs = with haskellPackages_HEAD; [
+    pkgs.darwin.apple_sdk.frameworks.Cocoa
     haskellPackages_HEAD.ghc
     alex happy
     ghc-core
@@ -478,6 +478,7 @@ ghcHEADEnv = pkgs.myEnvFun {
 ghc82Env = pkgs.myEnvFun {
   name = "ghc82";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_2; [
+    pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
   ];
 };
@@ -485,6 +486,7 @@ ghc82Env = pkgs.myEnvFun {
 ghc82ProfEnv = pkgs.myEnvFun {
   name = "ghc82prof";
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_2; [
+    pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
   ];
 };
@@ -492,6 +494,7 @@ ghc82ProfEnv = pkgs.myEnvFun {
 ghc80Env = pkgs.myEnvFun {
   name = "ghc80";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_0; [
+    pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle (pkgs: myHaskellPackages pkgs ++
        (with pkgs; [
           concat-inline
@@ -508,15 +511,22 @@ ghc80Env = pkgs.myEnvFun {
     ghc-mod
     pointfree
     splot
+    # lambdabot
+
   ];
 };
 
 ghc80ProfEnv = pkgs.myEnvFun {
   name = "ghc80prof";
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_0; [
+    pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
     cabal-install
     hdevtools
+    ghc-mod
+    pointfree
+    splot
+    # lambdabot
   ];
 };
 
@@ -632,23 +642,29 @@ emacsFromUrl = pkgname: pkgsrc: pkgdeps: with pkgs; stdenv.mkDerivation rec {
   };
 };
 
-emacsPackageOverrides = super: with super; {
-  org = super.elpaBuild {
-    pname = "org";
+myEmacsPackages = super: with super; rec {
+  org = with pkgs; stdenv.mkDerivation (rec {
+    name = "emacs-org-${version}";
     version = "20160421";
-    src = pkgs.fetchFromGitHub {
+
+    src = fetchgit {
       url = git://github.com/jwiegley/org-mode.git;
-      sha256 = "0q8s074brh7ky34nbfwgagc1sdpihsk9ypa8b6i1dxc9dsryjdxj";
+      rev = "db5257389231bd49e92e2bc66713ac71b0435eec";
+      sha256 = "0v8i49c3yqfz7d92fx6paxw1ad565k918cricjg12zcl73r7rigk";
     };
-    packageRequires = [];
+
+    preInstall = ''
+      perl -i -pe "s%/usr/share%$out%;" local.mk
+    '';
+
+    buildInputs = [ emacs texinfo perl which ];
+
     meta = {
       homepage = "https://elpa.gnu.org/packages/org.html";
       license = pkgs.stdenv.lib.licenses.free;
     };
-  };
-};
+  });
 
-myEmacsPackages = super: with super; rec {
   ascii = emacsFromUrl "ascii.el" (pkgs.fetchurl {
     url = https://www.emacswiki.org/emacs/download/ascii.el;
     sha256 = "05fjsj5nmc05cmsi0qj914dqdwk8rll1d4dwhn0crw36p2ivql75";
@@ -1095,10 +1111,7 @@ myEmacsPackages = super: with super; rec {
   }) [];
 };
 
-emacs26PackagesNg   = pkgs.emacsPackagesNgGen emacs26;
-emacs26WithPackages = emacs26PackagesNg.emacsWithPackages;
-emacsPackagesNg     = emacs26PackagesNg;
-emacsWithPackages   = emacsPackagesNg.emacsWithPackages;
+emacs26PackagesNg = pkgs.emacsPackagesNgGen emacs26;
 
 emacsHEAD = with pkgs; pkgs.stdenv.lib.overrideDerivation
   (pkgs.emacs25.override { srcRepo = true; }) (attrs: rec {
@@ -1214,14 +1227,49 @@ emacs26 = with pkgs; pkgs.stdenv.lib.overrideDerivation
   '';
 });
 
-emacs26BareEnv = pkgs.myEnvFun {
-  name = "emacs26bare";
+emacs26Env = pkgs.myEnvFun {
+  name = "emacs26";
   buildInputs = [ emacs26 ];
 };
 
-emacs26Env = pkgs.buildEnv {
-  name = "emacs26";
-  paths = [ (emacs26WithPackages (with emacs26PackagesNg // myEmacsPackages emacs26PackagesNg; [
+emacsTestEnv = pkgs.myEnvFun {
+  name = "emacstest";
+  buildInputs = [
+   (let customEmacsPackages =
+      pkgs.emacsPackagesNg.overrideScope (super: self: {
+        org = with pkgs; stdenv.mkDerivation (rec {
+          name = "emacs-org-${version}";
+          version = "20160421";
+
+          src = fetchgit {
+            url = git://github.com/jwiegley/org-mode.git;
+            rev = "db5257389231bd49e92e2bc66713ac71b0435eec";
+            sha256 = "0v8i49c3yqfz7d92fx6paxw1ad565k918cricjg12zcl73r7rigk";
+          };
+
+          preInstall = ''
+            perl -i -pe "s%/usr/share%$out%;" local.mk
+          '';
+
+          buildInputs = [ emacs texinfo perl which ];
+
+          meta = {
+            homepage = "https://elpa.gnu.org/packages/org.html";
+            license = pkgs.stdenv.lib.licenses.free;
+          };
+        });
+      });
+    in customEmacsPackages.emacsWithPackages (super: with super; [ org ])) ];
+};
+
+emacs26FullEnv = pkgs.buildEnv {
+  name = "emacs26full";
+  paths = [
+   (let customEmacsPackages =
+      emacs26PackagesNg.overrideScope (super: self: {
+        emacs = emacs26;
+      } // myEmacsPackages emacs26PackagesNg);
+    in customEmacsPackages.emacsWithPackages (super: with super; [
     ace-link
     ace-window
     agda2-mode
@@ -1240,8 +1288,8 @@ emacs26Env = pkgs.buildEnv {
     avy-zap
     back-button
     backup-each-save
-    bbdb
-    bbdb-vcard
+    # bbdb
+    # bbdb-vcard
     beacon
     biblio
     bm
@@ -1450,6 +1498,8 @@ emacs26Env = pkgs.buildEnv {
     org-bookmark-heading
     orgit
     org-opml
+    # jww (2017-12-15): This fails to byte-compile during build, although it
+    # does byte-compile if you load it first.
     # org-parser
     org-ref
     org-super-agenda
@@ -1562,7 +1612,9 @@ emacs26Env = pkgs.buildEnv {
     yaml-mode
     yaoddmuse
     yasnippet
-    yasnippet-snippets
+    # jww (2017-12-15): This provides a 'default.el' file that clashes with
+    # what Nix loads on startup.
+    # yasnippet-snippets
     z3-mode
     zencoding-mode
     zoom
@@ -1635,6 +1687,7 @@ systemToolsEnv = pkgs.buildEnv {
     bash-completion
     nix-bash-completions
     ctop
+    direnv
     exiv2
     findutils
     fzf
@@ -1676,7 +1729,7 @@ systemToolsEnv = pkgs.buildEnv {
     unzip
     watch
     xz
-    z3_4_5_0
+    z3
     cvc4
     zip
     zsh
