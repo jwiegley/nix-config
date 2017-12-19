@@ -1229,7 +1229,7 @@ emacs26 = with pkgs; pkgs.stdenv.lib.overrideDerivation
 
 emacs26Env = pkgs.myEnvFun {
   name = "emacs26";
-  buildInputs = [ emacs26 ];
+  buildInputs = with emacs26PackagesNg; [ emacs26 ghc-mod ];
 };
 
 emacsTestEnv = pkgs.myEnvFun {
@@ -1686,6 +1686,7 @@ systemToolsEnv = pkgs.buildEnv {
     bashInteractive
     bash-completion
     nix-bash-completions
+    browserpass
     ctop
     direnv
     exiv2
@@ -1704,6 +1705,7 @@ systemToolsEnv = pkgs.buildEnv {
     (haskell.lib.justStaticExecutables haskPkgs.sizes)
     (haskell.lib.justStaticExecutables haskPkgs.una)
     imagemagick_light
+    jdk8
     jenkins
     less
     multitail
@@ -1821,6 +1823,8 @@ gitToolsEnv = pkgs.buildEnv {
   ];
 };
 
+pdf-tools-server = pkgs.callPackage ~/.nixpkgs/emacs/pdf-tools.nix {};
+
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
   paths = with pkgs; [
@@ -1830,6 +1834,7 @@ publishToolsEnv = pkgs.buildEnv {
     doxygen
     graphviz-nox
     highlight
+    pdf-tools-server
     poppler
     sourceHighlight
     texinfo
