@@ -512,7 +512,6 @@ ghc80Env = pkgs.myEnvFun {
     pointfree
     splot
     # lambdabot
-
   ];
 };
 
