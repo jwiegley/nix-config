@@ -604,7 +604,7 @@ coq85Env = pkgs.myEnvFun {
   buildInputs = [ coq_8_5 ] ++ myCoqPackages pkgs.coqPackages_8_5;
 };
 
-coqPackages_8_4 = pkgs.mkCoqPackages coqPackages_8_4 coq_8_4;
+coqPackages_8_4 = pkgs.mkCoqPackages coq_8_4;
 
 coq84Env = pkgs.myEnvFun {
   name = "coq84";
@@ -712,11 +712,6 @@ myEmacsPackages = super: with super; rec {
   dedicated = emacsFromUrl "dedicated.el" (pkgs.fetchurl {
     url = https://raw.githubusercontent.com/emacsmirror/dedicated/master/dedicated.el;
     sha256 = "03ky8hvj10q96w38qb9y0b5nqyp52nrq828570gx93rh1607zk8p";
-  }) [];
-
-  dired-plus = emacsFromUrl "dired+.el" (pkgs.fetchurl {
-    url = https://www.emacswiki.org/emacs/download/dired+.el;
-    sha256 = "0ymk1jnxmgs4m64197sy5rl2n0gfp9w81lk1b5xzch1vzw3n8ldw";
   }) [];
 
   el-mock = emacsFromUrl "el-mock.el" (pkgs.fetchurl {
@@ -1335,7 +1330,6 @@ emacs26FullEnv = pkgs.buildEnv {
     diffview
     diminish
     dired-hacks-utils
-    dired-plus
     dired-ranger
     dired-toggle
     discover
@@ -1624,7 +1618,7 @@ emacs26FullEnv = pkgs.buildEnv {
 
 emacs26debug = pkgs.stdenv.lib.overrideDerivation emacs26 (attrs: rec {
   name = "emacs-26.0.90-debug";
-  doCheck = false;
+  doCheck = true;
   CFLAGS = "-O0 -g3";
   configureFlags = [ "--with-modules" ] ++
    [ "--with-ns" "--disable-ns-self-contained"
@@ -1744,6 +1738,7 @@ networkToolsEnv = pkgs.buildEnv {
   paths = with pkgs; [
     aria2
     backblaze-b2
+    bazaar
     cacert
     httrack
     mercurialFull
@@ -1761,6 +1756,7 @@ networkToolsEnv = pkgs.buildEnv {
     sipcalc
     socat2pre
     spiped
+    subversion
     w3m
     wget
     youtube-dl
