@@ -20,10 +20,10 @@ if [[ "$1" == --debug ]]; then
 elif [[ "$EMACSVER" == 26full ]]; then
     exec load-env-coq$COQVER \
          load-env-ghc$GHCVER \
-         bash -c "unset TZ ; $EMACSBIN --debug-init $@"
+         bash -c "unset TZ ; $EMACSBIN $@"
 else
     exec load-env-coq$COQVER \
          load-env-ghc$GHCVER \
          load-env-emacs$EMACSVER \
-         bash -c "unset TZ ; $EMACSBIN --debug-init $@"
+         bash -c "unset TZ ; $EMACSBIN $@"
 fi
