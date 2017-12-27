@@ -559,7 +559,7 @@ myHaskellPackages = haskellPackages: with haskellPackages; [
   zlib
 ];
 
-haskPkgs = haskellPackages_8_0;
+haskPkgs = haskellPackages_8_2;
 haskellPackages = haskPkgs;
 
 mkHaskellPackages = hpkgs: hoverrides: hpkgs.override {
