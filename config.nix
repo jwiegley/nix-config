@@ -121,7 +121,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
       haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
     });
 
-  haskell-src-exts_1_20_1 = callPackage
+  "haskell-src-exts_1_20_1" = callPackage
     ({ mkDerivation, array, base, containers, cpphs, directory
      , filepath, ghc-prim, happy, mtl, pretty, pretty-show, smallcheck
      , tasty, tasty-golden, tasty-smallcheck
@@ -142,7 +142,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
        license = stdenv.lib.licenses.bsd3;
      }) {};
 
-  haskell-src-exts-simple_1_20_0_0 = callPackage
+  "haskell-src-exts-simple_1_20_0_0" = callPackage
     ({ mkDerivation, base, haskell-src-exts }:
      mkDerivation {
        pname = "haskell-src-exts-simple";
@@ -588,8 +588,8 @@ ghcHEADProfEnv = pkgs.myEnvFun {
     (ghcWithHoogle myHaskellPackages)
 
     # lhs2tex
-    (doJailbreak pushme)
-    (doJailbreak runmany)
+    pushme
+    runmany
     bench
     git-all
     git-monitor
@@ -609,8 +609,8 @@ ghc82Env = pkgs.myEnvFun {
     (ghcWithHoogle myHaskellPackages)
 
     # lhs2tex
-    (doJailbreak pushme)
-    (doJailbreak runmany)
+    pushme
+    runmany
     bench
     git-all
     git-monitor
@@ -630,8 +630,8 @@ ghc82ProfEnv = pkgs.myEnvFun {
     (ghcWithHoogle myHaskellPackages)
 
     # lhs2tex
-    (doJailbreak pushme)
-    (doJailbreak runmany)
+    pushme
+    runmany
     bench
     git-all
     git-monitor
