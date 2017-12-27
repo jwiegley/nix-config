@@ -154,6 +154,8 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
        license = stdenv.lib.licenses.mit;
      }) { haskell-src-exts = haskell-src-exts_1_20_1; };
 
+  recurseForDerivations = true;
+
   mkDerivation = args: super.mkDerivation (args // {
     enableLibraryProfiling = libProf;
     enableExecutableProfiling = false;
@@ -186,6 +188,8 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   these                    = doJailbreak super.these;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = doJailbreak (dontCheck (pkg ~/oss/timeparsers {}));
+
+  recurseForDerivations = true;
 
   mkDerivation = args: super.mkDerivation (args // {
     enableLibraryProfiling = libProf;
