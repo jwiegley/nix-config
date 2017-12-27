@@ -2,29 +2,24 @@
 
 packageOverrides = pkgs: rec {
 
-withSrc = path: deriv:
-  pkgs.stdenv.lib.overrideDerivation deriv (attrs: { src = path; });
-
-withName = arg: deriv:
-  pkgs.stdenv.lib.overrideDerivation deriv (attrs: { name = arg; });
+z3-debug = true;
 
 ##############################################################################
 # Haskell
-##############################################################################
 
-myHaskellPackageOverrides = libProf: self: super:
-  with pkgs.haskell.lib; let pkg = self.callPackage; in rec {
+myHaskellPackageDefs = super:
+  with super; let pkg = super.callPackage; in rec {
 
   # Personal packages
-
   async-pool       = pkg ~/src/async-pool {};
+  bindings-DSL     = pkg ~/oss/bindings-DSL {};
   bytestring-fiat  = pkg ~/src/bytestring/extract {};
   c2hsc            = pkg ~/src/c2hsc {};
-  categorical      = dontCheck (dontHaddock (pkg ~/src/categorical {}));
+  categorical      = pkg ~/src/categorical {};
   commodities      = pkg ~/src/ledger4/commodities {};
-  consistent       = doJailbreak (dontCheck (pkg ~/src/consistent {}));
+  consistent       = pkg ~/src/consistent {};
   coq-haskell      = pkg ~/src/coq-haskell {};
-  extract          = dontHaddock (pkg ~/src/bytestring/extract {});
+  extract          = pkg ~/src/bytestring/extract {};
   fuzzcheck        = pkg ~/src/fuzzcheck {};
   git-all          = pkg ~/src/git-all {};
   git-du           = pkg ~/src/git-du {};
@@ -34,73 +29,161 @@ myHaskellPackageOverrides = libProf: self: super:
   gitlib-hit       = pkg ~/src/gitlib/gitlib-hit {};
   gitlib-libgit2   = pkg ~/src/gitlib/gitlib-libgit2 {};
   gitlib-test      = pkg ~/src/gitlib/gitlib-test {};
-  z3               = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
-  z3-generate-api  = pkg ~/src/z3-generate-api { };
-  z3-api-4_5_0     = pkg ~/src/z3-generate-api/api/4.5.0 { };
-  hierarchy        = doJailbreak (pkg ~/src/hierarchy {});
-  hlibgit2         = dontCheck (pkg ~/src/gitlib/hlibgit2 {});
+  hierarchy        = pkg ~/src/hierarchy {};
+  hlibgit2         = pkg ~/src/gitlib/hlibgit2 { git = pkgs.gitAndTools.git; };
   hnix             = pkg ~/src/hnix {};
   hours            = pkg ~/src/hours {};
-  ipcvar           = dontCheck (pkg ~/src/ipcvar {});
+  ipcvar           = pkg ~/src/ipcvar {};
   linearscan       = pkg ~/src/linearscan {};
-  linearscan-hoopl = dontCheck (pkg ~/src/linearscan-hoopl {});
+  linearscan-hoopl = pkg ~/src/linearscan-hoopl {};
   logging          = pkg ~/src/logging {};
   monad-extras     = pkg ~/src/monad-extras {};
   parsec-free      = pkg ~/src/parsec-free {};
   pipes-async      = pkg ~/src/pipes-async {};
-  pipes-files      = doJailbreak (dontCheck (pkg ~/src/pipes-files {}));
-  pushme           = doJailbreak (pkg ~/src/pushme {});
-  recursors        = doJailbreak (pkg ~/src/recursors {});
+  pipes-files      = pkg ~/src/pipes-files {};
+  pushme           = pkg ~/src/pushme {};
+  recursors        = pkg ~/src/recursors {};
   runmany          = pkg ~/src/runmany {};
   simple-mirror    = pkg ~/src/hackage-mirror {};
   sitebuilder      = pkg ~/doc/sitebuilder { yuicompressor = pkgs.yuicompressor; };
   sizes            = pkg ~/src/sizes {};
   una              = pkg ~/src/una {};
+  z3-api-4_5_0     = pkg ~/src/z3-generate-api/api/4.5.0 { };
+  z3-generate-api  = pkg ~/src/z3-generate-api { };
   z3cat            = pkg ~/src/z3cat {};
 
   putting-lenses-to-work = pkg ~/doc/papers/putting-lenses-to-work {};
 
   # Open Source
-
+  concat-classes   = pkg ~/oss/concat/classes {};
+  concat-examples  = pkg ~/oss/concat/examples {};
+  concat-graphics  = pkg ~/oss/concat/graphics {};
+  concat-hardware  = pkg ~/oss/concat/hardware {};
+  concat-inline    = pkg ~/oss/concat/inline {};
+  concat-plugin    = pkg ~/oss/concat/plugin {};
+  freer-effects    = pkg ~/oss/freer-effects {};
   hs-to-coq        = pkg ~/oss/hs-to-coq/hs-to-coq {};
-  concat-classes   = dontCheck (dontHaddock (pkg ~/oss/concat/classes {}));
-  concat-examples  = dontCheck (dontHaddock (pkg ~/oss/concat/examples {}));
-  concat-plugin    = dontCheck (dontHaddock (pkg ~/oss/concat/plugin {}));
-  concat-inline    = dontCheck (dontHaddock (pkg ~/oss/concat/inline {}));
-  concat-graphics  = dontCheck (dontHaddock (pkg ~/oss/concat/graphics {}));
-  # concat-hardware  = dontCheck (dontHaddock (pkg ~/oss/concat/hardware {}));
+
+  z3 = pkg ~/src/haskell-z3 {
+    z3 = if z3-debug
+      then pkgs.z3.overrideDerivation (attrs: {
+        src = ~/oss/z3;
+        configurePhase = ''
+          ${pkgs.python2.interpreter} scripts/mk_make.py --prefix=$out \
+            --python --pypkgdir=$out/${pkgs.python2.sitePackages} -d
+          cd build
+        '';
+      })
+      else pkgs.z3;
+  };
 
   # BAE packages
-  harness             =
-    dontHaddock (pkg ~/bae/autofocus-deliverable/rings-dashboard/mitll-harness {});
-  rings-dashboard-api =
-    dontHaddock (pkg ~/bae/autofocus-deliverable/rings-dashboard/rings-dashboard-api {});
-  comparator          = dontHaddock (pkg ~/bae/autofocus-deliverable/xhtml/comparator {});
-  generator           = dontHaddock (pkg ~/bae/autofocus-deliverable/xhtml/generator {});
-  rings-dashboard     = dontHaddock (pkg ~/bae/autofocus-deliverable/rings-dashboard {});
-  hmon                = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon {});
-  hsmedl              = dontHaddock (pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {});
-  solver              = dontCheck (doJailbreak (dontHaddock (pkg ~/bae/concerto/solver {})));
+  comparator          = pkg ~/bae/autofocus-deliverable/xhtml/comparator {};
+  generator           = pkg ~/bae/autofocus-deliverable/xhtml/generator {};
+  harness             = pkg ~/bae/autofocus-deliverable/rings-dashboard/mitll-harness {};
+  hmon                = pkg ~/bae/atif-deliverable/monitors/hmon {};
+  hsmedl              = pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {};
+  rings-dashboard     = pkg ~/bae/autofocus-deliverable/rings-dashboard {};
+  rings-dashboard-api = pkg ~/bae/autofocus-deliverable/rings-dashboard/rings-dashboard-api {};
+  solver              = pkg ~/bae/concerto/solver {};
+};
 
-  # Hackage overrides
+haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
+  with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
+
+  Agda                      = dontHaddock super.Agda;
+  blaze-builder-enumerator  = doJailbreak super.blaze-builder-enumerator;
+  categorical               = dontCheck mypkgs.categorical;
+  compressed                = doJailbreak super.compressed;
+  concat-classes            = dontHaddock mypkgs.concat-classes;
+  concat-examples           = dontHaddock (dontCheck mypkgs.concat-examples);
+  concat-graphics           = dontCheck mypkgs.concat-graphics;
+  concat-inline             = dontHaddock mypkgs.concat-inline;
+  concat-plugin             = dontHaddock mypkgs.concat-plugin;
+  consistent                = dontCheck mypkgs.consistent;
+  derive-storable           = dontCheck super.derive-storable;
+  hierarchy                 = doJailbreak super.hierarchy;
+  hlibgit2                  = doJailbreak super.hlibgit2;
+  ipcvar                    = dontCheck super.ipcvar;
+  linearscan-hoopl          = dontCheck super.linearscan-hoopl;
+  liquidhaskell             = doJailbreak super.liquidhaskell;
+  pipes-binary              = doJailbreak super.pipes-binary;
+  pipes-files               = dontCheck super.pipes-files;
+  pipes-zlib                = dontCheck (doJailbreak super.pipes-zlib);
+  recursors                 = doJailbreak super.recursors;
+  sbvPlugin                 = doJailbreak super.sbvPlugin;
+  time-recurrence           = doJailbreak super.time-recurrence;
+  timeparsers               = doJailbreak (dontCheck (pkg ~/oss/timeparsers {}));
+  z3cat                     = dontCheck mypkgs.z3cat;
+
+  lambdabot-haskell-plugins = doJailbreak (
+    super.lambdabot-haskell-plugins.override {
+      haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
+    });
+
+  haskell-src-exts_1_20_1 = callPackage
+    ({ mkDerivation, array, base, containers, cpphs, directory
+     , filepath, ghc-prim, happy, mtl, pretty, pretty-show, smallcheck
+     , tasty, tasty-golden, tasty-smallcheck
+     }:
+     mkDerivation {
+       pname = "haskell-src-exts";
+       version = "1.20.1";
+       sha256 = "1jsjl9hja2dpcfq4mzlfpwyr6axwnwgacfb7aa070kz4lbygzaa8";
+       libraryHaskellDepends = [ array base cpphs ghc-prim pretty ];
+       libraryToolDepends = [ happy ];
+       testHaskellDepends = [
+         base containers directory filepath mtl pretty-show smallcheck tasty
+         tasty-golden tasty-smallcheck
+       ];
+       doCheck = false;
+       homepage = "https://github.com/haskell-suite/haskell-src-exts";
+       description = "Manipulating Haskell source: abstract syntax, lexer, parser, and pretty-printer";
+       license = stdenv.lib.licenses.bsd3;
+     }) {};
+
+  haskell-src-exts-simple_1_20_0_0 = callPackage
+    ({ mkDerivation, base, haskell-src-exts }:
+     mkDerivation {
+       pname = "haskell-src-exts-simple";
+       version = "1.20.0.0";
+       sha256 = "0p79ppmwb14lj2a1wy42zgm3z3zk5jbyn7rfgwxsyw2g424bw1dk";
+       libraryHaskellDepends = [ base haskell-src-exts ];
+       homepage = "https://github.com/int-e/haskell-src-exts-simple";
+       description = "A simplified view on the haskell-src-exts AST";
+       license = stdenv.lib.licenses.mit;
+     }) { haskell-src-exts = haskell-src-exts_1_20_1; };
+
+  mkDerivation = args: super.mkDerivation (args // {
+    enableLibraryProfiling = libProf;
+    enableExecutableProfiling = false;
+  });
+};
+
+haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
+  with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
+
   Agda                     = dontHaddock super.Agda;
-  bindings-DSL             = pkg ~/oss/bindings-DSL {};
-  bindings-posix           = pkg ~/oss/bindings-DSL/bindings-posix {};
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   compressed               = doJailbreak super.compressed;
+  consistent               = doJailbreak (dontCheck mypkgs.consistent);
   derive-storable          = dontCheck super.derive-storable;
   diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
   diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
-  freer-effects            = pkg ~/oss/freer-effects {};
   hakyll                   = doJailbreak super.hakyll;
+  hierarchy                = doJailbreak super.hierarchy;
+  ipcvar                   = dontCheck super.ipcvar;
   lattices                 = doJailbreak super.lattices;
+  linearscan-hoopl         = dontCheck super.linearscan-hoopl;
   pandoc-citeproc          = pkg ~/oss/pandoc-citeproc {};
   pipes-binary             = doJailbreak super.pipes-binary;
+  pipes-files              = dontCheck (doJailbreak super.pipes-files);
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
   posix-paths              = doJailbreak super.posix-paths;
+  recursors                = doJailbreak super.recursors;
   shelly                   = doJailbreak super.shelly;
-  these                    = doJailbreak super.these;
   text-icu                 = dontCheck super.text-icu;
+  these                    = doJailbreak super.these;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = doJailbreak (dontCheck (pkg ~/oss/timeparsers {}));
 
@@ -110,21 +193,42 @@ myHaskellPackageOverrides = libProf: self: super:
   });
 };
 
-myHaskellPackages = haskellPackages:
-  with pkgs.haskell.lib; with haskellPackages; [
-  # HFuse
-  # categorical
-  # free-functors
-  # ghc-datasize
-  # gitlib-hit
-  # gitlib-s3
-  # idris
-  # liquidhaskell
-  # threadscope
-  # z3-api-4_5_0
-  # z3cat
-  Agda
+haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
+  with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
+
+  Agda                     = dontHaddock super.Agda;
+  blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
+  compressed               = doJailbreak super.compressed;
+  consistent               = doJailbreak (dontCheck mypkgs.consistent);
+  derive-storable          = dontCheck super.derive-storable;
+  diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
+  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
+  hakyll                   = doJailbreak super.hakyll;
+  hierarchy                = doJailbreak super.hierarchy;
+  ipcvar                   = dontCheck super.ipcvar;
+  lattices                 = doJailbreak super.lattices;
+  linearscan-hoopl         = dontCheck super.linearscan-hoopl;
+  pandoc-citeproc          = pkg ~/oss/pandoc-citeproc {};
+  pipes-binary             = doJailbreak super.pipes-binary;
+  pipes-files              = dontCheck (doJailbreak super.pipes-files);
+  pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
+  posix-paths              = doJailbreak super.posix-paths;
+  recursors                = doJailbreak super.recursors;
+  shelly                   = doJailbreak super.shelly;
+  text-icu                 = dontCheck super.text-icu;
+  these                    = doJailbreak super.these;
+  time-recurrence          = doJailbreak super.time-recurrence;
+  timeparsers              = doJailbreak (dontCheck (pkg ~/oss/timeparsers {}));
+
+  mkDerivation = args: super.mkDerivation (args // {
+    enableLibraryProfiling = libProf;
+    enableExecutableProfiling = false;
+  });
+};
+
+myHaskellPackages = haskellPackages: with haskellPackages; [
   Boolean
+  # HFuse
   HTTP
   HUnit
   IfElse
@@ -237,10 +341,13 @@ myHaskellPackages = haskellPackages:
   fuzzcheck
   generic-lens
   ghc-core
+  # ghc-datasize
   ghc-paths
   gitlib
   gitlib-cmdline
+  # gitlib-hit
   gitlib-libgit2
+  # gitlib-s3
   gitlib-sample
   gitlib-test
   graphviz
@@ -258,7 +365,6 @@ myHaskellPackages = haskellPackages:
   hierarchy
   hlibgit2
   hlint
-  # hmatrix
   hnix
   hpack
   hpack
@@ -297,13 +403,13 @@ myHaskellPackages = haskellPackages:
   linear
   linearscan
   linearscan-hoopl
+  # liquidhaskell
   list-extras
   list-t
   logging
   logict
   machinecell
   machines
-  matrix
   megaparsec
   mime-mail
   mime-types
@@ -369,6 +475,7 @@ myHaskellPackages = haskellPackages:
   retry
   safe
   sbv
+  sbvPlugin
   scalpel
   scientific
   scotty
@@ -416,6 +523,7 @@ myHaskellPackages = haskellPackages:
   text-format
   text-show
   these
+  # threadscope
   thyme
   time
   time-recurrence
@@ -442,7 +550,7 @@ myHaskellPackages = haskellPackages:
   x509-system
   yaml
   z3
-  z3-generate-api
+  # z3-generate-api
   zippers
   zlib
 ];
@@ -450,28 +558,43 @@ myHaskellPackages = haskellPackages:
 haskPkgs = haskellPackages_8_0;
 haskellPackages = haskPkgs;
 
-haskellPackages_HEAD =
-  pkgs.haskell.packages.ghcHEAD.extend (myHaskellPackageOverrides false);
-profiledHaskellPackages_HEAD =
-  pkgs.haskell.packages.ghcHEAD.extend (myHaskellPackageOverrides true);
+mkHaskellPackages = hpkgs: hoverrides: hpkgs.override {
+  overrides = self: super: hoverrides (myHaskellPackageDefs super) self super;
+};
 
-haskellPackages_8_2 =
-  pkgs.haskell.packages.ghc822.extend (myHaskellPackageOverrides false);
-profiledHaskellPackages_8_2 =
-  pkgs.haskell.packages.ghc822.extend (myHaskellPackageOverrides true);
+haskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD
+  (haskellPackage_HEAD_overrides false);
+profiledHaskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD
+  (haskellPackage_HEAD_overrides true);
 
-haskellPackages_8_0 =
-  pkgs.haskell.packages.ghc802.extend (myHaskellPackageOverrides false);
-profiledHaskellPackages_8_0 =
-  pkgs.haskell.packages.ghc802.extend (myHaskellPackageOverrides true);
+haskellPackages_8_2 = mkHaskellPackages pkgs.haskell.packages.ghc822
+  (haskellPackage_8_2_overrides false);
+profiledHaskellPackages_8_2 = mkHaskellPackages pkgs.haskell.packages.ghc822
+  (haskellPackage_8_2_overrides true);
 
-ghcHEADEnv = pkgs.myEnvFun {
-  name = "ghcHEAD";
-  buildInputs = with haskellPackages_HEAD; [
+haskellPackages_8_0 = mkHaskellPackages pkgs.haskell.packages.ghc802
+  (haskellPackage_8_0_overrides false);
+profiledHaskellPackages_8_0 = mkHaskellPackages pkgs.haskell.packages.ghc802
+  (haskellPackage_8_0_overrides true);
+
+ghcHEADProfEnv = pkgs.myEnvFun {
+  name = "ghcHEADprof";
+  buildInputs = with pkgs.haskell.lib; with haskellPackages_HEAD; [
     pkgs.darwin.apple_sdk.frameworks.Cocoa
-    haskellPackages_HEAD.ghc
-    alex happy
-    ghc-core
+    (ghcWithHoogle myHaskellPackages)
+
+    # lhs2tex
+    (doJailbreak pushme)
+    (doJailbreak runmany)
+    bench
+    git-all
+    git-monitor
+    hours
+    hpack
+    simple-mirror
+    sitebuilder
+    sizes
+    una
   ];
 };
 
@@ -480,6 +603,19 @@ ghc82Env = pkgs.myEnvFun {
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_2; [
     pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
+
+    # lhs2tex
+    (doJailbreak pushme)
+    (doJailbreak runmany)
+    bench
+    git-all
+    git-monitor
+    hours
+    hpack
+    simple-mirror
+    sitebuilder
+    sizes
+    una
   ];
 };
 
@@ -488,6 +624,19 @@ ghc82ProfEnv = pkgs.myEnvFun {
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_2; [
     pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
+
+    # lhs2tex
+    (doJailbreak pushme)
+    (doJailbreak runmany)
+    bench
+    git-all
+    git-monitor
+    hours
+    hpack
+    simple-mirror
+    sitebuilder
+    sizes
+    una
   ];
 };
 
@@ -495,23 +644,27 @@ ghc80Env = pkgs.myEnvFun {
   name = "ghc80";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_0; [
     pkgs.darwin.apple_sdk.frameworks.Cocoa
-    (ghcWithHoogle (pkgs: myHaskellPackages pkgs ++
-       (with pkgs; [
-          concat-inline
-          concat-classes
-          concat-plugin
-          concat-examples
-          concat-graphics
-          # concat-hardware
-          singletons
-          units
-        ])))
+    (ghcWithHoogle (pkgs: myHaskellPackages pkgs ++ (with pkgs; [
+       Agda
+       # idris
+       categorical
+       concat-inline
+       concat-classes
+       concat-plugin
+       concat-examples
+       concat-graphics
+       # concat-hardware
+       singletons
+       units
+       z3cat
+     ])))
+
     cabal-install
-    hdevtools
     ghc-mod
+    hdevtools
+    lambdabot
     pointfree
     splot
-    # lambdabot
   ];
 };
 
@@ -519,13 +672,25 @@ ghc80ProfEnv = pkgs.myEnvFun {
   name = "ghc80prof";
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_0; [
     pkgs.darwin.apple_sdk.frameworks.Cocoa
-    (ghcWithHoogle myHaskellPackages)
+    (ghcWithHoogle (pkgs: myHaskellPackages pkgs ++ (with pkgs; [
+       categorical
+       concat-inline
+       concat-classes
+       concat-plugin
+       concat-examples
+       concat-graphics
+       # concat-hardware
+       singletons
+       units
+       z3cat
+     ])))
+
     cabal-install
-    hdevtools
     ghc-mod
+    hdevtools
+    lambdabot
     pointfree
     splot
-    # lambdabot
   ];
 };
 
@@ -547,7 +712,6 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
 
 ##############################################################################
 # Coq
-##############################################################################
 
 myCoqPackages = coqPkgs: with pkgs; [
   ocaml
@@ -577,6 +741,33 @@ coq_8_6 = pkgs.coq_8_6.override { csdp = null; };
 coq_8_5 = pkgs.coq_8_5.override { csdp = null; };
 coq_8_4 = pkgs.coq_8_4.override { csdp = null; };
 
+coq_HEAD = pkgs.stdenv.lib.overrideDerivation coq_8_7 (attrs: rec {
+  name = "coq-8.8-pre";
+  version = "8.8";
+  src = ~/oss/coq;
+  ideFlags = "-lablgtkdir ${pkgs.ocamlPackages.lablgtk}/lib/ocaml/*/site-lib/lablgtk2 -coqide opt";
+  preConfigure = ''
+    configureFlagsArray=(
+      ${ideFlags}
+    )
+  '';
+});
+
+coqPackages_HEAD = pkgs.mkCoqPackages coq_HEAD;
+
+coqHEADEnv = pkgs.myEnvFun {
+  name = "coqHEAD";
+  buildInputs = [ coq_HEAD ] # ++ myCoqPackages coqPackages_HEAD ++
+    # (with coqPackages_HEAD; [
+    #    CoLoR
+    #    category-theory
+    #    equations
+    #    math-classes
+    #    metalib
+    #  ])
+     ;
+};
+
 coq87Env = pkgs.myEnvFun {
   name = "coq87";
   buildInputs = [ coq_8_7 ] ++ myCoqPackages pkgs.coqPackages_8_7 ++
@@ -586,7 +777,175 @@ coq87Env = pkgs.myEnvFun {
        equations
        math-classes
        metalib
-     ]);
+     ])
+    ++ (with pkgs.coqPackages_8_7.contribs; [
+      # aac-tactics
+      abp
+      additions
+      ails
+      algebra
+      # amm11262
+      angles
+      area-method
+      # atbr
+      automata
+      axiomatic-abp
+      # bdds
+      bertrand
+      buchberger
+      canon-bdds
+      # cantor
+      cats-in-zfc
+      ccs
+      cfgv
+      checker
+      chinese
+      circuits
+      # classical-realizability
+      coalgebras
+      coinductive-examples
+      # coinductive-reals
+      concat
+      constructive-geometry
+      # containers
+      # continuations
+      coq-in-coq
+      coqoban
+      # corn
+      # counting
+      cours-de-coq
+      ctltctl
+      dblib
+      demos
+      dep-map
+      # descente-infinie
+      dictionaries
+      distributed-reference-counting
+      domain-theory
+      # ergo
+      euclidean-geometry
+      euler-formula
+      exact-real-arithmetic
+      exceptions
+      fairisle
+      fermat4
+      finger-tree
+      firing-squad
+      float
+      founify
+      free-groups
+      fsets
+      fssec-model
+      functions-in-zfc
+      fundamental-arithmetics
+      gc
+      generic-environments
+      # goedel
+      graph-basics
+      # graphs
+      group-theory
+      groups
+      hardware
+      hedges
+      # high-school-geometry
+      higman-cf
+      higman-nw
+      higman-s
+      historical-examples
+      hoare-tut
+      huffman
+      icharate
+      idxassoc
+      ieee754
+      int-map
+      # intuitionistic-nuprl
+      ipc
+      izf
+      jordan-curve-theorem
+      # jprover
+      karatsuba
+      kildall
+      lambda
+      lambek
+      lazy-pcf
+      lc
+      # legacy-field
+      # legacy-ring
+      # lemma-overloading
+      lesniewski-mereology
+      # lin-alg
+      ltl
+      # maple-mode
+      markov
+      # math-classes
+      maths
+      matrices
+      micromega
+      mini-compiler
+      minic
+      miniml
+      mod-red
+      multiplier
+      mutual-exclusion
+      # nfix
+      # orb-stab
+      otway-rees
+      paco
+      paradoxes
+      param-pi
+      pautomata
+      persistent-union-find
+      pi-calc
+      pocklington
+      # presburger
+      prfx
+      projective-geometry
+      propcalc
+      pts
+      ptsatr
+      # ptsf
+      qarith
+      qarith-stern-brocot
+      quicksort-complexity
+      railroad-crossing
+      ramsey
+      random
+      # rational
+      # recursive-definition
+      reflexive-first-order
+      regexp
+      # relation-algebra
+      # relation-extraction
+      rem
+      rsa
+      ruler-compass-geometry
+      schroeder
+      search-trees
+      # semantics
+      shuffle
+      # smc
+      square-matrices
+      # stalmarck
+      streams
+      # string
+      subst
+      sudoku
+      sum-of-two-square
+      tait
+      tarski-geometry
+      three-gap
+      # topology
+      tortoise-hare-algorithm
+      traversable-fincontainer
+      # tree-automata
+      tree-diameter
+      weak-up-to
+      zchinese
+      zf
+      zfc
+      zorns-lemma
+      zsearch-trees
+    ]);
 };
 
 coq86Env = pkgs.myEnvFun {
@@ -596,12 +955,348 @@ coq86Env = pkgs.myEnvFun {
        category-theory
        equations
        ssreflect
-     ]);
+     ])
+    ++ (with pkgs.coqPackages_8_6.contribs; [
+      # aac-tactics
+      abp
+      additions
+      # ails
+      algebra
+      amm11262
+      angles
+      area-method
+      # atbr
+      automata
+      axiomatic-abp
+      # bdds
+      # bertrand
+      buchberger
+      canon-bdds
+      cantor
+      cats-in-zfc
+      ccs
+      cfgv
+      checker
+      chinese
+      circuits
+      classical-realizability
+      coalgebras
+      coinductive-examples
+      # coinductive-reals
+      concat
+      constructive-geometry
+      # containers
+      # continuations
+      coq-in-coq
+      coqoban
+      # corn
+      # counting
+      cours-de-coq
+      ctltctl
+      dblib
+      demos
+      dep-map
+      # descente-infinie
+      dictionaries
+      distributed-reference-counting
+      domain-theory
+      # ergo
+      euclidean-geometry
+      euler-formula
+      exact-real-arithmetic
+      exceptions
+      fairisle
+      # fermat4
+      finger-tree
+      firing-squad
+      # float
+      founify
+      free-groups
+      fsets
+      fssec-model
+      functions-in-zfc
+      fundamental-arithmetics
+      gc
+      generic-environments
+      # goedel
+      graph-basics
+      # graphs
+      group-theory
+      groups
+      hardware
+      hedges
+      high-school-geometry
+      higman-cf
+      higman-nw
+      higman-s
+      historical-examples
+      hoare-tut
+      huffman
+      icharate
+      idxassoc
+      ieee754
+      int-map
+      # intuitionistic-nuprl
+      ipc
+      izf
+      jordan-curve-theorem
+      # jprover
+      karatsuba
+      kildall
+      lambda
+      lambek
+      lazy-pcf
+      lc
+      # legacy-field
+      # legacy-ring
+      # lemma-overloading
+      lesniewski-mereology
+      # lin-alg
+      ltl
+      # maple-mode
+      # markov
+      math-classes
+      maths
+      matrices
+      micromega
+      mini-compiler
+      minic
+      miniml
+      mod-red
+      multiplier
+      mutual-exclusion
+      # nfix
+      # orb-stab
+      otway-rees
+      paco
+      paradoxes
+      param-pi
+      pautomata
+      persistent-union-find
+      pi-calc
+      pocklington
+      # presburger
+      prfx
+      projective-geometry
+      propcalc
+      pts
+      ptsatr
+      # ptsf
+      qarith
+      # qarith-stern-brocot
+      quicksort-complexity
+      railroad-crossing
+      ramsey
+      random
+      # rational
+      # recursive-definition
+      reflexive-first-order
+      regexp
+      # relation-algebra
+      # relation-extraction
+      rem
+      rsa
+      ruler-compass-geometry
+      schroeder
+      search-trees
+      # semantics
+      shuffle
+      # smc
+      square-matrices
+      # stalmarck
+      streams
+      # string
+      subst
+      sudoku
+      sum-of-two-square
+      tait
+      tarski-geometry
+      three-gap
+      # topology
+      tortoise-hare-algorithm
+      # traversable-fincontainer
+      # tree-automata
+      tree-diameter
+      weak-up-to
+      zchinese
+      zf
+      zfc
+      zorns-lemma
+      zsearch-trees
+    ]);
 };
 
 coq85Env = pkgs.myEnvFun {
   name = "coq85";
-  buildInputs = [ coq_8_5 ] ++ myCoqPackages pkgs.coqPackages_8_5;
+  buildInputs = [ coq_8_5 ] ++ myCoqPackages pkgs.coqPackages_8_5
+    ++ (with pkgs.coqPackages_8_5.contribs; [
+      # aac-tactics
+      abp
+      # additions
+      # ails
+      algebra
+      amm11262
+      angles
+      area-method
+      # atbr
+      automata
+      axiomatic-abp
+      # bdds
+      # bertrand
+      # buchberger
+      # canon-bdds
+      cantor
+      cats-in-zfc
+      ccs
+      cfgv
+      checker
+      # chinese
+      circuits
+      # classical-realizability
+      coalgebras
+      coinductive-examples
+      # coinductive-reals
+      concat
+      constructive-geometry
+      # containers
+      # continuations
+      # coq-in-coq
+      coqoban
+      # corn
+      # counting
+      cours-de-coq
+      ctltctl
+      dblib
+      demos
+      dep-map
+      # descente-infinie
+      dictionaries
+      distributed-reference-counting
+      domain-theory
+      # ergo
+      # euclidean-geometry
+      euler-formula
+      exact-real-arithmetic
+      # exceptions
+      fairisle
+      # fermat4
+      finger-tree
+      # firing-squad
+      # float
+      # founify
+      free-groups
+      # fsets
+      fssec-model
+      functions-in-zfc
+      fundamental-arithmetics
+      gc
+      generic-environments
+      # goedel
+      graph-basics
+      # graphs
+      group-theory
+      groups
+      # hardware
+      hedges
+      # high-school-geometry
+      # higman-cf
+      # higman-nw
+      higman-s
+      historical-examples
+      hoare-tut
+      # huffman
+      icharate
+      idxassoc
+      # ieee754
+      int-map
+      # intuitionistic-nuprl
+      # ipc
+      izf
+      jordan-curve-theorem
+      # jprover
+      karatsuba
+      kildall
+      lambda
+      lambek
+      lazy-pcf
+      lc
+      # legacy-field
+      # legacy-ring
+      # lemma-overloading
+      lesniewski-mereology
+      # lin-alg
+      ltl
+      # maple-mode
+      # markov
+      # math-classes
+      maths
+      matrices
+      micromega
+      mini-compiler
+      # minic
+      miniml
+      mod-red
+      # multiplier
+      # mutual-exclusion
+      # nfix
+      # orb-stab
+      otway-rees
+      paco
+      # paradoxes
+      param-pi
+      # pautomata
+      persistent-union-find
+      pi-calc
+      pocklington
+      # presburger
+      prfx
+      # projective-geometry
+      propcalc
+      # pts
+      ptsatr
+      # ptsf
+      # qarith
+      # qarith-stern-brocot
+      # quicksort-complexity
+      railroad-crossing
+      ramsey
+      random
+      # rational
+      # recursive-definition
+      reflexive-first-order
+      regexp
+      # relation-algebra
+      # relation-extraction
+      rem
+      rsa
+      # ruler-compass-geometry
+      schroeder
+      # search-trees
+      # semantics
+      shuffle
+      # smc
+      # square-matrices
+      # stalmarck
+      streams
+      # string
+      subst
+      # sudoku
+      sum-of-two-square
+      # tait
+      tarski-geometry
+      three-gap
+      # topology
+      tortoise-hare-algorithm
+      # traversable-fincontainer
+      # tree-automata
+      tree-diameter
+      weak-up-to
+      # zchinese
+      zf
+      zfc
+      zorns-lemma
+      # zsearch-trees
+    ]);
 };
 
 coqPackages_8_4 = pkgs.mkCoqPackages coq_8_4;
@@ -613,7 +1308,6 @@ coq84Env = pkgs.myEnvFun {
 
 ##############################################################################
 # Emacs
-##############################################################################
 
 emacs = emacs26;
 
@@ -1226,36 +1920,6 @@ emacs26Env = pkgs.myEnvFun {
   buildInputs = with emacs26PackagesNg; [ emacs26 ghc-mod ];
 };
 
-emacsTestEnv = pkgs.myEnvFun {
-  name = "emacstest";
-  buildInputs = [
-   (let customEmacsPackages =
-      pkgs.emacsPackagesNg.overrideScope (super: self: {
-        org = with pkgs; stdenv.mkDerivation (rec {
-          name = "emacs-org-${version}";
-          version = "20160421";
-
-          src = fetchgit {
-            url = git://github.com/jwiegley/org-mode.git;
-            rev = "db5257389231bd49e92e2bc66713ac71b0435eec";
-            sha256 = "0v8i49c3yqfz7d92fx6paxw1ad565k918cricjg12zcl73r7rigk";
-          };
-
-          preInstall = ''
-            perl -i -pe "s%/usr/share%$out%;" local.mk
-          '';
-
-          buildInputs = [ emacs texinfo perl which ];
-
-          meta = {
-            homepage = "https://elpa.gnu.org/packages/org.html";
-            license = pkgs.stdenv.lib.licenses.free;
-          };
-        });
-      });
-    in customEmacsPackages.emacsWithPackages (super: with super; [ org ])) ];
-};
-
 emacs26FullEnv = pkgs.buildEnv {
   name = "emacs26full";
   paths = [
@@ -1640,7 +2304,6 @@ emacs25Env = pkgs.myEnvFun {
 
 ##############################################################################
 # Ledger
-##############################################################################
 
 ledger_HEAD = pkgs.callPackage ~/src/ledger {};
 
@@ -1669,7 +2332,6 @@ ledgerPy2Env = pkgs.myEnvFun {
 
 ##############################################################################
 # Tools
-##############################################################################
 
 systemToolsEnv = pkgs.buildEnv {
   name = "systemTools";
@@ -1709,6 +2371,7 @@ systemToolsEnv = pkgs.buildEnv {
     pinentry_mac
     postgresql96
     pv
+    # jww (2017-12-26): Waiting on https://bugs.launchpad.net/qemu/+bug/1714750
     # qemu
     ripgrep
     rlwrap
@@ -1864,6 +2527,7 @@ langToolsEnv = pkgs.buildEnv {
     idutils
     lean
     ott
+    R
     sbcl
     sloccount
     verasco
