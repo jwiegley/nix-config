@@ -7,11 +7,11 @@ if [[ "$1" == "-a" ]]; then
         shift 1
         cd ~/.nix-defexpr/nixpkgs-next
         git remote update
-        git pull && git pull --tags
-        git gc && git prune
+        git pull --rebase
     fi
 
     nix-env -f '<nixpkgs-next>' -u "$@"
+
     rsync -a --delete ~/.nix-defexpr/nixpkgs-next/ ~/.nix-defexpr/nixpkgs/
     git --git-dir=$HOME/.nix-defexpr/nixpkgs/.git push --mirror jwiegley
     copy-nix hermes --leq -Q -j4
