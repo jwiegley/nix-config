@@ -58,7 +58,6 @@ myHaskellPackageDefs = super:
   concat-classes   = pkg ~/oss/concat/classes {};
   concat-examples  = pkg ~/oss/concat/examples {};
   concat-graphics  = pkg ~/oss/concat/graphics {};
-  concat-hardware  = pkg ~/oss/concat/hardware {};
   concat-inline    = pkg ~/oss/concat/inline {};
   concat-plugin    = pkg ~/oss/concat/plugin {};
   freer-effects    = pkg ~/oss/freer-effects {};
@@ -93,30 +92,116 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
 
   Agda                      = dontHaddock super.Agda;
   blaze-builder-enumerator  = doJailbreak super.blaze-builder-enumerator;
+  Cabal                     = super.Cabal_2_0_1_1;
+  cabal-install             = super.cabal-install.override { Cabal = Cabal; };
+  cabal-helper              = super.cabal-helper.override {
+    cabal-install = cabal-install;
+    Cabal = Cabal;
+  };
   categorical               = dontCheck mypkgs.categorical;
+  commodities               = doJailbreak mypkgs.commodities;
   compressed                = doJailbreak super.compressed;
   concat-classes            = dontHaddock mypkgs.concat-classes;
   concat-examples           = dontHaddock (dontCheck mypkgs.concat-examples);
   concat-graphics           = dontCheck mypkgs.concat-graphics;
   concat-inline             = dontHaddock mypkgs.concat-inline;
   concat-plugin             = dontHaddock mypkgs.concat-plugin;
+  concurrent-output         = doJailbreak super.concurrent-output;
   consistent                = dontCheck mypkgs.consistent;
   derive-storable           = dontCheck super.derive-storable;
+  diagrams-graphviz         = doJailbreak super.diagrams-graphviz;
+  diagrams-rasterific       = doJailbreak super.diagrams-rasterific;
+  ghc-compact               = null;
+  hakyll                    = doJailbreak super.hakyll;
+  heap                      = dontCheck super.heap;
   hierarchy                 = doJailbreak super.hierarchy;
   hlibgit2                  = doJailbreak super.hlibgit2;
   ipcvar                    = dontCheck super.ipcvar;
   linearscan-hoopl          = dontCheck super.linearscan-hoopl;
   liquidhaskell             = doJailbreak super.liquidhaskell;
   pipes-binary              = doJailbreak super.pipes-binary;
-  pipes-files               = dontCheck super.pipes-files;
+  pipes-files               = dontCheck (doJailbreak super.pipes-files);
   pipes-zlib                = dontCheck (doJailbreak super.pipes-zlib);
   recursors                 = doJailbreak super.recursors;
+  runmany                   = doJailbreak super.runmany;
   sbvPlugin                 = doJailbreak super.sbvPlugin;
+  shelly                    = dontCheck super.shelly;
+  text-show                 = dontCheck super.text-show;
   time-recurrence           = doJailbreak super.time-recurrence;
   timeparsers               = doJailbreak (dontCheck (pkg ~/oss/timeparsers {}));
+  units                     = super.units.override { th-desugar = th-desugar_1_6; };
   z3cat                     = dontCheck mypkgs.z3cat;
 
-  lambdabot-haskell-plugins = doJailbreak (
+  "th-desugar_1_6" = callPackage
+    ({ mkDerivation, base, containers, hspec, HUnit, mtl, syb
+     , template-haskell, th-expand-syns, th-lift, th-orphans
+     }:
+     mkDerivation {
+       pname = "th-desugar";
+       version = "1.6";
+       sha256 = "0kv3gxvr7izvg1s86p92b5318bv7pjghig2hx9q21cg9ppifry68";
+       revision = "2";
+       editedCabalFile = "0rimjzkqky6sq4yba7vqra7hj29903f9xsn2g8rc23abrm35vds3";
+       libraryHaskellDepends = [
+         base containers mtl syb template-haskell th-expand-syns th-lift
+         th-orphans
+       ];
+       testHaskellDepends = [
+         base containers hspec HUnit mtl syb template-haskell th-expand-syns
+         th-lift th-orphans
+       ];
+       homepage = "https://github.com/goldfirere/th-desugar";
+       description = "Functions to desugar Template Haskell";
+       license = stdenv.lib.licenses.bsd3;
+     }) {};
+
+  "singletons" = dontCheck (doJailbreak (callPackage
+    ({ mkDerivation, base, Cabal, containers, directory, filepath, mtl
+     , process, syb, tasty, tasty-golden, template-haskell, th-desugar
+     }:
+     mkDerivation {
+       pname = "singletons";
+       version = "2.2";
+       sha256 = "1bwcsp1x8bivmvkv8a724lsnwyjharhb0x0hl0isp3jgigh0dg9k";
+       libraryHaskellDepends = [
+         base containers mtl syb template-haskell th-desugar
+       ];
+       testHaskellDepends = [
+         base Cabal directory filepath process tasty tasty-golden
+       ];
+       homepage = "http://www.github.com/goldfirere/singletons";
+       description = "A framework for generating singleton types";
+       license = stdenv.lib.licenses.bsd3;
+     }) { th-desugar = th-desugar_1_6; }));
+
+  # lens-family 1.2.2 requires GHC 8.2 or higher
+  "lens-family" = callPackage
+    ({ mkDerivation, base, containers, lens-family-core, mtl
+     , transformers
+     }:
+     mkDerivation {
+       pname = "lens-family";
+       version = "1.2.1";
+       sha256 = "1dwsrli94i8vs1wzfbxbxh49qhn8jn9hzmxwgd3dqqx07yx8x0s1";
+       libraryHaskellDepends = [
+         base containers lens-family-core mtl transformers
+       ];
+       description = "Lens Families";
+       license = stdenv.lib.licenses.bsd3;
+     }) {};
+
+  "lens-family-core" = callPackage
+    ({ mkDerivation, base, containers, transformers }:
+     mkDerivation {
+       pname = "lens-family-core";
+       version = "1.2.1";
+       sha256 = "190r3n25m8x24nd6xjbbk9x0qhs1mw22xlpsbf3cdp3cda3vkqwm";
+       libraryHaskellDepends = [ base containers transformers ];
+       description = "Haskell 98 Lens Families";
+       license = stdenv.lib.licenses.bsd3;
+     }) {};
+
+  "lambdabot-haskell-plugins" = doJailbreak (
     super.lambdabot-haskell-plugins.override {
       haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
     });
@@ -173,6 +258,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   derive-storable          = dontCheck super.derive-storable;
   diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
   diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
+  git-annex                = dontCheck super.git-annex;
   hakyll                   = doJailbreak super.hakyll;
   heap                     = dontCheck super.heap;
   hierarchy                = doJailbreak super.hierarchy;
@@ -184,9 +270,12 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   pipes-files              = dontCheck (doJailbreak super.pipes-files);
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
   posix-paths              = doJailbreak super.posix-paths;
+  pushme                   = doJailbreak mypkgs.pushme;
   recursors                = doJailbreak super.recursors;
-  shelly                   = doJailbreak super.shelly;
+  runmany                  = doJailbreak super.runmany;
+  shelly                   = dontCheck (doJailbreak super.shelly);
   text-icu                 = dontCheck super.text-icu;
+  text-show                = dontCheck super.text-show;
   these                    = doJailbreak super.these;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = doJailbreak (dontCheck (pkg ~/oss/timeparsers {}));
@@ -205,13 +294,11 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
   Agda                     = dontHaddock super.Agda;
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   compressed               = doJailbreak super.compressed;
-  commodities              = doJailbreak mypkgs.commodities;
   consistent               = doJailbreak (dontCheck mypkgs.consistent);
   derive-storable          = dontCheck super.derive-storable;
   diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
   diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
   hakyll                   = doJailbreak super.hakyll;
-  heap                     = dontCheck super.heap;
   hierarchy                = doJailbreak super.hierarchy;
   ipcvar                   = dontCheck super.ipcvar;
   lattices                 = doJailbreak super.lattices;
@@ -591,18 +678,12 @@ ghcHEADProfEnv = pkgs.myEnvFun {
     pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
 
-    # lhs2tex
-    pushme
-    runmany
-    bench
-    git-all
-    git-monitor
-    hours
-    hpack
-    simple-mirror
-    sitebuilder
-    sizes
-    una
+    cabal-install
+    # ghc-mod
+    # hdevtools
+    lambdabot
+    pointfree
+    # splot
   ];
 };
 
@@ -612,18 +693,12 @@ ghc82Env = pkgs.myEnvFun {
     pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
 
-    # lhs2tex
-    pushme
-    runmany
-    bench
-    git-all
-    git-monitor
-    hours
-    hpack
-    simple-mirror
-    sitebuilder
-    sizes
-    una
+    cabal-install
+    # ghc-mod
+    # hdevtools
+    lambdabot
+    pointfree
+    # splot
   ];
 };
 
@@ -633,18 +708,12 @@ ghc82ProfEnv = pkgs.myEnvFun {
     pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
 
-    # lhs2tex
-    pushme
-    runmany
-    bench
-    git-all
-    git-monitor
-    hours
-    hpack
-    simple-mirror
-    sitebuilder
-    sizes
-    una
+    cabal-install
+    # ghc-mod
+    # hdevtools
+    lambdabot
+    pointfree
+    # splot
   ];
 };
 
@@ -661,15 +730,14 @@ ghc80Env = pkgs.myEnvFun {
        concat-plugin
        concat-examples
        concat-graphics
-       # concat-hardware
        singletons
        units
        z3cat
      ])))
 
     cabal-install
-    ghc-mod
-    hdevtools
+    # ghc-mod
+    # hdevtools
     lambdabot
     pointfree
     splot
@@ -687,15 +755,14 @@ ghc80ProfEnv = pkgs.myEnvFun {
        concat-plugin
        concat-examples
        concat-graphics
-       # concat-hardware
        singletons
        units
        z3cat
      ])))
 
     cabal-install
-    ghc-mod
-    hdevtools
+    # ghc-mod
+    # hdevtools
     lambdabot
     pointfree
     splot
@@ -744,19 +811,23 @@ myCoqPackages = coqPkgs: with pkgs; [
   paco
 ]);
 
-coq_8_7 = pkgs.coq_8_7.override { csdp = null; };
-coq_8_6 = pkgs.coq_8_6.override { csdp = null; };
-coq_8_5 = pkgs.coq_8_5.override { csdp = null; };
-coq_8_4 = pkgs.coq_8_4.override { csdp = null; };
+coq_8_7_override = pkgs.coq_8_7.override {
+  ocamlPackages = pkgs.ocaml-ng.ocamlPackages_4_06;
+  buildIde = false;
+};
 
-coq_HEAD = pkgs.stdenv.lib.overrideDerivation coq_8_7 (attrs: rec {
-  name = "coq-8.8-pre";
+coq_HEAD = pkgs.stdenv.lib.overrideDerivation coq_8_7_override (attrs: rec {
   version = "8.8";
+  name = "coq-${version}-pre";
+  coq-version = "${builtins.substring 0 3 version}";
   src = ~/oss/coq;
-  ideFlags = "-lablgtkdir ${pkgs.ocamlPackages.lablgtk}/lib/ocaml/*/site-lib/lablgtk2 -coqide opt";
+  buildInputs = attrs.buildInputs
+    ++ [ pkgs.ocaml-ng.ocamlPackages_4_06.num
+         texFull pkgs.hevea pkgs.fig2dev pkgs.imagemagick_light ];
   preConfigure = ''
     configureFlagsArray=(
-      ${ideFlags}
+      -with-doc yes
+      -coqide no
     )
   '';
 });
@@ -765,8 +836,9 @@ coqPackages_HEAD = pkgs.mkCoqPackages coq_HEAD;
 
 coqHEADEnv = pkgs.myEnvFun {
   name = "coqHEAD";
-  buildInputs = [ coq_HEAD ] # ++ myCoqPackages coqPackages_HEAD ++
-    # (with coqPackages_HEAD; [
+  buildInputs = [ coq_HEAD ]
+    # ++ myCoqPackages coqPackages_HEAD
+    # ++ (with coqPackages_HEAD; [
     #    CoLoR
     #    category-theory
     #    equations
@@ -778,7 +850,8 @@ coqHEADEnv = pkgs.myEnvFun {
 
 coq87Env = pkgs.myEnvFun {
   name = "coq87";
-  buildInputs = [ coq_8_7 ] ++ myCoqPackages pkgs.coqPackages_8_7 ++
+  buildInputs = [ pkgs.coq_8_7 ]
+    ++ myCoqPackages pkgs.coqPackages_8_7 ++
     (with pkgs.coqPackages_8_7; [
        CoLoR
        category-theory
@@ -958,7 +1031,8 @@ coq87Env = pkgs.myEnvFun {
 
 coq86Env = pkgs.myEnvFun {
   name = "coq86";
-  buildInputs = [ coq_8_6 ] ++ myCoqPackages pkgs.coqPackages_8_6 ++
+  buildInputs = [ pkgs.coq_8_6 ]
+    ++ myCoqPackages pkgs.coqPackages_8_6 ++
     (with pkgs.coqPackages_8_6; [
        category-theory
        equations
@@ -1136,7 +1210,8 @@ coq86Env = pkgs.myEnvFun {
 
 coq85Env = pkgs.myEnvFun {
   name = "coq85";
-  buildInputs = [ coq_8_5 ] ++ myCoqPackages pkgs.coqPackages_8_5
+  buildInputs = [ pkgs.coq_8_5 ]
+    ++ myCoqPackages pkgs.coqPackages_8_5
     ++ (with pkgs.coqPackages_8_5.contribs; [
       # aac-tactics
       abp
@@ -1307,11 +1382,11 @@ coq85Env = pkgs.myEnvFun {
     ]);
 };
 
-coqPackages_8_4 = pkgs.mkCoqPackages coq_8_4;
+coqPackages_8_4 = pkgs.mkCoqPackages pkgs.coq_8_4;
 
 coq84Env = pkgs.myEnvFun {
   name = "coq84";
-  buildInputs = [ coq_8_4 ];
+  buildInputs = [ pkgs.coq_8_4 ];
 };
 
 ##############################################################################
@@ -1925,7 +2000,8 @@ emacs26 = with pkgs; pkgs.stdenv.lib.overrideDerivation
 
 emacs26Env = pkgs.myEnvFun {
   name = "emacs26";
-  buildInputs = with emacs26PackagesNg; [ emacs26 ghc-mod ];
+  buildInputs = with emacs26PackagesNg; [ emacs26 # ghc-mod
+  ];
 };
 
 emacs26FullEnv = pkgs.buildEnv {
@@ -2059,7 +2135,6 @@ emacs26FullEnv = pkgs.buildEnv {
     ghc
     ghub
     ghub-plus
-    git-annex
     git-link
     git-modes
     git-timemachine
@@ -2491,6 +2566,14 @@ gitToolsEnv = pkgs.buildEnv {
 
 pdf-tools-server = pkgs.callPackage ~/.nixpkgs/emacs/pdf-tools.nix {};
 
+texFull = with pkgs; texlive.combine {
+  inherit (texlive) scheme-full texdoc latex2e-help-texinfo;
+  pkgFilter = pkg:
+     pkg.tlType == "run"
+  || pkg.tlType == "bin"
+  || pkg.pname == "latex2e-help-texinfo";
+};
+
 publishToolsEnv = pkgs.buildEnv {
   name = "publishTools";
   paths = with pkgs; [
@@ -2500,6 +2583,7 @@ publishToolsEnv = pkgs.buildEnv {
     doxygen
     graphviz-nox
     highlight
+    languagetool
     pdf-tools-server
     poppler
     sourceHighlight
@@ -2507,13 +2591,7 @@ publishToolsEnv = pkgs.buildEnv {
     yuicompressor
     (haskell.lib.justStaticExecutables haskPkgs.lhs2tex)
     (haskell.lib.justStaticExecutables haskPkgs.sitebuilder)
-    (texlive.combine {
-       inherit (texlive) scheme-full texdoc latex2e-help-texinfo;
-       pkgFilter = pkg:
-          pkg.tlType == "run"
-       || pkg.tlType == "bin"
-       || pkg.pname == "latex2e-help-texinfo";
-     })
+    texFull
   ];
 };
 
