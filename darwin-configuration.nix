@@ -15,6 +15,11 @@
       serviceConfig.StartInterval = 86400;
     };
 
+    collectgarbage = {
+      command = "${pkgs.nix}/bin/nix-collect-garbage --delete-older-than 14d";
+      serviceConfig.StartInterval = 86400;
+    };
+
     pdnsd = {
       script = ''
         cp -p ${pkgs.johnw-home}/etc/pdnsd.conf /tmp/.pdnsd.conf
@@ -36,15 +41,15 @@
       };
     };
 
-    leafnode = {
-      command = "${pkgs.leafnode}/sbin/leafnode -d ~/Messages/Newsdir -F ~/Messages/leafnode/config";
-      serviceConfig.WorkingDirectory = "${pkgs.dovecot}/lib";
-      serviceConfig.inetdCompatibility.Wait = "nowait";
-      serviceConfig.Sockets.Listeners = {
-        SockNodeName = "127.0.0.1";
-        SockServiceName = "9119";
-      };
-    };
+    # leafnode = {
+    #   command = "${pkgs.leafnode}/sbin/leafnode -d ~/Messages/Newsdir -F ~/Messages/leafnode/config";
+    #   serviceConfig.WorkingDirectory = "${pkgs.dovecot}/lib";
+    #   serviceConfig.inetdCompatibility.Wait = "nowait";
+    #   serviceConfig.Sockets.Listeners = {
+    #     SockNodeName = "127.0.0.1";
+    #     SockServiceName = "9119";
+    #   };
+    # };
 
     languagetool = {
       script = ''
@@ -62,7 +67,7 @@
             --verbose \
             --launchd \
             --inactivity-timeout 300 \
-            --log-file ~/Library/Logs/rtags.launchd.log
+            --log-file /Users/johnw/Library/Logs/rtags.launchd.log
       '';
       serviceConfig.Sockets.Listeners.SockPathName = "/Users/johnw/.rdm";
     };
@@ -117,7 +122,7 @@
     user johnw@newartisans.com
     passwordeval pass smtp.fastmail.com
     from johnw@newartisans.com
-    logfile /Library/Logs/msmtp.log
+    logfile /Users/johnw/Library/Logs/msmtp.log
   '';
 
   environment.etc."dovecot/dovecot.conf".text = ''
@@ -192,33 +197,38 @@
       mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e -m list.misc"
   '';
 
-  system.activationScripts.extraActivation.text = ''
+  system.activationScripts.extraPostActivation.text = ''
     chflags nohidden ~/Library
 
-    chown johnw /etc/static/fetchmailrc
-    chmod 0700 /etc/static/fetchmailrc
-    chown johnw /etc/static/fetchmailrc.lists
-    chmod 0700 /etc/static/fetchmailrc.lists
+    ln -sf /etc/bashrc ~/.bashrc
+
+    cp -p /etc/fetchmailrc ~/.fetchmailrc
+    chown johnw ~/.fetchmailrc
+    chmod 0600 ~/.fetchmailrc
+
+    cp -p /etc/fetchmailrc.lists ~/.fetchmailrc.lists
+    chown johnw ~/.fetchmailrc.lists
+    chmod 0600 ~/.fetchmailrc.lists
 
     for i in                                    \
-        /etc/static/per-user/johnw/aspell.conf  \
+        /etc/per-user/johnw/aspell.conf         \
         ${pkgs.johnw-home}/dot-files/*
     do
         ln -sf $i ~/.$(basename $i)
     done
 
-    ln -sf ${pkgs.dot-emacs}/emacs.d/compiled ~/.emacs.d/compiled
-
     mkdir -p ~/.parallel
     touch ~/.parallel/will-cite
 
+    rm -f ~/.gitconfig
+    cp -p ${pkgs.johnw-home}/dot-files/gitconfig ~/.gitconfig
     git config --global http.sslCAinfo "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
     git config --global http.sslverify true
 
-    cp -p /etc/static/per-user/johnw/scdaemon-wrapper ~/.gnupg
+    cp -p /etc/per-user/johnw/scdaemon-wrapper ~/.gnupg
     chmod +x ~/.gnupg/scdaemon-wrapper
 
-    cp -p /etc/static/per-user/johnw/gpg-agent.conf ~/.gnupg
+    cp -p /etc/per-user/johnw/gpg-agent.conf ~/.gnupg
     ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
 
     for file in                                           \
@@ -243,10 +253,9 @@
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.allowBroken = true;
 
-  nixpkgs.config.packageOverrides = pkgs: import ./overrides.nix { pkgs = pkgs; };
+  nixpkgs.config.packageOverrides = pkgs:
+    import ./overrides.nix { pkgs = pkgs; };
 
-  # List packages installed in system profile. To search by name, run:
-  # $ nix-env -qaP | grep wget
   environment.systemPackages = with pkgs; [
     nix-prefetch-scripts
     nix-repl
@@ -255,7 +264,6 @@
     coreutils
     johnw-home
     johnw-scripts
-    dot-emacs
 
     # gitToolsEnv
     diffstat
@@ -462,6 +470,7 @@
       "$HOME/.nix-defexpr/channels"
     ];
 
+  nix.trustedUsers = [ "johnw" ];
   nix.extraOptions = ''
     gc-keep-outputs = true
     gc-keep-derivations = true
@@ -469,4 +478,87 @@
   '';
 
   programs.nix-index.enable = true;
+
+  environment.etc."bash.local".text = ''
+    if [[ -x "$(which docker-machine)" ]]; then
+        if docker-machine status default > /dev/null 2>&1; then
+            eval $(docker-machine env default) > /dev/null 2>&1
+        fi
+    fi
+
+    export GPG_TTY=$(tty)
+    if [ -f $HOME/.gpg-agent-info ]; then
+        . $HOME/.gpg-agent-info
+        export GPG_AGENT_INFO
+        export SSH_AUTH_SOCK
+        export SSH_AGENT_PID
+    fi
+
+    shopt -s histappend
+
+    for path in                                     \
+        /usr/X11/man                                \
+        /Developer/usr/share/man                    \
+        /usr/share/man                              \
+        /usr/local/share/man                        \
+        $HOME/run/current-system/sw/man             \
+        $HOME/run/current-system/sw/share/man       \
+        $HOME/.nix-profile/man                      \
+        $HOME/.nix-profile/share/man
+    do
+        export MANPATH=$path:$MANPATH
+    done
+
+    # mkdir -p /tmp/current-load
+    # chmod a+rwX /tmp/current-load
+    #
+    # export NIX_BUILD_HOOK=$HOME/.nix-profile/libexec/nix/build-remote.pl
+    # export NIX_REMOTE_SYSTEMS=$HOME/.nixpkgs/remote-systems.conf
+    # export NIX_CURRENT_LOAD=/tmp/current-load
+  '';
+
+  environment.variables = {
+    ALTERNATE_EDITOR   = "vi";
+    COLUMNS            = "100";
+    COQVER             = "87";
+    EDITOR             = "emacsclient -a vi";
+    EMACSVER           = "26";
+    EMAIL              = "johnw@newartisans.com";
+    GHCPKGVER          = "822";
+    GHCVER             = "82";
+    GIT_PAGER          = "less";
+    HISTCONTROL        = "ignoreboth:erasedups";
+    HISTFILE           = "/Users/johnw/.bash_history";
+    HISTFILESIZE       = "50000";
+    HISTSIZE           = "50000";
+    JAVA_OPTS          = "-Xverify:none";
+    LC_CTYPE           = "en_US.UTF-8";
+    # LD_LIBRARY_PATH    = "/usr/local/lib:\\$LD_LIBRARY_PATH";
+    LEDGER_COLOR       = "true";
+    LESS               = "-FRSXM";
+    LESSCHARSET        = "utf-8";
+    PAGER              = "less";
+    PASSWORD_STORE_DIR = "/Users/johnw/doc/.passwords";
+    PROMPT_DIRTRIM     = "2";
+    PS1                = "\\D{%H:%M} \\h:\\W $ ";
+    SAVEHIST           = "50000";
+    SSH_AUTH_SOCK      = "/Users/johnw/.gnupg/S.gpg-agent.ssh";
+    WORDCHARS          = "";
+  };
+
+  environment.shellAliases = {
+    b       = "git branch --color -v";
+    g       = "hub";
+    ga      = "git-annex";
+    gerp    = "grep";
+    git     = "hub";
+    l       = "git l";
+    ls      = "ls --color=auto";
+    par     = "parallel";
+    rehash  = "hash -r";
+    rm      = "rmtrash";
+    scp     = "rsync -aP --inplace";
+    snaplog = "git log refs/snapshots/\\$(git symbolic-ref HEAD)";
+    w       = "git status -sb";
+  };
 }

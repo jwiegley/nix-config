@@ -2115,6 +2115,7 @@ emacsHEAD = with pkgs; pkgs.stdenv.lib.overrideDerivation
     sed -i 's|Name=Emacs|Name=${appName}|' nextstep/templates/Emacs.desktop.in
     sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Emacs.desktop.in
     sed -i 's|"Emacs|"${appName}|' nextstep/templates/InfoPlist.strings.in
+    rm -fr .git
     sh autogen.sh
   '';
 
@@ -2167,6 +2168,10 @@ emacs26 = with pkgs; pkgs.stdenv.lib.overrideDerivation
   src = builtins.filterSource (path: type:
       type != "directory" || baseNameOf path != ".git")
     ~/.emacs.d/release;
+
+  postPatch = ''
+    rm -fr .git
+  '';
 
   postInstall = ''
     mkdir -p $out/share/emacs/site-lisp
@@ -2704,7 +2709,10 @@ networkToolsEnv = pkgs.buildEnv {
 
 johnw-home = with pkgs; stdenv.mkDerivation {
   name = "johnw-home";
-  src  = ~/src/home;
+
+  src = builtins.filterSource (path: type:
+      type != "directory" || baseNameOf path != ".git")
+    ~/src/home;
 
   buildInputs = [];
 
@@ -2730,7 +2738,29 @@ johnw-home = with pkgs; stdenv.mkDerivation {
 
 dot-emacs = with pkgs; stdenv.mkDerivation {
   name = "dot-emacs";
-  src  = ~/src/dot-emacs;
+
+  src = builtins.filterSource (path: type:
+      baseNameOf path != ".git"             &&
+      baseNameOf path != "MANIFEST.csv"     &&
+      baseNameOf path != "abbrevs.el"       &&
+      baseNameOf path != "data"             &&
+      baseNameOf path != "data-alt"         &&
+      baseNameOf path != "data-full"        &&
+      baseNameOf path != "data-other"       &&
+      baseNameOf path != "dot-gnus.el"      &&
+      baseNameOf path != "dot-org.el"       &&
+      baseNameOf path != "emms"             &&
+      baseNameOf path != "eshell"           &&
+      baseNameOf path != "games"            &&
+      baseNameOf path != "gnus-settings.el" &&
+      baseNameOf path != "info"             &&
+      baseNameOf path != "init.el"          &&
+      baseNameOf path != "magithub"         &&
+      baseNameOf path != "master"           &&
+      baseNameOf path != "org-settings.el"  &&
+      baseNameOf path != "release"          &&
+      baseNameOf path != "settings.el")
+    ~/src/dot-emacs;
 
   buildInputs = [ emacs26 parallel git ];
 
@@ -2754,7 +2784,10 @@ dot-emacs = with pkgs; stdenv.mkDerivation {
 
 johnw-scripts = with pkgs; stdenv.mkDerivation {
   name = "johnw-scripts";
-  src  = ~/src/scripts;
+
+  src = builtins.filterSource (path: type:
+      type != "directory" || baseNameOf path != ".git")
+    ~/src/scripts;
 
   buildInputs = [];
 
@@ -2775,7 +2808,10 @@ johnw-scripts = with pkgs; stdenv.mkDerivation {
 
 git-scripts = with pkgs; stdenv.mkDerivation {
   name = "git-scripts";
-  src  = ~/src/git-scripts;
+
+  src = builtins.filterSource (path: type:
+      type != "directory" || baseNameOf path != ".git")
+    ~/src/git-scripts;
 
   buildInputs = [];
 
@@ -2796,7 +2832,8 @@ git-scripts = with pkgs; stdenv.mkDerivation {
 
 nix-scripts = with pkgs; stdenv.mkDerivation {
   name = "nix-scripts";
-  src  = ./bin;
+
+  src = ./bin;
 
   buildInputs = [];
 

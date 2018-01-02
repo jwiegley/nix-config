@@ -3,6 +3,10 @@
 HOST=$1
 shift 1
 
-nix-copy-closure --to $HOST $(readlink -f ~/.nix-profile)
-pushme -f Projects,Contracts,home $HOST --from vulcan
-exec ssh $HOST update-nix "$@"
+nix-copy-closure --to $HOST $(readlink -f ~/.nix-profile) \
+    $(readlink -f /run/current-system)
+
+push -h vulcan -f Projects,Contracts,home $HOST
+
+ssh $HOST darwin-rebuild switch
+ssh $HOST nix-env -u "$@"
