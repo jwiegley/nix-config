@@ -3,8 +3,6 @@ rec {
 
 z3-debug = true;
 
-home-johnw = pkgs.callPackage ~/src/home {};
-
 ##############################################################################
 # Haskell
 
@@ -2085,7 +2083,7 @@ emacsHEAD = with pkgs; pkgs.stdenv.lib.overrideDerivation
 
   appName = "ERC";
   bundleName = "nextstep/ERC.app";
-  iconFile = "/Users/johnw/.nixpkgs/emacs/Chat.icns";
+  iconFile = "/Users/johnw/src/nix/emacs/Chat.icns";
 
   buildInputs = pkgs.emacs25.buildInputs ++ [ git ];
 
@@ -2669,7 +2667,7 @@ systemToolsEnv = pkgs.buildEnv {
   ];
 };
 
-backblaze-b2 = pkgs.callPackage ~/.nixpkgs/backblaze.nix {};
+backblaze-b2 = pkgs.callPackage ./backblaze.nix {};
 
 networkToolsEnv = pkgs.buildEnv {
   name = "networkTools";
@@ -2702,6 +2700,119 @@ networkToolsEnv = pkgs.buildEnv {
     zncModules.fish
     zncModules.push
   ];
+};
+
+johnw-home = with pkgs; stdenv.mkDerivation {
+  name = "johnw-home";
+  src  = ~/src/home;
+
+  buildInputs = [];
+
+  installPhase = ''
+    mkdir -p $out/etc
+    cp -prL etc/* $out/etc
+
+    mkdir -p $out/dot-files
+    cp -prL dot-files/* $out/dot-files
+
+    mkdir -p $out/Library
+    cp -prL Library/* $out/Library
+  '';
+
+  meta = with stdenv.lib; {
+    description = "John Wiegley's various scripts";
+    homepage = https://github.com/jwiegley;
+    license = licenses.mit;
+    maintainers = with maintainers; [ jwiegley ];
+    platforms = platforms.darwin;
+  };
+};
+
+dot-emacs = with pkgs; stdenv.mkDerivation {
+  name = "dot-emacs";
+  src  = ~/src/dot-emacs;
+
+  buildInputs = [ emacs26 parallel git ];
+
+  buildPhase = ''
+    ./compile-all --leq
+  '';
+
+  installPhase = ''
+    mkdir -p $out/emacs.d
+    cp -pR compiled $out/emacs.d
+  '';
+
+  meta = with stdenv.lib; {
+    description = "John Wiegley's various scripts";
+    homepage = https://github.com/jwiegley;
+    license = licenses.mit;
+    maintainers = with maintainers; [ jwiegley ];
+    platforms = platforms.darwin;
+  };
+};
+
+johnw-scripts = with pkgs; stdenv.mkDerivation {
+  name = "johnw-scripts";
+  src  = ~/src/scripts;
+
+  buildInputs = [];
+
+  installPhase = ''
+    mkdir -p $out/bin
+    find . -maxdepth 1 \( -type f -o -type l \) -executable \
+        -exec cp -pL {} $out/bin \;
+  '';
+
+  meta = with stdenv.lib; {
+    description = "John Wiegley's various scripts";
+    homepage = https://github.com/jwiegley;
+    license = licenses.mit;
+    maintainers = with maintainers; [ jwiegley ];
+    platforms = platforms.darwin;
+  };
+};
+
+git-scripts = with pkgs; stdenv.mkDerivation {
+  name = "git-scripts";
+  src  = ~/src/git-scripts;
+
+  buildInputs = [];
+
+  installPhase = ''
+    mkdir -p $out/bin
+    find . -maxdepth 1 \( -type f -o -type l \) -executable \
+        -exec cp -pL {} $out/bin \;
+  '';
+
+  meta = with stdenv.lib; {
+    description = "John Wiegley's various scripts";
+    homepage = https://github.com/jwiegley;
+    license = licenses.mit;
+    maintainers = with maintainers; [ jwiegley ];
+    platforms = platforms.darwin;
+  };
+};
+
+nix-scripts = with pkgs; stdenv.mkDerivation {
+  name = "nix-scripts";
+  src  = ./bin;
+
+  buildInputs = [];
+
+  installPhase = ''
+    mkdir -p $out/bin
+    find . -maxdepth 1 \( -type f -o -type l \) -executable \
+        -exec cp -pL {} $out/bin \;
+  '';
+
+  meta = with stdenv.lib; {
+    description = "John Wiegley's various scripts";
+    homepage = https://github.com/jwiegley;
+    license = licenses.mit;
+    maintainers = with maintainers; [ jwiegley ];
+    platforms = platforms.darwin;
+  };
 };
 
 dovecot-plugins = with pkgs; stdenv.mkDerivation {
@@ -2771,7 +2882,7 @@ gitToolsEnv = pkgs.buildEnv {
   ];
 };
 
-pdf-tools-server = pkgs.callPackage ~/.nixpkgs/emacs/pdf-tools.nix {};
+pdf-tools-server = pkgs.callPackage ./emacs/pdf-tools.nix {};
 
 texFull = with pkgs; texlive.combine {
   inherit (texlive) scheme-full texdoc latex2e-help-texinfo;

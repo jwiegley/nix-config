@@ -17,7 +17,7 @@
 
     pdnsd = {
       script = ''
-        cp -p ${pkgs.home-johnw}/etc/pdnsd.conf /tmp/.pdnsd.conf
+        cp -p ${pkgs.johnw-home}/etc/pdnsd.conf /tmp/.pdnsd.conf
         chown root /tmp/.pdnsd.conf
         ${pkgs.pdnsd}/sbin/pdnsd -c /tmp/.pdnsd.conf
       '';
@@ -72,6 +72,10 @@
     #   serviceConfig.RunAtLoad = true;
     # };
   };
+
+  environment.etc."per-user/johnw/aspell.conf".text = ''
+    data-dir ${pkgs.aspell}/lib/aspell
+  '';
 
   environment.etc."per-user/johnw/scdaemon-wrapper".text = ''
     #!/bin/bash
@@ -196,20 +200,35 @@
     chown johnw /etc/static/fetchmailrc.lists
     chmod 0700 /etc/static/fetchmailrc.lists
 
+    for i in                                    \
+        /etc/static/per-user/johnw/aspell.conf  \
+        ${pkgs.johnw-home}/dot-files/*
+    do
+        ln -sf $i ~/.$(basename $i)
+    done
+
+    ln -sf ${pkgs.dot-emacs}/emacs.d/compiled ~/.emacs.d/compiled
+
+    mkdir -p ~/.parallel
+    touch ~/.parallel/will-cite
+
+    git config --global http.sslCAinfo "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+    git config --global http.sslverify true
+
     cp -p /etc/static/per-user/johnw/scdaemon-wrapper ~/.gnupg
     chmod +x ~/.gnupg/scdaemon-wrapper
 
     cp -p /etc/static/per-user/johnw/gpg-agent.conf ~/.gnupg
     ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
 
-    for file in \
-        Library/KeyBindings/DefaultKeyBinding.dict \
+    for file in                                           \
+        Library/KeyBindings/DefaultKeyBinding.dict        \
         Library/Keyboard\ Layouts/PersianDvorak.keylayout \
         Library/Scripts
     do
         dir=$(dirname "$file")
         mkdir -p ~/"$dir"
-        ln -sf "${pkgs.home-johnw}/$file" ~/"$file"
+        ln -sf "${pkgs.johnw-home}/$file" ~/"$file"
     done
 
     for file in \
@@ -224,23 +243,26 @@
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.allowBroken = true;
 
-  nixpkgs.config.packageOverrides = pkgs:
-    import ~/.nixpkgs/overrides.nix { pkgs = pkgs; };
+  nixpkgs.config.packageOverrides = pkgs: import ./overrides.nix { pkgs = pkgs; };
 
   # List packages installed in system profile. To search by name, run:
   # $ nix-env -qaP | grep wget
   environment.systemPackages = with pkgs; [
     nix-prefetch-scripts
     nix-repl
+    nix-scripts
 
     coreutils
-    home-johnw
+    johnw-home
+    johnw-scripts
+    dot-emacs
 
     # gitToolsEnv
     diffstat
     diffutils
     ghi
     gist
+    git-scripts
     gitRepo
     gitAndTools.git-imerge
     gitAndTools.gitFull
@@ -433,10 +455,18 @@
   nix.maxJobs = 4;
   nix.nixPath =
     [ # Use local nixpkgs checkout instead of channels.
-      "darwin-config=$HOME/.nixpkgs/darwin-configuration.nix"
-      "darwin=$HOME/.nix-defexpr/darwin"
-      "nixpkgs=$HOME/.nix-defexpr/nixpkgs"
-      "nixpkgs-next=$HOME/.nix-defexpr/nixpkgs-next"
+      "darwin-config=$HOME/src/nix/darwin-configuration.nix"
+      "darwin=$HOME/oss/darwin"
+      "nixpkgs=$HOME/oss/nixpkgs"
+      "nixpkgs-next=$HOME/oss/nixpkgs-next"
       "$HOME/.nix-defexpr/channels"
     ];
+
+  nix.extraOptions = ''
+    gc-keep-outputs = true
+    gc-keep-derivations = true
+    env-keep-derivations = true
+  '';
+
+  programs.nix-index.enable = true;
 }
