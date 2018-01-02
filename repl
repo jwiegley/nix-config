@@ -1,0 +1,6 @@
+#!/bin/bash
+SUFFIX=""
+if [[ "$1" == "next" ]]; then
+    SUFFIX="-next"
+fi
+exec nix-repl "<nixpkgs$SUFFIX>"
