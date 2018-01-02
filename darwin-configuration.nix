@@ -517,6 +517,8 @@
     # export NIX_CURRENT_LOAD=/tmp/current-load
   '';
 
+  environment.pathsToLink = [ "/info" "/etc" "/share" ];
+
   environment.variables = {
     ALTERNATE_EDITOR   = "vi";
     COLUMNS            = "100";
