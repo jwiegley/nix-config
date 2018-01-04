@@ -1,4 +1,6 @@
 { config, lib, pkgs, ... }:
+
+let home = builtins.getEnv "HOME"; in
 {
   system.defaults.NSGlobalDomain.AppleKeyboardUIMode = 3;
   system.defaults.NSGlobalDomain.ApplePressAndHoldEnabled = false;
@@ -11,7 +13,7 @@
 
   launchd.daemons = {
     cleanup = {
-      command = "/Users/johnw/bin/cleanup -u";
+      command = "${home}/bin/cleanup -u";
       serviceConfig.StartInterval = 86400;
     };
 
@@ -67,9 +69,9 @@
             --verbose \
             --launchd \
             --inactivity-timeout 300 \
-            --log-file /Users/johnw/Library/Logs/rtags.launchd.log
+            --log-file ${home}/Library/Logs/rtags.launchd.log
       '';
-      serviceConfig.Sockets.Listeners.SockPathName = "/Users/johnw/.rdm";
+      serviceConfig.Sockets.Listeners.SockPathName = "${home}/.rdm";
     };
 
     znc = {
@@ -94,7 +96,7 @@
     default-cache-ttl 600
     max-cache-ttl 7200
     pinentry-program ${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac
-    scdaemon-program /Users/johnw/.gnupg/scdaemon-wrapper
+    scdaemon-program ${home}/.gnupg/scdaemon-wrapper
   '';
 
   environment.etc."per-user/johnw/com.dannyvankooten.browserpass.json".text = ''
@@ -123,7 +125,7 @@
     user johnw@newartisans.com
     passwordeval pass smtp.fastmail.com
     from johnw@newartisans.com
-    logfile /Users/johnw/Library/Logs/msmtp.log
+    logfile ${home}/Library/Logs/msmtp.log
   '';
 
   environment.etc."dovecot/dovecot.conf".text = ''
@@ -132,7 +134,7 @@
     lda_mailbox_autocreate = yes
     log_path = syslog
     mail_gid = 20
-    mail_location = mdbox:/Users/johnw/Messages/Mailboxes
+    mail_location = mdbox:${home}/Messages/Mailboxes
     mail_plugin_dir = ${pkgs.dovecot-plugins}/etc/dovecot/modules
     mail_plugins = fts fts_lucene zlib
     mail_uid = 501
@@ -151,7 +153,7 @@
 
     passdb {
       driver = static
-      args = uid=501 gid=20 home=/Users/johnw password=pass
+      args = uid=501 gid=20 home=${home} password=pass
     }
 
     namespace {
@@ -486,7 +488,7 @@
   nix.buildMachines = lib.optionals (config.networking.hostName == "vulcan") [
     { hostName = "hermes";
       sshUser = "johnw";
-      sshKey = "/Users/johnw/.ssh/id_local";
+      sshKey = "${home}/.ssh/id_local";
       system = "x86_64-darwin";
       maxJobs = 4;
     }
@@ -518,17 +520,17 @@
 
   environment.variables = {
     MANPATH            = [
-      "/Users/johnw/.nix-profile/share/man"
-      "/Users/johnw/.nix-profile/man"
-      "/Users/johnw/run/current-system/sw/share/man"
-      "/Users/johnw/run/current-system/sw/man"
+      "${home}/.nix-profile/share/man"
+      "${home}/.nix-profile/man"
+      "${home}/run/current-system/sw/share/man"
+      "${home}/run/current-system/sw/man"
       "/usr/local/share/man"
       "/usr/share/man"
       "/Developer/usr/share/man"
       "/usr/X11/man"
     ];
 
-    PASSWORD_STORE_DIR = "/Users/johnw/doc/.passwords";
+    PASSWORD_STORE_DIR = "${home}/doc/.passwords";
     PASSWORD_STORE_ENABLE_EXTENSIONS = "true";
     PASSWORD_STORE_EXTENSIONS_DIR =
       "/run/current-system/sw/lib/password-store/extensions";
@@ -543,7 +545,7 @@
     GHCVER             = "82";
     GIT_PAGER          = "less";
     HISTCONTROL        = "ignoreboth:erasedups";
-    HISTFILE           = "/Users/johnw/.bash_history";
+    HISTFILE           = "${home}/.bash_history";
     HISTFILESIZE       = "50000";
     HISTSIZE           = "50000";
     JAVA_OPTS          = "-Xverify:none";
@@ -555,8 +557,8 @@
     PROMPT_DIRTRIM     = "2";
     PS1                = "\\D{%H:%M} \\h:\\W $ ";
     SAVEHIST           = "50000";
-    SSH_AUTH_SOCK      = "/Users/johnw/.gnupg/S.gpg-agent.ssh";
-    STARDICT_DATA_DIR  = "/Users/johnw/oss/dictionaries";
+    SSH_AUTH_SOCK      = "${home}/.gnupg/S.gpg-agent.ssh";
+    STARDICT_DATA_DIR  = "${home}/oss/dictionaries";
     WORDCHARS          = "";
   };
 
