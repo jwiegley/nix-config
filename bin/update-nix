@@ -5,15 +5,26 @@ if [[ "$1" == "-a" ]]; then
 
     if [[ "$1" == "-p" ]]; then
         shift 1
-        cd ~/.nix-defexpr/nixpkgs-next
+
+        cd ~/oss/nixpkgs-next
+        git remote update
+        git pull --rebase
+
+        cd ~/oss/darwin
         git remote update
         git pull --rebase
     fi
 
     nix-env -f '<nixpkgs-next>' -u "$@"
 
-    rsync -a --delete ~/.nix-defexpr/nixpkgs-next/ ~/.nix-defexpr/nixpkgs/
-    git --git-dir=$HOME/.nix-defexpr/nixpkgs/.git push --mirror jwiegley
+    darwin-rebuild build
+    darwin-rebuild switch
+
+    rsync -a --delete ~/oss/nixpkgs-next/ ~/oss/nixpkgs/
+    git --git-dir=$HOME/oss/nixpkgs/.git push --mirror jwiegley
+
+    git --git-dir=$HOME/oss/darwin/.git push --mirror jwiegley
+
     copy-nix hermes --leq -Q -j4
 else
     nix-env -q | sed 's/-[0-9].*//' | xargs nix-env -f '<nixpkgs>' -u "$@"

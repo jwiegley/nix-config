@@ -79,8 +79,8 @@ myHaskellPackageDefs = super:
   comparator          = pkg ~/bae/autofocus-deliverable/xhtml/comparator {};
   generator           = pkg ~/bae/autofocus-deliverable/xhtml/generator {};
   harness             = pkg ~/bae/autofocus-deliverable/rings-dashboard/mitll-harness {};
-  hmon                = pkg ~/bae/atif-deliverable/monitors/hmon {};
-  hsmedl              = pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {};
+  # hmon                = pkg ~/bae/atif-deliverable/monitors/hmon {};
+  # hsmedl              = pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {};
   rings-dashboard     = pkg ~/bae/autofocus-deliverable/rings-dashboard {};
   rings-dashboard-api = pkg ~/bae/autofocus-deliverable/rings-dashboard/rings-dashboard-api {};
   solver              = pkg ~/bae/concerto/solver {};
@@ -238,43 +238,10 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
        license = stdenv.lib.licenses.bsd3;
      }) {};
 
-  "lambdabot-haskell-plugins" = doJailbreak (
-    super.lambdabot-haskell-plugins.override {
-      haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
-    });
-
-  "haskell-src-exts_1_20_1" = callPackage
-    ({ mkDerivation, array, base, containers, cpphs, directory
-     , filepath, ghc-prim, happy, mtl, pretty, pretty-show, smallcheck
-     , tasty, tasty-golden, tasty-smallcheck
-     }:
-     mkDerivation {
-       pname = "haskell-src-exts";
-       version = "1.20.1";
-       sha256 = "1jsjl9hja2dpcfq4mzlfpwyr6axwnwgacfb7aa070kz4lbygzaa8";
-       libraryHaskellDepends = [ array base cpphs ghc-prim pretty ];
-       libraryToolDepends = [ happy ];
-       testHaskellDepends = [
-         base containers directory filepath mtl pretty-show smallcheck tasty
-         tasty-golden tasty-smallcheck
-       ];
-       doCheck = false;
-       homepage = "https://github.com/haskell-suite/haskell-src-exts";
-       description = "Manipulating Haskell source: abstract syntax, lexer, parser, and pretty-printer";
-       license = stdenv.lib.licenses.bsd3;
-     }) {};
-
-  "haskell-src-exts-simple_1_20_0_0" = callPackage
-    ({ mkDerivation, base, haskell-src-exts }:
-     mkDerivation {
-       pname = "haskell-src-exts-simple";
-       version = "1.20.0.0";
-       sha256 = "0p79ppmwb14lj2a1wy42zgm3z3zk5jbyn7rfgwxsyw2g424bw1dk";
-       libraryHaskellDepends = [ base haskell-src-exts ];
-       homepage = "https://github.com/int-e/haskell-src-exts-simple";
-       description = "A simplified view on the haskell-src-exts AST";
-       license = stdenv.lib.licenses.mit;
-     }) { haskell-src-exts = haskell-src-exts_1_20_1; };
+  # "lambdabot-haskell-plugins" = doJailbreak (
+  #   super.lambdabot-haskell-plugins.override {
+  #     haskell-src-exts-simple = super.haskell-src-exts-simple_1_20_0_0;
+  #   });
 
   "ghc-mod" = dontCheck (doJailbreak (callPackage
     ({ mkDerivation, base, binary, bytestring, Cabal, cabal-helper
@@ -293,7 +260,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
          owner = "DanielG";
          repo = "ghc-mod";
          rev = "c3530f75d5c539c91ed0b8d38e90d66cbaa66a35";
-         sha256 = "2f70nrlqgizsrya1x5kgxib7hxc0ip18b7nh62jclny1fq4r02vm";
+         sha256 = "3q7sz50da645x7ysqy8k1m09adidqp62vf8v7zin69yv76fsz9nn";
        };
        isLibrary = true;
        isExecutable = true;
@@ -413,6 +380,16 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
        hydraPlatforms = pkgs.stdenv.lib.platforms.none;
      }) {});
 
+  "haskell-src-exts-simple_1_20_0_0" =
+    super."haskell-src-exts-simple_1_20_0_0".override {
+      haskell-src-exts = super."haskell-src-exts_1_20_1";
+    };
+
+  "lambdabot-haskell-plugins" =
+    super."lambdabot-haskell-plugins".override {
+      haskell-src-exts-simple = "haskell-src-exts-simple_1_20_0_0";
+    };
+
   "ghc-mod" = dontCheck (doJailbreak (callPackage
     ({ mkDerivation, base, binary, bytestring, Cabal, cabal-helper
      , containers, criterion, deepseq, directory, djinn-ghc, doctest
@@ -430,7 +407,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
          owner = "DanielG";
          repo = "ghc-mod";
          rev = "c3530f75d5c539c91ed0b8d38e90d66cbaa66a35";
-         sha256 = "1q7sz50da645x7ysqy8k1m09adidqp62vf8v7zin69yv76fsz9nn";
+         sha256 = "3q7sz50da645x7ysqy8k1m09adidqp62vf8v7zin69yv76fsz9nn";
        };
        isLibrary = true;
        isExecutable = true;
@@ -464,8 +441,9 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
        description = "Happy Haskell Hacking";
        license = pkgs.stdenv.lib.licenses.agpl3;
        hydraPlatforms = pkgs.stdenv.lib.platforms.none;
-     }) { shelltest = null;
-          cabal-helper = cabal-helper; }));
+     }) { haskell-src-exts = super."haskell-src-exts_1_20_1";
+          cabal-helper = cabal-helper;
+          shelltest = null; }));
 
   recurseForDerivations = true;
 
@@ -631,7 +609,7 @@ myHaskellPackages = haskellPackages: with haskellPackages; [
   fuzzcheck
   generic-lens
   ghc-core
-  ghc-mod
+  # ghc-mod
   ghc-paths
   gitlib
   gitlib-cmdline
@@ -679,7 +657,7 @@ myHaskellPackages = haskellPackages: with haskellPackages; [
   kan-extensions
   kdt
   keys
-  lambdabot
+  # lambdabot
   language-c
   lattices
   lens
@@ -1621,7 +1599,7 @@ myEmacsPackages = super: with super; rec {
 
   browse-kill-ring-plus = emacsFromUrl "browse-kill-ring+.el" (pkgs.fetchurl {
     url = https://www.emacswiki.org/emacs/download/browse-kill-ring+.el;
-    sha256 = "01cnh9i09b7i97aqjh8m7s18js85wm7cs25dxlkcrhy112pjb1nq";
+    sha256 = "1s32f70lc1gnllqqfw8zqr5n743rf0yfifqljsl210vnb5zg4zkj";
   }) [browse-kill-ring];
 
   bytecomp-simplify = emacsFromUrl "bytecomp-simplify.el" (pkgs.fetchurl {
@@ -1641,17 +1619,17 @@ myEmacsPackages = super: with super; rec {
 
   col-highlight = emacsFromUrl "col-highlight.el" (pkgs.fetchurl {
     url = https://www.emacswiki.org/emacs/download/col-highlight.el;
-    sha256 = "0wi4xz8n5ib65spyrgqsp8l6zafnvxdiw3hy918fs0xjj7ziy6qc";
+    sha256 = "0na8aimv5j66pzqi4hk2jw5kk00ki99zkxiykwcmjiy3h1r9311k";
   }) [ vline ];
 
   crosshairs = emacsFromUrl "crosshairs.el" (pkgs.fetchurl {
     url = https://www.emacswiki.org/emacs/download/crosshairs.el;
-    sha256 = "1dcynm83a3ixdccw3cqy533d9xwzswyi67cydaqmv35q88dg2nqw";
+    sha256 = "0032v3ry043wzvbacm16liykc362pza1bc46x37b307bvbv12qlg";
   }) [ hl-line-plus col-highlight vline ];
 
   cursor-chg = emacsFromUrl "cursor-chg.el" (pkgs.fetchurl {
     url = https://www.emacswiki.org/emacs/download/cursor-chg.el;
-    sha256 = "026x1mbjrf68xrv970jbf131d26rj0nmzi1x0c8r6qdr02pw2jy1";
+    sha256 = "1zmwh0z4g6khb04lbgga263pqa51mfvs0wfj3y85j7b08f2lqnqn";
   }) [];
 
   dedicated = emacsFromUrl "dedicated.el" (pkgs.fetchurl {
@@ -1701,12 +1679,12 @@ myEmacsPackages = super: with super; rec {
 
   highlight = emacsFromUrl "highlight.el" (pkgs.fetchurl {
     url = https://www.emacswiki.org/emacs/download/highlight.el;
-    sha256 = "160q7p922x1brxkb7372faw2kl2jdzm5shvblqlw9f1jmqdyscvz";
+    sha256 = "1f0lz7giv7f80hi4wvhjc688912pjrhwgm4fc16rqyk8rklywxp9";
   }) [];
 
   hl-line-plus = emacsFromUrl "hl-line+.el" (pkgs.fetchurl {
     url = "https://www.emacswiki.org/emacs/download/hl-line+.el";
-    sha256 = "03bgx651nrnwqbclbfaabkw4h2iaiswnndqgms0w6lp3jjfc10wc";
+    sha256 = "0crkmjah8i61z6c15sgn2cbpbj8xqfx0py1y84pxkcjh1cj7hx7q";
   }) [];
 
   initsplit = emacsFromUrl "initsplit.el" (pkgs.fetchFromGitHub {
@@ -1773,7 +1751,7 @@ myEmacsPackages = super: with super; rec {
 
   pp-c-l = emacsFromUrl "pp-c-l.el" (pkgs.fetchurl {
     url = https://www.emacswiki.org/emacs/download/pp-c-l.el;
-    sha256 = "1faq3acfsvpqwcb4v6n1k4qamcmz2czap9r5plrcyam9bi40aspc";
+    sha256 = "03mhd8lja71163jg6fj4d4hy2dwb1c5j46sn9yq6m9wz413a4pmd";
   }) [];
 
   rs-gnus-summary = emacsFromUrl "rs-gnus-summary.el" (pkgs.fetchurl {
@@ -2083,7 +2061,7 @@ emacsHEAD = with pkgs; pkgs.stdenv.lib.overrideDerivation
 
   appName = "ERC";
   bundleName = "nextstep/ERC.app";
-  iconFile = "/Users/johnw/src/nix/emacs/Chat.icns";
+  iconFile = ~/src/nix/emacs/Chat.icns;
 
   buildInputs = pkgs.emacs25.buildInputs ++ [ git ];
 
@@ -2262,7 +2240,7 @@ emacs26FullEnv = pkgs.buildEnv {
     csv-mode
     ctable
     cursor-chg
-    dash
+    dash # dash-el
     dash-at-point
     debbugs
     dedicated
@@ -2511,6 +2489,7 @@ emacs26FullEnv = pkgs.buildEnv {
     string-inflection
     super-save
     supercite
+    sunrise-commander
     swiper
     tablegen-mode
     tablist
@@ -2522,14 +2501,14 @@ emacs26FullEnv = pkgs.buildEnv {
     typo
     undo-tree
     use-package
-    uuidgen
+    uuidgen # uuidgen-el
     vdiff
     vimish-fold
     visual-fill-column
     visual-regexp
     visual-regexp-steroids
     vline
-    w3m
+    w3m # emacs-w3m
     web
     web-mode
     web-server
@@ -2540,16 +2519,12 @@ emacs26FullEnv = pkgs.buildEnv {
     with-editor
     word-count-mode
     worf
-    writeroom-mode
     ws-butler
     xml-rpc
     xray
     yaml-mode
     yaoddmuse
     yasnippet
-    # jww (2017-12-15): This provides a 'default.el' file that clashes with
-    # what Nix loads on startup.
-    # yasnippet-snippets
     z3-mode
     zencoding-mode
     zoom
@@ -2707,6 +2682,11 @@ networkToolsEnv = pkgs.buildEnv {
   ];
 };
 
+zbar = pkgs.callPackage ~/oss/nixpkgs-next/pkgs/tools/graphics/zbar {};
+nss = pkgs.callPackage ~/oss/nixpkgs-next/pkgs/development/libraries/nss {};
+apg = pkgs.callPackage ~/oss/nixpkgs-next/pkgs/tools/security/apg {};
+pass-otp = pkgs.callPackage ~/oss/nixpkgs-next/pkgs/tools/security/pass-otp {};
+
 johnw-home = with pkgs; stdenv.mkDerivation {
   name = "johnw-home";
 
@@ -2718,13 +2698,13 @@ johnw-home = with pkgs; stdenv.mkDerivation {
 
   installPhase = ''
     mkdir -p $out/etc
-    cp -prL etc/* $out/etc
+    cp -pR etc/* $out/etc
 
     mkdir -p $out/dot-files
-    cp -prL dot-files/* $out/dot-files
+    cp -pR dot-files/* $out/dot-files
 
     mkdir -p $out/Library
-    cp -prL Library/* $out/Library
+    cp -pR Library/* $out/Library
   '';
 
   meta = with stdenv.lib; {

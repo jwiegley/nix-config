@@ -72,10 +72,11 @@
       serviceConfig.Sockets.Listeners.SockPathName = "/Users/johnw/.rdm";
     };
 
-    # znc = {
-    #   command = "${pkgs.znc}/bin/znc";
-    #   serviceConfig.RunAtLoad = true;
-    # };
+    znc = {
+      command = "${pkgs.znc}/bin/znc";
+      serviceConfig.RunAtLoad = true;
+      serviceConfig.StartInterval = 300;
+    };
   };
 
   environment.etc."per-user/johnw/aspell.conf".text = ''
@@ -200,6 +201,10 @@
   system.activationScripts.extraPostActivation.text = ''
     chflags nohidden ~/Library
 
+    sudo launchctl load -w \
+        /System/Library/LaunchDaemons/com.apple.atrun.plist > /dev/null 2>&1 \
+        || exit 0
+
     ln -sf /etc/bashrc ~/.bashrc
 
     cp -p /etc/fetchmailrc ~/.fetchmailrc
@@ -214,6 +219,7 @@
         /etc/per-user/johnw/aspell.conf         \
         ${pkgs.johnw-home}/dot-files/*
     do
+        rm -f ~/.$(basename $i)
         ln -sf $i ~/.$(basename $i)
     done
 
@@ -238,7 +244,8 @@
     do
         dir=$(dirname "$file")
         mkdir -p ~/"$dir"
-        ln -sf "${pkgs.johnw-home}/$file" ~/"$file"
+        rm -fr ~/"$file"
+        cp -pR "${pkgs.johnw-home}/$file" ~/"$file"
     done
 
     for file in \
@@ -246,6 +253,7 @@
     do
         dir=$(dirname "$file")
         mkdir -p ~/"$dir"
+        rm -f ~/"$file"
         ln -sf "/etc/per-user/johnw/$(basename "$file")" ~/"$file"
     done
   '';
@@ -372,12 +380,14 @@
     ledger
     pdf-tools-server
     poppler
+    sdcv
     sourceHighlight
     # texinfo
     yuicompressor
     (haskell.lib.justStaticExecutables haskPkgs.lhs2tex)
     (haskell.lib.justStaticExecutables haskPkgs.sitebuilder)
     texFull
+    wordnet
 
     # pythonToolsEnv
     python3
@@ -389,6 +399,7 @@
     python27Packages.certifi
 
     # systemToolsEnv
+    apg
     aspell
     aspellDicts.en
     bashInteractive
@@ -413,20 +424,21 @@
     (haskell.lib.justStaticExecutables haskPkgs.simple-mirror)
     (haskell.lib.justStaticExecutables haskPkgs.sizes)
     (haskell.lib.justStaticExecutables haskPkgs.una)
-    imagemagick_light
+    imagemagickBig
     jdk8
     jenkins
     less
     multitail
-    renameutils
     p7zip
     pass
+    pass-otp
     parallel
     pinentry_mac
     postgresql96
     pv
-    # jww (2017-12-26): Waiting on https://bugs.launchpad.net/qemu/+bug/1714750
-    # qemu
+    qemu
+    qrencode
+    renameutils
     ripgrep
     rlwrap
     screen
@@ -443,27 +455,20 @@
     xz
     z3
     cvc4
+    zbar
     zip
     zsh
   ];
 
-  # Create /etc/bashrc that loads the nix-darwin environment.
   programs.bash.enable = true;
 
-  # Recreate /run/current-system symlink after boot.
   services.nix-daemon.enable = true;
   services.activate-system.enable = true;
 
-  # Used for backwards compatibility, please read the changelog before changing.
-  # $ darwin-rebuild changelog
   system.stateVersion = 2;
 
-  # You should generally set this to the total number of logical cores in your
-  # system. (sysctl -n hw.ncpu)
-  nix.maxJobs = 4;
   nix.nixPath =
-    [ # Use local nixpkgs checkout instead of channels.
-      "darwin-config=$HOME/src/nix/darwin-configuration.nix"
+    [ "darwin-config=$HOME/src/nix/darwin-configuration.nix"
       "darwin=$HOME/oss/darwin"
       "nixpkgs=$HOME/oss/nixpkgs"
       "nixpkgs-next=$HOME/oss/nixpkgs-next"
@@ -476,6 +481,16 @@
     gc-keep-derivations = true
     env-keep-derivations = true
   '';
+
+  nix.distributedBuilds = true;
+  nix.buildMachines = lib.optionals (config.networking.hostName == "vulcan") [
+    { hostName = "hermes";
+      sshUser = "johnw";
+      sshKey = "/Users/johnw/.ssh/id_local";
+      system = "x86_64-darwin";
+      maxJobs = 4;
+    }
+  ];
 
   programs.nix-index.enable = true;
 
@@ -494,32 +509,30 @@
         export SSH_AGENT_PID
     fi
 
+    export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
     shopt -s histappend
-
-    for path in                                     \
-        /usr/X11/man                                \
-        /Developer/usr/share/man                    \
-        /usr/share/man                              \
-        /usr/local/share/man                        \
-        $HOME/run/current-system/sw/man             \
-        $HOME/run/current-system/sw/share/man       \
-        $HOME/.nix-profile/man                      \
-        $HOME/.nix-profile/share/man
-    do
-        export MANPATH=$path:$MANPATH
-    done
-
-    # mkdir -p /tmp/current-load
-    # chmod a+rwX /tmp/current-load
-    #
-    # export NIX_BUILD_HOOK=$HOME/.nix-profile/libexec/nix/build-remote.pl
-    # export NIX_REMOTE_SYSTEMS=$HOME/.nixpkgs/remote-systems.conf
-    # export NIX_CURRENT_LOAD=/tmp/current-load
   '';
 
-  environment.pathsToLink = [ "/info" "/etc" "/share" ];
+  environment.pathsToLink = [ "/info" "/etc" "/share" "/lib" "/libexec" ];
 
   environment.variables = {
+    MANPATH            = [
+      "/Users/johnw/.nix-profile/share/man"
+      "/Users/johnw/.nix-profile/man"
+      "/Users/johnw/run/current-system/sw/share/man"
+      "/Users/johnw/run/current-system/sw/man"
+      "/usr/local/share/man"
+      "/usr/share/man"
+      "/Developer/usr/share/man"
+      "/usr/X11/man"
+    ];
+
+    PASSWORD_STORE_DIR = "/Users/johnw/doc/.passwords";
+    PASSWORD_STORE_ENABLE_EXTENSIONS = "true";
+    PASSWORD_STORE_EXTENSIONS_DIR =
+      "/run/current-system/sw/lib/password-store/extensions";
+
     ALTERNATE_EDITOR   = "vi";
     COLUMNS            = "100";
     COQVER             = "87";
@@ -535,16 +548,15 @@
     HISTSIZE           = "50000";
     JAVA_OPTS          = "-Xverify:none";
     LC_CTYPE           = "en_US.UTF-8";
-    # LD_LIBRARY_PATH    = "/usr/local/lib:\\$LD_LIBRARY_PATH";
     LEDGER_COLOR       = "true";
     LESS               = "-FRSXM";
     LESSCHARSET        = "utf-8";
     PAGER              = "less";
-    PASSWORD_STORE_DIR = "/Users/johnw/doc/.passwords";
     PROMPT_DIRTRIM     = "2";
     PS1                = "\\D{%H:%M} \\h:\\W $ ";
     SAVEHIST           = "50000";
     SSH_AUTH_SOCK      = "/Users/johnw/.gnupg/S.gpg-agent.ssh";
+    STARDICT_DATA_DIR  = "/Users/johnw/oss/dictionaries";
     WORDCHARS          = "";
   };
 
