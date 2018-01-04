@@ -130,7 +130,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   units                     = super.units.override { th-desugar = th-desugar_1_6; };
   z3cat                     = dontCheck mypkgs.z3cat;
 
-  "cabal-install" = callPackage
+  cabal-install = callPackage
     ({ mkDerivation, array, async, base, base16-bytestring, binary
      , bytestring, Cabal, containers, cryptohash-sha256, directory
      , filepath, hackage-security, hashable, HTTP, mtl, network
@@ -169,7 +169,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
        maintainers = with pkgs.stdenv.lib.maintainers; [ peti ];
      }) { Cabal = Cabal; };
 
-  "th-desugar_1_6" = callPackage
+  th-desugar_1_6 = callPackage
     ({ mkDerivation, base, containers, hspec, HUnit, mtl, syb
      , template-haskell, th-expand-syns, th-lift, th-orphans
      }:
@@ -192,7 +192,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
        license = stdenv.lib.licenses.bsd3;
      }) {};
 
-  "singletons" = dontCheck (doJailbreak (callPackage
+  singletons = dontCheck (doJailbreak (callPackage
     ({ mkDerivation, base, Cabal, containers, directory, filepath, mtl
      , process, syb, tasty, tasty-golden, template-haskell, th-desugar
      }:
@@ -212,7 +212,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
      }) { th-desugar = th-desugar_1_6; }));
 
   # lens-family 1.2.2 requires GHC 8.2 or higher
-  "lens-family" = callPackage
+  lens-family = callPackage
     ({ mkDerivation, base, containers, lens-family-core, mtl
      , transformers
      }:
@@ -227,7 +227,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
        license = stdenv.lib.licenses.bsd3;
      }) {};
 
-  "lens-family-core" = callPackage
+  lens-family-core = callPackage
     ({ mkDerivation, base, containers, transformers }:
      mkDerivation {
        pname = "lens-family-core";
@@ -243,7 +243,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   #     haskell-src-exts-simple = super.haskell-src-exts-simple_1_20_0_0;
   #   });
 
-  "ghc-mod" = dontCheck (doJailbreak (callPackage
+  ghc-mod = dontCheck (doJailbreak (callPackage
     ({ mkDerivation, base, binary, bytestring, Cabal, cabal-helper
      , containers, criterion, deepseq, directory, djinn-ghc, doctest
      , extra, fclabels, filepath, ghc, ghc-boot, ghc-paths
@@ -338,7 +338,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = doJailbreak (dontCheck (pkg ~/oss/timeparsers {}));
 
-  "cabal-helper" = doJailbreak (callPackage
+  cabal-helper = doJailbreak (callPackage
     ({ mkDerivation, base, bytestring, Cabal, cabal-install, containers
      , directory, extra, filepath, ghc-prim, mtl, process
      , template-haskell, temporary, transformers, unix, utf8-string
@@ -380,17 +380,17 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
        hydraPlatforms = pkgs.stdenv.lib.platforms.none;
      }) {});
 
-  "haskell-src-exts-simple_1_20_0_0" =
-    super."haskell-src-exts-simple_1_20_0_0".override {
-      haskell-src-exts = super."haskell-src-exts_1_20_1";
+  haskell-src-exts-simple_1_20_0_0 =
+    super.haskell-src-exts-simple_1_20_0_0.override {
+      haskell-src-exts = super.haskell-src-exts_1_20_1;
     };
 
-  "lambdabot-haskell-plugins" =
-    super."lambdabot-haskell-plugins".override {
-      haskell-src-exts-simple = "haskell-src-exts-simple_1_20_0_0";
+  lambdabot-haskell-plugins =
+    super.lambdabot-haskell-plugins.override {
+      haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
     };
 
-  "ghc-mod" = dontCheck (doJailbreak (callPackage
+  ghc-mod = dontCheck (doJailbreak (callPackage
     ({ mkDerivation, base, binary, bytestring, Cabal, cabal-helper
      , containers, criterion, deepseq, directory, djinn-ghc, doctest
      , extra, fclabels, filepath, ghc, ghc-boot, ghc-paths
@@ -441,7 +441,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
        description = "Happy Haskell Hacking";
        license = pkgs.stdenv.lib.licenses.agpl3;
        hydraPlatforms = pkgs.stdenv.lib.platforms.none;
-     }) { haskell-src-exts = super."haskell-src-exts_1_20_1";
+     }) { haskell-src-exts = super.haskell-src-exts_1_20_1;
           cabal-helper = cabal-helper;
           shelltest = null; }));
 
