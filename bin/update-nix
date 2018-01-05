@@ -6,23 +6,20 @@ if [[ "$1" == "-a" ]]; then
     if [[ "$1" == "-p" ]]; then
         shift 1
 
-        cd ~/oss/nixpkgs-next
-        git remote update
-        git pull --rebase
-
-        cd ~/oss/darwin
-        git remote update
-        git pull --rebase
+        (cd ~/oss/nixpkgs && git pull --rebase)
+        (cd ~/oss/darwin && git pull --rebase)
     fi
 
-    nix-env -f '<nixpkgs-next>' -u "$@"
+    git --git-dir=$HOME/oss/nixpkgs/.git branch -f before-update HEAD
+
+    nix-env -f '<nixpkgs>' -u "$@"
 
     darwin-rebuild build
     darwin-rebuild switch
 
-    rsync -a --delete ~/oss/nixpkgs-next/ ~/oss/nixpkgs/
-    git --git-dir=$HOME/oss/nixpkgs/.git push --mirror jwiegley
+    git --git-dir=$HOME/oss/nixpkgs/.git branch -f last-known-good before-update
 
+    git --git-dir=$HOME/oss/nixpkgs/.git push --mirror jwiegley
     git --git-dir=$HOME/oss/darwin/.git push --mirror jwiegley
 
     copy-nix hermes --leq -Q -j4

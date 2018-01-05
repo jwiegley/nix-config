@@ -79,8 +79,6 @@ myHaskellPackageDefs = super:
   comparator          = pkg ~/bae/autofocus-deliverable/xhtml/comparator {};
   generator           = pkg ~/bae/autofocus-deliverable/xhtml/generator {};
   harness             = pkg ~/bae/autofocus-deliverable/rings-dashboard/mitll-harness {};
-  # hmon                = pkg ~/bae/atif-deliverable/monitors/hmon {};
-  # hsmedl              = pkg ~/bae/atif-deliverable/monitors/hmon/hsmedl {};
   rings-dashboard     = pkg ~/bae/autofocus-deliverable/rings-dashboard {};
   rings-dashboard-api = pkg ~/bae/autofocus-deliverable/rings-dashboard/rings-dashboard-api {};
   solver              = pkg ~/bae/concerto/solver {};
@@ -238,10 +236,15 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
        license = stdenv.lib.licenses.bsd3;
      }) {};
 
-  # "lambdabot-haskell-plugins" = doJailbreak (
-  #   super.lambdabot-haskell-plugins.override {
-  #     haskell-src-exts-simple = super.haskell-src-exts-simple_1_20_0_0;
-  #   });
+  haskell-src-exts-simple_1_20_0_0 =
+    super.haskell-src-exts-simple_1_20_0_0.override {
+      haskell-src-exts = super.haskell-src-exts_1_20_1;
+    };
+
+  lambdabot-haskell-plugins = doJailbreak (
+    super.lambdabot-haskell-plugins.override {
+      haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
+    });
 
   ghc-mod = dontCheck (doJailbreak (callPackage
     ({ mkDerivation, base, binary, bytestring, Cabal, cabal-helper
@@ -259,8 +262,8 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
        src = pkgs.fetchFromGitHub {
          owner = "DanielG";
          repo = "ghc-mod";
-         rev = "c3530f75d5c539c91ed0b8d38e90d66cbaa66a35";
-         sha256 = "3q7sz50da645x7ysqy8k1m09adidqp62vf8v7zin69yv76fsz9nn";
+         rev = "0f281bea89edf8f11c82c5359ee2b3ce19888b99";
+         sha256 = "0f70nrlqgizsrya1x5kgxib7hxc0ip18b7nh62jclny1fq4r02vm";
        };
        isLibrary = true;
        isExecutable = true;
@@ -407,7 +410,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
          owner = "DanielG";
          repo = "ghc-mod";
          rev = "c3530f75d5c539c91ed0b8d38e90d66cbaa66a35";
-         sha256 = "3q7sz50da645x7ysqy8k1m09adidqp62vf8v7zin69yv76fsz9nn";
+         sha256 = "1q7sz50da645x7ysqy8k1m09adidqp62vf8v7zin69yv76fsz9nn";
        };
        isLibrary = true;
        isExecutable = true;
@@ -441,8 +444,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
        description = "Happy Haskell Hacking";
        license = pkgs.stdenv.lib.licenses.agpl3;
        hydraPlatforms = pkgs.stdenv.lib.platforms.none;
-     }) { haskell-src-exts = super.haskell-src-exts_1_20_1;
-          cabal-helper = cabal-helper;
+     }) { cabal-helper = cabal-helper;
           shelltest = null; }));
 
   recurseForDerivations = true;
@@ -488,12 +490,8 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
 
 myHaskellPackages = haskellPackages: with haskellPackages; [
   # HFuse
-  # ghc-datasize
-  # gitlib-hit
-  # gitlib-s3
   # liquidhaskell
   # threadscope
-  # z3-generate-api
   Boolean
   HTTP
   HUnit
@@ -609,7 +607,7 @@ myHaskellPackages = haskellPackages: with haskellPackages; [
   fuzzcheck
   generic-lens
   ghc-core
-  # ghc-mod
+  ghc-mod
   ghc-paths
   gitlib
   gitlib-cmdline
@@ -657,7 +655,7 @@ myHaskellPackages = haskellPackages: with haskellPackages; [
   kan-extensions
   kdt
   keys
-  # lambdabot
+  lambdabot
   language-c
   lattices
   lens
@@ -848,8 +846,6 @@ ghcHEADProfEnv = pkgs.myEnvFun {
   buildInputs = with pkgs.haskell.lib; with haskellPackages_HEAD; [
     pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
-
-    # splot
   ];
 };
 
@@ -858,8 +854,6 @@ ghc82Env = pkgs.myEnvFun {
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_2; [
     pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
-
-    # splot
   ];
 };
 
@@ -868,8 +862,6 @@ ghc82ProfEnv = pkgs.myEnvFun {
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_2; [
     pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
-
-    # splot
   ];
 };
 
@@ -2203,8 +2195,6 @@ emacs26FullEnv = pkgs.buildEnv {
     avy-zap
     back-button
     backup-each-save
-    # bbdb
-    # bbdb-vcard
     beacon
     biblio
     bm
@@ -2584,108 +2574,9 @@ ledgerPy2Env = pkgs.myEnvFun {
 };
 
 ##############################################################################
-# Tools
-
-systemToolsEnv = pkgs.buildEnv {
-  name = "systemTools";
-  paths = with pkgs; [
-    aspell
-    aspellDicts.en
-    bashInteractive
-    bash-completion
-    nix-bash-completions
-    browserpass
-    ctop
-    direnv
-    exiv2
-    findutils
-    fzf
-    gawk
-    gnugrep
-    gnupg paperkey
-    gnuplot
-    gnused
-    gnutar
-    (haskell.lib.justStaticExecutables haskPkgs.hours)
-    (haskell.lib.justStaticExecutables haskPkgs.pushme)
-    (haskell.lib.justStaticExecutables haskPkgs.runmany)
-    (haskell.lib.justStaticExecutables haskPkgs.simple-mirror)
-    (haskell.lib.justStaticExecutables haskPkgs.sizes)
-    (haskell.lib.justStaticExecutables haskPkgs.una)
-    imagemagick_light
-    jdk8
-    jenkins
-    less
-    multitail
-    renameutils
-    p7zip
-    pass
-    parallel
-    pinentry_mac
-    postgresql96
-    pv
-    # jww (2017-12-26): Waiting on https://bugs.launchpad.net/qemu/+bug/1714750
-    # qemu
-    ripgrep
-    rlwrap
-    screen
-    silver-searcher
-    srm
-    sqlite
-    stow
-    time
-    tmux
-    tree
-    unrar
-    unzip
-    watch
-    xz
-    z3
-    cvc4
-    zip
-    zsh
-  ];
-};
+# System
 
 backblaze-b2 = pkgs.callPackage ./backblaze.nix {};
-
-networkToolsEnv = pkgs.buildEnv {
-  name = "networkTools";
-  paths = with pkgs; [
-    aria2
-    backblaze-b2
-    bazaar
-    cacert
-    httrack
-    mercurialFull
-    iperf
-    nmap
-    lftp
-    mtr
-    dnsutils
-    openssh
-    openssl
-    pdnsd
-    privoxy
-    rclone
-    rsync
-    sipcalc
-    socat2pre
-    spiped
-    subversion
-    w3m
-    wget
-    youtube-dl
-    znc
-    zncModules.fish
-    zncModules.push
-  ];
-};
-
-zbar = pkgs.callPackage ~/oss/nixpkgs-next/pkgs/tools/graphics/zbar {};
-nss = pkgs.callPackage ~/oss/nixpkgs-next/pkgs/development/libraries/nss {};
-apg = pkgs.callPackage ~/oss/nixpkgs-next/pkgs/tools/security/apg {};
-pass-otp = pkgs.callPackage ~/oss/nixpkgs-next/pkgs/tools/security/pass-otp {};
 
 johnw-home = with pkgs; stdenv.mkDerivation {
   name = "johnw-home";
@@ -2705,52 +2596,6 @@ johnw-home = with pkgs; stdenv.mkDerivation {
 
     mkdir -p $out/Library
     cp -pR Library/* $out/Library
-  '';
-
-  meta = with stdenv.lib; {
-    description = "John Wiegley's various scripts";
-    homepage = https://github.com/jwiegley;
-    license = licenses.mit;
-    maintainers = with maintainers; [ jwiegley ];
-    platforms = platforms.darwin;
-  };
-};
-
-dot-emacs = with pkgs; stdenv.mkDerivation {
-  name = "dot-emacs";
-
-  src = builtins.filterSource (path: type:
-      baseNameOf path != ".git"             &&
-      baseNameOf path != "MANIFEST.csv"     &&
-      baseNameOf path != "abbrevs.el"       &&
-      baseNameOf path != "data"             &&
-      baseNameOf path != "data-alt"         &&
-      baseNameOf path != "data-full"        &&
-      baseNameOf path != "data-other"       &&
-      baseNameOf path != "dot-gnus.el"      &&
-      baseNameOf path != "dot-org.el"       &&
-      baseNameOf path != "emms"             &&
-      baseNameOf path != "eshell"           &&
-      baseNameOf path != "games"            &&
-      baseNameOf path != "gnus-settings.el" &&
-      baseNameOf path != "info"             &&
-      baseNameOf path != "init.el"          &&
-      baseNameOf path != "magithub"         &&
-      baseNameOf path != "master"           &&
-      baseNameOf path != "org-settings.el"  &&
-      baseNameOf path != "release"          &&
-      baseNameOf path != "settings.el")
-    ~/src/dot-emacs;
-
-  buildInputs = [ emacs26 parallel git ];
-
-  buildPhase = ''
-    ./compile-all --leq
-  '';
-
-  installPhase = ''
-    mkdir -p $out/emacs.d
-    cp -pR compiled $out/emacs.d
   '';
 
   meta = with stdenv.lib; {
@@ -2846,19 +2691,6 @@ dovecot-plugins = with pkgs; stdenv.mkDerivation {
   '';
 };
 
-mailToolsEnv = pkgs.buildEnv {
-  name = "mailTools";
-  paths = with pkgs; [
-    dovecot
-    dovecot_pigeonhole
-    contacts
-    fetchmail
-    imapfilter
-    leafnode
-    msmtp
-  ];
-};
-
 ghi = with pkgs; buildRubyGem rec {
   inherit ruby;
   name = "${gemName}-${version}";
@@ -2877,28 +2709,6 @@ gist = with pkgs; buildRubyGem rec {
   buildInputs = [bundler];
 };
 
-gitToolsEnv = pkgs.buildEnv {
-  name = "gitTools";
-  paths = with pkgs; [
-    diffstat
-    diffutils
-    ghi
-    gist
-    gitRepo
-    gitAndTools.git-imerge
-    gitAndTools.gitFull
-    gitAndTools.gitflow
-    gitAndTools.hub
-    gitAndTools.tig
-    gitAndTools.git-annex
-    gitAndTools.git-annex-remote-rclone
-    (haskell.lib.justStaticExecutables haskPkgs.git-all)
-    (haskell.lib.justStaticExecutables haskPkgs.git-monitor)
-    patch
-    patchutils
-  ];
-};
-
 pdf-tools-server = pkgs.callPackage ./emacs/pdf-tools.nix {};
 
 texFull = with pkgs; texlive.combine {
@@ -2907,82 +2717,6 @@ texFull = with pkgs; texlive.combine {
      pkg.tlType == "run"
   || pkg.tlType == "bin"
   || pkg.pname == "latex2e-help-texinfo";
-};
-
-publishToolsEnv = pkgs.buildEnv {
-  name = "publishTools";
-  paths = with pkgs; [
-    hugo
-    biber
-    dot2tex
-    doxygen
-    graphviz-nox
-    highlight
-    languagetool
-    pdf-tools-server
-    poppler
-    sourceHighlight
-    texinfo
-    yuicompressor
-    (haskell.lib.justStaticExecutables haskPkgs.lhs2tex)
-    (haskell.lib.justStaticExecutables haskPkgs.sitebuilder)
-    texFull
-  ];
-};
-
-langToolsEnv = pkgs.buildEnv {
-  name = "langTools";
-  paths = with pkgs; [
-    global
-    (haskell.lib.justStaticExecutables haskPkgs.bench)
-    (haskell.lib.justStaticExecutables haskPkgs.hpack)
-    autoconf automake libtool pkgconfig
-    clang libcxx libcxxabi llvm
-    cmake ninja gnumake
-    rabbitmq-c
-    lp_solve
-    cabal2nix cabal-install
-    rtags
-    gmp mpfr
-    htmlTidy
-    idutils
-    lean
-    ott
-    R
-    sbcl
-    sloccount
-    verasco
-  ];
- };
-
-jsToolsEnv = pkgs.buildEnv {
-  name = "jsTools";
-  paths = with pkgs; [
-    jq
-    nodejs
-    nodePackages.eslint
-    nodePackages.csslint
-    nodePackages.jsontool
-    jquery
-  ];
-};
-
-pythonToolsEnv = pkgs.buildEnv {
-  name = "pythonTools";
-  paths = with pkgs; [
-    python3
-    python27
-    pythonDocs.pdf_letter.python27
-    pythonDocs.html.python27
-    python27Packages.setuptools
-    python27Packages.pygments
-    python27Packages.certifi
-  ];
-};
-
-x11ToolsEnv = pkgs.buildEnv {
-  name = "x11Tools";
-  paths = with pkgs; [ xquartz xorg.xhost xorg.xauth ratpoison ];
 };
 
 }

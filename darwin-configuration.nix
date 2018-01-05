@@ -460,6 +460,12 @@ let home = builtins.getEnv "HOME"; in
     zbar
     zip
     zsh
+
+    # x11ToolsEnv
+    # xquartz
+    # xorg.xhost
+    # xorg.xauth
+    # ratpoison
   ];
 
   programs.bash.enable = true;
@@ -473,7 +479,6 @@ let home = builtins.getEnv "HOME"; in
     [ "darwin-config=$HOME/src/nix/darwin-configuration.nix"
       "darwin=$HOME/oss/darwin"
       "nixpkgs=$HOME/oss/nixpkgs"
-      "nixpkgs-next=$HOME/oss/nixpkgs-next"
       "$HOME/.nix-defexpr/channels"
     ];
 
@@ -485,7 +490,7 @@ let home = builtins.getEnv "HOME"; in
   '';
 
   nix.distributedBuilds = true;
-  nix.buildMachines = lib.optionals (config.networking.hostName == "vulcan") [
+  nix.buildMachines = [
     { hostName = "hermes";
       sshUser = "johnw";
       sshKey = "${home}/.ssh/id_local";
