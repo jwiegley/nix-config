@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }:
 
-let home = builtins.getEnv "HOME"; in
+let home = "/Users/johnw"; in
 {
   system.defaults.NSGlobalDomain.AppleKeyboardUIMode = 3;
   system.defaults.NSGlobalDomain.ApplePressAndHoldEnabled = false;
@@ -24,7 +24,8 @@ let home = builtins.getEnv "HOME"; in
 
     pdnsd = {
       script = ''
-        cp -p ${pkgs.johnw-home}/etc/pdnsd.conf /tmp/.pdnsd.conf
+        cp -p /etc/pdnsd.conf /tmp/.pdnsd.conf
+        chmod 700 /tmp/.pdnsd.conf
         chown root /tmp/.pdnsd.conf
         ${pkgs.pdnsd}/sbin/pdnsd -c /tmp/.pdnsd.conf
       '';
@@ -43,15 +44,17 @@ let home = builtins.getEnv "HOME"; in
       };
     };
 
-    # leafnode = {
-    #   command = "${pkgs.leafnode}/sbin/leafnode -d ~/Messages/Newsdir -F ~/Messages/leafnode/config";
-    #   serviceConfig.WorkingDirectory = "${pkgs.dovecot}/lib";
-    #   serviceConfig.inetdCompatibility.Wait = "nowait";
-    #   serviceConfig.Sockets.Listeners = {
-    #     SockNodeName = "127.0.0.1";
-    #     SockServiceName = "9119";
-    #   };
-    # };
+    leafnode = {
+      command = "${pkgs.leafnode}/sbin/leafnode "
+        + "-d ${home}/Messages/Newsdir "
+        + "-F ${home}/Messages/leafnode/config";
+      serviceConfig.WorkingDirectory = "${pkgs.dovecot}/lib";
+      serviceConfig.inetdCompatibility.Wait = "nowait";
+      serviceConfig.Sockets.Listeners = {
+        SockNodeName = "127.0.0.1";
+        SockServiceName = "9119";
+      };
+    };
 
     languagetool = {
       script = ''
@@ -80,53 +83,6 @@ let home = builtins.getEnv "HOME"; in
       serviceConfig.StartInterval = 300;
     };
   };
-
-  environment.etc."per-user/johnw/aspell.conf".text = ''
-    data-dir ${pkgs.aspell}/lib/aspell
-  '';
-
-  environment.etc."per-user/johnw/scdaemon-wrapper".text = ''
-    #!/bin/bash
-    export DYLD_FRAMEWORK_PATH=/System/Library/Frameworks
-    exec ${pkgs.gnupg}/libexec/scdaemon "$@"
-  '';
-
-  environment.etc."per-user/johnw/gpg-agent.conf".text = ''
-    enable-ssh-support
-    default-cache-ttl 600
-    max-cache-ttl 7200
-    pinentry-program ${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac
-    scdaemon-program ${home}/.gnupg/scdaemon-wrapper
-  '';
-
-  environment.etc."per-user/johnw/com.dannyvankooten.browserpass.json".text = ''
-    {
-      "name": "com.dannyvankooten.browserpass",
-      "description": "Browserpass binary for the Firefox extension",
-      "path": "${pkgs.browserpass}/bin/browserpass",
-      "type": "stdio",
-      "allowed_extensions": [
-        "browserpass@maximbaz.com"
-      ]
-    }
-  '';
-
-  environment.etc."msmtp.conf".text = ''
-    defaults
-
-    tls on
-    tls_starttls on
-    tls_trust_file ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
-
-    account fastmail
-    host smtp.fastmail.com
-    port 587
-    auth on
-    user johnw@newartisans.com
-    passwordeval pass smtp.fastmail.com
-    from johnw@newartisans.com
-    logfile ${home}/Library/Logs/msmtp.log
-  '';
 
   environment.etc."dovecot/dovecot.conf".text = ''
     auth_mechanisms = plain
@@ -177,103 +133,149 @@ let home = builtins.getEnv "HOME"; in
     }
     plugin {
       sieve_extensions = +editheader
-      sieve = ~/Messages/dovecot.sieve
-      sieve_dir = ~/Messages/sieve
+      sieve = ${home}/Messages/dovecot.sieve
+      sieve_dir = ${home}/Messages/sieve
     }
   '';
 
-  environment.etc."fetchmailrc".text = ''
-    poll imap.fastmail.com protocol IMAP port 993
-      user 'johnw@newartisans.com' there is johnw here
-      ssl sslcertck sslcertfile "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-      folder INBOX
-      fetchall
-      mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e"
+  environment.etc."pdnsd.conf".text = ''
+    global {
+        perm_cache   = 8192;
+        cache_dir    = "/Library/Caches/pdnsd";
+        run_as       = "johnw";
+        server_ip    = 127.0.0.1;
+        status_ctl   = on;
+        query_method = udp_tcp;
+        min_ttl      = 1h;    # Retain cached entries at least 1 hour.
+        max_ttl      = 4h;    # Four hours.
+        timeout      = 10;    # Global timeout option (10 seconds).
+        udpbufsize   = 1024;  # Upper limit on the size of UDP messages.
+        neg_rrs_pol  = on;
+        par_queries  = 1;
+    }
+
+    server {
+        label       = "google";
+        ip          = 8.8.8.8, 8.8.4.4;
+        preset      = on;
+        uptest      = none;
+        edns_query  = yes;
+        exclude     = ".local";
+        proxy_only  = on;
+        purge_cache = off;
+    }
+
+    server {
+        label       = "dyndns";
+        ip          = 216.146.35.35, 216.146.36.36;
+        preset      = on;
+        uptest      = none;
+        edns_query  = yes;
+        exclude     = ".local";
+        proxy_only  = on;
+        purge_cache = off;
+    }
+
+    # The servers provided by OpenDNS are fast, but they do not reply with
+    # NXDOMAIN for non-existant domains, instead they supply you with an address
+    # of one of their search engines. They also lie about the addresses of the
+    # search engines of google, microsoft and yahoo. If you do not like this
+    # behaviour the "reject" option may be useful.
+    server {
+        label       = "opendns";
+        ip          = 208.67.222.222, 208.67.220.220;
+        # You may need to add additional address ranges here if the addresses
+        # of their search engines change.
+        reject      = 208.69.32.0/24,
+                      208.69.34.0/24,
+                      208.67.219.0/24;
+        preset      = on;
+        uptest      = none;
+        edns_query  = yes;
+        exclude     = ".local";
+        proxy_only  = on;
+        purge_cache = off;
+    }
+
+    # This section is meant for resolving from root servers.
+    server {
+        label             = "root-servers";
+        root_server       = discover;
+        ip                = 198.41.0.4, 192.228.79.201;
+        randomize_servers = on;
+    }
+
+    source {
+        owner         = localhost;
+        serve_aliases = on;
+        file          = "/etc/hosts";
+    }
+
+    rr {
+        name    = localhost;
+        reverse = on;
+        a       = 127.0.0.1;
+        owner   = localhost;
+        soa     = localhost,root.localhost,42,86400,900,86400,86400;
+    }
+
+    rr { name = localunixsocket;       a = 127.0.0.1; }
+    rr { name = localunixsocket.local; a = 127.0.0.1; }
+
+    neg {
+        name  = doubleclick.net;
+        types = domain;           # This will also block xxx.doubleclick.net, etc.
+    }
+
+    neg {
+        name  = bad.server.com;   # Badly behaved server you don't want to connect to.
+        types = A,AAAA;
+    }
   '';
 
-  environment.etc."fetchmailrc.lists".text = ''
-    poll imap.fastmail.com protocol IMAP port 993
-      user 'johnw@newartisans.com' there is johnw here
-      ssl sslcertck sslcertfile "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-      folder 'Lists'
-      fetchall
-      mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e -m list.misc"
+  environment.etc."firefox-wrapper".text = ''
+    #!/bin/bash
+    source /etc/bashrc
+    source ${home}/.bashrc
+    dir=$(dirname "$0")
+    name=$(basename "$0")
+    exec "$dir"/."$name" "$@"
   '';
 
   system.activationScripts.extraPostActivation.text = ''
-    chflags nohidden ~/Library
+    chflags nohidden ${home}/Library
 
     sudo launchctl load -w \
         /System/Library/LaunchDaemons/com.apple.atrun.plist > /dev/null 2>&1 \
         || exit 0
 
-    ln -sf /etc/bashrc ~/.bashrc
+    mkdir -p ${home}/.parallel
+    touch ${home}/.parallel/will-cite
 
-    cp -p /etc/fetchmailrc ~/.fetchmailrc
-    chown johnw ~/.fetchmailrc
-    chmod 0600 ~/.fetchmailrc
-
-    cp -p /etc/fetchmailrc.lists ~/.fetchmailrc.lists
-    chown johnw ~/.fetchmailrc.lists
-    chmod 0600 ~/.fetchmailrc.lists
-
-    for i in                                    \
-        /etc/per-user/johnw/aspell.conf         \
-        ${pkgs.johnw-home}/dot-files/*
-    do
-        rm -f ~/.$(basename $i)
-        ln -sf $i ~/.$(basename $i)
-    done
-
-    mkdir -p ~/.parallel
-    touch ~/.parallel/will-cite
-
-    rm -f ~/.gitconfig
-    cp -p ${pkgs.johnw-home}/dot-files/gitconfig ~/.gitconfig
-    git config --global http.sslCAinfo "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-    git config --global http.sslverify true
-
-    cp -p /etc/per-user/johnw/scdaemon-wrapper ~/.gnupg
-    chmod +x ~/.gnupg/scdaemon-wrapper
-
-    cp -p /etc/per-user/johnw/gpg-agent.conf ~/.gnupg
-    ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
-
-    for file in                                           \
-        Library/KeyBindings/DefaultKeyBinding.dict        \
-        Library/Keyboard\ Layouts/PersianDvorak.keylayout \
-        Library/Scripts
-    do
-        dir=$(dirname "$file")
-        mkdir -p ~/"$dir"
-        rm -fr ~/"$file"
-        cp -pR "${pkgs.johnw-home}/$file" ~/"$file"
-    done
-
-    for file in \
-        Library/Application\ Support/Mozilla/NativeMessagingHosts/com.dannyvankooten.browserpass.json
-    do
-        dir=$(dirname "$file")
-        mkdir -p ~/"$dir"
-        rm -f ~/"$file"
-        ln -sf "/etc/per-user/johnw/$(basename "$file")" ~/"$file"
-    done
+    if [[ ! -f /Applications/Firefox.app/Contents/MacOS/.firefox ]]; then
+        mv /Applications/Firefox.app/Contents/MacOS/firefox \
+           /Applications/Firefox.app/Contents/MacOS/.firefox
+        mv /Applications/Firefox.app/Contents/MacOS/firefox-bin \
+           /Applications/Firefox.app/Contents/MacOS/.firefox-bin
+        cp -pL /etc/firefox-wrapper /Applications/Firefox.app/Contents/MacOS/firefox
+        chmod +x /Applications/Firefox.app/Contents/MacOS/firefox
+        cp -pL /etc/firefox-wrapper /Applications/Firefox.app/Contents/MacOS/firefox-bin
+        chmod +x /Applications/Firefox.app/Contents/MacOS/firefox-bin
+    fi
   '';
 
-  nixpkgs.config.allowUnfree = true;
-  nixpkgs.config.allowBroken = true;
+  nixpkgs.config = {
+    allowUnfree = true;
+    allowBroken = true;
 
-  nixpkgs.config.packageOverrides = pkgs:
-    import ./overrides.nix { pkgs = pkgs; };
+    packageOverrides = pkgs: import ./overrides.nix { pkgs = pkgs; };
+  };
 
   environment.systemPackages = with pkgs; [
-    nix-prefetch-scripts
-    nix-repl
+    nixUnstable
     nix-scripts
-
+    home-manager
     coreutils
-    johnw-home
-    johnw-scripts
 
     # gitToolsEnv
     diffstat
@@ -475,8 +477,10 @@ let home = builtins.getEnv "HOME"; in
 
   system.stateVersion = 2;
 
+  nix.package = pkgs.nixUnstable;
   nix.nixPath =
     [ "darwin-config=$HOME/src/nix/darwin-configuration.nix"
+      "home-manager=$HOME/oss/home-manager"
       "darwin=$HOME/oss/darwin"
       "nixpkgs=$HOME/oss/nixpkgs"
       "$HOME/.nix-defexpr/channels"
@@ -501,85 +505,37 @@ let home = builtins.getEnv "HOME"; in
 
   programs.nix-index.enable = true;
 
-  environment.etc."bash.local".text = ''
-    if [[ -x "$(which docker-machine)" ]]; then
-        if docker-machine status default > /dev/null 2>&1; then
-            eval $(docker-machine env default) > /dev/null 2>&1
-        fi
-    fi
-
-    export GPG_TTY=$(tty)
-    if [ -f $HOME/.gpg-agent-info ]; then
-        . $HOME/.gpg-agent-info
-        export GPG_AGENT_INFO
-        export SSH_AUTH_SOCK
-        export SSH_AGENT_PID
-    fi
-
-    export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-
-    shopt -s histappend
-  '';
-
   environment.pathsToLink = [ "/info" "/etc" "/share" "/lib" "/libexec" ];
 
   environment.variables = {
-    MANPATH            = [
+    HOME_MANAGER_CONFIG = "${home}/src/nix/home-configuration.nix";
+
+    PASSWORD_STORE_ENABLE_EXTENSIONS = "true";
+    PASSWORD_STORE_EXTENSIONS_DIR =
+      "/run/current-system/sw/lib/password-store/extensions";
+
+    MANPATH = [
       "${home}/.nix-profile/share/man"
       "${home}/.nix-profile/man"
-      "${home}/run/current-system/sw/share/man"
-      "${home}/run/current-system/sw/man"
+      "/run/current-system/sw/share/man"
+      "/run/current-system/sw/man"
       "/usr/local/share/man"
       "/usr/share/man"
       "/Developer/usr/share/man"
       "/usr/X11/man"
     ];
 
-    PASSWORD_STORE_DIR = "${home}/doc/.passwords";
-    PASSWORD_STORE_ENABLE_EXTENSIONS = "true";
-    PASSWORD_STORE_EXTENSIONS_DIR =
-      "/run/current-system/sw/lib/password-store/extensions";
+    LC_CTYPE     = "en_US.UTF-8";
+    LESSCHARSET  = "utf-8";
+    LEDGER_COLOR = "true";
+    PAGER        = "less";
+    GIT_PAGER    = "less";
 
-    ALTERNATE_EDITOR   = "vi";
-    COLUMNS            = "100";
-    COQVER             = "87";
-    EDITOR             = "emacsclient -a vi";
-    EMACSVER           = "26";
-    EMAIL              = "johnw@newartisans.com";
-    GHCPKGVER          = "822";
-    GHCVER             = "82";
-    GIT_PAGER          = "less";
-    HISTCONTROL        = "ignoreboth:erasedups";
-    HISTFILE           = "${home}/.bash_history";
-    HISTFILESIZE       = "50000";
-    HISTSIZE           = "50000";
-    JAVA_OPTS          = "-Xverify:none";
-    LC_CTYPE           = "en_US.UTF-8";
-    LEDGER_COLOR       = "true";
-    LESS               = "-FRSXM";
-    LESSCHARSET        = "utf-8";
-    PAGER              = "less";
-    PROMPT_DIRTRIM     = "2";
-    PS1                = "\\D{%H:%M} \\h:\\W $ ";
-    SAVEHIST           = "50000";
-    SSH_AUTH_SOCK      = "${home}/.gnupg/S.gpg-agent.ssh";
     STARDICT_DATA_DIR  = "${home}/oss/dictionaries";
-    WORDCHARS          = "";
   };
 
   environment.shellAliases = {
-    b       = "git branch --color -v";
-    g       = "hub";
-    ga      = "git-annex";
-    gerp    = "grep";
-    git     = "hub";
-    l       = "git l";
-    ls      = "ls --color=auto";
-    par     = "parallel";
     rehash  = "hash -r";
-    rm      = "rmtrash";
-    scp     = "rsync -aP --inplace";
     snaplog = "git log refs/snapshots/\\$(git symbolic-ref HEAD)";
-    w       = "git status -sb";
   };
 }

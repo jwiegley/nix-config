@@ -2578,57 +2578,8 @@ ledgerPy2Env = pkgs.myEnvFun {
 
 backblaze-b2 = pkgs.callPackage ./backblaze.nix {};
 
-johnw-home = with pkgs; stdenv.mkDerivation {
-  name = "johnw-home";
-
-  src = builtins.filterSource (path: type:
-      type != "directory" || baseNameOf path != ".git")
-    ~/src/home;
-
-  buildInputs = [];
-
-  installPhase = ''
-    mkdir -p $out/etc
-    cp -pR etc/* $out/etc
-
-    mkdir -p $out/dot-files
-    cp -pR dot-files/* $out/dot-files
-
-    mkdir -p $out/Library
-    cp -pR Library/* $out/Library
-  '';
-
-  meta = with stdenv.lib; {
-    description = "John Wiegley's various scripts";
-    homepage = https://github.com/jwiegley;
-    license = licenses.mit;
-    maintainers = with maintainers; [ jwiegley ];
-    platforms = platforms.darwin;
-  };
-};
-
-johnw-scripts = with pkgs; stdenv.mkDerivation {
-  name = "johnw-scripts";
-
-  src = builtins.filterSource (path: type:
-      type != "directory" || baseNameOf path != ".git")
-    ~/src/scripts;
-
-  buildInputs = [];
-
-  installPhase = ''
-    mkdir -p $out/bin
-    find . -maxdepth 1 \( -type f -o -type l \) -executable \
-        -exec cp -pL {} $out/bin \;
-  '';
-
-  meta = with stdenv.lib; {
-    description = "John Wiegley's various scripts";
-    homepage = https://github.com/jwiegley;
-    license = licenses.mit;
-    maintainers = with maintainers; [ jwiegley ];
-    platforms = platforms.darwin;
-  };
+home-manager = pkgs.callPackage ~/oss/home-manager/home-manager {
+  path = toString ~/oss/home-manager;
 };
 
 git-scripts = with pkgs; stdenv.mkDerivation {

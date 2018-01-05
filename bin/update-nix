@@ -14,8 +14,8 @@ if [[ "$1" == "-a" ]]; then
 
     nix-env -f '<nixpkgs>' -u "$@"
 
-    darwin-rebuild build
     darwin-rebuild switch
+    home-manager switch
 
     git --git-dir=$HOME/oss/nixpkgs/.git branch -f last-known-good before-update
 
