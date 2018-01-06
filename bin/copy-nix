@@ -3,10 +3,11 @@
 HOST=$1
 shift 1
 
-nix-copy-closure --to $HOST $(readlink -f ~/.nix-profile) \
+nix copy --to $HOST                             \
+    $(readlink -f ~/.nix-profile)               \
     $(readlink -f /run/current-system)
 
 push -f Projects,Contracts,home $HOST
 
 ssh $HOST darwin-rebuild switch
-ssh $HOST nix-env -u "$@"
+ssh $HOST home-manager switch
