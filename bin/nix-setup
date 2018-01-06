@@ -3,7 +3,7 @@
 curl https://nixos.org/nix/install | sudo sh
 
 cd ~
-git clone git://github.com/joelteon/nixpkgs.git
+git clone git://github.com/jwiegley/nixpkgs.git
 
 export PATH=$HOME/.nix-profile/bin:$PATH
 

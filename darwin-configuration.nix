@@ -1,6 +1,7 @@
 { config, lib, pkgs, ... }:
 
-let home = "/Users/johnw"; in
+let home_directory = "/Users/johnw";
+    logdir = "${home_directory}/Library/Logs"; in
 {
   system.defaults.NSGlobalDomain.AppleKeyboardUIMode = 3;
   system.defaults.NSGlobalDomain.ApplePressAndHoldEnabled = false;
@@ -13,7 +14,7 @@ let home = "/Users/johnw"; in
 
   launchd.daemons = {
     cleanup = {
-      command = "${home}/bin/cleanup -u";
+      command = "${home_directory}/bin/cleanup -u";
       serviceConfig.StartInterval = 86400;
     };
 
@@ -46,8 +47,8 @@ let home = "/Users/johnw"; in
 
     leafnode = {
       command = "${pkgs.leafnode}/sbin/leafnode "
-        + "-d ${home}/Messages/Newsdir "
-        + "-F ${home}/Messages/leafnode/config";
+        + "-d ${home_directory}/Messages/Newsdir "
+        + "-F ${home_directory}/Messages/leafnode/config";
       serviceConfig.WorkingDirectory = "${pkgs.dovecot}/lib";
       serviceConfig.inetdCompatibility.Wait = "nowait";
       serviceConfig.Sockets.Listeners = {
@@ -72,9 +73,9 @@ let home = "/Users/johnw"; in
             --verbose \
             --launchd \
             --inactivity-timeout 300 \
-            --log-file ${home}/Library/Logs/rtags.launchd.log
+            --log-file ${logdir}/rtags.launchd.log
       '';
-      serviceConfig.Sockets.Listeners.SockPathName = "${home}/.rdm";
+      serviceConfig.Sockets.Listeners.SockPathName = "${home_directory}/.rdm";
     };
   };
 
@@ -84,7 +85,7 @@ let home = "/Users/johnw"; in
     lda_mailbox_autocreate = yes
     log_path = syslog
     mail_gid = 20
-    mail_location = mdbox:${home}/Messages/Mailboxes
+    mail_location = mdbox:${home_directory}/Messages/Mailboxes
     mail_plugin_dir = ${pkgs.dovecot-plugins}/etc/dovecot/modules
     mail_plugins = fts fts_lucene zlib
     mail_uid = 501
@@ -103,7 +104,7 @@ let home = "/Users/johnw"; in
 
     passdb {
       driver = static
-      args = uid=501 gid=20 home=${home} password=pass
+      args = uid=501 gid=20 home=${home_directory} password=pass
     }
 
     namespace {
@@ -127,8 +128,8 @@ let home = "/Users/johnw"; in
     }
     plugin {
       sieve_extensions = +editheader
-      sieve = ${home}/Messages/dovecot.sieve
-      sieve_dir = ${home}/Messages/sieve
+      sieve = ${home_directory}/Messages/dovecot.sieve
+      sieve_dir = ${home_directory}/Messages/sieve
     }
   '';
 
@@ -261,23 +262,23 @@ let home = "/Users/johnw"; in
   environment.etc."firefox-wrapper".text = ''
     #!/bin/bash
     source /etc/bashrc
-    source ${home}/.bash_profile
+    source ${home_directory}/.bash_profile
     dir=$(dirname "$0")
     name=$(basename "$0")
     exec "$dir"/."$name" "$@"
   '';
 
   system.activationScripts.extraPostActivation.text = ''
-    chflags nohidden ${home}/Library
+    chflags nohidden ${home_directory}/Library
 
     sudo launchctl load -w \
         /System/Library/LaunchDaemons/com.apple.atrun.plist > /dev/null 2>&1 \
         || exit 0
 
-    cp -pL /etc/DefaultKeyBinding.dict ${home}/Library/KeyBindings/DefaultKeyBinding.dict
+    cp -pL /etc/DefaultKeyBinding.dict ${home_directory}/Library/KeyBindings/DefaultKeyBinding.dict
 
-    mkdir -p ${home}/.parallel
-    touch ${home}/.parallel/will-cite
+    mkdir -p ${home_directory}/.parallel
+    touch ${home_directory}/.parallel/will-cite
 
     if [[ ! -f /Applications/Firefox.app/Contents/MacOS/.firefox ]]; then
         mv /Applications/Firefox.app/Contents/MacOS/firefox \
@@ -301,6 +302,7 @@ let home = "/Users/johnw"; in
   environment.systemPackages = with pkgs; [
     nixUnstable
     nix-scripts
+    nix-prefetch-scripts
     home-manager
     coreutils
 
@@ -482,6 +484,7 @@ let home = "/Users/johnw"; in
     tree
     unrar
     unzip
+    vim
     watch
     xz
     z3
@@ -520,8 +523,8 @@ let home = "/Users/johnw"; in
     env-keep-derivations = true
   '';
 
-  nix.maxJobs = 4;
-  nix.distributedBuilds = false;
+  nix.maxJobs = 6;
+  nix.distributedBuilds = true;
   nix.buildMachines = [
     # { hostName = "/nix/store";
     #   system = "x86_64-darwin";
@@ -529,7 +532,7 @@ let home = "/Users/johnw"; in
     # }
     { hostName = "hermes";
       sshUser = "johnw";
-      sshKey = "${home}/.config/ssh/id_local";
+      sshKey = "${home_directory}/.config/ssh/id_local";
       system = "x86_64-darwin";
       maxJobs = 2;
     }
@@ -540,15 +543,15 @@ let home = "/Users/johnw"; in
   environment.pathsToLink = [ "/info" "/etc" "/share" "/lib" "/libexec" ];
 
   environment.variables = {
-    HOME_MANAGER_CONFIG = "${home}/src/nix/home-configuration.nix";
+    HOME_MANAGER_CONFIG = "${home_directory}/src/nix/home-configuration.nix";
 
     PASSWORD_STORE_ENABLE_EXTENSIONS = "true";
     PASSWORD_STORE_EXTENSIONS_DIR =
       "/run/current-system/sw/lib/password-store/extensions";
 
     MANPATH = [
-      "${home}/.nix-profile/share/man"
-      "${home}/.nix-profile/man"
+      "${home_directory}/.nix-profile/share/man"
+      "${home_directory}/.nix-profile/man"
       "/run/current-system/sw/share/man"
       "/run/current-system/sw/man"
       "/usr/local/share/man"
@@ -563,7 +566,7 @@ let home = "/Users/johnw"; in
     PAGER        = "less";
     GIT_PAGER    = "less";
 
-    STARDICT_DATA_DIR  = "${home}/oss/dictionaries";
+    STARDICT_DATA_DIR  = "${home_directory}/oss/dictionaries";
   };
 
   environment.shellAliases = {

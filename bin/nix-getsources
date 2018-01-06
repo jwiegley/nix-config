@@ -1,6 +1,0 @@
-#!/bin/bash
-
-dir=$1
-shift 1
-
-exec nix-store -r $(grep -l outputHash $(nix-store -qR $(nix-instantiate $dir -A "$@") | grep '.drv$'))

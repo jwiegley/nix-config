@@ -3,4 +3,4 @@ SUFFIX=""
 if [[ "$1" == "next" ]]; then
     SUFFIX="-next"
 fi
-exec nix-repl "<nixpkgs$SUFFIX>"
+exec nix repl "<nixpkgs$SUFFIX>"

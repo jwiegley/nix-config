@@ -1,2 +1,0 @@
-#!/bin/bash
-exec nix-env -Q -j$(ncpu) -k -i "$@"

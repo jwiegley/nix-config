@@ -2,13 +2,13 @@
 
 pythonPackages.buildPythonApplication rec {
   name = "backblaze-b2-${version}";
-  version = "0.6.3-pre";
+  version = "1.1.0";
 
   src = fetchFromGitHub {
     owner = "Backblaze";
     repo = "B2_Command_Line_Tool";
-    rev = "bbbf473931a3cd04a801e77dfa86000bc39693c9";
-    sha256 = "0rsqkp5q9ri2zapgv4glmfm6whqsws3gyvpx5jcnzjcz23hdymi9";
+    rev = "5ddc920940344200cf335c7a7336d5e0582b1cc0";
+    sha256 = "0697rcdsmxz51p4b8m8klx2mf5xnx6vx56vcf5jmzidh8mc38a6z";
   };
 
   propagatedBuildInputs = with pythonPackages; 

@@ -11,21 +11,6 @@ rec {
 
   home = {
     packages = with pkgs; [
-      coq84Env
-      coq85Env
-      coq86Env
-      coq87Env
-      emacs25Env
-      emacs26DebugEnv
-      emacs26Env
-      emacs26FullEnv
-      emacsHEADEnv
-      ghc80Env
-      ghc80ProfEnv
-      ghc82Env
-      ghc82ProfEnv
-      ledgerPy2Env
-      ledgerPy3Env
     ];
 
     sessionVariables = {
@@ -41,9 +26,9 @@ rec {
       GHCVER             = "82";
       GHCPKGVER          = "822";
 
-      ALTERNATE_EDITOR   = "vi";
+      ALTERNATE_EDITOR   = "${pkgs.vim}/bin/vi";
       COLUMNS            = "100";
-      EDITOR             = "emacsclient -a vi";
+      EDITOR             = "${pkgs.emacs}/bin/emacsclient -a vi";
       EMAIL              = "${programs.git.userEmail}";
       JAVA_OPTS          = "-Xverify:none";
       LC_CTYPE           = "en_US.UTF-8";
@@ -81,16 +66,16 @@ rec {
     shellOptions    = [ "histappend" ];
 
     shellAliases = {
-      b   = "git branch --color -v";
-      g   = "hub";
-      ga  = "git-annex";
-      git = "hub";
-      l   = "git l";
+      b   = "${pkgs.git}/bin/git branch --color -v";
+      g   = "${pkgs.gitAndTools.hub}/bin/hub";
+      ga  = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
+      git = "${pkgs.gitAndTools.hub}/bin/hub";
+      l   = "${pkgs.git}/bin/git l";
       ls  = "ls --color=auto";
-      par = "parallel";
-      rm  = "rmtrash";
-      scp = "rsync -aP --inplace";
-      w   = "git status -sb";
+      par = "${pkgs.parallel}/bin/parallel";
+      rm  = "${home_directory}/bin/rmtrash";
+      scp = "${pkgs.rsync}/bin/rsync -aP --inplace";
+      w   = "${pkgs.git}/bin/git status -sb";
     };
 
     profileExtra = ''
@@ -106,21 +91,25 @@ rec {
       #     ${pkgs.znc}/bin/znc -d ${xdg.configHome}/znc
       # fi
 
+      export GPG_TTY=$(${pkgs.coreutils}/bin/tty)
+
       if ! pgrep -x "gpg-agent" > /dev/null; then
           ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
       fi
 
-      test -L bae   || ln -sf Contracts/BAE/Projects bae
-      test -L oss   || ln -sf Contracts/OSS/Projects oss
-      test -L doc   || ln -sf Documents doc
-      test -L dl    || ln -sf Downloads dl
-      test -L src   || ln -sf Projects src
-      test -L emacs || ln -sf Projects/dot-emacs emacs
-      test -L bin   || ln -sf Projects/scripts bin
+      (cd ~ ; test -L bae   || ln -sf Contracts/BAE/Projects bae)
+      (cd ~ ; test -L oss   || ln -sf Contracts/OSS/Projects oss)
+      (cd ~ ; test -L doc   || ln -sf Documents doc)
+      (cd ~ ; test -L dl    || ln -sf Downloads dl)
+      (cd ~ ; test -L src   || ln -sf Projects src)
+      (cd ~ ; test -L emacs || ln -sf Projects/dot-emacs emacs)
+      (cd ~ ; test -L bin   || ln -sf Projects/scripts bin)
+
+      tput rmam
     '';
 
     initExtra = ''
-      tput rmam
+      source /etc/bashrc
 
       if [[ -x "$(which docker-machine)" ]]; then
           if docker-machine status default > /dev/null 2>&1; then
@@ -128,14 +117,7 @@ rec {
           fi
       fi
 
-      export GPG_TTY=$(${pkgs.coreutils}/bin/tty)
-      if [[ -f ~/.gpg-agent-info ]]; then
-          . ~/.gpg-agent-info
-          export GPG_AGENT_INFO
-          export SSH_AUTH_SOCK
-          export SSH_AGENT_PID
-      fi
-
+      export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
       export PATH=$HOME/bin:$PATH
     '';
   };
@@ -194,26 +176,26 @@ rec {
 
     extraConfig = {
       core = {
-        editor            = "emacsclient";
+        editor            = "${pkgs.emacs}/bin/emacsclient";
         trustctime        = false;
         fsyncobjectfiles  = true;
-        pager             = "less --tabs=4 -RFX";
+        pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
         logAllRefUpdates  = true;
         precomposeunicode = false;
         whitespace        = "trailing-space,space-before-tab";
       };
 
       branch.autosetupmerge = true;
-      commit.gpgsign = false;
-      credential.helper = "osxkeychain";
-      ghi.token = "!security find-internet-password -a jwiegley -s github.com -l 'ghi token' -w";
-      hub.protocol = "https";
-      mergetool.keepBackup = true;
-      pull.rebase = true;
-      rebase.autosquash = true;
-      rerere.enabled = true;
+      commit.gpgsign        = false;
+      credential.helper     = "osxkeychain";
+      ghi.token             = "!/usr/bin/security find-internet-password -a jwiegley -s github.com -l 'ghi token' -w";
+      hub.protocol          = "https";
+      mergetool.keepBackup  = true;
+      pull.rebase           = true;
+      rebase.autosquash     = true;
+      rerere.enabled        = true;
 
-      "merge \"ours\"".driver = true;
+      "merge \"ours\"".driver   = true;
       "magithub \"ci\"".enabled = false;
 
       http = {
@@ -237,7 +219,7 @@ rec {
 
       "merge \"merge-changelog\"" = {
         name = "GNU-style ChangeLog merge driver";
-        driver = "git-merge-changelog %O %A %B";
+        driver = "${pkgs.git-scripts}/bin/git-merge-changelog %O %A %B";
       };
 
       merge = {
@@ -260,8 +242,8 @@ rec {
 
       "filter \"media\"" = {
         required = true;
-        clean = "git media clean %f";
-        smudge = "git media smudge %f";
+        clean = "${pkgs.git}/bin/git media clean %f";
+        smudge = "${pkgs.git}/bin/git media smudge %f";
       };
 
       diff = {
@@ -276,8 +258,8 @@ rec {
       };
 
       "filter \"lfs\"" = {
-        clean    = "git-lfs clean -- %f";
-        smudge   = "git-lfs smudge --skip -- %f";
+        clean    = "${home_directory}/bin/git-lfs clean -- %f";
+        smudge   = "${home_directory}/bin/git-lfs smudge --skip -- %f";
         required = true;
       };
 
@@ -302,7 +284,7 @@ rec {
     enable = true;
 
     configHome = "${home_directory}/.config";
-    dataHome = "${home_directory}/.local/share";
+    dataHome   = "${home_directory}/.local/share";
 
     configFile."gnupg/gpg-agent.conf".text = ''
       enable-ssh-support
@@ -339,7 +321,7 @@ rec {
       port 587
       auth on
       user ${programs.git.userEmail}
-      passwordeval pass smtp.fastmail.com
+      passwordeval ${pkgs.pass}/bin/pass smtp.fastmail.com
       from ${programs.git.userEmail}
       logfile ${home_directory}/Library/Logs/msmtp.log
     '';
@@ -377,16 +359,15 @@ rec {
     hashKnownHosts = true;
     userKnownHostsFile = "${xdg.configHome}/ssh/known_hosts";
 
-    matchBlocks = {
+    matchBlocks = rec {
       vulcan.hostname = "192.168.1.69";
+      hermes.hostname = "192.168.1.65";
+      mybook = hermes;
 
       home = {
         hostname = "76.234.69.149";
         port = 2201;
       };
-
-      hermes.hostname = "192.168.1.65";
-      mybook.hostname = "192.168.1.65";
 
       titan = {
         hostname = "192.168.1.133";
@@ -416,15 +397,14 @@ rec {
       mac1010.hostname = "172.16.138.131";
       mac1011.hostname = "172.16.138.130";
       mac1012.hostname = "172.16.138.128";
+      ubuntu.hostname  = "172.16.138.129";
+      peta.hostname    = "172.16.138.140";
+      fiat.hostname    = "172.16.138.145";
 
       smokeping = {
         user = "smokeping";
         hostname = "192.168.1.78";
       };
-
-      ubuntu.hostname = "172.16.138.129";
-      peta.hostname = "172.16.138.140";
-      fiat.hostname = "172.16.138.145";
 
       tails = {
         hostname = "172.16.138.139";
@@ -432,36 +412,25 @@ rec {
       };
 
       local_vms = {
-        host = "mac1* ubuntu* rings";
+        host = "mac1* ubuntu* peta fiat smokeping tails";
         compression = false;
         identityFile = "${xdg.configHome}/ssh/id_local";
         identitiesOnly = true;
       };
 
       elpa = {
-        user = "root";
         hostname = "elpa.gnu.org";
+        user = "root";
       };
 
-      savannah.hostname = "git.sv.gnu.org";
+      savannah.hostname  = "git.sv.gnu.org";
       fencepost.hostname = "fencepost.gnu.org";
       launchpad.hostname = "bazaar.launchpad.net";
-
-      mail = {
-        hostname = "mail.haskell.org";
-        user = "root";
-      };
+      mail.hostname      = "mail.haskell.org";
 
       haskell_org = {
         host = "*haskell.org";
         user = "root";
-      };
-
-      crash = {
-        hostname = "git.crash-safe.org";
-        user = "jwiegley";
-        identityFile = "${xdg.configHome}/ssh/id_bae";
-        identitiesOnly = true;
       };
 
       ivysaur = {
@@ -480,6 +449,6 @@ rec {
 
   programs.home-manager = {
     enable = true;
-    path = "~/oss/home-manager";
+    path = "${home_directory}/oss/home-manager";
   };
 }
