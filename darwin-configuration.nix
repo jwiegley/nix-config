@@ -520,14 +520,14 @@ let home = "/Users/johnw"; in
     env-keep-derivations = true
   '';
 
-  nix.maxJobs = 8;
+  nix.maxJobs = 4;
   nix.distributedBuilds = true;
   nix.buildMachines = [
     { hostName = "hermes";
       sshUser = "johnw";
       sshKey = "${home}/.config/ssh/id_local";
       system = "x86_64-darwin";
-      maxJobs = 4;
+      maxJobs = 1;
     }
   ];
 
