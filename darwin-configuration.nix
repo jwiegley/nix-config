@@ -76,12 +76,6 @@ let home = "/Users/johnw"; in
       '';
       serviceConfig.Sockets.Listeners.SockPathName = "${home}/.rdm";
     };
-
-    znc = {
-      command = "${pkgs.znc}/bin/znc";
-      serviceConfig.RunAtLoad = true;
-      serviceConfig.StartInterval = 300;
-    };
   };
 
   environment.etc."dovecot/dovecot.conf".text = ''
@@ -233,10 +227,41 @@ let home = "/Users/johnw"; in
     }
   '';
 
+  environment.etc."DefaultKeyBinding.dict".text = ''
+    {
+      "~f"    = "moveWordForward:";
+      "~b"    = "moveWordBackward:";
+
+      "~d"    = "deleteWordForward:";
+      "~^h"   = "deleteWordBackward:";
+      "~\010" = "deleteWordBackward:";    /* Option-backspace */
+      "~\177" = "deleteWordBackward:";    /* Option-delete */
+
+      "~v"    = "pageUp:";
+      "^v"    = "pageDown:";
+
+      "~<"    = "moveToBeginningOfDocument:";
+      "~>"    = "moveToEndOfDocument:";
+
+      "^/"    = "undo:";
+      "~/"    = "complete:";
+
+      "^g"    = "_cancelKey:";
+      "^a"    = "moveToBeginningOfLine:";
+      "^e"    = "moveToEndOfLine:";
+
+      "~c"	  = "capitalizeWord:"; /* M-c */
+      "~u"	  = "uppercaseWord:";	 /* M-u */
+      "~l"	  = "lowercaseWord:";	 /* M-l */
+      "^t"	  = "transpose:";      /* C-t */
+      "~t"	  = "transposeWords:"; /* M-t */
+    }
+  '';
+
   environment.etc."firefox-wrapper".text = ''
     #!/bin/bash
     source /etc/bashrc
-    source ${home}/.bashrc
+    source ${home}/.bash_profile
     dir=$(dirname "$0")
     name=$(basename "$0")
     exec "$dir"/."$name" "$@"
@@ -248,6 +273,8 @@ let home = "/Users/johnw"; in
     sudo launchctl load -w \
         /System/Library/LaunchDaemons/com.apple.atrun.plist > /dev/null 2>&1 \
         || exit 0
+
+    cp -pL /etc/DefaultKeyBinding.dict ${home}/Library/KeyBindings/DefaultKeyBinding.dict
 
     mkdir -p ${home}/.parallel
     touch ${home}/.parallel/will-cite
@@ -493,11 +520,12 @@ let home = "/Users/johnw"; in
     env-keep-derivations = true
   '';
 
+  nix.maxJobs = 8;
   nix.distributedBuilds = true;
   nix.buildMachines = [
     { hostName = "hermes";
       sshUser = "johnw";
-      sshKey = "${home}/.ssh/id_local";
+      sshKey = "${home}/.config/ssh/id_local";
       system = "x86_64-darwin";
       maxJobs = 4;
     }

@@ -28,6 +28,30 @@ rec {
       ledgerPy3Env
     ];
 
+    sessionVariables = {
+      ASPELL_CONF        = "${xdg.configHome}/aspell/config";
+      GNUPGHOME          = "${xdg.configHome}/gnupg";
+      SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
+      PASSWORD_STORE_DIR = "${home_directory}/doc/.passwords";
+
+      COQVER             = "87";
+      EMACSVER           = "26";
+      GHCVER             = "82";
+      GHCPKGVER          = "822";
+
+      ALTERNATE_EDITOR   = "vi";
+      COLUMNS            = "100";
+      EDITOR             = "emacsclient -a vi";
+      EMAIL              = "${programs.git.userEmail}";
+      JAVA_OPTS          = "-Xverify:none";
+      LC_CTYPE           = "en_US.UTF-8";
+      LESS               = "-FRSXM";
+      PROMPT_DIRTRIM     = "2";
+      PS1                = "\\D{%H:%M} \\h:\\W $ ";
+      TINC_USE_NIX       = "yes";
+      WORDCHARS          = "";
+    };
+
     # file = {
     #   "Library/KeyBindings/DefaultKeyBinding.dict".source
     #     = ~/src/home/Library/KeyBindings/DefaultKeyBinding.dict;
@@ -45,8 +69,7 @@ rec {
                source = builtins.toPath("${home_directory}/src/home/${path}");
              };
            })
-          [ "Library/KeyBindings/DefaultKeyBinding.dict"
-            "Library/Keyboard Layouts/PersianDvorak.keylayout"
+          [ "Library/Keyboard Layouts/PersianDvorak.keylayout"
             "Library/Scripts/Applications/Download links to PDF.scpt"
             "Library/Scripts/Applications/Media Pro" ]
         ++
@@ -65,7 +88,6 @@ rec {
             "screenrc"
             "slate"
             "tmux.conf" ]);
-
   };
 
   programs.bash = {
@@ -75,28 +97,6 @@ rec {
     historyFileSize = 50000;
     historyControl  = [ "ignoredups" "ignorespace" "erasedups" ];
     shellOptions    = [ "histappend" ];
-
-    sessionVariables = {
-      ASPELL_CONF        = "${xdg.configHome}/aspell/config";
-      GNUPGHOME          = "${xdg.configHome}/gnupg";
-      PASSWORD_STORE_DIR = "${home_directory}/doc/.passwords";
-
-      COQVER             = "87";
-      EMACSVER           = "26";
-      GHCVER             = "82";
-      GHCPKGVER          = "822";
-
-      ALTERNATE_EDITOR   = "vi";
-      COLUMNS            = "100";
-      EDITOR             = "emacsclient -a vi";
-      EMAIL              = "${programs.git.userEmail}";
-      JAVA_OPTS          = "-Xverify:none";
-      LC_CTYPE           = "en_US.UTF-8";
-      LESS               = "-FRSXM";
-      PROMPT_DIRTRIM     = "2";
-      PS1                = "\\D{%H:%M} \\h:\\W $ ";
-      WORDCHARS          = "";
-    };
 
     shellAliases = {
       b   = "git branch --color -v";
@@ -111,14 +111,34 @@ rec {
       w   = "git status -sb";
     };
 
-    initExtra = ''
+    profileExtra = ''
       for file in \
-          ${xdg.configHome}/fetchmail \
-          ${xdg.configHome}/fetchmail-lists
+          ${xdg.configHome}/fetchmail/config \
+          ${xdg.configHome}/fetchmail/config-lists
       do
           cp -pL $file ''${file}.copy
           chmod 0600 ''${file}.copy
       done
+
+      if ! pgrep -x "znc" > /dev/null; then
+          ${pkgs.znc}/bin/znc -d ${xdg.configHome}/znc
+      fi
+
+      if ! pgrep -x "gpg-agent" > /dev/null; then
+          ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
+      fi
+
+      ln -sf Contracts/BAE/Projects ~/bae
+      ln -sf Contracts/OSS/Projects ~/oss
+      ln -sf Documents ~/doc
+      ln -sf Downloads ~/dl
+      ln -sf Projects ~/src
+      ln -sf Projects/dot-emacs ~/emacs
+      ln -sf Projects/scripts ~/bin
+    '';
+
+    initExtra = ''
+      tput rmam
 
       if [[ -x "$(which docker-machine)" ]]; then
           if docker-machine status default > /dev/null 2>&1; then
@@ -135,14 +155,6 @@ rec {
       fi
 
       export PATH=$HOME/bin:$PATH
-
-      ln -sf Contracts/BAE/Projects ~/bae
-      ln -sf Contracts/OSS/Projects ~/oss
-      ln -sf Documents ~/doc
-      ln -sf Downloads ~/dl
-      ln -sf Projects ~/src
-      ln -sf Projects/dot-emacs ~/emacs
-      ln -sf Projects/scripts ~/bin
     '';
   };
 
@@ -158,55 +170,55 @@ rec {
     };
 
     aliases = {
-    	amend      = "commit --amend -C HEAD";
-    	authors    = "!\"git log --pretty=format:%aN | sort | uniq -c | sort -rn\"";
-    	b          = "branch -v";
-    	c          = "commit";
-    	ca         = "commit --amend";
-    	changes    = "diff --name-status -r";
-    	ci         = "commit";
-    	cl         = "clone --recursive";
-    	cm         = "checkout master";
-    	co         = "checkout";
-    	cp         = "cherry-pick";
-    	dc         = "diff --cached";
-    	ds         = "diff --staged";
-    	ls-ignored = "ls-files --exclude-standard --ignored --others";
-    	m          = "merge";
-    	mm         = "merge --no-ff";
-    	msg        = "commit --allow-empty -m";
-    	p          = "cherry-pick -s";
-    	pick       = "cherry-pick";
-    	pull       = "pull --ff";
-    	r          = "remote";
-    	rc         = "rebase --continue";
-    	rh         = "reset --hard";
-    	ri         = "rebase -i";
-    	rs         = "rebase --skip";
-    	ru         = "remote update --prune";
-    	sh         = "!git-sh";
-    	snap       = "!git stash && git stash apply";
-    	sp         = "!\"git stash ; git pull ; git stash pop\"";
-    	spull      = "!git stash && git pull && git stash pop";
-    	st         = "stash";
-    	stl        = "stash list";
-    	stp        = "stash pop";
-    	su         = "submodule update --init";
-    	undo       = "reset --soft HEAD^";
-    	w          = "git status";
-    	wd         = "diff --color-words";
+      amend      = "commit --amend -C HEAD";
+      authors    = "!\"git log --pretty=format:%aN | sort | uniq -c | sort -rn\"";
+      b          = "branch -v";
+      c          = "commit";
+      ca         = "commit --amend";
+      changes    = "diff --name-status -r";
+      ci         = "commit";
+      cl         = "clone --recursive";
+      cm         = "checkout master";
+      co         = "checkout";
+      cp         = "cherry-pick";
+      dc         = "diff --cached";
+      ds         = "diff --staged";
+      ls-ignored = "ls-files --exclude-standard --ignored --others";
+      m          = "merge";
+      mm         = "merge --no-ff";
+      msg        = "commit --allow-empty -m";
+      p          = "cherry-pick -s";
+      pick       = "cherry-pick";
+      pull       = "pull --ff";
+      r          = "remote";
+      rc         = "rebase --continue";
+      rh         = "reset --hard";
+      ri         = "rebase -i";
+      rs         = "rebase --skip";
+      ru         = "remote update --prune";
+      sh         = "!git-sh";
+      snap       = "!git stash && git stash apply";
+      sp         = "!\"git stash ; git pull ; git stash pop\"";
+      spull      = "!git stash && git pull && git stash pop";
+      st         = "stash";
+      stl        = "stash list";
+      stp        = "stash pop";
+      su         = "submodule update --init";
+      undo       = "reset --soft HEAD^";
+      w          = "git status";
+      wd         = "diff --color-words";
       l          = "log --graph --pretty=format:'%Cred%h%Creset —%Cblue%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative --show-notes=*";
     };
 
     extraConfig = {
       core = {
-      	editor            = "emacsclient";
-      	trustctime        = false;
-      	fsyncobjectfiles  = true;
-      	pager             = "less --tabs=4 -RFX";
-      	logAllRefUpdates  = true;
-      	precomposeunicode = false;
-      	whitespace        = "trailing-space,space-before-tab";
+        editor            = "emacsclient";
+        trustctime        = false;
+        fsyncobjectfiles  = true;
+        pager             = "less --tabs=4 -RFX";
+        logAllRefUpdates  = true;
+        precomposeunicode = false;
+        whitespace        = "trailing-space,space-before-tab";
       };
 
       branch.autosetupmerge = true;
@@ -228,63 +240,63 @@ rec {
       };
 
       color = {
-       	status      = "auto";
-       	diff        = "auto";
-       	branch      = "auto";
-       	interactive = "auto";
-       	ui          = "auto";
-       	sh          = "auto";
+        status      = "auto";
+        diff        = "auto";
+        branch      = "auto";
+        interactive = "auto";
+        ui          = "auto";
+        sh          = "auto";
       };
 
       push = {
-      	default = "tracking";
-      	recurseSubmodules = "check";
+        default = "tracking";
+        recurseSubmodules = "check";
       };
 
       "merge \"merge-changelog\"" = {
-      	name = "GNU-style ChangeLog merge driver";
-      	driver = "git-merge-changelog %O %A %B";
+        name = "GNU-style ChangeLog merge driver";
+        driver = "git-merge-changelog %O %A %B";
       };
 
       merge = {
-      	conflictstyle = "diff3";
-      	stat = true;
+        conflictstyle = "diff3";
+        stat = true;
       };
 
       "color \"sh\"" = {
-      	branch      = "yellow reverse";
-      	workdir     = "blue bold";
-      	dirty       = "red";
-      	dirty-stash = "red";
-      	repo-state  = "red";
+        branch      = "yellow reverse";
+        workdir     = "blue bold";
+        dirty       = "red";
+        dirty-stash = "red";
+        repo-state  = "red";
       };
 
       annex = {
-      	backends = "SHA512E";
-      	alwayscommit = false;
+        backends = "SHA512E";
+        alwayscommit = false;
       };
 
       "filter \"media\"" = {
-      	required = true;
-      	clean = "git media clean %f";
-      	smudge = "git media smudge %f";
+        required = true;
+        clean = "git media clean %f";
+        smudge = "git media smudge %f";
       };
 
       diff = {
-      	ignoreSubmodules = "dirty";
-      	renames = "copies";
-      	mnemonicprefix = true;
+        ignoreSubmodules = "dirty";
+        renames = "copies";
+        mnemonicprefix = true;
       };
 
       advice = {
-      	statusHints = false;
-      	pushNonFastForward = false;
+        statusHints = false;
+        pushNonFastForward = false;
       };
 
       "filter \"lfs\"" = {
-      	clean    = "git-lfs clean -- %f";
-      	smudge   = "git-lfs smudge --skip -- %f";
-      	required = true;
+        clean    = "git-lfs clean -- %f";
+        smudge   = "git-lfs smudge --skip -- %f";
+        required = true;
       };
 
       "url \"git://github.com/ghc/packages-\"".insteadOf
@@ -349,7 +361,7 @@ rec {
       logfile ${home_directory}/Library/Logs/msmtp.log
     '';
 
-    configFile."fetchmail".text = ''
+    configFile."fetchmail/config".text = ''
       poll imap.fastmail.com protocol IMAP port 993
         user '${programs.git.userEmail}' there is johnw here
         ssl sslcertck sslcertfile "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
@@ -358,7 +370,7 @@ rec {
         mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e"
     '';
 
-    configFile."fetchmail-lists".text = ''
+    configFile."fetchmail/config-lists".text = ''
       poll imap.fastmail.com protocol IMAP port 993
         user '${programs.git.userEmail}' there is johnw here
         ssl sslcertck sslcertfile "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
@@ -366,6 +378,116 @@ rec {
         fetchall
         mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e -m list.misc"
     '';
+  };
+
+  programs.ssh = {
+    enable = true;
+
+    controlMaster  = "auto";
+    controlPath    = "/tmp/ssh-%u-%r@%h:%p";
+    controlPersist = "1800";
+
+    forwardAgent = true;
+    compression = true;
+    serverAliveInterval = 60;
+
+    hashKnownHosts = true;
+    userKnownHostsFile = "${xdg.configHome}/ssh/known_hosts";
+
+    matchBlocks = {
+      vulcan.hostname = "192.168.1.69";
+
+      home = {
+        hostname = "76.234.69.149";
+        port = 2201;
+      };
+
+      hermes.hostname = "192.168.1.65";
+      mybook.hostname = "192.168.1.65";
+
+      titan = {
+        hostname = "192.168.1.133";
+        user = "root";
+      };
+
+      mohajer = {
+        hostname = "192.168.1.75";
+        user = "nasimw";
+      };
+
+      router = {
+        hostname = "192.168.1.2";
+        user = "root";
+      };
+
+      id_local = {
+        host = "vulcan mybook hermes titan mohajer home";
+        identityFile = "${xdg.configHome}/ssh/id_local";
+        identitiesOnly = true;
+        compression = false;
+      };
+
+      mac107.hostname  = "172.16.138.133";
+      mac108.hostname  = "172.16.138.132";
+      mac109.hostname  = "172.16.138.134";
+      mac1010.hostname = "172.16.138.131";
+      mac1011.hostname = "172.16.138.130";
+      mac1012.hostname = "172.16.138.128";
+
+      smokeping = {
+        user = "smokeping";
+        hostname = "192.168.1.78";
+      };
+
+      ubuntu.hostname = "172.16.138.129";
+      peta.hostname = "172.16.138.140";
+      fiat.hostname = "172.16.138.145";
+
+      tails = {
+        hostname = "172.16.138.139";
+        user = "root";
+      };
+
+      local_vms = {
+        host = "mac1* ubuntu* rings";
+        compression = false;
+        identityFile = "${xdg.configHome}/ssh/id_local";
+        identitiesOnly = true;
+      };
+
+      elpa = {
+        user = "root";
+        hostname = "elpa.gnu.org";
+      };
+
+      savannah.hostname = "git.sv.gnu.org";
+      fencepost.hostname = "fencepost.gnu.org";
+      launchpad.hostname = "bazaar.launchpad.net";
+
+      mail = {
+        hostname = "mail.haskell.org";
+        user = "root";
+      };
+
+      haskell_org = {
+        host = "*haskell.org";
+        user = "root";
+      };
+
+      crash = {
+        hostname = "git.crash-safe.org";
+        user = "jwiegley";
+        identityFile = "${xdg.configHome}/ssh/id_bae";
+        identitiesOnly = true;
+      };
+
+      ivysaur = {
+        hostname = "ivysaur.ait.na.baesystems.com";
+        user = "jwiegley";
+        identityFile = "${xdg.configHome}/ssh/id_bae";
+        identitiesOnly = true;
+      };
+    };
   };
 
   programs.browserpass = {
