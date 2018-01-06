@@ -86,7 +86,7 @@ let home_directory = "/Users/johnw";
     log_path = syslog
     mail_gid = 20
     mail_location = mdbox:${home_directory}/Messages/Mailboxes
-    mail_plugin_dir = ${pkgs.dovecot-plugins}/etc/dovecot/modules
+    mail_plugin_dir = ${config.system.path}/lib/dovecot
     mail_plugins = fts fts_lucene zlib
     mail_uid = 501
     postmaster_address = postmaster@newartisans.com
@@ -295,9 +295,14 @@ let home_directory = "/Users/johnw";
   nixpkgs.config = {
     allowUnfree = true;
     allowBroken = true;
-
-    packageOverrides = pkgs: import ./overrides.nix { pkgs = pkgs; };
   };
+
+  nixpkgs.overlays = 
+    let path = ./overlays; in with builtins;
+    map (n: import (path + ("/" + n)))
+        (filter (n: match ".*\\.nix" n != null || 
+                    pathExists (path + ("/" + n + "/default.nix")))
+                (attrNames (readDir path)));
 
   environment.systemPackages = with pkgs; [
     nixUnstable
@@ -366,7 +371,7 @@ let home_directory = "/Users/johnw";
 
     # mailToolsEnv
     dovecot
-    dovecot-plugins
+    dovecot_pigeonhole
     contacts
     fetchmail
     imapfilter
@@ -547,13 +552,13 @@ let home_directory = "/Users/johnw";
 
     PASSWORD_STORE_ENABLE_EXTENSIONS = "true";
     PASSWORD_STORE_EXTENSIONS_DIR =
-      "/run/current-system/sw/lib/password-store/extensions";
+      "${config.system.path}/lib/password-store/extensions";
 
     MANPATH = [
       "${home_directory}/.nix-profile/share/man"
       "${home_directory}/.nix-profile/man"
-      "/run/current-system/sw/share/man"
-      "/run/current-system/sw/man"
+      "${config.system.path}/share/man"
+      "${config.system.path}/man"
       "/usr/local/share/man"
       "/usr/share/man"
       "/Developer/usr/share/man"

@@ -1,7 +1,6 @@
-{ stdenv, clang, gnumake, automake, autoconf, pkgconfig, libpng, zlib
-, poppler }:
+self: super: {
 
-stdenv.mkDerivation rec {
+pdf-tools-server = with super; stdenv.mkDerivation rec {
   pname = "emacs-pdf-tools-server";
   version = "0.80";
   name = "${pname}-${version}";
@@ -26,4 +25,6 @@ stdenv.mkDerivation rec {
     license = licenses.gpl3;
     platforms = platforms.unix;
   };
+};
+
 }

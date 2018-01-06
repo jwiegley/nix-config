@@ -1,6 +1,6 @@
-{ fetchFromGitHub, makeWrapper, pythonPackages, stdenv }:
+self: super: {
 
-pythonPackages.buildPythonApplication rec {
+backblaze-b2 = with super; pythonPackages.buildPythonApplication rec {
   name = "backblaze-b2-${version}";
   version = "1.1.0";
 
@@ -11,7 +11,7 @@ pythonPackages.buildPythonApplication rec {
     sha256 = "0697rcdsmxz51p4b8m8klx2mf5xnx6vx56vcf5jmzidh8mc38a6z";
   };
 
-  propagatedBuildInputs = with pythonPackages; 
+  propagatedBuildInputs = with pythonPackages;
     [ futures requests six tqdm logfury arrow funcsigs ];
 
   checkPhase = ''
@@ -35,4 +35,6 @@ pythonPackages.buildPythonApplication rec {
     maintainers = with maintainers; [ hrdinka kevincox ];
     platforms = platforms.unix;
   };
+};
+
 }
