@@ -76,7 +76,7 @@ rec {
 
     historySize     = 5000;
     historyFileSize = 50000;
-    # historyFile = "${xdg.localHome}/bash/history";
+    historyFile     = "${xdg.localHome}/bash/history";
     historyControl  = [ "ignoredups" "ignorespace" "erasedups" ];
     shellOptions    = [ "histappend" ];
 
