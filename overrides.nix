@@ -794,7 +794,6 @@ myHaskellPackages = haskellPackages: with haskellPackages; [
   time-recurrence
   timeparsers
   timeplot
-  tinc
   tls
   total
   transformers
