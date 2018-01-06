@@ -32,6 +32,8 @@ rec {
       ASPELL_CONF        = "${xdg.configHome}/aspell/config";
       GNUPGHOME          = "${xdg.configHome}/gnupg";
       SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
+      SCREENRC           = "${xdg.configHome}/screen/config";
+      INPUTRC            = "${xdg.configHome}/bash/input";
       PASSWORD_STORE_DIR = "${home_directory}/doc/.passwords";
 
       COQVER             = "87";
@@ -52,16 +54,6 @@ rec {
       WORDCHARS          = "";
     };
 
-    # file = {
-    #   "Library/KeyBindings/DefaultKeyBinding.dict".source
-    #     = ~/src/home/Library/KeyBindings/DefaultKeyBinding.dict;
-    #   "Library/Keyboard Layouts/PersianDvorak.keylayout".source
-    #     = builtins.toPath("${home_directory}/src/home/Library/Keyboard Layouts/PersianDvorak.keylayout");
-    #   "Library/Scripts/Applications/Download links to PDF.scpt".source
-    #     = builtins.toPath("${home_directory}/src/home/Library/Scripts/Applications/Download links to PDF.scpt");
-    #   "Library/Scripts/Applications/Media Pro".source
-    #     = builtins.toPath("${home_directory}/src/home/Library/Scripts/Applications/Media Pro");
-
     file = builtins.listToAttrs (
       map (path: {
              name = path;
@@ -71,23 +63,12 @@ rec {
            })
           [ "Library/Keyboard Layouts/PersianDvorak.keylayout"
             "Library/Scripts/Applications/Download links to PDF.scpt"
-            "Library/Scripts/Applications/Media Pro" ]
-        ++
-      map (path: {
-             name = "." + path;
-             value = {
-               source = builtins.toPath("${home_directory}/src/home/dot-files/${path}");
-             };
-           })
-          [ "Xresources"
-            "gitattributes"
-            "inputrc"
-            "ledgerrc"
-            "lftprc"
-            "pushme"
-            "screenrc"
-            "slate"
-            "tmux.conf" ]);
+            "Library/Scripts/Applications/Media Pro" ])
+      //
+      {
+        ".slate".source = ~/.config/slate/config;
+        ".ledgerrc".text = "--file /Volumes/Files/Accounts/ledger.dat\n";
+      };
   };
 
   programs.bash = {
@@ -95,6 +76,7 @@ rec {
 
     historySize     = 5000;
     historyFileSize = 50000;
+    # historyFile = "${xdg.localHome}/bash/history";
     historyControl  = [ "ignoredups" "ignorespace" "erasedups" ];
     shellOptions    = [ "histappend" ];
 
@@ -128,13 +110,13 @@ rec {
           ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
       fi
 
-      ln -sf Contracts/BAE/Projects ~/bae
-      ln -sf Contracts/OSS/Projects ~/oss
-      ln -sf Documents ~/doc
-      ln -sf Downloads ~/dl
-      ln -sf Projects ~/src
-      ln -sf Projects/dot-emacs ~/emacs
-      ln -sf Projects/scripts ~/bin
+      test -L bae   || ln -sf Contracts/BAE/Projects bae
+      test -L oss   || ln -sf Contracts/OSS/Projects oss
+      test -L doc   || ln -sf Documents doc
+      test -L dl    || ln -sf Downloads dl
+      test -L src   || ln -sf Projects src
+      test -L emacs || ln -sf Projects/dot-emacs emacs
+      test -L bin   || ln -sf Projects/scripts bin
     '';
 
     initExtra = ''
