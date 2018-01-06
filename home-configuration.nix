@@ -76,7 +76,7 @@ rec {
 
     historySize     = 5000;
     historyFileSize = 50000;
-    historyFile     = "${xdg.localHome}/bash/history";
+    historyFile     = "${xdg.dataHome}/bash/history";
     historyControl  = [ "ignoredups" "ignorespace" "erasedups" ];
     shellOptions    = [ "histappend" ];
 
@@ -102,9 +102,9 @@ rec {
           chmod 0600 ''${file}.copy
       done
 
-      if ! pgrep -x "znc" > /dev/null; then
-          ${pkgs.znc}/bin/znc -d ${xdg.configHome}/znc
-      fi
+      # if ! pgrep -x "znc" > /dev/null; then
+      #     ${pkgs.znc}/bin/znc -d ${xdg.configHome}/znc
+      # fi
 
       if ! pgrep -x "gpg-agent" > /dev/null; then
           ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
@@ -302,6 +302,7 @@ rec {
     enable = true;
 
     configHome = "${home_directory}/.config";
+    dataHome = "${home_directory}/.local/share";
 
     configFile."gnupg/gpg-agent.conf".text = ''
       enable-ssh-support

@@ -19,8 +19,8 @@ git --git-dir=$HOME/oss/nixpkgs/.git push --mirror jwiegley
 git --git-dir=$HOME/oss/darwin/.git push --mirror jwiegley
 git --git-dir=$HOME/oss/home-manager/.git push --mirror jwiegley
 
-nix copy --to hermes $(readlink -f ~/.nix-profile)      \
-                     $(readlink -f /run/current-system)
+nix copy --to ssh://hermes $(readlink -f ~/.nix-profile)      \
+                           $(readlink -f /run/current-system)
 
 push -f Projects,Contracts hermes
 

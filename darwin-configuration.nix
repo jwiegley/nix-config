@@ -521,13 +521,17 @@ let home = "/Users/johnw"; in
   '';
 
   nix.maxJobs = 4;
-  nix.distributedBuilds = true;
+  nix.distributedBuilds = false;
   nix.buildMachines = [
+    # { hostName = "/nix/store";
+    #   system = "x86_64-darwin";
+    #   maxJobs = 4;
+    # }
     { hostName = "hermes";
       sshUser = "johnw";
       sshKey = "${home}/.config/ssh/id_local";
       system = "x86_64-darwin";
-      maxJobs = 1;
+      maxJobs = 2;
     }
   ];
 
