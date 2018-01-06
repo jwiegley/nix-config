@@ -1,27 +1,28 @@
 #!/bin/bash -e
 
-if [[ "$1" == "-a" ]]; then
+if [[ "$1" == "-p" ]]; then
     shift 1
 
-    if [[ "$1" == "-p" ]]; then
-        shift 1
-
-        (cd ~/oss/nixpkgs      && git pull --rebase)
-        (cd ~/oss/darwin       && git pull --rebase)
-        (cd ~/oss/home-manager && git pull --rebase)
-    fi
-
-    git --git-dir=$HOME/oss/nixpkgs/.git branch -f before-update HEAD
-
-    darwin-rebuild switch
-    home-manager switch
-
-    git --git-dir=$HOME/oss/nixpkgs/.git branch -f last-known-good before-update
-
-    git --git-dir=$HOME/oss/nixpkgs/.git push --mirror jwiegley
-    git --git-dir=$HOME/oss/darwin/.git push --mirror jwiegley
-
-    copy-nix hermes --leq -Q -j4
-else
-    nix-env -q | sed 's/-[0-9].*//' | xargs nix-env -f '<nixpkgs>' -u "$@"
+    (cd ~/oss/nixpkgs      && git pull --rebase)
+    (cd ~/oss/darwin       && git pull --rebase)
+    (cd ~/oss/home-manager && git pull --rebase)
 fi
+
+git --git-dir=$HOME/oss/nixpkgs/.git branch -f before-update HEAD
+
+darwin-rebuild switch
+home-manager switch
+
+git --git-dir=$HOME/oss/nixpkgs/.git branch -f last-known-good before-update
+
+git --git-dir=$HOME/oss/nixpkgs/.git push --mirror jwiegley
+git --git-dir=$HOME/oss/darwin/.git push --mirror jwiegley
+git --git-dir=$HOME/oss/home-manager/.git push --mirror jwiegley
+
+nix copy --to hermes $(readlink -f ~/.nix-profile)      \
+                     $(readlink -f /run/current-system)
+
+push -f Projects,Contracts hermes
+
+ssh hermes darwin-rebuild switch
+ssh hermes home-manager switch
