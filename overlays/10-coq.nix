@@ -2,7 +2,7 @@ self: pkgs: rec {
 
 myCoqPackages = coqPkgs: with pkgs; [
   ocaml
-  ocamlPackages.camlp5_strict
+  ocamlPackages.camlp5_transitional
   ocamlPackages.findlib
   ocamlPackages.menhir
   coq2html
@@ -20,7 +20,6 @@ myCoqPackages = coqPkgs: with pkgs; [
   heq
   interval
   mathcomp
-  paco
 ]);
 
 coq_8_7_override = pkgs.coq_8_7.override {

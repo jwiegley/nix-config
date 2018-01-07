@@ -8,7 +8,7 @@ rec {
   };
 
   nixpkgs.overlays =
-    let path = ./overlays; in with builtins;
+    let path = ../overlays; in with builtins;
     map (n: import (path + ("/" + n)))
         (filter (n: match ".*\\.nix" n != null ||
                     pathExists (path + ("/" + n + "/default.nix")))
@@ -24,7 +24,11 @@ rec {
       SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
       SCREENRC           = "${xdg.configHome}/screen/config";
       INPUTRC            = "${xdg.configHome}/bash/input";
+
       PASSWORD_STORE_DIR = "${home_directory}/doc/.passwords";
+
+      # OCAMLPATH          = "${pkgs.ocamlPackages.camlp5_transitional}"
+      #                    + "/lib/ocaml/${pkgs.ocaml.version}/site-lib/camlp5";
 
       COQVER             = "87";
       EMACSVER           = "26";
@@ -263,8 +267,8 @@ rec {
       };
 
       "filter \"lfs\"" = {
-        clean    = "${home_directory}/bin/git-lfs clean -- %f";
-        smudge   = "${home_directory}/bin/git-lfs smudge --skip -- %f";
+        clean = "${home_directory}/bin/git-lfs clean -- %f";
+        smudge = "${home_directory}/bin/git-lfs smudge --skip -- %f";
         required = true;
       };
 
@@ -274,9 +278,9 @@ rec {
         = "http://github.com/ghc/packages/";
       "url \"https://github.com/ghc/packages-\"".insteadOf
         = "https://github.com/ghc/packages/";
-      "url \"ssh://git\\@github.com/ghc/packages-\"".insteadOf
+      "url \"ssh://git@github.com/ghc/packages-\"".insteadOf
         = "ssh://git@github.com/ghc/packages/";
-      "url \"git\\@github.com:/ghc/packages-\"".insteadOf
+      "url \"git@github.com:/ghc/packages-\"".insteadOf
         = "git@github.com:/ghc/packages/";
     };
 

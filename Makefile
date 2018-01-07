@@ -29,7 +29,8 @@ tag-working:
 	git --git-dir=$(HOME)/oss/nixpkgs/.git branch -D before-update
 
 env:
-	nix-env -f '<nixpkgs>' -u --leq -Q -j4 -k || nix-env -f '<nixpkgs>' -u --leq -Q
+	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs \
+	    || nix-env -f '<darwin>' -u --leq -Q -A pkgs
 
 mirror:
 	git --git-dir=$(HOME)/oss/nixpkgs/.git push --mirror jwiegley
@@ -41,3 +42,8 @@ copy:
 	                           $(shell readlink -f /run/current-system)
 
 update: tag-before pull env switch tag-working mirror copy
+
+gc:
+	find ~ \( -name dist -type d -o -name result -type l \) -print0 \
+	    | parallel -0 /bin/rm -fr {}
+	nix-garbage-collect --delete-older-than 14d

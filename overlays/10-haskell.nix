@@ -516,6 +516,7 @@ myHaskellPackages = haskellPackages: with haskellPackages; [
   base16-bytestring
   base64-bytestring
   basic-prelude
+  bench
   bifunctors
   bindings-DSL
   blaze-builder
@@ -534,6 +535,7 @@ myHaskellPackages = haskellPackages: with haskellPackages; [
   c2hsc
   cabal-helper
   cabal-install
+  cabal2nix
   case-insensitive
   cassava
   categories
@@ -630,7 +632,6 @@ myHaskellPackages = haskellPackages: with haskellPackages; [
   hlibgit2
   hlint
   hnix
-  hpack
   hpack
   hslogger
   hspec
@@ -851,7 +852,6 @@ ghcHEADProfEnv = pkgs.myEnvFun {
 ghc82Env = pkgs.myEnvFun {
   name = "ghc82";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_2; [
-    pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
   ];
 };

@@ -18,11 +18,6 @@ let home_directory = "/Users/johnw";
       serviceConfig.StartInterval = 86400;
     };
 
-    collectgarbage = {
-      command = "${pkgs.nix}/bin/nix-collect-garbage --delete-older-than 14d";
-      serviceConfig.StartInterval = 86400;
-    };
-
     pdnsd = {
       script = ''
         cp -p /etc/pdnsd.conf /tmp/.pdnsd.conf
@@ -298,7 +293,7 @@ let home_directory = "/Users/johnw";
   };
 
   nixpkgs.overlays = 
-    let path = ./overlays; in with builtins;
+    let path = ../overlays; in with builtins;
     map (n: import (path + ("/" + n)))
         (filter (n: match ".*\\.nix" n != null || 
                     pathExists (path + ("/" + n + "/default.nix")))
@@ -339,32 +334,28 @@ let home_directory = "/Users/johnw";
     jquery
 
     # langToolsEnv
-    global
-    (haskell.lib.justStaticExecutables haskPkgs.bench)
-    (haskell.lib.justStaticExecutables haskPkgs.hpack)
+    R
     autoconf
     automake
-    libtool
-    pkgconfig
     clang
-    libcxx
-    libcxxabi
-    llvm
     cmake
-    ninja
-    gnumake
-    rabbitmq-c
-    lp_solve
-    cabal2nix
-    cabal-install
-    rtags
+    global
     gmp
-    mpfr
+    gnumake
     htmlTidy
     idutils
     lean
+    libcxx
+    libcxxabi
+    libtool
+    llvm
+    lp_solve
+    mpfr
+    ninja
     ott
-    R
+    pkgconfig
+    rabbitmq-c
+    rtags
     sbcl
     sloccount
     verasco
@@ -514,7 +505,7 @@ let home_directory = "/Users/johnw";
 
   nix.package = pkgs.nixUnstable;
   nix.nixPath =
-    [ "darwin-config=$HOME/src/nix/darwin-configuration.nix"
+    [ "darwin-config=$HOME/src/nix/config/darwin.nix"
       "home-manager=$HOME/oss/home-manager"
       "darwin=$HOME/oss/darwin"
       "nixpkgs=$HOME/oss/nixpkgs"
@@ -548,7 +539,7 @@ let home_directory = "/Users/johnw";
   environment.pathsToLink = [ "/info" "/etc" "/share" "/lib" "/libexec" ];
 
   environment.variables = {
-    HOME_MANAGER_CONFIG = "${home_directory}/src/nix/home-configuration.nix";
+    HOME_MANAGER_CONFIG = "${home_directory}/src/nix/config/home.nix";
 
     PASSWORD_STORE_ENABLE_EXTENSIONS = "true";
     PASSWORD_STORE_EXTENSIONS_DIR =

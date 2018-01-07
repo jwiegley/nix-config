@@ -3,7 +3,6 @@
 EMACSAPP=Emacs
 
 if [[ "$1" == --alt ]]; then
-    # export EMACSVER=${EMACSVER}alt
     export EMACSVER=HEAD
     EMACSAPP=ERC
     shift 1
