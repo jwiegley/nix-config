@@ -1,7 +1,7 @@
 self: pkgs: rec {
 
 myCoqPackages = coqPkgs: with pkgs; [
-  ocaml
+  ocamlPackages.ocaml
   ocamlPackages.camlp5_transitional
   ocamlPackages.findlib
   ocamlPackages.menhir
@@ -27,6 +27,8 @@ coq_8_7_override = pkgs.coq_8_7.override {
   buildIde = false;
 };
 
+self: pkgs: rec {
+
 coq_HEAD = pkgs.stdenv.lib.overrideDerivation coq_8_7_override (attrs: rec {
   version = "8.8";
   name = "coq-${version}-pre";
@@ -37,7 +39,7 @@ coq_HEAD = pkgs.stdenv.lib.overrideDerivation coq_8_7_override (attrs: rec {
                      texFull hevea fig2dev imagemagick_light ]);
   preConfigure = ''
     configureFlagsArray=(
-      -with-doc yes
+      -with-doc no
       -coqide no
     )
   '';
@@ -47,16 +49,7 @@ coqPackages_HEAD = pkgs.mkCoqPackages coq_HEAD;
 
 coqHEADEnv = pkgs.myEnvFun {
   name = "coqHEAD";
-  buildInputs = [ coq_HEAD ]
-    # ++ myCoqPackages coqPackages_HEAD
-    # ++ (with coqPackages_HEAD; [
-    #    CoLoR
-    #    category-theory
-    #    equations
-    #    math-classes
-    #    metalib
-    #  ])
-     ;
+  buildInputs = [ coq_HEAD ];
 };
 
 coq87Env = pkgs.myEnvFun {
