@@ -30,11 +30,11 @@ coq_8_7_override = pkgs.coq_8_7.override {
 coq_HEAD = pkgs.stdenv.lib.overrideDerivation coq_8_7_override (attrs: rec {
   version = "8.8";
   name = "coq-${version}-pre";
-  coq-version = "${builtins.substring 0 3 version}";
+  coq-version = "${version}";
   src = ~/oss/coq;
   buildInputs = attrs.buildInputs
-    ++ [ pkgs.ocaml-ng.ocamlPackages_4_06.num
-         pkgs.texFull pkgs.hevea pkgs.fig2dev pkgs.imagemagick_light ];
+    ++ (with pkgs; [ ocaml-ng.ocamlPackages_4_06.num
+                     texFull hevea fig2dev imagemagick_light ]);
   preConfigure = ''
     configureFlagsArray=(
       -with-doc yes
