@@ -12,6 +12,12 @@ let home_directory = "/Users/johnw";
 
   system.defaults.trackpad.Clicking = true;
 
+  networking = {
+    dns = [ "127.0.0.1" ];
+    search = [ "local" ];
+    networkservices = [ "Ethernet" "Wi-Fi" ];
+  };
+
   launchd.daemons = {
     cleanup = {
       command = "${home_directory}/bin/cleanup -u";
