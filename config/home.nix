@@ -1,6 +1,7 @@
 { pkgs, ... }:
 
-let home_directory = builtins.getEnv "HOME"; in
+let home_directory = builtins.getEnv "HOME";
+    lib = pkgs.stdenv.lib; in
 rec {
   nixpkgs.config = {
     allowUnfree = true;
@@ -20,10 +21,15 @@ rec {
 
     sessionVariables = {
       ASPELL_CONF        = "${xdg.configHome}/aspell/config";
+      B2_ACCOUNT_INFO    = "${xdg.configHome}/backblaze-b2/account_info";
+      CABAL_CONFIG       = "${xdg.configHome}/cabal/config";
       GNUPGHOME          = "${xdg.configHome}/gnupg";
       SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
-      SCREENRC           = "${xdg.configHome}/screen/config";
       INPUTRC            = "${xdg.configHome}/bash/input";
+      LESSHISTFILE       = "${xdg.cacheHome}/less/history";
+      PARALLEL_HOME      = "${xdg.cacheHome}/parallel";
+      SCREENRC           = "${xdg.configHome}/screen/config";
+      WWW_HOME           = "${xdg.cacheHome}/w3m";
 
       PASSWORD_STORE_DIR = "${home_directory}/doc/.passwords";
 
@@ -60,8 +66,12 @@ rec {
             "Library/Scripts/Applications/Media Pro" ])
       //
       {
-        ".slate".source = ~/.config/slate/config;
-        ".ledgerrc".text = "--file /Volumes/Files/Accounts/ledger.dat\n";
+        ".Deskzilla".source = "${xdg.dataHome}/Deskzilla";
+        ".docker".source    = "${xdg.configHome}/docker";
+        ".gist".source      = "${xdg.configHome}/gist/account_id";
+        ".ledgerrc".text    = "--file /Volumes/Files/Accounts/ledger.dat\n";
+        ".slate".source     = "${xdg.configHome}/slate/config";
+        ".zekr".source      = "${xdg.dataHome}/zekr";
       };
   };
 
@@ -117,7 +127,7 @@ rec {
       tput rmam
     '';
 
-    initExtra = ''
+    bashrcExtra = lib.mkBefore ''
       source /etc/bashrc
 
       if [[ -x "$(which docker-machine)" ]]; then
@@ -294,6 +304,7 @@ rec {
 
     configHome = "${home_directory}/.config";
     dataHome   = "${home_directory}/.local/share";
+    cacheHome  = "${home_directory}/.cache";
 
     configFile."gnupg/gpg-agent.conf".text = ''
       enable-ssh-support

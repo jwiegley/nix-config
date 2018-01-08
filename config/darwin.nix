@@ -62,15 +62,17 @@ let home_directory = "/Users/johnw";
       serviceConfig.RunAtLoad = true;
     };
 
-    rdm = {
+    rdm = rec {
       script = ''
         ${pkgs.rtags}/bin/rdm \
             --verbose \
             --launchd \
             --inactivity-timeout 300 \
+            --socket-file ${serviceConfig.Sockets.Listeners.SockPathName}
             --log-file ${logdir}/rtags.launchd.log
       '';
-      serviceConfig.Sockets.Listeners.SockPathName = "${home_directory}/.rdm";
+      serviceConfig.Sockets.Listeners.SockPathName
+        = "${home_directory}/.cache/rdm/socket";
     };
   };
 
@@ -271,9 +273,6 @@ let home_directory = "/Users/johnw";
         || exit 0
 
     cp -pL /etc/DefaultKeyBinding.dict ${home_directory}/Library/KeyBindings/DefaultKeyBinding.dict
-
-    mkdir -p ${home_directory}/.parallel
-    touch ${home_directory}/.parallel/will-cite
 
     if [[ ! -f /Applications/Firefox.app/Contents/MacOS/.firefox ]]; then
         mv /Applications/Firefox.app/Contents/MacOS/firefox \
@@ -509,7 +508,6 @@ let home_directory = "/Users/johnw";
       "home-manager=$HOME/oss/home-manager"
       "darwin=$HOME/oss/darwin"
       "nixpkgs=$HOME/oss/nixpkgs"
-      "$HOME/.nix-defexpr/channels"
     ];
 
   nix.trustedUsers = [ "johnw" ];

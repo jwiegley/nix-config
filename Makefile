@@ -41,7 +41,11 @@ copy:
 	nix copy --to ssh://hermes $(shell readlink -f ~/.nix-profile)      \
 	                           $(shell readlink -f /run/current-system)
 
-update: tag-before pull env switch tag-working mirror copy
+update-remote:
+	push -f Projects,Contracts,home hermes
+	ssh hermes '(cd ~/src/nix ; make env switch)'
+
+update: tag-before pull env switch tag-working mirror copy update-remote
 
 gc:
 	find ~ \( -name dist -type d -o -name result -type l \) -print0 \
