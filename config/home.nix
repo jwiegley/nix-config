@@ -118,6 +118,8 @@ rec {
           ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
       fi
 
+      . ${pkgs.bash-z}/share/bash/z.sh
+
       (cd ~ ; test -L bae   || ln -sf Contracts/BAE/Projects bae)
       (cd ~ ; test -L oss   || ln -sf Contracts/OSS/Projects oss)
       (cd ~ ; test -L doc   || ln -sf Documents doc)

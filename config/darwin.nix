@@ -438,6 +438,7 @@ let home_directory = "/Users/johnw";
     aspellDicts.en
     bashInteractive
     bash-completion
+    bash-z
     nix-bash-completions
     browserpass
     ctop
