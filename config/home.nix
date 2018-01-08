@@ -67,6 +67,7 @@ rec {
       //
       {
         ".Deskzilla".source = "${xdg.dataHome}/Deskzilla";
+        ".dbvis".source     = "${xdg.configHome}/DbVisualizer";
         ".docker".source    = "${xdg.configHome}/docker";
         ".gist".source      = "${xdg.configHome}/gist/account_id";
         ".ledgerrc".text    = "--file /Volumes/Files/Accounts/ledger.dat\n";
