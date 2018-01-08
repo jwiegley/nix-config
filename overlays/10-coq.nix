@@ -27,8 +27,6 @@ coq_8_7_override = pkgs.coq_8_7.override {
   buildIde = false;
 };
 
-self: pkgs: rec {
-
 coq_HEAD = pkgs.stdenv.lib.overrideDerivation coq_8_7_override (attrs: rec {
   version = "8.8";
   name = "coq-${version}-pre";
