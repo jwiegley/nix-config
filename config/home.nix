@@ -24,11 +24,12 @@ rec {
       B2_ACCOUNT_INFO    = "${xdg.configHome}/backblaze-b2/account_info";
       CABAL_CONFIG       = "${xdg.configHome}/cabal/config";
       GNUPGHOME          = "${xdg.configHome}/gnupg";
-      SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
       INPUTRC            = "${xdg.configHome}/bash/input";
       LESSHISTFILE       = "${xdg.cacheHome}/less/history";
       PARALLEL_HOME      = "${xdg.cacheHome}/parallel";
       SCREENRC           = "${xdg.configHome}/screen/config";
+      SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
+      STARDICT_DATA_DIR  = "${xdg.dataHome}/dictionary";
       WWW_HOME           = "${xdg.cacheHome}/w3m";
 
       PASSWORD_STORE_DIR = "${home_directory}/doc/.passwords";

@@ -511,9 +511,9 @@ let home_directory = "/Users/johnw";
   nix.package = pkgs.nixUnstable;
   nix.nixPath =
     [ "darwin-config=$HOME/src/nix/config/darwin.nix"
-      "home-manager=$HOME/oss/home-manager"
-      "darwin=$HOME/oss/darwin"
-      "nixpkgs=$HOME/oss/nixpkgs"
+      "home-manager=$HOME/src/nix/home-manager"
+      "darwin=$HOME/src/nix/darwin"
+      "nixpkgs=$HOME/src/nix/nixpkgs"
     ];
 
   nix.trustedUsers = [ "johnw" ];
@@ -565,8 +565,6 @@ let home_directory = "/Users/johnw";
     LEDGER_COLOR = "true";
     PAGER        = "less";
     GIT_PAGER    = "less";
-
-    STARDICT_DATA_DIR  = "${home_directory}/oss/dictionaries";
   };
 
   environment.shellAliases = {

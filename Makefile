@@ -17,25 +17,25 @@ switch: darwin home
 build: darwin-build home-build
 
 pull:
-	(cd ~/oss/nixpkgs      && git pull --rebase)
-	(cd ~/oss/darwin       && git pull --rebase)
-	(cd ~/oss/home-manager && git pull --rebase)
+	(cd nixpkgs      && git pull --rebase)
+	(cd darwin       && git pull --rebase)
+	(cd home-manager && git pull --rebase)
 
 tag-before:
-	git --git-dir=$(HOME)/oss/nixpkgs/.git branch -f before-update HEAD
+	git --git-dir=nixpkgs/.git branch -f before-update HEAD
 
 tag-working:
-	git --git-dir=$(HOME)/oss/nixpkgs/.git branch -f last-known-good before-update
-	git --git-dir=$(HOME)/oss/nixpkgs/.git branch -D before-update
+	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
+	git --git-dir=nixpkgs/.git branch -D before-update
 
 env:
 	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs \
 	    || nix-env -f '<darwin>' -u --leq -Q -A pkgs
 
 mirror:
-	git --git-dir=$(HOME)/oss/nixpkgs/.git push --mirror jwiegley
-	git --git-dir=$(HOME)/oss/darwin/.git push --mirror jwiegley
-	git --git-dir=$(HOME)/oss/home-manager/.git push --mirror jwiegley
+	git --git-dir=nixpkgs/.git push --mirror jwiegley
+	git --git-dir=darwin/.git push --mirror jwiegley
+	git --git-dir=home-manager/.git push --mirror jwiegley
 
 copy:
 	nix copy --to ssh://hermes $(shell readlink -f ~/.nix-profile)      \
