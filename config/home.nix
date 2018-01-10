@@ -129,8 +129,6 @@ rec {
       (cd ~ ; test -L src   || ln -sf Projects src)
       (cd ~ ; test -L emacs || ln -sf Projects/dot-emacs emacs)
       (cd ~ ; test -L bin   || ln -sf Projects/scripts bin)
-
-      tput rmam
     '';
 
     bashrcExtra = lib.mkBefore ''
