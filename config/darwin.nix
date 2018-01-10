@@ -388,6 +388,7 @@ let home_directory = "/Users/johnw";
     dnsutils
     openssh
     openssl
+    openvpn
     pdnsd
     privoxy
     rclone
