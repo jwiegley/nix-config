@@ -409,7 +409,8 @@ rec {
       };
 
       id_local = {
-        host = "vulcan mybook hermes titan mohajer home";
+        host = "vulcan mybook hermes titan mohajer home" +
+               "mac1* ubuntu* peta fiat smokeping tails nixos*";
         identityFile = "${xdg.configHome}/ssh/id_local";
         identitiesOnly = true;
         compression = false;
@@ -424,6 +425,7 @@ rec {
       ubuntu.hostname  = "172.16.138.129";
       peta.hostname    = "172.16.138.140";
       fiat.hostname    = "172.16.138.145";
+      nixos.hostname   = "172.16.138.147";
 
       smokeping = {
         user = "smokeping";
@@ -433,13 +435,6 @@ rec {
       tails = {
         hostname = "172.16.138.139";
         user = "root";
-      };
-
-      local_vms = {
-        host = "mac1* ubuntu* peta fiat smokeping tails";
-        compression = false;
-        identityFile = "${xdg.configHome}/ssh/id_local";
-        identitiesOnly = true;
       };
 
       elpa = {
