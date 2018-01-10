@@ -844,7 +844,6 @@ profiledHaskellPackages_8_0 = mkHaskellPackages pkgs.haskell.packages.ghc802
 ghcHEADProfEnv = pkgs.myEnvFun {
   name = "ghcHEADprof";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_HEAD; [
-    pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
   ];
 };
@@ -859,7 +858,6 @@ ghc82Env = pkgs.myEnvFun {
 ghc82ProfEnv = pkgs.myEnvFun {
   name = "ghc82prof";
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_2; [
-    pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle myHaskellPackages)
   ];
 };
@@ -867,7 +865,6 @@ ghc82ProfEnv = pkgs.myEnvFun {
 ghc80Env = pkgs.myEnvFun {
   name = "ghc80";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_0; [
-    pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle (pkgs: myHaskellPackages pkgs ++ (with pkgs; [
        Agda
        # idris
@@ -889,7 +886,6 @@ ghc80Env = pkgs.myEnvFun {
 ghc80ProfEnv = pkgs.myEnvFun {
   name = "ghc80prof";
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_0; [
-    pkgs.darwin.apple_sdk.frameworks.Cocoa
     (ghcWithHoogle (pkgs: myHaskellPackages pkgs ++ (with pkgs; [
        categorical
        concat-inline
