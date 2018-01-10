@@ -67,6 +67,8 @@ rec {
             "Library/Scripts/Applications/Media Pro" ])
       //
       {
+        "Library/Fonts".source = "${xdg.dataHome}/fonts";
+
         ".Deskzilla".source = "${xdg.dataHome}/Deskzilla";
         ".dbvis".source     = "${xdg.configHome}/DbVisualizer";
         ".docker".source    = "${xdg.configHome}/docker";
