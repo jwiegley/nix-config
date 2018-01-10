@@ -14,7 +14,7 @@ bash-z = with super; stdenv.mkDerivation rec {
   phases = [ "unpackPhase" "installPhase" ];
 
   installPhase = ''
-    mkdir -p $out/bin
+    mkdir -p $out/share/bash
     cp -p z.sh $out/share/bash/z.sh
   '';
 
