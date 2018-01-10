@@ -525,13 +525,9 @@ let home_directory = "/Users/johnw";
     env-keep-derivations = true
   '';
 
-  nix.maxJobs = 6;
+  nix.maxJobs = 4;
   nix.distributedBuilds = true;
   nix.buildMachines = [
-    # { hostName = "/nix/store";
-    #   system = "x86_64-darwin";
-    #   maxJobs = 4;
-    # }
     { hostName = "hermes";
       sshUser = "johnw";
       sshKey = "${home_directory}/.config/ssh/id_local";
