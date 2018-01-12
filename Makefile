@@ -28,9 +28,15 @@ tag-working:
 	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
 	git --git-dir=nixpkgs/.git branch -D before-update
 
-env:
+env-all:
 	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs \
 	    || nix-env -f '<darwin>' -u --leq -Q -A pkgs
+
+env:
+	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.emacs26Env
+	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.coq87Env
+	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.ghc82Env
+	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.ledgerPy3Env
 
 mirror:
 	git --git-dir=nixpkgs/.git push --mirror jwiegley

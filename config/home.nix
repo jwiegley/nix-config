@@ -96,7 +96,7 @@ rec {
       l   = "${pkgs.git}/bin/git l";
       ls  = "ls --color=auto";
       par = "${pkgs.parallel}/bin/parallel";
-      rm  = "${home_directory}/bin/rmtrash";
+      rm  = "${home_directory}/bin/trash";
       scp = "${pkgs.rsync}/bin/rsync -aP --inplace";
       w   = "${pkgs.git}/bin/git status -sb";
     };
@@ -425,7 +425,11 @@ rec {
       ubuntu.hostname  = "172.16.138.129";
       peta.hostname    = "172.16.138.140";
       fiat.hostname    = "172.16.138.145";
-      nixos.hostname   = "172.16.138.147";
+
+      nixos = {
+        hostname     = "192.168.128.132";
+        proxyCommand = "${pkgs.openssh}/bin/ssh -q hermes socat - TCP:%h:%p";
+      };
 
       smokeping = {
         user = "smokeping";

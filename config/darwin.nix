@@ -219,6 +219,8 @@ let home_directory = "/Users/johnw";
 
     rr { name = localunixsocket;       a = 127.0.0.1; }
     rr { name = localunixsocket.local; a = 127.0.0.1; }
+    # rr { name = bugs.ledger-cli.org;   a = 172.16.138.147; }
+    rr { name = bugs.ledger-cli.org;   a = 192.168.128.132; }
 
     neg {
         name  = doubleclick.net;
@@ -434,7 +436,6 @@ let home_directory = "/Users/johnw";
     python27Packages.certifi
 
     # systemToolsEnv
-    apg
     aspell
     aspellDicts.en
     bashInteractive
@@ -503,41 +504,6 @@ let home_directory = "/Users/johnw";
     # ratpoison
   ];
 
-  programs.bash.enable = true;
-
-  services.nix-daemon.enable = true;
-  services.activate-system.enable = true;
-
-  system.stateVersion = 2;
-
-  nix.package = pkgs.nixUnstable;
-  nix.nixPath =
-    [ "darwin-config=$HOME/src/nix/config/darwin.nix"
-      "home-manager=$HOME/src/nix/home-manager"
-      "darwin=$HOME/src/nix/darwin"
-      "nixpkgs=$HOME/src/nix/nixpkgs"
-    ];
-
-  nix.trustedUsers = [ "johnw" ];
-  nix.extraOptions = ''
-    gc-keep-outputs = true
-    gc-keep-derivations = true
-    env-keep-derivations = true
-  '';
-
-  nix.maxJobs = 4;
-  nix.distributedBuilds = true;
-  nix.buildMachines = [
-    { hostName = "hermes";
-      sshUser = "johnw";
-      sshKey = "${home_directory}/.config/ssh/id_local";
-      system = "x86_64-darwin";
-      maxJobs = 2;
-    }
-  ];
-
-  programs.nix-index.enable = true;
-
   environment.pathsToLink = [ "/info" "/etc" "/share" "/lib" "/libexec" ];
 
   environment.variables = {
@@ -567,6 +533,43 @@ let home_directory = "/Users/johnw";
 
   environment.shellAliases = {
     rehash  = "hash -r";
-    snaplog = "git log refs/snapshots/\\$(git symbolic-ref HEAD)";
+    snaplog = "${pkgs.git}/bin/git log refs/snapshots/\\$(${pkgs.git}/bin/git symbolic-ref HEAD)";
+    darwin  = "darwin-rebuild switch";
+    home    = "${pkgs.home-manager}/bin/home-manager switch";
   };
+
+  services.nix-daemon.enable = true;
+  services.activate-system.enable = true;
+
+  nix.nixPath =
+    [ "darwin-config=$HOME/src/nix/config/darwin.nix"
+      "home-manager=$HOME/src/nix/home-manager"
+      "darwin=$HOME/src/nix/darwin"
+      "nixpkgs=$HOME/src/nix/nixpkgs"
+    ];
+
+  nix.package = pkgs.nixUnstable;
+  nix.trustedUsers = [ "@admin" ];
+  nix.maxJobs = 4;
+  # nix.useSandbox = true;
+  nix.distributedBuilds = true;
+  nix.buildMachines = [
+    { hostName = "hermes";
+      sshUser = "johnw";
+      sshKey = "${home_directory}/.config/ssh/id_local";
+      system = "x86_64-darwin";
+      maxJobs = 2;
+    }
+  ];
+
+  nix.extraOptions = ''
+    gc-keep-outputs = true
+    gc-keep-derivations = true
+    env-keep-derivations = true
+  '';
+
+  programs.bash.enable = true;
+  programs.nix-index.enable = true;
+
+  system.stateVersion = 2;
 }

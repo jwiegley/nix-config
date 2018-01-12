@@ -14,6 +14,7 @@ pdf-tools-server = with super; stdenv.mkDerivation rec {
   preConfigure = "./autogen.sh";
 
   installPhase = ''
+    echo hello
     mkdir -p $out/bin
     cp -p epdfinfo $out/bin
   '';

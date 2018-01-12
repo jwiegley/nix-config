@@ -46,7 +46,6 @@ myHaskellPackageDefs = super:
   sitebuilder      = pkg ~/doc/sitebuilder { yuicompressor = pkgs.yuicompressor; };
   sizes            = pkg ~/src/sizes {};
   una              = pkg ~/src/una {};
-  z3-api-4_5_0     = pkg ~/src/z3-generate-api/api/4.5.0 { };
   z3-generate-api  = pkg ~/src/z3-generate-api { };
   z3cat            = pkg ~/src/z3cat {};
 
@@ -449,6 +448,11 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   recurseForDerivations = true;
 
   mkDerivation = args: super.mkDerivation (args // {
+    # libraryHaskellDepends =
+    #   if builtins.hasAttr "libraryHaskellDepends" args
+    #   then args.libraryHaskellDepends
+    #          ++ [ pkgs.darwin.apple_sdk.frameworks.Cocoa ]
+    #   else [ pkgs.darwin.apple_sdk.frameworks.Cocoa ];
     enableLibraryProfiling = libProf;
     enableExecutableProfiling = false;
   });
@@ -815,6 +819,7 @@ myHaskellPackages = haskellPackages: with haskellPackages; [
   x509-system
   yaml
   z3
+  z3-generate-api
   zippers
   zlib
 ];
