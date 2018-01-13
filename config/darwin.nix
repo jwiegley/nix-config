@@ -15,7 +15,7 @@ let home_directory = "/Users/johnw";
   networking = {
     dns = [ "127.0.0.1" ];
     search = [ "local" ];
-    networkservices = [ "Ethernet" "Wi-Fi" ];
+    knownNetworkServices = [ "Ethernet" "Wi-Fi" ];
   };
 
   launchd.daemons = {
@@ -273,7 +273,7 @@ let home_directory = "/Users/johnw";
     exec "$dir"/."$name" "$@"
   '';
 
-  system.activationScripts.extraPostActivation.text = ''
+  system.activationScripts.postActivation.text = ''
     chflags nohidden ${home_directory}/Library
 
     sudo launchctl load -w \

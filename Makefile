@@ -1,10 +1,10 @@
 all: switch
 
 darwin:
-	darwin-rebuild switch
+	darwin-rebuild switch -Q
 
 darwin-build:
-	darwin-rebuild build
+	darwin-rebuild build -Q
 
 home:
 	home-manager switch
