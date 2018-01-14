@@ -4,17 +4,15 @@ darwin:
 	darwin-rebuild switch -Q
 
 darwin-build:
-	darwin-rebuild build -Q
+	nix build darwin.system
 
 home:
 	home-manager switch
 
 home-build:
-	home-manager build
-
-switch: darwin home
-
-build: darwin-build home-build
+	nix build -f ~/src/nix/home-manager/home-manager/home-manager.nix \
+		  --argstr confPath "$(HOME_MANAGER_CONFIG)" \
+		  --argstr confAttr "" activationPackage
 
 pull:
 	(cd nixpkgs      && git pull --rebase)
@@ -38,6 +36,12 @@ env:
 	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.ghc82Env
 	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.ledgerPy3Env
 
+build: darwin-build home-build env
+
+build-all: darwin-build home-build env-all
+
+switch: darwin home
+
 mirror:
 	git --git-dir=nixpkgs/.git push --mirror jwiegley
 	git --git-dir=darwin/.git push --mirror jwiegley
@@ -51,7 +55,7 @@ update-remote:
 	push -f Projects,Contracts,home hermes
 	ssh hermes '(cd ~/src/nix ; make env switch)'
 
-update: tag-before pull env switch tag-working mirror copy update-remote
+update: tag-before pull build switch tag-working mirror copy update-remote
 
 gc:
 	find ~ \( -name dist -type d -o -name result -type l \) -print0 \

@@ -846,8 +846,8 @@ haskellPackages_8_0 = mkHaskellPackages pkgs.haskell.packages.ghc802
 profiledHaskellPackages_8_0 = mkHaskellPackages pkgs.haskell.packages.ghc802
   (haskellPackage_8_0_overrides true);
 
-ghcHEADProfEnv = pkgs.myEnvFun {
-  name = "ghcHEADprof";
+ghcHEADEnv = pkgs.myEnvFun {
+  name = "ghcHEAD";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_HEAD; [
     (ghcWithHoogle myHaskellPackages)
   ];
