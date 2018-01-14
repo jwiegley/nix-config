@@ -387,6 +387,7 @@ rec {
       vulcan.hostname = "192.168.1.69";
       hermes.hostname = "192.168.1.65";
       mybook = hermes;
+      tank = hermes;
 
       home = {
         hostname = "76.234.69.149";
@@ -409,7 +410,7 @@ rec {
       };
 
       id_local = {
-        host = "vulcan mybook hermes titan mohajer home" +
+        host = "vulcan mybook tank hermes titan mohajer home" +
                "mac1* ubuntu* peta fiat smokeping tails nixos*";
         identityFile = "${xdg.configHome}/ssh/id_local";
         identitiesOnly = true;

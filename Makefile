@@ -53,7 +53,9 @@ copy:
 
 update-remote:
 	push -f Projects,Contracts,home hermes
-	ssh hermes '(cd ~/src/nix ; make env switch)'
+	ssh hermes '(cd ~/src/nix ; make switch env-all)'
+
+hermes: copy update-remote
 
 update: tag-before pull build switch tag-working mirror copy update-remote
 
