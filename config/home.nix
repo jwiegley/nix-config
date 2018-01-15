@@ -21,7 +21,7 @@ let home_directory = builtins.getEnv "HOME";
     packages = with pkgs; [];
 
     sessionVariables = {
-      ASPELL_CONF        = "${xdg.configHome}/aspell/config";
+      ASPELL_CONF        = "conf ${xdg.configHome}/aspell/config;";
       B2_ACCOUNT_INFO    = "${xdg.configHome}/backblaze-b2/account_info";
       CABAL_CONFIG       = "${xdg.configHome}/cabal/config";
       GNUPGHOME          = "${xdg.configHome}/gnupg";
@@ -326,9 +326,10 @@ let home_directory = builtins.getEnv "HOME";
     };
 
     configFile."aspell/config".text = ''
-      data-dir ${pkgs.aspell}/lib/aspell
-      personal ${xdg.configHome}/aspell/en.personal
-      repl ${xdg.configHome}/aspell/en.repl
+      local-data-dir ${pkgs.aspell}/lib/aspell
+      data-dir ${pkgs.aspellDicts.en}/lib/aspell
+      personal ${xdg.configHome}/aspell/en_US.personal
+      repl ${xdg.configHome}/aspell/en_US.repl
     '';
 
     configFile."msmtp".text = ''
