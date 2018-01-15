@@ -87,33 +87,41 @@ let home_directory = builtins.getEnv "HOME";
     shellOptions    = [ "histappend" ];
 
     shellAliases = {
-      b   = "${pkgs.git}/bin/git branch --color -v";
+      b = "${pkgs.git}/bin/git b";
+      l = "${pkgs.git}/bin/git l";
+      w = "${pkgs.git}/bin/git w";
+
+      u = "${pkgs.gnumake}/bin/make -C ${home_directory}/src/nix -f Makefile";
+
       g   = "${pkgs.gitAndTools.hub}/bin/hub";
-      ga  = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
       git = "${pkgs.gitAndTools.hub}/bin/hub";
-      l   = "${pkgs.git}/bin/git l";
-      ls  = "ls --color=auto";
-      par = "${pkgs.parallel}/bin/parallel";
-      rm  = "${home_directory}/bin/trash";
-      scp = "${pkgs.rsync}/bin/rsync -aP --inplace";
-      w   = "${pkgs.git}/bin/git status -sb";
+      ga  = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
+
+      ls    = "${pkgs.coreutils}/bin/ls --color=auto";
+      nm    = "${pkgs.findutils}/bin/find . -name";
+      par   = "${pkgs.parallel}/bin/parallel";
+      rm    = "${home_directory}/bin/trash";
+      rX    = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
+      scp   = "${pkgs.rsync}/bin/rsync -aP --inplace";
+      hide  = "chflags hidden";
+      proc  = "ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
+      wipe  = "${pkgs.srm}/bin/srm -vfr";
+      nstat = "netstat -nr -f inet"
+            + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
+            + " | ${pkgs.coreutils}/bin/tail -n +5";
     };
 
     profileExtra = ''
-      for file in \
-          ${xdg.configHome}/fetchmail/config \
-          ${xdg.configHome}/fetchmail/config-lists
+      export PATH=${pkgs.coreutils}/bin:$PATH
+
+      for file in ${xdg.configHome}/fetchmail/config \
+                  ${xdg.configHome}/fetchmail/config-lists
       do
           cp -pL $file ''${file}.copy
           chmod 0600 ''${file}.copy
       done
 
-      # if ! pgrep -x "znc" > /dev/null; then
-      #     ${pkgs.znc}/bin/znc -d ${xdg.configHome}/znc
-      # fi
-
-      export GPG_TTY=$(${pkgs.coreutils}/bin/tty)
-
+      export GPG_TTY=$(tty)
       if ! pgrep -x "gpg-agent" > /dev/null; then
           ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
       fi
@@ -127,14 +135,28 @@ let home_directory = builtins.getEnv "HOME";
       (cd ~ ; test -L src   || ln -sf Projects src)
       (cd ~ ; test -L emacs || ln -sf Projects/dot-emacs emacs)
       (cd ~ ; test -L bin   || ln -sf Projects/scripts bin)
+
+      function k() {
+          if [[ -f .makefile ]]; then
+              ${pkgs.gnumake}/bin/make -f .makefile "$@"
+          else
+              ${pkgs.gnumake}/bin/make "$@"
+          fi
+      }
+
+      function rmdir-r() {
+          ${pkgs.findutils}/bin/find "$@" -depth -type d -empty \
+              -exec ${pkgs.coreutils}/bin/rmdir {} \;
+      }
     '';
 
     bashrcExtra = lib.mkBefore ''
       source /etc/bashrc
 
-      if [[ -x "$(which docker-machine)" ]]; then
-          if docker-machine status default > /dev/null 2>&1; then
-              eval $(docker-machine env default) > /dev/null 2>&1
+      DOCKER_MACHINE=$(which docker-machine)
+      if [[ -x "$DOCKER_MACHINE" ]]; then
+          if $DOCKER_MACHINE status default > /dev/null 2>&1; then
+              eval $($DOCKER_MACHINE env default) > /dev/null 2>&1
           fi
       fi
 
@@ -146,7 +168,7 @@ let home_directory = builtins.getEnv "HOME";
   programs.git = {
     enable = true;
 
-    userName = "John Wiegley";
+    userName  = "John Wiegley";
     userEmail = "johnw@newartisans.com";
 
     signing = {
@@ -156,43 +178,38 @@ let home_directory = builtins.getEnv "HOME";
 
     aliases = {
       amend      = "commit --amend -C HEAD";
-      authors    = "!\"git log --pretty=format:%aN | sort | uniq -c | sort -rn\"";
-      b          = "branch -v";
-      c          = "commit";
+      authors    = "!\"${pkgs.git}/bin/git log --pretty=format:%aN"
+                 + " | ${pkgs.coreutils}/bin/sort"
+                 + " | ${pkgs.coreutils}/bin/uniq -c"
+                 + " | ${pkgs.coreutils}/bin/sort -rn\"";
+      b          = "branch --color -v";
       ca         = "commit --amend";
       changes    = "diff --name-status -r";
-      ci         = "commit";
-      cl         = "clone --recursive";
-      cm         = "checkout master";
+      clone      = "clone --recursive";
       co         = "checkout";
       cp         = "cherry-pick";
       dc         = "diff --cached";
+      dh         = "diff HEAD";
       ds         = "diff --staged";
       ls-ignored = "ls-files --exclude-standard --ignored --others";
-      m          = "merge";
-      mm         = "merge --no-ff";
-      msg        = "commit --allow-empty -m";
-      p          = "cherry-pick -s";
-      pick       = "cherry-pick";
-      pull       = "pull --ff";
-      r          = "remote";
       rc         = "rebase --continue";
       rh         = "reset --hard";
-      ri         = "rebase -i";
       rs         = "rebase --skip";
       ru         = "remote update --prune";
-      sh         = "!git-sh";
-      snap       = "!git stash && git stash apply";
-      sp         = "!\"git stash ; git pull ; git stash pop\"";
-      spull      = "!git stash && git pull && git stash pop";
-      st         = "stash";
-      stl        = "stash list";
-      stp        = "stash pop";
+      snap       = "!${pkgs.git}/bin/git stash"
+                 + " && ${pkgs.git}/bin/git stash apply";
+      snaplog    = "!${pkgs.git}/bin/git log refs/snapshots/refs/heads/"
+                 + "\$(${pkgs.git}/bin/git rev-parse HEAD)";
+      spull      = "!${pkgs.git}/bin/git stash"
+                 + " && ${pkgs.git}/bin/git pull"
+                 + " && ${pkgs.git}/bin/git stash pop";
       su         = "submodule update --init";
       undo       = "reset --soft HEAD^";
-      w          = "git status";
-      wd         = "diff --color-words";
-      l          = "log --graph --pretty=format:'%Cred%h%Creset —%Cblue%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative --show-notes=*";
+      w          = "status -sb";
+      wdiff      = "diff --color-words";
+      l          = "log --graph --pretty=format:'%Cred%h%Creset"
+                 + " —%Cblue%d%Creset %s %Cgreen(%cr)%Creset'"
+                 + " --abbrev-commit --date=relative --show-notes=*";
     };
 
     extraConfig = {
@@ -209,7 +226,8 @@ let home_directory = builtins.getEnv "HOME";
       branch.autosetupmerge = true;
       commit.gpgsign        = false;
       credential.helper     = "osxkeychain";
-      ghi.token             = "!/usr/bin/security find-internet-password -a jwiegley -s github.com -l 'ghi token' -w";
+      ghi.token             = "!/usr/bin/security find-internet-password"
+                            + " -a jwiegley -s github.com -l 'ghi token' -w";
       hub.protocol          = "https";
       mergetool.keepBackup  = true;
       pull.rebase           = true;
@@ -297,7 +315,8 @@ let home_directory = builtins.getEnv "HOME";
     };
 
     ignores = [
-      "*.elc"
+      "*.elc" "*.vo" "*.aux" "*.v.d" "*.o" "*.a" "*.la" "*.so" "*.dylib"
+      "*~" "#*#"
     ];
   };
 
@@ -376,7 +395,6 @@ let home_directory = builtins.getEnv "HOME";
     controlPersist = "1800";
 
     forwardAgent = true;
-    compression = true;
     serverAliveInterval = 60;
 
     hashKnownHosts = true;
@@ -388,32 +406,18 @@ let home_directory = builtins.getEnv "HOME";
       mybook = hermes;
       tank = hermes;
 
-      home = {
-        hostname = "76.234.69.149";
-        port = 2201;
-      };
-
-      titan = {
-        hostname = "192.168.1.133";
-        user = "root";
-      };
-
-      mohajer = {
-        hostname = "192.168.1.75";
-        user = "nasimw";
-      };
-
-      router = {
-        hostname = "192.168.1.2";
-        user = "root";
-      };
+      home    = { hostname = "76.234.69.149"; port = 2201; };
+      titan   = { hostname = "192.168.1.133"; user = "root"; };
+      mohajer = { hostname = "192.168.1.75";  user = "nasimw"; };
+      router  = { hostname = "192.168.1.2";   user = "root"; };
 
       id_local = {
-        host = "vulcan mybook tank hermes titan mohajer home" +
-               "mac1* ubuntu* peta fiat smokeping tails nixos*";
+        host = lib.concatStringsSep " " [
+          "fiat" "hermes" "home" "mac1*" "mohajer" "mybook" "nixos*"
+          "peta" "smokeping" "tails" "tank" "titan" "ubuntu*" "vulcan"
+        ];
         identityFile = "${xdg.configHome}/ssh/id_local";
         identitiesOnly = true;
-        compression = false;
       };
 
       mac107.hostname  = "172.16.138.133";
@@ -428,33 +432,20 @@ let home_directory = builtins.getEnv "HOME";
 
       nixos = {
         hostname     = "192.168.128.132";
-        proxyCommand = "${pkgs.openssh}/bin/ssh -q hermes socat - TCP:%h:%p";
+        proxyCommand = "${pkgs.openssh}/bin/ssh -q hermes "
+                     + "/run/current-system/sw/bin/socat - TCP:%h:%p";
       };
 
-      smokeping = {
-        user = "smokeping";
-        hostname = "192.168.1.78";
-      };
-
-      tails = {
-        hostname = "172.16.138.139";
-        user = "root";
-      };
-
-      elpa = {
-        hostname = "elpa.gnu.org";
-        user = "root";
-      };
+      smokeping = { hostname = "192.168.1.78";   user = "smokeping"; };
+      tails     = { hostname = "172.16.138.139"; user = "root"; };
+      elpa      = { hostname = "elpa.gnu.org";   user = "root"; };
 
       savannah.hostname  = "git.sv.gnu.org";
       fencepost.hostname = "fencepost.gnu.org";
       launchpad.hostname = "bazaar.launchpad.net";
       mail.hostname      = "mail.haskell.org";
 
-      haskell_org = {
-        host = "*haskell.org";
-        user = "root";
-      };
+      haskell_org = { host = "*haskell.org"; user = "root"; };
 
       ivysaur = {
         hostname = "ivysaur.ait.na.baesystems.com";
