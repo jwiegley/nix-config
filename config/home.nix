@@ -1,8 +1,8 @@
 { pkgs, ... }:
 
 let home_directory = builtins.getEnv "HOME";
-    lib = pkgs.stdenv.lib; in
-rec {
+    lib = pkgs.stdenv.lib; in rec {
+
   nixpkgs.config = {
     allowUnfree = true;
     allowBroken = true;
@@ -16,8 +16,9 @@ rec {
                 (attrNames (readDir path)));
 
   home = {
-    packages = with pkgs; [
-    ];
+    # These are packages that should always be present in the user
+    # environment, though perhaps not the machine environment.
+    packages = with pkgs; [];
 
     sessionVariables = {
       ASPELL_CONF        = "${xdg.configHome}/aspell/config";
@@ -64,18 +65,15 @@ rec {
            })
           [ "Library/Keyboard Layouts/PersianDvorak.keylayout"
             "Library/Scripts/Applications/Download links to PDF.scpt"
-            "Library/Scripts/Applications/Media Pro" ])
-      //
-      {
-        "Library/Fonts".source = "${xdg.dataHome}/fonts";
-
-        ".Deskzilla".source = "${xdg.dataHome}/Deskzilla";
-        ".dbvis".source     = "${xdg.configHome}/DbVisualizer";
-        ".docker".source    = "${xdg.configHome}/docker";
-        ".gist".source      = "${xdg.configHome}/gist/account_id";
-        ".ledgerrc".text    = "--file /Volumes/Files/Accounts/ledger.dat\n";
-        ".slate".source     = "${xdg.configHome}/slate/config";
-        ".zekr".source      = "${xdg.dataHome}/zekr";
+            "Library/Scripts/Applications/Media Pro" ]) //
+      { "Library/Fonts".source = "${xdg.dataHome}/fonts";
+        ".Deskzilla".source    = "${xdg.dataHome}/Deskzilla";
+        ".dbvis".source        = "${xdg.configHome}/DbVisualizer";
+        ".docker".source       = "${xdg.configHome}/docker";
+        ".gist".source         = "${xdg.configHome}/gist/account_id";
+        ".ledgerrc".text       = "--file /Volumes/Files/Accounts/ledger.dat\n";
+        ".slate".source        = "${xdg.configHome}/slate/config";
+        ".zekr".source         = "${xdg.dataHome}/zekr";
       };
   };
 
