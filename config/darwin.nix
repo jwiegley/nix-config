@@ -299,10 +299,10 @@ let home_directory = "/Users/johnw";
     allowBroken = true;
   };
 
-  nixpkgs.overlays = 
+  nixpkgs.overlays =
     let path = ../overlays; in with builtins;
     map (n: import (path + ("/" + n)))
-        (filter (n: match ".*\\.nix" n != null || 
+        (filter (n: match ".*\\.nix" n != null ||
                     pathExists (path + ("/" + n + "/default.nix")))
                 (attrNames (readDir path)));
 
@@ -541,32 +541,43 @@ let home_directory = "/Users/johnw";
   services.nix-daemon.enable = true;
   services.activate-system.enable = true;
 
-  nix.nixPath =
-    [ "darwin-config=$HOME/src/nix/config/darwin.nix"
-      "home-manager=$HOME/src/nix/home-manager"
-      "darwin=$HOME/src/nix/darwin"
-      "nixpkgs=$HOME/src/nix/nixpkgs"
+  nix = {
+    package = pkgs.nixUnstable;
+
+    nixPath =
+      [ "darwin-config=$HOME/src/nix/config/darwin.nix"
+        "home-manager=$HOME/src/nix/home-manager"
+        "darwin=$HOME/src/nix/darwin"
+        "nixpkgs=$HOME/src/nix/nixpkgs"
+      ];
+
+    trustedUsers = [ "@admin" ];
+    maxJobs = 4;
+    # useSandbox = true;
+    distributedBuilds = true;
+    buildMachines = [
+      { hostName = "hermes";
+        sshUser = "johnw";
+        sshKey = "${home_directory}/.config/ssh/id_local";
+        system = "x86_64-darwin";
+        maxJobs = 2;
+      }
     ];
 
-  nix.package = pkgs.nixUnstable;
-  nix.trustedUsers = [ "@admin" ];
-  nix.maxJobs = 4;
-  # nix.useSandbox = true;
-  nix.distributedBuilds = true;
-  nix.buildMachines = [
-    { hostName = "hermes";
-      sshUser = "johnw";
-      sshKey = "${home_directory}/.config/ssh/id_local";
-      system = "x86_64-darwin";
-      maxJobs = 2;
-    }
-  ];
+    binaryCaches = [
+      "https://cache.nixos.org/"
+      "https://nixcache.reflex-frp.org"
+    ];
+    binaryCachePublicKeys = [
+      "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="
+    ];
 
-  nix.extraOptions = ''
-    gc-keep-outputs = true
-    gc-keep-derivations = true
-    env-keep-derivations = true
-  '';
+    extraOptions = ''
+      gc-keep-outputs = true
+      gc-keep-derivations = true
+      env-keep-derivations = true
+    '';
+  };
 
   programs.bash.enable = true;
   programs.nix-index.enable = true;
