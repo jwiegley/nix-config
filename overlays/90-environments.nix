@@ -9,10 +9,9 @@ myBuildEnvs = with super; stdenv.mkDerivation {
     coq87Env
     coqHEADEnv
     emacs25Env
-    emacs26DebugEnv
     emacs26Env
-    emacs26FullEnv
-    # emacsHEADEnv
+    emacs26DebugEnv
+    emacsHEADEnv
     ghc80Env
     ghc80ProfEnv
     ghc82Env

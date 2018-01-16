@@ -1,5 +1,7 @@
 self: pkgs: rec {
 
+emacs = emacs26;
+
 myEmacsPackages = epkgs: with epkgs; [
   ace-jump-mode
   ace-link
@@ -20,7 +22,6 @@ myEmacsPackages = epkgs: with epkgs; [
   auto-yasnippet
   avy
   avy-zap
-  back-button
   backup-each-save
   beacon
   biblio
@@ -267,7 +268,6 @@ myEmacsPackages = epkgs: with epkgs; [
   pass
   password-store
   password-store-otp
-  pcache
   pcre2el
   pdf-tools
   per-window-point
@@ -369,133 +369,6 @@ myEmacsPackages = epkgs: with epkgs; [
   zoutline
   ztree
 ];
-
-emacs = emacs26;
-emacs26PackagesNg = pkgs.emacsPackagesNgGen emacs26;
-
-emacs26 = with pkgs; pkgs.stdenv.lib.overrideDerivation
-  (pkgs.emacs25.override { srcRepo = true; }) (attrs: rec {
-  name = "emacs-${version}${versionModifier}";
-  version = "26.0";
-  versionModifier = ".90";
-
-  buildInputs = pkgs.emacs25.buildInputs ++ [ git ];
-
-  patches = lib.optional stdenv.isDarwin ./emacs/at-fdcwd.patch;
-
-  CFLAGS = "-Ofast -momit-leaf-frame-pointer";
-
-  src = builtins.filterSource (path: type:
-      type != "directory" || baseNameOf path != ".git")
-    ~/.emacs.d/release;
-
-  postPatch = ''
-    rm -fr .git
-  '';
-
-  postInstall = ''
-    mkdir -p $out/share/emacs/site-lisp
-    cp ${./emacs/site-start.el} $out/share/emacs/site-lisp/site-start.el
-    $out/bin/emacs --batch -f batch-byte-compile $out/share/emacs/site-lisp/site-start.el
-
-    rm -rf $out/var
-    rm -rf $out/share/emacs/${version}/site-lisp
-
-    for srcdir in src lisp lwlib ; do
-      dstdir=$out/share/emacs/${version}/$srcdir
-      mkdir -p $dstdir
-      find $srcdir -name "*.[chm]" -exec cp {} $dstdir \;
-      cp $srcdir/TAGS $dstdir
-      echo '((nil . ((tags-file-name . "TAGS"))))' > $dstdir/.dir-locals.el
-    done
-  '' + lib.optionalString stdenv.isDarwin ''
-    mkdir -p $out/Applications
-    mv nextstep/Emacs.app $out/Applications
-  '';
-});
-
-emacs26debug = pkgs.stdenv.lib.overrideDerivation emacs26 (attrs: rec {
-  name = "emacs-26.0.90-debug";
-  doCheck = true;
-  CFLAGS = "-O0 -g3";
-  configureFlags = [ "--with-modules" ] ++
-   [ "--with-ns" "--disable-ns-self-contained"
-     "--enable-checking=yes,glyphs"
-     "--enable-check-lisp-object-type" ];
-});
-
-emacsHEADPackagesNg = pkgs.emacsPackagesNgGen emacsHEAD;
-
-emacsHEAD = with pkgs; pkgs.stdenv.lib.overrideDerivation
-  (pkgs.emacs25.override { srcRepo = true; }) (attrs: rec {
-  name = "emacs-${version}${versionModifier}";
-  version = "27.0";
-  versionModifier = ".50";
-
-  appName = "ERC";
-  bundleName = "nextstep/ERC.app";
-  iconFile = ./emacs/Chat.icns;
-
-  buildInputs = pkgs.emacs25.buildInputs ++ [ git ];
-
-  patches = lib.optional stdenv.isDarwin ./emacs/at-fdcwd.patch;
-
-  CFLAGS = "-O0 -g3";
-
-  configureFlags = [ "--with-modules" ] ++
-   [ "--with-ns" "--disable-ns-self-contained"
-     "--enable-checking=yes,glyphs"
-     "--enable-check-lisp-object-type" ];
-
-  src = builtins.filterSource (path: type:
-      type != "directory" || baseNameOf path != ".git")
-    ~/.emacs.d/master;
-
-  postPatch = ''
-    sed -i 's|/usr/share/locale|${gettext}/share/locale|g' \
-      lisp/international/mule-cmds.el
-    sed -i 's|nextstep/Emacs\.app|${bundleName}|' configure.ac
-    sed -i 's|>Emacs<|>${appName}<|' nextstep/templates/Info.plist.in
-    sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Info.plist.in
-    sed -i 's|org\.gnu\.Emacs|org.gnu.${appName}|' nextstep/templates/Info.plist.in
-    sed -i 's|Emacs @version@|${appName} @version@|' nextstep/templates/Info.plist.in
-    sed -i 's|EmacsApp|${appName}App|' nextstep/templates/Info.plist.in
-    if [ -n "${iconFile}" ]; then
-      sed -i 's|Emacs\.icns|${appName}.icns|' nextstep/templates/Info.plist.in
-    fi
-    sed -i 's|Name=Emacs|Name=${appName}|' nextstep/templates/Emacs.desktop.in
-    sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Emacs.desktop.in
-    sed -i 's|"Emacs|"${appName}|' nextstep/templates/InfoPlist.strings.in
-    rm -fr .git
-    sh autogen.sh
-  '';
-
-  postInstall = ''
-    mkdir -p $out/share/emacs/site-lisp
-    cp ${./emacs/site-start.el} $out/share/emacs/site-lisp/site-start.el
-    $out/bin/emacs --batch -f batch-byte-compile $out/share/emacs/site-lisp/site-start.el
-
-    rm -rf $out/var
-    rm -rf $out/share/emacs/${version}/site-lisp
-
-    for srcdir in src lisp lwlib ; do
-      dstdir=$out/share/emacs/${version}/$srcdir
-      mkdir -p $dstdir
-      find $srcdir -name "*.[chm]" -exec cp {} $dstdir \;
-      cp $srcdir/TAGS $dstdir
-      echo '((nil . ((tags-file-name . "TAGS"))))' > $dstdir/.dir-locals.el
-    done
-
-    mkdir -p $out/Applications
-    if [ "${appName}" != "Emacs" ]; then
-        mv ${bundleName}/Contents/MacOS/Emacs ${bundleName}/Contents/MacOS/${appName}
-    fi
-    if [ -n "${iconFile}" ]; then
-      cp "${iconFile}" ${bundleName}/Contents/Resources/${appName}.icns
-    fi
-    mv ${bundleName} $out/Applications
-  '';
-});
 
 emacsFromUrl = pkgname: pkgsrc: pkgdeps: with pkgs; stdenv.mkDerivation rec {
   name = pkgname;
@@ -954,13 +827,14 @@ myEmacsPackageOverrides = emacs: super: self: with self; super.melpaPackages // 
         }; in
     stdenv.mkDerivation (rec {
     name = "emacs-proof-general-${version}";
-    version = "2017-12-10";
+    version = "2018-01-15";
 
     src = fetchFromGitHub {
       owner = "ProofGeneral";
       repo = "PG";
       rev = "f1b4d250d58854031c0afc3f309f40e4ee1e2d22";
       sha256 = "0a3fmf0612kpq737jn05gs94qdmb4gi391z72hdkfd044n7zw9bz";
+      # date = 2018-01-15T18:05:00+01:00;
     };
 
     buildInputs = [ emacs texinfo perl which ]
@@ -972,6 +846,10 @@ myEmacsPackageOverrides = emacs: super: self: with self; super.melpaPackages // 
                  s|/sbin/install-info|install-info|g"
          sed -i '94d' doc/PG-adapting.texi
          sed -i '96d' doc/ProofGeneral.texi
+         sed -i '2538s|(`|`|' twelf/twelf-old.el
+         sed -i '2569s|))|)|' twelf/twelf-old.el
+         sed -i '2586s|(`|`|' twelf/twelf-old.el
+         sed -i '2591s|))|)|' twelf/twelf-old.el
       '';
 
     preBuild = ''
@@ -1038,42 +916,173 @@ myEmacsPackageOverrides = emacs: super: self: with self; super.melpaPackages // 
   };
 };
 
+emacs26 = with pkgs; pkgs.stdenv.lib.overrideDerivation
+  (pkgs.emacs25.override { srcRepo = true; }) (attrs: rec {
+  name = "emacs-${version}${versionModifier}";
+  version = "26.0";
+  versionModifier = ".90";
+
+  buildInputs = pkgs.emacs25.buildInputs ++ [ git ];
+
+  patches = lib.optional stdenv.isDarwin ./emacs/at-fdcwd.patch;
+
+  CFLAGS = "-Ofast -momit-leaf-frame-pointer";
+
+  src = builtins.filterSource (path: type:
+      type != "directory" || baseNameOf path != ".git")
+    ~/.emacs.d/release;
+
+  postPatch = ''
+    rm -fr .git
+  '';
+
+  postInstall = ''
+    mkdir -p $out/share/emacs/site-lisp
+    cp ${./emacs/site-start.el} $out/share/emacs/site-lisp/site-start.el
+    $out/bin/emacs --batch -f batch-byte-compile $out/share/emacs/site-lisp/site-start.el
+
+    rm -rf $out/var
+    rm -rf $out/share/emacs/${version}/site-lisp
+
+    for srcdir in src lisp lwlib ; do
+      dstdir=$out/share/emacs/${version}/$srcdir
+      mkdir -p $dstdir
+      find $srcdir -name "*.[chm]" -exec cp {} $dstdir \;
+      cp $srcdir/TAGS $dstdir
+      echo '((nil . ((tags-file-name . "TAGS"))))' > $dstdir/.dir-locals.el
+    done
+  '' + lib.optionalString stdenv.isDarwin ''
+    mkdir -p $out/Applications
+    mv nextstep/Emacs.app $out/Applications
+  '';
+});
+
+emacs26debug = pkgs.stdenv.lib.overrideDerivation emacs26 (attrs: rec {
+  name = "emacs-26.0.90-debug";
+  doCheck = true;
+  CFLAGS = "-O0 -g3";
+  configureFlags = [ "--with-modules" ] ++
+   [ "--with-ns" "--disable-ns-self-contained"
+     "--enable-checking=yes,glyphs"
+     "--enable-check-lisp-object-type" ];
+});
+
+emacs26PackagesNg = pkgs.emacsPackagesNgGen emacs26;
+
+emacsHEAD = with pkgs; pkgs.stdenv.lib.overrideDerivation
+  (pkgs.emacs25.override { srcRepo = true; }) (attrs: rec {
+  name = "emacs-${version}${versionModifier}";
+  version = "27.0";
+  versionModifier = ".50";
+
+  appName = "ERC";
+  bundleName = "nextstep/ERC.app";
+  iconFile = ./emacs/Chat.icns;
+
+  buildInputs = pkgs.emacs25.buildInputs ++ [ git ];
+
+  patches = lib.optional stdenv.isDarwin ./emacs/at-fdcwd.patch;
+
+  CFLAGS = "-O0 -g3";
+
+  configureFlags = [ "--with-modules" ] ++
+   [ "--with-ns" "--disable-ns-self-contained"
+     "--enable-checking=yes,glyphs"
+     "--enable-check-lisp-object-type" ];
+
+  src = builtins.filterSource (path: type:
+      type != "directory" || baseNameOf path != ".git")
+    ~/.emacs.d/master;
+
+  postPatch = ''
+    sed -i 's|/usr/share/locale|${gettext}/share/locale|g' \
+      lisp/international/mule-cmds.el
+    sed -i 's|nextstep/Emacs\.app|${bundleName}|' configure.ac
+    sed -i 's|>Emacs<|>${appName}<|' nextstep/templates/Info.plist.in
+    sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Info.plist.in
+    sed -i 's|org\.gnu\.Emacs|org.gnu.${appName}|' nextstep/templates/Info.plist.in
+    sed -i 's|Emacs @version@|${appName} @version@|' nextstep/templates/Info.plist.in
+    sed -i 's|EmacsApp|${appName}App|' nextstep/templates/Info.plist.in
+    if [ -n "${iconFile}" ]; then
+      sed -i 's|Emacs\.icns|${appName}.icns|' nextstep/templates/Info.plist.in
+    fi
+    sed -i 's|Name=Emacs|Name=${appName}|' nextstep/templates/Emacs.desktop.in
+    sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Emacs.desktop.in
+    sed -i 's|"Emacs|"${appName}|' nextstep/templates/InfoPlist.strings.in
+    rm -fr .git
+    sh autogen.sh
+  '';
+
+  postInstall = ''
+    mkdir -p $out/share/emacs/site-lisp
+    cp ${./emacs/site-start.el} $out/share/emacs/site-lisp/site-start.el
+    $out/bin/emacs --batch -f batch-byte-compile $out/share/emacs/site-lisp/site-start.el
+
+    rm -rf $out/var
+    rm -rf $out/share/emacs/${version}/site-lisp
+
+    for srcdir in src lisp lwlib ; do
+      dstdir=$out/share/emacs/${version}/$srcdir
+      mkdir -p $dstdir
+      find $srcdir -name "*.[chm]" -exec cp {} $dstdir \;
+      cp $srcdir/TAGS $dstdir
+      echo '((nil . ((tags-file-name . "TAGS"))))' > $dstdir/.dir-locals.el
+    done
+
+    mkdir -p $out/Applications
+    if [ "${appName}" != "Emacs" ]; then
+        mv ${bundleName}/Contents/MacOS/Emacs ${bundleName}/Contents/MacOS/${appName}
+    fi
+    if [ -n "${iconFile}" ]; then
+      cp "${iconFile}" ${bundleName}/Contents/Resources/${appName}.icns
+    fi
+    mv ${bundleName} $out/Applications
+  '';
+});
+
+emacsHEADPackagesNg = pkgs.emacsPackagesNgGen emacsHEAD;
+
 customEmacsHEADPackages =
   emacsHEADPackagesNg.overrideScope (myEmacsPackageOverrides emacsHEAD);
 
-emacsHEADFullPackages =
-  customEmacsHEADPackages.emacsWithPackages myEmacsPackages;
+emacsHEAD_is_ERC = epkgs:
+  pkgs.stdenv.lib.overrideDerivation epkgs (attrs: {
+    installPhase = attrs.installPhase + ''
+      if [ -d "$emacs/Applications/ERC.app" ]; then
+        mkdir -p $out/Applications/ERC.app/Contents/MacOS
+        cp -r $emacs/Applications/ERC.app/Contents/Info.plist \
+              $emacs/Applications/ERC.app/Contents/PkgInfo \
+              $emacs/Applications/ERC.app/Contents/Resources \
+              $out/Applications/ERC.app/Contents
+        makeWrapper $emacs/Applications/ERC.app/Contents/MacOS/ERC \
+                    $out/Applications/ERC.app/Contents/MacOS/ERC \
+                    --suffix EMACSLOADPATH ":" "$deps/share/emacs/site-lisp:"
+      fi
+    '';
+  });
 
 emacsHEADEnv = pkgs.myEnvFun {
   name = "emacsHEAD";
-  buildInputs = with emacsHEADPackagesNg; [ emacsHEAD ghc-mod ];
-};
-
-emacsHEADFullEnv = pkgs.myEnvFun {
-  name = "emacsHEADfull";
-  buildInputs = [ emacsHEADFullPackages ];
+  buildInputs = [
+    (emacsHEAD_is_ERC
+       (customEmacsHEADPackages.emacsWithPackages myEmacsPackages))
+  ];
 };
 
 customEmacs26Packages =
   emacs26PackagesNg.overrideScope (myEmacsPackageOverrides emacs26);
 
-emacs26FullPackages = customEmacs26Packages.emacsWithPackages myEmacsPackages;
-
 emacs26Env = pkgs.myEnvFun {
   name = "emacs26";
-  buildInputs = with emacs26PackagesNg; [ emacs26 ghc-mod ];
+  buildInputs = [ (customEmacs26Packages.emacsWithPackages myEmacsPackages) ];
 };
 
-emacs26FullEnv = pkgs.buildEnv {
-  name = "emacs26full";
-  paths = [ emacs26FullPackages ];
-};
+customEmacs26DebugPackages =
+  emacs26PackagesNg.overrideScope (myEmacsPackageOverrides emacs26debug);
 
 emacs26DebugEnv = pkgs.myEnvFun {
   name = "emacs26debug";
-  buildInputs = with pkgs.emacsPackagesNgGen emacs26debug; [
-    emacs26debug
-  ];
+  buildInputs = [ (customEmacs26DebugPackages.emacsWithPackages myEmacsPackages) ];
 };
 
 emacs25Env = pkgs.myEnvFun {
