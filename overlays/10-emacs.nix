@@ -343,7 +343,7 @@ myEmacsPackages = epkgs: with epkgs; [
   visual-regexp-steroids
   vlf # vlfi
   vline
-  w3m # emacs-w3m
+  w3m
   web
   web-mode
   web-server
