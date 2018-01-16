@@ -8,7 +8,7 @@ myEmacsPackages = epkgs: with epkgs; [
   ace-mc
   ace-window
   agda2-mode
-  aggressive-indent # aggressive-indent-mode
+  aggressive-indent
   alert
   anaphora
   anki-editor
@@ -16,7 +16,7 @@ myEmacsPackages = epkgs: with epkgs; [
   aria2
   ascii
   asoc
-  async # emacs-async
+  async
   auctex
   auto-compile
   auto-yasnippet
@@ -29,10 +29,10 @@ myEmacsPackages = epkgs: with epkgs; [
   bookmark-plus
   browse-at-remote
   browse-kill-ring
-  browse-kill-ring-plus # browse-kill-ring+
+  browse-kill-ring-plus         # browse-kill-ring+
   button-lock
   bytecomp-simplify
-  calfw # emacs-calfw
+  calfw
   centered-cursor-mode
   change-inner
   chess
@@ -44,7 +44,7 @@ myEmacsPackages = epkgs: with epkgs; [
   col-highlight
   color-moccur
   command-log-mode
-  company # company-mode
+  company
   company-auctex
   company-cabal
   company-coq
@@ -61,21 +61,21 @@ myEmacsPackages = epkgs: with epkgs; [
   csv-mode
   ctable
   cursor-chg
-  dash # dash-el
+  dash
   dash-at-point
   debbugs
   dedicated
   deferred
   deft
   diff-hl
-  diffview # diffview-mode
+  diffview
   diminish
-  dired-hacks-utils # dired-hacks
+  dired-hacks-utils
   dired-ranger
   dired-toggle
   discover
   discover-my-major
-  docker # docker-el
+  docker
   docker-compose-mode
   docker-tramp
   dockerfile-mode
@@ -84,7 +84,7 @@ myEmacsPackages = epkgs: with epkgs; [
   easy-kill
   ebdb
   edit-indirect
-  edit-server # emacs-chrome
+  edit-server
   el-mock
   elfeed
   elisp-depend
@@ -95,7 +95,7 @@ myEmacsPackages = epkgs: with epkgs; [
   emojify
   emms
   engine-mode
-  enh-ruby-mode # ruby-mode
+  enh-ruby-mode
   epc
   epl
   erc-highlight-nicknames
@@ -111,9 +111,9 @@ myEmacsPackages = epkgs: with epkgs; [
   eval-expr
   eval-in-repl
   evil
-  expand-region # expand-region-el
+  expand-region
   eyebrowse
-  f # f-el
+  f
   fancy-narrow
   feebleline
   fence-edit
@@ -122,22 +122,22 @@ myEmacsPackages = epkgs: with epkgs; [
   flycheck-haskell
   flycheck-hdevtools
   flycheck-package
-  fn # fn-el
+  fn
   focus
   font-lock-studio
   free-keys
-  fringe-helper # fringe-helper-el
+  fringe-helper
   fullframe
-  fuzzy # fuzzy-el
+  fuzzy
   ggtags
-  ghc-mod # ghc
+  ghc-mod                       # ghc
   ghub
   ghub-plus
-  git-annex # git-annex-el
+  git-annex
   git-link
   git-modes
   git-timemachine
-  git-undo # git-undo-el
+  git-undo
   github-pullrequest
   gitpatch
   gnus-alias
@@ -160,11 +160,11 @@ myEmacsPackages = epkgs: with epkgs; [
   highlight-cl
   highlight-defined
   highlight-numbers
-  hl-line-plus # hl-line+
-  ht # ht-el
+  hl-line-plus                  # hl-line+
+  ht
   hydra
   hyperbole
-  ialign # interactive-align
+  ialign
   ibuffer-vc
   iedit
   iflipb
@@ -198,7 +198,7 @@ myEmacsPackages = epkgs: with epkgs; [
   lsp-haskell
   lsp-mode
   lua-mode
-  lusty-explorer # lusty-emacs
+  lusty-explorer
   m-buffer
   macrostep
   magit
@@ -210,7 +210,7 @@ myEmacsPackages = epkgs: with epkgs; [
   malyon
   markdown-mode
   markdown-preview-mode
-  marshal # marshal-el
+  marshal
   math-symbol-lists
   mc-extras
   mediawiki
@@ -224,24 +224,24 @@ myEmacsPackages = epkgs: with epkgs; [
   monitor
   mudel
   multi-term
-  multifiles # multifiles-el
+  multifiles
   multiple-cursors
   muse
   names
-  navi-mode # navi
+  navi-mode
   nf-procmail-mode
   nginx-mode
   nix-buffer
   nix-mode
   noflet
-  nov # nov-el
+  nov
   oauth2
   ob-restclient
   olivetti
   operate-on-number
   org-bookmark-heading
   orgit
-  org # org-mode
+  org
   org-noter
   org-opml
   org-ref
@@ -251,7 +251,7 @@ myEmacsPackages = epkgs: with epkgs; [
   origami
   outorg
   outshine
-  ov # ov-el
+  ov
   ovpn-mode
   ox-texinfo-plus
   package-lint
@@ -260,7 +260,7 @@ myEmacsPackages = epkgs: with epkgs; [
   paradox
   paredit
   parent-mode
-  parinfer # parinfer-mode
+  parinfer
   parsebib
   parsec
   parsec
@@ -277,7 +277,7 @@ myEmacsPackages = epkgs: with epkgs; [
   phi-search-mc
   pkg-info
   po-mode
-  popup # popup-el
+  popup
   popup-pos-tip
   popup-ruler
   popwin
@@ -299,7 +299,7 @@ myEmacsPackages = epkgs: with epkgs; [
   rich-minority
   riscv-mode
   rs-gnus-summary
-  s # s-el
+  s
   sdcv
   selected
   shackle
@@ -311,7 +311,7 @@ myEmacsPackages = epkgs: with epkgs; [
   smart-newline
   smart-region
   smartparens
-  smartscan # smart-scan
+  smartscan
   smex
   sort-words
   sos
@@ -335,13 +335,13 @@ myEmacsPackages = epkgs: with epkgs; [
   typo
   undo-tree
   use-package
-  uuidgen # uuidgen-el
+  uuidgen
   vdiff
   vimish-fold
   visual-fill-column
   visual-regexp
   visual-regexp-steroids
-  vlf # vlfi
+  vlf
   vline
   w3m
   web
