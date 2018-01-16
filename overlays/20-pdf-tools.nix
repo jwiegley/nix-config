@@ -5,13 +5,16 @@ pdf-tools-server = with super; stdenv.mkDerivation rec {
   version = "0.80";
   name = "${pname}-${version}";
 
-  src = ~/emacs/site-lisp/pdf-tools/server;
+  src = self.emacsPackagesNg.pdf-tools.src;
 
   buildInputs = [
     clang gnumake automake autoconf pkgconfig libpng zlib poppler
   ];
 
-  preConfigure = "./autogen.sh";
+  preConfigure = ''
+    cd server
+    ./autogen.sh
+  '';
 
   installPhase = ''
     echo hello

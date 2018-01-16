@@ -83,8 +83,10 @@ myEmacsPackages = epkgs: with epkgs; [
   dumb-jump
   easy-kill
   ebdb
+  edit-env
   edit-indirect
   edit-server
+  edit-var
   el-mock
   elfeed
   elisp-depend
@@ -253,6 +255,7 @@ myEmacsPackages = epkgs: with epkgs; [
   outshine
   ov
   ovpn-mode
+  ox-extra
   ox-texinfo-plus
   package-lint
   packed
@@ -593,6 +596,15 @@ myEmacsPackageOverrides = emacs: super: self: with self; super.melpaPackages // 
 
   supercite = emacsFromUrl "supercite.el"
     ( ./emacs/supercite.el ) [] [];
+
+  edit-env = emacsFromUrl "edit-env.el"
+    ( ./emacs/edit-env.el ) [] [];
+
+  edit-var = emacsFromUrl "edit-var.el"
+    ( ./emacs/edit-var.el ) [] [];
+
+  ox-extra = emacsFromUrl "ox-extra.el"
+    ( ./emacs/ox-extra.el ) [] [];
 
   tablegen-mode = emacsFromUrl "tablegen-mode.el" (pkgs.fetchurl {
     url = https://raw.githubusercontent.com/llvm-mirror/llvm/master/utils/emacs/tablegen-mode.el;
@@ -991,7 +1003,7 @@ emacs26 = with pkgs; pkgs.stdenv.lib.overrideDerivation
 
   src = builtins.filterSource (path: type:
       type != "directory" || baseNameOf path != ".git")
-    ~/.emacs.d/release;
+    ~/oss/emacs-release;
 
   postPatch = ''
     rm -fr .git
@@ -1029,6 +1041,7 @@ emacs26debug = pkgs.stdenv.lib.overrideDerivation emacs26 (attrs: rec {
 });
 
 emacs26PackagesNg = pkgs.emacsPackagesNgGen emacs26;
+emacsPackagesNg = emacs26PackagesNg;
 
 emacsHEAD = with pkgs; pkgs.stdenv.lib.overrideDerivation
   (pkgs.emacs25.override { srcRepo = true; }) (attrs: rec {
@@ -1053,7 +1066,7 @@ emacsHEAD = with pkgs; pkgs.stdenv.lib.overrideDerivation
 
   src = builtins.filterSource (path: type:
       type != "directory" || baseNameOf path != ".git")
-    ~/.emacs.d/master;
+    ~/oss/emacs;
 
   postPatch = ''
     sed -i 's|/usr/share/locale|${gettext}/share/locale|g' \
@@ -1148,7 +1161,7 @@ emacs26DebugEnv = pkgs.myEnvFun {
 
 emacs25Env = pkgs.myEnvFun {
   name = "emacs25";
-  buildInputs = with pkgs.emacsPackagesNgGen pkgs.emacs25; [ emacs ];
+  buildInputs = [ pkgs.emacs25 ];
 };
 
 }
