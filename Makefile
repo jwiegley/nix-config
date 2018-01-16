@@ -1,12 +1,12 @@
 all: switch
 
-darwin:
+darwin-switch:
 	darwin-rebuild switch -Q
 
 darwin-build:
 	nix build darwin.system
 
-home:
+home-switch:
 	home-manager switch
 
 home-build:
@@ -49,7 +49,7 @@ build: darwin-build home-build env-build
 
 build-all: darwin-build home-build env-all-build
 
-switch: darwin home
+switch: darwin-switch home-switch
 
 mirror:
 	git --git-dir=nixpkgs/.git push --mirror jwiegley
