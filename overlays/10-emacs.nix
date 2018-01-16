@@ -149,28 +149,35 @@ emacsFromUrl = pkgname: pkgsrc: pkgdeps: with pkgs; stdenv.mkDerivation rec {
   };
 };
 
-myEmacsPackages = super: with super; rec {
-  org = with pkgs; stdenv.mkDerivation (rec {
+myEmacsPackages = emacs: super: self: with self; super.melpaPackages // {
+  org = with pkgs; stdenv.mkDerivation rec {
     name = "emacs-org-${version}";
     version = "20160421";
-
-    src = fetchgit {
-      url = git://github.com/jwiegley/org-mode.git;
-      rev = "db5257389231bd49e92e2bc66713ac71b0435eec";
-      sha256 = "0v8i49c3yqfz7d92fx6paxw1ad565k918cricjg12zcl73r7rigk";
+    src = fetchFromGitHub {
+      owner  = "jwiegley";
+      repo   = "org-mode";
+      rev    = "db5257389231bd49e92e2bc66713ac71b0435eec";
+      sha256 = "073cmwgxga14r4ykbgp8w0gjp1wqajmlk6qv9qfnrafgpxic366m";
     };
-
+    preBuild = ''
+      makeFlagsArray=(
+        prefix="$out/share"
+      );
+    '';
     preInstall = ''
       perl -i -pe "s%/usr/share%$out%;" local.mk
     '';
-
     buildInputs = [ emacs texinfo perl which ];
-
     meta = {
       homepage = "https://elpa.gnu.org/packages/org.html";
-      license = pkgs.stdenv.lib.licenses.free;
+      license = stdenv.lib.licenses.free;
     };
-  });
+  };
+
+  # org-noter = super.org-noter.override { org = org; };
+  # org-super-agenda = super.org-super-agenda.override { org = org; };
+  # org-web-tools = super.org-web-tools.override { org = org; };
+  # sos = super.sos.override { org = org; };
 
   ascii = emacsFromUrl "ascii.el" (pkgs.fetchurl {
     url = https://www.emacswiki.org/emacs/download/ascii.el;
@@ -185,7 +192,7 @@ myEmacsPackages = super: with super; rec {
   browse-kill-ring-plus = emacsFromUrl "browse-kill-ring+.el" (pkgs.fetchurl {
     url = https://www.emacswiki.org/emacs/download/browse-kill-ring+.el;
     sha256 = "1s32f70lc1gnllqqfw8zqr5n743rf0yfifqljsl210vnb5zg4zkj";
-  }) [browse-kill-ring];
+  }) [ browse-kill-ring ];
 
   bytecomp-simplify = emacsFromUrl "bytecomp-simplify.el" (pkgs.fetchurl {
     url = https://download.tuxfamily.org/user42/bytecomp-simplify.el;
@@ -379,10 +386,34 @@ myEmacsPackages = super: with super; rec {
     sha256 = "0vlllq3xmnlni0ws226pqxj68nshclbl5rgqv6y11i3yvzgiazr6";
   }) [];
 
+  anki-editor = emacsFromUrl "anki-editor" (pkgs.fetchgit {
+    url = git://github.com/louietan/anki-editor.git;
+    rev = "b8c48138b90f3a7c5a5f6617b3092ac409f5e899";
+    sha256 = "05xsgpb82adsp97b6h9w825l4larl2py0sk4k7w5hn91v1wbsh52";
+  }) [];
+
+  feebleline = emacsFromUrl "feebleline" (pkgs.fetchgit {
+    url = git://github.com/tautologyclub/feebleline.git;
+    rev = "9e381c444a6fa9a8c8ea5a2803331a74e7d3321c";
+    sha256 = "0irpn91acfdzp2bppx7np6pf8qvyj630d5n79r3bh2qlx2q9h1mr";
+  }) [];
+
+  ovpn-mode = emacsFromUrl "ovpn-mode" (pkgs.fetchgit {
+    url = git://github.com/collarchoke/ovpn-mode.git;
+    rev = "378b1f82b29cb9aea835dc0a0a246dd4531d7e1d";
+    sha256 = "06f7lnk82j6aqabdhacqn6mks1a5nls4d8b99lwihvxwhjfm4qgm";
+  }) [];
+
   sunrise-commander = emacsFromUrl "sunrise-commander" (pkgs.fetchgit {
-    url = https://github.com/escherdragon/sunrise-commander.git;
+    url = git://github.com/escherdragon/sunrise-commander.git;
     rev = "855ed752affd98ee49cd13c3be1c2fa68142fbb8";
     sha256 = "1zaa7gqrx2pal9habza75s2l8azl9bn7vfi1n0kylbaa48n4wrar";
+  }) [];
+
+  yari-with-buttons = emacsFromUrl "yari-with-buttons" (pkgs.fetchgit {
+    url = git://github.com/pedz/yari-with-buttons.git;
+    rev = "9d5bbf59f6ea8dece493cbe609d9c510698eee41";
+    sha256 = "1ipk881150152hzhha37sp8162lazw08rkkiahcr5s85f177dkih";
   }) [];
 
   python-mode = melpaBuild {
@@ -402,7 +433,7 @@ myEmacsPackages = super: with super; rec {
     packageRequires = [];
     meta = {
       homepage = "https://melpa.org/#/python-mode";
-      license = stdenv.lib.licenses.free;
+      license = pkgs.stdenv.lib.licenses.free;
     };
   };
 
@@ -523,7 +554,7 @@ myEmacsPackages = super: with super; rec {
     url = git://github.com/magit/orgit.git;
     rev = "022687eb02f0bf0d0151d0ad917b165bfef2d663";
     sha256 = "1cddyns82a06ydbw8rhxzghkjav5vxmmc671pdnai50mql3cx9kf";
-  }) [ dash magit with-editor git-commit pkgs.git ];
+  }) [ dash magit magit-popup ghub with-editor git-commit pkgs.git ];
 
   ox-texinfo-plus = emacsFromUrl "ox-texinfo-plus" (pkgs.fetchgit {
     url = git://github.com/tarsius/ox-texinfo-plus.git;
@@ -613,27 +644,26 @@ myEmacsPackages = super: with super; rec {
     sha256 = "1pvwy6dm6pwm0d8dd4l1d5rqk31w39h5n4wxqmq2ipwnxrlxp0nh";
   }) [];
 
-  counsel-projectile = callPackage ({ counsel, fetchFromGitHub, fetchurl, lib, melpaBuild, projectile }:
-  melpaBuild {
-      pname = "counsel-projectile";
-      version = "20171201.1224";
-      src = fetchFromGitHub {
-        owner = "ericdanan";
-        repo = "counsel-projectile";
-        rev = "162cdc2655c58a75bb51e939f3688b1a4dd7632a";
-        sha256 = "1vncznis89hqrg8yb26d0sxwdjp5c32p1ynwg5vni55cxc5cznv3";
-      };
-      recipeFile = fetchurl {
-        url = "https://raw.githubusercontent.com/milkypostman/melpa/389f16f886a385b02f466540f042a16eea8ba792/recipes/counsel-projectile";
-        sha256 = "1gshphxaa902kq878rnizn3k1zycakwqkciz92z3xxb3bdyy0hnl";
-        name = "counsel-projectile";
-      };
-      packageRequires = [ counsel projectile ];
-      meta = {
-        homepage = "https://melpa.org/#/counsel-projectile";
-        license = lib.licenses.free;
-      };
-    }) {};
+  counsel-projectile = melpaBuild {
+    pname = "counsel-projectile";
+    version = "20171201.1224";
+    src = pkgs.fetchFromGitHub {
+      owner = "ericdanan";
+      repo = "counsel-projectile";
+      rev = "162cdc2655c58a75bb51e939f3688b1a4dd7632a";
+      sha256 = "1vncznis89hqrg8yb26d0sxwdjp5c32p1ynwg5vni55cxc5cznv3";
+    };
+    recipeFile = pkgs.fetchurl {
+      url = "https://raw.githubusercontent.com/milkypostman/melpa/389f16f886a385b02f466540f042a16eea8ba792/recipes/counsel-projectile";
+      sha256 = "1gshphxaa902kq878rnizn3k1zycakwqkciz92z3xxb3bdyy0hnl";
+      name = "counsel-projectile";
+    };
+    packageRequires = [ counsel projectile ];
+    meta = {
+      homepage = "https://melpa.org/#/counsel-projectile";
+      license = lib.licenses.free;
+    };
+  };
 };
 
 emacsHEADEnv = pkgs.myEnvFun {
@@ -648,358 +678,382 @@ emacs26Env = pkgs.myEnvFun {
   buildInputs = with emacs26PackagesNg; [ emacs26 ghc-mod ];
 };
 
+customEmacs26Packages =
+  emacs26PackagesNg.overrideScope (myEmacsPackages emacs26);
+
+emacs26FullPackages = customEmacs26Packages.emacsWithPackages (epkgs: with epkgs; [
+  ace-jump-mode
+  ace-link
+  ace-mc
+  ace-window
+  agda2-mode
+  aggressive-indent # aggressive-indent-mode
+  alert
+  anaphora
+  anki-editor
+  apiwrap
+  aria2
+  ascii
+  asoc
+  async # emacs-async
+  auctex
+  auto-compile
+  auto-yasnippet
+  avy
+  avy-zap
+  back-button
+  backup-each-save
+  beacon
+  biblio
+  bm
+  bookmark-plus
+  browse-at-remote
+  browse-kill-ring
+  browse-kill-ring-plus # browse-kill-ring+
+  button-lock
+  bytecomp-simplify
+  calfw # emacs-calfw
+  centered-cursor-mode
+  change-inner
+  chess
+  circe
+  cldoc
+  clipmon
+  cmake-font-lock
+  cmake-mode
+  col-highlight
+  color-moccur
+  command-log-mode
+  company # company-mode
+  company-auctex
+  company-cabal
+  company-coq
+  company-ghc
+  company-math
+  company-quickhelp
+  company-restclient
+  copy-as-format
+  counsel
+  counsel-gtags
+  counsel-projectile
+  crosshairs
+  crux
+  csv-mode
+  ctable
+  cursor-chg
+  dash # dash-el
+  dash-at-point
+  debbugs
+  dedicated
+  deferred
+  deft
+  diff-hl
+  diffview # diffview-mode
+  diminish
+  dired-hacks-utils # dired-hacks
+  dired-ranger
+  dired-toggle
+  discover
+  discover-my-major
+  docker # docker-el
+  docker-compose-mode
+  docker-tramp
+  dockerfile-mode
+  doxymacs
+  dumb-jump
+  easy-kill
+  ebdb
+  edit-indirect
+  edit-server # emacs-chrome
+  el-mock
+  elfeed
+  elisp-depend
+  elisp-docstring-mode
+  elisp-refs
+  elisp-slime-nav
+  elmacro
+  emojify
+  emms
+  engine-mode
+  enh-ruby-mode # ruby-mode
+  epc
+  epl
+  erc-highlight-nicknames
+  erc-yank
+  erefactor
+  esh-buf-stack
+  esh-help
+  eshell-autojump
+  eshell-bookmark
+  eshell-up
+  eshell-z
+  esxml
+  eval-expr
+  eval-in-repl
+  evil
+  expand-region # expand-region-el
+  eyebrowse
+  f # f-el
+  fancy-narrow
+  feebleline
+  fence-edit
+  fetchmail-mode
+  flycheck
+  flycheck-haskell
+  flycheck-hdevtools
+  flycheck-package
+  fn # fn-el
+  focus
+  font-lock-studio
+  free-keys
+  fringe-helper # fringe-helper-el
+  fullframe
+  fuzzy # fuzzy-el
+  ggtags
+  ghc-mod # ghc
+  ghub
+  ghub-plus
+  git-annex # git-annex-el
+  git-link
+  git-modes
+  git-timemachine
+  git-undo # git-undo-el
+  github-pullrequest
+  gitpatch
+  gnus-alias
+  gnus-harvest
+  google-this
+  goto-last-change
+  graphviz-dot-mode
+  haskell-mode
+  helm
+  helm-bibtex
+  helm-dash
+  helm-descbinds
+  helm-describe-modes
+  helm-firefox
+  helm-google
+  helm-navi
+  helm-org-rifle
+  helpful
+  highlight
+  highlight-cl
+  highlight-defined
+  highlight-numbers
+  hl-line-plus # hl-line+
+  ht # ht-el
+  hydra
+  hyperbole
+  ialign # interactive-align
+  ibuffer-vc
+  iedit
+  iflipb
+  imenu-list
+  indent-shift
+  inf-ruby
+  info-lookmore
+  initsplit
+  ipcalc
+  ivy
+  ivy-hydra
+  ivy-pass
+  ivy-rich
+  jq-mode
+  js2-mode
+  js3-mode
+  json-mode
+  json-reformat
+  json-snatcher
+  key-chord
+  know-your-http-well
+  kv
+  langtool
+  ledger-mode
+  lentic
+  lispy
+  list-utils
+  llvm-mode
+  logito
+  loop
+  lsp-haskell
+  lsp-mode
+  lua-mode
+  lusty-explorer # lusty-emacs
+  m-buffer
+  macrostep
+  magit
+  magit-imerge
+  magit-popup
+  magithub
+  makefile-runner
+  makey
+  malyon
+  markdown-mode
+  markdown-preview-mode
+  marshal # marshal-el
+  math-symbol-lists
+  mc-extras
+  mediawiki
+  memory-usage
+  message-x
+  mic-paren
+  minimap
+  mmm-mode
+  moccur-edit
+  mode-line-bell
+  monitor
+  mudel
+  multi-term
+  multifiles # multifiles-el
+  multiple-cursors
+  muse
+  names
+  navi-mode # navi
+  nf-procmail-mode
+  nginx-mode
+  nix-buffer
+  nix-mode
+  noflet
+  nov # nov-el
+  oauth2
+  ob-restclient
+  olivetti
+  operate-on-number
+  org-bookmark-heading
+  orgit
+  org # org-mode
+  org-noter
+  org-opml
+  # org-parser # jww (2017-12-15): fails to byte-compile
+  org-ref
+  org-super-agenda
+  org-web-tools
+  orgaggregate
+  origami
+  outorg
+  outshine
+  ov # ov-el
+  ovpn-mode
+  ox-texinfo-plus
+  package-lint
+  packed
+  pandoc-mode
+  paradox
+  paredit
+  parent-mode
+  parinfer # parinfer-mode
+  parsebib
+  parsec
+  parsec
+  pass
+  password-store
+  password-store-otp
+  pcache
+  pcre2el
+  pdf-tools
+  per-window-point
+  persistent-scratch
+  peval
+  pfuture
+  phi-search
+  phi-search-mc
+  pkg-info
+  po-mode
+  popup # popup-el
+  popup-pos-tip
+  popup-ruler
+  popwin
+  pos-tip
+  pp-c-l
+  prodigy
+  projectile
+  proof-general
+  purpose
+  python-mode
+  rainbow-delimiters
+  rainbow-mode
+  redshank
+  regex-tool
+  repl-toggle
+  request
+  restclient
+  reveal-in-osx-finder
+  rich-minority
+  riscv-mode
+  rs-gnus-summary
+  s # s-el
+  sdcv
+  selected
+  shackle
+  shift-number
+  simple-httpd
+  slime
+  smart-jump
+  smart-mode-line
+  smart-newline
+  smart-region
+  smartparens
+  smartscan # smart-scan
+  smex
+  sort-words
+  sos
+  spinner
+  springboard
+  sql-indent
+  stopwatch
+  string-edit
+  string-inflection
+  super-save
+  supercite
+  sunrise-commander
+  swiper
+  tablegen-mode
+  tablist
+  tagedit
+  tidy
+  transpose-mark
+  treemacs
+  tuareg
+  typo
+  undo-tree
+  use-package
+  uuidgen # uuidgen-el
+  vdiff
+  vimish-fold
+  visual-fill-column
+  visual-regexp
+  visual-regexp-steroids
+  vlf # vlfi
+  vline
+  w3m # emacs-w3m
+  web
+  web-mode
+  web-server
+  websocket
+  wgrep
+  which-key
+  whitespace-cleanup-mode
+  whole-line-or-region
+  with-editor
+  word-count-mode
+  worf
+  ws-butler
+  xml-rpc
+  xray
+  yaml-mode
+  yaoddmuse
+  yari-with-buttons
+  yasnippet
+  z3-mode
+  zencoding-mode
+  zoom
+  zoutline
+  ztree
+]);
+
 emacs26FullEnv = pkgs.buildEnv {
   name = "emacs26full";
-  paths = [
-   (let customEmacsPackages =
-      emacs26PackagesNg.overrideScope (super: self: {
-        emacs = emacs26;
-      } // myEmacsPackages emacs26PackagesNg);
-    in customEmacsPackages.emacsWithPackages (super: with super; [
-    ace-link
-    ace-window
-    agda2-mode
-    aggressive-indent
-    alert
-    anaphora
-    apiwrap
-    ascii
-    asoc
-    async
-    auctex
-    auth-password-store
-    auto-compile
-    auto-yasnippet
-    avy
-    avy-zap
-    back-button
-    backup-each-save
-    beacon
-    biblio
-    bm
-    bookmark-plus
-    browse-at-remote
-    browse-kill-ring
-    browse-kill-ring-plus
-    button-lock
-    bytecomp-simplify
-    calfw
-    change-inner
-    chess
-    circe
-    cldoc
-    clipmon
-    cmake-font-lock
-    cmake-mode
-    col-highlight
-    color-moccur
-    command-log-mode
-    company
-    company-auctex
-    company-coq
-    company-ghc
-    company-math
-    company-quickhelp
-    copy-as-format
-    counsel
-    counsel-gtags
-    counsel-projectile
-    crosshairs
-    crux
-    csv-mode
-    ctable
-    cursor-chg
-    dash # dash-el
-    dash-at-point
-    debbugs
-    dedicated
-    deferred
-    deft
-    diff-hl
-    difflib
-    diffview
-    diminish
-    dired-hacks-utils
-    dired-ranger
-    dired-toggle
-    discover
-    discover-my-major
-    docker
-    docker-compose-mode
-    docker-tramp
-    dockerfile-mode
-    doxymacs
-    dumb-jump
-    easy-kill
-    ebdb
-    edit-indirect
-    el-mock
-    elisp-depend
-    elisp-docstring-mode
-    elisp-refs
-    elisp-slime-nav
-    elmacro
-    emojify
-    enh-ruby-mode
-    epc
-    epl
-    erc-highlight-nicknames
-    erc-yank
-    erefactor
-    esh-buf-stack
-    esh-help
-    eshell-autojump
-    eshell-bookmark
-    eshell-up
-    eshell-z
-    esxml
-    eval-expr
-    eval-in-repl
-    evil
-    expand-region
-    eyebrowse
-    f
-    fancy-narrow
-    fence-edit
-    flycheck
-    flycheck-haskell
-    flycheck-hdevtools
-    flycheck-package
-    fn
-    focus
-    font-lock-studio
-    free-keys
-    fringe-helper
-    fullframe
-    fuzzy
-    ggtags
-    gh
-    ghc
-    ghub
-    ghub-plus
-    git-link
-    git-modes
-    git-timemachine
-    git-undo
-    github-pullrequest
-    gitpatch
-    gnus-alias
-    gnus-harvest
-    google-this
-    goto-last-change
-    graphviz-dot-mode
-    haskell-mode
-    helm
-    helm-bibtex
-    helm-dash
-    helm-descbinds
-    helm-describe-modes
-    helm-firefox
-    helm-google
-    helm-navi
-    helm-pass
-    helpful
-    highlight
-    highlight-cl
-    highlight-defined
-    highlight-numbers
-    hl-line-plus
-    ht
-    hydra
-    hyperbole
-    iedit
-    iflipb
-    imenu-list
-    indent-shift
-    inf-ruby
-    info-lookmore
-    initsplit
-    ipcalc
-    ivy
-    ivy-hydra
-    ivy-pass
-    ivy-rich
-    jq-mode
-    js2-mode
-    js3-mode
-    json-mode
-    json-reformat
-    json-snatcher
-    key-chord
-    know-your-http-well
-    kv
-    ledger-mode
-    lentic
-    lispy
-    list-utils
-    llvm-mode
-    logito
-    loop
-    lsp-haskell
-    lsp-mode
-    lua-mode
-    lusty-explorer
-    m-buffer
-    macrostep
-    magit
-    magit-imerge
-    magithub
-    makefile-runner
-    makey
-    malyon
-    markdown-mode
-    markdown-preview-mode
-    marshal
-    math-symbol-lists
-    mc-extras
-    mediawiki
-    memory-usage
-    message-x
-    mic-paren
-    minimap
-    moccur-edit
-    monitor
-    mudel
-    multi-compile
-    multi-term
-    multifiles
-    multiple-cursors
-    muse
-    names
-    navi-mode
-    nf-procmail-mode
-    nginx-mode
-    nix-buffer
-    nix-mode
-    noflet
-    nov
-    oauth2
-    ob-restclient
-    olivetti
-    org
-    org-bookmark-heading
-    orgit
-    org-opml
-    # jww (2017-12-15): This fails to byte-compile during build, although it
-    # does byte-compile if you load it first.
-    # org-parser
-    org-ref
-    org-super-agenda
-    org-web-tools
-    orgaggregate
-    origami
-    outorg
-    outshine
-    ov
-    ox-texinfo-plus
-    package-lint
-    packed
-    pandoc-mode
-    paradox
-    paredit
-    parent-mode
-    parinfer
-    parsebib
-    parsec
-    parsec
-    pass
-    password-store
-    pcache
-    pcre2el
-    pdf-tools
-    per-window-point
-    persistent-scratch
-    peval
-    pfuture
-    phi-search
-    phi-search-mc
-    pkg-info
-    po-mode
-    popup
-    popup-pos-tip
-    popup-ruler
-    popwin
-    pos-tip
-    pp-c-l
-    prodigy
-    projectile
-    proof-general
-    purpose
-    python-mode
-    rainbow-delimiters
-    rainbow-mode
-    redshank
-    regex-tool
-    repl-toggle
-    request
-    restclient
-    reveal-in-osx-finder
-    rich-minority
-    riscv-mode
-    rs-gnus-summary
-    s
-    selected
-    shackle
-    shift-number
-    slime
-    smart-jump
-    smart-mode-line
-    smart-newline
-    smartparens
-    smartscan
-    smex
-    sort-words
-    sos
-    spinner
-    springboard
-    sql-indent
-    stopwatch
-    string-edit
-    string-inflection
-    super-save
-    supercite
-    sunrise-commander
-    swiper
-    tablegen-mode
-    tablist
-    tagedit
-    tidy
-    transpose-mark
-    treemacs
-    tuareg
-    typo
-    undo-tree
-    use-package
-    uuidgen # uuidgen-el
-    vdiff
-    vimish-fold
-    visual-fill-column
-    visual-regexp
-    visual-regexp-steroids
-    vline
-    w3m # emacs-w3m
-    web
-    web-mode
-    web-server
-    websocket
-    wgrep
-    which-key
-    whitespace-cleanup-mode
-    with-editor
-    word-count-mode
-    worf
-    ws-butler
-    xml-rpc
-    xray
-    yaml-mode
-    yaoddmuse
-    yasnippet
-    z3-mode
-    zencoding-mode
-    zoom
-    zoutline
-    ztree
-  ])) ];
+  paths = [ emacs26FullPackages ];
 };
 
 emacs26DebugEnv = pkgs.myEnvFun {

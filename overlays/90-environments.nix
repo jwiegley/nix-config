@@ -12,12 +12,11 @@ myBuildEnvs = with super; stdenv.mkDerivation {
     emacs26DebugEnv
     emacs26Env
     emacs26FullEnv
-    emacsHEADEnv
+    # emacsHEADEnv
     ghc80Env
     ghc80ProfEnv
     ghc82Env
     ghc82ProfEnv
-    ghcHEADProfEnv
     ledgerPy2Env
     ledgerPy3Env
   ];

@@ -225,6 +225,7 @@ let home_directory = builtins.getEnv "HOME";
 
       branch.autosetupmerge = true;
       commit.gpgsign        = false;
+      github.user           = "jwiegley";
       credential.helper     = "osxkeychain";
       ghi.token             = "!/usr/bin/security find-internet-password"
                             + " -a jwiegley -s github.com -l 'ghi token' -w";
@@ -403,7 +404,7 @@ let home_directory = builtins.getEnv "HOME";
     matchBlocks = rec {
       vulcan.hostname = "192.168.1.69";
       hermes.hostname = "192.168.1.65";
-      mybook = hermes;
+      mybook = vulcan;
       tank = hermes;
 
       home    = { hostname = "76.234.69.149"; port = 2201; };
@@ -420,15 +421,9 @@ let home_directory = builtins.getEnv "HOME";
         identitiesOnly = true;
       };
 
-      mac107.hostname  = "172.16.138.133";
-      mac108.hostname  = "172.16.138.132";
-      mac109.hostname  = "172.16.138.134";
-      mac1010.hostname = "172.16.138.131";
-      mac1011.hostname = "172.16.138.130";
-      mac1012.hostname = "172.16.138.128";
-      ubuntu.hostname  = "172.16.138.129";
-      peta.hostname    = "172.16.138.140";
-      fiat.hostname    = "172.16.138.145";
+      ubuntu.hostname = "172.16.138.129";
+      peta.hostname   = "172.16.138.140";
+      fiat.hostname   = "172.16.138.145";
 
       nixos = {
         hostname     = "192.168.128.132";

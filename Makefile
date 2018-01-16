@@ -30,15 +30,24 @@ env-all:
 	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs \
 	    || nix-env -f '<darwin>' -u --leq -Q -A pkgs
 
+env-all-build:
+	nix build darwin.pkgs.myBuildEnvs
+
 env:
 	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.emacs26Env
 	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.coq87Env
 	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.ghc82Env
 	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.ledgerPy3Env
 
-build: darwin-build home-build env
+env-build:
+	nix build darwin.pkgs.emacs26Env
+	nix build darwin.pkgs.coq87Env
+	nix build darwin.pkgs.ghc82Env
+	nix build darwin.pkgs.ledgerPy3Env
 
-build-all: darwin-build home-build env-all
+build: darwin-build home-build env-build
+
+build-all: darwin-build home-build env-all-build
 
 switch: darwin home
 
@@ -57,7 +66,9 @@ update-remote:
 
 hermes: copy update-remote
 
-update: tag-before pull build switch tag-working mirror copy update-remote
+working: tag-working mirror copy update-remote
+
+update: tag-before pull build-all switch env-all working
 
 gc:
 	find ~ \( -name dist -type d -o -name result -type l \) -print0 \
