@@ -1,0 +1,10 @@
+--- a/org-ref-ivy-cite.el
++++ b/org-ref-ivy-cite.el
+@@ -30,6 +30,7 @@
+
+ ;;; Code:
+ (require 'ivy)
++(require 'org-ref-core)
+ (require 'org-ref-bibtex)
+ (require 'org-ref-citeproc)
+ (require 'bibtex-completion)

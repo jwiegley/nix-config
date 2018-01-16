@@ -1,0 +1,11 @@
+--- a/browse-kill-ring+.el
++++ b/browse-kill-ring+.el
+@@ -866,7 +866,7 @@
+
+ ;;; Key Bindings
+
+-(browse-kill-ring-default-keybindings)
++;;(browse-kill-ring-default-keybindings)
+
+ ;;;;;;;;;;;;;;;;;;;;;
+
