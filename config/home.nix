@@ -136,14 +136,6 @@ let home_directory = builtins.getEnv "HOME";
       (cd ~ ; test -L emacs || ln -sf Projects/dot-emacs emacs)
       (cd ~ ; test -L bin   || ln -sf Projects/scripts bin)
 
-      function k() {
-          if [[ -f .makefile ]]; then
-              ${pkgs.gnumake}/bin/make -f .makefile "$@"
-          else
-              ${pkgs.gnumake}/bin/make "$@"
-          fi
-      }
-
       function rmdir-r() {
           ${pkgs.findutils}/bin/find "$@" -depth -type d -empty \
               -exec ${pkgs.coreutils}/bin/rmdir {} \;
