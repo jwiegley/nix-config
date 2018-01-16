@@ -244,7 +244,6 @@ myEmacsPackages = epkgs: with epkgs; [
   org # org-mode
   org-noter
   org-opml
-  # org-parser # jww (2017-12-15): fails to byte-compile
   org-ref
   org-super-agenda
   org-web-tools
