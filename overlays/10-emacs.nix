@@ -710,6 +710,11 @@ myEmacsPackageOverrides = emacs: super: self: with self; super.melpaPackages // 
       patches = [ ./emacs/patches/hyperbole.patch ];
     });
 
+  magit =
+    pkgs.stdenv.lib.overrideDerivation melpaPackages.magit (attrs: {
+      patches = [ ./emacs/patches/magit.patch ];
+    });
+
   multi-term =
     pkgs.stdenv.lib.overrideDerivation melpaPackages.multi-term (attrs: {
       patches = [ ./emacs/patches/multi-term.patch ];
