@@ -961,7 +961,7 @@ myEmacsPackageOverrides = emacs: super: self: with self; super.melpaPackages // 
         }; in
     stdenv.mkDerivation (rec {
     name = "emacs-proof-general-${version}";
-    version = "2018-01-15";
+    version = "2018-01-16";
 
     src = fetchFromGitHub {
       owner = "ProofGeneral";
@@ -980,10 +980,6 @@ myEmacsPackageOverrides = emacs: super: self: with self; super.melpaPackages // 
                  s|/sbin/install-info|install-info|g"
          sed -i '94d' doc/PG-adapting.texi
          sed -i '96d' doc/ProofGeneral.texi
-         sed -i '2538s|(`|`|' twelf/twelf-old.el
-         sed -i '2569s|))|)|' twelf/twelf-old.el
-         sed -i '2586s|(`|`|' twelf/twelf-old.el
-         sed -i '2591s|))|)|' twelf/twelf-old.el
       '';
 
     preBuild = ''
