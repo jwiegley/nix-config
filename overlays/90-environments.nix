@@ -1,7 +1,7 @@
 self: super: {
 
 myBuildEnvs = with super; stdenv.mkDerivation {
-  name = "coqHEAD";
+  name = "buildEnvs";
   buildInputs = [
     coq84Env
     coq85Env
