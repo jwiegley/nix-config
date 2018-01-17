@@ -518,6 +518,7 @@ let home_directory = "/Users/johnw";
     jdk8
     less
     multitail
+    mysql
     p7zip
     pass
     pass-otp
