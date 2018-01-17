@@ -461,6 +461,7 @@ let home_directory = "/Users/johnw";
     (haskell.lib.justStaticExecutables haskPkgs.simple-mirror)
     (haskell.lib.justStaticExecutables haskPkgs.sizes)
     (haskell.lib.justStaticExecutables haskPkgs.una)
+    htop
     imagemagickBig
     jdk8
     jenkins
