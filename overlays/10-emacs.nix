@@ -1033,7 +1033,7 @@ myEmacsPackageOverrides = emacs: super: self: with self; super.melpaPackages // 
 
   counsel-projectile = melpaBuild {
     pname = "counsel-projectile";
-    version = "20171201.1224";
+    version = "20180105.632";
     src = pkgs.fetchFromGitHub {
       owner = "ericdanan";
       repo = "counsel-projectile";
