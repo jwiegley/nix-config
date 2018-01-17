@@ -516,7 +516,6 @@ let home_directory = "/Users/johnw";
     htop
     imagemagickBig
     jdk8
-    jenkins
     less
     multitail
     p7zip
