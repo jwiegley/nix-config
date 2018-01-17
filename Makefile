@@ -2,12 +2,14 @@ all: switch
 
 darwin-switch:
 	darwin-rebuild switch -Q
+	echo "Darwin generation: $(darwin-rebuild --list-generations | tail -1)"
 
 darwin-build:
 	nix build darwin.system
 
 home-switch:
 	home-manager switch
+	echo "Home generation:   $(home-manager generations | head -1)"
 
 home-build:
 	nix build -f ~/src/nix/home-manager/home-manager/home-manager.nix \
@@ -27,17 +29,19 @@ tag-working:
 	git --git-dir=nixpkgs/.git branch -D before-update
 
 env-all:
-	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs \
+	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs \
 	    || nix-env -f '<darwin>' -u --leq -Q -A pkgs
+	echo "Nix generation:    $(nix-env --list-generations | tail -1)"
 
 env-all-build:
-	nix build darwin.pkgs.myBuildEnvs
+	-nix build darwin.pkgs.myBuildEnvs
+	nix-build '<darwin>' -Q -k -A pkgs.myBuildEnvs
 
 env:
-	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.emacs26Env
-	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.coq87Env
-	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.ghc82Env
-	nix-env -f '<darwin>' -u --leq -Q -j4 -k -A pkgs.ledgerPy3Env
+	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.emacs26Env
+	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.coq87Env
+	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.ghc82Env
+	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.ledgerPy3Env
 
 env-build:
 	nix build darwin.pkgs.emacs26Env
