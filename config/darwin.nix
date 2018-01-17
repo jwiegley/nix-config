@@ -33,6 +33,11 @@ let home_directory = "/Users/johnw";
       '';
       serviceConfig.RunAtLoad = true;
     };
+
+    privoxy = {
+      script = "${pkgs.privoxy}/bin/privoxy --no-daemon /etc/privoxy/config";
+      serviceConfig.RunAtLoad = true;
+    };
   };
 
   launchd.user.agents = {
@@ -231,6 +236,53 @@ let home_directory = "/Users/johnw";
         name  = bad.server.com;   # Badly behaved server you don't want to connect to.
         types = A,AAAA;
     }
+  '';
+
+  environment.etc."privoxy/config".text = ''
+    user-manual ${pkgs.privoxy}/share/doc/privoxy/user-manual/
+    confdir ${pkgs.privoxy}/etc
+    logdir ${pkgs.privoxy}/var/log/privoxy
+    actionsfile /etc/privoxy/match-all.action
+    actionsfile default.action
+    actionsfile user.action
+    filterfile default.filter
+    filterfile user.filter
+    logfile logfile
+    listen-address 127.0.0.1:8118
+    toggle 1
+    enable-remote-toggle 0
+    enable-remote-http-toggle 0
+    enable-edit-actions 0
+    enforce-blocks 0
+    buffer-limit 4096
+    enable-proxy-authentication-forwarding 0
+    forwarded-connect-retries  0
+    accept-intercepted-requests 0
+    allow-cgi-request-crunching 0
+    split-large-forms 0
+    keep-alive-timeout 5
+    tolerate-pipelining 1
+    socket-timeout 300
+  '';
+
+  environment.etc."privoxy/match-all.action".text = ''
+    {+change-x-forwarded-for{block} \
+     +client-header-tagger{css-requests} \
+     +client-header-tagger{image-requests} \
+     +client-header-tagger{range-requests} \
+     +deanimate-gifs{last} \
+     +filter{refresh-tags} \
+     +filter{img-reorder} \
+     +filter{banners-by-size} \
+     +filter{webbugs} \
+     +filter{jumping-windows} \
+     +filter{ie-exploits} \
+     +hide-from-header{block} \
+     +hide-referrer{conditional-block} \
+     +session-cookies-only \
+     +set-image-blocker{pattern} \
+    }
+    / # Match all URLs
   '';
 
   environment.etc."DefaultKeyBinding.dict".text = ''
@@ -473,6 +525,7 @@ let home_directory = "/Users/johnw";
     parallel
     pinentry_mac
     postgresql96
+    privoxy
     pv
     qemu
     qrencode
