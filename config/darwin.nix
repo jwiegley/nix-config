@@ -524,7 +524,7 @@ let home_directory = "/Users/johnw";
     pass-otp
     parallel
     pinentry_mac
-    postgresql96
+    postgresql
     privoxy
     pv
     qemu
