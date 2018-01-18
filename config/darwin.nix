@@ -32,11 +32,13 @@ let home_directory = "/Users/johnw";
         ${pkgs.pdnsd}/sbin/pdnsd -c /tmp/.pdnsd.conf
       '';
       serviceConfig.RunAtLoad = true;
+      serviceConfig.KeepAlive = true;
     };
 
     privoxy = {
       script = "${pkgs.privoxy}/bin/privoxy --no-daemon /etc/privoxy/config";
       serviceConfig.RunAtLoad = true;
+      serviceConfig.KeepAlive = true;
     };
   };
 
