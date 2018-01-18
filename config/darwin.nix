@@ -418,6 +418,7 @@ let home_directory = "/Users/johnw";
     sbcl
     sloccount
     verasco
+    (haskell.lib.justStaticExecutables haskPkgs.nixfmt)
 
     # mailToolsEnv
     dovecot

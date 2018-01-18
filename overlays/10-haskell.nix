@@ -1,6 +1,6 @@
 self: pkgs: rec {
 
-z3-debug = true;
+z3-debug = false;
 
 ##############################################################################
 # Haskell
@@ -23,12 +23,12 @@ myHaskellPackageDefs = super:
   git-du           = pkg ~/src/git-du {};
   git-monitor      = pkg ~/src/gitlib/git-monitor {};
   gitlib           = pkg ~/src/gitlib/gitlib {};
-  gitlib-cmdline   = pkg ~/src/gitlib/gitlib-cmdline { git = pkgs.gitAndTools.git; };
+  gitlib-cmdline   = pkg ~/src/gitlib/gitlib-cmdline { inherit (pkgs.gitAndTools) git; };
   gitlib-hit       = pkg ~/src/gitlib/gitlib-hit {};
   gitlib-libgit2   = pkg ~/src/gitlib/gitlib-libgit2 {};
   gitlib-test      = pkg ~/src/gitlib/gitlib-test {};
   hierarchy        = pkg ~/src/hierarchy {};
-  hlibgit2         = pkg ~/src/gitlib/hlibgit2 { git = pkgs.gitAndTools.git; };
+  hlibgit2         = pkg ~/src/gitlib/hlibgit2 { inherit (pkgs.gitAndTools) git; };
   hnix             = pkg ~/src/hnix {};
   hours            = pkg ~/src/hours {};
   ipcvar           = pkg ~/src/ipcvar {};
@@ -43,7 +43,7 @@ myHaskellPackageDefs = super:
   recursors        = pkg ~/src/recursors {};
   runmany          = pkg ~/src/runmany {};
   simple-mirror    = pkg ~/src/hackage-mirror {};
-  sitebuilder      = pkg ~/doc/sitebuilder { yuicompressor = pkgs.yuicompressor; };
+  sitebuilder      = pkg ~/doc/sitebuilder { inherit (pkgs) yuicompressor; };
   sizes            = pkg ~/src/sizes {};
   una              = pkg ~/src/una {};
   z3-generate-api  = pkg ~/src/z3-generate-api { };
@@ -59,6 +59,25 @@ myHaskellPackageDefs = super:
   concat-plugin    = pkg ~/oss/concat/plugin {};
   freer-effects    = pkg ~/oss/freer-effects {};
   hs-to-coq        = pkg ~/oss/hs-to-coq/hs-to-coq {};
+
+  nixfmt = pkg ({mkDerivation}: mkDerivation {
+    pname = "nixfmt";
+    version = "1.0.0";
+    src = pkgs.fetchFromGitHub {
+      owner = "Gabriel439";
+      repo = "nixfmt";
+      rev = "ae310b52a99e1fe41110e7ac07f6e477c612b32c";
+      sha256 = "0f6kbcs9dzgah76l5ql1xd8qylw2v4iqswaa99krd6gibf1nh4pw";
+      # date = 2016-09-21T16:51:35-07:00;
+    };
+    isLibrary = false;
+    isExecutable = true;
+    executableHaskellDepends = [ base Earley parsec pretty text ];
+    executableToolDepends = [ alex happy ];
+    homepage = "https://github.com/Gabriel439/nixfmt#readme";
+    description = "Auto-format Nix code";
+    license = stdenv.lib.licenses.bsd3;
+  }) {};
 
   z3 = pkg ~/src/haskell-z3 {
     z3 = if z3-debug
