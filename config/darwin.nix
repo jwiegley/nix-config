@@ -40,6 +40,15 @@ let home_directory = "/Users/johnw";
       serviceConfig.RunAtLoad = true;
       serviceConfig.KeepAlive = true;
     };
+
+    syncthing = {
+      script = "sudo -u johnw ${pkgs.syncthing}/bin/syncthing -no-browser -no-restart";
+      environment.STNORESTART = "1";
+      serviceConfig.RunAtLoad = true;
+      serviceConfig.KeepAlive = true;
+      serviceConfig.ProcessType = "Background";
+      serviceConfig.LowPriorityIO = true;
+    };
   };
 
   launchd.user.agents = {
@@ -454,6 +463,7 @@ let home_directory = "/Users/johnw";
     socat2pre
     spiped
     subversion
+    syncthing
     w3m
     wget
     youtube-dl
