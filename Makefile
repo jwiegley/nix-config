@@ -2,14 +2,14 @@ all: switch
 
 darwin-switch:
 	darwin-rebuild switch -Q
-	echo "Darwin generation: $(darwin-rebuild --list-generations | tail -1)"
+	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
 darwin-build:
 	nix build darwin.system
 
 home-switch:
 	home-manager switch
-	echo "Home generation:   $(home-manager generations | head -1)"
+	@echo "Home generation:   $$(home-manager generations | head -1)"
 
 home-build:
 	nix build -f ~/src/nix/home-manager/home-manager/home-manager.nix \
@@ -31,7 +31,7 @@ tag-working:
 env-all:
 	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs \
 	    || nix-env -f '<darwin>' -u --leq -Q -A pkgs
-	echo "Nix generation:    $(nix-env --list-generations | tail -1)"
+	@echo "Nix generation:    $$(nix-env --list-generations | tail -1)"
 
 env-all-build:
 	-nix build darwin.pkgs.myBuildEnvs
