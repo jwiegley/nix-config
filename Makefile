@@ -35,7 +35,6 @@ env-all:
 
 env-all-build:
 	-nix build darwin.pkgs.myBuildEnvs
-	nix-build '<darwin>' -Q -k -A pkgs.myBuildEnvs
 
 env:
 	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.emacs26Env
@@ -65,7 +64,7 @@ copy:
 	                           $(shell readlink -f /run/current-system)
 
 update-remote:
-	push -f Projects,Contracts,home hermes
+	push -f src,oss,bae,home hermes
 	ssh hermes '(cd ~/src/nix ; make switch env-all)'
 
 hermes: copy update-remote

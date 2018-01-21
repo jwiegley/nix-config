@@ -33,7 +33,7 @@ let home_directory = builtins.getEnv "HOME";
       STARDICT_DATA_DIR  = "${xdg.dataHome}/dictionary";
       WWW_HOME           = "${xdg.cacheHome}/w3m";
 
-      PASSWORD_STORE_DIR = "${home_directory}/doc/.passwords";
+      PASSWORD_STORE_DIR = "${home_directory}/Documents/.passwords";
 
       # OCAMLPATH          = "${pkgs.ocamlPackages.camlp5_transitional}"
       #                    + "/lib/ocaml/${pkgs.ocaml.version}/site-lib/camlp5";
@@ -100,7 +100,7 @@ let home_directory = builtins.getEnv "HOME";
       ls    = "${pkgs.coreutils}/bin/ls --color=auto";
       nm    = "${pkgs.findutils}/bin/find . -name";
       par   = "${pkgs.parallel}/bin/parallel";
-      rm    = "${home_directory}/bin/trash";
+      rm    = "${home_directory}/src/scripts/trash";
       rX    = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
       scp   = "${pkgs.rsync}/bin/rsync -aP --inplace";
       hide  = "chflags hidden";
@@ -128,14 +128,6 @@ let home_directory = builtins.getEnv "HOME";
 
       . ${pkgs.bash-z}/share/bash/z.sh
 
-      (cd ~ ; test -L bae   || ln -sf Contracts/BAE/Projects bae)
-      (cd ~ ; test -L oss   || ln -sf Contracts/OSS/Projects oss)
-      (cd ~ ; test -L doc   || ln -sf Documents doc)
-      (cd ~ ; test -L dl    || ln -sf Downloads dl)
-      (cd ~ ; test -L src   || ln -sf Projects src)
-      (cd ~ ; test -L emacs || ln -sf Projects/dot-emacs emacs)
-      (cd ~ ; test -L bin   || ln -sf Projects/scripts bin)
-
       function rmdir-r() {
           ${pkgs.findutils}/bin/find "$@" -depth -type d -empty \
               -exec ${pkgs.coreutils}/bin/rmdir {} \;
@@ -153,7 +145,7 @@ let home_directory = builtins.getEnv "HOME";
       fi
 
       export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
-      export PATH=$HOME/bin:$PATH
+      export PATH=$HOME/src/scripts:$PATH
     '';
   };
 
@@ -290,8 +282,8 @@ let home_directory = builtins.getEnv "HOME";
       };
 
       "filter \"lfs\"" = {
-        clean = "${home_directory}/bin/git-lfs clean -- %f";
-        smudge = "${home_directory}/bin/git-lfs smudge --skip -- %f";
+        clean = "${home_directory}/src/scripts/git-lfs clean -- %f";
+        smudge = "${home_directory}/src/scripts/git-lfs smudge --skip -- %f";
         required = true;
       };
 
