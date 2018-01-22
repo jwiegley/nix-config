@@ -1,0 +1,25 @@
+#!/bin/bash
+
+if [[ ! -f default.nix ]]; then
+    cabal2nix . > default.nix
+fi
+
+if [[ ! -f shell.nix ]]; then
+    cabal2nix --shell . > shell.nix
+fi
+
+if [[ ! -f Setup.hs && ! -f Setup.lhs ]]; then
+    cat > Setup.hs <<EOF
+import Distribution.Simple
+main = defaultMain
+EOF
+fi
+
+PKGS=haskellPackages
+if [[ "$1" == "--using" ]]; then
+    shift 1
+    PKGS=$1
+    shift 1
+fi
+
+exec nix-build "$@" -E "let pkgs = import <nixpkgs> {}; in pkgs.stdenv.lib.callPackageWith (pkgs // pkgs.${PKGS}) ./default.nix {}"

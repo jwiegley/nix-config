@@ -6,7 +6,7 @@ pkgs: version: cpkgs: with pkgs;
   ocamlPackages.menhir
   coq2html
   compcert
-] ++ (with cpkgs; [
+] ++ (with cpkgs; ([
   QuickChick
   autosubst
   bignums
@@ -18,7 +18,7 @@ pkgs: version: cpkgs: with pkgs;
   heq
   interval
   mathcomp
-]) ++ (pkgs.stdenv.lib.optionals (version == "8.7") [
+] ++ (pkgs.stdenv.lib.optionals (version == "8.7") [
   CoLoR
   category-theory
   equations
@@ -28,4 +28,4 @@ pkgs: version: cpkgs: with pkgs;
   category-theory
   equations
   ssreflect
-])
+])))
