@@ -329,6 +329,8 @@ let home_directory = "/Users/johnw";
       zbar
       zip
       zsh
+      nix-zsh-completions
+      zsh-syntax-highlighting
 
       # x11ToolsEnv
       # xquartz
@@ -652,6 +654,15 @@ let home_directory = "/Users/johnw";
   };
 
   programs.bash.enable = true;
+
+  programs.zsh = {
+    enable = true;
+    enableFzfCompletion = true;
+    enableFzfGit = true;
+    enableFzfHistory = true;
+    enableSyntaxHighlighting = true;
+  };
+
   programs.nix-index.enable = true;
 
   system.stateVersion = 2;

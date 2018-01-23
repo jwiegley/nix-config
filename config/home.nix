@@ -3,17 +3,27 @@
 let home_directory = builtins.getEnv "HOME";
     lib = pkgs.stdenv.lib; in rec {
 
-  nixpkgs.config = {
-    allowUnfree = true;
-    allowBroken = true;
+  nixpkgs = {
+    config = {
+      allowUnfree = true;
+      allowBroken = true;
+    };
+
+    overlays =
+      let path = ../overlays; in with builtins;
+      map (n: import (path + ("/" + n)))
+          (filter (n: match ".*\\.nix" n != null ||
+                      pathExists (path + ("/" + n + "/default.nix")))
+                  (attrNames (readDir path)));
   };
 
-  nixpkgs.overlays =
-    let path = ../overlays; in with builtins;
-    map (n: import (path + ("/" + n)))
-        (filter (n: match ".*\\.nix" n != null ||
-                    pathExists (path + ("/" + n + "/default.nix")))
-                (attrNames (readDir path)));
+  # services = {
+  #   gpg-agent = {
+  #     enable = true;
+  #     defaultCacheTtl = 1800;
+  #     enableSshSupport = true;
+  #   };
+  # };
 
   home = {
     # These are packages that should always be present in the user
@@ -25,7 +35,6 @@ let home_directory = builtins.getEnv "HOME";
       B2_ACCOUNT_INFO    = "${xdg.configHome}/backblaze-b2/account_info";
       CABAL_CONFIG       = "${xdg.configHome}/cabal/config";
       GNUPGHOME          = "${xdg.configHome}/gnupg";
-      INPUTRC            = "${xdg.configHome}/bash/input";
       LESSHISTFILE       = "${xdg.cacheHome}/less/history";
       PARALLEL_HOME      = "${xdg.cacheHome}/parallel";
       SCREENRC           = "${xdg.configHome}/screen/config";
@@ -51,7 +60,7 @@ let home_directory = builtins.getEnv "HOME";
       LC_CTYPE           = "en_US.UTF-8";
       LESS               = "-FRSXM";
       PROMPT_DIRTRIM     = "2";
-      PS1                = "\\D{%H:%M} \\h:\\W $ ";
+      # PS1                = "\\D{%H:%M} \\h:\\W $ ";
       TINC_USE_NIX       = "yes";
       WORDCHARS          = "";
     };
@@ -66,8 +75,7 @@ let home_directory = builtins.getEnv "HOME";
           [ "Library/Keyboard Layouts/PersianDvorak.keylayout"
             "Library/Scripts/Applications/Download links to PDF.scpt"
             "Library/Scripts/Applications/Media Pro" ]) //
-      { "Library/Fonts".source = "${xdg.dataHome}/fonts";
-        ".Deskzilla".source    = "${xdg.dataHome}/Deskzilla";
+      { ".Deskzilla".source    = "${xdg.dataHome}/Deskzilla";
         ".dbvis".source        = "${xdg.configHome}/DbVisualizer";
         ".docker".source       = "${xdg.configHome}/docker";
         ".gist".source         = "${xdg.configHome}/gist/account_id";
@@ -75,6 +83,97 @@ let home_directory = builtins.getEnv "HOME";
         ".slate".source        = "${xdg.configHome}/slate/config";
         ".zekr".source         = "${xdg.dataHome}/zekr";
       };
+  };
+
+  programs.zsh = rec {
+    enable = true;
+
+    dotDir = ".config/zsh";
+    enableCompletion = false;
+    enableAutosuggestions = true;
+
+    history = {
+      size = 5000;
+      save = 50000;
+      path = "${dotDir}/history";
+      ignoreDups = true;
+      share = true;
+    };
+
+    sessionVariables = {
+      POWERLEVEL9K_PROMPT_ON_NEWLINE = "true";
+      POWERLEVEL9K_RPROMPT_ON_NEWLINE = "true";
+    };
+
+    shellAliases = {
+      b = "${pkgs.git}/bin/git b";
+      l = "${pkgs.git}/bin/git l";
+      w = "${pkgs.git}/bin/git w";
+
+      u = "${pkgs.gnumake}/bin/make -C ${home_directory}/src/nix -f Makefile";
+
+      g   = "${pkgs.gitAndTools.hub}/bin/hub";
+      git = "${pkgs.gitAndTools.hub}/bin/hub";
+      ga  = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
+
+      ls    = "${pkgs.coreutils}/bin/ls --color=auto";
+      nm    = "${pkgs.findutils}/bin/find . -name";
+      par   = "${pkgs.parallel}/bin/parallel";
+      rm    = "${home_directory}/src/scripts/trash";
+      rX    = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
+      scp   = "${pkgs.rsync}/bin/rsync -aP --inplace";
+      hide  = "chflags hidden";
+      proc  = "ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
+      wipe  = "${pkgs.srm}/bin/srm -vfr";
+      nstat = "netstat -nr -f inet"
+            + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
+            + " | ${pkgs.coreutils}/bin/tail -n +5";
+    };
+
+    profileExtra = ''
+      for file in ${xdg.configHome}/fetchmail/config \
+                  ${xdg.configHome}/fetchmail/config-lists
+      do
+          cp -pL $file ''${file}.copy
+          chmod 0600 ''${file}.copy
+      done
+
+      export GPG_TTY=$(tty)
+      if ! pgrep -x "gpg-agent" > /dev/null; then
+          ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
+      fi
+
+      function rmdir-r() {
+          ${pkgs.findutils}/bin/find "$@" -depth -type d -empty \
+              -exec ${pkgs.coreutils}/bin/rmdir {} \;
+      }
+
+      export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir rbenv vcs)
+      export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs history command_execution_time time)
+    '';
+
+    initExtra = lib.mkBefore ''
+      DOCKER_MACHINE=$(which docker-machine)
+      if [[ -x "$DOCKER_MACHINE" ]]; then
+          if $DOCKER_MACHINE status default > /dev/null 2>&1; then
+              eval $($DOCKER_MACHINE env default) > /dev/null 2>&1
+          fi
+      fi
+
+      export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
+      export PATH=$HOME/src/scripts:$PATH
+    '';
+
+    plugins = [
+      { name = "zsh-navigation-tools";
+        file = "zsh-navigation-tools.plugin.zsh";
+        src = pkgs.zsh-navigation-tools.src;
+      }
+      { name = "zsh-powerlevel9k";
+        file = "powerlevel9k.zsh-theme";
+        src = pkgs.zsh-powerlevel9k.src;
+      }
+    ];
   };
 
   programs.bash = {
@@ -85,6 +184,10 @@ let home_directory = builtins.getEnv "HOME";
     historyFile     = "${xdg.dataHome}/bash/history";
     historyControl  = [ "ignoredups" "ignorespace" "erasedups" ];
     shellOptions    = [ "histappend" ];
+
+    sessionVariables = {
+      INPUTRC = "${xdg.configHome}/bash/input";
+    };
 
     shellAliases = {
       b = "${pkgs.git}/bin/git b";
@@ -305,73 +408,6 @@ let home_directory = builtins.getEnv "HOME";
     ];
   };
 
-  xdg = {
-    enable = true;
-
-    configHome = "${home_directory}/.config";
-    dataHome   = "${home_directory}/.local/share";
-    cacheHome  = "${home_directory}/.cache";
-
-    configFile."gnupg/gpg-agent.conf".text = ''
-      enable-ssh-support
-      default-cache-ttl 600
-      max-cache-ttl 7200
-      pinentry-program ${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac
-      scdaemon-program ${xdg.configHome}/gnupg/scdaemon-wrapper
-    '';
-
-    configFile."gnupg/scdaemon-wrapper" = {
-      text = ''
-        #!/bin/bash
-        export DYLD_FRAMEWORK_PATH=/System/Library/Frameworks
-        exec ${pkgs.gnupg}/libexec/scdaemon "$@"
-      '';
-      executable = true;
-    };
-
-    configFile."aspell/config".text = ''
-      local-data-dir ${pkgs.aspell}/lib/aspell
-      data-dir ${pkgs.aspellDicts.en}/lib/aspell
-      personal ${xdg.configHome}/aspell/en_US.personal
-      repl ${xdg.configHome}/aspell/en_US.repl
-    '';
-
-    configFile."msmtp".text = ''
-      defaults
-
-      tls on
-      tls_starttls on
-      tls_trust_file ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
-
-      account fastmail
-      host smtp.fastmail.com
-      port 587
-      auth on
-      user ${programs.git.userEmail}
-      passwordeval ${pkgs.pass}/bin/pass smtp.fastmail.com
-      from ${programs.git.userEmail}
-      logfile ${home_directory}/Library/Logs/msmtp.log
-    '';
-
-    configFile."fetchmail/config".text = ''
-      poll imap.fastmail.com protocol IMAP port 993
-        user '${programs.git.userEmail}' there is johnw here
-        ssl sslcertck sslcertfile "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-        folder INBOX
-        fetchall
-        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e"
-    '';
-
-    configFile."fetchmail/config-lists".text = ''
-      poll imap.fastmail.com protocol IMAP port 993
-        user '${programs.git.userEmail}' there is johnw here
-        ssl sslcertck sslcertfile "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-        folder 'Lists'
-        fetchall
-        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e -m list.misc"
-    '';
-  };
-
   programs.ssh = {
     enable = true;
 
@@ -443,5 +479,72 @@ let home_directory = builtins.getEnv "HOME";
   programs.home-manager = {
     enable = true;
     path = "${home_directory}/oss/home-manager";
+  };
+
+  xdg = {
+    enable = true;
+
+    configHome = "${home_directory}/.config";
+    dataHome   = "${home_directory}/.local/share";
+    cacheHome  = "${home_directory}/.cache";
+
+    configFile."gnupg/gpg-agent.conf".text = ''
+      enable-ssh-support
+      default-cache-ttl 600
+      max-cache-ttl 7200
+      pinentry-program ${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac
+      scdaemon-program ${xdg.configHome}/gnupg/scdaemon-wrapper
+    '';
+
+    configFile."gnupg/scdaemon-wrapper" = {
+      text = ''
+        #!/bin/bash
+        export DYLD_FRAMEWORK_PATH=/System/Library/Frameworks
+        exec ${pkgs.gnupg}/libexec/scdaemon "$@"
+      '';
+      executable = true;
+    };
+
+    configFile."aspell/config".text = ''
+      local-data-dir ${pkgs.aspell}/lib/aspell
+      data-dir ${pkgs.aspellDicts.en}/lib/aspell
+      personal ${xdg.configHome}/aspell/en_US.personal
+      repl ${xdg.configHome}/aspell/en_US.repl
+    '';
+
+    configFile."msmtp".text = ''
+      defaults
+
+      tls on
+      tls_starttls on
+      tls_trust_file ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
+
+      account fastmail
+      host smtp.fastmail.com
+      port 587
+      auth on
+      user ${programs.git.userEmail}
+      passwordeval ${pkgs.pass}/bin/pass smtp.fastmail.com
+      from ${programs.git.userEmail}
+      logfile ${home_directory}/Library/Logs/msmtp.log
+    '';
+
+    configFile."fetchmail/config".text = ''
+      poll imap.fastmail.com protocol IMAP port 993
+        user '${programs.git.userEmail}' there is johnw here
+        ssl sslcertck sslcertfile "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        folder INBOX
+        fetchall
+        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e"
+    '';
+
+    configFile."fetchmail/config-lists".text = ''
+      poll imap.fastmail.com protocol IMAP port 993
+        user '${programs.git.userEmail}' there is johnw here
+        ssl sslcertck sslcertfile "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        folder 'Lists'
+        fetchall
+        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e -m list.misc"
+    '';
   };
 }
