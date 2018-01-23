@@ -149,7 +149,7 @@ let home_directory = builtins.getEnv "HOME";
       }
 
       export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir rbenv vcs)
-      export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs history command_execution_time time)
+      export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs command_execution_time time)
 
       source ${pkgs.z}/share/z.sh
     '';
