@@ -150,6 +150,8 @@ let home_directory = builtins.getEnv "HOME";
 
       export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir rbenv vcs)
       export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs history command_execution_time time)
+
+      source ${pkgs.z}/share/z.sh
     '';
 
     initExtra = lib.mkBefore ''
@@ -165,10 +167,6 @@ let home_directory = builtins.getEnv "HOME";
     '';
 
     plugins = [
-      { name = "zsh-navigation-tools";
-        file = "zsh-navigation-tools.plugin.zsh";
-        src = pkgs.zsh-navigation-tools.src;
-      }
       { name = "zsh-powerlevel9k";
         file = "powerlevel9k.zsh-theme";
         src = pkgs.zsh-powerlevel9k.src;
@@ -229,7 +227,7 @@ let home_directory = builtins.getEnv "HOME";
           ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
       fi
 
-      . ${pkgs.bash-z}/share/bash/z.sh
+      . ${pkgs.z}/share/z.sh
 
       function rmdir-r() {
           ${pkgs.findutils}/bin/find "$@" -depth -type d -empty \

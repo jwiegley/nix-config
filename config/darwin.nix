@@ -271,7 +271,6 @@ let home_directory = "/Users/johnw";
       aspellDicts.en
       bashInteractive
       bash-completion
-      bash-z
       nix-bash-completions
       browserpass
       ctop
@@ -326,6 +325,7 @@ let home_directory = "/Users/johnw";
       xz
       z3
       cvc4
+      z
       zbar
       zip
       zsh

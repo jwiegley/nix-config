@@ -1,6 +1,6 @@
 self: super: {
 
-bash-z = with super; stdenv.mkDerivation rec {
+z = with super; stdenv.mkDerivation rec {
   name = "z-${version}";
   version = "2ebe41";
 
@@ -14,8 +14,8 @@ bash-z = with super; stdenv.mkDerivation rec {
   phases = [ "unpackPhase" "installPhase" ];
 
   installPhase = ''
-    mkdir -p $out/share/bash
-    cp -p z.sh $out/share/bash/z.sh
+    mkdir -p $out/share
+    cp -p z.sh $out/share/z.sh
   '';
 
   meta = with stdenv.lib; {
