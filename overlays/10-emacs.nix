@@ -457,6 +457,7 @@ myEmacsPackageOverrides = emacs: super: self: with self;
       sha256 = "0d0izs458j4ksqa6z1ws388z3zrxqvkwvs5gkajqy1zgvchz5hqh";
       # date = 2018-01-20T12:42:50+09:00;
     };
+    patches = [ ./emacs/patches/sky-color-clock.patch ];
   };
 
   stopwatch = compileEmacsFiles {

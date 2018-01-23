@@ -1,0 +1,20 @@
+--- a/sky-color-clock.el
++++ b/sky-color-clock.el
+@@ -192,7 +192,7 @@
+          (sunset (+ 12 sunset-time-from-noon)))
+     (setq sky-color-clock--bg-color-gradient
+           (sky-color-clock--make-gradient
+-           (cons (- sunrise 2.0)          "#111111")
++           (cons (- sunrise 2.0)          "#999999")
+            (cons (- sunrise 1.5)          "#4d548a")
+            (cons (- sunrise 1.0)          "#c486b1")
+            (cons (- sunrise 0.5)          "#ee88a0")
+@@ -203,7 +203,7 @@
+            (cons (- sunset  1.0)          "#f1e17c")
+            (cons (- sunset  0.5)          "#f86b10")
+            (cons sunset                   "#100028")
+-           (cons (+ sunset  0.5)          "#111111")))))
++           (cons (+ sunset  0.5)          "#999999")))))
+ 
+ (defun sky-color-clock--pick-bg-color (time &optional cloudiness)
+   "Pick a color from sky-color-clock--bg-color-gradient and
