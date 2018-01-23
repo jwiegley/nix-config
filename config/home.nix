@@ -128,6 +128,9 @@ let home_directory = builtins.getEnv "HOME";
       nstat = "netstat -nr -f inet"
             + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
             + " | ${pkgs.coreutils}/bin/tail -n +5";
+
+      hermes = "ssh -t hermes 'zsh -l'";
+      vulcan = "ssh -t vulcan 'zsh -l'";
     };
 
     profileExtra = ''
@@ -149,7 +152,7 @@ let home_directory = builtins.getEnv "HOME";
       }
 
       export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir rbenv vcs)
-      export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs command_execution_time time)
+      export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs history command_execution_time time)
 
       source ${pkgs.z}/share/z.sh
     '';
