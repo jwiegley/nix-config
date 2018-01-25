@@ -120,7 +120,7 @@ pkgs: hpkgs: with hpkgs;
   fuzzcheck
   generic-lens
   ghc-core
-  ghc-mod
+  # ghc-mod
   ghc-paths
   gitlib
   gitlib-cmdline

@@ -129,7 +129,7 @@ pkgs: epkgs: with epkgs;
   fullframe
   fuzzy
   ggtags
-  ghc-mod                       # ghc
+  # ghc-mod                       # ghc
   ghub
   ghub-plus                     # ghub+
   git-annex

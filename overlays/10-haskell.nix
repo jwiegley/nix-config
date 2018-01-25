@@ -263,60 +263,60 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
       haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
     });
 
-  ghc-mod = dontCheck (doJailbreak (callPackage
-    ({ mkDerivation, base, binary, bytestring, Cabal, cabal-helper
-     , containers, criterion, deepseq, directory, djinn-ghc, doctest
-     , extra, fclabels, filepath, ghc, ghc-boot, ghc-paths
-     , ghc-syb-utils, haskell-src-exts, hlint, hspec, monad-control
-     , monad-journal, mtl, old-time, optparse-applicative, pipes
-     , process, safe, semigroups, shelltest, split, syb
-     , template-haskell, temporary, text, time, transformers
-     , transformers-base
-     }:
-     mkDerivation {
-       pname = "ghc-mod";
-       version = "5.9.0.0";
-       src = pkgs.fetchFromGitHub {
-         owner = "DanielG";
-         repo = "ghc-mod";
-         rev = "0f281bea89edf8f11c82c5359ee2b3ce19888b99";
-         sha256 = "0f70nrlqgizsrya1x5kgxib7hxc0ip18b7nh62jclny1fq4r02vm";
-       };
-       isLibrary = true;
-       isExecutable = true;
-       enableSeparateDataOutput = true;
-       setupHaskellDepends = [
-         base Cabal containers directory filepath process template-haskell
-         transformers
-       ];
-       libraryHaskellDepends = [
-         base binary bytestring cabal-helper containers deepseq directory
-         djinn-ghc extra fclabels filepath ghc ghc-boot ghc-paths
-         ghc-syb-utils haskell-src-exts hlint monad-control monad-journal
-         mtl old-time optparse-applicative pipes process safe semigroups
-         split syb template-haskell temporary text time transformers
-         transformers-base
-       ];
-       executableHaskellDepends = [
-         base binary deepseq directory fclabels filepath ghc monad-control
-         mtl old-time optparse-applicative process semigroups split time
-       ];
-       testHaskellDepends = [
-         base cabal-helper containers directory doctest fclabels filepath
-         ghc ghc-boot hspec monad-journal mtl process split temporary
-         transformers
-       ];
-       testToolDepends = [ shelltest ];
-       benchmarkHaskellDepends = [
-         base criterion directory filepath temporary
-       ];
-       homepage = "https://github.com/DanielG/ghc-mod";
-       description = "Happy Haskell Hacking";
-       license = pkgs.stdenv.lib.licenses.agpl3;
-       hydraPlatforms = pkgs.stdenv.lib.platforms.none;
-     }) { shelltest = null;
-          Cabal = Cabal;
-          cabal-helper = cabal-helper; }));
+  # ghc-mod = dontCheck (doJailbreak (callPackage
+  #   ({ mkDerivation, base, binary, bytestring, Cabal, cabal-helper
+  #    , containers, criterion, deepseq, directory, djinn-ghc, doctest
+  #    , extra, fclabels, filepath, ghc, ghc-boot, ghc-paths
+  #    , ghc-syb-utils, haskell-src-exts, hlint, hspec, monad-control
+  #    , monad-journal, mtl, old-time, optparse-applicative, pipes
+  #    , process, safe, semigroups, shelltest, split, syb
+  #    , template-haskell, temporary, text, time, transformers
+  #    , transformers-base
+  #    }:
+  #    mkDerivation {
+  #      pname = "ghc-mod";
+  #      version = "5.9.0.0";
+  #      src = pkgs.fetchFromGitHub {
+  #        owner = "DanielG";
+  #        repo = "ghc-mod";
+  #        rev = "0f281bea89edf8f11c82c5359ee2b3ce19888b99";
+  #        sha256 = "0f70nrlqgizsrya1x5kgxib7hxc0ip18b7nh62jclny1fq4r02vm";
+  #      };
+  #      isLibrary = true;
+  #      isExecutable = true;
+  #      enableSeparateDataOutput = true;
+  #      setupHaskellDepends = [
+  #        base Cabal containers directory filepath process template-haskell
+  #        transformers
+  #      ];
+  #      libraryHaskellDepends = [
+  #        base binary bytestring cabal-helper containers deepseq directory
+  #        djinn-ghc extra fclabels filepath ghc ghc-boot ghc-paths
+  #        ghc-syb-utils haskell-src-exts hlint monad-control monad-journal
+  #        mtl old-time optparse-applicative pipes process safe semigroups
+  #        split syb template-haskell temporary text time transformers
+  #        transformers-base
+  #      ];
+  #      executableHaskellDepends = [
+  #        base binary deepseq directory fclabels filepath ghc monad-control
+  #        mtl old-time optparse-applicative process semigroups split time
+  #      ];
+  #      testHaskellDepends = [
+  #        base cabal-helper containers directory doctest fclabels filepath
+  #        ghc ghc-boot hspec monad-journal mtl process split temporary
+  #        transformers
+  #      ];
+  #      testToolDepends = [ shelltest ];
+  #      benchmarkHaskellDepends = [
+  #        base criterion directory filepath temporary
+  #      ];
+  #      homepage = "https://github.com/DanielG/ghc-mod";
+  #      description = "Happy Haskell Hacking";
+  #      license = pkgs.stdenv.lib.licenses.agpl3;
+  #      hydraPlatforms = pkgs.stdenv.lib.platforms.none;
+  #    }) { shelltest = null;
+  #         Cabal = Cabal;
+  #         cabal-helper = cabal-helper; }));
 
   recurseForDerivations = true;
 
@@ -358,47 +358,47 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = doJailbreak (dontCheck (pkg ~/oss/timeparsers {}));
 
-  cabal-helper = doJailbreak (callPackage
-    ({ mkDerivation, base, bytestring, Cabal, cabal-install, containers
-     , directory, extra, filepath, ghc-prim, mtl, process
-     , template-haskell, temporary, transformers, unix, utf8-string
-     , semigroupoids, unix-compat
-     }:
-     mkDerivation {
-       pname = "cabal-helper";
-       version = "4bfc6b";
-       src = pkgs.fetchFromGitHub {
-         owner = "DanielG";
-         repo = "cabal-helper";
-         rev = "4bfc6b916fcc696a5d82e7cd35713d6eabcb0533";
-         sha256 = "1a8231as0wdvi0q73ha9lc0qrx23kmcwf910qaicvmdar5p2b15m";
-       };
-       isLibrary = true;
-       isExecutable = true;
-       setupHaskellDepends = [
-         base Cabal containers directory filepath process template-haskell
-         transformers semigroupoids unix-compat
-       ];
-       libraryHaskellDepends = [
-         base Cabal directory filepath ghc-prim mtl process transformers
-         semigroupoids unix-compat
-       ];
-       executableHaskellDepends = [
-         base bytestring Cabal directory filepath ghc-prim mtl process
-         template-haskell temporary transformers utf8-string semigroupoids
-         unix-compat
-       ];
-       testHaskellDepends = [
-         base bytestring Cabal directory extra filepath ghc-prim mtl process
-         template-haskell temporary transformers unix utf8-string
-         semigroupoids unix-compat
-       ];
-       testToolDepends = [ cabal-install ];
-       doCheck = false;
-       description = "Simple interface to some of Cabal's configuration state used by ghc-mod";
-       license = pkgs.stdenv.lib.licenses.agpl3;
-       hydraPlatforms = pkgs.stdenv.lib.platforms.none;
-     }) {});
+  # cabal-helper = doJailbreak (callPackage
+  #   ({ mkDerivation, base, bytestring, Cabal, cabal-install, containers
+  #    , directory, extra, filepath, ghc-prim, mtl, process
+  #    , template-haskell, temporary, transformers, unix, utf8-string
+  #    , semigroupoids, unix-compat
+  #    }:
+  #    mkDerivation {
+  #      pname = "cabal-helper";
+  #      version = "4bfc6b";
+  #      src = pkgs.fetchFromGitHub {
+  #        owner = "DanielG";
+  #        repo = "cabal-helper";
+  #        rev = "4bfc6b916fcc696a5d82e7cd35713d6eabcb0533";
+  #        sha256 = "1a8231as0wdvi0q73ha9lc0qrx23kmcwf910qaicvmdar5p2b15m";
+  #      };
+  #      isLibrary = true;
+  #      isExecutable = true;
+  #      setupHaskellDepends = [
+  #        base Cabal containers directory filepath process template-haskell
+  #        transformers semigroupoids unix-compat
+  #      ];
+  #      libraryHaskellDepends = [
+  #        base Cabal directory filepath ghc-prim mtl process transformers
+  #        semigroupoids unix-compat
+  #      ];
+  #      executableHaskellDepends = [
+  #        base bytestring Cabal directory filepath ghc-prim mtl process
+  #        template-haskell temporary transformers utf8-string semigroupoids
+  #        unix-compat
+  #      ];
+  #      testHaskellDepends = [
+  #        base bytestring Cabal directory extra filepath ghc-prim mtl process
+  #        template-haskell temporary transformers unix utf8-string
+  #        semigroupoids unix-compat
+  #      ];
+  #      testToolDepends = [ cabal-install ];
+  #      doCheck = false;
+  #      description = "Simple interface to some of Cabal's configuration state used by ghc-mod";
+  #      license = pkgs.stdenv.lib.licenses.agpl3;
+  #      hydraPlatforms = pkgs.stdenv.lib.platforms.none;
+  #    }) {});
 
   haskell-src-exts-simple_1_20_0_0 =
     super.haskell-src-exts-simple_1_20_0_0.override {
@@ -410,59 +410,59 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
       haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
     };
 
-  ghc-mod = dontCheck (doJailbreak (callPackage
-    ({ mkDerivation, base, binary, bytestring, Cabal, cabal-helper
-     , containers, criterion, deepseq, directory, djinn-ghc, doctest
-     , extra, fclabels, filepath, ghc, ghc-boot, ghc-paths
-     , ghc-syb-utils, haskell-src-exts, hlint, hspec, monad-control
-     , monad-journal, mtl, old-time, optparse-applicative, pipes
-     , process, safe, semigroups, shelltest, split, syb
-     , template-haskell, temporary, text, time, transformers
-     , transformers-base
-     }:
-     mkDerivation {
-       pname = "ghc-mod";
-       version = "5.9.0.0";
-       src = pkgs.fetchFromGitHub {
-         owner = "DanielG";
-         repo = "ghc-mod";
-         rev = "c3530f75d5c539c91ed0b8d38e90d66cbaa66a35";
-         sha256 = "1q7sz50da645x7ysqy8k1m09adidqp62vf8v7zin69yv76fsz9nn";
-       };
-       isLibrary = true;
-       isExecutable = true;
-       enableSeparateDataOutput = true;
-       setupHaskellDepends = [
-         base Cabal containers directory filepath process template-haskell
-         transformers cabal-doctest
-       ];
-       libraryHaskellDepends = [
-         base binary bytestring cabal-helper containers deepseq directory
-         djinn-ghc extra fclabels filepath ghc ghc-boot ghc-paths
-         ghc-syb-utils haskell-src-exts hlint monad-control monad-journal
-         mtl old-time optparse-applicative pipes process safe semigroups
-         split syb template-haskell temporary text time transformers
-         transformers-base
-       ];
-       executableHaskellDepends = [
-         base binary deepseq directory fclabels filepath ghc monad-control
-         mtl old-time optparse-applicative process semigroups split time
-       ];
-       testHaskellDepends = [
-         base cabal-helper containers directory doctest fclabels filepath
-         ghc ghc-boot hspec monad-journal mtl process split temporary
-         transformers
-       ];
-       testToolDepends = [ shelltest ];
-       benchmarkHaskellDepends = [
-         base criterion directory filepath temporary
-       ];
-       homepage = "https://github.com/DanielG/ghc-mod";
-       description = "Happy Haskell Hacking";
-       license = pkgs.stdenv.lib.licenses.agpl3;
-       hydraPlatforms = pkgs.stdenv.lib.platforms.none;
-     }) { cabal-helper = cabal-helper;
-          shelltest = null; }));
+  # ghc-mod = dontCheck (doJailbreak (callPackage
+  #   ({ mkDerivation, base, binary, bytestring, Cabal, cabal-helper
+  #    , containers, criterion, deepseq, directory, djinn-ghc, doctest
+  #    , extra, fclabels, filepath, ghc, ghc-boot, ghc-paths
+  #    , ghc-syb-utils, haskell-src-exts, hlint, hspec, monad-control
+  #    , monad-journal, mtl, old-time, optparse-applicative, pipes
+  #    , process, safe, semigroups, shelltest, split, syb
+  #    , template-haskell, temporary, text, time, transformers
+  #    , transformers-base
+  #    }:
+  #    mkDerivation {
+  #      pname = "ghc-mod";
+  #      version = "5.9.0.0";
+  #      src = pkgs.fetchFromGitHub {
+  #        owner = "DanielG";
+  #        repo = "ghc-mod";
+  #        rev = "c3530f75d5c539c91ed0b8d38e90d66cbaa66a35";
+  #        sha256 = "1q7sz50da645x7ysqy8k1m09adidqp62vf8v7zin69yv76fsz9nn";
+  #      };
+  #      isLibrary = true;
+  #      isExecutable = true;
+  #      enableSeparateDataOutput = true;
+  #      setupHaskellDepends = [
+  #        base Cabal containers directory filepath process template-haskell
+  #        transformers cabal-doctest
+  #      ];
+  #      libraryHaskellDepends = [
+  #        base binary bytestring cabal-helper containers deepseq directory
+  #        djinn-ghc extra fclabels filepath ghc ghc-boot ghc-paths
+  #        ghc-syb-utils haskell-src-exts hlint monad-control monad-journal
+  #        mtl old-time optparse-applicative pipes process safe semigroups
+  #        split syb template-haskell temporary text time transformers
+  #        transformers-base
+  #      ];
+  #      executableHaskellDepends = [
+  #        base binary deepseq directory fclabels filepath ghc monad-control
+  #        mtl old-time optparse-applicative process semigroups split time
+  #      ];
+  #      testHaskellDepends = [
+  #        base cabal-helper containers directory doctest fclabels filepath
+  #        ghc ghc-boot hspec monad-journal mtl process split temporary
+  #        transformers
+  #      ];
+  #      testToolDepends = [ shelltest ];
+  #      benchmarkHaskellDepends = [
+  #        base criterion directory filepath temporary
+  #      ];
+  #      homepage = "https://github.com/DanielG/ghc-mod";
+  #      description = "Happy Haskell Hacking";
+  #      license = pkgs.stdenv.lib.licenses.agpl3;
+  #      hydraPlatforms = pkgs.stdenv.lib.platforms.none;
+  #    }) { cabal-helper = cabal-helper;
+  #         shelltest = null; }));
 
   recurseForDerivations = true;
 
