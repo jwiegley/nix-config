@@ -166,7 +166,8 @@ let home_directory = builtins.getEnv "HOME";
       fi
 
       export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
-      export PATH=$HOME/src/scripts:$PATH
+      # Package org2tc and hours with Nix
+      export PATH=$HOME/src/scripts:$HOME/src/org2tc:$HOME/src/hours:$PATH
     '';
 
     plugins = [
