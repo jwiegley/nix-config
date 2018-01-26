@@ -422,8 +422,9 @@ let home_directory = builtins.getEnv "HOME";
     userKnownHostsFile = "${xdg.configHome}/ssh/known_hosts";
 
     matchBlocks = rec {
-      vulcan.hostname = "192.168.1.69";
-      hermes.hostname = "192.168.1.65";
+      vulcan.hostname  = "192.168.1.69";
+      hermes.hostname  = "192.168.1.65";
+      hermesw.hostname = "192.168.1.67";
       mybook = vulcan;
       tank = hermes;
 
