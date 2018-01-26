@@ -98,7 +98,6 @@ myHaskellPackageDefs = super:
   harness             = pkg ~/bae/autofocus-deliverable/rings-dashboard/mitll-harness {};
   rings-dashboard     = pkg ~/bae/autofocus-deliverable/rings-dashboard {};
   rings-dashboard-api = pkg ~/bae/autofocus-deliverable/rings-dashboard/rings-dashboard-api {};
-  solver              = pkg ~/bae/concerto/solver {};
 };
 
 haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
