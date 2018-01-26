@@ -179,6 +179,7 @@ pkgs: epkgs: with epkgs;
   ivy-hydra
   ivy-pass
   ivy-rich
+  jobhours
   jq-mode
   js2-mode
   js3-mode

@@ -63,7 +63,6 @@ myHaskellPackageDefs = super:
     .overrideDerivation (attrs: {
       installPhase = ''
         mkdir -p $out/bin
-        mkdir -p $out/share/emacs/site-lisp
         cp jobhours $out/bin
         cp gethours $out/bin
         cp dist/build/bae-periods/bae-periods $out/bin

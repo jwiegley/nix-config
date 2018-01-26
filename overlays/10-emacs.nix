@@ -531,6 +531,11 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     };
   };
 
+  jobhours = compileEmacsFiles {
+    name = "jobhours";
+    src = ~/src/hours;
+  };
+
   doxymacs = mkDerivation rec {
     name = "emacs-doxymacs-${version}";
     version = "2017-12-10";
