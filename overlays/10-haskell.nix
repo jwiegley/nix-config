@@ -30,7 +30,6 @@ myHaskellPackageDefs = super:
   hierarchy        = pkg ~/src/hierarchy {};
   hlibgit2         = pkg ~/src/gitlib/hlibgit2 { inherit (pkgs.gitAndTools) git; };
   hnix             = pkg ~/src/hnix {};
-  hours            = pkg ~/src/hours {};
   ipcvar           = pkg ~/src/ipcvar {};
   linearscan       = pkg ~/src/linearscan {};
   linearscan-hoopl = pkg ~/src/linearscan-hoopl {};
@@ -59,6 +58,19 @@ myHaskellPackageDefs = super:
   concat-plugin    = pkg ~/oss/concat/plugin {};
   freer-effects    = pkg ~/oss/freer-effects {};
   hs-to-coq        = pkg ~/oss/hs-to-coq/hs-to-coq {};
+
+  hours = (pkgs.haskell.lib.dontHaddock (pkg ~/src/hours {}))
+    .overrideDerivation (attrs: {
+      installPhase = ''
+        mkdir -p $out/bin
+        mkdir -p $out/share/emacs/site-lisp
+        cp jobhours $out/bin
+        cp gethours $out/bin
+        cp dist/build/bae-periods/bae-periods $out/bin
+        cp dist/build/timelog-periods/timelog-periods $out/bin
+        cp dist/build/process-hours/process-hours $out/bin
+      '';
+    });
 
   nixfmt = pkg ({mkDerivation}: mkDerivation {
     pname = "nixfmt";
