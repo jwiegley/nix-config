@@ -250,6 +250,7 @@ pkgs: epkgs: with epkgs;
   org-super-agenda
   org-web-tools
   orgit
+  orgnav
   orgtbl-aggregate
   origami
   outorg
