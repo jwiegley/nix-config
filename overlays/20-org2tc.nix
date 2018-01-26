@@ -7,9 +7,9 @@ org2tc = with super; stdenv.mkDerivation rec {
   src = fetchFromGitHub {
     owner = "jwiegley";
     repo = "org2tc";
-    rev = "7d52a20a8957264cbca0f1678f2f3d14155ac3f6";
-    sha256 = "1173ljh94sr2wfy9qfbk8rapsn8j708hc9mgwy10gz721mqhpjxj";
-    # date = 2018-01-25T23:39:06-08:00;
+    rev = "eb378db6ad9e5ed9f7f4b80ab04b0489574a47bd";
+    sha256 = "0mbdz4x1f8zpfhwkqnrxvvqk70h6d7yn314cizxkb7a0qy27zprz";
+    # date = 2018-01-26T00:15:37-08:00;
   };
 
   phases = [ "unpackPhase" "installPhase" ];

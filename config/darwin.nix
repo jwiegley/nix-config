@@ -297,6 +297,7 @@ let home_directory = "/Users/johnw";
       less
       multitail
       mysql
+      org2tc
       p7zip
       pass
       pass-otp
