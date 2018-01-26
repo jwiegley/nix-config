@@ -1,6 +1,6 @@
 self: super: {
 
-z = with super; stdenv.mkDerivation rec {
+org2tc = with super; stdenv.mkDerivation rec {
   name = "org2tc-${version}";
   version = "7d52a20";
 
