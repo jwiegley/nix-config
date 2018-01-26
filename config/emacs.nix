@@ -282,6 +282,7 @@ pkgs: epkgs: with epkgs;
   phi-search
   phi-search-mc
   pkg-info
+  plantuml-mode
   po-mode
   popup
   popup-pos-tip

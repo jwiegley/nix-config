@@ -247,6 +247,7 @@ let home_directory = "/Users/johnw";
       languagetool
       ledger
       pdf-tools-server
+      plantuml
       poppler
       sdcv
       sourceHighlight
