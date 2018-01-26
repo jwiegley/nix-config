@@ -166,6 +166,7 @@ let home_directory = builtins.getEnv "HOME";
       fi
 
       export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
+      export PATH=$HOME/src/scripts:$PATH
     '';
 
     plugins = [
