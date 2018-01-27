@@ -306,7 +306,7 @@ pkgs: epkgs: with epkgs;
   riscv-mode
   rs-gnus-summary
   s
-  sdcv                          # sdcv-mode
+  sdcv-mode
   selected
   shackle
   shift-number

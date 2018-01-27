@@ -448,6 +448,17 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     buildInputs = [ dash ];
   };
 
+  sdcv-mode = compileEmacsFiles {
+    name = "sdcv-mode";
+    src = fetchFromGitHub {
+      owner = "gucong";
+      repo = "emacs-sdcv";
+      rev = "c51569ebf3fd1f8c02c33c289d229996bf2ff186";
+      sha256 = "0qkvapiaprv9p5zrzr7xfy2prwjnhc3rq3r21zcppcb5habbvy8q";
+      # date = 2012-01-28T14:08:32-06:00;
+    };
+  };
+
   sky-color-clock = compileEmacsFiles {
     name = "sky-color-clock";
     src = fetchFromGitHub {
