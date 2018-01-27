@@ -96,6 +96,15 @@ let home_directory = builtins.getEnv "HOME";
       browsers = [ "firefox" ];
     };
 
+    bash = {
+      enable = true;
+
+      bashrcExtra = lib.mkBefore ''
+        source /etc/bashrc
+        export PATH=$HOME/src/scripts:$PATH
+      '';
+    };
+
     zsh = rec {
       enable = true;
 
