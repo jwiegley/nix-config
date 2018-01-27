@@ -84,6 +84,19 @@ let home_directory = "/Users/johnw";
       serviceConfig.RunAtLoad = true;
     };
 
+    myip = {
+      script = ''
+        if [[ $(hostname) =~ [Vv]ulcan ]]; then
+            cat > ${home_directory}/Documents/home.config <<EOF
+Host home
+    HostName $(dig +short myip.opendns.com @resolver1.opendns.com.)
+    Port 2201
+EOF
+        fi
+      '';
+      serviceConfig.StartInterval = 3600;
+    };
+
     rdm = rec {
       script = ''
         ${pkgs.rtags}/bin/rdm \

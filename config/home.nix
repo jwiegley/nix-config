@@ -364,7 +364,6 @@ let home_directory = builtins.getEnv "HOME";
         mybook = vulcan;
         tank = hermes;
 
-        home    = { hostname = "76.234.69.149"; port = 2201; };
         titan   = { hostname = "192.168.1.133"; user = "root"; };
         mohajer = { hostname = "192.168.1.75";  user = "nasimw"; };
         router  = { hostname = "192.168.1.2";   user = "root"; };
