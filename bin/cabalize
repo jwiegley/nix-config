@@ -8,6 +8,12 @@ cabal2nix . > default.nix
 cabal2nix --shell . > shell.nix
 
 perl -i -pe 's/<nixpkgs>/<darwin>/;' shell.nix
+perl -i -ne 'print unless /^Error:/;' shell.nix
+
+ARGS="--enable-tests --enable-benchmarks"
+if [[ $GHCVER =~ prof ]]; then
+    ARGS="$ARGS --enable-profiling"
+fi
 
 cabal clean
-nix-shell --command "cabal configure --enable-tests --enable-benchmarks $@"
+nix-shell --command "cabal configure $ARGS $@"
