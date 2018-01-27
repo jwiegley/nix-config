@@ -619,8 +619,14 @@ EOF
 
     etc."firefox-wrapper".text = ''
       #!/bin/bash
-      source /etc/bashrc
-      source ${home_directory}/.bash_profile
+      export PASSWORD_STORE_ENABLE_EXTENSIONS="true"
+      export PASSWORD_STORE_EXTENSIONS_DIR="${config.system.path}/lib/password-store/extensions";
+      export PASSWORD_STORE_DIR = "${home_directory}/Documents/.passwords";
+      export GNUPGHOME="${home_directory}/.config/gnupg"
+      export GPG_TTY=$(tty)
+      if ! pgrep -x "gpg-agent" > /dev/null; then
+          ${pkgs.gnupg}/gpgconf --launch gpg-agent
+      fi
       dir=$(dirname "$0")
       name=$(basename "$0")
       exec "$dir"/."$name" "$@"
