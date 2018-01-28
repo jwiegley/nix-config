@@ -1,0 +1,9 @@
+#!/bin/sh
+
+runHook setupCompilerEnvironmentPhase
+runHook jailbreakPhase
+runHook compileBuildDriverPhase
+
+eval "$configurePhase"
+eval "$buildPhase"
+eval "$checkPhase"

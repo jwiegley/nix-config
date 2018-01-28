@@ -30,6 +30,8 @@ pkgs: epkgs: with epkgs;
   button-lock
   bytecomp-simplify
   calfw
+  calfw-cal
+  calfw-org
   centered-cursor-mode
   change-inner
   chess                         # chess chess-ics
@@ -205,8 +207,13 @@ pkgs: epkgs: with epkgs;
   m-buffer
   macrostep
   magit
+  magit-annex
+  magit-filenotify
+  magit-gitflow
   magit-imerge
+  magit-lfs
   magit-popup
+  magit-tbdiff
   magithub
   makefile-runner
   makey
@@ -354,6 +361,7 @@ pkgs: epkgs: with epkgs;
   vline
   w3m
   web
+  web-beautify
   web-mode
   web-server
   websocket

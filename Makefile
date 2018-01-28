@@ -60,8 +60,9 @@ mirror:
 	git --git-dir=home-manager/.git push --mirror jwiegley
 
 copy:
-	nix copy --to ssh://hermes $(shell readlink -f ~/.nix-profile)      \
-	                           $(shell readlink -f /run/current-system)
+	nix copy --to ssh://hermes			\
+	    $(shell readlink -f ~/.nix-profile)		\
+	    $(shell readlink -f /run/current-system)
 
 update-remote:
 	push -f src,oss,bae,home hermes

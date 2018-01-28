@@ -101,7 +101,6 @@ let home_directory = builtins.getEnv "HOME";
 
       bashrcExtra = lib.mkBefore ''
         source /etc/bashrc
-        export PATH=$HOME/src/scripts:$PATH
       '';
     };
 
@@ -139,7 +138,7 @@ let home_directory = builtins.getEnv "HOME";
         ls    = "${pkgs.coreutils}/bin/ls --color=auto";
         nm    = "${pkgs.findutils}/bin/find . -name";
         par   = "${pkgs.parallel}/bin/parallel";
-        rm    = "${home_directory}/src/scripts/trash";
+        rm    = "${pkgs.my-scripts}/bin/trash";
         rX    = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
         scp   = "${pkgs.rsync}/bin/rsync -aP --inplace";
         hide  = "chflags hidden";
@@ -186,7 +185,6 @@ let home_directory = builtins.getEnv "HOME";
         fi
 
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
-        export PATH=$HOME/src/scripts:$PATH
       '';
 
       plugins = [
@@ -330,8 +328,8 @@ let home_directory = builtins.getEnv "HOME";
         };
 
         "filter \"lfs\"" = {
-          clean = "${home_directory}/src/scripts/git-lfs clean -- %f";
-          smudge = "${home_directory}/src/scripts/git-lfs smudge --skip -- %f";
+          clean = "${pkgs.git-lfs}/bin/git-lfs clean -- %f";
+          smudge = "${pkgs.git-lfs}/bin/git-lfs smudge --skip -- %f";
           required = true;
         };
 

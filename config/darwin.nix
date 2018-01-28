@@ -20,7 +20,7 @@ let home_directory = "/Users/johnw";
 
   launchd.daemons = {
     cleanup = {
-      command = "${home_directory}/bin/cleanup -u";
+      command = "${pkgs.dirscan}/bin/cleanup -u";
       serviceConfig.StartInterval = 86400;
     };
 
@@ -155,6 +155,7 @@ EOF
       nix-prefetch-scripts
       home-manager
       coreutils
+      my-scripts
 
       # gitToolsEnv
       diffstat
@@ -163,7 +164,9 @@ EOF
       gist
       (exe haskPkgs.git-all)
       (exe haskPkgs.git-monitor)
+      git-lfs
       git-scripts
+      git-tbdiff
       gitRepo
       gitAndTools.git-imerge
       gitAndTools.gitFull
@@ -175,14 +178,16 @@ EOF
       gitstats
       patch
       patchutils
+      sift
 
       # jsToolsEnv
       jq
+      jquery
       nodejs
       nodePackages.eslint
       nodePackages.csslint
+      nodePackages.js-beautify
       nodePackages.jsontool
-      jquery
 
       # langToolsEnv
       R
@@ -203,6 +208,7 @@ EOF
       lp_solve
       mpfr
       ninja
+      (exe haskPkgs.nixfmt)
       ott
       pkgconfig
       rabbitmq-c
@@ -210,12 +216,11 @@ EOF
       sbcl
       sloccount
       verasco
-      (exe haskPkgs.nixfmt)
 
       # mailToolsEnv
+      contacts
       dovecot
       dovecot_pigeonhole
-      contacts
       fetchmail
       imapfilter
       leafnode
@@ -226,13 +231,13 @@ EOF
       backblaze-b2
       bazaar
       cacert
-      httrack
-      mercurialFull
-      iperf
-      nmap
-      lftp
-      mtr
       dnsutils
+      httrack
+      iperf
+      lftp
+      mercurialFull
+      mtr
+      nmap
       openssh
       openssl
       openvpn
@@ -243,6 +248,7 @@ EOF
       sipcalc
       socat2pre
       spiped
+      sshify
       subversion
       #syncthing
       w3m
@@ -277,80 +283,87 @@ EOF
       yuicompressor
 
       # pythonToolsEnv
-      python3
       python27
       pythonDocs.pdf_letter.python27
       pythonDocs.html.python27
       python27Packages.setuptools
       python27Packages.pygments
       python27Packages.certifi
+      python3
 
       # systemToolsEnv
       aspell
       aspellDicts.en
-      bashInteractive
       bash-completion
-      nix-bash-completions
+      bashInteractive
       browserpass
+      dirscan
       ctop
+      cvc4
       direnv
+      epipe
       exiv2
       findutils
       fzf
       gawk
       gnugrep
       gnupg
-      paperkey
       gnuplot
       gnused
       gnutar
+      hammer
+      hashdb
       (exe haskPkgs.hours)
-      (exe haskPkgs.pushme)
-      (exe haskPkgs.runmany)
-      (exe haskPkgs.simple-mirror)
-      (exe haskPkgs.sizes)
-      (exe haskPkgs.una)
       htop
       imagemagickBig
       jdiskreport
       jdk8
       less
+      linkdups
+      lipotell
       multitail
       mysql
+      nix-bash-completions
+      nix-zsh-completions
       org2tc
       p7zip
+      paperkey
+      parallel
       pass
       pass-otp
-      parallel
       pinentry_mac
       postgresql
       privoxy
+      (exe haskPkgs.pushme)
       pv
       qemu
       qrencode
       renameutils
       ripgrep
       rlwrap
+      (exe haskPkgs.runmany)
       screen
       silver-searcher
-      srm
+      (exe haskPkgs.simple-mirror)
+      (exe haskPkgs.sizes)
       sqlite
+      srm
       stow
       time
       tmux
       tree
+      tsvutils
+      (exe haskPkgs.una)
       unrar
       unzip
       vim
       watch
       xz
-      z3
-      cvc4
       z
+      z3
       zbar
       zip
       zsh
-      nix-zsh-completions
       zsh-syntax-highlighting
 
       # x11ToolsEnv
