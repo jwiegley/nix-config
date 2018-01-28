@@ -627,7 +627,7 @@ EOF
       #!/bin/bash
       export PASSWORD_STORE_ENABLE_EXTENSIONS="true"
       export PASSWORD_STORE_EXTENSIONS_DIR="${config.system.path}/lib/password-store/extensions";
-      export PASSWORD_STORE_DIR = "${home_directory}/Documents/.passwords";
+      export PASSWORD_STORE_DIR="${home_directory}/Documents/.passwords";
       export GNUPGHOME="${home_directory}/.config/gnupg"
       export GPG_TTY=$(tty)
       if ! pgrep -x "gpg-agent" > /dev/null; then
