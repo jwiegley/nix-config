@@ -349,7 +349,7 @@ let home_directory = builtins.getEnv "HOME";
 
       ignores = [
         "*.elc" "*.vo" "*.aux" "*.v.d" "*.o" "*.a" "*.la" "*.so" "*.dylib"
-        "*~" "#*#"
+        "*~" "#*#" ".makefile" ".clean"
       ];
     };
 
