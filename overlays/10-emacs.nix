@@ -32,6 +32,13 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   inherit (lib) overrideDerivation;
 
 
+  edit-env        = compileLocalFile "edit-env.el";
+  edit-var        = compileLocalFile "edit-var.el";
+  ox-extra        = compileLocalFile "ox-extra.el";
+  rs-gnus-summary = compileLocalFile "rs-gnus-summary.el";
+  supercite       = compileLocalFile "supercite.el";
+
+
   company-coq = withPatches melpaPackages.company-coq
     [ ./emacs/patches/company-coq.patch ];
 
@@ -74,12 +81,6 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   swiper = withPatches melpaPackages.swiper
     [ ./emacs/patches/swiper.patch ];
 
-
-  edit-env        = compileLocalFile "edit-env.el";
-  edit-var        = compileLocalFile "edit-var.el";
-  ox-extra        = compileLocalFile "ox-extra.el";
-  rs-gnus-summary = compileLocalFile "rs-gnus-summary.el";
-  supercite       = compileLocalFile "supercite.el";
 
   ascii = compileEmacsWikiFile {
     name = "ascii.el";
@@ -216,7 +217,7 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchurl {
       url = https://download.tuxfamily.org/user42/bytecomp-simplify.el;
       sha256 = "13cg5nrh0zfyb8rymwlc1lj8mlns27nmj2p7jycl8krwln36g6jr";
-      # date = 2018-01-16T15:05:35-0800;
+      # date = 2018-01-27T17:28:14-0800;
     };
   };
 
@@ -263,9 +264,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "louietan";
       repo = "anki-editor";
-      rev = "b8c48138b90f3a7c5a5f6617b3092ac409f5e899";
-      sha256 = "05xsgpb82adsp97b6h9w825l4larl2py0sk4k7w5hn91v1wbsh52";
-      # date = 2018-01-15T23:38:09+08:00;
+      rev = "01776197ec408bf9efe0b2001dfd87dfc16a074d";
+      sha256 = "1m3rdkahf0nab230ldgcvhxk6iqj4r855k7b346g55jrziscj595";
+      # date = 2018-01-22T17:46:08+08:00;
     };
   };
 
@@ -318,9 +319,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "tautologyclub";
       repo = "feebleline";
-      rev = "9e381c444a6fa9a8c8ea5a2803331a74e7d3321c";
-      sha256 = "0irpn91acfdzp2bppx7np6pf8qvyj630d5n79r3bh2qlx2q9h1mr";
-      # date = 2018-01-15T21:56:42+01:00;
+      rev = "da128c73b14ec6a220d1020f181b12c115c0df6d";
+      sha256 = "0pz0dn3rgmsmjnkr6w3pbcvxzhh0rh74h4awdqpx79vs6jfbi3p6";
+      # date = 2018-01-17T22:22:15+01:00;
     };
   };
 
@@ -419,9 +420,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "collarchoke";
       repo = "ovpn-mode";
-      rev = "378b1f82b29cb9aea835dc0a0a246dd4531d7e1d";
-      sha256 = "06f7lnk82j6aqabdhacqn6mks1a5nls4d8b99lwihvxwhjfm4qgm";
-      # date = "2017-11-29T10:36:58-05:00";
+      rev = "79aa879dcad05e89e7fd32e2cbef78878ddfd857";
+      sha256 = "0dsgk1lycs99xkqkzlkrs7yxjnw3z39r4r7mm8ghqqwdk3r67fw7";
+      # date = "2018-01-24T09:33:00-05:00";
     };
   };
 
@@ -475,9 +476,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "zk-phi";
       repo = "sky-color-clock";
-      rev = "fad28b62479650537bcd19daa8e9f1bed0e2d1bc";
-      sha256 = "0d0izs458j4ksqa6z1ws388z3zrxqvkwvs5gkajqy1zgvchz5hqh";
-      # date = 2018-01-20T12:42:50+09:00;
+      rev = "d9e4b65d8b4fd5d74619c2a5c41a9d0c72ccdbd2";
+      sha256 = "0xfc51h8bjl1m591naxdrq2fz7hflzx4zkmiixifhq699ynza71k";
+      # date = 2018-01-24T17:07:38+09:00;
     };
     patches = [ ./emacs/patches/sky-color-clock.patch ];
   };
@@ -610,9 +611,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "ProofGeneral";
       repo = "PG";
-      rev = "ca601291ddf22739847c629f2d687ab3f68b4786";
-      sha256 = "119ndsdqi50aiv9iz9lwkcb5n4iifx52d9xi5pskf1lzbyp6lrfw";
-      # date = 2018-01-16T14:43:00-05:00;
+      rev = "8762209b3b7aeeaee52d11624eef2a676392c72a";
+      sha256 = "072hzfv4l3wxl9xil11s5gil0ikb8s6pgkycdgl7ks1fcls6lb53";
+      # date = 2018-01-17T10:59:13-05:00;
     };
 
     buildInputs = [ emacs ] ++ (with pkgs; [ texinfo perl which ]);
