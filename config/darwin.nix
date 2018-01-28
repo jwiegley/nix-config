@@ -148,7 +148,8 @@ EOF
   };
 
   environment = {
-    systemPackages = with pkgs; [
+    systemPackages = with pkgs;
+      let exe = haskell.lib.justStaticExecutables; in [
       nixUnstable
       nix-scripts
       nix-prefetch-scripts
@@ -160,6 +161,8 @@ EOF
       diffutils
       ghi
       gist
+      (exe haskPkgs.git-all)
+      (exe haskPkgs.git-monitor)
       git-scripts
       gitRepo
       gitAndTools.git-imerge
@@ -169,8 +172,7 @@ EOF
       gitAndTools.tig
       gitAndTools.git-annex
       gitAndTools.git-annex-remote-rclone
-      (haskell.lib.justStaticExecutables haskPkgs.git-all)
-      (haskell.lib.justStaticExecutables haskPkgs.git-monitor)
+      gitstats
       patch
       patchutils
 
@@ -208,7 +210,7 @@ EOF
       sbcl
       sloccount
       verasco
-      (haskell.lib.justStaticExecutables haskPkgs.nixfmt)
+      (exe haskPkgs.nixfmt)
 
       # mailToolsEnv
       dovecot
@@ -251,25 +253,28 @@ EOF
       zncModules.push
 
       # publishToolsEnv
-      hugo
       biber
+      ditaa
       dot2tex
       doxygen
+      figlet
       graphviz-nox
+      groff
       highlight
+      hugo
       languagetool
       ledger
+      (exe haskPkgs.lhs2tex)
       pdf-tools-server
       plantuml
       poppler
       sdcv
+      (exe haskPkgs.sitebuilder)
       sourceHighlight
-      # texinfo
-      yuicompressor
-      (haskell.lib.justStaticExecutables haskPkgs.lhs2tex)
-      (haskell.lib.justStaticExecutables haskPkgs.sitebuilder)
       texFull
+      # texinfo
       wordnet
+      yuicompressor
 
       # pythonToolsEnv
       python3
@@ -299,14 +304,15 @@ EOF
       gnuplot
       gnused
       gnutar
-      (haskell.lib.justStaticExecutables haskPkgs.hours)
-      (haskell.lib.justStaticExecutables haskPkgs.pushme)
-      (haskell.lib.justStaticExecutables haskPkgs.runmany)
-      (haskell.lib.justStaticExecutables haskPkgs.simple-mirror)
-      (haskell.lib.justStaticExecutables haskPkgs.sizes)
-      (haskell.lib.justStaticExecutables haskPkgs.una)
+      (exe haskPkgs.hours)
+      (exe haskPkgs.pushme)
+      (exe haskPkgs.runmany)
+      (exe haskPkgs.simple-mirror)
+      (exe haskPkgs.sizes)
+      (exe haskPkgs.una)
       htop
       imagemagickBig
+      jdiskreport
       jdk8
       less
       multitail

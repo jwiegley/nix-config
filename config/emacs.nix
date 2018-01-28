@@ -91,6 +91,7 @@ pkgs: epkgs: with epkgs;
   elisp-refs
   elisp-slime-nav
   elmacro
+  emacs-load-time
   emms                          # emms-setup
   emojify
   engine-mode
@@ -240,6 +241,7 @@ pkgs: epkgs: with epkgs;
   noflet
   nov
   oauth2
+  ob-diagrams
   ob-restclient
   olivetti
   operate-on-number

@@ -291,6 +291,17 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     };
   };
 
+  emacs-load-time = compileEmacsFiles {
+    name = "emacs-load-time";
+    src = fetchFromGitHub {
+      owner = "fniessen";
+      repo = "emacs-load-time";
+      rev = "9d31686a76e9792bd06e49ff77c662065ded015c";
+      sha256 = "0zhrfidcxqfld7y67pysdlcvrprrka9sq8065ygqx5yxjb7mxs32";
+      # date = 2014-10-10T16:52:58+02:00;
+    };
+  };
+
   erc-yank = compileEmacsFiles {
     name = "erc-yank";
     src = fetchFromGitHub {
@@ -569,6 +580,22 @@ myEmacsPackageOverrides = emacs: super: self: with self;
       homepage = http://doxymacs.sourceforge.net/;
       license = lib.licenses.gpl2Plus;
       platforms = lib.platforms.unix;
+    };
+  };
+
+  use-package = melpaBuild {
+    pname = "use-package";
+    version = "20180127.1411";
+    src = ~/src/dot-emacs/lisp/use-package;
+    recipeFile = fetchurl {
+      url = "https://raw.githubusercontent.com/milkypostman/melpa/51a19a251c879a566d4ae451d94fcb35e38a478b/recipes/use-package";
+      sha256 = "0d0zpgxhj6crsdi9sfy30fn3is036apm1kz8fhjg1yzdapf1jdyp";
+      name = "use-package";
+    };
+    packageRequires = [ bind-key emacs ];
+    meta = {
+      homepage = "https://melpa.org/#/use-package";
+      license = lib.licenses.free;
     };
   };
 
