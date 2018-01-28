@@ -65,7 +65,7 @@ copy:
 	    $(shell readlink -f /run/current-system)
 
 update-remote:
-	push -f src,oss,bae,home hermes
+	push -f src,home hermes
 	ssh hermes '(cd ~/src/nix ; make switch env-all)'
 
 hermes: copy update-remote

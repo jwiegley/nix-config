@@ -647,13 +647,17 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
 
   buildInputs = emacs25.buildInputs ++ [ git ];
 
-  patches = lib.optional stdenv.isDarwin ./emacs/at-fdcwd.patch;
+  patches = lib.optionals stdenv.isDarwin
+    [ ./emacs/patches/at-fdcwd.patch
+      ./emacs/patches/emacs-26.patch ];
 
   CFLAGS = "-Ofast -momit-leaf-frame-pointer";
 
-  src = builtins.filterSource (path: type:
-      type != "directory" || baseNameOf path != ".git")
-    ~/oss/emacs-release;
+  src = fetchgit {
+    url = https://git.savannah.gnu.org/git/emacs.git;
+    rev = "8d4500087f547e203cfba03f61dcbe641bf650de";
+    sha256 = "1zk9xm01v4chnxf9ns9c3kx2jal3lj88hadv5vp0zb8xr9vz4f31";
+  };
 
   postPatch = ''
     rm -fr .git
@@ -705,7 +709,9 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
 
   buildInputs = emacs25.buildInputs ++ [ git ];
 
-  patches = lib.optional stdenv.isDarwin ./emacs/at-fdcwd.patch;
+  patches = lib.optionals stdenv.isDarwin
+    [ ./emacs/patches/at-fdcwd.patch
+      ./emacs/patches/emacs-26.patch ];
 
   CFLAGS = "-O0 -g3";
 
@@ -714,9 +720,11 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
      "--enable-checking=yes,glyphs"
      "--enable-check-lisp-object-type" ];
 
-  src = builtins.filterSource (path: type:
-      type != "directory" || baseNameOf path != ".git")
-    ~/oss/emacs;
+  src = fetchgit {
+    url = https://git.savannah.gnu.org/git/emacs.git;
+    rev = "614e9b322ec08cf6549cd4db34e1dc75149e6b31";
+    sha256 = "0pbqn33hkwwvw1qrwh0nxn77rj2ryrb1yfbs9sm6j2x9avbfiyha";
+  };
 
   postPatch = ''
     sed -i 's|/usr/share/locale|${gettext}/share/locale|g' \

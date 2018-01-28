@@ -9,7 +9,13 @@ coq_HEAD = pkgs.stdenv.lib.overrideDerivation coq_8_7_override (attrs: rec {
   version = "8.8";
   name = "coq-${version}-pre";
   coq-version = "${version}";
-  src = ~/oss/coq;
+  src = pkgs.fetchFromGitHub {
+    owner = "coq";
+    repo = "coq";
+    rev = "d0e05a1964fb2af093ac2a15a75bb84d342bf1ad";
+    sha256 = "1r4ziwjmq2kh3j52dvb6phpflvkbznkk71fiwnp1klf557li98i5";
+    # date = 2018-01-25T13:52:14+01:00;
+  };
   buildInputs = attrs.buildInputs
     ++ (with pkgs; [ ocaml-ng.ocamlPackages_4_06.num
                      texFull hevea fig2dev imagemagick_light ]);

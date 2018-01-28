@@ -88,7 +88,7 @@ let home_directory = builtins.getEnv "HOME";
   programs = {
     home-manager = {
       enable = true;
-      path = "${home_directory}/oss/home-manager";
+      path = "${home_directory}/src/nix/home-manager";
     };
 
     browserpass = {

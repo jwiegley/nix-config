@@ -1,7 +1,5 @@
 self: pkgs: rec {
 
-z3-debug = false;
-
 ##############################################################################
 # Haskell
 
@@ -10,7 +8,7 @@ myHaskellPackageDefs = super:
 
   # Personal packages
   async-pool       = pkg ~/src/async-pool {};
-  bindings-DSL     = pkg ~/oss/bindings-DSL {};
+  bindings-DSL     = pkg ~/src/bindings-DSL {};
   bytestring-fiat  = pkg ~/src/bytestring/extract {};
   c2hsc            = pkg ~/src/c2hsc {};
   categorical      = pkg ~/src/categorical {};
@@ -51,13 +49,15 @@ myHaskellPackageDefs = super:
   putting-lenses-to-work = pkg ~/Documents/papers/putting-lenses-to-work {};
 
   # Open Source
-  concat-classes   = pkg ~/oss/concat/classes {};
-  concat-examples  = pkg ~/oss/concat/examples {};
-  concat-graphics  = pkg ~/oss/concat/graphics {};
-  concat-inline    = pkg ~/oss/concat/inline {};
-  concat-plugin    = pkg ~/oss/concat/plugin {};
-  freer-effects    = pkg ~/oss/freer-effects {};
-  hs-to-coq        = pkg ~/oss/hs-to-coq/hs-to-coq {};
+  concat-classes   = pkg ~/src/concat/classes {};
+  concat-examples  = pkg ~/src/concat/examples {};
+  concat-graphics  = pkg ~/src/concat/graphics {};
+  concat-inline    = pkg ~/src/concat/inline {};
+  concat-plugin    = pkg ~/src/concat/plugin {};
+  freer-effects    = pkg ~/src/freer-effects {};
+  hs-to-coq        = pkg ~/src/hs-to-coq/hs-to-coq {};
+  pandoc-citeproc  = pkg ~/src/pandoc-citeproc {};
+  timeparsers      = pkg ~/src/timeparsers {};
 
   hours = (pkgs.haskell.lib.dontHaddock (pkg ~/src/hours {}))
     .overrideDerivation (attrs: {
@@ -90,25 +90,7 @@ myHaskellPackageDefs = super:
     license = stdenv.lib.licenses.bsd3;
   }) {};
 
-  z3 = pkg ~/src/haskell-z3 {
-    z3 = if z3-debug
-      then pkgs.z3.overrideDerivation (attrs: {
-        src = ~/oss/z3;
-        configurePhase = ''
-          ${pkgs.python2.interpreter} scripts/mk_make.py --prefix=$out \
-            --python --pypkgdir=$out/${pkgs.python2.sitePackages} -d
-          cd build
-        '';
-      })
-      else pkgs.z3;
-  };
-
-  # BAE packages
-  comparator          = pkg ~/bae/autofocus-deliverable/xhtml/comparator {};
-  generator           = pkg ~/bae/autofocus-deliverable/xhtml/generator {};
-  harness             = pkg ~/bae/autofocus-deliverable/rings-dashboard/mitll-harness {};
-  rings-dashboard     = pkg ~/bae/autofocus-deliverable/rings-dashboard {};
-  rings-dashboard-api = pkg ~/bae/autofocus-deliverable/rings-dashboard/rings-dashboard-api {};
+  z3 = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
 };
 
 haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
@@ -151,7 +133,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   shelly                    = dontCheck super.shelly;
   text-show                 = dontCheck super.text-show;
   time-recurrence           = doJailbreak super.time-recurrence;
-  timeparsers               = doJailbreak (dontCheck (pkg ~/oss/timeparsers {}));
+  timeparsers               = doJailbreak (dontCheck mypkgs.timeparsers);
   units                     = super.units.override { th-desugar = th-desugar_1_6; };
   z3cat                     = dontCheck mypkgs.z3cat;
 
@@ -299,7 +281,6 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   ipcvar                   = dontCheck super.ipcvar;
   lattices                 = doJailbreak super.lattices;
   linearscan-hoopl         = dontCheck super.linearscan-hoopl;
-  pandoc-citeproc          = pkg ~/oss/pandoc-citeproc {};
   pipes-binary             = doJailbreak super.pipes-binary;
   pipes-files              = dontCheck (doJailbreak super.pipes-files);
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
@@ -311,7 +292,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   text-show                = dontCheck super.text-show;
   these                    = doJailbreak super.these;
   time-recurrence          = doJailbreak super.time-recurrence;
-  timeparsers              = doJailbreak (dontCheck (pkg ~/oss/timeparsers {}));
+  timeparsers              = doJailbreak (dontCheck mypkgs.timeparsers);
 
   diagrams-builder = with pkgs; with self; mkDerivation {
     pname = "diagrams-builder";
@@ -374,7 +355,6 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
   ipcvar                   = dontCheck super.ipcvar;
   lattices                 = doJailbreak super.lattices;
   linearscan-hoopl         = dontCheck super.linearscan-hoopl;
-  pandoc-citeproc          = pkg ~/oss/pandoc-citeproc {};
   pipes-binary             = doJailbreak super.pipes-binary;
   pipes-files              = dontCheck (doJailbreak super.pipes-files);
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
@@ -384,7 +364,7 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
   text-icu                 = dontCheck super.text-icu;
   these                    = doJailbreak super.these;
   time-recurrence          = doJailbreak super.time-recurrence;
-  timeparsers              = doJailbreak (dontCheck (pkg ~/oss/timeparsers {}));
+  timeparsers              = doJailbreak (dontCheck mypkgs.timeparsers);
 
   mkDerivation = args: super.mkDerivation (args // {
     enableLibraryProfiling = libProf;
