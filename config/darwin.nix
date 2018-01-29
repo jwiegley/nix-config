@@ -175,6 +175,7 @@ EOF
       gitAndTools.tig
       gitAndTools.git-annex
       gitAndTools.git-annex-remote-rclone
+      github-backup
       gitstats
       pass-git-helper
       patch
