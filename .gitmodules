@@ -7,3 +7,6 @@
 [submodule "home-manager"]
 	path = home-manager
 	url = git://github.com/jwiegley/home-manager.git
+[submodule "forks/timeparsers"]
+	path = forks/timeparsers
+	url = git://github.com/jwiegley/timeparsers.git
