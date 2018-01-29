@@ -116,6 +116,7 @@ pkgs: hpkgs: with hpkgs;
   free
   free-vl
   freer-effects
+  freer-simple
   fsnotify
   fuzzcheck
   generic-lens

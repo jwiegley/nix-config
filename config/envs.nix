@@ -10,6 +10,7 @@ let myEmacsPackages   = import ./emacs.nix pkgs;
   emacs25Env      = pkgs.emacs25Env myEmacsPackages;
 
   ghcHEADEnv      = pkgs.ghcHEADEnv myHaskellPackages;
+  ghcHEADProfEnv  = pkgs.ghcHEADProfEnv myHaskellPackages;
   ghc82Env        = pkgs.ghc82Env myHaskellPackages;
   ghc82ProfEnv    = pkgs.ghc82ProfEnv myHaskellPackages;
   ghc80Env        = pkgs.ghc80Env myHaskellPackages;

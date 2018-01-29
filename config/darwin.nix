@@ -209,7 +209,6 @@ EOF
       lp_solve
       mpfr
       ninja
-      (exe haskPkgs.nixfmt)
       ott
       pkgconfig
       rabbitmq-c

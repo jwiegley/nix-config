@@ -240,6 +240,11 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     };
   };
 
+  jobhours = compileEmacsFiles {
+    name = "jobhours";
+    src = ~/src/hours;
+  };
+
   nf-procmail-mode = compileEmacsFiles {
     name = "nf-procmail-mode.el";
     src = fetchurl {
@@ -528,37 +533,6 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   };
 
 
-  org = mkDerivation rec {
-    name = "emacs-org-${version}";
-    version = "20160421";
-    src = fetchFromGitHub {
-      owner  = "jwiegley";
-      repo   = "org-mode";
-      rev    = "db5257389231bd49e92e2bc66713ac71b0435eec";
-      sha256 = "073cmwgxga14r4ykbgp8w0gjp1wqajmlk6qv9qfnrafgpxic366m";
-    };
-    preBuild = ''
-      rm -f contrib/lisp/org-jira.el
-      makeFlagsArray=(
-        prefix="$out/share"
-        ORG_ADD_CONTRIB="org* ox*"
-      );
-    '';
-    preInstall = ''
-      perl -i -pe "s%/usr/share%$out%;" local.mk
-    '';
-    buildInputs = [ emacs ] ++ (with pkgs; [ texinfo perl which ]);
-    meta = {
-      homepage = "https://elpa.gnu.org/packages/org.html";
-      license = lib.licenses.free;
-    };
-  };
-
-  jobhours = compileEmacsFiles {
-    name = "jobhours";
-    src = ~/src/hours;
-  };
-
   doxymacs = mkDerivation rec {
     name = "emacs-doxymacs-${version}";
     version = "2017-12-10";
@@ -584,18 +558,50 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     };
   };
 
-  use-package = melpaBuild {
-    pname = "use-package";
-    version = "20180127.1411";
-    src = ~/src/dot-emacs/lisp/use-package;
-    recipeFile = fetchurl {
-      url = "https://raw.githubusercontent.com/milkypostman/melpa/51a19a251c879a566d4ae451d94fcb35e38a478b/recipes/use-package";
-      sha256 = "0d0zpgxhj6crsdi9sfy30fn3is036apm1kz8fhjg1yzdapf1jdyp";
-      name = "use-package";
+  elfeed = melpaBuild {
+    pname = "elfeed";
+    version = "20180127.1742";
+    src = fetchFromGitHub {
+      owner = "skeeto";
+      repo = "elfeed";
+      rev = "e2b0e255fc3a3cb3e9d69c05df3b8e9d7ca70e86";
+      sha256 = "1sq2w40ac8nc6pvifl0r5ri255jcd237x5rxfliwd2wdwqhk9izd";
+      # date = 2018-01-27T17:42:53-05:00;
     };
-    packageRequires = [ bind-key emacs ];
+    recipeFile = fetchurl {
+      url = "https://raw.githubusercontent.com/milkypostman/melpa/407ae027fcec444622c2a822074b95996df9e6af/recipes/elfeed";
+      sha256 = "1psga7fcjk2b8xjg10fndp9l0ib72l5ggf43gxp62i4lxixzv8f9";
+      name = "elfeed";
+    };
+    packageRequires = [ emacs ];
     meta = {
-      homepage = "https://melpa.org/#/use-package";
+      homepage = "https://melpa.org/#/elfeed";
+      license = lib.licenses.free;
+    };
+  };
+
+  org = mkDerivation rec {
+    name = "emacs-org-${version}";
+    version = "20160421";
+    src = fetchFromGitHub {
+      owner  = "jwiegley";
+      repo   = "org-mode";
+      rev    = "db5257389231bd49e92e2bc66713ac71b0435eec";
+      sha256 = "073cmwgxga14r4ykbgp8w0gjp1wqajmlk6qv9qfnrafgpxic366m";
+    };
+    preBuild = ''
+      rm -f contrib/lisp/org-jira.el
+      makeFlagsArray=(
+        prefix="$out/share"
+        ORG_ADD_CONTRIB="org* ox*"
+      );
+    '';
+    preInstall = ''
+      perl -i -pe "s%/usr/share%$out%;" local.mk
+    '';
+    buildInputs = [ emacs ] ++ (with pkgs; [ texinfo perl which ]);
+    meta = {
+      homepage = "https://elpa.gnu.org/packages/org.html";
       license = lib.licenses.free;
     };
   };
@@ -635,6 +641,22 @@ myEmacsPackageOverrides = emacs: super: self: with self;
       homepage = http://proofgeneral.inf.ed.ac.uk;
       license = lib.licenses.gpl2Plus;
       platforms = lib.platforms.unix;
+    };
+  };
+
+  use-package = melpaBuild {
+    pname = "use-package";
+    version = "20180127.1411";
+    src = ~/src/dot-emacs/lisp/use-package;
+    recipeFile = fetchurl {
+      url = "https://raw.githubusercontent.com/milkypostman/melpa/51a19a251c879a566d4ae451d94fcb35e38a478b/recipes/use-package";
+      sha256 = "0d0zpgxhj6crsdi9sfy30fn3is036apm1kz8fhjg1yzdapf1jdyp";
+      name = "use-package";
+    };
+    packageRequires = [ bind-key emacs ];
+    meta = {
+      homepage = "https://melpa.org/#/use-package";
+      license = lib.licenses.free;
     };
   };
 };

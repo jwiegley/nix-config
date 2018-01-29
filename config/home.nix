@@ -1,8 +1,10 @@
 { pkgs, ... }:
 
 let home_directory = builtins.getEnv "HOME";
-    lib = pkgs.stdenv.lib; in rec {
+    ca-bundle_crt = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+    lib = pkgs.stdenv.lib; in
 
+rec {
   nixpkgs = {
     config = {
       allowUnfree = true;
@@ -256,9 +258,9 @@ let home_directory = builtins.getEnv "HOME";
         branch.autosetupmerge = true;
         commit.gpgsign        = false;
         github.user           = "jwiegley";
-        ghi.token             = "!/usr/bin/security find-internet-password"
-                              + " -a jwiegley -s github.com -l 'ghi token' -w";
         credential.helper     = "${pkgs.pass-git-helper}/bin/pass-git-helper";
+        ghi.token             =
+          "!${pkgs.pass}/bin/pass api.github.com | head -1";
         hub.protocol          = "https";
         mergetool.keepBackup  = true;
         pull.rebase           = true;
@@ -269,7 +271,7 @@ let home_directory = builtins.getEnv "HOME";
         "magithub \"ci\"".enabled = false;
 
         http = {
-          sslCAinfo = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          sslCAinfo = "${ca-bundle_crt}";
           sslverify = true;
         };
 
@@ -448,10 +450,9 @@ let home_directory = builtins.getEnv "HOME";
 
     configFile."msmtp".text = ''
       defaults
-
       tls on
       tls_starttls on
-      tls_trust_file ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
+      tls_trust_file ${ca-bundle_crt}
 
       account fastmail
       host smtp.fastmail.com
@@ -466,7 +467,7 @@ let home_directory = builtins.getEnv "HOME";
     configFile."fetchmail/config".text = ''
       poll imap.fastmail.com protocol IMAP port 993
         user '${programs.git.userEmail}' there is johnw here
-        ssl sslcertck sslcertfile "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        ssl sslcertck sslcertfile "${ca-bundle_crt}"
         folder INBOX
         fetchall
         mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e"
@@ -475,7 +476,7 @@ let home_directory = builtins.getEnv "HOME";
     configFile."fetchmail/config-lists".text = ''
       poll imap.fastmail.com protocol IMAP port 993
         user '${programs.git.userEmail}' there is johnw here
-        ssl sslcertck sslcertfile "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        ssl sslcertck sslcertfile "${ca-bundle_crt}"
         folder 'Lists'
         fetchall
         mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e -m list.misc"

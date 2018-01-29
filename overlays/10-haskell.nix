@@ -6,16 +6,12 @@ self: pkgs: rec {
 myHaskellPackageDefs = super:
   with super; let pkg = super.callPackage; in rec {
 
-  # Personal packages
   async-pool       = pkg ~/src/async-pool {};
   bindings-DSL     = pkg ~/src/bindings-DSL {};
-  bytestring-fiat  = pkg ~/src/bytestring/extract {};
   c2hsc            = pkg ~/src/c2hsc {};
-  categorical      = pkg ~/src/categorical {};
   commodities      = pkg ~/src/ledger4/commodities {};
   consistent       = pkg ~/src/consistent {};
   coq-haskell      = pkg ~/src/coq-haskell {};
-  extract          = pkg ~/src/bytestring/extract {};
   fuzzcheck        = pkg ~/src/fuzzcheck {};
   git-all          = pkg ~/src/git-all {};
   git-du           = pkg ~/src/git-du {};
@@ -40,24 +36,12 @@ myHaskellPackageDefs = super:
   recursors        = pkg ~/src/recursors {};
   runmany          = pkg ~/src/runmany {};
   simple-mirror    = pkg ~/src/hackage-mirror {};
-  sitebuilder      = pkg ~/Documents/sitebuilder { inherit (pkgs) yuicompressor; };
+  sitebuilder      = pkg ~/src/sitebuilder { inherit (pkgs) yuicompressor; };
   sizes            = pkg ~/src/sizes {};
   una              = pkg ~/src/una {};
+  z3               = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
   z3-generate-api  = pkg ~/src/z3-generate-api { };
   z3cat            = pkg ~/src/z3cat {};
-
-  putting-lenses-to-work = pkg ~/Documents/papers/putting-lenses-to-work {};
-
-  # Open Source
-  concat-classes   = pkg ~/src/concat/classes {};
-  concat-examples  = pkg ~/src/concat/examples {};
-  concat-graphics  = pkg ~/src/concat/graphics {};
-  concat-inline    = pkg ~/src/concat/inline {};
-  concat-plugin    = pkg ~/src/concat/plugin {};
-  freer-effects    = pkg ~/src/freer-effects {};
-  hs-to-coq        = pkg ~/src/hs-to-coq/hs-to-coq {};
-  pandoc-citeproc  = pkg ~/src/pandoc-citeproc {};
-  timeparsers      = pkg ~/src/timeparsers {};
 
   hours = (pkgs.haskell.lib.dontHaddock (pkg ~/src/hours {}))
     .overrideDerivation (attrs: {
@@ -71,27 +55,50 @@ myHaskellPackageDefs = super:
       '';
     });
 
-  nixfmt = pkg ({mkDerivation}: mkDerivation {
-    pname = "nixfmt";
-    version = "1.0.0";
-    src = pkgs.fetchFromGitHub {
-      owner = "Gabriel439";
-      repo = "nixfmt";
-      rev = "ae310b52a99e1fe41110e7ac07f6e477c612b32c";
-      sha256 = "0f6kbcs9dzgah76l5ql1xd8qylw2v4iqswaa99krd6gibf1nh4pw";
-      # date = 2016-09-21T16:51:35-07:00;
-    };
-    isLibrary = false;
-    isExecutable = true;
-    executableHaskellDepends = [ base Earley parsec pretty text ];
-    executableToolDepends = [ alex happy ];
-    homepage = "https://github.com/Gabriel439/nixfmt#readme";
-    description = "Auto-format Nix code";
-    license = stdenv.lib.licenses.bsd3;
-  }) {};
+  hs-to-coq        = pkg ~/src/hs-to-coq/hs-to-coq {};
 
-  z3 = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
+  concat-classes   = pkg ~/src/concat/classes {};
+  concat-examples  = pkg ~/src/concat/examples {};
+  concat-graphics  = pkg ~/src/concat/graphics {};
+  concat-inline    = pkg ~/src/concat/inline {};
+  concat-plugin    = pkg ~/src/concat/plugin {};
+
+  freer-effects = super.freer-effects.overrideDerivation (attrs: {
+    src = pkgs.fetchFromGitHub {
+      owner = "IxpertaSolutions";
+      repo = "freer-effects";
+      rev = "39a7e62cc049d43d36ece4ac24ba19e545f0b726";
+      sha256 = "1iqs45fqp0lbqr7iiy0sjhhys9wk59jbabnwdkxz5lkwq8z7pa9d";
+      # date = 2017-05-10T15:13:24+02:00;
+    };
+  });
+
+  timeparsers = super.timeparsers.overrideDerivation (attrs: {
+    src = pkgs.fetchFromGitHub {
+      owner = "jwiegley";
+      repo = "timeparsers";
+      rev = "ebdc0071f43833b220b78523f6e442425641415d";
+      sha256 = "0h8wkqyvahp0csfcj5dl7j56ib8m1aad5kwcsccaahiciic249xq";
+      # date = 2017-01-19T16:47:50-08:00;
+    };
+  });
 };
+
+haskellFilterSource = paths: src: builtins.filterSource (path: type:
+    let baseName = baseNameOf path; in
+    !( type == "directory"
+       && builtins.elem baseName ([".git" ".cabal-sandbox" "dist"] ++ paths))
+    &&
+    !( type == "unknown"
+       || pkgs.stdenv.lib.hasSuffix ".hdevtools.sock" path
+       || pkgs.stdenv.lib.hasSuffix ".sock" path
+       || pkgs.stdenv.lib.hasSuffix ".hi" path
+       || pkgs.stdenv.lib.hasSuffix ".hi-boot" path
+       || pkgs.stdenv.lib.hasSuffix ".o" path
+       || pkgs.stdenv.lib.hasSuffix ".o-boot" path
+       || pkgs.stdenv.lib.hasSuffix ".dyn_o" path
+       || pkgs.stdenv.lib.hasSuffix ".p_o" path))
+  src;
 
 haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
@@ -330,6 +337,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   recurseForDerivations = true;
 
   mkDerivation = args: super.mkDerivation (args // {
+    # jww (2018-01-28): This crashes due to an infinite loop
     # libraryHaskellDepends =
     #   if builtins.hasAttr "libraryHaskellDepends" args
     #   then args.libraryHaskellDepends
@@ -401,10 +409,19 @@ ghcHEADEnv = myPkgs: pkgs.myEnvFun {
   ];
 };
 
+ghcHEADProfEnv = myPkgs: pkgs.myEnvFun {
+  name = "ghcHEADprof";
+  buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_HEAD; [
+    (ghcWithHoogle myPkgs)
+  ];
+};
+
 ghc82Env = myPkgs: pkgs.myEnvFun {
   name = "ghc82";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_2; [
     (ghcWithHoogle myPkgs)
+    Agda
+    idris
   ];
 };
 
@@ -412,6 +429,8 @@ ghc82ProfEnv = myPkgs: pkgs.myEnvFun {
   name = "ghc82prof";
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_2; [
     (ghcWithHoogle myPkgs)
+    Agda
+    idris
   ];
 };
 
@@ -419,8 +438,6 @@ ghc80Env = myPkgs: pkgs.myEnvFun {
   name = "ghc80";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_0; [
     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-       Agda
-       # idris
        categorical
        concat-inline
        concat-classes
@@ -454,21 +471,5 @@ ghc80ProfEnv = myPkgs: pkgs.myEnvFun {
     splot
   ];
 };
-
-haskellFilterSource = paths: src: builtins.filterSource (path: type:
-    let baseName = baseNameOf path; in
-    !( type == "directory"
-       && builtins.elem baseName ([".git" ".cabal-sandbox" "dist"] ++ paths))
-    &&
-    !( type == "unknown"
-       || pkgs.stdenv.lib.hasSuffix ".hdevtools.sock" path
-       || pkgs.stdenv.lib.hasSuffix ".sock" path
-       || pkgs.stdenv.lib.hasSuffix ".hi" path
-       || pkgs.stdenv.lib.hasSuffix ".hi-boot" path
-       || pkgs.stdenv.lib.hasSuffix ".o" path
-       || pkgs.stdenv.lib.hasSuffix ".o-boot" path
-       || pkgs.stdenv.lib.hasSuffix ".dyn_o" path
-       || pkgs.stdenv.lib.hasSuffix ".p_o" path))
-  src;
 
 }
