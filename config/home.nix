@@ -256,9 +256,9 @@ let home_directory = builtins.getEnv "HOME";
         branch.autosetupmerge = true;
         commit.gpgsign        = false;
         github.user           = "jwiegley";
-        credential.helper     = "osxkeychain";
         ghi.token             = "!/usr/bin/security find-internet-password"
                               + " -a jwiegley -s github.com -l 'ghi token' -w";
+        credential.helper     = "${pkgs.pass-git-helper}/bin/pass-git-helper";
         hub.protocol          = "https";
         mergetool.keepBackup  = true;
         pull.rebase           = true;

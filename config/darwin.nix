@@ -176,6 +176,7 @@ EOF
       gitAndTools.git-annex
       gitAndTools.git-annex-remote-rclone
       gitstats
+      pass-git-helper
       patch
       patchutils
       sift
