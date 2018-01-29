@@ -667,7 +667,7 @@ EOF
       ];
 
     trustedUsers = [ "@admin" ];
-    maxJobs = 4;
+    maxJobs = 12;
     # useSandbox = true;
     distributedBuilds = true;
     buildMachines = [
@@ -675,8 +675,14 @@ EOF
         sshUser = "johnw";
         sshKey = "${home_directory}/.config/ssh/id_local";
         system = "x86_64-darwin";
-        maxJobs = 2;
+        maxJobs = 4;
       }
+      # { hostName = "nixos";
+      #   sshUser = "johnw";
+      #   sshKey = "${home_directory}/.config/ssh/id_local";
+      #   system = "x86_64-linux";
+      #   maxJobs = 2;
+      # }
     ];
 
     binaryCaches = [
