@@ -110,7 +110,6 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
     cabal-install = cabal-install;
     Cabal = Cabal;
   };
-  categorical               = dontCheck mypkgs.categorical;
   commodities               = doJailbreak mypkgs.commodities;
   compressed                = doJailbreak super.compressed;
   concat-classes            = dontHaddock mypkgs.concat-classes;
@@ -438,7 +437,6 @@ ghc80Env = myPkgs: pkgs.myEnvFun {
   name = "ghc80";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_0; [
     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-       categorical
        concat-inline
        concat-classes
        concat-plugin
@@ -457,7 +455,6 @@ ghc80ProfEnv = myPkgs: pkgs.myEnvFun {
   name = "ghc80prof";
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_0; [
     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-       categorical
        concat-inline
        concat-classes
        concat-plugin
