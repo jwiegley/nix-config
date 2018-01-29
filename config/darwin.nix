@@ -236,6 +236,7 @@ EOF
       iperf
       lftp
       mercurialFull
+      mitmproxy
       mtr
       nmap
       openssh
