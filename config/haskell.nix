@@ -115,7 +115,6 @@ pkgs: hpkgs: with hpkgs;
   foldl
   free
   free-vl
-  freer-effects
   freer-simple
   fsnotify
   fuzzcheck

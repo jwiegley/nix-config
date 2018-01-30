@@ -63,16 +63,6 @@ myHaskellPackageDefs = super:
   concat-inline    = pkg ~/src/concat/inline {};
   concat-plugin    = pkg ~/src/concat/plugin {};
 
-  freer-effects = super.freer-effects.overrideDerivation (attrs: {
-    src = pkgs.fetchFromGitHub {
-      owner = "IxpertaSolutions";
-      repo = "freer-effects";
-      rev = "39a7e62cc049d43d36ece4ac24ba19e545f0b726";
-      sha256 = "1iqs45fqp0lbqr7iiy0sjhhys9wk59jbabnwdkxz5lkwq8z7pa9d";
-      # date = 2017-05-10T15:13:24+02:00;
-    };
-  });
-
   timeparsers = super.timeparsers.overrideDerivation (attrs: {
     src = pkgs.fetchFromGitHub {
       owner = "jwiegley";
