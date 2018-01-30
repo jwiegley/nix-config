@@ -311,6 +311,7 @@ EOF
       exiv2
       fd
       findutils
+      fswatch
       fzf
       gawk
       gnugrep
