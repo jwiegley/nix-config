@@ -256,6 +256,7 @@ pkgs: epkgs: with epkgs;
   org-bookmark-heading
   org-noter
   org-opml
+  org-pdfview
   org-ref
   org-super-agenda
   org-web-tools
