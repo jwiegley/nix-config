@@ -308,6 +308,7 @@ EOF
       direnv
       epipe
       exiv2
+      fd
       findutils
       fzf
       gawk
