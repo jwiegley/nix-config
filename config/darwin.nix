@@ -266,6 +266,7 @@ EOF
       dot2tex
       doxygen
       figlet
+      fontconfig
       graphviz-nox
       groff
       highlight
@@ -385,6 +386,8 @@ EOF
       PASSWORD_STORE_ENABLE_EXTENSIONS = "true";
       PASSWORD_STORE_EXTENSIONS_DIR =
         "${config.system.path}/lib/password-store/extensions";
+
+      FONTCONFIG_PATH = "${pkgs.fontconfig.out}/etc/fonts";
 
       MANPATH = [
         "${home_directory}/.nix-profile/share/man"
