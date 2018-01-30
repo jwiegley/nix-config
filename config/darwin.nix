@@ -270,15 +270,18 @@ EOF
       groff
       highlight
       hugo
+      inkscape.out
       languagetool
       ledger
       (exe haskPkgs.lhs2tex)
+      librsvg
       pdf-tools-server
       plantuml
       poppler
       sdcv
       (exe haskPkgs.sitebuilder)
       sourceHighlight
+      svg2tikz
       texFull
       # texinfo
       wordnet
