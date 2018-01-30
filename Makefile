@@ -55,7 +55,7 @@ build-all: darwin-build home-build env-all-build
 switch: darwin-switch home-switch
 
 mirror:
-	git --git-dir=nixpkgs/.git push --mirror jwiegley
+	git --git-dir=nixpkgs/.git push jwiegley unstable:unstable
 	git --git-dir=darwin/.git push --mirror jwiegley
 	git --git-dir=home-manager/.git push --mirror jwiegley
 
