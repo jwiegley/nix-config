@@ -278,7 +278,7 @@ EOF
       librsvg
       pdf-tools-server
       plantuml
-      poppler
+      poppler_utils
       sdcv
       (exe haskPkgs.sitebuilder)
       sourceHighlight

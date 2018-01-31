@@ -375,6 +375,7 @@ pkgs: epkgs: with epkgs;
   word-count-mode               # word-count
   worf
   ws-butler
+  x86-lookup
   xml-rpc
   xray
   yaml-mode
