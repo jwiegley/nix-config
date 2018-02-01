@@ -237,6 +237,7 @@ pkgs: hpkgs: with hpkgs;
   posix-paths
   postgresql-simple
   pretty-show
+  primitive
   process
   process-extras
   profunctors
