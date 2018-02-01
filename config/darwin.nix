@@ -648,6 +648,7 @@ EOF
 
     etc."firefox-wrapper".text = ''
       #!/bin/bash
+      export PATH=${pkgs.gnupg}/bin:${pkgs.pass}/bin:$PATH
       export PASSWORD_STORE_ENABLE_EXTENSIONS="true"
       export PASSWORD_STORE_EXTENSIONS_DIR="${config.system.path}/lib/password-store/extensions";
       export PASSWORD_STORE_DIR="${home_directory}/Documents/.passwords";
