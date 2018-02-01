@@ -269,9 +269,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "louietan";
       repo = "anki-editor";
-      rev = "01776197ec408bf9efe0b2001dfd87dfc16a074d";
-      sha256 = "1m3rdkahf0nab230ldgcvhxk6iqj4r855k7b346g55jrziscj595";
-      # date = 2018-01-22T17:46:08+08:00;
+      rev = "690121ce582105239f8bf20a9c011b8c6bb1661a";
+      sha256 = "168lixn9s3s1p33qw8x6wr5ll6mikkx3316xfsql0bdnz1rkk6cp";
+      # date = 2018-01-28T17:29:35+08:00;
     };
   };
 
@@ -324,9 +324,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "tautologyclub";
       repo = "feebleline";
-      rev = "da128c73b14ec6a220d1020f181b12c115c0df6d";
-      sha256 = "0pz0dn3rgmsmjnkr6w3pbcvxzhh0rh74h4awdqpx79vs6jfbi3p6";
-      # date = 2018-01-17T22:22:15+01:00;
+      rev = "00d891603b1d3c786a2f1e56000296c1573c4456";
+      sha256 = "1p7jiav16r467k5kpbvwphz7690dczhak0ghcmkj9h4gcbklngs1";
+      # date = 2018-01-29T13:25:07+01:00;
     };
   };
 
@@ -617,9 +617,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "ProofGeneral";
       repo = "PG";
-      rev = "8762209b3b7aeeaee52d11624eef2a676392c72a";
-      sha256 = "072hzfv4l3wxl9xil11s5gil0ikb8s6pgkycdgl7ks1fcls6lb53";
-      # date = 2018-01-17T10:59:13-05:00;
+      rev = "945cada601c5729edd16fcc989a3969c8b34d20a";
+      sha256 = "1zjmbhq6c8g8b93nnsvr5pxx6mlcndb0fz152b2h80vfh9663cn8";
+      # date = 2018-01-30T14:28:25+01:00;
     };
 
     buildInputs = [ emacs ] ++ (with pkgs; [ texinfo perl which ]);
