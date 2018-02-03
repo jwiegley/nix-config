@@ -1,4 +1,4 @@
-all: switch
+all: switch env-all
 
 darwin-switch:
 	darwin-rebuild switch -Q
