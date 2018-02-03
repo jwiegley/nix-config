@@ -54,7 +54,9 @@ pkgs: epkgs: with epkgs;
   company-restclient
   copy-as-format
   counsel
+  counsel-dash
   counsel-gtags
+  counsel-osx-app
   counsel-projectile
   crosshairs
   crux
