@@ -46,8 +46,6 @@ pkgs: hpkgs: with hpkgs;
   bytestring-show
   c2hsc
   cabal-helper
-  cabal-install
-  cabal2nix
   case-insensitive
   cassava
   categories
@@ -144,7 +142,6 @@ pkgs: hpkgs: with hpkgs;
   hlibgit2
   hlint
   hnix
-  hpack
   hslogger
   hspec
   hspec-expectations

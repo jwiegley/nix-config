@@ -66,9 +66,6 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   noflet = withPatches melpaPackages.noflet
     [ ./emacs/patches/noflet.patch ];
 
-  org-noter = withPatches melpaPackages.org-noter
-    [ ./emacs/patches/org-noter.patch ];
-
   org-ref = withPatches melpaPackages.org-ref
     [ ./emacs/patches/org-ref.patch ];
 

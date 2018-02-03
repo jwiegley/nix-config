@@ -41,7 +41,6 @@ myHaskellPackageDefs = super:
   una              = pkg ~/src/una {};
   z3               = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
   z3-generate-api  = pkg ~/src/z3-generate-api { };
-  z3cat            = pkg ~/src/z3cat {};
 
   hours = (pkgs.haskell.lib.dontHaddock (pkg ~/src/hours {}))
     .overrideDerivation (attrs: {
@@ -55,13 +54,7 @@ myHaskellPackageDefs = super:
       '';
     });
 
-  hs-to-coq        = pkg ~/src/hs-to-coq/hs-to-coq {};
-
-  concat-classes   = pkg ~/src/concat/classes {};
-  concat-examples  = pkg ~/src/concat/examples {};
-  concat-graphics  = pkg ~/src/concat/graphics {};
-  concat-inline    = pkg ~/src/concat/inline {};
-  concat-plugin    = pkg ~/src/concat/plugin {};
+  hs-to-coq = pkg ~/src/hs-to-coq/hs-to-coq {};
 
   timeparsers = super.timeparsers.overrideDerivation (attrs: {
     src = pkgs.fetchFromGitHub {
@@ -95,18 +88,8 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
 
   Agda                      = dontHaddock super.Agda;
   blaze-builder-enumerator  = doJailbreak super.blaze-builder-enumerator;
-  Cabal                     = super.Cabal_1_24_2_0;
-  cabal-helper              = super.cabal-helper.override {
-    cabal-install = cabal-install;
-    Cabal = Cabal;
-  };
   commodities               = doJailbreak mypkgs.commodities;
   compressed                = doJailbreak super.compressed;
-  concat-classes            = dontHaddock mypkgs.concat-classes;
-  concat-examples           = dontHaddock (dontCheck mypkgs.concat-examples);
-  concat-graphics           = dontCheck mypkgs.concat-graphics;
-  concat-inline             = dontHaddock mypkgs.concat-inline;
-  concat-plugin             = dontHaddock mypkgs.concat-plugin;
   concurrent-output         = doJailbreak super.concurrent-output;
   consistent                = dontCheck mypkgs.consistent;
   derive-storable           = dontCheck super.derive-storable;
@@ -130,8 +113,8 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   text-show                 = dontCheck super.text-show;
   time-recurrence           = doJailbreak super.time-recurrence;
   timeparsers               = doJailbreak (dontCheck mypkgs.timeparsers);
-  units                     = super.units.override { th-desugar = th-desugar_1_6; };
-  z3cat                     = dontCheck mypkgs.z3cat;
+
+  Cabal = super.Cabal_1_24_2_0;
 
   cabal-install = callPackage
     ({ mkDerivation, array, async, base, base16-bytestring, binary
@@ -172,28 +155,29 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
        maintainers = with pkgs.stdenv.lib.maintainers; [ peti ];
      }) { Cabal = Cabal; };
 
-  th-desugar_1_6 = callPackage
-    ({ mkDerivation, base, containers, hspec, HUnit, mtl, syb
-     , template-haskell, th-expand-syns, th-lift, th-orphans
-     }:
-     mkDerivation {
-       pname = "th-desugar";
-       version = "1.6";
-       sha256 = "0kv3gxvr7izvg1s86p92b5318bv7pjghig2hx9q21cg9ppifry68";
-       revision = "2";
-       editedCabalFile = "0rimjzkqky6sq4yba7vqra7hj29903f9xsn2g8rc23abrm35vds3";
-       libraryHaskellDepends = [
-         base containers mtl syb template-haskell th-expand-syns th-lift
-         th-orphans
-       ];
-       testHaskellDepends = [
-         base containers hspec HUnit mtl syb template-haskell th-expand-syns
-         th-lift th-orphans
-       ];
-       homepage = "https://github.com/goldfirere/th-desugar";
-       description = "Functions to desugar Template Haskell";
-       license = stdenv.lib.licenses.bsd3;
-     }) {};
+  cabal-helper = super.cabal-helper.override {
+    cabal-install = cabal-install;
+    Cabal = Cabal;
+  };
+
+  th-desugar_1_6 = mkDerivation {
+    pname = "th-desugar";
+    version = "1.6";
+    sha256 = "0kv3gxvr7izvg1s86p92b5318bv7pjghig2hx9q21cg9ppifry68";
+    revision = "2";
+    editedCabalFile = "0rimjzkqky6sq4yba7vqra7hj29903f9xsn2g8rc23abrm35vds3";
+    libraryHaskellDepends = [
+      base containers mtl syb template-haskell th-expand-syns th-lift
+      th-orphans
+    ];
+    testHaskellDepends = [
+      base containers hspec HUnit mtl syb template-haskell th-expand-syns
+      th-lift th-orphans
+    ];
+    homepage = "https://github.com/goldfirere/th-desugar";
+    description = "Functions to desugar Template Haskell";
+    license = stdenv.lib.licenses.bsd3;
+  };
 
   singletons = dontCheck (doJailbreak (callPackage
     ({ mkDerivation, base, Cabal, containers, directory, filepath, mtl
@@ -214,32 +198,30 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
        license = stdenv.lib.licenses.bsd3;
      }) { th-desugar = th-desugar_1_6; }));
 
-  # lens-family 1.2.2 requires GHC 8.2 or higher
-  lens-family = callPackage
-    ({ mkDerivation, base, containers, lens-family-core, mtl
-     , transformers
-     }:
-     mkDerivation {
-       pname = "lens-family";
-       version = "1.2.1";
-       sha256 = "1dwsrli94i8vs1wzfbxbxh49qhn8jn9hzmxwgd3dqqx07yx8x0s1";
-       libraryHaskellDepends = [
-         base containers lens-family-core mtl transformers
-       ];
-       description = "Lens Families";
-       license = stdenv.lib.licenses.bsd3;
-     }) {};
+  units = super.units.override {
+    th-desugar = th-desugar_1_6;
+  };
 
-  lens-family-core = callPackage
-    ({ mkDerivation, base, containers, transformers }:
-     mkDerivation {
-       pname = "lens-family-core";
-       version = "1.2.1";
-       sha256 = "190r3n25m8x24nd6xjbbk9x0qhs1mw22xlpsbf3cdp3cda3vkqwm";
-       libraryHaskellDepends = [ base containers transformers ];
-       description = "Haskell 98 Lens Families";
-       license = stdenv.lib.licenses.bsd3;
-     }) {};
+  # lens-family 1.2.2 requires GHC 8.2 or higher
+  lens-family = mkDerivation {
+    pname = "lens-family";
+    version = "1.2.1";
+    sha256 = "1dwsrli94i8vs1wzfbxbxh49qhn8jn9hzmxwgd3dqqx07yx8x0s1";
+    libraryHaskellDepends = [
+      base containers lens-family-core mtl transformers
+    ];
+    description = "Lens Families";
+    license = stdenv.lib.licenses.bsd3;
+  };
+
+  lens-family-core = mkDerivation {
+    pname = "lens-family-core";
+    version = "1.2.1";
+    sha256 = "190r3n25m8x24nd6xjbbk9x0qhs1mw22xlpsbf3cdp3cda3vkqwm";
+    libraryHaskellDepends = [ base containers transformers ];
+    description = "Haskell 98 Lens Families";
+    license = stdenv.lib.licenses.bsd3;
+  };
 
   haskell-src-exts-simple_1_20_0_0 =
     super.haskell-src-exts-simple_1_20_0_0.override {
@@ -427,14 +409,8 @@ ghc80Env = myPkgs: pkgs.myEnvFun {
   name = "ghc80";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_0; [
     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-       concat-inline
-       concat-classes
-       concat-plugin
-       concat-examples
-       concat-graphics
        singletons
        units
-       z3cat
      ])))
 
     splot
@@ -445,14 +421,8 @@ ghc80ProfEnv = myPkgs: pkgs.myEnvFun {
   name = "ghc80prof";
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_0; [
     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-       concat-inline
-       concat-classes
-       concat-plugin
-       concat-examples
-       concat-graphics
        singletons
        units
-       z3cat
      ])))
 
     splot

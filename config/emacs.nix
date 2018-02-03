@@ -199,7 +199,7 @@ pkgs: epkgs: with epkgs;
   lentic                        # lentic-mode
   lispy
   list-utils
-  llvm-mode
+  #llvm-mode
   logito
   loop
   lsp-haskell

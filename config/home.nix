@@ -131,8 +131,6 @@ rec {
         l = "${pkgs.git}/bin/git l";
         w = "${pkgs.git}/bin/git w";
 
-        u = "${pkgs.gnumake}/bin/make -C ${home_directory}/src/nix -f Makefile";
-
         g   = "${pkgs.gitAndTools.hub}/bin/hub";
         git = "${pkgs.gitAndTools.hub}/bin/hub";
         ga  = "${pkgs.gitAndTools.git-annex}/bin/git-annex";

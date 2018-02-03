@@ -195,11 +195,14 @@ EOF
       R
       autoconf
       automake
+      (exe haskPkgs.cabal2nix)
+      (exe haskPkgs.cabal-install)
       clang
       cmake
       global
       gmp
       gnumake
+      (exe haskPkgs.hpack)
       htmlTidy
       idutils
       lean
@@ -409,10 +412,7 @@ EOF
     };
 
     shellAliases = {
-      rehash  = "hash -r";
-      snaplog = "${pkgs.git}/bin/git log refs/snapshots/\\$(${pkgs.git}/bin/git symbolic-ref HEAD)";
-      darwin  = "darwin-rebuild switch";
-      home    = "${pkgs.home-manager}/bin/home-manager switch";
+      rehash = "hash -r";
     };
 
     pathsToLink = [ "/info" "/etc" "/share" "/lib" "/libexec" ];
@@ -677,7 +677,7 @@ EOF
       ];
 
     trustedUsers = [ "@admin" ];
-    maxJobs = 12;
+    maxJobs = 8;
     # useSandbox = true;
     distributedBuilds = true;
     buildMachines = [
