@@ -282,6 +282,7 @@ EOF
       pdf-tools-server
       plantuml
       poppler_utils
+      qpdf
       sdcv
       (exe haskPkgs.sitebuilder)
       sourceHighlight
