@@ -378,6 +378,8 @@ EOF
       Anki
       Firefox
       GIMP
+      # LaTeXiT
+      Transmission
       VLC
     ];
 

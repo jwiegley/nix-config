@@ -39,7 +39,7 @@ Anki = self.installApplication rec {
     # date = 2018-02-02T15:42:49-0800;
   };
   description = "Anki is a program which makes remembering things easy";
-  homepage = https://apps.ankiweb.net/;
+  homepage = https://apps.ankiweb.net;
 };
 
 Firefox = self.installApplication rec {
@@ -79,7 +79,7 @@ EOF
     done
   '';
   description = "Anki is a program which makes remembering things easy";
-  homepage = https://apps.ankiweb.net/;
+  homepage = https://apps.ankiweb.net;
 };
 
 GIMP = self.installApplication rec {
@@ -93,8 +93,20 @@ GIMP = self.installApplication rec {
     # date = 2018-02-04T13:08:53-0800;
   };
   description = "GIMP is a cross-platform image editor";
-  homepage = https://www.gimp.org/;
+  homepage = https://www.gimp.org;
 };
+
+# LaTeXiT = self.installApplication rec {
+#   name = "LaTeXiT";
+#   version = "2.8.1";
+#   src = super.fetchurl {
+#     url = "https://www.chachatelier.fr/latexit/downloads/LaTeXiT-2_8_1.dmg";
+#     sha256 = "error: unable to download 'https://www.chachatelier.fr/latexit/downloads/LaTeXiT-2_8_1.dmg': HTTP error 403 (curl error: No error)";
+#     # date = 2018-02-04T14:46:50-0800;
+#   };
+#   description = "LaTeXiT is a graphical interface above a LaTeX engine";
+#   homepage = https://www.chachatelier.fr/latexit;
+# };
 
 # SageMath = self.installApplication rec {
 #   name = "SageMath";
@@ -105,8 +117,20 @@ GIMP = self.installApplication rec {
 #     # date = 2018-02-04T13:08:53-0800;
 #   };
 #   description = "GIMP is a cross-platform image editor";
-#   homepage = https://www.gimp.org/;
+#   homepage = https://www.gimp.org;
 # };
+
+Transmission = self.installApplication rec {
+  name = "Transmission";
+  version = "896de2b593";
+  src = super.fetchurl {
+    url = "https://build.transmissionbt.com/job/trunk-mac/lastSuccessfulBuild/artifact/release/Transmission-${version}.dmg";
+    sha256 = "0c8yx461kbgwqzz3b97n2i9hk19sk6m9rh5r7r87a7dwwnmrcj32";
+    # date = 2018-02-04T14:23:15-0800;
+  };
+  description = "Cross-platform BitTorrent client";
+  homepage = https://transmissionbt.com;
+};
 
 VLC = self.installApplication rec {
   name = "VLC";
@@ -119,5 +143,22 @@ VLC = self.installApplication rec {
   description = "VLC is a free and open source cross-platform multimedia player";
   homepage = https://www.videolan.org/vlc;
 };
+
+# Dash
+# Deskzilla Lite
+# HandBrake
+# Protégé
+# Slate
+# Suspicious Package
+# Ukelele
+# UnicodeChecker
+# YubiKey NEO Manager
+# YubiKey PIV Manager
+# YubiKey Personalization Tool
+# Yubico Authenticator
+# Zekr
+# Zotero
+# fseventer
+# iTerm
 
 }
