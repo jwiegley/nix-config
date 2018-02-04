@@ -361,6 +361,7 @@ EOF
       sqlite
       srm
       stow
+      terminal-notifier
       time
       tmux
       tree
@@ -383,6 +384,10 @@ EOF
       # xorg.xhost
       # xorg.xauth
       # ratpoison
+
+      # Applications
+      Anki
+      VLC
     ];
 
     variables = {
