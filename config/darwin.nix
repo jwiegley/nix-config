@@ -119,17 +119,6 @@ EOF
         || exit 0
 
     cp -pL /etc/DefaultKeyBinding.dict ${home_directory}/Library/KeyBindings/DefaultKeyBinding.dict
-
-    if [[ ! -f /Applications/Firefox.app/Contents/MacOS/.firefox ]]; then
-        mv /Applications/Firefox.app/Contents/MacOS/firefox \
-           /Applications/Firefox.app/Contents/MacOS/.firefox
-        mv /Applications/Firefox.app/Contents/MacOS/firefox-bin \
-           /Applications/Firefox.app/Contents/MacOS/.firefox-bin
-        cp -pL /etc/firefox-wrapper /Applications/Firefox.app/Contents/MacOS/firefox
-        chmod +x /Applications/Firefox.app/Contents/MacOS/firefox
-        cp -pL /etc/firefox-wrapper /Applications/Firefox.app/Contents/MacOS/firefox-bin
-        chmod +x /Applications/Firefox.app/Contents/MacOS/firefox-bin
-    fi
   '';
 
   nixpkgs = {
@@ -387,6 +376,8 @@ EOF
 
       # Applications
       Anki
+      Firefox
+      GIMP
       VLC
     ];
 
@@ -648,22 +639,6 @@ EOF
         "^t"	  = "transpose:";      /* C-t */
         "~t"	  = "transposeWords:"; /* M-t */
       }
-    '';
-
-    etc."firefox-wrapper".text = ''
-      #!/bin/bash
-      export PATH=${pkgs.gnupg}/bin:${pkgs.pass}/bin:$PATH
-      export PASSWORD_STORE_ENABLE_EXTENSIONS="true"
-      export PASSWORD_STORE_EXTENSIONS_DIR="${config.system.path}/lib/password-store/extensions";
-      export PASSWORD_STORE_DIR="${home_directory}/Documents/.passwords";
-      export GNUPGHOME="${home_directory}/.config/gnupg"
-      export GPG_TTY=$(tty)
-      if ! pgrep -x "gpg-agent" > /dev/null; then
-          ${pkgs.gnupg}/gpgconf --launch gpg-agent
-      fi
-      dir=$(dirname "$0")
-      name=$(basename "$0")
-      exec "$dir"/."$name" "$@"
     '';
   };
 
