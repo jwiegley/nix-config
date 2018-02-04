@@ -82,7 +82,6 @@ pkgs: epkgs: with epkgs;
   dockerfile-mode
   doxymacs
   dumb-jump
-  easy-kill
   ebdb                          # ebdb-com
   edit-env
   edit-indirect
@@ -279,7 +278,6 @@ pkgs: epkgs: with epkgs;
   paradox
   paredit
   parent-mode
-  parinfer
   parsebib
   parsec
   parsec
