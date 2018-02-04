@@ -392,8 +392,6 @@ EOF
       PASSWORD_STORE_EXTENSIONS_DIR =
         "${config.system.path}/lib/password-store/extensions";
 
-      FONTCONFIG_PATH = "${pkgs.fontconfig.out}/etc/fonts";
-
       MANPATH = [
         "${home_directory}/.nix-profile/share/man"
         "${home_directory}/.nix-profile/man"

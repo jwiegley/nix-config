@@ -43,6 +43,9 @@ rec {
       SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
       STARDICT_DATA_DIR  = "${xdg.dataHome}/dictionary";
       WWW_HOME           = "${xdg.cacheHome}/w3m";
+      # FONTCONFIG_PATH    = "${pkgs.fontconfig.out}/etc/fonts";
+      FONTCONFIG_PATH    = "${xdg.configHome}/fontconfig";
+      FONTCONFIG_FILE    = "${xdg.configHome}/fontconfig/fonts.conf";
 
       PASSWORD_STORE_DIR = "${home_directory}/Documents/.passwords";
 
