@@ -278,7 +278,4 @@ Zotero = self.installApplication rec {
   homepage = https://www.zotero.org;
 };
 
-# Dash
-# Deskzilla Lite
-
 }
