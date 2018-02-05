@@ -378,9 +378,12 @@ EOF
       Anki
       Firefox
       GIMP
-      # LaTeXiT
+      HandBrake
+      Slate
       Transmission
       VLC
+      Zekr
+      Zotero
     ];
 
     variables = {

@@ -2,24 +2,17 @@ self: super: {
 
 installApplication = 
   { name, appname ? name, version, src, description, homepage, 
-    postInstall ? "", ... }:
+    postInstall ? "", sourceRoot ? ".", ... }:
   with super; stdenv.mkDerivation {
     name = "${name}-${version}";
     version = "${version}";
     src = src;
     buildInputs = [ undmg ];
+    sourceRoot = sourceRoot;
     phases = [ "unpackPhase" "installPhase" ];
-    unpackPhase = ''
-      undmg < "${src}"
-    '';
     installPhase = ''
-      if [[ $(find . -maxdepth 1 -name '*.app' -type d | wc -l) == 0 ]]; then
-        mkdir -p "$out/Applications/${appname}.app"
-        cp -pR * "$out/Applications/${appname}.app"
-      else
-        mkdir -p $out/Applications
-        cp -pR *.app $out/Applications
-      fi
+      mkdir -p "$out/Applications/${appname}.app"
+      cp -pR * "$out/Applications/${appname}.app"
     '' + postInstall;
     # postInstall = postInstall;
     meta = with stdenv.lib; {
@@ -45,6 +38,7 @@ Anki = self.installApplication rec {
 Firefox = self.installApplication rec {
   name = "Firefox";
   version = "58.0.1";
+  sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
@@ -96,6 +90,35 @@ GIMP = self.installApplication rec {
   homepage = https://www.gimp.org;
 };
 
+HandBrake = self.installApplication rec {
+  name = "HandBrake";
+  version = "1.0.7";
+  sourceRoot = "HandBrake.app";
+  src = super.fetchurl {
+    url = "https://download2.handbrake.fr/${version}/HandBrake-${version}.dmg";
+    sha256 = "1ql9xx9bh88c0xhsva2bsmdnxix3cw7lmm6wfjak84d2ilifdliw";
+    # date = 2018-02-04T15:50:05-0800;
+  };
+  description = ''
+    HandBrake is a tool for converting video from nearly any format to a
+    selection of modern, widely supported codecs
+  '';
+  homepage = https://handbrake.fr;
+};
+
+iTerm2 = self.installApplication rec {
+  name = "iTerm2";
+  appname = "iTerm";
+  version = "3.1.6beta1";
+  src = super.fetchurl {
+    url = "https://iterm2.com/downloads/beta/iTerm2-3_1_6beta1.zip";
+    sha256 = "1hsgib46f098s10gg2s2810vpyj9c89qs0aivhrpgvp2vm84jhas";
+    # date = 2018-02-04T15:47:24-0800;
+  };
+  description = "iTerm2 is a replacement for Terminal and the successor to iTerm";
+  homepage = https://www.iterm2.com;
+};
+
 # LaTeXiT = self.installApplication rec {
 #   name = "LaTeXiT";
 #   version = "2.8.1";
@@ -120,9 +143,24 @@ GIMP = self.installApplication rec {
 #   homepage = https://www.gimp.org;
 # };
 
+Slate = self.installApplication rec {
+  name = "Slate";
+  version = "1.0.25";
+  src = super.fetchurl {
+    url = "http://slate.ninjamonkeysoftware.com/Slate.dmg";
+    sha256 = "0gr27s0a150sy2rf0vqw0mw32k21wh4v7b1n2ngzfr0wbdfkg3j2";
+    # date = 2018-02-04T15:50:51-0800;
+  };
+  description = ''
+    A window management application (replacement for Divvy/SizeUp/ShiftIt)
+  '';
+  homepage = https://github.com/jigish/slate;
+};
+
 Transmission = self.installApplication rec {
   name = "Transmission";
   version = "896de2b593";
+  sourceRoot = "Transmission.app";
   src = super.fetchurl {
     url = "https://build.transmissionbt.com/job/trunk-mac/lastSuccessfulBuild/artifact/release/Transmission-${version}.dmg";
     sha256 = "0c8yx461kbgwqzz3b97n2i9hk19sk6m9rh5r7r87a7dwwnmrcj32";
@@ -135,6 +173,7 @@ Transmission = self.installApplication rec {
 VLC = self.installApplication rec {
   name = "VLC";
   version = "2.2.8";
+  sourceRoot = "VLC.app";
   src = super.fetchurl {
     url = "https://get.videolan.org/vlc/${version}/macosx/vlc-${version}.dmg";
     sha256 = "09x0sbzrs1sknw6bd549zgfq15ir7q6hflqyn4x71ib6qljy01j4";
@@ -144,11 +183,37 @@ VLC = self.installApplication rec {
   homepage = https://www.videolan.org/vlc;
 };
 
+Zekr = self.installApplication rec {
+  name = "Zekr";
+  version = "1.1.0";
+  src = super.fetchurl {
+    name = "zekr-${version}-mac_64.tgz";
+    url = "http://sourceforge.net/projects/zekr/files/Zekr/zekr-${version}/zekr-${version}-mac_64.tgz/download";
+    sha256 = "0615cw21da3bxwyws718y889h9hdcy50s5r7famjj3i51w1zrhcm";
+    # date = 2018-02-04T15:38:19-0800;
+  };
+  description = "Open-source Holy Qur'an browser for the Mac";
+  homepage = http://zekr.org/quran/en/quran-for-mac;
+};
+
+Zotero = self.installApplication rec {
+  name = "Zotero";
+  version = "5.0.34.6";
+  src = super.fetchurl {
+    name = "zotero-${version}.dmg";
+    url = "https://www.zotero.org/download/client/dl?channel=release&platform=mac&version=5.0.34.6";
+    sha256 = "0dcphxhi2f566cqn5avihwp63kijs2wj49zccafcl8gllw861y4p";
+    # date = 2018-02-04T15:54:54-0800;
+  };
+  description = ''
+    Zotero is a free, easy-to-use tool to help you collect, organize, cite,
+    and share your research sources
+  '';
+  homepage = https://www.zotero.org;
+};
+
 # Dash
 # Deskzilla Lite
-# HandBrake
-# Protégé
-# Slate
 # Suspicious Package
 # Ukelele
 # UnicodeChecker
@@ -156,9 +221,5 @@ VLC = self.installApplication rec {
 # YubiKey PIV Manager
 # YubiKey Personalization Tool
 # Yubico Authenticator
-# Zekr
-# Zotero
-# fseventer
-# iTerm
 
 }
