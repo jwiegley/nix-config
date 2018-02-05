@@ -361,6 +361,9 @@ EOF
       vim
       watch
       xz
+      yubico-piv-tool
+      yubikey-manager
+      yubikey-personalization
       z
       z3
       zbar
@@ -380,7 +383,10 @@ EOF
       GIMP
       HandBrake
       Slate
+      SuspiciousPackage
       Transmission
+      Ukelele
+      UnicodeChecker
       VLC
       Zekr
       Zotero
