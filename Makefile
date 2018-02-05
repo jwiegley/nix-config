@@ -74,7 +74,18 @@ working: tag-working mirror copy update-remote
 
 update: tag-before pull build-all switch env-all working
 
+CACHE=/Volumes/mybook/Cache
+
 gc:
-	find ~ \( -name dist -type d -o -name result -type l \) -print0 \
+	find /nix/store -maxdepth 1 -type f			\
+	    \( -name '*.dmg' -o					\
+	       -name '*.zip' -o					\
+	       -name '*gz'   -o					\
+	       -name '*xz'   -o					\
+	       -name '*.tar' \) -print0				\
+	    | parallel -0 cp -upv {} $(CACHE)
+	find $(HOME)				\
+	    \( -name dist -type d -o		\
+	       -name result -type l \) -print0	\
 	    | parallel -0 /bin/rm -fr {}
-	nix-garbage-collect --delete-older-than 14d
+	nix-collect-garbage --delete-older-than 14d
