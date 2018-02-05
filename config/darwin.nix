@@ -379,6 +379,8 @@ EOF
 
       # Applications
       Anki
+      Dash
+      DeskzillaLite
       Firefox
       GIMP
       HandBrake

@@ -35,6 +35,33 @@ Anki = self.installApplication rec {
   homepage = https://apps.ankiweb.net;
 };
 
+Dash = self.installApplication rec {
+  name = "Dash";
+  version = "4.1.3";
+  src = super.fetchurl {
+    url = https://kapeli.com/downloads/v4/Dash.zip;
+    sha256 = "073fzga9gra5rln7cixj50h7c6zgajhd2jibslkx2qrdbry67mc4";
+    # date = 2018-02-04T16:32:27-0800;
+  };
+  description = "Dash is an API Documentation Browser and Code Snippet Manager";
+  homepage = https://kapeli.com/dash;
+};
+
+DeskzillaLite = self.installApplication rec {
+  name = "DeskzillaLite";
+  appname = "Deskzilla Lite";
+  version = "3.2.1";
+  src = super.fetchurl {
+    url = https://d1.almworks.com/.files/deskzilla-lite-3_2_1.dmg;
+    sha256 = "0w2hqmznsk3qic2c6f3cycvmjpgvscckd9b0ljqfcrhkla4bv505";
+    # date = 2018-02-04T16:36:09-0800;
+  };
+  description = ''
+    Deskzilla is a desktop client for Mozilla's Bugzilla bug tracking system
+  '';
+  homepage = http://almworks.com/deskzilla;
+};
+
 Firefox = self.installApplication rec {
   name = "Firefox";
   version = "58.0.1";
