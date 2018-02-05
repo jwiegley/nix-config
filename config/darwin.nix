@@ -188,6 +188,15 @@ EOF
       (exe haskPkgs.cabal-install)
       clang
       cmake
+      fftw
+      fftw.dev
+      fftw.man
+      fftwFloat
+      fftwFloat.dev
+      fftwFloat.man
+      fftwLongDouble
+      fftwLongDouble.dev
+      fftwLongDouble.man
       global
       gmp
       gnumake
@@ -381,19 +390,37 @@ EOF
       Anki
       Dash
       DeskzillaLite
+      DEVONagentPro
+      DEVONthinkPro
+      Docker
       Firefox
       GIMP
       HandBrake
-      iTerm2
+      KeyboardMaestro
+      LaTeXiT
+      LaunchBar
+      OmniGrafflePro_6
+      OmniOutlinerPro
+      PathFinder
+      PhoneView
+      RipIt
+      SageMath
       Skim
       Slate
+      Soulver
       SuspiciousPackage
       Transmission
       Ukelele
       UnicodeChecker
       VLC
+      VirtualII
       Zekr
       Zotero
+      iTerm2
+    ];
+
+    systemPath = [
+      "${pkgs.Docker}/Applications/Docker.app/Contents/Resources/bin"
     ];
 
     variables = {
@@ -425,7 +452,7 @@ EOF
       rehash = "hash -r";
     };
 
-    pathsToLink = [ "/info" "/etc" "/share" "/lib" "/libexec" ];
+    pathsToLink = [ "/info" "/etc" "/share" "/include" "/lib" "/libexec" ];
 
     etc."dovecot/dovecot.conf".text = ''
       auth_mechanisms = plain

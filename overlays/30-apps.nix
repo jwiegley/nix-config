@@ -14,7 +14,6 @@ installApplication =
       mkdir -p "$out/Applications/${appname}.app"
       cp -pR * "$out/Applications/${appname}.app"
     '' + postInstall;
-    # postInstall = postInstall;
     meta = with stdenv.lib; {
       description = description;
       homepage = homepage;
@@ -63,6 +62,68 @@ DeskzillaLite = self.installApplication rec {
     Deskzilla is a desktop client for Mozilla's Bugzilla bug tracking system
   '';
   homepage = http://almworks.com/deskzilla;
+};
+
+DEVONagentPro = super.stdenv.lib.overrideDerivation (self.installApplication rec {
+  name = "DEVONagentPro";
+  appname = "DEVONagent";
+  version = "3.9.8";
+  sourceRoot = "DEVONagent.app";
+  src = super.fetchurl {
+    url = "https://s3.amazonaws.com/DTWebsiteSupport/download/devonagent/${version}/DEVONagent_Pro.dmg.zip";
+    sha256 = "0wr7is69q9vn6kzg624kx1zs7jp2rx3f85xfzhqhg8pzlhrdv4cr";
+    # date = 2018-02-05T00:00:54-0800;
+  };
+  description = ''
+    DEVONagent Pro helps you search more efficiently on the web. It searches
+    multiple sources, frees you from hunting for the really relevant results,
+    and gives you power tools for your research.
+  '';
+  homepage = http://www.devontechnologies.com/products/devonagent/devonagent-pro.html;
+}) (attrs: {
+  unpackPhase = ''
+    unzip -q ${attrs.src}
+    undmg < DEVONagent_Pro.dmg
+  '';
+});
+
+DEVONthinkPro = super.stdenv.lib.overrideDerivation (self.installApplication rec {
+  name = "DEVONthinkPro";
+  appname = "DEVONthink Pro";
+  version = "2.9.17";
+  sourceRoot = "DEVONthink Pro.app";
+  src = super.fetchurl {
+    url = "https://s3.amazonaws.com/DTWebsiteSupport/download/devonthink/${version}/DEVONthink_Pro.dmg.zip";
+    sha256 = "04iz6z65czir80nc22b47qdqk2132cjbmi6sq2njkjb407wmyq0d";
+    # date = 2018-02-04T23:54:35-0800;
+  };
+  description = ''
+    DEVONthink Pro Office is your Mac paperless office. It stores all your
+    documents, helps you keep them organized, and presents you with what you
+    need to get the job done.
+  '';
+  homepage = http://www.devontechnologies.com/products/devonthink/devonthink-pro-office.html;
+}) (attrs: {
+  unpackPhase = ''
+    unzip -q ${attrs.src}
+    undmg < DEVONthink_Pro.dmg
+  '';
+});
+
+Docker = self.installApplication rec {
+  name = "Docker";
+  version = "17.12.0-ce-mac49";
+  sourceRoot = "Docker.app";
+  src = super.fetchurl {
+    url = https://download.docker.com/mac/stable/Docker.dmg;
+    sha256 = "0dvr3mlvrwfc9ab6dyx351vraqx01lzxgz8vrczs0vhm2rpv3kdy";
+    # date = 2018-02-04T16:36:09-0800;
+  };
+  description = ''
+    Docker CE for Mac is an easy-to-install desktop app for building,
+    debugging, and testing Dockerized apps on a Mac
+  '';
+  homepage = https://store.docker.com/editions/community/docker-ce-desktop-mac;
 };
 
 Firefox = self.installApplication rec {
@@ -141,6 +202,7 @@ iTerm2 = self.installApplication rec {
   name = "iTerm2";
   appname = "iTerm";
   version = "3.1.6beta1";
+  sourceRoot = "iTerm.app";
   src = super.fetchurl {
     url = "https://iterm2.com/downloads/beta/iTerm2-3_1_6beta1.zip";
     sha256 = "1hsgib46f098s10gg2s2810vpyj9c89qs0aivhrpgvp2vm84jhas";
@@ -150,29 +212,139 @@ iTerm2 = self.installApplication rec {
   homepage = https://www.iterm2.com;
 };
 
-# LaTeXiT = self.installApplication rec {
-#   name = "LaTeXiT";
-#   version = "2.8.1";
-#   src = super.fetchurl {
-#     url = "https://www.chachatelier.fr/latexit/downloads/LaTeXiT-2_8_1.dmg";
-#     sha256 = "error: unable to download 'https://www.chachatelier.fr/latexit/downloads/LaTeXiT-2_8_1.dmg': HTTP error 403 (curl error: No error)";
-#     # date = 2018-02-04T14:46:50-0800;
-#   };
-#   description = "LaTeXiT is a graphical interface above a LaTeX engine";
-#   homepage = https://www.chachatelier.fr/latexit;
-# };
+KeyboardMaestro = self.installApplication rec {
+  name = "KeyboardMaestro";
+  appname = "Keyboard Maestro";
+  version = "8.0.5";
+  sourceRoot = "Keyboard Maestro.app";
+  src = super.fetchurl {
+    url = http://files.stairways.com/keyboardmaestro-805.zip;
+    sha256 = "1hif5hn97hqmqvz8vwbwmjd1kqyp575ridy54h7g6plghjp7w660";
+    # date = 2018-02-04T22:01:26-0800;
+  };
+  description = "Keyboard macro program for macOS";
+  homepage = https://www.keyboardmaestro.com;
+};
 
-# SageMath = self.installApplication rec {
-#   name = "SageMath";
-#   version = "8.1";
-#   src = super.fetchurl {
-#     url = "http://mirrors.xmission.com/sage/osx/intel/sage-${version}-OSX_10.12.6-x86_64.dmg";
-#     sha256 = "163gdv3iylf5l7vl5zd1a80az8pnlbilqcmhwgjqjf44rr5krk0k";
-#     # date = 2018-02-04T13:08:53-0800;
-#   };
-#   description = "GIMP is a cross-platform image editor";
-#   homepage = https://www.gimp.org;
-# };
+LaTeXiT = self.installApplication rec {
+  name = "LaTeXiT";
+  version = "2.8.1";
+  sourceRoot = "LaTeXiT.app";
+  src = super.fetchurl {
+    url = https://www.chachatelier.fr/latexit/downloads/LaTeXiT-2_8_1.dmg;
+    sha256 = "1jpgz61w8p2kz7gvlxjnh0f91nwl2ap826kfgw5zdd2pznnwnb5b";
+    # date = 2018-02-04T14:46:50-0800;
+  };
+  description = "LaTeXiT is a graphical interface above a LaTeX engine";
+  homepage = https://www.chachatelier.fr/latexit;
+};
+
+LaunchBar = self.installApplication rec {
+  name = "LaunchBar";
+  version = "6.9.4";
+  sourceRoot = "LaunchBar.app";
+  src = super.fetchurl {
+    url = "https://www.obdev.at/downloads/launchbar/LaunchBar-6.9.4.dmg";
+    sha256 = "19k8g2w10qi400rak6894w3lc5j58sq5sfd2r51w9y4fb1wwgg8v";
+    # date = 2018-02-04T23:37:26-0800;
+  };
+  description = ''
+    Start with a single keyboard shortcut to access and control every aspect
+    of your digital life.
+  '';
+  homepage = https://www.obdev.at/products/launchbar;
+};
+
+OmniGrafflePro_6 = self.installApplication rec {
+  name = "OmniGrafflePro";
+  appname = "OmniGraffle";
+  version = "6.6.2";
+  sourceRoot = "OmniGraffle.app";
+  src = super.fetchurl {
+    url = "https://downloads.omnigroup.com/software/MacOSX/10.10/OmniGraffle-${version}.dmg";
+    sha256 = "0a5q1rnajjk4ds59h1mx4rfv8dcja6i4dxnyrl1jgi468rjmmc7h";
+    # date = 2018-02-04T22:08:16-0800;
+  };
+  description = "Professional graphing software for macOS";
+  homepage = https://www.omnigroup.com/omnigraffle;
+};
+
+OmniOutlinerPro = self.installApplication rec {
+  name = "OmniOutlinerPro";
+  appname = "OmniOutliner";
+  version = "5.2";
+  sourceRoot = "OmniOutliner.app";
+  src = super.fetchurl {
+    url = "https://downloads.omnigroup.com/software/MacOSX/10.12/OmniOutliner-${version}.dmg";
+    sha256 = "1b1qi5wbjfr49vyqyrqydlxc3ph4r1akhg2xw8sh4mvlrqh9403x";
+    # date = 2018-02-04T22:18:19-0800;
+  };
+  description = "Professional outlining software for macOS";
+  homepage = https://www.omnigroup.com/omnioutliner;
+};
+
+PathFinder = self.installApplication rec {
+  name = "PathFinder";
+  appname = "Path Finder";
+  version = "7.6.2";
+  sourceRoot = "Path Finder.app";
+  src = super.fetchurl {
+    url = "http://get.cocoatech.com/PF7.zip";
+    sha256 = "0m1dz8i9af1lvcdj5fd8wc77qr18zx40pq9c27zss34yjr7r0mq7";
+    # date = 2018-02-04T22:21:12-0800;
+  };
+  description = "File manager for macOS";
+  homepage = https://cocoatech.com;
+};
+
+PhoneView = self.installApplication rec {
+  name = "PhoneView";
+  version = "2.13.6";
+  sourceRoot = "PhoneView Demo/PhoneView Demo.app";
+  src = super.fetchurl {
+    url = http://downloads.ecamm.com/PhoneView.zip;
+    sha256 = "05axjghckm2ggm9jrdb5fy4a1blya2xqy6ri6ay9h8pj8j79kinn";
+    # date = 2018-02-04T22:24:51-0800;
+  };
+  description = ''
+    With PhoneView, you can view, save and print all of your iPhone and iPad
+    messages, WhatsApp messages, voicemail and other data directly on your
+    Mac.
+  '';
+  homepage = http://www.ecamm.com/mac/phoneview;
+};
+
+RipIt = self.installApplication rec {
+  name = "RipIt";
+  version = "1.6.9";
+  sourceRoot = "RipIt.app";
+  src = super.fetchurl {
+    url = http://files.thelittleappfactory.com/ripit/RipIt.zip;
+    sha256 = "1g6h59y83f9fflb5kbdq2d47jiljn4ki69vl9cxajayv2q04b8vn";
+    # date = 2018-02-04T23:39:18-0800;
+  };
+  description = "The simple DVD ripper for Macs";
+  homepage = http://thelittleappfactory.com/ripit;
+};
+
+SageMath = self.installApplication rec {
+  name = "SageMath";
+  version = "8.1";
+  sourceRoot = "SageMath-${version}.app";
+  src = super.fetchurl {
+    url = "http://mirrors.xmission.com/sage/osx/intel/sage-${version}-OSX_10.12.6-x86_64.app.dmg";
+    sha256 = "0cvdp9p4jvv23a8spswb0g9rj1rpcz64qzmfdg9cqww875lm6ydx";
+    # date = 2018-02-04T13:08:53-0800;
+  };
+  description = ''
+    SageMath is a free open-source mathematics software system licensed under
+    the GPL. It builds on top of many existing open-source packages: NumPy,
+    SciPy, matplotlib, Sympy, Maxima, GAP, FLINT, R and many more. Access
+    their combined power through a common, Python-based language or directly
+    via interfaces or wrappers.
+  '';
+  homepage = http://www.sagemath.org;
+};
 
 Skim = self.installApplication rec {
   name = "Skim";
@@ -201,6 +373,23 @@ Slate = self.installApplication rec {
     A window management application (replacement for Divvy/SizeUp/ShiftIt)
   '';
   homepage = https://github.com/jigish/slate;
+};
+
+Soulver = self.installApplication rec {
+  name = "Soulver";
+  version = "2.6.2";
+  sourceRoot = "Soulver.app";
+  src = super.fetchurl {
+    name = "soulver-${version}.zip";
+    url = "http://www.acqualia.com/files/download.php?product=soulver";
+    sha256 = "1bimz497nnfigjp4w04v75bx3ymcss1y4i7c1adcjlxs9w41jlm9";
+    # date = 2018-02-04T15:54:54-0800;
+  };
+  description = ''
+    Use Soulver to play around with numbers, do "back of the envelope" quick
+    calculations, and solve day-to-day problems.
+  '';
+  homepage = http://www.acqualia.com/soulver;
 };
 
 SuspiciousPackage = self.installApplication rec {
@@ -268,6 +457,31 @@ VLC = self.installApplication rec {
   };
   description = "VLC is a free and open source cross-platform multimedia player";
   homepage = https://www.videolan.org/vlc;
+};
+
+VirtualII = self.installApplication rec {
+  name = "VirtualII";
+  appname = "Virtual ][";
+  version = "8.1";
+  sourceRoot = "Virtual ][.app";
+  src = super.fetchurl {
+    url = http://www.virtualii.com/VirtualII.dmg;
+    sha256 = "0d7023vq8c85f4zypxjhsppdi4q49biqxg16kh1vq5jz7w51pkbm";
+    # date = 2018-02-04T22:39:02-0800;
+  };
+  description = ''
+    Virtual ][ lets you play the old Apple games, because it supports all
+    graphics modes, lets you control the game paddles with a USB game pad or
+    mouse and emulates the internal speaker. When you want to temporarily
+    interrupt gameplay, Virtual ][ allows you to save the entire virtual
+    machine, and continue later on from where you left off.
+
+    But Virtual ][ also supports more "serious" software, because it emulates
+    many peripheral devices: floppy disk, hard disk, mouse, serial port,
+    matrix printer, even cassette tape! It also emulates the Z80A processor,
+    allowing you to run the CP/M operating system.
+  '';
+  homepage = http://www.virtualii.com;
 };
 
 Zekr = self.installApplication rec {
