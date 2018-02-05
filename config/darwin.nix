@@ -384,6 +384,7 @@ EOF
       Firefox
       GIMP
       HandBrake
+      Skim
       Slate
       SuspiciousPackage
       Transmission

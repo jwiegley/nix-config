@@ -26,6 +26,7 @@ installApplication =
 Anki = self.installApplication rec {
   name = "Anki";
   version = "2.1.0beta35";
+  sourceRoot = "Anki.app";
   src = super.fetchurl {
     url = "https://apps.ankiweb.net/downloads/beta/anki-${version}.dmg";
     sha256 = "04q9pv182ajvgj79ffad8618wf75lpx4xq7sn5chb4sws66r5yky";
@@ -38,12 +39,13 @@ Anki = self.installApplication rec {
 Dash = self.installApplication rec {
   name = "Dash";
   version = "4.1.3";
+  sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
     sha256 = "073fzga9gra5rln7cixj50h7c6zgajhd2jibslkx2qrdbry67mc4";
     # date = 2018-02-04T16:32:27-0800;
   };
-  description = "Dash is an API Documentation Browser and Code Snippet Manager";
+ description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
 };
 
@@ -51,6 +53,7 @@ DeskzillaLite = self.installApplication rec {
   name = "DeskzillaLite";
   appname = "Deskzilla Lite";
   version = "3.2.1";
+  sourceRoot = "Deskzilla Lite.app";
   src = super.fetchurl {
     url = https://d1.almworks.com/.files/deskzilla-lite-3_2_1.dmg;
     sha256 = "0w2hqmznsk3qic2c6f3cycvmjpgvscckd9b0ljqfcrhkla4bv505";
@@ -108,6 +111,7 @@ GIMP = self.installApplication rec {
   major = "2.8";
   minor = "22";
   version = "${major}.${minor}";
+  sourceRoot = "GIMP.app";
   src = super.fetchurl {
     url = "https://download.gimp.org/mirror/pub/gimp/v${major}/osx/gimp-${version}-x86_64.dmg";
     sha256 = "05mxwimvym4afpzj32lp0yjlac5m39nmmxa775wvaqmjah69c51l";
@@ -170,11 +174,26 @@ iTerm2 = self.installApplication rec {
 #   homepage = https://www.gimp.org;
 # };
 
+Skim = self.installApplication rec {
+  name = "Skim";
+  version = "1.4.32";
+  sourceRoot = "Skim.app";
+  src = super.fetchurl {
+    name = "Skim-${version}.dmg";
+    url = "https://sourceforge.net/projects/skim-app/files/Skim/Skim-${version}/Skim-${version}.dmg/download";
+    sha256 = "15j7r328dxhlwdihw9g82pidmwx5lbrqz2xd07g858rx3v3bcf9k";
+    # date = 2018-02-04T15:50:51-0800;
+  };
+  description = "Skim is a PDF reader and note-taker for OS X";
+  homepage = https://skim-app.sourceforge.io;
+};
+
 Slate = self.installApplication rec {
   name = "Slate";
   version = "1.0.25";
+  sourceRoot = "Slate.app";
   src = super.fetchurl {
-    url = "http://slate.ninjamonkeysoftware.com/Slate.dmg";
+    url = http://slate.ninjamonkeysoftware.com/Slate.dmg;
     sha256 = "0gr27s0a150sy2rf0vqw0mw32k21wh4v7b1n2ngzfr0wbdfkg3j2";
     # date = 2018-02-04T15:50:51-0800;
   };
@@ -188,6 +207,7 @@ SuspiciousPackage = self.installApplication rec {
   name = "SuspiciousPackage";
   appname = "Suspicious Package";
   version = "3.3.1";
+  sourceRoot = "Suspicious Package.app";
   src = super.fetchurl {
     url = "http://www.mothersruin.com/software/downloads/SuspiciousPackage.dmg";
     sha256 = "0133l1v1x3pv9bhjpf7nqh8gsiyz1j1abgil6p8bcx05jgffdvj9";
@@ -213,6 +233,7 @@ Transmission = self.installApplication rec {
 Ukelele = self.installApplication rec {
   name = "Ukelele";
   version = "3.2.7";
+  sourceRoot = "Ukelele.app";
   src = super.fetchurl {
     name = "Ukelele-${version}.dmg";
     url = "http://scripts.sil.org/cms/scripts/render_download.php?format=file&media_id=Ukelele_${version}&filename=Ukelele_${version}.dmg";
@@ -252,6 +273,7 @@ VLC = self.installApplication rec {
 Zekr = self.installApplication rec {
   name = "Zekr";
   version = "1.1.0";
+  sourceRoot = "Zekr.app";
   src = super.fetchurl {
     name = "zekr-${version}-mac_64.tgz";
     url = "http://sourceforge.net/projects/zekr/files/Zekr/zekr-${version}/zekr-${version}-mac_64.tgz/download";
@@ -265,6 +287,7 @@ Zekr = self.installApplication rec {
 Zotero = self.installApplication rec {
   name = "Zotero";
   version = "5.0.34.6";
+  sourceRoot = "Zotero.app";
   src = super.fetchurl {
     name = "zotero-${version}.dmg";
     url = "https://www.zotero.org/download/client/dl?channel=release&platform=mac&version=5.0.34.6";
