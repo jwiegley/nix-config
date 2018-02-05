@@ -384,6 +384,7 @@ EOF
       Firefox
       GIMP
       HandBrake
+      iTerm2
       Skim
       Slate
       SuspiciousPackage
