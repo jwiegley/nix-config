@@ -717,12 +717,12 @@ EOF
     ];
 
     binaryCaches = [
-      "https://cache.nixos.org/"
-      "https://nixcache.reflex-frp.org"
+      # "https://nixcache.reflex-frp.org"
+      "file:///Volumes/mybook/Cache"
     ];
-    binaryCachePublicKeys = [
-      "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="
-    ];
+    # binaryCachePublicKeys = [
+    #   "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="
+    # ];
 
     extraOptions = ''
       gc-keep-outputs = true

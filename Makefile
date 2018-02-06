@@ -74,16 +74,18 @@ working: tag-working mirror copy update-remote
 
 update: tag-before pull build-all switch env-all working
 
-CACHE=/Volumes/mybook/Cache
+CACHE = /Volumes/mybook/Cache
 
-gc:
+cache:
 	find /nix/store -maxdepth 1 -type f			\
 	    \( -name '*.dmg' -o					\
 	       -name '*.zip' -o					\
 	       -name '*gz'   -o					\
 	       -name '*xz'   -o					\
 	       -name '*.tar' \) -print0				\
-	    | parallel -0 cp -upv {} $(CACHE)
+	    | parallel -0 nix copy --to file://$(CACHE)
+
+gc: cache
 	find $(HOME)				\
 	    \( -name dist -type d -o		\
 	       -name result -type l \) -print0	\
