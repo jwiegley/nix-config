@@ -356,6 +356,7 @@ EOF
       silver-searcher
       (exe haskPkgs.simple-mirror)
       (exe haskPkgs.sizes)
+      smartmontools
       sqlite
       srm
       stow
