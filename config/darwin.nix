@@ -404,7 +404,7 @@ EOF
       PathFinder
       PhoneView
       RipIt
-      SageMath
+      #SageMath
       Skim
       Slate
       Soulver
@@ -698,23 +698,23 @@ EOF
       ];
 
     trustedUsers = [ "@admin" ];
-    maxJobs = 8;
+    maxJobs = 4;
     # useSandbox = true;
-    distributedBuilds = true;
-    buildMachines = [
-      { hostName = "hermes";
-        sshUser = "johnw";
-        sshKey = "${home_directory}/.config/ssh/id_local";
-        system = "x86_64-darwin";
-        maxJobs = 4;
-      }
-      # { hostName = "nixos";
-      #   sshUser = "johnw";
-      #   sshKey = "${home_directory}/.config/ssh/id_local";
-      #   system = "x86_64-linux";
-      #   maxJobs = 2;
-      # }
-    ];
+    distributedBuilds = false;
+    # buildMachines = [
+    #   { hostName = "hermes";
+    #     sshUser = "johnw";
+    #     sshKey = "${home_directory}/.config/ssh/id_local";
+    #     system = "x86_64-darwin";
+    #     maxJobs = 4;
+    #   }
+    #   # { hostName = "nixos";
+    #   #   sshUser = "johnw";
+    #   #   sshKey = "${home_directory}/.config/ssh/id_local";
+    #   #   system = "x86_64-linux";
+    #   #   maxJobs = 2;
+    #   # }
+    # ];
 
     binaryCaches = [
       # "https://nixcache.reflex-frp.org"

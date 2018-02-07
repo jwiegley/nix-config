@@ -80,6 +80,7 @@ cache:
 	find /nix/store -maxdepth 1 -type f			\
 	    \( -name '*.dmg' -o					\
 	       -name '*.zip' -o					\
+	       -name '*.el'  -o					\
 	       -name '*gz'   -o					\
 	       -name '*xz'   -o					\
 	       -name '*.tar' \) -print0				\

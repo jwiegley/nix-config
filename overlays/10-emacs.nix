@@ -664,7 +664,9 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
   version = "26.0";
   versionModifier = ".90";
 
-  buildInputs = emacs25.buildInputs ++ [ git ];
+  buildInputs = emacs25.buildInputs ++
+    [ git libpng.dev libjpeg.dev libungif libtiff.dev librsvg.dev
+      imagemagick.dev ];
 
   patches = lib.optionals stdenv.isDarwin
     [ ./emacs/patches/at-fdcwd.patch
@@ -726,7 +728,9 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
   bundleName = "nextstep/ERC.app";
   iconFile = ./emacs/Chat.icns;
 
-  buildInputs = emacs25.buildInputs ++ [ git ];
+  buildInputs = emacs25.buildInputs ++
+    [ git libpng.dev libjpeg.dev libungif libtiff.dev librsvg.dev
+      imagemagick.dev ];
 
   patches = lib.optionals stdenv.isDarwin
     [ ./emacs/patches/at-fdcwd.patch
