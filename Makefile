@@ -34,7 +34,20 @@ env-all:
 	@echo "Nix generation:    $$(nix-env --list-generations | tail -1)"
 
 env-all-build:
-	-nix build darwin.pkgs.myBuildEnvs
+	nix build darwin.pkgs.emacs25Env
+	nix build darwin.pkgs.emacs26Env
+	nix build darwin.pkgs.emacs26DebugEnv
+	nix build darwin.pkgs.emacsHEADEnv
+	nix build darwin.pkgs.coq84Env
+	nix build darwin.pkgs.coq85Env
+	nix build darwin.pkgs.coq86Env
+	nix build darwin.pkgs.coq87Env
+	nix build darwin.pkgs.ghc80Env
+	nix build darwin.pkgs.ghc80ProfEnv
+	nix build darwin.pkgs.ghc82Env
+	nix build darwin.pkgs.ghc82ProfEnv
+	nix build darwin.pkgs.ledgerPy2Env
+	nix build darwin.pkgs.ledgerPy3Env
 
 env:
 	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.emacs26Env
