@@ -391,8 +391,6 @@ EOF
       Anki
       Dash
       DeskzillaLite
-      DEVONagentPro
-      DEVONthinkPro
       Docker
       Firefox
       GIMP
