@@ -218,6 +218,7 @@ EOF
       sbcl
       sloccount
       verasco
+      yamale
 
       # mailToolsEnv
       contacts
