@@ -445,7 +445,6 @@ EOF
       LESSCHARSET  = "utf-8";
       LEDGER_COLOR = "true";
       PAGER        = "less";
-      GIT_PAGER    = "less";
     };
 
     shellAliases = {

@@ -14,7 +14,7 @@ let myEmacsPackages   = import ./emacs.nix pkgs;
   ghc82Env        = pkgs.ghc82Env myHaskellPackages;
   ghc82ProfEnv    = pkgs.ghc82ProfEnv myHaskellPackages;
   ghc80Env        = pkgs.ghc80Env myHaskellPackages;
-  ghc80ProfEnv    = pkgs.ghcHEADEnv myHaskellPackages;
+  ghc80ProfEnv    = pkgs.ghc80ProfEnv myHaskellPackages;
 
   coqHEADEnv      = pkgs.coqHEADEnv myCoqPackages;
   coq87Env        = pkgs.coq87Env myCoqPackages;
