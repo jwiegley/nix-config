@@ -204,7 +204,6 @@ pkgs: epkgs: with epkgs;
   lsp-haskell
   lsp-mode
   lua-mode
-  lusty-explorer
   m-buffer
   macrostep
   magit
@@ -339,7 +338,6 @@ pkgs: epkgs: with epkgs;
   stopwatch
   string-edit
   string-inflection
-  sunrise-commander
   super-save
   supercite
   swiper
