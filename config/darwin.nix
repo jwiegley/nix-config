@@ -278,6 +278,7 @@ EOF
       ledger
       (exe haskPkgs.lhs2tex)
       librsvg
+      (exe haskPkgs.pandoc)
       pdf-tools-server
       plantuml
       poppler_utils

@@ -208,7 +208,6 @@ pkgs: hpkgs: with hpkgs;
   numbers
   operational
   optparse-applicative
-  pandoc
   parallel
   parallel-io
   parsec
