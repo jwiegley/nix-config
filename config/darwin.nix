@@ -400,8 +400,6 @@ EOF
       KeyboardMaestro
       LaTeXiT
       LaunchBar
-      OmniGrafflePro_6
-      OmniOutlinerPro
       PathFinder
       PhoneView
       RipIt
