@@ -6,6 +6,7 @@ darwin-switch:
 
 darwin-build:
 	nix build darwin.system
+	rm result
 
 home-switch:
 	home-manager switch
@@ -15,6 +16,7 @@ home-build:
 	nix build -f ~/src/nix/home-manager/home-manager/home-manager.nix \
 		  --argstr confPath "$(HOME_MANAGER_CONFIG)" \
 		  --argstr confAttr "" activationPackage
+	rm result
 
 pull:
 	(cd nixpkgs      && git pull --rebase)
@@ -47,6 +49,7 @@ env-all-build:
 	nix build darwin.pkgs.ghc82ProfEnv
 	nix build darwin.pkgs.ledgerPy2Env
 	nix build darwin.pkgs.ledgerPy3Env
+	rm result
 
 env:
 	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.emacs26Env
@@ -59,6 +62,7 @@ env-build:
 	nix build darwin.pkgs.coq87Env
 	nix build darwin.pkgs.ghc82Env
 	nix build darwin.pkgs.ledgerPy3Env
+	rm result
 
 build: darwin-build home-build env-build
 
