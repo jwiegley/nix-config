@@ -196,6 +196,7 @@ pkgs: epkgs: with epkgs;
   langtool
   ledger-mode
   lentic                        # lentic-mode
+  link-hint
   lispy
   list-utils
   #llvm-mode
