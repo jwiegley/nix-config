@@ -405,7 +405,6 @@ EOF
       RipIt
       #SageMath
       Skim
-      Slate
       Soulver
       SuspiciousPackage
       Transmission
