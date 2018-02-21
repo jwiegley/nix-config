@@ -35,12 +35,6 @@ let home_directory = "/Users/johnw";
       serviceConfig.KeepAlive = true;
     };
 
-    # privoxy = {
-    #   command = "${pkgs.privoxy}/bin/privoxy --no-daemon /etc/privoxy/config";
-    #   serviceConfig.RunAtLoad = true;
-    #   serviceConfig.KeepAlive = true;
-    # };
-
     # syncthing = {
     #   command = "sudo -u johnw ${pkgs.syncthing}/bin/syncthing -no-browser -no-restart";
     #   environment.STNORESTART = "1";
@@ -266,7 +260,6 @@ EOF
       openssl
       openvpn
       pdnsd
-      # privoxy
       rclone
       rsync
       sipcalc
@@ -621,53 +614,6 @@ EOF
           types = A,AAAA;
       }
     '';
-
-    # etc."privoxy/config".text = ''
-    #   user-manual ${pkgs.privoxy}/share/doc/privoxy/user-manual/
-    #   confdir ${pkgs.privoxy}/etc
-    #   logdir ${pkgs.privoxy}/var/log/privoxy
-    #   actionsfile /etc/privoxy/match-all.action
-    #   actionsfile default.action
-    #   actionsfile user.action
-    #   filterfile default.filter
-    #   filterfile user.filter
-    #   logfile logfile
-    #   listen-address 127.0.0.1:8118
-    #   toggle 1
-    #   enable-remote-toggle 0
-    #   enable-remote-http-toggle 0
-    #   enable-edit-actions 0
-    #   enforce-blocks 0
-    #   buffer-limit 4096
-    #   enable-proxy-authentication-forwarding 0
-    #   forwarded-connect-retries  0
-    #   accept-intercepted-requests 0
-    #   allow-cgi-request-crunching 0
-    #   split-large-forms 0
-    #   keep-alive-timeout 5
-    #   tolerate-pipelining 1
-    #   socket-timeout 300
-    # '';
-
-    # etc."privoxy/match-all.action".text = ''
-    #   {+change-x-forwarded-for{block} \
-    #    +client-header-tagger{css-requests} \
-    #    +client-header-tagger{image-requests} \
-    #    +client-header-tagger{range-requests} \
-    #    +deanimate-gifs{last} \
-    #    +filter{refresh-tags} \
-    #    +filter{img-reorder} \
-    #    +filter{banners-by-size} \
-    #    +filter{webbugs} \
-    #    +filter{jumping-windows} \
-    #    +filter{ie-exploits} \
-    #    +hide-from-header{block} \
-    #    +hide-referrer{conditional-block} \
-    #    +session-cookies-only \
-    #    +set-image-blocker{pattern} \
-    #   }
-    #   / # Match all URLs
-    # '';
 
     etc."DefaultKeyBinding.dict".text = ''
       {
