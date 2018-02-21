@@ -79,16 +79,6 @@ let home_directory = "/Users/johnw";
       };
     };
 
-    # languagetool = {
-    #   script = ''
-    #     ${pkgs.jdk8}/bin/java                                      \
-    #         -cp ${pkgs.languagetool}/share/languagetool-server.jar \
-    #         org.languagetool.server.HTTPServer                     \
-    #         --port 8099 --allow-origin "*"
-    #   '';
-    #   serviceConfig.RunAtLoad = true;
-    # };
-
     myip = {
       script = ''
         if [[ $(hostname) =~ [Vv]ulcan ]]; then
@@ -277,7 +267,6 @@ EOF
       highlight
       hugo
       inkscape.out
-      # languagetool
       ledger
       (exe haskPkgs.lhs2tex)
       librsvg
