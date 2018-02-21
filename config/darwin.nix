@@ -35,15 +35,6 @@ let home_directory = "/Users/johnw";
       serviceConfig.KeepAlive = true;
     };
 
-    # syncthing = {
-    #   command = "sudo -u johnw ${pkgs.syncthing}/bin/syncthing -no-browser -no-restart";
-    #   environment.STNORESTART = "1";
-    #   serviceConfig.RunAtLoad = true;
-    #   serviceConfig.KeepAlive = true;
-    #   serviceConfig.ProcessType = "Background";
-    #   serviceConfig.LowPriorityIO = true;
-    # };
-
     openzfs-InvariantDisks = {
       command = "${pkgs.OpenZFSonOSX}/bin/InvariantDisks";
       serviceConfig.RunAtLoad = true;
@@ -267,7 +258,6 @@ EOF
       spiped
       sshify
       subversion
-      #syncthing
       w3m
       wget
       youtube-dl
