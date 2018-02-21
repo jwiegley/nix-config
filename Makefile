@@ -75,30 +75,29 @@ mirror:
 	git --git-dir=darwin/.git push --mirror jwiegley
 	git --git-dir=home-manager/.git push --mirror jwiegley
 
+REMOTE = hermes
+
 copy:
-	nix copy --to ssh://hermes			\
+	nix copy --to ssh://$(REMOTE)			\
 	    $(shell readlink -f ~/.nix-profile)		\
 	    $(shell readlink -f /run/current-system)
 
-update-remote:
-	push -f src,home hermes
-	ssh hermes '(cd ~/src/nix ; make switch env-all)'
-
-hermes: copy update-remote
-
-working: tag-working mirror copy update-remote
+working: tag-working mirror copy
 
 update: tag-before pull build-all switch env-all working
 
-CACHE = /Volumes/mybook/Cache
+CACHE = /Volumes/Cache
 
 cache:
 	find /nix/store -maxdepth 1 -type f			\
 	    \( -name '*.dmg' -o					\
 	       -name '*.zip' -o					\
+	       -name '*.pkg' -o					\
 	       -name '*.el'  -o					\
+	       -name '*.7z'  -o					\
 	       -name '*gz'   -o					\
 	       -name '*xz'   -o					\
+	       -name '*bz2'  -o					\
 	       -name '*.tar' \) -print0				\
 	    | parallel -0 nix copy --to file://$(CACHE)
 

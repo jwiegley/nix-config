@@ -1,0 +1,8 @@
+#!/bin/bash
+OCAMLVER=$(ocaml --version | awk '{print $5}')
+CAMLP5=$(dirname $(dirname $(readlink $(which camlp5))))
+export OCAMLPATH=$CAMLP5/lib/ocaml/$OCAMLVER/site-lib/
+FINDLIB=$(dirname $(dirname $(readlink $(which ocamlfind))))
+export OCAMLPATH=$OCAMLPATH:$FINDLIB/lib/ocaml/$OCAMLVER/site-lib/
+MENHIR=$(dirname $(dirname $(readlink $(which menhir))))
+export OCAMLPATH=$OCAMLPATH:$MENHIR/lib/ocaml/$OCAMLVER/site-lib/

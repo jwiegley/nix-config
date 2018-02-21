@@ -188,6 +188,12 @@ rec {
         fi
 
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
+
+        if [ $TERM = "dumb" ]; then
+            prompt_powerlevel9k_teardown
+            unsetopt zle
+            export PS1='$ '
+        fi
       '';
 
       plugins = [
@@ -388,6 +394,7 @@ rec {
         };
 
         ubuntu.hostname = "172.16.138.129";
+        gramma.hostname = "192.168.5.128";
         peta.hostname   = "172.16.138.140";
         fiat.hostname   = "172.16.138.145";
 

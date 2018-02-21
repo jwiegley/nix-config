@@ -417,6 +417,17 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     };
   };
 
+  org-rich-yank = compileEmacsFiles {
+    name = "org-rich-yank";
+    src = fetchFromGitHub {
+      owner = "unhammer";
+      repo = "org-rich-yank";
+      rev = "ffa90b29604e27a60ad341c06d0e43769af19715";
+      sha256 = "1z9137nirbaydqpw5b7ii3qnpn09v1kiqnyxsxkgc0q3arb1m1f6";
+      # date = 2018-02-18T10:56:41+01:00;
+    };
+  };
+
   ovpn-mode = compileEmacsFiles {
     name = "ovpn-mode";
     src = fetchFromGitHub {

@@ -58,6 +58,7 @@ pkgs: epkgs: with epkgs;
   counsel-gtags
   counsel-osx-app
   counsel-projectile
+  counsel-tramp
   crosshairs
   crux
   csv-mode
@@ -259,6 +260,7 @@ pkgs: epkgs: with epkgs;
   org-opml
   org-pdfview
   org-ref
+  org-rich-yank
   org-super-agenda
   org-web-tools
   orgit

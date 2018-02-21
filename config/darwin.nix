@@ -35,20 +35,40 @@ let home_directory = "/Users/johnw";
       serviceConfig.KeepAlive = true;
     };
 
-    privoxy = {
-      script = "${pkgs.privoxy}/bin/privoxy --no-daemon /etc/privoxy/config";
+    # privoxy = {
+    #   command = "${pkgs.privoxy}/bin/privoxy --no-daemon /etc/privoxy/config";
+    #   serviceConfig.RunAtLoad = true;
+    #   serviceConfig.KeepAlive = true;
+    # };
+
+    # syncthing = {
+    #   command = "sudo -u johnw ${pkgs.syncthing}/bin/syncthing -no-browser -no-restart";
+    #   environment.STNORESTART = "1";
+    #   serviceConfig.RunAtLoad = true;
+    #   serviceConfig.KeepAlive = true;
+    #   serviceConfig.ProcessType = "Background";
+    #   serviceConfig.LowPriorityIO = true;
+    # };
+
+    openzfs-InvariantDisks = {
+      command = "${pkgs.OpenZFSonOSX}/bin/InvariantDisks";
       serviceConfig.RunAtLoad = true;
       serviceConfig.KeepAlive = true;
     };
-
-    #syncthing = {
-    #  script = "sudo -u johnw ${pkgs.syncthing}/bin/syncthing -no-browser -no-restart";
-    #  environment.STNORESTART = "1";
-    #  serviceConfig.RunAtLoad = true;
-    #  serviceConfig.KeepAlive = true;
-    #  serviceConfig.ProcessType = "Background";
-    #  serviceConfig.LowPriorityIO = true;
-    #};
+    openzfs-zconfigd = {
+      command = "${pkgs.OpenZFSonOSX}/bin/zconfigd";
+      serviceConfig.RunAtLoad = true;
+      serviceConfig.KeepAlive = true;
+    };
+    openzfs-zed = {
+      command = "${pkgs.OpenZFSonOSX}/bin/zed -vfF";
+      serviceConfig.RunAtLoad = true;
+      serviceConfig.KeepAlive = true;
+    };
+    openzfs-zpool-import-all = {
+      command = "${pkgs.OpenZFSonOSX}/libexec/zfs/launchd.d/zpool-import-all.sh";
+      serviceConfig.RunAtLoad = true;
+    };
   };
 
   launchd.user.agents = {
@@ -74,15 +94,15 @@ let home_directory = "/Users/johnw";
       };
     };
 
-    languagetool = {
-      script = ''
-        ${pkgs.jdk8}/bin/java                                      \
-            -cp ${pkgs.languagetool}/share/languagetool-server.jar \
-            org.languagetool.server.HTTPServer                     \
-            --port 8099 --allow-origin "*"
-      '';
-      serviceConfig.RunAtLoad = true;
-    };
+    # languagetool = {
+    #   script = ''
+    #     ${pkgs.jdk8}/bin/java                                      \
+    #         -cp ${pkgs.languagetool}/share/languagetool-server.jar \
+    #         org.languagetool.server.HTTPServer                     \
+    #         --port 8099 --allow-origin "*"
+    #   '';
+    #   serviceConfig.RunAtLoad = true;
+    # };
 
     myip = {
       script = ''
@@ -246,7 +266,7 @@ EOF
       openssl
       openvpn
       pdnsd
-      privoxy
+      # privoxy
       rclone
       rsync
       sipcalc
@@ -274,7 +294,7 @@ EOF
       highlight
       hugo
       inkscape.out
-      languagetool
+      # languagetool
       ledger
       (exe haskPkgs.lhs2tex)
       librsvg
@@ -345,7 +365,6 @@ EOF
       pass-otp
       pinentry_mac
       postgresql
-      privoxy
       (exe haskPkgs.pushme)
       pv
       qemu
@@ -398,8 +417,9 @@ EOF
       GIMP
       HandBrake
       KeyboardMaestro
-      LaTeXiT
-      LaunchBar
+      # LaTeXiT
+      # LaunchBar
+      OpenZFSonOSX
       PathFinder
       PhoneView
       RipIt
@@ -407,7 +427,7 @@ EOF
       Skim
       Soulver
       SuspiciousPackage
-      Transmission
+      # Transmission
       Ukelele
       UnicodeChecker
       VLC
@@ -602,52 +622,52 @@ EOF
       }
     '';
 
-    etc."privoxy/config".text = ''
-      user-manual ${pkgs.privoxy}/share/doc/privoxy/user-manual/
-      confdir ${pkgs.privoxy}/etc
-      logdir ${pkgs.privoxy}/var/log/privoxy
-      actionsfile /etc/privoxy/match-all.action
-      actionsfile default.action
-      actionsfile user.action
-      filterfile default.filter
-      filterfile user.filter
-      logfile logfile
-      listen-address 127.0.0.1:8118
-      toggle 1
-      enable-remote-toggle 0
-      enable-remote-http-toggle 0
-      enable-edit-actions 0
-      enforce-blocks 0
-      buffer-limit 4096
-      enable-proxy-authentication-forwarding 0
-      forwarded-connect-retries  0
-      accept-intercepted-requests 0
-      allow-cgi-request-crunching 0
-      split-large-forms 0
-      keep-alive-timeout 5
-      tolerate-pipelining 1
-      socket-timeout 300
-    '';
+    # etc."privoxy/config".text = ''
+    #   user-manual ${pkgs.privoxy}/share/doc/privoxy/user-manual/
+    #   confdir ${pkgs.privoxy}/etc
+    #   logdir ${pkgs.privoxy}/var/log/privoxy
+    #   actionsfile /etc/privoxy/match-all.action
+    #   actionsfile default.action
+    #   actionsfile user.action
+    #   filterfile default.filter
+    #   filterfile user.filter
+    #   logfile logfile
+    #   listen-address 127.0.0.1:8118
+    #   toggle 1
+    #   enable-remote-toggle 0
+    #   enable-remote-http-toggle 0
+    #   enable-edit-actions 0
+    #   enforce-blocks 0
+    #   buffer-limit 4096
+    #   enable-proxy-authentication-forwarding 0
+    #   forwarded-connect-retries  0
+    #   accept-intercepted-requests 0
+    #   allow-cgi-request-crunching 0
+    #   split-large-forms 0
+    #   keep-alive-timeout 5
+    #   tolerate-pipelining 1
+    #   socket-timeout 300
+    # '';
 
-    etc."privoxy/match-all.action".text = ''
-      {+change-x-forwarded-for{block} \
-       +client-header-tagger{css-requests} \
-       +client-header-tagger{image-requests} \
-       +client-header-tagger{range-requests} \
-       +deanimate-gifs{last} \
-       +filter{refresh-tags} \
-       +filter{img-reorder} \
-       +filter{banners-by-size} \
-       +filter{webbugs} \
-       +filter{jumping-windows} \
-       +filter{ie-exploits} \
-       +hide-from-header{block} \
-       +hide-referrer{conditional-block} \
-       +session-cookies-only \
-       +set-image-blocker{pattern} \
-      }
-      / # Match all URLs
-    '';
+    # etc."privoxy/match-all.action".text = ''
+    #   {+change-x-forwarded-for{block} \
+    #    +client-header-tagger{css-requests} \
+    #    +client-header-tagger{image-requests} \
+    #    +client-header-tagger{range-requests} \
+    #    +deanimate-gifs{last} \
+    #    +filter{refresh-tags} \
+    #    +filter{img-reorder} \
+    #    +filter{banners-by-size} \
+    #    +filter{webbugs} \
+    #    +filter{jumping-windows} \
+    #    +filter{ie-exploits} \
+    #    +hide-from-header{block} \
+    #    +hide-referrer{conditional-block} \
+    #    +session-cookies-only \
+    #    +set-image-blocker{pattern} \
+    #   }
+    #   / # Match all URLs
+    # '';
 
     etc."DefaultKeyBinding.dict".text = ''
       {
@@ -694,7 +714,7 @@ EOF
         "nixpkgs=$HOME/src/nix/nixpkgs"
       ];
 
-    trustedUsers = [ "@admin" ];
+    trustedUsers = [ "johnw" "@admin" ];
     maxJobs = 4;
     # useSandbox = true;
     distributedBuilds = false;
@@ -715,7 +735,7 @@ EOF
 
     binaryCaches = [
       # "https://nixcache.reflex-frp.org"
-      "file:///Volumes/mybook/Cache"
+      "file:///Volumes/tank/Cache"
     ];
     # binaryCachePublicKeys = [
     #   "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="

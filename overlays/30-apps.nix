@@ -37,12 +37,12 @@ Anki = self.installApplication rec {
 
 Dash = self.installApplication rec {
   name = "Dash";
-  version = "4.1.3";
+  version = "4.1.4";
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "073fzga9gra5rln7cixj50h7c6zgajhd2jibslkx2qrdbry67mc4";
-    # date = 2018-02-04T16:32:27-0800;
+    sha256 = "05m0h7zkwb7biy324hsg89vls8l81axqy6hn8hhvm1hlnwc4v23h";
+    # date = 2018-02-19T10:51:10-0800;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
@@ -215,12 +215,12 @@ iTerm2 = self.installApplication rec {
 KeyboardMaestro = self.installApplication rec {
   name = "KeyboardMaestro";
   appname = "Keyboard Maestro";
-  version = "8.0.5";
+  version = "8.1.1";
   sourceRoot = "Keyboard Maestro.app";
   src = super.fetchurl {
-    url = http://files.stairways.com/keyboardmaestro-805.zip;
-    sha256 = "1hif5hn97hqmqvz8vwbwmjd1kqyp575ridy54h7g6plghjp7w660";
-    # date = 2018-02-04T22:01:26-0800;
+    url = http://files.stairways.com/keyboardmaestro-811.zip;
+    sha256 = "1mcwcqsi7nnk4vdvy611j167j7qxjmzal2nr83h66fplln7bqwjn";
+    # date = 2018-02-20T11:06:21-0800;
   };
   description = "Keyboard macro program for macOS";
   homepage = https://www.keyboardmaestro.com;
@@ -282,6 +282,74 @@ OmniOutlinerPro = self.installApplication rec {
   description = "Professional outlining software for macOS";
   homepage = https://www.omnigroup.com/omnioutliner;
 };
+
+OpenZFSonOSX = with super; stdenv.mkDerivation rec {
+  name = "OpenZFS-on-OSX";
+  version = "1.7.0";
+  src = super.fetchurl {
+    name = "OpenZFS-${version}.pkg";
+    url = "https://openzfsonosx.org/forum/download/file.php?id=98&sid=b403862a792839f9a372eebac59345cf";
+    sha256 = "1ii5vf9yvcnfhr2yq7zs695fn4y20kgyb0gg5lgl469kzjwf49lq";
+    # date = 2018-02-19T21:38:01-0800;
+  };
+
+  buildInputs = [ rsync cpio ];
+
+  unpackPhase = ''
+    /usr/bin/xar -xf $src
+    cd zfs1013.pkg
+  '';
+
+  buildPhase = ''
+    cat Payload | gunzip -dc | cpio -i
+  '';
+
+  nativeBuildInputs = [ fixDarwinDylibNames ];
+
+  postFixup = ''
+    for exe in $(find "$out/bin" "$out/lib" \
+                   -type f ! -name '*.la' \
+                   \( -executable -o -name '*.dylib' \)); do
+      isScript $exe && continue
+      for lib in \
+          libdiskmgt.1.dylib \
+          libnvpair.1.dylib \
+          libuutil.1.dylib \
+          libzfs.2.dylib \
+          libzfs_core.1.dylib \
+          libzpool.1.dylib; do
+        install_name_tool -change /usr/local/lib/$lib @executable_path/../lib/$lib $exe
+      done
+    done
+  '';
+
+  installPhase = ''
+    rsync -av usr/local/ $out/
+
+    mkdir -p $out/etc/zfs/zed.d
+    cp etc/zfs/zed.d/zed-functions.sh $out/etc/zfs/zed.d
+    cp etc/zfs/zed.d/zed.rc $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/all-syslog.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/checksum-notify.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/checksum-spare.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/config.remove.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/config.sync.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/data-notify.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/io-notify.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/io-spare.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/resilver.finish-notify.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/scrub.finish-notify.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/snapshot.mount.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/zpool.destroy.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/zpool.import.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/zvol.create.sh $out/etc/zfs/zed.d
+    ln -s $out/libexec/zfs/zed.d/zvol.remove.sh $out/etc/zfs/zed.d
+  '';
+
+  description = "The open source port of OpenZFS on OS X";
+  homepage = https://openzfsonosx.org;
+};
+
 
 PathFinder = self.installApplication rec {
   name = "PathFinder";

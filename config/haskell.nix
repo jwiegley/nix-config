@@ -141,6 +141,7 @@ pkgs: hpkgs: with hpkgs;
   hierarchy
   hlibgit2
   hlint
+  hmatrix
   hnix
   hslogger
   hspec
@@ -184,6 +185,7 @@ pkgs: hpkgs: with hpkgs;
   logict
   machinecell
   machines
+  matrices
   megaparsec
   mime-mail
   mime-types
@@ -239,6 +241,8 @@ pkgs: hpkgs: with hpkgs;
   profunctors
   quickcheck-instances
   random
+  random-fu
+  random-source
   recursors
   reducers
   reflection
