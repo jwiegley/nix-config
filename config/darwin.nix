@@ -24,6 +24,20 @@ let home_directory = "/Users/johnw";
       serviceConfig.StartInterval = 86400;
     };
 
+    # locate = {
+    #   command = "${pkgs.my-scripts}/bin/update.local";
+    #   serviceConfig = {
+    #     LowPriorityIO = true;
+    #     Nice = 5;
+    #     StartCalendarInterval = {
+    #       Hour = 3;
+    #       Minute = 15;
+    #       Weekday = 6;
+    #     };
+    #     AbandonProcessGroup = true;
+    #   };
+    # };
+
     pdnsd = {
       script = ''
         cp -p /etc/pdnsd.conf /tmp/.pdnsd.conf
@@ -234,7 +248,7 @@ EOF
       iperf
       lftp
       mercurialFull
-      mitmproxy
+      # mitmproxy
       mtr
       nmap
       openssh
@@ -660,7 +674,7 @@ EOF
 
     binaryCaches = [
       # "https://nixcache.reflex-frp.org"
-      "file:///Volumes/tank/Cache"
+      # "file:///Volumes/tank/Cache"
     ];
     # binaryCachePublicKeys = [
     #   "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="

@@ -82,19 +82,19 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   ascii = compileEmacsWikiFile {
     name = "ascii.el";
     sha256 = "05fjsj5nmc05cmsi0qj914dqdwk8rll1d4dwhn0crw36p2ivql75";
-    # date = 2018-01-16T15:05:25-0800;
+    # date = 2018-02-21T17:21:27-0800;
   };
 
   backup-each-save = compileEmacsWikiFile {
     name = "backup-each-save.el";
     sha256 = "0b9vvi2m0fdv36wj8mvawl951gjmg3pypg08a8n6rzn3rwg0fwz7";
-    # date = 2018-01-16T15:05:29-0800;
+    # date = 2018-02-21T17:21:29-0800;
   };
 
   browse-kill-ring-plus = compileEmacsWikiFile {
     name = "browse-kill-ring+.el";
     sha256 = "1s32f70lc1gnllqqfw8zqr5n743rf0yfifqljsl210vnb5zg4zkj";
-    # date = 2018-01-16T15:05:32-0800;
+    # date = 2018-02-21T17:21:31-0800;
 
     buildInputs = [ browse-kill-ring ];
     patches = [ ./emacs/patches/browse-kill-ring-plus.patch ];
@@ -103,7 +103,7 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   col-highlight = compileEmacsWikiFile {
     name = "col-highlight.el";
     sha256 = "0na8aimv5j66pzqi4hk2jw5kk00ki99zkxiykwcmjiy3h1r9311k";
-    # date = 2018-01-16T15:06:01-0800;
+    # date = 2018-02-21T17:21:33-0800;
 
     buildInputs = [ vline ];
   };
@@ -111,7 +111,7 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   crosshairs = compileEmacsWikiFile {
     name = "crosshairs.el";
     sha256 = "0032v3ry043wzvbacm16liykc362pza1bc46x37b307bvbv12qlg";
-    # date = 2018-01-16T15:06:03-0800;
+    # date = 2018-02-21T17:21:34-0800;
 
     buildInputs = [ hl-line-plus col-highlight vline ];
   };
@@ -119,55 +119,55 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   cursor-chg = compileEmacsWikiFile {
     name = "cursor-chg.el";
     sha256 = "1zmwh0z4g6khb04lbgga263pqa51mfvs0wfj3y85j7b08f2lqnqn";
-    # date = 2018-01-16T15:06:04-0800;
+    # date = 2018-02-21T17:21:36-0800;
   };
 
   erc-highlight-nicknames = compileEmacsWikiFile {
     name = "erc-highlight-nicknames.el";
     sha256 = "01r184q86aha4gs55r2vy3rygq1qnxh1bj9qmlz97b2yh8y17m50";
-    # date = 2018-01-16T15:06:10-0800;
+    # date = 2018-02-21T17:21:39-0800;
   };
 
   fetchmail-mode = compileEmacsWikiFile {
     name = "fetchmail-mode.el";
     sha256 = "19lqkc35kgzm07xjpb9nrcayg69qyijn159lak0mg45fhnybf4a6";
-    # date = 2018-01-16T15:06:12-0800;
+    # date = 2018-02-21T17:21:40-0800;
   };
 
   highlight = compileEmacsWikiFile {
     name = "highlight.el";
-    sha256 = "1f0lz7giv7f80hi4wvhjc688912pjrhwgm4fc16rqyk8rklywxp9";
-    # date = 2018-01-16T15:06:19-0800;
+    sha256 = "0masypzcpqimqb8r0x5d53yc4r4k2g17qr8bg0ysp5li2pmdll9d";
+    # date = 2018-02-21T17:21:42-0800;
   };
 
   highlight-cl = compileEmacsWikiFile {
     name = "highlight-cl.el";
     sha256 = "0r3kzs2fsi3kl5gqmsv75dc7lgfl4imrrqhg09ij6kq1ri8gjxjw";
-    # date = 2018-01-16T15:06:17-0800;
+    # date = 2018-02-21T17:21:43-0800;
   };
 
   hl-line-plus = compileEmacsWikiFile {
     name = "hl-line+.el";
     sha256 = "0crkmjah8i61z6c15sgn2cbpbj8xqfx0py1y84pxkcjh1cj7hx7q";
-    # date = 2018-01-16T15:06:21-0800;
+    # date = 2018-02-21T17:21:44-0800;
   };
 
   message-x = compileEmacsWikiFile {
-      name = "message-x.el";
+    name = "message-x.el";
     sha256 = "05ic97plsysh4nqwdrsl5m9f24m11w24bahj8bxzfdawfima2bkf";
-    # date = 2018-01-16T15:06:32-0800;
+    # date = 2018-02-21T17:21:45-0800;
   };
 
   mudel = compileEmacsWikiFile {
     name = "mudel.el";
     sha256 = "0z6giw5i3qflxll29k6nbmy71nkadbjjkh465fcqbs2v22643fr9";
-    # date = 2018-01-16T15:06:36-0800;
+    # date = 2018-02-21T17:21:50-0800;
   };
 
   popup-pos-tip = compileEmacsWikiFile {
     name = "popup-pos-tip.el";
     sha256 = "0dhyzfsl01y61m53iz38a1vcvclr98wamsh0nishw0by1dnlb17x";
-    # date = 2018-01-16T15:06:42-0800;
+    # date = 2018-02-21T17:21:52-0800;
 
     buildInputs = [ popup pos-tip ];
   };
@@ -175,37 +175,43 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   popup-ruler = compileEmacsWikiFile {
     name = "popup-ruler.el";
     sha256 = "0fszl969savcibmksfkanaq11d047xbnrfxd84shf9z9z2i3dr43";
-    # date = 2018-01-16T15:06:44-0800;
+    # date = 2018-02-21T17:21:55-0800;
   };
 
   pp-c-l = compileEmacsWikiFile {
     name = "pp-c-l.el";
     sha256 = "03mhd8lja71163jg6fj4d4hy2dwb1c5j46sn9yq6m9wz413a4pmd";
-    # date = 2018-01-16T15:06:46-0800;
+    # date = 2018-02-21T17:21:56-0800;
   };
 
   tidy = compileEmacsWikiFile {
     name = "tidy.el";
     sha256 = "0psci55a3angwv45z9i8wz8jw634rxg1xawkrb57m878zcxxddwa";
-    # date = 2018-01-16T15:06:52-0800;
+    # date = 2018-02-21T17:21:58-0800;
   };
 
   vline = compileEmacsWikiFile {
     name = "vline.el";
     sha256 = "1ys6928fgk8mswa4gv10cxggir8acck27g78cw1z3pdz5gakbgnj";
-    # date = 2018-01-16T15:06:55-0800;
+    # date = 2018-02-21T17:21:59-0800;
   };
 
   xml-rpc = compileEmacsWikiFile {
     name = "xml-rpc.el";
     sha256 = "0a9n3mj39icfkbsqpcpg9q1d5yz6h3jhay70ngiwsa4264ha4ipa";
-    # date = 2018-01-16T15:06:58-0800;
+    # date = 2018-02-21T17:22:00-0800;
   };
 
   xray = compileEmacsWikiFile {
     name = "xray.el";
     sha256 = "12pzik5plywil0rz95rqb5qdqwdawkbwhmqab346yizhlp6i4fq6";
-    # date = 2018-01-16T15:06:59-0800;
+    # date = 2018-02-21T17:22:02-0800;
+  };
+
+  yaoddmuse = compileEmacsWikiFile {
+    name = "yaoddmuse.el";
+    sha256 = "0h3s3mdfz0czgz1cj415k170g7mbbqmsinw0xr7qmk050i154iis";
+    # date = 2018-02-21T17:58:19-0800;
   };
 
 

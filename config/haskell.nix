@@ -8,6 +8,7 @@ pkgs: hpkgs: with hpkgs;
   HUnit
   IfElse
   MemoTrie
+  MonadPrompt
   MissingH
   Network-NineP
   QuickCheck

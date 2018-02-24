@@ -86,7 +86,7 @@ working: tag-working mirror copy
 
 update: tag-before pull build-all switch env-all working
 
-CACHE = /Volumes/Cache
+CACHE = /Volumes/tank/Cache
 
 cache:
 	find /nix/store -maxdepth 1 -type f			\

@@ -46,6 +46,7 @@ rec {
       # FONTCONFIG_PATH    = "${pkgs.fontconfig.out}/etc/fonts";
       FONTCONFIG_PATH    = "${xdg.configHome}/fontconfig";
       FONTCONFIG_FILE    = "${xdg.configHome}/fontconfig/fonts.conf";
+      LOCATE_PATH        = "${xdg.cacheHome}/locate/home.db:${xdg.cacheHome}/locate/system.db";
 
       PASSWORD_STORE_DIR = "${home_directory}/Documents/.passwords";
 
