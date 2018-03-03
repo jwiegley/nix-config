@@ -1,8 +1,8 @@
 all: switch env-all
 
-switch: darwin home
+switch: darwin-switch home-switch
 
-darwin:
+darwin-switch:
 	darwin-rebuild switch -Q
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
@@ -10,7 +10,7 @@ darwin-build:
 	nix build darwin.system
 	rm result
 
-home:
+home-switch:
 	home-manager switch
 	@echo "Home generation:   $$(home-manager generations | head -1)"
 
