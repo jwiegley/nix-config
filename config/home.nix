@@ -39,6 +39,7 @@ rec {
       GNUPGHOME          = "${xdg.configHome}/gnupg";
       LESSHISTFILE       = "${xdg.cacheHome}/less/history";
       PARALLEL_HOME      = "${xdg.cacheHome}/parallel";
+      RECOLL_CONFDIR     = "${xdg.configHome}/recoll";
       SCREENRC           = "${xdg.configHome}/screen/config";
       SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
       STARDICT_DATA_DIR  = "${xdg.dataHome}/dictionary";
@@ -59,8 +60,9 @@ rec {
       GHCPKGVER          = "822";
 
       ALTERNATE_EDITOR   = "${pkgs.vim}/bin/vi";
+      EMACS_SERVER_FILE  = "/tmp/emacsclient.server";
       COLUMNS            = "100";
-      EDITOR             = "${pkgs.emacs}/bin/emacsclient -a vi";
+      EDITOR             = "${pkgs.emacs26}/bin/emacsclient -s /tmp/emacs501/server -a vi";
       EMAIL              = "${programs.git.userEmail}";
       JAVA_OPTS          = "-Xverify:none";
       LC_CTYPE           = "en_US.UTF-8";
@@ -254,7 +256,7 @@ rec {
 
       extraConfig = {
         core = {
-          editor            = "${pkgs.emacs}/bin/emacsclient";
+          editor            = "${pkgs.emacs26}/bin/emacsclient -s /tmp/emacs501/server";
           trustctime        = false;
           fsyncobjectfiles  = true;
           pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
@@ -455,6 +457,13 @@ rec {
       data-dir ${pkgs.aspellDicts.en}/lib/aspell
       personal ${xdg.configHome}/aspell/en_US.personal
       repl ${xdg.configHome}/aspell/en_US.repl
+    '';
+
+    configFile."recoll/mimeview".text = ''
+      xallexcepts- = application/pdf
+      xallexcepts+ =
+      [view]
+      application/pdf = ${pkgs.emacs26}/bin/emacsclient -n -s /tmp/emacs501/server --eval '(org-pdfview-open "%f::%p")'
     '';
 
     configFile."msmtp".text = ''

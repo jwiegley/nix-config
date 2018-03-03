@@ -1,6 +1,8 @@
 all: switch env-all
 
-darwin-switch:
+switch: darwin home
+
+darwin:
 	darwin-rebuild switch -Q
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
@@ -8,7 +10,7 @@ darwin-build:
 	nix build darwin.system
 	rm result
 
-home-switch:
+home:
 	home-manager switch
 	@echo "Home generation:   $$(home-manager generations | head -1)"
 
@@ -17,18 +19,6 @@ home-build:
 		  --argstr confPath "$(HOME_MANAGER_CONFIG)" \
 		  --argstr confAttr "" activationPackage
 	rm result
-
-pull:
-	(cd nixpkgs      && git pull --rebase)
-	(cd darwin       && git pull --rebase)
-	(cd home-manager && git pull --rebase)
-
-tag-before:
-	git --git-dir=nixpkgs/.git branch -f before-update HEAD
-
-tag-working:
-	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
-	git --git-dir=nixpkgs/.git branch -D before-update
 
 env-all:
 	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs \
@@ -68,12 +58,26 @@ build: darwin-build home-build env-build
 
 build-all: darwin-build home-build env-all-build
 
-switch: darwin-switch home-switch
+pull:
+	(cd nixpkgs      && git pull --rebase)
+	(cd darwin       && git pull --rebase)
+	(cd home-manager && git pull --rebase)
+
+tag-before:
+	git --git-dir=nixpkgs/.git branch -f before-update HEAD
+
+tag-working:
+	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
+	git --git-dir=nixpkgs/.git branch -D before-update
 
 mirror:
 	git --git-dir=nixpkgs/.git push jwiegley -f unstable:unstable
 	git --git-dir=darwin/.git push --mirror jwiegley
 	git --git-dir=home-manager/.git push --mirror jwiegley
+
+working: tag-working mirror
+
+update: tag-before pull build-all switch env-all working
 
 REMOTE = hermes
 
@@ -81,10 +85,6 @@ copy:
 	nix copy --to ssh://$(REMOTE)			\
 	    $(shell readlink -f ~/.nix-profile)		\
 	    $(shell readlink -f /run/current-system)
-
-working: tag-working mirror copy
-
-update: tag-before pull build-all switch env-all working
 
 CACHE = /Volumes/tank/Cache
 
@@ -107,3 +107,5 @@ gc: cache
 	       -name result -type l \) -print0	\
 	    | parallel -0 /bin/rm -fr {}
 	nix-collect-garbage --delete-older-than 14d
+
+### Makefile ends here

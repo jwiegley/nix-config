@@ -40,7 +40,10 @@ myHaskellPackageDefs = super:
   sizes            = pkg ~/src/sizes {};
   una              = pkg ~/src/una {};
   z3               = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
-  z3-generate-api  = pkg ~/src/z3-generate-api { };
+  z3-generate-api  = pkg ~/src/z3-generate-api {};
+
+  atif-fiat = pkg ~/bae/micromht-fiat-deliverable/atif-fiat {};
+  stanag4607 = pkg ~/bae/micromht-fiat-deliverable/atif-fiat/stanag4607 {};
 
   hours = (pkgs.haskell.lib.dontHaddock (pkg ~/src/hours {}))
     .overrideDerivation (attrs: {
@@ -353,8 +356,8 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
   });
 };
 
-haskPkgs = haskellPackages_8_2;
-haskellPackages = haskPkgs;
+haskellPackages = haskellPackages_8_2;
+haskPkgs = haskellPackages;
 
 mkHaskellPackages = hpkgs: hoverrides: hpkgs.override {
   overrides = self: super: hoverrides (myHaskellPackageDefs super) self super;

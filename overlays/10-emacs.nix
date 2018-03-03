@@ -75,9 +75,6 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   password-store = withPatches melpaPackages.password-store
     [ ./emacs/patches/password-store.patch ];
 
-  swiper = withPatches melpaPackages.swiper
-    [ ./emacs/patches/swiper.patch ];
-
 
   ascii = compileEmacsWikiFile {
     name = "ascii.el";
@@ -626,15 +623,24 @@ myEmacsPackageOverrides = emacs: super: self: with self;
           inherit (texlive) scheme-basic cm-super ec;
         }; in mkDerivation rec {
     name = "emacs-proof-general-${version}";
-    version = "2018-01-16";
+    version = "2018-02-26";
 
+    # This is the main branch
     src = fetchFromGitHub {
       owner = "ProofGeneral";
       repo = "PG";
-      rev = "945cada601c5729edd16fcc989a3969c8b34d20a";
-      sha256 = "1zjmbhq6c8g8b93nnsvr5pxx6mlcndb0fz152b2h80vfh9663cn8";
-      # date = 2018-01-30T14:28:25+01:00;
+      rev = "5e7566e54842fb198a6f68abb7c624b53a488038";
+      sha256 = "1d1s99l1awqv8k0ijqp8xam59wabzpidalpglgckyxip2g7jlsm3";
+      # date = 2018-02-20T10:30:00+01:00;
     };
+
+    # src = fetchFromGitHub {
+    #   owner = "ProofGeneral";
+    #   repo = "PG";
+    #   rev = "c066d71ba4b2174186e15086e4dbf5136f4f10e2";
+    #   sha256 = "0syskz6359cbqbslkck6m1lfy095hgngjqin6mj22rik1a24vfqk";
+    #   # date = 2018-02-28T10:30:00+01:00;
+    # };
 
     buildInputs = [ emacs ] ++ (with pkgs; [ texinfo perl which ]);
 

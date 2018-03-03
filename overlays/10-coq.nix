@@ -2,7 +2,7 @@ self: pkgs: rec {
 
 coq_8_7_override = pkgs.coq_8_7.override {
   ocamlPackages = pkgs.ocaml-ng.ocamlPackages_4_06;
-  buildIde = false;
+  buildIde = true;
 };
 
 coq_HEAD = pkgs.stdenv.lib.overrideDerivation coq_8_7_override (attrs: rec {
