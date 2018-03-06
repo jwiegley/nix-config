@@ -34,6 +34,7 @@ env-all-build:
 	nix build darwin.pkgs.coq85Env
 	nix build darwin.pkgs.coq86Env
 	nix build darwin.pkgs.coq87Env
+	nix build darwin.pkgs.coqHEADEnv
 	nix build darwin.pkgs.ghc80Env
 	nix build darwin.pkgs.ghc82Env
 	nix build darwin.pkgs.ghc82ProfEnv

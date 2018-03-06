@@ -7,6 +7,10 @@ pkgs: version: cpkgs: with pkgs;
   coq2html
   compcert
 ] ++ (with cpkgs; ([
+] ++ (pkgs.stdenv.lib.optionals (version == "8.8+alpha") [
+  equations
+  # fiat_HEAD
+]) ++ (pkgs.stdenv.lib.optionals (version == "8.7") [
   QuickChick
   autosubst
   bignums
@@ -18,10 +22,11 @@ pkgs: version: cpkgs: with pkgs;
   heq
   interval
   mathcomp
-] ++ (pkgs.stdenv.lib.optionals (version == "8.7") [
+
   CoLoR
   category-theory
   equations
+  fiat_HEAD
   math-classes
   metalib
 ]) ++ (pkgs.stdenv.lib.optionals (version == "8.6") [
