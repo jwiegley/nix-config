@@ -699,8 +699,8 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
 
   src = fetchgit {
     url = https://git.savannah.gnu.org/git/emacs.git;
-    rev = "8d4500087f547e203cfba03f61dcbe641bf650de";
-    sha256 = "1zk9xm01v4chnxf9ns9c3kx2jal3lj88hadv5vp0zb8xr9vz4f31";
+    rev = "ec79bdc53fd75ea48c1451b0d83b0b41a0345bc6";
+    sha256 = "1g2jjpvwlzpvk49fds0w9m0rjh372i4qpv3p6qxlxydiyjqpa5f6";
   };
 
   postPatch = ''
@@ -768,8 +768,8 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
 
   src = fetchgit {
     url = https://git.savannah.gnu.org/git/emacs.git;
-    rev = "614e9b322ec08cf6549cd4db34e1dc75149e6b31";
-    sha256 = "0pbqn33hkwwvw1qrwh0nxn77rj2ryrb1yfbs9sm6j2x9avbfiyha";
+    rev = "892129881dba9a923ab1ff3fe75283ee67a6c0c9";
+    sha256 = "0ky25lgb5qvwasf61l5sfxhv8msm6minhy20yzh1skqb5d8sas9b";
   };
 
   postPatch = ''

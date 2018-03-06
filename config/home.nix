@@ -463,7 +463,7 @@ rec {
       xallexcepts- = application/pdf
       xallexcepts+ =
       [view]
-      application/pdf = ${pkgs.emacs26}/bin/emacsclient -n -s /tmp/emacs501/server --eval '(org-pdfview-open "%f::%p")'
+      application/pdf = ${home_directory}/.nix-profile/bin/load-env-emacs26 emacsclient -n -s /tmp/emacs501/server --eval '(org-pdfview-open "%f::%p")'
     '';
 
     configFile."msmtp".text = ''
