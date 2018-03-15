@@ -5,7 +5,6 @@ pkgs: version: cpkgs: with pkgs;
   ocamlPackages.findlib
   ocamlPackages.menhir
   coq2html
-  compcert
 ] ++ (with cpkgs; ([
 ] ++ (pkgs.stdenv.lib.optionals (version == "8.8+alpha") [
   equations
@@ -14,6 +13,7 @@ pkgs: version: cpkgs: with pkgs;
   QuickChick
   autosubst
   bignums
+  compcert
   coq-ext-lib
   coq-haskell
   coquelicot
@@ -24,13 +24,13 @@ pkgs: version: cpkgs: with pkgs;
   mathcomp
 
   CoLoR
-  category-theory
+  # category-theory
   equations
   fiat_HEAD
   math-classes
   metalib
 ]) ++ (pkgs.stdenv.lib.optionals (version == "8.6") [
-  category-theory
+  # category-theory
   equations
   ssreflect
 ])))

@@ -64,6 +64,7 @@ rec {
       COLUMNS            = "100";
       EDITOR             = "${pkgs.emacs26}/bin/emacsclient -s /tmp/emacs501/server -a vi";
       EMAIL              = "${programs.git.userEmail}";
+      GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";
       JAVA_OPTS          = "-Xverify:none";
       LC_CTYPE           = "en_US.UTF-8";
       LESS               = "-FRSXM";
@@ -80,8 +81,7 @@ rec {
                source = builtins.toPath("${home_directory}/src/home/${path}");
              };
            })
-          [ "Library/Keyboard Layouts/PersianDvorak.keylayout"
-            "Library/Scripts/Applications/Download links to PDF.scpt"
+          [ "Library/Scripts/Applications/Download links to PDF.scpt"
             "Library/Scripts/Applications/Media Pro" ]) //
       { ".Deskzilla".source    = "${xdg.dataHome}/Deskzilla";
         ".dbvis".source        = "${xdg.configHome}/DbVisualizer";

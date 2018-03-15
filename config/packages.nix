@@ -48,6 +48,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   automake
   (exe haskPkgs.cabal2nix)
   (exe haskPkgs.cabal-install)
+  (exe haskellPackages_8_0.hs-to-coq)
   clang
   cmake
   fftw

@@ -634,13 +634,7 @@ myEmacsPackageOverrides = emacs: super: self: with self;
       # date = 2018-02-20T10:30:00+01:00;
     };
 
-    # src = fetchFromGitHub {
-    #   owner = "ProofGeneral";
-    #   repo = "PG";
-    #   rev = "c066d71ba4b2174186e15086e4dbf5136f4f10e2";
-    #   sha256 = "0syskz6359cbqbslkck6m1lfy095hgngjqin6mj22rik1a24vfqk";
-    #   # date = 2018-02-28T10:30:00+01:00;
-    # };
+    # src = ~/src/proof-general;
 
     buildInputs = [ emacs ] ++ (with pkgs; [ texinfo perl which ]);
 

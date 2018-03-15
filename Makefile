@@ -78,7 +78,7 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build-all switch env-all working
+update: tag-before pull build-all switch env-all working cache
 
 REMOTE = hermes
 
@@ -87,7 +87,7 @@ copy:
 	    $(shell readlink -f ~/.nix-profile)		\
 	    $(shell readlink -f /run/current-system)
 
-CACHE = /Volumes/tank/Cache
+CACHE = /Volumes/slim/Cache
 
 cache:
 	find /nix/store -maxdepth 1 -type f			\

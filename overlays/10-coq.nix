@@ -1,33 +1,11 @@
 self: pkgs: rec {
 
-equations_8_8 = coq: with pkgs; stdenv.mkDerivation rec {
-  name = "coq${coq.coq-version}-equations-${version}";
-  version = "8.8+alpha";
-
-  src = fetchFromGitHub {
-    owner = "mattam82";
-    repo = "Coq-Equations";
-    rev = "5f358fb4ff463a7502adf6862efa611dff41350d";
-    sha256 = "1iffarnch6grdb7d8ifzlxm45fpmnk5bax9gf556ny5qrnyx8s13";
-  };
-
-  buildInputs = [ coq.ocaml coq.camlp5 coq.findlib coq ];
-
-  preBuild = "coq_makefile -f _CoqProject -o Makefile";
-
-  installFlags = "COQLIB=$(out)/lib/coq/${coq.coq-version}/";
-
-  meta = with stdenv.lib; {
-    homepage = https://mattam82.github.io/Coq-Equations/;
-    description = "A plugin for Coq to add dependent pattern-matching";
-    maintainers = with maintainers; [ jwiegley ];
-    platforms = coq.meta.platforms;
-  };
-
-  passthru = {
-    compatibleCoqVersions = v: builtins.elem v [ "8.8+alpha" ];
-  };
-};
+QuickChick = cpkgs:
+  self.callPackage ./coq/QuickChick.nix { inherit (cpkgs) coq ssreflect; };
+fiat_HEAD = cpkgs:
+  self.callPackage ./coq/fiat.nix { inherit (cpkgs) coq; };
+equations_8_8 = cpkgs:
+  self.callPackage ./coq/equations.nix { inherit (cpkgs) coq; };
 
 coq_8_7_override = pkgs.coq_8_7.override {
   ocamlPackages = pkgs.ocaml-ng.ocamlPackages_4_06;
@@ -69,9 +47,24 @@ coq_HEAD = with pkgs; stdenv.lib.overrideDerivation coq_8_7_override (attrs: rec
   '';
 });
 
-coqPackages_HEAD = pkgs.mkCoqPackages coq_HEAD // {
-  equations = equations_8_8 coq_HEAD;
+coqPackages_HEAD = let cpkgs = pkgs.mkCoqPackages coq_HEAD; in cpkgs // {
+  QuickChick = QuickChick cpkgs;
+  equations = equations_8_8 cpkgs;
+  fiat_HEAD = fiat_HEAD cpkgs;
 };
+
+coqPackages_8_7 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_7; in cpkgs // {
+  QuickChick = QuickChick cpkgs;
+  fiat_HEAD = fiat_HEAD cpkgs;
+};
+
+coqPackages_8_6 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_6; in cpkgs // {
+  QuickChick = QuickChick cpkgs;
+  fiat_HEAD = fiat_HEAD cpkgs;
+};
+
+coqPackages_8_5 = pkgs.mkCoqPackages pkgs.coq_8_5;
+coqPackages_8_4 = pkgs.mkCoqPackages pkgs.coq_8_4;
 
 coqHEADEnv = myPkgs: pkgs.myEnvFun {
   name = "coqHEAD";
@@ -80,24 +73,22 @@ coqHEADEnv = myPkgs: pkgs.myEnvFun {
 
 coq87Env = myPkgs: pkgs.myEnvFun {
   name = "coq87";
-  buildInputs = [ pkgs.coq_8_7 ] ++ myPkgs "8.7" pkgs.coqPackages_8_7;
+  buildInputs = [ pkgs.coq_8_7 ] ++ myPkgs "8.7" coqPackages_8_7;
 };
 
 coq86Env = myPkgs: pkgs.myEnvFun {
   name = "coq86";
-  buildInputs = [ pkgs.coq_8_6 ] ++ myPkgs "8.6" pkgs.coqPackages_8_6;
+  buildInputs = [ pkgs.coq_8_6 ] ++ myPkgs "8.6" coqPackages_8_6;
 };
 
 coq85Env = myPkgs: pkgs.myEnvFun {
   name = "coq85";
-  buildInputs = [ pkgs.coq_8_5 ] ++ myPkgs "8.5" pkgs.coqPackages_8_5;
+  buildInputs = [ pkgs.coq_8_5 ] ++ myPkgs "8.5" coqPackages_8_5;
 };
-
-coqPackages_8_4 = pkgs.mkCoqPackages pkgs.coq_8_4;
 
 coq84Env = myPkgs: pkgs.myEnvFun {
   name = "coq84";
-  buildInputs = [ pkgs.coq_8_4 ];
+  buildInputs = [ pkgs.coq_8_4 ] ++ myPkgs "8.4" coqPackages_8_4;
 };
 
 }

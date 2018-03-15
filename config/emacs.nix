@@ -105,8 +105,6 @@ pkgs: epkgs: with epkgs;
   erc-highlight-nicknames
   erc-yank
   erefactor
-  esh-buf-stack
-  esh-help
   eshell-autojump
   eshell-bookmark
   eshell-up
@@ -256,6 +254,7 @@ pkgs: epkgs: with epkgs;
   operate-on-number
   org                           # org org-babel org-crypt
   org-bookmark-heading
+  org-gcal
   org-noter
   org-opml
   org-pdfview

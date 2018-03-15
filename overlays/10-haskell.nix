@@ -57,7 +57,7 @@ myHaskellPackageDefs = super:
       '';
     });
 
-  hs-to-coq = pkg ~/src/hs-to-coq/hs-to-coq {};
+  hs-to-coq = pkg ~/src/hs-to-coq {};
 
   timeparsers = super.timeparsers.overrideDerivation (attrs: {
     src = pkgs.fetchFromGitHub {
@@ -324,6 +324,88 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   });
 };
 
+haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
+  with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
+
+  Agda                     = dontHaddock super.Agda;
+  blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
+  compressed               = doJailbreak super.compressed;
+  commodities              = doJailbreak mypkgs.commodities;
+  consistent               = doJailbreak (dontCheck mypkgs.consistent);
+  derive-storable          = dontCheck super.derive-storable;
+  diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
+  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
+  git-annex                = dontCheck super.git-annex;
+  hakyll                   = doJailbreak super.hakyll;
+  heap                     = dontCheck super.heap;
+  hierarchy                = doJailbreak super.hierarchy;
+  ipcvar                   = dontCheck super.ipcvar;
+  lattices                 = doJailbreak super.lattices;
+  pipes-binary             = doJailbreak super.pipes-binary;
+  pipes-files              = dontCheck (doJailbreak super.pipes-files);
+  pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
+  posix-paths              = doJailbreak super.posix-paths;
+  recursors                = doJailbreak super.recursors;
+  runmany                  = doJailbreak super.runmany;
+  shelly                   = dontCheck (doJailbreak super.shelly);
+  streaming-commons        = dontCheck super.streaming-commons;
+  text-icu                 = dontCheck super.text-icu;
+  text-show                = dontCheck super.text-show;
+  these                    = doJailbreak super.these;
+  time-recurrence          = doJailbreak super.time-recurrence;
+  timeparsers              = doJailbreak (dontCheck mypkgs.timeparsers);
+
+  diagrams-builder = with pkgs; with self; mkDerivation {
+    pname = "diagrams-builder";
+    version = "0.8.0.2";
+    sha256 = "1jr98sza6bhzq9myfb9f2p8lfbs9qcxck67h2hvxisgpvmy0gjn2";
+    configureFlags = [ "-fcairo" "-fps" "-frasterific" "-fsvg" ];
+    isLibrary = true;
+    isExecutable = true;
+    libraryHaskellDepends = [
+      base base-orphans cmdargs diagrams-lib directory exceptions
+      filepath hashable haskell-src-exts haskell-src-exts-simple hint
+      lens mtl split transformers
+    ];
+    executableHaskellDepends = [
+      base bytestring cmdargs diagrams-cairo diagrams-lib
+      diagrams-postscript diagrams-rasterific diagrams-svg directory
+      filepath JuicyPixels lens svg-builder
+    ];
+    homepage = "http://projects.haskell.org/diagrams";
+    description = "hint-based build service for the diagrams graphics EDSL";
+    license = stdenv.lib.licenses.bsd3;
+    hydraPlatforms = stdenv.lib.platforms.none;
+  };
+
+  haskell-src-exts-simple_1_20_0_0 =
+    super.haskell-src-exts-simple_1_20_0_0.override {
+      haskell-src-exts = super.haskell-src-exts_1_20_1;
+    };
+
+  lambdabot-haskell-plugins =
+    super.lambdabot-haskell-plugins.override {
+      haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
+    };
+
+  hoopl = super.hoopl_3_10_2_2;
+
+  linearscan-hoopl = dontCheck super.linearscan-hoopl;
+
+  recurseForDerivations = true;
+
+  mkDerivation = args: super.mkDerivation (args // {
+    # jww (2018-01-28): This crashes due to an infinite loop
+    # libraryHaskellDepends =
+    #   if builtins.hasAttr "libraryHaskellDepends" args
+    #   then args.libraryHaskellDepends
+    #          ++ [ pkgs.darwin.apple_sdk.frameworks.Cocoa ]
+    #   else [ pkgs.darwin.apple_sdk.frameworks.Cocoa ];
+    enableLibraryProfiling = libProf;
+    enableExecutableProfiling = false;
+  });
+};
+
 haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
@@ -368,6 +450,11 @@ haskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD
 profiledHaskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD
   (haskellPackage_HEAD_overrides true);
 
+haskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc841
+  (haskellPackage_8_4_overrides false);
+profiledHaskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc841
+  (haskellPackage_8_4_overrides true);
+
 haskellPackages_8_2 = mkHaskellPackages pkgs.haskell.packages.ghc822
   (haskellPackage_8_2_overrides false);
 profiledHaskellPackages_8_2 = mkHaskellPackages pkgs.haskell.packages.ghc822
@@ -389,6 +476,24 @@ ghcHEADProfEnv = myPkgs: pkgs.myEnvFun {
   name = "ghcHEADprof";
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_HEAD; [
     (ghcWithHoogle myPkgs)
+  ];
+};
+
+ghc84Env = myPkgs: pkgs.myEnvFun {
+  name = "ghc84";
+  buildInputs = with pkgs.haskell.lib; with haskellPackages_8_4; [
+    (ghcWithHoogle myPkgs)
+    Agda
+    idris
+  ];
+};
+
+ghc84ProfEnv = myPkgs: pkgs.myEnvFun {
+  name = "ghc84prof";
+  buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_4; [
+    (ghcWithHoogle myPkgs)
+    Agda
+    idris
   ];
 };
 
