@@ -7,8 +7,8 @@ stdenv.mkDerivation rec {
   src = fetchFromGitHub {
     owner = "mattam82";
     repo = "Coq-Equations";
-    rev = "5f358fb4ff463a7502adf6862efa611dff41350d";
-    sha256 = "1iffarnch6grdb7d8ifzlxm45fpmnk5bax9gf556ny5qrnyx8s13";
+    rev = "c0c7e993bc1a745bed70065bdb5e94948a63f402";
+    sha256 = "10qmfbzm21dgnh42y8wp5wkjw8wvfydnzcw4r7vh448avgcr18jw";
   };
 
   buildInputs = [ coq.ocaml coq.camlp5 coq.findlib coq ];

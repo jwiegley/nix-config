@@ -689,12 +689,12 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
     [ ./emacs/patches/at-fdcwd.patch
       ./emacs/patches/emacs-26.patch ];
 
-  CFLAGS = "-Ofast -momit-leaf-frame-pointer";
+  CFLAGS = "-Ofast -momit-leaf-frame-pointer -DMAC_OS_X_VERSION_MAX_ALLOWED=101200";
 
   src = fetchgit {
     url = https://git.savannah.gnu.org/git/emacs.git;
-    rev = "ec79bdc53fd75ea48c1451b0d83b0b41a0345bc6";
-    sha256 = "1g2jjpvwlzpvk49fds0w9m0rjh372i4qpv3p6qxlxydiyjqpa5f6";
+    rev = "aa40014ba373ac633b118dc63647f323ef0cedb5";
+    sha256 = "1asv0m76phm9hm22wnknsrkp1hgxw5cmm8fk2d2iyar9mcw29c0n";
   };
 
   postPatch = ''
@@ -753,7 +753,7 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
     [ ./emacs/patches/at-fdcwd.patch
       ./emacs/patches/emacs-26.patch ];
 
-  CFLAGS = "-O0 -g3";
+  CFLAGS = "-O0 -g3 -DMAC_OS_X_VERSION_MAX_ALLOWED=101200";
 
   configureFlags = [ "--with-modules" ] ++
    [ "--with-ns" "--disable-ns-self-contained"
@@ -762,8 +762,8 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
 
   src = fetchgit {
     url = https://git.savannah.gnu.org/git/emacs.git;
-    rev = "892129881dba9a923ab1ff3fe75283ee67a6c0c9";
-    sha256 = "0ky25lgb5qvwasf61l5sfxhv8msm6minhy20yzh1skqb5d8sas9b";
+    rev = "7ff62ed221cc712bb2e310917dd303594f68a625";
+    sha256 = "0y8nybv0d0zwr2xcn1qg2scvd1g6dskij7cmnrz3ncx6nsl6bvfk";
   };
 
   postPatch = ''

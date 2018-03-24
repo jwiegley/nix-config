@@ -229,7 +229,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
 
   haskell-src-exts-simple_1_20_0_0 =
     super.haskell-src-exts-simple_1_20_0_0.override {
-      haskell-src-exts = super.haskell-src-exts_1_20_1;
+      haskell-src-exts = super.haskell-src-exts_1_20_2;
     };
 
   lambdabot-haskell-plugins = doJailbreak (
@@ -241,7 +241,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
 
   mkDerivation = args: super.mkDerivation (args // {
     enableLibraryProfiling = libProf;
-    enableExecutableProfiling = false;
+    enableExecutableProfiling = libProf;
   });
 };
 
@@ -277,6 +277,27 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = doJailbreak (dontCheck mypkgs.timeparsers);
 
+  HUnit =
+    if libProf
+    then dontCheck super.HUnit
+    else super.HUnit;
+  inspection-testing =
+    if libProf
+    then dontCheck super.inspection-testing
+    else super.inspection-testing;
+  th-abstraction =
+    if libProf
+    then dontCheck super.th-abstraction
+    else super.th-abstraction;
+  th-lift =
+    if libProf
+    then dontCheck super.th-lift
+    else super.th-lift;
+  th-expand-syns =
+    if libProf
+    then dontCheck super.th-expand-syns
+    else super.th-expand-syns;
+
   diagrams-builder = with pkgs; with self; mkDerivation {
     pname = "diagrams-builder";
     version = "0.8.0.2";
@@ -302,7 +323,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
 
   haskell-src-exts-simple_1_20_0_0 =
     super.haskell-src-exts-simple_1_20_0_0.override {
-      haskell-src-exts = super.haskell-src-exts_1_20_1;
+      haskell-src-exts = super.haskell-src-exts_1_20_2;
     };
 
   lambdabot-haskell-plugins =
@@ -320,7 +341,8 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
     #          ++ [ pkgs.darwin.apple_sdk.frameworks.Cocoa ]
     #   else [ pkgs.darwin.apple_sdk.frameworks.Cocoa ];
     enableLibraryProfiling = libProf;
-    enableExecutableProfiling = false;
+    # enableExecutableProfiling = libProf;
+    # enableSharedLibraries = !libProf;
   });
 };
 
@@ -402,7 +424,7 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
     #          ++ [ pkgs.darwin.apple_sdk.frameworks.Cocoa ]
     #   else [ pkgs.darwin.apple_sdk.frameworks.Cocoa ];
     enableLibraryProfiling = libProf;
-    enableExecutableProfiling = false;
+    enableExecutableProfiling = libProf;
   });
 };
 
@@ -434,7 +456,7 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
 
   mkDerivation = args: super.mkDerivation (args // {
     enableLibraryProfiling = libProf;
-    enableExecutableProfiling = false;
+    enableExecutableProfiling = libProf;
   });
 };
 

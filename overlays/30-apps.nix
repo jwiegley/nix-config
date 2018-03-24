@@ -128,13 +128,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "59.0";
+  version = "59.0.1";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "1jj0dwb93b8ajqv3igxv3x3w3cqp5d7xanr7wy9k0bqa0gr4414j";
-    # date = 2018-02-02T15:42:49-0800;
+    sha256 = "00il1n1rv6vxfl0ip7n3xdm0632rp0vx0sm6x23wz9whakkdhcy8";
   };
   postInstall = ''
     for file in  \
@@ -215,12 +214,12 @@ iTerm2 = self.installApplication rec {
 KeyboardMaestro = self.installApplication rec {
   name = "KeyboardMaestro";
   appname = "Keyboard Maestro";
-  version = "8.1.1";
+  version = "8.2";
   sourceRoot = "Keyboard Maestro.app";
   src = super.fetchurl {
-    url = http://files.stairways.com/keyboardmaestro-811.zip;
-    sha256 = "1mcwcqsi7nnk4vdvy611j167j7qxjmzal2nr83h66fplln7bqwjn";
-    # date = 2018-02-20T11:06:21-0800;
+    url = http://files.stairways.com/keyboardmaestro-82.zip;
+    sha256 = "0zxyk23hw6vd3nzzfxma5ww892x5rgycflk0wdfs4h2ghampsfgs";
+    # date = 2018-03-23T22:17:27-0700;
   };
   description = "Keyboard macro program for macOS";
   homepage = https://www.keyboardmaestro.com;

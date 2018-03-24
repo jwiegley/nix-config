@@ -6,9 +6,8 @@ pkgs: version: cpkgs: with pkgs;
   ocamlPackages.menhir
   coq2html
 ] ++ (with cpkgs; ([
-] ++ (pkgs.stdenv.lib.optionals (version == "8.8+alpha") [
+] ++ (pkgs.stdenv.lib.optionals (version == "8.8+beta1") [
   equations
-  # fiat_HEAD
 ]) ++ (pkgs.stdenv.lib.optionals (version == "8.7") [
   QuickChick
   autosubst
@@ -24,13 +23,11 @@ pkgs: version: cpkgs: with pkgs;
   mathcomp
 
   CoLoR
-  # category-theory
   equations
   fiat_HEAD
   math-classes
   metalib
 ]) ++ (pkgs.stdenv.lib.optionals (version == "8.6") [
-  # category-theory
   equations
   ssreflect
 ])))

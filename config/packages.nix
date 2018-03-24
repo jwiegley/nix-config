@@ -35,7 +35,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
 
   # jsToolsEnv
   jq
-  jquery
   nodejs
   nodePackages.eslint
   nodePackages.csslint

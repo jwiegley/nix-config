@@ -13,17 +13,11 @@ coq_8_7_override = pkgs.coq_8_7.override {
 };
 
 coq_HEAD = with pkgs; stdenv.lib.overrideDerivation coq_8_7_override (attrs: rec {
-  version = "8.8+alpha";
+  version = "HEAD";
   name = "coq-${version}-pre";
   coq-version = "${version}";
 
-  src = fetchFromGitHub {
-    owner = "coq";
-    repo = "coq";
-    rev = "15331729aaab16678c2f7e29dd391f72df53d76e";
-    sha256 = "1296mzx21c4djrrfkcicnr87ns9vspdsdp15mkps7fjqmd330rk0";
-    # date = 2018-03-05T13:30:08+01:00;
-  };
+  src = ~/src/coq;
 
   buildInputs = attrs.buildInputs
     ++ (with pkgs; [ ocaml-ng.ocamlPackages_4_06.num
@@ -53,6 +47,12 @@ coqPackages_HEAD = let cpkgs = pkgs.mkCoqPackages coq_HEAD; in cpkgs // {
   fiat_HEAD = fiat_HEAD cpkgs;
 };
 
+coqPackages_8_8 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_8; in cpkgs // {
+  QuickChick = QuickChick cpkgs;
+  equations = equations_8_8 cpkgs;
+  fiat_HEAD = fiat_HEAD cpkgs;
+};
+
 coqPackages_8_7 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_7; in cpkgs // {
   QuickChick = QuickChick cpkgs;
   fiat_HEAD = fiat_HEAD cpkgs;
@@ -68,7 +68,12 @@ coqPackages_8_4 = pkgs.mkCoqPackages pkgs.coq_8_4;
 
 coqHEADEnv = myPkgs: pkgs.myEnvFun {
   name = "coqHEAD";
-  buildInputs = [ coq_HEAD ] ++ myPkgs "8.8+alpha" coqPackages_HEAD;
+  buildInputs = [ coq_HEAD ] ++ myPkgs "HEAD" coqPackages_HEAD;
+};
+
+coq88Env = myPkgs: pkgs.myEnvFun {
+  name = "coq88";
+  buildInputs = [ pkgs.coq_8_8 ] ++ myPkgs "8.8+beta1" coqPackages_8_8;
 };
 
 coq87Env = myPkgs: pkgs.myEnvFun {

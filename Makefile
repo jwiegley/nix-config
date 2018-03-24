@@ -90,23 +90,27 @@ copy:
 CACHE = /Volumes/slim/Cache
 
 cache:
-	find /nix/store -maxdepth 1 -type f			\
-	    \( -name '*.dmg' -o					\
-	       -name '*.zip' -o					\
-	       -name '*.pkg' -o					\
-	       -name '*.el'  -o					\
-	       -name '*.7z'  -o					\
-	       -name '*gz'   -o					\
-	       -name '*xz'   -o					\
-	       -name '*bz2'  -o					\
-	       -name '*.tar' \) -print0				\
-	    | parallel -0 nix copy --to file://$(CACHE)
+	test -d $(CACHE) &&				\
+	(find /nix/store -maxdepth 1 -type f		\
+	    \( -name '*.dmg' -o				\
+	       -name '*.zip' -o				\
+	       -name '*.pkg' -o				\
+	       -name '*.el'  -o				\
+	       -name '*.7z'  -o				\
+	       -name '*gz'   -o				\
+	       -name '*xz'   -o				\
+	       -name '*bz2'  -o				\
+	       -name '*.tar' \) -print0			\
+	    | parallel -0 nix copy --to file://$(CACHE))
 
-gc: cache
+gc:
 	find $(HOME)				\
 	    \( -name dist -type d -o		\
 	       -name result -type l \) -print0	\
 	    | parallel -0 /bin/rm -fr {}
 	nix-collect-garbage --delete-older-than 14d
+
+gc-all: gc
+	nix-collect-garbage -d
 
 ### Makefile ends here

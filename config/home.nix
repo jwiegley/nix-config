@@ -204,6 +204,14 @@ rec {
           file = "powerlevel9k.zsh-theme";
           src = pkgs.zsh-powerlevel9k.src;
         }
+
+        # { name = "iterm2_shell_integration";
+        #   src = pkgs.fetchurl {
+        #     url = https://iterm2.com/shell_integration/zsh;
+        #     sha256 = "17x6mqgn0j1cn6xvzl6x7d36zrkrmq81bqnbmz797prsgs1g4i98";
+        #     # date = 2018-03-23T21:44:01-0700
+        #   };
+        # }
       ];
     };
 
