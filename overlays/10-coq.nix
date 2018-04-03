@@ -8,6 +8,8 @@ equations_8_8 = cpkgs:
   self.callPackage ./coq/equations.nix { inherit (cpkgs) coq; };
 coq-haskell = cpkgs:
   self.callPackage ./coq/coq-haskell.nix { inherit (cpkgs) coq ssreflect; };
+category-theory = cpkgs:
+  self.callPackage ./coq/category-theory.nix { inherit (cpkgs) coq equations; };
 
 coq_8_7_override = pkgs.coq_8_7.override {
   ocamlPackages = pkgs.ocaml-ng.ocamlPackages_4_06;
@@ -48,6 +50,7 @@ coqPackages_HEAD = let cpkgs = pkgs.mkCoqPackages coq_HEAD; in cpkgs // {
   equations = equations_8_8 cpkgs;
   fiat_HEAD = fiat_HEAD cpkgs;
   coq-haskell = coq-haskell cpkgs;
+  category-theory = category-theory cpkgs;
 };
 
 coqPackages_8_8 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_8; in cpkgs // {
@@ -55,18 +58,21 @@ coqPackages_8_8 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_8; in cpkgs // {
   equations = equations_8_8 cpkgs;
   fiat_HEAD = fiat_HEAD cpkgs;
   coq-haskell = coq-haskell cpkgs;
+  category-theory = category-theory cpkgs;
 };
 
 coqPackages_8_7 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_7; in cpkgs // {
   QuickChick = QuickChick cpkgs;
   fiat_HEAD = fiat_HEAD cpkgs;
   coq-haskell = coq-haskell cpkgs;
+  category-theory = category-theory cpkgs;
 };
 
 coqPackages_8_6 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_6; in cpkgs // {
   QuickChick = QuickChick cpkgs;
   fiat_HEAD = fiat_HEAD cpkgs;
   coq-haskell = coq-haskell cpkgs;
+  category-theory = category-theory cpkgs;
 };
 
 coqPackages_8_5 = pkgs.mkCoqPackages pkgs.coq_8_5;

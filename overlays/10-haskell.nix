@@ -267,6 +267,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
   diagrams-svg             = doJailbreak super.diagrams-svg;
   heap                     = dontCheck super.heap;
+  indents                  = doJailbreak super.indents;
   machinecell              = doJailbreak super.machinecell;
   pipes-binary             = doJailbreak super.pipes-binary;
   pipes-group              = doJailbreak super.pipes-group;
