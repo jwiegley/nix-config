@@ -21,6 +21,7 @@ pkgs: version: cpkgs: with pkgs;
   heq
   interval
   mathcomp
+  coq-haskell
 
   CoLoR
   equations
@@ -30,4 +31,5 @@ pkgs: version: cpkgs: with pkgs;
 ]) ++ (pkgs.stdenv.lib.optionals (version == "8.6") [
   equations
   ssreflect
+  coq-haskell
 ])))
