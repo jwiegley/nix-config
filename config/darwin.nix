@@ -136,7 +136,7 @@ EOF
   nixpkgs = {
     config = {
       allowUnfree = true;
-      allowBroken = true;
+      # allowBroken = true;
     };
 
     overlays =

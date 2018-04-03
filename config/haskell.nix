@@ -7,6 +7,7 @@ pkgs: hpkgs: with hpkgs;
   HTTP
   HUnit
   IfElse
+  ListLike
   MemoTrie
   MonadPrompt
   MissingH
@@ -39,6 +40,7 @@ pkgs: hpkgs: with hpkgs;
   blaze-markup
   blaze-textual
   bool-extras
+  bound
   byteable
   byteorder
   bytes
@@ -85,7 +87,6 @@ pkgs: hpkgs: with hpkgs;
   data-fix
   derive-storable
   diagrams
-  diagrams-builder
   diagrams-core
   diagrams-graphviz
   diagrams-lib
@@ -200,6 +201,7 @@ pkgs: hpkgs: with hpkgs;
   monad-par-extras
   monad-stm
   monadloc
+  monadlist
   mono-traversable
   monoid-extras
   mtl
@@ -298,6 +300,7 @@ pkgs: hpkgs: with hpkgs;
   tasty-hunit
   tasty-quickcheck
   tasty-smallcheck
+  tasty-th
   temporary
   text
   text-format
@@ -314,6 +317,7 @@ pkgs: hpkgs: with hpkgs;
   transformers-base
   trifecta
   turtle
+  unbound-generics
   uniplate
   unix-compat
   unordered-containers

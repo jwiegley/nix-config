@@ -352,6 +352,18 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     };
   };
 
+  # ghub-plus = compileEmacsFiles {
+  #   name = "ghub-plus";
+  #   src = fetchFromGitHub {
+  #     owner = "vermiculus";
+  #     repo = "ghub-plus";
+  #     rev = "ec821200e3812ad4c8b38303e114c7f1c26e2c9d";
+  #     sha256 = "07azkhlb4lf2z0k6kyakprdklbb92617mixi0r22vfq71l53i17p";
+  #     # date = 2018-03-19T17:53:51-05:00;
+  #   };
+  #   buildInputs = [ ghub apiwrap ];
+  # };
+
   gnus-harvest = compileEmacsFiles {
     name = "gnus-harvest";
     src = fetchFromGitHub {

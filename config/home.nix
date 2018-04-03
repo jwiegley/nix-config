@@ -177,7 +177,7 @@ rec {
         }
 
         export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir rbenv vcs)
-        export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs command_execution_time time)
+        export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status background_jobs command_execution_time time)
 
         source ${pkgs.z}/share/z.sh
       '';

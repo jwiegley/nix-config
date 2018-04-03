@@ -384,7 +384,6 @@ pkgs: epkgs: with epkgs;
   yari-with-buttons             # yari
   yasnippet
   z3-mode
-  zencoding-mode
   zoom
   zoutline
   ztree                         # ztree-diff

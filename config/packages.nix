@@ -220,7 +220,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.runmany)
   screen
   silver-searcher
-  (exe haskPkgs.simple-mirror)
   (exe haskPkgs.sizes)
   smartmontools
   sqlite

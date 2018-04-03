@@ -89,34 +89,41 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
 haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
-  Agda                      = dontHaddock super.Agda;
-  blaze-builder-enumerator  = doJailbreak super.blaze-builder-enumerator;
-  commodities               = doJailbreak mypkgs.commodities;
-  compressed                = doJailbreak super.compressed;
-  concurrent-output         = doJailbreak super.concurrent-output;
-  conduit-extra           = dontCheck super.conduit-extra;
-  consistent                = dontCheck mypkgs.consistent;
-  derive-storable           = dontCheck super.derive-storable;
-  diagrams-graphviz         = doJailbreak super.diagrams-graphviz;
-  diagrams-rasterific       = doJailbreak super.diagrams-rasterific;
-  ghc-compact               = null;
-  hakyll                    = doJailbreak super.hakyll;
-  heap                      = dontCheck super.heap;
-  hierarchy                 = doJailbreak super.hierarchy;
-  hlibgit2                  = doJailbreak super.hlibgit2;
-  ipcvar                    = dontCheck super.ipcvar;
-  linearscan-hoopl          = dontCheck super.linearscan-hoopl;
-  liquidhaskell             = doJailbreak super.liquidhaskell;
-  pipes-binary              = doJailbreak super.pipes-binary;
-  pipes-files               = dontCheck (doJailbreak super.pipes-files);
-  pipes-zlib                = dontCheck (doJailbreak super.pipes-zlib);
-  recursors                 = doJailbreak super.recursors;
-  runmany                   = doJailbreak super.runmany;
-  sbvPlugin                 = doJailbreak super.sbvPlugin;
-  shelly                    = dontCheck super.shelly;
-  text-show                 = dontCheck super.text-show;
-  time-recurrence           = doJailbreak super.time-recurrence;
-  timeparsers               = doJailbreak (dontCheck mypkgs.timeparsers);
+  commodities              = doJailbreak mypkgs.commodities;
+  consistent               = dontCheck mypkgs.consistent;
+  hierarchy                = doJailbreak super.hierarchy;
+  hnix                     = doJailbreak super.hnix;
+  ipcvar                   = dontCheck super.ipcvar;
+  linearscan-hoopl         = dontCheck super.linearscan-hoopl;
+  pipes-files              = dontCheck (doJailbreak super.pipes-files);
+  recursors                = doJailbreak super.recursors;
+  runmany                  = doJailbreak super.runmany;
+
+  Agda                     = dontHaddock super.Agda;
+  blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
+  concurrent-output        = doJailbreak super.concurrent-output;
+  diagrams-builder         = doJailbreak super.diagrams-builder;
+  diagrams-cairo           = doJailbreak super.diagrams-cairo;
+  diagrams-contrib         = doJailbreak super.diagrams-contrib;
+  diagrams-core            = doJailbreak super.diagrams-core;
+  diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
+  diagrams-lib             = doJailbreak super.diagrams-lib;
+  diagrams-postscript      = doJailbreak super.diagrams-postscript;
+  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
+  diagrams-svg             = doJailbreak super.diagrams-svg;
+  ghc-compact              = null;
+  haddock-library          = doJailbreak super.haddock-library_1_2_1;
+  hakyll                   = doJailbreak super.hakyll;
+  heap                     = dontCheck super.heap;
+  indents                  = doJailbreak super.indents;
+  machinecell              = doJailbreak super.machinecell;
+  monad-logger             = doJailbreak super.monad-logger;
+  pipes-binary             = doJailbreak super.pipes-binary;
+  pipes-group              = doJailbreak super.pipes-group;
+  pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
+  sbvPlugin                = doJailbreak super.sbvPlugin;
+  text-show                = dontCheck super.text-show;
+  time-recurrence          = doJailbreak super.time-recurrence;
 
   Cabal = super.Cabal_1_24_2_0;
 
@@ -227,16 +234,6 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
     license = stdenv.lib.licenses.bsd3;
   };
 
-  haskell-src-exts-simple_1_20_0_0 =
-    super.haskell-src-exts-simple_1_20_0_0.override {
-      haskell-src-exts = super.haskell-src-exts_1_20_2;
-    };
-
-  lambdabot-haskell-plugins = doJailbreak (
-    super.lambdabot-haskell-plugins.override {
-      haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
-    });
-
   recurseForDerivations = true;
 
   mkDerivation = args: super.mkDerivation (args // {
@@ -248,167 +245,102 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
 haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
-  Agda                     = dontHaddock super.Agda;
-  blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
-  compressed               = doJailbreak super.compressed;
   commodities              = doJailbreak mypkgs.commodities;
-  consistent               = doJailbreak (dontCheck mypkgs.consistent);
-  derive-storable          = dontCheck super.derive-storable;
-  diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
-  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
-  git-annex                = dontCheck super.git-annex;
-  hakyll                   = doJailbreak super.hakyll;
-  heap                     = dontCheck super.heap;
+  consistent               = dontCheck (doJailbreak mypkgs.consistent);
   hierarchy                = doJailbreak super.hierarchy;
+  hnix                     = doJailbreak super.hnix;
   ipcvar                   = dontCheck super.ipcvar;
-  lattices                 = doJailbreak super.lattices;
   linearscan-hoopl         = dontCheck super.linearscan-hoopl;
-  pipes-binary             = doJailbreak super.pipes-binary;
   pipes-files              = dontCheck (doJailbreak super.pipes-files);
-  pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
-  posix-paths              = doJailbreak super.posix-paths;
   recursors                = doJailbreak super.recursors;
   runmany                  = doJailbreak super.runmany;
-  shelly                   = dontCheck (doJailbreak super.shelly);
-  streaming-commons        = dontCheck super.streaming-commons;
-  text-icu                 = dontCheck super.text-icu;
+
+  Agda                     = dontHaddock super.Agda;
+  blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
+  diagrams-builder         = doJailbreak super.diagrams-builder;
+  diagrams-cairo           = doJailbreak super.diagrams-cairo;
+  diagrams-contrib         = doJailbreak super.diagrams-contrib;
+  diagrams-core            = doJailbreak super.diagrams-core;
+  diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
+  diagrams-lib             = doJailbreak super.diagrams-lib;
+  diagrams-postscript      = doJailbreak super.diagrams-postscript;
+  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
+  diagrams-svg             = doJailbreak super.diagrams-svg;
+  heap                     = dontCheck super.heap;
+  machinecell              = doJailbreak super.machinecell;
+  pipes-binary             = doJailbreak super.pipes-binary;
+  pipes-group              = doJailbreak super.pipes-group;
+  pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
   text-show                = dontCheck super.text-show;
-  these                    = doJailbreak super.these;
   time-recurrence          = doJailbreak super.time-recurrence;
-  timeparsers              = doJailbreak (dontCheck mypkgs.timeparsers);
-
-  HUnit =
-    if libProf
-    then dontCheck super.HUnit
-    else super.HUnit;
-  inspection-testing =
-    if libProf
-    then dontCheck super.inspection-testing
-    else super.inspection-testing;
-  th-abstraction =
-    if libProf
-    then dontCheck super.th-abstraction
-    else super.th-abstraction;
-  th-lift =
-    if libProf
-    then dontCheck super.th-lift
-    else super.th-lift;
-  th-expand-syns =
-    if libProf
-    then dontCheck super.th-expand-syns
-    else super.th-expand-syns;
-
-  diagrams-builder = with pkgs; with self; mkDerivation {
-    pname = "diagrams-builder";
-    version = "0.8.0.2";
-    sha256 = "1jr98sza6bhzq9myfb9f2p8lfbs9qcxck67h2hvxisgpvmy0gjn2";
-    configureFlags = [ "-fcairo" "-fps" "-frasterific" "-fsvg" ];
-    isLibrary = true;
-    isExecutable = true;
-    libraryHaskellDepends = [
-      base base-orphans cmdargs diagrams-lib directory exceptions
-      filepath hashable haskell-src-exts haskell-src-exts-simple hint
-      lens mtl split transformers
-    ];
-    executableHaskellDepends = [
-      base bytestring cmdargs diagrams-cairo diagrams-lib
-      diagrams-postscript diagrams-rasterific diagrams-svg directory
-      filepath JuicyPixels lens svg-builder
-    ];
-    homepage = "http://projects.haskell.org/diagrams";
-    description = "hint-based build service for the diagrams graphics EDSL";
-    license = stdenv.lib.licenses.bsd3;
-    hydraPlatforms = stdenv.lib.platforms.none;
-  };
-
-  haskell-src-exts-simple_1_20_0_0 =
-    super.haskell-src-exts-simple_1_20_0_0.override {
-      haskell-src-exts = super.haskell-src-exts_1_20_2;
-    };
-
-  lambdabot-haskell-plugins =
-    super.lambdabot-haskell-plugins.override {
-      haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
-    };
+  timeparsers              = dontCheck (doJailbreak mypkgs.timeparsers);
 
   recurseForDerivations = true;
 
   mkDerivation = args: super.mkDerivation (args // {
-    # jww (2018-01-28): This crashes due to an infinite loop
-    # libraryHaskellDepends =
-    #   if builtins.hasAttr "libraryHaskellDepends" args
-    #   then args.libraryHaskellDepends
-    #          ++ [ pkgs.darwin.apple_sdk.frameworks.Cocoa ]
-    #   else [ pkgs.darwin.apple_sdk.frameworks.Cocoa ];
     enableLibraryProfiling = libProf;
-    # enableExecutableProfiling = libProf;
-    # enableSharedLibraries = !libProf;
   });
 };
 
 haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
-  Agda                     = dontHaddock super.Agda;
+  runmany                  = doJailbreak super.runmany;
+
+  Agda                     = doJailbreak (dontHaddock super.Agda);
+  active                   = doJailbreak super.active;
+  async-pool               = doJailbreak super.async-pool;
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
-  compressed               = doJailbreak super.compressed;
+  cabal-helper             = doJailbreak super.cabal-helper;
+  circle-packing           = doJailbreak super.circle-packing;
   commodities              = doJailbreak mypkgs.commodities;
+  compressed               = doJailbreak super.compressed;
   consistent               = doJailbreak (dontCheck mypkgs.consistent);
   derive-storable          = dontCheck super.derive-storable;
+  diagrams-builder         = doJailbreak super.diagrams-builder;
+  diagrams-cairo           = doJailbreak super.diagrams-cairo;
+  diagrams-contrib         = doJailbreak super.diagrams-contrib;
+  diagrams-core            = doJailbreak super.diagrams-core;
   diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
+  diagrams-lib             = doJailbreak super.diagrams-lib;
+  diagrams-postscript      = doJailbreak super.diagrams-postscript;
   diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
+  diagrams-solve           = doJailbreak super.diagrams-solve;
+  diagrams-svg             = doJailbreak super.diagrams-svg;
+  force-layout             = doJailbreak super.force-layout;
   git-annex                = dontCheck super.git-annex;
   hakyll                   = doJailbreak super.hakyll;
   heap                     = dontCheck super.heap;
   hierarchy                = doJailbreak super.hierarchy;
+  hint                     = doJailbreak super.hint;
+  hnix                     = doJailbreak super.hnix;
+  hspec-smallcheck         = doJailbreak super.hspec-smallcheck;
   ipcvar                   = dontCheck super.ipcvar;
+  json-stream              = doJailbreak super.json-stream;
   lattices                 = doJailbreak super.lattices;
+  machinecell              = doJailbreak super.machinecell;
+  monoid-extras            = doJailbreak super.monoid-extras;
   pipes-binary             = doJailbreak super.pipes-binary;
   pipes-files              = dontCheck (doJailbreak super.pipes-files);
+  pipes-group              = doJailbreak super.pipes-group;
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
   posix-paths              = doJailbreak super.posix-paths;
+  postgresql-simple        = doJailbreak super.postgresql-simple;
   recursors                = doJailbreak super.recursors;
-  runmany                  = doJailbreak super.runmany;
+  servant-foreign          = doJailbreak super.servant-foreign;
   shelly                   = dontCheck (doJailbreak super.shelly);
   streaming-commons        = dontCheck super.streaming-commons;
+  svg-builder              = doJailbreak super.svg-builder;
+  tasty-hspec              = doJailbreak super.tasty-hspec;
+  testing-feat             = doJailbreak super.testing-feat;
   text-icu                 = dontCheck super.text-icu;
   text-show                = dontCheck super.text-show;
   these                    = doJailbreak super.these;
+  thyme                    = dontHaddock super.thyme;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = doJailbreak (dontCheck mypkgs.timeparsers);
-
-  diagrams-builder = with pkgs; with self; mkDerivation {
-    pname = "diagrams-builder";
-    version = "0.8.0.2";
-    sha256 = "1jr98sza6bhzq9myfb9f2p8lfbs9qcxck67h2hvxisgpvmy0gjn2";
-    configureFlags = [ "-fcairo" "-fps" "-frasterific" "-fsvg" ];
-    isLibrary = true;
-    isExecutable = true;
-    libraryHaskellDepends = [
-      base base-orphans cmdargs diagrams-lib directory exceptions
-      filepath hashable haskell-src-exts haskell-src-exts-simple hint
-      lens mtl split transformers
-    ];
-    executableHaskellDepends = [
-      base bytestring cmdargs diagrams-cairo diagrams-lib
-      diagrams-postscript diagrams-rasterific diagrams-svg directory
-      filepath JuicyPixels lens svg-builder
-    ];
-    homepage = "http://projects.haskell.org/diagrams";
-    description = "hint-based build service for the diagrams graphics EDSL";
-    license = stdenv.lib.licenses.bsd3;
-    hydraPlatforms = stdenv.lib.platforms.none;
-  };
-
-  haskell-src-exts-simple_1_20_0_0 =
-    super.haskell-src-exts-simple_1_20_0_0.override {
-      haskell-src-exts = super.haskell-src-exts_1_20_1;
-    };
-
-  lambdabot-haskell-plugins =
-    super.lambdabot-haskell-plugins.override {
-      haskell-src-exts-simple = haskell-src-exts-simple_1_20_0_0;
-    };
+  turtle                   = doJailbreak super.Agda;
+  wl-pprint                = doJailbreak super.wl-pprint;
 
   hoopl = super.hoopl_3_10_2_2;
 
@@ -436,8 +368,15 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
   compressed               = doJailbreak super.compressed;
   consistent               = doJailbreak (dontCheck mypkgs.consistent);
   derive-storable          = dontCheck super.derive-storable;
+  diagrams-builder         = doJailbreak super.diagrams-builder;
+  diagrams-cairo           = doJailbreak super.diagrams-cairo;
+  diagrams-contrib         = doJailbreak super.diagrams-contrib;
+  diagrams-core            = doJailbreak super.diagrams-core;
   diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
+  diagrams-lib             = doJailbreak super.diagrams-lib;
+  diagrams-postscript      = doJailbreak super.diagrams-postscript;
   diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
+  diagrams-svg             = doJailbreak super.diagrams-svg;
   hakyll                   = doJailbreak super.hakyll;
   hierarchy                = doJailbreak super.hierarchy;
   ipcvar                   = dontCheck super.ipcvar;

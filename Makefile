@@ -1,3 +1,9 @@
+REMOTE = vulcan
+CACHE  = /Volumes/slim/Cache
+
+SHELLS = bae/micromht-fiat-deliverable/atif-fiat \
+	 bae/concerto/solver
+
 all: switch env-all
 
 switch: darwin-switch home-switch
@@ -19,6 +25,11 @@ home-build:
 		  --argstr confPath "$(HOME_MANAGER_CONFIG)" \
 		  --argstr confAttr "" activationPackage
 	rm result
+
+shells:
+	for i in $(SHELLS); do \
+	    (cd $(HOME)/$$i && nix-shell --command true); \
+	done
 
 env-all:
 	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs \
@@ -78,16 +89,12 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build-all switch env-all working cache
-
-REMOTE = hermes
+update: tag-before pull build-all switch env-all shells cache working
 
 copy:
 	nix copy --to ssh://$(REMOTE)			\
 	    $(shell readlink -f ~/.nix-profile)		\
 	    $(shell readlink -f /run/current-system)
-
-CACHE = /Volumes/slim/Cache
 
 cache:
 	test -d $(CACHE) &&				\
