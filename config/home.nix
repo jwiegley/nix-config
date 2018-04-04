@@ -253,7 +253,7 @@ rec {
         spull      = "!${pkgs.git}/bin/git stash"
                    + " && ${pkgs.git}/bin/git pull"
                    + " && ${pkgs.git}/bin/git stash pop";
-        su         = "submodule update --init";
+        su         = "submodule update --init --recursive";
         undo       = "reset --soft HEAD^";
         w          = "status -sb";
         wdiff      = "diff --color-words";

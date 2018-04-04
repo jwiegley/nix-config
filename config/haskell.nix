@@ -179,8 +179,6 @@ pkgs: hpkgs: with hpkgs;
   lifted-async
   lifted-base
   linear
-  linearscan
-  linearscan-hoopl
   list-extras
   list-t
   logging

@@ -8,7 +8,6 @@ pkgs: version: cpkgs: with pkgs;
 ] ++ (with cpkgs; ([
 ] ++ (pkgs.stdenv.lib.optionals (version == "8.8+beta1") [
   equations
-  category-theory
 ]) ++ (pkgs.stdenv.lib.optionals (version == "8.7") [
   QuickChick
   autosubst
@@ -34,5 +33,4 @@ pkgs: version: cpkgs: with pkgs;
   equations
   ssreflect
   coq-haskell
-  category-theory
 ])))

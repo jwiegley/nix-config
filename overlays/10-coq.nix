@@ -50,7 +50,8 @@ coqPackages_HEAD = let cpkgs = pkgs.mkCoqPackages coq_HEAD; in cpkgs // {
   equations = equations_8_8 cpkgs;
   fiat_HEAD = fiat_HEAD cpkgs;
   coq-haskell = coq-haskell cpkgs;
-  category-theory = category-theory cpkgs;
+  category-theory =
+    category-theory (cpkgs // { equations = equations_8_8 cpkgs; });
 };
 
 coqPackages_8_8 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_8; in cpkgs // {
@@ -58,7 +59,8 @@ coqPackages_8_8 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_8; in cpkgs // {
   equations = equations_8_8 cpkgs;
   fiat_HEAD = fiat_HEAD cpkgs;
   coq-haskell = coq-haskell cpkgs;
-  category-theory = category-theory cpkgs;
+  category-theory =
+    category-theory (cpkgs // { equations = equations_8_8 cpkgs; });
 };
 
 coqPackages_8_7 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_7; in cpkgs // {
