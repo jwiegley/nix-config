@@ -42,9 +42,6 @@ myHaskellPackageDefs = super:
   z3               = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
   z3-generate-api  = pkg ~/src/z3-generate-api {};
 
-  atif-fiat = pkg ~/bae/micromht-fiat-deliverable/atif-fiat {};
-  stanag4607 = pkg ~/bae/micromht-fiat-deliverable/atif-fiat/stanag4607 {};
-
   hours = (pkgs.haskell.lib.dontHaddock (pkg ~/src/hours {}))
     .overrideDerivation (attrs: {
       installPhase = ''
@@ -92,7 +89,6 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   commodities              = doJailbreak mypkgs.commodities;
   consistent               = dontCheck mypkgs.consistent;
   hierarchy                = doJailbreak super.hierarchy;
-  hnix                     = doJailbreak super.hnix;
   ipcvar                   = dontCheck super.ipcvar;
   linearscan-hoopl         = dontCheck super.linearscan-hoopl;
   pipes-files              = dontCheck (doJailbreak super.pipes-files);
@@ -102,6 +98,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   Agda                     = dontHaddock super.Agda;
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   concurrent-output        = doJailbreak super.concurrent-output;
+  data-inttrie             = doJailbreak super.data-inttrie;
   diagrams-builder         = doJailbreak super.diagrams-builder;
   diagrams-cairo           = doJailbreak super.diagrams-cairo;
   diagrams-contrib         = doJailbreak super.diagrams-contrib;
@@ -116,12 +113,14 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   hakyll                   = doJailbreak super.hakyll;
   heap                     = dontCheck super.heap;
   indents                  = doJailbreak super.indents;
+  inline-c-cpp             = dontCheck super.inline-c-cpp;
   machinecell              = doJailbreak super.machinecell;
   monad-logger             = doJailbreak super.monad-logger;
   pipes-binary             = doJailbreak super.pipes-binary;
   pipes-group              = doJailbreak super.pipes-group;
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
   sbvPlugin                = doJailbreak super.sbvPlugin;
+  serialise                = dontCheck super.serialise;
   text-show                = dontCheck super.text-show;
   time-recurrence          = doJailbreak super.time-recurrence;
 
@@ -248,7 +247,6 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   commodities              = doJailbreak mypkgs.commodities;
   consistent               = dontCheck (doJailbreak mypkgs.consistent);
   hierarchy                = doJailbreak super.hierarchy;
-  hnix                     = doJailbreak super.hnix;
   ipcvar                   = dontCheck super.ipcvar;
   linearscan-hoopl         = dontCheck super.linearscan-hoopl;
   pipes-files              = dontCheck (doJailbreak super.pipes-files);
@@ -268,13 +266,29 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   diagrams-svg             = doJailbreak super.diagrams-svg;
   heap                     = dontCheck super.heap;
   indents                  = doJailbreak super.indents;
+  inline-c-cpp             = dontCheck super.inline-c-cpp;
   machinecell              = doJailbreak super.machinecell;
   pipes-binary             = doJailbreak super.pipes-binary;
   pipes-group              = doJailbreak super.pipes-group;
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
+  serialise                = dontCheck super.serialise;
   text-show                = dontCheck super.text-show;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = dontCheck (doJailbreak mypkgs.timeparsers);
+
+  # Use a particular commit from github
+  insert-ordered-containers =
+    super.insert-ordered-containers.overrideDerivation (attrs: {
+      name = "insert-ordered-containers-0.2.2.0";
+      version = "0.2.2.0";
+      revision = null;
+      src = pkgs.fetchFromGitHub {
+        owner = "mightybyte";
+        repo = "insert-ordered-containers";
+        rev = "87054c519b969b62131bcf7a183470d422cbb535";
+        sha256 = "0l0g6ns5bcrcaij0wbdgc04qyl9h0vk1kx9lkzdkwj9v51l26azm";
+      };
+    });
 
   recurseForDerivations = true;
 
@@ -314,8 +328,8 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   heap                     = dontCheck super.heap;
   hierarchy                = doJailbreak super.hierarchy;
   hint                     = doJailbreak super.hint;
-  hnix                     = doJailbreak super.hnix;
   hspec-smallcheck         = doJailbreak super.hspec-smallcheck;
+  inline-c-cpp             = dontCheck super.inline-c-cpp;
   ipcvar                   = dontCheck super.ipcvar;
   json-stream              = doJailbreak super.json-stream;
   lattices                 = doJailbreak super.lattices;
@@ -380,6 +394,7 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
   diagrams-svg             = doJailbreak super.diagrams-svg;
   hakyll                   = doJailbreak super.hakyll;
   hierarchy                = doJailbreak super.hierarchy;
+  inline-c-cpp             = dontCheck super.inline-c-cpp;
   ipcvar                   = dontCheck super.ipcvar;
   lattices                 = doJailbreak super.lattices;
   linearscan-hoopl         = dontCheck super.linearscan-hoopl;
@@ -388,6 +403,7 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
   posix-paths              = doJailbreak super.posix-paths;
   recursors                = doJailbreak super.recursors;
+  serialise                = dontCheck super.serialise;
   shelly                   = doJailbreak super.shelly;
   text-icu                 = dontCheck super.text-icu;
   these                    = doJailbreak super.these;
@@ -412,10 +428,10 @@ haskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD
 profiledHaskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD
   (haskellPackage_HEAD_overrides true);
 
-haskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc841
-  (haskellPackage_8_4_overrides false);
-profiledHaskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc841
-  (haskellPackage_8_4_overrides true);
+# haskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc841
+#   (haskellPackage_8_4_overrides false);
+# profiledHaskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc841
+#   (haskellPackage_8_4_overrides true);
 
 haskellPackages_8_2 = mkHaskellPackages pkgs.haskell.packages.ghc822
   (haskellPackage_8_2_overrides false);
@@ -430,39 +446,49 @@ profiledHaskellPackages_8_0 = mkHaskellPackages pkgs.haskell.packages.ghc802
 ghcHEADEnv = myPkgs: pkgs.myEnvFun {
   name = "ghcHEAD";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_HEAD; [
-    (ghcWithHoogle myPkgs)
+    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
+       compact
+     ])))
   ];
 };
 
 ghcHEADProfEnv = myPkgs: pkgs.myEnvFun {
   name = "ghcHEADprof";
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_HEAD; [
-    (ghcWithHoogle myPkgs)
+    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
+       compact
+     ])))
   ];
 };
 
-ghc84Env = myPkgs: pkgs.myEnvFun {
-  name = "ghc84";
-  buildInputs = with pkgs.haskell.lib; with haskellPackages_8_4; [
-    (ghcWithHoogle myPkgs)
-    Agda
-    idris
-  ];
-};
+# ghc84Env = myPkgs: pkgs.myEnvFun {
+#   name = "ghc84";
+#   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_4; [
+#     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
+#        compact
+#      ])))
+#     Agda
+#     idris
+#   ];
+# };
 
-ghc84ProfEnv = myPkgs: pkgs.myEnvFun {
-  name = "ghc84prof";
-  buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_4; [
-    (ghcWithHoogle myPkgs)
-    Agda
-    idris
-  ];
-};
+# ghc84ProfEnv = myPkgs: pkgs.myEnvFun {
+#   name = "ghc84prof";
+#   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_4; [
+#     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
+#        compact
+#      ])))
+#     Agda
+#     idris
+#   ];
+# };
 
 ghc82Env = myPkgs: pkgs.myEnvFun {
   name = "ghc82";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_2; [
-    (ghcWithHoogle myPkgs)
+    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
+       compact
+     ])))
     Agda
     idris
   ];
@@ -471,7 +497,9 @@ ghc82Env = myPkgs: pkgs.myEnvFun {
 ghc82ProfEnv = myPkgs: pkgs.myEnvFun {
   name = "ghc82prof";
   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_2; [
-    (ghcWithHoogle myPkgs)
+    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
+       compact
+     ])))
     Agda
     idris
   ];

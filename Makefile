@@ -2,9 +2,11 @@ REMOTE = vulcan
 CACHE  = /Volumes/slim/Cache
 
 SHELLS = bae/micromht-fiat-deliverable/atif-fiat \
-	 bae/concerto/solver
+	 bae/micromht-fiat-deliverable/atif-fiat/stanag4607 \
+	 bae/concerto/solver \
+	 src/hnix
 
-all: switch env-all
+all: switch env-all shells
 
 switch: darwin-switch home-switch
 

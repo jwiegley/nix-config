@@ -112,11 +112,11 @@ DEVONthinkPro = super.stdenv.lib.overrideDerivation (self.installApplication rec
 
 Docker = self.installApplication rec {
   name = "Docker";
-  version = "17.12.0-ce-mac49";
+  version = "17.12.1-ce-mac49";
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
-    sha256 = "0dvr3mlvrwfc9ab6dyx351vraqx01lzxgz8vrczs0vhm2rpv3kdy";
+    sha256 = "14ssbq7v8q7l2w9dyx082grxgjs60rk9b19ay8abgzymcb870afd";
     # date = 2018-02-04T16:36:09-0800;
   };
   description = ''
@@ -128,12 +128,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "59.0.1";
+  version = "59.0.2";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "00il1n1rv6vxfl0ip7n3xdm0632rp0vx0sm6x23wz9whakkdhcy8";
+    sha256 = "02ha91kyxik6srnwqzgrijafys3md2cf86jcp8x45agqh18ahrfy";
   };
   postInstall = ''
     for file in  \

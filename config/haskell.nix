@@ -85,6 +85,8 @@ pkgs: hpkgs: with hpkgs;
   data-default
   data-default-class
   data-fix
+  deepseq
+  deepseq-generics
   derive-storable
   diagrams
   diagrams-core
@@ -144,7 +146,6 @@ pkgs: hpkgs: with hpkgs;
   hlibgit2
   hlint
   hmatrix
-  hnix
   hslogger
   hspec
   hspec-expectations
@@ -157,6 +158,9 @@ pkgs: hpkgs: with hpkgs;
   http-date
   http-media
   http-types
+  inline-c
+  inline-c-cpp
+  insert-ordered-containers
   interpolate
   io-memoize
   io-storage
@@ -251,6 +255,7 @@ pkgs: hpkgs: with hpkgs;
   regex-base
   regex-compat
   regex-posix
+  repline
   resourcet
   retry
   safe
@@ -262,6 +267,7 @@ pkgs: hpkgs: with hpkgs;
   semigroupoids
   semigroups
   semiring-simple
+  serialise
   servant
   servant-blaze
   servant-client
@@ -329,6 +335,7 @@ pkgs: hpkgs: with hpkgs;
   x509
   x509-store
   x509-system
+  xml
   yaml
   z3
   z3-generate-api
