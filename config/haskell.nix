@@ -32,6 +32,8 @@ pkgs: hpkgs: with hpkgs;
   basic-prelude
   bench
   bifunctors
+  binary
+  binary-orphans
   bindings-DSL
   blaze-builder
   blaze-builder-conduit
@@ -88,6 +90,7 @@ pkgs: hpkgs: with hpkgs;
   deepseq
   deepseq-generics
   derive-storable
+  deriving-compat
   diagrams
   diagrams-core
   diagrams-graphviz
@@ -240,6 +243,7 @@ pkgs: hpkgs: with hpkgs;
   posix-paths
   postgresql-simple
   pretty-show
+  pretty-simple
   primitive
   process
   process-extras
@@ -255,6 +259,7 @@ pkgs: hpkgs: with hpkgs;
   regex-base
   regex-compat
   regex-posix
+  regex-tdfa-text
   repline
   resourcet
   retry

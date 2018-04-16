@@ -405,7 +405,7 @@ rec {
         };
 
         ubuntu.hostname = "172.16.138.129";
-        gramma.hostname = "192.168.5.128";
+        gramma.hostname = "192.168.64.129";
         peta.hostname   = "172.16.138.140";
         fiat.hostname   = "172.16.138.145";
 

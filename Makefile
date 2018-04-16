@@ -91,7 +91,7 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build-all switch env-all shells cache working
+update: tag-before pull build-all switch env-all shells working
 
 copy:
 	nix copy --to ssh://$(REMOTE)			\
