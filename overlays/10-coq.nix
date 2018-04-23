@@ -2,12 +2,16 @@ self: pkgs: rec {
 
 QuickChick = cpkgs:
   self.callPackage ./coq/QuickChick.nix { inherit (cpkgs) coq ssreflect; };
+QuickChick_8_8 = cpkgs:
+  self.callPackage ./coq/QuickChick.nix { inherit (cpkgs) coq; };
 fiat_HEAD = cpkgs:
   self.callPackage ./coq/fiat.nix { inherit (cpkgs) coq; };
 equations_8_8 = cpkgs:
   self.callPackage ./coq/equations.nix { inherit (cpkgs) coq; };
 coq-haskell = cpkgs:
   self.callPackage ./coq/coq-haskell.nix { inherit (cpkgs) coq ssreflect; };
+coq-haskell_8_8 = cpkgs:
+  self.callPackage ./coq/coq-haskell.nix { inherit (cpkgs) coq; };
 category-theory = cpkgs:
   self.callPackage ./coq/category-theory.nix { inherit (cpkgs) coq equations; };
 
@@ -46,19 +50,19 @@ coq_HEAD = with pkgs; stdenv.lib.overrideDerivation coq_8_7_override (attrs: rec
 });
 
 coqPackages_HEAD = let cpkgs = pkgs.mkCoqPackages coq_HEAD; in cpkgs // {
-  QuickChick = QuickChick cpkgs;
+  QuickChick = QuickChick_8_8 cpkgs;
   equations = equations_8_8 cpkgs;
   fiat_HEAD = fiat_HEAD cpkgs;
-  coq-haskell = coq-haskell cpkgs;
+  coq-haskell = coq-haskell_8_8 cpkgs;
   category-theory =
     category-theory (cpkgs // { equations = equations_8_8 cpkgs; });
 };
 
 coqPackages_8_8 = let cpkgs = pkgs.mkCoqPackages pkgs.coq_8_8; in cpkgs // {
-  QuickChick = QuickChick cpkgs;
+  QuickChick = QuickChick_8_8 cpkgs;
   equations = equations_8_8 cpkgs;
   fiat_HEAD = fiat_HEAD cpkgs;
-  coq-haskell = coq-haskell cpkgs;
+  coq-haskell = coq-haskell_8_8 cpkgs;
   category-theory =
     category-theory (cpkgs // { equations = equations_8_8 cpkgs; });
 };
@@ -87,7 +91,7 @@ coqHEADEnv = myPkgs: pkgs.myEnvFun {
 
 coq88Env = myPkgs: pkgs.myEnvFun {
   name = "coq88";
-  buildInputs = [ pkgs.coq_8_8 ] ++ myPkgs "8.8+beta1" coqPackages_8_8;
+  buildInputs = [ pkgs.coq_8_8 ] ++ myPkgs "8.8" coqPackages_8_8;
 };
 
 coq87Env = myPkgs: pkgs.myEnvFun {

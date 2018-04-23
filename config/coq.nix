@@ -6,8 +6,26 @@ pkgs: version: cpkgs: with pkgs;
   ocamlPackages.menhir
   coq2html
 ] ++ (with cpkgs; ([
-] ++ (pkgs.stdenv.lib.optionals (version == "8.8+beta1") [
+] ++ (pkgs.stdenv.lib.optionals (version == "8.8") [
+  # QuickChick
+  # autosubst
+  bignums
+  compcert
+  # coq-ext-lib
+  # coquelicot
+  # dpdgraph
+  flocq
+  # heq
+  # interval
+  # mathcomp
+  # coq-haskell
+  # category-theory
+
+  # CoLoR
   equations
+  # fiat_HEAD
+  math-classes
+  metalib
 ]) ++ (pkgs.stdenv.lib.optionals (version == "8.7") [
   QuickChick
   autosubst

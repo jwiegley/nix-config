@@ -1,4 +1,4 @@
-{ pkgs, coq, ssreflect }: with pkgs;
+{ pkgs, coq, ssreflect ? null }: with pkgs;
 
 let param =
   {
@@ -20,7 +20,7 @@ let param =
       sha256 = "0zm23y89z0h4iamy74qk9qi2pz2cj3ga6ygav0w79n0qyqwhxcq1";
     };
 
-    "8.8+alpha" = {
+    "8.8" = {
       version = "20180304";
       rev = "639f7140b781ed4af16fb052eeead41d1a68dc64";
       sha256 = "12x0mcqdi5kwalkxiwmpsk3iy6fz6fh0isczcbg4qf0bm0g0h2ly";

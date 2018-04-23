@@ -1,4 +1,4 @@
-{ pkgs, coq, ssreflect }: with pkgs;
+{ pkgs, coq, ssreflect ? null }: with pkgs;
 
 stdenv.mkDerivation rec {
   name = "coq${coq.coq-version}-haskell-${version}";

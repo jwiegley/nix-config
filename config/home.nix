@@ -404,16 +404,16 @@ rec {
           identitiesOnly = true;
         };
 
-        ubuntu.hostname = "172.16.138.129";
-        gramma.hostname = "192.168.64.129";
+        gramma.hostname = "192.168.64.130";
         peta.hostname   = "172.16.138.140";
         fiat.hostname   = "172.16.138.145";
+        nixos.hostname  = "192.168.64.131";
 
-        nixos = {
-          hostname     = "192.168.128.132";
-          proxyCommand = "${pkgs.openssh}/bin/ssh -q hermes "
-                       + "/run/current-system/sw/bin/socat - TCP:%h:%p";
-        };
+        # nixos = {
+        #   hostname     = "192.168.128.132";
+        #   proxyCommand = "${pkgs.openssh}/bin/ssh -q hermes "
+        #                + "/run/current-system/sw/bin/socat - TCP:%h:%p";
+        # };
 
         smokeping = { hostname = "192.168.1.78";   user = "smokeping"; };
         tails     = { hostname = "172.16.138.139"; user = "root"; };
