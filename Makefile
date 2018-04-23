@@ -4,7 +4,7 @@ CACHE  = /Volumes/slim/Cache
 SHELLS = \
 	 bae/concerto/solver \
 	 bae/micromht-deliverable/micromht/stanagPacketPoster \
-	 bae/micromht-deliverable/rings-dashboard/default.nix \
+	 bae/micromht-deliverable/rings-dashboard \
 	 bae/micromht-deliverable/rings-dashboard/mitll-harness \
 	 bae/micromht-deliverable/rings-dashboard/rings-dashboard-api \
 	 bae/micromht-fiat-deliverable/atif-fiat \
