@@ -1,4 +1,4 @@
-{ pkgs }:
+{ pkgs_prev, pkgs }:
 
 with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nixUnstable
@@ -47,7 +47,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   automake
   (exe haskPkgs.cabal2nix)
   (exe haskPkgs.cabal-install)
-  (exe haskellPackages_8_0.hs-to-coq)
   clang
   cmake
   fftw
@@ -133,7 +132,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   groff
   highlight
   hugo
-  inkscape.out
+  pkgs_prev.inkscape.out
   ledger
   (exe haskPkgs.lhs2tex)
   librsvg
@@ -212,7 +211,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   postgresql
   (exe haskPkgs.pushme)
   pv
-  qemu
+  pkgs_prev.qemu
   qrencode
   renameutils
   ripgrep

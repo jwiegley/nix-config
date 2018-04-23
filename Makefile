@@ -1,8 +1,8 @@
 REMOTE = vulcan
 CACHE  = /Volumes/slim/Cache
-
-SHELLS = \
-	 bae/concerto/solver \
+ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
+SHELLS = bae/concerto/solver \
+	 bae/concerto/solver/lib/z3 \
 	 bae/micromht-deliverable/micromht/stanagPacketPoster \
 	 bae/micromht-deliverable/rings-dashboard \
 	 bae/micromht-deliverable/rings-dashboard/mitll-harness \
@@ -20,7 +20,7 @@ darwin-switch:
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
 darwin-build:
-	nix build darwin.system
+	nix build --keep-going darwin.system
 	rm result
 
 home-switch:
@@ -30,12 +30,15 @@ home-switch:
 home-build:
 	nix build -f ~/src/nix/home-manager/home-manager/home-manager.nix \
 		  --argstr confPath "$(HOME_MANAGER_CONFIG)" \
-		  --argstr confAttr "" activationPackage
+		  --argstr confAttr "" activationPackage \
+		  --keep-going
 	rm result
 
 shells:
-	for i in $(SHELLS); do \
-	    (cd $(HOME)/$$i && nix-shell --command true); \
+	for i in $(SHELLS); do						\
+	    (cd $(HOME)/$$i &&						\
+	     nix-shell --command true &&				\
+	     nix-instantiate --add-root $(ROOTS)/$$(basename $$i) ./.);	\
 	done
 
 env-all:
@@ -44,20 +47,20 @@ env-all:
 	@echo "Nix generation:    $$(nix-env --list-generations | tail -1)"
 
 env-all-build:
-	nix build darwin.pkgs.emacs25Env
-	nix build darwin.pkgs.emacs26Env
-	nix build darwin.pkgs.emacs26DebugEnv
-	nix build darwin.pkgs.emacsHEADEnv
-	nix build darwin.pkgs.coq84Env
-	nix build darwin.pkgs.coq85Env
-	nix build darwin.pkgs.coq86Env
-	nix build darwin.pkgs.coq87Env
-	nix build darwin.pkgs.coqHEADEnv
-	nix build darwin.pkgs.ghc80Env
-	nix build darwin.pkgs.ghc82Env
-	nix build darwin.pkgs.ghc82ProfEnv
-	nix build darwin.pkgs.ledgerPy2Env
-	nix build darwin.pkgs.ledgerPy3Env
+	nix build --keep-going darwin.pkgs.emacs25Env
+	nix build --keep-going darwin.pkgs.emacs26Env
+	nix build --keep-going darwin.pkgs.emacs26DebugEnv
+	nix build --keep-going darwin.pkgs.emacsHEADEnv
+	nix build --keep-going darwin.pkgs.coq84Env
+	nix build --keep-going darwin.pkgs.coq85Env
+	nix build --keep-going darwin.pkgs.coq86Env
+	nix build --keep-going darwin.pkgs.coq87Env
+	nix build --keep-going darwin.pkgs.coqHEADEnv
+	nix build --keep-going darwin.pkgs.ghc80Env
+	nix build --keep-going darwin.pkgs.ghc82Env
+	nix build --keep-going darwin.pkgs.ghc82ProfEnv
+	nix build --keep-going darwin.pkgs.ledgerPy2Env
+	nix build --keep-going darwin.pkgs.ledgerPy3Env
 	rm result
 
 env:
@@ -67,10 +70,10 @@ env:
 	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.ledgerPy3Env
 
 env-build:
-	nix build darwin.pkgs.emacs26Env
-	nix build darwin.pkgs.coq87Env
-	nix build darwin.pkgs.ghc82Env
-	nix build darwin.pkgs.ledgerPy3Env
+	nix build --keep-going darwin.pkgs.emacs26Env
+	nix build --keep-going darwin.pkgs.coq87Env
+	nix build --keep-going darwin.pkgs.ghc82Env
+	nix build --keep-going darwin.pkgs.ledgerPy3Env
 	rm result
 
 build: darwin-build home-build env-build
@@ -98,10 +101,17 @@ working: tag-working mirror
 
 update: tag-before pull build-all switch env-all shells working
 
-copy:
+copy: copy-shells
 	nix copy --to ssh://$(REMOTE)			\
 	    $(shell readlink -f ~/.nix-profile)		\
 	    $(shell readlink -f /run/current-system)
+
+copy-shells: shells
+	for i in $(SHELLS); do							\
+	    (cd $(HOME)/$$i &&							\
+	     nix copy --to ssh://$(REMOTE)					\
+	         $$(nix-instantiate --add-root $(ROOTS)/$$(basename $$i) ./.));	\
+	done
 
 cache:
 	test -d $(CACHE) &&				\

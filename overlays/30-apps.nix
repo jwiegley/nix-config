@@ -200,12 +200,12 @@ HandBrake = self.installApplication rec {
 iTerm2 = self.installApplication rec {
   name = "iTerm2";
   appname = "iTerm";
-  version = "3.1.6beta1";
+  version = "3.1.6";
   sourceRoot = "iTerm.app";
   src = super.fetchurl {
-    url = "https://iterm2.com/downloads/beta/iTerm2-3_1_6beta1.zip";
-    sha256 = "1hsgib46f098s10gg2s2810vpyj9c89qs0aivhrpgvp2vm84jhas";
-    # date = 2018-02-04T15:47:24-0800;
+    url = "https://iterm2.com/downloads/stable/iTerm2-3_1_6.zip";
+    sha256 = "11q0dg26nm9kx8v2lfn4wxlqzj4zjddf9fafpd4xp7pr90mh3ksa";
+    # date = 2018-04-23T12:54:35-0700;
   };
   description = "iTerm2 is a replacement for Terminal and the successor to iTerm";
   homepage = https://www.iterm2.com;

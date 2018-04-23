@@ -149,7 +149,20 @@ EOF
   };
 
   environment = {
-    systemPackages = import ./packages.nix { pkgs = pkgs; };
+    systemPackages = import ./packages.nix {
+      inherit pkgs;
+      pkgs_prev =
+        let
+        in import (pkgs.fetchFromGitHub {
+          owner  = "NixOS";
+          repo   = "nixpkgs";
+          rev    = "2e855dc6b0cd88767a8a5df2faff9e66e1cd7f18";
+          sha256 = "08s6mfh5a05kd2qs3hmza50ng3pyhd3qha4nanwwk0s8fjzqnv4a";
+          }) {
+          config.allowBroken = false;
+          config.allowUnfree = true;
+        };
+    };
 
     systemPath = [
       "${pkgs.Docker}/Applications/Docker.app/Contents/Resources/bin"
