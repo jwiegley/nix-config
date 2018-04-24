@@ -1,15 +1,16 @@
 REMOTE = vulcan
 CACHE  = /Volumes/slim/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
-SHELLS = bae/concerto/solver \
-	 bae/concerto/solver/lib/z3 \
-	 bae/micromht-deliverable/micromht/stanagPacketPoster \
-	 bae/micromht-deliverable/rings-dashboard \
-	 bae/micromht-deliverable/rings-dashboard/mitll-harness \
-	 bae/micromht-deliverable/rings-dashboard/rings-dashboard-api \
-	 bae/micromht-fiat-deliverable/atif-fiat \
-	 bae/micromht-fiat-deliverable/atif-fiat/stanag4607 \
-	 src/hnix
+SHELLS = bae/concerto/solver						\
+	 bae/concerto/solver/lib/z3					\
+	 bae/micromht-fiat-deliverable/atif-fiat			\
+	 bae/micromht-fiat-deliverable/atif-fiat/stanag4607		\
+	 bae/micromht-deliverable/rings-dashboard/mitll-harness		\
+	 bae/micromht-deliverable/rings-dashboard/rings-dashboard-api	\
+	 bae/micromht-deliverable/rings-dashboard			\
+	 bae/micromht-deliverable/micromht/stanagPacketPoster		\
+	 src/hnix							\
+	 src/hs-to-coq
 
 all: switch env-all shells
 

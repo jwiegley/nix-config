@@ -159,8 +159,8 @@ EOF
           rev    = "2e855dc6b0cd88767a8a5df2faff9e66e1cd7f18";
           sha256 = "08s6mfh5a05kd2qs3hmza50ng3pyhd3qha4nanwwk0s8fjzqnv4a";
           }) {
-          config.allowBroken = false;
           config.allowUnfree = true;
+          # config.allowBroken = false;
         };
     };
 
