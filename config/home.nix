@@ -171,15 +171,11 @@ rec {
             ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
         fi
 
-        function rmdir-r() {
-            ${pkgs.findutils}/bin/find "$@" -depth -type d -empty \
-                -exec ${pkgs.coreutils}/bin/rmdir {} \;
-        }
-
         export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir rbenv vcs)
-        export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status background_jobs command_execution_time time)
+        # export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status background_jobs command_execution_time time)
+        export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(command_execution_time)
 
-        source ${pkgs.z}/share/z.sh
+        . ${pkgs.z}/share/z.sh
       '';
 
       initExtra = lib.mkBefore ''
@@ -192,10 +188,12 @@ rec {
 
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
 
-        if [ $TERM = "dumb" ]; then
+        if [[ ! -o interactive ]]; then
             prompt_powerlevel9k_teardown
             unsetopt zle
             export PS1='$ '
+        else
+           . ${xdg.configHome}/zsh/plugins/iterm2_shell_integration
         fi
       '';
 
@@ -205,13 +203,13 @@ rec {
           src = pkgs.zsh-powerlevel9k.src;
         }
 
-        # { name = "iterm2_shell_integration";
-        #   src = pkgs.fetchurl {
-        #     url = https://iterm2.com/shell_integration/zsh;
-        #     sha256 = "17x6mqgn0j1cn6xvzl6x7d36zrkrmq81bqnbmz797prsgs1g4i98";
-        #     # date = 2018-03-23T21:44:01-0700
-        #   };
-        # }
+        { name = "iterm2_shell_integration";
+          src = pkgs.fetchurl {
+            url = https://iterm2.com/shell_integration/zsh;
+            sha256 = "17x6mqgn0j1cn6xvzl6x7d36zrkrmq81bqnbmz797prsgs1g4i98";
+            # date = 2018-04-26T14:38:20-0700;
+          };
+        }
       ];
     };
 
