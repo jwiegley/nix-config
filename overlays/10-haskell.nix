@@ -425,10 +425,10 @@ haskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD
 profiledHaskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD
   (haskellPackage_HEAD_overrides true);
 
-# haskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc841
-#   (haskellPackage_8_4_overrides false);
-# profiledHaskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc841
-#   (haskellPackage_8_4_overrides true);
+haskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc842
+  (haskellPackage_8_4_overrides false);
+profiledHaskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc842
+  (haskellPackage_8_4_overrides true);
 
 haskellPackages_8_2 = mkHaskellPackages pkgs.haskell.packages.ghc822
   (haskellPackage_8_2_overrides false);
@@ -458,27 +458,27 @@ ghcHEADProfEnv = myPkgs: pkgs.myEnvFun {
   ];
 };
 
-# ghc84Env = myPkgs: pkgs.myEnvFun {
-#   name = "ghc84";
-#   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_4; [
-#     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-#        compact
-#      ])))
-#     Agda
-#     idris
-#   ];
-# };
+ghc84Env = myPkgs: pkgs.myEnvFun {
+  name = "ghc84";
+  buildInputs = with pkgs.haskell.lib; with haskellPackages_8_4; [
+    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
+       compact
+     ])))
+    Agda
+    idris
+  ];
+};
 
-# ghc84ProfEnv = myPkgs: pkgs.myEnvFun {
-#   name = "ghc84prof";
-#   buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_4; [
-#     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-#        compact
-#      ])))
-#     Agda
-#     idris
-#   ];
-# };
+ghc84ProfEnv = myPkgs: pkgs.myEnvFun {
+  name = "ghc84prof";
+  buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_4; [
+    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
+       compact
+     ])))
+    Agda
+    idris
+  ];
+};
 
 ghc82Env = myPkgs: pkgs.myEnvFun {
   name = "ghc82";
