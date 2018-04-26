@@ -38,7 +38,7 @@ home-build:
 shells:
 	for i in $(SHELLS); do						\
 	    (cd $(HOME)/$$i &&						\
-	     nix-shell --command true &&				\
+	     nix-shell -Q -j4 --command true &&				\
 	     nix-instantiate --add-root $(ROOTS)/$$(basename $$i) ./.);	\
 	done
 
@@ -102,17 +102,8 @@ working: tag-working mirror
 
 update: tag-before pull build-all switch env-all shells working
 
-copy: copy-shells
-	nix copy --to ssh://$(REMOTE)			\
-	    $(shell readlink -f ~/.nix-profile)		\
-	    $(shell readlink -f /run/current-system)
-
-copy-shells: shells
-	for i in $(SHELLS); do							\
-	    (cd $(HOME)/$$i &&							\
-	     nix copy --to ssh://$(REMOTE)					\
-	         $$(nix-instantiate --add-root $(ROOTS)/$$(basename $$i) ./.));	\
-	done
+copy:
+	find /nix/store -maxdepth 1 | xargs nix copy --to ssh://$(REMOTE)
 
 cache:
 	test -d $(CACHE) &&				\
