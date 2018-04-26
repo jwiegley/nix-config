@@ -24,17 +24,4 @@ let myEmacsPackages   = import ./emacs.nix pkgs;
   coq86Env        = pkgs.coq86Env myCoqPackages;
   coq85Env        = pkgs.coq85Env myCoqPackages;
   coq84Env        = pkgs.coq84Env myCoqPackages;
-
-  atif-fiat-env   = with pkgs; buildEnv {
-    name = "atif-fiat-env";
-    paths = [
-      blas
-      liblapackWithoutAtlas
-      darwin.apple_sdk.frameworks.Accelerate
-      gfortran.cc.lib
-      profiledHaskellPackages_8_2.cabal-install
-      profiledHaskellPackages_8_2.cpphs
-      profiledHaskellPackages_8_2.ghc
-    ];
-  };
 }
