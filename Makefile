@@ -48,18 +48,21 @@ env-all:
 	@echo "Nix generation:    $$(nix-env --list-generations | tail -1)"
 
 env-all-build:
-	nix build --keep-going darwin.pkgs.emacs25Env
+	nix build --keep-going darwin.pkgs.emacsHEADEnv
 	nix build --keep-going darwin.pkgs.emacs26Env
 	nix build --keep-going darwin.pkgs.emacs26DebugEnv
-	nix build --keep-going darwin.pkgs.emacsHEADEnv
-	nix build --keep-going darwin.pkgs.coq84Env
-	nix build --keep-going darwin.pkgs.coq85Env
-	nix build --keep-going darwin.pkgs.coq86Env
-	nix build --keep-going darwin.pkgs.coq87Env
+	nix build --keep-going darwin.pkgs.emacs25Env
 	nix build --keep-going darwin.pkgs.coqHEADEnv
-	nix build --keep-going darwin.pkgs.ghc80Env
-	nix build --keep-going darwin.pkgs.ghc82Env
+	nix build --keep-going darwin.pkgs.coq88Env
+	nix build --keep-going darwin.pkgs.coq87Env
+	nix build --keep-going darwin.pkgs.coq86Env
+	nix build --keep-going darwin.pkgs.coq85Env
+	nix build --keep-going darwin.pkgs.coq84Env
+	nix build --keep-going darwin.pkgs.ghc84ProfEnv
+	nix build --keep-going darwin.pkgs.ghc84Env
 	nix build --keep-going darwin.pkgs.ghc82ProfEnv
+	nix build --keep-going darwin.pkgs.ghc82Env
+	nix build --keep-going darwin.pkgs.ghc80Env
 	nix build --keep-going darwin.pkgs.ledgerPy2Env
 	nix build --keep-going darwin.pkgs.ledgerPy3Env
 	rm result

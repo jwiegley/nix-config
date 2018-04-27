@@ -299,12 +299,14 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
   Agda                     = doJailbreak (dontHaddock super.Agda);
+  PSQueue                  = doJailbreak super.PSQueue;
   active                   = doJailbreak super.active;
   async-pool               = doJailbreak super.async-pool;
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   cabal-helper             = doJailbreak super.cabal-helper;
   circle-packing           = doJailbreak super.circle-packing;
   commodities              = doJailbreak mypkgs.commodities;
+  compact                  = doJailbreak super.compact;
   compressed               = doJailbreak super.compressed;
   consistent               = doJailbreak (dontCheck mypkgs.consistent);
   derive-storable          = dontCheck super.derive-storable;
@@ -339,6 +341,7 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   postgresql-simple        = doJailbreak super.postgresql-simple;
   recursors                = doJailbreak super.recursors;
   runmany                  = doJailbreak super.runmany;
+  serialise                = doJailbreak (dontCheck super.serialise);
   servant-foreign          = doJailbreak super.servant-foreign;
   shelly                   = dontCheck (doJailbreak super.shelly);
   streaming-commons        = dontCheck super.streaming-commons;
@@ -351,7 +354,8 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   thyme                    = dontHaddock super.thyme;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = doJailbreak (dontCheck mypkgs.timeparsers);
-  turtle                   = doJailbreak super.Agda;
+  turtle                   = doJailbreak super.turtle;
+  vector-sized             = doJailbreak super.vector-sized;
   wl-pprint                = doJailbreak super.wl-pprint;
 
   hoopl = super.hoopl_3_10_2_2;
@@ -464,8 +468,6 @@ ghc84Env = myPkgs: pkgs.myEnvFun {
     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
        compact
      ])))
-    Agda
-    idris
   ];
 };
 
@@ -475,8 +477,6 @@ ghc84ProfEnv = myPkgs: pkgs.myEnvFun {
     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
        compact
      ])))
-    Agda
-    idris
   ];
 };
 

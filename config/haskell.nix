@@ -1,16 +1,15 @@
-pkgs: hpkgs: with hpkgs;
+pkgs: version: hpkgs: with hpkgs;
+
+# These work with every version of GHC environments are created for
 [
-  # HFuse
-  # liquidhaskell
-  # threadscope
   Boolean
   HTTP
   HUnit
   IfElse
   ListLike
   MemoTrie
-  MonadPrompt
   MissingH
+  MonadPrompt
   Network-NineP
   QuickCheck
   abstract-deque
@@ -24,20 +23,17 @@ pkgs: hpkgs: with hpkgs;
   attempt
   attoparsec
   attoparsec-conduit
-  attoparsec-enumerator
   base
   base-unicode-symbols
   base16-bytestring
   base64-bytestring
   basic-prelude
-  bench
   bifunctors
   binary
   binary-orphans
   bindings-DSL
   blaze-builder
   blaze-builder-conduit
-  blaze-builder-enumerator
   blaze-html
   blaze-markup
   blaze-textual
@@ -50,7 +46,6 @@ pkgs: hpkgs: with hpkgs;
   bytestring-mmap
   bytestring-show
   c2hsc
-  cabal-helper
   case-insensitive
   cassava
   categories
@@ -62,7 +57,6 @@ pkgs: hpkgs: with hpkgs;
   classy-prelude
   classy-prelude-conduit
   cmdargs
-  commodities
   comonad
   comonad-transformers
   composition
@@ -91,21 +85,14 @@ pkgs: hpkgs: with hpkgs;
   deepseq-generics
   derive-storable
   deriving-compat
-  diagrams
-  diagrams-core
-  diagrams-graphviz
-  diagrams-lib
-  diagrams-svg
   directory
   distributive
-  djinn
   dlist
   dlist-instances
   dns
   doctest
   doctest-prop
   either
-  enclosed-exceptions
   errors
   exceptions
   extensible-exceptions
@@ -125,14 +112,11 @@ pkgs: hpkgs: with hpkgs;
   fuzzcheck
   generic-lens
   ghc-core
-  # ghc-mod
   ghc-paths
   gitlib
-  gitlib-cmdline
   gitlib-libgit2
   gitlib-sample
   gitlib-test
-  graphviz
   groups
   hakyll
   hamlet
@@ -143,7 +127,6 @@ pkgs: hpkgs: with hpkgs;
   haskell-src
   haskell-src-exts
   hasktags
-  hdevtools
   here
   hierarchy
   hlibgit2
@@ -153,7 +136,6 @@ pkgs: hpkgs: with hpkgs;
   hspec
   hspec-expectations
   hspec-megaparsec
-  hspec-smallcheck
   hspec-wai
   html
   http-client
@@ -161,8 +143,6 @@ pkgs: hpkgs: with hpkgs;
   http-date
   http-media
   http-types
-  inline-c
-  inline-c-cpp
   insert-ordered-containers
   interpolate
   io-memoize
@@ -174,7 +154,6 @@ pkgs: hpkgs: with hpkgs;
   kan-extensions
   kdt
   keys
-  lambdabot
   language-c
   lattices
   lens
@@ -205,12 +184,11 @@ pkgs: hpkgs: with hpkgs;
   monad-par
   monad-par-extras
   monad-stm
-  monadloc
   monadlist
+  monadloc
   mono-traversable
   monoid-extras
   mtl
-  mueval
   multimap
   network
   network-simple
@@ -241,7 +219,6 @@ pkgs: hpkgs: with hpkgs;
   pointed
   pointfree
   posix-paths
-  postgresql-simple
   pretty-show
   pretty-simple
   primitive
@@ -264,11 +241,8 @@ pkgs: hpkgs: with hpkgs;
   resourcet
   retry
   safe
-  sbv
-  sbvPlugin
   scalpel
   scientific
-  scotty
   semigroupoids
   semigroups
   semiring-simple
@@ -278,11 +252,9 @@ pkgs: hpkgs: with hpkgs;
   servant-client
   servant-docs
   servant-foreign
-  servant-js
   servant-server
   shake
   shakespeare
-  shelly
   silently
   simple-reflect
   smallcheck
@@ -297,7 +269,6 @@ pkgs: hpkgs: with hpkgs;
   strict
   stringsearch
   strptime
-  stylish-haskell
   syb
   system-fileio
   system-filepath
@@ -319,7 +290,6 @@ pkgs: hpkgs: with hpkgs;
   time
   time-recurrence
   timeparsers
-  timeplot
   tls
   total
   transformers
@@ -332,7 +302,6 @@ pkgs: hpkgs: with hpkgs;
   unordered-containers
   uuid
   vector
-  vector-sized
   void
   wai
   warp
@@ -346,4 +315,46 @@ pkgs: hpkgs: with hpkgs;
   z3-generate-api
   zippers
   zlib
-]
+] ++
+
+# These don't work with GHC 8.4 yet
+(pkgs.stdenv.lib.optionals (version < 8.3)
+[
+  attoparsec-enumerator
+  bench
+  blaze-builder-enumerator
+  cabal-helper
+  commodities
+  diagrams
+  diagrams-core
+  diagrams-graphviz
+  diagrams-lib
+  diagrams-svg
+  djinn
+  enclosed-exceptions
+  gitlib-cmdline
+  graphviz
+  hdevtools
+  hspec-smallcheck
+  inline-c
+  inline-c-cpp
+  lambdabot
+  mueval
+  postgresql-simple
+  sbv
+  sbvPlugin
+  scotty
+  servant-js
+  shelly
+  stylish-haskell
+  timeplot
+  vector-sized
+]) ++
+
+# These only work with GHC 8.2
+(pkgs.stdenv.lib.optionals (version > 8.1)
+[
+  # ghc-mod
+  liquidhaskell
+  # threadscope
+])
