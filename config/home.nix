@@ -137,9 +137,13 @@ rec {
         l = "${pkgs.git}/bin/git l";
         w = "${pkgs.git}/bin/git w";
 
-        g   = "${pkgs.gitAndTools.hub}/bin/hub";
-        git = "${pkgs.gitAndTools.hub}/bin/hub";
-        ga  = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
+        g    = "${pkgs.gitAndTools.hub}/bin/hub";
+        git  = "${pkgs.gitAndTools.hub}/bin/hub";
+        ga   = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
+        gpr  = "${pkgs.git-pull-request}/bin/git-pull-request";
+        good = "${pkgs.git}/bin/git bisect good";
+        bad  = "${pkgs.git}/bin/git bisect bad";
+        done = "${pkgs.git}/bin/git bisect reset";
 
         ls    = "${pkgs.coreutils}/bin/ls --color=auto";
         nm    = "${pkgs.findutils}/bin/find . -name";
@@ -171,7 +175,8 @@ rec {
             ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
         fi
 
-        export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir rbenv vcs)
+        export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir)
+        # export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir rbenv vcs)
         # export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status background_jobs command_execution_time time)
         export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(command_execution_time)
 
@@ -239,9 +244,13 @@ rec {
         dc         = "diff --cached";
         dh         = "diff HEAD";
         ds         = "diff --staged";
+        from       = "!${pkgs.git}/bin/git bisect start && ${pkgs.git}/bin/git bisect bad HEAD && ${pkgs.git}/bin/git bisect good";
         ls-ignored = "ls-files --exclude-standard --ignored --others";
+        nb         = "!${pkgs.git}/bin/git checkout --track $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote)/$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD) -b";
+        ppr        = "!${pkgs.git}/bin/git push $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote) HEAD:$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD) && ${pkgs.git-pull-request}/bin/git-pull-request --target-branch $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).merge)";
         rc         = "rebase --continue";
         rh         = "reset --hard";
+        ri         = "rebase --interactive";
         rs         = "rebase --skip";
         ru         = "remote update --prune";
         snap       = "!${pkgs.git}/bin/git stash"

@@ -112,6 +112,8 @@ pkgs: version: hpkgs: with hpkgs;
   fuzzcheck
   generic-lens
   ghc-core
+  ghc-datasize
+  ghc-heap-view
   ghc-paths
   gitlib
   gitlib-libgit2
@@ -266,6 +268,9 @@ pkgs: version: hpkgs: with hpkgs;
   stm-stats
   streaming
   streaming-bytestring
+  streaming-commons
+  streaming-concurrency
+  streaming-with
   strict
   stringsearch
   strptime

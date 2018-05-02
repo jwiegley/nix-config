@@ -6,41 +6,42 @@ self: pkgs: rec {
 myHaskellPackageDefs = super:
   with super; let pkg = super.callPackage; in rec {
 
-  async-pool       = pkg ~/src/async-pool {};
-  bindings-DSL     = pkg ~/src/bindings-DSL {};
-  c2hsc            = pkg ~/src/c2hsc {};
-  commodities      = pkg ~/src/ledger4/commodities {};
-  consistent       = pkg ~/src/consistent {};
-  coq-haskell      = pkg ~/src/coq-haskell {};
-  fuzzcheck        = pkg ~/src/fuzzcheck {};
-  git-all          = pkg ~/src/git-all {};
-  git-du           = pkg ~/src/git-du {};
-  git-monitor      = pkg ~/src/gitlib/git-monitor {};
-  gitlib           = pkg ~/src/gitlib/gitlib {};
-  gitlib-cmdline   = pkg ~/src/gitlib/gitlib-cmdline { inherit (pkgs.gitAndTools) git; };
-  gitlib-hit       = pkg ~/src/gitlib/gitlib-hit {};
-  gitlib-libgit2   = pkg ~/src/gitlib/gitlib-libgit2 {};
-  gitlib-test      = pkg ~/src/gitlib/gitlib-test {};
-  hierarchy        = pkg ~/src/hierarchy {};
-  hlibgit2         = pkg ~/src/gitlib/hlibgit2 { inherit (pkgs.gitAndTools) git; };
-  hnix             = pkg ~/src/hnix {};
-  ipcvar           = pkg ~/src/ipcvar {};
-  linearscan       = pkg ~/src/linearscan {};
-  linearscan-hoopl = pkg ~/src/linearscan-hoopl {};
-  logging          = pkg ~/src/logging {};
-  monad-extras     = pkg ~/src/monad-extras {};
-  parsec-free      = pkg ~/src/parsec-free {};
-  pipes-async      = pkg ~/src/pipes-async {};
-  pipes-files      = pkg ~/src/pipes-files {};
-  pushme           = pkg ~/src/pushme {};
-  recursors        = pkg ~/src/recursors {};
-  runmany          = pkg ~/src/runmany {};
-  simple-mirror    = pkg ~/src/hackage-mirror {};
-  sitebuilder      = pkg ~/src/sitebuilder { inherit (pkgs) yuicompressor; };
-  sizes            = pkg ~/src/sizes {};
-  una              = pkg ~/src/una {};
-  z3               = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
-  z3-generate-api  = pkg ~/src/z3-generate-api {};
+  async-pool          = pkg ~/src/async-pool {};
+  bindings-DSL        = pkg ~/src/bindings-DSL {};
+  c2hsc               = pkg ~/src/c2hsc {};
+  commodities         = pkg ~/src/ledger4/commodities {};
+  consistent          = pkg ~/src/consistent {};
+  coq-haskell         = pkg ~/src/coq-haskell {};
+  fuzzcheck           = pkg ~/src/fuzzcheck {};
+  git-all             = pkg ~/src/git-all {};
+  git-du              = pkg ~/src/git-du {};
+  git-monitor         = pkg ~/src/gitlib/git-monitor {};
+  gitlib              = pkg ~/src/gitlib/gitlib {};
+  gitlib-cmdline      = pkg ~/src/gitlib/gitlib-cmdline { inherit (pkgs.gitAndTools) git; };
+  gitlib-hit          = pkg ~/src/gitlib/gitlib-hit {};
+  gitlib-libgit2      = pkg ~/src/gitlib/gitlib-libgit2 {};
+  gitlib-test         = pkg ~/src/gitlib/gitlib-test {};
+  hierarchy           = pkg ~/src/hierarchy {};
+  hlibgit2            = pkg ~/src/gitlib/hlibgit2 { inherit (pkgs.gitAndTools) git; };
+  hnix                = pkg ~/src/hnix {};
+  ipcvar              = pkg ~/src/ipcvar {};
+  linearscan          = pkg ~/src/linearscan {};
+  linearscan-hoopl    = pkg ~/src/linearscan-hoopl {};
+  logging             = pkg ~/src/logging {};
+  monad-extras        = pkg ~/src/monad-extras {};
+  parsec-free         = pkg ~/src/parsec-free {};
+  pipes-async         = pkg ~/src/pipes-async {};
+  pipes-files         = pkg ~/src/pipes-files {};
+  pushme              = pkg ~/src/pushme {};
+  recursors           = pkg ~/src/recursors {};
+  runmany             = pkg ~/src/runmany {};
+  simple-mirror       = pkg ~/src/hackage-mirror {};
+  sitebuilder         = pkg ~/src/sitebuilder { inherit (pkgs) yuicompressor; };
+  sizes               = pkg ~/src/sizes {};
+  streaming-hierarchy = pkg ~/src/streaming-hierarchy {};
+  una                 = pkg ~/src/una {};
+  z3                  = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
+  z3-generate-api     = pkg ~/src/z3-generate-api {};
 
   hours = (pkgs.haskell.lib.dontHaddock (pkg ~/src/hours {}))
     .overrideDerivation (attrs: {
@@ -122,6 +123,17 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   serialise                = dontCheck super.serialise;
   text-show                = dontCheck super.text-show;
   time-recurrence          = doJailbreak super.time-recurrence;
+
+  ghc-datasize =
+    overrideCabal super.ghc-datasize (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
+    });
+  ghc-heap-view =
+    overrideCabal super.ghc-heap-view (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
+    });
 
   Cabal = super.Cabal_1_24_2_0;
 
@@ -256,6 +268,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   diagrams-postscript      = doJailbreak super.diagrams-postscript;
   diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
   diagrams-svg             = doJailbreak super.diagrams-svg;
+  github-backup            = doJailbreak super.github-backup;
   heap                     = dontCheck super.heap;
   hierarchy                = doJailbreak super.hierarchy;
   indents                  = doJailbreak super.indents;
@@ -273,6 +286,17 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   text-show                = dontCheck super.text-show;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = dontCheck (doJailbreak mypkgs.timeparsers);
+
+  ghc-datasize =
+    overrideCabal super.ghc-datasize (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
+    });
+  ghc-heap-view =
+    overrideCabal super.ghc-heap-view (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
+    });
 
   # Use a particular commit from github
   insert-ordered-containers =
@@ -299,6 +323,7 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
   Agda                     = doJailbreak (dontHaddock super.Agda);
+  HUnit                    = dontCheck super.HUnit;
   PSQueue                  = doJailbreak super.PSQueue;
   active                   = doJailbreak super.active;
   async-pool               = doJailbreak super.async-pool;
@@ -358,6 +383,17 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   vector-sized             = doJailbreak super.vector-sized;
   wl-pprint                = doJailbreak super.wl-pprint;
 
+  ghc-datasize =
+    overrideCabal super.ghc-datasize (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
+    });
+  ghc-heap-view =
+    overrideCabal super.ghc-heap-view (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
+    });
+
   hoopl = super.hoopl_3_10_2_2;
 
   linearscan-hoopl = dontCheck super.linearscan-hoopl;
@@ -410,6 +446,17 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
   these                    = doJailbreak super.these;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = doJailbreak (dontCheck mypkgs.timeparsers);
+
+  ghc-datasize =
+    overrideCabal super.ghc-datasize (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
+    });
+  ghc-heap-view =
+    overrideCabal super.ghc-heap-view (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
+    });
 
   mkDerivation = args: super.mkDerivation (args // {
     enableLibraryProfiling = libProf;

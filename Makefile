@@ -1,6 +1,7 @@
 REMOTE = vulcan
 CACHE  = /Volumes/slim/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
+
 SHELLS = bae/concerto/solver						\
 	 bae/concerto/solver/lib/z3					\
 	 bae/micromht-fiat-deliverable/atif-fiat			\
@@ -9,6 +10,8 @@ SHELLS = bae/concerto/solver						\
 	 bae/micromht-deliverable/rings-dashboard/rings-dashboard-api	\
 	 bae/micromht-deliverable/rings-dashboard			\
 	 bae/micromht-deliverable/micromht/stanagPacketPoster		\
+	 src/runmany							\
+	 src/free							\
 	 src/hnix							\
 	 src/hs-to-coq
 
@@ -58,8 +61,6 @@ env-all-build:
 	nix build --keep-going darwin.pkgs.coq86Env
 	nix build --keep-going darwin.pkgs.coq85Env
 	nix build --keep-going darwin.pkgs.coq84Env
-	nix build --keep-going darwin.pkgs.ghc84ProfEnv
-	nix build --keep-going darwin.pkgs.ghc84Env
 	nix build --keep-going darwin.pkgs.ghc82ProfEnv
 	nix build --keep-going darwin.pkgs.ghc82Env
 	nix build --keep-going darwin.pkgs.ghc80Env
@@ -103,7 +104,7 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build-all switch env-all shells working
+update: tag-before pull build-all switch env-all shells working copy cache
 
 copy:
 	find /nix/store -maxdepth 1 | xargs nix copy --to ssh://$(REMOTE)

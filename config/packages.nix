@@ -16,6 +16,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.git-all)
   (exe haskPkgs.git-monitor)
   git-lfs
+  git-pull-request
   git-scripts
   git-tbdiff
   gitRepo
@@ -26,7 +27,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gitAndTools.tig
   gitAndTools.git-annex
   gitAndTools.git-annex-remote-rclone
-  github-backup
+  (exe haskPkgs.github-backup)
   gitstats
   pass-git-helper
   patch
