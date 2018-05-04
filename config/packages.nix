@@ -35,7 +35,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   sift
 
   # jsToolsEnv
-  pkgs_prev.jq
+  jq
   nodejs
   nodePackages.eslint
   nodePackages.csslint
@@ -133,7 +133,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   groff
   highlight
   hugo
-  pkgs_prev.inkscape.out
+  inkscape.out
   ledger
   (exe haskPkgs.lhs2tex)
   librsvg
@@ -167,6 +167,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   python3
 
   # systemToolsEnv
+  apg
   aspell
   aspellDicts.en
   bash-completion
@@ -212,7 +213,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   postgresql
   (exe haskPkgs.pushme)
   pv
-  pkgs_prev.qemu
+  qemu
   qrencode
   renameutils
   ripgrep

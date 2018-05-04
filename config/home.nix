@@ -5,6 +5,9 @@ let home_directory = builtins.getEnv "HOME";
     lib = pkgs.stdenv.lib; in
 
 rec {
+  # jww (2018-05-02): Temporary workaround for a recent breakage
+  manual.manpages.enable = false;
+
   nixpkgs = {
     config = {
       allowUnfree = true;
@@ -133,17 +136,17 @@ rec {
       };
 
       shellAliases = {
-        b = "${pkgs.git}/bin/git b";
-        l = "${pkgs.git}/bin/git l";
-        w = "${pkgs.git}/bin/git w";
+        b    = "${pkgs.git}/bin/git b";
+        l    = "${pkgs.git}/bin/git l";
+        w    = "${pkgs.git}/bin/git w";
 
         g    = "${pkgs.gitAndTools.hub}/bin/hub";
         git  = "${pkgs.gitAndTools.hub}/bin/hub";
         ga   = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
-        gpr  = "${pkgs.git-pull-request}/bin/git-pull-request";
+        gprr = "${pkgs.git-pull-request}/bin/git-pull-request";
+        gpr  = "${pkgs.git-pull-request}/bin/git-pull-request --target-remote origin --target-branch master";
         good = "${pkgs.git}/bin/git bisect good";
         bad  = "${pkgs.git}/bin/git bisect bad";
-        done = "${pkgs.git}/bin/git bisect reset";
 
         ls    = "${pkgs.coreutils}/bin/ls --color=auto";
         nm    = "${pkgs.findutils}/bin/find . -name";
@@ -286,7 +289,7 @@ rec {
         credential.helper     = "${pkgs.pass-git-helper}/bin/pass-git-helper";
         ghi.token             =
           "!${pkgs.pass}/bin/pass api.github.com | head -1";
-        hub.protocol          = "https";
+        hub.protocol          = "ssh";
         mergetool.keepBackup  = true;
         pull.rebase           = true;
         rebase.autosquash     = true;

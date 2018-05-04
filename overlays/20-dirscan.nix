@@ -1,6 +1,6 @@
 self: super: {
 
-dirscan = with super; python3Packages.buildPythonPackage rec {
+dirscan = with super; python2Packages.buildPythonPackage rec {
   pname = "dirscan";
   version = "2.0";
   name = "${pname}-${version}";
@@ -16,6 +16,7 @@ dirscan = with super; python3Packages.buildPythonPackage rec {
   phases = [ "unpackPhase" "buildPhase" "installPhase" ];
 
   buildPhase = ''
+    sed -i -e "s|/usr/bin/env python|${pkgs.python27}/bin/python|" dirscan.py
     sed -i -e "s|/usr/bin/env python2.7|${pkgs.python27}/bin/python|" cleanup
     sed -i -e "s|/Users/johnw/bin/dirscan|$out/libexec|" cleanup
   '';
@@ -28,7 +29,7 @@ dirscan = with super; python3Packages.buildPythonPackage rec {
 
   meta = {
     homepage = https://github.com/jwiegley/dirscan;
-    description = "Stateful directory scanning in Python. Makes a great ~/.Trash cleaner";
+    description = "Stateful directory scanning in Python";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ jwiegley ];
   };

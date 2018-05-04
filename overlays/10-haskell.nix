@@ -121,6 +121,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   runmany                  = doJailbreak super.runmany;
   sbvPlugin                = doJailbreak super.sbvPlugin;
   serialise                = dontCheck super.serialise;
+  stylish-haskell          = dontCheck super.stylish-haskell;
   text-show                = dontCheck super.text-show;
   time-recurrence          = doJailbreak super.time-recurrence;
 
@@ -283,6 +284,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   recursors                = doJailbreak super.recursors;
   runmany                  = doJailbreak super.runmany;
   serialise                = dontCheck super.serialise;
+  stylish-haskell          = dontCheck super.stylish-haskell;
   text-show                = dontCheck super.text-show;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = dontCheck (doJailbreak mypkgs.timeparsers);

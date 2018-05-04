@@ -2,18 +2,32 @@ REMOTE = vulcan
 CACHE  = /Volumes/slim/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
 
-SHELLS = bae/concerto/solver						\
-	 bae/concerto/solver/lib/z3					\
-	 bae/micromht-fiat-deliverable/atif-fiat			\
-	 bae/micromht-fiat-deliverable/atif-fiat/stanag4607		\
-	 bae/micromht-deliverable/rings-dashboard/mitll-harness		\
-	 bae/micromht-deliverable/rings-dashboard/rings-dashboard-api	\
-	 bae/micromht-deliverable/rings-dashboard			\
-	 bae/micromht-deliverable/micromht/stanagPacketPoster		\
-	 src/runmany							\
-	 src/free							\
-	 src/hnix							\
-	 src/hs-to-coq
+SHELLS = $(shell find $(HOME)/bae/ $(HOME)/src/ \
+		        \( -path $(HOME)/src/nix/nixpkgs -prune \) \
+		     -o \( -path $(HOME)/src/notes -prune \) \
+		     -o -name default.nix -print0 \
+		   | parallel -0 'grep -q developPackage {} && echo {//}')
+
+PENVS = emacs26Env	\
+	coq87Env	\
+	ghc82Env	\
+	ledgerPy3Env
+
+ENVS =  emacsHEADEnv	\
+	emacs26Env	\
+	emacs26DebugEnv	\
+	emacs25Env	\
+	coqHEADEnv	\
+	coq88Env	\
+	coq87Env	\
+	coq86Env	\
+	coq85Env	\
+	coq84Env	\
+	ghc82ProfEnv	\
+	ghc82Env	\
+	ghc80Env	\
+	ledgerPy2Env	\
+	ledgerPy3Env
 
 all: switch env-all shells
 
@@ -25,7 +39,7 @@ darwin-switch:
 
 darwin-build:
 	nix build --keep-going darwin.system
-	rm result
+	@rm result
 
 home-switch:
 	home-manager switch
@@ -36,7 +50,10 @@ home-build:
 		  --argstr confPath "$(HOME_MANAGER_CONFIG)" \
 		  --argstr confAttr "" activationPackage \
 		  --keep-going
-	rm result
+	@rm result
+
+print-shells:
+	@echo $(SHELLS)
 
 shells:
 	for i in $(SHELLS); do						\
@@ -46,49 +63,34 @@ shells:
 	done
 
 env-all:
-	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs \
-	    || nix-env -f '<darwin>' -u --leq -Q -A pkgs
+	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs
 	@echo "Nix generation:    $$(nix-env --list-generations | tail -1)"
 
 env-all-build:
-	nix build --keep-going darwin.pkgs.emacsHEADEnv
-	nix build --keep-going darwin.pkgs.emacs26Env
-	nix build --keep-going darwin.pkgs.emacs26DebugEnv
-	nix build --keep-going darwin.pkgs.emacs25Env
-	nix build --keep-going darwin.pkgs.coqHEADEnv
-	nix build --keep-going darwin.pkgs.coq88Env
-	nix build --keep-going darwin.pkgs.coq87Env
-	nix build --keep-going darwin.pkgs.coq86Env
-	nix build --keep-going darwin.pkgs.coq85Env
-	nix build --keep-going darwin.pkgs.coq84Env
-	nix build --keep-going darwin.pkgs.ghc82ProfEnv
-	nix build --keep-going darwin.pkgs.ghc82Env
-	nix build --keep-going darwin.pkgs.ghc80Env
-	nix build --keep-going darwin.pkgs.ledgerPy2Env
-	nix build --keep-going darwin.pkgs.ledgerPy3Env
-	rm result
+	for i in $(ENVS); do \
+	    nix build --keep-going darwin.pkgs.$$i ; \
+	done
+	@rm result
 
 env:
-	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.emacs26Env
-	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.coq87Env
-	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.ghc82Env
-	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.ledgerPy3Env
+	for i in $(PENVS); do \
+	    nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ; \
+	done
 
 env-build:
-	nix build --keep-going darwin.pkgs.emacs26Env
-	nix build --keep-going darwin.pkgs.coq87Env
-	nix build --keep-going darwin.pkgs.ghc82Env
-	nix build --keep-going darwin.pkgs.ledgerPy3Env
-	rm result
+	for i in $(PENVS); do \
+	    nix build --keep-going darwin.pkgs.$$i ; \
+	done
+	@rm result
 
 build: darwin-build home-build env-build
 
 build-all: darwin-build home-build env-all-build
 
 pull:
-	(cd nixpkgs      && git pull --rebase)
 	(cd darwin       && git pull --rebase)
 	(cd home-manager && git pull --rebase)
+	(cd nixpkgs      && git pull --rebase)
 
 tag-before:
 	git --git-dir=nixpkgs/.git branch -f before-update HEAD
@@ -107,7 +109,8 @@ working: tag-working mirror
 update: tag-before pull build-all switch env-all shells working copy cache
 
 copy:
-	find /nix/store -maxdepth 1 | xargs nix copy --to ssh://$(REMOTE)
+	find /nix/store -maxdepth 1 ! -path /nix/store \
+	    | xargs nix copy --to ssh://$(REMOTE)
 
 cache:
 	test -d $(CACHE) &&				\
