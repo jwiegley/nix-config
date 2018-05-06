@@ -33,6 +33,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   patch
   patchutils
   sift
+  travis
 
   # jsToolsEnv
   jq

@@ -111,6 +111,7 @@ pkgs: version: hpkgs: with hpkgs;
   fsnotify
   fuzzcheck
   generic-lens
+  generic-random
   ghc-core
   ghc-datasize
   ghc-heap-view
@@ -164,6 +165,7 @@ pkgs: version: hpkgs: with hpkgs;
   lens-datetime
   lens-family
   lens-family-core
+  lens-family-th
   lifted-async
   lifted-base
   linear

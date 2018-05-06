@@ -57,7 +57,7 @@ print-shells:
 
 shells:
 	for i in $(SHELLS); do						\
-	    (cd $(HOME)/$$i &&						\
+	    (cd $$i &&							\
 	     nix-shell -Q -j4 --command true &&				\
 	     nix-instantiate --add-root $(ROOTS)/$$(basename $$i) ./.);	\
 	done
