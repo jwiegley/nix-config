@@ -106,10 +106,10 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build-all switch env-all shells working copy cache
+update: tag-before pull build-all switch env-all shells working cache gc copy
 
 copy:
-	find /nix/store -maxdepth 1 ! -path /nix/store \
+	find /nix/store -maxdepth 1 ! -path /nix/store ! -name '*.lock' \
 	    | xargs nix copy --to ssh://$(REMOTE)
 
 cache:

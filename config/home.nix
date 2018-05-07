@@ -154,7 +154,6 @@ rec {
         rm    = "${pkgs.my-scripts}/bin/trash";
         rX    = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
         scp   = "${pkgs.rsync}/bin/rsync -aP --inplace";
-        hide  = "chflags hidden";
         proc  = "ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
         wipe  = "${pkgs.srm}/bin/srm -vfr";
         nstat = "netstat -nr -f inet"
@@ -229,7 +228,7 @@ rec {
 
       signing = {
         key = "C144D8F4F19FE630";
-        signByDefault = false;
+        signByDefault = true;
       };
 
       aliases = {
@@ -284,7 +283,7 @@ rec {
         };
 
         branch.autosetupmerge = true;
-        commit.gpgsign        = false;
+        commit.gpgsign        = true;
         github.user           = "jwiegley";
         credential.helper     = "${pkgs.pass-git-helper}/bin/pass-git-helper";
         ghi.token             =

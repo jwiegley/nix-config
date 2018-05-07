@@ -38,7 +38,6 @@ myHaskellPackageDefs = super:
   simple-mirror       = pkg ~/src/hackage-mirror {};
   sitebuilder         = pkg ~/src/sitebuilder { inherit (pkgs) yuicompressor; };
   sizes               = pkg ~/src/sizes {};
-  streaming-hierarchy = pkg ~/src/streaming-hierarchy {};
   una                 = pkg ~/src/una {};
   z3                  = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
   z3-generate-api     = pkg ~/src/z3-generate-api {};
