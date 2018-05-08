@@ -2,13 +2,13 @@
 
 stdenv.mkDerivation rec {
   name = "coq${coq.coq-version}-equations-${version}";
-  version = "8.8+alpha";
+  version = "1.0";
 
   src = fetchFromGitHub {
     owner = "mattam82";
     repo = "Coq-Equations";
-    rev = "c0c7e993bc1a745bed70065bdb5e94948a63f402";
-    sha256 = "10qmfbzm21dgnh42y8wp5wkjw8wvfydnzcw4r7vh448avgcr18jw";
+    rev = "v1.0-8.8";
+    sha256 = "0dd7zd5j2sv5cw3mfwg33ss2vcj634q3qykakc41sv7f3rfgqfnn";
   };
 
   buildInputs = [ coq.ocaml coq.camlp5 coq.findlib coq ];
@@ -25,6 +25,6 @@ stdenv.mkDerivation rec {
   };
 
   passthru = {
-    compatibleCoqVersions = v: builtins.elem v [ "8.8+alpha" ];
+    compatibleCoqVersions = v: builtins.elem v [ "8.8" ];
   };
 }
