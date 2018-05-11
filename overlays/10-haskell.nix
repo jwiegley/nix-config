@@ -39,7 +39,7 @@ myHaskellPackageDefs = super:
   sitebuilder         = pkg ~/src/sitebuilder { inherit (pkgs) yuicompressor; };
   sizes               = pkg ~/src/sizes {};
   una                 = pkg ~/src/una {};
-  z3                  = pkg ~/src/haskell-z3 { z3 = pkgs.z3; };
+  z3                  = pkg ~/bae/concerto/solver/lib/z3 {};
   z3-generate-api     = pkg ~/src/z3-generate-api {};
 
   hours = (pkgs.haskell.lib.dontHaddock (pkg ~/src/hours {}))
@@ -91,6 +91,7 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   commodities              = doJailbreak mypkgs.commodities;
   concurrent-output        = doJailbreak super.concurrent-output;
   consistent               = dontCheck mypkgs.consistent;
+  cryptohash-sha512        = doJailbreak super.cryptohash-sha512;
   data-inttrie             = doJailbreak super.data-inttrie;
   diagrams-builder         = doJailbreak super.diagrams-builder;
   diagrams-cairo           = doJailbreak super.diagrams-cairo;
@@ -259,6 +260,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   commodities              = doJailbreak mypkgs.commodities;
   consistent               = dontCheck (doJailbreak mypkgs.consistent);
+  cryptohash-sha512         = doJailbreak super.cryptohash-sha512;
   diagrams-builder         = doJailbreak super.diagrams-builder;
   diagrams-cairo           = doJailbreak super.diagrams-cairo;
   diagrams-contrib         = doJailbreak super.diagrams-contrib;

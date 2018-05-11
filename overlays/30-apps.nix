@@ -128,12 +128,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "59.0.2";
+  version = "60.0";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "02ha91kyxik6srnwqzgrijafys3md2cf86jcp8x45agqh18ahrfy";
+    sha256 = "1smjpis0890y0rwbjha14mlbwvh1pr6ax2pl28bqvgcfjzp4b48y";
   };
   postInstall = ''
     for file in  \
@@ -214,12 +214,12 @@ iTerm2 = self.installApplication rec {
 KeyboardMaestro = self.installApplication rec {
   name = "KeyboardMaestro";
   appname = "Keyboard Maestro";
-  version = "8.2";
+  version = "8.2.1";
   sourceRoot = "Keyboard Maestro.app";
   src = super.fetchurl {
-    url = http://files.stairways.com/keyboardmaestro-82.zip;
-    sha256 = "0zxyk23hw6vd3nzzfxma5ww892x5rgycflk0wdfs4h2ghampsfgs";
-    # date = 2018-03-23T22:17:27-0700;
+    url = http://files.stairways.com/keyboardmaestro-821.zip;
+    sha256 = "1icmayxgf8r775v7yl6yp4bap7fpbh37vp5lfhn1w7ipq8v03agf";
+    # date = 2018-05-08T23:38:18-0700;
   };
   description = "Keyboard macro program for macOS";
   homepage = https://www.keyboardmaestro.com;
@@ -567,13 +567,12 @@ Zekr = self.installApplication rec {
 
 Zotero = self.installApplication rec {
   name = "Zotero";
-  version = "5.0.34.6";
+  version = "5.0.47";
   sourceRoot = "Zotero.app";
   src = super.fetchurl {
     name = "zotero-${version}.dmg";
-    url = "https://www.zotero.org/download/client/dl?channel=release&platform=mac&version=5.0.34.6";
-    sha256 = "0dcphxhi2f566cqn5avihwp63kijs2wj49zccafcl8gllw861y4p";
-    # date = 2018-02-04T15:54:54-0800;
+    url = "https://www.zotero.org/download/client/dl?channel=release&platform=mac&version=5.0.47";
+    sha256 = "099wll5wjf0gl7a1lvmj5hmj9vda2sd2x7fvs4n5y2cb56zqa5mv";
   };
   description = ''
     Zotero is a free, easy-to-use tool to help you collect, organize, cite,

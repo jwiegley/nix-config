@@ -255,6 +255,7 @@ pkgs: epkgs: with epkgs;
   org                           # org org-babel org-crypt
   org-bookmark-heading
   org-gcal
+  org-mind-map
   org-noter
   org-opml
   org-pdfview

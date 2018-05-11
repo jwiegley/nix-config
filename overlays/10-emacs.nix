@@ -128,7 +128,7 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   fetchmail-mode = compileEmacsWikiFile {
     name = "fetchmail-mode.el";
     sha256 = "19lqkc35kgzm07xjpb9nrcayg69qyijn159lak0mg45fhnybf4a6";
-    # date = 2018-02-21T17:21:40-0800;
+    # date = 2018-05-10T00:43:55-0700;
   };
 
   highlight = compileEmacsWikiFile {
@@ -184,7 +184,7 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   tidy = compileEmacsWikiFile {
     name = "tidy.el";
     sha256 = "0psci55a3angwv45z9i8wz8jw634rxg1xawkrb57m878zcxxddwa";
-    # date = 2018-02-21T17:21:58-0800;
+    # date = 2018-05-10T00:44:08-0700;
   };
 
   vline = compileEmacsWikiFile {
@@ -202,13 +202,13 @@ myEmacsPackageOverrides = emacs: super: self: with self;
   xray = compileEmacsWikiFile {
     name = "xray.el";
     sha256 = "12pzik5plywil0rz95rqb5qdqwdawkbwhmqab346yizhlp6i4fq6";
-    # date = 2018-02-21T17:22:02-0800;
+    # date = 2018-05-10T00:44:13-0700;
   };
 
   yaoddmuse = compileEmacsWikiFile {
     name = "yaoddmuse.el";
     sha256 = "0h3s3mdfz0czgz1cj415k170g7mbbqmsinw0xr7qmk050i154iis";
-    # date = 2018-02-21T17:58:19-0800;
+    # date = 2018-05-10T00:44:17-0700;
   };
 
 
@@ -269,9 +269,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "louietan";
       repo = "anki-editor";
-      rev = "690121ce582105239f8bf20a9c011b8c6bb1661a";
-      sha256 = "168lixn9s3s1p33qw8x6wr5ll6mikkx3316xfsql0bdnz1rkk6cp";
-      # date = 2018-01-28T17:29:35+08:00;
+      rev = "fa807a684760c34934cd4c399dfd705751e216a3";
+      sha256 = "13vmxzwcih1s24793l45c8xmkkl1iqkbg9ikr6348xcwpa0skq5a";
+      # date = 2018-05-03T20:28:54+08:00;
     };
   };
 
@@ -291,9 +291,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "emacsmirror";
       repo = "bookmark-plus";
-      rev = "954d48092247e9fd461d310fd9fc3c0d545362d5";
-      sha256 = "0c9yiwrc6apxrrc8dyfdgs6q2m2l8rd92rwmywci7ivhcpp4cadi";
-      # date = 2017-12-04T00:55:55+01:00;
+      rev = "6b2e4b961429920ba94c0905aa87b9a1925233fe";
+      sha256 = "0y1bbq2rcigq7wfinn22q0qxg2xfn96kynd7yax5k3d4lwssgvjn";
+      # date = 2018-02-25T17:27:44+01:00;
     };
   };
 
@@ -324,9 +324,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "tautologyclub";
       repo = "feebleline";
-      rev = "00d891603b1d3c786a2f1e56000296c1573c4456";
-      sha256 = "1p7jiav16r467k5kpbvwphz7690dczhak0ghcmkj9h4gcbklngs1";
-      # date = 2018-01-29T13:25:07+01:00;
+      rev = "56cd8fe336b619840991dc66d9cca973ddd8500c";
+      sha256 = "0p8d31942c3xlymjm2r9qppr07c8vg0842f87lzqh84sc3z7r5ql";
+      # date = 2018-03-22T22:01:01+01:00;
     };
   };
 
@@ -437,9 +437,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "unhammer";
       repo = "org-rich-yank";
-      rev = "ffa90b29604e27a60ad341c06d0e43769af19715";
-      sha256 = "1z9137nirbaydqpw5b7ii3qnpn09v1kiqnyxsxkgc0q3arb1m1f6";
-      # date = 2018-02-18T10:56:41+01:00;
+      rev = "b29bd06f295424fc15b3b8c1b3f78f501d67db47";
+      sha256 = "0c4ywznxwf7hdc4x434d90hp440rplc4nsih4aswjkb7lx38lp9a";
+      # date = 2018-04-30T15:44:14+02:00;
     };
   };
 
@@ -448,9 +448,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "collarchoke";
       repo = "ovpn-mode";
-      rev = "79aa879dcad05e89e7fd32e2cbef78878ddfd857";
-      sha256 = "0dsgk1lycs99xkqkzlkrs7yxjnw3z39r4r7mm8ghqqwdk3r67fw7";
-      # date = "2018-01-24T09:33:00-05:00";
+      rev = "a7c225948605198c5d277090d7c22af310ce2e24";
+      sha256 = "1afsh27y5yl7yg7m4i2j0mwc2rlgfn29ml3lbg2mn86p5wqanjqy";
+      # date = "2018-05-03T12:39:41-04:00";
     };
   };
 
@@ -641,9 +641,9 @@ myEmacsPackageOverrides = emacs: super: self: with self;
     src = fetchFromGitHub {
       owner = "ProofGeneral";
       repo = "PG";
-      rev = "5e7566e54842fb198a6f68abb7c624b53a488038";
-      sha256 = "1d1s99l1awqv8k0ijqp8xam59wabzpidalpglgckyxip2g7jlsm3";
-      # date = 2018-02-20T10:30:00+01:00;
+      rev = "73792323172e289b531afc086d3f97323b28ecb6";
+      sha256 = "15kxzbsqa5rb2z3yvjlngz5y4z6vr5gca3npdz75awxwiblajz86";
+      # date = 2018-04-22T12:37:22+02:00;
     };
 
     # src = ~/src/proof-general;
@@ -705,8 +705,8 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
 
   src = fetchgit {
     url = https://git.savannah.gnu.org/git/emacs.git;
-    rev = "d6e2c593180934926fa4cc5b58fdab82b20f5f14";
-    sha256 = "00vlkwavipymg802f54aj9xp7d8wm4pngjy9r6f32mp26v2smick";
+    rev = "1d9e66aea17787e03954f32c6cd7561c881bb444";
+    sha256 = "09pniqwgjqbxd7c7liwr72d1kwbs0lsdbcyhrvdblsaf7kcm5gpr";
   };
 
   postPatch = ''
@@ -774,8 +774,8 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
 
   src = fetchgit {
     url = https://git.savannah.gnu.org/git/emacs.git;
-    rev = "fa3136e07148ab37fabc52007f531e71e41a1d5a";
-    sha256 = "02p08cvvm6kg92zr8apwhciiv6ndscbibkb4c801dfwff6hgp08b";
+    rev = "766b057e41df7316808ec7658836fda75facda75";
+    sha256 = "1ki8diwb11mkkm7spfs52ijn5wbh21py0mpkvk6f1axa31jshgbk";
   };
 
   postPatch = ''

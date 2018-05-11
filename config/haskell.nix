@@ -75,6 +75,10 @@ pkgs: version: hpkgs: with hpkgs;
   cpphs
   criterion
   cryptohash
+  cryptohash-md5
+  cryptohash-sha1
+  cryptohash-sha256
+  cryptohash-sha512
   css-text
   curl
   data-checked
@@ -112,6 +116,7 @@ pkgs: version: hpkgs: with hpkgs;
   fuzzcheck
   generic-lens
   generic-random
+  ghc
   ghc-core
   ghc-datasize
   ghc-heap-view
@@ -125,10 +130,12 @@ pkgs: version: hpkgs: with hpkgs;
   hamlet
   happy
   hashable
+  hashing
   hashtables
   haskell-lexer
   haskell-src
   haskell-src-exts
+  haskell-src-meta
   hasktags
   here
   hierarchy

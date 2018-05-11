@@ -11,7 +11,12 @@ fi
 EMACSPATH=../Applications/${EMACSAPP}.app/Contents/MacOS/${EMACSAPP}
 EMACSBIN="\$(dirname \$(which emacs))/$EMACSPATH"
 
-if [[ "$1" == --debug ]]; then
+if [[ "$1" == --here ]]; then
+    shift 1
+    exec load-env-emacs$EMACSVER \
+         bash -c "unset TZ ; $EMACSBIN $@"
+elif [[ "$1" == --debug ]]; then
+    shift 1
     exec load-env-coq$COQVER \
          load-env-ghc$GHCVER \
          load-env-emacs${EMACSVER}debug \
