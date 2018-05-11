@@ -203,6 +203,7 @@ pkgs: epkgs: with epkgs;
   loop
   lsp-haskell
   lsp-mode
+  lsp-ui
   lua-mode
   m-buffer
   macrostep

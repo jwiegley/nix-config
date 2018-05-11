@@ -245,6 +245,15 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
     license = stdenv.lib.licenses.bsd3;
   };
 
+  haskell-ide-engine = (import (
+    pkgs.fetchFromGitHub {
+      owner = "domenkozar";
+      repo = "hie-nix";
+      rev = "dbb89939da8997cc6d863705387ce7783d8b6958";
+      sha256 = "1bcw59zwf788wg686p3qmcq03fr7bvgbcaa83vq8gvg231bgid4m";
+      # date = 2018-03-27T10:14:16+01:00;
+    }) {}).hie80;
+
   recurseForDerivations = true;
 
   mkDerivation = args: super.mkDerivation (args // {
@@ -314,6 +323,15 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
         sha256 = "0l0g6ns5bcrcaij0wbdgc04qyl9h0vk1kx9lkzdkwj9v51l26azm";
       };
     });
+
+  haskell-ide-engine = (import (
+    pkgs.fetchFromGitHub {
+      owner = "domenkozar";
+      repo = "hie-nix";
+      rev = "dbb89939da8997cc6d863705387ce7783d8b6958";
+      sha256 = "1bcw59zwf788wg686p3qmcq03fr7bvgbcaa83vq8gvg231bgid4m";
+      # date = 2018-03-27T10:14:16+01:00;
+    }) {}).hie82;
 
   recurseForDerivations = true;
 
