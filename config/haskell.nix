@@ -21,7 +21,6 @@ pkgs: version: hpkgs: with hpkgs;
   async-pool
   attempt
   attoparsec
-  attoparsec-conduit
   base
   base-unicode-symbols
   base16-bytestring
@@ -31,11 +30,6 @@ pkgs: version: hpkgs: with hpkgs;
   binary
   binary-orphans
   bindings-DSL
-  blaze-builder
-  blaze-builder-conduit
-  blaze-html
-  blaze-markup
-  blaze-textual
   bool-extras
   bound
   byteable
@@ -49,21 +43,15 @@ pkgs: version: hpkgs: with hpkgs;
   cassava
   categories
   cereal
-  cereal-conduit
   charset
   checkers
   chunked-data
-  classy-prelude
-  classy-prelude-conduit
   cmdargs
   comonad
   comonad-transformers
   composition
   compressed
   cond
-  conduit
-  conduit-combinators
-  conduit-extra
   configurator
   connection
   consistent
@@ -180,11 +168,7 @@ pkgs: version: hpkgs: with hpkgs;
   logging
   logict
   machinecell
-  machines
-  matrices
   megaparsec
-  mime-mail
-  mime-types
   mmorph
   monad-control
   monad-coroutine
@@ -251,14 +235,12 @@ pkgs: version: hpkgs: with hpkgs;
   resourcet
   retry
   safe
-  scalpel
   scientific
   semigroupoids
   semigroups
   semiring-simple
   serialise
   servant
-  servant-blaze
   servant-client
   servant-docs
   servant-foreign
@@ -267,18 +249,12 @@ pkgs: version: hpkgs: with hpkgs;
   shakespeare
   silently
   simple-reflect
-  smallcheck
   speculation
   split
   spoon
   stm
   stm-chans
   stm-stats
-  streaming
-  streaming-bytestring
-  streaming-commons
-  streaming-concurrency
-  streaming-with
   strict
   stringsearch
   strptime
@@ -293,7 +269,6 @@ pkgs: version: hpkgs: with hpkgs;
   tasty-hspec
   tasty-hunit
   tasty-quickcheck
-  tasty-smallcheck
   tasty-th
   temporary
   text
@@ -308,21 +283,12 @@ pkgs: version: hpkgs: with hpkgs;
   total
   transformers
   transformers-base
-  trifecta
-  turtle
-  unbound-generics
   uniplate
   unix-compat
   unordered-containers
   uuid
   vector
   void
-  wai
-  warp
-  weigh
-  x509
-  x509-store
-  x509-system
   xml
   yaml
   z3
@@ -336,7 +302,6 @@ pkgs: version: hpkgs: with hpkgs;
 [
   attoparsec-enumerator
   bench
-  blaze-builder-enumerator
   commodities
   diagrams
   diagrams-core
@@ -346,7 +311,6 @@ pkgs: version: hpkgs: with hpkgs;
   enclosed-exceptions
   gitlib-cmdline
   graphviz
-  hspec-smallcheck
   inline-c
   inline-c-cpp
   postgresql-simple
