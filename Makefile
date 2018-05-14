@@ -58,12 +58,15 @@ print-shells:
 shells:
 	for i in $(SHELLS); do						\
 	    (cd $$i &&							\
+	     echo Building shell for $$i && \
 	     nix-shell -Q -j4 --command true &&				\
 	     nix-instantiate --add-root $(ROOTS)/$$(basename $$i) ./.);	\
 	done
 
 env-all:
-	nix-env -f '<darwin>' -u --leq -Q -k -A pkgs
+	for i in $(ENVS); do \
+	    nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ; \
+	done
 	@echo "Nix generation:    $$(nix-env --list-generations | tail -1)"
 
 env-all-build:

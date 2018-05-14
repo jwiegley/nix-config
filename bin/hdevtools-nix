@@ -1,0 +1,12 @@
+#!/bin/bash -xe
+
+set -euo pipefail
+IFS=$'\n\t'
+
+while [[ $PWD != "/" && ! -f default.nix ]]; do
+    cd ..
+done
+
+ARGS="$@"
+
+exec nix-shell --command "hdevtools $ARGS"

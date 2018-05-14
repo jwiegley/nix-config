@@ -1,46 +1,48 @@
 self: pkgs: rec {
 
-##############################################################################
-# Haskell
-
 myHaskellPackageDefs = super:
   with super; let pkg = super.callPackage; in rec {
 
-  async-pool          = pkg ~/src/async-pool {};
+  async-pool          = pkg ~/src/async-pool { nixpkgs = self; };
   bindings-DSL        = pkg ~/src/bindings-DSL {};
-  c2hsc               = pkg ~/src/c2hsc {};
+  c2hsc               = pkg ~/src/c2hsc { nixpkgs = self; };
   commodities         = pkg ~/src/ledger4/commodities {};
   consistent          = pkg ~/src/consistent {};
   coq-haskell         = pkg ~/src/coq-haskell {};
-  fuzzcheck           = pkg ~/src/fuzzcheck {};
+  fuzzcheck           = pkg ~/src/fuzzcheck { nixpkgs = self; };
   git-all             = pkg ~/src/git-all {};
   git-du              = pkg ~/src/git-du {};
   git-monitor         = pkg ~/src/gitlib/git-monitor {};
   gitlib              = pkg ~/src/gitlib/gitlib {};
-  gitlib-cmdline      = pkg ~/src/gitlib/gitlib-cmdline { inherit (pkgs.gitAndTools) git; };
+  gitlib-cmdline      = pkg ~/src/gitlib/gitlib-cmdline
+                          { inherit (pkgs.gitAndTools) git; };
   gitlib-hit          = pkg ~/src/gitlib/gitlib-hit {};
   gitlib-libgit2      = pkg ~/src/gitlib/gitlib-libgit2 {};
   gitlib-test         = pkg ~/src/gitlib/gitlib-test {};
-  hierarchy           = pkg ~/src/hierarchy {};
-  hlibgit2            = pkg ~/src/gitlib/hlibgit2 { inherit (pkgs.gitAndTools) git; };
-  hnix                = pkg ~/src/hnix {};
-  ipcvar              = pkg ~/src/ipcvar {};
+  hierarchy           = pkg ~/src/hierarchy { nixpkgs = self; };
+  hlibgit2            = pkg ~/src/gitlib/hlibgit2
+                          { inherit (pkgs.gitAndTools) git; };
+  hnix                = pkg ~/src/hnix { nixpkgs = self; };
+  ipcvar              = pkg ~/src/ipcvar { nixpkgs = self; };
   linearscan          = pkg ~/src/linearscan {};
   linearscan-hoopl    = pkg ~/src/linearscan-hoopl {};
-  logging             = pkg ~/src/logging {};
-  monad-extras        = pkg ~/src/monad-extras {};
-  parsec-free         = pkg ~/src/parsec-free {};
+  logging             = pkg ~/src/logging { nixpkgs = self; };
+  monad-extras        = pkg ~/src/monad-extras { nixpkgs = self; };
+  parsec-free         = pkg ~/src/parsec-free { nixpkgs = self; };
   pipes-async         = pkg ~/src/pipes-async {};
-  pipes-files         = pkg ~/src/pipes-files {};
+  pipes-files         = pkg ~/src/pipes-files { nixpkgs = self; };
   pushme              = pkg ~/src/pushme {};
-  recursors           = pkg ~/src/recursors {};
-  runmany             = pkg ~/src/runmany {};
+  recursors           = pkg ~/src/recursors { nixpkgs = self; };
+  runmany             = pkg ~/src/runmany { nixpkgs = self; };
   simple-mirror       = pkg ~/src/hackage-mirror {};
-  sitebuilder         = pkg ~/src/sitebuilder { inherit (pkgs) yuicompressor; };
+  sitebuilder         = pkg ~/src/sitebuilder
+                          { inherit (pkgs) yuicompressor; };
   sizes               = pkg ~/src/sizes {};
+  stanag4607          = pkg ~/bae/micromht-fiat-deliverable/atif-fiat/stanag4607
+                          { nixpkgs = self; };
   una                 = pkg ~/src/una {};
   z3                  = pkg ~/bae/concerto/solver/lib/z3 {};
-  z3-generate-api     = pkg ~/src/z3-generate-api {};
+  z3-generate-api     = pkg ~/src/z3-generate-api { nixpkgs = self; };
 
   hours = (pkgs.haskell.lib.dontHaddock (pkg ~/src/hours {}))
     .overrideDerivation (attrs: {
@@ -58,9 +60,9 @@ myHaskellPackageDefs = super:
 
   timeparsers = super.timeparsers.overrideDerivation (attrs: {
     src = pkgs.fetchFromGitHub {
-      owner = "jwiegley";
-      repo = "timeparsers";
-      rev = "ebdc0071f43833b220b78523f6e442425641415d";
+      owner  = "jwiegley";
+      repo   = "timeparsers";
+      rev    = "ebdc0071f43833b220b78523f6e442425641415d";
       sha256 = "0h8wkqyvahp0csfcj5dl7j56ib8m1aad5kwcsccaahiciic249xq";
       # date = 2017-01-19T16:47:50-08:00;
     };
@@ -106,7 +108,6 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   haddock-library          = doJailbreak super.haddock-library_1_2_1;
   hakyll                   = doJailbreak super.hakyll;
   heap                     = dontCheck super.heap;
-  hierarchy                = doJailbreak super.hierarchy;
   indents                  = doJailbreak super.indents;
   inline-c-cpp             = dontCheck super.inline-c-cpp;
   ipcvar                   = dontCheck super.ipcvar;
@@ -114,7 +115,6 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   machinecell              = doJailbreak super.machinecell;
   monad-logger             = doJailbreak super.monad-logger;
   pipes-binary             = doJailbreak super.pipes-binary;
-  pipes-files              = dontCheck (doJailbreak super.pipes-files);
   pipes-group              = doJailbreak super.pipes-group;
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
   recursors                = doJailbreak super.recursors;
@@ -281,23 +281,48 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   diagrams-svg             = doJailbreak super.diagrams-svg;
   github-backup            = doJailbreak super.github-backup;
   heap                     = dontCheck super.heap;
-  hierarchy                = doJailbreak super.hierarchy;
   indents                  = doJailbreak super.indents;
   inline-c-cpp             = dontCheck super.inline-c-cpp;
   ipcvar                   = dontCheck super.ipcvar;
-  linearscan-hoopl         = dontCheck super.linearscan-hoopl;
+  linearscan-hoopl         = dontCheck mypkgs.linearscan-hoopl;
   machinecell              = doJailbreak super.machinecell;
   pipes-binary             = doJailbreak super.pipes-binary;
-  pipes-files              = dontCheck (doJailbreak super.pipes-files);
   pipes-group              = doJailbreak super.pipes-group;
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
+  pushme                   = doJailbreak mypkgs.pushme;
   recursors                = doJailbreak super.recursors;
+  # super.runmany uses what is in Hackage; mypkgs.runmany uses local
   runmany                  = doJailbreak super.runmany;
   serialise                = dontCheck super.serialise;
   stylish-haskell          = dontCheck super.stylish-haskell;
   text-show                = dontCheck super.text-show;
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = dontCheck (doJailbreak mypkgs.timeparsers);
+
+  hdevtools     = super.hdevtools.override { Cabal = super.Cabal; };
+  hpc-coveralls = super.hpc-coveralls.override { Cabal = super.Cabal; };
+  scotty        = super.scotty.override { hpc-coveralls = hpc-coveralls; };
+  idris         = super.idris.override { Cabal = super.Cabal; };
+
+  cabal-install =
+    self.callHackage "cabal-install" "2.0.0.1" { Cabal = Cabal; };
+
+  cabal-helper =
+    (super.cabal-helper.overrideDerivation (attrs: {
+      name = "cabal-helper-0.8.0.3pre";
+      version = "0.8.0.3pre";
+      revision = null;
+      src = pkgs.fetchFromGitHub {
+        owner = "DanielG";
+        repo = "cabal-helper";
+        rev = "8648be0324c8f9e5f2904907ae5da3f867ea9f5a";
+        sha256 = "092c01q0hnp6kx8h6qw2b7n5bh82nmnlw75vl3a35hxqx4qr3wq9";
+        # date = 2018-04-30T14:30:23+02:00;
+      };
+    })).override {
+      cabal-install = cabal-install;
+      Cabal = Cabal;
+    };
 
   ghc-datasize =
     overrideCabal super.ghc-datasize (attrs: {
@@ -310,28 +335,12 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
       enableExecutableProfiling = false;
     });
 
-  # Use a particular commit from github
-  insert-ordered-containers =
-    super.insert-ordered-containers.overrideDerivation (attrs: {
-      name = "insert-ordered-containers-0.2.2.0";
-      version = "0.2.2.0";
-      revision = null;
-      src = pkgs.fetchFromGitHub {
-        owner = "mightybyte";
-        repo = "insert-ordered-containers";
-        rev = "87054c519b969b62131bcf7a183470d422cbb535";
-        sha256 = "0l0g6ns5bcrcaij0wbdgc04qyl9h0vk1kx9lkzdkwj9v51l26azm";
-      };
-    });
-
-  haskell-ide-engine = (import (
-    pkgs.fetchFromGitHub {
-      owner = "domenkozar";
-      repo = "hie-nix";
-      rev = "dbb89939da8997cc6d863705387ce7783d8b6958";
-      sha256 = "1bcw59zwf788wg686p3qmcq03fr7bvgbcaa83vq8gvg231bgid4m";
-      # date = 2018-03-27T10:14:16+01:00;
-    }) {}).hie82;
+  haskell-ide-engine = (import (pkgs.fetchFromGitHub {
+    owner  = "domenkozar";
+    repo   = "hie-nix";
+    rev    = "dbb89939da8997cc6d863705387ce7783d8b6958";
+    sha256 = "1bcw59zwf788wg686p3qmcq03fr7bvgbcaa83vq8gvg231bgid4m";
+  }) {}).hie82;
 
   recurseForDerivations = true;
 
@@ -370,7 +379,6 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   git-annex                = dontCheck super.git-annex;
   hakyll                   = doJailbreak super.hakyll;
   heap                     = dontCheck super.heap;
-  hierarchy                = doJailbreak super.hierarchy;
   hint                     = doJailbreak super.hint;
   hspec-smallcheck         = doJailbreak super.hspec-smallcheck;
   inline-c-cpp             = dontCheck super.inline-c-cpp;
@@ -380,7 +388,6 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   machinecell              = doJailbreak super.machinecell;
   monoid-extras            = doJailbreak super.monoid-extras;
   pipes-binary             = doJailbreak super.pipes-binary;
-  pipes-files              = dontCheck (doJailbreak super.pipes-files);
   pipes-group              = doJailbreak super.pipes-group;
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
   posix-paths              = doJailbreak super.posix-paths;
@@ -451,13 +458,11 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
   diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
   diagrams-svg             = doJailbreak super.diagrams-svg;
   hakyll                   = doJailbreak super.hakyll;
-  hierarchy                = doJailbreak super.hierarchy;
   inline-c-cpp             = dontCheck super.inline-c-cpp;
   ipcvar                   = dontCheck super.ipcvar;
   lattices                 = doJailbreak super.lattices;
   linearscan-hoopl         = dontCheck super.linearscan-hoopl;
   pipes-binary             = doJailbreak super.pipes-binary;
-  pipes-files              = dontCheck (doJailbreak super.pipes-files);
   pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
   posix-paths              = doJailbreak super.posix-paths;
   recursors                = doJailbreak super.recursors;
@@ -556,6 +561,12 @@ ghc82Env = myPkgs: pkgs.myEnvFun {
      ])))
     Agda
     idris
+    haskell-ide-engine
+    hdevtools
+    lambdabot
+    hlint
+    alex
+    happy
   ];
 };
 
@@ -567,6 +578,12 @@ ghc82ProfEnv = myPkgs: pkgs.myEnvFun {
      ])))
     Agda
     idris
+    haskell-ide-engine
+    hdevtools
+    lambdabot
+    hlint
+    alex
+    happy
   ];
 };
 
@@ -579,6 +596,9 @@ ghc80Env = myPkgs: pkgs.myEnvFun {
      ])))
 
     splot
+    haskell-ide-engine
+    hdevtools
+    cabal-helper
   ];
 };
 
@@ -591,6 +611,9 @@ ghc80ProfEnv = myPkgs: pkgs.myEnvFun {
      ])))
 
     splot
+    haskell-ide-engine
+    hdevtools
+    cabal-helper
   ];
 };
 

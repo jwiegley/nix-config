@@ -80,7 +80,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   rtags
   sbcl
   sloccount
-  verasco
+  # verasco
   yamale
 
   # mailToolsEnv
@@ -208,8 +208,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   p7zip
   paperkey
   parallel
-  pass
-  pass-otp
+  (pass.withExtensions (ext: with ext; [ pass-otp pass-update ]))
   pinentry_mac
   postgresql
   (exe haskPkgs.pushme)

@@ -171,10 +171,6 @@ EOF
     variables = {
       HOME_MANAGER_CONFIG = "${home_directory}/src/nix/config/home.nix";
 
-      PASSWORD_STORE_ENABLE_EXTENSIONS = "true";
-      PASSWORD_STORE_EXTENSIONS_DIR =
-        "${config.system.path}/lib/password-store/extensions";
-
       MANPATH = [
         "${home_directory}/.nix-profile/share/man"
         "${home_directory}/.nix-profile/man"
@@ -406,12 +402,11 @@ EOF
     # ];
 
     binaryCaches = [
-      # "https://nixcache.reflex-frp.org"
-      # "file:///Volumes/tank/Cache"
+      "https://nixcache.reflex-frp.org"
     ];
-    # binaryCachePublicKeys = [
-    #   "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="
-    # ];
+    binaryCachePublicKeys = [
+      "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="
+    ];
 
     extraOptions = ''
       gc-keep-outputs = true

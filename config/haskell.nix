@@ -16,7 +16,6 @@ pkgs: version: hpkgs: with hpkgs;
   abstract-par
   adjunctions
   aeson
-  alex
   amqp
   async
   async-pool
@@ -128,7 +127,6 @@ pkgs: version: hpkgs: with hpkgs;
   groups
   hakyll
   hamlet
-  happy
   hashable
   hashing
   hashtables
@@ -137,6 +135,7 @@ pkgs: version: hpkgs: with hpkgs;
   haskell-src-exts
   haskell-src-meta
   hasktags
+  hedgehog
   here
   hierarchy
   hlibgit2
@@ -290,6 +289,7 @@ pkgs: version: hpkgs: with hpkgs;
   tar
   tardis
   tasty
+  tasty-hedgehog
   tasty-hspec
   tasty-hunit
   tasty-quickcheck
@@ -337,29 +337,25 @@ pkgs: version: hpkgs: with hpkgs;
   attoparsec-enumerator
   bench
   blaze-builder-enumerator
-  cabal-helper
   commodities
   diagrams
   diagrams-core
   diagrams-graphviz
   diagrams-lib
   diagrams-svg
-  djinn
   enclosed-exceptions
   gitlib-cmdline
   graphviz
-  hdevtools
   hspec-smallcheck
   inline-c
   inline-c-cpp
-  lambdabot
-  mueval
   postgresql-simple
   sbv
   sbvPlugin
   scotty
   servant-js
   shelly
+  stanag4607
   stylish-haskell
   timeplot
   vector-sized
@@ -368,7 +364,6 @@ pkgs: version: hpkgs: with hpkgs;
 # These only work with GHC 8.2
 (pkgs.stdenv.lib.optionals (version > 8.1)
 [
-  # ghc-mod
   liquidhaskell
   # threadscope
 ])
