@@ -1,14 +1,34 @@
 #!/bin/bash
 
-COMPILER='ghc822'
-HASKVER='_8_2'
-NIXPKGS='(import <darwin> {}).pkgs'
-GHCWITH='ghcWithHoogle'
+START="$PWD"
+while [[ "$PWD" != "/" && ! -f default.nix ]]; do
+    cd ..
+done
 
-HASKPKGS="haskellPackages${HASKVER}"
-PKGNAME=$(basename "$PWD")
+if [[ "$PWD" = "/" ]]; then
+    cd "$START"
+    while [[ "$PWD" != "/" && ! -d .git && ! -f .git ]]; do
+        cd ..
+    done
+fi
 
-read -r -d '' INPUT <<- EOM
+if [[ "$PWD" = "/" ]]; then
+    echo "Error: Could not find default.nix or .git"
+    exit 1
+fi
+
+if [[ -f default.nix ]]; then
+    exec nix-shell "$@"
+else
+    COMPILER='ghc822'
+    HASKVER='_8_2'
+    NIXPKGS='(import <darwin> {}).pkgs'
+    GHCWITH='ghcWithHoogle'
+
+    HASKPKGS="haskellPackages${HASKVER}"
+    PKGNAME=$(basename "$PWD")
+
+    read -r -d '' INPUT <<- EOM
 let pkgs = ${NIXPKGS}; in
 pkgs.${HASKPKGS}.${GHCWITH} (hpkgs: with hpkgs;
   (callCabal2nix "${PKGNAME}" ./. {}).buildInputs ++
@@ -39,4 +59,5 @@ pkgs.${HASKPKGS}.${GHCWITH} (hpkgs: with hpkgs;
   ])
 EOM
 
-exec nix-shell -p "$INPUT" "$@"
+    exec nix-shell -p "$INPUT" "$@"
+fi
