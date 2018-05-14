@@ -3,7 +3,7 @@ self: pkgs: rec {
 myHaskellPackageDefs = super:
   with super; let pkg = super.callPackage; in rec {
 
-  async-pool          = pkg ~/src/async-pool { nixpkgs = self; };
+  async-pool          = callCabal2nix "async-pool" ~/src/async-pool {};
   bindings-DSL        = pkg ~/src/bindings-DSL {};
   c2hsc               = pkg ~/src/c2hsc { nixpkgs = self; };
   commodities         = pkg ~/src/ledger4/commodities {};
@@ -356,7 +356,6 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   HUnit                    = dontCheck super.HUnit;
   PSQueue                  = doJailbreak super.PSQueue;
   active                   = doJailbreak super.active;
-  async-pool               = doJailbreak super.async-pool;
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   cabal-helper             = doJailbreak super.cabal-helper;
   circle-packing           = doJailbreak super.circle-packing;
