@@ -1,48 +1,55 @@
 self: pkgs: rec {
 
-myHaskellPackageDefs = super:
-  with super; let pkg = super.callPackage; in rec {
+# All of these projects are identified simply by their .cabal files, no other
+# special handling is needed.
+srcs = [
+  "async-pool"
+  "bindings-DSL"
+  "c2hsc"
+  "consistent"
+  "coq-haskell"
+  "fuzzcheck"
+  "git-all"
+  "git-du"
+  "hackage-mirror"
+  "hs-to-coq"
+  "ipcvar"
+  "linearscan"
+  "linearscan-hoopl"
+  "logging"
+  "monad-extras"
+  "parsec-free"
+  "pipes-async"
+  "pushme"
+  "recursors"
+  "runmany"
+  "sizes"
+  "una"
+  "z3-generate-api"
+];
 
-  async-pool          = callCabal2nix "async-pool" ~/src/async-pool {};
-  bindings-DSL        = pkg ~/src/bindings-DSL {};
-  c2hsc               = pkg ~/src/c2hsc { nixpkgs = self; };
-  commodities         = pkg ~/src/ledger4/commodities {};
-  consistent          = pkg ~/src/consistent {};
-  coq-haskell         = pkg ~/src/coq-haskell {};
-  fuzzcheck           = pkg ~/src/fuzzcheck { nixpkgs = self; };
-  git-all             = pkg ~/src/git-all {};
-  git-du              = pkg ~/src/git-du {};
-  git-monitor         = pkg ~/src/gitlib/git-monitor {};
-  gitlib              = pkg ~/src/gitlib/gitlib {};
-  gitlib-cmdline      = pkg ~/src/gitlib/gitlib-cmdline
-                          { inherit (pkgs.gitAndTools) git; };
-  gitlib-hit          = pkg ~/src/gitlib/gitlib-hit {};
-  gitlib-libgit2      = pkg ~/src/gitlib/gitlib-libgit2 {};
-  gitlib-test         = pkg ~/src/gitlib/gitlib-test {};
-  hierarchy           = pkg ~/src/hierarchy { nixpkgs = self; };
-  hlibgit2            = pkg ~/src/gitlib/hlibgit2
-                          { inherit (pkgs.gitAndTools) git; };
-  hnix                = pkg ~/src/hnix { nixpkgs = self; };
-  ipcvar              = pkg ~/src/ipcvar { nixpkgs = self; };
-  linearscan          = pkg ~/src/linearscan {};
-  linearscan-hoopl    = pkg ~/src/linearscan-hoopl {};
-  logging             = pkg ~/src/logging { nixpkgs = self; };
-  monad-extras        = pkg ~/src/monad-extras { nixpkgs = self; };
-  parsec-free         = pkg ~/src/parsec-free { nixpkgs = self; };
-  pipes-async         = pkg ~/src/pipes-async {};
-  pipes-files         = pkg ~/src/pipes-files { nixpkgs = self; };
-  pushme              = pkg ~/src/pushme {};
-  recursors           = pkg ~/src/recursors { nixpkgs = self; };
-  runmany             = pkg ~/src/runmany { nixpkgs = self; };
-  simple-mirror       = pkg ~/src/hackage-mirror {};
-  sitebuilder         = pkg ~/src/sitebuilder
-                          { inherit (pkgs) yuicompressor; };
-  sizes               = pkg ~/src/sizes {};
-  stanag4607          = pkg ~/bae/micromht-fiat-deliverable/atif-fiat/stanag4607
-                          { nixpkgs = self; };
-  una                 = pkg ~/src/una {};
-  z3                  = pkg ~/bae/concerto/solver/lib/z3 {};
-  z3-generate-api     = pkg ~/src/z3-generate-api { nixpkgs = self; };
+myHaskellPackageDefs = super:
+  let fromSrc = name: args: {
+      ${name} = super.callCabal2nix name (~/src + "/${name}") args;
+    }; in
+  with super; let pkg = super.callPackage; in
+
+  builtins.foldl' (acc: x: acc // fromSrc x {}) {} srcs // rec {
+
+  git-monitor    = pkg ~/src/gitlib/git-monitor {};
+  gitlib         = pkg ~/src/gitlib/gitlib {};
+  gitlib-cmdline = pkg ~/src/gitlib/gitlib-cmdline
+                     { inherit (pkgs.gitAndTools) git; };
+  gitlib-libgit2 = pkg ~/src/gitlib/gitlib-libgit2 {};
+  gitlib-test    = pkg ~/src/gitlib/gitlib-test {};
+  hierarchy      = pkg ~/src/hierarchy { nixpkgs = self; };
+  hlibgit2       = pkg ~/src/gitlib/hlibgit2
+                     { inherit (pkgs.gitAndTools) git; };
+  hnix           = pkg ~/src/hnix { nixpkgs = self; };
+  pipes-files    = pkg ~/src/pipes-files { nixpkgs = self; };
+  sitebuilder    = pkg ~/src/sitebuilder
+                     { inherit (pkgs) yuicompressor; };
+  z3             = pkg ~/bae/concerto/solver/lib/z3 {};
 
   hours = (pkgs.haskell.lib.dontHaddock (pkg ~/src/hours {}))
     .overrideDerivation (attrs: {
@@ -56,17 +63,13 @@ myHaskellPackageDefs = super:
       '';
     });
 
-  hs-to-coq = pkg ~/src/hs-to-coq {};
-
-  timeparsers = super.timeparsers.overrideDerivation (attrs: {
-    src = pkgs.fetchFromGitHub {
-      owner  = "jwiegley";
-      repo   = "timeparsers";
-      rev    = "ebdc0071f43833b220b78523f6e442425641415d";
-      sha256 = "0h8wkqyvahp0csfcj5dl7j56ib8m1aad5kwcsccaahiciic249xq";
-      # date = 2017-01-19T16:47:50-08:00;
-    };
-  });
+  timeparsers = super.callCabal2nix "timeparsers" (pkgs.fetchFromGitHub {
+    owner  = "jwiegley";
+    repo   = "timeparsers";
+    rev    = "ebdc0071f43833b220b78523f6e442425641415d";
+    sha256 = "0h8wkqyvahp0csfcj5dl7j56ib8m1aad5kwcsccaahiciic249xq";
+    # date = 2017-01-19T16:47:50-08:00;
+  }) {};
 };
 
 haskellFilterSource = paths: src: builtins.filterSource (path: type:
@@ -125,125 +128,34 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   text-show                = dontCheck super.text-show;
   time-recurrence          = doJailbreak super.time-recurrence;
 
-  ghc-datasize =
-    overrideCabal super.ghc-datasize (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
-  ghc-heap-view =
-    overrideCabal super.ghc-heap-view (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
+  ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
+    enableLibraryProfiling    = false;
+    enableExecutableProfiling = false;
+  });
+  ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
+    enableLibraryProfiling    = false;
+    enableExecutableProfiling = false;
+  });
 
   Cabal = super.Cabal_1_24_2_0;
-
-  cabal-install = callPackage
-    ({ mkDerivation, array, async, base, base16-bytestring, binary
-     , bytestring, Cabal, containers, cryptohash-sha256, directory
-     , filepath, hackage-security, hashable, HTTP, mtl, network
-     , network-uri, pretty, process, QuickCheck, random, regex-posix
-     , stm, tagged, tar, tasty, tasty-hunit, tasty-quickcheck, time
-     , unix, zlib
-     }:
-     mkDerivation {
-       pname = "cabal-install";
-       version = "1.24.0.2";
-       sha256 = "1q0gl3i9cpg854lcsiifxxginnvhp2bpx19wkkzpzrd072983j1a";
-       revision = "1";
-       editedCabalFile = "0v112hvvppa31sklpzg54vr0hfidy1334kg5p3jc0gbgl8in1n90";
-       isLibrary = false;
-       isExecutable = true;
-       executableHaskellDepends = [
-         array async base base16-bytestring binary bytestring Cabal
-         containers cryptohash-sha256 directory filepath hackage-security
-         hashable HTTP mtl network network-uri pretty process random stm tar
-         time unix zlib
-       ];
-       testHaskellDepends = [
-         array async base binary bytestring Cabal containers directory
-         filepath hackage-security hashable HTTP mtl network network-uri
-         pretty process QuickCheck random regex-posix stm tagged tar tasty
-         tasty-hunit tasty-quickcheck time unix zlib
-       ];
-       doCheck = false;
-       postInstall = ''
-         mkdir $out/etc
-         mv bash-completion $out/etc/bash_completion.d
-       '';
-       homepage = "http://www.haskell.org/cabal/";
-       description = "The command-line interface for Cabal and Hackage";
-       license = pkgs.stdenv.lib.licenses.bsd3;
-       maintainers = with pkgs.stdenv.lib.maintainers; [ peti ];
-     }) { Cabal = Cabal; };
-
+  cabal-install =
+    self.callHackage "cabal-install" "1.24.0.2" { Cabal = Cabal; };
   cabal-helper = super.cabal-helper.override {
     cabal-install = cabal-install;
     Cabal = Cabal;
   };
 
-  th-desugar_1_6 = mkDerivation {
-    pname = "th-desugar";
-    version = "1.6";
-    sha256 = "0kv3gxvr7izvg1s86p92b5318bv7pjghig2hx9q21cg9ppifry68";
-    revision = "2";
-    editedCabalFile = "0rimjzkqky6sq4yba7vqra7hj29903f9xsn2g8rc23abrm35vds3";
-    libraryHaskellDepends = [
-      base containers mtl syb template-haskell th-expand-syns th-lift
-      th-orphans
-    ];
-    testHaskellDepends = [
-      base containers hspec HUnit mtl syb template-haskell th-expand-syns
-      th-lift th-orphans
-    ];
-    homepage = "https://github.com/goldfirere/th-desugar";
-    description = "Functions to desugar Template Haskell";
-    license = stdenv.lib.licenses.bsd3;
-  };
-
-  singletons = dontCheck (doJailbreak (callPackage
-    ({ mkDerivation, base, Cabal, containers, directory, filepath, mtl
-     , process, syb, tasty, tasty-golden, template-haskell, th-desugar
-     }:
-     mkDerivation {
-       pname = "singletons";
-       version = "2.2";
-       sha256 = "1bwcsp1x8bivmvkv8a724lsnwyjharhb0x0hl0isp3jgigh0dg9k";
-       libraryHaskellDepends = [
-         base containers mtl syb template-haskell th-desugar
-       ];
-       testHaskellDepends = [
-         base Cabal directory filepath process tasty tasty-golden
-       ];
-       homepage = "http://www.github.com/goldfirere/singletons";
-       description = "A framework for generating singleton types";
-       license = stdenv.lib.licenses.bsd3;
-     }) { th-desugar = th-desugar_1_6; }));
-
+  th-desugar_1_6 = self.callHackage "th-desugar" "1.6" {};
+  singletons = dontCheck (doJailbreak (self.callHackage "singletons" "2.2" {
+    th-desugar = th-desugar_1_6;
+  }));
   units = super.units.override {
     th-desugar = th-desugar_1_6;
   };
 
   # lens-family 1.2.2 requires GHC 8.2 or higher
-  lens-family = mkDerivation {
-    pname = "lens-family";
-    version = "1.2.1";
-    sha256 = "1dwsrli94i8vs1wzfbxbxh49qhn8jn9hzmxwgd3dqqx07yx8x0s1";
-    libraryHaskellDepends = [
-      base containers lens-family-core mtl transformers
-    ];
-    description = "Lens Families";
-    license = stdenv.lib.licenses.bsd3;
-  };
-
-  lens-family-core = mkDerivation {
-    pname = "lens-family-core";
-    version = "1.2.1";
-    sha256 = "190r3n25m8x24nd6xjbbk9x0qhs1mw22xlpsbf3cdp3cda3vkqwm";
-    libraryHaskellDepends = [ base containers transformers ];
-    description = "Haskell 98 Lens Families";
-    license = stdenv.lib.licenses.bsd3;
-  };
+  lens-family = self.callHackage "lens-family" "1.2.1" {};
+  lens-family-core = self.callHackage "lens-family-core" "1.2.1" {};
 
   haskell-ide-engine = (import (
     pkgs.fetchFromGitHub {
@@ -299,41 +211,33 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = dontCheck (doJailbreak mypkgs.timeparsers);
 
+  cabal-install =
+    self.callHackage "cabal-install" "2.0.0.1" { Cabal = Cabal; };
+  cabal-helper =
+    self.callCabal2nix "cabal-install" (pkgs.fetchFromGitHub {
+      owner  = "DanielG";
+      repo   = "cabal-helper";
+      rev    = "8648be0324c8f9e5f2904907ae5da3f867ea9f5a";
+      sha256 = "092c01q0hnp6kx8h6qw2b7n5bh82nmnlw75vl3a35hxqx4qr3wq9";
+      # date = 2018-04-30T14:30:23+02:00;
+    }) {
+      cabal-install = cabal-install;
+      Cabal = Cabal;
+    };
+
   hdevtools     = super.hdevtools.override { Cabal = super.Cabal; };
   hpc-coveralls = super.hpc-coveralls.override { Cabal = super.Cabal; };
   scotty        = super.scotty.override { hpc-coveralls = hpc-coveralls; };
   idris         = super.idris.override { Cabal = super.Cabal; };
 
-  cabal-install =
-    self.callHackage "cabal-install" "2.0.0.1" { Cabal = Cabal; };
-
-  cabal-helper =
-    (super.cabal-helper.overrideDerivation (attrs: {
-      name = "cabal-helper-0.8.0.3pre";
-      version = "0.8.0.3pre";
-      revision = null;
-      src = pkgs.fetchFromGitHub {
-        owner = "DanielG";
-        repo = "cabal-helper";
-        rev = "8648be0324c8f9e5f2904907ae5da3f867ea9f5a";
-        sha256 = "092c01q0hnp6kx8h6qw2b7n5bh82nmnlw75vl3a35hxqx4qr3wq9";
-        # date = 2018-04-30T14:30:23+02:00;
-      };
-    })).override {
-      cabal-install = cabal-install;
-      Cabal = Cabal;
-    };
-
-  ghc-datasize =
-    overrideCabal super.ghc-datasize (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
-  ghc-heap-view =
-    overrideCabal super.ghc-heap-view (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
+  ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
+    enableLibraryProfiling    = false;
+    enableExecutableProfiling = false;
+  });
+  ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
+    enableLibraryProfiling    = false;
+    enableExecutableProfiling = false;
+  });
 
   haskell-ide-engine = (import (pkgs.fetchFromGitHub {
     owner  = "domenkozar";

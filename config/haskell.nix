@@ -108,10 +108,6 @@ pkgs: version: hpkgs: with hpkgs;
   ghc-datasize
   ghc-heap-view
   ghc-paths
-  gitlib
-  gitlib-libgit2
-  gitlib-sample
-  gitlib-test
   groups
   hakyll
   hamlet
@@ -300,27 +296,15 @@ pkgs: version: hpkgs: with hpkgs;
 # These don't work with GHC 8.4 yet
 (pkgs.stdenv.lib.optionals (version < 8.3)
 [
-  attoparsec-enumerator
-  bench
-  commodities
   diagrams
   diagrams-core
   diagrams-graphviz
   diagrams-lib
   diagrams-svg
-  enclosed-exceptions
-  gitlib-cmdline
   graphviz
-  inline-c
-  inline-c-cpp
   postgresql-simple
-  sbv
-  sbvPlugin
-  scotty
   servant-js
   shelly
-  stanag4607
-  stylish-haskell
   timeplot
   vector-sized
 ]) ++
