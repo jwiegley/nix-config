@@ -1,4 +1,4 @@
-self: pkgs: rec {
+self: pkgs: with self; {
 
 # All of these projects are identified simply by their .cabal files, no other
 # special handling is needed.

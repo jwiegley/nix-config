@@ -1,4 +1,4 @@
-self: super: rec {
+self: super: {
 
 daiquiri = with super; with python3Packages; buildPythonPackage rec {
   pname = "daiquiri";
@@ -57,7 +57,7 @@ git-pull-request = with super; with python3Packages; buildPythonPackage rec {
     # date = 2018-04-29T20:54:49-0700;
   };
 
-  propagatedBuildInputs = [ pygithub daiquiri requests pyjwt fixtures git ];
+  propagatedBuildInputs = [ self.pygithub self.daiquiri requests pyjwt fixtures git ];
 
   # doCheck = false;
 

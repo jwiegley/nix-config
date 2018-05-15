@@ -1,4 +1,4 @@
-self: pkgs: rec {
+self: pkgs: with self; {
 
 QuickChick = cpkgs:
   self.callPackage ./coq/QuickChick.nix { inherit (cpkgs) coq ssreflect; };

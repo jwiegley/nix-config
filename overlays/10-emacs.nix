@@ -1,4 +1,4 @@
-self: pkgs: rec {
+self: pkgs: with self; {
 
 emacs = emacs26;
 
