@@ -56,10 +56,11 @@ print-shells:
 	@echo $(SHELLS)
 
 shells:
+	find ~/bae/ ~/src/ -name .hdevtools.sock -delete
 	for i in $(SHELLS); do						\
 	    (cd $$i &&							\
-	     echo Building shell for $$i && \
-	     nix-shell -Q -j4 --command true &&				\
+	     echo Building shell for $$i &&				\
+	     shell -Q -j4 --command true &&				\
 	     nix-instantiate --add-root $(ROOTS)/$$(basename $$i) ./.);	\
 	done
 

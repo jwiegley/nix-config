@@ -1,5 +1,12 @@
 #!/bin/bash
 
+COMPILER='ghc822'
+HASKVER='_8_2'
+NIXPKGS='import <darwin> {}'
+
+HASKPKGS="haskellPackages${HASKVER}"
+PKGNAME=$(basename "$PWD")
+
 START="$PWD"
 while [[ "$PWD" != "/" && ! -f default.nix ]]; do
     cd ..
@@ -17,47 +24,13 @@ if [[ "$PWD" = "/" ]]; then
     exit 1
 fi
 
-if [[ -f default.nix ]]; then
-    exec nix-shell "$@"
-else
-    COMPILER='ghc822'
-    HASKVER='_8_2'
-    NIXPKGS='(import <darwin> {}).pkgs'
-    GHCWITH='ghcWithHoogle'
-
-    HASKPKGS="haskellPackages${HASKVER}"
-    PKGNAME=$(basename "$PWD")
-
-    read -r -d '' INPUT <<- EOM
-let pkgs = ${NIXPKGS}; in
-pkgs.${HASKPKGS}.${GHCWITH} (hpkgs: with hpkgs;
-  (callCabal2nix "${PKGNAME}" ./. {}).buildInputs ++
-  [ hpack
-
-    (let cabalInstallVersion = {
-           ghc802 = "1.24.0.2";
-           ghc822 = "2.0.0.1";
-           ghc842 = "2.2.0.0";
-         }; in
-     haskellPackages.callHackage "cabal-install"
-      (cabalInstallVersion.${COMPILER}) {})
-
-    (let haskell-ide-engine = import (pkgs.fetchFromGitHub {
-           owner  = "domenkozar";
-           repo   = "hie-nix";
-           rev    = "dbb89939da8997cc6d863705387ce7783d8b6958";
-           sha256 = "1bcw59zwf788wg686p3qmcq03fr7bvgbcaa83vq8gvg231bgid4m";
-           # date = 2018-03-27T10:14:16+01:00;
-         }) {};
-
-         hie = {
-           ghc802 = haskell-ide-engine.hie80;
-           ghc822 = haskell-ide-engine.hie82;
-           ghc842 = throw "HIE not supported on GHC 8.4.2 yet";
-         }; in
-     hie.${COMPILER})
-  ])
+read -r -d '' INPUT <<- EOM
+let pkgs = (${NIXPKGS}).pkgs;
+in pkgs.packageDeps
+     "${PKGNAME}"
+     "${COMPILER}"
+     pkgs.${HASKPKGS}
+     (builtins.toPath "$PWD")
 EOM
 
-    exec nix-shell -p "$INPUT" "$@"
-fi
+exec nix-shell -p "$INPUT" "$@"

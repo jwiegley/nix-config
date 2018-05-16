@@ -88,6 +88,49 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
        || pkgs.stdenv.lib.hasSuffix ".p_o" path))
   src;
 
+packageDeps = name: ghc: hpkgs: path:
+  let haveDefault = builtins.pathExists (path + ("/default.nix"));
+
+      package =
+        if haveDefault
+        then import path {
+          compiler = "${ghc}";
+          nixpkgs = pkgs;
+          provideDrv = true;
+        }
+        else hpkgs.callCabal2nix name path {};
+
+      compiler = package.compiler;
+      packages = pkgs.haskell.lib.getHaskellBuildInputs package;
+
+      cabalInstallVersion = {
+        ghc802 = "1.24.0.2";
+        ghc822 = "2.0.0.1";
+        ghc842 = "2.2.0.0";
+      };
+
+      hoogleExpr = <nixpkgs/pkgs/development/haskell-modules/hoogle.nix>;
+
+      haskell-ide-engine = import (pkgs.fetchFromGitHub {
+        owner  = "domenkozar";
+        repo   = "hie-nix";
+        rev    = "dbb89939da8997cc6d863705387ce7783d8b6958";
+        sha256 = "1bcw59zwf788wg686p3qmcq03fr7bvgbcaa83vq8gvg231bgid4m";
+        # date = 2018-03-27T10:14:16+01:00;
+      }) {};
+
+      hie = {
+        ghc802 = haskell-ide-engine.hie80;
+        ghc822 = haskell-ide-engine.hie82;
+        ghc842 = throw "HIE not supported on GHC 8.4.2 yet";
+      };
+
+  in compiler.withPackages (p: with p;
+       let hoogle = callPackage hoogleExpr { inherit packages; }; in
+       [ hpack criterion # hdevtools hoogle hie.${ghc}
+         (callHackage "cabal-install" cabalInstallVersion.${ghc} {})
+       ] ++ packages);
+
 haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
@@ -181,7 +224,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   commodities              = doJailbreak mypkgs.commodities;
   consistent               = dontCheck (doJailbreak mypkgs.consistent);
-  cryptohash-sha512         = doJailbreak super.cryptohash-sha512;
+  cryptohash-sha512        = doJailbreak super.cryptohash-sha512;
   diagrams-builder         = doJailbreak super.diagrams-builder;
   diagrams-cairo           = doJailbreak super.diagrams-cairo;
   diagrams-contrib         = doJailbreak super.diagrams-contrib;
@@ -314,16 +357,14 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   vector-sized             = doJailbreak super.vector-sized;
   wl-pprint                = doJailbreak super.wl-pprint;
 
-  ghc-datasize =
-    overrideCabal super.ghc-datasize (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
-  ghc-heap-view =
-    overrideCabal super.ghc-heap-view (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
+  ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
+    enableLibraryProfiling    = false;
+    enableExecutableProfiling = false;
+  });
+  ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
+    enableLibraryProfiling    = false;
+    enableExecutableProfiling = false;
+  });
 
   hoopl = super.hoopl_3_10_2_2;
 
@@ -376,16 +417,14 @@ haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
   time-recurrence          = doJailbreak super.time-recurrence;
   timeparsers              = doJailbreak (dontCheck mypkgs.timeparsers);
 
-  ghc-datasize =
-    overrideCabal super.ghc-datasize (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
-  ghc-heap-view =
-    overrideCabal super.ghc-heap-view (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
+  ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
+    enableLibraryProfiling    = false;
+    enableExecutableProfiling = false;
+  });
+  ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
+    enableLibraryProfiling    = false;
+    enableExecutableProfiling = false;
+  });
 
   mkDerivation = args: super.mkDerivation (args // {
     enableLibraryProfiling = libProf;

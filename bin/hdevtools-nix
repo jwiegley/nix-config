@@ -3,10 +3,9 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-while [[ $PWD != "/" && ! -f default.nix ]]; do
-    cd ..
-done
-
-ARGS="$@"
-
-exec nix-shell --command "hdevtools $ARGS"
+if true; then
+    ARGS="$@"
+    exec nix-shell-gen --arg doBenchmark true --pure --command "hdevtools $ARGS"
+else
+    exec hdevtools "$@"
+fi
