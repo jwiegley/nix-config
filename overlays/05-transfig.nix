@@ -1,6 +1,8 @@
-self: super: let libpng = super.libpng12; in {
+self: super: with self;
 
-transfig = with super; stdenv.mkDerivation rec {
+let libpng = super.libpng12; in {
+
+transfig = stdenv.mkDerivation rec {
   name = "transfig-3.2.6a";
   src = fetchurl {
     url = https://sourceforge.net/projects/mcj/files/xfig-3.2.6a.tar.xz;
@@ -18,7 +20,7 @@ transfig = with super; stdenv.mkDerivation rec {
   };
 };
 
-fig2dev = with super; stdenv.mkDerivation {
+fig2dev = stdenv.mkDerivation {
   name = "fig2dev-3.2.6a";
   src = fetchurl {
     url = https://sourceforge.net/projects/mcj/files/fig2dev-3.2.6a.tar.xz;

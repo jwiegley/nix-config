@@ -25,12 +25,12 @@ if [[ "$PWD" = "/" ]]; then
 fi
 
 read -r -d '' INPUT <<- EOM
-let pkgs = (${NIXPKGS}).pkgs;
-in pkgs.packageDeps
-     "${PKGNAME}"
-     "${COMPILER}"
-     pkgs.${HASKPKGS}
-     (builtins.toPath "$PWD")
+let pkgs = (${NIXPKGS}).pkgs; in
+pkgs.packageDeps "${COMPILER}" pkgs.${HASKPKGS} (builtins.toPath "$PWD")
 EOM
 
-exec nix-shell -p "$INPUT" "$@"
+if [[ -f default.nix ]]; then
+    exec nix-shell "$@"
+else
+    exec nix-shell -p "$INPUT" "$@"
+fi

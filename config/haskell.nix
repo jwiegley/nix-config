@@ -105,8 +105,6 @@ pkgs: version: hpkgs: with hpkgs;
   generic-random
   ghc
   ghc-core
-  ghc-datasize
-  ghc-heap-view
   ghc-paths
   groups
   hakyll
@@ -301,6 +299,8 @@ pkgs: version: hpkgs: with hpkgs;
   diagrams-graphviz
   diagrams-lib
   diagrams-svg
+  ghc-datasize
+  ghc-heap-view
   graphviz
   postgresql-simple
   servant-js
@@ -310,7 +310,7 @@ pkgs: version: hpkgs: with hpkgs;
 ]) ++
 
 # These only work with GHC 8.2
-(pkgs.stdenv.lib.optionals (version > 8.1)
+(pkgs.stdenv.lib.optionals (version > 8.1 && version < 8.3)
 [
   liquidhaskell
   # threadscope

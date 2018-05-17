@@ -44,7 +44,7 @@ pkgs: version: cpkgs: with pkgs;
 
   CoLoR
   equations
-  # fiat_HEAD
+  fiat_HEAD
   math-classes
   metalib
 ]) ++ (pkgs.stdenv.lib.optionals (version == "8.6") [

@@ -25,6 +25,7 @@ srcs = [
   "runmany"
   "sizes"
   "una"
+  "z3cat"
   "z3-generate-api"
 ];
 
@@ -34,7 +35,9 @@ myHaskellPackageDefs = super:
     }; in
   with super; let pkg = super.callPackage; in
 
-  builtins.foldl' (acc: x: acc // fromSrc x {}) {} srcs // rec {
+  builtins.foldl' (acc: x: acc // fromSrc x {}) {} srcs
+
+  // rec {
 
   git-monitor    = pkg ~/src/gitlib/git-monitor {};
   gitlib         = pkg ~/src/gitlib/gitlib {};
@@ -42,16 +45,18 @@ myHaskellPackageDefs = super:
                      { inherit (pkgs.gitAndTools) git; };
   gitlib-libgit2 = pkg ~/src/gitlib/gitlib-libgit2 {};
   gitlib-test    = pkg ~/src/gitlib/gitlib-test {};
-  hierarchy      = pkg ~/src/hierarchy { nixpkgs = self; };
   hlibgit2       = pkg ~/src/gitlib/hlibgit2
                      { inherit (pkgs.gitAndTools) git; };
+
+  hierarchy      = pkg ~/src/hierarchy { nixpkgs = self; };
   hnix           = pkg ~/src/hnix { nixpkgs = self; };
   pipes-files    = pkg ~/src/pipes-files { nixpkgs = self; };
   sitebuilder    = pkg ~/src/sitebuilder
                      { inherit (pkgs) yuicompressor; };
-  z3             = pkg ~/bae/concerto/solver/lib/z3 {};
+  z3             = pkg ~/bae/concerto/solver/lib/z3 { nixpkgs = self; };
 
-  hours = (pkgs.haskell.lib.dontHaddock (pkg ~/src/hours {}))
+  hours = (pkgs.haskell.lib.dontHaddock
+             (super.callCabal2nix "hours" ~/src/hours {}))
     .overrideDerivation (attrs: {
       installPhase = ''
         mkdir -p $out/bin
@@ -88,17 +93,13 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
        || pkgs.stdenv.lib.hasSuffix ".p_o" path))
   src;
 
-packageDeps = name: ghc: hpkgs: path:
+packageDeps = ghc: hpkgs: path:
   let haveDefault = builtins.pathExists (path + ("/default.nix"));
 
       package =
         if haveDefault
-        then import path {
-          compiler = "${ghc}";
-          nixpkgs = pkgs;
-          provideDrv = true;
-        }
-        else hpkgs.callCabal2nix name path {};
+        then import path { provideDrv = true; }
+        else hpkgs.callCabal2nix (builtins.baseNameOf path) path {};
 
       compiler = package.compiler;
       packages = pkgs.haskell.lib.getHaskellBuildInputs package;
@@ -131,7 +132,7 @@ packageDeps = name: ghc: hpkgs: path:
          (callHackage "cabal-install" cabalInstallVersion.${ghc} {})
        ] ++ packages);
 
-haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
+haskellPackage_8_0_overrides = libProf: hpkgs: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
   Agda                     = dontHaddock super.Agda;
@@ -217,11 +218,12 @@ haskellPackage_8_0_overrides = libProf: mypkgs: self: super:
   });
 };
 
-haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
+haskellPackage_8_2_overrides = libProf: hpkgs: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
   Agda                     = dontHaddock super.Agda;
   blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
+  cassava                  = doJailbreak super.cassava;
   commodities              = doJailbreak mypkgs.commodities;
   consistent               = dontCheck (doJailbreak mypkgs.consistent);
   cryptohash-sha512        = doJailbreak super.cryptohash-sha512;
@@ -268,6 +270,8 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
       Cabal = Cabal;
     };
 
+  # exceptions = super.exceptions_0_10_0;
+
   hdevtools     = super.hdevtools.override { Cabal = super.Cabal; };
   hpc-coveralls = super.hpc-coveralls.override { Cabal = super.Cabal; };
   scotty        = super.scotty.override { hpc-coveralls = hpc-coveralls; };
@@ -296,7 +300,7 @@ haskellPackage_8_2_overrides = libProf: mypkgs: self: super:
   });
 };
 
-haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
+haskellPackage_8_4_overrides = libProf: hpkgs: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
   Agda                     = doJailbreak (dontHaddock super.Agda);
@@ -310,6 +314,7 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   compact                  = doJailbreak super.compact;
   compressed               = doJailbreak super.compressed;
   consistent               = doJailbreak (dontCheck mypkgs.consistent);
+  criterion                = doJailbreak super.criterion;
   derive-storable          = dontCheck super.derive-storable;
   diagrams-builder         = doJailbreak super.diagrams-builder;
   diagrams-cairo           = doJailbreak super.diagrams-cairo;
@@ -347,8 +352,9 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   svg-builder              = doJailbreak super.svg-builder;
   tasty-hspec              = doJailbreak super.tasty-hspec;
   testing-feat             = doJailbreak super.testing-feat;
+  text-format              = doJailbreak super.text-format;
   text-icu                 = dontCheck super.text-icu;
-  text-show                = dontCheck super.text-show;
+  text-show                = dontCheck (doJailbreak super.text-show);
   these                    = doJailbreak super.these;
   thyme                    = dontHaddock super.thyme;
   time-recurrence          = doJailbreak super.time-recurrence;
@@ -356,6 +362,13 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   turtle                   = doJailbreak super.turtle;
   vector-sized             = doJailbreak super.vector-sized;
   wl-pprint                = doJailbreak super.wl-pprint;
+
+  # These do not pass tests when profiling is enabled. Some of them complain
+  # about '.dyn_o' objects being missing, others just fail.
+  inspection-testing       = dontCheck super.inspection-testing;
+  th-abstraction           = dontCheck super.th-abstraction;
+  th-expand-syns           = dontCheck super.th-expand-syns;
+  th-lift                  = dontCheck super.th-lift;
 
   ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
     enableLibraryProfiling    = false;
@@ -384,7 +397,7 @@ haskellPackage_8_4_overrides = libProf: mypkgs: self: super:
   });
 };
 
-haskellPackage_HEAD_overrides = libProf: mypkgs: self: super:
+haskellPackage_HEAD_overrides = libProf: hpkgs: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
   Agda                     = dontHaddock super.Agda;
@@ -436,7 +449,7 @@ haskellPackages = haskellPackages_8_2;
 haskPkgs = haskellPackages;
 
 mkHaskellPackages = hpkgs: hoverrides: hpkgs.override {
-  overrides = self: super: hoverrides (myHaskellPackageDefs super) self super;
+  overrides = self: super: hoverrides hpkgs (myHaskellPackageDefs super) self super;
 };
 
 haskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD

@@ -128,6 +128,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   ditaa
   dot2tex
   doxygen
+  ffmpeg
   figlet
   fontconfig
   graphviz-nox
