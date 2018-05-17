@@ -128,11 +128,11 @@ packageDeps = ghc: hpkgs: path:
 
   in compiler.withPackages (p: with p;
        let hoogle = callPackage hoogleExpr { inherit packages; }; in
-       [ hpack criterion # hdevtools hoogle hie.${ghc}
+       [ hpack criterion hdevtools # hoogle hie.${ghc}
          (callHackage "cabal-install" cabalInstallVersion.${ghc} {})
        ] ++ packages);
 
-haskellPackage_8_0_overrides = libProf: hpkgs: mypkgs: self: super:
+haskellPackage_8_0_overrides = hpkgs: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
   Agda                     = dontHaddock super.Agda;
@@ -211,14 +211,9 @@ haskellPackage_8_0_overrides = libProf: hpkgs: mypkgs: self: super:
     }) {}).hie80;
 
   recurseForDerivations = true;
-
-  mkDerivation = args: super.mkDerivation (args // {
-    enableLibraryProfiling = libProf;
-    enableExecutableProfiling = libProf;
-  });
 };
 
-haskellPackage_8_2_overrides = libProf: hpkgs: mypkgs: self: super:
+haskellPackage_8_2_overrides = hpkgs: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
   Agda                     = dontHaddock super.Agda;
@@ -294,13 +289,9 @@ haskellPackage_8_2_overrides = libProf: hpkgs: mypkgs: self: super:
   }) {}).hie82;
 
   recurseForDerivations = true;
-
-  mkDerivation = args: super.mkDerivation (args // {
-    enableLibraryProfiling = libProf;
-  });
 };
 
-haskellPackage_8_4_overrides = libProf: hpkgs: mypkgs: self: super:
+haskellPackage_8_4_overrides = hpkgs: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
   Agda                     = doJailbreak (dontHaddock super.Agda);
@@ -384,20 +375,9 @@ haskellPackage_8_4_overrides = libProf: hpkgs: mypkgs: self: super:
   linearscan-hoopl = dontCheck super.linearscan-hoopl;
 
   recurseForDerivations = true;
-
-  mkDerivation = args: super.mkDerivation (args // {
-    # jww (2018-01-28): This crashes due to an infinite loop
-    # libraryHaskellDepends =
-    #   if builtins.hasAttr "libraryHaskellDepends" args
-    #   then args.libraryHaskellDepends
-    #          ++ [ pkgs.darwin.apple_sdk.frameworks.Cocoa ]
-    #   else [ pkgs.darwin.apple_sdk.frameworks.Cocoa ];
-    enableLibraryProfiling = libProf;
-    enableExecutableProfiling = libProf;
-  });
 };
 
-haskellPackage_HEAD_overrides = libProf: hpkgs: mypkgs: self: super:
+haskellPackage_HEAD_overrides = hpkgs: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
   Agda                     = dontHaddock super.Agda;
@@ -438,11 +418,6 @@ haskellPackage_HEAD_overrides = libProf: hpkgs: mypkgs: self: super:
     enableLibraryProfiling    = false;
     enableExecutableProfiling = false;
   });
-
-  mkDerivation = args: super.mkDerivation (args // {
-    enableLibraryProfiling = libProf;
-    enableExecutableProfiling = libProf;
-  });
 };
 
 haskellPackages = haskellPackages_8_2;
@@ -453,24 +428,13 @@ mkHaskellPackages = hpkgs: hoverrides: hpkgs.override {
 };
 
 haskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD
-  (haskellPackage_HEAD_overrides false);
-profiledHaskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD
-  (haskellPackage_HEAD_overrides true);
-
+  haskellPackage_HEAD_overrides;
 haskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc842
-  (haskellPackage_8_4_overrides false);
-profiledHaskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc842
-  (haskellPackage_8_4_overrides true);
-
+  haskellPackage_8_4_overrides;
 haskellPackages_8_2 = mkHaskellPackages pkgs.haskell.packages.ghc822
-  (haskellPackage_8_2_overrides false);
-profiledHaskellPackages_8_2 = mkHaskellPackages pkgs.haskell.packages.ghc822
-  (haskellPackage_8_2_overrides true);
-
+  haskellPackage_8_2_overrides;
 haskellPackages_8_0 = mkHaskellPackages pkgs.haskell.packages.ghc802
-  (haskellPackage_8_0_overrides false);
-profiledHaskellPackages_8_0 = mkHaskellPackages pkgs.haskell.packages.ghc802
-  (haskellPackage_8_0_overrides true);
+  haskellPackage_8_0_overrides;
 
 ghcHEADEnv = myPkgs: pkgs.myEnvFun {
   name = "ghcHEAD";
@@ -481,27 +445,9 @@ ghcHEADEnv = myPkgs: pkgs.myEnvFun {
   ];
 };
 
-ghcHEADProfEnv = myPkgs: pkgs.myEnvFun {
-  name = "ghcHEADprof";
-  buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_HEAD; [
-    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-       compact
-     ])))
-  ];
-};
-
 ghc84Env = myPkgs: pkgs.myEnvFun {
   name = "ghc84";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_4; [
-    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-       compact
-     ])))
-  ];
-};
-
-ghc84ProfEnv = myPkgs: pkgs.myEnvFun {
-  name = "ghc84prof";
-  buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_4; [
     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
        compact
      ])))
@@ -525,41 +471,9 @@ ghc82Env = myPkgs: pkgs.myEnvFun {
   ];
 };
 
-ghc82ProfEnv = myPkgs: pkgs.myEnvFun {
-  name = "ghc82prof";
-  buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_2; [
-    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-       compact
-     ])))
-    Agda
-    idris
-    haskell-ide-engine
-    hdevtools
-    lambdabot
-    hlint
-    alex
-    happy
-  ];
-};
-
 ghc80Env = myPkgs: pkgs.myEnvFun {
   name = "ghc80";
   buildInputs = with pkgs.haskell.lib; with haskellPackages_8_0; [
-    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-       singletons
-       units
-     ])))
-
-    splot
-    haskell-ide-engine
-    hdevtools
-    cabal-helper
-  ];
-};
-
-ghc80ProfEnv = myPkgs: pkgs.myEnvFun {
-  name = "ghc80prof";
-  buildInputs = with pkgs.haskell.lib; with profiledHaskellPackages_8_0; [
     (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
        singletons
        units

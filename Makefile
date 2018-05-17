@@ -28,7 +28,6 @@ ENVS =  emacsHEADEnv	\
 	coq85Env	\
 	coq84Env	\
 	ghc84Env	\
-	ghc82ProfEnv	\
 	ghc82Env	\
 	ghc80Env	\
 	ledgerPy2Env	\
@@ -68,16 +67,22 @@ shells:
 	                          default.nix;					\
 	      fi));								\
 	done
-# (cd $(HOME)/src/hnix &&							\
-#  echo "Building ghc80 shell for hnix" &&				\
-#  shell -k -Q -j4 --argstr compiler ghc802 --command true &&		\
-#  nix-instantiate --add-root $(ROOTS)/$$(basename $$i)-shell-ghc80	\
-#                  default.nix)
-# (cd $(HOME)/src/hnix &&							\
-#  echo "Building ghc84 shell for hnix" &&				\
-#  shell -k -Q -j4 --argstr compiler ghc842 --command true &&		\
-#  nix-instantiate --add-root $(ROOTS)/$$(basename $$i)-shell-ghc84	\
-#                  default.nix)
+	(cd $(HOME)/src/hnix &&							\
+	 echo "Building ghc80 shell for hnix" &&				\
+	 nix-shell -k -Q -j4 --argstr compiler ghc802 --command true &&		\
+	 nix-build -k -Q -j4 --argstr compiler ghc802 dir-locals.nix &&		\
+	 nix-instantiate --add-root $(ROOTS)/$$(basename $$i)-shell-ghc80	\
+	                 default.nix;						\
+	 nix-instantiate --add-root $(ROOTS)/$$(basename $$i)-locals-ghc80	\
+	                 dir-locals.nix)
+	(cd $(HOME)/src/hnix &&							\
+	 echo "Building ghc84 shell for hnix" &&				\
+	 nix-shell -k -Q -j4 --argstr compiler ghc842 --command true &&		\
+	 nix-build -k -Q -j4 --argstr compiler ghc842 dir-locals.nix &&		\
+	 nix-instantiate --add-root $(ROOTS)/$$(basename $$i)-shell-ghc84	\
+	                 default.nix;						\
+	 nix-instantiate --add-root $(ROOTS)/$$(basename $$i)-locals-ghc84	\
+	                 dir-locals.nix)
 
 locals:
 	for i in $(LOCALS); do						\
