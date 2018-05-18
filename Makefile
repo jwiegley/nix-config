@@ -2,15 +2,17 @@ REMOTE = vulcan
 CACHE  = /Volumes/slim/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
 
-SHELLS = $(HOME)/src/async-pool							\
-	 $(shell find $(HOME)/bae/ $(HOME)/src/					\
-		        \( -path $(HOME)/src/nix/nixpkgs -prune \)		\
-		     -o \( -path $(HOME)/src/notes -prune \)			\
-		     -o -name default.nix -print0				\
-		   | parallel -0 'grep -q developPackage {} && echo {//}')
-
-LOCALS = $(shell find $(HOME)/bae $(HOME)/src -name dir-locals.nix		\
-	              ! -path $(HOME)/src/reflex-platform/dir-locals.nix)
+PROJS = src/async-pool							\
+	src/category-theory						\
+	src/hnix							\
+									\
+	bae/micromht-fiat-deliverable/atif-fiat				\
+	bae/micromht-fiat-deliverable/atif-fiat/stanag4607		\
+	bae/micromht-fiat-deliverable/atif-fiat/monitors/hmon/hsmedl	\
+									\
+	bae/micromht-deliverable/rings-dashboard/mitll-harness		\
+	bae/micromht-deliverable/rings-dashboard/rings-dashboard-api	\
+	bae/micromht-deliverable/rings-dashboard
 
 PENVS = emacs26Env	\
 	coq87Env	\
@@ -58,38 +60,17 @@ home-build:
 
 shells:
 	-find ~/bae/ ~/src/ -name .hdevtools.sock -delete
-	for i in $(SHELLS); do							\
-	    (cd $$i &&								\
-	     echo "Building shell for $$i" &&					\
-	     shell -k -Q -j4 --command true &&					\
-	     (if [[ -f default.nix ]]; then					\
-	          nix-instantiate --add-root $(ROOTS)/$$(basename $$i)-shell	\
-	                          default.nix;					\
-	      fi));								\
-	done
-	(cd $(HOME)/src/hnix &&							\
-	 echo "Building ghc80 shell for hnix" &&				\
-	 nix-shell -k -Q -j4 --argstr compiler ghc802 --command true &&		\
-	 nix-build -k -Q -j4 --argstr compiler ghc802 dir-locals.nix &&		\
-	 nix-instantiate --add-root $(ROOTS)/$$(basename $$i)-shell-ghc80	\
-	                 default.nix;						\
-	 nix-instantiate --add-root $(ROOTS)/$$(basename $$i)-locals-ghc80	\
-	                 dir-locals.nix)
-	(cd $(HOME)/src/hnix &&							\
-	 echo "Building ghc84 shell for hnix" &&				\
-	 nix-shell -k -Q -j4 --argstr compiler ghc842 --command true &&		\
-	 nix-build -k -Q -j4 --argstr compiler ghc842 dir-locals.nix &&		\
-	 nix-instantiate --add-root $(ROOTS)/$$(basename $$i)-shell-ghc84	\
-	                 default.nix;						\
-	 nix-instantiate --add-root $(ROOTS)/$$(basename $$i)-locals-ghc84	\
-	                 dir-locals.nix)
-
-locals:
-	for i in $(LOCALS); do						\
-	    (echo "Building dir-locals.el for $$i" &&			\
-	     nix-build -k -Q -j4 $$i &&					\
-	     nix-instantiate --add-root					\
-	         $(ROOTS)/$$(basename $$(dirname $$i))-locals $$i);	\
+	for i in $(PROJS); do						\
+	    cd $(HOME)/$$i;						\
+	    echo "Building shell for $$i" &&				\
+	    shell -k -Q -j4 --command true &&				\
+	    echo "Building locals for $$i" &&				\
+	    if [[ -f dir-locals.nix ]]; then				\
+	        nix-build -k -Q -j4 dir-locals.nix;			\
+	    else							\
+	        nix-build -k -Q -j4					\
+	            -E "((import <darwin> {}).pkgs.dirLocals $$PWD)";	\
+	    fi;								\
 	done
 
 env-all:
@@ -142,7 +123,7 @@ mirror:
 working: tag-working mirror
 
 update: tag-before pull build-all switch env-all \
-	shells locals working cache copy
+	shells working cache copy
 
 copy:
 	nix copy --all --keep-going --to ssh://$(REMOTE)

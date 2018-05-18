@@ -11,7 +11,6 @@ srcs = [
   "fuzzcheck"
   "git-all"
   "git-du"
-  "hackage-mirror"
   "hs-to-coq"
   "ipcvar"
   "linearscan"
@@ -93,6 +92,31 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
        || pkgs.stdenv.lib.hasSuffix ".p_o" path))
   src;
 
+dirLocals = root:
+  let inherit ((import <darwin> {}).pkgs)
+        lib nixBufferBuilders
+        haskell haskellPackages_8_2 packageDeps
+        coq_8_7 coqPackages_8_7;
+
+      ghcVer          = "ghc822";
+      haskellPackages = haskellPackages_8_2;
+      cabal-found     = lib.filesystem.locateDominatingFile
+                          "([^.].*)\\.cabal" root;
+
+      coq             = coq_8_7;
+      coqPackages     = coqPackages_8_7;
+
+  in if cabal-found != null
+     then nixBufferBuilders.withPackages
+            [ (packageDeps ghcVer haskellPackages cabal-found.path) ]
+     else
+
+     if lib.filesystem.locateDominatingFile "_CoqProject" root != null
+     then nixBufferBuilders.withPackages
+            [ coq coqPackages.equations coqPackages.fiat_HEAD
+              coqPackages.mathcomp coqPackages.ssreflect ]
+     else {};
+
 packageDeps = ghc: hpkgs: path:
   let haveDefault = builtins.pathExists (path + ("/default.nix"));
 
@@ -157,7 +181,6 @@ haskellPackage_8_0_overrides = hpkgs: mypkgs: self: super:
   heap                     = dontCheck super.heap;
   indents                  = doJailbreak super.indents;
   inline-c-cpp             = dontCheck super.inline-c-cpp;
-  ipcvar                   = dontCheck super.ipcvar;
   linearscan-hoopl         = dontCheck super.linearscan-hoopl;
   machinecell              = doJailbreak super.machinecell;
   monad-logger             = doJailbreak super.monad-logger;
@@ -217,7 +240,7 @@ haskellPackage_8_2_overrides = hpkgs: mypkgs: self: super:
   with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
 
   Agda                     = dontHaddock super.Agda;
-  blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
+  # blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
   cassava                  = doJailbreak super.cassava;
   commodities              = doJailbreak mypkgs.commodities;
   consistent               = dontCheck (doJailbreak mypkgs.consistent);
@@ -235,7 +258,6 @@ haskellPackage_8_2_overrides = hpkgs: mypkgs: self: super:
   heap                     = dontCheck super.heap;
   indents                  = doJailbreak super.indents;
   inline-c-cpp             = dontCheck super.inline-c-cpp;
-  ipcvar                   = dontCheck super.ipcvar;
   linearscan-hoopl         = dontCheck mypkgs.linearscan-hoopl;
   machinecell              = doJailbreak super.machinecell;
   pipes-binary             = doJailbreak super.pipes-binary;
@@ -324,7 +346,6 @@ haskellPackage_8_4_overrides = hpkgs: mypkgs: self: super:
   hint                     = doJailbreak super.hint;
   hspec-smallcheck         = doJailbreak super.hspec-smallcheck;
   inline-c-cpp             = dontCheck super.inline-c-cpp;
-  ipcvar                   = dontCheck super.ipcvar;
   json-stream              = doJailbreak super.json-stream;
   lattices                 = doJailbreak super.lattices;
   machinecell              = doJailbreak super.machinecell;
@@ -396,7 +417,6 @@ haskellPackage_HEAD_overrides = hpkgs: mypkgs: self: super:
   diagrams-svg             = doJailbreak super.diagrams-svg;
   hakyll                   = doJailbreak super.hakyll;
   inline-c-cpp             = dontCheck super.inline-c-cpp;
-  ipcvar                   = dontCheck super.ipcvar;
   lattices                 = doJailbreak super.lattices;
   linearscan-hoopl         = dontCheck super.linearscan-hoopl;
   pipes-binary             = doJailbreak super.pipes-binary;
