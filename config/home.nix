@@ -416,7 +416,7 @@ rec {
         gramma.hostname = "192.168.64.130";
         peta.hostname   = "172.16.138.140";
         fiat.hostname   = "172.16.138.145";
-        nixos.hostname  = "192.168.64.131";
+        nixos.hostname  = "192.168.64.132";
 
         # nixos = {
         #   hostname     = "192.168.128.132";

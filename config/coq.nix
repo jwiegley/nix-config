@@ -17,7 +17,7 @@ pkgs: version: cpkgs: with pkgs;
   flocq
   # heq
   # interval
-  # mathcomp
+  mathcomp
   # coq-haskell
   # category-theory
 
@@ -40,7 +40,7 @@ pkgs: version: cpkgs: with pkgs;
   interval
   mathcomp
   coq-haskell
-  category-theory
+  # category-theory
 
   CoLoR
   equations
@@ -51,4 +51,5 @@ pkgs: version: cpkgs: with pkgs;
   equations
   ssreflect
   coq-haskell
+  # category-theory
 ])))

@@ -284,18 +284,18 @@ OmniOutlinerPro = self.installApplication rec {
 
 OpenZFSonOSX = with super; stdenv.mkDerivation rec {
   name = "OpenZFS-on-OSX";
-  version = "1.7.0";
+  version = "1.7.2";
   src = super.fetchurl {
     name = "OpenZFS-${version}.pkg";
-    url = "https://openzfsonosx.org/forum/download/file.php?id=98&sid=b403862a792839f9a372eebac59345cf";
-    sha256 = "1ii5vf9yvcnfhr2yq7zs695fn4y20kgyb0gg5lgl469kzjwf49lq";
-    # date = 2018-02-19T21:38:01-0800;
+    url = "https://openzfsonosx.org/w/images/e/ea/OpenZFS_on_OS_X_${version}.dmg";
+    sha256 = "1b81cqlkfrmxz30v4aiy9ms1r20s214x9ny4qfcxp6gq1jyxvpmj";
   };
 
-  buildInputs = [ rsync cpio ];
+  buildInputs = [ rsync cpio undmg ];
 
   unpackPhase = ''
-    /usr/bin/xar -xf $src
+    undmg < $src
+    /usr/bin/xar -xf "OpenZFS on OS X 1.7.2 High Sierra.pkg"
     cd zfs1013.pkg
   '';
 

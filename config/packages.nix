@@ -77,6 +77,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   ott
   pkgconfig
   rabbitmq-c
+  rabbitmq_server
   rtags
   sbcl
   sloccount
@@ -98,6 +99,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   bazaar
   cacert
   dnsutils
+  httpie
   httrack
   iperf
   lftp
@@ -174,11 +176,13 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   aspellDicts.en
   bash-completion
   bashInteractive
+  # bat
   browserpass
   dirscan
   ctop
   cvc4
   direnv
+  entr
   epipe
   exiv2
   fd
@@ -196,11 +200,13 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.hours)
   htop
   imagemagickBig
+  # imgcat
   jdiskreport
   jdk8
   less
   linkdups
   lipotell
+  m-cli
   multitail
   mysql
   nix-bash-completions
@@ -214,6 +220,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   postgresql
   (exe haskPkgs.pushme)
   pv
+  reflex
   qemu
   qrencode
   renameutils
@@ -237,6 +244,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   unzip
   vim
   watch
+  xsv
   xz
   yubico-piv-tool
   yubikey-manager

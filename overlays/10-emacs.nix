@@ -1,24 +1,36 @@
-self: pkgs: with self; {
+self: pkgs:
 
-emacs = emacs26;
+let
+  compileEmacsFiles  = pkgs.callPackage ./emacs/builder.nix;
 
-compileEmacsFiles  = pkgs.callPackage ./emacs/builder.nix;
+  fetchFromEmacsWiki = pkgs.callPackage ({ fetchurl, name, sha256 }:
+    fetchurl {
+      inherit sha256;
+      url = "https://www.emacswiki.org/emacs/download/" + name;
+    });
 
-fetchFromEmacsWiki = pkgs.callPackage ({ fetchurl, name, sha256 }:
-  fetchurl {
-    inherit sha256;
-    url = "https://www.emacswiki.org/emacs/download/" + name;
-  });
+  compileEmacsWikiFile = { name, sha256, buildInputs ? [], patches ? [] }:
+    compileEmacsFiles {
+      inherit name buildInputs patches;
+      src = fetchFromEmacsWiki { name = name; sha256 = sha256; };
+    };
 
-compileEmacsWikiFile = { name, sha256, buildInputs ? [], patches ? [] }:
-  compileEmacsFiles {
-    inherit name buildInputs patches;
-    src = fetchFromEmacsWiki { name = name; sha256 = sha256; };
+  compileLocalFile = name: compileEmacsFiles {
+    inherit name; src = ./emacs + ("/" + name);
   };
 
-compileLocalFile = name: compileEmacsFiles {
-  inherit name; src = ./emacs + ("/" + name);
-};
+  customEmacsHEADPackages = self.emacsHEADPackagesNg.overrideScope
+    (self.myEmacsPackageOverrides self.emacsHEAD);
+
+  customEmacs26Packages = self.emacs26PackagesNg.overrideScope
+    (self.myEmacsPackageOverrides self.emacs26);
+
+  customEmacs26DebugPackages = self.emacs26PackagesNg.overrideScope
+    (self.myEmacsPackageOverrides self.emacs26debug);
+
+in {
+
+emacs = self.emacs26;
 
 myEmacsPackageOverrides = emacs: super: self: with self;
   let withPatches = pkg: patches:
@@ -688,7 +700,7 @@ myEmacsPackageOverrides = emacs: super: self: with self;
 };
 
 emacs26 = with pkgs; stdenv.lib.overrideDerivation
-  (emacs25.override { srcRepo = true; }) (attrs: rec {
+  (self.emacs25.override { srcRepo = true; }) (attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "26.0";
   versionModifier = ".90";
@@ -734,7 +746,7 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
   '';
 });
 
-emacs26debug = pkgs.stdenv.lib.overrideDerivation emacs26 (attrs: rec {
+emacs26debug = pkgs.stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
   name = "emacs-26.0.90-debug";
   doCheck = true;
   CFLAGS = "-O0 -g3";
@@ -744,11 +756,11 @@ emacs26debug = pkgs.stdenv.lib.overrideDerivation emacs26 (attrs: rec {
      "--enable-check-lisp-object-type" ];
 });
 
-emacs26PackagesNg = pkgs.emacsPackagesNgGen emacs26;
-emacsPackagesNg = emacs26PackagesNg;
+emacs26PackagesNg = self.emacsPackagesNgGen self.emacs26;
+emacsPackagesNg = self.emacs26PackagesNg;
 
 emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
-  (emacs25.override { srcRepo = true; }) (attrs: rec {
+  (self.emacs25.override { srcRepo = true; }) (attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "27.0";
   versionModifier = ".50";
@@ -772,11 +784,7 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
      "--enable-checking=yes,glyphs"
      "--enable-check-lisp-object-type" ];
 
-  src = fetchgit {
-    url = https://git.savannah.gnu.org/git/emacs.git;
-    rev = "766b057e41df7316808ec7658836fda75facda75";
-    sha256 = "1ki8diwb11mkkm7spfs52ijn5wbh21py0mpkvk6f1axa31jshgbk";
-  };
+  src = ~/src/emacs;
 
   postPatch = ''
     sed -i 's|/usr/share/locale|${gettext}/share/locale|g' \
@@ -824,10 +832,7 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
   '';
 });
 
-emacsHEADPackagesNg = pkgs.emacsPackagesNgGen emacsHEAD;
-
-customEmacsHEADPackages =
-  emacsHEADPackagesNg.overrideScope (myEmacsPackageOverrides emacsHEAD);
+emacsHEADPackagesNg = self.emacsPackagesNgGen self.emacsHEAD;
 
 emacsHEAD_is_ERC = epkgs:
   pkgs.stdenv.lib.overrideDerivation epkgs (attrs: {
@@ -848,21 +853,14 @@ emacsHEAD_is_ERC = epkgs:
 emacsHEADEnv = myPkgs: pkgs.myEnvFun {
   name = "emacsHEAD";
   buildInputs = [
-    (emacsHEAD_is_ERC
-       (customEmacsHEADPackages.emacsWithPackages myPkgs))
+    (self.emacsHEAD_is_ERC (customEmacsHEADPackages.emacsWithPackages myPkgs))
   ];
 };
-
-customEmacs26Packages =
-  emacs26PackagesNg.overrideScope (myEmacsPackageOverrides emacs26);
 
 emacs26Env = myPkgs: pkgs.myEnvFun {
   name = "emacs26";
   buildInputs = [ (customEmacs26Packages.emacsWithPackages myPkgs) ];
 };
-
-customEmacs26DebugPackages =
-  emacs26PackagesNg.overrideScope (myEmacsPackageOverrides emacs26debug);
 
 emacs26DebugEnv = myPkgs: pkgs.myEnvFun {
   name = "emacs26debug";
@@ -871,7 +869,7 @@ emacs26DebugEnv = myPkgs: pkgs.myEnvFun {
 
 emacs25Env = myPkgs: pkgs.myEnvFun {
   name = "emacs25";
-  buildInputs = [ pkgs.emacs25 ];
+  buildInputs = [ self.emacs25 ];
 };
 
 }

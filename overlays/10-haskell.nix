@@ -1,491 +1,256 @@
-self: pkgs: with self; {
+self: pkgs:
 
-# All of these projects are identified simply by their .cabal files, no other
-# special handling is needed.
-srcs = [
-  "async-pool"
-  "bindings-DSL"
-  "c2hsc"
-  "consistent"
-  "coq-haskell"
-  "fuzzcheck"
-  "git-all"
-  "git-du"
-  "hs-to-coq"
-  "ipcvar"
-  "linearscan"
-  "linearscan-hoopl"
-  "logging"
-  "monad-extras"
-  "parsec-free"
-  "pipes-async"
-  "pushme"
-  "recursors"
-  "runmany"
-  "sizes"
-  "una"
-  "z3cat"
-  "z3-generate-api"
-];
+let
+  # All of these projects are identified simply by their .cabal files, no other
+  # special handling is needed.
+  srcs = [
+    "async-pool"
+    "bindings-DSL"
+    "c2hsc"
+    "coq-haskell"
+    "git-all"
+    "git-du"
+    "gitlib/git-monitor"
+    "gitlib/gitlib"
+    [ "gitlib/gitlib-cmdline" { inherit (self.gitAndTools) git; } ]
+    "gitlib/gitlib-libgit2"
+    "gitlib/gitlib-test"
+    [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
+    "hierarchy"
+    "hnix"
+    "hours"
+    "hs-to-coq"
+    "linearscan"
+    "linearscan-hoopl"
+    "logging"
+    "monad-extras"
+    "parsec-free"
+    "pipes-async"
+    "pipes-files"
+    "pushme"
+    "recursors"
+    "runmany"
+    [ "sitebuilder" { inherit (self) yuicompressor; } ]
+    "sizes"
+    "una"
+    "z3-generate-api"
+    "z3cat"
+  ];
 
-myHaskellPackageDefs = super:
-  let fromSrc = name: args: {
-      ${name} = super.callCabal2nix name (~/src + "/${name}") args;
-    }; in
-  with super; let pkg = super.callPackage; in
+  otherHackagePackages = ghc: self: super:
+    let pkg = p: self.callPackage p { pkgs = pkgs; compiler = ghc; }; in
+    with pkgs.haskell.lib; {
 
-  builtins.foldl' (acc: x: acc // fromSrc x {}) {} srcs
+    z3 = if ghc == "ghc842"
+         then null else pkg ~/bae/concerto/solver/lib/z3;
 
-  // rec {
+    Agda = dontHaddock super.Agda;
 
-  git-monitor    = pkg ~/src/gitlib/git-monitor {};
-  gitlib         = pkg ~/src/gitlib/gitlib {};
-  gitlib-cmdline = pkg ~/src/gitlib/gitlib-cmdline
-                     { inherit (pkgs.gitAndTools) git; };
-  gitlib-libgit2 = pkg ~/src/gitlib/gitlib-libgit2 {};
-  gitlib-test    = pkg ~/src/gitlib/gitlib-test {};
-  hlibgit2       = pkg ~/src/gitlib/hlibgit2
-                     { inherit (pkgs.gitAndTools) git; };
+    diagrams-contrib  = doJailbreak super.diagrams-contrib;
+    diagrams-graphviz = doJailbreak super.diagrams-graphviz;
+    diagrams-svg      = doJailbreak super.diagrams-svg;
+    hasktags          = dontCheck super.hasktags;
+    pipes-binary      = doJailbreak super.pipes-binary;
+    pipes-zlib        = dontCheck (doJailbreak super.pipes-zlib);
+    text-show         = dontCheck (doJailbreak super.text-show);
 
-  hierarchy      = pkg ~/src/hierarchy { nixpkgs = self; };
-  hnix           = pkg ~/src/hnix { nixpkgs = self; };
-  pipes-files    = pkg ~/src/pipes-files { nixpkgs = self; };
-  sitebuilder    = pkg ~/src/sitebuilder
-                     { inherit (pkgs) yuicompressor; };
-  z3             = pkg ~/bae/concerto/solver/lib/z3 { nixpkgs = self; };
-
-  hours = (pkgs.haskell.lib.dontHaddock
-             (super.callCabal2nix "hours" ~/src/hours {}))
-    .overrideDerivation (attrs: {
-      installPhase = ''
-        mkdir -p $out/bin
-        cp jobhours $out/bin
-        cp gethours $out/bin
-        cp dist/build/bae-periods/bae-periods $out/bin
-        cp dist/build/timelog-periods/timelog-periods $out/bin
-        cp dist/build/process-hours/process-hours $out/bin
-      '';
+    ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
+    });
+    ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
     });
 
-  timeparsers = super.callCabal2nix "timeparsers" (pkgs.fetchFromGitHub {
-    owner  = "jwiegley";
-    repo   = "timeparsers";
-    rev    = "ebdc0071f43833b220b78523f6e442425641415d";
-    sha256 = "0h8wkqyvahp0csfcj5dl7j56ib8m1aad5kwcsccaahiciic249xq";
-    # date = 2017-01-19T16:47:50-08:00;
-  }) {};
-};
+    timeparsers = dontCheck (doJailbreak
+      (self.callCabal2nix "timeparsers" (pkgs.fetchFromGitHub {
+        owner  = "jwiegley";
+        repo   = "timeparsers";
+        rev    = "ebdc0071f43833b220b78523f6e442425641415d";
+        sha256 = "0h8wkqyvahp0csfcj5dl7j56ib8m1aad5kwcsccaahiciic249xq";
+        # date = 2017-01-19T16:47:50-08:00;
+      }) {}));
+
+    time-recurrence = doJailbreak super.time-recurrence;
+  };
+
+  # This is a function taking self: super: arguments.
+  mkHaskellPackages = ghc: self: super:
+    let fromSrc = arg:
+      let
+        name = if builtins.isList arg
+               then builtins.elemAt arg 0
+               else arg;
+        args = if builtins.isList arg
+               then builtins.elemAt arg 1
+               else {};
+        path = ~/src + "/${name}";
+        base = builtins.baseNameOf name;
+      in {
+        name = base;
+        value =
+          (if builtins.pathExists (path + "/default.nix")
+           then self.callPackage else self.callCabal2nix "${base}")
+            path ({ pkgs = pkgs;
+                    compiler = ghc;
+                    returnShellEnv = false; } // args);
+      };
+    in builtins.listToAttrs (builtins.map fromSrc srcs);
+
+  overrideHask = ghc: hpkgs: hoverrides: hpkgs.override {
+    overrides = pkgs.lib.composeExtensions (otherHackagePackages ghc)
+      (pkgs.lib.composeExtensions hoverrides (mkHaskellPackages ghc)) ;
+  };
+
+  breakout = super: names:
+    builtins.listToAttrs
+      (builtins.map (x: { name  = x;
+                          value = pkgs.haskell.lib.doJailbreak super.${x}; })
+                    names);
+
+in {
 
 haskellFilterSource = paths: src: builtins.filterSource (path: type:
-    let baseName = baseNameOf path; in
-    !( type == "directory"
-       && builtins.elem baseName ([".git" ".cabal-sandbox" "dist"] ++ paths))
-    &&
-    !( type == "unknown"
-       || pkgs.stdenv.lib.hasSuffix ".hdevtools.sock" path
-       || pkgs.stdenv.lib.hasSuffix ".sock" path
-       || pkgs.stdenv.lib.hasSuffix ".hi" path
-       || pkgs.stdenv.lib.hasSuffix ".hi-boot" path
-       || pkgs.stdenv.lib.hasSuffix ".o" path
-       || pkgs.stdenv.lib.hasSuffix ".o-boot" path
-       || pkgs.stdenv.lib.hasSuffix ".dyn_o" path
-       || pkgs.stdenv.lib.hasSuffix ".p_o" path))
-  src;
+  let baseName = baseNameOf path; in
+  !( type == "directory"
+     && builtins.elem baseName ([".git" ".cabal-sandbox" "dist"] ++ paths))
+  &&
+  !( type == "unknown"
+     || pkgs.stdenv.lib.hasSuffix ".hdevtools.sock" path
+     || pkgs.stdenv.lib.hasSuffix ".sock" path
+     || pkgs.stdenv.lib.hasSuffix ".hi" path
+     || pkgs.stdenv.lib.hasSuffix ".hi-boot" path
+     || pkgs.stdenv.lib.hasSuffix ".o" path
+     || pkgs.stdenv.lib.hasSuffix ".o-boot" path
+     || pkgs.stdenv.lib.hasSuffix ".p_o" path)) src;
 
 dirLocals = root:
-  let inherit ((import <darwin> {}).pkgs)
-        lib nixBufferBuilders
-        haskell haskellPackages_8_2 packageDeps
-        coq_8_7 coqPackages_8_7;
+  let
+    inherit (self) lib nixBufferBuilders
+      haskell haskellPackages_8_2 packageDeps
+      coq_8_7 coqPackages_8_7;
 
-      ghcVer          = "ghc822";
-      haskellPackages = haskellPackages_8_2;
-      cabal-found     = lib.filesystem.locateDominatingFile
-                          "([^.].*)\\.cabal" root;
+    cabal-found =
+      lib.filesystem.locateDominatingFile "([^.].*)\\.cabal" root;
 
-      coq             = coq_8_7;
-      coqPackages     = coqPackages_8_7;
+    coq = coq_8_7;
+    coqPackages = coqPackages_8_7;
 
   in if cabal-found != null
      then nixBufferBuilders.withPackages
-            [ (packageDeps ghcVer haskellPackages cabal-found.path) ]
+            [ (packageDeps cabal-found.path) ]
      else
-
      if lib.filesystem.locateDominatingFile "_CoqProject" root != null
      then nixBufferBuilders.withPackages
             [ coq coqPackages.equations coqPackages.fiat_HEAD
               coqPackages.mathcomp coqPackages.ssreflect ]
      else {};
 
-packageDeps = ghc: hpkgs: path:
-  let haveDefault = builtins.pathExists (path + ("/default.nix"));
+packageDeps = path:
+  let
+    haveDefault = builtins.pathExists (path + ("/default.nix"));
 
-      package =
-        if haveDefault
-        then import path { provideDrv = true; }
-        else hpkgs.callCabal2nix (builtins.baseNameOf path) path {};
+    ghc = self.ghcDefaultVersion;
+    hpkgs = self.haskell.packages.${ghc};
+    package =
+      if haveDefault
+      then import path { returnShellEnv = false; }
+      else hpkgs.callCabal2nix (builtins.baseNameOf path) path {};
 
-      compiler = package.compiler;
-      packages = pkgs.haskell.lib.getHaskellBuildInputs package;
+    compiler = package.compiler;
+    packages = self.haskell.lib.getHaskellBuildInputs package;
 
-      cabalInstallVersion = {
-        ghc802 = "1.24.0.2";
-        ghc822 = "2.0.0.1";
-        ghc842 = "2.2.0.0";
-      };
+    cabalInstallVersion = {
+      ghc802 = "1.24.0.2";
+      ghc822 = "2.0.0.1";
+      ghc842 = "2.2.0.0";
+    };
 
-      hoogleExpr = <nixpkgs/pkgs/development/haskell-modules/hoogle.nix>;
+    # hoogleExpr = <nixpkgs/pkgs/development/haskell-modules/hoogle.nix>;
 
-      haskell-ide-engine = import (pkgs.fetchFromGitHub {
-        owner  = "domenkozar";
-        repo   = "hie-nix";
-        rev    = "dbb89939da8997cc6d863705387ce7783d8b6958";
-        sha256 = "1bcw59zwf788wg686p3qmcq03fr7bvgbcaa83vq8gvg231bgid4m";
-        # date = 2018-03-27T10:14:16+01:00;
-      }) {};
+    # hie-nix = import (pkgs.fetchFromGitHub {
+    #   owner  = "domenkozar";
+    #   repo   = "hie-nix";
+    #   rev    = "dbb89939da8997cc6d863705387ce7783d8b6958";
+    #   sha256 = "1bcw59zwf788wg686p3qmcq03fr7bvgbcaa83vq8gvg231bgid4m";
+    #   # date = 2018-03-27T10:14:16+01:00;
+    # }) {};
 
-      hie = {
-        ghc802 = haskell-ide-engine.hie80;
-        ghc822 = haskell-ide-engine.hie82;
-        ghc842 = throw "HIE not supported on GHC 8.4.2 yet";
-      };
+    # hie = {
+    #   ghc802 = hie-nix.hie80;
+    #   ghc822 = hie-nix.hie82;
+    #   ghc842 = throw "HIE not supported on GHC 8.4.2 yet";
+    # };
 
   in compiler.withPackages (p: with p;
-       let hoogle = callPackage hoogleExpr { inherit packages; }; in
-       [ hpack criterion hdevtools # hoogle hie.${ghc}
+       # let hoogle = callPackage hoogleExpr { inherit packages; }; in
+       [ hpack criterion hdevtools # hie.${ghc} hoogle
          (callHackage "cabal-install" cabalInstallVersion.${ghc} {})
        ] ++ packages);
 
-haskellPackage_8_0_overrides = hpkgs: mypkgs: self: super:
-  with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
+haskell = pkgs.haskell // {
+  packages = pkgs.haskell.packages // {
+    ghc802 = overrideHask "ghc802" pkgs.haskell.packages.ghc802 (self: super:
+      (breakout super [
+        "concurrent-output"
+        "hakyll"
+      ])
+      // (with pkgs.haskell.lib; {
+        ghc-compact = null;
 
-  Agda                     = dontHaddock super.Agda;
-  blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
-  commodities              = doJailbreak mypkgs.commodities;
-  concurrent-output        = doJailbreak super.concurrent-output;
-  consistent               = dontCheck mypkgs.consistent;
-  cryptohash-sha512        = doJailbreak super.cryptohash-sha512;
-  data-inttrie             = doJailbreak super.data-inttrie;
-  diagrams-builder         = doJailbreak super.diagrams-builder;
-  diagrams-cairo           = doJailbreak super.diagrams-cairo;
-  diagrams-contrib         = doJailbreak super.diagrams-contrib;
-  diagrams-core            = doJailbreak super.diagrams-core;
-  diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
-  diagrams-lib             = doJailbreak super.diagrams-lib;
-  diagrams-postscript      = doJailbreak super.diagrams-postscript;
-  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
-  diagrams-svg             = doJailbreak super.diagrams-svg;
-  ghc-compact              = null;
-  haddock-library          = doJailbreak super.haddock-library_1_2_1;
-  hakyll                   = doJailbreak super.hakyll;
-  heap                     = dontCheck super.heap;
-  indents                  = doJailbreak super.indents;
-  inline-c-cpp             = dontCheck super.inline-c-cpp;
-  linearscan-hoopl         = dontCheck super.linearscan-hoopl;
-  machinecell              = doJailbreak super.machinecell;
-  monad-logger             = doJailbreak super.monad-logger;
-  pipes-binary             = doJailbreak super.pipes-binary;
-  pipes-group              = doJailbreak super.pipes-group;
-  pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
-  recursors                = doJailbreak super.recursors;
-  runmany                  = doJailbreak super.runmany;
-  sbvPlugin                = doJailbreak super.sbvPlugin;
-  serialise                = dontCheck super.serialise;
-  stylish-haskell          = dontCheck super.stylish-haskell;
-  text-show                = dontCheck super.text-show;
-  time-recurrence          = doJailbreak super.time-recurrence;
+        th-desugar_1_6 = self.callHackage "th-desugar" "1.6" {};
+        singletons = dontCheck (doJailbreak (self.callHackage "singletons" "2.2" {
+          th-desugar = self.th-desugar_1_6;
+        }));
+        units = super.units.override {
+          th-desugar = self.th-desugar_1_6;
+        };
 
-  ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
-    enableLibraryProfiling    = false;
-    enableExecutableProfiling = false;
-  });
-  ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
-    enableLibraryProfiling    = false;
-    enableExecutableProfiling = false;
-  });
+        lens-family = self.callHackage "lens-family" "1.2.1" {};
+        lens-family-core = self.callHackage "lens-family-core" "1.2.1" {};
+      }));
 
-  Cabal = super.Cabal_1_24_2_0;
-  cabal-install =
-    self.callHackage "cabal-install" "1.24.0.2" { Cabal = Cabal; };
-  cabal-helper = super.cabal-helper.override {
-    cabal-install = cabal-install;
-    Cabal = Cabal;
+    ghc822 = overrideHask "ghc822" pkgs.haskell.packages.ghc822 (self: super: {
+      });
+
+    ghc842 = overrideHask "ghc842" pkgs.haskell.packages.ghc842 (self: super:
+      breakout super [
+        "compact"
+        "criterion"
+        "text-format"
+      ]);
   };
-
-  th-desugar_1_6 = self.callHackage "th-desugar" "1.6" {};
-  singletons = dontCheck (doJailbreak (self.callHackage "singletons" "2.2" {
-    th-desugar = th-desugar_1_6;
-  }));
-  units = super.units.override {
-    th-desugar = th-desugar_1_6;
-  };
-
-  # lens-family 1.2.2 requires GHC 8.2 or higher
-  lens-family = self.callHackage "lens-family" "1.2.1" {};
-  lens-family-core = self.callHackage "lens-family-core" "1.2.1" {};
-
-  haskell-ide-engine = (import (
-    pkgs.fetchFromGitHub {
-      owner = "domenkozar";
-      repo = "hie-nix";
-      rev = "dbb89939da8997cc6d863705387ce7783d8b6958";
-      sha256 = "1bcw59zwf788wg686p3qmcq03fr7bvgbcaa83vq8gvg231bgid4m";
-      # date = 2018-03-27T10:14:16+01:00;
-    }) {}).hie80;
-
-  recurseForDerivations = true;
 };
 
-haskellPackage_8_2_overrides = hpkgs: mypkgs: self: super:
-  with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
+haskellPackages_8_0 = self.haskell.packages.ghc802;
+haskellPackages_8_2 = self.haskell.packages.ghc822;
+haskellPackages_8_4 = self.haskell.packages.ghc842;
 
-  Agda                     = dontHaddock super.Agda;
-  # blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
-  cassava                  = doJailbreak super.cassava;
-  commodities              = doJailbreak mypkgs.commodities;
-  consistent               = dontCheck (doJailbreak mypkgs.consistent);
-  cryptohash-sha512        = doJailbreak super.cryptohash-sha512;
-  diagrams-builder         = doJailbreak super.diagrams-builder;
-  diagrams-cairo           = doJailbreak super.diagrams-cairo;
-  diagrams-contrib         = doJailbreak super.diagrams-contrib;
-  diagrams-core            = doJailbreak super.diagrams-core;
-  diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
-  diagrams-lib             = doJailbreak super.diagrams-lib;
-  diagrams-postscript      = doJailbreak super.diagrams-postscript;
-  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
-  diagrams-svg             = doJailbreak super.diagrams-svg;
-  github-backup            = doJailbreak super.github-backup;
-  heap                     = dontCheck super.heap;
-  indents                  = doJailbreak super.indents;
-  inline-c-cpp             = dontCheck super.inline-c-cpp;
-  linearscan-hoopl         = dontCheck mypkgs.linearscan-hoopl;
-  machinecell              = doJailbreak super.machinecell;
-  pipes-binary             = doJailbreak super.pipes-binary;
-  pipes-group              = doJailbreak super.pipes-group;
-  pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
-  pushme                   = doJailbreak mypkgs.pushme;
-  recursors                = doJailbreak super.recursors;
-  # super.runmany uses what is in Hackage; mypkgs.runmany uses local
-  runmany                  = doJailbreak super.runmany;
-  serialise                = dontCheck super.serialise;
-  stylish-haskell          = dontCheck super.stylish-haskell;
-  text-show                = dontCheck super.text-show;
-  time-recurrence          = doJailbreak super.time-recurrence;
-  timeparsers              = dontCheck (doJailbreak mypkgs.timeparsers);
+ghcDefaultVersion = "ghc822";
 
-  cabal-install =
-    self.callHackage "cabal-install" "2.0.0.1" { Cabal = Cabal; };
-  cabal-helper =
-    self.callCabal2nix "cabal-install" (pkgs.fetchFromGitHub {
-      owner  = "DanielG";
-      repo   = "cabal-helper";
-      rev    = "8648be0324c8f9e5f2904907ae5da3f867ea9f5a";
-      sha256 = "092c01q0hnp6kx8h6qw2b7n5bh82nmnlw75vl3a35hxqx4qr3wq9";
-      # date = 2018-04-30T14:30:23+02:00;
-    }) {
-      cabal-install = cabal-install;
-      Cabal = Cabal;
-    };
-
-  # exceptions = super.exceptions_0_10_0;
-
-  hdevtools     = super.hdevtools.override { Cabal = super.Cabal; };
-  hpc-coveralls = super.hpc-coveralls.override { Cabal = super.Cabal; };
-  scotty        = super.scotty.override { hpc-coveralls = hpc-coveralls; };
-  idris         = super.idris.override { Cabal = super.Cabal; };
-
-  ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
-    enableLibraryProfiling    = false;
-    enableExecutableProfiling = false;
-  });
-  ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
-    enableLibraryProfiling    = false;
-    enableExecutableProfiling = false;
-  });
-
-  haskell-ide-engine = (import (pkgs.fetchFromGitHub {
-    owner  = "domenkozar";
-    repo   = "hie-nix";
-    rev    = "dbb89939da8997cc6d863705387ce7783d8b6958";
-    sha256 = "1bcw59zwf788wg686p3qmcq03fr7bvgbcaa83vq8gvg231bgid4m";
-  }) {}).hie82;
-
-  recurseForDerivations = true;
-};
-
-haskellPackage_8_4_overrides = hpkgs: mypkgs: self: super:
-  with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
-
-  Agda                     = doJailbreak (dontHaddock super.Agda);
-  HUnit                    = dontCheck super.HUnit;
-  PSQueue                  = doJailbreak super.PSQueue;
-  active                   = doJailbreak super.active;
-  blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
-  cabal-helper             = doJailbreak super.cabal-helper;
-  circle-packing           = doJailbreak super.circle-packing;
-  commodities              = doJailbreak mypkgs.commodities;
-  compact                  = doJailbreak super.compact;
-  compressed               = doJailbreak super.compressed;
-  consistent               = doJailbreak (dontCheck mypkgs.consistent);
-  criterion                = doJailbreak super.criterion;
-  derive-storable          = dontCheck super.derive-storable;
-  diagrams-builder         = doJailbreak super.diagrams-builder;
-  diagrams-cairo           = doJailbreak super.diagrams-cairo;
-  diagrams-contrib         = doJailbreak super.diagrams-contrib;
-  diagrams-core            = doJailbreak super.diagrams-core;
-  diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
-  diagrams-lib             = doJailbreak super.diagrams-lib;
-  diagrams-postscript      = doJailbreak super.diagrams-postscript;
-  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
-  diagrams-solve           = doJailbreak super.diagrams-solve;
-  diagrams-svg             = doJailbreak super.diagrams-svg;
-  force-layout             = doJailbreak super.force-layout;
-  git-annex                = dontCheck super.git-annex;
-  hakyll                   = doJailbreak super.hakyll;
-  heap                     = dontCheck super.heap;
-  hint                     = doJailbreak super.hint;
-  hspec-smallcheck         = doJailbreak super.hspec-smallcheck;
-  inline-c-cpp             = dontCheck super.inline-c-cpp;
-  json-stream              = doJailbreak super.json-stream;
-  lattices                 = doJailbreak super.lattices;
-  machinecell              = doJailbreak super.machinecell;
-  monoid-extras            = doJailbreak super.monoid-extras;
-  pipes-binary             = doJailbreak super.pipes-binary;
-  pipes-group              = doJailbreak super.pipes-group;
-  pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
-  posix-paths              = doJailbreak super.posix-paths;
-  postgresql-simple        = doJailbreak super.postgresql-simple;
-  recursors                = doJailbreak super.recursors;
-  runmany                  = doJailbreak super.runmany;
-  serialise                = doJailbreak (dontCheck super.serialise);
-  servant-foreign          = doJailbreak super.servant-foreign;
-  shelly                   = dontCheck (doJailbreak super.shelly);
-  streaming-commons        = dontCheck super.streaming-commons;
-  svg-builder              = doJailbreak super.svg-builder;
-  tasty-hspec              = doJailbreak super.tasty-hspec;
-  testing-feat             = doJailbreak super.testing-feat;
-  text-format              = doJailbreak super.text-format;
-  text-icu                 = dontCheck super.text-icu;
-  text-show                = dontCheck (doJailbreak super.text-show);
-  these                    = doJailbreak super.these;
-  thyme                    = dontHaddock super.thyme;
-  time-recurrence          = doJailbreak super.time-recurrence;
-  timeparsers              = doJailbreak (dontCheck mypkgs.timeparsers);
-  turtle                   = doJailbreak super.turtle;
-  vector-sized             = doJailbreak super.vector-sized;
-  wl-pprint                = doJailbreak super.wl-pprint;
-
-  # These do not pass tests when profiling is enabled. Some of them complain
-  # about '.dyn_o' objects being missing, others just fail.
-  inspection-testing       = dontCheck super.inspection-testing;
-  th-abstraction           = dontCheck super.th-abstraction;
-  th-expand-syns           = dontCheck super.th-expand-syns;
-  th-lift                  = dontCheck super.th-lift;
-
-  ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
-    enableLibraryProfiling    = false;
-    enableExecutableProfiling = false;
-  });
-  ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
-    enableLibraryProfiling    = false;
-    enableExecutableProfiling = false;
-  });
-
-  hoopl = super.hoopl_3_10_2_2;
-
-  linearscan-hoopl = dontCheck super.linearscan-hoopl;
-
-  recurseForDerivations = true;
-};
-
-haskellPackage_HEAD_overrides = hpkgs: mypkgs: self: super:
-  with pkgs.haskell.lib; with super; let pkg = callPackage; in mypkgs // rec {
-
-  Agda                     = dontHaddock super.Agda;
-  blaze-builder-enumerator = doJailbreak super.blaze-builder-enumerator;
-  compressed               = doJailbreak super.compressed;
-  consistent               = doJailbreak (dontCheck mypkgs.consistent);
-  derive-storable          = dontCheck super.derive-storable;
-  diagrams-builder         = doJailbreak super.diagrams-builder;
-  diagrams-cairo           = doJailbreak super.diagrams-cairo;
-  diagrams-contrib         = doJailbreak super.diagrams-contrib;
-  diagrams-core            = doJailbreak super.diagrams-core;
-  diagrams-graphviz        = doJailbreak super.diagrams-graphviz;
-  diagrams-lib             = doJailbreak super.diagrams-lib;
-  diagrams-postscript      = doJailbreak super.diagrams-postscript;
-  diagrams-rasterific      = doJailbreak super.diagrams-rasterific;
-  diagrams-svg             = doJailbreak super.diagrams-svg;
-  hakyll                   = doJailbreak super.hakyll;
-  inline-c-cpp             = dontCheck super.inline-c-cpp;
-  lattices                 = doJailbreak super.lattices;
-  linearscan-hoopl         = dontCheck super.linearscan-hoopl;
-  pipes-binary             = doJailbreak super.pipes-binary;
-  pipes-zlib               = dontCheck (doJailbreak super.pipes-zlib);
-  posix-paths              = doJailbreak super.posix-paths;
-  recursors                = doJailbreak super.recursors;
-  serialise                = dontCheck super.serialise;
-  shelly                   = doJailbreak super.shelly;
-  text-icu                 = dontCheck super.text-icu;
-  these                    = doJailbreak super.these;
-  time-recurrence          = doJailbreak super.time-recurrence;
-  timeparsers              = doJailbreak (dontCheck mypkgs.timeparsers);
-
-  ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
-    enableLibraryProfiling    = false;
-    enableExecutableProfiling = false;
-  });
-  ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
-    enableLibraryProfiling    = false;
-    enableExecutableProfiling = false;
-  });
-};
-
-haskellPackages = haskellPackages_8_2;
-haskPkgs = haskellPackages;
-
-mkHaskellPackages = hpkgs: hoverrides: hpkgs.override {
-  overrides = self: super: hoverrides hpkgs (myHaskellPackageDefs super) self super;
-};
-
-haskellPackages_HEAD = mkHaskellPackages pkgs.haskell.packages.ghcHEAD
-  haskellPackage_HEAD_overrides;
-haskellPackages_8_4 = mkHaskellPackages pkgs.haskell.packages.ghc842
-  haskellPackage_8_4_overrides;
-haskellPackages_8_2 = mkHaskellPackages pkgs.haskell.packages.ghc822
-  haskellPackage_8_2_overrides;
-haskellPackages_8_0 = mkHaskellPackages pkgs.haskell.packages.ghc802
-  haskellPackage_8_0_overrides;
-
-ghcHEADEnv = myPkgs: pkgs.myEnvFun {
-  name = "ghcHEAD";
-  buildInputs = with pkgs.haskell.lib; with haskellPackages_HEAD; [
-    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
-       compact
-     ])))
-  ];
-};
+haskellPackages = self.haskellPackages_8_2;
+haskPkgs = self.haskellPackages;
 
 ghc84Env = myPkgs: pkgs.myEnvFun {
   name = "ghc84";
-  buildInputs = with pkgs.haskell.lib; with haskellPackages_8_4; [
-    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
+  buildInputs = with self.haskellPackages_8_4; [
+    (ghcWithHoogle (pkgs: with pkgs; myPkgs pkgs ++ [
        compact
-     ])))
+     ]))
   ];
 };
 
 ghc82Env = myPkgs: pkgs.myEnvFun {
   name = "ghc82";
-  buildInputs = with pkgs.haskell.lib; with haskellPackages_8_2; [
-    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
+  buildInputs = with self.haskellPackages_8_2; [
+    (ghcWithHoogle (pkgs: with pkgs; myPkgs pkgs ++ [
        compact
-     ])))
+     ]))
+
     Agda
     idris
-    haskell-ide-engine
-    hdevtools
     lambdabot
-    hlint
     alex
     happy
   ];
@@ -493,16 +258,13 @@ ghc82Env = myPkgs: pkgs.myEnvFun {
 
 ghc80Env = myPkgs: pkgs.myEnvFun {
   name = "ghc80";
-  buildInputs = with pkgs.haskell.lib; with haskellPackages_8_0; [
-    (ghcWithHoogle (pkgs: myPkgs pkgs ++ (with pkgs; [
+  buildInputs = with self.haskellPackages_8_0; [
+    (ghcWithHoogle (pkgs: with pkgs; myPkgs pkgs ++ [
        singletons
        units
-     ])))
+     ]))
 
     splot
-    haskell-ide-engine
-    hdevtools
-    cabal-helper
   ];
 };
 

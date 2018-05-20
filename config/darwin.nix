@@ -136,6 +136,7 @@ EOF
   nixpkgs = {
     config = {
       allowUnfree = true;
+      allowUnsupportedSystems = true;
       # allowBroken = true;
     };
 

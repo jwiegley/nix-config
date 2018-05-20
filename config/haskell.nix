@@ -54,7 +54,6 @@ pkgs: version: hpkgs: with hpkgs;
   cond
   configurator
   connection
-  consistent
   constraints
   containers
   contravariant
@@ -100,7 +99,6 @@ pkgs: version: hpkgs: with hpkgs;
   free-vl
   freer-simple
   fsnotify
-  fuzzcheck
   generic-lens
   generic-random
   ghc
@@ -139,7 +137,6 @@ pkgs: version: hpkgs: with hpkgs;
   io-memoize
   io-storage
   io-streams
-  ipcvar
   json
   json-stream
   kan-extensions
