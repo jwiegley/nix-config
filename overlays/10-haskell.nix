@@ -122,6 +122,8 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
      || pkgs.stdenv.lib.hasSuffix ".hi" path
      || pkgs.stdenv.lib.hasSuffix ".hi-boot" path
      || pkgs.stdenv.lib.hasSuffix ".o" path
+     || pkgs.stdenv.lib.hasSuffix ".dyn_o" path
+     || pkgs.stdenv.lib.hasSuffix ".dyn_p" path
      || pkgs.stdenv.lib.hasSuffix ".o-boot" path
      || pkgs.stdenv.lib.hasSuffix ".p_o" path)) src;
 

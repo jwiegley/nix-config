@@ -13,6 +13,35 @@ let
 
 in {
 
+coqFilterSource = paths: src: builtins.filterSource (path: type:
+  let baseName = baseNameOf path; in
+  !( type == "directory"
+     && builtins.elem baseName ([".git"] ++ paths))
+  &&
+  !( type == "unknown"
+     || baseName == ".coq-version"
+     || baseName == "CoqMakefile.conf"
+     || baseName == "Makefile.coq"
+     || baseName == "Makefile.coq-old.conf"
+     || baseName == "result"
+     || pkgs.stdenv.lib.hasSuffix ".a" path
+     || pkgs.stdenv.lib.hasSuffix ".o" path
+     || pkgs.stdenv.lib.hasSuffix ".cmi" path
+     || pkgs.stdenv.lib.hasSuffix ".cmo" path
+     || pkgs.stdenv.lib.hasSuffix ".cmx" path
+     || pkgs.stdenv.lib.hasSuffix ".cmxa" path
+     || pkgs.stdenv.lib.hasSuffix ".cmxs" path
+     || pkgs.stdenv.lib.hasSuffix ".ml" path
+     || pkgs.stdenv.lib.hasSuffix ".mli" path
+     || pkgs.stdenv.lib.hasSuffix ".ml.d" path
+     || pkgs.stdenv.lib.hasSuffix ".ml4" path
+     || pkgs.stdenv.lib.hasSuffix ".ml4.d" path
+     || pkgs.stdenv.lib.hasSuffix ".mllib.d" path
+     || pkgs.stdenv.lib.hasSuffix ".aux" path
+     || pkgs.stdenv.lib.hasSuffix ".glob" path
+     || pkgs.stdenv.lib.hasSuffix ".v.d" path
+     || pkgs.stdenv.lib.hasSuffix ".vo" path)) src;
+
 coq_8_8_override = pkgs.coq_8_8.override {
   ocamlPackages = self.ocaml-ng.ocamlPackages_4_06;
   buildIde = true;
