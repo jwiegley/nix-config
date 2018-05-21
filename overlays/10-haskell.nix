@@ -44,6 +44,11 @@ let
     z3 = if ghc == "ghc842"
          then null else pkg ~/bae/concerto/solver/lib/z3;
 
+    rings-dashboard = pkg ~/bae/micromht-deliverable/rings-dashboard;
+    rings-dashboard-api =
+      pkg ~/bae/micromht-deliverable/rings-dashboard/rings-dashboard-api;
+    harness = pkg ~/bae/micromht-deliverable/rings-dashboard/mitll-harness;
+
     Agda = dontHaddock super.Agda;
 
     diagrams-contrib  = doJailbreak super.diagrams-contrib;
@@ -129,22 +134,18 @@ haskellFilterSource = paths: src: builtins.filterSource (path: type:
 
 dirLocals = root:
   let
-    inherit (self) lib nixBufferBuilders
-      haskell haskellPackages_8_2 packageDeps
-      coq_8_7 coqPackages_8_7;
-
     cabal-found =
-      lib.filesystem.locateDominatingFile "([^.].*)\\.cabal" root;
+      pkgs.lib.filesystem.locateDominatingFile "([^.].*)\\.cabal" root;
 
-    coq = coq_8_7;
-    coqPackages = coqPackages_8_7;
+    coq = self.coq_8_7;
+    coqPackages = self.coqPackages_8_7;
 
   in if cabal-found != null
-     then nixBufferBuilders.withPackages
-            [ (packageDeps cabal-found.path) ]
+     then self.nixBufferBuilders.withPackages
+            [ (self.packageDeps cabal-found.path) ]
      else
-     if lib.filesystem.locateDominatingFile "_CoqProject" root != null
-     then nixBufferBuilders.withPackages
+     if pkgs.lib.filesystem.locateDominatingFile "_CoqProject" root != null
+     then self.nixBufferBuilders.withPackages
             [ coq coqPackages.equations coqPackages.fiat_HEAD
               coqPackages.mathcomp coqPackages.ssreflect ]
      else {};
