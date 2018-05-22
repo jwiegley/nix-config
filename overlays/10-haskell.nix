@@ -157,27 +157,27 @@ dirLocals = root:
            coqPackages.mathcomp coqPackages.ssreflect ]
   else {};
 
+packageDrv = path: filtered (
+  if builtins.pathExists (path + ("/default.nix"))
+  then import path { returnShellEnv = false; }
+  else
+    let ghc = self.ghcDefaultVersion;
+        hpkgs = self.haskell.packages.${ghc};
+    in hpkgs.callCabal2nix (builtins.baseNameOf path) path {});
+
 packageDeps = path:
   let
-    haveDefault = builtins.pathExists (path + ("/default.nix"));
-
-    ghc = self.ghcDefaultVersion;
-    hpkgs = self.haskell.packages.${ghc};
-    package = filtered (
-      if haveDefault
-      then import path { returnShellEnv = false; }
-      else hpkgs.callCabal2nix (builtins.baseNameOf path) path {});
-
+    package  = self.packageDrv path;
     compiler = package.compiler;
     packages = self.haskell.lib.getHaskellBuildInputs package;
 
-    cabalInstallVersion = {
+    ghc = self.ghcDefaultVersion;
+
+    cabalInstall = {
       ghc802 = "1.24.0.2";
       ghc822 = "2.0.0.1";
       ghc842 = "2.2.0.0";
     };
-
-    # hoogleExpr = <nixpkgs/pkgs/development/haskell-modules/hoogle.nix>;
 
     # hie-nix = import (pkgs.fetchFromGitHub {
     #   owner  = "domenkozar";
@@ -193,10 +193,9 @@ packageDeps = path:
     #   ghc842 = throw "HIE not supported on GHC 8.4.2 yet";
     # };
 
-  in compiler.withPackages (p: with p;
-       # let hoogle = callPackage hoogleExpr { inherit packages; }; in
-       [ hpack criterion hdevtools # hie.${ghc} hoogle
-         (callHackage "cabal-install" cabalInstallVersion.${ghc} {})
+  in compiler.withHoogle (p: with p;
+       [ hpack criterion hdevtools # hie.${ghc}
+         (callHackage "cabal-install" cabalInstall.${ghc} {})
        ] ++ packages);
 
 haskell = pkgs.haskell // {

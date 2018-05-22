@@ -18,7 +18,7 @@ if [[ "$PWD" = "/" ]]; then
 fi
 
 if [[ -f default.nix ]]; then
-    exec nix-shell "$@"
+    exec nix-build "$@"
 else
-    exec nix-shell -p "(${NIXPKGS}).pkgs.packageDeps $PWD" "$@"
+    exec nix-build -E "(${NIXPKGS}).pkgs.packageDrv $PWD" "$@"
 fi
