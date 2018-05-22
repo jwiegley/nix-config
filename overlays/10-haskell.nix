@@ -80,10 +80,7 @@ let
     time-recurrence = doJailbreak super.time-recurrence;
   };
 
-  filtered = drv: drv // { inherit (self.haskellFilterSource [] drv) src; };
-
-  # This is a function taking self: super: arguments.
-  mkHaskellPackages = ghc: self: super:
+  myHaskellPackages = ghc:
     let fromSrc = arg:
       let
         name = if builtins.isList arg
@@ -92,22 +89,17 @@ let
         args = if builtins.isList arg
                then builtins.elemAt arg 1
                else {};
-        path = ~/src + "/${name}";
-        base = builtins.baseNameOf name;
       in {
-        name = base;
-        value = filtered (
-          (if builtins.pathExists (path + "/default.nix")
-           then self.callPackage else self.callCabal2nix "${base}")
-            path ({ inherit pkgs;
-                    compiler = ghc;
-                    returnShellEnv = false; } // args));
+        name  = builtins.baseNameOf name;
+        value = self.packageDrv ghc (~/src + "/${name}") args;
       };
     in builtins.listToAttrs (builtins.map fromSrc srcs);
 
   overrideHask = ghc: hpkgs: hoverrides: hpkgs.override {
-    overrides = pkgs.lib.composeExtensions (otherHackagePackages ghc)
-      (pkgs.lib.composeExtensions hoverrides (mkHaskellPackages ghc)) ;
+    overrides =
+      pkgs.lib.composeExtensions
+        (pkgs.lib.composeExtensions (otherHackagePackages ghc) hoverrides)
+        (self: super: myHaskellPackages ghc);
   };
 
   breakout = super: names:
@@ -115,6 +107,8 @@ let
       (builtins.map (x: { name  = x;
                           value = pkgs.haskell.lib.doJailbreak super.${x}; })
                     names);
+
+  filtered = drv: drv // { src = self.haskellFilterSource [] drv.src; };
 
 in {
 
@@ -139,35 +133,20 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
        || pkgs.stdenv.lib.hasSuffix ".p_o" path);
 };
 
-dirLocals = root:
+packageDrv = ghc: path: args:
   let
-    cabal-found =
-      pkgs.lib.filesystem.locateDominatingFile "([^.].*)\\.cabal" root;
-
-    coq = self.coq_8_7;
-    coqPackages = self.coqPackages_8_7; in
-
-  if cabal-found != null
-  then self.nixBufferBuilders.withPackages
-         [ (self.packageDeps cabal-found.path) ]
-  else
-  if pkgs.lib.filesystem.locateDominatingFile "_CoqProject" root != null
-  then self.nixBufferBuilders.withPackages
-         [ coq coqPackages.equations coqPackages.fiat_HEAD
-           coqPackages.mathcomp coqPackages.ssreflect ]
-  else {};
-
-packageDrv = path: filtered (
-  if builtins.pathExists (path + ("/default.nix"))
-  then import path { returnShellEnv = false; }
-  else
-    let ghc = self.ghcDefaultVersion;
-        hpkgs = self.haskell.packages.${ghc};
-    in hpkgs.callCabal2nix (builtins.baseNameOf path) path {});
+    ghcVer = if ghc == null then self.ghcDefaultVersion else ghc;
+    hpkgs  = self.haskell.packages.${ghcVer}; in
+  filtered (
+    if builtins.pathExists (path + ("/default.nix"))
+    then hpkgs.callPackage path ({ pkgs = self;
+                                   compiler = ghcVer;
+                                   returnShellEnv = false; } // args)
+    else hpkgs.callCabal2nix (builtins.baseNameOf path) path args);
 
 packageDeps = path:
   let
-    package  = self.packageDrv path;
+    package  = self.packageDrv null path {};
     compiler = package.compiler;
     packages = self.haskell.lib.getHaskellBuildInputs package;
 
@@ -197,6 +176,24 @@ packageDeps = path:
        [ hpack criterion hdevtools # hie.${ghc}
          (callHackage "cabal-install" cabalInstall.${ghc} {})
        ] ++ packages);
+
+dirLocals = root:
+  let
+    cabal-found =
+      pkgs.lib.filesystem.locateDominatingFile "([^.].*)\\.cabal" root;
+
+    coq = self.coq_8_7;
+    coqPackages = self.coqPackages_8_7; in
+
+  if cabal-found != null
+  then self.nixBufferBuilders.withPackages
+         [ (self.packageDeps cabal-found.path) ]
+  else
+  if pkgs.lib.filesystem.locateDominatingFile "_CoqProject" root != null
+  then self.nixBufferBuilders.withPackages
+         [ coq coqPackages.equations coqPackages.fiat_HEAD
+           coqPackages.mathcomp coqPackages.ssreflect ]
+  else {};
 
 haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // {

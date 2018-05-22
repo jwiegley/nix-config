@@ -1,0 +1,35 @@
+#!/bin/bash -e
+
+set -eo pipefail
+IFS=$'\n\t'
+
+function finish {
+    if [[ -f default.nix.bak ]]; then
+        mv default.nix.bak default.nix
+    fi
+}
+
+if [[ -z "$1" && -f default.nix ]]; then
+    trap finish EXIT INT TERM ERR
+    mv default.nix default.nix.bak
+fi
+
+function realize {
+    build -Q -j4
+    shell -Q -j4 --command true
+
+    if [[ -z "$1" ]]; then
+        nix build --keep-going darwin.system
+        nix build --keep-going darwin.pkgs.ghc82Env
+    fi
+}
+
+realize
+nix-build -Q -j4 -E "((import <darwin> {}).pkgs.dirLocals $PWD)"
+
+if [[ -z "$1" ]]; then
+    finish
+    if [[ -f default.nix ]]; then
+        realize
+    fi
+fi

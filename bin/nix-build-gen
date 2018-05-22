@@ -20,5 +20,5 @@ fi
 if [[ -f default.nix ]]; then
     exec nix-build "$@"
 else
-    exec nix-build -E "(${NIXPKGS}).pkgs.packageDrv $PWD" "$@"
+    exec nix-build -E "(${NIXPKGS}).pkgs.packageDrv null $PWD {}" "$@"
 fi

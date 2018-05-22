@@ -78,19 +78,11 @@ home-build:
 
 shells:
 	-find ~/bae/ ~/src/ -name .hdevtools.sock -delete
-	for i in $(PROJS); do						\
-	    cd $(HOME)/$$i;						\
-	    echo "Building shell for $$i" &&				\
-	    shell -k -Q -j4 --command true &&				\
-	    rm -f result &&						\
-	    echo "Building locals for $$i" &&				\
-	    if [[ -f dir-locals.nix ]]; then				\
-	        nix-build -k -Q -j4 dir-locals.nix;			\
-	    else							\
-	        nix-build -k -Q -j4					\
-	            -E "((import <darwin> {}).pkgs.dirLocals $$PWD)";	\
-	    fi &&							\
-	    rm -f result;						\
+	for i in $(PROJS); do				\
+	    cd $(HOME)/$$i;				\
+	    echo Pre-building shell env for $$i;	\
+	    testit --make;				\
+	    rm -f result;				\
 	done
 
 env-all:
