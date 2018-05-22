@@ -3,8 +3,26 @@ CACHE  = /Volumes/slim/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
 
 PROJS = src/async-pool							\
+	src/bindings-DSL						\
+	src/c2hsc							\
 	src/category-theory						\
+	src/git-all							\
+	src/hierarchy							\
 	src/hnix							\
+	src/hours							\
+	src/logging							\
+	src/monad-extras						\
+	src/numbers							\
+	src/parsec-free							\
+	src/pipes-async							\
+	src/pipes-files							\
+	src/pushme							\
+	src/recursors							\
+	src/runmany							\
+	src/sitebuilder							\
+	src/sizes							\
+	src/una								\
+	src/z3-generate-api						\
 									\
 	bae/micromht-fiat-deliverable/atif-fiat				\
 	bae/micromht-fiat-deliverable/atif-fiat/stanag4607		\
@@ -141,11 +159,12 @@ cache:
 	       -name '*.tar' \) -print0			\
 	    | parallel -0 nix copy --to file://$(CACHE))
 
+# find $(HOME)				\
+#     \( -name dist -type d -o		\
+#        -name result -type l \) -print0	\
+#     | parallel -0 /bin/rm -fr {}
+
 gc:
-	find $(HOME)				\
-	    \( -name dist -type d -o		\
-	       -name result -type l \) -print0	\
-	    | parallel -0 /bin/rm -fr {}
 	nix-collect-garbage --delete-older-than 14d
 
 gc-all: gc

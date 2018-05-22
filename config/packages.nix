@@ -27,6 +27,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gitAndTools.tig
   gitAndTools.git-annex
   gitAndTools.git-annex-remote-rclone
+  gitAndTools.git-secret
   (exe haskPkgs.github-backup)
   gitstats
   pass-git-helper
