@@ -3,44 +3,53 @@ self: pkgs:
 let
   extendAttrs = base: f: with pkgs; lib.fix (lib.extends f (self: base));
 
+  filtered = drv: drv // { inherit (self.coqFilterSource [] drv) src; };
+
+  coqPackage = self: path:
+    let drv = self.callPackage path {}; in
+    if builtins.pathExists (path + "/default.nix")
+    then filtered drv
+    else drv;
+
   myCoqPackages = self: super:
-    let pkg = self.callPackage; in {
-      QuickChick      = pkg ./coq/QuickChick.nix { inherit (self) coq ssreflect; };
-      fiat_HEAD       = pkg ./coq/fiat.nix { inherit (self) coq; };
-      coq-haskell     = pkg ./coq/coq-haskell.nix { inherit (self) coq ssreflect; };
-      category-theory = pkg ./coq/category-theory.nix { inherit (self) coq equations; };
+    let pkg = coqPackage self; in {
+      QuickChick      = pkg ./coq/QuickChick.nix;
+      fiat_HEAD       = pkg ./coq/fiat.nix;
+      coq-haskell     = pkg ./coq/coq-haskell.nix;
+      category-theory = pkg ./coq/category-theory.nix;
     };
 
 in {
 
-coqFilterSource = paths: src: builtins.filterSource (path: type:
-  let baseName = baseNameOf path; in
-  !( type == "directory"
-     && builtins.elem baseName ([".git"] ++ paths))
-  &&
-  !( type == "unknown"
-     || baseName == ".coq-version"
-     || baseName == "CoqMakefile.conf"
-     || baseName == "Makefile.coq"
-     || baseName == "Makefile.coq-old.conf"
-     || baseName == "result"
-     || pkgs.stdenv.lib.hasSuffix ".a" path
-     || pkgs.stdenv.lib.hasSuffix ".o" path
-     || pkgs.stdenv.lib.hasSuffix ".cmi" path
-     || pkgs.stdenv.lib.hasSuffix ".cmo" path
-     || pkgs.stdenv.lib.hasSuffix ".cmx" path
-     || pkgs.stdenv.lib.hasSuffix ".cmxa" path
-     || pkgs.stdenv.lib.hasSuffix ".cmxs" path
-     || pkgs.stdenv.lib.hasSuffix ".ml" path
-     || pkgs.stdenv.lib.hasSuffix ".mli" path
-     || pkgs.stdenv.lib.hasSuffix ".ml.d" path
-     || pkgs.stdenv.lib.hasSuffix ".ml4" path
-     || pkgs.stdenv.lib.hasSuffix ".ml4.d" path
-     || pkgs.stdenv.lib.hasSuffix ".mllib.d" path
-     || pkgs.stdenv.lib.hasSuffix ".aux" path
-     || pkgs.stdenv.lib.hasSuffix ".glob" path
-     || pkgs.stdenv.lib.hasSuffix ".v.d" path
-     || pkgs.stdenv.lib.hasSuffix ".vo" path)) src;
+coqFilterSource = paths: src: pkgs.lib.cleanSourceWith {
+  inherit src;
+  filter = path: type:
+    let baseName = baseNameOf path; in
+    !( type == "directory"
+       && builtins.elem baseName ([".git"] ++ paths))
+    &&
+    !( type == "unknown"
+       || baseName == ".coq-version"
+       || baseName == "CoqMakefile.conf"
+       || baseName == "Makefile.coq"
+       || baseName == "Makefile.coq-old.conf"
+       || baseName == "result"
+       || pkgs.stdenv.lib.hasSuffix ".a" path
+       || pkgs.stdenv.lib.hasSuffix ".o" path
+       || pkgs.stdenv.lib.hasSuffix ".cmi" path
+       || pkgs.stdenv.lib.hasSuffix ".cmo" path
+       || pkgs.stdenv.lib.hasSuffix ".cmx" path
+       || pkgs.stdenv.lib.hasSuffix ".cmxa" path
+       || pkgs.stdenv.lib.hasSuffix ".cmxs" path
+       || pkgs.stdenv.lib.hasSuffix ".ml.d" path
+       || pkgs.stdenv.lib.hasSuffix ".ml4" path
+       || pkgs.stdenv.lib.hasSuffix ".ml4.d" path
+       || pkgs.stdenv.lib.hasSuffix ".mllib.d" path
+       || pkgs.stdenv.lib.hasSuffix ".aux" path
+       || pkgs.stdenv.lib.hasSuffix ".glob" path
+       || pkgs.stdenv.lib.hasSuffix ".v.d" path
+       || pkgs.stdenv.lib.hasSuffix ".vo" path);
+};
 
 coq_8_8_override = pkgs.coq_8_8.override {
   ocamlPackages = self.ocaml-ng.ocamlPackages_4_06;
@@ -78,17 +87,17 @@ coq_HEAD = with pkgs; stdenv.lib.overrideDerivation self.coq_8_8_override (attrs
 
 coqPackages_HEAD = extendAttrs (self.mkCoqPackages self.coq_HEAD)
   (pkgs.lib.composeExtensions
-     (self: super: let pkg = self.callPackage; in {
+     (self: super: let pkg = coqPackage self; in {
         ssreflect = null;
-        equations = pkg ./coq/equations.nix { inherit (self) coq; };
+        equations = pkg ./coq/equations.nix;
       })
      myCoqPackages);
 
 coqPackages_8_8 = extendAttrs (self.mkCoqPackages self.coq_8_8)
   (pkgs.lib.composeExtensions
-     (self: super: let pkg = self.callPackage; in {
+     (self: super: let pkg = coqPackage self; in {
         ssreflect = null;
-        equations = pkg ./coq/equations.nix { inherit (self) coq; };
+        equations = pkg ./coq/equations.nix;
       })
      myCoqPackages);
 

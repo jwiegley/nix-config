@@ -80,6 +80,8 @@ let
     time-recurrence = doJailbreak super.time-recurrence;
   };
 
+  filtered = drv: drv // { inherit (self.haskellFilterSource [] drv) src; };
+
   # This is a function taking self: super: arguments.
   mkHaskellPackages = ghc: self: super:
     let fromSrc = arg:
@@ -94,12 +96,12 @@ let
         base = builtins.baseNameOf name;
       in {
         name = base;
-        value =
+        value = filtered (
           (if builtins.pathExists (path + "/default.nix")
            then self.callPackage else self.callCabal2nix "${base}")
-            path ({ pkgs = pkgs;
+            path ({ inherit pkgs;
                     compiler = ghc;
-                    returnShellEnv = false; } // args);
+                    returnShellEnv = false; } // args));
       };
     in builtins.listToAttrs (builtins.map fromSrc srcs);
 
@@ -116,21 +118,26 @@ let
 
 in {
 
-haskellFilterSource = paths: src: builtins.filterSource (path: type:
-  let baseName = baseNameOf path; in
-  !( type == "directory"
-     && builtins.elem baseName ([".git" ".cabal-sandbox" "dist"] ++ paths))
-  &&
-  !( type == "unknown"
-     || pkgs.stdenv.lib.hasSuffix ".hdevtools.sock" path
-     || pkgs.stdenv.lib.hasSuffix ".sock" path
-     || pkgs.stdenv.lib.hasSuffix ".hi" path
-     || pkgs.stdenv.lib.hasSuffix ".hi-boot" path
-     || pkgs.stdenv.lib.hasSuffix ".o" path
-     || pkgs.stdenv.lib.hasSuffix ".dyn_o" path
-     || pkgs.stdenv.lib.hasSuffix ".dyn_p" path
-     || pkgs.stdenv.lib.hasSuffix ".o-boot" path
-     || pkgs.stdenv.lib.hasSuffix ".p_o" path)) src;
+haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
+  inherit src;
+  filter = path: type:
+    let baseName = baseNameOf path; in
+    !( type == "directory"
+       && builtins.elem baseName ([".git" ".cabal-sandbox" "dist"] ++ paths))
+    &&
+    !( type == "unknown"
+       || baseName == "cabal.sandbox.config"
+       || baseName == "result"
+       || pkgs.stdenv.lib.hasSuffix ".hdevtools.sock" path
+       || pkgs.stdenv.lib.hasSuffix ".sock" path
+       || pkgs.stdenv.lib.hasSuffix ".hi" path
+       || pkgs.stdenv.lib.hasSuffix ".hi-boot" path
+       || pkgs.stdenv.lib.hasSuffix ".o" path
+       || pkgs.stdenv.lib.hasSuffix ".dyn_o" path
+       || pkgs.stdenv.lib.hasSuffix ".dyn_p" path
+       || pkgs.stdenv.lib.hasSuffix ".o-boot" path
+       || pkgs.stdenv.lib.hasSuffix ".p_o" path);
+};
 
 dirLocals = root:
   let
@@ -138,17 +145,17 @@ dirLocals = root:
       pkgs.lib.filesystem.locateDominatingFile "([^.].*)\\.cabal" root;
 
     coq = self.coq_8_7;
-    coqPackages = self.coqPackages_8_7;
+    coqPackages = self.coqPackages_8_7; in
 
-  in if cabal-found != null
-     then self.nixBufferBuilders.withPackages
-            [ (self.packageDeps cabal-found.path) ]
-     else
-     if pkgs.lib.filesystem.locateDominatingFile "_CoqProject" root != null
-     then self.nixBufferBuilders.withPackages
-            [ coq coqPackages.equations coqPackages.fiat_HEAD
-              coqPackages.mathcomp coqPackages.ssreflect ]
-     else {};
+  if cabal-found != null
+  then self.nixBufferBuilders.withPackages
+         [ (self.packageDeps cabal-found.path) ]
+  else
+  if pkgs.lib.filesystem.locateDominatingFile "_CoqProject" root != null
+  then self.nixBufferBuilders.withPackages
+         [ coq coqPackages.equations coqPackages.fiat_HEAD
+           coqPackages.mathcomp coqPackages.ssreflect ]
+  else {};
 
 packageDeps = path:
   let
@@ -156,10 +163,10 @@ packageDeps = path:
 
     ghc = self.ghcDefaultVersion;
     hpkgs = self.haskell.packages.${ghc};
-    package =
+    package = filtered (
       if haveDefault
       then import path { returnShellEnv = false; }
-      else hpkgs.callCabal2nix (builtins.baseNameOf path) path {};
+      else hpkgs.callCabal2nix (builtins.baseNameOf path) path {});
 
     compiler = package.compiler;
     packages = self.haskell.lib.getHaskellBuildInputs package;

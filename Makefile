@@ -82,13 +82,15 @@ shells:
 	    cd $(HOME)/$$i;						\
 	    echo "Building shell for $$i" &&				\
 	    shell -k -Q -j4 --command true &&				\
+	    rm -f result &&						\
 	    echo "Building locals for $$i" &&				\
 	    if [[ -f dir-locals.nix ]]; then				\
 	        nix-build -k -Q -j4 dir-locals.nix;			\
 	    else							\
 	        nix-build -k -Q -j4					\
 	            -E "((import <darwin> {}).pkgs.dirLocals $$PWD)";	\
-	    fi;								\
+	    fi &&							\
+	    rm -f result;						\
 	done
 
 env-all:
