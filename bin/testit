@@ -9,7 +9,9 @@ function finish {
     fi
 }
 
-if [[ -z "$1" && -f default.nix ]]; then
+ARGS="$1"
+
+if [[ -z "$ARGS" && -f default.nix ]]; then
     trap finish EXIT INT TERM ERR
     mv default.nix default.nix.bak
 fi
@@ -18,7 +20,7 @@ function realize {
     build -Q -j4
     shell -Q -j4 --command true
 
-    if [[ -z "$1" ]]; then
+    if [[ -z "$ARGS" ]]; then
         nix build --keep-going darwin.system
         nix build --keep-going darwin.pkgs.ghc82Env
     fi
@@ -27,7 +29,7 @@ function realize {
 realize
 nix-build -Q -j4 -E "((import <darwin> {}).pkgs.dirLocals $PWD)"
 
-if [[ -z "$1" ]]; then
+if [[ -z "$ARGS" ]]; then
     finish
     if [[ -f default.nix ]]; then
         realize
