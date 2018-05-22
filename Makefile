@@ -5,7 +5,6 @@ ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
 PROJS = src/async-pool							\
 	src/bindings-DSL						\
 	src/c2hsc							\
-	src/category-theory						\
 	src/git-all							\
 	src/hierarchy							\
 	src/hnix							\

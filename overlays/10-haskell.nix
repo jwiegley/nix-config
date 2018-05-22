@@ -139,9 +139,12 @@ packageDrv = ghc: path: args:
     hpkgs  = self.haskell.packages.${ghcVer}; in
   filtered (
     if builtins.pathExists (path + ("/default.nix"))
-    then hpkgs.callPackage path ({ pkgs = self;
-                                   compiler = ghcVer;
-                                   returnShellEnv = false; } // args)
+    then (if ghc == null
+          then import
+          else hpkgs.callPackage)
+           path ({ pkgs = self;
+                   compiler = ghcVer;
+                   returnShellEnv = false; } // args)
     else hpkgs.callCabal2nix (builtins.baseNameOf path) path args);
 
 packageDeps = path:
