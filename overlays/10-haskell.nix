@@ -38,19 +38,18 @@ let
   ];
 
   otherHackagePackages = ghc: self: super:
-    let pkg = p: self.callPackage p { pkgs = pkgs; compiler = ghc; }; in
-    with pkgs.haskell.lib; {
+    let pkg = p: self.packageDrv ghc p {}; in with pkgs.haskell.lib; {
 
     z3 = if ghc == "ghc842"
-         then null else pkg ~/bae/concerto/solver/lib/z3;
+         then null
+         else pkg ~/bae/concerto/solver/lib/z3;
 
     rings-dashboard = pkg ~/bae/micromht-deliverable/rings-dashboard;
     rings-dashboard-api =
       pkg ~/bae/micromht-deliverable/rings-dashboard/rings-dashboard-api;
     harness = pkg ~/bae/micromht-deliverable/rings-dashboard/mitll-harness;
 
-    Agda = dontHaddock super.Agda;
-
+    Agda              = dontHaddock super.Agda;
     diagrams-contrib  = doJailbreak super.diagrams-contrib;
     diagrams-graphviz = doJailbreak super.diagrams-graphviz;
     diagrams-svg      = doJailbreak super.diagrams-svg;
@@ -58,15 +57,7 @@ let
     pipes-binary      = doJailbreak super.pipes-binary;
     pipes-zlib        = dontCheck (doJailbreak super.pipes-zlib);
     text-show         = dontCheck (doJailbreak super.text-show);
-
-    ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
-    ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
+    time-recurrence   = doJailbreak super.time-recurrence;
 
     timeparsers = dontCheck (doJailbreak
       (self.callCabal2nix "timeparsers" (pkgs.fetchFromGitHub {
@@ -77,29 +68,31 @@ let
         # date = 2017-01-19T16:47:50-08:00;
       }) {}));
 
-    time-recurrence = doJailbreak super.time-recurrence;
+    ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
+    });
+    ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
+      enableLibraryProfiling    = false;
+      enableExecutableProfiling = false;
+    });
   };
 
   myHaskellPackages = ghc:
     let fromSrc = arg:
       let
-        name = if builtins.isList arg
-               then builtins.elemAt arg 0
-               else arg;
-        args = if builtins.isList arg
-               then builtins.elemAt arg 1
-               else {};
+        path = if builtins.isList arg then builtins.elemAt arg 0 else arg;
+        args = if builtins.isList arg then builtins.elemAt arg 1 else {};
       in {
-        name  = builtins.baseNameOf name;
-        value = self.packageDrv ghc (~/src + "/${name}") args;
+        name  = builtins.baseNameOf path;
+        value = self.packageDrv ghc (~/src + "/${path}") args;
       };
     in builtins.listToAttrs (builtins.map fromSrc srcs);
 
   overrideHask = ghc: hpkgs: hoverrides: hpkgs.override {
-    overrides =
-      pkgs.lib.composeExtensions
-        (pkgs.lib.composeExtensions (otherHackagePackages ghc) hoverrides)
-        (self: super: myHaskellPackages ghc);
+    overrides = pkgs.lib.composeExtensions
+      (pkgs.lib.composeExtensions (otherHackagePackages ghc) hoverrides)
+      (self: super: myHaskellPackages ghc);
   };
 
   breakout = super: names:
@@ -152,10 +145,8 @@ packageDeps = path:
     package  = self.packageDrv null path {};
     compiler = package.compiler;
     packages = self.haskell.lib.getHaskellBuildInputs package;
-
-    ghc = self.ghcDefaultVersion;
-
-    cabalInstall = {
+    ghc      = self.ghcDefaultVersion;
+    cabal    = {
       ghc802 = "1.24.0.2";
       ghc822 = "2.0.0.1";
       ghc842 = "2.2.0.0";
@@ -177,7 +168,7 @@ packageDeps = path:
 
   in compiler.withHoogle (p: with p;
        [ hpack criterion hdevtools # hie.${ghc}
-         (callHackage "cabal-install" cabalInstall.${ghc} {})
+         (callHackage "cabal-install" cabal.${ghc} {})
        ] ++ packages);
 
 dirLocals = root:
