@@ -86,6 +86,7 @@ shells:
 
 env-all:
 	for i in $(ENVS); do \
+	    echo Updating $$i; \
 	    nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ; \
 	done
 	@echo "Nix generation:    $$(nix-env --list-generations | tail -1)"

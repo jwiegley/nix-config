@@ -282,8 +282,8 @@ pkgs: version: hpkgs: with hpkgs;
   void
   xml
   yaml
-  z3
-  z3-generate-api
+  # z3
+  # z3-generate-api
   zippers
   zlib
 ] ++

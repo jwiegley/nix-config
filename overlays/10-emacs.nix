@@ -704,8 +704,8 @@ emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
 emacs26 = with pkgs; stdenv.lib.overrideDerivation
   (self.emacs25.override { srcRepo = true; }) (attrs: rec {
   name = "emacs-${version}${versionModifier}";
-  version = "26.0";
-  versionModifier = ".90";
+  version = "26.1";
+  versionModifier = "";
 
   buildInputs = emacs25.buildInputs ++
     [ git libpng.dev libjpeg.dev libungif libtiff.dev librsvg.dev
@@ -719,8 +719,8 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
 
   src = fetchgit {
     url = https://git.savannah.gnu.org/git/emacs.git;
-    rev = "1d9e66aea17787e03954f32c6cd7561c881bb444";
-    sha256 = "09pniqwgjqbxd7c7liwr72d1kwbs0lsdbcyhrvdblsaf7kcm5gpr";
+    rev = "50024fc7fa83c8b7cf5e391c8a2ee6bd25d0b916";
+    sha256 = "0nh5gjlnywhixrm52p8ky6vcd2qq9sv8mk6h2ri3f8lh520kqprl";
   };
 
   postPatch = ''
@@ -749,7 +749,7 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
 });
 
 emacs26debug = pkgs.stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
-  name = "emacs-26.0.90-debug";
+  name = "emacs-26.1-debug";
   doCheck = true;
   CFLAGS = "-O0 -g3";
   configureFlags = [ "--with-modules" ] ++

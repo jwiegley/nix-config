@@ -90,12 +90,11 @@ DEVONagentPro = super.stdenv.lib.overrideDerivation (self.installApplication rec
 DEVONthinkPro = super.stdenv.lib.overrideDerivation (self.installApplication rec {
   name = "DEVONthinkPro";
   appname = "DEVONthink Pro";
-  version = "2.9.17";
+  version = "2.10";
   sourceRoot = "DEVONthink Pro.app";
   src = super.fetchurl {
     url = "https://s3.amazonaws.com/DTWebsiteSupport/download/devonthink/${version}/DEVONthink_Pro.dmg.zip";
-    sha256 = "04iz6z65czir80nc22b47qdqk2132cjbmi6sq2njkjb407wmyq0d";
-    # date = 2018-02-04T23:54:35-0800;
+    sha256 = "156sbcip9y1c46v9sbgk50nswi52vnzlxfqzp5zzn9lyfycafpc5";
   };
   description = ''
     DEVONthink Pro Office is your Mac paperless office. It stores all your
@@ -128,12 +127,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "60.0";
+  version = "60.0.1";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "1smjpis0890y0rwbjha14mlbwvh1pr6ax2pl28bqvgcfjzp4b48y";
+    sha256 = "0jfvxy7c84vg18962vz27gmyaapkp04cvkcwf4y61s4cm0rjh1aa";
   };
   postInstall = ''
     for file in  \

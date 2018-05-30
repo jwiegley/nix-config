@@ -25,7 +25,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gitAndTools.gitflow
   gitAndTools.hub
   gitAndTools.tig
-  gitAndTools.git-annex
+  (exe gitAndTools.git-annex)
   gitAndTools.git-annex-remote-rclone
   gitAndTools.git-secret
   (exe haskPkgs.github-backup)
