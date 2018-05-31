@@ -25,11 +25,11 @@ PROJS = src/async-pool							\
 									\
 	bae/micromht-fiat-deliverable/atif-fiat				\
 	bae/micromht-fiat-deliverable/atif-fiat/stanag4607		\
-	bae/micromht-fiat-deliverable/atif-monitors/hmon/hsmedl		\
-									\
-	bae/micromht-deliverable/rings-dashboard/mitll-harness		\
-	bae/micromht-deliverable/rings-dashboard/rings-dashboard-api	\
-	bae/micromht-deliverable/rings-dashboard
+	bae/micromht-fiat-deliverable/atif-monitors/hmon/hsmedl
+
+# bae/micromht-deliverable/rings-dashboard/mitll-harness		\
+# bae/micromht-deliverable/rings-dashboard/rings-dashboard-api	\
+# bae/micromht-deliverable/rings-dashboard
 
 PENVS = emacs26Env	\
 	coq87Env	\
