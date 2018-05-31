@@ -148,10 +148,9 @@ usingWithHoogle = hpkgs: hpkgs.override {
 };
 
 packageDrv = ghc: path: args:
-  let
-    ghcVer = if ghc == null then self.ghcDefaultVersion else ghc;
-    hpkgs  = self.usingWithHoogle self.haskell.packages.${ghcVer}; in
-  callPackage hpkgs ghc path args;
+  let ghcVer = if ghc == null then self.ghcDefaultVersion else ghc;
+      hpkgs  = self.usingWithHoogle self.haskell.packages.${ghcVer};
+  in callPackage hpkgs ghc path args;
 
 packageDeps = path:
   let
