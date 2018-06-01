@@ -37,8 +37,9 @@ let
     "z3cat"
   ];
 
-  otherHackagePackages = ghc: this: super:
-    let pkg = p: self.packageDrv ghc p {}; in with pkgs.haskell.lib; {
+  otherHackagePackages = ghc:
+    let pkg = p: self.packageDrv ghc p {}; in self: super:
+    with pkgs.haskell.lib; {
 
     z3 = if ghc == "ghc842"
          then null
@@ -48,6 +49,7 @@ let
     rings-dashboard-api =
       pkg ~/bae/micromht-deliverable/rings-dashboard/rings-dashboard-api;
     harness = pkg ~/bae/micromht-deliverable/rings-dashboard/mitll-harness;
+
     stanag4607 = pkg ~/bae/micromht-fiat-deliverable/atif-fiat/stanag4607;
 
     Agda              = dontHaddock super.Agda;
@@ -61,7 +63,7 @@ let
     time-recurrence   = doJailbreak super.time-recurrence;
 
     timeparsers = dontCheck (doJailbreak
-      (this.callCabal2nix "timeparsers" (pkgs.fetchFromGitHub {
+      (self.callCabal2nix "timeparsers" (pkgs.fetchFromGitHub {
         owner  = "jwiegley";
         repo   = "timeparsers";
         rev    = "ebdc0071f43833b220b78523f6e442425641415d";
