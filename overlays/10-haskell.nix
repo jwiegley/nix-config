@@ -1,8 +1,6 @@
 self: pkgs:
 
 let
-  # All of these projects are identified simply by their .cabal files, no other
-  # special handling is needed.
   srcs = [
     "async-pool"
     "bindings-DSL"
@@ -44,13 +42,6 @@ let
     z3 = if ghc == "ghc842"
          then null
          else pkg ~/bae/concerto/solver/lib/z3;
-
-    rings-dashboard = pkg ~/bae/micromht-deliverable/rings-dashboard;
-    rings-dashboard-api =
-      pkg ~/bae/micromht-deliverable/rings-dashboard/rings-dashboard-api;
-    harness = pkg ~/bae/micromht-deliverable/rings-dashboard/mitll-harness;
-
-    stanag4607 = pkg ~/bae/micromht-fiat-deliverable/atif-fiat/stanag4607;
 
     Agda              = dontHaddock super.Agda;
     diagrams-contrib  = doJailbreak super.diagrams-contrib;
