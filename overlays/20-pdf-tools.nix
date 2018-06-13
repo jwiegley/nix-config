@@ -5,11 +5,19 @@ pdf-tools-server = with super; stdenv.mkDerivation rec {
   version = "0.80";
   name = "${pname}-${version}";
 
-  src = self.emacsPackagesNg.pdf-tools.src;
+  src = fetchFromGitHub {
+    owner = "politza";
+    repo = "pdf-tools";
+    rev = "60d12ce15220d594e8eb95f4d072e2710cddefe0";
+    sha256 = "1s8zphbd7k1ifdlisy894cg4mrkiq1rl2qk8x10njp1i596hz1fm";
+    # date = 2018-04-29T18:31:04+02:00;
+  };
 
   buildInputs = [
     clang gnumake automake autoconf pkgconfig libpng zlib poppler
   ];
+
+  patches = [ ./emacs/patches/pdf-tools.patch ];
 
   preConfigure = ''
     cd server

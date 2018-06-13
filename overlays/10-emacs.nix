@@ -598,6 +598,16 @@ let
       };
     };
 
+    pdf-tools = lib.overrideDerivation super.pdf-tools (attrs: {
+      src = fetchFromGitHub {
+        owner = "politza";
+        repo = "pdf-tools";
+        rev = "60d12ce15220d594e8eb95f4d072e2710cddefe0";
+        sha256 = "1s8zphbd7k1ifdlisy894cg4mrkiq1rl2qk8x10njp1i596hz1fm";
+        # date = 2018-04-29T18:31:04+02:00;
+      };
+    });
+
     org = mkDerivation rec {
       name = "emacs-org-${version}";
       version = "20160421";
@@ -719,8 +729,8 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
 
   src = fetchgit {
     url = https://git.savannah.gnu.org/git/emacs.git;
-    rev = "50024fc7fa83c8b7cf5e391c8a2ee6bd25d0b916";
-    sha256 = "0nh5gjlnywhixrm52p8ky6vcd2qq9sv8mk6h2ri3f8lh520kqprl";
+    rev = "ec79bdc53fd75ea48c1451b0d83b0b41a0345bc6";
+    sha256 = "1g2jjpvwlzpvk49fds0w9m0rjh372i4qpv3p6qxlxydiyjqpa5f6";
   };
 
   postPatch = ''

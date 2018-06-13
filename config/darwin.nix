@@ -42,9 +42,10 @@ let home_directory = "/Users/johnw";
 
     pdnsd = {
       script = ''
-        cp -p /etc/pdnsd.conf /tmp/.pdnsd.conf
+        cp -pL /etc/pdnsd.conf /tmp/.pdnsd.conf
         chmod 700 /tmp/.pdnsd.conf
         chown root /tmp/.pdnsd.conf
+        touch /Library/Caches/pdnsd/pdnsd.cache
         ${pkgs.pdnsd}/sbin/pdnsd -c /tmp/.pdnsd.conf
       '';
       serviceConfig.RunAtLoad = true;
@@ -134,11 +135,7 @@ EOF
   '';
 
   nixpkgs = {
-    config = {
-      allowUnfree = true;
-      allowUnsupportedSystems = true;
-      # allowBroken = true;
-    };
+    config.allowUnfree = true;
 
     overlays =
       let path = ../overlays; in with builtins;
@@ -150,20 +147,7 @@ EOF
   };
 
   environment = {
-    systemPackages = import ./packages.nix {
-      inherit pkgs;
-      pkgs_prev =
-        let
-        in import (pkgs.fetchFromGitHub {
-          owner  = "NixOS";
-          repo   = "nixpkgs";
-          rev    = "2e855dc6b0cd88767a8a5df2faff9e66e1cd7f18";
-          sha256 = "08s6mfh5a05kd2qs3hmza50ng3pyhd3qha4nanwwk0s8fjzqnv4a";
-          }) {
-          config.allowUnfree = true;
-          # config.allowBroken = false;
-        };
-    };
+    systemPackages = import ./packages.nix { inherit pkgs; };
 
     systemPath = [
       "${pkgs.Docker}/Applications/Docker.app/Contents/Resources/bin"
@@ -253,7 +237,6 @@ EOF
       global {
           perm_cache   = 8192;
           cache_dir    = "/Library/Caches/pdnsd";
-          run_as       = "johnw";
           server_ip    = 127.0.0.1;
           status_ctl   = on;
           query_method = udp_tcp;

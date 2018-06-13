@@ -1,0 +1,23 @@
+#!/bin/bash -e
+
+PREV=$1
+REV=$2
+PSHA=$3
+SHA=$4
+
+update_pin() {
+    for file in "$@"; do
+        echo "Updating pin in $file"
+        perl -i -pe "s/$PREV/$REV/g; s/$PSHA/$SHA/g;" "$file"
+        dir=$(dirname "$file")
+        (cd "$dir";                                                             \
+         git add default.nix;                                                   \
+         git commit -m "Update pinned version of nixpkgs in default.nix";       \
+         git push)
+    done
+}
+
+find ~/bae/ ~/src/ -name default.nix                            \
+     \! -path ~/src/notes/'*'                                   \
+     \! -path ~/src/nix/'*'                                     \
+    | xargs update_pin

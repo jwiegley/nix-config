@@ -1,4 +1,4 @@
-{ pkgs_prev, pkgs }:
+{ pkgs }:
 
 with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nixUnstable
@@ -146,8 +146,8 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   pdf-tools-server
   plantuml
   poppler_utils
-  qpdf
   recoll
+  qpdf
   perlPackages.ImageExifTool
   libxml2
   libxslt
@@ -278,7 +278,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   PathFinder
   PhoneView
   RipIt
-  #SageMath
+  # SageMath
   Skim
   Soulver
   SuspiciousPackage

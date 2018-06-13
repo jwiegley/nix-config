@@ -37,12 +37,12 @@ Anki = self.installApplication rec {
 
 Dash = self.installApplication rec {
   name = "Dash";
-  version = "4.1.7";
+  version = "4.2.0";
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "02167b5rakpmjvailc3ky4n6ms98inl4g4ibg2hilqvn9yb6p1gf";
-    # date = 2018-04-24T12:48:47-0700;
+    sha256 = "1r7m143hyp1d7da2pxcv1c5md763bhfdx7f3zh3q3szcqb0wjx8p";
+    # date = 2018-06-08T23:37:28-0700;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
@@ -239,12 +239,12 @@ LaTeXiT = self.installApplication rec {
 
 LaunchBar = self.installApplication rec {
   name = "LaunchBar";
-  version = "6.9.4";
+  version = "6.9.5";
   sourceRoot = "LaunchBar.app";
   src = super.fetchurl {
-    url = "https://www.obdev.at/downloads/launchbar/LaunchBar-6.9.4.dmg";
-    sha256 = "19k8g2w10qi400rak6894w3lc5j58sq5sfd2r51w9y4fb1wwgg8v";
-    # date = 2018-02-04T23:37:26-0800;
+    url = "https://www.obdev.at/downloads/launchbar/LaunchBar-${version}.dmg";
+    sha256 = "0ldmbbh0snsdsfgbqsxwp954622am5nf5iqyx9n536wz9yfhyvw3";
+    # date = 2018-06-09T10:29:40-0700;
   };
   description = ''
     Start with a single keyboard shortcut to access and control every aspect
