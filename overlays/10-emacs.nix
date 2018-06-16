@@ -404,6 +404,21 @@ let
       };
     };
 
+    magit-todos = compileEmacsFiles {
+      name = "magit-todos";
+      src = fetchFromGitHub {
+        owner = "alphapapa";
+        repo = "magit-todos";
+        rev = "cc6d13ceaa26b5f41eea112c147f21bee32233d7";
+        sha256 = "10jhp4k91vmmhbavlc2c02z7dlgqry58giyzl96qqaavdzp6663i";
+        # date = 2018-06-13T07:53:36-05:00;
+      };
+      buildInputs = with self; [
+        magit magit-popup a anaphora dash f s hl-todo kv with-editor git-commit
+        ghub
+      ];
+    };
+
     moccur-edit = compileEmacsFiles {
       name = "moccur-edit";
       src = fetchFromGitHub {
@@ -704,20 +719,26 @@ let
 
 in {
 
-emacs = self.emacs26;
+# emacs = self.emacs26;
+
+# emacsPackagesNg = self.emacs26PackagesNg;
+# emacs26PackagesNg = mkEmacsPackages self.emacs26;
+
+emacs = self.emacsMacport;
 
 emacsPackagesNg = self.emacs26PackagesNg;
-emacs26PackagesNg = mkEmacsPackages self.emacs26;
+emacs26PackagesNg = mkEmacsPackages self.emacsMacport;
+
 emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
 emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
 
 emacs26 = with pkgs; stdenv.lib.overrideDerivation
-  (self.emacs25.override { srcRepo = true; }) (attrs: rec {
+  (pkgs.emacs26.override { srcRepo = true; }) (attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "26.1";
   versionModifier = "";
 
-  buildInputs = emacs25.buildInputs ++
+  buildInputs = emacs26.buildInputs ++
     [ git libpng.dev libjpeg.dev libungif libtiff.dev librsvg.dev
       imagemagick.dev ];
 
@@ -769,7 +790,7 @@ emacs26debug = pkgs.stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
 });
 
 emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
-  (self.emacs25.override { srcRepo = true; }) (attrs: rec {
+  (pkgs.emacs26.override { srcRepo = true; }) (attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "27.0";
   versionModifier = ".50";
@@ -778,7 +799,7 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
   bundleName = "nextstep/ERC.app";
   iconFile = ./emacs/Chat.icns;
 
-  buildInputs = emacs25.buildInputs ++
+  buildInputs = emacs26.buildInputs ++
     [ git libpng.dev libjpeg.dev libungif libtiff.dev librsvg.dev
       imagemagick.dev ];
 
@@ -871,11 +892,6 @@ emacs26Env = myPkgs: pkgs.myEnvFun {
 emacs26DebugEnv = myPkgs: pkgs.myEnvFun {
   name = "emacs26debug";
   buildInputs = [ (self.emacs26DebugPackagesNg.emacsWithPackages myPkgs) ];
-};
-
-emacs25Env = myPkgs: pkgs.myEnvFun {
-  name = "emacs25";
-  buildInputs = [ self.emacs25 ];
 };
 
 }

@@ -7,7 +7,6 @@ let myEmacsPackages   = import ./emacs.nix pkgs;
   emacsHEADEnv    = pkgs.emacsHEADEnv myEmacsPackages;
   emacs26Env      = pkgs.emacs26Env myEmacsPackages;
   emacs26DebugEnv = pkgs.emacs26DebugEnv myEmacsPackages;
-  emacs25Env      = pkgs.emacs25Env myEmacsPackages;
 
   ghc84Env        = pkgs.ghc84Env (myHaskellPackages 8.4);
   ghc82Env        = pkgs.ghc82Env (myHaskellPackages 8.2);

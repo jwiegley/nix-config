@@ -216,6 +216,7 @@ pkgs: epkgs: with epkgs;
   magit-lfs
   magit-popup
   magit-tbdiff
+  magit-todos
   magithub
   makefile-runner
   makey

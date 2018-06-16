@@ -39,7 +39,6 @@ PENVS = emacs26Env	\
 ENVS =  emacsHEADEnv	\
 	emacs26Env	\
 	emacs26DebugEnv	\
-	emacs25Env	\
 	coqHEADEnv	\
 	coq88Env	\
 	coq87Env	\

@@ -1,11 +1,11 @@
 self: super: {
 
-pdf-tools-server = with super; stdenv.mkDerivation rec {
+pdf-tools-server = with self; super.stdenv.mkDerivation rec {
   pname = "emacs-pdf-tools-server";
   version = "0.80";
   name = "${pname}-${version}";
 
-  src = fetchFromGitHub {
+  src = super.fetchFromGitHub {
     owner = "politza";
     repo = "pdf-tools";
     rev = "60d12ce15220d594e8eb95f4d072e2710cddefe0";
