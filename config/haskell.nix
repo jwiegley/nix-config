@@ -127,11 +127,11 @@ pkgs: version: hpkgs: with hpkgs;
   hspec-megaparsec
   hspec-wai
   html
-  http-client
-  http-client-tls
-  http-date
-  http-media
-  http-types
+  # http-client
+  # http-client-tls
+  # http-date
+  # http-media
+  # http-types
   insert-ordered-containers
   interpolate
   io-memoize

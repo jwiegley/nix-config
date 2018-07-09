@@ -386,12 +386,12 @@ EOF
     # ];
 
     binaryCaches = [
-      "https://nixcache.reflex-frp.org"
-      "https://cachix.cachix.org"
+      # "https://nixcache.reflex-frp.org"
+      # "https://cachix.cachix.org"
     ];
     binaryCachePublicKeys = [
-      "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="
-      "cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM="
+      # "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="
+      # "cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM="
     ];
 
     extraOptions = ''

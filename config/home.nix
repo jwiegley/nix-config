@@ -86,9 +86,9 @@ rec {
            })
           [ "Library/Scripts/Applications/Download links to PDF.scpt"
             "Library/Scripts/Applications/Media Pro" ]) //
-      { ".Deskzilla".source    = "${xdg.dataHome}/Deskzilla";
-        ".dbvis".source        = "${xdg.configHome}/DbVisualizer";
+      { ".dbvis".source        = "${xdg.configHome}/DbVisualizer";
         ".docker".source       = "${xdg.configHome}/docker";
+        ".recoll".source       = "${xdg.configHome}/recoll";
         ".gist".source         = "${xdg.configHome}/gist/account_id";
         ".ledgerrc".text       = "--file /Volumes/Files/Accounts/ledger.dat\n";
         ".slate".source        = "${xdg.configHome}/slate/config";
@@ -202,6 +202,8 @@ rec {
         else
            . ${xdg.configHome}/zsh/plugins/iterm2_shell_integration
         fi
+
+        eval "$(direnv hook zsh)"
       '';
 
       plugins = [
@@ -345,6 +347,10 @@ rec {
           smudge = "${pkgs.git}/bin/git media smudge %f";
         };
 
+        submodule = {
+          recurse = true;
+        };
+
         diff = {
           ignoreSubmodules = "dirty";
           renames = "copies";
@@ -376,7 +382,7 @@ rec {
 
       ignores = [
         "*.elc" "*.vo" "*.aux" "*.v.d" "*.o" "*.a" "*.la" "*.so" "*.dylib"
-        "*~" "#*#" ".makefile" ".clean"
+        "*~" "#*#" ".makefile" ".clean" ".envrc" ".direnv"
       ];
     };
 

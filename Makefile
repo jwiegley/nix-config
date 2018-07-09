@@ -1,6 +1,8 @@
-REMOTE = vulcan
-CACHE  = /Volumes/slim/Cache
-ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
+REMOTE	 = vulcan
+CACHE	 = /Volumes/slim/Cache
+ROOTS	 = /nix/var/nix/gcroots/per-user/johnw/shells
+NIX_ROOT = /Users/johnw/src/nix
+NIX_PATH = darwin-config=$(NIX_ROOT)/config/darwin.nix:home-manager=$(NIX_ROOT)/home-manager:darwin=$(NIX_ROOT)/darwin:nixpkgs=$(NIX_ROOT)/nixpkgs
 
 PROJS = src/async-pool							\
 	src/bindings-DSL						\
@@ -17,6 +19,7 @@ PROJS = src/async-pool							\
 	src/pipes-files							\
 	src/pushme							\
 	src/recursors							\
+	src/refine-freer						\
 	src/runmany							\
 	src/sitebuilder							\
 	src/sizes							\
@@ -56,22 +59,23 @@ all: switch env-all shells
 switch: darwin-switch home-switch
 
 darwin-switch:
-	darwin-rebuild switch -Q
+	NIX_PATH=$(NIX_PATH) darwin-rebuild switch -Q
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
 darwin-build:
-	nix build --keep-going darwin.system
+	NIX_PATH=$(NIX_PATH) nix build --keep-going darwin.system
 	@rm result
 
 home-switch:
-	home-manager switch
+	NIX_PATH=$(NIX_PATH) home-manager switch
 	@echo "Home generation:   $$(home-manager generations | head -1)"
 
 home-build:
-	nix build -f ~/src/nix/home-manager/home-manager/home-manager.nix \
-		  --argstr confPath "$(HOME_MANAGER_CONFIG)" \
-		  --argstr confAttr "" activationPackage \
-		  --keep-going
+	NIX_PATH=$(NIX_PATH) \
+	    nix build -f ~/src/nix/home-manager/home-manager/home-manager.nix \
+		--argstr confPath "$(HOME_MANAGER_CONFIG)" \
+		--argstr confAttr "" activationPackage \
+		--keep-going
 	@rm result
 
 shells:
@@ -79,34 +83,34 @@ shells:
 	for i in $(PROJS); do				\
 	    cd $(HOME)/$$i;				\
 	    echo Pre-building shell env for $$i;	\
-	    testit --make;				\
+	    NIX_PATH=$(NIX_PATH) testit --make;		\
 	    rm -f result;				\
 	done
 
 env-all:
 	for i in $(ENVS); do \
 	    echo Updating $$i; \
-	    nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ; \
+	    NIX_PATH=$(NIX_PATH) \
+	        nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ; \
 	done
 	@echo "Nix generation:    $$(nix-env --list-generations | tail -1)"
 
 env-all-build:
-	for i in $(ENVS); do \
-	    echo Building $$i; \
-	    nix build --keep-going darwin.pkgs.$$i ; \
-	done
+	NIX_PATH=$(NIX_PATH) nix build --keep-going darwin.pkgs.allEnvs
 	@rm result
 
 env:
 	for i in $(PENVS); do \
 	    echo Updating $$i; \
-	    nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ; \
+	    NIX_PATH=$(NIX_PATH) \
+	        nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ; \
 	done
 
 env-build:
 	for i in $(PENVS); do \
 	    echo Building $$i; \
-	    nix build --keep-going darwin.pkgs.$$i ; \
+	    NIX_PATH=$(NIX_PATH) \
+	        nix build --keep-going darwin.pkgs.$$i ; \
 	done
 	@rm result
 
@@ -136,31 +140,37 @@ working: tag-working mirror
 update: tag-before pull build-all switch env-all shells working cache
 
 copy:
-	nix copy --all --keep-going --to ssh://$(REMOTE)
+	NIX_PATH=$(NIX_PATH) \
+	    nix copy --all --keep-going --to ssh://$(REMOTE)
 
 cache:
-	test -d $(CACHE) &&				\
-	(find /nix/store -maxdepth 1 -type f		\
-	    \( -name '*.dmg' -o				\
-	       -name '*.zip' -o				\
-	       -name '*.pkg' -o				\
-	       -name '*.el'  -o				\
-	       -name '*.7z'  -o				\
-	       -name '*gz'   -o				\
-	       -name '*xz'   -o				\
-	       -name '*bz2'  -o				\
-	       -name '*.tar' \) -print0			\
+	test -d $(CACHE) &&					\
+	export NIX_PATH=$(NIX_PATH) &&				\
+	(find /nix/store -maxdepth 1 -type f			\
+	    \( -name '*.dmg' -o					\
+	       -name '*.zip' -o					\
+	       -name '*.pkg' -o					\
+	       -name '*.el'  -o					\
+	       -name '*.7z'  -o					\
+	       -name '*gz'   -o					\
+	       -name '*xz'   -o					\
+	       -name '*bz2'  -o					\
+	       -name '*.tar' \) -print0				\
 	    | parallel -0 nix copy --to file://$(CACHE))
 
-# find $(HOME)				\
-#     \( -name dist -type d -o		\
-#        -name result -type l \) -print0	\
-#     | parallel -0 /bin/rm -fr {}
+remove-build-products:
+	find $(HOME)					\
+	    \( -name 'dist' -type d -o			\
+	       -name 'result' -type l -o		\
+	       -name 'result-*' -type l \) -print0	\
+	    | parallel -0 /bin/rm -fr {}
 
 gc:
-	nix-collect-garbage --delete-older-than 14d
+	NIX_PATH=$(NIX_PATH) \
+	    nix-collect-garbage --delete-older-than 14d
 
 gc-all: gc
-	nix-collect-garbage -d
+	NIX_PATH=$(NIX_PATH) \
+	    nix-collect-garbage -d
 
 ### Makefile ends here

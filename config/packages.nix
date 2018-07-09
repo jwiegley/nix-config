@@ -52,6 +52,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.cabal-install)
   clang
   cmake
+  direnv
   fftw
   fftw.dev
   fftw.man
@@ -266,7 +267,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   # Applications
   Anki
   Dash
-  DeskzillaLite
   Docker
   Firefox
   GIMP

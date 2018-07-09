@@ -48,21 +48,21 @@ Dash = self.installApplication rec {
   homepage = https://kapeli.com/dash;
 };
 
-DeskzillaLite = self.installApplication rec {
-  name = "DeskzillaLite";
-  appname = "Deskzilla Lite";
-  version = "3.2.1";
-  sourceRoot = "Deskzilla Lite.app";
-  src = super.fetchurl {
-    url = https://d1.almworks.com/.files/deskzilla-lite-3_2_1.dmg;
-    sha256 = "0w2hqmznsk3qic2c6f3cycvmjpgvscckd9b0ljqfcrhkla4bv505";
-    # date = 2018-02-04T16:36:09-0800;
-  };
-  description = ''
-    Deskzilla is a desktop client for Mozilla's Bugzilla bug tracking system
-  '';
-  homepage = http://almworks.com/deskzilla;
-};
+# DeskzillaLite = self.installApplication rec {
+#   name = "DeskzillaLite";
+#   appname = "Deskzilla Lite";
+#   version = "3.2.1";
+#   sourceRoot = "Deskzilla Lite.app";
+#   src = super.fetchurl {
+#     url = https://d1.almworks.com/.files/deskzilla-lite-3_2_1.dmg;
+#     sha256 = "0w2hqmznsk3qic2c6f3cycvmjpgvscckd9b0ljqfcrhkla4bv505";
+#     # date = 2018-02-04T16:36:09-0800;
+#   };
+#   description = ''
+#     Deskzilla is a desktop client for Mozilla's Bugzilla bug tracking system
+#   '';
+#   homepage = http://almworks.com/deskzilla;
+# };
 
 DEVONagentPro = super.stdenv.lib.overrideDerivation (self.installApplication rec {
   name = "DEVONagentPro";

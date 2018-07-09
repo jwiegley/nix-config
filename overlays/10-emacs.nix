@@ -292,6 +292,18 @@ let
       };
     };
 
+    deadgrep = compileEmacsFiles {
+      name = "deadgrep";
+      src = fetchFromGitHub {
+        owner = "Wilfred";
+        repo = "deadgrep";
+        rev = "885c98d1c53f9e847fe36d99e0d826f2f55fe960";
+        sha256 = "0yf6d9yizcs3rlzm7zkh03lbd5047rlj81a38jd3h5lns9faj3j6";
+        # date = 2018-07-08T23:10:54+01:00;
+      };
+      buildInputs = with self; [ s dash spinner ];
+    };
+
     emacs-load-time = compileEmacsFiles {
       name = "emacs-load-time";
       src = fetchFromGitHub {
@@ -519,6 +531,17 @@ let
         # date = 2018-01-24T17:07:38+09:00;
       };
       patches = [ ./emacs/patches/sky-color-clock.patch ];
+    };
+
+    spinner = compileEmacsFiles {
+      name = "spinner";
+      src = fetchFromGitHub {
+        owner = "Malabarba";
+        repo = "spinner.el";
+        rev = "0637791f005f747532b4439439a81c3415961377";
+        sha256 = "0kv3i8ky9kjanpvw09p48rsswl1qcmkgkfc893mnbi0x9525amwz";
+        # date = 2016-11-17T10:56:26-02:00;
+      };
     };
 
     stopwatch = compileEmacsFiles {

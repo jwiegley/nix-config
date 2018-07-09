@@ -68,6 +68,7 @@ pkgs: epkgs: with epkgs;
   dash
   dash-at-point
   debbugs                       # debbugs-gnu
+  deadgrep
   dedicated
   deferred
   deft
@@ -76,6 +77,7 @@ pkgs: epkgs: with epkgs;
   diminish
   dired-ranger
   dired-toggle
+  direnv
   discover
   discover-my-major
   docker
@@ -101,6 +103,7 @@ pkgs: epkgs: with epkgs;
   emojify
   engine-mode
   enh-ruby-mode                 # ruby-mode
+  ensime
   epc
   epl
   erc-highlight-nicknames
@@ -320,6 +323,8 @@ pkgs: epkgs: with epkgs;
   riscv-mode
   rs-gnus-summary
   s
+  sbt-mode
+  scala-mode
   sdcv-mode
   selected
   shackle
