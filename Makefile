@@ -1,8 +1,6 @@
-REMOTE	 = vulcan
-CACHE	 = /Volumes/slim/Cache
-ROOTS	 = /nix/var/nix/gcroots/per-user/johnw/shells
-NIX_ROOT = /Users/johnw/src/nix
-NIX_PATH = darwin-config=$(NIX_ROOT)/config/darwin.nix:home-manager=$(NIX_ROOT)/home-manager:darwin=$(NIX_ROOT)/darwin:nixpkgs=$(NIX_ROOT)/nixpkgs
+REMOTE = vulcan
+CACHE  = /Volumes/slim/Cache
+ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
 
 PROJS = src/async-pool							\
 	src/bindings-DSL						\
@@ -59,23 +57,22 @@ all: switch env-all shells
 switch: darwin-switch home-switch
 
 darwin-switch:
-	NIX_PATH=$(NIX_PATH) darwin-rebuild switch -Q
+	darwin-rebuild switch -Q
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
 darwin-build:
-	NIX_PATH=$(NIX_PATH) nix build --keep-going darwin.system
+	nix build --keep-going darwin.system
 	@rm result
 
 home-switch:
-	NIX_PATH=$(NIX_PATH) home-manager switch
+	home-manager switch
 	@echo "Home generation:   $$(home-manager generations | head -1)"
 
 home-build:
-	NIX_PATH=$(NIX_PATH) \
-	    nix build -f ~/src/nix/home-manager/home-manager/home-manager.nix \
-		--argstr confPath "$(HOME_MANAGER_CONFIG)" \
-		--argstr confAttr "" activationPackage \
-		--keep-going
+	nix build -f ~/src/nix/home-manager/home-manager/home-manager.nix	\
+	    --argstr confPath "$(HOME_MANAGER_CONFIG)"				\
+	    --argstr confAttr "" activationPackage				\
+	    --keep-going
 	@rm result
 
 shells:
@@ -83,34 +80,31 @@ shells:
 	for i in $(PROJS); do				\
 	    cd $(HOME)/$$i;				\
 	    echo Pre-building shell env for $$i;	\
-	    NIX_PATH=$(NIX_PATH) testit --make;		\
+	    testit --make;				\
 	    rm -f result;				\
 	done
 
 env-all:
-	for i in $(ENVS); do \
-	    echo Updating $$i; \
-	    NIX_PATH=$(NIX_PATH) \
-	        nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ; \
+	for i in $(ENVS); do					\
+	    echo Updating $$i;					\
+	    nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ;	\
 	done
 	@echo "Nix generation:    $$(nix-env --list-generations | tail -1)"
 
 env-all-build:
-	NIX_PATH=$(NIX_PATH) nix build --keep-going darwin.pkgs.allEnvs
+	nix build --keep-going darwin.pkgs.allEnvs
 	@rm result
 
 env:
-	for i in $(PENVS); do \
-	    echo Updating $$i; \
-	    NIX_PATH=$(NIX_PATH) \
-	        nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ; \
+	for i in $(PENVS); do					\
+	    echo Updating $$i;					\
+	    nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ;	\
 	done
 
 env-build:
-	for i in $(PENVS); do \
-	    echo Building $$i; \
-	    NIX_PATH=$(NIX_PATH) \
-	        nix build --keep-going darwin.pkgs.$$i ; \
+	for i in $(PENVS); do				\
+	    echo Building $$i;				\
+	    nix build --keep-going darwin.pkgs.$$i ;	\
 	done
 	@rm result
 
@@ -140,12 +134,10 @@ working: tag-working mirror
 update: tag-before pull build-all switch env-all shells working cache
 
 copy:
-	NIX_PATH=$(NIX_PATH) \
-	    nix copy --all --keep-going --to ssh://$(REMOTE)
+	nix copy --all --keep-going --to ssh://$(REMOTE)
 
 cache:
 	test -d $(CACHE) &&					\
-	export NIX_PATH=$(NIX_PATH) &&				\
 	(find /nix/store -maxdepth 1 -type f			\
 	    \( -name '*.dmg' -o					\
 	       -name '*.zip' -o					\
@@ -166,11 +158,9 @@ remove-build-products:
 	    | parallel -0 /bin/rm -fr {}
 
 gc:
-	NIX_PATH=$(NIX_PATH) \
-	    nix-collect-garbage --delete-older-than 14d
+	nix-collect-garbage --delete-older-than 14d
 
 gc-all: gc
-	NIX_PATH=$(NIX_PATH) \
-	    nix-collect-garbage -d
+	nix-collect-garbage -d
 
 ### Makefile ends here
