@@ -27,7 +27,7 @@
 # `find .direnv -name 'env-*' -and -not -name `readlink .direnv/default` -exec rm -rf {} +`
 #
 use_nix() {
-    set -xe
+    set -e
 
     local shell="shell.nix"
     if [[ ! -f "${shell}" ]]; then

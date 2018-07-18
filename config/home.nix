@@ -53,6 +53,7 @@ rec {
       LOCATE_PATH        = "${xdg.cacheHome}/locate/home.db:${xdg.cacheHome}/locate/system.db";
 
       PASSWORD_STORE_DIR = "${home_directory}/Documents/.passwords";
+      NIX_CONF           = "${home_directory}/src/nix";
 
       # OCAMLPATH          = "${pkgs.ocamlPackages.camlp5_transitional}"
       #                    + "/lib/ocaml/${pkgs.ocaml.version}/site-lib/camlp5";
