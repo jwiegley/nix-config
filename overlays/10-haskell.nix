@@ -43,15 +43,44 @@ let
          then null
          else pkg ~/bae/concerto/solver/lib/z3;
 
-    Agda              = dontHaddock super.Agda;
-    diagrams-contrib  = doJailbreak super.diagrams-contrib;
-    diagrams-graphviz = doJailbreak super.diagrams-graphviz;
-    diagrams-svg      = doJailbreak super.diagrams-svg;
-    hasktags          = dontCheck super.hasktags;
-    pipes-binary      = doJailbreak super.pipes-binary;
-    pipes-zlib        = dontCheck (doJailbreak super.pipes-zlib);
-    text-show         = dontCheck (doJailbreak super.text-show);
-    time-recurrence   = doJailbreak super.time-recurrence;
+    Agda                  = dontHaddock super.Agda;
+    base-compat-batteries = doJailbreak super.base-compat-batteries;
+    diagrams-contrib      = doJailbreak super.diagrams-contrib;
+    diagrams-graphviz     = doJailbreak super.diagrams-graphviz;
+    diagrams-svg          = doJailbreak super.diagrams-svg;
+    generic-lens          = dontCheck super.generic-lens;
+    haddock-library       = dontHaddock super.haddock-library;
+    hasktags              = dontCheck super.hasktags;
+    language-ecmascript   = doJailbreak super.language-ecmascript;
+    liquidhaskell         = doJailbreak super.liquidhaskell;
+    pipes-binary          = doJailbreak super.pipes-binary;
+    pipes-text            = doJailbreak super.pipes-text;
+    pipes-zlib            = dontCheck (doJailbreak super.pipes-zlib);
+    text-show             = dontCheck (doJailbreak super.text-show);
+    time-recurrence       = doJailbreak super.time-recurrence;
+
+    ListLike = overrideCabal super.ListLike (attrs: {
+      libraryHaskellDepends =
+        attrs.libraryHaskellDepends ++ [ self.semigroups ];
+    });
+
+    cabal2nix = dontCheck super.cabal2nix;
+
+    hakyll = super.hakyll.overrideAttrs (attrs: {
+      strictDeps = true;
+    });
+
+    lambdabot = super.lambdabot.overrideAttrs (attrs: {
+      strictDeps = true;
+    });
+    lambdabot-haskell-plugins = super.lambdabot-haskell-plugins.overrideAttrs (attrs: {
+      strictDeps = true;
+    });
+
+    git-annex = dontCheck (super.git-annex.overrideAttrs (attrs: {
+      strictDeps = true;
+      nativeBuildInputs = [ pkgs.git pkgs.perl ] ++ attrs.nativeBuildInputs;
+    }));
 
     timeparsers = dontCheck (doJailbreak
       (self.callCabal2nix "timeparsers" (pkgs.fetchFromGitHub {
@@ -97,9 +126,18 @@ let
     in builtins.listToAttrs (builtins.map fromSrc srcs);
 
   overrideHask = ghc: hpkgs: hoverrides: hpkgs.override {
-    overrides = pkgs.lib.composeExtensions
-      (pkgs.lib.composeExtensions (otherHackagePackages ghc) hoverrides)
-      (myHaskellPackages ghc);
+    overrides =
+      pkgs.lib.composeExtensions
+        hoverrides
+        (pkgs.lib.composeExtensions
+           (otherHackagePackages ghc)
+           (pkgs.lib.composeExtensions
+              (myHaskellPackages ghc)
+              (self: super: {
+                 sitebuilder = super.sitebuilder.overrideAttrs (attrs: {
+                   strictDeps = true;
+                 });
+               })));
   };
 
   breakout = super: names:
@@ -216,15 +254,31 @@ haskell = pkgs.haskell // {
         lens-family-core = self.callHackage "lens-family-core" "1.2.1" {};
       }));
 
-    ghc822 = overrideHask "ghc822" pkgs.haskell.packages.ghc822 (self: super: {
+    ghc822 = overrideHask "ghc822" pkgs.haskell.packages.ghc822 (self: super:
+      with pkgs.haskell.lib; {
+        haddock-library =
+          doJailbreak (self.callHackage "haddock-library" "1.4.5" {});
       });
 
     ghc843 = overrideHask "ghc843" pkgs.haskell.packages.ghc843 (self: super:
-      breakout super [
-        "compact"
-        "criterion"
-        "text-format"
-      ]);
+      (breakout super [
+         "compact"
+         "criterion"
+         "text-format"
+       ])
+       // (with pkgs.haskell.lib; {
+        text-format = doJailbreak (overrideCabal super.text-format (drv: {
+          ##     • No instance for (Semigroup Format)
+          ##         arising from the superclasses of an instance declaration
+          ##     • In the instance declaration for ‘Monoid Format’
+          src = pkgs.fetchFromGitHub {
+            owner  = "deepfire";
+            repo   = "text-format";
+            rev    = "a1cda87c222d422816f956c7272e752ea12dbe19";
+            sha256 = "0lyrx4l57v15rvazrmw0nfka9iyxs4wyaasjj9y1525va9s1z4fr";
+          };
+        }));
+      }));
   };
 };
 

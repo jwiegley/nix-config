@@ -9,7 +9,11 @@ let
       withPatches = pkg: patches:
         lib.overrideDerivation pkg (attrs: { inherit patches; });
 
-      compileEmacsFiles  = pkgs.callPackage ./emacs/builder.nix;
+      compileEmacsFiles = pkgs.callPackage ./emacs/builder.nix;
+
+      addBuildInputs = pkg: inputs: pkg.overrideAttrs (attrs: {
+        buildInputs = attrs.buildInputs ++ inputs;
+      });
 
       compileLocalFile = name: compileEmacsFiles {
         inherit name;
@@ -37,38 +41,28 @@ let
     supercite       = compileLocalFile "supercite.el";
 
 
-    company-coq = withPatches super.company-coq
-      [ ./emacs/patches/company-coq.patch ];
+    github-pullrequest = addBuildInputs super.github-pullrequest [ pkgs.git ];
+    magithub           = addBuildInputs super.magithub           [ pkgs.git ];
+    magit-annex        = addBuildInputs super.magit-annex        [ pkgs.git ];
+    magit-filenotify   = addBuildInputs super.magit-filenotify   [ pkgs.git ];
+    magit-gitflow      = addBuildInputs super.magit-gitflow      [ pkgs.git ];
+    magit-imerge       = addBuildInputs super.magit-imerge       [ pkgs.git ];
+    magit-lfs          = addBuildInputs super.magit-lfs          [ pkgs.git ];
+    magit-tbdiff       = addBuildInputs super.magit-tbdiff       [ pkgs.git ];
+    orgit              = addBuildInputs super.orgit              [ pkgs.git ];
 
-    esh-buf-stack = withPatches super.esh-buf-stack
-      [ ./emacs/patches/esh-buf-stack.patch ];
 
-    git-link = withPatches super.git-link
-      [ ./emacs/patches/git-link.patch ];
-
-    haskell-mode = withPatches super.haskell-mode
-      [ ./emacs/patches/haskell-mode.patch ];
-
-    helm-google = withPatches super.helm-google
-      [ ./emacs/patches/helm-google.patch ];
-
-    hyperbole = withPatches super.hyperbole
-      [ ./emacs/patches/hyperbole.patch ];
-
-    magit = withPatches super.magit
-      [ ./emacs/patches/magit.patch ];
-
-    multi-term = withPatches super.multi-term
-      [ ./emacs/patches/multi-term.patch ];
-
-    noflet = withPatches super.noflet
-      [ ./emacs/patches/noflet.patch ];
-
-    org-ref = withPatches super.org-ref
-      [ ./emacs/patches/org-ref.patch ];
-
-    pass = withPatches super.pass
-      [ ./emacs/patches/pass.patch ];
+    company-coq   = withPatches super.company-coq   [ ./emacs/patches/company-coq.patch ];
+    esh-buf-stack = withPatches super.esh-buf-stack [ ./emacs/patches/esh-buf-stack.patch ];
+    git-link      = withPatches super.git-link      [ ./emacs/patches/git-link.patch ];
+    haskell-mode  = withPatches super.haskell-mode  [ ./emacs/patches/haskell-mode.patch ];
+    helm-google   = withPatches super.helm-google   [ ./emacs/patches/helm-google.patch ];
+    hyperbole     = withPatches super.hyperbole     [ ./emacs/patches/hyperbole.patch ];
+    magit         = withPatches super.magit         [ ./emacs/patches/magit.patch ];
+    multi-term    = withPatches super.multi-term    [ ./emacs/patches/multi-term.patch ];
+    noflet        = withPatches super.noflet        [ ./emacs/patches/noflet.patch ];
+    org-ref       = withPatches super.org-ref       [ ./emacs/patches/org-ref.patch ];
+    pass          = withPatches super.pass          [ ./emacs/patches/pass.patch ];
 
 
     ascii = compileEmacsWikiFile {
@@ -359,17 +353,17 @@ let
       };
     };
 
-    # ghub-plus = compileEmacsFiles {
-    #   name = "ghub-plus";
-    #   src = fetchFromGitHub {
-    #     owner = "vermiculus";
-    #     repo = "ghub-plus";
-    #     rev = "ec821200e3812ad4c8b38303e114c7f1c26e2c9d";
-    #     sha256 = "07azkhlb4lf2z0k6kyakprdklbb92617mixi0r22vfq71l53i17p";
-    #     # date = 2018-03-19T17:53:51-05:00;
-    #   };
-    #   buildInputs = [ ghub apiwrap ];
-    # };
+    ghub-plus = compileEmacsFiles {
+      name = "ghub-plus";
+      src = fetchFromGitHub {
+        owner = "vermiculus";
+        repo = "ghub-plus";
+        rev = "52acf79f59e5807bd1825affd79808db709e283a";
+        sha256 = "0c7q11bcjccrhpxnabghpb8c2pfz3khqb8cpff8wpqmnsnh9whd4";
+        # date = 2018-06-03T15:38:46-05:00;
+      };
+      buildInputs = with self; [ ghub apiwrap ];
+    };
 
     gnus-harvest = compileEmacsFiles {
       name = "gnus-harvest";
@@ -624,7 +618,7 @@ let
         sha256 = "1sq2w40ac8nc6pvifl0r5ri255jcd237x5rxfliwd2wdwqhk9izd";
         # date = 2018-01-27T17:42:53-05:00;
       };
-      recipeFile = fetchurl {
+      recipe = fetchurl {
         url = "https://raw.githubusercontent.com/milkypostman/melpa/407ae027fcec444622c2a822074b95996df9e6af/recipes/elfeed";
         sha256 = "1psga7fcjk2b8xjg10fndp9l0ib72l5ggf43gxp62i4lxixzv8f9";
         name = "elfeed";
@@ -717,7 +711,7 @@ let
       pname = "use-package";
       version = "20180127.1411";
       src = ~/src/dot-emacs/lisp/use-package;
-      recipeFile = fetchurl {
+      recipe = fetchurl {
         url = "https://raw.githubusercontent.com/milkypostman/melpa/51a19a251c879a566d4ae451d94fcb35e38a478b/recipes/use-package";
         sha256 = "0d0zpgxhj6crsdi9sfy30fn3is036apm1kz8fhjg1yzdapf1jdyp";
         name = "use-package";

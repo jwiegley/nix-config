@@ -48,7 +48,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   R
   autoconf
   automake
-  (exe haskPkgs.cabal2nix)
   (exe haskPkgs.cabal-install)
   clang
   cmake
@@ -128,7 +127,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   zncModules.push
 
   # publishToolsEnv
-  biber
+  # biber                  # jww (2018-07-17): now part of texlive-combined
   ditaa
   dot2tex
   doxygen

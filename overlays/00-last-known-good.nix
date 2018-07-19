@@ -7,6 +7,6 @@ lastKnownGood = import (super.fetchFromGitHub {
   sha256 = "0m2sfik3f9067m3v3pm4cjv3hdf56iwc3vymgh02qf8rqkh1s8cf";
 }) { config.allowUnfree = true; };
 
-inherit (self.lastKnownGood) aria2 poppler_utils;
+inherit (self.lastKnownGood) aria2;
 
 }
