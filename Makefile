@@ -45,10 +45,8 @@ ENVS =  emacsHEADEnv	\
 	coq87Env	\
 	coq86Env	\
 	coq85Env	\
-	coq84Env	\
 	ghc84Env	\
 	ghc82Env	\
-	ghc80Env	\
 	ledgerPy2Env	\
 	ledgerPy3Env
 
@@ -69,7 +67,7 @@ home-switch:
 	@echo "Home generation:   $$(home-manager generations | head -1)"
 
 home-build:
-	nix build -f ~/src/nix/home-manager/home-manager/home-manager.nix	\
+	nix build -f $(NIX_CONF)/home-manager/home-manager/home-manager.nix	\
 	    --argstr confPath "$(HOME_MANAGER_CONFIG)"				\
 	    --argstr confAttr "" activationPackage				\
 	    --keep-going
