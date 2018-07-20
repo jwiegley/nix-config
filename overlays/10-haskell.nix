@@ -189,11 +189,9 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
        || pkgs.stdenv.lib.hasSuffix ".p_o" path);
 };
 
-usingWithHoogle = hpkgs: hpkgs.override {
-  overrides = self: super: {
-    ghc = super.ghc // { withPackages = super.ghc.withHoogle; };
-    ghcWithPackages = self.ghc.withPackages;
-  };
+usingWithHoogle = hpkgs: hpkgs // rec {
+  ghc = hpkgs.ghc // { withPackages = hpkgs.ghc.withHoogle; };
+  ghcWithPackages = ghc.withPackages;
 };
 
 packageDrv = ghc:
@@ -201,10 +199,10 @@ packageDrv = ghc:
 
 packageDeps = path:
   let
-    package  = self.packageDrv self.ghcDefaultVersion path {};
+    ghc      = self.ghcDefaultVersion;
+    package  = self.packageDrv ghc path {};
     compiler = package.compiler;
     packages = self.haskell.lib.getHaskellBuildInputs package;
-    ghc      = self.ghcDefaultVersion;
     cabal    = {
       ghc802 = "1.24.0.2";
       ghc822 = "2.0.0.1";
