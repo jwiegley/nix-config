@@ -101,18 +101,35 @@ let
     });
   };
 
+  callPackageKeepDeriver = hpkgs: src: args:
+    pkgs.haskell.lib.overrideCabal (hpkgs.callPackage src args) (orig: {
+      preConfigure = ''
+        # Generated from ${src}
+        ${orig.preConfigure or ""}
+      '';
+    });
+
+  callCabal2nix = hpkgs: name: src: args: let
+    filter = path: type:
+               pkgs.lib.hasSuffix "${name}.cabal" path ||
+               baseNameOf path == "package.yaml";
+    expr = hpkgs.haskellSrc2nix {
+      inherit name;
+      src = if pkgs.lib.canCleanSource src
+            then pkgs.lib.cleanSourceWith { inherit src filter; }
+            else src;
+    };
+  in pkgs.haskell.lib.overrideCabal
+       (callPackageKeepDeriver hpkgs expr args) (orig: { inherit src; });
+
   callPackage = hpkgs: ghc: path: args:
     filtered (
       if builtins.pathExists (path + ("/default.nix"))
-      then (if ghc == null
-            then import
-            else hpkgs.callPackage)
-             path ({ pkgs = self;
-                     compiler = if ghc == null
-                                then self.ghcDefaultVersion
-                                else ghc;
-                     returnShellEnv = false; } // args)
-      else hpkgs.callCabal2nix (builtins.baseNameOf path) path args);
+      then hpkgs.callPackage path
+             ({ pkgs = self;
+                compiler = ghc;
+                returnShellEnv = false; } // args)
+      else callCabal2nix hpkgs (builtins.baseNameOf path) path args);
 
   myHaskellPackages = ghc: self: super:
     let fromSrc = arg:
@@ -146,7 +163,8 @@ let
                           value = pkgs.haskell.lib.doJailbreak super.${x}; })
                     names);
 
-  filtered = drv: drv // { src = self.haskellFilterSource [] drv.src; };
+  filtered = drv:
+    drv.overrideAttrs (attrs: { src = self.haskellFilterSource [] attrs.src; });
 
 in {
 
@@ -178,14 +196,12 @@ usingWithHoogle = hpkgs: hpkgs.override {
   };
 };
 
-packageDrv = ghc: path: args:
-  let ghcVer = if ghc == null then self.ghcDefaultVersion else ghc;
-      hpkgs  = self.usingWithHoogle self.haskell.packages.${ghcVer};
-  in callPackage hpkgs ghc path args;
+packageDrv = ghc:
+  callPackage (self.usingWithHoogle self.haskell.packages.${ghc}) ghc;
 
 packageDeps = path:
   let
-    package  = self.packageDrv null path {};
+    package  = self.packageDrv self.ghcDefaultVersion path {};
     compiler = package.compiler;
     packages = self.haskell.lib.getHaskellBuildInputs package;
     ghc      = self.ghcDefaultVersion;
