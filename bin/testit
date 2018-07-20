@@ -27,7 +27,7 @@ function realize {
 }
 
 realize
-nix-build -Q -j4 -E "((import <darwin> {}).pkgs.dirLocals $PWD)"
+# nix-build -Q -j4 -E "((import <darwin> {}).pkgs.dirLocals $PWD)"
 
 if [[ -z "$ARGS" ]]; then
     finish

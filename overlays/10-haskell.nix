@@ -211,7 +211,8 @@ packageDeps = path:
 
   in compiler.withHoogle (p: with p;
        [ hpack criterion hdevtools # hie.${ghc}
-         (callHackage "cabal-install" cabal.${ghc} {})
+         (self.haskell.lib.doJailbreak
+            (callHackage "cabal-install" cabal.${ghc} {}))
        ] ++ packages.haskellBuildInputs);
 
 dirLocals = root:

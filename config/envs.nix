@@ -26,13 +26,11 @@ let myEmacsPackages   = import ./emacs.nix pkgs;
 
     ghc84Env
     ghc82Env
-    ghc80Env
 
     coqHEADEnv
     coq88Env
     coq87Env
     coq86Env
     coq85Env
-    coq84Env
   ];
 }
