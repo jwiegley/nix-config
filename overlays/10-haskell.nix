@@ -73,9 +73,10 @@ let
     lambdabot = super.lambdabot.overrideAttrs (attrs: {
       strictDeps = true;
     });
-    lambdabot-haskell-plugins = super.lambdabot-haskell-plugins.overrideAttrs (attrs: {
-      strictDeps = true;
-    });
+    lambdabot-haskell-plugins =
+      super.lambdabot-haskell-plugins.overrideAttrs (attrs: {
+        strictDeps = true;
+      });
 
     git-annex = dontCheck (super.git-annex.overrideAttrs (attrs: {
       strictDeps = true;
@@ -88,7 +89,6 @@ let
         repo   = "timeparsers";
         rev    = "ebdc0071f43833b220b78523f6e442425641415d";
         sha256 = "0h8wkqyvahp0csfcj5dl7j56ib8m1aad5kwcsccaahiciic249xq";
-        # date = 2017-01-19T16:47:50-08:00;
       }) {}));
 
     ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
@@ -101,27 +101,6 @@ let
     });
   };
 
-  callPackageKeepDeriver = hpkgs: src: args:
-    pkgs.haskell.lib.overrideCabal (hpkgs.callPackage src args) (orig: {
-      preConfigure = ''
-        # Generated from ${src}
-        ${orig.preConfigure or ""}
-      '';
-    });
-
-  callCabal2nix = hpkgs: name: src: args: let
-    filter = path: type:
-               pkgs.lib.hasSuffix "${name}.cabal" path ||
-               baseNameOf path == "package.yaml";
-    expr = hpkgs.haskellSrc2nix {
-      inherit name;
-      src = if pkgs.lib.canCleanSource src
-            then pkgs.lib.cleanSourceWith { inherit src filter; }
-            else src;
-    };
-  in pkgs.haskell.lib.overrideCabal
-       (callPackageKeepDeriver hpkgs expr args) (orig: { inherit src; });
-
   callPackage = hpkgs: ghc: path: args:
     filtered (
       if builtins.pathExists (path + ("/default.nix"))
@@ -129,7 +108,7 @@ let
              ({ pkgs = self;
                 compiler = ghc;
                 returnShellEnv = false; } // args)
-      else callCabal2nix hpkgs (builtins.baseNameOf path) path args);
+      else hpkgs.callCabal2nix hpkgs (builtins.baseNameOf path) path args);
 
   myHaskellPackages = ghc: self: super:
     let fromSrc = arg:
@@ -258,9 +237,10 @@ haskell = pkgs.haskell // {
         ghc-compact = null;
 
         th-desugar_1_6 = self.callHackage "th-desugar" "1.6" {};
-        singletons = dontCheck (doJailbreak (self.callHackage "singletons" "2.2" {
-          th-desugar = self.th-desugar_1_6;
-        }));
+        singletons =
+          dontCheck (doJailbreak (self.callHackage "singletons" "2.2" {
+            th-desugar = self.th-desugar_1_6;
+          }));
         units = super.units.override {
           th-desugar = self.th-desugar_1_6;
         };
@@ -283,9 +263,6 @@ haskell = pkgs.haskell // {
        ])
        // (with pkgs.haskell.lib; {
         text-format = doJailbreak (overrideCabal super.text-format (drv: {
-          ##     • No instance for (Semigroup Format)
-          ##         arising from the superclasses of an instance declaration
-          ##     • In the instance declaration for ‘Monoid Format’
           src = pkgs.fetchFromGitHub {
             owner  = "deepfire";
             repo   = "text-format";

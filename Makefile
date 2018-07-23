@@ -6,6 +6,7 @@ PROJS = src/async-pool							\
 	src/bindings-DSL						\
 	src/c2hsc							\
 	src/git-all							\
+	src/haskell-z3							\
 	src/hierarchy							\
 	src/hnix							\
 	src/hours							\
@@ -22,15 +23,7 @@ PROJS = src/async-pool							\
 	src/sitebuilder							\
 	src/sizes							\
 	src/una								\
-	src/z3-generate-api						\
-									\
-	bae/micromht-fiat-deliverable/atif-fiat				\
-	bae/micromht-fiat-deliverable/atif-fiat/stanag4607		\
-	bae/micromht-fiat-deliverable/atif-monitors/hmon/hsmedl
-
-# bae/micromht-deliverable/rings-dashboard/mitll-harness		\
-# bae/micromht-deliverable/rings-dashboard/rings-dashboard-api	\
-# bae/micromht-deliverable/rings-dashboard
+	src/z3-generate-api
 
 PENVS = emacs26Env	\
 	coq87Env	\
