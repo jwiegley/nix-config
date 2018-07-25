@@ -111,12 +111,12 @@ DEVONthinkPro = super.stdenv.lib.overrideDerivation (self.installApplication rec
 
 Docker = self.installApplication rec {
   name = "Docker";
-  version = "17.12.1-ce-mac49";
+  version = "18.03.1-ce-mac65";
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
-    sha256 = "14ssbq7v8q7l2w9dyx082grxgjs60rk9b19ay8abgzymcb870afd";
-    # date = 2018-02-04T16:36:09-0800;
+    sha256 = "1hkgi3fm04rinjfzs64p1f34q351rrzwwk5ga1jvyxvk88bj73k7";
+    # date = 2018-07-23T11:14:33-0700;
   };
   description = ''
     Docker CE for Mac is an easy-to-install desktop app for building,
