@@ -6,7 +6,6 @@ PROJS = src/async-pool							\
 	src/bindings-DSL						\
 	src/c2hsc							\
 	src/git-all							\
-	src/haskell-z3							\
 	src/hierarchy							\
 	src/hnix							\
 	src/hours							\
@@ -117,6 +116,7 @@ tag-working:
 
 mirror:
 	git --git-dir=nixpkgs/.git push github -f unstable:unstable
+	git --git-dir=nixpkgs/.git push github -f master:master
 	git --git-dir=darwin/.git push --mirror jwiegley
 	git --git-dir=home-manager/.git push --mirror jwiegley
 
