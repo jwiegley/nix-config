@@ -7,8 +7,8 @@ stdenv.mkDerivation rec {
   src = fetchFromGitHub {
     owner = "jwiegley";
     repo = "category-theory";
-    rev = "cfe8882136d8298e10bc00234ee2527ba66f85b3";
-    sha256 = "0ml9jn0hzl4kzzk7mgqwmdmxdncn1aqn86lhi29m0dsh4awsllvn";
+    rev = "3b9ba7b26a64d49a55e8b6ccea570a7f32c11ead";
+    sha256 = "0f2nr8dgn1ab7hr7jrdmr1zla9g9h8216q4yf4wnff9qkln8sbbs";
     # date = 2018-03-26T17:10:21-07:00;
   };
 

@@ -1,5 +1,5 @@
 REMOTE = vulcan
-CACHE  = /Volumes/slim/Cache
+CACHE  = /Volumes/tank/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
 
 PROJS = src/async-pool							\
