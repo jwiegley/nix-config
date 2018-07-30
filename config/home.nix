@@ -383,7 +383,7 @@ rec {
 
       ignores = [
         "*.elc" "*.vo" "*.aux" "*.v.d" "*.o" "*.a" "*.la" "*.so" "*.dylib"
-        "*~" "#*#" ".makefile" ".clean" ".envrc" ".direnv"
+        "*~" "#*#" ".makefile" ".clean" ".envrc" ".direnv" "*.glob"
       ];
     };
 
