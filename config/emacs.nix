@@ -42,6 +42,7 @@ pkgs: epkgs: with epkgs;
   cmake-mode
   col-highlight
   color-moccur
+  color-theme
   command-log-mode
   company
   company-auctex
