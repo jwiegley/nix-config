@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NIXPKGS='import <darwin> {}'
+NIXPKGS='import <darwin> {}.pkgs'
 PKGNAME=$(basename "$PWD")
 START="$PWD"
 
@@ -18,7 +18,7 @@ if [[ "$PWD" = "/" ]]; then
 fi
 
 if [[ -f default.nix ]]; then
-    exec nix-build "$@"
+    exec nix-build --arg pkgs "$NIXPKGS" "$@"
 else
-    exec nix-build -E "(${NIXPKGS}).pkgs.packageDrv null $PWD {}" "$@"
+    exec nix-build -E "$NIXPKGS.packageDrv null $PWD {}" "$@"
 fi

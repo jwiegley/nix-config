@@ -26,6 +26,8 @@
 # To remove only old environments:
 # `find .direnv -name 'env-*' -and -not -name `readlink .direnv/default` -exec rm -rf {} +`
 #
+NIXPKGS='(import <darwin> {}).pkgs'
+
 use_nix() {
     set -e
 
@@ -48,7 +50,7 @@ use_nix() {
         local drv="${wd}/env.drv"
         if [[ ! -f "${drv}" ]]; then
             log_status "use nix: deriving new environment"
-            IN_NIX_SHELL=1 nix-instantiate --add-root "${drv}" --indirect "${shell}" > /dev/null
+            IN_NIX_SHELL=1 nix-instantiate --arg pkgs "$NIXPKGS" --add-root "${drv}" --indirect "${shell}" > /dev/null
             nix-store -r `nix-store --query --references "${drv}"` --add-root "${wd}/dep" --indirect > /dev/null
         fi
 
@@ -63,7 +65,7 @@ use_nix() {
         log_status "use nix: updating cache"
 
         old=`find ${dir} -name 'dump-*'`
-        nix-shell "${drv}" --show-trace "$@" --run 'direnv dump' > "${dump}"
+        nix-shell --arg pkgs "$NIXPKGS" "${drv}" --show-trace "$@" --run 'direnv dump' > "${dump}"
         rm -f ${old}
     fi
 
