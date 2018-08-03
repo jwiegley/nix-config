@@ -281,7 +281,6 @@ pkgs: epkgs: with epkgs;
   ox-texinfo-plus
   package-lint
   packed
-  palette
   pandoc-mode
   paradox
   paredit
