@@ -108,6 +108,10 @@ rec {
       browsers = [ "firefox" ];
     };
 
+    direnv = {
+      enable = true;
+    };
+
     bash = {
       enable = true;
 
@@ -161,8 +165,8 @@ rec {
               + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
               + " | ${pkgs.coreutils}/bin/tail -n +5";
 
-        hermes = "ssh -t hermes 'zsh -l'";
-        vulcan = "ssh -t vulcan 'zsh -l'";
+        hermes = "${pkgs.openssh}/bin/ssh -t hermes 'zsh -l'";
+        vulcan = "${pkgs.openssh}/bin/ssh -t vulcan 'zsh -l'";
       };
 
       profileExtra = ''
@@ -203,8 +207,6 @@ rec {
         else
            . ${xdg.configHome}/zsh/plugins/iterm2_shell_integration
         fi
-
-        eval "$(direnv hook zsh)"
       '';
 
       plugins = [
@@ -291,7 +293,7 @@ rec {
         credential.helper     = "${pkgs.pass-git-helper}/bin/pass-git-helper";
         ghi.token             =
           "!${pkgs.pass}/bin/pass api.github.com | head -1";
-        hub.protocol          = "ssh";
+        hub.protocol          = "${pkgs.openssh}/bin/ssh";
         mergetool.keepBackup  = true;
         pull.rebase           = true;
         rebase.autosquash     = true;

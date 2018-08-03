@@ -213,12 +213,12 @@ iTerm2 = self.installApplication rec {
 KeyboardMaestro = self.installApplication rec {
   name = "KeyboardMaestro";
   appname = "Keyboard Maestro";
-  version = "8.2.2";
+  version = "8.2.3";
   sourceRoot = "Keyboard Maestro.app";
   src = super.fetchurl {
-    url = http://files.stairways.com/keyboardmaestro-822.zip;
-    sha256 = "14fk71iwwpg8kf6qjvxl1gkgxhinj6p4gzhxngxrcbcvyz77i4v2";
-    # date = 2018-07-17T11:40:34-0700;
+    url = http://files.stairways.com/keyboardmaestro-823.zip;
+    sha256 = "10s0vjmabymmbycn56zzjgm56q2rs45lck528fqpw5hqa0na8iaw";
+    # date = 2018-08-02T15:46:51-0400;
   };
   description = "Keyboard macro program for macOS";
   homepage = https://www.keyboardmaestro.com;

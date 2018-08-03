@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NIXPKGS='import <darwin> {}.pkgs'
+NIXPKGS='(import <darwin> {}).pkgs'
 PKGNAME=$(basename "$PWD")
 START="$PWD"
 

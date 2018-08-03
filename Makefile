@@ -66,7 +66,6 @@ home-build:
 	@rm result
 
 shells:
-	-find ~/bae/ ~/src/ -name .hdevtools.sock -delete
 	for i in $(PROJS); do				\
 	    cd $(HOME)/$$i;				\
 	    echo Pre-building shell env for $$i;	\

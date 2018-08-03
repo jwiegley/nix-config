@@ -66,22 +66,22 @@ let
 
     cabal2nix = dontCheck super.cabal2nix;
 
-    hakyll = super.hakyll.overrideAttrs (attrs: {
-      strictDeps = true;
-    });
+    # hakyll = super.hakyll.overrideAttrs (attrs: {
+    #   strictDeps = true;
+    # });
 
-    lambdabot = super.lambdabot.overrideAttrs (attrs: {
-      strictDeps = true;
-    });
-    lambdabot-haskell-plugins =
-      super.lambdabot-haskell-plugins.overrideAttrs (attrs: {
-        strictDeps = true;
-      });
+    # lambdabot = super.lambdabot.overrideAttrs (attrs: {
+    #   strictDeps = true;
+    # });
+    # lambdabot-haskell-plugins =
+    #   super.lambdabot-haskell-plugins.overrideAttrs (attrs: {
+    #     strictDeps = true;
+    #   });
 
-    git-annex = dontCheck (super.git-annex.overrideAttrs (attrs: {
-      strictDeps = true;
-      nativeBuildInputs = [ pkgs.git pkgs.perl ] ++ attrs.nativeBuildInputs;
-    }));
+    # git-annex = dontCheck (super.git-annex.overrideAttrs (attrs: {
+    #   strictDeps = true;
+    #   nativeBuildInputs = [ pkgs.git pkgs.perl ] ++ attrs.nativeBuildInputs;
+    # }));
 
     timeparsers = dontCheck (doJailbreak
       (self.callCabal2nix "timeparsers" (pkgs.fetchFromGitHub {
@@ -130,9 +130,9 @@ let
            (pkgs.lib.composeExtensions
               (myHaskellPackages ghc)
               (self: super: {
-                 sitebuilder = super.sitebuilder.overrideAttrs (attrs: {
-                   strictDeps = true;
-                 });
+                 # sitebuilder = super.sitebuilder.overrideAttrs (attrs: {
+                 #   strictDeps = true;
+                 # });
                })));
   };
 

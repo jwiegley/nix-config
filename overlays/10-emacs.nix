@@ -120,6 +120,12 @@ let
       # date = 2018-05-10T00:43:55-0700;
     };
 
+    hexrgb = compileEmacsWikiFile {
+      name = "hexrgb.el";
+      sha256 = "18hb8brf7x92aidjfgczxangri6rkqq4x5d06lh41193f97rslm8";
+      # date = 2018-08-02T21:54:21-0400;
+    };
+
     highlight = compileEmacsWikiFile {
       name = "highlight.el";
       sha256 = "0masypzcpqimqb8r0x5d53yc4r4k2g17qr8bg0ysp5li2pmdll9d";
@@ -148,6 +154,14 @@ let
       name = "mudel.el";
       sha256 = "0z6giw5i3qflxll29k6nbmy71nkadbjjkh465fcqbs2v22643fr9";
       # date = 2018-02-21T17:21:50-0800;
+    };
+
+    palette = compileEmacsWikiFile {
+      name = "palette.el";
+      sha256 = "0hqfaykzwn83wngja3ygn0s5iy690wwh84q8xz5cxr6h85b61i53";
+      # date = 2018-08-02T21:54:00-0400;
+
+      buildInputs = [ self.hexrgb ];
     };
 
     popup-pos-tip = compileEmacsWikiFile {
@@ -736,15 +750,15 @@ let
 
 in {
 
-# emacs = self.emacs26;
-
-# emacsPackagesNg = self.emacs26PackagesNg;
-# emacs26PackagesNg = mkEmacsPackages self.emacs26;
-
-emacs = self.emacsMacport;
+emacs = self.emacs26;
 
 emacsPackagesNg = self.emacs26PackagesNg;
-emacs26PackagesNg = mkEmacsPackages self.emacsMacport;
+emacs26PackagesNg = mkEmacsPackages self.emacs26;
+
+# emacs = self.emacsMacport;
+
+# emacsPackagesNg = self.emacs26PackagesNg;
+# emacs26PackagesNg = mkEmacsPackages self.emacsMacport;
 
 emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
 emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
