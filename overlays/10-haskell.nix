@@ -103,7 +103,7 @@ let
 
   callPackage = hpkgs: ghc: path: args:
     filtered (
-      if builtins.pathExists (path + ("/default.nix"))
+      if builtins.pathExists (path + "/default.nix")
       then hpkgs.callPackage path
              ({ pkgs = self;
                 compiler = ghc;
@@ -121,6 +121,11 @@ let
       };
     in builtins.listToAttrs (builtins.map fromSrc srcs);
 
+  usingWithHoogle = hpkgs: hpkgs // rec {
+    ghc = hpkgs.ghc // { withPackages = hpkgs.ghc.withHoogle; };
+    ghcWithPackages = ghc.withPackages;
+  };
+
   overrideHask = ghc: hpkgs: hoverrides: hpkgs.override {
     overrides =
       pkgs.lib.composeExtensions
@@ -130,9 +135,25 @@ let
            (pkgs.lib.composeExtensions
               (myHaskellPackages ghc)
               (self: super: {
-                 # sitebuilder = super.sitebuilder.overrideAttrs (attrs: {
-                 #   strictDeps = true;
-                 # });
+                 ghc = super.ghc // { withPackages = super.ghc.withHoogle; };
+                 ghcWithPackages = self.ghc.withPackages;
+
+                 developPackage =
+                   { root
+                   , source-overrides ? {}
+                   , overrides ? self: super: {}
+                   , modifier ? drv: drv
+                   , returnShellEnv ? pkgs.lib.inNixShell }:
+                   let drv =
+                     ((pkgs.lib.composeExtensions
+                         (_: _: self)
+                         (pkgs.lib.composeExtensions
+                            (self.packageSourceOverrides source-overrides)
+                            overrides)) {} super)
+                     .callCabal2nix (builtins.baseNameOf root) root {};
+                   in if returnShellEnv
+                      then (modifier drv).env
+                      else modifier drv;
                })));
   };
 
@@ -168,13 +189,8 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
        || pkgs.stdenv.lib.hasSuffix ".p_o" path);
 };
 
-usingWithHoogle = hpkgs: hpkgs // rec {
-  ghc = hpkgs.ghc // { withPackages = hpkgs.ghc.withHoogle; };
-  ghcWithPackages = ghc.withPackages;
-};
-
 packageDrv = ghc:
-  callPackage (self.usingWithHoogle self.haskell.packages.${ghc}) ghc;
+  callPackage (usingWithHoogle self.haskell.packages.${ghc}) ghc;
 
 packageDeps = path:
   let
