@@ -26,12 +26,6 @@
 # To remove only old environments:
 # `find .direnv -name 'env-*' -and -not -name `readlink .direnv/default` -exec rm -rf {} +`
 #
-NIXPKGS=${NIXPKGS:-'(import <darwin> {}).pkgs'}
-
-if [[ -z "$NIXARGS" ]]; then
-    NIXARGS=("--arg" "pkgs" "$NIXPKGS")
-fi
-
 use_nix() {
     set -e
 
