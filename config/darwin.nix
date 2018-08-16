@@ -387,10 +387,14 @@ EOF
 
     binaryCaches = [
       "https://hnix.cachix.org"
+      "https://nix-config.cachix.org"
+      "https://nix.london.dfinity.build"
       # "https://nixcache.reflex-frp.org"
     ];
     binaryCachePublicKeys = [
       "hnix.cachix.org-1:8MflOlogfd6Y94rD0cjHsmfK0qIF8F5dPz4TSY7qSdU="
+      "nix-johnw.cachix.org-1:rzYKmZ31XaW/YIac/Nvprktdpk/chtz2JmTaAdooJoQ="
+      "dfinity:585nFxv6mDnV5szM5wdxnMbd7XSQ2GLBvzM36eNAtME="
       # "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="
     ];
 

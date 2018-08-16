@@ -265,11 +265,16 @@ haskell = pkgs.haskell // {
         lens-family-core = self.callHackage "lens-family-core" "1.2.1" {};
       }));
 
-    ghc822 = overrideHask "ghc822" pkgs.haskell.packages.ghc822 (self: super:
-      with pkgs.haskell.lib; {
-        haddock-library =
-          doJailbreak (self.callHackage "haddock-library" "1.4.5" {});
-      });
+    ghc822 =
+      let newPkgs = self; in
+        overrideHask "ghc822" pkgs.haskell.packages.ghc822 (self: super:
+          with pkgs.haskell.lib; {
+            haddock-library =
+              doJailbreak (self.callHackage "haddock-library" "1.4.5" {});
+
+            hpack = newPkgs.haskell.packages.ghc843.hpack;
+            cabal2nix = newPkgs.haskell.packages.ghc843.cabal2nix;
+          });
 
     ghc843 = overrideHask "ghc843" pkgs.haskell.packages.ghc843 (self: super:
       (breakout super [
@@ -294,9 +299,9 @@ haskellPackages_8_0 = self.haskell.packages.ghc802;
 haskellPackages_8_2 = self.haskell.packages.ghc822;
 haskellPackages_8_4 = self.haskell.packages.ghc843;
 
-ghcDefaultVersion = "ghc822";
+ghcDefaultVersion = "ghc843";
 
-haskellPackages = self.haskellPackages_8_2;
+haskellPackages = self.haskellPackages_8_4;
 haskPkgs = self.haskellPackages;
 
 ghc84Env = myPkgs: pkgs.myEnvFun {

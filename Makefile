@@ -31,14 +31,9 @@ PENVS = emacs26Env	\
 
 ENVS =  emacsHEADEnv	\
 	emacs26Env	\
-	emacs26DebugEnv	\
-	coqHEADEnv	\
 	coq88Env	\
 	coq87Env	\
-	coq86Env	\
-	coq85Env	\
 	ghc84Env	\
-	ghc82Env	\
 	ledgerPy2Env	\
 	ledgerPy3Env
 
@@ -125,6 +120,14 @@ update: tag-before pull build-all switch env-all shells working # cache
 
 copy:
 	nix copy --all --keep-going --to ssh://$(REMOTE)
+
+upload:
+	nix-build '<darwin>' -A system | cachix push nix-johnw
+	nix-build $(NIX_CONF)/home-manager/home-manager/home-manager.nix	\
+	    --argstr confPath "$(HOME_MANAGER_CONFIG)"				\
+	    --argstr confAttr "" -A activationPackage |				\
+	    cachix push nix-johnw
+	nix-build '<darwin>' -A pkgs.allEnvs | cachix push nix-johnw
 
 cache:
 	test -d $(CACHE) &&					\

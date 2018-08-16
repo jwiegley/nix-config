@@ -73,6 +73,7 @@ rec {
       LC_CTYPE           = "en_US.UTF-8";
       LESS               = "-FRSXM";
       PROMPT_DIRTRIM     = "2";
+      TERM               = "xterm-256color";
       # PS1                = "\\D{%H:%M} \\h:\\W $ ";
       TINC_USE_NIX       = "yes";
       WORDCHARS          = "";
@@ -171,6 +172,7 @@ rec {
 
       profileExtra = ''
         for file in ${xdg.configHome}/fetchmail/config \
+                    ${xdg.configHome}/fetchmail/config-work \
                     ${xdg.configHome}/fetchmail/config-lists
         do
             cp -pL $file ''${file}.copy
@@ -511,6 +513,15 @@ rec {
     configFile."fetchmail/config".text = ''
       poll imap.fastmail.com protocol IMAP port 993
         user '${programs.git.userEmail}' there is johnw here
+        ssl sslcertck sslcertfile "${ca-bundle_crt}"
+        folder INBOX
+        fetchall
+        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e"
+    '';
+
+    configFile."fetchmail/config-work".text = ''
+      poll imap.gmail.com protocol IMAP port 993
+        user 'john@dfinity.org' there is johnw here
         ssl sslcertck sslcertfile "${ca-bundle_crt}"
         folder INBOX
         fetchall

@@ -140,7 +140,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   hugo
   inkscape.out
   ledger
-  (exe haskPkgs.lhs2tex)
+  (exe haskellPackages_8_2.lhs2tex)
   librsvg
   (exe haskPkgs.pandoc)
   pdf-tools-server
@@ -230,7 +230,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.runmany)
   screen
   silver-searcher
-  (exe haskPkgs.sizes)
+  (exe haskellPackages_8_2.sizes)
   smartmontools
   sqlite
   srm
