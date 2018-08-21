@@ -73,7 +73,6 @@ rec {
       LC_CTYPE           = "en_US.UTF-8";
       LESS               = "-FRSXM";
       PROMPT_DIRTRIM     = "2";
-      TERM               = "xterm-256color";
       # PS1                = "\\D{%H:%M} \\h:\\W $ ";
       TINC_USE_NIX       = "yes";
       WORDCHARS          = "";
@@ -168,6 +167,7 @@ rec {
 
         hermes = "${pkgs.openssh}/bin/ssh -t hermes 'zsh -l'";
         vulcan = "${pkgs.openssh}/bin/ssh -t vulcan 'zsh -l'";
+        fin    = "${pkgs.openssh}/bin/ssh -t fin 'zsh -l'";
       };
 
       profileExtra = ''
@@ -408,8 +408,8 @@ rec {
         vulcan.hostname  = "192.168.1.69";
         hermes.hostname  = "192.168.1.65";
         hermesw.hostname = "192.168.1.67";
-        mybook = vulcan;
-        tank = hermes;
+        fin.hostname     = "192.168.1.80";
+        tank = fin;
 
         titan   = { hostname = "192.168.1.133"; user = "root"; };
         mohajer = { hostname = "192.168.1.75";  user = "nasimw"; };
@@ -417,17 +417,14 @@ rec {
 
         id_local = {
           host = lib.concatStringsSep " " [
-            "fiat" "hermes" "home" "mac1*" "mohajer" "mybook" "nixos*"
+            "fiat" "hermes" "home" "mac1*" "mohajer" "nixos*" "fin"
             "peta" "smokeping" "tails" "tank" "titan" "ubuntu*" "vulcan"
           ];
           identityFile = "${xdg.configHome}/ssh/id_local";
           identitiesOnly = true;
         };
 
-        gramma.hostname = "192.168.64.130";
-        peta.hostname   = "172.16.138.140";
-        fiat.hostname   = "172.16.138.145";
-        nixos.hostname  = "192.168.64.132";
+        nixos.hostname = "192.168.118.128";
 
         # nixos = {
         #   hostname     = "192.168.128.132";
@@ -445,13 +442,6 @@ rec {
         mail.hostname      = "mail.haskell.org";
 
         haskell_org = { host = "*haskell.org"; user = "root"; };
-
-        ivysaur = {
-          hostname = "ivysaur.ait.na.baesystems.com";
-          user = "jwiegley";
-          identityFile = "${xdg.configHome}/ssh/id_bae";
-          identitiesOnly = true;
-        };
       };
     };
   };

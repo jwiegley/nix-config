@@ -105,7 +105,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   iperf
   lftp
   mercurialFull
-  # mitmproxy
+  mitmproxy
   mtr
   nmap
   openssh
@@ -275,7 +275,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   # LaunchBar
   OpenZFSonOSX
   PathFinder
-  PhoneView
   RipIt
   # SageMath
   Skim

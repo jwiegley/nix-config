@@ -37,12 +37,12 @@ Anki = self.installApplication rec {
 
 Dash = self.installApplication rec {
   name = "Dash";
-  version = "4.2.0";
+  version = "4.4.0";
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "1r7m143hyp1d7da2pxcv1c5md763bhfdx7f3zh3q3szcqb0wjx8p";
-    # date = 2018-06-08T23:37:28-0700;
+    sha256 = "1csn42nraxv4h38igrfcrnfr0hb6n5s6gm2wi7vcj6269ijky203";
+    # date = 2018-08-19T23:36:13-0700;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
@@ -127,12 +127,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "61.0.1";
+  version = "61.0.2";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "13sx6y6585dgvy4rrmcsilbvqblzn6fyi7nz1h3jbyh56ws4fbkc";
+    sha256 = "1ibdjf22pxklk2y9awxznxvi0386rbyayxh5vl2jd0rlmrczc8xz";
   };
   postInstall = ''
     for file in  \
@@ -167,13 +167,13 @@ EOF
 
 GIMP = self.installApplication rec {
   name = "GIMP";
-  major = "2.8";
-  minor = "22";
+  major = "2.10";
+  minor = "4";
   version = "${major}.${minor}";
-  sourceRoot = "GIMP.app";
+  sourceRoot = "Gimp-${major}.app";
   src = super.fetchurl {
     url = "https://download.gimp.org/mirror/pub/gimp/v${major}/osx/gimp-${version}-x86_64.dmg";
-    sha256 = "05mxwimvym4afpzj32lp0yjlac5m39nmmxa775wvaqmjah69c51l";
+    sha256 = "0sv9z5a5y54qvnf1a0wgr60bpwxn17gghd1djrlg2xplp443ddzp";
     # date = 2018-02-04T13:08:53-0800;
   };
   description = "GIMP is a cross-platform image editor";
@@ -182,11 +182,11 @@ GIMP = self.installApplication rec {
 
 HandBrake = self.installApplication rec {
   name = "HandBrake";
-  version = "1.0.7";
+  version = "1.1.1";
   sourceRoot = "HandBrake.app";
   src = super.fetchurl {
     url = "https://download2.handbrake.fr/${version}/HandBrake-${version}.dmg";
-    sha256 = "1ql9xx9bh88c0xhsva2bsmdnxix3cw7lmm6wfjak84d2ilifdliw";
+    sha256 = "1nfghjwwy4rl26l0hvm5rfc5rsr7g1pgsk87ysqijf6nv23jr7rh";
     # date = 2018-02-04T15:50:05-0800;
   };
   description = ''
@@ -414,12 +414,12 @@ SageMath = self.installApplication rec {
 
 Skim = self.installApplication rec {
   name = "Skim";
-  version = "1.4.32";
+  version = "1.4.36";
   sourceRoot = "Skim.app";
   src = super.fetchurl {
     name = "Skim-${version}.dmg";
     url = "https://sourceforge.net/projects/skim-app/files/Skim/Skim-${version}/Skim-${version}.dmg/download";
-    sha256 = "15j7r328dxhlwdihw9g82pidmwx5lbrqz2xd07g858rx3v3bcf9k";
+    sha256 = "0smg8ldr7c90gakqg20f8nrq94ak80kkk4456y2abxjk6jijmhr3";
     # date = 2018-02-04T15:50:51-0800;
   };
   description = "Skim is a PDF reader and note-taker for OS X";
@@ -443,13 +443,13 @@ Slate = self.installApplication rec {
 
 Soulver = self.installApplication rec {
   name = "Soulver";
-  version = "2.6.2";
+  version = "2.6.8";
   sourceRoot = "Soulver.app";
   src = super.fetchurl {
     name = "soulver-${version}.zip";
     url = "http://www.acqualia.com/files/download.php?product=soulver";
-    sha256 = "1bimz497nnfigjp4w04v75bx3ymcss1y4i7c1adcjlxs9w41jlm9";
-    # date = 2018-02-04T15:54:54-0800;
+    sha256 = "0ymb608j69ihs4a35zz3d5jqyc446nkffc0gp17ik0w727w10q91";
+    # date = 2018-08-19T15:54:54-0800;
   };
   description = ''
     Use Soulver to play around with numbers, do "back of the envelope" quick
@@ -514,12 +514,12 @@ UnicodeChecker = self.installApplication rec {
 
 VLC = self.installApplication rec {
   name = "VLC";
-  version = "2.2.8";
+  version = "3.0.3";
   sourceRoot = "VLC.app";
   src = super.fetchurl {
     url = "https://get.videolan.org/vlc/${version}/macosx/vlc-${version}.dmg";
-    sha256 = "09x0sbzrs1sknw6bd549zgfq15ir7q6hflqyn4x71ib6qljy01j4";
-    # date = 2018-02-04T13:08:53-0800;
+    sha256 = "04bwl7641zl47pbgnxfq5lfsa5ychsm8gnqvf080mxp0xkb9028l";
+    # date = 2018-08-21T13:08:53-0800;
   };
   description = "VLC is a free and open source cross-platform multimedia player";
   homepage = https://www.videolan.org/vlc;
@@ -528,11 +528,11 @@ VLC = self.installApplication rec {
 VirtualII = self.installApplication rec {
   name = "VirtualII";
   appname = "Virtual ][";
-  version = "8.1";
+  version = "8.6";
   sourceRoot = "Virtual ][.app";
   src = super.fetchurl {
     url = http://www.virtualii.com/VirtualII.dmg;
-    sha256 = "0d7023vq8c85f4zypxjhsppdi4q49biqxg16kh1vq5jz7w51pkbm";
+    sha256 = "09c4nq03bqhvmxprrz0kaiw7a3z250kfwbch4b6wd4llhjkvwr2a";
     # date = 2018-02-04T22:39:02-0800;
   };
   description = ''
@@ -566,12 +566,12 @@ Zekr = self.installApplication rec {
 
 Zotero = self.installApplication rec {
   name = "Zotero";
-  version = "5.0.47";
+  version = "5.0.55";
   sourceRoot = "Zotero.app";
   src = super.fetchurl {
     name = "zotero-${version}.dmg";
-    url = "https://www.zotero.org/download/client/dl?channel=release&platform=mac&version=5.0.47";
-    sha256 = "099wll5wjf0gl7a1lvmj5hmj9vda2sd2x7fvs4n5y2cb56zqa5mv";
+    url = "https://www.zotero.org/download/client/dl?channel=release&platform=mac&version=${version}";
+    sha256 = "1i42i5fcgv7d7g8dns0m557fvgbpcs6bvsiqq2fs7cacdxhl92ci";
   };
   description = ''
     Zotero is a free, easy-to-use tool to help you collect, organize, cite,

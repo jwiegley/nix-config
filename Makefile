@@ -1,5 +1,4 @@
-REMOTE = vulcan
-CACHE  = /Volumes/tank/Cache
+CACHE  = /Volumes/slim/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
 
 PROJS = src/async-pool							\
@@ -26,7 +25,7 @@ PROJS = src/async-pool							\
 
 PENVS = emacs26Env	\
 	coq87Env	\
-	ghc82Env	\
+	ghc84Env	\
 	ledgerPy3Env
 
 ENVS =  emacsHEADEnv	\
@@ -116,10 +115,16 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build-all switch env-all shells working # cache
+update: tag-before pull build-all switch env-all \
+	upload shells working cache copy
 
 copy:
-	nix copy --all --keep-going --to ssh://$(REMOTE)
+	nix copy --keep-going --to ssh://hermes		\
+	    $(shell readlink -f ~/.nix-profile)		\
+	    $(shell readlink -f /run/current-system)
+	nix copy --keep-going --to ssh://fin		\
+	    $(shell readlink -f ~/.nix-profile)		\
+	    $(shell readlink -f /run/current-system)
 
 upload:
 	nix-build '<darwin>' -A system | cachix push nix-johnw

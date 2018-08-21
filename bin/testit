@@ -17,17 +17,11 @@ if [[ -z "$ARGS" && -f default.nix ]]; then
 fi
 
 function realize {
-    build -Q -j4
-    shell -Q -j4 --command true
-
-    if [[ -z "$ARGS" ]]; then
-        nix build --keep-going darwin.system
-        nix build --keep-going darwin.pkgs.ghc82Env
-    fi
+    build -Q | cachix push nix-johnw
+    shell -Q --command true
 }
 
 realize
-# nix-build -Q -j4 -E "((import <darwin> {}).pkgs.dirLocals $PWD)"
 
 if [[ -z "$ARGS" ]]; then
     finish

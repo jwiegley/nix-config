@@ -22,15 +22,8 @@ let myEmacsPackages   = import ./emacs.nix pkgs;
   allEnvs = with self; [
     emacsHEADEnv
     emacs26Env
-    emacs26DebugEnv
-
     ghc84Env
-    ghc82Env
-
-    coqHEADEnv
     coq88Env
     coq87Env
-    coq86Env
-    coq85Env
   ];
 }

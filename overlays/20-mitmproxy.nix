@@ -31,6 +31,8 @@ mitmproxy = with self.python3Packages; buildPythonPackage rec {
     sortedcontainers ldap3 wsproto
   ];
 
+  doCheck = false;
+
   checkInputs = with self; [
     beautifulsoup4 flask pytest
     requests glibcLocales
