@@ -135,7 +135,11 @@ EOF
   '';
 
   nixpkgs = {
-    config.allowUnfree = true;
+    config = {
+      allowUnfree = true;
+      allowBroken = false;
+      allowUnsupportedSystem = false;
+    };
 
     overlays =
       let path = ../overlays; in with builtins;

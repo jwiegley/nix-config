@@ -1,0 +1,8 @@
+#!/bin/bash
+
+sudo nix-env --delete-generations $(sudo nix-env --list-generations | field 1 | head -n -1)
+
+sudo nix-env -p /nix/var/nix/profiles/system --delete-generations \
+    $(sudo nix-env -p /nix/var/nix/profiles/system --list-generations | field 1 | head -n -1)
+
+exec nix-collect-garbage -d

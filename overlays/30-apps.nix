@@ -501,12 +501,12 @@ Ukelele = self.installApplication rec {
 
 UnicodeChecker = self.installApplication rec {
   name = "UnicodeChecker";
-  version = "1.19";
+  version = "1.20";
   sourceRoot = "UnicodeChecker ${version}/UnicodeChecker.app";
   src = super.fetchurl {
     url = http://earthlingsoft.net/UnicodeChecker/UnicodeChecker.zip;
-    sha256 = "12rf6l62bxszxs8cq4259bi3n0iwmmg6rxqmff52i55qnbiqjb87";
-    # date = 2018-02-04T16:15:00-0800;
+    sha256 = "06v7qbb55zd2x9qmqr6ssnrsvsv97x9apq81vkbych4f5farwk2z";
+    # date = 2018-08-21T12:44:03-0700;
   };
   description = "Explore and convert Unicode";
   homepage = http://earthlingsoft.net/UnicodeChecker;
