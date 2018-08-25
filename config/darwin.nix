@@ -381,31 +381,38 @@ EOF
 
     trustedUsers = [ "johnw" "@admin" ];
     maxJobs = 10;
-    distributedBuilds = true;
-    buildMachines = [
-      { hostName = "hermes";
-        sshUser = "johnw";
-        sshKey = "${home_directory}/.config/ssh/id_local";
-        system = "x86_64-darwin";
-        maxJobs = 4;
-        speedFactor = 2;
-      }
-      { hostName = "fin";
-        sshUser = "johnw";
-        sshKey = "${home_directory}/.config/ssh/id_local";
-        system = "x86_64-darwin";
-        maxJobs = 4;
-        speedFactor = 1;
-      }
-    ];
+    distributedBuilds = false;
+    # buildMachines = [
+    #   # { hostName = "vulcan";
+    #   #   sshUser = "johnw";
+    #   #   sshKey = "${home_directory}/.config/ssh/id_local";
+    #   #   system = "x86_64-darwin";
+    #   #   maxJobs = 10;
+    #   #   speedFactor = 4;
+    #   # }
+    #   { hostName = "hermes";
+    #     sshUser = "johnw";
+    #     sshKey = "${home_directory}/.config/ssh/id_local";
+    #     system = "x86_64-darwin";
+    #     maxJobs = 4;
+    #     speedFactor = 2;
+    #   }
+    #   { hostName = "fin";
+    #     sshUser = "johnw";
+    #     sshKey = "${home_directory}/.config/ssh/id_local";
+    #     system = "x86_64-darwin";
+    #     maxJobs = 4;
+    #     speedFactor = 1;
+    #   }
+    # ];
 
     binaryCaches = [
-      "https://hnix.cachix.org"
-      "https://nix-johnw.cachix.org"
+      # "https://hnix.cachix.org"
+      # "https://nix-johnw.cachix.org"
     ];
     binaryCachePublicKeys = [
-      "hnix.cachix.org-1:8MflOlogfd6Y94rD0cjHsmfK0qIF8F5dPz4TSY7qSdU="
-      "nix-johnw.cachix.org-1:rzYKmZ31XaW/YIac/Nvprktdpk/chtz2JmTaAdooJoQ="
+      # "hnix.cachix.org-1:8MflOlogfd6Y94rD0cjHsmfK0qIF8F5dPz4TSY7qSdU="
+      # "nix-johnw.cachix.org-1:rzYKmZ31XaW/YIac/Nvprktdpk/chtz2JmTaAdooJoQ="
     ];
 
     extraOptions = ''

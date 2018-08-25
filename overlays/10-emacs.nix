@@ -439,6 +439,17 @@ let
       ];
     };
 
+    mmm-mode = compileEmacsFiles {
+      name = "mmm-mode";
+      src = fetchFromGitHub {
+        owner = "purcell";
+        repo = "mmm-mode";
+        rev = "ff0b214f27d5dddeb856acb4216e77a864dcc0b2";
+        sha256 = "0lxd55yhz0ag7v1ydff55bg4h8snq5lbk8cjwxqpyq6gh4v7md1h";
+        # date = 2018-06-21T16:19:14+03:00;
+      };
+    };
+
     moccur-edit = compileEmacsFiles {
       name = "moccur-edit";
       src = fetchFromGitHub {
@@ -449,6 +460,18 @@ let
         # date = 2015-03-01T18:04:32+09:00;
       };
       buildInputs = [ self.color-moccur ];
+    };
+
+    nix-mode = compileEmacsFiles {
+      name = "nix-mode";
+      src = fetchFromGitHub {
+        owner = "NixOS";
+        repo = "nix-mode";
+        rev = "38061187ca16fa9973622777e6087730b72ebfc1";
+        sha256 = "1ayclfbk5dkd9pnvxap8yxrszhbjzgzyw604kwhncklskx66bfjf";
+        # date = 2018-08-21T21:14:47-05:00;
+      };
+      buildInputs = with self; [ company json-mode mmm-mode json-snatcher json-reformat ];
     };
 
     org-opml = compileEmacsFiles {

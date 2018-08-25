@@ -115,8 +115,12 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build-all switch env-all \
-	upload shells working cache copy
+update: tag-before pull build-all switch env-all shells working cache copy
+
+check:
+	nix-store --verify --repair --check-contents
+	ssh hermes nix-store --verify --repair --check-contents
+	ssh fin nix-store --verify --repair --check-contents
 
 copy:
 	nix copy --keep-going --to ssh://hermes		\
