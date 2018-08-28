@@ -177,7 +177,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   aspellDicts.en
   bash-completion
   bashInteractive
-  # bat
+  bat
   browserpass
   dirscan
   ctop
@@ -201,7 +201,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.hours)
   htop
   imagemagickBig
-  # imgcat
+  imgcat
   jdiskreport
   jdk8
   less
@@ -258,10 +258,10 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   zsh-syntax-highlighting
 
   # x11ToolsEnv
-  # xquartz
-  # xorg.xhost
-  # xorg.xauth
-  # ratpoison
+  xquartz
+  xorg.xhost
+  xorg.xauth
+  ratpoison
 
   # Applications
   Anki
