@@ -123,12 +123,16 @@ check:
 	ssh fin nix-store --verify --repair --check-contents
 
 copy:
+	push -f src hermes
 	nix copy --keep-going --to ssh://hermes		\
 	    $(shell readlink -f ~/.nix-profile)		\
 	    $(shell readlink -f /run/current-system)
+	ssh hermes '(cd src/nix; make)'
+	push -f src fin
 	nix copy --keep-going --to ssh://fin		\
 	    $(shell readlink -f ~/.nix-profile)		\
 	    $(shell readlink -f /run/current-system)
+	ssh fin '(cd src/nix; make)'
 
 upload:
 	nix-build '<darwin>' -A system | cachix push nix-johnw

@@ -411,6 +411,11 @@ rec {
         fin.hostname     = "192.168.1.80";
         tank = fin;
 
+        home = {
+          hostname = "76.234.69.149";
+          port = 2201;
+        };
+
         titan   = { hostname = "192.168.1.133"; user = "root"; };
         mohajer = { hostname = "192.168.1.75";  user = "nasimw"; };
         router  = { hostname = "192.168.1.2";   user = "root"; };

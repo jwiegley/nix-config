@@ -239,12 +239,12 @@ LaTeXiT = self.installApplication rec {
 
 LaunchBar = self.installApplication rec {
   name = "LaunchBar";
-  version = "6.9.5";
+  version = "6.9.6";
   sourceRoot = "LaunchBar.app";
   src = super.fetchurl {
     url = "https://www.obdev.at/downloads/launchbar/LaunchBar-${version}.dmg";
-    sha256 = "0ldmbbh0snsdsfgbqsxwp954622am5nf5iqyx9n536wz9yfhyvw3";
-    # date = 2018-06-09T10:29:40-0700;
+    sha256 = "14xr57q6iwdsp6ssvs8gmsp94kl3hnmp2yspah97qw580q9dr167";
+    # date = 2018-08-31T10:29:40-0700;
   };
   description = ''
     Start with a single keyboard shortcut to access and control every aspect
