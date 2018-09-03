@@ -163,14 +163,17 @@ cache:
 remove-build-products:
 	find $(HOME)					\
 	    \( -name 'dist' -type d -o			\
+	       -name '.direnv' -type d -o		\
 	       -name 'result' -type l -o		\
 	       -name 'result-*' -type l \) -print0	\
 	    | parallel -0 /bin/rm -fr {}
 
 gc:
+	nix-collect-garbage -p /nix/var/nix/profiles/system --delete-older-than 14d
 	nix-collect-garbage --delete-older-than 14d
 
-gc-all: gc
+gc-all: remove-build-products
+	nix-collect-garbage -p /nix/var/nix/profiles/system -d
 	nix-collect-garbage -d
 
 ### Makefile ends here

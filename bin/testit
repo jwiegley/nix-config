@@ -17,7 +17,7 @@ if [[ -z "$ARGS" && -f default.nix ]]; then
 fi
 
 function realize {
-    build -Q | cachix push nix-johnw
+    build -Q
     shell -Q --command true
 }
 
@@ -31,5 +31,7 @@ if [[ -z "$ARGS" ]]; then
 fi
 
 if [[ -f .envrc ]]; then
+    direnv allow .
+    rm -fr .direnv
     direnv export zsh || exit "Failed to build direnv environment"
 fi
