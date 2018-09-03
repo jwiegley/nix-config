@@ -1,28 +1,8 @@
 CACHE  = /Volumes/slim/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
 
-PROJS = src/async-pool							\
-	src/bindings-DSL						\
-	src/c2hsc							\
-	src/git-all							\
-	src/hierarchy							\
-	src/hnix							\
-	src/hours							\
-	src/logging							\
-	src/monad-extras						\
-	src/numbers							\
-	src/parsec-free							\
-	src/pipes-async							\
-	src/pipes-files							\
-	src/pushme							\
-	src/recursors							\
+PROJS = src/hnix							\
 	src/refine-freer						\
-	src/runmany							\
-	src/sitebuilder							\
-	src/sizes							\
-	src/una								\
-	src/z3-generate-api						\
-	dfinity/dev-in-nix						\
 	dfinity/consensus-model
 
 PENVS = emacs26Env	\
@@ -52,7 +32,7 @@ darwin-build:
 
 home-switch:
 	home-manager switch
-	@echo "Home generation:   $$(home-manager generations | head -1)"
+	@echo "Home generation: $$(home-manager generations | head -1)"
 
 home-build:
 	nix build -f $(NIX_CONF)/home-manager/home-manager/home-manager.nix	\
@@ -68,13 +48,17 @@ shells:
 	    testit --make;				\
 	    rm -f result;				\
 	done
+	(cd dfinity/dev-in-nix; \
+	 nix-build -Q -A client || exit "Failed to build DFINITY client")
+	(cd dfinity/dev-in-nix; rm -fr .direnv; \
+	 direnv export zsh || exit "Failed to build direnv environment")
 
 env-all:
 	for i in $(ENVS); do					\
 	    echo Updating $$i;					\
 	    nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ;	\
 	done
-	@echo "Nix generation:    $$(nix-env --list-generations | tail -1)"
+	@echo "Nix generation: $$(nix-env --list-generations | tail -1)"
 
 env-all-build:
 	nix build --keep-going darwin.pkgs.allEnvs
@@ -108,10 +92,14 @@ tag-before:
 tag-working:
 	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
 	git --git-dir=nixpkgs/.git branch -D before-update
+	git --git-dir=nixpkgs/.git tag \
+	    known-good-$(shell git show -s --format=%cd --date=format:%Y%m%d_%H%M%S last-known-good) \
+	    last-known-good
 
 mirror:
 	git --git-dir=nixpkgs/.git push github -f unstable:unstable
 	git --git-dir=nixpkgs/.git push github -f master:master
+	git --git-dir=nixpkgs/.git push --tags github
 	git --git-dir=darwin/.git push --mirror jwiegley
 	git --git-dir=home-manager/.git push --mirror jwiegley
 
@@ -134,6 +122,8 @@ copy:
 	    nix copy --keep-going --to ssh://hermes	\
 	        $(HOME)/$$i/.direnv/default/env.drv;	\
 	done
+	nix copy --keep-going --to ssh://hermes	\
+	    $(HOME)/dfinity/dev-in-nix/.direnv/default/env.drv
 	ssh hermes '(cd src/nix; make)'
 	push -f src fin
 	nix copy --keep-going --to ssh://fin		\
@@ -144,6 +134,8 @@ copy:
 	    nix copy --keep-going --to ssh://fin	\
 	        $(HOME)/$$i/.direnv/default/env.drv;	\
 	done
+	nix copy --keep-going --to ssh://fin	\
+	    $(HOME)/dfinity/dev-in-nix/.direnv/default/env.drv
 	ssh fin '(cd src/nix; make)'
 
 cache:
@@ -169,11 +161,13 @@ remove-build-products:
 	    | parallel -0 /bin/rm -fr {}
 
 gc:
-	nix-collect-garbage -p /nix/var/nix/profiles/system --delete-older-than 14d
 	nix-collect-garbage --delete-older-than 14d
 
 gc-all: remove-build-products
-	nix-collect-garbage -p /nix/var/nix/profiles/system -d
+	sudo nix-env --delete-generations \
+	    $(shell sudo nix-env --list-generations | field 1 | head -n -1)
+	sudo nix-env -p /nix/var/nix/profiles/system --delete-generations \
+	    $(shell sudo nix-env -p /nix/var/nix/profiles/system --list-generations | field 1 | head -n -1)
 	nix-collect-garbage -d
 
 ### Makefile ends here

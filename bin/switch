@@ -1,0 +1,3 @@
+#!/bin/bash -e
+cd ~/src/nix
+exec make switch
