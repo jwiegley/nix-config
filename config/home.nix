@@ -422,14 +422,16 @@ rec {
 
         id_local = {
           host = lib.concatStringsSep " " [
-            "fiat" "hermes" "home" "mac1*" "mohajer" "nixos*" "fin" "dfinity"
-            "peta" "smokeping" "tails" "tank" "titan" "ubuntu*" "vulcan"
+            "fiat" "hermes" "home" "mac1*" "macos*" "nixos*" "mohajer" "fin"
+            "dfinity" "peta" "smokeping" "tails" "tank" "titan" "ubuntu*"
+            "vulcan"
           ];
           identityFile = "${xdg.configHome}/ssh/id_local";
           identitiesOnly = true;
         };
 
         nixos.hostname   = "192.168.118.128";
+        macos.hostname   = "192.168.118.130";
         dfinity.hostname = "192.168.118.129";
 
         # nixos = {
