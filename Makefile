@@ -21,7 +21,9 @@ PROJS = src/async-pool							\
 	src/sitebuilder							\
 	src/sizes							\
 	src/una								\
-	src/z3-generate-api
+	src/z3-generate-api						\
+	dfinity/dev-in-nix						\
+	dfinity/consensus-model
 
 PENVS = emacs26Env	\
 	coq87Env	\
@@ -127,20 +129,22 @@ copy:
 	nix copy --keep-going --to ssh://hermes		\
 	    $(shell readlink -f ~/.nix-profile)		\
 	    $(shell readlink -f /run/current-system)
+	for i in $(PROJS); do				\
+	    echo Copying shell env for $$i to hermes;	\
+	    nix copy --keep-going --to ssh://hermes	\
+	        $(HOME)/$$i/.direnv/default/env.drv;	\
+	done
 	ssh hermes '(cd src/nix; make)'
 	push -f src fin
 	nix copy --keep-going --to ssh://fin		\
 	    $(shell readlink -f ~/.nix-profile)		\
 	    $(shell readlink -f /run/current-system)
+	for i in $(PROJS); do				\
+	    echo Copying shell env for $$i to fin;	\
+	    nix copy --keep-going --to ssh://fin	\
+	        $(HOME)/$$i/.direnv/default/env.drv;	\
+	done
 	ssh fin '(cd src/nix; make)'
-
-upload:
-	nix-build '<darwin>' -A system | cachix push nix-johnw
-	nix-build $(NIX_CONF)/home-manager/home-manager/home-manager.nix	\
-	    --argstr confPath "$(HOME_MANAGER_CONFIG)"				\
-	    --argstr confAttr "" -A activationPackage |				\
-	    cachix push nix-johnw
-	nix-build '<darwin>' -A pkgs.allEnvs | cachix push nix-johnw
 
 cache:
 	test -d $(CACHE) &&					\

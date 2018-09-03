@@ -29,3 +29,7 @@ if [[ -z "$ARGS" ]]; then
         realize
     fi
 fi
+
+if [[ -f .envrc ]]; then
+    direnv export zsh || exit "Failed to build direnv environment"
+fi
