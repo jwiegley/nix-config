@@ -407,21 +407,9 @@ EOF
     # ];
 
     binaryCaches = [
-      # "https://hnix.cachix.org"
-      # "https://nix-johnw.cachix.org"
     ];
     binaryCachePublicKeys = [
-      # "hnix.cachix.org-1:8MflOlogfd6Y94rD0cjHsmfK0qIF8F5dPz4TSY7qSdU="
-      # "nix-johnw.cachix.org-1:rzYKmZ31XaW/YIac/Nvprktdpk/chtz2JmTaAdooJoQ="
     ];
-
-    extraOptions = ''
-      gc-keep-outputs = true
-      gc-keep-derivations = true
-      env-keep-derivations = true
-      # optional, useful when the builder has a faster internet connection than yours
-      # builders-use-substitutes = true
-    '';
   };
 
   programs.bash.enable = true;
