@@ -7,12 +7,10 @@
 }:
 
 stdenv.mkDerivation {
-  name = name;
-  src = src;
+  inherit name src patches;
   unpackCmd = ''
     test -f "${src}" && mkdir el && cp -p ${src} el/${name}
   '';
-  patches = patches;
   buildInputs = [ emacs ] ++ buildInputs;
   buildPhase = ''
     ARGS=$(find ${stdenv.lib.concatStrings
