@@ -128,8 +128,8 @@ let
 
     highlight = compileEmacsWikiFile {
       name = "highlight.el";
-      sha256 = "0masypzcpqimqb8r0x5d53yc4r4k2g17qr8bg0ysp5li2pmdll9d";
-      # date = 2018-02-21T17:21:42-0800;
+      sha256 = "1d0b90xm786wm8yd36w0fzy5g87rsbbkz8zx7xq6a5p02vvfciaj";
+      # date = 2018-09-10T17:26:26-0700;
     };
 
     highlight-cl = compileEmacsWikiFile {
@@ -224,22 +224,13 @@ let
       };
     };
 
-    cldoc = compileEmacsFiles {
-      name = "cldoc.el";
-      src = fetchurl {
-        url = http://homepage1.nifty.com/bmonkey/emacs/elisp/cldoc.el;
-        sha256 = "0svv1k7fr4a1syplp0fdfn1as7am0d7g5z8hhl4qhmd5b0hl1pad";
-        # date = 2018-01-16T15:05:37-0800;
-      };
-    };
-
     # jww (2018-01-16): This is present in melpaPackages, but does not build.
     cmake-mode = compileEmacsFiles {
       name = "cmake-mode.el";
       src = fetchurl {
         url = https://raw.githubusercontent.com/Kitware/CMake/master/Auxiliary/cmake-mode.el;
-        sha256 = "11969b7hdvfx2zxhbpcfshdwi5kk2kigg43hli4yacpkhvl7f2qd";
-        # date = 2018-01-16T15:05:55-0800;
+        sha256 = "01q9gnkgjl5dfsvw639kq8xi7vlgfyn5iz01ipn85q37wvibvlij";
+        # date = 2018-09-10T17:26:40-0700;
       };
     };
 

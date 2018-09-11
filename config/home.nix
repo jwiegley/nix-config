@@ -190,6 +190,7 @@ rec {
         export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(command_execution_time)
 
         . ${pkgs.z}/share/z.sh
+        setopt extended_glob
       '';
 
       initExtra = lib.mkBefore ''
@@ -432,13 +433,14 @@ rec {
 
         nixos.hostname   = "192.168.118.128";
         macos.hostname   = "192.168.118.130";
-        dfinity.hostname = "192.168.118.129";
 
-        # nixos = {
-        #   hostname     = "192.168.128.132";
-        #   proxyCommand = "${pkgs.openssh}/bin/ssh -q hermes "
-        #                + "/run/current-system/sw/bin/socat - TCP:%h:%p";
-        # };
+        # dfinity.hostname = "192.168.118.129";
+
+        dfinity = {
+          hostname     = "192.168.118.129";
+          proxyCommand = "${pkgs.openssh}/bin/ssh -q home "
+                       + "/run/current-system/sw/bin/socat - TCP:%h:%p";
+        };
 
         smokeping = { hostname = "192.168.1.78";   user = "smokeping"; };
         tails     = { hostname = "172.16.138.139"; user = "root"; };

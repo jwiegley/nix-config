@@ -99,7 +99,7 @@ tag-working:
 mirror:
 	git --git-dir=nixpkgs/.git push github -f unstable:unstable
 	git --git-dir=nixpkgs/.git push github -f master:master
-	git --git-dir=nixpkgs/.git push --tags github
+	git --git-dir=nixpkgs/.git push -f --tags github
 	git --git-dir=darwin/.git push --mirror jwiegley
 	git --git-dir=home-manager/.git push --mirror jwiegley
 

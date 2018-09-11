@@ -36,7 +36,6 @@ pkgs: epkgs: with epkgs;
   change-inner
   chess                         # chess chess-ics
   circe
-  cldoc
   clipmon
   cmake-font-lock
   cmake-mode

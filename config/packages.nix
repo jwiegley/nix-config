@@ -46,43 +46,16 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
 
   # langToolsEnv
   R
-  autoconf
-  automake
-  (exe haskPkgs.cabal-install)
-  clang
-  cmake
+  (exe haskPkgs.cabal-install)  # for sdist/publish
   direnv
-  fftw
-  fftw.dev
-  fftw.man
-  fftwFloat
-  fftwFloat.dev
-  fftwFloat.man
-  fftwLongDouble
-  fftwLongDouble.dev
-  fftwLongDouble.man
   global
-  gmp
   gnumake
   (exe haskPkgs.hpack)
   htmlTidy
   idutils
-  lean
-  libcxx
-  libcxxabi
-  libtool
-  llvm
   lp_solve
-  mpfr
-  ninja
-  ott
-  pkgconfig
-  rabbitmq-c
-  rabbitmq_server
   rtags
-  sbcl
   sloccount
-  # verasco
   yamale
 
   # mailToolsEnv
