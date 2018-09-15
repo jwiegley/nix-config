@@ -1,7 +1,7 @@
 { pkgs }:
 
 with pkgs; let exe = haskell.lib.justStaticExecutables; in [
-  nixUnstable
+  nixStable
   nix-scripts
   nix-prefetch-scripts
   home-manager
@@ -20,6 +20,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   git-scripts
   git-tbdiff
   gitRepo
+  gitAndTools.git-crypt
   gitAndTools.git-imerge
   gitAndTools.gitFull
   gitAndTools.gitflow
@@ -28,9 +29,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe gitAndTools.git-annex)
   gitAndTools.git-annex-remote-rclone
   gitAndTools.git-secret
-  (exe haskPkgs.github-backup)
   gitstats
-  pass-git-helper
   patch
   patchutils
   sift
@@ -45,15 +44,14 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nodePackages.jsontool
 
   # langToolsEnv
-  R
   (exe haskPkgs.cabal-install)  # for sdist/publish
   direnv
   global
   gnumake
   (exe haskPkgs.hpack)
+  # (exe haskPkgs.brittany)
   htmlTidy
   idutils
-  lp_solve
   rtags
   sloccount
   yamale
@@ -151,7 +149,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   bash-completion
   bashInteractive
   bat
-  browserpass
   dirscan
   ctop
   cvc4
@@ -190,19 +187,18 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   paperkey
   parallel
   (pass.withExtensions (ext: with ext; [ pass-otp pass-update ]))
+  pass-git-helper
+  browserpass
+  qrencode
   pinentry_mac
-  postgresql
   (exe haskPkgs.pushme)
   pv
-  reflex
   qemu
-  qrencode
   renameutils
   ripgrep
   rlwrap
   (exe haskPkgs.runmany)
   screen
-  silver-searcher
   (exe haskellPackages_8_2.sizes)
   smartmontools
   sqlite
@@ -225,7 +221,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   yubikey-personalization
   z
   z3
-  zbar
   zip
   zsh
   zsh-syntax-highlighting

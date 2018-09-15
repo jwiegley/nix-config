@@ -91,6 +91,24 @@ let
         sha256 = "0h8wkqyvahp0csfcj5dl7j56ib8m1aad5kwcsccaahiciic249xq";
       }) {}));
 
+    ghc-exactprint = self.callCabal2nix "ghc-exactprint"
+      (pkgs.fetchFromGitHub {
+         owner  = "alanz";
+         repo   = "ghc-exactprint";
+         rev    = "8c9b982fadd2301e5707411caafb744c81f71ab9";
+         sha256 = "10pzn71nnfrmyywqv50vfak7xgf19c9aqy3i8k92lns5x9ycfqdv";
+         # date = 2018-09-12T23:35:30+02:00;
+       }) {};
+
+    brittany = self.callCabal2nix "brittany"
+      (pkgs.fetchFromGitHub {
+         owner  = "lspitzner";
+         repo   = "brittany";
+         rev    = "932cf70f9baff7b7870fa8744590d0de602f05f8";
+         sha256 = "1df1bxbc5gzlb7ifamdng95nrgsz8qlkwswvybcir35mj7cplblw";
+         # date = 2018-09-13T22:47:25+02:00;
+       }) {};
+
     ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
       enableLibraryProfiling    = false;
       enableExecutableProfiling = false;

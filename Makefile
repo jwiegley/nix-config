@@ -1,20 +1,20 @@
-CACHE  = /Volumes/slim/Cache
-ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
+BRANCH = unstable
 
-PROJS = src/hnix							\
-	src/refine-freer						\
+CACHE = /Volumes/slim/Cache
+ROOTS = /nix/var/nix/gcroots/per-user/johnw/shells
+
+PROJS = src/hnix				\
+	src/hours				\
+	src/refine-freer			\
+	src/category-theory			\
+	src/papers/denotational-design		\
+	dfinity/dev-in-nix			\
 	dfinity/consensus-model
 
-PENVS = emacs26Env	\
-	coq87Env	\
-	ghc84Env	\
-	ledgerPy3Env
+PENVS = emacs26Env
 
-ENVS =  emacsHEADEnv	\
+ENVS  = emacsHEADEnv	\
 	emacs26Env	\
-	coq88Env	\
-	coq87Env	\
-	ghc84Env	\
 	ledgerPy2Env	\
 	ledgerPy3Env
 
@@ -48,10 +48,6 @@ shells:
 	    testit --make;				\
 	    rm -f result;				\
 	done
-	#(cd $(HOME)/dfinity/dev-in-nix; \
-	# nix-build -Q -A client || exit "Failed to build DFINITY client")
-	#(cd $(HOME)/dfinity/dev-in-nix; rm -fr .direnv; \
-	# direnv export zsh || exit "Failed to build direnv environment")
 
 env-all:
 	for i in $(ENVS); do					\
@@ -97,7 +93,7 @@ tag-working:
 	    last-known-good
 
 mirror:
-	git --git-dir=nixpkgs/.git push github -f unstable:unstable
+	git --git-dir=nixpkgs/.git push github -f $(BRANCH):$(BRANCH)
 	git --git-dir=nixpkgs/.git push github -f master:master
 	git --git-dir=nixpkgs/.git push -f --tags github
 	git --git-dir=darwin/.git push --mirror jwiegley
@@ -105,41 +101,27 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build-all switch env-all shells working cache copy
+update: tag-before pull build-all switch env-all shells working cache
 
 check:
 	nix-store --verify --repair --check-contents
 	ssh hermes nix-store --verify --repair --check-contents
 	ssh fin nix-store --verify --repair --check-contents
 
+REMOTE = hermes
+
 copy:
 	nix-store --verify --repair --check-contents
-	push -f src hermes
-	nix copy --keep-going --to ssh://hermes		\
+	push -f src $(REMOTE)
+	nix copy --keep-going --to ssh://$(REMOTE)	\
 	    $(shell readlink -f ~/.nix-profile)		\
 	    $(shell readlink -f /run/current-system)
-	for i in $(PROJS); do				\
-	    echo Copying shell env for $$i to hermes;	\
-	    nix copy --keep-going --to ssh://hermes	\
-	        $(HOME)/$$i/.direnv/default/env.drv;	\
+	for i in $(PROJS); do					\
+	    echo Copying shell env for $$i to $(REMOTE);	\
+	    nix copy --keep-going --to ssh://$(REMOTE)		\
+	        $(HOME)/$$i/.direnv/default/env.drv;		\
 	done
-	ssh hermes '(cd src/nix; make)'
-
-# push -f src fin
-# nix copy --keep-going --to ssh://fin		\
-#     $(shell readlink -f ~/.nix-profile)		\
-#     $(shell readlink -f /run/current-system)
-# for i in $(PROJS); do				\
-#     echo Copying shell env for $$i to fin;	\
-#     nix copy --keep-going --to ssh://fin	\
-#         $(HOME)/$$i/.direnv/default/env.drv;	\
-# done
-# ssh fin '(cd src/nix; make)'
-
-#nix copy --keep-going --to ssh://hermes	\
-#    $(HOME)/dfinity/dev-in-nix/.direnv/default/env.drv
-#nix copy --keep-going --to ssh://fin	\
-#    $(HOME)/dfinity/dev-in-nix/.direnv/default/env.drv
+	ssh $(REMOTE) '(cd src/nix; make)'
 
 cache:
 	test -d $(CACHE) &&					\

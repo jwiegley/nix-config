@@ -94,6 +94,11 @@ rec {
         ".ledgerrc".text       = "--file /Volumes/Files/Accounts/ledger.dat\n";
         ".slate".source        = "${xdg.configHome}/slate/config";
         ".zekr".source         = "${xdg.dataHome}/zekr";
+
+        ".curlrc".text = ''
+          capath=${pkgs.cacert}/etc/ssl/certs/
+          cacert=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
+        '';
       };
   };
 
@@ -405,21 +410,31 @@ rec {
       hashKnownHosts = true;
       userKnownHostsFile = "${xdg.configHome}/ssh/known_hosts";
 
-      matchBlocks = rec {
-        vulcan.hostname  = "192.168.1.69";
+      matchBlocks =
+        let amLocal = false;
+            hostOnVulcan = ipaddr: {
+              hostname     = ipaddr;
+              proxyCommand = "${pkgs.openssh}/bin/ssh -q vulcan "
+                           + "/run/current-system/sw/bin/socat - TCP:%h:%p";
+            };
+        in rec {
         hermes.hostname  = "192.168.1.65";
         hermesw.hostname = "192.168.1.67";
         fin.hostname     = "192.168.1.80";
         tank = fin;
 
-        home = {
-          hostname = "76.234.69.149";
-          port = 2201;
-        };
+        vulcan =
+          if amLocal
+          then { hostname = "192.168.1.69"; }
+          else {
+            hostname = "76.234.69.149";
+            port = 2201;
+            extraOptions = {
+              "LocalForward" = "5999 127.0.0.1:5900";
+            };
+          };
 
-        titan   = { hostname = "192.168.1.133"; user = "root"; };
-        mohajer = { hostname = "192.168.1.75";  user = "nasimw"; };
-        router  = { hostname = "192.168.1.2";   user = "root"; };
+        router = { hostname = "192.168.1.2"; user = "root"; };
 
         id_local = {
           host = lib.concatStringsSep " " [
@@ -431,20 +446,13 @@ rec {
           identitiesOnly = true;
         };
 
-        nixos.hostname   = "192.168.118.128";
-        macos.hostname   = "192.168.118.130";
+        nixos   = hostOnVulcan "192.168.118.128";
+        dfinity = hostOnVulcan "192.168.118.129";
+        macos   = hostOnVulcan "192.168.118.130";
 
-        # dfinity.hostname = "192.168.118.129";
+        smokeping = { hostname = "192.168.1.78"; user = "smokeping"; };
 
-        dfinity = {
-          hostname     = "192.168.118.129";
-          proxyCommand = "${pkgs.openssh}/bin/ssh -q home "
-                       + "/run/current-system/sw/bin/socat - TCP:%h:%p";
-        };
-
-        smokeping = { hostname = "192.168.1.78";   user = "smokeping"; };
-        tails     = { hostname = "172.16.138.139"; user = "root"; };
-        elpa      = { hostname = "elpa.gnu.org";   user = "root"; };
+        elpa = { hostname = "elpa.gnu.org"; user = "root"; };
 
         savannah.hostname  = "git.sv.gnu.org";
         fencepost.hostname = "fencepost.gnu.org";

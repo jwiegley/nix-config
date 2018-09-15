@@ -3,14 +3,21 @@
 let home_directory = "/Users/johnw";
     logdir = "${home_directory}/Library/Logs"; in
 {
-  system.defaults.NSGlobalDomain.AppleKeyboardUIMode = 3;
-  system.defaults.NSGlobalDomain.ApplePressAndHoldEnabled = false;
+  system.defaults = {
+    NSGlobalDomain = {
+      AppleKeyboardUIMode = 3;
+      ApplePressAndHoldEnabled = false;
+    };
 
-  system.defaults.dock.autohide    = true;
-  system.defaults.dock.launchanim  = false;
-  system.defaults.dock.orientation = "right";
+    dock = {
+      autohide    = true;
+      launchanim  = false;
+      orientation = "right";
+    };
 
-  system.defaults.trackpad.Clicking = true;
+    trackpad.Clicking = true;
+  };
+
   # system.defaults.menuextra.battery.ShowPercent = true;
   # system.defaults.menuextra.clock.DateFormat = "EEE MMM d  h:mm a";
 
@@ -370,7 +377,7 @@ EOF
   services.activate-system.enable = true;
 
   nix = {
-    package = pkgs.nixUnstable;
+    package = pkgs.nixStable;
 
     nixPath =
       [ "darwin-config=$HOME/src/nix/config/darwin.nix"

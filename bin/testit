@@ -3,32 +3,10 @@
 set -eo pipefail
 IFS=$'\n\t'
 
-function finish {
-    if [[ -f default.nix.bak ]]; then
-        mv default.nix.bak default.nix
-    fi
-}
-
 ARGS="$1"
 
-if [[ -z "$ARGS" && -f default.nix ]]; then
-    trap finish EXIT INT TERM ERR
-    mv default.nix default.nix.bak
-fi
-
-function realize {
-    build -Q
-    shell -Q --command true
-}
-
-realize
-
-if [[ -z "$ARGS" ]]; then
-    finish
-    if [[ -f default.nix ]]; then
-        realize
-    fi
-fi
+build -Q || exit "Failed to build project"
+shell -Q --command true || exit "Failed to enter project shell"
 
 if [[ -f .envrc ]]; then
     direnv allow .
