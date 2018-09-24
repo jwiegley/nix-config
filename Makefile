@@ -3,12 +3,14 @@ BRANCH = unstable
 CACHE = /Volumes/slim/Cache
 ROOTS = /nix/var/nix/gcroots/per-user/johnw/shells
 
-PROJS = src/hnix				\
-	src/hours				\
-	src/refine-freer			\
-	src/category-theory			\
-	src/papers/denotational-design		\
-	dfinity/dev-in-nix			\
+PROJS = src/hnix		       \
+	src/hours		       \
+	src/refine-freer	       \
+	src/category-theory	       \
+	src/papers/denotational-design \
+	src/notes/haskell	       \
+	src/notes/coq		       \
+	dfinity/dev-in-nix	       \
 	dfinity/consensus-model
 
 PENVS = emacs26Env

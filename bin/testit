@@ -5,11 +5,11 @@ IFS=$'\n\t'
 
 ARGS="$1"
 
-build -Q || exit "Failed to build project"
-shell -Q --command true || exit "Failed to enter project shell"
+build -Q || echo "Failed to build project"
+shell -Q --command true || echo "Failed to enter project shell"
 
 if [[ -f .envrc ]]; then
     direnv allow .
     rm -fr .direnv
-    direnv export zsh || exit "Failed to build direnv environment"
+    direnv export zsh || echo "Failed to build direnv environment"
 fi
