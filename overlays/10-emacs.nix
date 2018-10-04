@@ -42,7 +42,9 @@ let
 
 
     github-pullrequest = addBuildInputs super.github-pullrequest [ pkgs.git ];
-    magithub           = addBuildInputs super.magithub           [ pkgs.git ];
+    magithub           = addBuildInputs super.magithub           [
+      pkgs.git self.dash self.graphql self.treepy
+    ];
     magit-annex        = addBuildInputs super.magit-annex        [ pkgs.git ];
     magit-filenotify   = addBuildInputs super.magit-filenotify   [ pkgs.git ];
     magit-gitflow      = addBuildInputs super.magit-gitflow      [ pkgs.git ];
@@ -367,7 +369,7 @@ let
         sha256 = "0c7q11bcjccrhpxnabghpb8c2pfz3khqb8cpff8wpqmnsnh9whd4";
         # date = 2018-06-03T15:38:46-05:00;
       };
-      buildInputs = with self; [ ghub apiwrap ];
+      buildInputs = with self; [ ghub apiwrap dash graphql treepy ];
     };
 
     gnus-harvest = compileEmacsFiles {
@@ -426,7 +428,7 @@ let
       };
       buildInputs = with self; [
         magit magit-popup a anaphora dash f s hl-todo kv with-editor git-commit
-        ghub
+        ghub graphql treepy
       ];
     };
 

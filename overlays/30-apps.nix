@@ -24,12 +24,12 @@ installApplication =
 
 Anki = self.installApplication rec {
   name = "Anki";
-  version = "2.1.0beta35";
+  version = "2.1.5";
   sourceRoot = "Anki.app";
   src = super.fetchurl {
-    url = "https://apps.ankiweb.net/downloads/beta/anki-${version}.dmg";
-    sha256 = "04q9pv182ajvgj79ffad8618wf75lpx4xq7sn5chb4sws66r5yky";
-    # date = 2018-02-02T15:42:49-0800;
+    url = "https://apps.ankiweb.net/downloads/current/anki-${version}-mac.dmg";
+    sha256 = "0ca0sbfxvji6h9g6p3433c663i2kgp3nfgh8b262w1ganxygjfd2";
+    # date = 2018-10-03T15:42:49-0800;
   };
   description = "Anki is a program which makes remembering things easy";
   homepage = https://apps.ankiweb.net;
@@ -41,8 +41,8 @@ Dash = self.installApplication rec {
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "1csn42nraxv4h38igrfcrnfr0hb6n5s6gm2wi7vcj6269ijky203";
-    # date = 2018-08-19T23:36:13-0700;
+    sha256 = "0agnl62fciyqdh9f14w35cdamyblm0qy4kbvj2y9qs41z49qq4p4";
+    # date = 2018-10-03T22:44:23-0700;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
@@ -111,12 +111,12 @@ DEVONthinkPro = super.stdenv.lib.overrideDerivation (self.installApplication rec
 
 Docker = self.installApplication rec {
   name = "Docker";
-  version = "18.03.1-ce-mac65";
+  version = "18.06.1-ce-mac";
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
-    sha256 = "1hkgi3fm04rinjfzs64p1f34q351rrzwwk5ga1jvyxvk88bj73k7";
-    # date = 2018-07-23T11:14:33-0700;
+    sha256 = "19a7n36nkw20rrklr8qlp76l5xhn037avqfnk81rilghik1yla9l";
+    # date = 2018-10-03T11:14:33-0700;
   };
   description = ''
     Docker CE for Mac is an easy-to-install desktop app for building,
@@ -127,12 +127,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "61.0.2";
+  version = "62.0.3";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "1ibdjf22pxklk2y9awxznxvi0386rbyayxh5vl2jd0rlmrczc8xz";
+    sha256 = "0l9d8k73im5l0zd581zbq34xjhcgi3r4kkzjb4ds33yljn34vl7w";
   };
   postInstall = ''
     for file in  \
@@ -199,12 +199,12 @@ HandBrake = self.installApplication rec {
 iTerm2 = self.installApplication rec {
   name = "iTerm2";
   appname = "iTerm";
-  version = "3.2.0";
+  version = "3.2.1";
   sourceRoot = "iTerm.app";
   src = super.fetchurl {
-    url = "https://iterm2.com/downloads/stable/iTerm2-3_2_0.zip";
-    sha256 = "19121a3hdqvsm6l778s7myfm8z61ss8c0g8rlwlvypbfdybn4j3x";
-    # date = 2018-08-09T18:27:05-0400;
+    url = "https://iterm2.com/downloads/stable/iTerm2-3_2_1.zip";
+    sha256 = "07f3acrnwlf76zjzv8kxl3kl86wdl9iylfc15rm9r0d57qrvvmh0";
+    # date = 2018-09-25T16:52:34-0500;
   };
   description = "iTerm2 is a replacement for Terminal and the successor to iTerm";
   homepage = https://www.iterm2.com;
@@ -461,12 +461,12 @@ Soulver = self.installApplication rec {
 SuspiciousPackage = self.installApplication rec {
   name = "SuspiciousPackage";
   appname = "Suspicious Package";
-  version = "3.3.1";
+  version = "3.4";
   sourceRoot = "Suspicious Package.app";
   src = super.fetchurl {
     url = "http://www.mothersruin.com/software/downloads/SuspiciousPackage.dmg";
-    sha256 = "0133l1v1x3pv9bhjpf7nqh8gsiyz1j1abgil6p8bcx05jgffdvj9";
-    # date = 2018-02-04T16:23:11-0800;
+    sha256 = "022sg23xjfvgx94xd4dq9db3kw0dcp8y6c6lxv1cv773q2kfa5h4";
+    # date = 2018-10-03T22:43:45-0700;
   };
   description = "An Application for Inspecting macOS Installer Packages";
   homepage = http://www.mothersruin.com/software/SuspiciousPackage;
