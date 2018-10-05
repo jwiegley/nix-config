@@ -199,12 +199,12 @@ HandBrake = self.installApplication rec {
 iTerm2 = self.installApplication rec {
   name = "iTerm2";
   appname = "iTerm";
-  version = "3.2.1";
+  version = "3.2.3";
   sourceRoot = "iTerm.app";
   src = super.fetchurl {
-    url = "https://iterm2.com/downloads/stable/iTerm2-3_2_1.zip";
-    sha256 = "07f3acrnwlf76zjzv8kxl3kl86wdl9iylfc15rm9r0d57qrvvmh0";
-    # date = 2018-09-25T16:52:34-0500;
+    url = "https://iterm2.com/downloads/stable/iTerm2-3_2_3.zip";
+    sha256 = "0vvs12plz6cjpxj74msmjn72d30mly7nplp6vipj5g45s35x1jay";
+    # date = 2018-10-05T10:51:47-0700;
   };
   description = "iTerm2 is a replacement for Terminal and the successor to iTerm";
   homepage = https://www.iterm2.com;
@@ -222,35 +222,6 @@ KeyboardMaestro = self.installApplication rec {
   };
   description = "Keyboard macro program for macOS";
   homepage = https://www.keyboardmaestro.com;
-};
-
-LaTeXiT = self.installApplication rec {
-  name = "LaTeXiT";
-  version = "2.8.1";
-  sourceRoot = "LaTeXiT.app";
-  src = super.fetchurl {
-    url = https://www.chachatelier.fr/latexit/downloads/LaTeXiT-2_8_1.dmg;
-    sha256 = "1jpgz61w8p2kz7gvlxjnh0f91nwl2ap826kfgw5zdd2pznnwnb5b";
-    # date = 2018-02-04T14:46:50-0800;
-  };
-  description = "LaTeXiT is a graphical interface above a LaTeX engine";
-  homepage = https://www.chachatelier.fr/latexit;
-};
-
-LaunchBar = self.installApplication rec {
-  name = "LaunchBar";
-  version = "6.9.6";
-  sourceRoot = "LaunchBar.app";
-  src = super.fetchurl {
-    url = "https://www.obdev.at/downloads/launchbar/LaunchBar-${version}.dmg";
-    sha256 = "14xr57q6iwdsp6ssvs8gmsp94kl3hnmp2yspah97qw580q9dr167";
-    # date = 2018-08-31T10:29:40-0700;
-  };
-  description = ''
-    Start with a single keyboard shortcut to access and control every aspect
-    of your digital life.
-  '';
-  homepage = https://www.obdev.at/products/launchbar;
 };
 
 OmniGrafflePro_6 = self.installApplication rec {
@@ -393,25 +364,6 @@ RipIt = self.installApplication rec {
   homepage = http://thelittleappfactory.com/ripit;
 };
 
-SageMath = self.installApplication rec {
-  name = "SageMath";
-  version = "8.1";
-  sourceRoot = "SageMath-${version}.app";
-  src = super.fetchurl {
-    url = "http://mirrors.xmission.com/sage/osx/intel/sage-${version}-OSX_10.12.6-x86_64.app.dmg";
-    sha256 = "0cvdp9p4jvv23a8spswb0g9rj1rpcz64qzmfdg9cqww875lm6ydx";
-    # date = 2018-02-04T13:08:53-0800;
-  };
-  description = ''
-    SageMath is a free open-source mathematics software system licensed under
-    the GPL. It builds on top of many existing open-source packages: NumPy,
-    SciPy, matplotlib, Sympy, Maxima, GAP, FLINT, R and many more. Access
-    their combined power through a common, Python-based language or directly
-    via interfaces or wrappers.
-  '';
-  homepage = http://www.sagemath.org;
-};
-
 Skim = self.installApplication rec {
   name = "Skim";
   version = "1.4.36";
@@ -470,19 +422,6 @@ SuspiciousPackage = self.installApplication rec {
   };
   description = "An Application for Inspecting macOS Installer Packages";
   homepage = http://www.mothersruin.com/software/SuspiciousPackage;
-};
-
-Transmission = self.installApplication rec {
-  name = "Transmission";
-  version = "896de2b593";
-  sourceRoot = "Transmission.app";
-  src = super.fetchurl {
-    url = "https://build.transmissionbt.com/job/trunk-mac/lastSuccessfulBuild/artifact/release/Transmission-${version}.dmg";
-    sha256 = "0c8yx461kbgwqzz3b97n2i9hk19sk6m9rh5r7r87a7dwwnmrcj32";
-    # date = 2018-02-04T14:23:15-0800;
-  };
-  description = "Cross-platform BitTorrent client";
-  homepage = https://transmissionbt.com;
 };
 
 Ukelele = self.installApplication rec {

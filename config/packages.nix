@@ -111,7 +111,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   hugo
   inkscape.out
   ledger
-  (exe haskellPackages_8_2.lhs2tex)
+  (exe haskPkgs.lhs2tex)
   librsvg
   (exe haskPkgs.pandoc)
   pdf-tools-server
@@ -238,22 +238,18 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   Firefox
   GIMP
   HandBrake
+  iTerm2
   KeyboardMaestro
-  # LaTeXiT
-  # LaunchBar
   OpenZFSonOSX
   PathFinder
   RipIt
-  # SageMath
   Skim
   Soulver
   SuspiciousPackage
-  # Transmission
   Ukelele
   UnicodeChecker
   VLC
   VirtualII
   Zekr
   Zotero
-  iTerm2
 ]

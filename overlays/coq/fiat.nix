@@ -1,17 +1,20 @@
 { pkgs, coq }: with pkgs;
 
 stdenv.mkDerivation rec {
-  name = "coq-fiat-${coq.coq-version}-unstable-${version}";
-  version = "2018-02-27";
+  name = "coq-fiat-core-${coq.coq-version}-unstable-${version}";
+  version = "2018-05-14";
 
-  src = fetchgit {
-    url = "https://github.com/mit-plv/fiat.git";
-    rev = "253fc133397f73d6daed0b9518ca7ab5507a1cb0";
-    sha256 = "0b5z7nz0cr1s7vy04s996dj0pd7ljqx6g5a8syh4hy2z87ijkjzd";
+  src = pkgs.fetchFromGitHub {
+    owner = "jwiegley";
+    repo = "fiat-core";
+    rev = "5d2d1fdfba7c3ed5a3120dad2415b0bb958b6d02";
+    sha256 = "190v5sz8fmdhbndknq9mkwpj3jf570gzdibww7f76g81a34v3qli";
+    fetchSubmodules = true;
+    # date = 2018-05-14T10:05:32-07:00;
   };
 
-  buildInputs = [ ocamlPackages.ocaml ocamlPackages.camlp5_transitional
-                  ocamlPackages.findlib python27 ];
+  buildInputs = [ coq coq.ocaml coq.camlp5 coq.findlib
+                  pkgs.git pkgs.python27 ];
   propagatedBuildInputs = [ coq ];
 
   doCheck = false;

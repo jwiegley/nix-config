@@ -15,7 +15,6 @@ let
     let pkg = coqPackage self; in {
       QuickChick      = pkg ./coq/QuickChick.nix;
       fiat_HEAD       = pkg ./coq/fiat.nix;
-      coq-haskell     = pkg ./coq/coq-haskell.nix;
       category-theory = pkg ./coq/category-theory.nix;
       procrastination = pkg ./coq/procrastination.nix;
     };
