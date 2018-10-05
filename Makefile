@@ -46,7 +46,10 @@ home-build:
 shells:
 	for i in $(PROJS); do				\
 	    cd $(HOME)/$$i;				\
+	    echo;					\
+	    echo;					\
 	    echo Pre-building shell env for $$i;	\
+	    echo;					\
 	    testit --make;				\
 	    rm -f result;				\
 	done

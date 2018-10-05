@@ -5,7 +5,6 @@ IFS=$'\n\t'
 
 ARGS="$1"
 
-build -Q || echo "Failed to build project"
 shell -Q --command true || echo "Failed to enter project shell"
 
 if [[ -f .envrc ]]; then
