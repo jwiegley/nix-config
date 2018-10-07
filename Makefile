@@ -111,8 +111,6 @@ update: tag-before pull build-all switch env-all shells working cache
 
 check:
 	nix-store --verify --repair --check-contents
-	ssh hermes nix-store --verify --repair --check-contents
-	ssh fin nix-store --verify --repair --check-contents
 
 REMOTE = hermes
 
@@ -132,7 +130,7 @@ copy:
 	echo Copying shell env for dev-in-nix to $(REMOTE)
 	nix copy --keep-going --to ssh://$(REMOTE)		\
 	    $(HOME)/dfinity/dev-in-nix/.direnv/default/env.drv
-	ssh $(REMOTE) '(cd src/nix; make)'
+	ssh $(REMOTE) 'make -C src/nix -f Makefile build-all all'
 
 cache:
 	test -d $(CACHE) &&					\
