@@ -10,5 +10,5 @@ shell -Q --command true || echo "Failed to enter project shell"
 if [[ -f .envrc ]]; then
     direnv allow .
     rm -fr .direnv
-    direnv export zsh || echo "Failed to build direnv environment"
+    direnv export zsh > /dev/null || echo "Failed to build direnv environment"
 fi

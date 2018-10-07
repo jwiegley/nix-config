@@ -10,7 +10,6 @@ PROJS = src/hnix		       \
 	src/papers/denotational-design \
 	src/notes/haskell	       \
 	src/notes/coq		       \
-	dfinity/dev-in-nix	       \
 	dfinity/consensus-model
 
 PENVS = emacs26Env
@@ -47,12 +46,14 @@ shells:
 	for i in $(PROJS); do				\
 	    cd $(HOME)/$$i;				\
 	    echo;					\
-	    echo;					\
 	    echo Pre-building shell env for $$i;	\
 	    echo;					\
 	    testit --make;				\
 	    rm -f result;				\
 	done
+	(cd $(HOME)/dfinity/dev-in-nix;							\
+	 rm -fr .direnv;							\
+	 direnv export zsh > /dev/null || echo "Failed to build direnv environment")
 
 env-all:
 	for i in $(ENVS); do					\
@@ -115,17 +116,22 @@ check:
 
 REMOTE = hermes
 
-copy:
+verify:
 	nix-store --verify --repair --check-contents
+
+copy:
 	push -f src $(REMOTE)
-	nix copy --keep-going --to ssh://$(REMOTE)	\
-	    $(shell readlink -f ~/.nix-profile)		\
+	nix copy --keep-going --to ssh://$(REMOTE)		\
+	    $(shell readlink -f ~/.nix-profile)			\
 	    $(shell readlink -f /run/current-system)
 	for i in $(PROJS); do					\
 	    echo Copying shell env for $$i to $(REMOTE);	\
 	    nix copy --keep-going --to ssh://$(REMOTE)		\
 	        $(HOME)/$$i/.direnv/default/env.drv;		\
 	done
+	echo Copying shell env for dev-in-nix to $(REMOTE)
+	nix copy --keep-going --to ssh://$(REMOTE)		\
+	    $(HOME)/dfinity/dev-in-nix/.direnv/default/env.drv
 	ssh $(REMOTE) '(cd src/nix; make)'
 
 cache:
