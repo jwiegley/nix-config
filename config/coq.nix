@@ -1,7 +1,7 @@
 pkgs: version: cpkgs: with pkgs;
 [
   ocamlPackages.ocaml
-  ocamlPackages.camlp5_transitional
+  ocamlPackages.camlp5
   ocamlPackages.findlib
   ocamlPackages.menhir
   coq2html

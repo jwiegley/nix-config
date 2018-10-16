@@ -276,6 +276,7 @@ pkgs: epkgs: with epkgs;
   ov
   ovpn-mode
   ox-extra
+  ox-jira
   ox-pandoc
   ox-texinfo-plus
   package-lint

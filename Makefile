@@ -10,6 +10,7 @@ PROJS = src/hnix		       \
 	src/papers/denotational-design \
 	src/notes/haskell	       \
 	src/notes/coq		       \
+	src/plclub/hs-to-coq	       \
 	dfinity/consensus-model
 
 PENVS = emacs26Env
@@ -51,7 +52,7 @@ shells:
 	    testit --make;				\
 	    rm -f result;				\
 	done
-	(cd $(HOME)/dfinity/dev-in-nix;							\
+	(cd $(HOME)/dfinity/dev;						\
 	 rm -fr .direnv;							\
 	 direnv export zsh > /dev/null || echo "Failed to build direnv environment")
 
@@ -118,7 +119,7 @@ verify:
 	nix-store --verify --repair --check-contents
 
 copy:
-	push -f src $(REMOTE)
+	push -f src,dfinity $(REMOTE)
 	nix copy --keep-going --to ssh://$(REMOTE)		\
 	    $(shell readlink -f ~/.nix-profile)			\
 	    $(shell readlink -f /run/current-system)
@@ -127,13 +128,13 @@ copy:
 	    nix copy --keep-going --to ssh://$(REMOTE)		\
 	        $(HOME)/$$i/.direnv/default/env.drv;		\
 	done
-	echo Copying shell env for dev-in-nix to $(REMOTE)
+	echo Copying shell env for dev to $(REMOTE)
 	nix copy --keep-going --to ssh://$(REMOTE)		\
-	    $(HOME)/dfinity/dev-in-nix/.direnv/default/env.drv
-	ssh $(REMOTE) 'make -C src/nix -f Makefile build-all all'
+	    $(HOME)/dfinity/dev/.direnv/default/env.drv
+	ssh $(REMOTE) 'make -C src/nix -f Makefile NIX_CONF=$(HOME)/src/nix build-all all'
 
 cache:
-	test -d $(CACHE) &&					\
+	-test -d $(CACHE) &&					\
 	(find /nix/store -maxdepth 1 -type f			\
 	    \( -name '*.dmg' -o					\
 	       -name '*.zip' -o					\

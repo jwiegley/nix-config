@@ -207,6 +207,7 @@ rec {
         fi
 
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
+        export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | head -1);
 
         if [[ ! -o interactive ]]; then
             prompt_powerlevel9k_teardown
@@ -262,7 +263,7 @@ rec {
         from       = "!${pkgs.git}/bin/git bisect start && ${pkgs.git}/bin/git bisect bad HEAD && ${pkgs.git}/bin/git bisect good";
         ls-ignored = "ls-files --exclude-standard --ignored --others";
         nb         = "!${pkgs.git}/bin/git checkout --track $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote)/$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD) -b";
-        ppr        = "!${pkgs.git}/bin/git push $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote) HEAD:$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD) && ${pkgs.git-pull-request}/bin/git-pull-request --target-branch $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).merge)";
+        pr         = "!${pkgs.git}/bin/git push $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote) HEAD:$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD) && ${pkgs.git-pull-request}/bin/git-pull-request --target-branch $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).merge) --target-remote $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote) --no-rebase --no-comment-on-update";
         rc         = "rebase --continue";
         rh         = "reset --hard";
         ri         = "rebase --interactive";
@@ -299,8 +300,7 @@ rec {
         commit.gpgsign        = true;
         github.user           = "jwiegley";
         credential.helper     = "${pkgs.pass-git-helper}/bin/pass-git-helper";
-        ghi.token             =
-          "!${pkgs.pass}/bin/pass api.github.com | head -1";
+        ghi.token             = "!${pkgs.pass}/bin/pass api.github.com | head -1";
         hub.protocol          = "${pkgs.openssh}/bin/ssh";
         mergetool.keepBackup  = true;
         pull.rebase           = true;
@@ -420,6 +420,10 @@ rec {
         in rec {
         hermes.hostname  = "192.168.1.65";
         hermesw.hostname = "192.168.1.67";
+        hermesr = {
+          hostname = "127.0.0.1";
+          port = 2222;
+        };
         fin.hostname     = "192.168.1.80";
         tank = fin;
 

@@ -230,6 +230,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   xorg.xhost
   xorg.xauth
   ratpoison
+  prooftree
 
   # Applications
   Anki

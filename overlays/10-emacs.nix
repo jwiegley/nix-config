@@ -81,7 +81,7 @@ let
 
     browse-kill-ring-plus = compileEmacsWikiFile {
       name = "browse-kill-ring+.el";
-      sha256 = "1s32f70lc1gnllqqfw8zqr5n743rf0yfifqljsl210vnb5zg4zkj";
+      sha256 = "14118rimjsps94ilhi0i9mwx7l69ilbidgqfkfrm5c9m59rki2gq";
       # date = 2018-02-21T17:21:31-0800;
 
       buildInputs = [ self.browse-kill-ring ];
@@ -130,7 +130,7 @@ let
 
     highlight = compileEmacsWikiFile {
       name = "highlight.el";
-      sha256 = "1d0b90xm786wm8yd36w0fzy5g87rsbbkz8zx7xq6a5p02vvfciaj";
+      sha256 = "128z9k4mjkk688dm9i5157nn1acidmka6c7x8srx6d3sgrrm987r";
       # date = 2018-09-10T17:26:26-0700;
     };
 
