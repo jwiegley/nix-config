@@ -30,7 +30,9 @@ use_nix() {
     set -e
 
     local shell="shell.nix"
-    if [[ ! -f "${shell}" ]]; then
+    if [[ -n "$NIXFILE" && -f "${NIXFILE}" ]]; then
+        shell="$NIXFILE"
+    elif [[ ! -f "${shell}" ]]; then
         shell="default.nix"
     fi
 
