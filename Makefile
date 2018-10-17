@@ -1,24 +1,35 @@
+NIX_CONF = $(HOME)/src/nix
+
 BRANCH = unstable
+REMOTE = hermes
+CACHE  = /Volumes/slim/Cache
+ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
 
-CACHE = /Volumes/slim/Cache
-ROOTS = /nix/var/nix/gcroots/per-user/johnw/shells
+PENVS  = emacs26Env
 
-PROJS = src/hnix		       \
-	src/hours		       \
-	src/refine-freer	       \
-	src/category-theory	       \
-	src/papers/denotational-design \
-	src/notes/haskell	       \
-	src/notes/coq		       \
-	src/plclub/hs-to-coq	       \
-	dfinity/consensus-model
+ENVS   = emacsHEADEnv	\
+	 emacs26Env	\
+	 ledgerPy2Env	\
+	 ledgerPy3Env
 
-PENVS = emacs26Env
-
-ENVS  = emacsHEADEnv	\
-	emacs26Env	\
-	ledgerPy2Env	\
-	ledgerPy3Env
+PROJS  = src/hnix				\
+	 src/hours				\
+	 src/refine-freer			\
+	 src/category-theory			\
+						\
+	 src/papers/denotational-design		\
+						\
+	 src/notes/haskell			\
+	 src/notes/coq				\
+						\
+	 src/plclub/hs-to-coq			\
+						\
+	 dfinity/consensus-model		\
+	 dfinity/dev/hs-dfinity-common		\
+	 dfinity/dev/hs-dfinity-node		\
+	 dfinity/dev/hs-dfinity-consensus	\
+	 dfinity/dev/hs-dfinity-hypervisor	\
+	 dfinity/dev/hs-dfinity-storage
 
 all: switch env-all shells
 
@@ -52,9 +63,6 @@ shells:
 	    testit --make;				\
 	    rm -f result;				\
 	done
-	(cd $(HOME)/dfinity/dev;						\
-	 rm -fr .direnv;							\
-	 direnv export zsh > /dev/null || echo "Failed to build direnv environment")
 
 env-all:
 	for i in $(ENVS); do					\
@@ -113,8 +121,6 @@ update: tag-before pull build-all switch env-all shells working cache
 check:
 	nix-store --verify --repair --check-contents
 
-REMOTE = hermes
-
 verify:
 	nix-store --verify --repair --check-contents
 
@@ -128,9 +134,6 @@ copy:
 	    nix copy --keep-going --to ssh://$(REMOTE)		\
 	        $(HOME)/$$i/.direnv/default/env.drv;		\
 	done
-	echo Copying shell env for dev to $(REMOTE)
-	nix copy --keep-going --to ssh://$(REMOTE)		\
-	    $(HOME)/dfinity/dev/.direnv/default/env.drv
 	ssh $(REMOTE) 'make -C src/nix -f Makefile NIX_CONF=$(HOME)/src/nix build-all all'
 
 cache:
@@ -164,5 +167,3 @@ gc-all: remove-build-products
 	sudo nix-env -p /nix/var/nix/profiles/system --delete-generations \
 	    $(shell sudo nix-env -p /nix/var/nix/profiles/system --list-generations | field 1 | head -n -1)
 	nix-collect-garbage -d
-
-### Makefile ends here

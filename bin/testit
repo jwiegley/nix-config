@@ -5,7 +5,7 @@ IFS=$'\n\t'
 
 ARGS="$1"
 
-shell -Q --command true || echo "Failed to enter project shell"
+# shell -Q --command true || echo "Failed to enter project shell"
 
 if [[ -f .envrc ]]; then
     direnv allow .
