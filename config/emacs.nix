@@ -87,6 +87,7 @@ pkgs: epkgs: with epkgs;
   doxymacs
   dumb-jump
   ebdb                          # ebdb-com
+  edbi
   edit-env
   edit-indirect
   edit-server
@@ -355,6 +356,7 @@ pkgs: epkgs: with epkgs;
   tablist
   tagedit
   tidy
+  tla-mode
   transpose-mark
   treemacs
   tuareg

@@ -590,6 +590,17 @@ let
       };
     };
 
+    tla-mode = compileEmacsFiles {
+      name = "tla-mode";
+      src = fetchFromGitHub {
+        owner = "ratish-punnoose";
+        repo = "tla-mode";
+        rev = "ab604ba3739ad613599ccee7bc7cb4c9a7b84f5c";
+        sha256 = "1q9pnf4hdan7y4gyxssgdarprdf3wjv5gflnirbpfqq7fyfihwxw";
+        # date = 2016-04-06T23:50:23-07:00;
+      };
+    };
+
     word-count-mode = compileEmacsFiles {
       name = "word-count-mode";
       src = fetchFromGitHub {

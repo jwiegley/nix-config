@@ -267,7 +267,19 @@ EOF
           preset      = on;
           uptest      = none;
           edns_query  = yes;
-          exclude     = ".local";
+          exclude     = ".local",".dfinity.build";
+          purge_cache = off;
+      }
+
+      server {
+          label       = "DFINITY";
+          ip          = 10.20.0.2;
+          preset      = off;
+          interface   = "ipsec0";
+          uptest      = if;
+          edns_query  = yes;
+          lean_query  = yes;
+          include     = ".dfinity.build";
           proxy_only  = on;
           purge_cache = off;
       }
@@ -278,8 +290,7 @@ EOF
           preset      = on;
           uptest      = none;
           edns_query  = yes;
-          exclude     = ".local";
-          proxy_only  = on;
+          exclude     = ".local",".dfinity.build";
           purge_cache = off;
       }
 
@@ -299,8 +310,7 @@ EOF
           preset      = on;
           uptest      = none;
           edns_query  = yes;
-          exclude     = ".local";
-          proxy_only  = on;
+          exclude     = ".local",".dfinity.build";
           purge_cache = off;
       }
 
