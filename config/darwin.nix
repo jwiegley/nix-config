@@ -320,6 +320,7 @@ EOF
           root_server       = discover;
           ip                = 198.41.0.4, 192.228.79.201;
           randomize_servers = on;
+          exclude           = ".local",".dfinity.build";
       }
 
       source {
