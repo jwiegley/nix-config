@@ -27,6 +27,7 @@ PROJS  = src/hnix				\
 	 dfinity/consensus-model		\
 	 dfinity/dev/hs-dfinity-common		\
 	 dfinity/dev/hs-dfinity-node		\
+	 dfinity/dev/hs-dfinity-proc		\
 	 dfinity/dev/hs-dfinity-consensus	\
 	 dfinity/dev/hs-dfinity-hypervisor	\
 	 dfinity/dev/hs-dfinity-storage

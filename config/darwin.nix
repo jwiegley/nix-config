@@ -33,6 +33,16 @@ let home_directory = "/Users/johnw";
       serviceConfig.StartInterval = 86400;
     };
 
+    snapshots-slim = {
+      command = "${pkgs.my-scripts}/bin/snapshots slim";
+      serviceConfig.StartInterval = 86400;
+    };
+
+    snapshots-tank = {
+      command = "${pkgs.my-scripts}/bin/snapshots tank";
+      serviceConfig.StartInterval = 86400;
+    };
+
     # locate = {
     #   command = "${pkgs.my-scripts}/bin/update.locate";
     #   serviceConfig = {

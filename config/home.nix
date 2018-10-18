@@ -263,7 +263,7 @@ rec {
         from       = "!${pkgs.git}/bin/git bisect start && ${pkgs.git}/bin/git bisect bad HEAD && ${pkgs.git}/bin/git bisect good";
         ls-ignored = "ls-files --exclude-standard --ignored --others";
         nb         = "!${pkgs.git}/bin/git checkout --track $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote)/$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD) -b";
-        pr         = "!${pkgs.git}/bin/git push $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote) HEAD:$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD) && ${pkgs.git-pull-request}/bin/git-pull-request --target-branch $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).merge) --target-remote $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote) --no-rebase --no-comment-on-update";
+        ppr        = "!${pkgs.git}/bin/git push $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote) HEAD:$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD) && ${pkgs.git-pull-request}/bin/git-pull-request --target-branch $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).merge) --target-remote $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote) --no-rebase --no-comment-on-update";
         rc         = "rebase --continue";
         rh         = "reset --hard";
         ri         = "rebase --interactive";

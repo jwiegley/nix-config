@@ -37,12 +37,12 @@ Anki = self.installApplication rec {
 
 Dash = self.installApplication rec {
   name = "Dash";
-  version = "4.4.0";
+  version = "4.5.3";
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "0agnl62fciyqdh9f14w35cdamyblm0qy4kbvj2y9qs41z49qq4p4";
-    # date = 2018-10-03T22:44:23-0700;
+    sha256 = "0z8365shmwn26c2fcwv18drmi1i06myj1wspc563kaic7g7z9l4v";
+    # date = 2018-10-18T08:58:53-0700;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
@@ -182,11 +182,11 @@ GIMP = self.installApplication rec {
 
 HandBrake = self.installApplication rec {
   name = "HandBrake";
-  version = "1.1.1";
+  version = "1.1.2";
   sourceRoot = "HandBrake.app";
   src = super.fetchurl {
     url = "https://download2.handbrake.fr/${version}/HandBrake-${version}.dmg";
-    sha256 = "1nfghjwwy4rl26l0hvm5rfc5rsr7g1pgsk87ysqijf6nv23jr7rh";
+    sha256 = "0s5k0rj8m53vyxn4gd68ca5bic9z311wr9wdrhalpn476r2fn7qq";
     # date = 2018-02-04T15:50:05-0800;
   };
   description = ''
