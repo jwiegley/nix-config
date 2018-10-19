@@ -262,6 +262,7 @@ pkgs: epkgs: with epkgs;
   org                           # org org-babel org-crypt
   org-bookmark-heading
   org-gcal
+  org-jira
   org-opml
   org-pdfview
   org-ref

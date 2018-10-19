@@ -32,7 +32,7 @@ PROJS  = src/hnix				\
 	 dfinity/dev/hs-dfinity-hypervisor	\
 	 dfinity/dev/hs-dfinity-storage
 
-all: switch env-all shells
+all: switch env-all
 
 switch: darwin-switch home-switch
 
