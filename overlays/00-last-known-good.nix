@@ -3,10 +3,10 @@ self: super: {
 lastKnownGood = import (super.fetchFromGitHub {
   owner  = "NixOS";
   repo   = "nixpkgs";
-  rev    = "2cbe52f42a2a7f0b2dfa687e432932305ee01d8e";
-  sha256 = "0m2sfik3f9067m3v3pm4cjv3hdf56iwc3vymgh02qf8rqkh1s8cf";
+  rev    = "ee5f38dde279197aea00f01900c34556487bf717";
+  sha256 = "01iy0sl610dnq0bqzhxwafb563h6qca3izv9afqq1c5x20xhhp92";
 }) { config.allowUnfree = true; };
 
-inherit (self.lastKnownGood) aria2;
+inherit (self.lastKnownGood) go_bootstrap;
 
 }

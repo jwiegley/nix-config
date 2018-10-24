@@ -25,6 +25,7 @@ PROJS  = src/hnix				\
 	 src/plclub/hs-to-coq			\
 						\
 	 dfinity/consensus-model		\
+	 dfinity/tex-all			\
 	 dfinity/dev/hs-dfinity-common		\
 	 dfinity/dev/hs-dfinity-node		\
 	 dfinity/dev/hs-dfinity-proc		\
@@ -117,25 +118,25 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build-all switch env-all shells working cache
+update: tag-before pull build-all switch env-all shells working check cache
+
+update-all: gc update copy-all
+
+copy-all: copy
+	make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) REMOTE=fin copy
 
 check:
 	nix-store --verify --repair --check-contents
 
-verify:
-	nix-store --verify --repair --check-contents
-
 copy:
 	push -f src,dfinity $(REMOTE)
-	nix copy --keep-going --to ssh://$(REMOTE)		\
-	    $(shell readlink -f ~/.nix-profile)			\
-	    $(shell readlink -f /run/current-system)
-	for i in $(PROJS); do					\
-	    echo Copying shell env for $$i to $(REMOTE);	\
-	    nix copy --keep-going --to ssh://$(REMOTE)		\
-	        $(HOME)/$$i/.direnv/default/env.drv;		\
-	done
-	ssh $(REMOTE) 'make -C src/nix -f Makefile NIX_CONF=$(HOME)/src/nix build-all all'
+	nix copy --keep-going --to ssh://$(REMOTE)			\
+	    $(shell readlink -f ~/.nix-profile)				\
+	    $(shell readlink -f /run/current-system)			\
+	    $(shell for i in $(PROJS); do				\
+	                echo $(HOME)/$$i/.direnv/default/env.drv;	\
+	            done)
+	ssh $(REMOTE) 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) build-all all shells'
 
 cache:
 	-test -d $(CACHE) &&					\
