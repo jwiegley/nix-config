@@ -10,10 +10,10 @@ let
     "git-du"
     "gitlib/git-monitor"
     "gitlib/gitlib"
-    [ "gitlib/gitlib-cmdline" { inherit (self.gitAndTools) git; } ]
+  [ "gitlib/gitlib-cmdline" { inherit (self.gitAndTools) git; } ]
     "gitlib/gitlib-libgit2"
     "gitlib/gitlib-test"
-    [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
+  [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
     "hierarchy"
     "hnix"
     "hours"
@@ -28,7 +28,7 @@ let
     "pushme"
     "recursors"
     "runmany"
-    [ "sitebuilder" { inherit (self) yuicompressor; } ]
+  [ "sitebuilder" { inherit (self) yuicompressor; } ]
     "sizes"
     "una"
     "z3-generate-api"
@@ -65,7 +65,6 @@ let
     });
 
     cabal2nix = dontCheck super.cabal2nix;
-    # ghc-exactprint = dontCheck super.ghc-exactprint;
 
     timeparsers = dontCheck (doJailbreak
       (self.callCabal2nix "timeparsers" (pkgs.fetchFromGitHub {
