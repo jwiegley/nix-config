@@ -221,6 +221,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   yubikey-personalization
   z
   z3
+  zbar
   zip
   zsh
   zsh-syntax-highlighting

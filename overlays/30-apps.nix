@@ -127,12 +127,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "62.0.3";
+  version = "63.0";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "0l9d8k73im5l0zd581zbq34xjhcgi3r4kkzjb4ds33yljn34vl7w";
+    sha256 = "0wf13j8l239pldkjbv61ahzp5m27b4hrd0qgsa3l52whfv3kfll0";
   };
   postInstall = ''
     for file in  \
@@ -199,12 +199,12 @@ HandBrake = self.installApplication rec {
 iTerm2 = self.installApplication rec {
   name = "iTerm2";
   appname = "iTerm";
-  version = "3.2.3";
+  version = "3.2.5";
   sourceRoot = "iTerm.app";
   src = super.fetchurl {
-    url = "https://iterm2.com/downloads/stable/iTerm2-3_2_3.zip";
-    sha256 = "0vvs12plz6cjpxj74msmjn72d30mly7nplp6vipj5g45s35x1jay";
-    # date = 2018-10-05T10:51:47-0700;
+    url = "https://iterm2.com/downloads/stable/iTerm2-3_2_5.zip";
+    sha256 = "0s3jrwcwrkmb5ympr7vjc4jbgvkzgj2ripw1fzb6b1hzvq1yc7pc";
+    # date = 2018-10-30T15:31:27-0700;
   };
   description = "iTerm2 is a replacement for Terminal and the successor to iTerm";
   homepage = https://www.iterm2.com;

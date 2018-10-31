@@ -334,6 +334,7 @@ pkgs: epkgs: with epkgs;
   shift-number
   simple-httpd
   sky-color-clock
+  slack
   slime
   smart-jump
   smart-mode-line

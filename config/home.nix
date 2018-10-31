@@ -133,8 +133,8 @@ rec {
       enableAutosuggestions = true;
 
       history = {
-        size = 5000;
-        save = 50000;
+        size = 50000;
+        save = 500000;
         path = "${dotDir}/history";
         ignoreDups = true;
         share = true;

@@ -43,19 +43,26 @@ let home_directory = "/Users/johnw";
       serviceConfig.StartInterval = 86400;
     };
 
-    # locate = {
-    #   command = "${pkgs.my-scripts}/bin/update.locate";
-    #   serviceConfig = {
-    #     LowPriorityIO = true;
-    #     Nice = 5;
-    #     StartCalendarInterval = {
-    #       Hour = 3;
-    #       Minute = 15;
-    #       Weekday = 6;
-    #     };
-    #     AbandonProcessGroup = true;
-    #   };
-    # };
+    limit-maxfiles = {
+      command = "/bin/launchctl limit maxfiles 524288 524288";
+      serviceConfig.RunAtLoad = true;
+    };
+
+    limit-maxproc = {
+      command = "/bin/launchctl limit maxproc 2048 2048";
+      serviceConfig.RunAtLoad = true;
+    };
+
+    locate = {
+      command = "${pkgs.my-scripts}/bin/update.locate";
+      serviceConfig = {
+        LowPriorityIO = true;
+        Nice = 5;
+        StartInterval = 86400;
+        # StartCalendarInterval.Hour = 3;
+        AbandonProcessGroup = true;
+      };
+    };
 
     pdnsd = {
       script = ''

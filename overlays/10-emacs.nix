@@ -623,6 +623,15 @@ let
       };
     };
 
+    color-theme = lib.overrideDerivation super.color-theme (attrs: rec {
+      name = "emacs-color-theme-${version}";
+      version = "6.6.0";
+      src = fetchurl {
+        url = "http://download.savannah.nongnu.org/releases/color-theme/color-theme-6.6.0.tar.gz";
+        sha256 = "0yx1ghcjc66s1rl0v3d4r1k88ifw591hf814ly3d73acvh15zlsn";
+        # date = 2018-10-31T10:46:05-0700;
+      };
+    });
 
     doxymacs = mkDerivation rec {
       name = "emacs-doxymacs-${version}";
