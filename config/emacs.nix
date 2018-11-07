@@ -214,13 +214,10 @@ pkgs: epkgs: with epkgs;
   macrostep
   magit
   magit-annex
-  magit-filenotify
-  magit-gitflow
   magit-imerge
   magit-lfs
   magit-popup
   magit-tbdiff
-  magit-todos
   magithub
   makefile-runner
   makey

@@ -394,6 +394,8 @@ rec {
       ignores = [
         "*.elc" "*.vo" "*.aux" "*.v.d" "*.o" "*.a" "*.la" "*.so" "*.dylib"
         "*~" "#*#" ".makefile" ".clean" ".envrc" ".direnv" "*.glob"
+        ".ghc.environment.x86_64-darwin-*" "cabal.project.local"
+        "dist-newstyle" "tags" "TAGS"
       ];
     };
 

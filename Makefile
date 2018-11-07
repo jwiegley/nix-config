@@ -12,26 +12,32 @@ ENVS   = emacsHEADEnv	\
 	 ledgerPy2Env	\
 	 ledgerPy3Env
 
-PROJS  = src/hnix				\
-	 src/hours				\
-	 src/refine-freer			\
-	 src/category-theory			\
-						\
-	 src/papers/denotational-design		\
-						\
-	 src/notes/haskell			\
-	 src/notes/coq				\
-						\
-	 src/plclub/hs-to-coq			\
-						\
-	 dfinity/consensus-model		\
-	 dfinity/tex-all			\
-	 dfinity/dev/hs-dfinity-common		\
-	 dfinity/dev/hs-dfinity-node		\
-	 dfinity/dev/hs-dfinity-proc		\
-	 dfinity/dev/hs-dfinity-consensus	\
-	 dfinity/dev/hs-dfinity-hypervisor	\
-	 dfinity/dev/hs-dfinity-storage
+PROJS  = src/hnix						\
+	 src/hours						\
+	 src/refine-freer					\
+	 src/category-theory					\
+								\
+	 src/papers/denotational-design				\
+								\
+	 src/notes/haskell					\
+	 src/notes/coq						\
+								\
+	 src/plclub/hs-to-coq					\
+								\
+	 dfinity/consensus-model				\
+	 dfinity/tex-all					\
+								\
+	 dfinity/dev/hs-dfinity-common				\
+	 dfinity/dev/hs-dfinity-consensus			\
+	 dfinity/dev/hs-dfinity-engine				\
+	 dfinity/dev/hs-dfinity-hypervisor			\
+	 dfinity/dev/hs-dfinity-node				\
+	 dfinity/dev/hs-dfinity-proc				\
+	 dfinity/dev/hs-dfinity-wasm				\
+								\
+	 dfinity/topics/hypervisor-wasm/hs-dfinity-engine	\
+	 dfinity/topics/hypervisor-wasm/hs-dfinity-hypervisor	\
+	 dfinity/topics/hypervisor-wasm/hs-dfinity-wasm
 
 all: switch env-all
 
@@ -128,14 +134,15 @@ copy-all: copy
 check:
 	nix-store --verify --repair --check-contents
 
+size:
+	sudo du --si -shx /nix/store
+
 copy:
 	push -f src,dfinity $(REMOTE)
 	nix copy --keep-going --to ssh://$(REMOTE)			\
 	    $(shell readlink -f ~/.nix-profile)				\
 	    $(shell readlink -f /run/current-system)			\
-	    $(shell for i in $(PROJS); do				\
-	                echo $(HOME)/$$i/.direnv/default/env.drv;	\
-	            done)
+	    $(shell cd $(HOME); find $(PROJS) -path '*/.direnv/default/env.drv')
 	ssh $(REMOTE) 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) build-all all shells'
 
 cache:
@@ -155,10 +162,12 @@ cache:
 remove-build-products:
 	find $(HOME)					\
 	    \( -name 'dist' -type d -o			\
+	       -name 'dist-newstyle' -type d -o		\
 	       -name '.direnv' -type d -o		\
-	       -name 'result' -type l -o		\
-	       -name 'result-*' -type l \) -print0	\
-	    | parallel -0 /bin/rm -fr {}
+	       -name '.ghc.*' -o			\
+	       -name 'cabal.project.local*' -type f -o	\
+	       -name 'result*' -type l \) -print0	\
+	    | xargs -P4 -0 /bin/rm -fr
 
 gc:
 	nix-collect-garbage --delete-older-than 14d

@@ -39,7 +39,7 @@ let
     let pkg = p: self.packageDrv ghc p {}; in self: super:
     with pkgs.haskell.lib; {
 
-    z3 = if ghc == "ghc843"
+    z3 = if ghc == "ghc844"
          then null
          else pkg ~/bae/concerto/solver/lib/z3;
 
@@ -202,7 +202,7 @@ packageDeps = path:
     cabal    = {
       ghc802 = "1.24.0.2";
       ghc822 = "2.0.0.1";
-      ghc843 = "2.2.0.0";
+      ghc844 = "2.2.0.0";
     };
 
     # hie-nix = import (pkgs.fetchFromGitHub {
@@ -216,7 +216,7 @@ packageDeps = path:
     # hie = {
     #   ghc802 = hie-nix.hie80;
     #   ghc822 = hie-nix.hie82;
-    #   ghc843 = throw "HIE not supported on GHC 8.4.2 yet";
+    #   ghc844 = throw "HIE not supported on GHC 8.4.2 yet";
     # };
 
   in compiler.withHoogle (p: with p;
@@ -273,11 +273,11 @@ haskell = pkgs.haskell // {
             haddock-library =
               doJailbreak (self.callHackage "haddock-library" "1.4.5" {});
 
-            hpack = newPkgs.haskell.packages.ghc843.hpack;
-            cabal2nix = newPkgs.haskell.packages.ghc843.cabal2nix;
+            hpack = newPkgs.haskell.packages.ghc844.hpack;
+            cabal2nix = newPkgs.haskell.packages.ghc844.cabal2nix;
           });
 
-    ghc843 = overrideHask "ghc843" pkgs.haskell.packages.ghc843 (self: super:
+    ghc844 = overrideHask "ghc844" pkgs.haskell.packages.ghc844 (self: super:
       (breakout super [
          "compact"
          "criterion"
@@ -298,9 +298,9 @@ haskell = pkgs.haskell // {
 
 haskellPackages_8_0 = self.haskell.packages.ghc802;
 haskellPackages_8_2 = self.haskell.packages.ghc822;
-haskellPackages_8_4 = self.haskell.packages.ghc843;
+haskellPackages_8_4 = self.haskell.packages.ghc844;
 
-ghcDefaultVersion = "ghc843";
+ghcDefaultVersion = "ghc844";
 
 haskellPackages = self.haskellPackages_8_4;
 haskPkgs = self.haskellPackages;
