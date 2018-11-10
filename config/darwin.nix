@@ -27,29 +27,36 @@ let home_directory = "/Users/johnw";
     knownNetworkServices = [ "Ethernet" "Wi-Fi" ];
   };
 
-  launchd.daemons = {
+  launchd.daemons =
+    let loPrioDaily = {
+        LowPriorityIO = true;
+        Nice = 5;
+        StartInterval = 86400;
+        # StartCalendarInterval.Hour = 3;
+        AbandonProcessGroup = true;
+      }; in {
     cleanup = {
       command = ''
         export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
-        ${pkgs.dirscan}/bin/cleanup -u
+        ${pkgs.dirscan}/bin/cleanup -u >> /var/log/cleanup.log 2>&1
       '';
-      serviceConfig.StartInterval = 86400;
+      serviceConfig = loPrioDaily;
     };
 
     snapshots-slim = {
       script = ''
         export PATH=$PATH:${pkgs.my-scripts}/bin:${pkgs.OpenZFSonOSX}/bin
-        snapshots slim
+        snapshots slim >> /var/log/snapshots.log 2>&1
       '';
-      serviceConfig.StartInterval = 86400;
+      serviceConfig = loPrioDaily;
     };
 
     snapshots-tank = {
       script = ''
         export PATH=$PATH:${pkgs.my-scripts}/bin:${pkgs.OpenZFSonOSX}/bin
-        snapshots tank
+        snapshots tank >> /var/log/snapshots.log 2>&1
       '';
-      serviceConfig.StartInterval = 86400;
+      serviceConfig = loPrioDaily;
     };
 
     limit-maxfiles = {
@@ -66,15 +73,9 @@ let home_directory = "/Users/johnw";
       command = ''
         export PATH=$PATH:${pkgs.findutils}/bin
         export HOME=/Users/johnw
-        ${pkgs.my-scripts}/bin/update.locate
+        ${pkgs.my-scripts}/bin/update.locate >> /var/log/locate.log 2>&1
       '';
-      serviceConfig = {
-        LowPriorityIO = true;
-        Nice = 5;
-        StartInterval = 86400;
-        # StartCalendarInterval.Hour = 3;
-        AbandonProcessGroup = true;
-      };
+      serviceConfig = loPrioDaily;
     };
 
     pdnsd = {
@@ -208,6 +209,7 @@ EOF
         "/usr/X11/man"
       ];
 
+      PYTHONPATH   = "${pkgs.dirscan}/libexec";
       LC_CTYPE     = "en_US.UTF-8";
       LESSCHARSET  = "utf-8";
       LEDGER_COLOR = "true";
