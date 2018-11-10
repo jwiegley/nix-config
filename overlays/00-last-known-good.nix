@@ -9,4 +9,13 @@ lastKnownGood = import (super.fetchFromGitHub {
 
 inherit (self.lastKnownGood) go_bootstrap;
 
+lastKnownGood_2 = import (super.fetchFromGitHub {
+  owner  = "NixOS";
+  repo   = "nixpkgs";
+  rev    = "2b962cc0c24163d492c699bba279b6a2be00dc2e";
+  sha256 = "0cqh4d53if6x9lg9nr0rv0rsldx5bh13ainn86cjshdlnmijnhna";
+}) { config.allowUnfree = true; };
+
+inherit (self.lastKnownGood_2) xsv nix-index;
+
 }

@@ -1,6 +1,6 @@
 NIX_CONF = $(HOME)/src/nix
 
-BRANCH = unstable
+BRANCH = master
 REMOTE = hermes
 CACHE  = /Volumes/slim/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
@@ -12,32 +12,7 @@ ENVS   = emacsHEADEnv	\
 	 ledgerPy2Env	\
 	 ledgerPy3Env
 
-PROJS  = src/hnix						\
-	 src/hours						\
-	 src/refine-freer					\
-	 src/category-theory					\
-								\
-	 src/papers/denotational-design				\
-								\
-	 src/notes/haskell					\
-	 src/notes/coq						\
-								\
-	 src/plclub/hs-to-coq					\
-								\
-	 dfinity/consensus-model				\
-	 dfinity/tex-all					\
-								\
-	 dfinity/dev/hs-dfinity-common				\
-	 dfinity/dev/hs-dfinity-consensus			\
-	 dfinity/dev/hs-dfinity-engine				\
-	 dfinity/dev/hs-dfinity-hypervisor			\
-	 dfinity/dev/hs-dfinity-node				\
-	 dfinity/dev/hs-dfinity-proc				\
-	 dfinity/dev/hs-dfinity-wasm				\
-								\
-	 dfinity/topics/hypervisor-wasm/hs-dfinity-engine	\
-	 dfinity/topics/hypervisor-wasm/hs-dfinity-hypervisor	\
-	 dfinity/topics/hypervisor-wasm/hs-dfinity-wasm
+PROJS  = $(shell find $(HOME)/dfinity $(HOME)/src -name .envrc -type f -printf '%h ')
 
 all: switch env-all
 
@@ -62,9 +37,14 @@ home-build:
 	    --keep-going
 	@rm result
 
+projs:
+	@for i in $(PROJS); do \
+	    echo "proj: $$i"; \
+	done
+
 shells:
 	for i in $(PROJS); do				\
-	    cd $(HOME)/$$i;				\
+	    cd $$i;					\
 	    echo;					\
 	    echo Pre-building shell env for $$i;	\
 	    echo;					\
@@ -124,9 +104,9 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build-all switch env-all shells working check cache
+update: tag-before pull build-all switch env-all working cache
 
-update-all: gc update copy-all
+update-all: update shells copy-all
 
 copy-all: copy
 	make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) REMOTE=fin copy
@@ -142,10 +122,10 @@ copy:
 	nix copy --keep-going --to ssh://$(REMOTE)			\
 	    $(shell readlink -f ~/.nix-profile)				\
 	    $(shell readlink -f /run/current-system)			\
-	    $(shell cd $(HOME); find $(PROJS) -path '*/.direnv/default/env.drv')
-	ssh $(REMOTE) 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) build-all all shells'
+	    $(shell find $(PROJS) -path '*/.direnv/default/env.drv')
+	ssh $(REMOTE) 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) build-all all'
 
-cache:
+cache: check
 	-test -d $(CACHE) &&					\
 	(find /nix/store -maxdepth 1 -type f			\
 	    \( -name '*.dmg' -o					\

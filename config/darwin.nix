@@ -29,17 +29,26 @@ let home_directory = "/Users/johnw";
 
   launchd.daemons = {
     cleanup = {
-      command = "${pkgs.dirscan}/bin/cleanup -u";
+      command = ''
+        export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
+        ${pkgs.dirscan}/bin/cleanup -u
+      '';
       serviceConfig.StartInterval = 86400;
     };
 
     snapshots-slim = {
-      command = "${pkgs.my-scripts}/bin/snapshots slim";
+      script = ''
+        export PATH=$PATH:${pkgs.my-scripts}/bin:${pkgs.OpenZFSonOSX}/bin
+        snapshots slim
+      '';
       serviceConfig.StartInterval = 86400;
     };
 
     snapshots-tank = {
-      command = "${pkgs.my-scripts}/bin/snapshots tank";
+      script = ''
+        export PATH=$PATH:${pkgs.my-scripts}/bin:${pkgs.OpenZFSonOSX}/bin
+        snapshots tank
+      '';
       serviceConfig.StartInterval = 86400;
     };
 
@@ -54,7 +63,11 @@ let home_directory = "/Users/johnw";
     };
 
     locate = {
-      command = "${pkgs.my-scripts}/bin/update.locate";
+      command = ''
+        export PATH=$PATH:${pkgs.findutils}/bin
+        export HOME=/Users/johnw
+        ${pkgs.my-scripts}/bin/update.locate
+      '';
       serviceConfig = {
         LowPriorityIO = true;
         Nice = 5;
