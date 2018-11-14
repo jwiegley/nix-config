@@ -426,13 +426,16 @@ rec {
           hostname = "127.0.0.1";
           port = 2222;
         };
-        fin.hostname     = "192.168.1.80";
+
+        fin.hostname = "192.168.1.80";
+        finr = hostOnVulcan "192.168.1.80";
         tank = fin;
 
         vulcan =
           if amLocal
-          then { hostname = "192.168.1.69"; }
-          else {
+          then {
+            hostname = "192.168.1.69";
+          } else {
             hostname = "76.234.69.149";
             port = 2201;
             extraOptions = {

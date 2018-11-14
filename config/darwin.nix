@@ -28,27 +28,30 @@ let home_directory = "/Users/johnw";
   };
 
   launchd.daemons =
-    let loPrioDaily = {
+    let iterate = interval: {
         LowPriorityIO = true;
         Nice = 5;
-        StartInterval = 86400;
+        StartInterval = interval;
         # StartCalendarInterval.Hour = 3;
         AbandonProcessGroup = true;
       }; in {
     cleanup = {
-      command = ''
+      script = ''
         export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
         ${pkgs.dirscan}/bin/cleanup -u >> /var/log/cleanup.log 2>&1
       '';
-      serviceConfig = loPrioDaily;
+      serviceConfig = iterate 86400;
     };
 
-    snapshots-slim = {
+    b2-sync = {
       script = ''
-        export PATH=$PATH:${pkgs.my-scripts}/bin:${pkgs.OpenZFSonOSX}/bin
-        snapshots slim >> /var/log/snapshots.log 2>&1
+        export PATH=$PATH:${pkgs.my-scripts}/bin:${pkgs.backblaze-b2}/bin
+        if [[ -d /Volumes/tank/Backups ]]; then
+            ${pkgs.my-scripts}/bin/b2-sync /Volumes/tank tank \
+                >> /var/log/b2-sync.log 2>&1
+        fi
       '';
-      serviceConfig = loPrioDaily;
+      serviceConfig = iterate 86400;
     };
 
     snapshots-tank = {
@@ -56,7 +59,7 @@ let home_directory = "/Users/johnw";
         export PATH=$PATH:${pkgs.my-scripts}/bin:${pkgs.OpenZFSonOSX}/bin
         snapshots tank >> /var/log/snapshots.log 2>&1
       '';
-      serviceConfig = loPrioDaily;
+      serviceConfig = iterate 86400;
     };
 
     limit-maxfiles = {
@@ -70,12 +73,12 @@ let home_directory = "/Users/johnw";
     };
 
     locate = {
-      command = ''
+      script = ''
         export PATH=$PATH:${pkgs.findutils}/bin
         export HOME=/Users/johnw
         ${pkgs.my-scripts}/bin/update.locate >> /var/log/locate.log 2>&1
       '';
-      serviceConfig = loPrioDaily;
+      serviceConfig = iterate 86400;
     };
 
     pdnsd = {
@@ -105,10 +108,10 @@ let home_directory = "/Users/johnw";
       serviceConfig.RunAtLoad = true;
       serviceConfig.KeepAlive = true;
     };
-    openzfs-zpool-import-all = {
-      command = "${pkgs.OpenZFSonOSX}/libexec/zfs/launchd.d/zpool-import-all.sh";
-      serviceConfig.RunAtLoad = true;
-    };
+    # openzfs-zpool-import-all = {
+    #   command = "${pkgs.OpenZFSonOSX}/libexec/zfs/launchd.d/zpool-import-all.sh";
+    #   serviceConfig.RunAtLoad = true;
+    # };
   };
 
   launchd.user.agents = {

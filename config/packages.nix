@@ -187,7 +187,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   p7zip
   paperkey
   parallel
-  (pass.withExtensions (ext: with ext; [ pass-otp pass-update ]))
+  (pass.withExtensions (ext: with ext; [ pass-otp pass-update pass-import ]))
   pass-git-helper
   browserpass
   qrencode
