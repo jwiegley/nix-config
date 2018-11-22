@@ -382,6 +382,17 @@ let
       };
     };
 
+    gnus-recent = compileEmacsFiles {
+      name = "gnus-recent";
+      src = fetchFromGitHub {
+        owner = "unhammer";
+        repo = "gnus-recent";
+        rev = "0acc25bea544b4b93db05debf1d9bad4e54f51d8";
+        sha256 = "07rvg1j2rvasfcmmi0k8c4lkvfih90ga7q75xf5qcakhfnrf6vk5";
+        # date = 2018-11-22T10:17:17+01:00;
+      };
+    };
+
     indent-shift = compileEmacsFiles {
       name = "indent-shift";
       src = fetchFromGitHub {

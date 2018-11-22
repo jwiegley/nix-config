@@ -150,6 +150,7 @@ pkgs: epkgs: with epkgs;
   gitpatch
   gnus-alias
   gnus-harvest
+  gnus-recent
   google-this
   goto-last-change
   graphviz-dot-mode
