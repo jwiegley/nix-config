@@ -35,21 +35,11 @@ let home_directory = "/Users/johnw";
         # StartCalendarInterval.Hour = 3;
         AbandonProcessGroup = true;
       }; in {
+
     cleanup = {
       script = ''
         export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
         ${pkgs.dirscan}/bin/cleanup -u >> /var/log/cleanup.log 2>&1
-      '';
-      serviceConfig = iterate 86400;
-    };
-
-    b2-sync = {
-      script = ''
-        export PATH=$PATH:${pkgs.my-scripts}/bin:${pkgs.backblaze-b2}/bin
-        if [[ -d /Volumes/tank/Backups ]]; then
-            ${pkgs.my-scripts}/bin/b2-sync /Volumes/tank tank \
-                >> /var/log/b2-sync.log 2>&1
-        fi
       '';
       serviceConfig = iterate 86400;
     };
@@ -114,7 +104,33 @@ let home_directory = "/Users/johnw";
     # };
   };
 
-  launchd.user.agents = {
+  launchd.user.agents =
+    let iterate = interval: {
+        LowPriorityIO = true;
+        Nice = 5;
+        StartInterval = interval;
+        # StartCalendarInterval.Hour = 3;
+        AbandonProcessGroup = true;
+      }; in {
+
+    aria2c = {
+      command = "${pkgs.aria2}/bin/aria2c --enable-rpc";
+      serviceConfig.RunAtLoad = true;
+    };
+
+    b2-sync = {
+      script = ''
+        export PATH=$PATH:${pkgs.my-scripts}/bin
+        export PATH=$PATH:${pkgs.backblaze-b2}/bin
+        export PATH=$PATH:${pkgs.rclone}/bin
+        if [[ -d /Volumes/tank/Backups ]]; then
+            ${pkgs.my-scripts}/bin/b2-sync /Volumes/tank tank \
+                >> /var/log/b2-sync.log 2>&1
+        fi
+      '';
+      serviceConfig = iterate 86400;
+    };
+
     dovecot = {
       command = "${pkgs.dovecot}/libexec/dovecot/imap -c /etc/dovecot/dovecot.conf";
       serviceConfig.WorkingDirectory = "${pkgs.dovecot}/lib";

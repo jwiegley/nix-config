@@ -42,7 +42,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nodePackages.eslint
   nodePackages.csslint
   nodePackages.js-beautify
-  nodePackages.jsontool
 
   # langToolsEnv
   (exe haskPkgs.cabal-install)  # for sdist/publish

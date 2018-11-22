@@ -146,7 +146,6 @@ pkgs: epkgs: with epkgs;
   git-undo
   gitattributes-mode
   gitconfig-mode
-  github-pullrequest
   gitignore-mode
   gitpatch
   gnus-alias
@@ -389,6 +388,7 @@ pkgs: epkgs: with epkgs;
   xml-rpc
   xray
   yaml-mode
+  yankpad
   yaoddmuse
   yari-with-buttons             # yari
   yasnippet

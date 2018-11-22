@@ -111,12 +111,12 @@ DEVONthinkPro = super.stdenv.lib.overrideDerivation (self.installApplication rec
 
 Docker = self.installApplication rec {
   name = "Docker";
-  version = "18.06.1-ce-mac";
+  version = "2.0.0.0-mac78";
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
-    sha256 = "19a7n36nkw20rrklr8qlp76l5xhn037avqfnk81rilghik1yla9l";
-    # date = 2018-10-03T11:14:33-0700;
+    sha256 = "1dp5536qky0iw246kg3dwji1kfq9db2nikvsf6i7xqc02xm04lm4";
+    # date = 2018-11-20T15:42:46-0800;
   };
   description = ''
     Docker CE for Mac is an easy-to-install desktop app for building,
@@ -127,12 +127,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "63.0.1";
+  version = "63.0.3";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "0ycgraigr9acbhbidnh5s9f9sy4qshhp36fhfjnb1wybklw11s3k";
+    sha256 = "04c2sk84zn1wqmj4s5w2s446i7fb7p22r2bbahrjbbiv39yil81g";
   };
   postInstall = ''
     for file in  \

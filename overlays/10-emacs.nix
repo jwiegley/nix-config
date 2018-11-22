@@ -41,7 +41,6 @@ let
     supercite       = compileLocalFile "supercite.el";
 
 
-    github-pullrequest = addBuildInputs super.github-pullrequest [ pkgs.git ];
     magithub           = addBuildInputs super.magithub           [
       pkgs.git self.dash self.graphql self.treepy
     ];
@@ -130,8 +129,8 @@ let
 
     highlight = compileEmacsWikiFile {
       name = "highlight.el";
-      sha256 = "022n0g9vxg6agngyylbbnj3ifsvwyz4kjh93qda9x716r63xfz8p";
-      # date = 2018-11-08T08:07:55-0800;
+      sha256 = "0hp8ybg92mwlid0ph8h6vj8ksmj30lp3yy9m89kq9a9rfdp2s13f";
+      # date = 2018-11-19T11:39:17-0800;
     };
 
     highlight-cl = compileEmacsWikiFile {
@@ -817,8 +816,9 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
 
   src = fetchgit {
     url = https://git.savannah.gnu.org/git/emacs.git;
-    rev = "ec79bdc53fd75ea48c1451b0d83b0b41a0345bc6";
-    sha256 = "1g2jjpvwlzpvk49fds0w9m0rjh372i4qpv3p6qxlxydiyjqpa5f6";
+    rev = "7851ae8b443c62a41ea4f4440512aa56cc87b9b7";
+    sha256 = "05jrp3nhjrwrsipphzman7x9rwbzcf2ik17rp1h1ghq1q9ryx73x";
+    # date = 2018-11-19T07:33:53-08:00;
   };
 
   postPatch = ''

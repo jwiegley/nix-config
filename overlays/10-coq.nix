@@ -106,34 +106,4 @@ coqPackages_8_6 = extendAttrs (self.mkCoqPackages self.coq_8_6) myCoqPackages;
 coqPackages_8_5 = self.mkCoqPackages self.coq_8_5;
 coqPackages_8_4 = self.mkCoqPackages self.coq_8_4;
 
-coqHEADEnv = myPkgs: pkgs.myEnvFun {
-  name = "coqHEAD";
-  buildInputs = [ self.coq_HEAD ] ++ myPkgs "HEAD" self.coqPackages_HEAD;
-};
-
-coq88Env = myPkgs: pkgs.myEnvFun {
-  name = "coq88";
-  buildInputs = [ self.coq_8_8 ] ++ myPkgs "8.8" self.coqPackages_8_8;
-};
-
-coq87Env = myPkgs: pkgs.myEnvFun {
-  name = "coq87";
-  buildInputs = [ self.coq_8_7 ] ++ myPkgs "8.7" self.coqPackages_8_7;
-};
-
-coq86Env = myPkgs: pkgs.myEnvFun {
-  name = "coq86";
-  buildInputs = [ self.coq_8_6 ] ++ myPkgs "8.6" self.coqPackages_8_6;
-};
-
-coq85Env = myPkgs: pkgs.myEnvFun {
-  name = "coq85";
-  buildInputs = [ self.coq_8_5 ] ++ myPkgs "8.5" self.coqPackages_8_5;
-};
-
-coq84Env = myPkgs: pkgs.myEnvFun {
-  name = "coq84";
-  buildInputs = [ self.coq_8_4 ] ++ myPkgs "8.4" self.coqPackages_8_4;
-};
-
 }

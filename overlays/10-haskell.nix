@@ -87,9 +87,9 @@ let
       (pkgs.fetchFromGitHub {
          owner  = "lspitzner";
          repo   = "brittany";
-         rev    = "932cf70f9baff7b7870fa8744590d0de602f05f8";
-         sha256 = "1df1bxbc5gzlb7ifamdng95nrgsz8qlkwswvybcir35mj7cplblw";
-         # date = 2018-09-13T22:47:25+02:00;
+         rev    = "621e00bf3f24896d603978c3d4e5fd61dac3841a";
+         sha256 = "1shd30mfncqzdrcnmm5pfvgsivv030s7y9isn3753dclj5jag5aa";
+         # date = 2018-11-14T14:53:08+01:00;
        }) {};
 
     ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
@@ -160,12 +160,14 @@ let
 
   breakout = super: names:
     builtins.listToAttrs
-      (builtins.map (x: { name  = x;
-                          value = pkgs.haskell.lib.doJailbreak super.${x}; })
-                    names);
+      (builtins.map
+         (x: { name  = x;
+               value = pkgs.haskell.lib.doJailbreak super.${x}; })
+         names);
 
   filtered = drv:
-    drv.overrideAttrs (attrs: { src = self.haskellFilterSource [] attrs.src; });
+    drv.overrideAttrs
+      (attrs: { src = self.haskellFilterSource [] attrs.src; });
 
 in {
 
@@ -205,43 +207,11 @@ packageDeps = path:
       ghc844 = "2.2.0.0";
     };
 
-    # hie-nix = import (pkgs.fetchFromGitHub {
-    #   owner  = "domenkozar";
-    #   repo   = "hie-nix";
-    #   rev    = "dbb89939da8997cc6d863705387ce7783d8b6958";
-    #   sha256 = "1bcw59zwf788wg686p3qmcq03fr7bvgbcaa83vq8gvg231bgid4m";
-    #   # date = 2018-03-27T10:14:16+01:00;
-    # }) {};
-
-    # hie = {
-    #   ghc802 = hie-nix.hie80;
-    #   ghc822 = hie-nix.hie82;
-    #   ghc844 = throw "HIE not supported on GHC 8.4.2 yet";
-    # };
-
   in compiler.withHoogle (p: with p;
-       [ hpack criterion hdevtools # hie.${ghc}
+       [ hpack criterion # hdevtools hie.${ghc}
          (self.haskell.lib.doJailbreak
             (callHackage "cabal-install" cabal.${ghc} {}))
        ] ++ packages.haskellBuildInputs);
-
-dirLocals = root:
-  let
-    cabal-found =
-      pkgs.lib.filesystem.locateDominatingFile "([^.].*)\\.cabal" root;
-
-    coq = self.coq_8_7;
-    coqPackages = self.coqPackages_8_7; in
-
-  if cabal-found != null
-  then self.nixBufferBuilders.withPackages
-         [ (self.packageDeps cabal-found.path) ]
-  else
-  if pkgs.lib.filesystem.locateDominatingFile "_CoqProject" root != null
-  then self.nixBufferBuilders.withPackages
-         [ coq coqPackages.equations coqPackages.fiat_HEAD
-           coqPackages.mathcomp coqPackages.ssreflect ]
-  else {};
 
 haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // {
@@ -300,45 +270,9 @@ haskellPackages_8_0 = self.haskell.packages.ghc802;
 haskellPackages_8_2 = self.haskell.packages.ghc822;
 haskellPackages_8_4 = self.haskell.packages.ghc844;
 
-ghcDefaultVersion = "ghc844";
-
 haskellPackages = self.haskellPackages_8_4;
 haskPkgs = self.haskellPackages;
 
-ghc84Env = myPkgs: pkgs.myEnvFun {
-  name = "ghc84";
-  buildInputs = with self.haskellPackages_8_4; [
-    (ghcWithHoogle (pkgs: with pkgs; myPkgs pkgs ++ [
-       compact
-     ]))
-  ];
-};
-
-ghc82Env = myPkgs: pkgs.myEnvFun {
-  name = "ghc82";
-  buildInputs = with self.haskellPackages_8_2; [
-    (ghcWithHoogle (pkgs: with pkgs; myPkgs pkgs ++ [
-       compact
-     ]))
-
-    Agda
-    idris
-    lambdabot
-    alex
-    happy
-  ];
-};
-
-ghc80Env = myPkgs: pkgs.myEnvFun {
-  name = "ghc80";
-  buildInputs = with self.haskellPackages_8_0; [
-    (ghcWithHoogle (pkgs: with pkgs; myPkgs pkgs ++ [
-       singletons
-       units
-     ]))
-
-    splot
-  ];
-};
+ghcDefaultVersion = "ghc844";
 
 }

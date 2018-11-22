@@ -207,7 +207,7 @@ rec {
         fi
 
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
-        export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | head -1);
+        #export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | head -1);
 
         if [[ ! -o interactive ]]; then
             prompt_powerlevel9k_teardown
