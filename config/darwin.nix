@@ -318,7 +318,8 @@ EOF
           preset      = on;
           uptest      = none;
           edns_query  = yes;
-          exclude     = ".local",".dfinity.build";
+          exclude     = ".local";
+          exclude     = "hydra.oregon.dfinity.build";
           purge_cache = off;
       }
 
@@ -341,7 +342,8 @@ EOF
           preset      = on;
           uptest      = none;
           edns_query  = yes;
-          exclude     = ".local",".dfinity.build";
+          exclude     = ".local";
+          exclude     = "hydra.oregon.dfinity.build";
           purge_cache = off;
       }
 
@@ -361,7 +363,8 @@ EOF
           preset      = on;
           uptest      = none;
           edns_query  = yes;
-          exclude     = ".local",".dfinity.build";
+          exclude     = ".local";
+          exclude     = "hydra.oregon.dfinity.build";
           purge_cache = off;
       }
 
@@ -371,7 +374,8 @@ EOF
           root_server       = discover;
           ip                = 198.41.0.4, 192.228.79.201;
           randomize_servers = on;
-          exclude           = ".local",".dfinity.build";
+          exclude           = ".local";
+          exclude           = "hydra.oregon.dfinity.build";
       }
 
       source {
@@ -478,7 +482,12 @@ EOF
     binaryCaches = [
     ];
     binaryCachePublicKeys = [
+      "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
     ];
+
+    extraOptions = ''
+      secret-key-files = ${home_directory}/.config/gnupg/nix-signing-key.sec
+    '';
   };
 
   programs.bash.enable = true;

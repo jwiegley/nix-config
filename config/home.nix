@@ -55,9 +55,6 @@ rec {
       PASSWORD_STORE_DIR = "${home_directory}/Documents/.passwords";
       NIX_CONF           = "${home_directory}/src/nix";
 
-      # OCAMLPATH          = "${pkgs.ocamlPackages.camlp5_transitional}"
-      #                    + "/lib/ocaml/${pkgs.ocaml.version}/site-lib/camlp5";
-
       COQVER             = "87";
       EMACSVER           = "26";
       GHCVER             = "82";
@@ -73,7 +70,8 @@ rec {
       LC_CTYPE           = "en_US.UTF-8";
       LESS               = "-FRSXM";
       PROMPT_DIRTRIM     = "2";
-      # PS1                = "\\D{%H:%M} \\h:\\W $ ";
+      PROMPT             = "%m %~ $ ";
+      RPROMPT            = "";
       TINC_USE_NIX       = "yes";
       WORDCHARS          = "";
     };
@@ -140,10 +138,9 @@ rec {
         share = true;
       };
 
-      sessionVariables = {
-        POWERLEVEL9K_PROMPT_ON_NEWLINE = "true";
-        # POWERLEVEL9K_RPROMPT_ON_NEWLINE = "true";
-      };
+      # sessionVariables = {
+      #   POWERLEVEL9K_PROMPT_ON_NEWLINE = "true";
+      # };
 
       shellAliases = {
         b    = "${pkgs.git}/bin/git b";
@@ -189,12 +186,11 @@ rec {
             ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
         fi
 
-        export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir)
-        # export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir rbenv vcs)
-        # export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status background_jobs command_execution_time time)
-        export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(command_execution_time)
+        # export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir)
+        # export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(command_execution_time)
 
         . ${pkgs.z}/share/z.sh
+
         setopt extended_glob
       '';
 
@@ -209,28 +205,30 @@ rec {
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
         #export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | head -1);
 
+        unset zle_bracketed_paste
+
         if [[ ! -o interactive ]]; then
-            prompt_powerlevel9k_teardown
+            # prompt_powerlevel9k_teardown
             unsetopt zle
             export PS1='$ '
-        else
-           . ${xdg.configHome}/zsh/plugins/iterm2_shell_integration
+        # else
+        #    . ${xdg.configHome}/zsh/plugins/iterm2_shell_integration
         fi
       '';
 
       plugins = [
-        { name = "zsh-powerlevel9k";
-          file = "powerlevel9k.zsh-theme";
-          src = pkgs.zsh-powerlevel9k.src;
-        }
+        # { name = "zsh-powerlevel9k";
+        #   file = "powerlevel9k.zsh-theme";
+        #   src = pkgs.zsh-powerlevel9k.src;
+        # }
 
-        { name = "iterm2_shell_integration";
-          src = pkgs.fetchurl {
-            url = https://iterm2.com/shell_integration/zsh;
-            sha256 = "17x6mqgn0j1cn6xvzl6x7d36zrkrmq81bqnbmz797prsgs1g4i98";
-            # date = 2018-04-26T14:38:20-0700;
-          };
-        }
+        # { name = "iterm2_shell_integration";
+        #   src = pkgs.fetchurl {
+        #     url = https://iterm2.com/shell_integration/zsh;
+        #     sha256 = "1vm6p5gsnck6s96p5jdchna4jnc3ifsw1nd5l7fr14l4rlza4r5s";
+        #     # date = 2018-11-23T13:14:43-0800;
+        #   };
+        # }
       ];
     };
 
@@ -395,16 +393,16 @@ rec {
         "*.elc" "*.vo" "*.aux" "*.v.d" "*.o" "*.a" "*.la" "*.so" "*.dylib"
         "*~" "#*#" ".makefile" ".clean" ".envrc" ".direnv" "*.glob"
         ".ghc.environment.x86_64-darwin-*" "cabal.project.local"
-        "dist-newstyle" "tags" "TAGS"
+        "dist-newstyle" "tags" "TAGS" ".envrc.override"
       ];
     };
 
     ssh = {
       enable = true;
 
-      # controlMaster  = "auto";
-      # controlPath    = "/tmp/ssh-%u-%r@%h:%p";
-      # controlPersist = "1800";
+      controlMaster  = "auto";
+      controlPath    = "/tmp/ssh-%u-%r@%h:%p";
+      controlPersist = "1800";
 
       forwardAgent = true;
       serverAliveInterval = 60;
@@ -458,6 +456,8 @@ rec {
         nixos   = hostOnVulcan "192.168.118.128";
         dfinity = hostOnVulcan "192.168.118.129";
         macos   = hostOnVulcan "192.168.118.130";
+
+hydra = { hostname = "hydra.oregon.dfinity.build"; user = "ec2-user"; };
 
         smokeping = { hostname = "192.168.1.78"; user = "smokeping"; };
 

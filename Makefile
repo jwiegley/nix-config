@@ -1,6 +1,6 @@
 NIX_CONF = $(HOME)/src/nix
 
-BRANCH = master
+BRANCH = staging
 REMOTE = hermes
 CACHE  = /Volumes/slim/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
@@ -119,10 +119,17 @@ size:
 
 copy:
 	push -f src,dfinity $(REMOTE)
-	nix copy --keep-going --to ssh://$(REMOTE)			\
-	    $(shell readlink -f ~/.nix-profile)				\
-	    $(shell readlink -f /run/current-system)			\
-	    $(shell find $(PROJS) -path '*/.direnv/default/env.drv')
+	nix copy --keep-going --to ssh://$(REMOTE)		\
+	    $(shell readlink -f ~/.nix-profile)			\
+	    $(shell readlink -f /run/current-system)		\
+	    $(shell find $(PROJS) -path '*/.direnv/default'	\
+		| while read dir; do				\
+		    ls $$dir/ | while read file ; do		\
+	              readlink $$dir/$$file;			\
+	            done ;					\
+	          done						\
+	        | sort						\
+		| uniq)
 	ssh $(REMOTE) 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) build-all all'
 
 cache: check

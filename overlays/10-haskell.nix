@@ -58,7 +58,7 @@ let
     pipes-zlib            = dontCheck (doJailbreak super.pipes-zlib);
     text-show             = dontCheck (doJailbreak super.text-show);
     time-recurrence       = doJailbreak super.time-recurrence;
-    # megaparsec            = self.megaparsec_7_0_4;
+    megaparsec            = self.megaparsec_7_0_4;
 
     ListLike = overrideCabal super.ListLike (attrs: {
       libraryHaskellDepends =
@@ -142,6 +142,7 @@ let
 
                  developPackage =
                    { root
+                   , name ? builtins.baseNameOf root
                    , source-overrides ? {}
                    , overrides ? self: super: {}
                    , modifier ? drv: drv
@@ -154,7 +155,7 @@ let
                            (self.packageSourceOverrides source-overrides)
                            overrides)) {} super;
                      drv =
-                       hpkgs.callCabal2nix (builtins.baseNameOf root) root {};
+                       hpkgs.callCabal2nix name root {};
                    in if returnShellEnv
                       then (modifier drv).env
                       else modifier drv;

@@ -275,9 +275,11 @@ pkgs: epkgs: with epkgs;
   ov
   ovpn-mode
   ox-extra
+  ox-gfm
   ox-jira
   ox-pandoc
   ox-texinfo-plus
+  ox-slack
   package-lint
   packed
   pandoc-mode

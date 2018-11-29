@@ -76,7 +76,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   iperf
   lftp
   mercurialFull
-  mitmproxy
+  # mitmproxy
   mtr
   nmap
   openssh
