@@ -114,6 +114,10 @@ copy-all: copy
 check:
 	nix-store --verify --repair --check-contents
 
+check-all: check
+	ssh hermes 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) check'
+	ssh fin    'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) check'
+
 size:
 	sudo du --si -shx /nix/store
 
@@ -165,3 +169,7 @@ gc-all: remove-build-products
 	sudo nix-env -p /nix/var/nix/profiles/system --delete-generations \
 	    $(shell sudo nix-env -p /nix/var/nix/profiles/system --list-generations | field 1 | head -n -1)
 	nix-collect-garbage -d
+
+fullclean: gc-all check
+	ssh hermes 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) gc-all check'
+	ssh fin    'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) gc-all check'

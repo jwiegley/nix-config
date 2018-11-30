@@ -510,6 +510,18 @@ let
       };
     };
 
+    ox-slack = compileEmacsFiles {
+      name = "ox-slack";
+      src = fetchFromGitHub {
+        owner = "titaniumbones";
+        repo = "ox-slack";
+        rev = "96d90914e6df1a0141657fc51f1dc5bb8f1da6bd";
+        sha256 = "1cda5c35wm7aqyj7yj80wkwb79dgzlzis1dlpysdxv30ahcf4w8p";
+        # date = 2018-11-19T06:31:43-05:00;
+      };
+      buildInputs = [ self.ox-gfm ];
+    };
+
     ox-texinfo-plus = compileEmacsFiles {
       name = "ox-texinfo-plus";
       src = fetchFromGitHub {

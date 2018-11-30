@@ -126,6 +126,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.sitebuilder)
   sourceHighlight
   svg2tikz
+  taskjuggler
   texFull
   # texinfo
   xapian
