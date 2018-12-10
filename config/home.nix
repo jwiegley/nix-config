@@ -457,7 +457,7 @@ rec {
         dfinity = hostOnVulcan "192.168.118.129";
         macos   = hostOnVulcan "192.168.118.130";
 
-hydra = { hostname = "hydra.oregon.dfinity.build"; user = "ec2-user"; };
+        hydra = { hostname = "hydra.oregon.dfinity.build"; user = "ec2-user"; };
 
         smokeping = { hostname = "192.168.1.78"; user = "smokeping"; };
 

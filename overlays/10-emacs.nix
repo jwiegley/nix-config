@@ -590,6 +590,17 @@ let
       };
     };
 
+    slidify-pages = compileEmacsFiles {
+      name = "slidify-pages";
+      src = fetchFromGitHub {
+        owner = "enaeher";
+        repo = "slidify-pages";
+        rev = "de0c7d58779e5f8355efcbcfed3f0d4cd98a1a73";
+        sha256 = "1cjmcwqyczvapsn0bsal1f3xdzzzcqmc2srhzvpb0ph2m51z1fz7";
+        # date = 2015-07-07T18:43:40-05:00;
+      };
+    };
+
     stopwatch = compileEmacsFiles {
       name = "stopwatch";
       src = fetchFromGitHub {

@@ -113,7 +113,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   ledger
   (exe haskPkgs.lhs2tex)
   librsvg
-  (exe haskPkgs.pandoc)
+  pandoc
   pdf-tools-server
   plantuml
   poppler_utils
