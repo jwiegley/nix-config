@@ -2,15 +2,19 @@ self: super: {
 
 git-lfs = with super; stdenv.mkDerivation rec {
   name = "git-lfs-${version}";
-  version = "2.3.4";
+  version = "2.6.1";
 
   src = fetchurl {
-    url = https://github.com/git-lfs/git-lfs/releases/download/v2.3.4/git-lfs-darwin-amd64-2.3.4.tar.gz;
-    sha256 = "1nvfaxrvrc0qbx78ar1jj3bvh9f4gjvv3vbvwbh39ymid5s4nvdi";
-    # date = 2018-01-28T00:38:51-0800;
+    url = "https://github.com/git-lfs/git-lfs/releases/download/v${version}/git-lfs-darwin-amd64-v${version}.tar.gz";
+    sha256 = "12rcqc0z6awsf1nsili5f0jhpkxig1vmng8wzmzgifjvqm9lkb44";
+    # date = 2018-12-27T00:38:51-0800;
   };
 
   phases = [ "unpackPhase" "installPhase" ];
+
+  unpackPhase = ''
+    tar xvzf ${src}
+  '';
 
   installPhase = ''
     mkdir -p $out/bin

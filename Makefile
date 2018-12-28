@@ -2,7 +2,7 @@ NIX_CONF = $(HOME)/src/nix
 
 BRANCH = staging
 REMOTE = hermes
-CACHE  = /Volumes/slim/Cache
+CACHE  = /Users/johnw/tank/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
 
 PENVS  = emacs26Env

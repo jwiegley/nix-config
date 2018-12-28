@@ -59,7 +59,6 @@ let
     haskell-mode  = withPatches super.haskell-mode  [ ./emacs/patches/haskell-mode.patch ];
     helm-google   = withPatches super.helm-google   [ ./emacs/patches/helm-google.patch ];
     hyperbole     = withPatches super.hyperbole     [ ./emacs/patches/hyperbole.patch ];
-    magit         = withPatches super.magit         [ ./emacs/patches/magit.patch ];
     multi-term    = withPatches super.multi-term    [ ./emacs/patches/multi-term.patch ];
     noflet        = withPatches super.noflet        [ ./emacs/patches/noflet.patch ];
     org-ref       = withPatches super.org-ref       [ ./emacs/patches/org-ref.patch ];
@@ -304,6 +303,19 @@ let
       buildInputs = with self; [ s dash spinner ];
     };
 
+    ejira = compileEmacsFiles {
+      name = "ejira";
+      src = fetchFromGitHub {
+        owner = "nyyManni";
+        repo = "ejira";
+        rev = "9ef57f96456f0bb3be17befb000d960f5ac766b4";
+        sha256 = "056k1wczaqkvqx24hfcjfixknr51aqk2fmy7kgrsvhygw7b6gcla";
+        # date = 2018-12-12T14:20:51+02:00;
+      };
+      buildInputs = with self; [ s ox-jira request helm language-detection ];
+      preBuild = "rm helm-ejira.el";
+    };
+
     emacs-load-time = compileEmacsFiles {
       name = "emacs-load-time";
       src = fetchFromGitHub {
@@ -416,6 +428,18 @@ let
       };
     };
 
+    ivy-explorer = compileEmacsFiles {
+      name = "ivy-explorer";
+      src = fetchFromGitHub {
+        owner = "clemera";
+        repo = "ivy-explorer";
+        rev = "783816afda31d1b75487b906257e23e273bad6fa";
+        sha256 = "1y3igqvmikz21ikzhmrmz2mpmk1pw6x2bk2d2i4z6l580fhz0h5y";
+        # date = 2018-12-21T13:27:32+01:00;
+      };
+      buildInputs = with self; [ ivy ];
+    };
+
     makefile-runner = compileEmacsFiles {
       name = "makefile-runner";
       src = fetchFromGitHub {
@@ -426,6 +450,39 @@ let
         # date = 2017-07-29T16:05:20+02:00;
       };
     };
+
+    magit = withPatches (self.melpaBuild {
+      pname = "magit";
+      ename = "magit";
+      version = "20181226";
+      src = fetchFromGitHub {
+        owner = "magit";
+        repo = "magit";
+        rev = "4e57537694e2758a4287973168e4f0d432ad1ae9";
+        sha256 = "1azg0nfni08pnggac38328qfzjrw50d81pxnnaslgy4q0nzk8ngi";
+        # date = 2018-12-26T20:09:08+01:00;
+      };
+      recipe = fetchurl {
+        url = "https://raw.githubusercontent.com/milkypostman/melpa/13d1a86dfe682f65daf529f9f62dd494fd860be9/recipes/magit";
+        sha256 = "03iv74rgng5fcy3qfr76hiy0hj6x2z0pis1yj8wm1naq5rc55hjn";
+        name = "recipe";
+        # date = 2018-12-26T17:02:21-0800;
+      };
+      packageRequires = with self; [
+        async
+        dash
+        emacs
+        ghub
+        git-commit
+        magit-popup
+        with-editor
+	pkgs.git
+      ];
+      meta = {
+        homepage = "https://melpa.org/#/magit";
+        license = lib.licenses.free;
+      };
+    }) [ ./emacs/patches/magit.patch ];
 
     magit-todos = compileEmacsFiles {
       name = "magit-todos";
@@ -713,13 +770,63 @@ let
       };
     };
 
+    emacsql-sqlite = self.melpaBuild {
+      pname = "emacsql-sqlite";
+      ename = "emacsql-sqlite";
+      version = "20181111";
+      src = fetchFromGitHub {
+        owner = "skeeto";
+        repo = "emacsql";
+        rev = "f8c3d9fce28ab7d5b0c9fcf2c1236151ca7add24";
+        sha256 = "0kfr3y54b7cj9zm3dnqfryilhgiaa78ani5fgi402l5h9i922isn";
+        # date = 2018-11-11T11:05:00+01:00;
+      };
+      preBuild = ''
+        make LDFLAGS="-L ${self.pg}/share/emacs/site-lisp/elpa/$(echo ${self.pg.name} | sed 's/^emacs-//')"
+      '';
+      recipe = fetchurl {
+        url = "https://raw.githubusercontent.com/milkypostman/melpa/13d1a86dfe682f65daf529f9f62dd494fd860be9/recipes/emacsql-sqlite";
+        sha256 = "1y81nabzzb9f7b8azb9giy23ckywcbrrg4b88gw5qyjizbb3h70x";
+        name = "recipe";
+        # date = 2018-12-26T15:42:41-0800;
+      };
+      packageRequires = with self; [ emacs emacsql ];
+      meta = {
+        homepage = "https://melpa.org/#/emacsql-sqlite";
+        license = lib.licenses.free;
+      };
+    };
+
+    forge = self.melpaBuild {
+      pname = "forge";
+      version = "20181226";
+      src = fetchFromGitHub {
+        owner = "magit";
+        repo = "forge";
+        rev = "fd33db0bc72c45af4321e8aca7c3e10174a676dd";
+        sha256 = "1mjjxxvd53l2awfgda7m03dkkbvwvfa5f2mcj355g84n7n07ddf1";
+        # date = 2018-12-26T20:07:10+01:00;
+      };
+      recipe = fetchurl {
+        url = "https://raw.githubusercontent.com/melpa/melpa/23512cf8152161322960d72a5ec49a7595003477/recipes/forge";
+        sha256 = "0a1yvdxx43zq9ivwmg34wyybkw4vhgzd2c54cchsbrbr972x9522";
+        name = "forge";
+        # date = 2018-12-26T15:34:51-0800;
+      };
+      packageRequires = with self; [ emacs magit closql ];
+      meta = {
+        homepage = "https://github.com/magit/forge";
+        license = lib.licenses.free;
+      };
+    };
+
     pdf-tools = lib.overrideDerivation super.pdf-tools (attrs: {
       src = fetchFromGitHub {
         owner = "politza";
         repo = "pdf-tools";
-        rev = "b6c0e4f3bb8d57818c51f27c12b9235d39bec8d3";
-        sha256 = "1yh70fk45a5hfcfz823kps5w0p76j1vwhy7agd9557f86xjzf3rq";
-        # date = 2018-10-27T18:23:25+02:00;
+        rev = "a4cd69ea1d50b8e74ea515eec95948ad87c6c732";
+        sha256 = "0m9hwihj2n8vv7hmcg6ax5sjxlmsb7wgsd6wqkp01x1xb5qjqhpm";
+        # date = 2018-12-21T20:13:05+01:00;
       };
     });
 
@@ -902,18 +1009,20 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation
 
   buildInputs = emacs26.buildInputs ++
     [ git libpng.dev libjpeg.dev libungif libtiff.dev librsvg.dev
-      imagemagick.dev ];
+      imagemagick.dev harfbuzz.dev ];
 
   patches = lib.optionals stdenv.isDarwin
     [ ./emacs/patches/at-fdcwd.patch
-      ./emacs/patches/emacs-26.patch ];
+      # ./emacs/patches/emacs-26.patch
+    ];
 
   CFLAGS = "-O0 -g3 -DMAC_OS_X_VERSION_MAX_ALLOWED=101200";
 
   configureFlags = [ "--with-modules" ] ++
    [ "--with-ns" "--disable-ns-self-contained"
      "--enable-checking=yes,glyphs"
-     "--enable-check-lisp-object-type" ];
+     "--enable-check-lisp-object-type"
+     "--enable-harfbuzz" ];
 
   src = ~/src/emacs;
 

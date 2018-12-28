@@ -127,12 +127,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "63.0.3";
+  version = "64.0";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "04c2sk84zn1wqmj4s5w2s446i7fb7p22r2bbahrjbbiv39yil81g";
+    sha256 = "0bz9ds4z5if5xqp4vqydkmyrdlryqr3l6sfsvh6fmsxzgz5113p1";
   };
   postInstall = ''
     for file in  \

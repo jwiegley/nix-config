@@ -2,13 +2,13 @@ self: super: {
 
 mitmproxy = with self.python3Packages; buildPythonPackage rec {
   pname = "mitmproxy";
-  version = "3.0.4";
+  version = "4.0.4";
 
   src = super.fetchFromGitHub {
     owner  = pname;
     repo   = pname;
     rev    = "v${version}";
-    sha256 = "10l761ds46r1p2kjxlgby9vdxbjjlgq72s6adjypghi41s3qf034";
+    sha256 = "20l761ds46r1p2kjxlgby9vdxbjjlgq72s6adjypghi41s3qf034";
   };
 
   postPatch = ''

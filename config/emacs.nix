@@ -92,6 +92,7 @@ pkgs: epkgs: with epkgs;
   edit-indirect
   edit-server
   edit-var
+  ejira
   el-mock
   elfeed
   elisp-depend
@@ -132,6 +133,7 @@ pkgs: epkgs: with epkgs;
   fn
   focus
   font-lock-studio
+  forge
   free-keys
   fringe-helper
   fullframe
@@ -184,6 +186,7 @@ pkgs: epkgs: with epkgs;
   initsplit
   ipcalc
   ivy
+  ivy-explorer
   ivy-hydra
   ivy-pass
   ivy-rich
@@ -197,12 +200,14 @@ pkgs: epkgs: with epkgs;
   key-chord
   know-your-http-well
   kv
+  language-detection
   langtool
   ledger-mode
   lentic                        # lentic-mode
   link-hint
   lispy
   list-utils
+  lively
   #llvm-mode
   logito
   loop
@@ -302,7 +307,7 @@ pkgs: epkgs: with epkgs;
   phi-search-mc
   pkg-info
   plantuml-mode
-  po-mode
+  # po-mode
   popup
   popup-pos-tip
   popup-ruler

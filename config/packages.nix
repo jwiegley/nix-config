@@ -71,6 +71,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   bazaar
   cacert
   dnsutils
+  go-jira
   httpie
   httrack
   iperf
@@ -215,6 +216,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   unzip
   vim
   watch
+  watchman
   xsv
   xz
   yubico-piv-tool

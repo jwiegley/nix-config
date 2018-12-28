@@ -8,9 +8,9 @@ pdf-tools-server = with self; super.stdenv.mkDerivation rec {
   src = super.fetchFromGitHub {
     owner = "politza";
     repo = "pdf-tools";
-    rev = "60d12ce15220d594e8eb95f4d072e2710cddefe0";
-    sha256 = "1s8zphbd7k1ifdlisy894cg4mrkiq1rl2qk8x10njp1i596hz1fm";
-    # date = 2018-04-29T18:31:04+02:00;
+    rev = "a4cd69ea1d50b8e74ea515eec95948ad87c6c732";
+    sha256 = "0m9hwihj2n8vv7hmcg6ax5sjxlmsb7wgsd6wqkp01x1xb5qjqhpm";
+    # date = 2018-12-21T20:13:05+01:00;
   };
 
   buildInputs = [

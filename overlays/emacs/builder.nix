@@ -4,6 +4,7 @@
 , src
 , buildInputs ? []
 , patches ? []
+, preBuild ? ""
 }:
 
 stdenv.mkDerivation {
@@ -13,6 +14,7 @@ stdenv.mkDerivation {
   '';
   buildInputs = [ emacs ] ++ buildInputs;
   buildPhase = ''
+    ${preBuild}
     ARGS=$(find ${stdenv.lib.concatStrings
                   (builtins.map (arg: arg + "/share/emacs/site-lisp ") buildInputs)} \
                  -type d -exec echo -L {} \;)
