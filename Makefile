@@ -1,6 +1,6 @@
 NIX_CONF = $(HOME)/src/nix
 
-BRANCH = staging
+BRANCH = unstable
 REMOTE = hermes
 CACHE  = /Users/johnw/tank/Cache
 ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
