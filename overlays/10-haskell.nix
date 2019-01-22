@@ -44,6 +44,10 @@ let
          else pkg ~/bae/concerto/solver/lib/z3;
 
     Agda                  = dontHaddock super.Agda;
+    aeson                 = overrideCabal super.aeson (attrs: {
+      libraryHaskellDepends =
+        attrs.libraryHaskellDepends ++ [ self.contravariant ];
+    });
     base-compat-batteries = doJailbreak super.base-compat-batteries;
     diagrams-contrib      = doJailbreak super.diagrams-contrib;
     diagrams-graphviz     = doJailbreak super.diagrams-graphviz;
@@ -206,9 +210,10 @@ packageDeps = path:
     compiler = package.compiler;
     packages = self.haskell.lib.getHaskellBuildInputs package;
     cabal    = {
-      ghc802 = "1.24.0.2";
-      ghc822 = "2.0.0.1";
-      ghc844 = "2.2.0.0";
+      ghc802 = "1.24.2.0";
+      ghc822 = "2.0.1.0";
+      ghc844 = "2.2.0.1";
+      ghc863 = "2.4.0.1";
     };
 
   in compiler.withHoogle (p: with p;
@@ -255,7 +260,6 @@ haskell = pkgs.haskell // {
       (breakout super [
          "compact"
          "criterion"
-         "text-format"
        ])
        // (with pkgs.haskell.lib; {
         text-format = doJailbreak (overrideCabal super.text-format (drv: {
@@ -267,14 +271,17 @@ haskell = pkgs.haskell // {
           };
         }));
       }));
+
+    ghc863 = overrideHask "ghc863" pkgs.haskell.packages.ghc863 (self: super: {});
   };
 };
 
 haskellPackages_8_0 = self.haskell.packages.ghc802;
 haskellPackages_8_2 = self.haskell.packages.ghc822;
 haskellPackages_8_4 = self.haskell.packages.ghc844;
+haskellPackages_8_6 = self.haskell.packages.ghc863;
 
-haskellPackages = self.haskellPackages_8_4;
+haskellPackages = self.haskell.packages.${self.ghcDefaultVersion};
 haskPkgs = self.haskellPackages;
 
 ghcDefaultVersion = "ghc844";

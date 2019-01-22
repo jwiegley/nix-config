@@ -1,41 +1,42 @@
 NIX_CONF = $(HOME)/src/nix
 
-BRANCH = unstable
-REMOTE = hermes
-CACHE  = /Users/johnw/tank/Cache
-ROOTS  = /nix/var/nix/gcroots/per-user/johnw/shells
+HOSTNAME = vulcan
+REMOTE	 = hermes
+CACHE	 = /Users/johnw/tank/Cache
+ROOTS	 = /nix/var/nix/gcroots/per-user/johnw/shells
 
-PENVS  = emacs26Env
+ENVS     = emacsHEADEnv	\
+	   emacs26Env	\
+	   ledgerPy2Env	\
+	   ledgerPy3Env
 
-ENVS   = emacsHEADEnv	\
-	 emacs26Env	\
-	 ledgerPy2Env	\
-	 ledgerPy3Env
+PROJS    = $(shell find $(HOME)/dfinity $(HOME)/src -name .envrc -type f -printf '%h ')
 
-PROJS  = $(shell find $(HOME)/dfinity $(HOME)/src -name .envrc -type f -printf '%h ')
+all: switch env
 
-all: switch env-all
+NIXPATH = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 
-switch: darwin-switch home-switch
-
-darwin-switch:
-	darwin-rebuild switch -Q
-	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
-
-darwin-build:
-	nix build --keep-going darwin.system
+darwin-build: config/darwin.nix
+	NIX_PATH=$(NIXPATH) nix build --keep-going darwin.system
 	@rm result
 
-home-switch:
-	home-manager switch
-	@echo "Home generation: $$(home-manager generations | head -1)"
+darwin-switch: darwin-build
+	NIX_PATH=$(NIXPATH) darwin-rebuild switch -Q
+	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
-home-build:
+home-build: config/home.nix
+	NIX_PATH=$(NIXPATH)							\
 	nix build -f $(NIX_CONF)/home-manager/home-manager/home-manager.nix	\
 	    --argstr confPath "$(HOME_MANAGER_CONFIG)"				\
 	    --argstr confAttr "" activationPackage				\
 	    --keep-going
 	@rm result
+
+home-switch: home-build
+	NIX_PATH=$(NIXPATH) home-manager switch
+	@echo "Home generation: $$(home-manager generations | head -1)"
+
+switch: darwin-switch home-switch
 
 projs:
 	@for i in $(PROJS); do \
@@ -48,37 +49,23 @@ shells:
 	    echo;					\
 	    echo Pre-building shell env for $$i;	\
 	    echo;					\
-	    testit --make;				\
+	    NIX_PATH=$(NIXPATH) testit --make;		\
 	    rm -f result;				\
 	done
 
-env-all:
+env-build: config/darwin.nix
+	NIX_PATH=$(NIXPATH) nix build --keep-going darwin.pkgs.allEnvs
+	@rm result
+
+env:
 	for i in $(ENVS); do					\
 	    echo Updating $$i;					\
+	    NIX_PATH=$(NIXPATH)					\
 	    nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ;	\
 	done
 	@echo "Nix generation: $$(nix-env --list-generations | tail -1)"
 
-env-all-build:
-	nix build --keep-going darwin.pkgs.allEnvs
-	@rm result
-
-env:
-	for i in $(PENVS); do					\
-	    echo Updating $$i;					\
-	    nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ;	\
-	done
-
-env-build:
-	for i in $(PENVS); do				\
-	    echo Building $$i;				\
-	    nix build --keep-going darwin.pkgs.$$i ;	\
-	done
-	@rm result
-
 build: darwin-build home-build env-build
-
-build-all: darwin-build home-build env-all-build
 
 pull:
 	(cd darwin       && git pull --rebase)
@@ -96,15 +83,16 @@ tag-working:
 	    last-known-good
 
 mirror:
-	git --git-dir=nixpkgs/.git push github -f $(BRANCH):$(BRANCH)
 	git --git-dir=nixpkgs/.git push github -f master:master
+	git --git-dir=nixpkgs/.git push github -f unstable:unstable
+	git --git-dir=nixpkgs/.git push github -f last-known-good:last-known-good
 	git --git-dir=nixpkgs/.git push -f --tags github
 	git --git-dir=darwin/.git push --mirror jwiegley
 	git --git-dir=home-manager/.git push --mirror jwiegley
 
 working: tag-working mirror
 
-update: tag-before pull build-all switch env-all working cache
+update: tag-before pull build switch env working cache
 
 update-all: update shells copy-all
 
@@ -123,7 +111,7 @@ size:
 
 copy:
 	push -f src,dfinity $(REMOTE)
-	nix copy --keep-going --to ssh://$(REMOTE)		\
+	nix copy --keep-going --to ssh-ng://$(REMOTE)		\
 	    $(shell readlink -f ~/.nix-profile)			\
 	    $(shell readlink -f /run/current-system)		\
 	    $(shell find $(PROJS) -path '*/.direnv/default'	\
@@ -134,7 +122,7 @@ copy:
 	          done						\
 	        | sort						\
 		| uniq)
-	ssh $(REMOTE) 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) build-all all'
+	ssh $(REMOTE) 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) HOSTNAME=$(REMOTE) build all'
 
 cache: check
 	-test -d $(CACHE) &&					\

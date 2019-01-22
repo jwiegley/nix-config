@@ -41,8 +41,8 @@ Dash = self.installApplication rec {
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "0z8365shmwn26c2fcwv18drmi1i06myj1wspc563kaic7g7z9l4v";
-    # date = 2018-10-18T08:58:53-0700;
+    sha256 = "0n429q4b8g7fmpx50zkamq19hfd1629jgj055429iw0818891sdg";
+    # date = 2019-01-07T14:11:55-0800;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
@@ -115,8 +115,8 @@ Docker = self.installApplication rec {
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
-    sha256 = "1dp5536qky0iw246kg3dwji1kfq9db2nikvsf6i7xqc02xm04lm4";
-    # date = 2018-11-20T15:42:46-0800;
+    sha256 = "1zyi7dmyv4vx1nl2sp0xzk0d48ca2iypkrci3zsccywzkcbglhsk";
+    # date = 2019-01-09T10:27:52-0800;
   };
   description = ''
     Docker CE for Mac is an easy-to-install desktop app for building,
@@ -127,12 +127,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "64.0";
+  version = "64.0.2";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "0bz9ds4z5if5xqp4vqydkmyrdlryqr3l6sfsvh6fmsxzgz5113p1";
+    sha256 = "1dnhwcr0243lb0lm56a6c6pz53zz66sdzlk2v8iv2aw3b0ba6z7l";
   };
   postInstall = ''
     for file in  \
@@ -199,12 +199,12 @@ HandBrake = self.installApplication rec {
 iTerm2 = self.installApplication rec {
   name = "iTerm2";
   appname = "iTerm";
-  version = "3.2.6";
+  version = "3.2.7";
   sourceRoot = "iTerm.app";
   src = super.fetchurl {
-    url = "https://iterm2.com/downloads/stable/iTerm2-3_2_6.zip";
-    sha256 = "116qmdcbbga8hr9q9n1yqnhrmmq26l7pb5lgvlgp976yqa043i6v";
-    # date = 2018-11-26T10:24:24-0800;
+    url = "https://iterm2.com/downloads/stable/iTerm2-3_2_7.zip";
+    sha256 = "1q9agvyl0zv8y6bbjnjyxll0fc23wnysjjn661xbi3rpp7sdswdc";
+    # date = 2019-01-22T10:40:39-0800;
   };
   description = "iTerm2 is a replacement for Terminal and the successor to iTerm";
   homepage = https://www.iterm2.com;
@@ -417,8 +417,8 @@ SuspiciousPackage = self.installApplication rec {
   sourceRoot = "Suspicious Package.app";
   src = super.fetchurl {
     url = "http://www.mothersruin.com/software/downloads/SuspiciousPackage.dmg";
-    sha256 = "022sg23xjfvgx94xd4dq9db3kw0dcp8y6c6lxv1cv773q2kfa5h4";
-    # date = 2018-10-03T22:43:45-0700;
+    sha256 = "0jq9x6rs3j6qvw4phar65law50r2vp58znc92xqwnz8fb463lrz4";
+    # date = 2019-01-07T14:10:49-0800;
   };
   description = "An Application for Inspecting macOS Installer Packages";
   homepage = http://www.mothersruin.com/software/SuspiciousPackage;

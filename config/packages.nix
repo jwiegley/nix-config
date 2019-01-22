@@ -51,9 +51,12 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.hpack)
   # (exe haskPkgs.brittany)
   htmlTidy
+  m4
   idutils
   rtags
   sloccount
+  valgrind
+  wabt
   yamale
 
   # mailToolsEnv

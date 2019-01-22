@@ -5,7 +5,7 @@ if [[ "$(basename $PWD)" =~ hs-dfinity-(.+) &&
     echo "Setting up for -A ${BASH_REMATCH[1]}"
     cat > .envrc.override <<EOF
 . $(which use_nix.sh)
-export NIXARGS=(--arg useHoogle true --arg v8 false --arg devel true -A ${BASH_REMATCH[1]})
+export NIXARGS=(--arg useHoogle true --arg devel true -A ${BASH_REMATCH[1]})
 export NIXFILE=../shell.nix
 use_nix
 EOF

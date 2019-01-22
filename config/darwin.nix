@@ -1,8 +1,11 @@
 { config, lib, pkgs, ... }:
 
 let home_directory = "/Users/johnw";
-    logdir = "${home_directory}/Library/Logs"; in
-{
+    log_directory = "${home_directory}/Library/Logs";
+    tmp_directory = "/tmp";
+    localconfig = import <localconfig>;
+
+in {
   system.defaults = {
     NSGlobalDomain = {
       AppleKeyboardUIMode = 3;
@@ -17,9 +20,6 @@ let home_directory = "/Users/johnw";
 
     trackpad.Clicking = true;
   };
-
-  # system.defaults.menuextra.battery.ShowPercent = true;
-  # system.defaults.menuextra.clock.DateFormat = "EEE MMM d  h:mm a";
 
   networking = {
     dns = [ "127.0.0.1" ];
@@ -40,14 +40,6 @@ let home_directory = "/Users/johnw";
       script = ''
         export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
         ${pkgs.dirscan}/bin/cleanup -u >> /var/log/cleanup.log 2>&1
-      '';
-      serviceConfig = iterate 86400;
-    };
-
-    snapshots-tank = {
-      script = ''
-        export PATH=$PATH:${pkgs.my-scripts}/bin:${pkgs.OpenZFSonOSX}/bin
-        snapshots tank >> /var/log/snapshots.log 2>&1
       '';
       serviceConfig = iterate 86400;
     };
@@ -73,11 +65,11 @@ let home_directory = "/Users/johnw";
 
     pdnsd = {
       script = ''
-        cp -pL /etc/pdnsd.conf /tmp/.pdnsd.conf
-        chmod 700 /tmp/.pdnsd.conf
-        chown root /tmp/.pdnsd.conf
+        cp -pL /etc/pdnsd.conf ${tmp_directory}/.pdnsd.conf
+        chmod 700 ${tmp_directory}/.pdnsd.conf
+        chown root ${tmp_directory}/.pdnsd.conf
         touch /Library/Caches/pdnsd/pdnsd.cache
-        ${pkgs.pdnsd}/sbin/pdnsd -c /tmp/.pdnsd.conf
+        ${pkgs.pdnsd}/sbin/pdnsd -c ${tmp_directory}/.pdnsd.conf
       '';
       serviceConfig.RunAtLoad = true;
       serviceConfig.KeepAlive = true;
@@ -102,7 +94,16 @@ let home_directory = "/Users/johnw";
     #   command = "${pkgs.OpenZFSonOSX}/libexec/zfs/launchd.d/zpool-import-all.sh";
     #   serviceConfig.RunAtLoad = true;
     # };
-  };
+  } //
+  (if localconfig.hostname == "fin" then {
+     snapshots-tank = {
+       script = ''
+         export PATH=$PATH:${pkgs.my-scripts}/bin:${pkgs.OpenZFSonOSX}/bin
+         snapshots tank >> /var/log/snapshots.log 2>&1
+       '';
+       serviceConfig = iterate 86400;
+     };
+   } else {});
 
   launchd.user.agents =
     let iterate = interval: {
@@ -116,19 +117,6 @@ let home_directory = "/Users/johnw";
     aria2c = {
       command = "${pkgs.aria2}/bin/aria2c --enable-rpc";
       serviceConfig.RunAtLoad = true;
-    };
-
-    b2-sync = {
-      script = ''
-        export PATH=$PATH:${pkgs.my-scripts}/bin
-        export PATH=$PATH:${pkgs.backblaze-b2}/bin
-        export PATH=$PATH:${pkgs.rclone}/bin
-        if [[ -d /Volumes/tank/Backups ]]; then
-            ${pkgs.my-scripts}/bin/b2-sync /Volumes/tank tank \
-                >> /var/log/b2-sync.log 2>&1
-        fi
-      '';
-      serviceConfig = iterate 86400;
     };
 
     dovecot = {
@@ -153,19 +141,6 @@ let home_directory = "/Users/johnw";
       };
     };
 
-    myip = {
-      script = ''
-        if [[ $(hostname) =~ [Vv]ulcan ]]; then
-            cat > ${home_directory}/Documents/home.config <<EOF
-Host home
-    HostName $(dig +short myip.opendns.com @resolver1.opendns.com.)
-    Port 2201
-EOF
-        fi
-      '';
-      serviceConfig.StartInterval = 3600;
-    };
-
     rdm = rec {
       script = ''
         ${pkgs.rtags}/bin/rdm \
@@ -173,12 +148,38 @@ EOF
             --launchd \
             --inactivity-timeout 300 \
             --socket-file ${serviceConfig.Sockets.Listeners.SockPathName}
-            --log-file ${logdir}/rtags.launchd.log
+            --log-file ${log_directory}/rtags.launchd.log
       '';
       serviceConfig.Sockets.Listeners.SockPathName
         = "${home_directory}/.cache/rdm/socket";
     };
-  };
+  } //
+  (if localconfig.hostname == "fin" then {
+     # b2-sync = {
+     #   script = ''
+     #     export PATH=$PATH:${pkgs.my-scripts}/bin
+     #     export PATH=$PATH:${pkgs.backblaze-b2}/bin
+     #     export PATH=$PATH:${pkgs.rclone}/bin
+     #     if [[ -d /Volumes/tank/Backups ]]; then
+     #         ${pkgs.my-scripts}/bin/b2-sync /Volumes/tank tank \
+     #             >> /var/log/b2-sync.log 2>&1
+     #     fi
+     #   '';
+     #   serviceConfig = iterate 86400;
+     # };
+   }
+   else if localconfig.hostname == "vulcan" then {
+     myip = {
+       script = ''
+         cat > ${home_directory}/Documents/home.config <<EOF
+Host home
+    HostName $(dig +short myip.opendns.com @resolver1.opendns.com.)
+    Port 2201
+EOF
+       '';
+       serviceConfig.StartInterval = 3600;
+     };
+   } else {});
 
   system.activationScripts.postActivation.text = ''
     chflags nohidden ${home_directory}/Library
@@ -312,6 +313,9 @@ EOF
           par_queries  = 1;
       }
 
+      rr { name = hydra.oregon.dfinity.build; a = 10.20.12.55; }
+      rr { name = nix.oregon.dfinity.build; a = 10.20.12.55; }
+
       server {
           label       = "google";
           ip          = 8.8.8.8, 8.8.4.4;
@@ -395,7 +399,6 @@ EOF
       rr { name = localunixsocket;       a = 127.0.0.1; }
       rr { name = localunixsocket.local; a = 127.0.0.1; }
       rr { name = bugs.ledger-cli.org;   a = 192.168.128.132; }
-      rr { name = hydra.oregon.dfinity.build; a = 10.20.12.55; }
 
       neg {
           name  = doubleclick.net;
@@ -454,42 +457,72 @@ EOF
       ];
 
     trustedUsers = [ "johnw" "@admin" ];
-    maxJobs = 10;
-    distributedBuilds = false;
-    # buildMachines = [
-    #   # { hostName = "vulcan";
-    #   #   sshUser = "johnw";
-    #   #   sshKey = "${home_directory}/.config/ssh/id_local";
-    #   #   system = "x86_64-darwin";
-    #   #   maxJobs = 10;
-    #   #   speedFactor = 4;
-    #   # }
-    #   { hostName = "hermes";
-    #     sshUser = "johnw";
-    #     sshKey = "${home_directory}/.config/ssh/id_local";
-    #     system = "x86_64-darwin";
-    #     maxJobs = 4;
-    #     speedFactor = 2;
-    #   }
-    #   { hostName = "fin";
-    #     sshUser = "johnw";
-    #     sshKey = "${home_directory}/.config/ssh/id_local";
-    #     system = "x86_64-darwin";
-    #     maxJobs = 4;
-    #     speedFactor = 1;
-    #   }
-    # ];
 
+    trustedBinaryCaches = [
+    ];
     binaryCaches = [
     ];
     binaryCachePublicKeys = [
       "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
+      "hydra.oregon.dfinity.build-2:KMTixHrh9DpAjF/0xU/49VEtNuGzQ71YaVIUSOLUaCM="
     ];
 
     extraOptions = ''
       secret-key-files = ${home_directory}/.config/gnupg/nix-signing-key.sec
     '';
-  };
+  } //
+  (if localconfig.hostname == "hermes" then {
+     maxJobs = 4;
+     buildCores = 4;
+     distributedBuilds = true;
+
+     buildMachines = [
+       { hostName = "vulcan";
+         sshUser = "johnw";
+         sshKey = "${home_directory}/.config/ssh/id_local";
+         system = "x86_64-darwin";
+         maxJobs = 10;
+         buildCores = 10;
+         speedFactor = 4;
+       }
+     ];
+   }
+   else if localconfig.hostname == "fin" then {
+     maxJobs = 4;
+     buildCores = 4;
+     distributedBuilds = true;
+
+     buildMachines = [
+       { hostName = "vulcan";
+         sshUser = "johnw";
+         sshKey = "${home_directory}/.config/ssh/id_local";
+         system = "x86_64-darwin";
+         maxJobs = 10;
+         buildCores = 10;
+         speedFactor = 4;
+       }
+       { hostName = "hermes";
+         sshUser = "johnw";
+         sshKey = "${home_directory}/.config/ssh/id_local";
+         system = "x86_64-darwin";
+         maxJobs = 4;
+         buildCores = 4;
+         speedFactor = 2;
+       }
+     ];
+   }
+   else if localconfig.hostname == "vulcan" then {
+     maxJobs = 10;
+     buildCores = 10;
+
+     trustedBinaryCaches = [
+       https://nix.oregon.dfinity.build
+     ];
+     binaryCaches = [
+       https://nix.oregon.dfinity.build
+     ];
+   }
+   else {});
 
   programs.bash.enable = true;
 

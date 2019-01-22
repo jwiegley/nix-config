@@ -335,6 +335,7 @@ pkgs: epkgs: with epkgs;
   sdcv-mode
   selected
   shackle
+  shell-toggle
   shift-number
   simple-httpd
   sky-color-clock

@@ -1,13 +1,13 @@
 { pkgs, ... }:
 
 let home_directory = builtins.getEnv "HOME";
+    log_directory = "${home_directory}/Library/Logs";
+    tmp_directory = "/tmp";
+    localconfig = import <localconfig>;
     ca-bundle_crt = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-    lib = pkgs.stdenv.lib; in
+    lib = pkgs.stdenv.lib;
 
-rec {
-  # jww (2018-05-02): Temporary workaround for a recent breakage
-  manual.manpages.enable = false;
-
+in rec {
   nixpkgs = {
     config = {
       allowUnfree = true;
@@ -39,41 +39,24 @@ rec {
       ASPELL_CONF        = "conf ${xdg.configHome}/aspell/config;";
       B2_ACCOUNT_INFO    = "${xdg.configHome}/backblaze-b2/account_info";
       CABAL_CONFIG       = "${xdg.configHome}/cabal/config";
+      FONTCONFIG_FILE    = "${xdg.configHome}/fontconfig/fonts.conf";
+      FONTCONFIG_PATH    = "${xdg.configHome}/fontconfig";
       GNUPGHOME          = "${xdg.configHome}/gnupg";
+      GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";
       LESSHISTFILE       = "${xdg.cacheHome}/less/history";
+      LOCATE_PATH        = "${xdg.cacheHome}/locate/home.db:${xdg.cacheHome}/locate/system.db";
+      NIX_CONF           = "${home_directory}/src/nix";
       PARALLEL_HOME      = "${xdg.cacheHome}/parallel";
+      PASSWORD_STORE_DIR = "${home_directory}/Documents/.passwords";
       RECOLL_CONFDIR     = "${xdg.configHome}/recoll";
       SCREENRC           = "${xdg.configHome}/screen/config";
       SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
       STARDICT_DATA_DIR  = "${xdg.dataHome}/dictionary";
       WWW_HOME           = "${xdg.cacheHome}/w3m";
-      # FONTCONFIG_PATH    = "${pkgs.fontconfig.out}/etc/fonts";
-      FONTCONFIG_PATH    = "${xdg.configHome}/fontconfig";
-      FONTCONFIG_FILE    = "${xdg.configHome}/fontconfig/fonts.conf";
-      LOCATE_PATH        = "${xdg.cacheHome}/locate/home.db:${xdg.cacheHome}/locate/system.db";
-
-      PASSWORD_STORE_DIR = "${home_directory}/Documents/.passwords";
-      NIX_CONF           = "${home_directory}/src/nix";
-
-      COQVER             = "87";
       EMACSVER           = "26";
-      GHCVER             = "82";
-      GHCPKGVER          = "822";
-
-      ALTERNATE_EDITOR   = "${pkgs.vim}/bin/vi";
-      EMACS_SERVER_FILE  = "/tmp/emacsclient.server";
-      COLUMNS            = "100";
-      EDITOR             = "${pkgs.emacs26}/bin/emacsclient -s /tmp/emacs501/server -a vi";
+      EMACS_SERVER_FILE  = "${tmp_directory}/emacsclient.server";
       EMAIL              = "${programs.git.userEmail}";
-      GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";
       JAVA_OPTS          = "-Xverify:none";
-      LC_CTYPE           = "en_US.UTF-8";
-      LESS               = "-FRSXM";
-      PROMPT_DIRTRIM     = "2";
-      PROMPT             = "%m %~ $ ";
-      RPROMPT            = "";
-      TINC_USE_NIX       = "yes";
-      WORDCHARS          = "";
     };
 
     file = builtins.listToAttrs (
@@ -84,14 +67,18 @@ rec {
              };
            })
           [ "Library/Scripts/Applications/Download links to PDF.scpt"
-            "Library/Scripts/Applications/Media Pro" ]) //
-      { ".dbvis".source        = "${xdg.configHome}/DbVisualizer";
+            "Library/Scripts/Applications/Media Pro" ]) // {
+        ".dbvis".source        = "${xdg.configHome}/DbVisualizer";
         ".docker".source       = "${xdg.configHome}/docker";
         ".recoll".source       = "${xdg.configHome}/recoll";
         ".gist".source         = "${xdg.configHome}/gist/account_id";
         ".ledgerrc".text       = "--file /Volumes/Files/Accounts/ledger.dat\n";
         ".slate".source        = "${xdg.configHome}/slate/config";
         ".zekr".source         = "${xdg.dataHome}/zekr";
+
+        # ".tmux.conf".text = ''
+        #   set-option -g default-command "reattach-to-user-namespace -l ${pkgs.zsh}/bin/zsh"
+        # '';
 
         ".curlrc".text = ''
           capath=${pkgs.cacert}/etc/ssl/certs/
@@ -117,7 +104,6 @@ rec {
 
     bash = {
       enable = true;
-
       bashrcExtra = lib.mkBefore ''
         source /etc/bashrc
       '';
@@ -138,38 +124,41 @@ rec {
         share = true;
       };
 
-      # sessionVariables = {
-      #   POWERLEVEL9K_PROMPT_ON_NEWLINE = "true";
-      # };
+      sessionVariables = {
+        ALTERNATE_EDITOR  = "${pkgs.vim}/bin/vi";
+        EDITOR            = "${pkgs.emacs26}/bin/emacsclient -s ${tmp_directory}/emacs501/server -a vi";
+        LC_CTYPE          = "en_US.UTF-8";
+        LESS              = "-FRSXM";
+        PROMPT            = "%m %~ $ ";
+        PROMPT_DIRTRIM    = "2";
+        RPROMPT           = "";
+        TINC_USE_NIX      = "yes";
+        WORDCHARS         = "";
+      };
 
       shellAliases = {
-        b    = "${pkgs.git}/bin/git b";
-        l    = "${pkgs.git}/bin/git l";
-        w    = "${pkgs.git}/bin/git w";
-
-        g    = "${pkgs.gitAndTools.hub}/bin/hub";
-        git  = "${pkgs.gitAndTools.hub}/bin/hub";
-        ga   = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
-        gprr = "${pkgs.git-pull-request}/bin/git-pull-request";
-        gpr  = "${pkgs.git-pull-request}/bin/git-pull-request --target-remote origin --target-branch master";
-        good = "${pkgs.git}/bin/git bisect good";
-        bad  = "${pkgs.git}/bin/git bisect bad";
-
-        ls    = "${pkgs.coreutils}/bin/ls --color=auto";
-        nm    = "${pkgs.findutils}/bin/find . -name";
-        par   = "${pkgs.parallel}/bin/parallel";
-        rm    = "${pkgs.my-scripts}/bin/trash";
-        rX    = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
-        scp   = "${pkgs.rsync}/bin/rsync -aP --inplace";
-        proc  = "ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
-        wipe  = "${pkgs.srm}/bin/srm -vfr";
-        nstat = "netstat -nr -f inet"
-              + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
-              + " | ${pkgs.coreutils}/bin/tail -n +5";
-
-        hermes = "${pkgs.openssh}/bin/ssh -t hermes 'zsh -l'";
-        vulcan = "${pkgs.openssh}/bin/ssh -t vulcan 'zsh -l'";
-        fin    = "${pkgs.openssh}/bin/ssh -t fin 'zsh -l'";
+        b      = "${pkgs.git}/bin/git b";
+        l      = "${pkgs.git}/bin/git l";
+        w      = "${pkgs.git}/bin/git w";
+        g      = "${pkgs.gitAndTools.hub}/bin/hub";
+        git    = "${pkgs.gitAndTools.hub}/bin/hub";
+        ga     = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
+        good   = "${pkgs.git}/bin/git bisect good";
+        bad    = "${pkgs.git}/bin/git bisect bad";
+        cn     = "cabal new-configure --enable-tests";
+        cnp    = "cabal new-configure --enable-tests --enable-profiling";
+        cb     = "cabal new-build";
+        ls     = "${pkgs.coreutils}/bin/ls --color=auto";
+        nm     = "${pkgs.findutils}/bin/find . -name";
+        par    = "${pkgs.parallel}/bin/parallel";
+        rm     = "${pkgs.my-scripts}/bin/trash";
+        rX     = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
+        scp    = "${pkgs.rsync}/bin/rsync -aP --inplace";
+        proc   = "/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
+        wipe   = "${pkgs.srm}/bin/srm -vfr";
+        nstat  = "/usr/sbin/netstat -nr -f inet"
+               + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
+               + " | ${pkgs.coreutils}/bin/tail -n +5";
       };
 
       profileExtra = ''
@@ -186,49 +175,39 @@ rec {
             ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
         fi
 
-        # export POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(context dir)
-        # export POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(command_execution_time)
-
         . ${pkgs.z}/share/z.sh
 
         setopt extended_glob
       '';
 
       initExtra = lib.mkBefore ''
-        DOCKER_MACHINE=$(which docker-machine)
-        if [[ -x "$DOCKER_MACHINE" ]]; then
-            if $DOCKER_MACHINE status default > /dev/null 2>&1; then
-                eval $($DOCKER_MACHINE env default) > /dev/null 2>&1
-            fi
-        fi
+        # DOCKER_MACHINE=$(which docker-machine)
+        # if [[ -x "$DOCKER_MACHINE" ]]; then
+        #     if $DOCKER_MACHINE status default > /dev/null 2>&1; then
+        #         eval $($DOCKER_MACHINE env default) > /dev/null 2>&1
+        #     fi
+        # fi
 
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
-        #export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | head -1);
+        # export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | head -1);
 
-        unset zle_bracketed_paste
-
-        if [[ ! -o interactive ]]; then
-            # prompt_powerlevel9k_teardown
+        if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
             unsetopt zle
-            export PS1='$ '
-        # else
-        #    . ${xdg.configHome}/zsh/plugins/iterm2_shell_integration
+            unset zle_bracketed_paste
+            export PS1='%m %~ $ '
+        else
+           . ${xdg.configHome}/zsh/plugins/iterm2_shell_integration
         fi
       '';
 
       plugins = [
-        # { name = "zsh-powerlevel9k";
-        #   file = "powerlevel9k.zsh-theme";
-        #   src = pkgs.zsh-powerlevel9k.src;
-        # }
-
-        # { name = "iterm2_shell_integration";
-        #   src = pkgs.fetchurl {
-        #     url = https://iterm2.com/shell_integration/zsh;
-        #     sha256 = "1vm6p5gsnck6s96p5jdchna4jnc3ifsw1nd5l7fr14l4rlza4r5s";
-        #     # date = 2018-11-23T13:14:43-0800;
-        #   };
-        # }
+        { name = "iterm2_shell_integration";
+          src = pkgs.fetchurl {
+            url = https://iterm2.com/shell_integration/zsh;
+            sha256 = "1vm6p5gsnck6s96p5jdchna4jnc3ifsw1nd5l7fr14l4rlza4r5s";
+            # date = 2019-01-04T10:28:43-0800;
+          };
+        }
       ];
     };
 
@@ -260,8 +239,6 @@ rec {
         ds         = "diff --staged";
         from       = "!${pkgs.git}/bin/git bisect start && ${pkgs.git}/bin/git bisect bad HEAD && ${pkgs.git}/bin/git bisect good";
         ls-ignored = "ls-files --exclude-standard --ignored --others";
-        nb         = "!${pkgs.git}/bin/git checkout --track $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote)/$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD) -b";
-        ppr        = "!${pkgs.git}/bin/git push $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote) HEAD:$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD) && ${pkgs.git-pull-request}/bin/git-pull-request --target-branch $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).merge) --target-remote $(${pkgs.git}/bin/git config branch.$(${pkgs.git}/bin/git rev-parse --abbrev-ref HEAD).remote) --no-rebase --no-comment-on-update";
         rc         = "rebase --continue";
         rh         = "reset --hard";
         ri         = "rebase --interactive";
@@ -285,7 +262,7 @@ rec {
 
       extraConfig = {
         core = {
-          editor            = "${pkgs.emacs26}/bin/emacsclient -s /tmp/emacs501/server";
+          editor            = "${pkgs.emacs26}/bin/emacsclient -s ${tmp_directory}/emacs501/server";
           trustctime        = false;
           fsyncobjectfiles  = true;
           pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
@@ -401,7 +378,7 @@ rec {
       enable = true;
 
       controlMaster  = "auto";
-      controlPath    = "/tmp/ssh-%u-%r@%h:%p";
+      controlPath    = "${tmp_directory}/ssh-%u-%r@%h:%p";
       controlPersist = "1800";
 
       forwardAgent = true;
@@ -411,35 +388,29 @@ rec {
       userKnownHostsFile = "${xdg.configHome}/ssh/known_hosts";
 
       matchBlocks =
-        let amLocal = false;
-            hostOnVulcan = ipaddr: {
-              hostname     = ipaddr;
-              proxyCommand = "${pkgs.openssh}/bin/ssh -q vulcan "
-                           + "/run/current-system/sw/bin/socat - TCP:%h:%p";
-            };
-        in rec {
-        hermes.hostname  = "192.168.1.65";
-        hermesw.hostname = "192.168.1.67";
-        hermesr = {
-          hostname = "127.0.0.1";
-          port = 2222;
-        };
+        let onHost = _: hostname: { inherit hostname; } //
+          (if "${localconfig.hostname}" == "vulcan" then {} else {
+             proxyJump = "vulcan";
+           }); in
+        (if "${localconfig.hostname}" == "vulcan" then {
+           vulcan.hostname = "192.168.1.69";
+         } else {
+           vulcan = {
+             hostname = "76.234.69.149";
+             port = 2201;
+             extraOptions = {
+               "LocalForward" = "5999 127.0.0.1:5900";
+             };
+           };
+         }) // rec {
+        hermes  = onHost "vulcan" "192.168.1.65";
+        fin     = onHost "vulcan" "192.168.1.80"; tank = fin;
+        nixos   = onHost "vulcan" "192.168.118.128";
+        dfinity = onHost "vulcan" "192.168.118.129";
+        macos   = onHost "vulcan" "192.168.118.130";
 
-        fin.hostname = "192.168.1.80";
-        finr = hostOnVulcan "192.168.1.80";
-        tank = fin;
-
-        vulcan =
-          if amLocal
-          then {
-            hostname = "192.168.1.69";
-          } else {
-            hostname = "76.234.69.149";
-            port = 2201;
-            extraOptions = {
-              "LocalForward" = "5999 127.0.0.1:5900";
-            };
-          };
+        # This requires a VPN connection to the DFINITY network.
+        macmini = { hostname = "10.129.1.161"; user = "dfinity"; };
 
         router = { hostname = "192.168.1.2"; user = "root"; };
 
@@ -453,22 +424,16 @@ rec {
           identitiesOnly = true;
         };
 
-        nixos   = hostOnVulcan "192.168.118.128";
-        dfinity = hostOnVulcan "192.168.118.129";
-        macos   = hostOnVulcan "192.168.118.130";
-
-        hydra = { hostname = "hydra.oregon.dfinity.build"; user = "ec2-user"; };
-
+        hydra     = { hostname = "hydra.oregon.dfinity.build"; user = "ec2-user"; };
         smokeping = { hostname = "192.168.1.78"; user = "smokeping"; };
+        elpa      = { hostname = "elpa.gnu.org"; user = "root"; };
 
-        elpa = { hostname = "elpa.gnu.org"; user = "root"; };
+        haskell_org = { host = "*haskell.org"; user = "root"; };
 
         savannah.hostname  = "git.sv.gnu.org";
         fencepost.hostname = "fencepost.gnu.org";
         launchpad.hostname = "bazaar.launchpad.net";
         mail.hostname      = "mail.haskell.org";
-
-        haskell_org = { host = "*haskell.org"; user = "root"; };
       };
     };
   };
@@ -524,7 +489,7 @@ rec {
       user ${programs.git.userEmail}
       passwordeval ${pkgs.pass}/bin/pass smtp.fastmail.com
       from ${programs.git.userEmail}
-      logfile ${home_directory}/Library/Logs/msmtp.log
+      logfile ${log_directory}/msmtp.log
     '';
 
     configFile."fetchmail/config".text = ''
