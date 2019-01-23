@@ -74,35 +74,15 @@ in {
       serviceConfig.RunAtLoad = true;
       serviceConfig.KeepAlive = true;
     };
-
-    openzfs-InvariantDisks = {
-      command = "${pkgs.OpenZFSonOSX}/bin/InvariantDisks";
-      serviceConfig.RunAtLoad = true;
-      serviceConfig.KeepAlive = true;
-    };
-    openzfs-zconfigd = {
-      command = "${pkgs.OpenZFSonOSX}/bin/zconfigd";
-      serviceConfig.RunAtLoad = true;
-      serviceConfig.KeepAlive = true;
-    };
-    openzfs-zed = {
-      command = "${pkgs.OpenZFSonOSX}/bin/zed -vfF";
-      serviceConfig.RunAtLoad = true;
-      serviceConfig.KeepAlive = true;
-    };
-    # openzfs-zpool-import-all = {
-    #   command = "${pkgs.OpenZFSonOSX}/libexec/zfs/launchd.d/zpool-import-all.sh";
-    #   serviceConfig.RunAtLoad = true;
-    # };
   } //
   (if localconfig.hostname == "fin" then {
-     snapshots-tank = {
-       script = ''
-         export PATH=$PATH:${pkgs.my-scripts}/bin:${pkgs.OpenZFSonOSX}/bin
-         snapshots tank >> /var/log/snapshots.log 2>&1
-       '';
-       serviceConfig = iterate 86400;
-     };
+    snapshots-tank = {
+      script = ''
+        export PATH=$PATH:${pkgs.my-scripts}/bin:/usr/local/bin
+        snapshots tank >> /var/log/snapshots.log 2>&1
+      '';
+      serviceConfig = iterate 86400;
+    };
    } else {});
 
   launchd.user.agents =

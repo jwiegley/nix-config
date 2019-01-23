@@ -248,7 +248,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   HandBrake
   iTerm2
   KeyboardMaestro
-  OpenZFSonOSX
   PathFinder
   RipIt
   Skim

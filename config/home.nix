@@ -162,6 +162,8 @@ in rec {
       };
 
       profileExtra = ''
+        export PATH=$PATH:/usr/local/bin:/usr/local/sbin
+
         for file in ${xdg.configHome}/fetchmail/config \
                     ${xdg.configHome}/fetchmail/config-work \
                     ${xdg.configHome}/fetchmail/config-lists
@@ -410,7 +412,11 @@ in rec {
         macos   = onHost "vulcan" "192.168.118.130";
 
         # This requires a VPN connection to the DFINITY network.
-        macmini = { hostname = "10.129.1.161"; user = "dfinity"; };
+        macmini = {
+          hostname = "10.129.1.161";
+          user = "dfinity";
+          proxyJump = "hydra";
+        };
 
         router = { hostname = "192.168.1.2"; user = "root"; };
 

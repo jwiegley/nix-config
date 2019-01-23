@@ -48,75 +48,14 @@ Dash = self.installApplication rec {
   homepage = https://kapeli.com/dash;
 };
 
-# DeskzillaLite = self.installApplication rec {
-#   name = "DeskzillaLite";
-#   appname = "Deskzilla Lite";
-#   version = "3.2.1";
-#   sourceRoot = "Deskzilla Lite.app";
-#   src = super.fetchurl {
-#     url = https://d1.almworks.com/.files/deskzilla-lite-3_2_1.dmg;
-#     sha256 = "0w2hqmznsk3qic2c6f3cycvmjpgvscckd9b0ljqfcrhkla4bv505";
-#     # date = 2018-02-04T16:36:09-0800;
-#   };
-#   description = ''
-#     Deskzilla is a desktop client for Mozilla's Bugzilla bug tracking system
-#   '';
-#   homepage = http://almworks.com/deskzilla;
-# };
-
-DEVONagentPro = super.stdenv.lib.overrideDerivation (self.installApplication rec {
-  name = "DEVONagentPro";
-  appname = "DEVONagent";
-  version = "3.9.8";
-  sourceRoot = "DEVONagent.app";
-  src = super.fetchurl {
-    url = "https://s3.amazonaws.com/DTWebsiteSupport/download/devonagent/${version}/DEVONagent_Pro.dmg.zip";
-    sha256 = "0wr7is69q9vn6kzg624kx1zs7jp2rx3f85xfzhqhg8pzlhrdv4cr";
-    # date = 2018-02-05T00:00:54-0800;
-  };
-  description = ''
-    DEVONagent Pro helps you search more efficiently on the web. It searches
-    multiple sources, frees you from hunting for the really relevant results,
-    and gives you power tools for your research.
-  '';
-  homepage = http://www.devontechnologies.com/products/devonagent/devonagent-pro.html;
-}) (attrs: {
-  unpackPhase = ''
-    unzip -q ${attrs.src}
-    undmg < DEVONagent_Pro.dmg
-  '';
-});
-
-DEVONthinkPro = super.stdenv.lib.overrideDerivation (self.installApplication rec {
-  name = "DEVONthinkPro";
-  appname = "DEVONthink Pro";
-  version = "2.10";
-  sourceRoot = "DEVONthink Pro.app";
-  src = super.fetchurl {
-    url = "https://s3.amazonaws.com/DTWebsiteSupport/download/devonthink/${version}/DEVONthink_Pro.dmg.zip";
-    sha256 = "156sbcip9y1c46v9sbgk50nswi52vnzlxfqzp5zzn9lyfycafpc5";
-  };
-  description = ''
-    DEVONthink Pro Office is your Mac paperless office. It stores all your
-    documents, helps you keep them organized, and presents you with what you
-    need to get the job done.
-  '';
-  homepage = http://www.devontechnologies.com/products/devonthink/devonthink-pro-office.html;
-}) (attrs: {
-  unpackPhase = ''
-    unzip -q ${attrs.src}
-    undmg < DEVONthink_Pro.dmg
-  '';
-});
-
 Docker = self.installApplication rec {
   name = "Docker";
-  version = "2.0.0.0-mac78";
+  version = "2.0.0.0-mac81";
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
-    sha256 = "1zyi7dmyv4vx1nl2sp0xzk0d48ca2iypkrci3zsccywzkcbglhsk";
-    # date = 2019-01-09T10:27:52-0800;
+    sha256 = "0km0q18hia8asj7rgg3fsck74fzd6xqbhv3qhfqphdwwvbc0fqx0";
+    # date = 2019-01-23T08:50:30-0800;
   };
   description = ''
     Docker CE for Mac is an easy-to-install desktop app for building,
@@ -224,102 +163,6 @@ KeyboardMaestro = self.installApplication rec {
   homepage = https://www.keyboardmaestro.com;
 };
 
-OmniGrafflePro_6 = self.installApplication rec {
-  name = "OmniGrafflePro";
-  appname = "OmniGraffle";
-  version = "6.6.2";
-  sourceRoot = "OmniGraffle.app";
-  src = super.fetchurl {
-    url = "https://downloads.omnigroup.com/software/MacOSX/10.10/OmniGraffle-${version}.dmg";
-    sha256 = "0a5q1rnajjk4ds59h1mx4rfv8dcja6i4dxnyrl1jgi468rjmmc7h";
-    # date = 2018-02-04T22:08:16-0800;
-  };
-  description = "Professional graphing software for macOS";
-  homepage = https://www.omnigroup.com/omnigraffle;
-};
-
-OmniOutlinerPro = self.installApplication rec {
-  name = "OmniOutlinerPro";
-  appname = "OmniOutliner";
-  version = "5.2";
-  sourceRoot = "OmniOutliner.app";
-  src = super.fetchurl {
-    url = "https://downloads.omnigroup.com/software/MacOSX/10.12/OmniOutliner-${version}.dmg";
-    sha256 = "1b1qi5wbjfr49vyqyrqydlxc3ph4r1akhg2xw8sh4mvlrqh9403x";
-    # date = 2018-02-04T22:18:19-0800;
-  };
-  description = "Professional outlining software for macOS";
-  homepage = https://www.omnigroup.com/omnioutliner;
-};
-
-OpenZFSonOSX = with super; stdenv.mkDerivation rec {
-  name = "OpenZFS-on-OSX";
-  version = "1.7.2";
-  src = super.fetchurl {
-    name = "OpenZFS-${version}.pkg";
-    url = "https://openzfsonosx.org/w/images/e/ea/OpenZFS_on_OS_X_${version}.dmg";
-    sha256 = "1b81cqlkfrmxz30v4aiy9ms1r20s214x9ny4qfcxp6gq1jyxvpmj";
-  };
-
-  buildInputs = [ rsync cpio undmg ];
-
-  unpackPhase = ''
-    undmg < $src
-    /usr/bin/xar -xf "OpenZFS on OS X 1.7.2 High Sierra.pkg"
-    cd zfs1013.pkg
-  '';
-
-  buildPhase = ''
-    cat Payload | gunzip -dc | cpio -i
-  '';
-
-  nativeBuildInputs = [ fixDarwinDylibNames ];
-
-  postFixup = ''
-    for exe in $(find "$out/bin" "$out/lib" \
-                   -type f ! -name '*.la' \
-                   \( -executable -o -name '*.dylib' \)); do
-      isScript $exe && continue
-      for lib in \
-          libdiskmgt.1.dylib \
-          libnvpair.1.dylib \
-          libuutil.1.dylib \
-          libzfs.2.dylib \
-          libzfs_core.1.dylib \
-          libzpool.1.dylib; do
-        install_name_tool -change /usr/local/lib/$lib @executable_path/../lib/$lib $exe
-      done
-    done
-  '';
-
-  installPhase = ''
-    rsync -av usr/local/ $out/
-
-    mkdir -p $out/etc/zfs/zed.d
-    cp etc/zfs/zed.d/zed-functions.sh $out/etc/zfs/zed.d
-    cp etc/zfs/zed.d/zed.rc $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/all-syslog.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/checksum-notify.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/checksum-spare.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/config.remove.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/config.sync.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/data-notify.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/io-notify.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/io-spare.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/resilver.finish-notify.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/scrub.finish-notify.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/snapshot.mount.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/zpool.destroy.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/zpool.import.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/zvol.create.sh $out/etc/zfs/zed.d
-    ln -s $out/libexec/zfs/zed.d/zvol.remove.sh $out/etc/zfs/zed.d
-  '';
-
-  description = "The open source port of OpenZFS on OS X";
-  homepage = https://openzfsonosx.org;
-};
-
-
 PathFinder = self.installApplication rec {
   name = "PathFinder";
   appname = "Path Finder";
@@ -332,23 +175,6 @@ PathFinder = self.installApplication rec {
   };
   description = "File manager for macOS";
   homepage = https://cocoatech.com;
-};
-
-PhoneView = self.installApplication rec {
-  name = "PhoneView";
-  version = "2.13.6";
-  sourceRoot = "PhoneView Demo/PhoneView Demo.app";
-  src = super.fetchurl {
-    url = http://downloads.ecamm.com/PhoneView.zip;
-    sha256 = "05axjghckm2ggm9jrdb5fy4a1blya2xqy6ri6ay9h8pj8j79kinn";
-    # date = 2018-02-04T22:24:51-0800;
-  };
-  description = ''
-    With PhoneView, you can view, save and print all of your iPhone and iPad
-    messages, WhatsApp messages, voicemail and other data directly on your
-    Mac.
-  '';
-  homepage = http://www.ecamm.com/mac/phoneview;
 };
 
 RipIt = self.installApplication rec {
