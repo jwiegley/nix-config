@@ -24,12 +24,12 @@ installApplication =
 
 Anki = self.installApplication rec {
   name = "Anki";
-  version = "2.1.5";
+  version = "2.1.8";
   sourceRoot = "Anki.app";
   src = super.fetchurl {
     url = "https://apps.ankiweb.net/downloads/current/anki-${version}-mac.dmg";
-    sha256 = "0ca0sbfxvji6h9g6p3433c663i2kgp3nfgh8b262w1ganxygjfd2";
-    # date = 2018-10-03T15:42:49-0800;
+    sha256 = "15fzbgbcl03pkkix0i9g5f1402gyc0rq06if80pvhi70vks7c27b";
+    # date = 2019-01-23T15:42:49-0800;
   };
   description = "Anki is a program which makes remembering things easy";
   homepage = https://apps.ankiweb.net;
@@ -37,7 +37,7 @@ Anki = self.installApplication rec {
 
 Dash = self.installApplication rec {
   name = "Dash";
-  version = "4.5.3";
+  version = "4.6.1";
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
@@ -192,13 +192,13 @@ RipIt = self.installApplication rec {
 
 Skim = self.installApplication rec {
   name = "Skim";
-  version = "1.4.36";
+  version = "1.4.40";
   sourceRoot = "Skim.app";
   src = super.fetchurl {
     name = "Skim-${version}.dmg";
     url = "https://sourceforge.net/projects/skim-app/files/Skim/Skim-${version}/Skim-${version}.dmg/download";
-    sha256 = "0smg8ldr7c90gakqg20f8nrq94ak80kkk4456y2abxjk6jijmhr3";
-    # date = 2018-02-04T15:50:51-0800;
+    sha256 = "1mgawkw0pfhicg98s2ydj1dinl8232g9lkkncj961j8fdr95qwaz";
+    # date = 2019-01-23T15:50:51-0800;
   };
   description = "Skim is a PDF reader and note-taker for OS X";
   homepage = https://skim-app.sourceforge.io;
@@ -275,19 +275,6 @@ UnicodeChecker = self.installApplication rec {
   };
   description = "Explore and convert Unicode";
   homepage = http://earthlingsoft.net/UnicodeChecker;
-};
-
-VLC = self.installApplication rec {
-  name = "VLC";
-  version = "3.0.3";
-  sourceRoot = "VLC.app";
-  src = super.fetchurl {
-    url = "https://get.videolan.org/vlc/${version}/macosx/vlc-${version}.dmg";
-    sha256 = "04bwl7641zl47pbgnxfq5lfsa5ychsm8gnqvf080mxp0xkb9028l";
-    # date = 2018-08-21T13:08:53-0800;
-  };
-  description = "VLC is a free and open source cross-platform multimedia player";
-  homepage = https://www.videolan.org/vlc;
 };
 
 VirtualII = self.installApplication rec {

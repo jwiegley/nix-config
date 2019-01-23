@@ -139,13 +139,13 @@ cache: check
 	    | parallel -0 nix copy --to file://$(CACHE))
 
 remove-build-products:
-	find $(HOME)					\
-	    \( -name 'dist' -type d -o			\
-	       -name 'dist-newstyle' -type d -o		\
-	       -name '.direnv' -type d -o		\
-	       -name '.ghc.*' -o			\
-	       -name 'cabal.project.local*' -type f -o	\
-	       -name 'result*' -type l \) -print0	\
+	find $(HOME)/dfinity $(HOME)/Documents $(HOME)/src	\
+	    \( -name 'dist' -type d -o				\
+	       -name 'dist-newstyle' -type d -o			\
+	       -name '.direnv' -type d -o			\
+	       -name '.ghc.*' -o				\
+	       -name 'cabal.project.local*' -type f -o		\
+	       -name 'result*' -type l \) -print0		\
 	    | xargs -P4 -0 /bin/rm -fr
 
 gc:

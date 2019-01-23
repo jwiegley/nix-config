@@ -255,7 +255,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   SuspiciousPackage
   Ukelele
   UnicodeChecker
-  VLC
   VirtualII
   Zekr
   Zotero
