@@ -41,7 +41,7 @@ Dash = self.installApplication rec {
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "0n429q4b8g7fmpx50zkamq19hfd1629jgj055429iw0818891sdg";
+    sha256 = "1f74jga5cv3j99qz94gjkm4v5wcnbcwimzawdrvg5v3svsnkmv44";
     # date = 2019-01-07T14:11:55-0800;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
