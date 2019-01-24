@@ -1,15 +1,9 @@
-NIX_CONF = $(HOME)/src/nix
-
 HOSTNAME = vulcan
 REMOTE	 = hermes
 CACHE	 = /Users/johnw/tank/Cache
 ROOTS	 = /nix/var/nix/gcroots/per-user/johnw/shells
-
-ENVS     = emacsHEADEnv	\
-	   emacs26Env	\
-	   ledgerPy2Env	\
-	   ledgerPy3Env
-
+ENVS     = emacsHEADEnv emacs26Env
+NIX_CONF = $(HOME)/src/nix
 PROJS    = $(shell find $(HOME)/dfinity $(HOME)/src -name .envrc -type f -printf '%h ')
 
 all: switch env

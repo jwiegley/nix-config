@@ -128,8 +128,8 @@ let
 
     highlight = compileEmacsWikiFile {
       name = "highlight.el";
-      sha256 = "0hp8ybg92mwlid0ph8h6vj8ksmj30lp3yy9m89kq9a9rfdp2s13f";
-      # date = 2018-11-19T11:39:17-0800;
+      sha256 = "0gmlly1pq5zp7qdcmck90nm0n8j9lahhr26pljb9wjqy4cgzr5ls";
+      # date = 2019-01-24T13:24:14-0800;
     };
 
     highlight-cl = compileEmacsWikiFile {
@@ -819,6 +819,18 @@ let
         license = lib.licenses.free;
       };
     };
+
+    lua-mode = lib.overrideDerivation super.lua-mode (attrs: rec {
+      name = "lua-mode-${version}";
+      version = "20190113.1350";
+      src = fetchFromGitHub {
+        owner = "immerrr";
+        repo = "lua-mode";
+        rev = "95c64bb5634035630e8c59d10d4a1d1003265743";
+        sha256 = "0cawb544qylifkvqads307n0nfqg7lvyphqbpbzr2xvr5iyi4901";
+        # date = 2019-01-13T13:50:39+03:00;
+      };
+    });
 
     pdf-tools = lib.overrideDerivation super.pdf-tools (attrs: {
       src = fetchFromGitHub {

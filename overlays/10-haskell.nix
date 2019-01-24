@@ -261,6 +261,7 @@ haskell = pkgs.haskell // {
       (breakout super [
          "compact"
          "criterion"
+         "these"
        ])
        // (with pkgs.haskell.lib; {
         text-format = doJailbreak (overrideCabal super.text-format (drv: {

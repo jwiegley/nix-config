@@ -452,7 +452,7 @@ EOF
     '';
   } //
   (if localconfig.hostname == "hermes" then {
-     maxJobs = 4;
+     maxJobs = 16;
      buildCores = 4;
      distributedBuilds = true;
 
@@ -461,14 +461,14 @@ EOF
          sshUser = "johnw";
          sshKey = "${home_directory}/.config/ssh/id_local";
          system = "x86_64-darwin";
-         maxJobs = 10;
+         maxJobs = 40;
          buildCores = 10;
          speedFactor = 4;
        }
      ];
    }
    else if localconfig.hostname == "fin" then {
-     maxJobs = 4;
+     maxJobs = 16;
      buildCores = 4;
      distributedBuilds = true;
 
@@ -477,7 +477,7 @@ EOF
          sshUser = "johnw";
          sshKey = "${home_directory}/.config/ssh/id_local";
          system = "x86_64-darwin";
-         maxJobs = 10;
+         maxJobs = 40;
          buildCores = 10;
          speedFactor = 4;
        }
@@ -485,14 +485,14 @@ EOF
          sshUser = "johnw";
          sshKey = "${home_directory}/.config/ssh/id_local";
          system = "x86_64-darwin";
-         maxJobs = 4;
+         maxJobs = 16;
          buildCores = 4;
          speedFactor = 2;
        }
      ];
    }
    else if localconfig.hostname == "vulcan" then {
-     maxJobs = 10;
+     maxJobs = 40;
      buildCores = 10;
 
      trustedBinaryCaches = [
