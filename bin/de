@@ -4,7 +4,8 @@ if [[ "$(basename $PWD)" =~ hs-dfinity-(.+) &&
       ! -f .envrc.override ]]; then
     echo "Setting up for -A ${BASH_REMATCH[1]}"
     cat > .envrc.override <<EOF
-. $(which use_nix.sh)
+. ../nix/use_nix.sh
+export NIXBLDARGS=(-f ../shell.nix ${BASH_REMATCH[1]})
 export NIXARGS=(--arg useHoogle false --arg devel true -A ${BASH_REMATCH[1]})
 export NIXFILE=../shell.nix
 use_nix
@@ -14,6 +15,7 @@ EOF
 elif [[ ! -f .envrc ]]; then
     cat > .envrc <<EOF
 . \$(which use_nix.sh)
+export NIXBLDARGS=(-f .)
 export NIXPKGS='(import <darwin> {}).pkgs'
 export NIXARGS=(--arg pkgs "\$NIXPKGS")
 use_nix

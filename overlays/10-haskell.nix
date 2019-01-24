@@ -44,6 +44,7 @@ let
          else pkg ~/bae/concerto/solver/lib/z3;
 
     Agda                  = dontHaddock super.Agda;
+    Diff                  = dontCheck super.Diff;
     aeson                 = overrideCabal super.aeson (attrs: {
       libraryHaskellDepends =
         attrs.libraryHaskellDepends ++ [ self.contravariant ];

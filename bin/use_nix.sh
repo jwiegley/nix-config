@@ -50,6 +50,9 @@ use_nix() {
         local drv="${wd}/env.drv"
         if [[ ! -f "${drv}" ]]; then
             log_status "use nix: deriving new environment"
+            if [[ -n $NIXBLDARGS ]]; then
+                IN_NIX_SHELL=1 nix build -f . "${NIXBLDARGS[@]}"
+            fi
             IN_NIX_SHELL=1 nix-instantiate "${NIXARGS[@]}" --add-root "${drv}" --indirect "${shell}" > /dev/null
             nix-store -r `nix-store --query --references "${drv}"` --add-root "${wd}/dep" --indirect > /dev/null
         fi

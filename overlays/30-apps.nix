@@ -280,12 +280,12 @@ UnicodeChecker = self.installApplication rec {
 VirtualII = self.installApplication rec {
   name = "VirtualII";
   appname = "Virtual ][";
-  version = "8.6";
+  version = "9.0";
   sourceRoot = "Virtual ][.app";
   src = super.fetchurl {
     url = http://www.virtualii.com/VirtualII.dmg;
-    sha256 = "09c4nq03bqhvmxprrz0kaiw7a3z250kfwbch4b6wd4llhjkvwr2a";
-    # date = 2018-02-04T22:39:02-0800;
+    sha256 = "0sqdjrcf7wk847p4pzaj5gh2wccgq5hfbi72xsdq5p53dn8696hl";
+    # date = 2019-01-24T11:34:12-0800;
   };
   description = ''
     Virtual ][ lets you play the old Apple games, because it supports all
