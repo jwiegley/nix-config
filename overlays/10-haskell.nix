@@ -41,7 +41,7 @@ let
 
     z3 = if ghc == "ghc844"
          then null
-         else pkg ~/bae/concerto/solver/lib/z3;
+         else pkg ~/src/z3;
 
     Agda                  = dontHaddock super.Agda;
     Diff                  = dontCheck super.Diff;
@@ -63,7 +63,6 @@ let
     pipes-zlib            = dontCheck (doJailbreak super.pipes-zlib);
     text-show             = dontCheck (doJailbreak super.text-show);
     time-recurrence       = doJailbreak super.time-recurrence;
-    megaparsec            = self.megaparsec_7_0_4;
 
     ListLike = overrideCabal super.ListLike (attrs: {
       libraryHaskellDepends =

@@ -1,4 +1,4 @@
 #!/bin/bash
 
 nix-prefetch-git --no-deepClone --quiet \
-    git://github.com/coq-contribs/$1.git $2 | jq -r .sha256
+    git://github.com/$1.git $2 | jq -r .sha256
