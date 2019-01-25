@@ -18,6 +18,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   git-lfs
   git-pull-request
   git-scripts
+  git-subrepo
   git-tbdiff
   gitRepo
   gitAndTools.git-crypt

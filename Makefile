@@ -88,7 +88,7 @@ working: tag-working mirror
 
 update: tag-before pull build switch env working cache
 
-update-all: update shells copy-all
+update-all: update shells copy
 
 copy-all: copy
 	make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) REMOTE=fin copy
