@@ -5,9 +5,10 @@ if [[ "$(basename $PWD)" =~ hs-dfinity-(.+) &&
     echo "Setting up for -A ${BASH_REMATCH[1]}"
     cat > .envrc.override <<EOF
 . ../nix/use_nix.sh
-export NIXBLDARGS=(-f ../shell.nix ${BASH_REMATCH[1]})
 export NIXARGS=(--arg useHoogle false --arg devel true -A ${BASH_REMATCH[1]})
 export NIXFILE=../shell.nix
+export NIXBLDARGS=(-f ../shell.nix ${BASH_REMATCH[1]})
+export CABAL_BUILDDIR=$(pwd | sed 's^dfinity^Products^')/dist
 use_nix
 EOF
     direnv allow .
@@ -15,9 +16,10 @@ EOF
 elif [[ ! -f .envrc ]]; then
     cat > .envrc <<EOF
 . \$(which use_nix.sh)
-export NIXBLDARGS=(-f .)
 export NIXPKGS='(import <darwin> {}).pkgs'
 export NIXARGS=(--arg pkgs "\$NIXPKGS")
+export NIXBLDARGS=(-f . --arg pkgs "\$NIXPKGS")
+export CABAL_BUILDDIR=$(pwd | sed 's^src^Products^')/dist
 use_nix
 EOF
     direnv allow .

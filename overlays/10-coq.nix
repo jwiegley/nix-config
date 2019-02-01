@@ -51,12 +51,12 @@ coqFilterSource = paths: src: pkgs.lib.cleanSourceWith {
        || pkgs.stdenv.lib.hasSuffix ".vo" path);
 };
 
-coq_8_8_override = pkgs.coq_8_8.override {
+coq_8_9_override = pkgs.coq_8_9.override {
   ocamlPackages = self.ocaml-ng.ocamlPackages_4_06;
   buildIde = true;
 };
 
-coq_HEAD = with pkgs; stdenv.lib.overrideDerivation self.coq_8_8_override (attrs: rec {
+coq_HEAD = with pkgs; stdenv.lib.overrideDerivation self.coq_8_9_override (attrs: rec {
   version = "HEAD";
   name = "coq-${version}-pre";
   coq-version = "${version}";
@@ -85,25 +85,12 @@ coq_HEAD = with pkgs; stdenv.lib.overrideDerivation self.coq_8_8_override (attrs
   '';
 });
 
-coqPackages_HEAD = extendAttrs (self.mkCoqPackages self.coq_HEAD)
-  (pkgs.lib.composeExtensions
-     (self: super: let pkg = coqPackage self; in {
-        ssreflect = null;
-        equations = pkg ./coq/equations.nix;
-      })
-     myCoqPackages);
-
-coqPackages_8_8 = extendAttrs (self.mkCoqPackages self.coq_8_8)
-  (pkgs.lib.composeExtensions
-     (self: super: let pkg = coqPackage self; in {
-        ssreflect = null;
-        equations = pkg ./coq/equations.nix;
-      })
-     myCoqPackages);
-
-coqPackages_8_7 = extendAttrs (self.mkCoqPackages self.coq_8_7) myCoqPackages;
-coqPackages_8_6 = extendAttrs (self.mkCoqPackages self.coq_8_6) myCoqPackages;
-coqPackages_8_5 = self.mkCoqPackages self.coq_8_5;
-coqPackages_8_4 = self.mkCoqPackages self.coq_8_4;
+coqPackages_HEAD = extendAttrs (self.mkCoqPackages self.coq_HEAD) myCoqPackages;
+coqPackages_8_9  = extendAttrs (self.mkCoqPackages self.coq_8_9) myCoqPackages;
+coqPackages_8_8  = extendAttrs (self.mkCoqPackages self.coq_8_8) myCoqPackages;
+coqPackages_8_7  = extendAttrs (self.mkCoqPackages self.coq_8_7) myCoqPackages;
+coqPackages_8_6  = extendAttrs (self.mkCoqPackages self.coq_8_6) myCoqPackages;
+coqPackages_8_5  = self.mkCoqPackages self.coq_8_5;
+coqPackages_8_4  = self.mkCoqPackages self.coq_8_4;
 
 }
