@@ -50,7 +50,7 @@ Dash = self.installApplication rec {
 
 Docker = self.installApplication rec {
   name = "Docker";
-  version = "2.0.0.0-mac81";
+  version = "2.0.0.2";
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
