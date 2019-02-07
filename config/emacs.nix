@@ -380,6 +380,7 @@ pkgs: epkgs: with epkgs;
   vlf
   vline
   w3m
+  wat-mode
   web
   web-beautify
   web-mode

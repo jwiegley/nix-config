@@ -691,6 +691,17 @@ let
       };
     };
 
+    wat-mode = compileEmacsFiles {
+      name = "wat-mode";
+      src = fetchFromGitHub {
+        owner = "devonsparks";
+        repo = "wat-mode";
+        rev = "f34fc84879a99130283a124cd196041b474213e1";
+        sha256 = "11j7cawvy1g9llslgmyk3bnqw6qjxiil1g6jq7bza97ckfrcc1if";
+        # date = 2018-10-22T18:26:10-07:00;
+      };
+    };
+
     word-count-mode = compileEmacsFiles {
       name = "word-count-mode";
       src = fetchFromGitHub {

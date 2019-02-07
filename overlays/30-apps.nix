@@ -37,12 +37,12 @@ Anki = self.installApplication rec {
 
 Dash = self.installApplication rec {
   name = "Dash";
-  version = "4.6.1";
+  version = "4.6.2";
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "1f74jga5cv3j99qz94gjkm4v5wcnbcwimzawdrvg5v3svsnkmv44";
-    # date = 2019-01-07T14:11:55-0800;
+    sha256 = "0l0ccxxl8zvpdyacj1rndlqmzhwm2zqjj5a8qvj4mjbjmiimlb40";
+    # date = 2019-02-07T09:24:55-0800;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
