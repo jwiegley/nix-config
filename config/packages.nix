@@ -252,6 +252,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   PathFinder
   RipIt
   Skim
+  Slate
   Soulver
   SuspiciousPackage
   Ukelele

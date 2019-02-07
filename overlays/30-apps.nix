@@ -211,7 +211,7 @@ Slate = self.installApplication rec {
   src = super.fetchurl {
     url = http://slate.ninjamonkeysoftware.com/Slate.dmg;
     sha256 = "0gr27s0a150sy2rf0vqw0mw32k21wh4v7b1n2ngzfr0wbdfkg3j2";
-    # date = 2018-02-04T15:50:51-0800;
+    # date = 2019-02-07T09:26:28-0800;
   };
   description = ''
     A window management application (replacement for Divvy/SizeUp/ShiftIt)
