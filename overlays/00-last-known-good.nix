@@ -16,4 +16,14 @@ inherit (nixpkgs { # known-good-20181208_134904
 
   zbar xquartz;
 
+gitAndTools = super.gitAndTools // {
+
+inherit ((nixpkgs { # known-good-20190131_115636
+  rev    = "120eab94e0981758a1c928ff81229cd802053158";
+  sha256 = "0qk6k8gxx5xlkyg05dljywj5wx5fvrc3dzp4v2h6ab83b7zwg813"; }).gitAndTools)
+
+  git-annex;
+
+};
+
 }

@@ -434,6 +434,8 @@ EOF
         "home-manager=$HOME/src/nix/home-manager"
         "darwin=$HOME/src/nix/darwin"
         "nixpkgs=$HOME/src/nix/nixpkgs"
+        "ssh-config-file=${home_directory}/.ssh/config"
+        "ssh-auth-sock=${home_directory}/.config/gnupg/S.gpg-agent.ssh"
       ];
 
     trustedUsers = [ "johnw" "@admin" ];
@@ -461,7 +463,7 @@ EOF
          sshUser = "johnw";
          sshKey = "${home_directory}/.config/ssh/id_local";
          system = "x86_64-darwin";
-         maxJobs = 40;
+         maxJobs = 30;
          buildCores = 10;
          speedFactor = 4;
        }
@@ -477,7 +479,7 @@ EOF
          sshUser = "johnw";
          sshKey = "${home_directory}/.config/ssh/id_local";
          system = "x86_64-darwin";
-         maxJobs = 40;
+         maxJobs = 30;
          buildCores = 10;
          speedFactor = 4;
        }
@@ -492,7 +494,7 @@ EOF
      ];
    }
    else if localconfig.hostname == "vulcan" then {
-     maxJobs = 40;
+     maxJobs = 30;
      buildCores = 10;
 
      trustedBinaryCaches = [
