@@ -285,6 +285,6 @@ haskellPackages_8_6 = self.haskell.packages.ghc863;
 haskellPackages = self.haskell.packages.${self.ghcDefaultVersion};
 haskPkgs = self.haskellPackages;
 
-ghcDefaultVersion = "ghc844";
+ghcDefaultVersion = "ghc863";
 
 }

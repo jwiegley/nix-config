@@ -429,6 +429,14 @@ EOF
   nix = {
     package = pkgs.nixStable;
 
+    # useSandbox = true;
+    # sandboxPaths = [
+    #   "/usr/lib"
+    #   "/System/Library/Frameworks"
+    #   "/dev"
+    #   "/bin/sh"
+    # ];
+
     nixPath =
       [ "darwin-config=$HOME/src/nix/config/darwin.nix"
         "home-manager=$HOME/src/nix/home-manager"
