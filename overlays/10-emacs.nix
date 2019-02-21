@@ -534,6 +534,18 @@ let
       buildInputs = with self; [ company json-mode mmm-mode json-snatcher json-reformat ];
     };
 
+    org-mind-map = compileEmacsFiles {
+      name = "org-mind-map";
+      src = fetchFromGitHub {
+        owner = "theodorewiles";
+        repo = "org-mind-map";
+        rev = "16a8aac5462c01c4e7b6b7915381fde42fd3caf6";
+        sha256 = "0ipkmws7r8dk2p65m9jri90s8pgxhzidz7g2fmh7d6cz97jbk3v7";
+        # date = 2018-09-25T07:13:25-04:00;
+      };
+      buildInputs = [ self.dash ];
+    };
+
     org-opml = compileEmacsFiles {
       name = "org-opml";
       src = fetchFromGitHub {

@@ -217,7 +217,7 @@ packageDeps = path:
     };
 
   in compiler.withHoogle (p: with p;
-       [ hpack criterion # hdevtools hie.${ghc}
+       [ hpack criterion
          (self.haskell.lib.doJailbreak
             (callHackage "cabal-install" cabal.${ghc} {}))
        ] ++ packages.haskellBuildInputs);

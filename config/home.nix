@@ -369,10 +369,30 @@ in rec {
       };
 
       ignores = [
-        "*.elc" "*.vo" "*.aux" "*.v.d" "*.o" "*.a" "*.la" "*.so" "*.dylib"
-        "*~" "#*#" ".makefile" ".clean" ".envrc" ".direnv" "*.glob"
-        ".ghc.environment.x86_64-darwin-*" "cabal.project.local"
-        "dist-newstyle" "tags" "TAGS" ".envrc.override"
+        "#*#"
+        "*.a"
+        "*.aux"
+        "*.dylib"
+        "*.elc"
+        "*.glob"
+        "*.la"
+        "*.o"
+        "*.so"
+        "*.v.d"
+        "*.vo"
+        "*~"
+        ".clean"
+        ".direnv"
+        ".envrc"
+        ".envrc.override"
+        ".ghc.environment.x86_64-darwin-*"
+        ".makefile"
+        "TAGS"
+        "cabal.project.local"
+        "dist-newstyle"
+        "result"
+        "result-*"
+        "tags"
       ];
     };
 

@@ -153,7 +153,7 @@ in {
        script = ''
          cat > ${home_directory}/Documents/home.config <<EOF
 Host home
-    HostName $(dig +short myip.opendns.com @resolver1.opendns.com.)
+    HostName $(${pkgs.dnsutils}/bin/dig +short myip.opendns.com @resolver1.opendns.com.)
     Port 2201
 EOF
        '';

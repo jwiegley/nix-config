@@ -265,6 +265,7 @@ pkgs: epkgs: with epkgs;
   org-bookmark-heading
   org-gcal
   org-jira
+  org-mind-map
   org-opml
   org-pdfview
   org-ref
