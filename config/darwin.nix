@@ -442,8 +442,8 @@ EOF
         "home-manager=$HOME/src/nix/home-manager"
         "darwin=$HOME/src/nix/darwin"
         "nixpkgs=$HOME/src/nix/nixpkgs"
-        "ssh-config-file=${home_directory}/.ssh/config"
-        "ssh-auth-sock=${home_directory}/.config/gnupg/S.gpg-agent.ssh"
+        "ssh-config-file=$HOME/.ssh/config"
+        "ssh-auth-sock=$HOME/.config/gnupg/S.gpg-agent.ssh"
       ];
 
     trustedUsers = [ "johnw" "@admin" ];
