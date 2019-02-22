@@ -54,7 +54,7 @@ Docker = self.installApplication rec {
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
-    sha256 = "0km0q18hia8asj7rgg3fsck74fzd6xqbhv3qhfqphdwwvbc0fqx0";
+    sha256 = "09gwqdppnzw7hhlmgxakczxql4jfknk4ayc5z09g4kr8agqn4m55";
     # date = 2019-01-23T08:50:30-0800;
   };
   description = ''
@@ -226,7 +226,7 @@ Soulver = self.installApplication rec {
   src = super.fetchurl {
     name = "soulver-${version}.zip";
     url = "http://www.acqualia.com/files/download.php?product=soulver";
-    sha256 = "0ymb608j69ihs4a35zz3d5jqyc446nkffc0gp17ik0w727w10q91";
+    sha256 = "1gvjj8wbknpfrv6jbx76dk341jgbhb0by1448mzifa1xwjaniyg8";
     # date = 2018-08-19T15:54:54-0800;
   };
   description = ''
@@ -280,12 +280,12 @@ UnicodeChecker = self.installApplication rec {
 VirtualII = self.installApplication rec {
   name = "VirtualII";
   appname = "Virtual ][";
-  version = "9.0";
+  version = "9.1.2";
   sourceRoot = "Virtual ][.app";
   src = super.fetchurl {
     url = http://www.virtualii.com/VirtualII.dmg;
-    sha256 = "0sqdjrcf7wk847p4pzaj5gh2wccgq5hfbi72xsdq5p53dn8696hl";
-    # date = 2019-01-24T11:34:12-0800;
+    sha256 = "1wp78jy611n86q0jjs0vb4w1y72gla44xapzbqvsyjskkcjzyfls";
+    # date = 2019-02-21T14:30:32-0800;
   };
   description = ''
     Virtual ][ lets you play the old Apple games, because it supports all
