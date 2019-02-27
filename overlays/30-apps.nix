@@ -121,12 +121,12 @@ GIMP = self.installApplication rec {
 
 HandBrake = self.installApplication rec {
   name = "HandBrake";
-  version = "1.1.2";
+  version = "1.2.2";
   sourceRoot = "HandBrake.app";
   src = super.fetchurl {
     url = "https://download2.handbrake.fr/${version}/HandBrake-${version}.dmg";
-    sha256 = "0s5k0rj8m53vyxn4gd68ca5bic9z311wr9wdrhalpn476r2fn7qq";
-    # date = 2018-02-04T15:50:05-0800;
+    sha256 = "13kc80m7q3s262rz3rf10rdfb4rnbh4l7gmxfi66x2v6rjrmn3k9";
+    # date = 2019-02-25T15:50:05-0800;
   };
   description = ''
     HandBrake is a tool for converting video from nearly any format to a

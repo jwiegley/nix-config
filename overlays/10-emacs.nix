@@ -972,6 +972,18 @@ let
         license = lib.licenses.free;
       };
     };
+
+    w3m = lib.overrideDerivation super.w3m (attrs: rec {
+      name = "emacs-w3m-${version}";
+      version = "20190227.2349";
+      src = fetchFromGitHub {
+        owner = "emacs-w3m";
+        repo = "emacs-w3m";
+        rev = "fd29dae5c1964922d079736aa173cd0dcaa99c78";
+        sha256 = "0dn145ha63sbpz8zxbcf3rfcdmdn3ifik1gspb8pdvsnq8vb55mw";
+        # date = 2019-02-27T23:49:44+09:00;
+      };
+    });
   };
 
   mkEmacsPackages = emacs:
