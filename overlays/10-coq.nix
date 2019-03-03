@@ -17,6 +17,7 @@ let
       fiat_HEAD       = pkg ./coq/fiat.nix;
       category-theory = pkg ./coq/category-theory.nix;
       procrastination = pkg ./coq/procrastination.nix;
+      equations       = pkg ./coq/equations.nix;
     };
 
 in {

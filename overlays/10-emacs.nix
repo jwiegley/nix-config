@@ -703,6 +703,17 @@ let
       };
     };
 
+    undo-propose = compileEmacsFiles {
+      name = "undo-propose";
+      src = fetchFromGitHub {
+        owner = "jackkamm";
+        repo = "undo-propose-el";
+        rev = "503963cbe69197339cc6ab01a1b909590b433de7";
+        sha256 = "1acz7lsbqcyn06r5zhp4qkqmwz282mjpwvj20q2nv5v8qkby2qic";
+        # date = 2019-03-02T08:20:15-08:00;
+      };
+    };
+
     wat-mode = compileEmacsFiles {
       name = "wat-mode";
       src = fetchFromGitHub {

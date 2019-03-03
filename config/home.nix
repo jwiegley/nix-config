@@ -451,6 +451,7 @@ in rec {
         };
 
         hydra     = { hostname = "hydra.oregon.dfinity.build"; user = "ec2-user"; };
+
         smokeping = { hostname = "192.168.1.78"; user = "smokeping"; };
         elpa      = { hostname = "elpa.gnu.org"; user = "root"; };
 

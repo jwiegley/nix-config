@@ -370,6 +370,7 @@ pkgs: epkgs: with epkgs;
   treemacs
   tuareg
   typo
+  undo-propose
   undo-tree
   use-package
   uuidgen

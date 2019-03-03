@@ -294,7 +294,7 @@ EOF
       }
 
       rr { name = hydra.oregon.dfinity.build; a = 10.20.12.55; }
-      rr { name = nix.oregon.dfinity.build; a = 10.20.12.55; }
+      rr { name = nix.oregon.dfinity.build;   a = 10.20.12.55; }
 
       server {
           label       = "google";
@@ -303,7 +303,7 @@ EOF
           uptest      = none;
           edns_query  = yes;
           exclude     = ".local";
-          exclude     = "hydra.oregon.dfinity.build";
+          exclude     = ".dfinity.build";
           purge_cache = off;
       }
 
@@ -316,6 +316,7 @@ EOF
           edns_query  = yes;
           lean_query  = yes;
           include     = ".dfinity.build";
+          exclude     = "vpn.oregon.dfinity.build";
           proxy_only  = on;
           purge_cache = off;
       }
@@ -327,7 +328,7 @@ EOF
           uptest      = none;
           edns_query  = yes;
           exclude     = ".local";
-          exclude     = "hydra.oregon.dfinity.build";
+          exclude     = ".dfinity.build";
           purge_cache = off;
       }
 
@@ -348,7 +349,7 @@ EOF
           uptest      = none;
           edns_query  = yes;
           exclude     = ".local";
-          exclude     = "hydra.oregon.dfinity.build";
+          exclude     = ".dfinity.build";
           purge_cache = off;
       }
 
@@ -359,7 +360,7 @@ EOF
           ip                = 198.41.0.4, 192.228.79.201;
           randomize_servers = on;
           exclude           = ".local";
-          exclude           = "hydra.oregon.dfinity.build";
+          exclude           = ".dfinity.build";
       }
 
       source {
