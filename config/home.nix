@@ -452,6 +452,14 @@ in rec {
 
         hydra     = { hostname = "hydra.oregon.dfinity.build"; user = "ec2-user"; };
 
+        nix-docker = {
+          hostname = "127.0.0.1";
+          user = "root";
+          port = 3022;
+          identityFile = "${xdg.configHome}/ssh/nix-docker_rsa";
+          identitiesOnly = true;
+        };
+
         smokeping = { hostname = "192.168.1.78"; user = "smokeping"; };
         elpa      = { hostname = "elpa.gnu.org"; user = "root"; };
 

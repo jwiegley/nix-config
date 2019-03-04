@@ -1,6 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let home_directory = "/Users/johnw";
+    xdg_configHome = "${home_directory}/.config";
     log_directory = "${home_directory}/Library/Logs";
     tmp_directory = "/tmp";
     localconfig = import <localconfig>;
@@ -303,6 +304,7 @@ EOF
           uptest      = none;
           edns_query  = yes;
           exclude     = ".local";
+          include     = "vpn.oregon.dfinity.build";
           exclude     = ".dfinity.build";
           purge_cache = off;
       }
@@ -328,6 +330,7 @@ EOF
           uptest      = none;
           edns_query  = yes;
           exclude     = ".local";
+          include     = "vpn.oregon.dfinity.build";
           exclude     = ".dfinity.build";
           purge_cache = off;
       }
@@ -349,6 +352,7 @@ EOF
           uptest      = none;
           edns_query  = yes;
           exclude     = ".local";
+          include     = "vpn.oregon.dfinity.build";
           exclude     = ".dfinity.build";
           purge_cache = off;
       }
@@ -360,6 +364,7 @@ EOF
           ip                = 198.41.0.4, 192.228.79.201;
           randomize_servers = on;
           exclude           = ".local";
+          include           = "vpn.oregon.dfinity.build";
           exclude           = ".dfinity.build";
       }
 
@@ -459,7 +464,7 @@ EOF
     ];
 
     extraOptions = ''
-      secret-key-files = ${home_directory}/.config/gnupg/nix-signing-key.sec
+      secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
     '';
   } //
   (if localconfig.hostname == "hermes" then {
@@ -470,12 +475,35 @@ EOF
      buildMachines = [
        { hostName = "vulcan";
          sshUser = "johnw";
-         sshKey = "${home_directory}/.config/ssh/id_local";
+         sshKey = "${xdg_configHome}/ssh/id_local";
          system = "x86_64-darwin";
          maxJobs = 30;
          buildCores = 10;
          speedFactor = 4;
        }
+       # { hostName = "hydra";
+       #   sshUser = "ec2-user";
+       #   sshKey = "${xdg_configHome}/ssh/id_dfinity";
+       #   system = "x86_64-linux";
+       #   maxJobs = 1;
+       #   buildCores = 1;
+       #   speedFactor = 1;
+       # }
+       { hostName = "nix-docker";
+         sshUser = "root";
+         sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+         system = "x86_64-linux";
+         maxJobs = 2;
+         buildCores = 1;
+         speedFactor = 1;
+       }
+     ];
+
+     trustedBinaryCaches = [
+       https://nix.oregon.dfinity.build
+     ];
+     binaryCaches = [
+       https://nix.oregon.dfinity.build
      ];
    }
    else if localconfig.hostname == "fin" then {
@@ -486,7 +514,7 @@ EOF
      buildMachines = [
        { hostName = "vulcan";
          sshUser = "johnw";
-         sshKey = "${home_directory}/.config/ssh/id_local";
+         sshKey = "${xdg_configHome}/ssh/id_local";
          system = "x86_64-darwin";
          maxJobs = 30;
          buildCores = 10;
@@ -494,7 +522,7 @@ EOF
        }
        { hostName = "hermes";
          sshUser = "johnw";
-         sshKey = "${home_directory}/.config/ssh/id_local";
+         sshKey = "${xdg_configHome}/ssh/id_local";
          system = "x86_64-darwin";
          maxJobs = 16;
          buildCores = 4;
@@ -505,6 +533,26 @@ EOF
    else if localconfig.hostname == "vulcan" then {
      maxJobs = 30;
      buildCores = 10;
+     distributedBuilds = true;
+
+     buildMachines = [
+       # { hostName = "hydra";
+       #   sshUser = "ec2-user";
+       #   sshKey = "${xdg_configHome}/ssh/id_dfinity";
+       #   system = "x86_64-linux";
+       #   maxJobs = 1;
+       #   buildCores = 1;
+       #   speedFactor = 1;
+       # }
+       { hostName = "nix-docker";
+         sshUser = "root";
+         sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+         system = "x86_64-linux";
+         maxJobs = 2;
+         buildCores = 1;
+         speedFactor = 1;
+       }
+     ];
 
      trustedBinaryCaches = [
        https://nix.oregon.dfinity.build

@@ -16,7 +16,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.git-all)
   (exe haskPkgs.git-monitor)
   git-lfs
-  git-pull-request
+  # git-pull-request
   git-scripts
   git-subrepo
   git-tbdiff

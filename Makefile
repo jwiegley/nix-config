@@ -2,16 +2,18 @@ HOSTNAME = vulcan
 REMOTE	 = hermes
 CACHE	 = /Users/johnw/tank/Cache
 ROOTS	 = /nix/var/nix/gcroots/per-user/johnw/shells
-ENVS     = emacsHEADEnv emacs26Env
+ENVS     = emacs26Env # emacsHEADEnv
 NIX_CONF = $(HOME)/src/nix
 PROJS    = $(shell find $(HOME)/dfinity $(HOME)/src -name .envrc -type f -printf '%h ')
 
 all: switch env
 
+NIXOPTS =
+# NIXOPTS = --option build-use-substitutes false
 NIXPATH = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 
 darwin-build: config/darwin.nix
-	NIX_PATH=$(NIXPATH) nix build --keep-going darwin.system
+	NIX_PATH=$(NIXPATH) nix build $(NIXOPTS) --keep-going darwin.system
 	@rm result
 
 darwin-switch: darwin-build
@@ -23,7 +25,7 @@ home-build: config/home.nix
 	nix build -f $(NIX_CONF)/home-manager/home-manager/home-manager.nix	\
 	    --argstr confPath "$(HOME_MANAGER_CONFIG)"				\
 	    --argstr confAttr "" activationPackage				\
-	    --keep-going
+	    $(NIXOPTS) --keep-going
 	@rm result
 
 home-switch: home-build
@@ -48,14 +50,14 @@ shells:
 	done
 
 env-build: config/darwin.nix
-	NIX_PATH=$(NIXPATH) nix build --keep-going darwin.pkgs.allEnvs
+	NIX_PATH=$(NIXPATH) nix build $(NIXOPTS) --keep-going darwin.pkgs.allEnvs
 	@rm result
 
 env:
-	for i in $(ENVS); do					\
-	    echo Updating $$i;					\
-	    NIX_PATH=$(NIXPATH)					\
-	    nix-env -f '<darwin>' -u --leq -Q -k -A pkgs.$$i ;	\
+	for i in $(ENVS); do							\
+	    echo Updating $$i;							\
+	    NIX_PATH=$(NIXPATH)							\
+	    nix-env -f '<darwin>' -u --leq -Q -k $(NIXOPTS) -A pkgs.$$i ;	\
 	done
 	@echo "Nix generation: $$(nix-env --list-generations | tail -1)"
 
@@ -86,7 +88,7 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build switch env working cache
+update: tag-before pull build switch env working
 
 copy-all: copy
 	make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) REMOTE=fin copy
@@ -116,7 +118,7 @@ copy:
 		| uniq)
 	ssh $(REMOTE) 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) HOSTNAME=$(REMOTE) build all'
 
-cache: check
+cache:
 	-test -d $(CACHE) &&					\
 	(find /nix/store -maxdepth 1 -type f			\
 	    \( -name '*.dmg' -o					\

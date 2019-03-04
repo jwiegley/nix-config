@@ -18,24 +18,11 @@ let
     sha256 = "0qk6k8gxx5xlkyg05dljywj5wx5fvrc3dzp4v2h6ab83b7zwg813";
   };
 
-  known-good-20190211_193052 = nixpkgs {
-    rev    = "1a88aa9e0cdcbc12acc5cbdc379c0804d208e913";
-    sha256 = "076zlppa0insiv9wklk4h45m7frq1vfs43vsa11l8bm5i5qxzk6r";
-  };
-
 in
 {
-  inherit (known-good-20181208_134904) zbar xquartz;
-
-  inherit (known-good-20190211_193052) xapian;
+  inherit (known-good-20181208_134904) zbar;
 
   gitAndTools = super.gitAndTools // {
     inherit (known-good-20190131_115636.gitAndTools) git-annex;
-  };
-
-  haskell = super.haskell // {
-    compiler = super.haskell.compiler // {
-      inherit (known-good-20190131_115636.haskell.compiler) ghc844 ghc822;
-    };
   };
 }
