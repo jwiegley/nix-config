@@ -18,7 +18,7 @@ if [[ "$PWD" = "/" ]]; then
 fi
 
 if [[ -f default.nix ]]; then
-    exec nix-shell --arg pkgs "$NIXPKGS" "$@"
+    exec nix-shell "$@"
 else
     exec nix-shell -p "$NIXPKGS.packageDeps $PWD" "$@"
 fi

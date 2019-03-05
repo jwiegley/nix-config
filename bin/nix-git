@@ -1,4 +1,0 @@
-#!/bin/bash
-
-nix-prefetch-git "$@" 2> /dev/null \
-    | jq -r '"rev = \"\(.rev)\";\nsha256 = \"\(.sha256)\";"'

@@ -481,19 +481,11 @@ EOF
          buildCores = 10;
          speedFactor = 4;
        }
-       # { hostName = "hydra";
-       #   sshUser = "ec2-user";
-       #   sshKey = "${xdg_configHome}/ssh/id_dfinity";
-       #   system = "x86_64-linux";
-       #   maxJobs = 1;
-       #   buildCores = 1;
-       #   speedFactor = 1;
-       # }
-       { hostName = "nix-docker";
-         sshUser = "root";
-         sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+       { hostName = "hydra";
+         sshUser = "ec2-user";
+         sshKey = "${xdg_configHome}/ssh/id_dfinity";
          system = "x86_64-linux";
-         maxJobs = 2;
+         maxJobs = 1;
          buildCores = 1;
          speedFactor = 1;
        }
@@ -536,19 +528,19 @@ EOF
      distributedBuilds = true;
 
      buildMachines = [
-       # { hostName = "hydra";
-       #   sshUser = "ec2-user";
-       #   sshKey = "${xdg_configHome}/ssh/id_dfinity";
-       #   system = "x86_64-linux";
-       #   maxJobs = 1;
-       #   buildCores = 1;
-       #   speedFactor = 1;
-       # }
        { hostName = "nix-docker";
          sshUser = "root";
          sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
          system = "x86_64-linux";
-         maxJobs = 2;
+         maxJobs = 4;
+         buildCores = 1;
+         speedFactor = 2;
+       }
+       { hostName = "hydra";
+         sshUser = "ec2-user";
+         sshKey = "${xdg_configHome}/ssh/id_dfinity";
+         system = "x86_64-linux";
+         maxJobs = 1;
          buildCores = 1;
          speedFactor = 1;
        }

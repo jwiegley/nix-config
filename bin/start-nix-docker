@@ -3,4 +3,9 @@
 # As documented here:
 # https://github.com/LnL7/nix-docker#running-as-a-remote-builder
 
-exec docker run --restart always --name nix-docker -d -p 3022:22 lnl7/nix:ssh
+exec docker run                                 \
+     --restart always                           \
+     --name nix-docker                          \
+     --detach                                   \
+     --publish 3022:22                          \
+     lnl7/nix:ssh

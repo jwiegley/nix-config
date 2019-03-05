@@ -13,11 +13,25 @@ use_nix
 EOF
     direnv allow .
 
+elif [[ -f add-direnv.sh ]]; then
+    echo "Setting up for -A new-build"
+    cat > .envrc <<EOF
+. nix/use_nix.sh
+export NIXFLAGS=(--arg useHoogle true --arg devel true)
+export NIXARGS=("\${NIXFLAGS[@]}" -A new-build)
+export NIXFILE=shell.nix
+export NIXBLDARGS=(-f "\$NIXFILE" "\${NIXFLAGS[@]}" new-build)
+export CABAL_BUILDDIR=\$(pwd | sed 's^dfinity^Products^')/dist
+use_nix
+EOF
+    direnv allow .
+
 elif [[ ! -f .envrc ]]; then
     cat > .envrc <<EOF
 . \$(which use_nix.sh)
-export NIXPKGS='(import <darwin> {}).pkgs'
-export NIXARGS=(--arg pkgs "\$NIXPKGS")
+export NIXARGS=()
+# export NIXPKGS='(import <darwin> {}).pkgs'
+# export NIXARGS=(--arg pkgs "\$NIXPKGS")
 export NIXBLDARGS=(-f . "\${NIXARGS[@]}")
 export CABAL_BUILDDIR=\$(pwd | sed 's^src^Products^')/dist
 use_nix

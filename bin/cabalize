@@ -16,4 +16,4 @@ if [[ $GHCVER =~ prof ]]; then
 fi
 
 cabal clean
-nix-shell --command "cabal configure $ARGS $@"
+nix-shell --command "cabal new-configure $ARGS $@"

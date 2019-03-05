@@ -425,20 +425,24 @@ in rec {
              };
            };
          }) // rec {
+
         hermes  = onHost "vulcan" "192.168.1.65";
-        fin     = onHost "vulcan" "192.168.1.80"; tank = fin;
+        fin     = onHost "vulcan" "192.168.1.80";
+        tank    = fin;
         nixos   = onHost "vulcan" "192.168.118.128";
         dfinity = onHost "vulcan" "192.168.118.129";
         macos   = onHost "vulcan" "192.168.118.130";
 
-        # This requires a VPN connection to the DFINITY network.
-        macmini = {
-          hostname = "10.129.1.161";
-          user = "dfinity";
-          proxyJump = "hydra";
-        };
+        router    = { hostname = "192.168.1.2";  user = "root"; };
+        smokeping = { hostname = "192.168.1.78"; user = "smokeping"; };
 
-        router = { hostname = "192.168.1.2"; user = "root"; };
+        elpa        = { hostname = "elpa.gnu.org"; user = "root"; };
+        haskell_org = { host = "*haskell.org";     user = "root"; };
+
+        savannah.hostname  = "git.sv.gnu.org";
+        fencepost.hostname = "fencepost.gnu.org";
+        launchpad.hostname = "bazaar.launchpad.net";
+        mail.hostname      = "mail.haskell.org";
 
         id_local = {
           host = lib.concatStringsSep " " [
@@ -450,7 +454,12 @@ in rec {
           identitiesOnly = true;
         };
 
-        hydra     = { hostname = "hydra.oregon.dfinity.build"; user = "ec2-user"; };
+        # DFINITY related
+
+        hydra = {
+          hostname = "hydra.oregon.dfinity.build";
+          user = "ec2-user";
+        };
 
         nix-docker = {
           hostname = "127.0.0.1";
@@ -460,15 +469,12 @@ in rec {
           identitiesOnly = true;
         };
 
-        smokeping = { hostname = "192.168.1.78"; user = "smokeping"; };
-        elpa      = { hostname = "elpa.gnu.org"; user = "root"; };
-
-        haskell_org = { host = "*haskell.org"; user = "root"; };
-
-        savannah.hostname  = "git.sv.gnu.org";
-        fencepost.hostname = "fencepost.gnu.org";
-        launchpad.hostname = "bazaar.launchpad.net";
-        mail.hostname      = "mail.haskell.org";
+        # This requires a VPN connection to the DFINITY network.
+        macmini = {
+          hostname = "10.129.1.161";
+          user = "dfinity";
+          proxyJump = "hydra";
+        };
       };
     };
   };
