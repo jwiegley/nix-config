@@ -371,6 +371,18 @@ let
       };
     };
 
+    github-review = compileEmacsFiles {
+      name = "github-review";
+      src = fetchFromGitHub {
+        owner = "charignon";
+        repo = "github-review";
+        rev = "27e606419d5c70b91cac1e369e5d5ff8ce1bef27";
+        sha256 = "1nqm36lwxwmjchbi2zl6d7lgg19vgz4nikf5mc3dahwsj39s484y";
+        # date = 2019-03-03T11:21:44-08:00;
+      };
+      buildInputs = with self; [ ghub dash graphql treepy s ];
+    };
+
     ghub-plus = compileEmacsFiles {
       name = "ghub-plus";
       src = fetchFromGitHub {
@@ -402,6 +414,17 @@ let
         rev = "0acc25bea544b4b93db05debf1d9bad4e54f51d8";
         sha256 = "07rvg1j2rvasfcmmi0k8c4lkvfih90ga7q75xf5qcakhfnrf6vk5";
         # date = 2018-11-22T10:17:17+01:00;
+      };
+    };
+
+    goto-line-preview = compileEmacsFiles {
+      name = "goto-line-preview";
+      src = fetchFromGitHub {
+        owner = "jcs090218";
+        repo = "goto-line-preview";
+        rev = "bc2da7dc8fc738021b90eac1783bbf896a27b63f";
+        sha256 = "0kpi9746pq8lmvigrcr79bapfssy3pw1chcwsb025lijv3jq6hv1";
+        # date = 2019-03-03T15:53:02+08:00;
       };
     };
 

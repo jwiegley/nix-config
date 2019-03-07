@@ -145,9 +145,9 @@ in rec {
         ga     = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
         good   = "${pkgs.git}/bin/git bisect good";
         bad    = "${pkgs.git}/bin/git bisect bad";
-        cn     = "cabal configure --enable-tests";
-        cnp    = "cabal configure --enable-tests --enable-profiling";
-        cb     = "cabal build";
+        cn     = "cabal new-configure --enable-tests";
+        cnp    = "cabal new-configure --enable-tests --enable-profiling";
+        cb     = "cabal new-build";
         ls     = "${pkgs.coreutils}/bin/ls --color=auto";
         nm     = "${pkgs.findutils}/bin/find . -name";
         par    = "${pkgs.parallel}/bin/parallel";

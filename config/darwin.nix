@@ -481,14 +481,14 @@ EOF
          buildCores = 10;
          speedFactor = 4;
        }
-       { hostName = "hydra";
-         sshUser = "ec2-user";
-         sshKey = "${xdg_configHome}/ssh/id_dfinity";
-         system = "x86_64-linux";
-         maxJobs = 1;
-         buildCores = 1;
-         speedFactor = 1;
-       }
+       # { hostName = "hydra";
+       #   sshUser = "ec2-user";
+       #   sshKey = "${xdg_configHome}/ssh/id_dfinity";
+       #   system = "x86_64-linux";
+       #   maxJobs = 1;
+       #   buildCores = 1;
+       #   speedFactor = 1;
+       # }
      ];
 
      trustedBinaryCaches = [
@@ -536,14 +536,14 @@ EOF
          buildCores = 1;
          speedFactor = 2;
        }
-       { hostName = "hydra";
-         sshUser = "ec2-user";
-         sshKey = "${xdg_configHome}/ssh/id_dfinity";
-         system = "x86_64-linux";
-         maxJobs = 1;
-         buildCores = 1;
-         speedFactor = 1;
-       }
+       # { hostName = "hydra";
+       #   sshUser = "ec2-user";
+       #   sshKey = "${xdg_configHome}/ssh/id_dfinity";
+       #   system = "x86_64-linux";
+       #   maxJobs = 1;
+       #   buildCores = 1;
+       #   speedFactor = 1;
+       # }
      ];
 
      trustedBinaryCaches = [

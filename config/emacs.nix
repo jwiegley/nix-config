@@ -149,12 +149,14 @@ pkgs: epkgs: with epkgs;
   gitattributes-mode
   gitconfig-mode
   gitignore-mode
+  github-review
   gitpatch
   gnus-alias
   gnus-harvest
   gnus-recent
   google-this
   goto-last-change
+  goto-line-preview
   graphviz-dot-mode
   haskell-mode
   helm
