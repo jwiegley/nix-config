@@ -6,9 +6,8 @@ let
     "bindings-DSL"
     "c2hsc"
     "coq-haskell"
-    "git-all"
-    "git-du"
-    "gitlib/git-monitor"
+    "git-all"                   # jww (2019-03-07): remove
+    "gitlib/git-monitor"        # jww (2019-03-07): remove
     "gitlib/gitlib"
   [ "gitlib/gitlib-cmdline" { inherit (self.gitAndTools) git; } ]
     "gitlib/gitlib-libgit2"
@@ -16,21 +15,15 @@ let
   [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
     "hierarchy"
     "hnix"
-    "hours"
-    "hs-to-coq"
-    "linearscan"
-    "linearscan-hoopl"
     "logging"
     "monad-extras"
     "parsec-free"
     "pipes-async"
     "pipes-files"
-    "pushme"
     "recursors"
-    "runmany"
-  [ "sitebuilder" { inherit (self) yuicompressor; } ]
-    "sizes"
-    "una"
+    "runmany"                   # jww (2019-03-07): remove
+    "sizes"                     # jww (2019-03-07): remove
+    "una"                       # jww (2019-03-07): remove
     "z3-generate-api"
     "z3cat"
   ];
@@ -39,7 +32,7 @@ let
     let pkg = p: self.packageDrv ghc p {}; in self: super:
     with pkgs.haskell.lib; {
 
-    z3 = if ghc == "ghc844"
+    z3 = if ghc == "ghc844" || ghc == "ghc863"
          then null
          else pkg ~/src/z3;
 
@@ -226,8 +219,8 @@ haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // {
     ghc802 = overrideHask "ghc802" pkgs.haskell.packages.ghc802 (self: super:
       (breakout super [
-        "concurrent-output"
-        "hakyll"
+         "concurrent-output"
+         "hakyll"
       ])
       // (with pkgs.haskell.lib; {
         ghc-compact = null;
@@ -273,7 +266,12 @@ haskell = pkgs.haskell // {
         }));
       }));
 
-    ghc863 = overrideHask "ghc863" pkgs.haskell.packages.ghc863 (self: super: {});
+    ghc863 = overrideHask "ghc863" pkgs.haskell.packages.ghc863 (self: super:
+      (breakout super [
+         "hakyll"
+         "pandoc"
+       ])
+      );
   };
 };
 

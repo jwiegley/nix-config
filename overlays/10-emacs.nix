@@ -1079,16 +1079,17 @@ emacs26debug = pkgs.stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
      "--enable-check-lisp-object-type" ];
 });
 
-emacsHEAD = with pkgs; stdenv.lib.overrideDerivation self.emacs26debug (attrs: rec {
+emacsHEAD = with pkgs; stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "27.0";
   versionModifier = ".50";
 
-  patches = (attrs.patches or []) ++
-    (lib.optionals stdenv.isDarwin
-      [ ./emacs/patches/at-fdcwd.patch
-        # ./emacs/patches/emacs-26.patch
-      ]);
+  doCheck = false;
+
+  patches = lib.optionals stdenv.isDarwin
+    [ ./emacs/tramp-detect-wrapped-gvfsd.patch
+      ./emacs/patches/at-fdcwd.patch
+    ];
 
   buildInputs    = attrs.buildInputs    ++ [ harfbuzz.dev ];
   configureFlags = attrs.configureFlags ++ [ "--enable-harfbuzz" ];
@@ -1173,8 +1174,7 @@ convertForERC = drv: pkgs.stdenv.lib.overrideDerivation drv (attrs: rec {
 emacsHEADEnv = myPkgs: pkgs.myEnvFun {
   name = "emacsHEAD";
   buildInputs = [
-    # (self.convertForERC (self.emacsHEADPackagesNg.emacsWithPackages myPkgs))
-    (self.convertForERC (self.emacs26PackagesNg.emacsWithPackages myPkgs))
+    (self.convertForERC (self.emacsHEADPackagesNg.emacsWithPackages myPkgs))
   ];
 };
 

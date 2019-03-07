@@ -29,8 +29,8 @@ EOF
 elif [[ ! -f .envrc ]]; then
     cat > .envrc <<EOF
 . \$(which use_nix.sh)
-export NIXARGS=()
 # export NIXPKGS='(import <darwin> {}).pkgs'
+export NIXARGS=()
 # export NIXARGS=(--arg pkgs "\$NIXPKGS")
 export NIXBLDARGS=(-f . "\${NIXARGS[@]}")
 export CABAL_BUILDDIR=\$(pwd | sed 's^src^Products^')/dist

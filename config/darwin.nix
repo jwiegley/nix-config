@@ -512,14 +512,14 @@ EOF
          buildCores = 10;
          speedFactor = 4;
        }
-       { hostName = "hermes";
-         sshUser = "johnw";
-         sshKey = "${xdg_configHome}/ssh/id_local";
-         system = "x86_64-darwin";
-         maxJobs = 16;
-         buildCores = 4;
-         speedFactor = 2;
-       }
+       # { hostName = "hermes";
+       #   sshUser = "johnw";
+       #   sshKey = "${xdg_configHome}/ssh/id_local";
+       #   system = "x86_64-darwin";
+       #   maxJobs = 16;
+       #   buildCores = 4;
+       #   speedFactor = 2;
+       # }
      ];
    }
    else if localconfig.hostname == "vulcan" then {

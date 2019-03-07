@@ -1,0 +1,8 @@
+#!/bin/bash
+
+BASE_URL=https://github.com/NixOS/nixpkgs/archive
+REV=$(git --git-dir ~/src/nix/nixpkgs/.git rev-parse ${1:-last-known-good})
+SHA=$(nix-prefetch-url ${BASE_URL}/${REV}.tar.gz 2>&1 | tail -1)
+
+echo ", rev    ? \"$REV\""
+echo ", sha256 ? \"$SHA\""

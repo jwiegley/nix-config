@@ -13,8 +13,8 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   diffutils
   ghi
   gist
-  (exe haskPkgs.git-all)
-  (exe haskPkgs.git-monitor)
+  (exe haskPkgs.git-all)        # jww (2019-03-07): use a direct import
+  (exe haskPkgs.git-monitor)    # jww (2019-03-07): use a direct import
   git-lfs
   # git-pull-request
   git-scripts
@@ -51,6 +51,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gnumake
   (exe haskPkgs.hpack)
   # (exe haskPkgs.brittany)
+  (exe (import ~/src/hnix {}))
   htmlTidy
   m4
   idutils
@@ -128,7 +129,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   libxml2
   libxslt
   sdcv
-  (exe haskPkgs.sitebuilder)
+  (exe (import ~/src/sitebuilder {}))
   sourceHighlight
   svg2tikz
   taskjuggler
@@ -174,7 +175,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gnutar
   hammer
   hashdb
-  (exe haskPkgs.hours)
+  (exe (import ~/src/hours {}))
   htop
   imagemagickBig
   imgcat
@@ -197,15 +198,15 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   browserpass
   qrencode
   pinentry_mac
-  (exe haskPkgs.pushme)
+  (exe (import ~/src/pushme {}))
   pv
   qemu
   renameutils
   ripgrep
   rlwrap
-  (exe haskPkgs.runmany)
+  (exe haskPkgs.runmany)        # jww (2019-03-07): use a direct import
   screen
-  (exe haskellPackages_8_2.sizes)
+  (exe haskellPackages_8_2.sizes) # jww (2019-03-07): use a direct import
   smartmontools
   sqlite
   srm
@@ -215,7 +216,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   tmux
   tree
   tsvutils
-  (exe haskPkgs.una)
+  (exe haskPkgs.una)            # jww (2019-03-07): use a direct import
   unrar
   unzip
   vim
