@@ -468,7 +468,7 @@ EOF
     '';
   } //
   (if localconfig.hostname == "hermes" then {
-     maxJobs = 16;
+     maxJobs = 8;
      buildCores = 4;
      distributedBuilds = true;
 
@@ -477,7 +477,7 @@ EOF
          sshUser = "johnw";
          sshKey = "${xdg_configHome}/ssh/id_local";
          system = "x86_64-darwin";
-         maxJobs = 30;
+         maxJobs = 20;
          buildCores = 10;
          speedFactor = 4;
        }
@@ -499,7 +499,7 @@ EOF
      ];
    }
    else if localconfig.hostname == "fin" then {
-     maxJobs = 16;
+     maxJobs = 8;
      buildCores = 4;
      distributedBuilds = true;
 
@@ -508,7 +508,7 @@ EOF
          sshUser = "johnw";
          sshKey = "${xdg_configHome}/ssh/id_local";
          system = "x86_64-darwin";
-         maxJobs = 30;
+         maxJobs = 20;
          buildCores = 10;
          speedFactor = 4;
        }
@@ -523,7 +523,7 @@ EOF
      ];
    }
    else if localconfig.hostname == "vulcan" then {
-     maxJobs = 30;
+     maxJobs = 20;
      buildCores = 10;
      distributedBuilds = true;
 
@@ -533,7 +533,7 @@ EOF
          sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
          system = "x86_64-linux";
          maxJobs = 4;
-         buildCores = 1;
+         buildCores = 2;
          speedFactor = 2;
        }
        # { hostName = "hydra";

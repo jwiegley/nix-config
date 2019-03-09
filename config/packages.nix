@@ -204,9 +204,9 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   renameutils
   ripgrep
   rlwrap
-  (exe haskPkgs.runmany)        # jww (2019-03-07): use a direct import
+  (exe (import ~/src/runmany {}))
   screen
-  (exe haskellPackages_8_2.sizes) # jww (2019-03-07): use a direct import
+  (exe (import ~/src/sizes {}))
   smartmontools
   sqlite
   srm
@@ -216,7 +216,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   tmux
   tree
   tsvutils
-  (exe haskPkgs.una)            # jww (2019-03-07): use a direct import
+  (exe (import ~/src/una {}))
   unrar
   unzip
   vim

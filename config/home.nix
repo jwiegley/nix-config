@@ -3,9 +3,9 @@
 let home_directory = builtins.getEnv "HOME";
     log_directory = "${home_directory}/Library/Logs";
     tmp_directory = "/tmp";
-    localconfig = import <localconfig>;
     ca-bundle_crt = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
     lib = pkgs.stdenv.lib;
+    localconfig = import <localconfig>;
 
 in rec {
   nixpkgs = {

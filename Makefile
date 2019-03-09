@@ -2,7 +2,7 @@ HOSTNAME = vulcan
 REMOTE	 = hermes
 CACHE	 = /Users/johnw/tank/Cache
 ROOTS	 = /nix/var/nix/gcroots/per-user/johnw/shells
-ENVS     = emacs26Env # emacsHEADEnv
+ENVS     = emacs26Env emacsERCEnv # emacsHEADEnv
 NIX_CONF = $(HOME)/src/nix
 PROJS    = $(shell find $(HOME)/dfinity $(HOME)/src -name .envrc -type f -printf '%h ')
 
@@ -12,21 +12,9 @@ NIXOPTS =
 # NIXOPTS = --option build-use-substitutes false
 NIXPATH = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 
-darwin-build: config/darwin.nix
-	NIX_PATH=$(NIXPATH) nix build $(NIXOPTS) --keep-going darwin.system
-	@rm result
-
 darwin-switch: darwin-build
 	NIX_PATH=$(NIXPATH) darwin-rebuild switch -Q
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
-
-home-build: config/home.nix
-	NIX_PATH=$(NIXPATH)							\
-	nix build -f $(NIX_CONF)/home-manager/home-manager/home-manager.nix	\
-	    --argstr confPath "$(HOME_MANAGER_CONFIG)"				\
-	    --argstr confAttr "" activationPackage				\
-	    $(NIXOPTS) --keep-going
-	@rm result
 
 home-switch: home-build
 	NIX_PATH=$(NIXPATH) home-manager switch
@@ -49,10 +37,6 @@ shells:
 	    rm -f result;				\
 	done
 
-env-build: config/darwin.nix
-	NIX_PATH=$(NIXPATH) nix build $(NIXOPTS) --keep-going darwin.pkgs.allEnvs
-	@rm result
-
 env:
 	for i in $(ENVS); do							\
 	    echo Updating $$i;							\
@@ -61,7 +45,10 @@ env:
 	done
 	@echo "Nix generation: $$(nix-env --list-generations | tail -1)"
 
-build: darwin-build home-build env-build
+build:
+	NIX_PATH=$(NIXPATH) nix build $(NIXOPTS) -f . --keep-going \
+	    --argstr version $(shell git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S HEAD)
+	@rm -f result*
 
 pull:
 	(cd darwin       && git pull --rebase)

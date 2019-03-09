@@ -21,9 +21,6 @@ let
     "pipes-async"
     "pipes-files"
     "recursors"
-    "runmany"                   # jww (2019-03-07): remove
-    "sizes"                     # jww (2019-03-07): remove
-    "una"                       # jww (2019-03-07): remove
     "z3-generate-api"
     "z3cat"
   ];

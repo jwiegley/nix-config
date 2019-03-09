@@ -1033,12 +1033,7 @@ let
 in {
 
 emacs = self.emacs26;
-
 emacsPackagesNg = self.emacs26PackagesNg;
-emacs26PackagesNg = mkEmacsPackages self.emacs26;
-
-emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
-emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
 
 emacs26 = with pkgs; stdenv.lib.overrideDerivation
   (pkgs.emacs26.override { srcRepo = true; }) (attrs: rec {
@@ -1065,9 +1060,9 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
     sha256 = "0v6nrmf0viw6ahf8s090hwpsrf6gjpi37r842ikjcsakfxys9dmc";
     # date = 2019-02-20T07:33:53-08:00;
   };
-
-  postPatch = "rm -fr .git";
 });
+
+emacs26PackagesNg = mkEmacsPackages self.emacs26;
 
 emacs26debug = pkgs.stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
   name = "emacs-26.1-debug";
@@ -1078,6 +1073,8 @@ emacs26debug = pkgs.stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
      "--enable-checking=yes,glyphs"
      "--enable-check-lisp-object-type" ];
 });
+
+emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
 
 emacsHEAD = with pkgs; stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
   name = "emacs-${version}${versionModifier}";
@@ -1091,31 +1088,22 @@ emacsHEAD = with pkgs; stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
       ./emacs/patches/at-fdcwd.patch
     ];
 
-  buildInputs    = attrs.buildInputs    ++ [ harfbuzz.dev ];
-  configureFlags = attrs.configureFlags ++ [ "--enable-harfbuzz" ];
-
   src = ~/src/emacs;
 });
 
-convertForMac = drv: pkgs.stdenv.lib.overrideDerivation drv (attrs: rec {
-  postInstall = (attrs.postInstall or "") + ''
-    mkdir -p $out/Applications
-    mv nextstep/Emacs.app $out/Applications
-  '';
-});
+emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
 
 convertForERC = drv: pkgs.stdenv.lib.overrideDerivation drv (attrs: rec {
+  name = "erc-${version}${versionModifier}";
   appName = "ERC";
-  bundleName = "nextstep/ERC.app";
-
+  version = "27.0";
+  versionModifier = ".50";
   iconFile = ./emacs/Chat.icns;
 
-  version = "26.1";
-
-  postPatch = (attrs.postPatch or "") + ''
+  preConfigure = ''
     sed -i 's|/usr/share/locale|${pkgs.gettext}/share/locale|g' \
       lisp/international/mule-cmds.el
-    sed -i 's|nextstep/Emacs\.app|${bundleName}|' configure.ac
+    sed -i 's|nextstep/Emacs\.app|nextstep/${appName}.app|' configure.ac
     sed -i 's|>Emacs<|>${appName}<|' nextstep/templates/Info.plist.in
     sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Info.plist.in
     sed -i 's|org\.gnu\.Emacs|org.gnu.${appName}|' nextstep/templates/Info.plist.in
@@ -1128,10 +1116,18 @@ convertForERC = drv: pkgs.stdenv.lib.overrideDerivation drv (attrs: rec {
     sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Emacs.desktop.in
     sed -i 's|"Emacs|"${appName}|' nextstep/templates/InfoPlist.strings.in
     rm -fr .git
-    sh autogen.sh
-  '';
+  '' + attrs.preConfigure;
 
-  installPhase = (attrs.installPhase or "") + ''
+  postInstall =
+    builtins.replaceStrings ["Emacs.app"] ["${appName}.app"] attrs.postInstall + ''
+      mv $out/Applications/${appName}.app/Contents/MacOS/Emacs \
+         $out/Applications/${appName}.app/Contents/MacOS/${appName}
+      cp "${iconFile}" $out/Applications/${appName}.app/Contents/Resources/${appName}.icns
+    '';
+});
+
+rewrapForERC = drv: pkgs.stdenv.lib.overrideDerivation drv (attrs: rec {
+  installPhase = attrs.installPhase + ''
     if [ -d "$emacs/Applications/ERC.app" ]; then
       mkdir -p $out/Applications/ERC.app/Contents/MacOS
       cp -r $emacs/Applications/ERC.app/Contents/Info.plist \
@@ -1143,52 +1139,36 @@ convertForERC = drv: pkgs.stdenv.lib.overrideDerivation drv (attrs: rec {
                   --suffix EMACSLOADPATH ":" "$deps/share/emacs/site-lisp:"
     fi
   '';
-
-  postInstall = ''
-    mkdir -p $out/share/emacs/site-lisp
-    cp ${./emacs/site-start.el} $out/share/emacs/site-lisp/site-start.el
-    $out/bin/emacs --batch -f batch-byte-compile $out/share/emacs/site-lisp/site-start.el
-
-    rm -rf $out/var
-    rm -rf $out/share/emacs/${version}/site-lisp
-
-    for srcdir in src lisp lwlib ; do
-      dstdir=$out/share/emacs/${version}/$srcdir
-      mkdir -p $dstdir
-      find $srcdir -name "*.[chm]" -exec cp {} $dstdir \;
-      cp $srcdir/TAGS $dstdir
-      echo '((nil . ((tags-file-name . "TAGS"))))' > $dstdir/.dir-locals.el
-    done
-
-    mkdir -p $out/Applications
-    if [ "${appName}" != "Emacs" ]; then
-        mv ${bundleName}/Contents/MacOS/Emacs ${bundleName}/Contents/MacOS/${appName}
-    fi
-    if [ -n "${iconFile}" ]; then
-      cp "${iconFile}" ${bundleName}/Contents/Resources/${appName}.icns
-    fi
-    mv ${bundleName} $out/Applications
-  '';
 });
+
+emacsERC = self.convertForERC self.emacsHEAD;
+emacsERCPackagesNg = mkEmacsPackages self.emacsERC;
 
 emacsHEADEnv = myPkgs: pkgs.myEnvFun {
   name = "emacsHEAD";
   buildInputs = [
-    (self.convertForERC (self.emacsHEADPackagesNg.emacsWithPackages myPkgs))
+    (self.emacsHEADPackagesNg.emacsWithPackages myPkgs)
+  ];
+};
+
+emacsERCEnv = myPkgs: pkgs.myEnvFun {
+  name = "emacsERC";
+  buildInputs = [
+    (self.rewrapForERC (self.emacsERCPackagesNg.emacsWithPackages myPkgs))
   ];
 };
 
 emacs26Env = myPkgs: pkgs.myEnvFun {
   name = "emacs26";
   buildInputs = [
-    (self.convertForMac (self.emacs26PackagesNg.emacsWithPackages myPkgs))
+    (self.emacs26PackagesNg.emacsWithPackages myPkgs)
   ];
 };
 
 emacs26DebugEnv = myPkgs: pkgs.myEnvFun {
   name = "emacs26debug";
   buildInputs = [
-    (self.convertForMac (self.emacs26DebugPackagesNg.emacsWithPackages myPkgs))
+    (self.emacs26DebugPackagesNg.emacsWithPackages myPkgs)
   ];
 };
 
