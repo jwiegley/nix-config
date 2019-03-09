@@ -51,7 +51,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gnumake
   (exe haskPkgs.hpack)
   # (exe haskPkgs.brittany)
-  (exe (import ~/src/hnix {}))
+  # (exe (import ~/src/hnix {}))
   htmlTidy
   m4
   idutils

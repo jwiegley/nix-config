@@ -5,6 +5,7 @@ ROOTS	 = /nix/var/nix/gcroots/per-user/johnw/shells
 ENVS     = emacs26Env emacsERCEnv # emacsHEADEnv
 NIX_CONF = $(HOME)/src/nix
 PROJS    = $(shell find $(HOME)/dfinity $(HOME)/src -name .envrc -type f -printf '%h ')
+GIT_DATE = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
 
 all: switch env
 
@@ -12,42 +13,43 @@ NIXOPTS =
 # NIXOPTS = --option build-use-substitutes false
 NIXPATH = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 
-darwin-switch: darwin-build
+darwin-switch:
 	NIX_PATH=$(NIXPATH) darwin-rebuild switch -Q
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
-home-switch: home-build
+home-switch:
 	NIX_PATH=$(NIXPATH) home-manager switch
 	@echo "Home generation: $$(home-manager generations | head -1)"
 
 switch: darwin-switch home-switch
 
 projs:
-	@for i in $(PROJS); do \
-	    echo "proj: $$i"; \
+	@for i in $(PROJS); do			\
+	    echo "proj: $$i";			\
 	done
 
 shells:
-	for i in $(PROJS); do				\
-	    cd $$i;					\
-	    echo;					\
-	    echo Pre-building shell env for $$i;	\
-	    echo;					\
-	    NIX_PATH=$(NIXPATH) testit --make;		\
-	    rm -f result;				\
+	for i in $(PROJS); do			\
+	    cd $$i;				\
+	    echo;				\
+	    echo Building shell env for $$i;	\
+	    echo;				\
+	    NIX_PATH=$(NIXPATH) testit --make;	\
+	    rm -f result;			\
 	done
 
 env:
-	for i in $(ENVS); do							\
-	    echo Updating $$i;							\
-	    NIX_PATH=$(NIXPATH)							\
-	    nix-env -f '<darwin>' -u --leq -Q -k $(NIXOPTS) -A pkgs.$$i ;	\
+	for i in $(ENVS); do			\
+	    echo Updating $$i;			\
+	    NIX_PATH=$(NIXPATH)			\
+	    nix-env -f '<darwin>' -u --leq	\
+	        -Q -k $(NIXOPTS) -A pkgs.$$i ;	\
 	done
 	@echo "Nix generation: $$(nix-env --list-generations | tail -1)"
 
 build:
 	NIX_PATH=$(NIXPATH) nix build $(NIXOPTS) -f . --keep-going \
-	    --argstr version $(shell git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S HEAD)
+	    --argstr version $(shell $(GIT_DATE) HEAD)
 	@rm -f result*
 
 pull:
@@ -61,8 +63,8 @@ tag-before:
 tag-working:
 	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
 	git --git-dir=nixpkgs/.git branch -D before-update
-	git --git-dir=nixpkgs/.git tag -f \
-	    known-good-$(shell git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S last-known-good) \
+	git --git-dir=nixpkgs/.git tag -f			\
+	    known-good-$(shell $(GIT_DATE) last-known-good)	\
 	    last-known-good
 
 mirror:
@@ -133,10 +135,11 @@ gc:
 	nix-collect-garbage --delete-older-than 14d
 
 gc-all: remove-build-products
-	sudo nix-env --delete-generations \
+	sudo nix-env --delete-generations					\
 	    $(shell sudo nix-env --list-generations | field 1 | head -n -1)
-	sudo nix-env -p /nix/var/nix/profiles/system --delete-generations \
-	    $(shell sudo nix-env -p /nix/var/nix/profiles/system --list-generations | field 1 | head -n -1)
+	sudo nix-env -p /nix/var/nix/profiles/system --delete-generations	\
+	    $(shell sudo nix-env -p /nix/var/nix/profiles/system		\
+	                         --list-generations | field 1 | head -n -1)
 	nix-collect-garbage -d
 
 fullclean: gc-all check
