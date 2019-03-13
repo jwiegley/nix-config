@@ -7,7 +7,7 @@ NIX_CONF = $(HOME)/src/nix
 PROJS    = $(shell find $(HOME)/dfinity $(HOME)/src -name .envrc -type f -printf '%h ')
 GIT_DATE = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
 
-all: switch env
+all: build switch env
 
 NIXOPTS =
 # NIXOPTS = --option build-use-substitutes false
@@ -94,16 +94,16 @@ size:
 
 copy:
 	push -f src,dfinity $(REMOTE)
-	nix copy --keep-going --to ssh-ng://$(REMOTE)		\
-	    $(shell readlink -f ~/.nix-profile)			\
-	    $(shell readlink -f /run/current-system)		\
-	    $(shell find $(PROJS) -path '*/.direnv/default'	\
-		| while read dir; do				\
-		    ls $$dir/ | while read file ; do		\
-	              readlink $$dir/$$file;			\
-	            done ;					\
-	          done						\
-	        | sort						\
+	nix copy --keep-going --to ssh-ng://$(REMOTE)			\
+	    $(shell NIX_PATH=$(NIXPATH) nix-build $(NIXOPTS)		\
+	                --argstr version $(shell $(GIT_DATE) HEAD))	\
+	    $(shell find $(PROJS) -path '*/.direnv/default'		\
+		| while read dir; do					\
+		    ls $$dir/ | while read file ; do			\
+	              readlink $$dir/$$file;				\
+	            done ;						\
+	          done							\
+	        | sort							\
 		| uniq)
 	ssh $(REMOTE) 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) HOSTNAME=$(REMOTE) build all'
 
@@ -125,7 +125,6 @@ remove-build-products:
 	find $(HOME)/dfinity $(HOME)/Documents $(HOME)/src	\
 	    \( -name 'dist' -type d -o				\
 	       -name 'dist-newstyle' -type d -o			\
-	       -name '.direnv' -type d -o			\
 	       -name '.ghc.*' -o				\
 	       -name 'cabal.project.local*' -type f -o		\
 	       -name 'result*' -type l \) -print0		\

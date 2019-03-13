@@ -473,7 +473,7 @@ in rec {
         macmini = {
           hostname = "10.129.1.161";
           user = "dfinity";
-          proxyJump = "hydra";
+          # proxyJump = "hydra";
         };
       };
     };

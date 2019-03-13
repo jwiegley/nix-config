@@ -5,7 +5,6 @@ let
     "async-pool"
     "bindings-DSL"
     "c2hsc"
-    "coq-haskell"
     "git-all"                   # jww (2019-03-07): remove
     "gitlib/git-monitor"        # jww (2019-03-07): remove
     "gitlib/gitlib"
@@ -21,17 +20,14 @@ let
     "pipes-async"
     "pipes-files"
     "recursors"
-    "z3-generate-api"
-    "z3cat"
   ];
+
+  packageDrv = ghc:
+    callPackage (usingWithHoogle self.haskell.packages.${ghc}) ghc;
 
   otherHackagePackages = ghc:
     let pkg = p: self.packageDrv ghc p {}; in self: super:
     with pkgs.haskell.lib; {
-
-    z3 = if ghc == "ghc844" || ghc == "ghc863"
-         then null
-         else pkg ~/src/z3;
 
     Agda                  = dontHaddock super.Agda;
     Diff                  = dontCheck super.Diff;
@@ -76,15 +72,6 @@ let
          rev    = "8c9b982fadd2301e5707411caafb744c81f71ab9";
          sha256 = "10pzn71nnfrmyywqv50vfak7xgf19c9aqy3i8k92lns5x9ycfqdv";
          # date = 2018-09-12T23:35:30+02:00;
-       }) {};
-
-    brittany = self.callCabal2nix "brittany"
-      (pkgs.fetchFromGitHub {
-         owner  = "lspitzner";
-         repo   = "brittany";
-         rev    = "621e00bf3f24896d603978c3d4e5fd61dac3841a";
-         sha256 = "1shd30mfncqzdrcnmm5pfvgsivv030s7y9isn3753dclj5jag5aa";
-         # date = 2018-11-14T14:53:08+01:00;
        }) {};
 
     ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
@@ -190,62 +177,8 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
        || pkgs.stdenv.lib.hasSuffix ".p_o" path);
 };
 
-packageDrv = ghc:
-  callPackage (usingWithHoogle self.haskell.packages.${ghc}) ghc;
-
-packageDeps = path:
-  let
-    ghc      = self.ghcDefaultVersion;
-    package  = self.packageDrv ghc path {};
-    compiler = package.compiler;
-    packages = self.haskell.lib.getHaskellBuildInputs package;
-    cabal    = {
-      ghc802 = "1.24.2.0";
-      ghc822 = "2.0.1.0";
-      ghc844 = "2.2.0.1";
-      ghc863 = "2.4.0.1";
-    };
-
-  in compiler.withHoogle (p: with p;
-       [ hpack criterion
-         (self.haskell.lib.doJailbreak
-            (callHackage "cabal-install" cabal.${ghc} {}))
-       ] ++ packages.haskellBuildInputs);
-
 haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // {
-    ghc802 = overrideHask "ghc802" pkgs.haskell.packages.ghc802 (self: super:
-      (breakout super [
-         "concurrent-output"
-         "hakyll"
-      ])
-      // (with pkgs.haskell.lib; {
-        ghc-compact = null;
-
-        th-desugar_1_6 = self.callHackage "th-desugar" "1.6" {};
-        singletons =
-          dontCheck (doJailbreak (self.callHackage "singletons" "2.2" {
-            th-desugar = self.th-desugar_1_6;
-          }));
-        units = super.units.override {
-          th-desugar = self.th-desugar_1_6;
-        };
-
-        lens-family = self.callHackage "lens-family" "1.2.1" {};
-        lens-family-core = self.callHackage "lens-family-core" "1.2.1" {};
-      }));
-
-    ghc822 =
-      let newPkgs = self; in
-        overrideHask "ghc822" pkgs.haskell.packages.ghc822 (self: super:
-          with pkgs.haskell.lib; {
-            haddock-library =
-              doJailbreak (self.callHackage "haddock-library" "1.4.5" {});
-
-            hpack = newPkgs.haskell.packages.ghc844.hpack;
-            cabal2nix = newPkgs.haskell.packages.ghc844.cabal2nix;
-          });
-
     ghc844 = overrideHask "ghc844" pkgs.haskell.packages.ghc844 (self: super:
       (breakout super [
          "compact"
@@ -272,8 +205,6 @@ haskell = pkgs.haskell // {
   };
 };
 
-haskellPackages_8_0 = self.haskell.packages.ghc802;
-haskellPackages_8_2 = self.haskell.packages.ghc822;
 haskellPackages_8_4 = self.haskell.packages.ghc844;
 haskellPackages_8_6 = self.haskell.packages.ghc863;
 
