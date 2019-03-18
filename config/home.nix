@@ -459,6 +459,7 @@ in rec {
         hydra = {
           hostname = "hydra.oregon.dfinity.build";
           user = "ec2-user";
+          identityFile = "${xdg.configHome}/ssh/id_dfinity";
         };
 
         nix-docker = {
@@ -473,7 +474,8 @@ in rec {
         macmini = {
           hostname = "10.129.1.161";
           user = "dfinity";
-          # proxyJump = "hydra";
+          proxyJump = "hydra";
+          identityFile = "${xdg.configHome}/ssh/id_dfinity";
         };
       };
     };
