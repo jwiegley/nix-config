@@ -199,6 +199,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   qrencode
   pinentry_mac
   (exe (import ~/src/pushme {}))
+  pstree
   pv
   qemu
   renameutils

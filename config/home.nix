@@ -159,6 +159,10 @@ in rec {
         nstat  = "/usr/sbin/netstat -nr -f inet"
                + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
                + " | ${pkgs.coreutils}/bin/tail -n +5";
+
+        worker-1 = ''(cd ~/dfinity/ops-in-nix ; \
+          ${pkgs.nix}/bin/nix-shell -p nixops -p nix --pure \
+            --command 'make hydra-ssh MACHINE=worker-1')'';
       };
 
       profileExtra = ''
@@ -456,12 +460,6 @@ in rec {
 
         # DFINITY related
 
-        hydra = {
-          hostname = "hydra.oregon.dfinity.build";
-          user = "ec2-user";
-          identityFile = "${xdg.configHome}/ssh/id_dfinity";
-        };
-
         nix-docker = {
           hostname = "127.0.0.1";
           user = "root";
@@ -470,12 +468,31 @@ in rec {
           identitiesOnly = true;
         };
 
+        id_dfinity = {
+          host = lib.concatStringsSep " " [
+            "hydra"
+            "zrh-1"
+            "macmini"
+          ];
+          identityFile = "${xdg.configHome}/ssh/id_dfinity";
+          identitiesOnly = true;
+        };
+
+        hydra = {
+          hostname = "hydra.oregon.dfinity.build";
+          user = "ec2-user";
+        };
+
+        zrh-1 = {
+          hostname = "10.0.128.1";
+          user = "johnw";
+        };
+
         # This requires a VPN connection to the DFINITY network.
         macmini = {
-          hostname = "10.129.1.161";
+          hostname = "10.129.10.7";
           user = "dfinity";
           proxyJump = "hydra";
-          identityFile = "${xdg.configHome}/ssh/id_dfinity";
         };
       };
     };

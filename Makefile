@@ -94,7 +94,7 @@ size:
 
 copy:
 	push -f src,dfinity $(REMOTE)
-	nix copy --keep-going --to ssh-ng://$(REMOTE)			\
+	nix copy --no-check-sigs --keep-going --to ssh-ng://$(REMOTE)	\
 	    $(shell NIX_PATH=$(NIXPATH) nix-build $(NIXOPTS)		\
 	                --argstr version $(shell $(GIT_DATE) HEAD))	\
 	    $(shell find $(PROJS) -path '*/.direnv/default'		\
