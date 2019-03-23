@@ -1,16 +1,14 @@
 #+TITLE: Setting up a new Mac from scratch using nix-darwin
 
-* Setting up the machine
+* Wipe the hard disk, and format as APFS
 
-** Wipe the hard disk, and format as APFS
+* Install Mac OS X
 
-** Install Mac OS X
+* Run the App Store and update to the latest version
 
-** Run the App Store and update to the latest version
+* Install Xcode
 
-** Install Xcode
-
-** Run Terminal.app and accept the Xcode license
+* Run Terminal.app and accept the Xcode license
 
 #+begin_src sh
 sudo xcodebuild -license
@@ -18,26 +16,26 @@ sudo xcodebuild -license
 
 Press =SPACE= many times, and then type =accept=.
 
-** Install multi-user Nix
+* Install multi-user Nix
 
 #+begin_src sh
 sh <(curl https://nixos.org/nix/install) --daemon
 #+end_src
 
-** Add the Nix system path to =.bashrc=
+* Add the Nix system path to =.bashrc=
 
 #+begin_src sh
 echo 'export PATH=$PATH:/nix/var/nix/profiles/default/bin' > .bashrc
 chmod +x .bashrc
 #+end_src
 
-** Confirm you can login from another machine
+* Confirm you can login from another machine
 
 #+begin_src sh
 ssh $REMOTE nix-daemon --version
 #+end_src
 
-** Add yourself as a trusted user to =/etc/nix/nix.conf=
+* Add yourself as a trusted user to =/etc/nix/nix.conf=
 
 On the new machine, run:
 
@@ -53,7 +51,7 @@ Then run:
 sudo killall nix-daemon
 #+end_src
 
-** Seed Nix store contents from a working machine
+* Seed Nix store contents from a working machine
 
 On the already configured machine, run:
 
