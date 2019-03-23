@@ -1,4 +1,5 @@
 #+TITLE: Setting up a new Mac from scratch using nix-darwin
+#+OPTIONS: H:4
 
 * Wipe the hard disk, and format as APFS
 
