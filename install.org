@@ -58,3 +58,10 @@ On the already configured machine, run:
 #+begin_src sh
 nix copy --no-check-sigs --keep-going --to ssh-ng://$REMOTE ~/.nix-profile
 #+end_src
+
+*** Install nix-darwin
+
+#+begin_src sh
+nix-build https://github.com/LnL7/nix-darwin/archive/master.tar.gz -A installer
+./result/bin/darwin-installer
+#+end_src
