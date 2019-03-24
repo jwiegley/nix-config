@@ -1,32 +1,71 @@
-HOSTNAME = vulcan
-REMOTE	 = hermes
-CACHE	 = /Users/johnw/tank/Cache
-ROOTS	 = /nix/var/nix/gcroots/per-user/johnw/shells
-ENVS     = emacs26Env emacsERCEnv # emacsHEADEnv
-NIX_CONF = $(HOME)/src/nix
-PROJS    = $(shell find $(HOME)/dfinity $(HOME)/src -name .envrc -type f -printf '%h ')
-GIT_DATE = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
+HOSTNAME   = vulcan
+REMOTE	   = hermes
+MAX_AGE    = 14d
+CACHE	   = /Users/johnw/tank/Cache
+ROOTS	   = /nix/var/nix/gcroots/per-user/johnw/shells
+ENVS	   = emacs26Env emacsERCEnv # emacsHEADEnv
+NIX_CONF   = $(HOME)/src/nix
+MAKE_REC   = make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF)
+NIXOPTS    =
+# NIXOPTS   = --option build-use-substitutes false --options builders ""
+NIXPATH    = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
+GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
+BUILD_ARGS = $(NIXOPTS) --keep-going --argstr version $(HEAD_DATE)
+
+# Lazily evaluated variables; expensive to compute, but we only want it do it
+# when first necessary.
+PROJS	   = $(eval PROJS :=						\
+		$(shell find $(HOME)/dfinity $(HOME)/src		\
+			-name .envrc -type f -printf '%h '))$(PROJS)
+HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
+LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good)$(LKG_DATE)
+BUILD_PATH = $(eval BUILD_PATH :=					\
+		$(shell NIX_PATH=$(NIXPATH)				\
+			    nix-build $(BUILD_ARGS)))$(BUILD_PATH)
 
 all: build switch env
-
-NIXOPTS =
-# NIXOPTS = --option build-use-substitutes false
-NIXPATH = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
-
-darwin-switch:
-	NIX_PATH=$(NIXPATH) darwin-rebuild switch -Q
-	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
-
-home-switch:
-	NIX_PATH=$(NIXPATH) home-manager switch
-	@echo "Home generation: $$(home-manager generations | head -1)"
-
-switch: darwin-switch home-switch
 
 projs:
 	@for i in $(PROJS); do			\
 	    echo "proj: $$i";			\
 	done
+
+tools:
+	@PATH=$(BUILD_PATH)/sw/bin:$(PATH)	\
+	    which				\
+	        field				\
+	        find				\
+	        git				\
+	        head				\
+	        make				\
+	        nix-build			\
+	        nix-env				\
+	        sort				\
+	        sudo				\
+	        uniq
+
+build:
+	NIX_PATH=$(NIXPATH) nix build -f . $(BUILD_ARGS)
+	@rm -f result*
+
+switch: darwin-switch home-switch
+
+darwin-switch:
+	PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIXPATH) darwin-rebuild switch -Q
+	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
+
+home-switch:
+	PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIXPATH) home-manager switch
+	@echo "Home generation: $$(home-manager generations | head -1)"
+
+env:
+	for i in $(ENVS); do			\
+	    echo Updating $$i;			\
+	    NIX_PATH=$(NIXPATH)			\
+	    nix-env -f '<darwin>' -u --leq	\
+	        -Q -k $(NIXOPTS) -A pkgs.$$i ;	\
+	done
+	@echo "Nix generation: $$(nix-env --list-generations | tail -1)"
 
 shells:
 	for i in $(PROJS); do			\
@@ -38,20 +77,6 @@ shells:
 	    rm -f result;			\
 	done
 
-env:
-	for i in $(ENVS); do			\
-	    echo Updating $$i;			\
-	    NIX_PATH=$(NIXPATH)			\
-	    nix-env -f '<darwin>' -u --leq	\
-	        -Q -k $(NIXOPTS) -A pkgs.$$i ;	\
-	done
-	@echo "Nix generation: $$(nix-env --list-generations | tail -1)"
-
-build:
-	NIX_PATH=$(NIXPATH) nix build $(NIXOPTS) -f . --keep-going \
-	    --argstr version $(shell $(GIT_DATE) HEAD)
-	@rm -f result*
-
 pull:
 	(cd darwin       && git pull --rebase)
 	(cd home-manager && git pull --rebase)
@@ -60,12 +85,12 @@ pull:
 tag-before:
 	git --git-dir=nixpkgs/.git branch -f before-update HEAD
 
+working: tag-working mirror
+
 tag-working:
 	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
 	git --git-dir=nixpkgs/.git branch -D before-update
-	git --git-dir=nixpkgs/.git tag -f			\
-	    known-good-$(shell $(GIT_DATE) last-known-good)	\
-	    last-known-good
+	git --git-dir=nixpkgs/.git tag -f known-good-$(LKG_DATE) last-known-good
 
 mirror:
 	git --git-dir=nixpkgs/.git push github -f master:master
@@ -75,19 +100,17 @@ mirror:
 	git --git-dir=darwin/.git push --mirror jwiegley
 	git --git-dir=home-manager/.git push --mirror jwiegley
 
-working: tag-working mirror
-
 update: tag-before pull build switch env working
 
 copy-all: copy
-	make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) REMOTE=fin copy
+	$(MAKE_REC) REMOTE=fin copy
 
 check:
 	nix-store --verify --repair --check-contents
 
 check-all: check
-	ssh hermes 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) check'
-	ssh fin    'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) check'
+	ssh hermes '$(MAKE_REC) check'
+	ssh fin    '$(MAKE_REC) check'
 
 size:
 	sudo du --si -shx /nix/store
@@ -95,8 +118,7 @@ size:
 copy:
 	push -f src,dfinity $(REMOTE)
 	nix copy --no-check-sigs --keep-going --to ssh-ng://$(REMOTE)	\
-	    $(shell NIX_PATH=$(NIXPATH) nix-build $(NIXOPTS)		\
-	                --argstr version $(shell $(GIT_DATE) HEAD))	\
+	    $(BUILD_PATH)						\
 	    $(shell find $(PROJS) -path '*/.direnv/default'		\
 		| while read dir; do					\
 		    ls $$dir/ | while read file ; do			\
@@ -105,7 +127,7 @@ copy:
 	          done							\
 	        | sort							\
 		| uniq)
-	ssh $(REMOTE) 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) HOSTNAME=$(REMOTE) build all'
+	ssh $(REMOTE) '$(MAKE_REC) HOSTNAME=$(REMOTE) build all'
 
 cache:
 	-test -d $(CACHE) &&					\
@@ -131,7 +153,7 @@ remove-build-products:
 	    | xargs -P4 -0 /bin/rm -fr
 
 gc:
-	nix-collect-garbage --delete-older-than 14d
+	nix-collect-garbage --delete-older-than $(MAX_AGE)
 
 gc-all: remove-build-products
 	sudo nix-env --delete-generations					\
@@ -142,5 +164,5 @@ gc-all: remove-build-products
 	nix-collect-garbage -d
 
 fullclean: gc-all check
-	ssh hermes 'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) gc-all check'
-	ssh fin    'make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF) gc-all check'
+	ssh hermes '$(MAKE_REC) gc-all check'
+	ssh fin    '$(MAKE_REC) gc-all check'

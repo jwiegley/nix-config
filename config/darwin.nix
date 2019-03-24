@@ -435,22 +435,24 @@ EOF
   nix = {
     package = pkgs.nixStable;
 
-    # useSandbox = true;
-    # sandboxPaths = [
-    #   "/usr/lib"
-    #   "/System/Library/Frameworks"
-    #   "/dev"
-    #   "/bin/sh"
-    # ];
+    useSandbox = false;
+    sandboxPaths = [
+      "/System/Library/Frameworks"
+      "/System/Library/PrivateFrameworks"
+      "/usr/lib"
+      "/private/tmp"
+      "/private/var/tmp"
+      "/usr/bin/env"
+    ];
 
-    nixPath =
-      [ "darwin-config=$HOME/src/nix/config/darwin.nix"
-        "home-manager=$HOME/src/nix/home-manager"
-        "darwin=$HOME/src/nix/darwin"
-        "nixpkgs=$HOME/src/nix/nixpkgs"
-        "ssh-config-file=$HOME/.ssh/config"
-        "ssh-auth-sock=$HOME/.config/gnupg/S.gpg-agent.ssh"
-      ];
+    nixPath = [
+      "darwin-config=$HOME/src/nix/config/darwin.nix"
+      "home-manager=$HOME/src/nix/home-manager"
+      "darwin=$HOME/src/nix/darwin"
+      "nixpkgs=$HOME/src/nix/nixpkgs"
+      "ssh-config-file=$HOME/.ssh/config"
+      "ssh-auth-sock=$HOME/.config/gnupg/S.gpg-agent.ssh"
+    ];
 
     trustedUsers = [ "johnw" "@admin" ];
 

@@ -59,9 +59,22 @@ On the already configured machine, run:
 nix copy --no-check-sigs --keep-going --to ssh-ng://$REMOTE ~/.nix-profile
 #+end_src
 
-*** Install nix-darwin
+*** Install nix-darwin (optional)
 
 #+begin_src sh
 nix-build https://github.com/LnL7/nix-darwin/archive/master.tar.gz -A installer
 ./result/bin/darwin-installer
 #+end_src
+
+*** Build and switch to this Nix environment
+
+#+begin_src sh
+make -C $PWD -f Makefile HOSTNAME=<name of host>
+#+end_src
+
+Note that the hostname must match a like-named file in the =config= directory.
+These files allow the configuration to vary per-machine.
+
+If you're using this config entirely, you won't need to install =nix-darwin=
+separately. But you'll need to modify several of the configuration files which
+refer to paths you won't have on your own machine.
