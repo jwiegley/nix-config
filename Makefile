@@ -18,10 +18,13 @@ PROJS	   = $(eval PROJS :=						\
 		$(shell find $(HOME)/dfinity $(HOME)/src		\
 			-name .envrc -type f -printf '%h '))$(PROJS)
 HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
-LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good)$(LKG_DATE)
+LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 BUILD_PATH = $(eval BUILD_PATH :=					\
 		$(shell NIX_PATH=$(NIXPATH)				\
 			    nix-build $(BUILD_ARGS)))$(BUILD_PATH)
+
+DARWIN_REBUILD = $(BUILD_PATH)/sw/bin/darwin-rebuild
+HOME_MANAGER = $(BUILD_PATH)/sw/bin/home-manager
 
 all: build switch env
 
@@ -51,12 +54,17 @@ build:
 switch: darwin-switch home-switch
 
 darwin-switch:
-	PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIXPATH) darwin-rebuild switch -Q
-	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
+	PATH=$(BUILD_PATH)/sw/bin:$(PATH) \
+	NIX_PATH=$(NIXPATH) \
+	    $(DARWIN_REBUILD) switch -Q
+	@echo "Darwin generation: $$($(DARWIN_REBUILD) --list-generations | tail -1)"
 
 home-switch:
-	PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIXPATH) home-manager switch
-	@echo "Home generation: $$(home-manager generations | head -1)"
+	PATH=$(BUILD_PATH)/sw/bin:$(PATH) \
+	NIX_PATH=$(NIXPATH) \
+	HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix \
+	    $(HOME_MANAGER) switch
+	@echo "Home generation: $$($(HOME_MANAGER) generations | head -1)"
 
 env:
 	for i in $(ENVS); do			\
