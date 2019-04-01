@@ -451,6 +451,16 @@ let
       };
     };
 
+    ivy-compile = compileEmacsFiles {
+      name = "ivy-compile.el";
+      src = fetchurl {
+        url = https://bitbucket.org/holgerschurig/emacsconf/raw/74d428aa2f9be88b14a503f6c3a816ae7cd13644/elisp/ivy-compile.el;
+        sha256 = "0igi5p9s6w9yqaxirl286ms9zxad1njw0c6q1b7nry0mh12f7327";
+        # date = 2019-03-29T16:14:42-0700;
+      };
+      buildInputs = with self; [ ivy ];
+    };
+
     ivy-explorer = compileEmacsFiles {
       name = "ivy-explorer";
       src = fetchFromGitHub {

@@ -483,6 +483,14 @@ EOF
          buildCores = 10;
          speedFactor = 4;
        }
+       { hostName = "nix-docker";
+         sshUser = "root";
+         sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+         system = "x86_64-linux";
+         maxJobs = 4;
+         buildCores = 2;
+         speedFactor = 2;
+       }
        # { hostName = "hydra";
        #   sshUser = "ec2-user";
        #   sshKey = "${xdg_configHome}/ssh/id_dfinity";

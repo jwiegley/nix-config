@@ -11,7 +11,8 @@ in rec {
   nixpkgs = {
     config = {
       allowUnfree = true;
-      allowBroken = true;
+      allowBroken = false;
+      allowUnsupportedSystem = false;
     };
 
     overlays =
@@ -203,6 +204,7 @@ in rec {
             export PS1='%m %~ $ '
         else
            . ${xdg.configHome}/zsh/plugins/iterm2_shell_integration
+           . ${xdg.configHome}/zsh/plugins/iterm2_tmux_integration
         fi
       '';
 
@@ -210,8 +212,15 @@ in rec {
         { name = "iterm2_shell_integration";
           src = pkgs.fetchurl {
             url = https://iterm2.com/shell_integration/zsh;
-            sha256 = "1vm6p5gsnck6s96p5jdchna4jnc3ifsw1nd5l7fr14l4rlza4r5s";
-            # date = 2019-01-04T10:28:43-0800;
+            sha256 = "0jjcf4r6vybjz4knpnlhbql7f486k3aqqisgpas1mckjdhlsh5vf";
+            # date = 2019-03-28T14:15:10-0700;
+          };
+        }
+        { name = "iterm2_tmux_integration";
+          src = pkgs.fetchurl {
+            url = https://gist.githubusercontent.com/antifuchs/c8eca4bcb9d09a7bbbcd/raw/3ebfecdad7eece7c537a3cd4fa0510f25d02611b/iterm2_zsh_init.zsh;
+            sha256 = "1v1b6yz0lihxbbg26nvz85c1hngapiv7zmk4mdl5jp0fsj6c9s8c";
+            # date = 2019-03-28T14:19:21-0700;
           };
         }
       ];
@@ -437,6 +446,8 @@ in rec {
         dfinity = onHost "vulcan" "192.168.118.129";
         macos   = onHost "vulcan" "192.168.118.130";
 
+        dfinity2.hostname = "192.168.92.128";
+
         router    = { hostname = "192.168.1.2";  user = "root"; };
         smokeping = { hostname = "192.168.1.78"; user = "smokeping"; };
 
@@ -447,6 +458,15 @@ in rec {
         fencepost.hostname = "fencepost.gnu.org";
         launchpad.hostname = "bazaar.launchpad.net";
         mail.hostname      = "mail.haskell.org";
+
+        keychain = {
+          host = "*";
+          extraOptions = {
+            "UseKeychain"    = "yes";
+            "AddKeysToAgent" = "yes";
+            "IgnoreUnknown"  = "UseKeychain";
+          };
+        };
 
         id_local = {
           host = lib.concatStringsSep " " [

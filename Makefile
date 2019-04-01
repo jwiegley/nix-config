@@ -3,7 +3,7 @@ REMOTE	   = hermes
 MAX_AGE    = 14d
 CACHE	   = /Users/johnw/tank/Cache
 ROOTS	   = /nix/var/nix/gcroots/per-user/johnw/shells
-ENVS	   = emacs26Env emacsERCEnv # emacsHEADEnv
+ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
 NIX_CONF   = $(HOME)/src/nix
 MAKE_REC   = make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF)
 NIXOPTS    =

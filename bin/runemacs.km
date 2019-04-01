@@ -1,8 +1,2 @@
-#!/usr/bin/env bash
-
-env -i /run/current-system/sw/bin/zsh -l \
-    -c "source /etc/zshenv; \
-        source ~/.zshenv; \
-        source ~/.nix-profile/etc/profile.d/hm-session-vars.sh; \
-        env & $HOME/src/nix/bin/runemacs $*" \
-    > /tmp/emacs.log 2>&1
+#!/bin/bash
+exec sudo --user johnw --login $HOME/src/nix/bin/runemacs

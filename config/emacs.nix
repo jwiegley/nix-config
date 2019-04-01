@@ -188,6 +188,7 @@ pkgs: epkgs: with epkgs;
   initsplit
   ipcalc
   ivy
+  ivy-compile
   ivy-explorer
   ivy-hydra
   ivy-pass
