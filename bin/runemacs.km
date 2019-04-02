@@ -1,2 +1,2 @@
 #!/bin/bash
-exec sudo --user johnw --login $HOME/src/nix/bin/runemacs
+exec sudo --user johnw --login $HOME/src/nix/bin/runemacs "$@"
