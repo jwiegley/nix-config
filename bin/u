@@ -1,2 +1,16 @@
 #!/bin/bash
-exec make -C $NIX_CONF -f Makefile "$@"
+
+if [[ $(hostname) == "Vulcan.local" ]]; then
+  HOSTNAME=vulcan
+  REMOTE=hermes
+elif [[ $(hostname) == "fin" ]]; then
+  HOSTNAME=fin
+else
+  HOSTNAME=hermes
+  REMOTE=vulcan
+fi
+
+echo HOSTNAME=$HOSTNAME
+echo REMOTE=$REMOTE
+
+exec make -C $NIX_CONF -f Makefile HOSTNAME=$HOSTNAME REMOTE=$REMOTE "$@"

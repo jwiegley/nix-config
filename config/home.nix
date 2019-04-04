@@ -55,7 +55,7 @@ in rec {
       STARDICT_DATA_DIR  = "${xdg.dataHome}/dictionary";
       WWW_HOME           = "${xdg.cacheHome}/w3m";
       EMACSVER           = "26";
-      EMACS_SERVER_FILE  = "${tmp_directory}/emacsclient.server";
+      EMACS_SERVER_FILE  = "${tmp_directory}/emacs501/server";
       EMAIL              = "${programs.git.userEmail}";
       JAVA_OPTS          = "-Xverify:none";
     };
@@ -482,6 +482,7 @@ in rec {
 
         nix-docker = {
           hostname = "127.0.0.1";
+          proxyJump = "fin";
           user = "root";
           port = 3022;
           identityFile = "${xdg.configHome}/ssh/nix-docker_rsa";

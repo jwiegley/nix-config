@@ -59,6 +59,7 @@ let
     haskell-mode  = withPatches super.haskell-mode  [ ./emacs/patches/haskell-mode.patch ];
     helm-google   = withPatches super.helm-google   [ ./emacs/patches/helm-google.patch ];
     hyperbole     = withPatches super.hyperbole     [ ./emacs/patches/hyperbole.patch ];
+    magit         = withPatches super.magit         [ ./emacs/patches/magit.patch ];
     multi-term    = withPatches super.multi-term    [ ./emacs/patches/multi-term.patch ];
     noflet        = withPatches super.noflet        [ ./emacs/patches/noflet.patch ];
     org-ref       = withPatches super.org-ref       [ ./emacs/patches/org-ref.patch ];
@@ -68,19 +69,19 @@ let
     ascii = compileEmacsWikiFile {
       name = "ascii.el";
       sha256 = "05fjsj5nmc05cmsi0qj914dqdwk8rll1d4dwhn0crw36p2ivql75";
-      # date = 2018-02-21T17:21:27-0800;
+      # date = 2019-04-03T08:43:15-0700;
     };
 
     backup-each-save = compileEmacsWikiFile {
       name = "backup-each-save.el";
       sha256 = "0b9vvi2m0fdv36wj8mvawl951gjmg3pypg08a8n6rzn3rwg0fwz7";
-      # date = 2018-02-21T17:21:29-0800;
+      # date = 2019-04-03T08:43:18-0700;
     };
 
     browse-kill-ring-plus = compileEmacsWikiFile {
       name = "browse-kill-ring+.el";
       sha256 = "14118rimjsps94ilhi0i9mwx7l69ilbidgqfkfrm5c9m59rki2gq";
-      # date = 2018-02-21T17:21:31-0800;
+      # date = 2019-04-03T08:43:20-0700;
 
       buildInputs = [ self.browse-kill-ring ];
       patches = [ ./emacs/patches/browse-kill-ring-plus.patch ];
@@ -89,7 +90,7 @@ let
     col-highlight = compileEmacsWikiFile {
       name = "col-highlight.el";
       sha256 = "0na8aimv5j66pzqi4hk2jw5kk00ki99zkxiykwcmjiy3h1r9311k";
-      # date = 2018-02-21T17:21:33-0800;
+      # date = 2019-04-03T08:43:22-0700;
 
       buildInputs = [ self.vline ];
     };
@@ -97,7 +98,7 @@ let
     crosshairs = compileEmacsWikiFile {
       name = "crosshairs.el";
       sha256 = "0032v3ry043wzvbacm16liykc362pza1bc46x37b307bvbv12qlg";
-      # date = 2018-02-21T17:21:34-0800;
+      # date = 2019-04-03T08:43:25-0700;
 
       buildInputs = [ self.hl-line-plus self.col-highlight self.vline ];
     };
@@ -105,61 +106,61 @@ let
     cursor-chg = compileEmacsWikiFile {
       name = "cursor-chg.el";
       sha256 = "1zmwh0z4g6khb04lbgga263pqa51mfvs0wfj3y85j7b08f2lqnqn";
-      # date = 2018-02-21T17:21:36-0800;
+      # date = 2019-04-03T08:43:27-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
       name = "erc-highlight-nicknames.el";
       sha256 = "01r184q86aha4gs55r2vy3rygq1qnxh1bj9qmlz97b2yh8y17m50";
-      # date = 2018-02-21T17:21:39-0800;
+      # date = 2019-04-03T08:43:29-0700;
     };
 
     fetchmail-mode = compileEmacsWikiFile {
       name = "fetchmail-mode.el";
       sha256 = "19lqkc35kgzm07xjpb9nrcayg69qyijn159lak0mg45fhnybf4a6";
-      # date = 2018-05-10T00:43:55-0700;
+      # date = 2019-04-03T08:43:31-0700;
     };
 
     hexrgb = compileEmacsWikiFile {
       name = "hexrgb.el";
       sha256 = "18hb8brf7x92aidjfgczxangri6rkqq4x5d06lh41193f97rslm8";
-      # date = 2018-08-02T21:54:21-0400;
+      # date = 2019-04-03T08:43:33-0700;
     };
 
     highlight = compileEmacsWikiFile {
       name = "highlight.el";
       sha256 = "0gmlly1pq5zp7qdcmck90nm0n8j9lahhr26pljb9wjqy4cgzr5ls";
-      # date = 2019-01-24T13:24:14-0800;
+      # date = 2019-04-03T08:43:35-0700;
     };
 
     highlight-cl = compileEmacsWikiFile {
       name = "highlight-cl.el";
       sha256 = "0r3kzs2fsi3kl5gqmsv75dc7lgfl4imrrqhg09ij6kq1ri8gjxjw";
-      # date = 2018-11-08T08:07:59-0800;
+      # date = 2019-04-03T08:43:36-0700;
     };
 
     hl-line-plus = compileEmacsWikiFile {
       name = "hl-line+.el";
       sha256 = "0crkmjah8i61z6c15sgn2cbpbj8xqfx0py1y84pxkcjh1cj7hx7q";
-      # date = 2018-02-21T17:21:44-0800;
+      # date = 2019-04-03T08:43:37-0700;
     };
 
     message-x = compileEmacsWikiFile {
       name = "message-x.el";
       sha256 = "05ic97plsysh4nqwdrsl5m9f24m11w24bahj8bxzfdawfima2bkf";
-      # date = 2018-02-21T17:21:45-0800;
+      # date = 2019-04-03T08:43:39-0700;
     };
 
     mudel = compileEmacsWikiFile {
       name = "mudel.el";
       sha256 = "0z6giw5i3qflxll29k6nbmy71nkadbjjkh465fcqbs2v22643fr9";
-      # date = 2018-02-21T17:21:50-0800;
+      # date = 2019-04-03T08:43:40-0700;
     };
 
     palette = compileEmacsWikiFile {
       name = "palette.el";
-      sha256 = "0hqfaykzwn83wngja3ygn0s5iy690wwh84q8xz5cxr6h85b61i53";
-      # date = 2018-08-02T21:54:00-0400;
+      sha256 = "149y6bmn0njgq632m9zdnaaw7wrvxvfqndpqlgcizn6dwzixiih6";
+      # date = 2019-04-03T08:43:41-0700;
 
       buildInputs = [ self.hexrgb ];
     };
@@ -167,7 +168,7 @@ let
     popup-pos-tip = compileEmacsWikiFile {
       name = "popup-pos-tip.el";
       sha256 = "0dhyzfsl01y61m53iz38a1vcvclr98wamsh0nishw0by1dnlb17x";
-      # date = 2018-02-21T17:21:52-0800;
+      # date = 2019-04-03T08:51:23-0700;
 
       buildInputs = [ self.popup self.pos-tip ];
     };
@@ -175,43 +176,43 @@ let
     popup-ruler = compileEmacsWikiFile {
       name = "popup-ruler.el";
       sha256 = "0fszl969savcibmksfkanaq11d047xbnrfxd84shf9z9z2i3dr43";
-      # date = 2018-02-21T17:21:55-0800;
+      # date = 2019-04-03T08:51:26-0700;
     };
 
     pp-c-l = compileEmacsWikiFile {
       name = "pp-c-l.el";
       sha256 = "03mhd8lja71163jg6fj4d4hy2dwb1c5j46sn9yq6m9wz413a4pmd";
-      # date = 2018-02-21T17:21:56-0800;
+      # date = 2019-04-03T08:51:27-0700;
     };
 
     tidy = compileEmacsWikiFile {
       name = "tidy.el";
       sha256 = "0psci55a3angwv45z9i8wz8jw634rxg1xawkrb57m878zcxxddwa";
-      # date = 2018-05-10T00:44:08-0700;
+      # date = 2019-04-03T08:51:29-0700;
     };
 
     vline = compileEmacsWikiFile {
       name = "vline.el";
       sha256 = "1ys6928fgk8mswa4gv10cxggir8acck27g78cw1z3pdz5gakbgnj";
-      # date = 2018-02-21T17:21:59-0800;
+      # date = 2019-04-03T08:51:30-0700;
     };
 
     xml-rpc = compileEmacsWikiFile {
       name = "xml-rpc.el";
       sha256 = "1lmmzd9vpvybva642558wfm6nv21x7c0qrm6487r31l3k18lz3nd";
-      # date = 2018-11-08T08:15:46-0800;
+      # date = 2019-04-03T08:51:31-0700;
     };
 
     xray = compileEmacsWikiFile {
       name = "xray.el";
       sha256 = "12pzik5plywil0rz95rqb5qdqwdawkbwhmqab346yizhlp6i4fq6";
-      # date = 2018-05-10T00:44:13-0700;
+      # date = 2019-04-03T08:51:32-0700;
     };
 
     yaoddmuse = compileEmacsWikiFile {
       name = "yaoddmuse.el";
       sha256 = "0h3s3mdfz0czgz1cj415k170g7mbbqmsinw0xr7qmk050i154iis";
-      # date = 2018-05-10T00:44:17-0700;
+      # date = 2019-04-03T08:51:34-0700;
     };
 
 
@@ -220,7 +221,7 @@ let
       src = fetchurl {
         url = https://download.tuxfamily.org/user42/bytecomp-simplify.el;
         sha256 = "13cg5nrh0zfyb8rymwlc1lj8mlns27nmj2p7jycl8krwln36g6jr";
-        # date = 2018-01-27T17:28:14-0800;
+        # date = 2019-04-03T08:51:50-0700;
       };
     };
 
@@ -230,7 +231,7 @@ let
       src = fetchurl {
         url = https://raw.githubusercontent.com/Kitware/CMake/master/Auxiliary/cmake-mode.el;
         sha256 = "01q9gnkgjl5dfsvw639kq8xi7vlgfyn5iz01ipn85q37wvibvlij";
-        # date = 2018-09-10T17:26:40-0700;
+        # date = 2019-04-03T08:51:54-0700;
       };
     };
 
@@ -244,7 +245,7 @@ let
       src = fetchurl {
         url = http://www.splode.com/~friedman/software/emacs-lisp/src/nf-procmail-mode.el;
         sha256 = "1a7byym62g2rjh2grrqh1g51p05cibp6k83581xyn7fai5f4hxx3";
-        # date = 2018-01-16T15:06:37-0800;
+        # date = 2019-04-03T08:51:58-0700;
       };
     };
 
@@ -253,7 +254,7 @@ let
       src = fetchurl {
         url = https://raw.githubusercontent.com/llvm-mirror/llvm/master/utils/emacs/tablegen-mode.el;
         sha256 = "0vinzlin17ghp2xg0mzxw58jp08fg0jxmq228rd6n017j48b89ck";
-        # date = 2018-01-16T15:06:51-0800;
+        # date = 2019-04-03T08:51:59-0700;
       };
     };
 
@@ -263,10 +264,11 @@ let
       src = fetchFromGitHub {
         owner = "louietan";
         repo = "anki-editor";
-        rev = "fa807a684760c34934cd4c399dfd705751e216a3";
-        sha256 = "13vmxzwcih1s24793l45c8xmkkl1iqkbg9ikr6348xcwpa0skq5a";
-        # date = 2018-05-03T20:28:54+08:00;
+        rev = "115ce2e2e62deb8dbca91fd84c7999ba80916c89";
+        sha256 = "0njwsq03h36hqw55xk6n8225k52nlw1lq0mc9pzww2bf7dccjl9r";
+        # date = 2018-12-30T23:53:14-08:00;
       };
+      buildInputs = with self; [ dash request ];
     };
 
     asoc = compileEmacsFiles {
@@ -285,9 +287,9 @@ let
       src = fetchFromGitHub {
         owner = "emacsmirror";
         repo = "bookmark-plus";
-        rev = "6b2e4b961429920ba94c0905aa87b9a1925233fe";
-        sha256 = "0y1bbq2rcigq7wfinn22q0qxg2xfn96kynd7yax5k3d4lwssgvjn";
-        # date = 2018-02-25T17:27:44+01:00;
+        rev = "03ec5a4ab6fb0d7ad4c7a4793c1478110da3646c";
+        sha256 = "0jv18g9yfzhicfcdn98azb2q5v9f64087537csl4vibgf3hs0yfy";
+        # date = 2019-02-19T08:01:57+01:00;
       };
     };
 
@@ -296,9 +298,9 @@ let
       src = fetchFromGitHub {
         owner = "Wilfred";
         repo = "deadgrep";
-        rev = "4e177d7c540f0a6d317f08a15dcfec6ba97609fc";
-        sha256 = "1fjdv9vknisb7ik4f90bwr0vanv24qqw3svn0j959n5pl3h99z8w";
-        # date = 2018-10-21T14:49:59+01:00;
+        rev = "160e7adb7f043fc42ba6d4d891ad50ef1e063be7";
+        sha256 = "1sm92hj4ilq0h82fy5k5nzn7jq56yw2665ikqdcj89k9xldin6xi";
+        # date = 2019-03-14T22:07:10+00:00;
       };
       buildInputs = with self; [ s dash spinner ];
     };
@@ -343,9 +345,9 @@ let
       src = fetchFromGitHub {
         owner = "tautologyclub";
         repo = "feebleline";
-        rev = "89ddf31ecad885e5491e8d6b71b48c1591b3faec";
-        sha256 = "0v0m2vk7cxfrihcs1ipbw80wfj0nvyqzyfamzk3fnk42hj4qdb75";
-        # date = 2018-09-14T23:00:46+02:00;
+        rev = "d1df599254f4c250720ae98dd69dada89535a295";
+        sha256 = "10h59zd9hq81dyjw558k417kaqs5m9bhmx8mndcshh4cn1xfp5j3";
+        # date = 2019-04-02T17:25:09+02:00;
       };
     };
 
@@ -354,9 +356,9 @@ let
       src = fetchFromGitHub {
         owner = "aaronbieber";
         repo = "fence-edit.el";
-        rev = "f447f3c94b475c27ad09b7f51cc63aef7073097a";
-        sha256 = "1k8zyv4d7wg46rkki5pr58q852ws3p02rn2qnckg70ln7dkpxhh0";
-        # date = 2018-06-26T06:44:33-04:00;
+        rev = "d05f82fb99f787b24cdf5f77dc90fab0d6e00761";
+        sha256 = "0sdmc89ycrxnfj25dva86sqa8x5rjfs6jg7gvpwrvgq2126hzqvh";
+        # date = 2019-04-03T06:20:48-04:00;
       };
     };
 
@@ -376,9 +378,9 @@ let
       src = fetchFromGitHub {
         owner = "charignon";
         repo = "github-review";
-        rev = "27e606419d5c70b91cac1e369e5d5ff8ce1bef27";
-        sha256 = "1nqm36lwxwmjchbi2zl6d7lgg19vgz4nikf5mc3dahwsj39s484y";
-        # date = 2019-03-03T11:21:44-08:00;
+        rev = "9c3ffe30fba5d02e9951e76d1a5be2ed046663da";
+        sha256 = "078rv6f2p3wrznhgvmkhd071bwy72007f5l2m2a0r1k2i3vbfaja";
+        # date = 2019-03-27T00:32:52-07:00;
       };
       buildInputs = with self; [ ghub dash graphql treepy s ];
     };
@@ -388,9 +390,9 @@ let
       src = fetchFromGitHub {
         owner = "vermiculus";
         repo = "ghub-plus";
-        rev = "4c86c8adc99ea95d575f0045ca8b1ae2d69cde83";
-        sha256 = "1s5q94xna2gikwf5xvg2372c7ackdc67irz4jv1m73blhp7lr3ra";
-        # date = 2018-10-23T19:15:18-05:00;
+        rev = "51ebffe549286b3c0b0565a373f44f4d64fc57af";
+        sha256 = "11fr6ri95a9wkc0mqrkhjxz1fm2cb52151fc88k73l93mggib3ak";
+        # date = 2018-11-12T18:32:52-06:00;
       };
       buildInputs = with self; [ ghub apiwrap dash graphql treepy ];
     };
@@ -400,20 +402,9 @@ let
       src = fetchFromGitHub {
         owner = "jwiegley";
         repo = "gnus-harvest";
-        rev = "181ac4a1c2d2b697dd90a1c615bc511e0f196f5d";
-        sha256 = "1ilwk8yc2834mxfc37l2qrvljbzjgvcb8ricnd8sa52mvql9dh3r";
-        # date = 2014-02-16T23:02:13-06:00;
-      };
-    };
-
-    gnus-recent = compileEmacsFiles {
-      name = "gnus-recent";
-      src = fetchFromGitHub {
-        owner = "unhammer";
-        repo = "gnus-recent";
-        rev = "0acc25bea544b4b93db05debf1d9bad4e54f51d8";
-        sha256 = "07rvg1j2rvasfcmmi0k8c4lkvfih90ga7q75xf5qcakhfnrf6vk5";
-        # date = 2018-11-22T10:17:17+01:00;
+        rev = "feda071a87b799bd5d23cacde3ee71f0b166e75d";
+        sha256 = "08zb7vc3v3wdxkzgi902vlc5ybfvm8fxrvm5drnwfsjj9873pbcb";
+        # date = 2018-02-08T11:20:21-08:00;
       };
     };
 
@@ -422,9 +413,9 @@ let
       src = fetchFromGitHub {
         owner = "jcs090218";
         repo = "goto-line-preview";
-        rev = "bc2da7dc8fc738021b90eac1783bbf896a27b63f";
-        sha256 = "0kpi9746pq8lmvigrcr79bapfssy3pw1chcwsb025lijv3jq6hv1";
-        # date = 2019-03-03T15:53:02+08:00;
+        rev = "772fb942777a321b4698add1b94cff157f23a93b";
+        sha256 = "16zil8kjv7lfmy11g88p1cm24j9db319fgkwzsgf2vzp1m15l0pc";
+        # date = 2019-03-08T15:38:36+08:00;
       };
     };
 
@@ -456,7 +447,7 @@ let
       src = fetchurl {
         url = https://bitbucket.org/holgerschurig/emacsconf/raw/74d428aa2f9be88b14a503f6c3a816ae7cd13644/elisp/ivy-compile.el;
         sha256 = "0igi5p9s6w9yqaxirl286ms9zxad1njw0c6q1b7nry0mh12f7327";
-        # date = 2019-03-29T16:14:42-0700;
+        # date = 2019-04-03T08:52:31-0700;
       };
       buildInputs = with self; [ ivy ];
     };
@@ -466,9 +457,9 @@ let
       src = fetchFromGitHub {
         owner = "clemera";
         repo = "ivy-explorer";
-        rev = "783816afda31d1b75487b906257e23e273bad6fa";
-        sha256 = "1y3igqvmikz21ikzhmrmz2mpmk1pw6x2bk2d2i4z6l580fhz0h5y";
-        # date = 2018-12-21T13:27:32+01:00;
+        rev = "5bf3b915bdb78f58fc657e616262d967266a4500";
+        sha256 = "1nfabcphfsbza4zrw4f23ajv6bh4jrma0k9ygphv7pzg7hc48jf8";
+        # date = 2019-03-18T17:08:00+01:00;
       };
       buildInputs = with self; [ ivy ];
     };
@@ -484,47 +475,14 @@ let
       };
     };
 
-    magit = withPatches (self.melpaBuild {
-      pname = "magit";
-      ename = "magit";
-      version = "20181226";
-      src = fetchFromGitHub {
-        owner = "magit";
-        repo = "magit";
-        rev = "4e57537694e2758a4287973168e4f0d432ad1ae9";
-        sha256 = "1azg0nfni08pnggac38328qfzjrw50d81pxnnaslgy4q0nzk8ngi";
-        # date = 2018-12-26T20:09:08+01:00;
-      };
-      recipe = fetchurl {
-        url = "https://raw.githubusercontent.com/milkypostman/melpa/13d1a86dfe682f65daf529f9f62dd494fd860be9/recipes/magit";
-        sha256 = "03iv74rgng5fcy3qfr76hiy0hj6x2z0pis1yj8wm1naq5rc55hjn";
-        name = "recipe";
-        # date = 2018-12-26T17:02:21-0800;
-      };
-      packageRequires = with self; [
-        async
-        dash
-        emacs
-        ghub
-        git-commit
-        magit-popup
-        with-editor
-	pkgs.git
-      ];
-      meta = {
-        homepage = "https://melpa.org/#/magit";
-        license = lib.licenses.free;
-      };
-    }) [ ./emacs/patches/magit.patch ];
-
     magit-todos = compileEmacsFiles {
       name = "magit-todos";
       src = fetchFromGitHub {
         owner = "alphapapa";
         repo = "magit-todos";
-        rev = "ccfb2c5df0d6371aee0d4abc4a55c403ee2b0241";
-        sha256 = "194nqnddsmdcvyfnlqlcrlrbmnpgsf0nyfjgywx4g041xc8k4bz6";
-        # date = 2018-10-08T23:24:06-05:00;
+        rev = "14e5347c98f42166ad7061b8663d368bb0d4fba4";
+        sha256 = "1czaf38w0z1pkjwmlhxrln9nmd3zp1j7gmhaf82bw15d8xcl4kbh";
+        # date = 2019-01-14T08:50:27-06:00;
       };
       buildInputs = with self; [
         magit magit-popup a anaphora dash f s hl-todo kv with-editor git-commit
@@ -560,9 +518,9 @@ let
       src = fetchFromGitHub {
         owner = "NixOS";
         repo = "nix-mode";
-        rev = "84ee98019fbb48854ebd57cc74848b7e7327a78c";
-        sha256 = "1i9vg5q1fqp2h49p5m5p6a0nv796v0wq8ljbmfg1z4kmwll69mkx";
-        # date = 2018-10-29T22:46:19-05:00;
+        rev = "1e53bed4d47c526c71113569f592c82845a17784";
+        sha256 = "172s5lxlns633gbi6sq6iws269chalh5k501n3wffp5i3b2xzdyq";
+        # date = 2019-01-19T10:25:21+01:00;
       };
       buildInputs = with self; [ company json-mode mmm-mode json-snatcher json-reformat ];
     };
@@ -595,9 +553,9 @@ let
       src = fetchFromGitHub {
         owner = "unhammer";
         repo = "org-rich-yank";
-        rev = "b29bd06f295424fc15b3b8c1b3f78f501d67db47";
-        sha256 = "0c4ywznxwf7hdc4x434d90hp440rplc4nsih4aswjkb7lx38lp9a";
-        # date = 2018-04-30T15:44:14+02:00;
+        rev = "d2f350c5296cf05d6c84b02762ba44f09a02b4e3";
+        sha256 = "0gxb0fnh5gxjmld0hnk5hli0cvdd8gjd27m30bk2b80kwldxlq1z";
+        # date = 2018-11-20T14:54:52+01:00;
       };
     };
 
@@ -629,9 +587,9 @@ let
       src = fetchFromGitHub {
         owner = "tarsius";
         repo = "ox-texinfo-plus";
-        rev = "d3c57f2d60283aa1667d93785fd66765c3769189";
-        sha256 = "13brkf7gqcyg7imb92naa8205m0c3wvrv2pssbmbzw9gy7yi421q";
-        # date = 2017-10-06T12:55:55+02:00;
+        rev = "2f4b8a6055f37dbb19219c3a57c6d99ed8bc1580";
+        sha256 = "0awb08v9pcb92hk398fg2nnbv258v12nrsbi0jnndsrgsyp6i4pk";
+        # date = 2019-02-23T23:08:56+01:00;
       };
     };
 
@@ -686,9 +644,9 @@ let
       src = fetchFromGitHub {
         owner = "Malabarba";
         repo = "spinner.el";
-        rev = "0637791f005f747532b4439439a81c3415961377";
-        sha256 = "0kv3i8ky9kjanpvw09p48rsswl1qcmkgkfc893mnbi0x9525amwz";
-        # date = 2016-11-17T10:56:26-02:00;
+        rev = "4b335260edcdd8dcee0811d7048bb08274e941f1";
+        sha256 = "0y8nv9cxpmy98y9sk7w889f43plh0095r6vl6z8b22p3qm4rxq3m";
+        # date = 2018-12-06T18:34:11-02:00;
       };
     };
 
@@ -741,9 +699,9 @@ let
       src = fetchFromGitHub {
         owner = "jackkamm";
         repo = "undo-propose-el";
-        rev = "503963cbe69197339cc6ab01a1b909590b433de7";
-        sha256 = "1acz7lsbqcyn06r5zhp4qkqmwz282mjpwvj20q2nv5v8qkby2qic";
-        # date = 2019-03-02T08:20:15-08:00;
+        rev = "036e66c1ac4b0358b34727d2c9b65853347dad89";
+        sha256 = "1ah2x0fwf2ybz3i4cjs19fmx7aq1xfgnh4x623qy12v7ab4pvd3m";
+        # date = 2019-03-22T09:17:36-07:00;
       };
     };
 
@@ -809,7 +767,7 @@ let
       name = "emacs-color-theme-${version}";
       version = "6.6.0";
       src = fetchurl {
-        url = "http://download.savannah.nongnu.org/releases/color-theme/color-theme-6.6.0.tar.gz";
+        url = "http://download.savannah.nongnu.org/releases/color-theme/color-theme-${version}.tar.gz";
         sha256 = "0yx1ghcjc66s1rl0v3d4r1k88ifw591hf814ly3d73acvh15zlsn";
         # date = 2018-10-31T10:46:05-0700;
       };
@@ -846,9 +804,9 @@ let
       src = fetchFromGitHub {
         owner = "skeeto";
         repo = "elfeed";
-        rev = "afafa1f7d9e29de55ce5b1709074738a7e185f2a";
-        sha256 = "1dhnimh0xvrydk5y99vzyinammryj0554dbmakf8bglbzpdbrk2r";
-        # date = 2018-09-16T09:38:39-04:00;
+        rev = "e3379ad22fb286ddcdfe5a27177d9bfa9e83e883";
+        sha256 = "12b0nrrj8mpjc9hj6jyv1sjd6xidxxllx9d1cmp7idx1arbvm7m3";
+        # date = 2019-03-26T09:04:11-04:00;
       };
       recipe = fetchurl {
         url = "https://raw.githubusercontent.com/milkypostman/melpa/407ae027fcec444622c2a822074b95996df9e6af/recipes/elfeed";
@@ -869,9 +827,9 @@ let
       src = fetchFromGitHub {
         owner = "skeeto";
         repo = "emacsql";
-        rev = "f8c3d9fce28ab7d5b0c9fcf2c1236151ca7add24";
-        sha256 = "0kfr3y54b7cj9zm3dnqfryilhgiaa78ani5fgi402l5h9i922isn";
-        # date = 2018-11-11T11:05:00+01:00;
+        rev = "5ebd12b6ffaa9fbadefe8518eab07a028bbaf7c1";
+        sha256 = "19anva1mcm89hylhdjjjsc3gc32kv2wqp5qs6h7rca059kkqj277";
+        # date = 2019-03-10T14:22:13+01:00;
       };
       preBuild = ''
         make LDFLAGS="-L ${self.pg}/share/emacs/site-lisp/elpa/$(echo ${self.pg.name} | sed 's/^emacs-//')"
@@ -885,29 +843,6 @@ let
       packageRequires = with self; [ emacs emacsql ];
       meta = {
         homepage = "https://melpa.org/#/emacsql-sqlite";
-        license = lib.licenses.free;
-      };
-    };
-
-    forge = self.melpaBuild {
-      pname = "forge";
-      version = "20181226";
-      src = fetchFromGitHub {
-        owner = "magit";
-        repo = "forge";
-        rev = "fd33db0bc72c45af4321e8aca7c3e10174a676dd";
-        sha256 = "1mjjxxvd53l2awfgda7m03dkkbvwvfa5f2mcj355g84n7n07ddf1";
-        # date = 2018-12-26T20:07:10+01:00;
-      };
-      recipe = fetchurl {
-        url = "https://raw.githubusercontent.com/melpa/melpa/23512cf8152161322960d72a5ec49a7595003477/recipes/forge";
-        sha256 = "0a1yvdxx43zq9ivwmg34wyybkw4vhgzd2c54cchsbrbr972x9522";
-        name = "forge";
-        # date = 2018-12-26T15:34:51-0800;
-      };
-      packageRequires = with self; [ emacs magit closql ];
-      meta = {
-        homepage = "https://github.com/magit/forge";
         license = lib.licenses.free;
       };
     };
@@ -928,9 +863,9 @@ let
       src = fetchFromGitHub {
         owner = "politza";
         repo = "pdf-tools";
-        rev = "a4cd69ea1d50b8e74ea515eec95948ad87c6c732";
-        sha256 = "0m9hwihj2n8vv7hmcg6ax5sjxlmsb7wgsd6wqkp01x1xb5qjqhpm";
-        # date = 2018-12-21T20:13:05+01:00;
+        rev = "9a63f3909e5a331b6974deb03abd2c4bad42c2d9";
+        sha256 = "11i4kbwclwyvznyd9q69fq36fjasvs72ziz0555hl3fjbbq0n71q";
+        # date = 2019-03-09T08:44:42+01:00;
       };
     });
 
@@ -972,9 +907,9 @@ let
       src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "15cf5a3f1e3ba35d832e1464a1b729905aed78a8";
-        sha256 = "0xcgm9wg3cagkv3amq2rc0ij9jr81nijzlraxmv39i3w1qr69pdr";
-        # date = 2018-11-01T10:06:56-04:00;
+        rev = "8f90ac961c22099a615c03ed07576aaef820e06d";
+        sha256 = "07rwy1q0pii1k7z18hpfs768w07n7qg0wrvcqkrjfii3hx19vbwf";
+        # date = 2019-02-12T15:33:53+01:00;
       };
 
       # src = ~/src/proof-general;
@@ -1009,6 +944,7 @@ let
         url = "https://raw.githubusercontent.com/milkypostman/melpa/51a19a251c879a566d4ae451d94fcb35e38a478b/recipes/use-package";
         sha256 = "0d0zpgxhj6crsdi9sfy30fn3is036apm1kz8fhjg1yzdapf1jdyp";
         name = "use-package";
+        # date = 2019-04-03T08:54:52-0700;
       };
       packageRequires = [ self.bind-key self.emacs ];
       meta = {
@@ -1023,9 +959,9 @@ let
       src = fetchFromGitHub {
         owner = "emacs-w3m";
         repo = "emacs-w3m";
-        rev = "fd29dae5c1964922d079736aa173cd0dcaa99c78";
-        sha256 = "0dn145ha63sbpz8zxbcf3rfcdmdn3ifik1gspb8pdvsnq8vb55mw";
-        # date = 2019-02-27T23:49:44+09:00;
+        rev = "84ef5a917182d3fc5417c763fd9b3fe6db32d1fb";
+        sha256 = "1qc8la7y121pj7l1g98wcafr3cjs5dbafcv1k9d9xiadpi21bir2";
+        # date = 2019-03-14T01:54:38+00:00;
       };
     });
   };
