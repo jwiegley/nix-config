@@ -2,12 +2,12 @@
 
 if [[ $(hostname) == "Vulcan.local" ]]; then
   HOSTNAME=vulcan
-  REMOTE=hermes
+  REMOTE=${REMOTE:-hermes}
 elif [[ $(hostname) == "fin" ]]; then
   HOSTNAME=fin
 else
   HOSTNAME=hermes
-  REMOTE=vulcan
+  REMOTE=${REMOTE:-vulcan}
 fi
 
 echo HOSTNAME=$HOSTNAME
