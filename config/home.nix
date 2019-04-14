@@ -448,7 +448,7 @@ in rec {
 
         dfinity2.hostname = "192.168.92.128";
 
-        router    = { hostname = "192.168.1.2";  user = "root"; };
+        router    = { hostname = "192.168.1.98"; user = "root"; };
         smokeping = { hostname = "192.168.1.78"; user = "smokeping"; };
 
         elpa        = { hostname = "elpa.gnu.org"; user = "root"; };

@@ -98,6 +98,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   subversion
   w3m
   wget
+  wireshark
   youtube-dl
   znc
   zncModules.fish
