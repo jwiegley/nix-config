@@ -138,7 +138,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   # texinfo
   xapian
   xdg_utils
-  wordnet
   yuicompressor
 
   # pythonToolsEnv

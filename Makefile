@@ -66,6 +66,12 @@ home-switch:
 	    $(HOME_MANAGER) switch
 	@echo "Home generation: $$($(HOME_MANAGER) generations | head -1)"
 
+home-news:
+	PATH=$(BUILD_PATH)/sw/bin:$(PATH) \
+	NIX_PATH=$(NIXPATH) \
+	HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix \
+	    $(HOME_MANAGER) news
+
 env:
 	for i in $(ENVS); do			\
 	    echo Updating $$i;			\

@@ -984,8 +984,8 @@ emacsPackagesNg = self.emacs26PackagesNg;
 emacs26 = with pkgs; stdenv.lib.overrideDerivation
   (pkgs.emacs26.override { srcRepo = true; }) (attrs: rec {
   name = "emacs-${version}${versionModifier}";
-  version = "26.1";
-  versionModifier = ".92";
+  version = "26.2";
+  versionModifier = "";
 
   doCheck = false;
 
@@ -1003,7 +1003,7 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
   src = fetchgit {
     url = https://git.savannah.gnu.org/git/emacs.git;
     rev = "emacs-${version}${versionModifier}";
-    sha256 = "0v6nrmf0viw6ahf8s090hwpsrf6gjpi37r842ikjcsakfxys9dmc";
+    sha256 = "0wln9zadc2n5vxi5z20mx2i1544ni8l4z81kh9dda10jz8ddwsqj";
     # date = 2019-02-20T07:33:53-08:00;
   };
 });
@@ -1011,7 +1011,7 @@ emacs26 = with pkgs; stdenv.lib.overrideDerivation
 emacs26PackagesNg = mkEmacsPackages self.emacs26;
 
 emacs26debug = pkgs.stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
-  name = "emacs-26.1-debug";
+  name = "emacs-26.2-debug";
   doCheck = true;
   CFLAGS = "-O0 -g3 -DMAC_OS_X_VERSION_MAX_ALLOWED=101200";
   configureFlags = [ "--with-modules" ] ++
