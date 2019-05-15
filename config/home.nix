@@ -146,8 +146,9 @@ in rec {
         ga     = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
         good   = "${pkgs.git}/bin/git bisect good";
         bad    = "${pkgs.git}/bin/git bisect bad";
-        cn     = "cabal new-configure --enable-tests";
-        cnp    = "cabal new-configure --enable-tests --enable-profiling";
+        cn     = "cabal new-configure --enable-tests --enable-benchmarks";
+        cnp    = "cabal new-configure --enable-tests --enable-benchmarks " +
+                 "--enable-profiling --ghc-options=-fprof-auto";
         cb     = "cabal new-build";
         ls     = "${pkgs.coreutils}/bin/ls --color=auto";
         nm     = "${pkgs.findutils}/bin/find . -name";
@@ -164,6 +165,9 @@ in rec {
         worker-1 = ''(cd ~/dfinity/ops-in-nix ; \
           ${pkgs.nix}/bin/nix-shell -p nixops -p nix --pure \
             --command 'make hydra-ssh MACHINE=worker-1')'';
+        worker-2 = ''(cd ~/dfinity/ops-in-nix ; \
+          ${pkgs.nix}/bin/nix-shell -p nixops -p nix --pure \
+            --command 'make hydra-ssh MACHINE=worker-2')'';
       };
 
       profileExtra = ''
@@ -361,6 +365,7 @@ in rec {
         advice = {
           statusHints = false;
           pushNonFastForward = false;
+          objectNameWarning = "false";
         };
 
         "filter \"lfs\"" = {

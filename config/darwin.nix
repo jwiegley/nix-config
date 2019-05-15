@@ -294,8 +294,9 @@ EOF
           par_queries  = 1;
       }
 
-      rr { name = hydra.oregon.dfinity.build; a = 10.20.12.55; }
-      rr { name = nix.oregon.dfinity.build;   a = 10.20.12.55; }
+      rr { name = hydra.oregon.dfinity.build;     a = 10.20.12.55; }
+      rr { name = nix.oregon.dfinity.build;       a = 10.20.12.55; }
+      rr { name = docker.oregon.dfinity.internal; a = 10.20.7.236; }
 
       server {
           label       = "google";
@@ -306,6 +307,7 @@ EOF
           exclude     = ".local";
           include     = "vpn.oregon.dfinity.build";
           exclude     = ".dfinity.build";
+          exclude     = ".dfinity.internal";
           purge_cache = off;
       }
 
@@ -318,6 +320,7 @@ EOF
           edns_query  = yes;
           lean_query  = yes;
           include     = ".dfinity.build";
+          include     = ".dfinity.internal";
           exclude     = "vpn.oregon.dfinity.build";
           proxy_only  = on;
           purge_cache = off;
@@ -332,6 +335,7 @@ EOF
           exclude     = ".local";
           include     = "vpn.oregon.dfinity.build";
           exclude     = ".dfinity.build";
+          exclude     = ".dfinity.internal";
           purge_cache = off;
       }
 
@@ -354,6 +358,7 @@ EOF
           exclude     = ".local";
           include     = "vpn.oregon.dfinity.build";
           exclude     = ".dfinity.build";
+          exclude     = ".dfinity.internal";
           purge_cache = off;
       }
 
@@ -366,6 +371,7 @@ EOF
           exclude           = ".local";
           include           = "vpn.oregon.dfinity.build";
           exclude           = ".dfinity.build";
+          exclude           = ".dfinity.internal";
       }
 
       source {

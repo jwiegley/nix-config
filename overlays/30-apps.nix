@@ -37,12 +37,12 @@ Anki = self.installApplication rec {
 
 Dash = self.installApplication rec {
   name = "Dash";
-  version = "4.6.2";
+  version = "4.6.3";
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "0l0ccxxl8zvpdyacj1rndlqmzhwm2zqjj5a8qvj4mjbjmiimlb40";
-    # date = 2019-02-07T13:34:58-0800;
+    sha256 = "0fmr4462mkj222zmcc28is5x1j1s2l91hzvlm2sxxx45f3wvajwa";
+    # date = 2019-05-14T13:15:30-0700;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
@@ -66,12 +66,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "66.0.3";
+  version = "66.0.5";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "04fry0pqj8nr50yjqj0dcps6nx0n4phmjph9rq5nzr40zas1n4xz";
+    sha256 = "0daj8qd1q7b0ysxcz9vc0kaki36p8j4c4lx9h4ffzwidhgh2zgna";
   };
   postInstall = ''
     for file in  \
@@ -266,12 +266,12 @@ Ukelele = self.installApplication rec {
 
 UnicodeChecker = self.installApplication rec {
   name = "UnicodeChecker";
-  version = "1.20";
-  sourceRoot = "UnicodeChecker ${version}/UnicodeChecker.app";
+  version = "1.21.1";
+  sourceRoot = "UnicodeChecker ${version} (755)/UnicodeChecker.app";
   src = super.fetchurl {
     url = http://earthlingsoft.net/UnicodeChecker/UnicodeChecker.zip;
-    sha256 = "06v7qbb55zd2x9qmqr6ssnrsvsv97x9apq81vkbych4f5farwk2z";
-    # date = 2018-08-21T12:44:03-0700;
+    sha256 = "11v5plzf7m2qbf6cwap0jns5lff757yz1b84576hrqmdgckijq0b";
+    # date = 2019-05-14T13:16:43-0700;
   };
   description = "Explore and convert Unicode";
   homepage = http://earthlingsoft.net/UnicodeChecker;
@@ -280,12 +280,12 @@ UnicodeChecker = self.installApplication rec {
 VirtualII = self.installApplication rec {
   name = "VirtualII";
   appname = "Virtual ][";
-  version = "9.1.2";
+  version = "9.1.3";
   sourceRoot = "Virtual ][.app";
   src = super.fetchurl {
     url = http://www.virtualii.com/VirtualII.dmg;
-    sha256 = "1wp78jy611n86q0jjs0vb4w1y72gla44xapzbqvsyjskkcjzyfls";
-    # date = 2019-02-21T14:30:32-0800;
+    sha256 = "1cgy57qlz99k8sgyplqz7n5yws75827byq93x8s7kaqx0a3kf1l9";
+    # date = 2019-04-30T08:55:35-0700;
   };
   description = ''
     Virtual ][ lets you play the old Apple games, because it supports all

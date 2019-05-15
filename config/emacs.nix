@@ -78,7 +78,6 @@ pkgs: epkgs: with epkgs;
   dired-ranger
   dired-toggle
   direnv
-  discover
   discover-my-major
   docker
   docker-compose-mode
@@ -111,7 +110,6 @@ pkgs: epkgs: with epkgs;
   erc-highlight-nicknames
   erc-yank
   erefactor
-  eshell-autojump
   eshell-bookmark
   eshell-up
   eshell-z
@@ -176,14 +174,11 @@ pkgs: epkgs: with epkgs;
   hl-line-plus                  # hl-line+
   ht
   hydra
-  hyperbole                     # hyperbole kotl-mode
   ialign
-  ibuffer-vc
   iedit
   iflipb
   imenu-list
   indent-shift
-  inf-ruby
   info-lookmore
   initsplit
   ipcalc
@@ -226,7 +221,6 @@ pkgs: epkgs: with epkgs;
   magit-lfs
   magit-popup
   magit-tbdiff
-  magithub
   makefile-runner
   makey
   malyon
@@ -242,9 +236,7 @@ pkgs: epkgs: with epkgs;
   minimap
   mmm-mode
   moccur-edit
-  mode-line-bell
   monitor
-  mudel
   multi-term
   multifiles
   multiple-cursors
@@ -300,7 +292,6 @@ pkgs: epkgs: with epkgs;
   parsec
   pass
   password-store
-  password-store-otp
   pcre2el
   pdf-tools
   per-window-point
@@ -343,13 +334,10 @@ pkgs: epkgs: with epkgs;
   shift-number
   simple-httpd
   sky-color-clock
-  slack
   slidify-pages
   slime
-  smart-jump
   smart-mode-line
   smart-newline
-  smart-region
   smartparens                   # smartparens-config
   smartscan
   smex
@@ -374,15 +362,12 @@ pkgs: epkgs: with epkgs;
   tuareg
   typo
   undo-propose
-  undo-tree
   use-package
   uuidgen
   vdiff
   vimish-fold
   visual-fill-column
   visual-regexp
-  visual-regexp-steroids
-  vlf
   vline
   w3m
   wat-mode
@@ -394,12 +379,10 @@ pkgs: epkgs: with epkgs;
   wgrep
   which-key
   whitespace-cleanup-mode
-  whole-line-or-region
   window-purpose
   with-editor
   word-count-mode               # word-count
   worf
-  ws-butler
   x86-lookup
   xml-rpc
   xray

@@ -41,9 +41,6 @@ let
     supercite       = compileLocalFile "supercite.el";
 
 
-    magithub           = addBuildInputs super.magithub           [
-      pkgs.git self.dash self.graphql self.treepy
-    ];
     magit-annex        = addBuildInputs super.magit-annex        [ pkgs.git ];
     magit-filenotify   = addBuildInputs super.magit-filenotify   [ pkgs.git ];
     magit-gitflow      = addBuildInputs super.magit-gitflow      [ pkgs.git ];
@@ -56,9 +53,11 @@ let
     company-coq   = withPatches super.company-coq   [ ./emacs/patches/company-coq.patch ];
     esh-buf-stack = withPatches super.esh-buf-stack [ ./emacs/patches/esh-buf-stack.patch ];
     git-link      = withPatches super.git-link      [ ./emacs/patches/git-link.patch ];
-    haskell-mode  = withPatches super.haskell-mode  [ ./emacs/patches/haskell-mode.patch ];
+    haskell-mode  = withPatches super.haskell-mode  [
+      ./emacs/patches/haskell-mode.patch
+      ./emacs/patches/haskell-mode-stylish-args.patch
+    ];
     helm-google   = withPatches super.helm-google   [ ./emacs/patches/helm-google.patch ];
-    hyperbole     = withPatches super.hyperbole     [ ./emacs/patches/hyperbole.patch ];
     magit         = withPatches super.magit         [ ./emacs/patches/magit.patch ];
     multi-term    = withPatches super.multi-term    [ ./emacs/patches/multi-term.patch ];
     noflet        = withPatches super.noflet        [ ./emacs/patches/noflet.patch ];
@@ -149,12 +148,6 @@ let
       name = "message-x.el";
       sha256 = "05ic97plsysh4nqwdrsl5m9f24m11w24bahj8bxzfdawfima2bkf";
       # date = 2019-04-03T08:43:39-0700;
-    };
-
-    mudel = compileEmacsWikiFile {
-      name = "mudel.el";
-      sha256 = "0z6giw5i3qflxll29k6nbmy71nkadbjjkh465fcqbs2v22643fr9";
-      # date = 2019-04-03T08:43:40-0700;
     };
 
     palette = compileEmacsWikiFile {
@@ -739,7 +732,7 @@ let
     };
 
     agda2-mode =
-      let Agda = pkgs.haskell.packages.ghc844.Agda; in
+      let Agda = pkgs.haskell.lib.dontHaddock pkgs.haskell.packages.ghc844.Agda; in
       self.trivialBuild {
         pname = "agda-mode";
         version = Agda.version;
@@ -973,8 +966,7 @@ let
            myEmacsPackageOverrides
            (_: super.melpaPackages
                  // { inherit emacs;
-                      inherit (super) melpaBuild trivialBuild;
-                      inherit (super.elpaPackages) hyperbole; })));
+                      inherit (super) melpaBuild trivialBuild; })));
 
 in {
 
