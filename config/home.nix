@@ -342,7 +342,7 @@ in rec {
         };
 
         annex = {
-          backends = "SHA512E";
+          backends = "BLAKE2B512E";
           alwayscommit = false;
         };
 
