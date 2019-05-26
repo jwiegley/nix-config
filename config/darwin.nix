@@ -313,7 +313,7 @@ EOF
 
       server {
           label       = "DFINITY";
-          ip          = 10.20.0.2;
+          ip          = 10.20.13.192;
           preset      = off;
           interface   = "ipsec0";
           uptest      = if;

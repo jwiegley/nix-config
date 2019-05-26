@@ -18,9 +18,15 @@ let
     sha256 = "0qk6k8gxx5xlkyg05dljywj5wx5fvrc3dzp4v2h6ab83b7zwg813";
   };
 
+  known-good-20190305_133437 = nixpkgs {
+    rev    = "b36dc66bfea6b0a733cf13bed85d80462d39c736";
+    sha256 = "1f7vmhdipf0zz19lwx3ni0lmilhnild7r387a04ng92hnc27nnsv";
+  };
+
 in
 {
   inherit (known-good-20181208_134904) zbar;
+  inherit (known-good-20190305_133437) nmap recoll;
 
   gitAndTools = super.gitAndTools // {
     inherit (known-good-20190131_115636.gitAndTools) git-annex;
