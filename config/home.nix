@@ -510,7 +510,7 @@ in rec {
         };
 
         zrh-1 = {
-          hostname = "10.0.128.1";
+          hostname = "10.129.0.33";
           user = "johnw";
         };
 

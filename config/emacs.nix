@@ -32,6 +32,7 @@ pkgs: epkgs: with epkgs;
   calfw
   calfw-cal
   calfw-org
+  cargo
   centered-cursor-mode
   change-inner
   chess                         # chess chess-ics
@@ -128,6 +129,7 @@ pkgs: epkgs: with epkgs;
   flycheck-haskell
   flycheck-hdevtools
   flycheck-package
+  flycheck-rust
   fn
   focus
   font-lock-studio
@@ -254,6 +256,7 @@ pkgs: epkgs: with epkgs;
   oauth2
   ob-diagrams
   ob-restclient
+  ob-rust
   olivetti
   operate-on-number
   org                           # org org-babel org-crypt
@@ -313,6 +316,7 @@ pkgs: epkgs: with epkgs;
   projectile
   proof-general                 # proof-site
   python-mode
+  racer
   rainbow-delimiters
   rainbow-mode
   redshank
@@ -324,6 +328,8 @@ pkgs: epkgs: with epkgs;
   rich-minority
   riscv-mode
   rs-gnus-summary
+  rust-auto-use
+  rust-mode
   s
   sbt-mode
   scala-mode
@@ -357,6 +363,7 @@ pkgs: epkgs: with epkgs;
   tagedit
   tidy
   tla-mode
+  toml-mode
   transpose-mark
   treemacs
   tuareg
