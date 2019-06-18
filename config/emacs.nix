@@ -4,6 +4,7 @@ pkgs: epkgs: with epkgs;
   ace-link
   ace-mc
   ace-window
+  adoc-mode
   agda2-mode                    # agda2-mode agda-input
   aggressive-indent
   alert
