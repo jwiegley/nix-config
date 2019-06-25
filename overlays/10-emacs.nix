@@ -55,11 +55,9 @@ let
     git-link      = withPatches super.git-link      [ ./emacs/patches/git-link.patch ];
     haskell-mode  = withPatches super.haskell-mode  [
       ./emacs/patches/haskell-mode.patch
-      ./emacs/patches/haskell-mode-stylish-args.patch
     ];
     helm-google   = withPatches super.helm-google   [ ./emacs/patches/helm-google.patch ];
     magit         = withPatches super.magit         [ ./emacs/patches/magit.patch ];
-    multi-term    = withPatches super.multi-term    [ ./emacs/patches/multi-term.patch ];
     noflet        = withPatches super.noflet        [ ./emacs/patches/noflet.patch ];
     org-ref       = withPatches super.org-ref       [ ./emacs/patches/org-ref.patch ];
     pass          = withPatches super.pass          [ ./emacs/patches/pass.patch ];
@@ -213,8 +211,8 @@ let
       name = "bytecomp-simplify.el";
       src = fetchurl {
         url = https://download.tuxfamily.org/user42/bytecomp-simplify.el;
-        sha256 = "13cg5nrh0zfyb8rymwlc1lj8mlns27nmj2p7jycl8krwln36g6jr";
-        # date = 2019-04-03T08:51:50-0700;
+        sha256 = "1yq0wqgva8yidyd46cqag0ds0cyzl7q8rpd2cmksp68k4zlsxwyv";
+        # date = 2019-06-25T12:42:17-0700;
       };
     };
 
@@ -296,19 +294,6 @@ let
         # date = 2019-03-14T22:07:10+00:00;
       };
       buildInputs = with self; [ s dash spinner ];
-    };
-
-    ejira = compileEmacsFiles {
-      name = "ejira";
-      src = fetchFromGitHub {
-        owner = "nyyManni";
-        repo = "ejira";
-        rev = "9ef57f96456f0bb3be17befb000d960f5ac766b4";
-        sha256 = "056k1wczaqkvqx24hfcjfixknr51aqk2fmy7kgrsvhygw7b6gcla";
-        # date = 2018-12-12T14:20:51+02:00;
-      };
-      buildInputs = with self; [ s ox-jira request helm language-detection ];
-      preBuild = "rm helm-ejira.el";
     };
 
     emacs-load-time = compileEmacsFiles {
@@ -851,6 +836,29 @@ let
         # date = 2019-01-13T13:50:39+03:00;
       };
     });
+
+    multi-term = self.melpaBuild {
+      pname = "multi-term";
+      ename = "multi-term";
+      version = "20160619.233";
+      src = fetchFromGitHub {
+        owner = "milkypostman";
+        repo = "multi-term";
+        rev = "8b163b5277f69a46184787feab9a54402622c6fc";
+        sha256 = "1h39cld2p82pz80sdnzsajcs03k25ml5ld4d8hdx8hv4v96ismfz";
+        # date = 2012-03-06T15:42:35-06:00;
+      };
+      recipe = fetchurl {
+        url = "https://raw.githubusercontent.com/milkypostman/melpa/ae489be43b1aee93614e40f492ebdf0b98a3fbc1/recipes/multi-term";
+        sha256 = "16idk4nd7qpyrvyspbrdl8gdfaclng6ny0xigk6fqdv352djalal";
+        name = "recipe";
+      };
+      packageRequires = [];
+      meta = {
+        homepage = "https://melpa.org/#/multi-term";
+        license = lib.licenses.free;
+      };
+    };
 
     pdf-tools = lib.overrideDerivation super.pdf-tools (attrs: {
       src = fetchFromGitHub {

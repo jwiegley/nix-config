@@ -93,7 +93,6 @@ pkgs: epkgs: with epkgs;
   edit-indirect
   edit-server
   edit-var
-  ejira
   el-mock
   elfeed
   elisp-depend
@@ -263,7 +262,6 @@ pkgs: epkgs: with epkgs;
   org                           # org org-babel org-crypt
   org-bookmark-heading
   org-gcal
-  org-jira
   org-mind-map
   org-opml
   org-pdfview
@@ -281,7 +279,6 @@ pkgs: epkgs: with epkgs;
   ovpn-mode
   ox-extra
   ox-gfm
-  ox-jira
   ox-pandoc
   ox-texinfo-plus
   ox-slack
