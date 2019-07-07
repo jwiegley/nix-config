@@ -50,12 +50,12 @@ Dash = self.installApplication rec {
 
 Docker = self.installApplication rec {
   name = "Docker";
-  version = "2.0.0.2";
+  version = "2.0.0.3";
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
     sha256 = "09gwqdppnzw7hhlmgxakczxql4jfknk4ayc5z09g4kr8agqn4m55";
-    # date = 2019-01-23T08:50:30-0800;
+    # date = 2019-06-26T06:06:09-0700;
   };
   description = ''
     Docker CE for Mac is an easy-to-install desktop app for building,
@@ -107,12 +107,12 @@ EOF
 GIMP = self.installApplication rec {
   name = "GIMP";
   major = "2.10";
-  minor = "4";
+  minor = "12";
   version = "${major}.${minor}";
   sourceRoot = "Gimp-${major}.app";
   src = super.fetchurl {
     url = "https://download.gimp.org/mirror/pub/gimp/v${major}/osx/gimp-${version}-x86_64.dmg";
-    sha256 = "0sv9z5a5y54qvnf1a0wgr60bpwxn17gghd1djrlg2xplp443ddzp";
+    sha256 = "1szgqr7kskmhaxd5ki6bps0yph3zq6j4m0zv93xd0cdyvg9lm5lb";
     # date = 2018-02-04T13:08:53-0800;
   };
   description = "GIMP is a cross-platform image editor";
@@ -244,8 +244,8 @@ SuspiciousPackage = self.installApplication rec {
   sourceRoot = "Suspicious Package.app";
   src = super.fetchurl {
     url = "http://www.mothersruin.com/software/downloads/SuspiciousPackage.dmg";
-    sha256 = "0jq9x6rs3j6qvw4phar65law50r2vp58znc92xqwnz8fb463lrz4";
-    # date = 2019-01-07T14:10:49-0800;
+    sha256 = "15zvfim1raclvzq0b5n01shc3l4ir9vjsx440zzd26nmlgiajq3s";
+    # date = 2019-06-27T08:53:27-0700;
   };
   description = "An Application for Inspecting macOS Installer Packages";
   homepage = http://www.mothersruin.com/software/SuspiciousPackage;

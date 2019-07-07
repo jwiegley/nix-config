@@ -73,7 +73,7 @@ in rec {
         ".docker".source       = "${xdg.configHome}/docker";
         ".recoll".source       = "${xdg.configHome}/recoll";
         ".gist".source         = "${xdg.configHome}/gist/account_id";
-        ".ledgerrc".text       = "--file /Volumes/Files/Accounts/ledger.dat\n";
+        ".ledgerrc".text       = "--file ${home_directory}/Documents/accounts/ledger.dat\n";
         ".slate".source        = "${xdg.configHome}/slate/config";
         ".zekr".source         = "${xdg.dataHome}/zekr";
 

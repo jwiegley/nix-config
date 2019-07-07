@@ -1,12 +1,14 @@
 self: pkgs: {
 
-ledger_HEAD = pkgs.callPackage ~/src/ledger {};
+ledger_HEAD = pkgs.callPackage ~/src/ledger/master {
+  boost = pkgs.boost15x;
+};
 
 boost_with_python3 = pkgs.boost160.override {
   python = pkgs.python3;
 };
 
-ledger_HEAD_python3 = pkgs.callPackage ~/src/ledger {
+ledger_HEAD_python3 = pkgs.callPackage ~/src/ledger/master {
   boost = self.boost_with_python3;
 };
 

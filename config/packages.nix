@@ -117,7 +117,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   highlight
   hugo
   inkscape.out
-  ledger
+  ledger_HEAD
   (exe haskPkgs.lhs2tex)
   librsvg
   pandoc

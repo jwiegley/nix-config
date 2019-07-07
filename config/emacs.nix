@@ -191,6 +191,7 @@ pkgs: epkgs: with epkgs;
   ivy-pass
   ivy-rich
   jobhours
+  jq-format
   jq-mode
   js2-mode
   js3-mode
