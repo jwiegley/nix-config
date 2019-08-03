@@ -478,34 +478,34 @@ EOF
   (if localconfig.hostname == "hermes" then {
      maxJobs = 8;
      buildCores = 4;
-     distributedBuilds = true;
+     distributedBuilds = false;
 
-     buildMachines = [
-       { hostName = "vulcan";
-         sshUser = "johnw";
-         sshKey = "${xdg_configHome}/ssh/id_local";
-         system = "x86_64-darwin";
-         maxJobs = 20;
-         buildCores = 10;
-         speedFactor = 4;
-       }
-       { hostName = "nix-docker";
-         sshUser = "root";
-         sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
-         system = "x86_64-linux";
-         maxJobs = 4;
-         buildCores = 2;
-         speedFactor = 2;
-       }
-       # { hostName = "hydra";
-       #   sshUser = "ec2-user";
-       #   sshKey = "${xdg_configHome}/ssh/id_dfinity";
-       #   system = "x86_64-linux";
-       #   maxJobs = 1;
-       #   buildCores = 1;
-       #   speedFactor = 1;
-       # }
-     ];
+     # buildMachines = [
+     #   { hostName = "vulcan";
+     #     sshUser = "johnw";
+     #     sshKey = "${xdg_configHome}/ssh/id_local";
+     #     system = "x86_64-darwin";
+     #     maxJobs = 20;
+     #     buildCores = 10;
+     #     speedFactor = 4;
+     #   }
+     #   { hostName = "nix-docker";
+     #     sshUser = "root";
+     #     sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+     #     system = "x86_64-linux";
+     #     maxJobs = 4;
+     #     buildCores = 2;
+     #     speedFactor = 2;
+     #   }
+     #   # { hostName = "hydra";
+     #   #   sshUser = "ec2-user";
+     #   #   sshKey = "${xdg_configHome}/ssh/id_dfinity";
+     #   #   system = "x86_64-linux";
+     #   #   maxJobs = 1;
+     #   #   buildCores = 1;
+     #   #   speedFactor = 1;
+     #   # }
+     # ];
 
      trustedBinaryCaches = [
        https://nix.oregon.dfinity.build

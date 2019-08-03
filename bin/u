@@ -1,6 +1,10 @@
 #!/bin/bash
 
-if [[ $(hostname) == "Vulcan.local" ]]; then
+if [[ "$1" == "vulcan" ]]; then
+  HOSTNAME=vulcan
+  REMOTE=${REMOTE:-hermes}
+  shift 1
+elif [[ $(hostname) == "Vulcan.local" ]]; then
   HOSTNAME=vulcan
   REMOTE=${REMOTE:-hermes}
 elif [[ $(hostname) == "fin" ]]; then

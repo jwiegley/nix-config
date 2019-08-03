@@ -73,9 +73,13 @@ in rec {
         ".docker".source       = "${xdg.configHome}/docker";
         ".recoll".source       = "${xdg.configHome}/recoll";
         ".gist".source         = "${xdg.configHome}/gist/account_id";
-        ".ledgerrc".text       = "--file ${home_directory}/Documents/accounts/ledger.dat\n";
         ".slate".source        = "${xdg.configHome}/slate/config";
         ".zekr".source         = "${xdg.dataHome}/zekr";
+
+        ".ledgerrc".text = ''
+          --file ${home_directory}/Documents/accounts/main.ledger
+          --date-format %Y/%m/%d
+        '';
 
         # ".tmux.conf".text = ''
         #   set-option -g default-command "reattach-to-user-namespace -l ${pkgs.zsh}/bin/zsh"
@@ -171,8 +175,6 @@ in rec {
       };
 
       profileExtra = ''
-        export PATH=$PATH:/usr/local/bin:/usr/local/sbin
-
         for file in ${xdg.configHome}/fetchmail/config \
                     ${xdg.configHome}/fetchmail/config-work \
                     ${xdg.configHome}/fetchmail/config-lists
@@ -192,6 +194,9 @@ in rec {
       '';
 
       initExtra = lib.mkBefore ''
+        export PATH=${home_directory}/Documents/accounts/bin:$PATH
+        export PATH=$PATH:/usr/local/bin:/usr/local/sbin
+
         # DOCKER_MACHINE=$(which docker-machine)
         # if [[ -x "$DOCKER_MACHINE" ]]; then
         #     if $DOCKER_MACHINE status default > /dev/null 2>&1; then
@@ -428,9 +433,9 @@ in rec {
       userKnownHostsFile = "${xdg.configHome}/ssh/known_hosts";
 
       matchBlocks =
-        let onHost = _: hostname: { inherit hostname; } //
-          (if "${localconfig.hostname}" == "vulcan" then {} else {
-             proxyJump = "vulcan";
+        let onHost = proxy: hostname: { inherit hostname; } //
+          (if "${localconfig.hostname}" == proxy then {} else {
+             proxyJump = proxy;
            }); in
         (if "${localconfig.hostname}" == "vulcan" then {
            vulcan.hostname = "192.168.1.69";

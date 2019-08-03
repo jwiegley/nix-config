@@ -22,6 +22,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   git-tbdiff
   gitRepo
   gitAndTools.git-crypt
+  gitAndTools.git-hub
   gitAndTools.git-imerge
   gitAndTools.gitFull
   gitAndTools.gitflow
@@ -227,9 +228,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   watchman
   xsv
   xz
-  yubico-piv-tool
-  yubikey-manager
-  yubikey-personalization
   z
   z3
   zbar
