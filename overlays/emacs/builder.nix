@@ -18,6 +18,8 @@ stdenv.mkDerivation {
     ARGS=$(find ${stdenv.lib.concatStrings
                   (builtins.map (arg: arg + "/share/emacs/site-lisp ") buildInputs)} \
                  -type d -exec echo -L {} \;)
+    mkdir $out
+    export HOME=$out
     ${emacs}/bin/emacs -Q -nw -L . $ARGS --batch -f batch-byte-compile *.el
   '';
   installPhase = ''

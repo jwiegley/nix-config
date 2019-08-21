@@ -452,14 +452,13 @@ in rec {
         hermes  = onHost "vulcan" "192.168.1.65";
         fin     = onHost "vulcan" "192.168.1.80";
         tank    = fin;
+
+        router  = { hostname = "192.168.1.98"; user = "root"; };
+
         nixos   = onHost "vulcan" "192.168.118.128";
         dfinity = onHost "vulcan" "192.168.118.129";
         macos   = onHost "vulcan" "192.168.118.130";
-
-        dfinity2.hostname = "192.168.92.128";
-
-        router    = { hostname = "192.168.1.98"; user = "root"; };
-        smokeping = { hostname = "192.168.1.78"; user = "smokeping"; };
+        centos  = onHost "vulcan" "192.168.118.133";
 
         elpa        = { hostname = "elpa.gnu.org"; user = "root"; };
         haskell_org = { host = "*haskell.org";     user = "root"; };
@@ -502,8 +501,10 @@ in rec {
         id_dfinity = {
           host = lib.concatStringsSep " " [
             "hydra"
+            "pa-1"
             "zrh-1"
-            "macmini"
+            "zrh-darwin-1"
+            "pa-darwin-1" "pa-darwin-2"
           ];
           identityFile = "${xdg.configHome}/ssh/id_dfinity";
           identitiesOnly = true;
@@ -514,16 +515,31 @@ in rec {
           user = "ec2-user";
         };
 
+        pa-1 = {
+          hostname = "10.129.10.148";
+          user = "root";
+        };
+
         zrh-1 = {
           hostname = "10.129.0.33";
           user = "johnw";
         };
 
+        zrh-darwin-1 = {
+          hostname = "10.129.0.99";
+          user = "dfinity";
+        };
+
         # This requires a VPN connection to the DFINITY network.
-        macmini = {
+        pa-darwin-1 = {
           hostname = "10.129.10.7";
           user = "dfinity";
           proxyJump = "hydra";
+        };
+
+        pa-darwin-2 = {
+          hostname = "10.129.10.38";
+          user = "dfnmain";
         };
       };
     };

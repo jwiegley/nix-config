@@ -24,11 +24,11 @@ installApplication =
 
 Anki = self.installApplication rec {
   name = "Anki";
-  version = "2.1.8";
+  version = "2.1.14";
   sourceRoot = "Anki.app";
   src = super.fetchurl {
     url = "https://apps.ankiweb.net/downloads/current/anki-${version}-mac.dmg";
-    sha256 = "15fzbgbcl03pkkix0i9g5f1402gyc0rq06if80pvhi70vks7c27b";
+    sha256 = "0xizsq75dws08x6q7zss2rik9rd6365w1y2haa08hqnjzkf7yb8x";
     # date = 2019-01-23T15:42:49-0800;
   };
   description = "Anki is a program which makes remembering things easy";
@@ -37,12 +37,12 @@ Anki = self.installApplication rec {
 
 Dash = self.installApplication rec {
   name = "Dash";
-  version = "4.6.3";
+  version = "4.6.5";
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "0fmr4462mkj222zmcc28is5x1j1s2l91hzvlm2sxxx45f3wvajwa";
-    # date = 2019-05-14T13:15:30-0700;
+    sha256 = "0zvc119n30ya7xja4f2ksgqcdf8c4xjzszr8w0zgm8w65nfsi8y1";
+    # date = 2019-08-15T13:50:56-0700;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
@@ -66,12 +66,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "68.0.1";
+  version = "68.0.2";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "117jwjwff3azvclkacr9j6vwmd4didzd9qj01c5jv06kl68zg8im";
+    sha256 = "0ql80zbv1xiiqiasslli4qvpwd64l8nk6vz3pgpf3ij7c7540d0p";
   };
   postInstall = ''
     for file in  \
@@ -100,8 +100,8 @@ EOF
         chmod +x $file
     done
   '';
-  description = "Anki is a program which makes remembering things easy";
-  homepage = https://apps.ankiweb.net;
+  description = "The Firefox web browser";
+  homepage = https://www.mozilla.org/en-US/firefox/;
 };
 
 GIMP = self.installApplication rec {
@@ -138,12 +138,12 @@ HandBrake = self.installApplication rec {
 iTerm2 = self.installApplication rec {
   name = "iTerm2";
   appname = "iTerm";
-  version = "3.3.0";
+  version = "3.3.2";
   sourceRoot = "iTerm.app";
   src = super.fetchurl {
-    url = "https://iterm2.com/downloads/stable/iTerm2-3_3_0.zip";
-    sha256 = "1j4kr1r6s674d8s1b945x6zg1gpwjgizv2przmgad126fs9v1k9h";
-    # date = 2019-08-01T17:55:34-0700;
+    url = "https://iterm2.com/downloads/stable/iTerm2-3_3_2.zip";
+    sha256 = "0irb51fxcsg9hm05hyv1jipvka75w3h606v0r977vkl0ljzk0sz3";
+    # date = 2019-08-20T08:12:27-0700;
   };
   description = "iTerm2 is a replacement for Terminal and the successor to iTerm";
   homepage = https://www.iterm2.com;
@@ -152,12 +152,12 @@ iTerm2 = self.installApplication rec {
 KeyboardMaestro = self.installApplication rec {
   name = "KeyboardMaestro";
   appname = "Keyboard Maestro";
-  version = "8.2.4";
+  version = "9.0";
   sourceRoot = "Keyboard Maestro.app";
   src = super.fetchurl {
-    url = http://files.stairways.com/keyboardmaestro-824.zip;
-    sha256 = "0wv3vbvrs9rc2ln0dg4830izx0gmsf4d73ni298wkd98fs7c4is5";
-    # date = 2018-08-09T18:46:48-0400;
+    url = http://files.stairways.com/keyboardmaestro-90.zip;
+    sha256 = "04prshdmn5pdfj7hmimh5qqbscqfsvg7rzsm6zw4zyfzl84z2zbw";
+    # date = 2019-08-16T19:52:14-0700;
   };
   description = "Keyboard macro program for macOS";
   homepage = https://www.keyboardmaestro.com;
@@ -192,12 +192,12 @@ RipIt = self.installApplication rec {
 
 Skim = self.installApplication rec {
   name = "Skim";
-  version = "1.4.40";
+  version = "1.5.2";
   sourceRoot = "Skim.app";
   src = super.fetchurl {
     name = "Skim-${version}.dmg";
     url = "https://sourceforge.net/projects/skim-app/files/Skim/Skim-${version}/Skim-${version}.dmg/download";
-    sha256 = "1mgawkw0pfhicg98s2ydj1dinl8232g9lkkncj961j8fdr95qwaz";
+    sha256 = "0i4bnspacgmrklvllj9w2r687bg4iaha4h2x5jmwl48n7w6zgply";
     # date = 2019-01-23T15:50:51-0800;
   };
   description = "Skim is a PDF reader and note-taker for OS X";
@@ -221,12 +221,12 @@ Slate = self.installApplication rec {
 
 Soulver = self.installApplication rec {
   name = "Soulver";
-  version = "2.6.8";
+  version = "2.7.0";
   sourceRoot = "Soulver.app";
   src = super.fetchurl {
     name = "soulver-${version}.zip";
     url = "http://www.acqualia.com/files/download.php?product=soulver";
-    sha256 = "1gvjj8wbknpfrv6jbx76dk341jgbhb0by1448mzifa1xwjaniyg8";
+    sha256 = "0xjacwfi3k3k9gi3s5rpf5073qn8ly57k3kj48jmqyk1xmv9x33r";
     # date = 2018-08-19T15:54:54-0800;
   };
   description = ''
@@ -252,12 +252,12 @@ SuspiciousPackage = self.installApplication rec {
 
 Ukelele = self.installApplication rec {
   name = "Ukelele";
-  version = "3.2.7";
+  version = "3.3";
   sourceRoot = "Ukelele.app";
   src = super.fetchurl {
     name = "Ukelele-${version}.dmg";
     url = "http://scripts.sil.org/cms/scripts/render_download.php?format=file&media_id=Ukelele_${version}&filename=Ukelele_${version}.dmg";
-    sha256 = "0ga4sy6z52fqgdvckpsbvz1xnd6gpsk1d8pziw4nf68y7q9a7mjz";
+    sha256 = "1rim2q0n7aypkpa1kwffhz9yb1l5dpx89z8kz16174frxmnxr4ar";
     # date = 2018-02-04T16:15:00-0800;
   };
   description = "Ukelele is a Unicode Keyboard Layout Editor for Mac OS X";
@@ -280,12 +280,12 @@ UnicodeChecker = self.installApplication rec {
 VirtualII = self.installApplication rec {
   name = "VirtualII";
   appname = "Virtual ][";
-  version = "9.1.3";
+  version = "9.1.4";
   sourceRoot = "Virtual ][.app";
   src = super.fetchurl {
     url = http://www.virtualii.com/VirtualII.dmg;
-    sha256 = "1cgy57qlz99k8sgyplqz7n5yws75827byq93x8s7kaqx0a3kf1l9";
-    # date = 2019-04-30T08:55:35-0700;
+    sha256 = "09zskzyy6svkfliz74ahivzl1ij662h97vd3vfw3i16d8zzn2r1g";
+    # date = 2019-08-18T10:57:59-0700;
   };
   description = ''
     Virtual ][ lets you play the old Apple games, because it supports all
@@ -318,12 +318,12 @@ Zekr = self.installApplication rec {
 
 Zotero = self.installApplication rec {
   name = "Zotero";
-  version = "5.0.55";
+  version = "5.0.73";
   sourceRoot = "Zotero.app";
   src = super.fetchurl {
     name = "zotero-${version}.dmg";
     url = "https://www.zotero.org/download/client/dl?channel=release&platform=mac&version=${version}";
-    sha256 = "1i42i5fcgv7d7g8dns0m557fvgbpcs6bvsiqq2fs7cacdxhl92ci";
+    sha256 = "03mgpcbwd5rpwyh139snl2zzs86clw8fcm9158v3raffha3jkf8m";
   };
   description = ''
     Zotero is a free, easy-to-use tool to help you collect, organize, cite,

@@ -132,7 +132,7 @@ size:
 	sudo du --si -shx /nix/store
 
 copy:
-	push -f src,dfinity $(REMOTE)
+	push -h $(HOSTNAME) -f src,dfinity $(REMOTE)
 	nix copy --no-check-sigs --keep-going --to ssh-ng://$(REMOTE)	\
 	    $(BUILD_PATH)						\
 	    $(shell find $(PROJS) -path '*/.direnv/default'		\

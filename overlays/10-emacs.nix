@@ -41,21 +41,21 @@ let
     supercite       = compileLocalFile "supercite.el";
 
 
-    magit-annex        = addBuildInputs super.magit-annex        [ pkgs.git ];
-    magit-filenotify   = addBuildInputs super.magit-filenotify   [ pkgs.git ];
-    magit-gitflow      = addBuildInputs super.magit-gitflow      [ pkgs.git ];
-    magit-imerge       = addBuildInputs super.magit-imerge       [ pkgs.git ];
-    magit-lfs          = addBuildInputs super.magit-lfs          [ pkgs.git ];
-    magit-tbdiff       = addBuildInputs super.magit-tbdiff       [ pkgs.git ];
-    orgit              = addBuildInputs super.orgit              [ pkgs.git ];
+    magit-annex      = addBuildInputs super.magit-annex        [ pkgs.git ];
+    magit-filenotify = addBuildInputs super.magit-filenotify   [ pkgs.git ];
+    magit-gitflow    = addBuildInputs super.magit-gitflow      [ pkgs.git ];
+    magit-imerge     = addBuildInputs super.magit-imerge       [ pkgs.git ];
+    magit-lfs        = addBuildInputs super.magit-lfs          [ pkgs.git ];
+    magit-tbdiff     = addBuildInputs super.magit-tbdiff       [ pkgs.git ];
+    orgit            = addBuildInputs super.orgit              [ pkgs.git ];
 
 
     company-coq   = withPatches super.company-coq   [ ./emacs/patches/company-coq.patch ];
     esh-buf-stack = withPatches super.esh-buf-stack [ ./emacs/patches/esh-buf-stack.patch ];
     git-link      = withPatches super.git-link      [ ./emacs/patches/git-link.patch ];
-    haskell-mode  = withPatches super.haskell-mode  [
-      ./emacs/patches/haskell-mode.patch
-    ];
+    # haskell-mode  = withPatches super.haskell-mode  [
+    #   ./emacs/patches/haskell-mode.patch
+    # ];
     helm-google   = withPatches super.helm-google   [ ./emacs/patches/helm-google.patch ];
     magit         = withPatches super.magit         [ ./emacs/patches/magit.patch ];
     noflet        = withPatches super.noflet        [ ./emacs/patches/noflet.patch ];
@@ -409,6 +409,17 @@ let
       patches = [ ./emacs/patches/indent-shift.patch ];
     };
 
+    initsplit = compileEmacsFiles {
+      name = "initsplit";
+      src = fetchFromGitHub {
+        owner = "jwiegley";
+        repo = "initsplit";
+        rev = "e488e8f95661a8daf9c66241ce58bb6650d91751";
+        sha256 = "1qvkxpxdv0n9qlzigvi25iw485824pgbpb10lwhh8bs2074dvrgq";
+        # date = 2015-03-21T23:29:07-05:00;
+      };
+    };
+
     info-lookmore = compileEmacsFiles {
       name = "info-lookmore";
       src = fetchFromGitHub {
@@ -524,6 +535,19 @@ let
         sha256 = "1nj0ccjyj4yn5b77m9p1asgx41fpgpypsxfnqwhqwgxywhap00w1";
         # date = 2017-06-10T11:37:25-07:00;
       };
+    };
+
+    org-pdftools = compileEmacsFiles {
+      name = "org-pdftools";
+      src = fetchFromGitHub {
+        # owner = "fuxialexander";
+        owner = "jwiegley";
+        repo = "org-pdftools";
+        rev = "5c1cc5205bfac1289b02ddd8cb74305078b1afa5";
+        sha256 = "0yski9jlpy61rzzzp3qcjyqlqny3rg0xzpvmlp5daa09ixqz0clw";
+        # date = 2019-08-12T11:54:17+08:00;
+      };
+      buildInputs = with self; [ org org-noter pdf-tools tablist ];
     };
 
     org-rich-yank = compileEmacsFiles {
@@ -717,7 +741,7 @@ let
     };
 
     agda2-mode =
-      let Agda = pkgs.haskell.lib.dontHaddock pkgs.haskell.packages.ghc844.Agda; in
+      let Agda = pkgs.haskell.lib.dontHaddock pkgs.haskellPackages.Agda; in
       self.trivialBuild {
         pname = "agda-mode";
         version = Agda.version;

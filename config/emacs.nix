@@ -55,6 +55,7 @@ pkgs: epkgs: with epkgs;
   company-nixos-options
   company-quickhelp
   company-restclient
+  company-terraform
   copy-as-format
   counsel
   counsel-dash
@@ -264,8 +265,10 @@ pkgs: epkgs: with epkgs;
   org-bookmark-heading
   org-gcal
   org-mind-map
+  org-noter
   org-opml
   org-pdfview
+  org-pdftools
   org-ref
   org-rich-yank
   org-super-agenda
@@ -360,6 +363,7 @@ pkgs: epkgs: with epkgs;
   tablegen-mode
   tablist
   tagedit
+  terraform-mode
   tidy
   tla-mode
   toml-mode

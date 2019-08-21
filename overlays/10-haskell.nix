@@ -196,7 +196,7 @@ haskell = pkgs.haskell // {
         }));
       }));
 
-    ghc864 = overrideHask "ghc864" pkgs.haskell.packages.ghc864 (self: super:
+    ghc865 = overrideHask "ghc865" pkgs.haskell.packages.ghc865 (self: super:
       (breakout super [
          "hakyll"
          "pandoc"
@@ -206,11 +206,11 @@ haskell = pkgs.haskell // {
 };
 
 haskellPackages_8_4 = self.haskell.packages.ghc844;
-haskellPackages_8_6 = self.haskell.packages.ghc864;
+haskellPackages_8_6 = self.haskell.packages.ghc865;
 
 haskellPackages = self.haskell.packages.${self.ghcDefaultVersion};
 haskPkgs = self.haskellPackages;
 
-ghcDefaultVersion = "ghc864";
+ghcDefaultVersion = "ghc865";
 
 }

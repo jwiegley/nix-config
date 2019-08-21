@@ -315,8 +315,7 @@ EOF
           label       = "DFINITY";
           ip          = 10.20.13.192;
           preset      = off;
-          interface   = "ipsec0";
-          uptest      = if;
+          uptest      = ping;
           edns_query  = yes;
           lean_query  = yes;
           include     = ".dfinity.build";
@@ -544,12 +543,20 @@ EOF
      distributedBuilds = true;
 
      buildMachines = [
-       { hostName = "nix-docker";
-         sshUser = "root";
-         sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+       # { hostName = "nix-docker";
+       #   sshUser = "root";
+       #   sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+       #   system = "x86_64-linux";
+       #   maxJobs = 4;
+       #   buildCores = 2;
+       #   speedFactor = 2;
+       # }
+       { hostName = "zrh-1";
+         sshUser = "johnw";
+         sshKey = "${xdg_configHome}/ssh/id_dfinity";
          system = "x86_64-linux";
-         maxJobs = 4;
-         buildCores = 2;
+         maxJobs = 8;
+         buildCores = 4;
          speedFactor = 2;
        }
        # { hostName = "hydra";
