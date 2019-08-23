@@ -126,14 +126,14 @@ let
 
     highlight = compileEmacsWikiFile {
       name = "highlight.el";
-      sha256 = "0gmlly1pq5zp7qdcmck90nm0n8j9lahhr26pljb9wjqy4cgzr5ls";
-      # date = 2019-04-03T08:43:35-0700;
+      sha256 = "1a94xsjd98qdl06vmq8mi7rsygbngh97iqk5hbibxhbpwjz0njfw";
+      # date = 2019-08-21T17:38:13-0700;
     };
 
     highlight-cl = compileEmacsWikiFile {
       name = "highlight-cl.el";
       sha256 = "0r3kzs2fsi3kl5gqmsv75dc7lgfl4imrrqhg09ij6kq1ri8gjxjw";
-      # date = 2019-04-03T08:43:36-0700;
+      # date = 2019-08-21T17:38:10-0700;
     };
 
     hl-line-plus = compileEmacsWikiFile {
@@ -221,8 +221,8 @@ let
       name = "cmake-mode.el";
       src = fetchurl {
         url = https://raw.githubusercontent.com/Kitware/CMake/master/Auxiliary/cmake-mode.el;
-        sha256 = "01q9gnkgjl5dfsvw639kq8xi7vlgfyn5iz01ipn85q37wvibvlij";
-        # date = 2019-04-03T08:51:54-0700;
+        sha256 = "1a0dsw8cs29v6j7iji24d9k089f6q5wxjy5a0p1vfflfwa6i20ch";
+        # date = 2019-08-21T17:37:59-0700;
       };
     };
 
@@ -540,12 +540,11 @@ let
     org-pdftools = compileEmacsFiles {
       name = "org-pdftools";
       src = fetchFromGitHub {
-        # owner = "fuxialexander";
-        owner = "jwiegley";
+        owner = "fuxialexander";
         repo = "org-pdftools";
-        rev = "5c1cc5205bfac1289b02ddd8cb74305078b1afa5";
+        rev = "1a74e0f786da08ec61856cfe067633e56c5f4d23";
         sha256 = "0yski9jlpy61rzzzp3qcjyqlqny3rg0xzpvmlp5daa09ixqz0clw";
-        # date = 2019-08-12T11:54:17+08:00;
+        # date = 2019-08-20T15:41:31+08:00;
       };
       buildInputs = with self; [ org org-noter pdf-tools tablist ];
     };
