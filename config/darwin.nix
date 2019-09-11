@@ -294,8 +294,8 @@ EOF
           par_queries  = 1;
       }
 
-      rr { name = hydra.oregon.dfinity.build;     a = 10.20.12.55; }
-      rr { name = nix.oregon.dfinity.build;       a = 10.20.12.55; }
+      rr { name = hydra.dfinity.systems;     a = 10.20.12.55; }
+      rr { name = nix.dfinity.systems;       a = 10.20.12.55; }
       rr { name = docker.oregon.dfinity.internal; a = 10.20.7.236; }
 
       server {
@@ -305,7 +305,7 @@ EOF
           uptest      = none;
           edns_query  = yes;
           exclude     = ".local";
-          include     = "vpn.oregon.dfinity.build";
+          include     = "vpn.dfinity.systems";
           exclude     = ".dfinity.build";
           exclude     = ".dfinity.internal";
           purge_cache = off;
@@ -320,7 +320,7 @@ EOF
           lean_query  = yes;
           include     = ".dfinity.build";
           include     = ".dfinity.internal";
-          exclude     = "vpn.oregon.dfinity.build";
+          exclude     = "vpn.dfinity.systems";
           proxy_only  = on;
           purge_cache = off;
       }
@@ -332,7 +332,7 @@ EOF
           uptest      = none;
           edns_query  = yes;
           exclude     = ".local";
-          include     = "vpn.oregon.dfinity.build";
+          include     = "vpn.dfinity.systems";
           exclude     = ".dfinity.build";
           exclude     = ".dfinity.internal";
           purge_cache = off;
@@ -355,7 +355,7 @@ EOF
           uptest      = none;
           edns_query  = yes;
           exclude     = ".local";
-          include     = "vpn.oregon.dfinity.build";
+          include     = "vpn.dfinity.systems";
           exclude     = ".dfinity.build";
           exclude     = ".dfinity.internal";
           purge_cache = off;
@@ -368,7 +368,7 @@ EOF
           ip                = 198.41.0.4, 192.228.79.201;
           randomize_servers = on;
           exclude           = ".local";
-          include           = "vpn.oregon.dfinity.build";
+          include           = "vpn.dfinity.systems";
           exclude           = ".dfinity.build";
           exclude           = ".dfinity.internal";
       }
@@ -467,7 +467,8 @@ EOF
     ];
     binaryCachePublicKeys = [
       "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
-      "hydra.oregon.dfinity.build-2:KMTixHrh9DpAjF/0xU/49VEtNuGzQ71YaVIUSOLUaCM="
+      "cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
+      "hydra.dfinity.systems-2:KMTixHrh9DpAjF/0xU/49VEtNuGzQ71YaVIUSOLUaCM="
     ];
 
     extraOptions = ''
@@ -479,38 +480,46 @@ EOF
      buildCores = 4;
      distributedBuilds = false;
 
-     # buildMachines = [
-     #   { hostName = "vulcan";
-     #     sshUser = "johnw";
-     #     sshKey = "${xdg_configHome}/ssh/id_local";
-     #     system = "x86_64-darwin";
-     #     maxJobs = 20;
-     #     buildCores = 10;
-     #     speedFactor = 4;
-     #   }
-     #   { hostName = "nix-docker";
-     #     sshUser = "root";
-     #     sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
-     #     system = "x86_64-linux";
-     #     maxJobs = 4;
-     #     buildCores = 2;
-     #     speedFactor = 2;
-     #   }
-     #   # { hostName = "hydra";
-     #   #   sshUser = "ec2-user";
-     #   #   sshKey = "${xdg_configHome}/ssh/id_dfinity";
-     #   #   system = "x86_64-linux";
-     #   #   maxJobs = 1;
-     #   #   buildCores = 1;
-     #   #   speedFactor = 1;
-     #   # }
-     # ];
+     buildMachines = [
+       { hostName = "vulcan";
+         sshUser = "johnw";
+         sshKey = "${xdg_configHome}/ssh/id_local";
+         system = "x86_64-darwin";
+         maxJobs = 20;
+         buildCores = 10;
+         speedFactor = 4;
+       }
+       { hostName = "nix-docker";
+         sshUser = "root";
+         sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+         system = "x86_64-linux";
+         maxJobs = 4;
+         buildCores = 2;
+         speedFactor = 3;
+       }
+       { hostName = "zrh-1";
+         sshUser = "johnw";
+         sshKey = "${xdg_configHome}/ssh/id_dfinity";
+         system = "x86_64-linux";
+         maxJobs = 8;
+         buildCores = 4;
+         speedFactor = 2;
+       }
+       { hostName = "hydra";
+         sshUser = "ec2-user";
+         sshKey = "${xdg_configHome}/ssh/id_dfinity";
+         system = "x86_64-linux";
+         maxJobs = 1;
+         buildCores = 1;
+         speedFactor = 1;
+       }
+     ];
 
      trustedBinaryCaches = [
-       https://nix.oregon.dfinity.build
+       https://nix.dfinity.systems
      ];
      binaryCaches = [
-       https://nix.oregon.dfinity.build
+       https://nix.dfinity.systems
      ];
    }
    else if localconfig.hostname == "fin" then {
@@ -543,14 +552,14 @@ EOF
      distributedBuilds = true;
 
      buildMachines = [
-       # { hostName = "nix-docker";
-       #   sshUser = "root";
-       #   sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
-       #   system = "x86_64-linux";
-       #   maxJobs = 4;
-       #   buildCores = 2;
-       #   speedFactor = 2;
-       # }
+       { hostName = "nix-docker";
+         sshUser = "root";
+         sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+         system = "x86_64-linux";
+         maxJobs = 4;
+         buildCores = 2;
+         speedFactor = 3;
+       }
        { hostName = "zrh-1";
          sshUser = "johnw";
          sshKey = "${xdg_configHome}/ssh/id_dfinity";
@@ -559,21 +568,21 @@ EOF
          buildCores = 4;
          speedFactor = 2;
        }
-       # { hostName = "hydra";
-       #   sshUser = "ec2-user";
-       #   sshKey = "${xdg_configHome}/ssh/id_dfinity";
-       #   system = "x86_64-linux";
-       #   maxJobs = 1;
-       #   buildCores = 1;
-       #   speedFactor = 1;
-       # }
+       { hostName = "hydra";
+         sshUser = "ec2-user";
+         sshKey = "${xdg_configHome}/ssh/id_dfinity";
+         system = "x86_64-linux";
+         maxJobs = 1;
+         buildCores = 1;
+         speedFactor = 1;
+       }
      ];
 
      trustedBinaryCaches = [
-       https://nix.oregon.dfinity.build
+       https://nix.dfinity.systems
      ];
      binaryCaches = [
-       https://nix.oregon.dfinity.build
+       https://nix.dfinity.systems
      ];
    }
    else {});

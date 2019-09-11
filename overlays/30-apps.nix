@@ -54,8 +54,8 @@ Docker = self.installApplication rec {
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
-    sha256 = "09gwqdppnzw7hhlmgxakczxql4jfknk4ayc5z09g4kr8agqn4m55";
-    # date = 2019-06-26T06:06:09-0700;
+    sha256 = "1hxy8hn18gq518bmc1fg171smy18zql469alnb81v60g0806vwir";
+    # date = 2019-09-09T11:13:40-0700;
   };
   description = ''
     Docker CE for Mac is an easy-to-install desktop app for building,
@@ -66,12 +66,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "68.0.2";
+  version = "69.0";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "0ql80zbv1xiiqiasslli4qvpwd64l8nk6vz3pgpf3ij7c7540d0p";
+    sha256 = "0777schbds8vsl1218qh6x8xch14drgjxzqpxp4pd0hqmj4axadz";
   };
   postInstall = ''
     for file in  \
@@ -138,12 +138,12 @@ HandBrake = self.installApplication rec {
 iTerm2 = self.installApplication rec {
   name = "iTerm2";
   appname = "iTerm";
-  version = "3.3.2";
+  version = "3.3.3";
   sourceRoot = "iTerm.app";
   src = super.fetchurl {
-    url = "https://iterm2.com/downloads/stable/iTerm2-3_3_2.zip";
-    sha256 = "0irb51fxcsg9hm05hyv1jipvka75w3h606v0r977vkl0ljzk0sz3";
-    # date = 2019-08-20T08:12:27-0700;
+    url = "https://iterm2.com/downloads/stable/iTerm2-3_3_3.zip";
+    sha256 = "1ndwi8qrhzjsbw0wgw3dz3hg4gbhqhk7hn6m9phsfng7fcxyjzmy";
+    # date = 2019-09-04T15:50:26-0700;
   };
   description = "iTerm2 is a replacement for Terminal and the successor to iTerm";
   homepage = https://www.iterm2.com;
@@ -152,12 +152,12 @@ iTerm2 = self.installApplication rec {
 KeyboardMaestro = self.installApplication rec {
   name = "KeyboardMaestro";
   appname = "Keyboard Maestro";
-  version = "9.0";
+  version = "9.0.1";
   sourceRoot = "Keyboard Maestro.app";
   src = super.fetchurl {
-    url = http://files.stairways.com/keyboardmaestro-90.zip;
-    sha256 = "04prshdmn5pdfj7hmimh5qqbscqfsvg7rzsm6zw4zyfzl84z2zbw";
-    # date = 2019-08-16T19:52:14-0700;
+    url = http://files.stairways.com/keyboardmaestro-901.zip;
+    sha256 = "1ppw3zypm9b389z7c4f2clvxqf5j0vyi650yq7aqqjb1aagwza8i";
+    # date = 2019-08-26T07:51:35-0700;
   };
   description = "Keyboard macro program for macOS";
   homepage = https://www.keyboardmaestro.com;
@@ -221,12 +221,12 @@ Slate = self.installApplication rec {
 
 Soulver = self.installApplication rec {
   name = "Soulver";
-  version = "2.7.0";
+  version = "2.7.1";
   sourceRoot = "Soulver.app";
   src = super.fetchurl {
     name = "soulver-${version}.zip";
     url = "http://www.acqualia.com/files/download.php?product=soulver";
-    sha256 = "0xjacwfi3k3k9gi3s5rpf5073qn8ly57k3kj48jmqyk1xmv9x33r";
+    sha256 = "04hikh6w8wgjj45slc9ymivamnbsgdfgd43crjka8a4zzngw5ji4";
     # date = 2018-08-19T15:54:54-0800;
   };
   description = ''
@@ -239,12 +239,12 @@ Soulver = self.installApplication rec {
 SuspiciousPackage = self.installApplication rec {
   name = "SuspiciousPackage";
   appname = "Suspicious Package";
-  version = "3.4";
+  version = "3.5.1";
   sourceRoot = "Suspicious Package.app";
   src = super.fetchurl {
     url = "http://www.mothersruin.com/software/downloads/SuspiciousPackage.dmg";
-    sha256 = "15zvfim1raclvzq0b5n01shc3l4ir9vjsx440zzd26nmlgiajq3s";
-    # date = 2019-06-27T08:53:27-0700;
+    sha256 = "1xz7wfqc7wa6v8vwxpvnq0f5pf0bw3fihxzif3m7dbs58wq2rvdm";
+    # date = 2019-09-09T11:07:20-0700;
   };
   description = "An Application for Inspecting macOS Installer Packages";
   homepage = http://www.mothersruin.com/software/SuspiciousPackage;

@@ -83,7 +83,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   iperf
   lftp
   mercurialFull
-  # mitmproxy
+  mitmproxy
   mtr
   nmap
   openssh
@@ -102,7 +102,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   wireshark
   youtube-dl
   znc
-  zncModules.fish
   zncModules.push
 
   # publishToolsEnv

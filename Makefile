@@ -6,13 +6,17 @@ ROOTS	   = /nix/var/nix/gcroots/per-user/johnw/shells
 ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
 NIX_CONF   = $(HOME)/src/nix
 MAKE_REC   = make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF)
-NIXOPTS    =
-# NIXOPTS   = --option build-use-substitutes false	\
-# 	    --option builders ""			\
-# 	    --option substituters ''
 NIXPATH    = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
 BUILD_ARGS = $(NIXOPTS) --keep-going --argstr version $(HEAD_DATE)
+
+ifeq ($(NOCACHE),true)
+NIXOPTS    = --option build-use-substitutes false	\
+	     --option builders ""			\
+	     --option substituters ''
+else
+NIXOPTS    =
+endif
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
 # when first necessary.
@@ -73,6 +77,9 @@ home-news:
 	NIX_PATH=$(NIXPATH) \
 	HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix \
 	    $(HOME_MANAGER) news
+
+opts:
+	echo NIXOPTS=$(NIXOPTS)
 
 env:
 	for i in $(ENVS); do			\

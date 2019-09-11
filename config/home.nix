@@ -487,8 +487,6 @@ in rec {
           identitiesOnly = true;
         };
 
-        # DFINITY related
-
         nix-docker = {
           hostname = "127.0.0.1";
           proxyJump = "fin";
@@ -498,11 +496,13 @@ in rec {
           identitiesOnly = true;
         };
 
+        # DFINITY Machines
+
         id_dfinity = {
           host = lib.concatStringsSep " " [
             "hydra"
             "pa-1"
-            "zrh-1"
+            "zrh-1" "zrh-2" "zrh-3"
             "zrh-darwin-1"
             "pa-darwin-1" "pa-darwin-2"
           ];
@@ -510,18 +510,45 @@ in rec {
           identitiesOnly = true;
         };
 
+        # DFINITY Machines on AWS
+
         hydra = {
-          hostname = "hydra.oregon.dfinity.build";
+          hostname = "hydra.dfinity.systems";
           user = "ec2-user";
         };
+
+        # DFINITY Machines in Palo Alto
 
         pa-1 = {
           hostname = "10.129.10.148";
           user = "root";
         };
 
+        # This requires a VPN connection to the DFINITY network.
+        pa-darwin-1 = {
+          hostname = "10.129.10.7";
+          user = "dfinity";
+        };
+
+        pa-darwin-2 = {
+          hostname = "10.129.10.38";
+          user = "dfnmain";
+        };
+
+        # DFINITY Machines in Zurich
+
         zrh-1 = {
-          hostname = "10.129.0.33";
+          hostname = "zrh-linux-1.dfinity.systems";
+          user = "johnw";
+        };
+
+        zrh-2 = {
+          hostname = "zrh-linux-2.dfinity.systems";
+          user = "johnw";
+        };
+
+        zrh-3 = {
+          hostname = "zrh-linux-3.dfinity.systems";
           user = "johnw";
         };
 
@@ -530,16 +557,9 @@ in rec {
           user = "dfinity";
         };
 
-        # This requires a VPN connection to the DFINITY network.
-        pa-darwin-1 = {
-          hostname = "10.129.10.7";
+        treppenhaus = {
+          hostname = "10.129.0.103";
           user = "dfinity";
-          proxyJump = "hydra";
-        };
-
-        pa-darwin-2 = {
-          hostname = "10.129.10.38";
-          user = "dfnmain";
         };
       };
     };
