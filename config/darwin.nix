@@ -434,11 +434,15 @@ EOF
     '';
   };
 
-  services.nix-daemon.enable = true;
-  services.activate-system.enable = true;
+  services = {
+    nix-daemon.enable = false;
+    activate-system.enable = true;
+  };
 
   nix = {
     package = pkgs.nixStable;
+
+    useDaemon = false;
 
     useSandbox = false;
     sandboxPaths = [
@@ -478,48 +482,43 @@ EOF
   (if localconfig.hostname == "hermes" then {
      maxJobs = 8;
      buildCores = 4;
-     distributedBuilds = false;
+     distributedBuilds = true;
 
      buildMachines = [
        { hostName = "vulcan";
          sshUser = "johnw";
          sshKey = "${xdg_configHome}/ssh/id_local";
          system = "x86_64-darwin";
-         maxJobs = 20;
-         buildCores = 10;
+         maxJobs = 10;
+         buildCores = 4;
          speedFactor = 4;
        }
        { hostName = "nix-docker";
          sshUser = "root";
          sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
          system = "x86_64-linux";
-         maxJobs = 4;
+         maxJobs = 2;
          buildCores = 2;
-         speedFactor = 3;
+         speedFactor = 1;
+         supportedFeatures = [ "kvm" ];
        }
-       { hostName = "zrh-1";
+       { hostName = "zrh-3";
          sshUser = "johnw";
          sshKey = "${xdg_configHome}/ssh/id_dfinity";
          system = "x86_64-linux";
-         maxJobs = 8;
-         buildCores = 4;
-         speedFactor = 2;
-       }
-       { hostName = "hydra";
-         sshUser = "ec2-user";
-         sshKey = "${xdg_configHome}/ssh/id_dfinity";
-         system = "x86_64-linux";
-         maxJobs = 1;
-         buildCores = 1;
-         speedFactor = 1;
+         maxJobs = 16;
+         buildCores = 8;
+         speedFactor = 4;
        }
      ];
 
      trustedBinaryCaches = [
        https://nix.dfinity.systems
+       ssh-ng://vulcan
      ];
      binaryCaches = [
        https://nix.dfinity.systems
+       ssh-ng://vulcan
      ];
    }
    else if localconfig.hostname == "fin" then {
@@ -536,14 +535,6 @@ EOF
          buildCores = 10;
          speedFactor = 4;
        }
-       # { hostName = "hermes";
-       #   sshUser = "johnw";
-       #   sshKey = "${xdg_configHome}/ssh/id_local";
-       #   system = "x86_64-darwin";
-       #   maxJobs = 16;
-       #   buildCores = 4;
-       #   speedFactor = 2;
-       # }
      ];
    }
    else if localconfig.hostname == "vulcan" then {
@@ -559,22 +550,15 @@ EOF
          maxJobs = 4;
          buildCores = 2;
          speedFactor = 3;
+         supportedFeatures = [ "kvm" ];
        }
-       { hostName = "zrh-1";
+       { hostName = "zrh-3";
          sshUser = "johnw";
          sshKey = "${xdg_configHome}/ssh/id_dfinity";
          system = "x86_64-linux";
-         maxJobs = 8;
+         maxJobs = 48;
          buildCores = 4;
-         speedFactor = 2;
-       }
-       { hostName = "hydra";
-         sshUser = "ec2-user";
-         sshKey = "${xdg_configHome}/ssh/id_dfinity";
-         system = "x86_64-linux";
-         maxJobs = 1;
-         buildCores = 1;
-         speedFactor = 1;
+         speedFactor = 4;
        }
      ];
 

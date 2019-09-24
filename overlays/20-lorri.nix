@@ -4,9 +4,11 @@ lorri =
   let src = super.fetchFromGitHub {
     owner  = "target";
     repo   = "lorri";
-    rev    = "e943fa403234f1a5e403b6fdc112e79abc1e29ba";
-    sha256 = "1ar7clza117qdzldld9qzg4q0wr3g20zxrnd1s51cg6gxwlpg7fa";
-    # date = 2019-03-29T16:34:35+01:00;
+    # rev    = "refs/heads/rolling-release";
+    rev    = "38eae3d487526ece9d1b8c9bb0d27fb45cf60816";
+    sha256 = "11k9lxg9cv6dlxj4haydvw4dhcfyszwvx7jx9p24jadqsy9jmbj4";
+    # date = 2019-08-20T10:44:02-04:00;
+    fetchSubmodules = true;
   }; in
   import src { inherit src; pkgs = self; };
 

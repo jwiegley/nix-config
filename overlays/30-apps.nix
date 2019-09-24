@@ -37,12 +37,12 @@ Anki = self.installApplication rec {
 
 Dash = self.installApplication rec {
   name = "Dash";
-  version = "4.6.5";
+  version = "4.6.6";
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "0zvc119n30ya7xja4f2ksgqcdf8c4xjzszr8w0zgm8w65nfsi8y1";
-    # date = 2019-08-15T13:50:56-0700;
+    sha256 = "1dkrzh4l5an0z7qv25irmagssaymscjzzgdn1jha11sqhhna9lh1";
+    # date = 2019-09-24T09:46:16+0200;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
@@ -50,12 +50,12 @@ Dash = self.installApplication rec {
 
 Docker = self.installApplication rec {
   name = "Docker";
-  version = "2.0.0.3";
+  version = "2.1.0.3";
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
-    sha256 = "1hxy8hn18gq518bmc1fg171smy18zql469alnb81v60g0806vwir";
-    # date = 2019-09-09T11:13:40-0700;
+    sha256 = "11c6zrslyc1fpyyvldrdlxbywns8j5r5nza00fblqvcf8qxqqw81";
+    # date = 2019-09-24T09:49:04+0200;
   };
   description = ''
     Docker CE for Mac is an easy-to-install desktop app for building,
@@ -66,12 +66,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "69.0";
+  version = "69.0.1";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "0777schbds8vsl1218qh6x8xch14drgjxzqpxp4pd0hqmj4axadz";
+    sha256 = "17zz5gglgkava5lhc9292rr377j38gfnyyma9q1zyajarlxyymyh";
   };
   postInstall = ''
     for file in  \
@@ -138,12 +138,12 @@ HandBrake = self.installApplication rec {
 iTerm2 = self.installApplication rec {
   name = "iTerm2";
   appname = "iTerm";
-  version = "3.3.3";
+  version = "3.3.4";
   sourceRoot = "iTerm.app";
   src = super.fetchurl {
-    url = "https://iterm2.com/downloads/stable/iTerm2-3_3_3.zip";
-    sha256 = "1ndwi8qrhzjsbw0wgw3dz3hg4gbhqhk7hn6m9phsfng7fcxyjzmy";
-    # date = 2019-09-04T15:50:26-0700;
+    url = "https://iterm2.com/downloads/stable/iTerm2-3_3_4.zip";
+    sha256 = "1yfxnc82dh99g7fjq4r3rnraz36qzw33ybjd2h8n63xb46kyyly0";
+    # date = 2019-09-16T08:25:45-0700;
   };
   description = "iTerm2 is a replacement for Terminal and the successor to iTerm";
   homepage = https://www.iterm2.com;
@@ -152,12 +152,12 @@ iTerm2 = self.installApplication rec {
 KeyboardMaestro = self.installApplication rec {
   name = "KeyboardMaestro";
   appname = "Keyboard Maestro";
-  version = "9.0.1";
+  version = "9.0.2";
   sourceRoot = "Keyboard Maestro.app";
   src = super.fetchurl {
-    url = http://files.stairways.com/keyboardmaestro-901.zip;
-    sha256 = "1ppw3zypm9b389z7c4f2clvxqf5j0vyi650yq7aqqjb1aagwza8i";
-    # date = 2019-08-26T07:51:35-0700;
+    url = http://files.stairways.com/keyboardmaestro-902.zip;
+    sha256 = "09vs3hm40hqjvlrsrq328s84b4dgfds7ddmlnc2fc0iq0j73vc5i";
+    # date = 2019-09-16T07:53:42-0700;
   };
   description = "Keyboard macro program for macOS";
   homepage = https://www.keyboardmaestro.com;
@@ -280,12 +280,12 @@ UnicodeChecker = self.installApplication rec {
 VirtualII = self.installApplication rec {
   name = "VirtualII";
   appname = "Virtual ][";
-  version = "9.1.4";
+  version = "9.2";
   sourceRoot = "Virtual ][.app";
   src = super.fetchurl {
     url = http://www.virtualii.com/VirtualII.dmg;
-    sha256 = "09zskzyy6svkfliz74ahivzl1ij662h97vd3vfw3i16d8zzn2r1g";
-    # date = 2019-08-18T10:57:59-0700;
+    sha256 = "0fx60bcc8lipbl8mfm8p3i1yb98hkyfyc5zvcb70zzd01917xihj";
+    # date = 2019-09-24T09:49:35+0200;
   };
   description = ''
     Virtual ][ lets you play the old Apple games, because it supports all

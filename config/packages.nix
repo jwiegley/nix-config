@@ -99,6 +99,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   subversion
   w3m
   wget
+  wireguard
   wireshark
   youtube-dl
   znc
@@ -184,7 +185,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   less
   linkdups
   lipotell
-  # lorri
+  lorri
   m-cli
   multitail
   mysql

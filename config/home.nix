@@ -142,36 +142,37 @@ in rec {
       };
 
       shellAliases = {
-        b      = "${pkgs.git}/bin/git b";
-        l      = "${pkgs.git}/bin/git l";
-        w      = "${pkgs.git}/bin/git w";
-        g      = "${pkgs.gitAndTools.hub}/bin/hub";
-        git    = "${pkgs.gitAndTools.hub}/bin/hub";
-        ga     = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
-        good   = "${pkgs.git}/bin/git bisect good";
-        bad    = "${pkgs.git}/bin/git bisect bad";
-        cn     = "cabal new-configure --enable-tests --enable-benchmarks";
-        cnp    = "cabal new-configure --enable-tests --enable-benchmarks " +
-                 "--enable-profiling --ghc-options=-fprof-auto";
-        cb     = "cabal new-build";
-        ls     = "${pkgs.coreutils}/bin/ls --color=auto";
-        nm     = "${pkgs.findutils}/bin/find . -name";
-        par    = "${pkgs.parallel}/bin/parallel";
-        rm     = "${pkgs.my-scripts}/bin/trash";
-        rX     = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
-        scp    = "${pkgs.rsync}/bin/rsync -aP --inplace";
-        proc   = "/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
-        wipe   = "${pkgs.srm}/bin/srm -vfr";
-        nstat  = "/usr/sbin/netstat -nr -f inet"
-               + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
-               + " | ${pkgs.coreutils}/bin/tail -n +5";
+        b     = "${pkgs.git}/bin/git b";
+        l     = "${pkgs.git}/bin/git l";
+        w     = "${pkgs.git}/bin/git w";
+        g     = "${pkgs.gitAndTools.hub}/bin/hub";
+        git   = "${pkgs.gitAndTools.hub}/bin/hub";
+        ga    = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
+        good  = "${pkgs.git}/bin/git bisect good";
+        bad   = "${pkgs.git}/bin/git bisect bad";
+        ls    = "${pkgs.coreutils}/bin/ls --color=auto";
+        nm    = "${pkgs.findutils}/bin/find . -name";
+        par   = "${pkgs.parallel}/bin/parallel";
+        rm    = "${pkgs.my-scripts}/bin/trash";
+        rX    = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
+        scp   = "${pkgs.rsync}/bin/rsync -aP --inplace";
+        wipe  = "${pkgs.srm}/bin/srm -vfr";
 
-        worker-1 = ''(cd ~/dfinity/ops-in-nix ; \
-          ${pkgs.nix}/bin/nix-shell -p nixops -p nix --pure \
-            --command 'make hydra-ssh MACHINE=worker-1')'';
-        worker-2 = ''(cd ~/dfinity/ops-in-nix ; \
-          ${pkgs.nix}/bin/nix-shell -p nixops -p nix --pure \
-            --command 'make hydra-ssh MACHINE=worker-2')'';
+        proc  = "/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
+
+        nstat = "/usr/sbin/netstat -nr -f inet"
+              + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
+              + " | ${pkgs.coreutils}/bin/tail -n +5";
+
+        cn    = "cabal new-configure --enable-tests --enable-benchmarks";
+        cnp   = "cabal new-configure --enable-tests --enable-benchmarks " +
+                "--enable-profiling --ghc-options=-fprof-auto";
+        cb    = "cabal new-build";
+
+        teams = ''${pkgs.nix}/bin/nix-shell --pure --command '' +
+        ''"terraform init; '' +
+          ''export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | head -1); '' +
+          ''terraform apply"'';
       };
 
       profileExtra = ''
@@ -505,6 +506,7 @@ in rec {
             "zrh-1" "zrh-2" "zrh-3"
             "zrh-darwin-1"
             "pa-darwin-1" "pa-darwin-2"
+            "haight-conf"
           ];
           identityFile = "${xdg.configHome}/ssh/id_dfinity";
           identitiesOnly = true;
@@ -533,6 +535,16 @@ in rec {
         pa-darwin-2 = {
           hostname = "10.129.10.38";
           user = "dfnmain";
+        };
+
+        # DFINITY Machines in San Francisco
+
+        haight-conf = {
+          hostname = "10.129.12.75";
+          user = "jwiegley";
+          extraOptions = {
+            "LocalForward" = "5991 127.0.0.1:5900";
+          };
         };
 
         # DFINITY Machines in Zurich
