@@ -12,8 +12,8 @@ BUILD_ARGS = $(NIXOPTS) --keep-going --argstr version $(HEAD_DATE)
 
 ifeq ($(NOCACHE),true)
 NIXOPTS    = --option build-use-substitutes false	\
-	     --option builders ""			\
-	     --option substituters ''
+	     --option substituters ''			\
+	     --option builders ''
 else
 NIXOPTS    =
 endif
