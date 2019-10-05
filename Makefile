@@ -136,7 +136,7 @@ check-all: check
 	ssh fin    '$(MAKE_REC) check'
 
 size:
-	sudo du --si -shx /nix/store
+	du --si -shx /nix/store
 
 copy:
 	push -h $(HOSTNAME) -f src,dfinity $(REMOTE)
@@ -172,6 +172,7 @@ remove-build-products:
 	       -name 'dist-newstyle' -type d -o			\
 	       -name '.ghc.*' -o				\
 	       -name 'cabal.project.local*' -type f -o		\
+	       -name 'target' -type d -o			\
 	       -name 'result*' -type l \) -print0		\
 	    | xargs -P4 -0 /bin/rm -fr
 
@@ -179,10 +180,10 @@ gc:
 	nix-collect-garbage --delete-older-than $(MAX_AGE)
 
 gc-all: remove-build-products
-	sudo nix-env --delete-generations					\
-	    $(shell sudo nix-env --list-generations | field 1 | head -n -1)
-	sudo nix-env -p /nix/var/nix/profiles/system --delete-generations	\
-	    $(shell sudo nix-env -p /nix/var/nix/profiles/system		\
+	nix-env --delete-generations					\
+	    $(shell nix-env --list-generations | field 1 | head -n -1)
+	nix-env -p /nix/var/nix/profiles/system --delete-generations	\
+	    $(shell nix-env -p /nix/var/nix/profiles/system		\
 	                         --list-generations | field 1 | head -n -1)
 	nix-collect-garbage -d
 

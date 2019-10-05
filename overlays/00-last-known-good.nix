@@ -25,9 +25,9 @@ let
 
 in
 {
-  gitAndTools = super.gitAndTools // {
-    inherit (known-good-20190131_115636.gitAndTools) git-annex;
-  };
+  # gitAndTools = super.gitAndTools // {
+  #   inherit (known-good-20190131_115636.gitAndTools) git-annex;
+  # };
 
   inherit (known-good-20190305_133437) recoll socat2pre wireguard;
 

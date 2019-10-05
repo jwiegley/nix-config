@@ -160,6 +160,7 @@ pkgs: epkgs: with epkgs;
   goto-line-preview
   graphviz-dot-mode
   haskell-mode
+  hcl-mode
   helm
   helm-bibtex                   # ivy-bibtex
   helm-dash

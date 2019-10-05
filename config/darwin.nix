@@ -435,14 +435,14 @@ EOF
   };
 
   services = {
-    nix-daemon.enable = false;
+    nix-daemon.enable = localconfig.hostname == "vulcan";
     activate-system.enable = true;
   };
 
   nix = {
     package = pkgs.nixStable;
 
-    useDaemon = false;
+    useDaemon = localconfig.hostname == "vulcan";
 
     useSandbox = false;
     sandboxPaths = [
@@ -536,6 +536,15 @@ EOF
          speedFactor = 4;
        }
      ];
+
+     trustedBinaryCaches = [
+       ssh-ng://vulcan
+       ssh-ng://hermes
+     ];
+     binaryCaches = [
+       ssh-ng://vulcan
+       ssh-ng://hermes
+     ];
    }
    else if localconfig.hostname == "vulcan" then {
      maxJobs = 20;
@@ -564,10 +573,21 @@ EOF
 
      trustedBinaryCaches = [
        https://nix.dfinity.systems
+       ssh-ng://hermes
      ];
      binaryCaches = [
        https://nix.dfinity.systems
+       ssh-ng://hermes
+       http://nixcache.kadena.io
+       https://nixcache.reflex-frp.org
      ];
+    binaryCachePublicKeys = [
+      "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
+      "cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
+      "hydra.dfinity.systems-2:KMTixHrh9DpAjF/0xU/49VEtNuGzQ71YaVIUSOLUaCM="
+      "kadena-cache.local-1:8wj8JW8V9tmc5bgNNyPM18DYNA1ws3X/MChXh1AQy/Q="
+      "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="
+    ];
    }
    else {});
 

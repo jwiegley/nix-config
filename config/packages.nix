@@ -192,6 +192,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nix-bash-completions
   nix-zsh-completions
   nix-diff
+  OnePassword-op
   org2tc
   p7zip
   paperkey
@@ -213,6 +214,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe (import ~/src/sizes {}))
   smartmontools
   sqlite
+  squashfsTools
   srm
   stow
   terminal-notifier

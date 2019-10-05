@@ -1090,22 +1090,18 @@ convertForERC = drv: pkgs.stdenv.lib.overrideDerivation drv (attrs: rec {
       mv $out/Applications/${appName}.app/Contents/MacOS/Emacs \
          $out/Applications/${appName}.app/Contents/MacOS/${appName}
       cp "${iconFile}" $out/Applications/${appName}.app/Contents/Resources/${appName}.icns
-    '';
-});
 
-rewrapForERC = drv: pkgs.stdenv.lib.overrideDerivation drv (attrs: rec {
-  installPhase = attrs.installPhase + ''
-    if [ -d "$emacs/Applications/ERC.app" ]; then
-      mkdir -p $out/Applications/ERC.app/Contents/MacOS
-      cp -r $emacs/Applications/ERC.app/Contents/Info.plist \
-            $emacs/Applications/ERC.app/Contents/PkgInfo \
-            $emacs/Applications/ERC.app/Contents/Resources \
-            $out/Applications/ERC.app/Contents
-      makeWrapper $emacs/Applications/ERC.app/Contents/MacOS/ERC \
-                  $out/Applications/ERC.app/Contents/MacOS/ERC \
-                  --suffix EMACSLOADPATH ":" "$deps/share/emacs/site-lisp:"
-    fi
-  '';
+      if [ -d "$emacs/Applications/ERC.app" ]; then
+        mkdir -p $out/Applications/ERC.app/Contents/MacOS
+        cp -r $emacs/Applications/ERC.app/Contents/Info.plist \
+              $emacs/Applications/ERC.app/Contents/PkgInfo \
+              $emacs/Applications/ERC.app/Contents/Resources \
+              $out/Applications/ERC.app/Contents
+        makeWrapper $emacs/Applications/ERC.app/Contents/MacOS/ERC \
+                    $out/Applications/ERC.app/Contents/MacOS/ERC \
+                    --suffix EMACSLOADPATH ":" "$deps/share/emacs/site-lisp:"
+      fi
+    '';
 });
 
 emacsERC = self.convertForERC self.emacsHEAD;
@@ -1121,7 +1117,7 @@ emacsHEADEnv = myPkgs: pkgs.myEnvFun {
 emacsERCEnv = myPkgs: pkgs.myEnvFun {
   name = "emacsERC";
   buildInputs = [
-    (self.rewrapForERC (self.emacsERCPackagesNg.emacsWithPackages myPkgs))
+    (self.emacsERCPackagesNg.emacsWithPackages myPkgs)
   ];
 };
 
