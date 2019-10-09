@@ -9,6 +9,7 @@ export NIXARGS=("\${NIXFLAGS[@]}" -A ${BASH_REMATCH[1]})
 export NIXFILE=../shell.nix
 export NIXBLDARGS=(-f "\$NIXFILE" "\${NIXFLAGS[@]}" ${BASH_REMATCH[1]})
 export CABAL_BUILDDIR=\$(pwd | sed 's^dfinity^Products^')/dist
+export CARGO_HOME=$HOME/.cache/cargo
 export CARGO_TARGET_DIR=\$(pwd | sed 's^dfinity^Products^')/dist
 use_nix
 EOF
@@ -23,6 +24,7 @@ export NIXARGS=("\${NIXFLAGS[@]}" -A new-build)
 export NIXFILE=shell.nix
 export NIXBLDARGS=(-f "\$NIXFILE" "\${NIXFLAGS[@]}" new-build)
 export CABAL_BUILDDIR=\$(pwd | sed 's^dfinity^Products^')/dist
+export CARGO_HOME=$HOME/.cache/cargo
 export CARGO_TARGET_DIR=\$(pwd | sed 's^dfinity^Products^')/dist
 use_nix
 EOF
@@ -36,6 +38,7 @@ export NIXARGS=()
 # export NIXARGS=(--arg pkgs "\$NIXPKGS")
 export NIXBLDARGS=(-f . "\${NIXARGS[@]}")
 export CABAL_BUILDDIR=\$(pwd | sed 's^src^Products^')/dist
+export CARGO_HOME=$HOME/.cache/cargo
 export CARGO_TARGET_DIR=\$(pwd | sed 's^src^Products^')/dist
 use_nix
 EOF

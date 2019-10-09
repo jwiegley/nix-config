@@ -55,14 +55,14 @@ in {
       serviceConfig.RunAtLoad = true;
     };
 
-    locate = {
-      script = ''
-        export PATH=$PATH:${pkgs.findutils}/bin
-        export HOME=/Users/johnw
-        ${pkgs.my-scripts}/bin/update.locate >> /var/log/locate.log 2>&1
-      '';
-      serviceConfig = iterate 86400;
-    };
+    # locate = {
+    #   script = ''
+    #     export PATH=$PATH:${pkgs.mlocate}/bin
+    #     export HOME=/Users/johnw
+    #     ${pkgs.my-scripts}/bin/update.locate >> /var/log/locate.log 2>&1
+    #   '';
+    #   serviceConfig = iterate 86400;
+    # };
 
     pdnsd = {
       script = ''

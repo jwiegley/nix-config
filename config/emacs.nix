@@ -123,6 +123,7 @@ pkgs: epkgs: with epkgs;
   eyebrowse
   f
   fancy-narrow
+  fast-scroll
   feebleline
   fence-edit
   fetchmail-mode
