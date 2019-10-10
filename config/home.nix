@@ -522,8 +522,8 @@ in rec {
         # DFINITY Machines in Palo Alto
 
         pa-1 = {
-          hostname = "10.129.10.148";
-          user = "root";
+          hostname = "pa-linux-1.dfinity.systems";
+          user = "johnw";
         };
 
         # This requires a VPN connection to the DFINITY network.
