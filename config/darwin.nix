@@ -502,7 +502,7 @@ EOF
          speedFactor = 1;
          supportedFeatures = [ "kvm" ];
        }
-       { hostName = "pa-1";
+       { hostName = "zrh-3";
          sshUser = "johnw";
          sshKey = "${xdg_configHome}/ssh/id_dfinity";
          system = "x86_64-linux";
@@ -561,7 +561,7 @@ EOF
          speedFactor = 3;
          supportedFeatures = [ "kvm" ];
        }
-       { hostName = "pa-1";
+       { hostName = "zrh-3";
          sshUser = "johnw";
          sshKey = "${xdg_configHome}/ssh/id_dfinity";
          system = "x86_64-linux";

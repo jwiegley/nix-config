@@ -192,6 +192,8 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nix-bash-completions
   nix-zsh-completions
   nix-diff
+  nix-index
+  nix-info
   OnePassword-op
   org2tc
   p7zip

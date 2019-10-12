@@ -8,10 +8,10 @@ let
       inherit rev sha256;
     }) { config.allowUnfree = true; };
 
-  known-good-20190131_115636 = nixpkgs {
-    rev    = "120eab94e0981758a1c928ff81229cd802053158";
-    sha256 = "0qk6k8gxx5xlkyg05dljywj5wx5fvrc3dzp4v2h6ab83b7zwg813";
-  };
+  # known-good-20190131_115636 = nixpkgs {
+  #   rev    = "120eab94e0981758a1c928ff81229cd802053158";
+  #   sha256 = "0qk6k8gxx5xlkyg05dljywj5wx5fvrc3dzp4v2h6ab83b7zwg813";
+  # };
 
   known-good-20190305_133437 = nixpkgs {
     rev    = "b36dc66bfea6b0a733cf13bed85d80462d39c736";
@@ -25,9 +25,9 @@ let
 
 in
 {
-  gitAndTools = super.gitAndTools // {
-    inherit (known-good-20190131_115636.gitAndTools) git-annex;
-  };
+  # gitAndTools = super.gitAndTools // {
+  #   inherit (known-good-20190131_115636.gitAndTools) git-annex;
+  # };
 
   inherit (known-good-20190305_133437) recoll socat2pre wireguard;
 
