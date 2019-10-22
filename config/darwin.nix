@@ -485,14 +485,14 @@ EOF
      distributedBuilds = true;
 
      buildMachines = [
-       { hostName = "vulcan";
-         sshUser = "johnw";
-         sshKey = "${xdg_configHome}/ssh/id_local";
-         system = "x86_64-darwin";
-         maxJobs = 10;
-         buildCores = 4;
-         speedFactor = 4;
-       }
+       # { hostName = "vulcan";
+       #   sshUser = "johnw";
+       #   sshKey = "${xdg_configHome}/ssh/id_local";
+       #   system = "x86_64-darwin";
+       #   maxJobs = 10;
+       #   buildCores = 4;
+       #   speedFactor = 4;
+       # }
        { hostName = "nix-docker";
          sshUser = "root";
          sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
@@ -539,11 +539,9 @@ EOF
 
      trustedBinaryCaches = [
        ssh-ng://vulcan
-       ssh-ng://hermes
      ];
      binaryCaches = [
        ssh-ng://vulcan
-       ssh-ng://hermes
      ];
    }
    else if localconfig.hostname == "vulcan" then {
@@ -573,11 +571,9 @@ EOF
 
      trustedBinaryCaches = [
        https://nix.dfinity.systems
-       ssh-ng://hermes
      ];
      binaryCaches = [
        https://nix.dfinity.systems
-       ssh-ng://hermes
        http://nixcache.kadena.io
        https://nixcache.reflex-frp.org
      ];

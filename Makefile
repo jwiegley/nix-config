@@ -140,7 +140,7 @@ size:
 
 copy:
 	push -h $(HOSTNAME) -f src,dfinity $(REMOTE)
-	nix copy --no-check-sigs --keep-going --to ssh-ng://$(REMOTE)	\
+	nix copy --no-check-sigs --keep-going --to ssh://$(REMOTE)	\
 	    $(BUILD_PATH)						\
 	    $(shell find $(PROJS) -path '*/.direnv/default'		\
 		| while read dir; do					\
@@ -172,11 +172,17 @@ remove-build-products:
 	       -name 'dist-newstyle' -type d -o			\
 	       -name '.ghc.*' -o				\
 	       -name 'cabal.project.local*' -type f -o		\
+	       -name '.cargo-home' -type d -o			\
 	       -name 'target' -type d -o			\
 	       -name 'result*' -type l \) -print0		\
 	    | xargs -P4 -0 /bin/rm -fr
 
 gc:
+	nix-env --delete-generations					\
+	    $(shell nix-env --list-generations | field 1 | head -n -14)
+	nix-env -p /nix/var/nix/profiles/system --delete-generations	\
+	    $(shell nix-env -p /nix/var/nix/profiles/system		\
+	                         --list-generations | field 1 | head -n -14)
 	nix-collect-garbage --delete-older-than $(MAX_AGE)
 
 gc-all: remove-build-products
@@ -185,7 +191,7 @@ gc-all: remove-build-products
 	nix-env -p /nix/var/nix/profiles/system --delete-generations	\
 	    $(shell nix-env -p /nix/var/nix/profiles/system		\
 	                         --list-generations | field 1 | head -n -1)
-	nix-collect-garbage -d
+	nix-collect-garbage --delete-old
 
 fullclean: gc-all check
 	ssh hermes '$(MAKE_REC) gc-all check'

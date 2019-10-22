@@ -61,8 +61,8 @@ let
 
     ascii = compileEmacsWikiFile {
       name = "ascii.el";
-      sha256 = "05fjsj5nmc05cmsi0qj914dqdwk8rll1d4dwhn0crw36p2ivql75";
-      # date = 2019-04-03T08:43:15-0700;
+      sha256 = "1ijpnk334fbah94vm7dkcd2w4zcb0l7yn4nr9rwgpr2l25llnr0f";
+      # date = 2019-10-16T16:51:27-0700;
     };
 
     backup-each-save = compileEmacsWikiFile {
@@ -192,8 +192,8 @@ let
 
     xray = compileEmacsWikiFile {
       name = "xray.el";
-      sha256 = "12pzik5plywil0rz95rqb5qdqwdawkbwhmqab346yizhlp6i4fq6";
-      # date = 2019-04-03T08:51:32-0700;
+      sha256 = "1s25z9iiwpm1sp3yj9mniw4dq7dn0krk4678bgqh464k5yvn6lyk";
+      # date = 2019-10-16T16:58:04-0700;
     };
 
     yaoddmuse = compileEmacsWikiFile {
@@ -240,8 +240,8 @@ let
       name = "tablegen-mode.el";
       src = fetchurl {
         url = https://raw.githubusercontent.com/llvm-mirror/llvm/master/utils/emacs/tablegen-mode.el;
-        sha256 = "0vinzlin17ghp2xg0mzxw58jp08fg0jxmq228rd6n017j48b89ck";
-        # date = 2019-04-03T08:51:59-0700;
+        sha256 = "0dy0diiqfz91blrkpbfxc5ky0l7ghkqi72ah7sh9jkrqa8ss7isy";
+        # date = 2019-10-16T16:55:59-0700;
       };
     };
 
@@ -1004,58 +1004,32 @@ emacsPackagesNg = self.emacs26PackagesNg;
 
 emacs26 = with pkgs; stdenv.lib.overrideDerivation
   (pkgs.emacs26.override { srcRepo = true; }) (attrs: rec {
-  name = "emacs-${version}${versionModifier}";
-  version = "26.3";
-  versionModifier = "";
-
-  # doCheck = false;
-
-  buildInputs = (attrs.buildInputs or []) ++
-    [ libpng libjpeg libungif libtiff librsvg ] ++
-    [ imagemagick ] ;
-
-  # patches = lib.optionals stdenv.isDarwin
-  #   [ ./emacs/tramp-detect-wrapped-gvfsd.patch
-  #     ./emacs/patches/at-fdcwd.patch
-  #     ./emacs/patches/emacs-26.patch ];
-
-  # CFLAGS = "-Ofast -momit-leaf-frame-pointer -DMAC_OS_X_VERSION_MAX_ALLOWED=101200";
-
-  # src = fetchgit {
-  #   url = https://git.savannah.gnu.org/git/emacs.git;
-  #   rev = "emacs-${version}${versionModifier}";
-  #   sha256 = "0s5szdgs6pmj1x8brca7403jvv61s4xq19g4s0bfgiwvqzv0f6d5";
-  #   # date = 2019-02-20T07:33:53-08:00;
-  # };
+  CFLAGS = "-O3 -Ofast " + attrs.CFLAGS;
+  buildInputs = attrs.buildInputs ++
+    [ libpng libjpeg libungif libtiff librsvg ] ;
 });
 
 emacs26PackagesNg = mkEmacsPackages self.emacs26;
 
-emacs26debug = pkgs.stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
-  name = "emacs-26.3-debug";
-  doCheck = true;
-  CFLAGS = "-O0 -g3 -DMAC_OS_X_VERSION_MAX_ALLOWED=101200";
-  configureFlags = [ "--with-modules" ] ++
-   [ "--with-ns" "--disable-ns-self-contained"
-     "--enable-checking=yes,glyphs"
-     "--enable-check-lisp-object-type" ];
+emacs26debug = pkgs.stdenv.lib.overrideDerivation pkgs.emacs26 (attrs: rec {
+  name = "${attrs.name}-debug";
+  CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
+  configureFlags = attrs.configureFlags ++
+    [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
 });
 
 emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
 
-emacsHEAD = with pkgs; stdenv.lib.overrideDerivation self.emacs26 (attrs: rec {
+emacsHEAD = pkgs.stdenv.lib.overrideDerivation
+  (pkgs.emacs26.override { srcRepo = true; }) (attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "27.0";
   versionModifier = ".50";
-
   doCheck = false;
-
-  patches = lib.optionals stdenv.isDarwin
-    [ ./emacs/tramp-detect-wrapped-gvfsd.patch
-      ./emacs/patches/at-fdcwd.patch
-    ];
-
+  CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
   src = ~/src/emacs;
+  configureFlags = attrs.configureFlags ++
+    [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
 });
 
 emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
@@ -1066,6 +1040,10 @@ convertForERC = drv: pkgs.stdenv.lib.overrideDerivation drv (attrs: rec {
   version = "27.0";
   versionModifier = ".50";
   iconFile = ./emacs/Chat.icns;
+
+  patches = [
+    ./emacs/tramp-detect-wrapped-gvfsd.patch
+  ];
 
   preConfigure = ''
     sed -i 's|/usr/share/locale|${pkgs.gettext}/share/locale|g' \
@@ -1087,21 +1065,12 @@ convertForERC = drv: pkgs.stdenv.lib.overrideDerivation drv (attrs: rec {
 
   postInstall =
     builtins.replaceStrings ["Emacs.app"] ["${appName}.app"] attrs.postInstall + ''
+      set -x
+      echo moving
       mv $out/Applications/${appName}.app/Contents/MacOS/Emacs \
          $out/Applications/${appName}.app/Contents/MacOS/${appName}
       cp "${iconFile}" $out/Applications/${appName}.app/Contents/Resources/${appName}.icns
-
-      if [ -d "$emacs/Applications/ERC.app" ]; then
-        mkdir -p $out/Applications/ERC.app/Contents/MacOS
-        cp -r $emacs/Applications/ERC.app/Contents/Info.plist \
-              $emacs/Applications/ERC.app/Contents/PkgInfo \
-              $emacs/Applications/ERC.app/Contents/Resources \
-              $out/Applications/ERC.app/Contents
-        makeWrapper $emacs/Applications/ERC.app/Contents/MacOS/ERC \
-                    $out/Applications/ERC.app/Contents/MacOS/ERC \
-                    --suffix EMACSLOADPATH ":" "$deps/share/emacs/site-lisp:"
-      fi
-    '';
+  '';
 });
 
 emacsERC = self.convertForERC self.emacsHEAD;

@@ -438,7 +438,9 @@ in rec {
           (if "${localconfig.hostname}" == proxy then {} else {
              proxyJump = proxy;
            }); in
-        (if "${localconfig.hostname}" == "vulcan" || "${localconfig.hostname}" == "hermes" then {
+        (if    "${localconfig.hostname}" == "vulcan"
+            || "${localconfig.hostname}" == "hermes"
+            then {
            vulcan.hostname = "192.168.1.69";
          } else {
            vulcan = {

@@ -66,12 +66,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "69.0.3";
+  version = "70.0";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "037j456akzvr3n10fz53dvwwd915asynsmpi1h7ld8ss3adwj4b7";
+    sha256 = "0z0r4h2s1rb4hjrm5zcprmfip2iaa85mxznhm6lczvm46jy8zjra";
   };
   postInstall = ''
     for file in  \
@@ -152,12 +152,12 @@ iTerm2 = self.installApplication rec {
 KeyboardMaestro = self.installApplication rec {
   name = "KeyboardMaestro";
   appname = "Keyboard Maestro";
-  version = "9.0.2";
+  version = "9.0.3";
   sourceRoot = "Keyboard Maestro.app";
   src = super.fetchurl {
-    url = http://files.stairways.com/keyboardmaestro-902.zip;
-    sha256 = "09vs3hm40hqjvlrsrq328s84b4dgfds7ddmlnc2fc0iq0j73vc5i";
-    # date = 2019-09-16T07:53:42-0700;
+    url = http://files.stairways.com/keyboardmaestro-903.zip;
+    sha256 = "1j143zfbma7axq1f0a2syrlfchnigbl7vm05rhndibqd3rpa3iq1";
+    # date = 2019-10-14T10:04:30-0700;
   };
   description = "Keyboard macro program for macOS";
   homepage = https://www.keyboardmaestro.com;
@@ -271,7 +271,7 @@ UnicodeChecker = self.installApplication rec {
   src = super.fetchurl {
     url = http://earthlingsoft.net/UnicodeChecker/UnicodeChecker.zip;
     sha256 = "11v5plzf7m2qbf6cwap0jns5lff757yz1b84576hrqmdgckijq0b";
-    # date = 2019-05-14T13:16:43-0700;
+    # date = 2019-10-19T17:41:17-0700;
   };
   description = "Explore and convert Unicode";
   homepage = http://earthlingsoft.net/UnicodeChecker;
