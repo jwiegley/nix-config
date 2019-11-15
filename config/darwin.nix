@@ -294,10 +294,6 @@ EOF
           par_queries  = 1;
       }
 
-      rr { name = hydra.dfinity.systems;     a = 10.20.12.55; }
-      rr { name = nix.dfinity.systems;       a = 10.20.12.55; }
-      rr { name = docker.oregon.dfinity.internal; a = 10.20.7.236; }
-
       server {
           label       = "google";
           ip          = 8.8.8.8, 8.8.4.4;
@@ -463,7 +459,7 @@ EOF
       "ssh-auth-sock=$HOME/.config/gnupg/S.gpg-agent.ssh"
     ];
 
-    trustedUsers = [ "johnw" "@admin" ];
+    trustedUsers = [ "johnw" "@admin" "hydra-queue-runner" "dfinity" ];
 
     trustedBinaryCaches = [
     ];
@@ -489,36 +485,37 @@ EOF
        #   sshUser = "johnw";
        #   sshKey = "${xdg_configHome}/ssh/id_local";
        #   system = "x86_64-darwin";
-       #   maxJobs = 10;
-       #   buildCores = 4;
+       #   maxJobs = 20;
+       #   buildCores = 10;
        #   speedFactor = 4;
        # }
-       { hostName = "nix-docker";
-         sshUser = "root";
-         sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
-         system = "x86_64-linux";
-         maxJobs = 2;
-         buildCores = 2;
-         speedFactor = 1;
-         supportedFeatures = [ "kvm" ];
-       }
+       # { hostName = "nix-docker";
+       #   sshUser = "root";
+       #   sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+       #   system = "x86_64-linux";
+       #   maxJobs = 2;
+       #   buildCores = 2;
+       #   speedFactor = 1;
+       #   supportedFeatures = [ "kvm" ];
+       # }
        { hostName = "zrh-3";
          sshUser = "johnw";
          sshKey = "${xdg_configHome}/ssh/id_dfinity";
          system = "x86_64-linux";
-         maxJobs = 16;
-         buildCores = 8;
+         maxJobs = 48;
+         buildCores = 4;
          speedFactor = 4;
        }
      ];
 
+     requireSignedBinaryCaches = false;
      trustedBinaryCaches = [
        https://nix.dfinity.systems
-       ssh-ng://vulcan
+       ssh://vulcan
      ];
      binaryCaches = [
        https://nix.dfinity.systems
-       ssh-ng://vulcan
+       ssh://vulcan
      ];
    }
    else if localconfig.hostname == "fin" then {
@@ -538,10 +535,10 @@ EOF
      ];
 
      trustedBinaryCaches = [
-       ssh-ng://vulcan
+       ssh://vulcan
      ];
      binaryCaches = [
-       ssh-ng://vulcan
+       ssh://vulcan
      ];
    }
    else if localconfig.hostname == "vulcan" then {
@@ -550,15 +547,15 @@ EOF
      distributedBuilds = true;
 
      buildMachines = [
-       { hostName = "nix-docker";
-         sshUser = "root";
-         sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
-         system = "x86_64-linux";
-         maxJobs = 4;
-         buildCores = 2;
-         speedFactor = 3;
-         supportedFeatures = [ "kvm" ];
-       }
+       # { hostName = "nix-docker";
+       #   sshUser = "root";
+       #   sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+       #   system = "x86_64-linux";
+       #   maxJobs = 4;
+       #   buildCores = 2;
+       #   speedFactor = 3;
+       #   supportedFeatures = [ "kvm" ];
+       # }
        { hostName = "zrh-3";
          sshUser = "johnw";
          sshKey = "${xdg_configHome}/ssh/id_dfinity";
@@ -574,15 +571,10 @@ EOF
      ];
      binaryCaches = [
        https://nix.dfinity.systems
-       http://nixcache.kadena.io
-       https://nixcache.reflex-frp.org
      ];
     binaryCachePublicKeys = [
       "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
       "cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
-      "hydra.dfinity.systems-2:KMTixHrh9DpAjF/0xU/49VEtNuGzQ71YaVIUSOLUaCM="
-      "kadena-cache.local-1:8wj8JW8V9tmc5bgNNyPM18DYNA1ws3X/MChXh1AQy/Q="
-      "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI="
     ];
    }
    else {});

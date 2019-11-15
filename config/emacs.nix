@@ -34,6 +34,7 @@ pkgs: epkgs: with epkgs;
   calfw-cal
   calfw-org
   cargo
+  cell-mode
   centered-cursor-mode
   change-inner
   chess                         # chess chess-ics
@@ -106,7 +107,7 @@ pkgs: epkgs: with epkgs;
   emojify
   engine-mode
   enh-ruby-mode                 # ruby-mode
-  ensime
+  # ensime
   epc
   epl
   erc-highlight-nicknames
@@ -160,6 +161,7 @@ pkgs: epkgs: with epkgs;
   goto-last-change
   goto-line-preview
   graphviz-dot-mode
+  gud-lldb
   haskell-mode
   hcl-mode
   helm
@@ -376,6 +378,8 @@ pkgs: epkgs: with epkgs;
   undo-propose
   use-package
   uuidgen
+  vagrant
+  vagrant-tramp
   vdiff
   vimish-fold
   visual-fill-column

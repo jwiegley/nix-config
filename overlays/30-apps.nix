@@ -37,12 +37,12 @@ Anki = self.installApplication rec {
 
 Dash = self.installApplication rec {
   name = "Dash";
-  version = "4.6.6";
+  version = "4.6.7";
   sourceRoot = "Dash.app";
   src = super.fetchurl {
     url = https://kapeli.com/downloads/v4/Dash.zip;
-    sha256 = "1dkrzh4l5an0z7qv25irmagssaymscjzzgdn1jha11sqhhna9lh1";
-    # date = 2019-09-24T09:46:16+0200;
+    sha256 = "1dizd4mmmr3vrqa5x4pdbyy0g00d3d5y45dfrh95zcj5cscypdg2";
+    # date = 2019-11-13T10:25:37-0800;
   };
  description = "Dash is an API Documentation Browser and Code Snippet Manager";
   homepage = https://kapeli.com/dash;
@@ -50,12 +50,12 @@ Dash = self.installApplication rec {
 
 Docker = self.installApplication rec {
   name = "Docker";
-  version = "2.1.0.3";
+  version = "2.1.0.4";
   sourceRoot = "Docker.app";
   src = super.fetchurl {
     url = https://download.docker.com/mac/stable/Docker.dmg;
-    sha256 = "11c6zrslyc1fpyyvldrdlxbywns8j5r5nza00fblqvcf8qxqqw81";
-    # date = 2019-09-24T09:49:04+0200;
+    sha256 = "06g3s7igf0rxsybwas13df78cphqkg4kflnr53y6gcj10vq7jlsl";
+    # date = 2019-10-23T09:49:21-0700;
   };
   description = ''
     Docker CE for Mac is an easy-to-install desktop app for building,
@@ -66,12 +66,12 @@ Docker = self.installApplication rec {
 
 Firefox = self.installApplication rec {
   name = "Firefox";
-  version = "70.0";
+  version = "70.0.1";
   sourceRoot = "Firefox.app";
   src = super.fetchurl {
     name = "Firefox-${version}.dmg";
     url = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/mac/en-US/Firefox%20${version}.dmg";
-    sha256 = "0z0r4h2s1rb4hjrm5zcprmfip2iaa85mxznhm6lczvm46jy8zjra";
+    sha256 = "1d8v3hyhb8rk8bmpkw6lqlgjqvc5ld5l81dc0k5y6qkhnpln5gfh";
   };
   postInstall = ''
     for file in  \
@@ -285,7 +285,7 @@ VirtualII = self.installApplication rec {
   src = super.fetchurl {
     url = http://www.virtualii.com/VirtualII.dmg;
     sha256 = "0fx60bcc8lipbl8mfm8p3i1yb98hkyfyc5zvcb70zzd01917xihj";
-    # date = 2019-09-24T09:49:35+0200;
+    # date = 2019-11-02T12:56:22-0700;
   };
   description = ''
     Virtual ][ lets you play the old Apple games, because it supports all

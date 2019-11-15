@@ -15,6 +15,7 @@ NIXOPTS    = --option build-use-substitutes false	\
 	     --option substituters ''			\
 	     --option builders ''
 else
+# NIXOPTS    = --option substituters 'https://nix.dfinity.systems'
 NIXOPTS    =
 endif
 
@@ -101,9 +102,10 @@ shells:
 	done
 
 pull:
-	(cd darwin       && git pull --rebase)
+	(cd darwin && git pull --rebase)
 	(cd home-manager && git pull --rebase)
-	(cd nixpkgs      && git pull --rebase)
+	(cd overlays/emacs-overlay && git pull --rebase)
+	(cd nixpkgs && git pull --rebase)
 
 tag-before:
 	git --git-dir=nixpkgs/.git branch -f before-update HEAD
@@ -122,6 +124,7 @@ mirror:
 	git --git-dir=nixpkgs/.git push -f --tags github
 	git --git-dir=darwin/.git push --mirror jwiegley
 	git --git-dir=home-manager/.git push --mirror jwiegley
+	git --git-dir=overlays/emacs-overlay/.git push --mirror jwiegley
 
 update: tag-before pull build switch env working
 

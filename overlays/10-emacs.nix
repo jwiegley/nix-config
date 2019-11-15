@@ -7,7 +7,7 @@ let
       inherit (stdenv) lib mkDerivation;
 
       withPatches = pkg: patches:
-        lib.overrideDerivation pkg (attrs: { inherit patches; });
+        pkg.overrideAttrs(attrs: { inherit patches; });
 
       compileEmacsFiles = pkgs.callPackage ./emacs/builder.nix;
 
@@ -186,8 +186,8 @@ let
 
     xml-rpc = compileEmacsWikiFile {
       name = "xml-rpc.el";
-      sha256 = "1lmmzd9vpvybva642558wfm6nv21x7c0qrm6487r31l3k18lz3nd";
-      # date = 2019-04-03T08:51:31-0700;
+      sha256 = "0mdqa9w1p6cmli6976v4wi0sw9r4p5prkj7lzfd1877wk11c9c73";
+      # date = 2019-11-02T12:59:10-0700;
     };
 
     xray = compileEmacsWikiFile {
@@ -277,6 +277,15 @@ let
         rev = "efd593bf14d8f175e6bafad7101713507818c75d";
         sha256 = "1xm4snfgiaajziqsj9k4yg55zvrfg033fipx5awwa0j1zxy90gvd";
         # date = 2019-08-21T20:17:40+02:00;
+      };
+    };
+
+    cell-mode = compileEmacsFiles {
+      name = "cell-mode";
+      src = fetchgit {
+        url = http://gitlab.com/dto/cell.el.git;
+        rev = "c7094eb2d8101988339b0a95ca7a4d4708901e68";
+        sha256 = "00kgish9q8j5l6kg6n80a83a3dpbmkqqm2idqws41gsniyxaa93b";
       };
     };
 
@@ -390,6 +399,17 @@ let
         rev = "772fb942777a321b4698add1b94cff157f23a93b";
         sha256 = "16zil8kjv7lfmy11g88p1cm24j9db319fgkwzsgf2vzp1m15l0pc";
         # date = 2019-03-08T15:38:36+08:00;
+      };
+    };
+
+    gud-lldb = compileEmacsFiles {
+      name = "gud-lldb";
+      src = fetchFromGitHub {
+        owner = "jojojames";
+        repo = "gud-lldb";
+        rev = "8e68eef3a14f2a372577fd160d38d438a533c6a9";
+        sha256 = "19ab404khsiflhczc2xzdhsqrxlhzi90m4b2wzwb5q5mizivl2y6";
+        # date = 2017-04-14T17:22:24-07:00;
       };
     };
 
@@ -760,7 +780,7 @@ let
         };
       };
 
-    color-theme = lib.overrideDerivation super.color-theme (attrs: rec {
+    color-theme = super.color-theme.overrideAttrs(attrs: rec {
       name = "emacs-color-theme-${version}";
       version = "6.6.0";
       src = fetchurl {
@@ -845,7 +865,7 @@ let
       };
     };
 
-    lua-mode = lib.overrideDerivation super.lua-mode (attrs: rec {
+    lua-mode = super.lua-mode.overrideAttrs(attrs: rec {
       name = "lua-mode-${version}";
       version = "20190113.1350";
       src = fetchFromGitHub {
@@ -881,7 +901,7 @@ let
       };
     };
 
-    pdf-tools = lib.overrideDerivation super.pdf-tools (attrs: {
+    pdf-tools = super.pdf-tools.overrideAttrs(attrs: {
       src = fetchFromGitHub {
         owner = "politza";
         repo = "pdf-tools";
@@ -975,7 +995,7 @@ let
       };
     };
 
-    w3m = lib.overrideDerivation super.w3m (attrs: rec {
+    w3m = super.w3m.overrideAttrs(attrs: rec {
       name = "emacs-w3m-${version}";
       version = "20190227.2349";
       src = fetchFromGitHub {
@@ -1002,48 +1022,63 @@ in {
 emacs = self.emacs26;
 emacsPackagesNg = self.emacs26PackagesNg;
 
-emacs26 = with pkgs; stdenv.lib.overrideDerivation
-  (pkgs.emacs26.override { srcRepo = true; }) (attrs: rec {
+emacs26 = with pkgs;
+  (pkgs.emacs26.override { srcRepo = true; }).overrideAttrs(attrs: rec {
   CFLAGS = "-O3 -Ofast " + attrs.CFLAGS;
   buildInputs = attrs.buildInputs ++
-    [ libpng libjpeg libungif libtiff librsvg ] ;
+    [ libpng libjpeg libungif libtiff librsvg ];
+  preConfigure = ''
+    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
+  '';
 });
 
 emacs26PackagesNg = mkEmacsPackages self.emacs26;
 
-emacs26debug = pkgs.stdenv.lib.overrideDerivation pkgs.emacs26 (attrs: rec {
+emacs26debug = with pkgs;
+  (pkgs.emacs26.override { srcRepo = true; }).overrideAttrs(attrs: rec {
   name = "${attrs.name}-debug";
   CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
+  buildInputs = attrs.buildInputs ++
+    [ libpng libjpeg libungif libtiff librsvg ];
+  preConfigure = ''
+    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
+  '';
   configureFlags = attrs.configureFlags ++
     [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
 });
 
 emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
 
-emacsHEAD = pkgs.stdenv.lib.overrideDerivation
-  (pkgs.emacs26.override { srcRepo = true; }) (attrs: rec {
+emacsHEAD = with pkgs;
+  (pkgs.emacs26.override { srcRepo = true; }).overrideAttrs(attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "27.0";
   versionModifier = ".50";
-  doCheck = false;
-  CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
   src = ~/src/emacs;
+  CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
+  patches = [
+    ./emacs/tramp-detect-wrapped-gvfsd.patch
+    ./emacs/clean-env.patch
+  ];
+  buildInputs = attrs.buildInputs ++
+    [ libpng libjpeg libungif libtiff librsvg
+      jansson freetype harfbuzz.dev git ];
+  preConfigure = ''
+    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac
+    autoreconf
+  '';
   configureFlags = attrs.configureFlags ++
     [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
 });
 
 emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
 
-convertForERC = drv: pkgs.stdenv.lib.overrideDerivation drv (attrs: rec {
+convertForERC = drv: drv.overrideAttrs(attrs: rec {
   name = "erc-${version}${versionModifier}";
   appName = "ERC";
   version = "27.0";
   versionModifier = ".50";
   iconFile = ./emacs/Chat.icns;
-
-  patches = [
-    ./emacs/tramp-detect-wrapped-gvfsd.patch
-  ];
 
   preConfigure = ''
     sed -i 's|/usr/share/locale|${pkgs.gettext}/share/locale|g' \

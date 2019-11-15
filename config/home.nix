@@ -58,6 +58,9 @@ in rec {
       EMACS_SERVER_FILE  = "${tmp_directory}/emacs501/server";
       EMAIL              = "${programs.git.userEmail}";
       JAVA_OPTS          = "-Xverify:none";
+
+      VAGRANT_DEFAULT_PROVIDER = "vmware_desktop";
+      VAGRANT_VMWARE_CLONE_DIRECTORY = "${home_directory}/Machines/vagrant";
     };
 
     file = builtins.listToAttrs (
@@ -88,6 +91,10 @@ in rec {
         ".curlrc".text = ''
           capath=${pkgs.cacert}/etc/ssl/certs/
           cacert=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
+        '';
+        ".wgetrc".text = ''
+          ca_directory = ${pkgs.cacert}/etc/ssl/certs/
+          ca_certificate = ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
         '';
       };
   };
@@ -169,7 +176,7 @@ in rec {
                 "--enable-profiling --ghc-options=-fprof-auto";
         cb    = "cabal new-build";
 
-        teams = ''${pkgs.nix}/bin/nix-shell --pure --command '' +
+        deploy = ''${pkgs.nix}/bin/nix-shell --pure --command '' +
         ''"terraform init; '' +
           ''export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | head -1); '' +
           ''terraform apply"'';
@@ -439,7 +446,7 @@ in rec {
              proxyJump = proxy;
            }); in
         (if    "${localconfig.hostname}" == "vulcan"
-            || "${localconfig.hostname}" == "hermes"
+            # || "${localconfig.hostname}" == "hermes"
             then {
            vulcan.hostname = "192.168.1.69";
          } else {
@@ -459,7 +466,7 @@ in rec {
         router  = { hostname = "192.168.1.98"; user = "root"; };
 
         nixos   = onHost "vulcan" "192.168.118.128";
-        dfinity = onHost "vulcan" "192.168.118.129";
+        dfinity = onHost "vulcan" "192.168.118.136";
         macos   = onHost "vulcan" "192.168.118.130";
         centos  = onHost "vulcan" "192.168.118.133";
 

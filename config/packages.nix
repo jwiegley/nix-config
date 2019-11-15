@@ -40,6 +40,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
 
   # jsToolsEnv
   jq
+  jo
   nodejs
   nodePackages.eslint
   nodePackages.csslint
@@ -158,6 +159,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   bashInteractive
   bat
   dirscan
+  # cachix
   ctop
   cvc4
   direnv
@@ -201,6 +203,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   parallel
   (pass.withExtensions (ext: with ext; [ pass-update pass-import ]))
   pass-git-helper
+  perl
   browserpass
   qrencode
   pinentry_mac
@@ -211,6 +214,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   renameutils
   ripgrep
   rlwrap
+  ruby
   (exe (import ~/src/runmany {}))
   screen
   (exe (import ~/src/sizes {}))
@@ -246,24 +250,31 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   ratpoison
   prooftree
 
+  # vmToolsEnv
+  # VagrantManager
+  # VagrantVMwareUtility
+  # vagrant
+  # vagrant-aws
+  # vagrant-vmware-desktop
+
   # Applications
-  Anki
-  Dash
-  Docker
+  # Anki
+  # Dash
+  # Docker
   Firefox
-  GIMP
-  HandBrake
-  iTerm2
-  KeyboardMaestro
-  PathFinder
-  RipIt
-  Skim
-  Slate
-  Soulver
-  SuspiciousPackage
-  Ukelele
-  UnicodeChecker
-  VirtualII
-  Zekr
-  Zotero
+  # GIMP
+  # HandBrake
+  # iTerm2
+  # KeyboardMaestro
+  # PathFinder
+  # RipIt
+  # Skim
+  # Slate
+  # Soulver
+  # SuspiciousPackage
+  # Ukelele
+  # UnicodeChecker
+  # VirtualII
+  # Zekr
+  # Zotero
 ]
