@@ -440,6 +440,10 @@ in rec {
       hashKnownHosts = true;
       userKnownHostsFile = "${xdg.configHome}/ssh/known_hosts";
 
+      extraConfig = ''
+        Include ${home_directory}/dfinity/master/.vagrant/ssh_config
+      '';
+
       matchBlocks =
         let onHost = proxy: hostname: { inherit hostname; } //
           (if "${localconfig.hostname}" == proxy then {} else {

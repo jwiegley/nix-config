@@ -34,6 +34,20 @@ let
 
     in {
 
+    seq = if super.emacs.version == "27.0"
+      then mkDerivation rec {
+        name = "seq-stub";
+        version = "stub";
+        src = ./.;
+        phases = [ "installPhase" ];
+        installPhase = ''
+          mkdir $out
+          touch $out/.empty
+        '';
+      }
+      else super.seq;
+
+
     edit-env        = compileLocalFile "edit-env.el";
     edit-var        = compileLocalFile "edit-var.el";
     ox-extra        = compileLocalFile "ox-extra.el";
@@ -1009,13 +1023,14 @@ let
   };
 
   mkEmacsPackages = emacs:
-    (self.emacsPackagesNgGen emacs).overrideScope (super: self:
+    (self.emacsPackagesFor emacs).overrideScope (super: self:
       pkgs.lib.fix
         (pkgs.lib.extends
            myEmacsPackageOverrides
-           (_: super.melpaPackages
-                 // { inherit emacs;
-                      inherit (super) melpaBuild trivialBuild; })));
+           (_: super.elpaPackages
+            // super.melpaPackages
+            // { inherit emacs;
+                 inherit (super) melpaBuild trivialBuild; })));
 
 in {
 
