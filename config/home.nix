@@ -213,7 +213,6 @@ in rec {
         # fi
 
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
-        # export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | head -1);
 
         if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
             unsetopt zle
@@ -439,10 +438,6 @@ in rec {
 
       hashKnownHosts = true;
       userKnownHostsFile = "${xdg.configHome}/ssh/known_hosts";
-
-      extraConfig = ''
-        Include ${home_directory}/dfinity/master/.vagrant/ssh_config
-      '';
 
       matchBlocks =
         let onHost = proxy: hostname: { inherit hostname; } //

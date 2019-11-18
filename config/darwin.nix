@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, ... }@args:
 
 let home_directory = "/Users/johnw";
     xdg_configHome = "${home_directory}/.config";
@@ -7,6 +7,8 @@ let home_directory = "/Users/johnw";
     localconfig = import <localconfig>;
 
 in {
+  # imports = [ <home-manager/nix-darwin> ];
+
   system.defaults = {
     NSGlobalDomain = {
       AppleKeyboardUIMode = 3;
@@ -592,4 +594,15 @@ EOF
   programs.nix-index.enable = true;
 
   system.stateVersion = 2;
+
+  # users.users.johnw = {
+  #   name = "johnw";
+  #   home = "/Users/johnw";
+  #   shell = pkgs.zsh;
+  # };
+
+  # home-manager = {
+  #   useUserPackages = true;
+  #   users.johnw = import ./home.nix;
+  # };
 }
