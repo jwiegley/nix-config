@@ -195,7 +195,7 @@ EOF
     systemPackages = import ./packages.nix { inherit pkgs; };
 
     systemPath = [
-      "${pkgs.Docker}/Applications/Docker.app/Contents/Resources/bin"
+      "/Applications/Docker.app/Contents/Resources/bin"
     ];
 
     variables = {
