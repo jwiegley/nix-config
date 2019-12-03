@@ -61,6 +61,7 @@ pkgs: epkgs: with epkgs;
   counsel
   counsel-dash
   counsel-gtags
+  counsel-jq
   counsel-osx-app
   counsel-projectile
   counsel-tramp
@@ -268,6 +269,7 @@ pkgs: epkgs: with epkgs;
   org                           # org org-babel org-crypt
   org-bookmark-heading
   org-gcal
+  org-jira
   org-mind-map
   org-noter
   org-opml

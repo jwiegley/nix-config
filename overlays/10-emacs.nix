@@ -303,6 +303,18 @@ let
       };
     };
 
+    counsel-jq = compileEmacsFiles {
+      name = "counsel-jq";
+      src = fetchFromGitHub {
+        owner = "200ok-ch";
+        repo = "counsel-jq";
+        rev = "c940636fe55f26d35d9d2d23adcb6f931a6df5e0";
+        sha256 = "0jk7dcpa5ffl6kl3bf264kzmv06pwiamamqjgciphhfygwgxh7xc";
+        # date = 2019-12-02T09:46:04+01:00;
+      };
+      buildInputs = with self; [ swiper ivy ];
+    };
+
     deadgrep = compileEmacsFiles {
       name = "deadgrep";
       src = fetchFromGitHub {
