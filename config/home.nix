@@ -445,7 +445,7 @@ in rec {
              proxyJump = proxy;
            }); in
         (if    "${localconfig.hostname}" == "vulcan"
-            # || "${localconfig.hostname}" == "hermes"
+            || "${localconfig.hostname}" == "hermes"
             then {
            vulcan.hostname = "192.168.1.69";
          } else {
@@ -510,11 +510,8 @@ in rec {
         id_dfinity = {
           host = lib.concatStringsSep " " [
             "hydra"
-            "pa-1"
-            "zrh-1" "zrh-2" "zrh-3"
-            "zrh-darwin-1"
-            "pa-darwin-1" "pa-darwin-2"
-            "haight-conf"
+            "pa-1" "pa-darwin-1" "pa-darwin-2"
+            "zrh-1" "zrh-2" "zrh-3" "zrh-darwin-1"
           ];
           identityFile = "${xdg.configHome}/ssh/id_dfinity";
           identitiesOnly = true;
@@ -535,6 +532,7 @@ in rec {
         };
 
         # This requires a VPN connection to the DFINITY network.
+
         pa-darwin-1 = {
           hostname = "10.129.10.7";
           user = "dfinity";
@@ -543,16 +541,6 @@ in rec {
         pa-darwin-2 = {
           hostname = "10.129.10.38";
           user = "dfnmain";
-        };
-
-        # DFINITY Machines in San Francisco
-
-        haight-conf = {
-          hostname = "10.129.12.75";
-          user = "jwiegley";
-          extraOptions = {
-            "LocalForward" = "5991 127.0.0.1:5900";
-          };
         };
 
         # DFINITY Machines in Zurich
@@ -574,11 +562,6 @@ in rec {
 
         zrh-darwin-1 = {
           hostname = "10.129.0.99";
-          user = "dfinity";
-        };
-
-        treppenhaus = {
-          hostname = "10.129.0.103";
           user = "dfinity";
         };
       };

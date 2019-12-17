@@ -15,15 +15,12 @@ NIXOPTS    = --option build-use-substitutes false	\
 	     --option substituters ''			\
 	     --option builders ''
 else
-# NIXOPTS    = --option substituters 'https://nix.dfinity.systems'
 NIXOPTS    =
 endif
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
 # when first necessary.
-PROJS	   = $(eval PROJS :=						\
-		$(shell find $(HOME)/dfinity $(HOME)/src		\
-			-name .envrc -type f -printf '%h '))$(PROJS)
+PROJS	   = $(eval PROJS := $(shell find $(HOME)/src -name .envrc -type f -printf '%h '))$(PROJS)
 HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
 LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 BUILD_PATH = $(eval BUILD_PATH :=					\
@@ -142,7 +139,7 @@ size:
 	du --si -shx /nix/store
 
 copy:
-	push -h $(HOSTNAME) -f src,dfinity $(REMOTE)
+	push -h $(HOSTNAME) -f src $(REMOTE)
 	nix copy --no-check-sigs --keep-going --to ssh://$(REMOTE)	\
 	    $(BUILD_PATH)						\
 	    $(shell find $(PROJS) -path '*/.direnv/default'		\
@@ -170,7 +167,7 @@ cache:
 	    | parallel -0 nix copy --to file://$(CACHE))
 
 remove-build-products:
-	find $(HOME)/dfinity $(HOME)/Documents $(HOME)/src	\
+	find $(HOME)/Documents $(HOME)/src	\
 	    \( -name 'dist' -type d -o				\
 	       -name 'dist-newstyle' -type d -o			\
 	       -name '.ghc.*' -o				\

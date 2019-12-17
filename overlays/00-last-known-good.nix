@@ -23,11 +23,19 @@ let
     sha256 = "0xgy2rn2pxii3axa0d9y4s25lsq7d9ykq30gvg2nzgmdkmy375rr";
   };
 
+  known-good-20191130_091506 = nixpkgs {
+    rev    = "c0a5a7ba47e1600b806781d1830d3bdba2ca0077";
+    sha256 = "1hbm0hwggixd7mabgx840d9q49v5mja763w0p22d5h8yf5wb93fk";
+  };
+
 in
 {
-  inherit (known-good-20190305_133437) recoll socat2pre wireguard;
+  inherit (known-good-20190305_133437) recoll socat2pre;
+  # inherit (known-good-20190305_133437) recoll socat2pre wireguard;
 
-  inherit (known-good-20190831_155518) mitmproxy;
+  # inherit (known-good-20190831_155518) mitmproxy;
 
   inherit (known-good-20191113_070954) pass;
+
+  inherit (known-good-20191130_091506) nano;
 }

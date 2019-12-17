@@ -104,7 +104,7 @@ pkgs: epkgs: with epkgs;
   elisp-slime-nav
   elmacro
   emacs-load-time
-  emms                          # emms-setup
+  # emms                          # emms-setup
   emojify
   engine-mode
   enh-ruby-mode                 # ruby-mode

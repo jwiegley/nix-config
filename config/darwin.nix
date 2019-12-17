@@ -461,7 +461,7 @@ EOF
       "ssh-auth-sock=$HOME/.config/gnupg/S.gpg-agent.ssh"
     ];
 
-    trustedUsers = [ "johnw" "@admin" "hydra-queue-runner" "dfinity" ];
+    trustedUsers = [ "johnw" "@admin" ];
 
     trustedBinaryCaches = [
     ];
@@ -577,6 +577,7 @@ EOF
     binaryCachePublicKeys = [
       "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
       "cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
+      "hydra.dfinity.systems-2:KMTixHrh9DpAjF/0xU/49VEtNuGzQ71YaVIUSOLUaCM="
     ];
    }
    else {});
