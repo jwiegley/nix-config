@@ -1050,7 +1050,10 @@ emacs = self.emacs26;
 emacsPackagesNg = self.emacs26PackagesNg;
 
 emacs26 = with pkgs;
-  (pkgs.emacs26.override { srcRepo = true; }).overrideAttrs(attrs: rec {
+  (pkgs.emacs26.override {
+     imagemagick = self.imagemagickBig;
+     srcRepo = true;
+   }).overrideAttrs(attrs: rec {
   CFLAGS = "-O3 -Ofast " + attrs.CFLAGS;
   buildInputs = attrs.buildInputs ++
     [ libpng libjpeg libungif libtiff librsvg ];
@@ -1062,7 +1065,10 @@ emacs26 = with pkgs;
 emacs26PackagesNg = mkEmacsPackages self.emacs26;
 
 emacs26debug = with pkgs;
-  (pkgs.emacs26.override { srcRepo = true; }).overrideAttrs(attrs: rec {
+  (pkgs.emacs26.override {
+     imagemagick = self.imagemagickBig;
+     srcRepo = true;
+   }).overrideAttrs(attrs: rec {
   name = "${attrs.name}-debug";
   CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
   buildInputs = attrs.buildInputs ++
@@ -1077,7 +1083,10 @@ emacs26debug = with pkgs;
 emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
 
 emacsHEAD = with pkgs;
-  (pkgs.emacs26.override { srcRepo = true; }).overrideAttrs(attrs: rec {
+  (pkgs.emacs26.override {
+     imagemagick = self.imagemagickBig;
+     srcRepo = true;
+   }).overrideAttrs(attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "27.0";
   versionModifier = ".50";

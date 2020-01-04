@@ -24,8 +24,7 @@ PROJS	   = $(eval PROJS := $(shell find $(HOME)/src -name .envrc -type f -printf
 HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
 LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 BUILD_PATH = $(eval BUILD_PATH :=					\
-		$(shell NIX_PATH=$(NIXPATH)				\
-			    nix-build $(BUILD_ARGS)))$(BUILD_PATH)
+		$(shell NIX_PATH=$(NIXPATH) nix-build $(BUILD_ARGS)))$(BUILD_PATH)
 
 DARWIN_REBUILD = $(BUILD_PATH)/sw/bin/darwin-rebuild
 HOME_MANAGER = $(BUILD_PATH)/sw/bin/home-manager
@@ -69,6 +68,11 @@ home-switch:
 	HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix \
 	    $(HOME_MANAGER) switch
 	@echo "Home generation: $$($(HOME_MANAGER) generations | head -1)"
+	@for file in $(HOME)/.config/fetchmail/config		\
+		    $(HOME)/.config/fetchmail/config-lists; do	\
+	    cp -pL $$file $$file.copy;				\
+	    chmod 0600 $$file.copy;				\
+	done
 
 home-news:
 	PATH=$(BUILD_PATH)/sw/bin:$(PATH) \
@@ -138,8 +142,7 @@ check-all: check
 size:
 	du --si -shx /nix/store
 
-copy:
-	push -h $(HOSTNAME) -f src $(REMOTE)
+copy-nix:
 	nix copy --no-check-sigs --keep-going --to ssh://$(REMOTE)	\
 	    $(BUILD_PATH)						\
 	    $(shell find $(PROJS) -path '*/.direnv/default'		\
@@ -150,6 +153,9 @@ copy:
 	          done							\
 	        | sort							\
 		| uniq)
+
+copy: copy-nix
+	push -h $(HOSTNAME) -f src $(REMOTE)
 	ssh $(REMOTE) '$(MAKE_REC) HOSTNAME=$(REMOTE) build all'
 
 cache:

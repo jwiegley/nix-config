@@ -187,9 +187,8 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   less
   linkdups
   lipotell
-  lorri
+  # lorri
   m-cli
-  multitail
   mysql
   nix-bash-completions
   nix-zsh-completions

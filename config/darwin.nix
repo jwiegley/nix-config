@@ -228,6 +228,8 @@ EOF
     pathsToLink = [ "/info" "/etc" "/share" "/include" "/lib" "/libexec" ];
 
     etc."dovecot/dovecot.conf".text = ''
+      default_login_user = johnw
+      default_internal_user = johnw
       auth_mechanisms = plain
       disable_plaintext_auth = no
       lda_mailbox_autocreate = yes
@@ -262,6 +264,14 @@ EOF
         location =
         inbox = yes
         subscriptions = yes
+      }
+
+      service auth {
+        unix_listener auth-userdb {
+          mode = 0644
+          user = johnw
+          group = johnw
+        }
       }
 
       plugin {
@@ -311,7 +321,7 @@ EOF
 
       server {
           label       = "DFINITY";
-          ip          = 10.20.13.192;
+          ip          = 10.20.13.192
           preset      = off;
           uptest      = ping;
           edns_query  = yes;

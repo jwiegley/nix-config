@@ -1,0 +1,35 @@
+#!/bin/bash -e
+
+cd ~/.config/gnupg/private-keys-v1.d
+
+for i in                                                \
+    4975B4558FC5A7699D4E6DFD940DF0A5633B661F.key        \
+    99C79A2052C3B513DF26BB5B03519C83328F13E1.key        \
+    A8ADF3692CFDEA476DD3EF8191DF7C5806C0C825.key
+do
+    if [[ "$1" == "restore" ]]; then
+        if [[ ! -d /Volumes/File ]]; then
+            echo Please mount /Volumes/Files
+            exit 1
+        fi
+        cp -pv /Volumes/Files/Keys/GnuPG/private-keys-v1.d/$i $i
+    else
+        if [[ ! -f ${i}.$1 ]]; then
+            echo "Could not find key file $PWD/${i}.$1!"
+            exit 1
+        fi
+        cp -pv ${i}.$1 $i
+    fi
+done
+
+(sudo killall gpg-agent 2> /dev/null || exit 0)
+sleep 2
+(sudo killall -9 gpg-agent 2> /dev/null || exit 0)
+
+gpg --card-status
+
+(cd ~/src/category-theory; git remote update)
+
+if [[ ! -f ~/.yubico/challenge-$1 ]]; then
+    ykpamcfg -2
+fi

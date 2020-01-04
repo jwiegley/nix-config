@@ -183,14 +183,6 @@ in rec {
       };
 
       profileExtra = ''
-        for file in ${xdg.configHome}/fetchmail/config \
-                    ${xdg.configHome}/fetchmail/config-work \
-                    ${xdg.configHome}/fetchmail/config-lists
-        do
-            cp -pL $file ''${file}.copy
-            chmod 0600 ''${file}.copy
-        done
-
         export GPG_TTY=$(tty)
         if ! pgrep -x "gpg-agent" > /dev/null; then
             ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
@@ -488,12 +480,12 @@ in rec {
 
         id_local = {
           host = lib.concatStringsSep " " [
-            "fiat" "hermes" "home" "mac1*" "macos*" "nixos*" "mohajer" "fin"
-            "dfinity" "peta" "smokeping" "tails" "tank" "titan" "ubuntu*"
-            "vulcan"
+            "hermes" "home" "mac1*" "macos*" "nixos*" "mohajer" "fin"
+            "dfinity" "smokeping" "tank" "titan" "ubuntu*" "vulcan"
           ];
           identityFile = "${xdg.configHome}/ssh/id_local";
           identitiesOnly = true;
+          user = "johnw";
         };
 
         nix-docker = {
@@ -625,15 +617,6 @@ in rec {
     configFile."fetchmail/config".text = ''
       poll imap.fastmail.com protocol IMAP port 993
         user '${programs.git.userEmail}' there is johnw here
-        ssl sslcertck sslcertfile "${ca-bundle_crt}"
-        folder INBOX
-        fetchall
-        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e"
-    '';
-
-    configFile."fetchmail/config-work".text = ''
-      poll imap.gmail.com protocol IMAP port 993
-        user 'john@dfinity.org' there is johnw here
         ssl sslcertck sslcertfile "${ca-bundle_crt}"
         folder INBOX
         fetchall

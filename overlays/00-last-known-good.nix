@@ -31,9 +31,6 @@ let
 in
 {
   inherit (known-good-20190305_133437) recoll socat2pre;
-  # inherit (known-good-20190305_133437) recoll socat2pre wireguard;
-
-  # inherit (known-good-20190831_155518) mitmproxy;
 
   inherit (known-good-20191113_070954) pass;
 
