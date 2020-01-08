@@ -119,10 +119,10 @@ tag-working:
 	git --git-dir=nixpkgs/.git tag -f known-good-$(LKG_DATE) last-known-good
 
 mirror:
-	git --git-dir=nixpkgs/.git push github -f master:master
-	git --git-dir=nixpkgs/.git push github -f unstable:unstable
-	git --git-dir=nixpkgs/.git push github -f last-known-good:last-known-good
-	git --git-dir=nixpkgs/.git push -f --tags github
+	git --git-dir=nixpkgs/.git push origin -f master:master
+	git --git-dir=nixpkgs/.git push origin -f unstable:unstable
+	git --git-dir=nixpkgs/.git push origin -f last-known-good:last-known-good
+	git --git-dir=nixpkgs/.git push -f --tags origin
 	git --git-dir=darwin/.git push --mirror jwiegley
 	git --git-dir=home-manager/.git push --mirror jwiegley
 	git --git-dir=overlays/emacs-overlay/.git push --mirror jwiegley
@@ -137,7 +137,7 @@ check:
 
 check-all: check
 	ssh hermes '$(MAKE_REC) check'
-	ssh fin    '$(MAKE_REC) check'
+	ssh athena '$(MAKE_REC) check'
 
 size:
 	du --si -shx /nix/store
@@ -201,4 +201,4 @@ gc-all: remove-build-products
 
 fullclean: gc-all check
 	ssh hermes '$(MAKE_REC) gc-all check'
-	ssh fin    '$(MAKE_REC) gc-all check'
+	ssh athena '$(MAKE_REC) gc-all check'

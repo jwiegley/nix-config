@@ -220,15 +220,15 @@ in rec {
         { name = "iterm2_shell_integration";
           src = pkgs.fetchurl {
             url = https://iterm2.com/shell_integration/zsh;
-            sha256 = "0jjcf4r6vybjz4knpnlhbql7f486k3aqqisgpas1mckjdhlsh5vf";
-            # date = 2019-03-28T14:15:10-0700;
+            sha256 = "1qm7khz19dhwgz4aln3yy5hnpdh6pc8nzxp66m1za7iifq9wrvil";
+            # date = 2020-01-07T15:59:09-0800;
           };
         }
         { name = "iterm2_tmux_integration";
           src = pkgs.fetchurl {
             url = https://gist.githubusercontent.com/antifuchs/c8eca4bcb9d09a7bbbcd/raw/3ebfecdad7eece7c537a3cd4fa0510f25d02611b/iterm2_zsh_init.zsh;
             sha256 = "1v1b6yz0lihxbbg26nvz85c1hngapiv7zmk4mdl5jp0fsj6c9s8c";
-            # date = 2019-03-28T14:19:21-0700;
+            # date = 2020-01-07T15:59:13-0800;
           };
         }
       ];
@@ -438,6 +438,7 @@ in rec {
            }); in
         (if    "${localconfig.hostname}" == "vulcan"
             || "${localconfig.hostname}" == "hermes"
+            || "${localconfig.hostname}" == "athena"
             then {
            vulcan.hostname = "192.168.1.69";
          } else {
@@ -451,6 +452,7 @@ in rec {
          }) // rec {
 
         hermes  = onHost "vulcan" "192.168.1.65";
+        athena  = onHost "vulcan" "192.168.1.65";
         fin     = onHost "vulcan" "192.168.1.80";
         tank    = fin;
 
@@ -480,8 +482,8 @@ in rec {
 
         id_local = {
           host = lib.concatStringsSep " " [
-            "hermes" "home" "mac1*" "macos*" "nixos*" "mohajer" "fin"
-            "dfinity" "smokeping" "tank" "titan" "ubuntu*" "vulcan"
+            "hermes" "athena" "home" "mac1*" "macos*" "nixos*" "mohajer"
+            "fin" "dfinity" "smokeping" "tank" "titan" "ubuntu*" "vulcan"
           ];
           identityFile = "${xdg.configHome}/ssh/id_local";
           identitiesOnly = true;

@@ -9,6 +9,11 @@ elif [[ $(hostname) == "Vulcan.local" ]]; then
   REMOTE=${REMOTE:-hermes}
 elif [[ $(hostname) == "fin" ]]; then
   HOSTNAME=fin
+elif [[ $(hostname) == "athena"
+     || $(hostname) == "Athena"
+     || $(hostname) == "Athena.local" ]]; then
+  HOSTNAME=athena
+  REMOTE=${REMOTE:-vulcan}
 else
   HOSTNAME=hermes
   REMOTE=${REMOTE:-vulcan}

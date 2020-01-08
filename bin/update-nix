@@ -1,6 +1,0 @@
-#!/bin/bash -e
-
-u HOSTNAME=vulcan REMOTE=hermes update shells check cache copy || \
-    (cd ~/src/nix/nixpkgs ; git reset --hard last-known-good)
-
-ssh hermes 'make -C $NIX_CONF NIX_CONF=$NIX_CONF shells'

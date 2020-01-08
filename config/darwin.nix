@@ -321,7 +321,7 @@ EOF
 
       server {
           label       = "DFINITY";
-          ip          = 10.20.13.192
+          ip          = 10.20.13.192;
           preset      = off;
           uptest      = ping;
           edns_query  = yes;
@@ -443,14 +443,14 @@ EOF
   };
 
   services = {
-    nix-daemon.enable = localconfig.hostname == "vulcan";
+    nix-daemon.enable = false;
     activate-system.enable = true;
   };
 
   nix = {
     package = pkgs.nixStable;
 
-    useDaemon = localconfig.hostname == "vulcan";
+    useDaemon = false;
 
     useSandbox = false;
     sandboxPaths = [
@@ -490,6 +490,49 @@ EOF
   (if localconfig.hostname == "hermes" then {
      maxJobs = 8;
      buildCores = 4;
+     distributedBuilds = true;
+
+     buildMachines = [
+       # { hostName = "vulcan";
+       #   sshUser = "johnw";
+       #   sshKey = "${xdg_configHome}/ssh/id_local";
+       #   system = "x86_64-darwin";
+       #   maxJobs = 20;
+       #   buildCores = 10;
+       #   speedFactor = 4;
+       # }
+       # { hostName = "nix-docker";
+       #   sshUser = "root";
+       #   sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
+       #   system = "x86_64-linux";
+       #   maxJobs = 2;
+       #   buildCores = 2;
+       #   speedFactor = 1;
+       #   supportedFeatures = [ "kvm" ];
+       # }
+       { hostName = "zrh-3";
+         sshUser = "johnw";
+         sshKey = "${xdg_configHome}/ssh/id_dfinity";
+         system = "x86_64-linux";
+         maxJobs = 48;
+         buildCores = 4;
+         speedFactor = 4;
+       }
+     ];
+
+     requireSignedBinaryCaches = false;
+     trustedBinaryCaches = [
+       https://nix.dfinity.systems
+       ssh://vulcan
+     ];
+     binaryCaches = [
+       https://nix.dfinity.systems
+       ssh://vulcan
+     ];
+   }
+   else if localconfig.hostname == "athena" then {
+     maxJobs = 4;
+     buildCores = 2;
      distributedBuilds = true;
 
      buildMachines = [

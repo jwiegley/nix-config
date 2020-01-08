@@ -30,6 +30,6 @@ gpg --card-status
 
 (cd ~/src/category-theory; git remote update)
 
-if [[ ! -f ~/.yubico/challenge-$1 ]]; then
+if [[ ! -f ~/.yubico/challenge-$1 && -x $(which ykpamcfg 2> /dev/null) ]]; then
     ykpamcfg -2
 fi

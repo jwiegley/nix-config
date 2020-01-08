@@ -250,32 +250,4 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   xorg.xauth
   ratpoison
   prooftree
-
-  # vmToolsEnv
-  # VagrantManager
-  # VagrantVMwareUtility
-  # vagrant
-  # vagrant-aws
-  # vagrant-vmware-desktop
-
-  # Applications
-  # Anki
-  # Dash
-  # Docker
-  Firefox
-  # GIMP
-  # HandBrake
-  # iTerm2
-  # KeyboardMaestro
-  # PathFinder
-  # RipIt
-  # Skim
-  # Slate
-  # Soulver
-  # SuspiciousPackage
-  # Ukelele
-  # UnicodeChecker
-  # VirtualII
-  # Zekr
-  # Zotero
 ]
