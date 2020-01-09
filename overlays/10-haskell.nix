@@ -207,6 +207,8 @@ haskell = pkgs.haskell // {
 
 haskellPackages_8_4 = self.haskell.packages.ghc844;
 haskellPackages_8_6 = self.haskell.packages.ghc865;
+haskellPackages_8_8 = self.haskell.packages.ghc882;
+haskellPackages_8_10 = self.haskell.packages.ghc8101;
 
 haskellPackages = self.haskell.packages.${self.ghcDefaultVersion};
 haskPkgs = self.haskellPackages;

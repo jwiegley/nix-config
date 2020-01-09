@@ -72,12 +72,12 @@ in rec {
            })
           [ "Library/Scripts/Applications/Download links to PDF.scpt"
             "Library/Scripts/Applications/Media Pro" ]) // {
-        ".dbvis".source        = "${xdg.configHome}/DbVisualizer";
-        ".docker".source       = "${xdg.configHome}/docker";
-        ".recoll".source       = "${xdg.configHome}/recoll";
-        ".gist".source         = "${xdg.configHome}/gist/account_id";
-        ".slate".source        = "${xdg.configHome}/slate/config";
-        ".zekr".source         = "${xdg.dataHome}/zekr";
+        ".dbvis".source          = "${xdg.configHome}/DbVisualizer";
+        ".docker".source         = "${xdg.configHome}/docker";
+        ".recoll".source         = "${xdg.configHome}/recoll";
+        ".gist".source           = "${xdg.configHome}/gist/account_id";
+        ".slate".source          = "${xdg.configHome}/slate/config";
+        ".zekr".source           = "${xdg.dataHome}/zekr";
 
         ".ledgerrc".text = ''
           --file ${home_directory}/Documents/accounts/main.ledger
@@ -190,6 +190,15 @@ in rec {
 
         . ${pkgs.z}/share/z.sh
 
+        function upload() {
+            lftp -u johnw@newartisans.com,$(pass ftp.fastmail.com | head -1) \
+                ftp://johnw@newartisans.com@ftp.fastmail.com                 \
+                -e "set ssl:ca-file \"${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt\"; cd /johnw.newartisans.com/files/pub ; put \"$1\" ; quit"
+
+            file=$(basename "$1" | sed -e 's/ /%20/g')
+            echo "http://ftp.newartisans.com/pub/$file" | pbcopy
+        }
+
         setopt extended_glob
       '';
 
@@ -203,6 +212,13 @@ in rec {
         #         eval $($DOCKER_MACHINE env default) > /dev/null 2>&1
         #     fi
         # fi
+
+        if [[ ! -L ${home_directory}/.gnupg ]]; then
+            ln -sf ${xdg.configHome}/gnupg ${home_directory}/.gnupg
+        fi
+        if [[ ! -L ${home_directory}/.password-store ]]; then
+            ln -sf ${home_directory}/Documents/.passwords ${home_directory}/.password-store
+        fi
 
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
 

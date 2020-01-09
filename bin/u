@@ -1,12 +1,15 @@
 #!/bin/bash
 
+#LAPTOP=hermes
+LAPTOP=athena
+
 if [[ "$1" == "vulcan" ]]; then
   HOSTNAME=vulcan
-  REMOTE=${REMOTE:-hermes}
+  REMOTE=${REMOTE:-$LAPTOP}
   shift 1
 elif [[ $(hostname) == "Vulcan.local" ]]; then
   HOSTNAME=vulcan
-  REMOTE=${REMOTE:-hermes}
+  REMOTE=${REMOTE:-$LAPTOP}
 elif [[ $(hostname) == "fin" ]]; then
   HOSTNAME=fin
 elif [[ $(hostname) == "athena"

@@ -143,15 +143,21 @@ size:
 	du --si -shx /nix/store
 
 copy-nix:
-	nix copy --no-check-sigs --keep-going --to ssh://$(REMOTE)	\
-	    $(BUILD_PATH)						\
+	PATH=$(BUILD_PATH)/sw/bin:$(PATH) \
+	NIX_PATH=$(NIXPATH)               \
+	    nix copy --no-check-sigs --keep-going --to ssh://$(REMOTE) $(BUILD_PATH)
+
+copy-nix-envs:
+	PATH=$(BUILD_PATH)/sw/bin:$(PATH)				\
+	NIX_PATH=$(NIXPATH)						\
+	    nix copy --no-check-sigs --keep-going --to ssh://$(REMOTE)	\
 	    $(shell find $(PROJS) -path '*/.direnv/default'		\
 		| while read dir; do					\
-		    ls $$dir/ | while read file ; do			\
-	              readlink $$dir/$$file;				\
-	            done ;						\
-	          done							\
-	        | sort							\
+		  ls $$dir/ | while read file ; do			\
+		      readlink $$dir/$$file;				\
+		  done ;						\
+		  done							\
+		| sort							\
 		| uniq)
 
 copy: copy-nix
@@ -173,14 +179,19 @@ cache:
 	    | parallel -0 nix copy --to file://$(CACHE))
 
 remove-build-products:
-	find $(HOME)/Documents $(HOME)/src	\
-	    \( -name 'dist' -type d -o				\
-	       -name 'dist-newstyle' -type d -o			\
-	       -name '.ghc.*' -o				\
-	       -name 'cabal.project.local*' -type f -o		\
-	       -name '.cargo-home' -type d -o			\
-	       -name 'target' -type d -o			\
-	       -name 'result*' -type l \) -print0		\
+	find $(HOME)/Documents $(HOME)/src		\
+	    \( -name 'dist' -type d -o			\
+	       -name 'dist-newstyle' -type d -o		\
+	       -name '.ghc.*' -o			\
+	       -name 'cabal.project.local*' -type f -o	\
+	       -name '.cargo-home' -type d -o		\
+	       -name 'target' -type d -o		\
+	       -name 'result*' -type l \) -print0	\
+	    | xargs -P4 -0 /bin/rm -fr
+
+remove-direnvs:
+	find $(HOME)/Documents $(HOME)/src		\
+	    \( -name '.direnv' -type d \) -print0	\
 	    | xargs -P4 -0 /bin/rm -fr
 
 gc:
@@ -191,7 +202,7 @@ gc:
 	                         --list-generations | field 1 | head -n -14)
 	nix-collect-garbage --delete-older-than $(MAX_AGE)
 
-gc-all: remove-build-products
+gc-all: remove-build-products remove-direnvs
 	nix-env --delete-generations					\
 	    $(shell nix-env --list-generations | field 1 | head -n -1)
 	nix-env -p /nix/var/nix/profiles/system --delete-generations	\
