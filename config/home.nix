@@ -190,15 +190,6 @@ in rec {
 
         . ${pkgs.z}/share/z.sh
 
-        function upload() {
-            lftp -u johnw@newartisans.com,$(pass ftp.fastmail.com | head -1) \
-                ftp://johnw@newartisans.com@ftp.fastmail.com                 \
-                -e "set ssl:ca-file \"${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt\"; cd /johnw.newartisans.com/files/pub ; put \"$1\" ; quit"
-
-            file=$(basename "$1" | sed -e 's/ /%20/g')
-            echo "http://ftp.newartisans.com/pub/$file" | pbcopy
-        }
-
         setopt extended_glob
       '';
 
@@ -221,6 +212,15 @@ in rec {
         fi
 
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
+
+        function upload() {
+            lftp -u johnw@newartisans.com,$(pass ftp.fastmail.com | head -1) \
+                ftp://johnw@newartisans.com@ftp.fastmail.com                 \
+                -e "set ssl:ca-file \"${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt\"; cd /johnw.newartisans.com/files/pub ; put \"$1\" ; quit"
+
+            file=$(basename "$1" | sed -e 's/ /%20/g')
+            echo "http://ftp.newartisans.com/pub/$file" | pbcopy
+        }
 
         if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
             unsetopt zle

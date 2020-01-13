@@ -32,7 +32,7 @@ in
 {
   inherit (known-good-20190305_133437) recoll socat2pre;
 
-  inherit (known-good-20191113_070954) pass shared-mime-info;
+  inherit (known-good-20191113_070954) shared-mime-info;
 
   inherit (known-good-20191130_091506) nano;
 }

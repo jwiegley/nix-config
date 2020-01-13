@@ -7,6 +7,7 @@ ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
 NIX_CONF   = $(HOME)/src/nix
 MAKE_REC   = make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF)
 GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
+GIT_REMOTE = jwiegley
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
 # when first necessary.
@@ -125,13 +126,13 @@ tag-working:
 	git --git-dir=nixpkgs/.git tag -f known-good-$(LKG_DATE) last-known-good
 
 mirror:
-	git --git-dir=nixpkgs/.git push origin -f master:master
-	git --git-dir=nixpkgs/.git push origin -f unstable:unstable
-	git --git-dir=nixpkgs/.git push origin -f last-known-good:last-known-good
-	git --git-dir=nixpkgs/.git push -f --tags origin
-	git --git-dir=darwin/.git push --mirror jwiegley
-	git --git-dir=home-manager/.git push --mirror jwiegley
-	git --git-dir=overlays/emacs-overlay/.git push --mirror jwiegley
+	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f master:master
+	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f unstable:unstable
+	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f last-known-good:last-known-good
+	git --git-dir=nixpkgs/.git push -f --tags $(GIT_REMOTE)
+	git --git-dir=darwin/.git push --mirror $(GIT_REMOTE)
+	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
+	git --git-dir=overlays/emacs-overlay/.git push --mirror $(GIT_REMOTE)
 
 update: tag-before pull build switch env working
 

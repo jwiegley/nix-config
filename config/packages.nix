@@ -238,8 +238,8 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   p7zip
   paperkey
   parallel
-  pass
-  # pass-otp
+  # pass
+  (pass.withExtensions (ext: with ext; [ pass-otp ]))
   pass-git-helper
   perl
   browserpass
