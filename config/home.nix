@@ -340,7 +340,7 @@ in rec {
 
         push = {
           default = "tracking";
-          recurseSubmodules = "check";
+          # recurseSubmodules = "check";
         };
 
         "merge \"merge-changelog\"" = {
@@ -372,9 +372,9 @@ in rec {
           smudge = "${pkgs.git}/bin/git media smudge %f";
         };
 
-        submodule = {
-          recurse = true;
-        };
+        # submodule = {
+        #   recurse = true;
+        # };
 
         diff = {
           ignoreSubmodules = "dirty";
