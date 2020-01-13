@@ -6,9 +6,13 @@ ROOTS	   = /nix/var/nix/gcroots/per-user/johnw/shells
 ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
 NIX_CONF   = $(HOME)/src/nix
 MAKE_REC   = make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF)
-NIXPATH    = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
-BUILD_ARGS = $(NIXOPTS) --keep-going --argstr version $(HEAD_DATE)
+
+# Lazily evaluated variables; expensive to compute, but we only want it do it
+# when first necessary.
+PROJS	   = $(eval PROJS     := $(shell find $(HOME)/src -name .envrc -type f -printf '%h '))$(PROJS)
+HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
+LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
 ifeq ($(NOCACHE),true)
 NIXOPTS    = --option build-use-substitutes false	\
@@ -17,17 +21,18 @@ NIXOPTS    = --option build-use-substitutes false	\
 else
 NIXOPTS    =
 endif
+NIXPATH    = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 
-# Lazily evaluated variables; expensive to compute, but we only want it do it
-# when first necessary.
-PROJS	   = $(eval PROJS := $(shell find $(HOME)/src -name .envrc -type f -printf '%h '))$(PROJS)
-HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
-LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
+BUILD_ARGS = $(NIXOPTS) --keep-going --argstr version $(HEAD_DATE)
+ifeq ($(REALBUILDPATH),true)
 BUILD_PATH = $(eval BUILD_PATH :=					\
-		$(shell NIX_PATH=$(NIXPATH) nix-build $(BUILD_ARGS)))$(BUILD_PATH)
+		$(shell echo NIX_PATH=$(NIXPATH) nix-build $(BUILD_ARGS)))$(BUILD_PATH)
+else
+BUILD_PATH = /run/current-system
+endif
 
 DARWIN_REBUILD = $(BUILD_PATH)/sw/bin/darwin-rebuild
-HOME_MANAGER = $(BUILD_PATH)/sw/bin/home-manager
+HOME_MANAGER   = $(BUILD_PATH)/sw/bin/home-manager
 
 all: build switch env
 
@@ -81,7 +86,8 @@ home-news:
 	    $(HOME_MANAGER) news
 
 opts:
-	echo NIXOPTS=$(NIXOPTS)
+	@echo export NIXOPTS=$(NIXOPTS)
+	@echo export NIX_PATH=$(NIXPATH)
 
 env:
 	for i in $(ENVS); do			\
@@ -130,7 +136,7 @@ mirror:
 update: tag-before pull build switch env working
 
 copy-all: copy
-	$(MAKE_REC) REMOTE=fin copy
+	$(MAKE_REC) REMOTE=athena copy
 
 check:
 	nix-store --verify --repair --check-contents

@@ -71,10 +71,10 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   #    name = "ghc86";
   #    buildInputs = [ pkgs.haskellPackages_8_6.ghc ];
   #  })
-  # (pkgs.myEnvFun {
-  #    name = "ghc88";
-  #    buildInputs = [ pkgs.haskellPackages_8_8.ghc ];
-  #  })
+  (pkgs.myEnvFun {
+     name = "ghc88";
+     buildInputs = [ pkgs.haskellPackages_8_8.ghc ];
+   })
   # (pkgs.myEnvFun {
   #    name = "ghc810";
   #    buildInputs = [ pkgs.haskellPackages_8_10.ghc ];
@@ -139,7 +139,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   w3m
   wget
   wireguard
-  wireshark
   youtube-dl
   znc
   zncModules.push
@@ -157,7 +156,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   highlight
   hugo
   inkscape.out
-  ledger_HEAD
+  # ledger_HEAD
   (exe haskPkgs.lhs2tex)
   librsvg
   pandoc
@@ -226,6 +225,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   linkdups
   lipotell
   # lorri
+  lnav
   m-cli
   mysql
   nix-bash-completions
@@ -239,7 +239,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   paperkey
   parallel
   pass
-  # (pass.withExtensions (ext: with ext; [ pass-update pass-import ]))
+  # pass-otp
   pass-git-helper
   perl
   browserpass

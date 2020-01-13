@@ -468,9 +468,8 @@ in rec {
          }) // rec {
 
         hermes  = onHost "vulcan" "192.168.1.65";
-        athena  = onHost "vulcan" "192.168.1.65";
-        fin     = onHost "vulcan" "192.168.1.80";
-        tank    = fin;
+        athena  = onHost "vulcan" "192.168.1.80";
+        tank    = athena;
 
         router  = { hostname = "192.168.1.98"; user = "root"; };
 
@@ -499,7 +498,7 @@ in rec {
         id_local = {
           host = lib.concatStringsSep " " [
             "hermes" "athena" "home" "mac1*" "macos*" "nixos*" "mohajer"
-            "fin" "dfinity" "smokeping" "tank" "titan" "ubuntu*" "vulcan"
+            "dfinity" "smokeping" "tank" "titan" "ubuntu*" "vulcan"
           ];
           identityFile = "${xdg.configHome}/ssh/id_local";
           identitiesOnly = true;
@@ -508,7 +507,7 @@ in rec {
 
         nix-docker = {
           hostname = "127.0.0.1";
-          proxyJump = "fin";
+          proxyJump = "athena";
           user = "root";
           port = 3022;
           identityFile = "${xdg.configHome}/ssh/nix-docker_rsa";
@@ -574,6 +573,23 @@ in rec {
           hostname = "10.129.0.99";
           user = "dfinity";
         };
+
+        demo-1.hostname = "10.11.18.1";
+        demo-2.hostname = "10.11.18.2";
+        demo-3.hostname = "10.11.18.3";
+        demo-4.hostname = "10.11.18.4";
+
+        demo-options = {
+          host = lib.concatStringsSep " " [
+            "demo-*"
+          ];
+          # proxyJump = "zrh-3";
+          user = "root";
+          extraOptions = {
+            "PreferredAuthentications" = "password";
+            "PubkeyAuthentication"     = "no";
+          };
+        };
       };
     };
   };
@@ -587,8 +603,8 @@ in rec {
 
     configFile."gnupg/gpg-agent.conf".text = ''
       enable-ssh-support
-      default-cache-ttl 600
-      max-cache-ttl 7200
+      default-cache-ttl 7200
+      max-cache-ttl 86400
       pinentry-program ${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac
       scdaemon-program ${xdg.configHome}/gnupg/scdaemon-wrapper
     '';

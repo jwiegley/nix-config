@@ -78,7 +78,7 @@ in {
       serviceConfig.KeepAlive = true;
     };
   } //
-  (if localconfig.hostname == "fin" then {
+  (if localconfig.hostname == "athena" then {
     snapshots-tank = {
       script = ''
         export PATH=$PATH:${pkgs.my-scripts}/bin:/usr/local/bin
@@ -137,7 +137,7 @@ in {
         = "${home_directory}/.cache/rdm/socket";
     };
   } //
-  (if localconfig.hostname == "fin" then {
+  (if localconfig.hostname == "athena" then {
      # b2-sync = {
      #   script = ''
      #     export PATH=$PATH:${pkgs.my-scripts}/bin
@@ -570,29 +570,6 @@ EOF
      ];
      binaryCaches = [
        https://nix.dfinity.systems
-       ssh://vulcan
-     ];
-   }
-   else if localconfig.hostname == "fin" then {
-     maxJobs = 8;
-     buildCores = 4;
-     distributedBuilds = true;
-
-     buildMachines = [
-       { hostName = "vulcan";
-         sshUser = "johnw";
-         sshKey = "${xdg_configHome}/ssh/id_local";
-         system = "x86_64-darwin";
-         maxJobs = 20;
-         buildCores = 10;
-         speedFactor = 4;
-       }
-     ];
-
-     trustedBinaryCaches = [
-       ssh://vulcan
-     ];
-     binaryCaches = [
        ssh://vulcan
      ];
    }
