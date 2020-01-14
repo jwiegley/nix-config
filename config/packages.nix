@@ -156,7 +156,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   highlight
   hugo
   inkscape.out
-  # ledger_HEAD
+  ledger_HEAD
   (exe haskPkgs.lhs2tex)
   librsvg
   pandoc
@@ -238,8 +238,9 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   p7zip
   paperkey
   parallel
-  # pass
-  (pass.withExtensions (ext: with ext; [ pass-otp ]))
+  (pass.withExtensions (ext: with ext; [
+     pass-audit pass-otp pass-genphrase pass-otp
+   ]))
   pass-git-helper
   perl
   browserpass

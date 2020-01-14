@@ -1,6 +1,8 @@
 self: pkgs: {
 
 ledger_HEAD = (pkgs.callPackage ~/src/ledger/master {}).overrideAttrs (attrs: {
+  doCheck = false;
+
   preConfigure = (attrs.preConfigure or "") + ''
     sed -i -e "s%DESTINATION \\\''${Python_SITEARCH}%DESTINATION "$out/lib/python27/site-packages"%" src/CMakeLists.txt
   '';
