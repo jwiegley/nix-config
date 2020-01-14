@@ -169,7 +169,7 @@ copy-nix-envs:
 
 copy: copy-nix
 	push -h $(HOSTNAME) -f src $(REMOTE)
-	ssh $(REMOTE) '$(MAKE_REC) HOSTNAME=$(REMOTE) build all'
+	ssh $(REMOTE) '$(MAKE_REC) HOSTNAME=$(REMOTE) all'
 
 cache:
 	-test -d $(CACHE) &&					\
