@@ -164,7 +164,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.lhs2tex)
   librsvg
   pandoc
-  pdf-tools-server
   plantuml
   poppler_utils
   recoll

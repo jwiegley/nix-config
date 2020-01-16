@@ -5,14 +5,13 @@ dirscan = with super; python2Packages.buildPythonPackage rec {
   version = "2.0";
   name = "${pname}-${version}";
 
-  src = ~/src/dirscan;
-  # src = fetchFromGitHub {
-  #   owner = "jwiegley";
-  #   repo = "dirscan";
-  #   rev = "4646aac029f916381671409cc4c7419ae1894153";
-  #   sha256 = "0iss4fsl43k4hvamyv60bh304pjji9pimwbzcanwk7rj9py4wf64";
-  #   # date = 2018-11-10T09:44:46-08:00;
-  # };
+  src = fetchFromGitHub {
+    owner = "jwiegley";
+    repo = "dirscan";
+    rev = "af018fb14b9802400ce279b886fb4d09f4940348";
+    sha256 = "1ri48v9yk0x291wlw6ady46dc6zcb6j25dgnljbgdxaxqfbx743n";
+    # date = 2018-12-09T20:47:59-08:00;
+  };
 
   phases = [ "unpackPhase" "fixupPhase" "installPhase" ];
 

@@ -2,14 +2,14 @@ self: super: {
 
 epipe = with super; stdenv.mkDerivation rec {
   name = "epipe-${version}";
-  version = "a76c92";
+  version = "e881004d";
 
   src = fetchFromGitHub {
     owner = "cute-jumper";
     repo = "epipe";
-    rev = "a76c922ef9909f4a166e0568ec0e6aa59cd89de2";
-    sha256 = "0wbqbvkhlf84ihq8iznh224pjcm59clvbxcgrjvp8scdwqc6idh7";
-    # date = 2016-10-25T04:02:26-04:00;
+    rev = "e881004d7d6248fc6a6ea4c197f0bc56acb60583";
+    sha256 = "0wa50x5z082vfymiv7zw2azy3kwk1ljnwzrcyf8hjm8jz7b1jm4z";
+    # date = 2018-02-16T00:01:43-05:00;
   };
 
   phases = [ "unpackPhase" "installPhase" ];

@@ -4,9 +4,9 @@ cachix =
   let src = super.fetchFromGitHub {
         owner = "cachix";
         repo = "cachix";
-        rev = "5523187c07dc7ae8ca0be5c6105dc86584cb87de";
-        sha256 = "022igls08khlf7zw80qx4lpljz4d3slzwnkz942p1ls7ba3yb7jl";
-        # date = 2019-11-13T17:32:53+01:00;
+        rev = "cfc71ecd1322b922db9d60c49ac18f62555af06e";
+        sha256 = "0jdmi80l632s1cf6pikp3a7yj3lxba2zpc6mnn6icgkl49bv37h4";
+        # date = 2020-01-10T17:15:41+01:00;
       };
       cachix = import src {};
   in

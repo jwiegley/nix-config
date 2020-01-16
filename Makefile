@@ -144,7 +144,7 @@ check-all: check
 	ssh athena '$(MAKE_REC) check'
 
 size:
-	du --si -shx /nix/store
+	sizes /nix/store
 
 copy-nix:
 	PATH=$(BUILD_PATH)/sw/bin:$(PATH) \

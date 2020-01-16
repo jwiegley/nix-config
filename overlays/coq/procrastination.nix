@@ -7,9 +7,9 @@ stdenv.mkDerivation rec {
   src = fetchFromGitHub {
     owner = "Armael";
     repo = "coq-procrastination";
-    rev = "2472ef79b7f84169344a42dd94dc5fdea6869c98";
-    sha256 = "0fqhc1x80v7bsvfmmh40abym1036qbipp9zh53bgczd232ipallc";
-    # date = 2018-09-21T14:54:50+02:00;
+    rev = "199dab4435148e4bdfdf934836c644c2c4e44073";
+    sha256 = "0mnm0knzgn0mvq875pfghg3fhwvkr3fpkgwd6brb7hadfxh2xjay";
+    # date = 2019-10-14T15:18:05+02:00;
   };
 
   buildInputs = [ coq.ocaml coq.camlp5 coq.findlib coq ];
@@ -26,6 +26,6 @@ stdenv.mkDerivation rec {
   };
 
   passthru = {
-    compatibleCoqVersions = v: builtins.elem v [ "8.5" "8.6" "8.7" "8.8" ];
+    compatibleCoqVersions = v: builtins.elem v [ "8.5" "8.6" "8.7" "8.8" "8.9" "8.10" ];
   };
 }

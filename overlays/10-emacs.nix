@@ -288,9 +288,9 @@ let
       src = fetchFromGitHub {
         owner = "emacsmirror";
         repo = "bookmark-plus";
-        rev = "efd593bf14d8f175e6bafad7101713507818c75d";
-        sha256 = "1xm4snfgiaajziqsj9k4yg55zvrfg033fipx5awwa0j1zxy90gvd";
-        # date = 2019-08-21T20:17:40+02:00;
+        rev = "b09ceff50417051f9b720e3da1e49e102a434fd6";
+        sha256 = "0z5qspy01lr54ajfspfviah6l7lhyfnmgbjji76k5alpcxb7s4hw";
+        # date = 2019-10-29T21:32:58+01:00;
       };
     };
 
@@ -300,6 +300,7 @@ let
         url = http://gitlab.com/dto/cell.el.git;
         rev = "c7094eb2d8101988339b0a95ca7a4d4708901e68";
         sha256 = "00kgish9q8j5l6kg6n80a83a3dpbmkqqm2idqws41gsniyxaa93b";
+        # date = 2019-09-15T23:00:16-04:00;
       };
     };
 
@@ -308,9 +309,9 @@ let
       src = fetchFromGitHub {
         owner = "200ok-ch";
         repo = "counsel-jq";
-        rev = "c940636fe55f26d35d9d2d23adcb6f931a6df5e0";
-        sha256 = "0jk7dcpa5ffl6kl3bf264kzmv06pwiamamqjgciphhfygwgxh7xc";
-        # date = 2019-12-02T09:46:04+01:00;
+        rev = "b14dfc5c18d991c3b3051c3cbb244d5923b3a327";
+        sha256 = "0f5h7nnqrkzbyxi4mgzahqzylszrqb25l3i24ml8yra2a23nl2w8";
+        # date = 2019-12-07T14:34:24+01:00;
       };
       buildInputs = with self; [ swiper ivy ];
     };
@@ -320,9 +321,9 @@ let
       src = fetchFromGitHub {
         owner = "Wilfred";
         repo = "deadgrep";
-        rev = "329119c65126f7917d3910bc584f4191ba8f21ac";
-        sha256 = "0fxf7gq9sjfkgpdfqx10w3l3nd4rwa8kv9plyxk1fqacb3s5m6ai";
-        # date = 2019-08-07T22:25:18+01:00;
+        rev = "06764269582b2f844ae2a163d2fece8143b1c578";
+        sha256 = "0q3gjwi803xaw79y37nz0bccyss6n520bfkfr6z0ncya422la0hz";
+        # date = 2020-01-12T11:14:54+00:00;
       };
       buildInputs = with self; [ s dash spinner ];
     };
@@ -376,9 +377,9 @@ let
       src = fetchFromGitHub {
         owner = "jwiegley";
         repo = "git-undo-el";
-        rev = "852824ab7cb30f5a57361d3e567d78e7864655b1";
-        sha256 = "1pc8aaax5qmbl6khb1ixfmr4dhb5dad4qwpd902liqi2fpiy64gl";
-        # date = 2017-11-20T16:01:29-08:00;
+        rev = "cf31e38e7889e6ade7d2d2b9f8719fd44f52feb5";
+        sha256 = "10f9h8dby3ygkjqwizrif7v1wpwc8iqam5bvayahrabs87s0lnbi";
+        # date = 2019-12-21T11:05:45-08:00;
       };
     };
 
@@ -387,9 +388,9 @@ let
       src = fetchFromGitHub {
         owner = "charignon";
         repo = "github-review";
-        rev = "a13a3b4f1b6114a32af843971a145ab880f51232";
-        sha256 = "0injfpxzgfhmqalba845j5l5cdcxxqz43knhxwinf36g52nfabl0";
-        # date = 2019-08-30T09:39:32-07:00;
+        rev = "e8a275939e1a774c84b71ab3df2ce1599445dab0";
+        sha256 = "1swpfk3p82nj2rsnfdzllkrf5i0ya4s3zpi96w6afy1vp5kcgf2r";
+        # date = 2020-01-11T13:41:10-08:00;
       };
       buildInputs = with self; [ ghub dash graphql treepy s ];
     };
@@ -399,9 +400,9 @@ let
       src = fetchFromGitHub {
         owner = "vermiculus";
         repo = "ghub-plus";
-        rev = "51ebffe549286b3c0b0565a373f44f4d64fc57af";
-        sha256 = "11fr6ri95a9wkc0mqrkhjxz1fm2cb52151fc88k73l93mggib3ak";
-        # date = 2018-11-12T18:32:52-06:00;
+        rev = "b1adef2402d7599911d4dd447a987a0cea04e6fe";
+        sha256 = "0bzri6s5mwvgir9smkz68d5cgcf4glpdmcj8dz8rjxziwrg6k5bz";
+        # date = 2019-12-29T11:48:21-06:00;
       };
       buildInputs = with self; [ ghub apiwrap dash graphql treepy ];
     };
@@ -422,9 +423,9 @@ let
       src = fetchFromGitHub {
         owner = "jcs090218";
         repo = "goto-line-preview";
-        rev = "772fb942777a321b4698add1b94cff157f23a93b";
-        sha256 = "16zil8kjv7lfmy11g88p1cm24j9db319fgkwzsgf2vzp1m15l0pc";
-        # date = 2019-03-08T15:38:36+08:00;
+        rev = "1f0afb261a4e4a1b0a2fae3959b0ce5d30bce2a1";
+        sha256 = "03csbs9mh9jjw21sncvnlmm97waazy0c57jp1jynwhzzsbp0k0rs";
+        # date = 2019-12-19T14:43:02+08:00;
       };
     };
 
@@ -511,9 +512,9 @@ let
       src = fetchFromGitHub {
         owner = "alphapapa";
         repo = "magit-todos";
-        rev = "a80dace2bf8bf3e697e3e8421189996adcecc900";
-        sha256 = "0qwzag9js6qy98m7c8gmaskg4qc82sf0aihcs5vcxdf8rgia2j9q";
-        # date = 2019-09-07T08:21:17-05:00;
+        rev = "a64e36574bcb77a86726922df905307e55ea62ed";
+        sha256 = "18qm376i13gkls7y5qfszv57i0cn3w4q6d0lqjgbn0rq3hi29ca0";
+        # date = 2020-01-08T08:44:22-06:00;
       };
       buildInputs = with self; [
         magit magit-popup a anaphora dash f s hl-todo kv with-editor git-commit
@@ -526,9 +527,9 @@ let
       src = fetchFromGitHub {
         owner = "purcell";
         repo = "mmm-mode";
-        rev = "ff0b214f27d5dddeb856acb4216e77a864dcc0b2";
-        sha256 = "0lxd55yhz0ag7v1ydff55bg4h8snq5lbk8cjwxqpyq6gh4v7md1h";
-        # date = 2018-06-21T16:19:14+03:00;
+        rev = "981795bdde53fecf35c6b1179a1618b1e05dbf87";
+        sha256 = "1cjylw2jkd13ygvagjx732dsp1d68shgp1diapy29gjawqwc0gsz";
+        # date = 2019-12-15T11:05:55+02:00;
       };
     };
 
@@ -561,9 +562,9 @@ let
       src = fetchFromGitHub {
         owner = "theodorewiles";
         repo = "org-mind-map";
-        rev = "16a8aac5462c01c4e7b6b7915381fde42fd3caf6";
-        sha256 = "0ipkmws7r8dk2p65m9jri90s8pgxhzidz7g2fmh7d6cz97jbk3v7";
-        # date = 2018-09-25T07:13:25-04:00;
+        rev = "95347b2f9291f5c5eb6ebac8e726c03634c61de3";
+        sha256 = "0mkmh1ascxhfgbqdzcr6d60k4ldnh3l8dylw4m7wglz15hm3ixbm";
+        # date = 2019-12-01T10:24:01-05:00;
       };
       buildInputs = [ self.dash ];
     };
@@ -584,9 +585,9 @@ let
       src = fetchFromGitHub {
         owner = "fuxialexander";
         repo = "org-pdftools";
-        rev = "3ca91085290fc3d0f3886c3a3145deea760055b8";
-        sha256 = "06fnzs09y57b5cgznlin8y88rcd1a82xn35mazwf8ivxn0lhp2z2";
-        # date = 2019-08-30T18:22:51+08:00;
+        rev = "ba2d1eb2e8835c4eaf3bb2b10c8a7c476e3cb1db";
+        sha256 = "1wd400l4bnkh7ghiwnz5s2m5mxc8mrdq7l4yb75izvpnbsybc4ms";
+        # date = 2020-01-14T17:21:12+08:00;
       };
       buildInputs = with self; [ org org-noter pdf-tools tablist ];
     };
@@ -607,9 +608,9 @@ let
       src = fetchFromGitHub {
         owner = "collarchoke";
         repo = "ovpn-mode";
-        rev = "dce04d9f35fd203afd098ba413595db6c2cbc051";
-        sha256 = "0ix53rlwzi1mh35msh6gahfnip67p53jc3qxkbaxji7hlxi130fb";
-        # date = "2019-08-11T18:00:35-04:00";
+        rev = "8457f72de59929d6c176883e92d1a706163d3170";
+        sha256 = "0qcinx4gpfzngirwfis7byrdbgbwk3pak7f8mx5fsbcdnybkk8sj";
+        # date = "2019-12-13T22:10:16-05:00";
       };
     };
 
@@ -618,9 +619,9 @@ let
       src = fetchFromGitHub {
         owner = "titaniumbones";
         repo = "ox-slack";
-        rev = "96d90914e6df1a0141657fc51f1dc5bb8f1da6bd";
-        sha256 = "1cda5c35wm7aqyj7yj80wkwb79dgzlzis1dlpysdxv30ahcf4w8p";
-        # date = 2018-11-19T06:31:43-05:00;
+        rev = "89cedb9da6ea08b78bc1fe77d6a39aa078172c1e";
+        sha256 = "0a97la3hwkb792a26c6byavwzg8gca6s0ccajd7pi9p430ys1i9y";
+        # date = 2020-01-08T10:48:48-05:00;
       };
       buildInputs = [ self.ox-gfm ];
     };
@@ -630,9 +631,9 @@ let
       src = fetchFromGitHub {
         owner = "tarsius";
         repo = "ox-texinfo-plus";
-        rev = "e84574d315164727fb9538467ad4d24de8b3fba4";
-        sha256 = "06a71bjwgzbvy5fpjg42ng3v0plpw17wx1k3y3ycj2zriybmkhfa";
-        # date = 2019-06-04T14:41:35+02:00;
+        rev = "3ffceac08c4c690399b85598a5d22cf5bb06c405";
+        sha256 = "1jqvzdd3cs4fmkfn3qxw0pv9j3xh87pb4wnzy42yrsq3vs6403gl";
+        # date = 2020-01-03T13:38:18+01:00;
       };
     };
 
@@ -675,9 +676,9 @@ let
       src = fetchFromGitHub {
         owner = "zk-phi";
         repo = "sky-color-clock";
-        rev = "d9e4b65d8b4fd5d74619c2a5c41a9d0c72ccdbd2";
-        sha256 = "0xfc51h8bjl1m591naxdrq2fz7hflzx4zkmiixifhq699ynza71k";
-        # date = 2018-01-24T17:07:38+09:00;
+        rev = "d39f3209faee629bbf140277ce897bae16818602";
+        sha256 = "0qha6x595bpc149bs8ra5zq0jndqimc6bhxssb8rbdxvpakqq553";
+        # date = 2019-11-06T11:53:28+09:00;
       };
       patches = [ ./emacs/patches/sky-color-clock.patch ];
     };
@@ -687,9 +688,9 @@ let
       src = fetchFromGitHub {
         owner = "Malabarba";
         repo = "spinner.el";
-        rev = "4b335260edcdd8dcee0811d7048bb08274e941f1";
-        sha256 = "0y8nv9cxpmy98y9sk7w889f43plh0095r6vl6z8b22p3qm4rxq3m";
-        # date = 2018-12-06T18:34:11-02:00;
+        rev = "a5d721eea578abb0f13e2a7ba668033d6009f38f";
+        sha256 = "19v28czki4dw4wbh9hrp8nbyx3xkjhz90w200ll9vxwrprjl51lj";
+        # date = 2019-09-30T09:43:44-03:00;
       };
     };
 
@@ -742,9 +743,9 @@ let
       src = fetchFromGitHub {
         owner = "jackkamm";
         repo = "undo-propose-el";
-        rev = "505d79053590a411be6d84e1bcd4ce13485e96f0";
-        sha256 = "1kvpwcry6q28cw0xrzmss0d05kzn1ay4y2c55k3sb2157izxvafn";
-        # date = 2019-09-21T08:33:59-07:00;
+        rev = "71002612480fe5cb2b139e73d18c87ddf1fd76b2";
+        sha256 = "0mlmck46cgm95hsdqskadd975fdq03mh6pq6lfgzl1ffd0nfqm0z";
+        # date = 2019-12-29T14:29:53-08:00;
       };
     };
 
@@ -847,9 +848,9 @@ let
       src = fetchFromGitHub {
         owner = "skeeto";
         repo = "elfeed";
-        rev = "69b0320156cbf7e395efa670464d4651f708332f";
-        sha256 = "1nkd1ll8fjnnkqqz6x4yr7lij6kknh4mh30qf3g4kzg5gmwhbx6q";
-        # date = 2019-09-06T22:12:16+02:00;
+        rev = "fb7de7b6d299bb4190fed3cab541dbf5a5a1bbcd";
+        sha256 = "1wx55myyj15mii4zgczm1qpx2fa864ri87c1jr6fbl8vwcg4k0xq";
+        # date = 2019-12-27T12:26:39+08:00;
       };
       recipe = fetchurl {
         url = "https://raw.githubusercontent.com/milkypostman/melpa/407ae027fcec444622c2a822074b95996df9e6af/recipes/elfeed";
@@ -897,10 +898,10 @@ let
       src = fetchFromGitHub {
         owner = "immerrr";
         repo = "lua-mode";
-        rev = "95c64bb5634035630e8c59d10d4a1d1003265743";
-        sha256 = "1mra4db25ds64526dsj8m5yv0kfq3lgggjh1x6xmqypdaryddbcp";
+        rev = "1f596a93b3f1caadd7bba01030f8c179b029600b";
+        sha256 = "0i4adlaik3qjx1wkb7rwk2clvj7ci2g8pm0siyb3yk90r6z5mspi";
         fetchSubmodules = true;
-        # date = 2019-01-13T13:50:39+03:00;
+        # date = 2019-12-04T15:34:26+01:00;
       };
     });
 
@@ -926,16 +927,6 @@ let
         license = lib.licenses.free;
       };
     };
-
-    pdf-tools = super.pdf-tools.overrideAttrs(attrs: {
-      src = fetchFromGitHub {
-        owner = "politza";
-        repo = "pdf-tools";
-        rev = "c851df842e05f353e4d249f2653f98418b3345d6";
-        sha256 = "1ij2w7lhwx2f88m35xp56risa29qrhh2p6xnvc3rnbb9iszajs3i";
-        # date = 2019-09-18T19:15:52+02:00;
-      };
-    });
 
     org = mkDerivation rec {
       name = "emacs-org-${version}";
@@ -969,15 +960,15 @@ let
             inherit (pkgs.texlive) scheme-basic cm-super ec;
           }; in mkDerivation rec {
       name = "emacs-proof-general-${version}";
-      version = "2018-02-26";
+      version = "2020-01-13";
 
       # This is the main branch
       src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "d53ded580e30d49e7a783280fd9ba96bc9c1c39c";
-        sha256 = "17hf4mxpijvgd2jrffibcz9ps4vv8w2alcgmh78xjlb6mm0p3ls0";
-        # date = 2019-08-21T10:48:33+02:00;
+        rev = "bee3f802ada921fb8988edb96a8b41429f7c622c";
+        sha256 = "0swajipbssa78dknmgwwr5gvn1y6bbkbhr37aryssrysv82wb275";
+        # date = 2020-01-13T15:35:51+01:00;
       };
 
       # src = ~/src/proof-general;
@@ -1023,13 +1014,13 @@ let
 
     w3m = super.w3m.overrideAttrs(attrs: rec {
       name = "emacs-w3m-${version}";
-      version = "20190227.2349";
+      version = "20200113.2320";
       src = fetchFromGitHub {
         owner = "emacs-w3m";
         repo = "emacs-w3m";
-        rev = "8c647b83bc4f85f359e3d2ff6c72b8f53371a599";
-        sha256 = "1vxqh01y4v9jbz17zckkcgni6myvvk4mriqg294sran83br42vc5";
-        # date = 2019-09-25T07:43:44+00:00;
+        rev = "6eda3828bb8530ecd69a3823bd5569a5f779c239";
+        sha256 = "0ij85i0zy9wi1cgm0j8cvqpv9802kfy7g4ffx381l7k28m35lqh2";
+        # date = 2020-01-13T23:20:24+00:00;
       };
     });
   };

@@ -2,14 +2,14 @@ self: super: {
 
 tsvutils = with super; stdenv.mkDerivation rec {
   name = "tsvutils-${version}";
-  version = "d252d7";
+  version = "a286c817";
 
   src = fetchFromGitHub {
     owner = "brendano";
     repo = "tsvutils";
-    rev = "d252d7664d43f9246629cc6df65cf2452a96479e";
-    sha256 = "17y339grdywqcgifzjr18qh74pgx8dan1zmgkcbvvyii38l3kv8f";
-    # date = 2018-05-16T15:28:17-04:00;
+    rev = "a286c8179342285803871834bb92c39cd52e516d";
+    sha256 = "1jrg36ckvpmwjx9350lizfjghr3pfrmad0p3qibxwj14qw3wplni";
+    # date = 2019-08-11T16:06:16-04:00;
   };
 
   phases = [ "unpackPhase" "installPhase" ];
