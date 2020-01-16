@@ -136,9 +136,6 @@ mirror:
 
 update: tag-before pull build switch env working
 
-copy-all: copy
-	$(MAKE_REC) REMOTE=athena copy
-
 check:
 	nix-store --verify --repair --check-contents
 
@@ -170,6 +167,9 @@ copy-nix-envs:
 copy: copy-nix
 	push -h $(HOSTNAME) -f src $(REMOTE)
 	ssh $(REMOTE) '$(MAKE_REC) HOSTNAME=$(REMOTE) all'
+
+copy-all: copy
+	$(MAKE_REC) REMOTE=athena copy
 
 cache:
 	-test -d $(CACHE) &&					\

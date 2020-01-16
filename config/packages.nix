@@ -20,6 +20,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   git-scripts
   git-subrepo
   git-tbdiff
+  gitstats
   gitRepo
   gitAndTools.git-crypt
   gitAndTools.git-hub
@@ -40,6 +41,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
 
   # jsToolsEnv
   jq
+  yq
   jo
   nodejs
   nodePackages.eslint
@@ -47,6 +49,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nodePackages.js-beautify
 
   # langToolsEnv
+  bats
   (exe haskPkgs.cabal-install)  # for sdist/publish
   direnv
   global
@@ -123,6 +126,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   lftp
   mercurialFull
   mitmproxy
+  mosh
   mtr
   nmap
   openssh
