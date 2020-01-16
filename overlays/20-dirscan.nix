@@ -14,17 +14,17 @@ dirscan = with super; python2Packages.buildPythonPackage rec {
   #   # date = 2018-11-10T09:44:46-08:00;
   # };
 
-  phases = [ "unpackPhase" "buildPhase" "installPhase" ];
-
-  buildPhase = ''
-    sed -i -e "s|/usr/bin/env python2\.7|${pkgs.python27}/bin/python|" dirscan.py
-    sed -i -e "s|/usr/bin/env python2\.7|${pkgs.python27}/bin/python|" cleanup
-  '';
+  phases = [ "unpackPhase" "fixupPhase" "installPhase" ];
 
   installPhase = ''
     mkdir -p $out/bin $out/libexec
     cp dirscan.py $out/libexec
     cp cleanup $out/bin
+  '';
+
+  fixupPhase = ''
+    sed -i -e "s|/usr/bin/env python2\.7|${pkgs.python27}/bin/python|" dirscan.py
+    sed -i -e "s|/usr/bin/env python2\.7|${pkgs.python27}/bin/python|" cleanup
   '';
 
   meta = {
