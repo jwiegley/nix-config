@@ -14,12 +14,12 @@ GIT_REMOTE = jwiegley
 HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
 LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
-PROJS	   = $(eval PROJS     :=		\
-	$(shell find $(HOME)/src		\
-		     -name .envrc		\
-		  \! -path '*/nix/nixpkgs/*'	\
-		  \! -path '*/notes/gists/*'	\
-		     -type f			\
+PROJS	   = $(eval PROJS     :=					\
+	$(shell find $(HOME)/src $(HOME)/dfinity $(HOME)/Documents	\
+		     -name .envrc					\
+		  \! -path '*/nix/nixpkgs/*'				\
+		  \! -path '*/notes/gists/*'				\
+		     -type f						\
 		     -printf '%h '))$(PROJS)
 
 ifeq ($(NOCACHE),true)
@@ -30,6 +30,12 @@ else
 NIXOPTS	   =
 endif
 NIXPATH	   = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
+PRENIX	   = PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIXPATH)
+NIX	   = $(PRENIX) nix
+NIX_BUILD  = $(PRENIX) nix-build
+NIX_ENV	   = $(PRENIX) nix-env
+NIX_STORE  = $(PRENIX) nix-store
+NIX_GC	   = $(PRENIX) nix-collect-garbage
 
 BUILD_ARGS = $(NIXOPTS) --keep-going --argstr version $(HEAD_DATE)
 ifeq ($(REALBUILDPATH),true)
@@ -46,7 +52,7 @@ all: rebuild
 
 define make_broadcast
     for host in $(REMOTES); do				\
-	ssh $$host '$(MAKE_REC) HOSTNAME=$$host $(1)';	\
+	ssh $$host "$(MAKE_REC) HOSTNAME=$$host $(1)";	\
     done
 endef
 
@@ -68,19 +74,15 @@ tools:
 		uniq
 
 build:
-	NIX_PATH=$(NIXPATH) nix build -f . $(BUILD_ARGS)
+	$(NIX) build -f . $(BUILD_ARGS)
 	@rm -f result*
 
 darwin-switch:
-	PATH=$(BUILD_PATH)/sw/bin:$(PATH) \
-	NIX_PATH=$(NIXPATH) \
-	    $(DARWIN_REBUILD) switch -Q
+	$(PRENIX) $(DARWIN_REBUILD) switch -Q
 	@echo "Darwin generation: $$($(DARWIN_REBUILD) --list-generations | tail -1)"
 
 home-switch:
-	PATH=$(BUILD_PATH)/sw/bin:$(PATH) \
-	NIX_PATH=$(NIXPATH) \
-	HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix \
+	$(PRENIX) HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix	\
 	    $(HOME_MANAGER) switch
 	@echo "Home generation: $$($(HOME_MANAGER) generations | head -1)"
 	@for file in $(HOME)/.config/fetchmail/config		\
@@ -90,9 +92,7 @@ home-switch:
 	done
 
 home-news:
-	PATH=$(BUILD_PATH)/sw/bin:$(PATH)		\
-	NIX_PATH=$(NIXPATH)				\
-	HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix	\
+	$(PRENIX) HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix	\
 	    $(HOME_MANAGER) news
 
 switch: darwin-switch home-switch
@@ -104,13 +104,11 @@ opts:
 	@echo export NIX_PATH=$(NIXPATH)
 
 env:
-	@for i in $(ENVS); do			\
-	    echo Updating $$i;			\
-	    NIX_PATH=$(NIXPATH)			\
-	    nix-env -f '<darwin>' -u --leq	\
-		-Q -k $(NIXOPTS) -A pkgs.$$i ;	\
+	@for i in $(ENVS); do							\
+	    echo Updating $$i;							\
+	    $(NIX_ENV) -f '<darwin>' -u --leq -Q -k $(NIXOPTS) -A pkgs.$$i ;	\
 	done
-	@echo "Nix generation: $$(nix-env --list-generations | tail -1)"
+	@echo "Nix generation: $$($(NIX_ENV) --list-generations | tail -1)"
 
 projs:
 	@for i in $(PROJS); do			\
@@ -123,7 +121,7 @@ shells:
 	    echo;						\
 	    echo Building shell env for $$i;			\
 	    echo;						\
-	    NIX_PATH=$(NIXPATH) direnv export zsh > /dev/null	\
+	    $(PRENIX) direnv export zsh > /dev/null		\
 		|| echo "Failed to build direnv environment";	\
 	done
 
@@ -155,34 +153,38 @@ working: tag-working mirror
 update: tag-before pull build switch env working
 
 check:
-	nix-store --verify --repair --check-contents
+	$(NIX_STORE) --verify --repair --check-contents
 
 sizes:
 	sizes /nix/store
 
 copy-nix:
 	@for host in $(REMOTES); do							\
-	    PATH=$(BUILD_PATH)/sw/bin:$(PATH)						\
-	    NIX_PATH=$(NIXPATH)								\
-		nix copy --no-check-sigs --keep-going --to ssh://$$host $(BUILD_PATH);	\
+	    $(NIX) copy --no-check-sigs --keep-going --to ssh://$$host $(BUILD_PATH);	\
 	done
 
 copy: copy-nix
 	for host in $(REMOTES); do push -h $(HOSTNAME) -f src $$host; done
 
-copy-shells: copy
-	@for host in $(REMOTES); do						\
-	    PATH=$(BUILD_PATH)/sw/bin:$(PATH)					\
-	    NIX_PATH=$(NIXPATH)							\
-		nix copy --no-check-sigs --keep-going --to ssh://$$host		\
-		$(shell find $(PROJS) -path '*/.direnv/default'			\
-		    | while read dir; do					\
-		      ls $$dir/ | while read file ; do				\
-			  readlink $$dir/$$file;				\
-		      done ;							\
-		      done							\
-		    | sort							\
-		    | uniq);							\
+define find_defaults
+    find $(PROJS) -path '*/.direnv/default'
+endef
+
+defaults:
+	$(find_defaults)
+
+copy-shells:
+	for host in $(REMOTES); do				\
+	    $(NIX) copy						\
+		--no-check-sigs					\
+		--keep-going					\
+		--to ssh://$$host				\
+		$(shell $(find_defaults)			\
+		    | while read dir; do			\
+			  ls $$dir/ | while read file ; do	\
+			      readlink $$dir/$$file;		\
+			  done ;				\
+		      done | sort | uniq);			\
 	done
 
 cache:
@@ -200,14 +202,14 @@ cache:
 	    | parallel -0 nix copy --to file://$(CACHE))
 
 remove-build-products:
-	find $(HOME)/Documents $(HOME)/src		\
-	    \( -name 'dist' -type d -o			\
-	       -name 'dist-newstyle' -type d -o		\
-	       -name '.ghc.*' -o			\
-	       -name 'cabal.project.local*' -type f -o	\
-	       -name '.cargo-home' -type d -o		\
-	       -name 'target' -type d -o		\
-	       -name 'result*' -type l \) -print0	\
+	find $(HOME)/Documents $(HOME)/src			\
+	    \( -name 'dist' -type d -o				\
+	       -name 'dist-newstyle' -type d -o			\
+	       -name '.ghc.*' -o				\
+	       -name 'cabal.project.local*' -type f -o		\
+	       -name '.cargo-home' -type d -o			\
+	       -name 'target' -type d -o			\
+	       -name 'result*' -type l \) -print0		\
 	    | xargs -P4 -0 /bin/rm -fr
 
 remove-direnvs:
@@ -216,20 +218,20 @@ remove-direnvs:
 	    | xargs -P4 -0 /bin/rm -fr
 
 gc:
-	nix-env --delete-generations					\
-	    $(shell nix-env --list-generations | field 1 | head -n -14)
-	nix-env -p /nix/var/nix/profiles/system --delete-generations	\
-	    $(shell nix-env -p /nix/var/nix/profiles/system		\
+	$(NIX_ENV) --delete-generations						\
+	    $(shell $(NIX_ENV) --list-generations | field 1 | head -n -14)
+	$(NIX_ENV) -p /nix/var/nix/profiles/system --delete-generations		\
+	    $(shell $(NIX_ENV) -p /nix/var/nix/profiles/system			\
 				 --list-generations | field 1 | head -n -14)
-	nix-collect-garbage --delete-older-than $(MAX_AGE)
+	$(NIX_GC) --delete-older-than $(MAX_AGE)
 
 gc-old: remove-build-products remove-direnvs
-	nix-env --delete-generations					\
-	    $(shell nix-env --list-generations | field 1 | head -n -1)
-	nix-env -p /nix/var/nix/profiles/system --delete-generations	\
-	    $(shell nix-env -p /nix/var/nix/profiles/system		\
+	$(NIX_ENV) --delete-generations						\
+	    $(shell $(NIX_ENV) --list-generations | field 1 | head -n -1)
+	$(NIX_ENV) -p /nix/var/nix/profiles/system --delete-generations		\
+	    $(shell $(NIX_ENV) -p /nix/var/nix/profiles/system			\
 				 --list-generations | field 1 | head -n -1)
-	nix-collect-garbage --delete-old
+	$(NIX_GC) --delete-old
 
 clean: gc-all check-all
 
