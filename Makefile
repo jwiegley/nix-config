@@ -1,6 +1,6 @@
 HOSTNAME   = vulcan
-REMOTE	   = hermes
-MAX_AGE    = 14d
+REMOTES	   = hermes athena
+MAX_AGE	   = 14d
 CACHE	   = /Users/johnw/tank/Cache
 ROOTS	   = /nix/var/nix/gcroots/per-user/johnw/shells
 ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
@@ -11,18 +11,25 @@ GIT_REMOTE = jwiegley
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
 # when first necessary.
-PROJS	   = $(eval PROJS     := $(shell find $(HOME)/src -name .envrc -type f -printf '%h '))$(PROJS)
 HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
 LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
+PROJS	   = $(eval PROJS     :=		\
+	$(shell find $(HOME)/src		\
+		     -name .envrc		\
+		  \! -path '*/nix/nixpkgs/*'	\
+		  \! -path '*/notes/gists/*'	\
+		     -type f			\
+		     -printf '%h '))$(PROJS)
+
 ifeq ($(NOCACHE),true)
-NIXOPTS    = --option build-use-substitutes false	\
+NIXOPTS	   = --option build-use-substitutes false	\
 	     --option substituters ''			\
 	     --option builders ''
 else
-NIXOPTS    =
+NIXOPTS	   =
 endif
-NIXPATH    = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
+NIXPATH	   = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 
 BUILD_ARGS = $(NIXOPTS) --keep-going --argstr version $(HEAD_DATE)
 ifeq ($(REALBUILDPATH),true)
@@ -35,32 +42,34 @@ endif
 DARWIN_REBUILD = $(BUILD_PATH)/sw/bin/darwin-rebuild
 HOME_MANAGER   = $(BUILD_PATH)/sw/bin/home-manager
 
-all: build switch env
+all: rebuild
 
-projs:
-	@for i in $(PROJS); do			\
-	    echo "proj: $$i";			\
-	done
+define make_broadcast
+    for host in $(REMOTES); do				\
+	ssh $$host '$(MAKE_REC) HOSTNAME=$$host $(1)';	\
+    done
+endef
+
+%-all: %
+	$(call make_broadcast,$<)
 
 tools:
 	@PATH=$(BUILD_PATH)/sw/bin:$(PATH)	\
 	    which				\
-	        field				\
-	        find				\
-	        git				\
-	        head				\
-	        make				\
-	        nix-build			\
-	        nix-env				\
-	        sort				\
-	        sudo				\
-	        uniq
+		field				\
+		find				\
+		git				\
+		head				\
+		make				\
+		nix-build			\
+		nix-env				\
+		sort				\
+		sudo				\
+		uniq
 
 build:
 	NIX_PATH=$(NIXPATH) nix build -f . $(BUILD_ARGS)
 	@rm -f result*
-
-switch: darwin-switch home-switch
 
 darwin-switch:
 	PATH=$(BUILD_PATH)/sw/bin:$(PATH) \
@@ -81,44 +90,51 @@ home-switch:
 	done
 
 home-news:
-	PATH=$(BUILD_PATH)/sw/bin:$(PATH) \
-	NIX_PATH=$(NIXPATH) \
-	HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix \
+	PATH=$(BUILD_PATH)/sw/bin:$(PATH)		\
+	NIX_PATH=$(NIXPATH)				\
+	HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix	\
 	    $(HOME_MANAGER) news
+
+switch: darwin-switch home-switch
+
+rebuild: build switch env
 
 opts:
 	@echo export NIXOPTS=$(NIXOPTS)
 	@echo export NIX_PATH=$(NIXPATH)
 
 env:
-	for i in $(ENVS); do			\
+	@for i in $(ENVS); do			\
 	    echo Updating $$i;			\
 	    NIX_PATH=$(NIXPATH)			\
 	    nix-env -f '<darwin>' -u --leq	\
-	        -Q -k $(NIXOPTS) -A pkgs.$$i ;	\
+		-Q -k $(NIXOPTS) -A pkgs.$$i ;	\
 	done
 	@echo "Nix generation: $$(nix-env --list-generations | tail -1)"
 
+projs:
+	@for i in $(PROJS); do			\
+	    echo "proj: $$i";			\
+	done
+
 shells:
-	for i in $(PROJS); do			\
-	    cd $$i;				\
-	    echo;				\
-	    echo Building shell env for $$i;	\
-	    echo;				\
-	    NIX_PATH=$(NIXPATH) testit --make;	\
-	    rm -f result;			\
+	@for i in $(PROJS); do					\
+	    cd $$i;						\
+	    echo;						\
+	    echo Building shell env for $$i;			\
+	    echo;						\
+	    NIX_PATH=$(NIXPATH) direnv export zsh > /dev/null	\
+		|| echo "Failed to build direnv environment";	\
 	done
 
 pull:
-	(cd darwin && git pull --rebase)
-	(cd home-manager && git pull --rebase)
+	(cd darwin		   && git pull --rebase)
+	(cd home-manager	   && git pull --rebase)
 	(cd overlays/emacs-overlay && git pull --rebase)
-	(cd nixpkgs && git pull --rebase)
+	(cd nixpkgs		   && git pull --rebase)
 
 tag-before:
 	git --git-dir=nixpkgs/.git branch -f before-update HEAD
-
-working: tag-working mirror
 
 tag-working:
 	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
@@ -134,42 +150,40 @@ mirror:
 	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
 	git --git-dir=overlays/emacs-overlay/.git push --mirror $(GIT_REMOTE)
 
+working: tag-working mirror
+
 update: tag-before pull build switch env working
 
 check:
 	nix-store --verify --repair --check-contents
 
-check-all: check
-	ssh hermes '$(MAKE_REC) check'
-	ssh athena '$(MAKE_REC) check'
-
-size:
+sizes:
 	sizes /nix/store
 
 copy-nix:
-	PATH=$(BUILD_PATH)/sw/bin:$(PATH) \
-	NIX_PATH=$(NIXPATH)               \
-	    nix copy --no-check-sigs --keep-going --to ssh://$(REMOTE) $(BUILD_PATH)
-
-copy-nix-envs:
-	PATH=$(BUILD_PATH)/sw/bin:$(PATH)				\
-	NIX_PATH=$(NIXPATH)						\
-	    nix copy --no-check-sigs --keep-going --to ssh://$(REMOTE)	\
-	    $(shell find $(PROJS) -path '*/.direnv/default'		\
-		| while read dir; do					\
-		  ls $$dir/ | while read file ; do			\
-		      readlink $$dir/$$file;				\
-		  done ;						\
-		  done							\
-		| sort							\
-		| uniq)
+	@for host in $(REMOTES); do							\
+	    PATH=$(BUILD_PATH)/sw/bin:$(PATH)						\
+	    NIX_PATH=$(NIXPATH)								\
+		nix copy --no-check-sigs --keep-going --to ssh://$$host $(BUILD_PATH);	\
+	done
 
 copy: copy-nix
-	push -h $(HOSTNAME) -f src $(REMOTE)
-	ssh $(REMOTE) '$(MAKE_REC) HOSTNAME=$(REMOTE) all'
+	for host in $(REMOTES); do push -h $(HOSTNAME) -f src $$host; done
 
-copy-all: copy
-	$(MAKE_REC) REMOTE=athena copy
+copy-shells: copy
+	@for host in $(REMOTES); do						\
+	    PATH=$(BUILD_PATH)/sw/bin:$(PATH)					\
+	    NIX_PATH=$(NIXPATH)							\
+		nix copy --no-check-sigs --keep-going --to ssh://$$host		\
+		$(shell find $(PROJS) -path '*/.direnv/default'			\
+		    | while read dir; do					\
+		      ls $$dir/ | while read file ; do				\
+			  readlink $$dir/$$file;				\
+		      done ;							\
+		      done							\
+		    | sort							\
+		    | uniq);							\
+	done
 
 cache:
 	-test -d $(CACHE) &&					\
@@ -197,8 +211,8 @@ remove-build-products:
 	    | xargs -P4 -0 /bin/rm -fr
 
 remove-direnvs:
-	find $(HOME)/Documents $(HOME)/src		\
-	    \( -name '.direnv' -type d \) -print0	\
+	find $(HOME)/Documents $(HOME)/src $(HOME)/.Trash	\
+	    \( -name '.direnv' -type d \) -print0		\
 	    | xargs -P4 -0 /bin/rm -fr
 
 gc:
@@ -206,17 +220,17 @@ gc:
 	    $(shell nix-env --list-generations | field 1 | head -n -14)
 	nix-env -p /nix/var/nix/profiles/system --delete-generations	\
 	    $(shell nix-env -p /nix/var/nix/profiles/system		\
-	                         --list-generations | field 1 | head -n -14)
+				 --list-generations | field 1 | head -n -14)
 	nix-collect-garbage --delete-older-than $(MAX_AGE)
 
-gc-all: remove-build-products remove-direnvs
+gc-old: remove-build-products remove-direnvs
 	nix-env --delete-generations					\
 	    $(shell nix-env --list-generations | field 1 | head -n -1)
 	nix-env -p /nix/var/nix/profiles/system --delete-generations	\
 	    $(shell nix-env -p /nix/var/nix/profiles/system		\
-	                         --list-generations | field 1 | head -n -1)
+				 --list-generations | field 1 | head -n -1)
 	nix-collect-garbage --delete-old
 
-fullclean: gc-all check
-	ssh hermes '$(MAKE_REC) gc-all check'
-	ssh athena '$(MAKE_REC) gc-all check'
+clean: gc-all check-all
+
+fullclean: gc-old-all check-all

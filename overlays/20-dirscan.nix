@@ -8,22 +8,17 @@ dirscan = with super; python2Packages.buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "jwiegley";
     repo = "dirscan";
-    rev = "af018fb14b9802400ce279b886fb4d09f4940348";
-    sha256 = "1ri48v9yk0x291wlw6ady46dc6zcb6j25dgnljbgdxaxqfbx743n";
-    # date = 2018-12-09T20:47:59-08:00;
+    rev = "97f391b4e18db7d04f6a7b15e6b53d8d5af11fe5";
+    sha256 = "034wxjwp59f22165yvxki3kbjv747awqamxfwqvikhan7a5kwd8r";
+    # date = 2020-01-21T15:46:19-08:00;
   };
 
-  phases = [ "unpackPhase" "fixupPhase" "installPhase" ];
+  phases = [ "unpackPhase" "installPhase" ];
 
   installPhase = ''
     mkdir -p $out/bin $out/libexec
     cp dirscan.py $out/libexec
     cp cleanup $out/bin
-  '';
-
-  fixupPhase = ''
-    sed -i -e "s|/usr/bin/env python2\.7|${pkgs.python27}/bin/python|" dirscan.py
-    sed -i -e "s|/usr/bin/env python2\.7|${pkgs.python27}/bin/python|" cleanup
   '';
 
   meta = {

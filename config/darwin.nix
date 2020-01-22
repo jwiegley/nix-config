@@ -42,7 +42,8 @@ in {
     cleanup = {
       script = ''
         export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
-        ${pkgs.dirscan}/bin/cleanup -u >> /var/log/cleanup.log 2>&1
+        ${pkgs.python2}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
+            >> /var/log/cleanup.log 2>&1
       '';
       serviceConfig = iterate 86400;
     };
@@ -71,7 +72,7 @@ in {
         cp -pL /etc/pdnsd.conf ${tmp_directory}/.pdnsd.conf
         chmod 700 ${tmp_directory}/.pdnsd.conf
         chown root ${tmp_directory}/.pdnsd.conf
-        touch /Library/Caches/pdnsd/pdnsd.cache
+        touch ${home_directory}/.cache/pdnsd/pdnsd.cache
         ${pkgs.pdnsd}/sbin/pdnsd -c ${tmp_directory}/.pdnsd.conf
       '';
       serviceConfig.RunAtLoad = true;
@@ -212,7 +213,6 @@ EOF
         "/usr/X11/man"
       ];
 
-      PYTHONPATH   = "${pkgs.dirscan}/libexec";
       LC_CTYPE     = "en_US.UTF-8";
       LESSCHARSET  = "utf-8";
       LEDGER_COLOR = "true";
@@ -294,7 +294,7 @@ EOF
     etc."pdnsd.conf".text = ''
       global {
           perm_cache   = 8192;
-          cache_dir    = "/Library/Caches/pdnsd";
+          cache_dir    = "${home_directory}/.cache/pdnsd";
           server_ip    = 127.0.0.1;
           status_ctl   = on;
           query_method = udp_tcp;

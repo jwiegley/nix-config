@@ -21,6 +21,7 @@ pkgs: epkgs: with epkgs;
   avy-zap
   backup-each-save
   backup-walker
+  bats-mode
   beacon
   biblio
   bm
