@@ -468,7 +468,7 @@ EOF
       "darwin=$HOME/src/nix/darwin"
       "nixpkgs=$HOME/src/nix/nixpkgs"
       "ssh-config-file=$HOME/.ssh/config"
-      "ssh-auth-sock=$HOME/.config/gnupg/S.gpg-agent.ssh"
+      "ssh-auth-sock=${xdg_configHome}/gnupg/S.gpg-agent.ssh"
     ];
 
     trustedUsers = [ "johnw" "@admin" ];
@@ -524,10 +524,12 @@ EOF
      trustedBinaryCaches = [
        https://nix.dfinity.systems
        ssh://vulcan
+       ssh://athena?store=/Volumes/tank/nix
      ];
      binaryCaches = [
        https://nix.dfinity.systems
        ssh://vulcan
+       ssh://athena?store=/Volumes/tank/nix
      ];
    }
    else if localconfig.hostname == "athena" then {
@@ -567,10 +569,12 @@ EOF
      trustedBinaryCaches = [
        https://nix.dfinity.systems
        ssh://vulcan
+       file:///Volumes/tank/nix
      ];
      binaryCaches = [
        https://nix.dfinity.systems
        ssh://vulcan
+       file:///Volumes/tank/nix
      ];
    }
    else if localconfig.hostname == "vulcan" then {

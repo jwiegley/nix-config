@@ -204,13 +204,6 @@ in rec {
         #     fi
         # fi
 
-        if [[ ! -L ${home_directory}/.gnupg ]]; then
-            ln -sf ${xdg.configHome}/gnupg ${home_directory}/.gnupg
-        fi
-        if [[ ! -L ${home_directory}/.password-store ]]; then
-            ln -sf ${home_directory}/Documents/.passwords ${home_directory}/.password-store
-        fi
-
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
 
         function upload() {
@@ -603,20 +596,10 @@ in rec {
 
     configFile."gnupg/gpg-agent.conf".text = ''
       enable-ssh-support
-      default-cache-ttl 7200
+      default-cache-ttl 86400
       max-cache-ttl 86400
       pinentry-program ${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac
-      scdaemon-program ${xdg.configHome}/gnupg/scdaemon-wrapper
     '';
-
-    configFile."gnupg/scdaemon-wrapper" = {
-      text = ''
-        #!/bin/bash
-        export DYLD_FRAMEWORK_PATH=/System/Library/Frameworks
-        exec ${pkgs.gnupg}/libexec/scdaemon "$@"
-      '';
-      executable = true;
-    };
 
     configFile."aspell/config".text = ''
       local-data-dir ${pkgs.aspell}/lib/aspell

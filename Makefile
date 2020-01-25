@@ -1,25 +1,21 @@
 HOSTNAME   = vulcan
 REMOTES	   = hermes athena
-MAX_AGE	   = 14d
-CACHE	   = /Users/johnw/tank/Cache
-ROOTS	   = /nix/var/nix/gcroots/per-user/johnw/shells
-ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
-NIX_CONF   = $(HOME)/src/nix
-MAKE_REC   = make -C $(NIX_CONF) NIX_CONF=$(NIX_CONF)
-GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
 GIT_REMOTE = jwiegley
+ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
+PROJ_PATHS = $(HOME)/src $(HOME)/dfinity $(HOME)/Documents
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
 # when first necessary.
+GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
 HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
 LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
-PROJS	   = $(eval PROJS     :=					\
-	$(shell find $(HOME)/src $(HOME)/dfinity $(HOME)/Documents	\
-		     -name .envrc					\
-		  \! -path '*/nix/nixpkgs/*'				\
-		  \! -path '*/notes/gists/*'				\
-		     -type f						\
+PROJS	   = $(eval PROJS     :=		\
+	$(shell find $(PROJ_PATHS)		\
+		     -name .envrc		\
+		  \! -path '*/nix/nixpkgs/*'	\
+		  \! -path '*/notes/gists/*'	\
+		     -type f			\
 		     -printf '%h '))$(PROJS)
 
 ifeq ($(NOCACHE),true)
@@ -29,6 +25,7 @@ NIXOPTS	   = --option build-use-substitutes false	\
 else
 NIXOPTS	   =
 endif
+NIX_CONF   = $(HOME)/src/nix
 NIXPATH	   = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 PRENIX	   = PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIXPATH)
 NIX	   = $(PRENIX) nix
@@ -45,63 +42,38 @@ else
 BUILD_PATH = /run/current-system
 endif
 
-DARWIN_REBUILD = $(BUILD_PATH)/sw/bin/darwin-rebuild
-HOME_MANAGER   = $(BUILD_PATH)/sw/bin/home-manager
+DARWIN_REBUILD = $(PRENIX) $(BUILD_PATH)/sw/bin/darwin-rebuild
+HOME_MANAGER   = $(PRENIX) HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix	\
+			   $(BUILD_PATH)/sw/bin/home-manager
 
 all: rebuild
 
-define make_broadcast
-    for host in $(REMOTES); do				\
-	ssh $$host "$(MAKE_REC) HOSTNAME=$$host $(1)";	\
-    done
-endef
-
 %-all: %
-	$(call make_broadcast,$<)
-
-tools:
-	@PATH=$(BUILD_PATH)/sw/bin:$(PATH)	\
-	    which				\
-		field				\
-		find				\
-		git				\
-		head				\
-		make				\
-		nix-build			\
-		nix-env				\
-		sort				\
-		sudo				\
-		uniq
+	for host in $(REMOTES); do					\
+	    ssh $$host "make -C $(NIX_CONF) HOSTNAME=$$host $(1)";	\
+	done
 
 build:
 	$(NIX) build -f . $(BUILD_ARGS)
 	@rm -f result*
 
 darwin-switch:
-	$(PRENIX) $(DARWIN_REBUILD) switch -Q
+	$(DARWIN_REBUILD) switch -Q
 	@echo "Darwin generation: $$($(DARWIN_REBUILD) --list-generations | tail -1)"
 
 home-switch:
-	$(PRENIX) HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix	\
-	    $(HOME_MANAGER) switch
+	$(HOME_MANAGER) switch
 	@echo "Home generation: $$($(HOME_MANAGER) generations | head -1)"
 	@for file in $(HOME)/.config/fetchmail/config		\
-		    $(HOME)/.config/fetchmail/config-lists; do	\
+		     $(HOME)/.config/fetchmail/config-lists; do	\
 	    cp -pL $$file $$file.copy;				\
 	    chmod 0600 $$file.copy;				\
 	done
 
 home-news:
-	$(PRENIX) HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix	\
-	    $(HOME_MANAGER) news
+	$(HOME_MANAGER) news
 
 switch: darwin-switch home-switch
-
-rebuild: build switch env
-
-opts:
-	@echo export NIXOPTS=$(NIXOPTS)
-	@echo export NIX_PATH=$(NIXPATH)
 
 env:
 	@for i in $(ENVS); do							\
@@ -110,10 +82,7 @@ env:
 	done
 	@echo "Nix generation: $$($(NIX_ENV) --list-generations | tail -1)"
 
-projs:
-	@for i in $(PROJS); do			\
-	    echo "proj: $$i";			\
-	done
+rebuild: build switch env
 
 shells:
 	@for i in $(PROJS); do					\
@@ -152,11 +121,11 @@ working: tag-working mirror
 
 update: tag-before pull build switch env working
 
-check:
-	$(NIX_STORE) --verify --repair --check-contents
-
 sizes:
 	sizes /nix/store
+
+check:
+	$(NIX_STORE) --verify --repair --check-contents
 
 copy-nix:
 	@for host in $(REMOTES); do							\
@@ -187,19 +156,16 @@ copy-shells:
 		      done | sort | uniq);			\
 	done
 
+CACHE_HOST = athena
+CACHE_DIR  = /Volumes/tank/Cache
+
 cache:
-	-test -d $(CACHE) &&					\
-	(find /nix/store -maxdepth 1 -type f			\
-	    \( -name '*.dmg' -o					\
-	       -name '*.zip' -o					\
-	       -name '*.pkg' -o					\
-	       -name '*.el'  -o					\
-	       -name '*.7z'  -o					\
-	       -name '*gz'   -o					\
-	       -name '*xz'   -o					\
-	       -name '*bz2'  -o					\
-	       -name '*.tar' \) -print0				\
-	    | parallel -0 nix copy --to file://$(CACHE))
+	if [[ $(CACHE_HOST) == $(HOSTNAME) ]]; then		\
+	    nix copy --all --to "file://$(CACHE_DIR)";		\
+	else							\
+	    nix copy --all --to					\
+		"ssh://$(CACHE_HOST)?store=$(CACHE_DIR)";	\
+	fi
 
 remove-build-products:
 	find $(HOME)/Documents $(HOME)/src			\
@@ -216,6 +182,8 @@ remove-direnvs:
 	find $(HOME)/Documents $(HOME)/src $(HOME)/.Trash	\
 	    \( -name '.direnv' -type d \) -print0		\
 	    | xargs -P4 -0 /bin/rm -fr
+
+MAX_AGE = 14d
 
 gc:
 	$(NIX_ENV) --delete-generations						\
@@ -236,3 +204,29 @@ gc-old: remove-build-products remove-direnvs
 clean: gc-all check-all
 
 fullclean: gc-old-all check-all
+
+# These rules are used for debugging only
+
+tools:
+	@PATH=$(BUILD_PATH)/sw/bin:$(PATH)	\
+	    which				\
+		field				\
+		find				\
+		git				\
+		head				\
+		make				\
+		nix-build			\
+		nix-env				\
+		sort				\
+		sudo				\
+		uniq
+
+opts:
+	@echo export NIXOPTS=$(NIXOPTS)
+	@echo export NIX_PATH=$(NIXPATH)
+
+projs:
+	@for i in $(PROJS); do			\
+	    echo "proj: $$i";			\
+	done
+
