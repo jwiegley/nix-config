@@ -18,6 +18,7 @@ dirscan = with super; python2Packages.buildPythonPackage rec {
   installPhase = ''
     mkdir -p $out/bin $out/libexec
     cp dirscan.py $out/libexec
+    python -mpy_compile $out/libexec/dirscan.py
     cp cleanup $out/bin
   '';
 

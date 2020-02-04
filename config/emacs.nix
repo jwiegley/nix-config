@@ -129,6 +129,7 @@ pkgs: epkgs: with epkgs;
   fast-scroll
   feebleline
   fence-edit
+  fennel-mode
   fetchmail-mode
   flycheck
   flycheck-haskell

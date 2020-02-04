@@ -190,6 +190,10 @@ in rec {
 
         . ${pkgs.z}/share/z.sh
 
+
+        defaults write org.hammerspoon.Hammerspoon MJConfigFile \
+            "${xdg.configHome}/hammerspoon/init.lua"
+
         setopt extended_glob
       '';
 

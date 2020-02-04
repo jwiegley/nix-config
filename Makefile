@@ -128,12 +128,17 @@ check:
 	$(NIX_STORE) --verify --repair --check-contents
 
 copy-nix:
-	@for host in $(REMOTES); do							\
-	    $(NIX) copy --no-check-sigs --keep-going --to ssh://$$host $(BUILD_PATH);	\
+	@for host in $(REMOTES); do					\
+	    $(NIX) copy --keep-going --to ssh://$$host $(BUILD_PATH);	\
 	done
 
 copy: copy-nix
 	for host in $(REMOTES); do push -h $(HOSTNAME) -f src $$host; done
+
+copy-store:
+	@for host in $(REMOTES); do				\
+	    $(NIX) copy --keep-going --all --to ssh://$$host;	\
+	done
 
 define find_defaults
     find $(PROJS) -path '*/.direnv/default'

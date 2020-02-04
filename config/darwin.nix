@@ -487,7 +487,7 @@ EOF
       secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
     '';
   } //
-  (if localconfig.hostname == "hermes" then {
+  (if localconfig.hostname == "hermes" then rec {
      maxJobs = 8;
      buildCores = 4;
      distributedBuilds = true;
@@ -524,15 +524,11 @@ EOF
      trustedBinaryCaches = [
        https://nix.dfinity.systems
        ssh://vulcan
-       ssh://athena?store=/Volumes/tank/nix
+       file:///Volumes/G-DRIVE/nix
      ];
-     binaryCaches = [
-       https://nix.dfinity.systems
-       ssh://vulcan
-       ssh://athena?store=/Volumes/tank/nix
-     ];
+     binaryCaches = trustedBinaryCaches;
    }
-   else if localconfig.hostname == "athena" then {
+   else if localconfig.hostname == "athena" then rec {
      maxJobs = 4;
      buildCores = 2;
      distributedBuilds = true;
@@ -569,15 +565,10 @@ EOF
      trustedBinaryCaches = [
        https://nix.dfinity.systems
        ssh://vulcan
-       file:///Volumes/tank/nix
      ];
-     binaryCaches = [
-       https://nix.dfinity.systems
-       ssh://vulcan
-       file:///Volumes/tank/nix
-     ];
+     binaryCaches = trustedBinaryCaches;
    }
-   else if localconfig.hostname == "vulcan" then {
+   else if localconfig.hostname == "vulcan" then rec {
      maxJobs = 20;
      buildCores = 10;
      distributedBuilds = true;
@@ -605,14 +596,7 @@ EOF
      trustedBinaryCaches = [
        https://nix.dfinity.systems
      ];
-     binaryCaches = [
-       https://nix.dfinity.systems
-     ];
-    binaryCachePublicKeys = [
-      "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
-      "cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
-      "hydra.dfinity.systems-2:KMTixHrh9DpAjF/0xU/49VEtNuGzQ71YaVIUSOLUaCM="
-    ];
+     binaryCaches = trustedBinaryCaches;
    }
    else {});
 
