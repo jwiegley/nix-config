@@ -29,8 +29,6 @@ export CARGO_HOME=\$CARGO_TARGET_DIR/.cargo-home
 EOF
 fi
 
-nix run -c echo "All dependencies are built."
-
 exec nix-shell "${NIXARGS[@]}"                                  \
      --run 'unset SSH_AUTH_SOCK ${!DIRENV_@} && direnv dump'    \
      > .envrc.cache

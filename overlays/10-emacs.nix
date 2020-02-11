@@ -116,6 +116,12 @@ let
       # date = 2019-04-03T08:43:27-0700;
     };
 
+    dired-plus = compileEmacsWikiFile {
+      name = "dired+.el";
+      sha256 = "15g6nbfkb0p4irgk3jjmbaayrvqp39jyhd2yg361hy4gjh9gl8ln";
+      # date = 2020-02-11T09:10:20-0800;
+    };
+
     erc-highlight-nicknames = compileEmacsWikiFile {
       name = "erc-highlight-nicknames.el";
       sha256 = "01r184q86aha4gs55r2vy3rygq1qnxh1bj9qmlz97b2yh8y17m50";

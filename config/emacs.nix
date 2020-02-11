@@ -81,8 +81,10 @@ pkgs: epkgs: with epkgs;
   diff-hl                       # diff-hl diff-hl-flydiff
   diffview
   diminish
+  dired-plus
   dired-ranger
   dired-toggle
+  diredful
   direnv
   discover-my-major
   docker

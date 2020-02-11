@@ -165,20 +165,22 @@ in rec {
         scp   = "${pkgs.rsync}/bin/rsync -aP --inplace";
         wipe  = "${pkgs.srm}/bin/srm -vfr";
 
-        proc  = "/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
+        proc  = "${pkgs.darwin.ps}/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
 
-        nstat = "/usr/sbin/netstat -nr -f inet"
+        nstat = "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
               + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
               + " | ${pkgs.coreutils}/bin/tail -n +5";
 
+        # Use whichever cabal is on the PATH.
         cn    = "cabal new-configure --enable-tests --enable-benchmarks";
         cnp   = "cabal new-configure --enable-tests --enable-benchmarks " +
                 "--enable-profiling --ghc-options=-fprof-auto";
         cb    = "cabal new-build";
 
+        # Use whichever terraform is on the PATH.
         deploy = ''${pkgs.nix}/bin/nix-shell --pure --command '' +
           ''"terraform init; '' +
-          ''export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | head -1); '' +
+          ''export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | ${pkgs.coreutils}/bin/head -1); '' +
           ''terraform apply"'';
       };
 
@@ -189,7 +191,6 @@ in rec {
         fi
 
         . ${pkgs.z}/share/z.sh
-
 
         defaults write org.hammerspoon.Hammerspoon MJConfigFile \
             "${xdg.configHome}/hammerspoon/init.lua"
@@ -213,7 +214,7 @@ in rec {
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
 
         function upload() {
-            lftp -u johnw@newartisans.com,$(pass ftp.fastmail.com | head -1) \
+            ${pkgs.lftp}/bin/lftp -u johnw@newartisans.com,$(${pkgs.pass}/bin/pass ftp.fastmail.com | ${pkgs.coreutils}/bin/head -1) \
                 ftp://johnw@newartisans.com@ftp.fastmail.com                 \
                 -e "set ssl:ca-file \"${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt\"; cd /johnw.newartisans.com/files/pub ; put \"$1\" ; quit"
 
@@ -313,7 +314,7 @@ in rec {
         commit.gpgsign        = true;
         github.user           = "jwiegley";
         credential.helper     = "${pkgs.pass-git-helper}/bin/pass-git-helper";
-        ghi.token             = "!${pkgs.pass}/bin/pass api.github.com | head -1";
+        ghi.token             = "!${pkgs.pass}/bin/pass api.github.com | ${pkgs.coreutils}/bin/head -1";
         hub.protocol          = "${pkgs.openssh}/bin/ssh";
         mergetool.keepBackup  = true;
         pull.rebase           = true;
