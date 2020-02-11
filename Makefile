@@ -10,14 +10,6 @@ GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%
 HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
 LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
-PROJS	   = $(eval PROJS     :=		\
-	$(shell find $(PROJ_PATHS)		\
-		     -name .envrc		\
-		  \! -path '*/nix/nixpkgs/*'	\
-		  \! -path '*/notes/gists/*'	\
-		     -type f			\
-		     -printf '%h '))$(PROJS)
-
 ifeq ($(NOCACHE),true)
 NIXOPTS	   = --option build-use-substitutes false	\
 	     --option substituters ''			\
@@ -28,6 +20,7 @@ endif
 NIX_CONF   = $(HOME)/src/nix
 NIXPATH	   = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 PRENIX	   = PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIXPATH)
+
 NIX	   = $(PRENIX) nix
 NIX_BUILD  = $(PRENIX) nix-build
 NIX_ENV	   = $(PRENIX) nix-env
@@ -84,16 +77,6 @@ env:
 
 rebuild: build switch env
 
-shells:
-	@for i in $(PROJS); do					\
-	    cd $$i;						\
-	    echo;						\
-	    echo Building shell env for $$i;			\
-	    echo;						\
-	    $(PRENIX) direnv export zsh > /dev/null		\
-		|| echo "Failed to build direnv environment";	\
-	done
-
 pull:
 	(cd darwin		   && git pull --rebase)
 	(cd home-manager	   && git pull --rebase)
@@ -128,8 +111,9 @@ check:
 	$(NIX_STORE) --verify --repair --check-contents
 
 copy-nix:
-	@for host in $(REMOTES); do					\
-	    $(NIX) copy --keep-going --to ssh://$$host $(BUILD_PATH);	\
+	@for host in $(REMOTES); do			\
+	    $(NIX) copy --keep-going --to ssh://$$host	\
+	        $(HOME)/.nix-profile $(BUILD_PATH);	\
 	done
 
 copy: copy-nix
@@ -137,71 +121,35 @@ copy: copy-nix
 	    push -h $(HOSTNAME) -f src $$host;	\
 	done
 
-copy-store:
-	@for host in $(REMOTES); do				\
-	    $(NIX) copy --keep-going --all --to ssh://$$host;	\
-	done
-
-define find_defaults
-    find $(PROJS) -path '*/.direnv/default'
-endef
-
-defaults:
-	$(find_defaults)
-
-copy-shells:
-	for host in $(REMOTES); do				\
-	    $(NIX) copy						\
-		--no-check-sigs					\
-		--keep-going					\
-		--to ssh://$$host				\
-		$(shell $(find_defaults)			\
-		    | while read dir; do			\
-			  ls $$dir/ | while read file ; do	\
-			      readlink $$dir/$$file;		\
-			  done ;				\
-		      done | sort | uniq);			\
-	done
-
-CACHE_HOST = athena
-CACHE_DIR  = /Volumes/tank/Cache
+CACHE_DIR = /Volumes/192.168.1.64/Volumes/G-DRIVE/nix
 
 cache:
-	if [[ $(CACHE_HOST) == $(HOSTNAME) ]]; then		\
-	    nix copy --all --to "file://$(CACHE_DIR)";		\
-	else							\
-	    nix copy --all --to					\
-		"ssh://$(CACHE_HOST)?store=$(CACHE_DIR)";	\
-	fi
+	nix copy --all --to "file://$(CACHE_DIR)"
 
 remove-build-products:
-	find $(HOME)/Documents $(HOME)/src			\
-	    \( -name 'dist' -type d -o				\
-	       -name 'dist-newstyle' -type d -o			\
-	       -name '.ghc.*' -o				\
-	       -name 'cabal.project.local*' -type f -o		\
-	       -name '.cargo-home' -type d -o			\
-	       -name 'target' -type d -o			\
-	       -name 'result*' -type l \) -print0		\
+	find $(HOME)/Documents $(HOME)/src		\
+	    \( -name '.cargo-home' -type d -o		\
+	       -name '.direnv' -type d -o		\
+	       -name '.envrc.cache' -type f -o		\
+	       -name '.ghc.*' -o			\
+	       -name 'cabal.project.local*' -type f -o	\
+	       -name 'dist' -type d -o			\
+	       -name 'dist-newstyle' -type d -o		\
+	       -name 'result*' -type l -o		\
+	       -name 'target' -type d \) -print0	\
 	    | xargs -P4 -0 /bin/rm -fr
 
-remove-direnvs:
-	find $(HOME)/Documents $(HOME)/src $(HOME)/.Trash	\
-	    \( -name '.direnv' -type d -o			\
-	       -name '.envrc.cache' -type f \) -print0		\
-	    | xargs -P4 -0 /bin/rm -fr
-
-MAX_AGE = 14d
+MAX_AGE = 14
 
 gc:
 	$(NIX_ENV) --delete-generations						\
-	    $(shell $(NIX_ENV) --list-generations | field 1 | head -n -14)
+	    $(shell $(NIX_ENV) --list-generations | field 1 | head -n -$(MAX_AGE))
 	$(NIX_ENV) -p /nix/var/nix/profiles/system --delete-generations		\
 	    $(shell $(NIX_ENV) -p /nix/var/nix/profiles/system			\
-				 --list-generations | field 1 | head -n -14)
-	$(NIX_GC) --delete-older-than $(MAX_AGE)
+				 --list-generations | field 1 | head -n -$(MAX_AGE))
+	$(NIX_GC) --delete-older-than $(MAX_AGE)d
 
-gc-old: remove-build-products remove-direnvs
+gc-old: remove-build-products
 	$(NIX_ENV) --delete-generations						\
 	    $(shell $(NIX_ENV) --list-generations | field 1 | head -n -1)
 	$(NIX_ENV) -p /nix/var/nix/profiles/system --delete-generations		\
@@ -209,9 +157,9 @@ gc-old: remove-build-products remove-direnvs
 				 --list-generations | field 1 | head -n -1)
 	$(NIX_GC) --delete-old
 
-clean: gc-all check-all
+clean: gc check
 
-fullclean: gc-old-all check-all
+fullclean: gc-old check
 
 # These rules are used for debugging only
 
@@ -232,9 +180,3 @@ tools:
 opts:
 	@echo export NIXOPTS=$(NIXOPTS)
 	@echo export NIX_PATH=$(NIXPATH)
-
-projs:
-	@for i in $(PROJS); do			\
-	    echo "proj: $$i";			\
-	done
-
