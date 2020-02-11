@@ -133,7 +133,9 @@ copy-nix:
 	done
 
 copy: copy-nix
-	for host in $(REMOTES); do push -h $(HOSTNAME) -f src $$host; done
+	@for host in $(REMOTES); do		\
+	    push -h $(HOSTNAME) -f src $$host;	\
+	done
 
 copy-store:
 	@for host in $(REMOTES); do				\
@@ -185,7 +187,8 @@ remove-build-products:
 
 remove-direnvs:
 	find $(HOME)/Documents $(HOME)/src $(HOME)/.Trash	\
-	    \( -name '.direnv' -type d \) -print0		\
+	    \( -name '.direnv' -type d -o			\
+	       -name '.envrc.cache' -type f \) -print0		\
 	    | xargs -P4 -0 /bin/rm -fr
 
 MAX_AGE = 14d

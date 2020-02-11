@@ -177,7 +177,7 @@ in rec {
         cb    = "cabal new-build";
 
         deploy = ''${pkgs.nix}/bin/nix-shell --pure --command '' +
-        ''"terraform init; '' +
+          ''"terraform init; '' +
           ''export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | head -1); '' +
           ''terraform apply"'';
       };
@@ -198,8 +198,10 @@ in rec {
       '';
 
       initExtra = lib.mkBefore ''
+        export PATH=$(echo "$PATH" | sed 's/\/usr\/local\/bin:\/usr\/bin:\/bin:\/usr\/sbin:\/sbin://')
         export PATH=${home_directory}/Documents/accounts/bin:$PATH
-        export PATH=$PATH:/usr/local/bin:/usr/local/sbin
+        export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+        export PATH=$(echo "$PATH" | sed 's/\/Applications\/VMware Fusion\.app\/Contents\/Public://')
 
         # DOCKER_MACHINE=$(which docker-machine)
         # if [[ -x "$DOCKER_MACHINE" ]]; then
@@ -419,6 +421,7 @@ in rec {
         ".clean"
         ".direnv"
         ".envrc"
+        ".envrc.cache"
         ".envrc.override"
         ".ghc.environment.x86_64-darwin-*"
         ".makefile"
