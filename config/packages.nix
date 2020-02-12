@@ -59,7 +59,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   # (exe (import ~/src/hnix {}))
   htmlTidy
   m4
-  idutils
+  # idutils
   rtags
   sloccount
   valgrind

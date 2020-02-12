@@ -487,84 +487,56 @@ EOF
       secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
     '';
   } //
-  (if localconfig.hostname == "hermes" then rec {
+  (let zrh-3 = {
+         hostName = "zrh-3";
+         sshUser = "johnw";
+         sshKey = "${xdg_configHome}/ssh/id_dfinity";
+         system = "x86_64-linux";
+         maxJobs = 16;
+         buildCores = 4;
+         speedFactor = 4;
+       };
+       vulcan = {
+         hostName = "vulcan";
+         sshUser = "johnw";
+         sshKey = "${xdg_configHome}/ssh/id_local";
+         system = "x86_64-darwin";
+         maxJobs = 20;
+         buildCores = 10;
+         speedFactor = 4;
+       }; in
+   if localconfig.hostname == "hermes" then rec {
+     maxJobs = 16;
+     buildCores = 8;
+     distributedBuilds = true;
+
+     buildMachines = [
+       # vulcan
+       zrh-3
+     ];
+
+     requireSignedBinaryCaches = false;
+     trustedBinaryCaches = [
+       file:///Volumes/G-DRIVE/nix
+       ssh://vulcan
+       https://nix.dfinity.systems
+     ];
+     binaryCaches = trustedBinaryCaches;
+   }
+   else if localconfig.hostname == "athena" then rec {
      maxJobs = 8;
      buildCores = 4;
      distributedBuilds = true;
 
      buildMachines = [
-       # { hostName = "vulcan";
-       #   sshUser = "johnw";
-       #   sshKey = "${xdg_configHome}/ssh/id_local";
-       #   system = "x86_64-darwin";
-       #   maxJobs = 20;
-       #   buildCores = 10;
-       #   speedFactor = 4;
-       # }
-       # { hostName = "nix-docker";
-       #   sshUser = "root";
-       #   sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
-       #   system = "x86_64-linux";
-       #   maxJobs = 2;
-       #   buildCores = 2;
-       #   speedFactor = 1;
-       #   supportedFeatures = [ "kvm" ];
-       # }
-       { hostName = "zrh-3";
-         sshUser = "johnw";
-         sshKey = "${xdg_configHome}/ssh/id_dfinity";
-         system = "x86_64-linux";
-         maxJobs = 48;
-         buildCores = 4;
-         speedFactor = 4;
-       }
+       # vulcan
+       zrh-3
      ];
 
      requireSignedBinaryCaches = false;
      trustedBinaryCaches = [
-       https://nix.dfinity.systems
        ssh://vulcan
-       file:///Volumes/G-DRIVE/nix
-     ];
-     binaryCaches = trustedBinaryCaches;
-   }
-   else if localconfig.hostname == "athena" then rec {
-     maxJobs = 4;
-     buildCores = 2;
-     distributedBuilds = true;
-
-     buildMachines = [
-       # { hostName = "vulcan";
-       #   sshUser = "johnw";
-       #   sshKey = "${xdg_configHome}/ssh/id_local";
-       #   system = "x86_64-darwin";
-       #   maxJobs = 20;
-       #   buildCores = 10;
-       #   speedFactor = 4;
-       # }
-       # { hostName = "nix-docker";
-       #   sshUser = "root";
-       #   sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
-       #   system = "x86_64-linux";
-       #   maxJobs = 2;
-       #   buildCores = 2;
-       #   speedFactor = 1;
-       #   supportedFeatures = [ "kvm" ];
-       # }
-       { hostName = "zrh-3";
-         sshUser = "johnw";
-         sshKey = "${xdg_configHome}/ssh/id_dfinity";
-         system = "x86_64-linux";
-         maxJobs = 48;
-         buildCores = 4;
-         speedFactor = 4;
-       }
-     ];
-
-     requireSignedBinaryCaches = false;
-     trustedBinaryCaches = [
        https://nix.dfinity.systems
-       ssh://vulcan
      ];
      binaryCaches = trustedBinaryCaches;
    }
@@ -574,26 +546,11 @@ EOF
      distributedBuilds = true;
 
      buildMachines = [
-       # { hostName = "nix-docker";
-       #   sshUser = "root";
-       #   sshKey = "${xdg_configHome}/ssh/nix-docker_rsa";
-       #   system = "x86_64-linux";
-       #   maxJobs = 4;
-       #   buildCores = 2;
-       #   speedFactor = 3;
-       #   supportedFeatures = [ "kvm" ];
-       # }
-       { hostName = "zrh-3";
-         sshUser = "johnw";
-         sshKey = "${xdg_configHome}/ssh/id_dfinity";
-         system = "x86_64-linux";
-         maxJobs = 48;
-         buildCores = 4;
-         speedFactor = 4;
-       }
+       zrh-3
      ];
 
      trustedBinaryCaches = [
+       file:///Volumes/Backup/nix
        https://nix.dfinity.systems
      ];
      binaryCaches = trustedBinaryCaches;

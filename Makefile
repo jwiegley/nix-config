@@ -121,10 +121,10 @@ copy: copy-nix
 	    push -h $(HOSTNAME) -f src $$host;	\
 	done
 
-CACHE_DIR = /Volumes/192.168.1.64/Volumes/G-DRIVE/nix
+CACHE_DIR = /Volumes/Backup/nix
 
 cache:
-	nix copy --all --to "file://$(CACHE_DIR)"
+	nix copy --all --keep-going --to "file://$(CACHE_DIR)"
 
 remove-build-products:
 	find $(HOME)/Documents $(HOME)/src		\
