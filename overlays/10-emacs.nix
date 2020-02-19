@@ -1090,7 +1090,7 @@ emacsHEAD = with pkgs;
   src = ~/src/emacs;
   CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
   patches = [
-    ./emacs/tramp-detect-wrapped-gvfsd.patch
+    # ./emacs/tramp-detect-wrapped-gvfsd.patch
     ./emacs/clean-env.patch
   ];
   buildInputs = attrs.buildInputs ++

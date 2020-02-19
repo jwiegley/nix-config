@@ -1,6 +1,17 @@
-self: pkgs: {
+self: pkgs:
 
-ledger_HEAD = (pkgs.callPackage ~/src/ledger/master {}).overrideAttrs (attrs: {
+let ledger = pkgs.callPackage ~/src/ledger/master {}; in
+
+{
+
+ledger_HEAD = ledger.overrideAttrs (attrs: {
+  src = pkgs.fetchFromGitHub {
+    owner = "ledger";
+    repo = "ledger";
+    rev = "refs/heads/john";
+    sha256 = "06hxv0k4n1lnlhx4vdyd425321czhdqj1g087ijbxag6inphz8d2";
+  };
+
   doCheck = false;
 
   preConfigure = (attrs.preConfigure or "") + ''
@@ -12,7 +23,7 @@ ledger_HEAD = (pkgs.callPackage ~/src/ledger/master {}).overrideAttrs (attrs: {
   '';
 });
 
-ledger_HEAD_python3 = pkgs.callPackage ~/src/ledger/master {
+ledger_HEAD_python3 = ledger.overrideAttrs (attrs: {
   boost = pkgs.boost.override { python = pkgs.python3; };
 
   preConfigure = ''
@@ -22,7 +33,7 @@ ledger_HEAD_python3 = pkgs.callPackage ~/src/ledger/master {
   preInstall = ''
     mkdir -p $out/lib/python37/site-packages
   '';
-};
+});
 
 ledgerPy3Env = pkgs.myEnvFun {
   name = "ledger-py3";

@@ -2,7 +2,6 @@ HOSTNAME   = vulcan
 REMOTES	   = hermes athena
 GIT_REMOTE = jwiegley
 ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
-PROJ_PATHS = $(HOME)/src $(HOME)/dfinity $(HOME)/Documents
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
 # when first necessary.
@@ -125,6 +124,9 @@ CACHE_DIR = /Volumes/Backup/nix
 
 cache:
 	nix copy --all --keep-going --to "file://$(CACHE_DIR)"
+	-quickping 192.168.1.65 &&							\
+	    ssh hermes test -d /Volumes/G-DRIVE/nix &&					\
+	    rsync -av --delete /Volumes/Backup/nix/ hermes:/Volumes/G-DRIVE/nix/
 
 remove-build-products:
 	find $(HOME)/Documents $(HOME)/src		\
