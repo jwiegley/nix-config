@@ -755,6 +755,17 @@ let
       };
     };
 
+    verb = compileEmacsFiles {
+      name = "verb";
+      src = fetchFromGitHub {
+        owner = "federicotdn";
+        repo = "verb";
+        rev = "f9199768e55849cbe5a879a530b33bce88ac4c2c";
+        sha256 = "1zpsvjsr5mvi0l0mgfwirxg5bkhkp305h85fbv5g3hr4g0vnr448";
+        # date = 2020-02-23T23:18:06+01:00;
+      };
+    };
+
     wat-mode = compileEmacsFiles {
       name = "wat-mode";
       src = fetchFromGitHub {

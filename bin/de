@@ -20,13 +20,21 @@ EOF
     [[ -f package.nix ]] && echo "watch_file package.nix" >> .envrc
     [[ -f shell.nix ]] && echo "watch_file shell.nix" >> .envrc
 
-    cat >> .envrc <<EOF
+    if [[ -f package.yaml \
+       || -n "$(find . -maxdepth 1 -name '*.cabal')" ]]; then
+        cat >> .envrc <<EOF
 
 export CABAL_BUILDDIR=$PRODUCTS/dist
+EOF
+    fi
+
+    if [[ -f Cargo.toml ]]; then
+        cat >> .envrc <<EOF
 
 export CARGO_TARGET_DIR=$PRODUCTS/target
 export CARGO_HOME=\$CARGO_TARGET_DIR/.cargo-home
 EOF
+    fi
 fi
 
 exec nix-shell "${NIXARGS[@]}"                                  \

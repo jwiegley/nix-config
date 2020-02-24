@@ -477,7 +477,6 @@ in rec {
         nixos   = onHost "vulcan" "192.168.118.128";
         dfinity = onHost "vulcan" "192.168.118.136";
         macos   = onHost "vulcan" "192.168.118.130";
-        centos  = onHost "vulcan" "192.168.118.133";
 
         elpa        = { hostname = "elpa.gnu.org"; user = "root"; };
         haskell_org = { host = "*haskell.org";     user = "root"; };

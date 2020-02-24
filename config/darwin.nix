@@ -495,6 +495,7 @@ EOF
          maxJobs = 16;
          buildCores = 4;
          speedFactor = 4;
+         supportedFeatures = [ "kvm" ];
        };
        vulcan = {
          hostName = "vulcan";
@@ -517,8 +518,8 @@ EOF
 
      requireSignedBinaryCaches = false;
      trustedBinaryCaches = [
-       file:///Volumes/G-DRIVE/nix
-       ssh://vulcan
+       # file:///Volumes/G-DRIVE/nix
+       # ssh://vulcan
        https://nix.dfinity.systems
      ];
      binaryCaches = trustedBinaryCaches;

@@ -45,10 +45,19 @@ let
     language-ecmascript   = doJailbreak super.language-ecmascript;
     liquidhaskell         = doJailbreak super.liquidhaskell;
     pipes-binary          = doJailbreak super.pipes-binary;
-    pipes-text            = doJailbreak super.pipes-text;
+    pipes-text            = unmarkBroken (doJailbreak super.pipes-text);
     pipes-zlib            = dontCheck (doJailbreak super.pipes-zlib);
     text-show             = dontCheck (doJailbreak super.text-show);
     time-recurrence       = doJailbreak super.time-recurrence;
+
+    pushme = self.callCabal2nix "pushme"
+      (pkgs.fetchFromGitHub {
+        owner  = "jwiegley";
+        repo   = "pushme";
+        rev    = "d7892c0e3588fdc37c199b8bb6593ebdf9316cbf";
+        sha256 = "0fikx1ff6qah7x5zm1dyxk1iaw300y7kcq2qx4calpc5h3ba0sy2";
+        # date = 2020-01-14T07:25:07-08:00;
+      }) {};
 
     ListLike = overrideCabal super.ListLike (attrs: {
       libraryHaskellDepends =

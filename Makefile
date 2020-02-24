@@ -42,7 +42,7 @@ all: rebuild
 
 %-all: %
 	for host in $(REMOTES); do					\
-	    ssh $$host "make -C $(NIX_CONF) HOSTNAME=$$host $(1)";	\
+	    ssh $$host "make -C $(NIX_CONF) HOSTNAME=$$host $<";	\
 	done
 
 build:

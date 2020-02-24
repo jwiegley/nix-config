@@ -2,14 +2,14 @@ self: super: {
 
 z = with super; stdenv.mkDerivation rec {
   name = "z-${version}";
-  version = "4f08e7fe";
+  version = "f1f113d9";
 
   src = fetchFromGitHub {
     owner = "rupa";
     repo = "z";
-    rev = "4f08e7febba8d024cbf583544a8cd563e02c3413";
-    sha256 = "0rx75149wnxmbgys0ayyq61rfv4h19j3d1kh27hqa11k5gf2p0lp";
-    # date = 2019-10-24T01:49:52-04:00;
+    rev = "f1f113d9bae9effaef6b1e15853b5eeb445e0712";
+    sha256 = "1d0wwdjb0sgxzszbi7jnsnc6887h026r6hn4kzv9hjp1axr0dxrx";
+    # date = 2020-02-15T16:56:40-05:00;
   };
 
   phases = [ "unpackPhase" "installPhase" ];

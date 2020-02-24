@@ -2,14 +2,14 @@ self: super: {
 
 fennel = with super; stdenv.mkDerivation rec {
   name = "fennel-${version}";
-  version = "1abi8hmr";
+  version = "ea4ec851";
 
   src = fetchFromGitHub {
     owner = "bakpakin";
     repo = "Fennel";
-    rev = "ded00cf3933ea4435f5be95be071653c8ea42087";
-    sha256 = "1abi8hmrpv73kv25dibgacmpg4a3nl8l0753djwvx6ds6x1a9bsy";
-    # date = 2020-01-15T17:18:25-08:00;
+    rev = "ea4ec851eb0f4ded0c7d31d169f3aa2b3df8592b";
+    sha256 = "1b4760sqpbdjz0k6qr4a8i2jvkgnjhdlpf4qwy1p28nz9zsnjw2j";
+    # date = 2020-02-13T19:49:49-08:00;
   };
 
   propagatedBuildInputs = [ lua ];

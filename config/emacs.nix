@@ -387,6 +387,7 @@ pkgs: epkgs: with epkgs;
   vagrant
   vagrant-tramp
   vdiff
+  verb
   vimish-fold
   visual-fill-column
   visual-regexp
