@@ -126,7 +126,7 @@ cache:
 	nix copy --all --keep-going --to "file://$(CACHE_DIR)"
 	-quickping 192.168.1.65 &&							\
 	    ssh hermes test -d /Volumes/G-DRIVE/nix &&					\
-	    rsync -av --delete /Volumes/Backup/nix/ hermes:/Volumes/G-DRIVE/nix/
+	    rsync -a --delete /Volumes/Backup/nix/ hermes:/Volumes/G-DRIVE/nix/
 
 remove-build-products:
 	find $(HOME)/Documents $(HOME)/src		\

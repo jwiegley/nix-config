@@ -26,6 +26,7 @@ pkgs: epkgs: with epkgs;
   biblio
   bm
   bookmark-plus                 # bookmark+
+  bufler
   browse-at-remote
   browse-kill-ring
   browse-kill-ring-plus         # browse-kill-ring+
@@ -60,7 +61,6 @@ pkgs: epkgs: with epkgs;
   company-terraform
   copy-as-format
   counsel
-  counsel-dash
   counsel-gtags
   counsel-jq
   counsel-osx-app
@@ -71,8 +71,6 @@ pkgs: epkgs: with epkgs;
   csv-mode
   ctable
   cursor-chg
-  dash
-  dash-at-point
   debbugs                       # debbugs-gnu
   deadgrep
   dedicated
@@ -99,6 +97,7 @@ pkgs: epkgs: with epkgs;
   edit-indirect
   edit-server
   edit-var
+  eglot
   el-mock
   elfeed
   elisp-depend
@@ -170,8 +169,8 @@ pkgs: epkgs: with epkgs;
   haskell-mode
   hcl-mode
   helm
+  helm-aws
   helm-bibtex                   # ivy-bibtex
-  helm-dash
   helm-descbinds
   helm-describe-modes
   helm-firefox
@@ -210,6 +209,7 @@ pkgs: epkgs: with epkgs;
   json-snatcher
   key-chord
   know-your-http-well
+  kubernetes
   kv
   language-detection
   langtool
@@ -323,6 +323,7 @@ pkgs: epkgs: with epkgs;
   popup-ruler
   popwin
   pos-tip
+  posix-manual
   pp-c-l
   prodigy
   projectile
@@ -376,7 +377,6 @@ pkgs: epkgs: with epkgs;
   terraform-mode
   tidy
   tla-mode
-  toml-mode
   transpose-mark
   treemacs
   tuareg
@@ -391,6 +391,7 @@ pkgs: epkgs: with epkgs;
   vimish-fold
   visual-fill-column
   visual-regexp
+  virtual-auto-fill
   vline
   w3m
   wat-mode

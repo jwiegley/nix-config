@@ -53,13 +53,15 @@ in rec {
       SCREENRC           = "${xdg.configHome}/screen/config";
       SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
       STARDICT_DATA_DIR  = "${xdg.dataHome}/dictionary";
+      TRAVIS_CONFIG_PATH = "${xdg.configHome}/travis";
+      VAGRANT_HOME       = "${xdg.dataHome}/vagrant";
       WWW_HOME           = "${xdg.cacheHome}/w3m";
       EMACSVER           = "26";
       EMACS_SERVER_FILE  = "${tmp_directory}/emacs501/server";
       EMAIL              = "${programs.git.userEmail}";
       JAVA_OPTS          = "-Xverify:none";
 
-      VAGRANT_DEFAULT_PROVIDER = "vmware_desktop";
+      VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${home_directory}/Machines/vagrant";
     };
 
@@ -72,12 +74,17 @@ in rec {
            })
           [ "Library/Scripts/Applications/Download links to PDF.scpt"
             "Library/Scripts/Applications/Media Pro" ]) // {
-        ".dbvis".source          = "${xdg.configHome}/DbVisualizer";
-        ".docker".source         = "${xdg.configHome}/docker";
-        ".recoll".source         = "${xdg.configHome}/recoll";
-        ".gist".source           = "${xdg.configHome}/gist/account_id";
-        ".slate".source          = "${xdg.configHome}/slate/config";
-        ".zekr".source           = "${xdg.dataHome}/zekr";
+        ".cups".source    = "${xdg.configHome}/cups";
+        ".dbvis".source   = "${xdg.configHome}/DbVisualizer";
+        ".docker".source  = "${xdg.configHome}/docker";
+        ".gist".source    = "${xdg.configHome}/gist/account_id";
+        ".jira.d".source  = "${xdg.configHome}/jira";
+        ".macbeth".source = "${xdg.configHome}/macbeth";
+        ".recoll".source  = "${xdg.configHome}/recoll";
+        ".slate".source   = "${xdg.configHome}/slate/config";
+        ".zekr".source    = "${xdg.configHome}/zekr";
+
+        ".dl".source = "${home_directory}/Downloads";
 
         ".ledgerrc".text = ''
           --file ${home_directory}/Documents/accounts/main.ledger

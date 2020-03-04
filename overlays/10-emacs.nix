@@ -1,7 +1,7 @@
 self: pkgs:
 
 let
-  myEmacsPackageOverrides = self: super:
+  myEmacsPackageOverrides = eself: esuper:
     let
       inherit (pkgs) fetchurl fetchgit fetchFromGitHub stdenv;
       inherit (stdenv) lib mkDerivation;
@@ -34,7 +34,7 @@ let
 
     in {
 
-    seq = if super.emacs.version == "27.0"
+    seq = if esuper.emacs.version == "27.0"
       then mkDerivation rec {
         name = "seq-stub";
         version = "stub";
@@ -45,7 +45,7 @@ let
           touch $out/.empty
         '';
       }
-      else super.seq;
+      else esuper.seq;
 
 
     edit-env        = compileLocalFile "edit-env.el";
@@ -55,22 +55,22 @@ let
     supercite       = compileLocalFile "supercite.el";
 
 
-    magit-annex      = addBuildInputs super.magit-annex        [ pkgs.git ];
-    magit-filenotify = addBuildInputs super.magit-filenotify   [ pkgs.git ];
-    magit-gitflow    = addBuildInputs super.magit-gitflow      [ pkgs.git ];
-    magit-imerge     = addBuildInputs super.magit-imerge       [ pkgs.git ];
-    magit-lfs        = addBuildInputs super.magit-lfs          [ pkgs.git ];
-    magit-tbdiff     = addBuildInputs super.magit-tbdiff       [ pkgs.git ];
-    orgit            = addBuildInputs super.orgit              [ pkgs.git ];
+    magit-annex      = addBuildInputs esuper.magit-annex        [ pkgs.git ];
+    magit-filenotify = addBuildInputs esuper.magit-filenotify   [ pkgs.git ];
+    magit-gitflow    = addBuildInputs esuper.magit-gitflow      [ pkgs.git ];
+    magit-imerge     = addBuildInputs esuper.magit-imerge       [ pkgs.git ];
+    magit-lfs        = addBuildInputs esuper.magit-lfs          [ pkgs.git ];
+    magit-tbdiff     = addBuildInputs esuper.magit-tbdiff       [ pkgs.git ];
+    orgit            = addBuildInputs esuper.orgit              [ pkgs.git ];
 
 
-    company-coq   = withPatches super.company-coq   [ ./emacs/patches/company-coq.patch ];
-    esh-buf-stack = withPatches super.esh-buf-stack [ ./emacs/patches/esh-buf-stack.patch ];
-    helm-google   = withPatches super.helm-google   [ ./emacs/patches/helm-google.patch ];
-    magit         = withPatches super.magit         [ ./emacs/patches/magit.patch ];
-    noflet        = withPatches super.noflet        [ ./emacs/patches/noflet.patch ];
-    org-ref       = withPatches super.org-ref       [ ./emacs/patches/org-ref.patch ];
-    pass          = withPatches super.pass          [ ./emacs/patches/pass.patch ];
+    company-coq   = withPatches esuper.company-coq   [ ./emacs/patches/company-coq.patch ];
+    esh-buf-stack = withPatches esuper.esh-buf-stack [ ./emacs/patches/esh-buf-stack.patch ];
+    helm-google   = withPatches esuper.helm-google   [ ./emacs/patches/helm-google.patch ];
+    magit         = withPatches esuper.magit         [ ./emacs/patches/magit.patch ];
+    noflet        = withPatches esuper.noflet        [ ./emacs/patches/noflet.patch ];
+    org-ref       = withPatches esuper.org-ref       [ ./emacs/patches/org-ref.patch ];
+    pass          = withPatches esuper.pass          [ ./emacs/patches/pass.patch ];
 
 
     ascii = compileEmacsWikiFile {
@@ -90,7 +90,7 @@ let
       sha256 = "14118rimjsps94ilhi0i9mwx7l69ilbidgqfkfrm5c9m59rki2gq";
       # date = 2019-04-03T08:43:20-0700;
 
-      buildInputs = [ self.browse-kill-ring ];
+      buildInputs = with eself; [ browse-kill-ring ];
       patches = [ ./emacs/patches/browse-kill-ring-plus.patch ];
     };
 
@@ -99,7 +99,7 @@ let
       sha256 = "0na8aimv5j66pzqi4hk2jw5kk00ki99zkxiykwcmjiy3h1r9311k";
       # date = 2019-04-03T08:43:22-0700;
 
-      buildInputs = [ self.vline ];
+      buildInputs = with eself; [ vline ];
     };
 
     crosshairs = compileEmacsWikiFile {
@@ -107,7 +107,7 @@ let
       sha256 = "0032v3ry043wzvbacm16liykc362pza1bc46x37b307bvbv12qlg";
       # date = 2019-04-03T08:43:25-0700;
 
-      buildInputs = [ self.hl-line-plus self.col-highlight self.vline ];
+      buildInputs = with eself; [ hl-line-plus col-highlight vline ];
     };
 
     cursor-chg = compileEmacsWikiFile {
@@ -169,7 +169,7 @@ let
       sha256 = "149y6bmn0njgq632m9zdnaaw7wrvxvfqndpqlgcizn6dwzixiih6";
       # date = 2019-04-03T08:43:41-0700;
 
-      buildInputs = [ self.hexrgb ];
+      buildInputs = with eself; [ hexrgb ];
     };
 
     popup-pos-tip = compileEmacsWikiFile {
@@ -177,7 +177,7 @@ let
       sha256 = "0dhyzfsl01y61m53iz38a1vcvclr98wamsh0nishw0by1dnlb17x";
       # date = 2019-04-03T08:51:23-0700;
 
-      buildInputs = [ self.popup self.pos-tip ];
+      buildInputs = with eself; [ popup pos-tip ];
     };
 
     popup-ruler = compileEmacsWikiFile {
@@ -275,7 +275,7 @@ let
         sha256 = "0zjd5yid333shvjm4zy3p7zdpa09xcl96gc4wvi2paxjad6iqhwz";
         # date = 2019-09-22T20:23:39+08:00;
       };
-      buildInputs = with self; [ dash request ];
+      buildInputs = with eself; [ dash request ];
     };
 
     asoc = compileEmacsFiles {
@@ -300,6 +300,19 @@ let
       };
     };
 
+    bufler = compileEmacsFiles {
+      name = "bufler";
+      src = fetchFromGitHub {
+        owner = "alphapapa";
+        repo = "bufler.el";
+        rev = "cc7cbf8037f989c6785b8f7fbddec2e3d68c9db5";
+        sha256 = "10w6lh68zkq0dgifqpgj00isfiapiwd5fgwmbsjqb1c47nscn2gb";
+        # date = 2020-03-03T09:23:37-06:00;
+      };
+      buildInputs = with eself;
+        [ dash dash-functional f s magit hydra pretty-hydra lv ];
+    };
+
     cell-mode = compileEmacsFiles {
       name = "cell-mode";
       src = fetchgit {
@@ -319,7 +332,7 @@ let
         sha256 = "0f5h7nnqrkzbyxi4mgzahqzylszrqb25l3i24ml8yra2a23nl2w8";
         # date = 2019-12-07T14:34:24+01:00;
       };
-      buildInputs = with self; [ swiper ivy ];
+      buildInputs = with eself; [ swiper ivy ];
     };
 
     deadgrep = compileEmacsFiles {
@@ -331,7 +344,7 @@ let
         sha256 = "0q3gjwi803xaw79y37nz0bccyss6n520bfkfr6z0ncya422la0hz";
         # date = 2020-01-12T11:14:54+00:00;
       };
-      buildInputs = with self; [ s dash spinner ];
+      buildInputs = with eself; [ s dash spinner ];
     };
 
     emacs-load-time = compileEmacsFiles {
@@ -398,7 +411,7 @@ let
         sha256 = "1swpfk3p82nj2rsnfdzllkrf5i0ya4s3zpi96w6afy1vp5kcgf2r";
         # date = 2020-01-11T13:41:10-08:00;
       };
-      buildInputs = with self; [ ghub dash graphql treepy s ];
+      buildInputs = with eself; [ ghub dash graphql treepy s ];
     };
 
     ghub-plus = compileEmacsFiles {
@@ -410,7 +423,7 @@ let
         sha256 = "0bzri6s5mwvgir9smkz68d5cgcf4glpdmcj8dz8rjxziwrg6k5bz";
         # date = 2019-12-29T11:48:21-06:00;
       };
-      buildInputs = with self; [ ghub apiwrap dash graphql treepy ];
+      buildInputs = with eself; [ ghub apiwrap dash graphql treepy ];
     };
 
     gnus-harvest = compileEmacsFiles {
@@ -487,7 +500,7 @@ let
         sha256 = "0igi5p9s6w9yqaxirl286ms9zxad1njw0c6q1b7nry0mh12f7327";
         # date = 2019-04-03T08:52:31-0700;
       };
-      buildInputs = with self; [ ivy ];
+      buildInputs = with eself; [ ivy ];
     };
 
     ivy-explorer = compileEmacsFiles {
@@ -499,7 +512,7 @@ let
         sha256 = "1720g8i6jq56myv8m9pnr0ab7wagsflm0jgkg7cl3av7zc90zq8r";
         # date = 2019-09-09T21:21:25+02:00;
       };
-      buildInputs = with self; [ ivy ];
+      buildInputs = with eself; [ ivy ];
     };
 
     makefile-runner = compileEmacsFiles {
@@ -522,7 +535,7 @@ let
         sha256 = "18qm376i13gkls7y5qfszv57i0cn3w4q6d0lqjgbn0rq3hi29ca0";
         # date = 2020-01-08T08:44:22-06:00;
       };
-      buildInputs = with self; [
+      buildInputs = with eself; [
         magit magit-popup a anaphora dash f s hl-todo kv with-editor git-commit
         ghub graphql treepy
       ];
@@ -548,7 +561,7 @@ let
         sha256 = "1qikrqs69zqzjpz8bchjrg96bzhj7cbcwkvgsrrx113p420k90zx";
         # date = 2015-03-01T18:04:32+09:00;
       };
-      buildInputs = [ self.color-moccur ];
+      buildInputs = with eself; [ color-moccur ];
     };
 
     nix-mode = compileEmacsFiles {
@@ -560,7 +573,7 @@ let
         sha256 = "0lyf9vp6sivy321z8l8a2yf99kj5g15p6ly3f8gkyaf6dcq3jgnc";
         # date = 2019-09-04T10:40:40-04:00;
       };
-      buildInputs = with self; [ company json-mode mmm-mode json-snatcher json-reformat ];
+      buildInputs = with eself; [ company json-mode mmm-mode json-snatcher json-reformat ];
     };
 
     org-mind-map = compileEmacsFiles {
@@ -572,7 +585,7 @@ let
         sha256 = "0mkmh1ascxhfgbqdzcr6d60k4ldnh3l8dylw4m7wglz15hm3ixbm";
         # date = 2019-12-01T10:24:01-05:00;
       };
-      buildInputs = [ self.dash ];
+      buildInputs = with eself; [ dash ];
     };
 
     org-opml = compileEmacsFiles {
@@ -595,7 +608,7 @@ let
         sha256 = "1wd400l4bnkh7ghiwnz5s2m5mxc8mrdq7l4yb75izvpnbsybc4ms";
         # date = 2020-01-14T17:21:12+08:00;
       };
-      buildInputs = with self; [ org org-noter pdf-tools tablist ];
+      buildInputs = with eself; [ org org-noter pdf-tools tablist ];
     };
 
     org-rich-yank = compileEmacsFiles {
@@ -629,7 +642,7 @@ let
         sha256 = "0a97la3hwkb792a26c6byavwzg8gca6s0ccajd7pi9p430ys1i9y";
         # date = 2020-01-08T10:48:48-05:00;
       };
-      buildInputs = [ self.ox-gfm ];
+      buildInputs = with eself; [ ox-gfm ];
     };
 
     ox-texinfo-plus = compileEmacsFiles {
@@ -663,7 +676,7 @@ let
         sha256 = "1xwfbmm08sbf3fcc7viaysl6rsg4dx3wlmyrv0cfncscxg8x1f1c";
         # date = 2017-12-19T22:30:41+00:00;
       };
-      buildInputs = [ self.dash ];
+      buildInputs = with eself; [ dash ];
     };
 
     sdcv-mode = compileEmacsFiles {
@@ -800,8 +813,8 @@ let
     };
 
     agda2-mode =
-      let Agda = pkgs.haskell.lib.dontHaddock pkgs.haskellPackages.Agda; in
-      self.trivialBuild {
+      let Agda = pkgs.haskell.lib.dontHaddock self.haskellPackages_8_6.Agda; in
+      eself.trivialBuild {
         pname = "agda-mode";
         version = Agda.version;
 
@@ -824,7 +837,7 @@ let
         };
       };
 
-    color-theme = super.color-theme.overrideAttrs(attrs: rec {
+    color-theme = esuper.color-theme.overrideAttrs(attrs: rec {
       name = "emacs-color-theme-${version}";
       version = "6.6.0";
       src = fetchurl {
@@ -845,7 +858,7 @@ let
         # date = 2010-03-07T21:45:41+00:00;
       };
 
-      buildInputs = [ self.emacs ] ++ (with pkgs; [ texinfo perl which ]);
+      buildInputs = [ eself.emacs ] ++ (with pkgs; [ texinfo perl which ]);
 
       meta = {
         description = "Doxymacs is Doxygen + {X}Emacs";
@@ -859,7 +872,7 @@ let
       };
     };
 
-    elfeed = self.melpaBuild {
+    elfeed = eself.melpaBuild {
       pname = "elfeed";
       version = "20180127.1742";
       src = fetchFromGitHub {
@@ -875,14 +888,14 @@ let
         name = "elfeed";
         # date = 2019-09-25T11:38:28+0200;
       };
-      packageRequires = [ self.emacs ];
+      packageRequires = [ eself.emacs ];
       meta = {
         homepage = "https://melpa.org/#/elfeed";
         license = lib.licenses.free;
       };
     };
 
-    emacsql-sqlite = self.melpaBuild {
+    emacsql-sqlite = eself.melpaBuild {
       pname = "emacsql-sqlite";
       ename = "emacsql-sqlite";
       version = "20181111";
@@ -894,7 +907,7 @@ let
         # date = 2019-07-27T13:10:42-04:00;
       };
       preBuild = ''
-        make LDFLAGS="-L ${self.pg}/share/emacs/site-lisp/elpa/$(echo ${self.pg.name} | sed 's/^emacs-//')"
+        make LDFLAGS="-L ${eself.pg}/share/emacs/site-lisp/elpa/$(echo ${eself.pg.name} | sed 's/^emacs-//')"
       '';
       recipe = fetchurl {
         url = "https://raw.githubusercontent.com/milkypostman/melpa/13d1a86dfe682f65daf529f9f62dd494fd860be9/recipes/emacsql-sqlite";
@@ -902,14 +915,14 @@ let
         name = "recipe";
         # date = 2018-12-26T15:42:41-0800;
       };
-      packageRequires = with self; [ emacs emacsql ];
+      packageRequires = with eself; [ emacs emacsql ];
       meta = {
         homepage = "https://melpa.org/#/emacsql-sqlite";
         license = lib.licenses.free;
       };
     };
 
-    lua-mode = super.lua-mode.overrideAttrs(attrs: rec {
+    lua-mode = esuper.lua-mode.overrideAttrs(attrs: rec {
       name = "lua-mode-${version}";
       version = "20190113.1350";
       src = fetchFromGitHub {
@@ -922,7 +935,7 @@ let
       };
     });
 
-    multi-term = self.melpaBuild {
+    multi-term = eself.melpaBuild {
       pname = "multi-term";
       ename = "multi-term";
       version = "20160619.233";
@@ -964,7 +977,7 @@ let
       preInstall = ''
         perl -i -pe "s%/usr/share%$out%;" local.mk
       '';
-      buildInputs = [ self.emacs ] ++ (with pkgs; [ texinfo perl which ]);
+      buildInputs = [ eself.emacs ] ++ (with pkgs; [ texinfo perl which ]);
       meta = {
         homepage = "https://elpa.gnu.org/packages/org.html";
         license = lib.licenses.free;
@@ -990,7 +1003,7 @@ let
 
       # src = ~/src/proof-general;
 
-      buildInputs = [ self.emacs ] ++ (with pkgs; [ texinfo perl which ]);
+      buildInputs = [ eself.emacs ] ++ (with pkgs; [ texinfo perl which ]);
 
       prePatch =
         '' sed -i "Makefile" \
@@ -1012,7 +1025,7 @@ let
       };
     };
 
-    use-package = self.melpaBuild {
+    use-package = eself.melpaBuild {
       pname = "use-package";
       version = "20180127.1411";
       src = ~/src/dot-emacs/lisp/use-package;
@@ -1022,14 +1035,14 @@ let
         name = "use-package";
         # date = 2019-04-03T08:54:52-0700;
       };
-      packageRequires = [ self.bind-key self.emacs ];
+      packageRequires = with eself; [ emacs bind-key ];
       meta = {
         homepage = "https://melpa.org/#/use-package";
         license = lib.licenses.free;
       };
     };
 
-    w3m = super.w3m.overrideAttrs(attrs: rec {
+    w3m = esuper.w3m.overrideAttrs(attrs: rec {
       name = "emacs-w3m-${version}";
       version = "20200113.2320";
       src = fetchFromGitHub {

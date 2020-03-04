@@ -13,6 +13,7 @@ let
     "gitlib/gitlib-test"
   [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
     "hierarchy"
+    "hours"
     "hnix"
     "logging"
     "monad-extras"
@@ -20,6 +21,10 @@ let
     "pipes-async"
     "pipes-files"
     "recursors"
+    "runmany"
+    "sitebuilder"
+    "sizes"
+    "una"
   ];
 
   packageDrv = ghc:
@@ -29,7 +34,7 @@ let
     let pkg = p: self.packageDrv ghc p {}; in self: super:
     with pkgs.haskell.lib; {
 
-    Agda                  = dontHaddock super.Agda;
+    Agda                  = doJailbreak (dontHaddock super.Agda);
     Diff                  = dontCheck super.Diff;
     aeson                 = overrideCabal super.aeson (attrs: {
       libraryHaskellDepends =
@@ -46,17 +51,20 @@ let
     liquidhaskell         = doJailbreak super.liquidhaskell;
     pipes-binary          = doJailbreak super.pipes-binary;
     pipes-text            = unmarkBroken (doJailbreak super.pipes-text);
+    EdisonAPI             = unmarkBroken super.EdisonAPI;
+    EdisonCore            = unmarkBroken super.EdisonCore;
     pipes-zlib            = dontCheck (doJailbreak super.pipes-zlib);
     text-show             = dontCheck (doJailbreak super.text-show);
-    time-recurrence       = doJailbreak super.time-recurrence;
+    time-compat           = doJailbreak super.time-compat;
+    time-recurrence       = unmarkBroken (doJailbreak super.time-recurrence);
 
     pushme = self.callCabal2nix "pushme"
       (pkgs.fetchFromGitHub {
         owner  = "jwiegley";
         repo   = "pushme";
-        rev    = "d7892c0e3588fdc37c199b8bb6593ebdf9316cbf";
-        sha256 = "0fikx1ff6qah7x5zm1dyxk1iaw300y7kcq2qx4calpc5h3ba0sy2";
-        # date = 2020-01-14T07:25:07-08:00;
+        rev    = "9544f4dbaca1afff7d61beda524ceb1422cbc0bd";
+        sha256 = "15q1dj4p605sc77lnimi3jzca7ib57kdr07lw76jdib3c771k74h";
+        # date = 2020-03-03T16:00:21-08:00;
       }) {};
 
     ListLike = overrideCabal super.ListLike (attrs: {
@@ -201,11 +209,19 @@ haskell = pkgs.haskell // {
             repo   = "text-format";
             rev    = "a1cda87c222d422816f956c7272e752ea12dbe19";
             sha256 = "0lyrx4l57v15rvazrmw0nfka9iyxs4wyaasjj9y1525va9s1z4fr";
+            # date = 2018-01-12T02:33:46+03:00;
           };
         }));
       }));
 
     ghc865 = overrideHask "ghc865" pkgs.haskell.packages.ghc865 (self: super:
+      (breakout super [
+         "hakyll"
+         "pandoc"
+       ])
+      );
+
+    ghc882 = overrideHask "ghc882" pkgs.haskell.packages.ghc882 (self: super:
       (breakout super [
          "hakyll"
          "pandoc"

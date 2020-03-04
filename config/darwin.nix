@@ -157,11 +157,16 @@ in {
        script = ''
          cat > ${home_directory}/Documents/home.config <<EOF
 Host home
-    HostName $(${pkgs.dnsutils}/bin/dig +short myip.opendns.com @resolver1.opendns.com.)
+    HostName $(${pkgs.dnsutils}/bin/dig TXT +short o-o.myaddr.l.google.com @ns1.google.com | awk -F'"' '{ print $2}')
     Port 2201
 EOF
        '';
        serviceConfig.StartInterval = 3600;
+     };
+
+     znc = {
+       command = "${pkgs.znc}/bin/znc -f -d ${xdg_configHome}/znc";
+       serviceConfig.RunAtLoad = true;
      };
    } else {});
 
@@ -181,6 +186,11 @@ EOF
       allowUnfree = true;
       allowBroken = false;
       allowUnsupportedSystem = false;
+
+      # jww (2020-03-02): Support for OpenSSL 1.0.2 ended with 2019.
+      permittedInsecurePackages = [
+        "openssl-1.0.2u"
+      ];
     };
 
     overlays =
@@ -518,8 +528,8 @@ EOF
 
      requireSignedBinaryCaches = false;
      trustedBinaryCaches = [
-       # file:///Volumes/G-DRIVE/nix
-       # ssh://vulcan
+       file:///Volumes/G-DRIVE/nix
+       ssh://vulcan
        https://nix.dfinity.systems
      ];
      binaryCaches = trustedBinaryCaches;

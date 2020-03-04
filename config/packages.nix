@@ -13,7 +13,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   diffutils
   ghi
   gist
-  (exe haskPkgs.git-all)        # jww (2019-03-07): use a direct import
+  (exe haskPkgs.git-all)
   (exe haskPkgs.git-monitor)    # jww (2019-03-07): use a direct import
   git-lfs
   # git-pull-request
@@ -56,7 +56,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gnumake
   (exe haskPkgs.hpack)
   # (exe haskPkgs.brittany)
-  # (exe (import ~/src/hnix {}))
+  # (exe haskPkgs.hnix)
   htmlTidy
   m4
   # idutils
@@ -66,47 +66,47 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   wabt
   yamale
 
-  (pkgs.myEnvFun {
-     name = "ghc84";
-     buildInputs = [ pkgs.haskellPackages_8_4.ghc ];
-   })
-  (pkgs.myEnvFun {
-     name = "ghc86";
-     buildInputs = [ pkgs.haskellPackages_8_6.ghc ];
-   })
-  (pkgs.myEnvFun {
-     name = "ghc88";
-     buildInputs = [ pkgs.haskellPackages_8_8.ghc ];
-   })
-  (pkgs.myEnvFun {
-     name = "ghc810";
-     buildInputs = [ pkgs.haskellPackages_8_10.ghc ];
-   })
+  # (pkgs.callPackage ~/src/hello {}).hello-agda
+  # (pkgs.callPackage ~/src/hello {}).hello-cplusplus_5
+  # (pkgs.callPackage ~/src/hello {}).hello-cplusplus_6
+  # (pkgs.callPackage ~/src/hello {}).hello-cplusplus_7
+  # (pkgs.callPackage ~/src/hello {}).hello-cplusplus_8
+  # (pkgs.callPackage ~/src/hello {}).hello-cplusplus_9
+  # (pkgs.callPackage ~/src/hello {}).hello-coq_8_7
+  # (pkgs.callPackage ~/src/hello {}).hello-coq_8_8
+  # (pkgs.callPackage ~/src/hello {}).hello-coq_8_9
+  # (pkgs.callPackage ~/src/hello {}).hello-coq_8_10
+  # (pkgs.callPackage ~/src/hello {}).hello-coq_8_11
+  # (pkgs.callPackage ~/src/hello {}).hello-haskell_844
+  # (pkgs.callPackage ~/src/hello {}).hello-haskell_865
+  # (pkgs.callPackage ~/src/hello {}).hello-haskell_882
+  # (pkgs.callPackage ~/src/hello {}).hello-python_2
+  # (pkgs.callPackage ~/src/hello {}).hello-python_3
+  # (pkgs.callPackage ~/src/hello {}).hello-rust_1_38_0
+  # (pkgs.callPackage ~/src/hello {}).hello-rust_1_41_0
+  # (pkgs.callPackage ~/src/hello {}).hello-golang
+  # (pkgs.callPackage ~/src/hello {}).hello-scala_2_10
+  # (pkgs.callPackage ~/src/hello {}).hello-scala_2_11
+  # (pkgs.callPackage ~/src/hello {}).hello-scala_2_12
+  # (pkgs.callPackage ~/src/hello {}).hello-scala_2_13
+  # (pkgs.callPackage ~/src/hello {}).hello-common_lisp
+  # (pkgs.callPackage ~/src/hello {}).hello-emacs_lisp_25
+  # (pkgs.callPackage ~/src/hello {}).hello-emacs_lisp_26
+  # (pkgs.callPackage ~/src/hello {}).hello-ruby_2_5
+  # (pkgs.callPackage ~/src/hello {}).hello-ruby_2_6
+  # (pkgs.callPackage ~/src/hello {}).hello-ruby_2_7
 
-  (pkgs.myEnvFun {
-     name = "coq86";
-     buildInputs = [ pkgs.coqPackages_8_6.coq ];
-   })
-  (pkgs.myEnvFun {
-     name = "coq87";
-     buildInputs = [ pkgs.coqPackages_8_7.coq ];
-   })
-  (pkgs.myEnvFun {
-     name = "coq88";
-     buildInputs = [ pkgs.coqPackages_8_8.coq ];
-   })
-  (pkgs.myEnvFun {
-     name = "coq89";
-     buildInputs = [ pkgs.coqPackages_8_9.coq ];
-   })
-  (pkgs.myEnvFun {
-     name = "coq810";
-     buildInputs = [ pkgs.coqPackages_8_10.coq ];
-   })
-  (pkgs.myEnvFun {
-     name = "coq811";
-     buildInputs = [ pkgs.coqPackages_8_11.coq ];
-   })
+  (pkgs.myEnvFun { name = "ghc84";  buildInputs = [ pkgs.haskellPackages_8_4.ghc ]; })
+  (pkgs.myEnvFun { name = "ghc86";  buildInputs = [ pkgs.haskellPackages_8_6.ghc ]; })
+  (pkgs.myEnvFun { name = "ghc88";  buildInputs = [ pkgs.haskellPackages_8_8.ghc ]; })
+  (pkgs.myEnvFun { name = "ghc810"; buildInputs = [ pkgs.haskellPackages_8_10.ghc ]; })
+
+  (pkgs.myEnvFun { name = "coq86";  buildInputs = [ pkgs.coqPackages_8_6.coq ]; })
+  (pkgs.myEnvFun { name = "coq87";  buildInputs = [ pkgs.coqPackages_8_7.coq ]; })
+  (pkgs.myEnvFun { name = "coq88";  buildInputs = [ pkgs.coqPackages_8_8.coq ]; })
+  (pkgs.myEnvFun { name = "coq89";  buildInputs = [ pkgs.coqPackages_8_9.coq ]; })
+  (pkgs.myEnvFun { name = "coq810"; buildInputs = [ pkgs.coqPackages_8_10.coq ]; })
+  (pkgs.myEnvFun { name = "coq811"; buildInputs = [ pkgs.coqPackages_8_11.coq ]; })
 
   # mailToolsEnv
   contacts
@@ -176,7 +176,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   libxml2
   libxslt
   sdcv
-  (exe (import ~/src/sitebuilder {}))
+  (exe haskellPackages_8_8.sitebuilder)
   sourceHighlight
   svg2tikz
   taskjuggler
@@ -222,19 +222,21 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gnutar
   hammer
   hashdb
-  (exe (import ~/src/hours {}))
+  (exe haskPkgs.hours)
   htop
   iftop
   imagemagickBig
   imgcat
   jdiskreport
   jdk8
+  minikube
   kubectl
   less
   linkdups
   lipotell
   # lorri
   lnav
+  lsof
   m-cli
   multitail
   mysql
@@ -249,14 +251,14 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   paperkey
   parallel
   (pass.withExtensions (ext: with ext; [
-     pass-audit pass-otp pass-genphrase pass-otp
+     pass-otp pass-audit pass-genphrase
    ]))
   pass-git-helper
   perl
   browserpass
   qrencode
   pinentry_mac
-  (exe haskellPackages_8_4.pushme)
+  (exe haskPkgs.pushme)
   procps
   pstree
   pv
@@ -265,9 +267,9 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   ripgrep
   rlwrap
   ruby
-  (exe (import ~/src/runmany {}))
+  (exe haskPkgs.runmany)
   screen
-  (exe (import ~/src/sizes {}))
+  (exe haskPkgs.sizes)
   smartmontools
   sqlite
   squashfsTools
@@ -278,7 +280,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   tmux
   tree
   tsvutils
-  (exe (import ~/src/una {}))
+  (exe haskPkgs.una)
   unrar
   unzip
   vim
