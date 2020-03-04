@@ -103,8 +103,10 @@ working: tag-working mirror
 
 update: tag-before pull build switch env working
 
+update-sync: update check-all copy cache sizes
+
 sizes:
-	sizes /nix/store
+	df -H /nix
 
 check:
 	$(NIX_STORE) --verify --repair --check-contents
