@@ -62,7 +62,7 @@ home-switch:
 	    chmod 0600 $$file.copy;				\
 	done
 
-home-news:
+home-manager-news:
 	$(HOME_MANAGER) news
 
 switch: darwin-switch home-switch
