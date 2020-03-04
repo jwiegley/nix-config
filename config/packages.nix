@@ -14,7 +14,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   ghi
   gist
   (exe haskPkgs.git-all)
-  (exe haskPkgs.git-monitor)    # jww (2019-03-07): use a direct import
+  (exe haskellPackages_8_6.git-monitor)    # jww (2019-03-07): use a direct import
   git-lfs
   # git-pull-request
   git-scripts
@@ -222,7 +222,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gnutar
   hammer
   hashdb
-  (exe haskPkgs.hours)
+  (exe haskellPackages_8_6.hours)
   htop
   iftop
   imagemagickBig

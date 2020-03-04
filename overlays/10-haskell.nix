@@ -62,9 +62,9 @@ let
       (pkgs.fetchFromGitHub {
         owner  = "jwiegley";
         repo   = "pushme";
-        rev    = "9544f4dbaca1afff7d61beda524ceb1422cbc0bd";
-        sha256 = "15q1dj4p605sc77lnimi3jzca7ib57kdr07lw76jdib3c771k74h";
-        # date = 2020-03-03T16:00:21-08:00;
+        rev    = "7bfc48b08ffb7a96d8c96c1f2a418e6e1a46d813";
+        sha256 = "1km225gzziqkkw905iga1crkqakc0wgjddd17b1fnpl11a8r8vzn";
+        # date = 2020-03-03T16:38:31-08:00;
       }) {};
 
     ListLike = overrideCabal super.ListLike (attrs: {
@@ -238,6 +238,6 @@ haskellPackages_8_10 = self.haskell.packages.ghc8101;
 haskellPackages = self.haskell.packages.${self.ghcDefaultVersion};
 haskPkgs = self.haskellPackages;
 
-ghcDefaultVersion = "ghc865";
+ghcDefaultVersion = "ghc882";
 
 }
