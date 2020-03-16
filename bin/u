@@ -1,35 +1,26 @@
 #!/bin/bash
 
-LAPTOP=hermes
-
 if [[ "$1" == "vulcan" ]]; then
   HOSTNAME=vulcan
-  REMOTE=${REMOTE:-$LAPTOP}
   shift 1
 elif [[ "$1" == "hermes" ]]; then
   HOSTNAME=hermes
-  REMOTE=${REMOTE:-vulcan}
   shift 1
 elif [[ "$1" == "athena" ]]; then
   HOSTNAME=athena
-  REMOTE=${REMOTE:-vulcan}
   shift 1
 elif [[ $(hostname) == "vulcan"
      || $(hostname) == "Vulcan"
      || $(hostname) == "Vulcan.local" ]]; then
   HOSTNAME=vulcan
-  REMOTE=${REMOTE:-$LAPTOP}
 elif [[ $(hostname) == "athena"
      || $(hostname) == "Athena"
      || $(hostname) == "Athena.local" ]]; then
   HOSTNAME=athena
-  REMOTE=${REMOTE:-vulcan}
 else
   HOSTNAME=hermes
-  REMOTE=${REMOTE:-vulcan}
 fi
 
 echo HOSTNAME=$HOSTNAME
-echo REMOTE=$REMOTE
 
-exec make -C $NIX_CONF -f Makefile HOSTNAME=$HOSTNAME REMOTE=$REMOTE "$@"
+exec make -C $NIX_CONF -f Makefile HOSTNAME=$HOSTNAME "$@"

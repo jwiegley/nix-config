@@ -18,7 +18,7 @@ daiquiri = with super; with python3Packages; buildPythonPackage rec {
   meta = {
     homepage = https://github.com/jd/daiquiri;
     description = "Python library to easily setup basic logging functionality";
-    license = lib.licenses.apache2;
+    license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [ jwiegley ];
   };
 };
@@ -64,7 +64,7 @@ git-pull-request = with super; with python3Packages; buildPythonPackage rec {
   meta = {
     homepage = https://github.com/jd/git-pull-request;
     description = "Send git pull-request via command line";
-    license = lib.licenses.apache2;
+    license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [ jwiegley ];
   };
 };

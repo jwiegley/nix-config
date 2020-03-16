@@ -34,7 +34,7 @@ let
 
     in {
 
-    seq = if esuper.emacs.version == "27.0"
+    seq = if esuper.emacs.version != "26.3"
       then mkDerivation rec {
         name = "seq-stub";
         version = "stub";
@@ -1070,11 +1070,12 @@ in {
 emacs = self.emacs26;
 emacsPackagesNg = self.emacs26PackagesNg;
 
-emacs26 = with pkgs;
-  (pkgs.emacs26.override {
-     imagemagick = self.imagemagickBig;
-     srcRepo = true;
-   }).overrideAttrs(attrs: rec {
+emacs26_base = pkgs.emacs26.override {
+  imagemagick = self.imagemagickBig;
+  srcRepo = true;
+};
+
+emacs26 = with pkgs; self.emacs26_base.overrideAttrs(attrs: rec {
   CFLAGS = "-O3 -Ofast " + attrs.CFLAGS;
   buildInputs = attrs.buildInputs ++
     [ libpng libjpeg libungif libtiff librsvg ];
@@ -1103,13 +1104,48 @@ emacs26debug = with pkgs;
 
 emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
 
-emacsHEAD = with pkgs;
-  (pkgs.emacs26.override {
-     imagemagick = self.imagemagickBig;
-     srcRepo = true;
-   }).overrideAttrs(attrs: rec {
+emacs27_base = (pkgs.emacs26.override {
+  imagemagick = self.imagemagickBig;
+  srcRepo = true;
+}).overrideAttrs(attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "27.0";
+  versionModifier = ".90";
+  patches = [ ./emacs/clean-env-27.patch ];
+  src = pkgs.fetchurl {
+    url = "mirror://gnu/emacs/pretest/${name}.tar.xz";
+    sha256 = "1x0z9hfq7n88amd32714g9182nfy5dmz9br0pjqajgq82vjn9qxk";
+  };
+});
+
+emacs27 = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
+  CFLAGS = "-O3 " + attrs.CFLAGS;
+  buildInputs = attrs.buildInputs ++
+    [ libpng libjpeg libungif libtiff librsvg ];
+  preConfigure = ''
+    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
+  '';
+});
+
+emacs27PackagesNg = mkEmacsPackages self.emacs27;
+
+emacs27debug = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
+  name = "${attrs.name}-debug";
+  CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
+  buildInputs = attrs.buildInputs ++
+    [ libpng libjpeg libungif libtiff librsvg ];
+  preConfigure = ''
+    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
+  '';
+  configureFlags = attrs.configureFlags ++
+    [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
+});
+
+emacs27DebugPackagesNg = mkEmacsPackages self.emacs27debug;
+
+emacsHEAD = with pkgs; self.emacs26_base.overrideAttrs(attrs: rec {
+  name = "emacs-${version}${versionModifier}";
+  version = "28.0";
   versionModifier = ".50";
   src = ~/src/emacs;
   CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
@@ -1133,7 +1169,7 @@ emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
 convertForERC = drv: drv.overrideAttrs(attrs: rec {
   name = "erc-${version}${versionModifier}";
   appName = "ERC";
-  version = "27.0";
+  version = "28.0";
   versionModifier = ".50";
   iconFile = ./emacs/Chat.icns;
 
@@ -1190,10 +1226,27 @@ emacs26Env = myPkgs: pkgs.myEnvFun {
 };
 
 emacs26DebugEnv = myPkgs: pkgs.myEnvFun {
-  name = "emacs26debug";
+  name = "emacs26-debug";
   buildInputs = [
     (self.emacs26DebugPackagesNg.emacsWithPackages myPkgs)
   ];
 };
+
+emacs27Env = myPkgs: pkgs.myEnvFun {
+  name = "emacs27";
+  buildInputs = [
+    (self.emacs27PackagesNg.emacsWithPackages myPkgs)
+  ];
+};
+
+emacs27DebugEnv = myPkgs: pkgs.myEnvFun {
+  name = "emacs27-debug";
+  buildInputs = [
+    (self.emacs27DebugPackagesNg.emacsWithPackages myPkgs)
+  ];
+};
+
+emacsEnv = self.emacs26Env;
+emacsDebugEnv = self.emacs26DebugEnv;
 
 }

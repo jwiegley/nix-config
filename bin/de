@@ -37,6 +37,9 @@ EOF
     fi
 fi
 
-exec nix-shell "${NIXARGS[@]}"                                  \
+nix-shell "${NIXARGS[@]}"                                       \
      --run 'unset SSH_AUTH_SOCK ${!DIRENV_@} && direnv dump'    \
      > .envrc.cache
+
+. $(which use_nix.sh)
+build_drv

@@ -74,17 +74,16 @@ in rec {
            })
           [ "Library/Scripts/Applications/Download links to PDF.scpt"
             "Library/Scripts/Applications/Media Pro" ]) // {
-        ".cups".source    = "${xdg.configHome}/cups";
-        ".dbvis".source   = "${xdg.configHome}/DbVisualizer";
-        ".docker".source  = "${xdg.configHome}/docker";
-        ".gist".source    = "${xdg.configHome}/gist/account_id";
-        ".jira.d".source  = "${xdg.configHome}/jira";
-        ".macbeth".source = "${xdg.configHome}/macbeth";
-        ".recoll".source  = "${xdg.configHome}/recoll";
-        ".slate".source   = "${xdg.configHome}/slate/config";
-        ".zekr".source    = "${xdg.configHome}/zekr";
+        # ".cups".source    = "${xdg.configHome}/cups";
+        # ".dbvis".source   = "${xdg.configHome}/DbVisualizer";
+        # ".gist".source    = "${xdg.configHome}/gist/account_id";
+        # ".jira.d".source  = "${xdg.configHome}/jira";
+        # ".macbeth".source = "${xdg.configHome}/macbeth";
+        # ".recoll".source  = "${xdg.configHome}/recoll";
+        # ".slate".source   = "${xdg.configHome}/slate/config";
+        # ".zekr".source    = "${xdg.configHome}/zekr";
 
-        ".dl".source = "${home_directory}/Downloads";
+        # ".dl".source = "${home_directory}/Downloads";
 
         ".ledgerrc".text = ''
           --file ${home_directory}/Documents/accounts/main.ledger
@@ -104,6 +103,10 @@ in rec {
           ca_certificate = ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
         '';
       };
+
+      # activation.linkMyFiles = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      #   ln -s ${home_directory}/Downloads ${home_directory}/dl
+      # '';
   };
 
   programs = {
@@ -145,7 +148,7 @@ in rec {
 
       sessionVariables = {
         ALTERNATE_EDITOR  = "${pkgs.vim}/bin/vi";
-        EDITOR            = "${pkgs.emacs26}/bin/emacsclient -s ${tmp_directory}/emacs501/server -a vi";
+        EDITOR            = "${pkgs.emacs}/bin/emacsclient -s ${tmp_directory}/emacs501/server -a vi";
         LC_CTYPE          = "en_US.UTF-8";
         LESS              = "-FRSXM";
         PROMPT            = "%m %~ $ ";
@@ -308,7 +311,7 @@ in rec {
 
       extraConfig = {
         core = {
-          editor            = "${pkgs.emacs26}/bin/emacsclient -s ${tmp_directory}/emacs501/server";
+          editor            = "${pkgs.emacs}/bin/emacsclient -s ${tmp_directory}/emacs501/server";
           trustctime        = false;
           fsyncobjectfiles  = true;
           pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
@@ -626,7 +629,7 @@ in rec {
       xallexcepts- = application/pdf
       xallexcepts+ =
       [view]
-      application/pdf = ${home_directory}/.nix-profile/bin/load-env-emacs26 emacsclient -n -s /tmp/emacs501/server --eval '(org-pdfview-open "%f::%p")'
+      application/pdf = ${pkgs.emacs}/bin/emacsclient -n -s /tmp/emacs501/server --eval '(org-pdfview-open "%f::%p")'
     '';
 
     configFile."msmtp".text = ''

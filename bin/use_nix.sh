@@ -76,7 +76,6 @@ build_drv() {
 
         local drv="${wd}/env.drv"
         if [[ ! -f "${drv}" ]]; then
-            log_status "use nix: deriving new environment"
             IN_NIX_SHELL=1 nix-instantiate "${NIXARGS[@]}"              \
                 --add-root "${drv}" --indirect "${shell}" > /dev/null
             nix-store -r `nix-store --query --references "${drv}"`      \

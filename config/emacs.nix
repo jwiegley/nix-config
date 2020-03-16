@@ -106,6 +106,7 @@ pkgs: epkgs: with epkgs;
   elisp-slime-nav
   elmacro
   emacs-load-time
+  emamux
   # emms                          # emms-setup
   emojify
   engine-mode
@@ -327,6 +328,7 @@ pkgs: epkgs: with epkgs;
   pp-c-l
   prodigy
   projectile
+  pretty-hydra
   proof-general                 # proof-site
   python-mode
   racer

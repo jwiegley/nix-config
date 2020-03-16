@@ -2,6 +2,7 @@
 
 let home_directory = "/Users/johnw";
     xdg_configHome = "${home_directory}/.config";
+    xdg_dataHome = "${home_directory}/.local/share";
     log_directory = "${home_directory}/Library/Logs";
     tmp_directory = "/tmp";
     localconfig = import <localconfig>;
@@ -99,7 +100,12 @@ in {
       }; in {
 
     aria2c = {
-      command = "${pkgs.aria2}/bin/aria2c --enable-rpc";
+      command = "${pkgs.aria2}/bin/aria2c "
+        + "--enable-rpc "
+        + "--dir ${home_directory}/Downloads "
+        + "--log ${xdg_dataHome}/aria2c/aria2c.log "
+        + "--check-integrity "
+        + "--continue ";
       serviceConfig.RunAtLoad = true;
     };
 
@@ -483,8 +489,6 @@ EOF
 
     trustedUsers = [ "johnw" "@admin" ];
 
-    trustedBinaryCaches = [
-    ];
     binaryCaches = [
     ];
     binaryCachePublicKeys = [
@@ -527,12 +531,10 @@ EOF
      ];
 
      requireSignedBinaryCaches = false;
-     trustedBinaryCaches = [
-       file:///Volumes/G-DRIVE/nix
+     binaryCaches = [
        ssh://vulcan
        https://nix.dfinity.systems
      ];
-     binaryCaches = trustedBinaryCaches;
    }
    else if localconfig.hostname == "athena" then rec {
      maxJobs = 8;
@@ -545,11 +547,10 @@ EOF
      ];
 
      requireSignedBinaryCaches = false;
-     trustedBinaryCaches = [
+     binaryCaches = [
        ssh://vulcan
        https://nix.dfinity.systems
      ];
-     binaryCaches = trustedBinaryCaches;
    }
    else if localconfig.hostname == "vulcan" then rec {
      maxJobs = 20;
@@ -560,11 +561,9 @@ EOF
        zrh-3
      ];
 
-     trustedBinaryCaches = [
-       file:///Volumes/Backup/nix
+     binaryCaches = [
        https://nix.dfinity.systems
      ];
-     binaryCaches = trustedBinaryCaches;
    }
    else {});
 

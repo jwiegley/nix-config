@@ -1,6 +1,7 @@
 HOSTNAME   = vulcan
 REMOTES	   = hermes athena
 GIT_REMOTE = jwiegley
+# ENVS	   = emacs27Env emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
 ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
@@ -103,7 +104,7 @@ working: tag-working mirror
 
 update: tag-before pull build switch env working
 
-update-sync: update check-all copy cache sizes
+update-sync: update check-all copy rebuild-all sizes
 
 sizes:
 	df -H /nix
@@ -125,7 +126,7 @@ copy: copy-nix
 CACHE_DIR = /Volumes/Backup/nix
 
 cache:
-	nix copy --all --keep-going --to "file://$(CACHE_DIR)"
+	nix copy --all --from / --to /Volumes/Backup --no-check-sigs
 	-quickping 192.168.1.65 &&							\
 	    ssh hermes test -d /Volumes/G-DRIVE/nix &&					\
 	    rsync -a --delete /Volumes/Backup/nix/ hermes:/Volumes/G-DRIVE/nix/
