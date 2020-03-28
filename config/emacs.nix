@@ -305,7 +305,7 @@ pkgs: epkgs: with epkgs;
   parent-mode
   parsebib
   parsec
-  parsec
+  parse-csv
   pass
   password-store
   pcre2el
@@ -350,6 +350,7 @@ pkgs: epkgs: with epkgs;
   scala-mode
   sdcv-mode
   selected
+  separedit
   shackle
   shell-toggle
   shift-number

@@ -58,11 +58,13 @@ in rec {
       WWW_HOME           = "${xdg.cacheHome}/w3m";
       EMACSVER           = "26";
       EMACS_SERVER_FILE  = "${tmp_directory}/emacs501/server";
+      EDITOR             = "${pkgs.emacs}/bin/emacsclient -s ${tmp_directory}/emacs501/server -a vi";
       EMAIL              = "${programs.git.userEmail}";
       JAVA_OPTS          = "-Xverify:none";
 
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${home_directory}/Machines/vagrant";
+
     };
 
     file = builtins.listToAttrs (
@@ -148,7 +150,6 @@ in rec {
 
       sessionVariables = {
         ALTERNATE_EDITOR  = "${pkgs.vim}/bin/vi";
-        EDITOR            = "${pkgs.emacs}/bin/emacsclient -s ${tmp_directory}/emacs501/server -a vi";
         LC_CTYPE          = "en_US.UTF-8";
         LESS              = "-FRSXM";
         PROMPT            = "%m %~ $ ";
@@ -486,7 +487,7 @@ in rec {
 
         nixos   = onHost "vulcan" "192.168.118.128";
         dfinity = onHost "vulcan" "192.168.118.136";
-        macos   = onHost "vulcan" "192.168.118.130";
+        macos   = onHost "vulcan" "172.16.20.136";
 
         elpa        = { hostname = "elpa.gnu.org"; user = "root"; };
         haskell_org = { host = "*haskell.org";     user = "root"; };
@@ -553,12 +554,12 @@ in rec {
         # This requires a VPN connection to the DFINITY network.
 
         pa-darwin-1 = {
-          hostname = "10.129.10.7";
+          hostname = "pa-darwin-1.dfinity.systems";
           user = "dfinity";
         };
 
         pa-darwin-2 = {
-          hostname = "10.129.10.38";
+          hostname = "pa-darwin-2.dfinity.systems";
           user = "dfnmain";
         };
 

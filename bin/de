@@ -43,3 +43,5 @@ nix-shell "${NIXARGS[@]}"                                       \
 
 . $(which use_nix.sh)
 build_drv
+
+direnv reload

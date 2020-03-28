@@ -55,46 +55,13 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   global
   gnumake
   (exe haskPkgs.hpack)
-  # (exe haskPkgs.brittany)
-  # (exe haskPkgs.hnix)
   htmlTidy
   m4
-  # idutils
   rtags
   sloccount
   valgrind
   wabt
   yamale
-
-  # (pkgs.callPackage ~/src/hello {}).hello-agda
-  # (pkgs.callPackage ~/src/hello {}).hello-cplusplus_5
-  # (pkgs.callPackage ~/src/hello {}).hello-cplusplus_6
-  # (pkgs.callPackage ~/src/hello {}).hello-cplusplus_7
-  # (pkgs.callPackage ~/src/hello {}).hello-cplusplus_8
-  # (pkgs.callPackage ~/src/hello {}).hello-cplusplus_9
-  # (pkgs.callPackage ~/src/hello {}).hello-coq_8_7
-  # (pkgs.callPackage ~/src/hello {}).hello-coq_8_8
-  # (pkgs.callPackage ~/src/hello {}).hello-coq_8_9
-  # (pkgs.callPackage ~/src/hello {}).hello-coq_8_10
-  # (pkgs.callPackage ~/src/hello {}).hello-coq_8_11
-  # (pkgs.callPackage ~/src/hello {}).hello-haskell_844
-  # (pkgs.callPackage ~/src/hello {}).hello-haskell_865
-  # (pkgs.callPackage ~/src/hello {}).hello-haskell_882
-  # (pkgs.callPackage ~/src/hello {}).hello-python_2
-  # (pkgs.callPackage ~/src/hello {}).hello-python_3
-  # (pkgs.callPackage ~/src/hello {}).hello-rust_1_38_0
-  # (pkgs.callPackage ~/src/hello {}).hello-rust_1_41_0
-  # (pkgs.callPackage ~/src/hello {}).hello-golang
-  # (pkgs.callPackage ~/src/hello {}).hello-scala_2_10
-  # (pkgs.callPackage ~/src/hello {}).hello-scala_2_11
-  # (pkgs.callPackage ~/src/hello {}).hello-scala_2_12
-  # (pkgs.callPackage ~/src/hello {}).hello-scala_2_13
-  # (pkgs.callPackage ~/src/hello {}).hello-common_lisp
-  # (pkgs.callPackage ~/src/hello {}).hello-emacs_lisp_25
-  # (pkgs.callPackage ~/src/hello {}).hello-emacs_lisp_26
-  # (pkgs.callPackage ~/src/hello {}).hello-ruby_2_5
-  # (pkgs.callPackage ~/src/hello {}).hello-ruby_2_6
-  # (pkgs.callPackage ~/src/hello {}).hello-ruby_2_7
 
   (pkgs.myEnvFun { name = "ghc84";  buildInputs = [ pkgs.haskellPackages_8_4.ghc ]; })
   (pkgs.myEnvFun { name = "ghc86";  buildInputs = [ pkgs.haskellPackages_8_6.ghc ]; })
@@ -152,7 +119,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   zncModules.push
 
   # publishToolsEnv
-  # biber                  # jww (2018-07-17): now part of texlive-combined
   ditaa
   dot2tex
   doxygen
@@ -162,7 +128,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   graphviz-nox
   groff
   highlight
-  hugo
   inkscape.out
   ledger_HEAD
   (exe haskPkgs.lhs2tex)
@@ -176,12 +141,11 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   libxml2
   libxslt
   sdcv
-  (exe haskellPackages_8_8.sitebuilder)
+  (exe haskPkgs.sitebuilder)
   sourceHighlight
   svg2tikz
   taskjuggler
   texFull
-  # texinfo
   xapian
   xdg_utils
   yuicompressor
@@ -204,7 +168,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   bat
   dirscan
   # cachix
-  ctop
+  # ctop
   cvc4
   direnv
   entr
@@ -229,12 +193,11 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   imgcat
   jdiskreport
   jdk8
-  minikube
+  # minikube
   kubectl
   less
   linkdups
   lipotell
-  # lorri
   lnav
   lsof
   m-cli
@@ -250,9 +213,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   p7zip
   paperkey
   parallel
-  (pass.withExtensions (ext: with ext; [
-     pass-otp pass-audit pass-genphrase
-   ]))
+  (pass.withExtensions (ext: with ext; [ pass-otp pass-audit pass-genphrase ]))
   pass-git-helper
   perl
   browserpass

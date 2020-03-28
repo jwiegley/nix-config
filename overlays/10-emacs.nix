@@ -402,18 +402,6 @@ let
       };
     };
 
-    github-review = compileEmacsFiles {
-      name = "github-review";
-      src = fetchFromGitHub {
-        owner = "charignon";
-        repo = "github-review";
-        rev = "e8a275939e1a774c84b71ab3df2ce1599445dab0";
-        sha256 = "1swpfk3p82nj2rsnfdzllkrf5i0ya4s3zpi96w6afy1vp5kcgf2r";
-        # date = 2020-01-11T13:41:10-08:00;
-      };
-      buildInputs = with eself; [ ghub dash graphql treepy s ];
-    };
-
     ghub-plus = compileEmacsFiles {
       name = "ghub-plus";
       src = fetchFromGitHub {
@@ -499,18 +487,6 @@ let
         url = https://bitbucket.org/holgerschurig/emacsconf/raw/74d428aa2f9be88b14a503f6c3a816ae7cd13644/elisp/ivy-compile.el;
         sha256 = "0igi5p9s6w9yqaxirl286ms9zxad1njw0c6q1b7nry0mh12f7327";
         # date = 2019-04-03T08:52:31-0700;
-      };
-      buildInputs = with eself; [ ivy ];
-    };
-
-    ivy-explorer = compileEmacsFiles {
-      name = "ivy-explorer";
-      src = fetchFromGitHub {
-        owner = "clemera";
-        repo = "ivy-explorer";
-        rev = "a413966cfbcecacc082d99297fa1abde0c10d3f3";
-        sha256 = "1720g8i6jq56myv8m9pnr0ab7wagsflm0jgkg7cl3av7zc90zq8r";
-        # date = 2019-09-09T21:21:25+02:00;
       };
       buildInputs = with eself; [ ivy ];
     };
@@ -688,6 +664,18 @@ let
         sha256 = "0qkvapiaprv9p5zrzr7xfy2prwjnhc3rq3r21zcppcb5habbvy8q";
         # date = 2012-01-28T14:08:32-06:00;
       };
+    };
+
+    separedit = compileEmacsFiles {
+      name = "separedit";
+      src = fetchFromGitHub {
+        owner = "twlz0ne";
+        repo = "separedit.el";
+        rev = "e8ebb70d5b7f8e16f25e6909e5107ed6aa2700bf";
+        sha256 = "1vsvwc77a0wpz1xwpcizhvsh5p5q38q7qh0nf3dhsqwy3hvp39pp";
+        # date = 2020-03-17T14:35:40+08:00;
+      };
+      buildInputs = with eself; [ dash edit-indirect ];
     };
 
     sky-color-clock = compileEmacsFiles {
