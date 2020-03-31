@@ -8,7 +8,16 @@ if [[ ! -f .envrc ]]; then
     cat > .envrc <<EOF
 . \$(which use_nix.sh)
 
-keep_vars SSH_AUTH_SOCK
+keep_vars             \
+    ALTERNATE_EDITOR  \
+    EDITOR            \
+    EMACS_SERVER_FILE \
+    ITERM_SESSION_ID  \
+    SECURITYSESSIONID \
+    SSH_AUTH_SOCK     \
+    TERM              \
+    TERM_SESSION_ID
+
 source <(direnv apply_dump .envrc.cache)
 source <(reset_kept)
 

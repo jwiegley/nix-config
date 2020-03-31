@@ -4,6 +4,7 @@ let home_directory = builtins.getEnv "HOME";
     log_directory = "${home_directory}/Library/Logs";
     tmp_directory = "/tmp";
     ca-bundle_crt = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+    emacs-server  = "${tmp_directory}/johnw-emacs/server";
     lib = pkgs.stdenv.lib;
     localconfig = import <localconfig>;
 
@@ -57,8 +58,8 @@ in rec {
       VAGRANT_HOME       = "${xdg.dataHome}/vagrant";
       WWW_HOME           = "${xdg.cacheHome}/w3m";
       EMACSVER           = "26";
-      EMACS_SERVER_FILE  = "${tmp_directory}/emacs501/server";
-      EDITOR             = "${pkgs.emacs}/bin/emacsclient -s ${tmp_directory}/emacs501/server -a vi";
+      EMACS_SERVER_FILE  = "${emacs-server}";
+      EDITOR             = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
       EMAIL              = "${programs.git.userEmail}";
       JAVA_OPTS          = "-Xverify:none";
 
@@ -312,7 +313,7 @@ in rec {
 
       extraConfig = {
         core = {
-          editor            = "${pkgs.emacs}/bin/emacsclient -s ${tmp_directory}/emacs501/server";
+          editor            = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
           trustctime        = false;
           fsyncobjectfiles  = true;
           pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
@@ -630,7 +631,7 @@ in rec {
       xallexcepts- = application/pdf
       xallexcepts+ =
       [view]
-      application/pdf = ${pkgs.emacs}/bin/emacsclient -n -s /tmp/emacs501/server --eval '(org-pdfview-open "%f::%p")'
+      application/pdf = ${pkgs.emacs}/bin/emacsclient -n -s ${emacs-server} --eval '(org-pdfview-open "%f::%p")'
     '';
 
     configFile."msmtp".text = ''
