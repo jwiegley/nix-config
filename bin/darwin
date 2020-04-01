@@ -1,3 +1,0 @@
-#!/bin/bash -e
-cd ~/src/nix
-exec make darwin-switch
