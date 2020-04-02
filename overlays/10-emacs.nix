@@ -552,6 +552,17 @@ let
       buildInputs = with eself; [ company json-mode mmm-mode json-snatcher json-reformat ];
     };
 
+    nixpkgs-fmt = compileEmacsFiles {
+      name = "nixpkgs-fmt";
+      src = fetchFromGitHub {
+        owner = "purcell";
+        repo = "nixpkgs-fmt";
+        rev = "5aa706db6b11cd32bc506e46be0c66ddab6f8ef5";
+        sha256 = "1yavpcfgq6s6mxpgrm17ycxsz24fjkpldvnh0ahnx8x7qrc8i1aq";
+        # date = 2020-03-24T10:33:28+01:00;
+      };
+    };
+
     org-mind-map = compileEmacsFiles {
       name = "org-mind-map";
       src = fetchFromGitHub {

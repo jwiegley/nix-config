@@ -263,6 +263,7 @@ pkgs: epkgs: with epkgs;
   nix-mode
   nix-sandbox
   nixos-options
+  # nixpkgs-fmt
   noflet
   nov
   oauth2
