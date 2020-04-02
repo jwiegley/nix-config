@@ -31,6 +31,7 @@ keep_vars             \
     ITERM_SESSION_ID  \
     SECURITYSESSIONID \
     SSH_AUTH_SOCK     \
+    SSL_CERT_FILE     \
     TERM              \
     TERM_SESSION_ID
 
@@ -72,6 +73,7 @@ unset                 \
     ITERM_SESSION_ID  \
     SECURITYSESSIONID \
     SSH_AUTH_SOCK     \
+    SSL_CERT_FILE     \
     TERM              \
     TERM_SESSION_ID;  \
 direnv dump           \
