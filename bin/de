@@ -77,7 +77,7 @@ unset                 \
     TERM              \
     TERM_SESSION_ID;  \
 direnv dump           \
-"> .envrc.cache
+> .envrc.cache"
 
 identify_shell() {
     local shell="shell.nix"
