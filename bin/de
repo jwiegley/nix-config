@@ -76,8 +76,7 @@ unset                 \
     SSL_CERT_FILE     \
     TERM              \
     TERM_SESSION_ID;  \
-direnv dump           \
-"> .envrc.cache
+direnv dump > .envrc.cache"
 
 identify_shell() {
     local shell="shell.nix"

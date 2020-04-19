@@ -102,9 +102,9 @@ mirror:
 
 working: tag-working mirror
 
-update: tag-before pull build switch env working
+update: tag-before pull rebuild working
 
-update-sync: update check-all copy rebuild-all sizes
+update-sync: update check-all copy rebuild-all sizes-all
 
 sizes:
 	df -H /nix

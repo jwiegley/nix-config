@@ -480,7 +480,7 @@ in rec {
            };
          }) // rec {
 
-        hermes  = onHost "vulcan" "192.168.1.65";
+        hermes  = onHost "vulcan" "192.168.1.67";
         athena  = onHost "vulcan" "192.168.1.80";
         tank    = athena;
 

@@ -9,7 +9,7 @@ ledger_HEAD = ledger.overrideAttrs (attrs: {
     owner = "ledger";
     repo = "ledger";
     rev = "refs/heads/john";
-    sha256 = "06hxv0k4n1lnlhx4vdyd425321czhdqj1g087ijbxag6inphz8d2";
+    sha256 = "18hd17qpms731cmmahml73jlbzx5iz4fsk1579pvsnln8r7yhv6r";
   };
 
   doCheck = false;
