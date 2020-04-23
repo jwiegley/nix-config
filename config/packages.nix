@@ -168,6 +168,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   bat
   dirscan
   # cachix
+  csvkit
   # ctop
   cvc4
   direnv

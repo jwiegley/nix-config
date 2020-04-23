@@ -242,6 +242,7 @@ pkgs: epkgs: with epkgs;
   markdown-preview-mode
   marshal
   math-symbol-lists
+  mc-calc
   mc-extras                     # mc-extras mc-freeze mc-rect
   mediawiki
   memory-usage

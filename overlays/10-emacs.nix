@@ -517,6 +517,18 @@ let
       ];
     };
 
+    mc-calc = compileEmacsFiles {
+      name = "mc-calc";
+      src = fetchFromGitHub {
+        owner = "hatheroldev";
+        repo = "mc-calc";
+        rev = "74a046a5728919a4d1135ca62738326b0dde278c";
+        sha256 = "0498088pgbpywqdla8mzhpq4izzbdbqwq9cjzg0050y598pinpqq";
+        # date = 2020-04-20T20:36:49+02:00;
+      };
+      buildInputs = with eself; [ multiple-cursors ];
+    };
+
     mmm-mode = compileEmacsFiles {
       name = "mmm-mode";
       src = fetchFromGitHub {
