@@ -237,6 +237,8 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   squashfsTools
   srm
   stow
+  stress
+  stress-ng
   terminal-notifier
   time
   tmux
