@@ -347,17 +347,6 @@ let
       buildInputs = with eself; [ s dash spinner ];
     };
 
-    emacs-load-time = compileEmacsFiles {
-      name = "emacs-load-time";
-      src = fetchFromGitHub {
-        owner = "fniessen";
-        repo = "emacs-load-time";
-        rev = "9d31686a76e9792bd06e49ff77c662065ded015c";
-        sha256 = "0zhrfidcxqfld7y67pysdlcvrprrka9sq8065ygqx5yxjb7mxs32";
-        # date = 2014-10-10T16:52:58+02:00;
-      };
-    };
-
     erc-yank = compileEmacsFiles {
       name = "erc-yank";
       src = fetchFromGitHub {
@@ -489,6 +478,28 @@ let
         # date = 2019-04-03T08:52:31-0700;
       };
       buildInputs = with eself; [ ivy ];
+    };
+
+    keypression = compileEmacsFiles {
+      name = "keypression";
+      src = fetchFromGitHub {
+        owner = "chuntaro";
+        repo = "emacs-keypression";
+        rev = "9ce977dabd8355ebe35d9d06821e4edb09060d2b";
+        sha256 = "0wrm5k1a9j90qqfx2w844nc9xd9a70x9krp1x3qm4zhal6mf0kzn";
+        # date = 2020-01-24T18:59:47+09:00;
+      };
+    };
+
+    load-time = compileEmacsFiles {
+      name = "load-time";
+      src = fetchFromGitHub {
+        owner = "fniessen";
+        repo = "emacs-load-time";
+        rev = "9d31686a76e9792bd06e49ff77c662065ded015c";
+        sha256 = "0zhrfidcxqfld7y67pysdlcvrprrka9sq8065ygqx5yxjb7mxs32";
+        # date = 2014-10-10T16:52:58+02:00;
+      };
     };
 
     makefile-runner = compileEmacsFiles {
@@ -699,6 +710,18 @@ let
         # date = 2020-03-17T14:35:40+08:00;
       };
       buildInputs = with eself; [ dash edit-indirect ];
+    };
+
+    shfmt = compileEmacsFiles {
+      name = "shfmt";
+      src = fetchFromGitHub {
+        owner = "purcell";
+        repo = "emacs-shfmt";
+        rev = "342c55fab27f1e62472eebbb53cfc73b0d422a34";
+        sha256 = "0hmxa856hlai9ydarfsn5s9i8cnfrydgpa7mkh4a36klhdj21gfh";
+        # date = 2020-04-21T21:13:26+12:00;
+      };
+      buildInputs = with eself; [ reformatter ];
     };
 
     sky-color-clock = compileEmacsFiles {

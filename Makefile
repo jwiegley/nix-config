@@ -1,8 +1,8 @@
 HOSTNAME   = vulcan
 REMOTES	   = hermes athena
 GIT_REMOTE = jwiegley
-# ENVS	   = emacs27Env emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
-ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env # emacsHEADEnv
+ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env
+MAX_AGE    = 14
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
 # when first necessary.
@@ -106,11 +106,10 @@ update: tag-before pull rebuild working
 
 update-sync: update check-all copy rebuild-all sizes-all
 
-sizes:
-	df -H /nix
-
 check:
 	$(NIX_STORE) --verify --repair --check-contents
+
+########################################################################
 
 copy-nix:
 	@for host in $(REMOTES); do			\
@@ -123,52 +122,45 @@ copy: copy-nix
 	    push -h $(HOSTNAME) -f src $$host;	\
 	done
 
-CACHE_DIR = /Volumes/Backup/nix
+########################################################################
 
-cache:
-	nix copy --all --from / --to /Volumes/Backup --no-check-sigs
-	-quickping 192.168.1.65 &&							\
-	    ssh hermes test -d /Volumes/G-DRIVE/nix &&					\
-	    rsync -a --delete /Volumes/Backup/nix/ hermes:/Volumes/G-DRIVE/nix/
-
-remove-build-products:
-	find $(HOME)/Documents $(HOME)/src		\
-	    \( -name '.cargo-home' -type d -o		\
-	       -name '.direnv' -type d -o		\
-	       -name '.envrc.cache' -type f -o		\
-	       -name '.ghc.*' -o			\
-	       -name 'cabal.project.local*' -type f -o	\
-	       -name 'dist' -type d -o			\
-	       -name 'dist-newstyle' -type d -o		\
-	       -name 'result*' -type l -o		\
-	       -name 'target' -type d \) -print0	\
-	    | xargs -P4 -0 /bin/rm -fr
-
-MAX_AGE = 14
-
-gc:
+define delete-generations
 	$(NIX_ENV) --delete-generations						\
-	    $(shell $(NIX_ENV) --list-generations | field 1 | head -n -$(MAX_AGE))
+	    $(shell $(NIX_ENV)							\
+		--list-generations | field 1 | head -n -$(1))
 	$(NIX_ENV) -p /nix/var/nix/profiles/system --delete-generations		\
 	    $(shell $(NIX_ENV) -p /nix/var/nix/profiles/system			\
-				 --list-generations | field 1 | head -n -$(MAX_AGE))
-	$(NIX_GC) --delete-older-than $(MAX_AGE)d
-
-gc-old: remove-build-products
-	$(NIX_ENV) --delete-generations						\
-	    $(shell $(NIX_ENV) --list-generations | field 1 | head -n -1)
-	$(NIX_ENV) -p /nix/var/nix/profiles/system --delete-generations		\
-	    $(shell $(NIX_ENV) -p /nix/var/nix/profiles/system			\
-				 --list-generations | field 1 | head -n -1)
-	$(NIX_GC) --delete-old
+		--list-generations | field 1 | head -n -$(1))
+endef
 
 clean: gc check
 
 fullclean: gc-old check
 
+remove-build-products:
+	clean $(HOME)/Documents $(HOME)/src
+
+gc:
+	$(call delete-generations,$(MAX_AGE))
+	$(NIX_GC) --delete-older-than $(MAX_AGE)d
+
+gc-old: remove-build-products
+	$(call delete-generations,1)
+	$(NIX_GC) --delete-old
+
+########################################################################
+#
 # These rules are used for debugging only
+#
+
+sizes:
+	df -H /nix
 
 tools:
+	@echo ""
+	@echo export NIXOPTS=$(NIXOPTS)
+	@echo export NIX_PATH=$(NIXPATH)
+	@echo ""
 	@PATH=$(BUILD_PATH)/sw/bin:$(PATH)	\
 	    which				\
 		field				\
@@ -181,7 +173,4 @@ tools:
 		sort				\
 		sudo				\
 		uniq
-
-opts:
-	@echo export NIXOPTS=$(NIXOPTS)
-	@echo export NIX_PATH=$(NIXPATH)
+	@echo ""

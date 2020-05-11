@@ -143,6 +143,11 @@ in {
       serviceConfig.Sockets.Listeners.SockPathName
         = "${home_directory}/.cache/rdm/socket";
     };
+
+    tor = {
+      command = "${pkgs.tor}/bin/tor -f /etc/torrc";
+      serviceConfig.RunAtLoad = true;
+    };
   } //
   (if localconfig.hostname == "athena" then {
      # b2-sync = {
@@ -455,6 +460,14 @@ EOF
         "^t"	  = "transpose:";      /* C-t */
         "~t"	  = "transposeWords:"; /* M-t */
       }
+    '';
+
+    etc."torrc".text = ''
+      SOCKSPort 127.0.0.1:9050
+      SOCKSPolicy accept 127.0.0.1/32
+      SOCKSPolicy reject *
+      Log notice file ${log_directory}/tor.log
+      DataDirectory ${xdg_configHome}/tor
     '';
   };
 

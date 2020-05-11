@@ -105,7 +105,6 @@ pkgs: epkgs: with epkgs;
   elisp-refs
   elisp-slime-nav
   elmacro
-  emacs-load-time
   emamux
   # emms                          # emms-setup
   emojify
@@ -117,6 +116,7 @@ pkgs: epkgs: with epkgs;
   erc-highlight-nicknames
   erc-yank
   erefactor
+  es-mode
   eshell-bookmark
   eshell-up
   eshell-z
@@ -142,6 +142,7 @@ pkgs: epkgs: with epkgs;
   focus
   font-lock-studio
   forge
+  format-all
   free-keys
   fringe-helper
   fullframe
@@ -209,6 +210,7 @@ pkgs: epkgs: with epkgs;
   json-reformat
   json-snatcher
   key-chord
+  keypression
   know-your-http-well
   kubernetes
   kv
@@ -221,6 +223,7 @@ pkgs: epkgs: with epkgs;
   list-utils
   lively
   #llvm-mode
+  load-time
   logito
   loop
   lsp-haskell

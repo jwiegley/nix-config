@@ -13,23 +13,28 @@ let
     sha256 = "1f7vmhdipf0zz19lwx3ni0lmilhnild7r387a04ng92hnc27nnsv";
   };
 
-  known-good-20191113_070954 = nixpkgs {
-    rev    = "620124b130c9e678b9fe9dd4a98750968b1f749a";
-    sha256 = "0xgy2rn2pxii3axa0d9y4s25lsq7d9ykq30gvg2nzgmdkmy375rr";
-  };
-
   known-good-20200226_081157 = nixpkgs {
     rev    = "e27b8d559ad97f6a29d5307c315308e4ee6f6eef";
     sha256 = "0xmr79k63mnbnvcxk1kbb8ama8ckgy7hjg7k5wnajhrx37zypqgv";
   };
-in {
-  inherit (known-good-20190305_133437) recoll;
-  inherit (known-good-20190305_133437) socat2pre;
-  inherit (known-good-20191113_070954) shared-mime-info;
-  inherit (known-good-20200226_081157) nix-diff;
-  inherit (known-good-20200226_081157) biber;
 
-  perlPackages = super.perlPackages // {
-    inherit (known-good-20200226_081157.perlPackages) TextBibTeX;
+  known-good-20200419_174628 = nixpkgs {
+    rev    = "5460914bdd90082f655a2d930cac11b6d19cb825";
+    sha256 = "1y8mbbc1m9lhnas5s0g91r4gn4snjmg6r1hs86pq98zz9fq8843x";
   };
+in
+
+{
+  inherit (known-good-20190305_133437)
+    recoll
+    socat2pre
+    ;
+
+  inherit (known-good-20200226_081157)
+    nix-diff
+    ;
+
+  inherit (known-good-20200419_174628)
+    p7zip
+    ;
 }

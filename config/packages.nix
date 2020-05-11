@@ -57,7 +57,9 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.hpack)
   htmlTidy
   m4
+  nixfmt
   rtags
+  shfmt
   sloccount
   valgrind
   wabt
