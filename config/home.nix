@@ -1,7 +1,6 @@
 { pkgs, ... }:
 
 let home_directory = builtins.getEnv "HOME";
-    log_directory = "${home_directory}/Library/Logs";
     tmp_directory = "/tmp";
     ca-bundle_crt = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
     emacs-server  = "${tmp_directory}/johnw-emacs/server";
@@ -40,6 +39,7 @@ in rec {
     sessionVariables = {
       ASPELL_CONF        = "conf ${xdg.configHome}/aspell/config;";
       B2_ACCOUNT_INFO    = "${xdg.configHome}/backblaze-b2/account_info";
+      BORG_PASSCOMMAND   = "${pkgs.pass}/bin/pass show Passwords/borgbackup";
       CABAL_CONFIG       = "${xdg.configHome}/cabal/config";
       FONTCONFIG_FILE    = "${xdg.configHome}/fontconfig/fonts.conf";
       FONTCONFIG_PATH    = "${xdg.configHome}/fontconfig";
@@ -57,7 +57,6 @@ in rec {
       TRAVIS_CONFIG_PATH = "${xdg.configHome}/travis";
       VAGRANT_HOME       = "${xdg.dataHome}/vagrant";
       WWW_HOME           = "${xdg.cacheHome}/w3m";
-      EMACSVER           = "26";
       EMACS_SERVER_FILE  = "${emacs-server}";
       EDITOR             = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
       EMAIL              = "${programs.git.userEmail}";
@@ -206,6 +205,11 @@ in rec {
 
         defaults write org.hammerspoon.Hammerspoon MJConfigFile \
             "${xdg.configHome}/hammerspoon/init.lua"
+
+        for i in rdm msmtp privoxy tor; do
+            dir=${xdg.dataHome}/$i
+            if [[ ! -d $dir ]]; then mkdir -p $dir; fi
+        done
 
         setopt extended_glob
       '';
@@ -647,7 +651,7 @@ in rec {
       user ${programs.git.userEmail}
       passwordeval ${pkgs.pass}/bin/pass smtp.fastmail.com
       from ${programs.git.userEmail}
-      logfile ${log_directory}/msmtp.log
+      logfile ${xdg.dataHome}/msmtp/msmtp.log
     '';
 
     configFile."fetchmail/config".text = ''

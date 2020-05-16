@@ -51,19 +51,26 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   # langToolsEnv
   bats
   (exe haskPkgs.cabal-install)  # for sdist/publish
+  cachix
+  cbor-diag
   direnv
   global
   gnumake
   (exe haskPkgs.hpack)
   htmlTidy
   m4
-  nixfmt
+  nixpkgs-fmt
   rtags
   shfmt
   sloccount
   valgrind
   wabt
   yamale
+
+  emacs26Env
+  emacsERCEnv
+  ledgerPy2Env
+  ledgerPy3Env
 
   (pkgs.myEnvFun { name = "ghc84";  buildInputs = [ pkgs.haskellPackages_8_4.ghc ]; })
   (pkgs.myEnvFun { name = "ghc86";  buildInputs = [ pkgs.haskellPackages_8_6.ghc ]; })
@@ -168,6 +175,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   bash-completion
   bashInteractive
   bat
+  borgbackup
   dirscan
   # cachix
   csvkit
@@ -189,14 +197,17 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gnutar
   hammer
   hashdb
+  hostname
   (exe haskellPackages_8_6.hours)
   htop
+  unixtools.ifconfig
   iftop
   imagemagickBig
   imgcat
   jdiskreport
   jdk8
   # minikube
+  killall
   kubectl
   less
   linkdups
@@ -204,8 +215,10 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   lnav
   lsof
   m-cli
+  more
   multitail
   mysql
+  unixtools.netstat
   nix-bash-completions
   nix-zsh-completions
   nix-diff
@@ -218,8 +231,9 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   parallel
   (pass.withExtensions (ext: with ext; [ pass-otp pass-audit pass-genphrase ]))
   pass-git-helper
-  perl
   browserpass
+  perl
+  unixtools.ping
   qrencode
   pinentry_mac
   (exe haskPkgs.pushme)
@@ -230,6 +244,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   renameutils
   ripgrep
   rlwrap
+  unixtools.route
   ruby
   (exe haskPkgs.runmany)
   screen
@@ -244,6 +259,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   terminal-notifier
   time
   tmux
+  unixtools.top
   tree
   tsvutils
   (exe haskPkgs.una)

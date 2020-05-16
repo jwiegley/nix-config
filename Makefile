@@ -1,7 +1,6 @@
 HOSTNAME   = vulcan
 REMOTES	   = hermes athena
 GIT_REMOTE = jwiegley
-ENVS	   = emacs26Env emacsERCEnv ledgerPy2Env ledgerPy3Env
 MAX_AGE    = 14
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
@@ -68,14 +67,7 @@ home-manager-news:
 
 switch: darwin-switch home-switch
 
-env:
-	@for i in $(ENVS); do							\
-	    echo Updating $$i;							\
-	    $(NIX_ENV) -f '<darwin>' -u --leq -Q -k $(NIXOPTS) -A pkgs.$$i ;	\
-	done
-	@echo "Nix generation: $$($(NIX_ENV) --list-generations | tail -1)"
-
-rebuild: build switch env
+rebuild: build switch
 
 pull:
 	(cd darwin		   && git pull --rebase)

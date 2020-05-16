@@ -1110,7 +1110,7 @@ emacs26_base = pkgs.emacs26.override {
 };
 
 emacs26 = with pkgs; self.emacs26_base.overrideAttrs(attrs: rec {
-  CFLAGS = "-O3 -Ofast " + attrs.CFLAGS;
+  CFLAGS = "-O3 -Ofast -march=native -funroll-loops " + attrs.CFLAGS;
   buildInputs = attrs.buildInputs ++
     [ libpng libjpeg libungif libtiff librsvg ];
   preConfigure = ''
