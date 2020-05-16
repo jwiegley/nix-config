@@ -48,15 +48,6 @@ in {
       serviceConfig = iterate 86400;
     };
 
-    # syncthing = {
-    #   command = "sudo -u johnw ${pkgs.syncthing}/bin/syncthing -no-browser -no-restart";
-    #   environment.STNORESTART = "1";
-    #   serviceConfig.RunAtLoad = true;
-    #   serviceConfig.KeepAlive = true;
-    #   serviceConfig.ProcessType = "Background";
-    #   serviceConfig.LowPriorityIO = true;
-    # };
-
     limit-maxfiles = {
       command = "/bin/launchctl limit maxfiles 524288 524288";
       serviceConfig.RunAtLoad = true;
@@ -66,15 +57,6 @@ in {
       command = "/bin/launchctl limit maxproc 2048 2048";
       serviceConfig.RunAtLoad = true;
     };
-
-    # locate = {
-    #   script = ''
-    #     export PATH=$PATH:${pkgs.mlocate}/bin
-    #     export HOME=/Users/johnw
-    #     ${pkgs.my-scripts}/bin/update.locate >> /var/log/locate.log 2>&1
-    #   '';
-    #   serviceConfig = iterate 86400;
-    # };
 
     pdnsd = {
       script = ''
@@ -95,7 +77,7 @@ in {
         date >> /var/log/snapshots.log 2>&1
         snapshots tank
       '';
-      serviceConfig = iterate 3600;
+      serviceConfig = iterate 2700;
     };
    } else {});
 
@@ -107,6 +89,7 @@ in {
           # StartCalendarInterval.Hour = 3;
           AbandonProcessGroup = true;
         };
+
         runCommand = command: {
           inherit command;
           serviceConfig.RunAtLoad = true;
@@ -115,16 +98,13 @@ in {
 
     in {
 
-    aria2c = {
-      command = "${pkgs.aria2}/bin/aria2c "
+    aria2c = runCommand 
+      ("${pkgs.aria2}/bin/aria2c "
         + "--enable-rpc "
         + "--dir ${home_directory}/Downloads "
         + "--log ${xdg_dataHome}/aria2c/aria2c.log "
         + "--check-integrity "
-        + "--continue ";
-      serviceConfig.RunAtLoad = true;
-      serviceConfig.KeepAlive = true;
-    };
+        + "--continue ");
 
     dovecot = {
       command = "${pkgs.dovecot}/libexec/dovecot/imap -c /etc/dovecot/dovecot.conf";
@@ -146,6 +126,16 @@ in {
         SockNodeName = "127.0.0.1";
         SockServiceName = "9119";
       };
+    };
+
+    locate = {
+      script = ''
+        export PATH=${pkgs.findutils}/bin:$PATH
+        export HOME=/Users/johnw
+        date >> /var/log/locate.log 2>&1
+        ${pkgs.my-scripts}/bin/update.locate >> /var/log/locate.log 2>&1
+      '';
+      serviceConfig = iterate 86400;
     };
 
     rdm = rec {
@@ -198,22 +188,7 @@ in {
      # };
    }
    else if localconfig.hostname == "vulcan" then {
-     myip = {
-       script = ''
-         cat > ${home_directory}/Documents/home.config <<EOF
-Host home
-    HostName $(${pkgs.dnsutils}/bin/dig TXT +short o-o.myaddr.l.google.com @ns1.google.com | awk -F'"' '{ print $2}')
-    Port 2201
-EOF
-       '';
-       serviceConfig.StartInterval = 3600;
-     };
-
-     znc = {
-       command = "${pkgs.znc}/bin/znc -f -d ${xdg_configHome}/znc";
-       serviceConfig.RunAtLoad = true;
-       serviceConfig.KeepAlive = true;
-     };
+     znc = runCommand "${pkgs.znc}/bin/znc -f -d ${xdg_configHome}/znc";
    } else {});
 
   system.activationScripts.postActivation.text = ''
@@ -426,9 +401,9 @@ EOF
           uptest      = ping;
           edns_query  = yes;
           lean_query  = yes;
+          exclude     = "vpn.dfinity.systems";
           include     = ".dfinity.build";
           include     = ".dfinity.internal";
-          exclude     = "vpn.dfinity.systems";
           proxy_only  = on;
           purge_cache = off;
       }
@@ -722,7 +697,6 @@ EOF
      requireSignedBinaryCaches = false;
      binaryCaches = [
        ssh://vulcan
-       https://nix.dfinity.systems
      ];
    }
    else if localconfig.hostname == "vulcan" then rec {

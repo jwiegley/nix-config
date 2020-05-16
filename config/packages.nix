@@ -32,6 +32,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   aspell
   aspellDicts.en
   backblaze-b2
+  bandwhich
   bash-completion
   bashInteractive
   bat
@@ -60,7 +61,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   emacs26Env
   emacsERCEnv
   entr
-  epipe
   exiv2
   fd
   fetchmail
