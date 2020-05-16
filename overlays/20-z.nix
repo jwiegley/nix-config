@@ -7,9 +7,9 @@ z = with super; stdenv.mkDerivation rec {
   src = fetchFromGitHub {
     owner = "rupa";
     repo = "z";
-    rev = "f1f113d9bae9effaef6b1e15853b5eeb445e0712";
-    sha256 = "1d0wwdjb0sgxzszbi7jnsnc6887h026r6hn4kzv9hjp1axr0dxrx";
-    # date = 2020-02-15T16:56:40-05:00;
+    rev = "bbec3cb6af844e3f6d95bd7f28435abe0b5d21af";
+    sha256 = "1p37hsfwyryq7pdphcd3m8pykzfny80da6q6c9jdxksma3zp4jdq";
+    # date = 2020-04-03T01:56:04-04:00;
   };
 
   phases = [ "unpackPhase" "installPhase" ];

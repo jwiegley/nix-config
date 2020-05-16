@@ -8,9 +8,9 @@ yamale = with super; with python2Packages; buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "23andMe";
     repo = "Yamale";
-    rev = "618289c07424ca34892f367d356cb993af69c406";
-    sha256 = "0wsqbdnz4179l07mmdc3w1ci1b9mm0vvab6n0333qpllzqcazqxb";
-    # date = 2020-02-07T13:03:39-05:00;
+    rev = "21926d6cd53a68eac461e7c15e61757ee8d46838";
+    sha256 = "0nnhp8lwaix83bv327sp3cgw4spb7s0ind5yg8k8nmij3rgfnvvl";
+    # date = 2020-05-09T14:28:28-07:00;
   };
 
   propagatedBuildInputs = [ pyyaml ];

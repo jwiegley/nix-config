@@ -1,287 +1,264 @@
 { pkgs }:
 
 with pkgs; let exe = haskell.lib.justStaticExecutables; in [
-  nixStable
-  nix-scripts
-  nix-prefetch-scripts
-  home-manager
-  coreutils
-  my-scripts
-
-  # gitToolsEnv
-  diffstat
-  diffutils
-  ghi
-  gist
-  (exe haskPkgs.git-all)
-  (exe haskellPackages_8_6.git-monitor)    # jww (2019-03-07): use a direct import
-  git-lfs
-  # git-pull-request
-  git-scripts
-  git-subrepo
-  git-tbdiff
-  gitstats
-  gitRepo
-  gitAndTools.delta
-  gitAndTools.git-crypt
-  gitAndTools.git-hub
-  gitAndTools.git-imerge
-  gitAndTools.gitFull
-  gitAndTools.gitflow
-  gitAndTools.hub
-  gitAndTools.tig
-  gitAndTools.topGit
+  # ctop
+  # minikube
   (exe gitAndTools.git-annex)
-  gitAndTools.git-annex-remote-rclone
-  gitAndTools.git-secret
-  gitstats
-  patch
-  patchutils
-  sift
-  travis
-
-  # jsToolsEnv
-  jq
-  yq
-  jo
-  nodejs
-  nodePackages.eslint
-  nodePackages.csslint
-  nodePackages.js-beautify
-
-  # langToolsEnv
-  bats
   (exe haskPkgs.cabal-install)  # for sdist/publish
-  # cachix                      # takes too long to evaluate
-  cbor-diag
-  direnv
-  global
-  gnumake
+  (exe haskPkgs.git-all)
   (exe haskPkgs.hpack)
-  htmlTidy
-  m4
-  nixpkgs-fmt
-  rtags
-  shfmt
-  sloccount
-  valgrind
-  wabt
-  yamale
-
-  emacs26Env
-  emacsERCEnv
-  ledgerPy2Env
-  ledgerPy3Env
-
-  (pkgs.myEnvFun { name = "ghc84";  buildInputs = [ pkgs.haskellPackages_8_4.ghc ]; })
-  (pkgs.myEnvFun { name = "ghc86";  buildInputs = [ pkgs.haskellPackages_8_6.ghc ]; })
-  (pkgs.myEnvFun { name = "ghc88";  buildInputs = [ pkgs.haskellPackages_8_8.ghc ]; })
-  (pkgs.myEnvFun { name = "ghc810"; buildInputs = [ pkgs.haskellPackages_8_10.ghc ]; })
-
+  (exe haskPkgs.lhs2tex)
+  (exe haskPkgs.pushme)
+  (exe haskPkgs.runmany)
+  (exe haskPkgs.sitebuilder)
+  (exe haskPkgs.sizes)
+  (exe haskPkgs.una)
+  (exe haskellPackages_8_6.git-monitor)    # jww (2019-03-07): use a direct import
+  (exe haskellPackages_8_6.hours)
+  (pass.withExtensions (ext: with ext; [ pass-otp pass-audit pass-genphrase ]))
   (pkgs.myEnvFun { name = "coq86";  buildInputs = [ pkgs.coqPackages_8_6.coq ]; })
   (pkgs.myEnvFun { name = "coq87";  buildInputs = [ pkgs.coqPackages_8_7.coq ]; })
   (pkgs.myEnvFun { name = "coq88";  buildInputs = [ pkgs.coqPackages_8_8.coq ]; })
   (pkgs.myEnvFun { name = "coq89";  buildInputs = [ pkgs.coqPackages_8_9.coq ]; })
   (pkgs.myEnvFun { name = "coq810"; buildInputs = [ pkgs.coqPackages_8_10.coq ]; })
   (pkgs.myEnvFun { name = "coq811"; buildInputs = [ pkgs.coqPackages_8_11.coq ]; })
-
-  # mailToolsEnv
-  contacts
-  dovecot
-  dovecot_pigeonhole
-  fetchmail
-  imapfilter
-  leafnode
-  msmtp
-
-  # networkToolsEnv
-  aria2
-  backblaze-b2
-  bazaar
-  cacert
-  dnsutils
-  go-jira
-  httpie
-  httrack
-  iperf
-  lftp
-  mercurialFull
-  mitmproxy
-  mosh
-  mtr
-  nmap
-  openssh
-  openssl
-  openvpn
-  pdnsd
-  rclone
-  rsync
-  sipcalc
-  socat2pre
-  spiped
-  sshify
-  subversion
-  w3m
-  wget
-  wireguard
-  youtube-dl
-  znc
-  zncModules.push
-
-  # publishToolsEnv
-  ditaa
-  dot2tex
-  doxygen
-  ffmpeg
-  figlet
-  fontconfig
-  graphviz-nox
-  groff
-  highlight
-  inkscape.out
-  ledger_HEAD
-  (exe haskPkgs.lhs2tex)
-  librsvg
-  pandoc
-  plantuml
-  poppler_utils
-  recoll
-  qpdf
-  perlPackages.ImageExifTool
-  libxml2
-  libxslt
-  sdcv
-  (exe haskPkgs.sitebuilder)
-  sourceHighlight
-  svg2tikz
-  taskjuggler
-  texFull
-  xapian
-  xdg_utils
-  yuicompressor
-
-  # pythonToolsEnv
-  python27
-  pythonDocs.pdf_letter.python27
-  pythonDocs.html.python27
-  python27Packages.setuptools
-  python27Packages.pygments
-  python27Packages.certifi
-  python3
-
-  # systemToolsEnv
+  (pkgs.myEnvFun { name = "ghc84";  buildInputs = [ pkgs.haskellPackages_8_4.ghc ]; })
+  (pkgs.myEnvFun { name = "ghc86";  buildInputs = [ pkgs.haskellPackages_8_6.ghc ]; })
+  (pkgs.myEnvFun { name = "ghc88";  buildInputs = [ pkgs.haskellPackages_8_8.ghc ]; })
+  (pkgs.myEnvFun { name = "ghc810"; buildInputs = [ pkgs.haskellPackages_8_10.ghc ]; })
+  OnePassword-op
   apg
+  aria2
   aspell
   aspellDicts.en
+  backblaze-b2
   bash-completion
   bashInteractive
   bat
+  bats
+  bazaar
   borgbackup
-  dirscan
-  # cachix
+  browserpass
+  cacert
+  cachix
+  cbor-diag
+  contacts
+  coreutils
   csvkit
-  # ctop
   cvc4
+  diffstat
+  diffutils
   direnv
+  direnv
+  dirscan
+  ditaa
+  dnsutils
+  dot2tex
+  dovecot
+  dovecot_pigeonhole
+  doxygen
+  emacs26Env
+  emacsERCEnv
   entr
   epipe
   exiv2
   fd
+  fetchmail
+  ffmpeg
+  figlet
   findutils
+  fontconfig
   fswatch
   fzf
   gawk
+  ghi
+  gist
+  git-lfs
+  git-scripts
+  git-subrepo
+  git-tbdiff
+  gitAndTools.delta
+  gitAndTools.git-annex-remote-rclone
+  gitAndTools.git-crypt
+  gitAndTools.git-hub
+  gitAndTools.git-imerge
+  gitAndTools.git-secret
+  gitAndTools.gitFull
+  gitAndTools.gitflow
+  gitAndTools.hub
+  gitAndTools.tig
+  gitAndTools.topGit
+  gitRepo
+  gitstats
+  global
   gnugrep
+  gnumake
   gnupg
   gnuplot
   gnused
   gnutar
+  go-jira
+  graphviz-nox
+  groff
   hammer
   hashdb
+  highlight
+  home-manager
   hostname
-  (exe haskellPackages_8_6.hours)
+  htmlTidy
   htop
-  unixtools.ifconfig
+  httpie
+  httrack
   iftop
   imagemagickBig
+  imapfilter
   imgcat
+  inkscape.out
+  iperf
   jdiskreport
   jdk8
-  # minikube
+  jo
+  jq
   killall
   kubectl
+  leafnode
+  ledgerPy2Env
+  ledgerPy3Env
+  ledger_HEAD
   less
+  lftp
+  librsvg
+  libxml2
+  libxslt
   linkdups
   lipotell
   lnav
   lsof
   m-cli
+  m4
+  mercurialFull
+  mitmproxy
   more
+  mosh
+  msmtp
+  mtr
   multitail
+  my-scripts
   mysql
-  unixtools.netstat
   nix-bash-completions
-  nix-zsh-completions
   nix-diff
   nix-index
   nix-info
-  OnePassword-op
+  nix-prefetch-scripts
+  nix-scripts
+  nix-zsh-completions
+  nixStable
+  nixpkgs-fmt
+  nmap
+  nodePackages.csslint
+  nodePackages.eslint
+  nodePackages.js-beautify
+  nodejs
+  openssh
+  openssl
+  openvpn
   org2tc
   p7zip
+  pandoc
   paperkey
   parallel
-  (pass.withExtensions (ext: with ext; [ pass-otp pass-audit pass-genphrase ]))
   pass-git-helper
-  browserpass
+  patch
+  patchutils
+  pdnsd
   perl
-  unixtools.ping
-  qrencode
+  perlPackages.ImageExifTool
   pinentry_mac
-  (exe haskPkgs.pushme)
+  plantuml
+  poppler_utils
   procps
+  prooftree
   pstree
   pv
+  python27
+  python27Packages.certifi
+  python27Packages.pygments
+  python27Packages.setuptools
+  python3
+  pythonDocs.html.python27
+  pythonDocs.pdf_letter.python27
   qemu
+  qpdf
+  qrencode
+  ratpoison
+  rclone
+  recoll
   renameutils
+  restic
   ripgrep
   rlwrap
-  unixtools.route
+  rsync
+  rtags
   ruby
-  (exe haskPkgs.runmany)
   screen
-  (exe haskPkgs.sizes)
+  sdcv
+  shfmt
+  sift
+  sipcalc
+  sloccount
   smartmontools
+  socat2pre
+  sourceHighlight
+  spiped
   sqlite
   squashfsTools
   srm
+  sshify
   stow
   stress
   stress-ng
+  subversion
+  svg2tikz
+  taskjuggler
   terminal-notifier
+  texFull
   time
   tmux
-  unixtools.top
+  travis
   tree
   tsvutils
-  (exe haskPkgs.una)
+  unixtools.ifconfig
+  unixtools.netstat
+  unixtools.ping
+  unixtools.route
+  unixtools.top
   unrar
   unzip
+  valgrind
   vim
+  w3m
+  wabt
   watch
   watchman
+  wget
+  wireguard
+  xapian
+  xdg_utils
+  xorg.xauth
+  xorg.xhost
+  xquartz
   xsv
   xz
+  yamale
+  youtube-dl
+  yq
+  yuicompressor
   z
   z3
   zbar
   zip
+  znc
+  zncModules.push
   zsh
   zsh-syntax-highlighting
-
-  # x11ToolsEnv
-  xquartz
-  xorg.xhost
-  xorg.xauth
-  ratpoison
-  prooftree
 ]

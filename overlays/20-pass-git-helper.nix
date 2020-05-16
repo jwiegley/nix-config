@@ -8,9 +8,9 @@ pass-git-helper = with super; with python3Packages; buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "languitar";
     repo = "pass-git-helper";
-    rev = "561c464f896edebff6d9cf3722dcb299f300ab99";
-    sha256 = "0nn475pqhywirdprla9ihyf7pz4pv5pfc5rvc09q602fv51zc6qs";
-    # date = 2019-11-22T20:00:41+01:00;
+    rev = "faceb47cccbb0d7b0330871f353bccb9b9ddd201";
+    sha256 = "1gv78msx04hjvca3dixaj5dbvkmaak6qm0qgvqg9yb3hzjh1jbjl";
+    # date = 2020-05-13T20:20:21+02:00;
   };
 
   buildInputs = [ pyxdg pytest ];
