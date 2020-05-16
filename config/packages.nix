@@ -22,6 +22,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   git-tbdiff
   gitstats
   gitRepo
+  gitAndTools.delta
   gitAndTools.git-crypt
   gitAndTools.git-hub
   gitAndTools.git-imerge
@@ -51,7 +52,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   # langToolsEnv
   bats
   (exe haskPkgs.cabal-install)  # for sdist/publish
-  cachix
+  # cachix                      # takes too long to evaluate
   cbor-diag
   direnv
   global

@@ -320,12 +320,14 @@ in rec {
           editor            = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
           trustctime        = false;
           fsyncobjectfiles  = true;
-          pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
+          # pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
+          pager             = "${pkgs.gitAndTools.delta}/bin/delta --plus-color=\"#012800\" --minus-color=\"#340001\" --theme='1337'";
           logAllRefUpdates  = true;
           precomposeunicode = false;
           whitespace        = "trailing-space,space-before-tab";
         };
 
+        interactive.diffFilter = "${pkgs.gitAndTools.delta}/bin/delta --color-only";
         branch.autosetupmerge = true;
         commit.gpgsign        = true;
         github.user           = "jwiegley";

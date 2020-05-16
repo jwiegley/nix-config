@@ -275,7 +275,7 @@ EOF
       keep-alive-timeout 5
       tolerate-pipelining 1
       socket-timeout 300
-      debug 4
+      debug 1
       forward-socks5t / 127.0.0.1:9050 .
       forward 192.168.*.*/ .
       forward 10.*.*.*/ .
