@@ -369,7 +369,6 @@ pkgs: epkgs: with epkgs;
   smartscan
   smex
   sort-words
-  sos
   spinner
   springboard
   sql-indent

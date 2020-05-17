@@ -117,12 +117,14 @@ copy: copy-nix
 ########################################################################
 
 define delete-generations
-	$(NIX_ENV) --delete-generations						\
-	    $(shell $(NIX_ENV)							\
-		--list-generations | field 1 | head -n -$(1))
-	$(NIX_ENV) -p /nix/var/nix/profiles/system --delete-generations		\
-	    $(shell $(NIX_ENV) -p /nix/var/nix/profiles/system			\
-		--list-generations | field 1 | head -n -$(1))
+	$(NIX_ENV) $(1) --delete-generations			\
+	    $(shell $(NIX_ENV) $(1)				\
+		--list-generations | field 1 | head -n -$(2))
+endef
+
+define delete-generations-all
+	$(call delete-generations,,$(1))
+	$(call delete-generations,-p /nix/var/nix/profiles/system,$(1))
 endef
 
 clean: gc check
@@ -133,11 +135,11 @@ remove-build-products:
 	clean $(HOME)/Documents $(HOME)/src
 
 gc:
-	$(call delete-generations,$(MAX_AGE))
+	$(call delete-generations-all,$(MAX_AGE))
 	$(NIX_GC) --delete-older-than $(MAX_AGE)d
 
 gc-old: remove-build-products
-	$(call delete-generations,1)
+	$(call delete-generations-all,1)
 	$(NIX_GC) --delete-old
 
 ########################################################################
