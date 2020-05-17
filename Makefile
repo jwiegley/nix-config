@@ -96,7 +96,7 @@ working: tag-working mirror
 
 update: tag-before pull rebuild working
 
-update-sync: update check-all copy rebuild-all sizes-all
+update-sync: update copy rebuild-all
 
 check:
 	$(NIX_STORE) --verify --repair --check-contents

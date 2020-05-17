@@ -5,7 +5,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   # minikube
   (exe gitAndTools.git-annex)
   (exe haskPkgs.cabal-install)  # for sdist/publish
-  (exe haskPkgs.git-all)
+  # (exe haskPkgs.git-all)
   (exe haskPkgs.hpack)
   (exe haskPkgs.lhs2tex)
   (exe haskPkgs.pushme)
