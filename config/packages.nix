@@ -37,7 +37,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   bashInteractive
   bat
   bats
-  bazaar
   borgbackup
   browserpass
   cacert
@@ -59,7 +58,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   dovecot_pigeonhole
   doxygen
   emacs26Env
-  # emacs27Env
+  emacs27Env
   emacsERCEnv
   entr
   exiv2

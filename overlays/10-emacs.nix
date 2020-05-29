@@ -779,17 +779,15 @@ emacs26debug = with pkgs;
 
 emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
 
-emacs27_base = (pkgs.emacs26.override {
-  imagemagick = self.imagemagickBig;
-  srcRepo = true;
-}).overrideAttrs(attrs: rec {
+emacs27_base = self.emacs26_base.overrideAttrs(attrs: rec {
   name = "emacs-${version}${versionModifier}";
-  version = "27.0"; versionModifier = ".91";
+  version = "27.0"; versionModifier = ".92";
   patches = [ ./emacs/clean-env-27.patch ];
-  src = pkgs.fetchurl {
-    url = "mirror://gnu/emacs/pretest/${name}.tar.xz";
-    sha256 = "1x0z9hfq7n88amd32714g9182nfy5dmz9br0pjqajgq82vjn9qxk";
-  };
+  src = ~/src/emacs;
+  # src = pkgs.fetchurl {
+  #   url = "mirror://gnu/emacs/pretest/${name}.tar.xz";
+  #   sha256 = "1x0z9hfq7n88amd32714g9182nfy5dmz9br0pjqajgq82vjn9qxk";
+  # };
 });
 
 emacs27 = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
@@ -797,7 +795,8 @@ emacs27 = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
   buildInputs = attrs.buildInputs ++
     [ libpng libjpeg libungif libtiff librsvg ];
   preConfigure = ''
-    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
+    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure || \
+    (sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac; autoreconf)
   '';
 });
 

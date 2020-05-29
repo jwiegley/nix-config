@@ -27,5 +27,4 @@ let
 in {
   nix-darwin = darwin.system;
   home-manager = home-manager.activationPackage;
-  my-environments = darwin.pkgs.allEnvs;
 }

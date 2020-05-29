@@ -90,7 +90,8 @@ in rec {
 
         ".ledgerrc".text = ''
           --file ${home_directory}/Documents/accounts/main.ledger
-          --date-format %Y/%m/%d
+          --input-date-format %Y-%m-%d
+          --date-format %Y-%m-%d
         '';
 
         # ".tmux.conf".text = ''
@@ -192,7 +193,7 @@ in rec {
         # Use whichever terraform is on the PATH.
         deploy = ''${pkgs.nix}/bin/nix-shell --pure --command '' +
           ''"terraform init; '' +
-          ''export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass api.github.com | ${pkgs.coreutils}/bin/head -1); '' +
+          ''export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass show api.github.com | head -1); '' +
           ''terraform apply"'';
       };
 
@@ -231,7 +232,7 @@ in rec {
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
 
         function upload() {
-            ${pkgs.lftp}/bin/lftp -u johnw@newartisans.com,$(${pkgs.pass}/bin/pass ftp.fastmail.com | ${pkgs.coreutils}/bin/head -1) \
+            ${pkgs.lftp}/bin/lftp -u johnw@newartisans.com,$(${pkgs.pass}/bin/pass show ftp.fastmail.com | head -1) \
                 ftp://johnw@newartisans.com@ftp.fastmail.com                 \
                 -e "set ssl:ca-file \"${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt\"; cd /johnw.newartisans.com/files/pub ; put \"$1\" ; quit"
 
@@ -322,7 +323,7 @@ in rec {
           trustctime        = false;
           fsyncobjectfiles  = true;
           # pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
-          pager             = "${pkgs.gitAndTools.delta}/bin/delta --plus-color=\"#012800\" --minus-color=\"#340001\" --theme='1337'";
+          pager             = "${pkgs.gitAndTools.delta}/bin/delta --plus-color=\"#012800\" --minus-color=\"#340001\" --theme='ansi-dark'";
           logAllRefUpdates  = true;
           precomposeunicode = false;
           whitespace        = "trailing-space,space-before-tab";
@@ -333,7 +334,7 @@ in rec {
         commit.gpgsign        = true;
         github.user           = "jwiegley";
         credential.helper     = "${pkgs.pass-git-helper}/bin/pass-git-helper";
-        ghi.token             = "!${pkgs.pass}/bin/pass api.github.com | ${pkgs.coreutils}/bin/head -1";
+        ghi.token             = "!${pkgs.pass}/bin/pass show api.github.com | head -1";
         hub.protocol          = "${pkgs.openssh}/bin/ssh";
         mergetool.keepBackup  = true;
         pull.rebase           = true;
@@ -652,7 +653,7 @@ in rec {
       port 587
       auth on
       user ${programs.git.userEmail}
-      passwordeval ${pkgs.pass}/bin/pass smtp.fastmail.com
+      passwordeval ${pkgs.pass}/bin/pass show smtp.fastmail.com
       from ${programs.git.userEmail}
       logfile ${xdg.dataHome}/msmtp/msmtp.log
     '';

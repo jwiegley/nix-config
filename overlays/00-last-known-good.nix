@@ -22,6 +22,11 @@ let
     rev    = "5460914bdd90082f655a2d930cac11b6d19cb825";
     sha256 = "1y8mbbc1m9lhnas5s0g91r4gn4snjmg6r1hs86pq98zz9fq8843x";
   };
+
+  known-good-20200518_083459 = nixpkgs {
+    rev    = "e10c79407d7bacdeb477b7c204bdb82cf9ea16f2";
+    sha256 = "1d9922zv3ja1bs4mp38fn316bmb94xz3714w5l957kmk9xy5mnn0";
+  };
 in
 
 {
@@ -36,5 +41,9 @@ in
 
   inherit (known-good-20200419_174628)
     p7zip
+    ;
+
+  inherit (known-good-20200518_083459)
+    zbar
     ;
 }

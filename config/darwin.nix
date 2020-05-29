@@ -131,9 +131,13 @@ in {
     locate = {
       script = ''
         export PATH=${pkgs.findutils}/bin:$PATH
-        export HOME=/Users/johnw
-        date >> /var/log/locate.log 2>&1
-        ${pkgs.my-scripts}/bin/update.locate >> /var/log/locate.log 2>&1
+        export HOME=${home_directory}
+        if [[ ! -d ${xdg_dataHome}/locate ]]; then
+            mkdir ${xdg_dataHome}/locate
+        fi
+        date >> ${xdg_dataHome}/locate/locate.log 2>&1
+        ${pkgs.my-scripts}/bin/update.locate \
+            >> ${xdg_dataHome}/locate/locate.log 2>&1
       '';
       serviceConfig = iterate 86400;
     };

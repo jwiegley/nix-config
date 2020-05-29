@@ -14,7 +14,13 @@ NIXOPTS	   = --option build-use-substitutes false	\
 	     --option substituters ''			\
 	     --option builders ''
 else
-NIXOPTS	   =
+ifeq ($(HOSTNAME),vulcan)
+NIXOPTS    =
+else
+NIXOPTS	   = --option build-use-substitutes true	\
+	     --option substituters 'ssh://vulcan'	\
+	     --option builders 'ssh://vulcan'
+endif
 endif
 NIX_CONF   = $(HOME)/src/nix
 NIXPATH	   = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
