@@ -65,7 +65,7 @@ EOF
     fi
 fi
 
-nix-shell -Q --run "  \
+nix-shell "$@" -Q --run "  \
 unset                 \
     ALTERNATE_EDITOR  \
     EDITOR            \
