@@ -5,8 +5,8 @@ let
     "async-pool"
     "bindings-DSL"
     "c2hsc"
-    "git-all"                   # jww (2019-03-07): remove
-    "gitlib/git-monitor"        # jww (2019-03-07): remove
+    "git-all"
+    "gitlib/git-monitor"
     "gitlib/gitlib"
   [ "gitlib/gitlib-cmdline" { inherit (self.gitAndTools) git; } ]
     "gitlib/gitlib-libgit2"
@@ -57,6 +57,7 @@ let
     text-show             = dontCheck (doJailbreak super.text-show);
     time-compat           = doJailbreak super.time-compat;
     time-recurrence       = unmarkBroken (doJailbreak super.time-recurrence);
+    rebase                = doJailbreak super.rebase;
 
     pushme = self.callCabal2nix "pushme"
       (pkgs.fetchFromGitHub {
@@ -219,7 +220,9 @@ haskell = pkgs.haskell // {
          "hakyll"
          "pandoc"
        ])
-      );
+      // (with pkgs.haskell.lib; {
+        inherit (pkgs.haskell.packages.ghc883) hpack;
+      }));
 
     ghc883 = overrideHask "ghc883" pkgs.haskell.packages.ghc883 (self: super:
       (breakout super [

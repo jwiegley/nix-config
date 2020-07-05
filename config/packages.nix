@@ -1,11 +1,9 @@
 { pkgs }:
 
 with pkgs; let exe = haskell.lib.justStaticExecutables; in [
-  # ctop
-  # minikube
   (exe gitAndTools.git-annex)
   (exe haskPkgs.cabal-install)  # for sdist/publish
-  # (exe haskPkgs.git-all)
+  (exe haskPkgs.git-all)
   (exe haskPkgs.hpack)
   (exe haskPkgs.lhs2tex)
   (exe haskPkgs.pushme)
@@ -13,9 +11,11 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.sitebuilder)
   (exe haskPkgs.sizes)
   (exe haskPkgs.una)
-  (exe haskellPackages_8_6.git-monitor)    # jww (2019-03-07): use a direct import
+  (exe haskellPackages_8_6.git-monitor)
   (exe haskellPackages_8_6.hours)
-  (pass.withExtensions (ext: with ext; [ pass-otp pass-audit pass-genphrase ]))
+  (pass.withExtensions (ext: with ext; [ pass-otp pass-genphrase ]))
+  # jww (2020-07-05): pass-audit is currently broken
+  # (pass.withExtensions (ext: with ext; [ pass-otp pass-audit pass-genphrase ]))
   (pkgs.myEnvFun { name = "coq86";  buildInputs = [ pkgs.coqPackages_8_6.coq ]; })
   (pkgs.myEnvFun { name = "coq87";  buildInputs = [ pkgs.coqPackages_8_7.coq ]; })
   (pkgs.myEnvFun { name = "coq88";  buildInputs = [ pkgs.coqPackages_8_8.coq ]; })
@@ -45,6 +45,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   contacts
   coreutils
   csvkit
+  ctop
   cvc4
   diffstat
   diffutils
@@ -178,6 +179,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   poppler_utils
   procps
   prooftree
+  protobufc
   pstree
   pv
   python27

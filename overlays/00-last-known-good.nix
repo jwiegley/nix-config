@@ -45,5 +45,6 @@ in
 
   inherit (known-good-20200518_083459)
     zbar
+    zziplib
     ;
 }

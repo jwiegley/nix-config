@@ -661,7 +661,7 @@ in {
          maxJobs = 16;
          buildCores = 4;
          speedFactor = 4;
-         supportedFeatures = [ "kvm" ];
+         supportedFeatures = [ "kvm" "nixos-test" ];
        };
        vulcan = {
          hostName = "vulcan";

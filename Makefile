@@ -119,6 +119,15 @@ copy: copy-nix
 	@for host in $(REMOTES); do		\
 	    push -h $(HOSTNAME) -f src $$host;	\
 	done
+	@find $(HOME)/dfinity $(HOME)/src		\
+	    -path '*/.direnv/env-*/*'			\
+	    -type l |					\
+	    while read file ; do			\
+	        if [[ -e $$(readlink $file) ]]; then	\
+	            echo $file ;			\
+	        fi ;					\
+	    done |					\
+	    $(PRENIX) xargs nix copy --keep-going --to ssh://hermes
 
 ########################################################################
 

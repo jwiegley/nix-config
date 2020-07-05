@@ -272,6 +272,7 @@ pkgs: epkgs: with epkgs;
   nov
   oauth2
   ob-diagrams
+  ob-sql-mode
   ob-restclient
   ob-rust
   olivetti

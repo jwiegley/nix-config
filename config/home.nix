@@ -2,10 +2,19 @@
 
 let home_directory = builtins.getEnv "HOME";
     tmp_directory = "/tmp";
+
     ca-bundle_crt = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
     emacs-server  = "${tmp_directory}/johnw-emacs/server";
+
     lib = pkgs.stdenv.lib;
     localconfig = import <localconfig>;
+
+    vulcan_ethernet = "192.168.1.69";
+    vulcan_wifi     = "192.168.1.90";
+    athena_ethernet = "192.168.1.80";
+    athena_wifi     = "192.168.1.68";
+    hermes_ethernet = "192.168.1.108";
+    hermes_wifi     = "192.168.1.67";
 
 in rec {
   nixpkgs = {
@@ -61,6 +70,12 @@ in rec {
       EDITOR             = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
       EMAIL              = "${programs.git.userEmail}";
       JAVA_OPTS          = "-Xverify:none";
+      VULCAN_ETHERNET    = vulcan_ethernet;
+      VULCAN_WIFI        = vulcan_wifi;
+      ATHENA_ETHERNET    = athena_ethernet;
+      ATHENA_WIFI        = athena_wifi;
+      HERMES_ETHERNET    = hermes_ethernet;
+      HERMES_WIFI        = hermes_wifi;
 
       RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone-b2";
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
@@ -90,8 +105,8 @@ in rec {
 
         ".ledgerrc".text = ''
           --file ${home_directory}/Documents/accounts/main.ledger
-          --input-date-format %Y-%m-%d
-          --date-format %Y-%m-%d
+          --input-date-format %Y/%m/%d
+          --date-format %Y/%m/%d
         '';
 
         # ".tmux.conf".text = ''
@@ -477,7 +492,7 @@ in rec {
             || "${localconfig.hostname}" == "hermes"
             || "${localconfig.hostname}" == "athena"
             then {
-           vulcan.hostname = "192.168.1.69";
+           vulcan.hostname = vulcan_ethernet;
          } else {
            vulcan = {
              hostname = "76.234.69.149";
@@ -488,11 +503,11 @@ in rec {
            };
          }) // rec {
 
-        hermes  = onHost "vulcan" "192.168.1.67";
-        athena  = onHost "vulcan" "192.168.1.80";
+        hermes  = onHost "vulcan" hermes_ethernet;
+        athena  = onHost "vulcan" athena_ethernet;
         tank    = athena;
 
-        router  = { hostname = "192.168.1.98"; user = "root"; };
+        # router  = { hostname = "192.168.1.98"; user = "root"; };
 
         nixos   = onHost "vulcan" "192.168.118.128";
         dfinity = onHost "vulcan" "192.168.118.136";
