@@ -685,7 +685,7 @@ in {
      requireSignedBinaryCaches = false;
      binaryCaches = [
        ssh://vulcan
-       https://nix.dfinity.systems
+       # https://nix.dfinity.systems
      ];
    }
    else if localconfig.hostname == "athena" then rec {
@@ -713,7 +713,7 @@ in {
      ];
 
      binaryCaches = [
-       https://nix.dfinity.systems
+       # https://nix.dfinity.systems
      ];
    }
    else {});

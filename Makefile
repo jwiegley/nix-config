@@ -110,24 +110,25 @@ check:
 ########################################################################
 
 copy-nix:
-	@for host in $(REMOTES); do			\
-	    $(NIX) copy --keep-going --to ssh://$$host	\
-	        $(HOME)/.nix-profile $(BUILD_PATH);	\
+	@for host in $(REMOTES); do				\
+	    $(NIX) copy --keep-going --to ssh://$$host		\
+	        $(HOME)/.nix-profile $(BUILD_PATH);		\
 	done
 
-copy: copy-nix
-	@for host in $(REMOTES); do		\
-	    push -h $(HOSTNAME) -f src $$host;	\
+copy: copy-nix							\
+	@for host in $(REMOTES); do				\
+	    push -h $(HOSTNAME) -f src $$host;			\
+	    @find $(HOME)/dfinity $(HOME)/src			\
+	        -path '*/.direnv/env-*/*'			\
+	        -type l |					\
+	        while read file ; do				\
+	            if [[ -e $$(readlink $file) ]]; then	\
+	                echo $file ;				\
+	            fi ;					\
+	        done |						\
+	        $(PRENIX) xargs nix copy			\
+		    --keep-going --to ssh://$$host;		\
 	done
-	@find $(HOME)/dfinity $(HOME)/src		\
-	    -path '*/.direnv/env-*/*'			\
-	    -type l |					\
-	    while read file ; do			\
-	        if [[ -e $$(readlink $file) ]]; then	\
-	            echo $file ;			\
-	        fi ;					\
-	    done |					\
-	    $(PRENIX) xargs nix copy --keep-going --to ssh://hermes
 
 ########################################################################
 

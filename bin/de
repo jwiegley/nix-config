@@ -6,6 +6,12 @@ set -e
 # tree.
 PRODUCTS=$(echo $PWD | sed -E 's/\b(dfinity|src)\b/Products/')
 
+NIXOPTS=""
+if [[ $PWD =~ dfinity ]]; then
+    echo Building direnv cache for a DFINITY project...
+    NIXOPTS="--option substituters https://nix.dfinity.systems"
+fi
+
 if [[ ! -f .envrc ]]; then
     cat > .envrc <<'EOF'
 keep_vars() {
@@ -65,18 +71,19 @@ EOF
     fi
 fi
 
-nix-shell "$@" -Q --run "  \
-unset                 \
-    ALTERNATE_EDITOR  \
-    EDITOR            \
-    EMACS_SERVER_FILE \
-    ITERM_SESSION_ID  \
-    SECURITYSESSIONID \
-    SSH_AUTH_SOCK     \
-    SSL_CERT_FILE     \
-    TERM              \
-    TERM_SESSION_ID;  \
-direnv dump > .envrc.cache"
+# nix-shell $NIXOPTS "$@" -Q --run
+nix run $NIXOPTS "$@"                           \
+    --unset ALTERNATE_EDITOR                    \
+    --unset EDITOR                              \
+    --unset EMACS_SERVER_FILE                   \
+    --unset ITERM_SESSION_ID                    \
+    --unset SECURITYSESSIONID                   \
+    --unset SSH_AUTH_SOCK                       \
+    --unset SSL_CERT_FILE                       \
+    --unset TERM                                \
+    --unset TERM_SESSION_ID                     \
+    --command direnv dump                       \
+    > .envrc.cache
 
 identify_shell() {
     local shell="shell.nix"
