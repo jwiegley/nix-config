@@ -1,7 +1,7 @@
 HOSTNAME   = vulcan
 REMOTES	   = hermes athena
 GIT_REMOTE = jwiegley
-MAX_AGE    = 14
+MAX_AGE	   = 14
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
 # when first necessary.
@@ -15,7 +15,7 @@ NIXOPTS	   = --option build-use-substitutes false	\
 	     --option builders ''
 else
 ifeq ($(HOSTNAME),vulcan)
-NIXOPTS    =
+NIXOPTS	   =
 else
 NIXOPTS	   = --option build-use-substitutes true	\
 	     --option substituters 'ssh://vulcan'	\
@@ -112,23 +112,28 @@ check:
 copy-nix:
 	@for host in $(REMOTES); do				\
 	    $(NIX) copy --keep-going --to ssh://$$host		\
-	        $(HOME)/.nix-profile $(BUILD_PATH);		\
+		$(HOME)/.nix-profile $(BUILD_PATH);		\
 	done
 
-copy: copy-nix							\
+copy-src:
 	@for host in $(REMOTES); do				\
 	    push -h $(HOSTNAME) -f src $$host;			\
-	    @find $(HOME)/dfinity $(HOME)/src			\
-	        -path '*/.direnv/env-*/*'			\
-	        -type l |					\
-	        while read file ; do				\
-	            if [[ -e $$(readlink $file) ]]; then	\
-	                echo $file ;				\
-	            fi ;					\
-	        done |						\
-	        $(PRENIX) xargs nix copy			\
-		    --keep-going --to ssh://$$host;		\
 	done
+
+copy-direnv:
+	@find $(HOME)						\
+	    \( -path '*/Containers' -prune \) -o		\
+	    \( -path '*/.Trash' -prune \) -o			\
+	    -path '*/.direnv/default' -type l -print |		\
+	    while read file ; do				\
+	        for host in $(REMOTES); do			\
+	            echo "nix copy: $$file -> $$host";		\
+		    $(PRENIX) nix copy $$file/*			\
+			--keep-going --to ssh://$$host;		\
+	        done;						\
+	    done
+
+copy: copy-nix copy-src copy-direnv
 
 ########################################################################
 
