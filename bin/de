@@ -6,8 +6,14 @@ set -e
 # tree.
 PRODUCTS=$(echo $PWD | sed -E 's/\b(dfinity|src)\b/Products/')
 
+NOCACHE=false
+if [[ "$1" == "--no-cache" ]]; then
+    shift 1
+    NOCACHE=true
+fi
+
 NIXOPTS=""
-if [[ $PWD =~ dfinity ]]; then
+if [[ $PWD =~ dfinity && $NOCACHE == false ]]; then
     echo Building direnv cache for a DFINITY project...
     NIXOPTS="--option substituters https://nix.dfinity.systems"
 fi
