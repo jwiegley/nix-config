@@ -197,34 +197,16 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
 
 haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // {
-    ghc844 = overrideHask "ghc844" pkgs.haskell.packages.ghc844 (self: super:
-      (breakout super [
-         "compact"
-         "criterion"
-         "these"
-       ])
-       // (with pkgs.haskell.lib; {
-        text-format = doJailbreak (overrideCabal super.text-format (drv: {
-          src = pkgs.fetchFromGitHub {
-            owner  = "deepfire";
-            repo   = "text-format";
-            rev    = "a1cda87c222d422816f956c7272e752ea12dbe19";
-            sha256 = "0lyrx4l57v15rvazrmw0nfka9iyxs4wyaasjj9y1525va9s1z4fr";
-            # date = 2018-01-12T02:33:46+03:00;
-          };
-        }));
-      }));
-
     ghc865 = overrideHask "ghc865" pkgs.haskell.packages.ghc865 (self: super:
       (breakout super [
          "hakyll"
          "pandoc"
        ])
       // (with pkgs.haskell.lib; {
-        inherit (pkgs.haskell.packages.ghc883) hpack;
+        inherit (pkgs.haskell.packages.ghc884) hpack;
       }));
 
-    ghc883 = overrideHask "ghc883" pkgs.haskell.packages.ghc883 (self: super:
+    ghc884 = overrideHask "ghc884" pkgs.haskell.packages.ghc884 (self: super:
       (breakout super [
          "hakyll"
          "pandoc"
@@ -233,14 +215,13 @@ haskell = pkgs.haskell // {
   };
 };
 
-haskellPackages_8_4 = self.haskell.packages.ghc844;
 haskellPackages_8_6 = self.haskell.packages.ghc865;
-haskellPackages_8_8 = self.haskell.packages.ghc883;
+haskellPackages_8_8 = self.haskell.packages.ghc884;
 haskellPackages_8_10 = self.haskell.packages.ghc8101;
 
 haskellPackages = self.haskell.packages.${self.ghcDefaultVersion};
 haskPkgs = self.haskellPackages;
 
-ghcDefaultVersion = "ghc883";
+ghcDefaultVersion = "ghc884";
 
 }

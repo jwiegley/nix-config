@@ -641,12 +641,9 @@ in {
 
     trustedUsers = [ "johnw" "@admin" ];
 
-    binaryCaches = [
-    ];
+    binaryCaches = [];
     binaryCachePublicKeys = [
-      "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
-      "cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
-      "hydra.dfinity.systems-2:KMTixHrh9DpAjF/0xU/49VEtNuGzQ71YaVIUSOLUaCM="
+      "iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo="
     ];
 
     extraOptions = ''
@@ -685,7 +682,7 @@ in {
      requireSignedBinaryCaches = false;
      binaryCaches = [
        ssh://vulcan
-       # https://nix.dfinity.systems
+       https://iohk.cachix.org
      ];
    }
    else if localconfig.hostname == "athena" then rec {
@@ -713,7 +710,7 @@ in {
      ];
 
      binaryCaches = [
-       # https://nix.dfinity.systems
+       https://iohk.cachix.org
      ];
    }
    else {});
