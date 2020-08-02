@@ -16,7 +16,6 @@ NIXOPTS=""
 if [[ $PWD =~ dfinity && $NOCACHE == false ]]; then
     echo Building direnv cache for a DFINITY project...
     NIXOPTS="--option substituters https://nix.dfinity.systems"
-    NIXOPTS="$NIXOPTS --option binary-cache-public-keys \"cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw=\""
 fi
 
 if [[ ! -f .envrc ]]; then

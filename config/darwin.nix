@@ -643,7 +643,7 @@ in {
 
     binaryCaches = [];
     binaryCachePublicKeys = [
-      "iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo="
+      "cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
     ];
 
     extraOptions = ''
@@ -682,7 +682,6 @@ in {
      requireSignedBinaryCaches = false;
      binaryCaches = [
        ssh://vulcan
-       https://iohk.cachix.org
      ];
    }
    else if localconfig.hostname == "athena" then rec {
@@ -710,7 +709,6 @@ in {
      ];
 
      binaryCaches = [
-       https://iohk.cachix.org
      ];
    }
    else {});

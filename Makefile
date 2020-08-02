@@ -117,7 +117,7 @@ copy-nix:
 
 copy-src:
 	@for host in $(REMOTES); do				\
-	    push -h $(HOSTNAME) -f src $$host;			\
+	    push -f src $$host;					\
 	done
 
 copy-direnv:
