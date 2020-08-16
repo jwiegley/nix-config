@@ -677,15 +677,15 @@ let
             inherit (pkgs.texlive) scheme-basic cm-super ec;
           }; in mkDerivation rec {
       name = "emacs-proof-general-${version}";
-      version = "2020-01-13";
+      version = "2020-06-23";
 
       # This is the main branch
       src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "ea62543527e6c0fcca8bbb70695e25c2f5d89614";
-        sha256 = "0jzyj3a3b9b26b2cksrcby39gj9jg77dzj3d4zzbwf33j1vkvfd2";
-        # date = 2020-05-06T21:48:52+02:00;
+        rev = "03e427a8f19485e12b2f95387ed3e0bff7cc944c";
+        sha256 = "0ykxb4xdsxv2mja620kf61k2l18scs0jdsfsg1kzs2qf4ddjscyn";
+        # date = 2020-06-23T19:48:59+02:00;
       };
 
       # src = ~/src/proof-general;
@@ -742,46 +742,46 @@ let
 
 in {
 
-emacs = self.emacs26;
-emacsPackagesNg = self.emacs26PackagesNg;
+emacs = self.emacs27;
+emacsPackagesNg = self.emacs27PackagesNg;
 
 emacs26_base = pkgs.emacs26.override {
   imagemagick = self.imagemagickBig;
   srcRepo = true;
 };
 
-emacs26 = with pkgs; self.emacs26_base.overrideAttrs(attrs: rec {
-  CFLAGS = "-O3 -Ofast -march=native -funroll-loops " + attrs.CFLAGS;
-  buildInputs = attrs.buildInputs ++
-    [ libpng libjpeg libungif libtiff librsvg ];
-  preConfigure = ''
-    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
-  '';
-});
+# emacs26 = with pkgs; self.emacs26_base.overrideAttrs(attrs: rec {
+#   CFLAGS = "-O3 -Ofast -march=native -funroll-loops " + attrs.CFLAGS;
+#   buildInputs = attrs.buildInputs ++
+#     [ libpng libjpeg libungif libtiff librsvg ];
+#   preConfigure = ''
+#     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
+#   '';
+# });
 
-emacs26PackagesNg = mkEmacsPackages self.emacs26;
+# emacs26PackagesNg = mkEmacsPackages self.emacs26;
 
-emacs26debug = with pkgs;
-  (pkgs.emacs26.override {
-     imagemagick = self.imagemagickBig;
-     srcRepo = true;
-   }).overrideAttrs(attrs: rec {
-  name = "${attrs.name}-debug";
-  CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
-  buildInputs = attrs.buildInputs ++
-    [ libpng libjpeg libungif libtiff librsvg ];
-  preConfigure = ''
-    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
-  '';
-  configureFlags = attrs.configureFlags ++
-    [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
-});
+# emacs26debug = with pkgs;
+#   (pkgs.emacs26.override {
+#      imagemagick = self.imagemagickBig;
+#      srcRepo = true;
+#    }).overrideAttrs(attrs: rec {
+#   name = "${attrs.name}-debug";
+#   CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
+#   buildInputs = attrs.buildInputs ++
+#     [ libpng libjpeg libungif libtiff librsvg ];
+#   preConfigure = ''
+#     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
+#   '';
+#   configureFlags = attrs.configureFlags ++
+#     [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
+# });
 
-emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
+# emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
 
 emacs27_base = self.emacs26_base.overrideAttrs(attrs: rec {
   name = "emacs-${version}${versionModifier}";
-  version = "27.0"; versionModifier = ".92";
+  version = "27.1"; versionModifier = ".0";
   patches = [ ./emacs/clean-env-27.patch ];
   src = ~/src/emacs;
   # src = pkgs.fetchurl {
@@ -816,10 +816,10 @@ emacs27debug = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
 
 emacs27DebugPackagesNg = mkEmacsPackages self.emacs27debug;
 
-emacsHEAD = with pkgs; self.emacs26_base.overrideAttrs(attrs: rec {
+emacsHEAD = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
   name = "emacs-${version}${versionModifier}";
-  version = "27.0";
-  versionModifier = ".92";
+  version = "27.1";
+  versionModifier = ".0";
   src = ~/src/emacs;
   CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
   patches = [
@@ -889,19 +889,19 @@ emacsERCEnv = myPkgs: pkgs.myEnvFun {
   ];
 };
 
-emacs26Env = myPkgs: pkgs.myEnvFun {
-  name = "emacs26";
-  buildInputs = [
-    (self.emacs26PackagesNg.emacsWithPackages myPkgs)
-  ];
-};
+# emacs26Env = myPkgs: pkgs.myEnvFun {
+#   name = "emacs26";
+#   buildInputs = [
+#     (self.emacs26PackagesNg.emacsWithPackages myPkgs)
+#   ];
+# };
 
-emacs26DebugEnv = myPkgs: pkgs.myEnvFun {
-  name = "emacs26-debug";
-  buildInputs = [
-    (self.emacs26DebugPackagesNg.emacsWithPackages myPkgs)
-  ];
-};
+# emacs26DebugEnv = myPkgs: pkgs.myEnvFun {
+#   name = "emacs26-debug";
+#   buildInputs = [
+#     (self.emacs26DebugPackagesNg.emacsWithPackages myPkgs)
+#   ];
+# };
 
 emacs27Env = myPkgs: pkgs.myEnvFun {
   name = "emacs27";
@@ -917,7 +917,7 @@ emacs27DebugEnv = myPkgs: pkgs.myEnvFun {
   ];
 };
 
-emacsEnv = self.emacs26Env;
-emacsDebugEnv = self.emacs26DebugEnv;
+emacsEnv = self.emacs27Env;
+emacsDebugEnv = self.emacs27DebugEnv;
 
 }

@@ -58,7 +58,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   dovecot
   dovecot_pigeonhole
   doxygen
-  emacs26Env
+  # emacs26Env
   emacs27Env
   emacsERCEnv
   entr
@@ -202,6 +202,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   rsync
   rtags
   ruby
+  scc
   screen
   sdcv
   shfmt

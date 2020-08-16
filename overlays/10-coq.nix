@@ -17,7 +17,7 @@ let
       fiat_HEAD       = pkg ./coq/fiat.nix;
       category-theory = pkg ./coq/category-theory.nix;
       procrastination = pkg ./coq/procrastination.nix;
-      equations       = pkg ./coq/equations.nix;
+      # equations       = pkg ./coq/equations.nix;
     };
 
 in {
@@ -67,7 +67,12 @@ coq_8_11_override = pkgs.coq_8_11.override {
   buildIde = true;
 };
 
-coq_HEAD = with pkgs; stdenv.lib.overrideDerivation self.coq_8_11_override (attrs: rec {
+coq_8_12_override = pkgs.coq_8_12.override {
+  ocamlPackages = self.ocaml-ng.ocamlPackages_4_09;
+  buildIde = true;
+};
+
+coq_HEAD = with pkgs; stdenv.lib.overrideDerivation self.coq_8_12_override (attrs: rec {
   version = "HEAD";
   name = "coq-${version}-pre";
   coq-version = "${version}";
@@ -97,6 +102,7 @@ coq_HEAD = with pkgs; stdenv.lib.overrideDerivation self.coq_8_11_override (attr
 });
 
 coqPackages_HEAD = extendAttrs (self.mkCoqPackages self.coq_HEAD) myCoqPackages;
+coqPackages_8_12 = extendAttrs (self.mkCoqPackages self.coq_8_12) myCoqPackages;
 coqPackages_8_11 = extendAttrs (self.mkCoqPackages self.coq_8_11) myCoqPackages;
 coqPackages_8_10 = extendAttrs (self.mkCoqPackages self.coq_8_10) myCoqPackages;
 coqPackages_8_9  = extendAttrs (self.mkCoqPackages self.coq_8_9) myCoqPackages;

@@ -97,9 +97,8 @@ pkgs: epkgs: with epkgs;
   edit-indirect
   edit-server
   edit-var
-  eglot
+  # eglot
   el-mock
-  elfeed
   elisp-depend
   elisp-docstring-mode
   elisp-refs

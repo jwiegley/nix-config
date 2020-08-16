@@ -5,12 +5,13 @@ let ledger = pkgs.callPackage ~/src/ledger/master {}; in
 {
 
 ledger_HEAD = ledger.overrideAttrs (attrs: {
-  src = pkgs.fetchFromGitHub {
-    owner = "ledger";
-    repo = "ledger";
-    rev = "refs/heads/john";
-    sha256 = "18hd17qpms731cmmahml73jlbzx5iz4fsk1579pvsnln8r7yhv6r";
-  };
+  src = ~/src/ledger/master;
+  # src = pkgs.fetchFromGitHub {
+  #   owner = "ledger";
+  #   repo = "ledger";
+  #   rev = "refs/heads/john";
+  #   sha256 = "18hd17qpms731cmmahml73jlbzx5iz4fsk1579pvsnln8r7yhv6r";
+  # };
 
   doCheck = false;
 
