@@ -97,7 +97,7 @@ pkgs: epkgs: with epkgs;
   edit-indirect
   edit-server
   edit-var
-  # eglot
+  eglot
   el-mock
   elisp-depend
   elisp-docstring-mode
@@ -216,7 +216,7 @@ pkgs: epkgs: with epkgs;
   language-detection
   langtool
   ledger-mode
-  lentic                        # lentic-mode
+  # lentic                        # lentic-mode
   link-hint
   lispy
   list-utils

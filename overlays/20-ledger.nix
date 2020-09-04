@@ -5,7 +5,6 @@ let ledger = pkgs.callPackage ~/src/ledger/master {}; in
 {
 
 ledger_HEAD = ledger.overrideAttrs (attrs: {
-  src = ~/src/ledger/master;
   # src = pkgs.fetchFromGitHub {
   #   owner = "ledger";
   #   repo = "ledger";

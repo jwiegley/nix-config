@@ -1,5 +1,5 @@
 HOSTNAME   = vulcan
-REMOTES	   = hermes athena
+REMOTES	   = hermes # athena
 GIT_REMOTE = jwiegley
 MAX_AGE	   = 14
 

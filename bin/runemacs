@@ -5,7 +5,7 @@ if [[ "$1" == --alt ]]; then
     EMACSAPP=ERC
     shift 1
 else
-    export EMACSVER=26
+    export EMACSVER=27
     EMACSAPP=Emacs
 fi
 
