@@ -389,6 +389,7 @@ pkgs: epkgs: with epkgs;
   tuareg
   typo
   undo-propose
+  unicode-fonts
   use-package
   uuidgen
   vagrant

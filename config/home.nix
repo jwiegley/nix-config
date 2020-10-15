@@ -58,7 +58,7 @@ in rec {
       LOCATE_PATH        = "${xdg.cacheHome}/locate/home.db:${xdg.cacheHome}/locate/system.db";
       NIX_CONF           = "${home_directory}/src/nix";
       PARALLEL_HOME      = "${xdg.cacheHome}/parallel";
-      PASSWORD_STORE_DIR = "${home_directory}/Documents/.passwords";
+      PASSWORD_STORE_DIR = "${home_directory}/doc/.passwords";
       RECOLL_CONFDIR     = "${xdg.configHome}/recoll";
       SCREENRC           = "${xdg.configHome}/screen/config";
       SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
@@ -104,7 +104,7 @@ in rec {
         # ".dl".source = "${home_directory}/Downloads";
 
         ".ledgerrc".text = ''
-          --file ${home_directory}/Documents/accounts/main.ledger
+          --file ${home_directory}/doc/accounts/main.ledger
           --input-date-format %Y/%m/%d
           --date-format %Y/%m/%d
         '';
@@ -233,7 +233,7 @@ in rec {
 
       initExtra = lib.mkBefore ''
         export PATH=$(echo "$PATH" | sed 's/\/usr\/local\/bin:\/usr\/bin:\/bin:\/usr\/sbin:\/sbin://')
-        export PATH=${home_directory}/Documents/accounts/bin:$PATH
+        export PATH=${home_directory}/doc/accounts/bin:$PATH
         export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
         export PATH=$(echo "$PATH" | sed 's/\/Applications\/VMware Fusion\.app\/Contents\/Public://')
 
@@ -512,6 +512,7 @@ in rec {
         nixos   = onHost "vulcan" "192.168.118.128";
         dfinity = onHost "vulcan" "192.168.118.136";
         macos   = onHost "vulcan" "172.16.20.136";
+        ubuntu  = onHost "vulcan" "172.16.20.138";
 
         elpa        = { hostname = "elpa.gnu.org"; user = "root"; };
         haskell_org = { host = "*haskell.org";     user = "root"; };

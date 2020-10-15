@@ -102,7 +102,6 @@ in {
       ("${pkgs.aria2}/bin/aria2c "
         + "--enable-rpc "
         + "--dir ${home_directory}/Downloads "
-        + "--log ${xdg_dataHome}/aria2c/aria2c.log "
         + "--check-integrity "
         + "--continue ");
 

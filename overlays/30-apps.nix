@@ -87,7 +87,7 @@ Firefox = self.installApplication rec {
 export PATH=${self.gnupg}/bin:${self.pass}/bin:$PATH
 export PASSWORD_STORE_ENABLE_EXTENSIONS="true"
 export PASSWORD_STORE_EXTENSIONS_DIR="/run/current-system/sw/lib/password-store/extensions";
-export PASSWORD_STORE_DIR="$HOME/Documents/.passwords";
+export PASSWORD_STORE_DIR="$HOME/doc/.passwords";
 export GNUPGHOME="$HOME/.config/gnupg"
 export GPG_TTY=$(tty)
 if ! pgrep -x "gpg-agent" > /dev/null; then

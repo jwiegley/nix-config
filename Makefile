@@ -153,7 +153,7 @@ clean: gc check
 fullclean: gc-old check
 
 remove-build-products:
-	clean $(HOME)/Documents $(HOME)/src
+	clean $(HOME)/doc $(HOME)/src
 
 gc:
 	$(call delete-generations-all,$(MAX_AGE))

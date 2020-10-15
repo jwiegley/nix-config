@@ -16,6 +16,7 @@ in
     sha256 = "1f7vmhdipf0zz19lwx3ni0lmilhnild7r387a04ng92hnc27nnsv";
   })
     recoll
+    xquartz
     socat2pre
     ;
 
@@ -25,6 +26,6 @@ in
     sha256 = "09d72jnizw0rdldc30z4319ai59hwcm1wfzm7ch1mdg4kdcv0knx";
   })
     csvkit
-    xquartz
+    yq
     ;
 }

@@ -8,7 +8,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.lhs2tex)
   (exe haskPkgs.pushme)
   (exe haskPkgs.runmany)
-  (exe haskPkgs.sitebuilder)
   (exe haskPkgs.sizes)
   (exe haskPkgs.una)
   (exe haskellPackages_8_6.git-monitor)
