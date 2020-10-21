@@ -417,6 +417,7 @@ pkgs: epkgs: with epkgs;
   worf
   x86-lookup
   xml-rpc
+  xr
   xray
   yaml-mode
   yankpad

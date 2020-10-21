@@ -680,7 +680,7 @@ in {
 
      requireSignedBinaryCaches = false;
      binaryCaches = [
-       ssh://vulcan
+       # ssh://vulcan
      ];
    }
    else if localconfig.hostname == "athena" then rec {

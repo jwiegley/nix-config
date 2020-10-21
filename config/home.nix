@@ -489,7 +489,7 @@ in rec {
              proxyJump = proxy;
            }); in
         (if    "${localconfig.hostname}" == "vulcan"
-            || "${localconfig.hostname}" == "hermes"
+            # || "${localconfig.hostname}" == "hermes"
             || "${localconfig.hostname}" == "athena"
             then {
            vulcan.hostname = vulcan_ethernet;
