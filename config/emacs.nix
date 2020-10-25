@@ -132,6 +132,7 @@ pkgs: epkgs: with epkgs;
   fence-edit
   fennel-mode
   fetchmail-mode
+  fill-page
   flycheck
   flycheck-haskell
   flycheck-hdevtools

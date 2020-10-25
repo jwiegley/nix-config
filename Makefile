@@ -1,4 +1,5 @@
 HOSTNAME   = vulcan
+CACHE      = vulcan
 REMOTES	   = hermes # athena
 GIT_REMOTE = jwiegley
 MAX_AGE	   = 14
@@ -9,17 +10,17 @@ GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%
 HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
 LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
-ifeq ($(NOCACHE),true)
+ifeq ($(CACHE),)
 NIXOPTS	   = --option build-use-substitutes false	\
 	     --option substituters ''			\
 	     --option builders ''
 else
-ifeq ($(HOSTNAME),vulcan)
+ifeq ($(HOSTNAME),$(CACHE))
 NIXOPTS	   =
 else
 NIXOPTS	   = --option build-use-substitutes true	\
-	     --option substituters 'ssh://vulcan'	\
-	     --option builders 'ssh://vulcan'
+	     --option substituters 'ssh://$(CACHE)'	\
+	     --option builders 'ssh://$(CACHE)'
 endif
 endif
 NIX_CONF   = $(HOME)/src/nix

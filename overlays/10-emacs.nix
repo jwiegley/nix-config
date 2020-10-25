@@ -292,6 +292,17 @@ let
       };
     };
 
+    fill-page = compileEmacsFiles {
+      name = "fill-page";
+      src = fetchFromGitHub {
+        owner = "jcs-elpa";
+        repo = "fill-page";
+        rev = "3bf1fbdf0e8f325ad0fee016e4a11f7343c8c973";
+        sha256 = "124ghk48c70xykakwsfdcfli2rk2rn1x057d1ss6yrgb6gp9drs0";
+        # date = 2020-10-04T01:04:41+08:00;
+      };
+    };
+
     git-undo = compileEmacsFiles {
       name = "git-undo";
       src = fetchFromGitHub {

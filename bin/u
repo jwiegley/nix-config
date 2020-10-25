@@ -2,25 +2,31 @@
 
 if [[ "$1" == "vulcan" ]]; then
   HOSTNAME=vulcan
+  if [ -z ${CACHE+x} ]; then CACHE=vulcan; fi
   shift 1
 elif [[ "$1" == "hermes" ]]; then
   HOSTNAME=hermes
+  if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
   shift 1
 elif [[ "$1" == "athena" ]]; then
   HOSTNAME=athena
+  if [ -z ${CACHE+x} ]; then CACHE=athena; fi
   shift 1
-elif [[ $(hostname) == "vulcan"
-     || $(hostname) == "Vulcan"
-     || $(hostname) == "Vulcan.local" ]]; then
+elif [[ $(hostname) =~ [Vv]ulcan ]]; then
   HOSTNAME=vulcan
-elif [[ $(hostname) == "athena"
-     || $(hostname) == "Athena"
-     || $(hostname) == "Athena.local" ]]; then
+  if [ -z ${CACHE+x} ]; then CACHE=vulcan; fi
+elif [[ $(hostname) == [Aa]thena ]]; then
   HOSTNAME=athena
-else
+  if [ -z ${CACHE+x} ]; then CACHE=athena; fi
+elif [[ $(hostname) == [Hh]ermes ]]; then
   HOSTNAME=hermes
+  if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
+else
+  echo "Cannot recognize HOSTNAME=$HOSTNAME"
+  exit 1
 fi
 
 echo HOSTNAME=$HOSTNAME
+echo CACHE=$CACHE
 
-exec make -C $NIX_CONF -f Makefile HOSTNAME=$HOSTNAME "$@"
+exec make -C $NIX_CONF -f Makefile HOSTNAME=$HOSTNAME CACHE=$CACHE "$@"

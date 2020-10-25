@@ -81,6 +81,7 @@ in rec {
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${home_directory}/Machines/vagrant";
+      FILTER_BRANCH_SQUELCH_WARNING  = "1";
     };
 
     file = builtins.listToAttrs (
@@ -489,7 +490,7 @@ in rec {
              proxyJump = proxy;
            }); in
         (if    "${localconfig.hostname}" == "vulcan"
-            # || "${localconfig.hostname}" == "hermes"
+            || "${localconfig.hostname}" == "hermes"
             || "${localconfig.hostname}" == "athena"
             then {
            vulcan.hostname = vulcan_ethernet;
