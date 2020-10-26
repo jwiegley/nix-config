@@ -13,9 +13,28 @@ if [[ "$1" == "--no-cache" ]]; then
 fi
 
 NIXOPTS=""
+
 if [[ $PWD =~ dfinity && $NOCACHE == false ]]; then
     echo Building direnv cache for a DFINITY project...
-    NIXOPTS="--option substituters https://cache.dfinity.systems --trusted-public-keys cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
+    NIXOPTS="$NIXOPTS --option build-use-substitutes true"
+    NIXOPTS="$NIXOPTS --option substituters https://cache.dfinity.systems"
+    DFN_KEY="cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
+    NIXOPTS="$NIXOPTS --trusted-public-keys $DFN_KEY"
+fi
+
+if [[ -z ${CACHE+x} && $NOCACHE == false ]]; then
+    NIXOPTS="$NIXOPTS"
+else
+    if [[ ! ($NIXOPTS =~ build-use-substitutes) ]]; then
+        NIXOPTS="$NIXOPTS --option build-use-substitutes true"
+    fi
+    NIXOPTS="$NIXOPTS --option substituters ssh://${CACHE}"
+fi
+
+if [[ -z ${BUILDER+x} ]]; then
+    NIXOPTS="$NIXOPTS"
+else
+    NIXOPTS="$NIXOPTS --option builders ssh://${BUILDER}"
 fi
 
 if [[ ! -f .envrc ]]; then

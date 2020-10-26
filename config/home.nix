@@ -496,7 +496,7 @@ in rec {
            vulcan.hostname = vulcan_ethernet;
          } else {
            vulcan = {
-             hostname = "76.234.69.149";
+             hostname = "2600:1700:cf00:db0:f1b3:ab80:3419:685d";
              port = 2201;
              extraOptions = {
                "LocalForward" = "5999 127.0.0.1:5900";

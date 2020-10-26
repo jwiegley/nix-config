@@ -1,5 +1,6 @@
 HOSTNAME   = vulcan
 CACHE      = vulcan
+BUILDER    = vulcan
 REMOTES	   = hermes # athena
 GIT_REMOTE = jwiegley
 MAX_AGE	   = 14
@@ -12,17 +13,24 @@ LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE
 
 ifeq ($(CACHE),)
 NIXOPTS	   = --option build-use-substitutes false	\
-	     --option substituters ''			\
-	     --option builders ''
+	     --option substituters ''
 else
 ifeq ($(HOSTNAME),$(CACHE))
 NIXOPTS	   =
 else
 NIXOPTS	   = --option build-use-substitutes true	\
-	     --option substituters 'ssh://$(CACHE)'	\
-	     --option builders 'ssh://$(CACHE)'
+	     --option substituters 'ssh://$(CACHE)'
 endif
 endif
+
+ifeq ($(BUILDER),)
+NIXOPTS	  := $(NIXOPTS) --option builders ''
+else
+ifneq ($(HOSTNAME),$(BUILDER))
+NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
+endif
+endif
+
 NIX_CONF   = $(HOME)/src/nix
 NIXPATH	   = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 PRENIX	   = PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIXPATH)
@@ -55,6 +63,9 @@ all: rebuild
 build:
 	$(NIX) build -f . $(BUILD_ARGS)
 	@rm -f result*
+
+build-command:
+	@echo $(NIX) build -f . $(BUILD_ARGS)
 
 darwin-switch:
 	$(DARWIN_REBUILD) switch -Q
