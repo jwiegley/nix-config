@@ -61,7 +61,8 @@ all: rebuild
 	done
 
 build:
-	@echo nix build -f . $(BUILD_ARGS)
+	@echo
+	@echo '>>>' nix build -f . $(BUILD_ARGS)
 	@$(NIX) build -f . $(BUILD_ARGS)
 	@rm -f result*
 
@@ -69,12 +70,14 @@ build-command:
 	@echo $(NIX) build -f . $(BUILD_ARGS)
 
 darwin-switch:
-	@echo darwin-rebuild switch -Q
+	@echo
+	@echo '>>>' darwin-rebuild switch -Q
 	@$(DARWIN_REBUILD) switch -Q
 	@echo "Darwin generation: $$($(DARWIN_REBUILD) --list-generations | tail -1)"
 
 home-switch:
-	@echo home-manager switch
+	@echo
+	@echo '>>>' home-manager switch
 	@$(HOME_MANAGER) switch
 	@echo "Home generation: $$($(HOME_MANAGER) generations | head -1)"
 	@for file in $(HOME)/.config/fetchmail/config		\
