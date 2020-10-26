@@ -742,7 +742,7 @@ let
   };
 
   mkEmacsPackages = emacs:
-    (self.emacsPackagesFor emacs).overrideScope (super: self:
+    (self.emacsPackagesFor emacs).overrideScope' (self: super:
       pkgs.lib.fix
         (pkgs.lib.extends
            myEmacsPackageOverrides
