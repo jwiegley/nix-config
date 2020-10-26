@@ -4,7 +4,10 @@ set -e
 
 # jww (2020-04-01): I use this to keep build products in a separate directory
 # tree.
-PRODUCTS=$(echo $PWD | sed -E 's/\b(dfinity|src)\b/Products/')
+PRODUCTS=""
+if [[ -d $HOME/Products ]]; then
+    PRODUCTS=$(echo $PWD | sed -E 's/\b(dfinity|src)\b/Products/')
+fi
 
 NOCACHE=false
 if [[ "$1" == "--no-cache" ]]; then
