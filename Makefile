@@ -94,19 +94,27 @@ switch: darwin-switch home-switch
 rebuild: build switch
 
 pull:
+	@echo
+	@echo '>>>' git pull
 	(cd darwin	 && git pull --rebase)
 	(cd home-manager && git pull --rebase)
 	(cd nixpkgs	 && git pull --rebase)
 
 tag-before:
+	@echo
+	@echo '>>>' git tag "(before)"
 	git --git-dir=nixpkgs/.git branch -f before-update HEAD
 
 tag-working:
+	@echo
+	@echo '>>>' git tag "(after)"
 	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
 	git --git-dir=nixpkgs/.git branch -D before-update
 	git --git-dir=nixpkgs/.git tag -f known-good-$(LKG_DATE) last-known-good
 
 mirror:
+	@echo
+	@echo '>>>' git push
 	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f master:master
 	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f unstable:unstable
 	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f last-known-good:last-known-good
@@ -126,17 +134,23 @@ check:
 ########################################################################
 
 copy-nix:
+	@echo
+	@echo '>>>' copy nix
 	@for host in $(REMOTES); do				\
 	    $(NIX) copy --keep-going --to ssh://$$host		\
 		$(HOME)/.nix-profile $(BUILD_PATH);		\
 	done
 
 copy-src:
+	@echo
+	@echo '>>>' copy src
 	@for host in $(REMOTES); do				\
 	    push -f src $$host;					\
 	done
 
 copy-direnv:
+	@echo
+	@echo '>>>' copy direnv
 	@find $(HOME)						\
 	    \( -path '*/Containers' -prune \) -o		\
 	    \( -path '*/.Trash' -prune \) -o			\
