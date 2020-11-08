@@ -94,10 +94,9 @@ switch: darwin-switch home-switch
 rebuild: build switch
 
 pull:
-	(cd darwin		   && git pull --rebase)
-	(cd home-manager	   && git pull --rebase)
-	(cd overlays/emacs-overlay && git pull --rebase)
-	(cd nixpkgs		   && git pull --rebase)
+	(cd darwin	 && git pull --rebase)
+	(cd home-manager && git pull --rebase)
+	(cd nixpkgs	 && git pull --rebase)
 
 tag-before:
 	git --git-dir=nixpkgs/.git branch -f before-update HEAD
@@ -114,7 +113,6 @@ mirror:
 	git --git-dir=nixpkgs/.git push -f --tags $(GIT_REMOTE)
 	git --git-dir=darwin/.git push --mirror $(GIT_REMOTE)
 	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
-	git --git-dir=overlays/emacs-overlay/.git push --mirror $(GIT_REMOTE)
 
 working: tag-working mirror
 
@@ -146,10 +144,16 @@ copy-direnv:
 	    while read file ; do				\
 	        for host in $(REMOTES); do			\
 	            echo "nix copy: $$file -> $$host";		\
-		    $(PRENIX) nix copy $$file/*			\
+		    $(NIX) copy $$file/*			\
 			--keep-going --to ssh://$$host;		\
 	        done;						\
 	    done
+
+direnv-dirs:
+	@find $(HOME)						\
+	    \( -path '*/Containers' -prune \) -o		\
+	    \( -path '*/.Trash' -prune \) -o			\
+	    -path '*/.direnv/default' -type l -print
 
 copy: copy-nix copy-src copy-direnv
 
@@ -191,6 +195,9 @@ sizes:
 
 tools:
 	@echo ""
+	@echo HOSTNAME=$(HOSTNAME)
+	@echo CACHE=$(CACHE)
+	@echo BUILDER=$(BUILDER)
 	@echo export NIXOPTS=$(NIXOPTS)
 	@echo export NIX_PATH=$(NIXPATH)
 	@echo ""

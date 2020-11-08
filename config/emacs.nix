@@ -277,6 +277,7 @@ pkgs: epkgs: with epkgs;
   ob-rust
   olivetti
   operate-on-number
+  origami
   org                           # org org-babel org-crypt
   org-bookmark-heading
   org-gcal
@@ -284,7 +285,7 @@ pkgs: epkgs: with epkgs;
   org-mind-map
   org-noter
   org-opml
-  org-pdfview
+  # org-pdfview
   org-pdftools
   org-ref
   org-rich-yank
