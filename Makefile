@@ -60,9 +60,15 @@ all: rebuild
 	    ssh $$host "make -C $(NIX_CONF) HOSTNAME=$$host $<";	\
 	done
 
-build:
+define announce
 	@echo
-	@echo '>>>' nix build -f . $(BUILD_ARGS)
+	@echo '┌─────────────────────────────────────────────────────────────────────────────'
+	@echo '│ >>> $(1)'
+	@echo '└─────────────────────────────────────────────────────────────────────────────'
+endef
+
+build:
+	$(call announce,nix build -f . $(BUILD_ARGS))
 	@$(NIX) build -f . $(BUILD_ARGS)
 	@rm -f result*
 
@@ -70,14 +76,12 @@ build-command:
 	@echo $(NIX) build -f . $(BUILD_ARGS)
 
 darwin-switch:
-	@echo
-	@echo '>>>' darwin-rebuild switch -Q
+	$(call announce,darwin-rebuild switch)
 	@$(DARWIN_REBUILD) switch -Q
 	@echo "Darwin generation: $$($(DARWIN_REBUILD) --list-generations | tail -1)"
 
 home-switch:
-	@echo
-	@echo '>>>' home-manager switch
+	$(call announce,home-manager switch)
 	@$(HOME_MANAGER) switch
 	@echo "Home generation: $$($(HOME_MANAGER) generations | head -1)"
 	@for file in $(HOME)/.config/fetchmail/config		\
@@ -94,27 +98,23 @@ switch: darwin-switch home-switch
 rebuild: build switch
 
 pull:
-	@echo
-	@echo '>>>' git pull
+	$(call announce,git pull)
 	(cd darwin	 && git pull --rebase)
 	(cd home-manager && git pull --rebase)
 	(cd nixpkgs	 && git pull --rebase)
 
 tag-before:
-	@echo
-	@echo '>>>' git tag "(before)"
+	$(call announce,git tag (before))
 	git --git-dir=nixpkgs/.git branch -f before-update HEAD
 
 tag-working:
-	@echo
-	@echo '>>>' git tag "(after)"
+	$(call announce,git tag (after))
 	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
 	git --git-dir=nixpkgs/.git branch -D before-update
 	git --git-dir=nixpkgs/.git tag -f known-good-$(LKG_DATE) last-known-good
 
 mirror:
-	@echo
-	@echo '>>>' git push
+	$(call announce,git push)
 	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f master:master
 	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f unstable:unstable
 	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f last-known-good:last-known-good
@@ -134,23 +134,20 @@ check:
 ########################################################################
 
 copy-nix:
-	@echo
-	@echo '>>>' copy nix
+	$(call announce,copy nix)
 	@for host in $(REMOTES); do				\
 	    $(NIX) copy --keep-going --to ssh://$$host		\
 		$(HOME)/.nix-profile $(BUILD_PATH);		\
 	done
 
 copy-src:
-	@echo
-	@echo '>>>' copy src
+	$(call announce,copy src)
 	@for host in $(REMOTES); do				\
 	    push -f src $$host;					\
 	done
 
 copy-direnv:
-	@echo
-	@echo '>>>' copy direnv
+	$(call announce,copy direnv)
 	@find $(HOME)						\
 	    \( -path '*/Containers' -prune \) -o		\
 	    \( -path '*/.Trash' -prune \) -o			\

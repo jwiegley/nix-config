@@ -70,7 +70,7 @@ in {
       serviceConfig.KeepAlive = true;
     };
   } //
-  (if localconfig.hostname == "athena" then {
+  (if localconfig.hostname == "vulcan" then {
     snapshots = {
       script = ''
         export PATH=$PATH:${pkgs.my-scripts}/bin:/usr/local/bin

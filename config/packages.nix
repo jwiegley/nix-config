@@ -226,6 +226,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   texFull
   time
   tmux
+  translate-shell
   travis
   tree
   tsvutils

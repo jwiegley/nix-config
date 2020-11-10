@@ -20,7 +20,7 @@ NIXOPTS=""
 if [[ $PWD =~ dfinity && $NOCACHE == false ]]; then
     echo Building direnv cache for a DFINITY project...
     NIXOPTS="$NIXOPTS --option build-use-substitutes true"
-    NIXOPTS="$NIXOPTS --option substituters https://cache.dfinity.systems"
+    NIXOPTS="$NIXOPTS --option substituters https://nix.dfinity.systems"
     DFN_KEY="cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
     NIXOPTS="$NIXOPTS --trusted-public-keys $DFN_KEY"
 fi
