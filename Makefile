@@ -56,8 +56,8 @@ HOME_MANAGER   = $(PRENIX) HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix	\
 all: rebuild
 
 %-all: %
-	for host in $(REMOTES); do					\
-	    ssh $$host "make -C $(NIX_CONF) HOSTNAME=$$host $<";	\
+	for host in $(REMOTES); do				\
+	    ssh $$host "NIX_CONF=$(NIX_CONF) u $$host $<";	\
 	done
 
 define announce

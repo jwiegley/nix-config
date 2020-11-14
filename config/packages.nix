@@ -164,6 +164,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   plantuml
   poppler_utils
   procps
+  projects-env
   prooftree
   protobufc
   pstree
