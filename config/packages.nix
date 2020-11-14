@@ -13,18 +13,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages_8_6.git-monitor)
   (exe haskellPackages_8_6.hours)
   (pass.withExtensions (ext: with ext; [ pass-otp pass-genphrase ]))
-  # jww (2020-07-05): pass-audit is currently broken
-  # (pass.withExtensions (ext: with ext; [ pass-otp pass-audit pass-genphrase ]))
-  # (pkgs.myEnvFun { name = "coq86";  buildInputs = [ pkgs.coqPackages_8_6.coq ]; })
-  # (pkgs.myEnvFun { name = "coq87";  buildInputs = [ pkgs.coqPackages_8_7.coq ]; })
-  # (pkgs.myEnvFun { name = "coq88";  buildInputs = [ pkgs.coqPackages_8_8.coq ]; })
-  # (pkgs.myEnvFun { name = "coq89";  buildInputs = [ pkgs.coqPackages_8_9.coq ]; })
-  # (pkgs.myEnvFun { name = "coq810"; buildInputs = [ pkgs.coqPackages_8_10.coq ]; })
-  # (pkgs.myEnvFun { name = "coq811"; buildInputs = [ pkgs.coqPackages_8_11.coq ]; })
-  # (pkgs.myEnvFun { name = "coq812"; buildInputs = [ pkgs.coqPackages_8_12.coq ]; })
-  # (pkgs.myEnvFun { name = "ghc86";  buildInputs = [ pkgs.haskellPackages_8_6.ghc ]; })
-  # (pkgs.myEnvFun { name = "ghc88";  buildInputs = [ pkgs.haskellPackages_8_8.ghc ]; })
-  # (pkgs.myEnvFun { name = "ghc810"; buildInputs = [ pkgs.haskellPackages_8_10.ghc ]; })
   OnePassword-op
   apg
   aria2
@@ -48,7 +36,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   cvc4
   diffstat
   diffutils
-  direnv
   direnv
   dirscan
   ditaa

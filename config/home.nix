@@ -178,33 +178,32 @@ in rec {
       };
 
       shellAliases = {
-        b     = "${pkgs.git}/bin/git b";
-        l     = "${pkgs.git}/bin/git l";
-        w     = "${pkgs.git}/bin/git w";
-        g     = "${pkgs.gitAndTools.hub}/bin/hub";
-        git   = "${pkgs.gitAndTools.hub}/bin/hub";
-        ga    = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
-        good  = "${pkgs.git}/bin/git bisect good";
-        bad   = "${pkgs.git}/bin/git bisect bad";
-        ls    = "${pkgs.coreutils}/bin/ls --color=auto";
-        nm    = "${pkgs.findutils}/bin/find . -name";
-        par   = "${pkgs.parallel}/bin/parallel";
-        rm    = "${pkgs.my-scripts}/bin/trash";
-        rX    = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
-        scp   = "${pkgs.rsync}/bin/rsync -aP --inplace";
-        wipe  = "${pkgs.srm}/bin/srm -vfr";
-
-        proc  = "${pkgs.darwin.ps}/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
-
-        nstat = "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
-              + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
-              + " | ${pkgs.coreutils}/bin/tail -n +5";
+        b      = "${pkgs.git}/bin/git b";
+        l      = "${pkgs.git}/bin/git l";
+        w      = "${pkgs.git}/bin/git w";
+        g      = "${pkgs.gitAndTools.hub}/bin/hub";
+        git    = "${pkgs.gitAndTools.hub}/bin/hub";
+        ga     = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
+        good   = "${pkgs.git}/bin/git bisect good";
+        bad    = "${pkgs.git}/bin/git bisect bad";
+        ls     = "${pkgs.coreutils}/bin/ls --color=auto";
+        nm     = "${pkgs.findutils}/bin/find . -name";
+        par    = "${pkgs.parallel}/bin/parallel";
+        rm     = "${pkgs.my-scripts}/bin/trash";
+        rX     = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
+        scp    = "${pkgs.rsync}/bin/rsync -aP --inplace";
+        wipe   = "${pkgs.srm}/bin/srm -vfr";
+        switch = "${pkgs.nix-scripts}/bin/u ${localconfig.hostname} switch";
+        proc   = "${pkgs.darwin.ps}/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
+        nstat  = "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
+               + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
+               + " | ${pkgs.coreutils}/bin/tail -n +5";
 
         # Use whichever cabal is on the PATH.
-        cn    = "cabal new-configure --enable-tests --enable-benchmarks";
-        cnp   = "cabal new-configure --enable-tests --enable-benchmarks " +
-                "--enable-profiling --ghc-options=-fprof-auto";
-        cb    = "cabal new-build";
+        cn     = "cabal new-configure --enable-tests --enable-benchmarks";
+        cnp    = "cabal new-configure --enable-tests --enable-benchmarks " +
+                 "--enable-profiling --ghc-options=-fprof-auto";
+        cb     = "cabal new-build";
 
         # Use whichever terraform is on the PATH.
         deploy = ''${pkgs.nix}/bin/nix-shell --pure --command '' +
@@ -681,7 +680,7 @@ in rec {
         ssl sslcertck sslcertfile "${ca-bundle_crt}"
         folder INBOX
         fetchall
-        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e"
+        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e"
     '';
 
     configFile."fetchmail/config-lists".text = ''
@@ -690,7 +689,7 @@ in rec {
         ssl sslcertck sslcertfile "${ca-bundle_crt}"
         folder 'Lists'
         fetchall
-        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -e -m list.misc"
+        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e -m list.misc"
     '';
   };
 }

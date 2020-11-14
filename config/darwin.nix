@@ -3,6 +3,7 @@
 let home_directory = "/Users/johnw";
     xdg_configHome = "${home_directory}/.config";
     xdg_dataHome = "${home_directory}/.local/share";
+    xdg_cacheHome = "${home_directory}/.cache";
     tmp_directory = "/tmp";
     localconfig = import <localconfig>;
 
@@ -63,7 +64,7 @@ in {
         cp -pL /etc/pdnsd.conf ${tmp_directory}/.pdnsd.conf
         chmod 700 ${tmp_directory}/.pdnsd.conf
         chown root ${tmp_directory}/.pdnsd.conf
-        touch ${home_directory}/.cache/pdnsd/pdnsd.cache
+        touch ${xdg_cacheHome}/pdnsd/pdnsd.cache
         ${pkgs.pdnsd}/sbin/pdnsd -c ${tmp_directory}/.pdnsd.conf
       '';
       serviceConfig.RunAtLoad = true;
@@ -151,7 +152,7 @@ in {
             --log-file ${xdg_dataHome}/rdm/rtags.launchd.log
       '';
       serviceConfig.Sockets.Listeners.SockPathName
-        = "${home_directory}/.cache/rdm/socket";
+        = "${xdg_cacheHome}/rdm/socket";
     };
 
     haproxy = runCommand "${pkgs.haproxy}/bin/haproxy -- /etc/haproxy.conf";
@@ -304,7 +305,9 @@ in {
 
     pathsToLink = [ "/info" "/etc" "/share" "/include" "/lib" "/libexec" ];
 
+    etc."dovecot/modules".source = "/run/current-system/sw/lib/dovecot";
     etc."dovecot/dovecot.conf".text = ''
+      base_dir = ${home_directory}/Library/Application Support/dovecot
       default_login_user = johnw
       default_internal_user = johnw
       auth_mechanisms = plain
@@ -313,7 +316,8 @@ in {
       log_path = syslog
       mail_gid = 20
       mail_location = mdbox:${home_directory}/Messages/Mailboxes
-      mail_plugin_dir = ${config.system.path}/lib/dovecot
+      login_plugin_dir = /run/current-system/sw/lib/dovecot
+      mail_plugin_dir = /run/current-system/sw/lib/dovecot
       mail_plugins = fts fts_lucene zlib
       mail_uid = 501
       postmaster_address = postmaster@newartisans.com
@@ -371,7 +375,7 @@ in {
     etc."pdnsd.conf".text = ''
       global {
           perm_cache   = 8192;
-          cache_dir    = "${home_directory}/.cache/pdnsd";
+          cache_dir    = "${xdg_cacheHome}/pdnsd";
           server_ip    = 127.0.0.1;
           status_ctl   = on;
           query_method = udp_tcp;
