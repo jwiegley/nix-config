@@ -289,6 +289,7 @@ pkgs: epkgs: with epkgs;
   org-pdftools
   org-ref
   org-rich-yank
+  org-roam
   org-super-agenda
   org-web-tools
   orgit

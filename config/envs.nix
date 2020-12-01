@@ -15,6 +15,10 @@ rec {
   projects-env = pkgs.stdenv.mkDerivation rec {
     name = "projects";
     srcs = [
+      (import ~/dfinity/master/rs {}).shell
+      (import ~/dfinity/consensus-model {}).env
+      (import ~/dfinity/consensus-model/reference { returnShellEnv = true; })
+
       (import ~/src/agda/plfa {}).env
       (import ~/src/category-theory {}).env
       (import ~/src/hnix { returnShellEnv = true; })

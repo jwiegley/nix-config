@@ -20,6 +20,7 @@ let
     "parsec-free"
     "pipes-async"
     "pipes-files"
+    "pushme"
     "recursors"
     "runmany"
     "sitebuilder"
@@ -58,15 +59,6 @@ let
     time-compat           = doJailbreak super.time-compat;
     time-recurrence       = unmarkBroken (doJailbreak super.time-recurrence);
     rebase                = doJailbreak super.rebase;
-
-    pushme = self.callCabal2nix "pushme"
-      (pkgs.fetchFromGitHub {
-        owner  = "jwiegley";
-        repo   = "pushme";
-        rev    = "7bfc48b08ffb7a96d8c96c1f2a418e6e1a46d813";
-        sha256 = "1km225gzziqkkw905iga1crkqakc0wgjddd17b1fnpl11a8r8vzn";
-        # date = 2020-03-03T16:38:31-08:00;
-      }) {};
 
     ListLike = overrideCabal super.ListLike (attrs: {
       libraryHaskellDepends =
