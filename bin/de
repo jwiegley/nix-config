@@ -89,7 +89,7 @@ export CABAL_BUILDDIR=$PRODUCTS/dist
 EOF
         fi
 
-        if [[ -f Cargo.toml ]]; then
+        if [[ -f Cargo.toml || -f ../Cargo.toml ]]; then
             cat >> .envrc <<EOF
 
 export CARGO_TARGET_DIR=$PRODUCTS/target
