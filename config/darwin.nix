@@ -80,6 +80,12 @@ in {
       '';
       serviceConfig = iterate 2700;
     };
+
+     tank = {
+       command = "/usr/local/bin/zpool import tank";
+       serviceConfig.RunAtLoad = true;
+       serviceConfig.KeepAlive = false;
+     };
    } else {});
 
   launchd.user.agents =
@@ -108,11 +114,13 @@ in {
 
     dovecot = {
       command = "${pkgs.dovecot}/libexec/dovecot/imap -c /etc/dovecot/dovecot.conf";
-      serviceConfig.WorkingDirectory = "${pkgs.dovecot}/lib";
-      serviceConfig.inetdCompatibility.Wait = "nowait";
-      serviceConfig.Sockets.Listeners = {
-        SockNodeName = "127.0.0.1";
-        SockServiceName = "9143";
+      serviceConfig = {
+        WorkingDirectory = "${pkgs.dovecot}/lib";
+        inetdCompatibility.Wait = "nowait";
+        Sockets.Listeners = {
+          SockNodeName = "127.0.0.1";
+          SockServiceName = "9143";
+        };
       };
     };
 
@@ -120,11 +128,13 @@ in {
       command = "${pkgs.leafnode}/sbin/leafnode "
         + "-d ${home_directory}/Messages/Newsdir "
         + "-F ${home_directory}/Messages/leafnode/config";
-      serviceConfig.WorkingDirectory = "${pkgs.dovecot}/lib";
-      serviceConfig.inetdCompatibility.Wait = "nowait";
-      serviceConfig.Sockets.Listeners = {
-        SockNodeName = "127.0.0.1";
-        SockServiceName = "9119";
+      serviceConfig = {
+        WorkingDirectory = "${pkgs.dovecot}/lib";
+        inetdCompatibility.Wait = "nowait";
+        Sockets.Listeners = {
+          SockNodeName = "127.0.0.1";
+          SockServiceName = "9119";
+        };
       };
     };
 
