@@ -18,7 +18,7 @@ stdenv.mkDerivation rec {
 
   installFlags = "COQLIB=$(out)/lib/coq/${coq.coq-version}/";
 
-  meta = with stdenv.lib; {
+  meta = with pkgs.lib; {
     homepage = https://github.com/Armael/coq-procrastination;
     description = "A small Coq library for collecting side conditions and deferring their proof";
     maintainers = with maintainers; [ jwiegley ];

@@ -17,7 +17,7 @@ transfig = stdenv.mkDerivation rec {
   hardeningDisable = [ "format" ];
 
   meta = {
-    platforms = stdenv.lib.platforms.unix;
+    platforms = super.lib.platforms.unix;
   };
 };
 
@@ -34,7 +34,7 @@ fig2dev = stdenv.mkDerivation {
   hardeningDisable = [ "format" ];
 
   meta = {
-    platforms = stdenv.lib.platforms.unix;
+    platforms = super.lib.platforms.unix;
   };
 };
 

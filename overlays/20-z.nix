@@ -19,7 +19,7 @@ z = with super; stdenv.mkDerivation rec {
     cp -p z.sh $out/share/z.sh
   '';
 
-  meta = with stdenv.lib; {
+  meta = with super.lib; {
     description = "Tracks your most used directories, based on 'frecency'.";
     homepage = https://github.com/rupa/z;
     license = licenses.mit;

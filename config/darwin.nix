@@ -220,6 +220,7 @@ in {
     config = {
       allowUnfree = true;
       allowBroken = false;
+      allowInsecure = false;
       allowUnsupportedSystem = false;
 
       # jww (2020-03-02): Support for OpenSSL 1.0.2 ended with 2019.

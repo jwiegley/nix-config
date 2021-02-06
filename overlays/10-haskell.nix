@@ -35,30 +35,43 @@ let
     let pkg = p: self.packageDrv ghc p {}; in self: super:
     with pkgs.haskell.lib; {
 
+    active                = unmarkBroken (doJailbreak super.active);
     Agda                  = doJailbreak (dontHaddock super.Agda);
     Diff                  = dontCheck super.Diff;
-    aeson                 = overrideCabal super.aeson (attrs: {
-      libraryHaskellDepends =
-        attrs.libraryHaskellDepends ++ [ self.contravariant ];
-    });
+    EdisonAPI             = unmarkBroken super.EdisonAPI;
+    EdisonCore            = unmarkBroken super.EdisonCore;
     base-compat-batteries = doJailbreak super.base-compat-batteries;
-    diagrams-contrib      = doJailbreak super.diagrams-contrib;
+    diagrams              = unmarkBroken super.diagrams;
+    diagrams-cairo        = unmarkBroken super.diagrams-cairo;
+    diagrams-contrib      = unmarkBroken (doJailbreak super.diagrams-contrib);
+    diagrams-core         = unmarkBroken super.diagrams-core;
     diagrams-graphviz     = doJailbreak super.diagrams-graphviz;
-    diagrams-svg          = doJailbreak super.diagrams-svg;
+    diagrams-lib          = unmarkBroken super.diagrams-lib;
+    diagrams-svg          = unmarkBroken (doJailbreak super.diagrams-svg);
+    dual-tree             = unmarkBroken super.dual-tree;
+    force-layout          = unmarkBroken super.force-layout;
     generic-lens          = dontCheck super.generic-lens;
     haddock-library       = dontHaddock super.haddock-library;
     hasktags              = dontCheck super.hasktags;
     language-ecmascript   = doJailbreak super.language-ecmascript;
     liquidhaskell         = doJailbreak super.liquidhaskell;
+    monoid-extras         = unmarkBroken (doJailbreak super.monoid-extras);
     pipes-binary          = doJailbreak super.pipes-binary;
     pipes-text            = unmarkBroken (doJailbreak super.pipes-text);
-    EdisonAPI             = unmarkBroken super.EdisonAPI;
-    EdisonCore            = unmarkBroken super.EdisonCore;
     pipes-zlib            = dontCheck (doJailbreak super.pipes-zlib);
+    rebase                = doJailbreak super.rebase;
+    size-based            = unmarkBroken super.size-based;
+    statestack            = unmarkBroken super.statestack;
+    svg-builder           = unmarkBroken super.svg-builder;
+    testing-feat          = unmarkBroken super.testing-feat;
     text-show             = dontCheck (doJailbreak super.text-show);
     time-compat           = doJailbreak super.time-compat;
     time-recurrence       = unmarkBroken (doJailbreak super.time-recurrence);
-    rebase                = doJailbreak super.rebase;
+
+    aeson = overrideCabal super.aeson (attrs: {
+      libraryHaskellDepends =
+        attrs.libraryHaskellDepends ++ [ self.contravariant ];
+    });
 
     ListLike = overrideCabal super.ListLike (attrs: {
       libraryHaskellDepends =
@@ -176,15 +189,15 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
     !( type == "unknown"
        || baseName == "cabal.sandbox.config"
        || baseName == "result"
-       || pkgs.stdenv.lib.hasSuffix ".hdevtools.sock" path
-       || pkgs.stdenv.lib.hasSuffix ".sock" path
-       || pkgs.stdenv.lib.hasSuffix ".hi" path
-       || pkgs.stdenv.lib.hasSuffix ".hi-boot" path
-       || pkgs.stdenv.lib.hasSuffix ".o" path
-       || pkgs.stdenv.lib.hasSuffix ".dyn_o" path
-       || pkgs.stdenv.lib.hasSuffix ".dyn_p" path
-       || pkgs.stdenv.lib.hasSuffix ".o-boot" path
-       || pkgs.stdenv.lib.hasSuffix ".p_o" path);
+       || pkgs.lib.hasSuffix ".hdevtools.sock" path
+       || pkgs.lib.hasSuffix ".sock" path
+       || pkgs.lib.hasSuffix ".hi" path
+       || pkgs.lib.hasSuffix ".hi-boot" path
+       || pkgs.lib.hasSuffix ".o" path
+       || pkgs.lib.hasSuffix ".dyn_o" path
+       || pkgs.lib.hasSuffix ".dyn_p" path
+       || pkgs.lib.hasSuffix ".o-boot" path
+       || pkgs.lib.hasSuffix ".p_o" path);
 };
 
 haskell = pkgs.haskell // {
@@ -204,12 +217,20 @@ haskell = pkgs.haskell // {
          "pandoc"
        ])
       );
+
+    ghc8103 = overrideHask "ghc8103" pkgs.haskell.packages.ghc8103 (self: super:
+      (breakout super [
+         "hakyll"
+         "pandoc"
+       ])
+      );
   };
 };
 
 haskellPackages_8_6 = self.haskell.packages.ghc865;
 haskellPackages_8_8 = self.haskell.packages.ghc884;
 haskellPackages_8_10 = self.haskell.packages.ghc8101;
+haskellPackages_9_0 = self.haskell.packages.ghc901;
 
 haskellPackages = self.haskell.packages.${self.ghcDefaultVersion};
 haskPkgs = self.haskellPackages;

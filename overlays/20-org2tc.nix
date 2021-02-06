@@ -13,7 +13,7 @@ org2tc = with super; stdenv.mkDerivation rec {
     cp -p org2tc $out/bin
   '';
 
-  meta = with stdenv.lib; {
+  meta = with super.lib; {
     description = "Conversion utility from Org-mode to timeclock format";
     homepage = https://github.com/jwiegley/org2tc;
     license = licenses.mit;

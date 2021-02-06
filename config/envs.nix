@@ -30,7 +30,7 @@ rec {
     buildPhase = "true";
     installPhase = ''
       mkdir $out
-    '' + (pkgs.stdenv.lib.concatStrings (builtins.map (src: ''
+    '' + (pkgs.lib.concatStrings (builtins.map (src: ''
       ln -s ${src} $out
     '') srcs));
   };

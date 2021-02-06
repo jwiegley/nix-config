@@ -28,4 +28,18 @@ in
     csvkit
     yq
     ;
+
+  inherit (nixpkgs {
+    # known-good-20200930_084551
+    rev    = "1a2e59c7696e8e488ffe69148172f149a314a8d9";
+    sha256 = "0ikyg0pgr3w60lm0fyvfqi1d4hkg6bxy7rblnr0rfaxhx562gsbj";
+  })
+    cachix
+    gpgme
+    mitmproxy
+    prooftree
+    qemu
+    smartmontools
+    valgrind
+    ;
 }

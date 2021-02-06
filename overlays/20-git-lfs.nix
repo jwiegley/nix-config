@@ -21,7 +21,7 @@ git-lfs = with super; stdenv.mkDerivation rec {
     cp -p git-lfs $out/bin
   '';
 
-  meta = with stdenv.lib; {
+  meta = with super.lib; {
     description = "An open source Git extension for versioning large files";
     homepage = https://git-lfs.github.com/;
     license = licenses.mit;

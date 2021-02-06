@@ -35,21 +35,21 @@ coqFilterSource = paths: src: pkgs.lib.cleanSourceWith {
        || baseName == "Makefile.coq"
        || baseName == "Makefile.coq-old.conf"
        || baseName == "result"
-       || pkgs.stdenv.lib.hasSuffix ".a" path
-       || pkgs.stdenv.lib.hasSuffix ".o" path
-       || pkgs.stdenv.lib.hasSuffix ".cmi" path
-       || pkgs.stdenv.lib.hasSuffix ".cmo" path
-       || pkgs.stdenv.lib.hasSuffix ".cmx" path
-       || pkgs.stdenv.lib.hasSuffix ".cmxa" path
-       || pkgs.stdenv.lib.hasSuffix ".cmxs" path
-       || pkgs.stdenv.lib.hasSuffix ".ml.d" path
-       || pkgs.stdenv.lib.hasSuffix ".ml4" path
-       || pkgs.stdenv.lib.hasSuffix ".ml4.d" path
-       || pkgs.stdenv.lib.hasSuffix ".mllib.d" path
-       || pkgs.stdenv.lib.hasSuffix ".aux" path
-       || pkgs.stdenv.lib.hasSuffix ".glob" path
-       || pkgs.stdenv.lib.hasSuffix ".v.d" path
-       || pkgs.stdenv.lib.hasSuffix ".vo" path);
+       || pkgs.lib.hasSuffix ".a" path
+       || pkgs.lib.hasSuffix ".o" path
+       || pkgs.lib.hasSuffix ".cmi" path
+       || pkgs.lib.hasSuffix ".cmo" path
+       || pkgs.lib.hasSuffix ".cmx" path
+       || pkgs.lib.hasSuffix ".cmxa" path
+       || pkgs.lib.hasSuffix ".cmxs" path
+       || pkgs.lib.hasSuffix ".ml.d" path
+       || pkgs.lib.hasSuffix ".ml4" path
+       || pkgs.lib.hasSuffix ".ml4.d" path
+       || pkgs.lib.hasSuffix ".mllib.d" path
+       || pkgs.lib.hasSuffix ".aux" path
+       || pkgs.lib.hasSuffix ".glob" path
+       || pkgs.lib.hasSuffix ".v.d" path
+       || pkgs.lib.hasSuffix ".vo" path);
 };
 
 coq_8_9_override = pkgs.coq_8_9.override {
@@ -72,7 +72,7 @@ coq_8_12_override = pkgs.coq_8_12.override {
   buildIde = true;
 };
 
-coq_HEAD = with pkgs; stdenv.lib.overrideDerivation self.coq_8_12_override (attrs: rec {
+coq_HEAD = with pkgs; pkgs.lib.overrideDerivation self.coq_8_12_override (attrs: rec {
   version = "HEAD";
   name = "coq-${version}-pre";
   coq-version = "${version}";

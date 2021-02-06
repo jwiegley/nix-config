@@ -23,7 +23,7 @@ git-tbdiff = with super; stdenv.mkDerivation rec {
     cp -p git-tbdiff.py $out/bin/git-tbdiff
   '';
 
-  meta = with stdenv.lib; {
+  meta = with super.lib; {
     description = "tbdiff shows the differences between two versions of a patch series";
     homepage = https://github.com/trast/tbdiff;
     license = licenses.mit;

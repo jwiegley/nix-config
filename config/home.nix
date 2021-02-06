@@ -6,7 +6,7 @@ let home_directory = builtins.getEnv "HOME";
     ca-bundle_crt = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
     emacs-server  = "${tmp_directory}/johnw-emacs/server";
 
-    lib = pkgs.stdenv.lib;
+    lib = pkgs.lib;
     localconfig = import <localconfig>;
 
     vulcan_ethernet = "192.168.1.69";
@@ -511,7 +511,7 @@ in rec {
 
         nixos   = onHost "vulcan" "192.168.118.128";
         dfinity = onHost "vulcan" "192.168.118.136";
-        macos   = onHost "vulcan" "172.16.20.136";
+        macos   = onHost "vulcan" "172.16.20.139";
         ubuntu  = onHost "vulcan" "172.16.20.138";
 
         elpa        = { hostname = "elpa.gnu.org"; user = "root"; };

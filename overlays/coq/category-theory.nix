@@ -17,10 +17,10 @@ stdenv.mkDerivation rec {
   #     !( type == "directory" && builtins.elem baseName [".git"])
   #     &&
   #     !( type == "unknown"
-  #        || pkgs.stdenv.lib.hasSuffix ".vo" path
-  #        || pkgs.stdenv.lib.hasSuffix ".aux" path
-  #        || pkgs.stdenv.lib.hasSuffix ".v.d" path
-  #        || pkgs.stdenv.lib.hasSuffix ".glob" path))
+  #        || pkgs.lib.hasSuffix ".vo" path
+  #        || pkgs.lib.hasSuffix ".aux" path
+  #        || pkgs.lib.hasSuffix ".v.d" path
+  #        || pkgs.lib.hasSuffix ".glob" path))
   #   ~/src/category-theory;
 
   buildInputs = [ coq.ocaml coq.camlp5 coq.findlib coq equations ];
@@ -29,7 +29,7 @@ stdenv.mkDerivation rec {
 
   installFlags = "COQLIB=$(out)/lib/coq/${coq.coq-version}/";
 
-  meta = with stdenv.lib; {
+  meta = with pkgs.lib; {
     homepage = https://github.com/jwiegley/category-theory;
     description = "An axiom-free category theory library in Coq";
     maintainers = with maintainers; [ jwiegley ];

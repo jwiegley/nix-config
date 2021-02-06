@@ -20,7 +20,7 @@ tsvutils = with super; stdenv.mkDerivation rec {
         -exec cp -pL {} $out/bin \;
   '';
 
-  meta = with stdenv.lib; {
+  meta = with super.lib; {
     description = "Utilities for processing tab-separated files";
     homepage = https://github.com/brendano/tsvutils;
     license = licenses.mit;

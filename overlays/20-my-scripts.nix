@@ -17,7 +17,7 @@ my-scripts = with self; stdenv.mkDerivation {
         's^#!/usr/bin/env runhaskell^#!${self.haskellPackages.ghc}/bin/runhaskell^;' $out/bin/*
   '';
 
-  meta = with stdenv.lib; {
+  meta = with pkgs.lib; {
     description = "John Wiegley's various scripts";
     homepage = https://github.com/jwiegley;
     license = licenses.mit;

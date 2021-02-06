@@ -47,7 +47,7 @@ stdenv.mkDerivation rec {
     make -f Makefile.coq COQLIB=$out/lib/coq/${coq.coq-version}/ install
   '';
 
-  meta = with stdenv.lib; {
+  meta = with super.lib; {
     homepage = git://github.com/QuickChick/QuickChick.git;
     description = "Randomized property-based testing plugin for Coq; a clone of Haskell QuickCheck";
     maintainers = with maintainers; [ jwiegley ];

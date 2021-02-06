@@ -15,7 +15,7 @@ git-scripts = with self; stdenv.mkDerivation {
         -exec cp -pL {} $out/bin \;
   '';
 
-  meta = with stdenv.lib; {
+  meta = with super.lib; {
     description = "John Wiegley's various scripts";
     homepage = https://github.com/jwiegley;
     license = licenses.mit;

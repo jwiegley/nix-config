@@ -32,7 +32,7 @@ docker-machine-driver-vmware = super.buildGoModule rec {
     find .
   '';
 
-  meta = with super.stdenv.lib; {
+  meta = with super.lib; {
     homepage = https://github.com/machine-drivers/docker-machine-driver-vmware;
     description = "Docker machine driver for VMware Fusion and Workstation";
     license = licenses.asl20;
