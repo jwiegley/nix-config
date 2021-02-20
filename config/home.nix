@@ -99,7 +99,7 @@ in rec {
         # ".jira.d".source  = "${xdg.configHome}/jira";
         # ".macbeth".source = "${xdg.configHome}/macbeth";
         # ".recoll".source  = "${xdg.configHome}/recoll";
-        # ".slate".source   = "${xdg.configHome}/slate/config";
+        ".slate".source   = "${xdg.configHome}/slate/config";
         # ".zekr".source    = "${xdg.configHome}/zekr";
 
         # ".dl".source = "${home_directory}/Downloads";
@@ -675,7 +675,7 @@ in rec {
     '';
 
     configFile."fetchmail/config".text = ''
-      poll imap.fastmail.com protocol IMAP port 993
+      poll imap.fastmail.com protocol IMAP port 993 auth password
         user '${programs.git.userEmail}' there is johnw here
         ssl sslcertck sslcertfile "${ca-bundle_crt}"
         folder INBOX
@@ -684,7 +684,7 @@ in rec {
     '';
 
     configFile."fetchmail/config-lists".text = ''
-      poll imap.fastmail.com protocol IMAP port 993
+      poll imap.fastmail.com protocol IMAP port 993 auth password
         user '${programs.git.userEmail}' there is johnw here
         ssl sslcertck sslcertfile "${ca-bundle_crt}"
         folder 'Lists'

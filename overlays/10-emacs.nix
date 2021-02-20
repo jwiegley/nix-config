@@ -112,8 +112,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "0xv77djf73i107mhq56ix8b79apl3az2fqvr1qbixv2pzkzrc516";
-      # date = 2021-01-05T19:07:31-0800;
+      sha256 = "12ls86q5mark4dg9za70g67d1n3qgs3456l0kkf0079903m3gjhh";
+      # date = 2021-02-15T10:11:40-0800;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -615,6 +615,36 @@ let
           '';
           homepage = Agda.meta.homepage;
           license = Agda.meta.license;
+        };
+      };
+
+    auctex = eself.elpaBuild {
+        pname = "auctex";
+        ename = "auctex";
+        version = "13.0.4";
+        src = fetchurl {
+          url = "https://elpa.gnu.org/packages/auctex-13.0.4.tar";
+          sha256 = "1362dqb8mcaddda9849gqsj6rzlfq18xprddb74j02884xl7hq65";
+        };
+        packageRequires = with eself; [ cl-lib emacs ];
+        meta = {
+          homepage = "https://elpa.gnu.org/packages/auctex.html";
+          license = lib.licenses.free;
+        };
+      };
+
+    ebdb = eself.elpaBuild {
+        pname = "ebdb";
+        ename = "ebdb";
+        version = "0.6.22";
+        src = fetchurl {
+          url = "https://elpa.gnu.org/packages/ebdb-0.6.22.tar";
+          sha256 = "0dljl21n6508c7ash7l6zgxhpn2wdfzga0va63d4k9nwnqmkvsgz";
+        };
+        packageRequires = with eself; [ cl-lib emacs seq ];
+        meta = {
+          homepage = "https://elpa.gnu.org/packages/ebdb.html";
+          license = lib.licenses.free;
         };
       };
 

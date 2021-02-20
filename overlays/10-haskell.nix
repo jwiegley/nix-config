@@ -48,7 +48,7 @@ let
     diagrams-graphviz     = doJailbreak super.diagrams-graphviz;
     diagrams-lib          = unmarkBroken super.diagrams-lib;
     diagrams-svg          = unmarkBroken (doJailbreak super.diagrams-svg);
-    dual-tree             = unmarkBroken super.dual-tree;
+    dual-tree             = unmarkBroken (doJailbreak super.dual-tree);
     force-layout          = unmarkBroken super.force-layout;
     generic-lens          = dontCheck super.generic-lens;
     haddock-library       = dontHaddock super.haddock-library;

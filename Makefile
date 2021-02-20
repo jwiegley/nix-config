@@ -189,14 +189,11 @@ clean: gc check
 
 fullclean: gc-old check
 
-remove-build-products:
-	clean $(HOME)/doc $(HOME)/src
-
 gc:
 	$(call delete-generations-all,$(MAX_AGE))
 	$(NIX_GC) --delete-older-than $(MAX_AGE)d
 
-gc-old: remove-build-products
+gc-old:
 	$(call delete-generations-all,1)
 	$(NIX_GC) --delete-old
 
