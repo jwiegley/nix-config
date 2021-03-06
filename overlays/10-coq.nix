@@ -60,8 +60,7 @@ coq_HEAD = with pkgs; pkgs.lib.overrideDerivation self.coq_8_13 (attrs: rec {
   src = ~/src/coq;
 
   buildInputs = attrs.buildInputs
-    ++ (with pkgs; [ ocaml-ng.ocamlPackages_4_06.num
-                     texFull hevea fig2dev imagemagick_light ]);
+    ++ (with pkgs; [ texFull hevea fig2dev imagemagick_light ]);
 
   setupHook = writeText "setupHook.sh" ''
     addCoqPath () {

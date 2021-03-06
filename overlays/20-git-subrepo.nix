@@ -2,14 +2,14 @@ self: super: {
 
 git-subrepo = with super; stdenv.mkDerivation rec {
   name = "git-subrepo-${version}";
-  version = "a04d8c2e";
+  version = "2f685964";
 
   src = fetchFromGitHub {
     owner = "ingydotnet";
     repo = "git-subrepo";
-    rev = "a04d8c2e55c31931d66b5c92ef6d4fe4c59e3226";
-    sha256 = "0n10qnc8kyms6cv65k1n5xa9nnwpwbjn9h2cq47llxplawzqgrvp";
-    # date = 2020-01-09T17:28:02-06:00;
+    rev = "2f6859642ae9104a9699021218bf607598f5a0ea";
+    sha256 = "0gwm9x4kla4w9gb22pq6ffzi7mhmk550lfrpx1pyf8kb18kd9vmh";
+    # date = 2020-11-25T19:55:46-06:00;
   };
 
   buildInputs = with self; [ which git ];

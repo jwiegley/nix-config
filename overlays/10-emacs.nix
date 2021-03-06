@@ -112,8 +112,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "12ls86q5mark4dg9za70g67d1n3qgs3456l0kkf0079903m3gjhh";
-      # date = 2021-02-15T10:11:40-0800;
+      sha256 = "0bv2jwmqd3parq2fln5bdrz9r5f5436c1dwqda7rn0685aznynz3";
+      # date = 2021-03-03T14:06:24-0800;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -254,16 +254,16 @@ let
       src = fetchFromGitHub {
         owner = "emacsmirror";
         repo = "bookmark-plus";
-        rev = "b6a71e8d153ae8b7bc9afed1cf7659765cfc1b0e";
-        sha256 = "1nj9dci6wgwc531vigirx70g3nsw33bsh6ni3bq4dl0x1s4zy6gz";
-        # date = 2020-02-14T18:53:14+01:00;
+        rev = "cb16d5384f031292487f4f0a68d4afb4ececed80";
+        sha256 = "1djbx6275lj4n5alq78kggjly7ick2j15qn6yh1givywbficd3wj";
+        # date = 2020-12-29T21:51:30+01:00;
       };
     };
 
     cell-mode = compileEmacsFiles {
       name = "cell-mode";
       src = fetchgit {
-        url = http://gitlab.com/dto/cell.el.git;
+        url = "http://gitlab.com/dto/cell.el.git";
         rev = "c7094eb2d8101988339b0a95ca7a4d4708901e68";
         sha256 = "00kgish9q8j5l6kg6n80a83a3dpbmkqqm2idqws41gsniyxaa93b";
         # date = 2019-09-15T23:00:16-04:00;
@@ -498,9 +498,9 @@ let
       src = fetchFromGitHub {
         owner = "zk-phi";
         repo = "sky-color-clock";
-        rev = "d39f3209faee629bbf140277ce897bae16818602";
-        sha256 = "0qha6x595bpc149bs8ra5zq0jndqimc6bhxssb8rbdxvpakqq553";
-        # date = 2019-11-06T11:53:28+09:00;
+        rev = "3522726a5af0421f70ff9db68bd889cb4c7b6e62";
+        sha256 = "0pbv595wfl48np02bm5nh174l87a2g6w1y8n2cr846awi0nm0hcn";
+        # date = 2020-08-22T23:41:42+09:00;
       };
       patches = [ ./emacs/patches/sky-color-clock.patch ];
     };
@@ -625,6 +625,7 @@ let
         src = fetchurl {
           url = "https://elpa.gnu.org/packages/auctex-13.0.4.tar";
           sha256 = "1362dqb8mcaddda9849gqsj6rzlfq18xprddb74j02884xl7hq65";
+          # date = 2021-03-03T14:05:04-0800;
         };
         packageRequires = with eself; [ cl-lib emacs ];
         meta = {
@@ -712,6 +713,32 @@ let
       };
     };
 
+    pdf-tools = esuper.pdf-tools.overrideAttrs (old: {
+      nativeBuildInputs = [
+        self.autoconf
+        self.automake
+        self.pkg-config
+        self.removeReferencesTo
+      ];
+      buildInputs = old.buildInputs ++ [ self.libpng self.zlib self.poppler ];
+      preBuild = ''
+        make server/epdfinfo
+        remove-references-to \
+          -t ${self.stdenv.cc.libc} \
+          -t ${self.glib.dev} \
+          -t ${self.libpng.dev} \
+          -t ${self.poppler.dev} \
+          -t ${self.zlib.dev} \
+          -t ${self.cairo.dev} \
+          server/epdfinfo
+      '';
+      recipe = self.writeText "recipe" ''
+        (pdf-tools
+        :repo "politza/pdf-tools" :fetcher github
+        :files ("lisp/pdf-*.el" "server/epdfinfo"))
+      '';
+    });
+
     proof-general =
       let texinfo = pkgs.texinfo4 ;
           texLive = pkgs.texlive.combine {
@@ -724,9 +751,9 @@ let
       src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "03e427a8f19485e12b2f95387ed3e0bff7cc944c";
-        sha256 = "0ykxb4xdsxv2mja620kf61k2l18scs0jdsfsg1kzs2qf4ddjscyn";
-        # date = 2020-06-23T19:48:59+02:00;
+        rev = "7844e312b2a192c4245d0d05c12908efc5730e3b";
+        sha256 = "0ky8ivcwkjdclh1vh9hi8wc5zljamby10fd4m73nnkdi2lr6x5nr";
+        # date = 2021-02-27T20:42:42+01:00;
       };
 
       # src = ~/src/proof-general;
@@ -757,12 +784,7 @@ let
       pname = "use-package";
       version = "20180127.1411";
       src = ~/src/dot-emacs/lisp/use-package;
-      recipe = fetchurl {
-        url = "https://raw.githubusercontent.com/milkypostman/melpa/51a19a251c879a566d4ae451d94fcb35e38a478b/recipes/use-package";
-        sha256 = "0d0zpgxhj6crsdi9sfy30fn3is036apm1kz8fhjg1yzdapf1jdyp";
-        name = "use-package";
-        # date = 2020-05-17T11:51:29-0700;
-      };
+      inherit (esuper.use-package) recipe;
       packageRequires = with eself; [ emacs bind-key ];
       meta = {
         homepage = "https://melpa.org/#/use-package";

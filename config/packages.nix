@@ -2,7 +2,7 @@
 
 with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe gitAndTools.git-annex)
-  (exe haskPkgs.cabal-install)  # for sdist/publish
+  (exe haskPkgs.cabal-install)
   (exe haskPkgs.git-all)
   (exe haskPkgs.hpack)
   (exe haskPkgs.lhs2tex)
@@ -10,8 +10,8 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.runmany)
   (exe haskPkgs.sizes)
   (exe haskPkgs.una)
-  (exe haskellPackages_8_6.git-monitor)
-  (exe haskellPackages_8_6.hours)
+  (exe haskPkgs.git-monitor)
+  (exe haskPkgs.hours)
   (pass.withExtensions (ext: with ext; [ pass-otp pass-genphrase ]))
   OnePassword-op
   apg

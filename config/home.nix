@@ -483,6 +483,19 @@ in rec {
       hashKnownHosts = true;
       userKnownHostsFile = "${xdg.configHome}/ssh/known_hosts";
 
+      extraConfig = ''
+        Host default
+          HostName 127.0.0.1
+          User vagrant
+          Port 2222
+          UserKnownHostsFile /dev/null
+          StrictHostKeyChecking no
+          PasswordAuthentication no
+          IdentityFile /Users/johnw/dfinity/master/.vagrant/machines/default/vmware_desktop/private_key
+          IdentitiesOnly yes
+          LogLevel FATAL
+      '';
+
       matchBlocks =
         let onHost = proxy: hostname: { inherit hostname; } //
           (if "${localconfig.hostname}" == proxy then {} else {
