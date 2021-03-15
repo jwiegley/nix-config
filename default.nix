@@ -9,7 +9,8 @@
     confAttr = "";
   }
 }: {
-  inherit darwin;
+  inherit (darwin) pkgs;
+
   nix-darwin   = darwin.system;
   home-manager = home-manager.activationPackage;
 }
