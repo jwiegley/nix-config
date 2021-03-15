@@ -1,0 +1,9 @@
+#!/bin/bash
+
+REV=$1
+SHA=$(nix-prefetch-url https://github.com/NixOS/nixpkgs/archive/${REV}.tar.gz)
+
+cat <<EOF
+, rev      ? "$REV"
+, sha256   ? "$SHA"
+EOF

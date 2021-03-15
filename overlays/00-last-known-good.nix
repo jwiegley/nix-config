@@ -35,5 +35,6 @@ in
     mitmproxy
     prooftree
     valgrind
+    wget
     ;
 }

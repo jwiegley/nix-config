@@ -121,6 +121,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   lipotell
   lnav
   lsof
+  lzip
   m-cli
   m4
   mercurialFull

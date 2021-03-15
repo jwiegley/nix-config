@@ -53,6 +53,8 @@ let
     ox-extra        = compileLocalFile "ox-extra.el";
     rs-gnus-summary = compileLocalFile "rs-gnus-summary.el";
     supercite       = compileLocalFile "supercite.el";
+    flymake         = compileLocalFile "flymake-1.0.9.el";
+    project         = compileLocalFile "project-0.5.3.el";
 
 
     magit-annex      = addBuildInputs esuper.magit-annex        [ pkgs.git ];
@@ -674,6 +676,20 @@ let
       };
     };
 
+    eglot = esuper.eglot.overrideAttrs(attrs: rec {
+      name = "eglot-${version}";
+      version = "20210306.2312";
+      src = fetchFromGitHub {
+        owner = "joaotavora";
+        repo = "eglot";
+        rev = "f0c770cfbbc75c7aeb22cd2b118bc3948596d7a7";
+        sha256 = "0qcjiawszs3v166q8nanifp465yd5ib2gl2ywrlmgk1l7ixr80wp";
+        fetchSubmodules = true;
+        # date = 2021-03-06T23:12:02+00:00;
+      };
+      buildInputs = with eself; [ eldoc flymake jsonrpc project xref ];
+    });
+
     lua-mode = esuper.lua-mode.overrideAttrs(attrs: rec {
       name = "lua-mode-${version}";
       version = "20190113.1350";
@@ -794,64 +810,29 @@ let
   };
 
   mkEmacsPackages = emacs:
-    (self.emacsPackagesFor emacs).overrideScope' (self: super:
-      pkgs.lib.fix
-        (pkgs.lib.extends
-           myEmacsPackageOverrides
-           (_: super.elpaPackages
-            // super.melpaPackages
-            // { inherit emacs;
-                 inherit (super) melpaBuild trivialBuild; })));
+    pkgs.lib.recurseIntoAttrs
+    ((self.emacsPackagesFor emacs).overrideScope' (_: super:
+       pkgs.lib.fix
+         (pkgs.lib.extends
+            myEmacsPackageOverrides
+            (_: super.elpaPackages
+             // super.melpaPackages
+             // { inherit emacs;
+                  inherit (super) melpaBuild trivialBuild; }))));
 
 in {
 
 emacs = self.emacs27;
-emacsPackagesNg = self.emacs27PackagesNg;
 
-emacs26_base = pkgs.emacs26.override {
+emacsPackagesNg = self.emacs27PackagesNg;
+emacsPackages   = self.emacsPackagesNg;
+
+emacs27_base = pkgs.emacs27.override rec {
   imagemagick = self.imagemagickBig;
   srcRepo = true;
+  # patches = [ ./emacs/clean-env-27.patch ];
+  # src = ~/src/emacs;
 };
-
-# emacs26 = with pkgs; self.emacs26_base.overrideAttrs(attrs: rec {
-#   CFLAGS = "-O3 -Ofast -march=native -funroll-loops " + attrs.CFLAGS;
-#   buildInputs = attrs.buildInputs ++
-#     [ libpng libjpeg libungif libtiff librsvg ];
-#   preConfigure = ''
-#     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
-#   '';
-# });
-
-# emacs26PackagesNg = mkEmacsPackages self.emacs26;
-
-# emacs26debug = with pkgs;
-#   (pkgs.emacs26.override {
-#      imagemagick = self.imagemagickBig;
-#      srcRepo = true;
-#    }).overrideAttrs(attrs: rec {
-#   name = "${attrs.name}-debug";
-#   CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
-#   buildInputs = attrs.buildInputs ++
-#     [ libpng libjpeg libungif libtiff librsvg ];
-#   preConfigure = ''
-#     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
-#   '';
-#   configureFlags = attrs.configureFlags ++
-#     [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
-# });
-
-# emacs26DebugPackagesNg = mkEmacsPackages self.emacs26debug;
-
-emacs27_base = self.emacs26_base.overrideAttrs(attrs: rec {
-  name = "emacs-${version}${versionModifier}";
-  version = "27.1"; versionModifier = ".0";
-  patches = [ ./emacs/clean-env-27.patch ];
-  src = ~/src/emacs;
-  # src = pkgs.fetchurl {
-  #   url = "mirror://gnu/emacs/pretest/${name}.tar.xz";
-  #   sha256 = "1x0z9hfq7n88amd32714g9182nfy5dmz9br0pjqajgq82vjn9qxk";
-  # };
-});
 
 emacs27 = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
   CFLAGS = "-O3 -march=native -funroll-loops " + attrs.CFLAGS;
@@ -864,6 +845,7 @@ emacs27 = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
 });
 
 emacs27PackagesNg = mkEmacsPackages self.emacs27;
+emacs27Packages   = self.emacs27PackagesNg;
 
 emacs27debug = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
   name = "${attrs.name}-debug";
@@ -951,20 +933,6 @@ emacsERCEnv = myPkgs: pkgs.myEnvFun {
     (self.emacsERCPackagesNg.emacsWithPackages myPkgs)
   ];
 };
-
-# emacs26Env = myPkgs: pkgs.myEnvFun {
-#   name = "emacs26";
-#   buildInputs = [
-#     (self.emacs26PackagesNg.emacsWithPackages myPkgs)
-#   ];
-# };
-
-# emacs26DebugEnv = myPkgs: pkgs.myEnvFun {
-#   name = "emacs26-debug";
-#   buildInputs = [
-#     (self.emacs26DebugPackagesNg.emacsWithPackages myPkgs)
-#   ];
-# };
 
 emacs27Env = myPkgs: pkgs.myEnvFun {
   name = "emacs27";

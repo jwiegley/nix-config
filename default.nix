@@ -4,11 +4,12 @@
 , configuration ? ./config/darwin.nix
 , darwin        ? import ./darwin { inherit nixpkgs configuration system pkgs; }
 , home-manager  ? import ./home-manager/home-manager/home-manager.nix {
-    inherit pkgs;
+    inherit (darwin) pkgs;
     confPath = ./config/home.nix;
     confAttr = "";
   }
 }: {
-  nix-darwin = darwin.system;
+  inherit darwin;
+  nix-darwin   = darwin.system;
   home-manager = home-manager.activationPackage;
 }
