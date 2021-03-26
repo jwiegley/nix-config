@@ -99,7 +99,6 @@ in rec {
         # ".jira.d".source  = "${xdg.configHome}/jira";
         # ".macbeth".source = "${xdg.configHome}/macbeth";
         # ".recoll".source  = "${xdg.configHome}/recoll";
-        ".slate".source   = "${xdg.configHome}/slate/config";
         # ".zekr".source    = "${xdg.configHome}/zekr";
 
         # ".dl".source = "${home_directory}/Downloads";
@@ -526,6 +525,7 @@ in rec {
         dfinity = onHost "vulcan" "192.168.118.136";
         macos   = onHost "vulcan" "172.16.20.139";
         ubuntu  = onHost "vulcan" "172.16.20.140";
+        glibc   = onHost "vulcan" "172.16.20.141";
 
         elpa        = { hostname = "elpa.gnu.org"; user = "root"; };
         haskell_org = { host = "*haskell.org";     user = "root"; };

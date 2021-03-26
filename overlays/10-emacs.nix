@@ -114,8 +114,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "0bv2jwmqd3parq2fln5bdrz9r5f5436c1dwqda7rn0685aznynz3";
-      # date = 2021-03-03T14:06:24-0800;
+      sha256 = "110lyim10z2b8pdflgpj5mw7rd0hiaz75h92qb0ivk4pb15phy2s";
+      # date = 2021-03-21T10:12:23-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -596,7 +596,7 @@ let
     };
 
     agda2-mode =
-      let Agda = pkgs.haskell.lib.dontHaddock self.haskellPackages_8_6.Agda; in
+      let Agda = pkgs.haskell.lib.dontHaddock self.haskellPackages.Agda; in
       eself.trivialBuild {
         pname = "agda-mode";
         version = Agda.version;

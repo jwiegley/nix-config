@@ -53,7 +53,7 @@ pkgs: epkgs: with epkgs;
   company-cabal
   company-coq
   # company-ghc
-  company-lsp
+  # company-lsp
   company-math
   company-nixos-options
   company-quickhelp

@@ -13,10 +13,7 @@ let
     "gitlib/gitlib-test"
   [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
     "hierarchy"
-  [ "hours" { compiler = "ghc865"; }
-    # hours only builds with 8.6.5, because time-recurrence has not been
-    # ported forward.
-  ]
+    "hours"
     "hnix"
     "logging"
     "monad-extras"
@@ -34,81 +31,38 @@ let
   packageDrv = ghc:
     callPackage (usingWithHoogle self.haskell.packages.${ghc}) ghc;
 
-  otherHackagePackages = ghc:
-    let pkg = p: self.packageDrv ghc p {}; in self: super:
-    with pkgs.haskell.lib; {
+  otherHackagePackages = ghc: hself: hsuper: with pkgs.haskell.lib; {
+    nix-diff = doJailbreak hsuper.nix-diff;
 
-    Agda                  = doJailbreak (dontHaddock super.Agda);
-    Diff                  = dontCheck super.Diff;
-    EdisonAPI             = unmarkBroken super.EdisonAPI;
-    EdisonCore            = unmarkBroken super.EdisonCore;
-    active                = unmarkBroken (doJailbreak super.active);
-    base-compat-batteries = doJailbreak super.base-compat-batteries;
-    cabal2nix             = dontCheck super.cabal2nix;
-    diagrams              = unmarkBroken super.diagrams;
-    diagrams-cairo        = unmarkBroken super.diagrams-cairo;
-    diagrams-contrib      = unmarkBroken (doJailbreak super.diagrams-contrib);
-    diagrams-core         = unmarkBroken super.diagrams-core;
-    diagrams-graphviz     = doJailbreak super.diagrams-graphviz;
-    diagrams-lib          = unmarkBroken super.diagrams-lib;
-    diagrams-svg          = unmarkBroken (doJailbreak super.diagrams-svg);
-    dual-tree             = unmarkBroken (doJailbreak super.dual-tree);
-    force-layout          = unmarkBroken super.force-layout;
-    generic-lens          = dontCheck super.generic-lens;
-    haddock-library       = dontHaddock super.haddock-library;
-    hasktags              = dontCheck super.hasktags;
-    language-ecmascript   = doJailbreak super.language-ecmascript;
-    liquidhaskell         = doJailbreak super.liquidhaskell;
-    monoid-extras         = unmarkBroken (doJailbreak super.monoid-extras);
-    pipes-binary          = doJailbreak super.pipes-binary;
-    pipes-text            = unmarkBroken (doJailbreak super.pipes-text);
-    pipes-zlib            = dontCheck (doJailbreak super.pipes-zlib);
-    random                = doJailbreak super.random;
-    rebase                = doJailbreak super.rebase;
-    size-based            = unmarkBroken super.size-based;
-    statestack            = unmarkBroken super.statestack;
-    svg-builder           = unmarkBroken super.svg-builder;
-    testing-feat          = unmarkBroken super.testing-feat;
-    text-show             = dontCheck (doJailbreak super.text-show);
-    time-compat           = doJailbreak super.time-compat;
-    time-recurrence       = unmarkBroken (doJailbreak super.time-recurrence);
+    gitlib = unmarkBroken
+      (hself.callCabal2nix "gitlib" ~/src/gitlib/gitlib {});
 
-    aeson = overrideCabal super.aeson (attrs: {
-      libraryHaskellDepends =
-        attrs.libraryHaskellDepends ++ [ self.contravariant ];
-    });
-
-    ListLike = overrideCabal super.ListLike (attrs: {
-      libraryHaskellDepends =
-        attrs.libraryHaskellDepends ++ [ self.semigroups ];
-    });
-
-    ghc-datasize = overrideCabal super.ghc-datasize (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
-    ghc-heap-view = overrideCabal super.ghc-heap-view (attrs: {
-      enableLibraryProfiling    = false;
-      enableExecutableProfiling = false;
-    });
-
-    timeparsers = dontCheck (doJailbreak
-      (self.callCabal2nix "timeparsers" (pkgs.fetchFromGitHub {
-        owner  = "jwiegley";
-        repo   = "timeparsers";
-        rev    = "ebdc0071f43833b220b78523f6e442425641415d";
-        sha256 = "0h8wkqyvahp0csfcj5dl7j56ib8m1aad5kwcsccaahiciic249xq";
-        # date = 2017-01-19T16:47:50-08:00;
+    diagrams-cairo = unmarkBroken (doJailbreak
+      (hself.callCabal2nix "diagrams-cairo" (pkgs.fetchFromGitHub {
+        owner  = "diagrams";
+        repo   = "diagrams-cairo";
+        rev    = "533e4f4f18f961543bb1d78493c750dec45fd4a3";
+        sha256 = "18z38b8hq0laxd2q458pa58z3ls1fm9l3p09vsi3q8q4605d84k6";
+        # date = 2020-02-08T04:32:35-06:00;
       }) {}));
 
-    ghc-exactprint = self.callCabal2nix "ghc-exactprint"
-      (pkgs.fetchFromGitHub {
-         owner  = "alanz";
-         repo   = "ghc-exactprint";
-         rev    = "b6b75027811fa4c336b34122a7a7b1a8df462563";
-         sha256 = "1rfzppw9faprzabk323wdnjch0kyalggajb0s6s42q2gsr100gfx";
-         # date = 2021-02-24T18:10:49+00:00;
-       }) {};
+    diagrams-lib = unmarkBroken (doJailbreak
+      (hself.callCabal2nix "diagrams-lib" (pkgs.fetchFromGitHub {
+        owner  = "diagrams";
+        repo   = "diagrams-lib";
+        rev    = "6f66ce6bd5aed81d8a1330c143ea012724dbac3c";
+        sha256 = "0kn3kk8pc7kzwz065g8mpdbsbmbds3vrrgz2215f96ivivv8b9lw";
+        # date = 2021-03-02T17:03:02-06:00;
+      }) {}));
+
+    time-recurrence = unmarkBroken (doJailbreak
+      (hself.callCabal2nix "time-recurrence" (pkgs.fetchFromGitHub {
+        owner  = "jwiegley";
+        repo   = "time-recurrence";
+        rev    = "d1771331ffd495035cb7f1b2dd14cdf86b11d2fa";
+        sha256 = "1l9vf5mzq2r22gph45jk1a4cl8i53ayinlwq1m8dbx3lpnzsjc09";
+        # date = 2021-03-21T14:27:27-07:00;
+      }) {}));
   };
 
   callPackage = hpkgs: ghc: path: args:
@@ -120,14 +74,14 @@ let
                 returnShellEnv = false; } // args)
       else hpkgs.callCabal2nix hpkgs (builtins.baseNameOf path) path args);
 
-  myHaskellPackages = ghc: self: super:
+  myHaskellPackages = ghc: hself: hsuper:
     let fromSrc = arg:
       let
         path = if builtins.isList arg then builtins.elemAt arg 0 else arg;
         args = if builtins.isList arg then builtins.elemAt arg 1 else {};
       in {
         name  = builtins.baseNameOf path;
-        value = callPackage self ghc (~/src + "/${path}") args;
+        value = callPackage hself ghc (~/src + "/${path}") args;
       };
     in builtins.listToAttrs (builtins.map fromSrc srcs);
 
@@ -144,9 +98,9 @@ let
            (otherHackagePackages ghc)
            (pkgs.lib.composeExtensions
               (myHaskellPackages ghc)
-              (self: super: {
-                 ghc = super.ghc // { withPackages = super.ghc.withHoogle; };
-                 ghcWithPackages = self.ghc.withPackages;
+              (hself: hsuper: {
+                 ghc = hsuper.ghc // { withPackages = hsuper.ghc.withHoogle; };
+                 ghcWithPackages = hself.ghc.withPackages;
 
                  developPackage =
                    { root
@@ -158,10 +112,10 @@ let
                    let
                      hpkgs =
                        (pkgs.lib.composeExtensions
-                         (_: _: self)
+                         (_: _: hself)
                          (pkgs.lib.composeExtensions
-                           (self.packageSourceOverrides source-overrides)
-                           overrides)) {} super;
+                           (hself.packageSourceOverrides source-overrides)
+                           overrides)) {} hsuper;
                      drv =
                        hpkgs.callCabal2nix name root {};
                    in if returnShellEnv
@@ -170,11 +124,11 @@ let
                })));
   };
 
-  breakout = super: names:
+  breakout = hsuper: names:
     builtins.listToAttrs
       (builtins.map
          (x: { name  = x;
-               value = pkgs.haskell.lib.doJailbreak super.${x}; })
+               value = pkgs.haskell.lib.doJailbreak hsuper.${x}; })
          names);
 
   filtered = drv:
@@ -206,30 +160,22 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
 
 haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // rec {
-    ghc865 = overrideHask "ghc865" pkgs.haskell.packages.ghc865 (self: super:
-      { inherit (ghc884) hpack; }
-
-      // (breakout super [
-         "hakyll"
-         "pandoc"
-       ]));
-
-    ghc884 = overrideHask "ghc884" pkgs.haskell.packages.ghc884 (self: super:
-      (breakout super [
+    ghc884 = overrideHask "ghc884" pkgs.haskell.packages.ghc884 (hself: hsuper:
+      (breakout hsuper [
          "hakyll"
          "pandoc"
        ])
       );
 
-    ghc8104 = overrideHask "ghc8104" pkgs.haskell.packages.ghc8104 (self: super:
-      (breakout super [
+    ghc8104 = overrideHask "ghc8104" pkgs.haskell.packages.ghc8104 (hself: hsuper:
+      (breakout hsuper [
          "hakyll"
          "pandoc"
        ])
       );
 
-    ghc901 = overrideHask "ghc901" pkgs.haskell.packages.ghc901 (self: super:
-      (breakout super [
+    ghc901 = overrideHask "ghc901" pkgs.haskell.packages.ghc901 (hself: hsuper:
+      (breakout hsuper [
          "hakyll"
          "pandoc"
        ])
@@ -237,15 +183,12 @@ haskell = pkgs.haskell // {
   };
 };
 
-haskellPackages_8_6  = self.haskell.packages.ghc865;
+ghcDefaultVersion = "ghc8104";
+haskellPackages   = self.haskell.packages.${self.ghcDefaultVersion};
+haskPkgs          = self.haskellPackages;
+
 haskellPackages_8_8  = self.haskell.packages.ghc884;
 haskellPackages_8_10 = self.haskell.packages.ghc8104;
 haskellPackages_9_0  = self.haskell.packages.ghc901;
-
-haskellPackages = self.haskell.packages.${self.ghcDefaultVersion};
-haskPkgs = self.haskellPackages;
-
-
-ghcDefaultVersion = "ghc8104";
 
 }

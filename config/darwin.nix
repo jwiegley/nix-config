@@ -49,13 +49,12 @@ in {
       serviceConfig = iterate 86400;
     };
 
-    limit-maxfiles = {
-      command = "/bin/launchctl limit maxfiles 524288 524288";
-      serviceConfig.RunAtLoad = true;
-    };
-
-    limit-maxproc = {
-      command = "/bin/launchctl limit maxproc 2048 2048";
+    limits = {
+      script = ''
+        /bin/launchctl limit maxfiles 524288 524288
+        /bin/launchctl limit maxproc 8192 8192
+        /usr/sbin/sysctl -w kern.sysv.semume=1000
+      '';
       serviceConfig.RunAtLoad = true;
     };
 
