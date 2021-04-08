@@ -60,8 +60,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gist
   git-lfs
   git-scripts
-  git-subrepo
-  git-tbdiff
   gitAndTools.delta
   gitAndTools.git-annex-remote-rclone
   gitAndTools.git-crypt

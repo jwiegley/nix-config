@@ -620,37 +620,6 @@ let
         };
       };
 
-    auctex = eself.elpaBuild {
-        pname = "auctex";
-        ename = "auctex";
-        version = "13.0.5";
-        src = fetchurl {
-          url = "https://elpa.gnu.org/packages/auctex-13.0.5.tar";
-          sha256 = "072wwsqfl8n2gi2inbp0s8k1ydr6fh1zyvc3rgynwzibjjniy319";
-          # date = 2021-03-03T14:05:04-0800;
-        };
-        packageRequires = with eself; [ cl-lib emacs ];
-        meta = {
-          homepage = "https://elpa.gnu.org/packages/auctex.html";
-          license = lib.licenses.free;
-        };
-      };
-
-    ebdb = eself.elpaBuild {
-        pname = "ebdb";
-        ename = "ebdb";
-        version = "0.6.22";
-        src = fetchurl {
-          url = "https://elpa.gnu.org/packages/ebdb-0.6.22.tar";
-          sha256 = "0dljl21n6508c7ash7l6zgxhpn2wdfzga0va63d4k9nwnqmkvsgz";
-        };
-        packageRequires = with eself; [ cl-lib emacs seq ];
-        meta = {
-          homepage = "https://elpa.gnu.org/packages/ebdb.html";
-          license = lib.licenses.free;
-        };
-      };
-
     doxymacs = mkDerivation rec {
       name = "emacs-doxymacs-${version}";
       version = "2017-12-10";
@@ -676,32 +645,32 @@ let
       };
     };
 
-    eglot = esuper.eglot.overrideAttrs(attrs: rec {
-      name = "eglot-${version}";
-      version = "20210326.1008";
-      src = fetchFromGitHub {
-        owner = "joaotavora";
-        repo = "eglot";
-        rev = "2fbcab293e11e1502a0128ca5f59de0ea7888a75";
-        sha256 = "0fsar0ab0wj74jkbgkbigcg4ia6hg574yvqr2wq2s8lw7m22j8c4";
-        fetchSubmodules = true;
-        # date = 2021-03-26T10:08:03+00:00;
-      };
-      buildInputs = with eself; [ eldoc flymake jsonrpc project xref ];
-    });
+    # eglot = esuper.eglot.overrideAttrs(attrs: rec {
+    #   name = "eglot-${version}";
+    #   version = "20210326.1008";
+    #   src = fetchFromGitHub {
+    #     owner = "joaotavora";
+    #     repo = "eglot";
+    #     rev = "2fbcab293e11e1502a0128ca5f59de0ea7888a75";
+    #     sha256 = "0fsar0ab0wj74jkbgkbigcg4ia6hg574yvqr2wq2s8lw7m22j8c4";
+    #     fetchSubmodules = true;
+    #     # date = 2021-03-26T10:08:03+00:00;
+    #   };
+    #   buildInputs = with eself; [ eldoc flymake jsonrpc project xref ];
+    # });
 
-    lua-mode = esuper.lua-mode.overrideAttrs(attrs: rec {
-      name = "lua-mode-${version}";
-      version = "20200513.2313";
-      src = fetchFromGitHub {
-        owner = "immerrr";
-        repo = "lua-mode";
-        rev = "35b6e4c20b8b4eaf783ccc8e613d0dd06dbd165c";
-        sha256 = "1hai6rqjm5py0bp57nhggmj9qigwdj3a46ngacpnjc1qmy9kkgfk";
-        fetchSubmodules = true;
-        # date = 2020-05-13T23:13:56+02:00;
-      };
-    });
+    # lua-mode = esuper.lua-mode.overrideAttrs(attrs: rec {
+    #   name = "lua-mode-${version}";
+    #   version = "20200513.2313";
+    #   src = fetchFromGitHub {
+    #     owner = "immerrr";
+    #     repo = "lua-mode";
+    #     rev = "35b6e4c20b8b4eaf783ccc8e613d0dd06dbd165c";
+    #     sha256 = "1hai6rqjm5py0bp57nhggmj9qigwdj3a46ngacpnjc1qmy9kkgfk";
+    #     fetchSubmodules = true;
+    #     # date = 2020-05-13T23:13:56+02:00;
+    #   };
+    # });
 
     org = mkDerivation rec {
       name = "emacs-org-${version}";
