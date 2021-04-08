@@ -224,7 +224,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   unixtools.top
   unrar
   unzip
-  valgrind
   vim
   w3m
   wabt

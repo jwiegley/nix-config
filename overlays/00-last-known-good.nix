@@ -19,22 +19,13 @@ in
     socat2pre
     ;
 
-  inherit (nixpkgs {
-    # known-good-20200811_191740
-    rev    = "8aa2cdc2d96a76f324e2ae07b2e4c0ef67867d4d";
-    sha256 = "09d72jnizw0rdldc30z4319ai59hwcm1wfzm7ch1mdg4kdcv0knx";
-  })
-    csvkit
-    ;
-
-  inherit (nixpkgs {
-    # known-good-20200930_084551
-    rev    = "1a2e59c7696e8e488ffe69148172f149a314a8d9";
-    sha256 = "0ikyg0pgr3w60lm0fyvfqi1d4hkg6bxy7rblnr0rfaxhx562gsbj";
-  })
-    mitmproxy
-    prooftree
-    valgrind
-    wget
-    ;
+  darwin = super.darwin // {
+    inherit ((nixpkgs {
+      # known-good-20210325_234309
+      rev    = "c91ae65e97a39a76272f6c3d0ecf630d71f7f421";
+      sha256 = "0dhhkbhjspyh8nw9j1cnkfl9l1bhai3wylr2aiirgqxv3fsy5zgc";
+    }).darwin)
+      network_cmds
+      ;
+  };
 }

@@ -152,7 +152,7 @@ copy-src:
 
 copy-direnv:
 	$(call announce,copy direnv)
-	@find $(HOME)						\
+	@find $(HOME)/dfinity $(HOME)/src $(HOME)/doc		\
 	    \( -path '*/Containers' -prune \) -o		\
 	    \( -path '*/.Trash' -prune \) -o			\
 	    -path '*/.direnv/default' -type l -print |		\

@@ -78,13 +78,13 @@ let
     ascii = compileEmacsWikiFile {
       name = "ascii.el";
       sha256 = "1ijpnk334fbah94vm7dkcd2w4zcb0l7yn4nr9rwgpr2l25llnr0f";
-      # date = 2020-05-17T11:44:27-0700;
+      # date = 2021-03-26T13:22:06-0700;
     };
 
     browse-kill-ring-plus = compileEmacsWikiFile {
       name = "browse-kill-ring+.el";
       sha256 = "14118rimjsps94ilhi0i9mwx7l69ilbidgqfkfrm5c9m59rki2gq";
-      # date = 2020-05-17T11:44:34-0700;
+      # date = 2021-03-26T13:22:09-0700;
 
       buildInputs = with eself; [ browse-kill-ring ];
       patches = [ ./emacs/patches/browse-kill-ring-plus.patch ];
@@ -93,7 +93,7 @@ let
     col-highlight = compileEmacsWikiFile {
       name = "col-highlight.el";
       sha256 = "0na8aimv5j66pzqi4hk2jw5kk00ki99zkxiykwcmjiy3h1r9311k";
-      # date = 2020-05-17T11:44:41-0700;
+      # date = 2021-03-26T13:22:13-0700;
 
       buildInputs = with eself; [ vline ];
     };
@@ -101,7 +101,7 @@ let
     crosshairs = compileEmacsWikiFile {
       name = "crosshairs.el";
       sha256 = "0032v3ry043wzvbacm16liykc362pza1bc46x37b307bvbv12qlg";
-      # date = 2020-05-17T11:45:34-0700;
+      # date = 2021-03-26T13:22:16-0700;
 
       buildInputs = with eself; [ hl-line-plus col-highlight vline ];
     };
@@ -109,55 +109,55 @@ let
     cursor-chg = compileEmacsWikiFile {
       name = "cursor-chg.el";
       sha256 = "1zmwh0z4g6khb04lbgga263pqa51mfvs0wfj3y85j7b08f2lqnqn";
-      # date = 2020-05-17T11:45:45-0700;
+      # date = 2021-03-26T13:22:19-0700;
     };
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
       sha256 = "110lyim10z2b8pdflgpj5mw7rd0hiaz75h92qb0ivk4pb15phy2s";
-      # date = 2021-03-21T10:12:23-0700;
+      # date = 2021-03-26T13:22:23-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
       name = "erc-highlight-nicknames.el";
       sha256 = "01r184q86aha4gs55r2vy3rygq1qnxh1bj9qmlz97b2yh8y17m50";
-      # date = 2020-05-17T11:46:38-0700;
+      # date = 2021-03-26T13:22:24-0700;
     };
 
     fetchmail-mode = compileEmacsWikiFile {
       name = "fetchmail-mode.el";
       sha256 = "19lqkc35kgzm07xjpb9nrcayg69qyijn159lak0mg45fhnybf4a6";
-      # date = 2020-05-17T11:46:44-0700;
+      # date = 2021-03-26T13:22:25-0700;
     };
 
     hexrgb = compileEmacsWikiFile {
       name = "hexrgb.el";
       sha256 = "18hb8brf7x92aidjfgczxangri6rkqq4x5d06lh41193f97rslm8";
-      # date = 2020-05-17T11:46:47-0700;
+      # date = 2021-03-26T13:22:26-0700;
     };
 
     highlight-cl = compileEmacsWikiFile {
       name = "highlight-cl.el";
       sha256 = "0r3kzs2fsi3kl5gqmsv75dc7lgfl4imrrqhg09ij6kq1ri8gjxjw";
-      # date = 2020-05-17T11:46:52-0700;
+      # date = 2021-03-26T13:22:27-0700;
     };
 
     hl-line-plus = compileEmacsWikiFile {
       name = "hl-line+.el";
       sha256 = "0crkmjah8i61z6c15sgn2cbpbj8xqfx0py1y84pxkcjh1cj7hx7q";
-      # date = 2020-05-17T11:46:53-0700;
+      # date = 2021-03-26T13:22:28-0700;
     };
 
     message-x = compileEmacsWikiFile {
       name = "message-x.el";
       sha256 = "05ic97plsysh4nqwdrsl5m9f24m11w24bahj8bxzfdawfima2bkf";
-      # date = 2020-05-17T11:46:56-0700;
+      # date = 2021-03-26T13:22:29-0700;
     };
 
     palette = compileEmacsWikiFile {
       name = "palette.el";
       sha256 = "149y6bmn0njgq632m9zdnaaw7wrvxvfqndpqlgcizn6dwzixiih6";
-      # date = 2020-05-17T11:46:58-0700;
+      # date = 2021-03-26T13:22:30-0700;
 
       buildInputs = with eself; [ hexrgb ];
     };
@@ -165,7 +165,7 @@ let
     popup-pos-tip = compileEmacsWikiFile {
       name = "popup-pos-tip.el";
       sha256 = "0dhyzfsl01y61m53iz38a1vcvclr98wamsh0nishw0by1dnlb17x";
-      # date = 2020-05-17T11:47:03-0700;
+      # date = 2021-03-26T13:22:32-0700;
 
       buildInputs = with eself; [ popup pos-tip ];
     };
@@ -173,37 +173,37 @@ let
     popup-ruler = compileEmacsWikiFile {
       name = "popup-ruler.el";
       sha256 = "0fszl969savcibmksfkanaq11d047xbnrfxd84shf9z9z2i3dr43";
-      # date = 2020-05-17T11:47:06-0700;
+      # date = 2021-03-26T13:22:36-0700;
     };
 
     pp-c-l = compileEmacsWikiFile {
       name = "pp-c-l.el";
       sha256 = "03mhd8lja71163jg6fj4d4hy2dwb1c5j46sn9yq6m9wz413a4pmd";
-      # date = 2020-05-17T11:47:08-0700;
+      # date = 2021-03-26T13:22:37-0700;
     };
 
     tidy = compileEmacsWikiFile {
       name = "tidy.el";
       sha256 = "0psci55a3angwv45z9i8wz8jw634rxg1xawkrb57m878zcxxddwa";
-      # date = 2020-05-17T11:47:09-0700;
+      # date = 2021-03-26T13:22:39-0700;
     };
 
     vline = compileEmacsWikiFile {
       name = "vline.el";
       sha256 = "1ys6928fgk8mswa4gv10cxggir8acck27g78cw1z3pdz5gakbgnj";
-      # date = 2020-05-17T11:47:12-0700;
+      # date = 2021-03-26T13:22:40-0700;
     };
 
     xray = compileEmacsWikiFile {
       name = "xray.el";
       sha256 = "1s25z9iiwpm1sp3yj9mniw4dq7dn0krk4678bgqh464k5yvn6lyk";
-      # date = 2020-05-17T11:47:15-0700;
+      # date = 2021-03-26T13:22:41-0700;
     };
 
     yaoddmuse = compileEmacsWikiFile {
       name = "yaoddmuse.el";
       sha256 = "0h3s3mdfz0czgz1cj415k170g7mbbqmsinw0xr7qmk050i154iis";
-      # date = 2020-05-17T11:47:17-0700;
+      # date = 2021-03-26T13:22:43-0700;
     };
 
 
@@ -212,7 +212,7 @@ let
       src = fetchurl {
         url = https://download.tuxfamily.org/user42/bytecomp-simplify.el;
         sha256 = "1yq0wqgva8yidyd46cqag0ds0cyzl7q8rpd2cmksp68k4zlsxwyv";
-        # date = 2020-05-17T11:47:20-0700;
+        # date = 2021-03-26T13:22:46-0700;
       };
     };
 
@@ -226,7 +226,7 @@ let
       src = fetchurl {
         url = http://www.splode.com/~friedman/software/emacs-lisp/src/nf-procmail-mode.el;
         sha256 = "1a7byym62g2rjh2grrqh1g51p05cibp6k83581xyn7fai5f4hxx3";
-        # date = 2020-05-17T11:47:30-0700;
+        # date = 2021-03-26T13:22:48-0700;
       };
     };
 
@@ -235,7 +235,7 @@ let
       src = fetchurl {
         url = https://raw.githubusercontent.com/llvm-mirror/llvm/master/utils/emacs/tablegen-mode.el;
         sha256 = "0dy0diiqfz91blrkpbfxc5ky0l7ghkqi72ah7sh9jkrqa8ss7isy";
-        # date = 2020-05-17T11:47:31-0700;
+        # date = 2021-03-26T13:22:49-0700;
       };
     };
 
@@ -277,9 +277,9 @@ let
       src = fetchFromGitHub {
         owner = "jwiegley";
         repo = "erc-yank";
-        rev = "d4dfcf3a0386c3a4a28f8d4de4ae664f253e817c";
-        sha256 = "0sa1qx549wlswa3xnmmpb8a3imny0q8mfvqw8iki5l3sh60rfax9";
-        # date = 2017-01-20T15:26:06-08:00;
+        rev = "55d96f18c5df9d8fce51fa073d7a12c47a46ac80";
+        sha256 = "1chigywld4v2shc7ij6gyxfq0xzwyms5nal85b3yh7km2pim5i8h";
+        # date = 2021-02-20T10:15:07-08:00;
       };
     };
 
@@ -299,9 +299,9 @@ let
       src = fetchFromGitHub {
         owner = "jcs-elpa";
         repo = "fill-page";
-        rev = "3bf1fbdf0e8f325ad0fee016e4a11f7343c8c973";
-        sha256 = "124ghk48c70xykakwsfdcfli2rk2rn1x057d1ss6yrgb6gp9drs0";
-        # date = 2020-10-04T01:04:41+08:00;
+        rev = "95f82f93848ca608d4c4d9ec7386d94745cbc691";
+        sha256 = "10kgaq1da5zgz2dzagw2fc5hlh4ik5z6vyfw0lqd7bqpjfg62kgr";
+        # date = 2020-11-05T12:52:50+08:00;
       };
     };
 
@@ -389,7 +389,7 @@ let
       src = fetchurl {
         url = https://bitbucket.org/holgerschurig/emacsconf/raw/74d428aa2f9be88b14a503f6c3a816ae7cd13644/elisp/ivy-compile.el;
         sha256 = "0igi5p9s6w9yqaxirl286ms9zxad1njw0c6q1b7nry0mh12f7327";
-        # date = 2020-05-17T11:48:46-0700;
+        # date = 2021-03-26T13:23:13-0700;
       };
       buildInputs = with eself; [ ivy ];
     };
@@ -421,9 +421,9 @@ let
       src = fetchFromGitHub {
         owner = "purcell";
         repo = "mmm-mode";
-        rev = "552d7401c96f756bd55c205c60df2532bf65c919";
-        sha256 = "18spmyw96hp08lf2i81ml2gpc97mkhm1zz4sp8rdjqdzppnq5xmh";
-        # date = 2020-05-08T06:10:20+03:00;
+        rev = "0d00cdf4d02cc166304f6967a20fa22e2eaf208b";
+        sha256 = "1drm89pi67khc04816nynslcqdr9xaf6mb85y6aqrrl4sy0zzwxl";
+        # date = 2020-09-09T01:36:25+03:00;
       };
     };
 
@@ -455,9 +455,9 @@ let
       src = fetchFromGitHub {
         owner = "tarsius";
         repo = "ox-texinfo-plus";
-        rev = "3ffceac08c4c690399b85598a5d22cf5bb06c405";
-        sha256 = "1jqvzdd3cs4fmkfn3qxw0pv9j3xh87pb4wnzy42yrsq3vs6403gl";
-        # date = 2020-01-03T13:38:18+01:00;
+        rev = "579fe7b58594ab86f351e9d911033f351ef55d42";
+        sha256 = "0ids3ivcvwx2l0qyhxv6zfsmw6l1rinqybsfwk3l90c456pk11qb";
+        # date = 2020-12-27T21:34:30+01:00;
       };
     };
 
@@ -466,9 +466,9 @@ let
       src = fetchFromGitHub {
         owner = "alpaker";
         repo = "Per-Window-Point";
-        rev = "bd780d0e76814280bc055560e04bc6e606afa69a";
-        sha256 = "1kkm957a89fszbikjm1w6dwwnklxn2vwzk3jk9bqzhkpacsqcr16";
-        # date = 2013-08-07T09:14:20-04:00;
+        rev = "deb161520428e60fdc353335b46eb1f5392d96f8";
+        sha256 = "1fj65r5vlkihgx6n2j7kdnragz3apy3428lbs6y23lfcs6q8l18z";
+        # date = 2020-10-22T10:30:08-07:00;
       };
     };
 
@@ -500,9 +500,9 @@ let
       src = fetchFromGitHub {
         owner = "zk-phi";
         repo = "sky-color-clock";
-        rev = "3522726a5af0421f70ff9db68bd889cb4c7b6e62";
-        sha256 = "0pbv595wfl48np02bm5nh174l87a2g6w1y8n2cr846awi0nm0hcn";
-        # date = 2020-08-22T23:41:42+09:00;
+        rev = "525122ffb94ae4ac160de72c2ee0ade331d2e80a";
+        sha256 = "155h9cqwr74bf1kcjk5bwbcsdg86pbi0v2j60vmd6yd0f5j4kfwq";
+        # date = 2021-03-06T13:28:31+09:00;
       };
       patches = [ ./emacs/patches/sky-color-clock.patch ];
     };
@@ -523,9 +523,9 @@ let
       src = fetchFromGitHub {
         owner = "enaeher";
         repo = "slidify-pages";
-        rev = "de0c7d58779e5f8355efcbcfed3f0d4cd98a1a73";
-        sha256 = "1cjmcwqyczvapsn0bsal1f3xdzzzcqmc2srhzvpb0ph2m51z1fz7";
-        # date = 2015-07-07T18:43:40-05:00;
+        rev = "cae96b0e9fcfe0b71330b478e8c5d667c137ddc7";
+        sha256 = "0ya7azdx2l63chqidrxv5yd30y0pk9rn85djfdhipq3a493vgdp6";
+        # date = 2020-09-18T09:41:40-04:00;
       };
     };
 
@@ -623,10 +623,10 @@ let
     auctex = eself.elpaBuild {
         pname = "auctex";
         ename = "auctex";
-        version = "13.0.4";
+        version = "13.0.5";
         src = fetchurl {
-          url = "https://elpa.gnu.org/packages/auctex-13.0.4.tar";
-          sha256 = "1362dqb8mcaddda9849gqsj6rzlfq18xprddb74j02884xl7hq65";
+          url = "https://elpa.gnu.org/packages/auctex-13.0.5.tar";
+          sha256 = "072wwsqfl8n2gi2inbp0s8k1ydr6fh1zyvc3rgynwzibjjniy319";
           # date = 2021-03-03T14:05:04-0800;
         };
         packageRequires = with eself; [ cl-lib emacs ];
@@ -678,21 +678,21 @@ let
 
     eglot = esuper.eglot.overrideAttrs(attrs: rec {
       name = "eglot-${version}";
-      version = "20210306.2312";
+      version = "20210326.1008";
       src = fetchFromGitHub {
         owner = "joaotavora";
         repo = "eglot";
-        rev = "f0c770cfbbc75c7aeb22cd2b118bc3948596d7a7";
-        sha256 = "0qcjiawszs3v166q8nanifp465yd5ib2gl2ywrlmgk1l7ixr80wp";
+        rev = "2fbcab293e11e1502a0128ca5f59de0ea7888a75";
+        sha256 = "0fsar0ab0wj74jkbgkbigcg4ia6hg574yvqr2wq2s8lw7m22j8c4";
         fetchSubmodules = true;
-        # date = 2021-03-06T23:12:02+00:00;
+        # date = 2021-03-26T10:08:03+00:00;
       };
       buildInputs = with eself; [ eldoc flymake jsonrpc project xref ];
     });
 
     lua-mode = esuper.lua-mode.overrideAttrs(attrs: rec {
       name = "lua-mode-${version}";
-      version = "20190113.1350";
+      version = "20200513.2313";
       src = fetchFromGitHub {
         owner = "immerrr";
         repo = "lua-mode";
@@ -761,15 +761,15 @@ let
             inherit (pkgs.texlive) scheme-basic cm-super ec;
           }; in mkDerivation rec {
       name = "emacs-proof-general-${version}";
-      version = "2020-06-23";
+      version = "2021-03-21";
 
       # This is the main branch
       src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "7844e312b2a192c4245d0d05c12908efc5730e3b";
-        sha256 = "0ky8ivcwkjdclh1vh9hi8wc5zljamby10fd4m73nnkdi2lr6x5nr";
-        # date = 2021-02-27T20:42:42+01:00;
+        rev = "f0f0476d07401aba2cf428a71f7ee960cd1b3154";
+        sha256 = "1h6bwk1l3fm34xx8nbwh2s3g8ab5zbnx1givgaf64hf3z7r44xic";
+        # date = 2021-03-21T22:32:57+01:00;
       };
 
       # src = ~/src/proof-general;
