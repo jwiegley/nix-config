@@ -51,7 +51,7 @@ endif
 
 DARWIN_REBUILD = $(PRENIX) $(BUILD_PATH)/sw/bin/darwin-rebuild
 HOME_MANAGER   = $(PRENIX) HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix	\
-			   $(BUILD_PATH)/sw/bin/home-manager
+			   $(HOME)/.nix-profile/bin/home-manager
 
 all: rebuild
 

@@ -196,9 +196,6 @@ in {
     sudo launchctl load -w \
         /System/Library/LaunchDaemons/com.apple.atrun.plist > /dev/null 2>&1 \
         || exit 0
-
-    cp -pL /etc/DefaultKeyBinding.dict \
-       ${home_directory}/Library/KeyBindings/DefaultKeyBinding.dict
   '';
 
   nixpkgs = {
@@ -557,37 +554,6 @@ in {
     etc."torrc7".text = torConf "tor7" "9111";
     etc."torrc8".text = torConf "tor8" "9121";
     etc."torrc9".text = torConf "tor9" "9131";
-
-    etc."DefaultKeyBinding.dict".text = ''
-      {
-        "~f"    = "moveWordForward:";
-        "~b"    = "moveWordBackward:";
-
-        "~d"    = "deleteWordForward:";
-        "~^h"   = "deleteWordBackward:";
-        "~\010" = "deleteWordBackward:";    /* Option-backspace */
-        "~\177" = "deleteWordBackward:";    /* Option-delete */
-
-        "~v"    = "pageUp:";
-        "^v"    = "pageDown:";
-
-        "~<"    = "moveToBeginningOfDocument:";
-        "~>"    = "moveToEndOfDocument:";
-
-        "^/"    = "undo:";
-        "~/"    = "complete:";
-
-        "^g"    = "_cancelKey:";
-        "^a"    = "moveToBeginningOfLine:";
-        "^e"    = "moveToEndOfLine:";
-
-        "~c"	  = "capitalizeWord:"; /* M-c */
-        "~u"	  = "uppercaseWord:";	 /* M-u */
-        "~l"	  = "lowercaseWord:";	 /* M-l */
-        "^t"	  = "transpose:";      /* C-t */
-        "~t"	  = "transposeWords:"; /* M-t */
-      }
-    '';
   };
 
   services = {
@@ -660,21 +626,6 @@ in {
      requireSignedBinaryCaches = false;
      binaryCaches = [
        # ssh://vulcan
-     ];
-   }
-   else if localconfig.hostname == "athena" then rec {
-     maxJobs = 8;
-     buildCores = 4;
-     distributedBuilds = true;
-
-     buildMachines = [
-       # vulcan
-       zrh-3
-     ];
-
-     requireSignedBinaryCaches = false;
-     binaryCaches = [
-       ssh://vulcan
      ];
    }
    else if localconfig.hostname == "vulcan" then rec {
