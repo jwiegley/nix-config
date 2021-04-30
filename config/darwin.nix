@@ -1,11 +1,12 @@
-{ config, lib, pkgs, ... }@args:
+{ config, lib, pkgs, ... }:
 
-let home_directory = "/Users/johnw";
+let home_directory = builtins.getEnv "HOME";
+    tmp_directory  = "/tmp";
+    localconfig    = import <localconfig>;
+
     xdg_configHome = "${home_directory}/.config";
     xdg_dataHome   = "${home_directory}/.local/share";
     xdg_cacheHome  = "${home_directory}/.cache";
-    tmp_directory  = "/tmp";
-    localconfig    = import <localconfig>;
 
 in {
   imports = [ <home-manager/nix-darwin> ];
@@ -651,8 +652,8 @@ in {
   };
 
   home-manager = {
-    # useUserPackages = true;
     useGlobalPkgs = true;
-    users.johnw = import ./home.nix;
+    users.johnw = 
+      import ./home.nix { inherit home_directory tmp_directory localconfig; };
   };
 }

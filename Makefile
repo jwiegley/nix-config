@@ -49,6 +49,8 @@ else
 BUILD_PATH = /run/current-system
 endif
 
+DARWIN_REBUILD = $(PRENIX) $(BUILD_PATH)/sw/bin/darwin-rebuild
+
 all: rebuild
 
 %-all: %
@@ -67,24 +69,18 @@ endef
 test:
 	$(call announce,this is a test)
 
+command:
+	@echo $(NIX) build -f . $(BUILD_ARGS)
+
 build:
 	$(call announce,nix build -f . $(BUILD_ARGS))
 	@$(NIX) build -f . $(BUILD_ARGS)
 	@rm -f result*
 
-command:
-	@echo $(NIX) build -f . $(BUILD_ARGS)
-
-DARWIN_REBUILD = $(PRENIX) $(BUILD_PATH)/sw/bin/darwin-rebuild
-
 switch:
 	$(call announce,darwin-rebuild switch)
 	@$(DARWIN_REBUILD) switch -Q
 	@echo "Darwin generation: $$($(DARWIN_REBUILD) --list-generations | tail -1)"
-
-news:
-	$(PRENIX) HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix \
-	    $(HOME)/.nix-profile/bin/home-manager news
 
 rebuild: build switch
 

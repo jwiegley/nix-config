@@ -1,19 +1,15 @@
-{ pkgs, config, ... }:
+args: { pkgs, lib, config, ... }:
 
-let home_directory = builtins.getEnv "HOME";
-    tmp_directory  = "/tmp";
-    ca-bundle_path = "${pkgs.cacert}/etc/ssl/certs/";
-    ca-bundle_crt  = "${ca-bundle_path}/ca-bundle.crt";
-    emacs-server   = "${tmp_directory}/johnw-emacs/server";
+let home_directory  = args.home_directory;
+    tmp_directory   = args.tmp_directory;
+    localconfig     = args.localconfig;
 
-    lib = pkgs.lib;
-    localconfig = import <localconfig>;
+    ca-bundle_path  = "${pkgs.cacert}/etc/ssl/certs/";
+    ca-bundle_crt   = "${ca-bundle_path}/ca-bundle.crt";
+    emacs-server    = "${tmp_directory}/johnw-emacs/server";
 
     vulcan_ethernet = "192.168.1.69";
     vulcan_wifi     = "192.168.1.90";
-
-    athena_ethernet = "192.168.1.80";
-    athena_wifi     = "192.168.1.68";
 
     hermes_ethernet = "192.168.1.108";
     hermes_wifi     = "192.168.1.67";
@@ -51,8 +47,6 @@ in {
       JAVA_OPTS          = "-Xverify:none";
       VULCAN_ETHERNET    = vulcan_ethernet;
       VULCAN_WIFI        = vulcan_wifi;
-      ATHENA_ETHERNET    = athena_ethernet;
-      ATHENA_WIFI        = athena_wifi;
       HERMES_ETHERNET    = hermes_ethernet;
       HERMES_WIFI        = hermes_wifi;
 
@@ -78,6 +72,8 @@ in {
           --input-date-format %Y/%m/%d
           --date-format %Y/%m/%d
         '';
+
+        "HMHOST".text = builtins.toJSON { inherit (pkgs.stdenv.hostPlatform) system isDarwin; };
 
         ".curlrc".text = ''
           capath=${ca-bundle_path}
@@ -512,19 +508,6 @@ in {
       hashKnownHosts = true;
       userKnownHostsFile = "${config.xdg.configHome}/ssh/known_hosts";
 
-      extraConfig = ''
-        Host default
-          HostName 127.0.0.1
-          User vagrant
-          Port 2222
-          UserKnownHostsFile /dev/null
-          StrictHostKeyChecking no
-          PasswordAuthentication no
-          IdentityFile /Users/johnw/dfinity/master/.vagrant/machines/default/vmware_desktop/private_key
-          IdentitiesOnly yes
-          LogLevel FATAL
-      '';
-
       matchBlocks =
         let onHost = proxy: hostname: { inherit hostname; } //
           (if "${localconfig.hostname}" == proxy then {} else {
@@ -532,7 +515,6 @@ in {
            }); in
         (if    "${localconfig.hostname}" == "vulcan"
             || "${localconfig.hostname}" == "hermes"
-            || "${localconfig.hostname}" == "athena"
             then {
            vulcan.hostname = vulcan_ethernet;
          } else {
@@ -546,13 +528,6 @@ in {
          }) // rec {
 
         hermes  = onHost "vulcan" hermes_ethernet;
-        athena  = onHost "vulcan" athena_ethernet;
-        tank    = athena;
-
-        # router  = { hostname = "192.168.1.98"; user = "root"; };
-
-        nixos   = onHost "vulcan" "192.168.118.128";
-        dfinity = onHost "vulcan" "192.168.118.136";
         macos   = onHost "vulcan" "172.16.20.139";
         ubuntu  = onHost "vulcan" "172.16.20.141";
 
@@ -575,7 +550,7 @@ in {
 
         id_local = {
           host = lib.concatStringsSep " " [
-            "hermes" "athena" "home" "mac1*" "macos*" "nixos*" "mohajer"
+            "hermes" "home" "mac1*" "macos*" "nixos*" "mohajer"
             "dfinity" "smokeping" "tank" "titan" "ubuntu*" "vulcan"
           ];
           identityFile = "${config.xdg.configHome}/ssh/id_local";
@@ -583,91 +558,20 @@ in {
           user = "johnw";
         };
 
-        nix-docker = {
-          hostname = "127.0.0.1";
-          proxyJump = "athena";
-          user = "root";
-          port = 3022;
-          identityFile = "${config.xdg.configHome}/ssh/nix-docker_rsa";
-          identitiesOnly = true;
-        };
-
         # DFINITY Machines
 
         id_dfinity = {
-          host = lib.concatStringsSep " " [
-            "hydra"
-            "pa-1" "pa-darwin-1" "pa-darwin-2"
-            "zrh-1" "zrh-2" "zrh-3" "zrh-darwin-1"
-          ];
+          host = lib.concatStringsSep " " [ "zrh-3" ];
           identityFile = [ "${config.xdg.configHome}/ssh/id_dfinity"
                            "${config.xdg.configHome}/ssh/id_dfinity_old" ];
           identitiesOnly = true;
         };
 
-        # DFINITY Machines on AWS
-
-        hydra = {
-          hostname = "hydra.dfinity.systems";
-          user = "ec2-user";
-        };
-
-        # DFINITY Machines in Palo Alto
-
-        pa-1 = {
-          hostname = "pa-linux-1.dfinity.systems";
-          user = "johnw";
-        };
-
-        # This requires a VPN connection to the DFINITY network.
-
-        pa-darwin-1 = {
-          hostname = "pa-darwin-1.dfinity.systems";
-          user = "dfinity";
-        };
-
-        pa-darwin-2 = {
-          hostname = "pa-darwin-2.dfinity.systems";
-          user = "dfnmain";
-        };
-
         # DFINITY Machines in Zurich
-
-        zrh-1 = {
-          hostname = "zrh-linux-1.dfinity.systems";
-          user = "johnw";
-        };
-
-        zrh-2 = {
-          hostname = "zrh-linux-2.dfinity.systems";
-          user = "johnw";
-        };
 
         zrh-3 = {
           hostname = "zrh-linux-3.dfinity.systems";
           user = "johnw";
-        };
-
-        zrh-darwin-1 = {
-          hostname = "10.129.0.99";
-          user = "dfinity";
-        };
-
-        demo-1.hostname = "10.11.18.1";
-        demo-2.hostname = "10.11.18.2";
-        demo-3.hostname = "10.11.18.3";
-        demo-4.hostname = "10.11.18.4";
-
-        demo-options = {
-          host = lib.concatStringsSep " " [
-            "demo-*"
-          ];
-          # proxyJump = "zrh-3";
-          user = "root";
-          extraOptions = {
-            "PreferredAuthentications" = "password";
-            "PubkeyAuthentication"     = "no";
-          };
         };
       };
     };
@@ -716,32 +620,32 @@ in {
     '';
   };
 
-  targets.darwin.keybindings = {
-    "~f"    = "moveWordForward:";
-    "~b"    = "moveWordBackward:";
+  # targets.darwin.keybindings = {
+  #   "~f"    = "moveWordForward:";
+  #   "~b"    = "moveWordBackward:";
 
-    "~d"    = "deleteWordForward:";
-    "~^h"   = "deleteWordBackward:";
-    "~\010" = "deleteWordBackward:";    /* Option-backspace */
-    "~\177" = "deleteWordBackward:";    /* Option-delete */
+  #   "~d"    = "deleteWordForward:";
+  #   "~^h"   = "deleteWordBackward:";
+  #   "~\010" = "deleteWordBackward:";    /* Option-backspace */
+  #   "~\177" = "deleteWordBackward:";    /* Option-delete */
 
-    "~v"    = "pageUp:";
-    "^v"    = "pageDown:";
+  #   "~v"    = "pageUp:";
+  #   "^v"    = "pageDown:";
 
-    "~<"    = "moveToBeginningOfDocument:";
-    "~>"    = "moveToEndOfDocument:";
+  #   "~<"    = "moveToBeginningOfDocument:";
+  #   "~>"    = "moveToEndOfDocument:";
 
-    "^/"    = "undo:";
-    "~/"    = "complete:";
+  #   "^/"    = "undo:";
+  #   "~/"    = "complete:";
 
-    "^g"    = "_cancelKey:";
-    "^a"    = "moveToBeginningOfLine:";
-    "^e"    = "moveToEndOfLine:";
+  #   "^g"    = "_cancelKey:";
+  #   "^a"    = "moveToBeginningOfLine:";
+  #   "^e"    = "moveToEndOfLine:";
 
-    "~c"	  = "capitalizeWord:"; /* M-c */
-    "~u"	  = "uppercaseWord:";	 /* M-u */
-    "~l"	  = "lowercaseWord:";	 /* M-l */
-    "^t"	  = "transpose:";      /* C-t */
-    "~t"	  = "transposeWords:"; /* M-t */
-  };
+  #   "~c"	  = "capitalizeWord:"; /* M-c */
+  #   "~u"	  = "uppercaseWord:";	 /* M-u */
+  #   "~l"	  = "lowercaseWord:";	 /* M-l */
+  #   "^t"	  = "transpose:";      /* C-t */
+  #   "~t"	  = "transposeWords:"; /* M-t */
+  # };
 }
