@@ -19,7 +19,6 @@ let home_directory = builtins.getEnv "HOME";
     hermes_wifi     = "192.168.1.67";
 
 in {
-  config = {
   home = {
     # These are packages that should always be present in the user
     # environment, though perhaps not the machine environment.
@@ -89,35 +88,6 @@ in {
           ca_certificate = ${ca-bundle_crt}
         '';
       };
-
-    # keybindings = {
-    #   "~f"    = "moveWordForward:";
-    #   "~b"    = "moveWordBackward:";
-
-    #   "~d"    = "deleteWordForward:";
-    #   "~^h"   = "deleteWordBackward:";
-    #   "~\010" = "deleteWordBackward:";    /* Option-backspace */
-    #   "~\177" = "deleteWordBackward:";    /* Option-delete */
-
-    #   "~v"    = "pageUp:";
-    #   "^v"    = "pageDown:";
-
-    #   "~<"    = "moveToBeginningOfDocument:";
-    #   "~>"    = "moveToEndOfDocument:";
-
-    #   "^/"    = "undo:";
-    #   "~/"    = "complete:";
-
-    #   "^g"    = "_cancelKey:";
-    #   "^a"    = "moveToBeginningOfLine:";
-    #   "^e"    = "moveToEndOfLine:";
-
-    #   "~c"	  = "capitalizeWord:"; /* M-c */
-    #   "~u"	  = "uppercaseWord:";	 /* M-u */
-    #   "~l"	  = "lowercaseWord:";	 /* M-l */
-    #   "^t"	  = "transpose:";      /* C-t */
-    #   "~t"	  = "transposeWords:"; /* M-t */
-    # };
   };
 
   accounts.email = {
@@ -745,5 +715,33 @@ in {
         mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e -m list.misc"
     '';
   };
-};
+
+  targets.darwin.keybindings = {
+    "~f"    = "moveWordForward:";
+    "~b"    = "moveWordBackward:";
+
+    "~d"    = "deleteWordForward:";
+    "~^h"   = "deleteWordBackward:";
+    "~\010" = "deleteWordBackward:";    /* Option-backspace */
+    "~\177" = "deleteWordBackward:";    /* Option-delete */
+
+    "~v"    = "pageUp:";
+    "^v"    = "pageDown:";
+
+    "~<"    = "moveToBeginningOfDocument:";
+    "~>"    = "moveToEndOfDocument:";
+
+    "^/"    = "undo:";
+    "~/"    = "complete:";
+
+    "^g"    = "_cancelKey:";
+    "^a"    = "moveToBeginningOfLine:";
+    "^e"    = "moveToEndOfLine:";
+
+    "~c"	  = "capitalizeWord:"; /* M-c */
+    "~u"	  = "uppercaseWord:";	 /* M-u */
+    "~l"	  = "lowercaseWord:";	 /* M-l */
+    "^t"	  = "transpose:";      /* C-t */
+    "~t"	  = "transposeWords:"; /* M-t */
+  };
 }
