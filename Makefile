@@ -84,16 +84,6 @@ darwin-switch:
 	@$(DARWIN_REBUILD) switch -Q
 	@echo "Darwin generation: $$($(DARWIN_REBUILD) --list-generations | tail -1)"
 
-home-switch:
-	$(call announce,home-manager switch)
-	@$(HOME_MANAGER) switch
-	@echo "Home generation: $$($(HOME_MANAGER) generations | head -1)"
-	@for file in $(HOME)/.config/fetchmail/config		\
-		     $(HOME)/.config/fetchmail/config-lists; do	\
-	    cp -pL $$file $$file.copy;				\
-	    chmod 0600 $$file.copy;				\
-	done
-
 home-manager-news:
 	$(HOME_MANAGER) news
 

@@ -2,13 +2,13 @@
 
 let home_directory = "/Users/johnw";
     xdg_configHome = "${home_directory}/.config";
-    xdg_dataHome = "${home_directory}/.local/share";
-    xdg_cacheHome = "${home_directory}/.cache";
-    tmp_directory = "/tmp";
-    localconfig = import <localconfig>;
+    xdg_dataHome   = "${home_directory}/.local/share";
+    xdg_cacheHome  = "${home_directory}/.cache";
+    tmp_directory  = "/tmp";
+    localconfig    = import <localconfig>;
 
 in {
-  # imports = [ <home-manager/nix-darwin> ];
+  imports = [ <home-manager/nix-darwin> ];
 
   system.defaults = {
     NSGlobalDomain = {
@@ -186,21 +186,7 @@ in {
     tor8 = runCommand "${pkgs.tor}/bin/tor -f /etc/torrc8";
     tor9 = runCommand "${pkgs.tor}/bin/tor -f /etc/torrc9";
   } //
-  (if localconfig.hostname == "athena" then {
-     # b2-sync = {
-     #   script = ''
-     #     export PATH=$PATH:${pkgs.my-scripts}/bin
-     #     export PATH=$PATH:${pkgs.backblaze-b2}/bin
-     #     export PATH=$PATH:${pkgs.rclone}/bin
-     #     if [[ -d /Volumes/tank/Backups ]]; then
-     #         ${pkgs.my-scripts}/bin/b2-sync /Volumes/tank tank \
-     #             >> /var/log/b2-sync.log 2>&1
-     #     fi
-     #   '';
-     #   serviceConfig = iterate 86400;
-     # };
-   }
-   else if localconfig.hostname == "vulcan" then {
+  (if localconfig.hostname == "vulcan" then {
      znc = runCommand "${pkgs.znc}/bin/znc -f -d ${xdg_configHome}/znc";
    } else {});
 
@@ -221,11 +207,6 @@ in {
       allowBroken = false;
       allowInsecure = false;
       allowUnsupportedSystem = false;
-
-      # jww (2020-03-02): Support for OpenSSL 1.0.2 ended with 2019.
-      permittedInsecurePackages = [
-        "openssl-1.0.2u"
-      ];
     };
 
     overlays =
@@ -281,15 +262,12 @@ in {
     '';
 
     in {
-    systemPackages = import ./packages.nix { inherit pkgs; };
-
     systemPath = [
       "/Applications/Docker.app/Contents/Resources/bin"
     ];
 
     variables = {
-      HOME_MANAGER_CONFIG = "${home_directory}/src/nix/config/home.nix";
-
+      # jww (2021-04-29): This shouldn't be set here.
       MANPATH = [
         "${home_directory}/.nix-profile/share/man"
         "${home_directory}/.nix-profile/man"
@@ -300,17 +278,6 @@ in {
         "/Developer/usr/share/man"
         "/usr/X11/man"
       ];
-
-      LC_CTYPE     = "en_US.UTF-8";
-      LESSCHARSET  = "utf-8";
-      LEDGER_COLOR = "true";
-      PAGER        = "less";
-
-      TERM = "xterm-256color";
-    };
-
-    shellAliases = {
-      rehash = "hash -r";
     };
 
     pathsToLink = [ "/info" "/etc" "/share" "/include" "/lib" "/libexec" ];
@@ -655,9 +622,7 @@ in {
     trustedUsers = [ "johnw" "@admin" ];
 
     binaryCaches = [];
-    binaryCachePublicKeys = [
-      "cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
-    ];
+    binaryCachePublicKeys = [];
 
     extraOptions = ''
       secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
@@ -726,28 +691,17 @@ in {
    }
    else {});
 
-  programs.bash.enable = true;
-
-  programs.zsh = {
-    enable = true;
-    enableFzfCompletion = true;
-    enableFzfGit = true;
-    enableFzfHistory = true;
-    enableSyntaxHighlighting = true;
-  };
-
-  programs.nix-index.enable = true;
-
   system.stateVersion = 2;
 
-  # users.users.johnw = {
-  #   name = "johnw";
-  #   home = "/Users/johnw";
-  #   shell = pkgs.zsh;
-  # };
+  users.users.johnw = {
+    name = "johnw";
+    home = "/Users/johnw";
+    shell = pkgs.zsh;
+  };
 
-  # home-manager = {
-  #   useUserPackages = true;
-  #   users.johnw = import ./home.nix;
-  # };
+  home-manager = {
+    # useUserPackages = true;
+    useGlobalPkgs = true;
+    users.johnw = import ./home.nix;
+  };
 }

@@ -130,7 +130,7 @@ pkgs: epkgs: with epkgs;
   fast-scroll
   feebleline
   fence-edit
-  fennel-mode
+  # fennel-mode
   fetchmail-mode
   fill-page
   flycheck

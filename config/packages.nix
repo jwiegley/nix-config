@@ -66,7 +66,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gitAndTools.git-hub
   gitAndTools.git-imerge
   gitAndTools.git-secret
-  gitAndTools.gitFull
   gitAndTools.gitflow
   gitAndTools.hub
   gitAndTools.tig
@@ -173,7 +172,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   python3
   pythonDocs.html.python27
   pythonDocs.pdf_letter.python27
-  qemu
+  qemu libvirt
   qpdf
   qrencode
   ratpoison
@@ -208,7 +207,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   svg2tikz
   taskjuggler
   terminal-notifier
-  texFull
   time
   tmux
   translate-shell
@@ -222,7 +220,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   unixtools.top
   unrar
   unzip
-  vim
   w3m
   wabt
   watch

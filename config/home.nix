@@ -1,74 +1,53 @@
-{ pkgs, ... }:
+{ pkgs, config, ... }:
 
 let home_directory = builtins.getEnv "HOME";
-    tmp_directory = "/tmp";
-
-    ca-bundle_crt = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-    emacs-server  = "${tmp_directory}/johnw-emacs/server";
+    tmp_directory  = "/tmp";
+    ca-bundle_path = "${pkgs.cacert}/etc/ssl/certs/";
+    ca-bundle_crt  = "${ca-bundle_path}/ca-bundle.crt";
+    emacs-server   = "${tmp_directory}/johnw-emacs/server";
 
     lib = pkgs.lib;
     localconfig = import <localconfig>;
 
     vulcan_ethernet = "192.168.1.69";
     vulcan_wifi     = "192.168.1.90";
+
     athena_ethernet = "192.168.1.80";
     athena_wifi     = "192.168.1.68";
+
     hermes_ethernet = "192.168.1.108";
     hermes_wifi     = "192.168.1.67";
 
-in rec {
-  nixpkgs = {
-    config = {
-      allowUnfree = true;
-      allowBroken = false;
-      allowUnsupportedSystem = false;
-    };
-
-    overlays =
-      let path = ../overlays; in with builtins;
-      map (n: import (path + ("/" + n)))
-          (filter (n: match ".*\\.nix" n != null ||
-                      pathExists (path + ("/" + n + "/default.nix")))
-                  (attrNames (readDir path)));
-  };
-
-  # services = {
-  #   gpg-agent = {
-  #     enable = true;
-  #     defaultCacheTtl = 1800;
-  #     enableSshSupport = true;
-  #   };
-  # };
-
+in {
   home = {
     # These are packages that should always be present in the user
     # environment, though perhaps not the machine environment.
-    packages = with pkgs; [];
+    packages = pkgs.callPackage ./packages.nix {};
 
     sessionVariables = {
-      ASPELL_CONF        = "conf ${xdg.configHome}/aspell/config;";
-      B2_ACCOUNT_INFO    = "${xdg.configHome}/backblaze-b2/account_info";
+      ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";
+      B2_ACCOUNT_INFO    = "${config.xdg.configHome}/backblaze-b2/account_info";
       BORG_PASSCOMMAND   = "${pkgs.pass}/bin/pass show Passwords/borgbackup";
-      CABAL_CONFIG       = "${xdg.configHome}/cabal/config";
-      FONTCONFIG_FILE    = "${xdg.configHome}/fontconfig/fonts.conf";
-      FONTCONFIG_PATH    = "${xdg.configHome}/fontconfig";
-      GNUPGHOME          = "${xdg.configHome}/gnupg";
+      CABAL_CONFIG       = "${config.xdg.configHome}/cabal/config";
+      FONTCONFIG_FILE    = "${config.xdg.configHome}/fontconfig/fonts.conf";
+      FONTCONFIG_PATH    = "${config.xdg.configHome}/fontconfig";
+      GNUPGHOME          = "${config.xdg.configHome}/gnupg";
       GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";
-      LESSHISTFILE       = "${xdg.cacheHome}/less/history";
-      LOCATE_PATH        = "${xdg.cacheHome}/locate/home.db:${xdg.cacheHome}/locate/system.db";
+      LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
+      LOCATE_PATH        = "${config.xdg.cacheHome}/locate/home.db:${config.xdg.cacheHome}/locate/system.db";
       NIX_CONF           = "${home_directory}/src/nix";
-      PARALLEL_HOME      = "${xdg.cacheHome}/parallel";
+      PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
       PASSWORD_STORE_DIR = "${home_directory}/doc/.passwords";
-      RECOLL_CONFDIR     = "${xdg.configHome}/recoll";
-      SCREENRC           = "${xdg.configHome}/screen/config";
-      SSH_AUTH_SOCK      = "${xdg.configHome}/gnupg/S.gpg-agent.ssh";
-      STARDICT_DATA_DIR  = "${xdg.dataHome}/dictionary";
-      TRAVIS_CONFIG_PATH = "${xdg.configHome}/travis";
-      VAGRANT_HOME       = "${xdg.dataHome}/vagrant";
-      WWW_HOME           = "${xdg.cacheHome}/w3m";
+      RECOLL_CONFDIR     = "${config.xdg.configHome}/recoll";
+      SCREENRC           = "${config.xdg.configHome}/screen/config";
+      SSH_AUTH_SOCK      = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
+      STARDICT_DATA_DIR  = "${config.xdg.dataHome}/dictionary";
+      TRAVIS_CONFIG_PATH = "${config.xdg.configHome}/travis";
+      VAGRANT_HOME       = "${config.xdg.dataHome}/vagrant";
+      WWW_HOME           = "${config.xdg.cacheHome}/w3m";
       EMACS_SERVER_FILE  = "${emacs-server}";
       EDITOR             = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
-      EMAIL              = "${programs.git.userEmail}";
+      EMAIL              = "${config.programs.git.userEmail}";
       JAVA_OPTS          = "-Xverify:none";
       VULCAN_ETHERNET    = vulcan_ethernet;
       VULCAN_WIFI        = vulcan_wifi;
@@ -93,15 +72,6 @@ in rec {
            })
           [ "Library/Scripts/Applications/Download links to PDF.scpt"
             "Library/Scripts/Applications/Media Pro" ]) // {
-        # ".cups".source    = "${xdg.configHome}/cups";
-        # ".dbvis".source   = "${xdg.configHome}/DbVisualizer";
-        # ".gist".source    = "${xdg.configHome}/gist/account_id";
-        # ".jira.d".source  = "${xdg.configHome}/jira";
-        # ".macbeth".source = "${xdg.configHome}/macbeth";
-        # ".recoll".source  = "${xdg.configHome}/recoll";
-        # ".zekr".source    = "${xdg.configHome}/zekr";
-
-        # ".dl".source = "${home_directory}/Downloads";
 
         ".ledgerrc".text = ''
           --file ${home_directory}/doc/accounts/main.ledger
@@ -109,26 +79,72 @@ in rec {
           --date-format %Y/%m/%d
         '';
 
-        # ".tmux.conf".text = ''
-        #   set-option -g default-command "reattach-to-user-namespace -l ${pkgs.zsh}/bin/zsh"
-        # '';
-
         ".curlrc".text = ''
-          capath=${pkgs.cacert}/etc/ssl/certs/
-          cacert=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
+          capath=${ca-bundle_path}
+          cacert=${ca-bundle_crt}
         '';
         ".wgetrc".text = ''
-          ca_directory = ${pkgs.cacert}/etc/ssl/certs/
-          ca_certificate = ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
+          ca_directory = ${ca-bundle_path}
+          ca_certificate = ${ca-bundle_crt}
         '';
       };
+  };
 
-      # activation.linkMyFiles = lib.hm.dag.entryAfter ["writeBoundary"] ''
-      #   ln -s ${home_directory}/Downloads ${home_directory}/dl
-      # '';
+  accounts.email = {
+    certificatesFile = "${ca-bundle_crt}";
+
+    accounts.fastmail = {
+      realName = "John Wiegley";
+      address = "johnw@newartisans.com";
+      aliases = [
+        "jwiegley@gmail.com"
+        "johnw@gnu.org"
+      ];
+      userName = "johnw@newartisans.com";
+      flavor = "plain";
+      passwordCommand = "${pkgs.pass}/bin/pass show smtp.fastmail.com";
+      primary = true;
+      msmtp.enable = true;
+      imap = {
+        host = "imap.fastmail.com";
+        port = 993;
+        tls = {
+          enable = true;
+          useStartTls = false;
+        };
+      };
+      smtp = {
+        host = "smtp.fastmail.com";
+        port = 587;
+        tls = {
+          enable = true;
+          useStartTls = true;
+        };
+      };
+      gpg = {
+        key = "46C4BD1A7AC14BA2";
+        signByDefault = false;
+        encryptByDefault = false;
+      };
+    };
   };
 
   programs = {
+    direnv.enable = true;
+    jq.enable = true;
+    htop.enable = true;
+    info.enable = true;
+    man.enable = true;
+    tmux.enable = true;
+    vim.enable = true;
+
+    msmtp = {
+      enable = true;
+      extraConfig =''
+        logfile ${config.xdg.dataHome}/msmtp/msmtp.log
+      '';
+    };
+
     home-manager = {
       enable = true;
       path = "${home_directory}/src/nix/home-manager";
@@ -139,8 +155,15 @@ in rec {
       browsers = [ "firefox" ];
     };
 
-    direnv = {
+    texlive = {
       enable = true;
+      extraPackages = tpkgs: {
+        inherit (tpkgs) scheme-full texdoc latex2e-help-texinfo;
+        pkgFilter = pkg:
+             pkg.tlType == "run"
+          || pkg.tlType == "bin"
+          || pkg.pname == "latex2e-help-texinfo";
+      };
     };
 
     bash = {
@@ -148,6 +171,11 @@ in rec {
       bashrcExtra = lib.mkBefore ''
         source /etc/bashrc
       '';
+    };
+
+    fzf = {
+      enable = true;
+      enableZshIntegration = true;
     };
 
     zsh = rec {
@@ -168,10 +196,14 @@ in rec {
       sessionVariables = {
         ALTERNATE_EDITOR  = "${pkgs.vim}/bin/vi";
         LC_CTYPE          = "en_US.UTF-8";
+        LEDGER_COLOR      = "true";
         LESS              = "-FRSXM";
+        LESSCHARSET       = "utf-8";
+        PAGER             = "less";
         PROMPT            = "%m %~ $ ";
         PROMPT_DIRTRIM    = "2";
         RPROMPT           = "";
+        TERM              = "xterm-256color";
         TINC_USE_NIX      = "yes";
         WORDCHARS         = "";
       };
@@ -209,6 +241,8 @@ in rec {
           ''"terraform init; '' +
           ''export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass show api.github.com | head -1); '' +
           ''terraform apply"'';
+
+        rehash = "hash -r";
       };
 
       profileExtra = ''
@@ -220,10 +254,10 @@ in rec {
         . ${pkgs.z}/share/z.sh
 
         defaults write org.hammerspoon.Hammerspoon MJConfigFile \
-            "${xdg.configHome}/hammerspoon/init.lua"
+            "${config.xdg.configHome}/hammerspoon/init.lua"
 
         for i in rdm msmtp privoxy tor; do
-            dir=${xdg.dataHome}/$i
+            dir=${config.xdg.dataHome}/$i
             if [[ ! -d $dir ]]; then mkdir -p $dir; fi
         done
 
@@ -236,19 +270,12 @@ in rec {
         export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
         export PATH=$(echo "$PATH" | sed 's/\/Applications\/VMware Fusion\.app\/Contents\/Public://')
 
-        # DOCKER_MACHINE=$(which docker-machine)
-        # if [[ -x "$DOCKER_MACHINE" ]]; then
-        #     if $DOCKER_MACHINE status default > /dev/null 2>&1; then
-        #         eval $($DOCKER_MACHINE env default) > /dev/null 2>&1
-        #     fi
-        # fi
-
         export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
 
         function upload() {
             ${pkgs.lftp}/bin/lftp -u johnw@newartisans.com,$(${pkgs.pass}/bin/pass show ftp.fastmail.com | head -1) \
                 ftp://johnw@newartisans.com@ftp.fastmail.com                 \
-                -e "set ssl:ca-file \"${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt\"; cd /johnw.newartisans.com/files/pub ; put \"$1\" ; quit"
+                -e "set ssl:ca-file \"${ca-bundle_crt}\"; cd /johnw.newartisans.com/files/pub ; put \"$1\" ; quit"
 
             file=$(basename "$1" | sed -e 's/ /%20/g')
             echo "http://ftp.newartisans.com/pub/$file" | pbcopy
@@ -259,20 +286,22 @@ in rec {
             unset zle_bracketed_paste
             export PS1='%m %~ $ '
         else
-           . ${xdg.configHome}/zsh/plugins/iterm2_shell_integration
-           . ${xdg.configHome}/zsh/plugins/iterm2_tmux_integration
+           . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
+           . ${config.xdg.configHome}/zsh/plugins/iterm2_tmux_integration
         fi
       '';
 
       plugins = [
-        { name = "iterm2_shell_integration";
+        {
+          name = "iterm2_shell_integration";
           src = pkgs.fetchurl {
             url = https://iterm2.com/shell_integration/zsh;
             sha256 = "1qm7khz19dhwgz4aln3yy5hnpdh6pc8nzxp66m1za7iifq9wrvil";
             # date = 2020-01-07T15:59:09-0800;
           };
         }
-        { name = "iterm2_tmux_integration";
+        {
+          name = "iterm2_tmux_integration";
           src = pkgs.fetchurl {
             url = https://gist.githubusercontent.com/antifuchs/c8eca4bcb9d09a7bbbcd/raw/3ebfecdad7eece7c537a3cd4fa0510f25d02611b/iterm2_zsh_init.zsh;
             sha256 = "1v1b6yz0lihxbbg26nvz85c1hngapiv7zmk4mdl5jp0fsj6c9s8c";
@@ -284,6 +313,7 @@ in rec {
 
     git = {
       enable = true;
+      package = pkgs.gitFull;
 
       userName  = "John Wiegley";
       userEmail = "johnw@newartisans.com";
@@ -480,7 +510,7 @@ in rec {
       serverAliveInterval = 60;
 
       hashKnownHosts = true;
-      userKnownHostsFile = "${xdg.configHome}/ssh/known_hosts";
+      userKnownHostsFile = "${config.xdg.configHome}/ssh/known_hosts";
 
       extraConfig = ''
         Host default
@@ -524,8 +554,7 @@ in rec {
         nixos   = onHost "vulcan" "192.168.118.128";
         dfinity = onHost "vulcan" "192.168.118.136";
         macos   = onHost "vulcan" "172.16.20.139";
-        ubuntu  = onHost "vulcan" "172.16.20.140";
-        glibc   = onHost "vulcan" "172.16.20.141";
+        ubuntu  = onHost "vulcan" "172.16.20.141";
 
         elpa        = { hostname = "elpa.gnu.org"; user = "root"; };
         haskell_org = { host = "*haskell.org";     user = "root"; };
@@ -549,7 +578,7 @@ in rec {
             "hermes" "athena" "home" "mac1*" "macos*" "nixos*" "mohajer"
             "dfinity" "smokeping" "tank" "titan" "ubuntu*" "vulcan"
           ];
-          identityFile = "${xdg.configHome}/ssh/id_local";
+          identityFile = "${config.xdg.configHome}/ssh/id_local";
           identitiesOnly = true;
           user = "johnw";
         };
@@ -559,7 +588,7 @@ in rec {
           proxyJump = "athena";
           user = "root";
           port = 3022;
-          identityFile = "${xdg.configHome}/ssh/nix-docker_rsa";
+          identityFile = "${config.xdg.configHome}/ssh/nix-docker_rsa";
           identitiesOnly = true;
         };
 
@@ -571,7 +600,8 @@ in rec {
             "pa-1" "pa-darwin-1" "pa-darwin-2"
             "zrh-1" "zrh-2" "zrh-3" "zrh-darwin-1"
           ];
-          identityFile = "${xdg.configHome}/ssh/id_dfinity";
+          identityFile = [ "${config.xdg.configHome}/ssh/id_dfinity"
+                           "${config.xdg.configHome}/ssh/id_dfinity_old" ];
           identitiesOnly = true;
         };
 
@@ -646,10 +676,6 @@ in rec {
   xdg = {
     enable = true;
 
-    configHome = "${home_directory}/.config";
-    dataHome   = "${home_directory}/.local/share";
-    cacheHome  = "${home_directory}/.cache";
-
     configFile."gnupg/gpg-agent.conf".text = ''
       enable-ssh-support
       default-cache-ttl 86400
@@ -660,8 +686,8 @@ in rec {
     configFile."aspell/config".text = ''
       local-data-dir ${pkgs.aspell}/lib/aspell
       data-dir ${pkgs.aspellDicts.en}/lib/aspell
-      personal ${xdg.configHome}/aspell/en_US.personal
-      repl ${xdg.configHome}/aspell/en_US.repl
+      personal ${config.xdg.configHome}/aspell/en_US.personal
+      repl ${config.xdg.configHome}/aspell/en_US.repl
     '';
 
     configFile."recoll/mimeview".text = ''
@@ -671,25 +697,9 @@ in rec {
       application/pdf = ${pkgs.emacs}/bin/emacsclient -n -s ${emacs-server} --eval '(org-pdfview-open "%f::%p")'
     '';
 
-    configFile."msmtp".text = ''
-      defaults
-      tls on
-      tls_starttls on
-      tls_trust_file ${ca-bundle_crt}
-
-      account fastmail
-      host smtp.fastmail.com
-      port 587
-      auth on
-      user ${programs.git.userEmail}
-      passwordeval ${pkgs.pass}/bin/pass show smtp.fastmail.com
-      from ${programs.git.userEmail}
-      logfile ${xdg.dataHome}/msmtp/msmtp.log
-    '';
-
     configFile."fetchmail/config".text = ''
       poll imap.fastmail.com protocol IMAP port 993 auth password
-        user '${programs.git.userEmail}' there is johnw here
+        user '${config.accounts.email.accounts.fastmail.address}' there is johnw here
         ssl sslcertck sslcertfile "${ca-bundle_crt}"
         folder INBOX
         fetchall
@@ -698,7 +708,7 @@ in rec {
 
     configFile."fetchmail/config-lists".text = ''
       poll imap.fastmail.com protocol IMAP port 993 auth password
-        user '${programs.git.userEmail}' there is johnw here
+        user '${config.accounts.email.accounts.fastmail.address}' there is johnw here
         ssl sslcertck sslcertfile "${ca-bundle_crt}"
         folder 'Lists'
         fetchall

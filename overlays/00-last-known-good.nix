@@ -28,4 +28,13 @@ in
       network_cmds
       ;
   };
+
+  inherit (nixpkgs {
+    # known-good-20210422_091739
+    rev    = "f41dd45874e0113843f00a59c0b67c1609eeddf8";
+    sha256 = "0hwfvj50g84h8kcnmv2sz1z7n505s7kd2096lf23fbbpd6i4zb7m";
+  })
+    backblaze-b2
+    csvkit
+    ;
 }
