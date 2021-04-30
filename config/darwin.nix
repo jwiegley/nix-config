@@ -282,7 +282,7 @@ in {
 
     pathsToLink = [ "/info" "/etc" "/share" "/include" "/lib" "/libexec" ];
 
-    etc."dovecot/modules".source = "/run/current-system/sw/lib/dovecot";
+    etc."dovecot/modules".source = "${home_directory}/.nix-profile/lib/dovecot";
     etc."dovecot/dovecot.conf".text = ''
       base_dir = ${home_directory}/Library/Application Support/dovecot
       default_login_user = johnw
@@ -293,8 +293,8 @@ in {
       log_path = syslog
       mail_gid = 20
       mail_location = mdbox:${home_directory}/Messages/Mailboxes
-      login_plugin_dir = /run/current-system/sw/lib/dovecot
-      mail_plugin_dir = /run/current-system/sw/lib/dovecot
+      login_plugin_dir = ${home_directory}/.nix-profile/lib/dovecot
+      mail_plugin_dir = ${home_directory}/.nix-profile/lib/dovecot
       mail_plugins = fts fts_lucene zlib
       mail_uid = 501
       postmaster_address = postmaster@newartisans.com
