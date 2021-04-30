@@ -37,4 +37,12 @@ in
     backblaze-b2
     csvkit
     ;
+
+  inherit (nixpkgs {
+    # known-good-20210427_194036
+    rev    = "6ff596863b1497fd2114a3f4814e16af7385f86c";
+    sha256 = "1bc624inm21wl6s9b4nmn495j25yab1bvn3jc3f1mjfmcrbvm1gd";
+  })
+    subversion
+    ;
 }

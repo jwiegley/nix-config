@@ -1,16 +1,11 @@
-{ nixpkgs       ? ./nixpkgs
-, system        ? builtins.currentSystem
-, pkgs          ? import nixpkgs { inherit system; }
-, configuration ? ./config/darwin.nix
-, darwin        ? import ./darwin { inherit nixpkgs configuration system pkgs; }
-, home-manager  ? import ./home-manager/home-manager/home-manager.nix {
-    inherit (darwin) pkgs;
-    confPath = ./config/home.nix;
-    confAttr = "";
-  }
-}: {
-  inherit (darwin) pkgs;
+{ ... }:
 
-  nix-darwin   = darwin.system;
-  home-manager = home-manager.activationPackage;
+let darwin = import ./darwin rec {
+      nixpkgs       = ./nixpkgs;
+      configuration = ./config/darwin.nix;
+      system        = builtins.currentSystem;
+      pkgs          = import nixpkgs { inherit system; };
+    }; in
+{
+  nix-darwin = darwin.system;
 }

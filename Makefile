@@ -49,10 +49,6 @@ else
 BUILD_PATH = /run/current-system
 endif
 
-DARWIN_REBUILD = $(PRENIX) $(BUILD_PATH)/sw/bin/darwin-rebuild
-HOME_MANAGER   = $(PRENIX) HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix	\
-			   $(HOME)/.nix-profile/bin/home-manager
-
 all: rebuild
 
 %-all: %
@@ -68,7 +64,7 @@ define announce
 	@echo '└────────────────────────────────────────────────────────────────────────────┘'
 endef
 
-announce-test:
+test:
 	$(call announce,this is a test)
 
 build:
@@ -76,26 +72,27 @@ build:
 	@$(NIX) build -f . $(BUILD_ARGS)
 	@rm -f result*
 
-build-command:
+command:
 	@echo $(NIX) build -f . $(BUILD_ARGS)
 
-darwin-switch:
+DARWIN_REBUILD = $(PRENIX) $(BUILD_PATH)/sw/bin/darwin-rebuild
+
+switch:
 	$(call announce,darwin-rebuild switch)
 	@$(DARWIN_REBUILD) switch -Q
 	@echo "Darwin generation: $$($(DARWIN_REBUILD) --list-generations | tail -1)"
 
-home-manager-news:
-	$(HOME_MANAGER) news
-
-switch: darwin-switch home-switch
+news:
+	$(PRENIX) HOME_MANAGER_CONFIG=$(NIX_CONF)/config/home.nix \
+	    $(HOME)/.nix-profile/bin/home-manager news
 
 rebuild: build switch
 
 pull:
 	$(call announce,git pull)
+	(cd nixpkgs	 && git pull --rebase)
 	(cd darwin	 && git pull --rebase)
 	(cd home-manager && git pull --rebase)
-	(cd nixpkgs	 && git pull --rebase)
 
 tag-before:
 	$(call announce,git tag (before))
