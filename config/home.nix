@@ -73,8 +73,6 @@ in {
           --date-format %Y/%m/%d
         '';
 
-        "HMHOST".text = builtins.toJSON { inherit (pkgs.stdenv.hostPlatform) system isDarwin; };
-
         ".curlrc".text = ''
           capath=${ca-bundle_path}
           cacert=${ca-bundle_crt}
@@ -261,13 +259,6 @@ in {
       '';
 
       initExtra = lib.mkBefore ''
-        export PATH=$(echo "$PATH" | sed 's/\/usr\/local\/bin:\/usr\/bin:\/bin:\/usr\/sbin:\/sbin://')
-        export PATH=${home_directory}/doc/accounts/bin:$PATH
-        export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
-        export PATH=$(echo "$PATH" | sed 's/\/Applications\/VMware Fusion\.app\/Contents\/Public://')
-
-        export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
-
         function upload() {
             ${pkgs.lftp}/bin/lftp -u johnw@newartisans.com,$(${pkgs.pass}/bin/pass show ftp.fastmail.com | head -1) \
                 ftp://johnw@newartisans.com@ftp.fastmail.com                 \

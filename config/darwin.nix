@@ -645,6 +645,10 @@ in {
 
   system.stateVersion = 2;
 
+  programs.zsh = {
+    enable = true;
+  };
+
   users.users.johnw = {
     name = "johnw";
     home = "/Users/johnw";
