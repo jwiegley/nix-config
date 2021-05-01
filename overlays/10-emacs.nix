@@ -636,6 +636,21 @@ let
         };
       };
 
+    debbugs = eself.elpaBuild {
+        pname = "debbugs";
+        ename = "debbugs";
+        version = "0.28";
+        src = fetchurl {
+          url = "https://elpa.gnu.org/packages/debbugs-0.28.tar";
+          sha256 = "1qks38hpg3drhxzw66n5yxfq0v6fj9ya7d9dc6x0xwfp6r2x0li0";
+          # date = 2021-05-01T09:54:39-0700;
+        };
+        meta = {
+          homepage = "https://elpa.gnu.org/packages/debbugs.html";
+          license = lib.licenses.free;
+        };
+      };
+
     doxymacs = mkDerivation rec {
       name = "emacs-doxymacs-${version}";
       version = "2017-12-10";
