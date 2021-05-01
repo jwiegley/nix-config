@@ -1,12 +1,12 @@
-{ config, lib, pkgs, ... }:
+{ pkgs, lib, config, ... }:
 
-let home_directory = builtins.getEnv "HOME";
-    tmp_directory  = "/tmp";
+let home           = builtins.getEnv "HOME";
+    tmpdir         = "/tmp";
     localconfig    = import <localconfig>;
 
-    xdg_configHome = "${home_directory}/.config";
-    xdg_dataHome   = "${home_directory}/.local/share";
-    xdg_cacheHome  = "${home_directory}/.cache";
+    xdg_configHome = "${home}/.config";
+    xdg_dataHome   = "${home}/.local/share";
+    xdg_cacheHome  = "${home}/.cache";
 
 in {
   imports = [ <home-manager/nix-darwin> ];
@@ -61,11 +61,11 @@ in {
 
     pdnsd = {
       script = ''
-        cp -pL /etc/pdnsd.conf ${tmp_directory}/.pdnsd.conf
-        chmod 700 ${tmp_directory}/.pdnsd.conf
-        chown root ${tmp_directory}/.pdnsd.conf
+        cp -pL /etc/pdnsd.conf ${tmpdir}/.pdnsd.conf
+        chmod 700 ${tmpdir}/.pdnsd.conf
+        chown root ${tmpdir}/.pdnsd.conf
         touch ${xdg_cacheHome}/pdnsd/pdnsd.cache
-        ${pkgs.pdnsd}/sbin/pdnsd -c ${tmp_directory}/.pdnsd.conf
+        ${pkgs.pdnsd}/sbin/pdnsd -c ${tmpdir}/.pdnsd.conf
       '';
       serviceConfig.RunAtLoad = true;
       serviceConfig.KeepAlive = true;
@@ -108,7 +108,7 @@ in {
     aria2c = runCommand 
       ("${pkgs.aria2}/bin/aria2c "
         + "--enable-rpc "
-        + "--dir ${home_directory}/Downloads "
+        + "--dir ${home}/Downloads "
         + "--check-integrity "
         + "--continue ");
 
@@ -126,8 +126,8 @@ in {
 
     leafnode = {
       command = "${pkgs.leafnode}/sbin/leafnode "
-        + "-d ${home_directory}/Messages/Newsdir "
-        + "-F ${home_directory}/Messages/leafnode/config";
+        + "-d ${home}/Messages/Newsdir "
+        + "-F ${home}/Messages/leafnode/config";
       serviceConfig = {
         WorkingDirectory = "${pkgs.dovecot}/lib";
         inetdCompatibility.Wait = "nowait";
@@ -141,7 +141,7 @@ in {
     locate = {
       script = ''
         export PATH=${pkgs.findutils}/bin:$PATH
-        export HOME=${home_directory}
+        export HOME=${home}
         if [[ ! -d ${xdg_dataHome}/locate ]]; then
             mkdir ${xdg_dataHome}/locate
         fi
@@ -192,7 +192,7 @@ in {
    } else {});
 
   system.activationScripts.postActivation.text = ''
-    chflags nohidden ${home_directory}/Library
+    chflags nohidden ${home}/Library
 
     sudo launchctl load -w \
         /System/Library/LaunchDaemons/com.apple.atrun.plist > /dev/null 2>&1 \
@@ -267,8 +267,8 @@ in {
     variables = {
       # jww (2021-04-29): This shouldn't be set here.
       MANPATH = [
-        "${home_directory}/.nix-profile/share/man"
-        "${home_directory}/.nix-profile/man"
+        "${home}/.nix-profile/share/man"
+        "${home}/.nix-profile/man"
         "${config.system.path}/share/man"
         "${config.system.path}/man"
         "/usr/local/share/man"
@@ -280,9 +280,9 @@ in {
 
     pathsToLink = [ "/info" "/etc" "/share" "/include" "/lib" "/libexec" ];
 
-    etc."dovecot/modules".source = "${home_directory}/.nix-profile/lib/dovecot";
+    etc."dovecot/modules".source = "${home}/.nix-profile/lib/dovecot";
     etc."dovecot/dovecot.conf".text = ''
-      base_dir = ${home_directory}/Library/Application Support/dovecot
+      base_dir = ${home}/Library/Application Support/dovecot
       default_login_user = johnw
       default_internal_user = johnw
       auth_mechanisms = plain
@@ -290,9 +290,9 @@ in {
       lda_mailbox_autocreate = yes
       log_path = syslog
       mail_gid = 20
-      mail_location = mdbox:${home_directory}/Messages/Mailboxes
-      login_plugin_dir = ${home_directory}/.nix-profile/lib/dovecot
-      mail_plugin_dir = ${home_directory}/.nix-profile/lib/dovecot
+      mail_location = mdbox:${home}/Messages/Mailboxes
+      login_plugin_dir = ${home}/.nix-profile/lib/dovecot
+      mail_plugin_dir = ${home}/.nix-profile/lib/dovecot
       mail_plugins = fts fts_lucene zlib
       mail_uid = 501
       postmaster_address = postmaster@newartisans.com
@@ -310,7 +310,7 @@ in {
 
       passdb {
         driver = static
-        args = uid=501 gid=20 home=${home_directory} password=pass
+        args = uid=501 gid=20 home=${home} password=pass
       }
 
       namespace {
@@ -342,8 +342,8 @@ in {
       }
       plugin {
         sieve_extensions = +editheader
-        sieve = ${home_directory}/Messages/dovecot.sieve
-        sieve_dir = ${home_directory}/Messages/sieve
+        sieve = ${home}/Messages/dovecot.sieve
+        sieve_dir = ${home}/Messages/sieve
       }
     '';
 
@@ -657,7 +657,6 @@ in {
 
   home-manager = {
     useGlobalPkgs = true;
-    users.johnw = 
-      import ./home.nix { inherit home_directory tmp_directory localconfig; };
+    users.johnw = import ./home.nix;
   };
 }

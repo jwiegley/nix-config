@@ -1,12 +1,12 @@
-args: { pkgs, lib, config, ... }:
+{ pkgs, lib, config, ... }:
 
-let home_directory  = args.home_directory;
-    tmp_directory   = args.tmp_directory;
-    localconfig     = args.localconfig;
+let home            = builtins.getEnv "HOME";
+    tmpdir          = "/tmp";
+    localconfig     = import <localconfig>;
 
     ca-bundle_path  = "${pkgs.cacert}/etc/ssl/certs/";
     ca-bundle_crt   = "${ca-bundle_path}/ca-bundle.crt";
-    emacs-server    = "${tmp_directory}/johnw-emacs/server";
+    emacs-server    = "${tmpdir}/johnw-emacs/server";
 
     vulcan_ethernet = "192.168.1.69";
     vulcan_wifi     = "192.168.1.90";
@@ -31,9 +31,9 @@ in {
       GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";
       LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
       LOCATE_PATH        = "${config.xdg.cacheHome}/locate/home.db:${config.xdg.cacheHome}/locate/system.db";
-      NIX_CONF           = "${home_directory}/src/nix";
+      NIX_CONF           = "${home}/src/nix";
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
-      PASSWORD_STORE_DIR = "${home_directory}/doc/.passwords";
+      PASSWORD_STORE_DIR = "${home}/doc/.passwords";
       RECOLL_CONFDIR     = "${config.xdg.configHome}/recoll";
       SCREENRC           = "${config.xdg.configHome}/screen/config";
       SSH_AUTH_SOCK      = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
@@ -49,11 +49,11 @@ in {
       VULCAN_WIFI        = vulcan_wifi;
       HERMES_ETHERNET    = hermes_ethernet;
       HERMES_WIFI        = hermes_wifi;
+      HOSTNAME           = "${localconfig.hostname}";
 
-      RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone-b2";
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
-      VAGRANT_VMWARE_CLONE_DIRECTORY = "${home_directory}/Machines/vagrant";
+      VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";
       FILTER_BRANCH_SQUELCH_WARNING  = "1";
     };
 
@@ -61,14 +61,14 @@ in {
       map (path: {
              name = path;
              value = {
-               source = builtins.toPath("${home_directory}/src/home/${path}");
+               source = builtins.toPath("${home}/src/home/${path}");
              };
            })
           [ "Library/Scripts/Applications/Download links to PDF.scpt"
             "Library/Scripts/Applications/Media Pro" ]) // {
 
         ".ledgerrc".text = ''
-          --file ${home_directory}/doc/accounts/main.ledger
+          --file ${home}/doc/accounts/main.ledger
           --input-date-format %Y/%m/%d
           --date-format %Y/%m/%d
         '';
@@ -141,7 +141,7 @@ in {
 
     home-manager = {
       enable = true;
-      path = "${home_directory}/src/nix/home-manager";
+      path = "${home}/src/nix/home-manager";
     };
 
     browserpass = {
@@ -490,7 +490,7 @@ in {
       enable = true;
 
       controlMaster  = "auto";
-      controlPath    = "${tmp_directory}/ssh-%u-%r@%h:%p";
+      controlPath    = "${tmpdir}/ssh-%u-%r@%h:%p";
       controlPersist = "1800";
 
       forwardAgent = true;
