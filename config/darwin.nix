@@ -257,20 +257,6 @@ in {
       "/Applications/Docker.app/Contents/Resources/bin"
     ];
 
-    variables = {
-      # jww (2021-04-29): This shouldn't be set here.
-      MANPATH = [
-        "${home}/.nix-profile/share/man"
-        "${home}/.nix-profile/man"
-        "${config.system.path}/share/man"
-        "${config.system.path}/man"
-        "/usr/local/share/man"
-        "/usr/share/man"
-        "/Developer/usr/share/man"
-        "/usr/X11/man"
-      ];
-    };
-
     pathsToLink = [ "/info" "/etc" "/share" "/include" "/lib" "/libexec" ];
 
     etc."dovecot/modules".source = "${home}/.nix-profile/lib/dovecot";

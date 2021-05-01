@@ -7,6 +7,7 @@ let home            = builtins.getEnv "HOME";
     ca-bundle_path  = "${pkgs.cacert}/etc/ssl/certs/";
     ca-bundle_crt   = "${ca-bundle_path}/ca-bundle.crt";
     emacs-server    = "${tmpdir}/johnw-emacs/server";
+    emacsclient     = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
 
     vulcan_ethernet = "192.168.1.69";
     vulcan_wifi     = "192.168.1.90";
@@ -30,7 +31,6 @@ in {
       GNUPGHOME          = "${config.xdg.configHome}/gnupg";
       GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";
       LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
-      LOCATE_PATH        = "${config.xdg.cacheHome}/locate/home.db:${config.xdg.cacheHome}/locate/system.db";
       NIX_CONF           = "${home}/src/nix";
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
       PASSWORD_STORE_DIR = "${home}/doc/.passwords";
@@ -42,7 +42,7 @@ in {
       VAGRANT_HOME       = "${config.xdg.dataHome}/vagrant";
       WWW_HOME           = "${config.xdg.cacheHome}/w3m";
       EMACS_SERVER_FILE  = "${emacs-server}";
-      EDITOR             = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
+      EDITOR             = "${emacsclient}";
       EMAIL              = "${config.programs.git.userEmail}";
       JAVA_OPTS          = "-Xverify:none";
       VULCAN_ETHERNET    = vulcan_ethernet;
@@ -55,6 +55,18 @@ in {
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";
       FILTER_BRANCH_SQUELCH_WARNING  = "1";
+
+      LOCATE_PATH = lib.concatStringsSep ":" [
+        "${config.xdg.cacheHome}/locate/home.db"
+        "${config.xdg.cacheHome}/locate/system.db"
+      ];
+
+      MANPATH = lib.concatStringsSep ":" [
+        "${home}/.nix-profile/share/man"
+        "/run/current-system/sw/share/man"
+        "/usr/local/share/man"
+        "/usr/share/man"
+      ];
     };
 
     file = builtins.listToAttrs (
@@ -174,32 +186,31 @@ in {
 
     zsh = rec {
       enable = true;
-
-      dotDir = ".config/zsh";
       enableCompletion = false;
       enableAutosuggestions = true;
+      dotDir = ".config/zsh";
 
       history = {
-        size = 50000;
-        save = 500000;
-        path = "${dotDir}/history";
+        size       = 50000;
+        save       = 500000;
+        path       = "${dotDir}/history";
         ignoreDups = true;
-        share = true;
+        share      = true;
       };
 
       sessionVariables = {
-        ALTERNATE_EDITOR  = "${pkgs.vim}/bin/vi";
-        LC_CTYPE          = "en_US.UTF-8";
-        LEDGER_COLOR      = "true";
-        LESS              = "-FRSXM";
-        LESSCHARSET       = "utf-8";
-        PAGER             = "less";
-        PROMPT            = "%m %~ $ ";
-        PROMPT_DIRTRIM    = "2";
-        RPROMPT           = "";
-        TERM              = "xterm-256color";
-        TINC_USE_NIX      = "yes";
-        WORDCHARS         = "";
+        ALTERNATE_EDITOR = "${pkgs.vim}/bin/vi";
+        LC_CTYPE         = "en_US.UTF-8";
+        LEDGER_COLOR     = "true";
+        LESS             = "-FRSXM";
+        LESSCHARSET      = "utf-8";
+        PAGER            = "less";
+        PROMPT           = "%m %~ $ ";
+        PROMPT_DIRTRIM   = "2";
+        RPROMPT          = "";
+        TERM             = "xterm-256color";
+        TINC_USE_NIX     = "yes";
+        WORDCHARS        = "";
       };
 
       shellAliases = {
@@ -225,16 +236,10 @@ in {
                + " | ${pkgs.coreutils}/bin/tail -n +5";
 
         # Use whichever cabal is on the PATH.
+        cb     = "cabal new-build";
         cn     = "cabal new-configure --enable-tests --enable-benchmarks";
         cnp    = "cabal new-configure --enable-tests --enable-benchmarks " +
                  "--enable-profiling --ghc-options=-fprof-auto";
-        cb     = "cabal new-build";
-
-        # Use whichever terraform is on the PATH.
-        deploy = ''${pkgs.nix}/bin/nix-shell --pure --command '' +
-          ''"terraform init; '' +
-          ''export GITHUB_TOKEN=$(${pkgs.pass}/bin/pass show api.github.com | head -1); '' +
-          ''terraform apply"'';
 
         rehash = "hash -r";
       };
@@ -247,10 +252,7 @@ in {
 
         . ${pkgs.z}/share/z.sh
 
-        defaults write org.hammerspoon.Hammerspoon MJConfigFile \
-            "${config.xdg.configHome}/hammerspoon/init.lua"
-
-        for i in rdm msmtp privoxy tor; do
+        for i in rdm msmtp; do
             dir=${config.xdg.dataHome}/$i
             if [[ ! -d $dir ]]; then mkdir -p $dir; fi
         done
@@ -263,7 +265,6 @@ in {
             ${pkgs.lftp}/bin/lftp -u johnw@newartisans.com,$(${pkgs.pass}/bin/pass show ftp.fastmail.com | head -1) \
                 ftp://johnw@newartisans.com@ftp.fastmail.com                 \
                 -e "set ssl:ca-file \"${ca-bundle_crt}\"; cd /johnw.newartisans.com/files/pub ; put \"$1\" ; quit"
-
             file=$(basename "$1" | sed -e 's/ /%20/g')
             echo "http://ftp.newartisans.com/pub/$file" | pbcopy
         }
@@ -350,7 +351,7 @@ in {
 
       extraConfig = {
         core = {
-          editor            = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
+          editor            = "${emacsclient}";
           trustctime        = false;
           fsyncobjectfiles  = true;
           # pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
@@ -361,16 +362,16 @@ in {
         };
 
         interactive.diffFilter = "${pkgs.gitAndTools.delta}/bin/delta --color-only";
-        branch.autosetupmerge = true;
-        commit.gpgsign        = true;
-        github.user           = "jwiegley";
-        credential.helper     = "${pkgs.pass-git-helper}/bin/pass-git-helper";
-        ghi.token             = "!${pkgs.pass}/bin/pass show api.github.com | head -1";
-        hub.protocol          = "${pkgs.openssh}/bin/ssh";
-        mergetool.keepBackup  = true;
-        pull.rebase           = true;
-        rebase.autosquash     = true;
-        rerere.enabled        = true;
+        branch.autosetupmerge  = true;
+        commit.gpgsign         = true;
+        github.user            = "jwiegley";
+        credential.helper      = "${pkgs.pass-git-helper}/bin/pass-git-helper";
+        ghi.token              = "!${pkgs.pass}/bin/pass show api.github.com | head -1";
+        hub.protocol           = "${pkgs.openssh}/bin/ssh";
+        mergetool.keepBackup   = true;
+        pull.rebase            = true;
+        rebase.autosquash      = true;
+        rerere.enabled         = true;
 
         "merge \"ours\"".driver   = true;
         "magithub \"ci\"".enabled = false;
@@ -553,8 +554,10 @@ in {
 
         id_dfinity = {
           host = lib.concatStringsSep " " [ "zrh-3" ];
-          identityFile = [ "${config.xdg.configHome}/ssh/id_dfinity"
-                           "${config.xdg.configHome}/ssh/id_dfinity_old" ];
+          identityFile = [
+            "${config.xdg.configHome}/ssh/id_dfinity"
+            "${config.xdg.configHome}/ssh/id_dfinity_old"
+          ];
           identitiesOnly = true;
         };
 
@@ -589,7 +592,7 @@ in {
       xallexcepts- = application/pdf
       xallexcepts+ =
       [view]
-      application/pdf = ${pkgs.emacs}/bin/emacsclient -n -s ${emacs-server} --eval '(org-pdfview-open "%f::%p")'
+      application/pdf = ${emacsclient} -n --eval '(org-pdfview-open "%f::%p")'
     '';
 
     configFile."fetchmail/config".text = ''
