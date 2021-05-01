@@ -620,6 +620,22 @@ let
         };
       };
 
+    auctex = eself.elpaBuild {
+        pname = "auctex";
+        ename = "auctex";
+        version = "13.0.11";
+        src = fetchurl {
+          url = "https://elpa.gnu.org/packages/auctex-13.0.11.tar";
+          sha256 = "0sy4f1n38q58vyzw5l0f80ci3j99rb25gbwj0frl0pglfmgzl44k";
+          # date = 2021-05-01T09:51:38-0700;
+        };
+        packageRequires = with eself; [ cl-lib emacs ];
+        meta = {
+          homepage = "https://elpa.gnu.org/packages/auctex.html";
+          license = lib.licenses.free;
+        };
+      };
+
     doxymacs = mkDerivation rec {
       name = "emacs-doxymacs-${version}";
       version = "2017-12-10";
