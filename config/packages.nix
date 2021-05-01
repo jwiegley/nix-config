@@ -103,7 +103,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   jq
   killall
   kubectl
-  leafnode
   ledgerPy2Env
   ledgerPy3Env
   ledger_HEAD
