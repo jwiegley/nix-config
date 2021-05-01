@@ -611,32 +611,32 @@ in {
     '';
   };
 
-  # targets.darwin.keybindings = {
-  #   "~f"    = "moveWordForward:";
-  #   "~b"    = "moveWordBackward:";
+  targets.darwin.keybindings = {
+    "~f"    = "moveWordForward:";
+    "~b"    = "moveWordBackward:";
 
-  #   "~d"    = "deleteWordForward:";
-  #   "~^h"   = "deleteWordBackward:";
-  #   "~\010" = "deleteWordBackward:";    /* Option-backspace */
-  #   "~\177" = "deleteWordBackward:";    /* Option-delete */
+    "~d"    = "deleteWordForward:";
+    "~^h"   = "deleteWordBackward:";
+    "~\010" = "deleteWordBackward:";    /* Option-backspace */
+    "~\177" = "deleteWordBackward:";    /* Option-delete */
 
-  #   "~v"    = "pageUp:";
-  #   "^v"    = "pageDown:";
+    "~v"    = "pageUp:";
+    "^v"    = "pageDown:";
 
-  #   "~<"    = "moveToBeginningOfDocument:";
-  #   "~>"    = "moveToEndOfDocument:";
+    "~<"    = "moveToBeginningOfDocument:";
+    "~>"    = "moveToEndOfDocument:";
 
-  #   "^/"    = "undo:";
-  #   "~/"    = "complete:";
+    "^/"    = "undo:";
+    "~/"    = "complete:";
 
-  #   "^g"    = "_cancelKey:";
-  #   "^a"    = "moveToBeginningOfLine:";
-  #   "^e"    = "moveToEndOfLine:";
+    "^g"    = "_cancelKey:";
+    "^a"    = "moveToBeginningOfLine:";
+    "^e"    = "moveToEndOfLine:";
 
-  #   "~c"	  = "capitalizeWord:"; /* M-c */
-  #   "~u"	  = "uppercaseWord:";	 /* M-u */
-  #   "~l"	  = "lowercaseWord:";	 /* M-l */
-  #   "^t"	  = "transpose:";      /* C-t */
-  #   "~t"	  = "transposeWords:"; /* M-t */
-  # };
+    "~c"	  = "capitalizeWord:"; /* M-c */
+    "~u"	  = "uppercaseWord:";	 /* M-u */
+    "~l"	  = "lowercaseWord:";	 /* M-l */
+    "^t"	  = "transpose:";      /* C-t */
+    "~t"	  = "transposeWords:"; /* M-t */
+  };
 }
