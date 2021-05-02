@@ -49,7 +49,7 @@ in {
       VULCAN_WIFI        = vulcan_wifi;
       HERMES_ETHERNET    = hermes_ethernet;
       HERMES_WIFI        = hermes_wifi;
-      HOSTNAME           = "${localconfig.hostname}";
+      HOSTNAME           = localconfig.hostname;
 
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
@@ -97,7 +97,7 @@ in {
   };
 
   accounts.email = {
-    certificatesFile = "${ca-bundle_crt}";
+    certificatesFile = ca-bundle_crt;
 
     accounts.fastmail = {
       realName = "John Wiegley";
@@ -350,7 +350,7 @@ in {
 
       extraConfig = {
         core = {
-          editor            = "${emacsclient}";
+          editor            = emacsclient;
           trustctime        = false;
           fsyncobjectfiles  = true;
           # pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
@@ -376,7 +376,7 @@ in {
         "magithub \"ci\"".enabled = false;
 
         http = {
-          sslCAinfo = "${ca-bundle_crt}";
+          sslCAinfo = ca-bundle_crt;
           sslverify = true;
         };
 
