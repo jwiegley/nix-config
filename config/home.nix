@@ -110,7 +110,12 @@ in {
       flavor = "plain";
       passwordCommand = "${pkgs.pass}/bin/pass show smtp.fastmail.com";
       primary = true;
-      msmtp.enable = true;
+      msmtp = {
+        enable = true;
+        extraConfig = {
+          logfile = "${config.xdg.dataHome}/msmtp/msmtp.log";
+        };
+      };
       imap = {
         host = "imap.fastmail.com";
         port = 993;
@@ -143,13 +148,7 @@ in {
     man.enable = true;
     tmux.enable = true;
     vim.enable = true;
-
-    msmtp = {
-      enable = true;
-      extraConfig =''
-        logfile ${config.xdg.dataHome}/msmtp/msmtp.log
-      '';
-    };
+    msmtp.enable = true;
 
     home-manager = {
       enable = true;
@@ -626,8 +625,8 @@ in {
     "~v"    = "pageUp:";
     "^v"    = "pageDown:";
 
-    "~<"    = "moveToBeginningOfDocument:";
-    "~>"    = "moveToEndOfDocument:";
+    "~&lt;" = "moveToBeginningOfDocument:";
+    "~&gt;" = "moveToEndOfDocument:";
 
     "^/"    = "undo:";
     "~/"    = "complete:";

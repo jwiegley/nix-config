@@ -55,6 +55,7 @@ in {
     useDaemon = false;
 
     nixPath = lib.mkForce [{
+      localconfig     = <localconfig>;
       nixpkgs         = "${home}/src/nix/nixpkgs";
       darwin          = "${home}/src/nix/darwin";
       darwin-config   = "${home}/src/nix/config/darwin.nix";

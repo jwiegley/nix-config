@@ -44,5 +44,6 @@ in
     sha256 = "1bc624inm21wl6s9b4nmn495j25yab1bvn3jc3f1mjfmcrbvm1gd";
   })
     subversion
+    qemu
     ;
 }
