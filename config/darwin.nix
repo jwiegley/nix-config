@@ -52,32 +52,18 @@ in {
 
   nix = {
     package = pkgs.nixStable;
-
     useDaemon = false;
 
-    useSandbox = false;
-    sandboxPaths = [
-      "/System/Library/Frameworks"
-      "/System/Library/PrivateFrameworks"
-      "/usr/lib"
-      "/private/tmp"
-      "/private/var/tmp"
-      "/usr/bin/env"
-    ];
-
-    nixPath = [
-      "darwin-config=$HOME/src/nix/config/darwin.nix"
-      "home-manager=$HOME/src/nix/home-manager"
-      "darwin=$HOME/src/nix/darwin"
-      "nixpkgs=$HOME/src/nix/nixpkgs"
-      "ssh-config-file=$HOME/.ssh/config"
-      "ssh-auth-sock=${xdg_configHome}/gnupg/S.gpg-agent.ssh"
-    ];
+    nixPath = lib.mkForce [{
+      nixpkgs         = "${home}/src/nix/nixpkgs";
+      darwin          = "${home}/src/nix/darwin";
+      darwin-config   = "${home}/src/nix/config/darwin.nix";
+      home-manager    = "${home}/src/nix/home-manager";
+      ssh-config-file = "${home}/.ssh/config";
+      ssh-auth-sock   = "${xdg_configHome}/gnupg/S.gpg-agent.ssh";
+    }];
 
     trustedUsers = [ "johnw" "@admin" ];
-
-    binaryCaches = [];
-    binaryCachePublicKeys = [];
 
     extraOptions = ''
       secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
@@ -99,8 +85,8 @@ in {
        sshUser = "johnw";
        sshKey = "${xdg_configHome}/ssh/id_local";
        system = "x86_64-darwin";
-       maxJobs = 20;
-       buildCores = 10;
+       maxJobs = 10;
+       buildCores = 2;
        speedFactor = 4;
      }; in
    if localconfig.hostname == "hermes" then rec {
@@ -133,7 +119,7 @@ in {
    else {});
 
   system = {
-    stateVersion = 2;
+    stateVersion = 4;
 
     defaults = {
       NSGlobalDomain = {
@@ -164,6 +150,7 @@ in {
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = true;
       }; in {
+
     daemons = {
       cleanup = {
         script = ''
@@ -253,12 +240,6 @@ in {
   };
 
   environment = {
-    systemPath = [
-      "/Applications/Docker.app/Contents/Resources/bin"
-    ];
-
-    pathsToLink = [ "/info" "/etc" "/share" "/include" "/lib" "/libexec" ];
-
     etc."dovecot/modules".source = "${home}/.nix-profile/lib/dovecot";
     etc."dovecot/dovecot.conf".text = ''
       base_dir = ${home}/Library/Application Support/dovecot
@@ -283,6 +264,7 @@ in {
       protocol lda {
         mail_plugins = $mail_plugins sieve
       }
+
       userdb {
         driver = prefetch
       }
