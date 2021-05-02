@@ -516,7 +516,7 @@ in {
                "LocalForward" = "5999 127.0.0.1:5900";
              };
            };
-         }) // rec {
+         }) // {
 
         hermes  = onHost "vulcan" hermes_ethernet;
         macos   = onHost "vulcan" "172.16.20.139";

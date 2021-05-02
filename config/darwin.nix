@@ -90,7 +90,7 @@ in {
        buildCores = 2;
        speedFactor = 4;
      }; in
-   if localconfig.hostname == "hermes" then rec {
+   if localconfig.hostname == "hermes" then {
      maxJobs = 8;
      buildCores = 2;
      distributedBuilds = true;
@@ -105,7 +105,7 @@ in {
        # ssh://vulcan
      ];
    }
-   else if localconfig.hostname == "vulcan" then rec {
+   else if localconfig.hostname == "vulcan" then {
      maxJobs = 10;
      buildCores = 2;
      distributedBuilds = true;
@@ -221,19 +221,6 @@ in {
         '';
         serviceConfig = iterate 86400;
       };
-  
-      # rdm = rec {
-      #   script = ''
-      #     ${pkgs.rtags}/bin/rdm \
-      #         --verbose \
-      #         --launchd \
-      #         --inactivity-timeout 300 \
-      #         --socket-file ${serviceConfig.Sockets.Listeners.SockPathName}
-      #         --log-file ${xdg_dataHome}/rdm/rtags.launchd.log
-      #   '';
-      #   serviceConfig.Sockets.Listeners.SockPathName
-      #     = "${xdg_cacheHome}/rdm/socket";
-      # };
     } //
     (if localconfig.hostname == "vulcan" then {
        znc = runCommand "${pkgs.znc}/bin/znc -f -d ${xdg_configHome}/znc";
@@ -302,6 +289,7 @@ in {
         zlib_save_level = 6
         zlib_save = gz
       }
+
       plugin {
         sieve_extensions = +editheader
         sieve = ${home}/Messages/dovecot.sieve
