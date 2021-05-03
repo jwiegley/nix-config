@@ -10,19 +10,10 @@ elif [[ "$1" == "hermes" ]]; then
   if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
   if [ -z ${BUILDER+x} ]; then BUILDER=hermes; fi
   shift 1
-elif [[ "$1" == "athena" ]]; then
-  HOSTNAME=athena
-  if [ -z ${CACHE+x} ]; then CACHE=athena; fi
-  if [ -z ${BUILDER+x} ]; then BUILDER=athena; fi
-  shift 1
 elif [[ $(hostname) =~ [Vv]ulcan ]]; then
   HOSTNAME=vulcan
   if [ -z ${CACHE+x} ]; then CACHE=vulcan; fi
   if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
-elif [[ $(hostname) == [Aa]thena ]]; then
-  HOSTNAME=athena
-  if [ -z ${CACHE+x} ]; then CACHE=athena; fi
-  if [ -z ${BUILDER+x} ]; then BUILDER=athena; fi
 elif [[ $(hostname) == [Hh]ermes ]]; then
   HOSTNAME=hermes
   if [ -z ${CACHE+x} ]; then CACHE=hermes; fi

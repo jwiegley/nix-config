@@ -283,8 +283,8 @@ in {
           name = "iterm2_shell_integration";
           src = pkgs.fetchurl {
             url = https://iterm2.com/shell_integration/zsh;
-            sha256 = "1qm7khz19dhwgz4aln3yy5hnpdh6pc8nzxp66m1za7iifq9wrvil";
-            # date = 2020-01-07T15:59:09-0800;
+            sha256 = "1h38yggxfm8pyq3815mjd2rkb411v9g1sa0li884y0bjfaxgbnd4";
+            # date = 2021-05-02T18:15:26-0700;
           };
         }
         {
@@ -302,7 +302,7 @@ in {
       enable = true;
       package = pkgs.gitFull;
 
-      userName  = "John Wiegley";
+      userName = "John Wiegley";
       userEmail = "johnw@newartisans.com";
 
       signing = {
@@ -500,44 +500,31 @@ in {
       userKnownHostsFile = "${config.xdg.configHome}/ssh/known_hosts";
 
       matchBlocks =
-        let onHost = proxy: hostname: { inherit hostname; } //
-          (if "${localconfig.hostname}" == proxy then {} else {
-             proxyJump = proxy;
-           }); in
-        (if    "${localconfig.hostname}" == "vulcan"
-            || "${localconfig.hostname}" == "hermes"
-            then {
-           vulcan.hostname = vulcan_ethernet;
-         } else {
-           vulcan = {
-             hostname = "2600:1700:cf00:db0:f1b3:ab80:3419:685d";
-             port = 2201;
-             extraOptions = {
-               "LocalForward" = "5999 127.0.0.1:5900";
-             };
-           };
-         }) // {
+        let onHost = proxyJump: hostname: { inherit hostname; } //
+          lib.optionalAttrs (localconfig.hostname != proxyJump) {
+            inherit proxyJump;
+          }; in {
 
-        hermes  = onHost "vulcan" hermes_ethernet;
-        macos   = onHost "vulcan" "172.16.20.139";
-        ubuntu  = onHost "vulcan" "172.16.20.141";
-
-        elpa        = { hostname = "elpa.gnu.org"; user = "root"; };
-        haskell_org = { host = "*haskell.org";     user = "root"; };
-
-        savannah.hostname  = "git.sv.gnu.org";
-        fencepost.hostname = "fencepost.gnu.org";
-        launchpad.hostname = "bazaar.launchpad.net";
-        mail.hostname      = "mail.haskell.org";
-
-        keychain = {
-          host = "*";
-          extraOptions = {
-            "UseKeychain"    = "yes";
-            "AddKeysToAgent" = "yes";
-            "IgnoreUnknown"  = "UseKeychain";
+        # This is vulcan, as accessible from remote
+        home = {
+            hostname = "2600:1700:cf00:db0:f1b3:ab80:3419:685d";
+            port = 2201;
+            extraOptions = {
+              LocalForward = "5999 127.0.0.1:5900";
           };
         };
+
+        vulcan.hostname = vulcan_ethernet;
+
+        hermes = onHost "vulcan" hermes_ethernet;
+        macos  = onHost "vulcan" "172.16.20.139";
+        ubuntu = onHost "vulcan" "172.16.20.141";
+
+        elpa = { hostname = "elpa.gnu.org"; user = "root"; };
+
+        mail.hostname      = "mail.haskell.org";
+        savannah.hostname  = "git.sv.gnu.org";
+        fencepost.hostname = "fencepost.gnu.org";
 
         id_local = {
           host = lib.concatStringsSep " " [
@@ -549,9 +536,20 @@ in {
           user = "johnw";
         };
 
+        haskell_org = { host = "*haskell.org"; user = "root"; };
+
+        keychain = {
+          host = "*";
+          extraOptions = {
+            UseKeychain    = "yes";
+            AddKeysToAgent = "yes";
+            IgnoreUnknown  = "UseKeychain";
+          };
+        };
+
         # DFINITY Machines
 
-        id_dfinity = {
+        dfinity = {
           host = lib.concatStringsSep " " [ "zrh-3" ];
           identityFile = [
             "${config.xdg.configHome}/ssh/id_dfinity"

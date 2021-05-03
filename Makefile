@@ -31,8 +31,20 @@ endif
 endif
 
 NIX_CONF  := $(HOME)/src/nix
-NIX_PATH  := $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
-PRENIX	  := PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIX_PATH)
+
+# When building with the Makefile, rather than calling darwin-rebuild
+# directly, we set the NIX_PATH to point at whatever is the latest pull of the
+# various projects used to build this Nix configuration. See nix.nixPath in
+# darwin.nix for the system definition of the NIX_PATH, which relies on
+# whichever versions of the below were used to build that generation.
+NIX_PATH   = localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
+NIX_PATH  := $(NIX_PATH):nixpkgs=$(HOME)/src/nix/nixpkgs
+NIX_PATH  := $(NIX_PATH):darwin=$(HOME)/src/nix/darwin
+NIX_PATH  := $(NIX_PATH):darwin-config=$(HOME)/src/nix/config/darwin.nix
+NIX_PATH  := $(NIX_PATH):home-manager=$(HOME)/src/nix/home-manager
+NIX_PATH  := $(NIX_PATH):hm-config=$(HOME)/src/nix/config/home.nix
+NIX_PATH  := $(NIX_PATH):ssh-config-file=$(HOME)/.ssh/config
+NIX_PATH  := $(NIX_PATH):ssh-auth-sock=$(HOME)/.config/gnupg/S.gpg-agent.ssh
 
 NIX	   = $(PRENIX) nix
 NIX_BUILD  = $(PRENIX) nix-build
@@ -47,6 +59,8 @@ BUILD_PATH = $(eval BUILD_PATH :=					\
 else
 BUILD_PATH = /run/current-system
 endif
+
+PRENIX	  := PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIX_PATH)
 
 all: rebuild
 
@@ -97,7 +111,7 @@ build:
 switch:
 	$(call announce,darwin-rebuild switch)
 	@$(PRENIX) darwin-rebuild switch -Q
-	@echo "Darwin generation: $$($(DARWIN_REBUILD) --list-generations | tail -1)"
+	@echo "Darwin generation: $$($(PRENIX) darwin-rebuild --list-generations | tail -1)"
 
 rebuild: build switch
 

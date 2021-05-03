@@ -1,12 +1,6 @@
 self: pkgs:
 
-let myEmacsPackages = import ./emacs.nix pkgs; in
-rec {
-  # emacs26Env      = pkgs.emacs26Env      myEmacsPackages;
-  # emacs26DebugEnv = pkgs.emacs26DebugEnv myEmacsPackages;
-  # emacs27DebugEnv = pkgs.emacs27DebugEnv myEmacsPackages;
-  # emacsHEADEnv    = pkgs.emacsHEADEnv    myEmacsPackages;
-
+let myEmacsPackages = import ./emacs.nix pkgs; in rec {
   emacs27Env  = pkgs.emacs27Env  myEmacsPackages;
   emacsERCEnv = pkgs.emacsERCEnv myEmacsPackages;
 
