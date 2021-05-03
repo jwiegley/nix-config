@@ -1,15 +1,14 @@
 HOSTNAME   = vulcan
 CACHE      = vulcan
 BUILDER    = vulcan
-REMOTES	   = hermes # athena
+REMOTES	   = hermes
 GIT_REMOTE = jwiegley
 MAX_AGE	   = 14
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
 # when first necessary.
 GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
-HEAD_DATE  = $(eval HEAD_DATE := $(shell $(GIT_DATE) HEAD))$(HEAD_DATE)
-LKG_DATE   = $(eval LKG_DATE  := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
+LKG_DATE   = $(eval LKG_DATE := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
 ifeq ($(CACHE),)
 NIXOPTS	   = --option build-use-substitutes false	\
@@ -41,15 +40,13 @@ NIX_ENV	   = $(PRENIX) nix-env
 NIX_STORE  = $(PRENIX) nix-store
 NIX_GC	   = $(PRENIX) nix-collect-garbage
 
-BUILD_ARGS = $(NIXOPTS) --keep-going --argstr version $(HEAD_DATE)
+BUILD_ARGS = $(NIXOPTS) --keep-going
 ifeq ($(REALBUILDPATH),true)
 BUILD_PATH = $(eval BUILD_PATH :=					\
 		$(shell echo NIX_PATH=$(NIX_PATH) nix-build $(BUILD_ARGS)))$(BUILD_PATH)
 else
 BUILD_PATH = /run/current-system
 endif
-
-DARWIN_REBUILD = $(PRENIX) $(BUILD_PATH)/sw/bin/darwin-rebuild
 
 all: rebuild
 
@@ -69,18 +66,16 @@ endef
 test:
 	$(call announce,this is a test)
 
-command:
-	@echo $(NIX) build -f . $(BUILD_ARGS)
-
 tools:
-	@echo ""
 	@echo HOSTNAME=$(HOSTNAME)
 	@echo CACHE=$(CACHE)
 	@echo BUILDER=$(BUILDER)
+
+	@echo export PATH=$(PATH)
 	@echo export NIXOPTS=$(NIXOPTS)
 	@echo export NIX_PATH=$(NIX_PATH)
-	@echo export PATH=$(PATH)
-	@echo ""
+	@echo export BUILD_ARGS=$(BUILD_ARGS)
+
 	@PATH=$(BUILD_PATH)/sw/bin:$(PATH)	\
 	    which				\
 		field				\
@@ -93,16 +88,15 @@ tools:
 		sort				\
 		sudo				\
 		uniq
-	@echo ""
 
 build:
-	$(call announce,nix build -f . $(BUILD_ARGS))
-	@$(NIX) build -f . $(BUILD_ARGS)
+	$(call announce,nix build -f "<darwin>" system)
+	@$(NIX) build $(BUILD_ARGS) -f "<darwin>" system
 	@rm -f result*
 
 switch:
 	$(call announce,darwin-rebuild switch)
-	@$(DARWIN_REBUILD) switch -Q
+	@$(PRENIX) darwin-rebuild switch -Q
 	@echo "Darwin generation: $$($(DARWIN_REBUILD) --list-generations | tail -1)"
 
 rebuild: build switch
@@ -114,11 +108,11 @@ pull:
 	(cd home-manager && git pull --rebase)
 
 tag-before:
-	$(call announce,git tag (before))
+	$(call announce,git tag before-update)
 	git --git-dir=nixpkgs/.git branch -f before-update HEAD
 
 tag-working:
-	$(call announce,git tag (after))
+	$(call announce,git tag last-known-good)
 	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
 	git --git-dir=nixpkgs/.git branch -D before-update
 	git --git-dir=nixpkgs/.git tag -f known-good-$(LKG_DATE) last-known-good
@@ -139,14 +133,14 @@ update-sync: update copy rebuild-all
 ########################################################################
 
 copy-nix:
-	$(call announce,copy nix)
+	$(call announce,nix copy)
 	@for host in $(REMOTES); do				\
 	    $(NIX) copy --keep-going --to ssh://$$host		\
 		$(HOME)/.nix-profile $(BUILD_PATH);		\
 	done
 
 copy-src:
-	$(call announce,copy src)
+	$(call announce,pushme)
 	@for host in $(REMOTES); do				\
 	    push -f src $$host;					\
 	done
@@ -158,7 +152,7 @@ direnv-dirs:
 	    -path '*/.direnv/default' -type l -print
 
 copy-direnv:
-	$(call announce,copy direnv)
+	$(call announce,nix copy (direnv))
 	@find $(HOME)/dfinity $(HOME)/src $(HOME)/doc		\
 	    \( -path '*/Containers' -prune \) -o		\
 	    \( -path '*/.Trash' -prune \) -o			\
