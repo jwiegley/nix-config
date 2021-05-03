@@ -31,9 +31,9 @@ NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 endif
 
-NIX_CONF   = $(HOME)/src/nix
-NIXPATH	   = $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
-PRENIX	   = PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIXPATH)
+NIX_CONF  := $(HOME)/src/nix
+NIX_PATH  := $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
+PRENIX	  := PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIX_PATH)
 
 NIX	   = $(PRENIX) nix
 NIX_BUILD  = $(PRENIX) nix-build
@@ -44,7 +44,7 @@ NIX_GC	   = $(PRENIX) nix-collect-garbage
 BUILD_ARGS = $(NIXOPTS) --keep-going --argstr version $(HEAD_DATE)
 ifeq ($(REALBUILDPATH),true)
 BUILD_PATH = $(eval BUILD_PATH :=					\
-		$(shell echo NIX_PATH=$(NIXPATH) nix-build $(BUILD_ARGS)))$(BUILD_PATH)
+		$(shell echo NIX_PATH=$(NIX_PATH) nix-build $(BUILD_ARGS)))$(BUILD_PATH)
 else
 BUILD_PATH = /run/current-system
 endif
@@ -71,6 +71,29 @@ test:
 
 command:
 	@echo $(NIX) build -f . $(BUILD_ARGS)
+
+tools:
+	@echo ""
+	@echo HOSTNAME=$(HOSTNAME)
+	@echo CACHE=$(CACHE)
+	@echo BUILDER=$(BUILDER)
+	@echo export NIXOPTS=$(NIXOPTS)
+	@echo export NIX_PATH=$(NIX_PATH)
+	@echo export PATH=$(PATH)
+	@echo ""
+	@PATH=$(BUILD_PATH)/sw/bin:$(PATH)	\
+	    which				\
+		field				\
+		find				\
+		git				\
+		head				\
+		make				\
+		nix-build			\
+		nix-env				\
+		sort				\
+		sudo				\
+		uniq
+	@echo ""
 
 build:
 	$(call announce,nix build -f . $(BUILD_ARGS))
@@ -109,14 +132,9 @@ mirror:
 	git --git-dir=darwin/.git push --mirror $(GIT_REMOTE)
 	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
 
-working: tag-working mirror
-
-update: tag-before pull rebuild working
+update: tag-before pull rebuild tag-working mirror
 
 update-sync: update copy rebuild-all
-
-check:
-	$(NIX_STORE) --verify --repair --check-contents
 
 ########################################################################
 
@@ -133,6 +151,12 @@ copy-src:
 	    push -f src $$host;					\
 	done
 
+direnv-dirs:
+	@find $(HOME)/dfinity $(HOME)/src $(HOME)/doc		\
+	    \( -path '*/Containers' -prune \) -o		\
+	    \( -path '*/.Trash' -prune \) -o			\
+	    -path '*/.direnv/default' -type l -print
+
 copy-direnv:
 	$(call announce,copy direnv)
 	@find $(HOME)/dfinity $(HOME)/src $(HOME)/doc		\
@@ -146,12 +170,6 @@ copy-direnv:
 			--keep-going --to ssh://$$host;		\
 	        done;						\
 	    done
-
-direnv-dirs:
-	@find $(HOME)						\
-	    \( -path '*/Containers' -prune \) -o		\
-	    \( -path '*/.Trash' -prune \) -o			\
-	    -path '*/.direnv/default' -type l -print
 
 copy: copy-nix copy-src copy-direnv
 
@@ -180,32 +198,8 @@ gc-old:
 	$(call delete-generations-all,1)
 	$(NIX_GC) --delete-old
 
-########################################################################
-#
-# These rules are used for debugging only
-#
+check:
+	$(NIX_STORE) --verify --repair --check-contents
 
 sizes:
 	df -H /nix
-
-tools:
-	@echo ""
-	@echo HOSTNAME=$(HOSTNAME)
-	@echo CACHE=$(CACHE)
-	@echo BUILDER=$(BUILDER)
-	@echo export NIXOPTS=$(NIXOPTS)
-	@echo export NIX_PATH=$(NIXPATH)
-	@echo ""
-	@PATH=$(BUILD_PATH)/sw/bin:$(PATH)	\
-	    which				\
-		field				\
-		find				\
-		git				\
-		head				\
-		make				\
-		nix-build			\
-		nix-env				\
-		sort				\
-		sudo				\
-		uniq
-	@echo ""
