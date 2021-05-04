@@ -560,6 +560,11 @@ in {
 
         # DFINITY Machines in Zurich
 
+        zh1 = {
+          hostname = "zh1-spm34.dc1.dfinity.network";
+          user = "johnw";
+        };
+
         zrh-3 = {
           hostname = "zrh-linux-3.dfinity.systems";
           user = "johnw";

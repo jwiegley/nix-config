@@ -14,7 +14,7 @@ elif [[ $(hostname) =~ [Vv]ulcan ]]; then
   HOSTNAME=vulcan
   if [ -z ${CACHE+x} ]; then CACHE=vulcan; fi
   if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
-elif [[ $(hostname) == [Hh]ermes ]]; then
+elif [[ $(hostname) =~ [Hh]ermes ]]; then
   HOSTNAME=hermes
   if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
   if [ -z ${BUILDER+x} ]; then BUILDER=hermes; fi
