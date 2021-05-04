@@ -550,7 +550,7 @@ in {
         # DFINITY Machines
 
         dfinity = {
-          host = lib.concatStringsSep " " [ "zrh-3" ];
+          host = lib.concatStringsSep " " [ "zh1" "zrh-3" "prometheus" ];
           identityFile = [
             "${config.xdg.configHome}/ssh/id_dfinity"
             "${config.xdg.configHome}/ssh/id_dfinity_old"
@@ -567,6 +567,11 @@ in {
 
         zrh-3 = {
           hostname = "zrh-linux-3.dfinity.systems";
+          user = "johnw";
+        };
+
+        prometheus = {
+          hostname = "prometheus.dfinity.systems";
           user = "johnw";
         };
       };

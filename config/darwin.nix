@@ -339,23 +339,6 @@ in {
         uptest      = none;
         edns_query  = yes;
         exclude     = ".local";
-        include     = "vpn.dfinity.systems";
-        exclude     = ".dfinity.build";
-        exclude     = ".dfinity.internal";
-        purge_cache = off;
-      }
-
-      server {
-        label       = "DFINITY";
-        ip          = 10.20.13.192;
-        preset      = off;
-        uptest      = ping;
-        edns_query  = yes;
-        lean_query  = yes;
-        exclude     = "vpn.dfinity.systems";
-        include     = ".dfinity.build";
-        include     = ".dfinity.internal";
-        proxy_only  = on;
         purge_cache = off;
       }
 
@@ -366,9 +349,6 @@ in {
         uptest      = none;
         edns_query  = yes;
         exclude     = ".local";
-        include     = "vpn.dfinity.systems";
-        exclude     = ".dfinity.build";
-        exclude     = ".dfinity.internal";
         purge_cache = off;
       }
 
@@ -389,9 +369,6 @@ in {
         uptest      = none;
         edns_query  = yes;
         exclude     = ".local";
-        include     = "vpn.dfinity.systems";
-        exclude     = ".dfinity.build";
-        exclude     = ".dfinity.internal";
         purge_cache = off;
       }
 
@@ -402,9 +379,6 @@ in {
         ip                = 198.41.0.4, 192.228.79.201;
         randomize_servers = on;
         exclude           = ".local";
-        include           = "vpn.dfinity.systems";
-        exclude           = ".dfinity.build";
-        exclude           = ".dfinity.internal";
       }
 
       source {
