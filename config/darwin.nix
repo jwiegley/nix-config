@@ -318,58 +318,58 @@ in {
 
     etc."pdnsd.conf".text = ''
       global {
-          perm_cache   = 8192;
-          cache_dir    = "${xdg_cacheHome}/pdnsd";
-          server_ip    = 127.0.0.1;
-          status_ctl   = on;
-          query_method = udp_tcp;
-          min_ttl      = 1h;    # Retain cached entries at least 1 hour.
-          max_ttl      = 4h;    # Four hours.
-          timeout      = 10;    # Global timeout option (10 seconds).
-          udpbufsize   = 1024;  # Upper limit on the size of UDP messages.
-          neg_rrs_pol  = on;
-          par_queries  = 4;
-          debug        = on;
+        perm_cache   = 8192;
+        cache_dir    = "${xdg_cacheHome}/pdnsd";
+        server_ip    = 127.0.0.1;
+        status_ctl   = on;
+        query_method = udp_tcp;
+        min_ttl      = 1h;    # Retain cached entries at least 1 hour.
+        max_ttl      = 4h;    # Four hours.
+        timeout      = 10;    # Global timeout option (10 seconds).
+        udpbufsize   = 1024;  # Upper limit on the size of UDP messages.
+        neg_rrs_pol  = on;
+        par_queries  = 4;
+        debug        = on;
       }
 
       server {
-          label       = "google";
-          ip          = 8.8.8.8, 8.8.4.4;
-          preset      = on;
-          uptest      = none;
-          edns_query  = yes;
-          exclude     = ".local";
-          include     = "vpn.dfinity.systems";
-          exclude     = ".dfinity.build";
-          exclude     = ".dfinity.internal";
-          purge_cache = off;
+        label       = "google";
+        ip          = 8.8.8.8, 8.8.4.4;
+        preset      = on;
+        uptest      = none;
+        edns_query  = yes;
+        exclude     = ".local";
+        include     = "vpn.dfinity.systems";
+        exclude     = ".dfinity.build";
+        exclude     = ".dfinity.internal";
+        purge_cache = off;
       }
 
       server {
-          label       = "DFINITY";
-          ip          = 10.20.13.192;
-          preset      = off;
-          uptest      = ping;
-          edns_query  = yes;
-          lean_query  = yes;
-          exclude     = "vpn.dfinity.systems";
-          include     = ".dfinity.build";
-          include     = ".dfinity.internal";
-          proxy_only  = on;
-          purge_cache = off;
+        label       = "DFINITY";
+        ip          = 10.20.13.192;
+        preset      = off;
+        uptest      = ping;
+        edns_query  = yes;
+        lean_query  = yes;
+        exclude     = "vpn.dfinity.systems";
+        include     = ".dfinity.build";
+        include     = ".dfinity.internal";
+        proxy_only  = on;
+        purge_cache = off;
       }
 
       server {
-          label       = "dyndns";
-          ip          = 216.146.35.35, 216.146.36.36;
-          preset      = on;
-          uptest      = none;
-          edns_query  = yes;
-          exclude     = ".local";
-          include     = "vpn.dfinity.systems";
-          exclude     = ".dfinity.build";
-          exclude     = ".dfinity.internal";
-          purge_cache = off;
+        label       = "dyndns";
+        ip          = 216.146.35.35, 216.146.36.36;
+        preset      = on;
+        uptest      = none;
+        edns_query  = yes;
+        exclude     = ".local";
+        include     = "vpn.dfinity.systems";
+        exclude     = ".dfinity.build";
+        exclude     = ".dfinity.internal";
+        purge_cache = off;
       }
 
       # The servers provided by OpenDNS are fast, but they do not reply with
@@ -378,47 +378,47 @@ in {
       # addresses of the search engines of google, microsoft and yahoo. If you
       # do not like this behaviour the "reject" option may be useful.
       server {
-          label       = "opendns";
-          ip          = 208.67.222.222, 208.67.220.220;
-          # You may need to add additional address ranges here if the addresses
-          # of their search engines change.
-          reject      = 208.69.32.0/24,
-                        208.69.34.0/24,
-                        208.67.219.0/24;
-          preset      = on;
-          uptest      = none;
-          edns_query  = yes;
-          exclude     = ".local";
-          include     = "vpn.dfinity.systems";
-          exclude     = ".dfinity.build";
-          exclude     = ".dfinity.internal";
-          purge_cache = off;
+        label       = "opendns";
+        ip          = 208.67.222.222, 208.67.220.220;
+        # You may need to add additional address ranges here if the addresses
+        # of their search engines change.
+        reject      = 208.69.32.0/24,
+                      208.69.34.0/24,
+                      208.67.219.0/24;
+        preset      = on;
+        uptest      = none;
+        edns_query  = yes;
+        exclude     = ".local";
+        include     = "vpn.dfinity.systems";
+        exclude     = ".dfinity.build";
+        exclude     = ".dfinity.internal";
+        purge_cache = off;
       }
 
       # This section is meant for resolving from root servers.
       server {
-          label             = "root-servers";
-          root_server       = discover;
-          ip                = 198.41.0.4, 192.228.79.201;
-          randomize_servers = on;
-          exclude           = ".local";
-          include           = "vpn.dfinity.systems";
-          exclude           = ".dfinity.build";
-          exclude           = ".dfinity.internal";
+        label             = "root-servers";
+        root_server       = discover;
+        ip                = 198.41.0.4, 192.228.79.201;
+        randomize_servers = on;
+        exclude           = ".local";
+        include           = "vpn.dfinity.systems";
+        exclude           = ".dfinity.build";
+        exclude           = ".dfinity.internal";
       }
 
       source {
-          owner         = localhost;
-          serve_aliases = on;
-          file          = "/etc/hosts";
+        owner         = localhost;
+        serve_aliases = on;
+        file          = "/etc/hosts";
       }
 
       rr {
-          name    = localhost;
-          reverse = on;
-          a       = 127.0.0.1;
-          owner   = localhost;
-          soa     = localhost,root.localhost,42,86400,900,86400,86400;
+        name    = localhost;
+        reverse = on;
+        a       = 127.0.0.1;
+        owner   = localhost;
+        soa     = localhost,root.localhost,42,86400,900,86400,86400;
       }
 
       rr { name = localunixsocket;       a = 127.0.0.1; }
@@ -426,13 +426,13 @@ in {
       rr { name = bugs.ledger-cli.org;   a = 192.168.128.132; }
 
       neg {
-          name  = doubleclick.net;
-          types = domain;           # This will also block xxx.doubleclick.net, etc.
+        name  = doubleclick.net;
+        types = domain;           # This will also block xxx.doubleclick.net, etc.
       }
 
       neg {
-          name  = bad.server.com;   # Badly behaved server you don't want to connect to.
-          types = A,AAAA;
+        name  = bad.server.com;   # Badly behaved server you don't want to connect to.
+        types = A,AAAA;
       }
     '';
   };
