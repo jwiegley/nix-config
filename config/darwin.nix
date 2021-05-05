@@ -397,7 +397,6 @@ in {
 
       rr { name = localunixsocket;       a = 127.0.0.1; }
       rr { name = localunixsocket.local; a = 127.0.0.1; }
-      rr { name = bugs.ledger-cli.org;   a = 192.168.128.132; }
 
       neg {
         name  = doubleclick.net;
