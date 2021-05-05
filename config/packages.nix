@@ -12,7 +12,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskPkgs.una)
   (exe haskPkgs.git-monitor)
   (exe haskPkgs.hours)
-  (pass.withExtensions (ext: with ext; [ pass-otp pass-genphrase ]))
   OnePassword-op
   apg
   aria2
@@ -75,7 +74,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   global
   gnugrep
   gnumake
-  gnupg
   gnuplot
   gnused
   gnutar

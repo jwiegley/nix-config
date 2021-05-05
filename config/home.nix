@@ -33,7 +33,6 @@ in {
       LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
       NIX_CONF           = "${home}/src/nix";
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
-      PASSWORD_STORE_DIR = "${home}/doc/.passwords";
       RECOLL_CONFDIR     = "${config.xdg.configHome}/recoll";
       SCREENRC           = "${config.xdg.configHome}/screen/config";
       SSH_AUTH_SOCK      = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
@@ -142,13 +141,14 @@ in {
 
   programs = {
     direnv.enable = true;
-    jq.enable = true;
+    gh.enable = true;
     htop.enable = true;
     info.enable = true;
+    jq.enable = true;
     man.enable = true;
+    msmtp.enable = true;
     tmux.enable = true;
     vim.enable = true;
-    msmtp.enable = true;
 
     home-manager = {
       enable = true;
@@ -296,6 +296,30 @@ in {
           };
         }
       ];
+    };
+
+    password-store = {
+      enable = true;
+      package = pkgs.pass.withExtensions (exts: [ exts.pass-otp exts.pass-genphrase ]);
+      settings = {
+        PASSWORD_STORE_DIR = "${home}/doc/.passwords";
+      };
+    };
+
+    gpg = {
+      enable = true;
+      settings = {
+        default-key = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
+
+        auto-key-locate = "keyserver";
+        keyserver = "hkps://hkps.pool.sks-keyservers.net";
+        keyserver-options = "no-honor-keyserver-url include-revoked auto-key-retrieve";
+      };
+      scdaemonSettings = {
+        card-timeout = "1";
+        disable-ccid = true;
+        pcsc-driver = "/System/Library/Frameworks/PCSC.framework/PCSC";
+      };
     };
 
     git = {
