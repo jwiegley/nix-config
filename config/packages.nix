@@ -134,6 +134,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nix-zsh-completions
   nixStable
   nixpkgs-fmt
+  nixfmt
   nmap
   nodePackages.csslint
   nodePackages.eslint

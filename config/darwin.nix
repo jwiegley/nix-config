@@ -89,6 +89,8 @@ in {
     trustedUsers = [ "johnw" "@admin" ];
 
     extraOptions = ''
+      gc-keep-derivations = true
+      gc-keep-outputs = true
       secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
     '';
   }
@@ -127,6 +129,11 @@ in {
       NSGlobalDomain = {
         AppleKeyboardUIMode = 3;
         ApplePressAndHoldEnabled = false;
+        _HIHideMenuBar = true;
+        "com.apple.keyboard.fnState" = true;
+        "com.apple.mouse.tapBehavior" = 1;
+        "com.apple.sound.beep.volume" = "0.0";
+        "com.apple.sound.beep.feedback" = 0;
       };
 
       dock = {
@@ -135,7 +142,15 @@ in {
         orientation = "right";
       };
 
-      trackpad.Clicking = true;
+      trackpad = {
+        Clicking = true;
+        TrackpadThreeFingerDrag = true;
+      };
+    };
+
+    keyboard = {
+      enableKeyMapping = true;
+      remapCapsLockToControl = true;
     };
   };
 
