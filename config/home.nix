@@ -267,7 +267,7 @@ in {
         setopt extended_glob
       '';
 
-      initExtra = lib.mkBefore ''
+      initExtra = ''
         function upload() {
             ${pkgs.lftp}/bin/lftp -u johnw@newartisans.com,$(${pkgs.pass}/bin/pass show ftp.fastmail.com | head -1) \
                 ftp://johnw@newartisans.com@ftp.fastmail.com                 \
