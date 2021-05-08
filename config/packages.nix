@@ -2,16 +2,16 @@
 
 with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe gitAndTools.git-annex)
-  (exe haskPkgs.cabal-install)
-  (exe haskPkgs.git-all)
-  (exe haskPkgs.hpack)
-  (exe haskPkgs.lhs2tex)
-  (exe haskPkgs.pushme)
-  (exe haskPkgs.runmany)
-  (exe haskPkgs.sizes)
-  (exe haskPkgs.una)
-  (exe haskPkgs.git-monitor)
-  (exe haskPkgs.hours)
+  (exe haskellPackages.cabal-install)
+  (exe haskellPackages.git-all)
+  (exe haskellPackages.hpack)
+  (exe haskellPackages.lhs2tex)
+  (exe haskellPackages.pushme)
+  (exe haskellPackages.runmany)
+  (exe haskellPackages.sizes)
+  (exe haskellPackages.una)
+  (exe haskellPackages.git-monitor)
+  (exe haskellPackages.hours)
   OnePassword-op
   apg
   aria2

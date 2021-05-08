@@ -141,7 +141,6 @@ in {
 
   programs = {
     direnv.enable = true;
-    gh.enable = true;
     htop.enable = true;
     info.enable = true;
     jq.enable = true;
@@ -181,6 +180,13 @@ in {
     fzf = {
       enable = true;
       enableZshIntegration = true;
+      defaultOptions = [
+       "--height 40%"
+       "--layout=reverse"
+       "--info=inline"
+       "--border"
+       "--exact"
+      ];
     };
 
     zsh = rec {
@@ -324,6 +330,17 @@ in {
       };
     };
 
+    gh = {
+      enable = true;
+      aliases = {
+        co = "pr checkout";
+        pv = "pr view";
+        prs = "pr list -A jwiegley";
+      };
+      editor = emacsclient;
+      gitProtocol = "ssh";
+    };
+
     git = {
       enable = true;
       package = pkgs.gitFull;
@@ -379,14 +396,12 @@ in {
           editor            = emacsclient;
           trustctime        = false;
           fsyncobjectfiles  = true;
-          # pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
-          pager             = "${pkgs.gitAndTools.delta}/bin/delta --plus-color=\"#012800\" --minus-color=\"#340001\" --theme='ansi-dark'";
+          pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
           logAllRefUpdates  = true;
           precomposeunicode = false;
           whitespace        = "trailing-space,space-before-tab";
         };
 
-        interactive.diffFilter = "${pkgs.gitAndTools.delta}/bin/delta --color-only";
         branch.autosetupmerge  = true;
         commit.gpgsign         = true;
         github.user            = "jwiegley";

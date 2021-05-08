@@ -19,16 +19,6 @@ in
     socat2pre
     ;
 
-  darwin = super.darwin // {
-    inherit ((nixpkgs {
-      # known-good-20210325_234309
-      rev    = "c91ae65e97a39a76272f6c3d0ecf630d71f7f421";
-      sha256 = "0dhhkbhjspyh8nw9j1cnkfl9l1bhai3wylr2aiirgqxv3fsy5zgc";
-    }).darwin)
-      network_cmds
-      ;
-  };
-
   inherit (nixpkgs {
     # known-good-20210422_091739
     rev    = "f41dd45874e0113843f00a59c0b67c1609eeddf8";

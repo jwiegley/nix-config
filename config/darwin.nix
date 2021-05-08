@@ -136,6 +136,10 @@ in {
         "com.apple.sound.beep.feedback" = 0;
       };
 
+      ".GlobalPreferences" = {
+        "com.apple.sound.beep.sound" = "/System/Library/Sounds/Funk.aiff";
+      };
+
       dock = {
         autohide = true;
         launchanim = false;

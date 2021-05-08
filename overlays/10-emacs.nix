@@ -703,6 +703,17 @@ let
     #   };
     # });
 
+    xref = compileEmacsFiles rec {
+      name = "xref";
+      src = fetchurl {
+        url = "https://elpa.gnu.org/packages/xref-1.1.0.tar";
+        sha256 = "1s7pwk09bry4nqr4bc78a3mbwyrxagai2gpsd49x47czy2x7m3ax";
+      };
+      preBuild = ''
+        mv xref xref.el
+      '';
+    };
+
     org = mkDerivation rec {
       name = "emacs-org-${version}";
       version = "20160421";

@@ -183,12 +183,11 @@ haskell = pkgs.haskell // {
   };
 };
 
-ghcDefaultVersion = "ghc8104";
-haskellPackages   = self.haskell.packages.${self.ghcDefaultVersion};
-haskPkgs          = self.haskellPackages;
-
 haskellPackages_8_8  = self.haskell.packages.ghc884;
 haskellPackages_8_10 = self.haskell.packages.ghc8104;
 haskellPackages_9_0  = self.haskell.packages.ghc901;
+
+ghcDefaultVersion    = "ghc8104";
+haskellPackages      = self.haskell.packages.${self.ghcDefaultVersion};
 
 }
