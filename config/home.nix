@@ -276,6 +276,10 @@ in {
             echo "http://ftp.newartisans.com/pub/$file" | pbcopy
         }
 
+        # Make sure that fzf does not override the meaning of ^T
+        bindkey '^X^T' fzf-file-widget
+        bindkey '^T' transpose-chars
+
         if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
             unsetopt zle
             unset zle_bracketed_paste

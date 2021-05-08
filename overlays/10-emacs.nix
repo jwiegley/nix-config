@@ -710,7 +710,8 @@ let
         sha256 = "1s7pwk09bry4nqr4bc78a3mbwyrxagai2gpsd49x47czy2x7m3ax";
       };
       preBuild = ''
-        mv xref xref.el
+        tar xf xref
+        mv xref-1.1.0/*.el .
       '';
     };
 
