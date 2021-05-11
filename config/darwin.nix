@@ -220,7 +220,7 @@ in {
       };
 
       tank = {
-        command = "/usr/local/bin/zpool import tank";
+        command = "/usr/local/zfs/bin/zpool import tank";
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = false;
       };
@@ -348,7 +348,7 @@ in {
         udpbufsize   = 1024;  # Upper limit on the size of UDP messages.
         neg_rrs_pol  = on;
         par_queries  = 4;
-        debug        = on;
+        debug        = off;
       }
 
       server {
@@ -358,6 +358,7 @@ in {
         uptest      = none;
         edns_query  = yes;
         exclude     = ".local";
+        proxy_only  = on;
         purge_cache = off;
       }
 
@@ -368,6 +369,7 @@ in {
         uptest      = none;
         edns_query  = yes;
         exclude     = ".local";
+        proxy_only  = on;
         purge_cache = off;
       }
 
@@ -388,23 +390,24 @@ in {
         uptest      = none;
         edns_query  = yes;
         exclude     = ".local";
+        proxy_only  = on;
         purge_cache = off;
       }
 
       # This section is meant for resolving from root servers.
-      server {
-        label             = "root-servers";
-        root_server       = discover;
-        ip                = 198.41.0.4, 192.228.79.201;
-        randomize_servers = on;
-        exclude           = ".local";
-      }
+      # server {
+      #   label             = "root-servers";
+      #   root_server       = discover;
+      #   ip                = 198.41.0.4, 192.228.79.201;
+      #   randomize_servers = on;
+      #   exclude           = ".local";
+      # }
 
-      source {
-        owner         = localhost;
-        serve_aliases = on;
-        file          = "/etc/hosts";
-      }
+      # source {
+      #   owner         = localhost;
+      #   serve_aliases = on;
+      #   file          = "/etc/hosts";
+      # }
 
       rr {
         name    = localhost;
@@ -414,18 +417,18 @@ in {
         soa     = localhost,root.localhost,42,86400,900,86400,86400;
       }
 
-      rr { name = localunixsocket;       a = 127.0.0.1; }
-      rr { name = localunixsocket.local; a = 127.0.0.1; }
+      # rr { name = localunixsocket;       a = 127.0.0.1; }
+      # rr { name = localunixsocket.local; a = 127.0.0.1; }
 
-      neg {
-        name  = doubleclick.net;
-        types = domain;           # This will also block xxx.doubleclick.net, etc.
-      }
+      # neg {
+      #   name  = doubleclick.net;
+      #   types = domain;           # This will also block xxx.doubleclick.net, etc.
+      # }
 
-      neg {
-        name  = bad.server.com;   # Badly behaved server you don't want to connect to.
-        types = A,AAAA;
-      }
+      # neg {
+      #   name  = bad.server.com;   # Badly behaved server you don't want to connect to.
+      #   types = A,AAAA;
+      # }
     '';
   };
 }

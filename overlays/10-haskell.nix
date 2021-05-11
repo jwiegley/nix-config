@@ -92,12 +92,9 @@ let
 
   overrideHask = ghc: hpkgs: hoverrides: hpkgs.override {
     overrides =
-      pkgs.lib.composeExtensions
-        hoverrides
-        (pkgs.lib.composeExtensions
-           (otherHackagePackages ghc)
-           (pkgs.lib.composeExtensions
-              (myHaskellPackages ghc)
+      pkgs.lib.composeExtensions hoverrides
+        (pkgs.lib.composeExtensions (otherHackagePackages ghc)
+           (pkgs.lib.composeExtensions (myHaskellPackages ghc)
               (hself: hsuper: {
                  ghc = hsuper.ghc // { withPackages = hsuper.ghc.withHoogle; };
                  ghcWithPackages = hself.ghc.withPackages;
@@ -160,26 +157,9 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
 
 haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // rec {
-    ghc884 = overrideHask "ghc884" pkgs.haskell.packages.ghc884 (hself: hsuper:
-      (breakout hsuper [
-         "hakyll"
-         "pandoc"
-       ])
-      );
-
-    ghc8104 = overrideHask "ghc8104" pkgs.haskell.packages.ghc8104 (hself: hsuper:
-      (breakout hsuper [
-         "hakyll"
-         "pandoc"
-       ])
-      );
-
-    ghc901 = overrideHask "ghc901" pkgs.haskell.packages.ghc901 (hself: hsuper:
-      (breakout hsuper [
-         "hakyll"
-         "pandoc"
-       ])
-      );
+    ghc884  = overrideHask "ghc884"  pkgs.haskell.packages.ghc884  (_hself: _hsuper: {});
+    ghc8104 = overrideHask "ghc8104" pkgs.haskell.packages.ghc8104 (_hself: _hsuper: {});
+    ghc901  = overrideHask "ghc901"  pkgs.haskell.packages.ghc901  (_hself: _hsuper: {});
   };
 };
 

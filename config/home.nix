@@ -68,6 +68,10 @@ in {
       ];
     };
 
+    sessionPath = [
+      "/usr/local/zfs/bin"
+    ];
+
     file = builtins.listToAttrs (
       map (path: {
              name = path;

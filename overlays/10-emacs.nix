@@ -114,8 +114,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "1m5kipsb1wxhydf36k16m711rdnamvr5k828a3jiq61h0np6s4kd";
-      # date = 2021-04-26T09:34:16-0700;
+      sha256 = "06s6m1xghzdcpmavpjc5f0743y60jdlk813q7gc79kk8sa7h37nm";
+      # date = 2021-05-10T11:28:05-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {

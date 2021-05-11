@@ -12,12 +12,16 @@ LKG_DATE   = $(eval LKG_DATE := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
 ifeq ($(CACHE),)
 NIXOPTS	   = --option build-use-substitutes false	\
+	     --max-jobs 20 --cores 4 --keep-going \
 	     --option substituters ''
 else
 ifeq ($(HOSTNAME),$(CACHE))
-NIXOPTS	   =
+# NIXOPTS	   =
+NIXOPTS	   = --max-jobs 20 --cores 4 --keep-going
 else
 NIXOPTS	   = --option build-use-substitutes true	\
+	     --option require-sigs false \
+	     --max-jobs 20 --cores 4 --keep-going \
 	     --option substituters 'ssh://$(CACHE)'
 endif
 endif
