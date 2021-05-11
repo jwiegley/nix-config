@@ -272,14 +272,6 @@ in {
       '';
 
       initExtra = ''
-        function upload() {
-            ${pkgs.lftp}/bin/lftp -u johnw@newartisans.com,$(${pkgs.pass}/bin/pass show ftp.fastmail.com | head -1) \
-                ftp://johnw@newartisans.com@ftp.fastmail.com                 \
-                -e "set ssl:ca-file \"${ca-bundle_crt}\"; cd /johnw.newartisans.com/files/pub ; put \"$1\" ; quit"
-            file=$(basename "$1" | sed -e 's/ /%20/g')
-            echo "http://ftp.newartisans.com/pub/$file" | pbcopy
-        }
-
         # Make sure that fzf does not override the meaning of ^T
         bindkey '^X^T' fzf-file-widget
         bindkey '^T' transpose-chars

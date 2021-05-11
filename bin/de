@@ -137,9 +137,9 @@ build_drv() {
 
         local drv="${wd}/env.drv"
         if [[ ! -f "${drv}" ]]; then
-            IN_NIX_SHELL=1 nix-instantiate "${NIXARGS[@]}"              \
+            IN_NIX_SHELL=1 nix-instantiate $NIXOPTS "${NIXARGS[@]}"              \
                 --add-root "${drv}" --indirect "${shell}" > /dev/null
-            nix-store -r `nix-store --query --references "${drv}"`      \
+            nix-store $NIXOPTS -r `nix-store $NIXOPTS --query --references "${drv}"`      \
                 --add-root "${wd}/dep" --indirect > /dev/null
         fi
 

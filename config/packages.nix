@@ -33,6 +33,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   csvkit
   ctop
   cvc4
+  darwin.cctools
   diffstat
   diffutils
   direnv
