@@ -20,6 +20,8 @@ let
       # equations       = pkg ./coq/equations.nix;
     };
 
+  extend_coq = coq: extendAttrs (self.mkCoqPackages coq) myCoqPackages;
+
 in {
 
 coqFilterSource = paths: src: pkgs.lib.cleanSourceWith {
@@ -80,16 +82,21 @@ coq_HEAD = with pkgs; pkgs.lib.overrideDerivation self.coq_8_13 (attrs: rec {
   '';
 });
 
-coqPackages_HEAD = extendAttrs (self.mkCoqPackages self.coq_HEAD) myCoqPackages;
-coqPackages_8_13 = extendAttrs (self.mkCoqPackages self.coq_8_13) myCoqPackages;
-coqPackages_8_12 = extendAttrs (self.mkCoqPackages self.coq_8_12) myCoqPackages;
-coqPackages_8_11 = extendAttrs (self.mkCoqPackages self.coq_8_11) myCoqPackages;
-coqPackages_8_10 = extendAttrs (self.mkCoqPackages self.coq_8_10) myCoqPackages;
-coqPackages_8_9  = extendAttrs (self.mkCoqPackages self.coq_8_9) myCoqPackages;
-coqPackages_8_8  = extendAttrs (self.mkCoqPackages self.coq_8_8) myCoqPackages;
-coqPackages_8_7  = extendAttrs (self.mkCoqPackages self.coq_8_7) myCoqPackages;
-coqPackages_8_6  = extendAttrs (self.mkCoqPackages self.coq_8_6) myCoqPackages;
-coqPackages_8_5  = self.mkCoqPackages self.coq_8_5;
-coqPackages_8_4  = self.mkCoqPackages self.coq_8_4;
+coq_8_13 = pkgs.coq_8_13.override { buildIde = false; };
+coq_8_12 = pkgs.coq_8_12.override { buildIde = false; };
+coq_8_11 = pkgs.coq_8_11.override { buildIde = false; };
+coq_8_10 = pkgs.coq_8_10.override { buildIde = false; };
+
+coqPackages_HEAD = extend_coq self.coq_HEAD;
+coqPackages_8_13 = extend_coq self.coq_8_13;
+coqPackages_8_12 = extend_coq self.coq_8_12;
+coqPackages_8_11 = extend_coq self.coq_8_11;
+coqPackages_8_10 = extend_coq self.coq_8_10;
+coqPackages_8_9  = extend_coq self.coq_8_9;
+coqPackages_8_8  = extend_coq self.coq_8_8;
+coqPackages_8_7  = extend_coq self.coq_8_7;
+coqPackages_8_6  = extend_coq self.coq_8_6;
+
+coqPackages = self.coqPackages_8_13;
 
 }

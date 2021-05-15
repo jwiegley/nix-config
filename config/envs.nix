@@ -16,6 +16,7 @@ let myEmacsPackages = import ./emacs.nix pkgs; in rec {
       (import ~/src/agda/plfa {}).env
       (import ~/src/category-theory {}).env
       (import ~/src/hnix { returnShellEnv = true; })
+      (import ~/src/ltl/coq {}).env
       (import ~/src/ltl/simple-ltl { returnShellEnv = true; })
       (import ~/src/sitebuilder { returnShellEnv = true; })
       (import ~/src/thinkorswim/trade-journal { returnShellEnv = true; })
