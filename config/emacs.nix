@@ -338,6 +338,7 @@ pkgs: epkgs: with epkgs;
   projectile
   pretty-hydra
   proof-general                 # proof-site
+  protobuf-mode
   python-mode
   racer
   rainbow-delimiters

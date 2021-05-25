@@ -142,6 +142,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nodePackages.eslint
   nodePackages.js-beautify
   nodejs
+  opensc
   openssh
   openssl
   openvpn
