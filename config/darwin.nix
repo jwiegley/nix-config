@@ -216,11 +216,15 @@ in {
           date >> /var/log/snapshots.log 2>&1
           snapshots tank
         '';
-        serviceConfig = iterate 2700;
+        serviceConfig = iterate 3600;
       };
 
       tank = {
-        command = "/usr/local/zfs/bin/zpool import tank";
+        script = ''
+          export PATH=/usr/local/zfs/bin:$PATH
+          export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
+          zpool import tank
+        '';
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = false;
       };

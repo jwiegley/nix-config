@@ -669,8 +669,8 @@ in {
 
       "~d"    = "deleteWordForward:";
       "~^h"   = "deleteWordBackward:";
-      "~\010" = "deleteWordBackward:";    /* Option-backspace */
-      "~\177" = "deleteWordBackward:";    /* Option-delete */
+      # "~\010" = "deleteWordBackward:";
+      # "~\177" = "deleteWordBackward:";
 
       "~v"    = "pageUp:";
       "^v"    = "pageDown:";

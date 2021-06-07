@@ -3,8 +3,8 @@ self: pkgs:
 let
   myEmacsPackageOverrides = eself: esuper:
     let
-      inherit (pkgs) fetchurl fetchgit fetchFromGitHub stdenv;
-      inherit (stdenv) lib mkDerivation;
+      inherit (pkgs) fetchurl fetchgit fetchFromGitHub stdenv lib;
+      inherit (stdenv) mkDerivation;
 
       withPatches = pkg: patches:
         pkg.overrideAttrs(attrs: { inherit patches; });

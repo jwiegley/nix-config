@@ -98,7 +98,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   inkscape.out
   iperf
   jdiskreport
-  jdk8
   jo
   jq
   killall
@@ -142,7 +141,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nodePackages.eslint
   nodePackages.js-beautify
   nodejs
-  opensc
+  # opensc
   openssh
   openssl
   openvpn
