@@ -519,11 +519,18 @@ in {
         ".ghc.environment.x86_64-darwin-*"
         ".makefile"
         "TAGS"
-        "cabal.project.local"
+        "cabal.project.local*"
         "dist-newstyle"
         "result"
         "result-*"
         "tags"
+        "default.hoo"
+        "default.warn"
+        "input-haskell-cabal.tar.gz"
+        "input-haskell-hoogle.tar.gz"
+        "input-haskell-platform.txt"
+        "input-haskell-stackage-lts.txt"
+        "input-haskell-stackage-nightly.txt"
       ];
     };
 
