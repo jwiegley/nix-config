@@ -847,7 +847,7 @@ emacs27_base = pkgs.emacs27.override rec {
 };
 
 emacs27 = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
-  CFLAGS = "-O3 -march=native -funroll-loops " + attrs.CFLAGS;
+  # CFLAGS = "-O3 -march=native -funroll-loops " + attrs.CFLAGS;
   buildInputs = attrs.buildInputs ++
     [ libpng libjpeg libungif libtiff librsvg ];
   preConfigure = ''
@@ -861,7 +861,7 @@ emacs27Packages   = self.emacs27PackagesNg;
 
 emacs27debug = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
   name = "${attrs.name}-debug";
-  CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
+  # CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
   buildInputs = attrs.buildInputs ++
     [ libpng libjpeg libungif libtiff librsvg ];
   preConfigure = ''
@@ -878,7 +878,7 @@ emacsHEAD = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
   version = "27.1";
   versionModifier = ".0";
   src = ~/src/emacs;
-  CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
+  # CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
   patches = [
     # ./emacs/tramp-detect-wrapped-gvfsd.patch
     ./emacs/clean-env.patch

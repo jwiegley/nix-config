@@ -14,7 +14,7 @@ let
   [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
     "hierarchy"
     "hours"
-    "hnix"
+    # "hnix"
     "logging"
     "monad-extras"
     "parsec-free"

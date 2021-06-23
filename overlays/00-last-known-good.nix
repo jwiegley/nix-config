@@ -24,16 +24,16 @@ in
     rev    = "f41dd45874e0113843f00a59c0b67c1609eeddf8";
     sha256 = "0hwfvj50g84h8kcnmv2sz1z7n505s7kd2096lf23fbbpd6i4zb7m";
   })
-    backblaze-b2
     csvkit
     ;
 
   inherit (nixpkgs {
-    # known-good-20210427_194036
-    rev    = "6ff596863b1497fd2114a3f4814e16af7385f86c";
-    sha256 = "1bc624inm21wl6s9b4nmn495j25yab1bvn3jc3f1mjfmcrbvm1gd";
+    # known-good-20210619_090958
+    rev    = "961d51aad2dd3838fccdf8c97a276bbd247b3040";
+    sha256 = "0xnvx8aqi2n87zvifvmfk28fzxgn4yxqbvspszscsd7nmr9v8xj7";
   })
-    subversion
-    qemu
+    dovecot
+    dovecot_pigeonhole
+    exiv2
     ;
 }
