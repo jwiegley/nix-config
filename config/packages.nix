@@ -13,7 +13,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.una)
   (exe haskellPackages.git-monitor)
   (exe haskellPackages.hours)
-  OnePassword-op
+  # OnePassword-op
   apg
   aria2
   aspell
