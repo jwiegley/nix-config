@@ -412,6 +412,7 @@ in {
         pull.rebase            = true;
         rebase.autosquash      = true;
         rerere.enabled         = true;
+        init.defaultBranch     = "main";
 
         "merge \"ours\"".driver   = true;
         "magithub \"ci\"".enabled = false;
@@ -506,13 +507,25 @@ in {
         "*.elc"
         "*.glob"
         "*.la"
+        "*.lia.cache"
+        "*.lra.cache"
+        "*.nia.cache"
+        "*.nra.cache"
         "*.o"
         "*.so"
         "*.v.d"
+        "*.v.tex"
+        "*.vio"
         "*.vo"
+        "*.vok"
+        "*.vos"
         "*~"
+        ".*.aux"
+        ".Makefile.d"
         ".clean"
-        ".direnv"
+        ".coq-native/"
+        ".coqdeps.d"
+        ".direnv/"
         ".envrc"
         ".envrc.cache"
         ".envrc.override"
@@ -520,17 +533,17 @@ in {
         ".makefile"
         "TAGS"
         "cabal.project.local*"
-        "dist-newstyle"
-        "result"
-        "result-*"
-        "tags"
         "default.hoo"
         "default.warn"
+        "dist-newstyle"
         "input-haskell-cabal.tar.gz"
         "input-haskell-hoogle.tar.gz"
         "input-haskell-platform.txt"
         "input-haskell-stackage-lts.txt"
         "input-haskell-stackage-nightly.txt"
+        "result"
+        "result-*"
+        "tags"
       ];
     };
 
@@ -566,7 +579,7 @@ in {
 
         hermes = onHost "vulcan" hermes_ethernet;
         macos  = onHost "vulcan" "172.16.20.139";
-        ubuntu = onHost "vulcan" "172.16.20.141";
+        ubuntu = onHost "vulcan" "172.16.194.2";
 
         elpa = { hostname = "elpa.gnu.org"; user = "root"; };
 

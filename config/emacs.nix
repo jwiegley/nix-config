@@ -255,6 +255,7 @@ pkgs: epkgs: with epkgs;
   mmm-mode
   moccur-edit
   monitor
+  motoko-mode
   multi-term
   multifiles
   multiple-cursors
@@ -381,6 +382,7 @@ pkgs: epkgs: with epkgs;
   string-inflection
   super-save
   supercite
+  swift-mode
   swiper
   tablegen-mode
   tablist

@@ -13,11 +13,8 @@ let
 
   myCoqPackages = self: super:
     let pkg = coqPackage self; in {
-      QuickChick      = pkg ./coq/QuickChick.nix;
       fiat_HEAD       = pkg ./coq/fiat.nix;
-      category-theory = pkg ./coq/category-theory.nix;
-      procrastination = pkg ./coq/procrastination.nix;
-      # equations       = pkg ./coq/equations.nix;
+      # category-theory = pkg ./coq/category-theory.nix;
     };
 
   extend_coq = coq: extendAttrs (self.mkCoqPackages coq) myCoqPackages;

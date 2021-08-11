@@ -14,6 +14,8 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.git-monitor)
   (exe haskellPackages.hours)
   # OnePassword-op
+  acl2-minimal
+  (agda.withPackages (p: [p.standard-library p.agda-categories]))
   apg
   aria2
   aspell
@@ -30,6 +32,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   cbor-diag
   contacts
   coreutils
+  coqPackages_8_13.coq
   csvkit
   ctop
   cvc4
@@ -185,6 +188,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   rsync
   rtags
   ruby
+  sbcl
   scc
   screen
   sdcv
@@ -208,6 +212,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   taskjuggler
   terminal-notifier
   time
+  tlaplus
   tmux
   translate-shell
   travis

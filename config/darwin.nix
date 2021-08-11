@@ -223,6 +223,7 @@ in {
         script = ''
           export PATH=/usr/local/zfs/bin:$PATH
           export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
+          /sbin/kextload /Library/Extensions/zfs.kext
           zpool import tank
         '';
         serviceConfig.RunAtLoad = true;

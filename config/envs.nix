@@ -10,8 +10,8 @@ let myEmacsPackages = import ./emacs.nix pkgs; in rec {
     name = "projects";
     srcs = [
       (import ~/dfinity/master/rs {}).shell
-      (import ~/dfinity/consensus-model {}).env
-      (import ~/dfinity/consensus-model/reference { returnShellEnv = true; })
+      (import ~/dfinity/master/hs/analyzer/shell.nix {})
+      (import ~/dfinity/formal-models {}).env
 
       (import ~/src/agda/plfa {}).env
       (import ~/src/category-theory {}).env
@@ -19,7 +19,7 @@ let myEmacsPackages = import ./emacs.nix pkgs; in rec {
       (import ~/src/ltl/coq {}).env
       (import ~/src/ltl/simple-ltl { returnShellEnv = true; })
       (import ~/src/sitebuilder { returnShellEnv = true; })
-      (import ~/src/thinkorswim/trade-journal { returnShellEnv = true; })
+      (import ~/src/trade-journal { returnShellEnv = true; })
     ];
     phases = ["buildPhase" "installPhase"];
     buildPhase = "true";

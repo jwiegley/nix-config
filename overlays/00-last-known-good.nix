@@ -35,5 +35,7 @@ in
     dovecot
     dovecot_pigeonhole
     exiv2
+    nix-prefetch-scripts
+    squashfsTools
     ;
 }

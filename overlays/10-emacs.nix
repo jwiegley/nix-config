@@ -715,6 +715,21 @@ let
       '';
     };
 
+    motoko-mode = compileEmacsFiles rec {
+      name = "motoko-mode";
+      src = fetchFromGitHub {
+        owner  = "dfinity";
+        repo   = "motoko";
+        rev    = "bf1b5e30cd02705a0b6f9b77ba4dce0da857e72f";
+        sha256 = "121vdskhy0rh84i380kg3nrbhm1fxljybqlkfdsl1dkz0cb5rmx0";
+        # date = 2021-06-29T14:46:26+00:00;
+      };
+      preBuild = ''
+        cd emacs
+      '';
+      buildInputs = with eself; [ emacs swift-mode use-package ];
+    };
+
     org = mkDerivation rec {
       name = "emacs-org-${version}";
       version = "20160421";
@@ -808,17 +823,17 @@ let
       };
     };
 
-    use-package = eself.melpaBuild {
-      pname = "use-package";
-      version = "20180127.1411";
-      src = ~/src/dot-emacs/lisp/use-package;
-      inherit (esuper.use-package) recipe;
-      packageRequires = with eself; [ emacs bind-key ];
-      meta = {
-        homepage = "https://melpa.org/#/use-package";
-        license = lib.licenses.free;
-      };
-    };
+    # use-package = eself.melpaBuild {
+    #   pname = "use-package";
+    #   version = "20210207.1926";
+    #   src = ~/src/dot-emacs/lisp/use-package;
+    #   inherit (esuper.use-package) recipe;
+    #   packageRequires = with eself; [ emacs bind-key ];
+    #   meta = {
+    #     homepage = "https://melpa.org/#/use-package";
+    #     license = lib.licenses.free;
+    #   };
+    # };
   };
 
   mkEmacsPackages = emacs:

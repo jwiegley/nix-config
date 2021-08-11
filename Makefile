@@ -146,7 +146,7 @@ mirror:
 
 update: tag-before pull rebuild tag-working mirror
 
-update-sync: update copy rebuild-all
+update-sync: update copy rebuild-all check-all
 
 ########################################################################
 
