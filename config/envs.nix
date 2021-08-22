@@ -9,17 +9,23 @@ let myEmacsPackages = import ./emacs.nix pkgs; in rec {
   projects-env = pkgs.stdenv.mkDerivation rec {
     name = "projects";
     srcs = [
+      # (import ~/doc/johnwiegley { inherit pkgs; })
+      # (import ~/doc/newartisans { inherit pkgs; })
+
       (import ~/dfinity/master/rs {}).shell
       (import ~/dfinity/master/hs/analyzer/shell.nix {})
       (import ~/dfinity/formal-models {}).env
 
-      (import ~/src/agda/plfa {}).env
-      (import ~/src/category-theory {}).env
-      # (import ~/src/hnix { returnShellEnv = true; })
-      (import ~/src/ltl/coq {}).env
-      (import ~/src/ltl/simple-ltl { returnShellEnv = true; })
-      (import ~/src/sitebuilder { returnShellEnv = true; })
-      (import ~/src/trade-journal { returnShellEnv = true; })
+      (import ~/src/agda/adders-and-arrows { inherit pkgs; }).env
+      (import ~/src/agda/plfa { inherit pkgs; }).env
+      (import ~/src/category-theory { inherit pkgs; }).env
+      (import ~/src/ltl/coq { inherit pkgs; }).env
+      (import ~/src/ltl/simple-ltl { inherit pkgs; returnShellEnv = true; })
+      (import ~/src/notes/coq { inherit pkgs; }).env
+      (import ~/src/notes/haskell { inherit pkgs; returnShellEnv = true; })
+      (import ~/src/trade-journal { inherit pkgs; returnShellEnv = true; })
+      (import ~/src/sitebuilder { inherit pkgs; returnShellEnv = true; })
+      # (import ~/src/wallet { inherit pkgs; }).shell
     ];
     phases = ["buildPhase" "installPhase"];
     buildPhase = "true";
