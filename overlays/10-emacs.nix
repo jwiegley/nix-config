@@ -623,11 +623,11 @@ let
     auctex = eself.elpaBuild {
         pname = "auctex";
         ename = "auctex";
-        version = "13.0.11";
+        version = "13.0.14";
         src = fetchurl {
-          url = "https://elpa.gnu.org/packages/auctex-13.0.11.tar";
-          sha256 = "0sy4f1n38q58vyzw5l0f80ci3j99rb25gbwj0frl0pglfmgzl44k";
-          # date = 2021-05-01T09:51:38-0700;
+          url = "https://elpa.gnu.org/packages/auctex-13.0.14.tar";
+          sha256 = "1gmqdcg9s6xf8kvzh1j27nbimakd5cy8pwsn0il19l026kxjimr8";
+          # date = 2021-09-14T22:25:39-0700;
         };
         packageRequires = with eself; [ cl-lib emacs ];
         meta = {
@@ -639,11 +639,11 @@ let
     debbugs = eself.elpaBuild {
         pname = "debbugs";
         ename = "debbugs";
-        version = "0.28";
+        version = "0.29";
         src = fetchurl {
-          url = "https://elpa.gnu.org/packages/debbugs-0.28.tar";
-          sha256 = "1qks38hpg3drhxzw66n5yxfq0v6fj9ya7d9dc6x0xwfp6r2x0li0";
-          # date = 2021-05-01T09:54:39-0700;
+          url = "https://elpa.gnu.org/packages/debbugs-0.29.tar";
+          sha256 = "1bn21d9dr9pb3vdak3v07x056xafym89kdpxavjf4avy6bry6s4d";
+          # date = 2021-09-14T22:25:12-0700;
         };
         meta = {
           homepage = "https://elpa.gnu.org/packages/debbugs.html";

@@ -23,6 +23,7 @@ let myEmacsPackages = import ./emacs.nix pkgs; in rec {
       (import ~/src/ltl/simple-ltl { inherit pkgs; returnShellEnv = true; })
       (import ~/src/notes/coq { inherit pkgs; }).env
       (import ~/src/notes/haskell { inherit pkgs; returnShellEnv = true; })
+      (import ~/src/notes/rust { inherit pkgs; returnShellEnv = true; })
       (import ~/src/trade-journal { inherit pkgs; returnShellEnv = true; })
       (import ~/src/sitebuilder { inherit pkgs; returnShellEnv = true; })
       # (import ~/src/wallet { inherit pkgs; }).shell

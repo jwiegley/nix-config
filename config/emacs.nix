@@ -1,6 +1,7 @@
 pkgs: epkgs: with epkgs;
 [
   ace-jump-mode
+  ace-isearch
   ace-link
   ace-mc
   ace-window
