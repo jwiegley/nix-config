@@ -611,15 +611,17 @@ in {
         # DFINITY Machines
 
         dfinity = {
-          host = lib.concatStringsSep " " [ "zh1" "zrh-3" "prometheus" ];
+          host = lib.concatStringsSep " "
+            [ "zh1" "zrh-3" "prometheus" "gitlab-dfinity" ];
           identityFile = [
             "${config.xdg.configHome}/ssh/id_dfinity"
-            "${config.xdg.configHome}/ssh/id_dfinity_old"
           ];
           identitiesOnly = true;
         };
 
-        # DFINITY Machines in Zurich
+        gitlab-dfinity = {
+          hostname = "gitlab.com";
+        };
 
         zh1 = {
           hostname = "zh1-spm34.dc1.dfinity.network";

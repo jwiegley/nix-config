@@ -158,16 +158,16 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
 haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // rec {
     ghc884  = overrideHask "ghc884"  pkgs.haskell.packages.ghc884  (_hself: _hsuper: {});
-    ghc8106 = overrideHask "ghc8106" pkgs.haskell.packages.ghc8106 (_hself: _hsuper: {});
+    ghc8107 = overrideHask "ghc8107" pkgs.haskell.packages.ghc8107 (_hself: _hsuper: {});
     ghc901  = overrideHask "ghc901"  pkgs.haskell.packages.ghc901  (_hself: _hsuper: {});
   };
 };
 
 haskellPackages_8_8  = self.haskell.packages.ghc884;
-haskellPackages_8_10 = self.haskell.packages.ghc8106;
+haskellPackages_8_10 = self.haskell.packages.ghc8107;
 haskellPackages_9_0  = self.haskell.packages.ghc901;
 
-ghcDefaultVersion    = "ghc8106";
+ghcDefaultVersion    = "ghc8107";
 haskellPackages      = self.haskell.packages.${self.ghcDefaultVersion};
 
 }

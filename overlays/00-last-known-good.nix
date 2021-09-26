@@ -38,4 +38,12 @@ in
     nix-prefetch-scripts
     squashfsTools
     ;
+
+  inherit (nixpkgs {
+    # known-good-20210829_140352
+    rev    = "f29257b3ba2b0dbba291cb7c6a10becee932543f";
+    sha256 = "08vxysz4pq9fzdhgj7igkmkcs95ndnal9i6mhs0dpmzpirw12sn1";
+  })
+    backblaze-b2
+    ;
 }
