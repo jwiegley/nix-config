@@ -578,7 +578,7 @@ in {
         vulcan.hostname = vulcan_ethernet;
 
         hermes = onHost "vulcan" hermes_ethernet;
-        macos  = onHost "vulcan" "172.16.20.139";
+        macos  = onHost "vulcan" "172.16.194.6";
         ubuntu = onHost "vulcan" "172.16.194.2";
 
         elpa = { hostname = "elpa.gnu.org"; user = "root"; };

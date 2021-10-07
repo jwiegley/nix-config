@@ -14,7 +14,8 @@ let myEmacsPackages = import ./emacs.nix pkgs; in rec {
 
       (import ~/dfinity/master/rs {}).shell
       (import ~/dfinity/master/hs/analyzer/shell.nix {})
-      (import ~/dfinity/formal-models {}).env
+      (import ~/dfinity/formal-models/coq-governance {}).env
+      (import ~/dfinity/formal-models/icp-forecast { inherit pkgs; returnShellEnv = true; })
 
       (import ~/src/agda/adders-and-arrows { inherit pkgs; }).env
       (import ~/src/agda/plfa { inherit pkgs; }).env
