@@ -14,7 +14,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.git-monitor)
   (exe haskellPackages.hours)
   # OnePassword-op
-  acl2-minimal
+  acl2-minimal                  # acl2 (not building currently)
   (agda.withPackages (p: [p.standard-library p.agda-categories]))
   apg
   aria2
@@ -197,7 +197,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   sipcalc
   sloccount
   smartmontools
-  socat2pre
+  socat
   sourceHighlight
   spiped
   sqlite
