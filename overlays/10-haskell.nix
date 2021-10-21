@@ -23,6 +23,7 @@ let
     "pushme"
     "recursors"
     "runmany"
+    "simple-amount"
     "sitebuilder"
     "sizes"
     "una"
