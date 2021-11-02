@@ -151,14 +151,14 @@ pkgs: epkgs: with epkgs;
   ggtags
   # ghc-mod                       # ghc
   ghub
-  ghub-plus                     # ghub+
+  # ghub-plus                     # ghub+
   git-annex
   git-link
   git-timemachine
   git-undo
-  gitattributes-mode
-  gitconfig-mode
-  gitignore-mode
+  # gitattributes-mode
+  # gitconfig-mode
+  # gitignore-mode
   github-review
   gitpatch
   gnus-alias

@@ -2,10 +2,7 @@
 
 with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe gitAndTools.git-annex)
-  (exe haskellPackages.cabal-install)
   (exe haskellPackages.git-all)
-  (exe haskellPackages.hpack)
-  (exe haskellPackages.lhs2tex)
   (exe haskellPackages.pushme)
   (exe haskellPackages.runmany)
   (exe haskellPackages.sizes)
@@ -13,6 +10,12 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.una)
   (exe haskellPackages.git-monitor)
   (exe haskellPackages.hours)
+  # Haskell tools
+  (exe haskellPackages.lhs2tex)
+  (exe haskellPackages.cabal-install)
+  (exe haskellPackages.hpack)
+  (exe haskellPackages.hasktags)
+  # (exe haskellPackages.ormolu)
   # OnePassword-op
   acl2-minimal                  # acl2 (not building currently)
   (agda.withPackages (p: [p.standard-library p.agda-categories]))

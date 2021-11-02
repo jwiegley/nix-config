@@ -71,7 +71,7 @@ let
     helm-google   = withPatches esuper.helm-google   [ ./emacs/patches/helm-google.patch ];
     magit         = withPatches esuper.magit         [ ./emacs/patches/magit.patch ];
     noflet        = withPatches esuper.noflet        [ ./emacs/patches/noflet.patch ];
-    org-ref       = withPatches esuper.org-ref       [ ./emacs/patches/org-ref.patch ];
+    # org-ref       = withPatches esuper.org-ref       [ ./emacs/patches/org-ref.patch ];
     pass          = withPatches esuper.pass          [ ./emacs/patches/pass.patch ];
 
 
