@@ -17,7 +17,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.hasktags)
   # (exe haskellPackages.ormolu)
   # OnePassword-op
-  acl2-minimal                  # acl2 (not building currently)
   (agda.withPackages (p: [p.standard-library p.agda-categories]))
   apg
   aria2
@@ -132,13 +131,11 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   multitail
   my-scripts
   mysql
-  nix-bash-completions
   nix-diff
   nix-index
   nix-info
   nix-prefetch-scripts
   nix-scripts
-  nix-zsh-completions
   nixStable
   nixpkgs-fmt
   nixfmt
@@ -208,8 +205,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   srm
   sshify
   stow
-  stress
-  stress-ng
   subversion
   svg2tikz
   taskjuggler

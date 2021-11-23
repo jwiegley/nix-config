@@ -15,6 +15,9 @@ let home            = builtins.getEnv "HOME";
     hermes_ethernet = "192.168.1.108";
     hermes_wifi     = "192.168.1.67";
 
+    master_key      = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
+    signing_key     = "E0F96E618528E465";
+
 in {
   home = {
     # These are packages that should always be present in the user
@@ -24,12 +27,18 @@ in {
     sessionVariables = {
       ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";
       B2_ACCOUNT_INFO    = "${config.xdg.configHome}/backblaze-b2/account_info";
-      BORG_PASSCOMMAND   = "${pkgs.pass}/bin/pass show Passwords/borgbackup";
       CABAL_CONFIG       = "${config.xdg.configHome}/cabal/config";
+      EDITOR             = "${emacsclient}";
+      EMACS_SERVER_FILE  = "${emacs-server}";
+      EMAIL              = "${config.programs.git.userEmail}";
       FONTCONFIG_FILE    = "${config.xdg.configHome}/fontconfig/fonts.conf";
       FONTCONFIG_PATH    = "${config.xdg.configHome}/fontconfig";
       GNUPGHOME          = "${config.xdg.configHome}/gnupg";
       GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";
+      HERMES_ETHERNET    = hermes_ethernet;
+      HERMES_WIFI        = hermes_wifi;
+      HOSTNAME           = localconfig.hostname;
+      JAVA_OPTS          = "-Xverify:none";
       LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
       NIX_CONF           = "${home}/src/nix";
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
@@ -39,17 +48,11 @@ in {
       STARDICT_DATA_DIR  = "${config.xdg.dataHome}/dictionary";
       TRAVIS_CONFIG_PATH = "${config.xdg.configHome}/travis";
       VAGRANT_HOME       = "${config.xdg.dataHome}/vagrant";
-      WWW_HOME           = "${config.xdg.cacheHome}/w3m";
-      EMACS_SERVER_FILE  = "${emacs-server}";
-      EDITOR             = "${emacsclient}";
-      EMAIL              = "${config.programs.git.userEmail}";
-      JAVA_OPTS          = "-Xverify:none";
       VULCAN_ETHERNET    = vulcan_ethernet;
       VULCAN_WIFI        = vulcan_wifi;
-      HERMES_ETHERNET    = hermes_ethernet;
-      HERMES_WIFI        = hermes_wifi;
-      HOSTNAME           = localconfig.hostname;
+      WWW_HOME           = "${config.xdg.cacheHome}/w3m";
 
+      RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone-b2";
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";
@@ -136,7 +139,7 @@ in {
         };
       };
       gpg = {
-        key = "46C4BD1A7AC14BA2";
+        key = signing_key;
         signByDefault = false;
         encryptByDefault = false;
       };
@@ -174,13 +177,6 @@ in {
       };
     };
 
-    bash = {
-      enable = true;
-      bashrcExtra = lib.mkBefore ''
-        source /etc/bashrc
-      '';
-    };
-
     fzf = {
       enable = true;
       enableZshIntegration = true;
@@ -191,6 +187,13 @@ in {
        "--border"
        "--exact"
       ];
+    };
+
+    bash = {
+      enable = true;
+      bashrcExtra = lib.mkBefore ''
+        source /etc/bashrc
+      '';
     };
 
     zsh = rec {
@@ -317,10 +320,10 @@ in {
     gpg = {
       enable = true;
       settings = {
-        default-key = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
+        default-key = master_key;
 
         auto-key-locate = "keyserver";
-        keyserver = "hkps://hkps.pool.sks-keyservers.net";
+        keyserver = "pgp.mit.edu";
         keyserver-options = "no-honor-keyserver-url include-revoked auto-key-retrieve";
       };
       scdaemonSettings = {
@@ -349,7 +352,7 @@ in {
       userEmail = "johnw@newartisans.com";
 
       signing = {
-        key = "C144D8F4F19FE630";
+        key = signing_key;
         signByDefault = true;
       };
 
@@ -586,6 +589,17 @@ in {
         mail.hostname      = "mail.haskell.org";
         savannah.hostname  = "git.sv.gnu.org";
         fencepost.hostname = "fencepost.gnu.org";
+
+        savannah_gnu_org = {
+          host = lib.concatStringsSep " " [
+            "git.savannah.gnu.org"
+            "git.sv.gnu.org"
+            "git.savannah.nongnu.org"
+            "git.sv.nongnu.org"
+          ];
+          identityFile = "${config.xdg.configHome}/ssh/id_emacs";
+          identitiesOnly = true;
+        };
 
         id_local = {
           host = lib.concatStringsSep " " [

@@ -174,12 +174,15 @@ copy-direnv:
 	@find $(HOME)/dfinity $(HOME)/src $(HOME)/doc		\
 	    \( -path '*/Containers' -prune \) -o		\
 	    \( -path '*/.Trash' -prune \) -o			\
-	    -path '*/.direnv/default' -type l -print |		\
+	    -path '*/.direnv' -type d -print |			\
 	    while read file ; do				\
 	        for host in $(REMOTES); do			\
 	            echo "nix copy: $$file -> $$host";		\
-		    $(NIX) copy $$file/*			\
-			--keep-going --to ssh://$$host;		\
+		    find $$file \!				\
+			-name env.drv -name 'dep*'		\
+			-type l -print0 |			\
+		        $(PRENIX) xargs -0 nix copy		\
+			    --keep-going --to ssh://$$host;	\
 	        done;						\
 	    done
 

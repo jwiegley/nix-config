@@ -16,15 +16,18 @@ in {
     activate-system.enable = true;
   };
 
-  programs = {
-    zsh.enable = true;
-  };
-
   users = {
     users.johnw = {
       name = "johnw";
       home = "/Users/johnw";
       shell = pkgs.zsh;
+    };
+  };
+
+  programs = {
+    zsh = {
+      enable = true;
+      enableCompletion = false;
     };
   };
 
@@ -92,6 +95,7 @@ in {
       gc-keep-derivations = true
       gc-keep-outputs = true
       secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
+      experimental-features = nix-command flakes
     '';
   }
   // lib.optionalAttrs (localconfig.hostname == "hermes") {

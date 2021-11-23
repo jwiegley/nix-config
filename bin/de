@@ -15,7 +15,7 @@ if [[ "$1" == "--no-cache" ]]; then
     NOCACHE=true
 fi
 
-NIXOPTS=""
+NIXOPTS="--cores 4"
 NIXOPTS_MORE=""
 
 if [[ $PWD =~ dfinity ]]; then

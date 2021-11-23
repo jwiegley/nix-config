@@ -355,7 +355,8 @@ pkgs: epkgs: with epkgs;
   riscv-mode
   rs-gnus-summary
   rust-auto-use
-  rust-mode
+  # rust-mode
+  rustic
   s
   sbt-mode
   scala-mode

@@ -100,8 +100,8 @@ let
 
     crosshairs = compileEmacsWikiFile {
       name = "crosshairs.el";
-      sha256 = "0032v3ry043wzvbacm16liykc362pza1bc46x37b307bvbv12qlg";
-      # date = 2021-03-26T13:22:16-0700;
+      sha256 = "1zw9cw1a84gkqln79w71nxn3vizafrl6g9vg5q007k32f181349v";
+      # date = 2021-11-23T09:05:34-0800;
 
       buildInputs = with eself; [ hl-line-plus col-highlight vline ];
     };
@@ -114,8 +114,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "06s6m1xghzdcpmavpjc5f0743y60jdlk813q7gc79kk8sa7h37nm";
-      # date = 2021-05-10T11:28:05-0700;
+      sha256 = "1rpnzgi1f921zmxkljnc8464qjshqlvdhmavls6z4kbdg85x7vc8";
+      # date = 2021-11-23T09:05:38-0800;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -144,8 +144,8 @@ let
 
     hl-line-plus = compileEmacsWikiFile {
       name = "hl-line+.el";
-      sha256 = "0crkmjah8i61z6c15sgn2cbpbj8xqfx0py1y84pxkcjh1cj7hx7q";
-      # date = 2021-03-26T13:22:28-0700;
+      sha256 = "1ns064l1c5g3dnhx5d2sn43w9impn58msrywsgq0bdyzikg7wwh2";
+      # date = 2021-11-23T09:05:46-0800;
     };
 
     message-x = compileEmacsWikiFile {
@@ -256,9 +256,9 @@ let
       src = fetchFromGitHub {
         owner = "emacsmirror";
         repo = "bookmark-plus";
-        rev = "cb16d5384f031292487f4f0a68d4afb4ececed80";
-        sha256 = "1djbx6275lj4n5alq78kggjly7ick2j15qn6yh1givywbficd3wj";
-        # date = 2020-12-29T21:51:30+01:00;
+        rev = "478f945f538a2fd2c0fa0d531876b679914b6d85";
+        sha256 = "1hz24aldh68vf8ac16gahlkq2v5ic6r7dm8ra8m6k1343ba572rg";
+        # date = 2021-09-19T23:50:08+02:00;
       };
     };
 
@@ -299,9 +299,9 @@ let
       src = fetchFromGitHub {
         owner = "jcs-elpa";
         repo = "fill-page";
-        rev = "95f82f93848ca608d4c4d9ec7386d94745cbc691";
-        sha256 = "10kgaq1da5zgz2dzagw2fc5hlh4ik5z6vyfw0lqd7bqpjfg62kgr";
-        # date = 2020-11-05T12:52:50+08:00;
+        rev = "562d6d5118097b4e62f20773fd90d600ab19fb61";
+        sha256 = "0v5irns6061qx0madrf2dc1ahkn4j90v8jpx16l69y9i98dh6n5k";
+        # date = 2021-09-27T16:32:31+08:00;
       };
     };
 
@@ -455,9 +455,9 @@ let
       src = fetchFromGitHub {
         owner = "tarsius";
         repo = "ox-texinfo-plus";
-        rev = "579fe7b58594ab86f351e9d911033f351ef55d42";
-        sha256 = "0ids3ivcvwx2l0qyhxv6zfsmw6l1rinqybsfwk3l90c456pk11qb";
-        # date = 2020-12-27T21:34:30+01:00;
+        rev = "c639aeaac1a6eb150ac0b92a29650c627f891550";
+        sha256 = "1i97ayg867fqmc0vqjd7hpj29gzmpl194i82na0bnp1ql4pqxsx0";
+        # date = 2021-11-09T17:50:17+01:00;
       };
     };
 
@@ -512,9 +512,9 @@ let
       src = fetchFromGitHub {
         owner = "Malabarba";
         repo = "spinner.el";
-        rev = "d15e7a7b6395be69acda9d6464acc81d3e2ad07d";
-        sha256 = "0gyhjpc68gz1wyqf2rycsl8fgv0f2l6f5jx4mw6ma7zchglj95l2";
-        # date = 2020-03-19T08:32:10-03:00;
+        rev = "bca794fa6f6b007292cdac9b0a850a3711986db5";
+        sha256 = "1m872dj1n05mkvgfyiqsbri489vmff5zdmv4xx5qj2s91sp046rl";
+        # date = 2021-07-01T18:20:39-03:00;
       };
     };
 
@@ -720,9 +720,9 @@ let
       src = fetchFromGitHub {
         owner  = "dfinity";
         repo   = "motoko";
-        rev    = "bf1b5e30cd02705a0b6f9b77ba4dce0da857e72f";
-        sha256 = "121vdskhy0rh84i380kg3nrbhm1fxljybqlkfdsl1dkz0cb5rmx0";
-        # date = 2021-06-29T14:46:26+00:00;
+        rev    = "4115ecec5b471fb105f4aa7c7858a4a35d0e3159";
+        sha256 = "0145razl5382g9534qmj8i2ifxs43mc7sy0ian8ijgda637fws0b";
+        # date = 2021-11-23T00:25:16+00:00;
       };
       preBuild = ''
         cd emacs
@@ -794,9 +794,9 @@ let
       src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "f0f0476d07401aba2cf428a71f7ee960cd1b3154";
-        sha256 = "1h6bwk1l3fm34xx8nbwh2s3g8ab5zbnx1givgaf64hf3z7r44xic";
-        # date = 2021-03-21T22:32:57+01:00;
+        rev = "2376485828bbd6f151897fdac77dab84f360100e";
+        sha256 = "14dgqcc6hp6mywl49kmpb3hgl3cwsrmhcjcv4xwqx1kabd9ni3hd";
+        # date = 2021-11-23T00:00:45+01:00;
       };
 
       # src = ~/src/proof-general;

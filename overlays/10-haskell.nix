@@ -38,24 +38,6 @@ let
     gitlib = unmarkBroken
       (hself.callCabal2nix "gitlib" ~/src/gitlib/gitlib {});
 
-    diagrams-cairo = unmarkBroken (doJailbreak
-      (hself.callCabal2nix "diagrams-cairo" (pkgs.fetchFromGitHub {
-        owner  = "diagrams";
-        repo   = "diagrams-cairo";
-        rev    = "533e4f4f18f961543bb1d78493c750dec45fd4a3";
-        sha256 = "18z38b8hq0laxd2q458pa58z3ls1fm9l3p09vsi3q8q4605d84k6";
-        # date = 2020-02-08T04:32:35-06:00;
-      }) {}));
-
-    diagrams-lib = unmarkBroken (doJailbreak
-      (hself.callCabal2nix "diagrams-lib" (pkgs.fetchFromGitHub {
-        owner  = "diagrams";
-        repo   = "diagrams-lib";
-        rev    = "6f66ce6bd5aed81d8a1330c143ea012724dbac3c";
-        sha256 = "0kn3kk8pc7kzwz065g8mpdbsbmbds3vrrgz2215f96ivivv8b9lw";
-        # date = 2021-03-02T17:03:02-06:00;
-      }) {}));
-
     time-recurrence = unmarkBroken (doJailbreak
       (hself.callCabal2nix "time-recurrence" (pkgs.fetchFromGitHub {
         owner  = "jwiegley";
