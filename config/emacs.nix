@@ -53,8 +53,6 @@ pkgs: epkgs: with epkgs;
   company-auctex
   company-cabal
   company-coq
-  # company-ghc
-  # company-lsp
   company-math
   company-nixos-options
   company-quickhelp

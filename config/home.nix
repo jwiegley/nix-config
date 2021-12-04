@@ -733,8 +733,6 @@ in {
         DSDontWriteNetworkStores = true;
         DSDontWriteUSBStores = true;
       };
-
-      "com.apple.menuextra.battery".ShowPercent = "YES";
     };
   };
 

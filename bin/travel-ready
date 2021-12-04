@@ -1,0 +1,65 @@
+#!/bin/bash
+
+LOCAL=vulcan
+REMOTE=hermes
+
+if [[ $1 == --here ]]; then
+    function update_direnv() {
+        if [[ -d $1 ]]; then
+            cd $1
+            de
+        fi
+    }
+else
+    push hermes
+
+    u $LOCAL rebuild
+
+    ssh $REMOTE "NIX_CONF=$HOME/src/nix CACHE=$LOCAL u $REMOTE rebuild"
+
+    function update_direnv() {
+        if [[ -d $1 ]]; then
+            cd $1
+            export NIXPKGS_ALLOW_INSECURE=1
+            de
+            ssh $REMOTE "cd $1; CACHE=$LOCAL NIXPKGS_ALLOW_INSECURE=1 de"
+        fi
+    }
+
+    u $LOCAL copy
+fi
+
+
+for dir in                                      \
+    formal-models/coq-governance                \
+    formal-models/vote-forecast                 \
+    ic-hs                                       \
+    icp-forecast                                \
+    master/rs                                   \
+    merge/rs                                    \
+    quill                                       \
+    wfq/rs                                      \
+    winter
+do
+    echo "Updating direnv for ~/dfinity/$dir"
+    update_direnv ~/dfinity/$dir
+done
+
+for dir in                                      \
+    agda/plfa                                   \
+    category-theory                             \
+    comparable                                  \
+    ltl/coq                                     \
+    ltl/simple-ltl                              \
+    ltl/warford                                 \
+    notes/coq                                   \
+    notes/haskell                               \
+    notes/rust                                  \
+    simple-amount                               \
+    sitebuilder                                 \
+    trade-journal                               \
+    wallet
+do
+    echo "Updating direnv for ~/src/$dir"
+    update_direnv ~/src/$dir
+done
