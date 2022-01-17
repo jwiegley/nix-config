@@ -12,14 +12,14 @@ in {
   }) recoll;
 
   inherit (nixpkgs {
-    # rev    = "known-good-20210829_140352";
-    rev    = "c71c411d8f9ec5bd746fcd925555cee5b3cdd297";
-    sha256 = "08vxysz4pq9fzdhgj7igkmkcs95ndnal9i6mhs0dpmzpirw12sn1";
-  }) backblaze-b2;
-
-  inherit (nixpkgs {
     # rev    = "known-good-20211122_233757";
     rev    = "91e1ec3220ce0c47577d4b3d880ef9b1ffee3d3e";
     sha256 = "sha256-Wmm+1JLzOEtDwY6FQpuK35vBYXBZVngmU8I97fVbaqE=";
   }) qemu;
+
+  inherit (nixpkgs {
+    # rev    = "known-good-20211203_093237";
+    rev    = "08f61628174fa4b5c500622ce93138bd1063cdbf";
+    sha256 = "sha256-uaLfhJ5J7CMs4ikrtPi8yccg5zAIuwdUeokhKwn19k8=";
+  }) socat;
 }

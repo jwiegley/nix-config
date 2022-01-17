@@ -69,7 +69,7 @@ PRENIX	  := PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIX_PATH)
 all: rebuild
 
 %-all: %
-	for host in $(REMOTES); do						\
+	@for host in $(REMOTES); do						\
 	    ssh $$host "CACHE=$(CACHE) NIX_CONF=$(NIX_CONF) u $$host $<";	\
 	done
 
@@ -217,4 +217,4 @@ check:
 	$(NIX_STORE) --verify --repair --check-contents
 
 sizes:
-	df -H /nix
+	df -H /nix 2>&1 | grep /dev

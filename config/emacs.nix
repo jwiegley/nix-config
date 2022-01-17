@@ -37,7 +37,6 @@ pkgs: epkgs: with epkgs;
   calfw-cal
   calfw-org
   cargo
-  cell-mode
   centered-cursor-mode
   change-inner
   chess                         # chess chess-ics
@@ -104,11 +103,9 @@ pkgs: epkgs: with epkgs;
   elisp-slime-nav
   elmacro
   emamux
-  # emms                          # emms-setup
   emojify
   engine-mode
   enh-ruby-mode                 # ruby-mode
-  # ensime
   epc
   epl
   erc-highlight-nicknames
@@ -126,17 +123,13 @@ pkgs: epkgs: with epkgs;
   eyebrowse
   f
   fancy-narrow
-  fast-scroll
   feebleline
   fence-edit
-  # fennel-mode
   fetchmail-mode
   fill-page
   flycheck
   flycheck-haskell
-  flycheck-hdevtools
   flycheck-package
-  flycheck-rust
   fn
   focus
   font-lock-studio
@@ -147,16 +140,11 @@ pkgs: epkgs: with epkgs;
   fullframe
   fuzzy
   ggtags
-  # ghc-mod                       # ghc
   ghub
-  # ghub-plus                     # ghub+
   git-annex
   git-link
   git-timemachine
   git-undo
-  # gitattributes-mode
-  # gitconfig-mode
-  # gitignore-mode
   github-review
   gitpatch
   gnus-alias
@@ -166,7 +154,6 @@ pkgs: epkgs: with epkgs;
   goto-last-change
   goto-line-preview
   graphviz-dot-mode
-  gud-lldb
   haskell-mode
   hcl-mode
   helm
@@ -195,7 +182,6 @@ pkgs: epkgs: with epkgs;
   initsplit
   ipcalc
   ivy
-  ivy-compile
   ivy-explorer
   ivy-hydra
   ivy-pass
@@ -214,15 +200,11 @@ pkgs: epkgs: with epkgs;
   kubernetes
   kv
   language-detection
-  langtool
   ledger-mode
-  # lentic                        # lentic-mode
   link-hint
   lispy
   list-utils
   lively
-  #llvm-mode
-  load-time
   logito
   loop
   lsp-haskell
@@ -237,7 +219,6 @@ pkgs: epkgs: with epkgs;
   magit-lfs
   magit-popup
   magit-tbdiff
-  makefile-runner
   makey
   malyon
   markdown-mode
@@ -260,8 +241,6 @@ pkgs: epkgs: with epkgs;
   multiple-cursors
   muse
   names
-  navi-mode
-  nf-procmail-mode
   nginx-mode
   nix-buffer
   nix-mode
@@ -280,31 +259,18 @@ pkgs: epkgs: with epkgs;
   origami
   org                           # org org-babel org-crypt
   org-bookmark-heading
-  org-gcal
-  org-jira
-  org-mind-map
-  org-noter
-  org-opml
-  # org-pdfview
-  org-pdftools
   org-ref
   org-rich-yank
-  org-roam
   org-super-agenda
   org-web-tools
-  orgit
   orgnav
   orgtbl-aggregate
   origami
-  outorg
-  outshine
   ov
   ovpn-mode
   ox-extra
   ox-gfm
-  ox-pandoc
   ox-texinfo-plus
-  ox-slack
   package-lint
   packed
   pandoc-mode
@@ -326,7 +292,6 @@ pkgs: epkgs: with epkgs;
   phi-search-mc
   pkg-info
   plantuml-mode
-  # po-mode
   popup
   popup-pos-tip
   popup-ruler
@@ -340,7 +305,6 @@ pkgs: epkgs: with epkgs;
   proof-general                 # proof-site
   protobuf-mode
   python-mode
-  racer
   rainbow-delimiters
   rainbow-mode
   redshank
@@ -353,8 +317,8 @@ pkgs: epkgs: with epkgs;
   riscv-mode
   rs-gnus-summary
   rust-auto-use
-  # rust-mode
-  rustic
+  rust-mode
+  # rustic
   s
   sbt-mode
   scala-mode
@@ -366,7 +330,6 @@ pkgs: epkgs: with epkgs;
   shift-number
   simple-httpd
   sky-color-clock
-  slidify-pages
   slime
   smart-mode-line
   smart-newline
@@ -377,14 +340,12 @@ pkgs: epkgs: with epkgs;
   spinner
   springboard
   sql-indent
-  stopwatch
   string-edit
   string-inflection
   super-save
   supercite
   swift-mode
   swiper
-  tablegen-mode
   tablist
   tagedit
   terraform-mode
@@ -428,7 +389,6 @@ pkgs: epkgs: with epkgs;
   yaml-mode
   yankpad
   yaoddmuse
-  yari-with-buttons             # yari
   yasnippet
   z3-mode
   zoom

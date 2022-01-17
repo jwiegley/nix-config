@@ -47,6 +47,7 @@ let
       }
       else esuper.seq;
 
+    ########################################################################
 
     edit-env        = compileLocalFile "edit-env.el";
     edit-var        = compileLocalFile "edit-var.el";
@@ -56,6 +57,7 @@ let
     flymake         = compileLocalFile "flymake-1.0.9.el";
     project         = compileLocalFile "project-0.5.3.el";
 
+    ########################################################################
 
     magit-annex      = addBuildInputs esuper.magit-annex        [ pkgs.git ];
     magit-filenotify = addBuildInputs esuper.magit-filenotify   [ pkgs.git ];
@@ -65,15 +67,16 @@ let
     magit-tbdiff     = addBuildInputs esuper.magit-tbdiff       [ pkgs.git ];
     orgit            = addBuildInputs esuper.orgit              [ pkgs.git ];
 
+    ########################################################################
 
     company-coq   = withPatches esuper.company-coq   [ ./emacs/patches/company-coq.patch ];
     esh-buf-stack = withPatches esuper.esh-buf-stack [ ./emacs/patches/esh-buf-stack.patch ];
     helm-google   = withPatches esuper.helm-google   [ ./emacs/patches/helm-google.patch ];
     magit         = withPatches esuper.magit         [ ./emacs/patches/magit.patch ];
     noflet        = withPatches esuper.noflet        [ ./emacs/patches/noflet.patch ];
-    # org-ref       = withPatches esuper.org-ref       [ ./emacs/patches/org-ref.patch ];
     pass          = withPatches esuper.pass          [ ./emacs/patches/pass.patch ];
 
+    ########################################################################
 
     ascii = compileEmacsWikiFile {
       name = "ascii.el";
@@ -206,13 +209,14 @@ let
       # date = 2021-03-26T13:22:43-0700;
     };
 
+    ########################################################################
 
     bytecomp-simplify = compileEmacsFiles {
       name = "bytecomp-simplify.el";
       src = fetchurl {
         url = https://download.tuxfamily.org/user42/bytecomp-simplify.el;
         sha256 = "1yq0wqgva8yidyd46cqag0ds0cyzl7q8rpd2cmksp68k4zlsxwyv";
-        # date = 2021-03-26T13:22:46-0700;
+        # date = 2022-01-03T11:56:57-0800;
       };
     };
 
@@ -221,24 +225,7 @@ let
       src = ~/src/hours;
     };
 
-    nf-procmail-mode = compileEmacsFiles {
-      name = "nf-procmail-mode.el";
-      src = fetchurl {
-        url = http://www.splode.com/~friedman/software/emacs-lisp/src/nf-procmail-mode.el;
-        sha256 = "1a7byym62g2rjh2grrqh1g51p05cibp6k83581xyn7fai5f4hxx3";
-        # date = 2021-03-26T13:22:48-0700;
-      };
-    };
-
-    tablegen-mode = compileEmacsFiles {
-      name = "tablegen-mode.el";
-      src = fetchurl {
-        url = https://raw.githubusercontent.com/llvm-mirror/llvm/master/utils/emacs/tablegen-mode.el;
-        sha256 = "0dy0diiqfz91blrkpbfxc5ky0l7ghkqi72ah7sh9jkrqa8ss7isy";
-        # date = 2021-03-26T13:22:49-0700;
-      };
-    };
-
+    ########################################################################
 
     asoc = compileEmacsFiles {
       name = "asoc";
@@ -262,27 +249,6 @@ let
       };
     };
 
-    cell-mode = compileEmacsFiles {
-      name = "cell-mode";
-      src = fetchgit {
-        url = "http://gitlab.com/dto/cell.el.git";
-        rev = "c7094eb2d8101988339b0a95ca7a4d4708901e68";
-        sha256 = "00kgish9q8j5l6kg6n80a83a3dpbmkqqm2idqws41gsniyxaa93b";
-        # date = 2019-09-15T23:00:16-04:00;
-      };
-    };
-
-    erc-yank = compileEmacsFiles {
-      name = "erc-yank";
-      src = fetchFromGitHub {
-        owner = "jwiegley";
-        repo = "erc-yank";
-        rev = "55d96f18c5df9d8fce51fa073d7a12c47a46ac80";
-        sha256 = "1chigywld4v2shc7ij6gyxfq0xzwyms5nal85b3yh7km2pim5i8h";
-        # date = 2021-02-20T10:15:07-08:00;
-      };
-    };
-
     fence-edit = compileEmacsFiles {
       name = "fence-edit";
       src = fetchFromGitHub {
@@ -294,40 +260,6 @@ let
       };
     };
 
-    fill-page = compileEmacsFiles {
-      name = "fill-page";
-      src = fetchFromGitHub {
-        owner = "jcs-elpa";
-        repo = "fill-page";
-        rev = "562d6d5118097b4e62f20773fd90d600ab19fb61";
-        sha256 = "0v5irns6061qx0madrf2dc1ahkn4j90v8jpx16l69y9i98dh6n5k";
-        # date = 2021-09-27T16:32:31+08:00;
-      };
-    };
-
-    git-undo = compileEmacsFiles {
-      name = "git-undo";
-      src = fetchFromGitHub {
-        owner = "jwiegley";
-        repo = "git-undo-el";
-        rev = "cf31e38e7889e6ade7d2d2b9f8719fd44f52feb5";
-        sha256 = "10f9h8dby3ygkjqwizrif7v1wpwc8iqam5bvayahrabs87s0lnbi";
-        # date = 2019-12-21T11:05:45-08:00;
-      };
-    };
-
-    ghub-plus = compileEmacsFiles {
-      name = "ghub-plus";
-      src = fetchFromGitHub {
-        owner = "vermiculus";
-        repo = "ghub-plus";
-        rev = "b1adef2402d7599911d4dd447a987a0cea04e6fe";
-        sha256 = "0bzri6s5mwvgir9smkz68d5cgcf4glpdmcj8dz8rjxziwrg6k5bz";
-        # date = 2019-12-29T11:48:21-06:00;
-      };
-      buildInputs = with eself; [ ghub apiwrap dash graphql treepy ];
-    };
-
     gnus-harvest = compileEmacsFiles {
       name = "gnus-harvest";
       src = fetchFromGitHub {
@@ -336,17 +268,6 @@ let
         rev = "feda071a87b799bd5d23cacde3ee71f0b166e75d";
         sha256 = "08zb7vc3v3wdxkzgi902vlc5ybfvm8fxrvm5drnwfsjj9873pbcb";
         # date = 2018-02-08T11:20:21-08:00;
-      };
-    };
-
-    gud-lldb = compileEmacsFiles {
-      name = "gud-lldb";
-      src = fetchFromGitHub {
-        owner = "jojojames";
-        repo = "gud-lldb";
-        rev = "8e68eef3a14f2a372577fd160d38d438a533c6a9";
-        sha256 = "19ab404khsiflhczc2xzdhsqrxlhzi90m4b2wzwb5q5mizivl2y6";
-        # date = 2017-04-14T17:22:24-07:00;
       };
     };
 
@@ -384,49 +305,6 @@ let
       };
     };
 
-    ivy-compile = compileEmacsFiles {
-      name = "ivy-compile.el";
-      src = fetchurl {
-        url = https://bitbucket.org/holgerschurig/emacsconf/raw/74d428aa2f9be88b14a503f6c3a816ae7cd13644/elisp/ivy-compile.el;
-        sha256 = "0igi5p9s6w9yqaxirl286ms9zxad1njw0c6q1b7nry0mh12f7327";
-        # date = 2021-03-26T13:23:13-0700;
-      };
-      buildInputs = with eself; [ ivy ];
-    };
-
-    load-time = compileEmacsFiles {
-      name = "load-time";
-      src = fetchFromGitHub {
-        owner = "fniessen";
-        repo = "emacs-load-time";
-        rev = "9d31686a76e9792bd06e49ff77c662065ded015c";
-        sha256 = "0zhrfidcxqfld7y67pysdlcvrprrka9sq8065ygqx5yxjb7mxs32";
-        # date = 2014-10-10T16:52:58+02:00;
-      };
-    };
-
-    makefile-runner = compileEmacsFiles {
-      name = "makefile-runner";
-      src = fetchFromGitHub {
-        owner = "danamlund";
-        repo = "emacs-makefile-runner";
-        rev = "300ba3820aa0536ef4622f78d67ff1730f7e8521";
-        sha256 = "14ncli24x6g25krgjhx46bp1hc0x2hgavcl5ssgj2k2mn8zimkmf";
-        # date = 2017-07-29T16:05:20+02:00;
-      };
-    };
-
-    mmm-mode = compileEmacsFiles {
-      name = "mmm-mode";
-      src = fetchFromGitHub {
-        owner = "purcell";
-        repo = "mmm-mode";
-        rev = "0d00cdf4d02cc166304f6967a20fa22e2eaf208b";
-        sha256 = "1drm89pi67khc04816nynslcqdr9xaf6mb85y6aqrrl4sy0zzwxl";
-        # date = 2020-09-09T01:36:25+03:00;
-      };
-    };
-
     moccur-edit = compileEmacsFiles {
       name = "moccur-edit";
       src = fetchFromGitHub {
@@ -437,17 +315,6 @@ let
         # date = 2015-03-01T18:04:32+09:00;
       };
       buildInputs = with eself; [ color-moccur ];
-    };
-
-    org-opml = compileEmacsFiles {
-      name = "org-opml";
-      src = fetchFromGitHub {
-        owner = "edavis";
-        repo = "org-opml";
-        rev = "d9019be8653a4406eacf15a06afb8b162d2625a6";
-        sha256 = "1nj0ccjyj4yn5b77m9p1asgx41fpgpypsxfnqwhqwgxywhap00w1";
-        # date = 2017-06-10T11:37:25-07:00;
-      };
     };
 
     ox-texinfo-plus = compileEmacsFiles {
@@ -507,50 +374,6 @@ let
       patches = [ ./emacs/patches/sky-color-clock.patch ];
     };
 
-    spinner = compileEmacsFiles {
-      name = "spinner";
-      src = fetchFromGitHub {
-        owner = "Malabarba";
-        repo = "spinner.el";
-        rev = "bca794fa6f6b007292cdac9b0a850a3711986db5";
-        sha256 = "1m872dj1n05mkvgfyiqsbri489vmff5zdmv4xx5qj2s91sp046rl";
-        # date = 2021-07-01T18:20:39-03:00;
-      };
-    };
-
-    slidify-pages = compileEmacsFiles {
-      name = "slidify-pages";
-      src = fetchFromGitHub {
-        owner = "enaeher";
-        repo = "slidify-pages";
-        rev = "cae96b0e9fcfe0b71330b478e8c5d667c137ddc7";
-        sha256 = "0ya7azdx2l63chqidrxv5yd30y0pk9rn85djfdhipq3a493vgdp6";
-        # date = 2020-09-18T09:41:40-04:00;
-      };
-    };
-
-    stopwatch = compileEmacsFiles {
-      name = "stopwatch";
-      src = fetchFromGitHub {
-        owner = "lalopmak";
-        repo = "stopwatch";
-        rev = "107bdbafdc11128112169b41cf001384a203408a";
-        sha256 = "05k16z4w552rspdngjs5c74ng010zmdiwqjn0iahk05l5apx6wd8";
-        # date = 2013-08-11T19:22:20-05:00;
-      };
-    };
-
-    sunrise-commander = compileEmacsFiles {
-      name = "sunrise-commander";
-      src = fetchFromGitHub {
-        owner = "escherdragon";
-        repo = "sunrise-commander";
-        rev = "cf8305a149a321d028858057e7a7c92f0038a06a";
-        sha256 = "1jkdrs3rpn520daskvr7kdm29zwb8rrbbcaqgvai2rcj3dbqa8f8";
-        # date = 2017-12-17T20:09:39+01:00;
-      };
-    };
-
     tla-mode = compileEmacsFiles {
       name = "tla-mode";
       src = fetchFromGitHub {
@@ -584,16 +407,7 @@ let
       };
     };
 
-    yari-with-buttons = compileEmacsFiles {
-      name = "yari-with-buttons";
-      src = fetchFromGitHub {
-        owner = "pedz";
-        repo = "yari-with-buttons";
-        rev = "9d5bbf59f6ea8dece493cbe609d9c510698eee41";
-        sha256 = "1ipk881150152hzhha37sp8162lazw08rkkiahcr5s85f177dkih";
-        # date = 2013-11-28T19:05:23-06:00;
-      };
-    };
+    ########################################################################
 
     agda2-mode =
       let Agda = pkgs.haskell.lib.dontHaddock self.haskellPackages.Agda; in
@@ -675,33 +489,6 @@ let
         platforms = lib.platforms.unix;
       };
     };
-
-    # eglot = esuper.eglot.overrideAttrs(attrs: rec {
-    #   name = "eglot-${version}";
-    #   version = "20210326.1008";
-    #   src = fetchFromGitHub {
-    #     owner = "joaotavora";
-    #     repo = "eglot";
-    #     rev = "2fbcab293e11e1502a0128ca5f59de0ea7888a75";
-    #     sha256 = "0fsar0ab0wj74jkbgkbigcg4ia6hg574yvqr2wq2s8lw7m22j8c4";
-    #     fetchSubmodules = true;
-    #     # date = 2021-03-26T10:08:03+00:00;
-    #   };
-    #   buildInputs = with eself; [ eldoc flymake jsonrpc project xref ];
-    # });
-
-    # lua-mode = esuper.lua-mode.overrideAttrs(attrs: rec {
-    #   name = "lua-mode-${version}";
-    #   version = "20200513.2313";
-    #   src = fetchFromGitHub {
-    #     owner = "immerrr";
-    #     repo = "lua-mode";
-    #     rev = "35b6e4c20b8b4eaf783ccc8e613d0dd06dbd165c";
-    #     sha256 = "1hai6rqjm5py0bp57nhggmj9qigwdj3a46ngacpnjc1qmy9kkgfk";
-    #     fetchSubmodules = true;
-    #     # date = 2020-05-13T23:13:56+02:00;
-    #   };
-    # });
 
     xref = compileEmacsFiles rec {
       name = "xref";
@@ -788,15 +575,15 @@ let
             inherit (pkgs.texlive) scheme-basic cm-super ec;
           }; in mkDerivation rec {
       name = "emacs-proof-general-${version}";
-      version = "2021-03-21";
+      version = "2021-12-17";
 
       # This is the main branch
       src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "2376485828bbd6f151897fdac77dab84f360100e";
-        sha256 = "14dgqcc6hp6mywl49kmpb3hgl3cwsrmhcjcv4xwqx1kabd9ni3hd";
-        # date = 2021-11-23T00:00:45+01:00;
+        rev = "a61a1d8e5ffa610b794535995d58adf18e9ec47b";
+        sha256 = "1c6216yz2wb9c5yn5rq6jr9pwxb44vhvgnsi0wsh0rcccm24mdp8";
+        # date = 2021-12-17T17:53:23+00:00;
       };
 
       # src = ~/src/proof-general;

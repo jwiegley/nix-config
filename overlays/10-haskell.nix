@@ -70,7 +70,7 @@ let
 
   usingWithHoogle = hpkgs: hpkgs // rec {
     ghc = hpkgs.ghc // { withPackages = hpkgs.ghc.withHoogle; };
-    ghcWithPackages = ghc.withPackages;
+    ghcWithPackages = hpkgs.ghcWithHoogle;
   };
 
   overrideHask = ghc: hpkgs: hoverrides: hpkgs.override {
@@ -79,9 +79,6 @@ let
         (pkgs.lib.composeExtensions (otherHackagePackages ghc)
            (pkgs.lib.composeExtensions (myHaskellPackages ghc)
               (hself: hsuper: {
-                 ghc = hsuper.ghc // { withPackages = hsuper.ghc.withHoogle; };
-                 ghcWithPackages = hself.ghc.withPackages;
-
                  developPackage =
                    { root
                    , name ? builtins.baseNameOf root

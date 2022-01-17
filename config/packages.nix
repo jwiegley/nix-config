@@ -17,9 +17,9 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.hasktags)
   # (exe haskellPackages.ormolu)
   # OnePassword-op
-  (agda.withPackages (p: [p.standard-library p.agda-categories]))
   apg
   aria2
+  asciidoctor
   aspell
   aspellDicts.en
   backblaze-b2
@@ -34,7 +34,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   cbor-diag
   contacts
   coreutils
-  coqPackages_8_13.coq
   csvkit
   ctop
   cvc4
@@ -186,8 +185,9 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   ripgrep
   rlwrap
   rsync
-  rtags
+  # rtags
   ruby
+  rustup
   sbcl
   scc
   screen
@@ -236,7 +236,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   xquartz
   xsv
   xz
-  yamale
+  # yamale
   youtube-dl
   yq
   yuicompressor

@@ -335,13 +335,15 @@ in {
 
     gh = {
       enable = true;
-      aliases = {
-        co = "pr checkout";
-        pv = "pr view";
-        prs = "pr list -A jwiegley";
+      settings = {
+        editor = emacsclient;
+        git_protocol = "ssh";
+        aliases = {
+          co = "pr checkout";
+          pv = "pr view";
+          prs = "pr list -A jwiegley";
+        };
       };
-      editor = emacsclient;
-      gitProtocol = "ssh";
     };
 
     git = {
@@ -505,6 +507,7 @@ in {
       ignores = [
         "#*#"
         "*.a"
+        "*.agdai"
         "*.aux"
         "*.dylib"
         "*.elc"
@@ -581,8 +584,8 @@ in {
         vulcan.hostname = vulcan_ethernet;
 
         hermes = onHost "vulcan" hermes_ethernet;
-        macos  = onHost "vulcan" "172.16.194.6";
-        ubuntu = onHost "vulcan" "172.16.194.2";
+        macos  = onHost "vulcan" "172.16.194.129";
+        ubuntu = onHost "vulcan" "172.16.194.128";
 
         elpa = { hostname = "elpa.gnu.org"; user = "root"; };
 
