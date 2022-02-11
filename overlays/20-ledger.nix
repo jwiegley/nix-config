@@ -1,6 +1,7 @@
 self: pkgs:
 
-let ledger = pkgs.callPackage ~/src/ledger/master {}; in
+let ledgerPkg = import ~/src/ledger/master;
+    ledger = ledgerPkg.packages.${pkgs.system}.ledger; in
 
 {
 

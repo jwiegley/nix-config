@@ -36,7 +36,6 @@ for dir in                                      \
     ic-hs                                       \
     icp-forecast                                \
     master/rs                                   \
-    merge/rs                                    \
     quill                                       \
     winter
 do

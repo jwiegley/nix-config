@@ -171,9 +171,13 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   python27Packages.certifi
   python27Packages.pygments
   python27Packages.setuptools
-  python3
   pythonDocs.html.python27
   pythonDocs.pdf_letter.python27
+  python3
+  python3Packages.numpy
+  python3Packages.pandas
+  pythonDocs.html.python37
+  pythonDocs.pdf_letter.python37
   qemu # libvirt
   qpdf
   qrencode
@@ -187,9 +191,11 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   rsync
   # rtags
   ruby
+  # rust-analyzer
   rustup
   sbcl
   scc
+  sccache
   screen
   sdcv
   shfmt

@@ -512,6 +512,7 @@ in {
         "*.dylib"
         "*.elc"
         "*.glob"
+        "*.hi"
         "*.la"
         "*.lia.cache"
         "*.lra.cache"
