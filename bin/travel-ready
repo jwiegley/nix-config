@@ -36,8 +36,7 @@ for dir in                                      \
     ic-hs                                       \
     icp-forecast                                \
     master/rs                                   \
-    quill                                       \
-    winter
+    quill
 do
     echo "Updating direnv for ~/dfinity/$dir"
     update_direnv ~/dfinity/$dir

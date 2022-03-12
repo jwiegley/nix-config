@@ -22,4 +22,10 @@ in {
     rev    = "08f61628174fa4b5c500622ce93138bd1063cdbf";
     sha256 = "sha256-uaLfhJ5J7CMs4ikrtPi8yccg5zAIuwdUeokhKwn19k8=";
   }) socat;
+
+  inherit (nixpkgs {
+    # rev    = "known-good-20220210_135242";
+    rev    = "59d4fd41853dc2654fc699f016d2da9dae026d12";
+    sha256 = "sha256-KkLh7B0dciR0YyVIY/RLrDJ5+6vopr62Q3l8nk/vSsU=";
+  }) python3Packages backblaze-b2 httpie;
 }

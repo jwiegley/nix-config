@@ -31,6 +31,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   browserpass
   cacert
   cachix
+  cadaver
   cbor-diag
   contacts
   coreutils
@@ -91,7 +92,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   highlight
   home-manager
   hostname
-  htmlTidy
+  html-tidy
   htop
   httpie
   httrack
@@ -191,7 +192,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   rsync
   # rtags
   ruby
-  # rust-analyzer
+  rust-analyzer
   rustup
   sbcl
   scc
@@ -234,7 +235,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   watch
   watchman
   wget
-  wireguard
+  wireguard-tools
   xapian
   xdg_utils
   xorg.xauth
