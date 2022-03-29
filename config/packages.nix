@@ -31,7 +31,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   browserpass
   cacert
   cachix
-  cadaver
   cbor-diag
   contacts
   coreutils
@@ -144,6 +143,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nodePackages.eslint
   nodePackages.js-beautify
   nodejs
+  opam
   # opensc
   openssh
   openssl

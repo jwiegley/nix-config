@@ -46,6 +46,10 @@ for dir in                                      \
     agda/plfa                                   \
     category-theory                             \
     comparable                                  \
+    coq-haskell                                 \
+    coq-lattice                                 \
+    coq-pipes                                   \
+    linearscan                                  \
     ltl/coq                                     \
     ltl/simple-ltl                              \
     ltl/warford                                 \
