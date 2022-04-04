@@ -6,61 +6,50 @@ REMOTE=hermes
 if [[ $1 == --here ]]; then
     function update_direnv() {
         if [[ -d $1 ]]; then
-            cd $1
-            de
+            (cd $1; NIXPKGS_ALLOW_INSECURE=1 de)
         fi
     }
 else
     push hermes
 
     u $LOCAL rebuild
-
+    u $LOCAL copy
     ssh $REMOTE "NIX_CONF=$HOME/src/nix CACHE=$LOCAL u $REMOTE rebuild"
 
     function update_direnv() {
         if [[ -d $1 ]]; then
-            cd $1
-            export NIXPKGS_ALLOW_INSECURE=1
-            de
+            (cd $1; NIXPKGS_ALLOW_INSECURE=1 de)
             ssh $REMOTE "cd $1; CACHE=$LOCAL NIXPKGS_ALLOW_INSECURE=1 de"
         fi
     }
-
-    u $LOCAL copy
 fi
 
 
 for dir in                                      \
-    formal-models/coq-governance                \
-    formal-models/vote-forecast                 \
-    ic-hs                                       \
-    icp-forecast                                \
-    master/rs                                   \
-    quill
+    dfinity/formal-models/coq-governance        \
+    dfinity/formal-models/vote-forecast         \
+    dfinity/ic-hs                               \
+    dfinity/icp-forecast                        \
+    dfinity/master/rs                           \
+    dfinity/quill                               \
+    src/agda/plfa                               \
+    src/category-theory                         \
+    src/comparable                              \
+    src/coq-haskell                             \
+    src/coq-lattice                             \
+    src/coq-pipes                               \
+    src/linearscan                              \
+    src/ltl/coq                                 \
+    src/ltl/simple-ltl                          \
+    src/ltl/warford                             \
+    src/notes/coq                               \
+    src/notes/haskell                           \
+    src/notes/rust                              \
+    src/simple-amount                           \
+    src/sitebuilder                             \
+    src/trade-journal                           \
+    src/wallet
 do
-    echo "Updating direnv for ~/dfinity/$dir"
-    update_direnv ~/dfinity/$dir
-done
-
-for dir in                                      \
-    agda/plfa                                   \
-    category-theory                             \
-    comparable                                  \
-    coq-haskell                                 \
-    coq-lattice                                 \
-    coq-pipes                                   \
-    linearscan                                  \
-    ltl/coq                                     \
-    ltl/simple-ltl                              \
-    ltl/warford                                 \
-    notes/coq                                   \
-    notes/haskell                               \
-    notes/rust                                  \
-    simple-amount                               \
-    sitebuilder                                 \
-    trade-journal                               \
-    wallet
-do
-    echo "Updating direnv for ~/src/$dir"
-    update_direnv ~/src/$dir
+    echo "Updating direnv for ~/$dir"
+    update_direnv ~/$dir
 done
