@@ -36,6 +36,7 @@ for dir in                                      \
     src/category-theory                         \
     src/comparable                              \
     src/coq-haskell                             \
+    src/coq-jlib                                \
     src/coq-lattice                             \
     src/coq-pipes                               \
     src/linearscan                              \
