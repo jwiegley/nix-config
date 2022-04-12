@@ -2,15 +2,10 @@ self: pkgs:
 
 {
 
-coq_HEAD = with pkgs; pkgs.lib.overrideDerivation self.coq_8_15 (attrs: rec {
-  version = "dev";
-  name = "coq-${version}";
-  coq-version = version;
+coq_HEAD = (self.coq_8_15.override {
   buildIde = false;
-  src = ~/src/coq;
-  propagatedBuildInputs = [
-     pkgs.ocamlPackages.zarith
-  ];
+  version = ~/src/coq;
+}).overrideAttrs (attrs: {
   buildInputs = attrs.buildInputs
     ++ (with pkgs; [
       texlive.combined.scheme-full which hevea fig2dev imagemagick_light git

@@ -520,12 +520,13 @@ let
     org = mkDerivation rec {
       name = "emacs-org-${version}";
       version = "20160421";
-      src = fetchFromGitHub {
-        owner  = "jwiegley";
-        repo   = "org-mode";
-        rev    = "db5257389231bd49e92e2bc66713ac71b0435eec";
-        sha256 = "073cmwgxga14r4ykbgp8w0gjp1wqajmlk6qv9qfnrafgpxic366m";
-      };
+      src = ~/src/org-mode;
+      # src = fetchFromGitHub {
+      #   owner  = "jwiegley";
+      #   repo   = "org-mode";
+      #   rev    = "db5257389231bd49e92e2bc66713ac71b0435eec";
+      #   sha256 = "073cmwgxga14r4ykbgp8w0gjp1wqajmlk6qv9qfnrafgpxic366m";
+      # };
       preBuild = ''
         rm -f contrib/lisp/org-jira.el
         makeFlagsArray=(
@@ -636,48 +637,70 @@ let
 
 in {
 
-emacs = self.emacs27;
+emacs = self.emacs28NativeComp;
 
-emacsPackagesNg = self.emacs27PackagesNg;
+emacsPackagesNg = self.emacs28PackagesNg;
 emacsPackages   = self.emacsPackagesNg;
 
-emacs27_base = pkgs.emacs27.override rec {
-  imagemagick = self.imagemagickBig;
-  srcRepo = true;
-  # patches = [ ./emacs/clean-env-27.patch ];
-  # src = ~/src/emacs;
-};
+# emacs27_base = pkgs.emacs27.override rec {
+#   imagemagick = self.imagemagickBig;
+#   srcRepo = true;
+#   # patches = [ ./emacs/clean-env-27.patch ];
+#   # src = ~/src/emacs;
+# };
 
-emacs27 = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
-  # CFLAGS = "-O3 -march=native -funroll-loops " + attrs.CFLAGS;
-  buildInputs = attrs.buildInputs ++
-    [ libpng libjpeg libungif libtiff librsvg ];
-  preConfigure = ''
-    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure || \
-    (sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac; autoreconf)
-  '';
-});
+# emacs27 = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
+#   # CFLAGS = "-O3 -march=native -funroll-loops " + attrs.CFLAGS;
+#   buildInputs = attrs.buildInputs ++
+#     [ libpng libjpeg libungif libtiff librsvg ];
+#   preConfigure = ''
+#     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure || \
+#     (sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac; autoreconf)
+#   '';
+# });
 
-emacs27PackagesNg = mkEmacsPackages self.emacs27;
-emacs27Packages   = self.emacs27PackagesNg;
+# emacs27PackagesNg = mkEmacsPackages self.emacs27;
+# emacs27Packages   = self.emacs27PackagesNg;
 
-emacs27debug = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
-  name = "${attrs.name}-debug";
-  # CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
-  buildInputs = attrs.buildInputs ++
-    [ libpng libjpeg libungif libtiff librsvg ];
-  preConfigure = ''
-    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
-  '';
-  configureFlags = attrs.configureFlags ++
-    [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
-});
+emacs28_base = pkgs.emacs28NativeComp;
+# emacs28_base = pkgs.emacs28NativeComp.override rec {
+#   imagemagick = self.imagemagickBig;
+#   srcRepo = true;
+#   # patches = [ ./emacs/clean-env-27.patch ];
+#   # src = ~/src/emacs;
+# };
 
-emacs27DebugPackagesNg = mkEmacsPackages self.emacs27debug;
+# emacs28 = pkgs.emacs28NativeComp;
+# emacs28 = with pkgs; self.emacs28_base.overrideAttrs(attrs: rec {
+#   # CFLAGS = "-O3 -march=native -funroll-loops " + attrs.CFLAGS;
+#   buildInputs = attrs.buildInputs ++
+#     [ libpng libjpeg libungif libtiff librsvg ];
+#   preConfigure = ''
+#     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure || \
+#     (sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac; autoreconf)
+#   '';
+# });
 
-emacsHEAD = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
+emacs28PackagesNg = mkEmacsPackages self.emacs28NativeComp;
+emacs28Packages   = self.emacs28PackagesNg;
+
+# emacs27debug = with pkgs; self.emacs27_base.overrideAttrs(attrs: rec {
+#   name = "${attrs.name}-debug";
+#   # CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
+#   buildInputs = attrs.buildInputs ++
+#     [ libpng libjpeg libungif libtiff librsvg ];
+#   preConfigure = ''
+#     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure
+#   '';
+#   configureFlags = attrs.configureFlags ++
+#     [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
+# });
+
+# emacs27DebugPackagesNg = mkEmacsPackages self.emacs27debug;
+
+emacsHEAD = with pkgs; (self.emacs28.override { srcRepo = true; }).overrideAttrs(attrs: rec {
   name = "emacs-${version}${versionModifier}";
-  version = "27.1";
+  version = "28.1";
   versionModifier = ".0";
   src = ~/src/emacs;
   # CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
@@ -748,21 +771,21 @@ emacsERCEnv = myPkgs: pkgs.myEnvFun {
   ];
 };
 
-emacs27Env = myPkgs: pkgs.myEnvFun {
-  name = "emacs27";
+emacs28Env = myPkgs: pkgs.myEnvFun {
+  name = "emacs28";
   buildInputs = [
-    (self.emacs27PackagesNg.emacsWithPackages myPkgs)
+    (self.emacs28PackagesNg.emacsWithPackages myPkgs)
   ];
 };
 
-emacs27DebugEnv = myPkgs: pkgs.myEnvFun {
-  name = "emacs27-debug";
+emacs28DebugEnv = myPkgs: pkgs.myEnvFun {
+  name = "emacs28-debug";
   buildInputs = [
-    (self.emacs27DebugPackagesNg.emacsWithPackages myPkgs)
+    (self.emacs28DebugPackagesNg.emacsWithPackages myPkgs)
   ];
 };
 
-emacsEnv = self.emacs27Env;
-emacsDebugEnv = self.emacs27DebugEnv;
+emacsEnv = self.emacs28Env;
+emacsDebugEnv = self.emacs28DebugEnv;
 
 }
