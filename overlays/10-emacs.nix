@@ -698,7 +698,7 @@ emacs28Packages   = self.emacs28PackagesNg;
 
 # emacs27DebugPackagesNg = mkEmacsPackages self.emacs27debug;
 
-emacsHEAD = with pkgs; (self.emacs28.override { srcRepo = true; }).overrideAttrs(attrs: rec {
+emacsHEAD = with pkgs; (self.emacs.override { srcRepo = true; }).overrideAttrs(attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "28.1";
   versionModifier = ".0";

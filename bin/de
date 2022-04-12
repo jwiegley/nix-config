@@ -15,34 +15,44 @@ if [[ "$1" == "--no-cache" ]]; then
     NOCACHE=true
 fi
 
-NIXOPTS="--cores 4"
-NIXOPTS_MORE=""
+NIXOPTS=(--cores 4)
+NIXOPTS_MORE=()
 
 if [[ $PWD =~ dfinity ]]; then
     if [[ $NOCACHE == false ]]; then
         echo Building direnv cache for a DFINITY project...
-        NIXOPTS="$NIXOPTS --option build-use-substitutes true"
-        NIXOPTS="$NIXOPTS --option substituters https://nix.dfinity.systems"
-        DFN_KEY="cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw="
-        NIXOPTS="$NIXOPTS --trusted-public-keys $DFN_KEY"
+        NIXOPTS+=(--option build-use-substitutes true)
+        NIXOPTS+=(--extra-substituters 'https://nix.dfinity.systems')
+        NIXOPTS+=(--extra-trusted-public-keys 'cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw=')
+        NIXOPTS+=(--extra-substituters 'https://cache.nixos.org')
+        NIXOPTS+=(--extra-trusted-public-keys 'cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=')
+    fi
+elif [[ $PWD =~ kadena ]]; then
+    if [[ $NOCACHE == false ]]; then
+        echo Building direnv cache for a Kadena project...
+        NIXOPTS+=(--option build-use-substitutes true)
+        NIXOPTS+=(--extra-substituters 'https://nixcache.chainweb.com')
+        NIXOPTS+=(--extra-trusted-public-keys 'nixcache.chainweb.com:FVN503ABX9F8x8K0ptnc99XEz5SaA4Sks6kNcZn2pBY=')
+        NIXOPTS+=(--extra-substituters 'http://nixcache.kadena.io')
+        NIXOPTS+=(--extra-trusted-public-keys 'kadena-cache.local-1:8wj8JW8V9tmc5bgNNyPM18DYNA1ws3X/MChXh1AQy/Q=')
+        NIXOPTS+=(--extra-substituters 'https://open-source.nixcache.obsidian.systems')
+        NIXOPTS+=(--extra-trusted-public-keys 'obsidian-open-source:KP1UbL7OIibSjFo9/2tiHCYLm/gJMfy8Tim7+7P4o0I=')
+        NIXOPTS+=(--extra-substituters 'https://cache.nixos.org')
+        NIXOPTS+=(--extra-trusted-public-keys 'cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=')
     fi
 else
-    NIXOPTS_MORE="$NIXOPTS_MORE --arg pkgs (import<darwin>{}).pkgs"
+    NIXOPTS_MORE+=(--arg pkgs '(import<darwin>{}).pkgs')
 fi
 
-if [[ -z ${CACHE+x} && $NOCACHE == false ]]; then
-    NIXOPTS="$NIXOPTS"
-else
+if [[ -n ${CACHE+x} && $NOCACHE == false ]]; then
     if [[ ! ($NIXOPTS =~ build-use-substitutes) ]]; then
-        NIXOPTS="$NIXOPTS --option build-use-substitutes true"
+        NIXOPTS+=(--option build-use-substitutes true)
     fi
-    NIXOPTS="$NIXOPTS --option substituters ssh://${CACHE}"
+    NIXOPTS+=(--option substituters "ssh://${CACHE}")
 fi
 
-if [[ -z ${BUILDER+x} ]]; then
-    NIXOPTS="$NIXOPTS"
-else
-    NIXOPTS="$NIXOPTS --option builders ssh://${BUILDER}"
+if [[ -n ${BUILDER+x} ]]; then
+    NIXOPTS+=(--option builders "ssh://${BUILDER}")
 fi
 
 if [[ ! -f .envrc ]]; then
@@ -62,7 +72,7 @@ reset_kept() {
     done
     unset DIRENV_kept
 }
-
+;
 keep_vars             \
     ALTERNATE_EDITOR  \
     EDITOR            \
@@ -110,7 +120,7 @@ EOF
     fi
 fi
 
-nix-shell $NIXOPTS "$@" -Q $NIXOPTS_MORE --run "\
+nix-shell "${NIXOPTS[@]}" "$@" -Q "${NIXOPTS_MORE[@]}" --run "\
 unset                 \
     ALTERNATE_EDITOR  \
     EDITOR            \
