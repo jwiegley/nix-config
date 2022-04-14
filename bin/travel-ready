@@ -10,15 +10,17 @@ if [[ $1 == --here ]]; then
         fi
     }
 else
-    push hermes
+    push $REMOTE
 
     u $LOCAL rebuild
     u $LOCAL copy
+
     ssh $REMOTE "NIX_CONF=$HOME/src/nix CACHE=$LOCAL u $REMOTE rebuild"
 
     function update_direnv() {
         if [[ -d $1 ]]; then
             (cd $1; NIXPKGS_ALLOW_INSECURE=1 de)
+
             ssh $REMOTE "cd $1; CACHE=$LOCAL NIXPKGS_ALLOW_INSECURE=1 de"
         fi
     }
@@ -32,6 +34,10 @@ for dir in                                      \
     dfinity/icp-forecast                        \
     dfinity/master/rs                           \
     dfinity/quill                               \
+                                                \
+    kadena/chainweb-node                        \
+    kadena/pact                                 \
+                                                \
     src/agda/plfa                               \
     src/category-theory                         \
     src/comparable                              \

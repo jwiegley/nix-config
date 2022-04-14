@@ -12,16 +12,22 @@ LKG_DATE   = $(eval LKG_DATE := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
 ifeq ($(CACHE),)
 NIXOPTS	   = --option build-use-substitutes false	\
-	     --max-jobs 20 --cores 4 --keep-going \
+	     --max-jobs 20				\
+	     --cores 4					\
+	     --keep-going				\
 	     --option substituters ''
 else
 ifeq ($(HOSTNAME),$(CACHE))
 # NIXOPTS	   =
-NIXOPTS	   = --max-jobs 20 --cores 4 --keep-going
+NIXOPTS	   = --max-jobs 20				\
+	     --cores 4					\
+	     --keep-going
 else
 NIXOPTS	   = --option build-use-substitutes true	\
-	     --option require-sigs false \
-	     --max-jobs 20 --cores 4 --keep-going \
+	     --option require-sigs false		\
+	     --max-jobs 20				\
+	     --cores 4					\
+	     --keep-going				\
 	     --option substituters 'ssh://$(CACHE)'
 endif
 endif
@@ -137,9 +143,10 @@ tag-working:
 
 mirror:
 	$(call announce,git push)
-	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f master:master
-	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f unstable:unstable
-	git --git-dir=nixpkgs/.git push $(GIT_REMOTE) -f last-known-good:last-known-good
+	@for name in master unstable last-known-good; do	\
+	    git --git-dir=nixpkgs/.git push $(GIT_REMOTE)	\
+	        -f $${name}:$${name};				\
+	done
 	git --git-dir=nixpkgs/.git push -f --tags $(GIT_REMOTE)
 	git --git-dir=darwin/.git push --mirror $(GIT_REMOTE)
 	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
@@ -164,14 +171,20 @@ copy-src:
 	done
 
 direnv-dirs:
-	@find $(HOME)/dfinity $(HOME)/src $(HOME)/doc		\
+	@find $(HOME)/dfinity					\
+	      $(HOME)/kadena					\
+	      $(HOME)/src					\
+	      $(HOME)/doc					\
 	    \( -path '*/Containers' -prune \) -o		\
 	    \( -path '*/.Trash' -prune \) -o			\
 	    -path '*/.direnv/default' -type l -print
 
 copy-direnv:
 	$(call announce,nix copy (direnv))
-	@find $(HOME)/dfinity $(HOME)/src $(HOME)/doc		\
+	@find $(HOME)/dfinity					\
+	      $(HOME)/kadena					\
+	      $(HOME)/src					\
+	      $(HOME)/doc					\
 	    \( -path '*/Containers' -prune \) -o		\
 	    \( -path '*/.Trash' -prune \) -o			\
 	    -path '*/.direnv' -type d -print |			\

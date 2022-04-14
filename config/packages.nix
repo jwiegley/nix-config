@@ -15,7 +15,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
-  # (exe haskellPackages.ormolu)
   # OnePassword-op
   apg
   aria2
@@ -144,7 +143,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nodePackages.js-beautify
   nodejs
   opam
-  # opensc
+  opensc
   openssh
   openssl
   openvpn
@@ -179,7 +178,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   python3Packages.pandas
   pythonDocs.html.python37
   pythonDocs.pdf_letter.python37
-  qemu # libvirt
+  qemu libvirt
   qpdf
   qrencode
   ratpoison
@@ -243,7 +242,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   xquartz
   xsv
   xz
-  # yamale
+  yamale
   youtube-dl
   yq
   yuicompressor
