@@ -91,6 +91,10 @@ in {
 
     trustedUsers = [ "johnw" "@admin" ];
 
+    binaryCachePublicKeys = [
+      "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
+    ];
+
     extraOptions = ''
       gc-keep-derivations = true
       gc-keep-outputs = true
@@ -105,12 +109,12 @@ in {
 
     buildMachines = [
       # vulcan
-      zrh-3
+      # zrh-3
     ];
 
-    requireSignedBinaryCaches = false;
+    # requireSignedBinaryCaches = false;
     binaryCaches = [
-      # ssh://vulcan
+      "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
     ];
   }
   // lib.optionalAttrs (localconfig.hostname == "vulcan") {
@@ -119,10 +123,11 @@ in {
     distributedBuilds = true;
 
     buildMachines = [
-      zrh-3
+      # zrh-3
     ];
 
     binaryCaches = [
+      "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
     ];
   };
 

@@ -6,13 +6,6 @@ let ledgerPkg = import ~/src/ledger/master;
 {
 
 ledger_HEAD = ledger.overrideAttrs (attrs: {
-  # src = pkgs.fetchFromGitHub {
-  #   owner = "ledger";
-  #   repo = "ledger";
-  #   rev = "refs/heads/john";
-  #   sha256 = "18hd17qpms731cmmahml73jlbzx5iz4fsk1579pvsnln8r7yhv6r";
-  # };
-
   doCheck = false;
 
   preConfigure = (attrs.preConfigure or "") + ''

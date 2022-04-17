@@ -1,0 +1,3 @@
+#!/bin/bash
+S3_CACHE="s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
+exec nix copy --to "$S3_CACHE" "$@"

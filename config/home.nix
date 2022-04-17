@@ -264,6 +264,13 @@ in {
             ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
         fi
 
+        gpg --card-status > /dev/null 2>&1
+
+        export AWS_ACCESS_KEY_ID=$(${pkgs.pass}/bin/pass show Passwords/b2-access-key-id | head -1)
+        export AWS_SECRET_ACCESS_KEY=$(${pkgs.pass}/bin/pass show Passwords/b2-access-key | head -1)
+
+        source ~/src/scripts/b2-keys
+
         . ${pkgs.z}/share/z.sh
 
         for i in rdm msmtp; do

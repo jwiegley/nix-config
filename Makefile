@@ -153,7 +153,7 @@ mirror:
 
 update: tag-before pull rebuild tag-working mirror
 
-update-sync: update copy rebuild-all check-all
+update-sync: update copy rebuild-all
 
 ########################################################################
 
@@ -231,3 +231,25 @@ check:
 
 sizes:
 	df -H /nix 2>&1 | grep /dev
+
+S3_CACHE = "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
+
+cache: check sizes
+	nix store sign -k ~/.config/gnupg/nix-signing-key.sec --all
+	nix copy --to $(S3_CACHE)					\
+	    $$(readlink .nix-profile)					\
+	    $$(readlink /var/run/current-system)
+	find /nix/store/ \(						\
+	       -name '*.xz'						\
+	    -o -name '*.bz2'						\
+	    -o -name '*.gz'						\
+	    -o -name '*.dmg'						\
+	    -o -name '*.zip'						\
+	    -o -name '*.tar'						\
+	     \) -type f -print0 |					\
+	    xargs -0 nix copy --to $(S3_CACHE)
+	find $(HOME) -path '*/.direnv/default' -type l |		\
+	    while read dir; do						\
+	        echo $$dir ;						\
+	        nix copy --to $(S3_CACHE) $${dir}/* ;			\
+	    done

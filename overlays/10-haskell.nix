@@ -35,6 +35,8 @@ let
   otherHackagePackages = ghc: hself: hsuper: with pkgs.haskell.lib; {
     nix-diff = doJailbreak hsuper.nix-diff;
 
+    pipes-text = unmarkBroken hsuper.pipes-text;
+
     gitlib = unmarkBroken
       (hself.callCabal2nix "gitlib" ~/src/gitlib/gitlib {});
 
