@@ -234,7 +234,7 @@ sizes:
 
 S3_CACHE = "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
 
-cache: check sizes
+cache:
 	nix store sign -k ~/.config/gnupg/nix-signing-key.sec --all
 	nix copy --to $(S3_CACHE)					\
 	    $$(readlink .nix-profile)					\
