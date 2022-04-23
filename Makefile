@@ -234,12 +234,16 @@ sizes:
 
 S3_CACHE = "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
 
-cache:
+sign-store:
 	nix store sign -k ~/.config/gnupg/nix-signing-key.sec --all
+
+cache-system:
 	nix copy --to $(S3_CACHE)					\
 	    $$(readlink .nix-profile)					\
 	    $$(readlink /var/run/current-system)
-	find /nix/store/ \(						\
+
+cache-sources:
+	find /nix/store/ -maxdepth 1 \(					\
 	       -name '*.xz'						\
 	    -o -name '*.bz2'						\
 	    -o -name '*.gz'						\
@@ -248,8 +252,12 @@ cache:
 	    -o -name '*.tar'						\
 	     \) -type f -print0 |					\
 	    xargs -0 nix copy --to $(S3_CACHE)
+
+cache-envs:
 	find $(HOME) -path '*/.direnv/default' -type l |		\
 	    while read dir; do						\
 	        echo $$dir ;						\
 	        nix copy --to $(S3_CACHE) $${dir}/* ;			\
 	    done
+
+cache: sign-store cache-system cache-sources cache-envs

@@ -1,9 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 LOCAL=vulcan
 REMOTE=hermes
 
 if [[ $1 == --here ]]; then
+    shift 1
     function update_direnv() {
         if [[ -d $1 ]]; then
             (cd $1; NIXPKGS_ALLOW_INSECURE=1 de)
@@ -26,37 +27,10 @@ else
     }
 fi
 
+readarray -t projects \
+    < <(egrep -v '^(#.+)?$' "${1:-$HOME/.config/projects}")
 
-for dir in                                      \
-    dfinity/formal-models/coq-governance        \
-    dfinity/formal-models/vote-forecast         \
-    dfinity/ic-hs                               \
-    dfinity/icp-forecast                        \
-    dfinity/master/rs                           \
-    dfinity/quill                               \
-                                                \
-    kadena/chainweb-node                        \
-    kadena/pact                                 \
-                                                \
-    src/agda/plfa                               \
-    src/category-theory                         \
-    src/comparable                              \
-    src/coq-haskell                             \
-    src/coq-jlib                                \
-    src/coq-lattice                             \
-    src/coq-pipes                               \
-    src/linearscan                              \
-    src/ltl/coq                                 \
-    src/ltl/simple-ltl                          \
-    src/ltl/warford                             \
-    src/notes/coq                               \
-    src/notes/haskell                           \
-    src/notes/rust                              \
-    src/simple-amount                           \
-    src/sitebuilder                             \
-    src/trade-journal                           \
-    src/wallet
-do
+for dir in "${projects[@]}"; do
     echo "Updating direnv for ~/$dir"
     update_direnv ~/$dir
 done
