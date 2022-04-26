@@ -5,19 +5,23 @@ if [[ "$1" == "vulcan" ]]; then
   if [ -z ${CACHE+x} ]; then CACHE=vulcan; fi
   if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
   shift 1
+
 elif [[ "$1" == "hermes" ]]; then
   HOSTNAME=hermes
   if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
   if [ -z ${BUILDER+x} ]; then BUILDER=hermes; fi
   shift 1
+
 elif [[ $(hostname) =~ [Vv]ulcan ]]; then
   HOSTNAME=vulcan
   if [ -z ${CACHE+x} ]; then CACHE=vulcan; fi
   if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
+
 elif [[ $(hostname) =~ [Hh]ermes ]]; then
   HOSTNAME=hermes
   if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
   if [ -z ${BUILDER+x} ]; then BUILDER=hermes; fi
+
 else
   echo "Cannot recognize HOSTNAME=$HOSTNAME"
   exit 1
@@ -27,6 +31,10 @@ echo HOSTNAME=$HOSTNAME
 echo CACHE=$CACHE
 echo BUILDER=$BUILDER
 
-export NIXPKGS_ALLOW_INSECURE=1
+export AWS_ACCESS_KEY_ID=$(pass show Passwords/b2-access-key-id | head -1)
+export AWS_SECRET_ACCESS_KEY=$(pass show Passwords/b2-access-key | head -1)
 
-exec make -C $NIX_CONF -f Makefile HOSTNAME=$HOSTNAME CACHE=$CACHE BUILDER=$BUILDER "$@"
+exec make -C $NIX_CONF -f Makefile              \
+         HOSTNAME=$HOSTNAME                     \
+         CACHE=$CACHE                           \
+         BUILDER=$BUILDER "$@"

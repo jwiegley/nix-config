@@ -245,9 +245,9 @@ in {
         wipe   = "${pkgs.srm}/bin/srm -vfr";
         switch = "${pkgs.nix-scripts}/bin/u ${localconfig.hostname} switch";
         proc   = "${pkgs.darwin.ps}/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
-        nstat  = "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
-               + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
-               + " | ${pkgs.coreutils}/bin/tail -n +5";
+        #nstat  = "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
+        #       + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
+        #       + " | ${pkgs.coreutils}/bin/tail -n +5";
 
         # Use whichever cabal is on the PATH.
         cb     = "cabal new-build";
@@ -263,13 +263,6 @@ in {
         if ! pgrep -x "gpg-agent" > /dev/null; then
             ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
         fi
-
-        gpg --card-status > /dev/null 2>&1
-
-        export AWS_ACCESS_KEY_ID=$(${pkgs.pass}/bin/pass show Passwords/b2-access-key-id | head -1)
-        export AWS_SECRET_ACCESS_KEY=$(${pkgs.pass}/bin/pass show Passwords/b2-access-key | head -1)
-
-        source ~/src/scripts/b2-keys
 
         . ${pkgs.z}/share/z.sh
 

@@ -178,12 +178,12 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   python3Packages.pandas
   pythonDocs.html.python37
   pythonDocs.pdf_letter.python37
-  qemu libvirt
+  qemu #libvirt
   qpdf
   qrencode
   ratpoison
   rclone
-  recoll
+  # recoll
   renameutils
   restic
   ripgrep
@@ -222,11 +222,11 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   travis
   tree
   tsvutils
-  unixtools.ifconfig
-  unixtools.netstat
-  unixtools.ping
-  unixtools.route
-  unixtools.top
+  #unixtools.ifconfig
+  #unixtools.netstat
+  #unixtools.ping
+  #unixtools.route
+  #unixtools.top
   unrar
   unzip
   w3m
