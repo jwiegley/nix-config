@@ -167,7 +167,7 @@ copy-nix:
 copy-src:
 	$(call announce,pushme)
 	@for host in $(REMOTES); do				\
-	    push -f src $$host;					\
+	    push -f src,dfinity,kadena $$host;			\
 	done
 
 direnv-dirs:
@@ -227,6 +227,7 @@ gc-old:
 	$(NIX_GC) --delete-old
 
 check:
+	$(call announce,nix-store --check-contents)
 	$(NIX_STORE) --verify --repair --check-contents
 
 sizes:
@@ -238,11 +239,13 @@ sign-store:
 	nix store sign -k ~/.config/gnupg/nix-signing-key.sec --all
 
 cache-system:
+	$(call announce,nix-copy system)
 	nix copy --to $(S3_CACHE)					\
 	    $$(readlink .nix-profile)					\
 	    $$(readlink /var/run/current-system)
 
 cache-sources:
+	$(call announce,nix-copy sources)
 	find /nix/store/ -maxdepth 1 \(					\
 	       -name '*.xz'						\
 	    -o -name '*.bz2'						\
@@ -254,6 +257,7 @@ cache-sources:
 	    xargs -0 nix copy --to $(S3_CACHE)
 
 cache-envs:
+	$(call announce,nix-copy envs)
 	find $(HOME) -path '*/.direnv/default/dep*' -type l |		\
 	    while read dir; do						\
 	        echo $$dir ;						\
@@ -265,6 +269,7 @@ cache: sign-store cache-system cache-sources cache-envs
 PROJECTS = $(HOME)/.config/projects
 
 travel-ready:
+	$(call announce,travel-ready)
 	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
 	@for dir in "$${projects[@]}"; do				\
 	    echo "Updating direnv for ~/$$dir";				\
