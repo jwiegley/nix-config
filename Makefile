@@ -254,10 +254,21 @@ cache-sources:
 	    xargs -0 nix copy --to $(S3_CACHE)
 
 cache-envs:
-	find $(HOME) -path '*/.direnv/default' -type l |		\
+	find $(HOME) -path '*/.direnv/default/dep*' -type l |		\
 	    while read dir; do						\
 	        echo $$dir ;						\
 	        nix copy --to $(S3_CACHE) $${dir}/* ;			\
 	    done
 
 cache: sign-store cache-system cache-sources cache-envs
+
+PROJECTS = $(HOME)/.config/projects
+
+travel-ready:
+	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
+	@for dir in "$${projects[@]}"; do				\
+	    echo "Updating direnv for ~/$$dir";				\
+	    (cd ~/$$dir; unset BUILDER; de)				\
+	done
+
+.ONESHELL:
