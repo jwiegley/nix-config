@@ -114,7 +114,7 @@ in {
 
     # requireSignedBinaryCaches = false;
     binaryCaches = [
-      "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
+      # "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
     ];
   }
   // lib.optionalAttrs (localconfig.hostname == "vulcan") {
@@ -127,7 +127,7 @@ in {
     ];
 
     binaryCaches = [
-      "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
+      # "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
     ];
   };
 

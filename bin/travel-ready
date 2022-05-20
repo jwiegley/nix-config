@@ -3,9 +3,6 @@
 LOCAL=vulcan
 REMOTE=hermes
 
-export AWS_ACCESS_KEY_ID=$(pass show Passwords/b2-access-key-id | head -1)
-export AWS_SECRET_ACCESS_KEY=$(pass show Passwords/b2-access-key | head -1)
-
 if [[ $1 == --here ]]; then
     shift 1
     function update_direnv() {
