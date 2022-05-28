@@ -6,13 +6,15 @@ set -e
 # tree.
 PRODUCTS=""
 if [[ -d $HOME/Products ]]; then
-    PRODUCTS=$(echo $PWD | sed -E 's/\b(dfinity|src)\b/Products/')
+    PRODUCTS=$(echo $PWD | sed -E 's/\b(dfinity|kadena|src)\b/Products/')
+    echo "There is a ~/Products directory"
 fi
 
 NOCACHE=false
 if [[ "$1" == "--no-cache" ]]; then
     shift 1
     NOCACHE=true
+    echo "Disabling use of the Nix cache"
 fi
 
 NIXOPTS=(--cores 4)
@@ -41,6 +43,7 @@ elif [[ $PWD =~ kadena ]]; then
         NIXOPTS+=(--extra-trusted-public-keys 'cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=')
     fi
 else
+    echo "Using the package set for <darwin>"
     NIXOPTS_MORE+=(--arg pkgs '(import<darwin>{}).pkgs')
 fi
 
@@ -49,10 +52,12 @@ if [[ -n ${CACHE+x} && $NOCACHE == false ]]; then
         NIXOPTS+=(--option build-use-substitutes true)
     fi
     NIXOPTS+=(--option substituters "ssh://${CACHE}")
+    echo "Using substitutor: ssh://${CACHE}"
 fi
 
 if [[ -n ${BUILDER+x} ]]; then
     NIXOPTS+=(--option builders "ssh://${BUILDER}")
+    echo "Using builder: ssh://${CACHE}"
 fi
 
 if [[ ! -f .envrc ]]; then
