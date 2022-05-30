@@ -235,7 +235,6 @@ pkgs: epkgs: with epkgs;
   mmm-mode
   moccur-edit
   monitor
-  motoko-mode
   multi-term
   multifiles
   multiple-cursors

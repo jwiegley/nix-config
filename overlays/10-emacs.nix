@@ -502,21 +502,6 @@ let
       '';
     };
 
-    motoko-mode = compileEmacsFiles rec {
-      name = "motoko-mode";
-      src = fetchFromGitHub {
-        owner  = "dfinity";
-        repo   = "motoko";
-        rev    = "4115ecec5b471fb105f4aa7c7858a4a35d0e3159";
-        sha256 = "0145razl5382g9534qmj8i2ifxs43mc7sy0ian8ijgda637fws0b";
-        # date = 2021-11-23T00:25:16+00:00;
-      };
-      preBuild = ''
-        cd emacs
-      '';
-      buildInputs = with eself; [ emacs swift-mode use-package ];
-    };
-
     org = mkDerivation rec {
       name = "emacs-org-${version}";
       version = "20160421";

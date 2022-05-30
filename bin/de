@@ -6,7 +6,7 @@ set -e
 # tree.
 PRODUCTS=""
 if [[ -d $HOME/Products ]]; then
-    PRODUCTS=$(echo $PWD | sed -E 's/\b(dfinity|kadena|src)\b/Products/')
+    PRODUCTS=$(echo $PWD | sed -E 's/\b(kadena|src)\b/Products/')
     echo "There is a ~/Products directory"
 fi
 
@@ -20,16 +20,7 @@ fi
 NIXOPTS=(--cores 4)
 NIXOPTS_MORE=()
 
-if [[ $PWD =~ dfinity ]]; then
-    if [[ $NOCACHE == false ]]; then
-        echo Building direnv cache for a DFINITY project...
-        NIXOPTS+=(--option build-use-substitutes true)
-        NIXOPTS+=(--extra-substituters 'https://nix.dfinity.systems')
-        NIXOPTS+=(--extra-trusted-public-keys 'cache.dfinity.systems-1:IcOn/2SVyPGOi8i3hKhQOlyiSQotiOBKwTFmyPX5YNw=')
-        NIXOPTS+=(--extra-substituters 'https://cache.nixos.org')
-        NIXOPTS+=(--extra-trusted-public-keys 'cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=')
-    fi
-elif [[ $PWD =~ kadena ]]; then
+if [[ $PWD =~ kadena ]]; then
     if [[ $NOCACHE == false ]]; then
         echo Building direnv cache for a Kadena project...
         NIXOPTS+=(--option build-use-substitutes true)

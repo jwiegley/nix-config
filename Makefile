@@ -167,12 +167,11 @@ copy-nix:
 copy-src:
 	$(call announce,pushme)
 	@for host in $(REMOTES); do				\
-	    push -f src,dfinity,kadena $$host;			\
+	    push -f src,kadena $$host;				\
 	done
 
 direnv-dirs:
-	@find $(HOME)/dfinity					\
-	      $(HOME)/kadena					\
+	@find $(HOME)/kadena					\
 	      $(HOME)/src					\
 	      $(HOME)/doc					\
 	    \( -path '*/Containers' -prune \) -o		\
@@ -181,8 +180,7 @@ direnv-dirs:
 
 copy-direnv:
 	$(call announce,nix copy (direnv))
-	@find $(HOME)/dfinity					\
-	      $(HOME)/kadena					\
+	@find $(HOME)/kadena					\
 	      $(HOME)/src					\
 	      $(HOME)/doc					\
 	    \( -path '*/Containers' -prune \) -o		\

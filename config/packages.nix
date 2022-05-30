@@ -48,7 +48,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   dovecot_pigeonhole
   doxygen
   emacs28Env
-  emacsERCEnv
+  # emacsERCEnv
   entr
   exiv2
   fd

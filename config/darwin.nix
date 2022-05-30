@@ -55,16 +55,6 @@ in {
 
   nix =
     let
-      zrh-3 = {
-        hostName = "zrh-3";
-        sshUser = "johnw";
-        sshKey = "${xdg_configHome}/ssh/id_dfinity";
-        system = "x86_64-linux";
-        maxJobs = 16;
-        buildCores = 4;
-        speedFactor = 4;
-        supportedFeatures = [ "kvm" "nixos-test" "big-parallel" ];
-      };
       vulcan = {
         hostName = "vulcan";
         sshUser = "johnw";
@@ -109,7 +99,6 @@ in {
 
     buildMachines = [
       # vulcan
-      # zrh-3
     ];
 
     # requireSignedBinaryCaches = false;
@@ -123,7 +112,6 @@ in {
     distributedBuilds = true;
 
     buildMachines = [
-      # zrh-3
     ];
 
     binaryCaches = [

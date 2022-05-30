@@ -608,7 +608,7 @@ in {
         id_local = {
           host = lib.concatStringsSep " " [
             "hermes" "home" "mac1*" "macos*" "nixos*" "mohajer"
-            "dfinity" "smokeping" "tank" "titan" "ubuntu*" "vulcan"
+            "smokeping" "tank" "titan" "ubuntu*" "vulcan"
           ];
           identityFile = "${config.xdg.configHome}/ssh/id_local";
           identitiesOnly = true;
@@ -624,36 +624,6 @@ in {
             AddKeysToAgent = "yes";
             IgnoreUnknown  = "UseKeychain";
           };
-        };
-
-        # DFINITY Machines
-
-        dfinity = {
-          host = lib.concatStringsSep " "
-            [ "zh1" "zrh-3" "prometheus" "gitlab-dfinity" ];
-          identityFile = [
-            "${config.xdg.configHome}/ssh/id_dfinity"
-          ];
-          identitiesOnly = true;
-        };
-
-        gitlab-dfinity = {
-          hostname = "gitlab.com";
-        };
-
-        zh1 = {
-          hostname = "zh1-spm34.dc1.dfinity.network";
-          user = "johnw";
-        };
-
-        zrh-3 = {
-          hostname = "zrh-linux-3.dfinity.systems";
-          user = "johnw";
-        };
-
-        prometheus = {
-          hostname = "prometheus.dfinity.systems";
-          user = "johnw";
         };
       };
     };
