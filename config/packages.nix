@@ -191,8 +191,8 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   rsync
   # rtags
   ruby
-  rust-analyzer
-  rustup
+  # rust-analyzer
+  # rustup
   sbcl
   scc
   sccache

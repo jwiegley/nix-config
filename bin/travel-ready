@@ -11,22 +11,17 @@ if [[ $1 == --here ]]; then
         fi
     }
 else
-    push $REMOTE
+    # push $REMOTE
 
-    u $LOCAL rebuild
-    u $LOCAL copy
+    # u $LOCAL rebuild
+    # u $LOCAL copy
 
-    ssh $REMOTE "NIX_CONF=$HOME/src/nix CACHE=$LOCAL u $REMOTE rebuild"
+    # ssh $REMOTE "NIX_CONF=$HOME/src/nix CACHE=$LOCAL u $REMOTE rebuild"
 
     function update_direnv() {
         if [[ -d $1 ]]; then
             (cd $1; de)
-
-            ssh $REMOTE "cd $1;                                 \
-                CACHE=$LOCAL                                    \
-                AWS_ACCESS_KEY_ID='$AWS_ACCESS_KEY_ID'          \
-                AWS_SECRET_ACCESS_KEY='$AWS_SECRET_ACCESS_KEY'  \
-                de"
+            ssh $REMOTE "cd $1; CACHE=$LOCAL de"
         fi
     }
 fi

@@ -105,8 +105,8 @@ EOF
 
 export CARGO_TARGET_DIR=$PRODUCTS/target
 export CARGO_HOME=\$CARGO_TARGET_DIR/.cargo-home
-export RUSTUP_HOME=\$CARGO_TARGET_DIR/.rustup-home
-export RUSTUP_TOOLCHAIN=1.60.0-x86_64-apple-darwin
+# export RUSTUP_HOME=\$CARGO_TARGET_DIR/.rustup-home
+# export RUSTUP_TOOLCHAIN=1.60.0-x86_64-apple-darwin
 export RUSTC_WRAPPER=$(which sccache)
 export PATH=\$PATH:\$CARGO_HOME/bin
 export PATH=\$PATH:\$CARGO_TARGET_DIR/x86_64-apple-darwin/debug
@@ -154,7 +154,8 @@ build_drv() {
 
         local drv="${wd}/env.drv"
         if [[ ! -f "${drv}" ]]; then
-            IN_NIX_SHELL=1 nix-instantiate "${NIXOPTS[@]}" "${NIXARGS[@]}"      \
+            IN_NIX_SHELL=1 nix-instantiate                                      \
+                "${NIXOPTS[@]}" "${NIXOPTS_MORE[@]}" "${NIXARGS[@]}"            \
                 --add-root "${drv}" --indirect "${shell}" > /dev/null
             nix-store "${NIXOPTS[@]}"                                           \
                 -r `nix-store "${NIXOPTS[@]}" --query --references "${drv}"`    \
@@ -168,6 +169,10 @@ build_drv() {
     local drv=`readlink "${default}/env.drv"`
     echo "${drv}"
 }
+
+export NIXOPTS
+export NIXOPTS_MORE
+export NIXARGS
 
 build_drv
 

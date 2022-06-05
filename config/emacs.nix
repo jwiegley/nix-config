@@ -69,7 +69,7 @@ pkgs: epkgs: with epkgs;
   csv-mode
   ctable
   cursor-chg
-  debbugs                       # debbugs-gnu
+  # debbugs                       # debbugs-gnu
   deadgrep
   dedicated
   deferred

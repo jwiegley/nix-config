@@ -287,6 +287,9 @@ in {
            . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
            . ${config.xdg.configHome}/zsh/plugins/iterm2_tmux_integration
         fi
+
+        sudo /bin/launchctl limit maxfiles 524288 524288
+        ulimit -n 65536
       '';
 
       plugins = [

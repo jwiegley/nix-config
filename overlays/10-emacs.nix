@@ -96,15 +96,15 @@ let
     col-highlight = compileEmacsWikiFile {
       name = "col-highlight.el";
       sha256 = "0na8aimv5j66pzqi4hk2jw5kk00ki99zkxiykwcmjiy3h1r9311k";
-      # date = 2021-03-26T13:22:13-0700;
+      # date = 2022-06-05T10:05:24-0700;
 
       buildInputs = with eself; [ vline ];
     };
 
     crosshairs = compileEmacsWikiFile {
       name = "crosshairs.el";
-      sha256 = "1zw9cw1a84gkqln79w71nxn3vizafrl6g9vg5q007k32f181349v";
-      # date = 2021-11-23T09:05:34-0800;
+      sha256 = "0ld30hwcxvyqfaqi80nvrlflpzrclnjcllcp457hn4ydbcf2is9r";
+      # date = 2022-06-05T10:05:18-0700;
 
       buildInputs = with eself; [ hl-line-plus col-highlight vline ];
     };
@@ -112,13 +112,13 @@ let
     cursor-chg = compileEmacsWikiFile {
       name = "cursor-chg.el";
       sha256 = "1zmwh0z4g6khb04lbgga263pqa51mfvs0wfj3y85j7b08f2lqnqn";
-      # date = 2021-03-26T13:22:19-0700;
+      # date = 2022-06-05T10:05:26-0700;
     };
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "1rpnzgi1f921zmxkljnc8464qjshqlvdhmavls6z4kbdg85x7vc8";
-      # date = 2021-11-23T09:05:38-0800;
+      sha256 = "1h3rf17s817q76glsg5chb3pijwyja93v8c04gjn701zmxwcjiv8";
+      # date = 2022-06-05T09:57:50-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -148,7 +148,7 @@ let
     hl-line-plus = compileEmacsWikiFile {
       name = "hl-line+.el";
       sha256 = "1ns064l1c5g3dnhx5d2sn43w9impn58msrywsgq0bdyzikg7wwh2";
-      # date = 2021-11-23T09:05:46-0800;
+      # date = 2022-06-05T10:05:32-0700;
     };
 
     message-x = compileEmacsWikiFile {
@@ -194,7 +194,7 @@ let
     vline = compileEmacsWikiFile {
       name = "vline.el";
       sha256 = "1ys6928fgk8mswa4gv10cxggir8acck27g78cw1z3pdz5gakbgnj";
-      # date = 2021-03-26T13:22:40-0700;
+      # date = 2022-06-05T10:05:37-0700;
     };
 
     xray = compileEmacsWikiFile {
@@ -437,11 +437,11 @@ let
     auctex = eself.elpaBuild {
         pname = "auctex";
         ename = "auctex";
-        version = "13.0.14";
+        version = "13.1.3";
         src = fetchurl {
-          url = "https://elpa.gnu.org/packages/auctex-13.0.14.tar";
-          sha256 = "1gmqdcg9s6xf8kvzh1j27nbimakd5cy8pwsn0il19l026kxjimr8";
-          # date = 2021-09-14T22:25:39-0700;
+          url = "https://elpa.gnu.org/packages/auctex-13.1.3.tar";
+          sha256 = "0v9rxwz6ngnwrgvzgdki861s136gq30lqhy2gcd9q0a36gb6zhwk";
+          # date = 2022-06-05T09:57:15-0700;
         };
         packageRequires = with eself; [ cl-lib emacs ];
         meta = {
@@ -493,12 +493,13 @@ let
     xref = compileEmacsFiles rec {
       name = "xref";
       src = fetchurl {
-        url = "https://elpa.gnu.org/packages/xref-1.1.0.tar";
-        sha256 = "1s7pwk09bry4nqr4bc78a3mbwyrxagai2gpsd49x47czy2x7m3ax";
+        url = "https://elpa.gnu.org/packages/xref-1.4.1.tar";
+        sha256 = "1vbpplw0sngymmawi940nlqmncqznb5vp7zi0ib8v66g3y33ijrf";
+        # date = 2022-06-05T10:06:58-0700;
       };
       preBuild = ''
         tar xf xref
-        mv xref-1.1.0/*.el .
+        mv xref-1.4.1/*.el .
       '';
     };
 
