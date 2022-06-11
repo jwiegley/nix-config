@@ -118,9 +118,10 @@ build:
 	@$(NIX) build $(BUILD_ARGS) -f "<darwin>" system
 	@rm -f result*
 
+# echo $(PRENIX) darwin-rebuild switch --cores 1 -j1
 switch:
 	$(call announce,darwin-rebuild switch)
-	@$(PRENIX) darwin-rebuild switch -Q
+	@$(PRENIX) darwin-rebuild switch --cores 1 -j1
 	@echo "Darwin generation: $$($(PRENIX) darwin-rebuild --list-generations | tail -1)"
 
 rebuild: build switch

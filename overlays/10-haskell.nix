@@ -3,7 +3,7 @@ self: pkgs:
 let
   srcs = [
     "async-pool"
-    "bindings-DSL"
+    # "bindings-DSL"
     "c2hsc"
     "git-all"
     "gitlib/git-monitor"
@@ -11,7 +11,7 @@ let
   [ "gitlib/gitlib-cmdline" { inherit (self.gitAndTools) git; } ]
     "gitlib/gitlib-libgit2"
     "gitlib/gitlib-test"
-  [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
+  # [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
     "hierarchy"
     "hours"
     # "hnix"
@@ -23,7 +23,7 @@ let
     "pushme"
     "recursors"
     "runmany"
-    "simple-amount"
+    # "simple-amount"
     "sitebuilder"
     "sizes"
     "una"
@@ -141,13 +141,15 @@ haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // rec {
     ghc884  = overrideHask "ghc884"  pkgs.haskell.packages.ghc884  (_hself: _hsuper: {});
     ghc8107 = overrideHask "ghc8107" pkgs.haskell.packages.ghc8107 (_hself: _hsuper: {});
-    ghc901  = overrideHask "ghc901"  pkgs.haskell.packages.ghc901  (_hself: _hsuper: {});
+    ghc902  = overrideHask "ghc902"  pkgs.haskell.packages.ghc902  (_hself: _hsuper: {});
+    ghc923  = overrideHask "ghc923"  pkgs.haskell.packages.ghc923  (_hself: _hsuper: {});
   };
 };
 
 haskellPackages_8_8  = self.haskell.packages.ghc884;
 haskellPackages_8_10 = self.haskell.packages.ghc8107;
-haskellPackages_9_0  = self.haskell.packages.ghc901;
+haskellPackages_9_0  = self.haskell.packages.ghc902;
+haskellPackages_9_2  = self.haskell.packages.ghc923;
 
 ghcDefaultVersion    = "ghc8107";
 haskellPackages      = self.haskell.packages.${self.ghcDefaultVersion};

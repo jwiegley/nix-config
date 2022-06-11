@@ -574,18 +574,19 @@ in {
         let onHost = proxyJump: hostname: { inherit hostname; } //
           lib.optionalAttrs (localconfig.hostname != proxyJump) {
             inherit proxyJump;
-          }; in {
+          }; in rec {
 
         # This is vulcan, as accessible from remote
         home = {
-            hostname = "2600:1700:cf00:db0:f1b3:ab80:3419:685d";
+            hostname = "76.234.69.149";
             port = 2201;
             extraOptions = {
               LocalForward = "5999 127.0.0.1:5900";
           };
         };
 
-        vulcan.hostname = vulcan_ethernet;
+        #vulcan.hostname = vulcan_ethernet;
+        vulcan = home;
 
         hermes = onHost "vulcan" hermes_ethernet;
         macos  = onHost "vulcan" "172.16.194.129";
