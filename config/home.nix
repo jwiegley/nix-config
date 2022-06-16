@@ -585,12 +585,14 @@ in {
           };
         };
 
-        #vulcan.hostname = vulcan_ethernet;
-        vulcan = home;
+        vulcan.hostname = vulcan_ethernet;
+        #vulcan = home;
 
-        hermes = onHost "vulcan" hermes_ethernet;
-        macos  = onHost "vulcan" "172.16.194.129";
-        ubuntu = onHost "vulcan" "172.16.194.128";
+        hermes  = onHost "vulcan" hermes_ethernet;
+        macos   = onHost "vulcan" "172.16.194.129";
+        ubuntu  = onHost "vulcan" "172.16.194.128";
+
+        mohajer = { hostname = "192.168.50.120"; user = "nasimwiegley"; };
 
         elpa = { hostname = "elpa.gnu.org"; user = "root"; };
 
@@ -620,6 +622,18 @@ in {
         };
 
         haskell_org = { host = "*haskell.org"; user = "root"; };
+
+        # Kadena
+
+        chainweb_com = {
+          host = "*.chainweb.com";
+          user = "chainweb";
+          identityFile = "${config.xdg.configHome}/ssh/id_kadena";
+          identitiesOnly = true;
+          extraOptions = {
+            StrictHostKeyChecking = "no";
+          };
+        };
 
         keychain = {
           host = "*";

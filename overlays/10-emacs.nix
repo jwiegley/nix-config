@@ -653,7 +653,8 @@ emacsHEAD = with pkgs; (self.emacs.override { srcRepo = true; }).overrideAttrs(a
 emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
 
 convertForERC = drv: drv.overrideAttrs(attrs: rec {
-  name = "erc-${attrs.version}${attrs.versionModifier}";
+  # name = "erc-${attrs.version}${attrs.versionModifier}";
+  name = "erc-${attrs.version}";
   appName = "ERC";
   iconFile = ./emacs/Chat.icns;
 
@@ -673,7 +674,7 @@ convertForERC = drv: drv.overrideAttrs(attrs: rec {
     sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Emacs.desktop.in
     sed -i 's|"Emacs|"${appName}|' nextstep/templates/InfoPlist.strings.in
     rm -fr .git
-  '' + attrs.preConfigure;
+  '';
 
   postInstall =
     builtins.replaceStrings ["Emacs.app"] ["${appName}.app"] attrs.postInstall + ''
@@ -685,7 +686,7 @@ convertForERC = drv: drv.overrideAttrs(attrs: rec {
   '';
 });
 
-emacsERC = self.convertForERC self.emacsHEAD;
+emacsERC = self.convertForERC self.emacs28;
 emacsERCPackagesNg = mkEmacsPackages self.emacsERC;
 
 emacsHEADEnv = myPkgs: pkgs.myEnvFun {

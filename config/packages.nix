@@ -31,12 +31,15 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   cacert
   cachix
   cbor-diag
+  (exe (import ~/kadena/chainweb-node {}))
   contacts
   coreutils
   csvkit
   ctop
   cvc4
   darwin.cctools
+  dhall
+  dhall-json
   diffstat
   diffutils
   direnv
@@ -48,7 +51,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   dovecot_pigeonhole
   doxygen
   emacs28Env
-  # emacsERCEnv
+  emacsERCEnv
   entr
   exiv2
   fd
@@ -83,6 +86,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gnused
   gnutar
   go-jira
+  google-cloud-sdk
   graphviz-nox
   groff
   hammer
