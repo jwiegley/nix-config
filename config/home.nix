@@ -20,6 +20,8 @@ let home            = builtins.getEnv "HOME";
 
 in {
   home = {
+    stateVersion = "18.09";
+
     # These are packages that should always be present in the user
     # environment, though perhaps not the machine environment.
     packages = pkgs.callPackage ./packages.nix {};

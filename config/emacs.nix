@@ -353,6 +353,7 @@ pkgs: epkgs: with epkgs;
   transpose-mark
   treemacs
   tuareg
+  typescript-mode
   typo
   undo-propose
   unicode-fonts

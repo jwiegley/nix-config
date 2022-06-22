@@ -31,7 +31,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   cacert
   cachix
   cbor-diag
-  (exe (import ~/kadena/chainweb-node {}))
+  # (exe (import ~/kadena/chainweb-node {}))
   contacts
   coreutils
   csvkit
@@ -142,6 +142,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   nixpkgs-fmt
   nixfmt
   nmap
+  node2nix
   nodePackages.csslint
   nodePackages.eslint
   nodePackages.js-beautify
