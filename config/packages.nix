@@ -166,6 +166,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   pinentry_mac
   plantuml
   poppler_utils
+  postgresql
   procps
   projects-env
   prooftree
