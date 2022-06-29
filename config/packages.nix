@@ -15,6 +15,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
+  (exe haskellPackages.threadscope)
   # OnePassword-op
   apg
   aria2
