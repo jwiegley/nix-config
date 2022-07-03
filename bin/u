@@ -31,6 +31,8 @@ echo HOSTNAME=$HOSTNAME
 echo CACHE=$CACHE
 echo BUILDER=$BUILDER
 
+export NIXPKGS_ALLOW_UNFREE=1
+
 exec make -C $NIX_CONF -f Makefile              \
          HOSTNAME=$HOSTNAME                     \
          CACHE=$CACHE                           \

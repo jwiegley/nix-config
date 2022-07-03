@@ -39,7 +39,7 @@ in {
   nixpkgs = {
     config = {
       allowUnfree = true;
-      allowBroken = false;
+      allowBroken = true;
       allowInsecure = false;
       allowUnsupportedSystem = false;
     };

@@ -75,6 +75,7 @@ in {
 
     sessionPath = [
       "/usr/local/zfs/bin"
+      "${home}/.ghcup/bin"
     ];
 
     file = builtins.listToAttrs (
@@ -592,7 +593,7 @@ in {
 
         hermes  = onHost "vulcan" hermes_ethernet;
         macos   = onHost "vulcan" "172.16.194.129";
-        ubuntu  = onHost "vulcan" "172.16.194.128";
+        ubuntu  = onHost "vulcan" "172.16.194.134";
 
         mohajer = { hostname = "192.168.50.120"; user = "nasimwiegley"; };
 

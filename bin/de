@@ -116,6 +116,9 @@ EOF
     fi
 fi
 
+export NIXPKGS_ALLOW_UNFREE=1
+export NIXPKGS_ALLOW_BROKEN=1
+
 nix-shell "${NIXOPTS[@]}" "$@" -Q "${NIXOPTS_MORE[@]}" --run "\
 unset                 \
     ALTERNATE_EDITOR  \

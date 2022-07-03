@@ -225,10 +225,11 @@ gc-old:
 	$(call delete-generations-all,1)
 	$(NIX_GC) --delete-old
 
-purge:
-	$(call purge,purge)
+fullclean:
+	$(call fullclean,clean)
 	(cd $(HOME) && clean)
-	$(NIX_GC) --delete-old
+
+purge: fullclean gc-old
 
 check:
 	$(call announce,nix-store --check-contents)

@@ -16,6 +16,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
   (exe haskellPackages.threadscope)
+  (exe haskellPackages.ghcup)
   # OnePassword-op
   apg
   aria2
@@ -106,6 +107,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   inkscape.out
   iperf
   jdiskreport
+  jiq
   jo
   jq
   killall
