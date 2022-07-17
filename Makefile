@@ -171,32 +171,27 @@ copy-src:
 	    push -f src,kadena $$host;				\
 	done
 
-direnv-dirs:
-	@find $(HOME)/kadena					\
+direnv-files:
+	find $(HOME)/kadena					\
 	      $(HOME)/src					\
 	      $(HOME)/doc					\
 	    \( -path '*/Containers' -prune \) -o		\
 	    \( -path '*/.Trash' -prune \) -o			\
-	    -path '*/.direnv/default' -type l -print
+	    -path '*/.direnv/env*/dep*' -type l -print
 
 copy-direnv:
 	$(call announce,nix copy (direnv))
-	@find $(HOME)/kadena					\
-	      $(HOME)/src					\
-	      $(HOME)/doc					\
-	    \( -path '*/Containers' -prune \) -o		\
-	    \( -path '*/.Trash' -prune \) -o			\
-	    -path '*/.direnv' -type d -print |			\
-	    while read file ; do				\
-	        for host in $(REMOTES); do			\
-	            echo "nix copy: $$file -> $$host";		\
-		    find $$file \!				\
-			-name env.drv -name 'dep*'		\
-			-type l -print0 |			\
-		        $(PRENIX) xargs -0 nix copy		\
-			    --keep-going --to ssh://$$host;	\
-	        done;						\
-	    done
+	for host in $(REMOTES); do				\
+	    echo "nix copy to $$host";				\
+	    find $(HOME)/kadena					\
+	          $(HOME)/src					\
+	          $(HOME)/doc					\
+	        \( -path '*/Containers' -prune \) -o		\
+	        \( -path '*/.Trash' -prune \) -o		\
+	        -path '*/.direnv/env*/dep*' -type l -print0 |	\
+		    $(PRENIX) xargs -0 nix copy			\
+			--keep-going --to ssh://$$host;		\
+	done
 
 copy: copy-nix copy-src copy-direnv
 
