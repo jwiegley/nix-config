@@ -2,25 +2,25 @@
 
 if [[ "$1" == "vulcan" ]]; then
   HOSTNAME=vulcan
-  if [ -z ${CACHE+x} ]; then CACHE=vulcan; fi
+  if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
   if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
   shift 1
 
 elif [[ "$1" == "hermes" ]]; then
   HOSTNAME=hermes
-  if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
-  if [ -z ${BUILDER+x} ]; then BUILDER=hermes; fi
+  if [ -z ${CACHE+x} ]; then CACHE=vulcan; fi
+  if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
   shift 1
 
 elif [[ $(hostname) =~ [Vv]ulcan ]]; then
   HOSTNAME=vulcan
-  if [ -z ${CACHE+x} ]; then CACHE=vulcan; fi
+  if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
   if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
 
 elif [[ $(hostname) =~ [Hh]ermes ]]; then
   HOSTNAME=hermes
-  if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
-  if [ -z ${BUILDER+x} ]; then BUILDER=hermes; fi
+  if [ -z ${CACHE+x} ]; then CACHE=vulcan; fi
+  if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
 
 else
   echo "Cannot recognize HOSTNAME=$HOSTNAME"

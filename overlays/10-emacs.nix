@@ -117,8 +117,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "1h3rf17s817q76glsg5chb3pijwyja93v8c04gjn701zmxwcjiv8";
-      # date = 2022-06-05T09:57:50-0700;
+      sha256 = "1vy6sp8v2xp9mw9nkmycif521qf5x8zslgs777136sx9yg1l2l17";
+      # date = 2022-07-21T09:08:12-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -562,15 +562,14 @@ let
             inherit (pkgs.texlive) scheme-basic cm-super ec;
           }; in mkDerivation rec {
       name = "emacs-proof-general-${version}";
-      version = "2021-12-17";
+      version = "4.6-git";
 
       # This is the main branch
       src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "a61a1d8e5ffa610b794535995d58adf18e9ec47b";
-        sha256 = "1c6216yz2wb9c5yn5rq6jr9pwxb44vhvgnsi0wsh0rcccm24mdp8";
-        # date = 2021-12-17T17:53:23+00:00;
+        rev = "e06a7704a53ee43c4695681c0e40edfdf9b1124d";
+        sha256 = "1yyprdnfhp5rpax8qsag3szmkgn5f0m4g83pbbp2f33dxxvvx767";
       };
 
       # src = ~/src/proof-general;

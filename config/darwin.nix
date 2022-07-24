@@ -86,8 +86,8 @@ in {
     ];
 
     extraOptions = ''
-      gc-keep-derivations = true
-      gc-keep-outputs = true
+      gc-keep-derivations = false
+      gc-keep-outputs = false
       secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
       experimental-features = nix-command flakes
     '';
