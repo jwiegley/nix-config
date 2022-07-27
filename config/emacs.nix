@@ -27,6 +27,7 @@ pkgs: epkgs: with epkgs;
   biblio
   bm
   bookmark-plus                 # bookmark+
+  boogie-friends
   bufler
   browse-at-remote
   browse-kill-ring

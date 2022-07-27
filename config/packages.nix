@@ -29,6 +29,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   bashInteractive
   bat
   bats
+  boogie
   browserpass
   cacert
   cachix

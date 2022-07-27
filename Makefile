@@ -76,7 +76,7 @@ all: rebuild
 
 %-all: %
 	@for host in $(REMOTES); do						\
-	    ssh $$host "CACHE=$(CACHE) NIX_CONF=$(NIX_CONF) u $$host $<";	\
+	    ssh $$host "CACHE=$(HOSTNAME) NIX_CONF=$(NIX_CONF) u $$host $<";	\
 	done
 
 define announce
@@ -273,7 +273,7 @@ travel-ready:
 	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
 	@for dir in "$${projects[@]}"; do				\
 	    echo "Updating direnv for ~/$$dir";				\
-	    (cd ~/$$dir; unset BUILDER; de)				\
+	    (cd ~/$$dir; unset BUILDER; CACHE=$(CACHE) de)		\
 	done
 
 .ONESHELL:
