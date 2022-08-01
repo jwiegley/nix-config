@@ -12,20 +12,20 @@ LKG_DATE   = $(eval LKG_DATE := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
 ifeq ($(CACHE),)
 NIXOPTS	   = --option build-use-substitutes false	\
-	     --max-jobs 20				\
+	     --max-jobs 8				\
 	     --cores 4					\
 	     --keep-going				\
 	     --option substituters ''
 else
 ifeq ($(HOSTNAME),$(CACHE))
 # NIXOPTS	   =
-NIXOPTS	   = --max-jobs 20				\
+NIXOPTS	   = --max-jobs 8				\
 	     --cores 4					\
 	     --keep-going
 else
 NIXOPTS	   = --option build-use-substitutes true	\
 	     --option require-sigs false		\
-	     --max-jobs 20				\
+	     --max-jobs 8				\
 	     --cores 4					\
 	     --keep-going				\
 	     --option substituters 'ssh://$(CACHE)'
@@ -158,42 +158,13 @@ update-sync: update rebuild-all
 
 ########################################################################
 
-copy-nix:
-	$(call announce,nix copy)
-	@for host in $(REMOTES); do				\
-	    $(NIX) copy --keep-going --to ssh://$$host		\
-		$(HOME)/.nix-profile $(BUILD_PATH);		\
-	done
-
 copy-src:
 	$(call announce,pushme)
 	@for host in $(REMOTES); do				\
 	    push -f src,kadena $$host;				\
 	done
 
-direnv-files:
-	find $(HOME)/kadena					\
-	      $(HOME)/src					\
-	      $(HOME)/doc					\
-	    \( -path '*/Containers' -prune \) -o		\
-	    \( -path '*/.Trash' -prune \) -o			\
-	    -path '*/.direnv/env*/dep*' -type l -print
-
-copy-direnv:
-	$(call announce,nix copy (direnv))
-	for host in $(REMOTES); do				\
-	    echo "nix copy to $$host";				\
-	    find $(HOME)/kadena					\
-	          $(HOME)/src					\
-	          $(HOME)/doc					\
-	        \( -path '*/Containers' -prune \) -o		\
-	        \( -path '*/.Trash' -prune \) -o		\
-	        -path '*/.direnv/env*/dep*' -type l -print0 |	\
-		    $(PRENIX) xargs -0 nix copy			\
-			--keep-going --to ssh://$$host;		\
-	done
-
-copy: copy-nix copy-src copy-direnv
+copy: copy-src
 
 ########################################################################
 
@@ -233,47 +204,20 @@ check:
 sizes:
 	df -H /nix 2>&1 | grep /dev
 
-S3_CACHE = "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
-
-sign-store:
-	nix store sign -k ~/.config/gnupg/nix-signing-key.sec --all
-
-cache-system:
-	$(call announce,nix-copy system)
-	nix copy --to $(S3_CACHE)					\
-	    $$(readlink .nix-profile)					\
-	    $$(readlink /var/run/current-system)
-
-cache-sources:
-	$(call announce,nix-copy sources)
-	find /nix/store/ -maxdepth 1 \(					\
-	       -name '*.xz'						\
-	    -o -name '*.bz2'						\
-	    -o -name '*.gz'						\
-	    -o -name '*.dmg'						\
-	    -o -name '*.zip'						\
-	    -o -name '*.tar'						\
-	     \) -type f -print0 |					\
-	    xargs -0 nix copy --to $(S3_CACHE)
-
-cache-envs:
-	$(call announce,nix-copy envs)
-	find $(HOME) -path '*/.direnv/default/dep*' -type l |		\
-	    while read dir; do						\
-	        echo $$dir ;						\
-	        nix copy --to $(S3_CACHE) $${dir}/* ;			\
-	    done
-
-cache: sign-store cache-system cache-sources cache-envs
-
 PROJECTS = $(HOME)/.config/projects
 
 travel-ready:
 	$(call announce,travel-ready)
 	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
-	@for dir in "$${projects[@]}"; do				\
-	    echo "Updating direnv for ~/$$dir";				\
-	    (cd ~/$$dir; unset BUILDER; CACHE=$(CACHE) de)		\
+	@for dir in "$${projects[@]}"; do		\
+	    echo "Updating direnv for ~/$$dir";		\
+	    (cd ~/$$dir;				\
+             if [[ $(HOSTNAME) = vulcan ]]; then	\
+                unset BUILDER;				\
+             else					\
+	         BUILDER=$(BUILDER);			\
+	     fi;					\
+	     CACHE=$(CACHE) $(NIX_CONF)/bin/de)		\
 	done
 
 .ONESHELL:

@@ -117,8 +117,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "1vy6sp8v2xp9mw9nkmycif521qf5x8zslgs777136sx9yg1l2l17";
-      # date = 2022-07-21T09:08:12-0700;
+      sha256 = "1gpkhbsb6hll11y6j76q27c925d7g9m9wa0vd060fc6gxh2xkc60";
+      # date = 2022-07-31T17:46:04-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -488,19 +488,6 @@ let
         license = lib.licenses.gpl2Plus;
         platforms = lib.platforms.unix;
       };
-    };
-
-    xref = compileEmacsFiles rec {
-      name = "xref";
-      src = fetchurl {
-        url = "https://elpa.gnu.org/packages/xref-1.4.1.tar";
-        sha256 = "1vbpplw0sngymmawi940nlqmncqznb5vp7zi0ib8v66g3y33ijrf";
-        # date = 2022-06-05T10:06:58-0700;
-      };
-      preBuild = ''
-        tar xf xref
-        mv xref-1.4.1/*.el .
-      '';
     };
 
     org = mkDerivation rec {

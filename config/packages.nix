@@ -10,7 +10,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.una)
   (exe haskellPackages.git-monitor)
   (exe haskellPackages.hours)
-  # Haskell tools
   (exe haskellPackages.lhs2tex)
   (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
@@ -177,12 +176,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   protobufc
   pstree
   pv
-  python27
-  python27Packages.certifi
-  python27Packages.pygments
-  python27Packages.setuptools
-  pythonDocs.html.python27
-  pythonDocs.pdf_letter.python27
   python3
   python3Packages.numpy
   python3Packages.pandas
@@ -199,10 +192,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   ripgrep
   rlwrap
   rsync
-  # rtags
   ruby
-  # rust-analyzer
-  # rustup
   sbcl
   scc
   sccache

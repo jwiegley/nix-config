@@ -17,7 +17,7 @@ if [[ "$1" == "--no-cache" ]]; then
     echo "Disabling use of the Nix cache"
 fi
 
-NIXOPTS=(--cores 4)
+NIXOPTS=(--cores 2 -j4)
 NIXOPTS_MORE=()
 
 if [[ $PWD =~ kadena ]]; then
@@ -131,52 +131,5 @@ unset                 \
     TERM              \
     TERM_SESSION_ID;  \
 direnv dump > .envrc.cache"
-
-identify_shell() {
-    local shell="shell.nix"
-    if [[ -n "$NIXFILE" && -f "${NIXFILE}" ]]; then
-        shell="$NIXFILE"
-    elif [[ ! -f "${shell}" ]]; then
-        shell="default.nix"
-    fi
-
-    if [[ ! -f "${shell}" ]]; then
-        echo "use nix: shell.nix or default.nix not found in the folder"
-        exit 1
-    fi
-    echo "${shell}"
-}
-
-build_drv() {
-    local dir="${PWD}"/.direnv
-    local default="${dir}/default"
-    local shell=$(identify_shell)
-    if [[ ! -L "${default}" ]] || [[ ! -d `readlink "${default}"` ]]; then
-        local wd="${dir}/env-`md5sum "${shell}" | cut -c -32`"
-        mkdir -p "${wd}"
-
-        local drv="${wd}/env.drv"
-        if [[ ! -f "${drv}" ]]; then
-            IN_NIX_SHELL=1 nix-instantiate                                      \
-                "${NIXOPTS[@]}" "${NIXOPTS_MORE[@]}" "${NIXARGS[@]}"            \
-                --add-root "${drv}" --indirect "${shell}" > /dev/null
-            nix-store "${NIXOPTS[@]}"                                           \
-                -r `nix-store "${NIXOPTS[@]}" --query --references "${drv}"`    \
-                --add-root "${wd}/dep" --indirect > /dev/null
-        fi
-
-        rm -f "${default}"
-        ln -s `basename "${wd}"` "${default}"
-    fi
-
-    local drv=`readlink "${default}/env.drv"`
-    echo "${drv}"
-}
-
-export NIXOPTS
-export NIXOPTS_MORE
-export NIXARGS
-
-build_drv
 
 direnv reload
