@@ -15,7 +15,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
   (exe haskellPackages.threadscope)
-  (exe haskellPackages.ghcup)
+  (exe haskellPackages.pointfree)
   # OnePassword-op
   apg
   aria2
@@ -33,7 +33,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   cacert
   cachix
   cbor-diag
-  # (exe (import ~/kadena/chainweb-node {}))
   contacts
   coreutils
   csvkit
@@ -96,6 +95,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   highlight
   home-manager
   hostname
+  hs-to-coq
   html-tidy
   htop
   httpie
@@ -254,4 +254,9 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   zncModules.push
   zsh
   zsh-syntax-highlighting
+
+  start-kadena
+  chainweb-node
+  chainweb-data
+  pact
 ]

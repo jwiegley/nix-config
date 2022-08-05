@@ -30,6 +30,7 @@ in {
       ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";
       B2_ACCOUNT_INFO    = "${config.xdg.configHome}/backblaze-b2/account_info";
       CABAL_CONFIG       = "${config.xdg.configHome}/cabal/config";
+      CHAINWEB_PGDATA    = "";
       EDITOR             = "${emacsclient}";
       EMACS_SERVER_FILE  = "${emacs-server}";
       EMAIL              = "${config.programs.git.userEmail}";
