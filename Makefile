@@ -115,7 +115,7 @@ tools:
 
 build:
 	$(call announce,nix build -f "<darwin>" system)
-	@$(NIX) build $(BUILD_ARGS) -f "<darwin>" system
+	@$(NIX) build $(BUILD_ARGS) -f "<darwin>" system --keep-going
 	@rm -f result*
 
 # echo $(PRENIX) darwin-rebuild switch --cores 1 -j1

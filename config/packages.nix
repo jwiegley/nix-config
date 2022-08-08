@@ -38,6 +38,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   csvkit
   ctop
   cvc4
+  dafny
   darwin.cctools
   dhall
   dhall-json
@@ -171,8 +172,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   poppler_utils
   postgresql
   procps
-  projects-env
-  prooftree
   protobufc
   pstree
   pv

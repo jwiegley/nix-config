@@ -407,7 +407,6 @@ in {
         core = {
           editor            = emacsclient;
           trustctime        = false;
-          fsyncobjectfiles  = true;
           pager             = "${pkgs.less}/bin/less --tabs=4 -RFX";
           logAllRefUpdates  = true;
           precomposeunicode = false;
