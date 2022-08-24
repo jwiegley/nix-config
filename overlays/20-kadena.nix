@@ -5,8 +5,9 @@ let
 chainweb-data-src = pkgs.fetchFromGitHub {
   owner = "kadena-io";
   repo = "chainweb-data";
-  rev = "ca0a8be5e7199635679e37f70ff1659ac282dbb8";
-  sha256 = "052d2h5fsh0g9k771yz19v1f1fyfdnnyq2mszpj2brns2zzyj53d";
+  rev = "5d815a70c544eead5964ba4e84d8f71fb8977300";
+  sha256 = "111mczhhq7fqk784raa7zg1g9fd2gknph01265hyf4vzmxgr0y6r";
+  # date = "2022-08-04T20:20:13-07:00";
 };
 
 toYAML = name: data:
@@ -133,8 +134,9 @@ chainweb-node = pkgs.haskell.lib.compose.justStaticExecutables
   (import (pkgs.fetchFromGitHub {
      owner = "kadena-io";
      repo = "chainweb-node";
-     rev = "7299cf3396c4fb227d32d088de63d35a16c11b4c";
-     sha256 = "140745q386hnvs6r9vfbm7axm4fx91lg87czkil3c9sb8dzc3kpf";
+     rev = "33de69e617c8693af90652ac78f4667fd6273e48";
+     sha256 = "1ljzcqic051da2988djndr6c59ck1bha55kc5wr06zrnknib0zrc";
+     # date = "2022-08-16T15:06:28-07:00";
    }) {});
 
 chainweb-data = pkgs.haskell.lib.compose.justStaticExecutables

@@ -294,6 +294,10 @@ in {
 
         sudo /bin/launchctl limit maxfiles 524288 524288
         ulimit -n 65536
+
+        autoload -Uz compinit
+        compinit
+        eval "$(op completion zsh)"; compdef _op op
       '';
 
       plugins = [
@@ -544,6 +548,7 @@ in {
         ".envrc.override"
         ".ghc.environment.x86_64-darwin-*"
         ".makefile"
+        ".pact-history"
         "TAGS"
         "cabal.project.local*"
         "default.hoo"
@@ -589,11 +594,12 @@ in {
         };
 
         vulcan.hostname = vulcan_ethernet;
-        #vulcan = home;
+        # vulcan = home;
 
-        hermes  = onHost "vulcan" hermes_ethernet;
-        macos   = onHost "vulcan" "172.16.194.129";
-        ubuntu  = onHost "vulcan" "172.16.194.134";
+        hermes   = onHost "vulcan" hermes_ethernet;
+        macos    = onHost "vulcan" "172.16.194.129";
+        ubuntu   = onHost "vulcan" "172.16.194.134";
+        chainweb = onHost "vulcan" "192.168.1.152";
 
         mohajer = { hostname = "192.168.50.120"; user = "nasimwiegley"; };
 

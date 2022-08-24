@@ -161,7 +161,7 @@ update-sync: update rebuild-all
 copy-src:
 	$(call announce,pushme)
 	@for host in $(REMOTES); do				\
-	    push -f src,kadena $$host;				\
+	    push -f home,src,kadena $$host;			\
 	done
 
 copy: copy-src
