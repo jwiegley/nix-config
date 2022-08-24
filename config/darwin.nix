@@ -79,11 +79,20 @@ in {
       ssh-auth-sock   = "${xdg_configHome}/gnupg/S.gpg-agent.ssh";
     }];
 
-    trustedUsers = [ "johnw" "@admin" ];
+    settings = {
+      trusted-users = [ "johnw" "@admin" ];
+      max-jobs = 8;
+      cores = 2;
 
-    binaryCachePublicKeys = [
-      "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
-    ];
+      substituters = [
+      ];
+
+      trusted-public-keys = [
+        "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
+      ];
+    };
+
+    distributedBuilds = true;
 
     extraOptions = ''
       gc-keep-derivations = false
@@ -91,32 +100,6 @@ in {
       secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
       experimental-features = nix-command flakes
     '';
-  }
-  // lib.optionalAttrs (localconfig.hostname == "hermes") {
-    maxJobs = 8;
-    buildCores = 2;
-    distributedBuilds = true;
-
-    buildMachines = [
-      # vulcan
-    ];
-
-    # requireSignedBinaryCaches = false;
-    binaryCaches = [
-      # "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
-    ];
-  }
-  // lib.optionalAttrs (localconfig.hostname == "vulcan") {
-    maxJobs = 10;
-    buildCores = 2;
-    distributedBuilds = true;
-
-    buildMachines = [
-    ];
-
-    binaryCaches = [
-      # "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
-    ];
   };
 
   system = {
