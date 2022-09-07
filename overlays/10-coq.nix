@@ -2,30 +2,30 @@ self: pkgs:
 
 {
 
-coq_HEAD = (self.coq_8_15.override {
-  buildIde = false;
-  version = ~/src/coq;
-}).overrideAttrs (attrs: {
-  buildInputs = attrs.buildInputs
-    ++ (with pkgs; [
-      texlive.combined.scheme-full which hevea fig2dev imagemagick_light git
-    ]);
-});
-
 coqPackages = self.coqPackages_8_15;
 
 coqPackages_HEAD = self.mkCoqPackages self.coq_HEAD;
+coqPackages_8_16 = self.mkCoqPackages self.coq_8_16;
 coqPackages_8_15 = self.mkCoqPackages self.coq_8_15;
 coqPackages_8_14 = self.mkCoqPackages self.coq_8_14;
 coqPackages_8_13 = self.mkCoqPackages self.coq_8_13;
 coqPackages_8_12 = self.mkCoqPackages self.coq_8_12;
 coqPackages_8_11 = self.mkCoqPackages self.coq_8_11;
 coqPackages_8_10 = self.mkCoqPackages self.coq_8_10;
-coqPackages_8_9  = self.mkCoqPackages self.coq_8_9;
-coqPackages_8_8  = self.mkCoqPackages self.coq_8_8;
-coqPackages_8_7  = self.mkCoqPackages self.coq_8_7;
-coqPackages_8_6  = self.mkCoqPackages self.coq_8_6;
 
+coq = self.coq_8_15;
+
+coq_HEAD = (self.coq_8_16.override {
+    buildIde = false;
+    version = ~/src/coq;
+  }).overrideAttrs (attrs: {
+    buildInputs = attrs.buildInputs
+      ++ (with pkgs; [
+        texlive.combined.scheme-full which hevea fig2dev imagemagick_light git
+      ]);
+  });
+
+coq_8_16 = pkgs.coq_8_16.override { buildIde = false; };
 coq_8_15 = pkgs.coq_8_15.override { buildIde = false; };
 coq_8_14 = pkgs.coq_8_14.override { buildIde = false; };
 coq_8_13 = pkgs.coq_8_13.override { buildIde = false; };

@@ -16,11 +16,13 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.hasktags)
   (exe haskellPackages.threadscope)
   (exe haskellPackages.pointfree)
+  act
   apg
   aria2
   asciidoctor
   aspell
   aspellDicts.en
+  awscli2
   backblaze-b2
   bandwhich
   bash-completion
@@ -36,6 +38,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   coreutils
   csvkit
   ctop
+  curl
   cvc4
   dafny
   darwin.cctools
@@ -206,6 +209,8 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   sourceHighlight
   spiped
   sqlite
+  sqlite-analyzer 
+  sqldiff
   squashfsTools
   srm
   sshify
@@ -256,7 +261,5 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
 
   # Kadena packages
   start-kadena
-  chainweb-node
-  chainweb-data
   pact
 ]

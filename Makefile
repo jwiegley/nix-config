@@ -121,6 +121,7 @@ build:
 # echo $(PRENIX) darwin-rebuild switch --cores 1 -j1
 switch:
 	$(call announce,darwin-rebuild switch)
+	echo $(PRENIX) darwin-rebuild switch --cores 1 -j1
 	@$(PRENIX) darwin-rebuild switch --cores 1 -j1
 	@echo "Darwin generation: $$($(PRENIX) darwin-rebuild --list-generations | tail -1)"
 

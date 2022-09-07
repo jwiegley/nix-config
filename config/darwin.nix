@@ -106,15 +106,15 @@ in {
     stateVersion = 4;
 
     defaults = {
-      NSGlobalDomain = {
-        AppleKeyboardUIMode = 3;
-        ApplePressAndHoldEnabled = false;
-        _HIHideMenuBar = true;
-        "com.apple.keyboard.fnState" = true;
-        "com.apple.mouse.tapBehavior" = 1;
-        "com.apple.sound.beep.volume" = "0.0";
-        "com.apple.sound.beep.feedback" = 0;
-      };
+      # NSGlobalDomain = {
+      #   AppleKeyboardUIMode = 3;
+      #   ApplePressAndHoldEnabled = false;
+      #   _HIHideMenuBar = true;
+      #   "com.apple.keyboard.fnState" = true;
+      #   "com.apple.mouse.tapBehavior" = 1;
+      #   "com.apple.sound.beep.volume" = 0;
+      #   "com.apple.sound.beep.feedback" = 0;
+      # };
 
       ".GlobalPreferences" = {
         "com.apple.sound.beep.sound" = "/System/Library/Sounds/Funk.aiff";

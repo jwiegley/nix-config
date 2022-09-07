@@ -117,8 +117,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "1gpkhbsb6hll11y6j76q27c925d7g9m9wa0vd060fc6gxh2xkc60";
-      # date = 2022-07-31T17:46:04-0700;
+      sha256 = "1068h0jk454wzwkipcidk0kafb6wh6psrsxp9qbc7arjfigznf2w";
+      # date = 2022-09-02T13:46:42-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -243,9 +243,9 @@ let
       src = fetchFromGitHub {
         owner = "emacsmirror";
         repo = "bookmark-plus";
-        rev = "478f945f538a2fd2c0fa0d531876b679914b6d85";
-        sha256 = "1hz24aldh68vf8ac16gahlkq2v5ic6r7dm8ra8m6k1343ba572rg";
-        # date = 2021-09-19T23:50:08+02:00;
+        rev = "799b36be641f0c8f7f84314c50072b77e466dd0e";
+        sha256 = "14nv56sybyzgp6jnvh217nwgsa00k6hvrfdb4nk1s2g167kvk76f";
+        # date = 2022-06-22T04:42:09+02:00;
       };
     };
 
@@ -322,9 +322,9 @@ let
       src = fetchFromGitHub {
         owner = "tarsius";
         repo = "ox-texinfo-plus";
-        rev = "c639aeaac1a6eb150ac0b92a29650c627f891550";
-        sha256 = "1i97ayg867fqmc0vqjd7hpj29gzmpl194i82na0bnp1ql4pqxsx0";
-        # date = 2021-11-09T17:50:17+01:00;
+        rev = "1dfe1c01d34a979ce870269d2c964007f50449d5";
+        sha256 = "0hz2z063nrzwkr023x5mfpgvl5rk2nf0vs9c2rsy5hfpz1s9ncw0";
+        # date = 2022-03-05T23:47:11+01:00;
       };
     };
 
@@ -390,9 +390,9 @@ let
       src = fetchFromGitHub {
         owner = "devonsparks";
         repo = "wat-mode";
-        rev = "f34fc84879a99130283a124cd196041b474213e1";
-        sha256 = "11j7cawvy1g9llslgmyk3bnqw6qjxiil1g6jq7bza97ckfrcc1if";
-        # date = 2018-10-22T18:26:10-07:00;
+        rev = "46b4df83e92c585295d659d049560dbf190fe501";
+        sha256 = "1nn6h71qdi1ka4d84fa6g0i74zss2mfcixrc7pf3vy2q6kfmapld";
+        # date = 2022-07-12T19:51:49-07:00;
       };
     };
 
@@ -555,8 +555,9 @@ let
       src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "e06a7704a53ee43c4695681c0e40edfdf9b1124d";
-        sha256 = "1yyprdnfhp5rpax8qsag3szmkgn5f0m4g83pbbp2f33dxxvvx767";
+        rev = "c304d73e09daec54dd8f8cef90df10c0b3d2c2ef";
+        sha256 = "1vik42pn9gd1kvz2mvnslsg3xy0zsgy8cck1m412ffl8f6rlsgqx";
+        # date = "2022-08-03T19:07:56+02:00";
       };
 
       # src = ~/src/proof-general;
