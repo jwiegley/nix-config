@@ -16,6 +16,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.hasktags)
   (exe haskellPackages.threadscope)
   (exe haskellPackages.pointfree)
+  # haskellPackages.haskell-language-server
   act
   apg
   aria2
@@ -32,27 +33,20 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   boogie
   browserpass
   cacert
-  cachix
   cbor-diag
-  contacts
   coreutils
   csvkit
   ctop
   curl
   cvc4
-  dafny
   darwin.cctools
   dhall
   dhall-json
   diffstat
   diffutils
   direnv
-  dirscan
   ditaa
-  dnsutils
   dot2tex
-  dovecot
-  dovecot_pigeonhole
   doxygen
   emacs28Env
   emacsERCEnv
@@ -67,6 +61,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   fswatch
   fzf
   gawk
+  gh
   ghi
   gist
   git-lfs
@@ -80,7 +75,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   gitAndTools.gitflow
   gitAndTools.hub
   gitAndTools.tig
-  gitAndTools.topGit
+  gitAndTools.top-git
   gitRepo
   gitstats
   global
@@ -109,7 +104,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   imgcat
   inkscape.out
   iperf
-  jdiskreport
   jiq
   jo
   jq
@@ -131,14 +125,12 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   m-cli
   m4
   mercurialFull
-  mitmproxy
   more
   mosh
   msmtp
   mtr
   multitail
   my-scripts
-  mysql
   nix-diff
   nix-index
   nix-info
@@ -179,17 +171,12 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   pstree
   pv
   python3
-  python3Packages.numpy
-  python3Packages.pandas
-  pythonDocs.html.python37
-  pythonDocs.pdf_letter.python37
-  qemu libvirt
+  qemu # libvirt
   qpdf
   qrencode
   ratpoison
   rclone
   recoll
-  renameutils
   restic
   ripgrep
   rlwrap
@@ -220,7 +207,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   taskjuggler
   terminal-notifier
   time
-  tlaplus
   tmux
   translate-shell
   travis
@@ -240,13 +226,12 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   wget
   wireguard-tools
   xapian
-  xdg_utils
+  xdg-utils
   xorg.xauth
   xorg.xhost
-  xquartz
+  # xquartz
   xsv
   xz
-  yamale
   youtube-dl
   yq
   yuicompressor
@@ -260,6 +245,18 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   zsh-syntax-highlighting
 
   # Kadena packages
-  start-kadena
-  pact
+  # start-kadena
+  # pact
+] ++ pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
+  (exe haskellPackages_9_2.ormolu)
+  contacts
+  (pkgs.lowPrio dafny)
+  dovecot
+  dovecot_pigeonhole
+  dnsutils
+  jdiskreport
+  mitmproxy
+  renameutils
+  tlaplus
+  yamale
 ]

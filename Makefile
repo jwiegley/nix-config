@@ -118,10 +118,8 @@ build:
 	@$(NIX) build $(BUILD_ARGS) -f "<darwin>" system --keep-going
 	@rm -f result*
 
-# echo $(PRENIX) darwin-rebuild switch --cores 1 -j1
 switch:
 	$(call announce,darwin-rebuild switch)
-	echo $(PRENIX) darwin-rebuild switch --cores 1 -j1
 	@$(PRENIX) darwin-rebuild switch --cores 1 -j1
 	@echo "Darwin generation: $$($(PRENIX) darwin-rebuild --list-generations | tail -1)"
 
@@ -141,7 +139,8 @@ tag-working:
 	$(call announce,git tag last-known-good)
 	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
 	git --git-dir=nixpkgs/.git branch -D before-update
-	git --git-dir=nixpkgs/.git tag -f known-good-$(LKG_DATE) last-known-good
+	git --git-dir=nixpkgs/.git tag -f known-good-$(LKG_DATE) \
+	    -m "known-good-$(LKG_DATE)" last-known-good
 
 mirror:
 	$(call announce,git push)
@@ -213,12 +212,18 @@ travel-ready:
 	@for dir in "$${projects[@]}"; do		\
 	    echo "Updating direnv for ~/$$dir";		\
 	    (cd ~/$$dir;				\
-             if [[ $(HOSTNAME) = vulcan ]]; then	\
-                unset BUILDER;				\
+             if [[ $(HOSTNAME) == athena ]]; then	\
+                 unset BUILDER CACHE;			\
+	         $(NIX_CONF)/bin/de --no-cache;		\
+             elif [[ $(HOSTNAME) != hermes ]]; then	\
+                 unset BUILDER;				\
+		 CACHE=$(CACHE);			\
+	         $(NIX_CONF)/bin/de;			\
              else					\
 	         BUILDER=$(BUILDER);			\
-	     fi;					\
-	     CACHE=$(CACHE) $(NIX_CONF)/bin/de)		\
+		 CACHE=$(CACHE);			\
+	         $(NIX_CONF)/bin/de;			\
+	     fi);					\
 	done
 
 .ONESHELL:

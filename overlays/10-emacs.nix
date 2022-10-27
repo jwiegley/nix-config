@@ -117,8 +117,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "1068h0jk454wzwkipcidk0kafb6wh6psrsxp9qbc7arjfigznf2w";
-      # date = 2022-09-02T13:46:42-0700;
+      sha256 = "1z5xb97m3llqj2g48rqkmjmn9zrz2q3jw1w1c4iji3jsw835jhn5";
+      # date = 2022-09-26T21:18:36-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -437,11 +437,11 @@ let
     auctex = eself.elpaBuild {
         pname = "auctex";
         ename = "auctex";
-        version = "13.1.3";
+        version = "13.1.4";
         src = fetchurl {
-          url = "https://elpa.gnu.org/packages/auctex-13.1.3.tar";
-          sha256 = "0v9rxwz6ngnwrgvzgdki861s136gq30lqhy2gcd9q0a36gb6zhwk";
-          # date = 2022-06-05T09:57:15-0700;
+          url = "https://elpa.gnu.org/packages/auctex-13.1.4.tar";
+          sha256 = "1r9qysnfdbiblq3c95rgsh7vgy3k4qabnj0vicqhdkca0cl2b2bj";
+          # date = 2022-10-10T15:00:05-0700;
         };
         packageRequires = with eself; [ cl-lib emacs ];
         meta = {

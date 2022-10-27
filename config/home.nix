@@ -12,6 +12,9 @@ let home            = builtins.getEnv "HOME";
     vulcan_ethernet = "192.168.1.69";
     vulcan_wifi     = "192.168.1.90";
 
+    athena_ethernet = "192.168.1.157";
+    athena_wifi     = "192.168.1.91";
+
     hermes_ethernet = "192.168.1.108";
     hermes_wifi     = "192.168.1.67";
 
@@ -53,6 +56,8 @@ in {
       VAGRANT_HOME       = "${config.xdg.dataHome}/vagrant";
       VULCAN_ETHERNET    = vulcan_ethernet;
       VULCAN_WIFI        = vulcan_wifi;
+      ATHENA_ETHERNET    = athena_ethernet;
+      ATHENA_WIFI        = athena_wifi;
       WWW_HOME           = "${config.xdg.cacheHome}/w3m";
 
       RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone-b2";
@@ -254,9 +259,9 @@ in {
         #       + " | ${pkgs.coreutils}/bin/tail -n +5";
 
         # Use whichever cabal is on the PATH.
-        cb     = "cabal new-build";
-        cn     = "cabal new-configure --enable-tests --enable-benchmarks";
-        cnp    = "cabal new-configure --enable-tests --enable-benchmarks " +
+        cb     = "cabal build";
+        cn     = "cabal configure --enable-tests --enable-benchmarks";
+        cnp    = "cabal configure --enable-tests --enable-benchmarks " +
                  "--enable-profiling --ghc-options=-fprof-auto";
 
         rehash = "hash -r";
@@ -290,14 +295,14 @@ in {
         else
            . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
            . ${config.xdg.configHome}/zsh/plugins/iterm2_tmux_integration
+
+           sudo /bin/launchctl limit maxfiles 524288 524288
+           ulimit -n 65536
+
+           autoload -Uz compinit
+           compinit
+           # eval "$(op completion zsh)"; compdef _op op
         fi
-
-        sudo /bin/launchctl limit maxfiles 524288 524288
-        ulimit -n 65536
-
-        autoload -Uz compinit
-        compinit
-        eval "$(op completion zsh)"; compdef _op op
       '';
 
       plugins = [
@@ -305,8 +310,8 @@ in {
           name = "iterm2_shell_integration";
           src = pkgs.fetchurl {
             url = https://iterm2.com/shell_integration/zsh;
-            sha256 = "1h38yggxfm8pyq3815mjd2rkb411v9g1sa0li884y0bjfaxgbnd4";
-            # date = 2021-05-02T18:15:26-0700;
+            sha256 = "0r7pwn0m4siazfv22g31la3y0kksqn0dmr4cqbd454b59s39f1q4";
+            # date = 2022-09-26T21:23:26-0700;
           };
         }
         {
@@ -314,7 +319,7 @@ in {
           src = pkgs.fetchurl {
             url = https://gist.githubusercontent.com/antifuchs/c8eca4bcb9d09a7bbbcd/raw/3ebfecdad7eece7c537a3cd4fa0510f25d02611b/iterm2_zsh_init.zsh;
             sha256 = "1v1b6yz0lihxbbg26nvz85c1hngapiv7zmk4mdl5jp0fsj6c9s8c";
-            # date = 2020-01-07T15:59:13-0800;
+            # date = 2022-09-26T21:23:29-0700;
           };
         }
       ];
@@ -589,14 +594,25 @@ in {
             hostname = "76.234.69.149";
             port = 2201;
             extraOptions = {
-              LocalForward = "5999 127.0.0.1:5900";
+              LocalForward = "5999 127.0.0.1:5901";
+          };
+        };
+
+        # This is athena, as accessible from remote
+        build = {
+            hostname = "76.234.69.149";
+            port = 2202;
+            extraOptions = {
+              LocalForward = "5999 127.0.0.1:5902";
           };
         };
 
         vulcan.hostname = vulcan_ethernet;
         # vulcan = home;
+        athena.hostname = athena_ethernet;
+        # athena = build;
+        hermes.hostname = hermes_ethernet;
 
-        hermes   = onHost "vulcan" hermes_ethernet;
         macos    = onHost "vulcan" "172.16.194.129";
         ubuntu   = onHost "vulcan" "172.16.194.134";
         chainweb = onHost "vulcan" "192.168.1.152";
@@ -622,8 +638,8 @@ in {
 
         id_local = {
           host = lib.concatStringsSep " " [
-            "hermes" "home" "mac1*" "macos*" "nixos*" "mohajer"
-            "smokeping" "tank" "titan" "ubuntu*" "vulcan"
+            "vulcan" "home" "hermes" "athena" "mohajer"
+            "mac1*" "macos*" "nixos*" "smokeping" "tank" "ubuntu*"
           ];
           identityFile = "${config.xdg.configHome}/ssh/id_local";
           identitiesOnly = true;
@@ -679,7 +695,8 @@ in {
       [view]
       application/pdf = ${emacsclient} -n --eval '(org-pdfview-open "%f::%p")'
     '';
-
+  } //
+  (if pkgs.stdenv.targetPlatform.isx86_64 then {
     configFile."fetchmail/config".text = ''
       poll imap.fastmail.com protocol IMAP port 993 auth password
         user '${config.accounts.email.accounts.fastmail.address}' there is johnw here
@@ -697,7 +714,7 @@ in {
         fetchall
         mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e -m list.misc"
     '';
-  };
+   } else {});
 
   targets.darwin = {
     keybindings = {

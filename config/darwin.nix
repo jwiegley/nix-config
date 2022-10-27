@@ -66,7 +66,7 @@ in {
       }; in {
 
     package = pkgs.nixStable;
-    useDaemon = false;
+    useDaemon = localconfig.hostname == "athena";
 
     nixPath = lib.mkForce [{
       nixpkgs         = "${home}/src/nix/nixpkgs";
@@ -159,14 +159,14 @@ in {
       }; in {
 
     daemons = {
-      cleanup = {
-        script = ''
-          export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
-          ${pkgs.python2}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
-              >> /var/log/cleanup.log 2>&1
-        '';
-        serviceConfig = iterate 86400;
-      };
+      # cleanup = {
+      #   script = ''
+      #     export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
+      #     ${pkgs.python2}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
+      #         >> /var/log/cleanup.log 2>&1
+      #   '';
+      #   serviceConfig = iterate 86400;
+      # };
 
       limits = {
         script = ''
@@ -219,18 +219,6 @@ in {
           + "--check-integrity "
           + "--continue ");
 
-      dovecot = {
-        command = "${pkgs.dovecot}/libexec/dovecot/imap -c /etc/dovecot/dovecot.conf";
-        serviceConfig = {
-          WorkingDirectory = "${pkgs.dovecot}/lib";
-          inetdCompatibility.Wait = "nowait";
-          Sockets.Listeners = {
-            SockNodeName = "127.0.0.1";
-            SockServiceName = "9143";
-          };
-        };
-      };
-
       locate = {
         script = ''
           export PATH=${pkgs.findutils}/bin:$PATH
@@ -244,7 +232,20 @@ in {
         '';
         serviceConfig = iterate 86400;
       };
-    }
+    } //
+    (if pkgs.stdenv.targetPlatform.isx86_64 then {
+       dovecot = {
+         command = "${pkgs.dovecot}/libexec/dovecot/imap -c /etc/dovecot/dovecot.conf";
+         serviceConfig = {
+           WorkingDirectory = "${pkgs.dovecot}/lib";
+           inetdCompatibility.Wait = "nowait";
+           Sockets.Listeners = {
+             SockNodeName = "127.0.0.1";
+             SockServiceName = "9143";
+           };
+         };
+       };
+     } else {})
     // lib.optionalAttrs (localconfig.hostname == "vulcan") {
       znc = runCommand "${pkgs.znc}/bin/znc -f -d ${xdg_configHome}/znc";
     };

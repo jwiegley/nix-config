@@ -3,7 +3,7 @@ self: super: {
 dirscan = with super; python2Packages.buildPythonPackage rec {
   pname = "dirscan";
   version = "2.0";
-  name = "${pname}-${version}";
+  format = "source";
 
   src = ~/src/dirscan;
 
