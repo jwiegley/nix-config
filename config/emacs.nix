@@ -261,6 +261,7 @@ pkgs: epkgs: with epkgs;
   org-bookmark-heading
   org-ref
   org-rich-yank
+  org-roam
   org-super-agenda
   org-web-tools
   orgnav

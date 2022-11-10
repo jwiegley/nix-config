@@ -188,6 +188,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   screen
   sdcv
   shfmt
+  siege
   sift
   sipcalc
   sloccount
