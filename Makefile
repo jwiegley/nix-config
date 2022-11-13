@@ -125,15 +125,15 @@ switch:
 
 rebuild: build switch
 
-pull:
+tag-before:
+	$(call announce,git tag before-update)
+	git --git-dir=nixpkgs/.git branch -f before-update HEAD
+
+pull: tag-before
 	$(call announce,git pull)
 	(cd nixpkgs	 && git pull --rebase)
 	(cd darwin	 && git pull --rebase)
 	(cd home-manager && git pull --rebase)
-
-tag-before:
-	$(call announce,git tag before-update)
-	git --git-dir=nixpkgs/.git branch -f before-update HEAD
 
 tag-working:
 	$(call announce,git tag last-known-good)
@@ -142,7 +142,7 @@ tag-working:
 	git --git-dir=nixpkgs/.git tag -f known-good-$(LKG_DATE) \
 	    -m "known-good-$(LKG_DATE)" last-known-good
 
-mirror:
+mirror: tag-working
 	$(call announce,git push)
 	@for name in master unstable last-known-good; do	\
 	    git --git-dir=nixpkgs/.git push $(GIT_REMOTE)	\
@@ -152,9 +152,9 @@ mirror:
 	git --git-dir=darwin/.git push --mirror $(GIT_REMOTE)
 	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
 
-update: tag-before pull rebuild tag-working mirror
+update: pull rebuild mirror travel-ready check
 
-update-sync: update rebuild-all
+update-sync: pull copy rebuild-all mirror travel-ready-all check-all
 
 ########################################################################
 
