@@ -24,12 +24,12 @@ if [[ $PWD =~ kadena ]]; then
     if [[ $NOCACHE == false ]]; then
         echo Building direnv cache for a Kadena project...
         NIXOPTS+=(--option build-use-substitutes true)
-        NIXOPTS+=(--extra-substituters 'https://nixcache.chainweb.com')
-        NIXOPTS+=(--extra-trusted-public-keys 'nixcache.chainweb.com:FVN503ABX9F8x8K0ptnc99XEz5SaA4Sks6kNcZn2pBY=')
-        NIXOPTS+=(--extra-substituters 'http://nixcache.kadena.io')
-        NIXOPTS+=(--extra-trusted-public-keys 'kadena-cache.local-1:8wj8JW8V9tmc5bgNNyPM18DYNA1ws3X/MChXh1AQy/Q=')
-        NIXOPTS+=(--extra-substituters 'https://open-source.nixcache.obsidian.systems')
-        NIXOPTS+=(--extra-trusted-public-keys 'obsidian-open-source:KP1UbL7OIibSjFo9/2tiHCYLm/gJMfy8Tim7+7P4o0I=')
+        # NIXOPTS+=(--extra-substituters 'https://nixcache.chainweb.com')
+        # NIXOPTS+=(--extra-trusted-public-keys 'nixcache.chainweb.com:FVN503ABX9F8x8K0ptnc99XEz5SaA4Sks6kNcZn2pBY=')
+        # NIXOPTS+=(--extra-substituters 'http://nixcache.kadena.io')
+        # NIXOPTS+=(--extra-trusted-public-keys 'kadena-cache.local-1:8wj8JW8V9tmc5bgNNyPM18DYNA1ws3X/MChXh1AQy/Q=')
+        # NIXOPTS+=(--extra-substituters 'https://open-source.nixcache.obsidian.systems')
+        # NIXOPTS+=(--extra-trusted-public-keys 'obsidian-open-source:KP1UbL7OIibSjFo9/2tiHCYLm/gJMfy8Tim7+7P4o0I=')
         NIXOPTS+=(--extra-substituters 'https://cache.nixos.org')
         NIXOPTS+=(--extra-trusted-public-keys 'cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=')
     fi

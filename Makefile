@@ -12,22 +12,13 @@ LKG_DATE   = $(eval LKG_DATE := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
 ifeq ($(CACHE),)
 NIXOPTS	   = --option build-use-substitutes false	\
-	     --max-jobs 8				\
-	     --cores 4					\
-	     --keep-going				\
 	     --option substituters ''
 else
 ifeq ($(HOSTNAME),$(CACHE))
-# NIXOPTS	   =
-NIXOPTS	   = --max-jobs 8				\
-	     --cores 4					\
-	     --keep-going
+NIXOPTS	   =
 else
 NIXOPTS	   = --option build-use-substitutes true	\
 	     --option require-sigs false		\
-	     --max-jobs 8				\
-	     --cores 4					\
-	     --keep-going				\
 	     --option substituters 'ssh://$(CACHE)'
 endif
 endif
@@ -47,14 +38,15 @@ NIX_CONF  := $(HOME)/src/nix
 # various projects used to build this Nix configuration. See nix.nixPath in
 # darwin.nix for the system definition of the NIX_PATH, which relies on
 # whichever versions of the below were used to build that generation.
-NIX_PATH   = localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
-NIX_PATH  := $(NIX_PATH):nixpkgs=$(HOME)/src/nix/nixpkgs
+NIX_PATH   = $(HOME)/.nix-defexpr/channels
 NIX_PATH  := $(NIX_PATH):darwin=$(HOME)/src/nix/darwin
 NIX_PATH  := $(NIX_PATH):darwin-config=$(HOME)/src/nix/config/darwin.nix
-NIX_PATH  := $(NIX_PATH):home-manager=$(HOME)/src/nix/home-manager
 NIX_PATH  := $(NIX_PATH):hm-config=$(HOME)/src/nix/config/home.nix
-NIX_PATH  := $(NIX_PATH):ssh-config-file=$(HOME)/.ssh/config
+NIX_PATH  := $(NIX_PATH):home-manager=$(HOME)/src/nix/home-manager
+NIX_PATH  := $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
+NIX_PATH  := $(NIX_PATH):nixpkgs=$(HOME)/src/nix/nixpkgs
 NIX_PATH  := $(NIX_PATH):ssh-auth-sock=$(HOME)/.config/gnupg/S.gpg-agent.ssh
+NIX_PATH  := $(NIX_PATH):ssh-config-file=$(HOME)/.ssh/config
 
 NIX	   = $(PRENIX) nix
 NIX_BUILD  = $(PRENIX) nix-build
@@ -154,7 +146,7 @@ mirror: tag-working
 
 update: pull rebuild mirror travel-ready check
 
-update-sync: pull copy rebuild-all mirror travel-ready-all check-all
+update-sync: pull build copy rebuild-all mirror travel-ready-all check-all
 
 ########################################################################
 

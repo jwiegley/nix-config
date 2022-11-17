@@ -107,6 +107,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   jiq
   jo
   jq
+  jupyter
   killall
   kubectl
   ledgerPy2Env

@@ -342,7 +342,7 @@ pkgs: epkgs: with epkgs;
   spinner
   springboard
   sql-indent
-  string-edit
+  # string-edit
   string-inflection
   super-save
   supercite
