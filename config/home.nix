@@ -303,6 +303,12 @@ in {
            compinit
            # eval "$(op completion zsh)"; compdef _op op
         fi
+
+        function t() {
+            opt="$1"
+            shift 1
+            exec cabal test --test-options="opt" "$@"
+        }
       '';
 
       plugins = [

@@ -38,9 +38,14 @@ echo HOSTNAME=$HOSTNAME
 echo CACHE=$CACHE
 echo BUILDER=$BUILDER
 
-export NIXPKGS_ALLOW_UNFREE=1
+MAKEARGS="-C $NIX_CONF -f Makefile HOSTNAME=$HOSTNAME"
 
-exec make -C $NIX_CONF -f Makefile              \
-         HOSTNAME=$HOSTNAME                     \
-         CACHE=$CACHE                           \
-         BUILDER=$BUILDER "$@"
+if [[ $HOSTNAME != $BUILDER ]]; then
+    MAKEARGS="$MAKEARGS BUILDER=$BUILDER"
+fi
+if [[ $HOSTNAME != $CACHE ]]; then
+    MAKEARGS="$MAKEARGS CACHE=$CACHE"
+fi
+
+cd $NIX_CONF
+exec make $MAKEARGS "$@"

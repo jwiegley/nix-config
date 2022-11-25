@@ -55,14 +55,8 @@ NIX_STORE  = $(PRENIX) nix-store
 NIX_GC	   = $(PRENIX) nix-collect-garbage
 
 BUILD_ARGS = $(NIXOPTS) --keep-going
-ifeq ($(REALBUILDPATH),true)
-BUILD_PATH = $(eval BUILD_PATH :=					\
-		$(shell echo NIX_PATH=$(NIX_PATH) nix-build $(BUILD_ARGS)))$(BUILD_PATH)
-else
-BUILD_PATH = /run/current-system
-endif
 
-PRENIX	  := PATH=$(BUILD_PATH)/sw/bin:$(PATH) NIX_PATH=$(NIX_PATH)
+PRENIX	  := NIX_PATH=$(NIX_PATH)
 
 all: rebuild
 
@@ -92,13 +86,12 @@ tools:
 	@echo export NIX_PATH=$(NIX_PATH)
 	@echo export BUILD_ARGS=$(BUILD_ARGS)
 
-	@PATH=$(BUILD_PATH)/sw/bin:$(PATH)	\
-	    which				\
-		field				\
+	which   field				\
 		find				\
 		git				\
 		head				\
 		make				\
+		nix				\
 		nix-build			\
 		nix-env				\
 		sort				\
