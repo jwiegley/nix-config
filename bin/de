@@ -119,8 +119,7 @@ fi
 export NIXPKGS_ALLOW_UNFREE=1
 export NIXPKGS_ALLOW_BROKEN=1
 
-nix-shell "${NIXOPTS[@]}" "$@" -Q "${NIXOPTS_MORE[@]}" --run "\
-unset                 \
+SCRIPT="unset         \
     ALTERNATE_EDITOR  \
     EDITOR            \
     EMACS_SERVER_FILE \
@@ -131,5 +130,11 @@ unset                 \
     TERM              \
     TERM_SESSION_ID;  \
 direnv dump > .envrc.cache"
+
+if [[ -f flake.nix ]]; then
+    nix develop "${NIXOPTS[@]}" "$@" "${NIXOPTS_MORE[@]}" -c bash -c "$SCRIPT"
+else
+    nix-shell "${NIXOPTS[@]}" "$@" -Q "${NIXOPTS_MORE[@]}" --run "$SCRIPT"
+fi
 
 direnv reload

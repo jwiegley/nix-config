@@ -13,7 +13,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.lhs2tex)
   (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
-  (exe haskellPackages.hasktags)
+  (exe haskellPackages_9_2.hasktags)
   (exe haskellPackages.threadscope)
   (exe haskellPackages.pointfree)
   # haskellPackages.haskell-language-server
