@@ -15,5 +15,5 @@ in {
     # rev    = "known-good-20220815_094029";
     rev    = "5ae5d44e5ded42ba715be07002325487408d36ae";
     sha256 = "08mxlbs32m844vp6vnirgcd09qm9hmh1ifmjpb34jrppjdmal069";
-  }) biber;
+  }) biber fd httpie;
 }

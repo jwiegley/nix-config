@@ -1,37 +1,23 @@
 HOSTNAME   = vulcan
-CACHE      = vulcan
-BUILDER    = vulcan
 REMOTES	   = hermes
 GIT_REMOTE = jwiegley
 MAX_AGE	   = 14
+NIX_CONF   = $(HOME)/src/nix
+NIXOPTS	   =
 
 # Lazily evaluated variables; expensive to compute, but we only want it do it
 # when first necessary.
 GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
 LKG_DATE   = $(eval LKG_DATE := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
-ifeq ($(CACHE),)
-NIXOPTS	   = --option build-use-substitutes false	\
-	     --option substituters ''
-else
-ifeq ($(HOSTNAME),$(CACHE))
-NIXOPTS	   =
-else
-NIXOPTS	   = --option build-use-substitutes true	\
-	     --option require-sigs false		\
+ifneq ($(CACHE),)
+NIXOPTS	  := $(NIXOPTS) --option build-use-substitutes true	\
+	     --option require-sigs false			\
 	     --option substituters 'ssh://$(CACHE)'
 endif
-endif
-
-ifeq ($(BUILDER),)
-NIXOPTS	  := $(NIXOPTS) --option builders ''
-else
-ifneq ($(HOSTNAME),$(BUILDER))
+ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
-endif
-
-NIX_CONF  := $(HOME)/src/nix
 
 # When building with the Makefile, rather than calling darwin-rebuild
 # directly, we set the NIX_PATH to point at whatever is the latest pull of the
@@ -103,6 +89,12 @@ build:
 	@$(NIX) build $(BUILD_ARGS) -f "<darwin>" system --keep-going
 	@rm -f result*
 
+build-dry:
+	$(call announce,nix build -f "<darwin>" system --dry-run)
+	env > /tmp/build-dry-env
+	@echo $(NIX) build $(BUILD_ARGS) -f "<darwin>" system --dry-run
+	@$(NIX) build $(BUILD_ARGS) -f "<darwin>" system --dry-run
+
 switch:
 	$(call announce,darwin-rebuild switch)
 	@$(PRENIX) darwin-rebuild switch --cores 1 -j1
@@ -139,7 +131,7 @@ mirror: tag-working
 
 update: pull rebuild mirror travel-ready check
 
-update-sync: pull build copy rebuild-all mirror travel-ready-all check-all
+update-sync: pull build copy rebuild-all mirror travel-ready-all check-all sign cache
 
 ########################################################################
 
@@ -188,6 +180,33 @@ check:
 
 sizes:
 	df -H /nix 2>&1 | grep /dev
+
+# REMOTE_CACHE = "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
+SERVER = athena
+REMOTE_CACHE = "ssh://$(SERVER)"
+
+sign:
+	nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
+
+cache-system:
+	$(call announce,nix copy --to $(REMOTE_CACHE) <system>)
+	nix copy --to $(REMOTE_CACHE)			\
+	    $$(readlink .nix-profile)			\
+	    $$(readlink /var/run/current-system)
+
+cache-sources:
+	$(call announce,nix copy --to $(REMOTE_CACHE) <sources>)
+	find /nix/store/ -maxdepth 1 \(			\
+	       -name '*.xz'				\
+	    -o -name '*.bz2'				\
+	    -o -name '*.gz'				\
+	    -o -name '*.dmg'				\
+	    -o -name '*.zip'				\
+	    -o -name '*.tar'				\
+	     \) -type f -print0 |			\
+	    xargs -0 nix copy --to $(REMOTE_CACHE)
+
+cache: cache-system cache-sources
 
 PROJECTS = $(HOME)/.config/projects
 

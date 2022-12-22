@@ -2,8 +2,6 @@
 
 if [[ "$1" == "vulcan" ]]; then
   HOSTNAME=vulcan
-  if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
-  if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
   shift 1
 
 elif [[ "$1" == "hermes" ]]; then
@@ -18,8 +16,6 @@ elif [[ "$1" == "athena" ]]; then
 
 elif [[ $(hostname) =~ [Vv]ulcan ]]; then
   HOSTNAME=vulcan
-  if [ -z ${CACHE+x} ]; then CACHE=hermes; fi
-  if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
 
 elif [[ $(hostname) =~ [Hh]ermes ]]; then
   HOSTNAME=hermes
@@ -34,18 +30,18 @@ else
   exit 1
 fi
 
-echo HOSTNAME=$HOSTNAME
-echo CACHE=$CACHE
-echo BUILDER=$BUILDER
-
 MAKEARGS="-C $NIX_CONF -f Makefile HOSTNAME=$HOSTNAME"
+echo HOSTNAME=$HOSTNAME
 
-if [[ $HOSTNAME != $BUILDER ]]; then
+if [[ -n $BUILDER && $HOSTNAME != $BUILDER ]]; then
     MAKEARGS="$MAKEARGS BUILDER=$BUILDER"
+    echo BUILDER=$BUILDER
 fi
-if [[ $HOSTNAME != $CACHE ]]; then
+if [[ -n $CACHE && $HOSTNAME != $CACHE ]]; then
     MAKEARGS="$MAKEARGS CACHE=$CACHE"
+    echo CACHE=$CACHE
 fi
 
 cd $NIX_CONF
+
 exec make $MAKEARGS "$@"

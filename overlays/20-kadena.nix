@@ -2,7 +2,7 @@ self: pkgs:
 
 {
 
-inherit (pkgs.callPackage ~/kadena/fully-local {})
-  start-kadena pact;
+inherit (import ~/kadena/fully-local {})
+  start-kadena pact kda-tool;
 
 }

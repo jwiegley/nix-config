@@ -20,14 +20,14 @@ fi
 NIXOPTS=(--cores 2 -j4)
 NIXOPTS_MORE=()
 
-if [[ $PWD =~ kadena ]]; then
+if [[ $PWD =~ kadena || $PWD =~ athena ]]; then
     if [[ $NOCACHE == false ]]; then
         echo Building direnv cache for a Kadena project...
         NIXOPTS+=(--option build-use-substitutes true)
-        # NIXOPTS+=(--extra-substituters 'https://nixcache.chainweb.com')
-        # NIXOPTS+=(--extra-trusted-public-keys 'nixcache.chainweb.com:FVN503ABX9F8x8K0ptnc99XEz5SaA4Sks6kNcZn2pBY=')
-        # NIXOPTS+=(--extra-substituters 'http://nixcache.kadena.io')
-        # NIXOPTS+=(--extra-trusted-public-keys 'kadena-cache.local-1:8wj8JW8V9tmc5bgNNyPM18DYNA1ws3X/MChXh1AQy/Q=')
+        NIXOPTS+=(--extra-substituters 'https://nixcache.chainweb.com')
+        NIXOPTS+=(--extra-trusted-public-keys 'nixcache.chainweb.com:FVN503ABX9F8x8K0ptnc99XEz5SaA4Sks6kNcZn2pBY=')
+        NIXOPTS+=(--extra-substituters 'http://nixcache.kadena.io')
+        NIXOPTS+=(--extra-trusted-public-keys 'kadena-cache.local-1:8wj8JW8V9tmc5bgNNyPM18DYNA1ws3X/MChXh1AQy/Q=')
         # NIXOPTS+=(--extra-substituters 'https://open-source.nixcache.obsidian.systems')
         # NIXOPTS+=(--extra-trusted-public-keys 'obsidian-open-source:KP1UbL7OIibSjFo9/2tiHCYLm/gJMfy8Tim7+7P4o0I=')
         NIXOPTS+=(--extra-substituters 'https://cache.nixos.org')
@@ -133,6 +133,8 @@ direnv dump > .envrc.cache"
 
 if [[ -f flake.nix ]]; then
     nix develop "${NIXOPTS[@]}" "$@" "${NIXOPTS_MORE[@]}" -c bash -c "$SCRIPT"
+elif [[ -f shell-new.nix ]]; then
+    nix-shell shell-new.nix "${NIXOPTS[@]}" "$@" -Q "${NIXOPTS_MORE[@]}" --run "$SCRIPT"
 else
     nix-shell "${NIXOPTS[@]}" "$@" -Q "${NIXOPTS_MORE[@]}" --run "$SCRIPT"
 fi

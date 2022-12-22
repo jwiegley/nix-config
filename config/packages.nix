@@ -14,9 +14,9 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
   (exe haskellPackages_9_2.hasktags)
+  (exe haskellPackages_9_2.ormolu)
   (exe haskellPackages.threadscope)
   (exe haskellPackages.pointfree)
-  # haskellPackages.haskell-language-server
   act
   apg
   aria2
@@ -46,6 +46,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   diffutils
   direnv
   ditaa
+  dnsutils
   dot2tex
   doxygen
   emacs28Env
@@ -96,7 +97,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   hs-to-coq
   html-tidy
   htop
-  httpie
+  # httpie
   httrack
   iftop
   imagemagickBig
@@ -172,12 +173,13 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   pstree
   pv
   python3
-  qemu # libvirt
+  qemu libvirt
   qpdf
   qrencode
   ratpoison
   rclone
   recoll
+  renameutils
   restic
   ripgrep
   rlwrap
@@ -234,6 +236,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   # xquartz
   xsv
   xz
+  # yamale
   youtube-dl
   yq
   yuicompressor
@@ -247,18 +250,23 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   zsh-syntax-highlighting
 
   # Kadena packages
-  # start-kadena
-  # pact
-] ++ pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
-  (exe haskellPackages_9_2.ormolu)
+  (pkgs.lowPrio pact)
+  (pkgs.lowPrio kda-tool)
+
+  # Dfinity packages
+  quill
+  candid
+  idl2json
+]
+
+++
+
+pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
   contacts
-  (pkgs.lowPrio dafny)
+  # (pkgs.lowPrio dafny)
   dovecot
   dovecot_pigeonhole
-  dnsutils
   jdiskreport
-  mitmproxy
-  renameutils
+  # mitmproxy
   tlaplus
-  yamale
 ]

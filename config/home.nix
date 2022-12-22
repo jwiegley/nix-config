@@ -597,19 +597,19 @@ in {
 
         # This is vulcan, as accessible from remote
         home = {
-            hostname = "76.234.69.149";
-            port = 2201;
-            extraOptions = {
-              LocalForward = "5999 127.0.0.1:5901";
+          hostname = "76.234.69.149";
+          port = 2201;
+          extraOptions = {
+            LocalForward = "5999 127.0.0.1:5901";
           };
         };
 
         # This is athena, as accessible from remote
         build = {
-            hostname = "76.234.69.149";
-            port = 2202;
-            extraOptions = {
-              LocalForward = "5999 127.0.0.1:5902";
+          hostname = "76.234.69.149";
+          port = 2202;
+          extraOptions = {
+            LocalForward = "5999 127.0.0.1:5902";
           };
         };
 
@@ -620,6 +620,7 @@ in {
         hermes.hostname = hermes_ethernet;
 
         macos    = onHost "vulcan" "172.16.194.129";
+        macos15  = onHost "vulcan" "172.16.194.136";
         ubuntu   = onHost "vulcan" "172.16.194.134";
         chainweb = onHost "vulcan" "192.168.1.152";
 
