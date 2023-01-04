@@ -316,8 +316,8 @@ in {
           name = "iterm2_shell_integration";
           src = pkgs.fetchurl {
             url = https://iterm2.com/shell_integration/zsh;
-            sha256 = "0r7pwn0m4siazfv22g31la3y0kksqn0dmr4cqbd454b59s39f1q4";
-            # date = 2022-09-26T21:23:26-0700;
+            sha256 = "1xk6kx5kdn5wbqgx2f63vnafhkynlxnlshxrapkwkd9zf2531bqa";
+            # date = 2022-12-28T10:15:23-0800;
           };
         }
         {
@@ -325,7 +325,7 @@ in {
           src = pkgs.fetchurl {
             url = https://gist.githubusercontent.com/antifuchs/c8eca4bcb9d09a7bbbcd/raw/3ebfecdad7eece7c537a3cd4fa0510f25d02611b/iterm2_zsh_init.zsh;
             sha256 = "1v1b6yz0lihxbbg26nvz85c1hngapiv7zmk4mdl5jp0fsj6c9s8c";
-            # date = 2022-09-26T21:23:29-0700;
+            # date = 2022-12-28T10:15:27-0800;
           };
         }
       ];
@@ -341,6 +341,7 @@ in {
 
     gpg = {
       enable = true;
+      homedir = "${config.xdg.configHome}/gnupg";
       settings = {
         default-key = master_key;
 

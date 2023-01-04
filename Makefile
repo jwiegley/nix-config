@@ -13,7 +13,7 @@ LKG_DATE   = $(eval LKG_DATE := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 ifneq ($(CACHE),)
 NIXOPTS	  := $(NIXOPTS) --option build-use-substitutes true	\
 	     --option require-sigs false			\
-	     --option substituters 'ssh://$(CACHE)'
+	     --option trusted-substituters 'ssh://$(CACHE)'
 endif
 ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
@@ -213,21 +213,21 @@ PROJECTS = $(HOME)/.config/projects
 travel-ready:
 	$(call announce,travel-ready)
 	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
-	@for dir in "$${projects[@]}"; do		\
-	    echo "Updating direnv for ~/$$dir";		\
-	    (cd ~/$$dir;				\
-             if [[ $(HOSTNAME) == athena ]]; then	\
-                 unset BUILDER CACHE;			\
-	         $(NIX_CONF)/bin/de --no-cache;		\
-             elif [[ $(HOSTNAME) != hermes ]]; then	\
-                 unset BUILDER;				\
-		 CACHE=$(CACHE);			\
-	         $(NIX_CONF)/bin/de;			\
-             else					\
-	         BUILDER=$(BUILDER);			\
-		 CACHE=$(CACHE);			\
-	         $(NIX_CONF)/bin/de;			\
-	     fi);					\
+	@for dir in "$${projects[@]}"; do			\
+	    echo "Updating direnv on $(HOSTNAME) for ~/$$dir";	\
+	    (cd ~/$$dir;					\
+             if [[ $(HOSTNAME) == athena ]]; then		\
+                 unset BUILDER CACHE;				\
+	         $(NIX_CONF)/bin/de --no-cache;			\
+             elif [[ $(HOSTNAME) != hermes ]]; then		\
+                 unset BUILDER;					\
+		 CACHE=$(CACHE);				\
+	         $(NIX_CONF)/bin/de;				\
+             else						\
+	         unset BUILDER;					\
+		 CACHE=$(CACHE);				\
+	         $(NIX_CONF)/bin/de;				\
+	     fi);						\
 	done
 
 .ONESHELL:

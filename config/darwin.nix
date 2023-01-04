@@ -66,7 +66,7 @@ in {
       }; in {
 
     package = pkgs.nixStable;
-    useDaemon = localconfig.hostname == "athena";
+    useDaemon = true;
 
     nixPath = lib.mkForce [{
       nixpkgs         = "${home}/src/nix/nixpkgs";

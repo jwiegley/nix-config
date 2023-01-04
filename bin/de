@@ -42,13 +42,13 @@ if [[ -n ${CACHE+x} && $NOCACHE == false ]]; then
     if [[ ! ($NIXOPTS =~ build-use-substitutes) ]]; then
         NIXOPTS+=(--option build-use-substitutes true)
     fi
-    NIXOPTS+=(--option substituters "ssh://${CACHE}")
-    echo "Using substitutor: ssh://${CACHE}"
+    NIXOPTS+=(--option trusted-substituters "ssh-ng://${CACHE}")
+    echo "Using substitutor: ssh-ng://${CACHE}"
 fi
 
 if [[ -n ${BUILDER+x} ]]; then
-    NIXOPTS+=(--option builders "ssh://${BUILDER}")
-    echo "Using builder: ssh://${CACHE}"
+    NIXOPTS+=(--option builders "ssh-ng://${BUILDER}")
+    echo "Using builder: ssh-ng://${BUILDER}"
 fi
 
 if [[ ! -f .envrc ]]; then
