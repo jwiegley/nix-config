@@ -15,7 +15,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.hpack)
   (exe haskellPackages_9_2.hasktags)
   (exe haskellPackages_9_2.ormolu)
-  (exe haskellPackages.threadscope)
+  # (exe (haskell.lib.doJailbreak haskellPackages.threadscope))
   (exe haskellPackages.pointfree)
   act
   apg

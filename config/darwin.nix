@@ -39,9 +39,13 @@ in {
   nixpkgs = {
     config = {
       allowUnfree = true;
-      allowBroken = true;
+      allowBroken = false;
       allowInsecure = false;
       allowUnsupportedSystem = false;
+
+      permittedInsecurePackages = [
+        "python-2.7.18.6"
+      ];
     };
 
     overlays =
@@ -204,7 +208,7 @@ in {
           export PATH=/usr/local/zfs/bin:$PATH
           export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
           /sbin/kextload /Library/Extensions/zfs.kext
-          zpool import tank
+          zpool import -d /var/run/disk/by-serial tank
         '';
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = false;
