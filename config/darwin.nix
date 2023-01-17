@@ -194,14 +194,15 @@ in {
       };
     }
     // lib.optionalAttrs (localconfig.hostname == "vulcan") {
-      snapshots = {
-        script = ''
-          export PATH=$PATH:${pkgs.my-scripts}/bin:/usr/local/bin
-          date >> /var/log/snapshots.log 2>&1
-          snapshots tank
-        '';
-        serviceConfig = iterate 3600;
-      };
+      # snapshots = {
+      #   script = ''
+      #     export PATH=${pkgs.my-scripts}/bin:$PATH
+      #     export PATH=/usr/local/zfs/bin:$PATH
+      #     date >> /var/log/snapshots.log 2>&1
+      #     snapshots tank >> /var/log/snapshots.log 2>&1
+      #   '';
+      #   serviceConfig = iterate 3600;
+      # };
 
       tank = {
         script = ''

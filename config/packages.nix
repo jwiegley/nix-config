@@ -24,6 +24,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   aspell
   aspellDicts.en
   awscli2
+  b3sum
   backblaze-b2
   bandwhich
   bash-completion
@@ -243,6 +244,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   z
   z3
   zbar
+  zfs-prune-snapshots
   zip
   znc
   zncModules.push
