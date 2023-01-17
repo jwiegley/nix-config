@@ -14,6 +14,12 @@ ifneq ($(CACHE),)
 NIXOPTS	  := $(NIXOPTS) --option build-use-substitutes true	\
 	     --option require-sigs false			\
 	     --option trusted-substituters 'ssh://$(CACHE)'
+else
+ifeq ($(HOSTNAME),vulcan)
+NIXOPTS	  := $(NIXOPTS) --option build-use-substitutes true	\
+	     --option require-sigs false			\
+	     --option trusted-substituters 'file:///Volumes/tank/nix'
+endif
 endif
 ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
@@ -182,8 +188,9 @@ sizes:
 	df -H /nix 2>&1 | grep /dev
 
 # REMOTE_CACHE = "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
-SERVER = athena
-REMOTE_CACHE = "ssh://$(SERVER)"
+# SERVER = athena
+# REMOTE_CACHE = "ssh://$(SERVER)"
+REMOTE_CACHE = "file:///Volumes/tank/nix"
 
 sign:
 	nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
@@ -206,7 +213,8 @@ cache-sources:
 	     \) -type f -print0 |			\
 	    xargs -0 nix copy --to $(REMOTE_CACHE)
 
-cache: cache-system cache-sources
+cache:
+	nix copy --to $(REMOTE_CACHE) --all
 
 PROJECTS = $(HOME)/.config/projects
 
