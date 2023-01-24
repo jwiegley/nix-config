@@ -14,7 +14,7 @@ stdenv.mkDerivation rec {
   };
 
   buildInputs = [ coq coq.ocaml coq.camlp5 coq.findlib
-                  pkgs.git pkgs.python27 ];
+                  pkgs.git pkgs.python3 ];
   propagatedBuildInputs = [ coq ];
 
   doCheck = false;

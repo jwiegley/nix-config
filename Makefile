@@ -11,15 +11,7 @@ GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%
 LKG_DATE   = $(eval LKG_DATE := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
 
 ifneq ($(CACHE),)
-NIXOPTS	  := $(NIXOPTS) --option build-use-substitutes true	\
-	     --option require-sigs false			\
-	     --option trusted-substituters 'ssh://$(CACHE)'
-else
-ifeq ($(HOSTNAME),vulcan)
-NIXOPTS	  := $(NIXOPTS) --option build-use-substitutes true	\
-	     --option require-sigs false			\
-	     --option trusted-substituters 'file:///Volumes/tank/nix'
-endif
+NIXOPTS	  := $(NIXOPTS) --substituters 'ssh://$(CACHE)'
 endif
 ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
@@ -87,7 +79,6 @@ tools:
 		nix-build			\
 		nix-env				\
 		sort				\
-		sudo				\
 		uniq
 
 build:
@@ -144,7 +135,7 @@ update-sync: pull build copy rebuild-all mirror travel-ready-all check-all sign 
 copy-src:
 	$(call announce,pushme)
 	@for host in $(REMOTES); do				\
-	    push -f home,src,kadena $$host;			\
+	    push -f home,src,doc,kadena $$host;			\
 	done
 
 copy: copy-src
@@ -162,30 +153,26 @@ define delete-generations-all
 	$(call delete-generations,-p /nix/var/nix/profiles/system,$(1))
 endef
 
-clean: gc check
-
-fullclean: gc-old check
-
-gc:
-	$(call delete-generations-all,$(MAX_AGE))
-	$(NIX_GC) --delete-older-than $(MAX_AGE)d
-
-gc-old:
-	$(call delete-generations-all,1)
-	$(NIX_GC) --delete-old
-
-fullclean:
-	$(call fullclean,clean)
-	(cd $(HOME) && clean)
-
-purge: fullclean gc-old
-
 check:
 	$(call announce,nix-store --check-contents)
 	$(NIX_STORE) --verify --repair --check-contents
 
 sizes:
 	df -H /nix 2>&1 | grep /dev
+
+gc:
+	$(call delete-generations-all,$(MAX_AGE))
+	$(NIX_GC) --delete-older-than $(MAX_AGE)d
+	sudo $(NIX_GC) --delete-older-than $(MAX_AGE)d
+
+clean: gc check
+
+gc-old:
+	$(call delete-generations-all,1)
+	$(NIX_GC) --delete-old
+	sudo $(NIX_GC) --delete-old
+
+purge: gc-old check
 
 # REMOTE_CACHE = "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
 # SERVER = athena

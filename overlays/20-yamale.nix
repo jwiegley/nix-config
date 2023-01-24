@@ -1,6 +1,6 @@
 self: super: {
 
-yamale = with super; with python2Packages; buildPythonPackage rec {
+yamale = with super; with python3Packages; buildPythonPackage rec {
   pname = "yamale";
   version = "618289c0";
   name = "${pname}-${version}";

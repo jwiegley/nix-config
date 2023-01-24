@@ -23,7 +23,6 @@ NIXOPTS_MORE=()
 if [[ $PWD =~ kadena || $PWD =~ athena ]]; then
     if [[ $NOCACHE == false ]]; then
         echo Building direnv cache for a Kadena project...
-        NIXOPTS+=(--option build-use-substitutes true)
         NIXOPTS+=(--extra-substituters 'https://nixcache.chainweb.com')
         NIXOPTS+=(--extra-trusted-public-keys 'nixcache.chainweb.com:FVN503ABX9F8x8K0ptnc99XEz5SaA4Sks6kNcZn2pBY=')
         NIXOPTS+=(--extra-substituters 'http://nixcache.kadena.io')
@@ -39,11 +38,12 @@ else
 fi
 
 if [[ -n ${CACHE+x} && $NOCACHE == false ]]; then
-    if [[ ! ($NIXOPTS =~ build-use-substitutes) ]]; then
-        NIXOPTS+=(--option build-use-substitutes true)
-    fi
-    NIXOPTS+=(--option trusted-substituters "ssh-ng://${CACHE}")
+    NIXOPTS+=(--substituters "ssh-ng://${CACHE}")
     echo "Using substitutor: ssh-ng://${CACHE}"
+
+elif [[ $(hostname) =~ [Vv]ulcan ]]; then
+    NIXOPTS+=(--substituters "file:///Volumes/tank/nix")
+    echo "Using substitutor: file:///Volumes/tank/nix"
 fi
 
 if [[ -n ${BUILDER+x} ]]; then

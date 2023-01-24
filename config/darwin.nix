@@ -89,6 +89,13 @@ in {
       cores = 2;
 
       substituters = [
+      ] ++ lib.optionals (localconfig.hostname == "vulcan") [
+        "file:///Volumes/tank/nix"
+      ];
+
+      trusted-substituters = [
+      ] ++ lib.optionals (localconfig.hostname == "vulcan") [
+        "file:///Volumes/tank/nix"
       ];
 
       trusted-public-keys = [
@@ -166,7 +173,7 @@ in {
       # cleanup = {
       #   script = ''
       #     export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
-      #     ${pkgs.python2}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
+      #     ${pkgs.python3}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
       #         >> /var/log/cleanup.log 2>&1
       #   '';
       #   serviceConfig = iterate 86400;
@@ -194,26 +201,26 @@ in {
       };
     }
     // lib.optionalAttrs (localconfig.hostname == "vulcan") {
-      # snapshots = {
-      #   script = ''
-      #     export PATH=${pkgs.my-scripts}/bin:$PATH
-      #     export PATH=/usr/local/zfs/bin:$PATH
-      #     date >> /var/log/snapshots.log 2>&1
-      #     snapshots tank >> /var/log/snapshots.log 2>&1
-      #   '';
-      #   serviceConfig = iterate 3600;
-      # };
-
-      tank = {
+      snapshots = {
         script = ''
+          export PATH=${pkgs.my-scripts}/bin:$PATH
           export PATH=/usr/local/zfs/bin:$PATH
-          export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
-          /sbin/kextload /Library/Extensions/zfs.kext
-          zpool import -d /var/run/disk/by-serial tank
+          date >> /var/log/snapshots.log 2>&1
+          snapshots ext >> /var/log/snapshots.log 2>&1
         '';
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = false;
+        serviceConfig = iterate 3600;
       };
+
+      # tank = {
+      #   script = ''
+      #     export PATH=/usr/local/zfs/bin:$PATH
+      #     export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
+      #     /sbin/kextload /Library/Extensions/zfs.kext
+      #     zpool import -d /var/run/disk/by-serial tank
+      #   '';
+      #   serviceConfig.RunAtLoad = true;
+      #   serviceConfig.KeepAlive = false;
+      # };
      };
 
     user.agents = {

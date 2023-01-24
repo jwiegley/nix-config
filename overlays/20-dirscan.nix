@@ -1,6 +1,6 @@
 self: super: {
 
-dirscan = with super; python2Packages.buildPythonPackage rec {
+dirscan = with super; python3Packages.buildPythonPackage rec {
   pname = "dirscan";
   version = "2.0";
   format = "source";

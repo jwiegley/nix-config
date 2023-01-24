@@ -14,7 +14,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
   (exe haskellPackages_9_2.hasktags)
-  (exe haskellPackages_9_2.ormolu)
+  haskellPackages_9_2.ormolu.bin
   # (exe (haskell.lib.doJailbreak haskellPackages.threadscope))
   (exe haskellPackages.pointfree)
   act
@@ -39,7 +39,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   csvkit
   ctop
   curl
-  cvc4
+  # cvc4
   darwin.cctools
   dhall
   dhall-json
@@ -59,12 +59,13 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   ffmpeg
   figlet
   findutils
+  fio
   fontconfig
   fswatch
   fzf
   gawk
   gh
-  ghi
+  # ghi
   gist
   git-lfs
   git-scripts
@@ -98,7 +99,8 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   hs-to-coq
   html-tidy
   htop
-  # httpie
+  # httm
+  httpie
   httrack
   iftop
   imagemagickBig
@@ -109,10 +111,9 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   jiq
   jo
   jq
-  jupyter
+  # jupyter
   killall
   kubectl
-  ledgerPy2Env
   ledgerPy3Env
   ledger_HEAD
   less
@@ -186,6 +187,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   rlwrap
   rsync
   ruby
+  sanoid
   sbcl
   scc
   sccache
@@ -237,7 +239,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   # xquartz
   xsv
   xz
-  # yamale
+  yamale
   youtube-dl
   yq
   yuicompressor
@@ -251,11 +253,11 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   zsh
   zsh-syntax-highlighting
 
-  # Kadena packages
+  ## Kadena packages
   (pkgs.lowPrio pact)
   (pkgs.lowPrio kda-tool)
 
-  # Dfinity packages
+  ## Dfinity packages
   quill
   candid
   idl2json
