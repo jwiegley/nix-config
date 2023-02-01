@@ -14,7 +14,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
   (exe haskellPackages_9_2.hasktags)
-  haskellPackages_9_2.ormolu.bin
   # (exe (haskell.lib.doJailbreak haskellPackages.threadscope))
   (exe haskellPackages.pointfree)
   act
@@ -266,6 +265,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
 ++
 
 pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
+  haskellPackages_9_2.ormolu.bin
   contacts
   # (pkgs.lowPrio dafny)
   dovecot

@@ -41,7 +41,7 @@ if [[ -n ${CACHE+x} && $NOCACHE == false ]]; then
     NIXOPTS+=(--substituters "ssh-ng://${CACHE}")
     echo "Using substitutor: ssh-ng://${CACHE}"
 
-elif [[ $(hostname) =~ [Vv]ulcan ]]; then
+elif [[ $(hostname) =~ [Vv]ulcan && $NOCACHE == false ]]; then
     NIXOPTS+=(--substituters "file:///Volumes/tank/nix")
     echo "Using substitutor: file:///Volumes/tank/nix"
 fi

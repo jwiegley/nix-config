@@ -126,9 +126,9 @@ mirror: tag-working
 	git --git-dir=darwin/.git push --mirror $(GIT_REMOTE)
 	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
 
-update: pull rebuild mirror travel-ready check
+update: pull rebuild sign cache mirror travel-ready check
 
-update-sync: pull build copy rebuild-all mirror travel-ready-all check-all sign cache
+update-sync: pull build copy sign cache-all rebuild-all mirror travel-ready-all check-all
 
 ########################################################################
 
@@ -180,11 +180,12 @@ purge: gc-old check
 REMOTE_CACHE = "file:///Volumes/tank/nix"
 
 sign:
-	nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
+	$(call announce,nix store sign -k <key> --all)
+	@$(NIX) store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
 
 cache-system:
 	$(call announce,nix copy --to $(REMOTE_CACHE) <system>)
-	nix copy --to $(REMOTE_CACHE)			\
+	@$(NIX) copy --to $(REMOTE_CACHE)		\
 	    $$(readlink .nix-profile)			\
 	    $$(readlink /var/run/current-system)
 
@@ -198,10 +199,16 @@ cache-sources:
 	    -o -name '*.zip'				\
 	    -o -name '*.tar'				\
 	     \) -type f -print0 |			\
-	    xargs -0 nix copy --to $(REMOTE_CACHE)
+	    xargs -0 $(NIX) copy --to $(REMOTE_CACHE)
+
+cache-all:
+	$(call announce,nix copy --to <tank,hermes> --all)
+	@$(NIX) copy --to $(REMOTE_CACHE) --all
+	@$(NIX) copy --to ssh-ng://hermes --all
 
 cache:
-	nix copy --to $(REMOTE_CACHE) --all
+	$(call announce,nix copy --to $(REMOTE_CACHE) --all)
+	@$(NIX) copy --to $(REMOTE_CACHE) --all
 
 PROJECTS = $(HOME)/.config/projects
 

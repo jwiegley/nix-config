@@ -622,7 +622,7 @@ in {
 
         macos    = onHost "vulcan" "172.16.194.129";
         macos15  = onHost "vulcan" "172.16.194.136";
-        ubuntu   = onHost "vulcan" "172.16.194.134";
+        ubuntu   = onHost "vulcan" "172.16.194.137";
         chainweb = onHost "vulcan" "192.168.1.152";
 
         mohajer = { hostname = "192.168.50.120"; user = "nasimwiegley"; };

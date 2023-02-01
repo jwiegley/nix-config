@@ -203,24 +203,49 @@ in {
     // lib.optionalAttrs (localconfig.hostname == "vulcan") {
       snapshots = {
         script = ''
-          export PATH=${pkgs.my-scripts}/bin:$PATH
-          export PATH=/usr/local/zfs/bin:$PATH
           date >> /var/log/snapshots.log 2>&1
-          snapshots ext >> /var/log/snapshots.log 2>&1
+          ${pkgs.sanoid}/bin/sanoid --cron --verbose >> /var/log/snapshots.log 2>&1
         '';
         serviceConfig = iterate 3600;
       };
 
-      # tank = {
-      #   script = ''
-      #     export PATH=/usr/local/zfs/bin:$PATH
-      #     export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
-      #     /sbin/kextload /Library/Extensions/zfs.kext
-      #     zpool import -d /var/run/disk/by-serial tank
-      #   '';
-      #   serviceConfig.RunAtLoad = true;
-      #   serviceConfig.KeepAlive = false;
-      # };
+      unmount = {
+        script = ''
+          diskutil unmount /Volumes/BOOTCAMP
+          diskutil unmount /Volumes/Games
+        '';
+        serviceConfig.RunAtLoad = true;
+        serviceConfig.KeepAlive = false;
+      };
+
+      zfs-import = {
+        script = ''
+          export PATH=/usr/local/zfs/bin:$PATH
+          export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
+          zpool import -d /var/run/disk/by-serial -a
+        '';
+        serviceConfig.RunAtLoad = true;
+        serviceConfig.KeepAlive = false;
+      };
+     }
+    // lib.optionalAttrs (localconfig.hostname == "athena") {
+      snapshots = {
+        script = ''
+          date >> /var/log/snapshots.log 2>&1
+          ${pkgs.sanoid}/bin/sanoid --cron --verbose >> /var/log/snapshots.log 2>&1
+        '';
+        serviceConfig = iterate 3600;
+      };
+
+      zfs-import = {
+        script = ''
+          export PATH=/usr/local/zfs/bin:$PATH
+          export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
+          zpool import -d /var/run/disk/by-serial -a
+        '';
+        serviceConfig.RunAtLoad = true;
+        serviceConfig.KeepAlive = false;
+      };
      };
 
     user.agents = {
@@ -427,6 +452,76 @@ in {
       #   name  = bad.server.com;   # Badly behaved server you don't want to connect to.
       #   types = A,AAAA;
       # }
+    '';
+  }
+  // lib.optionalAttrs (localconfig.hostname == "vulcan") {
+    etc."sanoid/sanoid.conf".text = ''
+      [ext/Photos]
+      use_template = production
+
+      [ext/ChainState/cardano]
+      use_template = production
+
+      [tank]
+      use_template = archival
+      recursive = yes
+      process_children_only = yes
+
+      [template_production]
+
+      script_timeout = 5
+      frequent_period = 60
+
+      autoprune = yes
+      frequently = 0
+      hourly = 48
+      daily = 90
+      weekly = 20
+      monthly = 12
+      yearly = 20
+
+      # pruning can be skipped based on the used capacity of the pool
+      # (0: always prune, 1-100: only prune if used capacity is greater than this value)
+      prune_defer = 60
+
+      [template_archival]
+
+      autoprune = yes
+      frequently = 0
+      hourly = 0
+      daily = 90
+      weekly = 20
+      monthly = 12
+      yearly = 20
+
+      # pruning can be skipped based on the used capacity of the pool
+      # (0: always prune, 1-100: only prune if used capacity is greater than this value)
+      prune_defer = 60
+    '';
+  }
+  // lib.optionalAttrs (localconfig.hostname == "athena") {
+    etc."sanoid/sanoid.conf".text = ''
+      [studio/ChainState/kadena]
+      use_template = production
+      recursive = yes
+      process_children_only = yes
+
+      [template_production]
+
+      script_timeout = 5
+      frequent_period = 60
+
+      autoprune = yes
+      frequently = 0
+      hourly = 48
+      daily = 90
+      weekly = 20
+      monthly = 12
+      yearly = 20
+
+      # pruning can be skipped based on the used capacity of the pool
+      # (0: always prune, 1-100: only prune if used capacity is greater than this value)
+      prune_defer = 60
     '';
   };
 }
