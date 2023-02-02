@@ -288,9 +288,9 @@ in {
     };
   };
 
-  environment = {
-    etc."dovecot/modules".source = "${home}/.nix-profile/lib/dovecot";
-    etc."dovecot/dovecot.conf".text = ''
+  environment.etc = {
+    "dovecot/modules".source = "${home}/.nix-profile/lib/dovecot";
+    "dovecot/dovecot.conf".text = ''
       base_dir = ${home}/Library/Application Support/dovecot
       default_login_user = johnw
       default_internal_user = johnw
@@ -358,7 +358,7 @@ in {
       }
     '';
 
-    etc."pdnsd.conf".text = ''
+    "pdnsd.conf".text = ''
       global {
         perm_cache   = 8192;
         cache_dir    = "${xdg_cacheHome}/pdnsd";
@@ -455,17 +455,23 @@ in {
     '';
   }
   // lib.optionalAttrs (localconfig.hostname == "vulcan") {
-    etc."sanoid/sanoid.conf".text = ''
-      [ext/Photos]
+    "sanoid/sanoid.conf".text = ''
+      [ext]
       use_template = production
+      recursive = yes
+      process_children_only = yes
 
-      [ext/ChainState/cardano]
-      use_template = production
+      [ext/Volumes]
+      use_template = none
+      recursive = no
 
       [tank]
       use_template = archival
       recursive = yes
       process_children_only = yes
+
+      [tank/CopperToGold]
+      use_template = none
 
       [template_production]
 
@@ -486,6 +492,9 @@ in {
 
       [template_archival]
 
+      script_timeout = 5
+      frequent_period = 60
+
       autoprune = yes
       frequently = 0
       hourly = 0
@@ -497,10 +506,23 @@ in {
       # pruning can be skipped based on the used capacity of the pool
       # (0: always prune, 1-100: only prune if used capacity is greater than this value)
       prune_defer = 60
+
+      [template_none]
+
+      script_timeout = 5
+      frequent_period = 60
+
+      autoprune = yes
+      frequently = 0
+      hourly = 0
+      daily = 0
+      weekly = 0
+      monthly = 0
+      yearly = 0
     '';
   }
   // lib.optionalAttrs (localconfig.hostname == "athena") {
-    etc."sanoid/sanoid.conf".text = ''
+    "sanoid/sanoid.conf".text = ''
       [studio/ChainState/kadena]
       use_template = production
       recursive = yes
