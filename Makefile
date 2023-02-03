@@ -126,16 +126,16 @@ mirror: tag-working
 	git --git-dir=darwin/.git push --mirror $(GIT_REMOTE)
 	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
 
-update: pull rebuild sign cache mirror travel-ready check
+update: pull rebuild travel-ready check sign cache mirror
 
-update-sync: pull build copy sign cache-all rebuild-all mirror travel-ready-all check-all
+update-sync: update copy check-all cache-all rebuild-all travel-ready-all
 
 ########################################################################
 
 copy-src:
 	$(call announce,pushme)
 	@for host in $(REMOTES); do				\
-	    push -f home,src,doc,kadena $$host;			\
+	    push -f Home,src,doc,kadena $$host;			\
 	done
 
 copy: copy-src
@@ -180,7 +180,7 @@ purge: gc-old check
 REMOTE_CACHE = "file:///Volumes/tank/nix"
 
 sign:
-	$(call announce,nix store sign -k <key> --all)
+	$(call announce,nix store sign -k "<key>" --all)
 	@$(NIX) store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
 
 cache-system:
@@ -202,12 +202,12 @@ cache-sources:
 	    xargs -0 $(NIX) copy --to $(REMOTE_CACHE)
 
 cache-all:
-	$(call announce,nix copy --to <tank,hermes> --all)
+	$(call announce,nix copy --to "<tank+hermes>" --all)
 	@$(NIX) copy --to $(REMOTE_CACHE) --all
 	@$(NIX) copy --to ssh-ng://hermes --all
 
 cache:
-	$(call announce,nix copy --to $(REMOTE_CACHE) --all)
+	$(call announce,nix copy --to "$(REMOTE_CACHE)" --all)
 	@$(NIX) copy --to $(REMOTE_CACHE) --all
 
 PROJECTS = $(HOME)/.config/projects
@@ -221,10 +221,9 @@ travel-ready:
              if [[ $(HOSTNAME) == athena ]]; then		\
                  unset BUILDER CACHE;				\
 	         $(NIX_CONF)/bin/de --no-cache;			\
-             elif [[ $(HOSTNAME) != hermes ]]; then		\
-                 unset BUILDER;					\
-		 CACHE=$(CACHE);				\
-	         $(NIX_CONF)/bin/de;				\
+             elif [[ $(HOSTNAME) == hermes ]]; then		\
+                 unset BUILDER CACHE;				\
+	         $(NIX_CONF)/bin/de --no-cache;			\
              else						\
 	         unset BUILDER;					\
 		 CACHE=$(CACHE);				\

@@ -88,7 +88,7 @@ pkgs: epkgs: with epkgs;
   docker-compose-mode
   docker-tramp
   dockerfile-mode
-  doxymacs
+  # doxymacs
   dumb-jump
   ebdb                          # ebdb-com
   edbi

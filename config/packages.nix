@@ -105,7 +105,6 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   imagemagickBig
   imapfilter
   imgcat
-  inkscape.out
   iperf
   jiq
   jo
@@ -271,7 +270,7 @@ pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
   # (pkgs.lowPrio dafny)
   dovecot
   dovecot_pigeonhole
-  jdiskreport
+  inkscape.out
   # mitmproxy
   tlaplus
 ]
