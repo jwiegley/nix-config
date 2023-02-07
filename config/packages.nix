@@ -127,6 +127,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   lzop
   m-cli
   m4
+  # mbuffer
   mercurialFull
   more
   mosh

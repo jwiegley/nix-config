@@ -465,12 +465,31 @@ in {
       use_template = none
       recursive = no
 
+      [ext/Volumes/Ubuntu-22.04]
+      use_template = none
+      recursive = no
+
       [tank]
       use_template = archival
       recursive = yes
       process_children_only = yes
 
       [tank/CopperToGold]
+      use_template = none
+
+      [tank/ChainState]
+      use_template = none
+
+      [tank/ChainState/cardano]
+      use_template = none
+
+      [tank/ChainState/kadena]
+      use_template = none
+
+      [tank/ChainState/kadena/chainweb-data]
+      use_template = none
+
+      [tank/ChainState/kadena/chainweb-none]
       use_template = none
 
       [template_production]
