@@ -64,7 +64,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   fzf
   gawk
   gh
-  # ghi
+  ghi
   gist
   git-lfs
   git-scripts
@@ -98,7 +98,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   hs-to-coq
   html-tidy
   htop
-  # httm
+  httm
   httpie
   httrack
   iftop
@@ -109,7 +109,7 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   jiq
   jo
   jq
-  # jupyter
+  jupyter
   killall
   kubectl
   ledgerPy3Env
@@ -272,6 +272,6 @@ pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
   dovecot
   dovecot_pigeonhole
   inkscape.out
-  # mitmproxy
+  mitmproxy
   tlaplus
 ]
