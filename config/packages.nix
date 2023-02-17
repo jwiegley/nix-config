@@ -63,23 +63,49 @@ with pkgs; let exe = haskell.lib.justStaticExecutables; in [
   fswatch
   fzf
   gawk
-  gh
-  ghi
-  gist
-  git-lfs
-  git-scripts
   gitAndTools.delta
+  gitAndTools.gh
+  gitAndTools.ghi
+  gitAndTools.gist
+  gitAndTools.git-absorb
   gitAndTools.git-annex-remote-rclone
+  gitAndTools.git-branchless
+  gitAndTools.git-branchstack
+  gitAndTools.git-cliff
+  gitAndTools.git-codeowners
   gitAndTools.git-crypt
+  gitAndTools.git-crypt
+  gitAndTools.git-delete-merged-branches
+  (pkgs.lowPrio gitAndTools.git-extras)
+  gitAndTools.git-fame
+  gitAndTools.git-gone
   gitAndTools.git-hub
   gitAndTools.git-imerge
+  gitAndTools.git-lfs
+  gitAndTools.git-machete
+  gitAndTools.git-my
+  gitAndTools.git-octopus
+  gitAndTools.git-quick-stats
+  gitAndTools.git-quickfix
+  gitAndTools.git-recent
+  gitAndTools.git-reparent
+  gitAndTools.git-repo
+  gitAndTools.git-scripts
   gitAndTools.git-secret
+  gitAndTools.git-series
+  gitAndTools.git-sizer
+  (pkgs.hiPrio gitAndTools.git-standup)
+  gitAndTools.git-subrepo
+  gitAndTools.git-vendor
+  gitAndTools.git-when-merged
+  gitAndTools.git-workspace
+  gitAndTools.gitRepo
   gitAndTools.gitflow
+  gitAndTools.gitls
+  gitAndTools.gitstats
   gitAndTools.hub
   gitAndTools.tig
   gitAndTools.top-git
-  gitRepo
-  gitstats
   global
   gnugrep
   gnumake

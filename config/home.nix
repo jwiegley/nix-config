@@ -616,14 +616,14 @@ in {
 
         vulcan.hostname = vulcan_ethernet;
         # vulcan = home;
+        ubuntu = onHost "vulcan" "172.16.194.147";
+
         athena.hostname = athena_ethernet;
         # athena = build;
-        hermes.hostname = hermes_ethernet;
+        ubuntu-arm64 = onHost "athena" "192.168.27.128";
 
-        macos    = onHost "vulcan" "172.16.194.129";
-        macos15  = onHost "vulcan" "172.16.194.136";
-        ubuntu   = onHost "vulcan" "172.16.194.137";
-        chainweb = onHost "vulcan" "192.168.1.152";
+        hermes.hostname = hermes_ethernet;
+        ubuntu2 = onHost "hermes" "192.168.100.130";
 
         mohajer = { hostname = "192.168.50.120"; user = "nasimwiegley"; };
 
@@ -657,7 +657,6 @@ in {
         haskell_org = { host = "*haskell.org"; user = "root"; };
 
         # Kadena
-
         chainweb_com = {
           host = "*.chainweb.com";
           user = "chainweb";

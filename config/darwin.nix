@@ -554,9 +554,9 @@ in {
 
       autoprune = yes
       frequently = 0
-      hourly = 48
-      daily = 90
-      weekly = 20
+      hourly = 12
+      daily = 14
+      weekly = 8
       monthly = 12
       yearly = 20
 
