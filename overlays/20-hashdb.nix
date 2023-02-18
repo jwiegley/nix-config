@@ -1,4 +1,4 @@
-self: super: {
+_: super: {
 
 hashdb = with super; stdenv.mkDerivation rec {
   name = "hashdb-${version}";

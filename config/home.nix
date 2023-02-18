@@ -27,7 +27,7 @@ in {
 
     # These are packages that should always be present in the user
     # environment, though perhaps not the machine environment.
-    packages = pkgs.callPackage ./packages.nix {};
+    packages = import ./packages.nix pkgs;
 
     sessionVariables = {
       ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";
@@ -190,11 +190,11 @@ in {
       enable = true;
       enableZshIntegration = true;
       defaultOptions = [
-       "--height 40%"
-       "--layout=reverse"
-       "--info=inline"
-       "--border"
-       "--exact"
+        "--height 40%"
+        "--layout=reverse"
+        "--info=inline"
+        "--border"
+        "--exact"
       ];
     };
 
@@ -616,14 +616,14 @@ in {
 
         vulcan.hostname = vulcan_ethernet;
         # vulcan = home;
-        ubuntu = onHost "vulcan" "172.16.194.147";
+        deimos = onHost "vulcan" "172.16.194.147";
 
         athena.hostname = athena_ethernet;
         # athena = build;
-        ubuntu-arm64 = onHost "athena" "192.168.27.128";
+        phobos = onHost "athena" "192.168.27.128";
 
         hermes.hostname = hermes_ethernet;
-        ubuntu2 = onHost "hermes" "192.168.100.130";
+        neso = onHost "hermes" "192.168.100.130";
 
         mohajer = { hostname = "192.168.50.120"; user = "nasimwiegley"; };
 

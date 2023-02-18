@@ -1,6 +1,10 @@
-{ pkgs }:
+pkgs:
 
-with pkgs; let exe = haskell.lib.justStaticExecutables; in [
+with pkgs; 
+
+let exe = haskell.lib.justStaticExecutables; in 
+
+[
   (exe gitAndTools.git-annex)
   (exe haskellPackages.git-all)
   (exe haskellPackages.pushme)
