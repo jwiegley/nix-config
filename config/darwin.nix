@@ -45,6 +45,7 @@ in {
 
       permittedInsecurePackages = [
         "python-2.7.18.6"
+        "libressl-3.4.3"
       ];
     };
 
@@ -201,13 +202,13 @@ in {
       };
     }
     // lib.optionalAttrs (localconfig.hostname == "vulcan") {
-      snapshots = {
-        script = ''
-          date >> /var/log/snapshots.log 2>&1
-          ${pkgs.sanoid}/bin/sanoid --cron --verbose >> /var/log/snapshots.log 2>&1
-        '';
-        serviceConfig = iterate 3600;
-      };
+      # snapshots = {
+      #   script = ''
+      #     date >> /var/log/snapshots.log 2>&1
+      #     ${pkgs.sanoid}/bin/sanoid --cron --verbose >> /var/log/snapshots.log 2>&1
+      #   '';
+      #   serviceConfig = iterate 3600;
+      # };
 
       unmount = {
         script = ''
@@ -222,7 +223,8 @@ in {
         script = ''
           export PATH=/usr/local/zfs/bin:$PATH
           export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
-          zpool import -d /var/run/disk/by-serial -a
+          # zpool import -d /var/run/disk/by-serial -a
+          kextunload /Library/Extensions/zfs.kext
         '';
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = false;
@@ -454,21 +456,9 @@ in {
       # }
     '';
   }
-  // lib.optionalAttrs (localconfig.hostname == "vulcan") {
+  // lib.optionalAttrs (localconfig.hostname == "vulcan" ||
+                        localconfig.hostname == "hermes") {
     "sanoid/sanoid.conf".text = ''
-      [ext]
-      use_template = production
-      recursive = yes
-      process_children_only = yes
-
-      [ext/Volumes]
-      use_template = none
-      recursive = no
-
-      [ext/Volumes/Ubuntu-22.04]
-      use_template = none
-      recursive = no
-
       [tank]
       use_template = archival
       recursive = yes

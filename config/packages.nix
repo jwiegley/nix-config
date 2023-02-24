@@ -248,6 +248,7 @@ let exe = haskell.lib.justStaticExecutables; in
   translate-shell
   travis
   tree
+  tree-sitter
   tsvutils
   unixtools.ifconfig
   unixtools.netstat

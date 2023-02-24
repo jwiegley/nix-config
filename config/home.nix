@@ -82,33 +82,25 @@ in {
     sessionPath = [
       "/usr/local/zfs/bin"
       "${home}/.ghcup/bin"
+      "${home}/kadena/bin"
     ];
 
-    file = builtins.listToAttrs (
-      map (path: {
-             name = path;
-             value = {
-               source = builtins.toPath("${home}/src/home/${path}");
-             };
-           })
-          [ "Library/Scripts/Applications/Download links to PDF.scpt"
-            "Library/Scripts/Applications/Media Pro" ]) // {
+    file = {
+      ".ledgerrc".text = ''
+        --file ${home}/doc/accounts/main.ledger
+        --input-date-format %Y/%m/%d
+        --date-format %Y/%m/%d
+      '';
 
-        ".ledgerrc".text = ''
-          --file ${home}/doc/accounts/main.ledger
-          --input-date-format %Y/%m/%d
-          --date-format %Y/%m/%d
-        '';
-
-        ".curlrc".text = ''
-          capath=${ca-bundle_path}
-          cacert=${ca-bundle_crt}
-        '';
-        ".wgetrc".text = ''
-          ca_directory = ${ca-bundle_path}
-          ca_certificate = ${ca-bundle_crt}
-        '';
-      };
+      ".curlrc".text = ''
+        capath=${ca-bundle_path}
+        cacert=${ca-bundle_crt}
+      '';
+      ".wgetrc".text = ''
+        ca_directory = ${ca-bundle_path}
+        ca_certificate = ${ca-bundle_crt}
+      '';
+    };
   };
 
   accounts.email = {
