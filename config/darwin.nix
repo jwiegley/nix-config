@@ -91,12 +91,12 @@ in {
 
       substituters = [
       ] ++ lib.optionals (localconfig.hostname == "vulcan") [
-        "file:///Volumes/tank/nix"
+        "file:///Volumes/ext/nix"
       ];
 
       trusted-substituters = [
       ] ++ lib.optionals (localconfig.hostname == "vulcan") [
-        "file:///Volumes/tank/nix"
+        "file:///Volumes/ext/nix"
       ];
 
       trusted-public-keys = [

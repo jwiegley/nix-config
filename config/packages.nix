@@ -202,6 +202,7 @@ let exe = haskell.lib.justStaticExecutables; in
   postgresql
   procps
   protobufc
+  psrecord
   pstree
   pv
   python3

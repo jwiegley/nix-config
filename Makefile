@@ -177,7 +177,9 @@ purge: gc-old check
 # REMOTE_CACHE = "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
 # SERVER = athena
 # REMOTE_CACHE = "ssh://$(SERVER)"
-REMOTE_CACHE = "file:///Volumes/tank/nix"
+ifeq ($(HOSTNAME),vulcan)
+REMOTE_CACHE = "file:///Volumes/ext/nix"
+endif
 
 sign:
 	$(call announce,nix store sign -k "<key>" --all)
@@ -204,7 +206,7 @@ cache-sources:
 cache-all:
 	$(call announce,nix copy --to "<tank+hermes>" --all)
 	@$(NIX) copy --to $(REMOTE_CACHE) --all
-	@$(NIX) copy --to ssh-ng://hermes --all
+	volcopy -aP --delete /Volumes/ext/nix/ /Volumes/tank/nix/
 
 cache:
 	$(call announce,nix copy --to "$(REMOTE_CACHE)" --all)
