@@ -83,7 +83,17 @@ tools:
 
 build:
 	$(call announce,nix build -f "<darwin>" system)
-	@$(NIX) build $(BUILD_ARGS) -f "<darwin>" system --keep-going
+	@if [[ -d /Volumes/ext/nix ]]; then					\
+	    $(NIX) build $(BUILD_ARGS) -f "<darwin>" system			\
+	        --extra-trusted-substitutors file:///Volumes/ext/nix		\
+	        --keep-going;							\
+	elif [[ -d /Volumes/tank/nix ]]; then					\
+	    $(NIX) build $(BUILD_ARGS) -f "<darwin>" system --keep-going;	\
+	        --extra-trusted-substitutors file:///Volumes/tank/nix		\
+	        --keep-going;							\
+	else									\
+	    $(NIX) build $(BUILD_ARGS) -f "<darwin>" system --keep-going;	\
+	fi
 	@rm -f result*
 
 build-dry:
@@ -206,7 +216,7 @@ cache-sources:
 cache-all:
 	$(call announce,nix copy --to "<tank+hermes>" --all)
 	@$(NIX) copy --to $(REMOTE_CACHE) --all
-	volcopy -aP --delete /Volumes/ext/nix/ /Volumes/tank/nix/
+	volcopy -aP --delete /Volumes/ext/nix/ hermes:/Volumes/tank/nix/
 
 cache:
 	$(call announce,nix copy --to "$(REMOTE_CACHE)" --all)

@@ -246,7 +246,7 @@ pkgs: epkgs: with epkgs;
   nix-mode
   nix-sandbox
   nixos-options
-  # nixpkgs-fmt
+  nixpkgs-fmt
   noflet
   nov
   oauth2
@@ -342,7 +342,7 @@ pkgs: epkgs: with epkgs;
   spinner
   springboard
   sql-indent
-  # string-edit
+  string-edit-at-point
   string-inflection
   super-save
   supercite
