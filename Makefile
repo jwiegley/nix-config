@@ -85,11 +85,11 @@ build:
 	$(call announce,nix build -f "<darwin>" system)
 	@if [[ -d /Volumes/ext/nix ]]; then					\
 	    $(NIX) build $(BUILD_ARGS) -f "<darwin>" system			\
-	        --extra-trusted-substitutors file:///Volumes/ext/nix		\
+	        --extra-trusted-substituters file:///Volumes/ext/nix		\
 	        --keep-going;							\
 	elif [[ -d /Volumes/tank/nix ]]; then					\
-	    $(NIX) build $(BUILD_ARGS) -f "<darwin>" system --keep-going;	\
-	        --extra-trusted-substitutors file:///Volumes/tank/nix		\
+	    $(NIX) build $(BUILD_ARGS) -f "<darwin>" system                     \
+	        --extra-trusted-substituters file:///Volumes/tank/nix		\
 	        --keep-going;							\
 	else									\
 	    $(NIX) build $(BUILD_ARGS) -f "<darwin>" system --keep-going;	\
@@ -164,8 +164,14 @@ define delete-generations-all
 endef
 
 check:
-	$(call announce,nix-store --check-contents)
-	$(NIX_STORE) --verify --repair --check-contents
+	$(call announce,nix store verify --all)
+	@$(NIX_STORE) --verify --repair --check-contents
+	@$(NIX) store verify --all
+	@if [[ -d /Volumes/ext/nix ]]; then				\
+	    $(NIX) store verify --all --store file:///Volumes/ext/nix;	\
+	elif [[ -d /Volumes/tank/nix ]]; then				\
+	    $(NIX) store verify --all --store file:///Volumes/tank/nix;	\
+	fi
 
 sizes:
 	df -H /nix 2>&1 | grep /dev
@@ -194,6 +200,13 @@ endif
 sign:
 	$(call announce,nix store sign -k "<key>" --all)
 	@$(NIX) store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
+	@if [[ -d /Volumes/ext/nix ]]; then						\
+	    $(NIX) store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all	\
+	        --store file:///Volumes/ext/nix;					\
+	elif [[ -d /Volumes/tank/nix ]]; then						\
+	    $(NIX) store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all	\
+	        --store file:///Volumes/tank/nix;					\
+	fi
 
 cache-system:
 	$(call announce,nix copy --to $(REMOTE_CACHE) <system>)
