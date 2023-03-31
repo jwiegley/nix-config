@@ -64,6 +64,7 @@ let exe = haskell.lib.justStaticExecutables; in
   findutils
   fio
   fontconfig
+  fping
   fswatch
   fzf
   gawk
@@ -136,6 +137,8 @@ let exe = haskell.lib.justStaticExecutables; in
   imapfilter
   imgcat
   iperf
+  isync
+  jdk
   jiq
   jo
   jq
@@ -159,6 +162,7 @@ let exe = haskell.lib.justStaticExecutables; in
   m4
   # mbuffer
   mercurialFull
+  metabase
   more
   mosh
   msmtp
@@ -179,6 +183,7 @@ let exe = haskell.lib.justStaticExecutables; in
   nodePackages.eslint
   nodePackages.js-beautify
   nodejs
+  offlineimap
   opam
   opensc
   openssh
@@ -198,6 +203,7 @@ let exe = haskell.lib.justStaticExecutables; in
   perlPackages.ImageExifTool
   pinentry_mac
   plantuml
+  pngpaste
   poppler_utils
   postgresql
   procps
@@ -287,6 +293,11 @@ let exe = haskell.lib.justStaticExecutables; in
 
   ## Kadena packages
   (pkgs.lowPrio pact)
+  (pkgs.lowPrio pact-lsp)
+  (pkgs.lowPrio chainweb-node)
+  (pkgs.lowPrio run-chainweb-replay)
+  (pkgs.lowPrio chainweb-data)
+  # (pkgs.lowPrio chainweb-mining-client)
   (pkgs.lowPrio kda-tool)
 
   ## Dfinity packages

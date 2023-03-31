@@ -1,8 +1,1 @@
-self: pkgs:
-
-{
-
-inherit (import ~/kadena/fully-local {})
-  start-kadena pact kda-tool;
-
-}
+_self: _pkgs: import ~/kadena/fully-local {}

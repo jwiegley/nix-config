@@ -145,7 +145,7 @@ pkgs: epkgs: with epkgs;
   git-annex
   git-link
   git-timemachine
-  git-undo
+  # git-undo
   github-review
   gitpatch
   gnus-alias
@@ -259,14 +259,17 @@ pkgs: epkgs: with epkgs;
   origami
   org                           # org org-babel org-crypt
   org-bookmark-heading
+  org-download
+  org-mime
+  org-noter
   org-ref
   org-rich-yank
   org-roam
   org-super-agenda
+  org-transclusion
   org-web-tools
   orgnav
   orgtbl-aggregate
-  origami
   ov
   ovpn-mode
   ox-extra

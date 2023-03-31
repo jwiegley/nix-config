@@ -450,6 +450,38 @@ let
         };
       };
 
+    blink-search = mkDerivation rec {
+      name = "blink-search-${version}";
+      version = "1.0";
+
+      src = fetchFromGitHub {
+        owner = "manateelazycat";
+        repo = "blink-search";
+        rev = "f9d7e573ea9069dcfbf11cf869dbf6e598d7068a";
+        sha256 = "04ix7l0wv23wpzj3cvylik3xzs60qxh0ymlj30lpbmkzcgidynas";
+        # date = 2023-03-25T17:59:33+08:00;
+      };
+
+      propagatedBuildInputs = [ eself.emacs ] ++ (with pkgs; [
+        ripgrep
+        sqlite
+        fd
+        # rga
+        python3Packages.epc
+        python3Packages.requests
+      ]);
+
+      buildPhase = ''
+        mkdir $out
+        export HOME=$out
+        ${eself.emacs}/bin/emacs -Q -nw -L . -L backend --batch -f batch-byte-compile */*.el
+      '';
+      installPhase = ''
+        mkdir -p $out/share/emacs/site-lisp
+        ${pkgs.rsync}/bin/rsync -av ./ $out/share/emacs/site-lisp/
+      '';
+    };
+
     debbugs = eself.elpaBuild {
         pname = "debbugs";
         ename = "debbugs";
@@ -490,32 +522,32 @@ let
       };
     };
 
-    org = mkDerivation rec {
-      name = "emacs-org-${version}";
-      version = "20160421";
-      src = ~/src/org-mode;
-      # src = fetchFromGitHub {
-      #   owner  = "jwiegley";
-      #   repo   = "org-mode";
-      #   rev    = "db5257389231bd49e92e2bc66713ac71b0435eec";
-      #   sha256 = "073cmwgxga14r4ykbgp8w0gjp1wqajmlk6qv9qfnrafgpxic366m";
-      # };
-      preBuild = ''
-        rm -f contrib/lisp/org-jira.el
-        makeFlagsArray=(
-          prefix="$out/share"
-          ORG_ADD_CONTRIB="org* ox*"
-        );
-      '';
-      preInstall = ''
-        perl -i -pe "s%/usr/share%$out%;" local.mk
-      '';
-      buildInputs = [ eself.emacs ] ++ (with pkgs; [ texinfo perl which ]);
-      meta = {
-        homepage = "https://elpa.gnu.org/packages/org.html";
-        license = lib.licenses.free;
-      };
-    };
+    # org = mkDerivation rec {
+    #   name = "emacs-org-${version}";
+    #   version = "20160421";
+    #   src = ~/src/org-mode;
+    #   # src = fetchFromGitHub {
+    #   #   owner  = "jwiegley";
+    #   #   repo   = "org-mode";
+    #   #   rev    = "db5257389231bd49e92e2bc66713ac71b0435eec";
+    #   #   sha256 = "073cmwgxga14r4ykbgp8w0gjp1wqajmlk6qv9qfnrafgpxic366m";
+    #   # };
+    #   preBuild = ''
+    #     rm -f contrib/lisp/org-jira.el
+    #     makeFlagsArray=(
+    #       prefix="$out/share"
+    #       ORG_ADD_CONTRIB="org* ox*"
+    #     );
+    #   '';
+    #   preInstall = ''
+    #     perl -i -pe "s%/usr/share%$out%;" local.mk
+    #   '';
+    #   buildInputs = [ eself.emacs ] ++ (with pkgs; [ texinfo perl which ]);
+    #   meta = {
+    #     homepage = "https://elpa.gnu.org/packages/org.html";
+    #     license = lib.licenses.free;
+    #   };
+    # };
 
     pdf-tools = esuper.pdf-tools.overrideAttrs (old: {
       nativeBuildInputs = [

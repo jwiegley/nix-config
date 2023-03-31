@@ -113,6 +113,7 @@ in {
       realName = "John Wiegley";
       address = "johnw@newartisans.com";
       aliases = [
+        "john@kadena.io"
         "jwiegley@gmail.com"
         "johnw@gnu.org"
       ];
@@ -286,7 +287,7 @@ in {
         if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
             unsetopt zle
             unset zle_bracketed_paste
-            export PS1='%m %~ $ '
+            export PS1='$ '
         else
            . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
            . ${config.xdg.configHome}/zsh/plugins/iterm2_tmux_integration
@@ -615,7 +616,7 @@ in {
 
         athena.hostname = athena_ethernet;
         # athena = build;
-        phobos = onHost "athena" "192.168.27.128";
+        phobos = onHost "vulcan" "192.168.50.111";
 
         hermes.hostname = hermes_ethernet;
         neso = onHost "hermes" "192.168.100.130";

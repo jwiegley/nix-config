@@ -200,13 +200,6 @@ endif
 sign:
 	$(call announce,nix store sign -k "<key>" --all)
 	@$(NIX) store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
-	@if [[ -d /Volumes/ext/nix ]]; then						\
-	    $(NIX) store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all	\
-	        --store file:///Volumes/ext/nix;					\
-	elif [[ -d /Volumes/tank/nix ]]; then						\
-	    $(NIX) store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all	\
-	        --store file:///Volumes/tank/nix;					\
-	fi
 
 cache-system:
 	$(call announce,nix copy --to $(REMOTE_CACHE) <system>)
@@ -226,7 +219,7 @@ cache-sources:
 	     \) -type f -print0 |			\
 	    xargs -0 $(NIX) copy --to $(REMOTE_CACHE)
 
-cache-all:
+cache-all: sign
 	$(call announce,nix copy --to "<tank+hermes>" --all)
 	@$(NIX) copy --to $(REMOTE_CACHE) --all
 	volcopy -aP --delete /Volumes/ext/nix/ hermes:/Volumes/tank/nix/
@@ -252,7 +245,7 @@ travel-ready:
              else						\
 	         unset BUILDER;					\
 		 CACHE=$(CACHE);				\
-	         $(NIX_CONF)/bin/de;				\
+	         $(NIX_CONF)/bin/de --no-cache;			\
 	     fi);						\
 	done
 
