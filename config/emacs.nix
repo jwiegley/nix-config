@@ -6,6 +6,7 @@ pkgs: epkgs: with epkgs;
   ace-mc
   ace-window
   adoc-mode
+  agda2-mode                    # agda2-mode agda-input
   aggressive-indent
   alert
   anaphora
@@ -400,7 +401,4 @@ pkgs: epkgs: with epkgs;
   zoom
   zoutline
   ztree                         # ztree-diff
-] ++ pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
-  agda2-mode                    # agda2-mode agda-input
 ]
-
