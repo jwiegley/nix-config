@@ -136,6 +136,7 @@ let exe = haskell.lib.justStaticExecutables; in
   imagemagickBig
   imapfilter
   imgcat
+  inkscape.out
   iperf
   isync
   jdk
@@ -163,6 +164,7 @@ let exe = haskell.lib.justStaticExecutables; in
   # mbuffer
   mercurialFull
   metabase
+  mitmproxy
   more
   mosh
   msmtp
@@ -314,7 +316,5 @@ pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
   # (pkgs.lowPrio dafny)
   dovecot
   dovecot_pigeonhole
-  inkscape.out
-  mitmproxy
   tlaplus
 ]

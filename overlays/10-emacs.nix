@@ -627,6 +627,43 @@ let
     #     license = lib.licenses.free;
     #   };
     # };
+
+    xeft = mkDerivation rec {
+      name = "xeft-${version}";
+      version = "3.0";
+
+      src = fetchgit {
+        url = https://git.sr.ht/~casouri/xeft;
+        rev = "e88f73979d50247d9fc1ba730022caaffb5bc317";
+        sha256 = "1n01j3iw1nplsdcqn91rmcm3ka0rxvsnbd0kwfjmj8zvbgvsvzfn";
+        # date = 2023-03-22T15:39:50-07:00;
+      };
+
+      propagatedBuildInputs = [ eself.emacs ] ++ (with pkgs; [
+        xapian
+      ]);
+
+      makeFlags = [
+        "PREFIX=$(out)"
+        "CXX=${stdenv.cc.targetPrefix}c++"
+        "LDFLAGS=-L${pkgs.xapian}/lib"
+      ];
+
+      buildPhase = ''
+        make xapian-lite.${if stdenv.hostPlatform.isDarwin then "dylib" else "so"}
+        export HOME=$out
+        ${eself.emacs}/bin/emacs -Q -nw -L . --batch -f batch-byte-compile *.el
+      '';
+      installPhase = ''
+        mkdir -p $out/share/emacs/site-lisp
+        # mkdir -p $out/lib
+        cp xapian-lite.${if stdenv.hostPlatform.isDarwin then "dylib" else "so"} \
+           $out/share/emacs/site-lisp/
+           # $out/lib
+        mkdir -p $out/share/emacs/site-lisp
+        cp -p *.el* $out/share/emacs/site-lisp/
+      '';
+    };
   };
 
   mkEmacsPackages = emacs:

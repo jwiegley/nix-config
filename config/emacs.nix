@@ -391,6 +391,7 @@ pkgs: epkgs: with epkgs;
   worf
   x86-lookup
   xml-rpc
+  xeft
   xr
   xray
   yaml-mode
