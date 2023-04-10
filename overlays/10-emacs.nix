@@ -87,7 +87,7 @@ let
     browse-kill-ring-plus = compileEmacsWikiFile {
       name = "browse-kill-ring+.el";
       sha256 = "14118rimjsps94ilhi0i9mwx7l69ilbidgqfkfrm5c9m59rki2gq";
-      # date = 2021-03-26T13:22:09-0700;
+      # date = 2023-04-05T13:01:11-0700;
 
       buildInputs = with eself; [ browse-kill-ring ];
       patches = [ ./emacs/patches/browse-kill-ring-plus.patch ];
@@ -246,6 +246,17 @@ let
         rev = "799b36be641f0c8f7f84314c50072b77e466dd0e";
         sha256 = "14nv56sybyzgp6jnvh217nwgsa00k6hvrfdb4nk1s2g167kvk76f";
         # date = 2022-06-22T04:42:09+02:00;
+      };
+    };
+
+    dired-hist = compileEmacsFiles {
+      name = "dired-hist";
+      src = fetchFromGitHub {
+        owner = "karthink";
+        repo = "dired-hist";
+        rev = "94b09260ac964e3d856c018d66af3214915dd826";
+        sha256 = "0h5idb2q52yly8dcsrfr2prn20n3q2rhzk3ss5a0xj36i9wls275";
+        # date = 2022-02-28T13:43:50-08:00;
       };
     };
 
@@ -688,22 +699,31 @@ emacs28Packages   = self.emacs28PackagesNg;
 
 emacsHEAD = with pkgs; (self.emacs.override { srcRepo = true; }).overrideAttrs(attrs: rec {
   name = "emacs-${version}${versionModifier}";
-  version = "28.1";
-  versionModifier = ".0";
+  version = "29.0";
+  versionModifier = ".60";
   src = ~/src/emacs;
-  # CFLAGS = "-O0 -g3 " + attrs.CFLAGS;
   patches = [
     ./emacs/clean-env.patch
   ];
   buildInputs = attrs.buildInputs ++
-    [ libpng libjpeg libungif libtiff librsvg
-      jansson freetype harfbuzz.dev git ];
+    [ libpng
+      libjpeg
+      libungif
+      libtiff
+      librsvg
+      jansson
+      freetype
+      harfbuzz.dev
+      git
+    ];
   preConfigure = ''
     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac
     autoreconf
   '';
-  configureFlags = attrs.configureFlags ++
-    [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
+  # configureFlags = attrs.configureFlags ++
+  #   [ "--enable-checking=yes,glyphs"
+  #     "--enable-check-lisp-object-type"
+  #   ];
 });
 
 emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;

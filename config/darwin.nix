@@ -231,13 +231,13 @@ in {
       };
      }
     // lib.optionalAttrs (localconfig.hostname == "athena") {
-      snapshots = {
-        script = ''
-          date >> /var/log/snapshots.log 2>&1
-          ${pkgs.sanoid}/bin/sanoid --cron --verbose >> /var/log/snapshots.log 2>&1
-        '';
-        serviceConfig = iterate 3600;
-      };
+      # snapshots = {
+      #   script = ''
+      #     date >> /var/log/snapshots.log 2>&1
+      #     ${pkgs.sanoid}/bin/sanoid --cron --verbose >> /var/log/snapshots.log 2>&1
+      #   '';
+      #   serviceConfig = iterate 3600;
+      # };
 
       zfs-import = {
         script = ''

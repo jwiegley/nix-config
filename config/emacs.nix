@@ -1,8 +1,5 @@
 pkgs: epkgs: with epkgs;
 [
-  ace-jump-mode
-  ace-isearch
-  ace-link
   ace-mc
   ace-window
   adoc-mode
@@ -22,27 +19,28 @@ pkgs: epkgs: with epkgs;
   avy-zap
   backup-each-save
   backup-walker
-  bats-mode
+  # bats-mode
   beacon
   biblio
   bm
   bookmark-plus                 # bookmark+
   boogie-friends
-  bufler
+  # bufler
   browse-at-remote
   browse-kill-ring
-  browse-kill-ring-plus         # browse-kill-ring+
+  # browse-kill-ring-plus         # browse-kill-ring+
   button-lock
   bytecomp-simplify
   calfw
-  calfw-cal
+  # calfw-cal
   calfw-org
   cargo
   centered-cursor-mode
   change-inner
   chess                         # chess chess-ics
-  circe
-  clipmon
+  # circe
+  citre
+  # clipmon
   cmake-font-lock
   cmake-mode
   col-highlight
@@ -50,21 +48,9 @@ pkgs: epkgs: with epkgs;
   color-theme
   command-log-mode
   company
-  company-auctex
-  company-cabal
   company-coq
   company-math
-  company-nixos-options
-  company-quickhelp
-  company-restclient
-  company-terraform
   copy-as-format
-  counsel
-  counsel-gtags
-  counsel-jq
-  counsel-osx-app
-  counsel-projectile
-  counsel-tramp
   crosshairs
   crux
   csv-mode
@@ -74,15 +60,14 @@ pkgs: epkgs: with epkgs;
   deadgrep
   dedicated
   deferred
-  deft
+  # deft
   diff-hl                       # diff-hl diff-hl-flydiff
   diffview
   diminish
-  dired-plus
-  dired-ranger
+  dired-hist
+  # dired-plus
   dired-rsync
   dired-toggle
-  diredful
   direnv
   discover-my-major
   docker
@@ -91,13 +76,13 @@ pkgs: epkgs: with epkgs;
   dockerfile-mode
   # doxymacs
   dumb-jump
-  ebdb                          # ebdb-com
+  # ebdb                          # ebdb-com
   edbi
   edit-env
   edit-indirect
   edit-server
   edit-var
-  eglot
+  # eglot
   el-mock
   elisp-depend
   elisp-docstring-mode
@@ -112,14 +97,14 @@ pkgs: epkgs: with epkgs;
   epl
   erc-highlight-nicknames
   erc-yank
-  erefactor
-  es-mode
+  # erefactor
+  # es-mode
   eshell-bookmark
   eshell-up
   eshell-z
   esxml
   eval-expr
-  eval-in-repl
+  # eval-in-repl
   evil
   expand-region
   eyebrowse
@@ -128,7 +113,8 @@ pkgs: epkgs: with epkgs;
   feebleline
   fence-edit
   fetchmail-mode
-  fill-page
+  # filetree
+  # fill-page
   flycheck
   flycheck-haskell
   flycheck-package
@@ -139,9 +125,8 @@ pkgs: epkgs: with epkgs;
   format-all
   free-keys
   fringe-helper
-  fullframe
   fuzzy
-  ggtags
+  # ggtags
   ghub
   git-annex
   git-link
@@ -158,15 +143,6 @@ pkgs: epkgs: with epkgs;
   graphviz-dot-mode
   haskell-mode
   hcl-mode
-  helm
-  helm-aws
-  helm-bibtex                   # ivy-bibtex
-  helm-descbinds
-  helm-describe-modes
-  helm-firefox
-  helm-google
-  helm-navi
-  helm-org-rifle
   helpful
   highlight
   highlight-cl
@@ -176,20 +152,14 @@ pkgs: epkgs: with epkgs;
   ht
   hydra
   ialign
-  iedit
   iflipb
   imenu-list
   indent-shift
   info-lookmore
-  initsplit
+  # initsplit
   ipcalc
-  ivy
-  ivy-explorer
-  ivy-hydra
-  ivy-pass
-  ivy-rich
   jobhours
-  jq-format
+  # jq-format
   jq-mode
   js2-mode
   js3-mode
@@ -199,9 +169,9 @@ pkgs: epkgs: with epkgs;
   key-chord
   keypression
   know-your-http-well
-  kubernetes
+  # kubernetes
   kv
-  language-detection
+  # language-detection
   ledger-mode
   link-hint
   lispy
@@ -216,11 +186,8 @@ pkgs: epkgs: with epkgs;
   m-buffer
   macrostep
   magit
-  magit-annex
-  magit-imerge
   magit-lfs
   magit-popup
-  magit-tbdiff
   makey
   malyon
   markdown-mode
@@ -232,48 +199,47 @@ pkgs: epkgs: with epkgs;
   mediawiki
   memory-usage
   message-x
-  mic-paren
-  minimap
-  mmm-mode
   moccur-edit
-  monitor
+  mono-complete
   multi-term
   multifiles
   multiple-cursors
-  muse
+  # muse
   names
   nginx-mode
-  nix-buffer
+  # nix-buffer
   nix-mode
-  nix-sandbox
-  nixos-options
-  nixpkgs-fmt
+  # nix-sandbox
+  # nixos-options
+  # nixpkgs-fmt
   noflet
   nov
   oauth2
-  ob-diagrams
-  ob-sql-mode
+  # ob-diagrams
+  # ob-sql-mode
   ob-restclient
-  ob-rust
+  # ob-rust
   olivetti
   operate-on-number
   origami
   org                           # org org-babel org-crypt
   org-bookmark-heading
+  # org-cliplink
   org-download
   org-mime
   org-noter
-  org-ref
+  org-ql
+  # org-ref
   org-rich-yank
   org-roam
   org-super-agenda
   org-transclusion
   org-web-tools
-  orgnav
-  orgtbl-aggregate
+  # orgnav
+  # orgtbl-aggregate
   ov
   ovpn-mode
-  ox-extra
+  # ox-extra
   ox-gfm
   ox-texinfo-plus
   package-lint
@@ -285,7 +251,7 @@ pkgs: epkgs: with epkgs;
   parent-mode
   parsebib
   parsec
-  parse-csv
+  # parse-csv
   pass
   password-store
   pcre2el
@@ -303,11 +269,11 @@ pkgs: epkgs: with epkgs;
   popup-ruler
   popwin
   pos-tip
-  posix-manual
+  # posix-manual
   pp-c-l
   prodigy
   projectile
-  pretty-hydra
+  # pretty-hydra
   proof-general                 # proof-site
   protobuf-mode
   python-mode
@@ -322,7 +288,7 @@ pkgs: epkgs: with epkgs;
   rich-minority
   riscv-mode
   rs-gnus-summary
-  rust-auto-use
+  # rust-auto-use
   # rust-mode
   rustic
   s
@@ -339,19 +305,18 @@ pkgs: epkgs: with epkgs;
   slime
   smart-mode-line
   smart-newline
-  smartparens                   # smartparens-config
+  # smartparens                   # smartparens-config
   smartscan
   smex
   sort-words
   spinner
-  springboard
+  # springboard
   sql-indent
-  string-edit-at-point
   string-inflection
   super-save
   supercite
   swift-mode
-  swiper
+  # swiper
   tablist
   tagedit
   terraform-mode
@@ -375,10 +340,11 @@ pkgs: epkgs: with epkgs;
   visual-regexp
   virtual-auto-fill
   vline
+  vundo
   w3m
   wat-mode
   web
-  web-beautify
+  # web-beautify
   web-mode
   web-server
   websocket
@@ -388,18 +354,34 @@ pkgs: epkgs: with epkgs;
   window-purpose
   with-editor
   word-count-mode               # word-count
-  worf
   x86-lookup
   xml-rpc
   xeft
-  xr
+  # xr
   xray
   yaml-mode
-  yankpad
+  # yankpad
   yaoddmuse
   yasnippet
   z3-mode
   zoom
   zoutline
   ztree                         # ztree-diff
+
+  cape
+  consult
+  consult-dir
+  consult-projectile
+  consult-company
+  consult-flycheck
+  consult-git-log-grep
+  consult-lsp
+  consult-org-roam
+  consult-yasnippet
+  corfu
+  embark
+  embark-consult
+  marginalia
+  orderless
+  vertico
 ]

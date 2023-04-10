@@ -56,6 +56,7 @@ in {
       TRAVIS_CONFIG_PATH = "${config.xdg.configHome}/travis";
       VAGRANT_HOME       = "${config.xdg.dataHome}/vagrant";
       WWW_HOME           = "${config.xdg.cacheHome}/w3m";
+      TZ                 = "PST8PDT";
 
       VULCAN_ETHERNET    = vulcan_ethernet;
       VULCAN_WIFI        = vulcan_wifi;
@@ -298,6 +299,8 @@ in {
            autoload -Uz compinit
            compinit
            # eval "$(op completion zsh)"; compdef _op op
+
+           [ -f "/Users/johnw/.ghcup/env" ] && source "/Users/johnw/.ghcup/env"
         fi
 
         function t() {

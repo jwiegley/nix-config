@@ -18,6 +18,7 @@ let exe = haskell.lib.justStaticExecutables; in
   (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
   (exe haskellPackages_9_2.hasktags)
+  # (exe haskellPackages_9_2.eventlog2html)
   # (exe (haskell.lib.doJailbreak haskellPackages.threadscope))
   (exe haskellPackages.pointfree)
   act
@@ -54,6 +55,7 @@ let exe = haskell.lib.justStaticExecutables; in
   dot2tex
   doxygen
   emacs28Env
+  emacsHEADEnv
   emacsERCEnv
   entr
   exiv2
@@ -78,7 +80,6 @@ let exe = haskell.lib.justStaticExecutables; in
   gitAndTools.git-branchstack
   gitAndTools.git-cliff
   gitAndTools.git-codeowners
-  gitAndTools.git-crypt
   gitAndTools.git-crypt
   gitAndTools.git-delete-merged-branches
   (pkgs.lowPrio gitAndTools.git-extras)
@@ -259,6 +260,7 @@ let exe = haskell.lib.justStaticExecutables; in
   tree
   tree-sitter
   tsvutils
+  universal-ctags
   unixtools.ifconfig
   unixtools.netstat
   unixtools.ping
