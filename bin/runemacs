@@ -9,12 +9,14 @@ elif [[ "$1" == --rev ]]; then
     EMACSAPP=Emacs
     shift 2
 else
-    export EMACSVER=28
+    export EMACSVER=28MacPort
     EMACSAPP=Emacs
 fi
 
 EMACSPATH=../Applications/${EMACSAPP}.app/Contents/MacOS/${EMACSAPP}
 EMACSBIN="\$(dirname \$(which emacs))/$EMACSPATH"
 
-exec load-env-emacs$EMACSVER \
-     bash -c "unset TZ ; $EMACSBIN $@"
+cd ~/.emacs.d
+load-env-emacs$EMACSVER make
+
+exec load-env-emacs$EMACSVER bash -c "unset TZ ; $EMACSBIN $@"

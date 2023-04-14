@@ -44,6 +44,8 @@ in {
       FONTCONFIG_PATH    = "${config.xdg.configHome}/fontconfig";
       GNUPGHOME          = "${config.xdg.configHome}/gnupg";
       GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";
+      GTAGSCONF          = "${pkgs.global}/share/gtags/gtags.conf";
+      GTAGSLABEL         = "pygments";
       HOSTNAME           = localconfig.hostname;
       JAVA_OPTS          = "-Xverify:none";
       LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
@@ -227,7 +229,6 @@ in {
         PROMPT           = "%m %~ $ ";
         PROMPT_DIRTRIM   = "2";
         RPROMPT          = "";
-        TERM             = "xterm-256color";
         TINC_USE_NIX     = "yes";
         WORDCHARS        = "";
       };
@@ -288,8 +289,11 @@ in {
         if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
             unsetopt zle
             unset zle_bracketed_paste
+            export PROMPT='$ '
             export PS1='$ '
         else
+           export TERM="xterm-256color"
+
            . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
            . ${config.xdg.configHome}/zsh/plugins/iterm2_tmux_integration
 
@@ -298,16 +302,9 @@ in {
 
            autoload -Uz compinit
            compinit
-           # eval "$(op completion zsh)"; compdef _op op
 
            [ -f "/Users/johnw/.ghcup/env" ] && source "/Users/johnw/.ghcup/env"
         fi
-
-        function t() {
-            opt="$1"
-            shift 1
-            exec cabal test --test-options="opt" "$@"
-        }
       '';
 
       plugins = [
@@ -430,6 +427,7 @@ in {
 
         branch.autosetupmerge  = true;
         commit.gpgsign         = true;
+        commit.status          = false;
         github.user            = "jwiegley";
         credential.helper      = "${pkgs.pass-git-helper}/bin/pass-git-helper";
         ghi.token              = "!${pkgs.pass}/bin/pass show api.github.com | head -1";

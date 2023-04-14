@@ -34,30 +34,12 @@ let
 
     in {
 
-    seq = if esuper.emacs.version != "26.3"
-      then mkDerivation rec {
-        name = "seq-stub";
-        version = "stub";
-        src = ./.;
-        phases = [ "installPhase" ];
-        installPhase = ''
-          mkdir $out
-          touch $out/.empty
-        '';
-      }
-      else esuper.seq;
-
-    ########################################################################
-
     edit-env        = compileLocalFile "edit-env.el";
     edit-var        = compileLocalFile "edit-var.el";
-    ox-extra        = compileLocalFile "ox-extra.el";
+    # flymake         = compileLocalFile "flymake-1.0.9.el";
+    # project         = compileLocalFile "project-0.5.3.el";
     rs-gnus-summary = compileLocalFile "rs-gnus-summary.el";
     supercite       = compileLocalFile "supercite.el";
-    flymake         = compileLocalFile "flymake-1.0.9.el";
-    project         = compileLocalFile "project-0.5.3.el";
-
-    ########################################################################
 
     magit-annex      = addBuildInputs esuper.magit-annex        [ pkgs.git ];
     magit-filenotify = addBuildInputs esuper.magit-filenotify   [ pkgs.git ];
@@ -66,8 +48,6 @@ let
     magit-lfs        = addBuildInputs esuper.magit-lfs          [ pkgs.git ];
     magit-tbdiff     = addBuildInputs esuper.magit-tbdiff       [ pkgs.git ];
     orgit            = addBuildInputs esuper.orgit              [ pkgs.git ];
-
-    ########################################################################
 
     company-coq   = withPatches esuper.company-coq   [ ./emacs/patches/company-coq.patch ];
     esh-buf-stack = withPatches esuper.esh-buf-stack [ ./emacs/patches/esh-buf-stack.patch ];
@@ -82,15 +62,6 @@ let
       name = "ascii.el";
       sha256 = "1ijpnk334fbah94vm7dkcd2w4zcb0l7yn4nr9rwgpr2l25llnr0f";
       # date = 2021-03-26T13:22:06-0700;
-    };
-
-    browse-kill-ring-plus = compileEmacsWikiFile {
-      name = "browse-kill-ring+.el";
-      sha256 = "14118rimjsps94ilhi0i9mwx7l69ilbidgqfkfrm5c9m59rki2gq";
-      # date = 2023-04-05T13:01:11-0700;
-
-      buildInputs = with eself; [ browse-kill-ring ];
-      patches = [ ./emacs/patches/browse-kill-ring-plus.patch ];
     };
 
     col-highlight = compileEmacsWikiFile {
@@ -247,6 +218,18 @@ let
         sha256 = "14nv56sybyzgp6jnvh217nwgsa00k6hvrfdb4nk1s2g167kvk76f";
         # date = 2022-06-22T04:42:09+02:00;
       };
+    };
+
+    cape-yasnippet = compileEmacsFiles {
+      name = "cape-yasnippet";
+      src = fetchFromGitHub {
+        owner = "elken";
+        repo = "cape-yasnippet";
+        rev = "4d6e4963d4c5e6c7b7e82cb0f55566bcd5492a94";
+        sha256 = "089hz0ra5mcc2yn9gd34nq985imv1319a0kfc9xvcg43p6076h23";
+        # date = 2023-03-24T09:36:02+00:00;
+      };
+      buildInputs = with eself; [ cape yasnippet ];
     };
 
     dired-hist = compileEmacsFiles {
@@ -448,11 +431,11 @@ let
     auctex = eself.elpaBuild {
         pname = "auctex";
         ename = "auctex";
-        version = "13.1.4";
+        version = "13.1.10";
         src = fetchurl {
-          url = "https://elpa.gnu.org/packages/auctex-13.1.4.tar";
-          sha256 = "1r9qysnfdbiblq3c95rgsh7vgy3k4qabnj0vicqhdkca0cl2b2bj";
-          # date = 2022-10-10T15:00:05-0700;
+          url = "https://elpa.gnu.org/packages/auctex-13.1.10.tar";
+          sha256 = "0vxf3aw7j73d0cbfh8d5fp5gyi7vxq9vb7fqxmxxs24pvdnlym15";
+          # date = 2023-04-12T10:31:23-0700;
         };
         packageRequires = with eself; [ cl-lib emacs ];
         meta = {
@@ -460,78 +443,6 @@ let
           license = lib.licenses.free;
         };
       };
-
-    blink-search = mkDerivation rec {
-      name = "blink-search-${version}";
-      version = "1.0";
-
-      src = fetchFromGitHub {
-        owner = "manateelazycat";
-        repo = "blink-search";
-        rev = "f9d7e573ea9069dcfbf11cf869dbf6e598d7068a";
-        sha256 = "04ix7l0wv23wpzj3cvylik3xzs60qxh0ymlj30lpbmkzcgidynas";
-        # date = 2023-03-25T17:59:33+08:00;
-      };
-
-      propagatedBuildInputs = [ eself.emacs ] ++ (with pkgs; [
-        ripgrep
-        sqlite
-        fd
-        # rga
-        python3Packages.epc
-        python3Packages.requests
-      ]);
-
-      buildPhase = ''
-        mkdir $out
-        export HOME=$out
-        ${eself.emacs}/bin/emacs -Q -nw -L . -L backend --batch -f batch-byte-compile */*.el
-      '';
-      installPhase = ''
-        mkdir -p $out/share/emacs/site-lisp
-        ${pkgs.rsync}/bin/rsync -av ./ $out/share/emacs/site-lisp/
-      '';
-    };
-
-    debbugs = eself.elpaBuild {
-        pname = "debbugs";
-        ename = "debbugs";
-        version = "0.29";
-        src = fetchurl {
-          url = "https://elpa.gnu.org/packages/debbugs-0.29.tar";
-          sha256 = "1bn21d9dr9pb3vdak3v07x056xafym89kdpxavjf4avy6bry6s4d";
-          # date = 2021-09-14T22:25:12-0700;
-        };
-        meta = {
-          homepage = "https://elpa.gnu.org/packages/debbugs.html";
-          license = lib.licenses.free;
-        };
-      };
-
-    doxymacs = mkDerivation rec {
-      name = "emacs-doxymacs-${version}";
-      version = "2017-12-10";
-
-      src = fetchgit {
-        url = git://git.code.sf.net/p/doxymacs/code.git;
-        rev = "914d5cc98129d224e15bd68c39ec8836830b08a2";
-        sha256 = "1xqjga5pphcfgqzj9lxfkm50sc1qag1idf54lpa23z81wrxq9dy3";
-        # date = 2010-03-07T21:45:41+00:00;
-      };
-
-      buildInputs = [ eself.emacs ] ++ (with pkgs; [ texinfo perl which ]);
-
-      meta = {
-        description = "Doxymacs is Doxygen + {X}Emacs";
-        longDescription = ''
-          The purpose of the doxymacs project is to create a LISP package that
-          will make using Doxygen from within {X}Emacs easier.
-        '';
-        homepage = http://doxymacs.sourceforge.net/;
-        license = lib.licenses.gpl2Plus;
-        platforms = lib.platforms.unix;
-      };
-    };
 
     # org = mkDerivation rec {
     #   name = "emacs-org-${version}";
@@ -598,9 +509,9 @@ let
      src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "c366365aaddeb3a65dc0816c8f93ec209dc9de44";
-        sha256 = "14ll3gxjcw8ghpnhsyk1vpc0ffba0nmm8sz3hq6ddwq2nja5w96x";
-        # date = "2022-07-13T18:18:18+02:00";
+        rev = "911cf014b899212815c2ec8d3e8c8b88be0df57b";
+        sha256 = "12a1sgk6141znagq0p7xnflcxhm7s8gccg24mkrccbiykyxif8jz";
+        # date = "2023-04-07T11:09:09+02:00";
       };
 
       # src = ~/src/proof-general;
@@ -626,18 +537,6 @@ let
         platforms = lib.platforms.unix;
       };
     };
-
-    # use-package = eself.melpaBuild {
-    #   pname = "use-package";
-    #   version = "20210207.1926";
-    #   src = ~/src/dot-emacs/lisp/use-package;
-    #   inherit (esuper.use-package) recipe;
-    #   packageRequires = with eself; [ emacs bind-key ];
-    #   meta = {
-    #     homepage = "https://melpa.org/#/use-package";
-    #     license = lib.licenses.free;
-    #   };
-    # };
 
     xeft = mkDerivation rec {
       name = "xeft-${version}";
@@ -690,21 +589,29 @@ let
 
 in {
 
-emacs             = self.emacs28NativeComp;
-emacs28PackagesNg = mkEmacsPackages self.emacs28NativeComp;
-emacsPackagesNg   = self.emacs28PackagesNg;
-emacsPackages     = self.emacsPackagesNg;
-emacs28_base      = pkgs.emacs28NativeComp;
-emacs28Packages   = self.emacs28PackagesNg;
+emacs             = self.emacs28MacPort;
+emacsPackages     = self.emacs28MacPortPackages;
+emacsPackagesNg   = self.emacs28MacPortPackagesNg;
 
-emacsHEAD = with pkgs; (self.emacs.override { srcRepo = true; }).overrideAttrs(attrs: rec {
+emacs28           = pkgs.emacs28;
+emacs28Packages   = self.emacs28PackagesNg;
+emacs28PackagesNg = mkEmacsPackages self.emacs28;
+
+emacs28MacPort           = pkgs.emacsMacport;
+emacs28MacPortPackages   = self.emacs28MacPortPackagesNg;
+emacs28MacPortPackagesNg = mkEmacsPackages self.emacs28MacPort;
+
+emacs29 = with pkgs; (self.emacs28.override { srcRepo = true; }).overrideAttrs(attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "29.0";
-  versionModifier = ".60";
+  versionModifier = ".90";
   src = ~/src/emacs;
   patches = [
     ./emacs/clean-env.patch
   ];
+  propagatedBuildInputs = (attrs.propagatedBuildInputs or []) ++
+    [ libgccjit
+    ];
   buildInputs = attrs.buildInputs ++
     [ libpng
       libjpeg
@@ -726,10 +633,10 @@ emacsHEAD = with pkgs; (self.emacs.override { srcRepo = true; }).overrideAttrs(a
   #   ];
 });
 
-emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
+emacs29Packages   = self.emacs29PackagesNg;
+emacs29PackagesNg = mkEmacsPackages self.emacs29;
 
 convertForERC = drv: drv.overrideAttrs(attrs: rec {
-  # name = "erc-${attrs.version}${attrs.versionModifier}";
   name = "erc-${attrs.version}";
   appName = "ERC";
   iconFile = ./emacs/Chat.icns;
@@ -762,13 +669,30 @@ convertForERC = drv: drv.overrideAttrs(attrs: rec {
   '';
 });
 
-emacsERC = self.convertForERC self.emacs28;
+emacsERC           = self.convertForERC self.emacs29;
+emacsERCPackages   = self.emacsERCPackagesNg;
 emacsERCPackagesNg = mkEmacsPackages self.emacsERC;
 
-emacsHEADEnv = myPkgs: pkgs.myEnvFun {
-  name = "emacsHEAD";
+emacsEnv = self.emacs28MacPortEnv;
+
+emacs28Env = myPkgs: pkgs.myEnvFun {
+  name = "emacs28";
   buildInputs = [
-    (self.emacsHEADPackagesNg.emacsWithPackages myPkgs)
+    (self.emacs28PackagesNg.emacsWithPackages myPkgs)
+  ];
+};
+
+emacs28MacPortEnv = myPkgs: pkgs.myEnvFun {
+  name = "emacs28MacPort";
+  buildInputs = [
+    (self.emacs28MacPortPackagesNg.emacsWithPackages myPkgs)
+  ];
+};
+
+emacs29Env = myPkgs: pkgs.myEnvFun {
+  name = "emacs29";
+  buildInputs = [
+    (self.emacs29PackagesNg.emacsWithPackages myPkgs)
   ];
 };
 
@@ -778,22 +702,5 @@ emacsERCEnv = myPkgs: pkgs.myEnvFun {
     (self.emacsERCPackagesNg.emacsWithPackages myPkgs)
   ];
 };
-
-emacs28Env = myPkgs: pkgs.myEnvFun {
-  name = "emacs28";
-  buildInputs = [
-    (self.emacs28PackagesNg.emacsWithPackages myPkgs)
-  ];
-};
-
-emacs28DebugEnv = myPkgs: pkgs.myEnvFun {
-  name = "emacs28-debug";
-  buildInputs = [
-    (self.emacs28DebugPackagesNg.emacsWithPackages myPkgs)
-  ];
-};
-
-emacsEnv = self.emacs28Env;
-emacsDebugEnv = self.emacs28DebugEnv;
 
 }

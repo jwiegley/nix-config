@@ -43,7 +43,6 @@ let exe = haskell.lib.justStaticExecutables; in
   csvkit
   ctop
   curl
-  # cvc4
   darwin.cctools
   dhall
   dhall-json
@@ -55,7 +54,8 @@ let exe = haskell.lib.justStaticExecutables; in
   dot2tex
   doxygen
   emacs28Env
-  emacsHEADEnv
+  emacs28MacPortEnv
+  emacs29Env
   emacsERCEnv
   entr
   exiv2
@@ -130,7 +130,7 @@ let exe = haskell.lib.justStaticExecutables; in
   hs-to-coq
   html-tidy
   htop
-  httm
+  # httm
   httpie
   httrack
   iftop
@@ -162,7 +162,6 @@ let exe = haskell.lib.justStaticExecutables; in
   lzop
   m-cli
   m4
-  # mbuffer
   mercurialFull
   metabase
   mitmproxy
@@ -260,7 +259,8 @@ let exe = haskell.lib.justStaticExecutables; in
   tree
   tree-sitter
   tsvutils
-  universal-ctags
+  ctags
+  # universal-ctags
   unixtools.ifconfig
   unixtools.netstat
   unixtools.ping
