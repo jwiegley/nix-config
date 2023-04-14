@@ -51,7 +51,7 @@ pkgs: epkgs: with epkgs;
   consult-git-log-grep
   consult-lsp
   consult-org-roam
-  consult-projectile
+  # consult-projectile
   consult-yasnippet
   copy-as-format
   corfu
@@ -244,7 +244,7 @@ pkgs: epkgs: with epkgs;
   pos-tip
   pp-c-l
   prodigy
-  projectile
+  # projectile
   proof-general
   protobuf-mode
   python-mode
