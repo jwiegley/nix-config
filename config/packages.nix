@@ -54,9 +54,7 @@ let exe = haskell.lib.justStaticExecutables; in
   dot2tex
   doxygen
   emacs28Env
-  emacs28MacPortEnv
   emacs29Env
-  emacsERCEnv
   entr
   exiv2
   fd
@@ -318,5 +316,7 @@ pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
   # (pkgs.lowPrio dafny)
   dovecot
   dovecot_pigeonhole
+  emacs28MacPortEnv
+  emacsERCEnv
   tlaplus
 ]

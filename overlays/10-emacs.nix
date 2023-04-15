@@ -589,7 +589,9 @@ let
 
 in {
 
-emacs             = self.emacs28MacPort;
+emacs             = if pkgs.stdenv.targetPlatform.isx86_64
+                    then self.emacs28MacPort
+                    else self.emacs28;
 emacsPackages     = self.emacs28MacPortPackages;
 emacsPackagesNg   = self.emacs28MacPortPackagesNg;
 

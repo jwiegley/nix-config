@@ -17,9 +17,6 @@ pkgs: epkgs: with epkgs;
   auto-yasnippet
   avy
   avy-zap
-  backup-each-save
-  backup-walker
-  beacon
   biblio
   bm
   boogie-friends
@@ -56,7 +53,6 @@ pkgs: epkgs: with epkgs;
   copy-as-format
   corfu
   crosshairs
-  crux
   csv-mode
   ctable
   cursor-chg
@@ -231,6 +227,7 @@ pkgs: epkgs: with epkgs;
   pdf-tools
   per-window-point
   persistent-scratch
+  persistent-soft
   peval
   pfuture
   phi-search
@@ -273,7 +270,6 @@ pkgs: epkgs: with epkgs;
   slime
   smart-newline
   smartparens
-  smartscan
   sort-words
   spinner
   sql-indent
