@@ -365,7 +365,7 @@ in {
         fts_xapian = partial=3 full=20
 
         fts_autoindex = yes
-        fts_enforced = yes
+        fts_enforced = body
 
         fts_autoindex_exclude = \Trash
 
@@ -374,19 +374,13 @@ in {
       }
 
       service indexer-worker {
-        # Increase vsz_limit to 2GB or above.
-        # Or 0 if you have rather large memory usable on your server, which is
-        # preferred for performance)
+        executable = ${pkgs.dovecot}/libexec/dovecot/indexer-worker
         vsz_limit = 2G
       }
 
-      # service decode2text {
-      #   executable = script ${pkgs.dovecot}/libexec/dovecot/decode2text.sh
-      #   user = dovecot
-      #   unix_listener decode2text {
-      #       mode = 0666
-      #   }
-      # }
+      service decode2text {
+        executable = script ${pkgs.dovecot}/libexec/dovecot/decode2text.sh
+      }
 
       plugin {
         sieve_extensions = +editheader
