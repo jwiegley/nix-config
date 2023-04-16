@@ -304,7 +304,8 @@ in {
       mail_location = mdbox:${home}/Messages/Mailboxes
       login_plugin_dir = ${home}/.nix-profile/lib/dovecot
       mail_plugin_dir = ${home}/.nix-profile/lib/dovecot
-      mail_plugins = fts fts_lucene zlib
+      # mail_plugins = fts fts_lucene zlib
+      mail_plugins = fts fts_xapian zlib
       mail_uid = 501
       postmaster_address = postmaster@newartisans.com
       protocols = imap
@@ -358,6 +359,34 @@ in {
         zlib_save_level = 6
         zlib_save = gz
       }
+
+      plugin {
+        fts = xapian
+        fts_xapian = partial=3 full=20
+
+        fts_autoindex = yes
+        fts_enforced = yes
+
+        fts_autoindex_exclude = \Trash
+
+        # Index attachements
+        # fts_decoder = decode2text
+      }
+
+      service indexer-worker {
+        # Increase vsz_limit to 2GB or above.
+        # Or 0 if you have rather large memory usable on your server, which is
+        # preferred for performance)
+        vsz_limit = 2G
+      }
+
+      # service decode2text {
+      #   executable = script ${pkgs.dovecot}/libexec/dovecot/decode2text.sh
+      #   user = dovecot
+      #   unix_listener decode2text {
+      #       mode = 0666
+      #   }
+      # }
 
       plugin {
         sieve_extensions = +editheader
