@@ -16,4 +16,4 @@ fi
 EMACSPATH=../Applications/${EMACSAPP}.app/Contents/MacOS/${EMACSAPP}
 EMACSBIN="\$(dirname \$(which emacs))/$EMACSPATH"
 
-exec load-env-emacs$EMACSVER bash -c "unset TZ ; make C ~/.emacs.d open"
+exec load-env-emacs$EMACSVER bash -c "unset TZ ; make -C ~/.emacs.d open"

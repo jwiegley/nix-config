@@ -53,8 +53,8 @@ let exe = haskell.lib.justStaticExecutables; in
   dnsutils
   dot2tex
   doxygen
-  emacs28Env
-  emacs29Env
+  # emacs28Env
+  # emacs29Env
   entr
   exiv2
   fd
@@ -295,11 +295,11 @@ let exe = haskell.lib.justStaticExecutables; in
   zsh-syntax-highlighting
 
   ## Kadena packages
-  (pkgs.lowPrio pact)
+  # (pkgs.lowPrio pact)
   (pkgs.lowPrio pact-lsp)
-  (pkgs.lowPrio chainweb-node)
-  (pkgs.lowPrio run-chainweb-replay)
-  (pkgs.lowPrio chainweb-data)
+  # (pkgs.lowPrio chainweb-node)
+  # (pkgs.lowPrio run-chainweb-replay)
+  # (pkgs.lowPrio chainweb-data)
   # (pkgs.lowPrio chainweb-mining-client)
   (pkgs.lowPrio kda-tool)
 

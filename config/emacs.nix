@@ -184,6 +184,7 @@ pkgs: epkgs: with epkgs;
   message-x
   moccur-edit
   multi-term
+  multi-vterm
   multifiles
   multiple-cursors
   names
@@ -192,12 +193,14 @@ pkgs: epkgs: with epkgs;
   noflet
   nov
   oauth2
+  ob-emamux
   ob-restclient
   olivetti
   operate-on-number
   orderless
   org
   org-bookmark-heading
+  org-contrib
   org-download
   org-mime
   org-noter
@@ -205,7 +208,6 @@ pkgs: epkgs: with epkgs;
   org-rich-yank
   org-roam
   org-super-agenda
-  org-transclusion
   org-web-tools
   origami
   ov
@@ -301,6 +303,8 @@ pkgs: epkgs: with epkgs;
   visual-fill-column
   visual-regexp
   vline
+  vterm
+  vterm-tmux
   vundo
   w3m
   wat-mode

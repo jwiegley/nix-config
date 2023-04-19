@@ -311,6 +311,18 @@ let
       buildInputs = with eself; [ color-moccur ];
     };
 
+    ob-emamux = compileEmacsFiles {
+      name = "ob-emamux";
+      src = fetchFromGitHub {
+        owner = "jackkamm";
+        repo = "ob-emamux";
+        rev = "397760d24905ef1f00090586ea38556e6f680780";
+        sha256 = "1a4r2f3682yrnq8f595cbq8ngf2arikdn2i0w1pf1mrm6ai5z3q9";
+        # date = 2019-05-22T22:30:29-07:00;
+      };
+      buildInputs = with eself; [ emamux ];
+    };
+
     ox-texinfo-plus = compileEmacsFiles {
       name = "ox-texinfo-plus";
       src = fetchFromGitHub {
@@ -377,6 +389,17 @@ let
         sha256 = "1vvha5ahdq2jnhwn1s4kx6wf74iz7fvfwk4sl7nb8afy0gp06f9k";
         # date = 2019-06-03T00:38:56-07:00;
       };
+    };
+
+    vterm-tmux = compileEmacsFiles {
+      name = "vterm-tmux";
+      src = fetchgit {
+        url = https://codeberg.org/olivermead/vterm-tmux.git;
+        rev = "a847c88918beff0ce4697ec4d4f0fcb9ec57bafe";
+        sha256 = "1igljgjhn55x9gj7fdikdiaxcb73v62j9s70wq4ypk4b4hxac3l4";
+        # date = 2022-11-23T16:18:04+00:00;
+      };
+      buildInputs = with eself; [ vterm multi-vterm ];
     };
 
     wat-mode = compileEmacsFiles {
@@ -671,7 +694,7 @@ convertForERC = drv: drv.overrideAttrs(attrs: rec {
   '';
 });
 
-emacsERC           = self.convertForERC self.emacs29;
+emacsERC           = self.convertForERC self.emacs28;
 emacsERCPackages   = self.emacsERCPackagesNg;
 emacsERCPackagesNg = mkEmacsPackages self.emacsERC;
 
