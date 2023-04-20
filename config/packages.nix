@@ -317,7 +317,7 @@ pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
   # (pkgs.lowPrio dafny)
   dovecot
   dovecot_pigeonhole
-  dovecot_fts_xapian
+  # dovecot_fts_xapian
   emacs28MacPortEnv
   emacsERCEnv
   tlaplus

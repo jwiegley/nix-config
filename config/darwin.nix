@@ -304,8 +304,8 @@ in {
       mail_location = mdbox:${home}/Messages/Mailboxes
       login_plugin_dir = ${home}/.nix-profile/lib/dovecot
       mail_plugin_dir = ${home}/.nix-profile/lib/dovecot
-      # mail_plugins = fts fts_lucene zlib
-      mail_plugins = fts fts_xapian zlib
+      mail_plugins = fts fts_lucene zlib
+      # mail_plugins = fts fts_xapian zlib
       mail_uid = 501
       postmaster_address = postmaster@newartisans.com
       protocols = imap
@@ -360,18 +360,18 @@ in {
         zlib_save = gz
       }
 
-      plugin {
-        fts = xapian
-        fts_xapian = partial=3 full=20
+      # plugin {
+      #   fts = xapian
+      #   fts_xapian = partial=3 full=20
 
-        fts_autoindex = yes
-        fts_enforced = body
+      #   fts_autoindex = yes
+      #   fts_enforced = body
 
-        fts_autoindex_exclude = \Trash
+      #   fts_autoindex_exclude = \Trash
 
-        # Index attachements
-        # fts_decoder = decode2text
-      }
+      #   # Index attachements
+      #   # fts_decoder = decode2text
+      # }
 
       service indexer-worker {
         executable = ${pkgs.dovecot}/libexec/dovecot/indexer-worker
