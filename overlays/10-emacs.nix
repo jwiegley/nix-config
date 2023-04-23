@@ -473,45 +473,6 @@ let
       };
     };
 
-    # corfu = compileEmacsFiles {
-    #   name = "corfu";
-    #   src = fetchFromGitHub {
-    #     owner = "minad";
-    #     repo = "corfu";
-    #     rev = "811785299bf17d25258b6466d42f04fa5863345d";
-    #     sha256 = "1f2mmw4jvymwxz7hbl76fbjql9dgyl817jggn64v7dd52l7wrj96";
-    #     # date = 2023-04-21T21:48:15+02:00;
-    #   };
-    #   buildInputs = with eself; [ compat ];
-    # };
-
-    # org = mkDerivation rec {
-    #   name = "emacs-org-${version}";
-    #   version = "20160421";
-    #   src = ~/src/org-mode;
-    #   # src = fetchFromGitHub {
-    #   #   owner  = "jwiegley";
-    #   #   repo   = "org-mode";
-    #   #   rev    = "db5257389231bd49e92e2bc66713ac71b0435eec";
-    #   #   sha256 = "073cmwgxga14r4ykbgp8w0gjp1wqajmlk6qv9qfnrafgpxic366m";
-    #   # };
-    #   preBuild = ''
-    #     rm -f contrib/lisp/org-jira.el
-    #     makeFlagsArray=(
-    #       prefix="$out/share"
-    #       ORG_ADD_CONTRIB="org* ox*"
-    #     );
-    #   '';
-    #   preInstall = ''
-    #     perl -i -pe "s%/usr/share%$out%;" local.mk
-    #   '';
-    #   buildInputs = [ eself.emacs ] ++ (with pkgs; [ texinfo perl which ]);
-    #   meta = {
-    #     homepage = "https://elpa.gnu.org/packages/org.html";
-    #     license = lib.licenses.free;
-    #   };
-    # };
-
     pdf-tools = esuper.pdf-tools.overrideAttrs (old: {
       nativeBuildInputs = [
         self.autoconf
