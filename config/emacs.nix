@@ -17,6 +17,7 @@ pkgs: epkgs: with epkgs;
   auto-yasnippet
   avy
   avy-zap
+  backup-each-save
   biblio
   bm
   boogie-friends
@@ -304,7 +305,7 @@ pkgs: epkgs: with epkgs;
   visual-regexp
   vline
   vterm
-  vterm-tmux
+  # vterm-tmux
   vundo
   w3m
   wat-mode

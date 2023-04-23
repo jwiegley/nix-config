@@ -64,6 +64,12 @@ let
       # date = 2021-03-26T13:22:06-0700;
     };
 
+    backup-each-save = compileEmacsWikiFile {
+      name = "backup-each-save.el";
+      sha256 = "0b9vvi2m0fdv36wj8mvawl951gjmg3pypg08a8n6rzn3rwg0fwz7";
+      # date = 2023-04-20T11:04:05-0700;
+    };
+
     col-highlight = compileEmacsWikiFile {
       name = "col-highlight.el";
       sha256 = "0na8aimv5j66pzqi4hk2jw5kk00ki99zkxiykwcmjiy3h1r9311k";
@@ -452,20 +458,32 @@ let
       };
 
     auctex = eself.elpaBuild {
-        pname = "auctex";
-        ename = "auctex";
-        version = "13.1.10";
-        src = fetchurl {
-          url = "https://elpa.gnu.org/packages/auctex-13.1.10.tar";
-          sha256 = "0vxf3aw7j73d0cbfh8d5fp5gyi7vxq9vb7fqxmxxs24pvdnlym15";
-          # date = 2023-04-12T10:31:23-0700;
-        };
-        packageRequires = with eself; [ cl-lib emacs ];
-        meta = {
-          homepage = "https://elpa.gnu.org/packages/auctex.html";
-          license = lib.licenses.free;
-        };
+      pname = "auctex";
+      ename = "auctex";
+      version = "13.1.10";
+      src = fetchurl {
+        url = "https://elpa.gnu.org/packages/auctex-13.1.10.tar";
+        sha256 = "0vxf3aw7j73d0cbfh8d5fp5gyi7vxq9vb7fqxmxxs24pvdnlym15";
+        # date = 2023-04-12T10:31:23-0700;
       };
+      packageRequires = with eself; [ cl-lib emacs ];
+      meta = {
+        homepage = "https://elpa.gnu.org/packages/auctex.html";
+        license = lib.licenses.free;
+      };
+    };
+
+    # corfu = compileEmacsFiles {
+    #   name = "corfu";
+    #   src = fetchFromGitHub {
+    #     owner = "minad";
+    #     repo = "corfu";
+    #     rev = "811785299bf17d25258b6466d42f04fa5863345d";
+    #     sha256 = "1f2mmw4jvymwxz7hbl76fbjql9dgyl817jggn64v7dd52l7wrj96";
+    #     # date = 2023-04-21T21:48:15+02:00;
+    #   };
+    #   buildInputs = with eself; [ compat ];
+    # };
 
     # org = mkDerivation rec {
     #   name = "emacs-org-${version}";

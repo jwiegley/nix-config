@@ -28,7 +28,7 @@ if [[ $PWD =~ kadena || $PWD =~ athena ]]; then
         NIXOPTS+=(--extra-substituters 'http://nixcache.kadena.io')
         NIXOPTS+=(--extra-trusted-public-keys 'kadena-cache.local-1:8wj8JW8V9tmc5bgNNyPM18DYNA1ws3X/MChXh1AQy/Q=')
     fi
-else
+elif [[ ! -f flake.nix ]]; then
     echo "Using the package set for <darwin>"
     NIXOPTS_MORE+=(--arg pkgs '(import<darwin>{}).pkgs')
 fi
