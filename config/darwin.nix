@@ -106,6 +106,17 @@ in {
 
     distributedBuilds = true;
 
+    buildMachines = lib.optionals (localconfig.hostname == "hermes") [
+      {
+        hostName = "vulcan";
+        sshUser = "johnw";
+        sshKey = "${xdg_configHome}/ssh/id_local";
+        system = "x86_64-darwin";
+        maxJobs = 10;
+        speedFactor = 4;
+      }
+    ];
+
     extraOptions = ''
       gc-keep-derivations = true
       gc-keep-outputs = true

@@ -52,12 +52,15 @@ let
 
   callPackage = hpkgs: ghc: path: args:
     filtered (
-      if builtins.pathExists (path + "/default.nix")
-      then hpkgs.callPackage path
-             ({ pkgs = self;
-                compiler = ghc;
-                returnShellEnv = false; } // args)
-      else hpkgs.callCabal2nix hpkgs (builtins.baseNameOf path) path args);
+      if builtins.pathExists (path + "/flake.nix")
+      then (import (path + "/default.nix")).default
+      else
+        if builtins.pathExists (path + "/default.nix")
+        then hpkgs.callPackage path
+               ({ pkgs = self;
+                  compiler = ghc;
+                  returnShellEnv = false; } // args)
+        else hpkgs.callCabal2nix hpkgs (builtins.baseNameOf path) path args);
 
   myHaskellPackages = ghc: hself: hsuper:
     let fromSrc = arg:

@@ -614,6 +614,7 @@ in {
         vulcan.hostname = vulcan_ethernet;
         # vulcan = home;
         deimos = onHost "vulcan" "172.16.194.147";
+        mimas = onHost "vulcan" "172.16.194.154";
 
         athena.hostname = athena_ethernet;
         # athena = build;

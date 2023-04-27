@@ -10,7 +10,7 @@ let exe = haskell.lib.justStaticExecutables; in
   (exe haskellPackages.pushme)
   (exe haskellPackages.runmany)
   (exe haskellPackages.sizes)
-  # (exe haskellPackages.sitebuilder)
+  haskellPackages.sitebuilder
   (exe haskellPackages.una)
   (exe haskellPackages.git-monitor)
   (exe haskellPackages.hours)
