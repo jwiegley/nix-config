@@ -18,4 +18,10 @@ in {
       sha256 = "0jr03wdwa2snxs9i6m1ndlh0gsz9m2crvfz5ar1xkracr9bma0n2";
     }).gitAndTools) git-annex;
   };
+
+  inherit (nixpkgs {
+    # rev    = "known-good-20230409_220321";
+    rev    = "e1586b80a559beb47279c96d66ac6e8a216f58fe";
+    sha256 = "1fq11aq0h0795lrrkr56nv0lfr2saljcnypj7c9h8zrq85k82ic1";
+  }) vim-full squashfsTools;
 }

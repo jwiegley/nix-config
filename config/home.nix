@@ -226,11 +226,13 @@ in {
         LESS             = "-FRSXM";
         LESSCHARSET      = "utf-8";
         PAGER            = "less";
-        PROMPT           = "%m %~ $ ";
+        PROMPT           = "%B%m %~ %b\\$(git_super_status)%(!.#.$) ";
         PROMPT_DIRTRIM   = "2";
         RPROMPT          = "";
         TINC_USE_NIX     = "yes";
         WORDCHARS        = "";
+
+        ZSH_THEME_GIT_PROMPT_CACHE = "yes";
       };
 
       shellAliases = {
@@ -296,6 +298,7 @@ in {
 
            . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
            . ${config.xdg.configHome}/zsh/plugins/iterm2_tmux_integration
+           . ${pkgs.zsh-git-prompt}/share/zsh-git-prompt/zshrc.sh
 
            sudo /bin/launchctl limit maxfiles 524288 524288
            ulimit -n 65536
@@ -303,7 +306,8 @@ in {
            autoload -Uz compinit
            compinit
 
-           [ -f "/Users/johnw/.ghcup/env" ] && source "/Users/johnw/.ghcup/env"
+           [ -f "$HOME/.ghcup/env" ] && source "$HOME/.ghcup/env"
+           [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
         fi
       '';
 

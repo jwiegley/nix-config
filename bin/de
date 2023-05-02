@@ -70,16 +70,21 @@ reset_kept() {
     unset DIRENV_kept
 }
 
-keep_vars             \
-    ALTERNATE_EDITOR  \
-    EDITOR            \
-    EMACS_SERVER_FILE \
-    ITERM_SESSION_ID  \
-    SECURITYSESSIONID \
-    SSH_AUTH_SOCK     \
-    SSL_CERT_FILE     \
-    TERM              \
-    TERM_SESSION_ID
+keep_vars                                       \
+    ALTERNATE_EDITOR                            \
+    EDITOR                                      \
+    EMACS_SERVER_FILE                           \
+    GIT_PROMPT_EXECUTABLE                       \
+    ITERM_SESSION_ID                            \
+    PROMPT                                      \
+    SECURITYSESSIONID                           \
+    SSH_AUTH_SOCK                               \
+    SSL_CERT_FILE                               \
+    TERM                                        \
+    TERM_SESSION_ID                             \
+    TMPDIR                                      \
+    XDG_DATA_DIRS                               \
+    __GIT_PROMPT_DIR
 
 source <(direnv apply_dump .envrc.cache)
 source <(reset_kept)
