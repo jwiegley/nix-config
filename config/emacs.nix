@@ -22,7 +22,6 @@ pkgs: epkgs: with epkgs;
   bm
   boogie-friends
   bookmark-plus
-  browse-at-remote
   browse-kill-ring
   button-lock
   bytecomp-simplify
@@ -214,6 +213,7 @@ pkgs: epkgs: with epkgs;
   ov
   ovpn-mode
   ox-gfm
+  ox-slack
   ox-texinfo-plus
   package-lint
   packed
