@@ -213,6 +213,7 @@ pkgs: epkgs: with epkgs;
   ov
   ovpn-mode
   ox-gfm
+  ox-pandoc
   ox-slack
   ox-texinfo-plus
   package-lint

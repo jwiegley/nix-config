@@ -673,7 +673,7 @@ convertForERC = drv: drv.overrideAttrs(attrs: rec {
   '';
 });
 
-emacsERC           = self.convertForERC self.emacs28;
+emacsERC           = self.convertForERC self.emacs29;
 emacsERCPackages   = self.emacsERCPackagesNg;
 emacsERCPackagesNg = mkEmacsPackages self.emacsERC;
 

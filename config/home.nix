@@ -233,6 +233,9 @@ in {
         WORDCHARS        = "";
 
         ZSH_THEME_GIT_PROMPT_CACHE = "yes";
+        ZSH_THEME_GIT_PROMPT_CHANGED = "%{$fg[yellow]%}%{✚%G%}";
+        ZSH_THEME_GIT_PROMPT_STASHED = "%{$fg_bold[yellow]%}%{⚑%G%}";
+        ZSH_THEME_GIT_PROMPT_UPSTREAM_FRONT =" {%{$fg[yellow]%}";
       };
 
       shellAliases = {
