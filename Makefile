@@ -235,7 +235,7 @@ travel-ready:
 	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
 	@for dir in "$${projects[@]}"; do			\
 	    echo "Updating direnv on $(HOSTNAME) for ~/$$dir";	\
-	    (cd ~/$$dir;					\
+	    (cd ~/$$dir &&					\
              if [[ $(HOSTNAME) == athena ]]; then		\
                  unset BUILDER CACHE;				\
 	         $(NIX_CONF)/bin/de --no-cache;			\

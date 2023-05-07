@@ -209,6 +209,8 @@ pkgs: epkgs: with epkgs;
   org-roam
   org-super-agenda
   org-web-tools
+  orgit
+  orgit-forge
   origami
   ov
   ovpn-mode
