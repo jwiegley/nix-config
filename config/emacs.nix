@@ -71,6 +71,7 @@ pkgs: epkgs: with epkgs;
   docker
   docker-compose-mode
   dockerfile-mode
+  easy-kill
   edbi
   edit-env
   edit-indirect
@@ -121,7 +122,6 @@ pkgs: epkgs: with epkgs;
   git-link
   git-timemachine
   git-undo
-  gitpatch
   gnus-alias
   gnus-harvest
   gnus-recent
@@ -182,6 +182,7 @@ pkgs: epkgs: with epkgs;
   mediawiki
   memory-usage
   message-x
+  minesweeper
   moccur-edit
   multi-term
   multi-vterm
@@ -202,8 +203,10 @@ pkgs: epkgs: with epkgs;
   org-bookmark-heading
   org-contrib
   org-download
+  org-drill
   org-mime
   org-noter
+  org-pomodoro
   org-ql
   org-rich-yank
   org-roam
@@ -288,6 +291,7 @@ pkgs: epkgs: with epkgs;
   terraform-mode
   tidy
   tla-mode
+  toc-org
   transpose-mark
   treemacs
   tuareg

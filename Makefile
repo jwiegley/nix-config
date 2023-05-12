@@ -136,9 +136,9 @@ mirror: tag-working
 	git --git-dir=darwin/.git push --mirror $(GIT_REMOTE)
 	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
 
-update: pull rebuild travel-ready check sign cache mirror
+update: pull rebuild travel-ready check cache mirror
 
-update-sync: update copy check-all cache-all rebuild-all travel-ready-all
+update-sync: update copy check-all cache rebuild-all travel-ready-all
 
 ########################################################################
 
@@ -194,7 +194,7 @@ purge: gc-old check
 # SERVER = athena
 # REMOTE_CACHE = "ssh://$(SERVER)"
 ifeq ($(HOSTNAME),vulcan)
-REMOTE_CACHE = "file:///Volumes/ext/nix"
+REMOTE_CACHE = "ssh-ng://hermes?remote-store=file:///Volumes/tank/nix"
 endif
 
 sign:
@@ -219,12 +219,7 @@ cache-sources:
 	     \) -type f -print0 |			\
 	    xargs -0 $(NIX) copy --to $(REMOTE_CACHE)
 
-cache-all: sign
-	$(call announce,nix copy --to "<tank+hermes>" --all)
-	@$(NIX) copy --to $(REMOTE_CACHE) --all
-	volcopy -aP --delete /Volumes/ext/nix/ hermes:/Volumes/tank/nix/
-
-cache:
+cache: sign
 	$(call announce,nix copy --to "$(REMOTE_CACHE)" --all)
 	@$(NIX) copy --to $(REMOTE_CACHE) --all
 
