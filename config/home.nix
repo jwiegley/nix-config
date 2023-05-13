@@ -4,6 +4,9 @@ let home            = builtins.getEnv "HOME";
     tmpdir          = "/tmp";
     localconfig     = import <localconfig>;
 
+    userName        = "John Wiegley";
+    userEmail       = "johnw@newartisans.com";
+
     ca-bundle_path  = "${pkgs.cacert}/etc/ssl/certs/";
     ca-bundle_crt   = "${ca-bundle_path}/ca-bundle.crt";
     emacs-server    = "${tmpdir}/johnw-emacs/server";
@@ -36,10 +39,9 @@ in {
       ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";
       B2_ACCOUNT_INFO    = "${config.xdg.configHome}/backblaze-b2/account_info";
       CABAL_CONFIG       = "${config.xdg.configHome}/cabal/config";
-      CHAINWEB_PGDATA    = "";
       EDITOR             = "${emacsclient}";
       EMACS_SERVER_FILE  = "${emacs-server}";
-      EMAIL              = "${config.programs.git.userEmail}";
+      EMAIL              = "${userEmail}";
       FONTCONFIG_FILE    = "${config.xdg.configHome}/fontconfig/fonts.conf";
       FONTCONFIG_PATH    = "${config.xdg.configHome}/fontconfig";
       GNUPGHOME          = "${config.xdg.configHome}/gnupg";
@@ -86,12 +88,16 @@ in {
     };
 
     sessionPath = [
+      "/usr/local/bin"
       "/usr/local/zfs/bin"
       "${home}/.ghcup/bin"
+      "${home}/.rustup/toolchains/stable-x86_64-apple-darwin/bin"
       "${home}/kadena/bin"
     ];
 
-    file = {
+    file =
+    let mkLink = config.lib.file.mkOutOfStoreSymlink; in
+    {
       ".ledgerrc".text = ''
         --file ${home}/doc/accounts/main.ledger
         --input-date-format %Y/%m/%d
@@ -102,10 +108,30 @@ in {
         capath=${ca-bundle_path}
         cacert=${ca-bundle_crt}
       '';
+
       ".wgetrc".text = ''
         ca_directory = ${ca-bundle_path}
         ca_certificate = ${ca-bundle_crt}
       '';
+
+      ".cups".source        = mkLink "${config.xdg.configHome}/cups";
+      ".dbvis".source       = mkLink "${config.xdg.configHome}/dbvis";
+      ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
+      ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
+      ".macbeth".source     = mkLink "${config.xdg.configHome}/macbeth";
+      ".mbsyncrc".source    = mkLink "${config.xdg.configHome}/mbsync/config";
+      ".parallel".source    = mkLink "${config.xdg.configHome}/parallel";
+      ".recoll".source      = mkLink "${config.xdg.configHome}/recoll";
+      ".slate".source       = mkLink "${config.xdg.configHome}/slate/config";
+      ".zekr".source        = mkLink "${config.xdg.configHome}/zekr";
+
+      ".cargo".source       = mkLink "${config.xdg.dataHome}/cargo";
+      ".docker".source      = mkLink "${config.xdg.dataHome}/docker";
+      ".rustup".source      = mkLink "${config.xdg.dataHome}/rustup";
+      ".ghcup".source       = mkLink "${config.xdg.dataHome}/ghcup";
+      ".mbsync".source      = mkLink "${config.xdg.dataHome}/mbsync";
+
+      ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";
     };
   };
 
@@ -113,15 +139,15 @@ in {
     certificatesFile = ca-bundle_crt;
 
     accounts.fastmail = {
-      realName = "John Wiegley";
-      address = "johnw@newartisans.com";
+      realName = userName;
+      address = userEmail;
       aliases = [
-        "john@kadena.io"
         "jwiegley@gmail.com"
         "johnw@gnu.org"
+        "john@kadena.io"
+        "john.wiegley@coppertogold.org"
       ];
-      userName = "johnw@newartisans.com";
-      flavor = "plain";
+      flavor = "fastmail.com";
       passwordCommand = "${pkgs.pass}/bin/pass show smtp.fastmail.com";
       primary = true;
       msmtp = {
@@ -131,16 +157,12 @@ in {
         };
       };
       imap = {
-        host = "imap.fastmail.com";
-        port = 993;
         tls = {
           enable = true;
           useStartTls = false;
         };
       };
       smtp = {
-        host = "smtp.fastmail.com";
-        port = 587;
         tls = {
           enable = true;
           useStartTls = true;
@@ -347,9 +369,8 @@ in {
       homedir = "${config.xdg.configHome}/gnupg";
       settings = {
         default-key = master_key;
-
         auto-key-locate = "keyserver";
-        keyserver = "pgp.mit.edu";
+        keyserver = "keys.openpgp.org";
         keyserver-options = "no-honor-keyserver-url include-revoked auto-key-retrieve";
       };
       scdaemonSettings = {
@@ -376,8 +397,7 @@ in {
       enable = true;
       package = pkgs.gitFull;
 
-      userName = "John Wiegley";
-      userEmail = "johnw@newartisans.com";
+      inherit userName userEmail;
 
       signing = {
         key = signing_key;
@@ -687,46 +707,212 @@ in {
   xdg = {
     enable = true;
 
-    configFile."gnupg/gpg-agent.conf".text = ''
-      enable-ssh-support
-      default-cache-ttl 86400
-      max-cache-ttl 86400
-      pinentry-program ${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac
-    '';
+    configFile = {
+      "gnupg/gpg-agent.conf".text = ''
+        enable-ssh-support
+        default-cache-ttl 86400
+        max-cache-ttl 86400
+        pinentry-program ${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac
+      '';
 
-    configFile."aspell/config".text = ''
-      local-data-dir ${pkgs.aspell}/lib/aspell
-      data-dir ${pkgs.aspellDicts.en}/lib/aspell
-      personal ${config.xdg.configHome}/aspell/en_US.personal
-      repl ${config.xdg.configHome}/aspell/en_US.repl
-    '';
+      "aspell/config".text = ''
+        local-data-dir ${pkgs.aspell}/lib/aspell
+        data-dir ${pkgs.aspellDicts.en}/lib/aspell
+        personal ${config.xdg.configHome}/aspell/en_US.personal
+        repl ${config.xdg.configHome}/aspell/en_US.repl
+      '';
 
-    configFile."recoll/mimeview".text = ''
-      xallexcepts- = application/pdf
-      xallexcepts+ =
-      [view]
-      application/pdf = ${emacsclient} -n --eval '(org-pdfview-open "%f::%p")'
-    '';
-  } //
-  (if pkgs.stdenv.targetPlatform.isx86_64 then {
-    configFile."fetchmail/config".text = ''
-      poll imap.fastmail.com protocol IMAP port 993 auth password
-        user '${config.accounts.email.accounts.fastmail.address}' there is johnw here
-        ssl sslcertck sslcertfile "${ca-bundle_crt}"
-        folder INBOX
-        fetchall
-        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e"
-    '';
+      "recoll/mimeview".text = ''
+        xallexcepts- = application/pdf
+        xallexcepts+ =
+        [view]
+        application/pdf = ${emacsclient} -n --eval '(org-pdfview-open "%f::%p")'
+      '';
 
-    configFile."fetchmail/config-lists".text = ''
-      poll imap.fastmail.com protocol IMAP port 993 auth password
-        user '${config.accounts.email.accounts.fastmail.address}' there is johnw here
-        ssl sslcertck sslcertfile "${ca-bundle_crt}"
-        folder 'Lists'
-        fetchall
-        mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e -m list.misc"
-    '';
-   } else {});
+      "mbsync/config".text =
+        let
+          mailboxes = [
+            ## These five are handled specially
+            # "INBOX"
+            # "mail.drafts"
+            # "mail.sent"
+            # "mail.archive"
+            # "mail.spam"
+
+            "mail.pending"
+            "mail.spam.report"
+            "mail.kadena"
+            "list.kadena"
+            "list.kadena.asana"
+            "list.kadena.notion"
+            "list.kadena.github"
+            "list.kadena.calendar"
+            "list.kadena.greenhouse"
+            "list.kadena.immunefi"
+            "list.kadena.google"
+            "list.kadena.expensify"
+            "list.kadena.bill"
+            "list.kadena.justworks"
+            "list.kadena.slack"
+            "list.finance"
+            "list.types"
+            "list.misc"
+            "list.notifications"
+            "list.ledger"
+            "list.ledger.devel"
+            # "list.haskell.prime"
+            "list.haskell.infrastructure"
+            "list.haskell.hackage-trustees"
+            # "list.haskell.committee"
+            # "list.haskell.commercial"
+            # "list.haskell.libraries"
+            # "list.haskell.ghc"
+            # "list.haskell.community"
+            # "list.haskell.cafe"
+            # "list.haskell.cabal"
+            # "list.haskell.beginners"
+            # "list.haskell.announce"
+            # "list.haskell.admin"
+            # "list.gnu"
+            # "list.gnu.prog"
+            # "list.gnu.prog.discuss"
+            # "list.gnu.debbugs"
+            "list.github"
+            "list.emacs.sources"
+            # "list.emacs.proofgeneral"
+            # "list.emacs.manual"
+            "list.emacs.org-mode"
+            # "list.emacs.conf"
+            # "list.emacs.help"
+            # "list.emacs.bugs"
+            "list.emacs.tangents"
+            "list.emacs.devel"
+            # "list.emacs.devel.owner"
+            "list.emacs.announce"
+            "list.coq"
+            # "list.coq.ssreflect"
+            "list.coq.devel"
+            "list.bahai"
+            # "list.bahai.ror"
+            "list.bahai.ctg"
+            "list.bahai.ctg.sunday"
+            "list.bahai.study"
+            # "list.bahai.anti-racism"
+            "list.bahai.tarjuman"
+          ];
+          channelDecl = box: "Channel personal-${box}";
+          mailboxRule = box: ''
+            ${channelDecl box}
+            Far :fastmail-remote:${builtins.replaceStrings ["."] ["/"] box}
+            Near :dovecot-local:${box}
+            Create Both
+            Expunge Both
+            Remove Both
+            CopyArrivalDate yes
+          '';
+          allMailboxRules = builtins.concatStringsSep "\n" (builtins.map mailboxRule mailboxes);
+          allChannelDecls = builtins.concatStringsSep "\n" (builtins.map channelDecl mailboxes);
+        in ''
+        IMAPAccount fastmail
+        Host imap.fastmail.com
+        User ${userEmail}
+        PassCmd "pass imap.fastmail.com"
+        SSLType IMAPS
+        CertificateFile ${ca-bundle_crt}
+        Port 993
+        PipelineDepth 1
+
+        IMAPStore fastmail-remote
+        Account fastmail
+        PathDelimiter /
+        Trash Trash
+
+        IMAPAccount dovecot
+        SSLType None
+        Host localhost
+        Port 9143
+        User johnw
+        Pass pass
+        AuthMechs PLAIN
+        Tunnel "${pkgs.dovecot}/libexec/dovecot/imap -c /etc/dovecot/dovecot.conf"
+
+        IMAPStore dovecot-local
+        Account dovecot
+        PathDelimiter /
+        Trash mail.trash
+
+        Channel personal-inbox
+        Far :fastmail-remote:
+        Near :dovecot-local:
+        Patterns "INBOX"
+        Create Both
+        Expunge Both
+        Remove Both
+        CopyArrivalDate yes
+
+        Channel personal-drafts
+        Far :fastmail-remote:Drafts
+        Near :dovecot-local:Drafts
+        Create Both
+        Expunge Both
+        Remove Both
+        CopyArrivalDate yes
+
+        Channel personal-sent
+        Far :fastmail-remote:Sent
+        Near :dovecot-local:mail.sent
+        Create Both
+        Expunge Both
+        Remove Both
+        CopyArrivalDate yes
+
+        Channel personal-archive
+        Far :fastmail-remote:Archive
+        Near :dovecot-local:mail.archive
+        Create Both
+        Expunge Both
+        Remove Far
+        CopyArrivalDate yes
+
+        Channel personal-spam
+        Far :fastmail-remote:Spam
+        Near :dovecot-local:mail.spam
+        Create Both
+        Expunge Both
+        Remove Both
+        CopyArrivalDate yes
+
+        ${allMailboxRules}
+
+        Group personal
+        Channel personal-inbox
+        Channel personal-drafts
+        Channel personal-sent
+        Channel personal-archive
+        channel personal-spam
+        ${allChannelDecls}
+      '';
+    } //
+    (if pkgs.stdenv.targetPlatform.isx86_64 then {
+       "fetchmail/config".text = ''
+         poll imap.fastmail.com protocol IMAP port 993 auth password
+           user '${config.accounts.email.accounts.fastmail.address}' there is johnw here
+           ssl sslcertck sslcertfile "${ca-bundle_crt}"
+           folder INBOX
+           fetchall
+           mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e"
+       '';
+
+       "fetchmail/config-lists".text = ''
+         poll imap.fastmail.com protocol IMAP port 993 auth password
+           user '${config.accounts.email.accounts.fastmail.address}' there is johnw here
+           ssl sslcertck sslcertfile "${ca-bundle_crt}"
+           folder 'Lists'
+           fetchall
+           mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e -m list.misc"
+       '';
+     } else {});
+  };
 
   targets.darwin = {
     keybindings = {

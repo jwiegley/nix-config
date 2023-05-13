@@ -210,6 +210,7 @@ pkgs: epkgs: with epkgs;
   org-ql
   org-rich-yank
   org-roam
+  org-sticky-header
   org-super-agenda
   org-web-tools
   orgit

@@ -201,17 +201,17 @@ in {
         serviceConfig.KeepAlive = false;
       };
 
-      # pdnsd = {
-      #   script = ''
-      #     cp -pL /etc/pdnsd.conf ${tmpdir}/.pdnsd.conf
-      #     chmod 700 ${tmpdir}/.pdnsd.conf
-      #     chown root ${tmpdir}/.pdnsd.conf
-      #     touch ${xdg_cacheHome}/pdnsd/pdnsd.cache
-      #     ${pkgs.pdnsd}/sbin/pdnsd -c ${tmpdir}/.pdnsd.conf
-      #   '';
-      #   serviceConfig.RunAtLoad = true;
-      #   serviceConfig.KeepAlive = true;
-      # };
+      pdnsd = {
+        script = ''
+          cp -pL /etc/pdnsd.conf ${tmpdir}/.pdnsd.conf
+          chmod 700 ${tmpdir}/.pdnsd.conf
+          chown root ${tmpdir}/.pdnsd.conf
+          touch ${xdg_cacheHome}/pdnsd/pdnsd.cache
+          ${pkgs.pdnsd}/sbin/pdnsd -c ${tmpdir}/.pdnsd.conf
+        '';
+        serviceConfig.RunAtLoad = true;
+        serviceConfig.KeepAlive = true;
+      };
     }
     // lib.optionalAttrs (localconfig.hostname == "vulcan") {
       # snapshots = {
@@ -401,101 +401,101 @@ in {
       }
     '';
 
-    # "pdnsd.conf".text = ''
-    #   global {
-    #     perm_cache   = 8192;
-    #     cache_dir    = "${xdg_cacheHome}/pdnsd";
-    #     server_ip    = 127.0.0.1;
-    #     status_ctl   = on;
-    #     query_method = udp_tcp;
-    #     min_ttl      = 1h;    # Retain cached entries at least 1 hour.
-    #     max_ttl      = 4h;    # Four hours.
-    #     timeout      = 10;    # Global timeout option (10 seconds).
-    #     udpbufsize   = 1024;  # Upper limit on the size of UDP messages.
-    #     neg_rrs_pol  = on;
-    #     par_queries  = 4;
-    #     debug        = off;
-    #   }
+    "pdnsd.conf".text = ''
+      global {
+        perm_cache   = 8192;
+        cache_dir    = "${xdg_cacheHome}/pdnsd";
+        server_ip    = 127.0.0.1;
+        status_ctl   = on;
+        query_method = udp_tcp;
+        min_ttl      = 1h;    # Retain cached entries at least 1 hour.
+        max_ttl      = 4h;    # Four hours.
+        timeout      = 10;    # Global timeout option (10 seconds).
+        udpbufsize   = 1024;  # Upper limit on the size of UDP messages.
+        neg_rrs_pol  = on;
+        par_queries  = 4;
+        debug        = off;
+      }
 
-    #   server {
-    #     label       = "google";
-    #     ip          = 8.8.8.8, 8.8.4.4;
-    #     preset      = on;
-    #     uptest      = none;
-    #     edns_query  = yes;
-    #     exclude     = ".local";
-    #     proxy_only  = on;
-    #     purge_cache = off;
-    #   }
+      server {
+        label       = "google";
+        ip          = 8.8.8.8, 8.8.4.4;
+        preset      = on;
+        uptest      = none;
+        edns_query  = yes;
+        exclude     = ".local";
+        proxy_only  = on;
+        purge_cache = off;
+      }
 
-    #   server {
-    #     label       = "dyndns";
-    #     ip          = 216.146.35.35, 216.146.36.36;
-    #     preset      = on;
-    #     uptest      = none;
-    #     edns_query  = yes;
-    #     exclude     = ".local";
-    #     proxy_only  = on;
-    #     purge_cache = off;
-    #   }
+      server {
+        label       = "dyndns";
+        ip          = 216.146.35.35, 216.146.36.36;
+        preset      = on;
+        uptest      = none;
+        edns_query  = yes;
+        exclude     = ".local";
+        proxy_only  = on;
+        purge_cache = off;
+      }
 
-    #   # The servers provided by OpenDNS are fast, but they do not reply with
-    #   # NXDOMAIN for non-existant domains, instead they supply you with an
-    #   # address of one of their search engines. They also lie about the
-    #   # addresses of the search engines of google, microsoft and yahoo. If you
-    #   # do not like this behaviour the "reject" option may be useful.
-    #   server {
-    #     label       = "opendns";
-    #     ip          = 208.67.222.222, 208.67.220.220;
-    #     # You may need to add additional address ranges here if the addresses
-    #     # of their search engines change.
-    #     reject      = 208.69.32.0/24,
-    #                   208.69.34.0/24,
-    #                   208.67.219.0/24;
-    #     preset      = on;
-    #     uptest      = none;
-    #     edns_query  = yes;
-    #     exclude     = ".local";
-    #     proxy_only  = on;
-    #     purge_cache = off;
-    #   }
+      # The servers provided by OpenDNS are fast, but they do not reply with
+      # NXDOMAIN for non-existant domains, instead they supply you with an
+      # address of one of their search engines. They also lie about the
+      # addresses of the search engines of google, microsoft and yahoo. If you
+      # do not like this behaviour the "reject" option may be useful.
+      server {
+        label       = "opendns";
+        ip          = 208.67.222.222, 208.67.220.220;
+        # You may need to add additional address ranges here if the addresses
+        # of their search engines change.
+        reject      = 208.69.32.0/24,
+                      208.69.34.0/24,
+                      208.67.219.0/24;
+        preset      = on;
+        uptest      = none;
+        edns_query  = yes;
+        exclude     = ".local";
+        proxy_only  = on;
+        purge_cache = off;
+      }
 
-    #   # This section is meant for resolving from root servers.
-    #   # server {
-    #   #   label             = "root-servers";
-    #   #   root_server       = discover;
-    #   #   ip                = 198.41.0.4, 192.228.79.201;
-    #   #   randomize_servers = on;
-    #   #   exclude           = ".local";
-    #   # }
+      # This section is meant for resolving from root servers.
+      # server {
+      #   label             = "root-servers";
+      #   root_server       = discover;
+      #   ip                = 198.41.0.4, 192.228.79.201;
+      #   randomize_servers = on;
+      #   exclude           = ".local";
+      # }
 
-    #   # source {
-    #   #   owner         = localhost;
-    #   #   serve_aliases = on;
-    #   #   file          = "/etc/hosts";
-    #   # }
+      # source {
+      #   owner         = localhost;
+      #   serve_aliases = on;
+      #   file          = "/etc/hosts";
+      # }
 
-    #   rr {
-    #     name    = localhost;
-    #     reverse = on;
-    #     a       = 127.0.0.1;
-    #     owner   = localhost;
-    #     soa     = localhost,root.localhost,42,86400,900,86400,86400;
-    #   }
+      rr {
+        name    = localhost;
+        reverse = on;
+        a       = 127.0.0.1;
+        owner   = localhost;
+        soa     = localhost,root.localhost,42,86400,900,86400,86400;
+      }
 
-    #   # rr { name = localunixsocket;       a = 127.0.0.1; }
-    #   # rr { name = localunixsocket.local; a = 127.0.0.1; }
+      # rr { name = localunixsocket;       a = 127.0.0.1; }
+      # rr { name = localunixsocket.local; a = 127.0.0.1; }
 
-    #   # neg {
-    #   #   name  = doubleclick.net;
-    #   #   types = domain;           # This will also block xxx.doubleclick.net, etc.
-    #   # }
+      # neg {
+      #   name  = doubleclick.net;
+      #   types = domain;           # This will also block xxx.doubleclick.net, etc.
+      # }
 
-    #   # neg {
-    #   #   name  = bad.server.com;   # Badly behaved server you don't want to connect to.
-    #   #   types = A,AAAA;
-    #   # }
-    # '';
+      # neg {
+      #   name  = bad.server.com;   # Badly behaved server you don't want to connect to.
+      #   types = A,AAAA;
+      # }
+    '';
   } else {})
   // lib.optionalAttrs (localconfig.hostname == "vulcan" ||
                         localconfig.hostname == "hermes") {
