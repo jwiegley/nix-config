@@ -116,6 +116,7 @@ in {
 
       ".cups".source        = mkLink "${config.xdg.configHome}/cups";
       ".dbvis".source       = mkLink "${config.xdg.configHome}/dbvis";
+      ".emacs.d".source     = mkLink "${home}/src/dot-emacs";
       ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
       ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
       ".macbeth".source     = mkLink "${config.xdg.configHome}/macbeth";
@@ -669,16 +670,6 @@ in {
           identitiesOnly = true;
         };
 
-        id_local = {
-          host = lib.concatStringsSep " " [
-            "vulcan" "home" "hermes" "athena" "mohajer"
-            "mac1*" "macos*" "nixos*" "smokeping" "tank" "ubuntu*"
-          ];
-          identityFile = "${config.xdg.configHome}/ssh/id_local";
-          identitiesOnly = true;
-          user = "johnw";
-        };
-
         haskell_org = { host = "*haskell.org"; user = "root"; };
 
         # Kadena
@@ -728,175 +719,11 @@ in {
         [view]
         application/pdf = ${emacsclient} -n --eval '(org-pdfview-open "%f::%p")'
       '';
-
-      "mbsync/config".text =
-        let
-          mailboxes = [
-            ## These five are handled specially
-            # "INBOX"
-            # "mail.drafts"
-            # "mail.sent"
-            # "mail.archive"
-            # "mail.spam"
-
-            "mail.pending"
-            "mail.spam.report"
-            "mail.kadena"
-            "list.kadena"
-            "list.kadena.asana"
-            "list.kadena.notion"
-            "list.kadena.github"
-            "list.kadena.calendar"
-            "list.kadena.greenhouse"
-            "list.kadena.immunefi"
-            "list.kadena.google"
-            "list.kadena.expensify"
-            "list.kadena.bill"
-            "list.kadena.justworks"
-            "list.kadena.slack"
-            "list.finance"
-            "list.types"
-            "list.misc"
-            "list.notifications"
-            "list.ledger"
-            "list.ledger.devel"
-            # "list.haskell.prime"
-            "list.haskell.infrastructure"
-            "list.haskell.hackage-trustees"
-            # "list.haskell.committee"
-            # "list.haskell.commercial"
-            # "list.haskell.libraries"
-            # "list.haskell.ghc"
-            # "list.haskell.community"
-            # "list.haskell.cafe"
-            # "list.haskell.cabal"
-            # "list.haskell.beginners"
-            # "list.haskell.announce"
-            # "list.haskell.admin"
-            # "list.gnu"
-            # "list.gnu.prog"
-            # "list.gnu.prog.discuss"
-            # "list.gnu.debbugs"
-            "list.github"
-            "list.emacs.sources"
-            # "list.emacs.proofgeneral"
-            # "list.emacs.manual"
-            "list.emacs.org-mode"
-            # "list.emacs.conf"
-            # "list.emacs.help"
-            # "list.emacs.bugs"
-            "list.emacs.tangents"
-            "list.emacs.devel"
-            # "list.emacs.devel.owner"
-            "list.emacs.announce"
-            "list.coq"
-            # "list.coq.ssreflect"
-            "list.coq.devel"
-            "list.bahai"
-            # "list.bahai.ror"
-            "list.bahai.ctg"
-            "list.bahai.ctg.sunday"
-            "list.bahai.study"
-            # "list.bahai.anti-racism"
-            "list.bahai.tarjuman"
-          ];
-          channelDecl = box: "Channel personal-${box}";
-          mailboxRule = box: ''
-            ${channelDecl box}
-            Far :fastmail-remote:${builtins.replaceStrings ["."] ["/"] box}
-            Near :dovecot-local:${box}
-            Create Both
-            Expunge Both
-            Remove Both
-            CopyArrivalDate yes
-          '';
-          allMailboxRules = builtins.concatStringsSep "\n" (builtins.map mailboxRule mailboxes);
-          allChannelDecls = builtins.concatStringsSep "\n" (builtins.map channelDecl mailboxes);
-        in ''
-        IMAPAccount fastmail
-        Host imap.fastmail.com
-        User ${userEmail}
-        PassCmd "pass imap.fastmail.com"
-        SSLType IMAPS
-        CertificateFile ${ca-bundle_crt}
-        Port 993
-        PipelineDepth 1
-
-        IMAPStore fastmail-remote
-        Account fastmail
-        PathDelimiter /
-        Trash Trash
-
-        IMAPAccount dovecot
-        SSLType None
-        Host localhost
-        Port 9143
-        User johnw
-        Pass pass
-        AuthMechs PLAIN
-        Tunnel "${pkgs.dovecot}/libexec/dovecot/imap -c /etc/dovecot/dovecot.conf"
-
-        IMAPStore dovecot-local
-        Account dovecot
-        PathDelimiter /
-        Trash mail.trash
-
-        Channel personal-inbox
-        Far :fastmail-remote:
-        Near :dovecot-local:
-        Patterns "INBOX"
-        Create Both
-        Expunge Both
-        Remove Both
-        CopyArrivalDate yes
-
-        Channel personal-drafts
-        Far :fastmail-remote:Drafts
-        Near :dovecot-local:Drafts
-        Create Both
-        Expunge Both
-        Remove Both
-        CopyArrivalDate yes
-
-        Channel personal-sent
-        Far :fastmail-remote:Sent
-        Near :dovecot-local:mail.sent
-        Create Both
-        Expunge Both
-        Remove Both
-        CopyArrivalDate yes
-
-        Channel personal-archive
-        Far :fastmail-remote:Archive
-        Near :dovecot-local:mail.archive
-        Create Both
-        Expunge Both
-        Remove Far
-        CopyArrivalDate yes
-
-        Channel personal-spam
-        Far :fastmail-remote:Spam
-        Near :dovecot-local:mail.spam
-        Create Both
-        Expunge Both
-        Remove Both
-        CopyArrivalDate yes
-
-        ${allMailboxRules}
-
-        Group personal
-        Channel personal-inbox
-        Channel personal-drafts
-        Channel personal-sent
-        Channel personal-archive
-        channel personal-spam
-        ${allChannelDecls}
-      '';
     } //
     (if pkgs.stdenv.targetPlatform.isx86_64 then {
        "fetchmail/config".text = ''
          poll imap.fastmail.com protocol IMAP port 993 auth password
-           user '${config.accounts.email.accounts.fastmail.address}' there is johnw here
+           user '${userEmail}' there is johnw here
            ssl sslcertck sslcertfile "${ca-bundle_crt}"
            folder INBOX
            fetchall
@@ -905,11 +732,176 @@ in {
 
        "fetchmail/config-lists".text = ''
          poll imap.fastmail.com protocol IMAP port 993 auth password
-           user '${config.accounts.email.accounts.fastmail.address}' there is johnw here
+           user '${userEmail}' there is johnw here
            ssl sslcertck sslcertfile "${ca-bundle_crt}"
            folder 'Lists'
            fetchall
            mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e -m list.misc"
+       '';
+
+
+       "mbsync/config".text =
+         let
+           mailboxes = [
+             ## These five are handled specially
+             # "INBOX"
+             # "mail.drafts"
+             # "mail.sent"
+             # "mail.archive"
+             # "mail.spam"
+
+             "mail.pending"
+             "mail.spam.report"
+             "mail.kadena"
+             "list.kadena"
+             "list.kadena.asana"
+             "list.kadena.notion"
+             "list.kadena.github"
+             "list.kadena.calendar"
+             "list.kadena.greenhouse"
+             "list.kadena.immunefi"
+             "list.kadena.google"
+             "list.kadena.expensify"
+             "list.kadena.bill"
+             "list.kadena.justworks"
+             "list.kadena.slack"
+             "list.finance"
+             "list.types"
+             "list.misc"
+             "list.notifications"
+             "list.ledger"
+             "list.ledger.devel"
+             # "list.haskell.prime"
+             "list.haskell.infrastructure"
+             "list.haskell.hackage-trustees"
+             # "list.haskell.committee"
+             # "list.haskell.commercial"
+             # "list.haskell.libraries"
+             # "list.haskell.ghc"
+             # "list.haskell.community"
+             # "list.haskell.cafe"
+             # "list.haskell.cabal"
+             # "list.haskell.beginners"
+             # "list.haskell.announce"
+             # "list.haskell.admin"
+             # "list.gnu"
+             # "list.gnu.prog"
+             # "list.gnu.prog.discuss"
+             # "list.gnu.debbugs"
+             "list.github"
+             "list.emacs.sources"
+             # "list.emacs.proofgeneral"
+             # "list.emacs.manual"
+             "list.emacs.org-mode"
+             # "list.emacs.conf"
+             # "list.emacs.help"
+             # "list.emacs.bugs"
+             "list.emacs.tangents"
+             "list.emacs.devel"
+             # "list.emacs.devel.owner"
+             "list.emacs.announce"
+             "list.coq"
+             # "list.coq.ssreflect"
+             "list.coq.devel"
+             "list.bahai"
+             # "list.bahai.ror"
+             "list.bahai.ctg"
+             "list.bahai.ctg.sunday"
+             "list.bahai.study"
+             # "list.bahai.anti-racism"
+             "list.bahai.tarjuman"
+           ];
+           channelDecl = box: "Channel personal-${box}";
+           mailboxRule = box: ''
+             ${channelDecl box}
+             Far :fastmail-remote:${builtins.replaceStrings ["."] ["/"] box}
+             Near :dovecot-local:${box}
+             Create Both
+             Expunge Both
+             Remove Both
+             CopyArrivalDate yes
+           '';
+           allMailboxRules = builtins.concatStringsSep "\n" (builtins.map mailboxRule mailboxes);
+           allChannelDecls = builtins.concatStringsSep "\n" (builtins.map channelDecl mailboxes);
+         in ''
+         IMAPAccount fastmail
+         Host imap.fastmail.com
+         User ${userEmail}
+         PassCmd "pass imap.fastmail.com"
+         SSLType IMAPS
+         CertificateFile ${ca-bundle_crt}
+         Port 993
+         PipelineDepth 1
+
+         IMAPStore fastmail-remote
+         Account fastmail
+         PathDelimiter /
+         Trash Trash
+
+         IMAPAccount dovecot
+         SSLType None
+         Host localhost
+         Port 9143
+         User johnw
+         Pass pass
+         AuthMechs PLAIN
+         Tunnel "${pkgs.dovecot}/libexec/dovecot/imap -c /etc/dovecot/dovecot.conf"
+
+         IMAPStore dovecot-local
+         Account dovecot
+         PathDelimiter /
+         Trash mail.trash
+
+         Channel personal-inbox
+         Far :fastmail-remote:
+         Near :dovecot-local:
+         Patterns "INBOX"
+         Create Both
+         Expunge Both
+         Remove Both
+         CopyArrivalDate yes
+
+         Channel personal-drafts
+         Far :fastmail-remote:Drafts
+         Near :dovecot-local:Drafts
+         Create Both
+         Expunge Both
+         Remove Both
+         CopyArrivalDate yes
+
+         Channel personal-sent
+         Far :fastmail-remote:Sent
+         Near :dovecot-local:mail.sent
+         Create Both
+         Expunge Both
+         Remove Both
+         CopyArrivalDate yes
+
+         Channel personal-archive
+         Far :fastmail-remote:Archive
+         Near :dovecot-local:mail.archive
+         Create Both
+         Expunge Both
+         Remove Far
+         CopyArrivalDate yes
+
+         Channel personal-spam
+         Far :fastmail-remote:Spam
+         Near :dovecot-local:mail.spam
+         Create Both
+         Expunge Both
+         Remove Both
+         CopyArrivalDate yes
+
+         ${allMailboxRules}
+
+         Group personal
+         Channel personal-inbox
+         Channel personal-drafts
+         Channel personal-sent
+         Channel personal-archive
+         channel personal-spam
+         ${allChannelDecls}
        '';
      } else {});
   };

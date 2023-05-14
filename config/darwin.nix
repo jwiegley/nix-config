@@ -63,7 +63,6 @@ in {
       vulcan = {
         hostName = "vulcan";
         sshUser = "johnw";
-        sshKey = "${xdg_configHome}/ssh/id_local";
         system = "x86_64-darwin";
         maxJobs = 10;
         buildCores = 2;
@@ -90,6 +89,7 @@ in {
       cores = 2;
 
       substituters = [
+        "https://cache.iog.io"
       ] ++ lib.optionals (localconfig.hostname == "vulcan") [
         # "file:///Volumes/ext/nix"
       ];
@@ -101,6 +101,7 @@ in {
 
       trusted-public-keys = [
         "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
+        "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
       ];
     };
 
@@ -108,14 +109,7 @@ in {
     # distributedBuilds = true;
 
     # buildMachines = lib.optionals (localconfig.hostname == "hermes") [
-    #   {
-    #     hostName = "vulcan";
-    #     sshUser = "johnw";
-    #     sshKey = "${xdg_configHome}/ssh/id_local";
-    #     system = "x86_64-darwin";
-    #     maxJobs = 10;
-    #     speedFactor = 4;
-    #   }
+    #   vulcan
     # ];
 
     extraOptions = ''

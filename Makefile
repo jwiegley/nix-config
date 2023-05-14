@@ -219,8 +219,8 @@ cache-sources:
 	     \) -type f -print0 |			\
 	    xargs -0 $(NIX) copy --to $(REMOTE_CACHE)
 
-cache: sign
-	$(call announce,nix copy --to "$(REMOTE_CACHE)" --all)
+cache:
+	$(call announce,nix copy --to $(REMOTE_CACHE) --all)
 	@$(NIX) copy --to $(REMOTE_CACHE) --all
 
 PROJECTS = $(HOME)/.config/projects
