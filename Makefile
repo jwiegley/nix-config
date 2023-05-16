@@ -225,6 +225,9 @@ cache:
 
 PROJECTS = $(HOME)/.config/projects
 
+# TRAVEL_FLAG = --no-cache
+TRAVEL_FLAG =
+
 travel-ready:
 	$(call announce,travel-ready)
 	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
@@ -233,14 +236,14 @@ travel-ready:
 	    (cd ~/$$dir &&					\
              if [[ $(HOSTNAME) == athena ]]; then		\
                  unset BUILDER CACHE;				\
-	         $(NIX_CONF)/bin/de --no-cache;			\
+	         $(NIX_CONF)/bin/de $(TRAVEL_FLAG);		\
              elif [[ $(HOSTNAME) == hermes ]]; then		\
                  unset BUILDER CACHE;				\
-	         $(NIX_CONF)/bin/de --no-cache;			\
+	         $(NIX_CONF)/bin/de $(TRAVEL_FLAG);		\
              else						\
 	         unset BUILDER;					\
 		 CACHE=$(CACHE);				\
-	         $(NIX_CONF)/bin/de --no-cache;			\
+	         $(NIX_CONF)/bin/de $(TRAVEL_FLAG);		\
 	     fi);						\
 	done
 

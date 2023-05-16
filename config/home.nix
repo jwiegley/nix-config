@@ -117,6 +117,7 @@ in {
       ".cups".source        = mkLink "${config.xdg.configHome}/cups";
       ".dbvis".source       = mkLink "${config.xdg.configHome}/dbvis";
       ".emacs.d".source     = mkLink "${home}/src/dot-emacs";
+      ".gist".source        = mkLink "${config.xdg.configHome}/gist/api_key";
       ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
       ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
       ".macbeth".source     = mkLink "${config.xdg.configHome}/macbeth";
