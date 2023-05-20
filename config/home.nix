@@ -640,13 +640,13 @@ in {
           };
         };
 
-        vulcan.hostname = vulcan_ethernet;
-        # vulcan = home;
+        # vulcan.hostname = vulcan_ethernet;
+        vulcan = home;
         deimos = onHost "vulcan" "172.16.194.147";
         mimas = onHost "vulcan" "172.16.194.154";
 
-        athena.hostname = athena_ethernet;
-        # athena = build;
+        # athena.hostname = athena_ethernet;
+        athena = build;
         phobos = onHost "vulcan" "192.168.50.111";
 
         hermes.hostname = hermes_ethernet;

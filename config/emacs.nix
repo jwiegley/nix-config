@@ -161,9 +161,9 @@ pkgs: epkgs: with epkgs;
   lively
   logito
   loop
-  lsp-haskell
-  lsp-mode
-  lsp-ui
+  # lsp-haskell
+  # lsp-mode
+  # lsp-ui
   lua-mode
   m-buffer
   macrostep
