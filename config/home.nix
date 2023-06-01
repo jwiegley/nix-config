@@ -24,6 +24,9 @@ let home            = builtins.getEnv "HOME";
 
     athena_ethernet = "192.168.50.235";
 
+    am_traveling    = true;
+    external_ip     = "76.234.69.149";
+
     master_key      = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
     signing_key     = "E0F96E618528E465";
 
@@ -624,7 +627,7 @@ in {
 
         # This is vulcan, as accessible from remote
         home = {
-          hostname = "76.234.69.149";
+          hostname = external_ip;
           port = 2201;
           extraOptions = {
             LocalForward = "5999 127.0.0.1:5901";
@@ -633,20 +636,18 @@ in {
 
         # This is athena, as accessible from remote
         build = {
-          hostname = "76.234.69.149";
+          hostname = external_ip;
           port = 2202;
           extraOptions = {
             LocalForward = "5999 127.0.0.1:5902";
           };
         };
 
-        # vulcan.hostname = vulcan_ethernet;
-        vulcan = home;
+        vulcan = if am_traveling then home else { hostname = vulcan_ethernet; };
         deimos = onHost "vulcan" "172.16.194.147";
         mimas = onHost "vulcan" "172.16.194.154";
 
-        # athena.hostname = athena_ethernet;
-        athena = build;
+        athena = if am_traveling then build else { hostname = athena_ethernet; };
         phobos = onHost "vulcan" "192.168.50.111";
 
         hermes.hostname = hermes_ethernet;
@@ -739,7 +740,6 @@ in {
            fetchall
            mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e -m list.misc"
        '';
-
 
        "mbsync/config".text =
          let
@@ -853,6 +853,75 @@ in {
          PathDelimiter /
          Trash mail.trash
 
+         IMAPAccount gmail
+         Host imap.gmail.com
+         User jwiegley@gmail.com
+         PassCmd "pass imap.gmail.com"
+         SSLType IMAPS
+         AuthMechs LOGIN
+         CertificateFile ${ca-bundle_crt}
+         Port 993
+         PipelineDepth 1
+
+         IMAPStore gmail-remote
+         Account gmail
+         PathDelimiter /
+         Trash Trash
+
+         Channel gmail-all-mail
+         Far :gmail-remote:"[Gmail]/All Mail"
+         Near :dovecot-local:mail.gmail
+         Create Both
+         Expunge Both
+         Remove Both
+         CopyArrivalDate yes
+
+         IMAPAccount gmail-kadena
+         Host imap.gmail.com
+         User john@kadena.io
+         PassCmd "pass kadena.imap.gmail.com"
+         SSLType IMAPS
+         AuthMechs LOGIN
+         CertificateFile ${ca-bundle_crt}
+         Port 993
+         PipelineDepth 1
+
+         IMAPStore gmail-kadena-remote
+         Account gmail-kadena
+         PathDelimiter /
+         Trash Trash
+
+         Channel gmail-kadena-all-mail
+         Far :gmail-kadena-remote:"[Gmail]/All Mail"
+         Near :dovecot-local:mail.gmail.kadena
+         Create Both
+         Expunge Both
+         Remove Both
+         CopyArrivalDate yes
+
+         IMAPAccount gmail-c2g
+         Host imap.gmail.com
+         User john.wiegley@coppertogold.org
+         PassCmd "pass c2g.imap.gmail.com"
+         SSLType IMAPS
+         AuthMechs LOGIN
+         CertificateFile ${ca-bundle_crt}
+         Port 993
+         PipelineDepth 1
+
+         IMAPStore gmail-c2g-remote
+         Account gmail-c2g
+         PathDelimiter /
+         Trash Trash
+
+         Channel gmail-c2g-all-mail
+         Far :gmail-c2g-remote:"[Gmail]/All Mail"
+         Near :dovecot-local:mail.gmail.c2g
+         Create Both
+         Expunge Both
+         Remove Both
+         CopyArrivalDate yes
+
          Channel personal-inbox
          Far :fastmail-remote:
          Near :dovecot-local:
@@ -903,6 +972,9 @@ in {
          Channel personal-archive
          channel personal-spam
          ${allChannelDecls}
+         Channel gmail-all-mail
+         Channel gmail-kadena-all-mail
+         Channel gmail-c2g-all-mail
        '';
      } else {});
   };

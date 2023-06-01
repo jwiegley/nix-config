@@ -1,5 +1,6 @@
 pkgs: epkgs: with epkgs;
 [
+  epkgs."2048-game"
   ace-mc
   ace-window
   adoc-mode
@@ -208,6 +209,7 @@ pkgs: epkgs: with epkgs;
   org-noter
   org-pomodoro
   org-ql
+  org-remark
   org-rich-yank
   org-roam
   org-sticky-header
