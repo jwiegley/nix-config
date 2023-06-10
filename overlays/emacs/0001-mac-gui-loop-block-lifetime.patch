@@ -1,0 +1,30 @@
+diff --git a/src/macappkit.m b/src/macappkit.m
+index babb3560c7..457bd4d549 100644
+--- a/src/macappkit.m
++++ b/src/macappkit.m
+@@ -16137,19 +16137,21 @@ - (void)sound:(NSSound *)sound didFinishPlaying:(BOOL)finishedPlaying
+ mac_gui_loop (void)
+ {
+   eassert (pthread_main_np ());
+-  void (^block) (void);
+ 
+   do
+     {
+       BEGIN_AUTORELEASE_POOL;
++      void (^block) (void);
++
+       dispatch_semaphore_wait (mac_gui_semaphore, DISPATCH_TIME_FOREVER);
+       block = [mac_gui_queue dequeue];
+-      if (block)
+-	block ();
++      if (!block)
++	break;
++      block ();
+       dispatch_semaphore_signal (mac_lisp_semaphore);
+       END_AUTORELEASE_POOL;
+     }
+-  while (block);
++  while (1);
+ }
+ 
+ static void

@@ -1,0 +1,28 @@
+diff --git a/src/macappkit.m b/src/macappkit.m
+index babb3560c7..29b0ab3511 100644
+--- a/src/macappkit.m
++++ b/src/macappkit.m
+@@ -16145,9 +16145,9 @@ - (void)sound:(NSSound *)sound didFinishPlaying:(BOOL)finishedPlaying
+       dispatch_semaphore_wait (mac_gui_semaphore, DISPATCH_TIME_FOREVER);
+       block = [mac_gui_queue dequeue];
+       if (block)
+-	block ();
+-      dispatch_semaphore_signal (mac_lisp_semaphore);
++	block (); 
+       END_AUTORELEASE_POOL;
++      dispatch_semaphore_signal (mac_lisp_semaphore);
+     }
+   while (block);
+ }
+@@ -16161,9 +16161,9 @@ - (void)sound:(NSSound *)sound didFinishPlaying:(BOOL)finishedPlaying
+   dispatch_semaphore_wait (mac_gui_semaphore, DISPATCH_TIME_FOREVER);
+   block = [mac_gui_queue dequeue];
+   eassert (block);
+-  block ();
+-  dispatch_semaphore_signal (mac_lisp_semaphore);
++  block (); 
+   END_AUTORELEASE_POOL;
++  dispatch_semaphore_signal (mac_lisp_semaphore);
+ }
+ 
+ /* Ask execution of BLOCK to the GUI thread synchronously.  The

@@ -94,8 +94,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "186h3c2s3w5370fbjrpk9119f7i7digkya7mdivh36m2qsn5hry2";
-      # date = 2023-01-18T10:35:11-0800;
+      sha256 = "1snjdr4d0gvzgzckrglsz4sx0z3gd61dfba637lwg3qkcslkfrlh";
+      # date = 2023-06-09T13:28:36-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -601,7 +601,20 @@ emacs28           = pkgs.emacs28;
 emacs28Packages   = self.emacs28PackagesNg;
 emacs28PackagesNg = mkEmacsPackages self.emacs28;
 
-emacs28MacPort           = pkgs.emacsMacport;
+# emacs28MacPort           = pkgs.emacsMacport;
+
+# jww (2023-06-09): These changes allow emacs-mac-28 to build on aarch64-darwin
+emacs28MacPort           = (pkgs.emacsMacport.overrideAttrs (o: {
+  buildInputs = o.buildInputs ++
+    (with pkgs.darwin.apple_sdk_11_0.frameworks; [ UniformTypeIdentifiers Accelerate ]);
+  patches = o.patches ++ [
+    # ./emacs/0001-mac-gui-loop-block-lifetime.patch
+    ./emacs/0002-mac-gui-loop-block-autorelease.patch
+  ];
+})).override {
+  llvmPackages_6 = pkgs.llvmPackages_14;
+};
+
 emacs28MacPortPackages   = self.emacs28MacPortPackagesNg;
 emacs28MacPortPackagesNg = mkEmacsPackages self.emacs28MacPort;
 

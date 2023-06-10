@@ -19,6 +19,7 @@ let exe = haskell.lib.justStaticExecutables; in
   (exe haskellPackages.hpack)
   (exe haskellPackages_9_2.hasktags)
   # (exe haskellPackages_9_2.eventlog2html)
+  haskellPackages_9_2.ormolu.bin
   # (exe (haskell.lib.doJailbreak haskellPackages.threadscope))
   (exe haskellPackages.pointfree)
   act
@@ -36,7 +37,6 @@ let exe = haskell.lib.justStaticExecutables; in
   bat
   bats
   boogie
-  browserpass
   cacert
   cbor-diag
   coreutils
@@ -52,7 +52,13 @@ let exe = haskell.lib.justStaticExecutables; in
   ditaa
   dnsutils
   dot2tex
+  dovecot
+  # dovecot_pigeonhole
+  # dovecot_fts_xapian
   doxygen
+  emacs28MacPortEnv
+  emacs29Env
+  emacsERCEnv
   entr
   exiv2
   fd
@@ -87,9 +93,9 @@ let exe = haskell.lib.justStaticExecutables; in
   gitAndTools.git-machete
   gitAndTools.git-my
   gitAndTools.git-octopus
-  gitAndTools.git-quick-stats
+  # gitAndTools.git-quick-stats
   gitAndTools.git-quickfix
-  gitAndTools.git-recent
+  # gitAndTools.git-recent
   gitAndTools.git-reparent
   gitAndTools.git-repo
   gitAndTools.git-scripts
@@ -216,7 +222,7 @@ let exe = haskell.lib.justStaticExecutables; in
   qrencode
   ratpoison
   rclone
-  recoll
+  # recoll
   renameutils
   restic
   ripgrep
@@ -310,14 +316,7 @@ let exe = haskell.lib.justStaticExecutables; in
 ++
 
 pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
-  haskellPackages_9_2.ormolu.bin
   contacts
   # (pkgs.lowPrio dafny)
-  dovecot
-  dovecot_pigeonhole
-  dovecot_fts_xapian
-  emacs28MacPortEnv
-  emacs29Env
-  emacsERCEnv
   tlaplus
 ]

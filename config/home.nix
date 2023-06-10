@@ -24,7 +24,7 @@ let home            = builtins.getEnv "HOME";
 
     athena_ethernet = "192.168.50.235";
 
-    am_traveling    = true;
+    am_traveling    = false;
     external_ip     = "76.234.69.149";
 
     master_key      = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
@@ -196,10 +196,12 @@ in {
       path = "${home}/src/nix/home-manager";
     };
 
-    browserpass = {
-      enable = true;
-      browsers = [ "firefox" ];
-    };
+    # TODO re-enable on Darwin when
+    # https://github.com/NixOS/nixpkgs/pull/236258#issuecomment-1583450593 is fixed
+    # browserpass = {
+    #   enable = true;
+    #   browsers = [ "firefox" ];
+    # };
 
     texlive = {
       enable = true;
@@ -754,17 +756,20 @@ in {
              "mail.pending"
              "mail.spam.report"
              "mail.kadena"
+             "mail.kadena.archive"
              "list.kadena"
+             "list.kadena.amazon"
              "list.kadena.asana"
-             "list.kadena.notion"
-             "list.kadena.github"
+             "list.kadena.bill"
              "list.kadena.calendar"
+             "list.kadena.expensify"
+             "list.kadena.github"
+             "list.kadena.google"
              "list.kadena.greenhouse"
              "list.kadena.immunefi"
-             "list.kadena.google"
-             "list.kadena.expensify"
-             "list.kadena.bill"
              "list.kadena.justworks"
+             "list.kadena.lattice"
+             "list.kadena.notion"
              "list.kadena.slack"
              "list.finance"
              "list.types"
@@ -922,6 +927,30 @@ in {
          Remove Both
          CopyArrivalDate yes
 
+         IMAPAccount gmail-c2g-admin
+         Host imap.gmail.com
+         User copper2gold1@gmail.com
+         PassCmd "pass c2g-admin.imap.gmail.com"
+         SSLType IMAPS
+         AuthMechs LOGIN
+         CertificateFile ${ca-bundle_crt}
+         Port 993
+         PipelineDepth 1
+
+         IMAPStore gmail-c2g-admin-remote
+         Account gmail-c2g-admin
+         PathDelimiter /
+         Trash Trash
+
+         Channel gmail-c2g-admin-all-mail
+         Far :gmail-c2g-admin-remote:"[Gmail]/All Mail"
+         Near :dovecot-local:list.bahai.ctg.admin
+         Create Near
+         Expunge Near
+         Remove Near
+         Sync Pull
+         CopyArrivalDate yes
+
          Channel personal-inbox
          Far :fastmail-remote:
          Near :dovecot-local:
@@ -975,6 +1004,7 @@ in {
          Channel gmail-all-mail
          Channel gmail-kadena-all-mail
          Channel gmail-c2g-all-mail
+         Channel gmail-c2g-admin-all-mail
        '';
      } else {});
   };

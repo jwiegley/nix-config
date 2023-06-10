@@ -325,9 +325,9 @@ in {
       # If not set, use the value from info_log_path
       debug_log_path = /var/log/dovecot-debug.log
 
-      protocol lda {
-        mail_plugins = $mail_plugins sieve
-      }
+      # protocol lda {
+      #   mail_plugins = $mail_plugins sieve
+      # }
 
       userdb {
         driver = prefetch
@@ -388,11 +388,11 @@ in {
         executable = script ${pkgs.dovecot}/libexec/dovecot/decode2text.sh
       }
 
-      plugin {
-        sieve_extensions = +editheader
-        sieve = ${home}/Messages/dovecot.sieve
-        sieve_dir = ${home}/Messages/sieve
-      }
+      # plugin {
+      #   sieve_extensions = +editheader
+      #   sieve = ${home}/Messages/dovecot.sieve
+      #   sieve_dir = ${home}/Messages/sieve
+      # }
     '';
 
     "pdnsd.conf".text = ''
