@@ -601,12 +601,13 @@ emacs28           = pkgs.emacs28;
 emacs28Packages   = self.emacs28PackagesNg;
 emacs28PackagesNg = mkEmacsPackages self.emacs28;
 
-# emacs28MacPort           = pkgs.emacsMacport;
 
 # jww (2023-06-09): These changes allow emacs-mac-28 to build on aarch64-darwin
-emacs28MacPort           = (pkgs.emacsMacport.overrideAttrs (o: {
+emacs28MacPortAlt = (pkgs.emacsMacport.overrideAttrs (o: {
   buildInputs = o.buildInputs ++
-    (with pkgs.darwin.apple_sdk_11_0.frameworks; [ UniformTypeIdentifiers Accelerate ]);
+    (with pkgs.darwin.apple_sdk_11_0.frameworks; [
+      UniformTypeIdentifiers Accelerate
+    ]);
   patches = o.patches ++ [
     # ./emacs/0001-mac-gui-loop-block-lifetime.patch
     ./emacs/0002-mac-gui-loop-block-autorelease.patch
@@ -614,6 +615,11 @@ emacs28MacPort           = (pkgs.emacsMacport.overrideAttrs (o: {
 })).override {
   llvmPackages_6 = pkgs.llvmPackages_14;
 };
+
+emacs28MacPort =
+  if pkgs.stdenv.targetPlatform.isx86_64
+  then pkgs.emacsMacport
+  else self.emacs28MacPortAlt;
 
 emacs28MacPortPackages   = self.emacs28MacPortPackagesNg;
 emacs28MacPortPackagesNg = mkEmacsPackages self.emacs28MacPort;
