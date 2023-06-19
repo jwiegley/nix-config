@@ -25,7 +25,7 @@ let home            = builtins.getEnv "HOME";
     athena_ethernet = "192.168.50.235";
 
     am_traveling    = false;
-    external_ip     = "76.234.69.149";
+    external_ip     = "67.181.169.43";
 
     master_key      = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
     signing_key     = "E0F96E618528E465";
@@ -639,7 +639,8 @@ in {
         # This is athena, as accessible from remote
         build = {
           hostname = external_ip;
-          port = 2202;
+          # port = 2202;
+          port = 22;
           extraOptions = {
             LocalForward = "5999 127.0.0.1:5902";
           };

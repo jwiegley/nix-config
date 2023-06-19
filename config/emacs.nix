@@ -205,6 +205,7 @@ pkgs: epkgs: with epkgs;
   org-contrib
   org-download
   org-drill
+  org-edna
   org-mime
   org-noter
   org-pomodoro
