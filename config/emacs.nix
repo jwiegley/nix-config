@@ -47,6 +47,7 @@ pkgs: epkgs: with epkgs;
   consult-dir
   consult-flycheck
   consult-git-log-grep
+  # consult-gh
   consult-lsp
   consult-org-roam
   # consult-projectile

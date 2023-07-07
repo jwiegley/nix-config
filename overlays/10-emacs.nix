@@ -238,6 +238,18 @@ let
       buildInputs = with eself; [ cape yasnippet ];
     };
 
+    consult-gh = compileEmacsFiles {
+      name = "consult-gh";
+      src = fetchFromGitHub {
+        owner = "armindarvish";
+        repo = "consult-gh";
+        rev = "1fe876d9552b6ec6af257a4299a34eca99b40539";
+        sha256 = "1n7fcgdvb3m76i3a40ijs3c0675p6pfmxny5w797ccfdvfaalbvf";
+        # date = 2023-07-06T09:38:40-07:00;
+      };
+      buildInputs = with eself; [ consult embark ];
+    };
+
     dired-hist = compileEmacsFiles {
       name = "dired-hist";
       src = fetchFromGitHub {
@@ -628,7 +640,7 @@ emacs29 = with pkgs; (self.emacs28.override { srcRepo = true; }).overrideAttrs(a
   name = "emacs-${version}${versionModifier}";
   version = "29.0";
   versionModifier = ".90";
-  src = ~/src/emacs;
+  src = pkgs.nix-gitignore.gitignoreSource [] ~/src/emacs;
   patches = [
     ./emacs/clean-env.patch
   ];

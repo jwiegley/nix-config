@@ -23,9 +23,10 @@ let home            = builtins.getEnv "HOME";
     hermes_wifi     = "192.168.50.102";
 
     athena_ethernet = "192.168.50.235";
+    athena_wifi     = "192.168.50.3";
 
     am_traveling    = false;
-    external_ip     = "67.181.169.43";
+    external_ip     = "69.62.207.57";
 
     master_key      = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
     signing_key     = "E0F96E618528E465";
@@ -70,6 +71,7 @@ in {
       HERMES_ETHERNET    = hermes_ethernet;
       HERMES_WIFI        = hermes_wifi;
       ATHENA_ETHERNET    = athena_ethernet;
+      ATHENA_WIFI        = athena_wifi;
 
       RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone-b2";
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
@@ -631,26 +633,25 @@ in {
         home = {
           hostname = external_ip;
           port = 2201;
-          extraOptions = {
-            LocalForward = "5999 127.0.0.1:5901";
-          };
+          #extraOptions = {
+          #  LocalForward = "5999 127.0.0.1:5901";
+          #};
         };
 
         # This is athena, as accessible from remote
         build = {
           hostname = external_ip;
-          # port = 2202;
-          port = 22;
-          extraOptions = {
-            LocalForward = "5999 127.0.0.1:5902";
-          };
+          port = 2202;
+          #extraOptions = {
+          #  LocalForward = "5999 127.0.0.1:5902";
+          #};
         };
 
         vulcan = if am_traveling then home else { hostname = vulcan_ethernet; };
-        deimos = onHost "vulcan" "172.16.194.147";
+        deimos = onHost "vulcan" "172.16.194.157";
         mimas = onHost "vulcan" "172.16.194.154";
 
-        athena = if am_traveling then build else { hostname = athena_ethernet; };
+        athena = if am_traveling then build else { hostname = athena_wifi; };
         phobos = onHost "vulcan" "192.168.50.111";
 
         hermes.hostname = hermes_ethernet;

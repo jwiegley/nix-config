@@ -208,14 +208,6 @@ in {
       };
     }
     // lib.optionalAttrs (localconfig.hostname == "vulcan") {
-      # snapshots = {
-      #   script = ''
-      #     date >> /var/log/snapshots.log 2>&1
-      #     ${pkgs.sanoid}/bin/sanoid --cron --verbose >> /var/log/snapshots.log 2>&1
-      #   '';
-      #   serviceConfig = iterate 3600;
-      # };
-
       unmount = {
         script = ''
           diskutil unmount /Volumes/BOOTCAMP
@@ -227,8 +219,8 @@ in {
 
       zfs-import = {
         script = ''
-          export PATH=/usr/local/zfs/bin:$PATH
-          export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
+          # export PATH=/usr/local/zfs/bin:$PATH
+          # export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
           # zpool import -d /var/run/disk/by-serial -a
           kextunload /Library/Extensions/zfs.kext
         '';
@@ -237,13 +229,27 @@ in {
       };
      }
     // lib.optionalAttrs (localconfig.hostname == "athena") {
-      # snapshots = {
-      #   script = ''
-      #     date >> /var/log/snapshots.log 2>&1
-      #     ${pkgs.sanoid}/bin/sanoid --cron --verbose >> /var/log/snapshots.log 2>&1
-      #   '';
-      #   serviceConfig = iterate 3600;
-      # };
+      snapshots = {
+        script = ''
+          date >> /var/log/snapshots.log 2>&1
+          ${pkgs.sanoid}/bin/sanoid --cron --verbose >> /var/log/snapshots.log 2>&1
+        '';
+        serviceConfig = iterate 3600;
+      };
+
+      b2-restic = {
+        script = ''
+          date >> /var/log/b2-restic.log 2>&1
+          export PATH=${pkgs.restic}/bin:/usr/local/zfs/bin:$PATH
+          export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
+          ${pkgs.my-scripts}/bin/b2-restic --passwords ~/athena/restic-passwords \
+              tank --all 2>&1 \
+              | grep --line-buffered -v "can not obtain extended attribute" \
+              >> /var/log/b2-restic.log 2>&1
+
+        '';
+        serviceConfig = iterate 86400;
+      };
 
       zfs-import = {
         script = ''
@@ -491,8 +497,7 @@ in {
       # }
     '';
   } else {})
-  // lib.optionalAttrs (localconfig.hostname == "vulcan" ||
-                        localconfig.hostname == "hermes") {
+  // lib.optionalAttrs (localconfig.hostname == "athena") {
     "sanoid/sanoid.conf".text = ''
       [tank]
       use_template = archival
@@ -517,6 +522,11 @@ in {
       [tank/ChainState/kadena/chainweb-none]
       use_template = none
 
+      [studio/ChainState/kadena]
+      use_template = production
+      recursive = yes
+      process_children_only = yes
+
       [template_production]
 
       script_timeout = 5
@@ -524,9 +534,9 @@ in {
 
       autoprune = yes
       frequently = 0
-      hourly = 48
-      daily = 90
-      weekly = 20
+      hourly = 12
+      daily = 14
+      weekly = 8
       monthly = 12
       yearly = 20
 
@@ -563,31 +573,6 @@ in {
       weekly = 0
       monthly = 0
       yearly = 0
-    '';
-  }
-  // lib.optionalAttrs (localconfig.hostname == "athena") {
-    "sanoid/sanoid.conf".text = ''
-      [studio/ChainState/kadena]
-      use_template = production
-      recursive = yes
-      process_children_only = yes
-
-      [template_production]
-
-      script_timeout = 5
-      frequent_period = 60
-
-      autoprune = yes
-      frequently = 0
-      hourly = 12
-      daily = 14
-      weekly = 8
-      monthly = 12
-      yearly = 20
-
-      # pruning can be skipped based on the used capacity of the pool
-      # (0: always prune, 1-100: only prune if used capacity is greater than this value)
-      prune_defer = 60
     '';
   };
 }
