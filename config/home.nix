@@ -627,14 +627,12 @@ in {
         let onHost = proxyJump: hostname: { inherit hostname; } //
           lib.optionalAttrs (localconfig.hostname != proxyJump) {
             inherit proxyJump;
-            identitiesOnly = true;
           }; in rec {
 
         # This is vulcan, as accessible from remote
         home = {
           hostname = external_ip;
           port = 2201;
-          identitiesOnly = true;
           #extraOptions = {
           #  LocalForward = "5999 127.0.0.1:5901";
           #};
@@ -644,7 +642,6 @@ in {
         build = {
           hostname = external_ip;
           port = 2202;
-          identitiesOnly = true;
           #extraOptions = {
           #  LocalForward = "5999 127.0.0.1:5902";
           #};
@@ -668,7 +665,6 @@ in {
         router = {
           hostname = "rt-ax88u-3f30.local";
           user = "router";
-          identitiesOnly = true;
         };
 
         elpa = { hostname = "elpa.gnu.org"; user = "root"; };
@@ -685,7 +681,6 @@ in {
             "git.sv.nongnu.org"
           ];
           identityFile = "${config.xdg.configHome}/ssh/id_emacs";
-          identitiesOnly = true;
         };
 
         haskell_org = { host = "*haskell.org"; user = "root"; };
@@ -695,7 +690,6 @@ in {
           host = "*.chainweb.com";
           user = "chainweb";
           identityFile = "${config.xdg.configHome}/ssh/id_kadena";
-          identitiesOnly = true;
           extraOptions = {
             StrictHostKeyChecking = "no";
           };
