@@ -156,11 +156,11 @@ in {
     };
   };
 
-  # networking = {
-  #   dns = [ "127.0.0.1" ];
+  # networking = if localconfig.hostname == "vulcan" then {
+  #   dns = [ "192.168.50.1" ];
   #   search = [ "local" ];
-  #   knownNetworkServices = [ "Ethernet" "Wi-Fi" ];
-  # };
+  #   knownNetworkServices = [ "Ethernet" "Thunderbolt Bridge" ];
+  # } else {};
 
   launchd =
     let
@@ -195,17 +195,17 @@ in {
         serviceConfig.KeepAlive = false;
       };
 
-      pdnsd = {
-        script = ''
-          cp -pL /etc/pdnsd.conf ${tmpdir}/.pdnsd.conf
-          chmod 700 ${tmpdir}/.pdnsd.conf
-          chown root ${tmpdir}/.pdnsd.conf
-          touch ${xdg_cacheHome}/pdnsd/pdnsd.cache
-          ${pkgs.pdnsd}/sbin/pdnsd -c ${tmpdir}/.pdnsd.conf
-        '';
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = true;
-      };
+      # pdnsd = {
+      #   script = ''
+      #     cp -pL /etc/pdnsd.conf ${tmpdir}/.pdnsd.conf
+      #     chmod 700 ${tmpdir}/.pdnsd.conf
+      #     chown root ${tmpdir}/.pdnsd.conf
+      #     touch ${xdg_cacheHome}/pdnsd/pdnsd.cache
+      #     ${pkgs.pdnsd}/sbin/pdnsd -c ${tmpdir}/.pdnsd.conf
+      #   '';
+      #   serviceConfig.RunAtLoad = true;
+      #   serviceConfig.KeepAlive = true;
+      # };
     }
     // lib.optionalAttrs (localconfig.hostname == "vulcan") {
       unmount = {
@@ -233,22 +233,56 @@ in {
         script = ''
           date >> /var/log/snapshots.log 2>&1
           ${pkgs.sanoid}/bin/sanoid --cron --verbose >> /var/log/snapshots.log 2>&1
+          ${pkgs.sanoid}/bin/sanoid --prune-snapshots >> /var/log/snapshots.log 2>&1
         '';
         serviceConfig = iterate 3600;
       };
+
+      # workspace-update = {
+      #   script = ''
+      #     date >> /var/log/workspace-update.log 2>&1
+      #     export PATH=${pkgs.git}/bin:${pkgs.gitAndTools.git-workspace}/bin:$PATH
+      #     unset GITHUB_TOKEN
+      #     ${pkgs.my-scripts}/bin/workspace-update \
+      #         --passwords /Users/johnw/athena/restic-passwords 2>&1 \
+      #         >> /var/log/workspace-update.log 2>&1
+      #   '';
+      #   serviceConfig = {
+      #     StartCalendarInterval = [
+      #       {
+      #         Hour = 1;
+      #         Minute = 30;
+      #       }
+      #     ];
+      #     Nice = 5;
+      #     LowPriorityIO = true;
+      #     AbandonProcessGroup = true;
+      #   };
+      # };
 
       b2-restic = {
         script = ''
           date >> /var/log/b2-restic.log 2>&1
           export PATH=${pkgs.restic}/bin:/usr/local/zfs/bin:$PATH
           export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
-          ${pkgs.my-scripts}/bin/b2-restic --passwords ~/athena/restic-passwords \
-              tank --all 2>&1 \
+          unset RESTIC_PASSWORD_COMMAND
+          export HOME=/Users/johnw
+          ${pkgs.my-scripts}/bin/b2-restic \
+              --passwords /Users/johnw/athena/restic-passwords tank --all 2>&1 \
               | grep --line-buffered -v "can not obtain extended attribute" \
               >> /var/log/b2-restic.log 2>&1
-
         '';
-        serviceConfig = iterate 86400;
+        serviceConfig = {
+          StartCalendarInterval = [
+            {
+              Hour = 2;
+              Minute = 30;
+            }
+          ];
+          Nice = 5;
+          LowPriorityIO = true;
+          AbandonProcessGroup = true;
+        };
       };
 
       zfs-import = {

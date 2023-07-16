@@ -25,8 +25,8 @@ let home            = builtins.getEnv "HOME";
     athena_ethernet = "192.168.50.235";
     athena_wifi     = "192.168.50.3";
 
-    am_traveling    = false;
-    external_ip     = "69.62.207.57";
+    am_traveling    = true;
+    external_ip     = "newartisans.hopto.org";
 
     master_key      = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
     signing_key     = "E0F96E618528E465";
@@ -627,12 +627,14 @@ in {
         let onHost = proxyJump: hostname: { inherit hostname; } //
           lib.optionalAttrs (localconfig.hostname != proxyJump) {
             inherit proxyJump;
+            identitiesOnly = true;
           }; in rec {
 
         # This is vulcan, as accessible from remote
         home = {
           hostname = external_ip;
           port = 2201;
+          identitiesOnly = true;
           #extraOptions = {
           #  LocalForward = "5999 127.0.0.1:5901";
           #};
@@ -642,6 +644,7 @@ in {
         build = {
           hostname = external_ip;
           port = 2202;
+          identitiesOnly = true;
           #extraOptions = {
           #  LocalForward = "5999 127.0.0.1:5902";
           #};
@@ -657,7 +660,16 @@ in {
         hermes.hostname = hermes_ethernet;
         neso = onHost "hermes" "192.168.100.130";
 
-        mohajer = { hostname = "192.168.50.120"; user = "nasimwiegley"; };
+        mohajer = {
+          hostname = "192.168.50.120";
+          user = "nasimwiegley";
+        };
+
+        router = {
+          hostname = "rt-ax88u-3f30.local";
+          user = "router";
+          identitiesOnly = true;
+        };
 
         elpa = { hostname = "elpa.gnu.org"; user = "root"; };
 
