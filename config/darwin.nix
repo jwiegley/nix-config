@@ -21,6 +21,24 @@ in {
       name = "johnw";
       home = "/Users/johnw";
       shell = pkgs.zsh;
+
+      openssh.authorizedKeys = {
+        keys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb yubikey-gnupg"
+        ];
+        keyFiles =
+          if localconfig.hostname == "vulcan" then [
+            "${home}/vulcan/id_athena.pub"
+          ]
+          else if localconfig.hostname == "athena" then [
+            "${home}/athena/id_vulcan.pub"
+          ]
+          else if localconfig.hostname == "hermes" then [
+            "${home}/hermes/id_vulcan.pub"
+            "${home}/hermes/id_athena.pub"
+          ]
+          else [];
+      };
     };
   };
 
@@ -568,11 +586,11 @@ in {
 
       autoprune = yes
       frequently = 0
-      hourly = 12
-      daily = 14
-      weekly = 8
-      monthly = 12
-      yearly = 20
+      hourly = 6
+      daily = 3
+      weekly = 4
+      monthly = 3
+      yearly = 0
 
       # pruning can be skipped based on the used capacity of the pool
       # (0: always prune, 1-100: only prune if used capacity is greater than this value)

@@ -25,7 +25,7 @@ let home            = builtins.getEnv "HOME";
     athena_ethernet = "192.168.50.235";
     athena_wifi     = "192.168.50.3";
 
-    am_traveling    = true;
+    am_traveling    = false;
     external_ip     = "newartisans.hopto.org";
 
     master_key      = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
@@ -624,38 +624,46 @@ in {
       userKnownHostsFile = "${config.xdg.configHome}/ssh/known_hosts";
 
       matchBlocks =
-        let onHost = proxyJump: hostname: { inherit hostname; } //
-          lib.optionalAttrs (localconfig.hostname != proxyJump) {
-            inherit proxyJump;
-          }; in rec {
+        let
+          onHost = proxyJump: hostname: { inherit hostname; } //
+            lib.optionalAttrs (localconfig.hostname != proxyJump) {
+              inherit proxyJump;
+            };
+          withLocal = attrs: attrs //
+            (if localconfig.hostname == "vulcan" then {
+               identityFile = "${home}/vulcan/id_vulcan";
+             }
+             else if localconfig.hostname == "athena" then {
+               identityFile = "${home}/athena/id_athena";
+             }
+             else if localconfig.hostname == "hermes" then {
+               # always use the YubiKey when coming from a laptop
+             }
+             else {});
+        in rec {
 
         # This is vulcan, as accessible from remote
         home = {
           hostname = external_ip;
           port = 2201;
-          #extraOptions = {
-          #  LocalForward = "5999 127.0.0.1:5901";
-          #};
         };
 
         # This is athena, as accessible from remote
         build = {
           hostname = external_ip;
           port = 2202;
-          #extraOptions = {
-          #  LocalForward = "5999 127.0.0.1:5902";
-          #};
         };
 
-        vulcan = if am_traveling then home else { hostname = vulcan_ethernet; };
-        deimos = onHost "vulcan" "172.16.194.157";
-        mimas = onHost "vulcan" "172.16.194.154";
+        vulcan = withLocal (if am_traveling then home else { hostname = vulcan_ethernet; });
+        deimos = withLocal (onHost "vulcan" "172.16.194.157");
 
-        athena = if am_traveling then build else { hostname = athena_wifi; };
-        phobos = onHost "vulcan" "192.168.50.111";
+        athena = withLocal (if am_traveling then build else { hostname = athena_wifi; });
+        phobos = withLocal (onHost "vulcan" "192.168.50.111");
 
-        hermes.hostname = hermes_ethernet;
-        neso = onHost "hermes" "192.168.100.130";
+        hermes = withLocal (if localconfig.hostname == "athena"
+                            then { hostname = hermes_wifi; }
+                            else { hostname = hermes_ethernet; });
+        neso   = withLocal (onHost "hermes" "192.168.100.130");
 
         mohajer = {
           hostname = "192.168.50.120";
