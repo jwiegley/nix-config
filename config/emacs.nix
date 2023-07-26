@@ -208,6 +208,7 @@ pkgs: epkgs: with epkgs;
   org-drill
   org-edna
   org-mime
+  org-modern
   org-noter
   org-pomodoro
   org-ql

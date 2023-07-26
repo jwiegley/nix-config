@@ -310,7 +310,7 @@ let exe = haskell.lib.justStaticExecutables; in
   ## Dfinity packages
   quill
   candid
-  idl2json
+  # idl2json
 ]
 
 ++
