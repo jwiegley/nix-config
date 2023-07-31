@@ -341,6 +341,17 @@ let
       buildInputs = with eself; [ emamux ];
     };
 
+    org-extra-emphasis = compileEmacsFiles {
+      name = "org-extra-emphasis";
+      src = fetchFromGitHub {
+        owner = "QiangF";
+        repo = "org-extra-emphasis";
+        rev = "21eba82194bfb8cc4c359fb580fe094fe6afa615";
+        sha256 = "0kra76shm18j5065xhk02b7klh269k4addpcidgry6pypnr7z1d3";
+        # date = 2023-02-10T08:35:47+05:30;
+      };
+    };
+
     ox-texinfo-plus = compileEmacsFiles {
       name = "ox-texinfo-plus";
       src = fetchFromGitHub {

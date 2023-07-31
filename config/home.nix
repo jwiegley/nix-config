@@ -334,8 +334,8 @@ in {
            . ${config.xdg.configHome}/zsh/plugins/iterm2_tmux_integration
            . ${pkgs.zsh-git-prompt}/share/zsh-git-prompt/zshrc.sh
 
-           sudo /bin/launchctl limit maxfiles 524288 524288
-           ulimit -n 65536
+           # sudo /bin/launchctl limit maxfiles 524288 524288
+           # ulimit -n 65536
 
            autoload -Uz compinit
            compinit
@@ -654,10 +654,14 @@ in {
           port = 2202;
         };
 
-        vulcan = withLocal (if am_traveling then home else { hostname = vulcan_ethernet; });
+        vulcan = withLocal (if am_traveling
+                            then home
+                            else { hostname = vulcan_ethernet; });
         deimos = withLocal (onHost "vulcan" "172.16.194.157");
 
-        athena = withLocal (if am_traveling then build else { hostname = athena_wifi; });
+        athena = withLocal (if am_traveling
+                            then build
+                            else { hostname = athena_wifi; });
         phobos = withLocal (onHost "vulcan" "192.168.50.111");
 
         hermes = withLocal (if localconfig.hostname == "athena"

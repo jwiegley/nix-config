@@ -207,6 +207,7 @@ pkgs: epkgs: with epkgs;
   org-download
   org-drill
   org-edna
+  org-extra-emphasis
   org-mime
   org-modern
   org-noter

@@ -43,6 +43,7 @@ let exe = haskell.lib.justStaticExecutables; in
   csvkit
   ctop
   curl
+  (pkgs.lowPrio dafny)
   darwin.cctools
   dhall
   dhall-json
@@ -93,9 +94,9 @@ let exe = haskell.lib.justStaticExecutables; in
   gitAndTools.git-machete
   gitAndTools.git-my
   gitAndTools.git-octopus
-  # gitAndTools.git-quick-stats
+  gitAndTools.git-quick-stats
   gitAndTools.git-quickfix
-  # gitAndTools.git-recent
+  gitAndTools.git-recent
   gitAndTools.git-reparent
   gitAndTools.git-repo
   gitAndTools.git-scripts
@@ -256,6 +257,7 @@ let exe = haskell.lib.justStaticExecutables; in
   taskjuggler
   terminal-notifier
   time
+  tlaplus
   tmux
   translate-shell
   travis
@@ -304,19 +306,16 @@ let exe = haskell.lib.justStaticExecutables; in
   # (pkgs.lowPrio chainweb-node)
   # (pkgs.lowPrio run-chainweb-replay)
   # (pkgs.lowPrio chainweb-data)
-  # (pkgs.lowPrio chainweb-mining-client)
   (pkgs.lowPrio kda-tool)
 
   ## Dfinity packages
-  quill
-  candid
+  # quill
+  # candid
   # idl2json
 ]
 
 ++
 
 pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
-  contacts
-  # (pkgs.lowPrio dafny)
-  tlaplus
+  contacts                      # needs too old a version of clang
 ]
