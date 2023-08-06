@@ -183,7 +183,6 @@ pkgs: epkgs: with epkgs;
   mc-extras
   mediawiki
   memory-usage
-  message-x
   minesweeper
   moccur-edit
   multi-term
@@ -204,6 +203,7 @@ pkgs: epkgs: with epkgs;
   org
   org-bookmark-heading
   org-contrib
+  org-contacts
   org-download
   org-drill
   org-edna

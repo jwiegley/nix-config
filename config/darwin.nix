@@ -588,13 +588,13 @@ in {
       frequently = 0
       hourly = 6
       daily = 3
-      weekly = 4
-      monthly = 3
+      weekly = 0
+      monthly = 0
       yearly = 0
 
       # pruning can be skipped based on the used capacity of the pool
       # (0: always prune, 1-100: only prune if used capacity is greater than this value)
-      prune_defer = 60
+      prune_defer = 0
 
       [template_archival]
 
