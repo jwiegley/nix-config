@@ -27,7 +27,6 @@ pkgs: epkgs: with epkgs;
   button-lock
   bytecomp-simplify
   cape
-  # cape-yasnippet
   cargo
   centered-cursor-mode
   change-inner
@@ -47,10 +46,8 @@ pkgs: epkgs: with epkgs;
   consult-dir
   consult-flycheck
   consult-git-log-grep
-  # consult-gh
   consult-lsp
   consult-org-roam
-  # consult-projectile
   consult-yasnippet
   copy-as-format
   corfu
@@ -163,9 +160,6 @@ pkgs: epkgs: with epkgs;
   lively
   logito
   loop
-  # lsp-haskell
-  # lsp-mode
-  # lsp-ui
   lua-mode
   m-buffer
   macrostep
@@ -257,7 +251,6 @@ pkgs: epkgs: with epkgs;
   pos-tip
   pp-c-l
   prodigy
-  # projectile
   proof-general
   protobuf-mode
   python-mode
@@ -319,7 +312,6 @@ pkgs: epkgs: with epkgs;
   visual-regexp
   vline
   vterm
-  # vterm-tmux
   vundo
   w3m
   wat-mode
