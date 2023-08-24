@@ -453,6 +453,18 @@ let
       };
     };
 
+    yasnippet-capf = compileEmacsFiles {
+      name = "yasnippet-capf";
+      src = fetchFromGitHub {
+        owner = "elken";
+        repo = "yasnippet-capf";
+        rev = "40654214db7a44db3a99321447632b43a10fae57";
+        sha256 = "1kywl7jblrmixr0vwycpil5hyk4p5qlc3gxg9w25xga4jj91r663";
+        # date = 2023-08-13T20:06:42+01:00;
+      };
+      buildInputs = with eself; [ yasnippet ];
+    };
+
     ########################################################################
 
     agda2-mode =

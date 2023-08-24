@@ -598,12 +598,10 @@ in {
         "cabal.project.local*"
         "default.hoo"
         "default.warn"
-        "dist-newstyle"
-        "input-haskell-cabal.tar.gz"
-        "input-haskell-hoogle.tar.gz"
-        "input-haskell-platform.txt"
-        "input-haskell-stackage-lts.txt"
-        "input-haskell-stackage-nightly.txt"
+        "dist-newstyle/"
+        "ghc[0-9]*_[0-9]*/"
+        "input-haskell-*.tar.gz"
+        "input-haskell-*.txt"
         "result"
         "result-*"
         "tags"
@@ -661,7 +659,7 @@ in {
 
         athena = withLocal (if am_traveling
                             then build
-                            else { hostname = athena_wifi; });
+                            else { hostname = athena_ethernet; });
         phobos = withLocal (onHost "vulcan" "192.168.50.111");
 
         hermes = withLocal (if localconfig.hostname == "athena"
@@ -1021,9 +1019,9 @@ in {
          Channel personal-archive
          channel personal-spam
          ${allChannelDecls}
-         Channel gmail-all-mail
-         Channel gmail-kadena-all-mail
-         Channel gmail-c2g-all-mail
+         # Channel gmail-all-mail
+         # Channel gmail-kadena-all-mail
+         # Channel gmail-c2g-all-mail
          Channel gmail-c2g-admin-all-mail
        '';
      } else {});

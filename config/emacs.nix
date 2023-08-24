@@ -332,6 +332,7 @@ pkgs: epkgs: with epkgs;
   yaml-mode
   yaoddmuse
   yasnippet
+  yasnippet-capf
   z3-mode
   zoom
   zoutline
