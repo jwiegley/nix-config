@@ -13,13 +13,12 @@ let exe = haskell.lib.justStaticExecutables; in
   # haskellPackages.sitebuilder
   (exe haskellPackages.una)
   (exe haskellPackages.git-monitor)
-  (exe haskellPackages.hours)
-  (exe haskellPackages.lhs2tex)
+  # (exe haskellPackages.hours)
   (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
   (exe haskellPackages_9_2.hasktags)
   # (exe haskellPackages_9_2.eventlog2html)
-  haskellPackages_9_2.ormolu.bin
+  haskellPackages_9_2.ormolu
   # (exe (haskell.lib.doJailbreak haskellPackages.threadscope))
   (exe haskellPackages.pointfree)
   act
@@ -134,7 +133,7 @@ let exe = haskell.lib.justStaticExecutables; in
   html-tidy
   htop
   # httm
-  httpie
+  # httpie                # servant is broken
   httrack
   iftop
   imagemagickBig
@@ -146,7 +145,7 @@ let exe = haskell.lib.justStaticExecutables; in
   isync
   jdk
   jiq
-  jo
+  # jo
   jq
   jupyter
   killall

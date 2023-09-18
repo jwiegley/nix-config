@@ -660,7 +660,7 @@ in {
         athena = withLocal (if am_traveling
                             then build
                             else { hostname = athena_ethernet; });
-        phobos = withLocal (onHost "vulcan" "192.168.50.111");
+        phobos = withLocal (onHost "athena" "192.168.50.111");
 
         hermes = withLocal (if localconfig.hostname == "athena"
                             then { hostname = hermes_wifi; }

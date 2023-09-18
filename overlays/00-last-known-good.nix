@@ -24,4 +24,10 @@ in {
     rev    = "e1586b80a559beb47279c96d66ac6e8a216f58fe";
     sha256 = "1fq11aq0h0795lrrkr56nv0lfr2saljcnypj7c9h8zrq85k82ic1";
   }) vim-full squashfsTools;
+
+  inherit (nixpkgs {
+    # rev    = "known-good-20230815_094207";
+    rev    = "6ac50c5df158c3cbe29c5111962e4c89daf1f929";
+    sha256 = "sha256-trkGHaFfydle3MzKOFhGI4g1pY+j3s8xVsTNmztbLCI=";
+  }) pandoc;
 }
