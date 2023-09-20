@@ -945,30 +945,6 @@ in {
          Remove Both
          CopyArrivalDate yes
 
-         IMAPAccount gmail-c2g-admin
-         Host imap.gmail.com
-         User copper2gold1@gmail.com
-         PassCmd "pass c2g-admin.imap.gmail.com"
-         SSLType IMAPS
-         AuthMechs LOGIN
-         CertificateFile ${ca-bundle_crt}
-         Port 993
-         PipelineDepth 1
-
-         IMAPStore gmail-c2g-admin-remote
-         Account gmail-c2g-admin
-         PathDelimiter /
-         Trash Trash
-
-         Channel gmail-c2g-admin-all-mail
-         Far :gmail-c2g-admin-remote:"[Gmail]/All Mail"
-         Near :dovecot-local:list.bahai.ctg.admin
-         Create Near
-         Expunge Near
-         Remove Near
-         Sync Pull
-         CopyArrivalDate yes
-
          Channel personal-inbox
          Far :fastmail-remote:
          Near :dovecot-local:
@@ -1022,7 +998,6 @@ in {
          # Channel gmail-all-mail
          # Channel gmail-kadena-all-mail
          # Channel gmail-c2g-all-mail
-         Channel gmail-c2g-admin-all-mail
        '';
      } else {});
   };
