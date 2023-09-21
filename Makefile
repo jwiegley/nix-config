@@ -118,6 +118,8 @@ pull: tag-before
 	(cd nixpkgs	 && git pull --rebase)
 	(cd darwin	 && git pull --rebase)
 	(cd home-manager && git pull --rebase)
+	update ~/kadena ~/doc ~/src
+	(cd ~/src/emacs  && git pull)
 
 tag-working:
 	$(call announce,git tag last-known-good)
