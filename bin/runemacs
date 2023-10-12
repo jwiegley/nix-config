@@ -9,7 +9,7 @@ elif [[ "$1" == --rev ]]; then
     EMACSAPP=Emacs
     shift 2
 else
-    export EMACSVER=28MacPort
+    export EMACSVER=29MacPort
     EMACSAPP=Emacs
 fi
 

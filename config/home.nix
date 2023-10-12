@@ -656,6 +656,7 @@ in {
                             then home
                             else { hostname = vulcan_ethernet; });
         deimos = withLocal (onHost "vulcan" "172.16.194.157");
+        simon  = withLocal (onHost "vulcan" "172.16.194.158");
 
         athena = withLocal (if am_traveling
                             then build
@@ -794,7 +795,6 @@ in {
              "list.misc"
              "list.notifications"
              "list.ledger"
-             "list.ledger.devel"
              # "list.haskell.announce"
              # "list.haskell.beginners"
              # "list.haskell.cabal"

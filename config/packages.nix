@@ -56,9 +56,8 @@ let exe = haskell.lib.justStaticExecutables; in
   # dovecot_pigeonhole
   # dovecot_fts_xapian
   doxygen
-  emacs28MacPortEnv
+  emacs29MacPortEnv
   emacs29Env
-  emacsERCEnv
   entr
   exiv2
   fd
@@ -300,7 +299,7 @@ let exe = haskell.lib.justStaticExecutables; in
   zsh-syntax-highlighting
 
   ## Kadena packages
-  # (pkgs.lowPrio pact)
+  (pkgs.lowPrio pact)
   (pkgs.lowPrio pact-lsp)
   # (pkgs.lowPrio chainweb-node)
   # (pkgs.lowPrio run-chainweb-replay)
@@ -317,4 +316,5 @@ let exe = haskell.lib.justStaticExecutables; in
 
 pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
   contacts                      # needs too old a version of clang
+  emacsERCEnv
 ]

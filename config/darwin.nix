@@ -62,7 +62,7 @@ in {
       allowUnsupportedSystem = false;
 
       permittedInsecurePackages = [
-        "python-2.7.18.6"
+        "python-2.7.18.7"
         "libressl-3.4.3"
       ];
     };

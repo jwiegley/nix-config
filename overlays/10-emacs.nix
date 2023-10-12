@@ -615,18 +615,18 @@ let
 in {
 
 emacs             = if pkgs.stdenv.targetPlatform.isx86_64
-                    then self.emacs28MacPort
-                    else self.emacs28;
-emacsPackages     = self.emacs28MacPortPackages;
-emacsPackagesNg   = self.emacs28MacPortPackagesNg;
+                    then self.emacs29MacPort
+                    else self.emacs29;
+emacsPackages     = self.emacs29MacPortPackages;
+emacsPackagesNg   = self.emacs29MacPortPackagesNg;
 
-emacs28           = pkgs.emacs28;
-emacs28Packages   = self.emacs28PackagesNg;
-emacs28PackagesNg = mkEmacsPackages self.emacs28;
+emacs29           = pkgs.emacs29;
+emacs29Packages   = self.emacs29PackagesNg;
+emacs29PackagesNg = mkEmacsPackages self.emacs29;
 
 
-# jww (2023-06-09): These changes allow emacs-mac-28 to build on aarch64-darwin
-emacs28MacPortAlt = (pkgs.emacsMacport.overrideAttrs (o: {
+# jww (2023-06-09): These changes allow emacs29-macport to build on aarch64-darwin
+emacs29MacPortAlt = (pkgs.emacs29-macport.overrideAttrs (o: {
   buildInputs = o.buildInputs ++
     (with pkgs.darwin.apple_sdk_11_0.frameworks; [
       UniformTypeIdentifiers Accelerate
@@ -637,48 +637,48 @@ emacs28MacPortAlt = (pkgs.emacsMacport.overrideAttrs (o: {
   ];
 }));
 
-emacs28MacPort =
+emacs29MacPort =
   if pkgs.stdenv.targetPlatform.isx86_64
-  then pkgs.emacsMacport
-  else self.emacs28MacPortAlt;
+  then pkgs.emacs29-macport
+  else self.emacs29MacPortAlt;
 
-emacs28MacPortPackages   = self.emacs28MacPortPackagesNg;
-emacs28MacPortPackagesNg = mkEmacsPackages self.emacs28MacPort;
+emacs29MacPortPackages   = self.emacs29MacPortPackagesNg;
+emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29MacPort;
 
-emacs29 = with pkgs; (self.emacs28.override { srcRepo = true; }).overrideAttrs(attrs: rec {
-  name = "emacs-${version}${versionModifier}";
-  version = "29.0";
-  versionModifier = ".90";
-  src = pkgs.nix-gitignore.gitignoreSource [] ~/src/emacs;
-  patches = [
-    ./emacs/clean-env.patch
-  ];
-  propagatedBuildInputs = (attrs.propagatedBuildInputs or []) ++
-    [ libgccjit
-    ];
-  buildInputs = attrs.buildInputs ++
-    [ libpng
-      libjpeg
-      libungif
-      libtiff
-      librsvg
-      jansson
-      freetype
-      harfbuzz.dev
-      git
-    ];
-  preConfigure = ''
-    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac
-    autoreconf
-  '';
-  # configureFlags = attrs.configureFlags ++
-  #   [ "--enable-checking=yes,glyphs"
-  #     "--enable-check-lisp-object-type"
-  #   ];
-});
+# emacs29 = with pkgs; (self.emacs29.override { srcRepo = true; }).overrideAttrs(attrs: rec {
+#   name = "emacs-${version}${versionModifier}";
+#   version = "29.0";
+#   versionModifier = ".90";
+#   src = pkgs.nix-gitignore.gitignoreSource [] ~/src/emacs;
+#   patches = [
+#     ./emacs/clean-env.patch
+#   ];
+#   propagatedBuildInputs = (attrs.propagatedBuildInputs or []) ++
+#     [ libgccjit
+#     ];
+#   buildInputs = attrs.buildInputs ++
+#     [ libpng
+#       libjpeg
+#       libungif
+#       libtiff
+#       librsvg
+#       jansson
+#       freetype
+#       harfbuzz.dev
+#       git
+#     ];
+#   preConfigure = ''
+#     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac
+#     autoreconf
+#   '';
+#   # configureFlags = attrs.configureFlags ++
+#   #   [ "--enable-checking=yes,glyphs"
+#   #     "--enable-check-lisp-object-type"
+#   #   ];
+# });
 
-emacs29Packages   = self.emacs29PackagesNg;
-emacs29PackagesNg = mkEmacsPackages self.emacs29;
+# emacs29Packages   = self.emacs29PackagesNg;
+# emacs29PackagesNg = mkEmacsPackages self.emacs29;
 
 convertForERC = drv: drv.overrideAttrs(attrs: rec {
   name = "erc-${attrs.version}";
@@ -717,26 +717,19 @@ emacsERC           = self.convertForERC self.emacs29;
 emacsERCPackages   = self.emacsERCPackagesNg;
 emacsERCPackagesNg = mkEmacsPackages self.emacsERC;
 
-emacsEnv = self.emacs28MacPortEnv;
-
-emacs28Env = myPkgs: pkgs.myEnvFun {
-  name = "emacs28";
-  buildInputs = [
-    (self.emacs28PackagesNg.emacsWithPackages myPkgs)
-  ];
-};
-
-emacs28MacPortEnv = myPkgs: pkgs.myEnvFun {
-  name = "emacs28MacPort";
-  buildInputs = [
-    (self.emacs28MacPortPackagesNg.emacsWithPackages myPkgs)
-  ];
-};
+emacsEnv = self.emacs29MacPortEnv;
 
 emacs29Env = myPkgs: pkgs.myEnvFun {
   name = "emacs29";
   buildInputs = [
     (self.emacs29PackagesNg.emacsWithPackages myPkgs)
+  ];
+};
+
+emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
+  name = "emacs29MacPort";
+  buildInputs = [
+    (self.emacs29MacPortPackagesNg.emacsWithPackages myPkgs)
   ];
 };
 
