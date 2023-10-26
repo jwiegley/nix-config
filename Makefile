@@ -223,7 +223,7 @@ cache-sources:
 
 cache:
 	$(call announce,nix copy --to $(REMOTE_CACHE) --all)
-	@$(NIX) copy --to $(REMOTE_CACHE) --all
+	@for i in $(seq 0 10) ; do $(NIX) copy --to $(REMOTE_CACHE) --all || exit 0 ; done
 
 PROJECTS = $(HOME)/.config/projects
 
