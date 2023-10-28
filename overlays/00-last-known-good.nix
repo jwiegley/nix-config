@@ -17,5 +17,11 @@ in {
     # rev    = "known-good-20230815_094207";
     rev    = "6ac50c5df158c3cbe29c5111962e4c89daf1f929";
     sha256 = "sha256-trkGHaFfydle3MzKOFhGI4g1pY+j3s8xVsTNmztbLCI=";
-  }) clisp bats bind msmtp pandoc;
+  }) pandoc;
+
+  inherit (nixpkgs {
+    # rev    = "known-good-20231019_094849";
+    rev    = "4af7d5a24cb5ab3d1e3a9720e679b416707847b2";
+    sha256 = "sha256-trkGHaFfydle3MzKOFhGI4g1pY+j3s8xVsTNmztbLCI=";
+  }) asymptote;
 }

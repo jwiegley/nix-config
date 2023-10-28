@@ -13,12 +13,12 @@ let home            = builtins.getEnv "HOME";
     emacsclient     = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
 
     vulcan_ethernet = if localconfig.hostname == "hermes"
-                      then "192.168.234.1"
+                      then "192.168.233.1"
                       else "192.168.50.51";
     vulcan_wifi     = "192.168.50.172";
 
     hermes_ethernet = if localconfig.hostname == "vulcan"
-                      then "192.168.234.4"
+                      then "192.168.233.2"
                       else "192.168.50.212";
     hermes_wifi     = "192.168.50.102";
 
