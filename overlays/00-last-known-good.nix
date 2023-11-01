@@ -23,5 +23,5 @@ in {
     # rev    = "known-good-20231019_094849";
     rev    = "4af7d5a24cb5ab3d1e3a9720e679b416707847b2";
     sha256 = "sha256-trkGHaFfydle3MzKOFhGI4g1pY+j3s8xVsTNmztbLCI=";
-  }) asymptote;
+  }) asymptote csvkit;
 }
