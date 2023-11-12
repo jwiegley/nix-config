@@ -317,6 +317,18 @@ let
       };
     };
 
+    # lean4-mode = compileEmacsFiles {
+    #   name = "lean4-mode";
+    #   src = fetchFromGitHub {
+    #     owner = "myuhe";
+    #     repo = "moccur-edit.el";
+    #     rev = "026f5dd4159bd1b68c430ab385757157ba01a361";
+    #     sha256 = "1qikrqs69zqzjpz8bchjrg96bzhj7cbcwkvgsrrx113p420k90zx";
+    #     # date = 2015-03-01T18:04:32+09:00;
+    #   };
+    #   buildInputs = with eself; [ color-moccur ];
+    # };
+
     moccur-edit = compileEmacsFiles {
       name = "moccur-edit";
       src = fetchFromGitHub {
