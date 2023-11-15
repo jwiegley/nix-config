@@ -30,6 +30,7 @@ pkgs: epkgs: with epkgs;
   cargo
   centered-cursor-mode
   change-inner
+  chatgpt-shell
   chess
   citre
   cmake-font-lock

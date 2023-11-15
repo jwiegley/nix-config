@@ -184,7 +184,13 @@ in {
   };
 
   programs = {
-    direnv.enable = true;
+    direnv = {
+      enable = true;
+      enableBashIntegration = true;
+      enableZshIntegration = true;
+      nix-direnv.enable = true;
+    };
+
     htop.enable = true;
     info.enable = true;
     jq.enable = true;
