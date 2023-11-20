@@ -20,8 +20,10 @@ in {
   }) pandoc;
 
   inherit (nixpkgs {
-    # rev    = "known-good-20231019_094849";
-    rev    = "4af7d5a24cb5ab3d1e3a9720e679b416707847b2";
-    sha256 = "sha256-Indcx83/NmBw0xvhotqJ4uTd8pIcDfgLzwVxZ/4ugnM=";
-  }) asymptote csvkit mitmproxy;
+    # rev    = "known-good-20231112_090312";
+    rev    = "d9a676dbb008c2b98133e6ee81b6f92264f0a06e";
+    sha256 = "sha256-jLGUC9mf9OE4uM+Hnelbw6u+xFNb1TWR+j/IeOwsikg=";
+  }) awscli2 clucene_core_2 dovecot figlet lean4 opam siege texinfo413;
 }
+
+# for i in ... ; do echo $i ; nix build -f '<darwin>' pkgs.${i} > /tmp/${i}.log 2>&1 || echo "${i}...FAILED" ; done
