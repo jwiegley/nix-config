@@ -127,6 +127,7 @@ pkgs: epkgs: with epkgs;
   gnus-recent
   google-this
   goto-last-change
+  gptel
   graphviz-dot-mode
   haskell-mode
   hcl-mode

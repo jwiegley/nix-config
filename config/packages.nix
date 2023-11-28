@@ -215,7 +215,7 @@ let exe = haskell.lib.justStaticExecutables; in
   psrecord
   pstree
   pv
-  python3
+  (pkgs.lowPrio python3)
   qemu libvirt
   qpdf
   qrencode
