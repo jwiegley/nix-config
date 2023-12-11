@@ -61,6 +61,7 @@ let exe = haskell.lib.justStaticExecutables; in
   entr
   exiv2
   fd
+  fdupes
   fetchmail
   ffmpeg
   figlet
