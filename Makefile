@@ -221,7 +221,7 @@ cache-sources:
 	     \) -type f -print0 |			\
 	    xargs -0 $(NIX) copy --to $(REMOTE_CACHE)
 
-cache:
+cache: sign
 	$(call announce,nix copy --to $(REMOTE_CACHE) --all)
 	@for i in $(seq 0 10) ; do $(NIX) copy --to $(REMOTE_CACHE) --all || exit 0 ; done
 
