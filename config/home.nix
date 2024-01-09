@@ -18,7 +18,7 @@ let home            = builtins.getEnv "HOME";
     vulcan_wifi     = "192.168.50.172";
 
     hermes_ethernet = if localconfig.hostname == "vulcan"
-                      then "192.168.233.2"
+                      then "192.168.233.5"
                       else "192.168.50.212";
     hermes_wifi     = "192.168.50.102";
 
