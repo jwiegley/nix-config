@@ -43,6 +43,6 @@ in {
     rev    = "6498fa6d61651dbe0a101992e9dd34d939ce034a";
     sha256 = "sha256-EhaP/dBqlug/EQTJTnZB5ZnDOCvzyBmFes02jBI/Lxg=";
   })
-  csvkit
+  csvkit svg2tikz
   ;
 }
