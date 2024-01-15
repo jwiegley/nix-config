@@ -37,10 +37,12 @@ in {
   })
   backblaze-b2
   ;
-}
 
-# for i in ... ; do \
-#   echo $i ; \
-#   nix build -f '<darwin>' pkgs.${i} \
-#     > /tmp/${i}.log 2>&1 || echo "${i}...FAILED" ; \
-# done
+  inherit (nixpkgs {
+    # rev    = "known-good-20240108_120429";
+    rev    = "6498fa6d61651dbe0a101992e9dd34d939ce034a";
+    sha256 = "sha256-EhaP/dBqlug/EQTJTnZB5ZnDOCvzyBmFes02jBI/Lxg=";
+  })
+  csvkit
+  ;
+}

@@ -34,7 +34,6 @@ let exe = haskell.lib.justStaticExecutables; in
   bash-completion
   bashInteractive
   bat
-  bats
   boogie
   cacert
   cbor-diag
@@ -167,7 +166,7 @@ let exe = haskell.lib.justStaticExecutables; in
   m4
   mercurialFull
   metabase
-  mitmproxy
+  # mitmproxy
   more
   mosh
   msmtp
