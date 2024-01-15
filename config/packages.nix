@@ -10,16 +10,16 @@ let exe = haskell.lib.justStaticExecutables; in
   haskellPackages.pushme
   (exe haskellPackages.runmany)
   (exe haskellPackages.sizes)
-  # haskellPackages.sitebuilder
+  haskellPackages.sitebuilder
   (exe haskellPackages.una)
   (exe haskellPackages.git-monitor)
   # (exe haskellPackages.hours)
   (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
   (exe haskellPackages_9_2.hasktags)
-  # (exe haskellPackages_9_2.eventlog2html)
+  (exe haskellPackages_9_2.eventlog2html)
   haskellPackages_9_2.ormolu
-  # (exe (haskell.lib.doJailbreak haskellPackages.threadscope))
+  (exe (haskell.lib.doJailbreak haskellPackages.threadscope))
   (exe haskellPackages.pointfree)
   act
   apg
@@ -37,6 +37,7 @@ let exe = haskell.lib.justStaticExecutables; in
   boogie
   cacert
   cbor-diag
+  contacts
   coreutils
   csvkit
   ctop
@@ -52,8 +53,8 @@ let exe = haskell.lib.justStaticExecutables; in
   dnsutils
   dot2tex
   dovecot
-  # dovecot_pigeonhole
-  # dovecot_fts_xapian
+  dovecot_pigeonhole
+  dovecot_fts_xapian
   doxygen
   emacs29MacPortEnv
   emacs29Env
@@ -131,8 +132,8 @@ let exe = haskell.lib.justStaticExecutables; in
   hs-to-coq
   html-tidy
   htop
-  # httm
-  # httpie                # servant is broken
+  httm
+  httpie
   httrack
   iftop
   imagemagickBig
@@ -144,7 +145,7 @@ let exe = haskell.lib.justStaticExecutables; in
   isync
   jdk
   jiq
-  # jo
+  jo
   jq
   jupyter
   killall
@@ -166,7 +167,7 @@ let exe = haskell.lib.justStaticExecutables; in
   m4
   mercurialFull
   metabase
-  # mitmproxy
+  mitmproxy
   more
   mosh
   msmtp
@@ -221,7 +222,7 @@ let exe = haskell.lib.justStaticExecutables; in
   qrencode
   ratpoison
   rclone
-  # recoll
+  recoll
   renameutils
   restic
   ripgrep
@@ -262,8 +263,8 @@ let exe = haskell.lib.justStaticExecutables; in
   tree
   tree-sitter
   tsvutils
-  ctags
-  # universal-ctags
+  (pkgs.lowPrio ctags)
+  universal-ctags
   unixtools.ifconfig
   unixtools.netstat
   unixtools.ping
@@ -281,7 +282,7 @@ let exe = haskell.lib.justStaticExecutables; in
   xdg-utils
   xorg.xauth
   xorg.xhost
-  # xquartz
+  xquartz
   xsv
   xz
   yamale
@@ -298,23 +299,14 @@ let exe = haskell.lib.justStaticExecutables; in
   zsh
   zsh-syntax-highlighting
 
-  ## Kadena packages
+  # Kadena packages
   (pkgs.lowPrio pact)
   (pkgs.lowPrio pact-lsp)
-  # (pkgs.lowPrio chainweb-node)
-  # (pkgs.lowPrio run-chainweb-replay)
-  # (pkgs.lowPrio chainweb-data)
   (pkgs.lowPrio kda-tool)
-
-  ## Dfinity packages
-  # quill
-  # candid
-  # idl2json
 ]
 
 ++
 
 pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
-  contacts                      # needs too old a version of clang
   emacsERCEnv
 ]

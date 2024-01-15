@@ -137,6 +137,7 @@ pkgs: epkgs: with epkgs;
   highlight-defined
   highlight-numbers
   hl-line-plus
+  hl-todo
   ht
   hydra
   ialign
@@ -181,6 +182,7 @@ pkgs: epkgs: with epkgs;
   memory-usage
   minesweeper
   moccur-edit
+  move-text
   multi-term
   multi-vterm
   multifiles
