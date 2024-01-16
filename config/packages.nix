@@ -16,10 +16,10 @@ let exe = haskell.lib.justStaticExecutables; in
   # (exe haskellPackages.hours)
   (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
-  (exe haskellPackages_9_2.hasktags)
-  (exe haskellPackages_9_2.eventlog2html)
-  haskellPackages_9_2.ormolu
-  (exe (haskell.lib.doJailbreak haskellPackages.threadscope))
+  (exe haskellPackages.hasktags)
+  # (exe haskellPackages.eventlog2html)
+  haskellPackages.ormolu
+  (exe (haskell.lib.doJailbreak haskellPackages_8_10.threadscope))
   (exe haskellPackages.pointfree)
   act
   apg
