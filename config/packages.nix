@@ -147,6 +147,7 @@ let exe = haskell.lib.justStaticExecutables; in
   jiq
   jo
   jq
+  jujutsu
   jupyter
   killall
   kubectl
