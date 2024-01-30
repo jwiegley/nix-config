@@ -586,10 +586,10 @@ in {
 
       autoprune = yes
       frequently = 0
-      hourly = 6
-      daily = 3
-      weekly = 0
-      monthly = 0
+      hourly = 24
+      daily = 14
+      weekly = 4
+      monthly = 3
       yearly = 0
 
       # pruning can be skipped based on the used capacity of the pool
@@ -603,11 +603,11 @@ in {
 
       autoprune = yes
       frequently = 0
-      hourly = 0
+      hourly = 24
       daily = 90
-      weekly = 20
+      weekly = 26
       monthly = 12
-      yearly = 20
+      yearly = 30
 
       # pruning can be skipped based on the used capacity of the pool
       # (0: always prune, 1-100: only prune if used capacity is greater than this value)
