@@ -32,6 +32,9 @@ pkgs: epkgs: with epkgs;
   change-inner
   chatgpt-shell
   chess
+  citar
+  citar-embark
+  citar-org-roam
   citre
   cmake-font-lock
   cmake-mode
