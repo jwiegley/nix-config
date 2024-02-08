@@ -210,6 +210,7 @@ pkgs: epkgs: with epkgs;
   org-edna
   org-extra-emphasis
   org-mime
+  org-msg
   org-modern
   org-noter
   org-pomodoro
