@@ -6,20 +6,20 @@ let exe = haskell.lib.justStaticExecutables; in
 
 [
   (exe gitAndTools.git-annex)
-  (exe haskellPackages.git-all)
+  # (exe haskellPackages.git-all)
   haskellPackages.pushme
-  (exe haskellPackages.runmany)
+  # (exe haskellPackages.runmany)
   (exe haskellPackages.sizes)
   haskellPackages.sitebuilder
   (exe haskellPackages.una)
   (exe haskellPackages.git-monitor)
   # (exe haskellPackages.hours)
-  (exe haskellPackages.cabal-install)
-  (exe haskellPackages.hpack)
-  (exe haskellPackages.hasktags)
+  # (exe haskellPackages.cabal-install)
+  # (exe haskellPackages.hpack)
+  # (exe haskellPackages.hasktags)
   # (exe haskellPackages.eventlog2html)
   haskellPackages.ormolu
-  (exe (haskell.lib.doJailbreak haskellPackages_8_10.threadscope))
+  # (exe (haskell.lib.doJailbreak haskellPackages_8_10.threadscope))
   (exe haskellPackages.pointfree)
   act
   apg
@@ -129,7 +129,7 @@ let exe = haskell.lib.justStaticExecutables; in
   highlight
   home-manager
   hostname
-  hs-to-coq
+  # hs-to-coq
   html-tidy
   htop
   httm
@@ -302,8 +302,7 @@ let exe = haskell.lib.justStaticExecutables; in
 
   # Kadena packages
   (pkgs.lowPrio pact)
-  (pkgs.lowPrio pact-lsp)
-  (pkgs.lowPrio kda-tool)
+  # (pkgs.lowPrio pact-lsp)
 ]
 
 ++

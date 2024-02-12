@@ -57,5 +57,6 @@ in {
   svg2tikz
   dovecot_fts_xapian
   libvirt
+  xdg-utils
   ;
 }

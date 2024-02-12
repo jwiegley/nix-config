@@ -669,9 +669,10 @@ in {
                             else { hostname = athena_ethernet; });
         phobos = withLocal (onHost "athena" "192.168.50.111");
 
-        hermes = withLocal (if localconfig.hostname == "athena"
-                            then { hostname = hermes_wifi; }
-                            else { hostname = hermes_ethernet; });
+        # hermes = withLocal (if localconfig.hostname == "athena"
+        #                     then { hostname = hermes_wifi; }
+        #                     else { hostname = hermes_ethernet; });
+        hermes = withLocal ({ hostname = hermes_wifi; });
         neso   = withLocal (onHost "hermes" "192.168.100.130");
 
         mohajer = {

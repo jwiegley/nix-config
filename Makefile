@@ -113,7 +113,7 @@ tag-before:
 	$(call announce,git tag before-update)
 	git --git-dir=nixpkgs/.git branch -f before-update HEAD
 
-pull: tag-before
+pull:
 	$(call announce,git pull)
 	(cd nixpkgs	 && git pull --rebase)
 	(cd darwin	 && git pull --rebase)
@@ -128,7 +128,7 @@ tag-working:
 	git --git-dir=nixpkgs/.git tag -f known-good-$(LKG_DATE) \
 	    -m "known-good-$(LKG_DATE)" last-known-good
 
-mirror: tag-working
+mirror:
 	$(call announce,git push)
 	@for name in master unstable last-known-good; do	\
 	    git --git-dir=nixpkgs/.git push $(GIT_REMOTE)	\
@@ -138,7 +138,7 @@ mirror: tag-working
 	git --git-dir=darwin/.git push --mirror $(GIT_REMOTE)
 	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
 
-update: pull rebuild travel-ready check mirror
+update: tag-before pull rebuild travel-ready check mirror tag-working
 
 update-sync: update copy check-all rebuild-all travel-ready-all
 
@@ -183,14 +183,14 @@ gc:
 	$(NIX_GC) --delete-older-than $(MAX_AGE)d
 	sudo $(NIX_GC) --delete-older-than $(MAX_AGE)d
 
-clean: gc check
+clean: gc
 
 gc-old:
 	$(call delete-generations-all,1)
 	$(NIX_GC) --delete-old
 	sudo $(NIX_GC) --delete-old
 
-purge: gc-old check
+purge: gc-old
 
 # REMOTE_CACHE = "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
 # SERVER = athena
