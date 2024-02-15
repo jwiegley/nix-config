@@ -250,6 +250,17 @@ let
       buildInputs = with eself; [ consult embark ];
     };
 
+    consult-hoogle = compileEmacsFiles {
+      name = "consult-hoogle";
+      src = fetchgit {
+        url = "https://codeberg.org/rahguzar/consult-hoogle.git";
+        rev = "c4d4df5f5e863970b6ec907c5650fe673c9cf32a";
+        sha256 = "09yz3wh96r000klnscgy6klgjk20x6snajwn7vjv1a9vik6r037a";
+        # date = 2024-02-11T09:39:45+01:00;
+      };
+      buildInputs = with eself; [ consult haskell-mode ];
+    };
+
     dired-hist = compileEmacsFiles {
       name = "dired-hist";
       src = fetchFromGitHub {

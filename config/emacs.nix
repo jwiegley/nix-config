@@ -50,6 +50,7 @@ pkgs: epkgs: with epkgs;
   consult-dir
   consult-flycheck
   consult-git-log-grep
+  consult-hoogle
   consult-lsp
   consult-org-roam
   consult-yasnippet

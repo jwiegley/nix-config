@@ -25,7 +25,6 @@ let home            = builtins.getEnv "HOME";
     athena_ethernet = "192.168.50.235";
     athena_wifi     = "192.168.50.3";
 
-    am_traveling    = false;
     external_ip     = "newartisans.hopto.org";
 
     master_key      = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
@@ -658,20 +657,17 @@ in {
           port = 2202;
         };
 
-        vulcan = withLocal (if am_traveling
-                            then home
-                            else { hostname = vulcan_ethernet; });
+        vulcan = withLocal (if localconfig.hostname == "athena"
+                            then { hostname = vulcan_wifi; }
+                            else home);
         deimos = withLocal (onHost "vulcan" "172.16.194.157");
         simon  = withLocal (onHost "vulcan" "172.16.194.158");
 
-        athena = withLocal (if am_traveling
-                            then build
-                            else { hostname = athena_ethernet; });
+        athena = withLocal (if localconfig.hostname == "vulcan"
+                            then { hostname = athena_ethernet; }
+                            else build);
         phobos = withLocal (onHost "athena" "192.168.50.111");
 
-        # hermes = withLocal (if localconfig.hostname == "athena"
-        #                     then { hostname = hermes_wifi; }
-        #                     else { hostname = hermes_ethernet; });
         hermes = withLocal ({ hostname = hermes_wifi; });
         neso   = withLocal (onHost "hermes" "192.168.100.130");
 
