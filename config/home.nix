@@ -13,17 +13,19 @@ let home            = builtins.getEnv "HOME";
     emacsclient     = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
 
     vulcan_ethernet = if localconfig.hostname == "hermes"
-                      then "192.168.233.1"
+                      then "192.168.2.1"
                       else "192.168.50.51";
     vulcan_wifi     = "192.168.50.172";
 
     hermes_ethernet = if localconfig.hostname == "vulcan"
-                      then "192.168.233.5"
+                      then "192.168.2.2"
                       else "192.168.50.212";
     hermes_wifi     = "192.168.50.102";
 
     athena_ethernet = "192.168.50.235";
     athena_wifi     = "192.168.50.3";
+
+    am_traveling    = false;
 
     external_ip     = "newartisans.hopto.org";
 
@@ -657,18 +659,20 @@ in {
           port = 2202;
         };
 
-        vulcan = withLocal (if localconfig.hostname == "athena"
-                            then { hostname = vulcan_wifi; }
-                            else home);
+        vulcan = withLocal (if localconfig.hostname == "hermes" && am_traveling
+                            then home
+                            else { hostname = vulcan_ethernet; });
         deimos = withLocal (onHost "vulcan" "172.16.194.157");
         simon  = withLocal (onHost "vulcan" "172.16.194.158");
 
-        athena = withLocal (if localconfig.hostname == "vulcan"
-                            then { hostname = athena_ethernet; }
-                            else build);
+        athena = withLocal (if localconfig.hostname == "hermes" && am_traveling
+                            then build
+                            else { hostname = athena_ethernet; });
         phobos = withLocal (onHost "athena" "192.168.50.111");
 
-        hermes = withLocal ({ hostname = hermes_wifi; });
+        hermes = withLocal (if localconfig.hostname == "athena"
+                            then { hostname = hermes_wifi; }
+                            else { hostname = hermes_ethernet; });
         neso   = withLocal (onHost "hermes" "192.168.100.130");
 
         mohajer = {
