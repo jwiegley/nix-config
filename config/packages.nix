@@ -301,7 +301,7 @@ let exe = haskell.lib.justStaticExecutables; in
   zsh-syntax-highlighting
 
   # Kadena packages
-  (pkgs.lowPrio pact)
+  # (pkgs.lowPrio pact)
   # (pkgs.lowPrio pact-lsp)
 ]
 
