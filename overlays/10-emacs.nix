@@ -272,6 +272,16 @@ let
       };
     };
 
+    egerrit = compileEmacsFiles {
+      name = "egerrit";
+      src = fetchgit {
+        url = "https://git.sr.ht/~niklaseklund/egerrit";
+        rev = "8953a3b9ea9f77bb75ebb6ba55833cb08c34536a";
+        sha256 = "0mhk53y1yzy8ymir8l7vzg4d86rnhm0f5jdlbmliw4avyhvc396c";
+        # date = 2022-09-27T12:47:09+02:00;
+      };
+    };
+
     fence-edit = compileEmacsFiles {
       name = "fence-edit";
       src = fetchFromGitHub {

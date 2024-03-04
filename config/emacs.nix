@@ -121,6 +121,8 @@ pkgs: epkgs: with epkgs;
   free-keys
   fringe-helper
   fuzzy
+  gerrit
+  egerrit
   ghub
   git-annex
   git-link

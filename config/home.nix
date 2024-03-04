@@ -25,7 +25,7 @@ let home            = builtins.getEnv "HOME";
     athena_ethernet = "192.168.50.235";
     athena_wifi     = "192.168.50.3";
 
-    am_traveling    = false;
+    am_traveling    = true;
 
     external_ip     = "newartisans.hopto.org";
 
@@ -662,7 +662,7 @@ in {
         vulcan = withLocal (if localconfig.hostname == "hermes" && am_traveling
                             then home
                             else { hostname = vulcan_ethernet; });
-        deimos = withLocal (onHost "vulcan" "172.16.194.157");
+        deimos = withLocal (onHost "vulcan" "192.168.221.128");
         simon  = withLocal (onHost "vulcan" "172.16.194.158");
 
         athena = withLocal (if localconfig.hostname == "hermes" && am_traveling
