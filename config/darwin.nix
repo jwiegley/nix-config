@@ -556,25 +556,7 @@ in {
       recursive = yes
       process_children_only = yes
 
-      [tank/CopperToGold]
-      use_template = none
-
-      [tank/ChainState]
-      use_template = none
-
-      [tank/ChainState/cardano]
-      use_template = none
-
       [tank/ChainState/kadena]
-      use_template = none
-
-      [tank/ChainState/kadena/chainweb-data]
-      use_template = none
-
-      [tank/ChainState/kadena/chainweb-none]
-      use_template = none
-
-      [studio/ChainState/kadena]
       use_template = production
       recursive = yes
       process_children_only = yes
