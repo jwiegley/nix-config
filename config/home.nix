@@ -245,8 +245,9 @@ in {
     zsh = rec {
       enable = true;
       enableCompletion = false;
-      enableAutosuggestions = true;
       dotDir = ".config/zsh";
+
+      autosuggestion.enable = true;
 
       history = {
         size       = 50000;
