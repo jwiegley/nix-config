@@ -243,11 +243,13 @@ in {
     };
 
     zsh = rec {
-      enable = true;
-      enableCompletion = false;
       dotDir = ".config/zsh";
 
+      enable = true;
+      enableCompletion = false;
+
       autosuggestion.enable = true;
+      syntaxHighlighting.enable = true;
 
       history = {
         size       = 50000;
@@ -265,9 +267,6 @@ in {
         LESS             = "-FRSXM";
         LESSCHARSET      = "utf-8";
         PAGER            = "less";
-        PROMPT           = "%B%m %~ %b\\$(git_super_status)%(!.#.$) ";
-        PROMPT_DIRTRIM   = "2";
-        RPROMPT          = "";
         TINC_USE_NIX     = "yes";
         WORDCHARS        = "";
 
@@ -275,6 +274,13 @@ in {
         ZSH_THEME_GIT_PROMPT_CHANGED = "%{$fg[yellow]%}%{✚%G%}";
         ZSH_THEME_GIT_PROMPT_STASHED = "%{$fg_bold[yellow]%}%{⚑%G%}";
         ZSH_THEME_GIT_PROMPT_UPSTREAM_FRONT =" {%{$fg[yellow]%}";
+      };
+
+      localVariables = {
+        # PROMPT           = "%B%m %~ %b\\$(git_super_status)%(!.#.$) ";
+        PROMPT           = "%B%m %b\\$(git_super_status)%(!.#.$) ";
+        PROMPT_DIRTRIM   = "2";
+        # RPROMPT          = "";
       };
 
       shellAliases = {
@@ -296,9 +302,9 @@ in {
         wipe   = "${pkgs.srm}/bin/srm -vfr";
         switch = "${pkgs.nix-scripts}/bin/u ${localconfig.hostname} switch";
         proc   = "${pkgs.darwin.ps}/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
-        #nstat  = "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
-        #       + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
-        #       + " | ${pkgs.coreutils}/bin/tail -n +5";
+        nstat  = "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
+               + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
+               + " | ${pkgs.coreutils}/bin/tail -n +5";
 
         # Use whichever cabal is on the PATH.
         cb     = "cabal build";
@@ -359,7 +365,7 @@ in {
           src = pkgs.fetchurl {
             url = https://iterm2.com/shell_integration/zsh;
             sha256 = "1xk6kx5kdn5wbqgx2f63vnafhkynlxnlshxrapkwkd9zf2531bqa";
-            # date = 2022-12-28T10:15:23-0800;
+            # date = 2024-03-19T11:49:32-0700;
           };
         }
         {
@@ -367,7 +373,7 @@ in {
           src = pkgs.fetchurl {
             url = https://gist.githubusercontent.com/antifuchs/c8eca4bcb9d09a7bbbcd/raw/3ebfecdad7eece7c537a3cd4fa0510f25d02611b/iterm2_zsh_init.zsh;
             sha256 = "1v1b6yz0lihxbbg26nvz85c1hngapiv7zmk4mdl5jp0fsj6c9s8c";
-            # date = 2022-12-28T10:15:27-0800;
+            # date = 2024-03-19T11:49:34-0700;
           };
         }
       ];

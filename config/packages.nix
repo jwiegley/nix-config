@@ -129,7 +129,6 @@ let exe = haskell.lib.justStaticExecutables; in
   highlight
   home-manager
   hostname
-  # hs-to-coq
   html-tidy
   htop
   httm
