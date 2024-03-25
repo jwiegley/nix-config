@@ -842,6 +842,8 @@ in {
              # "list.coq.ssreflect"
              "list.coq.devel"
              "list.bahai"
+             "list.bahai.assembly"
+             "list.bahai.andf"
              # "list.bahai.ror"
              "list.bahai.ctg"
              "list.bahai.ctg.sunday"
