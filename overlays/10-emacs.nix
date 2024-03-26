@@ -238,6 +238,17 @@ let
       buildInputs = with eself; [ cape yasnippet ];
     };
 
+    casual = compileEmacsFiles {
+      name = "casual";
+      src = (fetchFromGitHub {
+        owner = "kickingvegas";
+        repo = "casual";
+        rev = "643af803258fd9524582fc1d56472ea44c70100f";
+        sha256 = "1jw82q82qzr41v7clwjcfvlhvyd02pacikga1sjfiq9bw9dj3alg";
+        # date = 2024-03-17T13:27:59-07:00;
+      }) + "/lisp";
+    };
+
     consult-gh = compileEmacsFiles {
       name = "consult-gh";
       src = fetchFromGitHub {

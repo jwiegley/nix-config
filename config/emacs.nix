@@ -28,6 +28,7 @@ pkgs: epkgs: with epkgs;
   bytecomp-simplify
   cape
   cargo
+  casual
   centered-cursor-mode
   change-inner
   chatgpt-shell
