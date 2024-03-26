@@ -74,7 +74,6 @@ keep_vars                                       \
     EMACS_SERVER_FILE                           \
     GIT_PROMPT_EXECUTABLE                       \
     ITERM_SESSION_ID                            \
-    PROMPT                                      \
     SECURITYSESSIONID                           \
     SSH_AUTH_SOCK                               \
     SSL_CERT_FILE                               \
