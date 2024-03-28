@@ -315,6 +315,17 @@ let
       };
     };
 
+    gptel = compileEmacsFiles {
+      name = "gptel";
+      src = fetchFromGitHub {
+        owner = "karthink";
+        repo = "gptel";
+        rev = "9a5a4a60d5aa0bad11f632135bacaf4bf592d56a";
+        sha256 = "16f8bb9qlin0x4iv6g14bha5dywgxfcqmnpqzypfhr8wjqdkpb6n";
+        # date = 2024-03-21T11:30:30-07:00;
+      };
+    };
+
     indent-shift = compileEmacsFiles {
       name = "indent-shift";
       src = fetchFromGitHub {
