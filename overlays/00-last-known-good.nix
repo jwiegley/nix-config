@@ -5,13 +5,13 @@ let nixpkgs = args@{ rev, sha256 }:
         owner = "NixOS";
         repo  = "nixpkgs"; })) {};
 in {
-  gitAndTools = pkgs.gitAndTools // {
-    inherit ((nixpkgs {
-      # rev    = "known-good-20221221_180856";
-      rev    = "f590aeafc4deddb5bb770a85bae208f36d2c72b3";
-      sha256 = "0jr03wdwa2snxs9i6m1ndlh0gsz9m2crvfz5ar1xkracr9bma0n2";
-    }).gitAndTools) git-annex;
-  };
+  # gitAndTools = pkgs.gitAndTools // {
+  #   inherit ((nixpkgs {
+  #     # rev    = "known-good-20221221_180856";
+  #     rev    = "f590aeafc4deddb5bb770a85bae208f36d2c72b3";
+  #     sha256 = "0jr03wdwa2snxs9i6m1ndlh0gsz9m2crvfz5ar1xkracr9bma0n2";
+  #   }).gitAndTools) git-annex;
+  # };
 
   inherit (nixpkgs {
     # rev    = "known-good-20221221_180856";
@@ -19,7 +19,7 @@ in {
     sha256 = "0jr03wdwa2snxs9i6m1ndlh0gsz9m2crvfz5ar1xkracr9bma0n2";
   })
   httm
-  recoll
+  # recoll
   ;
 
   inherit (nixpkgs {
@@ -27,7 +27,7 @@ in {
     rev    = "6ac50c5df158c3cbe29c5111962e4c89daf1f929";
     sha256 = "sha256-trkGHaFfydle3MzKOFhGI4g1pY+j3s8xVsTNmztbLCI=";
   })
-  pandoc
+  # pandoc
   mitmproxy
   ;
 
@@ -40,13 +40,13 @@ in {
   texinfo413
   ;
 
-  inherit (nixpkgs {
-    # rev    = "known-good-20231214_230317";
-    rev    = "bd0b831a74765264d4f71035ad1d28728ba49edb";
-    sha256 = "sha256-V4T55d2FxUTWH2sEWpp3du+cQZ/OibR/OYw2pN5y0b0=";
-  })
-  backblaze-b2
-  ;
+  # inherit (nixpkgs {
+  #   # rev    = "known-good-20231214_230317";
+  #   rev    = "bd0b831a74765264d4f71035ad1d28728ba49edb";
+  #   sha256 = "sha256-V4T55d2FxUTWH2sEWpp3du+cQZ/OibR/OYw2pN5y0b0=";
+  # })
+  # backblaze-b2
+  # ;
 
   inherit (nixpkgs {
     # rev    = "known-good-20240108_120429";
@@ -55,8 +55,8 @@ in {
   })
   csvkit
   svg2tikz
-  dovecot_fts_xapian
-  libvirt
-  xdg-utils
+  # dovecot_fts_xapian
+  # libvirt
+  # xdg-utils
   ;
 }

@@ -206,6 +206,7 @@ pkgs: epkgs: with epkgs;
   operate-on-number
   orderless
   org
+  org-anki
   org-bookmark-heading
   org-contrib
   org-contacts

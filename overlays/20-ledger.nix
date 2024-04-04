@@ -33,7 +33,7 @@ ledgerPy3Env = pkgs.myEnvFun {
   name = "ledger-py3";
   buildInputs = with pkgs; [
     cmake (pkgs.boost.override { python = pkgs.python3; }) gmp mpfr libedit
-    python texinfo gnused ninja clang doxygen
+    python3 texinfo gnused ninja clang doxygen
   ];
 };
 

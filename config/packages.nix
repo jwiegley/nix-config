@@ -57,7 +57,7 @@ let exe = haskell.lib.justStaticExecutables; in
   dovecot_fts_xapian
   doxygen
   emacs29MacPortEnv
-  emacs29Env
+  # emacs29Env
   entr
   exiv2
   fd

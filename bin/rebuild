@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -e
+
+case $1 in
+    vulcan)
+        u update
+        nix-copy-hermes.sh
+        push -f src,kadena,doc,Home hermes
+        push athena
+        u check
+        notify "Nix on Vulcan updated"
+        ;;
+
+    hermes)
+        u rebuild travel-ready check
+        notify "Nix on Hermes updated"
+        ;;
+
+    athena)
+        u rebuild check
+        notify "Nix on Athena updated"
+        ;;
+
+    *)
+        echo "Unrecognized hostname: $1"
+        exit 1
+        ;;
+esac

@@ -138,9 +138,9 @@ mirror:
 	git --git-dir=darwin/.git push --mirror $(GIT_REMOTE)
 	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
 
-update: tag-before pull rebuild travel-ready check mirror tag-working
+update: tag-before pull rebuild travel-ready mirror tag-working
 
-update-sync: update copy check-all rebuild-all travel-ready-all
+update-sync: update copy rebuild-all travel-ready-all
 
 ########################################################################
 
