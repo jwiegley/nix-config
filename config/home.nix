@@ -225,7 +225,7 @@ in {
 
     fzf = {
       enable = true;
-      enableZshIntegration = true;
+      # enableZshIntegration = true;
       defaultOptions = [
         "--height 40%"
         "--layout=reverse"
@@ -333,7 +333,7 @@ in {
 
       initExtra = ''
         # Make sure that fzf does not override the meaning of ^T
-        bindkey '^X^T' fzf-file-widget
+        # bindkey '^X^T' fzf-file-widget
         bindkey '^T' transpose-chars
 
         if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then

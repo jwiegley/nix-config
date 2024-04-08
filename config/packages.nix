@@ -71,6 +71,7 @@ let exe = haskell.lib.justStaticExecutables; in
   fping
   fswatch
   fzf
+  fzf-zsh
   gawk
   gitAndTools.delta
   gitAndTools.gh
@@ -217,7 +218,7 @@ let exe = haskell.lib.justStaticExecutables; in
   pstree
   pv
   (pkgs.lowPrio python3)
-  qemu libvirt
+  qemu # libvirt
   qpdf
   qrencode
   ratpoison
