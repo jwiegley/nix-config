@@ -4,21 +4,21 @@ set -e
 
 case $1 in
     vulcan)
-        u update
+        u vulcan update
         nix-copy-hermes.sh
         push -f src,kadena,doc,Home hermes
         push athena
-        u check
+        u vulcan check
         notify "Nix on Vulcan updated"
         ;;
 
     hermes)
-        u rebuild travel-ready check
+        u hermes rebuild travel-ready check
         notify "Nix on Hermes updated"
         ;;
 
     athena)
-        u rebuild check
+        u athena rebuild check
         notify "Nix on Athena updated"
         ;;
 

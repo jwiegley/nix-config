@@ -225,7 +225,7 @@ in {
 
     fzf = {
       enable = true;
-      # enableZshIntegration = true;
+      enableZshIntegration = true;
       defaultOptions = [
         "--height 40%"
         "--layout=reverse"
