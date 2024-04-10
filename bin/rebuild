@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 
-set -e
+set -ex
 
 case $1 in
     vulcan)
         u vulcan update
-        nix-copy-hermes.sh
-        push -f src,kadena,doc,Home hermes
-        push athena
-        u vulcan check
+        nix-copy-hermes.sh &
+        push -f src,kadena,doc,Home hermes &
+        push athena &
+        u vulcan check &
+        wait
         notify "Nix on Vulcan updated"
         ;;
 
