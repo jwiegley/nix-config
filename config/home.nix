@@ -57,6 +57,7 @@ in {
       JAVA_OPTS          = "-Xverify:none";
       LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
       NIX_CONF           = "${home}/src/nix";
+      OLLAMA_MODELS      = "${config.xdg.dataHome}/ollama/models";
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
       RECOLL_CONFDIR     = "${config.xdg.configHome}/recoll";
       SCREENRC           = "${config.xdg.configHome}/screen/config";
@@ -128,6 +129,7 @@ in {
       ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
       ".macbeth".source     = mkLink "${config.xdg.configHome}/macbeth";
       ".mbsyncrc".source    = mkLink "${config.xdg.configHome}/mbsync/config";
+      ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
       ".parallel".source    = mkLink "${config.xdg.configHome}/parallel";
       ".recoll".source      = mkLink "${config.xdg.configHome}/recoll";
       ".slate".source       = mkLink "${config.xdg.configHome}/slate/config";
