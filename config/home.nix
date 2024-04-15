@@ -790,6 +790,7 @@ in {
 
              "mail.pending"
              "mail.spam.report"
+             "mail.quantum"
              "mail.kadena"
              "mail.kadena.archive"
              "list.kadena"
