@@ -25,7 +25,7 @@ let home            = builtins.getEnv "HOME";
     athena_ethernet = "192.168.50.235";
     athena_wifi     = "192.168.50.3";
 
-    am_traveling    = true;
+    am_traveling    = false;
 
     external_ip     = "newartisans.hopto.org";
 
