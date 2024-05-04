@@ -15,8 +15,8 @@ let exe = haskell.lib.justStaticExecutables; in
   (exe haskellPackages.git-monitor)
   # (exe haskellPackages.hours)
   # (exe haskellPackages.cabal-install)
-  # (exe haskellPackages.hpack)
-  # (exe haskellPackages.hasktags)
+  (exe haskellPackages.hpack)
+  (exe haskellPackages.hasktags)
   # (exe haskellPackages.eventlog2html)
   haskellPackages.ormolu
   # (exe (haskell.lib.doJailbreak haskellPackages_8_10.threadscope))
@@ -218,7 +218,7 @@ let exe = haskell.lib.justStaticExecutables; in
   pstree
   pv
   (pkgs.lowPrio python3)
-  qemu # libvirt
+  qemu libvirt
   qpdf
   qrencode
   ratpoison

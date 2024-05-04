@@ -6,6 +6,8 @@ DEST=${1:-hermes}
 
 nix copy --to "ssh-ng://$DEST" ~/.local/state/nix/profiles/profile
 
+cd $HOME
+
 for project in $(grep "^[^#]" ~/.config/projects)
 do
     echo $project

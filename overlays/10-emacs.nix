@@ -520,7 +520,7 @@ let
 
         # already byte-compiled by Agda builder
         buildPhase = ''
-          agda=`${Agda}/bin/agda-mode locate`
+          agda=`${Agda.bin}/bin/agda-mode locate`
           cp `dirname $agda`/*.el* .
         '';
 

@@ -6,7 +6,7 @@ case $1 in
     vulcan)
         u vulcan update
         u vulcan sign
-        nix-copy-hermes.sh &
+        nix-copy hermes &
         push -f src,kadena,doc,Home hermes &
         push athena &
         u vulcan check &
