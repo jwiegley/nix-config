@@ -6,9 +6,9 @@ case $1 in
     vulcan)
         u vulcan update
         u vulcan sign
-        nix-copy hermes &
-        push -f src,kadena,doc,Home hermes &
-        push athena &
+        (nix-copy hermes && echo "nix-copy hermes done") &
+        (push -f src,kadena,doc,Home hermes && echo "push hermes done") &
+        (push athena && echo "push athena done") &
         u vulcan check &
         wait
         notify "Nix on Vulcan updated"
