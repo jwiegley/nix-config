@@ -142,20 +142,20 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
 
 haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // rec {
-    ghc948  = overrideHask "ghc948"  pkgs.haskell.packages.ghc948  (_hself: _hsuper: {});
-    ghc963  = overrideHask "ghc963"  pkgs.haskell.packages.ghc963  (_hself: hsuper:
+    ghc94 = overrideHask "ghc94"  pkgs.haskell.packages.ghc94 (_hself: _hsuper: {});
+    ghc96 = overrideHask "ghc96"  pkgs.haskell.packages.ghc96 (_hself: hsuper:
       with pkgs.haskell.lib; {
         system-fileio = unmarkBroken hsuper.system-fileio;
       });
-    ghc981  = overrideHask "ghc981"  pkgs.haskell.packages.ghc981  (_hself: _hsuper: {});
+    ghc98 = overrideHask "ghc98"  pkgs.haskell.packages.ghc98 (_hself: _hsuper: {});
   };
 };
 
-haskellPackages_9_4  = self.haskell.packages.ghc948;
-haskellPackages_9_6  = self.haskell.packages.ghc963;
-haskellPackages_9_8  = self.haskell.packages.ghc981;
+haskellPackages_9_4  = self.haskell.packages.ghc94;
+haskellPackages_9_6  = self.haskell.packages.ghc96;
+haskellPackages_9_8  = self.haskell.packages.ghc98;
 
-ghcDefaultVersion    = "ghc963";
+ghcDefaultVersion    = "ghc96";
 haskellPackages      = self.haskell.packages.${self.ghcDefaultVersion};
 
 }
