@@ -964,6 +964,29 @@ in {
          Remove Both
          CopyArrivalDate yes
 
+         IMAPAccount gmail-carmichael
+         Host imap.gmail.com
+         User carmichaellsa@gmail.com
+         PassCmd "pass carmichael.imap.gmail.com"
+         SSLType IMAPS
+         AuthMechs LOGIN
+         CertificateFile ${ca-bundle_crt}
+         Port 993
+         PipelineDepth 1
+
+         IMAPStore gmail-carmichael-remote
+         Account gmail-carmichael
+         PathDelimiter /
+         Trash Trash
+
+         Channel gmail-carmichael-all-mail
+         Far :gmail-carmichael-remote:"[Gmail]/All Mail"
+         Near :dovecot-local:mail.gmail.carmichael
+         Create Both
+         Expunge Both
+         Remove Both
+         CopyArrivalDate yes
+
          Channel personal-inbox
          Far :fastmail-remote:
          Near :dovecot-local:

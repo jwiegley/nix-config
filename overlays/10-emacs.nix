@@ -681,21 +681,22 @@ emacs29PackagesNg = mkEmacsPackages self.emacs29;
 
 
 # jww (2023-06-09): These changes allow emacs29-macport to build on aarch64-darwin
-emacs29MacPortAlt = (pkgs.emacs29-macport.overrideAttrs (o: {
+emacs29MacPortAlt = pkgs.emacs29-macport.overrideAttrs (o: {
   buildInputs = o.buildInputs ++
     (with pkgs.darwin.apple_sdk_11_0.frameworks; [
       UniformTypeIdentifiers Accelerate
     ]);
   patches = o.patches ++ [
-    # ./emacs/0001-mac-gui-loop-block-lifetime.patch
     ./emacs/0002-mac-gui-loop-block-autorelease.patch
   ];
-}));
+});
 
 emacs29MacPort =
-  if pkgs.stdenv.targetPlatform.isx86_64
-  then pkgs.emacs29-macport
-  else self.emacs29MacPortAlt;
+  (if pkgs.stdenv.targetPlatform.isx86_64
+   then pkgs.emacs29-macport
+   else self.emacs29MacPortAlt).overrideAttrs (o: {
+     configureFlags = o.configureFlags ++ [ "--with-natural-title-bar" ];
+   });
 
 emacs29MacPortPackages   = self.emacs29MacPortPackagesNg;
 emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29MacPort;

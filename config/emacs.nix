@@ -338,6 +338,7 @@ pkgs: epkgs: with epkgs;
   window-purpose
   with-editor
   word-count-mode
+  writeroom-mode
   x86-lookup
   xeft
   xml-rpc
