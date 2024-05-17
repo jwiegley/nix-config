@@ -38,4 +38,12 @@ in {
   csvkit
   svg2tikz
   ;
+
+  inherit (nixpkgs {
+    # rev    = "known-good-20240507_090322";
+    rev    = "cc6431d5598071f0021efc6c009c79e5b5fe1617";
+    sha256 = "sha256-GtwK9hQMbN+FxSD2eTioBOi2P47+t3oqnY4ZGJl53+k=";
+  })
+  hub
+  ;
 }
