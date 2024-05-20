@@ -149,6 +149,7 @@ let exe = haskell.lib.justStaticExecutables; in
   jq
   jujutsu
   jupyter
+  khard
   killall
   kubectl
   ledgerPy3Env

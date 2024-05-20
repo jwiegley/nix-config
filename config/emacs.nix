@@ -225,6 +225,7 @@ pkgs: epkgs: with epkgs;
   org-roam
   org-sticky-header
   org-super-agenda
+  org-vcard
   org-web-tools
   orgit
   orgit-forge
@@ -316,6 +317,7 @@ pkgs: epkgs: with epkgs;
   uuidgen
   vagrant
   vagrant-tramp
+  vcard-mode
   vdiff
   verb
   vertico

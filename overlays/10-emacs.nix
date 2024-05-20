@@ -475,6 +475,17 @@ let
       };
     };
 
+    vcard-mode = compileEmacsFiles {
+      name = "vcard-mode";
+      src = fetchFromGitHub {
+        owner = "dochang";
+        repo = "vcard-mode";
+        rev = "ab1a2885a5720d7fb02d9b6583ee908ba2260b78";
+        sha256 = "0w44ax9dxkj8mh4np9mg3yp2yakjwrgy13izq53p0vimrhywza0w";
+        # date = 2019-01-29T00:54:40+08:00;
+      };
+    };
+
     vterm-tmux = compileEmacsFiles {
       name = "vterm-tmux";
       src = fetchgit {
