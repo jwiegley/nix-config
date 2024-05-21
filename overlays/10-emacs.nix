@@ -549,11 +549,11 @@ let
     auctex = eself.elpaBuild {
       pname = "auctex";
       ename = "auctex";
-      version = "13.2.0";
+      version = "14.0.5";
       src = fetchurl {
-        url = "https://elpa.gnu.org/packages/auctex-13.2.0.tar";
-        sha256 = "1jk05cca7lrwykj3by4s7c198bffam0mga7hgwmcz5bgxl79ijvf";
-        # date = 2023-04-24T20:01:47-0700;
+        url = "https://elpa.gnu.org/packages/auctex-14.0.5.tar";
+        sha256 = "0sycj6ad5jazmsxq37hsnvbywkpj66lrw3d3mxqr1wqkb67cdd3k";
+        # date = 2024-05-20T16:49:18-0700;
       };
       packageRequires = with eself; [ cl-lib emacs ];
       meta = {
