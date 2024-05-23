@@ -206,6 +206,7 @@ let exe = haskell.lib.justStaticExecutables; in
   patchutils
   pcre
   pdnsd
+  pdfgrep
   perl
   perlPackages.ImageExifTool
   pinentry_mac

@@ -199,8 +199,12 @@ in {
     jq.enable = true;
     man.enable = true;
     msmtp.enable = true;
-    tmux.enable = true;
     vim.enable = true;
+
+    tmux = {
+      enable = true;
+      extraConfig = "set-option -g allow-passthrough";
+    };
 
     home-manager = {
       enable = true;
@@ -279,10 +283,9 @@ in {
       };
 
       localVariables = {
-        # PROMPT           = "%B%m %~ %b\\$(git_super_status)%(!.#.$) ";
-        PROMPT           = "%B%m %b\\$(git_super_status)%(!.#.$) ";
-        PROMPT_DIRTRIM   = "2";
-        # RPROMPT          = "";
+        RPROMPT        = "%F{green}%~%f";
+        PROMPT         = "%B%m %b\\$(git_super_status)%(!.#.$) ";
+        PROMPT_DIRTRIM = "2";
       };
 
       shellAliases = {
@@ -335,13 +338,13 @@ in {
 
       initExtra = ''
         # Make sure that fzf does not override the meaning of ^T
-        # bindkey '^X^T' fzf-file-widget
         bindkey '^T' transpose-chars
 
         if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
             unsetopt zle
             unset zle_bracketed_paste
             export PROMPT='$ '
+            export RPROMPT=""
             export PS1='$ '
         else
            export TERM="xterm-256color"
@@ -349,6 +352,8 @@ in {
            . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
            . ${config.xdg.configHome}/zsh/plugins/iterm2_tmux_integration
            . ${pkgs.zsh-git-prompt}/share/zsh-git-prompt/zshrc.sh
+
+           export ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX=YES
 
            # sudo /bin/launchctl limit maxfiles 524288 524288
            # ulimit -n 65536
@@ -367,7 +372,7 @@ in {
           src = pkgs.fetchurl {
             url = https://iterm2.com/shell_integration/zsh;
             sha256 = "1xk6kx5kdn5wbqgx2f63vnafhkynlxnlshxrapkwkd9zf2531bqa";
-            # date = 2024-03-19T11:49:32-0700;
+            # date = 2024-05-23T13:52:02-0700;
           };
         }
         {
@@ -375,7 +380,7 @@ in {
           src = pkgs.fetchurl {
             url = https://gist.githubusercontent.com/antifuchs/c8eca4bcb9d09a7bbbcd/raw/3ebfecdad7eece7c537a3cd4fa0510f25d02611b/iterm2_zsh_init.zsh;
             sha256 = "1v1b6yz0lihxbbg26nvz85c1hngapiv7zmk4mdl5jp0fsj6c9s8c";
-            # date = 2024-03-19T11:49:34-0700;
+            # date = 2024-05-23T13:52:04-0700;
           };
         }
       ];

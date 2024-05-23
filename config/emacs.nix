@@ -207,6 +207,7 @@ pkgs: epkgs: with epkgs;
   orderless
   org
   org-anki
+  org-appear
   org-bookmark-heading
   org-contrib
   org-contacts
@@ -218,6 +219,8 @@ pkgs: epkgs: with epkgs;
   org-msg
   org-modern
   org-noter
+  org-noter-pdftools
+  org-pdftools
   org-pomodoro
   org-ql
   org-remark
@@ -249,6 +252,7 @@ pkgs: epkgs: with epkgs;
   password-store
   pcre2el
   pdf-tools
+  pdfgrep
   per-window-point
   persistent-scratch
   persistent-soft
