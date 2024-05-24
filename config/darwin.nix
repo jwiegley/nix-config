@@ -9,7 +9,7 @@ let home           = builtins.getEnv "HOME";
     xdg_cacheHome  = "${home}/.cache";
 
 in {
-  imports = [ <home-manager/nix-darwin> ];
+  # imports = [ <home-manager/nix-darwin> ];
 
   services = {
     nix-daemon.enable = false;
@@ -49,10 +49,10 @@ in {
     };
   };
 
-  home-manager = {
-    useGlobalPkgs = true;
-    users.johnw = import <hm-config>;
-  };
+  # home-manager = {
+  #   useGlobalPkgs = true;
+  #   users.johnw = import <hm-config>;
+  # };
 
   nixpkgs = {
     config = {
@@ -94,8 +94,8 @@ in {
       nixpkgs         = "${home}/src/nix/nixpkgs";
       darwin          = "${home}/src/nix/darwin";
       darwin-config   = "${home}/src/nix/config/darwin.nix";
-      home-manager    = "${home}/src/nix/home-manager";
-      hm-config       = "${home}/src/nix/config/home.nix";
+      # home-manager    = "${home}/src/nix/home-manager";
+      # hm-config       = "${home}/src/nix/config/home.nix";
       localconfig     = "${home}/src/nix/config/${localconfig.hostname}.nix";
       ssh-config-file = "${home}/.ssh/config";
       ssh-auth-sock   = "${xdg_configHome}/gnupg/S.gpg-agent.ssh";

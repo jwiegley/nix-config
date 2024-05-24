@@ -34,7 +34,8 @@ let home            = builtins.getEnv "HOME";
 
 in {
   home = {
-    stateVersion = "18.09";
+    stateVersion = "23.11";
+    enableNixpkgsReleaseCheck = false;
 
     # These are packages that should always be present in the user
     # environment, though perhaps not the machine environment.
