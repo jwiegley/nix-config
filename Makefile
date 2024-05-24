@@ -23,20 +23,14 @@ endif
 # darwin.nix for the system definition of the NIX_PATH, which relies on
 # whichever versions of the below were used to build that generation.
 NIX_PATH   = $(HOME)/.nix-defexpr/channels
-NIX_PATH  := $(NIX_PATH):darwin=$(HOME)/src/nix/darwin
-NIX_PATH  := $(NIX_PATH):darwin-config=$(HOME)/src/nix/config/darwin.nix
-NIX_PATH  := $(NIX_PATH):hm-config=$(HOME)/src/nix/config/home.nix
-NIX_PATH  := $(NIX_PATH):home-manager=$(HOME)/src/nix/home-manager
-NIX_PATH  := $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 NIX_PATH  := $(NIX_PATH):nixpkgs=$(HOME)/src/nix/nixpkgs
+# NIX_PATH  := $(NIX_PATH):darwin=$(HOME)/src/nix/darwin
+# NIX_PATH  := $(NIX_PATH):darwin-config=$(HOME)/src/nix/config/darwin.nix
+# NIX_PATH  := $(NIX_PATH):hm-config=$(HOME)/src/nix/config/home.nix
+# NIX_PATH  := $(NIX_PATH):home-manager=$(HOME)/src/nix/home-manager
+NIX_PATH  := $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 NIX_PATH  := $(NIX_PATH):ssh-auth-sock=$(HOME)/.config/gnupg/S.gpg-agent.ssh
 NIX_PATH  := $(NIX_PATH):ssh-config-file=$(HOME)/.ssh/config
-
-NIX	   = $(PRENIX) nix
-NIX_BUILD  = $(PRENIX) nix-build
-NIX_ENV	   = $(PRENIX) nix-env
-NIX_STORE  = $(PRENIX) nix-store
-NIX_GC	   = $(PRENIX) nix-collect-garbage
 
 BUILD_ARGS = $(NIXOPTS) --keep-going
 
@@ -82,29 +76,13 @@ tools:
 		uniq
 
 build:
-	$(call announce,nix build -f "<darwin>" system)
-	@if [[ -d /Volumes/ext/nix ]]; then					\
-	    $(NIX) build $(BUILD_ARGS) -f "<darwin>" system			\
-	        --extra-trusted-substituters file:///Volumes/ext/nix		\
-	        --keep-going;							\
-	elif [[ -d /Volumes/tank/nix ]]; then					\
-	    $(NIX) build $(BUILD_ARGS) -f "<darwin>" system                     \
-	        --extra-trusted-substituters file:///Volumes/tank/nix		\
-	        --keep-going;							\
-	else									\
-	    $(NIX) build $(BUILD_ARGS) -f "<darwin>" system --keep-going;	\
-	fi
+	$(call announce,darwin-rebuild switch --impure --flake .#)
+	@$(PRENIX) darwin-rebuild build --impure --flake .#
 	@rm -f result*
-
-build-dry:
-	$(call announce,nix build -f "<darwin>" system --dry-run)
-	env > /tmp/build-dry-env
-	@echo $(NIX) build $(BUILD_ARGS) -f "<darwin>" system --dry-run
-	@$(NIX) build $(BUILD_ARGS) -f "<darwin>" system --dry-run
 
 switch:
 	$(call announce,darwin-rebuild switch)
-	@$(PRENIX) darwin-rebuild switch --cores 1 -j1
+	@$(PRENIX) darwin-rebuild switch --impure --flake .#
 	@echo "Darwin generation: $$($(PRENIX) darwin-rebuild --list-generations | tail -1)"
 
 rebuild: build switch
@@ -115,9 +93,9 @@ tag-before:
 
 pull:
 	$(call announce,git pull)
+	nix flake lock --update-input darwin
+	nix flake lock --update-input home-manager
 	(cd nixpkgs	 && git pull --rebase)
-	(cd darwin	 && git pull --rebase)
-	(cd home-manager && git pull --rebase)
 	update ~/kadena ~/doc ~/src
 	(cd ~/src/emacs  && git pull)
 
@@ -155,8 +133,8 @@ copy: copy-src
 ########################################################################
 
 define delete-generations
-	$(NIX_ENV) $(1) --delete-generations			\
-	    $(shell $(NIX_ENV) $(1)				\
+	$(PRENIX) nix-env $(1) --delete-generations			\
+	    $(shell $(PRENIX) nix-env $(1)				\
 		--list-generations | field 1 | head -n -$(2))
 endef
 
@@ -167,12 +145,12 @@ endef
 
 check:
 	$(call announce,nix store verify --all)
-	@$(NIX_STORE) --verify --repair --check-contents
-	@$(NIX) store verify --all
-	@if [[ -d /Volumes/ext/nix ]]; then				\
-	    $(NIX) store verify --all --store file:///Volumes/ext/nix;	\
-	elif [[ -d /Volumes/tank/nix ]]; then				\
-	    $(NIX) store verify --all --store file:///Volumes/tank/nix;	\
+	@$(PRENIX) nix-store --verify --repair --check-contents
+	@$(PRENIX) nix store verify --all
+	@if [[ -d /Volumes/ext/nix ]]; then					\
+	    $(PRENIX) nix store verify --all --store file:///Volumes/ext/nix;	\
+	elif [[ -d /Volumes/tank/nix ]]; then					\
+	    $(PRENIX) nix store verify --all --store file:///Volumes/tank/nix;	\
 	fi
 
 sizes:
@@ -180,15 +158,15 @@ sizes:
 
 gc:
 	$(call delete-generations-all,$(MAX_AGE))
-	$(NIX_GC) --delete-older-than $(MAX_AGE)d
-	sudo $(NIX_GC) --delete-older-than $(MAX_AGE)d
+	$(PRENIX) nix-collect-garbage --delete-older-than $(MAX_AGE)d
+	sudo $(PRENIX) nix-collect-garbage --delete-older-than $(MAX_AGE)d
 
 clean: gc
 
 gc-old:
 	$(call delete-generations-all,1)
-	$(NIX_GC) --delete-old
-	sudo $(NIX_GC) --delete-old
+	$(PRENIX) nix-collect-garbage --delete-old
+	sudo $(PRENIX) nix-collect-garbage --delete-old
 
 purge: gc-old
 
@@ -201,11 +179,11 @@ endif
 
 sign:
 	$(call announce,nix store sign -k "<key>" --all)
-	@$(NIX) store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
+	@$(PRENIX) nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
 
 cache-system:
 	$(call announce,nix copy --to $(REMOTE_CACHE) <system>)
-	@$(NIX) copy --to $(REMOTE_CACHE)		\
+	@$(PRENIX) nix copy --to $(REMOTE_CACHE)	\
 	    $$(readlink .nix-profile)			\
 	    $$(readlink /var/run/current-system)
 
@@ -219,11 +197,11 @@ cache-sources:
 	    -o -name '*.zip'				\
 	    -o -name '*.tar'				\
 	     \) -type f -print0 |			\
-	    xargs -0 $(NIX) copy --to $(REMOTE_CACHE)
+	    xargs -0 $(PRENIX) nix copy --to $(REMOTE_CACHE)
 
 cache: sign
 	$(call announce,nix copy --to $(REMOTE_CACHE) --all)
-	@for i in $(seq 0 10) ; do $(NIX) copy --to $(REMOTE_CACHE) --all || exit 0 ; done
+	@for i in $(seq 0 10) ; do $(PRENIX) nix copy --to $(REMOTE_CACHE) --all || exit 0 ; done
 
 PROJECTS = $(HOME)/.config/projects
 

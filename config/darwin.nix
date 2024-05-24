@@ -92,8 +92,8 @@ in {
 
     nixPath = lib.mkForce [{
       nixpkgs         = "${home}/src/nix/nixpkgs";
-      darwin          = "${home}/src/nix/darwin";
-      darwin-config   = "${home}/src/nix/config/darwin.nix";
+      # darwin          = "${home}/src/nix/darwin";
+      # darwin-config   = "${home}/src/nix/config/darwin.nix";
       # home-manager    = "${home}/src/nix/home-manager";
       # hm-config       = "${home}/src/nix/config/home.nix";
       localconfig     = "${home}/src/nix/config/${localconfig.hostname}.nix";
