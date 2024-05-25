@@ -1,16 +1,13 @@
-{ pkgs, lib, config, ... }:
+{ pkgs, lib, config, hostname, ... }:
 
 let home           = builtins.getEnv "HOME";
     tmpdir         = "/tmp";
-    localconfig    = import <localconfig>;
 
     xdg_configHome = "${home}/.config";
     xdg_dataHome   = "${home}/.local/share";
     xdg_cacheHome  = "${home}/.cache";
 
 in {
-  # imports = [ <home-manager/nix-darwin> ];
-
   services = {
     nix-daemon.enable = false;
     activate-system.enable = true;
@@ -27,13 +24,13 @@ in {
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb yubikey-gnupg"
         ];
         keyFiles =
-          if localconfig.hostname == "vulcan" then [
+          if hostname == "vulcan" then [
             "${home}/vulcan/id_athena.pub"
           ]
-          else if localconfig.hostname == "athena" then [
+          else if hostname == "athena" then [
             "${home}/athena/id_vulcan.pub"
           ]
-          else if localconfig.hostname == "hermes" then [
+          else if hostname == "hermes" then [
             "${home}/hermes/id_vulcan.pub"
             "${home}/hermes/id_athena.pub"
           ]
@@ -49,10 +46,103 @@ in {
     };
   };
 
-  # home-manager = {
-  #   useGlobalPkgs = true;
-  #   users.johnw = import <hm-config>;
-  # };
+  homebrew = {
+    enable = true;
+    onActivation.cleanup = "uninstall";
+
+    taps = [];
+    brews = [
+      "openssl"
+      "pact"
+      "z3"
+    ];
+
+    casks = [
+      "1password"
+      "anki"
+      "arc"
+      "asana"
+      "audacity"
+      "backblaze"
+      "backblaze-downloader"
+      "brave-browser"
+      # "carbon-copy-cloner"
+      "choosy"
+      "dbvisualizer"
+      "devonagent"
+      "devonthink"
+      "discord"
+      "docker"
+      "drivedx"
+      "element"
+      "fantastical"
+      "firefox"
+      "fujitsu-scansnap-home"
+      "geektool"
+      "gpg-suite"
+      "grammarly-desktop"
+      "gzdoom"
+      "hazel"
+      "iterm2"
+      "keyboard-maestro"
+      "launchbar"
+      "lectrote"
+      "ledger-live"
+      "mellel"
+      "notion"
+      "ollama"
+      "omnigraffle"
+      "omnioutliner"
+      "signal"
+      "steam"
+      "suspicious-package"
+      "tor-browser"
+      "ukelele"
+      "unicodechecker"
+      "virtual-ii"
+      "visual-studio-code"
+      "vivaldi"
+      "vlc"
+      "vmware-fusion"
+      "xnviewmp"
+      "yubico-yubikey-manager"
+      "zoom"
+      "zotero"
+      "zulip"
+    ];
+
+    masApps = {
+      "1Password for Safari"         = 1569813296;
+      "Bible Study"                  = 472790630;
+      "DataGraph"                    = 407412840;
+      "Drafts"                       = 1435957248;
+      # "Fantastical"                  = 975937182;
+      "Grammarly for Safari"         = 1462114288;
+      "Just Press Record"            = 1033342465;
+      "Keynote"                      = 409183694;
+      "Kindle"                       = 302584613;
+      "Marked 2"                     = 890031187;
+      # "Microsoft Excel"              = 462058435;
+      # "Microsoft PowerPoint"         = 462062816;
+      # "Microsoft Word"               = 462054704;
+      "MindNode"                     = 1289197285;
+      "Ninox Database"               = 901110441;
+      "PDF Expert"                   = 1055273043;
+      "Pages"                        = 409201541;
+      "Pixelmator Pro"               = 1289583905;
+      "Prime Video"                  = 545519333;
+      "Slack"                        = 803453959;
+      "Soulver 3"                    = 1508732804;
+      "Speedtest"                    = 1153157709;
+      "Telegram"                     = 747648890;
+      "WhatsApp"                     = 1147396723;
+      "Whisper Transcription"        = 1668083311;
+      "WireGuard"                    = 1451685025;
+      # "Xcode"                        = 497799835;
+      "YubiKey Personalization Tool" = 638161122;
+      # "iMovie"                       = 408981434;
+    };
+  };
 
   nixpkgs = {
     config = {
@@ -91,12 +181,6 @@ in {
     useDaemon = true;
 
     nixPath = lib.mkForce [{
-      nixpkgs         = "${home}/src/nix/nixpkgs";
-      # darwin          = "${home}/src/nix/darwin";
-      # darwin-config   = "${home}/src/nix/config/darwin.nix";
-      # home-manager    = "${home}/src/nix/home-manager";
-      # hm-config       = "${home}/src/nix/config/home.nix";
-      localconfig     = "${home}/src/nix/config/${localconfig.hostname}.nix";
       ssh-config-file = "${home}/.ssh/config";
       ssh-auth-sock   = "${xdg_configHome}/gnupg/S.gpg-agent.ssh";
     }];
@@ -108,14 +192,10 @@ in {
 
       substituters = [
         "https://cache.iog.io"
-      ] ++ lib.optionals (localconfig.hostname == "vulcan") [
-        # "file:///Volumes/ext/nix"
-      ];
+      ] ++ lib.optionals (hostname == "vulcan") [];
 
       trusted-substituters = [
-      ] ++ lib.optionals (localconfig.hostname == "vulcan") [
-        # "file:///Volumes/ext/nix"
-      ];
+      ] ++ lib.optionals (hostname == "vulcan") [];
 
       trusted-public-keys = [
         "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
@@ -124,9 +204,8 @@ in {
     };
 
     distributedBuilds = false;
-    # distributedBuilds = true;
 
-    # buildMachines = lib.optionals (localconfig.hostname == "hermes") [
+    # buildMachines = lib.optionals (hostname == "hermes") [
     #   vulcan
     # ];
 
@@ -174,7 +253,7 @@ in {
     };
   };
 
-  # networking = if localconfig.hostname == "vulcan" then {
+  # networking = if hostname == "vulcan" then {
   #   dns = [ "192.168.50.1" ];
   #   search = [ "local" ];
   #   knownNetworkServices = [ "Ethernet" "Thunderbolt Bridge" ];
@@ -225,7 +304,7 @@ in {
       #   serviceConfig.KeepAlive = true;
       # };
     }
-    // lib.optionalAttrs (localconfig.hostname == "vulcan") {
+    // lib.optionalAttrs (hostname == "vulcan") {
       unmount = {
         script = ''
           diskutil unmount /Volumes/BOOTCAMP
@@ -246,7 +325,7 @@ in {
         serviceConfig.KeepAlive = false;
       };
      }
-    // lib.optionalAttrs (localconfig.hostname == "athena") {
+    // lib.optionalAttrs (hostname == "athena") {
       snapshots = {
         script = ''
           date >> /var/log/snapshots.log 2>&1
@@ -349,7 +428,7 @@ in {
          };
        };
      } else {})
-    // lib.optionalAttrs (localconfig.hostname == "vulcan") {
+    // lib.optionalAttrs (hostname == "vulcan") {
       znc = runCommand "${pkgs.znc}/bin/znc -f -d ${xdg_configHome}/znc";
     };
   };
@@ -549,7 +628,7 @@ in {
       # }
     '';
   } else {})
-  // lib.optionalAttrs (localconfig.hostname == "athena") {
+  // lib.optionalAttrs (hostname == "athena") {
     "sanoid/sanoid.conf".text = ''
       [tank]
       use_template = archival

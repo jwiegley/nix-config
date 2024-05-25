@@ -1,8 +1,7 @@
-{ pkgs, lib, config, ... }:
+{ pkgs, lib, config, hostname, ... }:
 
 let home            = builtins.getEnv "HOME";
     tmpdir          = "/tmp";
-    localconfig     = import <localconfig>;
 
     userName        = "John Wiegley";
     userEmail       = "johnw@newartisans.com";
@@ -12,12 +11,12 @@ let home            = builtins.getEnv "HOME";
     emacs-server    = "${tmpdir}/johnw-emacs/server";
     emacsclient     = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
 
-    vulcan_ethernet = if localconfig.hostname == "hermes"
+    vulcan_ethernet = if hostname == "hermes"
                       then "192.168.2.1"
                       else "192.168.50.51";
     vulcan_wifi     = "192.168.50.172";
 
-    hermes_ethernet = if localconfig.hostname == "vulcan"
+    hermes_ethernet = if hostname == "vulcan"
                       then "192.168.2.2"
                       else "192.168.50.212";
     hermes_wifi     = "192.168.50.102";
@@ -54,7 +53,7 @@ in {
       GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";
       GTAGSCONF          = "${pkgs.global}/share/gtags/gtags.conf";
       GTAGSLABEL         = "pygments";
-      HOSTNAME           = localconfig.hostname;
+      HOSTNAME           = hostname;
       JAVA_OPTS          = "-Xverify:none";
       LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
       NIX_CONF           = "${home}/src/nix";
@@ -261,7 +260,7 @@ in {
       history = {
         size       = 50000;
         save       = 500000;
-        path       = "${dotDir}/history";
+        path       = "${config.xdg.configHome}/zsh/history";
         ignoreDups = true;
         share      = true;
         extended   = true;
@@ -306,7 +305,7 @@ in {
         rX     = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
         scp    = "${pkgs.rsync}/bin/rsync -aP --inplace";
         wipe   = "${pkgs.srm}/bin/srm -vfr";
-        switch = "${pkgs.nix-scripts}/bin/u ${localconfig.hostname} switch";
+        switch = "${pkgs.nix-scripts}/bin/u ${hostname} switch";
         proc   = "${pkgs.darwin.ps}/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
         nstat  = "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
                + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
@@ -646,17 +645,17 @@ in {
       matchBlocks =
         let
           onHost = proxyJump: hostname: { inherit hostname; } //
-            lib.optionalAttrs (localconfig.hostname != proxyJump) {
+            lib.optionalAttrs (hostname != proxyJump) {
               inherit proxyJump;
             };
           withLocal = attrs: attrs //
-            (if localconfig.hostname == "vulcan" then {
+            (if hostname == "vulcan" then {
                identityFile = "${home}/vulcan/id_vulcan";
              }
-             else if localconfig.hostname == "athena" then {
+             else if hostname == "athena" then {
                identityFile = "${home}/athena/id_athena";
              }
-             else if localconfig.hostname == "hermes" then {
+             else if hostname == "hermes" then {
                # always use the YubiKey when coming from a laptop
              }
              else {});
@@ -674,18 +673,18 @@ in {
           port = 2202;
         };
 
-        vulcan = withLocal (if localconfig.hostname == "hermes" && am_traveling
+        vulcan = withLocal (if hostname == "hermes" && am_traveling
                             then home
                             else { hostname = vulcan_ethernet; });
         deimos = withLocal (onHost "vulcan" "192.168.221.128");
         simon  = withLocal (onHost "vulcan" "172.16.194.158");
 
-        athena = withLocal (if localconfig.hostname == "hermes" && am_traveling
+        athena = withLocal (if hostname == "hermes" && am_traveling
                             then build
                             else { hostname = athena_ethernet; });
         phobos = withLocal (onHost "athena" "192.168.50.111");
 
-        hermes = withLocal (if localconfig.hostname == "athena"
+        hermes = withLocal (if hostname == "athena"
                             then { hostname = hermes_wifi; }
                             else { hostname = hermes_ethernet; });
         neso   = withLocal (onHost "hermes" "192.168.100.130");

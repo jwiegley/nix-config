@@ -23,12 +23,11 @@ endif
 # darwin.nix for the system definition of the NIX_PATH, which relies on
 # whichever versions of the below were used to build that generation.
 NIX_PATH   = $(HOME)/.nix-defexpr/channels
-NIX_PATH  := $(NIX_PATH):nixpkgs=$(HOME)/src/nix/nixpkgs
+# NIX_PATH  := $(NIX_PATH):nixpkgs=$(HOME)/src/nix/nixpkgs
 # NIX_PATH  := $(NIX_PATH):darwin=$(HOME)/src/nix/darwin
 # NIX_PATH  := $(NIX_PATH):darwin-config=$(HOME)/src/nix/config/darwin.nix
 # NIX_PATH  := $(NIX_PATH):hm-config=$(HOME)/src/nix/config/home.nix
 # NIX_PATH  := $(NIX_PATH):home-manager=$(HOME)/src/nix/home-manager
-NIX_PATH  := $(NIX_PATH):localconfig=$(NIX_CONF)/config/$(HOSTNAME).nix
 NIX_PATH  := $(NIX_PATH):ssh-auth-sock=$(HOME)/.config/gnupg/S.gpg-agent.ssh
 NIX_PATH  := $(NIX_PATH):ssh-config-file=$(HOME)/.ssh/config
 
@@ -75,14 +74,17 @@ tools:
 		sort				\
 		uniq
 
+# nix --extra-experimental-features repl-flake repl .#darwinConfigurations.vulcan.pkgs
+
 build:
-	$(call announce,darwin-rebuild switch --impure --flake .#)
-	@$(PRENIX) darwin-rebuild build --impure --flake .#
+	$(call announce,darwin-rebuild build --impure --flake .#$(HOSTNAME))
+	@$(PRENIX) darwin-rebuild build --impure --flake .#$(HOSTNAME)
 	@rm -f result*
 
 switch:
-	$(call announce,darwin-rebuild switch)
-	@$(PRENIX) darwin-rebuild switch --impure --flake .#
+	$(call announce,darwin-rebuild switch --impure --flake .#$(HOSTNAME))
+	@$(PRENIX) darwin-rebuild switch --impure --flake .#$(HOSTNAME)
+	brew upgrade
 	@echo "Darwin generation: $$($(PRENIX) darwin-rebuild --list-generations | tail -1)"
 
 rebuild: build switch
@@ -93,11 +95,10 @@ tag-before:
 
 pull:
 	$(call announce,git pull)
+	nix flake lock --update-input nixpkgs
 	nix flake lock --update-input darwin
 	nix flake lock --update-input home-manager
-	(cd nixpkgs	 && git pull --rebase)
-	update ~/kadena ~/doc ~/src
-	(cd ~/src/emacs  && git pull)
+	brew update
 
 tag-working:
 	$(call announce,git tag last-known-good)

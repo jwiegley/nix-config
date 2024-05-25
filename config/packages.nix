@@ -232,7 +232,7 @@ let exe = haskell.lib.justStaticExecutables; in
   rlwrap
   rsync
   ruby
-  sanoid
+  # sanoid
   sbcl
   scc
   sccache
@@ -310,5 +310,5 @@ let exe = haskell.lib.justStaticExecutables; in
 ++
 
 pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
-  emacsERCEnv
+  # emacsERCEnv
 ]
