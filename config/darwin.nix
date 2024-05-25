@@ -59,6 +59,7 @@ in {
 
     casks = [
       "1password"
+      "1password-cli"
       "anki"
       "arc"
       "asana"
@@ -66,8 +67,9 @@ in {
       "backblaze"
       "backblaze-downloader"
       "brave-browser"
-      # "carbon-copy-cloner"
+      "carbon-copy-cloner"
       "choosy"
+      "datagraph"
       "dbvisualizer"
       "devonagent"
       "devonthink"
@@ -76,6 +78,7 @@ in {
       "drivedx"
       "element"
       "fantastical"
+      "fertigt-slate"
       "firefox"
       "fujitsu-scansnap-home"
       "geektool"
@@ -88,14 +91,23 @@ in {
       "launchbar"
       "lectrote"
       "ledger-live"
+      "macwhisper"
+      "marked"
       "mellel"
+      "netdownloadhelpercoapp"
       "notion"
       "ollama"
       "omnigraffle"
       "omnioutliner"
+      "opera"
+      "pdf-expert"
       "signal"
+      "slack"
+      "soulver"
+      "soulver-cli"
       "steam"
       "suspicious-package"
+      "telegram"
       "tor-browser"
       "ukelele"
       "unicodechecker"
@@ -104,8 +116,9 @@ in {
       "vivaldi"
       "vlc"
       "vmware-fusion"
+      "whatsapp"
       "xnviewmp"
-      "yubico-yubikey-manager"
+      # "yubico-yubikey-manager"
       "zoom"
       "zotero"
       "zulip"
@@ -114,32 +127,23 @@ in {
     masApps = {
       "1Password for Safari"         = 1569813296;
       "Bible Study"                  = 472790630;
-      "DataGraph"                    = 407412840;
       "Drafts"                       = 1435957248;
-      # "Fantastical"                  = 975937182;
       "Grammarly for Safari"         = 1462114288;
       "Just Press Record"            = 1033342465;
       "Keynote"                      = 409183694;
       "Kindle"                       = 302584613;
-      "Marked 2"                     = 890031187;
       # "Microsoft Excel"              = 462058435;
       # "Microsoft PowerPoint"         = 462062816;
       # "Microsoft Word"               = 462054704;
       "MindNode"                     = 1289197285;
       "Ninox Database"               = 901110441;
-      "PDF Expert"                   = 1055273043;
       "Pages"                        = 409201541;
       "Pixelmator Pro"               = 1289583905;
       "Prime Video"                  = 545519333;
-      "Slack"                        = 803453959;
-      "Soulver 3"                    = 1508732804;
       "Speedtest"                    = 1153157709;
-      "Telegram"                     = 747648890;
-      "WhatsApp"                     = 1147396723;
-      "Whisper Transcription"        = 1668083311;
       "WireGuard"                    = 1451685025;
       # "Xcode"                        = 497799835;
-      "YubiKey Personalization Tool" = 638161122;
+      # "YubiKey Personalization Tool" = 638161122;
       # "iMovie"                       = 408981434;
     };
   };

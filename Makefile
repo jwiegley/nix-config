@@ -148,11 +148,6 @@ check:
 	$(call announce,nix store verify --all)
 	@$(PRENIX) nix-store --verify --repair --check-contents
 	@$(PRENIX) nix store verify --all
-	@if [[ -d /Volumes/ext/nix ]]; then					\
-	    $(PRENIX) nix store verify --all --store file:///Volumes/ext/nix;	\
-	elif [[ -d /Volumes/tank/nix ]]; then					\
-	    $(PRENIX) nix store verify --all --store file:///Volumes/tank/nix;	\
-	fi
 
 sizes:
 	df -H /nix 2>&1 | grep /dev
@@ -174,35 +169,35 @@ purge: gc-old
 # REMOTE_CACHE = "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
 # SERVER = athena
 # REMOTE_CACHE = "ssh://$(SERVER)"
-ifeq ($(HOSTNAME),vulcan)
-REMOTE_CACHE = "ssh-ng://hermes?remote-store=file:///Volumes/tank/nix"
-endif
+# ifeq ($(HOSTNAME),vulcan)
+# REMOTE_CACHE = "ssh-ng://hermes?remote-store=file:///Volumes/tank/nix"
+# endif
 
 sign:
 	$(call announce,nix store sign -k "<key>" --all)
 	@$(PRENIX) nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
 
-cache-system:
-	$(call announce,nix copy --to $(REMOTE_CACHE) <system>)
-	@$(PRENIX) nix copy --to $(REMOTE_CACHE)	\
-	    $$(readlink .nix-profile)			\
-	    $$(readlink /var/run/current-system)
+# cache-system:
+#	$(call announce,nix copy --to $(REMOTE_CACHE) <system>)
+#	@$(PRENIX) nix copy --to $(REMOTE_CACHE)	\
+#	    $$(readlink .nix-profile)			\
+#	    $$(readlink /var/run/current-system)
 
-cache-sources:
-	$(call announce,nix copy --to $(REMOTE_CACHE) <sources>)
-	find /nix/store/ -maxdepth 1 \(			\
-	       -name '*.xz'				\
-	    -o -name '*.bz2'				\
-	    -o -name '*.gz'				\
-	    -o -name '*.dmg'				\
-	    -o -name '*.zip'				\
-	    -o -name '*.tar'				\
-	     \) -type f -print0 |			\
-	    xargs -0 $(PRENIX) nix copy --to $(REMOTE_CACHE)
+# cache-sources:
+#	$(call announce,nix copy --to $(REMOTE_CACHE) <sources>)
+#	find /nix/store/ -maxdepth 1 \(			\
+#	       -name '*.xz'				\
+#	    -o -name '*.bz2'				\
+#	    -o -name '*.gz'				\
+#	    -o -name '*.dmg'				\
+#	    -o -name '*.zip'				\
+#	    -o -name '*.tar'				\
+#	     \) -type f -print0 |			\
+#	    xargs -0 $(PRENIX) nix copy --to $(REMOTE_CACHE)
 
-cache: sign
-	$(call announce,nix copy --to $(REMOTE_CACHE) --all)
-	@for i in $(seq 0 10) ; do $(PRENIX) nix copy --to $(REMOTE_CACHE) --all || exit 0 ; done
+# cache: sign
+#	$(call announce,nix copy --to $(REMOTE_CACHE) --all)
+#	@for i in $(seq 0 10) ; do $(PRENIX) nix copy --to $(REMOTE_CACHE) --all || exit 0 ; done
 
 PROJECTS = $(HOME)/.config/projects
 
