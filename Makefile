@@ -5,11 +5,6 @@ MAX_AGE	   = 14
 NIX_CONF   = $(HOME)/src/nix
 NIXOPTS	   =
 
-# Lazily evaluated variables; expensive to compute, but we only want it do it
-# when first necessary.
-GIT_DATE   = git --git-dir=nixpkgs/.git show -s --format=%cd --date=format:%Y%m%d_%H%M%S
-LKG_DATE   = $(eval LKG_DATE := $(shell $(GIT_DATE) last-known-good))$(LKG_DATE)
-
 ifneq ($(CACHE),)
 NIXOPTS	  := $(NIXOPTS) --substituters 'ssh://$(CACHE)'
 endif
@@ -23,11 +18,6 @@ endif
 # darwin.nix for the system definition of the NIX_PATH, which relies on
 # whichever versions of the below were used to build that generation.
 NIX_PATH   = $(HOME)/.nix-defexpr/channels
-# NIX_PATH  := $(NIX_PATH):nixpkgs=$(HOME)/src/nix/nixpkgs
-# NIX_PATH  := $(NIX_PATH):darwin=$(HOME)/src/nix/darwin
-# NIX_PATH  := $(NIX_PATH):darwin-config=$(HOME)/src/nix/config/darwin.nix
-# NIX_PATH  := $(NIX_PATH):hm-config=$(HOME)/src/nix/config/home.nix
-# NIX_PATH  := $(NIX_PATH):home-manager=$(HOME)/src/nix/home-manager
 NIX_PATH  := $(NIX_PATH):ssh-auth-sock=$(HOME)/.config/gnupg/S.gpg-agent.ssh
 NIX_PATH  := $(NIX_PATH):ssh-config-file=$(HOME)/.ssh/config
 
@@ -35,7 +25,7 @@ BUILD_ARGS = $(NIXOPTS) --keep-going
 
 PRENIX	  := NIX_PATH=$(NIX_PATH)
 
-all: rebuild
+all: switch
 
 %-all: %
 	@for host in $(REMOTES); do						\
@@ -87,12 +77,6 @@ switch:
 	brew upgrade
 	@echo "Darwin generation: $$($(PRENIX) darwin-rebuild --list-generations | tail -1)"
 
-rebuild: build switch
-
-tag-before:
-	$(call announce,git tag before-update)
-	git --git-dir=nixpkgs/.git branch -f before-update HEAD
-
 pull:
 	$(call announce,git pull)
 	nix flake lock --update-input nixpkgs
@@ -100,26 +84,9 @@ pull:
 	nix flake lock --update-input home-manager
 	brew update
 
-tag-working:
-	$(call announce,git tag last-known-good)
-	git --git-dir=nixpkgs/.git branch -f last-known-good before-update
-	git --git-dir=nixpkgs/.git branch -D before-update
-	git --git-dir=nixpkgs/.git tag -f known-good-$(LKG_DATE) \
-	    -m "known-good-$(LKG_DATE)" last-known-good
+update: pull switch travel-ready
 
-mirror:
-	$(call announce,git push)
-	@for name in master unstable last-known-good; do	\
-	    git --git-dir=nixpkgs/.git push $(GIT_REMOTE)	\
-	        -f $${name}:$${name};				\
-	done
-	git --git-dir=nixpkgs/.git push -f --tags $(GIT_REMOTE)
-	git --git-dir=darwin/.git push --mirror $(GIT_REMOTE)
-	git --git-dir=home-manager/.git push --mirror $(GIT_REMOTE)
-
-update: tag-before pull rebuild travel-ready mirror tag-working
-
-update-sync: update copy rebuild-all travel-ready-all
+update-sync: update copy switch-all travel-ready-all
 
 ########################################################################
 
@@ -166,38 +133,9 @@ gc-old:
 
 purge: gc-old
 
-# REMOTE_CACHE = "s3://jw-nix-cache?region=us-west-001&endpoint=s3.us-west-001.backblazeb2.com"
-# SERVER = athena
-# REMOTE_CACHE = "ssh://$(SERVER)"
-# ifeq ($(HOSTNAME),vulcan)
-# REMOTE_CACHE = "ssh-ng://hermes?remote-store=file:///Volumes/tank/nix"
-# endif
-
 sign:
 	$(call announce,nix store sign -k "<key>" --all)
 	@$(PRENIX) nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
-
-# cache-system:
-#	$(call announce,nix copy --to $(REMOTE_CACHE) <system>)
-#	@$(PRENIX) nix copy --to $(REMOTE_CACHE)	\
-#	    $$(readlink .nix-profile)			\
-#	    $$(readlink /var/run/current-system)
-
-# cache-sources:
-#	$(call announce,nix copy --to $(REMOTE_CACHE) <sources>)
-#	find /nix/store/ -maxdepth 1 \(			\
-#	       -name '*.xz'				\
-#	    -o -name '*.bz2'				\
-#	    -o -name '*.gz'				\
-#	    -o -name '*.dmg'				\
-#	    -o -name '*.zip'				\
-#	    -o -name '*.tar'				\
-#	     \) -type f -print0 |			\
-#	    xargs -0 $(PRENIX) nix copy --to $(REMOTE_CACHE)
-
-# cache: sign
-#	$(call announce,nix copy --to $(REMOTE_CACHE) --all)
-#	@for i in $(seq 0 10) ; do $(PRENIX) nix copy --to $(REMOTE_CACHE) --all || exit 0 ; done
 
 PROJECTS = $(HOME)/.config/projects
 

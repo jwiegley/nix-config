@@ -15,12 +15,12 @@ case $1 in
         ;;
 
     hermes)
-        u hermes rebuild travel-ready check
+        u hermes switch travel-ready check
         notify "Nix on Hermes updated"
         ;;
 
     athena)
-        u athena rebuild check
+        u athena switch check
         notify "Nix on Athena updated"
         ;;
 

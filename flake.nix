@@ -9,11 +9,11 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ nixpkgs, home-manager, darwin, ... }: {
+  outputs = inputs@{ nixpkgs, home-manager, darwin, ... }: rec {
     darwinConfigurations =
       let configure = hostname: system: darwin.lib.darwinSystem {
         inherit system;
-        specialArgs = { inherit hostname; };
+        specialArgs = { inherit hostname inputs; };
         modules = [
           ./config/darwin.nix
           home-manager.darwinModules.home-manager
@@ -32,5 +32,7 @@
         hermes = configure "hermes" "x86_64-darwin";
         athena = configure "athena" "aarch64-darwin";
       };
+
+    darwinPackages = darwinConfigurations."vulcan".pkgs;
   };
 }

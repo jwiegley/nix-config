@@ -25,18 +25,27 @@ in {
         ];
         keyFiles =
           if hostname == "vulcan" then [
-            "${home}/vulcan/id_athena.pub"
+            "${home}/${hostname}/id_athena.pub"
           ]
           else if hostname == "athena" then [
-            "${home}/athena/id_vulcan.pub"
+            "${home}/${hostname}/id_vulcan.pub"
           ]
           else if hostname == "hermes" then [
-            "${home}/hermes/id_vulcan.pub"
-            "${home}/hermes/id_athena.pub"
+            "${home}/${hostname}/id_vulcan.pub"
+            "${home}/${hostname}/id_athena.pub"
           ]
           else [];
       };
     };
+  };
+
+  fonts = {
+    fontDir.enable = true;
+    fonts = with pkgs; [
+      dejavu_fonts
+      scheherazade-new
+      ia-writer-duospace
+    ];
   };
 
   programs = {
@@ -48,16 +57,31 @@ in {
 
   homebrew = {
     enable = true;
-    onActivation.cleanup = "uninstall";
+    onActivation = {
+      autoUpdate = true;
+      upgrade = true;
+      cleanup = "zap";
+    };
 
     taps = [];
     brews = [
       "openssl"
-      "pact"
+      # "pact"
       "z3"
     ];
 
     casks = [
+      "docker"
+      "drivedx"
+      "firefox"
+      "hazel"
+      "iterm2"
+      "keyboard-maestro"
+      "launchbar"
+      "ollama"
+      "vmware-fusion"
+      "wireshark"
+    ] ++ lib.optionals (hostname != "athena") [
       "1password"
       "1password-cli"
       "anki"
@@ -67,47 +91,41 @@ in {
       "backblaze"
       "backblaze-downloader"
       "brave-browser"
-      "carbon-copy-cloner"
+      # "carbon-copy-cloner"        # Version is out of date
       "choosy"
-      "datagraph"
+      # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
       "devonagent"
       "devonthink"
       "discord"
-      "docker"
-      "drivedx"
       "element"
       "fantastical"
-      "fertigt-slate"
-      "firefox"
+      # "fertigt-slate"             # This does not open on Intel
       "fujitsu-scansnap-home"
       "geektool"
       "gpg-suite"
       "grammarly-desktop"
       "gzdoom"
-      "hazel"
-      "iterm2"
-      "keyboard-maestro"
-      "launchbar"
       "lectrote"
       "ledger-live"
-      "macwhisper"
-      "marked"
+      # "macwhisper"                # Use Whisper Transcription in AppStore
+      # "marked"                    # Use Marked 2 in AppStore
       "mellel"
       "netdownloadhelpercoapp"
       "notion"
-      "ollama"
-      "omnigraffle"
+      # "omnigraffle"               # I stay at version 6
       "omnioutliner"
       "opera"
       "pdf-expert"
+      # "screenflow"                # I stay at version 9
       "signal"
       "slack"
-      "soulver"
+      # "soulver"                   # Use Soulver 3 in App Store
       "soulver-cli"
       "steam"
       "suspicious-package"
       "telegram"
+      "thinkorswim"
       "tor-browser"
       "ukelele"
       "unicodechecker"
@@ -115,36 +133,52 @@ in {
       "visual-studio-code"
       "vivaldi"
       "vlc"
-      "vmware-fusion"
       "whatsapp"
       "xnviewmp"
-      # "yubico-yubikey-manager"
+      "yubico-yubikey-manager"
       "zoom"
       "zotero"
       "zulip"
     ];
 
-    masApps = {
+    ## The following software, or versions of software, are not available
+    ## via Homebrew or the App Store:
+
+    # "ABBYY FineReader for ScanSnap"
+    # "BackblazeRestore"
+    # "Bookmap"
+    # "Carbon Copy Cloner"
+    # "Kadena Chainweaver"
+    # "MotiveWave"
+    # "ScanSnap Online Update"
+    # "ScreenFlow"
+    # "Slate"
+
+    masApps = (if hostname != "athena" then {
       "1Password for Safari"         = 1569813296;
       "Bible Study"                  = 472790630;
+      "DataGraph"                    = 407412840;
       "Drafts"                       = 1435957248;
       "Grammarly for Safari"         = 1462114288;
+      "Infuse"                       = 1136220934;
       "Just Press Record"            = 1033342465;
       "Keynote"                      = 409183694;
       "Kindle"                       = 302584613;
-      # "Microsoft Excel"              = 462058435;
-      # "Microsoft PowerPoint"         = 462062816;
-      # "Microsoft Word"               = 462054704;
+      "Marked 2"                     = 890031187;
+      "Microsoft Excel"              = 462058435;
+      "Microsoft PowerPoint"         = 462062816;
+      "Microsoft Word"               = 462054704;
       "MindNode"                     = 1289197285;
       "Ninox Database"               = 901110441;
-      "Pages"                        = 409201541;
+      "OneDrive"                     = 823766827;
       "Pixelmator Pro"               = 1289583905;
       "Prime Video"                  = 545519333;
-      "Speedtest"                    = 1153157709;
+      "Soulver 3"                    = 1508732804;
+      "Whisper Transcription"        = 1668083311;
       "WireGuard"                    = 1451685025;
-      # "Xcode"                        = 497799835;
-      # "YubiKey Personalization Tool" = 638161122;
-      # "iMovie"                       = 408981434;
+    } else {}) // {
+      "Speedtest"                    = 1153157709;
+      "Xcode"                        = 497799835;
     };
   };
 
@@ -224,16 +258,91 @@ in {
   system = {
     stateVersion = 4;
 
+    # activationScripts are executed every time you boot the system or run
+    # `nixos-rebuild` / `darwin-rebuild`.
+    activationScripts.postUserActivation.text = ''
+      # activateSettings -u will reload the settings from the database and
+      # apply them to the current session, so we do not need to logout and
+      # login again to make the changes take effect.
+      /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
+    '';
+
     defaults = {
-      # NSGlobalDomain = {
-      #   AppleKeyboardUIMode = 3;
-      #   ApplePressAndHoldEnabled = false;
-      #   _HIHideMenuBar = true;
-      #   "com.apple.keyboard.fnState" = true;
-      #   "com.apple.mouse.tapBehavior" = 1;
-      #   "com.apple.sound.beep.volume" = 0;
-      #   "com.apple.sound.beep.feedback" = 0;
-      # };
+      NSGlobalDomain = {
+        AppleKeyboardUIMode = 3;
+        AppleInterfaceStyle = "Dark";
+        AppleShowAllExtensions = true;
+        NSAutomaticWindowAnimationsEnabled = false;
+        NSNavPanelExpandedStateForSaveMode = true;
+        NSNavPanelExpandedStateForSaveMode2 = true;
+        "com.apple.keyboard.fnState" = true;
+        _HIHideMenuBar = true;
+        "com.apple.mouse.tapBehavior" = 1;
+        "com.apple.sound.beep.volume" = 0.0;
+        "com.apple.sound.beep.feedback" = 0;
+        ApplePressAndHoldEnabled = false;
+      };
+
+      CustomUserPreferences = {
+        "com.apple.finder" = {
+          ShowExternalHardDrivesOnDesktop = true;
+          ShowHardDrivesOnDesktop = true;
+          ShowMountedServersOnDesktop = true;
+          ShowRemovableMediaOnDesktop = true;
+          _FXSortFoldersFirst = true;
+          # When performing a search, search the current folder by default
+          FXDefaultSearchScope = "SCcf";
+        };
+
+        "com.apple.desktopservices" = {
+          # Avoid creating .DS_Store files on network or USB volumes
+          DSDontWriteNetworkStores = true;
+          DSDontWriteUSBStores = true;
+        };
+
+        "com.apple.spaces" = {
+          "spans-displays" = 0; # Display have seperate spaces
+        };
+
+        "com.apple.WindowManager" = {
+          EnableStandardClickToShowDesktop = 0; # Click wallpaper to reveal desktop
+          StandardHideDesktopIcons = 0; # Show items on desktop
+          HideDesktop = 0; # Do not hide items on desktop & stage manager
+          StageManagerHideWidgets = 0;
+          StandardHideWidgets = 0;
+        };
+
+        "com.apple.screencapture" = {
+          location = "~/Downloads";
+          type = "png";
+        };
+
+        "com.apple.AdLib" = {
+          allowApplePersonalizedAdvertising = false;
+        };
+
+        # Prevent Photos from opening automatically when devices are plugged in
+        "com.apple.ImageCapture".disableHotPlug = true;
+
+        "com.apple.print.PrintingPrefs" = {
+          # Automatically quit printer app once the print jobs complete
+          "Quit When Finished" = true;
+        };
+
+        "com.apple.SoftwareUpdate" = {
+          AutomaticCheckEnabled = true;
+          # Check for software updates daily, not just once per week
+          ScheduleFrequency = 1;
+          # Download newly available updates in background
+          AutomaticDownload = 1;
+          # Install System data files & security updates
+          CriticalUpdateInstall = 1;
+        };
+        "com.apple.TimeMachine".DoNotOfferNewDisksForBackup = true;
+
+        # Turn on app auto-update
+        "com.apple.commerce".AutoUpdate = true;
+      };
 
       ".GlobalPreferences" = {
         "com.apple.sound.beep.sound" = "/System/Library/Sounds/Funk.aiff";
@@ -241,8 +350,17 @@ in {
 
       dock = {
         autohide = true;
-        launchanim = false;
         orientation = "right";
+        launchanim = false;
+        show-process-indicators = false;
+        show-recents = false;
+        static-only = true;
+      };
+
+      finder = {
+        AppleShowAllExtensions = true;
+        ShowPathbar = true;
+        FXEnableExtensionChangeWarning = false;
       };
 
       trackpad = {

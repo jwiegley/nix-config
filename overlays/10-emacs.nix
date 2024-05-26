@@ -749,34 +749,16 @@ emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29MacPort;
 
 convertForERC = drv: drv.overrideAttrs(attrs: rec {
   name = "erc-${attrs.version}";
-  # appName = "ERC";
+
+  appName = "ERC";
   iconFile = ./emacs/Chat.icns;
 
-  # preConfigure = ''
-  #   sed -i 's|/usr/share/locale|${pkgs.gettext}/share/locale|g' \
-  #     lisp/international/mule-cmds.el
-  #   sed -i 's|nextstep/Emacs\.app|nextstep/${appName}.app|' configure.ac
-  #   sed -i 's|>Emacs<|>${appName}<|' nextstep/templates/Info.plist.in
-  #   sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Info.plist.in
-  #   sed -i 's|org\.gnu\.Emacs|org.gnu.${appName}|' nextstep/templates/Info.plist.in
-  #   sed -i 's|Emacs @version@|${appName} @version@|' nextstep/templates/Info.plist.in
-  #   sed -i 's|EmacsApp|${appName}App|' nextstep/templates/Info.plist.in
-  #   if [ -n "${iconFile}" ]; then
-  #     sed -i 's|Emacs\.icns|${appName}.icns|' nextstep/templates/Info.plist.in
-  #   fi
-  #   sed -i 's|Name=Emacs|Name=${appName}|' nextstep/templates/Emacs.desktop.in
-  #   sed -i 's|Emacs\.app|${appName}.app|' nextstep/templates/Emacs.desktop.in
-  #   sed -i 's|"Emacs|"${appName}|' nextstep/templates/InfoPlist.strings.in
-  #   rm -fr .git
-  # '';
-
-  # postInstall =
-  #   builtins.replaceStrings ["Emacs.app"] ["${appName}.app"] attrs.postInstall + ''
-  #     set -x
-  #     mv $out/Applications/${appName}.app/Contents/MacOS/Emacs \
-  #        $out/Applications/${appName}.app/Contents/MacOS/${appName}
-  #     cp "${iconFile}" $out/Applications/${appName}.app/Contents/Resources/${appName}.icns
-  # '';
+  postInstall = attrs.postInstall + ''
+    mv $out/Applications/Emacs.app $out/Applications/${appName}.app
+    mv $out/Applications/${appName}.app/Contents/MacOS/Emacs \
+       $out/Applications/${appName}.app/Contents/MacOS/${appName}
+    cp "${iconFile}" $out/Applications/${appName}.app/Contents/Resources/${appName}.icns
+  '';
 });
 
 emacsERC           = self.convertForERC self.emacs29;
@@ -799,11 +781,17 @@ emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
   ];
 };
 
-emacsERCEnv = myPkgs: pkgs.myEnvFun {
-  name = "emacsERC";
-  buildInputs = [
-    (self.emacsERCPackagesNg.emacsWithPackages myPkgs)
-  ];
-};
+emacsERCEnv = myPkgs:
+  let selfEmacsWithPackages = { pkgs, lib }: pkgs.callPackage ./emacs/wrapper.nix {
+    inherit (pkgs.xorg) lndir;
+    inherit lib;
+  };
+  in pkgs.myEnvFun {
+    name = "emacsERC";
+    buildInputs = [
+      (selfEmacsWithPackages { inherit pkgs; lib = pkgs.lib; }
+        self.emacsERCPackagesNg myPkgs)
+    ];
+  };
 
 }
