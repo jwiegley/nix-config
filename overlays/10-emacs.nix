@@ -712,7 +712,7 @@ emacs29MacPort =
 emacs29MacPortPackages   = self.emacs29MacPortPackagesNg;
 emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29MacPort;
 
-# emacs29 = with pkgs; (self.emacs29.override { srcRepo = true; }).overrideAttrs(attrs: rec {
+# emacsHEAD = with pkgs; (self.emacs29.override { srcRepo = true; }).overrideAttrs(attrs: rec {
 #   name = "emacs-${version}${versionModifier}";
 #   version = "29.0";
 #   versionModifier = ".90";
@@ -744,8 +744,8 @@ emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29MacPort;
 #   #   ];
 # });
 
-# emacs29Packages   = self.emacs29PackagesNg;
-# emacs29PackagesNg = mkEmacsPackages self.emacs29;
+# emacsHEADPackages   = self.emacsHEADPackagesNg;
+# emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
 
 convertForERC = drv: drv.overrideAttrs(attrs: rec {
   name = "erc-${attrs.version}";
@@ -756,8 +756,13 @@ convertForERC = drv: drv.overrideAttrs(attrs: rec {
   postInstall = attrs.postInstall + ''
     mv $out/Applications/Emacs.app $out/Applications/${appName}.app
     mv $out/Applications/${appName}.app/Contents/MacOS/Emacs \
-       $out/Applications/${appName}.app/Contents/MacOS/${appName}
-    cp "${iconFile}" $out/Applications/${appName}.app/Contents/Resources/${appName}.icns
+        $out/Applications/${appName}.app/Contents/MacOS/${appName}
+
+    ${pkgs.perl}/bin/perl -i -pe 's/^\t<string>Emacs</string>/<string>ERC</string>/;' \
+        $out/Applications/${appName}.app/Contents/Info.plist
+
+    cp "${iconFile}" \
+        $out/Applications/${appName}.app/Contents/Resources/${appName}.icns
   '';
 });
 
