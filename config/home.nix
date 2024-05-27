@@ -96,9 +96,7 @@ in {
 
     sessionPath = [
       "/usr/local/bin"
-      "/usr/local/zfs/bin"
-      "${home}/.ghcup/bin"
-      "${home}/.rustup/toolchains/stable-x86_64-apple-darwin/bin"
+      "/opt/homebrew/bin"
       "${home}/kadena/bin"
     ];
 

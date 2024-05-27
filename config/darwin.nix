@@ -139,6 +139,8 @@ in {
       "zoom"
       "zotero"
       "zulip"
+    ] ++ lib.optionals (hostname == "athena") [
+      "openzfs"
     ];
 
     ## The following software, or versions of software, are not available
@@ -296,8 +298,8 @@ in {
 
       CustomUserPreferences = {
         "com.apple.finder" = {
-          ShowExternalHardDrivesOnDesktop = true;
-          ShowHardDrivesOnDesktop = true;
+          ShowExternalHardDrivesOnDesktop = false;
+          ShowHardDrivesOnDesktop = false;
           ShowMountedServersOnDesktop = true;
           ShowRemovableMediaOnDesktop = true;
           _FXSortFoldersFirst = true;
