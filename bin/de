@@ -26,23 +26,12 @@ if [[ $PWD =~ kadena || $PWD =~ athena ]]; then
         NIXOPTS+=(--extra-substituters 'https://nixcache.chainweb.com')
         NIXOPTS+=(--extra-trusted-public-keys 'nixcache.chainweb.com:FVN503ABX9F8x8K0ptnc99XEz5SaA4Sks6kNcZn2pBY=')
     fi
-elif [[ ! -f flake.nix ]]; then
+elif [[ -f flake.nix ]]; then
+    echo "Using the package set for <darwin>"
+    # NIXOPTS_MORE+=(--override-input nixpkgs nixpkgs --inputs-from ~/src/nix)
+else
     echo "Using the package set for <darwin>"
     NIXOPTS_MORE+=(--arg pkgs '(import<darwin>{}).pkgs')
-fi
-
-if [[ -n ${CACHE+x} && $NOCACHE == false ]]; then
-    NIXOPTS+=(--substituters "ssh-ng://${CACHE}")
-    echo "Using substitutor: ssh-ng://${CACHE}"
-
-elif [[ $NOCACHE == false ]]; then
-    if [[ -d /Volumes/ext/nix ]]; then
-        NIXOPTS+=(--substituters "file:///Volumes/ext/nix")
-        echo "Using substitutor: <nix-store on ext>"
-    elif [[ -d /Volumes/tank/nix ]]; then
-        NIXOPTS+=(--substituters "file:///Volumes/tank/nix")
-        echo "Using substitutor: <nix-store on tank>"
-    fi
 fi
 
 if [[ -n ${BUILDER+x} ]]; then
@@ -74,6 +63,7 @@ keep_vars                                       \
     EMACS_SERVER_FILE                           \
     GIT_PROMPT_EXECUTABLE                       \
     ITERM_SESSION_ID                            \
+    NIX_PATH                                    \
     SECURITYSESSIONID                           \
     SSH_AUTH_SOCK                               \
     SSL_CERT_FILE                               \
@@ -127,6 +117,7 @@ SCRIPT="unset         \
     EDITOR            \
     EMACS_SERVER_FILE \
     ITERM_SESSION_ID  \
+    NIX_PATH          \
     SECURITYSESSIONID \
     SSH_AUTH_SOCK     \
     SSL_CERT_FILE     \

@@ -1,4 +1,4 @@
-{ pkgs, lib, config, hostname, ... }:
+{ pkgs, lib, config, hostname, inputs, ... }:
 
 let home           = builtins.getEnv "HOME";
     tmpdir         = "/tmp";
@@ -218,10 +218,21 @@ in {
     package = pkgs.nixStable;
     useDaemon = true;
 
-    nixPath = lib.mkForce [{
-      ssh-config-file = "${home}/.ssh/config";
-      ssh-auth-sock   = "${xdg_configHome}/gnupg/S.gpg-agent.ssh";
-    }];
+    # This entry lets us to define a system registry entry so that
+    # `nixpkgs#foo` will use the nixpkgs that nix-darwin was last built with,
+    # rather than whatever is the current unstable version.
+    #
+    # See https://yusef.napora.org/blog/pinning-nixpkgs-flake
+    registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
+
+    nixPath = lib.mkForce (
+         lib.mapAttrsToList (key: value: "${key}=${value.to.path}")
+                            config.nix.registry
+      ++ [{ ssh-config-file = "${home}/.ssh/config";
+            ssh-auth-sock   = "${xdg_configHome}/gnupg/S.gpg-agent.ssh";
+            darwin-config   = "${home}/src/nix/config/darwin.nix";
+            hm-config       = "${home}/src/nix/config/home.nix";
+          }]);
 
     settings = {
       trusted-users = [ "johnw" "@admin" ];
