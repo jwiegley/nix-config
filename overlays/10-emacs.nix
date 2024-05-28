@@ -758,9 +758,9 @@ convertForERC = drv: drv.overrideAttrs(attrs: rec {
     mv $out/Applications/${appName}.app/Contents/MacOS/Emacs \
         $out/Applications/${appName}.app/Contents/MacOS/${appName}
 
-    ${pkgs.perl}/bin/perl -i -pe 's/^\t<string>Emacs</string>/<string>ERC</string>/;' \
+    ${pkgs.perl}/bin/perl -i -pe 's/^\t<string>Emacs<\/string>/<string>ERC<\/string>/;' \
         $out/Applications/${appName}.app/Contents/Info.plist
-    ${pkgs.perl}/bin/perl -i -pe 's/^\t<string>Emacs\.icns</string>/<string>ERC.icns</string>/;' \
+    ${pkgs.perl}/bin/perl -i -pe 's/^\t<string>Emacs\.icns<\/string>/<string>ERC.icns<\/string>/;' \
         $out/Applications/${appName}.app/Contents/Info.plist
 
     cp "${iconFile}" \

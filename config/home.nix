@@ -278,6 +278,8 @@ in {
         ZSH_THEME_GIT_PROMPT_CHANGED = "%{$fg[yellow]%}%{✚%G%}";
         ZSH_THEME_GIT_PROMPT_STASHED = "%{$fg_bold[yellow]%}%{⚑%G%}";
         ZSH_THEME_GIT_PROMPT_UPSTREAM_FRONT =" {%{$fg[yellow]%}";
+
+        ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX = "YES";
       };
 
       localVariables = {
@@ -350,8 +352,6 @@ in {
            . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
            . ${config.xdg.configHome}/zsh/plugins/iterm2_tmux_integration
            . ${pkgs.zsh-git-prompt}/share/zsh-git-prompt/zshrc.sh
-
-           export ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX=YES
 
            # sudo /bin/launchctl limit maxfiles 524288 524288
            # ulimit -n 65536
