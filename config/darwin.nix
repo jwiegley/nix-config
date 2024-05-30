@@ -242,7 +242,7 @@ in {
       cores = 2;
 
       substituters = [
-        "https://cache.iog.io"
+        # "https://cache.iog.io"
       ] ++ lib.optionals (hostname == "vulcan") [];
 
       trusted-substituters = [

@@ -65,6 +65,7 @@ let exe = haskell.lib.justStaticExecutables; in
   fetchmail
   ffmpeg
   figlet
+  filetags
   findutils
   fio
   fontconfig
