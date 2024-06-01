@@ -73,7 +73,7 @@ in {
     casks = [
       "docker"
       "drivedx"
-      "firefox"
+      { name = "firefox"; greedy = true; }
       "hazel"
       "iterm2"
       "keyboard-maestro"
@@ -85,13 +85,13 @@ in {
       "1password"
       "1password-cli"
       "anki"
-      "arc"
+      { name = "arc"; greedy = true; }
       "asana"
       "audacity"
       "backblaze"
       "backblaze-downloader"
-      "brave-browser"
-      # "carbon-copy-cloner"        # Version is out of date
+      { name = "brave-browser"; greedy = true; }
+      "carbon-copy-cloner".         # Version is out of date
       "choosy"
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
@@ -115,7 +115,7 @@ in {
       "notion"
       # "omnigraffle"               # I stay at version 6
       "omnioutliner"
-      "opera"
+      { name = "opera"; greedy = true; }
       "pdf-expert"
       # "screenflow"                # I stay at version 9
       "signal"
@@ -124,6 +124,7 @@ in {
       "soulver-cli"
       "steam"
       "suspicious-package"
+      "tagspaces"
       "telegram"
       "thinkorswim"
       "tor-browser"
@@ -131,12 +132,12 @@ in {
       "unicodechecker"
       "virtual-ii"
       "visual-studio-code"
-      "vivaldi"
+      { name = "vivaldi"; greedy = true; }
       "vlc"
       "whatsapp"
       "xnviewmp"
       "yubico-yubikey-manager"
-      "zoom"
+      { name = "zoom"; greedy = true; }
       "zotero"
       "zulip"
     ] ++ lib.optionals (hostname == "athena") [
@@ -147,12 +148,10 @@ in {
     ## via Homebrew or the App Store:
 
     # "ABBYY FineReader for ScanSnap"
-    # "BackblazeRestore"
+    # "ScanSnap Online Update"
     # "Bookmap"
-    # "Carbon Copy Cloner"
     # "Kadena Chainweaver"
     # "MotiveWave"
-    # "ScanSnap Online Update"
     # "ScreenFlow"
     # "Slate"
 
