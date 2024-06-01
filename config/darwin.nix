@@ -73,7 +73,8 @@ in {
     casks = [
       "docker"
       "drivedx"
-      { name = "firefox"; greedy = true; }
+      "firefox"
+      # { name = "firefox"; greedy = true; }
       "hazel"
       "iterm2"
       "keyboard-maestro"
@@ -85,13 +86,15 @@ in {
       "1password"
       "1password-cli"
       "anki"
-      { name = "arc"; greedy = true; }
+      "arc"
+      # { name = "arc"; greedy = true; }
       "asana"
       "audacity"
       "backblaze"
       "backblaze-downloader"
-      { name = "brave-browser"; greedy = true; }
-      "carbon-copy-cloner".         # Version is out of date
+      "brave-browser"
+      # { name = "brave-browser"; greedy = true; }
+      "carbon-copy-cloner"          # Version is out of date
       "choosy"
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
@@ -115,7 +118,8 @@ in {
       "notion"
       # "omnigraffle"               # I stay at version 6
       "omnioutliner"
-      { name = "opera"; greedy = true; }
+      "opera"
+      # { name = "opera"; greedy = true; }
       "pdf-expert"
       # "screenflow"                # I stay at version 9
       "signal"
@@ -132,12 +136,14 @@ in {
       "unicodechecker"
       "virtual-ii"
       "visual-studio-code"
-      { name = "vivaldi"; greedy = true; }
+      "vivaldi"
+      # { name = "vivaldi"; greedy = true; }
       "vlc"
       "whatsapp"
       "xnviewmp"
       "yubico-yubikey-manager"
-      { name = "zoom"; greedy = true; }
+      "zoom"
+      # { name = "zoom"; greedy = true; }
       "zotero"
       "zulip"
     ] ++ lib.optionals (hostname == "athena") [
