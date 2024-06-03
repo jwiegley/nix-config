@@ -57,7 +57,6 @@ build:
 switch:
 	$(call announce,darwin-rebuild switch --impure --flake .#$(HOSTNAME))
 	@darwin-rebuild switch --impure --flake .#$(HOSTNAME)
-	brew upgrade
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
 update:
@@ -65,9 +64,19 @@ update:
 	nix flake lock --update-input nixpkgs
 	nix flake lock --update-input darwin
 	nix flake lock --update-input home-manager
+	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
+	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
+	elif [[ -f /usr/local/bin/brew ]]; then		\
+	    eval "$(/usr/local/bin/brew shellenv)";	\
+	fi
 	brew update
 
 upgrade: update switch travel-ready
+	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
+	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
+	elif [[ -f /usr/local/bin/brew ]]; then		\
+	    eval "$(/usr/local/bin/brew shellenv)";	\
+	fi
 	brew upgrade --greedy
 
 upgrade-sync: upgrade copy switch-all travel-ready-all
