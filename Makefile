@@ -45,7 +45,9 @@ tools:
 		sort				\
 		uniq
 
-# nix --extra-experimental-features repl-flake repl .#darwinConfigurations.vulcan.pkgs
+repl:
+	nix --extra-experimental-features repl-flake \
+	    repl .#darwinConfigurations.$(HOSTNAME).pkgs
 
 build:
 	$(call announce,darwin-rebuild build --impure --flake .#$(HOSTNAME))
