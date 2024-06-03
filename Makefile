@@ -61,7 +61,7 @@ switch:
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
 update:
-	$(call announce,git update)
+	$(call announce,nix flake lock --update-input && brew update)
 	nix flake lock --update-input nixpkgs
 	nix flake lock --update-input darwin
 	nix flake lock --update-input home-manager
