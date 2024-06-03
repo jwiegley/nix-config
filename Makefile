@@ -60,16 +60,17 @@ switch:
 	brew upgrade
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
-pull:
-	$(call announce,git pull)
+update:
+	$(call announce,git update)
 	nix flake lock --update-input nixpkgs
 	nix flake lock --update-input darwin
 	nix flake lock --update-input home-manager
 	brew update
 
-update: pull switch travel-ready
+upgrade: update switch travel-ready
+	brew upgrade --greedy
 
-update-sync: update copy switch-all travel-ready-all
+upgrade-sync: upgrade copy switch-all travel-ready-all
 
 ########################################################################
 

@@ -4,24 +4,23 @@ set -ex
 
 case $1 in
     vulcan)
-        u vulcan update
-        u vulcan sign
-        (nix-copy hermes && echo "nix-copy hermes done") &
+        u vulcan upgrade
+        (u vulcan sign; nix-copy hermes && echo "nix-copy hermes done") &
         (push -f src,kadena,doc,Home hermes && echo "push hermes done") &
         (push athena && echo "push athena done") &
         u vulcan check &
         wait
-        notify "Nix on Vulcan updated"
+        notify "Nix on Vulcan upgraded"
         ;;
 
     hermes)
         u hermes switch travel-ready check
-        notify "Nix on Hermes updated"
+        notify "Nix on Hermes switched"
         ;;
 
     athena)
         u athena switch check
-        notify "Nix on Athena updated"
+        notify "Nix on Athena switched"
         ;;
 
     *)
