@@ -91,7 +91,7 @@ in {
       "backblaze"
       "backblaze-downloader"
       { name = "brave-browser"; greedy = true; }
-      "carbon-copy-cloner"          # Version is out of date
+      "carbon-copy-cloner"
       "choosy"
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
