@@ -104,6 +104,7 @@ in {
       # "fertigt-slate"             # This does not open on Intel
       "gpg-suite"
       "grammarly-desktop"
+      "hookmark"
       "lectrote"
       "logseq"
       # "macwhisper"                # Use Whisper Transcription in AppStore

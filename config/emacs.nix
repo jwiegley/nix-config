@@ -228,6 +228,7 @@ pkgs: epkgs: with epkgs;
   org-roam
   org-sticky-header
   org-super-agenda
+  org-transclusion
   org-vcard
   org-web-tools
   orgit
