@@ -84,6 +84,7 @@ in {
     ] ++ lib.optionals (hostname != "athena") [
       "1password"
       "1password-cli"
+      "ammonite"
       "anki"
       { name = "arc"; greedy = true; }
       "asana"
@@ -101,15 +102,13 @@ in {
       "element"
       "fantastical"
       # "fertigt-slate"             # This does not open on Intel
-      "fujitsu-scansnap-home"
-      "geektool"
       "gpg-suite"
       "grammarly-desktop"
-      "gzdoom"
       "lectrote"
-      "ledger-live"
+      "logseq"
       # "macwhisper"                # Use Whisper Transcription in AppStore
       # "marked"                    # Use Marked 2 in AppStore
+      "marta"
       "mellel"
       "netdownloadhelpercoapp"
       "notion"
@@ -130,18 +129,28 @@ in {
       "tor-browser"
       "ukelele"
       "unicodechecker"
+      "vagrant"
+      "vagrant-manager"
+      "vagrant-vmware-utility"
       "virtual-ii"
       "visual-studio-code"
       { name = "vivaldi"; greedy = true; }
       "vlc"
       "whatsapp"
-      "xnviewmp"
       "yubico-yubikey-manager"
       { name = "zoom"; greedy = true; }
       "zotero"
       "zulip"
     ] ++ lib.optionals (hostname == "athena") [
       "openzfs"
+    ] ++ lib.optionals (hostname == "vulcan") [
+      "daedalus-mainnet"
+      "fujitsu-scansnap-home"
+      "geektool"
+      "gzdoom"
+      "ledger-live"
+      "raspberry-pi-imager"
+      "xnviewmp"
     ];
 
     ## The following software, or versions of software, are not available
@@ -172,6 +181,8 @@ in {
       "MindNode"                     = 1289197285;
       "Ninox Database"               = 901110441;
       "OneDrive"                     = 823766827;
+      "Pages"                        = 409201541;
+      "Parcel"                       = 639968404;
       "Pixelmator Pro"               = 1289583905;
       "Prime Video"                  = 545519333;
       "Soulver 3"                    = 1508732804;

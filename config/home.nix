@@ -38,7 +38,7 @@ in {
 
     # These are packages that should always be present in the user
     # environment, though perhaps not the machine environment.
-    packages = import ./packages.nix pkgs;
+    packages = import ./packages.nix hostname pkgs;
 
     sessionVariables = {
       ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";

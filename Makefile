@@ -106,8 +106,7 @@ endef
 
 check:
 	$(call announce,nix store verify --all)
-	@nix-store --verify --repair --check-contents
-	@nix store verify --all
+	@nix store verify --no-trust --repair --all
 
 sizes:
 	df -H /nix 2>&1 | grep /dev

@@ -1,4 +1,4 @@
-pkgs:
+hostname: pkgs:
 
 with pkgs; 
 
@@ -131,7 +131,7 @@ let exe = haskell.lib.justStaticExecutables; in
   hashdb
   highlight
   home-manager
-  hostname
+  pkgs.hostname
   html-tidy
   htop
   httm
@@ -311,6 +311,7 @@ let exe = haskell.lib.justStaticExecutables; in
 
 ++
 
-pkgs.lib.optionals pkgs.stdenv.targetPlatform.isx86_64 [
-  emacsERCEnv
+pkgs.lib.optionals (hostname == "vulcan" &&
+                    pkgs.stdenv.targetPlatform.isx86_64) [
+    emacsERCEnv
 ]
