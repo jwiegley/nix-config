@@ -88,7 +88,7 @@ let exe = haskell.lib.justStaticExecutables; in
   gitAndTools.git-crypt
   gitAndTools.git-delete-merged-branches
   (pkgs.lowPrio gitAndTools.git-extras)
-  gitAndTools.git-fame
+  (pkgs.lowPrio gitAndTools.git-fame)
   gitAndTools.git-gone
   gitAndTools.git-hub
   gitAndTools.git-imerge
