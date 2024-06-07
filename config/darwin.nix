@@ -102,7 +102,7 @@ in {
       "element"
       "expandrive"
       "fantastical"
-      # "fertigt-slate"             # This does not open on Intel
+      # "fertigt-slate"             # Does not open on Intel
       "gpg-suite"
       "grammarly-desktop"
       "hookmark"
@@ -114,12 +114,13 @@ in {
       "mellel"
       "netdownloadhelpercoapp"
       "notion"
-      # "omnigraffle"               # I stay at version 6
+      # "omnigraffle"               # Stay at version 6
       "omnioutliner"
       "onedrive"
       { name = "opera"; greedy = true; }
       "pdf-expert"
-      # "screenflow"                # I stay at version 9
+      "sage"
+      # "screenflow"                # Stay at version 9
       "signal"
       "slack"
       # "soulver"                   # Use Soulver 3 in App Store
@@ -140,6 +141,7 @@ in {
       { name = "vivaldi"; greedy = true; }
       "vlc"
       "whatsapp"
+      "xnviewmp"
       "yubico-yubikey-manager"
       { name = "zoom"; greedy = true; }
       "zotero"
@@ -153,7 +155,6 @@ in {
       "gzdoom"
       "ledger-live"
       "raspberry-pi-imager"
-      "xnviewmp"
     ];
 
     ## The following software, or versions of software, are not available
@@ -230,7 +231,7 @@ in {
         speedFactor = 4;
       }; in {
 
-    package = pkgs.nixStable;
+g    # package = pkgs.nixStable;
     useDaemon = true;
 
     # This entry lets us to define a system registry entry so that
@@ -378,7 +379,7 @@ in {
         autohide = true;
         orientation = "right";
         launchanim = false;
-        show-process-indicators = false;
+        show-process-indicators = true;
         show-recents = false;
         static-only = true;
       };
