@@ -231,7 +231,7 @@ in {
         speedFactor = 4;
       }; in {
 
-g    # package = pkgs.nixStable;
+    # package = pkgs.nixStable;
     useDaemon = true;
 
     # This entry lets us to define a system registry entry so that
