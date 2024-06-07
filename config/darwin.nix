@@ -100,6 +100,7 @@ in {
       "devonthink"
       "discord"
       "element"
+      "expandrive"
       "fantastical"
       # "fertigt-slate"             # This does not open on Intel
       "gpg-suite"
@@ -115,6 +116,7 @@ in {
       "notion"
       # "omnigraffle"               # I stay at version 6
       "omnioutliner"
+      "onedrive"
       { name = "opera"; greedy = true; }
       "pdf-expert"
       # "screenflow"                # I stay at version 9
@@ -181,11 +183,11 @@ in {
       "Microsoft Word"               = 462054704;
       "MindNode"                     = 1289197285;
       "Ninox Database"               = 901110441;
-      "OneDrive"                     = 823766827;
       "Pages"                        = 409201541;
       "Parcel"                       = 639968404;
       "Pixelmator Pro"               = 1289583905;
       "Prime Video"                  = 545519333;
+      "Shell Fish"                   = 1336634154;
       "Soulver 3"                    = 1508732804;
       "Whisper Transcription"        = 1668083311;
       "WireGuard"                    = 1451685025;
