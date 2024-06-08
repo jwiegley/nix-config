@@ -26,9 +26,11 @@ in {
         keyFiles =
           if hostname == "vulcan" then [
             "${home}/${hostname}/id_athena.pub"
+            "${home}/${hostname}/id_iphone.pub"
           ]
           else if hostname == "athena" then [
             "${home}/${hostname}/id_vulcan.pub"
+            "${home}/${hostname}/id_iphone.pub"
           ]
           else if hostname == "hermes" then [
             "${home}/${hostname}/id_vulcan.pub"
@@ -105,7 +107,6 @@ in {
       # "fertigt-slate"             # Does not open on Intel
       "gpg-suite"
       "grammarly-desktop"
-      "hookmark"
       "lectrote"
       "logseq"
       # "macwhisper"                # Use Whisper Transcription in AppStore
