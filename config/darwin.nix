@@ -86,7 +86,6 @@ in {
     ] ++ lib.optionals (hostname != "athena") [
       "1password"
       "1password-cli"
-      "ammonite"
       "anki"
       { name = "arc"; greedy = true; }
       "asana"
@@ -108,15 +107,12 @@ in {
       "gpg-suite"
       "grammarly-desktop"
       "lectrote"
-      "logseq"
       # "macwhisper"                # Use Whisper Transcription in AppStore
       # "marked"                    # Use Marked 2 in AppStore
-      "marta"
       "mellel"
       "netdownloadhelpercoapp"
       "notion"
       # "omnigraffle"               # Stay at version 6
-      "omnioutliner"
       "onedrive"
       { name = "opera"; greedy = true; }
       "pdf-expert"
@@ -150,7 +146,6 @@ in {
     ] ++ lib.optionals (hostname == "athena") [
       "openzfs"
     ] ++ lib.optionals (hostname == "vulcan") [
-      "daedalus-mainnet"
       "fujitsu-scansnap-home"
       "geektool"
       "gzdoom"
@@ -183,9 +178,7 @@ in {
       "Microsoft Excel"              = 462058435;
       "Microsoft PowerPoint"         = 462062816;
       "Microsoft Word"               = 462054704;
-      "MindNode"                     = 1289197285;
       "Ninox Database"               = 901110441;
-      "Pages"                        = 409201541;
       "Parcel"                       = 639968404;
       "Pixelmator Pro"               = 1289583905;
       "Prime Video"                  = 545519333;
