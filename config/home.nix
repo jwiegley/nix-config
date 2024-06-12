@@ -130,7 +130,6 @@ in {
       ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
       ".parallel".source    = mkLink "${config.xdg.configHome}/parallel";
       ".recoll".source      = mkLink "${config.xdg.configHome}/recoll";
-      ".slate".source       = mkLink "${config.xdg.configHome}/slate/config";
       ".zekr".source        = mkLink "${config.xdg.configHome}/zekr";
 
       ".cargo".source       = mkLink "${config.xdg.dataHome}/cargo";

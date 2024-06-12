@@ -18,7 +18,7 @@ let exe = haskell.lib.justStaticExecutables; in
   (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
   # (exe haskellPackages.eventlog2html)
-  haskellPackages.org-data
+  haskellPackages.org-jw
   haskellPackages.ormolu
   # (exe (haskell.lib.doJailbreak haskellPackages_8_10.threadscope))
   (exe haskellPackages.pointfree)

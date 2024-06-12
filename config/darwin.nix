@@ -65,10 +65,12 @@ in {
       cleanup = "zap";
     };
 
-    taps = [];
+    taps = [
+      "kadena-io/pact"
+    ];
     brews = [
       "openssl"
-      # "pact"
+      "kadena-io/pact/pact"
       "z3"
     ];
 
@@ -103,7 +105,6 @@ in {
       "element"
       "expandrive"
       "fantastical"
-      # "fertigt-slate"             # Does not open on Intel
       "gpg-suite"
       "grammarly-desktop"
       "lectrote"
@@ -162,7 +163,6 @@ in {
     # "Kadena Chainweaver"
     # "MotiveWave"
     # "ScreenFlow"
-    # "Slate"
 
     masApps = (if hostname != "athena" then {
       "1Password for Safari"         = 1569813296;
@@ -815,7 +815,7 @@ in {
 
       # pruning can be skipped based on the used capacity of the pool
       # (0: always prune, 1-100: only prune if used capacity is greater than this value)
-      prune_defer = 60
+      prune_defer = 0
 
       [template_none]
 

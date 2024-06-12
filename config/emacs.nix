@@ -207,6 +207,7 @@ pkgs: epkgs: with epkgs;
   orderless
   org
   org-anki
+  org-annotate
   org-appear
   org-bookmark-heading
   org-contrib

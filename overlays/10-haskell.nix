@@ -17,7 +17,7 @@ let
     # "hnix"
     "logging"
     "monad-extras"
-    "org-data"
+    "org-jw"
     "parsec-free"
     "pipes-async"
     "pipes-files"

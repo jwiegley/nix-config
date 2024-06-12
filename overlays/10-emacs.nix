@@ -384,6 +384,17 @@ let
       buildInputs = with eself; [ color-moccur ];
     };
 
+    org-annotate = compileEmacsFiles {
+      name = "org-annotate";
+      src = fetchFromGitHub {
+        owner = "girzel";
+        repo = "org-annotate";
+        rev = "0297290f1cb1d31b264632e3f4cb4013956b5b94";
+        sha256 = "1qbhz441d7cvsqbsr6k4f34kgpvinc9cji3rxxw4hv43ar58c5xf";
+        # date = 2022-02-08T09:29:08-08:00;
+      };
+    };
+
     ob-emamux = compileEmacsFiles {
       name = "ob-emamux";
       src = fetchFromGitHub {
