@@ -77,6 +77,7 @@ pkgs: epkgs: with epkgs;
   docker-compose-mode
   dockerfile-mode
   easy-kill
+  eat
   edbi
   edit-env
   edit-indirect

@@ -8,19 +8,14 @@ let exe = haskell.lib.justStaticExecutables; in
   (exe gitAndTools.git-annex)
   # (exe haskellPackages.git-all)
   haskellPackages.pushme
-  # (exe haskellPackages.runmany)
   (exe haskellPackages.sizes)
-  haskellPackages.sitebuilder
   (exe haskellPackages.una)
   (exe haskellPackages.git-monitor)
   # (exe haskellPackages.hours)
-  # (exe haskellPackages.cabal-install)
   (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
-  # (exe haskellPackages.eventlog2html)
   haskellPackages.org-jw
   haskellPackages.ormolu
-  # (exe (haskell.lib.doJailbreak haskellPackages_8_10.threadscope))
   (exe haskellPackages.pointfree)
   act
   apg
