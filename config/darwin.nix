@@ -114,7 +114,6 @@ in {
       "netdownloadhelpercoapp"
       "notion"
       # "omnigraffle"               # Stay at version 6
-      "onedrive"
       { name = "opera"; greedy = true; }
       "pdf-expert"
       "sage"
