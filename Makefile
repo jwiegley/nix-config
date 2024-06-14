@@ -78,6 +78,7 @@ upgrade: update switch travel-ready
 	    eval "$(/usr/local/bin/brew shellenv)";	\
 	fi
 	brew upgrade --greedy
+	ollama-update
 
 upgrade-sync: upgrade copy switch-all travel-ready-all
 

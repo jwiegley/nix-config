@@ -96,6 +96,7 @@ in {
 
     sessionPath = [
       "/usr/local/bin"
+      "/usr/local/zfs/bin"
       "/opt/homebrew/bin"
       "${home}/kadena/bin"
     ];
