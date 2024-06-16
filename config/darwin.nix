@@ -158,10 +158,10 @@ in {
 
     # "ABBYY FineReader for ScanSnap"
     # "ScanSnap Online Update"
+    # "BackblazeRestore"
     # "Bookmap"
     # "Kadena Chainweaver"
     # "MotiveWave"
-    # "ScreenFlow"
 
     masApps = (if hostname != "athena" then {
       "1Password for Safari"         = 1569813296;
