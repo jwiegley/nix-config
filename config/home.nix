@@ -24,7 +24,7 @@ let home            = builtins.getEnv "HOME";
     athena_ethernet = "192.168.50.235";
     athena_wifi     = "192.168.50.3";
 
-    am_traveling    = true;
+    am_traveling    = false;
 
     external_ip     = "newartisans.hopto.org";
 
@@ -126,7 +126,7 @@ in {
       ".gist".source        = mkLink "${config.xdg.configHome}/gist/api_key";
       ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
       ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
-      ".macbeth".source     = mkLink "${config.xdg.configHome}/macbeth";
+      # ".macbeth".source     = mkLink "${config.xdg.configHome}/macbeth";
       ".mbsyncrc".source    = mkLink "${config.xdg.configHome}/mbsync/config";
       ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
       ".parallel".source    = mkLink "${config.xdg.configHome}/parallel";
@@ -135,8 +135,8 @@ in {
 
       ".cargo".source       = mkLink "${config.xdg.dataHome}/cargo";
       ".docker".source      = mkLink "${config.xdg.dataHome}/docker";
-      ".rustup".source      = mkLink "${config.xdg.dataHome}/rustup";
-      ".ghcup".source       = mkLink "${config.xdg.dataHome}/ghcup";
+      # ".rustup".source      = mkLink "${config.xdg.dataHome}/rustup";
+      # ".ghcup".source       = mkLink "${config.xdg.dataHome}/ghcup";
       ".mbsync".source      = mkLink "${config.xdg.dataHome}/mbsync";
 
       ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";

@@ -41,14 +41,11 @@ in {
     };
   };
 
-  fonts = {
-    fontDir.enable = true;
-    fonts = with pkgs; [
-      dejavu_fonts
-      scheherazade-new
-      ia-writer-duospace
-    ];
-  };
+  fonts.packages = with pkgs; [
+    dejavu_fonts
+    scheherazade-new
+    ia-writer-duospace
+  ];
 
   programs = {
     zsh = {
