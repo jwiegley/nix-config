@@ -1,0 +1,10 @@
+--- i/src/fts-xapian-plugin.h
++++ w/src/fts-xapian-plugin.h
+@@ -56,6 +56,7 @@ static const char * chars_sep[] = { "'", "\"", "\r", "\n", "\t", ",", ">
+ struct fts_xapian_settings
+ {
+    long verbose;
++   unsigned long pagesize;
+    long lowmemory;
+    long partial,full;
+    bool detach;

@@ -18,7 +18,7 @@ coqPackages_8_10 = self.mkCoqPackages self.coq_8_10;
 
 coq = self.coq_8_19;
 
-# coq_HEAD = (self.coq_8_16.override {
+# coq_HEAD = (self.coq_8_19.override {
 #     buildIde = false;
 #     version = ~/src/coq;
 #   }).overrideAttrs (attrs: {
