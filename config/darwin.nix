@@ -164,30 +164,30 @@ in {
     # "MotiveWave"
 
     masApps = (if hostname != "athena" then {
-      "1Password for Safari"         = 1569813296;
-      "Bible Study"                  = 472790630;
-      "DataGraph"                    = 407412840;
-      "Drafts"                       = 1435957248;
-      "Grammarly for Safari"         = 1462114288;
-      "Infuse"                       = 1136220934;
-      "Just Press Record"            = 1033342465;
-      "Keynote"                      = 409183694;
-      "Kindle"                       = 302584613;
-      "Marked 2"                     = 890031187;
-      "Microsoft Excel"              = 462058435;
-      "Microsoft PowerPoint"         = 462062816;
-      "Microsoft Word"               = 462054704;
-      "Ninox Database"               = 901110441;
-      "Parcel"                       = 639968404;
-      "Pixelmator Pro"               = 1289583905;
-      "Prime Video"                  = 545519333;
-      "Shell Fish"                   = 1336634154;
-      "Soulver 3"                    = 1508732804;
-      "Whisper Transcription"        = 1668083311;
-      "WireGuard"                    = 1451685025;
+      "1Password for Safari"  = 1569813296;
+      "Bible Study"           = 472790630;
+      "DataGraph"             = 407412840;
+      "Drafts"                = 1435957248;
+      "Grammarly for Safari"  = 1462114288;
+      "Infuse"                = 1136220934;
+      "Just Press Record"     = 1033342465;
+      "Keynote"               = 409183694;
+      "Kindle"                = 302584613;
+      "Marked 2"              = 890031187;
+      "Microsoft Excel"       = 462058435;
+      "Microsoft PowerPoint"  = 462062816;
+      "Microsoft Word"        = 462054704;
+      "Ninox Database"        = 901110441;
+      "Parcel"                = 639968404;
+      "Pixelmator Pro"        = 1289583905;
+      "Prime Video"           = 545519333;
+      "Shell Fish"            = 1336634154;
+      "Soulver 3"             = 1508732804;
+      "Whisper Transcription" = 1668083311;
+      "WireGuard"             = 1451685025;
     } else {}) // {
-      "Speedtest"                    = 1153157709;
-      "Xcode"                        = 497799835;
+      "Speedtest"             = 1153157709;
+      "Xcode"                 = 497799835;
     };
   };
 
