@@ -142,12 +142,15 @@ in {
       "zulip"
     ] ++ lib.optionals (hostname == "athena") [
       "openzfs"
+    ] ++ lib.optionals (hostname == "hermes") [
+      "chronoagent"
     ] ++ lib.optionals (hostname == "vulcan") [
       "fujitsu-scansnap-home"
       "geektool"
       "gzdoom"
       "ledger-live"
       "raspberry-pi-imager"
+      "chronosync"
     ];
 
     ## The following software, or versions of software, are not available
