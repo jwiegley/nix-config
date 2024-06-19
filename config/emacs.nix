@@ -304,6 +304,7 @@ pkgs: epkgs: with epkgs;
   spinner
   sql-indent
   string-inflection
+  sunrise-commander
   super-save
   supercite
   swift-mode

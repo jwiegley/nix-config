@@ -471,8 +471,8 @@ in {
       snapshots = {
         script = ''
           date >> /var/log/snapshots.log 2>&1
-          ${pkgs.sanoid}/bin/sanoid --cron --verbose >> /var/log/snapshots.log 2>&1
-          ${pkgs.sanoid}/bin/sanoid --prune-snapshots >> /var/log/snapshots.log 2>&1
+          ${pkgs.sanoid}/bin/sanoid --cron --force-prune --verbose \
+              >> /var/log/snapshots.log 2>&1
         '';
         serviceConfig = iterate 3600;
       };
@@ -773,21 +773,30 @@ in {
   // lib.optionalAttrs (hostname == "athena") {
     "sanoid/sanoid.conf".text = ''
       [tank]
+
       use_template = archival
       recursive = yes
       process_children_only = yes
 
+      [template_archival]
+
+      frequently = 0
+      hourly = 96
+      daily = 90
+      weekly = 26
+      monthly = 12
+      yearly = 30
+
+      autoprune = yes
+
       [tank/ChainState/kadena]
+
       use_template = production
       recursive = yes
       process_children_only = yes
 
       [template_production]
 
-      script_timeout = 5
-      frequent_period = 60
-
-      autoprune = yes
       frequently = 0
       hourly = 24
       daily = 14
@@ -795,39 +804,7 @@ in {
       monthly = 3
       yearly = 0
 
-      # pruning can be skipped based on the used capacity of the pool
-      # (0: always prune, 1-100: only prune if used capacity is greater than this value)
-      prune_defer = 0
-
-      [template_archival]
-
-      script_timeout = 5
-      frequent_period = 60
-
       autoprune = yes
-      frequently = 0
-      hourly = 24
-      daily = 90
-      weekly = 26
-      monthly = 12
-      yearly = 30
-
-      # pruning can be skipped based on the used capacity of the pool
-      # (0: always prune, 1-100: only prune if used capacity is greater than this value)
-      prune_defer = 0
-
-      [template_none]
-
-      script_timeout = 5
-      frequent_period = 60
-
-      autoprune = yes
-      frequently = 0
-      hourly = 0
-      daily = 0
-      weekly = 0
-      monthly = 0
-      yearly = 0
     '';
   };
 }
