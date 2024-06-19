@@ -2,9 +2,11 @@ hostname: pkgs:
 
 with pkgs; 
 
-let exe = haskell.lib.justStaticExecutables; in 
+let exe = if pkgs.stdenv.targetPlatform.isx86_64
+          then haskell.lib.justStaticExecutables
+          else pkgs.lib.id;
 
-[
+in [
   (exe gitAndTools.git-annex)
   # (exe haskellPackages.git-all)
   haskellPackages.pushme
