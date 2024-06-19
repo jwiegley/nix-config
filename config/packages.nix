@@ -17,7 +17,7 @@ in [
   (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
   haskellPackages.org-jw
-  haskellPackages.ormolu
+  (exe haskellPackages.ormolu)
   (exe haskellPackages.pointfree)
   act
   apg

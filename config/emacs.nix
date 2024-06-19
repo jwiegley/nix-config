@@ -148,6 +148,7 @@ pkgs: epkgs: with epkgs;
   hl-todo
   ht
   hydra
+  hyperbole
   ialign
   iflipb
   imenu-list
