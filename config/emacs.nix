@@ -78,6 +78,7 @@ pkgs: epkgs: with epkgs;
   dockerfile-mode
   easy-kill
   eat
+  ebdb
   edbi
   edit-env
   edit-indirect
@@ -218,6 +219,7 @@ pkgs: epkgs: with epkgs;
   org-drill
   org-edna
   org-extra-emphasis
+  org-gcal
   org-mime
   org-msg
   org-modern

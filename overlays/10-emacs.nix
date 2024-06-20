@@ -220,9 +220,9 @@ let
       src = fetchFromGitHub {
         owner = "emacsmirror";
         repo = "bookmark-plus";
-        rev = "799b36be641f0c8f7f84314c50072b77e466dd0e";
-        sha256 = "14nv56sybyzgp6jnvh217nwgsa00k6hvrfdb4nk1s2g167kvk76f";
-        # date = 2022-06-22T04:42:09+02:00;
+        rev = "e07702390622534dce2a3a250e9e295041aa7e65";
+        sha256 = "0vjz06rmjy6ag2pki6x8w6il53yq0p6d17dy7k2ny8n4caw08fhj";
+        # date = 2024-02-11T01:19:19+01:00;
       };
     };
 
@@ -231,9 +231,9 @@ let
       src = fetchFromGitHub {
         owner = "elken";
         repo = "cape-yasnippet";
-        rev = "4d6e4963d4c5e6c7b7e82cb0f55566bcd5492a94";
-        sha256 = "089hz0ra5mcc2yn9gd34nq985imv1319a0kfc9xvcg43p6076h23";
-        # date = 2023-03-24T09:36:02+00:00;
+        rev = "744dedb7837d0c7e07817d36ec752a0cd813f55c";
+        sha256 = "09smh2r0yysxqg3ixx0nssdz8kzqy5s1d687vbdijvhg3prcc8q4";
+        # date = 2024-04-21T19:48:14+01:00;
       };
       buildInputs = with eself; [ cape yasnippet ];
     };
@@ -254,9 +254,9 @@ let
       src = fetchFromGitHub {
         owner = "armindarvish";
         repo = "consult-gh";
-        rev = "1fe876d9552b6ec6af257a4299a34eca99b40539";
-        sha256 = "1n7fcgdvb3m76i3a40ijs3c0675p6pfmxny5w797ccfdvfaalbvf";
-        # date = 2023-07-06T09:38:40-07:00;
+        rev = "3a07139a1f7e38b959ce177a122c8f47c401d7fa";
+        sha256 = "1nimy1mfnm3p8ikn0hcv4sq1nrw4ryivx7q08yv30hvfjhdni685";
+        # date = 2024-04-23T20:41:51-07:00;
       };
       buildInputs = with eself; [ consult embark ];
     };
@@ -265,9 +265,9 @@ let
       name = "consult-hoogle";
       src = fetchgit {
         url = "https://codeberg.org/rahguzar/consult-hoogle.git";
-        rev = "c4d4df5f5e863970b6ec907c5650fe673c9cf32a";
-        sha256 = "09yz3wh96r000klnscgy6klgjk20x6snajwn7vjv1a9vik6r037a";
-        # date = 2024-02-11T09:39:45+01:00;
+        rev = "188c8d90a04adeb08c61a0835f5f9a9a10255495";
+        sha256 = "007552brmggivrpc8s3zlqq74mksx3rvfh0ald2j655nplf2v4w9";
+        # date = 2024-04-27T15:18:42+02:00;
       };
       buildInputs = with eself; [ consult haskell-mode ];
     };
@@ -412,9 +412,9 @@ let
       src = fetchFromGitHub {
         owner = "QiangF";
         repo = "org-extra-emphasis";
-        rev = "21eba82194bfb8cc4c359fb580fe094fe6afa615";
-        sha256 = "0kra76shm18j5065xhk02b7klh269k4addpcidgry6pypnr7z1d3";
-        # date = 2023-02-10T08:35:47+05:30;
+        rev = "d5849bb4f5327273b5a51fa6ce0cf623c58bbb16";
+        sha256 = "0rgvnfzm3v546zxkxs601qdqz9pd38w55gbv00ca453mp2np6r8g";
+        # date = 2023-12-01T08:29:06+05:30;
       };
     };
 
