@@ -1,10 +1,6 @@
 #!/bin/sh -e
 
-if [[ "$1" == --alt ]]; then
-    export EMACSVER=ERC
-    EMACSAPP=ERC
-    shift 1
-elif [[ "$1" == --rev ]]; then
+if [[ "$1" == --rev ]]; then
     export EMACSVER=$2
     EMACSAPP=Emacs
     shift 2

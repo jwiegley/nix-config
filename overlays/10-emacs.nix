@@ -758,31 +758,6 @@ emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29MacPort;
 # emacsHEADPackages   = self.emacsHEADPackagesNg;
 # emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
 
-convertForERC = drv: drv.overrideAttrs(attrs: rec {
-  name = "erc-${attrs.version}";
-
-  appName = "ERC";
-  iconFile = ./emacs/Chat.icns;
-
-  postInstall = attrs.postInstall + ''
-    mv $out/Applications/Emacs.app $out/Applications/${appName}.app
-    mv $out/Applications/${appName}.app/Contents/MacOS/Emacs \
-        $out/Applications/${appName}.app/Contents/MacOS/${appName}
-
-    ${pkgs.perl}/bin/perl -i -pe 's/^\t<string>Emacs<\/string>/<string>ERC<\/string>/;' \
-        $out/Applications/${appName}.app/Contents/Info.plist
-    ${pkgs.perl}/bin/perl -i -pe 's/^\t<string>Emacs\.icns<\/string>/<string>ERC.icns<\/string>/;' \
-        $out/Applications/${appName}.app/Contents/Info.plist
-
-    cp "${iconFile}" \
-        $out/Applications/${appName}.app/Contents/Resources/${appName}.icns
-  '';
-});
-
-emacsERC           = self.convertForERC self.emacs29;
-emacsERCPackages   = self.emacsERCPackagesNg;
-emacsERCPackagesNg = mkEmacsPackages self.emacsERC;
-
 emacsEnv = self.emacs29MacPortEnv;
 
 emacs29Env = myPkgs: pkgs.myEnvFun {
@@ -798,18 +773,5 @@ emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
     (self.emacs29MacPortPackagesNg.emacsWithPackages myPkgs)
   ];
 };
-
-emacsERCEnv = myPkgs:
-  let selfEmacsWithPackages = { pkgs, lib }: pkgs.callPackage ./emacs/wrapper.nix {
-    inherit (pkgs.xorg) lndir;
-    inherit lib;
-  };
-  in pkgs.myEnvFun {
-    name = "emacsERC";
-    buildInputs = [
-      (selfEmacsWithPackages { inherit pkgs; lib = pkgs.lib; }
-        self.emacsERCPackagesNg myPkgs)
-    ];
-  };
 
 }

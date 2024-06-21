@@ -71,7 +71,7 @@ update:
 	fi
 	brew update
 
-upgrade: update switch travel-ready
+upgrade-tasks: switch travel-ready
 	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
 	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
 	elif [[ -f /usr/local/bin/brew ]]; then		\
@@ -80,17 +80,30 @@ upgrade: update switch travel-ready
 	brew upgrade --greedy
 	ollama-update
 
+upgrade: update upgrade-tasks check
+	echo "Upgrade completed"
+
 upgrade-sync: upgrade copy switch-all travel-ready-all
 
 ########################################################################
 
-copy-src:
-	$(call announce,pushme)
-	@for host in $(REMOTES); do				\
-	    push -f Home,src,doc,kadena $$host;			\
+copy:
+	$(call announce,copy)
+	@for host in $(REMOTES); do						\
+	    nix copy --to "ssh-ng://$$host"					\
+	        $(HOME)/.local/state/nix/profiles/profile;			\
+	    for project in $(shell grep "^[^#]" $(HOME)/.config/projects); do	\
+	        echo $$project;							\
+	        ( cd $(HOME)/$$project ;					\
+	          if [[ -f .envrc.cache ]]; then				\
+	              source <(direnv apply_dump .envrc.cache) ;		\
+	              if [[ -n "$$buildInputs" ]]; then				\
+	                  eval nix copy --to ssh-ng://$$host $$buildInputs;	\
+	              fi;							\
+	          fi								\
+	        );								\
+	    done;								\
 	done
-
-copy: copy-src
 
 ########################################################################
 

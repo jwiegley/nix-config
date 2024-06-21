@@ -9,7 +9,7 @@ let exe = if pkgs.stdenv.targetPlatform.isx86_64
 in [
   (exe gitAndTools.git-annex)
   # (exe haskellPackages.git-all)
-  haskellPackages.pushme
+  # haskellPackages.pushme
   (exe haskellPackages.sizes)
   (exe haskellPackages.una)
   (exe haskellPackages.git-monitor)
@@ -296,15 +296,6 @@ in [
   zbar
   zfs-prune-snapshots
   zip
-  znc
-  zncModules.push
   zsh
   zsh-syntax-highlighting
-]
-
-++
-
-pkgs.lib.optionals (hostname == "vulcan" &&
-                    pkgs.stdenv.targetPlatform.isx86_64) [
-    emacsERCEnv
 ]

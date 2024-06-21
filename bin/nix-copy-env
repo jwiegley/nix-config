@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-nix develop --profile /tmp/env.$$ --command bash -c "exit 0"
-
-nix copy --to ssh-ng://hermes $(cat /tmp/env.$$ | jq -r '.variables.out.value')
-
-rm -f /tmp/env.$$

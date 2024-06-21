@@ -569,10 +569,7 @@ in {
            };
          };
        };
-     } else {})
-    // lib.optionalAttrs (hostname == "vulcan") {
-      znc = runCommand "${pkgs.znc}/bin/znc -f -d ${xdg_configHome}/znc";
-    };
+     } else {});
   };
 
   environment.etc = (if pkgs.stdenv.targetPlatform.isx86_64 then {
