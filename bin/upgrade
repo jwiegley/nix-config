@@ -4,26 +4,17 @@ set -e
 
 case $1 in
     vulcan)
-        u vulcan upgrade
-        (u vulcan sign ; nix-copy hermes && echo "nix-copy hermes done") &
-        (push -f src,kadena,doc,Home hermes && echo "push hermes done") &
-        (push athena && echo "push athena done") &
-        u vulcan check &
-        wait
+        u vulcan upgrade sign copy
         notify "Nix on Vulcan upgraded"
         ;;
 
     hermes)
-        u hermes switch travel-ready check
-        brew update
-        brew upgrade --greedy
+        u hermes upgrade-tasks check
         notify "Nix on Hermes upgraded"
         ;;
 
     athena)
-        u athena switch check
-        brew update
-        brew upgrade --greedy
+        u upgrade-tasks check
         notify "Nix on Athena upgraded"
         ;;
 
