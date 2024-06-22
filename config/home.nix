@@ -388,7 +388,7 @@ in {
       enable = true;
       package = pkgs.pass.withExtensions (exts: [ exts.pass-otp exts.pass-genphrase ]);
       settings = {
-        PASSWORD_STORE_DIR = "${home}/doc/.passwords";
+        PASSWORD_STORE_DIR = "${config.xdg.dataHome}/password-store";
       };
     };
 
