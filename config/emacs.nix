@@ -84,6 +84,7 @@ pkgs: epkgs: with epkgs;
   edit-indirect
   edit-server
   edit-var
+  egerrit
   eglot
   el-mock
   elisp-depend
@@ -125,7 +126,6 @@ pkgs: epkgs: with epkgs;
   fringe-helper
   fuzzy
   gerrit
-  egerrit
   ghub
   git-annex
   git-link
@@ -213,16 +213,16 @@ pkgs: epkgs: with epkgs;
   org-annotate
   org-appear
   org-bookmark-heading
-  org-contrib
   org-contacts
+  org-contrib
   org-download
   org-drill
   org-edna
   org-extra-emphasis
   org-gcal
   org-mime
-  org-msg
   org-modern
+  org-msg
   org-noter
   org-noter-pdftools
   org-pdftools
