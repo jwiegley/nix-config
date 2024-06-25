@@ -11,6 +11,10 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    firefox-addons = {
+      url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs@{ nixpkgs, home-manager, darwin, ... }: rec {
@@ -48,7 +52,7 @@
               useGlobalPkgs = true;
               # useUserPackages = true;
               users.johnw = import ./config/home.nix;
-              extraSpecialArgs = { inherit hostname; };
+              extraSpecialArgs = { inherit hostname inputs; };
             };
           }
         ];

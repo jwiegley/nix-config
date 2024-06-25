@@ -1,4 +1,4 @@
-{ pkgs, lib, config, hostname, ... }:
+{ pkgs, lib, config, hostname, inputs, ... }:
 
 let home            = builtins.getEnv "HOME";
     tmpdir          = "/tmp";
@@ -133,10 +133,7 @@ in {
       ".recoll".source      = mkLink "${config.xdg.configHome}/recoll";
       ".zekr".source        = mkLink "${config.xdg.configHome}/zekr";
 
-      ".cargo".source       = mkLink "${config.xdg.dataHome}/cargo";
       ".docker".source      = mkLink "${config.xdg.dataHome}/docker";
-      # ".rustup".source      = mkLink "${config.xdg.dataHome}/rustup";
-      # ".ghcup".source       = mkLink "${config.xdg.dataHome}/ghcup";
       ".mbsync".source      = mkLink "${config.xdg.dataHome}/mbsync";
 
       ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";
@@ -215,6 +212,91 @@ in {
     #   enable = true;
     #   browsers = [ "firefox" ];
     # };
+
+    firefox = {
+      enable = false;
+      profiles.default = {
+        name = "default";
+        isDefault = true;
+        path = "xyvqhelx.default-release";
+        extraConfig = ''
+          user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+        '';
+        userChrome = ''
+          #TabsToolbar {
+            visibility: collapse;
+          }
+        '';
+        extensions =
+          let buildFirefoxXpiAddon =
+            lib.makeOverridable ({ stdenv ? pkgs.stdenv, fetchurl ? pkgs.fetchurl,
+              pname, version, addonId, url, sha256, meta, ...
+            }:
+            stdenv.mkDerivation {
+              name = "${pname}-${version}";
+
+              inherit meta;
+
+              src = fetchurl { inherit url sha256; };
+
+              preferLocalBuild = true;
+              allowSubstitutes = true;
+
+              passthru = { inherit addonId; };
+
+              buildCommand = ''
+                dst="$out/share/mozilla/extensions/{ec8030f7-c20a-464f-9b0e-13a3a9e97384}"
+                mkdir -p "$dst"
+                install -v -m644 "$src" "$dst/${addonId}.xpi"
+              '';
+            }); in
+          with inputs.firefox-addons.packages.${pkgs.system}; [
+            onepassword-password-manager # 1Password — Password Manager
+            aria2-integration # Aria2 Download Manager Integration
+            augmented-steam # Augmented Steam
+            auto-tab-discard # Auto Tab Discard
+            # Choosy
+            clearurls # ClearURLs
+            cookie-autodelete # Cookie AutoDelete
+            copy-as-org-mode # Copy as Org-Mode
+            darkreader # Dark Reader
+            decentraleyes # Decentraleyes
+            # DownThemAll!
+            foxytab # FoxyTab
+            history-cleaner # History Cleaner
+            native-mathml # Native MathML
+            (buildFirefoxXpiAddon {
+              pname = "org-protocol";
+              version = "1.3.1";
+              addonId = "{ca86ec52-8c22-4282-b66e-c0debfc63c7f}";
+              url = "https://addons.mozilla.org/firefox/downloads/file/3747544/org_protocol-1.3.1.xpi";
+              sha256 = "06w6c0rdnkc7mrx100249viwmw8vq44rj1ggga2l87wb2mlnr06z";
+              meta = with lib; {
+                homepage = "https://github.com/vifon/org-protocol-for-firefox";
+                description = ''
+                  Provides a Firefox address bar button to send the current webpage to Emacs
+                  org-mode via org-protocol.
+                '';
+                license = licenses.mit;
+                mozPermissions = [ "activeTab" "storage" ];
+                platforms = platforms.all;
+              };
+            }) # org-protocol
+            # PopUpOFF - Popup and overlay blocker
+            reddit-enhancement-suite # Reddit Enhancement Suite
+            sidebery # Sidebery
+            simple-translate # Simple Translate
+            single-file # SingleFile
+            stylus # Stylus
+            ublock-origin # uBlock Origin
+            umatrix # uMatrix
+            video-downloadhelper # Video DownloadHelper
+            vimium # Vimium
+            web-archives # Web Archives
+            zotero-connector # Zotero Connector
+          ];
+      };
+    };
 
     texlive = {
       enable = true;
@@ -358,9 +440,6 @@ in {
 
            autoload -Uz compinit
            compinit
-
-           [ -f "$HOME/.ghcup/env" ] && source "$HOME/.ghcup/env"
-           [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
         fi
       '';
 

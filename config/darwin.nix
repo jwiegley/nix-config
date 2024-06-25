@@ -99,7 +99,9 @@ in {
       "devonagent"
       "devonthink"
       "discord"
+      "dungeon-crawl-stone-soup-tiles"
       "element"
+      # "emacsclient"               # Not available
       "expandrive"
       "fantastical"
       "gpg-suite"
