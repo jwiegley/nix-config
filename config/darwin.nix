@@ -158,12 +158,14 @@ in {
     ## The following software, or versions of software, are not available
     ## via Homebrew or the App Store:
 
-    # "ABBYY FineReader for ScanSnap"
-    # "ScanSnap Online Update"
     # "BackblazeRestore"
     # "Bookmap"
+    # "Digital Photo Professional"
+    # "EOS Utilityl"
     # "Kadena Chainweaver"
     # "MotiveWave"
+    # "ScanSnap Online Update"
+    # "ABBYY FineReader for ScanSnap"
 
     masApps = (if hostname != "athena" then {
       "1Password for Safari"  = 1569813296;

@@ -363,4 +363,14 @@ pkgs: epkgs: with epkgs;
   zoom
   zoutline
   ztree
+  bufler
+  burly
+
+  # taxy
+  # ement
+  # telega
+  magit-todos
+  # org-transclusion-http
+  hammy
+  # om-dash
 ]
