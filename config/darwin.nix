@@ -543,7 +543,7 @@ in {
       aria2c = runCommand
         ("${pkgs.aria2}/bin/aria2c "
           + "--enable-rpc "
-          + "--dir ${home}/Desktop "
+          + "--dir ${home}/Downloads "
           + "--check-integrity "
           + "--continue ");
 
