@@ -219,7 +219,7 @@ in [
   pstree
   pv
   (pkgs.lowPrio python3)
-  qemu libvirt
+  qemu #libvirt
   qpdf
   qrencode
   ratpoison
