@@ -119,7 +119,7 @@ define delete-generations-all
 endef
 
 check:
-	$(call announce,nix store verify --all)
+	$(call announce,nix store verify --no-trust --repair --all)
 	@nix store verify --no-trust --repair --all
 
 sizes:

@@ -126,12 +126,12 @@ in {
       ".gist".source        = mkLink "${config.xdg.configHome}/gist/api_key";
       ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
       ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
+      ".logseq".source      = mkLink "${config.xdg.configHome}/logseq";
       # ".macbeth".source     = mkLink "${config.xdg.configHome}/macbeth";
       ".mbsyncrc".source    = mkLink "${config.xdg.configHome}/mbsync/config";
       ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
       ".parallel".source    = mkLink "${config.xdg.configHome}/parallel";
       ".recoll".source      = mkLink "${config.xdg.configHome}/recoll";
-      ".zekr".source        = mkLink "${config.xdg.configHome}/zekr";
 
       ".docker".source      = mkLink "${config.xdg.dataHome}/docker";
       ".mbsync".source      = mkLink "${config.xdg.dataHome}/mbsync";
