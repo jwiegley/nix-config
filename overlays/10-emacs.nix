@@ -532,30 +532,41 @@ let
 
     ########################################################################
 
-    agda2-mode =
-      let Agda = pkgs.haskell.lib.dontHaddock self.haskellPackages.Agda; in
-      eself.trivialBuild {
-        pname = "agda-mode";
-        version = Agda.version;
+    agda2-mode = compileEmacsFiles {
+      name = "agda2-mode";
+      src = (fetchFromGitHub {
+        owner = "agda";
+        repo = "agda";
+        rev = "20ad6b5d02f7a647e83cc493d8b4e11e22cac8c9";
+        sha256 = "142x7466kwvc19m1c2pz66i7ni5b5jvkpgdpc34di8ml6rvrfcqf";
+        # date = 2024-06-27T17:34:53+02:00;
+      }) + "/src/data/emacs-mode";
+    };
 
-        phases = [ "buildPhase" "installPhase" ];
+    # agda2-mode =
+    #   let Agda = pkgs.haskell.lib.dontHaddock self.haskellPackages.Agda; in
+    #   eself.trivialBuild {
+    #     pname = "agda-mode";
+    #     version = Agda.version;
 
-        # already byte-compiled by Agda builder
-        buildPhase = ''
-          agda=`${Agda.bin}/bin/agda-mode locate`
-          cp `dirname $agda`/*.el* .
-        '';
+    #     phases = [ "buildPhase" "installPhase" ];
 
-        meta = {
-          description = "Agda2-mode for Emacs extracted from Agda package";
-          longDescription = ''
-            Wrapper packages that liberates init.el from `agda-mode locate` magic.
-            Simply add this to user profile or systemPackages and do `(require 'agda2)` in init.el.
-          '';
-          homepage = Agda.meta.homepage;
-          license = Agda.meta.license;
-        };
-      };
+    #     # already byte-compiled by Agda builder
+    #     buildPhase = ''
+    #       agda=`${Agda.bin}/bin/agda-mode locate`
+    #       cp `dirname $agda`/*.el* .
+    #     '';
+
+    #     meta = {
+    #       description = "Agda2-mode for Emacs extracted from Agda package";
+    #       longDescription = ''
+    #         Wrapper packages that liberates init.el from `agda-mode locate` magic.
+    #         Simply add this to user profile or systemPackages and do `(require 'agda2)` in init.el.
+    #       '';
+    #       homepage = Agda.meta.homepage;
+    #       license = Agda.meta.license;
+    #     };
+    #   };
 
     auctex = eself.elpaBuild {
       pname = "auctex";

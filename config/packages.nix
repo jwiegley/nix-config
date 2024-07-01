@@ -7,7 +7,7 @@ let exe = if pkgs.stdenv.targetPlatform.isx86_64
           else pkgs.lib.id;
 
 in [
-  (exe gitAndTools.git-annex)
+  # (exe gitAndTools.git-annex)
   # (exe haskellPackages.git-all)
   # haskellPackages.pushme
   (exe haskellPackages.sizes)

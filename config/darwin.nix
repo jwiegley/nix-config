@@ -109,7 +109,6 @@ in {
       "gpg-suite"
       "grammarly-desktop"
       "lectrote"
-      "logseq"
       # "macwhisper"                # Use Whisper Transcription in AppStore
       # "marked"                    # Use Marked 2 in AppStore
       "mellel"
