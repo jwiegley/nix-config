@@ -5,17 +5,20 @@ set -e
 case $1 in
     vulcan)
         u vulcan upgrade sign copy
-        notify "Nix on Vulcan upgraded"
+        # notify "Nix on Vulcan upgraded"
         ;;
 
     hermes)
         u hermes upgrade-tasks check
-        notify "Nix on Hermes upgraded"
+        # notify "Nix on Hermes upgraded"
         ;;
 
     athena)
-        u upgrade-tasks check
-        notify "Nix on Athena upgraded"
+        u switch check
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+	brew upgrade --greedy
+	ollama-update
+        # notify "Nix on Athena upgraded"
         ;;
 
     *)

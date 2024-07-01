@@ -127,7 +127,7 @@ pkgs: epkgs: with epkgs;
   fuzzy
   gerrit
   ghub
-  git-annex
+  # git-annex
   git-link
   git-timemachine
   git-undo

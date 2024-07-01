@@ -45,5 +45,6 @@ in {
     sha256 = "sha256-GtwK9hQMbN+FxSD2eTioBOi2P47+t3oqnY4ZGJl53+k=";
   })
   hub
+  lnav
   ;
 }

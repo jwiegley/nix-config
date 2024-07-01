@@ -81,7 +81,6 @@ upgrade-tasks: switch travel-ready
 	ollama-update
 
 upgrade: update upgrade-tasks check
-	echo "Upgrade completed"
 
 upgrade-sync: upgrade copy switch-all travel-ready-all
 

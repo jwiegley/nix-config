@@ -77,7 +77,7 @@ in [
   gitAndTools.ghi
   gitAndTools.gist
   gitAndTools.git-absorb
-  gitAndTools.git-annex-remote-rclone
+  # gitAndTools.git-annex-remote-rclone
   gitAndTools.git-branchless
   gitAndTools.git-branchstack
   gitAndTools.git-cliff
