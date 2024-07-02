@@ -5,15 +5,15 @@ let
     # "async-pool"
     # "bindings-DSL"
     # "c2hsc"
-    "git-all"
+    # "git-all"
     "gitlib/git-monitor"
     "gitlib/gitlib"
   [ "gitlib/gitlib-cmdline" { inherit (self.gitAndTools) git; } ]
     "gitlib/gitlib-libgit2"
     "gitlib/gitlib-test"
-  # [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
+    # [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
     # "hierarchy"
-    "hours"
+    # "hours"
     # "hnix"
     # "logging"
     # "monad-extras"
@@ -21,7 +21,7 @@ let
     # "parsec-free"
     # "pipes-async"
     # "pipes-files"
-    "pushme"
+    # "pushme"
     # "recursors"
     # "runmany"
     # "simple-amount"

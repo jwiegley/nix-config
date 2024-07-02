@@ -10,7 +10,7 @@ in [
   # (exe gitAndTools.git-annex)
   # (exe haskellPackages.git-all)
   # haskellPackages.pushme
-  (exe haskellPackages.sizes)
+  haskellPackages.sizes
   (exe haskellPackages.una)
   (exe haskellPackages.git-monitor)
   # (exe haskellPackages.hours)
