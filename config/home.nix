@@ -865,21 +865,13 @@ in {
          let
            mailboxes = [
              ## These five are handled specially
+
              # "INBOX"
-             # "mail.drafts"
+             # "Drafts"
              # "mail.sent"
-             # "mail.archive"                  # ***
+             # "mail.archive"         # ***
              # "mail.spam"
 
-             "mail.gmail"
-             "mail.gmail.c2g"
-             "mail.gmail.kadena"
-             "mail.kadena"            # ***
-             "mail.kadena.archive"    # ***
-             "mail.pending"           # ***
-             "mail.quantum"           # ***
-             "mail.spam.report"
-             "mail.trash"
              "list.bahai"             # ***
              "list.bahai.andf"        # ***
              "list.bahai.anti-racism" # ***
@@ -889,6 +881,7 @@ in {
              "list.bahai.ror"         # ***
              "list.bahai.study"       # ***
              "list.bahai.tarjuman"
+
              "list.emacs.announce"
              "list.emacs.bugs"
              "list.emacs.conf"
@@ -897,15 +890,24 @@ in {
              "list.emacs.org-mode"
              "list.emacs.sources"
              "list.emacs.tangents"
-             "list.finance"
-             "list.github"
+
              "list.haskell.admin"
              "list.haskell.hackage-trustees"
              "list.haskell.infrastructure"
+
+             "list.finance"
+             "list.ledger"            # ***
+
+             "list.github"
+             "list.misc"              # ***
+             "list.notifications"     # ***
+             "list.types"
+
              "list.kadena"            # ***
              "list.kadena.amazon"
              "list.kadena.asana"
              "list.kadena.bill"
+             "list.kadena.box"
              "list.kadena.calendar"
              "list.kadena.expensify"
              "list.kadena.github"
@@ -916,10 +918,14 @@ in {
              "list.kadena.lattice"
              "list.kadena.notion"
              "list.kadena.slack"
-             "list.ledger"            # ***
-             "list.misc"              # ***
-             "list.notifications"     # ***
-             "list.types"
+             "list.kadena.zulip"
+
+             "mail.kadena"            # ***
+             "mail.quantum"           # ***
+             "mail.pending"           # ***
+             "mail.spam.report"
+             "mail.trash"
+             "mail.kadena.archive"    # ***
            ];
            channelDecl = box: "Channel personal-${box}";
            mailboxRule = box: ''
