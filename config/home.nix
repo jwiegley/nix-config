@@ -126,7 +126,6 @@ in {
       ".gist".source        = mkLink "${config.xdg.configHome}/gist/api_key";
       ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
       ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
-      ".logseq".source      = mkLink "${config.xdg.configHome}/logseq";
       # ".macbeth".source     = mkLink "${config.xdg.configHome}/macbeth";
       ".mbsyncrc".source    = mkLink "${config.xdg.configHome}/mbsync/config";
       ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
@@ -465,10 +464,12 @@ in {
 
     password-store = {
       enable = true;
-      package = pkgs.pass.withExtensions (exts: [ exts.pass-otp exts.pass-genphrase ]);
-      settings = {
-        PASSWORD_STORE_DIR = "${config.xdg.dataHome}/password-store";
-      };
+      package = pkgs.pass.withExtensions (exts: [
+        exts.pass-otp
+        exts.pass-genphrase
+        exts.pass-import
+      ]);
+      settings.PASSWORD_STORE_DIR = "${home}/doc/.password-store";
     };
 
     gpg = {
@@ -867,15 +868,41 @@ in {
              # "INBOX"
              # "mail.drafts"
              # "mail.sent"
-             # "mail.archive"
+             # "mail.archive"                  # ***
              # "mail.spam"
 
-             "mail.pending"
+             "mail.gmail"
+             "mail.gmail.c2g"
+             "mail.gmail.kadena"
+             "mail.kadena"            # ***
+             "mail.kadena.archive"    # ***
+             "mail.pending"           # ***
+             "mail.quantum"           # ***
              "mail.spam.report"
-             "mail.quantum"
-             "mail.kadena"
-             "mail.kadena.archive"
-             "list.kadena"
+             "mail.trash"
+             "list.bahai"             # ***
+             "list.bahai.andf"        # ***
+             "list.bahai.anti-racism" # ***
+             "list.bahai.assembly"    # ***
+             "list.bahai.ctg"         # ***
+             "list.bahai.ctg.sunday"  # ***
+             "list.bahai.ror"         # ***
+             "list.bahai.study"       # ***
+             "list.bahai.tarjuman"
+             "list.emacs.announce"
+             "list.emacs.bugs"
+             "list.emacs.conf"
+             "list.emacs.devel"
+             "list.emacs.devel.owner"
+             "list.emacs.org-mode"
+             "list.emacs.sources"
+             "list.emacs.tangents"
+             "list.finance"
+             "list.github"
+             "list.haskell.admin"
+             "list.haskell.hackage-trustees"
+             "list.haskell.infrastructure"
+             "list.kadena"            # ***
              "list.kadena.amazon"
              "list.kadena.asana"
              "list.kadena.bill"
@@ -889,52 +916,10 @@ in {
              "list.kadena.lattice"
              "list.kadena.notion"
              "list.kadena.slack"
-             "list.finance"
+             "list.ledger"            # ***
+             "list.misc"              # ***
+             "list.notifications"     # ***
              "list.types"
-             "list.misc"
-             "list.notifications"
-             "list.ledger"
-             # "list.haskell.announce"
-             # "list.haskell.beginners"
-             # "list.haskell.cabal"
-             # "list.haskell.cafe"
-             # "list.haskell.commercial"
-             # "list.haskell.committee"
-             # "list.haskell.community"
-             # "list.haskell.ghc"
-             "list.haskell.hackage-trustees"
-             "list.haskell.infrastructure"
-             # "list.haskell.libraries"
-             # "list.haskell.prime"
-             "list.haskell.admin"
-             # "list.gnu"
-             # "list.gnu.prog"
-             # "list.gnu.prog.discuss"
-             # "list.gnu.debbugs"
-             "list.github"
-             "list.emacs.sources"
-             # "list.emacs.proofgeneral"
-             # "list.emacs.manual"
-             "list.emacs.org-mode"
-             # "list.emacs.conf"
-             # "list.emacs.help"
-             # "list.emacs.bugs"
-             "list.emacs.tangents"
-             "list.emacs.devel"
-             # "list.emacs.devel.owner"
-             "list.emacs.announce"
-             "list.coq"
-             # "list.coq.ssreflect"
-             "list.coq.devel"
-             "list.bahai"
-             "list.bahai.assembly"
-             "list.bahai.andf"
-             # "list.bahai.ror"
-             "list.bahai.ctg"
-             "list.bahai.ctg.sunday"
-             "list.bahai.study"
-             # "list.bahai.anti-racism"
-             "list.bahai.tarjuman"
            ];
            channelDecl = box: "Channel personal-${box}";
            mailboxRule = box: ''
@@ -976,98 +961,6 @@ in {
          Account dovecot
          PathDelimiter /
          Trash mail.trash
-
-         IMAPAccount gmail
-         Host imap.gmail.com
-         User jwiegley@gmail.com
-         PassCmd "pass imap.gmail.com"
-         SSLType IMAPS
-         AuthMechs LOGIN
-         CertificateFile ${ca-bundle_crt}
-         Port 993
-         PipelineDepth 1
-
-         IMAPStore gmail-remote
-         Account gmail
-         PathDelimiter /
-         Trash Trash
-
-         Channel gmail-all-mail
-         Far :gmail-remote:"[Gmail]/All Mail"
-         Near :dovecot-local:mail.gmail
-         Create Both
-         Expunge Both
-         Remove Both
-         CopyArrivalDate yes
-
-         IMAPAccount gmail-kadena
-         Host imap.gmail.com
-         User john@kadena.io
-         PassCmd "pass kadena.imap.gmail.com"
-         SSLType IMAPS
-         AuthMechs LOGIN
-         CertificateFile ${ca-bundle_crt}
-         Port 993
-         PipelineDepth 1
-
-         IMAPStore gmail-kadena-remote
-         Account gmail-kadena
-         PathDelimiter /
-         Trash Trash
-
-         Channel gmail-kadena-all-mail
-         Far :gmail-kadena-remote:"[Gmail]/All Mail"
-         Near :dovecot-local:mail.gmail.kadena
-         Create Both
-         Expunge Both
-         Remove Both
-         CopyArrivalDate yes
-
-         IMAPAccount gmail-c2g
-         Host imap.gmail.com
-         User john.wiegley@coppertogold.org
-         PassCmd "pass c2g.imap.gmail.com"
-         SSLType IMAPS
-         AuthMechs LOGIN
-         CertificateFile ${ca-bundle_crt}
-         Port 993
-         PipelineDepth 1
-
-         IMAPStore gmail-c2g-remote
-         Account gmail-c2g
-         PathDelimiter /
-         Trash Trash
-
-         Channel gmail-c2g-all-mail
-         Far :gmail-c2g-remote:"[Gmail]/All Mail"
-         Near :dovecot-local:mail.gmail.c2g
-         Create Both
-         Expunge Both
-         Remove Both
-         CopyArrivalDate yes
-
-         IMAPAccount gmail-carmichael
-         Host imap.gmail.com
-         User carmichaellsa@gmail.com
-         PassCmd "pass carmichael.imap.gmail.com"
-         SSLType IMAPS
-         AuthMechs LOGIN
-         CertificateFile ${ca-bundle_crt}
-         Port 993
-         PipelineDepth 1
-
-         IMAPStore gmail-carmichael-remote
-         Account gmail-carmichael
-         PathDelimiter /
-         Trash Trash
-
-         Channel gmail-carmichael-all-mail
-         Far :gmail-carmichael-remote:"[Gmail]/All Mail"
-         Near :dovecot-local:mail.gmail.carmichael
-         Create Both
-         Expunge Both
-         Remove Both
-         CopyArrivalDate yes
 
          Channel personal-inbox
          Far :fastmail-remote:
@@ -1119,9 +1012,6 @@ in {
          Channel personal-archive
          channel personal-spam
          ${allChannelDecls}
-         # Channel gmail-all-mail
-         # Channel gmail-kadena-all-mail
-         # Channel gmail-c2g-all-mail
        '';
      } else {});
   };
