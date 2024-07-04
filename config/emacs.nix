@@ -113,7 +113,6 @@ pkgs: epkgs: with epkgs;
   fancy-narrow
   feebleline
   fence-edit
-  fetchmail-mode
   flycheck
   flycheck-haskell
   flycheck-package

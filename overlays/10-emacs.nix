@@ -104,12 +104,6 @@ let
       # date = 2021-03-26T13:22:24-0700;
     };
 
-    fetchmail-mode = compileEmacsWikiFile {
-      name = "fetchmail-mode.el";
-      sha256 = "19lqkc35kgzm07xjpb9nrcayg69qyijn159lak0mg45fhnybf4a6";
-      # date = 2021-03-26T13:22:25-0700;
-    };
-
     hexrgb = compileEmacsWikiFile {
       name = "hexrgb.el";
       sha256 = "18hb8brf7x92aidjfgczxangri6rkqq4x5d06lh41193f97rslm8";
@@ -542,31 +536,6 @@ let
         # date = 2024-06-27T17:34:53+02:00;
       }) + "/src/data/emacs-mode";
     };
-
-    # agda2-mode =
-    #   let Agda = pkgs.haskell.lib.dontHaddock self.haskellPackages.Agda; in
-    #   eself.trivialBuild {
-    #     pname = "agda-mode";
-    #     version = Agda.version;
-
-    #     phases = [ "buildPhase" "installPhase" ];
-
-    #     # already byte-compiled by Agda builder
-    #     buildPhase = ''
-    #       agda=`${Agda.bin}/bin/agda-mode locate`
-    #       cp `dirname $agda`/*.el* .
-    #     '';
-
-    #     meta = {
-    #       description = "Agda2-mode for Emacs extracted from Agda package";
-    #       longDescription = ''
-    #         Wrapper packages that liberates init.el from `agda-mode locate` magic.
-    #         Simply add this to user profile or systemPackages and do `(require 'agda2)` in init.el.
-    #       '';
-    #       homepage = Agda.meta.homepage;
-    #       license = Agda.meta.license;
-    #     };
-    #   };
 
     auctex = eself.elpaBuild {
       pname = "auctex";

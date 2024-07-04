@@ -81,11 +81,6 @@ in {
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";
       FILTER_BRANCH_SQUELCH_WARNING  = "1";
 
-      LOCATE_PATH = lib.concatStringsSep ":" [
-        "${config.xdg.cacheHome}/locate/home.db"
-        "${config.xdg.cacheHome}/locate/system.db"
-      ];
-
       MANPATH = lib.concatStringsSep ":" [
         "${home}/.nix-profile/share/man"
         "/run/current-system/sw/share/man"
@@ -102,41 +97,36 @@ in {
     ];
 
     file =
-    let mkLink = config.lib.file.mkOutOfStoreSymlink; in
-    {
-      ".ledgerrc".text = ''
-        --file ${home}/doc/accounts/main.ledger
-        --input-date-format %Y/%m/%d
-        --date-format %Y/%m/%d
-      '';
+      let mkLink = config.lib.file.mkOutOfStoreSymlink; in
+      {
+        ".ledgerrc".text = ''
+          --file ${home}/doc/accounts/main.ledger
+          --input-date-format %Y/%m/%d
+          --date-format %Y/%m/%d
+        '';
 
-      ".curlrc".text = ''
-        capath=${ca-bundle_path}
-        cacert=${ca-bundle_crt}
-      '';
+        ".curlrc".text = ''
+          capath=${ca-bundle_path}
+          cacert=${ca-bundle_crt}
+        '';
 
-      ".wgetrc".text = ''
-        ca_directory = ${ca-bundle_path}
-        ca_certificate = ${ca-bundle_crt}
-      '';
+        ".wgetrc".text = ''
+          ca_directory = ${ca-bundle_path}
+          ca_certificate = ${ca-bundle_crt}
+        '';
 
-      ".cups".source        = mkLink "${config.xdg.configHome}/cups";
-      ".dbvis".source       = mkLink "${config.xdg.configHome}/dbvis";
-      ".emacs.d".source     = mkLink "${home}/src/dot-emacs";
-      ".gist".source        = mkLink "${config.xdg.configHome}/gist/api_key";
-      ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
-      ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
-      # ".macbeth".source     = mkLink "${config.xdg.configHome}/macbeth";
-      ".mbsyncrc".source    = mkLink "${config.xdg.configHome}/mbsync/config";
-      ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
-      ".parallel".source    = mkLink "${config.xdg.configHome}/parallel";
-      ".recoll".source      = mkLink "${config.xdg.configHome}/recoll";
-
-      ".docker".source      = mkLink "${config.xdg.dataHome}/docker";
-      ".mbsync".source      = mkLink "${config.xdg.dataHome}/mbsync";
-
-      ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";
-    };
+        ".cups".source        = mkLink "${config.xdg.configHome}/cups";
+        ".dbvis".source       = mkLink "${config.xdg.configHome}/dbvis";
+        ".docker".source      = mkLink "${config.xdg.dataHome}/docker";
+        ".emacs.d".source     = mkLink "${home}/src/dot-emacs";
+        ".gist".source        = mkLink "${config.xdg.configHome}/gist/api_key";
+        ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
+        ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
+        ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
+        ".parallel".source    = mkLink "${config.xdg.configHome}/parallel";
+        ".recoll".source      = mkLink "${config.xdg.configHome}/recoll";
+        ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";
+      };
   };
 
   accounts.email = {
@@ -154,12 +144,6 @@ in {
       flavor = "fastmail.com";
       passwordCommand = "${pkgs.pass}/bin/pass show smtp.fastmail.com";
       primary = true;
-      msmtp = {
-        enable = true;
-        extraConfig = {
-          logfile = "${config.xdg.dataHome}/msmtp/msmtp.log";
-        };
-      };
       imap = {
         tls = {
           enable = true;
@@ -192,7 +176,6 @@ in {
     info.enable = true;
     jq.enable = true;
     man.enable = true;
-    msmtp.enable = true;
     vim.enable = true;
 
     tmux = {
@@ -408,11 +391,6 @@ in {
         fi
 
         . ${pkgs.z}/share/z.sh
-
-        for i in rdm msmtp; do
-            dir=${config.xdg.dataHome}/$i
-            if [[ ! -d $dir ]]; then mkdir -p $dir; fi
-        done
 
         setopt extended_glob
       '';
@@ -841,185 +819,7 @@ in {
         [view]
         application/pdf = ${emacsclient} -n --eval '(org-pdfview-open "%f::%p")'
       '';
-    } //
-    (if pkgs.stdenv.targetPlatform.isx86_64 then {
-       "fetchmail/config".text = ''
-         poll imap.fastmail.com protocol IMAP port 993 auth password
-           user '${userEmail}' there is johnw here
-           ssl sslcertck sslcertfile "${ca-bundle_crt}"
-           folder INBOX
-           fetchall
-           mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e"
-       '';
-
-       "fetchmail/config-lists".text = ''
-         poll imap.fastmail.com protocol IMAP port 993 auth password
-           user '${userEmail}' there is johnw here
-           ssl sslcertck sslcertfile "${ca-bundle_crt}"
-           folder 'Lists'
-           fetchall
-           mda "${pkgs.dovecot}/libexec/dovecot/dovecot-lda -c /etc/dovecot/dovecot.conf -e -m list.misc"
-       '';
-
-       "mbsync/config".text =
-         let
-           mailboxes = [
-             ## These five are handled specially
-
-             # "INBOX"
-             # "Drafts"
-             # "mail.sent"
-             # "mail.archive"         # ***
-             # "mail.spam"
-
-             "list.bahai"             # ***
-             "list.bahai.andf"        # ***
-             "list.bahai.anti-racism" # ***
-             "list.bahai.assembly"    # ***
-             "list.bahai.ctg"         # ***
-             "list.bahai.ctg.sunday"  # ***
-             "list.bahai.ror"         # ***
-             "list.bahai.study"       # ***
-             "list.bahai.tarjuman"
-
-             "list.emacs.announce"
-             "list.emacs.bugs"
-             "list.emacs.conf"
-             "list.emacs.devel"
-             "list.emacs.devel.owner"
-             "list.emacs.org-mode"
-             "list.emacs.sources"
-             "list.emacs.tangents"
-
-             "list.haskell.admin"
-             "list.haskell.hackage-trustees"
-             "list.haskell.infrastructure"
-
-             "list.finance"
-             "list.ledger"            # ***
-
-             "list.github"
-             "list.misc"              # ***
-             "list.notifications"     # ***
-             "list.types"
-
-             "list.kadena"            # ***
-             "list.kadena.amazon"
-             "list.kadena.asana"
-             "list.kadena.bill"
-             "list.kadena.box"
-             "list.kadena.calendar"
-             "list.kadena.expensify"
-             "list.kadena.github"
-             "list.kadena.google"
-             "list.kadena.greenhouse"
-             "list.kadena.immunefi"
-             "list.kadena.justworks"
-             "list.kadena.lattice"
-             "list.kadena.notion"
-             "list.kadena.slack"
-             "list.kadena.zulip"
-
-             "mail.kadena"            # ***
-             "mail.quantum"           # ***
-             "mail.pending"           # ***
-             "mail.spam.report"
-             "mail.trash"
-             "mail.kadena.archive"    # ***
-           ];
-           channelDecl = box: "Channel personal-${box}";
-           mailboxRule = box: ''
-             ${channelDecl box}
-             Far :fastmail-remote:${builtins.replaceStrings ["."] ["/"] box}
-             Near :dovecot-local:${box}
-             Create Both
-             Expunge Both
-             Remove Both
-             CopyArrivalDate yes
-           '';
-           allMailboxRules = builtins.concatStringsSep "\n" (builtins.map mailboxRule mailboxes);
-           allChannelDecls = builtins.concatStringsSep "\n" (builtins.map channelDecl mailboxes);
-         in ''
-         IMAPAccount fastmail
-         Host imap.fastmail.com
-         User ${userEmail}
-         PassCmd "pass imap.fastmail.com"
-         SSLType IMAPS
-         CertificateFile ${ca-bundle_crt}
-         Port 993
-         PipelineDepth 1
-
-         IMAPStore fastmail-remote
-         Account fastmail
-         PathDelimiter /
-         Trash Trash
-
-         IMAPAccount dovecot
-         SSLType None
-         Host localhost
-         Port 9143
-         User johnw
-         Pass pass
-         AuthMechs PLAIN
-         Tunnel "${pkgs.dovecot}/libexec/dovecot/imap -c /etc/dovecot/dovecot.conf"
-
-         IMAPStore dovecot-local
-         Account dovecot
-         PathDelimiter /
-         Trash mail.trash
-
-         Channel personal-inbox
-         Far :fastmail-remote:
-         Near :dovecot-local:
-         Patterns "INBOX"
-         Create Both
-         Expunge Both
-         Remove Both
-         CopyArrivalDate yes
-
-         Channel personal-drafts
-         Far :fastmail-remote:Drafts
-         Near :dovecot-local:Drafts
-         Create Both
-         Expunge Both
-         Remove Both
-         CopyArrivalDate yes
-
-         Channel personal-sent
-         Far :fastmail-remote:Sent
-         Near :dovecot-local:mail.sent
-         Create Both
-         Expunge Both
-         Remove Both
-         CopyArrivalDate yes
-
-         Channel personal-archive
-         Far :fastmail-remote:Archive
-         Near :dovecot-local:mail.archive
-         Create Both
-         Expunge Both
-         Remove Far
-         CopyArrivalDate yes
-
-         Channel personal-spam
-         Far :fastmail-remote:Spam
-         Near :dovecot-local:mail.spam
-         Create Both
-         Expunge Both
-         Remove Both
-         CopyArrivalDate yes
-
-         ${allMailboxRules}
-
-         Group personal
-         Channel personal-inbox
-         Channel personal-drafts
-         Channel personal-sent
-         Channel personal-archive
-         channel personal-spam
-         ${allChannelDecls}
-       '';
-     } else {});
+    };
   };
 
   targets.darwin = {

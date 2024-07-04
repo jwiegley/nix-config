@@ -50,9 +50,6 @@ in [
   ditaa
   dnsutils
   dot2tex
-  dovecot
-  dovecot_pigeonhole
-  dovecot_fts_xapian
   doxygen
   emacs29MacPortEnv
   # emacs29Env
@@ -60,7 +57,6 @@ in [
   exiv2
   fd
   fdupes
-  fetchmail
   ffmpeg
   figlet
   filetags
@@ -127,17 +123,17 @@ in [
   hammer
   hashdb
   highlight
-  home-manager
+  # home-manager
   pkgs.hostname
   html-tidy
   htop
-  httm
+  # httm
   httpie
   httrack
   iftop
   imagemagickBig
   imapfilter
-  goimapnotify
+  # goimapnotify
   imgcat
   inkscape.out
   iperf
@@ -171,7 +167,6 @@ in [
   mitmproxy
   more
   mosh
-  msmtp
   mtr
   multitail
   my-scripts
@@ -189,7 +184,7 @@ in [
   nodePackages.eslint
   nodePackages.js-beautify
   nodejs
-  offlineimap
+  # offlineimap
   opam
   opensc
   openssh
