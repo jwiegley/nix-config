@@ -25,7 +25,7 @@ in [
   asciidoctor
   aspell
   aspellDicts.en
-  awscli2
+  # awscli2
   b3sum
   backblaze-b2
   bandwhich
@@ -148,7 +148,7 @@ in [
   killall
   kubectl
   ledgerPy3Env
-  ledger_HEAD
+  ledger_HEAD_python3
   less
   lftp
   librsvg
@@ -162,7 +162,7 @@ in [
   lzop
   m-cli
   m4
-  mercurialFull
+  # mercurialFull
   metabase
   mitmproxy
   more
@@ -179,11 +179,11 @@ in [
   nixpkgs-fmt
   nixfmt
   nmap
-  node2nix
-  nodePackages.csslint
-  nodePackages.eslint
-  nodePackages.js-beautify
-  nodejs
+  # node2nix
+  # nodePackages.csslint
+  # nodePackages.eslint
+  # nodePackages.js-beautify
+  # nodejs
   # offlineimap
   opam
   opensc

@@ -88,7 +88,7 @@ in {
       "1password"
       "1password-cli"
       "anki"
-      { name = "arc"; greedy = true; }
+      # { name = "arc"; greedy = true; }
       "asana"
       "audacity"
       "backblaze"
@@ -106,8 +106,8 @@ in {
       # "emacsclient"               # Not available
       "expandrive"
       "fantastical"
-      "gpg-suite"
       "grammarly-desktop"
+      "gpg-suite-no-mail"
       "lectrote"
       # "macwhisper"                # Use Whisper Transcription in AppStore
       # "marked"                    # Use Marked 2 in AppStore
