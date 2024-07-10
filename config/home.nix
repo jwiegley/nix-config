@@ -75,7 +75,6 @@ in {
       ATHENA_ETHERNET    = athena_ethernet;
       ATHENA_WIFI        = athena_wifi;
 
-      RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone-b2";
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";

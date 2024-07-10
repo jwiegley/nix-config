@@ -283,7 +283,7 @@ in [
   xsv
   xz
   yamale
-  youtube-dl
+  # youtube-dl
   yq
   yuicompressor
   z

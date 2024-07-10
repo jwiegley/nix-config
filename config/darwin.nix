@@ -91,8 +91,6 @@ in {
       # { name = "arc"; greedy = true; }
       "asana"
       "audacity"
-      "backblaze"
-      "backblaze-downloader"
       { name = "brave-browser"; greedy = true; }
       "carbon-copy-cloner"
       "choosy"
@@ -161,7 +159,6 @@ in {
     ## The following software, or versions of software, are not available
     ## via Homebrew or the App Store:
 
-    # "BackblazeRestore"
     # "Bookmap"
     # "Digital Photo Professional"
     # "EOS Utilityl"
