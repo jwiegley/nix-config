@@ -21,9 +21,14 @@ in {
 
       openssh.authorizedKeys = {
         keys = [
+          # GnuPG auth key stored on Yubikeys
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb yubikey-gnupg"
+          # ShellFish iPhone key
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJD0sIKWWVF+zIWcNm/BfsbCQxuUBHD8nRNSpZV+mCf+ ShellFish@iPhone-28062024"
+          # ShellFish iPad key
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZQeQ/gKkOwuwktwD4z0ZZ8tpxNej3qcHS5ZghRcdAd ShellFish@iPad-22062024"
+          # Secure enclave on Hermes
+          "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBB3Y8saKSHx76NQGC8CQBIec87Pe6Bk10TScomsWOW8YQ1Nb12RTLyMzq+WfpVwF9bmYvAEmbQ8H0F6n1Xfd8Y8= Hermes (enclave)"
         ];
         keyFiles =
           if hostname == "vulcan" then [
