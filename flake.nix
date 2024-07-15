@@ -15,9 +15,13 @@
       url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    kadena-nix = {
+      url = "github:kadena-io/kadena-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = inputs@{ nixpkgs, home-manager, darwin, ... }: rec {
+  outputs = inputs: with inputs; rec {
     darwinConfigurations =
       let configure = hostname: system: darwin.lib.darwinSystem {
         # pkgs = import nixpkgs {

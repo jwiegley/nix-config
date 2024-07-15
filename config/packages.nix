@@ -1,4 +1,4 @@
-hostname: pkgs:
+hostname: inputs: pkgs:
 
 with pkgs; 
 
@@ -293,4 +293,7 @@ in [
   zip
   zsh
   zsh-syntax-highlighting
+
+  # Kadena
+  inputs.kadena-nix.kadena-cli
 ]
