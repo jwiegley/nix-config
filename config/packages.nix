@@ -295,5 +295,5 @@ in [
   zsh-syntax-highlighting
 
   # Kadena
-  inputs.kadena-nix.kadena-cli
+  inputs.kadena-nix.packages.${pkgs.system}.kadena-cli
 ]
