@@ -444,7 +444,7 @@ in {
       package = pkgs.pass.withExtensions (exts: [
         exts.pass-otp
         exts.pass-genphrase
-        exts.pass-import
+        # exts.pass-import
       ]);
       settings.PASSWORD_STORE_DIR = "${home}/doc/.password-store";
     };
