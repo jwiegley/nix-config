@@ -57,7 +57,9 @@ in {
       JAVA_OPTS          = "-Xverify:none";
       LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
       NIX_CONF           = "${home}/src/nix";
-      OLLAMA_MODELS      = "${config.xdg.dataHome}/ollama/models";
+      OLLAMA_MODELS      = if hostname == "vulcan"
+                           then "/Volumes/ext/Models"
+                           else "${config.xdg.dataHome}/ollama/models";
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
       RECOLL_CONFDIR     = "${config.xdg.configHome}/recoll";
       SCREENRC           = "${config.xdg.configHome}/screen/config";

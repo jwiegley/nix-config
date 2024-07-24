@@ -170,14 +170,13 @@ in [
   mtr
   multitail
   my-scripts
-  nix-diff
-  nix-index
-  nix-info
-  nix-prefetch-scripts
+  # nix-diff
+  # nix-index
+  # nix-info
+  # nix-prefetch-scripts
   nix-scripts
-  nixStable
-  nixpkgs-fmt
-  nixfmt
+  # nixpkgs-fmt
+  # nixfmt
   nmap
   # node2nix
   # nodePackages.csslint

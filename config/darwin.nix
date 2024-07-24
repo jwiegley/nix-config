@@ -9,7 +9,7 @@ let home           = builtins.getEnv "HOME";
 
 in {
   services = {
-    nix-daemon.enable = false;
+    nix-daemon.enable = true;
     activate-system.enable = true;
   };
 
@@ -71,25 +71,20 @@ in {
       "kadena-io/pact"
     ];
     brews = [
-      "openssl"
-      "kadena-io/pact/pact"
-      "z3"
+      "kadena-io/pact/pact" "openssl" "z3"
     ];
 
     casks = [
       "docker"
       "drivedx"
-      { name = "firefox"; greedy = true; }
       "hazel"
       "iterm2"
-      "keyboard-maestro"
-      "launchbar"
-      "ollama"
       "vmware-fusion"
       "wireshark"
     ] ++ lib.optionals (hostname != "athena") [
       "1password"
       "1password-cli"
+      "affinity-photo"
       "anki"
       # { name = "arc"; greedy = true; }
       "asana"
@@ -109,14 +104,18 @@ in {
       # "emacsclient"               # Not available
       "expandrive"
       "fantastical"
+      { name = "firefox"; greedy = true; }
       "grammarly-desktop"
       "gpg-suite-no-mail"
+      "keyboard-maestro"
+      "launchbar"
       "lectrote"
       # "macwhisper"                # Use Whisper Transcription in AppStore
       # "marked"                    # Use Marked 2 in AppStore
       "mellel"
       "netdownloadhelpercoapp"
       "notion"
+      "ollama"
       # "omnigraffle"               # Stay at version 6
       { name = "opera"; greedy = true; }
       "pdf-expert"
@@ -234,7 +233,7 @@ in {
         speedFactor = 4;
       }; in {
 
-    # package = pkgs.nixStable;
+    package = pkgs.nix;
     useDaemon = true;
 
     # This entry lets us to define a system registry entry so that
