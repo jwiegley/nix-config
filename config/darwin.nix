@@ -194,6 +194,7 @@ in {
       "Soulver 3"             = 1508732804;
       "Whisper Transcription" = 1668083311;
       "WireGuard"             = 1451685025;
+      "iMovie"                = 408981434;
     } else {}) // {
       "Speedtest"             = 1153157709;
       "Xcode"                 = 497799835;
