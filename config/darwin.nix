@@ -190,7 +190,7 @@ in {
       "Parcel"                = 639968404;
       "Pixelmator Pro"        = 1289583905;
       "Prime Video"           = 545519333;
-      "Shell Fish"            = 1336634154;
+      # "Shell Fish"            = 1336634154;
       "Soulver 3"             = 1508732804;
       "Whisper Transcription" = 1668083311;
       "WireGuard"             = 1451685025;
