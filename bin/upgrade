@@ -16,8 +16,8 @@ case $1 in
     athena)
         u switch check
         eval "$(/opt/homebrew/bin/brew shellenv)"
+	brew update
 	brew upgrade --greedy
-	ollama-update
         # notify "Nix on Athena upgraded"
         ;;
 

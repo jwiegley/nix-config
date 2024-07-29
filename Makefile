@@ -71,18 +71,15 @@ update:
 	fi
 	brew update
 
-upgrade-tasks: switch travel-ready
+upgrade-tasks: update switch travel-ready
 	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
 	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
 	elif [[ -f /usr/local/bin/brew ]]; then		\
 	    eval "$(/usr/local/bin/brew shellenv)";	\
 	fi
 	brew upgrade --greedy
-	ollama-update
 
-upgrade: update upgrade-tasks check
-
-upgrade-sync: upgrade copy switch-all travel-ready-all
+upgrade: upgrade-tasks check
 
 ########################################################################
 
