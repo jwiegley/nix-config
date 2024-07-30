@@ -120,8 +120,10 @@ in {
         ".gist".source        = mkLink "${config.xdg.configHome}/gist/api_key";
         ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
         ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
-        ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
         ".parallel".source    = mkLink "${config.xdg.configHome}/parallel";
+
+        ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
+        "${config.xdg.configHome}/ollama/models".source = mkLink "${config.xdg.dataHome}/ollama/models";
 
         ".docker".source      = mkLink "${config.xdg.dataHome}/docker";
 
@@ -144,6 +146,7 @@ in {
         "Audio".source           = mkLink "/Volumes/ext/Audio";
         "Photos".source          = mkLink "/Volumes/ext/Photos";
         "_Archived Items".source = mkLink "/Volumes/ext/_Archived Items";
+        "${config.xdg.dataHome}/ollama/models".source = mkLink "/Volumes/ext/Models";
       }
       // lib.optionalAttrs (hostname == "hermes") {
         "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Audio";
