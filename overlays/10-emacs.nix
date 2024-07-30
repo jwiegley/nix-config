@@ -32,7 +32,7 @@ let
           src = fetchFromEmacsWiki { inherit name sha256; };
         };
 
-    in {
+    in rec {
 
     edit-env        = compileLocalFile "edit-env.el";
     edit-var        = compileLocalFile "edit-var.el";
@@ -232,15 +232,64 @@ let
       buildInputs = with eself; [ cape yasnippet ];
     };
 
-    casual = compileEmacsFiles {
-      name = "casual";
+    casual-lib = compileEmacsFiles {
+      name = "casual-lib";
       src = (fetchFromGitHub {
         owner = "kickingvegas";
-        repo = "casual";
-        rev = "643af803258fd9524582fc1d56472ea44c70100f";
-        sha256 = "1jw82q82qzr41v7clwjcfvlhvyd02pacikga1sjfiq9bw9dj3alg";
-        # date = 2024-03-17T13:27:59-07:00;
+        repo = "casual-lib";
+        rev = "74ae8cf0b88efefe9afc58605ccb1576ec1b035a";
+        sha256 = "02pxnhp5idn6ypk5s5nl0df1s2pgmyy7g5p3hiyb52m972y1if35";
+        # date = "2024-07-16T13:21:37-07:00";
       }) + "/lisp";
+      buildInputs = with eself; [ casual ];
+    };
+
+    casual-dired = compileEmacsFiles {
+      name = "casual-dired";
+      src = (fetchFromGitHub {
+        owner = "kickingvegas";
+        repo = "casual-dired";
+        rev = "4be72b52f91700cdb529a185b8f6f21bd0a86542";
+        sha256 = "1lilb3gi8mmiiwdwr3xsy9pvm3nh5crzsvbh45dsk72wwgzjp94i";
+        # date = "2024-07-16T14:20:23-07:00";
+      }) + "/lisp";
+      buildInputs = with eself; [ casual-lib ];
+    };
+
+    casual-calc = compileEmacsFiles {
+      name = "casual-calc";
+      src = (fetchFromGitHub {
+        owner = "kickingvegas";
+        repo = "casual-calc";
+        rev = "47d8c4fd2b4a2d91d3891320a42451577d9c804a";
+        sha256 = "0qdi6p3aybg0zwscf35l2dx51q7h4rz2g7r4xf7ml520dag7h5cw";
+        # date = "2024-06-28T16:32:16-07:00";
+      }) + "/lisp";
+      buildInputs = with eself; [ casual-lib ];
+    };
+
+    casual-ibuffer = compileEmacsFiles {
+      name = "casual-ibuffer";
+      src = (fetchFromGitHub {
+        owner = "kickingvegas";
+        repo = "casual-ibuffer";
+        rev = "877bffe4e69f2715f5f84ad15ca54f4a14493b80";
+        sha256 = "0gpklvr70vwkhsbb0s9khaj4mv8mizdyjrag8q6f5ajivaxp67vi";
+        # date = "2024-07-29T20:29:38-07:00";
+      }) + "/lisp";
+      buildInputs = with eself; [ casual-lib ];
+    };
+
+    casual-bookmarks = compileEmacsFiles {
+      name = "casual-bookmarks";
+      src = (fetchFromGitHub {
+        owner = "kickingvegas";
+        repo = "casual-bookmarks";
+        rev = "e5f91bcc646d62166afaca9e9e4d6b904b4d0244";
+        sha256 = "1h1575wj1yq01gjbjs834y734a2qyqls0fqc7y3dqbzkrbw6q0sw";
+        # date = "2024-07-29T20:49:47-07:00";
+      }) + "/lisp";
+      buildInputs = with eself; [ casual-lib ];
     };
 
     consult-gh = compileEmacsFiles {

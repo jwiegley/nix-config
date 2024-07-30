@@ -61,7 +61,6 @@ in {
                            then "/Volumes/ext/Models"
                            else "${config.xdg.dataHome}/ollama/models";
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
-      RECOLL_CONFDIR     = "${config.xdg.configHome}/recoll";
       SCREENRC           = "${config.xdg.configHome}/screen/config";
       SSH_AUTH_SOCK      = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
       STARDICT_DATA_DIR  = "${config.xdg.dataHome}/dictionary";
@@ -118,15 +117,43 @@ in {
 
         ".cups".source        = mkLink "${config.xdg.configHome}/cups";
         ".dbvis".source       = mkLink "${config.xdg.configHome}/dbvis";
-        ".docker".source      = mkLink "${config.xdg.dataHome}/docker";
-        ".emacs.d".source     = mkLink "${home}/src/dot-emacs";
         ".gist".source        = mkLink "${config.xdg.configHome}/gist/api_key";
         ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
         ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
         ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
         ".parallel".source    = mkLink "${config.xdg.configHome}/parallel";
-        ".recoll".source      = mkLink "${config.xdg.configHome}/recoll";
+
+        ".docker".source      = mkLink "${config.xdg.dataHome}/docker";
+
         ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";
+
+        ".emacs.d".source     = mkLink "${home}/src/dot-emacs";
+        "dl".source           = mkLink "${home}/Downloads";
+        "iCloud".source       = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
+      }
+      // lib.optionalAttrs (hostname != "athena") {
+        "org".source    = mkLink "${home}/doc/org";
+        "Mobile".source = mkLink "${home}/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org";
+        "Drafts".source = mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
+        "Inbox".source  = mkLink "${home}/Library/Application Support/DEVONthink 3/Inbox";
+        "Media".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Media";
+        "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Video";
+        "Athena".source = mkLink "${home}/Library/CloudStorage/ShellFish/Athena";
+      }
+      // lib.optionalAttrs (hostname == "vulcan") {
+        "Audio".source           = mkLink "/Volumes/ext/Audio";
+        "Photos".source          = mkLink "/Volumes/ext/Photos";
+        "_Archived Items".source = mkLink "/Volumes/ext/_Archived Items";
+      }
+      // lib.optionalAttrs (hostname == "hermes") {
+        "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Audio";
+        "Photos".source = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Photos";
+      }
+      // lib.optionalAttrs (hostname == "athena") {
+        "Audio".source  = mkLink "/Volumes/tank/Audio";
+        "Media".source  = mkLink "/Volumes/tank/Media";
+        "Photos".source = mkLink "/Volumes/tank/Photos";
+        "Video".source  = mkLink "/Volumes/tank/Video";
       };
   };
 
@@ -705,17 +732,9 @@ in {
             lib.optionalAttrs (hostname != proxyJump) {
               inherit proxyJump;
             };
-          withLocal = attrs: attrs //
-            (if hostname == "vulcan" then {
-               identityFile = "${home}/vulcan/id_vulcan";
-             }
-             else if hostname == "athena" then {
-               identityFile = "${home}/athena/id_athena";
-             }
-             else if hostname == "hermes" then {
-               # always use the YubiKey when coming from a laptop
-             }
-             else {});
+          withLocal = attrs: attrs // {
+            identityFile = "${home}/${hostname}/id_${hostname}";
+          };
         in rec {
 
         # This is vulcan, as accessible from remote
@@ -812,13 +831,6 @@ in {
         data-dir ${pkgs.aspellDicts.en}/lib/aspell
         personal ${config.xdg.configHome}/aspell/en_US.personal
         repl ${config.xdg.configHome}/aspell/en_US.repl
-      '';
-
-      "recoll/mimeview".text = ''
-        xallexcepts- = application/pdf
-        xallexcepts+ =
-        [view]
-        application/pdf = ${emacsclient} -n --eval '(org-pdfview-open "%f::%p")'
       '';
     };
   };

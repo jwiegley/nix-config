@@ -28,7 +28,11 @@ pkgs: epkgs: with epkgs;
   bytecomp-simplify
   cape
   cargo
-  casual
+  casual-lib
+  casual-dired
+  casual-calc
+  # casual-ibuffer
+  casual-bookmarks
   centered-cursor-mode
   change-inner
   chatgpt-shell

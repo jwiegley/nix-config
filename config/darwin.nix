@@ -30,18 +30,18 @@ in {
           # Secure enclave on Hermes
           "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBB3Y8saKSHx76NQGC8CQBIec87Pe6Bk10TScomsWOW8YQ1Nb12RTLyMzq+WfpVwF9bmYvAEmbQ8H0F6n1Xfd8Y8= Hermes (enclave)"
         ];
-        keyFiles =
-          if hostname == "vulcan" then [
+        keyFiles = {
+          vulcan = [
             "${home}/${hostname}/id_athena.pub"
-          ]
-          else if hostname == "athena" then [
+          ];
+          athena = [
             "${home}/${hostname}/id_vulcan.pub"
-          ]
-          else if hostname == "hermes" then [
+          ];
+          hermes = [
             "${home}/${hostname}/id_vulcan.pub"
             "${home}/${hostname}/id_athena.pub"
-          ]
-          else [];
+          ];
+        }.${hostname};
       };
     };
   };
@@ -171,7 +171,10 @@ in {
     # "ScanSnap Online Update"
     # "ABBYY FineReader for ScanSnap"
 
-    masApps = (if hostname != "athena" then {
+    masApps = {
+      "Speedtest"             = 1153157709;
+      "Xcode"                 = 497799835;
+    } // lib.optionalAttrs (hostname != "athena") {
       "1Password for Safari"  = 1569813296;
       "Bible Study"           = 472790630;
       "DataGraph"             = 407412840;
@@ -195,9 +198,6 @@ in {
       "Whisper Transcription" = 1668083311;
       "WireGuard"             = 1451685025;
       "iMovie"                = 408981434;
-    } else {}) // {
-      "Speedtest"             = 1153157709;
-      "Xcode"                 = 497799835;
     };
   };
 
@@ -260,10 +260,10 @@ in {
 
       substituters = [
         # "https://cache.iog.io"
-      ] ++ lib.optionals (hostname == "vulcan") [];
+      ];
 
       trusted-substituters = [
-      ] ++ lib.optionals (hostname == "vulcan") [];
+      ];
 
       trusted-public-keys = [
         "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
@@ -405,11 +405,11 @@ in {
     };
   };
 
-  # networking = if hostname == "vulcan" then {
+  # networking = lib.optionalAttrs (hostname == "vulcan") {
   #   dns = [ "192.168.50.1" ];
   #   search = [ "local" ];
   #   knownNetworkServices = [ "Ethernet" "Thunderbolt Bridge" ];
-  # } else {};
+  # };
 
   launchd =
     let
