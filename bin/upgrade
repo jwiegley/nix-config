@@ -5,11 +5,29 @@ set -e
 case $1 in
     vulcan)
         u vulcan upgrade sign copy
+        (cd ~/src/comparable;                           \
+         source <(direnv apply_dump .envrc.cache);      \
+         cargo update;                                  \
+         cargo build;                                   \
+         cargo test)
+        (cd ~/src/org-jw;                               \
+         source <(direnv apply_dump .envrc.cache);      \
+         cabal v2-update;                               \
+         cabal v2-build all)
         # notify "Nix on Vulcan upgraded"
         ;;
 
     hermes)
         u hermes upgrade-tasks check
+        (cd ~/src/comparable;                           \
+         source <(direnv apply_dump .envrc.cache);      \
+         cargo update;                                  \
+         cargo build;                                   \
+         cargo test)
+        (cd ~/src/org-jw;                               \
+         source <(direnv apply_dump .envrc.cache);      \
+         cabal v2-update;                               \
+         cabal v2-build all)
         # notify "Nix on Hermes upgraded"
         ;;
 

@@ -173,6 +173,7 @@ pkgs: epkgs: with epkgs;
   link-hint
   lispy
   list-utils
+  literate-calc-mode
   lively
   logito
   loop
