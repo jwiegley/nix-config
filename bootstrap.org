@@ -1,4 +1,8 @@
-#+TITLE: Bootstrapping a new system
+:PROPERTIES:
+:ID:       5AB0D908-77B6-4FF0-993F-808861D0A7C6
+:CREATED:  [2024-08-01 Thu 11:36]
+:END:
+#+title: Bootstrap new macOS system with Nix
 
 After the system installation and copying of the =~/src= directory, first thing
 is to make =sudo= easier to use, if desired:
