@@ -250,7 +250,6 @@ pkgs: epkgs: with epkgs;
   ox-slack
   ox-texinfo-plus
   package-lint
-  packed
   pact-mode
   pandoc-mode
   paradox

@@ -133,30 +133,35 @@ in {
         "dl".source           = mkLink "${home}/Downloads";
         "iCloud".source       = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
       }
-      // lib.optionalAttrs (hostname != "athena") {
-        "org".source    = mkLink "${home}/doc/org";
-        "Mobile".source = mkLink "${home}/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org";
-        "Drafts".source = mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
-        "Inbox".source  = mkLink "${home}/Library/Application Support/DEVONthink 3/Inbox";
-        "Media".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Media";
-        "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Video";
-        "Athena".source = mkLink "${home}/Library/CloudStorage/ShellFish/Athena";
-      }
       // lib.optionalAttrs (hostname == "vulcan") {
         "Audio".source           = mkLink "/Volumes/ext/Audio";
         "Photos".source          = mkLink "/Volumes/ext/Photos";
+        "Video".source           = mkLink "/Volumes/ext/Video";
+
         "_Archived Items".source = mkLink "/Volumes/ext/_Archived Items";
+
         "${config.xdg.dataHome}/ollama/models".source = mkLink "/Volumes/ext/Models";
       }
       // lib.optionalAttrs (hostname == "hermes") {
         "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Audio";
         "Photos".source = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Photos";
+        "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Video";
       }
       // lib.optionalAttrs (hostname == "athena") {
         "Audio".source  = mkLink "/Volumes/tank/Audio";
-        "Media".source  = mkLink "/Volumes/tank/Media";
         "Photos".source = mkLink "/Volumes/tank/Photos";
         "Video".source  = mkLink "/Volumes/tank/Video";
+        "Media".source  = mkLink "/Volumes/tank/Media";
+      }
+      // lib.optionalAttrs (hostname != "athena") {
+        "org".source    = mkLink "${home}/doc/org";
+
+        "Mobile".source = mkLink "${home}/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org";
+        "Drafts".source = mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
+        "Inbox".source  = mkLink "${home}/Library/Application Support/DEVONthink 3/Inbox";
+
+        "Media".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Media";
+        "Athena".source = mkLink "${home}/Library/CloudStorage/ShellFish/Athena";
       };
   };
 

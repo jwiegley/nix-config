@@ -81,12 +81,23 @@ in {
       "iterm2"
       "vmware-fusion"
       "wireshark"
+    ] ++ lib.optionals (hostname == "vulcan") [
+      "fujitsu-scansnap-home"
+      "geektool"
+      "gzdoom"
+      "ledger-live"
+      "raspberry-pi-imager"
+      "chronosync"
+    ] ++ lib.optionals (hostname == "hermes") [
+      "chronoagent"
+    ] ++ lib.optionals (hostname == "athena") [
+      "openzfs"
     ] ++ lib.optionals (hostname != "athena") [
       "1password"
       "1password-cli"
       "affinity-photo"
       "anki"
-      # { name = "arc"; greedy = true; }
+      { name = "arc"; greedy = true; }
       "asana"
       "audacity"
       { name = "brave-browser"; greedy = true; }
@@ -101,7 +112,6 @@ in {
       "dungeon-crawl-stone-soup-tiles"
       "dupeguru"
       "element"
-      # "emacsclient"               # Not available
       "expandrive"
       "fantastical"
       { name = "firefox"; greedy = true; }
@@ -110,8 +120,8 @@ in {
       "keyboard-maestro"
       "launchbar"
       "lectrote"
-      # "macwhisper"                # Use Whisper Transcription in AppStore
-      # "marked"                    # Use Marked 2 in AppStore
+      # "macwhisper"                # Use Whisper Transcription in App Store
+      # "marked"                    # Use Marked 2 in App Store
       "mellel"
       "netdownloadhelpercoapp"
       "notion"
@@ -147,17 +157,6 @@ in {
       { name = "zoom"; greedy = true; }
       "zotero"
       "zulip"
-    ] ++ lib.optionals (hostname == "athena") [
-      "openzfs"
-    ] ++ lib.optionals (hostname == "hermes") [
-      "chronoagent"
-    ] ++ lib.optionals (hostname == "vulcan") [
-      "fujitsu-scansnap-home"
-      "geektool"
-      "gzdoom"
-      "ledger-live"
-      "raspberry-pi-imager"
-      "chronosync"
     ];
 
     ## The following software, or versions of software, are not available

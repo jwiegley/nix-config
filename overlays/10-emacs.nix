@@ -241,7 +241,6 @@ let
         sha256 = "02pxnhp5idn6ypk5s5nl0df1s2pgmyy7g5p3hiyb52m972y1if35";
         # date = "2024-07-16T13:21:37-07:00";
       }) + "/lisp";
-      buildInputs = with eself; [ casual ];
     };
 
     casual-dired = compileEmacsFiles {
@@ -589,11 +588,11 @@ let
     auctex = eself.elpaBuild {
       pname = "auctex";
       ename = "auctex";
-      version = "14.0.5";
+      version = "14.0.6";
       src = fetchurl {
-        url = "https://elpa.gnu.org/packages/auctex-14.0.5.tar";
-        sha256 = "0sycj6ad5jazmsxq37hsnvbywkpj66lrw3d3mxqr1wqkb67cdd3k";
-        # date = 2024-05-20T16:49:18-0700;
+        url = "https://elpa.gnu.org/packages/auctex-14.0.6.tar";
+        sha256 = "0cajri7x6770wjkrasa0p2s0dvcp74fpv1znac5wdfiwhvl1i9yr";
+        # date = 2024-08-01T11:08:09-0700;
       };
       packageRequires = with eself; [ cl-lib emacs ];
       meta = {
@@ -716,7 +715,7 @@ let
             (_: super.elpaPackages
              // super.melpaPackages
              // { inherit emacs;
-                  inherit (super) melpaBuild trivialBuild; }))));
+                  inherit (super) elpaBuild melpaBuild trivialBuild; }))));
 
 in {
 

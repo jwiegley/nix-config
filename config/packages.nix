@@ -7,13 +7,12 @@ let exe = if pkgs.stdenv.targetPlatform.isx86_64
           else pkgs.lib.id;
 
 in [
-  # (exe gitAndTools.git-annex)
   # (exe haskellPackages.git-all)
   # haskellPackages.pushme
+  # (exe haskellPackages.hours)
   haskellPackages.sizes
   (exe haskellPackages.una)
   (exe haskellPackages.git-monitor)
-  # (exe haskellPackages.hours)
   (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
   haskellPackages.org-jw
@@ -25,7 +24,7 @@ in [
   asciidoctor
   aspell
   aspellDicts.en
-  # awscli2
+  awscli2
   b3sum
   backblaze-b2
   bandwhich
@@ -51,8 +50,8 @@ in [
   dnsutils
   dot2tex
   doxygen
-  emacs29MacPortEnv
   # emacs29Env
+  emacs29MacPortEnv
   entr
   exiv2
   fd
@@ -73,7 +72,6 @@ in [
   gitAndTools.ghi
   gitAndTools.gist
   gitAndTools.git-absorb
-  # gitAndTools.git-annex-remote-rclone
   gitAndTools.git-branchless
   gitAndTools.git-branchstack
   gitAndTools.git-cliff
@@ -123,17 +121,15 @@ in [
   hammer
   hashdb
   highlight
-  # home-manager
   pkgs.hostname
   html-tidy
   htop
-  # httm
+  httm
   httpie
   httrack
   iftop
   imagemagickBig
   imapfilter
-  # goimapnotify
   imgcat
   inkscape.out
   iperf
@@ -162,7 +158,6 @@ in [
   lzop
   m-cli
   m4
-  # mercurialFull
   metabase
   mitmproxy
   more
@@ -178,12 +173,10 @@ in [
   nixpkgs-fmt
   nixfmt
   nmap
-  # node2nix
-  # nodePackages.csslint
-  # nodePackages.eslint
-  # nodePackages.js-beautify
-  # nodejs
-  # offlineimap
+  nodePackages.csslint
+  nodePackages.eslint
+  nodePackages.js-beautify
+  nodejs
   opam
   opensc
   openssh
@@ -213,11 +206,10 @@ in [
   pstree
   pv
   (pkgs.lowPrio python3)
-  qemu #libvirt
+  qemu libvirt
   qpdf
   qrencode
   ratpoison
-  rclone
   recoll
   renameutils
   restic
@@ -282,7 +274,6 @@ in [
   xsv
   xz
   yamale
-  # youtube-dl
   yq
   yuicompressor
   z
@@ -292,6 +283,10 @@ in [
   zip
   zsh
   zsh-syntax-highlighting
+
+  # (exe gitAndTools.git-annex)
+  # gitAndTools.git-annex-remote-rclone
+  # rclone
 
   # Kadena
   inputs.kadena-nix.packages.${pkgs.system}.kadena-cli
