@@ -523,8 +523,8 @@ in {
         serviceConfig = {
           StartCalendarInterval = [
             {
-              Hour = 2;
-              Minute = 30;
+              Hour = 3;
+              Minute = 0;
             }
           ];
           Nice = 5;

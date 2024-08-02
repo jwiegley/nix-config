@@ -165,6 +165,7 @@ pkgs: epkgs: with epkgs;
   json-mode
   json-reformat
   json-snatcher
+  jupyter
   key-chord
   keypression
   know-your-http-well
@@ -232,6 +233,7 @@ pkgs: epkgs: with epkgs;
   org-pdftools
   org-pomodoro
   org-ql
+  org-real
   org-remark
   org-rich-yank
   org-roam
