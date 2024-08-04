@@ -124,6 +124,7 @@ in {
         ".sage".source        = mkLink "${config.xdg.configHome}/sage";
         ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
         ".parallel".source    = mkLink "${config.xdg.configHome}/parallel";
+        ".viminfo".source     = mkLink "${config.xdg.configHome}/vim/info";
 
         ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
         "${config.xdg.configHome}/ollama/models".source = mkLink "${config.xdg.dataHome}/ollama/models";
