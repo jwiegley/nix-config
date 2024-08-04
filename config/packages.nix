@@ -210,7 +210,7 @@ in [
   qpdf
   qrencode
   ratpoison
-  recoll
+  # recoll
   renameutils
   restic
   ripgrep
