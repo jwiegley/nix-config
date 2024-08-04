@@ -110,7 +110,6 @@ in {
       "devonthink"
       "discord"
       "dungeon-crawl-stone-soup-tiles"
-      "dupeguru"
       "element"
       "expandrive"
       "fantastical"
