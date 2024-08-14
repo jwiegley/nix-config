@@ -1,6 +1,8 @@
 { pkgs, lib, config, hostname, inputs, ... }:
 
-let home            = builtins.getEnv "HOME";
+let am_traveling    = false;
+
+    home            = builtins.getEnv "HOME";
     tmpdir          = "/tmp";
 
     userName        = "John Wiegley";
@@ -22,9 +24,6 @@ let home            = builtins.getEnv "HOME";
     hermes_wifi     = "192.168.50.102";
 
     athena_ethernet = "192.168.50.235";
-    athena_wifi     = "192.168.50.3";
-
-    am_traveling    = false;
 
     external_ip     = "newartisans.hopto.org";
 
@@ -74,7 +73,6 @@ in {
       HERMES_ETHERNET    = hermes_ethernet;
       HERMES_WIFI        = hermes_wifi;
       ATHENA_ETHERNET    = athena_ethernet;
-      ATHENA_WIFI        = athena_wifi;
 
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
