@@ -783,8 +783,9 @@ in {
         };
 
         router = {
-          hostname = "rt-ax88u-3f30.local";
+          hostname = "192.168.50.1";
           user = "router";
+          port = 2203;
         };
 
         elpa = { hostname = "elpa.gnu.org"; user = "root"; };
