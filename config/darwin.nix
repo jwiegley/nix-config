@@ -174,6 +174,7 @@ in {
       "Xcode"                 = 497799835;
     } // lib.optionalAttrs (hostname != "athena") {
       "1Password for Safari"  = 1569813296;
+      "ASUS Device Discovery" = 995124504;
       "Bible Study"           = 472790630;
       "DataGraph"             = 407412840;
       "Drafts"                = 1435957248;
