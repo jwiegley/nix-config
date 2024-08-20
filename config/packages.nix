@@ -16,6 +16,7 @@ in [
   (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
   haskellPackages.org-jw
+  haskellPackages.renamer
   (exe haskellPackages.ormolu)
   (exe haskellPackages.pointfree)
   act

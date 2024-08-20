@@ -103,7 +103,6 @@ in {
       { name = "brave-browser"; greedy = true; }
       "carbon-copy-cloner"
       "choosy"
-      "darktable"
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
       "devonagent"
