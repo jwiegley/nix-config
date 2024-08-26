@@ -425,10 +425,10 @@ in {
       };
 
       profileExtra = ''
-        export GPG_TTY=$(tty)
-        if ! pgrep -x "gpg-agent" > /dev/null; then
-            ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
-        fi
+        # export GPG_TTY=$(tty)
+        # if ! pgrep -x "gpg-agent" > /dev/null; then
+        #     ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
+        # fi
 
         . ${pkgs.z}/share/z.sh
 
