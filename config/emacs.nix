@@ -24,15 +24,16 @@ pkgs: epkgs: with epkgs;
   boogie-friends
   bookmark-plus
   browse-kill-ring
+  bufler
+  burly
   button-lock
   bytecomp-simplify
   cape
   cargo
-  casual-lib
-  casual-dired
-  casual-calc
-  # casual-ibuffer
   casual-bookmarks
+  casual-calc
+  casual-dired
+  casual-lib
   centered-cursor-mode
   change-inner
   chatgpt-shell
@@ -130,7 +131,6 @@ pkgs: epkgs: with epkgs;
   fuzzy
   gerrit
   ghub
-  # git-annex
   git-link
   git-timemachine
   git-undo
@@ -184,6 +184,7 @@ pkgs: epkgs: with epkgs;
   magit
   magit-lfs
   magit-popup
+  magit-todos
   makey
   malyon
   marginalia
@@ -237,6 +238,7 @@ pkgs: epkgs: with epkgs;
   org-remark
   org-rich-yank
   org-roam
+  org-roam-nursery
   org-sticky-header
   org-super-agenda
   org-transclusion
@@ -280,6 +282,7 @@ pkgs: epkgs: with epkgs;
   pos-tip
   pp-c-l
   prodigy
+  projectile
   proof-general
   protobuf-mode
   python-mode
@@ -368,14 +371,8 @@ pkgs: epkgs: with epkgs;
   zoom
   zoutline
   ztree
-  bufler
-  burly
 
-  # taxy
-  # ement
-  # telega
-  magit-todos
-  # org-transclusion-http
-  hammy
-  # om-dash
+  org-pretty-table
+  org-recent-headings
+  osm
 ]

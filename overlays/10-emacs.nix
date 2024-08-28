@@ -460,6 +460,35 @@ let
       };
     };
 
+    org-pretty-table = compileEmacsFiles {
+      name = "org-pretty-table";
+      src = fetchFromGitHub {
+        owner = "Fuco1";
+        repo = "org-pretty-table";
+        rev = "38e4354bbf7a8d08294babd067fac697038119b1";
+        sha256 = "1bl2qsh871m9wp39lq7xzhd2z77vjjla8gijpfq899313yhfgq91";
+        # date = 2023-03-19T15:52:27+01:00;
+      };
+      buildInputs = with eself; [
+        org
+      ];
+    };
+
+    org-roam-nursery = compileEmacsFiles {
+      name = "org-roam-nursery";
+      src = fetchFromGitHub {
+        owner = "chrisbarrett";
+        repo = "nursery";
+        rev = "00a169c75b934a2eb42ea8620e8eebf34577d4ca";
+        sha256 = "0715bcqhgj503380fr8wgq41kg22x05qwykm5230zka74x6x7vy7";
+        # date = 2024-05-03T20:50:59+12:00;
+      };
+      preBuild = "cd lisp";
+      buildInputs = with eself; [
+        org-roam persist ht async f magit org-drill ts pcre2el consult memoize
+      ];
+    };
+
     ox-texinfo-plus = compileEmacsFiles {
       name = "ox-texinfo-plus";
       src = fetchFromGitHub {
