@@ -285,6 +285,8 @@ in [
   zsh
   zsh-syntax-highlighting
 
+  hyperorg
+
   # (exe gitAndTools.git-annex)
   # gitAndTools.git-annex-remote-rclone
   # rclone

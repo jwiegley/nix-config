@@ -100,6 +100,7 @@ pkgs: epkgs: with epkgs;
   emamux
   embark
   embark-consult
+  embark-org-roam
   emojify
   engine-mode
   epc
@@ -233,12 +234,15 @@ pkgs: epkgs: with epkgs;
   org-noter-pdftools
   org-pdftools
   org-pomodoro
+  org-pretty-table
   org-ql
   org-real
+  org-recent-headings
   org-remark
   org-rich-yank
   org-roam
   org-roam-nursery
+  org-roam-ui
   org-sticky-header
   org-super-agenda
   org-transclusion
@@ -247,6 +251,7 @@ pkgs: epkgs: with epkgs;
   orgit
   orgit-forge
   origami
+  osm
   ov
   ovpn-mode
   ox-gfm
@@ -371,8 +376,4 @@ pkgs: epkgs: with epkgs;
   zoom
   zoutline
   ztree
-
-  org-pretty-table
-  org-recent-headings
-  osm
 ]

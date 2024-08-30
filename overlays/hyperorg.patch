@@ -1,0 +1,10 @@
+--- i/src/hyperorg/reader.py
++++ w/src/hyperorg/reader.py
+@@ -120,6 +120,7 @@ class Reader:
+                 orgid = node.properties['ID']
+ 
+                 # Create orgparse independent content object
++                _log.info(f'Parsing node: {orgid}')
+                 content, backlinks = self._content_from_orgparse_node(node)
+ 
+                 # stored it indexed by its orgid
