@@ -245,6 +245,7 @@ pkgs: epkgs: with epkgs;
   org-roam-ui
   org-sticky-header
   org-super-agenda
+  org-timeline
   org-transclusion
   org-vcard
   org-web-tools
