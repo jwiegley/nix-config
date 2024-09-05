@@ -26,15 +26,17 @@ in {
     rev    = "6498fa6d61651dbe0a101992e9dd34d939ce034a";
     sha256 = "sha256-EhaP/dBqlug/EQTJTnZB5ZnDOCvzyBmFes02jBI/Lxg=";
   })
+  lnav
   csvkit
   svg2tikz                      # python dependency build stalls
   ;
 
   inherit (nixpkgs {
     # rev    = "known-good-20240507_090322";
-    rev    = "cc6431d5598071f0021efc6c009c79e5b5fe1617";
-    sha256 = "sha256-GtwK9hQMbN+FxSD2eTioBOi2P47+t3oqnY4ZGJl53+k=";
+    rev    = "038fb464fcfa79b4f08131b07f2d8c9a6bcc4160";
+    sha256 = "sha256-Ul3rIdesWaiW56PS/Ak3UlJdkwBrD4UcagCmXZR9Z7Y=";
   })
-  lnav
+  texinfo4
+  watchman
   ;
 }

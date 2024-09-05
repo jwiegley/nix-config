@@ -82,6 +82,7 @@ pkgs: epkgs: with epkgs;
   docker-compose-mode
   dockerfile-mode
   easy-kill
+  eager-state
   eat
   ebdb
   edbi
@@ -220,6 +221,7 @@ pkgs: epkgs: with epkgs;
   org-annotate
   org-appear
   org-bookmark-heading
+  org-caldav
   org-contacts
   org-contrib
   org-download
@@ -229,6 +231,7 @@ pkgs: epkgs: with epkgs;
   org-gcal
   org-mime
   org-modern
+  org-mru-clock
   org-msg
   org-noter
   org-noter-pdftools
@@ -377,4 +380,7 @@ pkgs: epkgs: with epkgs;
   zoom
   zoutline
   ztree
+
+  org-timeblock
+  org-hyperscheduler
 ]

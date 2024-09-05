@@ -73,7 +73,7 @@ in [
   gitAndTools.ghi
   gitAndTools.gist
   gitAndTools.git-absorb
-  gitAndTools.git-branchless
+  # gitAndTools.git-branchless
   gitAndTools.git-branchstack
   gitAndTools.git-cliff
   gitAndTools.git-codeowners
@@ -174,9 +174,9 @@ in [
   nixpkgs-fmt
   nixfmt
   nmap
-  nodePackages.csslint
-  nodePackages.eslint
-  nodePackages.js-beautify
+  # nodePackages.csslint
+  # nodePackages.eslint
+  # nodePackages.js-beautify
   nodejs
   opam
   opensc

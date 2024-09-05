@@ -225,9 +225,9 @@ let
       src = fetchFromGitHub {
         owner = "elken";
         repo = "cape-yasnippet";
-        rev = "744dedb7837d0c7e07817d36ec752a0cd813f55c";
-        sha256 = "09smh2r0yysxqg3ixx0nssdz8kzqy5s1d687vbdijvhg3prcc8q4";
-        # date = 2024-04-21T19:48:14+01:00;
+        rev = "4c2e33d70cd1d95cf1e08d134b058a6dd90a99c9";
+        sha256 = "0zqwrk1sssivjl9mjj9wm8s8c83hn23r3gxv13hg6dzh97rxllk8";
+        # date = 2024-07-16T11:54:31+01:00;
       };
       buildInputs = with eself; [ cape yasnippet ];
     };
@@ -237,9 +237,9 @@ let
       src = (fetchFromGitHub {
         owner = "kickingvegas";
         repo = "casual-lib";
-        rev = "74ae8cf0b88efefe9afc58605ccb1576ec1b035a";
-        sha256 = "02pxnhp5idn6ypk5s5nl0df1s2pgmyy7g5p3hiyb52m972y1if35";
-        # date = "2024-07-16T13:21:37-07:00";
+        rev = "66bf8342eee76710df8075158d1e69c633bbd970";
+        sha256 = "1qzwzvrp94f2sw861q2jgjnil18m85nm0mryy92rdvijni2l0dj9";
+        # date = "2024-08-27T15:23:48-07:00";
       }) + "/lisp";
     };
 
@@ -248,9 +248,9 @@ let
       src = (fetchFromGitHub {
         owner = "kickingvegas";
         repo = "casual-dired";
-        rev = "4be72b52f91700cdb529a185b8f6f21bd0a86542";
-        sha256 = "1lilb3gi8mmiiwdwr3xsy9pvm3nh5crzsvbh45dsk72wwgzjp94i";
-        # date = "2024-07-16T14:20:23-07:00";
+        rev = "e32b120914bc1a9b62830ff291518ffeb98ae0e4";
+        sha256 = "0dhhd72snhsmmhh5g9314fprdlrkrzlxha0vsnmrgyc2kqsnv6md";
+        # date = "2024-08-27T21:48:18-07:00";
       }) + "/lisp";
       buildInputs = with eself; [ casual-lib ];
     };
@@ -260,9 +260,9 @@ let
       src = (fetchFromGitHub {
         owner = "kickingvegas";
         repo = "casual-calc";
-        rev = "47d8c4fd2b4a2d91d3891320a42451577d9c804a";
-        sha256 = "0qdi6p3aybg0zwscf35l2dx51q7h4rz2g7r4xf7ml520dag7h5cw";
-        # date = "2024-06-28T16:32:16-07:00";
+        rev = "3966fdd42686d234f69382ceb2e83a5b82ad60e7";
+        sha256 = "0640hq1nc5n7y6jzkbf0qn8lmprzhzllzkna9zbiqkia4jxcp9ws";
+        # date = "2024-08-27T21:37:28-07:00";
       }) + "/lisp";
       buildInputs = with eself; [ casual-lib ];
     };
@@ -272,9 +272,9 @@ let
       src = (fetchFromGitHub {
         owner = "kickingvegas";
         repo = "casual-ibuffer";
-        rev = "877bffe4e69f2715f5f84ad15ca54f4a14493b80";
-        sha256 = "0gpklvr70vwkhsbb0s9khaj4mv8mizdyjrag8q6f5ajivaxp67vi";
-        # date = "2024-07-29T20:29:38-07:00";
+        rev = "db35b7033ab0a1cc65992c1587d109cb1722283b";
+        sha256 = "11h6gpwp6grakz106dfbxlimz8f3181aqy517b5239q20p6b40na";
+        # date = "2024-08-27T22:07:32-07:00";
       }) + "/lisp";
       buildInputs = with eself; [ casual-lib ];
     };
@@ -284,9 +284,9 @@ let
       src = (fetchFromGitHub {
         owner = "kickingvegas";
         repo = "casual-bookmarks";
-        rev = "e5f91bcc646d62166afaca9e9e4d6b904b4d0244";
-        sha256 = "1h1575wj1yq01gjbjs834y734a2qyqls0fqc7y3dqbzkrbw6q0sw";
-        # date = "2024-07-29T20:49:47-07:00";
+        rev = "6ff2146a6e4afa00d2479a8bcc75fa57c24a391b";
+        sha256 = "072hn06laqaqs1f6kx4z9s01gz42m42czx5g8wghsilyh7r8r07r";
+        # date = "2024-08-27T20:19:49-07:00";
       }) + "/lisp";
       buildInputs = with eself; [ casual-lib ];
     };
@@ -322,6 +322,17 @@ let
         rev = "94b09260ac964e3d856c018d66af3214915dd826";
         sha256 = "0h5idb2q52yly8dcsrfr2prn20n3q2rhzk3ss5a0xj36i9wls275";
         # date = 2022-02-28T13:43:50-08:00;
+      };
+    };
+
+    eager-state = compileEmacsFiles {
+      name = "eager-state";
+      src = fetchFromGitHub {
+        owner = "meedstrom";
+        repo = "eager-state";
+        rev = "a507fea250d57dde4fff2cfeec8a22c3e2841167";
+        sha256 = "0l6bj1yhradcv958g1pzkmsmfam9c0r8v8jf8clb90lz3hvvdmfp";
+        # date = 2024-08-23T16:09:59+02:00;
       };
     };
 
@@ -362,9 +373,9 @@ let
       src = fetchFromGitHub {
         owner = "karthink";
         repo = "gptel";
-        rev = "9a5a4a60d5aa0bad11f632135bacaf4bf592d56a";
-        sha256 = "16f8bb9qlin0x4iv6g14bha5dywgxfcqmnpqzypfhr8wjqdkpb6n";
-        # date = 2024-03-21T11:30:30-07:00;
+        rev = "defe48bb8c56e678d8c1e7b5e278cccd95f9bc3d";
+        sha256 = "192ny3ilq16n4fhd1r6qbdjmz7kq6fq37kwn37j7v36lyhzv7wvr";
+        # date = 2024-09-04T21:39:34-07:00;
       };
     };
 
@@ -608,9 +619,9 @@ let
       src = (fetchFromGitHub {
         owner = "agda";
         repo = "agda";
-        rev = "20ad6b5d02f7a647e83cc493d8b4e11e22cac8c9";
-        sha256 = "142x7466kwvc19m1c2pz66i7ni5b5jvkpgdpc34di8ml6rvrfcqf";
-        # date = 2024-06-27T17:34:53+02:00;
+        rev = "1ca774278a208761a92325720057ea34ee2a41b7";
+        sha256 = "1jvy1v0kijvqks2mqq4i3ag3yf35mag6vpx9b2dvymmff1dncgdd";
+        # date = 2024-09-04T17:18:11+02:00;
       }) + "/src/data/emacs-mode";
     };
 
@@ -630,31 +641,31 @@ let
       };
     };
 
-    pdf-tools = esuper.pdf-tools.overrideAttrs (old: {
-      nativeBuildInputs = [
-        self.autoconf
-        self.automake
-        self.pkg-config
-        self.removeReferencesTo
-      ];
-      buildInputs = old.buildInputs ++ [ self.libpng self.zlib self.poppler ];
-      preBuild = ''
-        make server/epdfinfo
-        remove-references-to \
-          -t ${self.stdenv.cc.libc} \
-          -t ${self.glib.dev} \
-          -t ${self.libpng.dev} \
-          -t ${self.poppler.dev} \
-          -t ${self.zlib.dev} \
-          -t ${self.cairo.dev} \
-          server/epdfinfo
-      '';
-      recipe = self.writeText "recipe" ''
-        (pdf-tools
-        :repo "politza/pdf-tools" :fetcher github
-        :files ("lisp/pdf-*.el" "server/epdfinfo"))
-      '';
-    });
+    # pdf-tools = esuper.pdf-tools.overrideAttrs (old: {
+    #   nativeBuildInputs = [
+    #     self.autoconf
+    #     self.automake
+    #     self.pkg-config
+    #     self.removeReferencesTo
+    #   ];
+    #   buildInputs = old.buildInputs ++ [ self.libpng self.zlib self.poppler ];
+    #   preBuild = ''
+    #     make server/epdfinfo
+    #     remove-references-to \
+    #       -t ${self.stdenv.cc.libc} \
+    #       -t ${self.glib.dev} \
+    #       -t ${self.libpng.dev} \
+    #       -t ${self.poppler.dev} \
+    #       -t ${self.zlib.dev} \
+    #       -t ${self.cairo.dev} \
+    #       server/epdfinfo
+    #   '';
+    #   recipe = self.writeText "recipe" ''
+    #     (pdf-tools
+    #     :repo "politza/pdf-tools" :fetcher github
+    #     :files ("lisp/pdf-*.el" "server/epdfinfo"))
+    #   '';
+    # });
 
     proof-general =
       let texinfo = pkgs.texinfo4 ;
@@ -668,9 +679,9 @@ let
      src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "911cf014b899212815c2ec8d3e8c8b88be0df57b";
-        sha256 = "12a1sgk6141znagq0p7xnflcxhm7s8gccg24mkrccbiykyxif8jz";
-        # date = "2023-04-07T11:09:09+02:00";
+        rev = "c3e6c391e7eeb6f495327eae4fab8619fed70748";
+        sha256 = "06zp0gns72ncwchhqgvzvddlh6bbg60qm5bap294nxzik8ccgaxb";
+        # date = "2024-09-02T13:21:59+02:00";
       };
 
       # src = ~/src/proof-general;
@@ -699,13 +710,13 @@ let
 
     xeft = mkDerivation rec {
       name = "xeft-${version}";
-      version = "3.0";
+      version = "3.3";
 
       src = fetchgit {
         url = https://git.sr.ht/~casouri/xeft;
-        rev = "e88f73979d50247d9fc1ba730022caaffb5bc317";
-        sha256 = "1n01j3iw1nplsdcqn91rmcm3ka0rxvsnbd0kwfjmj8zvbgvsvzfn";
-        # date = 2023-03-22T15:39:50-07:00;
+        rev = "32735a2a631fc2957b79cc65ad851546b7d572df";
+        sha256 = "1z96d2akm0qnb86cmndnqbblhsl03sfzql26v59jpqfiiamnlnc0";
+        # date = 2023-09-13T22:05:28-07:00;
       };
 
       propagatedBuildInputs = [ eself.emacs ] ++ (with pkgs; [
@@ -774,7 +785,10 @@ emacs29MacPort =
   (if pkgs.stdenv.targetPlatform.isx86_64
    then pkgs.emacs29-macport
    else self.emacs29MacPortAlt).overrideAttrs (o: {
-     configureFlags = o.configureFlags ++ [ "--with-natural-title-bar" ];
+     configureFlags = o.configureFlags ++ [
+       "--with-natural-title-bar"
+       "CFLAGS=-DMAC_OS_X_VERSION_MAX_ALLOWED=101201"
+     ];
    });
 
 emacs29MacPortPackages   = self.emacs29MacPortPackagesNg;
