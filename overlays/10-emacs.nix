@@ -511,17 +511,6 @@ let
       };
     };
 
-    per-window-point = compileEmacsFiles {
-      name = "per-window-point";
-      src = fetchFromGitHub {
-        owner = "alpaker";
-        repo = "Per-Window-Point";
-        rev = "deb161520428e60fdc353335b46eb1f5392d96f8";
-        sha256 = "1fj65r5vlkihgx6n2j7kdnragz3apy3428lbs6y23lfcs6q8l18z";
-        # date = 2020-10-22T10:30:08-07:00;
-      };
-    };
-
     peval = compileEmacsFiles {
       name = "peval";
       src = fetchFromGitHub {
@@ -637,6 +626,26 @@ let
       packageRequires = with eself; [ cl-lib emacs ];
       meta = {
         homepage = "https://elpa.gnu.org/packages/auctex.html";
+        license = lib.licenses.free;
+      };
+    };
+
+    org = eself.elpaBuild {
+      pname = "org";
+      ename = "org";
+      version = "9.6.30";
+      src = fetchurl {
+        url = "https://elpa.gnu.org/packages/org-9.6.30.tar";
+        sha256 = "0h2p7gjiys5ch68y35l6bpw9pp852vprmfzi0dk86z1wkilhycip";
+      };
+      # version = "9.7.11";
+      # src = fetchurl {
+      #   url = "https://elpa.gnu.org/packages/org-9.7.11.tar";
+      #   sha256 = "08gfzj1siy2lr4vny1zqkv7290qd9skwd4lqa8ky3y4a25spz0ia";
+      #   # date = 2024-09-05T10:56:30-0700;
+      # };
+      meta = {
+        homepage = "https://elpa.gnu.org/devel/org.html";
         license = lib.licenses.free;
       };
     };

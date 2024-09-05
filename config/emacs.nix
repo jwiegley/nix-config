@@ -275,7 +275,6 @@ pkgs: epkgs: with epkgs;
   pcre2el
   pdf-tools
   pdfgrep
-  per-window-point
   persistent-scratch
   persistent-soft
   peval
@@ -381,6 +380,9 @@ pkgs: epkgs: with epkgs;
   zoutline
   ztree
 
+  calfw
+  calfw-org
+  khoj
   org-timeblock
   org-hyperscheduler
 ]
