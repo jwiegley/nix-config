@@ -3,7 +3,7 @@ self: pkgs:
 let
   myEmacsPackageOverrides = eself: esuper:
     let
-      inherit (pkgs) fetchurl fetchgit fetchFromGitHub stdenv lib;
+      inherit (pkgs) fetchurl fetchgit fetchFromGitHub fetchzip stdenv lib;
       inherit (stdenv) mkDerivation;
 
       withPatches = pkg: patches:
@@ -630,25 +630,45 @@ let
       };
     };
 
-    org = eself.elpaBuild {
-      pname = "org";
-      ename = "org";
-      version = "9.6.30";
-      src = fetchurl {
-        url = "https://elpa.gnu.org/packages/org-9.6.30.tar";
-        sha256 = "0h2p7gjiys5ch68y35l6bpw9pp852vprmfzi0dk86z1wkilhycip";
+    org =
+      let
+        versions = {
+          "9.7.11" = "1vlcqgxw8sn3iygwilbyfpibqpmw9fvqg9q8rz9d6bp2pzdpz398"; # bad
+          "9.7.10" = "13v4718xpkidmdk2jnr2a2khr9s83lxf0py21ih9dix76lha04aj";
+          "9.7.9" = "sha256-zyGzYG19PL6c+jV6h9deP1kzR+kr1t37lWF2jptNOvg="; # bad
+          "9.7.8" = "sha256-tsoCarXINn0a7wnfu4Y0NapSikpmaYczuo6oddyOINs="; # bad
+          "9.7.7" = "1afwp8har8cykv06sp4ldxdjm0vrszsgkdr5ns59s8l9ib3wg0gn";
+          "9.7.6" = "sha256-zyb09gU8yGXGuadZUb/VsA73/4HOhvN4GO3b5pdgsl8="; # good
+          "9.7.5" = "0icywg7hn26nmsvjvvw0mnkriyxjnqmz4az41rziyw07h06ml97b";
+          "9.7.4" = "0pd2awxv1gm9pq9gbr278dsdi7hhr3j6dya9radibayih2ldpqx8";
+          "9.7.3" = "1ar95jd7m20q8xcqyqqbpvymxr8122bmvxkwcmn5zh08yi9s6hq5";
+          "9.7.2" = "1wrad9w7njrg50sv61h347g049rrzh3i51vmamc29zk9zldsgack";
+          "9.7.1" = "1lm3qjsxn926ffx274va04k7abd1wqv5gb76lgi9qr6xhbq3kv79";
+          "9.6.30" = "1znagz7wrzh63xm23xff57qwqh1sxxfmqq6dzdfdf1qfdblbbg8x"; # good
+        };
+        version = "9.7.6";
+      in eself.elpaBuild {
+        pname = "org";
+        ename = "org";
+        inherit version;
+        src =
+          if version == "9.7.11"
+          then fetchurl {
+            url = "https://elpa.gnu.org/packages/org-${version}.tar";
+            sha256 = versions."${version}";
+          }
+          else fetchurl {
+            name = "org-${version}.tar";
+            url = "https://elpa.gnu.org/packages/org-${version}.tar.lz";
+            sha256 = versions."${version}";
+            downloadToTemp = true;
+            postFetch = "${pkgs.lzip}/bin/lzip -dc $downloadedFile > $out";
+          };
+        meta = {
+          homepage = "https://elpa.gnu.org/devel/org.html";
+          license = lib.licenses.free;
+        };
       };
-      # version = "9.7.11";
-      # src = fetchurl {
-      #   url = "https://elpa.gnu.org/packages/org-9.7.11.tar";
-      #   sha256 = "08gfzj1siy2lr4vny1zqkv7290qd9skwd4lqa8ky3y4a25spz0ia";
-      #   # date = 2024-09-05T10:56:30-0700;
-      # };
-      meta = {
-        homepage = "https://elpa.gnu.org/devel/org.html";
-        license = lib.licenses.free;
-      };
-    };
 
     # pdf-tools = esuper.pdf-tools.overrideAttrs (old: {
     #   nativeBuildInputs = [
