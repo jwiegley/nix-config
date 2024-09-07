@@ -638,15 +638,15 @@ let
           "9.7.9" = "sha256-zyGzYG19PL6c+jV6h9deP1kzR+kr1t37lWF2jptNOvg="; # bad
           "9.7.8" = "sha256-tsoCarXINn0a7wnfu4Y0NapSikpmaYczuo6oddyOINs="; # bad
           "9.7.7" = "1afwp8har8cykv06sp4ldxdjm0vrszsgkdr5ns59s8l9ib3wg0gn";
-          "9.7.6" = "sha256-zyb09gU8yGXGuadZUb/VsA73/4HOhvN4GO3b5pdgsl8="; # good
+          "9.7.6" = "sha256-zyb09gU8yGXGuadZUb/VsA73/4HOhvN4GO3b5pdgsl8="; # bad
           "9.7.5" = "0icywg7hn26nmsvjvvw0mnkriyxjnqmz4az41rziyw07h06ml97b";
           "9.7.4" = "0pd2awxv1gm9pq9gbr278dsdi7hhr3j6dya9radibayih2ldpqx8";
-          "9.7.3" = "1ar95jd7m20q8xcqyqqbpvymxr8122bmvxkwcmn5zh08yi9s6hq5";
+          "9.7.3" = "sha256-lHgZi6vvOSW89XZAFFjtgDWzbg2rhdAauiNI04q8vVE="; #bad
           "9.7.2" = "1wrad9w7njrg50sv61h347g049rrzh3i51vmamc29zk9zldsgack";
-          "9.7.1" = "1lm3qjsxn926ffx274va04k7abd1wqv5gb76lgi9qr6xhbq3kv79";
-          "9.6.30" = "1znagz7wrzh63xm23xff57qwqh1sxxfmqq6dzdfdf1qfdblbbg8x"; # good
+          "9.7.1" = "sha256-a/TIAdLpBtAhA9FfazFIvBVTc2rz9VeDfxZlwjkO88U="; #?
+          "9.6.30" = "sha256-NzIPaZw8fINmA/G7mu8WBd2b+F2GluGRgaxoH+U7V0A="; # good
         };
-        version = "9.7.6";
+        version = "9.6.30";
       in eself.elpaBuild {
         pname = "org";
         ename = "org";
