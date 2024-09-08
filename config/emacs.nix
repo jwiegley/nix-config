@@ -382,8 +382,11 @@ pkgs: epkgs: with epkgs;
   ztree
 
   calfw
+  calfw-cal
   calfw-org
   khoj
-  org-timeblock
-  org-hyperscheduler
+  org-superstar
+  # org-timeblock
+  # org-hyperscheduler
+  ultra-scroll-mac
 ]

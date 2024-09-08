@@ -557,6 +557,17 @@ let
       };
     };
 
+    ultra-scroll-mac = compileEmacsFiles {
+      name = "ultra-scroll-mac";
+      src = fetchFromGitHub {
+        owner = "jdtsmith";
+        repo = "ultra-scroll-mac";
+        rev = "07fbe0d10ec0d68207cbe0675c139f31d2b4d516";
+        sha256 = "0jy45lnacv3a719qa0365rg8msy1y9hjg1w0swcffpaw8gyml3y1";
+        # date = 2024-05-07T22:37:33-04:00;
+      };
+    };
+
     vcard-mode = compileEmacsFiles {
       name = "vcard-mode";
       src = fetchFromGitHub {
