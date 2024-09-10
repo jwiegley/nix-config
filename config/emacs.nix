@@ -389,4 +389,12 @@ pkgs: epkgs: with epkgs;
   # org-timeblock
   # org-hyperscheduler
   ultra-scroll-mac
+
+  org-upcoming-modeline
+  org-review
+  org-sidebar
+  # org-gtd
+  jinx
+  helpful
+  lasgun
 ]

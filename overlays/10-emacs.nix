@@ -425,6 +425,18 @@ let
     #   buildInputs = with eself; [ color-moccur ];
     # };
 
+    lasgun = compileEmacsFiles {
+      name = "lasgun";
+      src = fetchFromGitHub {
+        owner = "aatmunbaxi";
+        repo = "lasgun.el";
+        rev = "49f013d4130965cc45b1ff0e2f0def98e5e51f75";
+        sha256 = "130l9bdxr27lbgbaah27x0gjj4ivs8b276lf1iqwnm9hh9m9xgmh";
+        # date = 2024-06-23T13:20:01-05:00;
+      };
+      buildInputs = with eself; [ avy multiple-cursors ];
+    };
+
     moccur-edit = compileEmacsFiles {
       name = "moccur-edit";
       src = fetchFromGitHub {
@@ -498,6 +510,18 @@ let
       buildInputs = with eself; [
         org-roam persist ht async f magit org-drill ts pcre2el consult memoize
       ];
+    };
+
+    ox-slack = compileEmacsFiles {
+      name = "ox-slack";
+      src = fetchFromGitHub {
+        owner = "masukomi";
+        repo = "ox-slack";
+        rev = "0c08db7248d12519a64ed7924cf52d25be0c1f6d";
+        sha256 = "0sk9vbax5b64dbmqjb41rbs82adb9d71j8sp6i0lmldsv3f8h3pa";
+        # date = 2022-09-14T10:19:41-04:00;
+      };
+      buildInputs = with eself; [ ox-gfm ];
     };
 
     ox-texinfo-plus = compileEmacsFiles {

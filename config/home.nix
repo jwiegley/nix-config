@@ -117,7 +117,6 @@ in {
         ".dbvis".source       = mkLink "${config.xdg.configHome}/dbvis";
         ".gist".source        = mkLink "${config.xdg.configHome}/gist/api_key";
         ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
-        ".ipython".source     = mkLink "${config.xdg.configHome}/ipython";
         ".jupyter".source     = mkLink "${config.xdg.configHome}/jupyter";
         ".sage".source        = mkLink "${config.xdg.configHome}/sage";
         ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
