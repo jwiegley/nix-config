@@ -128,6 +128,7 @@ in {
       # "omnigraffle"               # Stay at version 6
       { name = "opera"; greedy = true; }
       "pdf-expert"
+      "rustrover"
       "sage"
       # "screenflow"                # Stay at version 9
       "signal"
