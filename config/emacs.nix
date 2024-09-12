@@ -161,6 +161,7 @@ pkgs: epkgs: with epkgs;
   indent-shift
   info-lookmore
   ipcalc
+  jinx
   jobhours
   jq-mode
   js2-mode
@@ -381,20 +382,23 @@ pkgs: epkgs: with epkgs;
   zoutline
   ztree
 
+  # org-gtd
+  # org-hyperscheduler
   calfw
   calfw-cal
   calfw-org
+  helpful
   khoj
-  org-superstar
-  # org-timeblock
-  # org-hyperscheduler
-  ultra-scroll-mac
-
-  org-upcoming-modeline
+  lasgun
+  org-auto-expand
+  org-autolist
+  org-edit-indirect
+  org-fancy-priorities
+  org-notifications
   org-review
   org-sidebar
-  # org-gtd
-  jinx
-  helpful
-  lasgun
+  org-superstar
+  org-timeblock
+  org-upcoming-modeline
+  ultra-scroll-mac
 ]
