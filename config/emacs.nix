@@ -81,8 +81,8 @@ pkgs: epkgs: with epkgs;
   docker
   docker-compose-mode
   dockerfile-mode
-  easy-kill
   eager-state
+  easy-kill
   eat
   ebdb
   edbi
@@ -145,6 +145,7 @@ pkgs: epkgs: with epkgs;
   graphviz-dot-mode
   haskell-mode
   hcl-mode
+  helpful
   helpful
   highlight
   highlight-cl
@@ -340,6 +341,7 @@ pkgs: epkgs: with epkgs;
   tuareg
   typescript-mode
   typo
+  ultra-scroll-mac
   undo-propose
   unicode-fonts
   use-package
@@ -387,7 +389,6 @@ pkgs: epkgs: with epkgs;
   calfw
   calfw-cal
   calfw-org
-  helpful
   khoj
   lasgun
   org-auto-expand
@@ -400,5 +401,4 @@ pkgs: epkgs: with epkgs;
   org-superstar
   org-timeblock
   org-upcoming-modeline
-  ultra-scroll-mac
 ]
