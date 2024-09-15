@@ -242,7 +242,7 @@ in {
     # rather than whatever is the current unstable version.
     #
     # See https://yusef.napora.org/blog/pinning-nixpkgs-flake
-    registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
+    # registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
 
     nixPath = lib.mkForce (
          lib.mapAttrsToList (key: value: "${key}=${value.to.path}")
