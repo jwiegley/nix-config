@@ -389,6 +389,7 @@ pkgs: epkgs: with epkgs;
   calfw
   calfw-cal
   calfw-org
+  elgantt
   khoj
   lasgun
   org-auto-expand

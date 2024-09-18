@@ -336,6 +336,18 @@ let
       };
     };
 
+    elgantt = compileEmacsFiles {
+      name = "elgantt";
+      src = fetchFromGitHub {
+        owner = "legalnonsense";
+        repo = "elgantt";
+        rev = "23fe6a3dd4f1a991e077f13869fb960b8b29e183";
+        sha256 = "18cgmg8pkbji6945kwdw99hb6vvfvvqkavgb8dbcpk657nqbjq28";
+        # date = 2024-02-23T22:42:27-05:00;
+      };
+      buildInputs = with eself; [ org-ql ts s dash ];
+    };
+
     egerrit = compileEmacsFiles {
       name = "egerrit";
       src = fetchgit {
