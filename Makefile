@@ -60,10 +60,8 @@ switch:
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
 update:
-	$(call announce,nix flake lock --update-input && brew update)
-	nix flake lock --update-input nixpkgs
-	nix flake lock --update-input darwin
-	nix flake lock --update-input home-manager
+	$(call announce,nix flake update --commit-lock-file && brew update)
+	nix flake update --commit-lock-file
 	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
 	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
 	elif [[ -f /usr/local/bin/brew ]]; then		\
