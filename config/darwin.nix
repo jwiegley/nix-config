@@ -108,6 +108,7 @@ in {
       "devonagent"
       "devonthink"
       "discord"
+      "duckduckgo"
       "dungeon-crawl-stone-soup-tiles"
       "element"
       "expandrive"

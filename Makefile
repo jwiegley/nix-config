@@ -69,7 +69,7 @@ update:
 	fi
 	brew update
 
-upgrade-tasks: update switch travel-ready
+upgrade-tasks: switch travel-ready
 	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
 	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
 	elif [[ -f /usr/local/bin/brew ]]; then		\
@@ -77,7 +77,7 @@ upgrade-tasks: update switch travel-ready
 	fi
 	brew upgrade --greedy
 
-upgrade: upgrade-tasks check
+upgrade: update upgrade-tasks check
 
 ########################################################################
 
