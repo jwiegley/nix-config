@@ -509,6 +509,25 @@ let
       ];
     };
 
+    org-noter-plus = compileEmacsFiles {
+      name = "org-noter-plus";
+      src = fetchFromGitHub {
+        owner = "dmitrym0";
+        repo = "org-noter-plus";
+        rev = "f4c318b1bea6a14a20bf82269dc2614dbf15a1cb";
+        sha256 = "0lhx8nypzihwasj63qbjbj0dk18bdr8ms1q5aakc5mn6s65jc2n5";
+        # date = 2023-02-05T19:06:01-08:00;
+      };
+      preBuild = ''
+        rm emacs-devel.el
+        mv modules/*.el .
+        mv other/*.el .
+      '';
+      buildInputs = with eself; [
+        org org-pdftools pdf-tools log4e citar nov org-ref
+      ];
+    };
+
     org-roam-nursery = compileEmacsFiles {
       name = "org-roam-nursery";
       src = fetchFromGitHub {

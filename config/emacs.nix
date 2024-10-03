@@ -117,7 +117,6 @@ pkgs: epkgs: with epkgs;
   expand-region
   eyebrowse
   f
-  fancy-narrow
   feebleline
   fence-edit
   flycheck
@@ -236,8 +235,9 @@ pkgs: epkgs: with epkgs;
   org-modern
   org-mru-clock
   org-msg
-  org-noter
-  org-noter-pdftools
+  # org-noter
+  # org-noter-pdftools
+  org-noter-plus
   org-pdftools
   org-pomodoro
   org-pretty-table
