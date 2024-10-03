@@ -191,7 +191,6 @@ in {
       "Microsoft Word"        = 462054704;
       "Ninox Database"        = 901110441;
       "Notability"            = 360593530;
-      "Parcel"                = 639968404;
       "Pixelmator Pro"        = 1289583905;
       "Prime Video"           = 545519333;
       # "Shell Fish"            = 1336634154;
