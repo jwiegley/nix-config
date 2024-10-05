@@ -286,6 +286,7 @@ pkgs: epkgs: with epkgs;
   phi-search-mc
   pkg-info
   plantuml-mode
+  popper
   popup
   popup-pos-tip
   popup-ruler
