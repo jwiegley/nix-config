@@ -241,6 +241,8 @@ pkgs: epkgs: with epkgs;
   org-pdftools
   org-pomodoro
   org-pretty-table
+  org-project-capture
+  org-projectile
   org-ql
   org-real
   org-recent-headings

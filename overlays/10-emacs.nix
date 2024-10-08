@@ -314,6 +314,18 @@ let
       buildInputs = with eself; [ consult haskell-mode ];
     };
 
+    corsair = compileEmacsFiles {
+      name = "corsair";
+      src = fetchFromGitHub {
+        owner = "rob137";
+        repo = "corsair";
+        rev = "828c175d049d31c3dabea46f4df2ef4e8bcf2768";
+        sha256 = "09calgswxlrvdnf0pfylpby8n687fdkz2vph2q27yyp9sqk3kvkx";
+        # date = 2024-10-07T10:25:27+01:00;
+      };
+      buildInputs = with eself; [ gptel ];
+    };
+
     dired-hist = compileEmacsFiles {
       name = "dired-hist";
       src = fetchFromGitHub {
