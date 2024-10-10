@@ -55,6 +55,7 @@ in [
   emacs29MacPortEnv
   entr
   exiv2
+  eza
   fd
   fdupes
   ffmpeg

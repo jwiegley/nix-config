@@ -220,8 +220,10 @@ pkgs: epkgs: with epkgs;
   orderless
   org
   org-anki
+  org-alert
   org-annotate
   org-appear
+  org-auto-expand
   org-bookmark-heading
   org-caldav
   org-contacts

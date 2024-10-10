@@ -315,8 +315,9 @@ in {
         # ga     = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
         good   = "${pkgs.git}/bin/git bisect good";
         bad    = "${pkgs.git}/bin/git bisect bad";
-        ls     = "${pkgs.coreutils}/bin/ls --color=auto";
-        nm     = "${pkgs.findutils}/bin/find . -name";
+        # ls     = "${pkgs.coreutils}/bin/ls --color=auto";
+        ls     = "${pkgs.eza}/bin/eza";
+        find   = "${pkgs.fd}/bin/fd";
         par    = "${pkgs.parallel}/bin/parallel";
         rm     = "${pkgs.my-scripts}/bin/trash";
         rX     = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
