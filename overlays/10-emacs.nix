@@ -360,6 +360,20 @@ let
       buildInputs = with eself; [ org-ql ts s dash ];
     };
 
+    slack = compileEmacsFiles {
+      name = "slack";
+      src = fetchFromGitHub {
+        owner = "isamert";
+        repo = "emacs-slack";
+        rev = "6414304d77088f62b6e66b2e8bb49df6f505e099";
+        sha256 = "0v4jzsfrbcfhcbhxfwm11y98wrdsskcj1b1bdlr8bfb6ajndg5f2";
+        # date = 2024-09-30T17:53:09+03:00;
+      };
+      buildInputs = with eself; [
+        alert circe emojify oauth2 request websocket
+      ];
+    };
+
     egerrit = compileEmacsFiles {
       name = "egerrit";
       src = fetchgit {

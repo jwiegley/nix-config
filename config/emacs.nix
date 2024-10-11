@@ -275,6 +275,7 @@ pkgs: epkgs: with epkgs;
   paradox
   paredit
   parent-mode
+  parse-csv
   parsebib
   parsec
   pass
@@ -324,6 +325,7 @@ pkgs: epkgs: with epkgs;
   shift-number
   simple-httpd
   sky-color-clock
+  slack circe
   slime
   smart-newline
   smartparens
