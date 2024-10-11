@@ -69,6 +69,7 @@ in [
   fzf
   fzf-zsh
   gawk
+  getopt
   gitAndTools.delta
   gitAndTools.gh
   gitAndTools.ghi

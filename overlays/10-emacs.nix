@@ -728,8 +728,8 @@ let
           "9.7.12" = "sha256-JfAGYa2oME7RNGic30/7Y+4/cK5fo5iccq7MU3SNFWw=";
           "9.6.30" = "sha256-NzIPaZw8fINmA/G7mu8WBd2b+F2GluGRgaxoH+U7V0A=";
         };
-        version = "9.6.30";
-        # version = "9.7.12";
+        # version = "9.6.30";
+        version = "9.7.12";
       in eself.elpaBuild {
         pname = "org";
         ename = "org";
