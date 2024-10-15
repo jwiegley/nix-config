@@ -4,12 +4,13 @@
 , name
 , src
 , buildInputs ? []
+, propagatedBuildInputs ? []
 , patches ? []
 , preBuild ? ""
 }:
 
 stdenv.mkDerivation {
-  inherit name src patches;
+  inherit name src patches propagatedBuildInputs;
   unpackCmd = ''
     test -f "${src}" && mkdir el && cp -p ${src} el/${name}
   '';

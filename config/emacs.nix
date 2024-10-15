@@ -83,7 +83,6 @@ pkgs: epkgs: with epkgs;
   dockerfile-mode
   eager-state
   easy-kill
-  eat
   ebdb
   edbi
   edit-env
@@ -155,7 +154,6 @@ pkgs: epkgs: with epkgs;
   ht
   hydra
   # hyperbole
-  ialign
   iflipb
   imenu-list
   indent-shift
@@ -211,7 +209,6 @@ pkgs: epkgs: with epkgs;
   nginx-mode
   nix-mode
   noflet
-  nov
   oauth2
   ob-async
   ob-emamux
@@ -299,7 +296,6 @@ pkgs: epkgs: with epkgs;
   popwin
   pos-tip
   pp-c-l
-  prodigy
   projectile
   proof-general
   protobuf-mode
@@ -392,8 +388,6 @@ pkgs: epkgs: with epkgs;
   zoutline
   ztree
 
-  # org-gtd
-  # org-hyperscheduler
   calfw
   calfw-cal
   calfw-org
@@ -411,4 +405,14 @@ pkgs: epkgs: with epkgs;
   org-superstar
   org-timeblock
   org-upcoming-modeline
+
+  nov
+  prodigy
+  lsp-bridge
+  undo-fu
+  ialign
+  awesome-tray
+  eglot-booster
+  centaur-tabs
+  eat
 ]

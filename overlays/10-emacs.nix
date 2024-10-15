@@ -209,6 +209,17 @@ let
       };
     };
 
+    awesome-tray = compileEmacsFiles {
+      name = "awesome-tray";
+      src = fetchFromGitHub {
+        owner = "manateelazycat";
+        repo = "awesome-tray";
+        rev = "138c7d22b1cd82ed883de1c859ead7a93736a734";
+        sha256 = "19dipnrxd82pmqxi49i0rpdy1phpygzb1hks6qjc3wd2p32736q9";
+        # date = 2024-05-09T21:27:15+08:00;
+      };
+    };
+
     bookmark-plus = compileEmacsFiles {
       name = "bookmark-plus";
       src = fetchFromGitHub {
@@ -346,6 +357,22 @@ let
         sha256 = "0l6bj1yhradcv958g1pzkmsmfam9c0r8v8jf8clb90lz3hvvdmfp";
         # date = 2024-08-23T16:09:59+02:00;
       };
+    };
+
+    eglot-booster = compileEmacsFiles {
+      name = "eglot-booster";
+      src = fetchFromGitHub {
+        owner = "jdtsmith";
+        repo = "eglot-booster";
+        rev = "3f9159a8b7fe87e2f01280a2c4c98ca6dab49d13";
+        sha256 = "1aq5fpfasgm5lz8hk476c1zqyj33m024nx8w9qv4qrg88y5mq5n9";
+        # date = 2024-09-11T11:50:03-04:00;
+      };
+      propagatedBuildInputs = with eself; [
+        (pkgs.emacs-lsp-booster.override {
+           emacs = eself.emacs;
+         })
+      ];
     };
 
     elgantt = compileEmacsFiles {
