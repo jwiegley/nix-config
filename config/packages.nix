@@ -53,6 +53,7 @@ in [
   doxygen
   # emacs29Env
   emacs29MacPortEnv
+  emacs-lsp-booster
   entr
   exiv2
   eza
@@ -164,7 +165,7 @@ in [
   metabase
   mitmproxy
   more
-  mosh
+  # mosh
   mtr
   multitail
   my-scripts
@@ -268,7 +269,7 @@ in [
   watch
   watchman
   wget
-  wireguard-tools
+  # wireguard-tools
   xapian
   xdg-utils
   xorg.xauth

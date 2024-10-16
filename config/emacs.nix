@@ -18,6 +18,7 @@ pkgs: epkgs: with epkgs;
   auto-yasnippet
   avy
   avy-zap
+  awesome-tray
   backup-each-save
   biblio
   bm
@@ -28,12 +29,16 @@ pkgs: epkgs: with epkgs;
   burly
   button-lock
   bytecomp-simplify
+  calfw
+  calfw-cal
+  calfw-org
   cape
   cargo
   casual-bookmarks
   casual-calc
   casual-dired
   casual-lib
+  centaur-tabs
   centered-cursor-mode
   change-inner
   chatgpt-shell
@@ -59,6 +64,7 @@ pkgs: epkgs: with epkgs;
   consult-hoogle
   consult-lsp
   consult-org-roam
+  consult-projectile
   consult-yasnippet
   copy-as-format
   corfu
@@ -83,6 +89,7 @@ pkgs: epkgs: with epkgs;
   dockerfile-mode
   eager-state
   easy-kill
+  eat
   ebdb
   edbi
   edit-env
@@ -91,7 +98,9 @@ pkgs: epkgs: with epkgs;
   edit-var
   egerrit
   eglot
+  eglot-booster
   el-mock
+  elgantt
   elisp-depend
   elisp-docstring-mode
   elisp-refs
@@ -101,6 +110,7 @@ pkgs: epkgs: with epkgs;
   embark
   embark-consult
   embark-org-roam
+  ement
   emojify
   engine-mode
   epc
@@ -154,6 +164,7 @@ pkgs: epkgs: with epkgs;
   ht
   hydra
   # hyperbole
+  ialign
   iflipb
   imenu-list
   indent-shift
@@ -169,8 +180,10 @@ pkgs: epkgs: with epkgs;
   jupyter
   key-chord
   keypression
+  khoj
   know-your-http-well
   kv
+  lasgun
   ledger-mode
   link-hint
   lispy
@@ -180,6 +193,7 @@ pkgs: epkgs: with epkgs;
   lively
   logito
   loop
+  lsp-bridge
   lua-mode
   m-buffer
   macrostep
@@ -209,6 +223,7 @@ pkgs: epkgs: with epkgs;
   nginx-mode
   nix-mode
   noflet
+  nov
   oauth2
   ob-async
   ob-emamux
@@ -217,19 +232,23 @@ pkgs: epkgs: with epkgs;
   operate-on-number
   orderless
   org
-  org-anki
   org-alert
+  org-anki
   org-annotate
   org-appear
   org-auto-expand
+  org-auto-expand
+  org-autolist
   org-bookmark-heading
   org-caldav
   org-contacts
   org-contrib
   org-download
   org-drill
+  org-edit-indirect
   org-edna
   org-extra-emphasis
+  org-fancy-priorities
   org-gcal
   org-mime
   org-modern
@@ -238,6 +257,7 @@ pkgs: epkgs: with epkgs;
   # org-noter
   # org-noter-pdftools
   org-noter-plus
+  org-notifications
   org-pdftools
   org-pomodoro
   org-pretty-table
@@ -247,14 +267,20 @@ pkgs: epkgs: with epkgs;
   org-real
   org-recent-headings
   org-remark
+  org-review
   org-rich-yank
   org-roam
   org-roam-nursery
   org-roam-ui
+  org-sidebar
+  org-sql
   org-sticky-header
   org-super-agenda
+  org-superstar
+  org-timeblock
   org-timeline
   org-transclusion
+  org-upcoming-modeline
   org-vcard
   org-web-tools
   orgit
@@ -296,6 +322,7 @@ pkgs: epkgs: with epkgs;
   popwin
   pos-tip
   pp-c-l
+  prodigy
   projectile
   proof-general
   protobuf-mode
@@ -346,6 +373,7 @@ pkgs: epkgs: with epkgs;
   typescript-mode
   typo
   ultra-scroll-mac
+  undo-fu
   undo-propose
   unicode-fonts
   use-package
@@ -387,32 +415,4 @@ pkgs: epkgs: with epkgs;
   zoom
   zoutline
   ztree
-
-  calfw
-  calfw-cal
-  calfw-org
-  elgantt
-  ement
-  khoj
-  lasgun
-  org-auto-expand
-  org-autolist
-  org-edit-indirect
-  org-fancy-priorities
-  org-notifications
-  org-review
-  org-sidebar
-  org-superstar
-  org-timeblock
-  org-upcoming-modeline
-
-  nov
-  prodigy
-  lsp-bridge
-  undo-fu
-  ialign
-  awesome-tray
-  eglot-booster
-  centaur-tabs
-  eat
 ]
