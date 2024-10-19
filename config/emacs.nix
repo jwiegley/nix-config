@@ -100,7 +100,7 @@ pkgs: epkgs: with epkgs;
   eglot
   eglot-booster
   el-mock
-  elgantt
+  # elgantt
   elisp-depend
   elisp-docstring-mode
   elisp-refs
@@ -270,7 +270,6 @@ pkgs: epkgs: with epkgs;
   org-review
   org-rich-yank
   org-roam
-  org-roam-nursery
   org-roam-ui
   org-sidebar
   org-sql

@@ -181,7 +181,7 @@ in [
   # nodePackages.eslint
   # nodePackages.js-beautify
   nodejs
-  opam
+  # opam
   opensc
   openssh
   openssl

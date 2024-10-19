@@ -318,11 +318,11 @@ let
       name = "consult-hoogle";
       src = fetchgit {
         url = "https://codeberg.org/rahguzar/consult-hoogle.git";
-        rev = "188c8d90a04adeb08c61a0835f5f9a9a10255495";
-        sha256 = "007552brmggivrpc8s3zlqq74mksx3rvfh0ald2j655nplf2v4w9";
-        # date = 2024-04-27T15:18:42+02:00;
+        rev = "635418813c6c6089576cc3b1abb45d173e853aab";
+        sha256 = "1bjpax7xq4mg7za56ydb0sx0rcm2h6pqrl709b0nad8v45mynib9";
+        # date = 2024-09-22T18:20:51+05:00;
       };
-      buildInputs = with eself; [ consult haskell-mode ];
+      buildInputs = with eself; [ consult haskell-mode compat ];
     };
 
     corsair = compileEmacsFiles {
@@ -384,7 +384,7 @@ let
         sha256 = "18cgmg8pkbji6945kwdw99hb6vvfvvqkavgb8dbcpk657nqbjq28";
         # date = 2024-02-23T22:42:27-05:00;
       };
-      buildInputs = with eself; [ org-ql ts s dash ];
+      buildInputs = with eself; [ org-ql ts s dash ov compat peg ];
     };
 
     slack = compileEmacsFiles {
@@ -577,22 +577,29 @@ let
         mv other/*.el .
       '';
       buildInputs = with eself; [
-        org org-pdftools pdf-tools log4e citar nov org-ref
-      ];
-    };
-
-    org-roam-nursery = compileEmacsFiles {
-      name = "org-roam-nursery";
-      src = fetchFromGitHub {
-        owner = "chrisbarrett";
-        repo = "nursery";
-        rev = "00a169c75b934a2eb42ea8620e8eebf34577d4ca";
-        sha256 = "0715bcqhgj503380fr8wgq41kg22x05qwykm5230zka74x6x7vy7";
-        # date = 2024-05-03T20:50:59+12:00;
-      };
-      preBuild = "cd lisp";
-      buildInputs = with eself; [
-        org-roam persist ht async f magit org-drill ts pcre2el consult memoize
+        avy
+        biblio
+        biblio-core
+        bibtex-completion
+        citar
+        citeproc
+        compat
+        dash
+        esxml
+        f
+        hydra
+        log4e
+        lv
+        nov
+        org
+        org-pdftools
+        org-ref
+        parsebib
+        pdf-tools
+        queue
+        request
+        s
+        tablist
       ];
     };
 
