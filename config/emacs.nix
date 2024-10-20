@@ -389,6 +389,7 @@ pkgs: epkgs: with epkgs;
   visual-regexp
   vline
   vterm
+  vulpea
   vundo
   w3m
   wat-mode

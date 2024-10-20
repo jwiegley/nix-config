@@ -218,7 +218,10 @@ in {
 
     tmux = {
       enable = true;
-      extraConfig = "set-option -g allow-passthrough";
+      extraConfig = ''
+        set-option -g allow-passthrough
+        set-option -g default-shell /bin/zsh
+      '';
     };
 
     home-manager = {
@@ -316,8 +319,8 @@ in {
         good   = "${pkgs.git}/bin/git bisect good";
         bad    = "${pkgs.git}/bin/git bisect bad";
         # ls     = "${pkgs.coreutils}/bin/ls --color=auto";
-        ls     = "${pkgs.eza}/bin/eza";
-        find   = "${pkgs.fd}/bin/fd";
+        # ls     = "${pkgs.eza}/bin/eza";
+        # find   = "${pkgs.fd}/bin/fd";
         par    = "${pkgs.parallel}/bin/parallel";
         rm     = "${pkgs.my-scripts}/bin/trash";
         rX     = "${pkgs.coreutils}/bin/chmod -R ugo+rX";

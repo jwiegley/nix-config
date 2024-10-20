@@ -56,8 +56,8 @@ in [
   emacs-lsp-booster
   entr
   exiv2
-  eza
-  fd
+  # eza
+  # fd
   fdupes
   ffmpeg
   figlet

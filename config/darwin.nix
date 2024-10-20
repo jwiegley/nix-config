@@ -116,7 +116,7 @@ in {
       { name = "firefox"; greedy = true; }
       "gitlight"
       "grammarly-desktop"
-      "gpg-suite-no-mail"
+      # "gpg-suite-no-mail"
       "keyboard-maestro"
       "launchbar"
       "lectrote"
