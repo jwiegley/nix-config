@@ -141,7 +141,7 @@ in {
       "suspicious-package"
       "tagspaces"
       "telegram"
-      "thinkorswim"
+      # "thinkorswim"
       "tor-browser"
       "ukelele"
       "unicodechecker"
