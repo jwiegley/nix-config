@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 case $1 in
     vulcan)
         u vulcan upgrade sign copy
@@ -25,8 +23,8 @@ case $1 in
     athena)
         u switch check
         eval "$(/opt/homebrew/bin/brew shellenv)"
-	brew update
-	brew upgrade --greedy
+      brew update
+      brew upgrade --greedy
         # notify "Nix on Athena upgraded"
         exit 0
         ;;
@@ -39,61 +37,61 @@ esac
 
 (
     cd ~/src/category-theory
-    source <(direnv apply_dump .envrc.cache)
+    source .envrc
     make clean
     make
 )
 
 (
     cd ~/src/ltl/coq
-    source <(direnv apply_dump .envrc.cache)
+    source .envrc
     make clean
     make
 )
 
 (
     cd ~/src/notes/haskell
-    source <(direnv apply_dump .envrc.cache)
+    source .envrc
 )
 
 (
     cd ~/src/org-jw
-    source <(direnv apply_dump .envrc.cache)
+    source .envrc
     cabal v2-update
     cabal v2-build all
 )
 
 (
     cd ~/src/renamer
-    source <(direnv apply_dump .envrc.cache)
+    source .envrc
     cabal v2-update
     cabal v2-build
 )
 
 (
     cd ~/src/simple-amount
-    source <(direnv apply_dump .envrc.cache)
+    source .envrc
     cabal v2-update
     cabal v2-build
 )
 
 (
     cd ~/src/three-partition
-    source <(direnv apply_dump .envrc.cache)
+    source .envrc
     cabal v2-update
     cabal v2-build
 )
 
 (
     cd ~/src/trade-journal
-    source <(direnv apply_dump .envrc.cache)
+    source .envrc
     cabal v2-update
     cabal v2-build
 )
 
 (
     cd ~/src/comparable
-    source <(direnv apply_dump .envrc.cache)
+    source .envrc
     cargo update
     cargo build
     cargo test
