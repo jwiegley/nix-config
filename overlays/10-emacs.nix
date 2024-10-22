@@ -433,17 +433,6 @@ let
       };
     };
 
-    gptel = compileEmacsFiles {
-      name = "gptel";
-      src = fetchFromGitHub {
-        owner = "karthink";
-        repo = "gptel";
-        rev = "defe48bb8c56e678d8c1e7b5e278cccd95f9bc3d";
-        sha256 = "192ny3ilq16n4fhd1r6qbdjmz7kq6fq37kwn37j7v36lyhzv7wvr";
-        # date = 2024-09-04T21:39:34-07:00;
-      };
-    };
-
     indent-shift = compileEmacsFiles {
       name = "indent-shift";
       src = fetchFromGitHub {
@@ -759,17 +748,17 @@ let
     org =
       let
         versions = {
-          "9.7.12" = "sha256-JfAGYa2oME7RNGic30/7Y+4/cK5fo5iccq7MU3SNFWw=";
+          "9.7.13" = "sha256-xyTYGmNbBDvr0aUQArlhmDF4iHGXngij3aDJkKInYkg=";
           "9.6.30" = "sha256-NzIPaZw8fINmA/G7mu8WBd2b+F2GluGRgaxoH+U7V0A=";
         };
-        version = "9.6.30";
-        # version = "9.7.12";
+        # version = "9.6.30";
+        version = "9.7.13";
       in eself.elpaBuild {
         pname = "org";
         ename = "org";
         inherit version;
         src =
-          if version == "9.7.12"
+          if version == "9.7.13"
           then fetchurl {
             url = "https://elpa.gnu.org/packages/org-${version}.tar";
             sha256 = versions."${version}";

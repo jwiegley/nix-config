@@ -214,6 +214,7 @@ in [
   qpdf
   qrencode
   ratpoison
+  rclone
   # recoll
   renameutils
   restic
@@ -292,7 +293,6 @@ in [
 
   # (exe gitAndTools.git-annex)
   # gitAndTools.git-annex-remote-rclone
-  # rclone
 
   # Kadena
   inputs.kadena-nix.packages.${pkgs.system}.kadena-cli
