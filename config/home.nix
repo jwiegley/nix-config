@@ -221,7 +221,8 @@ in {
       enable = true;
       extraConfig = ''
         set-option -g allow-passthrough
-        set-option -g default-shell /bin/zsh
+        set-option -g default-shell /Users/johnw/.nix-profile/bin/zsh
+        set-option -g default-command /Users/johnw/.nix-profile/bin/zsh
       '';
     };
 

@@ -68,6 +68,7 @@ pkgs: epkgs: with epkgs;
   consult-yasnippet
   copy-as-format
   corfu
+  corsair
   crosshairs
   csv-mode
   ctable
