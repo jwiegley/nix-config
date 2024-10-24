@@ -220,7 +220,7 @@ in {
     tmux = {
       enable = true;
       extraConfig = ''
-        set-option -g allow-passthrough
+        set-option -g allow-passthrough on
         set-option -g default-shell /Users/johnw/.nix-profile/bin/zsh
         set-option -g default-command /Users/johnw/.nix-profile/bin/zsh
       '';
@@ -368,7 +368,6 @@ in {
            export TERM="xterm-256color"
 
            . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
-           . ${config.xdg.configHome}/zsh/plugins/iterm2_tmux_integration
            . ${pkgs.zsh-git-prompt}/share/zsh-git-prompt/zshrc.sh
 
            # sudo /bin/launchctl limit maxfiles 524288 524288
@@ -385,15 +384,7 @@ in {
           src = pkgs.fetchurl {
             url = https://iterm2.com/shell_integration/zsh;
             sha256 = "1xk6kx5kdn5wbqgx2f63vnafhkynlxnlshxrapkwkd9zf2531bqa";
-            # date = 2024-05-23T13:52:02-0700;
-          };
-        }
-        {
-          name = "iterm2_tmux_integration";
-          src = pkgs.fetchurl {
-            url = https://gist.githubusercontent.com/antifuchs/c8eca4bcb9d09a7bbbcd/raw/3ebfecdad7eece7c537a3cd4fa0510f25d02611b/iterm2_zsh_init.zsh;
-            sha256 = "1v1b6yz0lihxbbg26nvz85c1hngapiv7zmk4mdl5jp0fsj6c9s8c";
-            # date = 2024-05-23T13:52:04-0700;
+            # date = 2024-10-23T14:38:30-0700;
           };
         }
       ];

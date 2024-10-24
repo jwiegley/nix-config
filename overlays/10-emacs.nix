@@ -337,6 +337,20 @@ let
       buildInputs = with eself; [ gptel ];
     };
 
+    delve = compileEmacsFiles {
+      name = "delve";
+      src = fetchFromGitHub {
+        owner = "publicimageltd";
+        repo = "delve";
+        rev = "0c84a886d9c2fa8a6743c2882551d4b1c0b4cc4f";
+        sha256 = "1cd2lbq5xky0ayqqvc3mc0zbvmskdc00h37jqzdvp6vsajqfnpxn";
+        # date = 2022-02-28T13:43:50-08:00;
+      };
+      buildInputs = with eself; [
+        dash org-roam magit-section lister compat emacsql
+      ];
+    };
+
     dired-hist = compileEmacsFiles {
       name = "dired-hist";
       src = fetchFromGitHub {

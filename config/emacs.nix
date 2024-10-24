@@ -7,6 +7,7 @@ pkgs: epkgs: with epkgs;
   agda2-mode
   aggressive-indent
   alert
+  all-the-icons
   anaphora
   anki-editor
   apiwrap
@@ -76,6 +77,7 @@ pkgs: epkgs: with epkgs;
   deadgrep
   dedicated
   deferred
+  delve lister
   diff-hl
   diffview
   diminish
