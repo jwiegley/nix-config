@@ -77,7 +77,7 @@ in {
     casks = [
       "docker"
       "drivedx"
-      "hazel"
+      # "hazel"                   # Stay at version 5
       "iterm2"
       "vmware-fusion"
       "wireshark"
