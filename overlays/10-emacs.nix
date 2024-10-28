@@ -606,6 +606,18 @@ let
       ];
     };
 
+    org-quick-peek = compileEmacsFiles {
+      name = "org-quick-peek";
+      src = fetchFromGitHub {
+        owner = "alphapapa";
+        repo = "org-quick-peek";
+        rev = "564e39bec72cba7b20c0373b946b8e58afcb1f43";
+        sha256 = "0ihm29ib3hbwc91di553x6ajmdbhaqvrwzp1sly7di3mwwsgh0pz";
+        # date = 2022-09-14T10:19:41-04:00;
+      };
+      buildInputs = with eself; [ quick-peek dash s ];
+    };
+
     ox-slack = compileEmacsFiles {
       name = "ox-slack";
       src = fetchFromGitHub {

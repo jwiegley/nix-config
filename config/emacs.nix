@@ -267,6 +267,7 @@ pkgs: epkgs: with epkgs;
   org-project-capture
   org-projectile
   org-ql
+  org-quick-peek
   org-real
   org-recent-headings
   org-remark
@@ -329,6 +330,7 @@ pkgs: epkgs: with epkgs;
   proof-general
   protobuf-mode
   python-mode
+  quick-peek
   rainbow-delimiters
   rainbow-mode
   redshank
