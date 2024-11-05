@@ -39,4 +39,14 @@ in {
   texinfo4
   watchman
   ;
+
+  inherit (nixpkgs {
+    rev    = "2d2a9ddbe3f2c00747398f3dc9b05f7f2ebb0f53";
+    sha256 = "sha256-B5WRZYsRlJgwVHIV6DvidFN7VX7Fg9uuwkRW9Ha8z+w=";
+  })
+  libvirt
+  multitail
+  opensc
+  xquartz
+  ;
 }
