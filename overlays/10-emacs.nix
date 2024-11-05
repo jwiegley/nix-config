@@ -618,6 +618,17 @@ let
       buildInputs = with eself; [ quick-peek dash s ];
     };
 
+    org-recoll = compileEmacsFiles {
+      name = "org-recoll";
+      src = fetchFromGitHub {
+        owner = "alraban";
+        repo = "org-recoll";
+        rev = "1e21fbc70b5e31b746257c12d00acba3dcc1dd5c";
+        sha256 = "09bixzl8ky7scsahb50wwkdcz335gy257m80z9rpqqhjy6q9023c";
+      };
+      buildInputs = with eself; [ quick-peek dash s ];
+    };
+
     ox-slack = compileEmacsFiles {
       name = "ox-slack";
       src = fetchFromGitHub {
@@ -869,6 +880,16 @@ let
       };
     };
 
+    notdeft = esuper.notdeft.overrideAttrs (_: {
+      meta = {
+        homepage = "https://tero.hasu.is/notdeft/";
+        description = "Fork of Deft that uses Xapian as a search engine";
+        maintainers = [ lib.maintainers.nessdoor ];
+        license = lib.licenses.bsd3;
+        platforms = lib.platforms.unix;
+      };
+    });
+
     xeft = mkDerivation rec {
       name = "xeft-${version}";
       version = "3.3";
@@ -915,6 +936,7 @@ let
             myEmacsPackageOverrides
             (_: super.elpaPackages
              // super.melpaPackages
+             // super.manualPackages
              // { inherit emacs;
                   inherit (super) elpaBuild melpaBuild trivialBuild; }))));
 

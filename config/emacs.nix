@@ -226,6 +226,7 @@ pkgs: epkgs: with epkgs;
   nginx-mode
   nix-mode
   noflet
+  notdeft
   nov
   oauth2
   ob-async
@@ -270,6 +271,7 @@ pkgs: epkgs: with epkgs;
   org-quick-peek
   org-real
   org-recent-headings
+  org-recoll
   org-remark
   org-review
   org-rich-yank
