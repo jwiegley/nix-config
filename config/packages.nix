@@ -215,7 +215,7 @@ in [
   qrencode
   ratpoison
   rclone
-  # recoll
+  # recoll-nox
   renameutils
   restic
   ripgrep

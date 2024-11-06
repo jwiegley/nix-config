@@ -226,7 +226,7 @@ pkgs: epkgs: with epkgs;
   nginx-mode
   nix-mode
   noflet
-  notdeft
+  # notdeft
   nov
   oauth2
   ob-async
@@ -263,7 +263,6 @@ pkgs: epkgs: with epkgs;
   org-noter-plus
   org-notifications
   org-pdftools
-  org-pomodoro
   org-pretty-table
   org-project-capture
   org-projectile
@@ -271,7 +270,7 @@ pkgs: epkgs: with epkgs;
   org-quick-peek
   org-real
   org-recent-headings
-  org-recoll
+  # org-recoll
   org-remark
   org-review
   org-rich-yank

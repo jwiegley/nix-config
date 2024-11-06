@@ -5,13 +5,13 @@ let nixpkgs = args@{ rev, sha256 }:
         owner = "NixOS";
         repo  = "nixpkgs"; })) {};
 in {
-  inherit (nixpkgs {
-    # rev    = "known-good-20230815_094207";
-    rev    = "6ac50c5df158c3cbe29c5111962e4c89daf1f929";
-    sha256 = "sha256-trkGHaFfydle3MzKOFhGI4g1pY+j3s8xVsTNmztbLCI=";
-  })
-  mitmproxy
-  ;
+  # inherit (nixpkgs {
+  #   # rev    = "known-good-20230815_094207";
+  #   rev    = "6ac50c5df158c3cbe29c5111962e4c89daf1f929";
+  #   sha256 = "sha256-trkGHaFfydle3MzKOFhGI4g1pY+j3s8xVsTNmztbLCI=";
+  # })
+  # mitmproxy
+  # ;
 
   inherit (nixpkgs {
     # rev    = "known-good-20231112_090312";
@@ -27,8 +27,8 @@ in {
     sha256 = "sha256-EhaP/dBqlug/EQTJTnZB5ZnDOCvzyBmFes02jBI/Lxg=";
   })
   lnav
-  csvkit
-  svg2tikz                      # python dependency build stalls
+  # csvkit
+  # svg2tikz                      # python dependency build stalls
   ;
 
   inherit (nixpkgs {
@@ -37,7 +37,7 @@ in {
     sha256 = "sha256-Ul3rIdesWaiW56PS/Ak3UlJdkwBrD4UcagCmXZR9Z7Y=";
   })
   texinfo4
-  watchman
+  # watchman
   ;
 
   inherit (nixpkgs {
