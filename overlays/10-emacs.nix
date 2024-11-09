@@ -782,20 +782,38 @@ let
       };
     };
 
+    org-HEAD = mkDerivation rec {
+      name = "org-mode-${version}";
+      version = "9.7.15-src";
+
+      src = ~/src/org-mode;
+
+      buildInputs = with pkgs; [ eself.emacs texinfo git ];
+
+      installPhase = ''
+        make install \
+             prefix=$out \
+             lispdir=$out/share/emacs/site-lisp/org \
+             datadir=$out/share/emacs/etc/org
+      '';
+
+      inherit (esuper.org) meta;
+    };
+
     org =
       let
         versions = {
-          "9.7.13" = "sha256-xyTYGmNbBDvr0aUQArlhmDF4iHGXngij3aDJkKInYkg=";
+          "9.7.15" = "sha256-A7JB+fu1L95h1CRXZKSNz/MexYfvDVZ3I/QAHi/xgj0=";
           "9.6.30" = "sha256-NzIPaZw8fINmA/G7mu8WBd2b+F2GluGRgaxoH+U7V0A=";
         };
         # version = "9.6.30";
-        version = "9.7.13";
+        version = "9.7.15";
       in eself.elpaBuild {
         pname = "org";
         ename = "org";
         inherit version;
         src =
-          if version == "9.7.13"
+          if version == "9.7.15"
           then fetchurl {
             url = "https://elpa.gnu.org/packages/org-${version}.tar";
             sha256 = versions."${version}";
@@ -848,7 +866,7 @@ let
       version = "4.5";
 
       # This is the main branch
-     src = fetchFromGitHub {
+      src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
         rev = "c3e6c391e7eeb6f495327eae4fab8619fed70748";
