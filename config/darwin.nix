@@ -80,6 +80,9 @@ in {
       # "hazel"                   # Stay at version 5
       "iterm2"
       "vmware-fusion"
+      "vagrant"
+      "vagrant-manager"
+      "vagrant-vmware-utility"
       "wireshark"
     ] ++ lib.optionals (hostname == "vulcan") [
       "fujitsu-scansnap-home"
@@ -145,9 +148,6 @@ in {
       "tor-browser"
       "ukelele"
       "unicodechecker"
-      "vagrant"
-      "vagrant-manager"
-      "vagrant-vmware-utility"
       "virtual-ii"
       "visual-studio-code"
       { name = "vivaldi"; greedy = true; }
