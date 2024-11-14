@@ -93,9 +93,9 @@ in {
       # "hazel"                   # Stay at version 5
       "iterm2"
       "vmware-fusion"
-      "vagrant"
-      "vagrant-manager"
-      "vagrant-vmware-utility"
+      # "vagrant"
+      # "vagrant-manager"
+      # "vagrant-vmware-utility"
       "wireshark"
     ] ++ lib.optionals (hostname == "vulcan" || hostname == "hera") [
       "fujitsu-scansnap-home"
@@ -167,7 +167,7 @@ in {
       "vlc"
       "whatsapp"
       "xnviewmp"
-      "yubico-yubikey-manager"
+      # "yubico-yubikey-manager"
       { name = "zoom"; greedy = true; }
       "zotero"
       "zulip"
