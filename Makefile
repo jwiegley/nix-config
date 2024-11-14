@@ -1,5 +1,5 @@
 HOSTNAME   = vulcan
-REMOTES	   = hermes
+REMOTES	   = clio
 GIT_REMOTE = jwiegley
 MAX_AGE	   = 14
 NIX_CONF   = $(HOME)/src/nix
@@ -144,6 +144,10 @@ travel-ready:
              if [[ $(HOSTNAME) == athena ]]; then		\
 	         $(NIX_CONF)/bin/de;				\
              elif [[ $(HOSTNAME) == hermes ]]; then		\
+	         $(NIX_CONF)/bin/de;				\
+             elif [[ $(HOSTNAME) == hera ]]; then		\
+	         $(NIX_CONF)/bin/de;				\
+             elif [[ $(HOSTNAME) == clio ]]; then		\
 	         $(NIX_CONF)/bin/de;				\
              else						\
 	         unset BUILDER;					\

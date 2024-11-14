@@ -94,7 +94,7 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "sha256-YAQRhSaPGvwFDJ7c635KX/RxC3l/h/clJhNK69msY8g=";
+      sha256 = "sha256-HZkYlhPSRAB4KuguSwYJRTNczYWISjSJcAucp+8wxG0=";
       # date = 2023-06-09T13:28:36-0700;
     };
 

@@ -29,17 +29,30 @@ in {
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZQeQ/gKkOwuwktwD4z0ZZ8tpxNej3qcHS5ZghRcdAd ShellFish@iPad-22062024"
           # Secure enclave on Hermes
           "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBB3Y8saKSHx76NQGC8CQBIec87Pe6Bk10TScomsWOW8YQ1Nb12RTLyMzq+WfpVwF9bmYvAEmbQ8H0F6n1Xfd8Y8= Hermes (enclave)"
+          # Secure enclave on Clio
         ];
         keyFiles = {
           vulcan = [
+            # "${home}/${hostname}/id_hera.pub"
+            "${home}/${hostname}/id_athena.pub"
+          ];
+          hermes = [
+            # "${home}/${hostname}/id_hera.pub"
+            "${home}/${hostname}/id_vulcan.pub"
+            "${home}/${hostname}/id_athena.pub"
+          ];
+          hera = [
+            "${home}/${hostname}/id_vulcan.pub"
+            "${home}/${hostname}/id_athena.pub"
+          ];
+          clio = [
+            # "${home}/${hostname}/id_hera.pub"
+            "${home}/${hostname}/id_vulcan.pub"
             "${home}/${hostname}/id_athena.pub"
           ];
           athena = [
+            # "${home}/${hostname}/id_hera.pub"
             "${home}/${hostname}/id_vulcan.pub"
-          ];
-          hermes = [
-            "${home}/${hostname}/id_vulcan.pub"
-            "${home}/${hostname}/id_athena.pub"
           ];
         }.${hostname};
       };
@@ -84,14 +97,14 @@ in {
       "vagrant-manager"
       "vagrant-vmware-utility"
       "wireshark"
-    ] ++ lib.optionals (hostname == "vulcan") [
+    ] ++ lib.optionals (hostname == "vulcan" || hostname == "hera") [
       "fujitsu-scansnap-home"
       "geektool"
       "gzdoom"
       "ledger-live"
       "raspberry-pi-imager"
       "chronosync"
-    ] ++ lib.optionals (hostname == "hermes") [
+    ] ++ lib.optionals (hostname == "hermes" || hostname == "clio") [
       "chronoagent"
     ] ++ lib.optionals (hostname == "athena") [
       "openzfs"
@@ -274,7 +287,7 @@ in {
 
     distributedBuilds = false;
 
-    # buildMachines = lib.optionals (hostname == "hermes") [
+    # buildMachines = lib.optionals (hostname == "clio") [
     #   vulcan
     # ];
 

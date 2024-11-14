@@ -6,6 +6,11 @@ case $1 in
         # notify "Nix on Vulcan upgraded"
         ;;
 
+    hera)
+        u hera upgrade sign copy
+        # notify "Nix on Hera upgraded"
+        ;;
+
     hermes)
         u hermes upgrade-tasks check
         (cd ~/src/comparable;                           \
@@ -18,6 +23,20 @@ case $1 in
          cabal v2-update;                               \
          cabal v2-build all)
         # notify "Nix on Hermes upgraded"
+        ;;
+
+    clio)
+        u clio upgrade-tasks check
+        (cd ~/src/comparable;                           \
+         source <(direnv apply_dump .envrc.cache);      \
+         cargo update;                                  \
+         cargo build;                                   \
+         cargo test)
+        (cd ~/src/org-jw;                               \
+         source <(direnv apply_dump .envrc.cache);      \
+         cabal v2-update;                               \
+         cabal v2-build all)
+        # notify "Nix on Clio upgraded"
         ;;
 
     athena)

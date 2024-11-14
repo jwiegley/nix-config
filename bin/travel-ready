@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-CACHE=${1:-hermes}
+CACHE=${1:-clio}
 
 function update_direnv() {
     if [[ -d $1 ]]; then

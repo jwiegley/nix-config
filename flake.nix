@@ -58,6 +58,8 @@
         ];
       };
       in {
+        hera   = configure "hera"   "aarch64-darwin";
+        clio   = configure "clio"   "aarch64-darwin";
         vulcan = configure "vulcan" "x86_64-darwin";
         hermes = configure "hermes" "x86_64-darwin";
         athena = configure "athena" "aarch64-darwin";
