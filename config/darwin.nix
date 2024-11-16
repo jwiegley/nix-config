@@ -10,7 +10,6 @@ let home           = builtins.getEnv "HOME";
 in {
   services = {
     nix-daemon.enable = true;
-    activate-system.enable = true;
   };
 
   users = {

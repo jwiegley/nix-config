@@ -2,7 +2,7 @@
 
 case $1 in
     vulcan)
-        u vulcan upgrade sign copy
+        u vulcan upgrade sign
         # notify "Nix on Vulcan upgraded"
         ;;
 

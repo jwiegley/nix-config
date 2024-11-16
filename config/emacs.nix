@@ -246,7 +246,6 @@ pkgs: epkgs: with epkgs;
   org-bookmark-heading
   org-caldav
   org-contacts
-  org-download
   org-drill
   org-edit-indirect
   org-edna
