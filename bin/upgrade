@@ -71,12 +71,15 @@ esac
 (
     cd ~/src/notes/haskell
     source .envrc
+    cabal v2-update
+    cabal v2-configure --disable-tests --disable-profiling --disable-executable-profiling
 )
 
 (
     cd ~/src/org-jw
     source .envrc
     cabal v2-update
+    cabal v2-configure --enable-tests --enable-profiling --enable-executable-profiling
     cabal v2-build all
 )
 
@@ -84,6 +87,7 @@ esac
     cd ~/src/renamer
     source .envrc
     cabal v2-update
+    cabal v2-configure --enable-tests --enable-profiling --enable-executable-profiling
     cabal v2-build
 )
 
@@ -91,6 +95,7 @@ esac
     cd ~/src/simple-amount
     source .envrc
     cabal v2-update
+    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
     cabal v2-build
 )
 
@@ -98,6 +103,7 @@ esac
     cd ~/src/three-partition
     source .envrc
     cabal v2-update
+    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
     cabal v2-build
 )
 
@@ -105,6 +111,7 @@ esac
     cd ~/src/trade-journal
     source .envrc
     cabal v2-update
+    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
     cabal v2-build
 )
 

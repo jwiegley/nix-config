@@ -32,6 +32,7 @@ in {
   })
   libvirt
   multitail
+  nix-diff
   opensc
   xquartz
   ;

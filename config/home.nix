@@ -375,16 +375,14 @@ in {
             export RPROMPT=""
             export PS1='$ '
         else
-           export TERM="xterm-256color"
+            . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
+            . ${pkgs.zsh-git-prompt}/share/zsh-git-prompt/zshrc.sh
 
-           . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
-           . ${pkgs.zsh-git-prompt}/share/zsh-git-prompt/zshrc.sh
+            # sudo /bin/launchctl limit maxfiles 524288 524288
+            # ulimit -n 65536
 
-           # sudo /bin/launchctl limit maxfiles 524288 524288
-           # ulimit -n 65536
-
-           autoload -Uz compinit
-           compinit
+            autoload -Uz compinit
+            compinit
         fi
       '';
 
