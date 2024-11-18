@@ -172,7 +172,11 @@ in [
   nix-diff
   nix-index
   nix-info
-  nix-prefetch-scripts
+  # nix-prefetch-scripts
+  (nix-prefetch-scripts.override(old: {
+    # NixCpp fails with "/var is a symlink"
+    nix = lix;
+  }))
   nix-scripts
   nixpkgs-fmt
   nixfmt
