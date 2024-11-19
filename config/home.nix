@@ -34,7 +34,7 @@ let am_traveling    = false;
     external_ip     = "newartisans.hopto.org";
 
     master_key      = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
-    signing_key     = "E0F96E618528E465";
+    signing_key     = "12D70076AB504679";
 
 in {
   home = {

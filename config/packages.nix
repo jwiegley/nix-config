@@ -165,18 +165,17 @@ in [
   metabase
   mitmproxy
   more
-  # mosh
   mtr
   multitail
   my-scripts
   nix-diff
   nix-index
   nix-info
-  # nix-prefetch-scripts
-  (nix-prefetch-scripts.override(old: {
-    # NixCpp fails with "/var is a symlink"
-    nix = lix;
-  }))
+  nix-prefetch-git
+  # (nix-prefetch-git.override(old: {
+  #   # NixCpp fails with "/var is a symlink"
+  #   nix = lix;
+  # }))
   nix-scripts
   nixpkgs-fmt
   nixfmt
@@ -185,7 +184,6 @@ in [
   # nodePackages.eslint
   # nodePackages.js-beautify
   nodejs
-  # opam
   opensc
   openssh
   openssl
