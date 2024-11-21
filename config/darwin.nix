@@ -21,7 +21,8 @@ in {
       openssh.authorizedKeys = {
         keys = [
           # GnuPG auth key stored on Yubikeys
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb yubikey-gnupg"
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJAj2IzkXyXEl+ReCg9H+t55oa6GIiumPWeufcYCWy3F yubikey-gnupg"
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb yubikey-14476831-gnupg"
           # ShellFish iPhone key
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJD0sIKWWVF+zIWcNm/BfsbCQxuUBHD8nRNSpZV+mCf+ ShellFish@iPhone-28062024"
           # ShellFish iPad key
@@ -81,10 +82,17 @@ in {
 
     taps = [
       "kadena-io/pact"
+      # Taps for Kadena
+      "kurtosis-tech/tap"
     ];
     brews = [
-      "kadena-io/pact/pact" "openssl" "z3"
       "ykman"
+      # Brews for Kadena
+      "kadena-io/pact/pact"
+      "openssl"
+      "z3"
+      "kurtosis-tech/tap/kurtosis-cli"
+      "truffle"
     ];
 
     casks = [
@@ -130,6 +138,7 @@ in {
       "expandrive"
       "fantastical"
       { name = "firefox"; greedy = true; }
+      "ganache"                     # Local Ethereum development
       "gitlight"
       "grammarly-desktop"
       # "gpg-suite-no-mail"
@@ -189,7 +198,7 @@ in {
       "Xcode"                 = 497799835;
     } // lib.optionalAttrs (hostname != "athena") {
       "1Password for Safari"  = 1569813296;
-      "ASUS Device Discovery" = 995124504;
+      # "ASUS Device Discovery" = 995124504;
       "Bible Study"           = 472790630;
       "DataGraph"             = 407412840;
       "Drafts"                = 1435957248;
@@ -320,7 +329,7 @@ in {
         NSNavPanelExpandedStateForSaveMode = true;
         NSNavPanelExpandedStateForSaveMode2 = true;
         "com.apple.keyboard.fnState" = true;
-        _HIHideMenuBar = false;
+        _HIHideMenuBar = hostname == "vulcan" || hostname == "hera";
         "com.apple.mouse.tapBehavior" = 1;
         "com.apple.sound.beep.volume" = 0.0;
         "com.apple.sound.beep.feedback" = 0;

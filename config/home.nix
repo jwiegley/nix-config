@@ -231,8 +231,8 @@ in {
       enable = true;
       extraConfig = ''
         set-option -g allow-passthrough on
-        set-option -g default-shell /Users/johnw/.nix-profile/bin/zsh
-        set-option -g default-command /Users/johnw/.nix-profile/bin/zsh
+        set-option -g default-shell /bin/zsh
+        set-option -g default-command /bin/zsh
       '';
     };
 
@@ -292,7 +292,7 @@ in {
         save       = 500000;
         path       = "${config.xdg.configHome}/zsh/history";
         ignoreDups = true;
-        share      = true;
+        share      = false;
         extended   = true;
       };
 
@@ -354,13 +354,7 @@ in {
       };
 
       profileExtra = ''
-        # export GPG_TTY=$(tty)
-        # if ! pgrep -x "gpg-agent" > /dev/null; then
-        #     ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
-        # fi
-
         . ${pkgs.z}/share/z.sh
-
         setopt extended_glob
       '';
 
@@ -582,16 +576,11 @@ in {
           required = true;
         };
 
-        "url \"git://github.com/ghc/packages-\"".insteadOf
-          = "git://github.com/ghc/packages/";
-        "url \"http://github.com/ghc/packages-\"".insteadOf
-          = "http://github.com/ghc/packages/";
-        "url \"https://github.com/ghc/packages-\"".insteadOf
-          = "https://github.com/ghc/packages/";
-        "url \"ssh://git@github.com/ghc/packages-\"".insteadOf
-          = "ssh://git@github.com/ghc/packages/";
-        "url \"git@github.com:/ghc/packages-\"".insteadOf
-          = "git@github.com:/ghc/packages/";
+        "url \"git://github.com/ghc/packages-\"".insteadOf = "git://github.com/ghc/packages/";
+        "url \"http://github.com/ghc/packages-\"".insteadOf = "http://github.com/ghc/packages/";
+        "url \"https://github.com/ghc/packages-\"".insteadOf = "https://github.com/ghc/packages/";
+        "url \"ssh://git@github.com/ghc/packages-\"".insteadOf = "ssh://git@github.com/ghc/packages/";
+        "url \"git@github.com:/ghc/packages-\"".insteadOf = "git@github.com:/ghc/packages/";
       };
 
       ignores = [

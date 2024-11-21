@@ -356,6 +356,9 @@ pkgs: epkgs: with epkgs;
   slime
   smart-newline
   smartparens
+  solidity-flycheck
+  solidity-mode
+  ob-solidity
   sort-words
   spinner
   sql-indent

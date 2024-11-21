@@ -172,17 +172,13 @@ in [
   nix-index
   nix-info
   nix-prefetch-git
-  # (nix-prefetch-git.override(old: {
-  #   # NixCpp fails with "/var is a symlink"
-  #   nix = lix;
-  # }))
   nix-scripts
   nixpkgs-fmt
   nixfmt
   nmap
-  # nodePackages.csslint
-  # nodePackages.eslint
-  # nodePackages.js-beautify
+  nodePackages.csslint
+  nodePackages.eslint
+  nodePackages.js-beautify
   nodejs
   opensc
   openssh
@@ -272,7 +268,7 @@ in [
   watch
   watchman
   wget
-  # wireguard-tools
+  wireguard-tools
   xapian
   xdg-utils
   xorg.xauth
@@ -281,6 +277,7 @@ in [
   xsv
   xz
   yamale
+  yarn
   yq
   yuicompressor
   z
