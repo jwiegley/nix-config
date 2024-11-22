@@ -668,27 +668,28 @@ in {
           port = 2202;
         };
 
-        vulcan = withLocal (if hostname == "hermes" || hostname == "clio" && am_traveling
-                            then home
-                            else { hostname = vulcan_ethernet; });
-        hera   = withLocal (if hostname == "hermes" || hostname == "clio" && am_traveling
-                            then home
-                            else { hostname = hera_ethernet; });
-        deimos = withLocal (onHost "vulcan" "192.168.221.128");
-        simon  = withLocal (onHost "vulcan" "172.16.194.158");
+        vulcan  = withLocal (if hostname == "hermes" || hostname == "clio" && am_traveling
+                             then home
+                             else { hostname = vulcan_ethernet; });
+        hera    = withLocal (if hostname == "hermes" || hostname == "clio" && am_traveling
+                             then home
+                             else { hostname = hera_ethernet; });
+        deimos  = withLocal (onHost "vulcan" "192.168.221.128");
+        simon   = withLocal (onHost "vulcan" "172.16.194.158");
+        minerva = withLocal (onHost "vulcan" "192.168.50.117");
 
-        athena = withLocal (if hostname == "hermes" || hostname == "clio" && am_traveling
-                            then build
-                            else { hostname = athena_ethernet; });
-        phobos = withLocal (onHost "athena" "192.168.50.111");
+        athena  = withLocal (if hostname == "hermes" || hostname == "clio" && am_traveling
+                             then build
+                             else { hostname = athena_ethernet; });
+        phobos  = withLocal (onHost "athena" "192.168.50.111");
 
-        hermes = withLocal (if hostname == "athena"
-                            then { hostname = hermes_wifi; }
-                            else { hostname = hermes_ethernet; });
-        clio   = withLocal (if hostname == "athena"
-                            then { hostname = clio_wifi; }
-                            else { hostname = clio_ethernet; });
-        neso   = withLocal (onHost "clio" "192.168.100.130");
+        hermes  = withLocal (if hostname == "athena"
+                             then { hostname = hermes_wifi; }
+                             else { hostname = hermes_ethernet; });
+        clio    = withLocal (if hostname == "athena"
+                             then { hostname = clio_wifi; }
+                             else { hostname = clio_ethernet; });
+        neso    = withLocal (onHost "clio" "192.168.100.130");
 
         mohajer = {
           hostname = "192.168.50.120";

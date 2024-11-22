@@ -62,6 +62,11 @@ switch:
 update:
 	$(call announce,nix flake update --commit-lock-file && brew update)
 	nix flake update --commit-lock-file
+	for project in $(shell grep "^[^#]" $(HOME)/.config/projects); do	\
+	    ( cd $(HOME)/$$project ;						\
+	      nix flake update --commit-lock-file				\
+	    );									\
+	done
 	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
 	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
 	elif [[ -f /usr/local/bin/brew ]]; then		\

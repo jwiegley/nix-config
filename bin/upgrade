@@ -6,14 +6,14 @@ case $1 in
         # notify "Nix on Vulcan upgraded"
         ;;
 
-    hera)
-        u hera upgrade sign copy
-        # notify "Nix on Hera upgraded"
-        ;;
-
     hermes)
         u hermes upgrade-tasks check
         # notify "Nix on Hermes upgraded"
+        ;;
+
+    hera)
+        u hera upgrade sign copy
+        # notify "Nix on Hera upgraded"
         ;;
 
     clio)
@@ -36,74 +36,11 @@ case $1 in
         ;;
 esac
 
-(
-    cd ~/src/category-theory
-    source .envrc
-    make clean
-    make
-)
-
-(
-    cd ~/src/ltl/coq
-    source .envrc
-    make clean
-    make
-)
+### Kadena projects
 
 (
     cd ~/kadena/pact-fv
-    source .envrc
-    cabal v2-update
-    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
-)
-
-(
-    cd ~/src/notes/haskell
-    source .envrc
-    cabal v2-update
-    cabal v2-configure --disable-tests --disable-profiling --disable-executable-profiling
-)
-
-(
-    cd ~/src/org-jw
-    source .envrc
-    cabal v2-update
-    cabal v2-configure --enable-tests --enable-profiling --enable-executable-profiling
-    cabal v2-build all
-)
-
-(
-    cd ~/src/renamer
-    source .envrc
-    cabal v2-update
-    cabal v2-configure --enable-tests --enable-profiling --enable-executable-profiling
-    cabal v2-build
-    cabal v2-test
-)
-
-(
-    cd ~/src/simple-amount
-    source .envrc
-    cabal v2-update
-    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
-)
-
-(
-    cd ~/src/three-partition
-    source .envrc
-    cabal v2-update
-    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
-)
-
-(
-    cd ~/src/trade-journal
-    source .envrc
+    rm .envrc* ; de ; source .envrc
     cabal v2-update
     cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
     cabal v2-build
@@ -112,7 +49,7 @@ esac
 
 (
     cd ~/kadena/evm/reth
-    source .envrc
+    rm .envrc* ; de ; source .envrc
     cargo update
     cargo build
     cargo test
@@ -120,9 +57,80 @@ esac
     cargo clippy
 )
 
+### Coq projects
+
+(
+    cd ~/src/category-theory
+    rm .envrc* ; de ; source .envrc
+    make clean
+    make
+)
+
+(
+    cd ~/src/ltl/coq
+    rm .envrc* ; de ; source .envrc
+    make clean
+    make
+)
+
+### Haskell projects
+
+(
+    cd ~/src/notes/haskell
+    rm .envrc* ; de ; source .envrc
+    cabal v2-update
+    cabal v2-configure --disable-tests --disable-profiling --disable-executable-profiling
+)
+
+(
+    cd ~/src/org-jw
+    rm .envrc* ; de ; source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests --enable-profiling --enable-executable-profiling
+    cabal v2-build all
+)
+
+(
+    cd ~/src/renamer
+    rm .envrc* ; de ; source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests --enable-profiling --enable-executable-profiling
+    cabal v2-build
+    cabal v2-test
+)
+
+(
+    cd ~/src/simple-amount
+    rm .envrc* ; de ; source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
+    cabal v2-build
+    cabal v2-test
+)
+
+(
+    cd ~/src/three-partition
+    rm .envrc* ; de ; source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
+    cabal v2-build
+    cabal v2-test
+)
+
+(
+    cd ~/src/trade-journal
+    rm .envrc* ; de ; source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
+    cabal v2-build
+    cabal v2-test
+)
+
+### Rust projects
+
 (
     cd ~/src/comparable
-    source .envrc
+    rm .envrc* ; de ; source .envrc
     cargo update
     cargo build
     cargo test

@@ -92,7 +92,7 @@ in {
       "openssl"
       "z3"
       "kurtosis-tech/tap/kurtosis-cli"
-      "truffle"
+      "truffle"                 # DEPRECATED
     ];
 
     casks = [
@@ -138,7 +138,7 @@ in {
       "expandrive"
       "fantastical"
       { name = "firefox"; greedy = true; }
-      "ganache"                     # Local Ethereum development
+      "ganache"                     # Local Ethereum development DEPRECATED
       "gitlight"
       "grammarly-desktop"
       # "gpg-suite-no-mail"
