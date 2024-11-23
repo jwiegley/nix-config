@@ -146,6 +146,7 @@ travel-ready:
 	@for dir in "$${projects[@]}"; do			\
 	    echo "Updating direnv on $(HOSTNAME) for ~/$$dir";	\
 	    (cd ~/$$dir &&					\
+             rm -f .envrc .envrc.cache;				\
              if [[ $(HOSTNAME) == athena ]]; then		\
 	         $(NIX_CONF)/bin/de;				\
              elif [[ $(HOSTNAME) == hermes ]]; then		\

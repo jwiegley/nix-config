@@ -1,139 +1,185 @@
 #!/usr/bin/env bash
 
-case $1 in
-    vulcan)
-        u vulcan upgrade sign
-        # notify "Nix on Vulcan upgraded"
-        ;;
+# case $1 in
+#     vulcan)
+#         u vulcan upgrade sign
+#         # notify "Nix on Vulcan upgraded"
+#         ;;
 
-    hermes)
-        u hermes upgrade-tasks check
-        # notify "Nix on Hermes upgraded"
-        ;;
+#     hermes)
+#         u hermes upgrade-tasks check
+#         # notify "Nix on Hermes upgraded"
+#         ;;
 
-    hera)
-        u hera upgrade sign copy
-        # notify "Nix on Hera upgraded"
-        ;;
+#     hera)
+#         u hera upgrade sign copy
+#         # notify "Nix on Hera upgraded"
+#         ;;
 
-    clio)
-        u clio upgrade-tasks check
-        # notify "Nix on Clio upgraded"
-        ;;
+#     clio)
+#         u clio upgrade-tasks check
+#         # notify "Nix on Clio upgraded"
+#         ;;
 
-    athena)
-        u switch check
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-        brew update
-        brew upgrade --greedy
-        # notify "Nix on Athena upgraded"
-        exit 0
-        ;;
+#     athena)
+#         u switch check
+#         eval "$(/opt/homebrew/bin/brew shellenv)"
+#         brew update
+#         brew upgrade --greedy
+#         # notify "Nix on Athena upgraded"
+#         exit 0
+#         ;;
 
-    *)
-        echo "Unrecognized hostname: $1"
-        exit 1
-        ;;
-esac
+#     *)
+#         echo "Unrecognized hostname: $1"
+#         exit 1
+#         ;;
+# esac
 
 ### Kadena projects
 
+echo ~/kadena/pact-fv
 (
     cd ~/kadena/pact-fv
-    rm .envrc* ; de ; source .envrc
+    source .envrc
     cabal v2-update
     cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
     cabal v2-build
     cabal v2-test
-)
+) > /tmp/pact-fv-build.log 2>&1
 
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+echo ~/kadena/evm/reth
 (
     cd ~/kadena/evm/reth
-    rm .envrc* ; de ; source .envrc
+    source .envrc
     cargo update
     cargo build
     cargo test
     cargo doc
     cargo clippy
-)
+) > /tmp/reth-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
 ### Coq projects
 
+echo ~/src/category-theory
 (
     cd ~/src/category-theory
-    rm .envrc* ; de ; source .envrc
+    source .envrc
     make clean
     make
-)
+) > /tmp/category-theory-build.log 2>&1
 
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+echo ~/src/ltl/coq
 (
     cd ~/src/ltl/coq
-    rm .envrc* ; de ; source .envrc
+    source .envrc
     make clean
     make
-)
+) > /tmp/ltl-coq-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
 ### Haskell projects
 
+echo ~/src/notes/haskell
 (
     cd ~/src/notes/haskell
-    rm .envrc* ; de ; source .envrc
+    echo ~/src/notes/haskell
+    source .envrc
     cabal v2-update
-    cabal v2-configure --disable-tests --disable-profiling --disable-executable-profiling
-)
+    cabal v2-configure --disable-tests                          \
+          --disable-profiling --disable-executable-profiling
+) > /tmp/notes-haskell-build.log 2>&1
 
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+echo ~/src/org-jw
 (
     cd ~/src/org-jw
-    rm .envrc* ; de ; source .envrc
+    echo ~/src/org-jw
+    source .envrc
     cabal v2-update
-    cabal v2-configure --enable-tests --enable-profiling --enable-executable-profiling
+    cabal v2-configure --enable-tests                           \
+          --enable-profiling --enable-executable-profiling
     cabal v2-build all
-)
+) > /tmp/org-jw-build.log 2>&1
 
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+echo ~/src/renamer
 (
     cd ~/src/renamer
-    rm .envrc* ; de ; source .envrc
+    echo ~/src/renamer
+    source .envrc
     cabal v2-update
-    cabal v2-configure --enable-tests --enable-profiling --enable-executable-profiling
+    cabal v2-configure --enable-tests                           \
+          --enable-profiling --enable-executable-profiling
     cabal v2-build
     cabal v2-test
-)
+) > /tmp/renamer-build.log 2>&1
 
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+echo ~/src/simple-amount
 (
     cd ~/src/simple-amount
-    rm .envrc* ; de ; source .envrc
+    echo ~/src/simple-amount
+    source .envrc
     cabal v2-update
-    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
+    cabal v2-configure --enable-tests                           \
+          --disable-profiling --disable-executable-profiling
     cabal v2-build
     cabal v2-test
-)
+) > /tmp/simple-amount-build.log 2>&1
 
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+echo ~/src/three-partition
 (
     cd ~/src/three-partition
-    rm .envrc* ; de ; source .envrc
+    echo ~/src/three-partition
+    source .envrc
     cabal v2-update
-    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
+    cabal v2-configure --enable-tests \
+          --disable-profiling --disable-executable-profiling
     cabal v2-build
     cabal v2-test
-)
+) > /tmp/three-partition-build.log 2>&1
 
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+echo ~/src/trade-journal
 (
     cd ~/src/trade-journal
-    rm .envrc* ; de ; source .envrc
+    echo ~/src/trade-journal
+    source .envrc
     cabal v2-update
-    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
+    cabal v2-configure --enable-tests \
+          --disable-profiling --disable-executable-profiling
     cabal v2-build
     cabal v2-test
-)
+) > /tmp/trade-journal-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
 ### Rust projects
 
+echo ~/src/comparable
 (
     cd ~/src/comparable
-    rm .envrc* ; de ; source .envrc
+    echo ~/src/comparable
+    source .envrc
     cargo update
     cargo build
     cargo test
     cargo doc
     cargo clippy
-)
+) > /tmp/comparable-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi

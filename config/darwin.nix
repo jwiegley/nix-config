@@ -82,8 +82,7 @@ in {
 
     taps = [
       "kadena-io/pact"
-      # Taps for Kadena
-      "kurtosis-tech/tap"
+      "beeftornado/rmtree"
     ];
     brews = [
       "ykman"
@@ -91,8 +90,6 @@ in {
       "kadena-io/pact/pact"
       "openssl"
       "z3"
-      "kurtosis-tech/tap/kurtosis-cli"
-      "truffle"                 # DEPRECATED
     ];
 
     casks = [
@@ -138,7 +135,6 @@ in {
       "expandrive"
       "fantastical"
       { name = "firefox"; greedy = true; }
-      "ganache"                     # Local Ethereum development DEPRECATED
       "gitlight"
       "grammarly-desktop"
       # "gpg-suite-no-mail"
@@ -154,8 +150,6 @@ in {
       # "omnigraffle"               # Stay at version 6
       { name = "opera"; greedy = true; }
       "pdf-expert"
-      "rustrover"
-      "sage"
       # "screenflow"                # Stay at version 9
       "signal"
       "slack"
@@ -164,19 +158,16 @@ in {
       "spamsieve"
       "steam"
       "suspicious-package"
-      "tagspaces"
       "telegram"
       # "thinkorswim"
       "tor-browser"
       "ukelele"
       "unicodechecker"
       "virtual-ii"
-      "visual-studio-code"
       { name = "vivaldi"; greedy = true; }
       "vlc"
       "whatsapp"
       "xnviewmp"
-      # "yubico-yubikey-manager"
       { name = "zoom"; greedy = true; }
       "zotero"
       "zulip"

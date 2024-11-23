@@ -176,10 +176,6 @@ in [
   nixpkgs-fmt
   nixfmt
   nmap
-  nodePackages.csslint
-  nodePackages.eslint
-  nodePackages.js-beautify
-  nodejs
   opensc
   openssh
   openssl
@@ -277,7 +273,6 @@ in [
   xsv
   xz
   yamale
-  yarn
   yq
   yuicompressor
   z
@@ -287,8 +282,6 @@ in [
   zip
   zsh
   zsh-syntax-highlighting
-
-  hyperorg
 
   # (exe gitAndTools.git-annex)
   # gitAndTools.git-annex-remote-rclone
