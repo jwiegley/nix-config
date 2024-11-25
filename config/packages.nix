@@ -216,6 +216,7 @@ in [
   rlwrap
   rsync
   ruby
+  samba
   sanoid
   sbcl
   scc
