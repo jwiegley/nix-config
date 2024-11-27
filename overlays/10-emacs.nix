@@ -948,7 +948,7 @@ let
 
   mkEmacsPackages = emacs:
     pkgs.lib.recurseIntoAttrs
-    ((self.emacsPackagesFor emacs).overrideScope' (_: super:
+    ((self.emacsPackagesFor emacs).overrideScope (_: super:
        pkgs.lib.fix
          (pkgs.lib.extends
             myEmacsPackageOverrides

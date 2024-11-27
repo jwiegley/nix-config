@@ -62,8 +62,9 @@ switch:
 update:
 	$(call announce,nix flake update --commit-lock-file && brew update)
 	nix flake update --commit-lock-file
-	for project in $(shell grep "^[^#]" $(HOME)/.config/projects); do	\
+	@for project in $(shell grep "^[^#]" $(HOME)/.config/projects); do	\
 	    ( cd $(HOME)/$$project ;						\
+	      echo "### $(HOME)/$$project" ;					\
 	      nix flake update --commit-lock-file				\
 	    );									\
 	done
@@ -83,6 +84,14 @@ upgrade-tasks: switch travel-ready
 	brew upgrade --greedy
 
 upgrade: update upgrade-tasks check
+
+changes:
+	@for project in $(shell grep "^[^#]" $(HOME)/.config/projects); do	\
+	    ( cd $(HOME)/$$project ;						\
+	      echo "### $(HOME)/$$project" ;					\
+	      changes								\
+	    );									\
+	done
 
 ########################################################################
 

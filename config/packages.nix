@@ -32,7 +32,6 @@ in [
   bash-completion
   bashInteractive
   bat
-  boogie
   cacert
   cbor-diag
   contacts
@@ -40,7 +39,6 @@ in [
   csvkit
   ctop
   curl
-  (pkgs.lowPrio dafny)
   darwin.cctools
   dhall
   dhall-json
