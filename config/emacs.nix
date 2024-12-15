@@ -394,6 +394,7 @@ pkgs: epkgs: with epkgs;
   virtual-auto-fill
   visual-fill-column
   visual-regexp
+  visual-regexp-steroids
   vline
   vterm
   vulpea

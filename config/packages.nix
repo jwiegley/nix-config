@@ -238,7 +238,7 @@ in [
   sshify
   stow
   subversion
-  svg2tikz
+  # svg2tikz
   taskjuggler
   terminal-notifier
   time
