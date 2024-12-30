@@ -90,7 +90,7 @@ in [
   gitAndTools.git-my
   gitAndTools.git-octopus
   gitAndTools.git-quick-stats
-  gitAndTools.git-quickfix
+  #gitAndTools.git-quickfix
   gitAndTools.git-recent
   gitAndTools.git-reparent
   gitAndTools.git-repo

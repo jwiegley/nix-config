@@ -500,7 +500,7 @@ in {
         mergetool.keepBackup   = true;
         pull.rebase            = true;
         rebase.autosquash      = true;
-        rerere.enabled         = true;
+        rerere.enabled         = false;
         init.defaultBranch     = "main";
 
         "merge \"ours\"".driver   = true;
