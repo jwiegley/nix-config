@@ -12,10 +12,12 @@ in [
   # (exe haskellPackages.hours)
   haskellPackages.sizes
   (exe haskellPackages.una)
-  (exe haskellPackages.git-monitor)
+  # haskellPackages.git-monitor
+  # haskellPackages.gitlib
   (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
   haskellPackages.org-jw
+  # haskellPackages.org-main
   haskellPackages.renamer
   (exe haskellPackages.ormolu)
   (exe haskellPackages.pointfree)
@@ -74,7 +76,7 @@ in [
   gitAndTools.ghi
   gitAndTools.gist
   gitAndTools.git-absorb
-  # gitAndTools.git-branchless
+  gitAndTools.git-branchless
   gitAndTools.git-branchstack
   gitAndTools.git-cliff
   gitAndTools.git-codeowners
@@ -90,7 +92,7 @@ in [
   gitAndTools.git-my
   gitAndTools.git-octopus
   gitAndTools.git-quick-stats
-  #gitAndTools.git-quickfix
+  # gitAndTools.git-quickfix
   gitAndTools.git-recent
   gitAndTools.git-reparent
   gitAndTools.git-repo
@@ -238,7 +240,7 @@ in [
   sshify
   stow
   subversion
-  # svg2tikz
+  svg2tikz
   taskjuggler
   terminal-notifier
   time

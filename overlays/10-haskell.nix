@@ -6,18 +6,30 @@ let
     # "bindings-DSL"
     # "c2hsc"
     # "git-all"
+    "gitlib"
     "gitlib/git-monitor"
     "gitlib/gitlib"
   [ "gitlib/gitlib-cmdline" { inherit (self.gitAndTools) git; } ]
     "gitlib/gitlib-libgit2"
     "gitlib/gitlib-test"
-    # [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
+  [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
     # "hierarchy"
     # "hours"
     # "hnix"
     # "logging"
     # "monad-extras"
     "org-jw"
+    "org-jw/org-main"
+    "org-jw/org-types"
+    "org-jw/flatparse-util"
+    "org-jw/org-cbor"
+    "org-jw/org-json"
+    "org-jw/org-data"
+    "org-jw/org-lint"
+    "org-jw/org-parse"
+    "org-jw/org-print"
+    "org-jw/org-filetags"
+    "org-jw/org-site"
     # "parsec-free"
     # "pipes-async"
     # "pipes-files"
@@ -35,12 +47,12 @@ let
     callPackage (usingWithHoogle self.haskell.packages.${ghc}) ghc;
 
   otherHackagePackages = ghc: hself: hsuper: with pkgs.haskell.lib; {
-    nix-diff = doJailbreak hsuper.nix-diff;
+    # nix-diff = doJailbreak hsuper.nix-diff;
 
-    pipes-text = unmarkBroken hsuper.pipes-text;
+    # pipes-text = unmarkBroken hsuper.pipes-text;
 
-    gitlib = unmarkBroken
-      (hself.callCabal2nix "gitlib" ~/src/gitlib/gitlib {});
+    # gitlib = unmarkBroken
+    #   (hself.callCabal2nix "gitlib" ~/src/gitlib/gitlib {});
 
     time-recurrence = unmarkBroken (doJailbreak
       (hself.callCabal2nix "time-recurrence" (pkgs.fetchFromGitHub {
@@ -62,7 +74,7 @@ let
                ({ pkgs = self;
                   compiler = ghc;
                   returnShellEnv = false; } // args)
-        else hpkgs.callCabal2nix hpkgs (builtins.baseNameOf path) path args);
+                  else hpkgs.callCabal2nix (builtins.baseNameOf path) path args);
 
   myHaskellPackages = ghc: hself: hsuper:
     let fromSrc = arg:
@@ -144,20 +156,20 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
 
 haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // rec {
-    ghc94 = overrideHask "ghc94"  pkgs.haskell.packages.ghc94 (_hself: _hsuper: {});
-    ghc96 = overrideHask "ghc96"  pkgs.haskell.packages.ghc96 (_hself: hsuper:
+    ghc94  = overrideHask "ghc94"  pkgs.haskell.packages.ghc94  (_hself: _hsuper: {});
+    ghc96  = overrideHask "ghc96"  pkgs.haskell.packages.ghc96  (_hself: hsuper:
       with pkgs.haskell.lib; {
         system-fileio = unmarkBroken hsuper.system-fileio;
       });
-    ghc98 = overrideHask "ghc98"  pkgs.haskell.packages.ghc98 (_hself: _hsuper: {});
-    ghc910 = overrideHask "ghc910"  pkgs.haskell.packages.ghc910 (_hself: _hsuper: {});
+    ghc98  = overrideHask "ghc98"  pkgs.haskell.packages.ghc98  (_hself: _hsuper: {});
+    ghc910 = overrideHask "ghc910" pkgs.haskell.packages.ghc910 (_hself: _hsuper: {});
   };
 };
 
 haskellPackages_9_4  = self.haskell.packages.ghc94;
 haskellPackages_9_6  = self.haskell.packages.ghc96;
 haskellPackages_9_8  = self.haskell.packages.ghc98;
-haskellPackages_9_10  = self.haskell.packages.ghc910;
+haskellPackages_9_10 = self.haskell.packages.ghc910;
 
 ghcDefaultVersion    = "ghc96";
 haskellPackages      = self.haskell.packages.${self.ghcDefaultVersion};
