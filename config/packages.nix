@@ -7,17 +7,15 @@ let exe = if pkgs.stdenv.targetPlatform.isx86_64
           else pkgs.lib.id;
 
 in [
-  # (exe haskellPackages.git-all)
-  # haskellPackages.pushme
-  # (exe haskellPackages.hours)
+  # haskellPackages.git-all
+  haskellPackages.pushme
+  haskellPackages.hours
   haskellPackages.sizes
-  (exe haskellPackages.una)
-  # haskellPackages.git-monitor
-  # haskellPackages.gitlib
+  haskellPackages.una
+  haskellPackages.git-monitor
   (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
   haskellPackages.org-jw
-  # haskellPackages.org-main
   haskellPackages.renamer
   (exe haskellPackages.ormolu)
   (exe haskellPackages.pointfree)

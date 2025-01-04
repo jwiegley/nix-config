@@ -6,20 +6,17 @@ let
     # "bindings-DSL"
     # "c2hsc"
     # "git-all"
-    "gitlib"
-    "gitlib/git-monitor"
     "gitlib/gitlib"
-  [ "gitlib/gitlib-cmdline" { inherit (self.gitAndTools) git; } ]
-    "gitlib/gitlib-libgit2"
     "gitlib/gitlib-test"
+  [ "gitlib/gitlib-cmdline" { inherit (self.gitAndTools) git; } ]
   [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
-    # "hierarchy"
-    # "hours"
+    "gitlib/gitlib-libgit2"
+    "gitlib/git-monitor"
+    "hours"
     # "hnix"
     # "logging"
     # "monad-extras"
-    "org-jw"
-    "org-jw/org-main"
+    "org-jw/org-jw"
     "org-jw/org-types"
     "org-jw/flatparse-util"
     "org-jw/org-cbor"
@@ -33,12 +30,11 @@ let
     # "parsec-free"
     # "pipes-async"
     # "pipes-files"
-    # "pushme"
+    "pushme"
     # "recursors"
     "renamer"
     # "runmany"
     # "simple-amount"
-    # "sitebuilder"
     "sizes"
     "una"
   ];
@@ -47,12 +43,14 @@ let
     callPackage (usingWithHoogle self.haskell.packages.${ghc}) ghc;
 
   otherHackagePackages = ghc: hself: hsuper: with pkgs.haskell.lib; {
-    # nix-diff = doJailbreak hsuper.nix-diff;
+    pushme = unmarkBroken (doJailbreak hsuper.pushme);
 
-    # pipes-text = unmarkBroken hsuper.pipes-text;
-
-    # gitlib = unmarkBroken
-    #   (hself.callCabal2nix "gitlib" ~/src/gitlib/gitlib {});
+    hakyll =  hself.callCabal2nix "hakyll" (pkgs.fetchFromGitHub {
+      owner  = "jwiegley";
+      repo   = "hakyll";
+      rev    = "ff283e5e828fde378aab09bf45ed704fd920f700";
+      sha256 = "sha256-1rQvA7DooclCpFZbjXUcU0ZC7UkSLuXOVLLL8BsZORI=";
+    }) {};
 
     time-recurrence = unmarkBroken (doJailbreak
       (hself.callCabal2nix "time-recurrence" (pkgs.fetchFromGitHub {

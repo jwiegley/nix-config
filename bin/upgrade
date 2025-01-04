@@ -116,6 +116,48 @@ echo ~/src/org-jw
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
+echo ~/src/pushme
+(
+    cd ~/src/pushme
+    echo ~/src/pushme
+    source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests                           \
+          --enable-profiling --enable-executable-profiling
+    cabal v2-build
+    cabal v2-test
+) > /tmp/pushme-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+echo ~/src/gitlib
+(
+    cd ~/src/gitlib
+    echo ~/src/gitlib
+    source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests                           \
+          --enable-profiling --enable-executable-profiling
+    cabal v2-build
+    cabal v2-test
+) > /tmp/gitlib-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+echo ~/src/hours
+(
+    cd ~/src/hours
+    echo ~/src/hours
+    source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests                           \
+          --enable-profiling --enable-executable-profiling
+    cabal v2-build
+    cabal v2-test
+) > /tmp/hours-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
 echo ~/src/renamer
 (
     cd ~/src/renamer
@@ -144,6 +186,20 @@ echo ~/src/simple-amount
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
+echo ~/src/sizes
+(
+    cd ~/src/sizes
+    echo ~/src/sizes
+    source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests                           \
+          --disable-profiling --disable-executable-profiling
+    cabal v2-build
+    cabal v2-test
+) > /tmp/sizes-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
 echo ~/src/three-partition
 (
     cd ~/src/three-partition
@@ -169,6 +225,20 @@ echo ~/src/trade-journal
     cabal v2-build
     cabal v2-test
 ) > /tmp/trade-journal-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+echo ~/src/una
+(
+    cd ~/src/una
+    echo ~/src/una
+    source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests \
+          --disable-profiling --disable-executable-profiling
+    cabal v2-build
+    cabal v2-test
+) > /tmp/una-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
