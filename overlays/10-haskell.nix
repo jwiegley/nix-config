@@ -36,6 +36,7 @@ let
     # "runmany"
     # "simple-amount"
     "sizes"
+    "trade-journal"
     "una"
   ];
 
@@ -169,7 +170,7 @@ haskellPackages_9_6  = self.haskell.packages.ghc96;
 haskellPackages_9_8  = self.haskell.packages.ghc98;
 haskellPackages_9_10 = self.haskell.packages.ghc910;
 
-ghcDefaultVersion    = "ghc96";
+ghcDefaultVersion    = "ghc98";
 haskellPackages      = self.haskell.packages.${self.ghcDefaultVersion};
 
 }

@@ -7,18 +7,19 @@ let exe = if pkgs.stdenv.targetPlatform.isx86_64
           else pkgs.lib.id;
 
 in [
-  # haskellPackages.git-all
-  haskellPackages.pushme
-  haskellPackages.hours
-  haskellPackages.sizes
-  haskellPackages.una
-  haskellPackages.git-monitor
-  (exe haskellPackages.hpack)
   (exe haskellPackages.hasktags)
-  haskellPackages.org-jw
-  haskellPackages.renamer
+  (exe haskellPackages.hpack)
   (exe haskellPackages.ormolu)
   (exe haskellPackages.pointfree)
+  # haskellPackages.git-all
+  haskellPackages.git-monitor
+  haskellPackages.hours
+  haskellPackages.org-jw
+  haskellPackages.pushme
+  haskellPackages.renamer
+  haskellPackages.sizes
+  haskellPackages.trade-journal
+  haskellPackages.una
   act
   apg
   aria2
@@ -40,8 +41,6 @@ in [
   ctop
   curl
   darwin.cctools
-  dhall
-  dhall-json
   diffstat
   diffutils
   direnv

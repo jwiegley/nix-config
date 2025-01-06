@@ -110,6 +110,7 @@ in {
       "raspberry-pi-imager"
       "chronosync"
     ] ++ lib.optionals (hostname == "hermes" || hostname == "clio") [
+      "aldente"
       "chronoagent"
     ] ++ lib.optionals (hostname == "athena") [
       "openzfs"
