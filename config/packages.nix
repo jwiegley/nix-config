@@ -201,6 +201,7 @@ in [
   pstree
   pv
   (pkgs.lowPrio python3)
+  pyright                       # LSP server for Python
   qemu libvirt
   qpdf
   qrencode
