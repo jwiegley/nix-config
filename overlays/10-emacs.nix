@@ -641,6 +641,29 @@ let
       buildInputs = with eself; [ ox-gfm ];
     };
 
+    fsrs = compileEmacsFiles {
+      name = "fsrs";
+      src = fetchFromGitHub {
+        owner = "bohonghuang";
+        repo = "lisp-fsrs";
+        rev = "824717b8507dda42f3953fbbd6b2a1283f0a6831";
+        sha256 = "1pv7gvfch6yrr8czbsf0x2px72gvcyry6xmikwxkmw97jrc4bghk";
+        # date = 2024-12-22T14:32:35+08:00;
+      };
+    };
+
+    org-srs = compileEmacsFiles {
+      name = "org-srs";
+      src = fetchFromGitHub {
+        owner = "bohonghuang";
+        repo = "org-srs";
+        rev = "366eaddba9cea74441729bcb718aabad851e4259";
+        sha256 = "1m5fbibq6p68n96zlk8y8dd5mjv96awkjazqi272vdmbfkmdcla3";
+        # date = 2025-01-09T22:47:04+08:00;
+      };
+      buildInputs = with eself; [ org fsrs ];
+    };
+
     ox-texinfo-plus = compileEmacsFiles {
       name = "ox-texinfo-plus";
       src = fetchFromGitHub {

@@ -60,12 +60,12 @@ switch:
 	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
 
 update:
-	$(call announce,nix flake update --commit-lock-file && brew update)
-	nix flake update --commit-lock-file
+	$(call announce,nix flake update && brew update)
+	nix flake update
 	@for project in $(shell grep "^[^#]" $(HOME)/.config/projects); do	\
 	    ( cd $(HOME)/$$project ;						\
 	      echo "### $(HOME)/$$project" ;					\
-	      nix flake update --commit-lock-file				\
+	      nix flake update							\
 	    );									\
 	done
 	@if [[ -f /opt/homebrew/bin/brew ]]; then	\

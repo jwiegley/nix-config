@@ -276,6 +276,7 @@ pkgs: epkgs: with epkgs;
   org-roam-ui
   org-sidebar
   org-sql
+  org-srs fsrs
   org-sticky-header
   org-super-agenda
   org-superstar
