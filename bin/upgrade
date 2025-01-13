@@ -112,6 +112,7 @@ echo ~/src/org-jw
     cabal v2-configure --enable-tests                           \
           --enable-profiling --enable-executable-profiling
     cabal v2-build all
+    cabal v2-test all
 ) > /tmp/org-jw-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -137,9 +138,9 @@ echo ~/src/gitlib
     source .envrc
     cabal v2-update
     cabal v2-configure --enable-tests                           \
-          --enable-profiling --enable-executable-profiling
-    cabal v2-build
-    cabal v2-test
+          --disable-profiling --disable-executable-profiling
+    cabal v2-build all
+    cabal v2-test all
 ) > /tmp/gitlib-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
