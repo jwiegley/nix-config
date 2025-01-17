@@ -334,7 +334,7 @@ in {
         # ls     = "${pkgs.eza}/bin/eza";
         # find   = "${pkgs.fd}/bin/fd";
         par    = "${pkgs.parallel}/bin/parallel";
-        rm     = "${pkgs.my-scripts}/bin/trash";
+        rm     = "${pkgs.rmtrash}/bin/rmtrash";
         rX     = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
         scp    = "${pkgs.rsync}/bin/rsync -aP --inplace";
         wipe   = "${pkgs.srm}/bin/srm -vfr";

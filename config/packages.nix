@@ -212,6 +212,7 @@ in [
   restic
   ripgrep
   rlwrap
+  rmtrash
   rsync
   ruby
   samba
