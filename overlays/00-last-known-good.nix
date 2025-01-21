@@ -32,5 +32,6 @@ in {
     sha256 = "sha256-nIYdTAiKIGnFNugbomgBJR+Xv5F1ZQU+HfaBqJKroC0=";
   })
   asymptote
+  clisp
   ;
 }

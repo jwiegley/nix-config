@@ -256,9 +256,8 @@ pkgs: epkgs: with epkgs;
   org-modern
   org-mru-clock
   org-msg
-  # org-noter
-  # org-noter-pdftools
-  org-noter-plus
+  org-noter
+  # org-noter-plus
   org-notifications
   org-pdftools
   org-pretty-table

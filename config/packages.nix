@@ -34,6 +34,7 @@ in [
   bashInteractive
   bat
   cacert
+  cargo-cache
   cbor-diag
   contacts
   coreutils
