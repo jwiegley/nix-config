@@ -73,7 +73,9 @@ pkgs: epkgs: with epkgs;
   crosshairs
   csv-mode
   ctable
+  ctrlf
   cursor-chg
+  dape
   deadgrep
   dedicated
   deferred
@@ -103,7 +105,6 @@ pkgs: epkgs: with epkgs;
   eglot
   eglot-booster
   el-mock
-  # elgantt
   elisp-depend
   elisp-docstring-mode
   elisp-refs
@@ -166,7 +167,6 @@ pkgs: epkgs: with epkgs;
   hl-todo
   ht
   hydra
-  # hyperbole
   ialign
   iflipb
   imenu-list
@@ -226,12 +226,12 @@ pkgs: epkgs: with epkgs;
   nginx-mode
   nix-mode
   noflet
-  # notdeft
   nov
   oauth2
   ob-async
   ob-emamux
   ob-restclient
+  ob-solidity
   olivetti
   operate-on-number
   orderless
@@ -257,7 +257,6 @@ pkgs: epkgs: with epkgs;
   org-mru-clock
   org-msg
   org-noter
-  # org-noter-plus
   org-notifications
   org-pdftools
   org-pretty-table
@@ -267,7 +266,6 @@ pkgs: epkgs: with epkgs;
   org-quick-peek
   org-real
   org-recent-headings
-  # org-recoll
   org-remark
   org-review
   org-rich-yank
@@ -358,11 +356,11 @@ pkgs: epkgs: with epkgs;
   smartparens
   solidity-flycheck
   solidity-mode
-  ob-solidity
   sort-words
   spinner
   sql-indent
   string-inflection
+  sudo-edit
   sunrise-commander
   super-save
   supercite

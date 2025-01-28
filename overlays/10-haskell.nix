@@ -162,6 +162,7 @@ haskell = pkgs.haskell // {
       });
     ghc98  = overrideHask "ghc98"  pkgs.haskell.packages.ghc98  (_hself: _hsuper: {});
     ghc910 = overrideHask "ghc910" pkgs.haskell.packages.ghc910 (_hself: _hsuper: {});
+    ghc912 = overrideHask "ghc912" pkgs.haskell.packages.ghc912 (_hself: _hsuper: {});
   };
 };
 
@@ -169,6 +170,7 @@ haskellPackages_9_4  = self.haskell.packages.ghc94;
 haskellPackages_9_6  = self.haskell.packages.ghc96;
 haskellPackages_9_8  = self.haskell.packages.ghc98;
 haskellPackages_9_10 = self.haskell.packages.ghc910;
+haskellPackages_9_12 = self.haskell.packages.ghc912;
 
 ghcDefaultVersion    = "ghc98";
 haskellPackages      = self.haskell.packages.${self.ghcDefaultVersion};

@@ -5,7 +5,7 @@ let ledgerPkg = import ~/src/ledger;
 
 {
 
-ledger_HEAD_python3 = ledger.overrideAttrs (attrs: {
+ledger_HEAD = ledger.overrideAttrs (attrs: {
   boost = pkgs.boost.override { python = pkgs.python3; };
 
   preConfigure = ''
@@ -16,13 +16,5 @@ ledger_HEAD_python3 = ledger.overrideAttrs (attrs: {
     mkdir -p $out/lib/python37/site-packages
   '';
 });
-
-ledgerPy3Env = pkgs.myEnvFun {
-  name = "ledger-py3";
-  buildInputs = with pkgs; [
-    cmake (pkgs.boost.override { python = pkgs.python3; }) gmp mpfr libedit
-    python3 texinfo gnused ninja clang doxygen icu
-  ];
-};
 
 }

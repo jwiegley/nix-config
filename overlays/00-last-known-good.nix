@@ -19,13 +19,13 @@ in {
   texinfo4
   ;
 
-  inherit (nixpkgs {
-    rev    = "2d2a9ddbe3f2c00747398f3dc9b05f7f2ebb0f53";
-    sha256 = "sha256-B5WRZYsRlJgwVHIV6DvidFN7VX7Fg9uuwkRW9Ha8z+w=";
-  })
-  svg2tikz
-  z3
-  ;
+  # inherit (nixpkgs {
+  #   rev    = "2d2a9ddbe3f2c00747398f3dc9b05f7f2ebb0f53";
+  #   sha256 = "sha256-B5WRZYsRlJgwVHIV6DvidFN7VX7Fg9uuwkRW9Ha8z+w=";
+  # })
+  # svg2tikz
+  # z3
+  # ;
 
   inherit (nixpkgs {
     rev    = "4bc9c909d9ac828a039f288cf872d16d38185db8";

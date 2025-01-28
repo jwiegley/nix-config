@@ -11,37 +11,11 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    kadena-nix = {
-      url = "github:kadena-io/kadena-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = inputs: with inputs; rec {
     darwinConfigurations =
       let configure = hostname: system: darwin.lib.darwinSystem {
-        # pkgs = import nixpkgs {
-        #   inherit system;
-        #   config = {
-        #     allowUnfree = true;
-        #     allowBroken = false;
-        #     allowInsecure = false;
-        #     allowUnsupportedSystem = false;
-
-        #     permittedInsecurePackages = [
-        #       "python-2.7.18.7"
-        #       "libressl-3.4.3"
-        #     ];
-        #   };
-
-        #   overlays =
-        #     let path = ./overlays; in with builtins;
-        #     map (n: import (path + ("/" + n)))
-        #         (filter (n: match ".*\\.nix" n != null ||
-        #                     pathExists (path + ("/" + n + "/default.nix")))
-        #                 (attrNames (readDir path)))
-        #       ++ [ (import ./config/envs.nix) ];
-        # };
         inherit system;
         specialArgs = { inherit hostname inputs; };
         modules = [

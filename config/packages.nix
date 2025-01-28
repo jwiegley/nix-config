@@ -49,7 +49,6 @@ in [
   dnsutils
   dot2tex
   doxygen
-  # emacs29Env
   emacs29MacPortEnv
   emacs-lsp-booster
   entr
@@ -77,7 +76,6 @@ in [
   gitAndTools.git-branchless
   gitAndTools.git-branchstack
   gitAndTools.git-cliff
-  gitAndTools.git-codeowners
   gitAndTools.git-crypt
   gitAndTools.git-delete-merged-branches
   (pkgs.lowPrio gitAndTools.git-extras)
@@ -145,8 +143,7 @@ in [
   khard
   killall
   kubectl
-  ledgerPy3Env
-  ledger_HEAD_python3
+  ledger_HEAD
   less
   lftp
   librsvg
@@ -286,7 +283,4 @@ in [
 
   # (exe gitAndTools.git-annex)
   # gitAndTools.git-annex-remote-rclone
-
-  # Kadena
-  inputs.kadena-nix.packages.${pkgs.system}.kadena-cli
 ]
