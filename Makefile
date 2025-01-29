@@ -92,6 +92,14 @@ changes:
 	      changes								\
 	    );									\
 	done
+	echo "### ~/.config/pushme"
+	(cd ~/.config/pushme ; changes)
+	echo "### ~/.emacs.d"
+	(cd ~/.emacs.d ; changes)
+	echo "### ~/src/nix"
+	(cd ~/src/nix ; changes)
+	echo "### ~/org"
+	(cd ~/org ; changes)
 
 ########################################################################
 
