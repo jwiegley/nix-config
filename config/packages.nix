@@ -138,6 +138,7 @@ in [
   jiq
   jo
   jq
+  jqp
   jujutsu
   jupyter
   khard
