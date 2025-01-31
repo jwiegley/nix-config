@@ -136,7 +136,6 @@ in {
       "expandrive"
       "fantastical"
       { name = "firefox"; greedy = true; }
-      "gitlight"
       "grammarly-desktop"
       # "gpg-suite-no-mail"
       "keyboard-maestro"
