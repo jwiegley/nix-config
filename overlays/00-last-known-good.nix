@@ -20,18 +20,21 @@ in {
   ;
 
   # inherit (nixpkgs {
-  #   rev    = "2d2a9ddbe3f2c00747398f3dc9b05f7f2ebb0f53";
-  #   sha256 = "sha256-B5WRZYsRlJgwVHIV6DvidFN7VX7Fg9uuwkRW9Ha8z+w=";
+  #   rev    = "4bc9c909d9ac828a039f288cf872d16d38185db8";
+  #   sha256 = "sha256-nIYdTAiKIGnFNugbomgBJR+Xv5F1ZQU+HfaBqJKroC0=";
   # })
-  # svg2tikz
-  # z3
+  # asymptote
+  # clisp
   # ;
 
   inherit (nixpkgs {
-    rev    = "4bc9c909d9ac828a039f288cf872d16d38185db8";
-    sha256 = "sha256-nIYdTAiKIGnFNugbomgBJR+Xv5F1ZQU+HfaBqJKroC0=";
+    rev    = "9a5db3142ce450045840cc8d832b13b8a2018e0c";
+    sha256 = "sha256-pUvLijVGARw4u793APze3j6mU1Zwdtz7hGkGGkD87qw=";
   })
-  asymptote
-  clisp
+  mitmproxy
+  httpie
+  xquartz
+  basedpyright
+  backblaze-b2
   ;
 }

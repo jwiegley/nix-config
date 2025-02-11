@@ -269,7 +269,6 @@ in [
   xorg.xauth
   xorg.xhost
   xquartz
-  xsv
   xz
   yamale
   yq
