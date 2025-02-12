@@ -112,6 +112,7 @@ in {
     ] ++ lib.optionals (hostname == "hermes" || hostname == "clio") [
       "aldente"
       "chronoagent"
+      "lm-studio"
     ] ++ lib.optionals (hostname == "athena") [
       "openzfs"
     ] ++ lib.optionals (hostname != "athena") [
