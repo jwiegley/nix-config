@@ -30,10 +30,7 @@ in {
     rev    = "9a5db3142ce450045840cc8d832b13b8a2018e0c";
     sha256 = "sha256-pUvLijVGARw4u793APze3j6mU1Zwdtz7hGkGGkD87qw=";
   })
-  mitmproxy
-  httpie
   xquartz
-  basedpyright
   backblaze-b2
   ;
 }
