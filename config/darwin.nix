@@ -8,10 +8,6 @@ let home           = builtins.getEnv "HOME";
     xdg_cacheHome  = "${home}/.cache";
 
 in {
-  services = {
-    nix-daemon.enable = true;
-  };
-
   users = {
     users.johnw = {
       name = "johnw";
@@ -250,7 +246,6 @@ in {
       }; in {
 
     package = pkgs.nix;
-    useDaemon = true;
 
     # This entry lets us to define a system registry entry so that
     # `nixpkgs#foo` will use the nixpkgs that nix-darwin was last built with,
