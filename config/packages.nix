@@ -2,9 +2,9 @@ hostname: inputs: pkgs:
 
 with pkgs; 
 
-let exe = if pkgs.stdenv.targetPlatform.isx86_64
+let exe = if stdenv.targetPlatform.isx86_64
           then haskell.lib.justStaticExecutables
-          else pkgs.lib.id;
+          else lib.id;
 
 in [
   (exe haskellPackages.hasktags)
@@ -33,6 +33,7 @@ in [
   bash-completion
   bashInteractive
   bat
+  btop
   cacert
   cargo-cache
   cbor-diag
@@ -78,8 +79,8 @@ in [
   gitAndTools.git-cliff
   gitAndTools.git-crypt
   gitAndTools.git-delete-merged-branches
-  (pkgs.lowPrio gitAndTools.git-extras)
-  (pkgs.lowPrio gitAndTools.git-fame)
+  (lowPrio gitAndTools.git-extras)
+  (lowPrio gitAndTools.git-fame)
   gitAndTools.git-gone
   gitAndTools.git-hub
   gitAndTools.git-imerge
@@ -96,7 +97,7 @@ in [
   gitAndTools.git-secret
   gitAndTools.git-series
   gitAndTools.git-sizer
-  (pkgs.hiPrio gitAndTools.git-standup)
+  (hiPrio gitAndTools.git-standup)
   gitAndTools.git-subrepo
   gitAndTools.git-vendor
   gitAndTools.git-when-merged
@@ -199,7 +200,7 @@ in [
   psrecord
   pstree
   pv
-  (pkgs.lowPrio python3)
+  (lowPrio python3)
   pyright                       # LSP server for Python
   qemu libvirt
   qpdf
@@ -249,7 +250,7 @@ in [
   tree
   tree-sitter
   tsvutils
-  (pkgs.lowPrio ctags)
+  (lowPrio ctags)
   universal-ctags
   unixtools.ifconfig
   unixtools.netstat

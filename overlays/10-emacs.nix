@@ -330,9 +330,9 @@ let
       src = fetchFromGitHub {
         owner = "rob137";
         repo = "corsair";
-        rev = "828c175d049d31c3dabea46f4df2ef4e8bcf2768";
-        sha256 = "09calgswxlrvdnf0pfylpby8n687fdkz2vph2q27yyp9sqk3kvkx";
-        # date = 2024-10-07T10:25:27+01:00;
+        rev = "f750a435d6be68f0d75dc5a90f8aa3cb58e8c16a";
+        sha256 = "0xwkfv63klpyqkgx1ihwqh1aqyk8yi3z3appygp28q60rybsyiyl";
+        # date = 2024-10-18T11:15:58+01:00;
       };
       buildInputs = with eself; [ gptel ];
     };
@@ -347,7 +347,7 @@ let
         # date = 2022-02-28T13:43:50-08:00;
       };
       buildInputs = with eself; [
-        dash org-roam magit-section lister compat emacsql
+        dash org-roam magit-section lister compat emacsql llama
       ];
     };
 
@@ -445,6 +445,32 @@ let
         sha256 = "08zb7vc3v3wdxkzgi902vlc5ybfvm8fxrvm5drnwfsjj9873pbcb";
         # date = 2018-02-08T11:20:21-08:00;
       };
+    };
+
+    gptel = compileEmacsFiles {
+      name = "gptel";
+      src = fetchFromGitHub {
+        owner = "karthink";
+        repo = "gptel";
+        rev = "73133590fa34c51bf2c528862be103a97c6463f0";
+        sha256 = "1nn24m9jyi825cvgf875nrw61f3i0gq0hvpxdfcy0f6di2rhy7zz";
+        # date = 2025-02-28T21:12:29-08:00;
+      };
+      buildInputs = with eself; [
+        transient compat
+      ];
+    };
+
+    gptel-quick = compileEmacsFiles {
+      name = "gptel-quick";
+      src = fetchFromGitHub {
+        owner = "karthink";
+        repo = "gptel-quick";
+        rev = "d7a3aedefdc656a136d5664f2dac165a1f6ebf0e";
+        sha256 = "05khdra5aig8466flwl62nsngyn9cz11zwjn0vyyig9c48n8nfka";
+        # date = 2025-01-21T15:09:22-08:00;
+      };
+      buildInputs = with eself; [ gptel ];
     };
 
     indent-shift = compileEmacsFiles {

@@ -26,9 +26,6 @@ let am_traveling    = false;
                       else "192.168.1.1";
     clio_wifi       = "192.168.50.112";
 
-    hermes_ethernet = "192.168.50.212";
-    hermes_wifi     = "192.168.50.102";
-
     athena_ethernet = "192.168.50.235";
 
     external_ip     = "newartisans.hopto.org";
@@ -80,8 +77,6 @@ in {
       VULCAN_WIFI        = vulcan_wifi;
       CLIO_ETHERNET      = clio_ethernet;
       CLIO_WIFI          = clio_wifi;
-      HERMES_ETHERNET    = hermes_ethernet;
-      HERMES_WIFI        = hermes_wifi;
       ATHENA_ETHERNET    = athena_ethernet;
 
       RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone";
@@ -155,7 +150,7 @@ in {
 
         "${config.xdg.dataHome}/ollama/models".source = mkLink "/Volumes/ext/Models";
       }
-      // lib.optionalAttrs (hostname == "hermes" || hostname == "clio") {
+      // lib.optionalAttrs (hostname == "clio") {
         "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Audio";
         "Photos".source = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Photos";
         "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Video";
@@ -668,24 +663,21 @@ in {
           port = 2202;
         };
 
-        vulcan  = withLocal (if hostname == "hermes" || hostname == "clio" && am_traveling
+        vulcan  = withLocal (if hostname == "clio" && am_traveling
                              then home
                              else { hostname = vulcan_ethernet; });
-        hera    = withLocal (if hostname == "hermes" || hostname == "clio" && am_traveling
+        hera    = withLocal (if hostname == "clio" && am_traveling
                              then home
                              else { hostname = hera_ethernet; });
         deimos  = withLocal (onHost "vulcan" "192.168.221.128");
         simon   = withLocal (onHost "vulcan" "172.16.194.158");
         minerva = withLocal (onHost "vulcan" "192.168.50.117");
 
-        athena  = withLocal (if hostname == "hermes" || hostname == "clio" && am_traveling
+        athena  = withLocal (if hostname == "clio" && am_traveling
                              then build
                              else { hostname = athena_ethernet; });
         phobos  = withLocal (onHost "athena" "192.168.50.111");
 
-        hermes  = withLocal (if hostname == "athena"
-                             then { hostname = hermes_wifi; }
-                             else { hostname = hermes_ethernet; });
         clio    = withLocal (if hostname == "athena"
                              then { hostname = clio_wifi; }
                              else { hostname = clio_ethernet; });

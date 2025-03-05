@@ -166,8 +166,6 @@ travel-ready:
              rm -f .envrc .envrc.cache;				\
              if [[ $(HOSTNAME) == athena ]]; then		\
 	         $(NIX_CONF)/bin/de;				\
-             elif [[ $(HOSTNAME) == hermes ]]; then		\
-	         $(NIX_CONF)/bin/de;				\
              elif [[ $(HOSTNAME) == hera ]]; then		\
 	         $(NIX_CONF)/bin/de;				\
              elif [[ $(HOSTNAME) == clio ]]; then		\

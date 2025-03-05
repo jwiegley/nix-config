@@ -154,6 +154,7 @@ pkgs: epkgs: with epkgs;
   google-this
   goto-last-change
   gptel
+  gptel-quick
   graphviz-dot-mode
   haskell-mode
   hcl-mode

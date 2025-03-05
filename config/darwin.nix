@@ -23,18 +23,10 @@ in {
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJD0sIKWWVF+zIWcNm/BfsbCQxuUBHD8nRNSpZV+mCf+ ShellFish@iPhone-28062024"
           # ShellFish iPad key
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZQeQ/gKkOwuwktwD4z0ZZ8tpxNej3qcHS5ZghRcdAd ShellFish@iPad-22062024"
-          # Secure enclave on Hermes
-          "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBB3Y8saKSHx76NQGC8CQBIec87Pe6Bk10TScomsWOW8YQ1Nb12RTLyMzq+WfpVwF9bmYvAEmbQ8H0F6n1Xfd8Y8= Hermes (enclave)"
-          # Secure enclave on Clio
         ];
         keyFiles = {
           vulcan = [
             # "${home}/${hostname}/id_hera.pub"
-            "${home}/${hostname}/id_athena.pub"
-          ];
-          hermes = [
-            # "${home}/${hostname}/id_hera.pub"
-            "${home}/${hostname}/id_vulcan.pub"
             "${home}/${hostname}/id_athena.pub"
           ];
           hera = [
@@ -77,13 +69,15 @@ in {
     };
 
     taps = [
-      "kadena-io/pact"
+      # "kadena-io/pact"
       "beeftornado/rmtree"
     ];
     brews = [
       "ykman"
+      "gollama"
+      "node@22"
       # Brews for Kadena
-      "kadena-io/pact/pact"
+      # "kadena-io/pact/pact"
       "openssl"
       "z3"
     ];
@@ -93,6 +87,7 @@ in {
       "drivedx"
       # "hazel"                   # Stay at version 5
       "iterm2"
+      "ollama"
       "vmware-fusion"
       # "vagrant"
       # "vagrant-manager"
@@ -105,13 +100,13 @@ in {
       "ledger-live"
       "raspberry-pi-imager"
       "chronosync"
-    ] ++ lib.optionals (hostname == "hermes" || hostname == "clio") [
+    ] ++ lib.optionals (hostname == "clio") [
       "aldente"
       "chronoagent"
       "lm-studio"
     ] ++ lib.optionals (hostname == "athena") [
       "openzfs"
-    ] ++ lib.optionals (hostname != "athena") [
+    ] ++ lib.optionals (hostname == "vulcan" || hostname == "clio") [
       "1password"
       "1password-cli"
       "affinity-photo"
@@ -143,7 +138,6 @@ in {
       "mellel"
       "netdownloadhelpercoapp"
       "notion"
-      "ollama"
       # "omnigraffle"               # Stay at version 6
       { name = "opera"; greedy = true; }
       "pdf-expert"
@@ -220,6 +214,9 @@ in {
       allowUnsupportedSystem = false;
 
       permittedInsecurePackages = [
+        "emacs-mac-macport-with-packages-29.4"
+        "emacs-mac-macport-29.4"
+        "emacs-29.4"
         "python-2.7.18.7"
         "libressl-3.4.3"
       ];
@@ -293,7 +290,9 @@ in {
       secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
       experimental-features = nix-command flakes
     '';
-  };
+      };
+
+  ids.gids.nixbld = if (hostname == "clio") then 350 else 30000;
 
   system = {
     stateVersion = 4;
@@ -555,13 +554,24 @@ in {
       };
      };
 
-    user.agents = {
-      aria2c = runCommand
-        ("${pkgs.aria2}/bin/aria2c "
+    user = {
+      # sudo sysctl iogpu.wired_limit_mb=57344
+      # launchctl setenv OLLAMA_HOST 0.0.0.0:11434
+      # OLLAMA_HOST=0.0.0.0:11434 ollama serve
+      # After ensuring that Ollam is not serving this port locally:
+      # ssh -L 11434:127.0.0.1:11434 athena
+      envVariables = lib.optionalAttrs (hostname == "athena") {
+        OLLAMA_HOST = "0.0.0.0:11434";
+      };
+
+      agents = {
+        aria2c = runCommand
+          ("${pkgs.aria2}/bin/aria2c "
           + "--enable-rpc "
           + "--dir ${home}/Downloads "
           + "--check-integrity "
           + "--continue ");
+      };
     };
   };
 

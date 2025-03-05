@@ -6,11 +6,6 @@ case $1 in
         # notify "Nix on Vulcan upgraded"
         ;;
 
-    hermes)
-        u hermes upgrade-tasks check
-        # notify "Nix on Hermes upgraded"
-        ;;
-
     hera)
         u hera upgrade sign copy
         # notify "Nix on Hera upgraded"
