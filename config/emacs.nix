@@ -104,6 +104,7 @@ pkgs: epkgs: with epkgs;
   egerrit
   eglot
   eglot-booster
+  el-easydraw
   el-mock
   elisp-depend
   elisp-docstring-mode
@@ -422,4 +423,12 @@ pkgs: epkgs: with epkgs;
   zoom
   zoutline
   ztree
+
+  prescient
+  vertico-prescient
+  outline-indent
+  easysession
+  compile-angel
+  inhibit-mouse
+  buffer-terminator
 ]
