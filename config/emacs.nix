@@ -104,7 +104,6 @@ pkgs: epkgs: with epkgs;
   egerrit
   eglot
   eglot-booster
-  el-easydraw
   el-mock
   elisp-depend
   elisp-docstring-mode

@@ -49,6 +49,7 @@ in {
 
   fonts.packages = with pkgs; [
     dejavu_fonts
+    nerd-fonts.dejavu-sans-mono
     scheherazade-new
     ia-writer-duospace
   ];
@@ -100,13 +101,14 @@ in {
       "ledger-live"
       "raspberry-pi-imager"
       "chronosync"
+    ] ++ lib.optionals (hostname == "clio" || hostname == "hera") [
+      "lm-studio"
     ] ++ lib.optionals (hostname == "clio") [
       "aldente"
       "chronoagent"
-      "lm-studio"
     ] ++ lib.optionals (hostname == "athena") [
       "openzfs"
-    ] ++ lib.optionals (hostname == "vulcan" || hostname == "clio") [
+    ] ++ lib.optionals (hostname == "vulcan" || hostname == "hera" || hostname == "clio") [
       "1password"
       "1password-cli"
       "affinity-photo"
