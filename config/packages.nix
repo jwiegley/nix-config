@@ -173,6 +173,8 @@ in [
   nixpkgs-fmt
   nixfmt
   nmap
+  openai
+  openai-whisper
   opensc
   openssh
   openssl
@@ -264,6 +266,7 @@ in [
   watch
   watchman
   wget
+  whisper-cpp
   wireguard-tools
   xapian
   xdg-utils

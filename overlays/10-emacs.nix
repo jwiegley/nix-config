@@ -791,6 +791,17 @@ let
       };
     };
 
+    whisper = compileEmacsFiles {
+      name = "whisper";
+      src = fetchFromGitHub {
+        owner = "natrys";
+        repo = "whisper.el";
+        rev = "fc122657bfb8d5faf6aedaefdc1687193f456d1f";
+        sha256 = "1kp9cdk71mfv8jzc68mzw9c4f71kgf4f26g8qys2578a9gk3xv2f";
+        # date = 2025-02-06T15:43:09+06:00;
+      };
+    };
+
     word-count-mode = compileEmacsFiles {
       name = "word-count-mode";
       src = fetchFromGitHub {

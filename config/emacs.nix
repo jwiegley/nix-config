@@ -406,6 +406,7 @@ pkgs: epkgs: with epkgs;
   websocket
   wgrep
   which-key
+  whisper
   whitespace-cleanup-mode
   window-purpose
   with-editor
