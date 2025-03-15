@@ -33,6 +33,7 @@ in [
   bash-completion
   bashInteractive
   bat
+  black                         # Python code formatter
   btop
   cacert
   cargo-cache
@@ -173,6 +174,7 @@ in [
   nixpkgs-fmt
   nixfmt
   nmap
+  onnxruntime
   openai
   openai-whisper
   opensc
@@ -190,20 +192,41 @@ in [
   pcre
   pdnsd
   pdfgrep
-  perl
-  perlPackages.ImageExifTool
+  (perl.withPackages (
+    perl-pkgs: with perl-pkgs; [
+      ImageExifTool
+    ]))
   pinentry_mac
   plantuml
   pngpaste
   poppler_utils
-  postgresql
+  (postgresql.withPackages (p: with p; [ pgvector ]))
   procps
   protobufc
   psrecord
   pstree
   pv
-  (lowPrio python3)
+  (hiPrio
+   (python3.withPackages (
+     python-pkgs: with python-pkgs; [
+       venvShellHook
+       # numpy_2
+       requests
+       stdenv
+
+       # llama-index-core
+       # llama-index-embeddings-huggingface
+       # llama-index-llms-ollama
+       # llama-index-readers-file
+       # llama-parse
+       # nltk
+       # fastembed
+       # qdrant-client
+       orgparse
+     ]
+   )))
   pyright                       # LSP server for Python
+  qdrant
   qemu libvirt
   qpdf
   qrencode

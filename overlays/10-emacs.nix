@@ -452,13 +452,40 @@ let
       src = fetchFromGitHub {
         owner = "karthink";
         repo = "gptel";
-        rev = "73133590fa34c51bf2c528862be103a97c6463f0";
-        sha256 = "1nn24m9jyi825cvgf875nrw61f3i0gq0hvpxdfcy0f6di2rhy7zz";
-        # date = 2025-02-28T21:12:29-08:00;
+        rev = "44f75b7d429be209b92980976fc2bd87cfefa60b";
+        sha256 = "1rwmdpy2pvx8kx6g2hnjyjni7a0g7y72vpgc3rkic6g7p455hg54";
+        # date = 2025-03-10T09:28:16-07:00;
       };
       buildInputs = with eself; [
         transient compat
       ];
+      propagatedBuildInputs = with eself; [
+        llama
+      ];
+    };
+
+    gptel-aibo = compileEmacsFiles {
+      name = "gptel-aibo";
+      src = fetchFromGitHub {
+        owner = "dolmens";
+        repo = "gptel-aibo";
+        rev = "a02325b8e1b7a9ff16fe0cf96cb1b65ea99beca2";
+        sha256 = "14sfxcm8r1hh4i0fbqzi2rxclmv67ygql64vi8milwy4d4600wgw";
+        # date = 2025-03-11T17:51:42+08:00;
+      };
+      buildInputs = with eself; [ gptel ];
+    };
+
+    gptel-fn-complete = compileEmacsFiles {
+      name = "gptel-fn-complete";
+      src = fetchFromGitHub {
+        owner = "mwolson";
+        repo = "gptel-fn-complete";
+        rev = "f69362c0a915db3c56bfc27525b89ac185924bf1";
+        sha256 = "0chssmnkbxnz8ls5kilsr7z7m0ldmwh3g6mpir27agjn081nbssz";
+        # date = 2025-02-23T20:07:11-05:00;
+      };
+      buildInputs = with eself; [ gptel ];
     };
 
     gptel-quick = compileEmacsFiles {
@@ -564,6 +591,18 @@ let
         # date = 2019-05-22T22:30:29-07:00;
       };
       buildInputs = with eself; [ emamux ];
+    };
+
+    onnx = compileEmacsFiles {
+      name = "onnx";
+      src = fetchFromGitHub {
+        owner = "lepisma";
+        repo = "onnx.el";
+        rev = "41da80ed670c2e8f26f3523e6a906318654fb1a7";
+        sha256 = "06ngwwrqzxsmdlya196716dz8a140fkfn584lif1cn1ygbas4haz";
+        # date = 2025-01-16T13:33:35+05:30;
+      };
+      propagatedBuildInputs = with eself; [ pkgs.onnxruntime ];
     };
 
     org-extra-emphasis = compileEmacsFiles {

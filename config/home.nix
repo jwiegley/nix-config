@@ -13,6 +13,12 @@ let am_traveling    = false;
     emacs-server    = "${tmpdir}/johnw-emacs/server";
     emacsclient     = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
 
+    is_work         = hostname == "athena";
+    is_server       = hostname == "athena";
+    is_personal     = hostname == "vulcan" || hostname == "hera" || hostname == "clio";
+    is_desktop      = hostname == "vulcan" || hostname == "hera" || hostname == "athena";
+    is_laptop       = hostname == "clio";
+
     hera_ethernet   = "192.168.1.1";
     hera_wifi       = "192.168.1.1";
 
@@ -59,10 +65,12 @@ in {
       JAVA_OPTS          = "-Xverify:none";
       LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
       NIX_CONF           = "${home}/src/nix";
+      NLTK_DATA          = "${config.xdg.dataHome}/nltk";
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
       SCREENRC           = "${config.xdg.configHome}/screen/config";
       SSH_AUTH_SOCK      = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
       STARDICT_DATA_DIR  = "${config.xdg.dataHome}/dictionary";
+      TIKTOKEN_CACHE_DIR = "${config.xdg.cacheHome}/tiktoken";
       TRAVIS_CONFIG_PATH = "${config.xdg.configHome}/travis";
       VAGRANT_HOME       = "${config.xdg.dataHome}/vagrant";
       WWW_HOME           = "${config.xdg.cacheHome}/w3m";
@@ -81,6 +89,7 @@ in {
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";
       FILTER_BRANCH_SQUELCH_WARNING  = "1";
+      LLAMA_INDEX_CACHE_DIR          = "${config.xdg.cacheHome}/llama-index";
 
       MANPATH = lib.concatStringsSep ":" [
         "${home}/.nix-profile/share/man"
@@ -138,25 +147,25 @@ in {
         "dl".source           = mkLink "${home}/Downloads";
         "iCloud".source       = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
       }
-      // lib.optionalAttrs (hostname == "vulcan") {
+      // lib.optionalAttrs (hostname == "vulcan" || hostname == "clio") {
         "Audio".source           = mkLink "/Volumes/ext/Audio";
         "Photos".source          = mkLink "/Volumes/ext/Photos";
         "Video".source           = mkLink "/Volumes/ext/Video";
 
         "_Archived Items".source = mkLink "/Volumes/ext/_Archived Items";
       }
-      // lib.optionalAttrs (hostname == "clio") {
-        "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Audio";
-        "Photos".source = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Photos";
-        "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Video";
-      }
-      // lib.optionalAttrs (hostname == "athena") {
+      # // lib.optionalAttrs (is_laptop) {
+      #   "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Audio";
+      #   "Photos".source = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Photos";
+      #   "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Video";
+      # }
+      // lib.optionalAttrs (is_server) {
         "Audio".source  = mkLink "/Volumes/tank/Audio";
         "Photos".source = mkLink "/Volumes/tank/Photos";
         "Video".source  = mkLink "/Volumes/tank/Video";
         "Media".source  = mkLink "/Volumes/tank/Media";
       }
-      // lib.optionalAttrs (hostname != "athena") {
+      // lib.optionalAttrs (is_personal) {
         "org".source    = mkLink "${home}/doc/org";
 
         "Mobile".source = mkLink "${home}/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org";
@@ -222,15 +231,16 @@ in {
       settings = {
         add_newline = true;
 
-        format = lib.concatStrings [
-          "$directory"
-          "$git_branch"
-          "$git_state"
-          "$git_status"
-          "$cmd_duration"
-          "$line_break"
-          "$character"
-        ];
+        # format = lib.concatStrings [
+        #   "$hostname"
+        #   "$directory"
+        #   "$git_branch"
+        #   "$git_state"
+        #   "$git_status"
+        #   "$cmd_duration"
+        #   "$line_break"
+        #   "$character"
+        # ];
 
         scan_timeout = 10;
         # character = {
@@ -775,22 +785,22 @@ in {
           port = 2202;
         };
 
-        vulcan  = withLocal (if hostname == "clio" && am_traveling
+        vulcan  = withLocal (if is_laptop && am_traveling
                              then home
                              else { hostname = vulcan_ethernet; });
-        hera    = withLocal (if hostname == "clio" && am_traveling
+        hera    = withLocal (if is_laptop && am_traveling
                              then home
                              else { hostname = hera_ethernet; });
         deimos  = withLocal (onHost "vulcan" "192.168.221.128");
         simon   = withLocal (onHost "vulcan" "172.16.194.158");
         minerva = withLocal (onHost "vulcan" "192.168.50.117");
 
-        athena  = withLocal (if hostname == "clio" && am_traveling
+        athena  = withLocal (if is_laptop && am_traveling
                              then build
                              else { hostname = athena_ethernet; });
         phobos  = withLocal (onHost "athena" "192.168.50.111");
 
-        clio    = withLocal (if hostname == "athena"
+        clio    = withLocal (if hostname != "vulcan"
                              then { hostname = clio_wifi; }
                              else { hostname = clio_ethernet; });
         neso    = withLocal (onHost "clio" "192.168.100.130");

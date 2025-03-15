@@ -110,6 +110,7 @@ pkgs: epkgs: with epkgs;
   elisp-refs
   elisp-slime-nav
   elmacro
+  emacsql
   emamux
   embark
   embark-consult
@@ -153,7 +154,9 @@ pkgs: epkgs: with epkgs;
   gnus-recent
   google-this
   goto-last-change
-  gptel
+  gptel llama
+  gptel-aibo
+  gptel-fn-complete
   gptel-quick
   graphviz-dot-mode
   haskell-mode
@@ -234,6 +237,7 @@ pkgs: epkgs: with epkgs;
   ob-restclient
   ob-solidity
   olivetti
+  onnx
   operate-on-number
   orderless
   org
@@ -261,8 +265,7 @@ pkgs: epkgs: with epkgs;
   org-notifications
   org-pdftools
   org-pretty-table
-  org-project-capture
-  org-projectile
+  org-projectile org-project-capture org-category-capture
   org-ql
   org-quick-peek
   org-real
@@ -308,6 +311,7 @@ pkgs: epkgs: with epkgs;
   pcre2el
   pdf-tools
   pdfgrep
+  peg
   persistent-scratch
   persistent-soft
   peval
@@ -372,6 +376,7 @@ pkgs: epkgs: with epkgs;
   tidy
   tla-mode
   toc-org
+  ts
   transpose-mark
   treemacs
   tuareg

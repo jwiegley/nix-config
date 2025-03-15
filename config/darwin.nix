@@ -7,6 +7,12 @@ let home           = builtins.getEnv "HOME";
     xdg_dataHome   = "${home}/.local/share";
     xdg_cacheHome  = "${home}/.cache";
 
+    is_work        = hostname == "athena";
+    is_server      = hostname == "athena";
+    is_personal    = hostname == "vulcan" || hostname == "hera" || hostname == "clio";
+    is_desktop     = hostname == "vulcan" || hostname == "hera" || hostname == "athena";
+    is_laptop      = hostname == "clio";
+
 in {
   users = {
     users.johnw = {
@@ -84,6 +90,7 @@ in {
     ];
 
     casks = [
+      "carbon-copy-cloner"
       "docker"
       "drivedx"
       # "hazel"                   # Stay at version 5
@@ -94,21 +101,21 @@ in {
       # "vagrant-manager"
       # "vagrant-vmware-utility"
       "wireshark"
-    ] ++ lib.optionals (hostname == "vulcan" || hostname == "hera") [
+    ] ++ lib.optionals (is_personal && is_desktop) [
       "fujitsu-scansnap-home"
       "geektool"
       "gzdoom"
-      "ledger-live"
       "raspberry-pi-imager"
       "chronosync"
-    ] ++ lib.optionals (hostname == "clio" || hostname == "hera") [
+    ] ++ lib.optionals (is_personal && pkgs.system == "aarch64-darwin") [
       "lm-studio"
-    ] ++ lib.optionals (hostname == "clio") [
+      "diffusionbee"
+    ] ++ lib.optionals (is_laptop) [
       "aldente"
       "chronoagent"
-    ] ++ lib.optionals (hostname == "athena") [
+    ] ++ lib.optionals (is_server) [
       "openzfs"
-    ] ++ lib.optionals (hostname == "vulcan" || hostname == "hera" || hostname == "clio") [
+    ] ++ lib.optionals (is_personal) [
       "1password"
       "1password-cli"
       "affinity-photo"
@@ -117,7 +124,6 @@ in {
       "asana"
       "audacity"
       { name = "brave-browser"; greedy = true; }
-      "carbon-copy-cloner"
       "choosy"
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
@@ -135,6 +141,7 @@ in {
       "keyboard-maestro"
       "launchbar"
       "lectrote"
+      "ledger-live"
       # "macwhisper"                # Use Whisper Transcription in App Store
       # "marked"                    # Use Marked 2 in App Store
       "mellel"
@@ -152,7 +159,7 @@ in {
       "steam"
       "suspicious-package"
       "telegram"
-      # "thinkorswim"
+      "thinkorswim"
       "tor-browser"
       "ukelele"
       "unicodechecker"
@@ -180,7 +187,7 @@ in {
     masApps = {
       "Speedtest"             = 1153157709;
       "Xcode"                 = 497799835;
-    } // lib.optionalAttrs (hostname != "athena") {
+    } // lib.optionalAttrs (is_personal) {
       "1Password for Safari"  = 1569813296;
       # "ASUS Device Discovery" = 995124504;
       "Bible Study"           = 472790630;
@@ -317,7 +324,7 @@ in {
         NSNavPanelExpandedStateForSaveMode = true;
         NSNavPanelExpandedStateForSaveMode2 = true;
         "com.apple.keyboard.fnState" = true;
-        _HIHideMenuBar = hostname == "vulcan" || hostname == "hera";
+        _HIHideMenuBar = is_desktop;
         "com.apple.mouse.tapBehavior" = 1;
         "com.apple.sound.beep.volume" = 0.0;
         "com.apple.sound.beep.feedback" = 0;
@@ -416,7 +423,7 @@ in {
     };
   };
 
-  # networking = lib.optionalAttrs (hostname == "vulcan") {
+  # networking = lib.optionalAttrs (is_desktop) {
   #   dns = [ "192.168.50.1" ];
   #   search = [ "local" ];
   #   knownNetworkServices = [ "Ethernet" "Thunderbolt Bridge" ];
@@ -488,7 +495,7 @@ in {
         serviceConfig.KeepAlive = false;
       };
      }
-    // lib.optionalAttrs (hostname == "athena") {
+    // lib.optionalAttrs (is_server) {
       snapshots = {
         script = ''
           date >> /var/log/snapshots.log 2>&1
@@ -562,7 +569,7 @@ in {
       # OLLAMA_HOST=0.0.0.0:11434 ollama serve
       # After ensuring that Ollam is not serving this port locally:
       # ssh -L 11434:127.0.0.1:11434 athena
-      envVariables = lib.optionalAttrs (hostname == "athena") {
+      envVariables = lib.optionalAttrs (is_server) {
         OLLAMA_HOST = "0.0.0.0:11434";
       };
 
@@ -577,7 +584,7 @@ in {
     };
   };
 
-  environment.etc = lib.optionalAttrs (hostname == "athena") {
+  environment.etc = lib.optionalAttrs (is_server) {
     "sanoid/sanoid.conf".text = ''
       [tank]
 
