@@ -281,7 +281,6 @@ pkgs: epkgs: with epkgs;
   org-sticky-header
   org-super-agenda
   org-superstar
-  org-timeblock
   org-timeline
   org-transclusion
   org-upcoming-modeline

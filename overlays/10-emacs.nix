@@ -1059,16 +1059,13 @@ let
 
 in {
 
-emacs             = if pkgs.stdenv.targetPlatform.isx86_64
-                    then self.emacs29MacPort
-                    else self.emacs29;
+emacs             = self.emacs29MacPort;
 emacsPackages     = self.emacs29MacPortPackages;
 emacsPackagesNg   = self.emacs29MacPortPackagesNg;
 
 emacs29           = pkgs.emacs29;
 emacs29Packages   = self.emacs29PackagesNg;
 emacs29PackagesNg = mkEmacsPackages self.emacs29;
-
 
 emacs29MacPort = pkgs.emacs29-macport.overrideAttrs (o: {
   version = "29.4";

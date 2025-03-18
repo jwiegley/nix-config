@@ -103,16 +103,15 @@ in {
       "wireshark"
     ] ++ lib.optionals (is_personal && is_desktop) [
       "fujitsu-scansnap-home"
-      "geektool"
       "gzdoom"
       "raspberry-pi-imager"
-      "chronosync"
+      "chronoagent"
     ] ++ lib.optionals (is_personal && pkgs.system == "aarch64-darwin") [
       "lm-studio"
       "diffusionbee"
     ] ++ lib.optionals (is_laptop) [
       "aldente"
-      "chronoagent"
+      "chronosync"
     ] ++ lib.optionals (is_server) [
       "openzfs"
     ] ++ lib.optionals (is_personal) [
@@ -136,6 +135,7 @@ in {
       "expandrive"
       "fantastical"
       { name = "firefox"; greedy = true; }
+      "geektool"
       "grammarly-desktop"
       # "gpg-suite-no-mail"
       "keyboard-maestro"
@@ -271,7 +271,7 @@ in {
 
     settings = {
       trusted-users = [ "johnw" "@admin" ];
-      max-jobs = 8;
+      max-jobs = if (hostname == "clio") then 10 else 24;
       cores = 2;
 
       substituters = [
