@@ -1,50 +1,50 @@
 #!/bin/bash
 
 if [[ "$1" == "vulcan" ]]; then
-  HOSTNAME=vulcan
-  REMOTES=clio
-  shift 1
+    HOSTNAME=vulcan
+    REMOTES=clio
+    shift 1
 
 elif [[ "$1" == "hera" ]]; then
-  HOSTNAME=hera
-  REMOTES=clio
-  shift 1
+    HOSTNAME=hera
+    REMOTES=clio
+    shift 1
 
 elif [[ "$1" == "clio" ]]; then
-  HOSTNAME=clio
-  # REMOTES="hera athena"
-  REMOTES=athena
-  # if [ -z ${CACHE+x} ]; then CACHE=athena; fi
-  # if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
-  shift 1
+    HOSTNAME=clio
+    # REMOTES="hera athena"
+    REMOTES=athena
+    # if [ -z ${CACHE+x} ]; then CACHE=athena; fi
+    # if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
+    shift 1
 
 elif [[ "$1" == "athena" ]]; then
-  HOSTNAME=athena
-  REMOTES="clio hera"
-  shift 1
+    HOSTNAME=athena
+    REMOTES="clio hera"
+    shift 1
 
 elif [[ $(hostname) =~ [Vv]ulcan ]]; then
-  HOSTNAME=vulcan
-  REMOTES=clio
+    HOSTNAME=vulcan
+    REMOTES=clio
 
 elif [[ $(hostname) =~ [Hh]era ]]; then
-  HOSTNAME=hera
-  REMOTES=clio
+    HOSTNAME=hera
+    REMOTES=clio
 
 elif [[ $(hostname) =~ [Cc]lio ]]; then
-  HOSTNAME=clio
-  # REMOTES="hera athena"
-  REMOTES=athena
-  # if [ -z ${CACHE+x} ]; then CACHE=athena; fi
-  # if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
+    HOSTNAME=clio
+    # REMOTES="hera athena"
+    REMOTES=athena
+    # if [ -z ${CACHE+x} ]; then CACHE=athena; fi
+    # if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
 
 elif [[ $(hostname) =~ [Aa]thena ]]; then
-  HOSTNAME=athena
-  REMOTES="clio hera"
+    HOSTNAME=athena
+    REMOTES="clio hera"
 
 else
-  echo "Cannot recognize HOSTNAME=$HOSTNAME"
-  exit 1
+    echo "Script does not recognize hostname '$HOSTNAME'"
+    exit 1
 fi
 
 MAKEARGS="-C $NIX_CONF -f Makefile"
