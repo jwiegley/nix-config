@@ -12,8 +12,7 @@ case $1 in
         ;;
 
     clio)
-        # u clio upgrade-tasks check
-        u clio upgrade sign
+        u clio upgrade-tasks sign check
         # notify "Nix on Clio upgraded"
         ;;
 

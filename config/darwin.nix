@@ -32,7 +32,7 @@ in {
         ];
         keyFiles = {
           vulcan = [
-            # "${home}/${hostname}/id_hera.pub"
+            "${home}/${hostname}/id_hera.pub"
             "${home}/${hostname}/id_athena.pub"
           ];
           hera = [
@@ -40,12 +40,12 @@ in {
             "${home}/${hostname}/id_athena.pub"
           ];
           clio = [
-            # "${home}/${hostname}/id_hera.pub"
+            "${home}/${hostname}/id_hera.pub"
             "${home}/${hostname}/id_vulcan.pub"
             "${home}/${hostname}/id_athena.pub"
           ];
           athena = [
-            # "${home}/${hostname}/id_hera.pub"
+            "${home}/${hostname}/id_hera.pub"
             "${home}/${hostname}/id_vulcan.pub"
           ];
         }.${hostname};
@@ -189,7 +189,6 @@ in {
       "Xcode"                 = 497799835;
     } // lib.optionalAttrs (is_personal) {
       "1Password for Safari"  = 1569813296;
-      # "ASUS Device Discovery" = 995124504;
       "Bible Study"           = 472790630;
       "DataGraph"             = 407412840;
       "Drafts"                = 1435957248;
@@ -207,7 +206,7 @@ in {
       "Paletter"              = 1494948845;
       "Pixelmator Pro"        = 1289583905;
       "Prime Video"           = 545519333;
-      # "Shell Fish"            = 1336634154;
+      "Shell Fish"            = 1336634154;
       "Soulver 3"             = 1508732804;
       "Whisper Transcription" = 1668083311;
       "WireGuard"             = 1451685025;
@@ -301,7 +300,8 @@ in {
     '';
       };
 
-  ids.gids.nixbld = if (hostname == "vulcan") then 30000 else 350;
+  ids.gids.nixbld = 
+    if (hostname == "vulcan" || hostname == "athena") then 30000 else 350;
 
   system = {
     stateVersion = 4;
