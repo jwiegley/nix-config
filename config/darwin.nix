@@ -301,7 +301,7 @@ in {
     '';
       };
 
-  ids.gids.nixbld = if (hostname == "clio") then 350 else 30000;
+  ids.gids.nixbld = if (hostname == "vulcan") then 30000 else 350;
 
   system = {
     stateVersion = 4;

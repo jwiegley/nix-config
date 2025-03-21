@@ -19,16 +19,16 @@ let am_traveling    = false;
     is_desktop      = hostname == "vulcan" || hostname == "hera" || hostname == "athena";
     is_laptop       = hostname == "clio";
 
-    hera_ethernet   = "192.168.1.1";
-    hera_wifi       = "192.168.1.1";
-
-    vulcan_ethernet = if hostname == "clio"
+    hera_ethernet   = if hostname == "clio"
                       then "192.168.2.1"
-                      else "192.168.50.51";
+                      else "192.168.50.5";
+    hera_wifi       = "192.168.50.30";
+
+    vulcan_ethernet = "192.168.50.51";
     vulcan_wifi     = "192.168.50.172";
 
-    clio_ethernet   = if hostname == "vulcan"
-                      then "192.168.2.3"
+    clio_ethernet   = if hostname == "hera"
+                      then "192.168.2.2"
                       else "192.168.1.1";
     clio_wifi       = "192.168.50.112";
 
@@ -125,40 +125,42 @@ in {
           ca_certificate = ${ca-bundle_crt}
         '';
 
-        ".cups".source        = mkLink "${config.xdg.configHome}/cups";
-        ".dbvis".source       = mkLink "${config.xdg.configHome}/dbvis";
-        ".gist".source        = mkLink "${config.xdg.configHome}/gist/api_key";
-        ".gnupg".source       = mkLink "${config.xdg.configHome}/gnupg";
-        ".jupyter".source     = mkLink "${config.xdg.configHome}/jupyter";
-        ".sage".source        = mkLink "${config.xdg.configHome}/sage";
-        ".jq".source          = mkLink "${config.xdg.configHome}/jq/config";
-        ".parallel".source    = mkLink "${config.xdg.configHome}/parallel";
+        ".cups".source         = mkLink "${config.xdg.configHome}/cups";
+        ".dbvis".source        = mkLink "${config.xdg.configHome}/dbvis";
+        ".gist".source         = mkLink "${config.xdg.configHome}/gist/api_key";
+        ".gnupg".source        = mkLink "${config.xdg.configHome}/gnupg";
+        ".jupyter".source      = mkLink "${config.xdg.configHome}/jupyter";
+        ".sage".source         = mkLink "${config.xdg.configHome}/sage";
+        ".jq".source           = mkLink "${config.xdg.configHome}/jq/config";
+        ".parallel".source     = mkLink "${config.xdg.configHome}/parallel";
 
-        ".ollama".source      = mkLink "${config.xdg.configHome}/ollama";
+        ".ollama".source       = mkLink "${config.xdg.configHome}/ollama";
         "${config.xdg.configHome}/ollama/models".source = mkLink "${config.xdg.dataHome}/ollama/models";
 
-        ".cargo".source       = mkLink "${config.xdg.dataHome}/cargo";
-        ".docker".source      = mkLink "${config.xdg.dataHome}/docker";
-        ".w3m".source         = mkLink "${config.xdg.dataHome}/w3m";
+        ".cargo".source        = mkLink "${config.xdg.dataHome}/cargo";
+        ".diffusionbee".source = mkLink "${config.xdg.dataHome}/diffusionbee";
+        ".docker".source       = mkLink "${config.xdg.dataHome}/docker";
+        ".lmstudio".source     = mkLink "${config.xdg.dataHome}/lmstudio";
+        ".w3m".source          = mkLink "${config.xdg.dataHome}/w3m";
 
-        ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";
+        ".thinkorswim".source  = mkLink "${config.xdg.cacheHome}/thinkorswim";
 
-        ".emacs.d".source     = mkLink "${home}/src/dot-emacs";
-        "dl".source           = mkLink "${home}/Downloads";
-        "iCloud".source       = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
+        ".emacs.d".source      = mkLink "${home}/src/dot-emacs";
+        "dl".source            = mkLink "${home}/Downloads";
+        "iCloud".source        = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
       }
-      // lib.optionalAttrs (hostname == "vulcan" || hostname == "clio") {
+      // lib.optionalAttrs (hostname == "hera") {
         "Audio".source           = mkLink "/Volumes/ext/Audio";
         "Photos".source          = mkLink "/Volumes/ext/Photos";
         "Video".source           = mkLink "/Volumes/ext/Video";
 
         "_Archived Items".source = mkLink "/Volumes/ext/_Archived Items";
       }
-      # // lib.optionalAttrs (is_laptop) {
-      #   "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Audio";
-      #   "Photos".source = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Photos";
-      #   "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Video";
-      # }
+      // lib.optionalAttrs (is_laptop) {
+        "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Audio";
+        "Photos".source = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Photos";
+        "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Video";
+      }
       // lib.optionalAttrs (is_server) {
         "Audio".source  = mkLink "/Volumes/tank/Audio";
         "Photos".source = mkLink "/Volumes/tank/Photos";
@@ -502,8 +504,8 @@ in {
           name = "iterm2_shell_integration";
           src = pkgs.fetchurl {
             url = https://iterm2.com/shell_integration/zsh;
-            sha256 = "1xk6kx5kdn5wbqgx2f63vnafhkynlxnlshxrapkwkd9zf2531bqa";
-            # date = 2024-10-23T14:38:30-0700;
+            sha256 = "0yhfnaigim95sk1idrc3hpwii8hfhjl5m3lyc0ip3vi1a9npq0li";
+            # date = 2025-03-19T15:01:02-0700;
           };
         }
       ];
@@ -791,16 +793,16 @@ in {
         hera    = withLocal (if is_laptop && am_traveling
                              then home
                              else { hostname = hera_ethernet; });
-        deimos  = withLocal (onHost "vulcan" "192.168.221.128");
-        simon   = withLocal (onHost "vulcan" "172.16.194.158");
-        minerva = withLocal (onHost "vulcan" "192.168.50.117");
+        deimos  = withLocal (onHost "hera" "192.168.221.128");
+        simon   = withLocal (onHost "hera" "172.16.194.158");
+        minerva = withLocal (onHost "hera" "192.168.50.117");
 
         athena  = withLocal (if is_laptop && am_traveling
                              then build
                              else { hostname = athena_ethernet; });
         phobos  = withLocal (onHost "athena" "192.168.50.111");
 
-        clio    = withLocal (if hostname != "vulcan"
+        clio    = withLocal (if hostname != "hera"
                              then { hostname = clio_wifi; }
                              else { hostname = clio_ethernet; });
         neso    = withLocal (onHost "clio" "192.168.100.130");

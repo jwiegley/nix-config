@@ -94,8 +94,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "sha256-HZkYlhPSRAB4KuguSwYJRTNczYWISjSJcAucp+8wxG0=";
-      # date = 2023-06-09T13:28:36-0700;
+      sha256 = "1xnxgjd9nrjz16avyn17ryrw9w3pzjvl14y78mjn64a54fbxxjrf";
+      # date = 2025-03-19T15:00:25-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -152,8 +152,8 @@ let
 
     pp-c-l = compileEmacsWikiFile {
       name = "pp-c-l.el";
-      sha256 = "03mhd8lja71163jg6fj4d4hy2dwb1c5j46sn9yq6m9wz413a4pmd";
-      # date = 2021-03-26T13:22:37-0700;
+      sha256 = "00509bv668wq8k0fa65xmlagkgris85g47f62ynqx7a39jgvca3g";
+      # date = 2025-03-19T15:00:16-0700;
     };
 
     tidy = compileEmacsWikiFile {
@@ -176,20 +176,11 @@ let
 
     yaoddmuse = compileEmacsWikiFile {
       name = "yaoddmuse.el";
-      sha256 = "0h3s3mdfz0czgz1cj415k170g7mbbqmsinw0xr7qmk050i154iis";
-      # date = 2021-03-26T13:22:43-0700;
+      sha256 = "1ahcshphziqi1hhrhv52jdmqp9q1w1b3qxl007xrjp3nmz0sbdjr";
+      # date = 2025-03-19T15:00:32-0700;
     };
 
     ########################################################################
-
-    bytecomp-simplify = compileEmacsFiles {
-      name = "bytecomp-simplify.el";
-      src = fetchurl {
-        url = https://download.tuxfamily.org/user42/bytecomp-simplify.el;
-        sha256 = "1yq0wqgva8yidyd46cqag0ds0cyzl7q8rpd2cmksp68k4zlsxwyv";
-        # date = 2022-01-03T11:56:57-0800;
-      };
-    };
 
     jobhours = compileEmacsFiles {
       name = "jobhours";
@@ -520,17 +511,6 @@ let
         rev = "e488e8f95661a8daf9c66241ce58bb6650d91751";
         sha256 = "1qvkxpxdv0n9qlzigvi25iw485824pgbpb10lwhh8bs2074dvrgq";
         # date = 2015-03-21T23:29:07-05:00;
-      };
-    };
-
-    info-lookmore = compileEmacsFiles {
-      name = "info-lookmore";
-      src = fetchFromGitHub {
-        owner = "emacsmirror";
-        repo = "info-lookmore";
-        rev = "5e2e62feea2b5149a82365be5580f9e328dd36cc";
-        sha256 = "1gfsblgwxszmnx1pf29czvik92ywprvryb57g89zwf31486gjb21";
-        # date = 2017-01-20T12:58:03+01:00;
       };
     };
 

@@ -29,7 +29,6 @@ pkgs: epkgs: with epkgs;
   bufler
   burly
   button-lock
-  bytecomp-simplify
   calfw
   calfw-cal
   calfw-org
@@ -175,7 +174,6 @@ pkgs: epkgs: with epkgs;
   iflipb
   imenu-list
   indent-shift
-  info-lookmore
   ipcalc
   jinx
   jobhours
