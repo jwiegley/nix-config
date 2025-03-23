@@ -174,6 +174,7 @@ in [
   nixpkgs-fmt
   nixfmt
   nmap
+  ollama
   onnxruntime
   openai
   openai-whisper

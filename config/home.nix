@@ -11,10 +11,6 @@ let home             = builtins.getEnv "HOME";
     emacs-server     = "${tmpdir}/johnw-emacs/server";
     emacsclient      = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
 
-    is_server        = hostname == "athena";
-    is_personal      = hostname == "vulcan" || hostname == "hera" || hostname == "clio";
-    is_laptop        = hostname == "clio";
-
     master_key       = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
     signing_key      = "12D70076AB504679";
 
@@ -127,18 +123,20 @@ in {
 
         "_Archived Items".source = mkLink "/Volumes/ext/_Archived Items";
       }
-      // lib.optionalAttrs (is_laptop) {
+      // lib.optionalAttrs (hostname == "clio") {
         "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Audio";
         "Photos".source = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Photos";
         "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Video";
       }
-      // lib.optionalAttrs (is_server) {
+      // lib.optionalAttrs (hostname == "athena") {
         "Audio".source  = mkLink "/Volumes/tank/Audio";
         "Photos".source = mkLink "/Volumes/tank/Photos";
         "Video".source  = mkLink "/Volumes/tank/Video";
         "Media".source  = mkLink "/Volumes/tank/Media";
       }
-      // lib.optionalAttrs (is_personal) {
+      // lib.optionalAttrs (hostname == "vulcan" ||
+                            hostname == "hera" ||
+                            hostname == "clio") {
         "org".source    = mkLink "${home}/doc/org";
 
         "Mobile".source = mkLink "${home}/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org";
@@ -740,81 +738,62 @@ in {
             identitiesOnly = true;
           };
 
+          matchHost = host: hostname: {
+            inherit hostname;
+            match = ''
+              host ${host} exec "ping -c1 -W50 -q ${hostname}"
+            '';
+          };
+
           onHost = proxyJump: hostname: { inherit hostname; } //
             lib.optionalAttrs (hostname != proxyJump) {
               inherit proxyJump;
             };
 
-          hera_thunderbolt = "192.168.2.1";
-          hera_ethernet    = "192.168.50.5";
-          hera_wifi        = "192.168.50.30";
-
-          vulcan_ethernet  = "192.168.50.51";
-          vulcan_wifi      = "192.168.50.172";
-
-          clio_thunderbolt = "192.168.2.2";
-          clio_wifi        = "192.168.50.112";
-
-          athena_ethernet  = "192.168.50.235";
-
-          external_ip      = "newartisans.hopto.org";
-
+          external_host = "newartisans.hopto.org";
         in {
 
-        vulcan  = withIdentity {
-          hostname = vulcan_ethernet;
-        };
+        # Hera
 
-        hera_direct = withIdentity {
-          hostname = hera_thunderbolt;
-          match = ''
-            host hera exec "ping -c1 -W50 -q ${hera_thunderbolt}"
-          '';
-        };
-        hera_local = withIdentity {
-          hostname = hera_ethernet;
-          match = ''
-            host hera exec "ping -c1 -W50 -q ${hera_ethernet}"
-          '';
-        };
-        hera_remote = withIdentity {
-          hostname = external_ip;
+        hera_thunderbolt = withIdentity (matchHost "hera" "192.168.2.1");
+        hera_ethernet    = withIdentity (matchHost "hera" "192.168.50.5");
+        hera_internet    = withIdentity (matchHost "hera" external_host) // {
           port = 2201;
         };
+
         deimos  = withIdentity (onHost "hera" "192.168.221.128");
         simon   = withIdentity (onHost "hera" "172.16.194.158");
         minerva = withIdentity (onHost "hera" "192.168.50.117");
 
-        athena_local = withIdentity {
-          hostname = athena_ethernet;
-          match = ''
-            host athena exec "ping -c1 -W50 -q ${athena_ethernet}"
-          '';
-        };
-        athena_remote = withIdentity {
-          hostname = external_ip;
+        # Athena
+
+        athena_ethernet = withIdentity (matchHost "athena" "192.168.50.235");
+        athena_internet = withIdentity (matchHost "athena" external_host) // {
           port = 2202;
         };
+
         phobos = withIdentity (onHost "athena" "192.168.50.111");
 
-        clio_direct = withIdentity {
-          hostname = clio_thunderbolt;
-          match = ''
-            host clio exec "ping -c1 -W50 -q ${clio_thunderbolt}"
-          '';
+        tank_ethernet = withIdentity (matchHost "tank" "192.168.50.235");
+        tank_internet = withIdentity (matchHost "tank" external_host) // {
+          port = 2202;
         };
-        clio_local = withIdentity {
-          hostname = clio_wifi;
-          match = ''
-            host clio exec "ping -c1 -W50 -q ${clio_wifi}"
-          '';
-        };
+
+        # Clio
+
+        clio_thunderbolt = withIdentity (matchHost "clio" "192.168.2.2");
+        clio_wifi        = withIdentity (matchHost "clio" "192.168.50.112");
+
         neso = withIdentity (onHost "clio" "192.168.100.130");
 
-        # mohajer = withIdentity {
-        #   hostname = "192.168.50.120";
-        #   user = "nasimwiegley";
-        # };
+        # Vulcan
+
+        vulcan_ethernet  = withIdentity (matchHost "vulcan" "192.168.50.51");
+        vulcan_internet  = withIdentity (matchHost "vulcan" external_host) // {
+          port = 2203;
+        };
+
+        # Other servers
 
         router = withIdentity {
           hostname = "192.168.50.1";
@@ -842,6 +821,7 @@ in {
         haskell_org = { host = "*haskell.org"; user = "root"; };
 
         # Kadena
+
         chainweb_com = {
           host = "*.chainweb.com";
           user = "chainweb";

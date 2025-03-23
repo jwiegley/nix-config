@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 
 case $1 in
-    vulcan)
-        u vulcan upgrade sign
-        # notify "Nix on Vulcan upgraded"
-        ;;
-
     hera)
         u hera upgrade sign copy
         # notify "Nix on Hera upgraded"
@@ -23,6 +18,11 @@ case $1 in
         brew upgrade --greedy
         # notify "Nix on Athena upgraded"
         exit 0
+        ;;
+
+    vulcan)
+        u vulcan upgrade sign
+        # notify "Nix on Vulcan upgraded"
         ;;
 
     *)

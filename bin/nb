@@ -3,4 +3,4 @@
 set -x
 cd ~/src/nix
 export NIXPKGS_ALLOW_INSECURE=1
-bash -c "$(u vulcan build-command | grep PATH) $@"
+bash -c "$(u hera build-command | grep PATH) $@"

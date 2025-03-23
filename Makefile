@@ -1,5 +1,5 @@
-HOSTNAME   = vulcan
-REMOTES	   = clio
+HOSTNAME   = hera
+REMOTES	   = clio athena
 GIT_REMOTE = jwiegley
 MAX_AGE	   = 14
 NIX_CONF   = $(HOME)/src/nix

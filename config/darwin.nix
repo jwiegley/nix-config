@@ -7,11 +7,6 @@ let home           = builtins.getEnv "HOME";
     xdg_dataHome   = "${home}/.local/share";
     xdg_cacheHome  = "${home}/.cache";
 
-    is_server      = hostname == "athena";
-    is_personal    = hostname == "vulcan" || hostname == "hera" || hostname == "clio";
-    is_desktop     = hostname == "vulcan" || hostname == "hera" || hostname == "athena";
-    is_laptop      = hostname == "clio";
-
 in {
   users = {
     users.johnw = {
@@ -30,11 +25,6 @@ in {
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZQeQ/gKkOwuwktwD4z0ZZ8tpxNej3qcHS5ZghRcdAd ShellFish@iPad-22062024"
         ];
         keyFiles = {
-          vulcan = [
-            "${home}/${hostname}/id_athena.pub"
-            "${home}/${hostname}/id_clio.pub"
-            "${home}/${hostname}/id_hera.pub"
-          ];
           hera = [
             "${home}/${hostname}/id_athena.pub"
             "${home}/${hostname}/id_clio.pub"
@@ -49,6 +39,11 @@ in {
             "${home}/${hostname}/id_clio.pub"
             "${home}/${hostname}/id_hera.pub"
             "${home}/${hostname}/id_vulcan.pub"
+          ];
+          vulcan = [
+            "${home}/${hostname}/id_athena.pub"
+            "${home}/${hostname}/id_clio.pub"
+            "${home}/${hostname}/id_hera.pub"
           ];
         }.${hostname};
       };
@@ -97,26 +92,25 @@ in {
       "drivedx"
       # "hazel"                   # Stay at version 5
       "iterm2"
-      "ollama"
       "vmware-fusion"
       # "vagrant"
       # "vagrant-manager"
       # "vagrant-vmware-utility"
       "wireshark"
-    ] ++ lib.optionals (is_personal && is_desktop) [
+    ] ++ lib.optionals (hostname == "vulcan" || hostname == "hera") [
       "fujitsu-scansnap-home"
       "gzdoom"
       "raspberry-pi-imager"
       "chronoagent"
-    ] ++ lib.optionals (is_personal && pkgs.system == "aarch64-darwin") [
+    ] ++ lib.optionals (pkgs.system == "aarch64-darwin") [
       "lm-studio"
       "diffusionbee"
-    ] ++ lib.optionals (is_laptop) [
+    ] ++ lib.optionals (hostname == "clio") [
       "aldente"
       "chronosync"
-    ] ++ lib.optionals (is_server) [
+    ] ++ lib.optionals (hostname == "athena") [
       "openzfs"
-    ] ++ lib.optionals (is_personal) [
+    ] ++ lib.optionals (hostname != "athena") [
       "1password"
       "1password-cli"
       "affinity-photo"
@@ -189,7 +183,7 @@ in {
     masApps = {
       "Speedtest"             = 1153157709;
       "Xcode"                 = 497799835;
-    } // lib.optionalAttrs (is_personal) {
+    } // lib.optionalAttrs (hostname != "athena") {
       "1Password for Safari"  = 1569813296;
       "Bible Study"           = 472790630;
       "DataGraph"             = 407412840;
@@ -299,11 +293,14 @@ in {
     };
 
     distributedBuilds = hostname == "clio";
+    preferLocalBuild = hostname == "hera";
 
-    buildMachines = lib.optionals (hostname == "clio") [
-      hera
-      athena
-    ];
+    buildMachines =
+      if hostname == "clio"
+      then [ hera athena ];
+      else if hostname == "hera";
+           then [ athena ];
+           else [];
 
     extraOptions = ''
       gc-keep-derivations = true
@@ -337,7 +334,7 @@ in {
         NSNavPanelExpandedStateForSaveMode = true;
         NSNavPanelExpandedStateForSaveMode2 = true;
         "com.apple.keyboard.fnState" = true;
-        _HIHideMenuBar = is_desktop;
+        _HIHideMenuBar = hostname == "vulcan" || hostname == "hera" || hostname == "athena";
         "com.apple.mouse.tapBehavior" = 1;
         "com.apple.sound.beep.volume" = 0.0;
         "com.apple.sound.beep.feedback" = 0;
@@ -436,7 +433,7 @@ in {
     };
   };
 
-  # networking = lib.optionalAttrs (is_desktop) {
+  # networking = lib.optionalAttrs (hostname == "hera") {
   #   dns = [ "192.168.50.1" ];
   #   search = [ "local" ];
   #   knownNetworkServices = [ "Ethernet" "Thunderbolt Bridge" ];
@@ -449,11 +446,6 @@ in {
         Nice = 5;
         LowPriorityIO = true;
         AbandonProcessGroup = true;
-      };
-      runCommand = command: {
-        inherit command;
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = true;
       }; in {
 
     daemons = {
@@ -510,11 +502,13 @@ in {
     }
     // lib.optionalAttrs (hostname == "hera") {
       "sysctl-vram-limit" = {
-        command = "/usr/sbin/sysctl iogpu.wired_limit_mb=458752";
+        script = ''
+          /usr/sbin/sysctl iogpu.wired_limit_mb=458752
+        '';
         serviceConfig.RunAtLoad = true;
       };
     }
-    // lib.optionalAttrs (is_server) {
+    // lib.optionalAttrs (hostname == "athena") {
       snapshots = {
         script = ''
           date >> /var/log/snapshots.log 2>&1
@@ -583,22 +577,38 @@ in {
      };
 
     user = {
-      envVariables = lib.optionalAttrs (is_server) {
+      envVariables = lib.optionalAttrs (hostname == "athena") {
         OLLAMA_HOST = "0.0.0.0:11434";
       };
 
       agents = {
-        aria2c = runCommand
-          ("${pkgs.aria2}/bin/aria2c "
-          + "--enable-rpc "
-          + "--dir ${home}/Downloads "
-          + "--check-integrity "
-          + "--continue ");
+        aria2c = {
+          script = ''
+            ${pkgs.aria2}/bin/aria2c    \
+                --enable-rpc            \
+                --dir ${home}/Downloads \
+                --check-integrity       \
+                --continue
+          '';
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = true;
+        };
+      } // lib.optionalAttrs (hostname == "hera") {
+        ollama = {
+          script = ''
+            export OLLAMA_HOST=0.0.0.0:11434
+            export OLLAMA_KEEP_ALIVE="60m"
+            export OLLAMA_NOHISTORY=true
+            ${pkgs.ollama}/bin/ollama serve
+          '';
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = true;
+        };
       };
     };
   };
 
-  environment.etc = lib.optionalAttrs (is_server) {
+  environment.etc = lib.optionalAttrs (hostname == "athena") {
     "sanoid/sanoid.conf".text = ''
       [tank]
 
