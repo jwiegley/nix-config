@@ -7,7 +7,6 @@ let home           = builtins.getEnv "HOME";
     xdg_dataHome   = "${home}/.local/share";
     xdg_cacheHome  = "${home}/.cache";
 
-    is_work        = hostname == "athena";
     is_server      = hostname == "athena";
     is_personal    = hostname == "vulcan" || hostname == "hera" || hostname == "clio";
     is_desktop     = hostname == "vulcan" || hostname == "hera" || hostname == "athena";
@@ -32,19 +31,22 @@ in {
         ];
         keyFiles = {
           vulcan = [
-            "${home}/${hostname}/id_hera.pub"
             "${home}/${hostname}/id_athena.pub"
+            "${home}/${hostname}/id_clio.pub"
+            "${home}/${hostname}/id_hera.pub"
           ];
           hera = [
-            "${home}/${hostname}/id_vulcan.pub"
             "${home}/${hostname}/id_athena.pub"
+            "${home}/${hostname}/id_clio.pub"
+            "${home}/${hostname}/id_vulcan.pub"
           ];
           clio = [
+            "${home}/${hostname}/id_athena.pub"
             "${home}/${hostname}/id_hera.pub"
             "${home}/${hostname}/id_vulcan.pub"
-            "${home}/${hostname}/id_athena.pub"
           ];
           athena = [
+            "${home}/${hostname}/id_clio.pub"
             "${home}/${hostname}/id_hera.pub"
             "${home}/${hostname}/id_vulcan.pub"
           ];
@@ -241,14 +243,24 @@ in {
 
   nix =
     let
-      vulcan = {
-        hostName = "vulcan";
+      hera = {
+        hostName = "home";
+        protocol = "ssh-ng";
+        system = "aarch64-darwin";
         sshUser = "johnw";
-        system = "x86_64-darwin";
-        maxJobs = 10;
-        buildCores = 2;
+        maxJobs = 24;
         speedFactor = 4;
-      }; in {
+      };
+
+      athena = {
+        hostName = "build";
+        protocol = "ssh-ng";
+        system = "aarch64-darwin";
+        sshUser = "johnw";
+        maxJobs = 10;
+        speedFactor = 2;
+      };
+    in {
 
     package = pkgs.nix;
 
@@ -269,7 +281,7 @@ in {
           }]);
 
     settings = {
-      trusted-users = [ "johnw" "@admin" ];
+      trusted-users = [ "@admin" "@builders" "johnw" ];
       max-jobs = if (hostname == "clio") then 10 else 24;
       cores = 2;
 
@@ -286,11 +298,12 @@ in {
       ];
     };
 
-    distributedBuilds = false;
+    distributedBuilds = hostname == "clio";
 
-    # buildMachines = lib.optionals (hostname == "clio") [
-    #   vulcan
-    # ];
+    buildMachines = lib.optionals (hostname == "clio") [
+      hera
+      athena
+    ];
 
     extraOptions = ''
       gc-keep-derivations = true
@@ -298,7 +311,7 @@ in {
       secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
       experimental-features = nix-command flakes
     '';
-      };
+    };
 
   ids.gids.nixbld = 
     if (hostname == "vulcan" || hostname == "athena") then 30000 else 350;
@@ -494,7 +507,13 @@ in {
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = false;
       };
-     }
+    }
+    // lib.optionalAttrs (hostname == "hera") {
+      "sysctl-vram-limit" = {
+        command = "/usr/sbin/sysctl iogpu.wired_limit_mb=458752";
+        serviceConfig.RunAtLoad = true;
+      };
+    }
     // lib.optionalAttrs (is_server) {
       snapshots = {
         script = ''
@@ -564,11 +583,6 @@ in {
      };
 
     user = {
-      # sudo sysctl iogpu.wired_limit_mb=57344
-      # launchctl setenv OLLAMA_HOST 0.0.0.0:11434
-      # OLLAMA_HOST=0.0.0.0:11434 ollama serve
-      # After ensuring that Ollam is not serving this port locally:
-      # ssh -L 11434:127.0.0.1:11434 athena
       envVariables = lib.optionalAttrs (is_server) {
         OLLAMA_HOST = "0.0.0.0:11434";
       };

@@ -1,43 +1,22 @@
 { pkgs, lib, config, hostname, inputs, ... }:
 
-let am_traveling    = false;
+let home             = builtins.getEnv "HOME";
+    tmpdir           = "/tmp";
 
-    home            = builtins.getEnv "HOME";
-    tmpdir          = "/tmp";
+    userName         = "John Wiegley";
+    userEmail        = "johnw@newartisans.com";
 
-    userName        = "John Wiegley";
-    userEmail       = "johnw@newartisans.com";
+    ca-bundle_path   = "${pkgs.cacert}/etc/ssl/certs/";
+    ca-bundle_crt    = "${ca-bundle_path}/ca-bundle.crt";
+    emacs-server     = "${tmpdir}/johnw-emacs/server";
+    emacsclient      = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
 
-    ca-bundle_path  = "${pkgs.cacert}/etc/ssl/certs/";
-    ca-bundle_crt   = "${ca-bundle_path}/ca-bundle.crt";
-    emacs-server    = "${tmpdir}/johnw-emacs/server";
-    emacsclient     = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
+    is_server        = hostname == "athena";
+    is_personal      = hostname == "vulcan" || hostname == "hera" || hostname == "clio";
+    is_laptop        = hostname == "clio";
 
-    is_work         = hostname == "athena";
-    is_server       = hostname == "athena";
-    is_personal     = hostname == "vulcan" || hostname == "hera" || hostname == "clio";
-    is_desktop      = hostname == "vulcan" || hostname == "hera" || hostname == "athena";
-    is_laptop       = hostname == "clio";
-
-    hera_ethernet   = if hostname == "clio"
-                      then "192.168.2.1"
-                      else "192.168.50.5";
-    hera_wifi       = "192.168.50.30";
-
-    vulcan_ethernet = "192.168.50.51";
-    vulcan_wifi     = "192.168.50.172";
-
-    clio_ethernet   = if hostname == "hera"
-                      then "192.168.2.2"
-                      else "192.168.1.1";
-    clio_wifi       = "192.168.50.112";
-
-    athena_ethernet = "192.168.50.235";
-
-    external_ip     = "newartisans.hopto.org";
-
-    master_key      = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
-    signing_key     = "12D70076AB504679";
+    master_key       = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
+    signing_key      = "12D70076AB504679";
 
 in {
   home = {
@@ -75,14 +54,6 @@ in {
       VAGRANT_HOME       = "${config.xdg.dataHome}/vagrant";
       WWW_HOME           = "${config.xdg.cacheHome}/w3m";
       TZ                 = "PST8PDT";
-
-      HERA_ETHERNET      = hera_ethernet;
-      HERA_WIFI          = hera_wifi;
-      VULCAN_ETHERNET    = vulcan_ethernet;
-      VULCAN_WIFI        = vulcan_wifi;
-      CLIO_ETHERNET      = clio_ethernet;
-      CLIO_WIFI          = clio_wifi;
-      ATHENA_ETHERNET    = athena_ethernet;
 
       RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone";
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
@@ -754,65 +725,98 @@ in {
     ssh = {
       enable = true;
 
-      controlMaster  = "auto";
-      controlPath    = "${tmpdir}/ssh-%u-%r@%h:%p";
-      controlPersist = "1800";
-
-      forwardAgent = true;
+      controlMaster       = "auto";
+      controlPath         = "${tmpdir}/ssh-%u-%r@%h:%p";
+      controlPersist      = "1800";
+      forwardAgent        = true;
       serverAliveInterval = 60;
-
-      hashKnownHosts = true;
-      userKnownHostsFile = "${config.xdg.configHome}/ssh/known_hosts";
+      hashKnownHosts      = true;
+      userKnownHostsFile  = "${config.xdg.configHome}/ssh/known_hosts";
 
       matchBlocks =
         let
+          withIdentity = attrs: attrs // {
+            identityFile   = "${home}/${hostname}/id_${hostname}";
+            identitiesOnly = true;
+          };
+
           onHost = proxyJump: hostname: { inherit hostname; } //
             lib.optionalAttrs (hostname != proxyJump) {
               inherit proxyJump;
             };
-          withLocal = attrs: attrs // {
-            identityFile = "${home}/${hostname}/id_${hostname}";
-          };
-        in rec {
 
-        # This is vulcan, as accessible from remote
-        home = {
+          hera_thunderbolt = "192.168.2.1";
+          hera_ethernet    = "192.168.50.5";
+          hera_wifi        = "192.168.50.30";
+
+          vulcan_ethernet  = "192.168.50.51";
+          vulcan_wifi      = "192.168.50.172";
+
+          clio_thunderbolt = "192.168.2.2";
+          clio_wifi        = "192.168.50.112";
+
+          athena_ethernet  = "192.168.50.235";
+
+          external_ip      = "newartisans.hopto.org";
+
+        in {
+
+        vulcan  = withIdentity {
+          hostname = vulcan_ethernet;
+        };
+
+        hera_direct = withIdentity {
+          hostname = hera_thunderbolt;
+          match = ''
+            host hera exec "ping -c1 -W50 -q ${hera_thunderbolt}"
+          '';
+        };
+        hera_local = withIdentity {
+          hostname = hera_ethernet;
+          match = ''
+            host hera exec "ping -c1 -W50 -q ${hera_ethernet}"
+          '';
+        };
+        hera_remote = withIdentity {
           hostname = external_ip;
           port = 2201;
         };
+        deimos  = withIdentity (onHost "hera" "192.168.221.128");
+        simon   = withIdentity (onHost "hera" "172.16.194.158");
+        minerva = withIdentity (onHost "hera" "192.168.50.117");
 
-        # This is athena, as accessible from remote
-        build = {
+        athena_local = withIdentity {
+          hostname = athena_ethernet;
+          match = ''
+            host athena exec "ping -c1 -W50 -q ${athena_ethernet}"
+          '';
+        };
+        athena_remote = withIdentity {
           hostname = external_ip;
           port = 2202;
         };
+        phobos = withIdentity (onHost "athena" "192.168.50.111");
 
-        vulcan  = withLocal (if is_laptop && am_traveling
-                             then home
-                             else { hostname = vulcan_ethernet; });
-        hera    = withLocal (if is_laptop && am_traveling
-                             then home
-                             else { hostname = hera_ethernet; });
-        deimos  = withLocal (onHost "hera" "192.168.221.128");
-        simon   = withLocal (onHost "hera" "172.16.194.158");
-        minerva = withLocal (onHost "hera" "192.168.50.117");
-
-        athena  = withLocal (if is_laptop && am_traveling
-                             then build
-                             else { hostname = athena_ethernet; });
-        phobos  = withLocal (onHost "athena" "192.168.50.111");
-
-        clio    = withLocal (if hostname != "hera"
-                             then { hostname = clio_wifi; }
-                             else { hostname = clio_ethernet; });
-        neso    = withLocal (onHost "clio" "192.168.100.130");
-
-        mohajer = {
-          hostname = "192.168.50.120";
-          user = "nasimwiegley";
+        clio_direct = withIdentity {
+          hostname = clio_thunderbolt;
+          match = ''
+            host clio exec "ping -c1 -W50 -q ${clio_thunderbolt}"
+          '';
         };
+        clio_local = withIdentity {
+          hostname = clio_wifi;
+          match = ''
+            host clio exec "ping -c1 -W50 -q ${clio_wifi}"
+          '';
+        };
+        neso = withIdentity (onHost "clio" "192.168.100.130");
 
-        router = {
+        # mohajer = withIdentity {
+        #   hostname = "192.168.50.120";
+        #   user = "nasimwiegley";
+        # };
+
+        router = withIdentity {
           hostname = "192.168.50.1";
           user = "router";
           port = 2203;
@@ -831,7 +835,8 @@ in {
             "git.savannah.nongnu.org"
             "git.sv.nongnu.org"
           ];
-          identityFile = "${config.xdg.configHome}/ssh/id_emacs";
+          identityFile   = "${config.xdg.configHome}/ssh/id_emacs";
+          identitiesOnly = true;
         };
 
         haskell_org = { host = "*haskell.org"; user = "root"; };
@@ -840,8 +845,10 @@ in {
         chainweb_com = {
           host = "*.chainweb.com";
           user = "chainweb";
-          identityFile = "${config.xdg.configHome}/ssh/id_kadena";
-          extraOptions = {
+
+          identityFile   = "${config.xdg.configHome}/ssh/id_kadena";
+          identitiesOnly = true;
+          extraOptions   = {
             StrictHostKeyChecking = "no";
           };
         };
