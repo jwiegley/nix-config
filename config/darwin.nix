@@ -282,24 +282,20 @@ in {
       substituters = [
         # "https://cache.iog.io"
       ];
-
       trusted-substituters = [
       ];
-
       trusted-public-keys = [
         "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
         "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
       ];
     };
 
-    distributedBuilds = hostname == "clio";
-    preferLocalBuild = hostname == "hera";
-
+    distributedBuilds = true;
     buildMachines =
       if hostname == "clio"
-      then [ hera athena ];
-      else if hostname == "hera";
-           then [ athena ];
+      then [ hera athena ]
+      else if hostname == "hera"
+           then [ athena ]
            else [];
 
     extraOptions = ''
