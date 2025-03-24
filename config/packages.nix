@@ -177,7 +177,7 @@ in [
   ollama
   onnxruntime
   openai
-  openai-whisper
+  # openai-whisper
   opensc
   openssh
   openssl

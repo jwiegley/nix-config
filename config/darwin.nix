@@ -238,7 +238,7 @@ in {
   nix =
     let
       hera = {
-        hostName = "home";
+        hostName = "hera";
         protocol = "ssh-ng";
         system = "aarch64-darwin";
         sshUser = "johnw";
@@ -247,7 +247,7 @@ in {
       };
 
       athena = {
-        hostName = "build";
+        hostName = "athena";
         protocol = "ssh-ng";
         system = "aarch64-darwin";
         sshUser = "johnw";
@@ -295,7 +295,7 @@ in {
       if hostname == "clio"
       then [ hera athena ]
       else if hostname == "hera"
-           then [ athena ]
+           then []
            else [];
 
     extraOptions = ''
