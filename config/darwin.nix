@@ -294,8 +294,8 @@ in {
     buildMachines =
       if hostname == "clio"
       then [ hera athena ]
-      else if hostname == "hera"
-           then []
+      else if hostname == "athena"
+           then [ hera ]
            else [];
 
     extraOptions = ''

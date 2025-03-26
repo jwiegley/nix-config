@@ -7,17 +7,17 @@ case $1 in
         ;;
 
     clio)
-        u clio upgrade sign
+        u clio upgrade-tasks
         # notify "Nix on Clio upgraded"
         ;;
 
     athena)
-        u athena upgrade sign
+        u athena switch
         # notify "Nix on Athena upgraded"
         ;;
 
     vulcan)
-        u vulcan upgrade sign
+        u vulcan upgrade-tasks
         # notify "Nix on Vulcan upgraded"
         ;;
 
