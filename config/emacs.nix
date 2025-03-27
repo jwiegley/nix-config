@@ -34,10 +34,7 @@ pkgs: epkgs: with epkgs;
   calfw-org
   cape
   cargo
-  casual-bookmarks
-  casual-calc
-  casual-dired
-  casual-lib
+  # casual
   centaur-tabs
   centered-cursor-mode
   change-inner
@@ -352,7 +349,7 @@ pkgs: epkgs: with epkgs;
   shift-number
   simple-httpd
   sky-color-clock
-  slack circe
+  # slack circe
   slime
   smart-newline
   smartparens

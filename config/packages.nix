@@ -174,10 +174,10 @@ in [
   nixpkgs-fmt
   nixfmt
   nmap
-  ollama
+  ollama llama-cpp
   onnxruntime
   openai
-  # openai-whisper
+  # openai-whisper whisper-cpp
   opensc
   openssh
   openssl
@@ -290,7 +290,6 @@ in [
   watch
   watchman
   wget
-  whisper-cpp
   wireguard-tools
   xapian
   xdg-utils

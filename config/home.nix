@@ -120,13 +120,13 @@ in {
         "Audio".source           = mkLink "/Volumes/ext/Audio";
         "Photos".source          = mkLink "/Volumes/ext/Photos";
         "Video".source           = mkLink "/Volumes/ext/Video";
-
         "_Archived Items".source = mkLink "/Volumes/ext/_Archived Items";
       }
-      // lib.optionalAttrs (hostname == "clio") {
+      // lib.optionalAttrs (hostname == "clio" || hostname == "vulcan") {
         "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Audio";
         "Photos".source = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Photos";
         "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Video";
+        "Hera".source   = mkLink "${home}/Library/CloudStorage/ShellFish/Hera";
       }
       // lib.optionalAttrs (hostname == "athena") {
         "Audio".source  = mkLink "/Volumes/tank/Audio";
@@ -134,9 +134,7 @@ in {
         "Video".source  = mkLink "/Volumes/tank/Video";
         "Media".source  = mkLink "/Volumes/tank/Media";
       }
-      // lib.optionalAttrs (hostname == "vulcan" ||
-                            hostname == "hera" ||
-                            hostname == "clio") {
+      // lib.optionalAttrs (hostname == "vulcan" || hostname == "hera" || hostname == "clio") {
         "org".source    = mkLink "${home}/doc/org";
 
         "Mobile".source = mkLink "${home}/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org";

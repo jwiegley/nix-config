@@ -514,28 +514,6 @@ in {
         serviceConfig = iterate 3600;
       };
 
-      # workspace-update = {
-      #   script = ''
-      #     date >> /var/log/workspace-update.log 2>&1
-      #     export PATH=${pkgs.git}/bin:${pkgs.gitAndTools.git-workspace}/bin:$PATH
-      #     unset GITHUB_TOKEN
-      #     ${pkgs.my-scripts}/bin/workspace-update \
-      #         --passwords /Users/johnw/athena/restic-passwords 2>&1 \
-      #         >> /var/log/workspace-update.log 2>&1
-      #   '';
-      #   serviceConfig = {
-      #     StartCalendarInterval = [
-      #       {
-      #         Hour = 1;
-      #         Minute = 30;
-      #       }
-      #     ];
-      #     Nice = 5;
-      #     LowPriorityIO = true;
-      #     AbandonProcessGroup = true;
-      #   };
-      # };
-
       b2-restic = {
         script = ''
           date >> /var/log/b2-restic.log 2>&1
@@ -573,10 +551,6 @@ in {
      };
 
     user = {
-      envVariables = lib.optionalAttrs (hostname == "athena") {
-        OLLAMA_HOST = "0.0.0.0:11434";
-      };
-
       agents = {
         aria2c = {
           script = ''
@@ -589,11 +563,12 @@ in {
           serviceConfig.RunAtLoad = true;
           serviceConfig.KeepAlive = true;
         };
-      } // lib.optionalAttrs (hostname == "hera") {
+      } // lib.optionalAttrs (hostname == "hera" || hostname == "clio" ||
+                              hostname == "athena") {
         ollama = {
           script = ''
             export OLLAMA_HOST=0.0.0.0:11434
-            export OLLAMA_KEEP_ALIVE="60m"
+            export OLLAMA_KEEP_ALIVE=${if hostname == "clio" then "5m" else "60m"}
             export OLLAMA_NOHISTORY=true
             ${pkgs.ollama}/bin/ollama serve
           '';
