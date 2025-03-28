@@ -24,28 +24,10 @@ in {
           # ShellFish iPad key
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZQeQ/gKkOwuwktwD4z0ZZ8tpxNej3qcHS5ZghRcdAd ShellFish@iPad-22062024"
         ];
-        keyFiles = {
-          hera = [
-            "${home}/${hostname}/id_athena.pub"
-            "${home}/${hostname}/id_clio.pub"
-            "${home}/${hostname}/id_vulcan.pub"
-          ];
-          clio = [
-            "${home}/${hostname}/id_athena.pub"
-            "${home}/${hostname}/id_hera.pub"
-            "${home}/${hostname}/id_vulcan.pub"
-          ];
-          athena = [
-            "${home}/${hostname}/id_clio.pub"
-            "${home}/${hostname}/id_hera.pub"
-            "${home}/${hostname}/id_vulcan.pub"
-          ];
-          vulcan = [
-            "${home}/${hostname}/id_athena.pub"
-            "${home}/${hostname}/id_clio.pub"
-            "${home}/${hostname}/id_hera.pub"
-          ];
-        }.${hostname};
+        keyFiles =
+          # Each machine accepts SSH key authentication from the rest
+          import ./key-files.nix { inherit (pkgs) lib; }
+            [ "hera" "clio" "athena" "vulcan" ] home hostname;
       };
     };
   };

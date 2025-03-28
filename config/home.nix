@@ -793,7 +793,7 @@ in {
 
         # Other servers
 
-        router = withIdentity {
+        router = {
           hostname = "192.168.50.1";
           user = "router";
           port = 2203;
