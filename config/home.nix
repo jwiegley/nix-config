@@ -1,6 +1,6 @@
 { pkgs, lib, config, hostname, inputs, ... }:
 
-let home             = builtins.getEnv "HOME";
+let home             = config.home.homeDirectory;
     tmpdir           = "/tmp";
 
     userName         = "John Wiegley";
@@ -17,10 +17,7 @@ let home             = builtins.getEnv "HOME";
 in {
   home = {
     stateVersion = "23.11";
-    enableNixpkgsReleaseCheck = false;
 
-    # These are packages that should always be present in the user
-    # environment, though perhaps not the machine environment.
     packages = import ./packages.nix hostname inputs pkgs;
 
     sessionVariables = {
@@ -50,6 +47,7 @@ in {
       VAGRANT_HOME       = "${config.xdg.dataHome}/vagrant";
       WWW_HOME           = "${config.xdg.cacheHome}/w3m";
       TZ                 = "PST8PDT";
+      PROFILE_DIR        = "${config.home.profileDirectory}";
 
       RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone";
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
@@ -57,9 +55,12 @@ in {
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";
       FILTER_BRANCH_SQUELCH_WARNING  = "1";
       LLAMA_INDEX_CACHE_DIR          = "${config.xdg.cacheHome}/llama-index";
+    };
 
-      MANPATH = lib.concatStringsSep ":" [
-        "${home}/.nix-profile/share/man"
+    sessionSearchVariables = {
+      MANPATH = [
+        "${config.home.profileDirectory}/share/man"
+        "${config.xdg.configHome}/.local/share/man"
         "/run/current-system/sw/share/man"
         "/usr/local/share/man"
         "/usr/share/man"
@@ -74,8 +75,7 @@ in {
     ];
 
     file =
-      let mkLink = config.lib.file.mkOutOfStoreSymlink; in
-      {
+      let mkLink = config.lib.file.mkOutOfStoreSymlink; in {
         ".ledgerrc".text = ''
           --file ${home}/doc/accounts/main.ledger
           --input-date-format %Y/%m/%d

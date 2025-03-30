@@ -24,7 +24,7 @@
           {
             home-manager = {
               useGlobalPkgs = true;
-              # useUserPackages = true;
+              useUserPackages = true;
               users.johnw = import ./config/home.nix;
               extraSpecialArgs = { inherit hostname inputs; };
             };

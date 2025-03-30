@@ -647,17 +647,16 @@ let
     org =
       let
         versions = {
-          "9.7.16" = "sha256-BrgQpXDGQ9wsrp5RdDaK6LG0hzi5naEA2GE5rU/r27Q=";
+          "9.7.27" = "sha256-5r4yOeYxZqe5rKuIGb/WRaZNvfX+3sZyPYqb2DFJXXg=";
           "9.6.30" = "sha256-NzIPaZw8fINmA/G7mu8WBd2b+F2GluGRgaxoH+U7V0A=";
         };
-        # version = "9.6.30";
-        version = "9.7.16";
+        version = "9.7.27";
       in eself.elpaBuild {
         pname = "org";
         ename = "org";
         inherit version;
         src =
-          if version == "9.7.16"
+          if version == "9.7.27"
           then fetchurl {
             url = "https://elpa.gnu.org/packages/org-${version}.tar";
             sha256 = versions."${version}";
