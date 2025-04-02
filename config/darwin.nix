@@ -11,7 +11,7 @@ in {
   users = {
     users.johnw = {
       name = "johnw";
-      home = "/Users/johnw";
+      inherit home;
       shell = pkgs.zsh;
 
       openssh.authorizedKeys = {
@@ -45,6 +45,14 @@ in {
       enableCompletion = false;
     };
   };
+
+  # services = {
+  #   postgresql = {
+  #     enable = true;
+  #     package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
+  #     dataDir = "${home}/Databases/postgresql";
+  #   };
+  # };
 
   homebrew = {
     enable = true;
@@ -214,7 +222,9 @@ in {
           (filter (n: match ".*\\.nix" n != null ||
                       pathExists (path + ("/" + n + "/default.nix")))
                   (attrNames (readDir path)))
-        ++ [ (import ./envs.nix) ];
+        ++ [ (import ./envs.nix) 
+             inputs.nurpkgs.overlays.default
+           ];
   };
 
   nix =

@@ -6,10 +6,13 @@
 	url = git://github.com/jwiegley/nix-darwin.git
 [submodule "home-manager"]
 	path = home-manager
-	url = git://github.com/jwiegley/home-manager.git
+	url = git@github.com:rycee/home-manager.git
 [submodule "forks/timeparsers"]
 	path = forks/timeparsers
 	url = git://github.com/jwiegley/timeparsers.git
 [submodule "overlays/emacs-overlay"]
 	path = overlays/emacs-overlay
 	url = git://github.com/jwiegley/emacs-overlay.git
+[submodule "nix-darwin"]
+	path = nix-darwin
+	url = git@github.com:LnL7/nix-darwin.git

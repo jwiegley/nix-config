@@ -1003,7 +1003,7 @@ emacs29           = pkgs.emacs29;
 emacs29Packages   = self.emacs29PackagesNg;
 emacs29PackagesNg = mkEmacsPackages self.emacs29;
 
-emacs29MacPort = pkgs.emacs29-macport.overrideAttrs (o: {
+emacs29MacPort = (pkgs.emacs29-macport.overrideAttrs (o: {
   version = "29.4";
   src = pkgs.fetchgit {
     url = "https://bitbucket.org/mituharu/emacs-mac.git";
@@ -1014,7 +1014,10 @@ emacs29MacPort = pkgs.emacs29-macport.overrideAttrs (o: {
     "CFLAGS=-DMAC_OS_X_VERSION_MAX_ALLOWED=101201"
     "CFLAGS=-DMAC_OS_X_VERSION_MIN_REQUIRED=101201"
   ];
-});
+})).override {
+    # jww (2025-04-02): https://github.com/NixOS/nixpkgs/issues/395169
+    withNativeCompilation = false;
+};
 
 emacs29MacPortPackages   = self.emacs29MacPortPackagesNg;
 emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29MacPort;

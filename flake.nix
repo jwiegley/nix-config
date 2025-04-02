@@ -11,6 +11,18 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    rycee-nurpkgs = {
+      url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nurpkgs = {
+      url = "github:nix-community/NUR";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    # arkenfox = {
+    #   url = "github:dwarfmaster/arkenfox-nixos";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
   };
 
   outputs = inputs: with inputs; rec {
@@ -21,11 +33,17 @@
         modules = [
           ./config/darwin.nix
           home-manager.darwinModules.home-manager
+          # arkenfox.hmModules.default
           {
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
+              sharedModules = [
+                # inputs.arkenfox.hmModules.default
+              ];
               users.johnw = import ./config/home.nix;
+
+              backupFileExtension = "hm-bak";
               extraSpecialArgs = { inherit hostname inputs; };
             };
           }

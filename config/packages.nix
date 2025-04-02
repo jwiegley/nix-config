@@ -1,6 +1,4 @@
-hostname: inputs: pkgs:
-
-with pkgs; 
+{ hostname, inputs, pkgs, ...}: with pkgs; 
 
 let exe = if stdenv.targetPlatform.isx86_64
           then haskell.lib.justStaticExecutables
@@ -201,7 +199,6 @@ in [
   plantuml
   pngpaste
   poppler_utils
-  (postgresql.withPackages (p: with p; [ pgvector ]))
   procps
   protobufc
   psrecord

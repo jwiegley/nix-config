@@ -2,23 +2,18 @@
 
 let home             = config.home.homeDirectory;
     tmpdir           = "/tmp";
-
     userName         = "John Wiegley";
     userEmail        = "johnw@newartisans.com";
-
     ca-bundle_path   = "${pkgs.cacert}/etc/ssl/certs/";
     ca-bundle_crt    = "${ca-bundle_path}/ca-bundle.crt";
     emacs-server     = "${tmpdir}/johnw-emacs/server";
     emacsclient      = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
-
     master_key       = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
     signing_key      = "12D70076AB504679";
-
 in {
   home = {
     stateVersion = "23.11";
-
-    packages = import ./packages.nix hostname inputs pkgs;
+    packages = import ./packages.nix { inherit hostname inputs pkgs; };
 
     sessionVariables = {
       ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";
@@ -69,9 +64,9 @@ in {
 
     sessionPath = [
       "/usr/local/bin"
-      "/usr/local/zfs/bin"
       "/opt/homebrew/bin"
-      "${home}/kadena/bin"
+    ] ++ lib.optionals (hostname == "athena") [
+      "/usr/local/zfs/bin"
     ];
 
     file =
@@ -102,7 +97,8 @@ in {
         ".parallel".source     = mkLink "${config.xdg.configHome}/parallel";
 
         ".ollama".source       = mkLink "${config.xdg.configHome}/ollama";
-        "${config.xdg.configHome}/ollama/models".source = mkLink "${config.xdg.dataHome}/ollama/models";
+        "${config.xdg.configHome}/ollama/models".source =
+          mkLink "${config.xdg.dataHome}/ollama/models";
 
         ".cargo".source        = mkLink "${config.xdg.dataHome}/cargo";
         ".diffusionbee".source = mkLink "${config.xdg.dataHome}/diffusionbee";
@@ -114,12 +110,14 @@ in {
 
         ".emacs.d".source      = mkLink "${home}/src/dot-emacs";
         "dl".source            = mkLink "${home}/Downloads";
-        "iCloud".source        = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
+        "iCloud".source        =
+          mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
       }
       // lib.optionalAttrs (hostname == "hera") {
         "Audio".source           = mkLink "/Volumes/ext/Audio";
         "Photos".source          = mkLink "/Volumes/ext/Photos";
         "Video".source           = mkLink "/Volumes/ext/Video";
+
         "_Archived Items".source = mkLink "/Volumes/ext/_Archived Items";
       }
       // lib.optionalAttrs (hostname == "clio" || hostname == "vulcan") {
@@ -137,13 +135,32 @@ in {
       // lib.optionalAttrs (hostname == "vulcan" || hostname == "hera" || hostname == "clio") {
         "org".source    = mkLink "${home}/doc/org";
 
-        "Mobile".source = mkLink "${home}/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org";
-        "Drafts".source = mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
-        "Inbox".source  = mkLink "${home}/Library/Application Support/DEVONthink 3/Inbox";
+        "Mobile".source =
+          mkLink "${home}/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org";
+        "Drafts".source =
+          mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
+        "Inbox".source  =
+          mkLink "${home}/Library/Application Support/DEVONthink 3/Inbox";
 
         "Media".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Media";
         "Athena".source = mkLink "${home}/Library/CloudStorage/ShellFish/Athena";
       };
+
+      activation.firefoxWriteBoundary =
+        let
+          profilesFilePath = "$HOME/Library/Application\\ Support/Firefox/profiles.ini";
+        in lib.hm.dag.entryAfter
+          [
+            "writeBoundary"
+            "linkGeneration"
+          ]
+          ''
+            run mv ${profilesFilePath} ${profilesFilePath}.hm
+            run cp "`readlink ${profilesFilePath}.hm`" ${profilesFilePath}
+            run rm -f ${profilesFilePath}.$HOME_MANAGER_BACKUP_EXT
+            run chmod u+w ${profilesFilePath}
+          '';
+
   };
 
   accounts.email = {
@@ -194,6 +211,8 @@ in {
     jq.enable = true;
     man.enable = true;
     vim.enable = true;
+
+    firefox = import ./firefox.nix { inherit hostname home pkgs; };
 
     starship = {
       enable = true;
