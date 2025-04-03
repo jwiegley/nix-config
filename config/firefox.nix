@@ -7,6 +7,10 @@
   #   enable = false;
   #   version = "133.0";
   # };
+  betterfox = {
+    enable = true;
+    # version = "128.0"; # defaults to main branch
+  };
 
   policies = {
     DisableTelemetry = true;
@@ -34,12 +38,14 @@
       name = "default-release";
       isDefault = true;
       # arkenfox.enable = false;
+      betterfox.enable = false;
     };
 
     "3ltwg757.default" = {
       id = 1;
       name = "default";
       # arkenfox.enable = false;
+      betterfox.enable = false;
     };
   } // pkgs.lib.optionalAttrs (hostname == "clio") {
     "unj6oien.default-release" = {
@@ -47,12 +53,14 @@
       name = "default-release";
       isDefault = true;
       # arkenfox.enable = false;
+      betterfox.enable = false;
     };
 
     "v7m0m1sc.default" = {
       id = 1;
       name = "default";
       # arkenfox.enable = false;
+      betterfox.enable = false;
     };
   } // {
     johnw = {
@@ -60,9 +68,37 @@
       name = "John Wiegley";
       isDefault = hostname == "athena";
       # arkenfox.enable = false;
+      betterfox = {
+        enable = true;
+        enableAllSections = true;
+      };
       extraConfig = ''
          user_pref("extensions.autoDisableScopes", 0);
          user_pref("extensions.enabledScopes", 15);
+
+         // PREF: disable login manager
+         user_pref("signon.rememberSignons", false);
+
+         // PREF: disable address and credit card manager
+         user_pref("extensions.formautofill.addresses.enabled", false);
+         user_pref("extensions.formautofill.creditCards.enabled", false);
+
+         // PREF: enforce certificate pinning
+         // [ERROR] MOZILLA_PKIX_ERROR_KEY_PINNING_FAILURE
+         // 1 = allow user MiTM (such as your antivirus) (default)
+         // 2 = strict
+         user_pref("security.cert_pinning.enforcement_level", 2);
+
+         // PREF: delete all browsing data on shutdown
+         user_pref("privacy.sanitize.sanitizeOnShutdown", true);
+         user_pref("privacy.clearOnShutdown_v2.cache", true);
+         user_pref("privacy.clearOnShutdown_v2.cookiesAndStorage", true);
+         user_pref("privacy.clearOnShutdown_v2.browsingHistoryAndDownloads", true);
+         user_pref("privacy.clearOnShutdown_v2.formdata", true);
+
+         // PREF: after crashes or restarts, do not save extra session data
+         // such as form content, scrollbar positions, and POST data
+         user_pref("browser.sessionstore.privacy_level", 2);
       '';
       containers = {
         "Kadena" = {

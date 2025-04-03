@@ -1,5 +1,25 @@
 {
   "nodes": {
+    "betterfox": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1740603755,
+        "narHash": "sha256-w3HfH5D8lfcpHtt7LLJmoeYJy4I3ERMHlPFSKsyFjF4=",
+        "owner": "HeitorAugustoLN",
+        "repo": "betterfox-nix",
+        "rev": "726415968213b2ea3c3ea9f19aa61789b96fa99c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "HeitorAugustoLN",
+        "repo": "betterfox-nix",
+        "type": "github"
+      }
+    },
     "darwin": {
       "inputs": {
         "nixpkgs": [
@@ -63,11 +83,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1743607567,
-        "narHash": "sha256-kTzKPDFmNzwO1cK4fiJgPB/iSw7HgBAmknRTeAPJAeI=",
+        "lastModified": 1743648554,
+        "narHash": "sha256-23JFd+zd2GamTTdnGuFVeIg8x8C3hLpQJRh/PGTORzo=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "49748c74cdbae03d70381f150b810f92617f23aa",
+        "rev": "107352dde4ff3c01cb5a0b3fe17f5beef37215bc",
         "type": "github"
       },
       "original": {
@@ -101,11 +121,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1743625889,
-        "narHash": "sha256-sy40st+sOy8E+gKXrZy/UbXT37nwWNw9uY2TSVmjVX4=",
+        "lastModified": 1743698595,
+        "narHash": "sha256-eb6Ua2K2JGuRNt0yzByobXETlRXdmdo124c8+LhDJp0=",
         "owner": "nix-community",
         "repo": "NUR",
-        "rev": "f61f075bf7181b27d94e50188eb2a270f759196e",
+        "rev": "4a89fe57862e03049dee98e183726e2211b90132",
         "type": "github"
       },
       "original": {
@@ -116,6 +136,7 @@
     },
     "root": {
       "inputs": {
+        "betterfox": "betterfox",
         "darwin": "darwin",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs",
@@ -132,11 +153,11 @@
       },
       "locked": {
         "dir": "pkgs/firefox-addons",
-        "lastModified": 1743608905,
-        "narHash": "sha256-gKOeu73tjunsOO4X5Ew7MHRMC4j83PJNy3DSHuni+DA=",
+        "lastModified": 1743650454,
+        "narHash": "sha256-SmbedrLlYr2PBLY4/l1d4ykZgM1W2M5J17wF7eCOOCM=",
         "owner": "rycee",
         "repo": "nur-expressions",
-        "rev": "2453846547797f40e118c4b202a993ca621648c3",
+        "rev": "6676dafa70c62324e72be65ad4ff1d278411ef96",
         "type": "gitlab"
       },
       "original": {

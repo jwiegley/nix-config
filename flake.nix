@@ -23,6 +23,10 @@
     #   url = "github:dwarfmaster/arkenfox-nixos";
     #   inputs.nixpkgs.follows = "nixpkgs";
     # };
+    betterfox = {
+      url = "github:HeitorAugustoLN/betterfox-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs: with inputs; rec {
@@ -40,6 +44,7 @@
               useUserPackages = true;
               sharedModules = [
                 # inputs.arkenfox.hmModules.default
+                inputs.betterfox.homeManagerModules.betterfox
               ];
               users.johnw = import ./config/home.nix;
 

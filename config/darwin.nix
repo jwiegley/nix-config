@@ -164,40 +164,41 @@ in {
 
     # "Bookmap"
     # "Digital Photo Professional"
-    # "EOS Utilityl"
+    # "EOS Utility"
     # "Kadena Chainweaver"
     # "MotiveWave"
     # "ScanSnap Online Update"
     # "ABBYY FineReader for ScanSnap"
 
-    masApps = {
-      "Speedtest"             = 1153157709;
-      "Xcode"                 = 497799835;
-    } // lib.optionalAttrs (hostname != "athena") {
-      "1Password for Safari"  = 1569813296;
-      "Bible Study"           = 472790630;
-      "DataGraph"             = 407412840;
-      "Drafts"                = 1435957248;
-      "Grammarly for Safari"  = 1462114288;
-      "Infuse"                = 1136220934;
-      "Just Press Record"     = 1033342465;
-      "Keynote"               = 409183694;
-      "Kindle"                = 302584613;
-      "Marked 2"              = 890031187;
-      "Microsoft Excel"       = 462058435;
-      "Microsoft PowerPoint"  = 462062816;
-      "Microsoft Word"        = 462054704;
-      "Ninox Database"        = 901110441;
-      "Notability"            = 360593530;
-      "Paletter"              = 1494948845;
-      "Pixelmator Pro"        = 1289583905;
-      "Prime Video"           = 545519333;
-      "Shell Fish"            = 1336634154;
-      "Soulver 3"             = 1508732804;
-      "Whisper Transcription" = 1668083311;
-      "WireGuard"             = 1451685025;
-      "iMovie"                = 408981434;
-    };
+    ## jww (2025-04-03): These keep getting re-installed
+    # masApps = {
+    #   "Speedtest"             = 1153157709;
+    #   "Xcode"                 = 497799835;
+    # } // lib.optionalAttrs (hostname != "athena") {
+    #   "1Password for Safari"  = 1569813296;
+    #   "Bible Study"           = 472790630;
+    #   "DataGraph"             = 407412840;
+    #   "Drafts"                = 1435957248;
+    #   "Grammarly for Safari"  = 1462114288;
+    #   "Infuse"                = 1136220934;
+    #   "Just Press Record"     = 1033342465;
+    #   "Keynote"               = 409183694;
+    #   "Kindle"                = 302584613;
+    #   "Marked 2"              = 890031187;
+    #   "Microsoft Excel"       = 462058435;
+    #   "Microsoft PowerPoint"  = 462062816;
+    #   "Microsoft Word"        = 462054704;
+    #   "Ninox Database"        = 901110441;
+    #   "Notability"            = 360593530;
+    #   "Paletter"              = 1494948845;
+    #   "Pixelmator Pro"        = 1289583905;
+    #   "Prime Video"           = 545519333;
+    #   "Shell Fish"            = 1336634154;
+    #   "Soulver 3"             = 1508732804;
+    #   "Whisper Transcription" = 1668083311;
+    #   "WireGuard"             = 1451685025;
+    #   "iMovie"                = 408981434;
+    # };
   };
 
   nixpkgs = {
@@ -544,19 +545,18 @@ in {
 
     user = {
       agents = {
-        aria2c = {
-          script = ''
-            ${pkgs.aria2}/bin/aria2c    \
-                --enable-rpc            \
-                --dir ${home}/Downloads \
-                --check-integrity       \
-                --continue
-          '';
-          serviceConfig.RunAtLoad = true;
-          serviceConfig.KeepAlive = true;
-        };
-      } // lib.optionalAttrs (hostname == "hera" || hostname == "clio" ||
-                              hostname == "athena") {
+        # aria2c = {
+        #   script = ''
+        #     ${pkgs.aria2}/bin/aria2c    \
+        #         --enable-rpc            \
+        #         --dir ${home}/Downloads \
+        #         --check-integrity       \
+        #         --continue
+        #   '';
+        #   serviceConfig.RunAtLoad = true;
+        #   serviceConfig.KeepAlive = true;
+        # };
+      } // lib.optionalAttrs (hostname == "hera") {
         ollama = {
           script = ''
             export OLLAMA_HOST=0.0.0.0:11434
