@@ -758,7 +758,7 @@ in {
           matchHost = host: hostname: {
             inherit hostname;
             match = ''
-              host ${host} exec "ping -c1 -W50 -q ${hostname}"
+              host ${host} exec "ping -c1 -W50 -n -r -q ${hostname}"
             '';
           };
 
@@ -819,8 +819,6 @@ in {
         };
 
         elpa = { hostname = "elpa.gnu.org"; user = "root"; };
-
-        mail.hostname      = "mail.haskell.org";
         savannah.hostname  = "git.sv.gnu.org";
         fencepost.hostname = "fencepost.gnu.org";
 
@@ -836,6 +834,7 @@ in {
         };
 
         haskell_org = { host = "*haskell.org"; user = "root"; };
+        mail.hostname = "mail.haskell.org";
 
         # Kadena
 
