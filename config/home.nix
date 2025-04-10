@@ -65,6 +65,7 @@ in {
     sessionPath = [
       "/usr/local/bin"
       "/opt/homebrew/bin"
+      "${config.xdg.dataHome}/lmstudio/bin"
     ] ++ lib.optionals (hostname == "athena") [
       "/usr/local/zfs/bin"
     ];
@@ -835,6 +836,11 @@ in {
 
         haskell_org = { host = "*haskell.org"; user = "root"; };
         mail.hostname = "mail.haskell.org";
+
+        hf = withIdentity {
+          host = "hf.co";
+          user = "git";
+        };
 
         # Kadena
 

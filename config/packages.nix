@@ -172,7 +172,8 @@ in [
   nixpkgs-fmt
   nixfmt
   nmap
-  ollama llama-cpp
+  ollama gollama
+  llama-cpp koboldcpp
   onnxruntime
   openai
   # openai-whisper whisper-cpp
@@ -208,10 +209,11 @@ in [
    (python3.withPackages (
      python-pkgs: with python-pkgs; [
        venvShellHook
-       # numpy_2
+       numpy_2
        requests
        stdenv
-
+       huggingface-hub
+       litellm
        # llama-index-core
        # llama-index-embeddings-huggingface
        # llama-index-llms-ollama

@@ -19,10 +19,6 @@
       url = "github:nix-community/NUR";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # arkenfox = {
-    #   url = "github:dwarfmaster/arkenfox-nixos";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
     betterfox = {
       url = "github:HeitorAugustoLN/betterfox-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -37,13 +33,11 @@
         modules = [
           ./config/darwin.nix
           home-manager.darwinModules.home-manager
-          # arkenfox.hmModules.default
           {
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
               sharedModules = [
-                # inputs.arkenfox.hmModules.default
                 inputs.betterfox.homeManagerModules.betterfox
               ];
               users.johnw = import ./config/home.nix;

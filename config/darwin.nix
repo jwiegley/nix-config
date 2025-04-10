@@ -68,7 +68,6 @@ in {
     ];
     brews = [
       "ykman"
-      "gollama"
       "node@22"
       # Brews for Kadena
       # "kadena-io/pact/pact"
@@ -134,6 +133,7 @@ in {
       "netdownloadhelpercoapp"
       "notion"
       # "omnigraffle"               # Stay at version 6
+      { name = "opera"; greedy = true; }
       { name = "opera"; greedy = true; }
       "pdf-expert"
       # "screenflow"                # Stay at version 9
@@ -492,7 +492,13 @@ in {
     // lib.optionalAttrs (hostname == "hera") {
       "sysctl-vram-limit" = {
         script = ''
-          /usr/sbin/sysctl iogpu.wired_limit_mb=458752
+          # This leaves 64 GB of working memory remaining
+          # /usr/sbin/sysctl iogpu.wired_limit_mb=458752
+
+          # This leaves 32 GB of working memory remaining, and is best for
+          # when the machine will only be used headless as a server from
+          # remote, during longer trips.
+          /usr/sbin/sysctl iogpu.wired_limit_mb=491520
         '';
         serviceConfig.RunAtLoad = true;
       };
@@ -545,17 +551,17 @@ in {
 
     user = {
       agents = {
-        # aria2c = {
-        #   script = ''
-        #     ${pkgs.aria2}/bin/aria2c    \
-        #         --enable-rpc            \
-        #         --dir ${home}/Downloads \
-        #         --check-integrity       \
-        #         --continue
-        #   '';
-        #   serviceConfig.RunAtLoad = true;
-        #   serviceConfig.KeepAlive = true;
-        # };
+        aria2c = {
+          script = ''
+            ${pkgs.aria2}/bin/aria2c    \
+                --enable-rpc            \
+                --dir ${home}/Downloads \
+                --check-integrity       \
+                --continue
+          '';
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = true;
+        };
       } // lib.optionalAttrs (hostname == "hera") {
         ollama = {
           script = ''
@@ -563,6 +569,14 @@ in {
             export OLLAMA_KEEP_ALIVE=${if hostname == "clio" then "5m" else "60m"}
             export OLLAMA_NOHISTORY=true
             ${pkgs.ollama}/bin/ollama serve
+          '';
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = true;
+        };
+      } // lib.optionalAttrs (hostname == "hera") {
+        lmstudio = {
+          script = ''
+            ${xdg_dataHome}/lmstudio/bin/lms server start
           '';
           serviceConfig.RunAtLoad = true;
           serviceConfig.KeepAlive = true;
