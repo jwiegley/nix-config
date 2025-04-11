@@ -172,11 +172,6 @@ in [
   nixpkgs-fmt
   nixfmt
   nmap
-  ollama gollama
-  llama-cpp koboldcpp
-  onnxruntime
-  openai
-  # openai-whisper whisper-cpp
   opensc
   openssh
   openssl
@@ -306,6 +301,18 @@ in [
   zip
   zsh
   zsh-syntax-highlighting
+
+  ollama
+  gollama
+  (hiPrio llama-cpp)
+  llama-swap
+  hfdownloader
+  koboldcpp
+  mistral-rs
+  onnxruntime
+  openai
+  openai-whisper
+  whisper-cpp
 
   # (exe gitAndTools.git-annex)
   # gitAndTools.git-annex-remote-rclone

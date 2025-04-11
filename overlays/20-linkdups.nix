@@ -7,9 +7,9 @@ linkdups = with super; stdenv.mkDerivation rec {
   src = fetchFromGitHub {
     owner = "jwiegley";
     repo = "linkdups";
-    rev = "d822bf05163581fabfc60e32ec820b5f67f5d6db";
-    sha256 = "07cw7ymz1kpwf8m3wgj868bj6qc9yjv886g53wa9gv84v77v8hk7";
-    # date = 2018-01-27T17:08:24-08:00;
+    rev = "7eb8be7a177b81f6fd9a0604f3062871247dc51f";
+    sha256 = "059kadjar52ms1fan0s076a60jrki9vj93xw6nyv4iw2bf27y6k6";
+    # date = 2025-04-11T09:08:02+02:00;
   };
 
   phases = [ "unpackPhase" "installPhase" ];
