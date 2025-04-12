@@ -57,8 +57,8 @@ in {
   homebrew = {
     enable = true;
     onActivation = {
-      autoUpdate = true;
-      upgrade = true;
+      autoUpdate = false;
+      upgrade = false;
       cleanup = "zap";
     };
 
@@ -112,7 +112,7 @@ in {
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
       "devonagent"
-      "devonthink"
+      # "devonthink"
       "discord"
       "duckduckgo"
       "dungeon-crawl-stone-soup-tiles"
@@ -191,6 +191,7 @@ in {
     #   "Ninox Database"        = 901110441;
     #   "Notability"            = 360593530;
     #   "Paletter"              = 1494948845;
+    #   "Perplexity"            = ;
     #   "Pixelmator Pro"        = 1289583905;
     #   "Prime Video"           = 545519333;
     #   "Shell Fish"            = 1336634154;

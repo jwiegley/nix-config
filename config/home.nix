@@ -141,7 +141,7 @@ in {
         "Drafts".source =
           mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
         "Inbox".source  =
-          mkLink "${home}/Library/Application Support/DEVONthink 3/Inbox";
+          mkLink "${home}/Library/Application Support/DEVONthink/Inbox";
 
         "Media".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Media";
         "Athena".source = mkLink "${home}/Library/CloudStorage/ShellFish/Athena";
@@ -339,6 +339,7 @@ in {
         set-option -g allow-passthrough on
         set-option -g default-shell /bin/zsh
         set-option -g default-command /bin/zsh
+        set-option -g history-limit 250000
       '';
     };
 
@@ -759,7 +760,7 @@ in {
           matchHost = host: hostname: {
             inherit hostname;
             match = ''
-              host ${host} exec "ping -c1 -W50 -n -r -q ${hostname}"
+              host ${host} exec "ping -c1 -W50 -n -r -q ${hostname} > /dev/null 2>&1"
             '';
           };
 
@@ -768,14 +769,26 @@ in {
               inherit proxyJump;
             };
 
+          localBind = port: {
+            bind = { inherit port; };
+            host = { inherit port; address = "127.0.0.1"; };
+          };
+
           external_host = "newartisans.hopto.org";
         in {
 
         # Hera
 
-        hera_thunderbolt = withIdentity (matchHost "hera" "192.168.2.1");
-        hera_ethernet    = withIdentity (matchHost "hera" "192.168.50.5");
-        hera_internet    = withIdentity (matchHost "hera" external_host) // {
+        hera1_thunderbolt = withIdentity (matchHost "hera" "192.168.2.1");
+        hera2_ethernet    = withIdentity (matchHost "hera" "192.168.50.5") // {
+          localForwards = [
+            (localBind 11434) # ollama
+            (localBind 1234)  # lmstudio
+            (localBind 8080)  # llama-cpp
+          ];
+        };
+        hera3_internet = withIdentity {
+          hostname = external_host;
           port = 2201;
         };
 
@@ -785,29 +798,31 @@ in {
 
         # Athena
 
-        athena_ethernet = withIdentity (matchHost "athena" "192.168.50.235");
-        athena_internet = withIdentity (matchHost "athena" external_host) // {
+        athena1_ethernet = withIdentity (matchHost "athena" "192.168.50.235");
+        athena2_internet = withIdentity {
+          hostname = external_host;
           port = 2202;
         };
 
         phobos = withIdentity (onHost "athena" "192.168.50.111");
 
-        tank_ethernet = withIdentity (matchHost "tank" "192.168.50.235");
-        tank_internet = withIdentity (matchHost "tank" external_host) // {
+        tank1_ethernet = withIdentity (matchHost "tank" "192.168.50.235");
+        tank2_internet = withIdentity {
+          hostname = external_host;
           port = 2202;
         };
 
         # Clio
 
-        clio_thunderbolt = withIdentity (matchHost "clio" "192.168.2.2");
-        clio_wifi        = withIdentity (matchHost "clio" "192.168.50.112");
+        clio1_thunderbolt = withIdentity (matchHost "clio" "192.168.2.2");
+        clio2_wifi        = withIdentity (matchHost "clio" "192.168.50.112");
 
         neso = withIdentity (onHost "clio" "192.168.100.130");
 
         # Vulcan
 
-        vulcan_ethernet  = withIdentity (matchHost "vulcan" "192.168.50.51");
-        vulcan_internet  = withIdentity (matchHost "vulcan" external_host) // {
+        vulcan1_ethernet  = withIdentity (matchHost "vulcan" "192.168.50.51");
+        vulcan2_internet  = withIdentity (matchHost "vulcan" external_host) // {
           port = 2203;
         };
 
