@@ -315,6 +315,7 @@ in [
   openai
   openai-whisper
   whisper-cpp
+  gguf-tools
 
   # (exe gitAndTools.git-annex)
   # gitAndTools.git-annex-remote-rclone
