@@ -160,6 +160,7 @@ in [
   m4
   metabase
   mitmproxy
+  mkcert
   more
   mtr
   multitail
@@ -172,6 +173,7 @@ in [
   nixpkgs-fmt
   nixfmt
   nmap
+  nss
   opensc
   openssh
   openssl

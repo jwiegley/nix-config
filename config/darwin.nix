@@ -574,7 +574,15 @@ in {
           serviceConfig.RunAtLoad = true;
           serviceConfig.KeepAlive = true;
         };
-      } // lib.optionalAttrs (hostname == "hera") {
+
+        llama-swap = {
+          script = ''
+            ${pkgs.llama-swap}/bin/llama-swap --config ${home}/Models/llama-swap.yaml
+          '';
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = true;
+        };
+
         lmstudio = {
           script = ''
             ${xdg_dataHome}/lmstudio/bin/lms server start
