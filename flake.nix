@@ -23,6 +23,10 @@
       url = "github:HeitorAugustoLN/betterfox-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # typingmind-server = {
+    #   url = "github:jwiegley/typingmind";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
   };
 
   outputs = inputs: with inputs; rec {

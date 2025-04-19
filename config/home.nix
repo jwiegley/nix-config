@@ -782,9 +782,9 @@ in {
         hera1_thunderbolt = withIdentity (matchHost "hera" "192.168.2.1");
         hera2_ethernet    = withIdentity (matchHost "hera" "192.168.50.5") // {
           localForwards = [
-            (localBind 11434) # ollama
-            (localBind 1234)  # lmstudio
-            (localBind 8080)  # llama-cpp
+            # (localBind 11434) # ollama
+            # (localBind 1234)  # lmstudio
+            # (localBind 8080)  # llama-cpp
           ];
         };
         hera3_internet = withIdentity {

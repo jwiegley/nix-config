@@ -46,13 +46,13 @@ in {
     };
   };
 
-  # services = {
-  #   postgresql = {
-  #     enable = true;
-  #     package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
-  #     dataDir = "${home}/Databases/postgresql";
-  #   };
-  # };
+  services = lib.optionalAttrs (hostname == "clio" || hostname == "hera") {
+    postgresql = {
+      enable = true;
+      package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
+      dataDir = "${home}/${hostname}/postgresql";
+    };
+  };
 
   homebrew = {
     enable = true;
@@ -564,16 +564,16 @@ in {
           serviceConfig.KeepAlive = true;
         };
       } // lib.optionalAttrs (hostname == "hera") {
-        ollama = {
-          script = ''
-            export OLLAMA_HOST=0.0.0.0:11434
-            export OLLAMA_KEEP_ALIVE=${if hostname == "clio" then "5m" else "60m"}
-            export OLLAMA_NOHISTORY=true
-            ${pkgs.ollama}/bin/ollama serve
-          '';
-          serviceConfig.RunAtLoad = true;
-          serviceConfig.KeepAlive = true;
-        };
+        # ollama = {
+        #   script = ''
+        #     export OLLAMA_HOST=0.0.0.0:11434
+        #     export OLLAMA_KEEP_ALIVE=${if hostname == "clio" then "5m" else "60m"}
+        #     export OLLAMA_NOHISTORY=true
+        #     ${pkgs.ollama}/bin/ollama serve
+        #   '';
+        #   serviceConfig.RunAtLoad = true;
+        #   serviceConfig.KeepAlive = true;
+        # };
 
         llama-swap = {
           script = ''
@@ -583,13 +583,64 @@ in {
           serviceConfig.KeepAlive = true;
         };
 
-        lmstudio = {
+        llama-swap-https-proxy =
+          let
+            logDir = "${home}/.cache/llama-swap-proxy";
+            config = pkgs.writeText "nginx.conf" ''
+              worker_processes 1;
+              pid ${logDir}/nginx.pid;
+              error_log ${logDir}/error.log warn;
+              events {
+                worker_connections 1024;
+              }
+              http {
+                server {
+                  listen 8443 ssl;
+                  ssl_certificate /Users/johnw/hera/hera.local+4.pem;
+                  ssl_certificate_key /Users/johnw/hera/hera.local+4-key.pem;
+                  ssl_protocols TLSv1.2 TLSv1.3;
+                  ssl_prefer_server_ciphers on;
+                  ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+                  
+                  access_log ${logDir}/access.log;
+
+                  location / {
+                    proxy_pass http://localhost:8080;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                  }
+                }
+              }
+            ''; in {
           script = ''
-            ${xdg_dataHome}/lmstudio/bin/lms server start
+            mkdir -p ${logDir}
+            ${pkgs.nginx}/bin/nginx -c ${config} -g "daemon off;" -e ${logDir}/error.log
           '';
           serviceConfig.RunAtLoad = true;
           serviceConfig.KeepAlive = true;
         };
+
+        # typingmind-server = {
+        #   command =
+        #     "${inputs.typingmind-server.packages.${pkgs.system}.default}/bin/start-server-with-proxy";
+        #   serviceConfig = {
+        #     KeepAlive = true;
+        #     RunAtLoad = true;
+        #     StandardOutPath = "${home}/Library/Logs/typingmind_server.out.log";
+        #     StandardErrorPath = "${home}/Library/Logs/typingmind_server.err.log";
+        #     WorkingDirectory = "${home}/${hostname}/typingmind"; # Replace with actual path
+        #   };
+        # };
+
+        # lmstudio = {
+        #   script = ''
+        #     ${xdg_dataHome}/lmstudio/bin/lms server start
+        #   '';
+        #   serviceConfig.RunAtLoad = true;
+        #   serviceConfig.KeepAlive = true;
+        # };
       };
     };
   };
