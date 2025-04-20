@@ -98,6 +98,10 @@ changes:
 	(cd ~/.emacs.d ; changes)
 	echo "### ~/src/nix"
 	(cd ~/src/nix ; changes)
+	echo "### ~/src/scripts"
+	(cd ~/src/scripts ; changes)
+	echo "### ~/doc"
+	(cd ~/doc ; changes)
 	echo "### ~/org"
 	(cd ~/org ; changes)
 
