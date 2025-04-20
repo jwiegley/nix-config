@@ -93,6 +93,7 @@ in {
         ".gist".source         = mkLink "${config.xdg.configHome}/gist/api_key";
         ".gnupg".source        = mkLink "${config.xdg.configHome}/gnupg";
         ".jupyter".source      = mkLink "${config.xdg.configHome}/jupyter";
+        ".kube".source         = mkLink "${config.xdg.configHome}/kube";
         ".sage".source         = mkLink "${config.xdg.configHome}/sage";
         ".jq".source           = mkLink "${config.xdg.configHome}/jq/config";
         ".parallel".source     = mkLink "${config.xdg.configHome}/parallel";

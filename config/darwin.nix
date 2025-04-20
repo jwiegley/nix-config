@@ -44,6 +44,11 @@ in {
       enable = true;
       enableCompletion = false;
     };
+
+    # gnupg = {
+    #   enable = true;
+    #   enableSSHSupport = true;
+    # };
   };
 
   services = lib.optionalAttrs (hostname == "clio" || hostname == "hera") {
@@ -63,19 +68,20 @@ in {
     };
 
     taps = [
-      # "kadena-io/pact"
+      "kadena-io/pact"
       "beeftornado/rmtree"
     ];
     brews = [
       "ykman"
       "node@22"
       # Brews for Kadena
-      # "kadena-io/pact/pact"
+      "kadena-io/pact/pact"
       "openssl"
       "z3"
     ];
 
     casks = [
+      "anythingllm"
       "carbon-copy-cloner"
       "docker"
       "drivedx"
@@ -564,17 +570,6 @@ in {
           serviceConfig.KeepAlive = true;
         };
       } // lib.optionalAttrs (hostname == "hera") {
-        # ollama = {
-        #   script = ''
-        #     export OLLAMA_HOST=0.0.0.0:11434
-        #     export OLLAMA_KEEP_ALIVE=${if hostname == "clio" then "5m" else "60m"}
-        #     export OLLAMA_NOHISTORY=true
-        #     ${pkgs.ollama}/bin/ollama serve
-        #   '';
-        #   serviceConfig.RunAtLoad = true;
-        #   serviceConfig.KeepAlive = true;
-        # };
-
         llama-swap = {
           script = ''
             ${pkgs.llama-swap}/bin/llama-swap --config ${home}/Models/llama-swap.yaml
@@ -622,16 +617,15 @@ in {
           serviceConfig.KeepAlive = true;
         };
 
-        # typingmind-server = {
-        #   command =
-        #     "${inputs.typingmind-server.packages.${pkgs.system}.default}/bin/start-server-with-proxy";
-        #   serviceConfig = {
-        #     KeepAlive = true;
-        #     RunAtLoad = true;
-        #     StandardOutPath = "${home}/Library/Logs/typingmind_server.out.log";
-        #     StandardErrorPath = "${home}/Library/Logs/typingmind_server.err.log";
-        #     WorkingDirectory = "${home}/${hostname}/typingmind"; # Replace with actual path
-        #   };
+        # ollama = {
+        #   script = ''
+        #     export OLLAMA_HOST=0.0.0.0:11434
+        #     export OLLAMA_KEEP_ALIVE=${if hostname == "clio" then "5m" else "60m"}
+        #     export OLLAMA_NOHISTORY=true
+        #     ${pkgs.ollama}/bin/ollama serve
+        #   '';
+        #   serviceConfig.RunAtLoad = true;
+        #   serviceConfig.KeepAlive = true;
         # };
 
         # lmstudio = {
