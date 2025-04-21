@@ -56,6 +56,10 @@ in {
       enable = true;
       package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
       dataDir = "${home}/${hostname}/postgresql";
+      authentication = ''
+        local all all              trust
+        host  all all 127.0.0.1/32 trust
+      '';
     };
   };
 

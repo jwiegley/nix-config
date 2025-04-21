@@ -210,7 +210,6 @@ in [
        requests
        stdenv
        huggingface-hub
-       litellm
        # llama-index-core
        # llama-index-embeddings-huggingface
        # llama-index-llms-ollama

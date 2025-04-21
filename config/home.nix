@@ -822,8 +822,9 @@ in {
 
         # Vulcan
 
-        vulcan1_ethernet  = withIdentity (matchHost "vulcan" "192.168.50.51");
-        vulcan2_internet  = withIdentity (matchHost "vulcan" external_host) // {
+        vulcan1_ethernet = withIdentity (matchHost "vulcan" "192.168.50.51");
+        vulcan2_wifi     = withIdentity (matchHost "vulcan" "192.168.50.47");
+        vulcan3_internet = withIdentity (matchHost "vulcan" external_host) // {
           port = 2203;
         };
 
