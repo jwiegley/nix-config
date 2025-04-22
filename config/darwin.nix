@@ -95,6 +95,7 @@ in {
       # "vagrant"
       # "vagrant-manager"
       # "vagrant-vmware-utility"
+      "usbimager"
       "wireshark"
     ] ++ lib.optionals (hostname == "vulcan" || hostname == "hera") [
       "fujitsu-scansnap-home"
@@ -107,8 +108,6 @@ in {
     ] ++ lib.optionals (hostname == "clio") [
       "aldente"
       "chronosync"
-    ] ++ lib.optionals (hostname == "athena") [
-      "openzfs"
     ] ++ lib.optionals (hostname != "athena") [
       "1password"
       "1password-cli"
@@ -334,7 +333,7 @@ in {
         NSNavPanelExpandedStateForSaveMode = true;
         NSNavPanelExpandedStateForSaveMode2 = true;
         "com.apple.keyboard.fnState" = true;
-        _HIHideMenuBar = hostname == "vulcan" || hostname == "hera" || hostname == "athena";
+        _HIHideMenuBar = hostname != "clio";
         "com.apple.mouse.tapBehavior" = 1;
         "com.apple.sound.beep.volume" = 0.0;
         "com.apple.sound.beep.feedback" = 0;
@@ -515,49 +514,49 @@ in {
       };
     }
     // lib.optionalAttrs (hostname == "athena") {
-      snapshots = {
-        script = ''
-          date >> /var/log/snapshots.log 2>&1
-          ${pkgs.sanoid}/bin/sanoid --cron --force-prune --verbose \
-              >> /var/log/snapshots.log 2>&1
-        '';
-        serviceConfig = iterate 3600;
-      };
+      # snapshots = {
+      #   script = ''
+      #     date >> /var/log/snapshots.log 2>&1
+      #     ${pkgs.sanoid}/bin/sanoid --cron --force-prune --verbose \
+      #         >> /var/log/snapshots.log 2>&1
+      #   '';
+      #   serviceConfig = iterate 3600;
+      # };
 
-      b2-restic = {
-        script = ''
-          date >> /var/log/b2-restic.log 2>&1
-          export PATH=${pkgs.restic}/bin:/usr/local/zfs/bin:$PATH
-          export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
-          unset RESTIC_PASSWORD_COMMAND
-          export HOME=/Users/johnw
-          ${pkgs.my-scripts}/bin/b2-restic \
-              --passwords /Users/johnw/athena/restic-passwords tank --all 2>&1 \
-              | grep --line-buffered -v "can not obtain extended attribute" \
-              >> /var/log/b2-restic.log 2>&1
-        '';
-        serviceConfig = {
-          StartCalendarInterval = [
-            {
-              Hour = 3;
-              Minute = 0;
-            }
-          ];
-          Nice = 5;
-          LowPriorityIO = true;
-          AbandonProcessGroup = true;
-        };
-      };
+      # b2-restic = {
+      #   script = ''
+      #     date >> /var/log/b2-restic.log 2>&1
+      #     export PATH=${pkgs.restic}/bin:/usr/local/zfs/bin:$PATH
+      #     export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
+      #     unset RESTIC_PASSWORD_COMMAND
+      #     export HOME=/Users/johnw
+      #     ${pkgs.my-scripts}/bin/b2-restic \
+      #         --passwords /Users/johnw/athena/restic-passwords tank --all 2>&1 \
+      #         | grep --line-buffered -v "can not obtain extended attribute" \
+      #         >> /var/log/b2-restic.log 2>&1
+      #   '';
+      #   serviceConfig = {
+      #     StartCalendarInterval = [
+      #       {
+      #         Hour = 3;
+      #         Minute = 0;
+      #       }
+      #     ];
+      #     Nice = 5;
+      #     LowPriorityIO = true;
+      #     AbandonProcessGroup = true;
+      #   };
+      # };
 
-      zfs-import = {
-        script = ''
-          export PATH=/usr/local/zfs/bin:$PATH
-          export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
-          zpool import -d /var/run/disk/by-serial -a
-        '';
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = false;
-      };
+      # zfs-import = {
+      #   script = ''
+      #     export PATH=/usr/local/zfs/bin:$PATH
+      #     export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
+      #     zpool import -d /var/run/disk/by-serial -a
+      #   '';
+      #   serviceConfig.RunAtLoad = true;
+      #   serviceConfig.KeepAlive = false;
+      # };
      };
 
     user = {
@@ -643,41 +642,41 @@ in {
     };
   };
 
-  environment.etc = lib.optionalAttrs (hostname == "athena") {
-    "sanoid/sanoid.conf".text = ''
-      [tank]
+  # environment.etc = lib.optionalAttrs (hostname == "athena") {
+  #   "sanoid/sanoid.conf".text = ''
+  #     [tank]
 
-      use_template = archival
-      recursive = yes
-      process_children_only = yes
+  #     use_template = archival
+  #     recursive = yes
+  #     process_children_only = yes
 
-      [template_archival]
+  #     [template_archival]
 
-      frequently = 0
-      hourly = 96
-      daily = 90
-      weekly = 26
-      monthly = 12
-      yearly = 30
+  #     frequently = 0
+  #     hourly = 96
+  #     daily = 90
+  #     weekly = 26
+  #     monthly = 12
+  #     yearly = 30
 
-      autoprune = yes
+  #     autoprune = yes
 
-      [tank/ChainState/kadena]
+  #     [tank/ChainState/kadena]
 
-      use_template = production
-      recursive = yes
-      process_children_only = yes
+  #     use_template = production
+  #     recursive = yes
+  #     process_children_only = yes
 
-      [template_production]
+  #     [template_production]
 
-      frequently = 0
-      hourly = 24
-      daily = 14
-      weekly = 4
-      monthly = 3
-      yearly = 0
+  #     frequently = 0
+  #     hourly = 24
+  #     daily = 14
+  #     weekly = 4
+  #     monthly = 3
+  #     yearly = 0
 
-      autoprune = yes
-    '';
-  };
+  #     autoprune = yes
+  #   '';
+  # };
 }

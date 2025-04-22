@@ -66,8 +66,6 @@ in {
       "/usr/local/bin"
       "/opt/homebrew/bin"
       "${config.xdg.dataHome}/lmstudio/bin"
-    ] ++ lib.optionals (hostname == "athena") [
-      "/usr/local/zfs/bin"
     ];
 
     file =
@@ -128,12 +126,6 @@ in {
         "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Video";
         "Hera".source   = mkLink "${home}/Library/CloudStorage/ShellFish/Hera";
       }
-      // lib.optionalAttrs (hostname == "athena") {
-        "Audio".source  = mkLink "/Volumes/tank/Audio";
-        "Photos".source = mkLink "/Volumes/tank/Photos";
-        "Video".source  = mkLink "/Volumes/tank/Video";
-        "Media".source  = mkLink "/Volumes/tank/Media";
-      }
       // lib.optionalAttrs (hostname == "vulcan" || hostname == "hera" || hostname == "clio") {
         "org".source    = mkLink "${home}/doc/org";
 
@@ -144,8 +136,8 @@ in {
         "Inbox".source  =
           mkLink "${home}/Library/Application Support/DEVONthink/Inbox";
 
-        "Media".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Athena/Media";
-        "Athena".source = mkLink "${home}/Library/CloudStorage/ShellFish/Athena";
+        "Media".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Media";
+        "Vulcan".source = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan";
       };
 
       activation.firefoxWriteBoundary =
@@ -807,10 +799,10 @@ in {
 
         phobos = withIdentity (onHost "athena" "192.168.50.111");
 
-        tank1_ethernet = withIdentity (matchHost "tank" "192.168.50.235");
+        tank1_ethernet = withIdentity (matchHost "tank" "192.168.50.182");
         tank2_internet = withIdentity {
           hostname = external_host;
-          port = 2202;
+          port = 2203;
         };
 
         # Clio
@@ -822,9 +814,13 @@ in {
 
         # Vulcan
 
-        vulcan1_ethernet = withIdentity (matchHost "vulcan" "192.168.50.51");
-        vulcan2_wifi     = withIdentity (matchHost "vulcan" "192.168.50.47");
-        vulcan3_internet = withIdentity (matchHost "vulcan" external_host) // {
+        vulcan1_ethernet = withIdentity (matchHost "vulcan" "192.168.50.182") // {
+          extraOptions = {
+            RequestTTY = "yes";
+            RemoteCommand = "sudo -i";
+          };
+        };
+        vulcan2_internet = withIdentity (matchHost "vulcan" external_host) // {
           port = 2203;
         };
 
@@ -833,7 +829,7 @@ in {
         router = {
           hostname = "192.168.50.1";
           user = "router";
-          port = 2203;
+          port = 2204;
         };
 
         elpa = { hostname = "elpa.gnu.org"; user = "root"; };
