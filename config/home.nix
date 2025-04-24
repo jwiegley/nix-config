@@ -128,7 +128,7 @@ in {
         "Drafts".source =
           mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
         "Inbox".source  =
-          mkLink "${home}/Library/Application Support/DEVONthink/Inbox";
+          mkLink "${home}/Library/Application Support/DEVONthink 3/Inbox";
         "iCloud".source        =
           mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
 

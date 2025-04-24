@@ -553,9 +553,9 @@ let
       src = fetchFromGitHub {
         owner = "karthink";
         repo = "gptel";
-        rev = "97934261f2418d69996b7cba78a3c63ab301e5a1";
-        sha256 = "01xfmwslb2l7cr3hvfnr3d5j0809vsrg82fd9pwxb4w4jhxdzy8m";
-        # date = 2025-03-26T11:25:39-07:00;
+        rev = "118431efeacf0fa995e9d908a593aea6fff927b8";
+        sha256 = "0jysn482qw6fwhchpn2lqbjf6j3w0dwq75sjzkdvxqygxpyqym6b";
+        # date = 2025-04-23T17:42:05-07:00;
       };
       buildInputs = with eself; [
         transient compat
@@ -594,9 +594,9 @@ let
       src = fetchFromGitHub {
         owner = "karthink";
         repo = "gptel-quick";
-        rev = "d7a3aedefdc656a136d5664f2dac165a1f6ebf0e";
-        sha256 = "05khdra5aig8466flwl62nsngyn9cz11zwjn0vyyig9c48n8nfka";
-        # date = 2025-01-21T15:09:22-08:00;
+        rev = "34acd437a7af8a387c14428bd1abdb3cd9e95d9d";
+        sha256 = "0k1lf0279lhv0pk5l0i6rhsh05qrnh265ynwdq79dgb8s77glxzw";
+        # date = 2025-04-14T12:06:36-07:00;
       };
       buildInputs = with eself; [ gptel ];
     };
@@ -618,9 +618,9 @@ let
       src = (fetchFromGitHub {
         owner = "agda";
         repo = "agda";
-        rev = "2c19173888efcd6c7cad0592abbd7aebeaa12a74";
-        sha256 = "1xq057yp1q09m6nr27yfyqilqmxhn3g0v2x1z61cy7d05vah8rzq";
-        # date = 2025-03-23T20:58:10+01:00;
+        rev = "493001846fbf63a228381e515b61f73b35d7d58f";
+        sha256 = "02m5f6rpvxgmypwb3zxh0z3pwmgrkdvk2rixl9jcjzcy05ydykm8";
+        # date = 2025-04-24T19:01:55+02:00;
       }) + "/src/data/emacs-mode";
     };
 
