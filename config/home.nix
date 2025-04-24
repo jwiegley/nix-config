@@ -96,9 +96,9 @@ in {
         ".jq".source           = mkLink "${config.xdg.configHome}/jq/config";
         ".parallel".source     = mkLink "${config.xdg.configHome}/parallel";
 
-        ".ollama".source       = mkLink "${config.xdg.configHome}/ollama";
-        "${config.xdg.configHome}/ollama/models".source =
-          mkLink "${config.xdg.dataHome}/ollama/models";
+        # ".ollama".source       = mkLink "${config.xdg.configHome}/ollama";
+        # "${config.xdg.configHome}/ollama/models".source =
+        #   mkLink "${config.xdg.dataHome}/ollama/models";
 
         ".cargo".source        = mkLink "${config.xdg.dataHome}/cargo";
         ".diffusionbee".source = mkLink "${config.xdg.dataHome}/diffusionbee";
@@ -110,23 +110,17 @@ in {
 
         ".emacs.d".source      = mkLink "${home}/src/dot-emacs";
         "dl".source            = mkLink "${home}/Downloads";
-        "iCloud".source        =
-          mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
       }
       // lib.optionalAttrs (hostname == "hera") {
-        "Audio".source           = mkLink "/Volumes/ext/Audio";
-        "Photos".source          = mkLink "/Volumes/ext/Photos";
-        "Video".source           = mkLink "/Volumes/ext/Video";
-
-        "_Archived Items".source = mkLink "/Volumes/ext/_Archived Items";
+        "Audio".source  = mkLink "/Volumes/ext/Audio";
+        "Photos".source = mkLink "/Volumes/ext/Photos";
       }
-      // lib.optionalAttrs (hostname == "clio" || hostname == "vulcan") {
+      // lib.optionalAttrs (hostname == "clio") {
         "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Audio";
         "Photos".source = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Photos";
-        "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Video";
         "Hera".source   = mkLink "${home}/Library/CloudStorage/ShellFish/Hera";
       }
-      // lib.optionalAttrs (hostname == "vulcan" || hostname == "hera" || hostname == "clio") {
+      // lib.optionalAttrs (hostname == "hera" || hostname == "clio") {
         "org".source    = mkLink "${home}/doc/org";
 
         "Mobile".source =
@@ -135,7 +129,10 @@ in {
           mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
         "Inbox".source  =
           mkLink "${home}/Library/Application Support/DEVONthink/Inbox";
+        "iCloud".source        =
+          mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
 
+        "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Video";
         "Media".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Media";
         "Vulcan".source = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan";
       };
@@ -458,7 +455,7 @@ in {
         setopt extended_glob
       '';
 
-      initExtra = ''
+      initContent = ''
         # Make sure that fzf does not override the meaning of ^T
         bindkey '^T' transpose-chars
 
@@ -814,13 +811,18 @@ in {
 
         # Vulcan
 
-        vulcan1_ethernet = withIdentity (matchHost "vulcan" "192.168.50.182") // {
+        vulcan1_ethernet = withIdentity (matchHost "vulcan" "192.168.50.182");
+        vulcan2_internet = withIdentity (matchHost "vulcan" external_host) // {
+          port = 2203;
+        };
+
+        nixos1_ethernet = withIdentity (matchHost "nixos" "192.168.50.182") // {
           extraOptions = {
             RequestTTY = "yes";
             RemoteCommand = "sudo -i";
           };
         };
-        vulcan2_internet = withIdentity (matchHost "vulcan" external_host) // {
+        nixos2_internet = withIdentity (matchHost "nixos" external_host) // {
           port = 2203;
         };
 

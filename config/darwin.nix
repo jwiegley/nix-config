@@ -121,7 +121,7 @@ in {
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
       "devonagent"
-      # "devonthink"
+      "devonthink"
       "discord"
       "duckduckgo"
       "dungeon-crawl-stone-soup-tiles"
@@ -642,41 +642,4 @@ in {
     };
   };
 
-  # environment.etc = lib.optionalAttrs (hostname == "athena") {
-  #   "sanoid/sanoid.conf".text = ''
-  #     [tank]
-
-  #     use_template = archival
-  #     recursive = yes
-  #     process_children_only = yes
-
-  #     [template_archival]
-
-  #     frequently = 0
-  #     hourly = 96
-  #     daily = 90
-  #     weekly = 26
-  #     monthly = 12
-  #     yearly = 30
-
-  #     autoprune = yes
-
-  #     [tank/ChainState/kadena]
-
-  #     use_template = production
-  #     recursive = yes
-  #     process_children_only = yes
-
-  #     [template_production]
-
-  #     frequently = 0
-  #     hourly = 24
-  #     daily = 14
-  #     weekly = 4
-  #     monthly = 3
-  #     yearly = 0
-
-  #     autoprune = yes
-  #   '';
-  # };
 }

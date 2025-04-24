@@ -170,8 +170,9 @@ in [
   nix-info
   nix-prefetch-git
   nix-scripts
+  nix-tree
   nixpkgs-fmt
-  nixfmt
+  nixfmt-classic
   nmap
   nss
   opensc
