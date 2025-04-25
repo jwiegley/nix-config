@@ -27,7 +27,7 @@ in {
         keyFiles =
           # Each machine accepts SSH key authentication from the rest
           import ./key-files.nix { inherit (pkgs) lib; }
-            [ "hera" "clio" "athena" "vulcan" ] home hostname;
+            [ "hera" "clio" "athena" ] home hostname;
       };
     };
   };
@@ -97,7 +97,7 @@ in {
       # "vagrant-vmware-utility"
       "usbimager"
       "wireshark"
-    ] ++ lib.optionals (hostname == "vulcan" || hostname == "hera") [
+    ] ++ lib.optionals (hostname == "hera") [
       "fujitsu-scansnap-home"
       "gzdoom"
       "raspberry-pi-imager"
@@ -189,7 +189,6 @@ in {
     #   "DataGraph"             = 407412840;
     #   "Drafts"                = 1435957248;
     #   "Grammarly for Safari"  = 1462114288;
-    #   "Infuse"                = 1136220934;
     #   "Just Press Record"     = 1033342465;
     #   "Keynote"               = 409183694;
     #   "Kindle"                = 302584613;
@@ -309,8 +308,7 @@ in {
     '';
     };
 
-  ids.gids.nixbld = 
-    if (hostname == "vulcan" || hostname == "athena") then 30000 else 350;
+  ids.gids.nixbld = if hostname == "athena" then 30000 else 350;
 
   system = {
     stateVersion = 4;
@@ -477,27 +475,6 @@ in {
       #   serviceConfig.RunAtLoad = true;
       #   serviceConfig.KeepAlive = true;
       # };
-    }
-    // lib.optionalAttrs (hostname == "vulcan") {
-      unmount = {
-        script = ''
-          diskutil unmount /Volumes/BOOTCAMP
-          diskutil unmount /Volumes/Games
-        '';
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = false;
-      };
-
-      zfs-import = {
-        script = ''
-          # export PATH=/usr/local/zfs/bin:$PATH
-          # export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
-          # zpool import -d /var/run/disk/by-serial -a
-          kextunload /Library/Extensions/zfs.kext
-        '';
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = false;
-      };
     }
     // lib.optionalAttrs (hostname == "hera") {
       "sysctl-vram-limit" = {

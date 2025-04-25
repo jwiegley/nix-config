@@ -52,7 +52,6 @@
         hera   = configure "hera"   "aarch64-darwin";
         clio   = configure "clio"   "aarch64-darwin";
         athena = configure "athena" "aarch64-darwin";
-        vulcan = configure "vulcan" "x86_64-darwin";
       };
 
     darwinPackages = darwinConfigurations."hera".pkgs;
