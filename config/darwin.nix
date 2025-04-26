@@ -597,16 +597,16 @@ in {
           serviceConfig.KeepAlive = true;
         };
 
-        # ollama = {
-        #   script = ''
-        #     export OLLAMA_HOST=0.0.0.0:11434
-        #     export OLLAMA_KEEP_ALIVE=${if hostname == "clio" then "5m" else "60m"}
-        #     export OLLAMA_NOHISTORY=true
-        #     ${pkgs.ollama}/bin/ollama serve
-        #   '';
-        #   serviceConfig.RunAtLoad = true;
-        #   serviceConfig.KeepAlive = true;
-        # };
+        ollama = {
+          script = ''
+            export OLLAMA_HOST=0.0.0.0:11434
+            export OLLAMA_KEEP_ALIVE=${if hostname == "clio" then "5m" else "60m"}
+            export OLLAMA_NOHISTORY=true
+            ${pkgs.ollama}/bin/ollama serve
+          '';
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = true;
+        };
 
         # lmstudio = {
         #   script = ''

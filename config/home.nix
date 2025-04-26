@@ -96,9 +96,9 @@ in {
         ".jq".source           = mkLink "${config.xdg.configHome}/jq/config";
         ".parallel".source     = mkLink "${config.xdg.configHome}/parallel";
 
-        # ".ollama".source       = mkLink "${config.xdg.configHome}/ollama";
-        # "${config.xdg.configHome}/ollama/models".source =
-        #   mkLink "${config.xdg.dataHome}/ollama/models";
+        ".ollama".source       = mkLink "${config.xdg.configHome}/ollama";
+        "${config.xdg.configHome}/ollama/models".source =
+          mkLink "${config.xdg.dataHome}/ollama/models";
 
         ".cargo".source        = mkLink "${config.xdg.dataHome}/cargo";
         ".diffusionbee".source = mkLink "${config.xdg.dataHome}/diffusionbee";

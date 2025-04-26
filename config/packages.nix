@@ -197,6 +197,7 @@ in [
   pinentry_mac
   plantuml
   pngpaste
+  pnpm
   poppler_utils
   procps
   protobufc
@@ -207,7 +208,7 @@ in [
    (python3.withPackages (
      python-pkgs: with python-pkgs; [
        venvShellHook
-       numpy_2
+       numpy
        requests
        stdenv
        huggingface-hub
@@ -304,8 +305,8 @@ in [
   zsh
   zsh-syntax-highlighting
 
-  # ollama
-  # gollama
+  ollama
+  gollama
   (hiPrio llama-cpp)
   llama-swap
   # hfdownloader
