@@ -24,7 +24,6 @@ in {
       EMAIL              = "${userEmail}";
       FONTCONFIG_FILE    = "${config.xdg.configHome}/fontconfig/fonts.conf";
       FONTCONFIG_PATH    = "${config.xdg.configHome}/fontconfig";
-      GNUPGHOME          = "${config.xdg.configHome}/gnupg";
       GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";
       GTAGSCONF          = "${pkgs.global}/share/gtags/gtags.conf";
       GTAGSLABEL         = "pygments";
@@ -35,7 +34,6 @@ in {
       NLTK_DATA          = "${config.xdg.dataHome}/nltk";
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
       SCREENRC           = "${config.xdg.configHome}/screen/config";
-      SSH_AUTH_SOCK      = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
       STARDICT_DATA_DIR  = "${config.xdg.dataHome}/dictionary";
       TIKTOKEN_CACHE_DIR = "${config.xdg.cacheHome}/tiktoken";
       TRAVIS_CONFIG_PATH = "${config.xdg.configHome}/travis";
@@ -89,7 +87,6 @@ in {
         ".cups".source         = mkLink "${config.xdg.configHome}/cups";
         ".dbvis".source        = mkLink "${config.xdg.configHome}/dbvis";
         ".gist".source         = mkLink "${config.xdg.configHome}/gist/api_key";
-        ".gnupg".source        = mkLink "${config.xdg.configHome}/gnupg";
         ".jupyter".source      = mkLink "${config.xdg.configHome}/jupyter";
         ".kube".source         = mkLink "${config.xdg.configHome}/kube";
         ".sage".source         = mkLink "${config.xdg.configHome}/sage";
@@ -338,12 +335,10 @@ in {
       path = "${home}/src/nix/home-manager";
     };
 
-    # TODO re-enable on Darwin when
-    # https://github.com/NixOS/nixpkgs/pull/236258#issuecomment-1583450593 is fixed
-    # browserpass = {
-    #   enable = true;
-    #   browsers = [ "firefox" ];
-    # };
+    browserpass = {
+      enable = true;
+      browsers = [ "firefox" ];
+    };
 
     texlive = {
       enable = true;
@@ -503,6 +498,7 @@ in {
       enable = true;
       homedir = "${config.xdg.configHome}/gnupg";
       settings = {
+        use-agent = true;
         default-key = master_key;
         auto-key-locate = "keyserver";
         keyserver = "keys.openpgp.org";
@@ -876,17 +872,20 @@ in {
     };
   };
 
+  services = {
+    gpg-agent = {
+      enable = true;
+      enableSshSupport = true;
+      defaultCacheTtl = 86400;
+      maxCacheTtl = 86400;
+      # pinentry-program ${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac
+    };
+  };
+
   xdg = {
     enable = true;
 
     configFile = {
-      "gnupg/gpg-agent.conf".text = ''
-        enable-ssh-support
-        default-cache-ttl 86400
-        max-cache-ttl 86400
-        pinentry-program ${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac
-      '';
-
       "aspell/config".text = ''
         local-data-dir ${pkgs.aspell}/lib/aspell
         data-dir ${pkgs.aspellDicts.en}/lib/aspell

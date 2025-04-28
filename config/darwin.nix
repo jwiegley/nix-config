@@ -44,11 +44,6 @@ in {
       enable = true;
       enableCompletion = false;
     };
-
-    # gnupg = {
-    #   enable = true;
-    #   enableSSHSupport = true;
-    # };
   };
 
   services = lib.optionalAttrs (hostname == "clio" || hostname == "hera") {
@@ -125,7 +120,7 @@ in {
       { name = "firefox"; greedy = true; }
       "geektool"
       "grammarly-desktop"
-      # "gpg-suite-no-mail"
+      # "gpg-suite-no-mail"         # Used only if Nix breaks GnuPG
       "keyboard-maestro"
       "launchbar"
       "lectrote"
@@ -263,7 +258,6 @@ in {
          lib.mapAttrsToList (key: value: "${key}=${value.to.path}")
                             config.nix.registry
       ++ [{ ssh-config-file = "${home}/.ssh/config";
-            ssh-auth-sock   = "${xdg_configHome}/gnupg/S.gpg-agent.ssh";
             darwin-config   = "${home}/src/nix/config/darwin.nix";
             hm-config       = "${home}/src/nix/config/home.nix";
           }]);
@@ -422,12 +416,6 @@ in {
     };
   };
 
-  # networking = lib.optionalAttrs (hostname == "hera") {
-  #   dns = [ "192.168.50.1" ];
-  #   search = [ "local" ];
-  #   knownNetworkServices = [ "Ethernet" "Thunderbolt Bridge" ];
-  # };
-
   launchd =
     let
       iterate = StartInterval: {
@@ -438,15 +426,6 @@ in {
       }; in {
 
     daemons = {
-      # cleanup = {
-      #   script = ''
-      #     export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
-      #     ${pkgs.python3}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
-      #         >> /var/log/cleanup.log 2>&1
-      #   '';
-      #   serviceConfig = iterate 86400;
-      # };
-
       limits = {
         script = ''
           /bin/launchctl limit maxfiles 524288 524288
@@ -456,17 +435,17 @@ in {
         serviceConfig.KeepAlive = false;
       };
 
-      # pdnsd = {
-      #   script = ''
-      #     cp -pL /etc/pdnsd.conf ${tmpdir}/.pdnsd.conf
-      #     chmod 700 ${tmpdir}/.pdnsd.conf
-      #     chown root ${tmpdir}/.pdnsd.conf
-      #     touch ${xdg_cacheHome}/pdnsd/pdnsd.cache
-      #     ${pkgs.pdnsd}/sbin/pdnsd -c ${tmpdir}/.pdnsd.conf
-      #   '';
-      #   serviceConfig.RunAtLoad = true;
-      #   serviceConfig.KeepAlive = true;
-      # };
+      pdnsd =
+        let
+          text = builtins.readFile "${xdg_configHome}/pdnsd/config";
+          config = pkgs.writeTextFile {
+          name = "pdnsd.conf";
+          inherit text;
+        }; in {
+          script = "${pkgs.pdnsd}/sbin/pdnsd -c ${config}";
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = true;
+        };
     }
     // lib.optionalAttrs (hostname == "hera") {
       "sysctl-vram-limit" = {
@@ -481,51 +460,6 @@ in {
         '';
         serviceConfig.RunAtLoad = true;
       };
-    }
-    // lib.optionalAttrs (hostname == "athena") {
-      # snapshots = {
-      #   script = ''
-      #     date >> /var/log/snapshots.log 2>&1
-      #     ${pkgs.sanoid}/bin/sanoid --cron --force-prune --verbose \
-      #         >> /var/log/snapshots.log 2>&1
-      #   '';
-      #   serviceConfig = iterate 3600;
-      # };
-
-      # b2-restic = {
-      #   script = ''
-      #     date >> /var/log/b2-restic.log 2>&1
-      #     export PATH=${pkgs.restic}/bin:/usr/local/zfs/bin:$PATH
-      #     export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
-      #     unset RESTIC_PASSWORD_COMMAND
-      #     export HOME=/Users/johnw
-      #     ${pkgs.my-scripts}/bin/b2-restic \
-      #         --passwords /Users/johnw/athena/restic-passwords tank --all 2>&1 \
-      #         | grep --line-buffered -v "can not obtain extended attribute" \
-      #         >> /var/log/b2-restic.log 2>&1
-      #   '';
-      #   serviceConfig = {
-      #     StartCalendarInterval = [
-      #       {
-      #         Hour = 3;
-      #         Minute = 0;
-      #       }
-      #     ];
-      #     Nice = 5;
-      #     LowPriorityIO = true;
-      #     AbandonProcessGroup = true;
-      #   };
-      # };
-
-      # zfs-import = {
-      #   script = ''
-      #     export PATH=/usr/local/zfs/bin:$PATH
-      #     export DYLD_LIBRARY_PATH=/usr/local/zfs/lib:$DYLD_LIBRARY_PATH
-      #     zpool import -d /var/run/disk/by-serial -a
-      #   '';
-      #   serviceConfig.RunAtLoad = true;
-      #   serviceConfig.KeepAlive = false;
-      # };
      };
 
     user = {
