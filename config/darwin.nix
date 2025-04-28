@@ -166,35 +166,33 @@ in {
     # "ScanSnap Online Update"
     # "ABBYY FineReader for ScanSnap"
 
-    ## jww (2025-04-03): These keep getting re-installed
-    # masApps = {
-    #   "Speedtest"             = 1153157709;
-    #   "Xcode"                 = 497799835;
-    # } // lib.optionalAttrs (hostname != "athena") {
-    #   "1Password for Safari"  = 1569813296;
-    #   "Bible Study"           = 472790630;
-    #   "DataGraph"             = 407412840;
-    #   "Drafts"                = 1435957248;
-    #   "Grammarly for Safari"  = 1462114288;
-    #   "Just Press Record"     = 1033342465;
-    #   "Keynote"               = 409183694;
-    #   "Kindle"                = 302584613;
-    #   "Marked 2"              = 890031187;
-    #   "Microsoft Excel"       = 462058435;
-    #   "Microsoft PowerPoint"  = 462062816;
-    #   "Microsoft Word"        = 462054704;
-    #   "Ninox Database"        = 901110441;
-    #   "Notability"            = 360593530;
-    #   "Paletter"              = 1494948845;
-    #   "Perplexity"            = ;
-    #   "Pixelmator Pro"        = 1289583905;
-    #   "Prime Video"           = 545519333;
-    #   "Shell Fish"            = 1336634154;
-    #   "Soulver 3"             = 1508732804;
-    #   "Whisper Transcription" = 1668083311;
-    #   "WireGuard"             = 1451685025;
-    #   "iMovie"                = 408981434;
-    # };
+    masApps = {
+      "Speedtest"             = 1153157709;
+      "Xcode"                 = 497799835;
+    } // lib.optionalAttrs (hostname != "athena") {
+      "1Password for Safari"  = 1569813296;
+      "Bible Study"           = 472790630;
+      "DataGraph"             = 407412840;
+      "Drafts"                = 1435957248;
+      "Grammarly for Safari"  = 1462114288;
+      "iMovie"                = 408981434;
+      "Just Press Record"     = 1033342465;
+      "Keynote"               = 409183694;
+      "Kindle"                = 302584613;
+      "Marked 2"              = 890031187;
+      "Microsoft Excel"       = 462058435;
+      "Microsoft PowerPoint"  = 462062816;
+      "Microsoft Word"        = 462054704;
+      "Ninox Database"        = 901110441;
+      "Notability"            = 360593530;
+      "Paletter"              = 1494948845;
+      "Pixelmator Pro"        = 1289583905;
+      "Prime Video"           = 545519333;
+      "Shell Fish"            = 1336634154;
+      "Soulver 3"             = 1508732804;
+      "Whisper Transcription" = 1668083311;
+      "WireGuard"             = 1451685025;
+    };
   };
 
   nixpkgs = {
@@ -416,15 +414,7 @@ in {
     };
   };
 
-  launchd =
-    let
-      iterate = StartInterval: {
-        inherit StartInterval;
-        Nice = 5;
-        LowPriorityIO = true;
-        AbandonProcessGroup = true;
-      }; in {
-
+  launchd = {
     daemons = {
       limits = {
         script = ''
@@ -434,18 +424,6 @@ in {
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = false;
       };
-
-      pdnsd =
-        let
-          text = builtins.readFile "${xdg_configHome}/pdnsd/config";
-          config = pkgs.writeTextFile {
-          name = "pdnsd.conf";
-          inherit text;
-        }; in {
-          script = "${pkgs.pdnsd}/sbin/pdnsd -c ${config}";
-          serviceConfig.RunAtLoad = true;
-          serviceConfig.KeepAlive = true;
-        };
     }
     // lib.optionalAttrs (hostname == "hera") {
       "sysctl-vram-limit" = {
@@ -535,14 +513,11 @@ in {
         };
 
         # lmstudio = {
-        #   script = ''
-        #     ${xdg_dataHome}/lmstudio/bin/lms server start
-        #   '';
+        #   script = "${xdg_dataHome}/lmstudio/bin/lms server start";
         #   serviceConfig.RunAtLoad = true;
         #   serviceConfig.KeepAlive = true;
         # };
       };
     };
   };
-
 }
