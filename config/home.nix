@@ -811,18 +811,12 @@ in {
 
         # Vulcan
 
-        vulcan1_ethernet = withIdentity (matchHost "vulcan" "192.168.50.182");
-        vulcan2_internet = withIdentity (matchHost "vulcan" external_host) // {
-          port = 2203;
+        vulcan1_ethernet = withIdentity (matchHost "vulcan" "192.168.50.182") // {
+          user = "root";
         };
-
-        nixos1_ethernet = withIdentity (matchHost "nixos" "192.168.50.182") // {
-          extraOptions = {
-            RequestTTY = "yes";
-            RemoteCommand = "sudo -i";
-          };
-        };
-        nixos2_internet = withIdentity (matchHost "nixos" external_host) // {
+        vulcan2_internet = withIdentity {
+          user = "root";
+          hostname = external_host;
           port = 2203;
         };
 

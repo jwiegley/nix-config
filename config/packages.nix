@@ -174,6 +174,7 @@ in [
   nixpkgs-fmt
   nixfmt-classic
   nmap
+  nodejs_22
   nss
   opensc
   openssh

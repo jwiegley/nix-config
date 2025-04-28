@@ -73,11 +73,9 @@ in {
 
     taps = [
       "kadena-io/pact"
-      "beeftornado/rmtree"
     ];
     brews = [
       "ykman"
-      "node@22"
       # Brews for Kadena
       "kadena-io/pact/pact"
       "openssl"
@@ -89,25 +87,21 @@ in {
       "carbon-copy-cloner"
       "docker"
       "drivedx"
-      # "hazel"                   # Stay at version 5
       "iterm2"
       "vmware-fusion"
       # "vagrant"
       # "vagrant-manager"
       # "vagrant-vmware-utility"
-      "usbimager"
       "wireshark"
     ] ++ lib.optionals (hostname == "hera") [
       "fujitsu-scansnap-home"
       "gzdoom"
       "raspberry-pi-imager"
-      "chronoagent"
     ] ++ lib.optionals (pkgs.system == "aarch64-darwin") [
       "lm-studio"
       "diffusionbee"
     ] ++ lib.optionals (hostname == "clio") [
       "aldente"
-      "chronosync"
     ] ++ lib.optionals (hostname != "athena") [
       "1password"
       "1password-cli"
@@ -143,13 +137,11 @@ in {
       "notion"
       # "omnigraffle"               # Stay at version 6
       { name = "opera"; greedy = true; }
-      { name = "opera"; greedy = true; }
       "pdf-expert"
       # "screenflow"                # Stay at version 9
       "signal"
       "slack"
       # "soulver"                   # Use Soulver 3 in App Store
-      "soulver-cli"
       "spamsieve"
       "steam"
       "suspicious-package"
