@@ -83,7 +83,6 @@ in {
     ];
 
     casks = [
-      "anythingllm"
       "carbon-copy-cloner"
       "docker"
       "drivedx"
@@ -125,7 +124,6 @@ in {
       { name = "firefox"; greedy = true; }
       "geektool"
       "grammarly-desktop"
-      # "gpg-suite-no-mail"         # Used only if Nix breaks GnuPG
       "keyboard-maestro"
       "launchbar"
       "lectrote"
