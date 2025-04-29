@@ -42,6 +42,9 @@ in {
       TZ                 = "PST8PDT";
       PROFILE_DIR        = "${config.home.profileDirectory}";
 
+      # This forces clearing the variable so home-manager can set it
+      SSH_AUTH_SOCK = "";
+
       RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone";
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";

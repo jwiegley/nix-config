@@ -44,6 +44,11 @@ in {
       enable = true;
       enableCompletion = false;
     };
+
+    gnupg.agent = {
+      enable = true;
+      enableSSHSupport = false;
+    };
   };
 
   services = lib.optionalAttrs (hostname == "clio" || hostname == "hera") {
