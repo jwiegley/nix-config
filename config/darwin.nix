@@ -106,7 +106,7 @@ in {
       "1password-cli"
       "affinity-photo"
       "anki"
-      { name = "arc"; greedy = true; }
+      # { name = "arc"; greedy = true; }
       "asana"
       "audacity"
       { name = "brave-browser"; greedy = true; }
@@ -116,7 +116,7 @@ in {
       "devonagent"
       "devonthink"
       "discord"
-      "duckduckgo"
+      # { name = "duckduckgo"; greedy = true; }
       "dungeon-crawl-stone-soup-tiles"
       "element"
       "expandrive"
@@ -132,7 +132,7 @@ in {
       # "marked"                    # Use Marked 2 in App Store
       "mellel"
       "netdownloadhelpercoapp"
-      "notion"
+      # "notion"
       # "omnigraffle"               # Stay at version 6
       { name = "opera"; greedy = true; }
       "pdf-expert"
@@ -155,7 +155,7 @@ in {
       "xnviewmp"
       { name = "zoom"; greedy = true; }
       "zotero"
-      "zulip"
+      # "zulip"
     ];
 
     ## The following software, or versions of software, are not available
