@@ -4,6 +4,9 @@ let exe = if stdenv.targetPlatform.isx86_64
           then haskell.lib.justStaticExecutables
           else lib.id;
 
+    rag-client-pkg = import ~/src/rag-client;
+    rag-client = rag-client-pkg.packages.${pkgs.system}.default;
+
 in [
   (exe haskellPackages.hasktags)
   (exe haskellPackages.hpack)
@@ -229,6 +232,7 @@ in [
   qemu libvirt
   qpdf
   qrencode
+  rag-client
   ratpoison
   rclone
   # recoll-nox

@@ -6,6 +6,7 @@ pkgs: epkgs: with epkgs;
   adoc-mode
   agda2-mode
   aggressive-indent
+  aio
   alert
   all-the-icons
   anaphora
