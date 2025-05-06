@@ -33,17 +33,17 @@ echo '└───────────────────────�
 
 ### Kadena projects
 
-# echo ~/kadena/pact-fv
-# (
-#     cd ~/kadena/pact-fv
-#     source .envrc
-#     cabal v2-update
-#     cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
-#     cabal v2-build
-#     cabal v2-test
-# ) > /tmp/pact-fv-build.log 2>&1
+echo ~/kadena/pact-fv
+(
+    cd ~/kadena/pact-fv
+    source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
+    cabal v2-build
+    cabal v2-test
+) > /tmp/pact-fv-build.log 2>&1
 
-# if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
 # echo ~/kadena/evm/reth
 # (

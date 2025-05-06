@@ -34,7 +34,6 @@ in [
   bash-completion
   bashInteractive
   bat
-  black                         # Python code formatter
   btop
   cacert
   cargo-cache
@@ -225,6 +224,13 @@ in [
        # fastembed
        # qdrant-client
        orgparse
+       basedpyright
+       autoflake
+       pylint
+       isort                    # Python code formatter
+       black                    # Python code formatter
+       pytest                   # Python test runner
+       flake8                   # Python code linter
      ]
    )))
   pyright                       # LSP server for Python

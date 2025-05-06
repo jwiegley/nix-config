@@ -107,6 +107,7 @@ pkgs: epkgs: with epkgs;
   elisp-refs
   elisp-slime-nav
   elmacro
+  elpy
   emacsql
   emamux
   embark
@@ -158,7 +159,6 @@ pkgs: epkgs: with epkgs;
   graphviz-dot-mode
   haskell-mode
   hcl-mode
-  helpful
   helpful
   highlight
   highlight-cl
