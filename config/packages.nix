@@ -229,7 +229,6 @@ in [
        pylint
        isort                    # Python code formatter
        black                    # Python code formatter
-       pytest                   # Python test runner
        flake8                   # Python code linter
      ]
    )))

@@ -77,6 +77,7 @@ in {
     ];
     brews = [
       "ykman"
+      "nss"
       # Brews for Kadena
       "kadena-io/pact/pact"
       "openssl"
