@@ -49,8 +49,8 @@ let
     hakyll =  hself.callCabal2nix "hakyll" (pkgs.fetchFromGitHub {
       owner  = "jwiegley";
       repo   = "hakyll";
-      rev    = "ff283e5e828fde378aab09bf45ed704fd920f700";
-      sha256 = "sha256-1rQvA7DooclCpFZbjXUcU0ZC7UkSLuXOVLLL8BsZORI=";
+      rev    = "1784bb74b0bfcaa0899c522f34f2063b92728bd8";
+      sha256 = "sha256-hNr59HQ5hwKctVTfBfgZZMPXJTohsFgAmLKjxuiHqHs=";
     }) {};
 
     time-recurrence = unmarkBroken (doJailbreak
