@@ -66,6 +66,7 @@ in {
     sessionPath = [
       "/usr/local/bin"
       "/opt/homebrew/bin"
+      "${home}/.local/bin"
       # "${config.xdg.dataHome}/lmstudio/bin"
     ];
 

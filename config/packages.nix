@@ -231,8 +231,19 @@ in [
        isort                    # Python code formatter
        black                    # Python code formatter
        flake8                   # Python code linter
-     ]
-   )))
+
+       # jww (2025-05-15): Right llm depends on llm-mlx, which needs a version
+       # of mlx that can build with Metal for full performance.
+       # llm
+       # llm-anthropic
+       # llm-cmd
+       # llm-gemini
+       # llm-gguf
+       # llm-jq
+       # # llm-ollama
+       # llm-openai-plugin
+       # llm-mlx
+     ])))
   pyright                       # LSP server for Python
   qdrant
   qemu libvirt
@@ -293,6 +304,7 @@ in [
   unixtools.top
   unrar
   unzip
+  uv
   w3m
   wabt
   watch
