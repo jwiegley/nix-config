@@ -66,7 +66,7 @@ in {
     sessionPath = [
       "/usr/local/bin"
       "/opt/homebrew/bin"
-      "${config.xdg.dataHome}/lmstudio/bin"
+      # "${config.xdg.dataHome}/lmstudio/bin"
     ];
 
     file =
@@ -96,14 +96,14 @@ in {
         ".jq".source           = mkLink "${config.xdg.configHome}/jq/config";
         ".parallel".source     = mkLink "${config.xdg.configHome}/parallel";
 
-        ".ollama".source       = mkLink "${config.xdg.configHome}/ollama";
-        "${config.xdg.configHome}/ollama/models".source =
-          mkLink "${config.xdg.dataHome}/ollama/models";
+        # ".ollama".source       = mkLink "${config.xdg.configHome}/ollama";
+        # "${config.xdg.configHome}/ollama/models".source =
+        #   mkLink "${config.xdg.dataHome}/ollama/models";
 
         ".cargo".source        = mkLink "${config.xdg.dataHome}/cargo";
         ".diffusionbee".source = mkLink "${config.xdg.dataHome}/diffusionbee";
         ".docker".source       = mkLink "${config.xdg.dataHome}/docker";
-        ".lmstudio".source     = mkLink "${config.xdg.dataHome}/lmstudio";
+        # ".lmstudio".source     = mkLink "${config.xdg.dataHome}/lmstudio";
         ".w3m".source          = mkLink "${config.xdg.dataHome}/w3m";
 
         ".thinkorswim".source  = mkLink "${config.xdg.cacheHome}/thinkorswim";

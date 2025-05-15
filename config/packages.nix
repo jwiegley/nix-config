@@ -160,6 +160,7 @@ in [
   lzop
   m-cli
   m4
+  macmon
   metabase
   mitmproxy
   mkcert
@@ -315,12 +316,12 @@ in [
   zsh
   zsh-syntax-highlighting
 
-  ollama
-  gollama
+  # ollama
+  # gollama
   (hiPrio llama-cpp)
   llama-swap
   # hfdownloader
-  # koboldcpp
+  koboldcpp
   # mistral-rs
   # onnxruntime
   # openai
