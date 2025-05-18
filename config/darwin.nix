@@ -118,7 +118,7 @@ in {
       "devonagent"
       "devonthink"
       "discord"
-      # { name = "duckduckgo"; greedy = true; }
+      { name = "duckduckgo"; greedy = true; }
       "dungeon-crawl-stone-soup-tiles"
       "element"
       "expandrive"

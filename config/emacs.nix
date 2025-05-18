@@ -381,6 +381,7 @@ pkgs: epkgs: with epkgs;
   undo-fu
   undo-propose
   unicode-fonts
+  uniline
   use-package
   uuidgen
   vagrant

@@ -332,6 +332,7 @@ in [
   # gollama
   (hiPrio llama-cpp)
   llama-swap
+  github-mcp-server
   # hfdownloader
   koboldcpp
   # mistral-rs
