@@ -184,7 +184,7 @@ let
 
     jobhours = compileEmacsFiles {
       name = "jobhours";
-      src = ~/src/hours;
+      src = /Users/johnw/src/hours;
     };
 
     ########################################################################
@@ -630,7 +630,7 @@ let
       name = "org-mode-${version}";
       version = "9.7.15-src";
 
-      src = ~/src/org-mode;
+      src = /Users/johnw/src/org-mode;
 
       buildInputs = with pkgs; [ eself.emacs texinfo git ];
 
@@ -909,7 +909,7 @@ let
         # date = "2025-01-29T13:56:02+01:00";
       };
 
-      # src = ~/src/proof-general;
+      # src = /Users/johnw/src/proof-general;
 
       buildInputs = [ eself.emacs ] ++ (with pkgs; [ texinfo perl which ]);
 
@@ -1023,7 +1023,7 @@ emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29MacPort;
 #   name = "emacs-${version}${versionModifier}";
 #   version = "29.0";
 #   versionModifier = ".90";
-#   src = pkgs.nix-gitignore.gitignoreSource [] ~/src/emacs;
+#   src = pkgs.nix-gitignore.gitignoreSource [] /Users/johnw/src/emacs;
 #   patches = [
 #     ./emacs/clean-env.patch
 #   ];

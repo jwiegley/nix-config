@@ -82,7 +82,7 @@ let
         args = if builtins.isList arg then builtins.elemAt arg 1 else {};
       in {
         name  = builtins.baseNameOf path;
-        value = callPackage hself ghc (~/src + "/${path}") args;
+        value = callPackage hself ghc (/Users/johnw/src + "/${path}") args;
       };
     in builtins.listToAttrs (builtins.map fromSrc srcs);
 

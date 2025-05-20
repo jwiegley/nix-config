@@ -5,7 +5,7 @@ git-scripts = with self; stdenv.mkDerivation {
 
   src = builtins.filterSource (path: type:
       type != "directory" || baseNameOf path != ".git")
-    ~/src/git-scripts;
+    /Users/johnw/src/git-scripts;
 
   buildInputs = [];
 

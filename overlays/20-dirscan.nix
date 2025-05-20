@@ -5,7 +5,7 @@ dirscan = with super; python3Packages.buildPythonPackage rec {
   version = "2.0";
   format = "source";
 
-  src = ~/src/dirscan;
+  src = /Users/johnw/src/dirscan;
 
   phases = [ "unpackPhase" "installPhase" ];
 

@@ -20,7 +20,7 @@ coq = self.coq_8_19;
 
 # coq_HEAD = (self.coq_8_19.override {
 #     buildIde = false;
-#     version = ~/src/coq;
+#     version = /Users/johnw/src/coq;
 #   }).overrideAttrs (attrs: {
 #     buildInputs = attrs.buildInputs
 #       ++ (with pkgs; [

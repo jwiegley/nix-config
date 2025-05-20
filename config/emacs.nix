@@ -367,6 +367,7 @@ pkgs: epkgs: with epkgs;
   swift-mode
   tablist
   tagedit
+  templatel
   terraform-mode
   tidy
   tla-mode
@@ -416,6 +417,7 @@ pkgs: epkgs: with epkgs;
   x86-lookup
   xeft
   xml-rpc
+  xr
   xray
   yaml-mode
   yaoddmuse

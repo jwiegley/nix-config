@@ -4,7 +4,7 @@ let exe = if stdenv.targetPlatform.isx86_64
           then haskell.lib.justStaticExecutables
           else lib.id;
 
-    rag-client-pkg = import ~/src/rag-client;
+    rag-client-pkg = import /Users/johnw/src/rag-client;
     rag-client = rag-client-pkg.packages.${pkgs.system}.default;
 
 in [
@@ -155,6 +155,7 @@ in [
   linkdups
   lipotell
   lnav
+  loccount
   lsof
   lzip
   lzop
@@ -215,7 +216,7 @@ in [
        numpy
        requests
        stdenv
-       huggingface-hub
+       # huggingface-hub
        # llama-index-core
        # llama-index-embeddings-huggingface
        # llama-index-llms-ollama
@@ -271,7 +272,6 @@ in [
   siege
   sift
   sipcalc
-  sloccount
   smartmontools
   socat
   sourceHighlight
@@ -328,6 +328,7 @@ in [
   zsh
   zsh-syntax-highlighting
 
+  litellm
   # ollama
   # gollama
   (hiPrio llama-cpp)
@@ -341,6 +342,7 @@ in [
   # openai-whisper
   # whisper-cpp
   gguf-tools
+  openmpi
 
   # (exe gitAndTools.git-annex)
   # gitAndTools.git-annex-remote-rclone

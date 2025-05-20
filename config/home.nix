@@ -50,6 +50,7 @@ in {
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";
       FILTER_BRANCH_SQUELCH_WARNING  = "1";
+      HF_HUB_ENABLE_HF_TRANSFER      = "1";
       LLAMA_INDEX_CACHE_DIR          = "${config.xdg.cacheHome}/llama-index";
     };
 

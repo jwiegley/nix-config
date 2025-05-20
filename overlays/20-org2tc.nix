@@ -4,7 +4,7 @@ org2tc = with super; stdenv.mkDerivation rec {
   name = "org2tc-${version}";
   version = "7d52a20";
 
-  src = ~/src/hours/org2tc;
+  src = /Users/johnw/src/hours/org2tc;
 
   phases = [ "unpackPhase" "installPhase" ];
 
