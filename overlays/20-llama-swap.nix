@@ -2,14 +2,14 @@ self: super: {
 
 llama-swap = with super; buildGoModule rec {
   pname = "llama-swap";
-  version = "110";
-  vendorHash = "sha256-ERf6uT7QCTR5LxHnbnko/nuFmVIPAAyd+5dP+SUaffA=";
+  version = "121";
+  vendorHash = "sha256-5mmciFAGe8ZEIQvXejhYN+ocJL3wOVwevIieDuokhGU=";
 
   src = fetchFromGitHub {
     owner = "mostlygeek";
     repo = "llama-swap";
     rev = "v${version}";
-    hash = "sha256-f/YMCbvI4JEVooiJLPJN53TDLL9WkOVQJvpGbMTba5I=";
+    hash = "sha256-vKDrG29E28uCdyrTQgd7Q8I9SPuz4V9mkrA6TMfHefQ=";
   };
 
   doCheck = false;

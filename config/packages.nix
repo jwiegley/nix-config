@@ -333,7 +333,6 @@ in [
   # gollama
   (hiPrio llama-cpp)
   llama-swap
-  github-mcp-server
   # hfdownloader
   koboldcpp
   # mistral-rs
@@ -343,7 +342,10 @@ in [
   # whisper-cpp
   gguf-tools
   openmpi
+  github-mcp-server
+  mcp-server-fetch
+  mcp-server-filesystem
 
-  # (exe gitAndTools.git-annex)
-  # gitAndTools.git-annex-remote-rclone
+  (exe gitAndTools.git-annex)
+  gitAndTools.git-annex-remote-rclone
 ]

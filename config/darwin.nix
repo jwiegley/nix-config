@@ -172,7 +172,6 @@ in {
     # "ABBYY FineReader for ScanSnap"
 
     masApps = {
-      "Speedtest"             = 1153157709;
       "Xcode"                 = 497799835;
     } // lib.optionalAttrs (hostname != "athena") {
       "1Password for Safari"  = 1569813296;
@@ -180,7 +179,6 @@ in {
       "DataGraph"             = 407412840;
       "Drafts"                = 1435957248;
       "Grammarly for Safari"  = 1462114288;
-      "iMovie"                = 408981434;
       "Just Press Record"     = 1033342465;
       "Keynote"               = 409183694;
       "Kindle"                = 302584613;
@@ -195,8 +193,10 @@ in {
       "Prime Video"           = 545519333;
       "Shell Fish"            = 1336634154;
       "Soulver 3"             = 1508732804;
+      "Speedtest"             = 1153157709;
       "Whisper Transcription" = 1668083311;
       "WireGuard"             = 1451685025;
+      "iMovie"                = 408981434;
     };
   };
 
@@ -224,6 +224,7 @@ in {
                   (attrNames (readDir path)))
         ++ [ (import ./envs.nix) 
              inputs.nurpkgs.overlays.default
+             inputs.mcp-servers-nix.overlays.default
            ];
   };
 
@@ -454,7 +455,7 @@ in {
       } // lib.optionalAttrs (hostname == "hera") {
         llama-swap = {
           script = ''
-            ${pkgs.llama-swap}/bin/llama-swap --config ${home}/Models/llama-swap.yaml
+            ${pkgs.llama-swap}/bin/llama-swap --config ${home}/Models/llama-swap.yaml --watch-config
           '';
           serviceConfig.RunAtLoad = true;
           serviceConfig.KeepAlive = true;

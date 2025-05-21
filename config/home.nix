@@ -424,7 +424,7 @@ in {
         w      = "${pkgs.git}/bin/git w";
         g      = "${pkgs.gitAndTools.hub}/bin/hub";
         git    = "${pkgs.gitAndTools.hub}/bin/hub";
-        # ga     = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
+        ga     = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
         good   = "${pkgs.git}/bin/git bisect good";
         bad    = "${pkgs.git}/bin/git bisect bad";
         # ls     = "${pkgs.coreutils}/bin/ls --color=auto";
