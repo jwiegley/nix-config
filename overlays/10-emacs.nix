@@ -1007,8 +1007,9 @@ emacs29MacPort = pkgs.emacs29-macport.overrideAttrs (o: {
   version = "29.4";
   src = pkgs.fetchgit {
     url = "https://bitbucket.org/mituharu/emacs-mac.git";
-    rev = "7cc5e67629363d9e98f65e4e652f83bb4e0ee674";
-    sha256 = "sha256-Uv0AX0d5JLgxHlBD70OIDOO/ImMA6hH1fs5hCuMxw7c=";
+    rev = "55768fe4781855e8cd4af721c8bf0610ed952e97";
+    sha256 = "0yrzh2vd5f1h786x8w0vsr0bgqahrq2p0gl2xyxgpz3fnyjw0sw5";
+    # date = "2025-03-31T16:15:03+09:00";
   };
   configureFlags = o.configureFlags ++ [
     "CFLAGS=-DMAC_OS_X_VERSION_MAX_ALLOWED=101201"

@@ -341,10 +341,15 @@ in [
   # openai-whisper
   # whisper-cpp
   gguf-tools
+  qdrant
+  qdrant-web-ui
   openmpi
   github-mcp-server
   mcp-server-fetch
   mcp-server-filesystem
+  (hiPrio mcp-server-sequential-thinking)
+  mcp-server-memory
+  # mcp-server-qdrant
 
   (exe gitAndTools.git-annex)
   gitAndTools.git-annex-remote-rclone
