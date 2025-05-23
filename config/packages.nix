@@ -250,7 +250,7 @@ in [
   qemu libvirt
   qpdf
   qrencode
-  rag-client
+  # rag-client
   ratpoison
   rclone
   # recoll-nox

@@ -26,6 +26,7 @@ pkgs: epkgs: with epkgs;
   bm
   boogie-friends
   bookmark-plus
+  browser-hist
   browse-kill-ring
   bufler
   burly
@@ -58,9 +59,14 @@ pkgs: epkgs: with epkgs;
   consult-company
   consult-dir
   consult-flycheck
+  consult-gh
+  consult-gh-embark
+  consult-gh-forge
+  consult-gh-with-pr-review
   consult-git-log-grep
   consult-hoogle
   consult-lsp
+  consult-omni
   consult-org-roam
   consult-projectile
   consult-yasnippet
@@ -326,6 +332,7 @@ pkgs: epkgs: with epkgs;
   projectile
   proof-general
   protobuf-mode
+  pr-review
   python-mode
   quick-peek
   rainbow-delimiters

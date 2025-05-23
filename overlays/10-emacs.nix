@@ -245,18 +245,6 @@ let
       }) + "/lisp";
     };
 
-    consult-gh = compileEmacsFiles {
-      name = "consult-gh";
-      src = fetchFromGitHub {
-        owner = "armindarvish";
-        repo = "consult-gh";
-        rev = "e21b9e44c6d241a9a3afc6c45b3e7c37a543a744";
-        sha256 = "1qxk12ia5p8qhmvxdy6zz5kb2cz2gmcmn3mg8gz3s823zx0fj4j0";
-        # date = 2025-03-09T20:50:01-07:00;
-      };
-      buildInputs = with eself; [ consult embark ];
-    };
-
     consult-hoogle = compileEmacsFiles {
       name = "consult-hoogle";
       src = fetchgit {
@@ -266,6 +254,39 @@ let
         # date = 2025-02-19T12:40:17+05:00;
       };
       buildInputs = with eself; [ consult haskell-mode compat ];
+    };
+
+    consult-omni = compileEmacsFiles {
+      name = "consult-omni";
+      src = fetchFromGitHub {
+        owner = "armindarvish";
+        repo = "consult-omni";
+        rev = "d0a24058bf0dda823e5f1efcae5da7dc0efe6bda";
+        sha256 = "12jz9hwb1m3ix7zai5qkbyycbaff55yf67pc8q3ijcg5xlks8ckp";
+        # date = "2025-02-18T17:03:29-08:00";
+      };
+      propagatedBuildInputs = with eself; [
+        browser-hist
+        elfeed
+        ox-gfm
+      ];
+      buildInputs = with eself; [
+        browser-hist
+        elfeed
+        ox-gfm
+        compat
+        consult
+        consult-gh
+        embark
+        embark-consult
+        markdown-mode
+        gptel
+      ];
+      preBuild = ''
+        cp sources/*.el .
+        rm -f consult-omni-mu4e.el
+        rm -f consult-omni-notmuch.el
+      '';
     };
 
     dired-hist = compileEmacsFiles {
