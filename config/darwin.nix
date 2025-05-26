@@ -171,9 +171,7 @@ in {
     # "ScanSnap Online Update"
     # "ABBYY FineReader for ScanSnap"
 
-    masApps = {
-      "Xcode"                 = 497799835;
-    } // lib.optionalAttrs (hostname != "athena") {
+    masApps = lib.optionalAttrs (hostname != "athena") {
       "1Password for Safari"  = 1569813296;
       "Bible Study"           = 472790630;
       "DataGraph"             = 407412840;
@@ -196,6 +194,7 @@ in {
       "Speedtest"             = 1153157709;
       "Whisper Transcription" = 1668083311;
       "WireGuard"             = 1451685025;
+      "Xcode"                 = 497799835;
       "iMovie"                = 408981434;
     };
   };
@@ -474,6 +473,7 @@ in {
               http {
                 server {
                   listen 8443 ssl;
+
                   ssl_certificate /Users/johnw/hera/hera.local+4.pem;
                   ssl_certificate_key /Users/johnw/hera/hera.local+4-key.pem;
                   ssl_protocols TLSv1.2 TLSv1.3;
@@ -481,11 +481,6 @@ in {
                   ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
                   
                   access_log ${logDir}/access.log;
-
-                  add_header 'Access-Control-Allow-Origin' '*';
-                  add_header 'Access-Control-Allow-Credentials' 'true';
-                  add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range';
-                  add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
 
                   location / {
                     proxy_pass http://localhost:8080;
@@ -499,6 +494,11 @@ in {
                     proxy_send_timeout 600;
                     proxy_read_timeout 600;
                     send_timeout 600;
+
+                    add_header 'Access-Control-Allow-Origin' '*';
+                    add_header 'Access-Control-Allow-Credentials' 'true';
+                    add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range';
+                    add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
                   }
                 }
               }

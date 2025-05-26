@@ -1,5 +1,7 @@
 self: pkgs:
 
 let myEmacsPackages = import ./emacs.nix pkgs; in rec {
-  emacsEnv = pkgs.emacsEnv myEmacsPackages;
+  emacs29MacPortEnv = pkgs.emacs29MacPortEnv myEmacsPackages;
+  emacs30Env = pkgs.emacs30Env myEmacsPackages;
+  emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
 }

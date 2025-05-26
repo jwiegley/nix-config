@@ -9,7 +9,10 @@ let
       withPatches = pkg: patches:
         pkg.overrideAttrs(attrs: { inherit patches; });
 
-      compileEmacsFiles = pkgs.callPackage ./emacs/builder.nix;
+      compileEmacsFiles = args:
+        pkgs.callPackage ./emacs/builder.nix ({
+          inherit (eself) emacs;
+        } // args);
 
       addBuildInputs = pkg: inputs: pkg.overrideAttrs (attrs: {
         buildInputs = attrs.buildInputs ++ inputs;
@@ -94,8 +97,8 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "1xnxgjd9nrjz16avyn17ryrw9w3pzjvl14y78mjn64a54fbxxjrf";
-      # date = 2025-03-19T15:00:25-0700;
+      sha256 = "1qjzysbnnkpagw88krmzh0gg7rg5z0lxn29phmwzwnj5mrz7i402";
+      # date = 2025-05-26T11:33:19-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
@@ -205,9 +208,9 @@ let
       src = fetchFromGitHub {
         owner = "manateelazycat";
         repo = "awesome-tray";
-        rev = "40d2dde850227c72850dd6275f9a285713b39302";
-        sha256 = "00bh9x3shlz1n35xigrhizalcv6jaqlzh9py51rn3f85sdsvrzdi";
-        # date = 2025-02-26T00:26:35+08:00;
+        rev = "3e0fda76a2bcf370a6126a2c80e3cd529225009a";
+        sha256 = "0zdks35fpf4n3nkgf83224aqlqyw1i7vcib688m1damcb59v0xyd";
+        # date = 2025-05-16T23:59:51+08:00;
       };
     };
 
@@ -227,9 +230,9 @@ let
       src = fetchFromGitHub {
         owner = "elken";
         repo = "cape-yasnippet";
-        rev = "de6446732b106965ea583c9e076770694f7226b8";
-        sha256 = "0aa0lv58c2d67z971di7zn98m51kplx5dpj9yd64dskpgx5j7cxg";
-        # date = 2025-02-24T10:18:17Z;
+        rev = "f53c42a996b86fc95b96bdc2deeb58581f48c666";
+        sha256 = "1hwsra5w150dfswkvw3jryhkg538nm3ig74xzfplzbg0n6v7qs19";
+        # date = 2025-05-20T12:05:06+01:00;
       };
       buildInputs = with eself; [ cape yasnippet ];
     };
@@ -239,9 +242,9 @@ let
       src = (fetchFromGitHub {
         owner = "kickingvegas";
         repo = "casual";
-        rev = "9c476ea12cdff376f508b1199373257d7e9b8715";
-        sha256 = "1jqk5jzj6ykijaa39rpyg85s1czwa4q2qdfv077vnv57wfknzvfy";
-        # date = "2025-03-14T15:45:19-07:00";
+        rev = "006b3d4ba15969946c9aa9255c8ac6b1ac82a409";
+        sha256 = "11bghffxrs9r2m9hv5xdxqs6hcqrvz7g55ry60mcdcak19jr08gi";
+        # date = "2025-05-19T09:16:51-07:00";
       }) + "/lisp";
     };
 
@@ -316,9 +319,9 @@ let
       src = fetchFromGitHub {
         owner = "jdtsmith";
         repo = "eglot-booster";
-        rev = "e6daa6bcaf4aceee29c8a5a949b43eb1b89900ed";
-        sha256 = "1fz9c0glxpx9wzkwc5w3lgbr82cj7xdlg9n4cm6pwxg489fdmdrw";
-        # date = 2024-10-29T00:42:11-07:00;
+        rev = "1260d2f7dd18619b42359aa3e1ba6871aa52fd26";
+        sha256 = "0b8pknnkyzqmi7b8ms27dzcbcx87cn2m8m160v18mv6b61c0mq5m";
+        # date = 2025-04-28T09:48:37-04:00;
       };
       propagatedBuildInputs = with eself; [
         (pkgs.emacs-lsp-booster.override {
@@ -449,9 +452,9 @@ let
       src = fetchFromGitHub {
         owner = "bohonghuang";
         repo = "lisp-fsrs";
-        rev = "6e5f8fda3e96f8a28cffa367835dd18497ca7e28";
-        sha256 = "08nj5nxsc38gkv60qhcjh99kmc1himnmfj0dfya43if23hb4bzg7";
-        # date = 2025-03-24T01:28:52+08:00;
+        rev = "8b5411e27e198227dd2e5bea8f92368259878626";
+        sha256 = "1zhhgyihp125h3wp4kqa52f2vbbz2xvi2c8ibgygksl3wfw6x2pa";
+        # date = 2025-04-09T01:02:12+08:00;
       };
     };
 
@@ -506,9 +509,9 @@ let
       src = fetchFromGitHub {
         owner = "jdtsmith";
         repo = "ultra-scroll-mac";
-        rev = "b72c507f6702db18d971a6b6bdc692e260f21159";
-        sha256 = "0r5yf0m7jbcilzj8sqvlv1f6wl3dyll3hxas3lsg95r5rwslds01";
-        # date = 2025-03-12T13:41:19-04:00;
+        rev = "93cd969c2ed1e75a950e6dec112a0ab1e4a6903b";
+        sha256 = "1r9940l361jjrir59gvs5ivlpsgjhs13cwbhqy8j3zsmxf45z3qc";
+        # date = 2025-05-04T23:22:43-04:00;
       };
     };
 
@@ -574,9 +577,9 @@ let
       src = fetchFromGitHub {
         owner = "karthink";
         repo = "gptel";
-        rev = "c03e4f3a4768c46cc7c581e52ee130e76a2e0173";
-        sha256 = "0f2r1cqg50i3y42qyd62mcyf6jjv3jb4cgis52zcimmrc0l426c3";
-        # date = 2025-05-19T12:33:54-07:00;
+        rev = "22f743287c011f8c31b1f123a2e38a502e28f474";
+        sha256 = "1cyfavdbw01fkvrp1v9cfm6pmw3n7fwhklvz7858r6bn84x9g2cv";
+        # date = 2025-05-25T21:42:18-07:00;
       };
       buildInputs = with eself; [
         transient compat
@@ -591,9 +594,9 @@ let
       src = fetchFromGitHub {
         owner = "dolmens";
         repo = "gptel-aibo";
-        rev = "1016eff1eecc4831e26cae73f5b62626dfb3abf0";
-        sha256 = "1h5z69rh7kmcx81g7iwz77xn7ylzfrlrfiknp9sb29lqg745drwj";
-        # date = 2025-03-18T17:16:05+08:00;
+        rev = "4289d563273c5f48db41f8057a81ea2a9f2ea156";
+        sha256 = "0v5x531h5hrvnb02n86b3hliww1zfdjkr3hgxwwmilh03nfp7h94";
+        # date = 2025-05-24T16:22:25+08:00;
       };
       buildInputs = with eself; [ gptel ];
     };
@@ -639,9 +642,9 @@ let
       src = (fetchFromGitHub {
         owner = "agda";
         repo = "agda";
-        rev = "e4342775741d7a48644b68b0209bdb84444e294f";
-        sha256 = "023ginnclclxr78a19q7zck3hzlgk99r0a8gdlm3n9i6kmw37lm2";
-        # date = 2025-05-15T20:09:49-03:00;
+        rev = "cf7ae06c0a6ec4bc8317f0e82310e72815af454d";
+        sha256 = "0awzkdkf28sb88h5dr4xcj1rnlvkc1d528hdwffapwixkhljfw0w";
+        # date = 2025-05-24T11:59:58+02:00;
       }) + "/src/data/emacs-mode";
     };
 
@@ -851,9 +854,9 @@ let
       src = fetchFromGitHub {
         owner = "bohonghuang";
         repo = "org-srs";
-        rev = "11c79919edeac26a95a29d2254a8f6dfed526c13";
-        sha256 = "15dc27sikfwx5rwilji0rrf9l99aw5w9va2qhz22y0wjnq5kaam3";
-        # date = 2025-03-23T16:06:08+08:00;
+        rev = "b0abd0a038eedd69489f81b2a07ef5a4dcfe65ac";
+        sha256 = "1psg10hfn70yr3a3dz7rqildsw8sxr3cdx6j5lpj0q96nd2l5ck5";
+        # date = 2025-05-21T01:26:00+08:00;
       };
       buildInputs = with eself; [ org fsrs ];
     };
@@ -874,10 +877,10 @@ let
     auctex = eself.elpaBuild {
       pname = "auctex";
       ename = "auctex";
-      version = "14.0.6";
+      version = "14.0.9";
       src = fetchurl {
-        url = "https://elpa.gnu.org/packages/auctex-14.0.6.tar";
-        sha256 = "0cajri7x6770wjkrasa0p2s0dvcp74fpv1znac5wdfiwhvl1i9yr";
+        url = "https://elpa.gnu.org/packages/auctex-14.0.9.tar";
+        sha256 = "sha256-9kjk9JRAGO7IrbwgSr72n4vt2f0PNgKsTVI6YCnOH9Y=";
         # date = 2024-08-01T11:08:09-0700;
       };
       packageRequires = with eself; [ cl-lib emacs ];
@@ -925,9 +928,9 @@ let
       src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "e0ec3db200f8ed465ec533b6409e64e3dfb6a9b0";
-        sha256 = "00wwc1fr4xb8h44fwi3qayrpm7pippmlyg2gs9373yjn2x0h4hh7";
-        # date = "2025-01-29T13:56:02+01:00";
+        rev = "f5d929ec447f3ad9cddba454e7c2dc6ca43cd732";
+        sha256 = "0qvvsagl5dicmfzmb7x73lfczbkqibd9zxsm0wps85ky93p8l0m2";
+        # date = "2025-05-16T11:13:08+02:00";
       };
 
       # src = /Users/johnw/src/proof-general;
@@ -970,9 +973,9 @@ let
 
       src = fetchgit {
         url = https://git.sr.ht/~casouri/xeft;
-        rev = "32735a2a631fc2957b79cc65ad851546b7d572df";
-        sha256 = "1z96d2akm0qnb86cmndnqbblhsl03sfzql26v59jpqfiiamnlnc0";
-        # date = 2023-09-13T22:05:28-07:00;
+        rev = "6c63bc4c40eae8fe7a3213efe11b75dfe73aaaa4";
+        sha256 = "1j3lxkpalx2yjy7cyrvm9q7h1pcsvdrpbd3h8dhj5l58mz04ll6n";
+        # date = 2025-05-01T22:28:27-07:00;
       };
 
       propagatedBuildInputs = [ eself.emacs ] ++ (with pkgs; [
@@ -1016,13 +1019,12 @@ let
 
 in {
 
-emacs             = self.emacs29MacPort;
-emacsPackages     = self.emacs29MacPortPackages;
-emacsPackagesNg   = self.emacs29MacPortPackagesNg;
+emacs           = self.emacs29MacPort;
+emacsPackages   = self.emacs29MacPortPackages;
+emacsPackagesNg = self.emacs29MacPortPackagesNg;
+emacsEnv        = self.emacs29MacPortEnv;
 
-emacs29           = pkgs.emacs29;
-emacs29Packages   = self.emacs29PackagesNg;
-emacs29PackagesNg = mkEmacsPackages self.emacs29;
+##########################################################################
 
 emacs29MacPort = pkgs.emacs29-macport.overrideAttrs (o: {
   version = "29.4";
@@ -1041,54 +1043,67 @@ emacs29MacPort = pkgs.emacs29-macport.overrideAttrs (o: {
 emacs29MacPortPackages   = self.emacs29MacPortPackagesNg;
 emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29MacPort;
 
-# emacsHEAD = with pkgs; (self.emacs29.override { srcRepo = true; }).overrideAttrs(attrs: rec {
-#   name = "emacs-${version}${versionModifier}";
-#   version = "29.0";
-#   versionModifier = ".90";
-#   src = pkgs.nix-gitignore.gitignoreSource [] /Users/johnw/src/emacs;
-#   patches = [
-#     ./emacs/clean-env.patch
-#   ];
-#   propagatedBuildInputs = (attrs.propagatedBuildInputs or []) ++
-#     [ libgccjit
-#     ];
-#   buildInputs = attrs.buildInputs ++
-#     [ libpng
-#       libjpeg
-#       libungif
-#       libtiff
-#       librsvg
-#       jansson
-#       freetype
-#       harfbuzz.dev
-#       git
-#     ];
-#   preConfigure = ''
-#     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac
-#     autoreconf
-#   '';
-#   # configureFlags = attrs.configureFlags ++
-#   #   [ "--enable-checking=yes,glyphs"
-#   #     "--enable-check-lisp-object-type"
-#   #   ];
-# });
-
-# emacsHEADPackages   = self.emacsHEADPackagesNg;
-# emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
-
-emacsEnv = self.emacs29MacPortEnv;
-
-emacs29Env = myPkgs: pkgs.myEnvFun {
-  name = "emacs29";
-  buildInputs = [
-    (self.emacs29PackagesNg.emacsWithPackages myPkgs)
-  ];
-};
-
 emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
   name = "emacs29MacPort";
   buildInputs = [
     (self.emacs29MacPortPackagesNg.emacsWithPackages myPkgs)
+  ];
+};
+
+##########################################################################
+
+# emacs30           = pkgs.emacs30;
+emacs30Packages   = self.emacs30PackagesNg;
+emacs30PackagesNg = mkEmacsPackages self.emacs30;
+
+emacs30Env = myPkgs: pkgs.myEnvFun {
+  name = "emacs30";
+  buildInputs = [
+    (self.emacs30PackagesNg.emacsWithPackages myPkgs)
+  ];
+};
+
+##########################################################################
+
+emacsHEAD = with pkgs; (self.emacs30.override { srcRepo = true; }).overrideAttrs(attrs: rec {
+  name = "emacs-${version}${versionModifier}";
+  version = "31.0";
+  versionModifier = ".90";
+  src = pkgs.nix-gitignore.gitignoreSource [] /Users/johnw/src/emacs;
+  patches = [
+    ./emacs/clean-env.patch
+  ];
+  propagatedBuildInputs = (attrs.propagatedBuildInputs or []) ++
+    [ libgccjit
+    ];
+  buildInputs = attrs.buildInputs ++
+    [ libpng
+      libjpeg
+      giflib
+      libtiff
+      librsvg
+      jansson
+      freetype
+      harfbuzz.dev
+      git
+    ];
+  preConfigure = ''
+    sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac
+    autoreconf
+  '';
+  configureFlags = attrs.configureFlags ++
+    [ "--enable-checking=yes,glyphs"
+      "--enable-check-lisp-object-type"
+    ];
+});
+
+emacsHEADPackages   = self.emacsHEADPackagesNg;
+emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
+
+emacsHEADEnv = myPkgs: pkgs.myEnvFun {
+  name = "emacsHEAD";
+  buildInputs = [
+    (self.emacsHEADPackagesNg.emacsWithPackages myPkgs)
   ];
 };
 

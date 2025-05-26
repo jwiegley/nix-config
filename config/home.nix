@@ -20,6 +20,8 @@ in {
       B2_ACCOUNT_INFO    = "${config.xdg.configHome}/backblaze-b2/account_info";
       CABAL_CONFIG       = "${config.xdg.configHome}/cabal/config";
       EDITOR             = "${emacsclient}";
+      EMACSAPP           = "Emacs";
+      EMACSVER           = "29MacPort";
       EMACS_SERVER_FILE  = "${emacs-server}";
       EMAIL              = "${userEmail}";
       FONTCONFIG_FILE    = "${config.xdg.configHome}/fontconfig/fonts.conf";

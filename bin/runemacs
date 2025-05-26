@@ -2,14 +2,7 @@
 
 if [[ "$1" == --rev ]]; then
     export EMACSVER=$2
-    EMACSAPP=Emacs
     shift 2
-else
-    export EMACSVER=29MacPort
-    EMACSAPP=Emacs
 fi
-
-EMACSPATH=../Applications/${EMACSAPP}.app/Contents/MacOS/${EMACSAPP}
-EMACSBIN="\$(dirname \$(which emacs))/$EMACSPATH"
 
 exec load-env-emacs$EMACSVER bash -c "unset TZ ; make -C ~/.emacs.d open"

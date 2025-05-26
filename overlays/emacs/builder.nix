@@ -17,12 +17,17 @@ stdenv.mkDerivation {
   buildInputs = [ emacs ] ++ buildInputs;
   buildPhase = ''
     ${preBuild}
+    set -x
     ARGS=$(find ${pkgs.lib.concatStrings
                   (builtins.map (arg: arg + "/share/emacs/site-lisp ") buildInputs)} \
                  -type d -exec echo -L {} \;)
     mkdir $out
     export HOME=$out
-    ${emacs}/bin/emacs -Q -nw -L . $ARGS --batch -f batch-byte-compile *.el
+    if ${emacs}/bin/emacs --version | grep 29; then
+        ${emacs}/bin/emacs -Q -nw -L . $ARGS --batch -f batch-byte-compile *.el
+    else
+        ${emacs}/bin/emacs -Q -nw -L . $ARGS --batch --eval "(setq byte-compile-warnings '(not docstrings))" -f batch-byte-compile *.el
+    fi
   '';
   installPhase = ''
     mkdir -p $out/share/emacs/site-lisp

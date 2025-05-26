@@ -51,7 +51,9 @@ in [
   dnsutils
   dot2tex
   doxygen
-  emacsEnv
+  emacs29MacPortEnv
+  emacs30Env
+  # emacsHEADEnv
   emacs-lsp-booster
   entr
   exiv2

@@ -207,8 +207,11 @@ pkgs: epkgs: with epkgs;
   m-buffer
   macrostep
   magit
+  magit-annex
+  magit-imerge
   magit-lfs
   magit-popup
+  magit-tbdiff
   magit-todos
   makey
   malyon
@@ -415,7 +418,6 @@ pkgs: epkgs: with epkgs;
   websocket
   wgrep
   which-key
-  whisper
   whitespace-cleanup-mode
   window-purpose
   with-editor
