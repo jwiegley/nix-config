@@ -178,6 +178,7 @@ pkgs: epkgs: with epkgs;
   iflipb
   imenu-list
   indent-shift
+  inspector tree-inspector
   ipcalc
   jinx
   jobhours

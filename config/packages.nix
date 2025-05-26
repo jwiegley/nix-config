@@ -206,6 +206,11 @@ in [
   pngpaste
   pnpm
   poppler_utils
+  (postgresql.withPackages (
+    postgres-pkgs: with postgres-pkgs; [
+      pgvector
+    ]))
+  libpq
   procps
   protobufc
   psrecord
@@ -252,7 +257,7 @@ in [
   qemu libvirt
   qpdf
   qrencode
-  # rag-client
+  rag-client
   ratpoison
   rclone
   # recoll-nox
