@@ -1052,9 +1052,15 @@ emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
 
 ##########################################################################
 
-emacs30           = pkgs.emacs30.override {
+emacs30 = (pkgs.emacs30.override {
+  srcRepo = true;
+  withCsrc = true;
   withImageMagick = true;
-};
+}).overrideAttrs(attrs: rec {
+  configureFlags = attrs.configureFlags ++ [
+    "--disable-gc-mark-trace"
+  ];
+});
 emacs30Packages   = self.emacs30PackagesNg;
 emacs30PackagesNg = mkEmacsPackages self.emacs30;
 
@@ -1067,7 +1073,7 @@ emacs30Env = myPkgs: pkgs.myEnvFun {
 
 ##########################################################################
 
-emacsHEAD = with pkgs; (self.emacs30.override { srcRepo = true; }).overrideAttrs(attrs: rec {
+emacsHEAD = with pkgs; self.emacs30.overrideAttrs(attrs: rec {
   name = "emacs-${version}${versionModifier}";
   version = "31.0";
   versionModifier = ".90";
