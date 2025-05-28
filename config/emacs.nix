@@ -239,6 +239,8 @@ pkgs: epkgs: with epkgs;
   nov
   oauth2
   ob-async
+  ob-coq
+  ob-diagrams
   ob-emamux
   ob-restclient
   ob-solidity

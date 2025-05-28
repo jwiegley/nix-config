@@ -735,6 +735,18 @@ let
       };
     };
 
+    ob-coq = compileEmacsFiles {
+      name = "ob-coq";
+      src = fetchFromGitHub {
+        owner = "sp1ff";
+        repo = "ob-coq";
+        rev = "a5b73c3c731ae65e4789b1a06e3ac4003394bfbd";
+        sha256 = "084m0df8a2b00g4pn6qxcgc3fhj43zascw42mcw4pxf9ljsjh74z";
+        # date = 2024-06-18T16:30:53-07:00;
+      };
+      buildInputs = with eself; [ org ];
+    };
+
     ob-emamux = compileEmacsFiles {
       name = "ob-emamux";
       src = fetchFromGitHub {
