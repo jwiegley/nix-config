@@ -1052,7 +1052,9 @@ emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
 
 ##########################################################################
 
-# emacs30           = pkgs.emacs30;
+emacs30           = pkgs.emacs30.override {
+  withImageMagick = true;
+};
 emacs30Packages   = self.emacs30PackagesNg;
 emacs30PackagesNg = mkEmacsPackages self.emacs30;
 
@@ -1091,10 +1093,11 @@ emacsHEAD = with pkgs; (self.emacs30.override { srcRepo = true; }).overrideAttrs
     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac
     autoreconf
   '';
-  configureFlags = attrs.configureFlags ++
-    [ "--enable-checking=yes,glyphs"
-      "--enable-check-lisp-object-type"
-    ];
+  configureFlags = attrs.configureFlags ++ [
+    "--enable-checking=yes,glyphs"
+    "--enable-check-lisp-object-type"
+    "--disable-gc-mark-trace"
+  ];
 });
 
 emacsHEADPackages   = self.emacsHEADPackagesNg;
