@@ -21,7 +21,8 @@ in {
       CABAL_CONFIG       = "${config.xdg.configHome}/cabal/config";
       EDITOR             = "${emacsclient}";
       EMACSAPP           = "Emacs";
-      EMACSVER           = "29MacPort";
+      # EMACSVER           = "29MacPort";
+      EMACSVER           = "30";
       EMACS_SERVER_FILE  = "${emacs-server}";
       EMAIL              = "${userEmail}";
       FONTCONFIG_FILE    = "${config.xdg.configHome}/fontconfig/fonts.conf";
