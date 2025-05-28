@@ -495,7 +495,7 @@ in {
                     proxy_read_timeout 600;
                     send_timeout 600;
 
-                    add_header 'Access-Control-Allow-Origin' '*';
+                    add_header 'Access-Control-Allow-Origin' $http_origin;
                     add_header 'Access-Control-Allow-Credentials' 'true';
                     add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range';
                     add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
