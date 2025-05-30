@@ -1031,10 +1031,15 @@ let
 
 in {
 
-emacs           = self.emacs29MacPort;
-emacsPackages   = self.emacs29MacPortPackages;
-emacsPackagesNg = self.emacs29MacPortPackagesNg;
-emacsEnv        = self.emacs29MacPortEnv;
+emacs           = self.emacs30;
+emacsPackages   = self.emacs30Packages;
+emacsPackagesNg = self.emacs30PackagesNg;
+emacsEnv        = self.emacs30Env;
+
+# emacs           = self.emacs29MacPort;
+# emacsPackages   = self.emacs29MacPortPackages;
+# emacsPackagesNg = self.emacs29MacPortPackagesNg;
+# emacsEnv        = self.emacs29MacPortEnv;
 
 ##########################################################################
 

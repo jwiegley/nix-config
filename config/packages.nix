@@ -92,7 +92,7 @@ in [
   gitAndTools.git-my
   gitAndTools.git-octopus
   gitAndTools.git-quick-stats
-  # gitAndTools.git-quickfix
+  gitAndTools.git-quickfix
   gitAndTools.git-recent
   gitAndTools.git-reparent
   gitAndTools.git-repo
@@ -223,15 +223,6 @@ in [
        numpy
        requests
        stdenv
-       # huggingface-hub
-       # llama-index-core
-       # llama-index-embeddings-huggingface
-       # llama-index-llms-ollama
-       # llama-index-readers-file
-       # llama-parse
-       # nltk
-       # fastembed
-       # qdrant-client
        orgparse
        basedpyright
        autoflake
@@ -239,18 +230,6 @@ in [
        isort                    # Python code formatter
        black                    # Python code formatter
        flake8                   # Python code linter
-
-       # jww (2025-05-15): Right llm depends on llm-mlx, which needs a version
-       # of mlx that can build with Metal for full performance.
-       # llm
-       # llm-anthropic
-       # llm-cmd
-       # llm-gemini
-       # llm-gguf
-       # llm-jq
-       # # llm-ollama
-       # llm-openai-plugin
-       # llm-mlx
      ])))
   pyright                       # LSP server for Python
   qdrant
@@ -340,7 +319,6 @@ in [
   # gollama
   (hiPrio llama-cpp)
   llama-swap
-  # hfdownloader
   koboldcpp
   # mistral-rs
   # onnxruntime
@@ -357,6 +335,7 @@ in [
   (hiPrio mcp-server-sequential-thinking)
   mcp-server-memory
   # mcp-server-qdrant
+  claude-code
 
   (exe gitAndTools.git-annex)
   gitAndTools.git-annex-remote-rclone

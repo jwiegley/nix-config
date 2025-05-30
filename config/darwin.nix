@@ -37,6 +37,7 @@ in {
     nerd-fonts.dejavu-sans-mono
     scheherazade-new
     ia-writer-duospace
+    liberation_ttf
   ];
 
   programs = {
@@ -169,6 +170,7 @@ in {
     # "Kadena Chainweaver"
     # "MotiveWave"
     # "ScanSnap Online Update"
+    # "Photo Supreme"
     # "ABBYY FineReader for ScanSnap"
 
     masApps = lib.optionalAttrs (hostname != "athena") {
