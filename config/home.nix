@@ -836,18 +836,21 @@ in {
         savannah.hostname  = "git.sv.gnu.org";
         fencepost.hostname = "fencepost.gnu.org";
 
-        savannah_gnu_org = {
+        savannah_gnu_org = withIdentity{
           host = lib.concatStringsSep " " [
             "git.savannah.gnu.org"
             "git.sv.gnu.org"
             "git.savannah.nongnu.org"
             "git.sv.nongnu.org"
           ];
-          identityFile   = "${config.xdg.configHome}/ssh/id_emacs";
-          identitiesOnly = true;
         };
 
-        haskell_org = { host = "*haskell.org"; user = "root"; };
+        haskell_org = {
+          host           = "*haskell.org";
+          user           = "root";
+          identityFile   = "${config.xdg.configHome}/ssh/id_haskell";
+          identitiesOnly = true;
+        };
         mail.hostname = "mail.haskell.org";
 
         hf = withIdentity {
@@ -858,9 +861,8 @@ in {
         # Kadena
 
         chainweb_com = {
-          host = "*.chainweb.com";
-          user = "chainweb";
-
+          host           = "*.chainweb.com";
+          user           = "chainweb";
           identityFile   = "${config.xdg.configHome}/ssh/id_kadena";
           identitiesOnly = true;
           extraOptions   = {

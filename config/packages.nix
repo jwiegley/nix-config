@@ -315,27 +315,20 @@ in [
   zsh-syntax-highlighting
 
   litellm
-  # ollama
-  # gollama
   (hiPrio llama-cpp)
   llama-swap
   koboldcpp
-  # mistral-rs
-  # onnxruntime
-  # openai
-  # openai-whisper
-  # whisper-cpp
   gguf-tools
-  qdrant
-  qdrant-web-ui
   openmpi
+  claude-code
   github-mcp-server
   mcp-server-fetch
   mcp-server-filesystem
   (hiPrio mcp-server-sequential-thinking)
   mcp-server-memory
   # mcp-server-qdrant
-  claude-code
+  qdrant
+  qdrant-web-ui
 
   (exe gitAndTools.git-annex)
   gitAndTools.git-annex-remote-rclone

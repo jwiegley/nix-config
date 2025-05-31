@@ -849,18 +849,6 @@ let
       buildInputs = with eself; [ quick-peek dash s ];
     };
 
-    ox-slack = compileEmacsFiles {
-      name = "ox-slack";
-      src = fetchFromGitHub {
-        owner = "masukomi";
-        repo = "ox-slack";
-        rev = "0c08db7248d12519a64ed7924cf52d25be0c1f6d";
-        sha256 = "0sk9vbax5b64dbmqjb41rbs82adb9d71j8sp6i0lmldsv3f8h3pa";
-        # date = 2022-09-14T10:19:41-04:00;
-      };
-      buildInputs = with eself; [ ox-gfm ];
-    };
-
     org-srs = compileEmacsFiles {
       name = "org-srs";
       src = fetchFromGitHub {
@@ -871,6 +859,35 @@ let
         # date = 2025-05-21T01:26:00+08:00;
       };
       buildInputs = with eself; [ org fsrs ];
+    };
+
+    ox-odt = compileEmacsFiles {
+      name = "ox-odt";
+      src = fetchFromGitHub {
+        owner = "kjambunathan";
+        repo = "org-mode-ox-odt";
+        rev = "4a303da5ba5b6fecb7b6deecc02158bd00746997";
+        sha256 = "1p1jxhjhav4559bk6l2m9d76brb9ailrh20wmr8jf74klmn3y17a";
+        # date = 2025-04-11T19:59:57+05:30;
+      };
+      buildInputs = with eself; [ org peg ];
+      preBuild = ''
+        mv lisp/ox-odt.el .
+        mv lisp/ox-ods.el .
+        mv lisp/odt.el .
+      '';
+    };
+
+    ox-slack = compileEmacsFiles {
+      name = "ox-slack";
+      src = fetchFromGitHub {
+        owner = "masukomi";
+        repo = "ox-slack";
+        rev = "0c08db7248d12519a64ed7924cf52d25be0c1f6d";
+        sha256 = "0sk9vbax5b64dbmqjb41rbs82adb9d71j8sp6i0lmldsv3f8h3pa";
+        # date = 2022-09-14T10:19:41-04:00;
+      };
+      buildInputs = with eself; [ ox-gfm ];
     };
 
     ox-texinfo-plus = compileEmacsFiles {

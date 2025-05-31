@@ -301,6 +301,7 @@ pkgs: epkgs: with epkgs;
   ov
   ovpn-mode
   ox-gfm
+  ox-odt
   ox-pandoc
   ox-slack
   ox-texinfo-plus
