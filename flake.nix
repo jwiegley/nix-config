@@ -2,6 +2,7 @@
   description = "Darwin configuration";
 
   inputs = {
+    # nixpkgs.url = "git+file:///Users/johnw/Products/nixpkgs";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     darwin = {
       url = "github:lnl7/nix-darwin";

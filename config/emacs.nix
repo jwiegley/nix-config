@@ -245,6 +245,7 @@ pkgs: epkgs: with epkgs;
   ob-restclient
   ob-solidity
   olivetti
+  onepassword-el
   onnx
   operate-on-number
   orderless

@@ -458,6 +458,18 @@ let
       };
     };
 
+    onepassword-el = compileEmacsFiles {
+      name = "onepassword-el";
+      src = fetchFromGitHub {
+        owner = "justinbarclay";
+        repo = "1password.el";
+        rev = "596e5ab4ecb515c032fec1ff4a4756041c8e5415";
+        sha256 = "0vjbr6xi7d4iwp1i665zwxgsvyc92yi1frp6mhc3fg3wrx1sxhz4";
+        # date = 2025-04-11T22:16:30-07:00;
+      };
+      buildInputs = with eself; [ aio ];
+    };
+
     peval = compileEmacsFiles {
       name = "peval";
       src = fetchFromGitHub {
@@ -1087,9 +1099,8 @@ emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
 ##########################################################################
 
 emacs30 = (pkgs.emacs30.override {
-  srcRepo = true;
-  withCsrc = true;
   withImageMagick = true;
+  withNativeCompilation = false;
 }).overrideAttrs(attrs: rec {
   configureFlags = attrs.configureFlags ++ [
     "--disable-gc-mark-trace"
