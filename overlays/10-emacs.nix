@@ -1102,15 +1102,21 @@ emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
 #   patches = old.patches ++ [./Dedupe-RPATH-entries.patch];
 # });
 
-emacs30 = (pkgs.emacs30.override {
-  withImageMagick = true;
-  withNativeCompilation = false;
-  # withNativeCompilation = true;
-}).overrideAttrs(attrs: rec {
-  configureFlags = attrs.configureFlags ++ [
-    "--disable-gc-mark-trace"
-  ];
-});
+emacs30 =
+  let
+    pkgs' = pkgs.extend (_final: prev: {
+        ld64 = prev.ld64.overrideAttrs (o: {
+          patches = o.patches ++ [./Dedupe-RPATH-entries.patch];
+        });
+      }); in
+  (pkgs.emacs30.override {
+     withImageMagick = true;
+     withNativeCompilation = false;
+   }).overrideAttrs(attrs: rec {
+     configureFlags = attrs.configureFlags ++ [
+       "--disable-gc-mark-trace"
+     ];
+   });
 emacs30Packages   = self.emacs30PackagesNg;
 emacs30PackagesNg = mkEmacsPackages self.emacs30;
 
