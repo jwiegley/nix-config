@@ -56,6 +56,95 @@ let
 in
 {
 
+gguf-tools = with super; stdenv.mkDerivation rec {
+  name = "gguf-tools-${version}";
+  version = "8fa6eb65";
+
+  src = fetchFromGitHub {
+    owner = "antirez";
+    repo = "gguf-tools";
+    rev = "8fa6eb65236618e28fd7710a0fba565f7faa1848";
+    sha256 = "084xwlqa6qq8ns2fzxvmgxhacgv7wy1l4mppwsmk7ac5yg46z4fp";
+    # date = 2025-01-09T16:46:11+01:00;
+  };
+
+  installPhase = ''
+    mkdir -p $out/bin
+    cp -p gguf-tools $out/bin
+  '';
+
+  meta = {
+    homepage = https://github.com/antirez/gguf-tools;
+    description = "This is a work in progress library to manipulate GGUF files";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ jwiegley ];
+  };
+};
+
+hfdownloader = with super; buildGoModule rec {
+  pname = "hfdownloader";
+  version = "1.4.2";
+  vendorHash = "sha256-0tAJEPJQJTUYoV0IU2YYmSV60189rDRdwoxQsewkMEU=";
+
+  src = fetchFromGitHub {
+    owner = "bodaay";
+    repo = "HuggingFaceModelDownloader";
+    rev = "${version}";
+    hash = "sha256-sec+NGh1I5YmQif+ifm+AJmG6TVKOW/enffh8UE0I+E=";
+  };
+
+  meta = with lib; {
+    description = "The HuggingFace Model Downloader is a utility tool for downloading models and datasets from the HuggingFace website";
+    homepage = "https://github.com/bodaay/HuggingFaceModelDownloader";
+    license = licenses.asl20;
+    maintainers = [ maintainers.jwiegley ];
+  };
+};
+
+koboldcpp = super.koboldcpp.overrideAttrs(attrs: rec {
+  version = "1.91";
+
+  src = super.fetchFromGitHub {
+    owner = "LostRuins";
+    repo = "koboldcpp";
+    tag = "v${version}";
+    hash = "sha256-s2AfdKF4kUez3F1P+FYMbP2KD+J6+der/datxrdTiZU=";
+  };
+});
+
+llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
+  version = "5572";
+
+  src = super.fetchFromGitHub {
+    owner = "ggml-org";
+    repo = "llama.cpp";
+    tag = "b${version}";
+    hash = "sha256-IJ6bB49Gc9Xj+2VDTbfVSjHe+lR74A6G6LkOEtz/Ud0=";
+  };
+});
+
+llama-swap = with super; buildGoModule rec {
+  pname = "llama-swap";
+  version = "123";
+  vendorHash = "sha256-5mmciFAGe8ZEIQvXejhYN+ocJL3wOVwevIieDuokhGU="
+;
+  src = fetchFromGitHub {
+    owner = "mostlygeek";
+    repo = "llama-swap";
+    rev = "v${version}";
+    hash = "sha256-Xh8TDngSEpYHZMWJAcxz6mrOsFRtnmQYYiAZeA3i6yA=";
+  };
+
+  doCheck = false;
+
+  meta = with lib; {
+    description = "llama-swap is a light weight, transparent proxy server that provides automatic model swapping to llama.cpp's server";
+    homepage = "https://github.com/mostlygeek/llama-swap";
+    license = licenses.mit;
+    maintainers = [ maintainers.jwiegley ];
+  };
+};
+
 mlx-lm = with self; with self.python3Packages; buildPythonApplication rec {
   pname = "mlx-lm";
   version = "0.24.1";

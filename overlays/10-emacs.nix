@@ -1098,9 +1098,14 @@ emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
 
 ##########################################################################
 
+# ld64 = pkgs.ld64.overrideAttrs (old: {
+#   patches = old.patches ++ [./Dedupe-RPATH-entries.patch];
+# });
+
 emacs30 = (pkgs.emacs30.override {
   withImageMagick = true;
   withNativeCompilation = false;
+  # withNativeCompilation = true;
 }).overrideAttrs(attrs: rec {
   configureFlags = attrs.configureFlags ++ [
     "--disable-gc-mark-trace"

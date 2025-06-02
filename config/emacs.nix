@@ -89,7 +89,9 @@ pkgs: epkgs: with epkgs;
   dired-hist
   dired-plus
   dired-rsync
+  dired-subtree
   dired-toggle
+  diredfl
   direnv
   discover-my-major
   docker
