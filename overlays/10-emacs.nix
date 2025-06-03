@@ -97,7 +97,7 @@ let
 
     dired-plus = compileEmacsWikiFile {
       name = "dired+.el";
-      sha256 = "1qjzysbnnkpagw88krmzh0gg7rg5z0lxn29phmwzwnj5mrz7i402";
+      sha256 = "sha256-jhOveOlstWyQFwwwWCvb2p0Qk2w0FzW/ySp9Z/qAcgw=";
       # date = 2025-05-26T11:33:19-0700;
     };
 
@@ -683,16 +683,16 @@ let
     org =
       let
         versions = {
-          "9.7.27" = "sha256-5r4yOeYxZqe5rKuIGb/WRaZNvfX+3sZyPYqb2DFJXXg=";
+          "9.7.30" = "sha256-vicu/oST/8XZ63c5C4QHJzf4xrn5jXkg5hEUwFVhBqE=";
           "9.6.30" = "sha256-NzIPaZw8fINmA/G7mu8WBd2b+F2GluGRgaxoH+U7V0A=";
         };
-        version = "9.7.27";
+        version = "9.7.30";
       in eself.elpaBuild {
         pname = "org";
         ename = "org";
         inherit version;
         src =
-          if version == "9.7.27"
+          if version == "9.7.30"
           then fetchurl {
             url = "https://elpa.gnu.org/packages/org-${version}.tar";
             sha256 = versions."${version}";
@@ -1098,25 +1098,28 @@ emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
 
 ##########################################################################
 
+# libarchive = pkgs.libarchive.overrideAttrs (old: {
+#   doCheck = false;
+# });
+
 # ld64 = pkgs.ld64.overrideAttrs (old: {
 #   patches = old.patches ++ [./Dedupe-RPATH-entries.patch];
 # });
 
 emacs30 =
-  let
-    pkgs' = pkgs.extend (_final: prev: {
-        ld64 = prev.ld64.overrideAttrs (o: {
-          patches = o.patches ++ [./Dedupe-RPATH-entries.patch];
-        });
-      }); in
+  # let pkgs' = pkgs.extend(_: prev: {
+  #   ld64 = prev.ld64.overrideAttrs (old: {
+  #     patches = old.patches ++ [./Dedupe-RPATH-entries.patch];
+  #   })
+  # }); in
   (pkgs.emacs30.override {
-     withImageMagick = true;
-     withNativeCompilation = false;
-   }).overrideAttrs(attrs: rec {
-     configureFlags = attrs.configureFlags ++ [
-       "--disable-gc-mark-trace"
-     ];
-   });
+    withImageMagick = true;
+    withNativeCompilation = false;
+  }).overrideAttrs(attrs: {
+    configureFlags = attrs.configureFlags ++ [
+      "--disable-gc-mark-trace"
+    ];
+  });
 emacs30Packages   = self.emacs30PackagesNg;
 emacs30PackagesNg = mkEmacsPackages self.emacs30;
 

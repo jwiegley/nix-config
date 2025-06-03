@@ -4,6 +4,7 @@
   inputs = {
     # nixpkgs.url = "git+file:///Users/johnw/Products/nixpkgs";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+
     darwin = {
       url = "github:lnl7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -28,31 +29,55 @@
       url = "github:natsukium/mcp-servers-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # emacs30-overlay = {
+    #   # url = "github:what-the-functor/nix-emacs30-macport-overlay";
+    #   url = "git+file:///Users/johnw/src/nix/nix-emacs30-overlay";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
   };
 
   outputs = inputs: with inputs; rec {
     darwinConfigurations =
-      let configure = hostname: system: darwin.lib.darwinSystem {
-        inherit system;
-        specialArgs = { inherit hostname inputs; };
-        modules = [
-          ./config/darwin.nix
-          home-manager.darwinModules.home-manager
-          {
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              sharedModules = [
-                inputs.betterfox.homeManagerModules.betterfox
-              ];
-              users.johnw = import ./config/home.nix;
-
-              backupFileExtension = "hm-bak";
-              extraSpecialArgs = { inherit hostname inputs; };
-            };
-          }
+      let
+        overlays = with inputs; [
+          # (final: prev:
+          #   let
+          #     pkgs = (import nixpkgs { system = prev.system; }).extend (
+          #       final: prev: {
+          #         ld64 = prev.ld64.overrideAttrs (o: {
+          #           patches = o.patches ++ [./overlays/Dedupe-RPATH-entries.patch];
+          #         });
+          #       }
+          #     ); in {
+          #     emacs30 = pkgs.emacs30;
+          #   })
+          nurpkgs.overlays.default
+          mcp-servers-nix.overlays.default
+          # emacs30-overlay.overlays.default
         ];
-      };
+        configure = hostname: system: darwin.lib.darwinSystem {
+          inherit inputs system;
+          specialArgs = {
+            inherit darwin system hostname inputs overlays;
+          };
+          modules = [
+            ./config/darwin.nix
+            home-manager.darwinModules.home-manager
+            {
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                sharedModules = [
+                  inputs.betterfox.homeManagerModules.betterfox
+                ];
+                users.johnw = import ./config/home.nix;
+
+                backupFileExtension = "hm-bak";
+                extraSpecialArgs = { inherit hostname inputs; };
+              };
+            }
+          ];
+        };
       in {
         hera   = configure "hera"   "aarch64-darwin";
         clio   = configure "clio"   "aarch64-darwin";

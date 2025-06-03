@@ -1,4 +1,4 @@
-{ pkgs, lib, config, hostname, inputs, ... }:
+{ pkgs, lib, config, hostname, inputs, overlays, ... }:
 
 let home           = "/Users/johnw";
     tmpdir         = "/tmp";
@@ -217,16 +217,13 @@ in {
       ];
     };
 
-    overlays =
-      let path = ../overlays; in with builtins;
-      map (n: import (path + ("/" + n)))
-          (filter (n: match ".*\\.nix" n != null ||
-                      pathExists (path + ("/" + n + "/default.nix")))
-                  (attrNames (readDir path)))
-        ++ [ (import ./envs.nix) 
-             inputs.nurpkgs.overlays.default
-             inputs.mcp-servers-nix.overlays.default
-           ];
+    overlays = overlays
+      ++ (let path = ../overlays; in with builtins;
+            map (n: import (path + ("/" + n)))
+                (filter (n: match ".*\\.nix" n != null ||
+                            pathExists (path + ("/" + n + "/default.nix")))
+                        (attrNames (readDir path))))
+      ++ [ (import ./envs.nix) ];
   };
 
   nix =

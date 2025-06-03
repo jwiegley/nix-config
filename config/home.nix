@@ -1,19 +1,22 @@
-{ pkgs, lib, config, hostname, inputs, ... }:
+{ pkgs, lib, config, hostname, inputs, ... }@args:
 
 let home             = config.home.homeDirectory;
     tmpdir           = "/tmp";
+
     userName         = "John Wiegley";
     userEmail        = "johnw@newartisans.com";
+    master_key       = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
+    signing_key      = "12D70076AB504679";
+
     ca-bundle_path   = "${pkgs.cacert}/etc/ssl/certs/";
     ca-bundle_crt    = "${ca-bundle_path}/ca-bundle.crt";
     emacs-server     = "${tmpdir}/johnw-emacs/server";
     emacsclient      = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
-    master_key       = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
-    signing_key      = "12D70076AB504679";
 in {
   home = {
     stateVersion = "23.11";
-    packages = import ./packages.nix { inherit hostname inputs pkgs; };
+
+    packages = import ./packages.nix args;
 
     sessionVariables = {
       ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";
