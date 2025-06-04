@@ -95,11 +95,11 @@ let
       # date = 2022-06-05T10:05:26-0700;
     };
 
-    dired-plus = compileEmacsWikiFile {
-      name = "dired+.el";
-      sha256 = "sha256-jhOveOlstWyQFwwwWCvb2p0Qk2w0FzW/ySp9Z/qAcgw=";
-      # date = 2025-05-26T11:33:19-0700;
-    };
+    # dired-plus = compileEmacsWikiFile {
+    #   name = "dired+.el";
+    #   sha256 = "sha256-Xr2vXSxAjJids2fePRxBBO8/2+pqv6o/4FTTKDNfPEM=";
+    #   # date = 2025-05-26T11:33:19-0700;
+    # };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
       name = "erc-highlight-nicknames.el";
@@ -1065,14 +1065,14 @@ emacsPackages   = self.emacs30Packages;
 emacsPackagesNg = self.emacs30PackagesNg;
 emacsEnv        = self.emacs30Env;
 
-# emacs           = self.emacs29MacPort;
+# emacs           = self.emacs29-macport;
 # emacsPackages   = self.emacs29MacPortPackages;
 # emacsPackagesNg = self.emacs29MacPortPackagesNg;
 # emacsEnv        = self.emacs29MacPortEnv;
 
 ##########################################################################
 
-emacs29MacPort = pkgs.emacs29-macport.overrideAttrs (o: {
+emacs29-macport = pkgs.emacs29-macport.overrideAttrs (o: {
   version = "29.4";
   src = pkgs.fetchgit {
     url = "https://bitbucket.org/mituharu/emacs-mac.git";
@@ -1087,7 +1087,7 @@ emacs29MacPort = pkgs.emacs29-macport.overrideAttrs (o: {
 });
 
 emacs29MacPortPackages   = self.emacs29MacPortPackagesNg;
-emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29MacPort;
+emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29-macport;
 
 emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
   name = "emacs29MacPort";
@@ -1098,23 +1098,37 @@ emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
 
 ##########################################################################
 
-# libarchive = pkgs.libarchive.overrideAttrs (old: {
-#   doCheck = false;
-# });
+emacs30-macport = pkgs.emacs29-macport.overrideAttrs (o: {
+  version = "30.1";
+  src = pkgs.fetchFromGitHub {
+    owner = "jdtsmith";
+    repo = "emacs-mac";
+    rev = "647fb5f4006d0654f11d413554b283d345d4a509";
+    sha256 = "0r5yzvfvdsk627fa1hgvk2kahbi8pmw46dl97cfh0mky8bmca29z";
+    # date = "2025-06-03T12:12:21-04:00";
+  };
+  configureFlags = o.configureFlags ++ [
+    "CFLAGS=-DMAC_OS_X_VERSION_MAX_ALLOWED=101201"
+    "CFLAGS=-DMAC_OS_X_VERSION_MIN_REQUIRED=101201"
+  ];
+});
 
-# ld64 = pkgs.ld64.overrideAttrs (old: {
-#   patches = old.patches ++ [./Dedupe-RPATH-entries.patch];
-# });
+emacs30MacPortPackages   = self.emacs30MacPortPackagesNg;
+emacs30MacPortPackagesNg = mkEmacsPackages self.emacs30-macport;
+
+emacs30MacPortEnv = myPkgs: pkgs.myEnvFun {
+  name = "emacs30MacPort";
+  buildInputs = [
+    (self.emacs30MacPortPackagesNg.emacsWithPackages myPkgs)
+  ];
+};
+
+##########################################################################
 
 emacs30 =
-  # let pkgs' = pkgs.extend(_: prev: {
-  #   ld64 = prev.ld64.overrideAttrs (old: {
-  #     patches = old.patches ++ [./Dedupe-RPATH-entries.patch];
-  #   })
-  # }); in
   (pkgs.emacs30.override {
     withImageMagick = true;
-    withNativeCompilation = false;
+    withNativeCompilation = true;
   }).overrideAttrs(attrs: {
     configureFlags = attrs.configureFlags ++ [
       "--disable-gc-mark-trace"

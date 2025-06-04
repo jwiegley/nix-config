@@ -87,7 +87,7 @@ pkgs: epkgs: with epkgs;
   diffview
   diminish
   dired-hist
-  dired-plus
+  # dired-plus
   dired-rsync
   dired-subtree
   dired-toggle

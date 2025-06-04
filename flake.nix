@@ -40,17 +40,20 @@
     darwinConfigurations =
       let
         overlays = with inputs; [
-          # (final: prev:
-          #   let
-          #     pkgs = (import nixpkgs { system = prev.system; }).extend (
-          #       final: prev: {
-          #         ld64 = prev.ld64.overrideAttrs (o: {
-          #           patches = o.patches ++ [./overlays/Dedupe-RPATH-entries.patch];
-          #         });
-          #       }
-          #     ); in {
-          #     emacs30 = pkgs.emacs30;
-          #   })
+          (final: prev:
+            let
+              pkgs = (import nixpkgs { system = prev.system; }).extend (
+                _final: prev: {
+                  ld64 = prev.ld64.overrideAttrs (o: {
+                    patches = o.patches ++ [./overlays/Dedupe-RPATH-entries.patch];
+                  });
+                  libarchive = prev.libarchive.overrideAttrs (_old: {
+                    doCheck = false;
+                  });
+                }
+              ); in {
+              emacs30 = pkgs.emacs30;
+            })
           nurpkgs.overlays.default
           mcp-servers-nix.overlays.default
           # emacs30-overlay.overlays.default
