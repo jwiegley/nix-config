@@ -33,4 +33,11 @@ in {
   xquartz
   backblaze-b2
   ;
+
+  inherit (nixpkgs {
+    rev    = "5929de975bcf4c7c8d8b5ca65c8cd9ef9e44523e";
+    sha256 = "sha256-BHmgfHlCJVNisJShVaEmfDIr/Ip58i/4oFGlD1iK6lk=";
+  })
+  libfaketime
+  ;
 }
