@@ -19,20 +19,20 @@ in {
   texinfo4
   ;
 
-  inherit (nixpkgs {
-    rev    = "4bc9c909d9ac828a039f288cf872d16d38185db8";
-    sha256 = "sha256-nIYdTAiKIGnFNugbomgBJR+Xv5F1ZQU+HfaBqJKroC0=";
-  })
-  asymptote
-  ;
+  # inherit (nixpkgs {
+  #   rev    = "4bc9c909d9ac828a039f288cf872d16d38185db8";
+  #   sha256 = "sha256-nIYdTAiKIGnFNugbomgBJR+Xv5F1ZQU+HfaBqJKroC0=";
+  # })
+  # asymptote
+  # ;
 
-  inherit (nixpkgs {
-    rev    = "9a5db3142ce450045840cc8d832b13b8a2018e0c";
-    sha256 = "sha256-pUvLijVGARw4u793APze3j6mU1Zwdtz7hGkGGkD87qw=";
-  })
-  xquartz
-  backblaze-b2
-  ;
+  # inherit (nixpkgs {
+  #   rev    = "9a5db3142ce450045840cc8d832b13b8a2018e0c";
+  #   sha256 = "sha256-pUvLijVGARw4u793APze3j6mU1Zwdtz7hGkGGkD87qw=";
+  # })
+  # xquartz
+  # backblaze-b2
+  # ;
 
   inherit (nixpkgs {
     rev    = "5929de975bcf4c7c8d8b5ca65c8cd9ef9e44523e";

@@ -222,8 +222,7 @@ in {
             map (n: import (path + ("/" + n)))
                 (filter (n: match ".*\\.nix" n != null ||
                             pathExists (path + ("/" + n + "/default.nix")))
-                        (attrNames (readDir path))))
-      ++ [ (import ./envs.nix) ];
+                        (attrNames (readDir path))));
   };
 
   nix =

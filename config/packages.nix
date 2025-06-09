@@ -7,6 +7,12 @@ let exe = if stdenv.targetPlatform.isx86_64
     rag-client-pkg = import /Users/johnw/src/rag-client;
     rag-client = rag-client-pkg.packages.${pkgs.system}.default;
 
+    myEmacsPackages = import ./emacs.nix pkgs; in rec {
+
+    # emacs29MacPortEnv = pkgs.emacs29MacPortEnv myEmacsPackages;
+    emacs30Env = pkgs.emacs30Env myEmacsPackages;
+    # emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
+
 in [
   (exe haskellPackages.hasktags)
   (exe haskellPackages.hpack)
@@ -51,7 +57,7 @@ in [
   dnsutils
   dot2tex
   doxygen
-  emacs29MacPortEnv
+  # emacs29MacPortEnv
   emacs30Env
   # emacsHEADEnv
   emacs-lsp-booster
