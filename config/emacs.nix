@@ -98,6 +98,7 @@ pkgs: epkgs: with epkgs;
   docker-compose-mode
   dockerfile-mode
   eager-state
+  eask easky flymake-eask
   easy-kill
   eat
   ebdb
@@ -116,6 +117,7 @@ pkgs: epkgs: with epkgs;
   elisp-slime-nav
   elmacro
   elpy
+  elsa flymake-elsa
   emacsql
   emamux
   embark

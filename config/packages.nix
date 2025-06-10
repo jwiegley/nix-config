@@ -7,7 +7,7 @@ let exe = if stdenv.targetPlatform.isx86_64
     rag-client-pkg = import /Users/johnw/src/rag-client;
     rag-client = rag-client-pkg.packages.${pkgs.system}.default;
 
-    myEmacsPackages = import ./emacs.nix pkgs; in rec {
+    myEmacsPackages = import ./emacs.nix pkgs;
 
     # emacs29MacPortEnv = pkgs.emacs29MacPortEnv myEmacsPackages;
     emacs30Env = pkgs.emacs30Env myEmacsPackages;
@@ -57,6 +57,7 @@ in [
   dnsutils
   dot2tex
   doxygen
+  eask
   # emacs29MacPortEnv
   emacs30Env
   # emacsHEADEnv

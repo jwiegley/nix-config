@@ -447,6 +447,18 @@ let
       propagatedBuildInputs = with eself; [ pkgs.onnxruntime ];
     };
 
+    flymake-elsa = compileEmacsFiles {
+      name = "flymake-elsa";
+      src = fetchFromGitHub {
+        owner = "flymake";
+        repo = "flymake-elsa";
+        rev = "fc173caf86a3c767fa3d0d3b6f98502ec703be2b";
+        sha256 = "0lci3m4997liphv1gfqcckr1m75hk9yc2l57b35m41ccrjhs1p89";
+        # date = 2025-04-22T16:16:27-07:00;
+      };
+      buildInputs = with eself; [ flymake-easy elsa ];
+    };
+
     fsrs = compileEmacsFiles {
       name = "fsrs";
       src = fetchFromGitHub {
