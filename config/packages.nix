@@ -333,12 +333,12 @@ in [
   mcp-server-github
   mcp-server-google-maps
   mcp-server-postgres
-  # mcp-server-qdrant
   mcp-server-slack
   mcp-server-sqlite
   mcp-server-time
   qdrant
   qdrant-web-ui
+  # mcp-server-qdrant
 
   (exe gitAndTools.git-annex)
   gitAndTools.git-annex-remote-rclone

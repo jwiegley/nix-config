@@ -449,7 +449,7 @@ in {
           serviceConfig.RunAtLoad = true;
           serviceConfig.KeepAlive = true;
         };
-      } // lib.optionalAttrs (hostname == "hera") {
+
         llama-swap = {
           script = ''
             ${pkgs.llama-swap}/bin/llama-swap --config ${home}/Models/llama-swap.yaml --watch-config
