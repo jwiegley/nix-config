@@ -174,6 +174,8 @@ pkgs: epkgs: with epkgs;
   highlight-cl
   highlight-defined
   highlight-numbers
+  highlight-quoted
+  # highlight-sexp
   hl-line-plus
   hl-todo
   ht

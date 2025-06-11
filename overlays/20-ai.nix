@@ -113,26 +113,26 @@ koboldcpp = super.koboldcpp.overrideAttrs(attrs: rec {
 });
 
 llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "5572";
+  version = "5624";
 
   src = super.fetchFromGitHub {
     owner = "ggml-org";
     repo = "llama.cpp";
     tag = "b${version}";
-    hash = "sha256-IJ6bB49Gc9Xj+2VDTbfVSjHe+lR74A6G6LkOEtz/Ud0=";
+    hash = "sha256-7TA8NHwbW1pH6KwxYteNLircR7g1awQOK88PHuzrMcY=";
   };
 });
 
 llama-swap = with super; buildGoModule rec {
   pname = "llama-swap";
-  version = "123";
+  version = "125";
   vendorHash = "sha256-5mmciFAGe8ZEIQvXejhYN+ocJL3wOVwevIieDuokhGU="
 ;
   src = fetchFromGitHub {
     owner = "mostlygeek";
     repo = "llama-swap";
     rev = "v${version}";
-    hash = "sha256-Xh8TDngSEpYHZMWJAcxz6mrOsFRtnmQYYiAZeA3i6yA=";
+    hash = "sha256-mFmrHTexcVYMu58dvrTYB6wtDQOo5ZoiJL2jt29xJ0s=";
   };
 
   doCheck = false;
@@ -147,14 +147,14 @@ llama-swap = with super; buildGoModule rec {
 
 mlx-lm = with self; with self.python3Packages; buildPythonApplication rec {
   pname = "mlx-lm";
-  version = "0.24.1";
+  version = "0.25.1";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "mlx-explore";
     repo = "mlx-lm";
     tag = version;
-    hash = "sha256-8SGbvhuNeKgMYGa0ZiOLm+H/JbNpvFWBcUL4De5xO4o=";
+    hash = "sha256-7SGbvhuNeKgMYGa0ZiOLm+H/JbNpvFWBcUL4De5xO4o=";
   };
 
   build-system = [

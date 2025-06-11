@@ -4,12 +4,7 @@ let exe = if stdenv.targetPlatform.isx86_64
           then haskell.lib.justStaticExecutables
           else lib.id;
 
-    rag-client-pkg = import /Users/johnw/src/rag-client;
-    rag-client = rag-client-pkg.packages.${pkgs.system}.default;
-
     myEmacsPackages = import ./emacs.nix pkgs;
-
-    # emacs29MacPortEnv = pkgs.emacs29MacPortEnv myEmacsPackages;
     emacs30Env = pkgs.emacs30Env myEmacsPackages;
     # emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
 
@@ -58,7 +53,6 @@ in [
   dot2tex
   doxygen
   eask
-  # emacs29MacPortEnv
   emacs30Env
   # emacsHEADEnv
   emacs-lsp-booster
@@ -243,7 +237,6 @@ in [
   qemu libvirt
   qpdf
   qrencode
-  rag-client
   ratpoison
   rclone
   # recoll-nox
@@ -265,6 +258,7 @@ in [
   siege
   sift
   sipcalc
+  slackdump
   smartmontools
   socat
   sourceHighlight
@@ -333,7 +327,16 @@ in [
   mcp-server-filesystem
   (hiPrio mcp-server-sequential-thinking)
   mcp-server-memory
+  mcp-server-brave-search
+  mcp-server-gdrive
+  mcp-server-git
+  mcp-server-github
+  mcp-server-google-maps
+  mcp-server-postgres
   # mcp-server-qdrant
+  mcp-server-slack
+  mcp-server-sqlite
+  mcp-server-time
   qdrant
   qdrant-web-ui
 
