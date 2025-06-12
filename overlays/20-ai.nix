@@ -112,14 +112,26 @@ koboldcpp = super.koboldcpp.overrideAttrs(attrs: rec {
   };
 });
 
+ik-llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
+  version = "b57bd865";
+
+  src = super.fetchFromGitHub {
+    owner = "ikawrakow";
+    repo = "ik_llama.cpp";
+    rev = "b57bd8658bfb20e65ad0b601eef6732fee45b81f";
+    sha256 = "06ad8458h1rsr91irkq6s5pbkrk3r3lpk5867yr76s4jxfqnwakx";
+    # date = "2025-06-12T19:25:11+03:00";
+  };
+});
+
 llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "5624";
+  version = "5648";
 
   src = super.fetchFromGitHub {
     owner = "ggml-org";
     repo = "llama.cpp";
     tag = "b${version}";
-    hash = "sha256-7TA8NHwbW1pH6KwxYteNLircR7g1awQOK88PHuzrMcY=";
+    hash = "sha256-OEGah4li1BgTxOZWQU39dYoaopnl4VynSBdOVClyaEk=";
   };
 });
 

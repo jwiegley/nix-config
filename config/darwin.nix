@@ -265,8 +265,8 @@ in {
 
     settings = {
       trusted-users = [ "@admin" "@builders" "johnw" ];
-      max-jobs = if (hostname == "clio") then 10 else 24;
-      cores = 2;
+      max-jobs = if (hostname == "clio") then 4 else 8;
+      cores = 10;
 
       substituters = [
         # "https://cache.iog.io"
