@@ -39,5 +39,6 @@ in {
     sha256 = "sha256-BHmgfHlCJVNisJShVaEmfDIr/Ip58i/4oFGlD1iK6lk=";
   })
   libfaketime
+  pngpaste
   ;
 }
