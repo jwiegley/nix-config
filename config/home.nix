@@ -145,21 +145,20 @@ in {
         "Vulcan".source = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan";
       };
 
-      activation.firefoxWriteBoundary =
-        let
-          profilesFilePath = "$HOME/Library/Application\\ Support/Firefox/profiles.ini";
-        in lib.hm.dag.entryAfter
-          [
-            "writeBoundary"
-            "linkGeneration"
-          ]
-          ''
-            run mv ${profilesFilePath} ${profilesFilePath}.hm
-            run cp "`readlink ${profilesFilePath}.hm`" ${profilesFilePath}
-            run rm -f ${profilesFilePath}.$HOME_MANAGER_BACKUP_EXT
-            run chmod u+w ${profilesFilePath}
-          '';
-
+      # activation.firefoxWriteBoundary =
+      #   let
+      #     profilesFilePath = "$HOME/Library/Application\\ Support/Firefox/profiles.ini";
+      #   in lib.hm.dag.entryAfter
+      #     [
+      #       "writeBoundary"
+      #       "linkGeneration"
+      #     ]
+      #     ''
+      #       run mv ${profilesFilePath} ${profilesFilePath}.hm
+      #       run cp "`readlink ${profilesFilePath}.hm`" ${profilesFilePath}
+      #       run rm -f ${profilesFilePath}.$HOME_MANAGER_BACKUP_EXT
+      #       run chmod u+w ${profilesFilePath}
+      #     '';
   };
 
   accounts.email = {
@@ -211,7 +210,7 @@ in {
     man.enable = true;
     vim.enable = true;
 
-    firefox = import ./firefox.nix { inherit hostname home pkgs; };
+    # firefox = import ./firefox.nix { inherit hostname home pkgs; };
 
     starship = {
       enable = true;
@@ -347,7 +346,7 @@ in {
     };
 
     browserpass = {
-      enable = true;
+      enable = false;
       browsers = [ "firefox" ];
     };
 
