@@ -121,6 +121,7 @@ in {
       "dbvisualizer"
       "devonagent"
       "devonthink"
+      { name = "thebrowsercompany-dia"; greedy = true; }
       "discord"
       { name = "duckduckgo"; greedy = true; }
       "dungeon-crawl-stone-soup-tiles"
