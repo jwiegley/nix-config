@@ -464,9 +464,9 @@ let
       src = fetchFromGitHub {
         owner = "bohonghuang";
         repo = "lisp-fsrs";
-        rev = "8b5411e27e198227dd2e5bea8f92368259878626";
-        sha256 = "1zhhgyihp125h3wp4kqa52f2vbbz2xvi2c8ibgygksl3wfw6x2pa";
-        # date = 2025-04-09T01:02:12+08:00;
+        rev = "b2c9b8e928b030b80ae7278701eed2bf0c53a79d";
+        sha256 = "1rp40hbbd3y08j7mpghc2hpzljmd1lgbf20ww4ma5dy46r940gvk";
+        # date = 2025-06-08T14:44:56+08:00;
       };
     };
 
@@ -878,9 +878,9 @@ let
       src = fetchFromGitHub {
         owner = "bohonghuang";
         repo = "org-srs";
-        rev = "b0abd0a038eedd69489f81b2a07ef5a4dcfe65ac";
-        sha256 = "1psg10hfn70yr3a3dz7rqildsw8sxr3cdx6j5lpj0q96nd2l5ck5";
-        # date = 2025-05-21T01:26:00+08:00;
+        rev = "66c682f52a1663478564beae34becaeb35bd8144";
+        sha256 = "0m41h4bkm7h5nz5jfwg6ng68rfslzw9x92c14amr3jmjsdba7vv2";
+        # date = 2025-06-18T01:11:47+08:00;
       };
       buildInputs = with eself; [ org fsrs ];
     };
@@ -975,15 +975,15 @@ let
             inherit (pkgs.texlive) scheme-basic cm-super ec;
           }; in mkDerivation rec {
       name = "emacs-proof-general-${version}";
-      version = "e0ec3db2";
+      version = "d4d2465d";
 
       # This is the main branch
       src = fetchFromGitHub {
         owner = "ProofGeneral";
         repo = "PG";
-        rev = "f5d929ec447f3ad9cddba454e7c2dc6ca43cd732";
-        sha256 = "0qvvsagl5dicmfzmb7x73lfczbkqibd9zxsm0wps85ky93p8l0m2";
-        # date = "2025-05-16T11:13:08+02:00";
+        rev = "d4d2465d0184d9c7aab51eeeac407c22b13ae7e7";
+        sha256 = "0gk1q8dxh7m2jw54h7rn6psmkl5ngr5rw17gv135fc42cihqq882";
+        # date = "2025-06-09T21:47:52+02:00";
       };
 
       # src = /Users/johnw/src/proof-general;
