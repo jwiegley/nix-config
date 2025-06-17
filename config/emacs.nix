@@ -244,7 +244,6 @@ pkgs: epkgs: with epkgs;
   noflet
   nov
   oauth2
-  ob-async
   ob-coq
   ob-diagrams
   ob-emamux

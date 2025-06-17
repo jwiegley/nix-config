@@ -53,6 +53,10 @@ in {
   };
 
   services = lib.optionalAttrs (hostname == "clio" || hostname == "hera") {
+    karabiner-elements = {
+      enable = false;
+    };
+
     postgresql = {
       enable = true;
       package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
