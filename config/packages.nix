@@ -144,6 +144,7 @@ in [
   jo
   jq
   jqp
+  json2yaml
   jujutsu
   jupyter
   khard

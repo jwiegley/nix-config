@@ -330,6 +330,7 @@ pkgs: epkgs: with epkgs;
   persistent-soft
   peval
   pfuture
+  pg
   phi-search
   phi-search-mc
   pkg-info
