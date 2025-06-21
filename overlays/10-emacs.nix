@@ -625,6 +625,20 @@ let
       buildInputs = with eself; [ gptel ];
     };
 
+    gptel-got = compileEmacsFiles {
+      name = "gptel-got";
+      src = fetchgit {
+        url = https://codeberg.org/bajsicki/gptel-got.git;
+        rev = "dc40c13c125cedbd55ad6425fbb7e95930099cc7";
+        sha256 = "1v5bxkmpsib2wk76sqvgq3718fk699g5d7nrps481gnw85hc1ffd";
+        # date = 2025-05-26T19:51:24+02:00;
+      };
+      buildInputs = with eself; [ gptel ];
+      preBuild = ''
+        rm -f gptel-got-qol.el
+      '';
+    };
+
     gptel-fn-complete = compileEmacsFiles {
       name = "gptel-fn-complete";
       src = fetchFromGitHub {
@@ -792,6 +806,34 @@ let
         sha256 = "0rgvnfzm3v546zxkxs601qdqz9pd38w55gbv00ca453mp2np6r8g";
         # date = 2023-12-01T08:29:06+05:30;
       };
+    };
+
+    org-mem = compileEmacsFiles {
+      name = "org-mem";
+      src = fetchFromGitHub {
+        owner = "meedstrom";
+        repo = "org-mem";
+        rev = "06d902abacf4cfdfec91c98c0a2072a68a63c4a7";
+        sha256 = "1xlb7cscc2fj3d1xxk79zvy203464j9fm63wswmdk8lkb7ixixx2";
+        # date = 2025-06-19T13:06:04+02:00;
+      };
+      buildInputs = with eself; [
+        org llama el-job
+      ];
+    };
+
+    org-node = compileEmacsFiles {
+      name = "org-node";
+      src = fetchFromGitHub {
+        owner = "meedstrom";
+        repo = "org-node";
+        rev = "ca0cf312f09242288d3887ee9bce74dd7afb6ee4";
+        sha256 = "0blpyi2xdjmwqk5gf7w39ac7ki5snifg1apwpc9mmah1xp8lpnd7";
+        # date = 2025-06-20T00:31:31+02:00;
+      };
+      buildInputs = with eself; [
+        org org-mem llama magit-section el-job
+      ];
     };
 
     org-pretty-table = compileEmacsFiles {

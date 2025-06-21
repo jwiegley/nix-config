@@ -44,6 +44,7 @@ pkgs: epkgs: with epkgs;
   chess
   citar
   citar-embark
+  # citar-org-node
   citar-org-roam
   citre
   cmake-font-lock
@@ -110,6 +111,7 @@ pkgs: epkgs: with epkgs;
   egerrit
   eglot
   eglot-booster
+  el-job
   el-mock
   elisp-depend
   elisp-docstring-mode
@@ -164,6 +166,7 @@ pkgs: epkgs: with epkgs;
   goto-last-change
   gptel llama
   gptel-aibo
+  gptel-got
   gptel-fn-complete
   gptel-quick
   graphviz-dot-mode
@@ -238,7 +241,7 @@ pkgs: epkgs: with epkgs;
   multi-vterm
   multifiles
   multiple-cursors
-  names
+  # names
   nginx-mode
   nix-mode
   noflet
@@ -275,6 +278,7 @@ pkgs: epkgs: with epkgs;
   org-modern
   org-mru-clock
   org-msg
+  org-node org-mem
   org-noter
   org-notifications
   org-pdftools

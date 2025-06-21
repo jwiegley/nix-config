@@ -36,7 +36,7 @@ in {
       HOSTNAME           = hostname;
       JAVA_OPTS          = "-Xverify:none";
       LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
-      LLM_USER_PATH      = "${config.xdg.configHome}/llm";
+r      LLM_USER_PATH      = "${config.xdg.configHome}/llm";
       NIX_CONF           = "${home}/src/nix";
       NLTK_DATA          = "${config.xdg.dataHome}/nltk";
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";

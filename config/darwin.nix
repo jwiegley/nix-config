@@ -458,13 +458,24 @@ in {
           serviceConfig.KeepAlive = true;
         };
 
-        llama-swap = {
-          script = ''
-            ${pkgs.llama-swap}/bin/llama-swap --config ${home}/Models/llama-swap.yaml --watch-config
-          '';
-          serviceConfig.RunAtLoad = true;
-          serviceConfig.KeepAlive = true;
-        };
+        llama-swap =
+          let ip-address = if hostname == "clio"
+                           then "192.168.50.112"
+                           else if hostname == "athena"
+                                then "192.168.50.235"
+                                else if hostname == "hera"
+                                     then "192.168.50.5"
+                                     else "127.0.0.1";
+          in {
+            script = ''
+              ${pkgs.llama-swap}/bin/llama-swap       \
+              --listen "${ip-address}:8080"           \
+              --config ${home}/Models/llama-swap.yaml \
+              --watch-config
+            '';
+            serviceConfig.RunAtLoad = true;
+            serviceConfig.KeepAlive = true;
+          };
 
         llama-swap-https-proxy =
           let
