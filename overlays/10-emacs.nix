@@ -927,6 +927,18 @@ let
       buildInputs = with eself; [ org fsrs ];
     };
 
+    org-table-highlight = compileEmacsFiles {
+      name = "org-table-highlight";
+      src = fetchFromGitHub {
+        owner = "llcc";
+        repo = "org-table-highlight";
+        rev = "62d654d393391132a9003ed109b5bc5819844154";
+        sha256 = "1rcxjnfxmrpl0i7yd1pif5277zch0mc0p3kdaq7in8xfcszs2crb";
+        # date = 2025-06-21T18:54:01+08:00;
+      };
+      buildInputs = with eself; [ org ];
+    };
+
     ox-odt = compileEmacsFiles {
       name = "ox-odt";
       src = fetchFromGitHub {

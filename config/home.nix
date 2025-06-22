@@ -36,6 +36,7 @@ in {
       HOSTNAME           = hostname;
       JAVA_OPTS          = "-Xverify:none";
       LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
+      LITELLM_PROXY_URL  = "http://vulcan/litellm";
       LLM_USER_PATH      = "${config.xdg.configHome}/llm";
       NIX_CONF           = "${home}/src/nix";
       NLTK_DATA          = "${config.xdg.dataHome}/nltk";

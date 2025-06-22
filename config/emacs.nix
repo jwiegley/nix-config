@@ -347,7 +347,6 @@ pkgs: epkgs: with epkgs;
   popwin
   pos-tip
   pp-c-l
-  prodigy
   projectile
   proof-general
   protobuf-mode
@@ -459,9 +458,10 @@ pkgs: epkgs: with epkgs;
   compile-angel
   inhibit-mouse
   buffer-terminator
-
   avy-embark-collect
   consult-eglot-embark
-  consult-gh-embark
   embark-vc
+  org-table-color
+  org-table-highlight
+  prodigy
 ]
