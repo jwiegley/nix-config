@@ -80,6 +80,7 @@ pkgs: epkgs: with epkgs;
   ctrlf
   cursor-chg
   dape
+  dash
   deadgrep
   dedicated
   deferred
@@ -458,4 +459,9 @@ pkgs: epkgs: with epkgs;
   compile-angel
   inhibit-mouse
   buffer-terminator
+
+  avy-embark-collect
+  consult-eglot-embark
+  consult-gh-embark
+  embark-vc
 ]

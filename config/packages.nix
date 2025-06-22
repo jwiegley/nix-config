@@ -158,6 +158,7 @@ in [
   libxslt
   linkdups
   lipotell
+  litellm
   lnav
   loccount
   lsof
