@@ -242,9 +242,9 @@ let
       src = (fetchFromGitHub {
         owner = "kickingvegas";
         repo = "casual";
-        rev = "006b3d4ba15969946c9aa9255c8ac6b1ac82a409";
-        sha256 = "11bghffxrs9r2m9hv5xdxqs6hcqrvz7g55ry60mcdcak19jr08gi";
-        # date = "2025-05-19T09:16:51-07:00";
+        rev = "471d730634f8fc735de03ed9d4edd7fbc659475e";
+        sha256 = "0d3ddrdh2cnhf96h4r9a6wdh1xpbpzp02jb69g0k5ayq9ygxwbrl";
+        # date = "2025-06-04T20:40:09-07:00";
       }) + "/lisp";
     };
 
@@ -475,9 +475,9 @@ let
       src = fetchFromGitHub {
         owner = "justinbarclay";
         repo = "1password.el";
-        rev = "596e5ab4ecb515c032fec1ff4a4756041c8e5415";
-        sha256 = "0vjbr6xi7d4iwp1i665zwxgsvyc92yi1frp6mhc3fg3wrx1sxhz4";
-        # date = 2025-04-11T22:16:30-07:00;
+        rev = "bccba07435682d2925ac357f60568acc99c72ae1";
+        sha256 = "0fllkzqc0ifsbfdqff89agzdn4mky163yq341midnw5k4pcvsq26";
+        # date = 2025-06-21T15:35:42-07:00;
       };
       buildInputs = with eself; [ aio ];
     };
@@ -533,9 +533,9 @@ let
       src = fetchFromGitHub {
         owner = "jdtsmith";
         repo = "ultra-scroll-mac";
-        rev = "93cd969c2ed1e75a950e6dec112a0ab1e4a6903b";
-        sha256 = "1r9940l361jjrir59gvs5ivlpsgjhs13cwbhqy8j3zsmxf45z3qc";
-        # date = 2025-05-04T23:22:43-04:00;
+        rev = "3dd35e9a2aa327ddf889bd0f3341a81d3215862b";
+        sha256 = "1nl2w43napga88xkvs2vznrfjzncsiaphb0aiks0kdzas6597qmv";
+        # date = 2025-06-21T12:45:38-04:00;
       };
     };
 
@@ -601,9 +601,9 @@ let
       src = fetchFromGitHub {
         owner = "karthink";
         repo = "gptel";
-        rev = "22f743287c011f8c31b1f123a2e38a502e28f474";
-        sha256 = "1cyfavdbw01fkvrp1v9cfm6pmw3n7fwhklvz7858r6bn84x9g2cv";
-        # date = 2025-05-25T21:42:18-07:00;
+        rev = "9caf7684c3a4182e173afe57fa06e53aafc53434";
+        sha256 = "0wzk5s8qa9nc5afrlinfg5ic5ygyisldj37xv9nvrilvh82v2c40";
+        # date = 2025-06-23T01:47:29-07:00;
       };
       buildInputs = with eself; [
         transient compat
@@ -618,9 +618,9 @@ let
       src = fetchFromGitHub {
         owner = "dolmens";
         repo = "gptel-aibo";
-        rev = "4289d563273c5f48db41f8057a81ea2a9f2ea156";
-        sha256 = "0v5x531h5hrvnb02n86b3hliww1zfdjkr3hgxwwmilh03nfp7h94";
-        # date = 2025-05-24T16:22:25+08:00;
+        rev = "36a5b96332c88e7157023e41f6dafc5b5e84dccb";
+        sha256 = "1wgx440076jrf40w0imlqwif7jhlm5my4ngz7lx7yngi7ic75ndf";
+        # date = 2025-06-05T16:59:46+08:00;
       };
       buildInputs = with eself; [ gptel ];
     };
@@ -656,9 +656,9 @@ let
       src = fetchFromGitHub {
         owner = "karthink";
         repo = "gptel-quick";
-        rev = "34acd437a7af8a387c14428bd1abdb3cd9e95d9d";
-        sha256 = "0k1lf0279lhv0pk5l0i6rhsh05qrnh265ynwdq79dgb8s77glxzw";
-        # date = 2025-04-14T12:06:36-07:00;
+        rev = "495b5e0b5348dbced1448bd12cbf8847e30b5175";
+        sha256 = "1k4n0qmaw4cbybw502wnn1mv2pr9giaickq830ly6bxrc5wz7jn4";
+        # date = 2025-06-01T11:07:58-07:00;
       };
       buildInputs = with eself; [ gptel ];
     };
@@ -680,31 +680,13 @@ let
       src = (fetchFromGitHub {
         owner = "agda";
         repo = "agda";
-        rev = "cf7ae06c0a6ec4bc8317f0e82310e72815af454d";
-        sha256 = "0awzkdkf28sb88h5dr4xcj1rnlvkc1d528hdwffapwixkhljfw0w";
-        # date = 2025-05-24T11:59:58+02:00;
+        rev = "2eba43d8f45c9d380c4e88d172d1533397544d36";
+        sha256 = "1phgpnaahak73m6791ahs4l2g78z3vapnis8h19cayn6g8fmn7g7";
+        # date = 2025-06-22T16:18:52+02:00;
       }) + "/src/data/emacs-mode";
     };
 
     ########################################################################
-
-    org-HEAD = mkDerivation rec {
-      name = "org-mode-${version}";
-      version = "9.7.15-src";
-
-      src = /Users/johnw/src/org-mode;
-
-      buildInputs = with pkgs; [ eself.emacs texinfo git ];
-
-      installPhase = ''
-        make install \
-             prefix=$out \
-             lispdir=$out/share/emacs/site-lisp/org \
-             datadir=$out/share/emacs/etc/org
-      '';
-
-      inherit (esuper.org) meta;
-    };
 
     org =
       let
@@ -778,9 +760,9 @@ let
       src = fetchFromGitHub {
         owner = "sp1ff";
         repo = "ob-coq";
-        rev = "a5b73c3c731ae65e4789b1a06e3ac4003394bfbd";
-        sha256 = "084m0df8a2b00g4pn6qxcgc3fhj43zascw42mcw4pxf9ljsjh74z";
-        # date = 2024-06-18T16:30:53-07:00;
+        rev = "a8160c6e8a280a644fbcdfe18d7adf3f20637b2a";
+        sha256 = "0f7kg5ma01d1dy0q2lb3jxnd92qnn3rrmvrzbxfkwcibjb3v1c72";
+        # date = 2025-06-12T20:26:23-07:00;
       };
       buildInputs = with eself; [ org ];
     };
@@ -813,9 +795,9 @@ let
       src = fetchFromGitHub {
         owner = "meedstrom";
         repo = "org-mem";
-        rev = "06d902abacf4cfdfec91c98c0a2072a68a63c4a7";
-        sha256 = "1xlb7cscc2fj3d1xxk79zvy203464j9fm63wswmdk8lkb7ixixx2";
-        # date = 2025-06-19T13:06:04+02:00;
+        rev = "3ef1012cd7730d47d44fd19084a906f82d739778";
+        sha256 = "0r7yv40p6svvcznr6lzfffmj0dypnbsyxj0xvx1p72f75krn0vxh";
+        # date = 2025-06-21T23:37:06+02:00;
       };
       buildInputs = with eself; [
         org llama el-job
@@ -827,9 +809,9 @@ let
       src = fetchFromGitHub {
         owner = "meedstrom";
         repo = "org-node";
-        rev = "ca0cf312f09242288d3887ee9bce74dd7afb6ee4";
-        sha256 = "0blpyi2xdjmwqk5gf7w39ac7ki5snifg1apwpc9mmah1xp8lpnd7";
-        # date = 2025-06-20T00:31:31+02:00;
+        rev = "b6e1efbee7f98845b726e2a446438e09d9f8f208";
+        sha256 = "0pk1hd43f42km8ps9rf8cxd6r5nh221ff4845y3a66scp2iw6wsk";
+        # date = 2025-06-21T23:11:50+02:00;
       };
       buildInputs = with eself; [
         org org-mem llama magit-section el-job
@@ -920,9 +902,9 @@ let
       src = fetchFromGitHub {
         owner = "bohonghuang";
         repo = "org-srs";
-        rev = "66c682f52a1663478564beae34becaeb35bd8144";
-        sha256 = "0m41h4bkm7h5nz5jfwg6ng68rfslzw9x92c14amr3jmjsdba7vv2";
-        # date = 2025-06-18T01:11:47+08:00;
+        rev = "4874c854ab67c4c0fced3ab38b9b91a6a7d8b0fe";
+        sha256 = "0q64b9g3q5gnvcy9x5dzhwpbk0sqr7gzxd2z2q331a5j8ja275j6";
+        # date = 2025-06-22T13:07:03+08:00;
       };
       buildInputs = with eself; [ org fsrs ];
     };
@@ -932,9 +914,9 @@ let
       src = fetchFromGitHub {
         owner = "llcc";
         repo = "org-table-highlight";
-        rev = "62d654d393391132a9003ed109b5bc5819844154";
-        sha256 = "1rcxjnfxmrpl0i7yd1pif5277zch0mc0p3kdaq7in8xfcszs2crb";
-        # date = 2025-06-21T18:54:01+08:00;
+        rev = "2ca529780bc9c648a6a7583f2e885fd078bdea96";
+        sha256 = "1sgw92f14j5sqja1akcyn2i75yi4vh0m7c9gv5wnhnjm8rs9yzyc";
+        # date = 2025-06-23T23:57:46+08:00;
       };
       buildInputs = with eself; [ org ];
     };
@@ -987,8 +969,8 @@ let
       version = "14.0.9";
       src = fetchurl {
         url = "https://elpa.gnu.org/packages/auctex-14.0.9.tar";
-        sha256 = "sha256-9kjk9JRAGO7IrbwgSr72n4vt2f0PNgKsTVI6YCnOH9Y=";
-        # date = 2024-08-01T11:08:09-0700;
+        sha256 = "1mhzrqln0fjj9nn04dhgzpcyv2wzysz4l85wmp4fw620jksf8j7n";
+        # date = 2025-06-23T09:01:05-0700;
       };
       packageRequires = with eself; [ cl-lib emacs ];
       meta = {
@@ -1138,20 +1120,6 @@ emacsEnv        = self.emacs30Env;
 
 ##########################################################################
 
-emacs29-macport = pkgs.emacs29-macport.overrideAttrs (o: {
-  version = "29.4";
-  src = pkgs.fetchgit {
-    url = "https://bitbucket.org/mituharu/emacs-mac.git";
-    rev = "55768fe4781855e8cd4af721c8bf0610ed952e97";
-    sha256 = "0yrzh2vd5f1h786x8w0vsr0bgqahrq2p0gl2xyxgpz3fnyjw0sw5";
-    # date = "2025-03-31T16:15:03+09:00";
-  };
-  configureFlags = o.configureFlags ++ [
-    "CFLAGS=-DMAC_OS_X_VERSION_MAX_ALLOWED=101201"
-    "CFLAGS=-DMAC_OS_X_VERSION_MIN_REQUIRED=101201"
-  ];
-});
-
 emacs29MacPortPackages   = self.emacs29MacPortPackagesNg;
 emacs29MacPortPackagesNg = mkEmacsPackages self.emacs29-macport;
 
@@ -1163,21 +1131,6 @@ emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
 };
 
 ##########################################################################
-
-emacs30-macport = pkgs.emacs29-macport.overrideAttrs (o: {
-  version = "30.1";
-  src = pkgs.fetchFromGitHub {
-    owner = "jdtsmith";
-    repo = "emacs-mac";
-    rev = "647fb5f4006d0654f11d413554b283d345d4a509";
-    sha256 = "0r5yzvfvdsk627fa1hgvk2kahbi8pmw46dl97cfh0mky8bmca29z";
-    # date = "2025-06-03T12:12:21-04:00";
-  };
-  configureFlags = o.configureFlags ++ [
-    "CFLAGS=-DMAC_OS_X_VERSION_MAX_ALLOWED=101201"
-    "CFLAGS=-DMAC_OS_X_VERSION_MIN_REQUIRED=101201"
-  ];
-});
 
 emacs30MacPortPackages   = self.emacs30MacPortPackagesNg;
 emacs30MacPortPackagesNg = mkEmacsPackages self.emacs30-macport;

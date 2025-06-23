@@ -25,13 +25,8 @@
       url = "github:HeitorAugustoLN/betterfox-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    mcp-servers-nix = {
-      url = "github:natsukium/mcp-servers-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    # emacs30-overlay = {
-    #   # url = "github:what-the-functor/nix-emacs30-macport-overlay";
-    #   url = "git+file:///Users/johnw/src/nix/nix-emacs30-overlay";
+    # mcp-servers-nix = {
+    #   url = "github:natsukium/mcp-servers-nix";
     #   inputs.nixpkgs.follows = "nixpkgs";
     # };
   };
@@ -52,11 +47,10 @@
                   });
                 }
               ); in {
-              emacs30 = pkgs.emacs30;
-            })
+                inherit (pkgs) emacs30;
+              })
           nurpkgs.overlays.default
-          mcp-servers-nix.overlays.default
-          # emacs30-overlay.overlays.default
+          # mcp-servers-nix.overlays.default
         ];
         configure = hostname: system: darwin.lib.darwinSystem {
           inherit inputs system;

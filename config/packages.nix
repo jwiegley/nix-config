@@ -5,8 +5,10 @@ let exe = if stdenv.targetPlatform.isx86_64
           else lib.id;
 
     myEmacsPackages = import ./emacs.nix pkgs;
+
     emacs30Env = pkgs.emacs30Env myEmacsPackages;
-    # emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
+    emacs30MacPortEnv = pkgs.emacs30MacPortEnv myEmacsPackages;
+    emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
 
 in [
   (exe haskellPackages.hasktags)
@@ -54,6 +56,7 @@ in [
   doxygen
   eask
   emacs30Env
+  # emacs30MacPortEnv
   # emacsHEADEnv
   emacs-lsp-booster
   entr
@@ -325,19 +328,19 @@ in [
   openmpi
   claude-code
   github-mcp-server
-  mcp-server-fetch
-  mcp-server-filesystem
-  (hiPrio mcp-server-sequential-thinking)
-  mcp-server-memory
-  mcp-server-brave-search
-  mcp-server-gdrive
-  mcp-server-git
-  mcp-server-github
-  mcp-server-google-maps
-  mcp-server-postgres
-  mcp-server-slack
-  mcp-server-sqlite
-  mcp-server-time
+  # mcp-server-fetch
+  # mcp-server-filesystem
+  # (hiPrio mcp-server-sequential-thinking)
+  # mcp-server-memory
+  # mcp-server-brave-search
+  # mcp-server-gdrive
+  # mcp-server-git
+  # mcp-server-github
+  # mcp-server-google-maps
+  # mcp-server-postgres
+  # mcp-server-slack
+  # mcp-server-sqlite
+  # mcp-server-time
   qdrant
   qdrant-web-ui
   # mcp-server-qdrant

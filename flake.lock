@@ -81,26 +81,6 @@
         "type": "github"
       }
     },
-    "mcp-servers-nix": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1749952797,
-        "narHash": "sha256-FDkzhp60rTbW0qLJ3wxoFjzHD+Com9bdBepnHmi0CXU=",
-        "owner": "natsukium",
-        "repo": "mcp-servers-nix",
-        "rev": "6c8961e93e7278f8c05aefdab4e698ccc846ee05",
-        "type": "github"
-      },
-      "original": {
-        "owner": "natsukium",
-        "repo": "mcp-servers-nix",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1750605355,
@@ -144,7 +124,6 @@
         "betterfox": "betterfox",
         "darwin": "darwin",
         "home-manager": "home-manager",
-        "mcp-servers-nix": "mcp-servers-nix",
         "nixpkgs": "nixpkgs",
         "nurpkgs": "nurpkgs",
         "rycee-nurpkgs": "rycee-nurpkgs"

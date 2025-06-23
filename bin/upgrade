@@ -101,7 +101,7 @@ echo ~/src/org-jw
     source .envrc
     cabal v2-update
     cabal v2-configure --enable-tests                           \
-          --enable-profiling --enable-executable-profiling
+          --disable-profiling --disable-executable-profiling
     cabal v2-build all
     cabal v2-test all
 ) > /tmp/org-jw-build.log 2>&1
@@ -115,7 +115,7 @@ echo ~/src/pushme
     source .envrc
     cabal v2-update
     cabal v2-configure --enable-tests                           \
-          --enable-profiling --enable-executable-profiling
+          --disable-profiling --disable-executable-profiling
     cabal v2-build
     cabal v2-test
 ) > /tmp/pushme-build.log 2>&1
@@ -143,7 +143,7 @@ echo ~/src/hours
     source .envrc
     cabal v2-update
     cabal v2-configure --enable-tests                           \
-          --enable-profiling --enable-executable-profiling
+          --disable-profiling --disable-executable-profiling
     cabal v2-build
     cabal v2-test
 ) > /tmp/hours-build.log 2>&1
@@ -157,7 +157,7 @@ echo ~/src/renamer
     source .envrc
     cabal v2-update
     cabal v2-configure --enable-tests                           \
-          --enable-profiling --enable-executable-profiling
+          --disable-profiling --disable-executable-profiling
     cabal v2-build
     cabal v2-test
 ) > /tmp/renamer-build.log 2>&1
