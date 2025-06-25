@@ -464,7 +464,7 @@ pkgs: epkgs: with epkgs;
   word-count-mode
   writeroom-mode
   # x86-lookup
-  xeft
+  # xeft
   xml-rpc
   xr
   xray
