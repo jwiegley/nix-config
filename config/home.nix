@@ -50,9 +50,6 @@ in {
       TZ                 = "PST8PDT";
       PROFILE_DIR        = "${config.home.profileDirectory}";
 
-      # This forces clearing the variable so home-manager can set it
-      SSH_AUTH_SOCK = "";
-
       RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone";
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
       VAGRANT_DEFAULT_PROVIDER       = "vmware_desktop";
@@ -60,6 +57,9 @@ in {
       FILTER_BRANCH_SQUELCH_WARNING  = "1";
       HF_HUB_ENABLE_HF_TRANSFER      = "1";
       LLAMA_INDEX_CACHE_DIR          = "${config.xdg.cacheHome}/llama-index";
+
+      # This forces clearing the variable so home-manager can set it
+      SSH_AUTH_SOCK = "";
     };
 
     sessionSearchVariables = {
@@ -236,96 +236,96 @@ in {
         #   error_symbol = "[➜](bold red)";
         # };
 
-        aws.symbol = "  ";
-        buf.symbol = " ";
-        c.symbol = " ";
-        cmake.symbol = " ";
-        conda.symbol = " ";
-        crystal.symbol = " ";
-        dart.symbol = " ";
-        directory.read_only = " 󰌾";
+        aws.symbol            = "  ";
+        buf.symbol            = " ";
+        c.symbol              = " ";
+        cmake.symbol          = " ";
+        conda.symbol          = " ";
+        crystal.symbol        = " ";
+        dart.symbol           = " ";
+        directory.read_only   = " 󰌾";
         docker_context.symbol = " ";
-        elixir.symbol = " ";
-        elm.symbol = " ";
-        fennel.symbol = " ";
-        fossil_branch.symbol = " ";
-        git_branch.symbol = " ";
+        elixir.symbol         = " ";
+        elm.symbol            = " ";
+        fennel.symbol         = " ";
+        fossil_branch.symbol  = " ";
+        git_branch.symbol     = " ";
         git_commit.tag_symbol = "  ";
-        golang.symbol = " ";
-        guix_shell.symbol = " ";
-        haskell.symbol = " ";
-        haxe.symbol = " ";
-        hg_branch.symbol = " ";
-        hostname.ssh_symbol = " ";
-        java.symbol = " ";
-        julia.symbol = " ";
-        kotlin.symbol = " ";
-        lua.symbol = " ";
-        memory_usage.symbol = "󰍛 ";
-        meson.symbol = "󰔷 ";
-        nim.symbol = "󰆥 ";
-        nix_shell.symbol = " ";
-        nodejs.symbol = " ";
-        ocaml.symbol = " ";
-        package.symbol = "󰏗 ";
-        perl.symbol = " ";
-        php.symbol = " ";
-        pijul_channel.symbol = " ";
-        python.symbol = " ";
-        rlang.symbol = "󰟔 ";
-        ruby.symbol = " ";
-        rust.symbol = "󱘗 ";
-        scala.symbol = " ";
-        swift.symbol = " ";
-        zig.symbol = " ";
-        gradle.symbol = " ";
+        golang.symbol         = " ";
+        guix_shell.symbol     = " ";
+        haskell.symbol        = " ";
+        haxe.symbol           = " ";
+        hg_branch.symbol      = " ";
+        hostname.ssh_symbol   = " ";
+        java.symbol           = " ";
+        julia.symbol          = " ";
+        kotlin.symbol         = " ";
+        lua.symbol            = " ";
+        memory_usage.symbol   = "󰍛 ";
+        meson.symbol          = "󰔷 ";
+        nim.symbol            = "󰆥 ";
+        nix_shell.symbol      = " ";
+        nodejs.symbol         = " ";
+        ocaml.symbol          = " ";
+        package.symbol        = "󰏗 ";
+        perl.symbol           = " ";
+        php.symbol            = " ";
+        pijul_channel.symbol  = " ";
+        python.symbol         = " ";
+        rlang.symbol          = "󰟔 ";
+        ruby.symbol           = " ";
+        rust.symbol           = "󱘗 ";
+        scala.symbol          = " ";
+        swift.symbol          = " ";
+        zig.symbol            = " ";
+        gradle.symbol         = " ";
 
         os.symbols = {
-          Alpaquita = " ";
-          Alpine = " ";
-          AlmaLinux = " ";
-          Amazon = " ";
-          Android = " ";
-          Arch = " ";
-          Artix = " ";
-          CachyOS = " ";
-          CentOS = " ";
-          Debian = " ";
-          DragonFly = " ";
-          Emscripten = " ";
-          EndeavourOS = " ";
-          Fedora = " ";
-          FreeBSD = " ";
-          Garuda = "󰛓 ";
-          Gentoo = " ";
-          HardenedBSD = "󰞌 ";
-          Illumos = "󰈸 ";
-          Kali = " ";
-          Linux = " ";
-          Mabox = " ";
-          Macos = " ";
-          Manjaro = " ";
-          Mariner = " ";
-          MidnightBSD = " ";
-          Mint = " ";
-          NetBSD = " ";
-          NixOS = " ";
-          Nobara = " ";
-          OpenBSD = "󰈺 ";
-          openSUSE = " ";
-          OracleLinux = "󰌷 ";
-          Pop = " ";
-          Raspbian = " ";
-          Redhat = " ";
+          Alpaquita        = " ";
+          Alpine           = " ";
+          AlmaLinux        = " ";
+          Amazon           = " ";
+          Android          = " ";
+          Arch             = " ";
+          Artix            = " ";
+          CachyOS          = " ";
+          CentOS           = " ";
+          Debian           = " ";
+          DragonFly        = " ";
+          Emscripten       = " ";
+          EndeavourOS      = " ";
+          Fedora           = " ";
+          FreeBSD          = " ";
+          Garuda           = "󰛓 ";
+          Gentoo           = " ";
+          HardenedBSD      = "󰞌 ";
+          Illumos          = "󰈸 ";
+          Kali             = " ";
+          Linux            = " ";
+          Mabox            = " ";
+          Macos            = " ";
+          Manjaro          = " ";
+          Mariner          = " ";
+          MidnightBSD      = " ";
+          Mint             = " ";
+          NetBSD           = " ";
+          NixOS            = " ";
+          Nobara           = " ";
+          OpenBSD          = "󰈺 ";
+          openSUSE         = " ";
+          OracleLinux      = "󰌷 ";
+          Pop              = " ";
+          Raspbian         = " ";
+          Redhat           = " ";
           RedHatEnterprise = " ";
-          RockyLinux = " ";
-          Redox = "󰀘 ";
-          Solus = "󰠳 ";
-          SUSE = " ";
-          Ubuntu = " ";
-          Unknown = " ";
-          Void = " ";
-          Windows = "󰍲 ";
+          RockyLinux       = " ";
+          Redox            = "󰀘 ";
+          Solus            = "󰠳 ";
+          SUSE             = " ";
+          Ubuntu           = " ";
+          Unknown          = " ";
+          Void             = " ";
+          Windows          = "󰍲 ";
         };
       };
       enableBashIntegration = true;
@@ -758,7 +758,7 @@ in {
           matchHost = host: hostname: {
             inherit hostname;
             match = ''
-              host ${host} exec "ping -c1 -W50 -n -r -q ${hostname} > /dev/null 2>&1"
+              host ${host} exec "${pkgs.unixtools.ping}/bin/ping -c1 -W50 -n -r -q ${hostname} > /dev/null 2>&1"
             '';
           };
 
@@ -773,19 +773,14 @@ in {
           };
 
           external_host = "newartisans.hopto.org";
-        in {
+        in rec {
 
         # Hera
 
         hera1_thunderbolt = withIdentity (matchHost "hera" "192.168.2.1");
-        hera2_ethernet    = withIdentity (matchHost "hera" "192.168.50.5") // {
-          localForwards = [
-            # (localBind 11434) # ollama
-            # (localBind 1234)  # lmstudio
-            # (localBind 8080)  # llama-cpp
-          ];
-        };
-        hera3_internet = withIdentity {
+        hera2_ethernet    = withIdentity (matchHost "hera" "192.168.50.5");
+
+        hera = withIdentity {
           hostname = external_host;
           port = 2201;
         };
@@ -797,18 +792,13 @@ in {
         # Athena
 
         athena1_ethernet = withIdentity (matchHost "athena" "192.168.50.235");
-        athena2_internet = withIdentity {
+
+        athena = withIdentity {
           hostname = external_host;
           port = 2202;
         };
 
         phobos = withIdentity (onHost "athena" "192.168.50.111");
-
-        tank1_ethernet = withIdentity (matchHost "tank" "192.168.50.182");
-        tank2_internet = withIdentity {
-          hostname = external_host;
-          port = 2203;
-        };
 
         # Clio
 
@@ -822,11 +812,18 @@ in {
         vulcan1_ethernet = withIdentity (matchHost "vulcan" "192.168.50.182") // {
           user = "root";
         };
-        vulcan2_internet = withIdentity {
+
+        vulcan = withIdentity {
           user = "root";
           hostname = external_host;
           port = 2203;
         };
+
+        tank1_ethernet = withIdentity (matchHost "tank" "192.168.50.182") // {
+          user = "root";
+        };
+
+        tank = vulcan;
 
         # Other servers
 
@@ -932,11 +929,11 @@ in {
       "^a"    = "moveToBeginningOfLine:";
       "^e"    = "moveToEndOfLine:";
 
-      "~c"	  = "capitalizeWord:"; /* M-c */
-      "~u"	  = "uppercaseWord:";	 /* M-u */
-      "~l"	  = "lowercaseWord:";	 /* M-l */
-      "^t"	  = "transpose:";      /* C-t */
-      "~t"	  = "transposeWords:"; /* M-t */
+      "~c"	  = "capitalizeWord:";
+      "~u"	  = "uppercaseWord:";
+      "~l"	  = "lowercaseWord:";
+      "^t"	  = "transpose:";
+      "~t"	  = "transposeWords:";
     };
 
     defaults = {

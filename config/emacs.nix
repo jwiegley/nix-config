@@ -26,14 +26,15 @@ pkgs: epkgs: with epkgs;
   bm
   boogie-friends
   bookmark-plus
-  browser-hist
   browse-kill-ring
+  browser-hist
+  # buffer-terminator
   bufler
   burly
   button-lock
   calfw
-  calfw-cal
-  calfw-org
+    calfw-cal
+    calfw-org
   cape
   cargo
   # casual
@@ -43,9 +44,9 @@ pkgs: epkgs: with epkgs;
   chatgpt-shell
   chess
   citar
-  citar-embark
-  # citar-org-node
-  citar-org-roam
+    citar-embark
+    # citar-org-node
+    citar-org-roam
   citre
   cmake-font-lock
   cmake-mode
@@ -56,12 +57,13 @@ pkgs: epkgs: with epkgs;
   company
   company-coq
   company-math
+  # compile-angel
   consult
   consult-company
   consult-dir
   consult-flycheck
   consult-gh
-  consult-gh-embark
+    consult-gh-embark
   consult-gh-forge
   consult-gh-with-pr-review
   consult-git-log-grep
@@ -84,7 +86,8 @@ pkgs: epkgs: with epkgs;
   deadgrep
   dedicated
   deferred
-  delve lister
+  delve
+    lister
   diff-hl
   diffview
   diminish
@@ -100,8 +103,11 @@ pkgs: epkgs: with epkgs;
   docker-compose-mode
   dockerfile-mode
   eager-state
-  eask easky flymake-eask
+  eask
+    easky
+    flymake-eask
   easy-kill
+  # easysession
   eat
   ebdb
   edbi
@@ -120,12 +126,16 @@ pkgs: epkgs: with epkgs;
   elisp-slime-nav
   elmacro
   elpy
-  elsa flymake-elsa
+  elsa
+    flymake-elsa
   emacsql
   emamux
   embark
-  embark-consult
-  embark-org-roam
+    embark-consult
+    embark-org-roam
+    avy-embark-collect
+    consult-eglot-embark
+    embark-vc
   ement
   emojify
   engine-mode
@@ -165,10 +175,11 @@ pkgs: epkgs: with epkgs;
   gnus-recent
   google-this
   goto-last-change
-  gptel llama
+  gptel
+    llama
   gptel-aibo
-  gptel-got
   gptel-fn-complete
+  gptel-got
   gptel-quick
   graphviz-dot-mode
   haskell-mode
@@ -188,7 +199,9 @@ pkgs: epkgs: with epkgs;
   iflipb
   imenu-list
   indent-shift
-  inspector tree-inspector
+  # inhibit-mouse
+  inspector
+    tree-inspector
   ipcalc
   jinx
   jobhours
@@ -264,7 +277,6 @@ pkgs: epkgs: with epkgs;
   org-annotate
   org-appear
   org-auto-expand
-  org-auto-expand
   org-autolist
   org-bookmark-heading
   org-caldav
@@ -279,12 +291,15 @@ pkgs: epkgs: with epkgs;
   org-modern
   org-mru-clock
   org-msg
-  org-node org-mem
+  org-node
+    org-mem
   org-noter
   org-notifications
   org-pdftools
   org-pretty-table
-  org-projectile org-project-capture org-category-capture
+  org-projectile
+    org-project-capture
+    org-category-capture
   org-ql
   org-quick-peek
   org-real
@@ -296,10 +311,13 @@ pkgs: epkgs: with epkgs;
   org-roam-ui
   org-sidebar
   org-sql
-  org-srs fsrs
+  org-srs
+    fsrs
   org-sticky-header
   org-super-agenda
   org-superstar
+  org-table-color
+  org-table-highlight
   org-timeline
   org-transclusion
   org-upcoming-modeline
@@ -308,7 +326,8 @@ pkgs: epkgs: with epkgs;
   orgit
   orgit-forge
   origami
-  osm
+  # osm
+  outline-indent
   ov
   ovpn-mode
   ox-gfm
@@ -336,6 +355,7 @@ pkgs: epkgs: with epkgs;
   peval
   pfuture
   pg
+  pgmacs
   phi-search
   phi-search-mc
   pkg-info
@@ -347,10 +367,14 @@ pkgs: epkgs: with epkgs;
   popwin
   pos-tip
   pp-c-l
+  pr-review
+  prescient
+    corfu-prescient
+    vertico-prescient
+  prodigy
   projectile
   proof-general
   protobuf-mode
-  pr-review
   python-mode
   quick-peek
   rainbow-delimiters
@@ -375,7 +399,8 @@ pkgs: epkgs: with epkgs;
   shift-number
   simple-httpd
   sky-color-clock
-  # slack circe
+  # slack
+  #   circe
   slime
   smart-newline
   smartparens
@@ -397,9 +422,9 @@ pkgs: epkgs: with epkgs;
   tidy
   tla-mode
   toc-org
-  ts
   transpose-mark
   treemacs
+  ts
   tuareg
   typescript-mode
   typo
@@ -432,36 +457,22 @@ pkgs: epkgs: with epkgs;
   web-server
   websocket
   wgrep
-  which-key
+  # which-key
   whitespace-cleanup-mode
   window-purpose
   with-editor
   word-count-mode
   writeroom-mode
-  x86-lookup
+  # x86-lookup
   xeft
   xml-rpc
   xr
   xray
   yaml-mode
-  yaoddmuse
+  # yaoddmuse
   yasnippet
   z3-mode
   zoom
   zoutline
   ztree
-
-  prescient
-  vertico-prescient
-  outline-indent
-  easysession
-  compile-angel
-  inhibit-mouse
-  buffer-terminator
-  avy-embark-collect
-  consult-eglot-embark
-  embark-vc
-  org-table-color
-  org-table-highlight
-  prodigy
 ]

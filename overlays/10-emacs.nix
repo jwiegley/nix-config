@@ -447,6 +447,18 @@ let
       propagatedBuildInputs = with eself; [ pkgs.onnxruntime ];
     };
 
+    pgmacs = compileEmacsFiles {
+      name = "pgmacs";
+      src = fetchFromGitHub {
+        owner = "emarsden";
+        repo = "pgmacs";
+        rev = "cf3c0e48e46d3eb822c0157e03209e4f42e2faa9";
+        sha256 = "1rczdbvjfkxx6d12ndrpwhm0vmb08l192vi5xl713qimj06pi64r";
+        # date = 2025-06-08T14:59:52+02:00;
+      };
+      buildInputs = with eself; [ pg ];
+    };
+
     flymake-elsa = compileEmacsFiles {
       name = "flymake-elsa";
       src = fetchFromGitHub {

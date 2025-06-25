@@ -53,12 +53,8 @@ in {
   };
 
   services = lib.optionalAttrs (hostname == "clio" || hostname == "hera") {
-    karabiner-elements = {
-      enable = false;
-    };
-
     postgresql = {
-      enable = true;
+      enable = false;
       package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
       dataDir = "${home}/${hostname}/postgresql";
       authentication = ''
@@ -102,13 +98,13 @@ in {
       # "vagrant-manager"
       # "vagrant-vmware-utility"
       "wireshark"
+    ] ++ lib.optionals (pkgs.system == "aarch64-darwin") [
+      # "lm-studio"
+      "diffusionbee"
     ] ++ lib.optionals (hostname == "hera") [
       "fujitsu-scansnap-home"
       "gzdoom"
       "raspberry-pi-imager"
-    ] ++ lib.optionals (pkgs.system == "aarch64-darwin") [
-      # "lm-studio"
-      "diffusionbee"
     ] ++ lib.optionals (hostname == "clio") [
       "aldente"
     ] ++ lib.optionals (hostname != "athena") [
@@ -277,13 +273,11 @@ in {
       cores = 10;
 
       substituters = [
-        # "https://cache.iog.io"
       ];
       trusted-substituters = [
       ];
       trusted-public-keys = [
         "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
-        "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
       ];
     };
 
@@ -527,23 +521,6 @@ in {
           serviceConfig.RunAtLoad = true;
           serviceConfig.KeepAlive = true;
         };
-
-        # ollama = {
-        #   script = ''
-        #     export OLLAMA_HOST=0.0.0.0:11434
-        #     export OLLAMA_KEEP_ALIVE=${if hostname == "clio" then "5m" else "60m"}
-        #     export OLLAMA_NOHISTORY=true
-        #     ${pkgs.ollama}/bin/ollama serve
-        #   '';
-        #   serviceConfig.RunAtLoad = true;
-        #   serviceConfig.KeepAlive = true;
-        # };
-
-        # lmstudio = {
-        #   script = "${xdg_dataHome}/lmstudio/bin/lms server start";
-        #   serviceConfig.RunAtLoad = true;
-        #   serviceConfig.KeepAlive = true;
-        # };
       };
     };
   };
