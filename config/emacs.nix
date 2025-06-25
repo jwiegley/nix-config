@@ -7,10 +7,8 @@ pkgs: epkgs: with epkgs;
   agda2-mode
   aggressive-indent
   aio
-  alert
-  all-the-icons
-  anaphora
-  anki-editor
+  # all-the-icons
+  # anki-editor
   apiwrap
   aria2
   ascii
@@ -19,17 +17,17 @@ pkgs: epkgs: with epkgs;
   auctex
   auto-yasnippet
   avy
-  avy-zap
-  awesome-tray
-  backup-each-save
+    avy-zap
+  # awesome-tray
+  # backup-each-save
   biblio
   bm
   boogie-friends
-  bookmark-plus
+  # bookmark-plus
   browse-kill-ring
   browser-hist
   # buffer-terminator
-  bufler
+  # bufler
   burly
   button-lock
   calfw
@@ -37,39 +35,37 @@ pkgs: epkgs: with epkgs;
     calfw-org
   cape
   cargo
-  # casual
-  centaur-tabs
-  centered-cursor-mode
+  # centaur-tabs
+  # centered-cursor-mode
   change-inner
-  chatgpt-shell
-  chess
+  # chatgpt-shell
   citar
     citar-embark
     # citar-org-node
     citar-org-roam
-  citre
+  # citre
   cmake-font-lock
   cmake-mode
   col-highlight
   color-moccur
   color-theme
   command-log-mode
-  company
+  # company
   company-coq
-  company-math
+  # company-math
   # compile-angel
   consult
   consult-company
   consult-dir
-  consult-flycheck
+  # consult-flycheck
   consult-gh
     consult-gh-embark
   consult-gh-forge
   consult-gh-with-pr-review
-  consult-git-log-grep
+  # consult-git-log-grep
   consult-hoogle
-  consult-lsp
-  consult-omni
+  # consult-lsp
+  # consult-omni
   consult-org-roam
   consult-projectile
   consult-yasnippet
@@ -79,15 +75,13 @@ pkgs: epkgs: with epkgs;
   crosshairs
   csv-mode
   ctable
-  ctrlf
-  cursor-chg
+  # ctrlf
+  # cursor-chg
   dape
   dash
   deadgrep
   dedicated
   deferred
-  delve
-    lister
   diff-hl
   diffview
   diminish
@@ -109,7 +103,7 @@ pkgs: epkgs: with epkgs;
   easy-kill
   # easysession
   eat
-  ebdb
+  # ebdb
   edbi
   edit-env
   edit-indirect
@@ -138,30 +132,27 @@ pkgs: epkgs: with epkgs;
     embark-vc
   ement
   emojify
-  engine-mode
+  # engine-mode
   epc
   epl
-  erc-highlight-nicknames
-  erc-yank
+  # erc-highlight-nicknames
   eshell-bookmark
   eshell-up
   eshell-z
   esxml
-  eval-expr
+  # eval-expr
   evil
   expand-region
   eyebrowse
   f
   feebleline
   fence-edit
-  flycheck
-  flycheck-haskell
-  flycheck-package
+  # flycheck
+    # flycheck-haskell
   fn
   focus
   font-lock-studio
   forge
-  format-all
   free-keys
   fringe-helper
   fuzzy
@@ -173,14 +164,14 @@ pkgs: epkgs: with epkgs;
   gnus-alias
   gnus-harvest
   gnus-recent
-  google-this
+  # google-this
   goto-last-change
   gptel
     llama
-  gptel-aibo
-  gptel-fn-complete
-  gptel-got
-  gptel-quick
+    # gptel-aibo
+    gptel-fn-complete
+    gptel-got
+    gptel-quick
   graphviz-dot-mode
   haskell-mode
   hcl-mode
@@ -192,11 +183,11 @@ pkgs: epkgs: with epkgs;
   highlight-quoted
   # highlight-sexp
   hl-line-plus
-  hl-todo
+  # hl-todo
   ht
-  hydra
+  # hydra
   ialign
-  iflipb
+  # iflipb
   imenu-list
   indent-shift
   # inhibit-mouse
@@ -204,13 +195,13 @@ pkgs: epkgs: with epkgs;
     tree-inspector
   ipcalc
   jinx
-  jobhours
+  # jobhours
   jq-mode
   js2-mode
   json-mode
   json-reformat
   json-snatcher
-  jupyter
+  # jupyter
   key-chord
   keypression
   khoj
@@ -226,14 +217,14 @@ pkgs: epkgs: with epkgs;
   lively
   logito
   loop
-  lsp-bridge
+  # lsp-bridge
   lua-mode
   m-buffer
   macrostep
   magit
-  magit-annex
-  magit-imerge
-  magit-lfs
+  # magit-annex
+  # magit-imerge
+  # magit-lfs
   magit-popup
   magit-tbdiff
   magit-todos
@@ -267,12 +258,12 @@ pkgs: epkgs: with epkgs;
   ob-restclient
   ob-solidity
   olivetti
-  onepassword-el
+  # onepassword-el
   onnx
   operate-on-number
   orderless
   org
-  org-alert
+  # org-alert
   org-anki
   org-annotate
   org-appear
@@ -285,12 +276,12 @@ pkgs: epkgs: with epkgs;
   org-edit-indirect
   org-edna
   org-extra-emphasis
-  org-fancy-priorities
-  org-gcal
+  # org-fancy-priorities
+  # org-gcal
   org-mime
-  org-modern
+  # org-modern
   org-mru-clock
-  org-msg
+  # org-msg
   org-node
     org-mem
   org-noter
@@ -303,7 +294,7 @@ pkgs: epkgs: with epkgs;
   org-ql
   org-quick-peek
   org-real
-  org-recent-headings
+  # org-recent-headings
   org-remark
   org-review
   org-rich-yank
@@ -318,23 +309,22 @@ pkgs: epkgs: with epkgs;
   org-superstar
   org-table-color
   org-table-highlight
-  org-timeline
+  # org-timeline
   org-transclusion
-  org-upcoming-modeline
+  # org-upcoming-modeline
   org-vcard
   org-web-tools
   orgit
   orgit-forge
-  origami
+  # origami
   # osm
   outline-indent
-  ov
-  ovpn-mode
+  # ovpn-mode
   ox-gfm
   ox-odt
   ox-pandoc
   ox-slack
-  ox-texinfo-plus
+  # ox-texinfo-plus
   package-lint
   pact-mode
   pandoc-mode
@@ -356,14 +346,14 @@ pkgs: epkgs: with epkgs;
   pfuture
   pg
   pgmacs
-  phi-search
-  phi-search-mc
+  # phi-search
+    # phi-search-mc
   pkg-info
   plantuml-mode
-  popper
+  # popper
   popup
-  popup-pos-tip
-  popup-ruler
+    popup-pos-tip
+    popup-ruler
   popwin
   pos-tip
   pp-c-l
@@ -383,8 +373,6 @@ pkgs: epkgs: with epkgs;
   regex-tool
   request
   restclient
-  reveal-in-osx-finder
-  rich-minority
   riscv-mode
   rs-gnus-summary
   rust-mode
@@ -394,7 +382,7 @@ pkgs: epkgs: with epkgs;
   sdcv-mode
   selected
   separedit
-  shackle
+  # shackle
   shell-toggle
   shift-number
   simple-httpd
@@ -411,8 +399,8 @@ pkgs: epkgs: with epkgs;
   sql-indent
   string-inflection
   sudo-edit
-  sunrise-commander
-  super-save
+  # sunrise-commander
+  # super-save
   supercite
   swift-mode
   tablist
@@ -429,11 +417,10 @@ pkgs: epkgs: with epkgs;
   typescript-mode
   typo
   ultra-scroll-mac
-  undo-fu
+  # undo-fu
   undo-propose
   unicode-fonts
   uniline
-  use-package
   uuidgen
   vagrant
   vagrant-tramp
@@ -445,7 +432,7 @@ pkgs: epkgs: with epkgs;
   virtual-auto-fill
   visual-fill-column
   visual-regexp
-  visual-regexp-steroids
+    # visual-regexp-steroids
   vline
   vterm
   vulpea
@@ -460,12 +447,10 @@ pkgs: epkgs: with epkgs;
   # which-key
   whitespace-cleanup-mode
   window-purpose
-  with-editor
   word-count-mode
   writeroom-mode
   # x86-lookup
   # xeft
-  xml-rpc
   xr
   xray
   yaml-mode
@@ -473,6 +458,5 @@ pkgs: epkgs: with epkgs;
   yasnippet
   z3-mode
   zoom
-  zoutline
   ztree
 ]
