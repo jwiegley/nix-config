@@ -10,6 +10,9 @@ let exe = if stdenv.targetPlatform.isx86_64
     emacs30MacPortEnv = pkgs.emacs30MacPortEnv myEmacsPackages;
     emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
 
+    rag-client-pkg = import /Users/johnw/src/rag-client;
+    rag-client = rag-client-pkg.packages.${pkgs.system}.default;
+
 in [
   (exe haskellPackages.hasktags)
   (exe haskellPackages.hpack)
@@ -41,6 +44,7 @@ in [
   cacert
   cargo-cache
   cbor-diag
+  cmake
   contacts
   coreutils
   csvkit
@@ -61,6 +65,7 @@ in [
   emacs-lsp-booster
   entr
   exiv2
+  eyed3
   eza
   fd
   fdupes
@@ -208,6 +213,7 @@ in [
       ImageExifTool
     ]))
   pinentry_mac
+  pkg-config
   plantuml
   pngpaste
   pnpm
@@ -242,6 +248,7 @@ in [
   qemu libvirt
   qpdf
   qrencode
+  rag-client
   ratpoison
   rclone
   # recoll-nox

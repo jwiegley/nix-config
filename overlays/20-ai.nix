@@ -125,21 +125,20 @@ ik-llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
 });
 
 llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "5648";
-
+  version = "5754";
   src = super.fetchFromGitHub {
     owner = "ggml-org";
     repo = "llama.cpp";
     tag = "b${version}";
-    hash = "sha256-OEGah4li1BgTxOZWQU39dYoaopnl4VynSBdOVClyaEk=";
+    hash = "sha256-5+c8qcrng8esG/+Jkw2RrP1vJvIWxyqL10jdsTby9QM=";
   };
 });
 
 llama-swap = with super; buildGoModule rec {
   pname = "llama-swap";
   version = "125";
-  vendorHash = "sha256-5mmciFAGe8ZEIQvXejhYN+ocJL3wOVwevIieDuokhGU="
-;
+
+  vendorHash = "sha256-5mmciFAGe8ZEIQvXejhYN+ocJL3wOVwevIieDuokhGU=";
   src = fetchFromGitHub {
     owner = "mostlygeek";
     repo = "llama-swap";

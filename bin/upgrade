@@ -45,6 +45,18 @@ echo ~/kadena/pact-fv
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
+echo ~/kadena/pact-5
+(
+    cd ~/kadena/pact-5
+    source .envrc
+    cabal v2-update
+    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
+    cabal v2-build
+    cabal v2-test
+) > /tmp/pact-5-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
 # echo ~/kadena/evm/reth
 # (
 #     cd ~/kadena/evm/reth
@@ -247,5 +259,22 @@ echo ~/src/comparable
     cargo doc
     cargo clippy
 ) > /tmp/comparable-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+### Python projects
+
+/bin/rm -fr ~/Library/Caches/pip ~/.cache/uv
+
+rag-client --help > /tmp/rag-client-build.log 2>&1
+huggingface-cli --help >> /tmp/rag-client-build.log 2>&1
+
+echo ~/src/rag-client
+(
+    cd ~/src/rag-client
+    echo ~/src/rag-client
+    source .envrc
+    nix develop -c echo hello
+) >> /tmp/rag-client-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi

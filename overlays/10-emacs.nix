@@ -687,6 +687,18 @@ let
       buildInputs = with eself; [ gptel ];
     };
 
+    macher = compileEmacsFiles {
+      name = "macher";
+      src = fetchFromGitHub {
+        owner = "kmontag";
+        repo = "macher";
+        rev = "a1adeb063a5a54787abf5b75f9d70a53da9fa1a2";
+        sha256 = "0lp5cxs2ayg7nbriplrddkyfpaby85fysz6ra3mb1h8168b5x4gh";
+        # date = 2025-06-18T13:33:44+02:00;
+      };
+      buildInputs = with eself; [ gptel ];
+    };
+
     agda2-mode = compileEmacsFiles {
       name = "agda2-mode";
       src = (fetchFromGitHub {

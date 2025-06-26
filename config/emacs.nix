@@ -190,6 +190,7 @@ pkgs: epkgs: with epkgs;
   # iflipb
   imenu-list
   indent-shift
+  inheritenv
   # inhibit-mouse
   inspector
     tree-inspector
@@ -207,6 +208,7 @@ pkgs: epkgs: with epkgs;
   khoj
   know-your-http-well
   kv
+  language-id
   lasgun
   ledger-mode
   link-hint
@@ -220,6 +222,7 @@ pkgs: epkgs: with epkgs;
   # lsp-bridge
   lua-mode
   m-buffer
+  macher
   macrostep
   magit
   # magit-annex
@@ -251,7 +254,7 @@ pkgs: epkgs: with epkgs;
   nix-mode
   noflet
   nov
-  oauth2
+  # oauth2
   ob-coq
   ob-diagrams
   ob-emamux
