@@ -16,6 +16,9 @@ yamale = with super; with python3Packages; buildPythonPackage rec {
   propagatedBuildInputs = [ pyyaml ];
   buildInputs = [ pytest ];
 
+  pyproject = true;
+  build-system = [ setuptools ];
+
   meta = {
     homepage = https://github.com/23andMe/Yamale;
     description = "A schema and validator for YAML";

@@ -6,6 +6,7 @@ pkgs: epkgs: with epkgs;
   adoc-mode
   agda2-mode
   aggressive-indent
+  aider
   aio
   # all-the-icons
   # anki-editor
@@ -411,6 +412,7 @@ pkgs: epkgs: with epkgs;
   templatel
   terraform-mode
   tidy
+  timeout
   tla-mode
   toc-org
   transpose-mark

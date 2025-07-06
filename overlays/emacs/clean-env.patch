@@ -1,3 +1,4 @@
+
 Dump temacs in an empty environment to prevent -dev paths from ending
 up in the dumped image.
 

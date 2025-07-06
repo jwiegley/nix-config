@@ -18,6 +18,9 @@ pass-git-helper = with super; with python3Packages; buildPythonPackage rec {
   pythonPath = [ pyxdg pytest ];
   doCheck = false;
 
+  pyproject = true;
+  build-system = [ setuptools ];
+
   meta = {
     homepage = https://github.com/languitar/pass-git-helper;
     description = "A git credential helper interfacing with pass, the standard unix password manager";

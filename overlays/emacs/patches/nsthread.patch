@@ -1,0 +1,13 @@
+--- a/src/nsterm.m	1969-12-31 16:00:01.000000000 -0800
++++ b/src/nsterm.m	2025-07-03 13:46:09.625403839 -0700
+@@ -4951,7 +4951,10 @@
+   block_input ();
+   ns_init_events (&event);
+ 
++  if ([[NSThread currentThread] isMainThread])
++    {
+   [NSApp run];
++    }
+ 
+   ns_finish_events ();
+   if (nr > 0 && readfds)

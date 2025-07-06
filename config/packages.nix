@@ -55,13 +55,14 @@ in [
   diffutils
   direnv
   ditaa
+  dnstracer
   dnsutils
   dot2tex
   doxygen
   eask
   emacs30Env
   # emacs30MacPortEnv
-  # emacsHEADEnv
+  emacsHEADEnv
   emacs-lsp-booster
   entr
   exiv2
@@ -223,6 +224,7 @@ in [
       pgvector
     ]))
   libpq
+  procmail
   procps
   protobufc
   psrecord
@@ -327,6 +329,7 @@ in [
   zsh
   zsh-syntax-highlighting
 
+  aider-chat
   litellm
   (hiPrio llama-cpp)
   llama-swap

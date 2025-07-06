@@ -1,17 +1,19 @@
 { pkgs, lib, config, hostname, inputs, ... }@args:
 
-let home             = config.home.homeDirectory;
-    tmpdir           = "/tmp";
+let home           = config.home.homeDirectory;
+    tmpdir         = "/tmp";
 
-    userName         = "John Wiegley";
-    userEmail        = "johnw@newartisans.com";
-    master_key       = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
-    signing_key      = "12D70076AB504679";
+    userName       = "John Wiegley";
+    userEmail      = "johnw@newartisans.com";
+    master_key     = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
+    signing_key    = "12D70076AB504679";
 
-    ca-bundle_path   = "${pkgs.cacert}/etc/ssl/certs/";
-    ca-bundle_crt    = "${ca-bundle_path}/ca-bundle.crt";
-    emacs-server     = "${tmpdir}/johnw-emacs/server";
-    emacsclient      = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
+    external_host  = "home.newartisans.com";
+
+    ca-bundle_path = "${pkgs.cacert}/etc/ssl/certs/";
+    ca-bundle_crt  = "${ca-bundle_path}/ca-bundle.crt";
+    emacs-server   = "${tmpdir}/johnw-emacs/server";
+    emacsclient    = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
 in {
   home = {
     stateVersion = "23.11";
@@ -43,6 +45,7 @@ in {
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
       SCREENRC           = "${config.xdg.configHome}/screen/config";
       STARDICT_DATA_DIR  = "${config.xdg.dataHome}/dictionary";
+      SSL_CERT_FILE      = "${ca-bundle_crt}";
       TIKTOKEN_CACHE_DIR = "${config.xdg.cacheHome}/tiktoken";
       TRAVIS_CONFIG_PATH = "${config.xdg.configHome}/travis";
       VAGRANT_HOME       = "${config.xdg.dataHome}/vagrant";
@@ -97,6 +100,7 @@ in {
           ca_certificate = ${ca-bundle_crt}
         '';
 
+        ".aider".source        = mkLink "${config.xdg.configHome}/aider";
         ".cups".source         = mkLink "${config.xdg.configHome}/cups";
         ".dbvis".source        = mkLink "${config.xdg.configHome}/dbvis";
         ".gist".source         = mkLink "${config.xdg.configHome}/gist/api_key";
@@ -138,7 +142,7 @@ in {
         "Drafts".source =
           mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
         "Inbox".source  =
-          mkLink "${home}/Library/Application Support/DEVONthink 3/Inbox";
+          mkLink "${home}/Library/Application Support/DEVONthink/Inbox";
         "iCloud".source        =
           mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
 
@@ -771,8 +775,6 @@ in {
             bind = { inherit port; };
             host = { inherit port; address = "127.0.0.1"; };
           };
-
-          external_host = "newartisans.hopto.org";
         in rec {
 
         # Hera

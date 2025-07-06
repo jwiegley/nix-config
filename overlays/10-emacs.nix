@@ -1176,6 +1176,9 @@ emacs30 =
     configureFlags = attrs.configureFlags ++ [
       "--disable-gc-mark-trace"
     ];
+    patches = attrs.patches ++ [
+      ./emacs/patches/nsthread.patch
+    ];
   });
 emacs30Packages   = self.emacs30PackagesNg;
 emacs30PackagesNg = mkEmacsPackages self.emacs30;
@@ -1189,36 +1192,40 @@ emacs30Env = myPkgs: pkgs.myEnvFun {
 
 ##########################################################################
 
-emacsHEAD = with pkgs; self.emacs30.overrideAttrs(attrs: rec {
-  name = "emacs-${version}${versionModifier}";
-  version = "31.0";
-  versionModifier = ".90";
-  src = pkgs.nix-gitignore.gitignoreSource [] /Users/johnw/src/emacs;
+emacsHEAD = with pkgs;
+  let
+    libGccJitLibraryPaths =
+      [
+        "${lib.getLib libgccjit}/lib/gcc"
+        "${lib.getLib stdenv.cc.libc}/lib"
+      ]
+      ++ lib.optionals (stdenv.cc ? cc.lib.libgcc) [
+        "${lib.getLib stdenv.cc.cc.lib.libgcc}/lib"
+      ]; in
+  (emacs30.override {
+      withImageMagick = true;
+      withNativeCompilation = false;
+    }).overrideAttrs(attrs: rec {
+  version = "31.0.50";
+  env = {
+    NATIVE_FULL_AOT = "1";
+    LIBRARY_PATH = lib.concatStringsSep ":" libGccJitLibraryPaths;
+  };
+  src = nix-gitignore.gitignoreSourcePure [] /Users/johnw/src/emacs;
   patches = [
-    ./emacs/clean-env.patch
+    (builtins.path {
+      name = "inhibit-lexical-cookie-warning-67916.patch";
+      path = ./emacs/patches/inhibit-lexical-cookie-warning-67916-30.patch;
+    })
   ];
-  propagatedBuildInputs = (attrs.propagatedBuildInputs or []) ++
-    [ libgccjit
-    ];
-  buildInputs = attrs.buildInputs ++
-    [ libpng
-      libjpeg
-      giflib
-      libtiff
-      librsvg
-      jansson
-      freetype
-      harfbuzz.dev
-      git
-    ];
   preConfigure = ''
     sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac
     autoreconf
   '';
+  env.NIX_CFLAGS_COMPILE = "-g3 -O0";
   configureFlags = attrs.configureFlags ++ [
     "--enable-checking=yes,glyphs"
     "--enable-check-lisp-object-type"
-    "--disable-gc-mark-trace"
   ];
 });
 
