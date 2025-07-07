@@ -25,6 +25,7 @@
       url = "github:HeitorAugustoLN/betterfox-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # jww (2025-07-07): python3.13-readabilipy-0.3.0 fails to build
     # mcp-servers-nix = {
     #   url = "github:natsukium/mcp-servers-nix";
     #   inputs.nixpkgs.follows = "nixpkgs";
@@ -37,7 +38,20 @@
         overlays = with inputs; [
           (final: prev:
             let
-              pkgs = (import nixpkgs { system = prev.system; }).extend (
+              # patchedNixpkgs = nixpkgs;
+              patchedNixpkgs =
+                (import nixpkgs { inherit (prev) system; }).applyPatches {
+                  name = "nixpkgs-unstable-patched";
+                  src = inputs.nixpkgs;
+                  patches = [
+                    # (builtins.fetchurl {
+                    #   url = "https://github.com/NixOS/nixpkgs/pull/393512.diff";
+                    #   sha256 = "1cjwzx7hkvzff70p62z6wb6hf6n9m69s80vv1jmgk6r756ban029";
+                    # })
+                    ./overlays/emacs/patches/emacs30-macport.patch
+                  ];
+                };
+              pkgs = (import patchedNixpkgs { inherit (prev) system; }).extend (
                 _final: prev: {
                   ld64 = prev.ld64.overrideAttrs (o: {
                     patches = o.patches ++ [./overlays/Dedupe-RPATH-entries.patch];
@@ -47,7 +61,7 @@
                   });
                 }
               ); in {
-                inherit (pkgs) emacs30;
+                inherit (pkgs) emacs30 emacs30-macport;
               })
           nurpkgs.overlays.default
           # mcp-servers-nix.overlays.default

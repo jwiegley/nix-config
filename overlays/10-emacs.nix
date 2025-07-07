@@ -365,6 +365,17 @@ let
       };
     };
 
+    firefox-bookmarks = compileEmacsFiles {
+      name = "firefox-bookmarks";
+      src = fetchFromGitHub {
+        owner = "tangxinfa";
+        repo = "firefox-bookmarks";
+        rev = "ca67da81ad370d9d142e11e6b9358dacfc2dbfb1";
+        sha256 = "06ww3f6xfv6dfbv4ddz5kz79qxn3gw8z36sljvfvmca669aprnjl";
+        # date = 2021-05-09T18:34:26+08:00;
+      };
+    };
+
     gnus-harvest = compileEmacsFiles {
       name = "gnus-harvest";
       src = fetchFromGitHub {
@@ -1156,6 +1167,14 @@ emacs29MacPortEnv = myPkgs: pkgs.myEnvFun {
 
 ##########################################################################
 
+emacs30-macport =
+  (pkgs.emacs30-macport.override {
+    withNativeCompilation = true;
+  }).overrideAttrs(attrs: {
+    configureFlags = attrs.configureFlags ++ [
+      "--disable-gc-mark-trace"
+    ];
+  });
 emacs30MacPortPackages   = self.emacs30MacPortPackagesNg;
 emacs30MacPortPackagesNg = mkEmacsPackages self.emacs30-macport;
 

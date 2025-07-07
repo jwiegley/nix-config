@@ -61,7 +61,7 @@ in [
   doxygen
   eask
   emacs30Env
-  # emacs30MacPortEnv
+  emacs30MacPortEnv
   emacsHEADEnv
   emacs-lsp-booster
   entr
@@ -351,9 +351,9 @@ in [
   # mcp-server-slack
   # mcp-server-sqlite
   # mcp-server-time
+  # mcp-server-qdrant
   qdrant
   qdrant-web-ui
-  # mcp-server-qdrant
 
   (exe gitAndTools.git-annex)
   gitAndTools.git-annex-remote-rclone

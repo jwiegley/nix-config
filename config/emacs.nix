@@ -148,6 +148,7 @@ pkgs: epkgs: with epkgs;
   f
   feebleline
   fence-edit
+  firefox-bookmarks
   # flycheck
     # flycheck-haskell
   fn
@@ -274,6 +275,7 @@ pkgs: epkgs: with epkgs;
   org-auto-expand
   org-autolist
   org-bookmark-heading
+  org-bookmarks-extractor
   org-caldav
   org-contacts
   org-drill
