@@ -51,18 +51,20 @@
                     ./overlays/emacs/patches/emacs30-macport.patch
                   ];
                 };
-              pkgs = (import patchedNixpkgs { inherit (prev) system; }).extend (
-                _final: prev: {
-                  ld64 = prev.ld64.overrideAttrs (o: {
-                    patches = o.patches ++ [./overlays/Dedupe-RPATH-entries.patch];
-                  });
-                  libarchive = prev.libarchive.overrideAttrs (_old: {
-                    doCheck = false;
-                  });
-                }
-              ); in {
-                inherit (pkgs) emacs30 emacs30-macport;
-              })
+              pkgs = import patchedNixpkgs { inherit (prev) system; };
+              # pkgs = (import patchedNixpkgs { inherit (prev) system; }).extend (
+              #   _final: prev: {
+              #     ld64 = prev.ld64.overrideAttrs (o: {
+              #       patches = o.patches ++ [./overlays/Dedupe-RPATH-entries.patch];
+              #     });
+              #     libarchive = prev.libarchive.overrideAttrs (_old: {
+              #       doCheck = false;
+              #     });
+              #   }
+              # );
+            in {
+              inherit (pkgs) emacs30 emacs30-macport;
+            })
           nurpkgs.overlays.default
           # mcp-servers-nix.overlays.default
         ];
