@@ -315,6 +315,7 @@ pkgs: epkgs: with epkgs;
   org-superstar
   org-table-color
   org-table-highlight
+  org-tidy
   # org-timeline
   org-transclusion
   # org-upcoming-modeline

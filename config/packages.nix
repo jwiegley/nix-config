@@ -313,7 +313,6 @@ in [
   wget
   wireguard-tools
   xapian
-  xdg-utils
   xorg.xauth
   xorg.xhost
   xquartz

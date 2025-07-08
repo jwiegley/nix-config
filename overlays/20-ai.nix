@@ -102,13 +102,13 @@ hfdownloader = with super; buildGoModule rec {
 };
 
 koboldcpp = super.koboldcpp.overrideAttrs(attrs: rec {
-  version = "1.91";
+  version = "1.95.1";
 
   src = super.fetchFromGitHub {
     owner = "LostRuins";
     repo = "koboldcpp";
     tag = "v${version}";
-    hash = "sha256-s2AfdKF4kUez3F1P+FYMbP2KD+J6+der/datxrdTiZU=";
+    hash = "sha256-aoVOEPK3hPuzkrHIFvDrnAw2D/OxXlRLXXP0CZJghx4=";
   };
 });
 
@@ -125,25 +125,79 @@ ik-llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
 });
 
 llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "5754";
+  version = "5849";
   src = super.fetchFromGitHub {
     owner = "ggml-org";
     repo = "llama.cpp";
     tag = "b${version}";
-    hash = "sha256-5+c8qcrng8esG/+Jkw2RrP1vJvIWxyqL10jdsTby9QM=";
+    hash = "sha256-1jCnvCeI6I2byyqvaYT8Kffslf/LG+mj9IAGhtFliL0=";
   };
 });
 
-llama-swap = with super; buildGoModule rec {
-  pname = "llama-swap";
-  version = "125";
+llama-swap =
+let
+  version = "137";
 
-  vendorHash = "sha256-5mmciFAGe8ZEIQvXejhYN+ocJL3wOVwevIieDuokhGU=";
+  src = super.fetchFromGitHub {
+    owner = "mostlygeek";
+    repo = "llama-swap";
+    rev = "v${version}";
+    hash = "sha256-DyAbZMTy4gvmF8HnUJ5B4ypIqhL9MDS7zBzeQfapFD8=";
+  };
+
+  ui = with super; buildNpmPackage (finalAttrs: {
+    pname = "llama-swap-ui";
+    inherit version src;
+
+    postPatch = ''
+      substituteInPlace vite.config.ts \
+      --replace '../proxy/ui_dist' '${placeholder "out"}/ui_dist'
+    '';
+
+    sourceRoot = "source/ui";
+
+    npmDepsHash = "sha256-smdqD1X9tVr0XMhQYpLBZ57/3iP8tYVoVJ2wR/gAC3w=";
+
+    postInstall = ''
+      rm -rf $out/lib
+    '';
+
+    meta = {
+      description = "llama-swap - UI";
+      license = lib.licenses.mit;
+      platforms = lib.platforms.unix;
+    };
+  });
+in
+with super; llama-swap.overrideAttrs(attrs: rec {
+  inherit version src;
+  vendorHash = "sha256-nSdvqYVBBVIdoa991bLVwfHPGAO4OHzW8lEQPQ6cuMs=";
+  preBuild = ''
+    cp -r ${ui}/ui_dist proxy/
+  '';
+  ldflags = [
+    "-X main.version=${version}"
+    "-X main.date=unknown"
+    "-X main.commit=v${version}"
+  ];
+  meta = {
+    description = "Model swapping for llama.cpp (or any local OpenAPI compatible server)";
+    license = lib.licenses.mit;
+    platforms = lib.platforms.unix;
+    mainProgram = "llama-swap";
+  };
+});
+
+llama-swap-direct = with super; buildGoModule rec {
+  pname = "llama-swap";
+  version = "137";
+
+  vendorHash = "sha256-nSdvqYVBBVIdoa991bLVwfHPGAO4OHzW8lEQPQ6cuMs=";
   src = fetchFromGitHub {
     owner = "mostlygeek";
     repo = "llama-swap";
     rev = "v${version}";
-    hash = "sha256-mFmrHTexcVYMu58dvrTYB6wtDQOo5ZoiJL2jt29xJ0s=";
+    hash = "sha256-DyAbZMTy4gvmF8HnUJ5B4ypIqhL9MDS7zBzeQfapFD8=";
   };
 
   doCheck = false;

@@ -44,10 +44,10 @@
                   name = "nixpkgs-unstable-patched";
                   src = inputs.nixpkgs;
                   patches = [
-                    # (builtins.fetchurl {
-                    #   url = "https://github.com/NixOS/nixpkgs/pull/393512.diff";
-                    #   sha256 = "1cjwzx7hkvzff70p62z6wb6hf6n9m69s80vv1jmgk6r756ban029";
-                    # })
+                    (builtins.fetchurl {
+                      url = "https://github.com/NixOS/nixpkgs/pull/417516.diff";
+                      sha256 = "1gh3m0n1c8rbng6silg7xd7n857yj2zch5ak5490qpc3w7wiqjqv";
+                    })
                     ./overlays/emacs/patches/emacs30-macport.patch
                   ];
                 };
@@ -63,7 +63,7 @@
               #   }
               # );
             in {
-              inherit (pkgs) emacs30 emacs30-macport;
+              inherit (pkgs) emacs30 emacs30-macport llama-swap;
             })
           nurpkgs.overlays.default
           # mcp-servers-nix.overlays.default
