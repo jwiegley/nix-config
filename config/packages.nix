@@ -6,8 +6,10 @@ let exe = if stdenv.targetPlatform.isx86_64
 
     myEmacsPackages = import ./emacs.nix pkgs;
 
-    emacs30Env = pkgs.emacs30Env myEmacsPackages;
-    emacs30MacPortEnv = pkgs.emacs30MacPortEnv myEmacsPackages;
+    emacs30Env = pkgs.emacs30Env (epkgs:
+      (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs)));
+    emacs30MacPortEnv = pkgs.emacs30MacPortEnv (epkgs:
+      (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs)));
     emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
 
     rag-client-pkg = import /Users/johnw/src/rag-client;

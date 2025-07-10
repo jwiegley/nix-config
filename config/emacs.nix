@@ -1,5 +1,6 @@
-pkgs: epkgs: with epkgs;
-[
+pkgs: epkgs:
+let exclude = p: p // { excluded = true; }; in
+with epkgs; [
   epkgs."2048-game"
   ace-mc
   ace-window
@@ -8,86 +9,86 @@ pkgs: epkgs: with epkgs;
   aggressive-indent
   aider
   aio
-  # all-the-icons
-  # anki-editor
-  apiwrap
+  (exclude all-the-icons)
+  (exclude anki-editor)
   aria2
   ascii
-  asoc
   async
   auctex
   auto-yasnippet
   avy
-    avy-zap
-  # awesome-tray
-  # backup-each-save
+  avy-embark-collect
+  avy-zap
+  (exclude awesome-tray)
+  (exclude backup-each-save)
+  (exclude backup-walker)
+  (exclude beacon)
   biblio
   bm
   boogie-friends
-  # bookmark-plus
+  (exclude bookmark-plus)
+  (exclude browse-at-remote)
   browse-kill-ring
-  browser-hist
-  # buffer-terminator
-  # bufler
+  (exclude buffer-terminator)
+  (exclude bufler)
   burly
-  button-lock
-  calfw
-    calfw-cal
-    calfw-org
+  (exclude calfw)
+  (exclude calfw-cal)
+  (exclude calfw-org)
   cape
   cargo
-  # centaur-tabs
-  # centered-cursor-mode
+  (exclude centaur-tabs)
+  (exclude centered-cursor-mode)
   change-inner
-  # chatgpt-shell
+  (exclude chatgpt-shell)
   citar
-    citar-embark
-    # citar-org-node
-    citar-org-roam
-  # citre
+  citar-embark
+  (exclude citar-org-node)
+  citar-org-roam
+  (exclude citre)
   cmake-font-lock
   cmake-mode
   col-highlight
   color-moccur
   color-theme
   command-log-mode
-  # company
+  (exclude company)
   company-coq
-  # company-math
-  # compile-angel
+  (exclude company-math)
+  (exclude compile-angel)
   consult
   consult-company
   consult-dir
-  # consult-flycheck
+  consult-eglot-embark
+  (exclude consult-flycheck)
   consult-gh
-    consult-gh-embark
+  consult-gh-embark
   consult-gh-forge
   consult-gh-with-pr-review
-  # consult-git-log-grep
+  (exclude consult-git-log-grep)
   consult-hoogle
-  # consult-lsp
-  # consult-omni
+  (exclude consult-lsp)
+  (exclude consult-omni)
   consult-org-roam
   consult-projectile
   consult-yasnippet
   copy-as-format
   corfu
+  (exclude corfu-prescient)
   corsair
   crosshairs
+  (exclude crux)
   csv-mode
-  ctable
-  # ctrlf
-  # cursor-chg
-  dape
+  (exclude ctrlf)
+  (exclude cursor-chg)
   dash
   deadgrep
   dedicated
-  deferred
   diff-hl
   diffview
   diminish
   dired-hist
-  # dired-plus
+  (exclude dired-plus)
   dired-rsync
   dired-subtree
   dired-toggle
@@ -97,84 +98,69 @@ pkgs: epkgs: with epkgs;
   docker
   docker-compose-mode
   dockerfile-mode
+  (exclude dumb-jump)
   eager-state
-  eask
-    easky
-    flymake-eask
+  easky
   easy-kill
-  # easysession
+  (exclude easysession)
   eat
-  # ebdb
+  (exclude ebdb)
   edbi
   edit-env
   edit-indirect
   edit-server
   edit-var
-  egerrit
   eglot
   eglot-booster
-  el-job
-  el-mock
   elisp-depend
   elisp-docstring-mode
-  elisp-refs
   elisp-slime-nav
   elmacro
   elpy
-  elsa
-    flymake-elsa
-  emacsql
   emamux
   embark
-    embark-consult
-    embark-org-roam
-    avy-embark-collect
-    consult-eglot-embark
-    embark-vc
-  ement
+  embark-consult
+  embark-org-roam
   emojify
-  # engine-mode
-  epc
-  epl
-  # erc-highlight-nicknames
+  (exclude engine-mode)
+  (exclude erc)
+  (exclude erc-highlight-nicknames)
+  (exclude erc-yank)
   eshell-bookmark
   eshell-up
   eshell-z
-  esxml
-  # eval-expr
+  (exclude eval-expr)
   evil
   expand-region
   eyebrowse
   f
   feebleline
   fence-edit
-  firefox-bookmarks
-  # flycheck
-    # flycheck-haskell
-  fn
+  (exclude flycheck)
+  (exclude flycheck-haskell)
   focus
   font-lock-studio
   forge
   free-keys
-  fringe-helper
-  fuzzy
-  gerrit
+  fsrs
+  (exclude fullframe)
   ghub
   git-link
   git-timemachine
-  git-undo
+  (exclude git-undo)
+  (exclude gitpatch)
   gnus-alias
   gnus-harvest
   gnus-recent
-  # google-this
+  (exclude google-this)
   goto-last-change
   gptel
-    llama
-    # gptel-aibo
-    gptel-fn-complete
-    gptel-got
-    gptel-quick
+  (exclude gptel-aibo)
+  gptel-fn-complete
+  gptel-got
+  gptel-quick
   graphviz-dot-mode
+  (exclude hammy)
   haskell-mode
   hcl-mode
   helpful
@@ -183,124 +169,115 @@ pkgs: epkgs: with epkgs;
   highlight-defined
   highlight-numbers
   highlight-quoted
-  # highlight-sexp
   hl-line-plus
-  # hl-todo
-  ht
-  # hydra
+  (exclude hl-todo)
+  (exclude hydra)
   ialign
-  # iflipb
+  (exclude iedit)
+  (exclude iflipb)
   imenu-list
   indent-shift
   inheritenv
-  # inhibit-mouse
+  (exclude inhibit-mouse)
   inspector
-    tree-inspector
   ipcalc
   jinx
-  # jobhours
+  (exclude jobhours)
   jq-mode
   js2-mode
   json-mode
   json-reformat
   json-snatcher
-  # jupyter
+  (exclude jupyter)
   key-chord
   keypression
-  khoj
   know-your-http-well
-  kv
   language-id
   lasgun
   ledger-mode
   link-hint
   lispy
-  list-utils
   listen
   literate-calc-mode
   lively
-  logito
-  loop
-  # lsp-bridge
+  llama
+  (exclude lsp-bridge)
+  (exclude lsp-haskell)
+  (exclude lsp-mode)
+  (exclude lsp-ui)
   lua-mode
-  m-buffer
   macher
   macrostep
   magit
-  # magit-annex
-  # magit-imerge
-  # magit-lfs
+  (exclude magit-annex)
+  (exclude magit-imerge)
+  (exclude magit-lfs)
   magit-popup
   magit-tbdiff
   magit-todos
-  makey
   malyon
   marginalia
   markdown-mode
   markdown-preview-mode
-  marshal
   math-symbol-lists
   mc-calc
   mc-extras
   mediawiki
   memory-usage
+  (exclude mic-paren)
   minesweeper
+  (exclude minimap)
   moccur-edit
+  (exclude monitor)
   move-text
   multi-term
   multi-vterm
   multifiles
   multiple-cursors
-  # names
+  (exclude names)
   nginx-mode
   nix-mode
-  noflet
   nov
-  # oauth2
-  ob-coq
-  ob-diagrams
+  (exclude oauth2)
   ob-emamux
   ob-restclient
-  ob-solidity
   olivetti
-  # onepassword-el
-  onnx
+  (exclude onepassword-el)
   operate-on-number
   orderless
   org
-  # org-alert
+  (exclude org-alert)
   org-anki
   org-annotate
   org-appear
   org-auto-expand
   org-autolist
   org-bookmark-heading
-  org-bookmarks-extractor
   org-caldav
+  org-checklist
   org-contacts
   org-drill
-  org-edit-indirect
   org-edna
   org-extra-emphasis
-  # org-fancy-priorities
-  # org-gcal
+  (exclude org-fancy-priorities)
+  (exclude org-gcal)
+  org-mem
+  (exclude org-mem)
   org-mime
-  # org-modern
+  (exclude org-modern)
   org-mru-clock
-  # org-msg
+  (exclude org-msg)
   org-node
-    org-mem
   org-noter
-  org-notifications
   org-pdftools
   org-pretty-table
+  org-project-capture
   org-projectile
-    org-project-capture
-    org-category-capture
   org-ql
   org-quick-peek
   org-real
-  # org-recent-headings
+  (exclude org-recent-headings)
+  (exclude org-recoll)
   org-remark
   org-review
   org-rich-yank
@@ -309,76 +286,60 @@ pkgs: epkgs: with epkgs;
   org-sidebar
   org-sql
   org-srs
-    fsrs
   org-sticky-header
   org-super-agenda
   org-superstar
   org-table-color
   org-table-highlight
   org-tidy
-  # org-timeline
+  (exclude org-timeline)
   org-transclusion
-  # org-upcoming-modeline
+  (exclude org-upcoming-modeline)
   org-vcard
   org-web-tools
   orgit
   orgit-forge
-  # origami
-  # osm
+  (exclude origami)
+  (exclude osm)
   outline-indent
-  # ovpn-mode
+  (exclude ovpn-mode)
   ox-gfm
-  ox-odt
   ox-pandoc
   ox-slack
-  # ox-texinfo-plus
+  (exclude ox-texinfo-plus)
   package-lint
   pact-mode
   pandoc-mode
   paradox
   paredit
-  parent-mode
   parse-csv
-  parsebib
-  parsec
   pass
   password-store
   pcre2el
   pdf-tools
   pdfgrep
-  peg
   persistent-scratch
   persistent-soft
-  peval
-  pfuture
   pg
   pgmacs
-  # phi-search
-    # phi-search-mc
-  pkg-info
+  (exclude phi-search)
+  (exclude phi-search-mc)
   plantuml-mode
-  # popper
-  popup
-    popup-pos-tip
-    popup-ruler
-  popwin
-  pos-tip
+  (exclude po-mode)
+  (exclude popper)
+  popup-ruler
   pp-c-l
-  pr-review
-  prescient
-    corfu-prescient
-    vertico-prescient
+  (exclude prescient)
   prodigy
   projectile
   proof-general
   protobuf-mode
   python-mode
-  quick-peek
   rainbow-delimiters
   rainbow-mode
   redshank
   regex-tool
-  request
+  (exclude repl-toggle)
   restclient
   riscv-mode
   rs-gnus-summary
@@ -389,28 +350,24 @@ pkgs: epkgs: with epkgs;
   sdcv-mode
   selected
   separedit
-  # shackle
+  (exclude shackle)
   shell-toggle
   shift-number
-  simple-httpd
   sky-color-clock
-  # slack
-  #   circe
+  (exclude slack)
   slime
+  (exclude smart-mode-line)
   smart-newline
   smartparens
-  solidity-flycheck
-  solidity-mode
+  (exclude smartscan)
   sort-words
-  spinner
   sql-indent
   string-inflection
   sudo-edit
-  # sunrise-commander
-  # super-save
+  (exclude sunrise-commander)
+  (exclude super-save)
   supercite
   swift-mode
-  tablist
   tagedit
   templatel
   terraform-mode
@@ -418,14 +375,15 @@ pkgs: epkgs: with epkgs;
   timeout
   tla-mode
   toc-org
+  (exclude tracking)
   transpose-mark
+  tree-inspector
   treemacs
-  ts
   tuareg
   typescript-mode
   typo
   ultra-scroll-mac
-  # undo-fu
+  (exclude undo-fu)
   undo-propose
   unicode-fonts
   uniline
@@ -434,35 +392,35 @@ pkgs: epkgs: with epkgs;
   vagrant-tramp
   vcard-mode
   vdiff
-  verb
+  (exclude verb)
   vertico
+  (exclude vertico-prescient)
   vimish-fold
   virtual-auto-fill
   visual-fill-column
   visual-regexp
-    # visual-regexp-steroids
+  (exclude visual-regexp-steroids)
   vline
   vterm
+  (exclude vterm-tmux)
   vulpea
   vundo
   w3m
   wat-mode
   web
   web-mode
-  web-server
-  websocket
   wgrep
-  # which-key
+  (exclude which-key)
   whitespace-cleanup-mode
   window-purpose
   word-count-mode
   writeroom-mode
-  # x86-lookup
-  # xeft
+  (exclude x86-lookup)
+  (exclude xeft)
   xr
   xray
   yaml-mode
-  # yaoddmuse
+  (exclude yaoddmuse)
   yasnippet
   z3-mode
   zoom

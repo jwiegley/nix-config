@@ -95,11 +95,11 @@ let
       # date = 2022-06-05T10:05:26-0700;
     };
 
-    # dired-plus = compileEmacsWikiFile {
-    #   name = "dired+.el";
-    #   sha256 = "sha256-Xr2vXSxAjJids2fePRxBBO8/2+pqv6o/4FTTKDNfPEM=";
-    #   # date = 2025-05-26T11:33:19-0700;
-    # };
+    dired-plus = compileEmacsWikiFile {
+      name = "dired+.el";
+      sha256 = "0gzvz7s3d0gjn4342jqq6rl0kaqzni3cl1jc690dhf2px7plhwyf";
+      # date = 2025-07-09T19:52:52-0700;
+    };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
       name = "erc-highlight-nicknames.el";
@@ -292,6 +292,12 @@ let
       '';
     };
 
+    citar-org-node = esuper.citar-org-node.overrideAttrs (attrs: {
+      buildInputs = attrs.buildInputs ++ (with eself; [
+        llama org-mem el-job
+      ]);
+    });
+
     dired-hist = compileEmacsFiles {
       name = "dired-hist";
       src = fetchFromGitHub {
@@ -300,6 +306,17 @@ let
         rev = "94b09260ac964e3d856c018d66af3214915dd826";
         sha256 = "0h5idb2q52yly8dcsrfr2prn20n3q2rhzk3ss5a0xj36i9wls275";
         # date = 2022-02-28T13:43:50-08:00;
+      };
+    };
+
+    doxymacs = compileEmacsFiles {
+      name = "doxymacs";
+      src = fetchFromGitHub {
+        owner = "dpom";
+        repo = "doxymacs";
+        rev = "a843eebe0f53c939d9792df3bbfca95661d31ece";
+        sha256 = "0py60glqgrx5sw6nmsskq6lhys01n9972gcq9vyq3hcwqvccp1cq";
+        # date = 2017-06-25T20:09:07+03:00;
       };
     };
 
@@ -340,7 +357,7 @@ let
         # date = 2025-03-25T14:41:25+01:00;
       };
       buildInputs = with eself; [
-        alert circe emojify oauth2 request websocket
+        alert circe emojify oauth2 request websocket dash s ts
       ];
     };
 
@@ -812,6 +829,15 @@ let
         # date = 2019-05-22T22:30:29-07:00;
       };
       buildInputs = with eself; [ emamux ];
+    };
+
+    org-checklist = compileEmacsFiles {
+      name = "org-checklist.el";
+      src = fetchurl {
+        url = "https://git.sr.ht/~bzg/org-contrib/blob/master/lisp/org-checklist.el";
+        sha256 = "03z9cklpcrnc0s0igi7jxz0aw7c97m9cwz7b1d8nfz29fws25cx9";
+        # date = "2025-07-09T20:55:10-0700";
+      };
     };
 
     org-extra-emphasis = compileEmacsFiles {
