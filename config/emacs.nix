@@ -40,7 +40,6 @@ with epkgs; [
   (exclude centaur-tabs)
   (exclude centered-cursor-mode)
   change-inner
-  (exclude chatgpt-shell)
   citar
   citar-embark
   (exclude citar-org-node)
@@ -68,7 +67,6 @@ with epkgs; [
   (exclude consult-git-log-grep)
   consult-hoogle
   (exclude consult-lsp)
-  (exclude consult-omni)
   consult-org-roam
   consult-projectile
   consult-yasnippet
@@ -88,7 +86,6 @@ with epkgs; [
   diffview
   diminish
   dired-hist
-  (exclude dired-plus)
   dired-rsync
   dired-subtree
   dired-toggle
@@ -335,6 +332,7 @@ with epkgs; [
   proof-general
   protobuf-mode
   python-mode
+  quick-peek
   rainbow-delimiters
   rainbow-mode
   redshank

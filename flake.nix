@@ -35,7 +35,7 @@
   outputs = inputs: with inputs; rec {
     darwinConfigurations =
       let
-        overlays = with inputs; [
+        overlays = [
           (final: prev:
             let
               # patchedNixpkgs = nixpkgs;
@@ -47,6 +47,10 @@
                     (builtins.fetchurl {
                       url = "https://github.com/NixOS/nixpkgs/pull/417516.diff";
                       sha256 = "1gh3m0n1c8rbng6silg7xd7n857yj2zch5ak5490qpc3w7wiqjqv";
+                    })
+                    (builtins.fetchurl {
+                      url = "https://github.com/NixOS/nixpkgs/pull/423799.diff";
+                      sha256 = "0dnzdyv9fk59rh9glh8rywwwpl0f0nziqny0dclx50g81khbxbwi";
                     })
                     ./overlays/emacs/patches/emacs30-macport.patch
                   ];
@@ -63,7 +67,20 @@
               #   }
               # );
             in {
-              inherit (pkgs) emacs30 emacs30-macport llama-swap;
+              inherit (pkgs)
+                # 417516
+                llama-swap
+                # 423799
+                elpaPackages
+                melpaPackages
+                manualPackages
+                elpaBuild
+                melpaBuild
+                trivialBuild
+                # emacs30-macport.patch
+                emacs30
+                emacs30-macport
+                ;
             })
           nurpkgs.overlays.default
           # mcp-servers-nix.overlays.default
