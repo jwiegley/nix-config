@@ -95,6 +95,7 @@ with epkgs; [
   docker
   docker-compose-mode
   dockerfile-mode
+  doxymacs
   (exclude dumb-jump)
   eager-state
   easky
