@@ -169,7 +169,7 @@ with epkgs; [
   highlight-quoted
   hl-line-plus
   (exclude hl-todo)
-  (exclude hydra)
+  hydra
   ialign
   (exclude iedit)
   (exclude iflipb)
@@ -213,6 +213,7 @@ with epkgs; [
   magit-popup
   magit-tbdiff
   magit-todos
+  major-mode-hydra
   malyon
   marginalia
   markdown-mode
@@ -259,13 +260,12 @@ with epkgs; [
   org-extra-emphasis
   (exclude org-fancy-priorities)
   (exclude org-gcal)
-  org-mem
   (exclude org-mem)
   org-mime
   (exclude org-modern)
   org-mru-clock
   (exclude org-msg)
-  org-node
+  (exclude org-node)
   org-noter
   org-pdftools
   org-pretty-table
@@ -282,7 +282,6 @@ with epkgs; [
   org-roam
   org-roam-ui
   org-sidebar
-  org-sql
   org-srs
   org-sticky-header
   org-super-agenda
@@ -328,6 +327,7 @@ with epkgs; [
   popup-ruler
   pp-c-l
   (exclude prescient)
+  pretty-hydra
   prodigy
   projectile
   proof-general

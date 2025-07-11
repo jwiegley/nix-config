@@ -50,7 +50,7 @@
                     })
                     (builtins.fetchurl {
                       url = "https://github.com/NixOS/nixpkgs/pull/423799.diff";
-                      sha256 = "0dnzdyv9fk59rh9glh8rywwwpl0f0nziqny0dclx50g81khbxbwi";
+                      sha256 = "14k0vhq4mc96c0bfhlc495dwslpm6p0ibrzi9bblz6w7fbprshya";
                     })
                     ./overlays/emacs/patches/emacs30-macport.patch
                   ];
