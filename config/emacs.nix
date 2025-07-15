@@ -110,6 +110,7 @@ with epkgs; [
   edit-var
   eglot
   eglot-booster
+  el-job
   elisp-depend
   elisp-docstring-mode
   elisp-slime-nav
@@ -260,6 +261,7 @@ with epkgs; [
   org-extra-emphasis
   (exclude org-fancy-priorities)
   (exclude org-gcal)
+  org-margin
   (exclude org-mem)
   org-mime
   (exclude org-modern)
@@ -374,7 +376,6 @@ with epkgs; [
   timeout
   tla-mode
   toc-org
-  (exclude tracking)
   transpose-mark
   tree-inspector
   treemacs

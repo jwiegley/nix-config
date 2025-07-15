@@ -446,6 +446,20 @@ let
       };
     };
 
+    org-margin = compileEmacsFiles {
+      name = "org-margin";
+      src = fetchFromGitHub {
+        owner = "rougier";
+        repo = "org-margin";
+        rev = "4013b59ff829903a7ab86b95593be71aa5c9b87d";
+        sha256 = "13x5568yfqm1lfmy29vcii2bdkjxjygmhslbr0fwgm2xq9rn63yv";
+        # date = 2024-01-15T11:05:11+01:00;
+      };
+      buildInputs = with eself; [
+        org
+      ];
+    };
+
     org-mem = compileEmacsFiles {
       name = "org-mem";
       src = fetchFromGitHub {

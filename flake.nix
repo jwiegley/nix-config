@@ -48,10 +48,6 @@
                       url = "https://github.com/NixOS/nixpkgs/pull/417516.diff";
                       sha256 = "1gh3m0n1c8rbng6silg7xd7n857yj2zch5ak5490qpc3w7wiqjqv";
                     })
-                    (builtins.fetchurl {
-                      url = "https://github.com/NixOS/nixpkgs/pull/423799.diff";
-                      sha256 = "14k0vhq4mc96c0bfhlc495dwslpm6p0ibrzi9bblz6w7fbprshya";
-                    })
                     ./overlays/emacs/patches/emacs30-macport.patch
                   ];
                 };
