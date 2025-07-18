@@ -8,7 +8,7 @@ with epkgs; [
   agda2-mode
   aggressive-indent
   aider
-  aio
+  (exclude aio)
   (exclude all-the-icons)
   (exclude anki-editor)
   aria2
@@ -92,7 +92,7 @@ with epkgs; [
   diredfl
   direnv
   discover-my-major
-  docker
+  (exclude docker)
   docker-compose-mode
   dockerfile-mode
   doxymacs
@@ -279,6 +279,7 @@ with epkgs; [
   (exclude org-recent-headings)
   (exclude org-recoll)
   org-remark
+  org-reverse-datetree
   org-review
   org-rich-yank
   org-roam
@@ -306,6 +307,7 @@ with epkgs; [
   ox-pandoc
   ox-slack
   (exclude ox-texinfo-plus)
+  ox-whatsapp
   package-lint
   pact-mode
   pandoc-mode

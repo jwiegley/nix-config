@@ -317,6 +317,17 @@ let
       };
     };
 
+    typo = compileEmacsFiles {
+      name = "typo";
+      src = fetchFromGitHub {
+        owner = "jorgenschaefer";
+        repo = "typoel";
+        rev = "173ebe4fc7ac38f344b16e6eaf41f79e38f20d57";
+        sha256 = "09835zlfzxby5lpz9njl705nqc2n2h2f7a4vpcyx89f5rb9qhy68";
+        # date = 2020-07-06T19:14:52+02:00;
+      };
+    };
+
     ultra-scroll-mac = compileEmacsFiles {
       name = "ultra-scroll-mac";
       src = fetchFromGitHub {
@@ -561,6 +572,17 @@ let
       };
     };
 
+    ox-whatsapp = compileEmacsFiles {
+      name = "ox-whatsapp";
+      src = fetchFromGitHub {
+        owner = "Hugo-Heagren";
+        repo = "ox-whatsapp";
+        rev = "9cdff80f3f8bb4dd5d70d772d489a8de575561af";
+        sha256 = "04r4z0cjv6jrjgyiyjqgiljnr751qqap3mbdjkwm3naf66wa32qr";
+        # date = 2024-03-03T14:54:20Z;
+      };
+    };
+
     # ########################################################################
 
     # pdf-tools = esuper.pdf-tools.overrideAttrs (old: {
@@ -643,6 +665,7 @@ let
                   {
                     inherit emacs;
                     inherit (super) elpaBuild melpaBuild trivialBuild;
+                    inherit (super) melpaPackages;
                   }))));
 
 in {
@@ -656,6 +679,7 @@ emacsEnv        = self.emacs30MacPortEnv;
 
 emacs30-macport =
   (pkgs.emacs30-macport.override {
+    withTreeSitter = false;
     withNativeCompilation = true;
   }).overrideAttrs(attrs: {
     configureFlags = attrs.configureFlags ++ [

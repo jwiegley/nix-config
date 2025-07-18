@@ -136,13 +136,13 @@ llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
 
 llama-swap =
 let
-  version = "137";
+  version = "139";
 
   src = super.fetchFromGitHub {
     owner = "mostlygeek";
     repo = "llama-swap";
     rev = "v${version}";
-    hash = "sha256-DyAbZMTy4gvmF8HnUJ5B4ypIqhL9MDS7zBzeQfapFD8=";
+    hash = "sha256-1N2IXESA/AtiEJCBQpuUayMzEYuJmN1PJ3c+mdT7RrM=";
   };
 
   ui = with super; buildNpmPackage (finalAttrs: {
@@ -171,7 +171,7 @@ let
 in
 with super; llama-swap.overrideAttrs(attrs: rec {
   inherit version src;
-  vendorHash = "sha256-nSdvqYVBBVIdoa991bLVwfHPGAO4OHzW8lEQPQ6cuMs=";
+  vendorHash = "sha256-5mmciFAGe8ZEIQvXejhYN+ocJL3wOVwevIieDuokhGU=";
   preBuild = ''
     cp -r ${ui}/ui_dist proxy/
   '';
@@ -187,28 +187,6 @@ with super; llama-swap.overrideAttrs(attrs: rec {
     mainProgram = "llama-swap";
   };
 });
-
-llama-swap-direct = with super; buildGoModule rec {
-  pname = "llama-swap";
-  version = "137";
-
-  vendorHash = "sha256-nSdvqYVBBVIdoa991bLVwfHPGAO4OHzW8lEQPQ6cuMs=";
-  src = fetchFromGitHub {
-    owner = "mostlygeek";
-    repo = "llama-swap";
-    rev = "v${version}";
-    hash = "sha256-DyAbZMTy4gvmF8HnUJ5B4ypIqhL9MDS7zBzeQfapFD8=";
-  };
-
-  doCheck = false;
-
-  meta = with lib; {
-    description = "llama-swap is a light weight, transparent proxy server that provides automatic model swapping to llama.cpp's server";
-    homepage = "https://github.com/mostlygeek/llama-swap";
-    license = licenses.mit;
-    maintainers = [ maintainers.jwiegley ];
-  };
-};
 
 mlx-lm = with self; with self.python3Packages; buildPythonApplication rec {
   pname = "mlx-lm";

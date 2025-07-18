@@ -132,6 +132,7 @@ in {
       { name = "firefox"; greedy = true; }
       "geektool"
       "grammarly-desktop"
+      "key-codes"
       "keyboard-maestro"
       "launchbar"
       "lectrote"
@@ -465,8 +466,7 @@ in {
             script = ''
               ${pkgs.llama-swap}/bin/llama-swap       \
               --listen "${ip-address}:8080"           \
-              --config ${home}/Models/llama-swap.yaml \
-              --watch-config
+              --config ${home}/Models/llama-swap.yaml
             '';
             serviceConfig.RunAtLoad = true;
             serviceConfig.KeepAlive = true;

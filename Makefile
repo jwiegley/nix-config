@@ -168,6 +168,7 @@ travel-ready:
 	    echo "Updating direnv on $(HOSTNAME) for ~/$$dir";	\
 	    (cd ~/$$dir &&					\
              rm -f .envrc .envrc.cache;				\
+             clean;						\
              if [[ $(HOSTNAME) == athena ]]; then		\
 	         $(NIX_CONF)/bin/de;				\
              elif [[ $(HOSTNAME) == hera ]]; then		\

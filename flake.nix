@@ -2,8 +2,8 @@
   description = "Darwin configuration";
 
   inputs = {
-    # nixpkgs.url = "git+file:///Users/johnw/Products/nixpkgs";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    # nixpkgs.url = "git+file:///Users/johnw/Products/nixpkgs";
 
     darwin = {
       url = "github:lnl7/nix-darwin";
@@ -46,7 +46,7 @@
                   patches = [
                     (builtins.fetchurl {
                       url = "https://github.com/NixOS/nixpkgs/pull/417516.diff";
-                      sha256 = "1gh3m0n1c8rbng6silg7xd7n857yj2zch5ak5490qpc3w7wiqjqv";
+                      sha256 = "0r3n2pdaq4fm8vdwzh4wnnqdy8svp2pny03jfk55zig9pvgacr93";
                     })
                     ./overlays/emacs/patches/emacs30-macport.patch
                   ];
