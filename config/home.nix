@@ -777,8 +777,18 @@ in {
 
         # Hera
 
-        hera1_thunderbolt = withIdentity (matchHost "hera" "192.168.2.1");
-        hera2_ethernet    = withIdentity (matchHost "hera" "192.168.50.5");
+        hera_thunderbolt = lib.hm.dag.entryBefore ["hera"]
+          (withIdentity (matchHost "hera" "192.168.2.1") // {
+             hostname = "192.168.2.1";
+             port = 22;
+             compression = false;
+           });
+        hera_ethernet    = lib.hm.dag.entryBefore ["hera"]
+          (withIdentity (matchHost "hera" "192.168.50.5") // {
+             hostname = "192.168.50.5";
+             port = 22;
+             compression = false;
+           });
 
         hera = withIdentity {
           hostname = external_host;
@@ -791,7 +801,12 @@ in {
 
         # Athena
 
-        athena1_ethernet = withIdentity (matchHost "athena" "192.168.50.235");
+        athena_ethernet = lib.hm.dag.entryBefore ["athena"]
+          (withIdentity (matchHost "athena" "192.168.50.235") // {
+             hostname = "192.168.50.235";
+             port = 22;
+             compression = false;
+           });
 
         athena = withIdentity {
           hostname = external_host;
@@ -809,9 +824,13 @@ in {
 
         # Vulcan
 
-        vulcan1_ethernet = withIdentity (matchHost "vulcan" "192.168.50.182") // {
-          user = "root";
-        };
+        vulcan_ethernet = lib.hm.dag.entryBefore ["vulcan"]
+          (withIdentity (matchHost "vulcan" "192.168.50.182") // {
+             user = "root";
+             hostname = "192.168.50.182";
+             port = 22;
+             compression = false;
+           });
 
         vulcan = withIdentity {
           user = "root";
@@ -819,9 +838,13 @@ in {
           port = 2203;
         };
 
-        tank1_ethernet = withIdentity (matchHost "tank" "192.168.50.182") // {
-          user = "root";
-        };
+        tank_ethernet = lib.hm.dag.entryBefore ["tank"]
+          (withIdentity (matchHost "tank" "192.168.50.182") // {
+             user = "root";
+             hostname = "192.168.50.182";
+             port = 22;
+             compression = false;
+           });
 
         tank = vulcan;
 
@@ -837,7 +860,7 @@ in {
         savannah.hostname  = "git.sv.gnu.org";
         fencepost.hostname = "fencepost.gnu.org";
 
-        savannah_gnu_org = withIdentity{
+        savannah_gnu_org = withIdentity {
           host = lib.concatStringsSep " " [
             "git.savannah.gnu.org"
             "git.sv.gnu.org"

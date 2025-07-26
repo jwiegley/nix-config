@@ -61,6 +61,7 @@ in [
   dnsutils
   dot2tex
   doxygen
+  du-dust
   eask
   emacs30Env
   emacs30MacPortEnv
