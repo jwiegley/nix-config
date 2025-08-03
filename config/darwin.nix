@@ -158,6 +158,7 @@ in {
       "ukelele"
       "unicodechecker"
       "virtual-ii"
+      "visual-studio-code"
       { name = "vivaldi"; greedy = true; }
       "vlc"
       "whatsapp"

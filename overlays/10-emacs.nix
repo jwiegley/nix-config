@@ -682,6 +682,7 @@ emacs30-macport =
     withTreeSitter = false;
     withNativeCompilation = true;
   }).overrideAttrs(attrs: {
+    env = attrs.env // { CFLAGS = "-fobjc-arc"; };
     configureFlags = attrs.configureFlags ++ [
       "--disable-gc-mark-trace"
     ];

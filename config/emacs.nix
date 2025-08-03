@@ -130,6 +130,7 @@ with epkgs; [
   eshell-z
   (exclude eval-expr)
   evil
+  exec-path-from-shell
   expand-region
   eyebrowse
   f
@@ -156,7 +157,7 @@ with epkgs; [
   gptel
   (exclude gptel-aibo)
   gptel-fn-complete
-  gptel-got
+  (exclude gptel-got)
   gptel-quick
   graphviz-dot-mode
   (exclude hammy)
