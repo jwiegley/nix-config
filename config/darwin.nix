@@ -131,6 +131,7 @@ in {
       "fantastical"
       { name = "firefox"; greedy = true; }
       "geektool"
+      "gog-galaxy"
       "grammarly-desktop"
       "key-codes"
       "keyboard-maestro"

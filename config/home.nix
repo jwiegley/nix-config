@@ -385,7 +385,7 @@ in {
     };
 
     zsh = rec {
-      dotDir = ".config/zsh";
+      dotDir = "${config.xdg.configHome}/zsh";
 
       enable = true;
       enableCompletion = false;
@@ -431,8 +431,8 @@ in {
         b      = "${pkgs.git}/bin/git b";
         l      = "${pkgs.git}/bin/git l";
         w      = "${pkgs.git}/bin/git w";
-        g      = "${pkgs.gitAndTools.hub}/bin/hub";
-        git    = "${pkgs.gitAndTools.hub}/bin/hub";
+        # g      = "${pkgs.gitAndTools.hub}/bin/hub";
+        # git    = "${pkgs.gitAndTools.hub}/bin/hub";
         ga     = "${pkgs.gitAndTools.git-annex}/bin/git-annex";
         good   = "${pkgs.git}/bin/git bisect good";
         bad    = "${pkgs.git}/bin/git bisect bad";
@@ -540,7 +540,7 @@ in {
 
     git = {
       enable = true;
-      package = pkgs.gitFull;
+      # package = pkgs.gitFull;
 
       inherit userName userEmail;
 
