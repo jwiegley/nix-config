@@ -122,6 +122,8 @@ in {
 
         ".emacs.d".source      = mkLink "${home}/src/dot-emacs";
         "dl".source            = mkLink "${home}/Downloads";
+
+        "News".source          = mkLink "${config.xdg.dataHome}/gnus/News";
       }
       // lib.optionalAttrs (hostname == "hera") {
         "Audio".source  = mkLink "/Volumes/ext/Audio";
@@ -350,7 +352,7 @@ in {
     };
 
     browserpass = {
-      enable = false;
+      enable = true;
       browsers = [ "firefox" ];
     };
 
@@ -780,19 +782,12 @@ in {
         hera_thunderbolt = lib.hm.dag.entryBefore ["hera"]
           (withIdentity (matchHost "hera" "192.168.2.1") // {
              hostname = "192.168.2.1";
-             port = 22;
-             compression = false;
-           });
-        hera_ethernet    = lib.hm.dag.entryBefore ["hera"]
-          (withIdentity (matchHost "hera" "192.168.50.5") // {
-             hostname = "192.168.50.5";
-             port = 22;
              compression = false;
            });
 
         hera = withIdentity {
-          hostname = external_host;
-          port = 2201;
+          hostname = "192.168.50.5";
+          compression = false;
         };
 
         deimos  = withIdentity (onHost "hera" "192.168.221.128");
@@ -801,50 +796,34 @@ in {
 
         # Athena
 
-        athena_ethernet = lib.hm.dag.entryBefore ["athena"]
-          (withIdentity (matchHost "athena" "192.168.50.235") // {
-             hostname = "192.168.50.235";
-             port = 22;
-             compression = false;
-           });
-
         athena = withIdentity {
-          hostname = external_host;
-          port = 2202;
+          hostname = "192.168.50.235";
+          compression = false;
         };
 
         phobos = withIdentity (onHost "athena" "192.168.50.111");
 
         # Clio
 
-        clio1_thunderbolt = withIdentity (matchHost "clio" "192.168.2.2");
-        clio2_wifi        = withIdentity (matchHost "clio" "192.168.50.112");
+        clio_thunderbolt = lib.hm.dag.entryBefore ["clio"]
+          (withIdentity (matchHost "clio" "192.168.2.2") // {
+             compression = false;
+           });
+
+        clio = withIdentity {
+          hostname = "192.168.50.112";
+          compression = false;
+        };
 
         neso = withIdentity (onHost "clio" "192.168.100.130");
 
         # Vulcan
 
-        vulcan_ethernet = lib.hm.dag.entryBefore ["vulcan"]
-          (withIdentity (matchHost "vulcan" "192.168.50.182") // {
-             user = "root";
-             hostname = "192.168.50.182";
-             port = 22;
-             compression = false;
-           });
-
         vulcan = withIdentity {
           user = "root";
-          hostname = external_host;
-          port = 2203;
+          hostname = "192.168.50.182";
+          compression = false;
         };
-
-        tank_ethernet = lib.hm.dag.entryBefore ["tank"]
-          (withIdentity (matchHost "tank" "192.168.50.182") // {
-             user = "root";
-             hostname = "192.168.50.182";
-             port = 22;
-             compression = false;
-           });
 
         tank = vulcan;
 
@@ -853,7 +832,7 @@ in {
         router = {
           hostname = "192.168.50.1";
           user = "router";
-          port = 2204;
+          compression = false;
         };
 
         elpa = { hostname = "elpa.gnu.org"; user = "root"; };

@@ -309,6 +309,7 @@ with epkgs; [
   ox-slack
   (exclude ox-texinfo-plus)
   ox-whatsapp
+  p-search
   package-lint
   pact-mode
   pandoc-mode
