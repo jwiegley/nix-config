@@ -60,6 +60,9 @@ in [
   dnstracer
   dnsutils
   dot2tex
+  dovecot
+  # dovecot_pigeonhole
+  # dovecot_fts_xapian
   doxygen
   du-dust
   eask

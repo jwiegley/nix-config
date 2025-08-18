@@ -524,7 +524,120 @@ in {
           serviceConfig.RunAtLoad = true;
           serviceConfig.KeepAlive = true;
         };
+
+        dovecot = {
+          command = "${pkgs.dovecot}/libexec/dovecot/imap -c /etc/dovecot/dovecot.conf";
+          serviceConfig = {
+            WorkingDirectory = "${pkgs.dovecot}/lib";
+            inetdCompatibility.Wait = "nowait";
+            Sockets.Listeners = {
+              SockNodeName = "127.0.0.1";
+              SockServiceName = "9143";
+            };
+          };
+        };
       };
     };
+  };
+
+  environment.etc = {
+    "dovecot/modules".source = "${pkgs.dovecot.out}/lib/dovecot";
+    "dovecot/dovecot.conf".text = ''
+      base_dir = ${pkgs.dovecot}/libexec/dovecot
+      default_login_user = johnw
+      default_internal_user = johnw
+      auth_mechanisms = plain login
+      disable_plaintext_auth = no
+      lda_mailbox_autocreate = yes
+      log_path = syslog
+      mail_gid = 20
+      mail_location = mdbox:${home}/doc/Mailboxes
+      login_plugin_dir = ${pkgs.dovecot.out}/lib/dovecot
+      mail_plugin_dir = ${pkgs.dovecot.out}/lib/dovecot
+      mail_plugins =
+      # mail_plugins = fts fts_lucene zlib
+      # mail_plugins = fts fts_xapian zlib
+      mail_uid = 501
+      postmaster_address = postmaster@newartisans.com
+      protocols = imap
+      # sendmail_path = /usr/bin/sendmail
+      ssl = no
+      syslog_facility = mail
+
+      log_path = /var/log/dovecot.log
+      # If not set, use the value from log_path
+      info_log_path = /var/log/dovecot-info.log
+      # If not set, use the value from info_log_path
+      debug_log_path = /var/log/dovecot-debug.log
+
+      # protocol lda {
+      #   mail_plugins = $mail_plugins sieve
+      # }
+
+      userdb {
+        driver = prefetch
+      }
+
+      passdb {
+        driver = static
+        args = uid=501 gid=20 home=${home} password=pass
+      }
+
+      namespace {
+        type = private
+        separator = .
+        prefix =
+        location =
+        inbox = yes
+        subscriptions = yes
+      }
+
+      service auth {
+        unix_listener auth-userdb {
+          mode = 0644
+          user = johnw
+          group = johnw
+        }
+      }
+
+      # plugin {
+      #   fts = lucene
+      #   fts_squat = partial=4 full=10
+      #
+      #   fts_lucene = whitespace_chars=@.
+      #   fts_autoindex = no
+      #
+      #   zlib_save_level = 6
+      #   zlib_save = gz
+      # }
+
+      # plugin {
+      #   fts = xapian
+      #   fts_xapian = partial=3 full=20
+
+      #   fts_autoindex = yes
+      #   fts_enforced = body
+
+      #   fts_autoindex_exclude = \Trash
+
+      #   # Index attachements
+      #   # fts_decoder = decode2text
+      # }
+
+      service indexer-worker {
+        executable = ${pkgs.dovecot}/libexec/dovecot/indexer-worker
+        vsz_limit = 2G
+      }
+
+      service decode2text {
+        executable = script ${pkgs.dovecot}/libexec/dovecot/decode2text.sh
+      }
+
+      # plugin {
+      #   sieve_extensions = +editheader
+      #   sieve = ${home}/doc/dovecot.sieve
+      #   sieve_dir = ${home}/doc/sieve
+      # }
+    '';
   };
 }
