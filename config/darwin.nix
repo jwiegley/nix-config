@@ -90,7 +90,7 @@ in {
 
     casks = [
       "carbon-copy-cloner"
-      "docker"
+      "docker-desktop"
       "drivedx"
       "iterm2"
       "vmware-fusion"
