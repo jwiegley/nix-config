@@ -117,6 +117,8 @@ in {
       "audacity"
       { name = "brave-browser"; greedy = true; }
       "choosy"
+      "claude"
+      "claude-code"
       "corelocationcli"
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
