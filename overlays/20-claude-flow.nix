@@ -1,0 +1,49 @@
+self: super: {
+
+claude-flow = buildNpmPackage rec {
+  pname = "claude-flow";
+  version = "2.0.0-alpha";
+
+  nodejs = nodejs_20; # required for sandboxed Nix builds on Darwin
+
+  src = fetchzip {
+    url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
+    hash = "sha256-MTugT72wrsUHQHUYx6HZPoE4kt1krYOhfNSSoOc/GjI=";
+  };
+
+  npmDepsHash = "sha256-1GBwoximrwJX5F7lp5KUXtt6uPABta8FBbYYoJ2Y7x8=";
+
+  postPatch = ''
+    cp ${./package-lock.json} package-lock.json
+  '';
+
+  dontNpmBuild = true;
+
+  AUTHORIZED = "1";
+
+  # `claude-code` tries to auto-update by default, this disables that functionality.
+  # https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview#environment-variables
+  # The DEV=true env var causes claude to crash with `TypeError: window.WebSocket is not a constructor`
+  postInstall = ''
+    wrapProgram $out/bin/claude \
+      --set DISABLE_AUTOUPDATER 1 \
+      --unset DEV
+  '';
+
+  passthru.updateScript = ./update.sh;
+
+  meta = {
+    description = "Agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster";
+    homepage = "https://github.com/anthropics/claude-code";
+    downloadPage = "https://www.npmjs.com/package/@anthropic-ai/claude-code";
+    license = lib.licenses.unfree;
+    maintainers = with lib.maintainers; [
+      malo
+      markus1189
+      omarjatoi
+    ];
+    mainProgram = "claude";
+  };
+};
+
+}
