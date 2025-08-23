@@ -100,24 +100,24 @@ in {
 
         ".aider".source        = mkLink "${config.xdg.configHome}/aider";
         ".cups".source         = mkLink "${config.xdg.configHome}/cups";
+        ".claude".source       = mkLink "${config.xdg.configHome}/claude";
         ".dbvis".source        = mkLink "${config.xdg.configHome}/dbvis";
         ".gist".source         = mkLink "${config.xdg.configHome}/gist/api_key";
         ".jupyter".source      = mkLink "${config.xdg.configHome}/jupyter";
         ".kube".source         = mkLink "${config.xdg.configHome}/kube";
+        ".mitmproxy".source    = mkLink "${config.xdg.configHome}/mitmproxy";
         ".sage".source         = mkLink "${config.xdg.configHome}/sage";
         ".jq".source           = mkLink "${config.xdg.configHome}/jq/config";
         ".mbsyncrc".source     = mkLink "${config.xdg.configHome}/mbsync/config";
         ".parallel".source     = mkLink "${config.xdg.configHome}/parallel";
 
-        # ".ollama".source       = mkLink "${config.xdg.configHome}/ollama";
-        # "${config.xdg.configHome}/ollama/models".source =
-        #   mkLink "${config.xdg.dataHome}/ollama/models";
-
         ".cargo".source        = mkLink "${config.xdg.dataHome}/cargo";
         ".diffusionbee".source = mkLink "${config.xdg.dataHome}/diffusionbee";
         ".docker".source       = mkLink "${config.xdg.dataHome}/docker";
-        # ".lmstudio".source     = mkLink "${config.xdg.dataHome}/lmstudio";
+        ".viminfo".source      = mkLink "${config.xdg.dataHome}/vim/info";
+        ".vscode".source       = mkLink "${config.xdg.dataHome}/vscode";
         ".w3m".source          = mkLink "${config.xdg.dataHome}/w3m";
+        ".wget-hsts".source    = mkLink "${config.xdg.dataHome}/wget/hsts";
 
         ".thinkorswim".source  = mkLink "${config.xdg.cacheHome}/thinkorswim";
 

@@ -251,6 +251,8 @@ in [
        isort                    # Python code formatter
        black                    # Python code formatter
        flake8                   # Python code linter
+       huggingface-hub
+       hf-xet
      ])))
   pyright                       # LSP server for Python
   qdrant
@@ -360,6 +362,7 @@ in [
   # mcp-server-qdrant
   qdrant
   qdrant-web-ui
+  task-master-ai
 
   (exe gitAndTools.git-annex)
   gitAndTools.git-annex-remote-rclone
