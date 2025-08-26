@@ -16,3 +16,6 @@
 [submodule "nix-darwin"]
 	path = nix-darwin
 	url = git@github.com:LnL7/nix-darwin.git
+[submodule "nixos"]
+	path = nixos
+	url = vulcan:/etc/nixos

@@ -120,6 +120,8 @@ in {
       "claude"
       "claude-code"
       "corelocationcli"
+      "cursor"
+      "cursor-cli"
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
       "devonagent"
@@ -157,6 +159,7 @@ in {
       "suspicious-package"
       "telegram"
       "thinkorswim"
+      "tla+-toolbox"
       "tor-browser"
       "ukelele"
       "unicodechecker"

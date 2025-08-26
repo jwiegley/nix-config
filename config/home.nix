@@ -24,6 +24,8 @@ in {
       ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";
       B2_ACCOUNT_INFO    = "${config.xdg.configHome}/backblaze-b2/account_info";
       CABAL_CONFIG       = "${config.xdg.configHome}/cabal/config";
+      CARGO_HOME         = "${config.xdg.dataHome}/cargo";
+      CLICOLOR           = "yes";
       EDITOR             = "${emacsclient}";
       EMACSVER           = "30MacPort";
       EMACS_SERVER_FILE  = "${emacs-server}";
@@ -41,15 +43,16 @@ in {
       NIX_CONF           = "${home}/src/nix";
       NLTK_DATA          = "${config.xdg.dataHome}/nltk";
       PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
+      PROFILE_DIR        = "${config.home.profileDirectory}";
+      RUSTUP_HOME        = "${config.xdg.dataHome}/rustup";
       SCREENRC           = "${config.xdg.configHome}/screen/config";
-      STARDICT_DATA_DIR  = "${config.xdg.dataHome}/dictionary";
       SSL_CERT_FILE      = "${ca-bundle_crt}";
+      STARDICT_DATA_DIR  = "${config.xdg.dataHome}/dictionary";
       TIKTOKEN_CACHE_DIR = "${config.xdg.cacheHome}/tiktoken";
       TRAVIS_CONFIG_PATH = "${config.xdg.configHome}/travis";
+      TZ                 = "PST8PDT";
       VAGRANT_HOME       = "${config.xdg.dataHome}/vagrant";
       WWW_HOME           = "${config.xdg.cacheHome}/w3m";
-      TZ                 = "PST8PDT";
-      PROFILE_DIR        = "${config.home.profileDirectory}";
 
       RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone";
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
@@ -101,6 +104,7 @@ in {
         ".aider".source        = mkLink "${config.xdg.configHome}/aider";
         ".cups".source         = mkLink "${config.xdg.configHome}/cups";
         ".claude".source       = mkLink "${config.xdg.configHome}/claude";
+        ".cursor".source       = mkLink "${config.xdg.configHome}/cursor";
         ".dbvis".source        = mkLink "${config.xdg.configHome}/dbvis";
         ".gist".source         = mkLink "${config.xdg.configHome}/gist/api_key";
         ".jupyter".source      = mkLink "${config.xdg.configHome}/jupyter";
@@ -111,7 +115,6 @@ in {
         ".mbsyncrc".source     = mkLink "${config.xdg.configHome}/mbsync/config";
         ".parallel".source     = mkLink "${config.xdg.configHome}/parallel";
 
-        ".cargo".source        = mkLink "${config.xdg.dataHome}/cargo";
         ".diffusionbee".source = mkLink "${config.xdg.dataHome}/diffusionbee";
         ".docker".source       = mkLink "${config.xdg.dataHome}/docker";
         ".viminfo".source      = mkLink "${config.xdg.dataHome}/vim/info";

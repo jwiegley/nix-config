@@ -93,7 +93,7 @@ in [
   gitAndTools.ghi
   gitAndTools.gist
   gitAndTools.git-absorb
-  gitAndTools.git-branchless
+  # gitAndTools.git-branchless
   gitAndTools.git-branchstack
   gitAndTools.git-cliff
   gitAndTools.git-crypt
@@ -244,7 +244,7 @@ in [
        numpy
        requests
        stdenv
-       orgparse
+       # orgparse
        basedpyright
        autoflake
        pylint
