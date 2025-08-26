@@ -117,7 +117,6 @@ in {
 
         ".diffusionbee".source = mkLink "${config.xdg.dataHome}/diffusionbee";
         ".docker".source       = mkLink "${config.xdg.dataHome}/docker";
-        ".viminfo".source      = mkLink "${config.xdg.dataHome}/vim/info";
         ".vscode".source       = mkLink "${config.xdg.dataHome}/vscode";
         ".w3m".source          = mkLink "${config.xdg.dataHome}/w3m";
         ".wget-hsts".source    = mkLink "${config.xdg.dataHome}/wget/hsts";
