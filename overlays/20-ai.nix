@@ -309,4 +309,36 @@ task-master-ai = with super; buildNpmPackage (finalAttrs: {
   };
 });
 
+rustdocs-mcp-server = with super; rustPlatform.buildRustPackage rec {
+  pname = "rustdocs-mcp-server";
+  version = "1.3.1";
+
+  src = fetchFromGitHub {
+    owner = "Govcraft";
+    repo = "rust-docs-mcp-server";
+    rev = "v${version}";
+    hash = "sha256-jSa4qKZEtZZvYfoRReGDDqH039RH/7Dimo3jmcnnwak=";
+  };
+
+  cargoHash = "sha256-iw7dRzwH42HBj2r9y5IHHKLmER7QkyFzLjh7Q+dNMao=";
+
+  nativeBuildInputs = [
+    pkg-config
+    perl
+    openssl.dev
+  ];
+
+  meta = with lib; {
+    description = ''
+      Fetches the documentation for a specified Rust crate, generates
+      embeddings for the content, and provides an MCP tool to answer questions
+      about the crate based on the documentation context.
+    '';
+    homepage = "https://github.com/Govcraft/rust-docs-mcp-server";
+    license = licenses.mit;
+    maintainers = with maintainers; [ jwiegley ];
+    mainProgram = "rustdocs_mcp_server";
+  };
+};
+
 }

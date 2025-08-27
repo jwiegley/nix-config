@@ -14,11 +14,13 @@ let home           = config.home.homeDirectory;
     ca-bundle_crt  = "${ca-bundle_path}/ca-bundle.crt";
     emacs-server   = "${tmpdir}/johnw-emacs/server";
     emacsclient    = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
+
+    packages       = import ./packages.nix args;
 in {
   home = {
     stateVersion = "23.11";
 
-    packages = import ./packages.nix args;
+    packages = packages.package-list;
 
     sessionVariables = {
       ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";
@@ -80,6 +82,7 @@ in {
       "/usr/local/bin"
       "/opt/homebrew/bin"
       "${home}/.local/bin"
+      "${pkgs.emacs30-macport}/bin"
       # "${config.xdg.dataHome}/lmstudio/bin"
     ];
 
@@ -834,6 +837,7 @@ in {
 
         router = {
           hostname = "192.168.50.1";
+          port = 2204;
           user = "router";
           compression = false;
         };
