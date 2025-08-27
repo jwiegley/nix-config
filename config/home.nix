@@ -749,14 +749,7 @@ in {
 
     ssh = {
       enable = true;
-
-      controlMaster       = "auto";
-      controlPath         = "${tmpdir}/ssh-%u-%r@%h:%p";
-      controlPersist      = "1800";
-      forwardAgent        = true;
-      serverAliveInterval = 60;
-      hashKnownHosts      = true;
-      userKnownHostsFile  = "${config.xdg.configHome}/ssh/known_hosts";
+      enableDefaultConfig = false;
 
       matchBlocks =
         let
@@ -798,7 +791,10 @@ in {
 
         deimos  = withIdentity (onHost "hera" "192.168.221.128");
         simon   = withIdentity (onHost "hera" "172.16.194.158");
-        minerva = withIdentity (onHost "hera" "192.168.50.117");
+        minerva = withIdentity {
+          hostname = "192.168.199.128";
+          compression = false;
+        };
 
         # Athena
 
@@ -880,8 +876,17 @@ in {
           };
         };
 
-        keychain = {
+        defaults = {
           host = "*";
+
+          controlPersist      = "1800";
+          controlPath         = "${tmpdir}/ssh-%u-%r@%h:%p";
+          controlMaster       = "auto";
+          userKnownHostsFile  = "${config.xdg.configHome}/ssh/known_hosts";
+          hashKnownHosts      = true;
+          serverAliveInterval = 60;
+          forwardAgent        = true;
+
           extraOptions = {
             UseKeychain    = "yes";
             AddKeysToAgent = "yes";

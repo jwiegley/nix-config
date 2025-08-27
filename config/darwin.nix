@@ -157,6 +157,7 @@ in {
       "spamsieve"
       "steam"
       "suspicious-package"
+      "sweet-home3d"
       "telegram"
       "thinkorswim"
       "tla+-toolbox"
