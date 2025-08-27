@@ -79,10 +79,10 @@ in {
     };
 
     sessionPath = [
+      "${home}/src/scripts"
+      "${home}/.local/bin"
       "/usr/local/bin"
       "/opt/homebrew/bin"
-      "${home}/.local/bin"
-      "${pkgs.emacs30-macport}/bin"
       # "${config.xdg.dataHome}/lmstudio/bin"
     ];
 
