@@ -92,7 +92,7 @@ with epkgs; [
   diredfl
   direnv
   discover-my-major
-  (exclude docker)
+  docker
   docker-compose-mode
   dockerfile-mode
   doxymacs

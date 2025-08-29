@@ -47,21 +47,12 @@
                     (builtins.fetchurl {
                       url = "https://github.com/NixOS/nixpkgs/pull/417516.diff";
                       sha256 = "0r3n2pdaq4fm8vdwzh4wnnqdy8svp2pny03jfk55zig9pvgacr93";
+                      # date = "2025-08-28T11:57:35-0700";
                     })
                     ./overlays/emacs/patches/emacs30-macport.patch
                   ];
                 };
               pkgs = import patchedNixpkgs { inherit (prev) system; };
-              # pkgs = (import patchedNixpkgs { inherit (prev) system; }).extend (
-              #   _final: prev: {
-              #     ld64 = prev.ld64.overrideAttrs (o: {
-              #       patches = o.patches ++ [./overlays/Dedupe-RPATH-entries.patch];
-              #     });
-              #     libarchive = prev.libarchive.overrideAttrs (_old: {
-              #       doCheck = false;
-              #     });
-              #   }
-              # );
             in {
               inherit (pkgs)
                 # 417516
@@ -73,7 +64,6 @@
                 elpaBuild
                 melpaBuild
                 trivialBuild
-                # emacs30-macport.patch
                 emacs30
                 emacs30-macport
                 ;
