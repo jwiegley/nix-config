@@ -406,7 +406,8 @@ in {
         save       = 500000;
         path       = "${config.xdg.configHome}/zsh/history";
         ignoreDups = true;
-        share      = false;
+        share      = true;
+        append     = true;
         extended   = true;
       };
 
