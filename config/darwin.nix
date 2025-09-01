@@ -120,8 +120,8 @@ in {
       "claude"
       "claude-code"
       "corelocationcli"
-      "cursor"
-      "cursor-cli"
+      # "cursor"
+      # "cursor-cli"
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
       "devonagent"
