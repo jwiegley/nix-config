@@ -21,10 +21,10 @@
       url = "github:nix-community/NUR";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    betterfox = {
-      url = "github:HeitorAugustoLN/betterfox-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    #betterfox = {
+    #  url = "github:HeitorAugustoLN/betterfox-nix";
+    #  inputs.nixpkgs.follows = "nixpkgs";
+    #};
     # jww (2025-07-07): python3.13-readabilipy-0.3.0 fails to build
     # mcp-servers-nix = {
     #   url = "github:natsukium/mcp-servers-nix";
@@ -83,9 +83,9 @@
               home-manager = {
                 useGlobalPkgs = true;
                 useUserPackages = true;
-                sharedModules = [
-                  inputs.betterfox.homeManagerModules.betterfox
-                ];
+                #sharedModules = [
+                #  inputs.betterfox.homeManagerModules.betterfox
+                #];
                 users.johnw = import ./config/home.nix;
 
                 backupFileExtension = "hm-bak";

@@ -1,5 +1,5 @@
 diff --git c/pkgs/applications/editors/emacs/default.nix w/pkgs/applications/editors/emacs/default.nix
-index cc604b222f32..75461dc60c78 100644
+index 1ac714c15575..a564fc836516 100644
 --- c/pkgs/applications/editors/emacs/default.nix
 +++ w/pkgs/applications/editors/emacs/default.nix
 @@ -13,6 +13,7 @@ lib.makeScope pkgs.newScope (
@@ -7,7 +7,7 @@ index cc604b222f32..75461dc60c78 100644
        inherit (pkgs)
          fetchFromBitbucket
 +        fetchFromGitHub
-         fetchFromSavannah
+         fetchzip
          ;
      };
 @@ -31,6 +32,6 @@ lib.makeScope pkgs.newScope (
@@ -49,7 +49,7 @@ index 64c65bd90f88..66accdd04faf 100644
  #define NOESCAPE_NOOP_H_
  
 diff --git c/pkgs/applications/editors/emacs/make-emacs.nix w/pkgs/applications/editors/emacs/make-emacs.nix
-index abb61a2a228c..704d4b385844 100644
+index b9f75464c793..2106053bbf18 100644
 --- c/pkgs/applications/editors/emacs/make-emacs.nix
 +++ w/pkgs/applications/editors/emacs/make-emacs.nix
 @@ -13,7 +13,7 @@
@@ -61,7 +61,7 @@ index abb61a2a228c..704d4b385844 100644
    autoreconfHook,
    cairo,
    dbus,
-@@ -195,7 +195,7 @@ mkDerivation (finalAttrs: {
+@@ -190,7 +190,7 @@ mkDerivation (finalAttrs: {
                  ]
                  ++ lib.optionals stdenv.hostPlatform.isDarwin [
                    # The linker needs to know where to find libSystem on Darwin.
@@ -71,7 +71,7 @@ index abb61a2a228c..704d4b385844 100644
                )
              )
 diff --git c/pkgs/applications/editors/emacs/sources.nix w/pkgs/applications/editors/emacs/sources.nix
-index c8bea20543b1..ea2f4be77c57 100644
+index d3fb3da3b599..629420d960ad 100644
 --- c/pkgs/applications/editors/emacs/sources.nix
 +++ w/pkgs/applications/editors/emacs/sources.nix
 @@ -1,6 +1,7 @@
@@ -79,7 +79,7 @@ index c8bea20543b1..ea2f4be77c57 100644
    lib,
    fetchFromBitbucket,
 +  fetchFromGitHub,
-   fetchFromSavannah,
+   fetchzip,
  }:
  
 @@ -32,8 +33,8 @@ let
@@ -93,7 +93,7 @@ index c8bea20543b1..ea2f4be77c57 100644
                repo = "emacs-mac";
                inherit rev hash;
              }
-@@ -89,7 +90,9 @@ let
+@@ -88,7 +89,9 @@ let
                matthewbauer
                panchoh
              ];
@@ -104,7 +104,7 @@ index c8bea20543b1..ea2f4be77c57 100644
            }
            .${variant};
          platforms =
-@@ -122,24 +125,14 @@ in
+@@ -117,25 +120,13 @@ in
      ];
    });
  
@@ -116,9 +116,7 @@ index c8bea20543b1..ea2f4be77c57 100644
      variant = "macport";
 -    rev = "emacs-29.4-mac-10.1";
 -    hash = "sha256-8OQ+fon9tclbh/eUJ09uqKfMaz9M77QnLIp2R8QB6Ic=";
-+    rev = "610cc8270ce72f3f6dbdef2d0e1e0da7a56bcf24";
-+    hash = "sha256-gbBSEM+z1U/IJ6dHtkA3afjtUID/iCXFQX8Q8frGPrA=";
-     patches = fetchpatch: [
+-    patches = fetchpatch: [
 -      # CVE-2024-53920
 -      (fetchpatch {
 -        url = "https://gitweb.gentoo.org/proj/emacs-patches.git/plain/emacs/29.4/07_all_trusted-content.patch?id=f24370de4de0a37304958ec1569d5c50c1745b7f";
@@ -130,15 +128,18 @@ index c8bea20543b1..ea2f4be77c57 100644
 -        url = "https://gitweb.gentoo.org/proj/emacs-patches.git/plain/emacs/29.4/06_all_man.patch?id=f24370de4de0a37304958ec1569d5c50c1745b7f";
 -        hash = "sha256-Vdf6GF5YmGoHTkxiD9mdYH0hgvfovZwrqYN1NQ++U1w=";
 -      })
-+      ./macport-stdbool.patch
-     ];
+-    ];
++    rev = "emacs-macs-30_1_exp";
++    hash = "sha256-dDkKSUfxPCWiF+MXQBY21npjZ6LZL6IG6GPx5AptegI=";
++    patches = _: [ ./macport-stdbool.patch ];
  
      meta.knownVulnerabilities = [ ];
+   });
 diff --git c/pkgs/top-level/aliases.nix w/pkgs/top-level/aliases.nix
-index c69ff6e49ecf..a00c0e88814f 100644
+index c47470549d1e..4d9ddd5ec72c 100644
 --- c/pkgs/top-level/aliases.nix
 +++ w/pkgs/top-level/aliases.nix
-@@ -612,6 +612,7 @@ mapAliases {
+@@ -829,6 +829,7 @@ mapAliases {
    emacs29-gtk3 = throw "Emacs 29 is removed due to CVEs which are fixed in Emacs 30"; # Added 2025-03-03
    emacs29-nox = throw "Emacs 29 is removed due to CVEs which are fixed in Emacs 30"; # Added 2025-03-03
    emacs29-pgtk = throw "Emacs 29 is removed due to CVEs which are fixed in Emacs 30"; # Added 2025-03-03
@@ -147,10 +148,10 @@ index c69ff6e49ecf..a00c0e88814f 100644
    emacsNativeComp = emacs; # Added 2022-06-08
    emacsWithPackages = throw "'emacsWithPackages' has been renamed to/replaced by 'emacs.pkgs.withPackages'"; # Converted to throw 2024-10-17
 diff --git c/pkgs/top-level/all-packages.nix w/pkgs/top-level/all-packages.nix
-index af23783e8e85..d390108b2baf 100644
+index 0f58b6d76629..ddd639580f3c 100644
 --- c/pkgs/top-level/all-packages.nix
 +++ w/pkgs/top-level/all-packages.nix
-@@ -12072,10 +12072,10 @@ with pkgs;
+@@ -11492,10 +11492,10 @@ with pkgs;
      emacs30-nox
      emacs30-pgtk
  

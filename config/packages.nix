@@ -66,9 +66,9 @@
     doxygen
     du-dust
     eask
-    emacs30Env
+    # emacs30Env
     emacs30MacPortEnv
-    emacsHEADEnv
+    # emacsHEADEnv
     emacs-lsp-booster
     entr
     exiv2

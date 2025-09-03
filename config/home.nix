@@ -485,7 +485,6 @@ in {
             export PS1='$ '
         else
             . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
-            . ${pkgs.zsh-git-prompt}/share/zsh-git-prompt/zshrc.sh
 
             # sudo /bin/launchctl limit maxfiles 524288 524288
             # ulimit -n 65536

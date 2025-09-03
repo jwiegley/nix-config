@@ -126,16 +126,16 @@ in {
       "dbvisualizer"
       "devonagent"
       "devonthink"
-      { name = "thebrowsercompany-dia"; greedy = true; }
+      # { name = "thebrowsercompany-dia"; greedy = true; }
       "discord"
-      { name = "duckduckgo"; greedy = true; }
+      # { name = "duckduckgo"; greedy = true; }
       "dungeon-crawl-stone-soup-tiles"
       "element"
       "expandrive"
       "fantastical"
       { name = "firefox"; greedy = true; }
       "geektool"
-      "gog-galaxy"
+      # "gog-galaxy"
       "grammarly-desktop"
       "key-codes"
       "keyboard-maestro"
@@ -157,10 +157,10 @@ in {
       "spamsieve"
       "steam"
       "suspicious-package"
-      "sweet-home3d"
+      # "sweet-home3d"
       "telegram"
       "thinkorswim"
-      "tla+-toolbox"
+      # "tla+-toolbox"
       "tor-browser"
       "ukelele"
       "unicodechecker"
