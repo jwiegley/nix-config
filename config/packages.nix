@@ -345,26 +345,22 @@
     gguf-tools
     openmpi
     claude-code
-    github-mcp-server
-    rustdocs-mcp-server
-    # mcp-server-fetch
-    # mcp-server-filesystem
-    # (hiPrio mcp-server-sequential-thinking)
-    # mcp-server-memory
-    # mcp-server-brave-search
-    # mcp-server-gdrive
-    # mcp-server-git
-    # mcp-server-github
-    # mcp-server-google-maps
-    # mcp-server-postgres
-    # mcp-server-slack
-    # mcp-server-sqlite
-    # mcp-server-time
-    # mcp-server-qdrant
     qdrant
     qdrant-web-ui
     task-master-ai
+    rustdocs-mcp-server
   
+    # mcp-servers-nix
+    context7-mcp
+    playwright-mcp
+    github-mcp-server
+    # mcp-server-filesystem
+    # mcp-server-git
+    mcp-server-memory
+    (hiPrio mcp-server-sequential-thinking)
+    mcp-server-time
+    # mcp-server-fetch
+
     (exe gitAndTools.git-annex)
     gitAndTools.git-annex-remote-rclone
   ];

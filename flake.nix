@@ -25,11 +25,10 @@
     #  url = "github:HeitorAugustoLN/betterfox-nix";
     #  inputs.nixpkgs.follows = "nixpkgs";
     #};
-    # jww (2025-07-07): python3.13-readabilipy-0.3.0 fails to build
-    # mcp-servers-nix = {
-    #   url = "github:natsukium/mcp-servers-nix";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
+    mcp-servers-nix = {
+      url = "github:natsukium/mcp-servers-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs: with inputs; rec {
@@ -69,7 +68,7 @@
                 ;
             })
           nurpkgs.overlays.default
-          # mcp-servers-nix.overlays.default
+          mcp-servers-nix.overlays.default
         ];
         configure = hostname: system: darwin.lib.darwinSystem {
           inherit inputs system;

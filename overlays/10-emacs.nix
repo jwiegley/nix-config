@@ -679,12 +679,19 @@ emacsEnv        = self.emacs30MacPortEnv;
 
 emacs30-macport =
   (pkgs.emacs30-macport.override {
-    withTreeSitter = false;
+    srcRepo = true;
+    withTreeSitter = true;
     withNativeCompilation = true;
   }).overrideAttrs(attrs: {
     env = attrs.env // { CFLAGS = "-fobjc-arc"; };
     configureFlags = attrs.configureFlags ++ [
       "--disable-gc-mark-trace"
+    ];
+    nativeBuildInputs = attrs.nativeBuildInputs ++ [
+      pkgs.autoreconfHook
+      pkgs.autoconf
+      pkgs.automake
+      pkgs.pkg-config
     ];
   });
 emacs30MacPortPackages   = self.emacs30MacPortPackagesNg;
