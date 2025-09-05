@@ -157,6 +157,7 @@ in {
       "spamsieve"
       "steam"
       "suspicious-package"
+      "swiftdefaultappsprefpane"
       # "sweet-home3d"
       "telegram"
       "thinkorswim"

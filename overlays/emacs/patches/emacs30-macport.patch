@@ -10,14 +10,15 @@ index 1ac714c15575..a564fc836516 100644
          fetchzip
          ;
      };
-@@ -31,6 +32,6 @@ lib.makeScope pkgs.newScope (
+@@ -31,7 +32,7 @@ lib.makeScope pkgs.newScope (
        withPgtk = true;
      };
  
--    emacs29-macport = callPackage (self.sources.emacs29-macport) inheritedArgs;
-+    emacs30-macport = callPackage (self.sources.emacs30-macport) inheritedArgs;
-   }
- )
+-    emacs29-macport = callPackage (self.sources.emacs29-macport) (
++    emacs30-macport = callPackage (self.sources.emacs30-macport) (
+       inheritedArgs
+       // {
+         srcRepo = true;
 diff --git c/pkgs/applications/editors/emacs/macport-stdbool.patch w/pkgs/applications/editors/emacs/macport-stdbool.patch
 new file mode 100644
 index 000000000000..5d3e71ed3942
@@ -36,18 +37,6 @@ index 000000000000..5d3e71ed3942
 + typedef bool bool_bf;
 + #endif
 + 
-diff --git c/pkgs/applications/editors/emacs/macport_noescape_noop.h w/pkgs/applications/editors/emacs/macport_noescape_noop.h
-index 64c65bd90f88..66accdd04faf 100644
---- c/pkgs/applications/editors/emacs/macport_noescape_noop.h
-+++ w/pkgs/applications/editors/emacs/macport_noescape_noop.h
-@@ -1,3 +1,7 @@
-+#if __has_include("config.h")
-+#include "config.h"
-+#endif
-+
- #ifndef NOESCAPE_NOOP_H_
- #define NOESCAPE_NOOP_H_
- 
 diff --git c/pkgs/applications/editors/emacs/make-emacs.nix w/pkgs/applications/editors/emacs/make-emacs.nix
 index b9f75464c793..2106053bbf18 100644
 --- c/pkgs/applications/editors/emacs/make-emacs.nix
