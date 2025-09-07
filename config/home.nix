@@ -799,11 +799,11 @@ in {
         # Athena
 
         athena = withIdentity {
-          hostname = "192.168.50.235";
+          hostname = "athena.localnet";
           compression = false;
         };
 
-        phobos = withIdentity (onHost "athena" "192.168.50.111");
+        phobos = withIdentity (onHost "athena" "phobos.localnet");
 
         # Clio
 
@@ -813,7 +813,7 @@ in {
            });
 
         clio = withIdentity {
-          hostname = "192.168.50.112";
+          hostname = "clio-wifi.localnet";
           compression = false;
         };
 
@@ -823,6 +823,7 @@ in {
 
         vulcan = withIdentity {
           user = "root";
+          # hostname = "vulcan.localnet";
           hostname = "192.168.50.182";
           compression = false;
         };
@@ -832,7 +833,14 @@ in {
         # Other servers
 
         router = {
+          # hostname = "asus-bq16-pro-router";
           hostname = "192.168.50.1";
+          port = 2204;
+          user = "router";
+          compression = false;
+        };
+        asus-node = {
+          hostname = "asus-bq16-pro-node";
           port = 2204;
           user = "router";
           compression = false;

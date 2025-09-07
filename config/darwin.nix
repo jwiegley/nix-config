@@ -53,6 +53,10 @@ in {
   };
 
   services = lib.optionalAttrs (hostname == "clio" || hostname == "hera") {
+    eternal-terminal = {
+      enable = true;
+    };
+
     postgresql = {
       enable = false;
       package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
