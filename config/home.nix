@@ -32,6 +32,7 @@ in {
       EMACSVER           = "30MacPort";
       EMACS_SERVER_FILE  = "${emacs-server}";
       EMAIL              = "${userEmail}";
+      ET_NO_TELEMETRY    = "1";
       FONTCONFIG_FILE    = "${config.xdg.configHome}/fontconfig/fonts.conf";
       FONTCONFIG_PATH    = "${config.xdg.configHome}/fontconfig";
       GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";

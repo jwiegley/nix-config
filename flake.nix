@@ -43,19 +43,12 @@
                   name = "nixpkgs-unstable-patched";
                   src = inputs.nixpkgs;
                   patches = [
-                    (builtins.fetchurl {
-                      url = "https://github.com/NixOS/nixpkgs/pull/417516.diff";
-                      sha256 = "0r3n2pdaq4fm8vdwzh4wnnqdy8svp2pny03jfk55zig9pvgacr93";
-                      # date = "2025-08-28T11:57:35-0700";
-                    })
                     ./overlays/emacs/patches/emacs30-macport.patch
                   ];
                 };
               pkgs = import patchedNixpkgs { inherit (prev) system; };
             in {
               inherit (pkgs)
-                # 417516
-                llama-swap
                 # 423799
                 elpaPackages
                 melpaPackages

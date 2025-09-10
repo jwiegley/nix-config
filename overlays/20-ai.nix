@@ -125,24 +125,24 @@ ik-llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
 });
 
 llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "6139";
+  version = "6434";
   src = super.fetchFromGitHub {
     owner = "ggml-org";
     repo = "llama.cpp";
     tag = "b${version}";
-    hash = "sha256-CtURbL94xEmdL09L8ffsyCd0KgsmPM20TKNeM5cQPlE=";
+    hash = "sha256-gLSrGmmFHic/znEmKF0f64WUWogEUMvaa7Qn1ffF5Ao=";
   };
 });
 
 llama-swap =
 let
-  version = "139";
+  version = "158";
 
   src = super.fetchFromGitHub {
     owner = "mostlygeek";
     repo = "llama-swap";
     rev = "v${version}";
-    hash = "sha256-1N2IXESA/AtiEJCBQpuUayMzEYuJmN1PJ3c+mdT7RrM=";
+    hash = "sha256-26xMIVf3eVkuKAJewkX6avdbXRcfOR8NPaAHAGTWNsU=";
   };
 
   ui = with super; buildNpmPackage (finalAttrs: {
@@ -156,7 +156,7 @@ let
 
     sourceRoot = "source/ui";
 
-    npmDepsHash = "sha256-smdqD1X9tVr0XMhQYpLBZ57/3iP8tYVoVJ2wR/gAC3w=";
+    npmDepsHash = "sha256-Sbvz3oudMVf+PxOJ6s7LsDaxFwvftNc8ZW5KPpbI/cA=";
 
     postInstall = ''
       rm -rf $out/lib
@@ -263,51 +263,6 @@ pythonPackagesExtensions = (super.pythonPackagesExtensions or []) ++ [
     llm-mlx = pfinal.callPackage llm-mlx {};
   })
 ];
-
-task-master-ai = with super; buildNpmPackage (finalAttrs: {
-  pname = "task-master-ai";
-  version = "0.25.1";
-
-  src = fetchFromGitHub {
-    owner = "eyaltoledano";
-    repo = "claude-task-master";
-    tag = "task-master-ai@${finalAttrs.version}";
-    hash = "sha256-7Vs8k8/ym2K+FzX3fAke344S9gEhjPCnzz1z+OlounE=";
-  };
-
-  npmDepsHash = "sha256-6dPIZtbTmLVrJgaSAZE7pT1+xbKVkBS+UF8xfy/micc=";
-
-  dontNpmBuild = true;
-
-  makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
-
-  passthru.updateScript = nix-update-script { };
-
-  # postInstall = ''
-  #   rm -f $out/lib/node_modules/task-master-ai/node_modules/extension
-  #   rm -f $out/lib/node_modules/task-master-ai/node_modules/docs
-  # '';
-
-  postInstall = ''
-    mkdir -p $out/lib/node_modules/task-master-ai/apps
-    cp -r apps/extension $out/lib/node_modules/task-master-ai/apps/extension
-    cp -r apps/docs $out/lib/node_modules/task-master-ai/apps/docs
-  '';
-
-  env = {
-    PUPPETEER_SKIP_DOWNLOAD = 1;
-  };
-
-  meta = with lib; {
-    description = "Node.js agentic AI workflow orchestrator";
-    homepage = "https://task-master.dev";
-    changelog = "https://github.com/eyaltoledano/claude-task-master/blob/${finalAttrs.src.tag}/CHANGELOG.md";
-    license = licenses.mit;
-    mainProgram = "task-master-ai";
-    maintainers = [ maintainers.repparw ];
-    platforms = platforms.all;
-  };
-});
 
 rustdocs-mcp-server = with super; rustPlatform.buildRustPackage rec {
   pname = "rustdocs-mcp-server";

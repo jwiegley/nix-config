@@ -64,6 +64,7 @@
     # dovecot_pigeonhole
     # dovecot_fts_xapian
     doxygen
+    dstp
     du-dust
     eask
     # emacs30Env

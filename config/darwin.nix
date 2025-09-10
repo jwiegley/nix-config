@@ -111,6 +111,7 @@ in {
       "raspberry-pi-imager"
     ] ++ lib.optionals (hostname == "clio") [
       "aldente"
+      "wifi-explorer"
     ] ++ lib.optionals (hostname != "athena") [
       "1password"
       "1password-cli"

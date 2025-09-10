@@ -118,8 +118,8 @@ index d3fb3da3b599..629420d960ad 100644
 -        hash = "sha256-Vdf6GF5YmGoHTkxiD9mdYH0hgvfovZwrqYN1NQ++U1w=";
 -      })
 -    ];
-+    rev = "emacs-macs-30_1_exp";
-+    hash = "sha256-dDkKSUfxPCWiF+MXQBY21npjZ6LZL6IG6GPx5AptegI=";
++    rev = "74fd8ac7e60ae9c82750013df460545de7628246";
++    hash = "sha256-i/W2Xa6Vk1+T1fs6fa4wJVMLLB6BK8QAPcdmPrU8NwM=";
 +    patches = _: [ ./macport-stdbool.patch ];
  
      meta.knownVulnerabilities = [ ];
