@@ -840,7 +840,7 @@ in {
           user = "router";
           compression = false;
         };
-        asus-node = {
+        node = {
           hostname = "asus-bq16-pro-node";
           port = 2204;
           user = "router";

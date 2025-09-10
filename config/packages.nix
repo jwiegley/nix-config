@@ -153,7 +153,7 @@
     imapfilter
     imgcat
     inkscape.out
-    iperf
+    iperf3
     isync
     jdk
     jiq

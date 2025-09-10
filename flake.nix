@@ -43,12 +43,19 @@
                   name = "nixpkgs-unstable-patched";
                   src = inputs.nixpkgs;
                   patches = [
+                    (builtins.fetchurl {
+                      url = "https://github.com/NixOS/nixpkgs/pull/440348.diff";
+                      sha256 = "1pin02ljng9d01ywcbhlrlwr64chxs52f1fbvwdhyp4r17p1malp";
+                      # date = "2025-09-09T22:41:46-0700";
+                    })
                     ./overlays/emacs/patches/emacs30-macport.patch
                   ];
                 };
               pkgs = import patchedNixpkgs { inherit (prev) system; };
             in {
               inherit (pkgs)
+                # 440348
+                ttfautohint
                 # 423799
                 elpaPackages
                 melpaPackages
