@@ -4,6 +4,7 @@ GIT_REMOTE = jwiegley
 MAX_AGE	   = 14
 NIX_CONF   = $(HOME)/src/nix
 NIXOPTS	   =
+PROJECTS   = $(HOME)/.config/projects
 
 ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
@@ -62,11 +63,11 @@ switch:
 update:
 	$(call announce,nix flake update && brew update)
 	nix flake update
-	@for project in $(shell grep "^[^#]" $(HOME)/.config/projects); do	\
-	    ( cd $(HOME)/$$project ;						\
-	      echo "### $(HOME)/$$project" ;					\
-	      nix flake update							\
-	    );									\
+	@for project in $(shell grep "^[^#]" $(PROJECTS)); do	\
+	    ( cd $(HOME)/$$project ;				\
+	      echo "### $(HOME)/$$project" ;			\
+	      nix flake update					\
+	    );							\
 	done
 	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
 	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
@@ -86,11 +87,11 @@ upgrade-tasks: switch travel-ready
 upgrade: update upgrade-tasks check
 
 changes:
-	@for project in $(shell grep "^[^#]" $(HOME)/.config/projects); do	\
-	    ( cd $(HOME)/$$project ;						\
-	      echo "### $(HOME)/$$project" ;					\
-	      changes								\
-	    );									\
+	@for project in $(shell grep "^[^#]" $(PROJECTS)); do	\
+	    ( cd $(HOME)/$$project ;				\
+	      echo "### $(HOME)/$$project" ;			\
+	      changes						\
+	    );							\
 	done
 	echo "### ~/.config/pushme"
 	(cd ~/.config/pushme ; changes)
@@ -108,11 +109,11 @@ changes:
 ########################################################################
 
 copy:
-	$(call announce,copy)
+	$(call announce,copy)							\
 	@for host in $(REMOTES); do						\
 	    nix copy --to "ssh-ng://$$host"					\
 	        $(HOME)/.local/state/nix/profiles/profile;			\
-	    for project in $(shell grep "^[^#]" $(HOME)/.config/projects); do	\
+	    for project in $(shell grep "^[^#]" $(PROJECTS)); do		\
 	        echo $$project;							\
 	        ( cd $(HOME)/$$project ;					\
 	          if [[ -f .envrc.cache ]]; then				\
@@ -158,8 +159,6 @@ purge:
 sign:
 	$(call announce,nix store sign -k "<key>" --all)
 	@nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
-
-PROJECTS = $(HOME)/.config/projects
 
 travel-ready:
 	$(call announce,travel-ready)

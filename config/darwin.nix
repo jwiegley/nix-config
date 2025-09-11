@@ -52,11 +52,12 @@ in {
     };
   };
 
-  services = lib.optionalAttrs (hostname == "clio" || hostname == "hera") {
+  services = {
     eternal-terminal = {
       enable = true;
     };
-
+  } //
+  (lib.optionalAttrs (hostname == "clio" || hostname == "hera") {
     postgresql = {
       enable = false;
       package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
@@ -67,7 +68,7 @@ in {
         host  all all 127.0.0.1/32 trust
       '';
     };
-  };
+  });
 
   homebrew = {
     enable = true;
@@ -170,6 +171,7 @@ in {
       "tor-browser"
       "ukelele"
       "unicodechecker"
+      "usbimager"
       "virtual-ii"
       "visual-studio-code"
       { name = "vivaldi"; greedy = true; }

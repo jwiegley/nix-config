@@ -23,6 +23,7 @@ in {
     packages = packages.package-list;
 
     sessionVariables = {
+      ANTHROPIC_MODEL    = "opus";
       ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";
       B2_ACCOUNT_INFO    = "${config.xdg.configHome}/backblaze-b2/account_info";
       CABAL_CONFIG       = "${config.xdg.configHome}/cabal/config";

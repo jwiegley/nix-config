@@ -42,6 +42,7 @@
     bash-completion
     bashInteractive
     bat
+    bbcp
     btop
     cacert
     cargo-cache
@@ -83,6 +84,7 @@
     findutils
     fio
     fontconfig
+    fpart
     fping
     fswatch
     fzf
