@@ -56,8 +56,7 @@ in {
     eternal-terminal = {
       enable = true;
     };
-  } //
-  (lib.optionalAttrs (hostname == "clio" || hostname == "hera") {
+
     postgresql = {
       enable = false;
       package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
@@ -68,7 +67,7 @@ in {
         host  all all 127.0.0.1/32 trust
       '';
     };
-  });
+  };
 
   homebrew = {
     enable = true;
@@ -104,7 +103,6 @@ in {
       # "vagrant-vmware-utility"
       "wireshark"
     ] ++ lib.optionals (pkgs.system == "aarch64-darwin") [
-      # "lm-studio"
       "diffusionbee"
     ] ++ lib.optionals (hostname == "hera") [
       "fujitsu-scansnap-home"
@@ -118,31 +116,25 @@ in {
       "1password-cli"
       "affinity-photo"
       "anki"
-      # { name = "arc"; greedy = true; }
       "asana"
       "audacity"
+      "balenaetcher"
       { name = "brave-browser"; greedy = true; }
       "choosy"
       "claude"
       "claude-code"
       "corelocationcli"
-      # "cursor"
-      # "cursor-cli"
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
       "devonagent"
       "devonthink"
-      # { name = "thebrowsercompany-dia"; greedy = true; }
       "discord"
-      # { name = "duckduckgo"; greedy = true; }
       "dungeon-crawl-stone-soup-tiles"
       "element"
       "expandrive"
       "fantastical"
       { name = "firefox"; greedy = true; }
       "geektool"
-      # "gog-galaxy"
-      # "grammarly-desktop"
       "key-codes"
       "keyboard-maestro"
       "launchbar"
@@ -152,7 +144,6 @@ in {
       # "marked"                    # Use Marked 2 in App Store
       "mellel"
       "netdownloadhelpercoapp"
-      # "notion"
       # "omnigraffle"               # Stay at version 6
       { name = "opera"; greedy = true; }
       "pdf-expert"
@@ -164,14 +155,12 @@ in {
       "steam"
       "suspicious-package"
       "swiftdefaultappsprefpane"
-      # "sweet-home3d"
       "telegram"
       "thinkorswim"
-      # "tla+-toolbox"
       "tor-browser"
       "ukelele"
       "unicodechecker"
-      "usbimager"
+      "utm"
       "virtual-ii"
       "visual-studio-code"
       { name = "vivaldi"; greedy = true; }
@@ -180,7 +169,6 @@ in {
       "xnviewmp"
       { name = "zoom"; greedy = true; }
       "zotero"
-      # "zulip"
     ];
 
     ## The following software, or versions of software, are not available
@@ -200,7 +188,6 @@ in {
       "Bible Study"           = 472790630;
       "DataGraph"             = 407412840;
       "Drafts"                = 1435957248;
-      # "Grammarly for Safari"  = 1462114288;
       "Just Press Record"     = 1033342465;
       "Keynote"               = 409183694;
       "Kindle"                = 302584613;
@@ -231,9 +218,6 @@ in {
       allowUnsupportedSystem = false;
 
       permittedInsecurePackages = [
-        "emacs-mac-macport-with-packages-29.4"
-        "emacs-mac-macport-29.4"
-        "emacs-29.4"
         "python-2.7.18.7"
         "libressl-3.4.3"
       ];

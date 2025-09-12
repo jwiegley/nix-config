@@ -151,6 +151,7 @@
     httpie
     httrack
     iftop
+    igrep
     imagemagickBig
     imapfilter
     imgcat

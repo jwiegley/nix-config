@@ -23,40 +23,41 @@ in {
     packages = packages.package-list;
 
     sessionVariables = {
-      ANTHROPIC_MODEL    = "opus";
-      ASPELL_CONF        = "conf ${config.xdg.configHome}/aspell/config;";
-      B2_ACCOUNT_INFO    = "${config.xdg.configHome}/backblaze-b2/account_info";
-      CABAL_CONFIG       = "${config.xdg.configHome}/cabal/config";
-      CARGO_HOME         = "${config.xdg.dataHome}/cargo";
-      CLICOLOR           = "yes";
-      EDITOR             = "${emacsclient}";
-      EMACSVER           = "30MacPort";
-      EMACS_SERVER_FILE  = "${emacs-server}";
-      EMAIL              = "${userEmail}";
-      ET_NO_TELEMETRY    = "1";
-      FONTCONFIG_FILE    = "${config.xdg.configHome}/fontconfig/fonts.conf";
-      FONTCONFIG_PATH    = "${config.xdg.configHome}/fontconfig";
-      GRAPHVIZ_DOT       = "${pkgs.graphviz}/bin/dot";
-      GTAGSCONF          = "${pkgs.global}/share/gtags/gtags.conf";
-      GTAGSLABEL         = "pygments";
-      HOSTNAME           = hostname;
-      JAVA_OPTS          = "-Xverify:none";
-      LESSHISTFILE       = "${config.xdg.cacheHome}/less/history";
-      LITELLM_PROXY_URL  = "http://vulcan/litellm";
-      LLM_USER_PATH      = "${config.xdg.configHome}/llm";
-      NIX_CONF           = "${home}/src/nix";
-      NLTK_DATA          = "${config.xdg.dataHome}/nltk";
-      PARALLEL_HOME      = "${config.xdg.cacheHome}/parallel";
-      PROFILE_DIR        = "${config.home.profileDirectory}";
-      RUSTUP_HOME        = "${config.xdg.dataHome}/rustup";
-      SCREENRC           = "${config.xdg.configHome}/screen/config";
-      SSL_CERT_FILE      = "${ca-bundle_crt}";
-      STARDICT_DATA_DIR  = "${config.xdg.dataHome}/dictionary";
-      TIKTOKEN_CACHE_DIR = "${config.xdg.cacheHome}/tiktoken";
-      TRAVIS_CONFIG_PATH = "${config.xdg.configHome}/travis";
-      TZ                 = "PST8PDT";
-      VAGRANT_HOME       = "${config.xdg.dataHome}/vagrant";
-      WWW_HOME           = "${config.xdg.cacheHome}/w3m";
+      ANTHROPIC_MODEL     = "opus";
+      DISABLE_AUTOUPDATER = "1";
+      ASPELL_CONF         = "conf ${config.xdg.configHome}/aspell/config;";
+      B2_ACCOUNT_INFO     = "${config.xdg.configHome}/backblaze-b2/account_info";
+      CABAL_CONFIG        = "${config.xdg.configHome}/cabal/config";
+      CARGO_HOME          = "${config.xdg.dataHome}/cargo";
+      CLICOLOR            = "yes";
+      EDITOR              = "${emacsclient}";
+      EMACSVER            = "30MacPort";
+      EMACS_SERVER_FILE   = "${emacs-server}";
+      EMAIL               = "${userEmail}";
+      ET_NO_TELEMETRY     = "1";
+      FONTCONFIG_FILE     = "${config.xdg.configHome}/fontconfig/fonts.conf";
+      FONTCONFIG_PATH     = "${config.xdg.configHome}/fontconfig";
+      GRAPHVIZ_DOT        = "${pkgs.graphviz}/bin/dot";
+      GTAGSCONF           = "${pkgs.global}/share/gtags/gtags.conf";
+      GTAGSLABEL          = "pygments";
+      HOSTNAME            = hostname;
+      JAVA_OPTS           = "-Xverify:none";
+      LESSHISTFILE        = "${config.xdg.cacheHome}/less/history";
+      LITELLM_PROXY_URL   = "http://vulcan/litellm";
+      LLM_USER_PATH       = "${config.xdg.configHome}/llm";
+      NIX_CONF            = "${home}/src/nix";
+      NLTK_DATA           = "${config.xdg.dataHome}/nltk";
+      PARALLEL_HOME       = "${config.xdg.cacheHome}/parallel";
+      PROFILE_DIR         = "${config.home.profileDirectory}";
+      RUSTUP_HOME         = "${config.xdg.dataHome}/rustup";
+      SCREENRC            = "${config.xdg.configHome}/screen/config";
+      SSL_CERT_FILE       = "${ca-bundle_crt}";
+      STARDICT_DATA_DIR   = "${config.xdg.dataHome}/dictionary";
+      TIKTOKEN_CACHE_DIR  = "${config.xdg.cacheHome}/tiktoken";
+      TRAVIS_CONFIG_PATH  = "${config.xdg.configHome}/travis";
+      TZ                  = "PST8PDT";
+      VAGRANT_HOME        = "${config.xdg.dataHome}/vagrant";
+      WWW_HOME            = "${config.xdg.cacheHome}/w3m";
 
       RCLONE_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/rclone";
       RESTIC_PASSWORD_COMMAND        = "${pkgs.pass}/bin/pass show Passwords/restic";
@@ -781,13 +782,13 @@ in {
         # Hera
 
         hera_thunderbolt = lib.hm.dag.entryBefore ["hera"]
-          (withIdentity (matchHost "hera" "192.168.2.1") // {
-             hostname = "192.168.2.1";
+          (withIdentity (matchHost "hera" "192.168.40.1") // {
+             hostname = "192.168.40.1";
              compression = false;
            });
 
         hera = withIdentity {
-          hostname = "192.168.50.5";
+          hostname = "192.168.1.3";
           compression = false;
         };
 
@@ -801,21 +802,21 @@ in {
         # Athena
 
         athena = withIdentity {
-          hostname = "athena.localnet";
+          hostname = "athena.lan";
           compression = false;
         };
 
-        phobos = withIdentity (onHost "athena" "phobos.localnet");
+        phobos = withIdentity (onHost "athena" "phobos.lan");
 
         # Clio
 
         clio_thunderbolt = lib.hm.dag.entryBefore ["clio"]
-          (withIdentity (matchHost "clio" "192.168.2.2") // {
+          (withIdentity (matchHost "clio" "192.168.40.2") // {
              compression = false;
            });
 
         clio = withIdentity {
-          hostname = "clio-wifi.localnet";
+          hostname = "clio-wifi.lan";
           compression = false;
         };
 
@@ -825,8 +826,8 @@ in {
 
         vulcan = withIdentity {
           user = "root";
-          # hostname = "vulcan.localnet";
-          hostname = "192.168.50.182";
+          # hostname = "vulcan.lan";
+          hostname = "192.168.1.2";
           compression = false;
         };
 
@@ -836,7 +837,7 @@ in {
 
         router = {
           # hostname = "asus-bq16-pro-router";
-          hostname = "192.168.50.1";
+          hostname = "192.168.3.2";
           port = 2204;
           user = "router";
           compression = false;
