@@ -23,6 +23,8 @@ in {
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJD0sIKWWVF+zIWcNm/BfsbCQxuUBHD8nRNSpZV+mCf+ ShellFish@iPhone-28062024"
           # ShellFish iPad key
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZQeQ/gKkOwuwktwD4z0ZZ8tpxNej3qcHS5ZghRcdAd ShellFish@iPad-22062024"
+        ] ++ lib.optionals (hostname == "athena") [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEY4JNmY8VNmNhfHd09eX/fi8GxDDu8w/0uqryqaZaIn root@vulcan"
         ];
         keyFiles =
           # Each machine accepts SSH key authentication from the rest
