@@ -781,14 +781,8 @@ in {
 
         # Hera
 
-        hera_thunderbolt = lib.hm.dag.entryBefore ["hera"]
-          (withIdentity (matchHost "hera" "192.168.40.1") // {
-             hostname = "192.168.40.1";
-             compression = false;
-           });
-
         hera = withIdentity {
-          hostname = "192.168.1.3";
+          hostname = "hera.lan";
           compression = false;
         };
 
@@ -810,13 +804,8 @@ in {
 
         # Clio
 
-        clio_thunderbolt = lib.hm.dag.entryBefore ["clio"]
-          (withIdentity (matchHost "clio" "192.168.40.2") // {
-             compression = false;
-           });
-
         clio = withIdentity {
-          hostname = "clio-wifi.lan";
+          hostname = "clio.lan";
           compression = false;
         };
 
@@ -826,8 +815,7 @@ in {
 
         vulcan = withIdentity {
           user = "root";
-          # hostname = "vulcan.lan";
-          hostname = "192.168.1.2";
+          hostname = "vulcan.lan";
           compression = false;
         };
 
@@ -835,15 +823,20 @@ in {
 
         # Other servers
 
-        router = {
-          # hostname = "asus-bq16-pro-router";
-          hostname = "192.168.3.2";
+        router = withIdentity {
+          hostname = "192.168.1.1";
+          user = "johnw";
+          compression = false;
+        };
+
+        asus1 = {
+          hostname = "asus-bq16-pro-router.lan";
           port = 2204;
           user = "router";
           compression = false;
         };
-        node = {
-          hostname = "asus-bq16-pro-node";
+        asus2 = {
+          hostname = "asus-bq16-pro-node.lan";
           port = 2204;
           user = "router";
           compression = false;

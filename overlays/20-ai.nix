@@ -296,4 +296,55 @@ rustdocs-mcp-server = with super; rustPlatform.buildRustPackage rec {
   };
 };
 
+task-master-ai-0-26-0 = with self; buildNpmPackage (finalAttrs: {
+  pname = "task-master-ai";
+  version = "0.26.0";
+
+  src = fetchFromGitHub {
+    owner = "eyaltoledano";
+    repo = "claude-task-master";
+    tag = "task-master-ai@${finalAttrs.version}";
+    hash = "sha256-eQEV8TMJsq3oUqgTKlmIrBEjtHphTt2gH22kCkrTeqY=";
+  };
+
+  npmDepsHash = "sha256-sxz5xAJDtgYKVCjBtW2H6y0dAPbXJNnIPIu5RSzrhuY=";
+
+  dontNpmBuild = true;
+  # makeCacheWritable = true;
+
+  npmFlags = [
+    "--ignore-scripts"
+    # "--legacy-peer-deps"
+  ];
+
+  makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
+
+  passthru.updateScript = nix-update-script { };
+
+  postInstall = ''
+    mkdir -p $out/lib/node_modules/task-master-ai/apps
+    cp -r apps/extension $out/lib/node_modules/task-master-ai/apps/extension
+    cp -r apps/docs $out/lib/node_modules/task-master-ai/apps/docs
+  '';
+
+  env = {
+    PUPPETEER_SKIP_DOWNLOAD = 1;
+  };
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
+  versionCheckProgram = "${placeholder "out"}/bin/task-master";
+  versionCheckProgramArg = "--version";
+
+  meta = with lib; {
+    description = "Node.js agentic AI workflow orchestrator";
+    homepage = "https://task-master.dev";
+    changelog = "https://github.com/eyaltoledano/claude-task-master/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = licenses.mit;
+    mainProgram = "task-master-ai";
+    maintainers = [ maintainers.repparw ];
+    platforms = platforms.all;
+  };
+});
+
 }
