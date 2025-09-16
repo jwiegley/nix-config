@@ -35,38 +35,38 @@
     darwinConfigurations =
       let
         overlays = [
-          (final: prev:
-            let
-              # patchedNixpkgs = nixpkgs;
-              patchedNixpkgs =
-                (import nixpkgs { inherit (prev) system; }).applyPatches {
-                  name = "nixpkgs-unstable-patched";
-                  src = inputs.nixpkgs;
-                  patches = [
-                    #(builtins.fetchurl {
-                    #  url = "https://github.com/NixOS/nixpkgs/pull/440348.diff";
-                    #  sha256 = "1pin02ljng9d01ywcbhlrlwr64chxs52f1fbvwdhyp4r17p1malp";
-                    #  # date = "2025-09-09T22:41:46-0700";
-                    #})
-                    ./overlays/emacs/patches/emacs30-macport.patch
-                  ];
-                };
-              pkgs = import patchedNixpkgs { inherit (prev) system; };
-            in {
-              inherit (pkgs)
-                # 440348
-                #ttfautohint
-                # 423799
-                elpaPackages
-                melpaPackages
-                manualPackages
-                elpaBuild
-                melpaBuild
-                trivialBuild
-                emacs30
-                emacs30-macport
-                ;
-            })
+          # (final: prev:
+          #   let
+          #     # patchedNixpkgs = nixpkgs;
+          #     patchedNixpkgs =
+          #       (import nixpkgs { inherit (prev) system; }).applyPatches {
+          #         name = "nixpkgs-unstable-patched";
+          #         src = inputs.nixpkgs;
+          #         patches = [
+          #           #(builtins.fetchurl {
+          #           #  url = "https://github.com/NixOS/nixpkgs/pull/440348.diff";
+          #           #  sha256 = "1pin02ljng9d01ywcbhlrlwr64chxs52f1fbvwdhyp4r17p1malp";
+          #           #  # date = "2025-09-09T22:41:46-0700";
+          #           #})
+          #           # ./overlays/emacs/patches/emacs30-macport-2.patch
+          #         ];
+          #       };
+          #     pkgs = import patchedNixpkgs { inherit (prev) system; };
+          #   in {
+          #     inherit (pkgs)
+          #       # 440348
+          #       #ttfautohint
+          #       # 423799
+          #       # elpaPackages
+          #       # melpaPackages
+          #       # manualPackages
+          #       # elpaBuild
+          #       # melpaBuild
+          #       # trivialBuild
+          #       # emacs30
+          #       # emacs30-macport
+          #       ;
+          #   })
           nurpkgs.overlays.default
           mcp-servers-nix.overlays.default
         ];

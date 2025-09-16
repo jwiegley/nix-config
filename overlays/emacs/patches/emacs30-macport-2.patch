@@ -1,0 +1,141 @@
+diff --git a/pkgs/applications/editors/emacs/default.nix b/pkgs/applications/editors/emacs/default.nix
+index 8640d64786b3..75461dc60c78 100644
+--- a/pkgs/applications/editors/emacs/default.nix
++++ b/pkgs/applications/editors/emacs/default.nix
+@@ -28,6 +13,7 @@ lib.makeScope pkgs.newScope (
+       inherit lib;
+       inherit (pkgs)
+         fetchFromBitbucket
++        fetchFromGitHub
+         fetchFromSavannah
+         ;
+     };
+@@ -46,6 +32,6 @@ lib.makeScope pkgs.newScope (
+       withPgtk = true;
+     };
+ 
+-    emacs29-macport = callPackage (self.sources.emacs29-macport) inheritedArgs;
++    emacs30-macport = callPackage (self.sources.emacs30-macport) inheritedArgs;
+   }
+ )
+diff --git a/pkgs/applications/editors/emacs/macport-stdbool.patch b/pkgs/applications/editors/emacs/macport-stdbool.patch
+new file mode 100644
+index 000000000000..5d3e71ed3942
+--- /dev/null
++++ b/pkgs/applications/editors/emacs/macport-stdbool.patch
+@@ -0,0 +1,12 @@
++diff --git a/src/conf_post.h b/src/conf_post.h
++index e3272278832..01d3bcf9a81 100644
++--- a/src/conf_post.h
+++++ b/src/conf_post.h
++@@ -58,6 +58,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
++ #if NS_IMPL_GNUSTEP || defined __MINGW32__
++ typedef unsigned int bool_bf;
++ #else
+++#include <stdbool.h> /* Clang in C mode does not automatically define bool unless you explicitly include that header */
++ typedef bool bool_bf;
++ #endif
++ 
+diff --git a/pkgs/applications/editors/emacs/make-emacs.nix b/pkgs/applications/editors/emacs/make-emacs.nix
+index ef8a5d923822..49468aeb80ec 100644
+--- a/pkgs/applications/editors/emacs/make-emacs.nix
++++ b/pkgs/applications/editors/emacs/make-emacs.nix
+@@ -13,7 +13,7 @@
+   Xaw3d,
+   acl,
+   alsa-lib,
+-  apple-sdk,
++  apple-sdk_14,
+   autoreconfHook,
+   cairo,
+   dbus,
+@@ -205,7 +190,7 @@ mkDerivation (finalAttrs: {
+                 ]
+                 ++ lib.optionals stdenv.hostPlatform.isDarwin [
+                   # The linker needs to know where to find libSystem on Darwin.
+-                  "${apple-sdk.sdkroot}/usr/lib"
++                  "${apple-sdk_14.sdkroot}/usr/lib"
+                 ]
+               )
+             )
+diff --git a/pkgs/applications/editors/emacs/sources.nix b/pkgs/applications/editors/emacs/sources.nix
+index 952d8e5aeab7..ebc99e067f86 100644
+--- a/pkgs/applications/editors/emacs/sources.nix
++++ b/pkgs/applications/editors/emacs/sources.nix
+@@ -1,6 +1,7 @@
+ {
+   lib,
+   fetchFromBitbucket,
++  fetchFromGitHub,
+   fetchFromSavannah,
+ }:
+ 
+@@ -31,8 +32,8 @@ let
+             }
+           );
+           "macport" = (
+-            fetchFromBitbucket {
+-              owner = "mituharu";
++            fetchFromGitHub {
++              owner = "jdtsmith";
+               repo = "emacs-mac";
+               inherit rev hash;
+             }
+@@ -88,7 +89,9 @@ let
+               matthewbauer
+               panchoh
+             ];
+-            "macport" = with lib.maintainers; [ ];
++            "macport" = with lib.maintainers; [
++              lactose
++            ];
+           }
+           .${variant};
+         platforms =
+@@ -121,11 +124,12 @@ in
+     ];
+   });
+ 
+-  emacs29-macport = import ./make-emacs.nix (mkArgs {
++  emacs30-macport = import ./make-emacs.nix (mkArgs {
+     pname = "emacs-mac";
+-    version = "29.1";
++    version = "30.2.50";
+     variant = "macport";
+-    rev = "emacs-29.1-mac-10.0";
+-    hash = "sha256-TE829qJdPjeOQ+kD0SfyO8d5YpJjBge/g+nScwj+XVU=";
++    rev = "4a522f417775a539b28a6a0b3a47af7994ed39d8";
++    hash = "sha256-Ap3ZBb9NYIbwLroOoqvpQU/hjhaJJDB+3/1V0Q2c6aA=";
++    patches = _: [ ./macport-stdbool.patch ];
+   });
+ }
+diff --git a/pkgs/top-level/aliases.nix b/pkgs/top-level/aliases.nix
+index 7808fc468fef..7446f09c4d3b 100644
+--- a/pkgs/top-level/aliases.nix
++++ b/pkgs/top-level/aliases.nix
+@@ -552,6 +552,7 @@ mapAliases {
+   emacs29-gtk3 = throw "Emacs 29 is removed due to CVEs which are fixed in Emacs 30"; # Added 2025-03-03
+   emacs29-nox = throw "Emacs 29 is removed due to CVEs which are fixed in Emacs 30"; # Added 2025-03-03
+   emacs29-pgtk = throw "Emacs 29 is removed due to CVEs which are fixed in Emacs 30"; # Added 2025-03-03
++  emacs29-macport = throw "Emacs 29 is removed due to CVEs which are fixed in Emacs 30"; # Added 2025-04-02
+   emacsMacport = emacs-macport; # Added 2023-08-10
+   emacsNativeComp = emacs; # Added 2022-06-08
+   emacsWithPackages = throw "'emacsWithPackages' has been renamed to/replaced by 'emacs.pkgs.withPackages'"; # Converted to throw 2024-10-17
+diff --git a/pkgs/top-level/all-packages.nix b/pkgs/top-level/all-packages.nix
+index 01cee5c744ab..21fc7268d665 100644
+--- a/pkgs/top-level/all-packages.nix
++++ b/pkgs/top-level/all-packages.nix
+@@ -14197,11 +14197,10 @@ with pkgs;
+     emacs30-nox
+     emacs30-pgtk
+ 
+-    emacs28-macport
+-    emacs29-macport
++    emacs30-macport
+     ;
+ 
+-  emacs-macport = emacs29-macport;
++  emacs-macport = emacs30-macport;
+   emacs = emacs30;
+   emacs-gtk = emacs30-gtk3;
+   emacs-nox = emacs30-nox;
