@@ -142,6 +142,7 @@ in {
       "launchbar"
       "lectrote"
       "ledger-live"
+      "mactracker"
       # "macwhisper"                # Use Whisper Transcription in App Store
       # "marked"                    # Use Marked 2 in App Store
       "mellel"
