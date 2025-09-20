@@ -73,6 +73,7 @@
     # emacsHEADEnv
     emacs-lsp-booster
     entr
+    eternal-terminal
     exiv2
     eyed3
     eza

@@ -54,22 +54,22 @@ in {
     };
   };
 
-  services = {
-    eternal-terminal = {
-      enable = true;
-    };
+  # services = {
+  #   eternal-terminal = {
+  #     enable = true;
+  #   };
 
-    postgresql = {
-      enable = false;
-      package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
-      dataDir = "${home}/${hostname}/postgresql";
-      authentication = ''
-        local all all              trust
-        host  all all localhost    trust
-        host  all all 127.0.0.1/32 trust
-      '';
-    };
-  };
+  #   postgresql = {
+  #     enable = false;
+  #     package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
+  #     dataDir = "${home}/${hostname}/postgresql";
+  #     authentication = ''
+  #       local all all              trust
+  #       host  all all localhost    trust
+  #       host  all all 127.0.0.1/32 trust
+  #     '';
+  #   };
+  # };
 
   homebrew = {
     enable = true;
@@ -160,7 +160,7 @@ in {
       "swiftdefaultappsprefpane"
       "telegram"
       "thinkorswim"
-      "tor-browser"
+      # "tor-browser"
       "ukelele"
       "unicodechecker"
       "utm"
@@ -237,7 +237,7 @@ in {
   nix =
     let
       hera = {
-        hostName = "hera";
+        hostName = "hera.lan";
         protocol = "ssh-ng";
         system = "aarch64-darwin";
         sshUser = "johnw";
@@ -246,7 +246,7 @@ in {
       };
 
       athena = {
-        hostName = "athena";
+        hostName = "athena.lan";
         protocol = "ssh-ng";
         system = "aarch64-darwin";
         sshUser = "johnw";
