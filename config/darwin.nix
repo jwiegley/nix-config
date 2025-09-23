@@ -255,6 +255,7 @@ in {
       };
     in {
 
+    enable = false;
     package = pkgs.nix;
 
     # This entry lets us to define a system registry entry so that
