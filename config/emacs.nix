@@ -365,6 +365,7 @@ with epkgs; [
   smart-newline
   smartparens
   (exclude smartscan)
+  (exclude sops)
   sort-words
   sql-indent
   string-inflection

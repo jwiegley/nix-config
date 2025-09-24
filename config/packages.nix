@@ -349,7 +349,7 @@
     koboldcpp
     gguf-tools
     openmpi
-    claude-code
+    # claude-code                # use version in homebrew
     qdrant
     qdrant-web-ui
     task-master-ai

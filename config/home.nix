@@ -43,7 +43,7 @@ in {
       HOSTNAME            = hostname;
       JAVA_OPTS           = "-Xverify:none";
       LESSHISTFILE        = "${config.xdg.cacheHome}/less/history";
-      LITELLM_PROXY_URL   = "http://vulcan/litellm";
+      LITELLM_PROXY_URL   = "http://litellm.vulcan.lan";
       LLM_USER_PATH       = "${config.xdg.configHome}/llm";
       NIX_CONF            = "${home}/src/nix";
       NLTK_DATA           = "${config.xdg.dataHome}/nltk";
@@ -814,7 +814,6 @@ in {
         # Vulcan
 
         vulcan = withIdentity {
-          user = "root";
           hostname = "vulcan.lan";
           compression = false;
         };
@@ -824,8 +823,7 @@ in {
         # Other servers
 
         router = withIdentity {
-          hostname = "192.168.1.1";
-          user = "johnw";
+          hostname = "router.lan";
           compression = false;
         };
 
