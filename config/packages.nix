@@ -57,6 +57,7 @@
     diffstat
     diffutils
     direnv
+    devenv
     ditaa
     dnstracer
     dnsutils
@@ -167,6 +168,7 @@
     json2yaml
     jujutsu
     jupyter
+    just
     khard
     killall
     kubectl

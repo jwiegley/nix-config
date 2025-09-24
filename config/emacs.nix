@@ -189,6 +189,7 @@ with epkgs; [
   json-reformat
   json-snatcher
   (exclude jupyter)
+  just-mode
   key-chord
   keypression
   know-your-http-well

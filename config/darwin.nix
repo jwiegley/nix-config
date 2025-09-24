@@ -60,7 +60,7 @@ in {
   #   };
 
   #   postgresql = {
-  #     enable = false;
+  #     enable = true;
   #     package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
   #     dataDir = "${home}/${hostname}/postgresql";
   #     authentication = ''
@@ -76,7 +76,7 @@ in {
     onActivation = {
       autoUpdate = false;
       upgrade = false;
-      cleanup = "zap";
+      cleanup = "zap";        # Remove uninstalled pkgs and dependencies
     };
 
     taps = [
