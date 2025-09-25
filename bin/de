@@ -2,8 +2,7 @@
 
 set -e
 
-# jww (2020-04-01): I use this to keep build products in a separate directory
-# tree.
+# I use this to keep build products in a separate directory tree.
 PRODUCTS=""
 if [[ -d $HOME/Products ]]; then
     PRODUCTS=$(echo $PWD | sed -E 's/\b(kadena|src)\b/Products/')
