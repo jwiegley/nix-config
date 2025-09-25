@@ -232,16 +232,16 @@ in {
       settings = {
         add_newline = true;
 
-        # format = lib.concatStrings [
-        #   "$hostname"
-        #   "$directory"
-        #   "$git_branch"
-        #   "$git_state"
-        #   "$git_status"
-        #   "$cmd_duration"
-        #   "$line_break"
-        #   "$character"
-        # ];
+        format = lib.concatStrings [
+          "$hostname"
+          "$directory"
+          # "$git_branch"
+          # "$git_state"
+          # "$git_status"
+          "$cmd_duration"
+          "$line_break"
+          "$character"
+        ];
 
         scan_timeout = 10;
         # character = {

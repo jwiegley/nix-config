@@ -92,7 +92,6 @@ in {
       "z3"
 
       "llm"
-      "sshfs"
     ];
 
     casks = [
