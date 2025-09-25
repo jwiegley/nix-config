@@ -92,6 +92,7 @@ in {
       "z3"
 
       "llm"
+      "sshfs"
     ];
 
     casks = [
@@ -142,6 +143,7 @@ in {
       "launchbar"
       "lectrote"
       "ledger-live"
+      "macfuse"
       "mactracker"
       # "macwhisper"                # Use Whisper Transcription in App Store
       # "marked"                    # Use Marked 2 in App Store

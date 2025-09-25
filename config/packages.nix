@@ -295,6 +295,7 @@
     sqldiff
     squashfsTools
     srm
+    sshfs
     sshify
     stow
     subversion
