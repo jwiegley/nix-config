@@ -357,6 +357,7 @@ with epkgs; [
   selected
   separedit
   (exclude shackle)
+  shell-maker
   shell-toggle
   shift-number
   sky-color-clock

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+if [[ $1 == system ]]; then
+    nix build --impure .\#darwinConfigurations.$(myhost).system
+elif [[ $1 == pkg ]]; then
+    nix build --impure .\#darwinConfigurations.$(myhost).pkgs.$2
+elif [[ $1 == emacs ]]; then
+    nix build --impure .\#darwinConfigurations.$(myhost).pkgs.emacs30MacPortPackages.$2
+fi
