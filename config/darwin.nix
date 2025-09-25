@@ -290,7 +290,10 @@ in {
     distributedBuilds = true;
     buildMachines =
       if hostname == "clio"
-      then [ hera athena ]
+      then [
+        # hera                # jww (2025-09-23): not running
+        athena
+      ]
       else if hostname == "athena"
            then [ hera ]
            else [];
