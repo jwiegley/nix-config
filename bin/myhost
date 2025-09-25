@@ -3,13 +3,13 @@
 if   [[ $(hostname) =~ [Vv]ulcan ]]; then
     echo vulcan
 elif [[ $(hostname) =~ [Hh]era || \
-        $(ipaddr en0 2> /dev/null) == 192.168.50.5 ]]; then
+        $(ipaddr en0 2> /dev/null) == 192.168.1.4 ]]; then
     echo hera
 elif [[ $(hostname) =~ [Aa]thena || \
-        $(ipaddr en0 2> /dev/null) == 192.168.50.235  ]]; then
+        $(ipaddr en0 2> /dev/null) == 192.168.20.2  ]]; then
     echo athena
 elif [[ $(hostname) =~ [Cc]lio || \
-        $(ipaddr en0 2> /dev/null) == 192.168.50.112 ]]; then
+        $(ipaddr en0 2> /dev/null) == 192.168.3.9 ]]; then
     echo clio
 else
     echo clio                   # assume we're on the laptop

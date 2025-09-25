@@ -911,56 +911,12 @@ in {
 
   xdg = {
     enable = true;
-
     configFile = {
       "aspell/config".text = ''
         local-data-dir ${pkgs.aspell}/lib/aspell
         data-dir ${pkgs.aspellDicts.en}/lib/aspell
         personal ${config.xdg.configHome}/aspell/en_US.personal
         repl ${config.xdg.configHome}/aspell/en_US.repl
-      '';
-
-      "mbsync/config".text = ''
-        IMAPAccount gmail-account
-        Host imap.gmail.com
-        User carmichaellsa@gmail.com
-        PassCmd "pass mbsync.carmichael.imap.gmail.com"
-        TLSType IMAPS
-        AuthMechs LOGIN
-        CertificateFile ${ca-bundle_crt}
-        Port 993
-        PipelineDepth 1
-
-        IMAPStore gmail-remote
-        Account gmail-account
-        PathDelimiter /
-
-        IMAPAccount dovecot
-        TLSType None
-        Host localhost
-        Port 9143
-        User johnw
-        Pass pass
-        AuthMechs PLAIN
-        Tunnel "${pkgs.dovecot}/libexec/dovecot/imap -c /etc/dovecot/dovecot.conf"
-
-        IMAPStore dovecot-local
-        Account dovecot
-        PathDelimiter .
-        Trash mail.trash
-
-        Channel assembly
-        Far :gmail-remote:
-        Near :dovecot-local:
-        Patterns * !"[Gmail]/All Mail" !"[Gmail]/Important" !"[Gmail]/Starred" !"[Gmail]/Bin"
-        Create Near
-        Expunge None
-        Remove None
-        CopyArrivalDate yes
-        Sync Pull New
-
-        Group assembly
-        Channel assembly
       '';
     };
   };

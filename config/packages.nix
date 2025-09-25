@@ -62,9 +62,6 @@
     dnstracer
     dnsutils
     dot2tex
-    dovecot
-    # dovecot_pigeonhole
-    # dovecot_fts_xapian
     doxygen
     dstp
     du-dust
