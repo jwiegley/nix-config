@@ -606,6 +606,7 @@ in {
           logAllRefUpdates  = true;
           precomposeunicode = false;
           whitespace        = "trailing-space,space-before-tab";
+          untrackedCache    = true;
         };
 
         branch.autosetupmerge  = true;
