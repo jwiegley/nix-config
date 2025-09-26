@@ -347,4 +347,40 @@ task-master-ai-0-26-0 = with self; buildNpmPackage (finalAttrs: {
   };
 });
 
+claude-code-acp = with self; buildNpmPackage (finalAttrs: {
+  pname = "claude-code-acp";
+  version = "0.4.5";
+
+  src = fetchFromGitHub {
+    owner = "zed-industries";
+    repo = "claude-code-acp";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-kkAQuYP2S5EwIGJV8TLrlYzHOC54vmxEHwwuZD5P1hI=";
+  };
+
+  npmDepsHash = "sha256-IR88NP1AiR6t/MLDdaZY1Np0AE7wfqEUfmnohaf0ymc=";
+
+  dontNpmBuild = false;
+
+  npmFlags = [
+    "--ignore-scripts"
+  ];
+
+  makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
+
+  passthru.updateScript = nix-update-script { };
+
+  # Version check disabled - command doesn't support --version flag
+  doInstallCheck = false;
+
+  meta = with lib; {
+    description = "Use Claude Code from any ACP-compatible clients such as Zed";
+    homepage = "https://github.com/zed-industries/claude-code-acp";
+    license = licenses.asl20;
+    mainProgram = "claude-code-acp";
+    maintainers = [ maintainers.jwiegley ];
+    platforms = platforms.all;
+  };
+});
+
 }
