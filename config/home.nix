@@ -118,7 +118,6 @@ in {
         ".mitmproxy".source    = mkLink "${config.xdg.configHome}/mitmproxy";
         ".sage".source         = mkLink "${config.xdg.configHome}/sage";
         ".jq".source           = mkLink "${config.xdg.configHome}/jq/config";
-        ".mbsyncrc".source     = mkLink "${config.xdg.configHome}/mbsync/config";
         ".parallel".source     = mkLink "${config.xdg.configHome}/parallel";
 
         ".diffusionbee".source = mkLink "${config.xdg.dataHome}/diffusionbee";
@@ -159,21 +158,6 @@ in {
         "Media".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Media";
         "Vulcan".source = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan";
       };
-
-      # activation.firefoxWriteBoundary =
-      #   let
-      #     profilesFilePath = "$HOME/Library/Application\\ Support/Firefox/profiles.ini";
-      #   in lib.hm.dag.entryAfter
-      #     [
-      #       "writeBoundary"
-      #       "linkGeneration"
-      #     ]
-      #     ''
-      #       run mv ${profilesFilePath} ${profilesFilePath}.hm
-      #       run cp "`readlink ${profilesFilePath}.hm`" ${profilesFilePath}
-      #       run rm -f ${profilesFilePath}.$HOME_MANAGER_BACKUP_EXT
-      #       run chmod u+w ${profilesFilePath}
-      #     '';
   };
 
   accounts.email = {
@@ -224,8 +208,6 @@ in {
     jq.enable = true;
     man.enable = true;
     vim.enable = true;
-
-    # firefox = import ./firefox.nix { inherit hostname home pkgs; };
 
     starship = {
       enable = true;
@@ -614,7 +596,6 @@ in {
         commit.status          = false;
         github.user            = "jwiegley";
         credential.helper      = "${pkgs.pass-git-helper}/bin/pass-git-helper";
-        ghi.token              = "!${pkgs.pass}/bin/pass show api.github.com | head -1";
         hub.protocol           = "${pkgs.openssh}/bin/ssh";
         mergetool.keepBackup   = true;
         pull.rebase            = true;
