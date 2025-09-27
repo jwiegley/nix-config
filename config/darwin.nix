@@ -160,6 +160,7 @@ in {
       "suspicious-package"
       "swiftdefaultappsprefpane"
       "telegram"
+      "thunderbird"
       "thinkorswim"
       # "tor-browser"
       "ukelele"
