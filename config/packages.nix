@@ -200,7 +200,6 @@
     nixpkgs-fmt
     nixfmt-classic
     nmap
-    nur.repos.charmbracelet.crush
     nodejs_22
     nss
     opensc
