@@ -1,8 +1,2 @@
-#!/bin/sh -e
-
-if [[ "$1" == --rev ]]; then
-    export EMACSVER=$2
-    shift 2
-fi
-
-exec load-env-emacs$EMACSVER bash -c "unset TZ ; make -C ~/.emacs.d open"
+#!/bin/sh
+exec load-env-emacs${1:-$EMACSVER} bash -c "unset TZ ; make -C ~/.emacs.d open"
