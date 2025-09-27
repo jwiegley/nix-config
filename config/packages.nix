@@ -42,7 +42,6 @@
     bash-completion
     bashInteractive
     bat
-    bbcp
     btop
     cacert
     cargo-cache
@@ -92,7 +91,6 @@
     getopt
     gitAndTools.delta
     gitAndTools.gh
-    gitAndTools.ghi
     gitAndTools.gist
     gitAndTools.git-absorb
     # gitAndTools.git-branchless
@@ -275,7 +273,6 @@
     rsync
     ruby
     samba
-    sanoid
     sbcl
     scc
     sccache

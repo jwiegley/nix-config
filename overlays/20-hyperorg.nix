@@ -13,7 +13,7 @@ hyperorg = with super; with python3Packages; buildPythonPackage rec {
   };
 
   patches = [
-    ./hyperorg.patch
+    ./emacs/patches/hyperorg.patch
   ];
 
   build-system = [

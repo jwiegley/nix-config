@@ -1,3 +1,0 @@
-[submodule "forks/timeparsers"]
-	path = forks/timeparsers
-	url = git://github.com/jwiegley/timeparsers.git
