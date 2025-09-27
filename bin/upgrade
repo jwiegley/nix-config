@@ -33,29 +33,29 @@ echo '└───────────────────────�
 
 ### Kadena projects
 
-echo ~/kadena/pact-fv
-(
-    cd ~/kadena/pact-fv
-    source .envrc
-    cabal v2-update
-    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
-) > /tmp/pact-fv-build.log 2>&1
+# echo ~/kadena/pact-fv
+# (
+#     cd ~/kadena/pact-fv
+#     source .envrc
+#     cabal v2-update
+#     cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
+#     cabal v2-build
+#     cabal v2-test
+# ) > /tmp/pact-fv-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+# if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
-echo ~/kadena/pact-5
-(
-    cd ~/kadena/pact-5
-    source .envrc
-    cabal v2-update
-    cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
-) > /tmp/pact-5-build.log 2>&1
+# echo ~/kadena/pact-5
+# (
+#     cd ~/kadena/pact-5
+#     source .envrc
+#     cabal v2-update
+#     cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
+#     cabal v2-build
+#     cabal v2-test
+# ) > /tmp/pact-5-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+# if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
 # echo ~/kadena/evm/reth
 # (
@@ -76,8 +76,7 @@ echo ~/src/category-theory
 (
     cd ~/src/category-theory
     source .envrc
-    make clean
-    make
+    nix develop -c echo hello
 ) > /tmp/category-theory-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -86,8 +85,7 @@ echo ~/src/ltl/coq
 (
     cd ~/src/ltl/coq
     source .envrc
-    make clean
-    make
+    nix develop -c echo hello
 ) > /tmp/ltl-coq-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -99,6 +97,7 @@ echo ~/src/notes/haskell
     cd ~/src/notes/haskell
     echo ~/src/notes/haskell
     source .envrc
+    nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --disable-tests                          \
           --disable-profiling --disable-executable-profiling
@@ -111,11 +110,10 @@ echo ~/src/org-jw
     cd ~/src/org-jw
     echo ~/src/org-jw
     source .envrc
+    nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests                           \
           --disable-profiling --disable-executable-profiling
-    cabal v2-build all
-    cabal v2-test all
 ) > /tmp/org-jw-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -125,11 +123,10 @@ echo ~/src/pushme
     cd ~/src/pushme
     echo ~/src/pushme
     source .envrc
+    nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests                           \
           --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
 ) > /tmp/pushme-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -139,11 +136,10 @@ echo ~/src/gitlib
     cd ~/src/gitlib
     echo ~/src/gitlib
     source .envrc
+    nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests                           \
           --disable-profiling --disable-executable-profiling
-    cabal v2-build all
-    cabal v2-test all
 ) > /tmp/gitlib-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -153,11 +149,10 @@ echo ~/src/hours
     cd ~/src/hours
     echo ~/src/hours
     source .envrc
+    nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests                           \
           --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
 ) > /tmp/hours-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -167,11 +162,10 @@ echo ~/src/renamer
     cd ~/src/renamer
     echo ~/src/renamer
     source .envrc
+    nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests                           \
           --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
 ) > /tmp/renamer-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -181,11 +175,10 @@ echo ~/src/simple-amount
     cd ~/src/simple-amount
     echo ~/src/simple-amount
     source .envrc
+    nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests                           \
           --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
 ) > /tmp/simple-amount-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -195,11 +188,10 @@ echo ~/src/sizes
     cd ~/src/sizes
     echo ~/src/sizes
     source .envrc
+    nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests                           \
           --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
 ) > /tmp/sizes-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -209,11 +201,10 @@ echo ~/src/three-partition
     cd ~/src/three-partition
     echo ~/src/three-partition
     source .envrc
+    nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests \
           --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
 ) > /tmp/three-partition-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -223,11 +214,10 @@ echo ~/src/trade-journal
     cd ~/src/trade-journal
     echo ~/src/trade-journal
     source .envrc
+    nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests \
           --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
 ) > /tmp/trade-journal-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -237,11 +227,10 @@ echo ~/src/una
     cd ~/src/una
     echo ~/src/una
     source .envrc
+    nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests \
           --disable-profiling --disable-executable-profiling
-    cabal v2-build
-    cabal v2-test
 ) > /tmp/una-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -253,11 +242,8 @@ echo ~/src/comparable
     cd ~/src/comparable
     echo ~/src/comparable
     source .envrc
+    nix develop -c echo hello
     cargo update
-    cargo build
-    cargo test
-    cargo doc
-    cargo clippy
 ) > /tmp/comparable-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
@@ -278,3 +264,37 @@ echo ~/src/rag-client
 ) >> /tmp/rag-client-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+echo ~/src/hf
+(
+    cd ~/src/hf
+    echo ~/src/hf
+    source .envrc
+    nix develop -c echo hello
+) >> /tmp/hf-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+### C++ projects
+
+echo ~/src/ledger
+(
+    cd ~/src/ledger
+    echo ~/src/ledger
+    source .envrc
+    nix develop -c echo hello
+) >> /tmp/ledger-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
+### C projects
+
+# echo ~/src/emacs
+# (
+#     cd ~/src/rag-client
+#     echo ~/src/rag-client
+#     source .envrc
+#     nix develop -c echo hello
+# ) >> /tmp/rag-client-build.log 2>&1
+
+# if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
