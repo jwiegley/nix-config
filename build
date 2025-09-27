@@ -4,15 +4,15 @@ if [[ $1 == system ]]; then
     shift 1
     nix build --impure .\#darwinConfigurations.$(myhost).system "$@"
 elif [[ $1 == pkg ]]; then
-    pkg=$1
+    pkg=$2
     shift 2
     nix build --impure .\#darwinConfigurations.$(myhost).pkgs.$pkg "$@"
 elif [[ $1 == emacs ]]; then
-    pkg=$1
+    pkg=$2
     shift 2
     nix build --impure .\#darwinConfigurations.$(myhost).pkgs.emacs30MacPortPackages.$pkg "$@"
 elif [[ $1 == haskell ]]; then
-    pkg=$1
+    pkg=$2
     shift 2
     nix build --impure .\#darwinConfigurations.$(myhost).pkgs.haskellPackages.$pkg "$@"
 fi

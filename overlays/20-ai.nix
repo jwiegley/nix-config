@@ -296,26 +296,25 @@ rustdocs-mcp-server = with super; rustPlatform.buildRustPackage rec {
   };
 };
 
-task-master-ai-0-26-0 = with self; buildNpmPackage (finalAttrs: {
+task-master-ai-0-27-3 = with super; buildNpmPackage (finalAttrs: {
   pname = "task-master-ai";
-  version = "0.26.0";
+  version = "0.27.3";
 
   src = fetchFromGitHub {
     owner = "eyaltoledano";
     repo = "claude-task-master";
     tag = "task-master-ai@${finalAttrs.version}";
-    hash = "sha256-eQEV8TMJsq3oUqgTKlmIrBEjtHphTt2gH22kCkrTeqY=";
+    hash = "sha256-rYD3pynVW0G2Dii4kx0wXiGd4VjBT9T3/2GBI9g6Fhc=";
   };
 
-  npmDepsHash = "sha256-sxz5xAJDtgYKVCjBtW2H6y0dAPbXJNnIPIu5RSzrhuY=";
+  postPatch = ''
+    cp ${./package-lock.json} package-lock.json
+  '';
+  npmDepsHash = "sha256-2mO3+Pc+ZuCjzBAsZParTc8lYn9uhMhe75UA1OLnHmw=";
 
   dontNpmBuild = true;
-  # makeCacheWritable = true;
 
-  npmFlags = [
-    "--ignore-scripts"
-    # "--legacy-peer-deps"
-  ];
+  npmFlags = [ "--ignore-scripts" ];
 
   makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
 

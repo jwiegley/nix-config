@@ -96,6 +96,7 @@ in {
 
     casks = [
       "carbon-copy-cloner"
+      "claude-code"
       "docker-desktop"
       "drivedx"
       "iterm2"
@@ -124,7 +125,6 @@ in {
       { name = "brave-browser"; greedy = true; }
       "choosy"
       "claude"
-      "claude-code"
       "corelocationcli"
       # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
@@ -289,17 +289,16 @@ in {
       ];
     };
 
-    distributedBuilds = false;
-    buildMachines = [];
-    # buildMachines =
-    #   if hostname == "clio"
-    #   then [
-    #     # hera                # jww (2025-09-23): not running
-    #     athena
-    #   ]
-    #   else if hostname == "athena"
-    #        then [ hera ]
-    #        else [];
+    distributedBuilds = true;
+    buildMachines =
+      if hostname == "clio"
+      then [
+        # hera                # jww (2025-09-23): not running
+        athena
+      ]
+      else if hostname == "athena"
+           then [ hera ]
+           else [];
 
     extraOptions = ''
       gc-keep-derivations = true
@@ -493,7 +492,7 @@ in {
                   ssl_protocols TLSv1.2 TLSv1.3;
                   ssl_prefer_server_ciphers on;
                   ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
-                  
+
                   access_log ${logDir}/access.log;
 
                   location / {
