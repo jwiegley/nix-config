@@ -5,6 +5,9 @@ self: pkgs:
 coqPackages = self.coqPackages_8_19;
 
 # coqPackages_HEAD = self.mkCoqPackages self.coq_HEAD;
+coqPackages_9_1  = self.mkCoqPackages self.coq_9_1;
+coqPackages_9_0  = self.mkCoqPackages self.coq_9_0;
+coqPackages_8_20 = self.mkCoqPackages self.coq_8_20;
 coqPackages_8_19 = self.mkCoqPackages self.coq_8_19;
 coqPackages_8_18 = self.mkCoqPackages self.coq_8_18;
 coqPackages_8_17 = self.mkCoqPackages self.coq_8_17;
@@ -28,6 +31,9 @@ coq = self.coq_8_19;
 #       ]);
 #   });
 
+coq_9_1  = pkgs.coq_9_1.override  { buildIde = false; };
+coq_9_0  = pkgs.coq_9_0.override  { buildIde = false; };
+coq_8_20 = pkgs.coq_8_20.override { buildIde = false; };
 coq_8_19 = pkgs.coq_8_19.override { buildIde = false; };
 coq_8_18 = pkgs.coq_8_18.override { buildIde = false; };
 coq_8_17 = pkgs.coq_8_17.override { buildIde = false; };
