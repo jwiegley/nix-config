@@ -6,4 +6,6 @@ elif [[ $1 == pkg ]]; then
     nix build --impure .\#darwinConfigurations.$(myhost).pkgs.$2
 elif [[ $1 == emacs ]]; then
     nix build --impure .\#darwinConfigurations.$(myhost).pkgs.emacs30MacPortPackages.$2
+elif [[ $1 == haskell ]]; then
+    nix build --impure .\#darwinConfigurations.$(myhost).pkgs.haskellPackages.$2
 fi
