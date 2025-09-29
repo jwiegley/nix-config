@@ -58,7 +58,7 @@ build:
 switch:
 	$(call announce,darwin-rebuild switch --impure --flake .#$(HOSTNAME))
 	@sudo darwin-rebuild switch --impure --flake .#$(HOSTNAME)
-	@echo "Darwin generation: $$(darwin-rebuild --list-generations | tail -1)"
+	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"
 
 update:
 	$(call announce,nix flake update && brew update)
