@@ -461,6 +461,7 @@ in {
       initContent = ''
         # Make sure that fzf does not override the meaning of ^T
         bindkey '^T' transpose-chars
+        bindkey -e
 
         if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
             unsetopt zle
@@ -588,7 +589,7 @@ in {
           logAllRefUpdates  = true;
           precomposeunicode = false;
           whitespace        = "trailing-space,space-before-tab";
-          untrackedCache    = true;
+          # untrackedCache    = true;
         };
 
         branch.autosetupmerge  = true;
