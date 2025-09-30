@@ -211,118 +211,22 @@ in {
 
     starship = {
       enable = true;
-      settings = {
-        add_newline = true;
+      settings = lib.mkMerge [
+        (builtins.fromTOML
+          (builtins.readFile
+            "${pkgs.starship}/share/starship/presets/nerd-font-symbols.toml"))
+        {
+          add_newline = true;
+          scan_timeout = 10;
 
-        format = lib.concatStrings [
-          "$hostname"
-          "$directory"
-          # "$git_branch"
-          # "$git_state"
-          # "$git_status"
-          "$cmd_duration"
-          "$line_break"
-          "$character"
-        ];
+          format = lib.concatStrings [
+            "$all"
+            "$directory"
+            "$character"
+          ];
+        }
+      ];
 
-        scan_timeout = 10;
-        # character = {
-        #   success_symbol = "[➜](bold green)";
-        #   error_symbol = "[➜](bold red)";
-        # };
-
-        aws.symbol            = "  ";
-        buf.symbol            = " ";
-        c.symbol              = " ";
-        cmake.symbol          = " ";
-        conda.symbol          = " ";
-        crystal.symbol        = " ";
-        dart.symbol           = " ";
-        directory.read_only   = " 󰌾";
-        docker_context.symbol = " ";
-        elixir.symbol         = " ";
-        elm.symbol            = " ";
-        fennel.symbol         = " ";
-        fossil_branch.symbol  = " ";
-        git_branch.symbol     = " ";
-        git_commit.tag_symbol = "  ";
-        golang.symbol         = " ";
-        guix_shell.symbol     = " ";
-        haskell.symbol        = " ";
-        haxe.symbol           = " ";
-        hg_branch.symbol      = " ";
-        hostname.ssh_symbol   = " ";
-        java.symbol           = " ";
-        julia.symbol          = " ";
-        kotlin.symbol         = " ";
-        lua.symbol            = " ";
-        memory_usage.symbol   = "󰍛 ";
-        meson.symbol          = "󰔷 ";
-        nim.symbol            = "󰆥 ";
-        nix_shell.symbol      = " ";
-        nodejs.symbol         = " ";
-        ocaml.symbol          = " ";
-        package.symbol        = "󰏗 ";
-        perl.symbol           = " ";
-        php.symbol            = " ";
-        pijul_channel.symbol  = " ";
-        python.symbol         = " ";
-        rlang.symbol          = "󰟔 ";
-        ruby.symbol           = " ";
-        rust.symbol           = "󱘗 ";
-        scala.symbol          = " ";
-        swift.symbol          = " ";
-        zig.symbol            = " ";
-        gradle.symbol         = " ";
-
-        os.symbols = {
-          Alpaquita        = " ";
-          Alpine           = " ";
-          AlmaLinux        = " ";
-          Amazon           = " ";
-          Android          = " ";
-          Arch             = " ";
-          Artix            = " ";
-          CachyOS          = " ";
-          CentOS           = " ";
-          Debian           = " ";
-          DragonFly        = " ";
-          Emscripten       = " ";
-          EndeavourOS      = " ";
-          Fedora           = " ";
-          FreeBSD          = " ";
-          Garuda           = "󰛓 ";
-          Gentoo           = " ";
-          HardenedBSD      = "󰞌 ";
-          Illumos          = "󰈸 ";
-          Kali             = " ";
-          Linux            = " ";
-          Mabox            = " ";
-          Macos            = " ";
-          Manjaro          = " ";
-          Mariner          = " ";
-          MidnightBSD      = " ";
-          Mint             = " ";
-          NetBSD           = " ";
-          NixOS            = " ";
-          Nobara           = " ";
-          OpenBSD          = "󰈺 ";
-          openSUSE         = " ";
-          OracleLinux      = "󰌷 ";
-          Pop              = " ";
-          Raspbian         = " ";
-          Redhat           = " ";
-          RedHatEnterprise = " ";
-          RockyLinux       = " ";
-          Redox            = "󰀘 ";
-          Solus            = "󰠳 ";
-          SUSE             = " ";
-          Ubuntu           = " ";
-          Unknown          = " ";
-          Void             = " ";
-          Windows          = "󰍲 ";
-        };
-      };
       enableBashIntegration = true;
       enableZshIntegration = true;
     };
