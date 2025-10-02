@@ -47,11 +47,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1759354283,
-        "narHash": "sha256-b8yxfeAs1ZTUOd6g6LgH0+Gq0xH9E9NwN1NViBgKIXg=",
+        "lastModified": 1759413602,
+        "narHash": "sha256-SqjkBCtYCYLFNyoilgQUgN2bSYsO6IsBtwjj4bb93FU=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "0b087899f9607336b19cfda4233ee62b6c643e8b",
+        "rev": "cb8843eef189514f24923088001ac5027b020937",
         "type": "github"
       },
       "original": {
@@ -62,11 +62,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1759133924,
-        "narHash": "sha256-eegjF6fo080481S/ZHyDENjeGG1ZgW2v86O9UZQxLJ8=",
+        "lastModified": 1759386674,
+        "narHash": "sha256-wg1Lz/1FC5Q13R+mM5a2oTV9TA9L/CHHTm3/PiLayfA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "9547cfd27b5158eb612a6812dfc5c7b3d118b996",
+        "rev": "625ad6366178f03acd79f9e3822606dd7985b657",
         "type": "github"
       },
       "original": {

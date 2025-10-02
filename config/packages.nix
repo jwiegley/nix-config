@@ -183,6 +183,7 @@
     m-cli
     m4
     macmon
+    mb2md
     metabase
     mitmproxy
     mkcert
@@ -201,6 +202,7 @@
     nmap
     nodejs_22
     nss
+    ntp
     opensc
     openssh
     openssl
