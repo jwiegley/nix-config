@@ -23,7 +23,7 @@ in {
     packages = packages.package-list;
 
     sessionVariables = {
-      ANTHROPIC_MODEL     = "opus";
+      ANTHROPIC_MODEL     = "sonnet";
       DISABLE_AUTOUPDATER = "1";
       ASPELL_CONF         = "conf ${config.xdg.configHome}/aspell/config;";
       B2_ACCOUNT_INFO     = "${config.xdg.configHome}/backblaze-b2/account_info";

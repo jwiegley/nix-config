@@ -55,10 +55,6 @@ in {
   };
 
   # services = {
-  #   eternal-terminal = {
-  #     enable = true;
-  #   };
-
   #   postgresql = {
   #     enable = true;
   #     package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
