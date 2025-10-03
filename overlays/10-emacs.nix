@@ -50,13 +50,13 @@ let
     ascii = compileEmacsWikiFile {
       name = "ascii.el";
       sha256 = "1ijpnk334fbah94vm7dkcd2w4zcb0l7yn4nr9rwgpr2l25llnr0f";
-      # date = 2025-08-28T11:50:26-0700;
+      # date = 2025-10-02T08:31:55-0700;
     };
 
     col-highlight = compileEmacsWikiFile {
       name = "col-highlight.el";
       sha256 = "0na8aimv5j66pzqi4hk2jw5kk00ki99zkxiykwcmjiy3h1r9311k";
-      # date = 2025-08-28T11:50:27-0700;
+      # date = 2025-10-02T08:31:56-0700;
 
       buildInputs = with eself; [ vline ];
     };
@@ -64,7 +64,7 @@ let
     crosshairs = compileEmacsWikiFile {
       name = "crosshairs.el";
       sha256 = "0ld30hwcxvyqfaqi80nvrlflpzrclnjcllcp457hn4ydbcf2is9r";
-      # date = 2025-08-28T11:50:28-0700;
+      # date = 2025-10-02T08:31:57-0700;
 
       buildInputs = with eself; [ hl-line-plus col-highlight vline ];
     };
@@ -72,55 +72,55 @@ let
     cursor-chg = compileEmacsWikiFile {
       name = "cursor-chg.el";
       sha256 = "1zmwh0z4g6khb04lbgga263pqa51mfvs0wfj3y85j7b08f2lqnqn";
-      # date = 2025-08-28T11:50:28-0700;
+      # date = 2025-10-02T08:31:58-0700;
     };
 
     erc-highlight-nicknames = compileEmacsWikiFile {
       name = "erc-highlight-nicknames.el";
       sha256 = "01r184q86aha4gs55r2vy3rygq1qnxh1bj9qmlz97b2yh8y17m50";
-      # date = 2025-08-28T11:50:29-0700;
+      # date = 2025-10-02T08:31:59-0700;
     };
 
     highlight-cl = compileEmacsWikiFile {
       name = "highlight-cl.el";
       sha256 = "0r3kzs2fsi3kl5gqmsv75dc7lgfl4imrrqhg09ij6kq1ri8gjxjw";
-      # date = 2025-08-28T11:50:30-0700;
+      # date = 2025-10-02T08:31:59-0700;
     };
 
     hl-line-plus = compileEmacsWikiFile {
       name = "hl-line+.el";
       sha256 = "1ns064l1c5g3dnhx5d2sn43w9impn58msrywsgq0bdyzikg7wwh2";
-      # date = 2025-08-28T11:50:31-0700;
+      # date = 2025-10-02T08:32:00-0700;
     };
 
     popup-ruler = compileEmacsWikiFile {
       name = "popup-ruler.el";
       sha256 = "0fszl969savcibmksfkanaq11d047xbnrfxd84shf9z9z2i3dr43";
-      # date = 2025-08-28T11:50:32-0700;
+      # date = 2025-10-02T08:32:01-0700;
     };
 
     pp-c-l = compileEmacsWikiFile {
       name = "pp-c-l.el";
       sha256 = "00509bv668wq8k0fa65xmlagkgris85g47f62ynqx7a39jgvca3g";
-      # date = 2025-08-28T11:50:32-0700;
+      # date = 2025-10-02T08:32:02-0700;
     };
 
     tidy = compileEmacsWikiFile {
       name = "tidy.el";
       sha256 = "0psci55a3angwv45z9i8wz8jw634rxg1xawkrb57m878zcxxddwa";
-      # date = 2025-08-28T11:50:33-0700;
+      # date = 2025-10-02T08:32:03-0700;
     };
 
     xray = compileEmacsWikiFile {
       name = "xray.el";
       sha256 = "1s25z9iiwpm1sp3yj9mniw4dq7dn0krk4678bgqh464k5yvn6lyk";
-      # date = 2025-08-28T11:50:34-0700;
+      # date = 2025-10-02T08:32:04-0700;
     };
 
     yaoddmuse = compileEmacsWikiFile {
       name = "yaoddmuse.el";
       sha256 = "1ahcshphziqi1hhrhv52jdmqp9q1w1b3qxl007xrjp3nmz0sbdjr";
-      # date = 2025-08-28T11:50:36-0700;
+      # date = 2025-10-02T08:32:05-0700;
     };
 
     jobhours = compileEmacsFiles {
@@ -264,9 +264,9 @@ let
       src = fetchFromGitHub {
         owner = "emarsden";
         repo = "pgmacs";
-        rev = "4fca51670b0f9a8d1b859d23eeb1e2ae7bbdc93d";
-        sha256 = "0bpj75b8fmg3cnfvm3qb864pd5iyxlng4qgw6iv2mqz2nnhyhxpg";
-        # date = 2025-08-27T11:16:42+02:00;
+        rev = "9907be6e606c1a0d51fa5d835f7527eeb88a667f";
+        sha256 = "0f7z2q7j03n8lrv9rh4z9bgba77d85r61rsmj3zx8y6mwkdhq0bf";
+        # date = 2025-09-29T11:18:24+02:00;
       };
       buildInputs = with eself; [ pg ];
     };
@@ -442,7 +442,7 @@ let
       src = fetchurl {
         url = "https://git.sr.ht/~bzg/org-contrib/blob/master/lisp/org-checklist.el";
         sha256 = "03z9cklpcrnc0s0igi7jxz0aw7c97m9cwz7b1d8nfz29fws25cx9";
-        # date = "2025-08-28T11:51:00-0700";
+        # date = "2025-10-02T08:32:29-0700";
       };
     };
 
@@ -476,9 +476,9 @@ let
       src = fetchFromGitHub {
         owner = "meedstrom";
         repo = "org-mem";
-        rev = "a99cd068737caf5d9d6c1ea7444f8a6b3c2e57a7";
-        sha256 = "1nm1avc0hbvhr43vkfw3jssiqyckd7ba6jw0qhvgcvk49df393wf";
-        # date = 2025-07-15T12:48:59+02:00;
+        rev = "65625c15785cfd3074437b84edc5ef72a91ac33e";
+        sha256 = "1n160lpqd6662x31sfpmk8rfn049dic0mycds27ncr2vx24nqg3q";
+        # date = 2025-10-01T20:50:56+02:00;
       };
       buildInputs = with eself; [
         org llama el-job
@@ -490,9 +490,9 @@ let
       src = fetchFromGitHub {
         owner = "meedstrom";
         repo = "org-node";
-        rev = "c032a0bc238dd8df5a71868cd5c736e258dd9918";
-        sha256 = "1xlxf12g16abizfb0y86kfcyq62v8z538dawmy8sxc0232d41iy7";
-        # date = 2025-07-18T19:01:56+02:00;
+        rev = "a1dc8b518e6a3345082acf139d402211e27406ad";
+        sha256 = "17hga96xvxz5knz85jp1fjjgymah8s0x0yd3klld6f4rrfp85fbv";
+        # date = 2025-10-01T20:55:21+02:00;
       };
       buildInputs = with eself; [
         org org-mem llama magit-section el-job
@@ -542,9 +542,9 @@ let
       src = fetchFromGitHub {
         owner = "bohonghuang";
         repo = "org-srs";
-        rev = "51856d234b8683c3502b5366d0eee512061bce04";
-        sha256 = "1jlva1a5llrsxscg1qfab1a5s3bf6dxkcllhm9d5dgsycb644jyg";
-        # date = 2025-08-19T01:26:11+08:00;
+        rev = "8bf7b497c490b4980ca63d20e419439e3c0d7a0c";
+        sha256 = "1179n9iva1zxb41pbfm3xm9n4gmw7s9nnc8hg4l6ziwgsa02x1iq";
+        # date = 2025-09-21T19:33:28+08:00;
       };
       buildInputs = with eself; [ org fsrs ];
     };
@@ -623,9 +623,9 @@ let
     #   src = fetchFromGitHub {
     #     owner = "ProofGeneral";
     #     repo = "PG";
-    #     rev = "fbb2878e49483181f6687b8ca15ecf9a597ff947";
-    #     sha256 = "0aq28fibnhiyjbbyjpg615pf2581b4w0r66sk4kchi39srwrngv5";
-    #     # date = "2025-08-11T13:27:00+02:00";
+    #     rev = "f33b478d1144d6828dfa0df7f0d7d48da704ea11";
+    #     sha256 = "0dfd4lpsdjhpp73812i4nb3vkphk4ixmnb9zychv7k2ad6cfhh6p";
+    #     # date = "2025-09-15T12:38:50+02:00";
     #   };
 
     #   # src = /Users/johnw/src/proof-general;

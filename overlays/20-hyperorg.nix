@@ -7,9 +7,9 @@ hyperorg = with super; with python3Packages; buildPythonPackage rec {
 
   src = fetchgit {
     url = "https://codeberg.org/buhtz/hyperorg.git";
-    rev = "a814c4bf5e95bd522fabe66d7baed9d71a7090e9";
-    sha256 = "1zw9ha79g8qb2gg83hkpigaarsfvkz948mrjksfgbh5im4n7qykp";
-    # date = 2024-08-25T21:16:09+02:00;
+    rev = "f9fc6a164cd94df4d146c69fc7e48aeb143afe16";
+    sha256 = "0cr16p6z0spr9xdabw4da77hrsmn4dzvfxd15kllva8w28xqsbl6";
+    # date = 2025-08-31T09:48:06+02:00;
   };
 
   patches = [

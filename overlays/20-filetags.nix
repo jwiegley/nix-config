@@ -9,9 +9,9 @@ filetags = with super; with python3Packages; buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "novoid";
     repo = "filetags";
-    rev = "a7f4d58998e02f53578c9d2dec73f30b5880fc1a";
-    sha256 = "1n97aa12sdjvqav5h7bz72kw0hfx8qmhhqxb80yki1vfavin62bk";
-    # date = "2024-01-13T18:29:31+01:00";
+    rev = "b042bd20314898527c9c2a0d942c25d0b01c263f";
+    sha256 = "1xkb5rha8f7zxgvwlk3gl6nba6jq74pgcnwg5m5kn59hra41f3kd";
+    # date = "2025-09-15T13:27:03+02:00";
   };
 
   propagatedBuildInputs = [ 

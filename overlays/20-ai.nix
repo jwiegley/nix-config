@@ -125,24 +125,24 @@ ik-llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
 });
 
 llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "6434";
+  version = "6670";
   src = super.fetchFromGitHub {
     owner = "ggml-org";
     repo = "llama.cpp";
     tag = "b${version}";
-    hash = "sha256-gLSrGmmFHic/znEmKF0f64WUWogEUMvaa7Qn1ffF5Ao=";
+    hash = "sha256-B0xD5pMK6l/KcZFjhUP2pKDh4EUECeDl4vvcwhLtSVA=";
   };
 });
 
 llama-swap =
 let
-  version = "158";
+  version = "162";
 
   src = super.fetchFromGitHub {
     owner = "mostlygeek";
     repo = "llama-swap";
     rev = "v${version}";
-    hash = "sha256-26xMIVf3eVkuKAJewkX6avdbXRcfOR8NPaAHAGTWNsU=";
+    hash = "sha256-UvvV8j5MgcVFIHM9MSPuJ2DB4JKQJp1SKbniN2lEF9o=";
   };
 
   ui = with super; buildNpmPackage (finalAttrs: {
@@ -156,7 +156,7 @@ let
 
     sourceRoot = "source/ui";
 
-    npmDepsHash = "sha256-Sbvz3oudMVf+PxOJ6s7LsDaxFwvftNc8ZW5KPpbI/cA=";
+    npmDepsHash = "sha256-F6izMZY4554M6PqPYjKcjNol3A6BZHHYA0CIcNrU5JA=";
 
     postInstall = ''
       rm -rf $out/lib
@@ -190,14 +190,14 @@ with super; llama-swap.overrideAttrs(attrs: rec {
 
 mlx-lm = with self; with self.python3Packages; buildPythonApplication rec {
   pname = "mlx-lm";
-  version = "0.25.1";
+  version = "0.28.2";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "mlx-explore";
     repo = "mlx-lm";
     tag = version;
-    hash = "sha256-7SGbvhuNeKgMYGa0ZiOLm+H/JbNpvFWBcUL4De5xO4o=";
+    hash = "sha256-6SGbvhuNeKgMYGa0ZiOLm+H/JbNpvFWBcUL4De5xO4o=";
   };
 
   build-system = [

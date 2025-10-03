@@ -2,15 +2,15 @@ self: super: {
 
 yamale = with super; with python3Packages; buildPythonPackage rec {
   pname = "yamale";
-  version = "bacaa1d8";
+  version = "c989fabf";
   name = "${pname}-${version}";
 
   src = fetchFromGitHub {
     owner = "23andMe";
     repo = "Yamale";
-    rev = "bacaa1d8e20395e11fe087cb7a7cb0365c2afd50";
-    sha256 = "0ac9j5rm0bgfkwmri131d8v16abyndfxx58lnnkmil1rkl0r0a4a";
-    # date = 2024-04-30T16:14:31-04:00;
+    rev = "c989fabfb2813885c5355f5f8bbf06ca02847e40";
+    sha256 = "15f0zbmsaddqad5zl8bd0xhpmqgx41jy8lgwcynl878qcf266gr2";
+    # date = 2025-01-02T15:35:16-05:00;
   };
 
   propagatedBuildInputs = [ pyyaml ];
