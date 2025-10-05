@@ -231,15 +231,10 @@ in {
       enableZshIntegration = true;
     };
 
-    tmux = {
-      enable = true;
-      extraConfig = ''
-        set-option -g allow-passthrough on
-        set-option -g default-shell /bin/zsh
-        set-option -g default-command /bin/zsh
-        set-option -g history-limit 250000
-      '';
-    };
+    tmux = { enable = true; extraConfig = '' set-option -g allow-passthrough
+      on set-option -g default-shell ${pkgs.zsh}/bin/zsh set-option -g
+      default-command ${pkgs.zsh}/bin/zsh set-option -g history-limit 250000
+      ''; };
 
     home-manager = {
       enable = true;
