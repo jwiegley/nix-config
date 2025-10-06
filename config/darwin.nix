@@ -133,6 +133,7 @@ in {
       "fantastical"
       { name = "firefox"; greedy = true; }
       "geektool"
+      "home-assistant"
       "key-codes"
       "keyboard-maestro"
       "launchbar"
