@@ -22,8 +22,6 @@ NIXOPTS_MORE=()
 if [[ $PWD =~ kadena || $PWD =~ athena ]]; then
     if [[ $NOCACHE == false ]]; then
         echo Building direnv cache for a Kadena project...
-        NIXOPTS+=(--extra-substituters 'https://nixcache.chainweb.com')
-        NIXOPTS+=(--extra-trusted-public-keys 'nixcache.chainweb.com:FVN503ABX9F8x8K0ptnc99XEz5SaA4Sks6kNcZn2pBY=')
     fi
 elif [[ -f flake.nix ]]; then
     echo "Using the package set for <darwin>"

@@ -54,18 +54,28 @@ in {
     };
   };
 
-  # services = {
-  #   postgresql = {
-  #     enable = true;
-  #     package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
-  #     dataDir = "${home}/${hostname}/postgresql";
-  #     authentication = ''
-  #       local all all              trust
-  #       host  all all localhost    trust
-  #       host  all all 127.0.0.1/32 trust
-  #     '';
-  #   };
-  # };
+  services = {
+    prometheus.exporters.node = {
+      enable = hostname != "clio";
+      port = 9100;
+      listenAddress = "0.0.0.0";  # Allow remote Prometheus to scrape
+      enabledCollectors = [
+        # Add additional collectors as needed
+        # "systemd"  # Not available on macOS
+      ];
+    };
+
+    # postgresql = {
+    #   enable = true;
+    #   package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
+    #   dataDir = "${home}/${hostname}/postgresql";
+    #   authentication = ''
+    #     local all all              trust
+    #     host  all all localhost    trust
+    #     host  all all 127.0.0.1/32 trust
+    #   '';
+    # };
+  };
 
   homebrew = {
     enable = true;
@@ -80,6 +90,7 @@ in {
     ];
     brews = [
       "ykman"
+      # "node_exporter"  # Now using nix-darwin services.prometheus.exporters.node
       "nss"
 
       # Brews for Kadena
