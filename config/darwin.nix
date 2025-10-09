@@ -90,7 +90,6 @@ in {
     ];
     brews = [
       "ykman"
-      # "node_exporter"  # Now using nix-darwin services.prometheus.exporters.node
       "nss"
 
       # Brews for Kadena
