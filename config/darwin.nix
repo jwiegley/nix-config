@@ -91,6 +91,7 @@ in {
     brews = [
       "ykman"
       "nss"
+      "node"
 
       # Brews for Kadena
       "kadena-io/pact/pact"
@@ -158,6 +159,7 @@ in {
       # "omnigraffle"               # Stay at version 6
       { name = "opera"; greedy = true; }
       "pdf-expert"
+      "sage"
       # "screenflow"                # Stay at version 9
       "signal"
       "slack"
