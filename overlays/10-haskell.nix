@@ -12,6 +12,7 @@ let
   [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
     "gitlib/gitlib-libgit2"
     "gitlib/git-monitor"
+    "hakyll"
     "hours"
     # "hnix"
     # "logging"
@@ -45,13 +46,6 @@ let
 
   otherHackagePackages = ghc: hself: hsuper: with pkgs.haskell.lib; {
     pushme = unmarkBroken (doJailbreak hsuper.pushme);
-
-    hakyll =  hself.callCabal2nix "hakyll" (pkgs.fetchFromGitHub {
-      owner  = "jwiegley";
-      repo   = "hakyll";
-      rev    = "1784bb74b0bfcaa0899c522f34f2063b92728bd8";
-      sha256 = "sha256-hNr59HQ5hwKctVTfBfgZZMPXJTohsFgAmLKjxuiHqHs=";
-    }) {};
 
     time-recurrence = unmarkBroken (doJailbreak
       (hself.callCabal2nix "time-recurrence" (pkgs.fetchFromGitHub {
