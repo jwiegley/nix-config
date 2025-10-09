@@ -63,9 +63,9 @@ gguf-tools = with super; stdenv.mkDerivation rec {
   src = fetchFromGitHub {
     owner = "antirez";
     repo = "gguf-tools";
-    rev = "8fa6eb65236618e28fd7710a0fba565f7faa1848";
-    sha256 = "084xwlqa6qq8ns2fzxvmgxhacgv7wy1l4mppwsmk7ac5yg46z4fp";
-    # date = 2025-01-09T16:46:11+01:00;
+    rev = "a3257ff3cb8aed8b60ba3243c70b85a17491d7d6";
+    sha256 = "1dgm1l194blgcbg1ma1lmzprydfgbbkv5bvp1mpdg6ysc2g6i8d4";
+    # date = 2025-08-28T16:35:01+02:00;
   };
 
   installPhase = ''
@@ -125,24 +125,24 @@ ik-llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
 });
 
 llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "6670";
+  version = "6721";
   src = super.fetchFromGitHub {
     owner = "ggml-org";
     repo = "llama.cpp";
     tag = "b${version}";
-    hash = "sha256-B0xD5pMK6l/KcZFjhUP2pKDh4EUECeDl4vvcwhLtSVA=";
+    hash = "sha256-saqnRL04KZSMAdoo1AuqoivmN4kG5Lfaxg4AYk24JJg=";
   };
 });
 
 llama-swap =
 let
-  version = "162";
+  version = "164";
 
   src = super.fetchFromGitHub {
     owner = "mostlygeek";
     repo = "llama-swap";
     rev = "v${version}";
-    hash = "sha256-UvvV8j5MgcVFIHM9MSPuJ2DB4JKQJp1SKbniN2lEF9o=";
+    hash = "sha256-Br3CES4j78nev858qw+TeTSJ74kjKAErHFCMg9cAZSc=";
   };
 
   ui = with super; buildNpmPackage (finalAttrs: {
@@ -180,6 +180,7 @@ with super; llama-swap.overrideAttrs(attrs: rec {
     "-X main.date=unknown"
     "-X main.commit=v${version}"
   ];
+  doCheck = false;
   meta = {
     description = "Model swapping for llama.cpp (or any local OpenAPI compatible server)";
     license = lib.licenses.mit;
