@@ -12,7 +12,6 @@ let
   [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
     "gitlib/gitlib-libgit2"
     "gitlib/git-monitor"
-    "hakyll"
     "hours"
     # "hnix"
     # "logging"
