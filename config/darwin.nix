@@ -9,27 +9,54 @@ let home           = "/Users/johnw";
 
 in {
   users = {
-    users.johnw = {
-      name = "johnw";
-      inherit home;
-      shell = pkgs.zsh;
+    # List of users and groups that nix-darwin is allowed to create/manage
+    # CRITICAL: Users/groups must be in these lists for nix-darwin to create them
+    knownUsers = [ "johnw" ] ++ lib.optionals (hostname == "hera") [ "avahi" ];
+    knownGroups = lib.optionals (hostname == "hera") [ "avahi" ];
 
-      openssh.authorizedKeys = {
-        keys = [
-          # GnuPG auth key stored on Yubikeys
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJAj2IzkXyXEl+ReCg9H+t55oa6GIiumPWeufcYCWy3F yubikey-gnupg"
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb yubikey-14476831-gnupg"
-          # ShellFish iPhone key
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJD0sIKWWVF+zIWcNm/BfsbCQxuUBHD8nRNSpZV+mCf+ ShellFish@iPhone-28062024"
-          # ShellFish iPad key
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZQeQ/gKkOwuwktwD4z0ZZ8tpxNej3qcHS5ZghRcdAd ShellFish@iPad-22062024"
-        ] ++ lib.optionals (hostname == "athena") [
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEY4JNmY8VNmNhfHd09eX/fi8GxDDu8w/0uqryqaZaIn root@vulcan"
-        ];
-        keyFiles =
-          # Each machine accepts SSH key authentication from the rest
-          import ./key-files.nix { inherit (pkgs) lib; }
-            [ "hera" "clio" "athena" ] home hostname;
+    users = {
+      johnw = {
+        name = "johnw";
+        uid = 501;
+        inherit home;
+        shell = pkgs.zsh;
+
+        openssh.authorizedKeys = {
+          keys = [
+            # GnuPG auth key stored on Yubikeys
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJAj2IzkXyXEl+ReCg9H+t55oa6GIiumPWeufcYCWy3F yubikey-gnupg"
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb yubikey-14476831-gnupg"
+            # ShellFish iPhone key
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJD0sIKWWVF+zIWcNm/BfsbCQxuUBHD8nRNSpZV+mCf+ ShellFish@iPhone-28062024"
+            # ShellFish iPad key
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZQeQ/gKkOwuwktwD4z0ZZ8tpxNej3qcHS5ZghRcdAd ShellFish@iPad-22062024"
+          ] ++ lib.optionals (hostname == "athena") [
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEY4JNmY8VNmNhfHd09eX/fi8GxDDu8w/0uqryqaZaIn root@vulcan"
+          ];
+          keyFiles =
+            # Each machine accepts SSH key authentication from the rest
+            import ./key-files.nix { inherit (pkgs) lib; }
+              [ "hera" "clio" "athena" ] home hostname;
+        };
+      };
+    } // lib.optionalAttrs (hostname == "hera") {
+      # System user for avahi-daemon
+      # Note: Creating 'avahi' (not '_avahi') because the daemon looks for user 'avahi'
+      avahi = {
+        name = "avahi";
+        uid = 383;
+        gid = 383;
+        description = "Avahi mDNS/DNS-SD daemon";
+        home = "/var/empty";
+        shell = "/usr/bin/false";
+        isHidden = true;
+      };
+    };
+
+    groups = lib.optionalAttrs (hostname == "hera") {
+      avahi = {
+        name = "avahi";
+        gid = 383;
       };
     };
   };
@@ -40,6 +67,10 @@ in {
     scheherazade-new
     ia-writer-duospace
     liberation_ttf
+  ];
+
+  environment.systemPackages = with pkgs; [
+    avahi
   ];
 
   programs = {
@@ -453,6 +484,76 @@ in {
       };
     }
     // lib.optionalAttrs (hostname == "hera") {
+      avahi-reflector =
+        let
+          avahiConfig = pkgs.writeText "avahi-daemon.conf" ''
+            [server]
+            use-ipv4=yes
+            use-ipv6=no
+            allow-interfaces=bridge0,en1
+            deny-interfaces=lo0
+            allow-point-to-point=no
+            enable-dbus=no
+            disallow-other-stacks=no
+
+            [wide-area]
+            enable-wide-area=no
+
+            [publish]
+            disable-publishing=no
+            publish-addresses=yes
+            publish-hinfo=no
+            publish-workstation=no
+            publish-domain=no
+
+            [reflector]
+            enable-reflector=yes
+
+            [rlimits]
+          '';
+        in {
+          path = [ pkgs.avahi pkgs.coreutils ];
+
+          script = ''
+            # Create Avahi directories if they don't exist
+            ${pkgs.coreutils}/bin/mkdir -p /var/run/avahi-daemon
+            ${pkgs.coreutils}/bin/mkdir -p /etc/avahi
+
+            # Copy Avahi configuration file
+            ${pkgs.coreutils}/bin/cp ${avahiConfig} /etc/avahi/avahi-daemon.conf
+
+            # Start avahi-daemon with macOS-compatible flags
+            # Note: --no-drop-root keeps running as root (since macOS avahi can't find user 'avahi')
+            # Note: --no-chroot is not supported on macOS, so we omit it
+            # Note: We don't chown to _avahi since we're running as root anyway
+            exec ${pkgs.avahi}/bin/avahi-daemon \
+              --no-rlimits \
+              --no-drop-root \
+              -f /etc/avahi/avahi-daemon.conf
+          '';
+
+          serviceConfig = {
+            RunAtLoad = true;
+            KeepAlive = true;
+            StandardErrorPath = "/var/log/avahi-daemon.log";
+            StandardOutPath = "/var/log/avahi-daemon.log";
+          };
+        };
+    }
+    // lib.optionalAttrs (hostname == "hera") {
+      # Enable IP forwarding for routing between bridge0 (192.168.1.x) and en1 (192.168.3.x)
+      # This allows HomeKit devices on 192.168.1.x to be accessed from devices on 192.168.3.x
+      # Required because Avahi only handles mDNS discovery, not actual TCP/IP routing
+      ip-forwarding = {
+        script = ''
+          /usr/sbin/sysctl -w net.inet.ip.forwarding=1
+        '';
+        serviceConfig = {
+          RunAtLoad = true;
+          KeepAlive = false;
+        };
+      };
+
       "sysctl-vram-limit" = {
         script = ''
           # This leaves 64 GB of working memory remaining
