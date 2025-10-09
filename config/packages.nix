@@ -18,7 +18,7 @@
   package-list = [
     (exe haskellPackages.hasktags)
     (exe haskellPackages.hpack)
-    (exe haskellPackages.ormolu)
+    (hiPrio (exe haskellPackages.ormolu))
     (exe haskellPackages.pointfree)
     # haskellPackages.git-all
     haskellPackages.git-monitor
@@ -35,7 +35,7 @@
     asciidoctor
     aspell
     aspellDicts.en
-    awscli2
+    # awscli2
     b3sum
     backblaze-b2
     bandwhich
