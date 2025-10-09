@@ -710,7 +710,7 @@ in {
         };
 
         asus1 = {
-          hostname = "asus-bq16-pro-router.lan";
+          hostname = "asus-bq16-pro-ap.lan";
           port = 2204;
           user = "router";
           compression = false;
