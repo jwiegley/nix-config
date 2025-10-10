@@ -342,7 +342,7 @@ in {
     buildMachines =
       if hostname == "clio"
       then [
-        # hera                # jww (2025-09-23): not running
+        hera
         athena
       ]
       else if hostname == "athena"
