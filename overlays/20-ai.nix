@@ -297,15 +297,15 @@ rustdocs-mcp-server = with super; rustPlatform.buildRustPackage rec {
   };
 };
 
-task-master-ai-0-27-3 = with super; buildNpmPackage (finalAttrs: {
+task-master-ai-latest = with super; buildNpmPackage (finalAttrs: {
   pname = "task-master-ai";
-  version = "0.27.3";
+  version = "0.28.0";
 
   src = fetchFromGitHub {
     owner = "eyaltoledano";
     repo = "claude-task-master";
     tag = "task-master-ai@${finalAttrs.version}";
-    hash = "sha256-rYD3pynVW0G2Dii4kx0wXiGd4VjBT9T3/2GBI9g6Fhc=";
+    hash = "sha256-qbqcJkopKf8cEslWfnhj9AYbkX/ViGm3tk5K2LIPNjo=";
   };
 
   postPatch = ''
