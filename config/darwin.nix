@@ -187,6 +187,7 @@ in {
       # "marked"                    # Use Marked 2 in App Store
       "mellel"
       "netdownloadhelpercoapp"
+      "nextcloud"
       # "omnigraffle"               # Stay at version 6
       { name = "opera"; greedy = true; }
       "pdf-expert"

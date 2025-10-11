@@ -136,6 +136,7 @@ in {
       // lib.optionalAttrs (hostname == "hera") {
         "Audio".source  = mkLink "/Volumes/ext/Audio";
         "Photos".source = mkLink "/Volumes/ext/Photos";
+        "Nextcloud".source = mkLink "/Volumes/ext/Nextcloud";
       }
       // lib.optionalAttrs (hostname == "clio") {
         "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Audio";
