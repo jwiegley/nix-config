@@ -347,6 +347,55 @@ task-master-ai-latest = with super; buildNpmPackage (finalAttrs: {
   };
 });
 
+browser-control-mcp = with super; buildNpmPackage (finalAttrs: {
+  pname = "browser-control-mcp";
+  version = "1.5.1";
+
+  src = fetchFromGitHub {
+    owner = "eyalzh";
+    repo = "browser-control-mcp";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-P0ZYjaHArngobtOf4C3j3LpuwfT4vZdJnoZnzeNoIWo=";
+  };
+
+  # postPatch = ''
+  #   cp ${./package-lock.json} package-lock.json
+  # '';
+  npmDepsHash = "sha256-NT0r3WHqg6ENVO4aPldUgs2doDJD+EEJcp78nNfbBnQ=";
+
+  # dontNpmBuild = true;
+
+  # npmFlags = [ "--ignore-scripts" ];
+
+  makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
+
+  passthru.updateScript = nix-update-script { };
+
+  # postInstall = ''
+  #   mkdir -p $out/lib/node_modules/task-master-ai/apps
+  #   cp -r apps/extension $out/lib/node_modules/task-master-ai/apps/extension
+  #   cp -r apps/docs $out/lib/node_modules/task-master-ai/apps/docs
+  # '';
+
+  # env = {
+  #   PUPPETEER_SKIP_DOWNLOAD = 1;
+  # };
+
+  # nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
+  versionCheckProgram = "${placeholder "out"}/bin/browser-control-mcp";
+  versionCheckProgramArg = "--version";
+
+  meta = with lib; {
+    description = "MCP server paired with a browser extension that enables AI agents to control the user's browser.";
+    homepage = "https://github.com/eyalzh/browser-control-mcp";
+    license = licenses.mit;
+    mainProgram = "browser-control-mcp";
+    maintainers = [ maintainers.jwiegley ];
+    platforms = platforms.all;
+  };
+});
+
 claude-code-acp = with self; buildNpmPackage (finalAttrs: {
   pname = "claude-code-acp";
   version = "0.4.5";
