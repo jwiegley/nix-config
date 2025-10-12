@@ -26,10 +26,6 @@ in {
             # GnuPG auth key stored on Yubikeys
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJAj2IzkXyXEl+ReCg9H+t55oa6GIiumPWeufcYCWy3F yubikey-gnupg"
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb yubikey-14476831-gnupg"
-            # ShellFish iPhone key
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJD0sIKWWVF+zIWcNm/BfsbCQxuUBHD8nRNSpZV+mCf+ ShellFish@iPhone-28062024"
-            # ShellFish iPad key
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIZQeQ/gKkOwuwktwD4z0ZZ8tpxNej3qcHS5ZghRcdAd ShellFish@iPad-22062024"
           ] ++ lib.optionals (hostname == "athena") [
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEY4JNmY8VNmNhfHd09eX/fi8GxDDu8w/0uqryqaZaIn root@vulcan"
           ];

@@ -139,9 +139,6 @@ in {
         "Nextcloud".source = mkLink "/Volumes/ext/Nextcloud";
       }
       // lib.optionalAttrs (hostname == "clio") {
-        "Audio".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Audio";
-        "Photos".source = mkLink "${home}/Library/CloudStorage/ShellFish/Hera/Photos";
-        "Hera".source   = mkLink "${home}/Library/CloudStorage/ShellFish/Hera";
       }
       // lib.optionalAttrs (hostname == "hera" || hostname == "clio") {
         "org".source    = mkLink "${home}/doc/org";
@@ -154,10 +151,6 @@ in {
           mkLink "${home}/Library/Application Support/DEVONthink/Inbox";
         "iCloud".source        =
           mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
-
-        "Video".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Video";
-        "Media".source  = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan/Media";
-        "Vulcan".source = mkLink "${home}/Library/CloudStorage/ShellFish/Vulcan";
       };
   };
 
