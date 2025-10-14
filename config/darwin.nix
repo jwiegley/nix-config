@@ -114,6 +114,7 @@ in {
 
     taps = [
       "kadena-io/pact"
+      "graelo/tap"
     ];
     brews = [
       "ykman"
@@ -126,6 +127,7 @@ in {
       "z3"
 
       "llm"
+      "graelo/tap/pumas"
     ];
 
     casks = [
