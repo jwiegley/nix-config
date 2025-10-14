@@ -16,11 +16,6 @@ case $1 in
         # notify "Nix on Athena upgraded"
         ;;
 
-    vulcan)
-        u vulcan upgrade-tasks
-        # notify "Nix on Vulcan upgraded"
-        ;;
-
     *)
         echo "Unrecognized hostname: $1"
         exit 1
