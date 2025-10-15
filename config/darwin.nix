@@ -169,7 +169,7 @@ in {
       "discord"
       "dungeon-crawl-stone-soup-tiles"
       "element"
-      "expandrive"
+      # "expandrive"
       "fantastical"
       { name = "firefox"; greedy = true; }
       "geektool"

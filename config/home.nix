@@ -351,6 +351,10 @@ in {
         setopt extended_glob
       '';
 
+      initExtra = ''
+        fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
+      '';
+
       initContent = ''
         # Make sure that fzf does not override the meaning of ^T
         bindkey '^T' transpose-chars
