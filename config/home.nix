@@ -99,7 +99,7 @@ in {
 
         ".curlrc".text = ''
           capath=${ca-bundle_path}
-          cacert=${ca-bundle_crt}
+          cacert=${config.xdg.configHome}/curl/ca-bundle.crt
         '';
 
         ".wgetrc".text = ''
@@ -351,10 +351,6 @@ in {
         setopt extended_glob
       '';
 
-      initExtra = ''
-        fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
-      '';
-
       initContent = ''
         # Make sure that fzf does not override the meaning of ^T
         bindkey '^T' transpose-chars
@@ -374,6 +370,8 @@ in {
 
             autoload -Uz compinit
             compinit
+
+            fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
         fi
       '';
 

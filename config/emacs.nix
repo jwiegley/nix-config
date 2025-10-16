@@ -130,6 +130,7 @@ with epkgs; [
   eshell-z
   (exclude eval-expr)
   evil
+  eww-plz
   exec-path-from-shell
   expand-region
   eyebrowse
@@ -329,6 +330,7 @@ with epkgs; [
   (exclude phi-search)
   (exclude phi-search-mc)
   plantuml-mode
+  plz
   (exclude po-mode)
   (exclude popper)
   popup-ruler

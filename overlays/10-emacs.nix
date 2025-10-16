@@ -190,6 +190,18 @@ let
       ];
     };
 
+    eww-plz = compileEmacsFiles {
+      name = "eww-plz";
+      src = fetchFromGitHub {
+        owner = "9viz";
+        repo = "eww-plz.el";
+        rev = "c37a7aae87ec84b34a48d6c03ffabf5f7c083039";
+        sha256 = "0lw40lzayyk7z8pgi7fpgfzg61c9p0r9pvn1gf150vkgkq1ynqzn";
+        # date = 2025-02-10T14:44:32+05:30;
+      };
+      buildInputs = with eself; [ plz ];
+    };
+
     fence-edit = compileEmacsFiles {
       name = "fence-edit";
       src = fetchFromGitHub {
