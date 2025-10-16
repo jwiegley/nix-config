@@ -79,7 +79,6 @@
     figlet
     filetags
     findutils
-    fio
     fontconfig
     fpart
     fping

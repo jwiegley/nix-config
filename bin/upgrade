@@ -1,17 +1,23 @@
-#!/usr/bin/env bash
+#!/usr/bin/env bash -e
 
 case $1 in
     hera)
+	cd ~/src/nix
+	./bulid system
         u hera upgrade sign
         # notify "Nix on Hera upgraded"
         ;;
 
     clio)
+	cd ~/src/nix
+	./bulid system
         u clio upgrade-tasks
         # notify "Nix on Clio upgraded"
         ;;
 
     athena)
+	cd ~/src/nix
+	./bulid system
         u athena switch
         # notify "Nix on Athena upgraded"
         ;;
