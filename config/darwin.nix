@@ -120,14 +120,14 @@ in {
       "ykman"
       "nss"
       "node"
+      "llm"
+      "sqlcmd"
+      "graelo/tap/pumas"
 
       # Brews for Kadena
       "kadena-io/pact/pact"
       "openssl"
       "z3"
-
-      "llm"
-      "graelo/tap/pumas"
     ];
 
     casks = [
