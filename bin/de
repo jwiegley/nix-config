@@ -5,7 +5,7 @@ set -e
 # I use this to keep build products in a separate directory tree.
 PRODUCTS=""
 if [[ -d $HOME/Products ]]; then
-    PRODUCTS=$(echo $PWD | sed -E 's/\b(kadena|src)\b/Products/')
+    PRODUCTS=$(echo $PWD | sed -E 's/\b(src)\b/Products/')
     echo "There is a ~/Products directory"
 fi
 
@@ -19,11 +19,7 @@ fi
 NIXOPTS=(--cores 2 -j4)
 NIXOPTS_MORE=()
 
-if [[ $PWD =~ kadena || $PWD =~ athena ]]; then
-    if [[ $NOCACHE == false ]]; then
-        echo Building direnv cache for a Kadena project...
-    fi
-elif [[ -f flake.nix ]]; then
+if [[ -f flake.nix ]]; then
     echo "Using the package set for <darwin>"
     # NIXOPTS_MORE+=(--override-input nixpkgs nixpkgs --inputs-from ~/src/nix)
 else

@@ -163,7 +163,6 @@ in {
       aliases = [
         "jwiegley@gmail.com"
         "johnw@gnu.org"
-        "john@kadena.io"
         "john.wiegley@coppertogold.org"
       ];
       flavor = "fastmail.com";
@@ -667,21 +666,13 @@ in {
           compression = false;
         };
 
+        mssql   = withIdentity (onHost "hera" "192.168.64.3");
         deimos  = withIdentity (onHost "hera" "192.168.221.128");
         simon   = withIdentity (onHost "hera" "172.16.194.158");
         minerva = withIdentity {
           hostname = "192.168.199.128";
           compression = false;
         };
-
-        # Athena
-
-        athena = withIdentity {
-          hostname = "athena.lan";
-          compression = false;
-        };
-
-        phobos = withIdentity (onHost "athena" "phobos.lan");
 
         # Clio
 
@@ -745,18 +736,6 @@ in {
         hf = withIdentity {
           host = "hf.co";
           user = "git";
-        };
-
-        # Kadena
-
-        chainweb_com = {
-          host           = "*.chainweb.com";
-          user           = "chainweb";
-          identityFile   = "${config.xdg.configHome}/ssh/id_kadena";
-          identitiesOnly = true;
-          extraOptions   = {
-            StrictHostKeyChecking = "no";
-          };
         };
 
         defaults = {

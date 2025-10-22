@@ -17,14 +17,6 @@ case $1 in
         # notify "Nix on Clio upgraded"
         ;;
 
-    athena)
-	cd ~/src/nix
-        u hera update
-	./build system
-        u athena switch
-        # notify "Nix on Athena upgraded"
-        ;;
-
     *)
         echo "Unrecognized hostname: $1"
         exit 1
@@ -34,45 +26,6 @@ esac
 echo '┌────────────────────────────────────────────────────────────────────────────┐'
 echo '│ >>> upgrade .config/projects                                               │'
 echo '└────────────────────────────────────────────────────────────────────────────┘'
-
-### Kadena projects
-
-# echo ~/kadena/pact-fv
-# (
-#     cd ~/kadena/pact-fv
-#     source .envrc
-#     cabal v2-update
-#     cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
-#     cabal v2-build
-#     cabal v2-test
-# ) > /tmp/pact-fv-build.log 2>&1
-
-# if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
-
-# echo ~/kadena/pact-5
-# (
-#     cd ~/kadena/pact-5
-#     source .envrc
-#     cabal v2-update
-#     cabal v2-configure --enable-tests --disable-profiling --disable-executable-profiling
-#     cabal v2-build
-#     cabal v2-test
-# ) > /tmp/pact-5-build.log 2>&1
-
-# if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
-
-# echo ~/kadena/evm/reth
-# (
-#     cd ~/kadena/evm/reth
-#     source .envrc
-#     cargo update
-#     cargo build
-#     cargo test
-#     cargo doc
-#     cargo clippy
-# ) > /tmp/reth-build.log 2>&1
-
-# if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
 ### Coq projects
 

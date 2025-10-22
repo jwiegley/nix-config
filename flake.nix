@@ -9,12 +9,19 @@
       url = "github:lnl7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     mcp-servers-nix = {
       url = "github:natsukium/mcp-servers-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    claude-code-nix = {
+      url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -45,7 +52,8 @@
           #       ttfautohint
           #       ;
           #   })
-          mcp-servers-nix.overlays.default
+          inputs.mcp-servers-nix.overlays.default
+          inputs.claude-code-nix.overlays.default
         ];
         configure = hostname: system: darwin.lib.darwinSystem {
           inherit inputs system;
@@ -59,19 +67,17 @@
               home-manager = {
                 useGlobalPkgs = true;
                 useUserPackages = true;
-
-                users.johnw = import ./config/home.nix;
-
                 backupFileExtension = "hm-bak";
                 extraSpecialArgs = { inherit hostname inputs; };
+
+                users.johnw = import ./config/home.nix;
               };
             }
           ];
         };
       in {
-        hera   = configure "hera"   "aarch64-darwin";
-        clio   = configure "clio"   "aarch64-darwin";
-        athena = configure "athena" "aarch64-darwin";
+        hera = configure "hera"   "aarch64-darwin";
+        clio = configure "clio"   "aarch64-darwin";
       };
 
     darwinPackages = darwinConfigurations."hera".pkgs;

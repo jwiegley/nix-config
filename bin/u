@@ -7,20 +7,13 @@ if [[ "$1" == "vulcan" ]]; then
 
 elif [[ "$1" == "hera" ]]; then
     HOSTNAME=hera
-    REMOTES="clio athena"
+    REMOTES="clio"
     shift 1
 
 elif [[ "$1" == "clio" ]]; then
     HOSTNAME=clio
-    # REMOTES="hera athena"
-    REMOTES="hera athena"
-    # if [ -z ${CACHE+x} ]; then CACHE=athena; fi
+    REMOTES="hera"
     # if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
-    shift 1
-
-elif [[ "$1" == "athena" ]]; then
-    HOSTNAME=athena
-    REMOTES="clio hera"
     shift 1
 
 elif [[ $(hostname) =~ [Vv]ulcan ]]; then
@@ -29,18 +22,12 @@ elif [[ $(hostname) =~ [Vv]ulcan ]]; then
 
 elif [[ $(hostname) =~ [Hh]era ]]; then
     HOSTNAME=hera
-    REMOTES="clio athena"
+    REMOTES="clio"
 
 elif [[ $(hostname) =~ [Cc]lio ]]; then
     HOSTNAME=clio
-    # REMOTES="hera athena"
-    REMOTES="hera athena"
-    # if [ -z ${CACHE+x} ]; then CACHE=athena; fi
+    REMOTES="hera"
     # if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
-
-elif [[ $(hostname) =~ [Aa]thena ]]; then
-    HOSTNAME=athena
-    REMOTES="clio hera"
 
 else
     echo "Script does not recognize hostname '$HOSTNAME'"

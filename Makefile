@@ -1,5 +1,5 @@
 HOSTNAME   = hera
-REMOTES	   = clio athena
+REMOTES	   = clio
 GIT_REMOTE = jwiegley
 MAX_AGE	   = 14
 NIX_CONF   = $(HOME)/src/nix
@@ -168,9 +168,7 @@ travel-ready:
 	    (cd ~/$$dir &&					\
              rm -f .envrc .envrc.cache;				\
              clean;						\
-             if [[ $(HOSTNAME) == athena ]]; then		\
-	         $(NIX_CONF)/bin/de;				\
-             elif [[ $(HOSTNAME) == hera ]]; then		\
+             if [[ $(HOSTNAME) == hera ]]; then			\
 	         $(NIX_CONF)/bin/de;				\
              elif [[ $(HOSTNAME) == clio ]]; then		\
 	         $(NIX_CONF)/bin/de;				\

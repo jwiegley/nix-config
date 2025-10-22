@@ -345,7 +345,7 @@
     koboldcpp
     gguf-tools
     openmpi
-    # claude-code                # use version in homebrew
+    claude-code
     qdrant
     qdrant-web-ui
     task-master-ai

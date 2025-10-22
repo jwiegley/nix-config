@@ -26,13 +26,11 @@ in {
             # GnuPG auth key stored on Yubikeys
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJAj2IzkXyXEl+ReCg9H+t55oa6GIiumPWeufcYCWy3F yubikey-gnupg"
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb yubikey-14476831-gnupg"
-          ] ++ lib.optionals (hostname == "athena") [
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEY4JNmY8VNmNhfHd09eX/fi8GxDDu8w/0uqryqaZaIn root@vulcan"
           ];
           keyFiles =
             # Each machine accepts SSH key authentication from the rest
             import ./key-files.nix { inherit (pkgs) lib; }
-              [ "hera" "clio" "athena" ] home hostname;
+              [ "hera" "clio" ] home hostname;
         };
       };
     } // lib.optionalAttrs (hostname == "hera") {
@@ -113,7 +111,6 @@ in {
     };
 
     taps = [
-      "kadena-io/pact"
       "graelo/tap"
     ];
     brews = [
@@ -123,34 +120,11 @@ in {
       "llm"
       "sqlcmd"
       "graelo/tap/pumas"
-
-      # Brews for Kadena
-      "kadena-io/pact/pact"
       "openssl"
       "z3"
     ];
 
     casks = [
-      "carbon-copy-cloner"
-      "claude-code"
-      "docker-desktop"
-      "drivedx"
-      "iterm2"
-      "vmware-fusion"
-      # "vagrant"
-      # "vagrant-manager"
-      # "vagrant-vmware-utility"
-      "wireshark"
-    ] ++ lib.optionals (pkgs.system == "aarch64-darwin") [
-      "diffusionbee"
-    ] ++ lib.optionals (hostname == "hera") [
-      "fujitsu-scansnap-home"
-      "gzdoom"
-      "raspberry-pi-imager"
-    ] ++ lib.optionals (hostname == "clio") [
-      "aldente"
-      "wifi-explorer"
-    ] ++ lib.optionals (hostname != "athena") [
       "1password"
       "1password-cli"
       "affinity-photo"
@@ -158,61 +132,82 @@ in {
       "asana"
       "audacity"
       "balenaetcher"
-      { name = "brave-browser"; greedy = true; }
+      "carbon-copy-cloner"
       "choosy"
       "claude"
       "corelocationcli"
-      # "datagraph"                 # Use DataGraph in App Store
       "dbvisualizer"
       "devonagent"
       "devonthink"
+      "diffusionbee"
       "discord"
+      "docker-desktop"
+      "drivedx"
       "dungeon-crawl-stone-soup-tiles"
       "element"
-      # "expandrive"
       "fantastical"
-      { name = "firefox"; greedy = true; }
       "geektool"
       "home-assistant"
+      "iterm2"
       "key-codes"
       "keyboard-maestro"
+      "kiwix"
       "launchbar"
       "lectrote"
       "ledger-live"
       "macfuse"
       "mactracker"
-      # "macwhisper"                # Use Whisper Transcription in App Store
-      # "marked"                    # Use Marked 2 in App Store
       "mellel"
+      "microsoft-excel"
+      "microsoft-powerpoint"
+      "microsoft-word"
       "netdownloadhelpercoapp"
       "nextcloud"
-      # "omnigraffle"               # Stay at version 6
-      { name = "opera"; greedy = true; }
       "pdf-expert"
       "sage"
-      # "screenflow"                # Stay at version 9
       "signal"
       "slack"
-      # "soulver"                   # Use Soulver 3 in App Store
       "spamsieve"
       "steam"
       "suspicious-package"
       "swiftdefaultappsprefpane"
       "telegram"
-      "thunderbird"
       "thinkorswim"
-      # "tor-browser"
+      "thunderbird"
+      "tor-browser"
       "ukelele"
       "unicodechecker"
       "utm"
       "virtual-ii"
       "visual-studio-code"
-      { name = "vivaldi"; greedy = true; }
       "vlc"
+      "vmware-fusion"
       "whatsapp"
+      "wireshark-app"
       "xnviewmp"
-      { name = "zoom"; greedy = true; }
       "zotero"
+      # "datagraph"                 # Use DataGraph in App Store
+      # "expandrive"
+      # "macwhisper"                # Use Whisper Transcription in App Store
+      # "marked-app"                # Use Marked 2 in App Store
+      # "omnigraffle"               # Stay at version 6
+      # "screenflow"                # Stay at version 9
+      # "soulver"                   # Use Soulver 3 in App Store
+      # "vagrant"
+      # "vagrant-manager"
+      # "vagrant-vmware-utility"
+      { name = "brave-browser"; greedy = true; }
+      { name = "firefox"; greedy = true; }
+      { name = "opera"; greedy = true; }
+      { name = "vivaldi"; greedy = true; }
+      { name = "zoom"; greedy = true; }
+    ] ++ lib.optionals (hostname == "hera") [
+      "fujitsu-scansnap-home"
+      "gzdoom"
+      "raspberry-pi-imager"
+    ] ++ lib.optionals (hostname == "clio") [
+      "aldente"
+      "wifi-explorer"
     ];
 
     ## The following software, or versions of software, are not available
@@ -221,14 +216,14 @@ in {
     # "Bookmap"
     # "Digital Photo Professional"
     # "EOS Utility"
-    # "Kadena Chainweaver"
     # "MotiveWave"
     # "ScanSnap Online Update"
     # "Photo Supreme"
     # "ABBYY FineReader for ScanSnap"
 
-    masApps = lib.optionalAttrs (hostname != "athena") {
+    masApps = {
       "1Password for Safari"  = 1569813296;
+      "Apple Configurator"    = 1037126344;
       "Bible Study"           = 472790630;
       "DataGraph"             = 407412840;
       "Drafts"                = 1435957248;
@@ -236,9 +231,9 @@ in {
       "Keynote"               = 409183694;
       "Kindle"                = 302584613;
       "Marked 2"              = 890031187;
-      "Microsoft Excel"       = 462058435;
-      "Microsoft PowerPoint"  = 462062816;
-      "Microsoft Word"        = 462054704;
+      # "Microsoft Excel"       = 462058435;
+      # "Microsoft PowerPoint"  = 462062816;
+      # "Microsoft Word"        = 462054704;
       "Ninox Database"        = 901110441;
       "Notability"            = 360593530;
       "Paletter"              = 1494948845;
@@ -283,15 +278,6 @@ in {
         sshUser = "johnw";
         maxJobs = 24;
         speedFactor = 4;
-      };
-
-      athena = {
-        hostName = "athena.lan";
-        protocol = "ssh-ng";
-        system = "aarch64-darwin";
-        sshUser = "johnw";
-        maxJobs = 10;
-        speedFactor = 2;
       };
     in {
 
@@ -339,13 +325,8 @@ in {
     distributedBuilds = true;
     buildMachines =
       if hostname == "clio"
-      then [
-        hera
-        athena
-      ]
-      else if hostname == "athena"
-           then [ hera ]
-           else [];
+      then [ hera ]
+      else [];
 
     extraOptions = ''
       gc-keep-derivations = true
@@ -355,7 +336,7 @@ in {
     '';
     };
 
-  ids.gids.nixbld = if hostname == "athena" then 30000 else 350;
+  ids.gids.nixbld = 350;
 
   system = {
     stateVersion = 4;
