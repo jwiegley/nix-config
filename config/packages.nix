@@ -272,7 +272,7 @@
     rsync
     ruby
     samba
-    sbcl
+    # sbcl
     scc
     sccache
     screen
@@ -355,7 +355,7 @@
     # mcp-servers-nix
     context7-mcp
     playwright-mcp
-    github-mcp-server
+    # github-mcp-server
     # mcp-server-filesystem
     # mcp-server-git
     mcp-server-memory
