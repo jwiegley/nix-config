@@ -691,8 +691,6 @@ in {
           compression = false;
         };
 
-        tank = vulcan;
-
         # Other servers
 
         router = withIdentity {
