@@ -80,6 +80,18 @@ in {
   };
 
   services = {
+    # SSH daemon configuration to prevent connection slowness
+    openssh = {
+      enable = true;
+      extraConfig = ''
+        # Disable DNS reverse lookups to prevent connection delays
+        UseDNS no
+
+        # Disable GSSAPI authentication to prevent timeouts
+        GSSAPIAuthentication no
+      '';
+    };
+
     prometheus.exporters.node = {
       enable = hostname != "clio";
       port = 9100;

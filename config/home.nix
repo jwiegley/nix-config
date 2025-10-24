@@ -680,6 +680,9 @@ in {
         clio = withIdentity {
           hostname = "clio.lan";
           compression = false;
+          # Disable ControlMaster due to intermittent hanging issues
+          controlMaster = "no";
+          controlPath = "none";
         };
 
         neso = withIdentity (onHost "clio" "192.168.100.130");
