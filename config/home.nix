@@ -669,6 +669,7 @@ in {
         mssql   = withIdentity (onHost "hera" "192.168.64.3");
         deimos  = withIdentity (onHost "hera" "192.168.221.128");
         simon   = withIdentity (onHost "hera" "172.16.194.158");
+
         minerva = withIdentity {
           hostname = "192.168.199.128";
           compression = false;
