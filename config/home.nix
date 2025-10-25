@@ -681,9 +681,6 @@ in {
         clio = withIdentity {
           hostname = "clio.lan";
           compression = false;
-          # Disable ControlMaster due to intermittent hanging issues
-          controlMaster = "no";
-          controlPath = "none";
         };
 
         neso = withIdentity (onHost "clio" "192.168.100.130");
@@ -744,9 +741,12 @@ in {
         defaults = {
           host = "*";
 
-          controlPersist      = "1800";
-          controlPath         = "${tmpdir}/ssh-%u-%r@%h:%p";
-          controlMaster       = "auto";
+          # Disable ControlMaster due to intermittent hanging issues
+          # controlMaster       = "auto";
+          # controlPath         = "${tmpdir}/ssh-%u-%r@%h:%p";
+          # controlPersist      = "1800";
+          controlMaster       = "no";
+          controlPath         = "none";
           userKnownHostsFile  = "${config.xdg.configHome}/ssh/known_hosts";
           hashKnownHosts      = true;
           serverAliveInterval = 60;
