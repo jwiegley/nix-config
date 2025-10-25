@@ -211,6 +211,7 @@ in {
         {
           add_newline = true;
           scan_timeout = 10;
+          command_timeout = 1000;  # Prevent git-annex broken pipe errors
 
           format = lib.concatStrings [
             "$all"
