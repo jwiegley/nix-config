@@ -85,6 +85,7 @@ in {
       "${home}/src/scripts"
       "${home}/.local/bin"
       "/usr/local/bin"
+      "/usr/local/zfs/bin"
       "/opt/homebrew/bin"
       # "${config.xdg.dataHome}/lmstudio/bin"
     ];
