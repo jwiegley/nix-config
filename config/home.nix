@@ -696,7 +696,7 @@ in {
         # Other servers
 
         router = withIdentity {
-          hostname = "router.lan";
+          hostname = "192.168.1.1";
           compression = false;
         };
 
