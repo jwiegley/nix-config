@@ -44,8 +44,18 @@ in {
     liberation_ttf
   ];
 
-  environment.systemPackages = with pkgs; [
-  ];
+  environment = {
+    systemPackages = with pkgs; [
+    ];
+
+    # ZFS configuration for OpenZFS on macOS (hera only)
+    # Sets ARC (Adaptive Replacement Cache) max to 32 GiB
+    etc = lib.mkIf (hostname == "hera") {
+      "zfs/zsysctl.conf".text = ''
+        kstat.zfs.darwin.tunable.zfs_arc.max=34359738368
+      '';
+    };
+  };
 
   programs = {
     zsh = {
