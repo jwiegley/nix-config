@@ -267,6 +267,7 @@ with epkgs; [
   org-margin
   (exclude org-mem)
   org-mime
+  org-ml
   (exclude org-modern)
   org-mru-clock
   (exclude org-msg)
@@ -288,6 +289,7 @@ with epkgs; [
   org-roam
   org-roam-ui
   org-sidebar
+  org-sql
   org-srs
   org-sticky-header
   org-super-agenda
