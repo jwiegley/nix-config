@@ -63,8 +63,8 @@
     dot2tex
     doxygen
     dstp
-    du-dust
-    eask
+    dust
+    eask-cli
     # emacs30Env
     emacs30MacPortEnv
     # emacsHEADEnv
@@ -87,45 +87,46 @@
     fzf-zsh
     gawk
     getopt
-    gitAndTools.delta
-    gitAndTools.gh
-    gitAndTools.gist
-    gitAndTools.git-absorb
-    # gitAndTools.git-branchless
-    gitAndTools.git-branchstack
-    gitAndTools.git-cliff
-    gitAndTools.git-crypt
-    gitAndTools.git-delete-merged-branches
-    (lowPrio gitAndTools.git-extras)
-    (lowPrio gitAndTools.git-fame)
-    gitAndTools.git-gone
-    gitAndTools.git-hub
-    gitAndTools.git-imerge
-    gitAndTools.git-lfs
-    gitAndTools.git-machete
-    gitAndTools.git-my
-    gitAndTools.git-octopus
-    gitAndTools.git-quick-stats
-    gitAndTools.git-quickfix
-    gitAndTools.git-recent
-    gitAndTools.git-reparent
-    gitAndTools.git-repo
-    gitAndTools.git-scripts
-    gitAndTools.git-secret
-    gitAndTools.git-series
-    gitAndTools.git-sizer
-    (hiPrio gitAndTools.git-standup)
-    gitAndTools.git-subrepo
-    gitAndTools.git-vendor
-    gitAndTools.git-when-merged
-    gitAndTools.git-workspace
-    gitAndTools.gitRepo
-    gitAndTools.gitflow
-    gitAndTools.gitls
-    gitAndTools.gitstats
-    gitAndTools.hub
-    gitAndTools.tig
-    gitAndTools.top-git
+    delta
+    gh
+    gist
+    git-absorb
+    # git-branchless
+    git-branchstack
+    git-cliff
+    git-crypt
+    git-delete-merged-branches
+    (lowPrio git-extras)
+    (lowPrio git-fame)
+    git-filter-repo
+    git-gone
+    git-hub
+    git-imerge
+    git-lfs
+    git-machete
+    git-my
+    git-octopus
+    git-quick-stats
+    git-quickfix
+    git-recent
+    git-reparent
+    git-repo
+    git-scripts
+    git-secret
+    git-series
+    git-sizer
+    (hiPrio git-standup)
+    git-subrepo
+    git-vendor
+    git-when-merged
+    git-workspace
+    gitRepo
+    gitflow
+    gitls
+    gitstats
+    hub
+    tig
+    top-git
     global
     gnugrep
     gnumake
@@ -159,7 +160,6 @@
     jq
     jqp
     json2yaml
-    jujutsu
     jupyter
     just
     khard
@@ -226,7 +226,7 @@
     plantuml
     pngpaste
     pnpm
-    poppler_utils
+    poppler-utils
     (postgresql.withPackages (
       postgres-pkgs: with postgres-pkgs; [
         pgvector
@@ -342,7 +342,7 @@
     litellm
     (hiPrio llama-cpp)
     llama-swap
-    koboldcpp
+    # koboldcpp
     gguf-tools
     openmpi
     claude-code
@@ -363,7 +363,7 @@
     mcp-server-time
     # mcp-server-fetch
 
-    (exe gitAndTools.git-annex)
-    gitAndTools.git-annex-remote-rclone
+    (exe git-annex)
+    git-annex-remote-rclone
   ];
 }

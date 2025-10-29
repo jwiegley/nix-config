@@ -8,8 +8,8 @@ let
     # "git-all"
     "gitlib/gitlib"
     "gitlib/gitlib-test"
-  [ "gitlib/gitlib-cmdline" { inherit (self.gitAndTools) git; } ]
-  [ "gitlib/hlibgit2" { inherit (self.gitAndTools) git; } ]
+  [ "gitlib/gitlib-cmdline" { inherit (self) git; } ]
+  [ "gitlib/hlibgit2" { inherit (self) git; } ]
     "gitlib/gitlib-libgit2"
     "gitlib/git-monitor"
     "hours"

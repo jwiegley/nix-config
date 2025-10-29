@@ -2,6 +2,8 @@
 
 case $1 in
     hera)
+        sudo /bin/launchctl limit maxfiles 524288 524288
+        ulimit -n 65536
 	cd ~/src/nix
         u hera update
 	./build system
@@ -10,6 +12,8 @@ case $1 in
         ;;
 
     clio)
+        sudo /bin/launchctl limit maxfiles 524288 524288
+        ulimit -n 65536
 	cd ~/src/nix
         u hera update
 	./build system
