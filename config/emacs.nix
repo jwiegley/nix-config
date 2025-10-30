@@ -256,7 +256,7 @@ with epkgs; [
   org-auto-expand
   org-autolist
   org-bookmark-heading
-  org-caldav
+  (exclude org-caldav)
   org-checklist
   org-contacts
   org-drill
@@ -267,7 +267,7 @@ with epkgs; [
   org-margin
   (exclude org-mem)
   org-mime
-  org-ml
+  (exclude org-ml)
   (exclude org-modern)
   org-mru-clock
   (exclude org-msg)
@@ -289,7 +289,7 @@ with epkgs; [
   org-roam
   org-roam-ui
   org-sidebar
-  org-sql
+  (exclude org-sql)
   org-srs
   org-sticky-header
   org-super-agenda
