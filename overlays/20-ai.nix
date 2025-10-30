@@ -125,24 +125,24 @@ ik-llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
 });
 
 llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "6721";
+  version = "6880";
   src = super.fetchFromGitHub {
     owner = "ggml-org";
     repo = "llama.cpp";
     tag = "b${version}";
-    hash = "sha256-saqnRL04KZSMAdoo1AuqoivmN4kG5Lfaxg4AYk24JJg=";
+    hash = "sha256-AYXfJy/zCAYdonibPPzuH13tahDuaV/jHnvHASWrYUQ=";
   };
 });
 
 llama-swap =
 let
-  version = "164";
+  version = "171";
 
   src = super.fetchFromGitHub {
     owner = "mostlygeek";
     repo = "llama-swap";
     rev = "v${version}";
-    hash = "sha256-Br3CES4j78nev858qw+TeTSJ74kjKAErHFCMg9cAZSc=";
+    hash = "sha256-gtrVPEqEWoxgE3mTqOmoCjEWT4l1AUmxBO6LFjVTL2Q=";
   };
 
   ui = with super; buildNpmPackage (finalAttrs: {
@@ -156,7 +156,7 @@ let
 
     sourceRoot = "source/ui";
 
-    npmDepsHash = "sha256-F6izMZY4554M6PqPYjKcjNol3A6BZHHYA0CIcNrU5JA=";
+    npmDepsHash = "sha256-uxZn/VYrGHcDfNiudDPrV6dR7Z/ZDTj0MetpB/hoGWQ=";
 
     postInstall = ''
       rm -rf $out/lib
