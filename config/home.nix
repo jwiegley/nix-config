@@ -328,7 +328,7 @@ in {
         # ls     = "${pkgs.eza}/bin/eza";
         # find   = "${pkgs.fd}/bin/fd";
         par    = "${pkgs.parallel}/bin/parallel";
-        rm     = "${pkgs.rmtrash}/bin/rmtrash";
+        # rm     = "${pkgs.rmtrash}/bin/rmtrash";
         rX     = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
         scp    = "${pkgs.rsync}/bin/rsync -aP --inplace";
         wipe   = "${pkgs.srm}/bin/srm -vfr";
@@ -687,6 +687,12 @@ in {
         neso = withIdentity (onHost "clio" "192.168.100.130");
 
         # Vulcan
+
+        # vulcan_wifi = lib.hm.dag.entryBefore ["vulcan"]
+        #   (withIdentity (matchHost "vulcan" "192.168.3.16") // {
+        #      hostname = "192.168.3.16";
+        #      compression = false;
+        #    });
 
         vulcan = withIdentity {
           hostname = "vulcan.lan";

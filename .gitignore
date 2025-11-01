@@ -1,2 +1,4 @@
 .DS_Store
 /result*
+/.claude
+__pycache__/
