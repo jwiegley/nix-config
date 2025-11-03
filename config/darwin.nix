@@ -118,7 +118,7 @@ in {
     brews = [
       "ykman"
       "nss"
-      "node"
+      "node@22"
       "llm"
       "sqlcmd"
       "graelo/tap/pumas"

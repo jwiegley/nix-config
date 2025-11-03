@@ -87,6 +87,7 @@ in {
       "/usr/local/bin"
       "/usr/local/zfs/bin"
       "/opt/homebrew/bin"
+      "/opt/homebrew/opt/node@22/bin"
       # "${config.xdg.dataHome}/lmstudio/bin"
     ];
 
