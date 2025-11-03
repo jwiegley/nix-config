@@ -356,7 +356,7 @@
     # mcp-servers-nix
     context7-mcp
     playwright-mcp
-    # github-mcp-server
+    github-mcp-server
     # mcp-server-filesystem
     # mcp-server-git
     mcp-server-memory
