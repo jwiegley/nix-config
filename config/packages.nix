@@ -57,6 +57,7 @@
     diffutils
     direnv
     devenv
+    dirscan
     ditaa
     dnstracer
     dnsutils
