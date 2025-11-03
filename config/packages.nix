@@ -18,7 +18,7 @@
   package-list = [
     (exe haskellPackages.hasktags)
     (exe haskellPackages.hpack)
-    (hiPrio (exe haskellPackages.ormolu))
+    (lib.hiPrio (exe haskellPackages.ormolu))
     (exe haskellPackages.pointfree)
     # haskellPackages.git-all
     haskellPackages.git-monitor
@@ -96,8 +96,8 @@
     git-cliff
     git-crypt
     git-delete-merged-branches
-    (lowPrio git-extras)
-    (lowPrio git-fame)
+    (lib.lowPrio git-extras)
+    (lib.lowPrio git-fame)
     git-filter-repo
     git-gone
     git-hub
@@ -115,7 +115,7 @@
     git-secret
     git-series
     git-sizer
-    (hiPrio git-standup)
+    (lib.hiPrio git-standup)
     git-subrepo
     git-vendor
     git-when-merged
@@ -238,7 +238,7 @@
     psrecord
     pstree
     pv
-    (hiPrio
+    (lib.hiPrio
      (python3.withPackages (
        python-pkgs: with python-pkgs; [
          venvShellHook
@@ -306,7 +306,7 @@
     tree
     tree-sitter
     tsvutils
-    (lowPrio ctags)
+    (lib.lowPrio ctags)
     universal-ctags
     unixtools.ifconfig
     unixtools.netstat
@@ -340,7 +340,7 @@
   
     aider-chat
     litellm
-    (hiPrio llama-cpp)
+    (lib.hiPrio llama-cpp)
     llama-swap
     # koboldcpp
     gguf-tools
@@ -359,7 +359,7 @@
     # mcp-server-filesystem
     # mcp-server-git
     mcp-server-memory
-    (hiPrio mcp-server-sequential-thinking)
+    (lib.hiPrio mcp-server-sequential-thinking)
     mcp-server-time
     # mcp-server-fetch
 
