@@ -452,11 +452,79 @@ in {
   };
 
   launchd = {
-    daemons = {
+    daemons =
+      let
+        iterate = StartInterval: {
+          inherit StartInterval;
+          Nice = 5;
+          LowPriorityIO = true;
+          AbandonProcessGroup = true;
+        }; in {
       limits = {
         script = ''
           /bin/launchctl limit maxfiles 524288 524288
           /bin/launchctl limit maxproc 8192 8192
+        '';
+        serviceConfig.RunAtLoad = true;
+        serviceConfig.KeepAlive = false;
+      };
+
+      cleanup = {
+        script = ''
+          export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
+          ${pkgs.python3}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
+              >> /var/log/cleanup.log 2>&1
+        '';
+        serviceConfig = iterate 86400;
+      };
+
+      mssql-server = {
+        script = ''
+          # Wait for Docker to be ready
+          while ! /usr/local/bin/docker info > /dev/null 2>&1; do
+            echo "Waiting for Docker to be ready..."
+            sleep 5
+          done
+
+          # Create data directory if it doesn't exist and set proper ownership
+          # On macOS, Docker Desktop handles permission mapping internally
+          mkdir -p ${home}/mssql
+          chown -R johnw:staff ${home}/mssql
+
+          # Create password file directory if it doesn't exist
+          mkdir -p ${xdg_configHome}/mssql
+          chown johnw:staff ${xdg_configHome}/mssql
+
+          # Read password from secure file (must be created manually)
+          # Create this file with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd
+          if [ ! -f ${xdg_configHome}/mssql/passwd ]; then
+            echo "ERROR: Password file ${xdg_configHome}/mssql/passwd not found"
+            echo "Create it with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd"
+            exit 1
+          fi
+          MSSQL_SA_PASSWORD=$(cat ${xdg_configHome}/mssql/passwd | tr -d '\n')
+
+          # Validate password meets SQL Server requirements
+          if [ ''${#MSSQL_SA_PASSWORD} -lt 8 ]; then
+            echo "ERROR: Password must be at least 8 characters"
+            exit 1
+          fi
+
+          # Pull the latest image if not present
+          /usr/local/bin/docker pull mcr.microsoft.com/mssql/server:2022-latest
+
+          # Stop and remove any existing container with the same name
+          /usr/local/bin/docker rm -f mssql-server 2>/dev/null || true
+
+          # Start the container with restart policy and persistent storage
+          /usr/local/bin/docker run -d \
+            --name mssql-server \
+            --restart unless-stopped \
+            -p 1433:1433 \
+            -v ${home}/mssql:/var/opt/mssql \
+            -e ACCEPT_EULA=Y \
+            -e "MSSQL_SA_PASSWORD=$MSSQL_SA_PASSWORD" \
+            mcr.microsoft.com/mssql/server:2022-latest
         '';
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = false;
@@ -475,7 +543,7 @@ in {
         '';
         serviceConfig.RunAtLoad = true;
       };
-     };
+    };
 
     user = {
       agents = {
