@@ -700,6 +700,13 @@ in {
           compression = false;
         };
 
+        gitea = withIdentity {
+          user = "gitea";
+          hostname = "gitea.vulcan.lan";
+          port = 2222;
+          compression = false;
+        };
+
         # Other servers
 
         router = withIdentity {
