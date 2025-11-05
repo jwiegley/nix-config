@@ -124,6 +124,7 @@ in {
       "graelo/tap/pumas"
       "openssl"
       "z3"
+      "claude-code-templates"
     ];
 
     casks = [

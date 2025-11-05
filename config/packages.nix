@@ -23,12 +23,12 @@
     # haskellPackages.git-all
     haskellPackages.git-monitor
     haskellPackages.hours
-    haskellPackages.org-jw
-    haskellPackages.pushme
-    haskellPackages.renamer
-    haskellPackages.sizes
-    haskellPackages.trade-journal
-    haskellPackages.una
+    haskellPackages_9_10.org-jw
+    haskellPackages_9_10.pushme
+    haskellPackages_9_10.renamer
+    haskellPackages_9_10.sizes
+    haskellPackages_9_10.trade-journal
+    haskellPackages_9_10.una
     act
     apg
     aria2
@@ -280,6 +280,7 @@
     sdcv
     shfmt
     siege
+    sieveshell
     sift
     sipcalc
     slackdump
