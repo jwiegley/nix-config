@@ -24,6 +24,10 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    org-jw = {
+      url = "github:jwiegley/org-jw";
+    };
   };
 
   outputs = inputs: with inputs; rec {
@@ -68,7 +72,7 @@
                 useGlobalPkgs = true;
                 useUserPackages = true;
                 backupFileExtension = "hm-bak";
-                extraSpecialArgs = { inherit hostname inputs; };
+                extraSpecialArgs = { inherit system hostname inputs; };
 
                 users.johnw = import ./config/home.nix;
               };
@@ -76,8 +80,8 @@
           ];
         };
       in {
-        hera = configure "hera"   "aarch64-darwin";
-        clio = configure "clio"   "aarch64-darwin";
+        hera = configure "hera" "aarch64-darwin";
+        clio = configure "clio" "aarch64-darwin";
       };
 
     darwinPackages = darwinConfigurations."hera".pkgs;

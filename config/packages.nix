@@ -1,4 +1,4 @@
-{ hostname, inputs, pkgs, ...}: with pkgs; rec
+{ system, hostname, inputs, pkgs, ...}: with pkgs; rec
 {
   exe = if stdenv.targetPlatform.isx86_64
         then haskell.lib.justStaticExecutables
@@ -23,7 +23,8 @@
     # haskellPackages.git-all
     haskellPackages.git-monitor
     haskellPackages.hours
-    haskellPackages_9_10.org-jw
+    # haskellPackages_9_10.org-jw
+    inputs.org-jw.packages.${system}.default
     haskellPackages_9_10.pushme
     haskellPackages_9_10.renamer
     haskellPackages_9_10.sizes
