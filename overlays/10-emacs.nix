@@ -152,6 +152,40 @@ let
       };
     };
 
+    consult-omni = compileEmacsFiles {
+      name = "consult-omni";
+      src = fetchFromGitHub {
+        owner = "armindarvish";
+        repo = "consult-omni";
+        rev = "9fb21c08ed0f836727f2d325516e3232ce31ef97";
+        sha256 = "1in0kvk9nb2d9gzq7fdb4pxv7i5vn06bjsldsjs36y51v3j424c2";
+        # date = "2025-09-27T22:49:03-07:00";
+      };
+      propagatedBuildInputs = with eself; [
+        browser-hist
+        elfeed
+        ox-gfm
+      ];
+      buildInputs = with eself; [
+        browser-hist
+        elfeed
+        ox-gfm
+        compat
+        consult
+        consult-gh
+        embark
+        embark-consult
+        markdown-mode
+        gptel
+        yaml
+      ];
+      preBuild = ''
+        cp sources/*.el .
+        rm -f consult-omni-mu4e.el
+        rm -f consult-omni-notmuch.el
+      '';
+    };
+
     doxymacs = compileEmacsFiles {
       name = "doxymacs";
       src = fetchFromGitHub {

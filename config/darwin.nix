@@ -166,7 +166,7 @@ in {
       "netdownloadhelpercoapp"
       "nextcloud"
       "pdf-expert"
-      "sage"
+      # "sage"
       "signal"
       "spamsieve"
       "steam"
