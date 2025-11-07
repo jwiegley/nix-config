@@ -168,7 +168,7 @@ in {
       "pdf-expert"
       # "sage"
       "signal"
-      "spamsieve"
+      # "spamsieve"
       "steam"
       "suspicious-package"
       "swiftdefaultappsprefpane"
