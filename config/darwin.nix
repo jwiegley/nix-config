@@ -453,6 +453,22 @@ in {
   };
 
   launchd = {
+    # User agents run at login in the user session context (GUI apps)
+    user.agents = {
+      docker-desktop = {
+        script = ''
+          # Start Docker Desktop
+          /usr/bin/open -a "/Applications/Docker.app"
+        '';
+        serviceConfig = {
+          RunAtLoad = true;
+          KeepAlive = false;  # Don't restart - Docker manages itself
+          ProcessType = "Interactive";  # GUI application
+        };
+      };
+    };
+
+    # System daemons run as background services
     daemons =
       let
         iterate = StartInterval: {
