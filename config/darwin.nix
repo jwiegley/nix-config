@@ -156,7 +156,7 @@ in {
       "kiwix"
       "launchbar"
       "lectrote"
-      "ledger-live"
+      "ledger-wallet"
       "macfuse"
       "mactracker"
       "mellel"
