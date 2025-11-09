@@ -168,7 +168,7 @@ haskellPackages_9_8  = self.haskell.packages.ghc98;
 haskellPackages_9_10 = self.haskell.packages.ghc910;
 haskellPackages_9_12 = self.haskell.packages.ghc912;
 
-ghcDefaultVersion    = "ghc98";
+ghcDefaultVersion    = "ghc910";
 haskellPackages      = self.haskell.packages.${self.ghcDefaultVersion};
 
 }
