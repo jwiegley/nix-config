@@ -246,7 +246,7 @@ with epkgs; [
   ob-emamux
   ob-restclient
   olivetti
-  (exclude onepassword-el)
+  onepassword-el
   operate-on-number
   orderless
   org

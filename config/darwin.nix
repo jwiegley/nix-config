@@ -157,6 +157,7 @@ in {
       "launchbar"
       "lectrote"
       "ledger-wallet"
+      "libreoffice"
       "macfuse"
       "mactracker"
       "mellel"
