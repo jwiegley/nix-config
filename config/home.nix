@@ -689,14 +689,14 @@ in {
 
         # Vulcan
 
-        # vulcan_wifi = lib.hm.dag.entryBefore ["vulcan"]
-        #   (withIdentity (matchHost "vulcan" "192.168.3.16") // {
-        #      hostname = "192.168.3.16";
-        #      compression = false;
-        #    });
+        vulcan_wifi = lib.hm.dag.entryBefore ["vulcan"]
+          (withIdentity (matchHost "vulcan" "192.168.1.2") // {
+             hostname = "192.168.1.2";
+             compression = false;
+           });
 
         vulcan = withIdentity {
-          hostname = "vulcan.lan";
+          hostname = "192.168.3.16";
           compression = false;
         };
 

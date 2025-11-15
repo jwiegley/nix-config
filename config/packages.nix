@@ -185,6 +185,7 @@
     m4
     macmon
     mb2md
+    mcat
     metabase
     mitmproxy
     mkcert

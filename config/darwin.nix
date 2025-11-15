@@ -48,11 +48,19 @@ in {
     systemPackages = with pkgs; [
     ];
 
-    # ZFS configuration for OpenZFS on macOS (hera only)
-    # Sets ARC (Adaptive Replacement Cache) max to 32 GiB
     etc = lib.mkIf (hostname == "hera") {
+      # ZFS configuration for OpenZFS on macOS (hera only)
+      # Sets ARC (Adaptive Replacement Cache) max to 32 GiB
       "zfs/zsysctl.conf".text = ''
         kstat.zfs.darwin.tunable.zfs_arc.max=34359738368
+      '';
+      "nsmb.conf".text = ''
+        [default]
+        signing_required=no
+        mc_on=yes
+        mc_prefer_wired=yes
+        dir_cache_off=yes
+        protocol_vers_map=6
       '';
     };
   };
@@ -121,6 +129,7 @@ in {
       "node@22"
       "llm"
       "sqlcmd"
+      "goclone"
       "graelo/tap/pumas"
       "openssl"
       "z3"
@@ -158,14 +167,13 @@ in {
       "lectrote"
       "ledger-wallet"
       "libreoffice"
-      "macfuse"
+      # "macfuse"
       "mactracker"
       "mellel"
       "microsoft-excel"
       "microsoft-powerpoint"
       "microsoft-word"
       "netdownloadhelpercoapp"
-      "nextcloud"
       "pdf-expert"
       # "sage"
       "signal"

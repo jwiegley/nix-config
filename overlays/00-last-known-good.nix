@@ -11,4 +11,11 @@ in {
   })
   siege
   ;
+
+  inherit (nixpkgs {
+    rev    = "e1ebeec86b771e9d387dd02d82ffdc77ac753abc";
+    sha256 = "sha256-g/da4FzvckvbiZT075Sb1/YDNDr+tGQgh4N8i5ceYMg=";
+  })
+  z3
+  ;
 }
