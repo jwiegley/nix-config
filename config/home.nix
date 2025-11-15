@@ -138,7 +138,6 @@ in {
       // lib.optionalAttrs (hostname == "hera") {
         "Audio".source  = mkLink "/Volumes/ext/Audio";
         "Photos".source = mkLink "/Volumes/ext/Photos";
-        "Nextcloud".source = mkLink "/Volumes/ext/Nextcloud";
       }
       // lib.optionalAttrs (hostname == "clio") {
       }
@@ -689,7 +688,7 @@ in {
 
         # Vulcan
 
-        vulcan_wifi = lib.hm.dag.entryBefore ["vulcan"]
+        vulcan_ethernet = lib.hm.dag.entryBefore ["vulcan"]
           (withIdentity (matchHost "vulcan" "192.168.1.2") // {
              hostname = "192.168.1.2";
              compression = false;
@@ -700,9 +699,17 @@ in {
           compression = false;
         };
 
+        gitea_ethernet = lib.hm.dag.entryBefore ["gitea"]
+          (withIdentity (matchHost "gitea" "192.168.1.2") // {
+            user = "gitea";
+            hostname = "192.168.1.2";
+            port = 2222;
+            compression = false;
+          });
+
         gitea = withIdentity {
           user = "gitea";
-          hostname = "gitea.vulcan.lan";
+          hostname = "192.168.3.16";
           port = 2222;
           compression = false;
         };

@@ -129,7 +129,6 @@ in {
       "node@22"
       "llm"
       "sqlcmd"
-      "goclone"
       "graelo/tap/pumas"
       "openssl"
       "z3"
