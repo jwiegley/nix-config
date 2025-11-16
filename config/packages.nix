@@ -23,7 +23,6 @@
     # haskellPackages.git-all
     haskellPackages.git-monitor
     haskellPackages.hours
-    # haskellPackages.org-jw
     inputs.org-jw.packages.${system}.default
     haskellPackages.pushme
     haskellPackages.renamer
