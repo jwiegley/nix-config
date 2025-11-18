@@ -143,6 +143,7 @@ in {
       "audacity"
       "balenaetcher"
       "carbon-copy-cloner"
+      "cardhop"
       "choosy"
       "claude"
       "corelocationcli"
