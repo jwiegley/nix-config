@@ -20,15 +20,15 @@
     (exe haskellPackages.hpack)
     (lib.hiPrio (exe haskellPackages.ormolu))
     (exe haskellPackages.pointfree)
-    # haskellPackages.git-all
+    inputs.git-all.packages.${system}.default
     haskellPackages.git-monitor
-    haskellPackages.hours
+    inputs.hours.packages.${system}.default
     inputs.org-jw.packages.${system}.default
-    haskellPackages.pushme
-    haskellPackages.renamer
-    haskellPackages.sizes
-    haskellPackages.trade-journal
-    haskellPackages.una
+    inputs.pushme.packages.${system}.default
+    inputs.renamer.packages.${system}.default
+    inputs.sizes.packages.${system}.default
+    inputs.trade-journal.packages.${system}.default
+    inputs.una.packages.${system}.default
     act
     apg
     aria2

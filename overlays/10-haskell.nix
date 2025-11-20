@@ -5,15 +5,21 @@ let
     # "async-pool"
     # "bindings-DSL"
     # "c2hsc"
-    # "git-all"
     "gitlib/gitlib"
     "gitlib/gitlib-test"
   [ "gitlib/gitlib-cmdline" { inherit (self) git; } ]
   [ "gitlib/hlibgit2" { inherit (self) git; } ]
     "gitlib/gitlib-libgit2"
     "gitlib/git-monitor"
-    "hakyll"
-    "hours"
+    # NOTE: The following packages are now accessed via flake inputs:
+    # "git-all" - inputs.git-all
+    # "hakyll" - inputs.hakyll
+    # "hours" - inputs.hours
+    # "pushme" - inputs.pushme
+    # "renamer" - inputs.renamer
+    # "sizes" - inputs.sizes
+    # "trade-journal" - inputs.trade-journal
+    # "una" - inputs.una
     # "hnix"
     # "logging"
     # "monad-extras"
@@ -33,21 +39,16 @@ let
     # "parsec-free"
     # "pipes-async"
     # "pipes-files"
-    "pushme"
     # "recursors"
-    "renamer"
     # "runmany"
     # "simple-amount"
-    "sizes"
-    "trade-journal"
-    "una"
   ];
 
   packageDrv = ghc:
     callPackage (usingWithHoogle self.haskell.packages.${ghc}) ghc;
 
   otherHackagePackages = ghc: hself: hsuper: with pkgs.haskell.lib; {
-    pushme = unmarkBroken (doJailbreak hsuper.pushme);
+    # pushme is now accessed via flake input
 
     time-recurrence = unmarkBroken (doJailbreak
       (hself.callCabal2nix "time-recurrence" (pkgs.fetchFromGitHub {
@@ -115,6 +116,48 @@ let
                })));
   };
 
+  # Common override for http2 compatibility with warp-3.4.9+
+  # warp-3.4.9 requires http2 >= 5.3.11 for confReadNTimeout field
+  http2Override = hself: hsuper: {
+    time-manager = hself.callHackageDirect {
+      pkg = "time-manager";
+      ver = "0.2.4";
+      sha256 = "176y8svag2fbmvicxgxkhv36gbaak2id3zbwaf40sbaqgpgpy2xh";
+    } {};
+
+    http-semantics = hself.callHackageDirect {
+      pkg = "http-semantics";
+      ver = "0.3.1";
+      sha256 = "0ifzl14g5xfqd2cwhbyp726vqcksg3p55lmxs2v04qrsi0w5yvay";
+    } {};
+
+    network-run = hself.callHackageDirect {
+      pkg = "network-run";
+      ver = "0.5.0";
+      sha256 = "0xacfhiq6yf1j5dr20h2smkfja7y3wkc91rsls0c23pi5kwf3ddx";
+    } {};
+
+    http2 = hself.callHackageDirect {
+      pkg = "http2";
+      ver = "5.3.11";
+      sha256 = "02cxcy3icy094z9x4l3nr8mxng526fls7p94lx1b3shj7n66s1pp";
+    } {};
+
+    warp = pkgs.haskell.lib.compose.dontCheck (pkgs.haskell.lib.doJailbreak (hself.callCabal2nix "warp" (self.fetchFromGitHub {
+      owner = "yesodweb";
+      repo = "wai";
+      rev = "5caae1ad3633e87c15e27863e593340c6385fa9d";
+      sha256 = "1i53qfqr4krj97idmwwagrl9q3p1siy5p83h2zwsy1jp863jnb08";
+    } + "/warp") {}));
+
+    wai-extra = pkgs.haskell.lib.compose.dontCheck (pkgs.haskell.lib.doJailbreak (hself.callCabal2nix "wai-extra" (self.fetchFromGitHub {
+      owner = "yesodweb";
+      repo = "wai";
+      rev = "5caae1ad3633e87c15e27863e593340c6385fa9d";
+      sha256 = "1i53qfqr4krj97idmwwagrl9q3p1siy5p83h2zwsy1jp863jnb08";
+    } + "/wai-extra") {}));
+  };
+
   breakout = hsuper: names:
     builtins.listToAttrs
       (builtins.map
@@ -151,14 +194,28 @@ haskellFilterSource = paths: src: pkgs.lib.cleanSourceWith {
 
 haskell = pkgs.haskell // {
   packages = pkgs.haskell.packages // rec {
-    ghc94  = overrideHask "ghc94"  pkgs.haskell.packages.ghc94  (_hself: _hsuper: {});
-    ghc96  = overrideHask "ghc96"  pkgs.haskell.packages.ghc96  (_hself: hsuper:
-      with pkgs.haskell.lib; {
-        system-fileio = unmarkBroken hsuper.system-fileio;
-      });
-    ghc98  = overrideHask "ghc98"  pkgs.haskell.packages.ghc98  (_hself: _hsuper: {});
-    ghc910 = overrideHask "ghc910" pkgs.haskell.packages.ghc910 (_hself: _hsuper: {});
-    ghc912 = overrideHask "ghc912" pkgs.haskell.packages.ghc912 (_hself: _hsuper: {});
+    ghc94  = overrideHask "ghc94"  pkgs.haskell.packages.ghc94
+      (pkgs.lib.composeExtensions http2Override
+        (_hself: _hsuper: {}));
+
+    ghc96  = overrideHask "ghc96"  pkgs.haskell.packages.ghc96
+      (pkgs.lib.composeExtensions http2Override
+        (_hself: hsuper:
+          with pkgs.haskell.lib; {
+            system-fileio = unmarkBroken hsuper.system-fileio;
+          }));
+
+    ghc98  = overrideHask "ghc98"  pkgs.haskell.packages.ghc98
+      (pkgs.lib.composeExtensions http2Override
+        (_hself: _hsuper: {}));
+
+    ghc910 = overrideHask "ghc910" pkgs.haskell.packages.ghc910
+      (pkgs.lib.composeExtensions http2Override
+        (_hself: _hsuper: {}));
+
+    ghc912 = overrideHask "ghc912" pkgs.haskell.packages.ghc912
+      (pkgs.lib.composeExtensions http2Override
+        (_hself: _hsuper: {}));
   };
 };
 

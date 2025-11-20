@@ -28,6 +28,38 @@
     org-jw = {
       url = "github:jwiegley/org-jw";
     };
+
+    git-all = {
+      url = "git+file:///Users/johnw/src/git-all";
+    };
+
+    hakyll = {
+      url = "git+file:///Users/johnw/src/hakyll";
+    };
+
+    hours = {
+      url = "git+file:///Users/johnw/src/hours";
+    };
+
+    pushme = {
+      url = "git+file:///Users/johnw/src/pushme";
+    };
+
+    renamer = {
+      url = "git+file:///Users/johnw/src/renamer";
+    };
+
+    sizes = {
+      url = "git+file:///Users/johnw/src/sizes";
+    };
+
+    trade-journal = {
+      url = "git+file:///Users/johnw/src/trade-journal";
+    };
+
+    una = {
+      url = "git+file:///Users/johnw/src/una";
+    };
   };
 
   outputs = inputs: with inputs; rec {
