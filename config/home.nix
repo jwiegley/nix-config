@@ -521,7 +521,8 @@ in {
         };
 
         push = {
-          default = "tracking";
+          autoSetupRemote = true;
+          default = "simple";
           # recurseSubmodules = "check";
         };
 
