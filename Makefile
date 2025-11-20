@@ -60,15 +60,16 @@ switch:
 	@sudo darwin-rebuild switch --impure --flake .#$(HOSTNAME)
 	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"
 
+# @for project in $(shell grep "^[^#]" $(PROJECTS)); do	\
+#     ( cd $(HOME)/$$project ;				\
+#       echo "### $(HOME)/$$project" ;			\
+#       nix flake update					\
+#     );							\
+# done
+
 update:
 	$(call announce,nix flake update && brew update)
 	nix flake update
-	@for project in $(shell grep "^[^#]" $(PROJECTS)); do	\
-	    ( cd $(HOME)/$$project ;				\
-	      echo "### $(HOME)/$$project" ;			\
-	      nix flake update					\
-	    );							\
-	done
 	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
 	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
 	elif [[ -f /usr/local/bin/brew ]]; then		\
