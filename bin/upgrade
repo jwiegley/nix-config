@@ -247,15 +247,3 @@ echo ~/src/ledger
 ) >> /tmp/ledger-build.log 2>&1
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
-
-### C projects
-
-# echo ~/src/emacs
-# (
-#     cd ~/src/rag-client
-#     echo ~/src/rag-client
-#     source .envrc
-#     nix develop -c echo hello
-# ) >> /tmp/rag-client-build.log 2>&1
-
-# if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
