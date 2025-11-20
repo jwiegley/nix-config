@@ -101,39 +101,6 @@ hfdownloader = with super; buildGoModule rec {
   };
 };
 
-koboldcpp = super.koboldcpp.overrideAttrs(attrs: rec {
-  version = "1.95.1";
-
-  src = super.fetchFromGitHub {
-    owner = "LostRuins";
-    repo = "koboldcpp";
-    tag = "v${version}";
-    hash = "sha256-aoVOEPK3hPuzkrHIFvDrnAw2D/OxXlRLXXP0CZJghx4=";
-  };
-});
-
-ik-llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "b57bd865";
-
-  src = super.fetchFromGitHub {
-    owner = "ikawrakow";
-    repo = "ik_llama.cpp";
-    rev = "b57bd8658bfb20e65ad0b601eef6732fee45b81f";
-    sha256 = "06ad8458h1rsr91irkq6s5pbkrk3r3lpk5867yr76s4jxfqnwakx";
-    # date = "2025-06-12T19:25:11+03:00";
-  };
-});
-
-llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "6932";
-  src = super.fetchFromGitHub {
-    owner = "ggml-org";
-    repo = "llama.cpp";
-    tag = "b${version}";
-    hash = "sha256-0BONJe8SqlcdY7zfQGU21IwEblOannAfJaBJHwGZIgY=";
-  };
-});
-
 llama-swap =
 let
   version = "171";

@@ -35,7 +35,7 @@
     asciidoctor
     aspell
     aspellDicts.en
-    # awscli2
+    awscli2
     b3sum
     backblaze-b2
     bandwhich
@@ -92,7 +92,7 @@
     gh
     gist
     git-absorb
-    # git-branchless
+    git-branchless
     git-branchstack
     git-cliff
     git-crypt
@@ -247,7 +247,6 @@
          numpy
          requests
          stdenv
-         # orgparse
          basedpyright
          autoflake
          pylint
@@ -274,7 +273,7 @@
     rsync
     ruby
     samba
-    # sbcl
+    sbcl
     scc
     sccache
     screen
@@ -345,7 +344,6 @@
     litellm
     (lib.hiPrio llama-cpp)
     llama-swap
-    # koboldcpp
     gguf-tools
     openmpi
     claude-code
@@ -355,16 +353,12 @@
     claude-code-acp
     rustdocs-mcp-server
   
-    # mcp-servers-nix
     context7-mcp
     playwright-mcp
     github-mcp-server
-    # mcp-server-filesystem
-    # mcp-server-git
     mcp-server-memory
     (lib.hiPrio mcp-server-sequential-thinking)
     mcp-server-time
-    # mcp-server-fetch
 
     (exe git-annex)
     git-annex-remote-rclone
