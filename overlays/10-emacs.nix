@@ -795,7 +795,7 @@ emacsHEAD = with pkgs;
     NATIVE_FULL_AOT = "1";
     LIBRARY_PATH = lib.concatStringsSep ":" libGccJitLibraryPaths;
   };
-  src = nix-gitignore.gitignoreSourcePure [] /Users/johnw/src/emacs;
+  src = nix-gitignore.gitignoreSourcePure [] /Users/johnw/Databases/emacs;
   patches = [
     (builtins.path {
       name = "inhibit-lexical-cookie-warning-67916.patch";
