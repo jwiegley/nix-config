@@ -646,7 +646,7 @@ in {
           matchHost = host: hostname: {
             inherit hostname;
             match = ''
-              host ${host} exec "${pkgs.unixtools.ping}/bin/ping -c1 -W50 -n -r -q ${hostname} > /dev/null 2>&1"
+              host ${host} exec "${pkgs.unixtools.ping}/bin/ping -c1 -W50 -n -q ${hostname} > /dev/null 2>&1"
             '';
           };
 
