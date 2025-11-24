@@ -56,8 +56,8 @@ build:
 	@rm -f result*
 
 switch:
-	$(call announce,darwin-rebuild switch --flake .#$(HOSTNAME))
-	@sudo darwin-rebuild switch --flake .#$(HOSTNAME)
+	$(call announce,darwin-rebuild switch --impure --flake .#$(HOSTNAME))
+	@sudo darwin-rebuild switch --impure --flake .#$(HOSTNAME)
 	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"
 
 update:
