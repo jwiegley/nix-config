@@ -56,16 +56,9 @@ build:
 	@rm -f result*
 
 switch:
-	$(call announce,darwin-rebuild switch --impure --flake .#$(HOSTNAME))
-	@sudo darwin-rebuild switch --impure --flake .#$(HOSTNAME)
+	$(call announce,darwin-rebuild switch --flake .#$(HOSTNAME))
+	@sudo darwin-rebuild switch --flake .#$(HOSTNAME)
 	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"
-
-# @for project in $(shell grep "^[^#]" $(PROJECTS)); do	\
-#     ( cd $(HOME)/$$project ;				\
-#       echo "### $(HOME)/$$project" ;			\
-#       nix flake update					\
-#     );							\
-# done
 
 update:
 	$(call announce,nix flake update && brew update)
@@ -77,6 +70,16 @@ update:
 	fi
 	brew update
 
+update-projects:
+	$(call announce,nix flake update (in projects))
+	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
+	@for project in "$${projects[@]}"; do	\
+	    ( cd $(HOME)/$$project ;		\
+	      echo "### $(HOME)/$$project" ;	\
+	      nix flake update			\
+	    );					\
+	done
+
 upgrade-tasks: switch travel-ready
 	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
 	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
@@ -85,14 +88,15 @@ upgrade-tasks: switch travel-ready
 	fi
 	brew upgrade --greedy
 
-upgrade: update upgrade-tasks check
+upgrade: update upgrade-tasks
 
 changes:
-	@for project in $(shell grep "^[^#]" $(PROJECTS)); do	\
-	    ( cd $(HOME)/$$project ;				\
-	      echo "### $(HOME)/$$project" ;			\
-	      changes						\
-	    );							\
+	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
+	@for project in "$${projects[@]}"; do	\
+	    ( cd $(HOME)/$$project ;		\
+	      echo "### $(HOME)/$$project" ;	\
+	      changes				\
+	    );					\
 	done
 	echo "### ~/.config/pushme"
 	(cd ~/.config/pushme ; changes)
@@ -110,11 +114,12 @@ changes:
 ########################################################################
 
 copy:
-	$(call announce,copy)							\
+	$(call announce,copy)
 	@for host in $(REMOTES); do						\
 	    nix copy --to "ssh-ng://$$host"					\
 	        $(HOME)/.local/state/nix/profiles/profile;			\
-	    for project in $(shell grep "^[^#]" $(PROJECTS)); do		\
+	    readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")	\
+	    for project in "$${projects[@]}"; do				\
 	        echo $$project;							\
 	        ( cd $(HOME)/$$project ;					\
 	          if [[ -f .envrc.cache ]]; then				\
@@ -164,19 +169,19 @@ sign:
 travel-ready:
 	$(call announce,travel-ready)
 	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
-	@for dir in "$${projects[@]}"; do			\
-	    echo "Updating direnv on $(HOSTNAME) for ~/$$dir";	\
-	    (cd ~/$$dir &&					\
-             rm -f .envrc .envrc.cache;				\
-             clean;						\
-             if [[ $(HOSTNAME) == hera ]]; then			\
-	         $(NIX_CONF)/bin/de;				\
-             elif [[ $(HOSTNAME) == clio ]]; then		\
-	         $(NIX_CONF)/bin/de;				\
-             else						\
-	         unset BUILDER;					\
-	         $(NIX_CONF)/bin/de;				\
-	     fi);						\
+	@for project in "$${projects[@]}"; do				\
+	    echo "Updating direnv on $(HOSTNAME) for ~/$$project";	\
+	    (cd ~/$$project &&						\
+             rm -f .envrc .envrc.cache;					\
+             clean;							\
+             if [[ $(HOSTNAME) == hera ]]; then				\
+	         $(NIX_CONF)/bin/de;					\
+             elif [[ $(HOSTNAME) == clio ]]; then			\
+	         $(NIX_CONF)/bin/de;					\
+             else							\
+	         unset BUILDER;						\
+	         $(NIX_CONF)/bin/de;					\
+	     fi);							\
 	done
 
 .ONESHELL:
