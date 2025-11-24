@@ -132,6 +132,7 @@ in {
 
         ".emacs.d".source      = mkLink "${home}/src/dot-emacs";
         "dl".source            = mkLink "${home}/Downloads";
+        "db".source            = mkLink "${home}/Databases";
 
         "News".source          = mkLink "${config.xdg.dataHome}/gnus/News";
       }

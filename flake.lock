@@ -755,11 +755,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1763596996,
-        "narHash": "sha256-7cFIOus5SL7+2eNgzsJdZpXuAbAbjdGGaRUYbdAOQ0E=",
+        "lastModified": 1763769801,
+        "narHash": "sha256-3bNP2lWP+Hor/GT3kFfdCBozaRzeKJncvXVBRtDggmI=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "c06fdde903bed1e0b74528b34c12293b4e406ec5",
+        "rev": "3b92e3b6f23a91cc795415b3990349e3712164bb",
         "type": "github"
       },
       "original": {
@@ -4083,11 +4083,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1763416652,
-        "narHash": "sha256-8EBEEvtzQ11LCxpQHMNEBQAGtQiCu/pqP9zSovDSbNM=",
+        "lastModified": 1763997646,
+        "narHash": "sha256-hLIvcdKAtwt5eZchw+7AZFXx3NniHPbZ7puYruofsD8=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "ea164b7c9ccdc2321379c2ff78fd4317b4c41312",
+        "rev": "b9c0dae3e474631d4813c685187f5b4e01c34d39",
         "type": "github"
       },
       "original": {
@@ -4424,11 +4424,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1763403887,
-        "narHash": "sha256-re5JOoHIhwbuW94qsP0SkStgEGbF59TGjOVre2GYir4=",
+        "lastModified": 1763989156,
+        "narHash": "sha256-/cQE5ayNP0VwzpZHfsWPdAkdVqpURRx9skPAIeyN8Pk=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "9651d9ae85524ec2784717273facaf131ba3e4c7",
+        "rev": "a58f65b5a2bd7716ffd14eeb413c868ca2ee9541",
         "type": "github"
       },
       "original": {
@@ -4439,11 +4439,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1763618868,
-        "narHash": "sha256-v5afmLjn/uyD9EQuPBn7nZuaZVV9r+JerayK/4wvdWA=",
+        "lastModified": 1763806073,
+        "narHash": "sha256-FHsEKDvfWpzdADWj99z7vBk4D716Ujdyveo5+A048aI=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "a8d610af3f1a5fb71e23e08434d8d61a466fc942",
+        "rev": "878e468e02bfabeda08c79250f7ad583037f2227",
         "type": "github"
       },
       "original": {
@@ -5505,11 +5505,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1763677257,
-        "narHash": "sha256-asAL5IY/klAB2s6UtCozcSVY0jml/2WjPRVQhBo0j6c=",
+        "lastModified": 1763684659,
+        "narHash": "sha256-TlGhAvj1lSf4q6xK6RZ5GBINYISOo2H/QV3iqck3r6A=",
         "ref": "refs/heads/master",
-        "rev": "6b16d6e21abc29dd7ef419e740f7eb9b672fa4bc",
-        "revCount": 209,
+        "rev": "525452db7881991cd576de8ec251bdd144e25995",
+        "revCount": 210,
         "type": "git",
         "url": "file:///Users/johnw/src/pushme"
       },
