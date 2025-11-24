@@ -4107,11 +4107,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1764006754,
+        "lastModified": 1764012944,
         "narHash": "sha256-moxZKZnxTCKgmm7puDXq6HdK+yG2Ni5WawLEc6wBVfo=",
         "ref": "refs/heads/master",
-        "rev": "663421758bfea0e65e167f7fbcd4675613eeefa0",
-        "revCount": 178,
+        "rev": "a9881a36435408f79f72cf746dfb0a4b57a3767a",
+        "revCount": 179,
         "type": "git",
         "url": "file:///Users/johnw/src/hours"
       },
