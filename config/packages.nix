@@ -21,7 +21,7 @@
     (lib.hiPrio (exe haskellPackages.ormolu))
     (exe haskellPackages.pointfree)
     inputs.git-all.packages.${system}.default
-    # haskellPackages.git-monitor
+    inputs.gitlib.packages.${system}.default
     inputs.hours.packages.${system}.default
     inputs.org-jw.packages.${system}.default
     inputs.pushme.packages.${system}.default
