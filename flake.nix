@@ -2,8 +2,8 @@
   description = "Darwin configuration";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     # nixpkgs.url = "git+file:///Users/johnw/Products/nixpkgs";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     darwin = {
       url = "github:lnl7/nix-darwin";
@@ -25,45 +25,16 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    org-jw = {
-      url = "github:jwiegley/org-jw";
-    };
-
-    git-all = {
-      url = "git+file:///Users/johnw/src/git-all";
-    };
-
-    gitlib = {
-      url = "git+file:///Users/johnw/src/gitlib?submodules=0";
-    };
-
-    hakyll = {
-      url = "git+file:///Users/johnw/src/hakyll";
-    };
-
-    hours = {
-      url = "git+file:///Users/johnw/src/hours";
-    };
-
-    pushme = {
-      url = "git+file:///Users/johnw/src/pushme";
-    };
-
-    renamer = {
-      url = "git+file:///Users/johnw/src/renamer";
-    };
-
-    sizes = {
-      url = "git+file:///Users/johnw/src/sizes";
-    };
-
-    trade-journal = {
-      url = "git+file:///Users/johnw/src/trade-journal";
-    };
-
-    una = {
-      url = "git+file:///Users/johnw/src/una";
-    };
+    org-jw.url = "github:jwiegley/org-jw";
+    git-all.url = "git+file:///Users/johnw/src/git-all";
+    gitlib.url = "git+file:///Users/johnw/src/gitlib?submodules=0";
+    hakyll.url = "git+file:///Users/johnw/src/hakyll";
+    hours.url = "git+file:///Users/johnw/src/hours";
+    pushme.url = "git+file:///Users/johnw/src/pushme";
+    renamer.url = "git+file:///Users/johnw/src/renamer";
+    sizes.url = "git+file:///Users/johnw/src/sizes";
+    trade-journal.url = "git+file:///Users/johnw/src/trade-journal";
+    una.url = "git+file:///Users/johnw/src/una";
   };
 
   outputs = inputs: with inputs; rec {
