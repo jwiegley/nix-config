@@ -173,6 +173,7 @@ in {
       "microsoft-excel"
       "microsoft-powerpoint"
       "microsoft-word"
+      "microsoft-remote-desktop"
       "netdownloadhelpercoapp"
       "pdf-expert"
       # "sage"

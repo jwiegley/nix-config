@@ -115,6 +115,7 @@ in {
         ".cursor".source       = mkLink "${config.xdg.configHome}/cursor";
         ".dbvis".source        = mkLink "${config.xdg.configHome}/dbvis";
         ".gist".source         = mkLink "${config.xdg.configHome}/gist/api_key";
+        ".gnupg".source        = mkLink "${config.xdg.configHome}/gnupg";
         ".jupyter".source      = mkLink "${config.xdg.configHome}/jupyter";
         ".kube".source         = mkLink "${config.xdg.configHome}/kube";
         ".mitmproxy".source    = mkLink "${config.xdg.configHome}/mitmproxy";
@@ -792,7 +793,7 @@ in {
       enableSshSupport = true;
       defaultCacheTtl = 86400;
       maxCacheTtl = 86400;
-      # pinentry-program ${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac
+      pinentry.package = pkgs.pinentry_mac;
     };
   };
 
