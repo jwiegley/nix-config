@@ -203,6 +203,18 @@ pythonPackagesExtensions = (super.pythonPackagesExtensions or []) ++ [
         };
       });
    in {
+    # Fix hash mismatch for mitmproxy-macos wheel (PyPI republished the package)
+    mitmproxy-macos = pprev.mitmproxy-macos.overridePythonAttrs (oldAttrs: {
+      src = pfinal.fetchPypi {
+        pname = "mitmproxy_macos";
+        inherit (oldAttrs) version;
+        format = "wheel";
+        dist = "py3";
+        python = "py3";
+        hash = "sha256-baAfEY4hEN3wOEicgE53gY71IX003JYFyyZaNJ7U8UA=";
+      };
+    });
+
     mlx = pprev.mlx.overridePythonAttrs (oldAttrs: rec {
       # version = "0.25.2";
       # src = super.fetchFromGitHub {
