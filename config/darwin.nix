@@ -178,6 +178,7 @@ in {
       "pdf-expert"
       # "sage"
       "signal"
+      "slack"
       # "spamsieve"
       "steam"
       "suspicious-package"
