@@ -147,6 +147,8 @@ in {
       "choosy"
       "claude"
       "corelocationcli"
+      "cursor"
+      "cursor-cli"
       "dbvisualizer"
       "devonagent"
       "devonthink"
