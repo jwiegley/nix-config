@@ -135,6 +135,9 @@ in {
         "dl".source            = mkLink "${home}/Downloads";
         "db".source            = mkLink "${home}/Databases";
 
+        "pos".source           = mkLink "${home}/work/positron";
+        "srp".source           = mkLink "${home}/work/regional-statistics/srp-db";
+
         "News".source          = mkLink "${config.xdg.dataHome}/gnus/News";
       }
       // lib.optionalAttrs (hostname == "hera") {
@@ -715,6 +718,15 @@ in {
           hostname = "192.168.3.16";
           port = 2222;
           compression = false;
+        };
+
+        # Work
+
+        ghpos = {
+          user = "git";
+          hostname = "github.com";
+          identityFile   = "${config.xdg.configHome}/ssh/id_positron";
+          identitiesOnly = true;
         };
 
         # Other servers
