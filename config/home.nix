@@ -778,12 +778,12 @@ in {
         defaults = {
           host = "*";
 
+          controlMaster       = "auto";
+          controlPath         = "${tmpdir}/ssh-%u-%r@%h:%p";
+          controlPersist      = "1800";
           # Disable ControlMaster due to intermittent hanging issues
-          # controlMaster       = "auto";
-          # controlPath         = "${tmpdir}/ssh-%u-%r@%h:%p";
-          # controlPersist      = "1800";
-          controlMaster       = "no";
-          controlPath         = "none";
+          # controlMaster       = "no";
+          # controlPath         = "none";
           userKnownHostsFile  = "${config.xdg.configHome}/ssh/known_hosts";
           hashKnownHosts      = true;
           serverAliveInterval = 60;
