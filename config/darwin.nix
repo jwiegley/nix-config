@@ -219,6 +219,7 @@ in {
       "fujitsu-scansnap-home"
       "gzdoom"
       "raspberry-pi-imager"
+      "logitune"
     ] ++ lib.optionals (hostname == "clio") [
       "aldente"
       "wifi-explorer"
