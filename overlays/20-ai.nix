@@ -172,28 +172,27 @@ with super; llama-swap.overrideAttrs(attrs: rec {
 
 mlx-lm = with self; with self.python3Packages; buildPythonApplication rec {
   pname = "mlx-lm";
-  version = "0.28.2";
+  version = "0.28.3";
   pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "mlx-explore";
+    owner = "ml-explore";
     repo = "mlx-lm";
-    tag = version;
-    hash = "sha256-6SGbvhuNeKgMYGa0ZiOLm+H/JbNpvFWBcUL4De5xO4o=";
+    tag = "v${version}";
+    hash = "sha256-H3LwMx3QFuU6d+ayIN2N+Y3Euv4L09oH0JUZV2Gd7Qw=";
   };
 
   build-system = [
     setuptools
-    llm
   ];
-  dependencies = [ mlx ];
+  dependencies = [
+    mlx
+    transformers
+    protobuf
+    jinja2
+  ];
 
-  nativeCheckInputs = [
-    pytestCheckHook
-    pytest-asyncio
-    pytest-recording
-    writableTmpDirAsHomeHook
-  ];
+  doCheck = false;  # Tests require additional dependencies
 
   meta = {
     description = "LLM access to models using MLX";
@@ -229,29 +228,25 @@ pythonPackagesExtensions = (super.pythonPackagesExtensions or []) ++ [
       };
     });
 
-    mlx = pprev.mlx.overridePythonAttrs (oldAttrs: rec {
-      # version = "0.25.2";
-      # src = super.fetchFromGitHub {
-      #   owner = "ml-explore";
-      #   repo = "mlx";
-      #   rev = "refs/tags/v${version}";
-      #   hash = "sha256-fkf/kKATr384WduFG/X81c5InEAZq5u5+hwrAJIg7MI=";
-      # };
-      patches = [];
-      env = {
-        PYPI_RELEASE = oldAttrs.version;
-        CMAKE_ARGS = with self; toString [
-          # (lib.cmakeBool "MLX_BUILD_METAL" true)
-          (lib.cmakeOptionType "filepath" "FETCHCONTENT_SOURCE_DIR_GGUFLIB" "${gguf-tools}")
-          (lib.cmakeOptionType "filepath" "FETCHCONTENT_SOURCE_DIR_JSON" "${nlohmann_json}")
-        ];
+    mlx = pprev.mlx.overridePythonAttrs (oldAttrs: {
+      # Use pre-built wheel from PyPI that includes Metal support
+      # Building from source fails in Nix sandbox due to Metal tools being unavailable
+      version = "0.30.0";
+      pyproject = null;
+      format = "wheel";
+      patches = [];  # Wheel doesn't need patches
+      postPatch = "";  # No patching needed for pre-built wheel
+      doCheck = false;  # Wheels don't include tests
+      src = pfinal.fetchPypi {
+        pname = "mlx";
+        version = "0.30.0";
+        format = "wheel";
+        dist = "cp313";
+        python = "cp313";
+        abi = "cp313";
+        platform = "macosx_14_0_arm64";
+        hash = "sha256-9GqqbFYroYPipkoOa6Fe1U+QJ9m3sYIunux/WbE9YQw=";
       };
-      # buildInputs = (oldAttrs.buildInputs or []) ++ [
-      #   self.darwin.apple_sdk_14_4
-      # ];
-      # nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [
-      #   nanobind
-      # ];
     });
 
     llm-mlx = pfinal.callPackage llm-mlx {};
