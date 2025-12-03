@@ -58,7 +58,7 @@ in
 
 gguf-tools = with super; stdenv.mkDerivation rec {
   name = "gguf-tools-${version}";
-  version = "8fa6eb65";
+  version = "a3257ff3";
 
   src = fetchFromGitHub {
     owner = "antirez";
