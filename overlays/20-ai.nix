@@ -83,14 +83,14 @@ gguf-tools = with super; stdenv.mkDerivation rec {
 
 hfdownloader = with super; buildGoModule rec {
   pname = "hfdownloader";
-  version = "1.4.2";
-  vendorHash = "sha256-0tAJEPJQJTUYoV0IU2YYmSV60189rDRdwoxQsewkMEU=";
+  version = "2.0.0";
+  vendorHash = "sha256-3xSLD0vEKedk/7LCxmKjHGuBvE9fd78aUoXYzmkDB1k=";
 
   src = fetchFromGitHub {
     owner = "bodaay";
     repo = "HuggingFaceModelDownloader";
     rev = "${version}";
-    hash = "sha256-sec+NGh1I5YmQif+ifm+AJmG6TVKOW/enffh8UE0I+E=";
+    hash = "sha256-gVCsUoUMYNxp99q1XED3+i4C0gdplDeVs+tZrgnzH7M=";
   };
 
   meta = with lib; {
