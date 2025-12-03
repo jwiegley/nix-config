@@ -117,13 +117,13 @@ llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
 
 llama-swap =
 let
-  version = "171";
+  version = "176";
 
   src = super.fetchFromGitHub {
     owner = "mostlygeek";
     repo = "llama-swap";
     rev = "v${version}";
-    hash = "sha256-gtrVPEqEWoxgE3mTqOmoCjEWT4l1AUmxBO6LFjVTL2Q=";
+    hash = "sha256-19vvuU5SD8lpaezNEY0FTkSVmpsouKh2SklsuFlTW+U=";
   };
 
   ui = with super; buildNpmPackage (finalAttrs: {
@@ -137,7 +137,7 @@ let
 
     sourceRoot = "source/ui";
 
-    npmDepsHash = "sha256-uxZn/VYrGHcDfNiudDPrV6dR7Z/ZDTj0MetpB/hoGWQ=";
+    npmDepsHash = "sha256-RKPcMwJ0qVOgbTxoGryrLn7AW0Bfmv9WasoY+gw4B30=";
 
     postInstall = ''
       rm -rf $out/lib
@@ -152,7 +152,7 @@ let
 in
 with super; llama-swap.overrideAttrs(attrs: rec {
   inherit version src;
-  vendorHash = "sha256-5mmciFAGe8ZEIQvXejhYN+ocJL3wOVwevIieDuokhGU=";
+  vendorHash = "sha256-/EbFyuCVFxHTTO0UwSV3B/6PYUpudxB2FD8nNx1Bb+M=";
   preBuild = ''
     cp -r ${ui}/ui_dist proxy/
   '';
