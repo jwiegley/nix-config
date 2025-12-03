@@ -101,6 +101,20 @@ hfdownloader = with super; buildGoModule rec {
   };
 };
 
+llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
+  version = "7236";
+  src = super.fetchFromGitHub {
+    owner = "ggml-org";
+    repo = "llama.cpp";
+    tag = "b${version}";
+    hash = "sha256-mwVUiPPtMvleOY1WE7vo1V/urhNO6AeD+BXjaMFM3Fk=";
+  };
+  # Fix macOS dylib version: 0.0.7236 exceeds max patch version (255)
+  cmakeFlags = (attrs.cmakeFlags or []) ++ super.lib.optionals super.stdenv.hostPlatform.isDarwin [
+    "-DLLAMA_BUILD_NUMBER=0"
+  ];
+});
+
 llama-swap =
 let
   version = "171";
