@@ -349,7 +349,6 @@
     claude-code
     qdrant
     qdrant-web-ui
-    task-master-ai
     claude-code-acp
     rustdocs-mcp-server
   
