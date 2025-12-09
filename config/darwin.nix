@@ -599,6 +599,17 @@ in {
           serviceConfig.KeepAlive = true;
         };
 
+        vlc-telnet = {
+          script = ''
+            /Applications/VLC.app/Contents/MacOS/VLC \
+                -I telnet                            \
+                --telnet-password=secret             \
+                --telnet-port=4212
+          '';
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = true;
+        };
+
         llama-swap-https-proxy =
           let
             logDir = "${xdg_cacheHome}/llama-swap-proxy";
