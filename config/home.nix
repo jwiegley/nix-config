@@ -729,6 +729,13 @@ in {
           identitiesOnly = true;
         };
 
+        andoria = {
+          host = "andoria-*";
+          user = "jwiegley";
+          identityFile   = "${config.xdg.configHome}/ssh/id_positron";
+          identitiesOnly = true;
+        };
+
         # Other servers
 
         router = withIdentity {
