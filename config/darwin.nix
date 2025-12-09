@@ -184,6 +184,7 @@ in {
       "steam"
       "suspicious-package"
       "swiftdefaultappsprefpane"
+      "tailscale-app"
       "telegram"
       "thinkorswim"
       "thunderbird"
