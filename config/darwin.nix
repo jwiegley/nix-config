@@ -156,7 +156,6 @@ in {
       "discord"
       "docker-desktop"
       "drivedx"
-      "dungeon-crawl-stone-soup-tiles"
       "element"
       "fantastical"
       "geektool"
@@ -250,7 +249,6 @@ in {
     #   # "Microsoft PowerPoint"  = 462062816;
     #   # "Microsoft Word"        = 462054704;
     #   "Ninox Database"        = 901110441;
-    #   "Notability"            = 360593530;
     #   "Paletter"              = 1494948845;
     #   "Pixelmator Pro"        = 1289583905;
     #   "Prime Video"           = 545519333;
