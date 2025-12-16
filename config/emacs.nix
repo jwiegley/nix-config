@@ -309,9 +309,9 @@ with epkgs; [
   (exclude osm)
   outline-indent
   (exclude ovpn-mode)
-  ox-gfm
+  (exclude ox-gfm)
   ox-pandoc
-  ox-slack
+  (exclude ox-slack)
   (exclude ox-texinfo-plus)
   ox-whatsapp
   p-search

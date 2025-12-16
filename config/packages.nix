@@ -35,6 +35,7 @@
     asciidoctor
     aspell
     aspellDicts.en
+    autossh
     awscli2
     b3sum
     backblaze-b2
@@ -92,12 +93,13 @@
     gh
     gist
     git-absorb
+    git-autofixup
     git-branchless
     git-branchstack
     git-cliff
     git-crypt
     git-delete-merged-branches
-    (lib.lowPrio git-extras)
+    # (lib.lowPrio git-extras)
     (lib.lowPrio git-fame)
     git-filter-repo
     git-gone
@@ -107,12 +109,13 @@
     git-machete
     git-my
     git-octopus
+    (lib.hiPrio git-pr)
     git-quick-stats
     git-quickfix
     git-recent
     git-reparent
     git-repo
-    git-scripts
+    (lib.lowPrio git-scripts)
     git-secret
     git-series
     git-sizer
@@ -346,10 +349,8 @@
     llama-swap
     gguf-tools
     openmpi
-    claude-code
     qdrant
     qdrant-web-ui
-    claude-code-acp
     rustdocs-mcp-server
   
     context7-mcp
@@ -361,5 +362,12 @@
 
     (exe git-annex)
     git-annex-remote-rclone
-  ];
+  ] ++ (with inputs.llm-agents.packages.${system}; [
+    droid
+    claude-code
+    claude-code-acp
+    ccusage
+    gemini-cli
+    codex
+  ]);
 }

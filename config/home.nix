@@ -134,6 +134,7 @@ in {
         ".emacs.d".source      = mkLink "${home}/src/dot-emacs";
         "dl".source            = mkLink "${home}/Downloads";
         "db".source            = mkLink "${home}/Databases";
+        "Recordings".source    = mkLink "${home}/Library/Mobile Documents/iCloud~com~openplanetsoftware~just-press-record/Documents";
 
         "pos".source           = mkLink "${home}/work/positron";
         "srp".source           = mkLink "${home}/work/regional-statistics/srp-db";
@@ -169,7 +170,7 @@ in {
       aliases = [
         "jwiegley@gmail.com"
         "johnw@gnu.org"
-        "john.wiegley@coppertogold.org"
+        "jwiegley@positron.ai"
       ];
       flavor = "fastmail.com";
       passwordCommand = "${pkgs.pass}/bin/pass show smtp.fastmail.com";
@@ -378,6 +379,31 @@ in {
             compinit
 
             fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
+
+            # GitHub CLI account switching based on directory
+            typeset -g _PREV_GH_ACCOUNT="jwiegley"
+
+            __gh_account_check() {
+              local desired_account="jwiegley"
+
+              # Check if we're in a Positron work directory
+              case "$PWD" in
+                ${home}/pos/*|${home}/work/positron/*)
+                  desired_account="jw-pos"
+                  ;;
+              esac
+
+              if [[ "$desired_account" != "$_PREV_GH_ACCOUNT" ]]; then
+                if command -v gh &> /dev/null; then
+                  gh auth switch --user "$desired_account" 2>/dev/null || true
+                fi
+                _PREV_GH_ACCOUNT="$desired_account"
+              fi
+            }
+
+            autoload -Uz add-zsh-hook
+            add-zsh-hook chpwd __gh_account_check
+            add-zsh-hook precmd __gh_account_check
         fi
       '';
 
@@ -473,8 +499,9 @@ in {
                      + " && ${pkgs.git}/bin/git pull"
                      + " && ${pkgs.git}/bin/git stash pop";
           su         = "submodule update --init --recursive";
-          undo       = "reset --soft HEAD^";
+          unstage    = "reset --soft HEAD^";
           w          = "status -sb";
+          wr         = "worktree remove";
           wdiff      = "diff --color-words";
           l          = "log --graph --pretty=format:'%Cred%h%Creset"
                      + " —%Cblue%d%Creset %s %Cgreen(%cr)%Creset'"
@@ -577,8 +604,8 @@ in {
         };
 
         "filter \"lfs\"" = {
-          clean = "${pkgs.git-lfs}/bin/git-lfs clean -- %f";
-          smudge = "${pkgs.git-lfs}/bin/git-lfs smudge --skip -- %f";
+          clean = "git-lfs clean -- %f";
+          smudge = "git-lfs smudge --skip -- %f";
           required = true;
         };
 
@@ -613,6 +640,8 @@ in {
         "*.vos"
         "*~"
         ".*.aux"
+        ".DS_Store"
+        ".localized"
         ".Makefile.d"
         ".clean"
         ".coq-native/"
@@ -626,6 +655,10 @@ in {
         ".pact-history"
         "TAGS"
         "cabal.project.local*"
+        "settings.local.json"
+        ".taskmaster"
+        "prd.txt"
+        "prd.md"
         "default.hoo"
         "default.warn"
         "dist-newstyle/"
@@ -649,6 +682,15 @@ in {
             identitiesOnly = true;
           };
 
+          controlMastered = attrs: attrs // {
+            controlMaster       = "auto";
+            controlPath         = "${tmpdir}/ssh-%u-%r@%h:%p";
+            controlPersist      = "1800";
+            # Disable ControlMaster due to intermittent hanging issues
+            # controlMaster       = "no";
+            # controlPath         = "none";
+          };
+
           matchHost = host: hostname: {
             inherit hostname;
             match = ''
@@ -661,11 +703,31 @@ in {
               inherit proxyJump;
             };
 
-          localBind = port: {
-            bind = { inherit port; };
-            host = { inherit port; address = "127.0.0.1"; };
+          localBind = here: there: {
+            bind = {
+              port = here;
+            };
+            host = {
+              address = "127.0.0.1";
+              port = there;
+            };
           };
         in rec {
+
+        defaults = {
+          host = "*";
+
+          userKnownHostsFile  = "${config.xdg.configHome}/ssh/known_hosts";
+          hashKnownHosts      = true;
+          serverAliveInterval = 60;
+          forwardAgent        = true;
+
+          extraOptions = {
+            UseKeychain    = "yes";
+            AddKeysToAgent = "yes";
+            IgnoreUnknown  = "UseKeychain";
+          };
+        };
 
         # Hera
 
@@ -694,30 +756,36 @@ in {
 
         # Vulcan
 
-        vulcan_ethernet = lib.hm.dag.entryBefore ["vulcan"]
-          (withIdentity (matchHost "vulcan" "192.168.1.2") // {
-             hostname = "192.168.1.2";
-             compression = false;
-           });
-
-        vulcan = withIdentity {
-          hostname = "192.168.3.16";
+        vulcan = controlMastered (withIdentity {
+          hostname = "192.168.1.2";
           compression = false;
-        };
 
-        gitea_ethernet = lib.hm.dag.entryBefore ["gitea"]
-          (withIdentity (matchHost "gitea" "192.168.1.2") // {
-            user = "gitea";
-            hostname = "192.168.1.2";
-            port = 2222;
-            compression = false;
-          });
+          remoteForwards = [
+            (localBind 8317 8317)
+          ];
+        });
 
-        gitea = withIdentity {
+        gitea = controlMastered (withIdentity {
           user = "gitea";
-          hostname = "192.168.3.16";
+          hostname = "192.168.1.2";
           port = 2222;
           compression = false;
+        });
+
+        # Council
+
+        vps = controlMastered {
+          user = "johnw";
+          hostname = "vps-b30dd5a8.vps.ovh.ca";
+
+          localForwards = [
+            (localBind 15432 5432)
+          ];
+          remoteForwards = [
+            (localBind 8317 8317)
+            (localBind 8090 8080)
+            (localBind 9222 9222)
+          ];
         };
 
         # Work
@@ -727,13 +795,20 @@ in {
           hostname = "github.com";
           identityFile   = "${config.xdg.configHome}/ssh/id_positron";
           identitiesOnly = true;
+
+          controlMaster = "no";
+          controlPath   = "none";
         };
 
-        andoria = {
+        andoria = controlMastered {
           host = "andoria-*";
           user = "jwiegley";
           identityFile   = "${config.xdg.configHome}/ssh/id_positron";
           identitiesOnly = true;
+
+          localForwards = [
+            (localBind 9998 3000)
+          ];
         };
 
         # Other servers
@@ -781,27 +856,6 @@ in {
           host = "hf.co";
           user = "git";
         };
-
-        defaults = {
-          host = "*";
-
-          controlMaster       = "auto";
-          controlPath         = "${tmpdir}/ssh-%u-%r@%h:%p";
-          controlPersist      = "1800";
-          # Disable ControlMaster due to intermittent hanging issues
-          # controlMaster       = "no";
-          # controlPath         = "none";
-          userKnownHostsFile  = "${config.xdg.configHome}/ssh/known_hosts";
-          hashKnownHosts      = true;
-          serverAliveInterval = 60;
-          forwardAgent        = true;
-
-          extraOptions = {
-            UseKeychain    = "yes";
-            AddKeysToAgent = "yes";
-            IgnoreUnknown  = "UseKeychain";
-          };
-        };
       };
     };
   };
@@ -813,6 +867,17 @@ in {
       defaultCacheTtl = 86400;
       maxCacheTtl = 86400;
       pinentry.package = pkgs.pinentry_mac;
+    };
+  };
+
+  launchd.agents.move-audio-files = {
+    enable = true;
+    config = {
+      ProgramArguments = [ "${home}/src/nix/bin/move-audio-files" ];
+      StartInterval = 3600; # Run every hour (in seconds)
+      StandardOutPath = "${home}/Library/Logs/move-audio-files.stdout.log";
+      StandardErrorPath = "${home}/Library/Logs/move-audio-files.stderr.log";
+      RunAtLoad = false; # Don't run immediately on login
     };
   };
 

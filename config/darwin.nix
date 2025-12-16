@@ -130,6 +130,7 @@ in {
       "llm"
       "sqlcmd"
       "graelo/tap/pumas"
+      "graelo/tap/huggingface-cli-full"
       "openssl"
       "z3"
       "claude-code-templates"
@@ -156,9 +157,11 @@ in {
       "discord"
       "docker-desktop"
       "drivedx"
+      "droid"
       "element"
       "fantastical"
       "geektool"
+      "github"
       "home-assistant"
       "iterm2"
       "key-codes"
@@ -621,11 +624,12 @@ in {
                 worker_connections 1024;
               }
               http {
+                client_body_temp_path ${logDir}/client_body;
                 server {
                   listen 8443 ssl;
 
-                  ssl_certificate /Users/johnw/hera/hera.local+4.pem;
-                  ssl_certificate_key /Users/johnw/hera/hera.local+4-key.pem;
+                  ssl_certificate /Users/johnw/hera/vpn.newartisans.com.crt;
+                  ssl_certificate_key /Users/johnw/hera/vpn.newartisans.com.key;
                   ssl_protocols TLSv1.2 TLSv1.3;
                   ssl_prefer_server_ciphers on;
                   ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
@@ -654,11 +658,34 @@ in {
               }
             ''; in {
           script = ''
-            mkdir -p ${logDir}
+            mkdir -p ${logDir} ${logDir}/client_body
             ${pkgs.nginx}/bin/nginx -c ${config} -g "daemon off;" -e ${logDir}/error.log
           '';
           serviceConfig.RunAtLoad = true;
           serviceConfig.KeepAlive = true;
+          serviceConfig.SoftResourceLimits.NumberOfFiles = 4096;
+        };
+
+        flatten-recordings = {
+          script = ''
+            # Move .m4a files from subdirectories of ~/Recordings into ~/Recordings
+            recordings_dir="${home}/Recordings/"
+
+            # Move only .m4a files from subdirectories up to ~/Recordings
+            if [ -d "$recordings_dir" ]; then
+              find -L "$recordings_dir" -mindepth 2 -type f -name "*.m4a" -exec mv {} "$recordings_dir" \;
+
+              # Remove .DS_Store files that macOS creates
+              find -L "$recordings_dir" -mindepth 2 -name ".DS_Store" -delete
+
+              # Remove empty subdirectories (using rmdir which only removes empty dirs)
+              find -L "$recordings_dir" -mindepth 1 -type d -depth -exec rmdir {} \; 2>/dev/null || true
+            fi
+          '';
+          serviceConfig = {
+            StartInterval = 900;  # Run every 15 minutes (900 seconds)
+            RunAtLoad = true;     # Run once at startup
+          };
         };
       };
     };

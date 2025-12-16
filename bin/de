@@ -55,6 +55,7 @@ keep_vars                                       \
     EDITOR                                      \
     EMACS_SERVER_FILE                           \
     GIT_PROMPT_EXECUTABLE                       \
+    GH_ACCOUNT                                  \
     ITERM_SESSION_ID                            \
     NIX_PATH                                    \
     SECURITYSESSIONID                           \

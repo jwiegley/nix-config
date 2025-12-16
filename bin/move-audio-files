@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Move audio files from subdirectories to parent directory
+
+set -uo pipefail
+
+# Target directory
+TARGET_DIR="$HOME/Library/Mobile Documents/iCloud~com~openplanetsoftware~just-press-record/Documents"
+
+# Audio file extensions to look for (case-insensitive)
+AUDIO_EXTENSIONS=("mp3" "m4a" "wav" "aiff" "aif" "flac" "aac" "ogg" "wma" "opus" "caf" "MP3" "M4A" "WAV" "AIFF" "AIF" "FLAC" "AAC" "OGG" "WMA" "OPUS" "CAF")
+
+# Log file for debugging
+LOG_FILE="$HOME/Library/Logs/move-audio-files.log"
+
+# Function to log messages
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
+
+log "Starting audio file move process"
+
+# Check if target directory exists
+if [ ! -d "$TARGET_DIR" ]; then
+    log "ERROR: Target directory does not exist: $TARGET_DIR"
+    exit 1
+fi
+
+cd "$TARGET_DIR" || exit 1
+
+# Enable nullglob so non-matching patterns expand to nothing
+shopt -s nullglob
+
+# Find all subdirectories (not hidden)
+find . -mindepth 1 -maxdepth 1 -type d ! -name ".*" 2>/dev/null | while read -r subdir; do
+    log "Processing subdirectory: $subdir"
+
+    file_count=0
+
+    # Move all audio files from subdirectory to parent
+    for ext in "${AUDIO_EXTENSIONS[@]}"; do
+        for file in "$subdir"/*.${ext}; do
+            if [ -f "$file" ]; then
+                basename=$(basename "$file")
+                log "Moving: $file -> $TARGET_DIR/$basename"
+
+                # If file exists in target, add timestamp to avoid overwrite
+                if [ -f "$TARGET_DIR/$basename" ]; then
+                    timestamp=$(date '+%Y%m%d-%H%M%S')
+                    new_name="${basename%.*}_${timestamp}.${basename##*.}"
+                    log "File exists, renaming to: $new_name"
+                    mv "$file" "$TARGET_DIR/$new_name" || log "ERROR: Failed to move $file"
+                else
+                    mv "$file" "$TARGET_DIR/" || log "ERROR: Failed to move $file"
+                fi
+
+                ((file_count++)) || true
+            fi
+        done
+    done
+
+    log "Moved $file_count audio file(s) from $subdir"
+
+    # Check if subdirectory is now empty, if so remove it
+    if [ -z "$(ls -A "$subdir" 2>/dev/null)" ]; then
+        log "Removing empty subdirectory: $subdir"
+        rmdir "$subdir" && log "Successfully removed $subdir" || log "ERROR: Failed to remove $subdir"
+    else
+        log "Subdirectory not empty, keeping: $subdir"
+        log "Remaining files: $(ls -A "$subdir" 2>/dev/null)"
+    fi
+done
+
+log "Audio file move process completed"

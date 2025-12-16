@@ -1,5 +1,8 @@
 #!/bin/bash
 
+sudo /bin/launchctl limit maxfiles 524288 524288
+ulimit -n 65536
+
 if [[ "$1" == "vulcan" ]]; then
     HOSTNAME=vulcan
     REMOTES=clio
