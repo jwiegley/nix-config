@@ -23,4 +23,11 @@ in {
   xquartz
   z3
   ;
+
+  inherit (nixpkgs {
+    rev    = "09b8fda8959d761445f12b55f380d90375a1d6bb";
+    sha256 = "sha256-aq+dQoaPONOSjtFIBnAXseDm9TUhIbe215TPmkfMYww=";
+  })
+  csvkit
+  ;
 }

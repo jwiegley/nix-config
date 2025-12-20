@@ -157,7 +157,6 @@ in {
       "discord"
       "docker-desktop"
       "drivedx"
-      "droid"
       "element"
       "fantastical"
       "geektool"

@@ -23,7 +23,6 @@ in {
     packages = packages.package-list;
 
     sessionVariables = {
-      ANTHROPIC_MODEL     = "sonnet";
       DISABLE_AUTOUPDATER = "1";
       ASPELL_CONF         = "conf ${config.xdg.configHome}/aspell/config;";
       B2_ACCOUNT_INFO     = "${config.xdg.configHome}/backblaze-b2/account_info";
@@ -83,6 +82,7 @@ in {
 
     sessionPath = [
       "${home}/src/scripts"
+      "${home}/work/positron/bin"
       "${home}/.local/bin"
       "/usr/local/bin"
       "/usr/local/zfs/bin"
@@ -774,7 +774,7 @@ in {
 
         # Council
 
-        vps = controlMastered {
+        "srp vps" = controlMastered {
           user = "johnw";
           hostname = "vps-b30dd5a8.vps.ovh.ca";
 

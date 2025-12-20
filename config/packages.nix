@@ -85,6 +85,7 @@
     fpart
     fping
     fswatch
+    fx
     fzf
     fzf-zsh
     gawk
@@ -246,18 +247,19 @@
     (lib.hiPrio
      (python3.withPackages (
        python-pkgs: with python-pkgs; [
-         venvShellHook
-         numpy
-         requests
-         stdenv
-         basedpyright
          autoflake
-         pylint
-         isort                    # Python code formatter
+         basedpyright
          black                    # Python code formatter
          flake8                   # Python code linter
-         huggingface-hub
          hf-xet
+         huggingface-hub
+         isort                    # Python code formatter
+         numpy
+         pandas
+         pylint
+         requests
+         stdenv
+         venvShellHook
        ])))
     pyright                       # LSP server for Python
     qdrant
