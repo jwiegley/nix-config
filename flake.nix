@@ -64,6 +64,11 @@
           #       ;
           #   })
           inputs.mcp-servers-nix.overlays.default
+          # Restore packages that mcp-servers-nix removed (now in nixpkgs)
+          (final: prev: {
+            github-mcp-server = prev.callPackage
+              (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix") {};
+          })
         ];
         configure = hostname: system: darwin.lib.darwinSystem {
           inherit inputs system;
