@@ -612,6 +612,54 @@ in {
           serviceConfig.KeepAlive = true;
         };
 
+        chrome-debug = {
+          script = ''
+            /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+                --headless=new \
+                --remote-debugging-port=9223 \
+                --user-data-dir=/tmp/chrome-debug
+          '';
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = true;
+        };
+
+        chrome-debug-proxy = {
+          script = ''
+            # Wait for Chrome to start listening on internal port
+            while ! /usr/bin/nc -z 127.0.0.1 9223 2>/dev/null; do
+              sleep 1
+            done
+            # Forward 0.0.0.0:9222 to localhost:9223
+            ${pkgs.socat}/bin/socat TCP-LISTEN:9222,bind=0.0.0.0,fork,reuseaddr TCP:127.0.0.1:9223
+          '';
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = true;
+        };
+
+        autossh-vps = {
+          script = ''
+            export AUTOSSH_GATETIME=0
+            export SSH_AUTH_SOCK="${xdg_configHome}/gnupg/S.gpg-agent.ssh"
+            ${pkgs.autossh}/bin/autossh -M 0 -N vps -C \
+                -o "ControlMaster=no"                  \
+                -o "ControlPath=none"                  \
+                -o "ServerAliveInterval=30"            \
+                -o "ServerAliveCountMax=3"             \
+                -o "ExitOnForwardFailure=yes"          \
+                -L 127.0.0.1:15432:127.0.0.1:5432      \
+                -R 127.0.0.1:8317:127.0.0.1:8317       \
+                -R 127.0.0.1:8090:127.0.0.1:8080       \
+                -R 127.0.0.1:9222:127.0.0.1:9222
+          '';
+          serviceConfig = {
+            RunAtLoad = true;
+            KeepAlive = true;
+            ThrottleInterval = 30;  # Wait 30s between restart attempts
+            StandardOutPath = "${xdg_cacheHome}/autossh-vps.log";
+            StandardErrorPath = "${xdg_cacheHome}/autossh-vps.log";
+          };
+        };
+
         llama-swap-https-proxy =
           let
             logDir = "${xdg_cacheHome}/llama-swap-proxy";

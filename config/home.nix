@@ -1,4 +1,4 @@
-{ pkgs, lib, config, hostname, inputs, ... }@args:
+{ system, pkgs, lib, config, hostname, inputs, ... }@args:
 
 let home           = config.home.homeDirectory;
     tmpdir         = "/tmp";
@@ -108,6 +108,8 @@ in {
           ca_directory = ${ca-bundle_path}
           ca_certificate = ${ca-bundle_crt}
         '';
+
+        ".local/bin/claude".source = mkLink "${inputs.llm-agents.packages.${system}.claude-code}/bin/claude";
 
         ".aider".source        = mkLink "${config.xdg.configHome}/aider";
         ".cups".source         = mkLink "${config.xdg.configHome}/cups";
@@ -777,15 +779,7 @@ in {
         "srp vps" = controlMastered {
           user = "johnw";
           hostname = "vps-b30dd5a8.vps.ovh.ca";
-
-          localForwards = [
-            (localBind 15432 5432)
-          ];
-          remoteForwards = [
-            (localBind 8317 8317)
-            (localBind 8090 8080)
-            (localBind 9222 9222)
-          ];
+          # Port forwards managed by autossh-vps launchd service in darwin.nix
         };
 
         # Work
