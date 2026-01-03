@@ -178,7 +178,6 @@
     libxslt
     linkdups
     lipotell
-    litellm
     lnav
     loccount
     lsof
@@ -346,7 +345,6 @@
     zsh-syntax-highlighting
   
     aider-chat
-    litellm
     (lib.hiPrio llama-cpp)
     llama-swap
     gguf-tools
@@ -358,9 +356,7 @@
     context7-mcp
     playwright-mcp
     github-mcp-server
-    mcp-server-memory
     (lib.hiPrio mcp-server-sequential-thinking)
-    mcp-server-time
 
     (exe git-annex)
     git-annex-remote-rclone
@@ -369,7 +365,7 @@
     claude-code
     claude-code-acp
     ccusage
-    gemini-cli
-    codex
+    # gemini-cli
+    # codex
   ]);
 }

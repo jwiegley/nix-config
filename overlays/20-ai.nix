@@ -253,6 +253,12 @@ pythonPackagesExtensions = (super.pythonPackagesExtensions or []) ++ [
   })
 ];
 
+# Fix: npm prune removes @types/node, then prepare script tries to rebuild
+mcp-server-sequential-thinking =
+  super.mcp-server-sequential-thinking.overrideAttrs (old: {
+    dontNpmPrune = true;
+  });
+
 rustdocs-mcp-server = with super; rustPlatform.buildRustPackage rec {
   pname = "rustdocs-mcp-server";
   version = "1.3.1";
