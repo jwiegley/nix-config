@@ -144,8 +144,9 @@ in {
         "News".source          = mkLink "${config.xdg.dataHome}/gnus/News";
       }
       // lib.optionalAttrs (hostname == "hera") {
-        "Audio".source  = mkLink "/Volumes/ext/Audio";
-        "Photos".source = mkLink "/Volumes/ext/Photos";
+        "Archives".source = mkLink "/Volumes/ext/Archives";
+        "Audio".source    = mkLink "/Volumes/ext/Audio";
+        "Photos".source   = mkLink "/Volumes/ext/Photos";
       }
       // lib.optionalAttrs (hostname == "clio") {
       }
