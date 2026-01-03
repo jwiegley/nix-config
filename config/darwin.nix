@@ -11,8 +11,9 @@ in {
   users = {
     # List of users and groups that nix-darwin is allowed to create/manage
     # CRITICAL: Users/groups must be in these lists for nix-darwin to create them
-    knownUsers = [ "johnw" ];
-    knownGroups = [];
+    knownUsers = [ "johnw" ]
+      ++ lib.optionals (hostname != "clio") [ "_prometheus-node-exporter" ];
+    knownGroups = lib.optionals (hostname != "clio") [ "_prometheus-node-exporter" ];
 
     users = {
       johnw = {
@@ -32,6 +33,14 @@ in {
             import ./key-files.nix { inherit (pkgs) lib; }
               [ "hera" "clio" ] home hostname;
         };
+      };
+
+    } // lib.optionalAttrs (hostname != "clio") {
+      # Prometheus node exporter user - match existing system user's home directory
+      # On macOS, /var is a symlink to /private/var, but the user was created with
+      # the canonical path, so we must force override the module's default
+      _prometheus-node-exporter = {
+        home = lib.mkForce "/private/var/lib/prometheus-node-exporter";
       };
     };
   };
