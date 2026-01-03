@@ -161,6 +161,12 @@ in {
         "iCloud".source        =
           mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
       };
+
+    # Create ~/double directory for AI personal memory system
+    # User should manually clone their personal double repo here
+    activation.createDoubleDir = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      $DRY_RUN_CMD mkdir -p "$HOME/double"
+    '';
   };
 
   accounts.email = {
@@ -884,6 +890,21 @@ in {
         personal ${config.xdg.configHome}/aspell/en_US.personal
         repl ${config.xdg.configHome}/aspell/en_US.repl
       '';
+
+      # Double: AI personal memory system commands
+      # https://github.com/ossa-ma/double
+      "claude/commands/business.md".source        = "${inputs.double}/.claude/commands/business.md";
+      "claude/commands/engineering.md".source     = "${inputs.double}/.claude/commands/engineering.md";
+      "claude/commands/handoff.md".source         = "${inputs.double}/.claude/commands/handoff.md";
+      "claude/commands/memory.md".source          = "${inputs.double}/.claude/commands/memory.md";
+      "claude/commands/new-task.md".source        = "${inputs.double}/.claude/commands/new-task.md";
+      "claude/commands/project-status.md".source  = "${inputs.double}/.claude/commands/project-status.md";
+      "claude/commands/research-update.md".source = "${inputs.double}/.claude/commands/research-update.md";
+      "claude/commands/research.md".source        = "${inputs.double}/.claude/commands/research.md";
+      "claude/commands/sync.md".source            = "${inputs.double}/.claude/commands/sync.md";
+      "claude/commands/task-done.md".source       = "${inputs.double}/.claude/commands/task-done.md";
+      "claude/commands/tasks.md".source           = "${inputs.double}/.claude/commands/tasks.md";
+      "claude/commands/weekly.md".source          = "${inputs.double}/.claude/commands/weekly.md";
     };
   };
 

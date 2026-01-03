@@ -872,6 +872,22 @@
         "type": "github"
       }
     },
+    "double": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1767102635,
+        "narHash": "sha256-bvKvsEhhcbF2nSWmEKMfchYd1+hIG9qT6++fsmEzcVo=",
+        "owner": "ossa-ma",
+        "repo": "double",
+        "rev": "a40a0ed79ee281c86e74e3a3e5d732a3394b8fb0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ossa-ma",
+        "repo": "double",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -6232,6 +6248,7 @@
     "root": {
       "inputs": {
         "darwin": "darwin",
+        "double": "double",
         "git-all": "git-all",
         "gitlib": "gitlib",
         "hakyll": "hakyll",

@@ -26,6 +26,14 @@
     };
 
     org-jw.url = "github:jwiegley/org-jw";
+
+    # Double: AI personal memory system (commands for Claude Code)
+    # https://github.com/ossa-ma/double
+    double = {
+      url = "github:ossa-ma/double";
+      flake = false;
+    };
+
     git-all.url = "git+file:///Users/johnw/src/git-all";
     gitlib.url = "git+file:///Users/johnw/src/gitlib?submodules=0";
     hakyll.url = "git+file:///Users/johnw/src/hakyll";
