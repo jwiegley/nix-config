@@ -102,12 +102,12 @@ hfdownloader = with super; buildGoModule rec {
 };
 
 llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "7236";
+  version = "7616";
   src = super.fetchFromGitHub {
     owner = "ggml-org";
     repo = "llama.cpp";
     tag = "b${version}";
-    hash = "sha256-mwVUiPPtMvleOY1WE7vo1V/urhNO6AeD+BXjaMFM3Fk=";
+    hash = "sha256-MRc6ivio5v6zgz2LBAJnAb+kY1M6B5Mn+2e+CYogPEQ=";
   };
   # Fix macOS dylib version: 0.0.7236 exceeds max patch version (255)
   cmakeFlags = (attrs.cmakeFlags or []) ++ super.lib.optionals super.stdenv.hostPlatform.isDarwin [
@@ -117,13 +117,13 @@ llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
 
 llama-swap =
 let
-  version = "176";
+  version = "182";
 
   src = super.fetchFromGitHub {
     owner = "mostlygeek";
     repo = "llama-swap";
     rev = "v${version}";
-    hash = "sha256-19vvuU5SD8lpaezNEY0FTkSVmpsouKh2SklsuFlTW+U=";
+    hash = "sha256-1uvrKFj5816PPWiDnzGBw/kdgt3rShHp2IyuBCunf64=";
   };
 
   ui = with super; buildNpmPackage (finalAttrs: {
@@ -152,7 +152,7 @@ let
 in
 with super; llama-swap.overrideAttrs(attrs: rec {
   inherit version src;
-  vendorHash = "sha256-/EbFyuCVFxHTTO0UwSV3B/6PYUpudxB2FD8nNx1Bb+M=";
+  vendorHash = "sha256-XiDYlw/byu8CWvg4KSPC7m8PGCZXtp08Y1velx4BR8U=";
   preBuild = ''
     cp -r ${ui}/ui_dist proxy/
   '';
