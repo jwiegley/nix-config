@@ -1,0 +1,730 @@
+#!/usr/bin/env python3
+"""
+update-overlay - Update Nix overlay package definitions to their latest versions.
+
+Usage:
+    update-overlay <package1> [package2] ...
+
+Examples:
+    update-overlay llama-swap llama-cpp
+    update-overlay hfdownloader
+    update-overlay --dry-run mlx-lm
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional
+
+
+@dataclass
+class PackageInfo:
+    """Information about a package in an overlay."""
+    name: str
+    file_path: Path
+    owner: str = ""
+    repo: str = ""
+    version: str = ""
+    version_prefix: str = ""  # e.g., "v", "b", ""
+    src_hash: str = ""
+    vendor_hash: Optional[str] = None
+    cargo_hash: Optional[str] = None
+    npm_deps_hash: Optional[str] = None
+    # Track where in the file each field is located
+    version_line: int = 0
+    hash_line: int = 0
+    vendor_hash_line: int = 0
+    cargo_hash_line: int = 0
+    npm_deps_hash_line: int = 0
+    # Raw text patterns for replacement
+    raw_version_pattern: str = ""
+    raw_hash_pattern: str = ""
+    # Package type
+    package_type: str = "standard"  # standard, go, rust, npm
+    # Commit-based versioning (no tags/releases)
+    uses_commit: bool = False  # True if rev = "full-commit-hash" pattern
+    full_rev: str = ""  # Full commit hash if uses_commit
+    hash_format: str = "sri"  # "sri" (sha256-...) or "base32" (old format)
+
+
+class OverlayParser:
+    """Parse Nix overlay files to extract package information."""
+
+    def __init__(self, overlays_dir: Path):
+        self.overlays_dir = overlays_dir
+
+    def find_package(self, package_name: str) -> Optional[PackageInfo]:
+        """Find a package definition in overlay files."""
+        for overlay_file in self.overlays_dir.glob("*.nix"):
+            result = self._parse_file_for_package(overlay_file, package_name)
+            if result:
+                return result
+        return None
+
+    def _parse_file_for_package(self, file_path: Path, package_name: str) -> Optional[PackageInfo]:
+        """Parse a single overlay file for a package definition."""
+        content = file_path.read_text()
+
+        # Pattern 1: Standard package definition (name = ... { })
+        # Pattern 2: overrideAttrs pattern (name = prev.name.overrideAttrs...)
+
+        # First, find the package definition block
+        patterns = [
+            # Standard: llama-swap = { ... } or llama-swap = with super; { ... }
+            rf'^{re.escape(package_name)}\s*=',
+            # overrideAttrs: llama-cpp = super.llama-cpp.overrideAttrs
+            rf'^{re.escape(package_name)}\s*=\s*(?:super|prev|pkgs)\.[a-zA-Z0-9_-]+\.overrideAttrs',
+        ]
+
+        for line_num, line in enumerate(content.split('\n'), 1):
+            for pattern in patterns:
+                if re.match(pattern, line.strip()):
+                    return self._extract_package_info(content, file_path, package_name, line_num)
+
+        return None
+
+    def _extract_package_block(self, content: str, package_name: str) -> Optional[str]:
+        """Extract just the block of code defining a specific package."""
+        lines = content.split('\n')
+
+        # Find the line where the package definition starts
+        start_idx = None
+        for i, line in enumerate(lines):
+            # Match: "package_name =" or "package_name="
+            if re.match(rf'^{re.escape(package_name)}\s*=', line.strip()):
+                start_idx = i
+                break
+
+        if start_idx is None:
+            return None
+
+        # Find the end by looking for the next top-level definition or end of block
+        # Top-level definitions start with: identifier = (at column 0 or after just whitespace)
+        block_lines = [lines[start_idx]]
+
+        # Track depth to understand nesting
+        depth = 0
+        in_let = False
+
+        # Check if this is a let...in block
+        for line in lines[start_idx:start_idx+5]:
+            if re.search(r'\blet\b', line):
+                in_let = True
+                break
+
+        for i in range(start_idx + 1, len(lines)):
+            line = lines[i]
+
+            # Check if we've reached a new top-level definition
+            # Must be at start of line and look like: name = or name=
+            stripped = line.lstrip()
+            if stripped and not line[0].isspace():
+                # This line starts at column 0
+                if re.match(r'^[a-zA-Z_][a-zA-Z0-9_-]*\s*=', stripped):
+                    # Found new package definition, stop here
+                    break
+                # Also stop at closing brace at column 0 (end of overlay block)
+                if stripped.startswith('}'):
+                    break
+
+            block_lines.append(line)
+
+            # Safety limit
+            if len(block_lines) > 500:
+                break
+
+        return '\n'.join(block_lines)
+
+    def _extract_package_info(self, content: str, file_path: Path, package_name: str, start_line: int) -> Optional[PackageInfo]:
+        """Extract package information from the content."""
+        info = PackageInfo(name=package_name, file_path=file_path)
+
+        # Extract just the package block, not the whole file
+        block = self._extract_package_block(content, package_name)
+        if not block:
+            return None
+
+        # Extract GitHub owner/repo from the block
+        owner_match = re.search(r'owner\s*=\s*"([^"]+)"', block)
+        repo_match = re.search(r'repo\s*=\s*"([^"]+)"', block)
+
+        if not owner_match or not repo_match:
+            return None
+
+        info.owner = owner_match.group(1)
+        info.repo = repo_match.group(1)
+
+        # Extract version - multiple patterns
+        version_patterns = [
+            # tag = "v${version}";
+            (r'tag\s*=\s*"v\$\{version\}"', "v", False),
+            # tag = "b${version}";
+            (r'tag\s*=\s*"b\$\{version\}"', "b", False),
+            # tag = version;
+            (r'tag\s*=\s*version', "", False),
+            # tag = "${version}";
+            (r'tag\s*=\s*"\$\{version\}"', "", False),
+            # rev = "v${version}";
+            (r'rev\s*=\s*"v\$\{version\}"', "v", False),
+            # rev = "${version}";
+            (r'rev\s*=\s*"\$\{version\}"', "", False),
+            # version = "123";
+            (r'version\s*=\s*"([^"]+)"', "", False),
+        ]
+
+        for pattern, prefix, is_commit in version_patterns:
+            match = re.search(pattern, block)
+            if match:
+                info.version_prefix = prefix
+                info.uses_commit = is_commit
+                break
+
+        # Check for commit-based versioning: rev = "full-40-char-hash"
+        # This is when rev is a literal commit hash, not interpolated
+        rev_literal_match = re.search(r'rev\s*=\s*"([a-f0-9]{40})"', block)
+        if rev_literal_match:
+            info.uses_commit = True
+            info.full_rev = rev_literal_match.group(1)
+
+        # Now find the actual version value
+        version_match = re.search(r'\bversion\s*=\s*"([^"$]+)"', block)
+        if version_match:
+            info.version = version_match.group(1)
+            info.raw_version_pattern = version_match.group(0)
+
+        # Extract source hash (SRI format: sha256-... or base32 format: old nix hash)
+        sri_match = re.search(r'hash\s*=\s*"(sha256-[^"]+)"', block)
+        base32_match = re.search(r'sha256\s*=\s*"([^"]+)"', block)
+
+        if sri_match:
+            info.src_hash = sri_match.group(1)
+            info.raw_hash_pattern = sri_match.group(0)
+            info.hash_format = "sri"
+        elif base32_match:
+            info.src_hash = base32_match.group(1)
+            info.raw_hash_pattern = base32_match.group(0)
+            info.hash_format = "base32"
+
+        # Extract ALL hashes found in the block (packages can have multiple)
+        # e.g., llama-swap has vendorHash (main) + npmDepsHash (ui subpackage)
+
+        vendor_match = re.search(r'vendorHash\s*=\s*"(sha256-[^"]+)"', block)
+        cargo_match = re.search(r'cargoHash\s*=\s*"(sha256-[^"]+)"', block)
+        npm_match = re.search(r'npmDepsHash\s*=\s*"(sha256-[^"]+)"', block)
+
+        if vendor_match:
+            info.vendor_hash = vendor_match.group(1)
+        if cargo_match:
+            info.cargo_hash = cargo_match.group(1)
+        if npm_match:
+            info.npm_deps_hash = npm_match.group(1)
+
+        # Set primary package type for display purposes
+        # Priority: vendorHash (Go) > cargoHash (Rust) > npmDepsHash (npm)
+        if vendor_match or 'buildGoModule' in block:
+            info.package_type = "go"
+        elif cargo_match or 'buildRustPackage' in block:
+            info.package_type = "rust"
+        elif npm_match or 'buildNpmPackage' in block:
+            info.package_type = "npm"
+
+        return info
+
+
+class GitHubClient:
+    """Client for GitHub API operations using gh CLI."""
+
+    def get_latest_release(self, owner: str, repo: str) -> Optional[str]:
+        """Get the latest release version from GitHub."""
+        try:
+            # Try latest release first
+            result = subprocess.run(
+                ["gh", "api", f"repos/{owner}/{repo}/releases/latest"],
+                capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                data = json.loads(result.stdout)
+                tag = data.get("tag_name", "")
+                return tag
+        except Exception:
+            pass
+
+        # Fall back to tags if no release
+        try:
+            result = subprocess.run(
+                ["gh", "api", f"repos/{owner}/{repo}/tags", "--jq", ".[0].name"],
+                capture_output=True, text=True
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+        except Exception:
+            pass
+
+        return None
+
+    def get_latest_commit(self, owner: str, repo: str, branch: str = "master") -> Optional[tuple[str, str]]:
+        """Get the latest commit SHA and short SHA from a branch. Returns (full_sha, short_sha)."""
+        # Try master first, then main
+        for br in [branch, "master", "main"]:
+            try:
+                result = subprocess.run(
+                    ["gh", "api", f"repos/{owner}/{repo}/commits/{br}", "--jq", ".sha"],
+                    capture_output=True, text=True
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    full_sha = result.stdout.strip()
+                    short_sha = full_sha[:8]
+                    return (full_sha, short_sha)
+            except Exception:
+                pass
+        return None
+
+
+class HashComputer:
+    """Compute Nix hashes for various package types."""
+
+    def __init__(self, nix_dir: Path):
+        self.nix_dir = nix_dir
+
+    def compute_src_hash(self, owner: str, repo: str, rev: str) -> Optional[str]:
+        """Compute source hash using nix-prefetch-github."""
+        try:
+            result = subprocess.run(
+                ["nix", "run", "nixpkgs#nix-prefetch-github", "--",
+                 owner, repo, "--rev", rev, "--json"],
+                capture_output=True, text=True, timeout=300
+            )
+            if result.returncode == 0:
+                data = json.loads(result.stdout)
+                # nix-prefetch-github returns hash in SRI format
+                return data.get("hash", data.get("sha256"))
+        except Exception as e:
+            print(f"  Error computing src hash: {e}", file=sys.stderr)
+        return None
+
+    def compute_vendor_hash(self, package_name: str) -> Optional[str]:
+        """Compute vendorHash by attempting a build with fake hash."""
+        return self._compute_fod_hash(package_name, "vendorHash")
+
+    def compute_cargo_hash(self, package_name: str) -> Optional[str]:
+        """Compute cargoHash by attempting a build with fake hash."""
+        return self._compute_fod_hash(package_name, "cargoHash")
+
+    def compute_npm_deps_hash(self, package_name: str) -> Optional[str]:
+        """Compute npmDepsHash by attempting a build with fake hash."""
+        return self._compute_fod_hash(package_name, "npmDepsHash")
+
+    def _compute_fod_hash(self, package_name: str, hash_type: str) -> Optional[str]:
+        """Compute a fixed-output derivation hash by parsing build failure."""
+        print(f"  Computing {hash_type} (this may take a while)...")
+
+        # Build the package and capture the error with the correct hash
+        try:
+            result = subprocess.run(
+                ["./build", "pkg", package_name],
+                capture_output=True, text=True, timeout=600,
+                cwd=self.nix_dir
+            )
+
+            # Even if build succeeds, we might need the hash from output
+            output = result.stdout + result.stderr
+
+            # Look for the hash mismatch error
+            # Pattern: "got: sha256-..."
+            hash_match = re.search(r'got:\s+(sha256-[A-Za-z0-9+/=]+)', output)
+            if hash_match:
+                return hash_match.group(1)
+
+            # Also try: "got:    sha256-..."
+            hash_match = re.search(r'got:\s+sha256:([A-Za-z0-9+/=]+)', output)
+            if hash_match:
+                # Convert to SRI format
+                return f"sha256-{hash_match.group(1)}"
+
+        except subprocess.TimeoutExpired:
+            print(f"  Timeout computing {hash_type}", file=sys.stderr)
+        except Exception as e:
+            print(f"  Error computing {hash_type}: {e}", file=sys.stderr)
+
+        return None
+
+
+class OverlayUpdater:
+    """Update overlay files with new versions and hashes."""
+
+    def set_dummy_hash(self, file_path: Path, package_name: str, hash_type: str, old_hash: str) -> bool:
+        """Set a dummy hash for a specific package to trigger hash computation on build."""
+        content = file_path.read_text()
+        lines = content.split('\n')
+
+        start_idx, end_idx = self._find_package_block_lines(content, package_name)
+        if start_idx < 0:
+            return False
+
+        # Extract and update the block
+        block_lines = lines[start_idx:end_idx + 1]
+        block = '\n'.join(block_lines)
+
+        # Map hash type to pattern
+        patterns = {
+            'vendorHash': rf'(vendorHash\s*=\s*")({re.escape(old_hash)})(")',
+            'cargoHash': rf'(cargoHash\s*=\s*")({re.escape(old_hash)})(")',
+            'npmDepsHash': rf'(npmDepsHash\s*=\s*")({re.escape(old_hash)})(")',
+        }
+
+        pattern = patterns.get(hash_type)
+        if not pattern:
+            return False
+
+        dummy_hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        new_block = re.sub(pattern, rf'\g<1>{dummy_hash}\g<3>', block)
+
+        if new_block == block:
+            return False
+
+        # Reconstruct file
+        new_lines = lines[:start_idx] + new_block.split('\n') + lines[end_idx + 1:]
+        file_path.write_text('\n'.join(new_lines))
+        return True
+
+    def _find_package_block_lines(self, content: str, package_name: str) -> tuple[int, int]:
+        """Find the start and end line indices for a package block."""
+        lines = content.split('\n')
+
+        # Find start
+        start_idx = None
+        for i, line in enumerate(lines):
+            if re.match(rf'^{re.escape(package_name)}\s*=', line.strip()):
+                start_idx = i
+                break
+
+        if start_idx is None:
+            return (-1, -1)
+
+        # Find end
+        end_idx = start_idx
+        for i in range(start_idx + 1, len(lines)):
+            line = lines[i]
+            stripped = line.lstrip()
+            if stripped and not line[0].isspace():
+                if re.match(r'^[a-zA-Z_][a-zA-Z0-9_-]*\s*=', stripped):
+                    end_idx = i - 1
+                    break
+                if stripped.startswith('}'):
+                    end_idx = i - 1
+                    break
+            end_idx = i
+
+        return (start_idx, end_idx)
+
+    def update_package(self, info: PackageInfo, new_version: str, new_src_hash: str,
+                      new_vendor_hash: Optional[str] = None,
+                      new_cargo_hash: Optional[str] = None,
+                      new_npm_deps_hash: Optional[str] = None,
+                      new_full_rev: Optional[str] = None,
+                      dry_run: bool = False) -> bool:
+        """Update a package in its overlay file."""
+        content = info.file_path.read_text()
+        lines = content.split('\n')
+
+        # Find the package block boundaries
+        start_idx, end_idx = self._find_package_block_lines(content, info.name)
+        if start_idx < 0:
+            print(f"  Could not find package block for {info.name}")
+            return False
+
+        # Extract the block
+        block_lines = lines[start_idx:end_idx + 1]
+        block = '\n'.join(block_lines)
+        original_block = block
+
+        # Update version within the block
+        old_version = info.version
+        block = re.sub(
+            rf'(\bversion\s*=\s*")({re.escape(old_version)})(")',
+            rf'\g<1>{new_version}\g<3>',
+            block
+        )
+
+        # For commit-based packages, also update the rev
+        if info.uses_commit and new_full_rev and info.full_rev:
+            block = re.sub(
+                rf'(rev\s*=\s*")({re.escape(info.full_rev)})(")',
+                rf'\g<1>{new_full_rev}\g<3>',
+                block
+            )
+
+        # Update source hash within the block
+        if new_src_hash and info.src_hash:
+            if info.hash_format == "sri":
+                block = re.sub(
+                    rf'(hash\s*=\s*")({re.escape(info.src_hash)})(")',
+                    rf'\g<1>{new_src_hash}\g<3>',
+                    block
+                )
+            else:
+                # base32 format - update sha256 = "..."
+                block = re.sub(
+                    rf'(sha256\s*=\s*")({re.escape(info.src_hash)})(")',
+                    rf'\g<1>{new_src_hash}\g<3>',
+                    block
+                )
+
+        # Update vendorHash if present
+        if new_vendor_hash and info.vendor_hash:
+            block = re.sub(
+                rf'(vendorHash\s*=\s*")({re.escape(info.vendor_hash)})(")',
+                rf'\g<1>{new_vendor_hash}\g<3>',
+                block
+            )
+
+        # Update cargoHash if present
+        if new_cargo_hash and info.cargo_hash:
+            block = re.sub(
+                rf'(cargoHash\s*=\s*")({re.escape(info.cargo_hash)})(")',
+                rf'\g<1>{new_cargo_hash}\g<3>',
+                block
+            )
+
+        # Update npmDepsHash if present
+        if new_npm_deps_hash and info.npm_deps_hash:
+            block = re.sub(
+                rf'(npmDepsHash\s*=\s*")({re.escape(info.npm_deps_hash)})(")',
+                rf'\g<1>{new_npm_deps_hash}\g<3>',
+                block
+            )
+
+        if block == original_block:
+            print(f"  No changes needed for {info.name}")
+            return False
+
+        if dry_run:
+            print(f"  Would update {info.file_path}")
+            print(f"    version: {old_version} -> {new_version}")
+            if new_full_rev and info.full_rev:
+                print(f"    rev: {info.full_rev[:12]}... -> {new_full_rev[:12]}...")
+            if new_src_hash:
+                print(f"    hash: {info.src_hash[:20]}... -> {new_src_hash[:20]}...")
+            if new_vendor_hash:
+                print(f"    vendorHash: ...{info.vendor_hash[-20:]} -> ...{new_vendor_hash[-20:]}")
+            if new_cargo_hash:
+                print(f"    cargoHash: updated")
+            if new_npm_deps_hash:
+                print(f"    npmDepsHash: updated")
+            return True
+
+        # Reconstruct the file with the updated block
+        new_lines = lines[:start_idx] + block.split('\n') + lines[end_idx + 1:]
+        new_content = '\n'.join(new_lines)
+
+        # Write the updated content
+        info.file_path.write_text(new_content)
+        print(f"  Updated {info.file_path}")
+        return True
+
+
+def extract_version_number(tag: str, prefix: str = "") -> str:
+    """Extract version number from a tag, removing common prefixes."""
+    version = tag
+
+    # Remove common prefixes
+    for p in ["v", "b", "release-", "version-"]:
+        if version.startswith(p):
+            version = version[len(p):]
+            break
+
+    return version
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Update Nix overlay package definitions to their latest versions",
+        epilog="""
+Examples:
+  update-overlay llama-cpp gguf-tools    Update to latest release/commit
+  update-overlay --dry-run llama-swap    Preview changes without modifying
+  update-overlay --no-build hfdownloader Skip slow hash computation (src only)
+  update-overlay -V 1.2.3 browser-control-mcp  Force specific version
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "packages", nargs="+",
+        help="Package names to update"
+    )
+    parser.add_argument(
+        "--dry-run", "-n", action="store_true",
+        help="Show what would be changed without making changes"
+    )
+    parser.add_argument(
+        "--overlays-dir", "-d", type=Path,
+        default=Path(__file__).parent.parent / "overlays",
+        help="Directory containing overlay files"
+    )
+    parser.add_argument(
+        "--no-build", action="store_true",
+        help="Skip computing vendorHash/cargoHash/npmDepsHash (faster but incomplete)"
+    )
+    parser.add_argument(
+        "--version", "-V",
+        help="Specify version instead of fetching latest"
+    )
+
+    args = parser.parse_args()
+
+    nix_dir = Path(__file__).parent.parent.resolve()
+    overlay_parser = OverlayParser(args.overlays_dir)
+    github_client = GitHubClient()
+    hash_computer = HashComputer(nix_dir)
+    updater = OverlayUpdater()
+
+    success_count = 0
+    fail_count = 0
+
+    for package_name in args.packages:
+        print(f"\nProcessing {package_name}...")
+
+        # Find package in overlays
+        info = overlay_parser.find_package(package_name)
+        if not info:
+            print(f"  ERROR: Package '{package_name}' not found in overlays")
+            fail_count += 1
+            continue
+
+        print(f"  Found in {info.file_path}")
+        print(f"  Current version: {info.version}")
+        print(f"  GitHub: {info.owner}/{info.repo}")
+        print(f"  Package type: {info.package_type}")
+
+        # Show all hashes that will be updated
+        hash_types = []
+        if info.src_hash:
+            hash_types.append("src")
+        if info.vendor_hash:
+            hash_types.append("vendorHash")
+        if info.cargo_hash:
+            hash_types.append("cargoHash")
+        if info.npm_deps_hash:
+            hash_types.append("npmDepsHash")
+        if hash_types:
+            print(f"  Hashes to update: {', '.join(hash_types)}")
+
+        # Get latest version
+        latest_tag = None
+        new_version = None
+        new_full_rev = None
+
+        if args.version:
+            latest_tag = args.version
+            if not latest_tag.startswith(("v", "b")):
+                latest_tag = f"{info.version_prefix}{args.version}"
+            new_version = extract_version_number(latest_tag, info.version_prefix)
+        elif info.uses_commit:
+            # Package uses commit-based versioning, fetch latest commit
+            commit_info = github_client.get_latest_commit(info.owner, info.repo)
+            if not commit_info:
+                print(f"  ERROR: Could not fetch latest commit")
+                fail_count += 1
+                continue
+            new_full_rev, new_version = commit_info
+            latest_tag = new_full_rev  # Use full rev for hash computation
+            print(f"  Latest commit: {new_version} ({new_full_rev[:12]}...)")
+        else:
+            latest_tag = github_client.get_latest_release(info.owner, info.repo)
+            if not latest_tag:
+                # Try falling back to commits
+                commit_info = github_client.get_latest_commit(info.owner, info.repo)
+                if commit_info:
+                    print(f"  No releases found, falling back to latest commit")
+                    new_full_rev, new_version = commit_info
+                    latest_tag = new_full_rev
+                    info.uses_commit = True  # Switch to commit mode
+                else:
+                    print(f"  ERROR: Could not fetch latest release or commit")
+                    fail_count += 1
+                    continue
+            else:
+                new_version = extract_version_number(latest_tag, info.version_prefix)
+
+        if not info.uses_commit:
+            print(f"  Latest version: {new_version} (tag: {latest_tag})")
+
+        if new_version == info.version:
+            print(f"  Already at latest version")
+            continue
+
+        # Compute new source hash
+        print(f"  Computing source hash...")
+        new_src_hash = hash_computer.compute_src_hash(info.owner, info.repo, latest_tag)
+        if not new_src_hash:
+            print(f"  ERROR: Could not compute source hash")
+            fail_count += 1
+            continue
+        print(f"  New source hash: {new_src_hash[:30]}...")
+
+        # Update the overlay file with new version and src hash first
+        # This is needed so we can compute the other hashes
+        temp_update = updater.update_package(
+            info, new_version, new_src_hash,
+            new_full_rev=new_full_rev,
+            dry_run=args.dry_run
+        )
+
+        # Compute additional hashes if needed
+        new_vendor_hash = None
+        new_cargo_hash = None
+        new_npm_deps_hash = None
+
+        if not args.no_build and not args.dry_run:
+            if info.vendor_hash:
+                # Set a dummy hash first (scoped to package block)
+                updater.set_dummy_hash(info.file_path, package_name, 'vendorHash', info.vendor_hash)
+
+                new_vendor_hash = hash_computer.compute_vendor_hash(package_name)
+                if new_vendor_hash:
+                    print(f"  New vendorHash: {new_vendor_hash[:30]}...")
+
+            if info.cargo_hash:
+                # Set a dummy hash first (scoped to package block)
+                updater.set_dummy_hash(info.file_path, package_name, 'cargoHash', info.cargo_hash)
+
+                new_cargo_hash = hash_computer.compute_cargo_hash(package_name)
+                if new_cargo_hash:
+                    print(f"  New cargoHash: {new_cargo_hash[:30]}...")
+
+            if info.npm_deps_hash:
+                # Set a dummy hash first (scoped to package block)
+                updater.set_dummy_hash(info.file_path, package_name, 'npmDepsHash', info.npm_deps_hash)
+
+                new_npm_deps_hash = hash_computer.compute_npm_deps_hash(package_name)
+                if new_npm_deps_hash:
+                    print(f"  New npmDepsHash: {new_npm_deps_hash[:30]}...")
+
+        # Final update with all hashes
+        if not args.dry_run:
+            # Re-read current state
+            info = overlay_parser.find_package(package_name)
+            updater.update_package(
+                info, new_version, new_src_hash,
+                new_vendor_hash=new_vendor_hash,
+                new_cargo_hash=new_cargo_hash,
+                new_npm_deps_hash=new_npm_deps_hash,
+                new_full_rev=new_full_rev,
+                dry_run=False
+            )
+
+        success_count += 1
+        print(f"  Successfully updated {package_name}")
+
+    print(f"\nSummary: {success_count} updated, {fail_count} failed")
+    return 0 if fail_count == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
