@@ -45,6 +45,7 @@ in {
       LITELLM_PROXY_URL   = "http://litellm.vulcan.lan";
       LLM_USER_PATH       = "${config.xdg.configHome}/llm";
       NIX_CONF            = "${home}/src/nix";
+      NODE_EXTRA_CA_CERTS = "${config.xdg.configHome}/ragflow/root_ca.crt";
       NLTK_DATA           = "${config.xdg.dataHome}/nltk";
       PARALLEL_HOME       = "${config.xdg.cacheHome}/parallel";
       PROFILE_DIR         = "${config.home.profileDirectory}";
