@@ -277,7 +277,7 @@
     rsync
     ruby
     samba
-    sbcl
+    # sbcl  # Disabled: ECL bootstrap broken on Darwin/Apple Silicon
     scc
     sccache
     screen
