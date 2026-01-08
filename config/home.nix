@@ -386,6 +386,7 @@ in {
             export PS1='$ '
         else
             . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
+            . $HOME/.shellfishrc
 
             # sudo /bin/launchctl limit maxfiles 524288 524288
             # ulimit -n 65536
