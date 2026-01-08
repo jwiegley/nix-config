@@ -83,14 +83,14 @@ gguf-tools = with super; stdenv.mkDerivation rec {
 
 hfdownloader = with super; buildGoModule rec {
   pname = "hfdownloader";
-  version = "2.0.0";
-  vendorHash = "sha256-3xSLD0vEKedk/7LCxmKjHGuBvE9fd78aUoXYzmkDB1k=";
+  version = "2.3.3";
+  vendorHash = "sha256-xswTwm37YakOobXl8A1S/3wzvAC5U2j2j/xN2m9tJ2s=";
 
   src = fetchFromGitHub {
     owner = "bodaay";
     repo = "HuggingFaceModelDownloader";
     rev = "${version}";
-    hash = "sha256-gVCsUoUMYNxp99q1XED3+i4C0gdplDeVs+tZrgnzH7M=";
+    hash = "sha256-2Y5jwXrTJKcMOus0zLXLhCVK5Q7CH4lydhMVa0EEFWI=";
   };
 
   meta = with lib; {
@@ -102,12 +102,12 @@ hfdownloader = with super; buildGoModule rec {
 };
 
 llama-cpp = super.llama-cpp.overrideAttrs(attrs: rec {
-  version = "7616";
+  version = "7679";
   src = super.fetchFromGitHub {
     owner = "ggml-org";
     repo = "llama.cpp";
     tag = "b${version}";
-    hash = "sha256-MRc6ivio5v6zgz2LBAJnAb+kY1M6B5Mn+2e+CYogPEQ=";
+    hash = "sha256-aU981UeCpdStxYMRJNOuTzfgIpLtnxnQeYsh/EH7c2c=";
   };
   # Fix macOS dylib version: 0.0.7236 exceeds max patch version (255)
   cmakeFlags = (attrs.cmakeFlags or []) ++ super.lib.optionals super.stdenv.hostPlatform.isDarwin [
@@ -172,14 +172,14 @@ with super; llama-swap.overrideAttrs(attrs: rec {
 
 mlx-lm = with self; with self.python3Packages; buildPythonApplication rec {
   pname = "mlx-lm";
-  version = "0.28.3";
+  version = "0.30.2";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ml-explore";
     repo = "mlx-lm";
     tag = "v${version}";
-    hash = "sha256-H3LwMx3QFuU6d+ayIN2N+Y3Euv4L09oH0JUZV2Gd7Qw=";
+    hash = "sha256-6WlKAchze5B724XYwzpVHy+17HlMcGSYjJw0aOdm5yw=";
   };
 
   build-system = [
@@ -342,16 +342,16 @@ browser-control-mcp = with super; buildNpmPackage (finalAttrs: {
 
 claude-code-acp = with self; buildNpmPackage (finalAttrs: {
   pname = "claude-code-acp";
-  version = "0.4.5";
+  version = "0.12.6";
 
   src = fetchFromGitHub {
     owner = "zed-industries";
     repo = "claude-code-acp";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-kkAQuYP2S5EwIGJV8TLrlYzHOC54vmxEHwwuZD5P1hI=";
+    hash = "sha256-RJ3nl86fGEEh4RgZoLiyz9XOC4wlP7WxuJzavZLsjMI=";
   };
 
-  npmDepsHash = "sha256-IR88NP1AiR6t/MLDdaZY1Np0AE7wfqEUfmnohaf0ymc=";
+  npmDepsHash = "sha256-3JLqokF1nk41S198NzYDT6xH8QiRm1yPBotyBnXu3E0=";
 
   dontNpmBuild = false;
 
