@@ -23,6 +23,30 @@ from pathlib import Path
 from typing import Optional
 
 
+# ANSI color codes
+class Colors:
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    DIM = "\033[2m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    MAGENTA = "\033[35m"
+    CYAN = "\033[36m"
+
+    @classmethod
+    def disable(cls):
+        """Disable colors (e.g., when not a TTY)."""
+        cls.RESET = cls.BOLD = cls.DIM = ""
+        cls.RED = cls.GREEN = cls.YELLOW = cls.BLUE = cls.MAGENTA = cls.CYAN = ""
+
+
+# Disable colors if not a TTY
+if not sys.stdout.isatty():
+    Colors.disable()
+
+
 @dataclass
 class PackageInfo:
     """Information about a package in an overlay."""
@@ -56,8 +80,92 @@ class PackageInfo:
 class OverlayParser:
     """Parse Nix overlay files to extract package information."""
 
+    # Package names to skip when using --all (not updatable or special)
+    SKIP_PACKAGES = {
+        'pythonPackagesExtensions',  # Not a package, extends python packages
+        'coqPackages', 'coq',  # References to other packages
+        'coqPackages_HEAD', 'coqPackages_9_1', 'coqPackages_9_0',
+        'coqPackages_8_20', 'coqPackages_8_19', 'coqPackages_8_18',
+        'coqPackages_8_17', 'coqPackages_8_16', 'coqPackages_8_15',
+        'coqPackages_8_14', 'coqPackages_8_13', 'coqPackages_8_12',
+        'coqPackages_8_11', 'coqPackages_8_10',
+        'coq_HEAD', 'coq_9_1', 'coq_9_0', 'coq_8_20', 'coq_8_19',
+        'coq_8_18', 'coq_8_17', 'coq_8_16', 'coq_8_15', 'coq_8_14',
+        'coq_8_13', 'coq_8_12', 'coq_8_11', 'coq_8_10',
+        'ledger_HEAD',  # Local build from source
+        'mcp-server-sequential-thinking',  # Override only, no version
+    }
+
     def __init__(self, overlays_dir: Path):
         self.overlays_dir = overlays_dir
+
+    def find_all_packages(self) -> list[str]:
+        """Find all package names defined in overlay files."""
+        packages = []
+        for overlay_file in self.overlays_dir.glob("*.nix"):
+            packages.extend(self._find_packages_in_file(overlay_file))
+        return sorted(set(packages) - self.SKIP_PACKAGES)
+
+    def _find_packages_in_file(self, file_path: Path) -> list[str]:
+        """Find all package names defined in a single overlay file."""
+        content = file_path.read_text()
+        packages = []
+
+        # Match top-level package definitions: name = ...
+        # Must start at column 0 (not indented)
+        for line in content.split('\n'):
+            # Skip empty lines and comments
+            if not line or line.startswith('#') or line.startswith('//'):
+                continue
+            # Must not start with whitespace (top-level only)
+            if line and not line[0].isspace():
+                match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)\s*=', line)
+                if match:
+                    name = match.group(1)
+                    # Skip 'self', 'super', 'pkgs', 'let', 'in', etc.
+                    if name not in ('self', 'super', 'pkgs', 'let', 'in', 'with', 'inherit'):
+                        packages.append(name)
+
+        # Also find packages inside rec { } blocks (e.g., Emacs packages)
+        # Look for fetchFromGitHub blocks and extract the enclosing package name
+        packages.extend(self._find_nested_packages(content))
+
+        return packages
+
+    def _find_nested_packages(self, content: str) -> list[str]:
+        """Find packages defined inside rec { } blocks with fetchFromGitHub."""
+        packages = []
+        lines = content.split('\n')
+
+        # Track if we're inside a rec { } block
+        in_rec_block = False
+        brace_depth = 0
+
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+
+            # Detect rec { or in rec {
+            if re.search(r'\brec\s*\{', line):
+                in_rec_block = True
+
+            # Count braces to track depth
+            brace_depth += line.count('{') - line.count('}')
+
+            if brace_depth <= 0:
+                in_rec_block = False
+
+            # Inside rec block, look for package definitions with fetchFromGitHub
+            if in_rec_block and line.startswith('    '):  # Must be indented
+                # Match: "package-name = compileEmacsFiles {" or similar on the stripped line
+                match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)\s*=\s*(?:compileEmacsFiles|compileEmacsWikiFile|mkDerivation)', stripped)
+                if match:
+                    name = match.group(1)
+                    # Check if this package has fetchFromGitHub in the next ~20 lines
+                    block_text = '\n'.join(lines[i:i+30])
+                    if 'fetchFromGitHub' in block_text:
+                        packages.append(name)
+
+        return packages
 
     def find_package(self, package_name: str) -> Optional[PackageInfo]:
         """Find a package definition in overlay files."""
@@ -73,6 +181,7 @@ class OverlayParser:
 
         # Pattern 1: Standard package definition (name = ... { })
         # Pattern 2: overrideAttrs pattern (name = prev.name.overrideAttrs...)
+        # Pattern 3: Nested package (indented, inside rec { } block)
 
         # First, find the package definition block
         patterns = [
@@ -80,11 +189,13 @@ class OverlayParser:
             rf'^{re.escape(package_name)}\s*=',
             # overrideAttrs: llama-cpp = super.llama-cpp.overrideAttrs
             rf'^{re.escape(package_name)}\s*=\s*(?:super|prev|pkgs)\.[a-zA-Z0-9_-]+\.overrideAttrs',
+            # Nested (indented): gnus-harvest = compileEmacsFiles {
+            rf'^\s+{re.escape(package_name)}\s*=\s*(?:compileEmacsFiles|compileEmacsWikiFile|mkDerivation)',
         ]
 
         for line_num, line in enumerate(content.split('\n'), 1):
             for pattern in patterns:
-                if re.match(pattern, line.strip()):
+                if re.match(pattern, line):
                     return self._extract_package_info(content, file_path, package_name, line_num)
 
         return None
@@ -95,43 +206,43 @@ class OverlayParser:
 
         # Find the line where the package definition starts
         start_idx = None
+        start_indent = 0  # Track the indentation level of the package
         for i, line in enumerate(lines):
-            # Match: "package_name =" or "package_name="
-            if re.match(rf'^{re.escape(package_name)}\s*=', line.strip()):
+            # Match: "package_name =" or "package_name=" (at any indentation)
+            match = re.match(rf'^(\s*){re.escape(package_name)}\s*=', line)
+            if match:
                 start_idx = i
+                start_indent = len(match.group(1))
                 break
 
         if start_idx is None:
             return None
 
-        # Find the end by looking for the next top-level definition or end of block
-        # Top-level definitions start with: identifier = (at column 0 or after just whitespace)
+        # Find the end by looking for the next definition at same or lower indentation
         block_lines = [lines[start_idx]]
 
-        # Track depth to understand nesting
-        depth = 0
-        in_let = False
-
-        # Check if this is a let...in block
-        for line in lines[start_idx:start_idx+5]:
-            if re.search(r'\blet\b', line):
-                in_let = True
-                break
+        # Track brace depth to understand nesting
+        brace_depth = lines[start_idx].count('{') - lines[start_idx].count('}')
 
         for i in range(start_idx + 1, len(lines)):
             line = lines[i]
 
-            # Check if we've reached a new top-level definition
-            # Must be at start of line and look like: name = or name=
+            # Update brace depth
+            brace_depth += line.count('{') - line.count('}')
+
+            # Check if we've reached a new definition at same or lower indentation
             stripped = line.lstrip()
-            if stripped and not line[0].isspace():
-                # This line starts at column 0
-                if re.match(r'^[a-zA-Z_][a-zA-Z0-9_-]*\s*=', stripped):
-                    # Found new package definition, stop here
-                    break
-                # Also stop at closing brace at column 0 (end of overlay block)
-                if stripped.startswith('}'):
-                    break
+            if stripped:
+                current_indent = len(line) - len(stripped)
+
+                # If brace depth is 0 or negative, and we find a new definition
+                # at same/lower indent, we're done
+                if brace_depth <= 0 and current_indent <= start_indent:
+                    if re.match(r'^[a-zA-Z_][a-zA-Z0-9_-]*\s*=', stripped):
+                        break
+                    # Also stop at closing brace at same/lower indent
+                    if stripped.startswith('}') and current_indent <= start_indent:
+                        break
 
             block_lines.append(line)
 
@@ -397,28 +508,41 @@ class OverlayUpdater:
         """Find the start and end line indices for a package block."""
         lines = content.split('\n')
 
-        # Find start
+        # Find start (at any indentation level)
         start_idx = None
+        start_indent = 0
         for i, line in enumerate(lines):
-            if re.match(rf'^{re.escape(package_name)}\s*=', line.strip()):
+            match = re.match(rf'^(\s*){re.escape(package_name)}\s*=', line)
+            if match:
                 start_idx = i
+                start_indent = len(match.group(1))
                 break
 
         if start_idx is None:
             return (-1, -1)
 
-        # Find end
+        # Find end by tracking brace depth
         end_idx = start_idx
+        brace_depth = lines[start_idx].count('{') - lines[start_idx].count('}')
+
         for i in range(start_idx + 1, len(lines)):
             line = lines[i]
+            brace_depth += line.count('{') - line.count('}')
+
             stripped = line.lstrip()
-            if stripped and not line[0].isspace():
-                if re.match(r'^[a-zA-Z_][a-zA-Z0-9_-]*\s*=', stripped):
-                    end_idx = i - 1
-                    break
-                if stripped.startswith('}'):
-                    end_idx = i - 1
-                    break
+            if stripped:
+                current_indent = len(line) - len(stripped)
+
+                # If brace depth is 0 or negative, and we find a new definition
+                # at same/lower indent, we're done
+                if brace_depth <= 0 and current_indent <= start_indent:
+                    if re.match(r'^[a-zA-Z_][a-zA-Z0-9_-]*\s*=', stripped):
+                        end_idx = i - 1
+                        break
+                    if stripped.startswith('}') and current_indent <= start_indent:
+                        end_idx = i - 1
+                        break
+
             end_idx = i
 
         return (start_idx, end_idx)
@@ -501,22 +625,9 @@ class OverlayUpdater:
             )
 
         if block == original_block:
-            print(f"  No changes needed for {info.name}")
             return False
 
         if dry_run:
-            print(f"  Would update {info.file_path}")
-            print(f"    version: {old_version} -> {new_version}")
-            if new_full_rev and info.full_rev:
-                print(f"    rev: {info.full_rev[:12]}... -> {new_full_rev[:12]}...")
-            if new_src_hash:
-                print(f"    hash: {info.src_hash[:20]}... -> {new_src_hash[:20]}...")
-            if new_vendor_hash:
-                print(f"    vendorHash: ...{info.vendor_hash[-20:]} -> ...{new_vendor_hash[-20:]}")
-            if new_cargo_hash:
-                print(f"    cargoHash: updated")
-            if new_npm_deps_hash:
-                print(f"    npmDepsHash: updated")
             return True
 
         # Reconstruct the file with the updated block
@@ -525,7 +636,6 @@ class OverlayUpdater:
 
         # Write the updated content
         info.file_path.write_text(new_content)
-        print(f"  Updated {info.file_path}")
         return True
 
 
@@ -551,12 +661,18 @@ Examples:
   update-overlay --dry-run llama-swap    Preview changes without modifying
   update-overlay --no-build hfdownloader Skip slow hash computation (src only)
   update-overlay -V 1.2.3 browser-control-mcp  Force specific version
+  update-overlay --all --dry-run         Preview updates for all packages
+  update-overlay --all --no-build        Update all packages (src hash only)
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
-        "packages", nargs="+",
-        help="Package names to update"
+        "packages", nargs="*",
+        help="Package names to update (not required if --all is used)"
+    )
+    parser.add_argument(
+        "--all", "-a", action="store_true",
+        help="Update all packages found in overlay files"
     )
     parser.add_argument(
         "--dry-run", "-n", action="store_true",
@@ -575,8 +691,19 @@ Examples:
         "--version", "-V",
         help="Specify version instead of fetching latest"
     )
+    parser.add_argument(
+        "--verbose", "-v", action="store_true",
+        help="Show skipped packages (no GitHub source)"
+    )
 
     args = parser.parse_args()
+
+    # Validate arguments
+    if not args.all and not args.packages:
+        parser.error("Please specify package names or use --all")
+
+    if args.all and args.version:
+        parser.error("Cannot use --version with --all")
 
     nix_dir = Path(__file__).parent.parent.resolve()
     overlay_parser = OverlayParser(args.overlays_dir)
@@ -584,36 +711,51 @@ Examples:
     hash_computer = HashComputer(nix_dir)
     updater = OverlayUpdater()
 
+    # Determine which packages to process
+    if args.all:
+        packages = overlay_parser.find_all_packages()
+        print(f"Found {len(packages)} packages in overlay files")
+        if args.packages:
+            # If both --all and package names given, filter to just those
+            packages = [p for p in packages if p in args.packages]
+            print(f"Filtered to {len(packages)} specified packages")
+    else:
+        packages = args.packages
+
     success_count = 0
     fail_count = 0
+    skipped_count = 0
 
-    for package_name in args.packages:
-        print(f"\nProcessing {package_name}...")
-
+    for package_name in packages:
         # Find package in overlays
         info = overlay_parser.find_package(package_name)
         if not info:
-            print(f"  ERROR: Package '{package_name}' not found in overlays")
-            fail_count += 1
+            if args.all:
+                # In --all mode, silently skip packages without GitHub info
+                if args.verbose:
+                    print(f"{Colors.DIM}{package_name}: skipped (no GitHub source){Colors.RESET}")
+                skipped_count += 1
+            else:
+                print(f"{Colors.RED}{package_name}: not found or no GitHub source{Colors.RESET}")
+                fail_count += 1
             continue
 
-        print(f"  Found in {info.file_path}")
-        print(f"  Current version: {info.version}")
-        print(f"  GitHub: {info.owner}/{info.repo}")
-        print(f"  Package type: {info.package_type}")
-
-        # Show all hashes that will be updated
+        # Build hash info string
         hash_types = []
         if info.src_hash:
             hash_types.append("src")
         if info.vendor_hash:
-            hash_types.append("vendorHash")
+            hash_types.append("vendor")
         if info.cargo_hash:
-            hash_types.append("cargoHash")
+            hash_types.append("cargo")
         if info.npm_deps_hash:
-            hash_types.append("npmDepsHash")
-        if hash_types:
-            print(f"  Hashes to update: {', '.join(hash_types)}")
+            hash_types.append("npm")
+        hash_info = f" [{','.join(hash_types)}]" if len(hash_types) > 1 else ""
+
+        # Compact package info
+        pkg_display = f"{Colors.BOLD}{package_name}{Colors.RESET}"
+        version_display = f"{Colors.DIM}{info.version}{Colors.RESET}"
+        print(f"{pkg_display} {version_display}{hash_info}", end=" ")
 
         # Get latest version
         latest_tag = None
@@ -629,44 +771,41 @@ Examples:
             # Package uses commit-based versioning, fetch latest commit
             commit_info = github_client.get_latest_commit(info.owner, info.repo)
             if not commit_info:
-                print(f"  ERROR: Could not fetch latest commit")
+                print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
                 fail_count += 1
                 continue
             new_full_rev, new_version = commit_info
             latest_tag = new_full_rev  # Use full rev for hash computation
-            print(f"  Latest commit: {new_version} ({new_full_rev[:12]}...)")
         else:
             latest_tag = github_client.get_latest_release(info.owner, info.repo)
             if not latest_tag:
                 # Try falling back to commits
                 commit_info = github_client.get_latest_commit(info.owner, info.repo)
                 if commit_info:
-                    print(f"  No releases found, falling back to latest commit")
                     new_full_rev, new_version = commit_info
                     latest_tag = new_full_rev
                     info.uses_commit = True  # Switch to commit mode
                 else:
-                    print(f"  ERROR: Could not fetch latest release or commit")
+                    print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
                     fail_count += 1
                     continue
             else:
                 new_version = extract_version_number(latest_tag, info.version_prefix)
 
-        if not info.uses_commit:
-            print(f"  Latest version: {new_version} (tag: {latest_tag})")
-
         if new_version == info.version:
-            print(f"  Already at latest version")
+            print(f"{Colors.GREEN}✓ up-to-date{Colors.RESET}")
+            skipped_count += 1
             continue
+
+        # Show update arrow
+        print(f"{Colors.YELLOW}→ {new_version}{Colors.RESET}", end="")
 
         # Compute new source hash
-        print(f"  Computing source hash...")
         new_src_hash = hash_computer.compute_src_hash(info.owner, info.repo, latest_tag)
         if not new_src_hash:
-            print(f"  ERROR: Could not compute source hash")
+            print(f" {Colors.RED}✗ hash failed{Colors.RESET}")
             fail_count += 1
             continue
-        print(f"  New source hash: {new_src_hash[:30]}...")
 
         # Update the overlay file with new version and src hash first
         # This is needed so we can compute the other hashes
@@ -680,35 +819,29 @@ Examples:
         new_vendor_hash = None
         new_cargo_hash = None
         new_npm_deps_hash = None
+        extra_hashes = []
 
         if not args.no_build and not args.dry_run:
             if info.vendor_hash:
-                # Set a dummy hash first (scoped to package block)
                 updater.set_dummy_hash(info.file_path, package_name, 'vendorHash', info.vendor_hash)
-
                 new_vendor_hash = hash_computer.compute_vendor_hash(package_name)
                 if new_vendor_hash:
-                    print(f"  New vendorHash: {new_vendor_hash[:30]}...")
+                    extra_hashes.append("vendor")
 
             if info.cargo_hash:
-                # Set a dummy hash first (scoped to package block)
                 updater.set_dummy_hash(info.file_path, package_name, 'cargoHash', info.cargo_hash)
-
                 new_cargo_hash = hash_computer.compute_cargo_hash(package_name)
                 if new_cargo_hash:
-                    print(f"  New cargoHash: {new_cargo_hash[:30]}...")
+                    extra_hashes.append("cargo")
 
             if info.npm_deps_hash:
-                # Set a dummy hash first (scoped to package block)
                 updater.set_dummy_hash(info.file_path, package_name, 'npmDepsHash', info.npm_deps_hash)
-
                 new_npm_deps_hash = hash_computer.compute_npm_deps_hash(package_name)
                 if new_npm_deps_hash:
-                    print(f"  New npmDepsHash: {new_npm_deps_hash[:30]}...")
+                    extra_hashes.append("npm")
 
         # Final update with all hashes
         if not args.dry_run:
-            # Re-read current state
             info = overlay_parser.find_package(package_name)
             updater.update_package(
                 info, new_version, new_src_hash,
@@ -720,9 +853,17 @@ Examples:
             )
 
         success_count += 1
-        print(f"  Successfully updated {package_name}")
+        extra_info = f" +{','.join(extra_hashes)}" if extra_hashes else ""
+        if args.dry_run:
+            print(f" {Colors.CYAN}(dry-run){Colors.RESET}")
+        else:
+            print(f" {Colors.GREEN}✓{Colors.RESET}{extra_info}")
 
-    print(f"\nSummary: {success_count} updated, {fail_count} failed")
+    # Colored summary
+    updated_str = f"{Colors.GREEN}{success_count} updated{Colors.RESET}" if success_count else f"{success_count} updated"
+    skipped_str = f"{skipped_count} up-to-date"
+    failed_str = f"{Colors.RED}{fail_count} failed{Colors.RESET}" if fail_count else f"{fail_count} failed"
+    print(f"\n{Colors.BOLD}Summary:{Colors.RESET} {updated_str}, {skipped_str}, {failed_str}")
     return 0 if fail_count == 0 else 1
 
 
