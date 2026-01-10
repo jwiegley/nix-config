@@ -692,7 +692,8 @@ in {
 
                   access_log ${logDir}/access.log;
 
-                  location / {
+                  # Proxy /v1/ requests to llama-swap
+                  location /v1/ {
                     proxy_pass http://localhost:8080;
 
                     proxy_set_header Host $host;
@@ -709,6 +710,27 @@ in {
                     add_header 'Access-Control-Allow-Credentials' 'true';
                     add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range';
                     add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
+                  }
+
+                  # Proxy all other requests to chat.vulcan.lan
+                  location / {
+                    proxy_pass https://chat.vulcan.lan;
+                    proxy_ssl_verify off;
+
+                    proxy_set_header Host chat.vulcan.lan;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+
+                    proxy_connect_timeout 600;
+                    proxy_send_timeout 600;
+                    proxy_read_timeout 600;
+                    send_timeout 600;
+
+                    # WebSocket support for chat interface
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "upgrade";
                   }
                 }
               }
