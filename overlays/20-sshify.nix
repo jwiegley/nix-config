@@ -2,13 +2,13 @@ self: super: {
 
 sshify = with super; stdenv.mkDerivation rec {
   name = "sshify-${version}";
-  version = "1.0";
+  version = "a6fb0d52";
 
   src = fetchFromGitHub {
     owner = "jwiegley";
     repo = "sshify";
     rev = "a6fb0d529ec01158dd031431099b0ba8c8d64eb6";
-    sha256 = "12vc4n9a667h7mjafa7g1qy2n6bgwk3ar40pf5mq39282mk82pf2";
+    sha256 = "sha256-wl2BZhVIpIFrcReQrMbkbxkrPA7vKKdkPfAYo5IlbIs=";
     # date = 2018-01-27T17:11:59-08:00;
   };
 

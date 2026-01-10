@@ -2,15 +2,15 @@ self: super: {
 
 filetags = with super; with python3Packages; buildPythonPackage rec {
   pname = "filetags";
-  version = "20240113";
+  version = "778a2de5";
   name = "${pname}-${version}";
   pyproject = false;
 
   src = fetchFromGitHub {
     owner = "novoid";
     repo = "filetags";
-    rev = "b042bd20314898527c9c2a0d942c25d0b01c263f";
-    sha256 = "1xkb5rha8f7zxgvwlk3gl6nba6jq74pgcnwg5m5kn59hra41f3kd";
+    rev = "778a2de5a0d59477dbea6a315891180419369680";
+    sha256 = "sha256-d4NNBn+y5er8j2zv85bKUutn5XSBykGWfTtr1/XA4zE=";
     # date = "2025-09-15T13:27:03+02:00";
   };
 

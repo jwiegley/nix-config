@@ -2,14 +2,14 @@ self: super: {
 
 pass-git-helper = with super; with python3Packages; buildPythonPackage rec {
  pname = "pass-git-helper";
-  version = "4.0.0";
+  version = "8832ffb0";
   name = "${pname}-${version}";
 
   src = fetchFromGitHub {
     owner = "languitar";
     repo = "pass-git-helper";
-    rev = "67cb6bbc01a60f1487fe43035e93b06b0656c0a5";
-    sha256 = "1akdqh14w8yn3r6ijdfi2ljp7z3r2y5jxk61h0v9mpd0i0mpalr4";
+    rev = "8832ffb02520c45e879a6c98cb9696a712324fe3";
+    sha256 = "sha256-3aYJaqIL+nFZm3XUqC2+CIed967U6yKVIwegsAtrWQg=";
     # date = 2025-10-02T16:40:46+02:00;
   };
 

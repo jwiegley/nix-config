@@ -2,13 +2,13 @@ self: super: {
 
 linkdups = with super; stdenv.mkDerivation rec {
   name = "linkdups-${version}";
-  version = "1.3";
+  version = "57bb7933";
 
   src = fetchFromGitHub {
     owner = "jwiegley";
     repo = "linkdups";
     rev = "57bb79332d3b79418692d0c974acba83a4fd3fc9";
-    sha256 = "1d400vanbsrmfxf1w4na3r4k3nw18xnv05qcf4rkqajmnfrbzh3h";
+    sha256 = "sha256-cMC/srNVKjwzcQwXsG1HgdsxSR7KEh5cdzXrZdUGgLQ=";
     # date = 2025-05-13T11:29:24-07:00;
   };
 
