@@ -684,8 +684,8 @@ in {
                 server {
                   listen 8443 ssl;
 
-                  ssl_certificate /Users/johnw/hera/vpn.newartisans.com.crt;
-                  ssl_certificate_key /Users/johnw/hera/vpn.newartisans.com.key;
+                  ssl_certificate /Users/johnw/hera/hera.lan.crt;
+                  ssl_certificate_key /Users/johnw/hera/hera.lan.key;
                   ssl_protocols TLSv1.2 TLSv1.3;
                   ssl_prefer_server_ciphers on;
                   ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
