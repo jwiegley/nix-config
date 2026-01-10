@@ -6,19 +6,19 @@ case $1 in
         ulimit -n 65536
 	cd ~/src/nix
         u hera update
+        update-overlay --all
 	./build system
-        u hera upgrade sign
-        # notify "Nix on Hera upgraded"
+        u hera upgrade-tasks sign check
+        notify "Nix on Hera upgraded"
         ;;
 
     clio)
         sudo /bin/launchctl limit maxfiles 524288 524288
         ulimit -n 65536
 	cd ~/src/nix
-        u hera update
 	./build system
-        u clio upgrade-tasks
-        # notify "Nix on Clio upgraded"
+        u clio upgrade-tasks check
+        notify "Nix on Clio upgraded"
         ;;
 
     *)
