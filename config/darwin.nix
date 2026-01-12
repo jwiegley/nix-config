@@ -187,6 +187,7 @@ in {
       "microsoft-word"
       "microsoft-remote-desktop"
       "netdownloadhelpercoapp"
+      "opencode-desktop"
       "pdf-expert"
       # "sage"
       "signal"

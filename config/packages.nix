@@ -365,6 +365,7 @@
     claude-code
     claude-code-acp
     ccusage
+    opencode
     # gemini-cli
     # codex
   ]);
