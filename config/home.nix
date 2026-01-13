@@ -249,6 +249,15 @@ in {
         set-option -g default-shell ${pkgs.zsh}/bin/zsh
         set-option -g default-command ${pkgs.zsh}/bin/zsh
         set-option -g history-limit 250000
+
+        # Terminal title settings
+        set-option -g allow-rename on
+        set-option -g set-titles on
+        set-option -g set-titles-string "#T"
+
+        # For iTerm2 native integration, also enable automatic rename
+        set-option -g automatic-rename on
+        set-option -g automatic-rename-format "#{pane_title}"
       '';
     };
 
@@ -396,6 +405,17 @@ in {
 
             fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
 
+            # Set terminal/tmux title to current directory
+            __update_terminal_title() {
+              # Use both OSC 0 (icon+title) and OSC 2 (title only)
+              # %~ expands to current directory with ~ substitution
+              print -Pn "\e]0;%~\a"
+              # Also set tmux pane title for native integration
+              if [[ -n "$TMUX" ]]; then
+                print -Pn "\e]2;%~\a"
+              fi
+            }
+
             # GitHub CLI account switching based on directory
             typeset -g _PREV_GH_ACCOUNT="jwiegley"
 
@@ -420,6 +440,8 @@ in {
             autoload -Uz add-zsh-hook
             add-zsh-hook chpwd __gh_account_check
             add-zsh-hook precmd __gh_account_check
+            add-zsh-hook chpwd __update_terminal_title
+            add-zsh-hook precmd __update_terminal_title
         fi
       '';
 
