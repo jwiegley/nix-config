@@ -210,6 +210,7 @@ in {
       "vmware-fusion"
       "whatsapp"
       "wireshark-app"
+      "wispr-flow"
       "xnviewmp"
       "zotero"
       # "datagraph"                 # Use DataGraph in App Store
