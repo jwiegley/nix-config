@@ -1,30 +1,31 @@
 self: super: {
 
-sift = with super; stdenv.mkDerivation rec {
-  name = "sift-${version}";
-  version = "c823f340";
+  sift = with super;
+    stdenv.mkDerivation rec {
+      name = "sift-${version}";
+      version = "c823f340";
 
-  src = fetchFromGitHub {
-    owner = "jwiegley";
-    repo = "sift";
-    rev = "c823f340be8818cc7aa970f9da4c81247f5b5535";
-    sha256 = "sha256-qHiSbrd73DZjS9GuCPhx5rPBj/F5UK88dCLCx+STTfk=";
-    # date = 2011-09-10T19:05:37-05:00;
-  };
+      src = fetchFromGitHub {
+        owner = "jwiegley";
+        repo = "sift";
+        rev = "c823f340be8818cc7aa970f9da4c81247f5b5535";
+        sha256 = "sha256-qHiSbrd73DZjS9GuCPhx5rPBj/F5UK88dCLCx+STTfk=";
+        # date = 2011-09-10T19:05:37-05:00;
+      };
 
-  phases = [ "unpackPhase" "installPhase" ];
+      phases = [ "unpackPhase" "installPhase" ];
 
-  installPhase = ''
-    mkdir -p $out/bin
-    cp -p sift $out/bin
-  '';
+      installPhase = ''
+        mkdir -p $out/bin
+        cp -p sift $out/bin
+      '';
 
-  meta = {
-    homepage = https://github.com/jwiegley/sift;
-    description = "A tool for sifting apart large patch files";
-    license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ jwiegley ];
-  };
-};
+      meta = {
+        homepage = "https://github.com/jwiegley/sift";
+        description = "A tool for sifting apart large patch files";
+        license = lib.licenses.mit;
+        maintainers = with lib.maintainers; [ jwiegley ];
+      };
+    };
 
 }

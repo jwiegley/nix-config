@@ -1,11 +1,12 @@
 { pkgs, lib, config, hostname, inputs, overlays, ... }:
 
-let home           = "/Users/johnw";
-    tmpdir         = "/tmp";
+let
+  home = "/Users/johnw";
+  tmpdir = "/tmp";
 
-    xdg_configHome = "${home}/.config";
-    xdg_dataHome   = "${home}/.local/share";
-    xdg_cacheHome  = "${home}/.cache";
+  xdg_configHome = "${home}/.config";
+  xdg_dataHome = "${home}/.local/share";
+  xdg_cacheHome = "${home}/.cache";
 
 in {
   users = {
@@ -13,7 +14,8 @@ in {
     # CRITICAL: Users/groups must be in these lists for nix-darwin to create them
     knownUsers = [ "johnw" ]
       ++ lib.optionals (hostname != "clio") [ "_prometheus-node-exporter" ];
-    knownGroups = lib.optionals (hostname != "clio") [ "_prometheus-node-exporter" ];
+    knownGroups =
+      lib.optionals (hostname != "clio") [ "_prometheus-node-exporter" ];
 
     users = {
       johnw = {
@@ -30,8 +32,8 @@ in {
           ];
           keyFiles =
             # Each machine accepts SSH key authentication from the rest
-            import ./key-files.nix { inherit (pkgs) lib; }
-              [ "hera" "clio" ] home hostname;
+            import ./key-files.nix { inherit (pkgs) lib; } [ "hera" "clio" ]
+            home hostname;
         };
       };
 
@@ -54,8 +56,7 @@ in {
   ];
 
   environment = {
-    systemPackages = with pkgs; [
-    ];
+    systemPackages = with pkgs; [ ];
 
     etc = lib.mkIf (hostname == "hera") {
       # ZFS configuration for OpenZFS on macOS (hera only)
@@ -102,7 +103,7 @@ in {
     prometheus.exporters.node = {
       enable = hostname != "clio";
       port = 9100;
-      listenAddress = "0.0.0.0";  # Allow remote Prometheus to scrape
+      listenAddress = "0.0.0.0"; # Allow remote Prometheus to scrape
       enabledCollectors = [
         # Add additional collectors as needed
         # "systemd"  # Not available on macOS
@@ -126,12 +127,10 @@ in {
     onActivation = {
       autoUpdate = false;
       upgrade = false;
-      cleanup = "zap";        # Remove uninstalled pkgs and dependencies
+      cleanup = "zap"; # Remove uninstalled pkgs and dependencies
     };
 
-    taps = [
-      "graelo/tap"
-    ];
+    taps = [ "graelo/tap" ];
     brews = [
       "ykman"
       "nss"
@@ -223,20 +222,32 @@ in {
       # "vagrant"
       # "vagrant-manager"
       # "vagrant-vmware-utility"
-      { name = "brave-browser"; greedy = true; }
-      { name = "firefox"; greedy = true; }
-      { name = "opera"; greedy = true; }
-      { name = "vivaldi"; greedy = true; }
-      { name = "zoom"; greedy = true; }
+      {
+        name = "brave-browser";
+        greedy = true;
+      }
+      {
+        name = "firefox";
+        greedy = true;
+      }
+      {
+        name = "opera";
+        greedy = true;
+      }
+      {
+        name = "vivaldi";
+        greedy = true;
+      }
+      {
+        name = "zoom";
+        greedy = true;
+      }
     ] ++ lib.optionals (hostname == "hera") [
       "fujitsu-scansnap-home"
       "gzdoom"
       "raspberry-pi-imager"
       "logitune"
-    ] ++ lib.optionals (hostname == "clio") [
-      "aldente"
-      "wifi-explorer"
-    ];
+    ] ++ lib.optionals (hostname == "clio") [ "aldente" "wifi-explorer" ];
 
     ## The following software, or versions of software, are not available
     ## via Homebrew or the App Store:
@@ -282,31 +293,27 @@ in {
       allowInsecure = false;
       allowUnsupportedSystem = false;
 
-      permittedInsecurePackages = [
-        "python-2.7.18.7"
-        "libressl-3.4.3"
-      ];
+      permittedInsecurePackages = [ "python-2.7.18.7" "libressl-3.4.3" ];
     };
 
-    overlays = overlays
-      ++ (let path = ../overlays; in with builtins;
-            map (n: import (path + ("/" + n)))
-                (filter (n: match ".*\\.nix" n != null ||
-                            pathExists (path + ("/" + n + "/default.nix")))
-                        (attrNames (readDir path))));
+    overlays = overlays ++ (let path = ../overlays;
+    in with builtins;
+    map (n: import (path + ("/" + n))) (filter (n:
+      match ".*\\.nix" n != null
+      || pathExists (path + ("/" + n + "/default.nix")))
+      (attrNames (readDir path))));
   };
 
-  nix =
-    let
-      hera = {
-        hostName = "hera.lan";
-        protocol = "ssh-ng";
-        system = "aarch64-darwin";
-        sshUser = "johnw";
-        maxJobs = 24;
-        speedFactor = 4;
-      };
-    in {
+  nix = let
+    hera = {
+      hostName = "hera.lan";
+      protocol = "ssh-ng";
+      system = "aarch64-darwin";
+      sshUser = "johnw";
+      maxJobs = 24;
+      speedFactor = 4;
+    };
+  in {
 
     enable = false;
     package = pkgs.nix;
@@ -318,13 +325,13 @@ in {
     # See https://yusef.napora.org/blog/pinning-nixpkgs-flake
     # registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
 
-    nixPath = lib.mkForce (
-         lib.mapAttrsToList (key: value: "${key}=${value.to.path}")
-                            config.nix.registry
-      ++ [{ ssh-config-file = "${home}/.ssh/config";
-            darwin-config   = "${home}/src/nix/config/darwin.nix";
-            hm-config       = "${home}/src/nix/config/home.nix";
-          }]);
+    nixPath = lib.mkForce
+      (lib.mapAttrsToList (key: value: "${key}=${value.to.path}")
+        config.nix.registry ++ [{
+          ssh-config-file = "${home}/.ssh/config";
+          darwin-config = "${home}/src/nix/config/darwin.nix";
+          hm-config = "${home}/src/nix/config/home.nix";
+        }]);
 
     settings = {
       trusted-users = [ "@admin" "@builders" "johnw" ];
@@ -350,10 +357,7 @@ in {
     };
 
     distributedBuilds = true;
-    buildMachines =
-      if hostname == "clio"
-      then [ hera ]
-      else [];
+    buildMachines = if hostname == "clio" then [ hera ] else [ ];
 
     extraOptions = ''
       gc-keep-derivations = true
@@ -361,7 +365,7 @@ in {
       secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
       experimental-features = nix-command flakes
     '';
-    };
+  };
 
   ids.gids.nixbld = 350;
 
@@ -408,7 +412,8 @@ in {
         };
 
         "com.apple.WindowManager" = {
-          EnableStandardClickToShowDesktop = 0; # Click wallpaper to reveal desktop
+          EnableStandardClickToShowDesktop =
+            0; # Click wallpaper to reveal desktop
           StandardHideDesktopIcons = 0; # Show items on desktop
           HideDesktop = 0; # Do not hide items on desktop & stage manager
           StageManagerHideWidgets = 0;
@@ -420,9 +425,7 @@ in {
           type = "png";
         };
 
-        "com.apple.AdLib" = {
-          allowApplePersonalizedAdvertising = false;
-        };
+        "com.apple.AdLib" = { allowApplePersonalizedAdvertising = false; };
 
         # Prevent Photos from opening automatically when devices are plugged in
         "com.apple.ImageCapture".disableHotPlug = true;
@@ -488,21 +491,21 @@ in {
         '';
         serviceConfig = {
           RunAtLoad = true;
-          KeepAlive = false;  # Don't restart - Docker manages itself
-          ProcessType = "Interactive";  # GUI application
+          KeepAlive = false; # Don't restart - Docker manages itself
+          ProcessType = "Interactive"; # GUI application
         };
       };
     };
 
     # System daemons run as background services
-    daemons =
-      let
-        iterate = StartInterval: {
-          inherit StartInterval;
-          Nice = 5;
-          LowPriorityIO = true;
-          AbandonProcessGroup = true;
-        }; in {
+    daemons = let
+      iterate = StartInterval: {
+        inherit StartInterval;
+        Nice = 5;
+        LowPriorityIO = true;
+        AbandonProcessGroup = true;
+      };
+    in {
       limits = {
         script = ''
           /bin/launchctl limit maxfiles 524288 524288
@@ -572,8 +575,7 @@ in {
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = false;
       };
-    }
-    // lib.optionalAttrs (hostname == "hera") {
+    } // lib.optionalAttrs (hostname == "hera") {
       "sysctl-vram-limit" = {
         script = ''
           # This leaves 64 GB of working memory remaining
@@ -665,78 +667,78 @@ in {
           serviceConfig = {
             RunAtLoad = true;
             KeepAlive = true;
-            ThrottleInterval = 30;  # Wait 30s between restart attempts
+            ThrottleInterval = 30; # Wait 30s between restart attempts
             StandardOutPath = "${xdg_cacheHome}/autossh-vps.log";
             StandardErrorPath = "${xdg_cacheHome}/autossh-vps.log";
           };
         };
 
-        llama-swap-https-proxy =
-          let
-            logDir = "${xdg_cacheHome}/llama-swap-proxy";
-            config = pkgs.writeText "nginx.conf" ''
-              worker_processes 1;
-              pid ${logDir}/nginx.pid;
-              error_log ${logDir}/error.log warn;
-              events {
-                worker_connections 1024;
-              }
-              http {
-                client_body_temp_path ${logDir}/client_body;
-                server {
-                  listen 8443 ssl;
+        llama-swap-https-proxy = let
+          logDir = "${xdg_cacheHome}/llama-swap-proxy";
+          config = pkgs.writeText "nginx.conf" ''
+            worker_processes 1;
+            pid ${logDir}/nginx.pid;
+            error_log ${logDir}/error.log warn;
+            events {
+              worker_connections 1024;
+            }
+            http {
+              client_body_temp_path ${logDir}/client_body;
+              server {
+                listen 8443 ssl;
 
-                  ssl_certificate /Users/johnw/hera/hera.lan.crt;
-                  ssl_certificate_key /Users/johnw/hera/hera.lan.key;
-                  ssl_protocols TLSv1.2 TLSv1.3;
-                  ssl_prefer_server_ciphers on;
-                  ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+                ssl_certificate /Users/johnw/hera/hera.lan.crt;
+                ssl_certificate_key /Users/johnw/hera/hera.lan.key;
+                ssl_protocols TLSv1.2 TLSv1.3;
+                ssl_prefer_server_ciphers on;
+                ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
 
-                  access_log ${logDir}/access.log;
+                access_log ${logDir}/access.log;
 
-                  # Proxy /v1/ requests to llama-swap
-                  location /v1/ {
-                    proxy_pass http://localhost:8080;
+                # Proxy /v1/ requests to llama-swap
+                location /v1/ {
+                  proxy_pass http://localhost:8080;
 
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
 
-                    proxy_connect_timeout 600;
-                    proxy_send_timeout 600;
-                    proxy_read_timeout 600;
-                    send_timeout 600;
+                  proxy_connect_timeout 600;
+                  proxy_send_timeout 600;
+                  proxy_read_timeout 600;
+                  send_timeout 600;
 
-                    add_header 'Access-Control-Allow-Origin' $http_origin;
-                    add_header 'Access-Control-Allow-Credentials' 'true';
-                    add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range';
-                    add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
-                  }
+                  add_header 'Access-Control-Allow-Origin' $http_origin;
+                  add_header 'Access-Control-Allow-Credentials' 'true';
+                  add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range';
+                  add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
+                }
 
-                  # Proxy all other requests to chat.vulcan.lan
-                  location / {
-                    proxy_pass https://chat.vulcan.lan;
-                    proxy_ssl_verify off;
+                # Proxy all other requests to chat.vulcan.lan
+                location / {
+                  proxy_pass https://chat.vulcan.lan;
+                  proxy_ssl_verify off;
 
-                    proxy_set_header Host chat.vulcan.lan;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_set_header Host chat.vulcan.lan;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
 
-                    proxy_connect_timeout 600;
-                    proxy_send_timeout 600;
-                    proxy_read_timeout 600;
-                    send_timeout 600;
+                  proxy_connect_timeout 600;
+                  proxy_send_timeout 600;
+                  proxy_read_timeout 600;
+                  send_timeout 600;
 
-                    # WebSocket support for chat interface
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection "upgrade";
-                  }
+                  # WebSocket support for chat interface
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
                 }
               }
-            ''; in {
+            }
+          '';
+        in {
           script = ''
             mkdir -p ${logDir} ${logDir}/client_body
             ${pkgs.nginx}/bin/nginx -c ${config} -g "daemon off;" -e ${logDir}/error.log
@@ -763,8 +765,8 @@ in {
             fi
           '';
           serviceConfig = {
-            StartInterval = 900;  # Run every 15 minutes (900 seconds)
-            RunAtLoad = true;     # Run once at startup
+            StartInterval = 900; # Run every 15 minutes (900 seconds)
+            RunAtLoad = true; # Run once at startup
           };
         };
       };

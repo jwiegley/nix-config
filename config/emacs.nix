@@ -1,6 +1,6 @@
 pkgs: epkgs:
-let exclude = p: p // { excluded = true; }; in
-with epkgs; [
+let exclude = p: p // { excluded = true; };
+in with epkgs; [
   epkgs."2048-game"
   ace-mc
   ace-window

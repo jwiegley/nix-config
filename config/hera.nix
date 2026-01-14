@@ -1,3 +1,1 @@
-{
-  hostname = "hera";
-}
+{ hostname = "hera"; }

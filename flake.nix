@@ -45,9 +45,9 @@
     una.url = "git+file:///Users/johnw/src/una";
   };
 
-  outputs = inputs: with inputs; rec {
-    darwinConfigurations =
-      let
+  outputs = inputs:
+    with inputs; rec {
+      darwinConfigurations = let
         overlays = [
           # (final: prev:
           #   let
@@ -74,35 +74,35 @@
           inputs.mcp-servers-nix.overlays.default
           # Restore packages that mcp-servers-nix removed (now in nixpkgs)
           (final: prev: {
-            github-mcp-server = prev.callPackage
-              (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix") {};
+            github-mcp-server = prev.callPackage (import
+              "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")
+              { };
           })
         ];
-        configure = hostname: system: darwin.lib.darwinSystem {
-          inherit inputs system;
-          specialArgs = {
-            inherit darwin system hostname inputs overlays;
-          };
-          modules = [
-            ./config/darwin.nix
-            home-manager.darwinModules.home-manager
-            {
-              home-manager = {
-                useGlobalPkgs = true;
-                useUserPackages = true;
-                backupFileExtension = "hm-bak";
-                extraSpecialArgs = { inherit system hostname inputs; };
+        configure = hostname: system:
+          darwin.lib.darwinSystem {
+            inherit inputs system;
+            specialArgs = { inherit darwin system hostname inputs overlays; };
+            modules = [
+              ./config/darwin.nix
+              home-manager.darwinModules.home-manager
+              {
+                home-manager = {
+                  useGlobalPkgs = true;
+                  useUserPackages = true;
+                  backupFileExtension = "hm-bak";
+                  extraSpecialArgs = { inherit system hostname inputs; };
 
-                users.johnw = import ./config/home.nix;
-              };
-            }
-          ];
-        };
+                  users.johnw = import ./config/home.nix;
+                };
+              }
+            ];
+          };
       in {
         hera = configure "hera" "aarch64-darwin";
         clio = configure "clio" "aarch64-darwin";
       };
 
-    darwinPackages = darwinConfigurations."hera".pkgs;
-  };
+      darwinPackages = darwinConfigurations."hera".pkgs;
+    };
 }

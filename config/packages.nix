@@ -1,8 +1,9 @@
-{ system, hostname, inputs, pkgs, ...}: with pkgs; rec
-{
-  exe = if stdenv.targetPlatform.isx86_64
-        then haskell.lib.justStaticExecutables
-        else lib.id;
+{ system, hostname, inputs, pkgs, ... }:
+with pkgs; rec {
+  exe = if stdenv.targetPlatform.isx86_64 then
+    haskell.lib.justStaticExecutables
+  else
+    lib.id;
 
   myEmacsPackages = import ./emacs.nix pkgs;
 
@@ -222,20 +223,14 @@
     pcre
     pdnsd
     pdfgrep
-    (perl.withPackages (
-      perl-pkgs: with perl-pkgs; [
-        ImageExifTool
-      ]))
+    (perl.withPackages (perl-pkgs: with perl-pkgs; [ ImageExifTool ]))
     pinentry_mac
     pkg-config
     plantuml
     pngpaste
     pnpm
     poppler-utils
-    (postgresql.withPackages (
-      postgres-pkgs: with postgres-pkgs; [
-        pgvector
-      ]))
+    (postgresql.withPackages (postgres-pkgs: with postgres-pkgs; [ pgvector ]))
     libpq
     procmail
     procps
@@ -243,26 +238,27 @@
     psrecord
     pstree
     pv
-    (lib.hiPrio
-     (python3.withPackages (
-       python-pkgs: with python-pkgs; [
-         autoflake
-         basedpyright
-         black                    # Python code formatter
-         flake8                   # Python code linter
-         hf-xet
-         huggingface-hub
-         isort                    # Python code formatter
-         numpy
-         pandas
-         pylint
-         requests
-         stdenv
-         venvShellHook
-       ])))
-    pyright                       # LSP server for Python
+    (lib.hiPrio (python3.withPackages (python-pkgs:
+      with python-pkgs; [
+        autoflake
+        basedpyright
+        black # Python code formatter
+        ruff # Python code linter/formatter
+        flake8 # Python code linter
+        hf-xet
+        huggingface-hub
+        isort # Python code formatter
+        numpy
+        pandas
+        pylint
+        requests
+        stdenv
+        venvShellHook
+      ])))
+    pyright # LSP server for Python
     qdrant
-    qemu libvirt
+    qemu
+    libvirt
     qpdf
     qrencode
     rag-client
@@ -293,7 +289,7 @@
     sourceHighlight
     spiped
     sqlite
-    sqlite-analyzer 
+    sqlite-analyzer
     sqldiff
     squashfsTools
     srm
@@ -343,7 +339,7 @@
     zip
     zsh
     zsh-syntax-highlighting
-  
+
     aider-chat
     (lib.hiPrio llama-cpp)
     llama-swap
@@ -352,7 +348,7 @@
     qdrant
     qdrant-web-ui
     rustdocs-mcp-server
-  
+
     context7-mcp
     playwright-mcp
     github-mcp-server
