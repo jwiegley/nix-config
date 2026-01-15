@@ -363,6 +363,6 @@ with pkgs; rec {
     ccusage
     opencode
     # gemini-cli
-    # codex
+    codex
   ]);
 }
