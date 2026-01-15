@@ -43,6 +43,7 @@
     sizes.url = "git+file:///Users/johnw/src/sizes";
     trade-journal.url = "git+file:///Users/johnw/src/trade-journal";
     una.url = "git+file:///Users/johnw/src/una";
+    gh-to-org.url = "git+file:///Users/johnw/src/gh-to-org";
   };
 
   outputs = inputs:

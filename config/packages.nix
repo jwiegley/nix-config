@@ -30,6 +30,7 @@ with pkgs; rec {
     inputs.sizes.packages.${system}.default
     inputs.trade-journal.packages.${system}.default
     inputs.una.packages.${system}.default
+    inputs.gh-to-org.packages.${system}.default
     act
     apg
     aria2
