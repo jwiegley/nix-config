@@ -188,6 +188,7 @@ in {
       "netdownloadhelpercoapp"
       "opencode-desktop"
       "pdf-expert"
+      "postman"
       # "sage"
       "signal"
       "slack"
