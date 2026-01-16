@@ -948,6 +948,31 @@ in {
         "${inputs.double}/.claude/commands/tasks.md";
       "claude/commands/weekly.md".source =
         "${inputs.double}/.claude/commands/weekly.md";
+
+      "opencode/command/business.md".source =
+        "${inputs.double}/.claude/commands/business.md";
+      "opencode/command/engineering.md".source =
+        "${inputs.double}/.claude/commands/engineering.md";
+      "opencode/command/handoff.md".source =
+        "${inputs.double}/.claude/commands/handoff.md";
+      "opencode/command/memory.md".source =
+        "${inputs.double}/.claude/commands/memory.md";
+      "opencode/command/new-task.md".source =
+        "${inputs.double}/.claude/commands/new-task.md";
+      "opencode/command/project-status.md".source =
+        "${inputs.double}/.claude/commands/project-status.md";
+      "opencode/command/research-update.md".source =
+        "${inputs.double}/.claude/commands/research-update.md";
+      "opencode/command/research.md".source =
+        "${inputs.double}/.claude/commands/research.md";
+      "opencode/command/sync.md".source =
+        "${inputs.double}/.claude/commands/sync.md";
+      "opencode/command/task-done.md".source =
+        "${inputs.double}/.claude/commands/task-done.md";
+      "opencode/command/tasks.md".source =
+        "${inputs.double}/.claude/commands/tasks.md";
+      "opencode/command/weekly.md".source =
+        "${inputs.double}/.claude/commands/weekly.md";
     };
   };
 
