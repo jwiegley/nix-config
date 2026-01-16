@@ -18,6 +18,8 @@ let
 
   packages = import ./packages.nix args;
 in {
+  imports = [ inputs.git-ai.homeManagerModules.default ];
+
   home = {
     stateVersion = "23.11";
 
@@ -206,6 +208,11 @@ in {
       enableBashIntegration = true;
       enableZshIntegration = true;
       nix-direnv.enable = true;
+    };
+
+    git-ai = {
+      enable = true;
+      installHooks = true;
     };
 
     htop.enable = true;
@@ -490,7 +497,7 @@ in {
 
     git = {
       enable = true;
-      # package = pkgs.gitFull;
+      package = inputs.git-ai.packages.${system}.default;
 
       signing = {
         key = signing_key;
