@@ -247,7 +247,7 @@ in {
       "fujitsu-scansnap-home"
       "gzdoom"
       "raspberry-pi-imager"
-      "logitune"
+      # "logitune"
     ] ++ lib.optionals (hostname == "clio") [ "aldente" "wifi-explorer" ];
 
     ## The following software, or versions of software, are not available
