@@ -365,5 +365,6 @@ with pkgs; rec {
     opencode
     # gemini-cli
     codex
+    ollama
   ]);
 }
