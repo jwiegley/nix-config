@@ -1,7 +1,7 @@
 HOSTNAME   = hera
 REMOTES	   = clio
 GIT_REMOTE = jwiegley
-MAX_AGE	   = 14
+MAX_AGE	   = 28
 NIX_CONF   = $(HOME)/src/nix
 NIXOPTS	   =
 PROJECTS   = $(HOME)/.config/projects
