@@ -89,7 +89,6 @@ with pkgs; rec {
     fswatch
     fx
     fzf
-    fzf-zsh
     gawk
     getopt
     delta
