@@ -1,8 +1,12 @@
-self: pkgs:
+# overlays/00-last-known-good.nix
+# Purpose: Pin specific packages to known-good nixpkgs revisions
+# Dependencies: None (uses only prev)
+# Packages: siege, xquartz, git-machete
+final: prev:
 
 let
   nixpkgs = args@{ rev, sha256 }:
-    import (pkgs.fetchFromGitHub (args // {
+    import (prev.fetchFromGitHub (args // {
       owner = "NixOS";
       repo = "nixpkgs";
     })) { };

@@ -1,16 +1,24 @@
-self: pkgs:
+# overlays/10-emacs.nix
+# Purpose: Emacs with MacPort patches, custom packages, and multiple variants
+# Dependencies: Uses final for emacs cross-references; uses prev for nixpkgs
+# Packages: emacs, emacs30-macport, emacs30, emacsHEAD, emacsPackages, and
+#           40+ custom Emacs packages (jobhours, gptel-*, org-*, etc.)
+# Note: Uses ./emacs/builder.nix, ./emacs/patches/*, and paths.hours
+final: prev:
 
 let
+  paths = import ../config/paths.nix;
+
   myEmacsPackageOverrides = eself: esuper:
     let
-      inherit (pkgs) fetchurl fetchgit fetchFromGitHub fetchzip stdenv lib;
+      inherit (prev) fetchurl fetchgit fetchFromGitHub fetchzip stdenv lib;
       inherit (stdenv) mkDerivation;
 
       withPatches = pkg: patches:
         pkg.overrideAttrs (attrs: { inherit patches; });
 
       compileEmacsFiles = args:
-        pkgs.callPackage ./emacs/builder.nix
+        prev.callPackage ./emacs/builder.nix
         ({ inherit (eself) emacs; } // args);
 
       addBuildInputs = pkg: inputs:
@@ -23,7 +31,7 @@ let
           src = ./emacs + ("/" + name);
         };
 
-      fetchFromEmacsWiki = pkgs.callPackage ({ fetchurl, name, sha256 }:
+      fetchFromEmacsWiki = prev.callPackage ({ fetchurl, name, sha256 }:
         fetchurl {
           inherit sha256;
           url = "https://www.emacswiki.org/emacs/download/" + name;
@@ -126,7 +134,7 @@ let
 
       jobhours = compileEmacsFiles {
         name = "jobhours";
-        src = /Users/johnw/src/hours;
+        src = paths.hours;
       };
 
       ########################################################################
@@ -217,7 +225,7 @@ let
           # date = 2025-07-16T14:21:52-04:00;
         };
         propagatedBuildInputs = with eself;
-          [ (pkgs.emacs-lsp-booster.override { emacs = eself.emacs; }) ];
+          [ (prev.emacs-lsp-booster.override { emacs = eself.emacs; }) ];
       };
 
       eww-plz = compileEmacsFiles {
@@ -689,9 +697,9 @@ let
     };
 
   mkEmacsPackages = emacs:
-    pkgs.lib.recurseIntoAttrs ((self.emacsPackagesFor emacs).overrideScope
+    prev.lib.recurseIntoAttrs ((final.emacsPackagesFor emacs).overrideScope
       (_: super:
-        pkgs.lib.fix (pkgs.lib.extends myEmacsPackageOverrides (_:
+        prev.lib.fix (prev.lib.extends myEmacsPackageOverrides (_:
           super.elpaPackages // super.melpaPackages // super.manualPackages // {
             inherit emacs;
             inherit (super) elpaBuild melpaBuild trivialBuild;
@@ -700,14 +708,16 @@ let
 
 in {
 
-  emacs = self.emacs30-macport;
-  emacsPackages = self.emacs30MacPortPackages;
-  emacsPackagesNg = self.emacs30MacPortPackagesNg;
-  emacsEnv = self.emacs30MacPortEnv;
+  # NOTE: Using 'final' for emacs aliases because they reference
+  # packages defined in this same overlay
+  emacs = final.emacs30-macport;
+  emacsPackages = final.emacs30MacPortPackages;
+  emacsPackagesNg = final.emacs30MacPortPackagesNg;
+  emacsEnv = final.emacs30MacPortEnv;
 
   ##########################################################################
 
-  emacs30-macport = (pkgs.emacs30-macport.override {
+  emacs30-macport = (prev.emacs30-macport.override {
     srcRepo = true;
     withTreeSitter = true;
     withNativeCompilation = true;
@@ -715,39 +725,39 @@ in {
     env = attrs.env // { CFLAGS = "-fobjc-arc"; };
     configureFlags = attrs.configureFlags ++ [ "--disable-gc-mark-trace" ];
     nativeBuildInputs = attrs.nativeBuildInputs
-      ++ [ pkgs.autoreconfHook pkgs.autoconf pkgs.automake pkgs.pkg-config ];
+      ++ [ prev.autoreconfHook prev.autoconf prev.automake prev.pkg-config ];
   });
-  emacs30MacPortPackages = self.emacs30MacPortPackagesNg;
-  emacs30MacPortPackagesNg = mkEmacsPackages self.emacs30-macport;
+  emacs30MacPortPackages = final.emacs30MacPortPackagesNg;
+  emacs30MacPortPackagesNg = mkEmacsPackages final.emacs30-macport;
 
   emacs30MacPortEnv = myPkgs:
-    pkgs.myEnvFun {
+    prev.myEnvFun {
       name = "emacs30MacPort";
       buildInputs =
-        [ (self.emacs30MacPortPackagesNg.emacsWithPackages myPkgs) ];
+        [ (final.emacs30MacPortPackagesNg.emacsWithPackages myPkgs) ];
     };
 
   ##########################################################################
 
-  emacs30 = (pkgs.emacs30.override {
+  emacs30 = (prev.emacs30.override {
     withImageMagick = true;
     withNativeCompilation = true;
   }).overrideAttrs (attrs: {
     configureFlags = attrs.configureFlags ++ [ "--disable-gc-mark-trace" ];
     patches = attrs.patches ++ [ ./emacs/patches/nsthread.patch ];
   });
-  emacs30Packages = self.emacs30PackagesNg;
-  emacs30PackagesNg = mkEmacsPackages self.emacs30;
+  emacs30Packages = final.emacs30PackagesNg;
+  emacs30PackagesNg = mkEmacsPackages final.emacs30;
 
   emacs30Env = myPkgs:
-    pkgs.myEnvFun {
+    prev.myEnvFun {
       name = "emacs30";
-      buildInputs = [ (self.emacs30PackagesNg.emacsWithPackages myPkgs) ];
+      buildInputs = [ (final.emacs30PackagesNg.emacsWithPackages myPkgs) ];
     };
 
   ##########################################################################
 
-  emacsHEAD = with pkgs;
+  emacsHEAD = with prev;
     let
       libGccJitLibraryPaths =
         [ "${lib.getLib libgccjit}/lib/gcc" "${lib.getLib stdenv.cc.libc}/lib" ]
@@ -778,13 +788,13 @@ in {
         ++ [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
     });
 
-  emacsHEADPackages = self.emacsHEADPackagesNg;
-  emacsHEADPackagesNg = mkEmacsPackages self.emacsHEAD;
+  emacsHEADPackages = final.emacsHEADPackagesNg;
+  emacsHEADPackagesNg = mkEmacsPackages final.emacsHEAD;
 
   emacsHEADEnv = myPkgs:
-    pkgs.myEnvFun {
+    prev.myEnvFun {
       name = "emacsHEAD";
-      buildInputs = [ (self.emacsHEADPackagesNg.emacsWithPackages myPkgs) ];
+      buildInputs = [ (final.emacsHEADPackagesNg.emacsWithPackages myPkgs) ];
     };
 
 }

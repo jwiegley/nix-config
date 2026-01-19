@@ -96,19 +96,31 @@ u repl
     - Can override packages, services, or add host-specific settings
 
 - **overlays/**: Custom package overlays organized by category
-  - **Numbered prefixes indicate loading order**: `00-` loads first, then `10-`, then `20-`, etc.
-  - **Loading mechanism**: All `.nix` files in overlays/ are automatically imported by flake.nix
+  - **Numbered prefixes indicate loading order**: `00-` loads first, then `10-`, `15-`, `30-`, etc.
+  - **Loading mechanism**: All `.nix` files in overlays/ are automatically imported by darwin.nix
   - **Categories**:
-    - `00-lib.nix`: Utility functions available to other overlays
-    - `10-emacs.nix`, `10-emacs-packages.nix`: Emacs with MacPort patches and custom packages
-    - `10-haskell.nix`: Haskell package overrides and GHC versions
-    - `10-coq.nix`: Coq theorem prover and related tools
-    - `20-*`: Custom scripts and utilities that depend on earlier overlays
+    - `00-last-known-good.nix`: Pin packages to specific nixpkgs revisions
+    - `00-lib.nix`: Shared utility functions (mkScriptPackage, mkSimpleGitHubPackage, filterGitSource)
+    - `10-coq.nix`: Coq theorem prover with IDE disabled
+    - `10-emacs.nix`: Emacs with MacPort patches, custom packages, and variants
+    - `15-darwin-fixes.nix`: Darwin-specific package fixes (time, zbar)
+    - `30-ai-*.nix`: AI/ML tools split into llm, mcp, and python overlays
+    - `30-data-tools.nix`: Data processing utilities (hashdb, dirscan, tsvutils)
+    - `30-git-tools.nix`: Git extensions (git-lfs, git-pr, git-scripts)
+    - `30-ledger.nix`: Ledger CLI accounting from local source
+    - `30-misc-tools.nix`: Miscellaneous utilities (hammer, linkdups, z, yamale, etc.)
+    - `30-text-tools.nix`: Text processing tools (filetags, hyperorg, org2tc)
+    - `30-user-scripts.nix`: Personal script collections (nix-scripts, my-scripts)
   - **Overlay pattern**: Each file exports `final: prev: { ... }` where:
     - `final`: The final package set after all overlays
     - `prev`: The package set before this overlay
     - Always use `prev` to reference the previous package version
     - Use `final` when you need packages from later overlays (careful: can cause infinite recursion)
+
+- **config/paths.nix**: Centralized path definitions for external source dependencies
+  - Defines paths to local source checkouts used by overlays
+  - Import in overlays: `let paths = import ../config/paths.nix; in { ... }`
+  - Paths: scripts, gitScripts, dirscan, org2tc, hours, ledger
 
 ### Configuration Merging and Precedence
 
