@@ -34,7 +34,7 @@
       flake = false;
     };
 
-    git-ai.url = "git+file:///Users/johnw/src/git-ai";
+    git-ai.url = "git+file:///Users/johnw/src/git-ai/work/nix-support";
     git-all.url = "git+file:///Users/johnw/src/git-all";
     gitlib.url = "git+file:///Users/johnw/src/gitlib?submodules=0";
     hakyll.url = "git+file:///Users/johnw/src/hakyll";
