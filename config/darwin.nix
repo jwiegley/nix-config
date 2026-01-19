@@ -186,7 +186,7 @@ in {
       "microsoft-word"
       "microsoft-remote-desktop"
       "netdownloadhelpercoapp"
-      "ollama"
+      "ollama-app"
       "opencode-desktop"
       "pdf-expert"
       "postman"
