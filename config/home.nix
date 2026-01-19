@@ -215,11 +215,8 @@ in {
       installHooks = true;
       settings = {
         promptStorage = "local";
-        includePromptsInRepositories = [
-          "ghpos:positron-ai/*"
-          "gitea@gitea:*"
-          "*positron-ai*"
-        ];
+        includePromptsInRepositories =
+          [ "ghpos:positron-ai/*" "gitea@gitea:*" "*positron-ai*" ];
         defaultPromptStorage = "notes";
       };
     };
