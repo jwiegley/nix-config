@@ -213,6 +213,15 @@ in {
     git-ai = {
       enable = true;
       installHooks = true;
+      settings = {
+        promptStorage = "local";
+        includePromptsInRepositories = [
+          "ghpos:positron-ai/*"
+          "gitea@gitea:*"
+          "*positron-ai*"
+        ];
+        defaultPromptStorage = "notes";
+      };
     };
 
     htop.enable = true;
