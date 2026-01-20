@@ -1,0 +1,97 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-opus-4-5",
+  "temperature": 0.1,
+  "permission": {
+    "edit": "ask",
+    "write": "ask",
+    "bash": {
+      "*": "ask",
+      "git status *": "allow",
+      "git log *": "allow",
+      "git diff *": "allow",
+      "ls *": "allow",
+      "cat *": "allow",
+      "find *": "allow"
+    }
+  },
+  "tools": {
+    "*": true
+  },
+  "mcp": {
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@context7/mcp-server"],
+      "timeout": 10000,
+      "_comment": "Project context and codebase understanding"
+    },
+    "sequential-thinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "timeout": 5000,
+      "_comment": "Complex problem solving and planning"
+    },
+    "nixos": {
+      "type": "local",
+      "command": ["npx", "-y", "@nixos-mcp/server"],
+      "timeout": 10000,
+      "_comment": "Search NixOS packages, options, programs, flakes, Home Manager configs"
+    },
+    "perplexity": {
+      "type": "remote",
+      "url": "https://api.perplexity.ai/mcp",
+      "headers": {
+        "Authorization": "Bearer {env:PERPLEXITY_API_KEY}"
+      },
+      "_comment": "AI-powered web search via Perplexity"
+    },
+    "kagi": {
+      "type": "local",
+      "command": ["npx", "-y", "@anthropics/kagi-mcp-server"],
+      "environment": {
+        "KAGI_API_KEY": "{env:KAGI_API_KEY}"
+      },
+      "_comment": "Web search via Kagi"
+    },
+    "fetch": {
+      "type": "local",
+      "command": ["npx", "-y", "@anthropics/fetch-mcp-server"],
+      "timeout": 30000,
+      "_comment": "Fetch web documentation and resources"
+    },
+    "notion": {
+      "type": "local",
+      "command": ["npx", "-y", "@anthropics/notion-mcp-server"],
+      "environment": {
+        "NOTION_API_KEY": "{env:NOTION_API_KEY}"
+      },
+      "_comment": "Query Notion documents and databases"
+    },
+    "pal": {
+      "type": "local",
+      "command": ["your-pal-mcp-command"],
+      "timeout": 300000,
+      "environment": {
+        "PAL_MODELS": "gemini-3-pro-preview,gpt-5.2-pro"
+      },
+      "_comment": "Multi-model consensus and deep thinking"
+    },
+    "mssql": {
+      "type": "local",
+      "command": ["npx", "-y", "@anthropics/mssql-mcp-server"],
+      "environment": {
+        "MSSQL_CONNECTION_STRING": "{env:MSSQL_CONNECTION_STRING}"
+      },
+      "_comment": "SQL Server database access"
+    }
+  },
+  "agent": {
+    "_comment": "Agent definitions can also go here as JSON instead of markdown files",
+    "example-inline-agent": {
+      "description": "Example of inline agent definition",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-5",
+      "prompt": "You are a helpful assistant."
+    }
+  }
+}

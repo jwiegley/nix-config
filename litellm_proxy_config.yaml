@@ -1,0 +1,233 @@
+# ============================================================================
+# LiteLLM Proxy Configuration with Pass-Through Endpoints
+# ============================================================================
+#
+# Required environment variables (set these before starting the proxy):
+#   ANTHROPIC_API_KEY       - Your Anthropic API key
+#   GEMINI_API_KEY          - Your Google AI Studio API key
+#   OPENAI_API_KEY          - Your OpenAI API key
+#   PERPLEXITYAI_API_KEY    - Your Perplexity API key
+# ============================================================================
+
+# -----------------------------------------------------------------------------
+# Model List - Define all models with their provider configurations
+# -----------------------------------------------------------------------------
+model_list:
+  # ===========================================================================
+  # ANTHROPIC MODELS
+  # ===========================================================================
+  # Pass-through endpoint: /anthropic/*
+  # Replace https://api.anthropic.com with http://YOUR_PROXY:4000/anthropic
+
+  - model_name: claude-opus-4-5
+    litellm_params:
+      model: anthropic/claude-opus-4-5-20251101
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-sonnet-4-5
+    litellm_params:
+      model: anthropic/claude-sonnet-4-5-20250929
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-sonnet-4
+    litellm_params:
+      model: anthropic/claude-sonnet-4-20250514
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-3-5-sonnet
+    litellm_params:
+      model: anthropic/claude-3-5-sonnet-20241022
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-3-5-haiku
+    litellm_params:
+      model: anthropic/claude-3-5-haiku-20241022
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-3-haiku
+    litellm_params:
+      model: anthropic/claude-3-haiku-20240307
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # Wildcard: Allow any Anthropic model through pass-through
+  - model_name: anthropic/*
+    litellm_params:
+      model: anthropic/*
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # ===========================================================================
+  # GOOGLE AI STUDIO (Gemini) MODELS
+  # ===========================================================================
+  # Pass-through endpoint: /gemini/*
+  # Replace https://generativelanguage.googleapis.com with http://YOUR_PROXY:4000/gemini
+
+  - model_name: gemini-2.5-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro-preview-06-05
+      api_key: os.environ/GEMINI_API_KEY
+
+  - model_name: gemini-2.5-flash
+    litellm_params:
+      model: gemini/gemini-2.5-flash-preview-05-20
+      api_key: os.environ/GEMINI_API_KEY
+
+  - model_name: gemini-2.0-flash
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+  - model_name: gemini-2.0-flash-thinking
+    litellm_params:
+      model: gemini/gemini-2.0-flash-thinking-exp
+      api_key: os.environ/GEMINI_API_KEY
+
+  - model_name: gemini-1.5-pro
+    litellm_params:
+      model: gemini/gemini-1.5-pro-latest
+      api_key: os.environ/GEMINI_API_KEY
+
+  - model_name: gemini-1.5-flash
+    litellm_params:
+      model: gemini/gemini-1.5-flash-latest
+      api_key: os.environ/GEMINI_API_KEY
+
+  # Wildcard: Allow any Gemini model through pass-through
+  - model_name: gemini/*
+    litellm_params:
+      model: gemini/*
+      api_key: os.environ/GEMINI_API_KEY
+
+  # ===========================================================================
+  # OPENAI MODELS
+  # ===========================================================================
+  # Pass-through endpoint: /openai/*
+  # Replace https://api.openai.com with http://YOUR_PROXY:4000/openai
+
+  - model_name: gpt-5
+    litellm_params:
+      model: openai/gpt-5
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: gpt-4.1
+    litellm_params:
+      model: openai/gpt-4.1
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: o3
+    litellm_params:
+      model: openai/o3
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: o3-mini
+    litellm_params:
+      model: openai/o3-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: o1
+    litellm_params:
+      model: openai/o1
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: o1-mini
+    litellm_params:
+      model: openai/o1-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  # Wildcard: Allow any OpenAI model through pass-through
+  - model_name: openai/*
+    litellm_params:
+      model: openai/*
+      api_key: os.environ/OPENAI_API_KEY
+
+  # ===========================================================================
+  # PERPLEXITY MODELS
+  # ===========================================================================
+  # Note: Perplexity does not have a native pass-through endpoint in LiteLLM.
+  # These are configured as standard LiteLLM provider models.
+  # Requests use the /chat/completions endpoint with model="perplexity/..."
+
+  - model_name: sonar-deep-research
+    litellm_params:
+      model: perplexity/sonar-deep-research
+      api_key: os.environ/PERPLEXITYAI_API_KEY
+
+  - model_name: sonar-reasoning-pro
+    litellm_params:
+      model: perplexity/sonar-reasoning-pro
+      api_key: os.environ/PERPLEXITYAI_API_KEY
+
+  - model_name: sonar-reasoning
+    litellm_params:
+      model: perplexity/sonar-reasoning
+      api_key: os.environ/PERPLEXITYAI_API_KEY
+
+  - model_name: sonar-pro
+    litellm_params:
+      model: perplexity/sonar-pro
+      api_key: os.environ/PERPLEXITYAI_API_KEY
+
+  - model_name: sonar
+    litellm_params:
+      model: perplexity/sonar
+      api_key: os.environ/PERPLEXITYAI_API_KEY
+
+  - model_name: r1-1776
+    litellm_params:
+      model: perplexity/r1-1776
+      api_key: os.environ/PERPLEXITYAI_API_KEY
+
+# -----------------------------------------------------------------------------
+# General Settings - Server-level configuration
+# -----------------------------------------------------------------------------
+general_settings:
+  # Enable pass-through endpoints
+  enable_pass_through_endpoints: true
+
+# -----------------------------------------------------------------------------
+# LiteLLM Settings - Module-level behavior
+# -----------------------------------------------------------------------------
+litellm_settings:
+  # Automatically retry failed requests
+  num_retries: 3
+  # Request timeout (seconds)
+  request_timeout: 600
+  # Drop unsupported params instead of erroring
+  drop_params: true
+  # Enable cost tracking
+  success_callback: ["langfuse"]  # Optional: remove if not using Langfuse
+  # Fallback configuration
+  fallbacks:
+    - claude-sonnet-4-5: [gpt-4o, gemini-2.5-pro]
+    - gpt-4o: [claude-sonnet-4-5, gemini-2.5-pro]
+    - gemini-2.5-pro: [claude-sonnet-4-5, gpt-4o]
+
+# -----------------------------------------------------------------------------
+# Router Settings - Load balancing and routing
+# -----------------------------------------------------------------------------
+router_settings:
+  routing_strategy: simple-shuffle
+  # Model group aliases for convenience
+  model_group_alias:
+    claude: claude-sonnet-4-5
+    gpt: gpt-4o
+    gemini: gemini-2.5-pro
+    perplexity: sonar-pro
+
+# -----------------------------------------------------------------------------
+# Environment Variables (can also be set externally)
+# -----------------------------------------------------------------------------
+environment_variables:
+  ANTHROPIC_API_KEY: ""
+  GEMINI_API_KEY: ""
+  OPENAI_API_KEY: ""
+  PERPLEXITYAI_API_KEY: ""

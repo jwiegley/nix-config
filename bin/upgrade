@@ -9,7 +9,7 @@ case $1 in
         update-overlay --all
 	./build system
         u hera upgrade-tasks sign # check
-        notify "Nix on Hera upgraded"
+        # notify "Nix on Hera upgraded"
         ;;
 
     clio)
@@ -18,7 +18,7 @@ case $1 in
 	cd ~/src/nix
 	./build system
         u clio upgrade-tasks # check
-        notify "Nix on Clio upgraded"
+        # notify "Nix on Clio upgraded"
         ;;
 
     *)
