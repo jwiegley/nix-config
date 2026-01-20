@@ -166,6 +166,7 @@ in {
       "docker-desktop"
       "drivedx"
       "element"
+      "elgato-stream-deck"
       "fantastical"
       "geektool"
       "github"
