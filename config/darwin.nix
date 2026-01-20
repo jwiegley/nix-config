@@ -341,19 +341,11 @@ in {
       cores = 10;
 
       # Custom binary caches for better package availability
-      substituters = [
-        "https://cache.nixos.org"
-        # "https://nixcache.chainweb.com"
-        "https://cache.iog.io"
-      ];
-      trusted-substituters = [
-        # "https://nixcache.chainweb.com"
-        "https://cache.iog.io"
-      ];
+      substituters = [ "https://cache.nixos.org" "https://cache.iog.io" ];
+      trusted-substituters = [ "https://cache.iog.io" ];
       trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
-        # "nixcache.chainweb.com:FVN503ABX9F8x8K0ptnc99XEz5SaA4Sks6kNcZn2pBY="
         "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
       ];
     };

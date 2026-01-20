@@ -5,8 +5,7 @@
 # Note: git-scripts requires paths.gitScripts
 final: prev:
 
-let
-  paths = import ../config/paths.nix;
+let paths = import ../config/paths.nix;
 in {
 
   # Git Large File Storage (pre-built binary for darwin-arm64)

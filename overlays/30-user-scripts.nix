@@ -7,8 +7,7 @@
 #   - my-scripts requires paths.scripts
 final: prev:
 
-let
-  paths = import ../config/paths.nix;
+let paths = import ../config/paths.nix;
 in {
 
   # Scripts from this repository's bin/ directory

@@ -7,8 +7,7 @@
 #   - org2tc requires paths.org2tc
 final: prev:
 
-let
-  paths = import ../config/paths.nix;
+let paths = import ../config/paths.nix;
 in {
 
   # Manage tags in filenames
