@@ -316,7 +316,6 @@ in with epkgs; [
   ox-whatsapp
   p-search
   package-lint
-  pact-mode
   pandoc-mode
   paradox
   paredit
