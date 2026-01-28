@@ -100,8 +100,8 @@ final: prev: {
       src = fetchFromGitHub {
         owner = "jwiegley";
         repo = "sift";
-        rev = "c823f340be8818cc7aa970f9da4c81987f1d203e";
-        sha256 = "sha256-qHiSbrd73DZjS9GuCPhx5rPBj/F5UK88dCLCx+STTfk=";
+        rev = "c823f340be8818cc7aa970f9da4c81247f5b5535";
+        sha256 = "1yadjgjcghi2fhyayl3ry67w3cz6f7w0ibni9dikdp3vnxp94y58";
         # date = 2011-09-10T19:05:37-05:00;
       };
 

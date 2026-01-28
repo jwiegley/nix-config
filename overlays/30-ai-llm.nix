@@ -57,12 +57,12 @@ final: prev: {
 
   # llama.cpp - LLM inference with GGUF models
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "7679";
+    version = "7823";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-aU981UeCpdStxYMRJNOuTzfgIpLtnxnQeYsh/EH7c2c=";
+      hash = "sha256-nDC3/Xlz6uMvfC3doBUV5SMKjmEPXamDnBTWuBtTVk0=";
     };
     # Fix macOS dylib version: 0.0.7236 exceeds max patch version (255)
     cmakeFlags = (attrs.cmakeFlags or [ ])
