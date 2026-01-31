@@ -67,7 +67,7 @@ in with epkgs; [
   (exclude consult-git-log-grep)
   consult-hoogle
   (exclude consult-lsp)
-  consult-omni
+  (exclude consult-omni)
   consult-org-roam
   consult-projectile
   consult-yasnippet
