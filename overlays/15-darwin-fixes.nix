@@ -1,23 +1,17 @@
 # overlays/15-darwin-fixes.nix
 # Purpose: Fixes for packages that fail to build or test on macOS (Darwin)
 # Dependencies: None (uses only prev)
-# Packages: time, zbar, z3, fsspec
+# Packages: samba, z3, fsspec
 final: prev: {
 
-  # Fix time package build failure on macOS
-  # The source uses __sighandler_t which is not available on Darwin
-  # Use sed to replace the incorrect type name during the patch phase
-  time = prev.time.overrideAttrs (oldAttrs: {
-    postPatch = (oldAttrs.postPatch or "") + ''
-      echo "Patching src/time.c to fix __sighandler_t on macOS"
-      sed -i.bak 's/__sighandler_t/sighandler_t/g' src/time.c
+  # Fix samba build failure on macOS
+  # Clang rejects discard_const in static initializers as non-constant expressions
+  # Patch the test file's STR_VAL macro to use a simple cast instead
+  samba = prev.samba.overrideAttrs (oldAttrs: {
+    postPatch = (oldAttrs.postPatch or "") + prev.lib.optionalString prev.stdenv.isDarwin ''
+      sed -i.bak 's/discard_const(s)/(void *)(s)/g' lib/ldb/tests/test_ldb_comparison_fold.c
     '';
   });
-
-  # Fix zbar test failures on macOS
-  # Tests fail with zbarimg returning error status (-11) which is a segfault
-  # Disable tests as the package itself works fine
-  zbar = prev.zbar.overrideAttrs (oldAttrs: { doCheck = false; });
 
   # Fix z3 test failures on macOS
   # Tests fail with "Error: invalid argument" in api_polynomial test
