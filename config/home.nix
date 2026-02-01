@@ -237,7 +237,13 @@ in {
           scan_timeout = 50;
           command_timeout = 1000; # Prevent git-annex broken pipe errors
 
-          format = lib.concatStrings [ "$all" "$directory" "$character" ];
+          format = lib.concatStrings [
+            "($all\n)"
+            "$directory"
+            "$character"
+          ];
+
+          line_break.disabled = true;
         }
       ];
 
