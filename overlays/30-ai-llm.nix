@@ -57,17 +57,21 @@ final: prev: {
 
   # llama.cpp - LLM inference with GGUF models
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "7823";
+    version = "7909";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-nDC3/Xlz6uMvfC3doBUV5SMKjmEPXamDnBTWuBtTVk0=";
+      hash = "sha256-2YWnykjWctS8hYPVS7MNjAgTCKt4HWwLgFohscImL5M=";
     };
-    # Fix macOS dylib version: 0.0.7236 exceeds max patch version (255)
-    cmakeFlags = (attrs.cmakeFlags or [ ])
-      ++ prev.lib.optionals prev.stdenv.hostPlatform.isDarwin
-      [ "-DLLAMA_BUILD_NUMBER=0" ];
+    npmDepsHash = "sha256-bbv0e3HZmqpFwKELiEFBgoMr72jKbsX20eceH4XjfBA=";
+    npmDeps = prev.fetchNpmDeps {
+      name = "llama-cpp-${version}-npm-deps";
+      inherit src;
+      inherit (attrs) patches;
+      preBuild = "pushd tools/server/webui";
+      hash = npmDepsHash;
+    };
   });
 
   # llama-swap - Model swapping for llama.cpp
