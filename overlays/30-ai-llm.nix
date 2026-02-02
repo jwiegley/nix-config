@@ -36,14 +36,14 @@ final: prev: {
   hfdownloader = with prev;
     buildGoModule rec {
       pname = "hfdownloader";
-      version = "2.3.3";
-      vendorHash = "sha256-xswTwm37YakOobXl8A1S/3wzvAC5U2j2j/xN2m9tJ2s=";
+      version = "3.0.3";
+      vendorHash = "sha256-DUALCwhuwQZ94uOVjw5wyY8z3fYr9WyDwVc89U34ytM=";
 
       src = fetchFromGitHub {
         owner = "bodaay";
         repo = "HuggingFaceModelDownloader";
-        rev = "${version}";
-        hash = "sha256-2Y5jwXrTJKcMOus0zLXLhCVK5Q7CH4lydhMVa0EEFWI=";
+        rev = "v${version}";
+        hash = "sha256-QpDtUAzR0sPKL/EwS5IhjtgE1bDj4ompAYMvK8kEOQs=";
       };
 
       meta = with lib; {
@@ -57,12 +57,12 @@ final: prev: {
 
   # llama.cpp - LLM inference with GGUF models
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "7909";
+    version = "7911";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-2YWnykjWctS8hYPVS7MNjAgTCKt4HWwLgFohscImL5M=";
+      hash = "sha256-LupXwk5v3Z8+ubBfLZYUdqwsC2/kTDnvhiRoDmQ6xEk=";
     };
     npmDepsHash = "sha256-bbv0e3HZmqpFwKELiEFBgoMr72jKbsX20eceH4XjfBA=";
     npmDeps = prev.fetchNpmDeps {
@@ -76,13 +76,13 @@ final: prev: {
 
   # llama-swap - Model swapping for llama.cpp
   llama-swap = let
-    version = "182";
+    version = "189";
 
     src = prev.fetchFromGitHub {
       owner = "mostlygeek";
       repo = "llama-swap";
       rev = "v${version}";
-      hash = "sha256-1uvrKFj5816PPWiDnzGBw/kdgt3rShHp2IyuBCunf64=";
+      hash = "sha256-6tAkUSET6klL4PFWawjlBCiMAh/WLQudHLXYjO2PoqI=";
     };
 
     ui = with prev;
@@ -95,9 +95,9 @@ final: prev: {
           --replace '../proxy/ui_dist' '${placeholder "out"}/ui_dist'
         '';
 
-        sourceRoot = "source/ui";
+        sourceRoot = "source/ui-svelte";
 
-        npmDepsHash = "sha256-RKPcMwJ0qVOgbTxoGryrLn7AW0Bfmv9WasoY+gw4B30=";
+        npmDepsHash = "sha256-Fs7+JKE8YBp2Xj8bVBlwmT+UwuD642VeUHiPx+fv94c=";
 
         postInstall = ''
           rm -rf $out/lib
@@ -138,14 +138,14 @@ final: prev: {
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "mlx-lm";
-      version = "0.30.2";
+      version = "0.30.5";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "ml-explore";
         repo = "mlx-lm";
         tag = "v${version}";
-        hash = "sha256-6WlKAchze5B724XYwzpVHy+17HlMcGSYjJw0aOdm5yw=";
+        hash = "sha256-GXz9VtNJ0ldh8aDAyBvSR2DhZq/NctpPup58WLrIt6Y=";
       };
 
       build-system = [ setuptools ];

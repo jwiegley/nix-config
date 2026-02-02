@@ -34,7 +34,7 @@ let
       fetchFromEmacsWiki = prev.callPackage ({ fetchurl, name, sha256 }:
         fetchurl {
           inherit sha256;
-          url = "https://www.emacswiki.org/emacs/download/" + name;
+          url = "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/" + name;
         });
 
       compileEmacsWikiFile = { name, sha256, buildInputs ? [ ], patches ? [ ] }:
@@ -208,8 +208,8 @@ let
         src = fetchFromGitHub {
           owner = "meedstrom";
           repo = "eager-state";
-          rev = "7d34fc1f4f341a971ec165fd54b1f42eb9982971";
-          sha256 = "sha256-VZJflDjBzLs3wTDMCCm27sVWWig6lY/1clYE0miPHUE=";
+          rev = "53282709833021dfbe8605c9eadaa0fffe5da349";
+          sha256 = "sha256-XkQKw8Kq5F2OYoVji49GkJGHbR5r39Z/zFk6kxbvRtc=";
           # date = 2024-08-23T16:09:59+02:00;
         };
         buildInputs = with eself; [ llama ];
@@ -383,8 +383,8 @@ let
         src = fetchFromGitHub {
           owner = "jdtsmith";
           repo = "ultra-scroll-mac";
-          rev = "d230b9308c5891abf8378b1030af9e1b029e9b3b";
-          sha256 = "sha256-zCKjuHjb07hnWgN3Xs1lUD7YLvYmQy1TOxad9xuU6pA=";
+          rev = "08758c6772c5fbce54fb74fb5cce080b6425c6ce";
+          sha256 = "sha256-hKgwjs4qZikbvHKjWIJFlkI/4LXR6qovCoTBM5miVr8=";
           # date = 2025-07-25T13:45:38-04:00;
         };
       };
@@ -455,8 +455,8 @@ let
         src = fetchFromGitHub {
           owner = "kmontag";
           repo = "macher";
-          rev = "d447e262a336498b64e49afc04b76263955bbee7";
-          sha256 = "sha256-EncGkv6QA0YqCU67lgKsvcO+62SKKdcdcs/NVn4eJqc=";
+          rev = "4226e3c09c12bc1cbe1ff8c55e58731092617829";
+          sha256 = "sha256-Y4g2UuT3UOysvhtKVYKlt33qL9h7KzXivxf8zWzlR5g=";
           # date = 2025-08-20T19:15:22-07:00;
         };
         buildInputs = with eself; [ gptel ];
@@ -502,8 +502,8 @@ let
         src = fetchFromGitHub {
           owner = "QiangF";
           repo = "org-extra-emphasis";
-          rev = "d5849bb4f5327273b5a51fa6ce0cf623c58bbb16";
-          sha256 = "sha256-D2Vzrbh1FKIYAHu9Ujga7aaPGw7A6D77N6TsUb+z+2U=";
+          rev = "bc6119226ebd84e7f2efd429a03601f563c9bb4f";
+          sha256 = "sha256-qCgbmBipJF9ZdwPuxyB9sfJVAvzi7pJ9H42ymuE95LE=";
           # date = 2023-12-01T08:29:06+05:30;
         };
       };
@@ -525,8 +525,8 @@ let
         src = fetchFromGitHub {
           owner = "meedstrom";
           repo = "org-mem";
-          rev = "0a33650ccb79c9bd49d7598fbb8f09beb2153350";
-          sha256 = "sha256-dNnVBwXobnvKE/I+0qMPKTwtPcjZw2ar2BFOw4HSMUs=";
+          rev = "58a6ae3f53e87c548ceeebae114230d7424a33ca";
+          sha256 = "sha256-Z6Xbxwh+tKpyV714EAn4cmDe1TxPYLS++hg3pbjsPjk=";
           # date = 2025-10-01T20:50:56+02:00;
         };
         buildInputs = with eself; [ org llama el-job ];
@@ -537,8 +537,8 @@ let
         src = fetchFromGitHub {
           owner = "meedstrom";
           repo = "org-node";
-          rev = "3956804cc0cc19fba0d98b2eb9b76056feda77ae";
-          sha256 = "sha256-j+kUndPjVJBwHYnAVhDNtZTUUYcc9P1nJBPZCU163SI=";
+          rev = "725d69791cc5a38a163bd5d40e58c57787542fe5";
+          sha256 = "sha256-s6qkMxBzSwQuupzGB5BGee/a7Xb+IDxhYKnVYHsEdxw=";
           # date = 2025-10-01T20:55:21+02:00;
         };
         buildInputs = with eself; [ org org-mem llama magit-section el-job ];

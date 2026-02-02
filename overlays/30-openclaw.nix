@@ -7,19 +7,19 @@ final: prev: {
   openclaw = with prev;
     stdenv.mkDerivation rec {
       pname = "openclaw";
-      version = "2026.1.30";
+      version = "2026.2.1";
 
       src = fetchFromGitHub {
         owner = "openclaw";
         repo = "openclaw";
         tag = "v${version}";
-        hash = "sha256-L/AUBlpOGf1Hy+OyFE0xXqTTDyfppMckNzHBp7HvKN4=";
+        hash = "sha256-oT2dZj5kB5xv6dJeh5nchnVHblfcpC31LzsoL4ON1qw=";
       };
 
       pnpmDeps = fetchPnpmDeps {
         inherit pname version src;
         fetcherVersion = 3;
-        hash = "sha256-CqtcNIxYZM9LXNuvhhSSvBPQz6gkoLA11bTybmJMc/w=";
+        hash = "sha256-NxKHy1q7A1zWrwZZGv7Yq5tr3ZyKJYDcKbUV6mSt70Y=";
       };
 
       nativeBuildInputs =
