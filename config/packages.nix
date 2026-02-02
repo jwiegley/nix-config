@@ -357,14 +357,18 @@ with pkgs; rec {
 
     (exe git-annex)
     git-annex-remote-rclone
-  ] ++ (with inputs.llm-agents.packages.${system}; [
-    droid
-    claude-code
-    claude-code-acp
-    ccusage
-    opencode
-    # gemini-cli
-    codex
-    ollama
-  ]);
+  ]
+  # Linux-only packages (not available on Darwin/macOS)
+    ++ lib.optionals stdenv.isLinux [
+      cpx # Modern, fast file copy tool with progress bars and resume support
+    ] ++ (with inputs.llm-agents.packages.${system}; [
+      droid
+      claude-code
+      claude-code-acp
+      ccusage
+      opencode
+      # gemini-cli
+      codex
+      ollama
+    ]);
 }
