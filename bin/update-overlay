@@ -112,14 +112,17 @@ class OverlayParser:
         packages = []
 
         # Match top-level package definitions: name = ...
-        # Must start at column 0 (not indented)
+        # These are inside the `final: prev: { ... }` block, typically indented 2 spaces
         for line in content.split('\n'):
             # Skip empty lines and comments
-            if not line or line.startswith('#') or line.startswith('//'):
+            stripped = line.strip()
+            if not stripped or stripped.startswith('#') or stripped.startswith('//'):
                 continue
-            # Must not start with whitespace (top-level only)
-            if line and not line[0].isspace():
-                match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)\s*=', line)
+            # Match package definitions at top-level (column 0) or standard
+            # overlay indentation (2 spaces inside final: prev: { })
+            indent = len(line) - len(line.lstrip())
+            if indent <= 2:
+                match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)\s*=', stripped)
                 if match:
                     name = match.group(1)
                     # Skip 'self', 'super', 'pkgs', 'let', 'in', etc.
@@ -186,9 +189,10 @@ class OverlayParser:
         # First, find the package definition block
         patterns = [
             # Standard: llama-swap = { ... } or llama-swap = with super; { ... }
-            rf'^{re.escape(package_name)}\s*=',
+            # Allow up to 2 spaces for overlay indentation (inside final: prev: { })
+            rf'^[ ]{{0,2}}{re.escape(package_name)}\s*=',
             # overrideAttrs: llama-cpp = super.llama-cpp.overrideAttrs
-            rf'^{re.escape(package_name)}\s*=\s*(?:super|prev|pkgs)\.[a-zA-Z0-9_-]+\.overrideAttrs',
+            rf'^[ ]{{0,2}}{re.escape(package_name)}\s*=\s*(?:super|prev|pkgs)\.[a-zA-Z0-9_-]+\.overrideAttrs',
             # Nested (indented): gnus-harvest = compileEmacsFiles {
             rf'^\s+{re.escape(package_name)}\s*=\s*(?:compileEmacsFiles|compileEmacsWikiFile|mkDerivation)',
         ]
