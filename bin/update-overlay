@@ -80,6 +80,11 @@ class PackageInfo:
 class OverlayParser:
     """Parse Nix overlay files to extract package information."""
 
+    # Overlay files to skip entirely (not auto-updatable)
+    SKIP_FILES = {
+        '00-last-known-good.nix',  # Packages pinned to specific nixpkgs revisions
+    }
+
     # Package names to skip when using --all (not updatable or special)
     SKIP_PACKAGES = {
         'pythonPackagesExtensions',  # Not a package, extends python packages
@@ -103,6 +108,8 @@ class OverlayParser:
         """Find all package names defined in overlay files."""
         packages = []
         for overlay_file in self.overlays_dir.glob("*.nix"):
+            if overlay_file.name in self.SKIP_FILES:
+                continue
             packages.extend(self._find_packages_in_file(overlay_file))
         return sorted(set(packages) - self.SKIP_PACKAGES)
 
@@ -173,6 +180,8 @@ class OverlayParser:
     def find_package(self, package_name: str) -> Optional[PackageInfo]:
         """Find a package definition in overlay files."""
         for overlay_file in self.overlays_dir.glob("*.nix"):
+            if overlay_file.name in self.SKIP_FILES:
+                continue
             result = self._parse_file_for_package(overlay_file, package_name)
             if result:
                 return result
