@@ -8,9 +8,10 @@ final: prev: {
   # Clang rejects discard_const in static initializers as non-constant expressions
   # Patch the test file's STR_VAL macro to use a simple cast instead
   samba = prev.samba.overrideAttrs (oldAttrs: {
-    postPatch = (oldAttrs.postPatch or "") + prev.lib.optionalString prev.stdenv.isDarwin ''
-      sed -i.bak 's/discard_const(s)/(void *)(s)/g' lib/ldb/tests/test_ldb_comparison_fold.c
-    '';
+    postPatch = (oldAttrs.postPatch or "")
+      + prev.lib.optionalString prev.stdenv.isDarwin ''
+        sed -i.bak 's/discard_const(s)/(void *)(s)/g' lib/ldb/tests/test_ldb_comparison_fold.c
+      '';
   });
 
   # Fix z3 test failures on macOS
@@ -21,9 +22,8 @@ final: prev: {
   # Tests fail with "OSError: AF_UNIX path too long" due to Nix store paths
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
     (pfinal: pprev: {
-      fsspec = pprev.fsspec.overridePythonAttrs (oldAttrs: {
-        doCheck = false;
-      });
+      fsspec =
+        pprev.fsspec.overridePythonAttrs (oldAttrs: { doCheck = false; });
     })
   ];
 

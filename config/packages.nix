@@ -344,6 +344,7 @@ with pkgs; rec {
     (lib.hiPrio llama-cpp)
     llama-swap
     gguf-tools
+    openclaw
     openmpi
     qdrant
     qdrant-web-ui

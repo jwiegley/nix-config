@@ -52,6 +52,7 @@ reset_kept() {
 
 keep_vars                                       \
     ALTERNATE_EDITOR                            \
+    CLAUDE_CONFIG_DIR                           \
     EDITOR                                      \
     EMACS_SERVER_FILE                           \
     GIT_PROMPT_EXECUTABLE                       \
@@ -108,6 +109,7 @@ export NIXPKGS_ALLOW_BROKEN=1
 
 SCRIPT="unset         \
     ALTERNATE_EDITOR  \
+    CLAUDE_CONFIG_DIR \
     EDITOR            \
     EMACS_SERVER_FILE \
     ITERM_SESSION_ID  \

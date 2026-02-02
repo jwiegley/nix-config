@@ -31,6 +31,7 @@ in {
       B2_ACCOUNT_INFO = "${config.xdg.configHome}/backblaze-b2/account_info";
       CABAL_CONFIG = "${config.xdg.configHome}/cabal/config";
       CARGO_HOME = "${config.xdg.dataHome}/cargo";
+      CLAUDE_CONFIG_DIR = "${config.xdg.configHome}/claude/personal";
       CLICOLOR = "yes";
       EDITOR = "${emacsclient}";
       EMACSVER = "30MacPort";
@@ -117,7 +118,7 @@ in {
 
       ".aider".source = mkLink "${config.xdg.configHome}/aider";
       ".cups".source = mkLink "${config.xdg.configHome}/cups";
-      ".claude".source = mkLink "${config.xdg.configHome}/claude";
+      ".claude".source = mkLink "${config.xdg.configHome}/claude/personal";
       ".cursor".source = mkLink "${config.xdg.configHome}/cursor";
       ".dbvis".source = mkLink "${config.xdg.configHome}/dbvis";
       ".gist".source = mkLink "${config.xdg.configHome}/gist/api_key";
@@ -238,7 +239,9 @@ in {
           command_timeout = 1000; # Prevent git-annex broken pipe errors
 
           format = lib.concatStrings [
-            "($all\n)"
+            ''
+              ($all
+              )''
             "$directory"
             "$character"
           ];
@@ -265,11 +268,11 @@ in {
         # directory of the pane's foreground process from the OS (via libproc
         # on macOS), so it works for Claude Code, vim, or any other program.
         set-option -g set-titles on
-        set-option -g set-titles-string "#{pane_current_path}"
+        set-option -g set-titles-string "#{b:pane_current_path}"
 
         # For iTerm2 native integration
         set-option -g automatic-rename on
-        set-option -g automatic-rename-format "#{pane_current_path}"
+        set-option -g automatic-rename-format "#{b:pane_current_path}"
       '';
     };
 

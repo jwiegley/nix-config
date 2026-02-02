@@ -83,7 +83,7 @@
         ];
         configure = hostname: system:
           darwin.lib.darwinSystem {
-            inherit inputs system;
+            inherit system;
             specialArgs = { inherit darwin system hostname inputs overlays; };
             modules = [
               ./config/darwin.nix
