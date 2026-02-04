@@ -217,7 +217,7 @@ in {
       settings = {
         promptStorage = "local";
         includePromptsInRepositories =
-          [ "ghpos:positron-ai/*" "gitea@gitea:*" "*positron-ai*" ];
+          [ "ghpos:positron-ai/*" "*positron-ai*" ];
         defaultPromptStorage = "notes";
       };
     };
