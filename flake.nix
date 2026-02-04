@@ -34,7 +34,7 @@
       flake = false;
     };
 
-    git-ai.url = "git+file:///Users/johnw/src/git-ai/work/nix-support";
+    git-ai.url = "git+file:///Users/johnw/src/git-ai/continue";
     git-all.url = "git+file:///Users/johnw/src/git-all";
     gitlib.url = "git+file:///Users/johnw/src/gitlib?submodules=0";
     hakyll.url = "git+file:///Users/johnw/src/hakyll";
@@ -45,6 +45,17 @@
     trade-journal.url = "git+file:///Users/johnw/src/trade-journal";
     una.url = "git+file:///Users/johnw/src/una";
     gh-to-org.url = "git+file:///Users/johnw/src/gh-to-org";
+
+    # Local source repos (non-flake) used by overlays
+    scripts = { url = "git+file:///Users/johnw/src/scripts"; flake = false; };
+    git-scripts = { url = "git+file:///Users/johnw/src/git-scripts"; flake = false; };
+    dirscan = { url = "git+file:///Users/johnw/src/dirscan"; flake = false; };
+    emacs-src = { url = "git+file:///Users/johnw/Databases/emacs"; flake = false; };
+    org2tc = { url = "github:jwiegley/org2tc"; flake = false; };
+
+    # Local flake repos used by overlays
+    ledger.url = "git+file:///Users/johnw/src/ledger";
+    rag-client.url = "git+file:///Users/johnw/src/rag-client";
   };
 
   outputs = inputs:
@@ -74,7 +85,6 @@
           #       ;
           #   })
           inputs.mcp-servers-nix.overlays.default
-          # Restore packages that mcp-servers-nix removed (now in nixpkgs)
           (final: prev: {
             github-mcp-server = prev.callPackage (import
               "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")

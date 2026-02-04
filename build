@@ -2,23 +2,23 @@
 
 if [[ $1 == system ]]; then
     shift 1
-    nix build --max-jobs 8 --cores 8 --impure \
+    nix build --max-jobs 8 --cores 8 \
         .\#darwinConfigurations.$(myhost).system \
         "$@" --keep-going --show-trace
 elif [[ $1 == pkg ]]; then
     pkg=$2
     shift 2
-    nix build --cores 24 --impure .\#darwinConfigurations.$(myhost).pkgs.$pkg "$@"
+    nix build --cores 24 .\#darwinConfigurations.$(myhost).pkgs.$pkg "$@"
 elif [[ $1 == emacs ]]; then
     pkg=$2
     shift 2
-    nix build --cores 24 --impure .\#darwinConfigurations.$(myhost).pkgs.emacs30MacPortPackages.$pkg "$@"
+    nix build --cores 24 .\#darwinConfigurations.$(myhost).pkgs.emacs30MacPortPackages.$pkg "$@"
 elif [[ $1 == python ]]; then
     pkg=$2
     shift 2
-    nix build --cores 24 --impure .\#darwinConfigurations.$(myhost).pkgs.python3Packages.$pkg "$@"
+    nix build --cores 24 .\#darwinConfigurations.$(myhost).pkgs.python3Packages.$pkg "$@"
 elif [[ $1 == haskell ]]; then
     pkg=$2
     shift 2
-    nix build --cores 24 --impure .\#darwinConfigurations.$(myhost).pkgs.haskellPackages.$pkg "$@"
+    nix build --cores 24 .\#darwinConfigurations.$(myhost).pkgs.haskellPackages.$pkg "$@"
 fi

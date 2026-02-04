@@ -1,37 +1,32 @@
 # config/paths.nix
 # Purpose: Centralized path definitions for external source dependencies
-# These paths point to local source checkouts used by overlays
+# These paths are derived from flake inputs for pure evaluation.
 #
 # Usage in overlays:
-#   let paths = import ../config/paths.nix; in
+#   let paths = import ../config/paths.nix { inputs = prev.inputs; }; in
 #   { src = paths.scripts; }
-#
-# Note: All paths must exist on the machine for the build to succeed.
-# If a path doesn't exist, the corresponding overlay package won't build.
+
+{ inputs }:
 
 {
-  # Base directory for all source checkouts
-  srcBase = /Users/johnw/src;
-
   # Personal scripts collection (used by 30-user-scripts.nix)
-  scripts = /Users/johnw/src/scripts;
+  scripts = inputs.scripts;
 
   # Git scripts collection (used by 30-git-tools.nix)
-  gitScripts = /Users/johnw/src/git-scripts;
+  gitScripts = inputs.git-scripts;
 
   # Directory scanning utility (used by 30-data-tools.nix)
-  dirscan = /Users/johnw/src/dirscan;
+  dirscan = inputs.dirscan;
 
   # Org-mode to timeclock converter (used by 30-text-tools.nix)
-  org2tc = /Users/johnw/src/hours/org2tc;
+  org2tc = inputs.org2tc;
 
   # Hours/time tracking project (used by 10-emacs.nix)
-  hours = /Users/johnw/src/hours;
+  hours = inputs.hours;
 
-  # Ledger CLI accounting (used by 30-ledger.nix)
-  ledger = /Users/johnw/src/ledger;
+  # Ledger CLI accounting flake (used by 30-ledger.nix)
+  ledger = inputs.ledger;
 
-  # Optional/commented paths (for reference)
-  # proofGeneral = /Users/johnw/src/proof-general;
-  # coq = /Users/johnw/src/coq;
+  # Emacs source tree (used by 10-emacs.nix for emacsHEAD)
+  emacsSrc = inputs.emacs-src;
 }

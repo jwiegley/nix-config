@@ -7,7 +7,7 @@
 #   - my-scripts requires paths.scripts
 final: prev:
 
-let paths = import ../config/paths.nix;
+let paths = import ../config/paths.nix { inherit (prev) inputs; };
 in {
 
   # Scripts from this repository's bin/ directory
@@ -35,14 +35,11 @@ in {
     };
 
   # Personal scripts collection
-  # Note: Requires paths.scripts
   my-scripts = with final;
     stdenv.mkDerivation {
       name = "my-scripts";
 
-      src = builtins.filterSource
-        (path: type: type != "directory" || baseNameOf path != ".git")
-        paths.scripts;
+      src = paths.scripts;
 
       buildInputs = [ ];
 

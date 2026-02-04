@@ -7,7 +7,7 @@
 final: prev:
 
 let
-  paths = import ../config/paths.nix;
+  paths = import ../config/paths.nix { inherit (prev) inputs; };
 
   myEmacsPackageOverrides = eself: esuper:
     let
@@ -772,7 +772,7 @@ in {
         NATIVE_FULL_AOT = "1";
         LIBRARY_PATH = lib.concatStringsSep ":" libGccJitLibraryPaths;
       };
-      src = nix-gitignore.gitignoreSourcePure [ ] /Users/johnw/Databases/emacs;
+      src = paths.emacsSrc;
       patches = [
         (builtins.path {
           name = "inhibit-lexical-cookie-warning-67916.patch";

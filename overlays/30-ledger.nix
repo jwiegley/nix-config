@@ -6,9 +6,7 @@
 final: prev:
 
 let
-  paths = import ../config/paths.nix;
-  ledgerPkg = import paths.ledger;
-  ledger = ledgerPkg.packages.${prev.system}.ledger;
+  ledger = prev.inputs.ledger.packages.${prev.system}.ledger;
 
 in {
 

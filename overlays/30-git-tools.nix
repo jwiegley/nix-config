@@ -5,7 +5,7 @@
 # Note: git-scripts requires paths.gitScripts
 final: prev:
 
-let paths = import ../config/paths.nix;
+let paths = import ../config/paths.nix { inherit (prev) inputs; };
 in {
 
   # Git Large File Storage (pre-built binary for darwin-arm64)
@@ -76,9 +76,7 @@ in {
     stdenv.mkDerivation {
       name = "git-scripts";
 
-      src = builtins.filterSource
-        (path: type: type != "directory" || baseNameOf path != ".git")
-        paths.gitScripts;
+      src = paths.gitScripts;
 
       buildInputs = [ ];
 

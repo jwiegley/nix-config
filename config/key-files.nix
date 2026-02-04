@@ -6,7 +6,7 @@ let
   makeKeyEntry = host:
     lib.nameValuePair host (lib.filter (x: x != null) (map (otherHost:
       if otherHost != host then
-        "${home}/${hostname}/id_${otherHost}.pub"
+        ./ssh-keys/id_${otherHost}.pub
       else
         null) hosts));
 

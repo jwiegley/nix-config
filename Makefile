@@ -51,13 +51,13 @@ repl:
 	    repl .#darwinConfigurations.$(HOSTNAME).pkgs
 
 build:
-	$(call announce,darwin-rebuild build --impure --flake .#$(HOSTNAME))
-	@darwin-rebuild build --impure --flake .#$(HOSTNAME)
+	$(call announce,darwin-rebuild build --flake .#$(HOSTNAME))
+	@darwin-rebuild build --flake .#$(HOSTNAME)
 	@rm -f result*
 
 switch:
-	$(call announce,darwin-rebuild switch --impure --flake .#$(HOSTNAME))
-	@sudo darwin-rebuild switch --impure --flake .#$(HOSTNAME)
+	$(call announce,darwin-rebuild switch --flake .#$(HOSTNAME))
+	@sudo darwin-rebuild switch --flake .#$(HOSTNAME)
 	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"
 
 update:

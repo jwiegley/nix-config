@@ -13,8 +13,7 @@ with pkgs; rec {
     (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs)));
   emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
 
-  rag-client-pkg = import /Users/johnw/src/rag-client;
-  rag-client = rag-client-pkg.packages.${pkgs.system}.default;
+  rag-client = inputs.rag-client.packages.${pkgs.system}.default;
 
   package-list = [
     (exe haskellPackages.hasktags)

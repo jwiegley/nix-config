@@ -7,7 +7,7 @@ let
     import (prev.fetchFromGitHub (args // {
       owner = "NixOS";
       repo = "nixpkgs";
-    })) { };
+    })) { inherit (prev) system; };
 in {
   inherit (nixpkgs {
     rev = "e1ebeec86b771e9d387dd02d82ffdc77ac753abc";

@@ -299,7 +299,10 @@ in {
       permittedInsecurePackages = [ "python-2.7.18.7" "libressl-3.4.3" ];
     };
 
-    overlays = overlays ++ (let path = ../overlays;
+    overlays = [
+      # Inject flake inputs so overlays can access them via prev.inputs
+      (final: prev: { inherit inputs; })
+    ] ++ overlays ++ (let path = ../overlays;
     in with builtins;
     map (n: import (path + ("/" + n))) (filter (n:
       match ".*\\.nix" n != null

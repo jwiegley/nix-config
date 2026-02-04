@@ -5,7 +5,7 @@
 # Note: dirscan requires paths.dirscan
 final: prev:
 
-let paths = import ../config/paths.nix;
+let paths = import ../config/paths.nix { inherit (prev) inputs; };
 in {
 
   # Simple key/value store for keeping hashes
