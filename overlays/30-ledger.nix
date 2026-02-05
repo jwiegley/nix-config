@@ -6,7 +6,7 @@
 final: prev:
 
 let
-  ledger = prev.inputs.ledger.packages.${prev.system}.ledger;
+  ledger = prev.inputs.ledger.packages.${prev.stdenv.hostPlatform.system}.ledger;
 
 in {
 

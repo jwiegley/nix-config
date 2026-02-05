@@ -13,7 +13,7 @@ with pkgs; rec {
     (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs)));
   emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
 
-  rag-client = inputs.rag-client.packages.${pkgs.system}.default;
+  rag-client = inputs.rag-client.packages.${system}.default;
 
   package-list = [
     (exe haskellPackages.hasktags)
@@ -202,7 +202,7 @@ with pkgs; rec {
     nix-scripts
     nix-tree
     nixpkgs-fmt
-    nixfmt-classic
+    nixfmt
     nmap
     nodejs_22
     nss

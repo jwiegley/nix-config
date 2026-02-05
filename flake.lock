@@ -907,10 +907,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "dirtyRev": "53bc4a2cb6578c53f9ca4bf00fd7480d7c3fe5ba-dirty",
-        "dirtyShortRev": "53bc4a2-dirty",
-        "lastModified": 1770072160,
-        "narHash": "sha256-xMEeEBdGEPmz3BAILjT10ip2oKDASMM8OOXHNi8gg2E=",
+        "lastModified": 1770221650,
+        "narHash": "sha256-sd/msl7yQekZ/8s+ui1RP9N2zDlgkfxOchUdahOdyZ0=",
+        "ref": "refs/heads/master",
+        "rev": "3ea1010a6b0a63e90896133deaba189f13d47436",
+        "revCount": 181055,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -6464,10 +6465,11 @@
         "nixpkgs": "nixpkgs_5"
       },
       "locked": {
-        "dirtyRev": "0ff8ba2e323412db080e25ec5568b947cc2fa57c-dirty",
-        "dirtyShortRev": "0ff8ba2-dirty",
-        "lastModified": 1763674046,
-        "narHash": "sha256-yoBPfRVl6RcpgOJVPnikX+bi8qgmDiYgyCo02dZ3WCE=",
+        "lastModified": 1770232536,
+        "narHash": "sha256-3xP39xLvAAMHC0ecBThhJh2TUyEsxzBCR028ypnU1gk=",
+        "ref": "refs/heads/main",
+        "rev": "83c88a09879424b75453b61f524d11d6ddee9034",
+        "revCount": 148,
         "type": "git",
         "url": "file:///Users/johnw/src/rag-client"
       },
