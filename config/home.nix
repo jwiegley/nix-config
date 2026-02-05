@@ -136,7 +136,9 @@ in
         ".cursor".source = mkLink "${config.xdg.configHome}/cursor";
         ".dbvis".source = mkLink "${config.xdg.configHome}/dbvis";
         ".factory".source = mkLink "${config.xdg.configHome}/factory";
+        ".gemini".source = mkLink "${config.xdg.configHome}/gemini";
         ".gist".source = mkLink "${config.xdg.configHome}/gist/api_key";
+        # ".git-ai".source = mkLink "${config.xdg.configHome}/git-ai";
         ".gnupg".source = mkLink "${config.xdg.configHome}/gnupg";
         ".jq".source = mkLink "${config.xdg.configHome}/jq/config";
         ".jupyter".source = mkLink "${config.xdg.configHome}/jupyter";
@@ -154,6 +156,7 @@ in
         ".cargo".source = mkLink "${config.xdg.cacheHome}/cargo";
         ".npm".source = mkLink "${config.xdg.cacheHome}/npm";
         ".ollama".source = mkLink "${config.xdg.cacheHome}/ollama";
+        ".swiftpm".source = mkLink "${config.xdg.cacheHome}/swiftpm";
         ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";
 
         ".emacs.d".source = mkLink "${home}/src/dot-emacs";
@@ -428,7 +431,7 @@ in
             export PS1='$ '
         else
             . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
-            . $HOME/.shellfishrc
+            . ${config.xdg.configHome}/shellfish/shellfishrc
 
             # sudo /bin/launchctl limit maxfiles 524288 524288
             # ulimit -n 65536
