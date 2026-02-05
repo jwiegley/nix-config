@@ -352,7 +352,6 @@ rec {
     (lib.hiPrio llama-cpp)
     llama-swap
     gguf-tools
-    openclaw
     openmpi
     qdrant
     qdrant-web-ui
@@ -373,11 +372,12 @@ rec {
   ++ (with inputs.llm-agents.packages.${system}; [
     droid
     claude-code
-    claude-code-acp
+    # claude-code-acp
     ccusage
     opencode
-    # gemini-cli
+    gemini-cli
     codex
     ollama
+    openclaw
   ]);
 }
