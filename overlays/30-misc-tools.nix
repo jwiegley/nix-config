@@ -5,7 +5,8 @@
 final: prev: {
 
   # Fix broken symlinks
-  hammer = with prev;
+  hammer =
+    with prev;
     stdenv.mkDerivation rec {
       name = "hammer-${version}";
       version = "b5a7543b";
@@ -18,7 +19,10 @@ final: prev: {
         # date = 2011-09-10T19:08:08-05:00;
       };
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [
+        "unpackPhase"
+        "installPhase"
+      ];
 
       installPhase = ''
         mkdir -p $out/bin
@@ -34,7 +38,8 @@ final: prev: {
     };
 
   # Hard-link duplicate files to save space
-  linkdups = with prev;
+  linkdups =
+    with prev;
     stdenv.mkDerivation rec {
       name = "linkdups-${version}";
       version = "57bb7933";
@@ -47,7 +52,10 @@ final: prev: {
         # date = 2025-05-13T11:29:24-07:00;
       };
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [
+        "unpackPhase"
+        "installPhase"
+      ];
 
       installPhase = ''
         mkdir -p $out/bin
@@ -63,7 +71,8 @@ final: prev: {
     };
 
   # Find large files within a directory
-  lipotell = with prev;
+  lipotell =
+    with prev;
     stdenv.mkDerivation rec {
       name = "lipotell-${version}";
       version = "1502a475";
@@ -76,7 +85,10 @@ final: prev: {
         # date = 2011-09-10T18:57:01-05:00;
       };
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [
+        "unpackPhase"
+        "installPhase"
+      ];
 
       installPhase = ''
         mkdir -p $out/bin
@@ -92,7 +104,8 @@ final: prev: {
     };
 
   # Sift apart large patch files
-  sift = with prev;
+  sift =
+    with prev;
     stdenv.mkDerivation rec {
       name = "sift-${version}";
       version = "c823f340";
@@ -105,7 +118,10 @@ final: prev: {
         # date = 2011-09-10T19:05:37-05:00;
       };
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [
+        "unpackPhase"
+        "installPhase"
+      ];
 
       installPhase = ''
         mkdir -p $out/bin
@@ -121,7 +137,8 @@ final: prev: {
     };
 
   # Install SSH authorized_keys on remote servers
-  sshify = with prev;
+  sshify =
+    with prev;
     stdenv.mkDerivation rec {
       name = "sshify-${version}";
       version = "a6fb0d52";
@@ -134,7 +151,10 @@ final: prev: {
         # date = 2018-01-27T17:11:59-08:00;
       };
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [
+        "unpackPhase"
+        "installPhase"
+      ];
 
       installPhase = ''
         mkdir -p $out/bin
@@ -143,15 +163,15 @@ final: prev: {
 
       meta = {
         homepage = "https://github.com/jwiegley/sshify";
-        description =
-          "A tool for installing SSH authorized_key on remote servers";
+        description = "A tool for installing SSH authorized_key on remote servers";
         license = lib.licenses.mit;
         maintainers = with lib.maintainers; [ jwiegley ];
       };
     };
 
   # Track most-used directories based on frecency
-  z = with prev;
+  z =
+    with prev;
     stdenv.mkDerivation rec {
       name = "z-${version}";
       version = "d37a763a";
@@ -164,7 +184,10 @@ final: prev: {
         # date = 2023-12-09T17:41:33-05:00;
       };
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [
+        "unpackPhase"
+        "installPhase"
+      ];
 
       installPhase = ''
         mkdir -p $out/share
@@ -181,7 +204,8 @@ final: prev: {
     };
 
   # Git credential helper using pass password manager
-  pass-git-helper = with prev;
+  pass-git-helper =
+    with prev;
     with python3Packages;
     buildPythonPackage rec {
       pname = "pass-git-helper";
@@ -196,9 +220,15 @@ final: prev: {
         # date = 2025-10-02T16:40:46+02:00;
       };
 
-      buildInputs = [ pyxdg pytest ];
+      buildInputs = [
+        pyxdg
+        pytest
+      ];
 
-      pythonPath = [ pyxdg pytest ];
+      pythonPath = [
+        pyxdg
+        pytest
+      ];
       doCheck = false;
 
       pyproject = true;
@@ -206,15 +236,15 @@ final: prev: {
 
       meta = {
         homepage = "https://github.com/languitar/pass-git-helper";
-        description =
-          "A git credential helper interfacing with pass, the standard unix password manager";
+        description = "A git credential helper interfacing with pass, the standard unix password manager";
         license = lib.licenses.lgpl3;
         maintainers = with lib.maintainers; [ jwiegley ];
       };
     };
 
   # YAML schema validator
-  yamale = with prev;
+  yamale =
+    with prev;
     with python3Packages;
     buildPythonPackage rec {
       pname = "yamale";

@@ -1,16 +1,22 @@
-{ system, hostname, inputs, pkgs, ... }:
-with pkgs; rec {
-  exe = if stdenv.targetPlatform.isx86_64 then
-    haskell.lib.justStaticExecutables
-  else
-    lib.id;
+{
+  system,
+  hostname,
+  inputs,
+  pkgs,
+  ...
+}:
+with pkgs;
+rec {
+  exe = if stdenv.targetPlatform.isx86_64 then haskell.lib.justStaticExecutables else lib.id;
 
   myEmacsPackages = import ./emacs.nix pkgs;
 
-  emacs30Env = pkgs.emacs30Env (epkgs:
-    (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs)));
-  emacs30MacPortEnv = pkgs.emacs30MacPortEnv (epkgs:
-    (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs)));
+  emacs30Env = pkgs.emacs30Env (
+    epkgs: (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs))
+  );
+  emacs30MacPortEnv = pkgs.emacs30MacPortEnv (
+    epkgs: (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs))
+  );
   emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
 
   rag-client = inputs.rag-client.packages.${system}.default;
@@ -237,23 +243,26 @@ with pkgs; rec {
     psrecord
     pstree
     pv
-    (lib.hiPrio (python3.withPackages (python-pkgs:
-      with python-pkgs; [
-        autoflake
-        basedpyright
-        black # Python code formatter
-        ruff # Python code linter/formatter
-        flake8 # Python code linter
-        hf-xet
-        huggingface-hub
-        isort # Python code formatter
-        numpy
-        pandas
-        pylint
-        requests
-        stdenv
-        venvShellHook
-      ])))
+    (lib.hiPrio (
+      python3.withPackages (
+        python-pkgs: with python-pkgs; [
+          autoflake
+          basedpyright
+          black # Python code formatter
+          ruff # Python code linter/formatter
+          flake8 # Python code linter
+          hf-xet
+          huggingface-hub
+          isort # Python code formatter
+          numpy
+          pandas
+          pylint
+          requests
+          stdenv
+          venvShellHook
+        ]
+      )
+    ))
     pyright # LSP server for Python
     qdrant
     qemu
@@ -358,16 +367,17 @@ with pkgs; rec {
     git-annex-remote-rclone
   ]
   # Linux-only packages (not available on Darwin/macOS)
-    ++ lib.optionals stdenv.isLinux [
-      cpx # Modern, fast file copy tool with progress bars and resume support
-    ] ++ (with inputs.llm-agents.packages.${system}; [
-      droid
-      claude-code
-      claude-code-acp
-      ccusage
-      opencode
-      # gemini-cli
-      codex
-      ollama
-    ]);
+  ++ lib.optionals stdenv.isLinux [
+    cpx # Modern, fast file copy tool with progress bars and resume support
+  ]
+  ++ (with inputs.llm-agents.packages.${system}; [
+    droid
+    claude-code
+    claude-code-acp
+    ccusage
+    opencode
+    # gemini-cli
+    codex
+    ollama
+  ]);
 }

@@ -8,7 +8,8 @@ final: prev:
 let
   ledger = prev.inputs.ledger.packages.${prev.stdenv.hostPlatform.system}.ledger;
 
-in {
+in
+{
 
   ledger_HEAD = ledger.overrideAttrs (attrs: {
     boost = prev.boost.override { python = prev.python3; };

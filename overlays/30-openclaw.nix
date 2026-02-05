@@ -4,7 +4,8 @@
 # Packages: openclaw
 final: prev: {
 
-  openclaw = with prev;
+  openclaw =
+    with prev;
     stdenv.mkDerivation rec {
       pname = "openclaw";
       version = "2026.2.1";
@@ -22,8 +23,14 @@ final: prev: {
         hash = "sha256-NxKHy1q7A1zWrwZZGv7Yq5tr3ZyKJYDcKbUV6mSt70Y=";
       };
 
-      nativeBuildInputs =
-        [ nodejs_22 pnpmConfigHook pnpm pkg-config python3 makeWrapper ];
+      nativeBuildInputs = [
+        nodejs_22
+        pnpmConfigHook
+        pnpm
+        pkg-config
+        python3
+        makeWrapper
+      ];
 
       buildInputs = [
         nodejs_22

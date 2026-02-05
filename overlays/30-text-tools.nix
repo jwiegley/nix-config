@@ -7,11 +7,14 @@
 #   - org2tc requires paths.org2tc
 final: prev:
 
-let paths = import ../config/paths.nix { inherit (prev) inputs; };
-in {
+let
+  paths = import ../config/paths.nix { inherit (prev) inputs; };
+in
+{
 
   # Manage tags in filenames
-  filetags = with prev;
+  filetags =
+    with prev;
     with python3Packages;
     buildPythonPackage rec {
       pname = "filetags";
@@ -27,7 +30,10 @@ in {
         # date = "2025-09-15T13:27:03+02:00";
       };
 
-      propagatedBuildInputs = [ colorama clint ];
+      propagatedBuildInputs = [
+        colorama
+        clint
+      ];
 
       installPhase = ''
         mkdir -p $out/bin
@@ -44,7 +50,8 @@ in {
     };
 
   # Convert org-mode/org-roam files to HTML
-  hyperorg = with prev;
+  hyperorg =
+    with prev;
     with python3Packages;
     buildPythonPackage rec {
       pname = "hyperorg";
@@ -60,14 +67,22 @@ in {
 
       patches = [ ./emacs/patches/hyperorg.patch ];
 
-      build-system = [ setuptools setuptools-scm ];
+      build-system = [
+        setuptools
+        setuptools-scm
+      ];
 
-      dependencies = [ setuptools orgparse dateutil packaging requests ];
+      dependencies = [
+        setuptools
+        orgparse
+        dateutil
+        packaging
+        requests
+      ];
 
       meta = {
         homepage = "https://codeberg.org/buhtz/hyperorg";
-        description =
-          "Hyperorg converts org-files and especially orgroam-v2-files into html-files.";
+        description = "Hyperorg converts org-files and especially orgroam-v2-files into html-files.";
         license = lib.licenses.mit;
         maintainers = with lib.maintainers; [ jwiegley ];
       };
@@ -75,14 +90,18 @@ in {
 
   # Convert org-mode to timeclock format
   # Note: Requires paths.org2tc
-  org2tc = with prev;
+  org2tc =
+    with prev;
     stdenv.mkDerivation rec {
       name = "org2tc-${version}";
       version = "7d52a20";
 
       src = paths.org2tc;
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [
+        "unpackPhase"
+        "installPhase"
+      ];
 
       installPhase = ''
         mkdir -p $out/bin

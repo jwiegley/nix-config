@@ -1,4 +1,12 @@
-{ pkgs, lib, config, hostname, inputs, overlays, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  hostname,
+  inputs,
+  overlays,
+  ...
+}:
 
 let
   home = "/Users/johnw";
@@ -8,14 +16,13 @@ let
   xdg_dataHome = "${home}/.local/share";
   xdg_cacheHome = "${home}/.cache";
 
-in {
+in
+{
   users = {
     # List of users and groups that nix-darwin is allowed to create/manage
     # CRITICAL: Users/groups must be in these lists for nix-darwin to create them
-    knownUsers = [ "johnw" ]
-      ++ lib.optionals (hostname != "clio") [ "_prometheus-node-exporter" ];
-    knownGroups =
-      lib.optionals (hostname != "clio") [ "_prometheus-node-exporter" ];
+    knownUsers = [ "johnw" ] ++ lib.optionals (hostname != "clio") [ "_prometheus-node-exporter" ];
+    knownGroups = lib.optionals (hostname != "clio") [ "_prometheus-node-exporter" ];
 
     users = {
       johnw = {
@@ -32,12 +39,12 @@ in {
           ];
           keyFiles =
             # Each machine accepts SSH key authentication from the rest
-            import ./key-files.nix { inherit (pkgs) lib; } [ "hera" "clio" ]
-            home hostname;
+            import ./key-files.nix { inherit (pkgs) lib; } [ "hera" "clio" ] home hostname;
         };
       };
 
-    } // lib.optionalAttrs (hostname != "clio") {
+    }
+    // lib.optionalAttrs (hostname != "clio") {
       # Prometheus node exporter user - match existing system user's home directory
       # On macOS, /var is a symlink to /private/var, but the user was created with
       # the canonical path, so we must force override the module's default
@@ -245,12 +252,17 @@ in {
         name = "zoom";
         greedy = true;
       }
-    ] ++ lib.optionals (hostname == "hera") [
+    ]
+    ++ lib.optionals (hostname == "hera") [
       "fujitsu-scansnap-home"
       "gzdoom"
       "raspberry-pi-imager"
       # "logitune"
-    ] ++ lib.optionals (hostname == "clio") [ "aldente" "wifi-explorer" ];
+    ]
+    ++ lib.optionals (hostname == "clio") [
+      "aldente"
+      "wifi-explorer"
+    ];
 
     ## The following software, or versions of software, are not available
     ## via Homebrew or the App Store:
@@ -296,74 +308,96 @@ in {
       allowInsecure = false;
       allowUnsupportedSystem = false;
 
-      permittedInsecurePackages = [ "python-2.7.18.7" "libressl-3.4.3" ];
+      permittedInsecurePackages = [
+        "python-2.7.18.7"
+        "libressl-3.4.3"
+      ];
     };
 
     overlays = [
       # Inject flake inputs so overlays can access them via prev.inputs
       (final: prev: { inherit inputs; })
-    ] ++ overlays ++ (let path = ../overlays;
-    in with builtins;
-    map (n: import (path + ("/" + n))) (filter (n:
-      match ".*\\.nix" n != null
-      || pathExists (path + ("/" + n + "/default.nix")))
-      (attrNames (readDir path))));
+    ]
+    ++ overlays
+    ++ (
+      let
+        path = ../overlays;
+      in
+      with builtins;
+      map (n: import (path + ("/" + n))) (
+        filter (n: match ".*\\.nix" n != null || pathExists (path + ("/" + n + "/default.nix"))) (
+          attrNames (readDir path)
+        )
+      )
+    );
   };
 
-  nix = let
-    hera = {
-      hostName = "hera.lan";
-      protocol = "ssh-ng";
-      system = "aarch64-darwin";
-      sshUser = "johnw";
-      maxJobs = 24;
-      speedFactor = 4;
+  nix =
+    let
+      hera = {
+        hostName = "hera.lan";
+        protocol = "ssh-ng";
+        system = "aarch64-darwin";
+        sshUser = "johnw";
+        maxJobs = 24;
+        speedFactor = 4;
+      };
+    in
+    {
+
+      enable = false;
+      package = pkgs.nix;
+
+      # This entry lets us to define a system registry entry so that
+      # `nixpkgs#foo` will use the nixpkgs that nix-darwin was last built with,
+      # rather than whatever is the current unstable version.
+      #
+      # See https://yusef.napora.org/blog/pinning-nixpkgs-flake
+      # registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
+
+      nixPath = lib.mkForce (
+        lib.mapAttrsToList (key: value: "${key}=${value.to.path}") config.nix.registry
+        ++ [
+          {
+            ssh-config-file = "${home}/.ssh/config";
+            darwin-config = "${home}/src/nix/config/darwin.nix";
+            hm-config = "${home}/src/nix/config/home.nix";
+          }
+        ]
+      );
+
+      settings = {
+        trusted-users = [
+          "@admin"
+          "@builders"
+          "johnw"
+        ];
+        max-jobs = if (hostname == "clio") then 4 else 8;
+        cores = 10;
+
+        # Custom binary caches for better package availability
+        substituters = [
+          "https://cache.nixos.org"
+          "https://cache.iog.io"
+        ];
+        trusted-substituters = [ "https://cache.iog.io" ];
+        trusted-public-keys = [
+          "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+          "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
+          "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+        ];
+      };
+
+      distributedBuilds = true;
+      buildMachines = if hostname == "clio" then [ hera ] else [ ];
+
+      extraOptions = ''
+        gc-keep-derivations = true
+        gc-keep-outputs = true
+        secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
+        experimental-features = nix-command flakes
+      '';
     };
-  in {
-
-    enable = false;
-    package = pkgs.nix;
-
-    # This entry lets us to define a system registry entry so that
-    # `nixpkgs#foo` will use the nixpkgs that nix-darwin was last built with,
-    # rather than whatever is the current unstable version.
-    #
-    # See https://yusef.napora.org/blog/pinning-nixpkgs-flake
-    # registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
-
-    nixPath = lib.mkForce
-      (lib.mapAttrsToList (key: value: "${key}=${value.to.path}")
-        config.nix.registry ++ [{
-          ssh-config-file = "${home}/.ssh/config";
-          darwin-config = "${home}/src/nix/config/darwin.nix";
-          hm-config = "${home}/src/nix/config/home.nix";
-        }]);
-
-    settings = {
-      trusted-users = [ "@admin" "@builders" "johnw" ];
-      max-jobs = if (hostname == "clio") then 4 else 8;
-      cores = 10;
-
-      # Custom binary caches for better package availability
-      substituters = [ "https://cache.nixos.org" "https://cache.iog.io" ];
-      trusted-substituters = [ "https://cache.iog.io" ];
-      trusted-public-keys = [
-        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-        "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
-        "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
-      ];
-    };
-
-    distributedBuilds = true;
-    buildMachines = if hostname == "clio" then [ hera ] else [ ];
-
-    extraOptions = ''
-      gc-keep-derivations = true
-      gc-keep-outputs = true
-      secret-key-files = ${xdg_configHome}/gnupg/nix-signing-key.sec
-      experimental-features = nix-command flakes
-    '';
-  };
 
   ids.gids.nixbld = 350;
 
@@ -410,8 +444,7 @@ in {
         };
 
         "com.apple.WindowManager" = {
-          EnableStandardClickToShowDesktop =
-            0; # Click wallpaper to reveal desktop
+          EnableStandardClickToShowDesktop = 0; # Click wallpaper to reveal desktop
           StandardHideDesktopIcons = 0; # Show items on desktop
           HideDesktop = 0; # Do not hide items on desktop & stage manager
           StageManagerHideWidgets = 0;
@@ -423,7 +456,9 @@ in {
           type = "png";
         };
 
-        "com.apple.AdLib" = { allowApplePersonalizedAdvertising = false; };
+        "com.apple.AdLib" = {
+          allowApplePersonalizedAdvertising = false;
+        };
 
         # Prevent Photos from opening automatically when devices are plugged in
         "com.apple.ImageCapture".disableHotPlug = true;
@@ -496,97 +531,100 @@ in {
     };
 
     # System daemons run as background services
-    daemons = let
-      iterate = StartInterval: {
-        inherit StartInterval;
-        Nice = 5;
-        LowPriorityIO = true;
-        AbandonProcessGroup = true;
+    daemons =
+      let
+        iterate = StartInterval: {
+          inherit StartInterval;
+          Nice = 5;
+          LowPriorityIO = true;
+          AbandonProcessGroup = true;
+        };
+      in
+      {
+        limits = {
+          script = ''
+            /bin/launchctl limit maxfiles 524288 524288
+            /bin/launchctl limit maxproc 8192 8192
+          '';
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = false;
+        };
+
+        # cleanup = {
+        #   script = ''
+        #     export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
+        #     ${pkgs.python3}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
+        #         >> /var/log/cleanup.log 2>&1
+        #   '';
+        #   serviceConfig = iterate 86400;
+        # };
+
+        mssql-server = {
+          script = ''
+            # Wait for Docker to be ready
+            while ! /usr/local/bin/docker info > /dev/null 2>&1; do
+              echo "Waiting for Docker to be ready..."
+              sleep 5
+            done
+
+            # Create data directory if it doesn't exist and set proper ownership
+            # On macOS, Docker Desktop handles permission mapping internally
+            mkdir -p ${home}/mssql
+            chown -R johnw:staff ${home}/mssql
+
+            # Create password file directory if it doesn't exist
+            mkdir -p ${xdg_configHome}/mssql
+            chown johnw:staff ${xdg_configHome}/mssql
+
+            # Read password from secure file (must be created manually)
+            # Create this file with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd
+            if [ ! -f ${xdg_configHome}/mssql/passwd ]; then
+              echo "ERROR: Password file ${xdg_configHome}/mssql/passwd not found"
+              echo "Create it with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd"
+              exit 1
+            fi
+            MSSQL_SA_PASSWORD=$(cat ${xdg_configHome}/mssql/passwd | tr -d '\n')
+
+            # Validate password meets SQL Server requirements
+            if [ ''${#MSSQL_SA_PASSWORD} -lt 8 ]; then
+              echo "ERROR: Password must be at least 8 characters"
+              exit 1
+            fi
+
+            # Pull the latest image if not present
+            /usr/local/bin/docker pull mcr.microsoft.com/mssql/server:2022-latest
+
+            # Stop and remove any existing container with the same name
+            /usr/local/bin/docker rm -f mssql-server 2>/dev/null || true
+
+            # Start the container with restart policy and persistent storage
+            /usr/local/bin/docker run -d \
+              --name mssql-server \
+              --restart unless-stopped \
+              -p 1433:1433 \
+              -v ${home}/mssql:/var/opt/mssql \
+              -e ACCEPT_EULA=Y \
+              -e "MSSQL_SA_PASSWORD=$MSSQL_SA_PASSWORD" \
+              mcr.microsoft.com/mssql/server:2022-latest
+          '';
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.KeepAlive = false;
+        };
+      }
+      // lib.optionalAttrs (hostname == "hera") {
+        "sysctl-vram-limit" = {
+          script = ''
+            # This leaves 64 GB of working memory remaining
+            # /usr/sbin/sysctl iogpu.wired_limit_mb=458752
+
+            # This leaves 32 GB of working memory remaining, and is best for
+            # when the machine will only be used headless as a server from
+            # remote, during longer trips.
+            /usr/sbin/sysctl iogpu.wired_limit_mb=491520
+          '';
+          serviceConfig.RunAtLoad = true;
+        };
       };
-    in {
-      limits = {
-        script = ''
-          /bin/launchctl limit maxfiles 524288 524288
-          /bin/launchctl limit maxproc 8192 8192
-        '';
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = false;
-      };
-
-      # cleanup = {
-      #   script = ''
-      #     export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
-      #     ${pkgs.python3}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
-      #         >> /var/log/cleanup.log 2>&1
-      #   '';
-      #   serviceConfig = iterate 86400;
-      # };
-
-      mssql-server = {
-        script = ''
-          # Wait for Docker to be ready
-          while ! /usr/local/bin/docker info > /dev/null 2>&1; do
-            echo "Waiting for Docker to be ready..."
-            sleep 5
-          done
-
-          # Create data directory if it doesn't exist and set proper ownership
-          # On macOS, Docker Desktop handles permission mapping internally
-          mkdir -p ${home}/mssql
-          chown -R johnw:staff ${home}/mssql
-
-          # Create password file directory if it doesn't exist
-          mkdir -p ${xdg_configHome}/mssql
-          chown johnw:staff ${xdg_configHome}/mssql
-
-          # Read password from secure file (must be created manually)
-          # Create this file with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd
-          if [ ! -f ${xdg_configHome}/mssql/passwd ]; then
-            echo "ERROR: Password file ${xdg_configHome}/mssql/passwd not found"
-            echo "Create it with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd"
-            exit 1
-          fi
-          MSSQL_SA_PASSWORD=$(cat ${xdg_configHome}/mssql/passwd | tr -d '\n')
-
-          # Validate password meets SQL Server requirements
-          if [ ''${#MSSQL_SA_PASSWORD} -lt 8 ]; then
-            echo "ERROR: Password must be at least 8 characters"
-            exit 1
-          fi
-
-          # Pull the latest image if not present
-          /usr/local/bin/docker pull mcr.microsoft.com/mssql/server:2022-latest
-
-          # Stop and remove any existing container with the same name
-          /usr/local/bin/docker rm -f mssql-server 2>/dev/null || true
-
-          # Start the container with restart policy and persistent storage
-          /usr/local/bin/docker run -d \
-            --name mssql-server \
-            --restart unless-stopped \
-            -p 1433:1433 \
-            -v ${home}/mssql:/var/opt/mssql \
-            -e ACCEPT_EULA=Y \
-            -e "MSSQL_SA_PASSWORD=$MSSQL_SA_PASSWORD" \
-            mcr.microsoft.com/mssql/server:2022-latest
-        '';
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = false;
-      };
-    } // lib.optionalAttrs (hostname == "hera") {
-      "sysctl-vram-limit" = {
-        script = ''
-          # This leaves 64 GB of working memory remaining
-          # /usr/sbin/sysctl iogpu.wired_limit_mb=458752
-
-          # This leaves 32 GB of working memory remaining, and is best for
-          # when the machine will only be used headless as a server from
-          # remote, during longer trips.
-          /usr/sbin/sysctl iogpu.wired_limit_mb=491520
-        '';
-        serviceConfig.RunAtLoad = true;
-      };
-    };
 
     user = {
       agents = {
@@ -671,80 +709,82 @@ in {
           };
         };
 
-        llama-swap-https-proxy = let
-          logDir = "${xdg_cacheHome}/llama-swap-proxy";
-          config = pkgs.writeText "nginx.conf" ''
-            worker_processes 1;
-            pid ${logDir}/nginx.pid;
-            error_log ${logDir}/error.log warn;
-            events {
-              worker_connections 1024;
-            }
-            http {
-              client_body_temp_path ${logDir}/client_body;
-              server {
-                listen 8443 ssl;
+        llama-swap-https-proxy =
+          let
+            logDir = "${xdg_cacheHome}/llama-swap-proxy";
+            config = pkgs.writeText "nginx.conf" ''
+              worker_processes 1;
+              pid ${logDir}/nginx.pid;
+              error_log ${logDir}/error.log warn;
+              events {
+                worker_connections 1024;
+              }
+              http {
+                client_body_temp_path ${logDir}/client_body;
+                server {
+                  listen 8443 ssl;
 
-                ssl_certificate /Users/johnw/hera/hera.lan.crt;
-                ssl_certificate_key /Users/johnw/hera/hera.lan.key;
-                ssl_protocols TLSv1.2 TLSv1.3;
-                ssl_prefer_server_ciphers on;
-                ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+                  ssl_certificate /Users/johnw/hera/hera.lan.crt;
+                  ssl_certificate_key /Users/johnw/hera/hera.lan.key;
+                  ssl_protocols TLSv1.2 TLSv1.3;
+                  ssl_prefer_server_ciphers on;
+                  ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
 
-                access_log ${logDir}/access.log;
+                  access_log ${logDir}/access.log;
 
-                # Proxy /v1/ requests to llama-swap
-                location /v1/ {
-                  proxy_pass http://localhost:8080;
+                  # Proxy /v1/ requests to llama-swap
+                  location /v1/ {
+                    proxy_pass http://localhost:8080;
 
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto $scheme;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
 
-                  proxy_connect_timeout 600;
-                  proxy_send_timeout 600;
-                  proxy_read_timeout 600;
-                  send_timeout 600;
+                    proxy_connect_timeout 600;
+                    proxy_send_timeout 600;
+                    proxy_read_timeout 600;
+                    send_timeout 600;
 
-                  add_header 'Access-Control-Allow-Origin' $http_origin;
-                  add_header 'Access-Control-Allow-Credentials' 'true';
-                  add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range';
-                  add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
-                }
+                    add_header 'Access-Control-Allow-Origin' $http_origin;
+                    add_header 'Access-Control-Allow-Credentials' 'true';
+                    add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range';
+                    add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
+                  }
 
-                # Proxy all other requests to chat.vulcan.lan
-                location / {
-                  proxy_pass https://chat.vulcan.lan;
-                  proxy_ssl_verify off;
+                  # Proxy all other requests to chat.vulcan.lan
+                  location / {
+                    proxy_pass https://chat.vulcan.lan;
+                    proxy_ssl_verify off;
 
-                  proxy_set_header Host chat.vulcan.lan;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto $scheme;
+                    proxy_set_header Host chat.vulcan.lan;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
 
-                  proxy_connect_timeout 600;
-                  proxy_send_timeout 600;
-                  proxy_read_timeout 600;
-                  send_timeout 600;
+                    proxy_connect_timeout 600;
+                    proxy_send_timeout 600;
+                    proxy_read_timeout 600;
+                    send_timeout 600;
 
-                  # WebSocket support for chat interface
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection "upgrade";
+                    # WebSocket support for chat interface
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "upgrade";
+                  }
                 }
               }
-            }
-          '';
-        in {
-          script = ''
-            mkdir -p ${logDir} ${logDir}/client_body
-            ${pkgs.nginx}/bin/nginx -c ${config} -g "daemon off;" -e ${logDir}/error.log
-          '';
-          serviceConfig.RunAtLoad = true;
-          serviceConfig.KeepAlive = true;
-          serviceConfig.SoftResourceLimits.NumberOfFiles = 4096;
-        };
+            '';
+          in
+          {
+            script = ''
+              mkdir -p ${logDir} ${logDir}/client_body
+              ${pkgs.nginx}/bin/nginx -c ${config} -g "daemon off;" -e ${logDir}/error.log
+            '';
+            serviceConfig.RunAtLoad = true;
+            serviceConfig.KeepAlive = true;
+            serviceConfig.SoftResourceLimits.NumberOfFiles = 4096;
+          };
 
         flatten-recordings = {
           script = ''

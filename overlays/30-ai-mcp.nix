@@ -6,12 +6,13 @@
 final: prev: {
 
   # Fix: npm prune removes @types/node, then prepare script tries to rebuild
-  mcp-server-sequential-thinking =
-    prev.mcp-server-sequential-thinking.overrideAttrs
-    (old: { dontNpmPrune = true; });
+  mcp-server-sequential-thinking = prev.mcp-server-sequential-thinking.overrideAttrs (old: {
+    dontNpmPrune = true;
+  });
 
   # Rust documentation MCP server
-  rustdocs-mcp-server = with prev;
+  rustdocs-mcp-server =
+    with prev;
     rustPlatform.buildRustPackage rec {
       pname = "rustdocs-mcp-server";
       version = "1.3.1";
@@ -25,7 +26,11 @@ final: prev: {
 
       cargoHash = "sha256-iw7dRzwH42HBj2r9y5IHHKLmER7QkyFzLjh7Q+dNMao=";
 
-      nativeBuildInputs = [ pkg-config perl openssl.dev ];
+      nativeBuildInputs = [
+        pkg-config
+        perl
+        openssl.dev
+      ];
 
       meta = with lib; {
         description = ''
@@ -41,7 +46,8 @@ final: prev: {
     };
 
   # Browser control MCP server
-  browser-control-mcp = with prev;
+  browser-control-mcp =
+    with prev;
     buildNpmPackage (finalAttrs: {
       pname = "browser-control-mcp";
       version = "1.5.1";
@@ -64,8 +70,7 @@ final: prev: {
       versionCheckProgramArg = "--version";
 
       meta = with lib; {
-        description =
-          "MCP server paired with a browser extension that enables AI agents to control the user's browser.";
+        description = "MCP server paired with a browser extension that enables AI agents to control the user's browser.";
         homepage = "https://github.com/eyalzh/browser-control-mcp";
         license = licenses.mit;
         mainProgram = "browser-control-mcp";
@@ -77,7 +82,8 @@ final: prev: {
   # Claude Code ACP - Use Claude Code from ACP-compatible clients
   # NOTE: Using 'final' here because claude-code-acp may need packages
   # defined earlier in this overlay
-  claude-code-acp = with final;
+  claude-code-acp =
+    with final;
     buildNpmPackage (finalAttrs: {
       pname = "claude-code-acp";
       version = "0.14.0";
@@ -103,8 +109,7 @@ final: prev: {
       doInstallCheck = false;
 
       meta = with lib; {
-        description =
-          "Use Claude Code from any ACP-compatible clients such as Zed";
+        description = "Use Claude Code from any ACP-compatible clients such as Zed";
         homepage = "https://github.com/zed-industries/claude-code-acp";
         license = licenses.asl20;
         mainProgram = "claude-code-acp";

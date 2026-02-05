@@ -7,11 +7,14 @@
 #   - my-scripts requires paths.scripts
 final: prev:
 
-let paths = import ../config/paths.nix { inherit (prev) inputs; };
-in {
+let
+  paths = import ../config/paths.nix { inherit (prev) inputs; };
+in
+{
 
   # Scripts from this repository's bin/ directory
-  nix-scripts = with prev;
+  nix-scripts =
+    with prev;
     stdenv.mkDerivation {
       name = "nix-scripts";
 
@@ -35,7 +38,8 @@ in {
     };
 
   # Personal scripts collection
-  my-scripts = with final;
+  my-scripts =
+    with final;
     stdenv.mkDerivation {
       name = "my-scripts";
 

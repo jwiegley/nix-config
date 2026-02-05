@@ -9,49 +9,73 @@ final: prev:
 let
   paths = import ../config/paths.nix { inherit (prev) inputs; };
 
-  myEmacsPackageOverrides = eself: esuper:
+  myEmacsPackageOverrides =
+    eself: esuper:
     let
-      inherit (prev) fetchurl fetchgit fetchFromGitHub fetchzip stdenv lib;
+      inherit (prev)
+        fetchurl
+        fetchgit
+        fetchFromGitHub
+        fetchzip
+        stdenv
+        lib
+        ;
       inherit (stdenv) mkDerivation;
 
-      withPatches = pkg: patches:
-        pkg.overrideAttrs (attrs: { inherit patches; });
+      withPatches =
+        pkg: patches:
+        pkg.overrideAttrs (attrs: {
+          inherit patches;
+        });
 
-      compileEmacsFiles = args:
-        prev.callPackage ./emacs/builder.nix
-        ({ inherit (eself) emacs; } // args);
+      compileEmacsFiles = args: prev.callPackage ./emacs/builder.nix ({ inherit (eself) emacs; } // args);
 
-      addBuildInputs = pkg: inputs:
-        pkg.overrideAttrs
-        (attrs: { buildInputs = attrs.buildInputs ++ inputs; });
+      addBuildInputs =
+        pkg: inputs:
+        pkg.overrideAttrs (attrs: {
+          buildInputs = attrs.buildInputs ++ inputs;
+        });
 
-      compileLocalFile = name:
+      compileLocalFile =
+        name:
         compileEmacsFiles {
           inherit name;
           src = ./emacs + ("/" + name);
         };
 
-      fetchFromEmacsWiki = prev.callPackage ({ fetchurl, name, sha256 }:
+      fetchFromEmacsWiki = prev.callPackage (
+        {
+          fetchurl,
+          name,
+          sha256,
+        }:
         fetchurl {
           inherit sha256;
           url = "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/" + name;
-        });
+        }
+      );
 
-      compileEmacsWikiFile = { name, sha256, buildInputs ? [ ], patches ? [ ] }:
+      compileEmacsWikiFile =
+        {
+          name,
+          sha256,
+          buildInputs ? [ ],
+          patches ? [ ],
+        }:
         compileEmacsFiles {
           inherit name buildInputs patches;
           src = fetchFromEmacsWiki { inherit name sha256; };
         };
 
-    in rec {
+    in
+    rec {
 
       edit-env = compileLocalFile "edit-env.el";
       edit-var = compileLocalFile "edit-var.el";
       rs-gnus-summary = compileLocalFile "rs-gnus-summary.el";
       supercite = compileLocalFile "supercite.el";
 
-      company-coq =
-        withPatches esuper.company-coq [ ./emacs/patches/company-coq.patch ];
+      company-coq = withPatches esuper.company-coq [ ./emacs/patches/company-coq.patch ];
       magit = withPatches esuper.magit [ ./emacs/patches/magit.patch ];
 
       ########################################################################
@@ -75,7 +99,11 @@ let
         sha256 = "0ld30hwcxvyqfaqi80nvrlflpzrclnjcllcp457hn4ydbcf2is9r";
         # date = 2025-10-02T08:31:57-0700;
 
-        buildInputs = with eself; [ hl-line-plus col-highlight vline ];
+        buildInputs = with eself; [
+          hl-line-plus
+          col-highlight
+          vline
+        ];
       };
 
       cursor-chg = compileEmacsWikiFile {
@@ -170,7 +198,11 @@ let
           sha256 = "sha256-vmKKEmZpzHQ8RDbTuoTCWGRypLfMiHrEv9Zw0G6K1pg=";
           # date = "2025-09-27T22:49:03-07:00";
         };
-        propagatedBuildInputs = with eself; [ browser-hist elfeed ox-gfm ];
+        propagatedBuildInputs = with eself; [
+          browser-hist
+          elfeed
+          ox-gfm
+        ];
         buildInputs = with eself; [
           browser-hist
           elfeed
@@ -224,8 +256,7 @@ let
           sha256 = "sha256-xUBQrQpw+JZxcqT1fy/8C2tjKwa7sLFHXamBm45Fa4Y=";
           # date = 2025-07-16T14:21:52-04:00;
         };
-        propagatedBuildInputs = with eself;
-          [ (prev.emacs-lsp-booster.override { emacs = eself.emacs; }) ];
+        propagatedBuildInputs = with eself; [ (prev.emacs-lsp-booster.override { emacs = eself.emacs; }) ];
       };
 
       eww-plz = compileEmacsFiles {
@@ -294,7 +325,10 @@ let
           sha256 = "sha256-VcP6HDDh9/YZOYEI1bpWONfrqk39GjyWK/nzApREhkQ=";
           # date = 2024-09-20T15:03:32-05:00;
         };
-        buildInputs = with eself; [ avy multiple-cursors ];
+        buildInputs = with eself; [
+          avy
+          multiple-cursors
+        ];
       };
 
       moccur-edit = compileEmacsFiles {
@@ -408,7 +442,10 @@ let
           sha256 = "07b18ij10zld5wv5k7f612gkb3y27i653inq3i905va45v1axvqm";
           # date = 2023-05-26T15:48:10+01:00;
         };
-        buildInputs = with eself; [ vterm multi-vterm ];
+        buildInputs = with eself; [
+          vterm
+          multi-vterm
+        ];
       };
 
       word-count-mode = compileEmacsFiles {
@@ -490,8 +527,7 @@ let
       org-checklist = compileEmacsFiles {
         name = "org-checklist.el";
         src = fetchurl {
-          url =
-            "https://git.sr.ht/~bzg/org-contrib/blob/master/lisp/org-checklist.el";
+          url = "https://git.sr.ht/~bzg/org-contrib/blob/master/lisp/org-checklist.el";
           sha256 = "03z9cklpcrnc0s0igi7jxz0aw7c97m9cwz7b1d8nfz29fws25cx9";
           # date = "2025-10-02T08:32:29-0700";
         };
@@ -529,7 +565,11 @@ let
           sha256 = "sha256-Z6Xbxwh+tKpyV714EAn4cmDe1TxPYLS++hg3pbjsPjk=";
           # date = 2025-10-01T20:50:56+02:00;
         };
-        buildInputs = with eself; [ org llama el-job ];
+        buildInputs = with eself; [
+          org
+          llama
+          el-job
+        ];
       };
 
       org-node = compileEmacsFiles {
@@ -541,7 +581,13 @@ let
           sha256 = "sha256-s6qkMxBzSwQuupzGB5BGee/a7Xb+IDxhYKnVYHsEdxw=";
           # date = 2025-10-01T20:55:21+02:00;
         };
-        buildInputs = with eself; [ org org-mem llama magit-section el-job ];
+        buildInputs = with eself; [
+          org
+          org-mem
+          llama
+          magit-section
+          el-job
+        ];
       };
 
       org-pretty-table = compileEmacsFiles {
@@ -565,7 +611,11 @@ let
           sha256 = "sha256-/wL4NOd1xHY81eF+njdWcLUqlemjlNhCYnzBsWISFUY=";
           # date = 2022-10-05T20:37:38-05:00;
         };
-        buildInputs = with eself; [ quick-peek dash s ];
+        buildInputs = with eself; [
+          quick-peek
+          dash
+          s
+        ];
       };
 
       org-recoll = compileEmacsFiles {
@@ -577,7 +627,11 @@ let
           sha256 = "sha256-bAiQsPESYnxz+gDVU4R/ZYzP2uQclAWVZvr4iejvcSU=";
           # date = "2020-06-28T15:19:50-04:00";
         };
-        buildInputs = with eself; [ quick-peek dash s ];
+        buildInputs = with eself; [
+          quick-peek
+          dash
+          s
+        ];
       };
 
       org-srs = compileEmacsFiles {
@@ -589,7 +643,10 @@ let
           sha256 = "sha256-yV7F0DimnGyAKMQuXVsm3I9dH4t0ZNvTs82pkez9bC8=";
           # date = 2025-09-21T19:33:28+08:00;
         };
-        buildInputs = with eself; [ org fsrs ];
+        buildInputs = with eself; [
+          org
+          fsrs
+        ];
       };
 
       org-table-highlight = compileEmacsFiles {
@@ -696,17 +753,29 @@ let
       # };
     };
 
-  mkEmacsPackages = emacs:
-    prev.lib.recurseIntoAttrs ((final.emacsPackagesFor emacs).overrideScope
-      (_: super:
-        prev.lib.fix (prev.lib.extends myEmacsPackageOverrides (_:
-          super.elpaPackages // super.melpaPackages // super.manualPackages // {
-            inherit emacs;
-            inherit (super) elpaBuild melpaBuild trivialBuild;
-            inherit (super) melpaPackages;
-          }))));
+  mkEmacsPackages =
+    emacs:
+    prev.lib.recurseIntoAttrs (
+      (final.emacsPackagesFor emacs).overrideScope (
+        _: super:
+        prev.lib.fix (
+          prev.lib.extends myEmacsPackageOverrides (
+            _:
+            super.elpaPackages
+            // super.melpaPackages
+            // super.manualPackages
+            // {
+              inherit emacs;
+              inherit (super) elpaBuild melpaBuild trivialBuild;
+              inherit (super) melpaPackages;
+            }
+          )
+        )
+      )
+    );
 
-in {
+in
+{
 
   # NOTE: Using 'final' for emacs aliases because they reference
   # packages defined in this same overlay
@@ -717,39 +786,50 @@ in {
 
   ##########################################################################
 
-  emacs30-macport = (prev.emacs30-macport.override {
-    srcRepo = true;
-    withTreeSitter = true;
-    withNativeCompilation = true;
-  }).overrideAttrs (attrs: {
-    env = attrs.env // { CFLAGS = "-fobjc-arc"; };
-    configureFlags = attrs.configureFlags ++ [ "--disable-gc-mark-trace" ];
-    nativeBuildInputs = attrs.nativeBuildInputs
-      ++ [ prev.autoreconfHook prev.autoconf prev.automake prev.pkg-config ];
-  });
+  emacs30-macport =
+    (prev.emacs30-macport.override {
+      srcRepo = true;
+      withTreeSitter = true;
+      withNativeCompilation = true;
+    }).overrideAttrs
+      (attrs: {
+        env = attrs.env // {
+          CFLAGS = "-fobjc-arc";
+        };
+        configureFlags = attrs.configureFlags ++ [ "--disable-gc-mark-trace" ];
+        nativeBuildInputs = attrs.nativeBuildInputs ++ [
+          prev.autoreconfHook
+          prev.autoconf
+          prev.automake
+          prev.pkg-config
+        ];
+      });
   emacs30MacPortPackages = final.emacs30MacPortPackagesNg;
   emacs30MacPortPackagesNg = mkEmacsPackages final.emacs30-macport;
 
-  emacs30MacPortEnv = myPkgs:
+  emacs30MacPortEnv =
+    myPkgs:
     prev.myEnvFun {
       name = "emacs30MacPort";
-      buildInputs =
-        [ (final.emacs30MacPortPackagesNg.emacsWithPackages myPkgs) ];
+      buildInputs = [ (final.emacs30MacPortPackagesNg.emacsWithPackages myPkgs) ];
     };
 
   ##########################################################################
 
-  emacs30 = (prev.emacs30.override {
-    withImageMagick = true;
-    withNativeCompilation = true;
-  }).overrideAttrs (attrs: {
-    configureFlags = attrs.configureFlags ++ [ "--disable-gc-mark-trace" ];
-    patches = attrs.patches ++ [ ./emacs/patches/nsthread.patch ];
-  });
+  emacs30 =
+    (prev.emacs30.override {
+      withImageMagick = true;
+      withNativeCompilation = true;
+    }).overrideAttrs
+      (attrs: {
+        configureFlags = attrs.configureFlags ++ [ "--disable-gc-mark-trace" ];
+        patches = attrs.patches ++ [ ./emacs/patches/nsthread.patch ];
+      });
   emacs30Packages = final.emacs30PackagesNg;
   emacs30PackagesNg = mkEmacsPackages final.emacs30;
 
-  emacs30Env = myPkgs:
+  emacs30Env =
+    myPkgs:
     prev.myEnvFun {
       name = "emacs30";
       buildInputs = [ (final.emacs30PackagesNg.emacsWithPackages myPkgs) ];
@@ -757,41 +837,48 @@ in {
 
   ##########################################################################
 
-  emacsHEAD = with prev;
+  emacsHEAD =
+    with prev;
     let
-      libGccJitLibraryPaths =
-        [ "${lib.getLib libgccjit}/lib/gcc" "${lib.getLib stdenv.cc.libc}/lib" ]
-        ++ lib.optionals (stdenv.cc ? cc.lib.libgcc)
-        [ "${lib.getLib stdenv.cc.cc.lib.libgcc}/lib" ];
-    in (emacs30.override {
+      libGccJitLibraryPaths = [
+        "${lib.getLib libgccjit}/lib/gcc"
+        "${lib.getLib stdenv.cc.libc}/lib"
+      ]
+      ++ lib.optionals (stdenv.cc ? cc.lib.libgcc) [ "${lib.getLib stdenv.cc.cc.lib.libgcc}/lib" ];
+    in
+    (emacs30.override {
       withImageMagick = true;
       withNativeCompilation = false;
-    }).overrideAttrs (attrs: rec {
-      version = "31.0.50";
-      env = {
-        NATIVE_FULL_AOT = "1";
-        LIBRARY_PATH = lib.concatStringsSep ":" libGccJitLibraryPaths;
-      };
-      src = paths.emacsSrc;
-      patches = [
-        (builtins.path {
-          name = "inhibit-lexical-cookie-warning-67916.patch";
-          path = ./emacs/patches/inhibit-lexical-cookie-warning-67916-30.patch;
-        })
-      ];
-      preConfigure = ''
-        sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac
-        autoreconf
-      '';
-      env.NIX_CFLAGS_COMPILE = "-g3 -O0";
-      configureFlags = attrs.configureFlags
-        ++ [ "--enable-checking=yes,glyphs" "--enable-check-lisp-object-type" ];
-    });
+    }).overrideAttrs
+      (attrs: rec {
+        version = "31.0.50";
+        env = {
+          NATIVE_FULL_AOT = "1";
+          LIBRARY_PATH = lib.concatStringsSep ":" libGccJitLibraryPaths;
+        };
+        src = paths.emacsSrc;
+        patches = [
+          (builtins.path {
+            name = "inhibit-lexical-cookie-warning-67916.patch";
+            path = ./emacs/patches/inhibit-lexical-cookie-warning-67916-30.patch;
+          })
+        ];
+        preConfigure = ''
+          sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac
+          autoreconf
+        '';
+        env.NIX_CFLAGS_COMPILE = "-g3 -O0";
+        configureFlags = attrs.configureFlags ++ [
+          "--enable-checking=yes,glyphs"
+          "--enable-check-lisp-object-type"
+        ];
+      });
 
   emacsHEADPackages = final.emacsHEADPackagesNg;
   emacsHEADPackagesNg = mkEmacsPackages final.emacsHEAD;
 
-  emacsHEADEnv = myPkgs:
+  emacsHEADEnv =
+    myPkgs:
     prev.myEnvFun {
       name = "emacsHEAD";
       buildInputs = [ (final.emacsHEADPackagesNg.emacsWithPackages myPkgs) ];

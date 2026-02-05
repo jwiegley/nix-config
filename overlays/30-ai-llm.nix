@@ -5,7 +5,8 @@
 final: prev: {
 
   # GGUF file manipulation tools
-  gguf-tools = with prev;
+  gguf-tools =
+    with prev;
     stdenv.mkDerivation rec {
       name = "gguf-tools-${version}";
       version = "a3257ff3";
@@ -25,15 +26,15 @@ final: prev: {
 
       meta = {
         homepage = "https://github.com/antirez/gguf-tools";
-        description =
-          "This is a work in progress library to manipulate GGUF files";
+        description = "This is a work in progress library to manipulate GGUF files";
         license = lib.licenses.mit;
         maintainers = with lib.maintainers; [ jwiegley ];
       };
     };
 
   # HuggingFace model downloader
-  hfdownloader = with prev;
+  hfdownloader =
+    with prev;
     buildGoModule rec {
       pname = "hfdownloader";
       version = "3.0.3";
@@ -47,8 +48,7 @@ final: prev: {
       };
 
       meta = with lib; {
-        description =
-          "The HuggingFace Model Downloader is a utility tool for downloading models and datasets from the HuggingFace website";
+        description = "The HuggingFace Model Downloader is a utility tool for downloading models and datasets from the HuggingFace website";
         homepage = "https://github.com/bodaay/HuggingFaceModelDownloader";
         license = licenses.asl20;
         maintainers = [ maintainers.jwiegley ];
@@ -75,66 +75,69 @@ final: prev: {
   });
 
   # llama-swap - Model swapping for llama.cpp
-  llama-swap = let
-    version = "189";
+  llama-swap =
+    let
+      version = "189";
 
-    src = prev.fetchFromGitHub {
-      owner = "mostlygeek";
-      repo = "llama-swap";
-      rev = "v${version}";
-      hash = "sha256-6tAkUSET6klL4PFWawjlBCiMAh/WLQudHLXYjO2PoqI=";
-    };
+      src = prev.fetchFromGitHub {
+        owner = "mostlygeek";
+        repo = "llama-swap";
+        rev = "v${version}";
+        hash = "sha256-6tAkUSET6klL4PFWawjlBCiMAh/WLQudHLXYjO2PoqI=";
+      };
 
-    ui = with prev;
-      buildNpmPackage (finalAttrs: {
-        pname = "llama-swap-ui";
-        inherit version src;
+      ui =
+        with prev;
+        buildNpmPackage (finalAttrs: {
+          pname = "llama-swap-ui";
+          inherit version src;
 
-        postPatch = ''
-          substituteInPlace vite.config.ts \
-          --replace '../proxy/ui_dist' '${placeholder "out"}/ui_dist'
-        '';
+          postPatch = ''
+            substituteInPlace vite.config.ts \
+            --replace '../proxy/ui_dist' '${placeholder "out"}/ui_dist'
+          '';
 
-        sourceRoot = "source/ui-svelte";
+          sourceRoot = "source/ui-svelte";
 
-        npmDepsHash = "sha256-Fs7+JKE8YBp2Xj8bVBlwmT+UwuD642VeUHiPx+fv94c=";
+          npmDepsHash = "sha256-Fs7+JKE8YBp2Xj8bVBlwmT+UwuD642VeUHiPx+fv94c=";
 
-        postInstall = ''
-          rm -rf $out/lib
-        '';
+          postInstall = ''
+            rm -rf $out/lib
+          '';
 
-        meta = {
-          description = "llama-swap - UI";
-          license = lib.licenses.mit;
-          platforms = lib.platforms.unix;
-        };
-      });
-  in with prev;
-  prev.llama-swap.overrideAttrs (attrs: rec {
-    inherit version src;
-    vendorHash = "sha256-XiDYlw/byu8CWvg4KSPC7m8PGCZXtp08Y1velx4BR8U=";
-    preBuild = ''
-      cp -r ${ui}/ui_dist proxy/
-    '';
-    ldflags = [
-      "-X main.version=${version}"
-      "-X main.date=unknown"
-      "-X main.commit=v${version}"
-    ];
-    doCheck = false;
-    meta = {
-      description =
-        "Model swapping for llama.cpp (or any local OpenAPI compatible server)";
-      license = lib.licenses.mit;
-      platforms = lib.platforms.unix;
-      mainProgram = "llama-swap";
-    };
-  });
+          meta = {
+            description = "llama-swap - UI";
+            license = lib.licenses.mit;
+            platforms = lib.platforms.unix;
+          };
+        });
+    in
+    with prev;
+    prev.llama-swap.overrideAttrs (attrs: rec {
+      inherit version src;
+      vendorHash = "sha256-XiDYlw/byu8CWvg4KSPC7m8PGCZXtp08Y1velx4BR8U=";
+      preBuild = ''
+        cp -r ${ui}/ui_dist proxy/
+      '';
+      ldflags = [
+        "-X main.version=${version}"
+        "-X main.date=unknown"
+        "-X main.commit=v${version}"
+      ];
+      doCheck = false;
+      meta = {
+        description = "Model swapping for llama.cpp (or any local OpenAPI compatible server)";
+        license = lib.licenses.mit;
+        platforms = lib.platforms.unix;
+        mainProgram = "llama-swap";
+      };
+    });
 
   # mlx-lm - Apple MLX-based LLM inference
   # NOTE: Using 'final' here because mlx-lm needs final python3Packages
   # which may include our pythonPackagesExtensions modifications
-  mlx-lm = with final;
+  mlx-lm =
+    with final;
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "mlx-lm";
@@ -149,7 +152,12 @@ final: prev: {
       };
 
       build-system = [ setuptools ];
-      dependencies = [ mlx transformers protobuf jinja2 ];
+      dependencies = [
+        mlx
+        transformers
+        protobuf
+        jinja2
+      ];
 
       doCheck = false; # Tests require additional dependencies
 

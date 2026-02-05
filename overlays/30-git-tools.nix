@@ -5,23 +5,28 @@
 # Note: git-scripts requires paths.gitScripts
 final: prev:
 
-let paths = import ../config/paths.nix { inherit (prev) inputs; };
-in {
+let
+  paths = import ../config/paths.nix { inherit (prev) inputs; };
+in
+{
 
   # Git Large File Storage (pre-built binary for darwin-arm64)
-  git-lfs = with prev;
+  git-lfs =
+    with prev;
     stdenv.mkDerivation rec {
       name = "git-lfs-${version}";
       version = "3.7.0";
 
       src = fetchurl {
-        url =
-          "https://github.com/git-lfs/git-lfs/releases/download/v${version}/git-lfs-darwin-arm64-v${version}.zip";
+        url = "https://github.com/git-lfs/git-lfs/releases/download/v${version}/git-lfs-darwin-arm64-v${version}.zip";
         sha256 = "sha256-NMqd9wMQYbhHHVMHbLdql0dok3ognD/Ko95icOxkZeo=";
         # date = 2020-05-16T00:38:51-0800;
       };
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [
+        "unpackPhase"
+        "installPhase"
+      ];
 
       buildInputs = [ unzip ];
 
@@ -44,7 +49,8 @@ in {
     };
 
   # Create and update GitHub PRs with stacked commits
-  git-pr = with prev;
+  git-pr =
+    with prev;
     buildGoModule rec {
       pname = "git-pr";
       version = "1.2.0";
@@ -60,8 +66,7 @@ in {
       };
 
       meta = {
-        description =
-          "git-pr is a command line tool to create and update GitHub pull requests within stacked commits";
+        description = "git-pr is a command line tool to create and update GitHub pull requests within stacked commits";
         license = lib.licenses.mit;
         homepage = "https://github.com/iOliverNguyen/git-pr";
         maintainers = with lib.maintainers; [ jwiegley ];
@@ -72,7 +77,8 @@ in {
 
   # Custom git helper scripts
   # Note: Requires paths.gitScripts
-  git-scripts = with prev;
+  git-scripts =
+    with prev;
     stdenv.mkDerivation {
       name = "git-scripts";
 

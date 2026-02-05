@@ -5,9 +5,20 @@
 final: prev:
 
 let
-  llm-mlx = { lib, callPackage, buildPythonPackage, fetchFromGitHub, setuptools
-    , llm, mlx, pytestCheckHook, pytest-asyncio, pytest-recording
-    , writableTmpDirAsHomeHook, }:
+  llm-mlx =
+    {
+      lib,
+      callPackage,
+      buildPythonPackage,
+      fetchFromGitHub,
+      setuptools,
+      llm,
+      mlx,
+      pytestCheckHook,
+      pytest-asyncio,
+      pytest-recording,
+      writableTmpDirAsHomeHook,
+    }:
     buildPythonPackage rec {
       pname = "llm-mlx";
       version = "0.4";
@@ -20,7 +31,10 @@ let
         hash = "sha256-9SGbvhuNeKgMYGa0ZiOLm+H/JbNpvFWBcUL4De5xO4o=";
       };
 
-      build-system = [ setuptools llm ];
+      build-system = [
+        setuptools
+        llm
+      ];
       dependencies = [ mlx ];
 
       nativeCheckInputs = [
@@ -32,21 +46,24 @@ let
 
       pythonImportsCheck = [ "llm_mlx" ];
 
-      passthru.tests = { llm-plugin = callPackage ./tests/llm-plugin.nix { }; };
+      passthru.tests = {
+        llm-plugin = callPackage ./tests/llm-plugin.nix { };
+      };
 
       meta = {
         description = "LLM access to models using MLX";
         homepage = "https://github.com/simonw/llm-mlx";
-        changelog =
-          "https://github.com/simonw/llm-mlx/releases/tag/${version}/CHANGELOG.md";
+        changelog = "https://github.com/simonw/llm-mlx/releases/tag/${version}/CHANGELOG.md";
         license = lib.licenses.asl20;
         maintainers = with lib.maintainers; [ jwiegley ];
       };
     };
-in {
+in
+{
 
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
-    (pfinal: pprev:
+    (
+      pfinal: pprev:
       let
         nanobind = pprev.nanobind.overridePythonAttrs (oldAttrs: rec {
           version = "2.4.0";
@@ -58,7 +75,8 @@ in {
             hash = "sha256-9OpDsjFEeJGtbti4Q9HHl78XaGf8M3lG4ukvHCMzyMU=";
           };
         });
-      in {
+      in
+      {
         # Fix hash mismatch for mitmproxy-macos wheel (PyPI republished the package)
         mitmproxy-macos = pprev.mitmproxy-macos.overridePythonAttrs (oldAttrs: {
           src = pfinal.fetchPypi {
@@ -111,8 +129,7 @@ in {
           pythonImportsCheck = [ "distutils" ];
 
           meta = {
-            description =
-              "Redistribution of removed distutils module from stdlib";
+            description = "Redistribution of removed distutils module from stdlib";
             homepage = "https://pypi.org/project/standard-distutils/";
             license = prev.lib.licenses.psfl;
           };
@@ -125,10 +142,10 @@ in {
             substituteInPlace pyproject.toml \
               --replace-fail "setuptools>80.0" "setuptools"
           '';
-          build-system = (oldAttrs.build-system or [ ])
-            ++ [ pfinal.standard-distutils ];
+          build-system = (oldAttrs.build-system or [ ]) ++ [ pfinal.standard-distutils ];
         });
-      })
+      }
+    )
   ];
 
 }

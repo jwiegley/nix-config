@@ -4,7 +4,8 @@
 # Packages: cpx
 final: prev: {
 
-  cpx = with prev;
+  cpx =
+    with prev;
     rustPlatform.buildRustPackage rec {
       pname = "cpx";
       version = "0.1.3";
@@ -21,8 +22,7 @@ final: prev: {
       # cpx is currently Linux-only (uses copy_file_range syscall)
       # Skip build on Darwin
       meta = with lib; {
-        description =
-          "A modern, fast file copy tool for Linux with progress bars, resume capability, and more";
+        description = "A modern, fast file copy tool for Linux with progress bars, resume capability, and more";
         homepage = "https://github.com/11happy/cpx";
         license = licenses.mit;
         maintainers = with maintainers; [ jwiegley ];

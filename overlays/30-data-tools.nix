@@ -5,11 +5,14 @@
 # Note: dirscan requires paths.dirscan
 final: prev:
 
-let paths = import ../config/paths.nix { inherit (prev) inputs; };
-in {
+let
+  paths = import ../config/paths.nix { inherit (prev) inputs; };
+in
+{
 
   # Simple key/value store for keeping hashes
-  hashdb = with prev;
+  hashdb =
+    with prev;
     stdenv.mkDerivation rec {
       name = "hashdb-${version}";
       version = "86c8675d";
@@ -22,7 +25,10 @@ in {
         # date = 2011-10-04T03:27:40-05:00;
       };
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [
+        "unpackPhase"
+        "installPhase"
+      ];
 
       installPhase = ''
         mkdir -p $out/bin
@@ -39,7 +45,8 @@ in {
 
   # Stateful directory scanning utility
   # Note: Requires paths.dirscan
-  dirscan = with prev;
+  dirscan =
+    with prev;
     python3Packages.buildPythonPackage rec {
       pname = "dirscan";
       version = "2.0";
@@ -47,7 +54,10 @@ in {
 
       src = paths.dirscan;
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [
+        "unpackPhase"
+        "installPhase"
+      ];
 
       installPhase = ''
         mkdir -p $out/bin $out/libexec
@@ -65,7 +75,8 @@ in {
     };
 
   # Utilities for processing tab-separated files
-  tsvutils = with prev;
+  tsvutils =
+    with prev;
     stdenv.mkDerivation rec {
       name = "tsvutils-${version}";
       version = "a286c817";
@@ -78,7 +89,10 @@ in {
         # date = 2019-08-11T16:06:16-04:00;
       };
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [
+        "unpackPhase"
+        "installPhase"
+      ];
 
       installPhase = ''
         mkdir -p $out/bin
