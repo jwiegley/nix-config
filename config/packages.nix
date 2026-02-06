@@ -375,8 +375,8 @@ rec {
     # claude-code-acp
     ccusage
     opencode
-    gemini-cli
-    codex
+    # gemini-cli
+    # codex
     ollama
     openclaw
   ]);
