@@ -907,11 +907,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1770221650,
-        "narHash": "sha256-sd/msl7yQekZ/8s+ui1RP9N2zDlgkfxOchUdahOdyZ0=",
+        "lastModified": 1770394277,
+        "narHash": "sha256-CmjtY2GcYVVVavHwU0rQYygWR3NC2rSThV982kJ6i98=",
         "ref": "refs/heads/master",
-        "rev": "3ea1010a6b0a63e90896133deaba189f13d47436",
-        "revCount": 181055,
+        "rev": "66d307aa0896acf7a74de6ec606f5c2997d24f2f",
+        "revCount": 181071,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -5066,10 +5066,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1769932065,
-        "narHash": "sha256-Tv7XJlaZZe2nvOE9XVFA5OqXf0m06iakGoo29A9BjJs=",
-        "rev": "69aca6dff9f2267f12d509752e44e46030c1f043",
-        "revCount": 7116,
+        "lastModified": 1770404711,
+        "narHash": "sha256-8nYh8PZvPWP5ruCdziXxtSad0p+D1M7ovseZcc+tpb8=",
+        "ref": "refs/heads/master",
+        "rev": "920059e6a4a9fbb7ccb9e2cbd6e8a8a06648c113",
+        "revCount": 7119,
         "type": "git",
         "url": "file:///Users/johnw/src/ledger/master"
       },
@@ -5104,11 +5105,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1770388146,
-        "narHash": "sha256-tjCUAiXibkgKMJxiTXak+VwYbWyxY2at7hRCPykrTbc=",
+        "lastModified": 1770407839,
+        "narHash": "sha256-ugBlGVRVaGRiCwb6rdtsvjZiAlEaPYYsZZH/lYBaFwE=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "2c5791cc2667f20fe75fa6a5ea9335c23bea538d",
+        "rev": "bba082e334ad951cfb1ded12ae86429a5927994b",
         "type": "github"
       },
       "original": {
@@ -5124,11 +5125,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1770360837,
-        "narHash": "sha256-AojeM10bKEyqSZajxrqsqKN2XuRTx37dyZojYWPRR90=",
+        "lastModified": 1770403384,
+        "narHash": "sha256-VVKmq6jptR2GI/wbF4nhva/QtLSp3C8JkpKONBEB3L0=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "9484614ac67d17da964a6bb1bef5470dd972e36e",
+        "rev": "ed398ae0dfea333f36ce459a512af65a9f03cdbd",
         "type": "github"
       },
       "original": {
