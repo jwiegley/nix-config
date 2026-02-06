@@ -374,6 +374,7 @@ rec {
     claude-code
     # claude-code-acp
     ccusage
+    kilocode-cli
     opencode
     # gemini-cli
     # codex

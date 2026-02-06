@@ -69,7 +69,7 @@
     };
 
     # Local flake repos used by overlays
-    ledger.url = "git+file:///Users/johnw/src/ledger";
+    ledger.url = "git+file:///Users/johnw/src/ledger/master";
     rag-client.url = "git+file:///Users/johnw/src/rag-client";
   };
 

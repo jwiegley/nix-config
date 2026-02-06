@@ -4694,11 +4694,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1770263241,
-        "narHash": "sha256-R1WFtIvp38hS9x63dnijdJw1KyIiy30KGea6e6N7LHs=",
+        "lastModified": 1770318660,
+        "narHash": "sha256-yFVde8QZK7Dc0Xa8eQDsmxLX4NJNfL1NKfctSyiQgMY=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "04e5203db66417d548ae1ff188a9f591836dfaa7",
+        "rev": "471e6a065f9efed51488d7c51a9abbd387df91b8",
         "type": "github"
       },
       "original": {
@@ -5066,17 +5066,16 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1768596843,
-        "narHash": "sha256-G3PPCGqqKGlLbXwXlbYKAMOLjZjQpekMK9UDKyc0kGA=",
-        "ref": "refs/heads/master",
-        "rev": "08808b964a2c4cd1a6ed90b9fa3d75c3e0a2f78a",
-        "revCount": 7114,
+        "lastModified": 1769932065,
+        "narHash": "sha256-Tv7XJlaZZe2nvOE9XVFA5OqXf0m06iakGoo29A9BjJs=",
+        "rev": "69aca6dff9f2267f12d509752e44e46030c1f043",
+        "revCount": 7116,
         "type": "git",
-        "url": "file:///Users/johnw/src/ledger"
+        "url": "file:///Users/johnw/src/ledger/master"
       },
       "original": {
         "type": "git",
-        "url": "file:///Users/johnw/src/ledger"
+        "url": "file:///Users/johnw/src/ledger/master"
       }
     },
     "libgit2-src": {
@@ -5105,11 +5104,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1770325891,
-        "narHash": "sha256-7ipAUiPb798BRdV56+3bxa71fdleMxlS/XvIGUYO1qI=",
+        "lastModified": 1770388146,
+        "narHash": "sha256-tjCUAiXibkgKMJxiTXak+VwYbWyxY2at7hRCPykrTbc=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "54aeaa16a2f836142fba98a455e0373e3f464ac5",
+        "rev": "2c5791cc2667f20fe75fa6a5ea9335c23bea538d",
         "type": "github"
       },
       "original": {
@@ -5125,11 +5124,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1770235178,
-        "narHash": "sha256-3KG6dmWHhC3ziaMB4dzv4lnoN+trb19RtmUgSIpya8U=",
+        "lastModified": 1770360837,
+        "narHash": "sha256-AojeM10bKEyqSZajxrqsqKN2XuRTx37dyZojYWPRR90=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "0a893a3ae8c99d91aa9c2629162d4436dece318c",
+        "rev": "9484614ac67d17da964a6bb1bef5470dd972e36e",
         "type": "github"
       },
       "original": {
