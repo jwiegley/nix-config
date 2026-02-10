@@ -38,6 +38,7 @@ in
       DISABLE_AUTOUPDATER = "1";
       ASPELL_CONF = "conf ${config.xdg.configHome}/aspell/config;";
       B2_ACCOUNT_INFO = "${config.xdg.configHome}/backblaze-b2/account_info";
+      BEADS_NO_DAEMON = "1";
       CABAL_CONFIG = "${config.xdg.configHome}/cabal/config";
       CARGO_HOME = "${config.xdg.dataHome}/cargo";
       CLAUDE_CONFIG_DIR = "${config.xdg.configHome}/claude/personal";
@@ -166,6 +167,7 @@ in
           mkLink "${home}/Library/Mobile Documents/iCloud~com~openplanetsoftware~just-press-record/Documents";
 
         "pos".source = mkLink "${home}/work/positron";
+        "tron".source = mkLink "${home}/work/positron/tron";
         "srp".source = mkLink "${home}/work/regional-statistics/srp-db";
 
         "News".source = mkLink "${config.xdg.dataHome}/gnus/News";

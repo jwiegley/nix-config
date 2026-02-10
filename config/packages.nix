@@ -370,14 +370,15 @@ rec {
     cpx # Modern, fast file copy tool with progress bars and resume support
   ]
   ++ (with inputs.llm-agents.packages.${system}; [
+    beads
     droid
     claude-code
-    # claude-code-acp
+    claude-code-acp
     ccusage
     kilocode-cli
     opencode
-    # gemini-cli
-    # codex
+    gemini-cli
+    codex
     ollama
     openclaw
   ]);

@@ -888,22 +888,6 @@
         "url": "file:///Users/johnw/src/dirscan"
       }
     },
-    "double": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1768620629,
-        "narHash": "sha256-ICLF4b5K5+1Z772LDzutqNjOUvhsTMGSufRBRlOci5Y=",
-        "owner": "ossa-ma",
-        "repo": "double",
-        "rev": "0192f75527185439a810f097f062e275762b97a6",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ossa-ma",
-        "repo": "double",
-        "type": "github"
-      }
-    },
     "emacs-src": {
       "flake": false,
       "locked": {
@@ -1350,11 +1334,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1770256428,
-        "narHash": "sha256-qbeeXqCe9pDX3XibgpIApBxM0RqwwVpVmo4BqD8AId8=",
+        "lastModified": 1770532351,
+        "narHash": "sha256-tO+TaJ3Py7BeuU87k5n2OPtXhZ7weKnHeEoWmzUEPbU=",
         "ref": "refs/heads/johnw/continue",
-        "rev": "ce3d3e870fe3f2cdd26835e01024a6160885c01f",
-        "revCount": 1572,
+        "rev": "bd33c431433a33982b495429551b2e5b9261d87b",
+        "revCount": 1617,
         "type": "git",
         "url": "file:///Users/johnw/src/git-ai/continue"
       },
@@ -4694,11 +4678,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1770318660,
-        "narHash": "sha256-yFVde8QZK7Dc0Xa8eQDsmxLX4NJNfL1NKfctSyiQgMY=",
+        "lastModified": 1770654520,
+        "narHash": "sha256-mg5WZMIPGsFu9MxSrUcuJUPMbfMsF77el5yb/7rc10k=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "471e6a065f9efed51488d7c51a9abbd387df91b8",
+        "rev": "6c4fdbe1ad198fac36c320fd45c5957324a80b8e",
         "type": "github"
       },
       "original": {
@@ -5066,17 +5050,17 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1770404711,
-        "narHash": "sha256-8nYh8PZvPWP5ruCdziXxtSad0p+D1M7ovseZcc+tpb8=",
-        "ref": "refs/heads/master",
-        "rev": "920059e6a4a9fbb7ccb9e2cbd6e8a8a06648c113",
-        "revCount": 7119,
-        "type": "git",
-        "url": "file:///Users/johnw/src/ledger/master"
+        "lastModified": 1770677035,
+        "narHash": "sha256-SrbGtZRHQ1Z+7I27ujk5bC6Q/afURzTISMw6ULCFpC8=",
+        "owner": "ledger",
+        "repo": "ledger",
+        "rev": "35089cd409f82d3d238c99cd13d9c42517bb6fc9",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/ledger/master"
+        "owner": "ledger",
+        "repo": "ledger",
+        "type": "github"
       }
     },
     "libgit2-src": {
@@ -5105,11 +5089,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1770407839,
-        "narHash": "sha256-ugBlGVRVaGRiCwb6rdtsvjZiAlEaPYYsZZH/lYBaFwE=",
+        "lastModified": 1770647950,
+        "narHash": "sha256-5IBnmc6yMO4p26kJfHQylCJEci8X8vhp5AYG41yjNU8=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "bba082e334ad951cfb1ded12ae86429a5927994b",
+        "rev": "752fd7ca23ccbe5f5b00c0c65db9d8dbb755e119",
         "type": "github"
       },
       "original": {
@@ -5125,11 +5109,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1770403384,
-        "narHash": "sha256-VVKmq6jptR2GI/wbF4nhva/QtLSp3C8JkpKONBEB3L0=",
+        "lastModified": 1770641590,
+        "narHash": "sha256-0YSgVG+dHUR3A4iR1gzkT6S478ynFbpOScSJqqplJmI=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "ed398ae0dfea333f36ce459a512af65a9f03cdbd",
+        "rev": "27c854db820487f9be4126cbb88137bc307a89a8",
         "type": "github"
       },
       "original": {
@@ -6196,11 +6180,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1770169770,
-        "narHash": "sha256-awR8qIwJxJJiOmcEGgP2KUqYmHG4v/z8XpL9z8FnT1A=",
+        "lastModified": 1770537093,
+        "narHash": "sha256-pF1quXG5wsgtyuPOHcLfYg/ft/QMr8NnX0i6tW2187s=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "aa290c9891fa4ebe88f8889e59633d20cc06a5f2",
+        "rev": "fef9403a3e4d31b0a23f0bacebbec52c248fbb51",
         "type": "github"
       },
       "original": {
@@ -6468,15 +6452,15 @@
       "locked": {
         "lastModified": 1770232536,
         "narHash": "sha256-3xP39xLvAAMHC0ecBThhJh2TUyEsxzBCR028ypnU1gk=",
-        "ref": "refs/heads/main",
+        "owner": "jwiegley",
+        "repo": "rag-client",
         "rev": "83c88a09879424b75453b61f524d11d6ddee9034",
-        "revCount": 148,
-        "type": "git",
-        "url": "file:///Users/johnw/src/rag-client"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/rag-client"
+        "owner": "jwiegley",
+        "repo": "rag-client",
+        "type": "github"
       }
     },
     "renamer": {
@@ -6507,7 +6491,6 @@
       "inputs": {
         "darwin": "darwin",
         "dirscan": "dirscan",
-        "double": "double",
         "emacs-src": "emacs-src",
         "gh-to-org": "gh-to-org",
         "git-ai": "git-ai",
@@ -6556,11 +6539,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1770277684,
-        "narHash": "sha256-i7irzSni0cLNcnt6yGtb/uZ03lLs2T3E80pLstrZdfA=",
+        "lastModified": 1770621949,
+        "narHash": "sha256-gQhWBsCylxECzvlB0rq2/uMi1fwD8DcmP2s1lzyeXTw=",
         "ref": "refs/heads/main",
-        "rev": "f6f137d2649362e054d3b70c06030c41babd667a",
-        "revCount": 1325,
+        "rev": "c43b8a4085a41706666e9be65e12f3911f3131ae",
+        "revCount": 1328,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
