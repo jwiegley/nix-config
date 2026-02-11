@@ -369,8 +369,10 @@ rec {
   ++ lib.optionals stdenv.isLinux [
     cpx # Modern, fast file copy tool with progress bars and resume support
   ]
+  ++ [
+    beads # pinned to 0.49.6 via overlays/30-beads.nix
+  ]
   ++ (with inputs.llm-agents.packages.${system}; [
-    beads
     droid
     claude-code
     claude-code-acp
