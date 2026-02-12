@@ -357,6 +357,7 @@ rec {
     qdrant-web-ui
     rustdocs-mcp-server
 
+    cozempic
     context7-mcp
     playwright-mcp
     github-mcp-server
