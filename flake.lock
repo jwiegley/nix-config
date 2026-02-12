@@ -1334,17 +1334,17 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1770832866,
-        "narHash": "sha256-ORJbJgUX3V0O8fQ05+HbBSKxHJ0+NMLN6E4LDzuuAaQ=",
-        "ref": "refs/heads/johnw/continue",
-        "rev": "225a40b8910c2ad3b8bcbd5ff57a9f37a52d5cf0",
-        "revCount": 1732,
+        "lastModified": 1770853607,
+        "narHash": "sha256-6zRTG6wq5FaIMEDuvD3+4qCxTYfIXP5h3fi9t+mzceA=",
+        "ref": "refs/heads/main",
+        "rev": "8e5d5398a476d7684815804ce9e9936eb9643c69",
+        "revCount": 1748,
         "type": "git",
-        "url": "file:///Users/johnw/src/git-ai/continue"
+        "url": "file:///Users/johnw/src/git-ai/main"
       },
       "original": {
         "type": "git",
-        "url": "file:///Users/johnw/src/git-ai/continue"
+        "url": "file:///Users/johnw/src/git-ai/main"
       }
     },
     "git-all": {

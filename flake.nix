@@ -27,7 +27,7 @@
 
     org-jw.url = "github:jwiegley/org-jw";
 
-    git-ai.url = "git+file:///Users/johnw/src/git-ai/continue";
+    git-ai.url = "git+file:///Users/johnw/src/git-ai/main";
     git-all.url = "git+file:///Users/johnw/src/git-all";
     gitlib.url = "git+file:///Users/johnw/src/gitlib?submodules=0";
     hakyll.url = "git+file:///Users/johnw/src/hakyll";
