@@ -55,6 +55,7 @@ rec {
     cargo-cache
     cbor-diag
     cmake
+    cmux
     contacts
     coreutils
     csvkit
