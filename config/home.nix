@@ -19,6 +19,8 @@ let
 
   external_host = "data.newartisans.com";
 
+  gitPkg = inputs.git-ai.packages.${system}.default;
+
   ca-bundle_path = "${pkgs.cacert}/etc/ssl/certs/";
   ca-bundle_crt = "${ca-bundle_path}/ca-bundle.crt";
   emacs-server = "${tmpdir}/johnw-emacs/server";
@@ -382,14 +384,14 @@ in
 
       shellAliases = {
         vi = "${pkgs.vim}/bin/vim";
-        b = "${pkgs.git}/bin/git b";
-        l = "${pkgs.git}/bin/git l";
-        w = "${pkgs.git}/bin/git w";
+        b = "${gitPkg}/bin/git b";
+        l = "${gitPkg}/bin/git l";
+        w = "${gitPkg}/bin/git w";
         # g      = "${pkgs.hub}/bin/hub";
         # git    = "${pkgs.hub}/bin/hub";
         ga = "${pkgs.git-annex}/bin/git-annex";
-        good = "${pkgs.git}/bin/git bisect good";
-        bad = "${pkgs.git}/bin/git bisect bad";
+        good = "${gitPkg}/bin/git bisect good";
+        bad = "${gitPkg}/bin/git bisect bad";
         # ls     = "${pkgs.coreutils}/bin/ls --color=auto";
         # ls     = "${pkgs.eza}/bin/eza";
         # find   = "${pkgs.fd}/bin/fd";
@@ -537,7 +539,7 @@ in
 
     git = {
       enable = true;
-      package = inputs.git-ai.packages.${system}.default;
+      package = gitPkg;
 
       signing = {
         key = signing_key;
@@ -548,7 +550,7 @@ in
         alias = {
           amend = "commit --amend -C HEAD";
           authors =
-            ''!"${pkgs.git}/bin/git log --pretty=format:%aN''
+            ''!"${gitPkg}/bin/git log --pretty=format:%aN''
             + " | ${pkgs.coreutils}/bin/sort"
             + " | ${pkgs.coreutils}/bin/uniq -c"
             + " | ${pkgs.coreutils}/bin/sort -rn\"";
@@ -561,18 +563,18 @@ in
           dc = "diff --cached";
           dh = "diff HEAD";
           ds = "diff --staged";
-          from = "!${pkgs.git}/bin/git bisect start && ${pkgs.git}/bin/git bisect bad HEAD && ${pkgs.git}/bin/git bisect good";
+          from = "!${gitPkg}/bin/git bisect start && ${gitPkg}/bin/git bisect bad HEAD && ${gitPkg}/bin/git bisect good";
           ls-ignored = "ls-files --exclude-standard --ignored --others";
           rc = "rebase --continue";
           rh = "reset --hard";
           ri = "rebase --interactive";
           rs = "rebase --skip";
           ru = "remote update --prune";
-          snap = "!${pkgs.git}/bin/git stash" + " && ${pkgs.git}/bin/git stash apply";
+          snap = "!${gitPkg}/bin/git stash" + " && ${gitPkg}/bin/git stash apply";
           snaplog =
-            "!${pkgs.git}/bin/git log refs/snapshots/refs/heads/" + "$(${pkgs.git}/bin/git rev-parse HEAD)";
+            "!${gitPkg}/bin/git log refs/snapshots/refs/heads/" + "$(${gitPkg}/bin/git rev-parse HEAD)";
           spull =
-            "!${pkgs.git}/bin/git stash" + " && ${pkgs.git}/bin/git pull" + " && ${pkgs.git}/bin/git stash pop";
+            "!${gitPkg}/bin/git stash" + " && ${gitPkg}/bin/git pull" + " && ${gitPkg}/bin/git stash pop";
           su = "submodule update --init --recursive";
           unstage = "reset --soft HEAD^";
           w = "status -sb";
@@ -659,8 +661,8 @@ in
 
         "filter \"media\"" = {
           required = true;
-          clean = "${pkgs.git}/bin/git media clean %f";
-          smudge = "${pkgs.git}/bin/git media smudge %f";
+          clean = "${gitPkg}/bin/git media clean %f";
+          smudge = "${gitPkg}/bin/git media smudge %f";
         };
 
         # submodule = {
