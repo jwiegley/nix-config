@@ -179,6 +179,7 @@ in
       "github"
       "home-assistant"
       "iterm2"
+      "itermai"
       "key-codes"
       "keyboard-maestro"
       "kiwix"
