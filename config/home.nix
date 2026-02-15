@@ -183,8 +183,7 @@ in
       // lib.optionalAttrs (hostname == "hera" || hostname == "clio") {
         "org".source = mkLink "${home}/doc/org";
 
-        "Mobile".source =
-          mkLink "${home}/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org";
+        "Mobile".source = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs/Plain Org";
         "Drafts".source =
           mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
         "Inbox".source = mkLink "${home}/Library/Application Support/DEVONthink/Inbox";

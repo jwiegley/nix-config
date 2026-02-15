@@ -9,13 +9,13 @@ final: prev: {
       buildGoModule = prev.buildGoModule.override { go = prev.go_1_26; };
     }).overrideAttrs
       (old: rec {
-        version = "0.49.6";
+        version = "0.50.3";
 
         src = prev.fetchFromGitHub {
           owner = "steveyegge";
           repo = "beads";
           tag = "v${version}";
-          hash = "sha256-zopOpBqaHC2t+tGYtrHyalOUsFDZai2NmZZOKJs2vfQ=";
+          hash = "sha256-vWPQuhKUHsikSvmHGqp96LpcBiFYH2nev2LzEHyLrV8=";
         };
 
         nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ prev.pkg-config ];
@@ -28,7 +28,7 @@ final: prev: {
         # Tests require daemon socket binding which fails in the Nix sandbox
         doCheck = false;
 
-        vendorHash = "sha256-RyOxrW0C+2E+ULhGeF2RbUhaUFt58sux7neHPei5QJI=";
+        vendorHash = "sha256-s9ELOxDHHk+RyImrPxm9DPos7Wb4AFWaNKsrgU4soow=";
       });
 
 }
