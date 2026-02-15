@@ -6,7 +6,7 @@ case $1 in
         ulimit -n 65536
 	cd ~/src/nix
         u hera update
-        update-overlay --all
+        python bin/update-overlay --all
 	./build system
         u hera upgrade-tasks sign # check
         # notify "Nix on Hera upgraded"

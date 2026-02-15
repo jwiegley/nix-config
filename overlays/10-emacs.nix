@@ -82,7 +82,7 @@ let
 
       ascii = compileEmacsWikiFile {
         name = "ascii.el";
-        sha256 = "1ijpnk334fbah94vm7dkcd2w4zcb0l7yn4nr9rwgpr2l25llnr0f";
+        sha256 = "sha256-DmRLaRFU5Pt4TtkS6w8Fi33CRWOznbpJgmo5Msa0V8Y=";
         # date = 2025-10-02T08:31:55-0700;
       };
 
@@ -174,7 +174,7 @@ let
           repo = "awesome-tray";
           rev = "448366baf76a46bfa280c49c4a57c7a5e53ebbe5";
           sha256 = "sha256-fL66Lp16qb+8sg2k79WU0dZzRMl2ga/n6oNaGljvYgE=";
-          # date = 2025-05-16T23:59:51+08:00;
+          # date = 2025-12-24T22:59:47+08:00;
         };
       };
 
@@ -492,8 +492,8 @@ let
         src = fetchFromGitHub {
           owner = "kmontag";
           repo = "macher";
-          rev = "4226e3c09c12bc1cbe1ff8c55e58731092617829";
-          sha256 = "sha256-Y4g2UuT3UOysvhtKVYKlt33qL9h7KzXivxf8zWzlR5g=";
+          rev = "16672b88967c3ea452d8670285e2ab7fc705ce17";
+          sha256 = "sha256-F37OGrSNFM98sjQDlbSW79sCxnrHWZ7MO52O5VtOn4M=";
           # date = 2025-08-20T19:15:22-07:00;
         };
         buildInputs = with eself; [ gptel ];
@@ -561,8 +561,8 @@ let
         src = fetchFromGitHub {
           owner = "meedstrom";
           repo = "org-mem";
-          rev = "58a6ae3f53e87c548ceeebae114230d7424a33ca";
-          sha256 = "sha256-Z6Xbxwh+tKpyV714EAn4cmDe1TxPYLS++hg3pbjsPjk=";
+          rev = "3f9c030396844c976bd5d80f08d0a3aa42962486";
+          sha256 = "sha256-ILGwnDvnZB1q59yWmwLLsqEL/FH0HkJe33qxElLObDo=";
           # date = 2025-10-01T20:50:56+02:00;
         };
         buildInputs = with eself; [
@@ -577,8 +577,8 @@ let
         src = fetchFromGitHub {
           owner = "meedstrom";
           repo = "org-node";
-          rev = "725d69791cc5a38a163bd5d40e58c57787542fe5";
-          sha256 = "sha256-s6qkMxBzSwQuupzGB5BGee/a7Xb+IDxhYKnVYHsEdxw=";
+          rev = "6d3f568659e831721160f483efe5e665c19e4705";
+          sha256 = "sha256-H2j/8hsVbVJlDD5X6KediZi2KLvbg3BRpzBqHGNgGl4=";
           # date = 2025-10-01T20:55:21+02:00;
         };
         buildInputs = with eself; [
@@ -717,7 +717,7 @@ let
       #         inherit (pkgs.texlive) scheme-basic cm-super ec;
       #       }; in mkDerivation rec {
       #   name = "emacs-proof-general-${version}";
-      #   version = "d4d2465d";
+      #   version = "9cdff80f";
 
       #   # This is the main branch
       #   src = fetchFromGitHub {

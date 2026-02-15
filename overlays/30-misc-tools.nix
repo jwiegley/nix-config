@@ -209,14 +209,14 @@ final: prev: {
     with python3Packages;
     buildPythonPackage rec {
       pname = "pass-git-helper";
-      version = "58056308";
+      version = "9263b146";
       name = "${pname}-${version}";
 
       src = fetchFromGitHub {
         owner = "languitar";
         repo = "pass-git-helper";
-        rev = "58056308ce2705705e8cdb18a46a1f3583e2ac19";
-        sha256 = "sha256-gdi70CfPuP7An2B9WGghJ3MRH6lXu9mVqZ7PLGXIYQE=";
+        rev = "9263b146b626769db67c7d4fb94a922788ee2c5d";
+        sha256 = "sha256-+pxwMuWJrRLIAO3PpGT2HRy0mVCcTKoFLiGkce4fCv4=";
         # date = 2025-10-02T16:40:46+02:00;
       };
 
@@ -247,7 +247,7 @@ final: prev: {
     with prev;
     stdenv.mkDerivation rec {
       name = "cmux-${version}";
-      version = "0.1.0";
+      version = "015d4ab7";
 
       src = fetchFromGitHub {
         owner = "craigsc";

@@ -99,6 +99,9 @@ class OverlayParser:
         'coq_8_13', 'coq_8_12', 'coq_8_11', 'coq_8_10',
         'ledger_HEAD',  # Local build from source
         'mcp-server-sequential-thinking',  # Override only, no version
+        'myEmacsPackageOverrides',  # Function definition, not a package
+        'mkEmacsPackages',  # Function definition, not a package
+        'paths',  # Local path import, not a package
     }
 
     def __init__(self, overlays_dir: Path):
@@ -170,9 +173,21 @@ class OverlayParser:
                 match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)\s*=\s*(?:compileEmacsFiles|compileEmacsWikiFile|mkDerivation)', stripped)
                 if match:
                     name = match.group(1)
-                    # Check if this package has fetchFromGitHub in the next ~20 lines
-                    block_text = '\n'.join(lines[i:i+30])
-                    if 'fetchFromGitHub' in block_text:
+                    # Check if this package has fetchFromGitHub within its own block
+                    # Track brace depth to stay within the package boundary
+                    pkg_depth = lines[i].count('{') - lines[i].count('}')
+                    has_fetch = 'fetchFromGitHub' in lines[i]
+                    for j in range(i + 1, min(i + 30, len(lines))):
+                        if has_fetch:
+                            break
+                        pkg_line = lines[j]
+                        if 'fetchFromGitHub' in pkg_line:
+                            has_fetch = True
+                            break
+                        pkg_depth += pkg_line.count('{') - pkg_line.count('}')
+                        if pkg_depth <= 0:
+                            break  # Exited this package's block
+                    if has_fetch:
                         packages.append(name)
 
         return packages
@@ -240,10 +255,9 @@ class OverlayParser:
         for i in range(start_idx + 1, len(lines)):
             line = lines[i]
 
-            # Update brace depth
-            brace_depth += line.count('{') - line.count('}')
-
             # Check if we've reached a new definition at same or lower indentation
+            # BEFORE updating brace depth, so opening braces on new package
+            # definitions don't prevent block termination
             stripped = line.lstrip()
             if stripped:
                 current_indent = len(line) - len(stripped)
@@ -256,6 +270,9 @@ class OverlayParser:
                     # Also stop at closing brace at same/lower indent
                     if stripped.startswith('}') and current_indent <= start_indent:
                         break
+
+            # Update brace depth AFTER termination check
+            brace_depth += line.count('{') - line.count('}')
 
             block_lines.append(line)
 
@@ -272,6 +289,12 @@ class OverlayParser:
         # Extract just the package block, not the whole file
         block = self._extract_package_block(content, package_name)
         if not block:
+            return None
+
+        # Sanity check: a single package definition shouldn't span hundreds of lines.
+        # If the block is unreasonably large, it's likely a function/let-binding that
+        # contains nested packages, not an actual package definition.
+        if len(block.split('\n')) > 100:
             return None
 
         # Extract GitHub owner/repo from the block
@@ -540,8 +563,9 @@ class OverlayUpdater:
 
         for i in range(start_idx + 1, len(lines)):
             line = lines[i]
-            brace_depth += line.count('{') - line.count('}')
 
+            # Check termination BEFORE updating brace depth, so opening braces
+            # on new package definitions don't prevent block termination
             stripped = line.lstrip()
             if stripped:
                 current_indent = len(line) - len(stripped)
@@ -556,6 +580,7 @@ class OverlayUpdater:
                         end_idx = i - 1
                         break
 
+            brace_depth += line.count('{') - line.count('}')
             end_idx = i
 
         return (start_idx, end_idx)
