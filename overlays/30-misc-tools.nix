@@ -242,45 +242,6 @@ final: prev: {
       };
     };
 
-  # Worktree lifecycle manager for parallel Claude Code sessions
-  cmux =
-    with prev;
-    stdenv.mkDerivation rec {
-      name = "cmux-${version}";
-      version = "015d4ab7";
-
-      src = fetchFromGitHub {
-        owner = "craigsc";
-        repo = "cmux";
-        rev = "015d4ab72d11978df30e1663a5b91a0f9817179d";
-        sha256 = "sha256-peHoFgMCdgwFNNwIY4L3y5dp0LQhjMr99bomb/yB19I=";
-        # date = 2025-02-13;
-      };
-
-      phases = [
-        "unpackPhase"
-        "installPhase"
-      ];
-
-      installPhase = ''
-        mkdir -p $out/bin $out/share/cmux
-        cp -p cmux.sh $out/share/cmux/cmux.sh
-        cat > $out/bin/cmux <<WRAPPER
-        #!/usr/bin/env bash
-        source "$out/share/cmux/cmux.sh"
-        cmux "\$@"
-        WRAPPER
-        chmod +x $out/bin/cmux
-      '';
-
-      meta = {
-        homepage = "https://github.com/craigsc/cmux";
-        description = "Worktree lifecycle manager for parallel Claude Code sessions";
-        license = lib.licenses.mit;
-        maintainers = with lib.maintainers; [ jwiegley ];
-      };
-    };
-
   # YAML schema validator
   yamale =
     with prev;
