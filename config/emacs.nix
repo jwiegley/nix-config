@@ -78,6 +78,7 @@ with epkgs;
   corfu
   (exclude corfu-prescient)
   corsair
+  cov
   crosshairs
   (exclude crux)
   csv-mode
@@ -397,6 +398,7 @@ with epkgs;
   typescript-mode
   typo
   ultra-scroll-mac
+  undercover
   (exclude undo-fu)
   undo-propose
   unicode-fonts
