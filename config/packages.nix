@@ -55,7 +55,6 @@ rec {
     cargo-cache
     cbor-diag
     cmake
-    cmux
     contacts
     coreutils
     csvkit
@@ -375,6 +374,7 @@ rec {
   ++ [
     beads # pinned to 0.49.6 via overlays/30-beads.nix
     get-shit-done-cc # meta-prompting system for Claude Code
+    ralph-claude-code # autonomous AI development loop for Claude Code
   ]
   ++ (with inputs.llm-agents.packages.${system}; [
     droid

@@ -1,8 +1,8 @@
 # overlays/30-ai-mcp.nix
-# Purpose: Model Context Protocol (MCP) servers for AI assistants
+# Purpose: Model Context Protocol (MCP) servers and Claude Code tools
 # Dependencies: Uses final for claude-code-acp; uses prev elsewhere
 # Packages: mcp-server-sequential-thinking, rustdocs-mcp-server,
-#           browser-control-mcp, claude-code-acp
+#           browser-control-mcp, claude-code-acp, ralph-claude-code
 final: prev: {
 
   # Fix: npm prune removes @types/node, then prepare script tries to rebuild
@@ -117,5 +117,97 @@ final: prev: {
         platforms = platforms.all;
       };
     });
+
+  # Ralph for Claude Code - Autonomous AI development loop
+  ralph-claude-code =
+    with prev;
+    stdenv.mkDerivation rec {
+      pname = "ralph-claude-code";
+      version = "b77cc991";
+
+      src = fetchFromGitHub {
+        owner = "frankbria";
+        repo = "ralph-claude-code";
+        rev = "b77cc991dc38e4be5eba4a722583572d5aee9644";
+        sha256 = "sha256-MuGcWOufqvBCxdpWVLBqMLrMNoe7jJv62ZWW7C5uxZw=";
+        # date = 2026-02-16;
+      };
+
+      nativeBuildInputs = [ makeWrapper ];
+
+      buildInputs = [
+        bash
+        jq
+        git
+        coreutils
+        tmux
+      ];
+
+      installPhase = ''
+        mkdir -p $out/share/ralph-claude-code
+        mkdir -p $out/bin
+
+        # Install main scripts
+        cp -p ralph_loop.sh $out/share/ralph-claude-code/
+        cp -p setup.sh $out/share/ralph-claude-code/
+        cp -p ralph_monitor.sh $out/share/ralph-claude-code/
+        cp -p ralph_import.sh $out/share/ralph-claude-code/
+        cp -p ralph_enable.sh $out/share/ralph-claude-code/
+        cp -p ralph_enable_ci.sh $out/share/ralph-claude-code/
+        cp -p migrate_to_ralph_folder.sh $out/share/ralph-claude-code/
+
+        # Install library scripts
+        cp -rp lib $out/share/ralph-claude-code/
+
+        # Install templates if they exist
+        if [ -d templates ]; then
+          cp -rp templates $out/share/ralph-claude-code/
+        fi
+
+        # Create wrapper for ralph (main command)
+        makeWrapper $out/share/ralph-claude-code/ralph_loop.sh $out/bin/ralph \
+          --prefix PATH : ${lib.makeBinPath [ bash jq git coreutils tmux ]} \
+          --set RALPH_HOME $out/share/ralph-claude-code
+
+        # Create wrapper for ralph-monitor
+        makeWrapper $out/share/ralph-claude-code/ralph_monitor.sh $out/bin/ralph-monitor \
+          --prefix PATH : ${lib.makeBinPath [ bash jq git coreutils tmux ]} \
+          --set RALPH_HOME $out/share/ralph-claude-code
+
+        # Create wrapper for ralph-setup
+        makeWrapper $out/share/ralph-claude-code/setup.sh $out/bin/ralph-setup \
+          --prefix PATH : ${lib.makeBinPath [ bash jq git coreutils tmux ]} \
+          --set RALPH_HOME $out/share/ralph-claude-code
+
+        # Create wrapper for ralph-import
+        makeWrapper $out/share/ralph-claude-code/ralph_import.sh $out/bin/ralph-import \
+          --prefix PATH : ${lib.makeBinPath [ bash jq git coreutils tmux ]} \
+          --set RALPH_HOME $out/share/ralph-claude-code
+
+        # Create wrapper for ralph-enable
+        makeWrapper $out/share/ralph-claude-code/ralph_enable.sh $out/bin/ralph-enable \
+          --prefix PATH : ${lib.makeBinPath [ bash jq git coreutils tmux ]} \
+          --set RALPH_HOME $out/share/ralph-claude-code
+
+        # Create wrapper for ralph-enable-ci
+        makeWrapper $out/share/ralph-claude-code/ralph_enable_ci.sh $out/bin/ralph-enable-ci \
+          --prefix PATH : ${lib.makeBinPath [ bash jq git coreutils tmux ]} \
+          --set RALPH_HOME $out/share/ralph-claude-code
+
+        # Create wrapper for ralph-migrate
+        makeWrapper $out/share/ralph-claude-code/migrate_to_ralph_folder.sh $out/bin/ralph-migrate \
+          --prefix PATH : ${lib.makeBinPath [ bash jq git coreutils tmux ]} \
+          --set RALPH_HOME $out/share/ralph-claude-code
+      '';
+
+      meta = with lib; {
+        description = "Autonomous AI development loop for Claude Code with intelligent exit detection";
+        homepage = "https://github.com/frankbria/ralph-claude-code";
+        license = licenses.mit;
+        mainProgram = "ralph";
+        maintainers = [ maintainers.jwiegley ];
+        platforms = platforms.unix;
+      };
+    };
 
 }
