@@ -5050,11 +5050,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1770845649,
-        "narHash": "sha256-gdVMjODHqvO6/3HWEnqiH0ui/Ccf5pM/XgGqOkj8Xqk=",
+        "lastModified": 1771186032,
+        "narHash": "sha256-XXBsZsh3m7AfFFcDb/lwN5beUpC697UWa2oMqaCClhA=",
         "owner": "ledger",
         "repo": "ledger",
-        "rev": "9fc3835709e8f50c8e3dc2ed437383a3b9a7be30",
+        "rev": "1cc73bffbf81a2abd07fdcb804da7b7d07a4de03",
         "type": "github"
       },
       "original": {
@@ -5089,11 +5089,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1771126768,
-        "narHash": "sha256-xWVnZDX/ZNtEnRGiGKuX5sG+OTK9fmDy95TFI3lHjfw=",
+        "lastModified": 1771211873,
+        "narHash": "sha256-pt6pz2UCrfPpH86C1BSWaThbD1cHvYyZYs0ociv7txQ=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "67d1d230e79b4d63499a2cb00b2c3f40faa6d18c",
+        "rev": "b73c33c4a725c11287add48d74a174dd109fcd0b",
         "type": "github"
       },
       "original": {
