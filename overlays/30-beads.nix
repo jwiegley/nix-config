@@ -9,13 +9,13 @@ final: prev: {
       buildGoModule = prev.buildGoModule.override { go = prev.go_1_26; };
     }).overrideAttrs
       (old: rec {
-        version = "0.50.3";
+        version = "0.52.0";
 
         src = prev.fetchFromGitHub {
           owner = "steveyegge";
           repo = "beads";
           tag = "v${version}";
-          hash = "sha256-vWPQuhKUHsikSvmHGqp96LpcBiFYH2nev2LzEHyLrV8=";
+          hash = "sha256-y0DBCmcHUK96VJkOI1WaenEnALUK9J4L4aTzJEfn73Y=";
         };
 
         nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ prev.pkg-config ];

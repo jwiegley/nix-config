@@ -86,16 +86,16 @@ final: prev: {
     with final;
     buildNpmPackage (finalAttrs: {
       pname = "claude-code-acp";
-      version = "0.16.1";
+      version = "0.17.1";
 
       src = fetchFromGitHub {
         owner = "zed-industries";
         repo = "claude-code-acp";
         rev = "v${finalAttrs.version}";
-        hash = "sha256-/HeAz0jdXhLhYGcwTgthrE7cGjKjro30GQUmAn4egXs=";
+        hash = "sha256-1x1YgHaabz/Ia1HBFO6S8+CbSQpspoyUcHRmobBfHsU=";
       };
 
-      npmDepsHash = "sha256-poTtwIIPHcgQ2uyIUIWVOpHbdDIzVgympa7aHtuSMok=";
+      npmDepsHash = "sha256-/bWheJBRcbI+QoFZf18dm74AQgJuUW+jg6bNcvmz+jA=";
 
       dontNpmBuild = false;
 
@@ -123,13 +123,13 @@ final: prev: {
     with prev;
     stdenv.mkDerivation rec {
       pname = "ralph-claude-code";
-      version = "b77cc991";
+      version = "f6cae651";
 
       src = fetchFromGitHub {
         owner = "frankbria";
         repo = "ralph-claude-code";
-        rev = "b77cc991dc38e4be5eba4a722583572d5aee9644";
-        sha256 = "sha256-MuGcWOufqvBCxdpWVLBqMLrMNoe7jJv62ZWW7C5uxZw=";
+        rev = "f6cae651f17828f647ae60225a3c8cead0c94b6b";
+        sha256 = "sha256-s4ktB1y+pVKnjziEVyag0t42afcmczC8IcftIQwBY6w=";
         # date = 2026-02-16;
       };
 

@@ -1334,11 +1334,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1770853607,
-        "narHash": "sha256-6zRTG6wq5FaIMEDuvD3+4qCxTYfIXP5h3fi9t+mzceA=",
+        "lastModified": 1771299241,
+        "narHash": "sha256-yHIWd+JRttDH0qH6ePhsS0jJdsEX/zxdId4NAamqoqU=",
         "ref": "refs/heads/main",
-        "rev": "8e5d5398a476d7684815804ce9e9936eb9643c69",
-        "revCount": 1748,
+        "rev": "f15a82e1a23375c6cf9ba25eadb5c62e82b145e5",
+        "revCount": 1812,
         "type": "git",
         "url": "file:///Users/johnw/src/git-ai/main"
       },
@@ -5089,11 +5089,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1771211873,
-        "narHash": "sha256-pt6pz2UCrfPpH86C1BSWaThbD1cHvYyZYs0ociv7txQ=",
+        "lastModified": 1771361172,
+        "narHash": "sha256-T2nVTHdNDIRx76CvLz+KNGw5BFJAWaci6blTgt/z0z8=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "b73c33c4a725c11287add48d74a174dd109fcd0b",
+        "rev": "d6f44851a38e5f2d0df869c9ef13bd6bcfadcfc9",
         "type": "github"
       },
       "original": {
