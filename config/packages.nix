@@ -114,6 +114,7 @@ rec {
     git-imerge
     git-lfs
     git-machete
+    mergiraf
     git-my
     git-octopus
     (lib.hiPrio git-pr)
