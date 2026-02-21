@@ -209,14 +209,14 @@ final: prev: {
     with python3Packages;
     buildPythonPackage rec {
       pname = "pass-git-helper";
-      version = "9263b146";
+      version = "b52775e2";
       name = "${pname}-${version}";
 
       src = fetchFromGitHub {
         owner = "languitar";
         repo = "pass-git-helper";
-        rev = "9263b146b626769db67c7d4fb94a922788ee2c5d";
-        sha256 = "sha256-+pxwMuWJrRLIAO3PpGT2HRy0mVCcTKoFLiGkce4fCv4=";
+        rev = "b52775e24c7283c05c82877ba686d4554398d117";
+        sha256 = "sha256-qTSCc17eD6fNQDAFqyhLAV28olpTmzYkT2+W3y8OARU=";
         # date = 2025-10-02T16:40:46+02:00;
       };
 
@@ -268,6 +268,32 @@ final: prev: {
       meta = {
         homepage = "https://github.com/23andMe/Yamale";
         description = "A schema and validator for YAML";
+        license = lib.licenses.mit;
+        maintainers = with lib.maintainers; [ jwiegley ];
+      };
+    };
+
+  # Google Suite CLI: Gmail, GCal, GDrive, GContacts
+  gogcli =
+    with prev;
+    buildGoModule rec {
+      pname = "gogcli";
+      version = "0.11.0";
+
+      src = fetchFromGitHub {
+        owner = "steipete";
+        repo = "gogcli";
+        rev = "v${version}";
+        hash = "sha256-hJU40ysjRx4p9SWGmbhhpToYCpk3DcMAWCnKqxHRmh0=";
+      };
+
+      vendorHash = "sha256-WGRlv3UsK3SVBQySD7uZ8+FiRl03p0rzjBm9Se1iITs=";
+
+      doCheck = false;
+
+      meta = {
+        homepage = "https://github.com/steipete/gogcli";
+        description = "Google Suite CLI: Gmail, GCal, GDrive, GContacts";
         license = lib.licenses.mit;
         maintainers = with lib.maintainers; [ jwiegley ];
       };

@@ -36,6 +36,8 @@ rec {
     inputs.trade-journal.packages.${system}.default
     inputs.una.packages.${system}.default
     inputs.gh-to-org.packages.${system}.default
+    inputs.obr.packages.${system}.default
+    inputs.org2jsonl.packages.${system}.default
     act
     apg
     aria2
@@ -146,6 +148,7 @@ rec {
     gnused
     gnutar
     go-jira
+    gogcli
     google-cloud-sdk
     graphviz-nox
     groff

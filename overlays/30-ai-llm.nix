@@ -57,12 +57,12 @@ final: prev: {
 
   # llama.cpp - LLM inference with GGUF models
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "8098";
+    version = "8117";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-9dCougqOacdLrfJJ8wx9BnXbpdyw7aKHrvtrO09dpAE=";
+      hash = "sha256-bhoF5XbcQIPo149MRUDPuG5bvqjMVGGScR5EZBi4Xdg=";
     };
     npmDepsHash = "sha256-FKjoZTKm0ddoVdpxzYrRUmTiuafEfbKc4UD2fz2fb8A=";
     npmDeps = prev.fetchNpmDeps {
@@ -77,13 +77,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "193";
+      version = "194";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-kgGnMGzqwxuP6FKI43yYesRoWQnBruKiL8J30zSHPGU=";
+        hash = "sha256-dLcNR+ZQDUYuPtsPaDOC4YYTFTMSxAapS0eNXRRkrV8=";
       };
 
       ui =

@@ -8,16 +8,16 @@ final: prev: {
     with prev;
     buildNpmPackage (finalAttrs: {
       pname = "get-shit-done-cc";
-      version = "1.20.4";
+      version = "1.20.5";
 
       src = fetchFromGitHub {
         owner = "gsd-build";
         repo = "get-shit-done";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-YqHJ1dwv6yRrB0Od9tW9NG5cuC/t6Ebleo0Y30y+S+M=";
+        hash = "sha256-m0kRPIP5XnoeAnIEj6TZ85C8pw36Y/zLEbnX9dyjAd4=";
       };
 
-      npmDepsHash = "sha256-wPDgNskuGi9tKnhXKI4i6imqEMLYCRIEutybx3Vnqkw=";
+      npmDepsHash = "sha256-8iTfmUhQilQSZSzVZ0DRSYBPpqu6gM3CI7MkawxTBkY=";
 
       # The prepublishOnly script builds hooks with esbuild; skip in nix build
       dontNpmBuild = true;

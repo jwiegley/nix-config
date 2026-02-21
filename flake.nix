@@ -38,6 +38,8 @@
     trade-journal.url = "git+file:///Users/johnw/src/trade-journal";
     una.url = "git+file:///Users/johnw/src/una";
     gh-to-org.url = "git+file:///Users/johnw/src/gh-to-org";
+    obr.url = "git+file:///Users/johnw/src/obr";
+    org2jsonl.url = "git+file:///Users/johnw/src/org2jsonl";
 
     # Local source repos (non-flake) used by overlays
     scripts = {
