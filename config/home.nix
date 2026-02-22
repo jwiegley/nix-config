@@ -888,16 +888,16 @@ in
 
           # Hera
 
-          hera = withIdentity {
+          hera = {
             hostname = "hera.lan";
             compression = false;
           };
 
-          mssql = withIdentity (onHost "hera" "192.168.64.3");
-          deimos = withIdentity (onHost "hera" "192.168.221.128");
-          simon = withIdentity (onHost "hera" "172.16.194.158");
+          mssql = onHost "hera" "192.168.64.3";
+          deimos = onHost "hera" "192.168.221.128";
+          simon = onHost "hera" "172.16.194.158";
 
-          minerva = withIdentity {
+          minerva = {
             hostname = "192.168.199.128";
             compression = false;
           };
