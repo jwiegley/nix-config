@@ -8,16 +8,16 @@ final: prev: {
     with prev;
     rustPlatform.buildRustPackage rec {
       pname = "cpx";
-      version = "0.1.3";
+      version = "0.1.4";
 
       src = fetchFromGitHub {
         owner = "11happy";
         repo = "cpx";
         tag = "v${version}";
-        hash = "sha256-tZ9NQUwnbONpJ59ByvgHESqqBWz6RaPgY6842VuAlL0=";
+        hash = "sha256-1TjUlV0l4JnSSmmCprEy6wT1v7RPdsuhrnuKbkHiMkw=";
       };
 
-      cargoHash = "sha256-atEB43eB8btQfMXPTCfsZ6bbAUIPzF8lUELx0Rdul84=";
+      cargoHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
       # cpx is currently Linux-only (uses copy_file_range syscall)
       # Skip build on Darwin

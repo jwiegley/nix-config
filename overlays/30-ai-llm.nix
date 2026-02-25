@@ -57,12 +57,12 @@ final: prev: {
 
   # llama.cpp - LLM inference with GGUF models
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "8117";
+    version = "8133";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-bhoF5XbcQIPo149MRUDPuG5bvqjMVGGScR5EZBi4Xdg=";
+      hash = "sha256-69CSRE7Fr0O//Or6OrNyaThTQBbkxjqPKVYyTu9Gh8c=";
     };
     npmDepsHash = "sha256-FKjoZTKm0ddoVdpxzYrRUmTiuafEfbKc4UD2fz2fb8A=";
     npmDeps = prev.fetchNpmDeps {
@@ -77,13 +77,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "194";
+      version = "195";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-dLcNR+ZQDUYuPtsPaDOC4YYTFTMSxAapS0eNXRRkrV8=";
+        hash = "sha256-Fc6aZDVhI8dvJUzZOn6iLqxmYht0GuXI8VjOQmln/2M=";
       };
 
       ui =
@@ -132,6 +132,17 @@ final: prev: {
         mainProgram = "llama-swap";
       };
     });
+
+  # pyarrow 22.0.0 has a broken test (test_timezone_absent) in the Nix sandbox
+  # that causes cascade failures for datasets, tokenizers, transformers, mlx-lm
+  pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+    (_: pprev: {
+      pyarrow = pprev.pyarrow.overrideAttrs (_: {
+        doCheck = false;
+        doInstallCheck = false;
+      });
+    })
+  ];
 
   # mlx-lm - Apple MLX-based LLM inference
   # NOTE: Using 'final' here because mlx-lm needs final python3Packages

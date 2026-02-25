@@ -956,6 +956,13 @@ in
             localForwards = [ (localBind 9998 3000) ];
           };
 
+          delphi = controlMastered {
+            host = "delphi-*";
+            user = "jwiegley";
+            identityFile = "${config.xdg.configHome}/ssh/id_positron";
+            identitiesOnly = true;
+          };
+
           # Other servers
 
           router = withIdentity {

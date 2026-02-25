@@ -18,15 +18,15 @@ in
     with python3Packages;
     buildPythonPackage rec {
       pname = "filetags";
-      version = "b03af114";
+      version = "7cd82379";
       name = "${pname}-${version}";
       pyproject = false;
 
       src = fetchFromGitHub {
         owner = "novoid";
         repo = "filetags";
-        rev = "b03af114bef2c2a21dd0f941c6b620aaaccfd1f5";
-        sha256 = "sha256-k21SeIjGkPZdC27cAABqXptcdJMWafOWEday6iP8/7g=";
+        rev = "7cd8237910cd9aff8fac38917d05a35355084b76";
+        sha256 = "sha256-vH08JQMIed90xJPARO0tgaYw6/2/+0sDPue39tMK874=";
         # date = "2025-09-15T13:27:03+02:00";
       };
 
@@ -75,7 +75,7 @@ in
       dependencies = [
         setuptools
         orgparse
-        dateutil
+        python-dateutil
         packaging
         requests
       ];
