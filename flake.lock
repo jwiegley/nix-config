@@ -1418,11 +1418,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1771546368,
-        "narHash": "sha256-MynktdMp/qxu+WXgwd9e9f4FpnQdSlMvLSWddBAOW4g=",
+        "lastModified": 1772031684,
+        "narHash": "sha256-3Xcy3O5muKQlCvWM9fkI2ZZtiNOPjNlHr7yygRArZZY=",
         "ref": "refs/heads/main",
-        "rev": "5742ad856895def1ece012a7ebb27a01893b7da4",
-        "revCount": 1991,
+        "rev": "524428bbad5c82a116a9b3ea9c30f29655858b82",
+        "revCount": 2019,
         "type": "git",
         "url": "file:///Users/johnw/src/git-ai/main"
       },
