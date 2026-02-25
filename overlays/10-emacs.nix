@@ -561,8 +561,8 @@ let
         src = fetchFromGitHub {
           owner = "meedstrom";
           repo = "org-mem";
-          rev = "caeac6ea7e10aa0698bf6c1ba198a8f7c1d63404";
-          sha256 = "sha256-Baf0oijikTEvsff2AgN4N+KjPcgVQf0WF0O/3pMQcQg=";
+          rev = "ebecc2378422c6bec2fe82d3ba5194de303263a6";
+          sha256 = "sha256-Fhto3ATYG5whxL4ZmhMMX6lgZC44I0vkm/mmqm0tF/0=";
           # date = 2025-10-01T20:50:56+02:00;
         };
         buildInputs = with eself; [
@@ -577,8 +577,8 @@ let
         src = fetchFromGitHub {
           owner = "meedstrom";
           repo = "org-node";
-          rev = "f9ef31aa212b33b79383c0c749e0003a69e697a2";
-          sha256 = "sha256-9tvf9OfoJVV+tYNF/LBLMF0B3oYaj3T2sf5ObBKQo4c=";
+          rev = "4b1e1899bfd20b8d2bde294b7d3008367d435be0";
+          sha256 = "sha256-LuPka4MqJZF4+5XzBBtTxJoBkivEzaXKyHTFLeAlMGA=";
           # date = 2025-10-01T20:55:21+02:00;
         };
         buildInputs = with eself; [

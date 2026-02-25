@@ -384,9 +384,11 @@ rec {
     claude-code-acp
     ccusage
     opencode
-    gemini-cli
     codex
     ollama
     openclaw
-  ]);
+  ])
+  ++ [
+    gemini-cli
+  ];
 }

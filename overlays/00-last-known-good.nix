@@ -22,6 +22,20 @@ in
     xquartz
     ;
 
+  # Pin packages to previous nixpkgs-unstable revision where they built.
+  # mitmproxy 12.2.1: dependency upper bounds exceeded (aioquic, asgiref, etc.)
+  # gemini-cli 0.29.7: node-pty fails to compile with Node.js 24.13.0
+  # backblaze-b2 4.5.1: docutils version constraint not satisfied
+  inherit
+    (nixpkgs {
+      rev = "bcc4a9d9533c033d806a46b37dc444f9b0da49dd";
+      sha256 = "sha256-K7Dg9TQ0mOcAtWTO/FX/FaprtWQ8BmEXTpLIaNRhEwU=";
+    })
+    mitmproxy
+    gemini-cli
+    backblaze-b2
+    ;
+
   eask-cli = prev.buildNpmPackage rec {
     pname = "eask-cli";
     version = "0.12.8";
