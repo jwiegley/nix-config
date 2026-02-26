@@ -247,11 +247,21 @@ in
       };
     };
 
+    carapace = {
+      enable = true;
+      enableZshIntegration = true;
+    };
+
     htop.enable = true;
     info.enable = true;
     jq.enable = true;
     man.enable = true;
     vim.enable = true;
+
+    zoxide = {
+      enable = true;
+      enableZshIntegration = true;
+    };
 
     starship = {
       enable = true;
@@ -418,7 +428,6 @@ in
       };
 
       profileExtra = ''
-        . ${pkgs.z}/share/z.sh
         setopt extended_glob
       '';
 

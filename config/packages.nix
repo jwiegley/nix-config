@@ -50,10 +50,13 @@ rec {
     backblaze-b2
     bandwhich
     bash-completion
+    bottom
     bashInteractive
     bat
     btop
     cacert
+    caligula
+    carapace
     cargo-cache
     cbor-diag
     cmake
@@ -177,6 +180,7 @@ rec {
     json2yaml
     jupyter
     just
+    kew
     khard
     killall
     kubectl
@@ -206,6 +210,7 @@ rec {
     mtr
     multitail
     my-scripts
+    nnn
     nix-diff
     nix-index
     nix-info
@@ -312,11 +317,13 @@ rec {
     subversion
     svg2tikz
     taskjuggler
+    tealdeer
     terminal-notifier
     time
     tlaplus
     tmux
     translate-shell
+    trash-cli
     travis
     tree
     tree-sitter
@@ -342,11 +349,12 @@ rec {
     xorg.xhost
     xquartz
     xz
+    yazi
     yamale
     yq
     yuicompressor
-    z
     z3
+    zoxide
     zbar
     zfs-prune-snapshots
     zip
@@ -360,7 +368,9 @@ rec {
     openmpi
     qdrant
     qdrant-web-ui
+    reasondb
     rustdocs-mcp-server
+    vllm-mlx
 
     agnix
     cozempic
