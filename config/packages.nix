@@ -56,7 +56,6 @@ rec {
     btop
     cacert
     caligula
-    carapace
     cargo-cache
     cbor-diag
     cmake
@@ -354,7 +353,6 @@ rec {
     yq
     yuicompressor
     z3
-    zoxide
     zbar
     zfs-prune-snapshots
     zip
