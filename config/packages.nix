@@ -209,7 +209,7 @@ rec {
     more
     mtr
     multitail
-    my-scripts
+    (lib.lowPrio my-scripts)
     nnn
     nix-diff
     nix-index
