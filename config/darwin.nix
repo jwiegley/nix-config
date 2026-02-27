@@ -154,6 +154,7 @@ in
       "z3"
       "claude-code-templates"
       "steipete/tap/remindctl"
+      "steipete/tap/imsg"
       "antoniorodr/memo/memo"
     ];
 
