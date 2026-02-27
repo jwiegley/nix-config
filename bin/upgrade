@@ -238,10 +238,10 @@ if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
 ### C++ projects
 
-echo ~/src/ledger/master
+echo ~/src/ledger/main
 (
-    cd ~/src/ledger/master
-    echo ~/src/ledger/master
+    cd ~/src/ledger/main
+    echo ~/src/ledger/main
     source .envrc
     nix develop -c echo hello
 ) >> /tmp/ledger-build.log 2>&1
