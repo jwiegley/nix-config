@@ -353,7 +353,7 @@ in
       dotDir = "${config.xdg.configHome}/zsh";
 
       enable = true;
-      enableCompletion = false;
+      enableCompletion = true;
 
       autosuggestion.enable = true;
       syntaxHighlighting.enable = true;
@@ -448,9 +448,6 @@ in
 
             # sudo /bin/launchctl limit maxfiles 524288 524288
             # ulimit -n 65536
-
-            autoload -Uz compinit
-            compinit
 
             fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
 
