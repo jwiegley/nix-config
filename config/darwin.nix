@@ -137,7 +137,11 @@ in
       cleanup = "zap"; # Remove uninstalled pkgs and dependencies
     };
 
-    taps = [ "graelo/tap" ];
+    taps = [
+      "graelo/tap"
+      "steipete/tap"
+      "antoniorodr/memo"
+    ];
     brews = [
       "ykman"
       "nss"
@@ -149,6 +153,8 @@ in
       "openssl"
       "z3"
       "claude-code-templates"
+      "steipete/tap/remindctl"
+      "antoniorodr/memo/memo"
     ];
 
     casks = [
