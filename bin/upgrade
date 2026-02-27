@@ -209,6 +209,17 @@ echo ~/src/comparable
 
 if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
 
+echo ~/src/git-ai/main
+(
+    cd ~/src/git-ai/main
+    echo ~/src/git-ai/main
+    source .envrc
+    nix develop -c echo hello
+    cargo update
+) > /tmp/git-ai-build.log 2>&1
+
+if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+
 ### Python projects
 
 /bin/rm -fr ~/Library/Caches/pip ~/.cache/uv
