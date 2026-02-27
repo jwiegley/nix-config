@@ -27,6 +27,11 @@ let
   emacsclient = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
 
   packages = import ./packages.nix args;
+
+  openclawPkg =
+    if hostname == "hera"
+    then inputs.llm-agents.packages.${system}.openclaw
+    else builtins.throw "openclaw is only available on hera, not ${hostname}";
 in
 {
   imports = [ inputs.git-ai.homeManagerModules.default ];
@@ -105,6 +110,12 @@ in
       "/opt/homebrew/bin"
       "/opt/homebrew/opt/node@22/bin"
     ];
+
+    activation = lib.optionalAttrs (hostname == "hera") {
+      openclawCompletion = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        $DRY_RUN_CMD ${openclawPkg}/bin/openclaw completion --write-state --yes || true
+      '';
+    };
 
     file =
       let
@@ -450,6 +461,12 @@ in
             # ulimit -n 65536
 
             fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
+
+            ${lib.optionalString (hostname == "hera") ''
+            # OpenClaw Completion
+            [[ -f "${home}/.openclaw/completions/openclaw.zsh" ]] && \
+              source "${home}/.openclaw/completions/openclaw.zsh"
+            ''}
 
             # Set terminal/tmux title to current directory
             __update_terminal_title() {

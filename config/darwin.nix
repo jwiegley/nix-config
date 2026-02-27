@@ -713,8 +713,53 @@ in
             serviceConfig.KeepAlive = true;
             serviceConfig.SoftResourceLimits.NumberOfFiles = 4096;
           };
+
       }
       // lib.optionalAttrs (hostname == "hera") {
+        # OpenClaw AI agent gateway
+        # After first switch, complete setup by running interactively:
+        #   openclaw models auth setup-token --provider anthropic
+        openclaw =
+          let
+            openclawPkg = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.openclaw;
+            logDir = "${xdg_cacheHome}/openclaw";
+            gatewayToken = builtins.substring 0 36
+              (builtins.hashString "sha256" "openclaw-gateway-${hostname}");
+          in
+          {
+            script = ''
+              export PATH="${home}/.nix-profile/bin:/run/current-system/sw/bin:${home}/.local/bin:/opt/homebrew/bin:$PATH"
+              OC="${openclawPkg}/bin/openclaw"
+              mkdir -p "${logDir}" "${home}/.openclaw/agents/main/sessions"
+
+              # Initialize config if not present
+              if [ ! -f "${home}/.openclaw/openclaw.json" ]; then
+                $OC setup --mode local --non-interactive
+              fi
+
+              # Persist gateway settings into config so CLI tools
+              # can authenticate against the running gateway
+              $OC config set gateway.mode local 2>/dev/null || true
+              $OC config set gateway.auth.mode token 2>/dev/null || true
+              $OC config set gateway.auth.token "${gatewayToken}" 2>/dev/null || true
+
+              exec $OC gateway run \
+                --bind loopback --port 18789 --auth token --force
+            '';
+            serviceConfig = {
+              Label = "ai.openclaw.gateway";
+              EnvironmentVariables = {
+                HOME = home;
+                OPENCLAW_GATEWAY_TOKEN = gatewayToken;
+              };
+              RunAtLoad = true;
+              KeepAlive = true;
+              ThrottleInterval = 30;
+              StandardOutPath = "${logDir}/gateway.log";
+              StandardErrorPath = "${logDir}/gateway.log";
+            };
+          };
+
         docker-desktop = {
           script = ''
             # Start Docker Desktop

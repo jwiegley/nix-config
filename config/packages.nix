@@ -394,8 +394,20 @@ rec {
     codex
     ollama
     opencode
-    openclaw
   ])
+  ++ lib.optionals (hostname == "hera") (
+    [
+      himalaya
+      openai-whisper
+      openhue-cli
+      soco-cli
+      spotify-player
+    ]
+    ++ (with inputs.llm-agents.packages.${system}; [
+      mcporter
+      openclaw
+    ])
+  )
   ++ [
     gemini-cli
   ];
