@@ -394,11 +394,9 @@ rec {
     ccusage
     codex
     ollama
+    opencode
     openclaw
   ])
-  ++ [
-    opencode_patched # patched opencode with TPS display (PR #12721)
-  ]
   ++ [
     gemini-cli
   ];
