@@ -273,7 +273,6 @@ rec {
       )
     ))
     pyright # LSP server for Python
-    qdrant
     qemu
     libvirt
     qpdf
