@@ -728,20 +728,17 @@ in
           in
           {
             script = ''
-              export PATH="${home}/.nix-profile/bin:/run/current-system/sw/bin:${home}/.local/bin:/opt/homebrew/bin:$PATH"
+              export PATH="/etc/profiles/per-user/johnw/bin:${home}/.nix-profile/bin:/run/current-system/sw/bin:${home}/.local/bin:/opt/homebrew/bin:$PATH"
               OC="${openclawPkg}/bin/openclaw"
               mkdir -p "${logDir}" "${home}/.openclaw/agents/main/sessions"
 
-              # Initialize config if not present
+              # Initialize config on first run only
               if [ ! -f "${home}/.openclaw/openclaw.json" ]; then
-                $OC setup --mode local --non-interactive
+                $OC setup --mode local --non-interactive --accept-risk 2>/dev/null || true
+                $OC config set gateway.mode local 2>/dev/null || true
+                $OC config set gateway.auth.mode token 2>/dev/null || true
+                $OC config set gateway.auth.token "${gatewayToken}" 2>/dev/null || true
               fi
-
-              # Persist gateway settings into config so CLI tools
-              # can authenticate against the running gateway
-              $OC config set gateway.mode local 2>/dev/null || true
-              $OC config set gateway.auth.mode token 2>/dev/null || true
-              $OC config set gateway.auth.token "${gatewayToken}" 2>/dev/null || true
 
               exec $OC gateway run \
                 --bind loopback --port 18789 --auth token --force
