@@ -4,8 +4,7 @@
 # Packages: vllm-mlx
 #
 # NOTE: MLX requires Apple Metal GPU access and native dylibs that don't work
-# in the Nix sandbox. This overlay installs vllm-mlx via uv into an isolated
-# environment, then wraps the entry points for Nix.
+# in the Nix sandbox. This overlay installs vllm-mlx via uv on first run.
 _final: prev: {
 
   vllm-mlx =
@@ -18,24 +17,52 @@ _final: prev: {
       dontConfigure = true;
       dontBuild = true;
 
-      nativeBuildInputs = [ makeWrapper ];
-
       installPhase = ''
         runHook preInstall
         mkdir -p $out/bin
-        # Wrapper that ensures vllm-mlx is installed via uv on first run
-        cat > $out/bin/vllm-mlx <<'WRAPPER'
-        #!/usr/bin/env bash
-        VLLM_MLX_HOME="''${XDG_DATA_HOME:-$HOME/.local/share}/vllm-mlx"
-        if [ ! -d "$VLLM_MLX_HOME" ]; then
-          echo "Installing vllm-mlx v${version} via uv..." >&2
-          ${uv}/bin/uv tool install \
-            "git+https://github.com/waybarrios/vllm-mlx.git" \
-            --tool-dir "$VLLM_MLX_HOME" 2>&1 | tail -3 >&2
-        fi
-        exec "$VLLM_MLX_HOME/vllm-mlx/bin/vllm-mlx" "$@"
-        WRAPPER
+
+        cat > $out/bin/vllm-mlx <<EOF
+#!/usr/bin/env bash
+UV="${uv}/bin/uv"
+TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
+
+if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
+  echo "Installing vllm-mlx v${version} via uv..." >&2
+  "\$UV" tool install "vllm-mlx==${version}" >&2
+fi
+
+exec "\$UV" tool run vllm-mlx "\$@"
+EOF
         chmod +x $out/bin/vllm-mlx
+
+        cat > $out/bin/vllm-mlx-chat <<EOF
+#!/usr/bin/env bash
+UV="${uv}/bin/uv"
+TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
+
+if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
+  echo "Installing vllm-mlx v${version} via uv..." >&2
+  "\$UV" tool install "vllm-mlx==${version}" >&2
+fi
+
+exec "\$UV" tool run vllm-mlx-chat "\$@"
+EOF
+        chmod +x $out/bin/vllm-mlx-chat
+
+        cat > $out/bin/vllm-mlx-bench <<EOF
+#!/usr/bin/env bash
+UV="${uv}/bin/uv"
+TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
+
+if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
+  echo "Installing vllm-mlx v${version} via uv..." >&2
+  "\$UV" tool install "vllm-mlx==${version}" >&2
+fi
+
+exec "\$UV" tool run vllm-mlx-bench "\$@"
+EOF
+        chmod +x $out/bin/vllm-mlx-bench
+
         runHook postInstall
       '';
 
