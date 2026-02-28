@@ -199,6 +199,7 @@ rec {
     m-cli
     m4
     macmon
+    mapq
     markless
     mb2md
     mcat
