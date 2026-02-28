@@ -40,6 +40,12 @@ Query Apple Maps for nearby places and get driving/walking/transit directions wi
 
 ### 1. Get Current Location
 
+**If the user's message contains GPS coordinates** (e.g., `[GPS: 38.57, -121.39]`), extract
+the latitude and longitude directly from the message. This happens when the user sends from
+a mobile device via an Apple Shortcut that prepends their iPhone GPS location.
+
+**Otherwise**, get the Mac's location:
+
 ```bash
 LOC=$(corelocationcli --json)
 LAT=$(echo "$LOC" | jq -r .latitude)
