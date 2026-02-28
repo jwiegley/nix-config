@@ -15,14 +15,17 @@ final: prev: {
     # Swift requires Xcode's command-line tools which live outside the Nix store
     __noChroot = true;
 
+    # stdenv fixup uses GNU find/cut flags unavailable on macOS BSD tools
+    dontFixup = true;
+
     buildPhase = ''
-      # Bypass xcrun entirely — use the Xcode swiftc and SDK directly
-      XCODE_DEV="/Applications/Xcode.app/Contents/Developer"
-      SWIFTC="$XCODE_DEV/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
-      SDKROOT="$XCODE_DEV/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
-      export DEVELOPER_DIR="$XCODE_DEV"
-      export SDKROOT
-      "$SWIFTC" -O -sdk "$SDKROOT" -o mapq main.swift 2>&1
+      XCODE="/Applications/Xcode.app/Contents/Developer"
+      SWIFTC="$XCODE/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+      SDK="$XCODE/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+      export DEVELOPER_DIR="$XCODE"
+      export SDKROOT="$SDK"
+      export PATH="$XCODE/Toolchains/XcodeDefault.xctoolchain/usr/bin:$XCODE/usr/bin:/usr/bin:$PATH"
+      "$SWIFTC" -O -sdk "$SDK" -o mapq main.swift
     '';
 
     installPhase = ''

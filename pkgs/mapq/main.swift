@@ -65,52 +65,7 @@ func writeStderr(_ message: String) {
     FileHandle.standardError.write(data)
 }
 
-// MARK: - Apple Maps Async Wrappers
-
-func searchNearby(query: String, coordinate: CLLocationCoordinate2D) async throws -> [MKMapItem] {
-    let request = MKLocalSearch.Request()
-    request.naturalLanguageQuery = query
-    request.region = MKCoordinateRegion(
-        center: coordinate,
-        latitudinalMeters: 16000,
-        longitudinalMeters: 16000
-    )
-
-    return try await withCheckedThrowingContinuation { continuation in
-        let search = MKLocalSearch(request: request)
-        search.start { response, error in
-            if let error = error {
-                continuation.resume(throwing: error)
-            } else if let response = response {
-                continuation.resume(returning: response.mapItems)
-            } else {
-                continuation.resume(returning: [])
-            }
-        }
-    }
-}
-
-func getDirections(
-    from source: MKMapItem,
-    to destination: MKMapItem,
-    transportType: MKDirectionsTransportType
-) async throws -> MKRoute? {
-    let request = MKDirections.Request()
-    request.source = source
-    request.destination = destination
-    request.transportType = transportType
-
-    return try await withCheckedThrowingContinuation { continuation in
-        let directions = MKDirections(request: request)
-        directions.calculate { response, error in
-            if let error = error {
-                continuation.resume(throwing: error)
-            } else {
-                continuation.resume(returning: response?.routes.first)
-            }
-        }
-    }
-}
+// MARK: - Apple Maps Query (callback-based)
 
 // MARK: - Address Formatting
 
@@ -203,9 +158,8 @@ func parseArgs() -> (lat: Double, lon: Double, query: String, transport: MKDirec
     return (lat, lon, query, transportOpt, transportName, count)
 }
 
-// MARK: - Entry Point (main.swift top-level code, RunLoop on main thread)
+// MARK: - Entry Point
 
-// Parse args synchronously
 guard let parsed = parseArgs() else {
     let usage = "Usage: mapq --lat FLOAT --lon FLOAT --query STRING [--transport automobile|walking|transit] [--count INT]"
     FileHandle.standardError.write((usage + "\n").data(using: .utf8)!)
@@ -213,144 +167,121 @@ guard let parsed = parseArgs() else {
 }
 
 let (lat, lon, query, transportOpt, transportName, count) = parsed
-
 let origin = CLLocationCoordinate2D(latitude: lat, longitude: lon)
 let originMapItem = MKMapItem(placemark: MKPlacemark(coordinate: origin))
 
-// Run async work on a background dispatch queue, pump main RunLoop manually
-// so that MapKit callbacks (which dispatch to main thread) can fire.
-var done = false
+// State machine: 0=searching, 1=routing, 2=done
+var phase = 0
 var exitCode: Int32 = 0
 
-DispatchQueue.global().async {
-    // Create a new Task that runs the async work
-    let task = Task {
-        do {
-            let results: [PlaceResult] = try await withThrowingTaskGroup(of: [PlaceResult].self) { group in
-                group.addTask {
-                    let items = try await searchNearby(query: query, coordinate: origin)
+// Step 1: Search for nearby places
+let searchReq = MKLocalSearch.Request()
+searchReq.naturalLanguageQuery = query
+searchReq.region = MKCoordinateRegion(
+    center: origin,
+    latitudinalMeters: 16000,
+    longitudinalMeters: 16000
+)
 
-                    if items.isEmpty {
-                        throw NSError(
-                            domain: "MapQ",
-                            code: 1,
-                            userInfo: [NSLocalizedDescriptionKey: "No results found for '\(query)'"]
-                        )
-                    }
+MKLocalSearch(request: searchReq).start { response, error in
+    if let error = error {
+        writeError(error.localizedDescription)
+        exitCode = 1; phase = 2; return
+    }
+    guard let items = response?.mapItems, !items.isEmpty else {
+        writeError("No results found for '\(query)'")
+        exitCode = 1; phase = 2; return
+    }
 
-                    let sorted = items.sorted { a, b in
-                        let dA = haversineDistanceMiles(
-                            lat1: lat, lon1: lon,
-                            lat2: a.placemark.coordinate.latitude,
-                            lon2: a.placemark.coordinate.longitude
-                        )
-                        let dB = haversineDistanceMiles(
-                            lat1: lat, lon1: lon,
-                            lat2: b.placemark.coordinate.latitude,
-                            lon2: b.placemark.coordinate.longitude
-                        )
-                        return dA < dB
-                    }
+    // Sort by straight-line distance, take top N
+    let sorted = items.sorted { a, b in
+        haversineDistanceMiles(lat1: lat, lon1: lon,
+                               lat2: a.placemark.coordinate.latitude,
+                               lon2: a.placemark.coordinate.longitude)
+        < haversineDistanceMiles(lat1: lat, lon1: lon,
+                                  lat2: b.placemark.coordinate.latitude,
+                                  lon2: b.placemark.coordinate.longitude)
+    }
+    let top = Array(sorted.prefix(count))
 
-                    let top = Array(sorted.prefix(count))
+    // Step 2: Get directions for each result
+    phase = 1
+    var placeResults: [PlaceResult] = []
+    var remaining = top.count
 
-                    var placeResults: [PlaceResult] = []
-                    for item in top {
-                        let coord = item.placemark.coordinate
-                        let slMiles = haversineDistanceMiles(
-                            lat1: lat, lon1: lon,
-                            lat2: coord.latitude, lon2: coord.longitude
-                        )
+    for item in top {
+        let coord = item.placemark.coordinate
+        let slMiles = haversineDistanceMiles(
+            lat1: lat, lon1: lon, lat2: coord.latitude, lon2: coord.longitude
+        )
 
-                        var routeMiles: Double = slMiles
-                        var travelMinutes: Int = 0
+        let dirReq = MKDirections.Request()
+        dirReq.source = originMapItem
+        dirReq.destination = item
+        dirReq.transportType = transportOpt
 
-                        do {
-                            if let route = try await getDirections(
-                                from: originMapItem,
-                                to: item,
-                                transportType: transportOpt
-                            ) {
-                                routeMiles = route.distance / 1609.344
-                                travelMinutes = Int((route.expectedTravelTime / 60).rounded())
-                            }
-                        } catch {
-                            writeStderr("Warning: directions failed for \(item.name ?? "unknown"): \(error.localizedDescription)")
-                        }
+        MKDirections(request: dirReq).calculate { dirResponse, dirError in
+            var routeMiles = slMiles
+            var travelMinutes = 0
 
-                        let label = transportLabel(transportOpt)
-                        let textSummary = String(
-                            format: "%.1f mi, %d min %@",
-                            routeMiles, travelMinutes, label
-                        )
-
-                        let address = formatAddress(from: item.placemark)
-                        let phoneNumber: String? = item.phoneNumber?.isEmpty == false ? item.phoneNumber : nil
-                        let urlString: String? = item.url?.absoluteString
-
-                        let result = PlaceResult(
-                            name: item.name ?? "Unknown",
-                            address: address,
-                            latitude: coord.latitude,
-                            longitude: coord.longitude,
-                            straight_line_miles: (slMiles * 10).rounded() / 10,
-                            route_miles: (routeMiles * 10).rounded() / 10,
-                            travel_minutes: travelMinutes,
-                            phone: phoneNumber,
-                            url: urlString,
-                            text_summary: textSummary
-                        )
-                        placeResults.append(result)
-                    }
-                    return placeResults
-                }
-
-                // Timeout task
-                group.addTask {
-                    try await Task.sleep(nanoseconds: 15_000_000_000)
-                    throw NSError(
-                        domain: "MapQ",
-                        code: 2,
-                        userInfo: [NSLocalizedDescriptionKey: "Request timed out after 15 seconds"]
-                    )
-                }
-
-                let result = try await group.next()!
-                group.cancelAll()
-                return result
+            if let route = dirResponse?.routes.first {
+                routeMiles = route.distance / 1609.344
+                travelMinutes = Int((route.expectedTravelTime / 60).rounded())
+            } else if let dirError = dirError {
+                writeStderr("Warning: directions failed for \(item.name ?? "unknown"): \(dirError.localizedDescription)")
             }
 
-            let output = MapQOutput(
-                query: query,
-                transport: transportName,
-                origin: Origin(latitude: lat, longitude: lon),
-                results: results
+            let label = transportLabel(transportOpt)
+            let textSummary = String(format: "%.1f mi, %d min %@", routeMiles, travelMinutes, label)
+            let address = formatAddress(from: item.placemark)
+
+            let result = PlaceResult(
+                name: item.name ?? "Unknown",
+                address: address,
+                latitude: coord.latitude,
+                longitude: coord.longitude,
+                straight_line_miles: (slMiles * 10).rounded() / 10,
+                route_miles: (routeMiles * 10).rounded() / 10,
+                travel_minutes: travelMinutes,
+                phone: item.phoneNumber?.isEmpty == false ? item.phoneNumber : nil,
+                url: item.url?.absoluteString,
+                text_summary: textSummary
             )
+            placeResults.append(result)
 
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
-            let data = try encoder.encode(output)
-            if let str = String(data: data, encoding: .utf8) {
-                print(str)
+            remaining -= 1
+            if remaining == 0 {
+                // Sort results by route distance
+                let sortedResults = placeResults.sorted { $0.route_miles < $1.route_miles }
+
+                let output = MapQOutput(
+                    query: query,
+                    transport: transportName,
+                    origin: Origin(latitude: lat, longitude: lon),
+                    results: sortedResults
+                )
+
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+                if let data = try? encoder.encode(output),
+                   let str = String(data: data, encoding: .utf8) {
+                    print(str)
+                }
+                phase = 2
             }
-
-        } catch {
-            writeError(error.localizedDescription)
-            exitCode = 1
-        }
-
-        // Signal completion from main thread
-        DispatchQueue.main.async {
-            done = true
-            CFRunLoopStop(CFRunLoopGetMain())
         }
     }
-    _ = task
 }
 
-// Pump the main RunLoop so MapKit callbacks can fire
-while !done {
-    CFRunLoopRunInMode(CFRunLoopMode.defaultMode, 0.1, false)
+// Pump RunLoop until done (15s timeout)
+let deadline = Date().addingTimeInterval(15)
+while phase < 2 && Date() < deadline {
+    RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.1))
+}
+
+if phase < 2 {
+    writeError("Request timed out after 15 seconds")
+    exitCode = 1
 }
 
 exit(exitCode)
