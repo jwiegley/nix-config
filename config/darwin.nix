@@ -179,6 +179,7 @@ in
       "diffusionbee"
       "discord"
       "docker-desktop"
+      "openclaw"
       "drivedx"
       "element"
       "elgato-stream-deck"
@@ -736,6 +737,7 @@ in
           {
             script = ''
               export PATH="/etc/profiles/per-user/johnw/bin:${home}/.nix-profile/bin:/run/current-system/sw/bin:${home}/.local/bin:/opt/homebrew/bin:$PATH"
+              export OPENAI_BASE_URL="http://localhost:8079/v1"
               OC="${openclawPkg}/bin/openclaw"
               mkdir -p "${logDir}" "${home}/.openclaw/agents/main/sessions"
 
@@ -755,6 +757,7 @@ in
               EnvironmentVariables = {
                 HOME = home;
                 OPENCLAW_GATEWAY_TOKEN = gatewayToken;
+                OPENAI_BASE_URL = "http://localhost:8079/v1";
               };
               RunAtLoad = true;
               KeepAlive = true;
