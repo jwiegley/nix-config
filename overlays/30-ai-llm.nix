@@ -57,12 +57,12 @@ final: prev: {
 
   # llama.cpp - LLM inference with GGUF models
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "8164";
+    version = "8192";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-aAiqLNVdyYWihUV5zSyua80gq84OkjE4Fa2j8PxpsSQ=";
+      hash = "sha256-7/zaDYbdKEu9ovC3DuMxvcIwZDOJ4UCKLtQQDmZphwU=";
     };
     npmDepsHash = "sha256-FKjoZTKm0ddoVdpxzYrRUmTiuafEfbKc4UD2fz2fb8A=";
     npmDeps = prev.fetchNpmDeps {
@@ -77,13 +77,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "195";
+      version = "197";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-Fc6aZDVhI8dvJUzZOn6iLqxmYht0GuXI8VjOQmln/2M=";
+        hash = "sha256-gm6d8sPIY3zBjGzUgmAI0bbp3ULm697EedNw65ghSlk=";
       };
 
       ui =
@@ -99,7 +99,7 @@ final: prev: {
 
           sourceRoot = "source/ui-svelte";
 
-          npmDepsHash = "sha256-4VH9jJ1Ae16p8kUubZBrIwwqw/X8I+wDg378G82WCtU=";
+          npmDepsHash = "sha256-Fs7+JKE8YBp2Xj8bVBlwmT+UwuD642VeUHiPx+fv94c=";
 
           postInstall = ''
             rm -rf $out/lib
@@ -115,7 +115,7 @@ final: prev: {
     with prev;
     prev.llama-swap.overrideAttrs (attrs: rec {
       inherit version src;
-      # vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      # vendorHash = "sha256-Fs7+JKE8YBp2Xj8bVBlwmT+UwuD642VeUHiPx+fv94c=";
       preBuild = ''
         cp -r ${ui}/ui_dist proxy/
       '';
