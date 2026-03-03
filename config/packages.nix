@@ -369,13 +369,13 @@ rec {
     reasondb
     rustdocs-mcp-server
     vllm-mlx
-
     agnix
     cozempic
     context7-mcp
     playwright-mcp
     github-mcp-server
     (lib.hiPrio mcp-server-sequential-thinking)
+    get-shit-done-cc # meta-prompting system for Claude Code
 
     (exe git-annex)
     git-annex-remote-rclone
@@ -384,17 +384,15 @@ rec {
   ++ lib.optionals stdenv.isLinux [
     cpx # Modern, fast file copy tool with progress bars and resume support
   ]
-  ++ [
-    get-shit-done-cc # meta-prompting system for Claude Code
-  ]
   ++ (with inputs.llm-agents.packages.${system}; [
-    droid
     claude-code
     claude-code-acp
     ccusage
-    codex
-    ollama
+    droid
     opencode
+    # gemini-cli
+    # codex
+    # ollama
   ])
   ++ lib.optionals (hostname == "hera") (
     [
@@ -408,8 +406,5 @@ rec {
       mcporter
       openclaw
     ])
-  )
-  ++ [
-    gemini-cli
-  ];
+  );
 }
