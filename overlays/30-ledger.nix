@@ -5,13 +5,9 @@
 # Note: Requires paths.ledger
 final: prev:
 
-let
-  ledger = prev.inputs.ledger.packages.${prev.stdenv.hostPlatform.system}.ledger;
-
-in
 {
 
-  ledger_HEAD = ledger.overrideAttrs (attrs: {
+  ledger_HEAD = prev.inputs.ledger.packages.${prev.stdenv.hostPlatform.system}.ledger.overrideAttrs (attrs: {
     boost = prev.boost.override { python = prev.python3; };
 
     preConfigure = ''
