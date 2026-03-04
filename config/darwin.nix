@@ -260,18 +260,20 @@ in
       }
     ]
     ++ lib.optionals (hostname == "hera") [
-      "home-assistant"
-      "utm"
-      "thunderbird"
-      "tailscale-app"
       "elgato-stream-deck"
       "fujitsu-scansnap-home"
       "gzdoom"
-      "raspberry-pi-imager"
+      "home-assistant"
+      "jump-desktop-connect"
       # "logitune"
+      "raspberry-pi-imager"
+      "tailscale-app"
+      "thunderbird"
+      "utm"
     ]
     ++ lib.optionals (hostname == "clio") [
       "aldente"
+      "jump-desktop"
       "wifi-explorer"
     ];
 
