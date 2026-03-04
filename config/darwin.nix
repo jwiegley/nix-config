@@ -718,9 +718,11 @@ in
               mkdir -p ${logDir} ${logDir}/client_body
               ${pkgs.nginx}/bin/nginx -c ${config} -g "daemon off;" -e ${logDir}/error.log
             '';
-            serviceConfig.RunAtLoad = true;
-            serviceConfig.KeepAlive = true;
-            serviceConfig.SoftResourceLimits.NumberOfFiles = 4096;
+            serviceConfig = {
+              RunAtLoad = true;
+              KeepAlive = true;
+              SoftResourceLimits.NumberOfFiles = 4096;
+            };
           };
 
       }
