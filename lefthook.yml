@@ -1,0 +1,6 @@
+pre-commit:
+  commands:
+    statix:
+      tags: lint
+      glob: "*.{nix}"
+      run: statix check .

@@ -66,6 +66,7 @@ rec {
     ctop
     curl
     darwin.cctools
+    deadnix
     diffstat
     diffutils
     direnv
@@ -185,6 +186,7 @@ rec {
     killall
     kubectl
     ledger_HEAD
+    lefthook
     less
     lftp
     librsvg
@@ -313,6 +315,7 @@ rec {
     srm
     sshfs
     sshify
+    statix
     stow
     subversion
     svg2tikz
