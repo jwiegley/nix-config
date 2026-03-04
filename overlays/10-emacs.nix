@@ -256,7 +256,9 @@ let
           sha256 = "sha256-xUBQrQpw+JZxcqT1fy/8C2tjKwa7sLFHXamBm45Fa4Y=";
           # date = 2025-07-16T14:21:52-04:00;
         };
-        propagatedBuildInputs = with eself; [ (prev.emacs-lsp-booster.override { emacs = eself.emacs; }) ];
+        propagatedBuildInputs = with eself; [
+          (prev.emacs-lsp-booster.override { inherit (eself) emacs; })
+        ];
       };
 
       eww-plz = compileEmacsFiles {
@@ -856,7 +858,7 @@ in
           NATIVE_FULL_AOT = "1";
           LIBRARY_PATH = lib.concatStringsSep ":" libGccJitLibraryPaths;
         };
-        src = paths.emacsSrc;
+        src = paths.emacs-src;
         patches = [
           (builtins.path {
             name = "inhibit-lexical-cookie-warning-67916.patch";

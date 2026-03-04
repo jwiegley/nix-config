@@ -9,24 +9,26 @@
 { inputs }:
 
 {
-  # Personal scripts collection (used by 30-user-scripts.nix)
-  scripts = inputs.scripts;
+  inherit (inputs)
+    # Personal scripts collection (used by 30-user-scripts.nix)
+    scripts
 
-  # Git scripts collection (used by 30-git-tools.nix)
-  gitScripts = inputs.git-scripts;
+    # Git scripts collection (used by 30-git-tools.nix)
+    git-scripts
 
-  # Directory scanning utility (used by 30-data-tools.nix)
-  dirscan = inputs.dirscan;
+    # Directory scanning utility (used by 30-data-tools.nix)
+    dirscan
 
-  # Org-mode to timeclock converter (used by 30-text-tools.nix)
-  org2tc = inputs.org2tc;
+    # Org-mode to timeclock converter (used by 30-text-tools.nix)
+    org2tc
 
-  # Hours/time tracking project (used by 10-emacs.nix)
-  hours = inputs.hours;
+    # Hours/time tracking project (used by 10-emacs.nix)
+    hours
 
-  # Ledger CLI accounting flake (used by 30-ledger.nix)
-  ledger = inputs.ledger;
+    # Ledger CLI accounting flake (used by 30-ledger.nix)
+    ledger
 
-  # Emacs source tree (used by 10-emacs.nix for emacsHEAD)
-  emacsSrc = inputs.emacs-src;
+    # Emacs source tree (used by 10-emacs.nix for emacsHEAD)
+    emacs-src
+    ;
 }

@@ -2,7 +2,7 @@
 # Purpose: Git-related tools and extensions
 # Dependencies: None (uses only prev)
 # Packages: git-lfs, git-pr, git-scripts
-# Note: git-scripts requires paths.gitScripts
+# Note: git-scripts requires paths.git-scripts
 final: prev:
 
 let
@@ -76,13 +76,13 @@ in
     };
 
   # Custom git helper scripts
-  # Note: Requires paths.gitScripts
+  # Note: Requires paths.git-scripts
   git-scripts =
     with prev;
     stdenv.mkDerivation {
       name = "git-scripts";
 
-      src = paths.gitScripts;
+      src = paths.git-scripts;
 
       buildInputs = [ ];
 

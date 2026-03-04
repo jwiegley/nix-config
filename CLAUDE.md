@@ -120,7 +120,7 @@ u repl
 - **config/paths.nix**: Centralized path definitions for external source dependencies
   - Defines paths to local source checkouts used by overlays
   - Import in overlays: `let paths = import ../config/paths.nix; in { ... }`
-  - Paths: scripts, gitScripts, dirscan, org2tc, hours, ledger
+  - Paths: scripts, git-scripts, dirscan, org2tc, hours, ledger
 
 ### Configuration Merging and Precedence
 
