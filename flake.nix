@@ -27,6 +27,7 @@
 
     org-jw.url = "github:jwiegley/org-jw";
 
+    claude-prompts.url = "git+file:///Users/johnw/src/claude-prompts";
     git-ai.url = "git+file:///Users/johnw/src/git-ai/main";
     git-all.url = "git+file:///Users/johnw/src/git-all";
     gitlib.url = "git+file:///Users/johnw/src/gitlib?submodules=0";
