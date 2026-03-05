@@ -170,6 +170,7 @@ final: prev: {
         faker
         ftfy
         httpx
+        h2 # httpx[http2] support required by guidellm
         loguru
         msgpack
         numpy
