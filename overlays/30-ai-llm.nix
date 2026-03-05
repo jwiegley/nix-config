@@ -144,6 +144,65 @@ final: prev: {
     })
   ];
 
+  # guidellm - LLM deployment benchmarking tool
+  guidellm =
+    with final;
+    with final.python3Packages;
+    buildPythonApplication rec {
+      pname = "guidellm";
+      version = "0.5.3";
+      pyproject = null;
+      format = "wheel";
+
+      src = fetchPypi {
+        inherit pname version;
+        format = "wheel";
+        dist = "py3";
+        python = "py3";
+        hash = "sha256-yoS5xDPeDIu4Qn6BjM9FMypLt/IBgwjrs669WVYVNXo=";
+      };
+
+      dependencies = [
+        click
+        culsans
+        datasets
+        eval-type-backport
+        faker
+        ftfy
+        httpx
+        loguru
+        msgpack
+        numpy
+        protobuf
+        pydantic
+        pydantic-settings
+        pyyaml
+        rich
+        sanic
+        tabulate
+        transformers
+        uvloop
+        torch
+        more-itertools
+        # recommended extras
+        orjson
+        msgspec
+      ];
+
+      dontBuild = true;
+      doCheck = false; # Tests require running LLM servers
+
+      pythonImportsCheck = [ "guidellm" ];
+
+      meta = {
+        description = "Benchmarking tool for evaluating LLM deployments";
+        homepage = "https://github.com/vllm-project/guidellm";
+        license = lib.licenses.asl20;
+        maintainers = with lib.maintainers; [ jwiegley ];
+        mainProgram = "guidellm";
+      };
+    };
+
   # mlx-lm - Apple MLX-based LLM inference
   # NOTE: Using 'final' here because mlx-lm needs final python3Packages
   # which may include our pythonPackagesExtensions modifications

@@ -135,6 +135,66 @@ in
           };
         };
 
+        # sanic test_validate_group_sets_gid fails in Nix sandbox (no 'root' group)
+        sanic = pprev.sanic.overridePythonAttrs (_: {
+          doCheck = false;
+        });
+
+        aiologic = pfinal.buildPythonPackage rec {
+          pname = "aiologic";
+          version = "0.16.0";
+          format = "wheel";
+
+          src = pfinal.fetchPypi {
+            inherit pname version;
+            format = "wheel";
+            dist = "py3";
+            python = "py3";
+            hash = "sha256-4Azl9oxWB8hk0mrsmcCjOoO9+CN6pzEv+7loBa9n2LY=";
+          };
+
+          dependencies = with pfinal; [
+            sniffio
+            typing-extensions
+            wrapt
+          ];
+
+          pythonImportsCheck = [ "aiologic" ];
+
+          meta = {
+            description = "Synchronization primitives for tasks and threads";
+            homepage = "https://pypi.org/project/aiologic/";
+            license = prev.lib.licenses.mit;
+          };
+        };
+
+        culsans = pfinal.buildPythonPackage rec {
+          pname = "culsans";
+          version = "0.10.0";
+          format = "wheel";
+
+          src = pfinal.fetchPypi {
+            inherit pname version;
+            format = "wheel";
+            dist = "py3";
+            python = "py3";
+            hash = "sha256-6DLJY1q3AWz2JWXeKUJp9HCM2SIA0A2v3S5aGUNYfy4=";
+          };
+
+          dependencies = with pfinal; [
+            aiologic
+            typing-extensions
+          ];
+
+          pythonImportsCheck = [ "culsans" ];
+
+          meta = {
+            description = "Mixed sync-async queue for threaded and async communication";
+            homepage = "https://pypi.org/project/culsans/";
+            license = prev.lib.licenses.asl20;
+          };
+        };
+
         # Fix pymssql: upstream changed setuptools constraint from ">=54.0,<70.3" to ">80.0"
         # and now requires standard-distutils for Python 3.12+
         pymssql = pprev.pymssql.overridePythonAttrs (oldAttrs: {

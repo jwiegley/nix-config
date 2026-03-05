@@ -364,6 +364,7 @@ rec {
     zsh-syntax-highlighting
 
     aider-chat
+    guidellm
     (lib.hiPrio llama-cpp)
     llama-swap
     gguf-tools
