@@ -742,7 +742,7 @@ in
           {
             script = ''
               export PATH="/etc/profiles/per-user/johnw/bin:${home}/.nix-profile/bin:/run/current-system/sw/bin:${home}/.local/bin:/opt/homebrew/bin:$PATH"
-              export OPENAI_BASE_URL="http://localhost:8079/v1"
+              export NODE_EXTRA_CA_CERTS="${home}/.openclaw/secrets/vulcan_root_ca.crt"
               OC="${openclawPkg}/bin/openclaw"
               mkdir -p "${logDir}" "${home}/.openclaw/agents/main/sessions"
 
@@ -762,7 +762,7 @@ in
               EnvironmentVariables = {
                 HOME = home;
                 OPENCLAW_GATEWAY_TOKEN = gatewayToken;
-                OPENAI_BASE_URL = "http://localhost:8079/v1";
+                NODE_EXTRA_CA_CERTS = "${home}/.openclaw/secrets/vulcan_root_ca.crt";
               };
               RunAtLoad = true;
               KeepAlive = true;
