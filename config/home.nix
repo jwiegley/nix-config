@@ -87,8 +87,9 @@ in
       HF_HUB_ENABLE_HF_TRANSFER = "1";
       LLAMA_INDEX_CACHE_DIR = "${config.xdg.cacheHome}/llama-index";
 
-      # This forces clearing the variable so home-manager can set it
-      SSH_AUTH_SOCK = "";
+      # Point SSH at the GPG agent's SSH socket so the hardware
+      # security key is available for GitHub authentication
+      SSH_AUTH_SOCK = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
     };
 
     sessionSearchVariables = {
