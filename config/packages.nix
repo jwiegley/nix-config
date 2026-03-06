@@ -26,7 +26,7 @@ rec {
     (exe haskellPackages.hpack)
     (lib.hiPrio (exe haskellPackages.ormolu))
     (exe haskellPackages.pointfree)
-    inputs.claude-prompts.packages.${system}.default
+    inputs.promptdeploy.packages.${system}.default
     inputs.git-all.packages.${system}.default
     inputs.gitlib.packages.${system}.default
     inputs.hours.packages.${system}.default

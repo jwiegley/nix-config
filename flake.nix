@@ -25,9 +25,20 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    org-jw.url = "github:jwiegley/org-jw";
+    ledger = {
+      url = "git+file:///Users/johnw/src/ledger/main";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
-    claude-prompts.url = "git+file:///Users/johnw/src/claude-prompts";
+    org-jw.url = "github:jwiegley/org-jw";
+    # ledger.url = "github:ledger/ledger";
+    rag-client.url = "github:jwiegley/rag-client";
+
+    promptdeploy = {
+      url = "git+file:///Users/johnw/src/promptdeploy?shallow=0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     git-ai.url = "git+file:///Users/johnw/src/git-ai/main";
     git-all.url = "git+file:///Users/johnw/src/git-all";
     gitlib.url = "git+file:///Users/johnw/src/gitlib?submodules=0";
@@ -42,7 +53,6 @@
     obr.url = "git+file:///Users/johnw/src/obr";
     org2jsonl.url = "git+file:///Users/johnw/src/org2jsonl";
 
-    # Local source repos (non-flake) used by overlays
     scripts = {
       url = "git+file:///Users/johnw/src/scripts";
       flake = false;
@@ -63,10 +73,6 @@
       url = "github:jwiegley/org2tc";
       flake = false;
     };
-
-    # Local flake repos used by overlays
-    ledger.url = "github:ledger/ledger";
-    rag-client.url = "github:jwiegley/rag-client";
   };
 
   outputs =
