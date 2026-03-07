@@ -186,6 +186,7 @@ in
       "fantastical"
       "geektool"
       "github"
+      "handy"
       "iterm2"
       "itermai"
       "key-codes"
