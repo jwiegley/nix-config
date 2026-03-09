@@ -46,7 +46,7 @@ in
       B2_ACCOUNT_INFO = "${config.xdg.configHome}/backblaze-b2/account_info";
       CABAL_CONFIG = "${config.xdg.configHome}/cabal/config";
       CARGO_HOME = "${config.xdg.dataHome}/cargo";
-      CLAUDE_CONFIG_DIR = "${config.xdg.configHome}/claude/personal";
+
       CLICOLOR = "yes";
       EDITOR = "${emacsclient}";
       EMACSVER = "30MacPort";
@@ -141,9 +141,8 @@ in
         ".local/bin/claude".source = mkLink "${
           inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
         }/bin/claude";
-
         ".aider".source = mkLink "${config.xdg.configHome}/aider";
-        ".claude".source = mkLink "${config.xdg.configHome}/claude/personal";
+
         ".codex".source = mkLink "${config.xdg.configHome}/codex";
         ".cups".source = mkLink "${config.xdg.configHome}/cups";
         ".cursor".source = mkLink "${config.xdg.configHome}/cursor";
@@ -398,7 +397,7 @@ in
       };
 
       localVariables = {
-        RPROMPT = "%F{green}%~%f";
+        RPROMPT = "%F{cyan}[\\$PERSONA]%f %F{green}%~%f";
         PROMPT = "%B%m %b\\$(git_super_status)%(!.#.$) ";
         PROMPT_DIRTRIM = "2";
       };
@@ -479,30 +478,12 @@ in
               fi
             }
 
-            # GitHub CLI account switching based on directory
-            typeset -g _PREV_GH_ACCOUNT="jwiegley"
-
-            __gh_account_check() {
-              local desired_account="jwiegley"
-
-              # Check if we're in a Positron work directory
-              case "$PWD" in
-                ${home}/pos/*|${home}/work/positron/*)
-                  desired_account="jw-pos"
-                  ;;
-              esac
-
-              if [[ "$desired_account" != "$_PREV_GH_ACCOUNT" ]]; then
-                if command -v gh &> /dev/null; then
-                  gh auth switch --user "$desired_account" 2>/dev/null || true
-                fi
-                _PREV_GH_ACCOUNT="$desired_account"
-              fi
-            }
+            # Auto-load persona environment on shell start
+            if [[ -f "$HOME/.config/persona/current" ]]; then
+              eval "$(command persona --env)"
+            fi
 
             autoload -Uz add-zsh-hook
-            add-zsh-hook chpwd __gh_account_check
-            add-zsh-hook precmd __gh_account_check
             add-zsh-hook chpwd __update_terminal_title
             add-zsh-hook precmd __update_terminal_title
         fi
@@ -568,6 +549,10 @@ in
         key = signing_key;
         signByDefault = true;
       };
+
+      includes = [
+        { path = "~/.config/git/persona.gitconfig"; }
+      ];
 
       settings = {
         alias = {

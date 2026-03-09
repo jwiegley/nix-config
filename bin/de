@@ -2,15 +2,6 @@
 
 set -e
 
-if [[ -d $HOME/.config/claude/personal ]]; then
-    export CLAUDE_CONFIG_DIR=$HOME/.config/claude/personal
-fi
-if [[ $PWD =~ /pos(itron)?/ ]]; then
-    if [[ -d $HOME/.config/claude/positron ]]; then
-        export CLAUDE_CONFIG_DIR=$HOME/.config/claude/positron
-    fi
-fi
-
 # I use this to keep build products in a separate directory tree.
 PRODUCTS=""
 if [[ -d $HOME/Products ]]; then
@@ -61,12 +52,14 @@ reset_kept() {
 
 keep_vars                                       \
     ALTERNATE_EDITOR                            \
+    CLAUDE_CONFIG_DIR                           \
     EDITOR                                      \
     EMACS_SERVER_FILE                           \
     GIT_PROMPT_EXECUTABLE                       \
     GH_ACCOUNT                                  \
     ITERM_SESSION_ID                            \
     NIX_PATH                                    \
+    PERSONA                                     \
     SECURITYSESSIONID                           \
     SSH_AUTH_SOCK                               \
     SSL_CERT_FILE                               \
