@@ -209,14 +209,14 @@ final: prev: {
     with python3Packages;
     buildPythonPackage rec {
       pname = "pass-git-helper";
-      version = "fded7816";
+      version = "04132a91";
       name = "${pname}-${version}";
 
       src = fetchFromGitHub {
         owner = "languitar";
         repo = "pass-git-helper";
-        rev = "fded7816830e81744b178ef0dec3d3d7b1b081f8";
-        sha256 = "sha256-cioIQEG7KrzlmDpcZ1QSwq5y5k5rt9OX74cnqqHhMOk=";
+        rev = "04132a9197a206fddd182a491d6ac25c246e1d86";
+        sha256 = "sha256-5MySL1iVVXG9tjNEWb8YwemYObVqNrxqvc9TWkt1MQU=";
         # date = 2025-10-02T16:40:46+02:00;
       };
 
@@ -278,6 +278,7 @@ final: prev: {
     with prev;
     buildGoModule rec {
       pname = "gogcli";
+      # Pinned: v0.12.0 requires Go >= 1.25.8, nixpkgs has 1.25.7
       version = "0.11.0";
 
       src = fetchFromGitHub {
