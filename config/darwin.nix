@@ -868,4 +868,12 @@ in
       };
     };
   };
+
+  # Allow OpenClaw Mac App to update the gateway plist without EACCES.
+  # nix-darwin writes it read-only (0444); this makes it writable so the
+  # Mac App's health check doesn't report a spurious failure.
+  system.activationScripts.postActivation.text = lib.optionalString (hostname == "hera") ''
+    chmod u+w "$HOME/Library/LaunchAgents/ai.openclaw.gateway.plist" 2>/dev/null || true
+    ln -sfn /etc/profiles/per-user/johnw/bin/openclaw /usr/local/bin/openclaw
+  '';
 }
