@@ -8,16 +8,16 @@ final: prev: {
     with prev;
     rustPlatform.buildRustPackage rec {
       pname = "markless";
-      version = "0.9.16";
+      version = "0.9.24";
 
       src = fetchFromGitHub {
         owner = "jvanderberg";
         repo = "markless";
         tag = "v${version}";
-        hash = "sha256-jqHFZQDFuASilUSjYXrw8pUBgWFEk/qoFi37bPXsnxo=";
+        hash = "sha256-LLI2hCsuWBlD0UyAkEbl2pz9+EEfpqPdPxEa/a4R11c=";
       };
 
-      cargoHash = "sha256-okrUPy4i1KDx1A4F3T+R157JWypyWAJrXo9OyYS+MyI=";
+      cargoHash = "sha256-v0wl2d6JXkI/BVVZ2TQiNJmjeItkZIqj80wWUYlloUU=";
 
       doCheck = false;
 

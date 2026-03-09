@@ -326,7 +326,6 @@ rec {
     tmux
     translate-shell
     trash-cli
-    travis
     tree
     tree-sitter
     tsvutils
@@ -347,8 +346,8 @@ rec {
     wget
     wireguard-tools
     xapian
-    xorg.xauth
-    xorg.xhost
+    xauth
+    xhost
     xquartz
     xz
     yazi

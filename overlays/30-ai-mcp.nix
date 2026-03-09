@@ -86,16 +86,16 @@ final: prev: {
     with final;
     buildNpmPackage (finalAttrs: {
       pname = "claude-code-acp";
-      version = "0.18.0";
+      version = "0.20.2";
 
       src = fetchFromGitHub {
         owner = "zed-industries";
         repo = "claude-code-acp";
         rev = "v${finalAttrs.version}";
-        hash = "sha256-KZg9z8cyMqMHOfATaT2gcbp0+HkqzecQvAVeHN+bCYg=";
+        hash = "sha256-0Oovlv7mkU0BqsNM7RFv5Be+umpmYy29bdmCuQcUheE=";
       };
 
-      npmDepsHash = "sha256-u/D/MbANckDjpxjvNweiXWU5RahZZzeva91aGcmPW7I=";
+      npmDepsHash = "sha256-DjkQUcx/osL+ZBJF7hOQT3qWlaKkB91VelJxReKbOO4=";
 
       dontNpmBuild = false;
 

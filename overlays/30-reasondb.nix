@@ -15,7 +15,7 @@ _final: prev: {
     in
     rustPlatform.buildRustPackage rec {
       pname = "reasondb";
-      version = "0.1.2";
+      version = "0.2.1";
 
       src = fetchFromGitHub {
         owner = "reasondb";

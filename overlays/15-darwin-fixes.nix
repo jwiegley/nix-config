@@ -1,8 +1,14 @@
 # overlays/15-darwin-fixes.nix
 # Purpose: Fixes for packages that fail to build or test on macOS (Darwin)
 # Dependencies: None (uses only prev)
-# Packages: samba, z3, fsspec
+# Packages: libvirt, samba, z3, fsspec
 final: prev: {
+
+  # Fix libvirt test failure on macOS
+  # qemucapabilitiestest fails with Linux-specific QEMU capability checks
+  libvirt = prev.libvirt.overrideAttrs (oldAttrs: {
+    doCheck = false;
+  });
 
   # Fix samba build failure on macOS
   # Clang rejects discard_const in static initializers as non-constant expressions
