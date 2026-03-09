@@ -373,6 +373,7 @@ rec {
     rustdocs-mcp-server
     vllm-mlx
     agnix
+    cozempic
     context7-mcp
     playwright-mcp
     github-mcp-server
