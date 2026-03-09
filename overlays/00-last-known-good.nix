@@ -11,7 +11,7 @@ let
         owner = "NixOS";
         repo = "nixpkgs";
       }
-    )) { inherit (prev.stdenv.hostPlatform) system; };
+    )) { localSystem = prev.stdenv.hostPlatform.system; };
 in
 {
   inherit

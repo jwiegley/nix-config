@@ -112,17 +112,16 @@
           configure =
             hostname: system:
             darwin.lib.darwinSystem {
-              inherit system;
               specialArgs = {
                 inherit
                   darwin
-                  system
                   hostname
                   inputs
                   overlays
                   ;
               };
               modules = [
+                { nixpkgs.hostPlatform = system; }
                 ./config/darwin.nix
                 home-manager.darwinModules.home-manager
                 {
@@ -130,7 +129,7 @@
                     useGlobalPkgs = true;
                     useUserPackages = true;
                     backupFileExtension = "hm-bak";
-                    extraSpecialArgs = { inherit system hostname inputs; };
+                    extraSpecialArgs = { inherit hostname inputs; };
 
                     users.johnw = import ./config/home.nix;
                   };

@@ -1,5 +1,4 @@
 {
-  system,
   pkgs,
   lib,
   config,
@@ -19,7 +18,7 @@ let
 
   external_host = "data.newartisans.com";
 
-  gitPkg = inputs.git-ai.packages.${system}.default;
+  gitPkg = inputs.git-ai.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   ca-bundle_path = "${pkgs.cacert}/etc/ssl/certs/";
   ca-bundle_crt = "${ca-bundle_path}/ca-bundle.crt";
@@ -30,7 +29,7 @@ let
 
   openclawPkg =
     if hostname == "hera"
-    then inputs.llm-agents.packages.${system}.openclaw
+    then inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.openclaw
     else builtins.throw "openclaw is only available on hera, not ${hostname}";
 in
 {
@@ -140,7 +139,7 @@ in
         '';
 
         ".local/bin/claude".source = mkLink "${
-          inputs.llm-agents.packages.${system}.claude-code
+          inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
         }/bin/claude";
 
         ".aider".source = mkLink "${config.xdg.configHome}/aider";

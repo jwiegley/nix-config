@@ -1,5 +1,4 @@
 {
-  system,
   hostname,
   inputs,
   pkgs,
@@ -19,26 +18,26 @@ rec {
   );
   emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
 
-  rag-client = inputs.rag-client.packages.${system}.default;
+  rag-client = inputs.rag-client.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   package-list = [
     (exe haskellPackages.hasktags)
     (exe haskellPackages.hpack)
     (lib.hiPrio (exe haskellPackages.ormolu))
     (exe haskellPackages.pointfree)
-    inputs.promptdeploy.packages.${system}.default
-    inputs.git-all.packages.${system}.default
-    inputs.gitlib.packages.${system}.default
-    inputs.hours.packages.${system}.default
-    inputs.org-jw.packages.${system}.default
-    inputs.pushme.packages.${system}.default
-    inputs.renamer.packages.${system}.default
-    inputs.sizes.packages.${system}.default
-    inputs.trade-journal.packages.${system}.default
-    inputs.una.packages.${system}.default
-    inputs.gh-to-org.packages.${system}.default
-    inputs.obr.packages.${system}.default
-    inputs.org2jsonl.packages.${system}.default
+    inputs.promptdeploy.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.git-all.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.gitlib.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.hours.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.org-jw.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.pushme.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.renamer.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.sizes.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.trade-journal.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.una.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.gh-to-org.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.obr.packages.${pkgs.stdenv.hostPlatform.system}.default
+    inputs.org2jsonl.packages.${pkgs.stdenv.hostPlatform.system}.default
     act
     apg
     aria2
@@ -388,7 +387,7 @@ rec {
   ++ lib.optionals stdenv.isLinux [
     cpx # Modern, fast file copy tool with progress bars and resume support
   ]
-  ++ (with inputs.llm-agents.packages.${system}; [
+  ++ (with inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}; [
     claude-code
     claude-code-acp
     ccusage
@@ -406,7 +405,7 @@ rec {
       soco-cli
       spotify-player
     ]
-    ++ (with inputs.llm-agents.packages.${system}; [
+    ++ (with inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}; [
       mcporter
       openclaw
     ])
