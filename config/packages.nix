@@ -377,7 +377,6 @@ rec {
     playwright-mcp
     github-mcp-server
     (lib.hiPrio mcp-server-sequential-thinking)
-    get-shit-done-cc # meta-prompting system for Claude Code
 
     (exe git-annex)
     git-annex-remote-rclone
