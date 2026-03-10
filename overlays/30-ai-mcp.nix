@@ -79,6 +79,34 @@ final: prev: {
       };
     });
 
+  # claude-replay - Convert Claude Code transcripts to HTML replays
+  claude-replay =
+    with prev;
+    buildNpmPackage (finalAttrs: {
+      pname = "claude-replay";
+      version = "0.2.0";
+
+      src = fetchFromGitHub {
+        owner = "es617";
+        repo = "claude-replay";
+        tag = "v${finalAttrs.version}";
+        hash = "sha256-yRMFCZ8A0CNJgfskYu+9c5ZaOKbvcbG1a29TNz9HOW8=";
+      };
+
+      npmDepsHash = "sha256-syv/sC8j2Ng0pyvcwXdlQj1JwUZRrqvkV0jma2pg8HU=";
+
+      makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
+
+      meta = with lib; {
+        description = "Convert Claude Code session transcripts into interactive, shareable HTML replays";
+        homepage = "https://github.com/es617/claude-replay";
+        license = licenses.mit;
+        mainProgram = "claude-replay";
+        maintainers = [ maintainers.jwiegley ];
+        platforms = platforms.all;
+      };
+    });
+
   # Claude Code ACP - Use Claude Code from ACP-compatible clients
   # NOTE: Using 'final' here because claude-code-acp may need packages
   # defined earlier in this overlay

@@ -377,6 +377,7 @@ rec {
     context7-mcp
     playwright-mcp
     github-mcp-server
+    claude-replay
     (lib.hiPrio mcp-server-sequential-thinking)
 
     (exe git-annex)
