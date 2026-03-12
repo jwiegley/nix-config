@@ -369,11 +369,12 @@ rec {
     openmpi
     qdrant
     qdrant-web-ui
-    reasondb
+
     rustdocs-mcp-server
     vllm-mlx
     agnix
     cozempic
+    context-hub
     context7-mcp
     playwright-mcp
     github-mcp-server

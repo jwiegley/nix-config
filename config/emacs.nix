@@ -315,7 +315,7 @@ with epkgs;
   (exclude ovpn-mode)
   (exclude ox-gfm)
   ox-pandoc
-  (exclude ox-slack)
+  ox-slack
   (exclude ox-texinfo-plus)
   ox-whatsapp
   p-search

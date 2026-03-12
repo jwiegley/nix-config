@@ -9,17 +9,24 @@ final: prev: {
     with prev.python3Packages;
     buildPythonApplication rec {
       pname = "cozempic";
-      version = "0.7.0";
+      version = "0.9.0";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "Ruya-AI";
         repo = "cozempic";
         tag = "v${version}";
-        hash = "sha256-TXbdAFNMmpfzFwllA5YOtxBehQNaotk3q8F1vji/D3w=";
+        hash = "sha256-hBjBFrnETrRoDaAs7FBp/P9VMi3xvMjtgjSpDwKRLkE=";
       };
 
       build-system = [ setuptools ];
+
+      # The guard daemon forks using `sys.executable -m cozempic.cli`
+      # which bypasses the Nix wrapper's site.addsitedir() injection.
+      # Setting PYTHONPATH ensures the forked process can find the module.
+      makeWrapperArgs = [
+        "--set" "PYTHONPATH" "${placeholder "out"}/${prev.python3.sitePackages}"
+      ];
 
       doCheck = false;
 

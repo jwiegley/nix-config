@@ -188,6 +188,8 @@ in
       "handy"
       "iterm2"
       "itermai"
+      "jump-desktop"
+      "jump-desktop-connect"
       "key-codes"
       "keyboard-maestro"
       "kiwix"
@@ -214,6 +216,7 @@ in
       "steam"
       "suspicious-package"
       "swiftdefaultappsprefpane"
+      "tailscale-app"
       # "telegram"
       "thinkorswim"
       "tor-browser"
@@ -264,16 +267,13 @@ in
       "fujitsu-scansnap-home"
       "gzdoom"
       "home-assistant"
-      "jump-desktop-connect"
       # "logitune"
       "raspberry-pi-imager"
-      "tailscale-app"
       "thunderbird"
       "utm"
     ]
     ++ lib.optionals (hostname == "clio") [
       "aldente"
-      "jump-desktop"
       "wifi-explorer"
     ];
 

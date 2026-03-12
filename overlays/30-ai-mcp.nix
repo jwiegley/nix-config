@@ -2,7 +2,7 @@
 # Purpose: Model Context Protocol (MCP) servers and Claude Code tools
 # Dependencies: Uses final for claude-code-acp; uses prev elsewhere
 # Packages: mcp-server-sequential-thinking, rustdocs-mcp-server,
-#           browser-control-mcp, claude-code-acp
+#           browser-control-mcp, claude-code-acp, context-hub
 final: prev: {
 
   # Fix: npm prune removes @types/node, then prepare script tries to rebuild
@@ -102,6 +102,45 @@ final: prev: {
         homepage = "https://github.com/es617/claude-replay";
         license = licenses.mit;
         mainProgram = "claude-replay";
+        maintainers = [ maintainers.jwiegley ];
+        platforms = platforms.all;
+      };
+    });
+
+  # Context Hub - AI agent documentation CLI and MCP server
+  context-hub =
+    with prev;
+    buildNpmPackage (finalAttrs: {
+      pname = "context-hub";
+      version = "0.1.1";
+
+      src = fetchFromGitHub {
+        owner = "andrewyng";
+        repo = "context-hub";
+        rev = "050ec408654c5186c34cd2d3f4c701663a6f5443";
+        hash = "sha256-lkWlAkuFnSo/ZclHrsQEAl0Z3jfrOrznfQxSft3ZrnA=";
+      };
+
+      npmDepsHash = "sha256-vQLCT8I4w4/5DXR1+3R4ZQ+DPSypQX3CpQNxrVp+E0I=";
+
+      npmWorkspace = "cli";
+
+      dontNpmBuild = true;
+
+      npmFlags = [ "--ignore-scripts" ];
+
+      # Remove dangling workspace symlinks left by npm workspace install
+      postInstall = ''
+        find $out -xtype l -delete
+      '';
+
+      makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
+
+      meta = with lib; {
+        description = "CLI and MCP server for Context Hub - search and retrieve LLM-optimized docs for AI agents";
+        homepage = "https://github.com/andrewyng/context-hub";
+        license = licenses.mit;
+        mainProgram = "chub";
         maintainers = [ maintainers.jwiegley ];
         platforms = platforms.all;
       };

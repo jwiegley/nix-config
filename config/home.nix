@@ -899,6 +899,7 @@ in
           hera = {
             hostname = "hera.lan";
             compression = false;
+            # proxyJump = "vulcan";
           };
 
           mssql = onHost "hera" "192.168.64.3";
@@ -915,6 +916,7 @@ in
           clio = withIdentity {
             hostname = "clio.lan";
             compression = false;
+            # proxyJump = "vulcan";
           };
 
           neso = withIdentity (onHost "clio" "192.168.100.130");

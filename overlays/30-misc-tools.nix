@@ -209,14 +209,14 @@ final: prev: {
     with python3Packages;
     buildPythonPackage rec {
       pname = "pass-git-helper";
-      version = "04132a91";
+      version = "b40f6078";
       name = "${pname}-${version}";
 
       src = fetchFromGitHub {
         owner = "languitar";
         repo = "pass-git-helper";
-        rev = "04132a9197a206fddd182a491d6ac25c246e1d86";
-        sha256 = "sha256-5MySL1iVVXG9tjNEWb8YwemYObVqNrxqvc9TWkt1MQU=";
+        rev = "b40f6078959e84847d014a92f9abdaac7156847c";
+        sha256 = "sha256-VBx7dxPg+OauZE6R6qsX8zUXeuG+wBRkadtL9zQFRMY=";
         # date = 2025-10-02T16:40:46+02:00;
       };
 
@@ -276,19 +276,18 @@ final: prev: {
   # Google Suite CLI: Gmail, GCal, GDrive, GContacts
   gogcli =
     with prev;
-    buildGoModule rec {
+    (buildGoModule.override { go = go_1_26; }) rec {
       pname = "gogcli";
-      # Pinned: v0.12.0 requires Go >= 1.25.8, nixpkgs has 1.25.7
-      version = "0.11.0";
+      version = "0.12.0";
 
       src = fetchFromGitHub {
         owner = "steipete";
         repo = "gogcli";
         rev = "v${version}";
-        hash = "sha256-hJU40ysjRx4p9SWGmbhhpToYCpk3DcMAWCnKqxHRmh0=";
+        hash = "sha256-KtjqZLR4Uf77865IGHFmcjwpV8GWkiaV7fBeTrsx93E=";
       };
 
-      vendorHash = "sha256-WGRlv3UsK3SVBQySD7uZ8+FiRl03p0rzjBm9Se1iITs=";
+      vendorHash = "sha256-8RKzJq4nlg7ljPw+9mtiv0is6MeVtkMEiM2UUdKPP3U=";
 
       doCheck = false;
 
