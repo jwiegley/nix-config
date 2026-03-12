@@ -803,6 +803,43 @@ in
               p7zip
             ];
 
+            # Vulcan private CA chain (Root + Intermediate) for *.vulcan.lan
+            vulcanCaCerts = linuxPkgs.writeText "vulcan-ca.pem" ''
+              -----BEGIN CERTIFICATE-----
+              MIIB8DCCAZagAwIBAgIRALiwKWjq4Ooy1fXyoEM83rowCgYIKoZIzj0EAwIwVjEl
+              MCMGA1UEChMcVnVsY2FuIENlcnRpZmljYXRlIEF1dGhvcml0eTEtMCsGA1UEAxMk
+              VnVsY2FuIENlcnRpZmljYXRlIEF1dGhvcml0eSBSb290IENBMB4XDTI1MDkyMjIx
+              MTMwNloXDTM1MDkyMDIxMTMwNlowVjElMCMGA1UEChMcVnVsY2FuIENlcnRpZmlj
+              YXRlIEF1dGhvcml0eTEtMCsGA1UEAxMkVnVsY2FuIENlcnRpZmljYXRlIEF1dGhv
+              cml0eSBSb290IENBMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAET6E9AE40v3h/
+              1bMsspNWHO3riZ/LmVHqFGygt+LuXURbWDlmmWnabAkA/KbMoVlfYgD7nhhvwbQk
+              j4l8GCUKL6NFMEMwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEw
+              HQYDVR0OBBYEFOT42u7UMDrYl8aw9bUKGoYB4gB9MAoGCCqGSM49BAMCA0gAMEUC
+              IQDNoLb72lR2LG+hwibB5Ct2ApRHt5deqsbrlLsKMCtJsAIgFWJC/5p7Q7tdJtVi
+              jImZjCO8EkfmTAdU4DnupnhJtU8=
+              -----END CERTIFICATE-----
+              -----BEGIN CERTIFICATE-----
+              MIICGTCCAb6gAwIBAgIQBDc2EKqNFuV/17XrH7NVATAKBggqhkjOPQQDAjBWMSUw
+              IwYDVQQKExxWdWxjYW4gQ2VydGlmaWNhdGUgQXV0aG9yaXR5MS0wKwYDVQQDEyRW
+              dWxjYW4gQ2VydGlmaWNhdGUgQXV0aG9yaXR5IFJvb3QgQ0EwHhcNMjUwOTIyMjEx
+              MzA3WhcNMzUwOTIwMjExMzA3WjBeMSUwIwYDVQQKExxWdWxjYW4gQ2VydGlmaWNh
+              dGUgQXV0aG9yaXR5MTUwMwYDVQQDEyxWdWxjYW4gQ2VydGlmaWNhdGUgQXV0aG9y
+              aXR5IEludGVybWVkaWF0ZSBDQTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABNdo
+              rYBZzxvQLHgTZo91lhWO+XfeDGIjITxGRpKlp94lllrnEpp7lHhoB/o4R+I7awJl
+              QYycscn7EfvVbuILKEKjZjBkMA4GA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAG
+              AQH/AgEAMB0GA1UdDgQWBBQHQh6YNjacUN+ovo1CYxrgD7iOWjAfBgNVHSMEGDAW
+              gBTk+Nru1DA62JfGsPW1ChqGAeIAfTAKBggqhkjOPQQDAgNJADBGAiEAudh3xyWI
+              IY6R5dOwak9QJf1PF3Ac4IA9OMlOCIjMcM0CIQD+Rn1urtz4HW5KFDSTT8TDi9qX
+              nML0GC5ZTlIeNxq6CA==
+              -----END CERTIFICATE-----
+            '';
+
+            # Mozilla CAs + Vulcan private CA
+            combinedCaBundle = linuxPkgs.runCommand "combined-ca-bundle.crt" { } ''
+              cat ${linuxPkgs.cacert}/etc/ssl/certs/ca-bundle.crt > $out
+              cat ${vulcanCaCerts} >> $out
+            '';
+
             containerEnv = linuxPkgs.buildEnv {
               name = "openclaw-container-env";
               paths = containerTools ++ [ openclawPkg ];
@@ -823,6 +860,19 @@ in
                        "$HOME/.openclaw/logs" \
                        "$HOME/.openclaw/cron" \
                        "$HOME/.openclaw/delivery-queue"
+
+              # Rebuild sharp native module for linux-arm64 if needed.
+              # This adds the linux binary alongside the darwin one in
+              # the bind-mounted directory (both coexist peacefully since
+              # they have different filenames).
+              SHARP_REL="$HOME/.openclaw/workspace/skills/memory-qdrant/node_modules/sharp/build/Release"
+              if [ -d "$SHARP_REL" ] && \
+                 [ ! -f "$SHARP_REL/sharp-linux-arm64v8.node" ]; then
+                echo "Installing sharp linux-arm64 binary..."
+                cd "$HOME/.openclaw/workspace/skills/memory-qdrant"
+                ${linuxPkgs.nodejs_22}/bin/npm rebuild sharp 2>&1 || true
+                cd "$HOME"
+              fi
 
               exec ${openclawPkg}/bin/openclaw gateway run \
                 --bind loopback --port 18789 --auth token
@@ -878,9 +928,9 @@ in
                   "LANG=C.UTF-8"
                   "TZ=PST8PDT"
                   "TZDIR=${linuxPkgs.tzdata}/share/zoneinfo"
-                  "SSL_CERT_FILE=${linuxPkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-                  "NIX_SSL_CERT_FILE=${linuxPkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-                  "NODE_EXTRA_CA_CERTS=${linuxPkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+                  "SSL_CERT_FILE=${combinedCaBundle}"
+                  "NIX_SSL_CERT_FILE=${combinedCaBundle}"
+                  "NODE_EXTRA_CA_CERTS=${combinedCaBundle}"
                 ];
                 Labels = {
                   "org.opencontainers.image.description" =
@@ -917,6 +967,8 @@ in
               ${docker} run --rm -d \
                 --name openclaw-gateway \
                 -v "${home}/.openclaw:/Users/johnw/.openclaw" \
+                --dns 100.100.100.100 \
+                --dns 192.168.1.2 \
                 --security-opt no-new-privileges \
                 openclaw-gateway:latest
 
