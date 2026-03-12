@@ -6682,6 +6682,21 @@
         "type": "github"
       }
     },
+    "pal-mcp-server": {
+      "flake": false,
+      "locked": {
+        "dirtyRev": "7afc7c1cc96e23992c8f105f960132c657883bb1-dirty",
+        "dirtyShortRev": "7afc7c1-dirty",
+        "lastModified": 1765818451,
+        "narHash": "sha256-I8Q90s3g3dkIBTU6uLSg5mJi5BWjCxcfhwt23pb+pLA=",
+        "type": "git",
+        "url": "file:///Users/johnw/src/pal-mcp-server"
+      },
+      "original": {
+        "type": "git",
+        "url": "file:///Users/johnw/src/pal-mcp-server"
+      }
+    },
     "promptdeploy": {
       "inputs": {
         "flake-utils": "flake-utils_11",
@@ -6793,6 +6808,7 @@
         "org-jw": "org-jw",
         "org2jsonl": "org2jsonl_2",
         "org2tc": "org2tc",
+        "pal-mcp-server": "pal-mcp-server",
         "promptdeploy": "promptdeploy",
         "pushme": "pushme",
         "rag-client": "rag-client",

@@ -370,6 +370,7 @@ rec {
     qdrant
     qdrant-web-ui
 
+    pal-mcp-server
     rustdocs-mcp-server
     vllm-mlx
     agnix

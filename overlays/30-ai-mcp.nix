@@ -1,9 +1,48 @@
 # overlays/30-ai-mcp.nix
 # Purpose: Model Context Protocol (MCP) servers and Claude Code tools
-# Dependencies: Uses final for claude-code-acp; uses prev elsewhere
-# Packages: mcp-server-sequential-thinking, rustdocs-mcp-server,
+# Dependencies: Uses final for python3Packages and claude-code-acp; uses prev elsewhere
+# Packages: pal-mcp-server, mcp-server-sequential-thinking, rustdocs-mcp-server,
 #           browser-control-mcp, claude-code-acp, context-hub
 final: prev: {
+
+  # PAL MCP Server - Provider Abstraction Layer for multi-model AI collaboration
+  # NOTE: Using 'final' because python3Packages may be modified by
+  # pythonPackagesExtensions in other overlays
+  pal-mcp-server =
+    with final;
+    with final.python3Packages;
+    buildPythonApplication {
+      pname = "pal-mcp-server";
+      version = "9.8.2";
+      pyproject = true;
+
+      src = prev.inputs.pal-mcp-server;
+
+      build-system = [
+        setuptools
+        setuptools-scm
+      ];
+
+      dependencies = [
+        mcp
+        google-genai
+        openai
+        pydantic
+        python-dotenv
+      ];
+
+      env.SETUPTOOLS_SCM_PRETEND_VERSION = "9.8.2";
+
+      doCheck = false;
+
+      meta = {
+        description = "AI-powered MCP server with multiple model providers";
+        homepage = "https://github.com/BeehiveInnovations/pal-mcp-server";
+        license = lib.licenses.mit;
+        maintainers = with lib.maintainers; [ jwiegley ];
+        mainProgram = "pal-mcp-server";
+      };
+    };
 
   # Fix: npm prune removes @types/node, then prepare script tries to rebuild
   mcp-server-sequential-thinking = prev.mcp-server-sequential-thinking.overrideAttrs (old: {
