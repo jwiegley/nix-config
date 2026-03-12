@@ -355,6 +355,16 @@ in
         maxJobs = 24;
         speedFactor = 4;
       };
+      vulcan-builder = {
+        hostName = "192.168.1.2";
+        protocol = "ssh-ng";
+        systems = [ "aarch64-linux" "x86_64-linux" ];
+        sshUser = "johnw";
+        sshKey = "${home}/hera/id_hera";
+        maxJobs = 8;
+        speedFactor = 2;
+        supportedFeatures = [ "nixos-test" "big-parallel" "kvm" ];
+      };
     in
     {
 
@@ -402,7 +412,9 @@ in
       };
 
       distributedBuilds = true;
-      buildMachines = if hostname == "clio" then [ hera ] else [ ];
+      buildMachines =
+        (if hostname == "clio" then [ hera ] else [ ])
+        ++ (if hostname == "hera" then [ vulcan-builder ] else [ ]);
 
       extraOptions = ''
         gc-keep-derivations = true
@@ -729,40 +741,206 @@ in
 
       }
       // lib.optionalAttrs (hostname == "hera") {
-        # OpenClaw AI agent gateway
+        # OpenClaw AI agent gateway — runs inside a Docker container
+        # for sandboxed execution, with a socat bridge on the host
+        # to relay CLI traffic (Docker Desktop for Mac does not
+        # reliably forward WebSocket connections via port mapping).
+        #
         # After first switch, complete setup by running interactively:
         #   openclaw models auth setup-token --provider anthropic
         openclaw =
           let
-            openclawPkg = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.openclaw;
+            # ── Linux packages for Docker image ──────────────────────
+            linuxPkgs = import inputs.nixpkgs {
+              system = "aarch64-linux";
+              config.allowUnfree = true;
+            };
+
+            openclawPkg = inputs.llm-agents.packages.aarch64-linux.openclaw;
+
+            # Tools the gateway can invoke inside the container
+            containerTools = with linuxPkgs; [
+              bashInteractive
+              coreutils
+              findutils
+              gnugrep
+              gnused
+              gawk
+              gnutar
+              git
+              curl
+              wget
+              openssh
+              rsync
+              jq
+              yq
+              ripgrep
+              fd
+              bat
+              (lib.hiPrio (
+                python3.withPackages (pp: with pp; [
+                  requests
+                  numpy
+                  pandas
+                ])
+              ))
+              nodejs_22
+              pnpm
+              imagemagickBig
+              ffmpeg
+              sqlite
+              cacert
+              less
+              tree
+              watch
+              vim
+              htop
+              lsof
+              parallel
+              xz
+              unzip
+              zip
+              p7zip
+            ];
+
+            containerEnv = linuxPkgs.buildEnv {
+              name = "openclaw-container-env";
+              paths = containerTools ++ [ openclawPkg ];
+              pathsToLink = [
+                "/bin"
+                "/lib"
+                "/share"
+                "/etc"
+                "/include"
+              ];
+            };
+
+            entrypoint = linuxPkgs.writeShellScript "openclaw-gateway-entrypoint" ''
+              set -euo pipefail
+
+              # Ensure required directories exist
+              mkdir -p "$HOME/.openclaw/agents/main/sessions" \
+                       "$HOME/.openclaw/logs" \
+                       "$HOME/.openclaw/cron" \
+                       "$HOME/.openclaw/delivery-queue"
+
+              exec ${openclawPkg}/bin/openclaw gateway run \
+                --bind loopback --port 18789 --auth token
+            '';
+
+            # ── Docker image ─────────────────────────────────────────
+            openclawImage = linuxPkgs.dockerTools.buildLayeredImage {
+              name = "openclaw-gateway";
+              tag = "latest";
+              maxLayers = 80;
+
+              contents = [ containerEnv linuxPkgs.socat ];
+
+              extraCommands = ''
+                mkdir -p etc
+                cat > etc/passwd <<EOF
+                root:x:0:0:root:/root:/bin/sh
+                nobody:x:65534:65534:Nobody:/nonexistent:/usr/sbin/nologin
+                johnw:x:1000:1000:John Wiegley:/Users/johnw:${linuxPkgs.bashInteractive}/bin/bash
+                EOF
+
+                cat > etc/group <<EOF
+                root:x:0:
+                nogroup:x:65534:
+                johnw:x:1000:johnw
+                EOF
+
+                echo "hosts: files dns" > etc/nsswitch.conf
+
+                mkdir -p bin usr/bin
+                ln -sf ${linuxPkgs.bashInteractive}/bin/bash bin/sh
+                ln -sf ${linuxPkgs.bashInteractive}/bin/bash bin/bash
+                ln -sf ${linuxPkgs.coreutils}/bin/env usr/bin/env
+
+                mkdir -p Users/johnw/.openclaw
+                mkdir -p Users/johnw/.cache
+                mkdir -p Users/johnw/.local/share
+                chmod -R 777 Users/johnw
+
+                mkdir -p tmp
+                chmod 1777 tmp
+              '';
+
+              config = {
+                Cmd = [ "${entrypoint}" ];
+                User = "johnw";
+                WorkingDir = "/Users/johnw";
+                Env = [
+                  "PATH=${containerEnv}/bin:/usr/local/bin:/usr/bin:/bin"
+                  "HOME=/Users/johnw"
+                  "USER=johnw"
+                  "TERM=xterm-256color"
+                  "LANG=C.UTF-8"
+                  "TZ=PST8PDT"
+                  "TZDIR=${linuxPkgs.tzdata}/share/zoneinfo"
+                  "SSL_CERT_FILE=${linuxPkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+                  "NIX_SSL_CERT_FILE=${linuxPkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+                  "NODE_EXTRA_CA_CERTS=${linuxPkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+                ];
+                Labels = {
+                  "org.opencontainers.image.description" =
+                    "OpenClaw gateway — sandboxed agent execution";
+                };
+              };
+            };
+
             logDir = "${xdg_cacheHome}/openclaw";
-            gatewayToken = builtins.substring 0 36
-              (builtins.hashString "sha256" "openclaw-gateway-${hostname}");
+            docker = "/usr/local/bin/docker";
+            socat = "${pkgs.socat}/bin/socat";
+            imageMarker = "${xdg_cacheHome}/openclaw/.image-loaded";
           in
           {
             script = ''
-              export PATH="/etc/profiles/per-user/johnw/bin:${home}/.nix-profile/bin:/run/current-system/sw/bin:${home}/.local/bin:/opt/homebrew/bin:$PATH"
-              export NODE_EXTRA_CA_CERTS="${home}/.openclaw/secrets/vulcan_root_ca.crt"
-              OC="${openclawPkg}/bin/openclaw"
               mkdir -p "${logDir}" "${home}/.openclaw/agents/main/sessions"
 
-              # Initialize config on first run only
-              if [ ! -f "${home}/.openclaw/openclaw.json" ]; then
-                $OC setup --mode local --non-interactive --accept-risk 2>/dev/null || true
-                $OC config set gateway.mode local 2>/dev/null || true
-                $OC config set gateway.auth.mode token 2>/dev/null || true
-                $OC config set gateway.auth.token "${gatewayToken}" 2>/dev/null || true
+              # Load Docker image only when the Nix store path changes
+              IMAGE_PATH="${openclawImage}"
+              if [ ! -f "${imageMarker}" ] || \
+                 [ "$(cat "${imageMarker}" 2>/dev/null)" != "$IMAGE_PATH" ]; then
+                echo "Loading new OpenClaw Docker image..."
+                ${docker} load < "$IMAGE_PATH"
+                echo "$IMAGE_PATH" > "${imageMarker}"
               fi
 
-              exec $OC gateway run \
-                --bind loopback --port 18789 --auth token --force
+              # Stop any existing container
+              ${docker} stop openclaw-gateway 2>/dev/null || true
+              ${docker} rm openclaw-gateway 2>/dev/null || true
+
+              # Start the containerised gateway (no port mapping — socat
+              # bridges the connection to work around Docker Desktop for
+              # Mac's broken WebSocket port forwarding).
+              ${docker} run --rm -d \
+                --name openclaw-gateway \
+                -v "${home}/.openclaw:/Users/johnw/.openclaw" \
+                --security-opt no-new-privileges \
+                openclaw-gateway:latest
+
+              # Wait for the gateway to be ready inside the container
+              for i in $(seq 1 60); do
+                if ${docker} exec openclaw-gateway \
+                     curl -sf http://127.0.0.1:18789/ >/dev/null 2>&1; then
+                  break
+                fi
+                sleep 1
+              done
+
+              echo "Gateway container ready — starting socat bridge"
+
+              # Bridge host loopback → container loopback via docker exec.
+              # Each CLI connection is relayed through a fresh docker exec.
+              exec ${socat} \
+                TCP-LISTEN:18789,bind=127.0.0.1,reuseaddr,fork \
+                EXEC:"${docker} exec -i openclaw-gateway ${linuxPkgs.socat}/bin/socat - TCP\:127.0.0.1\:18789"
             '';
             serviceConfig = {
               Label = "ai.openclaw.gateway";
               EnvironmentVariables = {
                 HOME = home;
-                OPENCLAW_GATEWAY_TOKEN = gatewayToken;
-                NODE_EXTRA_CA_CERTS = "${home}/.openclaw/secrets/vulcan_root_ca.crt";
               };
               RunAtLoad = true;
               KeepAlive = true;
