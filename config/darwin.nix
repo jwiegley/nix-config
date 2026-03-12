@@ -874,6 +874,16 @@ in
                 cd "$HOME"
               fi
 
+              # Bridge container localhost:8080 → host llama-swap for embeddings.
+              # The memory-qdrant plugin hardcodes fetch('http://localhost:8080/...').
+              # Listen on both IPv4 and IPv6 loopback (Node.js may try ::1 first).
+              ${linuxPkgs.socat}/bin/socat \
+                TCP-LISTEN:8080,bind=127.0.0.1,reuseaddr,fork \
+                TCP:host.docker.internal:8080 &
+              ${linuxPkgs.socat}/bin/socat \
+                TCP6-LISTEN:8080,bind=[::1],ipv6only=1,reuseaddr,fork \
+                TCP:host.docker.internal:8080 &
+
               exec ${openclawPkg}/bin/openclaw gateway run \
                 --bind loopback --port 18789 --auth token
             '';
@@ -966,7 +976,9 @@ in
               # Mac's broken WebSocket port forwarding).
               ${docker} run --rm -d \
                 --name openclaw-gateway \
+                --init \
                 -v "${home}/.openclaw:/Users/johnw/.openclaw" \
+                --add-host host.docker.internal:host-gateway \
                 --dns 100.100.100.100 \
                 --dns 192.168.1.2 \
                 --security-opt no-new-privileges \
