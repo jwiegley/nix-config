@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a personal Nix configuration repository for managing macOS (Darwin) and NixOS systems using Nix flakes, nix-darwin, and home-manager. The configuration manages three macOS hosts (hera, clio, athena) and one NixOS host (vulcan).
 
+## PAL MCP Server
+
+When using PAL MCP tools (chat, consensus, thinkdeep, planner, etc.), **always** set `thinking_mode` to `"max"`. Never use a lower thinking mode unless the user explicitly requests it.
+
 ## Working with Nix: Use Specialized Tools
 
 **IMPORTANT**: For any Nix-related tasks in this repository, you should proactively use the specialized Nix agent and tools:
