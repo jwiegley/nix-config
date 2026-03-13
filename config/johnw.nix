@@ -43,7 +43,10 @@ let
 
 in
 {
-  imports = [ inputs.git-ai.homeManagerModules.default ];
+  imports = [
+    inputs.git-ai.homeManagerModules.default
+    inputs.promptdeploy.homeManagerModules.default
+  ];
 
   home = {
     stateVersion = lib.mkDefault "24.11";
@@ -124,7 +127,7 @@ in
         "/opt/homebrew/opt/node@22/bin"
       ];
 
-    activation = { };
+    activation = { };  # promptdeploy activation is managed by programs.promptdeploy
 
     file =
       let
@@ -267,6 +270,13 @@ in
         ];
         defaultPromptStorage = "notes";
       };
+    };
+
+    promptdeploy = lib.mkIf isDarwin {
+      enable = true;
+      package = inputs.promptdeploy.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      sourceDir = "${home}/src/promptdeploy";
+      targets = [ "local" ];
     };
 
     carapace = lib.mkIf isDarwin {
