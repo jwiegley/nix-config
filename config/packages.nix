@@ -409,7 +409,6 @@ rec {
     ]
     ++ (with inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}; [
       mcporter
-      openclaw
     ])
   );
 }
