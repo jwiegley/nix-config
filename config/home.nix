@@ -27,10 +27,6 @@ let
 
   packages = import ./packages.nix args;
 
-  openclawPkg =
-    if hostname == "hera"
-    then inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.openclaw
-    else builtins.throw "openclaw is only available on hera, not ${hostname}";
 in
 {
   imports = [ inputs.git-ai.homeManagerModules.default ];
@@ -111,11 +107,7 @@ in
       "/opt/homebrew/opt/node@22/bin"
     ];
 
-    activation = lib.optionalAttrs (hostname == "hera") {
-      openclawCompletion = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        $DRY_RUN_CMD ${openclawPkg}/bin/openclaw completion --write-state --yes || true
-      '';
-    };
+    activation = { };
 
     file =
       let
