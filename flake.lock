@@ -5269,11 +5269,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1773241852,
-        "narHash": "sha256-kwETflAbufOL32E1dRkJDTgcroafwN8HZqxjAaLItJw=",
+        "lastModified": 1773325712,
+        "narHash": "sha256-s83aVJRJmR2sa9otxXnefohasKuRJACZv7zDh0FHzdg=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "e21490459caf641e19cac7ad7679f1121d643e0c",
+        "rev": "dfe7089b3cb1766cf40dccd4378f240356bcf2b2",
         "type": "github"
       },
       "original": {
@@ -6685,10 +6685,11 @@
     "pal-mcp-server": {
       "flake": false,
       "locked": {
-        "dirtyRev": "7afc7c1cc96e23992c8f105f960132c657883bb1-dirty",
-        "dirtyShortRev": "7afc7c1-dirty",
-        "lastModified": 1765818451,
-        "narHash": "sha256-I8Q90s3g3dkIBTU6uLSg5mJi5BWjCxcfhwt23pb+pLA=",
+        "lastModified": 1773338687,
+        "narHash": "sha256-niod8nGeHOYNjAfOnXfruhsHy5rNnk2LbpDFaQ5Zy8g=",
+        "ref": "refs/heads/main",
+        "rev": "7a50def9300b1795ed88a3a8853accc85f26c41c",
+        "revCount": 1153,
         "type": "git",
         "url": "file:///Users/johnw/src/pal-mcp-server"
       },
@@ -7406,11 +7407,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1772660329,
-        "narHash": "sha256-IjU1FxYqm+VDe5qIOxoW+pISBlGvVApRjiw/Y/ttJzY=",
+        "lastModified": 1773297127,
+        "narHash": "sha256-6E/yhXP7Oy/NbXtf1ktzmU8SdVqJQ09HC/48ebEGBpk=",
         "owner": "numtide",
         "repo": "treefmt-nix",
-        "rev": "3710e0e1218041bbad640352a0440114b1e10428",
+        "rev": "71b125cd05fbfd78cab3e070b73544abe24c5016",
         "type": "github"
       },
       "original": {
