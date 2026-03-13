@@ -147,5 +147,10 @@
         };
 
       darwinPackages = darwinConfigurations."hera".pkgs;
+
+      # Shared home-manager module for cross-platform use.
+      # NixOS hosts import this via: inputs.nix-config (flake = false)
+      # and then: imports = [ "${inputs.nix-config}/config/johnw.nix" ];
+      homeManagerModules.johnw = import ./config/johnw.nix;
     };
 }
