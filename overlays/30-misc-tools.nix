@@ -209,14 +209,14 @@ final: prev: {
     with python3Packages;
     buildPythonPackage rec {
       pname = "pass-git-helper";
-      version = "b40f6078";
+      version = "2a4c1cc1";
       name = "${pname}-${version}";
 
       src = fetchFromGitHub {
         owner = "languitar";
         repo = "pass-git-helper";
-        rev = "b40f6078959e84847d014a92f9abdaac7156847c";
-        sha256 = "sha256-VBx7dxPg+OauZE6R6qsX8zUXeuG+wBRkadtL9zQFRMY=";
+        rev = "2a4c1cc106d12d27473ca083bb56b22b59acf0dc";
+        sha256 = "sha256-xhGD6hQqrLpivdy5OxSWeBzc2+PdWFnOfLpohMiXeX4=";
         # date = 2025-10-02T16:40:46+02:00;
       };
 

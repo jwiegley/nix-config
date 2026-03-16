@@ -123,13 +123,13 @@ final: prev: {
     with prev;
     buildNpmPackage (finalAttrs: {
       pname = "claude-replay";
-      version = "0.2.0";
+      version = "0.5.0";
 
       src = fetchFromGitHub {
         owner = "es617";
         repo = "claude-replay";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-yRMFCZ8A0CNJgfskYu+9c5ZaOKbvcbG1a29TNz9HOW8=";
+        hash = "sha256-cSzZEA46wEOUEGhWVdNuqV8lSu0Brkw5ZL648qHRXm0=";
       };
 
       npmDepsHash = "sha256-syv/sC8j2Ng0pyvcwXdlQj1JwUZRrqvkV0jma2pg8HU=";
@@ -151,13 +151,13 @@ final: prev: {
     with prev;
     buildNpmPackage (finalAttrs: {
       pname = "context-hub";
-      version = "0.1.1";
+      version = "15b8f4d9";
 
       src = fetchFromGitHub {
         owner = "andrewyng";
         repo = "context-hub";
-        rev = "050ec408654c5186c34cd2d3f4c701663a6f5443";
-        hash = "sha256-lkWlAkuFnSo/ZclHrsQEAl0Z3jfrOrznfQxSft3ZrnA=";
+        rev = "15b8f4d943fa117d9b8ba3920922c545563f3adf";
+        hash = "sha256-IecojKRa9Tto1eY0BUDc6D7FS511l+xORmK8HO+8SoQ=";
       };
 
       npmDepsHash = "sha256-vQLCT8I4w4/5DXR1+3R4ZQ+DPSypQX3CpQNxrVp+E0I=";
