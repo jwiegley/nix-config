@@ -798,6 +798,31 @@ in
               inputs.llm-agents.packages.aarch64-linux.mcporter
             ];
 
+            # ── Service bridges ──────────────────────────────────────
+            # Each entry creates a socat tunnel inside the sandbox that
+            # forwards a local port through the Docker proxy (HTTP
+            # CONNECT) to a remote host:port.  Adding an entry here
+            # automatically:
+            #   1. Starts a socat bridge in the entrypoint
+            #   2. Adds a /etc/hosts entry (TLS hostname verification)
+            #   3. Adds the remote host to the proxy bypass list
+            # localPort must be >1024 (sandbox runs as non-root).
+            sandboxBridges = [
+              { name = "imap"; localPort = 9993;
+                remoteHost = "imap.vulcan.lan"; remotePort = 993; }
+              # Future vulcan services — just add a line:
+              # { name = "hass"; localPort = 8443;
+              #   remoteHost = "hass.vulcan.lan"; remotePort = 443; }
+            ];
+
+            # Shell code for the entrypoint: one socat bridge per entry
+            bridgeEntrypointCode = lib.concatStringsSep "\n" (map (b: ''
+              ${linuxPkgs.socat}/bin/socat \
+                TCP-LISTEN:${toString b.localPort},bind=127.0.0.1,reuseaddr,fork \
+                PROXY:host.docker.internal:${b.remoteHost}:${toString b.remotePort},proxyport=3128 &
+              echo "${b.name} bridge: sandbox:${toString b.localPort} -> ${b.remoteHost}:${toString b.remotePort} (via proxy)"
+            '') sandboxBridges);
+
             # Vulcan private CA chain (Root + Intermediate) for *.vulcan.lan
             vulcanCaCerts = linuxPkgs.writeText "vulcan-ca.pem" ''
               -----BEGIN CERTIFICATE-----
@@ -1042,16 +1067,8 @@ PROXYEOF
               });
               " &
 
-              # IMAP bridge: forward sandbox localhost:9993 → imap.vulcan.lan:993
-              # via HTTP CONNECT tunnel through the sandbox proxy.
-              # Himalaya (Rust CLI) can't use HTTP proxies for raw TLS/IMAP,
-              # so we bridge with socat's PROXY address type.
-              # Port 9993 (not 993) because the sandbox runs as non-root and
-              # can't bind privileged ports (<1024).
-              ${linuxPkgs.socat}/bin/socat \
-                TCP-LISTEN:9993,bind=127.0.0.1,reuseaddr,fork \
-                PROXY:host.docker.internal:imap.vulcan.lan:993,proxyport=3128 &
-              echo "IMAP bridge: sandbox:9993 → imap.vulcan.lan:993 (via proxy)"
+              # Service bridges (generated from sandboxBridges)
+              ${bridgeEntrypointCode}
 
               # Build runtime CA bundle: static CAs + Docker Sandbox proxy CA.
               # Always overwrite — the bind-mounted file may be stale from a
@@ -1170,8 +1187,9 @@ PROXYEOF
               # explicitly; "vulcan.lan" only matches the bare domain, not
               # *.vulcan.lan subdomains.
               "litellm.vulcan.lan" "qdrant.vulcan.lan" "vulcan.lan"
-              "hass.vulcan.lan" "imap.vulcan.lan"
-            ];
+            ]
+            # Add remote hosts from sandboxBridges automatically
+            ++ (map (b: b.remoteHost) sandboxBridges);
             bypassFlags = lib.concatMapStringsSep " "
               (h: "--bypass-host ${h}") bypassHosts;
           in
@@ -1274,12 +1292,13 @@ PROXYEOF
               # the entrypoint starts before the bypass is active.
               sleep 3
 
-              # Sandbox /etc/hosts is read-only for non-root.  Add
-              # imap.vulcan.lan → 127.0.0.1 so himalaya's TLS hostname
-              # verification matches the server cert when connecting via
-              # the local socat IMAP bridge.
+              # /etc/hosts entries for service bridges: TLS hostname
+              # verification requires the remote hostname to resolve to
+              # 127.0.0.1 (where the socat bridge listens).
+              ${lib.concatMapStringsSep "\n" (b: ''
               ${docker} sandbox exec --user root openclaw-gateway \
-                sh -c 'grep -q imap.vulcan.lan /etc/hosts 2>/dev/null || echo "127.0.0.1 imap.vulcan.lan" >> /etc/hosts'
+                sh -c 'grep -q ${b.remoteHost} /etc/hosts 2>/dev/null || echo "127.0.0.1 ${b.remoteHost}" >> /etc/hosts'
+              '') sandboxBridges}
 
               # Run the gateway entrypoint inside the sandbox.
               # Use the fixed /bin/openclaw-entrypoint symlink rather than
