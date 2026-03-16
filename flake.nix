@@ -80,7 +80,17 @@
   };
 
   outputs =
-    inputs: with inputs; rec {
+    inputs:
+    with inputs;
+    let
+      forAllSystems = nixpkgs.lib.genAttrs [
+        "aarch64-darwin"
+        "x86_64-darwin"
+        "aarch64-linux"
+        "x86_64-linux"
+      ];
+    in
+    rec {
       darwinConfigurations =
         let
           overlays = [
@@ -152,5 +162,99 @@
       # NixOS hosts import this via: inputs.nix-config (flake = false)
       # and then: imports = [ "${inputs.nix-config}/config/johnw.nix" ];
       homeManagerModules.johnw = import ./config/johnw.nix;
+
+      formatter = forAllSystems (system: (import nixpkgs { inherit system; }).nixfmt);
+
+      devShells = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in
+        {
+          default = pkgs.mkShell {
+            packages = with pkgs; [
+              statix
+              deadnix
+              nixfmt
+              shellcheck
+              shfmt
+              ruff
+              lefthook
+            ];
+          };
+        }
+      );
+
+      checks = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+          src = builtins.path {
+            path = ./.;
+            name = "nix-config-src";
+            filter =
+              path: type:
+              let
+                baseName = baseNameOf path;
+              in
+              !(
+                baseName == "result"
+                || baseName == ".git"
+                || baseName == ".DS_Store"
+                || baseName == ".claude"
+                || baseName == ".worktrees"
+              );
+          };
+        in
+        {
+          formatting =
+            pkgs.runCommand "check-formatting"
+              {
+                nativeBuildInputs = with pkgs; [
+                  nixfmt
+                  shfmt
+                  findutils
+                ];
+              }
+              ''
+                echo "Checking Nix formatting..."
+                find ${src} -name '*.nix' | xargs nixfmt --check
+                echo "Checking shell formatting..."
+                for f in $(find ${src}/bin -maxdepth 1 -type f) ${src}/build; do
+                  if head -1 "$f" | grep -q bash; then
+                    shfmt -i 4 -d "$f"
+                  fi
+                done
+                touch $out
+              '';
+
+          linting =
+            pkgs.runCommand "check-linting"
+              {
+                nativeBuildInputs = with pkgs; [
+                  statix
+                  deadnix
+                  shellcheck
+                  ruff
+                  findutils
+                ];
+              }
+              ''
+                echo "Running statix..."
+                statix check ${src}
+                echo "Running deadnix..."
+                deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail ${src}
+                echo "Running shellcheck..."
+                for f in $(find ${src}/bin -maxdepth 1 -type f) ${src}/build; do
+                  if head -1 "$f" | grep -q bash; then
+                    shellcheck --severity=warning "$f"
+                  fi
+                done
+                echo "Running ruff..."
+                ruff check ${src}/bin/update-overlay
+                touch $out
+              '';
+        }
+      );
     };
 }
