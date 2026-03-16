@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  nix-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Check Nix formatting
+        run: nix shell nixpkgs#nixfmt -c bash -c 'find . -name "*.nix" -not -path "./result/*" | xargs nixfmt --check'
+
+  nix-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Lint Nix (statix)
+        run: nix shell nixpkgs#statix -c statix check .
+      - name: Check dead Nix code
+        run: nix shell nixpkgs#deadnix -c deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail .
+
+  shell-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Lint shell scripts
+        run: |
+          nix shell nixpkgs#shellcheck -c bash -c '
+            for f in bin/de bin/u bin/upgrade bin/myhost bin/git-sha \
+                     bin/move-audio-files bin/persona bin/yubikey-switch build; do
+              shellcheck --severity=warning "$f"
+            done
+          '
+      - name: Check shell formatting
+        run: |
+          nix shell nixpkgs#shfmt -c bash -c '
+            for f in bin/de bin/u bin/upgrade bin/myhost bin/git-sha \
+                     bin/move-audio-files bin/persona bin/yubikey-switch build; do
+              shfmt -i 4 -d "$f"
+            done
+          '
+
+  python-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Lint Python
+        run: nix shell nixpkgs#ruff -c ruff check bin/update-overlay
