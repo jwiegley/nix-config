@@ -741,10 +741,9 @@ in
 
       }
       // lib.optionalAttrs (hostname == "hera") {
-        # OpenClaw AI agent gateway — runs inside a Docker container
-        # for sandboxed execution, with a socat bridge on the host
-        # to relay CLI traffic (Docker Desktop for Mac does not
-        # reliably forward WebSocket connections via port mapping).
+        # OpenClaw AI agent gateway — runs inside a Docker Sandbox
+        # (microVM isolation) with proxy bypass for Discord/WhatsApp,
+        # and a socat bridge on the host to relay CLI traffic.
         #
         # After first switch, complete setup by running interactively:
         #   openclaw models auth setup-token --provider anthropic
@@ -801,6 +800,8 @@ in
               unzip
               zip
               p7zip
+              himalaya
+              inputs.llm-agents.packages.aarch64-linux.mcporter
             ];
 
             # Vulcan private CA chain (Root + Intermediate) for *.vulcan.lan
@@ -834,10 +835,133 @@ in
               -----END CERTIFICATE-----
             '';
 
-            # Mozilla CAs + Vulcan private CA
+            # Mozilla CAs + Vulcan private CA.
+            # The Nix cacert bundle uses "TRUSTED CERTIFICATE" PEM markers
+            # and includes human-readable label lines between certs.
+            # Node.js's OpenSSL rejects those with "bad end line", causing
+            # NODE_EXTRA_CA_CERTS to be silently ignored.  Sanitize to
+            # standard "CERTIFICATE" markers with no inter-cert labels.
             combinedCaBundle = linuxPkgs.runCommand "combined-ca-bundle.crt" { } ''
-              cat ${linuxPkgs.cacert}/etc/ssl/certs/ca-bundle.crt > $out
+              ${linuxPkgs.gawk}/bin/awk '
+                /^-----BEGIN (TRUSTED )?CERTIFICATE-----/ {
+                  p = 1
+                  print "-----BEGIN CERTIFICATE-----"
+                  next
+                }
+                /^-----END (TRUSTED )?CERTIFICATE-----/ {
+                  p = 0
+                  print "-----END CERTIFICATE-----"
+                  print ""
+                  next
+                }
+                p { print }
+              ' ${linuxPkgs.cacert}/etc/ssl/certs/ca-bundle.crt > $out
               cat ${vulcanCaCerts} >> $out
+            '';
+
+            # Node.js preload that fixes proxy issues in Docker Sandbox:
+            # (1) undici fetch() doesn't honor HTTPS_PROXY env var
+            # (2) ws library's tls.connect() bypasses the proxy entirely
+            proxySetupScript = linuxPkgs.runCommand "proxy-setup" {} ''
+              UNDICI_IDX=$(find ${openclawPkg} \
+                -path '*/node_modules/undici/index.js' \
+                -not -path '*/undici-types/*' | head -1)
+              if [ -z "$UNDICI_IDX" ]; then
+                echo "ERROR: undici not found in ${openclawPkg}" >&2
+                exit 1
+              fi
+              UNDICI_DIR=$(dirname "$UNDICI_IDX")
+
+              mkdir -p $out/lib
+              cat > $out/lib/proxy-setup.cjs << 'PROXYEOF'
+"use strict";
+var proxyEnv = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || "";
+if (!proxyEnv) return;
+var proxyUrl = new (require("url").URL)(proxyEnv);
+var PROXY_HOST = proxyUrl.hostname;
+var PROXY_PORT = parseInt(proxyUrl.port, 10) || 3128;
+var noProxyList = (process.env.NO_PROXY || "").split(",").map(function(s) { return s.trim(); });
+try {
+  var undici = require("__UNDICI_PATH__");
+  undici.setGlobalDispatcher(new undici.EnvHttpProxyAgent());
+} catch (_) {}
+var tls = require("tls");
+var net = require("net");
+var Duplex = require("stream").Duplex;
+var inherits = require("util").inherits;
+function isLocal(host) {
+  if (!host) return true;
+  if (host === "127.0.0.1" || host === "::1" || host === "localhost") return true;
+  if (host === PROXY_HOST || host.startsWith("host.docker.internal")) return true;
+  for (var i = 0; i < noProxyList.length; i++) {
+    var np = noProxyList[i];
+    if (host === np || host.endsWith("." + np)) return true;
+  }
+  return false;
+}
+function ProxyTunnel(targetHost, targetPort) {
+  Duplex.call(this);
+  this.connecting = true;
+  this._tunnelReady = false;
+  this._writeBuffer = [];
+  var self = this;
+  this._sock = net.connect(PROXY_PORT, PROXY_HOST, function() {
+    self._sock.write(
+      "CONNECT " + targetHost + ":" + targetPort + " HTTP/1.1\r\n" +
+      "Host: " + targetHost + ":" + targetPort + "\r\n\r\n"
+    );
+    var buf = Buffer.alloc(0);
+    self._sock.on("data", function onData(chunk) {
+      buf = Buffer.concat([buf, chunk]);
+      var idx = buf.indexOf("\r\n\r\n");
+      if (idx === -1) return;
+      self._sock.removeListener("data", onData);
+      var status = parseInt(buf.toString().split(" ")[1], 10);
+      if (status !== 200) {
+        self.destroy(new Error("Proxy CONNECT " + targetHost + ":" + targetPort + " failed: " + status));
+        return;
+      }
+      var remainder = buf.slice(idx + 4);
+      self._tunnelReady = true;
+      self.connecting = false;
+      self._sock.on("data", function(d) { self.push(d); });
+      self._sock.on("end", function() { self.push(null); });
+      self._sock.on("close", function() { self.destroy(); });
+      if (remainder.length) self.push(remainder);
+      var pending = self._writeBuffer;
+      self._writeBuffer = [];
+      for (var i = 0; i < pending.length; i++) {
+        self._sock.write(pending[i].chunk, pending[i].enc, pending[i].cb);
+      }
+      self.emit("connect");
+    });
+  });
+  this._sock.on("error", function(e) { self.destroy(e); });
+}
+inherits(ProxyTunnel, Duplex);
+ProxyTunnel.prototype._read = function() {};
+ProxyTunnel.prototype._write = function(chunk, enc, cb) {
+  if (this._tunnelReady) return this._sock.write(chunk, enc, cb);
+  this._writeBuffer.push({ chunk: chunk, enc: enc, cb: cb });
+};
+ProxyTunnel.prototype._final = function(cb) { this._sock.end(cb); };
+ProxyTunnel.prototype._destroy = function(err, cb) {
+  this._writeBuffer.forEach(function(w) { if (w.cb) w.cb(err); });
+  this._writeBuffer = [];
+  if (this._sock) this._sock.destroy();
+  cb(err);
+};
+var origTlsConnect = tls.connect;
+tls.connect = function proxyTlsConnect(options, cb) {
+  var host = options.host || options.servername || "";
+  var port = options.port || 443;
+  if (options.socket || isLocal(host)) return origTlsConnect.call(tls, options, cb);
+  var tunnel = new ProxyTunnel(host, port);
+  var tlsOpts = Object.assign({}, options, { socket: tunnel });
+  return origTlsConnect.call(tls, tlsOpts, cb);
+};
+PROXYEOF
+              sed -i "s|__UNDICI_PATH__|$UNDICI_DIR|g" $out/lib/proxy-setup.cjs
             '';
 
             containerEnv = linuxPkgs.buildEnv {
@@ -861,6 +985,19 @@ in
                        "$HOME/.openclaw/cron" \
                        "$HOME/.openclaw/delivery-queue"
 
+              # Expose configs from the bind-mounted .openclaw directory
+              # into paths where tools expect them.
+              # mcporter: ~/.mcporter/mcporter.json
+              if [ -d "$HOME/.openclaw/.mcporter" ]; then
+                ln -sfn "$HOME/.openclaw/.mcporter" "$HOME/.mcporter"
+              fi
+              # himalaya: uses XDG or "Library/Application Support"
+              if [ -d "$HOME/.openclaw/.himalaya" ]; then
+                mkdir -p "$HOME/.config/himalaya"
+                ln -sf "$HOME/.openclaw/.himalaya/config.toml" \
+                  "$HOME/.config/himalaya/config.toml"
+              fi
+
               # Rebuild sharp native module for linux-arm64 if needed.
               # This adds the linux binary alongside the darwin one in
               # the bind-mounted directory (both coexist peacefully since
@@ -874,15 +1011,68 @@ in
                 cd "$HOME"
               fi
 
-              # Bridge container localhost:8080 → host llama-swap for embeddings.
-              # The memory-qdrant plugin hardcodes fetch('http://localhost:8080/...').
-              # Listen on both IPv4 and IPv6 loopback (Node.js may try ::1 first).
+              # Docker Sandbox blocks direct TCP to the host (network policy),
+              # so host-local services (e.g. embeddings on port 8080) can't
+              # be reached from the sandbox directly.  However, the sandbox's
+              # MITM proxy (host.docker.internal:3128) runs on the host and
+              # CAN forward HTTP requests to 127.0.0.1 on the host.
+              #
+              # OpenClaw's fetch() respects NO_PROXY (which includes
+              # 127.0.0.1 and localhost to avoid breaking loopback traffic),
+              # so we run a tiny bridge: listen on sandbox localhost:8080,
+              # forward through the proxy to host 127.0.0.1:8080.
+              HOST_TARGET="127.0.0.1"
+              ${linuxPkgs.nodejs_22}/bin/node -e "
+              const http = require('http');
+              const PROXY = { host: 'host.docker.internal', port: 3128 };
+              const TARGET = 'http://$HOST_TARGET:8080';
+              http.createServer((req, res) => {
+                const opts = {
+                  hostname: PROXY.host, port: PROXY.port,
+                  path: TARGET + req.url,
+                  method: req.method,
+                  headers: Object.assign({}, req.headers,
+                    { host: '$HOST_TARGET:8080' })
+                };
+                const p = http.request(opts, (pr) => {
+                  res.writeHead(pr.statusCode, pr.headers);
+                  pr.pipe(res);
+                });
+                p.on('error', (e) => {
+                  res.writeHead(502);
+                  res.end('bridge: ' + e.message);
+                });
+                req.pipe(p);
+              }).listen(8080, '127.0.0.1', () => {
+                process.stdout.write('HTTP bridge: sandbox:8080 → host:8080 (via proxy)\\n');
+              });
+              " &
+
+              # IMAP bridge: forward sandbox localhost:9993 → imap.vulcan.lan:993
+              # via HTTP CONNECT tunnel through the sandbox proxy.
+              # Himalaya (Rust CLI) can't use HTTP proxies for raw TLS/IMAP,
+              # so we bridge with socat's PROXY address type.
+              # Port 9993 (not 993) because the sandbox runs as non-root and
+              # can't bind privileged ports (<1024).
               ${linuxPkgs.socat}/bin/socat \
-                TCP-LISTEN:8080,bind=127.0.0.1,reuseaddr,fork \
-                TCP:host.docker.internal:8080 &
-              ${linuxPkgs.socat}/bin/socat \
-                TCP6-LISTEN:8080,bind=[::1],ipv6only=1,reuseaddr,fork \
-                TCP:host.docker.internal:8080 &
+                TCP-LISTEN:9993,bind=127.0.0.1,reuseaddr,fork \
+                PROXY:host.docker.internal:imap.vulcan.lan:993,proxyport=3128 &
+              echo "IMAP bridge: sandbox:9993 → imap.vulcan.lan:993 (via proxy)"
+
+              # Build runtime CA bundle: static CAs + Docker Sandbox proxy CA.
+              # Always overwrite — the bind-mounted file may be stale from a
+              # previous run with a different Nix closure.
+              CA_BUNDLE="$HOME/.openclaw/combined-ca.crt"
+              rm -f "$CA_BUNDLE"
+              cat ${combinedCaBundle} > "$CA_BUNDLE"
+              if [ -n "''${PROXY_CA_CERT_B64:-}" ]; then
+                printf '\n' >> "$CA_BUNDLE"
+                printf '%s' "$PROXY_CA_CERT_B64" | base64 -d >> "$CA_BUNDLE"
+              fi
+              export SSL_CERT_FILE="$CA_BUNDLE"
+              export NIX_SSL_CERT_FILE="$CA_BUNDLE"
+              export NODE_EXTRA_CA_CERTS="$CA_BUNDLE"
+              export REQUESTS_CA_BUNDLE="$CA_BUNDLE"
 
               exec ${openclawPkg}/bin/openclaw gateway run \
                 --bind loopback --port 18789 --auth token
@@ -894,7 +1084,7 @@ in
               tag = "latest";
               maxLayers = 80;
 
-              contents = [ containerEnv linuxPkgs.socat ];
+              contents = [ containerEnv linuxPkgs.socat proxySetupScript ];
 
               extraCommands = ''
                 mkdir -p etc
@@ -916,6 +1106,7 @@ in
                 ln -sf ${linuxPkgs.bashInteractive}/bin/bash bin/sh
                 ln -sf ${linuxPkgs.bashInteractive}/bin/bash bin/bash
                 ln -sf ${linuxPkgs.coreutils}/bin/env usr/bin/env
+                ln -sf ${entrypoint} bin/openclaw-entrypoint
 
                 mkdir -p Users/johnw/.openclaw
                 mkdir -p Users/johnw/.cache
@@ -924,10 +1115,18 @@ in
 
                 mkdir -p tmp
                 chmod 1777 tmp
+
+                # Docker Sandbox sets NODE_EXTRA_CA_CERTS and SSL_CERT_FILE
+                # to /usr/local/share/ca-certificates/proxy-ca.crt.
+                # Symlink to our combined CA bundle so that tools launched
+                # via 'docker sandbox exec' also validate TLS properly.
+                mkdir -p usr/local/share/ca-certificates
+                ln -sf /Users/johnw/.openclaw/combined-ca.crt \
+                  usr/local/share/ca-certificates/proxy-ca.crt
               '';
 
               config = {
-                Cmd = [ "${entrypoint}" ];
+                Cmd = [ "/bin/openclaw-entrypoint" ];
                 User = "johnw";
                 WorkingDir = "/Users/johnw";
                 Env = [
@@ -941,6 +1140,10 @@ in
                   "SSL_CERT_FILE=${combinedCaBundle}"
                   "NIX_SSL_CERT_FILE=${combinedCaBundle}"
                   "NODE_EXTRA_CA_CERTS=${combinedCaBundle}"
+                  "HTTPS_PROXY=http://host.docker.internal:3128"
+                  "HTTP_PROXY=http://host.docker.internal:3128"
+                  "NO_PROXY=127.0.0.1,localhost,::1,host.docker.internal"
+                  "NODE_OPTIONS=--require ${proxySetupScript}/lib/proxy-setup.cjs"
                 ];
                 Labels = {
                   "org.opencontainers.image.description" =
@@ -953,53 +1156,184 @@ in
             docker = "/usr/local/bin/docker";
             socat = "${pkgs.socat}/bin/socat";
             imageMarker = "${xdg_cacheHome}/openclaw/.image-loaded";
+            sandboxMarker = "${xdg_cacheHome}/openclaw/.sandbox-image";
+
+            # Domains that need direct TLS (bypass MITM proxy).
+            # Vulcan LAN services use a private CA; bypassing avoids
+            # MITM re-signing complexity.  WhatsApp uses numbered edge
+            # servers (w1–w20.web.whatsapp.com).
+            bypassHosts = [
+              # Discord
+              "discord.com" "gateway.discord.gg" "cdn.discordapp.com"
+              "discordapp.com" "discord.gg"
+              # WhatsApp — main + numbered edge servers
+              "web.whatsapp.com" "pps.whatsapp.net" "mmg.whatsapp.net"
+              "g.whatsapp.net" "static.whatsapp.net" "media.whatsapp.net"
+            ] ++ (map (n: "w${toString n}.web.whatsapp.com")
+                      (lib.range 1 20))
+            ++ [
+              # Vulcan LAN (private CA) — each subdomain must be listed
+              # explicitly; "vulcan.lan" only matches the bare domain, not
+              # *.vulcan.lan subdomains.
+              "litellm.vulcan.lan" "qdrant.vulcan.lan" "vulcan.lan"
+              "hass.vulcan.lan" "imap.vulcan.lan"
+            ];
+            bypassFlags = lib.concatMapStringsSep " "
+              (h: "--bypass-host ${h}") bypassHosts;
           in
           {
             script = ''
+              # docker push needs docker-credential-desktop in PATH
+              export PATH="/usr/local/bin:$PATH"
+
               mkdir -p "${logDir}" "${home}/.openclaw/agents/main/sessions"
 
-              # Load Docker image only when the Nix store path changes
+              # Docker Sandbox resolves template images from within its
+              # microVM, so a local registry is needed.  Push via
+              # localhost:5050; sandbox pulls via host.docker.internal:5050.
+              # Port 5050 avoids macOS AirPlay on 5000.  Requires
+              # insecure-registries ["host.docker.internal:5050"] in the
+              # Docker Desktop engine config.
+              REGISTRY_PORT=5050
+              # Use a content-hash tag to bust the sandbox containerd cache.
+              # The sandbox caches images by tag; 'latest' resolves to a stale
+              # digest even after a push.  A unique tag forces a fresh pull.
+              IMAGE_HASH=$(basename "${openclawImage}" | cut -c1-12)
+              PUSH_IMAGE="localhost:$REGISTRY_PORT/openclaw-gateway:$IMAGE_HASH"
+              SANDBOX_IMAGE="host.docker.internal:$REGISTRY_PORT/openclaw-gateway:$IMAGE_HASH"
+              if ! ${docker} ps --filter name=nix-registry --format '{{.Names}}' \
+                   | grep -q nix-registry 2>/dev/null; then
+                ${docker} rm -f nix-registry 2>/dev/null || true
+                ${docker} run -d \
+                  -p 0.0.0.0:$REGISTRY_PORT:5000 \
+                  --name nix-registry \
+                  --restart always \
+                  registry:2
+                sleep 2
+              fi
+
+              # Load and push image only when the Nix store path changes
               IMAGE_PATH="${openclawImage}"
               if [ ! -f "${imageMarker}" ] || \
                  [ "$(cat "${imageMarker}" 2>/dev/null)" != "$IMAGE_PATH" ]; then
                 echo "Loading new OpenClaw Docker image..."
                 ${docker} load < "$IMAGE_PATH"
+                ${docker} tag openclaw-gateway:latest "$PUSH_IMAGE"
+                echo "Pushing to local registry..."
+                ${docker} push "$PUSH_IMAGE"
                 echo "$IMAGE_PATH" > "${imageMarker}"
               fi
 
-              # Stop any existing container
-              ${docker} stop openclaw-gateway 2>/dev/null || true
-              ${docker} rm openclaw-gateway 2>/dev/null || true
+              # Helper: create sandbox with retry (sandboxd can transiently
+              # fail with "failed to load cached tar" right after Docker restart)
+              create_sandbox() {
+                for attempt in 1 2 3; do
+                  ${docker} sandbox rm openclaw-gateway 2>/dev/null || true
+                  if ${docker} sandbox create \
+                       --name openclaw-gateway \
+                       --template "$SANDBOX_IMAGE" \
+                       shell "${home}/.openclaw" 2>&1; then
+                    return 0
+                  fi
+                  echo "Sandbox creation attempt $attempt failed — retrying in 10s..."
+                  sleep 10
+                done
+                echo "ERROR: sandbox creation failed after 3 attempts"
+                return 1
+              }
 
-              # Start the containerised gateway (no port mapping — socat
-              # bridges the connection to work around Docker Desktop for
-              # Mac's broken WebSocket port forwarding).
-              ${docker} run --rm -d \
-                --name openclaw-gateway \
-                --init \
-                -v "${home}/.openclaw:/Users/johnw/.openclaw" \
-                --add-host host.docker.internal:host-gateway \
-                --dns 100.100.100.100 \
-                --dns 192.168.1.2 \
-                --security-opt no-new-privileges \
-                openclaw-gateway:latest
+              # Create or recreate sandbox when image changes
+              if [ ! -f "${sandboxMarker}" ] || \
+                 [ "$(cat "${sandboxMarker}" 2>/dev/null)" != "$IMAGE_PATH" ]; then
+                echo "Recreating OpenClaw sandbox with updated image..."
+                ${docker} sandbox stop openclaw-gateway 2>/dev/null || true
+                create_sandbox
+                echo "$IMAGE_PATH" > "${sandboxMarker}"
+              else
+                # Sandbox exists but may be stopped (e.g. after Docker restart)
+                if ! ${docker} sandbox exec openclaw-gateway true 2>/dev/null; then
+                  echo "Sandbox stopped — recreating..."
+                  create_sandbox
+                fi
+              fi
 
-              # Wait for the gateway to be ready inside the container
+              # Configure proxy bypass for services that need direct TLS.
+              # Also allow-cidr 127.0.0.0/8 so the HTTP bridge can forward
+              # requests through the proxy to host localhost services
+              # (embeddings on port 8080).
+              ${docker} sandbox network proxy openclaw-gateway \
+                ${bypassFlags} \
+                --allow-cidr 127.0.0.0/8
+
+              # Stop any existing gateway process from a previous run.
+              # Without this, a service restart would leave the old gateway
+              # listening on :18789 inside the sandbox, and the new
+              # entrypoint would fail to bind the port.
+              # The gateway lock is at /tmp/openclaw-<uid>/gateway.*.lock
+              ${docker} sandbox exec openclaw-gateway \
+                ${openclawPkg}/bin/openclaw gateway stop 2>/dev/null || true
+              # Give the old process time to release the port
+              sleep 2
+
+              # Wait for proxy bypass rules to propagate.  The gateway's
+              # initial Discord/Qdrant fetches fail with "fetch failed" if
+              # the entrypoint starts before the bypass is active.
+              sleep 3
+
+              # Sandbox /etc/hosts is read-only for non-root.  Add
+              # imap.vulcan.lan → 127.0.0.1 so himalaya's TLS hostname
+              # verification matches the server cert when connecting via
+              # the local socat IMAP bridge.
+              ${docker} sandbox exec --user root openclaw-gateway \
+                sh -c 'grep -q imap.vulcan.lan /etc/hosts 2>/dev/null || echo "127.0.0.1 imap.vulcan.lan" >> /etc/hosts'
+
+              # Run the gateway entrypoint inside the sandbox.
+              # Use the fixed /bin/openclaw-entrypoint symlink rather than
+              # the Nix store path, which changes on every rebuild and may
+              # not match the sandbox's cached image layers.
+              ${docker} sandbox exec -d \
+                -e HOME=/Users/johnw \
+                openclaw-gateway \
+                /bin/openclaw-entrypoint
+
+              # Wait for the gateway to be ready inside the sandbox
               for i in $(seq 1 60); do
-                if ${docker} exec openclaw-gateway \
+                if ${docker} sandbox exec openclaw-gateway \
                      curl -sf http://127.0.0.1:18789/ >/dev/null 2>&1; then
                   break
                 fi
                 sleep 1
               done
 
-              echo "Gateway container ready — starting socat bridge"
+              echo "Gateway sandbox ready — starting socat bridge"
 
-              # Bridge host loopback → container loopback via docker exec.
-              # Each CLI connection is relayed through a fresh docker exec.
+              # Health monitor + keepalive: runs every 30s to:
+              # 1. Detect gateway crashes (3 consecutive failures → restart)
+              # 2. Keep the sandbox VM alive (Docker API activity resets the
+              #    sandbox daemon's 1800s idle timeout, which otherwise kills
+              #    the VM even while the gateway is actively serving)
+              (
+                FAILURES=0
+                while sleep 30; do
+                  if ${docker} sandbox exec openclaw-gateway \
+                       curl -sf http://127.0.0.1:18789/ >/dev/null 2>&1; then
+                    FAILURES=0
+                  else
+                    FAILURES=$((FAILURES + 1))
+                    echo "Health check failed ($FAILURES/3)"
+                    if [ $FAILURES -ge 3 ]; then
+                      echo "Gateway unresponsive — killing socat to trigger restart"
+                      kill $$ 2>/dev/null || true
+                      exit 1
+                    fi
+                  fi
+                done
+              ) &
+
+              # Bridge host loopback → sandbox loopback via docker sandbox exec
               exec ${socat} \
                 TCP-LISTEN:18789,bind=127.0.0.1,reuseaddr,fork \
-                EXEC:"${docker} exec -i openclaw-gateway ${linuxPkgs.socat}/bin/socat - TCP\:127.0.0.1\:18789"
+                EXEC:"${docker} sandbox exec -i openclaw-gateway ${linuxPkgs.socat}/bin/socat - TCP\:127.0.0.1\:18789"
             '';
             serviceConfig = {
               Label = "ai.openclaw.gateway";
