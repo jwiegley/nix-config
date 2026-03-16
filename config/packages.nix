@@ -5,39 +5,57 @@
   ...
 }:
 with pkgs;
+let
+  inherit (stdenv) isDarwin isLinux;
+  sys = pkgs.stdenv.hostPlatform.system;
+
+  # Helper to conditionally include a package from a flake input.
+  # Returns a singleton list if the input exists, empty list otherwise.
+  inputPkg = name: if inputs ? ${name} then [ inputs.${name}.packages.${sys}.default ] else [ ];
+
+  # Helper to conditionally include a package that may come from an overlay.
+  # Returns a singleton list if the package exists in pkgs, empty list otherwise.
+  optPkg = name: if pkgs ? ${name} then [ pkgs.${name} ] else [ ];
+in
 rec {
   exe = if stdenv.targetPlatform.isx86_64 then haskell.lib.justStaticExecutables else lib.id;
 
   myEmacsPackages = import ./emacs.nix pkgs;
 
-  emacs30Env = pkgs.emacs30Env (
-    epkgs: (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs))
-  );
-  emacs30MacPortEnv = pkgs.emacs30MacPortEnv (
-    epkgs: (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs))
-  );
-  emacsHEADEnv = pkgs.emacsHEADEnv myEmacsPackages;
+  emacs30Env =
+    if pkgs ? emacs30Env then
+      pkgs.emacs30Env (epkgs: (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs)))
+    else
+      null;
+  emacs30MacPortEnv =
+    if pkgs ? emacs30MacPortEnv then
+      pkgs.emacs30MacPortEnv (epkgs: (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs)))
+    else
+      null;
+  emacsHEADEnv = if pkgs ? emacsHEADEnv then pkgs.emacsHEADEnv myEmacsPackages else null;
 
-  rag-client = inputs.rag-client.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  rag-client = if inputs ? rag-client then inputs.rag-client.packages.${sys}.default else null;
 
   package-list = [
     (exe haskellPackages.hasktags)
     (exe haskellPackages.hpack)
     (lib.hiPrio (exe haskellPackages.ormolu))
     (exe haskellPackages.pointfree)
-    inputs.promptdeploy.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.git-all.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.gitlib.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.hours.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.org-jw.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.pushme.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.renamer.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.sizes.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.trade-journal.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.una.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.gh-to-org.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.obr.packages.${pkgs.stdenv.hostPlatform.system}.default
-    inputs.org2jsonl.packages.${pkgs.stdenv.hostPlatform.system}.default
+  ]
+  ++ inputPkg "promptdeploy"
+  ++ inputPkg "git-all"
+  ++ inputPkg "gitlib"
+  ++ inputPkg "hours"
+  ++ inputPkg "org-jw"
+  ++ inputPkg "pushme"
+  ++ inputPkg "renamer"
+  ++ inputPkg "sizes"
+  ++ inputPkg "trade-journal"
+  ++ inputPkg "una"
+  ++ inputPkg "gh-to-org"
+  ++ inputPkg "obr"
+  ++ inputPkg "org2jsonl"
+  ++ [
     act
     apg
     aria2
@@ -59,18 +77,28 @@ rec {
     cargo-cache
     cbor-diag
     cmake
+  ]
+  ++ lib.optionals isDarwin [
     contacts
+  ]
+  ++ [
     coreutils
     csvkit
     ctop
     curl
+  ]
+  ++ lib.optionals isDarwin [
     darwin.cctools
+  ]
+  ++ [
     deadnix
     diffstat
     diffutils
     direnv
     devenv
-    dirscan
+  ]
+  ++ optPkg "dirscan"
+  ++ [
     ditaa
     dnstracer
     dnsutils
@@ -80,7 +108,9 @@ rec {
     dust
     eask-cli
     # emacs30Env
-    emacs30MacPortEnv
+  ]
+  ++ lib.optional (emacs30MacPortEnv != null) emacs30MacPortEnv
+  ++ [
     # emacsHEADEnv
     emacs-lsp-booster
     entr
@@ -91,7 +121,9 @@ rec {
     fdupes
     ffmpeg
     figlet
-    filetags
+  ]
+  ++ optPkg "filetags"
+  ++ [
     findutils
     fontconfig
     fpart
@@ -151,12 +183,16 @@ rec {
     gnused
     gnutar
     go-jira
-    gogcli
+  ]
+  ++ optPkg "gogcli"
+  ++ [
     google-cloud-sdk
     graphviz-nox
     groff
-    hammer
-    hashdb
+  ]
+  ++ optPkg "hammer"
+  ++ optPkg "hashdb"
+  ++ [
     highlight
     pkgs.hostname
     html-tidy
@@ -184,25 +220,35 @@ rec {
     khard
     killall
     kubectl
-    ledger_HEAD
+  ]
+  ++ optPkg "ledger_HEAD"
+  ++ [
     lefthook
     less
     lftp
     librsvg
     libxml2
     libxslt
-    linkdups
-    lipotell
+  ]
+  ++ optPkg "linkdups"
+  ++ optPkg "lipotell"
+  ++ [
     lnav
     loccount
     lsof
     lzip
     lzop
+  ]
+  ++ lib.optionals isDarwin [
     m-cli
-    m4
     macmon
-    mapq
-    markless
+  ]
+  ++ [
+    m4
+  ]
+  ++ optPkg "mapq"
+  ++ optPkg "markless"
+  ++ [
     mb2md
     mcat
     metabase
@@ -211,13 +257,17 @@ rec {
     more
     mtr
     multitail
-    (lib.lowPrio my-scripts)
+  ]
+  ++ (if pkgs ? my-scripts then [ (lib.lowPrio pkgs.my-scripts) ] else [ ])
+  ++ [
     nnn
     nix-diff
     nix-index
     nix-info
     nix-prefetch-git
-    nix-scripts
+  ]
+  ++ optPkg "nix-scripts"
+  ++ [
     nix-tree
     nixpkgs-fmt
     nixfmt
@@ -229,7 +279,9 @@ rec {
     openssh
     openssl
     openvpn
-    org2tc
+  ]
+  ++ optPkg "org2tc"
+  ++ [
     p7zip
     pandoc
     paperkey
@@ -241,10 +293,14 @@ rec {
     pdnsd
     pdfgrep
     (perl.withPackages (perl-pkgs: with perl-pkgs; [ ImageExifTool ]))
+  ]
+  ++ lib.optionals isDarwin [
     pinentry_mac
+    pngpaste
+  ]
+  ++ [
     pkg-config
     plantuml
-    pngpaste
     pnpm
     poppler-utils
     (postgresql.withPackages (postgres-pkgs: with postgres-pkgs; [ pgvector ]))
@@ -280,7 +336,9 @@ rec {
     libvirt
     qpdf
     qrencode
-    rag-client
+  ]
+  ++ lib.optional (rag-client != null) rag-client
+  ++ [
     ratpoison
     rclone
     # recoll-nox
@@ -299,7 +357,9 @@ rec {
     sdcv
     shfmt
     siege
-    sieveshell
+  ]
+  ++ optPkg "sieveshell"
+  ++ [
     sift
     sipcalc
     slackdump
@@ -313,14 +373,20 @@ rec {
     squashfsTools
     srm
     sshfs
-    sshify
+  ]
+  ++ optPkg "sshify"
+  ++ [
     statix
     stow
     subversion
     svg2tikz
     taskjuggler
     tealdeer
+  ]
+  ++ lib.optionals isDarwin [
     terminal-notifier
+  ]
+  ++ [
     time
     tlaplus
     tmux
@@ -328,7 +394,9 @@ rec {
     trash-cli
     tree
     tree-sitter
-    tsvutils
+  ]
+  ++ optPkg "tsvutils"
+  ++ [
     (lib.lowPrio ctags)
     universal-ctags
     unixtools.ifconfig
@@ -349,10 +417,16 @@ rec {
     xapian
     xauth
     xhost
+  ]
+  ++ lib.optionals isDarwin [
     xquartz
+  ]
+  ++ [
     xz
     yazi
-    yamale
+  ]
+  ++ optPkg "yamale"
+  ++ [
     yq
     yuicompressor
     z3
@@ -363,43 +437,57 @@ rec {
     zsh-syntax-highlighting
 
     aider-chat
-    guidellm
+  ]
+  ++ optPkg "guidellm"
+  ++ [
     (lib.hiPrio llama-cpp)
-    llama-swap
-    gguf-tools
+  ]
+  ++ optPkg "llama-swap"
+  ++ optPkg "gguf-tools"
+  ++ [
     openmpi
     qdrant
-    qdrant-web-ui
-
-    pal-mcp-server
-    rustdocs-mcp-server
-    vllm-mlx
-    agnix
-    cozempic
-    context-hub
-    context7-mcp
-    playwright-mcp
-    github-mcp-server
-    claude-replay
-    (lib.hiPrio mcp-server-sequential-thinking)
-
+  ]
+  ++ optPkg "qdrant-web-ui"
+  ++ optPkg "pal-mcp-server"
+  ++ optPkg "rustdocs-mcp-server"
+  ++ lib.optionals isDarwin (optPkg "vllm-mlx")
+  ++ optPkg "agnix"
+  ++ optPkg "cozempic"
+  ++ optPkg "context-hub"
+  ++ optPkg "context7-mcp"
+  ++ optPkg "playwright-mcp"
+  ++ optPkg "github-mcp-server"
+  ++ optPkg "claude-replay"
+  ++ (
+    if pkgs ? mcp-server-sequential-thinking then
+      [ (lib.hiPrio pkgs.mcp-server-sequential-thinking) ]
+    else
+      [ ]
+  )
+  ++ [
     (exe git-annex)
     git-annex-remote-rclone
   ]
   # Linux-only packages (not available on Darwin/macOS)
-  ++ lib.optionals stdenv.isLinux [
+  ++ lib.optionals isLinux [
     cpx # Modern, fast file copy tool with progress bars and resume support
   ]
-  ++ (with inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}; [
-    claude-code
-    claude-code-acp
-    ccusage
-    droid
-    opencode
-    # gemini-cli
-    # codex
-    # ollama
-  ])
+  ++ (
+    if inputs ? llm-agents then
+      (with inputs.llm-agents.packages.${sys}; [
+        claude-code
+        claude-code-acp
+        ccusage
+        droid
+        opencode
+        # gemini-cli
+        # codex
+        # ollama
+      ])
+    else
+      [ ]
+  )
   ++ lib.optionals (hostname == "hera") (
     [
       himalaya
@@ -408,8 +496,13 @@ rec {
       soco-cli
       spotify-player
     ]
-    ++ (with inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}; [
-      mcporter
-    ])
+    ++ (
+      if inputs ? llm-agents then
+        (with inputs.llm-agents.packages.${sys}; [
+          mcporter
+        ])
+      else
+        [ ]
+    )
   );
 }
