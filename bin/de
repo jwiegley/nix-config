@@ -119,6 +119,7 @@ SCRIPT="unset         \
     SSL_CERT_FILE     \
     TERM              \
     TERM_SESSION_ID;  \
+if [[ -f .env ]]; then set -a; source .env; set +a; fi; \
 direnv dump > .envrc.cache"
 
 if [[ -f flake.nix ]]; then
