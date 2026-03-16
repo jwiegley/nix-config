@@ -1,6 +1,32 @@
 pre-commit:
+  parallel: true
   commands:
-    statix:
-      tags: lint
-      glob: "*.{nix}"
+    nix-format:
+      glob: "*.nix"
+      run: find . -name '*.nix' -not -path './result/*' | xargs nixfmt --check
+    nix-lint:
+      glob: "*.nix"
       run: statix check .
+    nix-deadcode:
+      glob: "*.nix"
+      run: deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail .
+    shell-lint:
+      glob: "*.{sh,bash}"
+      run: |
+        for f in bin/de bin/u bin/upgrade bin/myhost bin/git-sha \
+                 bin/move-audio-files bin/persona bin/yubikey-switch build; do
+          shellcheck --severity=warning "$f"
+        done
+    shell-format:
+      glob: "*.{sh,bash}"
+      run: |
+        for f in bin/de bin/u bin/upgrade bin/myhost bin/git-sha \
+                 bin/move-audio-files bin/persona bin/yubikey-switch build; do
+          shfmt -i 4 -d "$f"
+        done
+    python-lint:
+      glob: "*.py"
+      run: ruff check bin/update-overlay
+    nix-check:
+      glob: "*.{nix,lock}"
+      run: nix flake check --no-warn-dirty 2>&1
