@@ -217,7 +217,7 @@ rec {
     jupyter
     just
     kew
-    khard
+    # khard # Build broken on aarch64-linux (nixpkgs issue)
     killall
     kubectl
   ]
