@@ -9,10 +9,8 @@ if [[ -d $HOME/Products ]]; then
     echo "There is a ~/Products directory"
 fi
 
-NOCACHE=false
 if [[ "$1" == "--no-cache" ]]; then
     shift 1
-    NOCACHE=true
     echo "Disabling use of the Nix cache"
 fi
 
@@ -33,7 +31,7 @@ if [[ -n ${BUILDER+x} ]]; then
 fi
 
 if [[ ! -f .envrc ]]; then
-    cat > .envrc <<'EOF'
+    cat >.envrc <<'EOF'
 keep_vars() {
     local v
     for k in $@; do
@@ -77,20 +75,20 @@ watch_file .envrc.cache
 watch_file default.nix
 EOF
 
-    [[ -f package.nix ]] && echo "watch_file package.nix" >> .envrc
-    [[ -f shell.nix ]] && echo "watch_file shell.nix" >> .envrc
+    [[ -f package.nix ]] && echo "watch_file package.nix" >>.envrc
+    [[ -f shell.nix ]] && echo "watch_file shell.nix" >>.envrc
 
     if [[ -n "$PRODUCTS" ]]; then
-        if [[ -f package.yaml \
-           || -n "$(find . -maxdepth 1 -name '*.cabal')" ]]; then
-            cat >> .envrc <<EOF
+        if [[ -f package.yaml ||
+            -n "$(find . -maxdepth 1 -name '*.cabal')" ]]; then
+            cat >>.envrc <<EOF
 
 export CABAL_BUILDDIR=$PRODUCTS/dist
 EOF
         fi
 
         if [[ -f Cargo.toml || -f ../Cargo.toml ]]; then
-            cat >> .envrc <<EOF
+            cat >>.envrc <<EOF
 
 export CARGO_TARGET_DIR=$PRODUCTS/target
 export CARGO_HOME=\$CARGO_TARGET_DIR/.cargo-home

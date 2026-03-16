@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-if   [[ $(hostname) =~ [Vv]ulcan ]]; then
+if [[ $(hostname) =~ [Vv]ulcan ]]; then
     echo vulcan
-elif [[ $(hostname) =~ [Hh]era || \
-        $(ipaddr en0 2> /dev/null) == 192.168.1.4 ]]; then
+elif [[ $(hostname) =~ [Hh]era ||
+$(ipaddr en0 2>/dev/null) == 192.168.1.4 ]]; then
     echo hera
-elif [[ $(hostname) =~ [Cc]lio || \
-        $(ipaddr en0 2> /dev/null) == 192.168.3.9 ]]; then
+elif [[ $(hostname) =~ [Cc]lio ||
+$(ipaddr en0 2>/dev/null) == 192.168.3.9 ]]; then
     echo clio
 else
-    echo clio                   # assume we're on the laptop
+    echo clio # assume we're on the laptop
 fi

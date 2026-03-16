@@ -1,30 +1,31 @@
-#!/usr/bin/env bash -e
+#!/usr/bin/env bash
+set -e
 
 case $1 in
-    hera)
-        sudo /bin/launchctl limit maxfiles 524288 524288
-        ulimit -n 65536
-	cd ~/src/nix
-        u hera update
-        python bin/update-overlay --all
-	./build system
-        u hera upgrade-tasks sign # check
-        # notify "Nix on Hera upgraded"
-        ;;
+hera)
+    sudo /bin/launchctl limit maxfiles 524288 524288
+    ulimit -n 65536
+    cd ~/src/nix
+    u hera update
+    python bin/update-overlay --all
+    ./build system
+    u hera upgrade-tasks sign # check
+    # notify "Nix on Hera upgraded"
+    ;;
 
-    clio)
-        sudo /bin/launchctl limit maxfiles 524288 524288
-        ulimit -n 65536
-	cd ~/src/nix
-	./build system
-        u clio upgrade-tasks # check
-        # notify "Nix on Clio upgraded"
-        ;;
+clio)
+    sudo /bin/launchctl limit maxfiles 524288 524288
+    ulimit -n 65536
+    cd ~/src/nix
+    ./build system
+    u clio upgrade-tasks # check
+    # notify "Nix on Clio upgraded"
+    ;;
 
-    *)
-        echo "Unrecognized hostname: $1"
-        exit 1
-        ;;
+*)
+    echo "Unrecognized hostname: $1"
+    exit 1
+    ;;
 esac
 
 echo '┌────────────────────────────────────────────────────────────────────────────┐'
@@ -38,18 +39,18 @@ echo ~/src/category-theory
     cd ~/src/category-theory
     source .envrc
     nix develop -c echo hello
-) > /tmp/category-theory-build.log 2>&1
+) >/tmp/category-theory-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/ltl/coq
 (
     cd ~/src/ltl/coq
     source .envrc
     nix develop -c echo hello
-) > /tmp/ltl-coq-build.log 2>&1
+) >/tmp/ltl-coq-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 ### Haskell projects
 
@@ -60,11 +61,11 @@ echo ~/src/notes/haskell
     source .envrc
     nix develop -c echo hello
     cabal v2-update
-    cabal v2-configure --disable-tests                          \
-          --disable-profiling --disable-executable-profiling
-) > /tmp/notes-haskell-build.log 2>&1
+    cabal v2-configure --disable-tests \
+        --disable-profiling --disable-executable-profiling
+) >/tmp/notes-haskell-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/org-jw
 (
@@ -73,11 +74,11 @@ echo ~/src/org-jw
     source .envrc
     nix develop -c echo hello
     cabal v2-update
-    cabal v2-configure --enable-tests                           \
-          --disable-profiling --disable-executable-profiling
-) > /tmp/org-jw-build.log 2>&1
+    cabal v2-configure --enable-tests \
+        --disable-profiling --disable-executable-profiling
+) >/tmp/org-jw-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/pushme
 (
@@ -86,11 +87,11 @@ echo ~/src/pushme
     source .envrc
     nix develop -c echo hello
     cabal v2-update
-    cabal v2-configure --enable-tests                           \
-          --disable-profiling --disable-executable-profiling
-) > /tmp/pushme-build.log 2>&1
+    cabal v2-configure --enable-tests \
+        --disable-profiling --disable-executable-profiling
+) >/tmp/pushme-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/gitlib
 (
@@ -99,11 +100,11 @@ echo ~/src/gitlib
     source .envrc
     nix develop -c echo hello
     cabal v2-update
-    cabal v2-configure --enable-tests                           \
-          --disable-profiling --disable-executable-profiling
-) > /tmp/gitlib-build.log 2>&1
+    cabal v2-configure --enable-tests \
+        --disable-profiling --disable-executable-profiling
+) >/tmp/gitlib-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/hours
 (
@@ -112,11 +113,11 @@ echo ~/src/hours
     source .envrc
     nix develop -c echo hello
     cabal v2-update
-    cabal v2-configure --enable-tests                           \
-          --disable-profiling --disable-executable-profiling
-) > /tmp/hours-build.log 2>&1
+    cabal v2-configure --enable-tests \
+        --disable-profiling --disable-executable-profiling
+) >/tmp/hours-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/renamer
 (
@@ -125,11 +126,11 @@ echo ~/src/renamer
     source .envrc
     nix develop -c echo hello
     cabal v2-update
-    cabal v2-configure --enable-tests                           \
-          --disable-profiling --disable-executable-profiling
-) > /tmp/renamer-build.log 2>&1
+    cabal v2-configure --enable-tests \
+        --disable-profiling --disable-executable-profiling
+) >/tmp/renamer-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/simple-amount
 (
@@ -138,11 +139,11 @@ echo ~/src/simple-amount
     source .envrc
     nix develop -c echo hello
     cabal v2-update
-    cabal v2-configure --enable-tests                           \
-          --disable-profiling --disable-executable-profiling
-) > /tmp/simple-amount-build.log 2>&1
+    cabal v2-configure --enable-tests \
+        --disable-profiling --disable-executable-profiling
+) >/tmp/simple-amount-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/sizes
 (
@@ -151,11 +152,11 @@ echo ~/src/sizes
     source .envrc
     nix develop -c echo hello
     cabal v2-update
-    cabal v2-configure --enable-tests                           \
-          --disable-profiling --disable-executable-profiling
-) > /tmp/sizes-build.log 2>&1
+    cabal v2-configure --enable-tests \
+        --disable-profiling --disable-executable-profiling
+) >/tmp/sizes-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/three-partition
 (
@@ -165,10 +166,10 @@ echo ~/src/three-partition
     nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests \
-          --disable-profiling --disable-executable-profiling
-) > /tmp/three-partition-build.log 2>&1
+        --disable-profiling --disable-executable-profiling
+) >/tmp/three-partition-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/trade-journal
 (
@@ -178,10 +179,10 @@ echo ~/src/trade-journal
     nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests \
-          --disable-profiling --disable-executable-profiling
-) > /tmp/trade-journal-build.log 2>&1
+        --disable-profiling --disable-executable-profiling
+) >/tmp/trade-journal-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/una
 (
@@ -191,10 +192,10 @@ echo ~/src/una
     nix develop -c echo hello
     cabal v2-update
     cabal v2-configure --enable-tests \
-          --disable-profiling --disable-executable-profiling
-) > /tmp/una-build.log 2>&1
+        --disable-profiling --disable-executable-profiling
+) >/tmp/una-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 ### Rust projects
 
@@ -205,9 +206,9 @@ echo ~/src/comparable
     source .envrc
     nix develop -c echo hello
     cargo update
-) > /tmp/comparable-build.log 2>&1
+) >/tmp/comparable-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/git-ai/main
 (
@@ -216,16 +217,16 @@ echo ~/src/git-ai/main
     source .envrc
     nix develop -c echo hello
     cargo update
-) > /tmp/git-ai-build.log 2>&1
+) >/tmp/git-ai-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 ### Python projects
 
 /bin/rm -fr ~/Library/Caches/pip ~/.cache/uv
 
-rag-client --help > /tmp/rag-client-build.log 2>&1
-huggingface-cli --help >> /tmp/rag-client-build.log 2>&1
+rag-client --help >/tmp/rag-client-build.log 2>&1
+huggingface-cli --help >>/tmp/rag-client-build.log 2>&1
 
 echo ~/src/rag-client
 (
@@ -233,9 +234,9 @@ echo ~/src/rag-client
     echo ~/src/rag-client
     source .envrc
     nix develop -c echo hello
-) >> /tmp/rag-client-build.log 2>&1
+) >>/tmp/rag-client-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 echo ~/src/hf
 (
@@ -243,9 +244,9 @@ echo ~/src/hf
     echo ~/src/hf
     source .envrc
     nix develop -c echo hello
-) >> /tmp/hf-build.log 2>&1
+) >>/tmp/hf-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi
 
 ### C++ projects
 
@@ -255,6 +256,6 @@ echo ~/src/ledger/main
     echo ~/src/ledger/main
     source .envrc
     nix develop -c echo hello
-) >> /tmp/ledger-build.log 2>&1
+) >>/tmp/ledger-build.log 2>&1
 
-if [[ $? = 0 ]]; then echo done; else echo FAIL; fi
+if [[ $? = 0 ]]; then echo "done"; else echo "FAIL"; fi

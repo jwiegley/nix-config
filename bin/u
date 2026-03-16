@@ -39,16 +39,16 @@ fi
 
 MAKEARGS="-C $NIX_CONF -f Makefile"
 
-if [[ -n $BUILDER && $HOSTNAME != $BUILDER ]]; then
+if [[ -n $BUILDER && $HOSTNAME != "$BUILDER" ]]; then
     MAKEARGS="$MAKEARGS BUILDER=$BUILDER"
     echo BUILDER=$BUILDER
 fi
-if [[ -n $CACHE && $HOSTNAME != $CACHE ]]; then
+if [[ -n $CACHE && $HOSTNAME != "$CACHE" ]]; then
     MAKEARGS="$MAKEARGS CACHE=$CACHE"
     echo CACHE=$CACHE
 fi
 
-cd $NIX_CONF
+cd "$NIX_CONF" || exit 1
 
 echo "HOSTNAME=$HOSTNAME"
 echo "REMOTES=\"$REMOTES\""

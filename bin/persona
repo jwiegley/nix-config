@@ -15,7 +15,10 @@ PERSONA_DIR="${HOME}/.config/persona"
 CURRENT_FILE="${PERSONA_DIR}/current"
 GIT_PERSONA_CONFIG="${HOME}/.config/git/persona.gitconfig"
 
-die() { echo "persona: $*" >&2; exit 1; }
+die() {
+    echo "persona: $*" >&2
+    exit 1
+}
 
 # Validate persona name contains only safe characters
 validate_name() {
@@ -138,7 +141,7 @@ switch_persona() {
         fi
         echo "[github]"
         [[ -n "$GITHUB_USER" ]] && echo "    user = ${GITHUB_USER}"
-    } > "$GIT_PERSONA_CONFIG"
+    } >"$GIT_PERSONA_CONFIG"
     echo "Git:    ${GIT_NAME} <${GIT_EMAIL}>" >&2
 
     # 3. Switch GitHub CLI account
@@ -149,7 +152,7 @@ switch_persona() {
 
     # 4. Save current persona
     mkdir -p "$PERSONA_DIR"
-    echo "$name" > "$CURRENT_FILE"
+    echo "$name" >"$CURRENT_FILE"
     echo "Switched to persona: ${name}" >&2
 
     # 5. Output eval-able exports to stdout
@@ -158,9 +161,9 @@ switch_persona() {
 
 # Main
 case "${1:-}" in
-    --status|-s)  show_status ;;
-    --list|-l)    list_personas ;;
-    --env|-e)     output_env ;;
-    --help|-h|"") usage ;;
-    *)            switch_persona "$1" ;;
+--status | -s) show_status ;;
+--list | -l) list_personas ;;
+--env | -e) output_env ;;
+--help | -h | "") usage ;;
+*) switch_persona "$1" ;;
 esac
