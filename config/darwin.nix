@@ -172,12 +172,9 @@ in
       "codexbar"
       "conductor"
       "corelocationcli"
-      # "cursor"
-      # "cursor-cli"
       "dbvisualizer"
       "devonagent"
       "devonthink"
-      # "diffusionbee"
       "discord"
       "docker-desktop"
       "drivedx"
@@ -205,19 +202,16 @@ in
       "microsoft-word"
       "microsoft-remote-desktop"
       "netdownloadhelpercoapp"
-      # "ollama-app"
       "opencode-desktop"
       "pdf-expert"
       "postman"
-      # "sage"
       "signal"
       "slack"
-      # "spamsieve"
       "steam"
       "suspicious-package"
       "swiftdefaultappsprefpane"
       "tailscale-app"
-      # "telegram"
+      "telegram"
       "thinkorswim"
       "tor-browser"
       "ukelele"
@@ -322,8 +316,8 @@ in
       allowUnsupportedSystem = false;
 
       permittedInsecurePackages = [
-        "python-2.7.18.7"
-        "libressl-3.4.3"
+        # "python-2.7.18.7"
+        # "libressl-3.4.3"
       ];
     };
 
