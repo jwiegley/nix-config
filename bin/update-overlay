@@ -13,12 +13,10 @@ Examples:
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
-import tempfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -847,7 +845,7 @@ Examples:
 
         # Update the overlay file with new version and src hash first
         # This is needed so we can compute the other hashes
-        temp_update = updater.update_package(
+        updater.update_package(
             info, new_version, new_src_hash,
             new_full_rev=new_full_rev,
             dry_run=args.dry_run
