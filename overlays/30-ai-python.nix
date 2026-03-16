@@ -62,150 +62,135 @@ in
 {
 
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
-    (
-      pfinal: pprev:
-      let
-        nanobind = pprev.nanobind.overridePythonAttrs (oldAttrs: rec {
-          version = "2.4.0";
-          src = prev.fetchFromGitHub {
-            owner = "wjakob";
-            repo = "nanobind";
-            rev = "v${version}";
-            fetchSubmodules = true;
-            hash = "sha256-9OpDsjFEeJGtbti4Q9HHl78XaGf8M3lG4ukvHCMzyMU=";
-          };
-        });
-      in
-      {
-        # Fix hash mismatch for mitmproxy-macos wheel (PyPI republished the package)
-        mitmproxy-macos = pprev.mitmproxy-macos.overridePythonAttrs (oldAttrs: {
-          src = pfinal.fetchPypi {
-            pname = "mitmproxy_macos";
-            inherit (oldAttrs) version;
-            format = "wheel";
-            dist = "py3";
-            python = "py3";
-            hash = "sha256-baAfEY4hEN3wOEicgE53gY71IX003JYFyyZaNJ7U8UA=";
-          };
-        });
+    (pfinal: pprev: {
+      # Fix hash mismatch for mitmproxy-macos wheel (PyPI republished the package)
+      mitmproxy-macos = pprev.mitmproxy-macos.overridePythonAttrs (oldAttrs: {
+        src = pfinal.fetchPypi {
+          pname = "mitmproxy_macos";
+          inherit (oldAttrs) version;
+          format = "wheel";
+          dist = "py3";
+          python = "py3";
+          hash = "sha256-baAfEY4hEN3wOEicgE53gY71IX003JYFyyZaNJ7U8UA=";
+        };
+      });
 
-        mlx = pprev.mlx.overridePythonAttrs (oldAttrs: {
-          # Use pre-built wheel from PyPI that includes Metal support
-          # Building from source fails in Nix sandbox due to Metal tools being unavailable
+      mlx = pprev.mlx.overridePythonAttrs (oldAttrs: {
+        # Use pre-built wheel from PyPI that includes Metal support
+        # Building from source fails in Nix sandbox due to Metal tools being unavailable
+        version = "0.30.0";
+        pyproject = null;
+        format = "wheel";
+        patches = [ ]; # Wheel doesn't need patches
+        postPatch = ""; # No patching needed for pre-built wheel
+        doCheck = false; # Wheels don't include tests
+        src = pfinal.fetchPypi {
+          pname = "mlx";
           version = "0.30.0";
-          pyproject = null;
           format = "wheel";
-          patches = [ ]; # Wheel doesn't need patches
-          postPatch = ""; # No patching needed for pre-built wheel
-          doCheck = false; # Wheels don't include tests
-          src = pfinal.fetchPypi {
-            pname = "mlx";
-            version = "0.30.0";
-            format = "wheel";
-            dist = "cp313";
-            python = "cp313";
-            abi = "cp313";
-            platform = "macosx_14_0_arm64";
-            hash = "sha256-9GqqbFYroYPipkoOa6Fe1U+QJ9m3sYIunux/WbE9YQw=";
-          };
-        });
+          dist = "cp313";
+          python = "cp313";
+          abi = "cp313";
+          platform = "macosx_14_0_arm64";
+          hash = "sha256-9GqqbFYroYPipkoOa6Fe1U+QJ9m3sYIunux/WbE9YQw=";
+        };
+      });
 
-        llm-mlx = pfinal.callPackage llm-mlx { };
+      llm-mlx = pfinal.callPackage llm-mlx { };
 
-        # standard-distutils: backport of distutils for Python 3.12+
-        standard-distutils = pfinal.buildPythonPackage rec {
-          pname = "standard-distutils";
-          version = "3.11.9";
-          pyproject = true;
+      # standard-distutils: backport of distutils for Python 3.12+
+      standard-distutils = pfinal.buildPythonPackage rec {
+        pname = "standard-distutils";
+        version = "3.11.9";
+        pyproject = true;
 
-          src = prev.fetchPypi {
-            pname = "standard_distutils";
-            inherit version;
-            hash = "sha256-N9bJ8PAyHtPJySPlSw/br6PXv1VoId5V/YFY1/RA3rU=";
-          };
-
-          build-system = [ pfinal.setuptools ];
-
-          pythonImportsCheck = [ "distutils" ];
-
-          meta = {
-            description = "Redistribution of removed distutils module from stdlib";
-            homepage = "https://pypi.org/project/standard-distutils/";
-            license = prev.lib.licenses.psfl;
-          };
+        src = prev.fetchPypi {
+          pname = "standard_distutils";
+          inherit version;
+          hash = "sha256-N9bJ8PAyHtPJySPlSw/br6PXv1VoId5V/YFY1/RA3rU=";
         };
 
-        # sanic test_validate_group_sets_gid fails in Nix sandbox (no 'root' group)
-        sanic = pprev.sanic.overridePythonAttrs (_: {
-          doCheck = false;
-        });
+        build-system = [ pfinal.setuptools ];
 
-        aiologic = pfinal.buildPythonPackage rec {
-          pname = "aiologic";
-          version = "0.16.0";
+        pythonImportsCheck = [ "distutils" ];
+
+        meta = {
+          description = "Redistribution of removed distutils module from stdlib";
+          homepage = "https://pypi.org/project/standard-distutils/";
+          license = prev.lib.licenses.psfl;
+        };
+      };
+
+      # sanic test_validate_group_sets_gid fails in Nix sandbox (no 'root' group)
+      sanic = pprev.sanic.overridePythonAttrs (_: {
+        doCheck = false;
+      });
+
+      aiologic = pfinal.buildPythonPackage rec {
+        pname = "aiologic";
+        version = "0.16.0";
+        format = "wheel";
+
+        src = pfinal.fetchPypi {
+          inherit pname version;
           format = "wheel";
-
-          src = pfinal.fetchPypi {
-            inherit pname version;
-            format = "wheel";
-            dist = "py3";
-            python = "py3";
-            hash = "sha256-4Azl9oxWB8hk0mrsmcCjOoO9+CN6pzEv+7loBa9n2LY=";
-          };
-
-          dependencies = with pfinal; [
-            sniffio
-            typing-extensions
-            wrapt
-          ];
-
-          pythonImportsCheck = [ "aiologic" ];
-
-          meta = {
-            description = "Synchronization primitives for tasks and threads";
-            homepage = "https://pypi.org/project/aiologic/";
-            license = prev.lib.licenses.mit;
-          };
+          dist = "py3";
+          python = "py3";
+          hash = "sha256-4Azl9oxWB8hk0mrsmcCjOoO9+CN6pzEv+7loBa9n2LY=";
         };
 
-        culsans = pfinal.buildPythonPackage rec {
-          pname = "culsans";
-          version = "0.10.0";
+        dependencies = with pfinal; [
+          sniffio
+          typing-extensions
+          wrapt
+        ];
+
+        pythonImportsCheck = [ "aiologic" ];
+
+        meta = {
+          description = "Synchronization primitives for tasks and threads";
+          homepage = "https://pypi.org/project/aiologic/";
+          license = prev.lib.licenses.mit;
+        };
+      };
+
+      culsans = pfinal.buildPythonPackage rec {
+        pname = "culsans";
+        version = "0.10.0";
+        format = "wheel";
+
+        src = pfinal.fetchPypi {
+          inherit pname version;
           format = "wheel";
-
-          src = pfinal.fetchPypi {
-            inherit pname version;
-            format = "wheel";
-            dist = "py3";
-            python = "py3";
-            hash = "sha256-6DLJY1q3AWz2JWXeKUJp9HCM2SIA0A2v3S5aGUNYfy4=";
-          };
-
-          dependencies = with pfinal; [
-            aiologic
-            typing-extensions
-          ];
-
-          pythonImportsCheck = [ "culsans" ];
-
-          meta = {
-            description = "Mixed sync-async queue for threaded and async communication";
-            homepage = "https://pypi.org/project/culsans/";
-            license = prev.lib.licenses.asl20;
-          };
+          dist = "py3";
+          python = "py3";
+          hash = "sha256-6DLJY1q3AWz2JWXeKUJp9HCM2SIA0A2v3S5aGUNYfy4=";
         };
 
-        # Fix pymssql: upstream changed setuptools constraint from ">=54.0,<70.3" to ">80.0"
-        # and now requires standard-distutils for Python 3.12+
-        pymssql = pprev.pymssql.overridePythonAttrs (oldAttrs: {
-          postPatch = ''
-            substituteInPlace pyproject.toml \
-              --replace-fail "setuptools>80.0" "setuptools"
-          '';
-          build-system = (oldAttrs.build-system or [ ]) ++ [ pfinal.standard-distutils ];
-        });
-      }
-    )
+        dependencies = with pfinal; [
+          aiologic
+          typing-extensions
+        ];
+
+        pythonImportsCheck = [ "culsans" ];
+
+        meta = {
+          description = "Mixed sync-async queue for threaded and async communication";
+          homepage = "https://pypi.org/project/culsans/";
+          license = prev.lib.licenses.asl20;
+        };
+      };
+
+      # Fix pymssql: upstream changed setuptools constraint from ">=54.0,<70.3" to ">80.0"
+      # and now requires standard-distutils for Python 3.12+
+      pymssql = pprev.pymssql.overridePythonAttrs (oldAttrs: {
+        postPatch = ''
+          substituteInPlace pyproject.toml \
+            --replace-fail "setuptools>80.0" "setuptools"
+        '';
+        build-system = (oldAttrs.build-system or [ ]) ++ [ pfinal.standard-distutils ];
+      });
+    })
   ];
 
 }

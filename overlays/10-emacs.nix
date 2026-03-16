@@ -16,11 +16,7 @@ let
         fetchurl
         fetchgit
         fetchFromGitHub
-        fetchzip
-        stdenv
-        lib
         ;
-      inherit (stdenv) mkDerivation;
 
       withPatches =
         pkg: patches:
@@ -29,12 +25,6 @@ let
         });
 
       compileEmacsFiles = args: prev.callPackage ./emacs/builder.nix ({ inherit (eself) emacs; } // args);
-
-      addBuildInputs =
-        pkg: inputs:
-        pkg.overrideAttrs (attrs: {
-          buildInputs = attrs.buildInputs ++ inputs;
-        });
 
       compileLocalFile =
         name:

@@ -25,7 +25,9 @@ final: prev: {
       # which bypasses the Nix wrapper's site.addsitedir() injection.
       # Setting PYTHONPATH ensures the forked process can find the module.
       makeWrapperArgs = [
-        "--set" "PYTHONPATH" "${placeholder "out"}/${prev.python3.sitePackages}"
+        "--set"
+        "PYTHONPATH"
+        "${placeholder "out"}/${prev.python3.sitePackages}"
       ];
 
       doCheck = false;

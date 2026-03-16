@@ -18,52 +18,52 @@ _final: prev: {
       dontBuild = true;
 
       installPhase = ''
-        runHook preInstall
-        mkdir -p $out/bin
+                runHook preInstall
+                mkdir -p $out/bin
 
-        cat > $out/bin/vllm-mlx <<EOF
-#!/usr/bin/env bash
-UV="${uv}/bin/uv"
-TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
+                cat > $out/bin/vllm-mlx <<EOF
+        #!/usr/bin/env bash
+        UV="${uv}/bin/uv"
+        TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
 
-if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
-  echo "Installing vllm-mlx v${version} via uv..." >&2
-  "\$UV" tool install "vllm-mlx==${version}" >&2
-fi
+        if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
+          echo "Installing vllm-mlx v${version} via uv..." >&2
+          "\$UV" tool install "vllm-mlx==${version}" >&2
+        fi
 
-exec "\$UV" tool run vllm-mlx "\$@"
-EOF
-        chmod +x $out/bin/vllm-mlx
+        exec "\$UV" tool run vllm-mlx "\$@"
+        EOF
+                chmod +x $out/bin/vllm-mlx
 
-        cat > $out/bin/vllm-mlx-chat <<EOF
-#!/usr/bin/env bash
-UV="${uv}/bin/uv"
-TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
+                cat > $out/bin/vllm-mlx-chat <<EOF
+        #!/usr/bin/env bash
+        UV="${uv}/bin/uv"
+        TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
 
-if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
-  echo "Installing vllm-mlx v${version} via uv..." >&2
-  "\$UV" tool install "vllm-mlx==${version}" >&2
-fi
+        if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
+          echo "Installing vllm-mlx v${version} via uv..." >&2
+          "\$UV" tool install "vllm-mlx==${version}" >&2
+        fi
 
-exec "\$UV" tool run vllm-mlx-chat "\$@"
-EOF
-        chmod +x $out/bin/vllm-mlx-chat
+        exec "\$UV" tool run vllm-mlx-chat "\$@"
+        EOF
+                chmod +x $out/bin/vllm-mlx-chat
 
-        cat > $out/bin/vllm-mlx-bench <<EOF
-#!/usr/bin/env bash
-UV="${uv}/bin/uv"
-TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
+                cat > $out/bin/vllm-mlx-bench <<EOF
+        #!/usr/bin/env bash
+        UV="${uv}/bin/uv"
+        TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
 
-if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
-  echo "Installing vllm-mlx v${version} via uv..." >&2
-  "\$UV" tool install "vllm-mlx==${version}" >&2
-fi
+        if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
+          echo "Installing vllm-mlx v${version} via uv..." >&2
+          "\$UV" tool install "vllm-mlx==${version}" >&2
+        fi
 
-exec "\$UV" tool run vllm-mlx-bench "\$@"
-EOF
-        chmod +x $out/bin/vllm-mlx-bench
+        exec "\$UV" tool run vllm-mlx-bench "\$@"
+        EOF
+                chmod +x $out/bin/vllm-mlx-bench
 
-        runHook postInstall
+                runHook postInstall
       '';
 
       meta = {

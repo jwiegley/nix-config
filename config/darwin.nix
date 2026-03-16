@@ -10,10 +10,8 @@
 
 let
   home = "/Users/johnw";
-  tmpdir = "/tmp";
 
   xdg_configHome = "${home}/.config";
-  xdg_dataHome = "${home}/.local/share";
   xdg_cacheHome = "${home}/.cache";
 
 in
@@ -352,12 +350,19 @@ in
       vulcan-builder = {
         hostName = "192.168.1.2";
         protocol = "ssh-ng";
-        systems = [ "aarch64-linux" "x86_64-linux" ];
+        systems = [
+          "aarch64-linux"
+          "x86_64-linux"
+        ];
         sshUser = "johnw";
         sshKey = "${home}/hera/id_hera";
         maxJobs = 8;
         speedFactor = 2;
-        supportedFeatures = [ "nixos-test" "big-parallel" "kvm" ];
+        supportedFeatures = [
+          "nixos-test"
+          "big-parallel"
+          "kvm"
+        ];
       };
     in
     {
@@ -535,100 +540,91 @@ in
 
   launchd = {
     # System daemons run as background services
-    daemons =
-      let
-        iterate = StartInterval: {
-          inherit StartInterval;
-          Nice = 5;
-          LowPriorityIO = true;
-          AbandonProcessGroup = true;
-        };
-      in
-      {
-        limits = {
-          script = ''
-            /bin/launchctl limit maxfiles 524288 524288
-            /bin/launchctl limit maxproc 8192 8192
-          '';
-          serviceConfig.RunAtLoad = true;
-          serviceConfig.KeepAlive = false;
-        };
-
-        # cleanup = {
-        #   script = ''
-        #     export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
-        #     ${pkgs.python3}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
-        #         >> /var/log/cleanup.log 2>&1
-        #   '';
-        #   serviceConfig = iterate 86400;
-        # };
-
-        mssql-server = {
-          script = ''
-            # Wait for Docker to be ready
-            while ! /usr/local/bin/docker info > /dev/null 2>&1; do
-              echo "Waiting for Docker to be ready..."
-              sleep 5
-            done
-
-            # Create data directory if it doesn't exist and set proper ownership
-            # On macOS, Docker Desktop handles permission mapping internally
-            mkdir -p ${home}/mssql
-            chown -R johnw:staff ${home}/mssql
-
-            # Create password file directory if it doesn't exist
-            mkdir -p ${xdg_configHome}/mssql
-            chown johnw:staff ${xdg_configHome}/mssql
-
-            # Read password from secure file (must be created manually)
-            # Create this file with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd
-            if [ ! -f ${xdg_configHome}/mssql/passwd ]; then
-              echo "ERROR: Password file ${xdg_configHome}/mssql/passwd not found"
-              echo "Create it with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd"
-              exit 1
-            fi
-            MSSQL_SA_PASSWORD=$(cat ${xdg_configHome}/mssql/passwd | tr -d '\n')
-
-            # Validate password meets SQL Server requirements
-            if [ ''${#MSSQL_SA_PASSWORD} -lt 8 ]; then
-              echo "ERROR: Password must be at least 8 characters"
-              exit 1
-            fi
-
-            # Pull the latest image if not present
-            /usr/local/bin/docker pull mcr.microsoft.com/mssql/server:2022-latest
-
-            # Stop and remove any existing container with the same name
-            /usr/local/bin/docker rm -f mssql-server 2>/dev/null || true
-
-            # Start the container with restart policy and persistent storage
-            /usr/local/bin/docker run -d \
-              --name mssql-server \
-              --restart unless-stopped \
-              -p 1433:1433 \
-              -v ${home}/mssql:/var/opt/mssql \
-              -e ACCEPT_EULA=Y \
-              -e "MSSQL_SA_PASSWORD=$MSSQL_SA_PASSWORD" \
-              mcr.microsoft.com/mssql/server:2022-latest
-          '';
-          serviceConfig.RunAtLoad = true;
-          serviceConfig.KeepAlive = false;
-        };
-      }
-      // lib.optionalAttrs (hostname == "hera") {
-        "sysctl-vram-limit" = {
-          script = ''
-            # This leaves 64 GB of working memory remaining
-            # /usr/sbin/sysctl iogpu.wired_limit_mb=458752
-
-            # This leaves 32 GB of working memory remaining, and is best for
-            # when the machine will only be used headless as a server from
-            # remote, during longer trips.
-            /usr/sbin/sysctl iogpu.wired_limit_mb=491520
-          '';
-          serviceConfig.RunAtLoad = true;
-        };
+    daemons = {
+      limits = {
+        script = ''
+          /bin/launchctl limit maxfiles 524288 524288
+          /bin/launchctl limit maxproc 8192 8192
+        '';
+        serviceConfig.RunAtLoad = true;
+        serviceConfig.KeepAlive = false;
       };
+
+      # cleanup = {
+      #   script = ''
+      #     export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
+      #     ${pkgs.python3}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
+      #         >> /var/log/cleanup.log 2>&1
+      #   '';
+      #   serviceConfig = iterate 86400;
+      # };
+
+      mssql-server = {
+        script = ''
+          # Wait for Docker to be ready
+          while ! /usr/local/bin/docker info > /dev/null 2>&1; do
+            echo "Waiting for Docker to be ready..."
+            sleep 5
+          done
+
+          # Create data directory if it doesn't exist and set proper ownership
+          # On macOS, Docker Desktop handles permission mapping internally
+          mkdir -p ${home}/mssql
+          chown -R johnw:staff ${home}/mssql
+
+          # Create password file directory if it doesn't exist
+          mkdir -p ${xdg_configHome}/mssql
+          chown johnw:staff ${xdg_configHome}/mssql
+
+          # Read password from secure file (must be created manually)
+          # Create this file with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd
+          if [ ! -f ${xdg_configHome}/mssql/passwd ]; then
+            echo "ERROR: Password file ${xdg_configHome}/mssql/passwd not found"
+            echo "Create it with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd"
+            exit 1
+          fi
+          MSSQL_SA_PASSWORD=$(cat ${xdg_configHome}/mssql/passwd | tr -d '\n')
+
+          # Validate password meets SQL Server requirements
+          if [ ''${#MSSQL_SA_PASSWORD} -lt 8 ]; then
+            echo "ERROR: Password must be at least 8 characters"
+            exit 1
+          fi
+
+          # Pull the latest image if not present
+          /usr/local/bin/docker pull mcr.microsoft.com/mssql/server:2022-latest
+
+          # Stop and remove any existing container with the same name
+          /usr/local/bin/docker rm -f mssql-server 2>/dev/null || true
+
+          # Start the container with restart policy and persistent storage
+          /usr/local/bin/docker run -d \
+            --name mssql-server \
+            --restart unless-stopped \
+            -p 1433:1433 \
+            -v ${home}/mssql:/var/opt/mssql \
+            -e ACCEPT_EULA=Y \
+            -e "MSSQL_SA_PASSWORD=$MSSQL_SA_PASSWORD" \
+            mcr.microsoft.com/mssql/server:2022-latest
+        '';
+        serviceConfig.RunAtLoad = true;
+        serviceConfig.KeepAlive = false;
+      };
+    }
+    // lib.optionalAttrs (hostname == "hera") {
+      "sysctl-vram-limit" = {
+        script = ''
+          # This leaves 64 GB of working memory remaining
+          # /usr/sbin/sysctl iogpu.wired_limit_mb=458752
+
+          # This leaves 32 GB of working memory remaining, and is best for
+          # when the machine will only be used headless as a server from
+          # remote, during longer trips.
+          /usr/sbin/sysctl iogpu.wired_limit_mb=491520
+        '';
+        serviceConfig.RunAtLoad = true;
+      };
+    };
 
     user = {
       agents = {
@@ -771,11 +767,13 @@ in
               fd
               bat
               (lib.hiPrio (
-                python3.withPackages (pp: with pp; [
-                  requests
-                  numpy
-                  pandas
-                ])
+                python3.withPackages (
+                  pp: with pp; [
+                    requests
+                    numpy
+                    pandas
+                  ]
+                )
               ))
               nodejs_22
               pnpm
@@ -808,20 +806,26 @@ in
             #   3. Adds the remote host to the proxy bypass list
             # localPort must be >1024 (sandbox runs as non-root).
             sandboxBridges = [
-              { name = "imap"; localPort = 9993;
-                remoteHost = "imap.vulcan.lan"; remotePort = 993; }
+              {
+                name = "imap";
+                localPort = 9993;
+                remoteHost = "imap.vulcan.lan";
+                remotePort = 993;
+              }
               # Future vulcan services — just add a line:
               # { name = "hass"; localPort = 8443;
               #   remoteHost = "hass.vulcan.lan"; remotePort = 443; }
             ];
 
             # Shell code for the entrypoint: one socat bridge per entry
-            bridgeEntrypointCode = lib.concatStringsSep "\n" (map (b: ''
-              ${linuxPkgs.socat}/bin/socat \
-                TCP-LISTEN:${toString b.localPort},bind=127.0.0.1,reuseaddr,fork \
-                PROXY:host.docker.internal:${b.remoteHost}:${toString b.remotePort},proxyport=3128 &
-              echo "${b.name} bridge: sandbox:${toString b.localPort} -> ${b.remoteHost}:${toString b.remotePort} (via proxy)"
-            '') sandboxBridges);
+            bridgeEntrypointCode = lib.concatStringsSep "\n" (
+              map (b: ''
+                ${linuxPkgs.socat}/bin/socat \
+                  TCP-LISTEN:${toString b.localPort},bind=127.0.0.1,reuseaddr,fork \
+                  PROXY:host.docker.internal:${b.remoteHost}:${toString b.remotePort},proxyport=3128 &
+                echo "${b.name} bridge: sandbox:${toString b.localPort} -> ${b.remoteHost}:${toString b.remotePort} (via proxy)"
+              '') sandboxBridges
+            );
 
             # Vulcan private CA chain (Root + Intermediate) for *.vulcan.lan
             vulcanCaCerts = linuxPkgs.writeText "vulcan-ca.pem" ''
@@ -881,106 +885,106 @@ in
             # Node.js preload that fixes proxy issues in Docker Sandbox:
             # (1) undici fetch() doesn't honor HTTPS_PROXY env var
             # (2) ws library's tls.connect() bypasses the proxy entirely
-            proxySetupScript = linuxPkgs.runCommand "proxy-setup" {} ''
-              UNDICI_IDX=$(find ${openclawPkg} \
-                -path '*/node_modules/undici/index.js' \
-                -not -path '*/undici-types/*' | head -1)
-              if [ -z "$UNDICI_IDX" ]; then
-                echo "ERROR: undici not found in ${openclawPkg}" >&2
-                exit 1
-              fi
-              UNDICI_DIR=$(dirname "$UNDICI_IDX")
+            proxySetupScript = linuxPkgs.runCommand "proxy-setup" { } ''
+                            UNDICI_IDX=$(find ${openclawPkg} \
+                              -path '*/node_modules/undici/index.js' \
+                              -not -path '*/undici-types/*' | head -1)
+                            if [ -z "$UNDICI_IDX" ]; then
+                              echo "ERROR: undici not found in ${openclawPkg}" >&2
+                              exit 1
+                            fi
+                            UNDICI_DIR=$(dirname "$UNDICI_IDX")
 
-              mkdir -p $out/lib
-              cat > $out/lib/proxy-setup.cjs << 'PROXYEOF'
-"use strict";
-var proxyEnv = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || "";
-if (!proxyEnv) return;
-var proxyUrl = new (require("url").URL)(proxyEnv);
-var PROXY_HOST = proxyUrl.hostname;
-var PROXY_PORT = parseInt(proxyUrl.port, 10) || 3128;
-var noProxyList = (process.env.NO_PROXY || "").split(",").map(function(s) { return s.trim(); });
-try {
-  var undici = require("__UNDICI_PATH__");
-  undici.setGlobalDispatcher(new undici.EnvHttpProxyAgent());
-} catch (_) {}
-var tls = require("tls");
-var net = require("net");
-var Duplex = require("stream").Duplex;
-var inherits = require("util").inherits;
-function isLocal(host) {
-  if (!host) return true;
-  if (host === "127.0.0.1" || host === "::1" || host === "localhost") return true;
-  if (host === PROXY_HOST || host.startsWith("host.docker.internal")) return true;
-  for (var i = 0; i < noProxyList.length; i++) {
-    var np = noProxyList[i];
-    if (host === np || host.endsWith("." + np)) return true;
-  }
-  return false;
-}
-function ProxyTunnel(targetHost, targetPort) {
-  Duplex.call(this);
-  this.connecting = true;
-  this._tunnelReady = false;
-  this._writeBuffer = [];
-  var self = this;
-  this._sock = net.connect(PROXY_PORT, PROXY_HOST, function() {
-    self._sock.write(
-      "CONNECT " + targetHost + ":" + targetPort + " HTTP/1.1\r\n" +
-      "Host: " + targetHost + ":" + targetPort + "\r\n\r\n"
-    );
-    var buf = Buffer.alloc(0);
-    self._sock.on("data", function onData(chunk) {
-      buf = Buffer.concat([buf, chunk]);
-      var idx = buf.indexOf("\r\n\r\n");
-      if (idx === -1) return;
-      self._sock.removeListener("data", onData);
-      var status = parseInt(buf.toString().split(" ")[1], 10);
-      if (status !== 200) {
-        self.destroy(new Error("Proxy CONNECT " + targetHost + ":" + targetPort + " failed: " + status));
-        return;
-      }
-      var remainder = buf.slice(idx + 4);
-      self._tunnelReady = true;
-      self.connecting = false;
-      self._sock.on("data", function(d) { self.push(d); });
-      self._sock.on("end", function() { self.push(null); });
-      self._sock.on("close", function() { self.destroy(); });
-      if (remainder.length) self.push(remainder);
-      var pending = self._writeBuffer;
-      self._writeBuffer = [];
-      for (var i = 0; i < pending.length; i++) {
-        self._sock.write(pending[i].chunk, pending[i].enc, pending[i].cb);
-      }
-      self.emit("connect");
-    });
-  });
-  this._sock.on("error", function(e) { self.destroy(e); });
-}
-inherits(ProxyTunnel, Duplex);
-ProxyTunnel.prototype._read = function() {};
-ProxyTunnel.prototype._write = function(chunk, enc, cb) {
-  if (this._tunnelReady) return this._sock.write(chunk, enc, cb);
-  this._writeBuffer.push({ chunk: chunk, enc: enc, cb: cb });
-};
-ProxyTunnel.prototype._final = function(cb) { this._sock.end(cb); };
-ProxyTunnel.prototype._destroy = function(err, cb) {
-  this._writeBuffer.forEach(function(w) { if (w.cb) w.cb(err); });
-  this._writeBuffer = [];
-  if (this._sock) this._sock.destroy();
-  cb(err);
-};
-var origTlsConnect = tls.connect;
-tls.connect = function proxyTlsConnect(options, cb) {
-  var host = options.host || options.servername || "";
-  var port = options.port || 443;
-  if (options.socket || isLocal(host)) return origTlsConnect.call(tls, options, cb);
-  var tunnel = new ProxyTunnel(host, port);
-  var tlsOpts = Object.assign({}, options, { socket: tunnel });
-  return origTlsConnect.call(tls, tlsOpts, cb);
-};
-PROXYEOF
-              sed -i "s|__UNDICI_PATH__|$UNDICI_DIR|g" $out/lib/proxy-setup.cjs
+                            mkdir -p $out/lib
+                            cat > $out/lib/proxy-setup.cjs << 'PROXYEOF'
+              "use strict";
+              var proxyEnv = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || "";
+              if (!proxyEnv) return;
+              var proxyUrl = new (require("url").URL)(proxyEnv);
+              var PROXY_HOST = proxyUrl.hostname;
+              var PROXY_PORT = parseInt(proxyUrl.port, 10) || 3128;
+              var noProxyList = (process.env.NO_PROXY || "").split(",").map(function(s) { return s.trim(); });
+              try {
+                var undici = require("__UNDICI_PATH__");
+                undici.setGlobalDispatcher(new undici.EnvHttpProxyAgent());
+              } catch (_) {}
+              var tls = require("tls");
+              var net = require("net");
+              var Duplex = require("stream").Duplex;
+              var inherits = require("util").inherits;
+              function isLocal(host) {
+                if (!host) return true;
+                if (host === "127.0.0.1" || host === "::1" || host === "localhost") return true;
+                if (host === PROXY_HOST || host.startsWith("host.docker.internal")) return true;
+                for (var i = 0; i < noProxyList.length; i++) {
+                  var np = noProxyList[i];
+                  if (host === np || host.endsWith("." + np)) return true;
+                }
+                return false;
+              }
+              function ProxyTunnel(targetHost, targetPort) {
+                Duplex.call(this);
+                this.connecting = true;
+                this._tunnelReady = false;
+                this._writeBuffer = [];
+                var self = this;
+                this._sock = net.connect(PROXY_PORT, PROXY_HOST, function() {
+                  self._sock.write(
+                    "CONNECT " + targetHost + ":" + targetPort + " HTTP/1.1\r\n" +
+                    "Host: " + targetHost + ":" + targetPort + "\r\n\r\n"
+                  );
+                  var buf = Buffer.alloc(0);
+                  self._sock.on("data", function onData(chunk) {
+                    buf = Buffer.concat([buf, chunk]);
+                    var idx = buf.indexOf("\r\n\r\n");
+                    if (idx === -1) return;
+                    self._sock.removeListener("data", onData);
+                    var status = parseInt(buf.toString().split(" ")[1], 10);
+                    if (status !== 200) {
+                      self.destroy(new Error("Proxy CONNECT " + targetHost + ":" + targetPort + " failed: " + status));
+                      return;
+                    }
+                    var remainder = buf.slice(idx + 4);
+                    self._tunnelReady = true;
+                    self.connecting = false;
+                    self._sock.on("data", function(d) { self.push(d); });
+                    self._sock.on("end", function() { self.push(null); });
+                    self._sock.on("close", function() { self.destroy(); });
+                    if (remainder.length) self.push(remainder);
+                    var pending = self._writeBuffer;
+                    self._writeBuffer = [];
+                    for (var i = 0; i < pending.length; i++) {
+                      self._sock.write(pending[i].chunk, pending[i].enc, pending[i].cb);
+                    }
+                    self.emit("connect");
+                  });
+                });
+                this._sock.on("error", function(e) { self.destroy(e); });
+              }
+              inherits(ProxyTunnel, Duplex);
+              ProxyTunnel.prototype._read = function() {};
+              ProxyTunnel.prototype._write = function(chunk, enc, cb) {
+                if (this._tunnelReady) return this._sock.write(chunk, enc, cb);
+                this._writeBuffer.push({ chunk: chunk, enc: enc, cb: cb });
+              };
+              ProxyTunnel.prototype._final = function(cb) { this._sock.end(cb); };
+              ProxyTunnel.prototype._destroy = function(err, cb) {
+                this._writeBuffer.forEach(function(w) { if (w.cb) w.cb(err); });
+                this._writeBuffer = [];
+                if (this._sock) this._sock.destroy();
+                cb(err);
+              };
+              var origTlsConnect = tls.connect;
+              tls.connect = function proxyTlsConnect(options, cb) {
+                var host = options.host || options.servername || "";
+                var port = options.port || 443;
+                if (options.socket || isLocal(host)) return origTlsConnect.call(tls, options, cb);
+                var tunnel = new ProxyTunnel(host, port);
+                var tlsOpts = Object.assign({}, options, { socket: tunnel });
+                return origTlsConnect.call(tls, tlsOpts, cb);
+              };
+              PROXYEOF
+                            sed -i "s|__UNDICI_PATH__|$UNDICI_DIR|g" $out/lib/proxy-setup.cjs
             '';
 
             containerEnv = linuxPkgs.buildEnv {
@@ -1095,7 +1099,11 @@ PROXYEOF
               tag = "latest";
               maxLayers = 80;
 
-              contents = [ containerEnv linuxPkgs.socat proxySetupScript ];
+              contents = [
+                containerEnv
+                linuxPkgs.socat
+                proxySetupScript
+              ];
 
               extraCommands = ''
                 mkdir -p etc
@@ -1157,8 +1165,7 @@ PROXYEOF
                   "NODE_OPTIONS=--require ${proxySetupScript}/lib/proxy-setup.cjs"
                 ];
                 Labels = {
-                  "org.opencontainers.image.description" =
-                    "OpenClaw gateway — sandboxed agent execution";
+                  "org.opencontainers.image.description" = "OpenClaw gateway — sandboxed agent execution";
                 };
               };
             };
@@ -1175,23 +1182,31 @@ PROXYEOF
             # servers (w1–w20.web.whatsapp.com).
             bypassHosts = [
               # Discord
-              "discord.com" "gateway.discord.gg" "cdn.discordapp.com"
-              "discordapp.com" "discord.gg"
+              "discord.com"
+              "gateway.discord.gg"
+              "cdn.discordapp.com"
+              "discordapp.com"
+              "discord.gg"
               # WhatsApp — main + numbered edge servers
-              "web.whatsapp.com" "pps.whatsapp.net" "mmg.whatsapp.net"
-              "g.whatsapp.net" "static.whatsapp.net" "media.whatsapp.net"
-            ] ++ (map (n: "w${toString n}.web.whatsapp.com")
-                      (lib.range 1 20))
+              "web.whatsapp.com"
+              "pps.whatsapp.net"
+              "mmg.whatsapp.net"
+              "g.whatsapp.net"
+              "static.whatsapp.net"
+              "media.whatsapp.net"
+            ]
+            ++ (map (n: "w${toString n}.web.whatsapp.com") (lib.range 1 20))
             ++ [
               # Vulcan LAN (private CA) — each subdomain must be listed
               # explicitly; "vulcan.lan" only matches the bare domain, not
               # *.vulcan.lan subdomains.
-              "litellm.vulcan.lan" "qdrant.vulcan.lan" "vulcan.lan"
+              "litellm.vulcan.lan"
+              "qdrant.vulcan.lan"
+              "vulcan.lan"
             ]
             # Add remote hosts from sandboxBridges automatically
             ++ (map (b: b.remoteHost) sandboxBridges);
-            bypassFlags = lib.concatMapStringsSep " "
-              (h: "--bypass-host ${h}") bypassHosts;
+            bypassFlags = lib.concatMapStringsSep " " (h: "--bypass-host ${h}") bypassHosts;
           in
           {
             script = ''
@@ -1296,8 +1311,8 @@ PROXYEOF
               # verification requires the remote hostname to resolve to
               # 127.0.0.1 (where the socat bridge listens).
               ${lib.concatMapStringsSep "\n" (b: ''
-              ${docker} sandbox exec --user root openclaw-gateway \
-                sh -c 'grep -q ${b.remoteHost} /etc/hosts 2>/dev/null || echo "127.0.0.1 ${b.remoteHost}" >> /etc/hosts'
+                ${docker} sandbox exec --user root openclaw-gateway \
+                  sh -c 'grep -q ${b.remoteHost} /etc/hosts 2>/dev/null || echo "127.0.0.1 ${b.remoteHost}" >> /etc/hosts'
               '') sandboxBridges}
 
               # Run the gateway entrypoint inside the sandbox.

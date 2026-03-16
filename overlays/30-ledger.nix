@@ -7,16 +7,18 @@ final: prev:
 
 {
 
-  ledger_HEAD = prev.inputs.ledger.packages.${prev.stdenv.hostPlatform.system}.ledger.overrideAttrs (attrs: {
-    boost = prev.boost.override { python = prev.python3; };
+  ledger_HEAD =
+    prev.inputs.ledger.packages.${prev.stdenv.hostPlatform.system}.ledger.overrideAttrs
+      (attrs: {
+        boost = prev.boost.override { python = prev.python3; };
 
-    preConfigure = ''
-      sed -i -e "s%DESTINATION \\\''${Python_SITEARCH}%DESTINATION $out/lib/python37/site-packages%" src/CMakeLists.txt
-    '';
+        preConfigure = ''
+          sed -i -e "s%DESTINATION \\\''${Python_SITEARCH}%DESTINATION $out/lib/python37/site-packages%" src/CMakeLists.txt
+        '';
 
-    preInstall = ''
-      mkdir -p $out/lib/python37/site-packages
-    '';
-  });
+        preInstall = ''
+          mkdir -p $out/lib/python37/site-packages
+        '';
+      });
 
 }

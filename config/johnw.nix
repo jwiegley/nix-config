@@ -29,8 +29,6 @@ let
   master_key = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
   signing_key = "12D70076AB504679";
 
-  external_host = "data.newartisans.com";
-
   gitPkg = inputs.git-ai.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   ca-bundle_path = "${pkgs.cacert}/etc/ssl/certs/";
@@ -38,8 +36,7 @@ let
   emacs-server = "${tmpdir}/johnw-emacs/server";
   emacsclient = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
 
-  identityDir =
-    if isDarwin then "${home}/${hostname}" else "${home}/.ssh";
+  identityDir = if isDarwin then "${home}/${hostname}" else "${home}/.ssh";
 
 in
 {
@@ -51,58 +48,57 @@ in
   home = {
     stateVersion = lib.mkDefault "24.11";
 
-    sessionVariables =
-      {
-        DISABLE_AUTOUPDATER = "1";
-        B2_ACCOUNT_INFO = "${config.xdg.configHome}/backblaze-b2/account_info";
-        CABAL_CONFIG = "${config.xdg.configHome}/cabal/config";
-        CARGO_HOME = "${config.xdg.dataHome}/cargo";
-        CLICOLOR = "yes";
-        EDITOR = lib.mkDefault "${emacsclient}";
-        EMACS_SERVER_FILE = "${emacs-server}";
-        EMAIL = "${userEmail}";
-        ET_NO_TELEMETRY = "1";
-        FONTCONFIG_FILE = "${config.xdg.configHome}/fontconfig/fonts.conf";
-        FONTCONFIG_PATH = "${config.xdg.configHome}/fontconfig";
-        GRAPHVIZ_DOT = "${pkgs.graphviz}/bin/dot";
-        GTAGSCONF = "${pkgs.global}/share/gtags/gtags.conf";
-        GTAGSLABEL = "pygments";
-        HOSTNAME = hostname;
-        JAVA_OPTS = "-Xverify:none";
-        LESSHISTFILE = "${config.xdg.cacheHome}/less/history";
-        LITELLM_PROXY_URL = "http://litellm.vulcan.lan";
-        LLM_USER_PATH = "${config.xdg.configHome}/llm";
-        NIX_CONF = "${home}/src/nix";
-        NLTK_DATA = "${config.xdg.dataHome}/nltk";
-        PARALLEL_HOME = "${config.xdg.cacheHome}/parallel";
-        PROFILE_DIR = "${config.home.profileDirectory}";
-        RUSTUP_HOME = "${config.xdg.dataHome}/rustup";
-        SCREENRC = "${config.xdg.configHome}/screen/config";
-        SSL_CERT_FILE = "${ca-bundle_crt}";
-        STARDICT_DATA_DIR = "${config.xdg.dataHome}/dictionary";
-        TIKTOKEN_CACHE_DIR = "${config.xdg.cacheHome}/tiktoken";
-        TRAVIS_CONFIG_PATH = "${config.xdg.configHome}/travis";
-        TZ = lib.mkDefault "America/Los_Angeles";
-        VAGRANT_HOME = "${config.xdg.dataHome}/vagrant";
-        WWW_HOME = "${config.xdg.cacheHome}/w3m";
+    sessionVariables = {
+      DISABLE_AUTOUPDATER = "1";
+      B2_ACCOUNT_INFO = "${config.xdg.configHome}/backblaze-b2/account_info";
+      CABAL_CONFIG = "${config.xdg.configHome}/cabal/config";
+      CARGO_HOME = "${config.xdg.dataHome}/cargo";
+      CLICOLOR = "yes";
+      EDITOR = lib.mkDefault "${emacsclient}";
+      EMACS_SERVER_FILE = "${emacs-server}";
+      EMAIL = "${userEmail}";
+      ET_NO_TELEMETRY = "1";
+      FONTCONFIG_FILE = "${config.xdg.configHome}/fontconfig/fonts.conf";
+      FONTCONFIG_PATH = "${config.xdg.configHome}/fontconfig";
+      GRAPHVIZ_DOT = "${pkgs.graphviz}/bin/dot";
+      GTAGSCONF = "${pkgs.global}/share/gtags/gtags.conf";
+      GTAGSLABEL = "pygments";
+      HOSTNAME = hostname;
+      JAVA_OPTS = "-Xverify:none";
+      LESSHISTFILE = "${config.xdg.cacheHome}/less/history";
+      LITELLM_PROXY_URL = "http://litellm.vulcan.lan";
+      LLM_USER_PATH = "${config.xdg.configHome}/llm";
+      NIX_CONF = "${home}/src/nix";
+      NLTK_DATA = "${config.xdg.dataHome}/nltk";
+      PARALLEL_HOME = "${config.xdg.cacheHome}/parallel";
+      PROFILE_DIR = "${config.home.profileDirectory}";
+      RUSTUP_HOME = "${config.xdg.dataHome}/rustup";
+      SCREENRC = "${config.xdg.configHome}/screen/config";
+      SSL_CERT_FILE = "${ca-bundle_crt}";
+      STARDICT_DATA_DIR = "${config.xdg.dataHome}/dictionary";
+      TIKTOKEN_CACHE_DIR = "${config.xdg.cacheHome}/tiktoken";
+      TRAVIS_CONFIG_PATH = "${config.xdg.configHome}/travis";
+      TZ = lib.mkDefault "America/Los_Angeles";
+      VAGRANT_HOME = "${config.xdg.dataHome}/vagrant";
+      WWW_HOME = "${config.xdg.cacheHome}/w3m";
 
-        RCLONE_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/rclone";
-        RESTIC_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/restic";
-        FILTER_BRANCH_SQUELCH_WARNING = "1";
-        HF_HUB_ENABLE_HF_TRANSFER = "1";
-        LLAMA_INDEX_CACHE_DIR = "${config.xdg.cacheHome}/llama-index";
-      }
-      // lib.optionalAttrs isDarwin {
-        ASPELL_CONF = "conf ${config.xdg.configHome}/aspell/config;";
-        EMACSVER = "30MacPort";
-        NODE_EXTRA_CA_CERTS = "${config.xdg.configHome}/ragflow/root_ca.crt";
-        VAGRANT_DEFAULT_PROVIDER = "vmware_desktop";
-        VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";
-        SSH_AUTH_SOCK = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
-      }
-      // lib.optionalAttrs isLinux {
-        FACTORY_AUTO_UPDATE = "false";
-      };
+      RCLONE_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/rclone";
+      RESTIC_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/restic";
+      FILTER_BRANCH_SQUELCH_WARNING = "1";
+      HF_HUB_ENABLE_HF_TRANSFER = "1";
+      LLAMA_INDEX_CACHE_DIR = "${config.xdg.cacheHome}/llama-index";
+    }
+    // lib.optionalAttrs isDarwin {
+      ASPELL_CONF = "conf ${config.xdg.configHome}/aspell/config;";
+      EMACSVER = "30MacPort";
+      NODE_EXTRA_CA_CERTS = "${config.xdg.configHome}/ragflow/root_ca.crt";
+      VAGRANT_DEFAULT_PROVIDER = "vmware_desktop";
+      VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";
+      SSH_AUTH_SOCK = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
+    }
+    // lib.optionalAttrs isLinux {
+      FACTORY_AUTO_UPDATE = "false";
+    };
 
     sessionSearchVariables = {
       MANPATH = [
@@ -114,20 +110,19 @@ in
       ];
     };
 
-    sessionPath =
-      [
-        "${home}/src/scripts"
-        "${home}/.local/bin"
-      ]
-      ++ lib.optionals isDarwin [
-        "${home}/work/positron/bin"
-        "/usr/local/bin"
-        "/usr/local/zfs/bin"
-        "/opt/homebrew/bin"
-        "/opt/homebrew/opt/node@22/bin"
-      ];
+    sessionPath = [
+      "${home}/src/scripts"
+      "${home}/.local/bin"
+    ]
+    ++ lib.optionals isDarwin [
+      "${home}/work/positron/bin"
+      "/usr/local/bin"
+      "/usr/local/zfs/bin"
+      "/opt/homebrew/bin"
+      "/opt/homebrew/opt/node@22/bin"
+    ];
 
-    activation = { };  # promptdeploy activation is managed by programs.promptdeploy
+    activation = { }; # promptdeploy activation is managed by programs.promptdeploy
 
     file =
       let
@@ -325,26 +320,25 @@ in
     tmux = {
       enable = true;
       mouse = lib.mkDefault true;
-      extraConfig =
-        ''
-          set-option -g allow-passthrough on
-          set-option -g default-shell ${pkgs.zsh}/bin/zsh
-          set-option -g default-command ${pkgs.zsh}/bin/zsh
-          set-option -g history-limit 250000
-        ''
-        + lib.optionalString isDarwin ''
+      extraConfig = ''
+        set-option -g allow-passthrough on
+        set-option -g default-shell ${pkgs.zsh}/bin/zsh
+        set-option -g default-command ${pkgs.zsh}/bin/zsh
+        set-option -g history-limit 250000
+      ''
+      + lib.optionalString isDarwin ''
 
-          # Use tmux's process-level directory tracking instead of shell escapes.
-          # #{pane_current_path} is populated by tmux reading the actual working
-          # directory of the pane's foreground process from the OS (via libproc
-          # on macOS), so it works for Claude Code, vim, or any other program.
-          set-option -g set-titles on
-          set-option -g set-titles-string "#{b:pane_current_path}"
+        # Use tmux's process-level directory tracking instead of shell escapes.
+        # #{pane_current_path} is populated by tmux reading the actual working
+        # directory of the pane's foreground process from the OS (via libproc
+        # on macOS), so it works for Claude Code, vim, or any other program.
+        set-option -g set-titles on
+        set-option -g set-titles-string "#{b:pane_current_path}"
 
-          # For iTerm2 native integration
-          set-option -g automatic-rename on
-          set-option -g automatic-rename-format "#{b:pane_current_path}"
-        '';
+        # For iTerm2 native integration
+        set-option -g automatic-rename on
+        set-option -g automatic-rename-format "#{b:pane_current_path}"
+      '';
     };
 
     home-manager = {
@@ -423,115 +417,109 @@ in
       };
 
       localVariables = {
-        RPROMPT =
-          if isDarwin
-          then "%F{cyan}[\\$PERSONA]%f %F{green}%~%f"
-          else "%F{green}%~%f";
+        RPROMPT = if isDarwin then "%F{cyan}[\\$PERSONA]%f %F{green}%~%f" else "%F{green}%~%f";
         PROMPT = "%B%m %b\\$(git_super_status)%(!.#.$) ";
         PROMPT_DIRTRIM = "2";
       };
 
-      shellAliases =
-        {
-          vi = "${pkgs.vim}/bin/vim";
-          b = "${gitPkg}/bin/git b";
-          l = "${gitPkg}/bin/git l";
-          w = "${gitPkg}/bin/git w";
-          ga = "${pkgs.git-annex}/bin/git-annex";
-          good = "${gitPkg}/bin/git bisect good";
-          bad = "${gitPkg}/bin/git bisect bad";
-          par = "${pkgs.parallel}/bin/parallel";
-          rX = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
-          scp = "${pkgs.rsync}/bin/rsync -aP --inplace";
+      shellAliases = {
+        vi = "${pkgs.vim}/bin/vim";
+        b = "${gitPkg}/bin/git b";
+        l = "${gitPkg}/bin/git l";
+        w = "${gitPkg}/bin/git w";
+        ga = "${pkgs.git-annex}/bin/git-annex";
+        good = "${gitPkg}/bin/git bisect good";
+        bad = "${gitPkg}/bin/git bisect bad";
+        par = "${pkgs.parallel}/bin/parallel";
+        rX = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
+        scp = "${pkgs.rsync}/bin/rsync -aP --inplace";
 
-          # Use whichever cabal is on the PATH.
-          cb = "cabal build";
-          cn = "cabal configure --enable-tests --enable-benchmarks";
-          cnp =
-            "cabal configure --enable-tests --enable-benchmarks "
-            + "--enable-profiling --ghc-options=-fprof-auto";
+        # Use whichever cabal is on the PATH.
+        cb = "cabal build";
+        cn = "cabal configure --enable-tests --enable-benchmarks";
+        cnp =
+          "cabal configure --enable-tests --enable-benchmarks "
+          + "--enable-profiling --ghc-options=-fprof-auto";
 
-          rehash = "hash -r";
-        }
-        // lib.optionalAttrs isDarwin {
-          switch = "${pkgs.nix-scripts}/bin/u ${hostname} switch";
-          proc = "${pkgs.darwin.ps}/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
-          nstat =
-            "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
-            + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
-            + " | ${pkgs.coreutils}/bin/tail -n +5";
-          wipe = "${pkgs.srm}/bin/srm -vfr";
-        }
-        // lib.optionalAttrs isLinux {
-          switch = "sudo nixos-rebuild switch --flake /etc/nixos#${hostname}";
-          proc = "ps axwwww | grep -i";
-        };
+        rehash = "hash -r";
+      }
+      // lib.optionalAttrs isDarwin {
+        switch = "${pkgs.nix-scripts}/bin/u ${hostname} switch";
+        proc = "${pkgs.darwin.ps}/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
+        nstat =
+          "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
+          + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
+          + " | ${pkgs.coreutils}/bin/tail -n +5";
+        wipe = "${pkgs.srm}/bin/srm -vfr";
+      }
+      // lib.optionalAttrs isLinux {
+        switch = "sudo nixos-rebuild switch --flake /etc/nixos#${hostname}";
+        proc = "ps axwwww | grep -i";
+      };
 
-      profileExtra =
-        ''
-          setopt extended_glob
-        ''
-        + lib.optionalString isLinux ''
-          . ${pkgs.zsh-z}/share/zsh-z/zsh-z.plugin.zsh
-        '';
+      profileExtra = ''
+        setopt extended_glob
+      ''
+      + lib.optionalString isLinux ''
+        . ${pkgs.zsh-z}/share/zsh-z/zsh-z.plugin.zsh
+      '';
 
-      initContent =
-        ''
-          # Make sure that fzf does not override the meaning of ^T
-          bindkey '^T' transpose-chars
-          bindkey -e
+      initContent = ''
+        # Make sure that fzf does not override the meaning of ^T
+        bindkey '^T' transpose-chars
+        bindkey -e
 
-          if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
-              unsetopt zle
-              unset zle_bracketed_paste
-              export PROMPT='$ '
-              export RPROMPT=""
-              export PS1='$ '
-        ''
-        + (
-          if isDarwin then
-            ''
-              else
-                  . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
-                  . ${config.xdg.configHome}/shellfish/shellfishrc
+        if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
+            unsetopt zle
+            unset zle_bracketed_paste
+            export PROMPT='$ '
+            export RPROMPT=""
+            export PS1='$ '
+      ''
+      + (
+        if isDarwin then
+          ''
+            else
+                . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
+                . ${config.xdg.configHome}/shellfish/shellfishrc
 
-                  fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
+                fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
 
-                  ${lib.optionalString (hostname == "hera") ''
+                ${lib.optionalString (hostname == "hera") ''
                   # OpenClaw Completion
                   [[ -f "${home}/.openclaw/completions/openclaw.zsh" ]] && \
                     source "${home}/.openclaw/completions/openclaw.zsh"
-                  ''}
+                ''}
 
-                  # Set terminal/tmux title to current directory
-                  __update_terminal_title() {
-                    # Use both OSC 0 (icon+title) and OSC 2 (title only)
-                    # %~ expands to current directory with ~ substitution
-                    print -Pn "\e]0;%~\a"
-                    # Also set tmux pane title for native integration
-                    if [[ -n "$TMUX" ]]; then
-                      print -Pn "\e]2;%~\a"
-                    fi
-                  }
-
-                  # Auto-load persona environment on shell start
-                  if [[ -f "$HOME/.config/persona/current" ]]; then
-                    eval "$(command persona --env)"
+                # Set terminal/tmux title to current directory
+                __update_terminal_title() {
+                  # Use both OSC 0 (icon+title) and OSC 2 (title only)
+                  # %~ expands to current directory with ~ substitution
+                  print -Pn "\e]0;%~\a"
+                  # Also set tmux pane title for native integration
+                  if [[ -n "$TMUX" ]]; then
+                    print -Pn "\e]2;%~\a"
                   fi
+                }
 
-                  autoload -Uz add-zsh-hook
-                  add-zsh-hook chpwd __update_terminal_title
-                  add-zsh-hook precmd __update_terminal_title
-              fi
-            ''
-          else
-            ''
-              else
-                  autoload -Uz compinit
-                  compinit
-              fi
-            ''
-        );
+                # Auto-load persona environment on shell start
+                if [[ -f "$HOME/.config/persona/current" ]]; then
+                  eval "$(command persona --env)"
+                fi
+
+                autoload -Uz add-zsh-hook
+                add-zsh-hook chpwd __update_terminal_title
+                add-zsh-hook precmd __update_terminal_title
+            fi
+          ''
+        else
+          ''
+            else
+                autoload -Uz compinit
+                compinit
+            fi
+          ''
+      );
 
       plugins = lib.optionals isDarwin [
         {
@@ -564,14 +552,13 @@ in
         keyserver = "keys.openpgp.org";
         keyserver-options = "no-honor-keyserver-url include-revoked auto-key-retrieve";
       };
-      scdaemonSettings =
-        {
-          card-timeout = "1";
-          disable-ccid = true;
-        }
-        // lib.optionalAttrs isDarwin {
-          pcsc-driver = "/System/Library/Frameworks/PCSC.framework/PCSC";
-        };
+      scdaemonSettings = {
+        card-timeout = "1";
+        disable-ccid = true;
+      }
+      // lib.optionalAttrs isDarwin {
+        pcsc-driver = "/System/Library/Frameworks/PCSC.framework/PCSC";
+      };
     };
 
     gh = {
@@ -891,13 +878,6 @@ in
               controlPersist = "1800";
             };
 
-          matchHost = host: hostAddr: {
-            hostname = hostAddr;
-            match = ''
-              host ${host} exec "${pkgs.unixtools.ping}/bin/ping -c1 -W50 -n -q ${hostAddr} > /dev/null 2>&1"
-            '';
-          };
-
           onHost =
             proxyJump: hostAddr:
             {
@@ -924,14 +904,13 @@ in
             serverAliveInterval = 60;
             forwardAgent = true;
 
-            extraOptions =
-              {
-                IgnoreUnknown = "UseKeychain";
-              }
-              // lib.optionalAttrs isDarwin {
-                UseKeychain = "yes";
-                AddKeysToAgent = "yes";
-              };
+            extraOptions = {
+              IgnoreUnknown = "UseKeychain";
+            }
+            // lib.optionalAttrs isDarwin {
+              UseKeychain = "yes";
+              AddKeysToAgent = "yes";
+            };
           };
 
           # Hera
@@ -968,15 +947,12 @@ in
             remoteForwards = [ (localBind 8317 8317) ];
           });
 
-          gitea = controlMastered (
-            withIdentity {
-              user = "gitea";
-              hostname =
-                if hostname == "vulcan" then "localhost" else "192.168.1.2";
-              port = 2222;
-              compression = false;
-            }
-          );
+          gitea = controlMastered (withIdentity {
+            user = "gitea";
+            hostname = if hostname == "vulcan" then "localhost" else "192.168.1.2";
+            port = 2222;
+            compression = false;
+          });
 
           # Council
 
