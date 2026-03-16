@@ -470,9 +470,7 @@ rec {
     git-annex-remote-rclone
   ]
   # Linux-only packages (not available on Darwin/macOS)
-  ++ lib.optionals isLinux [
-    cpx # Modern, fast file copy tool with progress bars and resume support
-  ]
+  ++ lib.optionals isLinux (optPkg "cpx")
   ++ (
     if inputs ? llm-agents then
       (with inputs.llm-agents.packages.${sys}; [
