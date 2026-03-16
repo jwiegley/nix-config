@@ -339,6 +339,7 @@ rec {
     unrar
     unzip
     uv
+    vega-lite
     w3m
     wabt
     watch
