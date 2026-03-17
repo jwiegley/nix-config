@@ -683,11 +683,6 @@ in
           default = "simple";
         };
 
-        "merge \"merge-changelog\"" = {
-          name = "GNU-style ChangeLog merge driver";
-          driver = "${pkgs.git-scripts}/bin/git-merge-changelog %O %A %B";
-        };
-
         "merge \"mergiraf\"" = {
           name = "mergiraf";
           driver = "${pkgs.mergiraf}/bin/mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L";
@@ -740,6 +735,12 @@ in
         "url \"https://github.com/ghc/packages-\"".insteadOf = "https://github.com/ghc/packages/";
         "url \"ssh://git@github.com/ghc/packages-\"".insteadOf = "ssh://git@github.com/ghc/packages/";
         "url \"git@github.com:/ghc/packages-\"".insteadOf = "git@github.com:/ghc/packages/";
+      }
+      // lib.optionalAttrs (pkgs ? git-scripts) {
+        "merge \"merge-changelog\"" = {
+          name = "GNU-style ChangeLog merge driver";
+          driver = "${pkgs.git-scripts}/bin/git-merge-changelog %O %A %B";
+        };
       };
 
       ignores = [
