@@ -42,6 +42,8 @@ in
 {
   imports = [
     inputs.git-ai.homeManagerModules.default
+  ]
+  ++ lib.optionals (inputs ? promptdeploy) [
     inputs.promptdeploy.homeManagerModules.default
   ];
 
