@@ -249,7 +249,6 @@ rec {
       act
       cmake
       doxygen
-      global
       go-jira
       graphviz-nox
       igrep
@@ -501,6 +500,7 @@ rec {
     ++ lib.optionals isDarwin [
       contacts
       darwin.cctools
+      global # Broken on Linux (embedded libdb incompatible with gcc strict typing)
       m-cli
       macmon
       pinentry_mac
