@@ -76,7 +76,6 @@ in
       FONTCONFIG_FILE = "${config.xdg.configHome}/fontconfig/fonts.conf";
       FONTCONFIG_PATH = "${config.xdg.configHome}/fontconfig";
       GRAPHVIZ_DOT = "${pkgs.graphviz}/bin/dot";
-      GTAGSCONF = "${pkgs.global}/share/gtags/gtags.conf";
       GTAGSLABEL = "pygments";
       HOSTNAME = hostname;
       JAVA_OPTS = "-Xverify:none";
@@ -106,6 +105,7 @@ in
     // lib.optionalAttrs isDarwin {
       ASPELL_CONF = "conf ${config.xdg.configHome}/aspell/config;";
       EMACSVER = "30MacPort";
+      GTAGSCONF = "${pkgs.global}/share/gtags/gtags.conf";
       NODE_EXTRA_CA_CERTS = "${config.xdg.configHome}/ragflow/root_ca.crt";
       VAGRANT_DEFAULT_PROVIDER = "vmware_desktop";
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";
