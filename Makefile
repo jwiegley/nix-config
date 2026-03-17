@@ -1,4 +1,4 @@
-HOSTNAME   = hera
+HOSTNAME   ?= $(shell myhost)
 REMOTES	   = clio
 GIT_REMOTE = jwiegley
 MAX_AGE	   = 28
