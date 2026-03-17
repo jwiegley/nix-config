@@ -218,8 +218,20 @@ u repl
 - **Updating inputs**:
   - `make update`: Updates all inputs and Homebrew
   - `nix flake lock --update-input nixpkgs`: Update only nixpkgs
+  - `make lock-local`: Re-locks only local `git+file://` inputs (fast, safe)
   - Review `flake.lock` changes before committing
   - Test after updates: `make build && make switch`
+
+- **CRITICAL: Never use `sudo` for flake operations**:
+  - Never run `sudo nix flake update` or `sudo nix flake lock`
+  - Root and user have separate fetcher caches (`fetcher-cache-v4.sqlite`)
+  - Running flake operations as root creates stale cache entries that cause NAR hash mismatches during `darwin-rebuild switch`
+  - Always update/lock as the regular user; only `darwin-rebuild switch` needs sudo
+
+- **Modifying input URLs in `flake.nix`**:
+  - After changing ANY input URL (e.g., adding `?shallow=0`, changing branch), always re-lock: `nix flake lock`
+  - Changing URL parameters changes the input identity and invalidates the lock hash
+  - The `make switch` target now automatically runs `lock-local` + `build` before switching
 
 - **Adding new inputs**:
   1. Add to `inputs` section in `flake.nix`
@@ -318,6 +330,17 @@ error: infinite recursion encountered
 error: hash mismatch in fixed-output derivation
 ```
 **Solution**: Source hash changed (package updated). Update the hash in the overlay or fetch expression.
+
+#### NAR Hash Mismatch in Local Git Inputs
+```
+error: NAR hash mismatch in input 'git+file:///Users/johnw/src/...'
+```
+**Solution**: The `flake.lock` hash is stale. This commonly happens when:
+- Input URLs were changed in `flake.nix` without re-locking (e.g., adding `?shallow=0`)
+- `sudo nix flake update` was used (creates separate root cache state)
+- A local git repo was updated but the lock wasn't refreshed
+
+Fix: Run `make lock-local` (as user, never sudo) to re-lock all local git inputs, then `make build` to verify.
 
 #### Darwin-Rebuild Errors
 ```
