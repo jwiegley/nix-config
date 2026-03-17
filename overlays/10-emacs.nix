@@ -553,8 +553,8 @@ let
         src = fetchFromGitHub {
           owner = "meedstrom";
           repo = "org-mem";
-          rev = "04abbc49d936dc632672d95851b0b1f2af4c2e3f";
-          sha256 = "sha256-6krt5jjv29dO8ARfvc4y3yTNGaC9bbeiYHMMIpU2/b4=";
+          rev = "7f85d407804b7f7ca56de23fef3d5599815ba104";
+          sha256 = "sha256-z2j5GL7vwXB7qI7A0HDdFBue7sppRN3NnwlML3TpfjM=";
           # date = 2025-10-01T20:50:56+02:00;
         };
         buildInputs = with eself; [

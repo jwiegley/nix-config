@@ -123,16 +123,16 @@ final: prev: {
     with prev;
     buildNpmPackage (finalAttrs: {
       pname = "claude-replay";
-      version = "0.5.0";
+      version = "0.5.2";
 
       src = fetchFromGitHub {
         owner = "es617";
         repo = "claude-replay";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-cSzZEA46wEOUEGhWVdNuqV8lSu0Brkw5ZL648qHRXm0=";
+        hash = "sha256-znzG0wy5J47qW9DEQ9FH096tbeJRqpP5FxEj51Fuw7w=";
       };
 
-      npmDepsHash = "sha256-syv/sC8j2Ng0pyvcwXdlQj1JwUZRrqvkV0jma2pg8HU=";
+      npmDepsHash = "sha256-CAVIhZnsqs+c+Dl3ZbkiYoFgT8mfuppcfv2slTWBkg8=";
 
       makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
 
@@ -151,13 +151,13 @@ final: prev: {
     with prev;
     buildNpmPackage (finalAttrs: {
       pname = "context-hub";
-      version = "15b8f4d9";
+      version = "02ba375c";
 
       src = fetchFromGitHub {
         owner = "andrewyng";
         repo = "context-hub";
-        rev = "15b8f4d943fa117d9b8ba3920922c545563f3adf";
-        hash = "sha256-IecojKRa9Tto1eY0BUDc6D7FS511l+xORmK8HO+8SoQ=";
+        rev = "02ba375c4deb4ba1d54550609bcd8b0e98ecf79c";
+        hash = "sha256-a51EY8+RXAkCHfKv5uULKZA8Ur07yJXiP2HTqJ0GgUY=";
       };
 
       npmDepsHash = "sha256-vQLCT8I4w4/5DXR1+3R4ZQ+DPSypQX3CpQNxrVp+E0I=";
@@ -192,16 +192,16 @@ final: prev: {
     with final;
     buildNpmPackage (finalAttrs: {
       pname = "claude-code-acp";
-      version = "0.21.0";
+      version = "0.22.0";
 
       src = fetchFromGitHub {
         owner = "zed-industries";
         repo = "claude-code-acp";
         rev = "v${finalAttrs.version}";
-        hash = "sha256-6c6bHuso3diW5ZfHiM2xcxGDTNG0LIL0TZd0MFVpW/E=";
+        hash = "sha256-yPBP93O4pnhUMFG0gRw3KGVM6Rpvmvv2YZJsiuyxpNM=";
       };
 
-      npmDepsHash = "sha256-UtiIcjgNCYMFrRpO5AlUbOyutJ3ipwIbcpMi2BqawEk=";
+      npmDepsHash = "sha256-AUqntm23wcPKelZ5Q27qXubS3gP6+iBdQ4HHWlnD1KA=";
 
       dontNpmBuild = false;
 
