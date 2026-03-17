@@ -470,6 +470,13 @@ in
       ''
       + lib.optionalString isLinux ''
         . ${pkgs.zsh-z}/share/zsh-z/zsh-z.plugin.zsh
+        # Source Nix environment so ~/.nix-profile/bin is in PATH for login shells.
+        # This is a no-op on NixOS (guarded internally); needed on Ubuntu/non-NixOS.
+        if [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
+          . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+        elif [[ -f ~/.nix-profile/etc/profile.d/nix.sh ]]; then
+          . ~/.nix-profile/etc/profile.d/nix.sh
+        fi
       '';
 
       initContent = ''
