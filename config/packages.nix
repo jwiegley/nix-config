@@ -200,13 +200,17 @@ rec {
       mergiraf
       git-my
       git-octopus
-      (lib.hiPrio git-pr)
+    ]
+    ++ lib.optional (pkgs ? git-pr) (lib.hiPrio pkgs.git-pr)
+    ++ [
       git-quick-stats
       git-quickfix
       git-recent
       git-reparent
       git-repo
-      (lib.lowPrio git-scripts)
+    ]
+    ++ lib.optional (pkgs ? git-scripts) (lib.lowPrio pkgs.git-scripts)
+    ++ [
       git-secret
       git-series
       git-sizer
