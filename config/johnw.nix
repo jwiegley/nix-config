@@ -45,6 +45,19 @@ in
   ]
   ++ lib.optionals (inputs ? promptdeploy) [
     inputs.promptdeploy.homeManagerModules.default
+    # Configure promptdeploy here so the definition is absent when the
+    # module (and its option declarations) is also absent.
+    (
+      { pkgs, lib, ... }:
+      lib.mkIf pkgs.stdenv.isDarwin {
+        programs.promptdeploy = {
+          enable = true;
+          package = inputs.promptdeploy.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          sourceDir = "${home}/src/promptdeploy";
+          targets = [ "local" ];
+        };
+      }
+    )
   ];
 
   home = {
@@ -267,13 +280,6 @@ in
         ];
         defaultPromptStorage = "notes";
       };
-    };
-
-    promptdeploy = lib.mkIf isDarwin {
-      enable = true;
-      package = inputs.promptdeploy.packages.${pkgs.stdenv.hostPlatform.system}.default;
-      sourceDir = "${home}/src/promptdeploy";
-      targets = [ "local" ];
     };
 
     carapace = lib.mkIf isDarwin {
