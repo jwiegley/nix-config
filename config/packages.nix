@@ -36,471 +36,496 @@ rec {
 
   rag-client = if inputs ? rag-client then inputs.rag-client.packages.${sys}.default else null;
 
-  package-list = [
-    (exe haskellPackages.hasktags)
-    (exe haskellPackages.hpack)
-    (lib.hiPrio (exe haskellPackages.ormolu))
-    (exe haskellPackages.pointfree)
-  ]
-  ++ inputPkg "promptdeploy"
-  ++ inputPkg "git-all"
-  ++ inputPkg "gitlib"
-  ++ inputPkg "hours"
-  ++ inputPkg "org-jw"
-  ++ inputPkg "pushme"
-  ++ inputPkg "renamer"
-  ++ inputPkg "sizes"
-  ++ inputPkg "trade-journal"
-  ++ inputPkg "una"
-  ++ inputPkg "gh-to-org"
-  ++ inputPkg "obr"
-  ++ inputPkg "org2jsonl"
-  ++ [
-    act
-    apg
-    aria2
-    asciidoctor
-    aspell
-    aspellDicts.en
-    autossh
-    awscli2
-    b3sum
-    backblaze-b2
-    bandwhich
-    bash-completion
-    bottom
-    bashInteractive
-    bat
-    btop
-    cacert
-    caligula
-    cargo-cache
-    cbor-diag
-    cmake
-  ]
-  ++ lib.optionals isDarwin [
-    contacts
-  ]
-  ++ [
-    coreutils
-    csvkit
-    ctop
-    curl
-  ]
-  ++ lib.optionals isDarwin [
-    darwin.cctools
-  ]
-  ++ [
-    deadnix
-    diffstat
-    diffutils
-    direnv
-    devenv
-  ]
-  ++ optPkg "dirscan"
-  ++ [
-    ditaa
-    dnstracer
-    dnsutils
-    dot2tex
-    doxygen
-    dstp
-    dust
-    eask-cli
-    # emacs30Env
-  ]
-  ++ lib.optional (emacs30MacPortEnv != null) emacs30MacPortEnv
-  ++ [
-    # emacsHEADEnv
-    emacs-lsp-booster
-    entr
-    exiv2
-    eyed3
-    eza
-    fd
-    fdupes
-    ffmpeg
-    figlet
-  ]
-  ++ optPkg "filetags"
-  ++ [
-    findutils
-    fontconfig
-    fpart
-    fping
-    fswatch
-    fx
-    fzf
-    gawk
-    getopt
-    delta
-    gh
-    gist
-    git-absorb
-    git-autofixup
-    git-branchless
-    git-branchstack
-    git-cliff
-    git-crypt
-    git-delete-merged-branches
-    # (lib.lowPrio git-extras)
-    (lib.lowPrio git-fame)
-    git-filter-repo
-    git-gone
-    git-hub
-    git-imerge
-    git-lfs
-    git-machete
-    mergiraf
-    git-my
-    git-octopus
-    (lib.hiPrio git-pr)
-    git-quick-stats
-    git-quickfix
-    git-recent
-    git-reparent
-    git-repo
-    (lib.lowPrio git-scripts)
-    git-secret
-    git-series
-    git-sizer
-    (lib.hiPrio git-standup)
-    git-subrepo
-    git-vendor
-    git-when-merged
-    git-workspace
-    gitRepo
-    gitflow
-    gitls
-    gitstats
-    hub
-    tig
-    top-git
-    global
-    gnugrep
-    gnumake
-    gnuplot
-    gnused
-    gnutar
-    go-jira
-  ]
-  ++ optPkg "gogcli"
-  ++ [
-    google-cloud-sdk
-    graphviz-nox
-    groff
-  ]
-  ++ optPkg "hammer"
-  ++ optPkg "hashdb"
-  ++ [
-    highlight
-    pkgs.hostname
-    html-tidy
-    htop
-    httm
-    httpie
-    httrack
-    iftop
-    igrep
-    imagemagickBig
-    imapfilter
-    imgcat
-    inkscape.out
-    iperf3
-    isync
-    jdk
-    jiq
-    jo
-    jq
-    jqp
-    json2yaml
-    jupyter
-    just
-    kew
-    # khard # Build broken on aarch64-linux (nixpkgs issue)
-    killall
-    kubectl
-  ]
-  ++ optPkg "ledger_HEAD"
-  ++ [
-    lefthook
-    less
-    lftp
-    librsvg
-    libxml2
-    libxslt
-  ]
-  ++ optPkg "linkdups"
-  ++ optPkg "lipotell"
-  ++ [
-    lnav
-    loccount
-    lsof
-    lzip
-    lzop
-  ]
-  ++ lib.optionals isDarwin [
-    m-cli
-    macmon
-  ]
-  ++ [
-    m4
-  ]
-  ++ optPkg "mapq"
-  ++ optPkg "markless"
-  ++ [
-    mb2md
-    mcat
-    metabase
-    mitmproxy
-    mkcert
-    more
-    mtr
-    multitail
-  ]
-  ++ (if pkgs ? my-scripts then [ (lib.lowPrio pkgs.my-scripts) ] else [ ])
-  ++ [
-    nnn
-    nix-diff
-    nix-index
-    nix-info
-    nix-prefetch-git
-  ]
-  ++ optPkg "nix-scripts"
-  ++ [
-    nix-tree
-    nixpkgs-fmt
-    nixfmt
-    nmap
-    nodejs_22
-    nss
-    ntp
-    opensc
-    openssh
-    openssl
-    openvpn
-  ]
-  ++ optPkg "org2tc"
-  ++ [
-    p7zip
-    pandoc
-    paperkey
-    parallel
-    pass-git-helper
-    patch
-    patchutils
-    pcre
-    pdnsd
-    pdfgrep
-    (perl.withPackages (perl-pkgs: with perl-pkgs; [ ImageExifTool ]))
-  ]
-  ++ lib.optionals isDarwin [
-    pinentry_mac
-    pngpaste
-  ]
-  ++ [
-    pkg-config
-    plantuml
-    pnpm
-    poppler-utils
-    (postgresql.withPackages (postgres-pkgs: with postgres-pkgs; [ pgvector ]))
-    libpq
-    procmail
-    procps
-    protobufc
-    psrecord
-    pstree
-    pv
-    (lib.hiPrio (
-      python3.withPackages (
-        python-pkgs: with python-pkgs; [
-          autoflake
-          basedpyright
-          black # Python code formatter
-          ruff # Python code linter/formatter
-          flake8 # Python code linter
-          hf-xet
-          huggingface-hub
-          isort # Python code formatter
-          numpy
-          pandas
-          pylint
-          requests
-          stdenv
-          venvShellHook
-        ]
-      )
-    ))
-    pyright # LSP server for Python
-    qemu
-    libvirt
-    qpdf
-    qrencode
-  ]
-  ++ lib.optional (rag-client != null) rag-client
-  ++ [
-    ratpoison
-    rclone
-    # recoll-nox
-    renameutils
-    restic
-    ripgrep
-    rlwrap
-    rmtrash
-    rsync
-    ruby
-    samba
-    # sbcl  # Disabled: ECL bootstrap broken on Darwin/Apple Silicon
-    scc
-    sccache
-    screen
-    sdcv
-    shfmt
-    siege
-  ]
-  ++ optPkg "sieveshell"
-  ++ [
-    sift
-    sipcalc
-    slackdump
-    smartmontools
-    socat
-    sourceHighlight
-    spiped
-    sqlite
-    sqlite-analyzer
-    sqldiff
-    squashfsTools
-    srm
-    sshfs
-  ]
-  ++ optPkg "sshify"
-  ++ [
-    statix
-    stow
-    subversion
-    svg2tikz
-    taskjuggler
-    tealdeer
-  ]
-  ++ lib.optionals isDarwin [
-    terminal-notifier
-  ]
-  ++ [
-    time
-    tlaplus
-    tmux
-    translate-shell
-    trash-cli
-    tree
-    tree-sitter
-  ]
-  ++ optPkg "tsvutils"
-  ++ [
-    (lib.lowPrio ctags)
-    universal-ctags
-    unixtools.ifconfig
-    unixtools.netstat
-    unixtools.ping
-    unixtools.route
-    unixtools.top
-    unrar
-    unzip
-    uv
-    vega-lite
-    w3m
-    wabt
-    watch
-    watchman
-    wget
-    wireguard-tools
-    xapian
-    xauth
-    xhost
-  ]
-  ++ lib.optionals isDarwin [
-    xquartz
-  ]
-  ++ [
-    xz
-    yazi
-  ]
-  ++ optPkg "yamale"
-  ++ [
-    yq
-    yuicompressor
-    z3
-    zbar
-    zfs-prune-snapshots
-    zip
-    zsh
-    zsh-syntax-highlighting
+  package-list =
 
-    aider-chat
-  ]
-  ++ optPkg "guidellm"
-  ++ [
-    (lib.hiPrio llama-cpp)
-  ]
-  ++ optPkg "llama-swap"
-  ++ optPkg "gguf-tools"
-  ++ [
-    openmpi
-    qdrant
-  ]
-  ++ optPkg "qdrant-web-ui"
-  ++ optPkg "pal-mcp-server"
-  ++ optPkg "rustdocs-mcp-server"
-  ++ lib.optionals isDarwin (optPkg "vllm-mlx")
-  ++ optPkg "agnix"
-  ++ optPkg "cozempic"
-  ++ optPkg "context-hub"
-  ++ optPkg "context7-mcp"
-  ++ optPkg "playwright-mcp"
-  ++ optPkg "github-mcp-server"
-  ++ optPkg "claude-replay"
-  ++ (
-    if pkgs ? mcp-server-sequential-thinking then
-      [ (lib.hiPrio pkgs.mcp-server-sequential-thinking) ]
-    else
-      [ ]
-  )
-  ++ [
-    (exe git-annex)
-    git-annex-remote-rclone
-  ]
-  # Linux-only packages (not available on Darwin/macOS)
-  ++ lib.optionals isLinux (optPkg "cpx")
-  ++ (
-    if inputs ? llm-agents then
-      (with inputs.llm-agents.packages.${sys}; [
-        claude-code
-        claude-code-acp
-        ccusage
-        droid
-        opencode
-        # gemini-cli
-        # codex
-        # ollama
-      ])
-    else
-      [ ]
-  )
-  ++ lib.optionals (hostname == "hera") (
-    [
-      himalaya
-      openai-whisper
-      openhue-cli
-      soco-cli
-      spotify-player
+    # ── Emacs ────────────────────────────────────────────────────────
+    # emacs30Env
+    lib.optional (emacs30MacPortEnv != null) emacs30MacPortEnv
+    ++ [
+      # emacsHEADEnv
+      eask-cli
+      emacs-lsp-booster
     ]
+
+    # ── Haskell Tools ────────────────────────────────────────────────
+    ++ [
+      (exe haskellPackages.hasktags)
+      (exe haskellPackages.hpack)
+      (lib.hiPrio (exe haskellPackages.ormolu))
+      (exe haskellPackages.pointfree)
+    ]
+
+    # ── Custom Flake Inputs ──────────────────────────────────────────
+    ++ inputPkg "git-all"
+    ++ inputPkg "gitlib"
+    ++ inputPkg "hours"
+    ++ inputPkg "org-jw"
+    ++ inputPkg "pushme"
+    ++ inputPkg "renamer"
+    ++ inputPkg "sizes"
+    ++ inputPkg "trade-journal"
+    ++ inputPkg "una"
+    ++ inputPkg "gh-to-org"
+    ++ inputPkg "obr"
+    ++ inputPkg "org2jsonl"
+    ++ inputPkg "promptdeploy"
+
+    # ── Shell & Terminal Utilities ───────────────────────────────────
+    ++ [
+      bashInteractive
+      bash-completion
+      bat
+      eza
+      fzf
+      nnn
+      ratpoison
+      rlwrap
+      screen
+      sdcv
+      shfmt
+      tealdeer
+      tmux
+      tree
+      w3m
+      watch
+      yazi
+      zsh
+      zsh-syntax-highlighting
+    ]
+
+    # ── Core System Utilities ────────────────────────────────────────
+    ++ [
+      cacert
+      coreutils
+      diffstat
+      diffutils
+      entr
+      findutils
+      fontconfig
+      fswatch
+      gawk
+      getopt
+      gnugrep
+      gnumake
+      gnused
+      gnutar
+      pkgs.hostname
+      less
+      libxml2
+      libxslt
+      loccount
+      m4
+      more
+      ntp
+      p7zip
+      parallel
+      patch
+      patchutils
+      pcre
+      (perl.withPackages (perl-pkgs: with perl-pkgs; [ ImageExifTool ]))
+      renameutils
+      ripgrep
+      scc
+      time
+      translate-shell
+      (lib.lowPrio ctags)
+      universal-ctags
+      tree-sitter
+      unixtools.ifconfig
+      unixtools.netstat
+      unixtools.ping
+      unixtools.route
+      unixtools.top
+      watchman
+      xapian
+      xauth
+      xhost
+    ]
+
+    # ── Networking Tools ─────────────────────────────────────────────
+    ++ [
+      aria2
+      autossh
+      curl
+      dstp
+      fping
+      httpie
+      httrack
+      iftop
+      iperf3
+      lftp
+      mitmproxy
+      mtr
+      nmap
+      openssh
+      openvpn
+      siege
+      sift
+      socat
+      spiped
+      wget
+      wireguard-tools
+    ]
+
+    # ── DNS Tools ────────────────────────────────────────────────────
+    ++ [
+      dnstracer
+      dnsutils
+      pdnsd
+      sipcalc
+    ]
+
+    # ── Git Tools ────────────────────────────────────────────────────
+    ++ [
+      delta
+      gh
+      gist
+      (exe git-annex)
+      git-annex-remote-rclone
+      git-absorb
+      git-autofixup
+      git-branchless
+      git-branchstack
+      git-cliff
+      git-crypt
+      git-delete-merged-branches
+      # (lib.lowPrio git-extras)
+      (lib.lowPrio git-fame)
+      git-filter-repo
+      git-gone
+      git-hub
+      git-imerge
+      git-lfs
+      git-machete
+      mergiraf
+      git-my
+      git-octopus
+      (lib.hiPrio git-pr)
+      git-quick-stats
+      git-quickfix
+      git-recent
+      git-reparent
+      git-repo
+      (lib.lowPrio git-scripts)
+      git-secret
+      git-series
+      git-sizer
+      (lib.hiPrio git-standup)
+      git-subrepo
+      git-vendor
+      git-when-merged
+      git-workspace
+      gitRepo
+      gitflow
+      gitls
+      gitstats
+      hub
+      tig
+      top-git
+      subversion
+    ]
+
+    # ── Nix Tools ────────────────────────────────────────────────────
+    ++ [
+      cachix
+      deadnix
+      devenv
+      direnv
+      nix-diff
+      nix-index
+      nix-info
+      nix-prefetch-git
+      nix-tree
+      nixpkgs-fmt
+      nixfmt
+      statix
+    ]
+
+    # ── Programming Languages & Dev Tools ────────────────────────────
+    ++ [
+      act
+      cmake
+      doxygen
+      global
+      go-jira
+      graphviz-nox
+      igrep
+      jdk
+      just
+      jupyter
+      lefthook
+      nodejs_22
+      pkg-config
+      pnpm
+      (lib.hiPrio (
+        python3.withPackages (
+          python-pkgs: with python-pkgs; [
+            autoflake
+            basedpyright
+            black # Python code formatter
+            ruff # Python code linter/formatter
+            flake8 # Python code linter
+            hf-xet
+            huggingface-hub
+            isort # Python code formatter
+            numpy
+            pandas
+            pylint
+            requests
+            stdenv
+            venvShellHook
+          ]
+        )
+      ))
+      pyright # LSP server for Python
+      protobufc
+      ruby
+      sccache
+      tlaplus
+      uv
+      wabt
+      z3
+    ]
+    ++ optPkg "yamale"
+    ++ [
+      yuicompressor
+      # sbcl  # Disabled: ECL bootstrap broken on Darwin/Apple Silicon
+    ]
+
+    # ── Text Processing & Documents ──────────────────────────────────
+    ++ [
+      asciidoctor
+      aspell
+      aspellDicts.en
+      ditaa
+      dot2tex
+      figlet
+      gnuplot
+      groff
+      highlight
+      html-tidy
+      inkscape.out
+      librsvg
+      pandoc
+      pdfgrep
+      plantuml
+      poppler-utils
+      qpdf
+      sourceHighlight
+      svg2tikz
+    ]
+    ++ optPkg "filetags"
+    ++ optPkg "org2tc"
+
+    # ── Data & JSON/YAML Tools ───────────────────────────────────────
+    ++ [
+      cbor-diag
+      csvkit
+      fx
+      jo
+      jiq
+      jq
+      jqp
+      json2yaml
+      metabase
+      (postgresql.withPackages (postgres-pkgs: with postgres-pkgs; [ pgvector ]))
+      libpq
+      sqlite
+      sqlite-analyzer
+      sqldiff
+      yq
+    ]
+    ++ optPkg "tsvutils"
+
+    # ── File Management Tools ────────────────────────────────────────
+    ++ [
+      dust
+      fd
+      fdupes
+      fpart
+      httm
+      lzip
+      lzop
+      rclone
+      # recoll-nox
+      restic
+      rmtrash
+      rsync
+      squashfsTools
+      srm
+      stow
+      trash-cli
+      unrar
+      unzip
+      xz
+      zfs-prune-snapshots
+      zip
+    ]
+
+    # ── Media Tools ──────────────────────────────────────────────────
+    ++ [
+      exiv2
+      eyed3
+      ffmpeg
+      imagemagickBig
+      imgcat
+      kew
+      qrencode
+      vega-lite
+      zbar
+    ]
+
+    # ── Security & Crypto ────────────────────────────────────────────
+    ++ [
+      apg
+      b3sum
+      mkcert
+      nss
+      opensc
+      openssl
+      paperkey
+      pass-git-helper
+      sshfs
+    ]
+    ++ optPkg "sshify"
+
+    # ── Monitoring & System Info ─────────────────────────────────────
+    ++ [
+      bandwhich
+      bottom
+      btop
+      ctop
+      htop
+      killall
+      lnav
+      lsof
+      multitail
+      procps
+      psrecord
+      pstree
+      pv
+      smartmontools
+    ]
+
+    # ── Email Tools ──────────────────────────────────────────────────
+    ++ [
+      imapfilter
+      isync
+      mb2md
+      procmail
+    ]
+    ++ optPkg "sieveshell"
+
+    # ── Cloud & Containers ───────────────────────────────────────────
+    ++ [
+      awscli2
+      backblaze-b2
+      google-cloud-sdk
+      kubectl
+      qemu
+      libvirt
+      samba
+      slackdump
+    ]
+
+    # ── AI & LLM Tools ──────────────────────────────────────────────
+    ++ [
+      (lib.hiPrio llama-cpp)
+      openmpi
+      qdrant
+    ]
+    ++ optPkg "guidellm"
+    ++ optPkg "llama-swap"
+    ++ optPkg "gguf-tools"
+    ++ optPkg "qdrant-web-ui"
+    ++ optPkg "agnix"
+    ++ optPkg "cozempic"
+    ++ optPkg "claude-replay"
+    ++ lib.optional (rag-client != null) rag-client
     ++ (
       if inputs ? llm-agents then
         (with inputs.llm-agents.packages.${sys}; [
-          mcporter
+          claude-code
+          claude-code-acp
+          ccusage
+          droid
+          opencode
+          # gemini-cli
+          # codex
+          # ollama
         ])
       else
         [ ]
     )
-  );
+
+    # ── MCP Servers & Agent Tools ────────────────────────────────────
+    ++ optPkg "pal-mcp-server"
+    ++ optPkg "rustdocs-mcp-server"
+    ++ optPkg "context-hub"
+    ++ optPkg "context7-mcp"
+    ++ optPkg "playwright-mcp"
+    ++ optPkg "github-mcp-server"
+    ++ (
+      if pkgs ? mcp-server-sequential-thinking then
+        [ (lib.hiPrio pkgs.mcp-server-sequential-thinking) ]
+      else
+        [ ]
+    )
+
+    # ── User Scripts & Custom Packages ───────────────────────────────
+    ++ (if pkgs ? my-scripts then [ (lib.lowPrio pkgs.my-scripts) ] else [ ])
+    ++ optPkg "nix-scripts"
+    ++ optPkg "dirscan"
+    ++ optPkg "hammer"
+    ++ optPkg "hashdb"
+    ++ optPkg "ledger_HEAD"
+    ++ optPkg "linkdups"
+    ++ optPkg "lipotell"
+    ++ optPkg "mapq"
+    ++ optPkg "markless"
+    ++ optPkg "gogcli"
+
+    # ── Miscellaneous ────────────────────────────────────────────────
+    ++ [
+      caligula
+      cargo-cache
+      mcat
+      taskjuggler
+      # khard # Build broken on aarch64-linux (nixpkgs issue)
+    ]
+
+    # ── Darwin-Only Packages ─────────────────────────────────────────
+    ++ lib.optionals isDarwin [
+      contacts
+      darwin.cctools
+      m-cli
+      macmon
+      pinentry_mac
+      pngpaste
+      terminal-notifier
+      xquartz
+    ]
+    ++ lib.optionals isDarwin (optPkg "vllm-mlx")
+
+    # ── Linux-Only Packages ──────────────────────────────────────────
+    ++ lib.optionals isLinux (optPkg "cpx")
+
+    # ── Host-Specific Packages (hera) ────────────────────────────────
+    ++ lib.optionals (hostname == "hera") (
+      [
+        himalaya
+        openai-whisper
+        openhue-cli
+        soco-cli
+        spotify-player
+      ]
+      ++ (
+        if inputs ? llm-agents then
+          (with inputs.llm-agents.packages.${sys}; [
+            mcporter
+          ])
+        else
+          [ ]
+      )
+    );
 }
