@@ -159,7 +159,6 @@ rec {
       nmap
       openssh
       openvpn
-      siege
       sift
       socat
       spiped
@@ -506,6 +505,7 @@ rec {
       macmon
       pinentry_mac
       pngpaste
+      siege # Broken on Linux (glibc 2.42 strcasecmp conflict)
       terminal-notifier
       xquartz
     ]
