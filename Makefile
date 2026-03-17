@@ -10,6 +10,9 @@ ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 
+.PHONY: all lock-local build switch update update-projects upgrade-tasks upgrade \
+	changes copy check sizes clean purge sign travel-ready test tools repl
+
 all: switch
 
 %-all: %
@@ -50,12 +53,25 @@ repl:
 	nix --extra-experimental-features repl-flake \
 	    repl .#darwinConfigurations.$(HOSTNAME).pkgs
 
+lock-local:
+	$(call announce,Re-locking local git inputs)
+	@python3 -c '\
+	import json; \
+	lock = json.load(open("flake.lock")); \
+	nodes = lock["nodes"]; \
+	[print(n) for n, k in nodes["root"]["inputs"].items() \
+	 if nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("type") == "git" \
+	 and "file://" in nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("url", "")]' \
+	| while IFS= read -r input; do \
+	    nix flake update "$$input" 2>&1 | grep -v '^warning:' || true; \
+	done
+
 build:
 	$(call announce,darwin-rebuild build --flake .#$(HOSTNAME))
-	@darwin-rebuild build --flake .#$(HOSTNAME)
+	@sudo darwin-rebuild build --flake .#$(HOSTNAME)
 	@rm -f result*
 
-switch:
+switch: lock-local
 	$(call announce,darwin-rebuild switch --flake .#$(HOSTNAME))
 	@sudo darwin-rebuild switch --flake .#$(HOSTNAME)
 	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"
