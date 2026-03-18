@@ -4,7 +4,6 @@
   config,
   hostname,
   inputs,
-  overlays,
   ...
 }:
 
@@ -319,22 +318,7 @@ in
       ];
     };
 
-    overlays = [
-      # Inject flake inputs so overlays can access them via prev.inputs
-      (final: prev: { inherit inputs; })
-    ]
-    ++ overlays
-    ++ (
-      let
-        path = ../overlays;
-      in
-      with builtins;
-      map (n: import (path + ("/" + n))) (
-        filter (n: match ".*\\.nix" n != null || pathExists (path + ("/" + n + "/default.nix"))) (
-          attrNames (readDir path)
-        )
-      )
-    );
+    overlays = import ./overlays.nix { inherit inputs; };
   };
 
   nix =

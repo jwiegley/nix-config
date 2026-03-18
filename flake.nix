@@ -93,36 +93,6 @@
     rec {
       darwinConfigurations =
         let
-          overlays = [
-            # (final: prev:
-            #   let
-            #     # patchedNixpkgs = nixpkgs;
-            #     patchedNixpkgs =
-            #       (import nixpkgs { inherit (prev) system; }).applyPatches {
-            #         name = "nixpkgs-unstable-patched";
-            #         src = inputs.nixpkgs;
-            #         patches = [
-            #           (builtins.fetchurl {
-            #             url = "https://github.com/NixOS/nixpkgs/pull/440348.diff";
-            #             sha256 = "1pin02ljng9d01ywcbhlrlwr64chxs52f1fbvwdhyp4r17p1malp";
-            #             # date = "2025-09-09T22:41:46-0700";
-            #           })
-            #         ];
-            #       };
-            #     pkgs = import patchedNixpkgs { inherit (prev) system; };
-            #   in {
-            #     inherit (pkgs)
-            #       # 440348
-            #       ttfautohint
-            #       ;
-            #   })
-            inputs.mcp-servers-nix.overlays.default
-            (final: prev: {
-              github-mcp-server =
-                prev.callPackage (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")
-                  { };
-            })
-          ];
           configure =
             hostname: system:
             darwin.lib.darwinSystem {
@@ -131,7 +101,6 @@
                   darwin
                   hostname
                   inputs
-                  overlays
                   ;
               };
               modules = [
@@ -162,6 +131,46 @@
       # NixOS hosts import this via: inputs.nix-config (flake = false)
       # and then: imports = [ "${inputs.nix-config}/config/johnw.nix" ];
       homeManagerModules.johnw = import ./config/johnw.nix;
+
+      # Standalone home-manager configurations for Linux hosts.
+      # Usage:
+      #   home-manager switch --flake ~/src/nix#johnw@aarch64-linux
+      #   home-manager switch --flake ~/src/nix#jwiegley@x86_64-linux
+      homeConfigurations =
+        let
+          mkLinuxHome =
+            username: hostname: system:
+            home-manager.lib.homeManagerConfiguration {
+              pkgs = import nixpkgs {
+                inherit system;
+                overlays = import ./config/overlays.nix { inherit inputs; };
+              };
+              extraSpecialArgs = { inherit hostname inputs; };
+              modules = [
+                (
+                  args:
+                  let
+                    packages = import ./config/packages.nix args;
+                  in
+                  {
+                    imports = [ ./config/johnw.nix ];
+                    home = {
+                      inherit username;
+                      homeDirectory = "/home/${username}";
+                      stateVersion = "23.11";
+                      packages = packages.package-list;
+                    };
+                  }
+                )
+              ];
+            };
+        in
+        {
+          # vulcan, vps
+          "johnw@aarch64-linux" = mkLinuxHome "johnw" "linux" "aarch64-linux";
+          # andoria-*, delphi-*
+          "jwiegley@x86_64-linux" = mkLinuxHome "jwiegley" "linux" "x86_64-linux";
+        };
 
       formatter = forAllSystems (system: (import nixpkgs { inherit system; }).nixfmt);
 
