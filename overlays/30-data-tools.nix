@@ -43,6 +43,9 @@ in
       };
     };
 
+}
+// prev.lib.optionalAttrs (paths.dirscan != null) {
+
   # Stateful directory scanning utility
   # Note: Requires paths.dirscan
   dirscan =
@@ -73,6 +76,9 @@ in
         maintainers = with lib.maintainers; [ jwiegley ];
       };
     };
+
+}
+// {
 
   # Utilities for processing tab-separated files
   tsvutils =

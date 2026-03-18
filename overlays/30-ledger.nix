@@ -5,7 +5,7 @@
 # Note: Requires paths.ledger
 final: prev:
 
-{
+prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? ledger) {
 
   ledger_HEAD =
     prev.inputs.ledger.packages.${prev.stdenv.hostPlatform.system}.ledger.overrideAttrs

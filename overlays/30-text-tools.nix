@@ -88,6 +88,9 @@ in
       };
     };
 
+}
+// prev.lib.optionalAttrs (paths.org2tc != null) {
+
   # Convert org-mode to timeclock format
   # Note: Requires paths.org2tc
   org2tc =

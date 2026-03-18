@@ -37,6 +37,9 @@ in
       };
     };
 
+}
+// prev.lib.optionalAttrs (paths.scripts != null) {
+
   # Personal scripts collection
   my-scripts =
     with final;

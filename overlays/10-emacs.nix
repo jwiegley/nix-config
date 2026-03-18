@@ -150,10 +150,14 @@ let
         # date = 2025-10-02T08:32:05-0700;
       };
 
-      jobhours = compileEmacsFiles {
-        name = "jobhours";
-        src = paths.hours;
-      };
+      jobhours =
+        if paths.hours != null then
+          compileEmacsFiles {
+            name = "jobhours";
+            src = paths.hours;
+          }
+        else
+          null;
 
       ########################################################################
 
@@ -826,6 +830,9 @@ in
       name = "emacs30";
       buildInputs = [ (final.emacs30PackagesNg.emacsWithPackages myPkgs) ];
     };
+
+}
+// prev.lib.optionalAttrs (paths.emacs-src != null) {
 
   ##########################################################################
 

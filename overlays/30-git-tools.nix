@@ -75,6 +75,9 @@ in
       };
     };
 
+}
+// prev.lib.optionalAttrs (paths.git-scripts != null) {
+
   # Custom git helper scripts
   # Note: Requires paths.git-scripts
   git-scripts =

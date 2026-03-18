@@ -3,7 +3,9 @@
 # Dependencies: Uses final for python3Packages and claude-code-acp; uses prev elsewhere
 # Packages: pal-mcp-server, mcp-server-sequential-thinking, rustdocs-mcp-server,
 #           browser-control-mcp, claude-code-acp, context-hub
-final: prev: {
+final: prev:
+
+prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
 
   # PAL MCP Server - Provider Abstraction Layer for multi-model AI collaboration
   # NOTE: Using 'final' because python3Packages may be modified by
@@ -43,6 +45,9 @@ final: prev: {
         mainProgram = "pal-mcp-server";
       };
     };
+
+}
+// {
 
   # Fix: npm prune removes @types/node, then prepare script tries to rebuild
   mcp-server-sequential-thinking = prev.mcp-server-sequential-thinking.overrideAttrs (old: {
