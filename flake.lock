@@ -6738,11 +6738,11 @@
         "rust-overlay": "rust-overlay_4"
       },
       "locked": {
-        "lastModified": 1773692663,
-        "narHash": "sha256-rssRYZ1tzmOYX3fkhsxBlu5Zz4tIsA3JpBPEQfj9Oto=",
+        "lastModified": 1773854790,
+        "narHash": "sha256-mWeouJ5jYN5Cfk5ofb82uIyne7A9SMydpvGszeicHhI=",
         "ref": "refs/heads/main",
-        "rev": "bf44e271f58bbda6b4ceca8a8a2d062bb2e65d48",
-        "revCount": 22,
+        "rev": "59521f99a490703d4d02f9b0f312a92ec9135ba8",
+        "revCount": 30,
         "type": "git",
         "url": "file:///Users/johnw/src/org2jsonl"
       },
