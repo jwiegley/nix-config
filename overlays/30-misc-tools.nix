@@ -42,13 +42,13 @@ final: prev: {
     with prev;
     stdenv.mkDerivation rec {
       name = "linkdups-${version}";
-      version = "57bb7933";
+      version = "e1d5b82d";
 
       src = fetchFromGitHub {
         owner = "jwiegley";
         repo = "linkdups";
-        rev = "57bb79332d3b79418692d0c974acba83a4fd3fc9";
-        sha256 = "sha256-cMC/srNVKjwzcQwXsG1HgdsxSR7KEh5cdzXrZdUGgLQ=";
+        rev = "e1d5b82da048300a78f2fc7d62f200bbfc5d973b";
+        sha256 = "sha256-N0MAdqn8yHrEvAbbtfHhToa9Kefs6LSwA/tVPUzWOSs=";
         # date = 2025-05-13T11:29:24-07:00;
       };
 

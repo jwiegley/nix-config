@@ -128,16 +128,16 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     with prev;
     buildNpmPackage (finalAttrs: {
       pname = "claude-replay";
-      version = "0.5.2";
+      version = "0.5.3";
 
       src = fetchFromGitHub {
         owner = "es617";
         repo = "claude-replay";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-znzG0wy5J47qW9DEQ9FH096tbeJRqpP5FxEj51Fuw7w=";
+        hash = "sha256-WlX0djAU8WXg2x/HILc4l6OouPM8e5xLEmjN0mfqHjE=";
       };
 
-      npmDepsHash = "sha256-CAVIhZnsqs+c+Dl3ZbkiYoFgT8mfuppcfv2slTWBkg8=";
+      npmDepsHash = "sha256-ikleWdiFxdJLuwICbwuardAmjWzh21fAaPBgyd9ER24=";
 
       makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
 
@@ -156,13 +156,13 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     with prev;
     buildNpmPackage (finalAttrs: {
       pname = "context-hub";
-      version = "02ba375c";
+      version = "9ba380cc";
 
       src = fetchFromGitHub {
         owner = "andrewyng";
         repo = "context-hub";
-        rev = "02ba375c4deb4ba1d54550609bcd8b0e98ecf79c";
-        hash = "sha256-a51EY8+RXAkCHfKv5uULKZA8Ur07yJXiP2HTqJ0GgUY=";
+        rev = "9ba380cc96a1f8b56b5abb2175bf637447affc72";
+        hash = "sha256-Zl149CfVqXxVT61VU3x08IXIuW/gFY+9I4+aFc741nA=";
       };
 
       npmDepsHash = "sha256-vQLCT8I4w4/5DXR1+3R4ZQ+DPSypQX3CpQNxrVp+E0I=";
@@ -197,16 +197,16 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     with final;
     buildNpmPackage (finalAttrs: {
       pname = "claude-code-acp";
-      version = "0.22.0";
+      version = "0.22.2";
 
       src = fetchFromGitHub {
         owner = "zed-industries";
         repo = "claude-code-acp";
         rev = "v${finalAttrs.version}";
-        hash = "sha256-yPBP93O4pnhUMFG0gRw3KGVM6Rpvmvv2YZJsiuyxpNM=";
+        hash = "sha256-JkSE6fwtM1btfuxbwX7b04cbTDr5SdYEb7qwlZK9JYo=";
       };
 
-      npmDepsHash = "sha256-AUqntm23wcPKelZ5Q27qXubS3gP6+iBdQ4HHWlnD1KA=";
+      npmDepsHash = "sha256-9OhdDRQuekmt3JMs0oGVbvqWcQFoyk4ZZlm6DZCNazU=";
 
       dontNpmBuild = false;
 
