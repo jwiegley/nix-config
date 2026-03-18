@@ -1358,11 +1358,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1773113989,
-        "narHash": "sha256-DSBuS8YbtnmCfCFOLAzDlM5lJPLQsfdTeJDxKfeDLdY=",
+        "lastModified": 1773856444,
+        "narHash": "sha256-Zpck/seb0XCYpUJ+r22PrVPCHD2AOwHcaIJ2ubFx2Gw=",
         "ref": "refs/heads/main",
-        "rev": "e0404d086edef188fd0a017aa888e80394075c25",
-        "revCount": 2171,
+        "rev": "d9ac9fdad200ba1acdfead6a584c22e4c4a8307c",
+        "revCount": 2337,
         "type": "git",
         "url": "file:///Users/johnw/src/git-ai/main"
       },
@@ -6791,11 +6791,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773692042,
-        "narHash": "sha256-qHH5SZ1e0iVVONNcr6lrUT13mvDRDnuaidzZ7e0mX4Q=",
+        "lastModified": 1773870988,
+        "narHash": "sha256-ShZn+P9qyOkkFdusMC91UT6H6TdOJSJepX2KKPxtKo0=",
         "ref": "refs/heads/main",
-        "rev": "76d35cc173cb72dec64a30ea9874ecc1eced4625",
-        "revCount": 186,
+        "rev": "25703e365c05a280059f3100ae4c0461258088d3",
+        "revCount": 188,
         "shallow": false,
         "type": "git",
         "url": "file:///Users/johnw/src/promptdeploy"
@@ -6817,11 +6817,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773771268,
-        "narHash": "sha256-UPFGlKNvyFS516zZ18qtBLCk1JxFG+481KtN67rs1AI=",
+        "lastModified": 1773868756,
+        "narHash": "sha256-qA06vmfimxrG6BdwbIJpccsRQ08fDcd1fWLN3JK78LU=",
         "ref": "refs/heads/master",
-        "rev": "3152decda328c502c3a8c579db4d3a50f66381bf",
-        "revCount": 219,
+        "rev": "038b54f87e3bc349f287d9179ce284fea8136c7c",
+        "revCount": 222,
         "type": "git",
         "url": "file:///Users/johnw/src/pushme"
       },
