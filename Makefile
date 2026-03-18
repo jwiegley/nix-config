@@ -10,7 +10,7 @@ ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 
-.PHONY: all lock-local build switch update update-projects upgrade-tasks upgrade \
+.PHONY: all verify-inputs lock-local build switch update update-projects upgrade-tasks upgrade \
 	changes copy check sizes clean purge sign travel-ready test tools repl
 
 all: switch
@@ -53,7 +53,43 @@ repl:
 	nix --extra-experimental-features repl-flake \
 	    repl .#darwinConfigurations.$(HOSTNAME).pkgs
 
-lock-local:
+verify-inputs:
+	$(call announce,Verifying local git inputs for NAR hash safety)
+	@errfile=$$(mktemp); \
+	python3 -c '\
+	import json; \
+	lock = json.load(open("flake.lock")); \
+	nodes = lock["nodes"]; \
+	[print(nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("url", "")) \
+	 for n, k in nodes["root"]["inputs"].items() \
+	 if nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("type") == "git" \
+	 and "file://" in nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("url", "")]' \
+	| sed 's|file://||' \
+	| while IFS= read -r repo; do \
+	    bad=$$(git -C "$$repo" ls-files -v 2>/dev/null | grep -E '^[shS] '); \
+	    if [ -n "$$bad" ]; then \
+	        echo "ERROR: $$repo has skip-worktree/assume-unchanged files:" | tee -a "$$errfile"; \
+	        echo "$$bad" | tee -a "$$errfile"; \
+	        echo "Fix: git -C $$repo update-index --no-skip-worktree --no-assume-unchanged <files>" | tee -a "$$errfile"; \
+	        echo "Then: git -C $$repo checkout -- <files>" | tee -a "$$errfile"; \
+	    fi; \
+	    uninit=$$(git -C "$$repo" submodule status 2>/dev/null | grep '^-'); \
+	    if [ -n "$$uninit" ]; then \
+	        echo "ERROR: $$repo has uninitialized submodules:" | tee -a "$$errfile"; \
+	        echo "$$uninit" | tee -a "$$errfile"; \
+	        echo "Fix: cd $$repo && git submodule update --init" | tee -a "$$errfile"; \
+	    fi; \
+	done; \
+	if [ -s "$$errfile" ]; then \
+	    echo ""; \
+	    echo "NAR hash mismatches will occur until the above are fixed."; \
+	    echo "See: nix flake update uses filesystem, darwin-rebuild uses git archive."; \
+	    rm -f "$$errfile"; \
+	    exit 1; \
+	fi; \
+	rm -f "$$errfile"
+
+lock-local: verify-inputs
 	$(call announce,Re-locking local git inputs)
 	@python3 -c '\
 	import json; \
