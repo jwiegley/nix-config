@@ -6,7 +6,9 @@
 }:
 with pkgs;
 let
-  inherit (stdenv) isDarwin isLinux;
+  inherit (stdenv)
+    isDarwin # isLinux
+    ;
   sys = pkgs.stdenv.hostPlatform.system;
 
   # Helper to conditionally include a package from a flake input.
@@ -511,8 +513,8 @@ rec {
     ]
     ++ lib.optionals isDarwin (optPkg "vllm-mlx")
 
-    # ── Linux-Only Packages ──────────────────────────────────────────
-    ++ lib.optionals isLinux (optPkg "cpx")
+    # # ── Linux-Only Packages ──────────────────────────────────────────
+    # ++ lib.optionals isLinux (optPkg "cpx")
 
     # ── Host-Specific Packages (hera) ────────────────────────────────
     ++ lib.optionals (hostname == "hera") (
