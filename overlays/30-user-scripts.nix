@@ -33,7 +33,7 @@ in
         homepage = "https://github.com/jwiegley";
         license = licenses.mit;
         maintainers = with maintainers; [ jwiegley ];
-        platforms = platforms.darwin;
+        platforms = platforms.unix;
       };
     };
 
@@ -60,7 +60,7 @@ in
         homepage = "https://github.com/jwiegley";
         license = licenses.mit;
         maintainers = with maintainers; [ jwiegley ];
-        platforms = platforms.darwin;
+        platforms = platforms.unix;
       };
     };
 
