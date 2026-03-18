@@ -10,35 +10,27 @@ let
 in
 {
 
-  # Simple key/value store for keeping hashes
+  # File checksum database for duplicate detection
   hashdb =
     with prev;
-    stdenv.mkDerivation rec {
-      name = "hashdb-${version}";
-      version = "86c8675d";
+    python3Packages.buildPythonApplication {
+      pname = "hashdb";
+      version = "0.1.0";
 
       src = fetchFromGitHub {
         owner = "jwiegley";
         repo = "hashdb";
-        rev = "86c8675d4116c03e81a7468cc66c4c987f1d203e";
-        sha256 = "sha256-rs0eqy8yA2YXZd1y6djGIG/WFwvWlSfz08m5qlkG524=";
-        # date = 2011-10-04T03:27:40-05:00;
+        rev = "3586458b01e7f61c6254d9a5220fc2fa6b4d217e";
+        sha256 = "sha256-nu4TMw3Jn1HEVqH244JovG8zN6CbgMg3TC/T0We59l8=";
       };
 
-      phases = [
-        "unpackPhase"
-        "installPhase"
-      ];
-
-      installPhase = ''
-        mkdir -p $out/bin
-        cp -p hashdb $out/bin
-      '';
+      pyproject = true;
+      build-system = [ python3Packages.setuptools ];
 
       meta = {
         homepage = "https://github.com/jwiegley/hashdb";
-        description = "A simply key/value store for keeping hashes";
-        license = lib.licenses.mit;
+        description = "File checksum database for duplicate detection";
+        license = lib.licenses.bsd3;
         maintainers = with lib.maintainers; [ jwiegley ];
       };
     };
