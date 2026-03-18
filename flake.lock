@@ -6791,11 +6791,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773870988,
-        "narHash": "sha256-ShZn+P9qyOkkFdusMC91UT6H6TdOJSJepX2KKPxtKo0=",
+        "lastModified": 1773874976,
+        "narHash": "sha256-jQ3EpUkaaW2u6Owie1m6sdhQZrwrF0m+AlLOZAhR268=",
         "ref": "refs/heads/main",
-        "rev": "25703e365c05a280059f3100ae4c0461258088d3",
-        "revCount": 188,
+        "rev": "ff36e38ed4315240f97d6abaa4070e1ba104a9a8",
+        "revCount": 191,
         "shallow": false,
         "type": "git",
         "url": "file:///Users/johnw/src/promptdeploy"
@@ -6994,7 +6994,7 @@
       "flake": false,
       "locked": {
         "lastModified": 1773872760,
-        "narHash": "sha256-jmVnB1//i13sLPRdv/5RyGMPuom+BzOvNdGNC4Hp/8I=",
+        "narHash": "sha256-/xYlQhAdPqk3OS7y4tbVF6fcMkjI1ICcWRqf6yLz/l8=",
         "ref": "refs/heads/main",
         "rev": "d2b7a102f4a3b5572d2c25b99189ce917beaba5f",
         "revCount": 1358,
