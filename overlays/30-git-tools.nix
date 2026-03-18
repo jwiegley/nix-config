@@ -8,9 +8,10 @@ final: prev:
 let
   paths = import ../config/paths.nix { inherit (prev) inputs; };
 in
-{
+# Git Large File Storage (pre-built binary for darwin-arm64)
+# On Linux, the nixpkgs git-lfs package is used instead.
+prev.lib.optionalAttrs prev.stdenv.isDarwin {
 
-  # Git Large File Storage (pre-built binary for darwin-arm64)
   git-lfs =
     with prev;
     stdenv.mkDerivation rec {
@@ -44,9 +45,12 @@ in
         homepage = "https://git-lfs.github.com/";
         license = licenses.mit;
         maintainers = with maintainers; [ jwiegley ];
-        platforms = platforms.unix;
+        platforms = platforms.darwin;
       };
     };
+
+}
+// {
 
   # Create and update GitHub PRs with stacked commits
   git-pr =
@@ -92,15 +96,16 @@ in
       installPhase = ''
         mkdir -p $out/bin
         find . -maxdepth 1 \( -type f -o -type l \) -executable \
+            ! -name git-merge-changelog \
             -exec cp -pL {} $out/bin \;
       '';
 
       meta = with prev.lib; {
         description = "John Wiegley's git scripts";
-        homepage = "https://github.com/jwiegley";
+        homepage = "https://github.com/jwiegley/git-scripts";
         license = licenses.mit;
         maintainers = with maintainers; [ jwiegley ];
-        platforms = platforms.darwin;
+        platforms = platforms.unix;
       };
     };
 
