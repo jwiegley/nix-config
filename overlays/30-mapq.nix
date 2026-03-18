@@ -2,7 +2,8 @@
 # Purpose: Apple Maps query CLI tool for OpenClaw
 # Dependencies: macOS system Swift compiler and MapKit framework
 # Packages: mapq
-final: prev: {
+final: prev:
+prev.lib.optionalAttrs prev.stdenv.isDarwin {
 
   mapq = prev.stdenv.mkDerivation {
     name = "mapq-1.0.0";
