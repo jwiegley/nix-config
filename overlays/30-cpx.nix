@@ -2,7 +2,8 @@
 # Purpose: cpx - Modern, fast file copy tool with progress bars and resume support
 # Dependencies: Rust, Linux-specific (copy_file_range syscall)
 # Packages: cpx
-final: prev: {
+final: prev:
+prev.lib.optionalAttrs prev.stdenv.isLinux {
 
   cpx =
     with prev;
@@ -17,7 +18,7 @@ final: prev: {
         hash = "sha256-1TjUlV0l4JnSSmmCprEy6wT1v7RPdsuhrnuKbkHiMkw=";
       };
 
-      cargoHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      cargoHash = "sha256-zc2R9cm/dDJqDVp2osLXxY0O0MK6gLVG0bxt40bl9wY=";
 
       # cpx is currently Linux-only (uses copy_file_range syscall)
       # Skip build on Darwin
