@@ -1000,15 +1000,8 @@ in
             controlPath = "none";
           };
 
-          andoria = controlMastered {
-            host = "andoria-*";
-            user = "jwiegley";
-            identityFile = "${config.xdg.configHome}/ssh/id_positron";
-            identitiesOnly = true;
-          };
-
-          delphi = controlMastered {
-            host = "delphi-*";
+          positron = controlMastered {
+            host = "andoria-* delphi-* agentsrv";
             user = "jwiegley";
             identityFile = "${config.xdg.configHome}/ssh/id_positron";
             identitiesOnly = true;
