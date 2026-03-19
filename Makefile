@@ -79,6 +79,12 @@ verify-inputs:
 	        echo "$$uninit" | tee -a "$$errfile"; \
 	        echo "Fix: cd $$repo && git submodule update --init" | tee -a "$$errfile"; \
 	    fi; \
+	    gitlinks=$$(git -C "$$repo" ls-files --stage 2>/dev/null | grep '^160000'); \
+	    if [ -n "$$gitlinks" ]; then \
+	        echo "WARNING: $$repo has submodules (gitlinks) that may cause NAR hash divergence:"; \
+	        echo "$$gitlinks"; \
+	        echo "Consider: remove submodules or add ?submodules=1 to the flake input URL"; \
+	    fi; \
 	done; \
 	if [ -s "$$errfile" ]; then \
 	    echo ""; \

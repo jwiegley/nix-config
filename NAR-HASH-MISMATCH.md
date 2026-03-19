@@ -98,6 +98,46 @@ git rm <submodule-path>
 git commit -m "Remove unused submodule"
 ```
 
+### 4. Initialized submodules (gitlinks)
+
+Even when a submodule is fully initialized and checked out, it can still cause
+NAR hash divergence. The two Nix code paths disagree on how to handle the
+gitlink entry (mode `160000`):
+
+- **Source-path walker**: Skips submodule directories entirely (treats them as
+  nested repositories outside the current tree)
+- **Git archive**: Includes the gitlink as an empty directory
+
+This produces different directory counts and therefore different NAR hashes.
+
+**How it happens:** A submodule is properly initialized and working, so
+`git status` and `git submodule status` both look clean. No flags are set.
+But the structural disagreement between the two code paths persists silently.
+
+**Example (2026-03-19):** The `trade-journal` repo had `vendor/simple-amount`
+as an initialized submodule. The source-path walker produced 26 directories
+(no `vendor/`), while git archive produced 28 directories (with `vendor/` and
+`vendor/simple-amount/` as empty dirs). The hash mismatch was persistent and
+could not be fixed by clearing caches alone.
+
+**Detection:**
+```bash
+git -C /path/to/repo ls-files --stage | grep '^160000'
+```
+Any output means gitlinks exist and may cause NAR divergence.
+
+**Fix:** Remove the submodule if it's not needed for the Nix build:
+```bash
+git submodule deinit <submodule-path>
+git rm <submodule-path>
+rm -rf .git/modules/<submodule-path>
+git commit -m "Remove submodule to fix NAR hash divergence"
+```
+
+If the submodule is needed, add `?submodules=1` to the flake input URL. This
+makes both code paths include the full submodule content, but requires the
+submodule to be initialized on all machines.
+
 ## The Verification Cache Problem
 
 The mismatch is made worse by Nix's `fetcher-cache-v4.sqlite`, which caches hash
@@ -125,6 +165,7 @@ for:
 
 - Files with `skip-worktree` or `assume-unchanged` flags
 - Uninitialized submodules
+- Any submodule gitlinks (mode `160000`) that may cause structural NAR divergence
 
 If any are found, it blocks the build with specific error messages and fix
 instructions.
@@ -180,3 +221,5 @@ Any files listed as "Only in" one directory are the source of the mismatch.
 | 2026-03-16 | promptdeploy NAR mismatch | Uninitialized submodule `skills/humanizer` | Removed submodule from repo |
 | 2026-03-18 | scripts NAR mismatch | `skip-worktree` on `.beads/*.jsonl` | Cleared flags, restored files |
 | 2026-03-18 | — | — | Added `verify-inputs` Makefile target |
+| 2026-03-19 | trade-journal NAR mismatch (clio) | Initialized submodule `vendor/simple-amount` (gitlink) | Removed submodule; simple-amount resolved from Hackage |
+| 2026-03-19 | — | — | Added gitlink (mode 160000) detection to `verify-inputs` |
