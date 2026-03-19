@@ -6791,11 +6791,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773874976,
-        "narHash": "sha256-jQ3EpUkaaW2u6Owie1m6sdhQZrwrF0m+AlLOZAhR268=",
+        "lastModified": 1773878550,
+        "narHash": "sha256-S9mVvZ24OBjSo+dEFS6l6i5o9GQi1GuhozH/68sZxqA=",
         "ref": "refs/heads/main",
-        "rev": "ff36e38ed4315240f97d6abaa4070e1ba104a9a8",
-        "revCount": 191,
+        "rev": "65a9b7258530482128ef98a7eebcc56f354b159a",
+        "revCount": 192,
         "shallow": false,
         "type": "git",
         "url": "file:///Users/johnw/src/promptdeploy"
@@ -7471,11 +7471,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773771353,
-        "narHash": "sha256-uvVBxzMOwSsO+5DOy8YmHDeNbjX7rejy/MuFSUYa38Y=",
+        "lastModified": 1773881149,
+        "narHash": "sha256-JswCDDWuICoAmtAiMHNWNqQm74kfFuwfVy/q8TF//CU=",
         "ref": "refs/heads/master",
-        "rev": "b3d719cc809752df9fed6fa418063e569b1af636",
-        "revCount": 226,
+        "rev": "4531503f65cad5c7a744cc382188b71cf3fc21a1",
+        "revCount": 227,
         "type": "git",
         "url": "file:///Users/johnw/src/trade-journal"
       },
