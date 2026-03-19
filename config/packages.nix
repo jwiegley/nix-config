@@ -443,6 +443,7 @@ rec {
     ++ optPkg "gguf-tools"
     ++ optPkg "qdrant-web-ui"
     ++ optPkg "agnix"
+    ++ optPkg "claude-vault"
     ++ optPkg "cozempic"
     ++ optPkg "claude-replay"
     ++ lib.optional (rag-client != null) rag-client
