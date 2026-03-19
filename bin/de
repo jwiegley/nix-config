@@ -50,7 +50,6 @@ reset_kept() {
 
 keep_vars                                       \
     ALTERNATE_EDITOR                            \
-    CLAUDE_CONFIG_DIR                           \
     EDITOR                                      \
     EMACS_SERVER_FILE                           \
     GIT_PROMPT_EXECUTABLE                       \
