@@ -1358,11 +1358,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1773856444,
-        "narHash": "sha256-Zpck/seb0XCYpUJ+r22PrVPCHD2AOwHcaIJ2ubFx2Gw=",
+        "lastModified": 1773898487,
+        "narHash": "sha256-uQlQwrfpzE6wtGBRe2T5VkEGuoOHxl40UuiFdPf2k7A=",
         "ref": "refs/heads/main",
-        "rev": "d9ac9fdad200ba1acdfead6a584c22e4c4a8307c",
-        "revCount": 2337,
+        "rev": "b51acb567679a802c78fd6772178ab493a05a22c",
+        "revCount": 2356,
         "type": "git",
         "url": "file:///Users/johnw/src/git-ai/main"
       },
@@ -4843,11 +4843,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773810247,
-        "narHash": "sha256-6Vz1Thy/1s7z+Rq5OfkWOBAdV4eD+OrvDs10yH6xJzQ=",
+        "lastModified": 1773898372,
+        "narHash": "sha256-PqeDgmyI/Df3/Mv0B81FP/ZC4KuO88YRQF5ZfeFyA4k=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "d47357a4c806d18a3e853ad2699eaec3c01622e7",
+        "rev": "ecf019baf47df009937b5f8c4604cee10f410a76",
         "type": "github"
       },
       "original": {
@@ -5274,11 +5274,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1773871378,
-        "narHash": "sha256-qPw/zWyyYuFRxbP6rb9EOUy0hi//j9gYvqTFFo8PU7c=",
+        "lastModified": 1773930710,
+        "narHash": "sha256-VzR/HQV6beRr0MjQPvoA2zYaLh04PpLAOnhrxwDgF80=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "682dad9a17726b61a297ed42f5064cb93b4fff59",
+        "rev": "6e67383a3e3c0c9142adde7cfebbd3c9fbf6fac2",
         "type": "github"
       },
       "original": {
@@ -6754,11 +6754,11 @@
     "org2tc": {
       "flake": false,
       "locked": {
-        "lastModified": 1659887942,
-        "narHash": "sha256-uFGgiUuxmCZHMJqzGVS0x6zVK2HtkbXOOsxZ+M3KTQo=",
+        "lastModified": 1773897220,
+        "narHash": "sha256-61NYztoi3E/aKq82y1bb7b6dLFLrTx4OlwkoauyDDng=",
         "owner": "jwiegley",
         "repo": "org2tc",
-        "rev": "8be3a01dafbb9e097c06945ac5dd7fd5bc9700ff",
+        "rev": "9d58d304f1ed6779993c9c71bbe019a04491a629",
         "type": "github"
       },
       "original": {
@@ -6791,11 +6791,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773878550,
-        "narHash": "sha256-S9mVvZ24OBjSo+dEFS6l6i5o9GQi1GuhozH/68sZxqA=",
+        "lastModified": 1773902571,
+        "narHash": "sha256-P+rc+vHFoSq+a3Wv9nEVWUq47VszN7SEWfcnnsnUKyU=",
         "ref": "refs/heads/main",
-        "rev": "65a9b7258530482128ef98a7eebcc56f354b159a",
-        "revCount": 192,
+        "rev": "6239bdb64f763a91faa19cbe3c7270781310affd",
+        "revCount": 193,
         "shallow": false,
         "type": "git",
         "url": "file:///Users/johnw/src/promptdeploy"

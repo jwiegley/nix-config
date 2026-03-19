@@ -531,6 +531,11 @@ in
                 autoload -Uz add-zsh-hook
                 add-zsh-hook chpwd __update_terminal_title
                 add-zsh-hook precmd __update_terminal_title
+
+                # Restore native zsh completions for commands that need
+                # SSH-based remote path completion (overridden by carapace)
+                autoload -Uz _rsync && compdef _rsync rsync
+                autoload -Uz _ssh && compdef _ssh ssh scp sftp
             fi
           ''
         else
@@ -1000,8 +1005,6 @@ in
             user = "jwiegley";
             identityFile = "${config.xdg.configHome}/ssh/id_positron";
             identitiesOnly = true;
-
-            localForwards = [ (localBind 9998 3000) ];
           };
 
           delphi = controlMastered {
