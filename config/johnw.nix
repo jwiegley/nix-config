@@ -333,6 +333,12 @@ in
         set-option -g default-shell ${pkgs.zsh}/bin/zsh
         set-option -g default-command ${pkgs.zsh}/bin/zsh
         set-option -g history-limit 250000
+
+        # Settings for Claude Code
+        set -g status off
+        set -sg escape-time 0
+        set -g default-terminal "tmux-256color"
+        set -ga terminal-overrides ",xterm-256color:Tc"
       ''
       + lib.optionalString isDarwin ''
 
