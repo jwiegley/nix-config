@@ -4,7 +4,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a personal Nix configuration repository for managing macOS (Darwin) and NixOS systems using Nix flakes, nix-darwin, and home-manager. The configuration manages three macOS hosts (hera, clio, athena) and one NixOS host (vulcan).
+This is a personal Nix configuration repository for managing macOS (Darwin), NixOS, and Ubuntu systems using Nix flakes, nix-darwin, and home-manager. The shared user environment in `config/johnw.nix` and `config/packages.nix` is used across all five machines below.
+
+## Managed Machines
+
+| Host | OS | Arch | User | Home | Nix binary | rsync binary | Config location | Rebuild command |
+|------|----|------|------|------|-----------|-------------|-----------------|----------------|
+| **hera** | macOS | aarch64-darwin | `johnw` | `/Users/johnw` | `/nix/var/nix/profiles/default/bin/nix` | `/etc/profiles/per-user/johnw/bin/rsync` | `~/src/nix` (this repo) | `u switch` |
+| **clio** | macOS | aarch64-darwin | `johnw` | `/Users/johnw` | `/nix/var/nix/profiles/default/bin/nix` | `/etc/profiles/per-user/johnw/bin/rsync` | `~/src/nix` (this repo) | `u switch` |
+| **vulcan** | NixOS (Asahi Linux) | aarch64-linux | `johnw` | `/Users/johnw` | `/run/current-system/sw/bin/nix` | `/etc/profiles/per-user/johnw/bin/rsync` | `/etc/nixos` | `sudo nixos-rebuild switch --flake '.#vulcan'` |
+| **vps** | NixOS | x86_64-linux | `johnw` | `/home/johnw` | `/run/current-system/sw/bin/nix` | `/etc/profiles/per-user/johnw/bin/rsync` | `/etc/nixos` | `sudo nixos-rebuild switch --flake '.#ovh-vps'` |
+| **andoria** | Ubuntu Linux | x86_64-linux | `jwiegley` | `/home/jwiegley` | `/nix/var/nix/profiles/default/bin/nix` | `/home/jwiegley/.nix-profile/bin/rsync` | `~/.config/home-manager` | `/nix/var/nix/profiles/default/bin/nix run home-manager/master -- switch` |
+
+### How each machine uses this repo
+
+- **hera, clio** (Darwin): This repo is the flake root. `flake.nix` defines `darwinConfigurations` and loads all overlays from `overlays/` directly. Rebuilt with `u switch` (which runs `make switch`).
+- **vulcan** (NixOS): `/etc/nixos/flake.nix` references this repo as `nix-config` input (`flake = false` via `git+ssh://gitea`). Its own `overlays/default.nix` selectively imports specific overlays from nix-config. Home-manager runs as a NixOS module importing `config/johnw.nix`.
+- **vps** (NixOS): Same pattern as vulcan but uses `github:jwiegley/nix-config?ref=main` (Gitea is LAN-only). Its `overlays/default.nix` selectively imports from nix-config.
+- **andoria** (Ubuntu): Standalone home-manager at `~/.config/home-manager/flake.nix`. Uses `github:jwiegley/nix-config?ref=main` with `flake = false`. Loads ALL overlays via `config/overlays.nix`. Username is `jwiegley` (not `johnw`). Requires `targets.genericLinux.enable = true`.
+
+### Cross-platform portability notes
+
+- Packages only available in Darwin overlays (e.g., `git-pr`, `git-scripts`) are wrapped with `lib.optional (pkgs ? name)` in `config/packages.nix` via the `optPkg` helper
+- The `promptdeploy` import in `config/johnw.nix` is guarded with `lib.optionals (inputs ? promptdeploy)`
+- Darwin-only packages (`siege`, `global`) are in the Darwin-only section of `packages.nix`
+- NixOS hosts (vulcan, vps) must explicitly import any nix-config overlay they want via `inherit` in their local `overlays/default.nix`
+- Changes intended for vps or andoria must be pushed to GitHub (`git push github main`) since they pull from `github:jwiegley/nix-config`
 
 ## PAL MCP Server
 
@@ -81,15 +106,21 @@ u repl
 
 ### Core Structure
 - **flake.nix**: Main Darwin flake defining system configurations for macOS hosts
-  - Defines darwinConfigurations for hera, clio, and athena
+  - Defines darwinConfigurations for hera and clio
   - Imports home-manager as a Darwin module
   - Specifies flake inputs (nixpkgs, nix-darwin, home-manager, emacs-overlay, etc.)
   - Loads all overlays from the `overlays/` directory
 
-- **nixos/flake.nix**: Separate flake for NixOS configuration (vulcan host)
-  - Independent flake with its own inputs and lock file
-  - Uses nixosSystem instead of darwinSystem
-  - Shares some overlays but has NixOS-specific modules
+- **config/overlays.nix**: Shared overlay loader used by non-Darwin hosts
+  - Auto-imports ALL `.nix` files from `overlays/` (same as Darwin)
+  - Used by andoria-08's standalone home-manager flake
+  - Injects `inputs` into `prev` so overlays can access flake inputs
+
+- **Remote NixOS flakes** (vulcan at `/etc/nixos`, vps at `/etc/nixos`):
+  - Independent flakes with their own inputs and lock files
+  - Reference this repo as `nix-config` input with `flake = false`
+  - Selectively import specific overlays from nix-config in their own `overlays/default.nix`
+  - Share `config/johnw.nix` and `config/packages.nix` for user environment
 
 - **config/**: Host-specific and shared configuration files
   - `darwin.nix`: System-level Darwin configuration (users, fonts, services, system preferences)
@@ -101,7 +132,7 @@ u repl
 
 - **overlays/**: Custom package overlays organized by category
   - **Numbered prefixes indicate loading order**: `00-` loads first, then `10-`, `15-`, `30-`, etc.
-  - **Loading mechanism**: All `.nix` files in overlays/ are automatically imported by darwin.nix
+  - **Loading mechanism**: All `.nix` files in overlays/ are automatically imported on Darwin (by flake.nix) and on andoria (by config/overlays.nix). NixOS hosts (vulcan, vps) selectively import individual overlay files.
   - **Categories**:
     - `00-last-known-good.nix`: Pin packages to specific nixpkgs revisions
     - `00-lib.nix`: Shared utility functions (mkScriptPackage, mkSimpleGitHubPackage, filterGitSource)
@@ -144,9 +175,10 @@ u repl
    - Host-specific packages: Use `lib.mkIf (config.networking.hostName == "hera")`
 
 3. **Home-Manager Integration**:
-   - Runs as a Darwin module (not standalone)
-   - User packages installed to `~/.nix-profile`
-   - System packages installed to `/run/current-system`
+   - **Darwin (hera, clio)**: Runs as a nix-darwin module (not standalone)
+   - **NixOS (vulcan, vps)**: Runs as a NixOS module; packages at `/etc/profiles/per-user/johnw/bin/` (useUserPackages=true)
+   - **Ubuntu (andoria)**: Runs standalone via `home-manager switch`; requires `targets.genericLinux.enable = true`
+   - All hosts share `config/johnw.nix` and `config/packages.nix`
    - Home-manager settings take precedence for user environment
 
 ### Key Design Patterns
@@ -176,8 +208,8 @@ u repl
    - Configured in `darwin.nix` under `nix.buildMachines`
 
 ### Important Variables
-- `HOSTNAME`: Current host (hera, clio, athena, or vulcan)
-- `NIX_CONF`: Points to this repository (`~/src/nix`)
+- `HOSTNAME`: Current host (hera, clio, vulcan, vps, or andoria-08)
+- `NIX_CONF`: Points to this repository (`~/src/nix`) on Darwin hosts
 - `BUILDER`: Optional remote builder hostname for Nix builds
 - `MAX_AGE`: Days to keep old generations (default: 14)
 
