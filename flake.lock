@@ -6817,11 +6817,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773872592,
-        "narHash": "sha256-7JV/DCJUrlFFDhGcWwCSqs0aK/c2CQWTYkld+paGKnw=",
+        "lastModified": 1773880694,
+        "narHash": "sha256-pPQTG+PoiZ7nkFYUEeMnubwk6A+KLio59FcSjzsflNY=",
         "ref": "refs/heads/master",
-        "rev": "0df031d630c10584aa624fe3a0084312747ad09a",
-        "revCount": 223,
+        "rev": "fe5b1238153d5c313a88fb739413fc6fea045371",
+        "revCount": 225,
         "type": "git",
         "url": "file:///Users/johnw/src/pushme"
       },
