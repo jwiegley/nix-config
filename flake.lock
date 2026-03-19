@@ -4867,11 +4867,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773726704,
-        "narHash": "sha256-ZiSrgS46GaetJ4a/ihhrgd6C5eQMsJsmxLe19dDmqdU=",
+        "lastModified": 1773881731,
+        "narHash": "sha256-G7FlbeYSnFsOQBf05VE8ZwYHLsloEYFdNXC84F0iscQ=",
         "ref": "refs/heads/master",
-        "rev": "c600cfc924a68cafef73d11cb4dc975184819e1d",
-        "revCount": 187,
+        "rev": "11a7305badaefd9c8b9b07c6f07785b4a03487ce",
+        "revCount": 188,
         "type": "git",
         "url": "file:///Users/johnw/src/hours"
       },
