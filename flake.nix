@@ -154,6 +154,7 @@
                   in
                   {
                     imports = [ ./config/johnw.nix ];
+                    targets.genericLinux.enable = true;
                     home = {
                       inherit username;
                       homeDirectory = "/home/${username}";

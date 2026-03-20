@@ -135,7 +135,7 @@ final: prev: {
 
   # pyarrow 22.0.0 has a broken test (test_timezone_absent) in the Nix sandbox
   # that causes cascade failures for datasets, tokenizers, transformers, mlx-lm
-  pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+  pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
     (_: pprev: {
       pyarrow = pprev.pyarrow.overrideAttrs (_: {
         doCheck = false;

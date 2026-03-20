@@ -29,7 +29,8 @@ let
   master_key = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
   signing_key = "12D70076AB504679";
 
-  gitPkg = inputs.git-ai.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  gitPkg =
+    if inputs ? git-ai then inputs.git-ai.packages.${pkgs.stdenv.hostPlatform.system}.default else null;
 
   ca-bundle_path = "${pkgs.cacert}/etc/ssl/certs/";
   ca-bundle_crt = "${ca-bundle_path}/ca-bundle.crt";
@@ -40,25 +41,26 @@ let
 
 in
 {
-  imports = [
-    inputs.git-ai.homeManagerModules.default
-  ]
-  ++ lib.optionals (inputs ? promptdeploy) [
-    inputs.promptdeploy.homeManagerModules.default
-    # Configure promptdeploy here so the definition is absent when the
-    # module (and its option declarations) is also absent.
-    (
-      { pkgs, lib, ... }:
-      lib.mkIf pkgs.stdenv.isDarwin {
-        programs.promptdeploy = {
-          enable = true;
-          package = inputs.promptdeploy.packages.${pkgs.stdenv.hostPlatform.system}.default;
-          sourceDir = "${home}/src/promptdeploy";
-          targets = [ "local" ];
-        };
-      }
-    )
-  ];
+  imports =
+    lib.optionals (inputs ? git-ai) [
+      inputs.git-ai.homeManagerModules.default
+    ]
+    ++ lib.optionals (inputs ? promptdeploy) [
+      inputs.promptdeploy.homeManagerModules.default
+      # Configure promptdeploy here so the definition is absent when the
+      # module (and its option declarations) is also absent.
+      (
+        { pkgs, lib, ... }:
+        lib.mkIf pkgs.stdenv.isDarwin {
+          programs.promptdeploy = {
+            enable = true;
+            package = inputs.promptdeploy.packages.${pkgs.stdenv.hostPlatform.system}.default;
+            sourceDir = "${home}/src/promptdeploy";
+            targets = [ "local" ];
+          };
+        }
+      )
+    ];
 
   home = {
     stateVersion = lib.mkDefault "24.11";
@@ -160,6 +162,8 @@ in
           ca_certificate = ${ca-bundle_crt}
         '';
 
+      }
+      // lib.optionalAttrs (inputs ? llm-agents) {
         ".local/bin/claude".source = mkLink "${
           inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
         }/bin/claude";

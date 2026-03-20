@@ -827,7 +827,8 @@ in
     }).overrideAttrs
       (attrs: {
         configureFlags = attrs.configureFlags ++ [ "--disable-gc-mark-trace" ];
-        patches = attrs.patches ++ [ ./emacs/patches/nsthread.patch ];
+        patches =
+          attrs.patches ++ prev.lib.optionals prev.stdenv.isDarwin [ ./emacs/patches/nsthread.patch ];
       });
   emacs30Packages = final.emacs30PackagesNg;
   emacs30PackagesNg = mkEmacsPackages final.emacs30;
