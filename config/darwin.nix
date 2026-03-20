@@ -536,17 +536,6 @@ in
         serviceConfig.KeepAlive = false;
       };
 
-      cleanup = {
-        script = ''
-          ${pkgs.dirscan}/bin/cleanup -u \
-              >> /var/log/cleanup.log 2>&1
-        '';
-        serviceConfig = {
-          StartInterval = 86400;
-          RunAtLoad = false;
-        };
-      };
-
       mssql-server = {
         script = ''
           # Wait for Docker to be ready

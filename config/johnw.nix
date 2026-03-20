@@ -1070,6 +1070,20 @@ in
   };
 
   launchd.agents = lib.mkIf (isDarwin && hostname == "hera") {
+    cleanup = {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          "${pkgs.dirscan}/bin/cleanup"
+          "-u"
+        ];
+        StartInterval = 86400;
+        StandardOutPath = "${home}/Library/Logs/cleanup.stdout.log";
+        StandardErrorPath = "${home}/Library/Logs/cleanup.stderr.log";
+        RunAtLoad = false;
+      };
+    };
+
     move-audio-files = {
       enable = true;
       config = {
