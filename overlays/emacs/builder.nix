@@ -30,7 +30,7 @@ stdenv.mkDerivation {
                  -type d -exec echo -L {} \;)
     mkdir $out
     export HOME=$out
-    if ${emacs}/bin/emacs --version | grep 29; then
+    if ${emacs}/bin/emacs --version | grep -q "^GNU Emacs 29\."; then
         ${emacs}/bin/emacs -Q -nw -L . $ARGS --batch -f batch-byte-compile *.el
     else
         ${emacs}/bin/emacs -Q -nw -L . $ARGS --batch --eval "(setq byte-compile-warnings '(not docstrings))" -f batch-byte-compile *.el

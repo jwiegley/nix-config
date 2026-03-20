@@ -209,25 +209,18 @@ final: prev: {
     with python3Packages;
     buildPythonPackage rec {
       pname = "pass-git-helper";
-      version = "83af9ba5";
-      name = "${pname}-${version}";
+      version = "258bfe33";
 
       src = fetchFromGitHub {
         owner = "languitar";
         repo = "pass-git-helper";
-        rev = "83af9ba5e28974fda63db630cb2b85bac9d2243e";
-        sha256 = "sha256-TOZaM/GIZwCyq9Z492dUnFSioiDRJX0gJ/Chz0eKYl8=";
+        rev = "258bfe33eec5a9b9bf2c2c01f89ae1f7cec563fa";
+        sha256 = "sha256-AQ3eVLfSfIhyoPhA+0158gMcV3PAtW6dqfggoARVJn8=";
         # date = 2025-10-02T16:40:46+02:00;
       };
 
-      buildInputs = [
+      dependencies = [
         pyxdg
-        pytest
-      ];
-
-      pythonPath = [
-        pyxdg
-        pytest
       ];
       doCheck = false;
 
@@ -249,7 +242,6 @@ final: prev: {
     buildPythonPackage rec {
       pname = "yamale";
       version = "c203d14b";
-      name = "${pname}-${version}";
 
       src = fetchFromGitHub {
         owner = "23andMe";
@@ -259,8 +251,7 @@ final: prev: {
         # date = 2025-10-27T13:56:16-04:00;
       };
 
-      propagatedBuildInputs = [ pyyaml ];
-      buildInputs = [ pytest ];
+      dependencies = [ pyyaml ];
 
       pyproject = true;
       build-system = [ setuptools ];

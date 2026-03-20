@@ -29,7 +29,7 @@ prev.lib.optionalAttrs prev.stdenv.isDarwin {
         "installPhase"
       ];
 
-      buildInputs = [ unzip ];
+      nativeBuildInputs = [ unzip ];
 
       unpackPhase = ''
         unzip ${src}

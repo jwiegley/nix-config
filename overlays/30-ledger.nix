@@ -13,11 +13,11 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? ledger) {
         boost = prev.boost.override { python = prev.python3; };
 
         preConfigure = ''
-          sed -i -e "s%DESTINATION \\\''${Python_SITEARCH}%DESTINATION $out/lib/python37/site-packages%" src/CMakeLists.txt
+          sed -i -e "s%DESTINATION \\\''${Python_SITEARCH}%DESTINATION $out/${prev.python3.sitePackages}%" src/CMakeLists.txt
         '';
 
         preInstall = ''
-          mkdir -p $out/lib/python37/site-packages
+          mkdir -p $out/${prev.python3.sitePackages}
         '';
       });
 

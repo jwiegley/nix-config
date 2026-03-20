@@ -9,8 +9,13 @@ prev.lib.optionalAttrs prev.stdenv.isDarwin {
     name = "mapq-1.0.0";
     src = ../pkgs/mapq;
 
-    # Only meaningful on Darwin
-    meta.platforms = prev.lib.platforms.darwin;
+    meta = {
+      description = "Apple Maps query CLI tool for OpenClaw";
+      homepage = "https://github.com/jwiegley";
+      license = prev.lib.licenses.mit;
+      platforms = prev.lib.platforms.darwin;
+      maintainers = with prev.lib.maintainers; [ jwiegley ];
+    };
 
     # Allow access to macOS system Swift and Xcode frameworks
     # Swift requires Xcode's command-line tools which live outside the Nix store
