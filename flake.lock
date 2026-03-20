@@ -811,11 +811,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1774023890,
-        "narHash": "sha256-FetR57MhMxGmV21DYykN6CytwKNN/grGHhZFDAUkfsY=",
+        "lastModified": 1774036144,
+        "narHash": "sha256-c4VY73ueFveyTNjX+MUSpgzPXdgJKCVEHizkAhdQU6s=",
         "ref": "refs/heads/master",
-        "rev": "25c6f28a41280a2144b807634568f0b215a2f8d2",
-        "revCount": 42,
+        "rev": "ae992d3a340425e00be00376b0d487f9693a30a0",
+        "revCount": 44,
         "type": "git",
         "url": "file:///Users/johnw/src/dirscan"
       },
