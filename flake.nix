@@ -63,7 +63,7 @@
     };
     dirscan = {
       url = "git+file:///Users/johnw/src/dirscan";
-      flake = false;
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     emacs-src = {
       url = "git+file:///Users/johnw/Databases/emacs";

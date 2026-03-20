@@ -2,12 +2,8 @@
 # Purpose: Data processing and storage utilities
 # Dependencies: None (uses only prev)
 # Packages: hashdb, dirscan, tsvutils
-# Note: dirscan requires paths.dirscan
 final: prev:
 
-let
-  paths = import ../config/paths.nix { inherit (prev) inputs; };
-in
 {
 
   # File checksum database for duplicate detection
@@ -36,38 +32,10 @@ in
     };
 
 }
-// prev.lib.optionalAttrs (paths.dirscan != null) {
+// prev.lib.optionalAttrs (prev.inputs ? dirscan) {
 
-  # Stateful directory scanning utility
-  # Note: Requires paths.dirscan
-  dirscan =
-    with prev;
-    python3Packages.buildPythonPackage rec {
-      pname = "dirscan";
-      version = "2.0";
-      format = "source";
-
-      src = paths.dirscan;
-
-      phases = [
-        "unpackPhase"
-        "installPhase"
-      ];
-
-      installPhase = ''
-        mkdir -p $out/bin $out/libexec
-        cp dirscan.py $out/libexec
-        python -mpy_compile $out/libexec/dirscan.py
-        cp cleanup $out/bin
-      '';
-
-      meta = {
-        homepage = "https://github.com/jwiegley/dirscan";
-        description = "Stateful directory scanning in Python";
-        license = lib.licenses.mit;
-        maintainers = with lib.maintainers; [ jwiegley ];
-      };
-    };
+  # Stateful directory scanning utility (from dirscan flake)
+  dirscan = prev.inputs.dirscan.packages.${prev.system}.default;
 
 }
 // {

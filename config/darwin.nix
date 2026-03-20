@@ -536,14 +536,16 @@ in
         serviceConfig.KeepAlive = false;
       };
 
-      # cleanup = {
-      #   script = ''
-      #     export PYTHONPATH=$PYTHONPATH:${pkgs.dirscan}/libexec
-      #     ${pkgs.python3}/bin/python ${pkgs.dirscan}/bin/cleanup -u \
-      #         >> /var/log/cleanup.log 2>&1
-      #   '';
-      #   serviceConfig = iterate 86400;
-      # };
+      cleanup = {
+        script = ''
+          ${pkgs.dirscan}/bin/cleanup -u \
+              >> /var/log/cleanup.log 2>&1
+        '';
+        serviceConfig = {
+          StartInterval = 86400;
+          RunAtLoad = false;
+        };
+      };
 
       mssql-server = {
         script = ''

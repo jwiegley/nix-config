@@ -17,9 +17,6 @@
   # Git scripts collection (used by 30-git-tools.nix)
   git-scripts = inputs.git-scripts or null;
 
-  # Directory scanning utility (used by 30-data-tools.nix)
-  dirscan = inputs.dirscan or null;
-
   # Org-mode to timeclock converter (used by 30-text-tools.nix)
   org2tc = inputs.org2tc or null;
 
