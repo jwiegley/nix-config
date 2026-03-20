@@ -146,6 +146,38 @@ in
         mkLink = config.lib.file.mkOutOfStoreSymlink;
       in
       {
+        "Library/LaunchAgents/com.newartisans.cleanup.plist" = lib.mkIf (isDarwin && hostname == "hera") {
+          text = ''
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+              <key>Label</key>
+              <string>com.newartisans.cleanup</string>
+              <key>EnvironmentVariables</key>
+              <dict>
+                <key>PYTHONPATH</key>
+                <string>${pkgs.dirscan}/${pkgs.python3.sitePackages}</string>
+              </dict>
+              <key>ProgramArguments</key>
+              <array>
+                <string>/usr/bin/python3</string>
+                <string>${pkgs.dirscan}/bin/.cleanup-wrapped</string>
+                <string>-u</string>
+              </array>
+              <key>StartInterval</key>
+              <integer>86400</integer>
+              <key>RunAtLoad</key>
+              <false/>
+              <key>StandardOutPath</key>
+              <string>${home}/Library/Logs/cleanup.stdout.log</string>
+              <key>StandardErrorPath</key>
+              <string>${home}/Library/Logs/cleanup.stderr.log</string>
+            </dict>
+            </plist>
+          '';
+        };
+
         ".ledgerrc".text = ''
           --file ${home}/doc/accounts/main.ledger
           --input-date-format %Y/%m/%d
@@ -1077,20 +1109,6 @@ in
   };
 
   launchd.agents = lib.mkIf (isDarwin && hostname == "hera") {
-    cleanup = {
-      enable = true;
-      config = {
-        ProgramArguments = [
-          "${pkgs.dirscan}/bin/cleanup"
-          "-u"
-        ];
-        StartInterval = 86400;
-        StandardOutPath = "${home}/Library/Logs/cleanup.stdout.log";
-        StandardErrorPath = "${home}/Library/Logs/cleanup.stderr.log";
-        RunAtLoad = false;
-      };
-    };
-
     move-audio-files = {
       enable = true;
       config = {
