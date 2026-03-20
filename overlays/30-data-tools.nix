@@ -11,7 +11,7 @@ final: prev:
     with prev;
     python3Packages.buildPythonApplication {
       pname = "hashdb";
-      version = "0.1.0";
+      version = "3586458b";
 
       src = fetchFromGitHub {
         owner = "jwiegley";
