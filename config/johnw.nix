@@ -933,7 +933,7 @@ in
             userKnownHostsFile = "${config.xdg.configHome}/ssh/known_hosts";
             hashKnownHosts = true;
             serverAliveInterval = 60;
-            forwardAgent = true;
+            forwardAgent = false;
 
             extraOptions = {
               IgnoreUnknown = "UseKeychain";
@@ -949,6 +949,7 @@ in
           hera = {
             hostname = "hera.lan";
             compression = false;
+            forwardAgent = true;
           };
 
           mssql = onHost "hera" "192.168.64.3";
@@ -965,6 +966,7 @@ in
           clio = withIdentity {
             hostname = "clio.lan";
             compression = false;
+            forwardAgent = true;
           };
 
           neso = withIdentity (onHost "clio" "192.168.100.130");
@@ -974,6 +976,7 @@ in
           vulcan = controlMastered (withIdentity {
             hostname = "192.168.1.2";
             compression = false;
+            forwardAgent = true;
 
             remoteForwards = [ (localBind 8317 8317) ];
           });
