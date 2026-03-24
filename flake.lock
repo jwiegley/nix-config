@@ -5255,11 +5255,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1774291677,
-        "narHash": "sha256-DX2y+xAMmOgd9Y4JVcIQ2SrsZkFEGFPGsh9WlYP2vUI=",
+        "lastModified": 1774300478,
+        "narHash": "sha256-htE9lseaIy7fUfx33QT2ukAa0UtqIdNqcTXxabciaZs=",
         "ref": "refs/heads/main",
-        "rev": "3174ba7dc0ca7fa7b9abcc8e47a81391d75554d8",
-        "revCount": 8148,
+        "rev": "15f651515cdeffb707f16816aa483560051d8d08",
+        "revCount": 8166,
         "type": "git",
         "url": "file:///Users/johnw/src/ledger/main"
       },

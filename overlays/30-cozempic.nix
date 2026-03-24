@@ -9,7 +9,7 @@ final: prev: {
     with prev.python3Packages;
     buildPythonApplication rec {
       pname = "cozempic";
-      version = "1.2.8";
+      version = "1.2.9";
       pyproject = true;
 
       src = fetchFromGitHub {
