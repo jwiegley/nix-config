@@ -148,6 +148,7 @@ in
       "graelo/tap/pumas"
       "graelo/tap/huggingface-cli-full"
       "openssl"
+      "pake"
       "z3"
       "claude-code-templates"
       "steipete/tap/remindctl"
