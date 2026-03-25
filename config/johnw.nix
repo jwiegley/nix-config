@@ -1046,6 +1046,13 @@ in
             identitiesOnly = true;
           };
 
+          git-ai = controlMastered {
+            host = "git-ai";
+            user = "johnw";
+            identityFile = "${config.xdg.configHome}/ssh/id_git-ai";
+            identitiesOnly = true;
+          };
+
           # Other servers
 
           router = withIdentity {
