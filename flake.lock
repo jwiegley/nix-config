@@ -5255,11 +5255,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1774555600,
-        "narHash": "sha256-xXcfOaHSlFNFicPBF80h+4G1GdfFMnPjQO1ZAeQ6UPA=",
+        "lastModified": 1774571157,
+        "narHash": "sha256-nrqF+xgGeLx7yudLnl91r4X6mmd+P1yeu/rDuJf0u6k=",
         "ref": "refs/heads/main",
-        "rev": "baaf7d6f4ef5deb761dc09d4661a9e801dc9c9f9",
-        "revCount": 8239,
+        "rev": "88ba53dc37aceb07de6029c39afd60bf53329306",
+        "revCount": 8257,
         "type": "git",
         "url": "file:///Users/johnw/src/ledger/main"
       },
@@ -5297,11 +5297,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1774536390,
-        "narHash": "sha256-Sv5SKZSHO5j/u15HkhhB0lKr357C36P8hcHAOr6DxJY=",
+        "lastModified": 1774623710,
+        "narHash": "sha256-UVVA1OCUeDm7fnH98G+Okfb6vUuA1in89LZGDgVWR/4=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "2a6459a5bf16be85fb8da6cbf10cbd1ec6d3b07b",
+        "rev": "4814adf48100a2138b02591e6a7e000c106887b1",
         "type": "github"
       },
       "original": {
@@ -6814,11 +6814,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1774391131,
-        "narHash": "sha256-0hdBfncmM+E54wWbRXUnEMouKbvwOKczBtOoKCOUdHQ=",
+        "lastModified": 1774635272,
+        "narHash": "sha256-XGF5b7MyqspKCq2mgl1xLeIIYiE5F5fKRXf8Gpr8Lrk=",
         "ref": "refs/heads/main",
-        "rev": "8c55e86adc247f31b7acecd8932f999d473bcab0",
-        "revCount": 198,
+        "rev": "38dafffb647781c0feef5af3fd952f31f970d306",
+        "revCount": 200,
         "shallow": false,
         "type": "git",
         "url": "file:///Users/johnw/src/promptdeploy"
