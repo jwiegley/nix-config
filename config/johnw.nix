@@ -507,18 +507,22 @@ in
         proc = "ps axwwww | grep -i";
       };
 
-      profileExtra = ''
-        setopt extended_glob
-      ''
-      + lib.optionalString isLinux ''
-        . ${pkgs.zsh-z}/share/zsh-z/zsh-z.plugin.zsh
-        # Source Nix environment so ~/.nix-profile/bin is in PATH for login shells.
-        # This is a no-op on NixOS (guarded internally); needed on Ubuntu/non-NixOS.
+      envExtra = lib.optionalString isLinux ''
+        # Source Nix environment for ALL zsh invocations (including non-interactive
+        # SSH remote commands like iTerm2's tmux -CC integration). Mirrors NixOS's
+        # /etc/zshenv approach. Idempotent on NixOS; required on Ubuntu/non-NixOS.
         if [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
           . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
         elif [[ -f ~/.nix-profile/etc/profile.d/nix.sh ]]; then
           . ~/.nix-profile/etc/profile.d/nix.sh
         fi
+      '';
+
+      profileExtra = ''
+        setopt extended_glob
+      ''
+      + lib.optionalString isLinux ''
+        . ${pkgs.zsh-z}/share/zsh-z/zsh-z.plugin.zsh
       '';
 
       initContent = ''
