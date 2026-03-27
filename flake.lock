@@ -4866,11 +4866,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1774007980,
-        "narHash": "sha256-FOnZjElEI8pqqCvB6K/1JRHTE8o4rer8driivTpq2uo=",
+        "lastModified": 1774539458,
+        "narHash": "sha256-H9GIOqdMfQZ6lFetsQhO9TCq53hYzpTHDWOt3PRh9V0=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "9670de2921812bc4e0452f6e3efd8c859696c183",
+        "rev": "e2e5f512b33ed19a7a3271d0b73ed5eefcc0be5f",
         "type": "github"
       },
       "original": {
@@ -5255,11 +5255,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1774410461,
-        "narHash": "sha256-Ylhkqndi/EOjinx3ee8rMd6VkAIi9YYrKFEP77H6ANU=",
+        "lastModified": 1774555600,
+        "narHash": "sha256-xXcfOaHSlFNFicPBF80h+4G1GdfFMnPjQO1ZAeQ6UPA=",
         "ref": "refs/heads/main",
-        "rev": "e06da0188c03891f3ff863d2d9f1664612cdc7dd",
-        "revCount": 8190,
+        "rev": "baaf7d6f4ef5deb761dc09d4661a9e801dc9c9f9",
+        "revCount": 8239,
         "type": "git",
         "url": "file:///Users/johnw/src/ledger/main"
       },
@@ -5297,11 +5297,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1774451242,
-        "narHash": "sha256-P4H6/DKVglU2fsKYquJdTbjQeUDrJq6hfbvmd3bdTD4=",
+        "lastModified": 1774536390,
+        "narHash": "sha256-Sv5SKZSHO5j/u15HkhhB0lKr357C36P8hcHAOr6DxJY=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "56fd69cf8cb8b62864cc2f9b64775990ac5a1bd5",
+        "rev": "2a6459a5bf16be85fb8da6cbf10cbd1ec6d3b07b",
         "type": "github"
       },
       "original": {
@@ -5317,11 +5317,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773774022,
-        "narHash": "sha256-s+EMBn+DlJmMH+ZUp+MrqnAaIomR9q+1xAyHMVF5HGE=",
+        "lastModified": 1774508874,
+        "narHash": "sha256-Tq967iKyYI1D05IDYW7bG3OQpWHtOvvFoz1mF/rES8g=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "411638cb2dae8e93415806340f3e7432ee09b8fd",
+        "rev": "a58f8c3f34c0ab2facb42ea7074e45ac5cca2b43",
         "type": "github"
       },
       "original": {
@@ -6452,11 +6452,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1773628058,
-        "narHash": "sha256-hpXH0z3K9xv0fHaje136KY872VT2T5uwxtezlAskQgY=",
+        "lastModified": 1774273680,
+        "narHash": "sha256-a++tZ1RQsDb1I0NHrFwdGuRlR5TORvCEUksM459wKUA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "f8573b9c935cfaa162dd62cc9e75ae2db86f85df",
+        "rev": "fdc7b8f7b30fdbedec91b71ed82f36e1637483ed",
         "type": "github"
       },
       "original": {
@@ -7016,11 +7016,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1774376811,
-        "narHash": "sha256-5ZDPnns3UaSctLBUNiErG5XKFODI/0adr+NjxUq4FxI=",
+        "lastModified": 1774547332,
+        "narHash": "sha256-L53uSF/2/4zZqkEyRwtaB9ZIJ9HqwlmZykps1cbeeO0=",
         "ref": "refs/heads/main",
-        "rev": "807c06731ccec0ef48ea3f39862036f595214c17",
-        "revCount": 1360,
+        "rev": "13d6574807941b5763c2e83820e91383ec0dc619",
+        "revCount": 1361,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
