@@ -641,6 +641,7 @@ in
       package = gitPkg;
 
       signing = lib.mkDefault {
+        format = "openpgp";
         key = signing_key;
         signByDefault = true;
       };
