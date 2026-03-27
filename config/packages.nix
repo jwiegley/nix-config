@@ -201,6 +201,7 @@ rec {
       mergiraf
       git-my
       git-octopus
+      graphite-cli
     ]
     ++ lib.optional (pkgs ? git-pr) (lib.hiPrio pkgs.git-pr)
     ++ [

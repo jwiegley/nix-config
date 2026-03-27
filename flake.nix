@@ -39,7 +39,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    git-ai.url = "git+file:///Users/johnw/src/git-ai/main";
+    # git-ai.url = "git+file:///Users/johnw/src/git-ai/main";
+    git-ai.url = "git+file:///Users/johnw/src/git-ai/async-bash-snapshots";
     git-all.url = "git+file:///Users/johnw/src/git-all";
     gitlib.url = "git+file:///Users/johnw/src/gitlib?submodules=0";
     hakyll.url = "git+file:///Users/johnw/src/hakyll";
