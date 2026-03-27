@@ -35,7 +35,7 @@ final: prev:
 // prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? dirscan) {
 
   # Stateful directory scanning utility (from dirscan flake)
-  dirscan = prev.inputs.dirscan.packages.${prev.system}.default;
+  dirscan = prev.inputs.dirscan.packages.${prev.stdenv.hostPlatform.system}.default;
 
 }
 // {
