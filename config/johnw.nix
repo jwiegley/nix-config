@@ -572,6 +572,14 @@ in
                 add-zsh-hook chpwd __update_terminal_title
                 add-zsh-hook precmd __update_terminal_title
 
+                # Reset terminal state before each prompt to prevent
+                # accumulated escape sequence corruption (especially
+                # over SSH with tmux -CC)
+                __reset_broken_terminal() {
+                  printf '%b' '\e[0m\e(B\e)0\017\e[?5l\e7\e[0;0r\e8'
+                }
+                add-zsh-hook precmd __reset_broken_terminal
+
                 # Restore native zsh completions for commands that need
                 # SSH-based remote path completion (overridden by carapace)
                 autoload -Uz _rsync && compdef _rsync rsync
@@ -583,6 +591,15 @@ in
             else
                 autoload -Uz compinit
                 compinit
+
+                # Reset terminal state before each prompt to prevent
+                # accumulated escape sequence corruption (especially
+                # over SSH with tmux -CC)
+                autoload -Uz add-zsh-hook
+                __reset_broken_terminal() {
+                  printf '%b' '\e[0m\e(B\e)0\017\e[?5l\e7\e[0;0r\e8'
+                }
+                add-zsh-hook precmd __reset_broken_terminal
             fi
           ''
       );
