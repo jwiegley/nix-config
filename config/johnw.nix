@@ -576,9 +576,12 @@ in
 
                 # Reset terminal state before each prompt to prevent
                 # accumulated escape sequence corruption (especially
-                # over SSH with tmux -CC)
+                # over SSH with tmux -CC, and after Claude Code exits)
                 __reset_broken_terminal() {
                   printf '%b' '\e[0m\e(B\e)0\017\e[?5l\e7\e[0;0r\e8'
+                  # Reset Kitty keyboard protocol and modifyOtherKeys
+                  # (Claude Code enables these and may not clean up on crash)
+                  printf '\e[>0u\e[>4;0m' 2>/dev/null
                 }
                 add-zsh-hook precmd __reset_broken_terminal
 
@@ -596,10 +599,13 @@ in
 
                 # Reset terminal state before each prompt to prevent
                 # accumulated escape sequence corruption (especially
-                # over SSH with tmux -CC)
+                # over SSH with tmux -CC, and after Claude Code exits)
                 autoload -Uz add-zsh-hook
                 __reset_broken_terminal() {
                   printf '%b' '\e[0m\e(B\e)0\017\e[?5l\e7\e[0;0r\e8'
+                  # Reset Kitty keyboard protocol and modifyOtherKeys
+                  # (Claude Code enables these and may not clean up on crash)
+                  printf '\e[>0u\e[>4;0m' 2>/dev/null
                 }
                 add-zsh-hook precmd __reset_broken_terminal
             fi
