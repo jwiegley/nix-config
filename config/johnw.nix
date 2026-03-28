@@ -372,7 +372,9 @@ in
       extraConfig = ''
         set-option -g allow-passthrough on
         set-option -g set-clipboard on
+        set-option -g extended-keys on
         set-option -ga terminal-overrides ",xterm-256color:RGB"
+        set-option -as terminal-features ",xterm-256color:sync:extkeys"
         set-option -g default-shell ${pkgs.zsh}/bin/zsh
         set-option -g default-command ${pkgs.zsh}/bin/zsh
       ''
