@@ -1381,11 +1381,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1774649096,
-        "narHash": "sha256-KQDBdMLKgz5CaG96ARdCQ1roM86MgD+xQestDQgak0g=",
+        "lastModified": 1774658062,
+        "narHash": "sha256-EArtmYLDwXEBH6SE1dn6vjybgVIIYKizPNoCpg3pZ0g=",
         "ref": "refs/heads/johnw/async-bash-snapshots",
-        "rev": "a083a231de259d9b181db0cd498fea4fd5ad0de6",
-        "revCount": 2650,
+        "rev": "7fe364036d9cd70fb1e0d70a0c3e1f39bedbe3bc",
+        "revCount": 2758,
         "type": "git",
         "url": "file:///Users/johnw/src/git-ai/async-bash-snapshots"
       },
@@ -4866,11 +4866,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1774539458,
-        "narHash": "sha256-H9GIOqdMfQZ6lFetsQhO9TCq53hYzpTHDWOt3PRh9V0=",
+        "lastModified": 1774647770,
+        "narHash": "sha256-UNNi14XiqRWWjO8ykbFwA5wRwx7EscsC+GItOVpuGjc=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "e2e5f512b33ed19a7a3271d0b73ed5eefcc0be5f",
+        "rev": "02371c05a04a2876cf92e2d67a259e8f87399068",
         "type": "github"
       },
       "original": {
@@ -7016,11 +7016,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1774547332,
-        "narHash": "sha256-L53uSF/2/4zZqkEyRwtaB9ZIJ9HqwlmZykps1cbeeO0=",
+        "lastModified": 1774658089,
+        "narHash": "sha256-oHbQbWQNv3ghvAbMOAhg9Kbczh24iyVzRySlpe7HkGA=",
         "ref": "refs/heads/main",
-        "rev": "13d6574807941b5763c2e83820e91383ec0dc619",
-        "revCount": 1361,
+        "rev": "66ba348ffe04fa82764e8ac09f7650fc9e2cfa7e",
+        "revCount": 1362,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
