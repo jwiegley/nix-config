@@ -1381,11 +1381,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1774658062,
-        "narHash": "sha256-EArtmYLDwXEBH6SE1dn6vjybgVIIYKizPNoCpg3pZ0g=",
+        "lastModified": 1774995743,
+        "narHash": "sha256-P+JnbNvgaVUja8itKdN+mMRDfwl8KZQyXqvjc9B5Jhs=",
         "ref": "refs/heads/johnw/async-bash-snapshots",
-        "rev": "7fe364036d9cd70fb1e0d70a0c3e1f39bedbe3bc",
-        "revCount": 2758,
+        "rev": "4892b391a5aabf12ea6af3552b5752f698d5f402",
+        "revCount": 2879,
         "type": "git",
         "url": "file:///Users/johnw/src/git-ai/async-bash-snapshots"
       },
