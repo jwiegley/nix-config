@@ -264,7 +264,9 @@ rec {
       pnpm
       (lib.hiPrio (
         python3.withPackages (
-          python-pkgs: with python-pkgs; [
+          python-pkgs:
+          with python-pkgs;
+          [
             autoflake
             basedpyright
             black # Python code formatter
@@ -280,6 +282,7 @@ rec {
             stdenv
             venvShellHook
           ]
+          ++ lib.optional (python-pkgs ? mlx-speech) python-pkgs.mlx-speech
         )
       ))
       pyright # LSP server for Python

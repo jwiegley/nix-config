@@ -81,29 +81,90 @@ in
 
         mlx = pprev.mlx.overridePythonAttrs (
           oldAttrs:
-          prev.lib.optionalAttrs (prev.stdenv.isDarwin && prev.stdenv.isAarch64) {
-            # Use pre-built wheel from PyPI that includes Metal support
-            # Building from source fails in Nix sandbox due to Metal tools being unavailable
-            version = "0.30.0";
-            pyproject = null;
-            format = "wheel";
-            patches = [ ]; # Wheel doesn't need patches
-            postPatch = ""; # No patching needed for pre-built wheel
-            doCheck = false; # Wheels don't include tests
-            src = pfinal.fetchPypi {
-              pname = "mlx";
-              version = "0.30.0";
+          prev.lib.optionalAttrs (prev.stdenv.isDarwin && prev.stdenv.isAarch64) (
+            let
+              mlxMetalWheel = pfinal.fetchPypi {
+                pname = "mlx_metal";
+                version = "0.31.1";
+                format = "wheel";
+                dist = "py3";
+                python = "py3";
+                platform = "macosx_14_0_arm64";
+                hash = "sha256-cHQRdBMdv3/dR5y3MOBuCMNY6sO/eQXZ6ITnlgz91bg=";
+              };
+            in
+            {
+              # Use pre-built wheel from PyPI that includes Metal support
+              # Building from source fails in Nix sandbox due to Metal tools being unavailable
+              version = "0.31.1";
+              pyproject = null;
               format = "wheel";
-              dist = "cp313";
-              python = "cp313";
-              abi = "cp313";
-              platform = "macosx_14_0_arm64";
-              hash = "sha256-9GqqbFYroYPipkoOa6Fe1U+QJ9m3sYIunux/WbE9YQw=";
-            };
-          }
+              patches = [ ]; # Wheel doesn't need patches
+              postPatch = ""; # No patching needed for pre-built wheel
+              doCheck = false; # Wheels don't include tests
+              # Skip mlx-metal dep check — its contents are merged in postInstall
+              pythonRemoveDeps = [ "mlx-metal" ];
+              src = pfinal.fetchPypi {
+                pname = "mlx";
+                version = "0.31.1";
+                format = "wheel";
+                dist = "cp313";
+                python = "cp313";
+                abi = "cp313";
+                platform = "macosx_14_0_arm64";
+                hash = "sha256-mm00EPyVG9KFCP7ZwatdmQP29rsQHDpdY9QZHUmjhKE=";
+              };
+              nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ prev.unzip ];
+              # Merge mlx-metal (Metal GPU kernels, split out since 0.31.x) into
+              # this derivation to avoid namespace-package file collisions in buildEnv.
+              postInstall = ''
+                unzip -o ${mlxMetalWheel} -d $TMPDIR/mlx-metal
+                siteDir=$out/lib/python3.13/site-packages/mlx
+                cp -r $TMPDIR/mlx-metal/mlx/lib     $siteDir/
+                cp -r $TMPDIR/mlx-metal/mlx/include  $siteDir/
+                cp -r $TMPDIR/mlx-metal/mlx/share    $siteDir/
+              '';
+            }
+          )
         );
 
         llm-mlx = pfinal.callPackage llm-mlx { };
+
+        mlx-speech = pfinal.buildPythonPackage {
+          pname = "mlx-speech";
+          version = "0-unstable-2025-03-30";
+          pyproject = true;
+
+          src = prev.fetchFromGitHub {
+            owner = "appautomaton";
+            repo = "mlx-speech";
+            rev = "d7bb3d79fe7b6cf545a79ca6ebfb0c22c221f6ad";
+            hash = "sha256-083qJM0aXQmc0Yu+MW8a9MuzCDiye9AZHghP0Pgmr2s=";
+          };
+
+          postPatch = ''
+            substituteInPlace pyproject.toml \
+              --replace-fail "uv_build>=0.11.2,<0.12" "uv_build>=0.6"
+          '';
+
+          build-system = [ pfinal.uv-build ];
+
+          dependencies = [
+            pfinal.mlx
+            pfinal.numpy
+            pfinal.safetensors
+            pfinal.soundfile
+            pfinal.tokenizers
+          ];
+
+          pythonImportsCheck = [ "mlx_speech" ];
+
+          meta = {
+            description = "MLX-native speech library for Apple Silicon";
+            homepage = "https://github.com/appautomaton/mlx-speech";
+            license = prev.lib.licenses.mit;
+          };
+        };
 
         # standard-distutils: backport of distutils for Python 3.12+
         standard-distutils = pfinal.buildPythonPackage rec {
