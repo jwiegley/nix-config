@@ -465,6 +465,7 @@ rec {
     )
 
     # ── MCP Servers & Agent Tools ────────────────────────────────────
+    ++ optPkg "sherlock-db"
     ++ optPkg "pal-mcp-server"
     ++ optPkg "rustdocs-mcp-server"
     ++ optPkg "context-hub"

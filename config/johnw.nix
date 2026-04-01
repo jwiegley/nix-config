@@ -200,6 +200,10 @@ in
           inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
         }/bin/claude";
       }
+      // lib.optionalAttrs (pkgs ? sherlock-db) {
+        ".claude/skills/sherlock/SKILL.md".source = "${pkgs.sherlock-db}/share/sherlock/SKILL.md";
+        ".claude/skills/sherlock/sherlock".source = "${pkgs.sherlock-db}/bin/sherlock";
+      }
       // lib.optionalAttrs isDarwin {
         ".aider".source = mkLink "${config.xdg.configHome}/aider";
         ".codex".source = mkLink "${config.xdg.configHome}/codex";
