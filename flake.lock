@@ -1381,11 +1381,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1774995743,
-        "narHash": "sha256-P+JnbNvgaVUja8itKdN+mMRDfwl8KZQyXqvjc9B5Jhs=",
+        "lastModified": 1775076058,
+        "narHash": "sha256-18N3isyS4NDzHK7/yvKB/352haRamOmlj0eYDm5UDbw=",
         "ref": "refs/heads/johnw/async-bash-snapshots",
-        "rev": "4892b391a5aabf12ea6af3552b5752f698d5f402",
-        "revCount": 2879,
+        "rev": "5cb79778f72d9b9d45b8ce817796a6e41b7bdf80",
+        "revCount": 2893,
         "type": "git",
         "url": "file:///Users/johnw/src/git-ai/async-bash-snapshots"
       },
@@ -5255,11 +5255,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1774644306,
-        "narHash": "sha256-jXdJgk5lN6Bm8HtqqdFHCWkHy45ICCJQhsMqInxowL8=",
+        "lastModified": 1775070543,
+        "narHash": "sha256-Pq2KYD0lfOgfwYq2XTd8EmtqahrrMb9xOobK2yAFwFg=",
         "ref": "refs/heads/main",
-        "rev": "374405c0cf1e132dee9e472b087a749b4f5bdffc",
-        "revCount": 8271,
+        "rev": "7180e17d25c03cfe1a396260e04193c58574e8cb",
+        "revCount": 8303,
         "type": "git",
         "url": "file:///Users/johnw/src/ledger/main"
       },
@@ -5297,11 +5297,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1774989530,
-        "narHash": "sha256-Tk73tZLLSjcnRCGCFhlbLmQfrtmFjgbz+9YJ1MhIOHM=",
+        "lastModified": 1775069339,
+        "narHash": "sha256-kML5ASnmb/KAsXWnVS9FUnSqH359SsUOMfEc4h7FymI=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "facba085859d6fb3036744f5c16f029456aa67b9",
+        "rev": "f46120c9690535d9c8cd95141de84a0b88dccba9",
         "type": "github"
       },
       "original": {
@@ -7016,11 +7016,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1774909240,
-        "narHash": "sha256-s0KCWKEhWFLkbcBkM10TENnPkAs9kWuBg2Ao+HvUMkQ=",
+        "lastModified": 1775074866,
+        "narHash": "sha256-6bRanHHjTnXXU59Wjv3JUnYmwmFz0wV2TiMd2SKUIxk=",
         "ref": "refs/heads/main",
-        "rev": "3b8811ea7a8551fa4200fb654cd23a093ea7745a",
-        "revCount": 1364,
+        "rev": "f210170206a8dbc4f066c1e2d6ed7f52c376c04c",
+        "revCount": 1365,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
