@@ -459,9 +459,9 @@ rec {
           ccusage
           droid
           opencode
+          ollama
           # gemini-cli
           # codex
-          # ollama
         ])
       else
         [ ]
