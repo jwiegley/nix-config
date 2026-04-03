@@ -2,6 +2,7 @@
   hostname,
   inputs,
   pkgs,
+  isClientMachine ? true,
   ...
 }:
 with pkgs;
@@ -40,14 +41,14 @@ rec {
 
   package-list =
 
-    # ── Emacs ────────────────────────────────────────────────────────
-    # emacs30Env
-    lib.optional (emacs30MacPortEnv != null) emacs30MacPortEnv
-    ++ [
-      # emacsHEADEnv
-      eask-cli
-      emacs-lsp-booster
-    ]
+    # ── Emacs (client machines only) ────────────────────────────────
+    lib.optionals isClientMachine (
+      lib.optional (emacs30MacPortEnv != null) emacs30MacPortEnv
+      ++ [
+        eask-cli
+        emacs-lsp-booster
+      ]
+    )
 
     # ── Haskell Tools ────────────────────────────────────────────────
     ++ [
