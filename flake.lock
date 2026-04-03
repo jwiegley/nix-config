@@ -6716,11 +6716,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1775239209,
-        "narHash": "sha256-YtSV0E0b5DRecFdnxjcXcmG75PKljxADCC2cAKV6Dp4=",
+        "lastModified": 1775243771,
+        "narHash": "sha256-hjl85Uy05cJx01jHZ/eBIr91Xlx6wbR9OuJ9CMRFky4=",
         "owner": "jwiegley",
         "repo": "org-jw",
-        "rev": "ddb7ae0fa3f1033011ff17afae1b3f261bb75db3",
+        "rev": "3bac0a7099e373b85a3a0b05c2f9964d357eb10e",
         "type": "github"
       },
       "original": {
@@ -7016,11 +7016,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1775147235,
-        "narHash": "sha256-Fck/gaJcNq2k1L3Vytx34jCH+Kwzl1XvlaC8FFVFt9Q=",
+        "lastModified": 1775243203,
+        "narHash": "sha256-Z7eSVJZGWyf5uh1iEiKrU6iRB9NFTFTUo3y+lT9J+K0=",
         "ref": "refs/heads/main",
-        "rev": "c6428678c6d7cf7967d98d49b756de431a1f6a60",
-        "revCount": 1366,
+        "rev": "8940e317aaeb0016c68ab8ac712c8f1c9359d3dc",
+        "revCount": 1367,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
