@@ -169,7 +169,6 @@ in
       "choosy"
       "claude"
       "claudebar"
-      "codexbar"
       "conductor"
       "corelocationcli"
       "cursor"
