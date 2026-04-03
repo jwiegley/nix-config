@@ -1075,7 +1075,7 @@ in
           };
 
           positron = controlMastered {
-            host = "andoria-* delphi-* agentsrv";
+            host = "andoria-* delphi-* agentsrv labmgr";
             user = "jwiegley";
             identityFile = "${config.xdg.configHome}/ssh/id_positron";
             identitiesOnly = true;
