@@ -197,16 +197,16 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     with final;
     buildNpmPackage (finalAttrs: {
       pname = "claude-code-acp";
-      version = "0.24.2";
+      version = "0.25.0";
 
       src = fetchFromGitHub {
         owner = "zed-industries";
         repo = "claude-code-acp";
         rev = "v${finalAttrs.version}";
-        hash = "sha256-SRVbLcGrH5pJt6yfM0ObSso68M+yGateIVYf/kFVDhE=";
+        hash = "sha256-RaVBdFnga/3Ra1EW8v2K/vl65vTK8k8MZFjzFyYQk/k=";
       };
 
-      npmDepsHash = "sha256-V5lBQNhpL+/Mok9bEVSOrrHSv9B9pXKJswcXW+QDnAs=";
+      npmDepsHash = "sha256-JZPbnB1Tpua7t4tZZf4Q/LNpOBl5A77TYgYQPB9j0Vk=";
 
       dontNpmBuild = false;
 
