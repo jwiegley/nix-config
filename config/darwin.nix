@@ -172,6 +172,8 @@ in
       "codexbar"
       "conductor"
       "corelocationcli"
+      "cursor"
+      "cursor-cli"
       "dbvisualizer"
       "devonagent"
       "devonthink"

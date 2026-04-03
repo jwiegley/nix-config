@@ -224,6 +224,10 @@ sign:
 	$(call announce,nix store sign -k "<key>" --all)
 	@nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
 
+format:
+	$(call announce,nixfmt)
+	find . -name '*.nix' -not -path './result/*' | xargs nixfmt
+
 travel-ready:
 	$(call announce,travel-ready)
 	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")

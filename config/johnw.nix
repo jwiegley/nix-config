@@ -1161,6 +1161,20 @@ in
         RunAtLoad = false;
       };
     };
+
+    ollama-serve = {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          "${pkgs.ollama}/bin/ollama"
+          "serve"
+        ];
+        KeepAlive = true;
+        RunAtLoad = true;
+        StandardOutPath = "${home}/Library/Logs/ollama.log";
+        StandardErrorPath = "${home}/Library/Logs/ollama.log";
+      };
+    };
   };
 
   xdg = {
