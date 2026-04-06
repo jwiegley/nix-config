@@ -359,6 +359,12 @@ in
           ];
 
           line_break.disabled = true;
+
+          # Disable git_status to prevent broken pipe errors in git-annex
+          # repos. git_status runs `git status` which triggers the annex
+          # filter-process; starship's command_timeout kills the pipe
+          # before git-annex finishes, causing hPutBuf errors.
+          git_status.disabled = true;
         }
       ];
 
