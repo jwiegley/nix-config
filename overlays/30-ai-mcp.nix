@@ -128,16 +128,16 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     with prev;
     buildNpmPackage (finalAttrs: {
       pname = "claude-replay";
-      version = "0.7.0";
+      version = "0.8.0";
 
       src = fetchFromGitHub {
         owner = "es617";
         repo = "claude-replay";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-GdmpQLKpxNJCNjow63yQiUngUgbjqvmiDWEv0N5+L88=";
+        hash = "sha256-VicMW9Ypn2P0GkTh5cmgubFsp9f/r3b+rgNdWSNwJPY=";
       };
 
-      npmDepsHash = "sha256-So8QP1MdKrKD4VayCSDCMqXBBdZFN4DdQJmSBTiHqEg=";
+      npmDepsHash = "sha256-VVSc5w5b5DVy7J9D2G9PpVNnuqD2dOUCoCAagMHWCnw=";
 
       makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
 
@@ -197,16 +197,16 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     with final;
     buildNpmPackage (finalAttrs: {
       pname = "claude-code-acp";
-      version = "0.25.0";
+      version = "0.25.3";
 
       src = fetchFromGitHub {
         owner = "zed-industries";
         repo = "claude-code-acp";
         rev = "v${finalAttrs.version}";
-        hash = "sha256-RaVBdFnga/3Ra1EW8v2K/vl65vTK8k8MZFjzFyYQk/k=";
+        hash = "sha256-GJWmJTUEvXxgYyaMp2agjBMGokE8PGqVxN/x7Yi9Tag=";
       };
 
-      npmDepsHash = "sha256-JZPbnB1Tpua7t4tZZf4Q/LNpOBl5A77TYgYQPB9j0Vk=";
+      npmDepsHash = "sha256-83/FrSvhJQ3r8M8Ja5Ta/J3X1myTS7vj98754HC/fgM=";
 
       dontNpmBuild = false;
 

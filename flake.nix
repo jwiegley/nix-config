@@ -39,12 +39,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    git-ai.url = "git+file:///Users/johnw/src/git-ai/async-bash-snapshots";
-    # git-ai.url = "git+file:///Users/johnw/src/git-ai/async-bash-snapshots?rev=a083a231de259d9b181db0cd498fea4fd5ad0de6";
-    # git-ai.url = "git+file:///Users/johnw/src/git-ai/main?rev=78623c6469567bdf8ff921dd2cec4b579e71df58";
-    # git-ai.url = "git+file:///Users/johnw/src/git-ai/main?rev=32bebfe2fcbee201ccbd2b763e6b34ffdb66029c";
-    # git-ai.url = "git+file:///Users/johnw/src/git-ai/main?rev=c6f15974afc5df18bde06f285cb667dcecee0799";
-    # git-ai.url = "git+file:///Users/johnw/src/git-ai/main?rev=334dac84efa661a13bdc08d6a73a431e206845de";
+    git-ai.url = "git+file:///Users/johnw/src/git-ai/bash-support";
     git-all.url = "git+file:///Users/johnw/src/git-all";
     gitlib.url = "git+file:///Users/johnw/src/gitlib?submodules=0";
     hakyll.url = "git+file:///Users/johnw/src/hakyll";
