@@ -1081,10 +1081,15 @@ in
           };
 
           positron = controlMastered {
-            host = "andoria-* delphi-* agentsrv labmgr";
+            host = "pos andoria andoria-* delphi-* agentsrv labmgr";
             user = "jwiegley";
             identityFile = "${config.xdg.configHome}/ssh/id_positron";
             identitiesOnly = true;
+          };
+
+          "pos andoria" = controlMastered {
+            user = "jwiegley";
+            hostname = "andoria-08";
           };
 
           git-ai = controlMastered {
