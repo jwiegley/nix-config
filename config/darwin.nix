@@ -675,7 +675,9 @@ in
                   # Proxy all other requests to chat.vulcan.lan
                   location / {
                     proxy_pass https://chat.vulcan.lan;
-                    proxy_ssl_verify off;
+                    proxy_ssl_verify on;
+                    proxy_ssl_trusted_certificate /Users/johnw/hera/vulcan-root-ca.crt;
+                    proxy_ssl_server_name on;
 
                     proxy_set_header Host chat.vulcan.lan;
                     proxy_set_header X-Real-IP $remote_addr;
