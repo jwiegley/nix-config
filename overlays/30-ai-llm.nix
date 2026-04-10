@@ -57,12 +57,12 @@ final: prev: {
 
   # llama.cpp - LLM inference with GGUF models
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "8690";
+    version = "8739";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-1BD1W3YgTip/aNvQ3c8DDgQJ8ZfFQVwpfNeWk8pA9d8=";
+      hash = "sha256-RMAHdyYqcItBGZ3x1qaYkehWF/5I3Aevf/kspGxZx6g=";
     };
     postPatch = "";
     preConfigure = ''
@@ -219,14 +219,14 @@ final: prev: {
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "mlx-lm";
-      version = "0.31.0";
+      version = "0.31.2";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "ml-explore";
         repo = "mlx-lm";
         tag = "v${version}";
-        hash = "sha256-1YZt2HtHyhP4h3WOcSytbN0sN2x58OYAmQtoxisNt1o=";
+        hash = "sha256-Ujt0KMs4dzIlbg7cg72TudAvlwJ4uWEG5Lx7+5j8cOU=";
       };
 
       build-system = [ setuptools ];
