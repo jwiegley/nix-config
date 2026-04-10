@@ -753,7 +753,9 @@ in
         mergetool.keepBackup = true;
         pull.rebase = true;
         rebase.autosquash = true;
-        rerere.enabled = false;
+        rebase.autoStash = true;
+        rerere.enabled = true;
+        rerere.autoupdate = true;
         init.defaultBranch = "main";
 
         "merge \"ours\"".driver = true;
