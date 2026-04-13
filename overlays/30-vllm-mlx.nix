@@ -1,77 +1,63 @@
 # overlays/30-vllm-mlx.nix
 # Purpose: vLLM-like inference for Apple Silicon via MLX
-# Dependencies: None (uses only prev)
+# Dependencies: Uses final for python3Packages (needs mlx, mlx-embeddings from extensions)
 # Packages: vllm-mlx
-#
-# NOTE: MLX requires Apple Metal GPU access and native dylibs that don't work
-# in the Nix sandbox. This overlay installs vllm-mlx via uv on first run.
-_final: prev: {
+final: prev: {
 
   vllm-mlx =
-    with prev;
-    stdenv.mkDerivation rec {
+    with final;
+    with final.python3Packages;
+    buildPythonApplication rec {
       pname = "vllm-mlx";
-      version = "0.2.6";
+      version = "0.2.8";
+      pyproject = null;
+      format = "wheel";
 
-      dontUnpack = true;
-      dontConfigure = true;
+      src = prev.fetchurl {
+        url = "https://files.pythonhosted.org/packages/54/e5/04730159e337b288e26b0957ee6a8e5647b47fb5e14f98e6d229565c1daf/vllm_mlx-${version}-py3-none-any.whl";
+        hash = "sha256-RTmXt4qKx8d2XOXdL7/JrgEEkuUCGuif8Lb8RK9VK/I=";
+      };
+
+      # opencv-python is provided by opencv4 in nixpkgs (same cv2 module)
+      pythonRemoveDeps = [ "opencv-python" ];
+
+      dependencies = [
+        mlx
+        mlx-lm
+        mlx-vlm
+        mlx-embeddings
+        transformers
+        tokenizers
+        huggingface-hub
+        numpy
+        pillow
+        tqdm
+        pyyaml
+        gradio
+        requests
+        tabulate
+        opencv4
+        torchvision
+        psutil
+        fastapi
+        uvicorn
+        mcp
+        jsonschema
+        pytz
+      ];
+
       dontBuild = true;
+      doCheck = false;
 
-      installPhase = ''
-                runHook preInstall
-                mkdir -p $out/bin
-
-                cat > $out/bin/vllm-mlx <<EOF
-        #!/usr/bin/env bash
-        UV="${uv}/bin/uv"
-        TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
-
-        if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
-          echo "Installing vllm-mlx v${version} via uv..." >&2
-          "\$UV" tool install "vllm-mlx==${version}" >&2
-        fi
-
-        exec "\$UV" tool run vllm-mlx "\$@"
-        EOF
-                chmod +x $out/bin/vllm-mlx
-
-                cat > $out/bin/vllm-mlx-chat <<EOF
-        #!/usr/bin/env bash
-        UV="${uv}/bin/uv"
-        TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
-
-        if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
-          echo "Installing vllm-mlx v${version} via uv..." >&2
-          "\$UV" tool install "vllm-mlx==${version}" >&2
-        fi
-
-        exec "\$UV" tool run vllm-mlx-chat "\$@"
-        EOF
-                chmod +x $out/bin/vllm-mlx-chat
-
-                cat > $out/bin/vllm-mlx-bench <<EOF
-        #!/usr/bin/env bash
-        UV="${uv}/bin/uv"
-        TOOL_DIR="\''${XDG_DATA_HOME:-\$HOME/.local/share}/uv/tools"
-
-        if [ ! -d "\$TOOL_DIR/vllm-mlx" ]; then
-          echo "Installing vllm-mlx v${version} via uv..." >&2
-          "\$UV" tool install "vllm-mlx==${version}" >&2
-        fi
-
-        exec "\$UV" tool run vllm-mlx-bench "\$@"
-        EOF
-                chmod +x $out/bin/vllm-mlx-bench
-
-                runHook postInstall
-      '';
+      pythonImportsCheck = [ "vllm_mlx" ];
 
       meta = {
         description = "vLLM-like inference for Apple Silicon via MLX";
-        homepage = "https://github.com/waybarrios/vllm-mlx";
+        homepage = "https://github.com/vllm-mlx/vllm-mlx";
         license = lib.licenses.asl20;
         platforms = [ "aarch64-darwin" ];
         maintainers = with lib.maintainers; [ jwiegley ];
+        mainProgram = "vllm-mlx";
       };
     };
 

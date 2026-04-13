@@ -117,6 +117,7 @@ with epkgs;
   eglot-booster
   el-job
   elisp-depend
+  elisp-autofmt
   elisp-docstring-mode
   elisp-slime-nav
   elmacro
@@ -353,6 +354,7 @@ with epkgs;
   rainbow-mode
   redshank
   regex-tool
+  relint
   (exclude repl-toggle)
   restclient
   riscv-mode

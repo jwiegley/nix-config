@@ -166,6 +166,33 @@ in
           };
         };
 
+        mlx-embeddings = pfinal.buildPythonPackage rec {
+          pname = "mlx-embeddings";
+          version = "0.1.0";
+          format = "wheel";
+
+          src = prev.fetchurl {
+            url = "https://files.pythonhosted.org/packages/78/18/05a341c811c9ee04f227cdbc064a635b84202cb8f85471adfdeebe0da32d/mlx_embeddings-${version}-py2.py3-none-any.whl";
+            hash = "sha256-P+H+qnhtO1RszYkJ9rTCK9O8zgl2FvzoMXPt7dMOZjA=";
+          };
+
+          dependencies = with pfinal; [
+            mlx
+            mlx-vlm
+            transformers
+            huggingface-hub
+            sentencepiece
+          ];
+
+          pythonImportsCheck = [ "mlx_embeddings" ];
+
+          meta = {
+            description = "MLX-based text embeddings for Apple Silicon";
+            homepage = "https://github.com/Blaizzy/mlx-embeddings";
+            license = prev.lib.licenses.asl20;
+          };
+        };
+
         # standard-distutils: backport of distutils for Python 3.12+
         standard-distutils = pfinal.buildPythonPackage rec {
           pname = "standard-distutils";
@@ -192,6 +219,15 @@ in
         # sanic test_validate_group_sets_gid fails in Nix sandbox (no 'root' group)
         sanic = pprev.sanic.overridePythonAttrs (_: {
           doCheck = false;
+        });
+
+        # ibis-framework: DuckDB backend tests fail (SystemError) and pythonImportsCheck
+        # tries to import ibis.backends.duckdb which needs the optional duckdb module
+        ibis-framework = pprev.ibis-framework.overrideAttrs (old: {
+          doCheck = false;
+          doInstallCheck = false;
+          installCheckPhase = "true";
+          pythonImportsCheck = [ "ibis" ];
         });
 
         aiologic = pfinal.buildPythonPackage rec {
