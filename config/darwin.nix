@@ -139,6 +139,7 @@ in
       "steipete/tap"
       "antoniorodr/memo"
       "withgraphite/tap"
+      "jundot/omlx"
     ];
     brews = [
       "ykman"
@@ -155,6 +156,7 @@ in
       "steipete/tap/imsg"
       "antoniorodr/memo/memo"
       "withgraphite/tap/graphite"
+      "jundot/omlx/omlx"
     ];
 
     casks = [
@@ -416,6 +418,19 @@ in
 
   system = {
     stateVersion = 4;
+
+    # Patch Homebrew formulas before `brew bundle` runs (extraActivation is
+    # position 4 in the activation sequence; homebrew is position 23).
+    activationScripts.extraActivation.text = ''
+      # omlx formula: pyo3 extension modules need dynamic_lookup on macOS so
+      # Python C API symbols resolve at runtime via the interpreter.
+      # Upstream: https://github.com/jundot/omlx/issues/747
+      FORMULA="/opt/homebrew/Library/Taps/jundot/homebrew-omlx/Formula/omlx.rb"
+      if [ -f "$FORMULA" ] && ! grep -q 'RUSTFLAGS' "$FORMULA"; then
+        echo >&2 "Patching omlx formula for pyo3 RUSTFLAGS..."
+        ${pkgs.gnused}/bin/sed -i 's|ENV.append "LDFLAGS", "-Wl,-headerpad_max_install_names"|&\n\n    # pyo3 extension modules on macOS need dynamic_lookup\n    ENV.append "RUSTFLAGS", "-C link-arg=-undefined -C link-arg=dynamic_lookup"|' "$FORMULA"
+      fi
+    '';
 
     primaryUser = "johnw";
 
@@ -706,25 +721,12 @@ in
           };
 
         omlx = {
-          script = ''
-            # Install oMLX tap if not already installed
-            if ! /opt/homebrew/bin/brew tap | grep -q "jundot/omlx"; then
-              /opt/homebrew/bin/brew tap jundot/omlx https://github.com/jundot/omlx
-            fi
-
-            # Install omlx if not already installed
-            if ! /opt/homebrew/bin/brew list omlx >/dev/null 2>&1; then
-              /opt/homebrew/bin/brew install jundot/omlx/omlx
-            fi
-
-            # Run omlx serve directly
-            exec /opt/homebrew/bin/omlx serve
-          '';
+          script = "exec /opt/homebrew/bin/omlx serve --base-path /Users/johnw/.config/omlx/.omlx";
           serviceConfig = {
             RunAtLoad = true;
             KeepAlive = true;
-            StandardOutPath = "/Users/johnw/.omlx/logs/launchd.log";
-            StandardErrorPath = "/Users/johnw/.omlx/logs/launchd.log";
+            StandardOutPath = "/Users/johnw/.local/share/omlx/logs/launchd.log";
+            StandardErrorPath = "/Users/johnw/.local/share/omlx/logs/launchd.log";
           };
         };
       }
