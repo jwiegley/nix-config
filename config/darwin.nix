@@ -705,6 +705,28 @@ in
             };
           };
 
+        omlx = {
+          script = ''
+            # Install oMLX tap if not already installed
+            if ! /opt/homebrew/bin/brew tap | grep -q "jundot/omlx"; then
+              /opt/homebrew/bin/brew tap jundot/omlx https://github.com/jundot/omlx
+            fi
+
+            # Install omlx if not already installed
+            if ! /opt/homebrew/bin/brew list omlx >/dev/null 2>&1; then
+              /opt/homebrew/bin/brew install jundot/omlx/omlx
+            fi
+
+            # Run omlx serve directly
+            exec /opt/homebrew/bin/omlx serve
+          '';
+          serviceConfig = {
+            RunAtLoad = true;
+            KeepAlive = true;
+            StandardOutPath = "/Users/johnw/.omlx/logs/launchd.log";
+            StandardErrorPath = "/Users/johnw/.omlx/logs/launchd.log";
+          };
+        };
       }
       // lib.optionalAttrs (hostname == "hera") {
         docker-desktop = {
