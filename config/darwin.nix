@@ -138,7 +138,7 @@ in
       "graelo/tap"
       "steipete/tap"
       "antoniorodr/memo"
-      # "withgraphite/tap"
+      "withgraphite/tap"
     ];
     brews = [
       "ykman"
@@ -154,7 +154,7 @@ in
       "steipete/tap/remindctl"
       "steipete/tap/imsg"
       "antoniorodr/memo/memo"
-      # "withgraphite/tap/graphite"
+      "withgraphite/tap/graphite"
     ];
 
     casks = [
