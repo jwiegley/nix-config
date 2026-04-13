@@ -60,12 +60,12 @@ verify-inputs:
 	import json; \
 	lock = json.load(open("flake.lock")); \
 	nodes = lock["nodes"]; \
-	[print(nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("url", "")) \
+	[print(str(int(bool(nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("submodules", False)))) + "\t" + nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("url", "")) \
 	 for n, k in nodes["root"]["inputs"].items() \
 	 if nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("type") == "git" \
 	 and "file://" in nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("url", "")]' \
 	| sed 's|file://||' \
-	| while IFS= read -r repo; do \
+	| while IFS=$$'\t' read -r has_submodules repo; do \
 	    bad=$$(git -C "$$repo" ls-files -v 2>/dev/null | grep -E '^[shS] '); \
 	    if [ -n "$$bad" ]; then \
 	        echo "ERROR: $$repo has skip-worktree/assume-unchanged files:" | tee -a "$$errfile"; \
@@ -80,7 +80,7 @@ verify-inputs:
 	        echo "Fix: cd $$repo && git submodule update --init" | tee -a "$$errfile"; \
 	    fi; \
 	    gitlinks=$$(git -C "$$repo" ls-files --stage 2>/dev/null | grep '^160000'); \
-	    if [ -n "$$gitlinks" ]; then \
+	    if [ -n "$$gitlinks" ] && [ "$$has_submodules" != "1" ]; then \
 	        echo "WARNING: $$repo has submodules (gitlinks) that may cause NAR hash divergence:"; \
 	        echo "$$gitlinks"; \
 	        echo "Consider: remove submodules or add ?submodules=1 to the flake input URL"; \
