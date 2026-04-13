@@ -492,7 +492,6 @@ rec {
     ++ optPkg "ledger_HEAD"
     ++ optPkg "linkdups"
     ++ optPkg "lipotell"
-    ++ optPkg "mapq"
     ++ optPkg "markless"
     ++ optPkg "gogcli"
 
