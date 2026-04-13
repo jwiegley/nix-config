@@ -26,6 +26,7 @@ let
     description: Allows read-only access to SQL databases and Redis for querying and analysis using natural language
     allowed-tools:
        - Bash(~/.claude/skills/sherlock/sherlock:*)
+       - Bash(security find-generic-password:*)
     ---
 
     # Sherlock
@@ -48,6 +49,24 @@ let
     - Query logging is disabled for ad hoc connections
 
     **When to use `--url` vs `-c`:** Use `--url` for quick one-off access, especially when the project already has a `DATABASE_URL`. Use `-c` for repeated access to the same database with config-managed credentials.
+
+    ## SSL Connections with Keychain Passwords
+
+    When a PostgreSQL server requires SSL (e.g., `pg_hba.conf` rejects unencrypted connections) and the config uses `$keychain` for the password, the `-c` flag may fail because sherlock does not yet pass SSL options from the config file. Work around this by constructing the URL with the password retrieved from macOS Keychain:
+
+    ```bash
+    PW=$(security find-generic-password -a <keychain-account> -w) && \
+    sherlock -u "postgres://user:''${PW}@host:5432/db?sslmode=require" <command>
+    ```
+
+    The `<keychain-account>` corresponds to the key name in the `"$keychain"` field of the connection config. For example, for a connection configured with `"password": { "$keychain": "org" }`:
+
+    ```bash
+    PW=$(security find-generic-password -a org -w) && \
+    sherlock -u "postgres://johnw:''${PW}@postgres.vulcan.lan:5432/org?sslmode=require" query "SELECT ..." -f markdown
+    ```
+
+    Always use `-f markdown` for human-readable output in conversation.
 
     ## SQL Commands
 
@@ -92,7 +111,7 @@ let
 
     ## SQL Workflow
 
-    1. Run `connections` to see available databases
+    1. Try `sherlock -c <conn> tables` first. If it fails with an SSL/encryption error, switch to the URL+Keychain approach described above
     2. Use `tables` or `introspect` to understand schema (introspect is cached per-connection)
     3. Use `fk` to understand table relationships before writing JOINs
     4. Use `sample` to see real data examples before writing queries
