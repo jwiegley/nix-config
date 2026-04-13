@@ -446,12 +446,6 @@ in
           FXDefaultSearchScope = "SCcf";
         };
 
-        "com.apple.desktopservices" = {
-          # Avoid creating .DS_Store files on network or USB volumes
-          DSDontWriteNetworkStores = true;
-          DSDontWriteUSBStores = true;
-        };
-
         "com.apple.spaces" = {
           "spans-displays" = 0; # Display have seperate spaces
         };
