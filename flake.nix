@@ -35,7 +35,7 @@
     rag-client.url = "github:jwiegley/rag-client";
 
     promptdeploy = {
-      url = "git+file:///Users/johnw/src/promptdeploy?shallow=0";
+      url = "git+file:///Users/johnw/src/promptdeploy?shallow=0&submodules=1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

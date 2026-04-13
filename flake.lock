@@ -6814,17 +6814,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1776062037,
-        "narHash": "sha256-4pdnzAvzpCysDi0MidXZN30mEsiavyTlnfxY+EOCv7k=",
+        "lastModified": 1776112109,
+        "narHash": "sha256-kgBOvOKZe8kTBhIXpp2i1teHjNur6M7KzS9NXT5nvqA=",
         "ref": "refs/heads/main",
-        "rev": "1fd3b152f218f0c490680499fbc75d14f45d8c64",
-        "revCount": 212,
+        "rev": "a1335f388016c31ab9b56b7eb6a51cc350b77173",
+        "revCount": 214,
         "shallow": false,
+        "submodules": true,
         "type": "git",
         "url": "file:///Users/johnw/src/promptdeploy"
       },
       "original": {
         "shallow": false,
+        "submodules": true,
         "type": "git",
         "url": "file:///Users/johnw/src/promptdeploy"
       }
@@ -7016,11 +7018,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1776110259,
-        "narHash": "sha256-6ErgEEbIbHik4s2xcLu1LPL7F/GnS6sUlrQTAGFYtaM=",
+        "lastModified": 1776111582,
+        "narHash": "sha256-nVFKg57s1S3l0cKaFh/qizTEvUREMDC13SApBLr7JFc=",
         "ref": "refs/heads/main",
-        "rev": "7a81226f6ce5cc9c005cc844d1a29ba505170e02",
-        "revCount": 1375,
+        "rev": "be432eb953dff62536a4f088f14a80494ce7dbee",
+        "revCount": 1377,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
