@@ -204,6 +204,7 @@ in
       "microsoft-remote-desktop"
       "netdownloadhelpercoapp"
       "opencode-desktop"
+      "path-finder"
       "pdf-expert"
       "postman"
       "signal"
