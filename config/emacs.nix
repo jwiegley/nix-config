@@ -117,7 +117,6 @@ with epkgs;
   eglot-booster
   el-job
   elisp-depend
-  elisp-autofmt
   elisp-docstring-mode
   elisp-slime-nav
   elmacro
