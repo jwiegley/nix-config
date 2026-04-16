@@ -183,7 +183,6 @@ in
       "drivedx"
       "element"
       "fantastical"
-      "geektool"
       "github"
       "handy"
       "iterm2"
@@ -203,7 +202,6 @@ in
       "microsoft-excel"
       "microsoft-powerpoint"
       "microsoft-word"
-      "microsoft-remote-desktop"
       "netdownloadhelpercoapp"
       "opencode-desktop"
       "path-finder"
@@ -223,7 +221,6 @@ in
       "virtual-ii"
       "visual-studio-code"
       "vlc"
-      "vmware-fusion"
       "whatsapp"
       "wireshark-app"
       "wispr-flow"
@@ -239,6 +236,7 @@ in
       # "vagrant"
       # "vagrant-manager"
       # "vagrant-vmware-utility"
+      # "vmware-fusion"
       {
         name = "brave-browser";
         greedy = true;
