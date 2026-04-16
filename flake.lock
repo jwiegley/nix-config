@@ -1382,11 +1382,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1776322119,
-        "narHash": "sha256-GUKERyQzozk1t18Rbwe0x6sWwWgSJq7xH7FSaiSINRM=",
-        "ref": "refs/heads/johnw/review-refactor-api",
-        "rev": "e70d3b266394dabbea456a2e8a29d96f12f879f3",
-        "revCount": 3422,
+        "lastModified": 1776371296,
+        "narHash": "sha256-D2RQVGBGoO7QSj1s8V8cO2n7a7YfpsOQGL0JrBZNkP0=",
+        "ref": "refs/heads/main",
+        "rev": "60df2ff696153e6a53308091d25bd6ed8c6982d7",
+        "revCount": 3435,
         "type": "git",
         "url": "file:///Users/johnw/src/git-ai/main"
       },
@@ -5256,11 +5256,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776275869,
-        "narHash": "sha256-jo1o8Gy3WSHGV52Hm9I1GAvXudw99w8jULpg1aKDNx0=",
-        "ref": "refs/heads/main",
-        "rev": "4183661e094e4e1117e3cdd475da4269be1a90dc",
-        "revCount": 8462,
+        "lastModified": 1776362575,
+        "narHash": "sha256-Nq0ne7JZez/nRn3LpFhnl7tqTTWAIrknu+EO1FzaEhE=",
+        "ref": "refs/heads/johnw/fix-636",
+        "rev": "3537b29cfd3446bfe4129dcc2d5751310f0e2e5e",
+        "revCount": 8474,
         "type": "git",
         "url": "file:///Users/johnw/src/ledger/main"
       },
@@ -5298,15 +5298,15 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1776269462,
-        "narHash": "sha256-9WA/wWlzYaJ2/X2y5YYk80ckhyLmhT5BjUVVR/8H5UY=",
-        "owner": "numtide",
+        "lastModified": 1776371380,
+        "narHash": "sha256-UzTE2pDqcBbn30elFzzWv9hWhTIPP6hHBrQKprdBfrk=",
+        "owner": "bgamari-positron",
         "repo": "llm-agents.nix",
-        "rev": "9419738cb8576d342fe830b3c317791a200de771",
+        "rev": "619f510cfca7b1661105c548916c106c865148c4",
         "type": "github"
       },
       "original": {
-        "owner": "numtide",
+        "owner": "bgamari-positron",
         "repo": "llm-agents.nix",
         "type": "github"
       }
@@ -6717,11 +6717,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776278203,
-        "narHash": "sha256-kfRB9HRSKjgijva0b5PiTpeyoZfdYZ//tInNR1pqiMk=",
+        "lastModified": 1776287045,
+        "narHash": "sha256-QpGYu2AUB69WRN78O0iGkSg5q+d0/cH+P9WDHC8Q6nI=",
         "owner": "jwiegley",
         "repo": "org-jw",
-        "rev": "20d2c0ecc0e2a5e9bb31135dc89bd8cf619d7307",
+        "rev": "13798f3b1f5b8403358ee496f6f9f99117504f26",
         "type": "github"
       },
       "original": {
@@ -6815,11 +6815,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776278681,
-        "narHash": "sha256-zdBi4BDt4sg16MWukzsrcx/kZD3S1Fn1tvhGLO48hXE=",
+        "lastModified": 1776367479,
+        "narHash": "sha256-LN6RLZEosYWx5ARyMwcDloopNrGOMD1MZyG4p9y5zn8=",
         "ref": "refs/heads/main",
-        "rev": "7ffe02f4eba7071e4c0de57bee375b5ea82b44c7",
-        "revCount": 222,
+        "rev": "cca4b70f7bc6c6bc734b78a147bbdbceae8882d7",
+        "revCount": 224,
         "shallow": false,
         "submodules": true,
         "type": "git",
