@@ -1382,11 +1382,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1775856115,
-        "narHash": "sha256-wxm0+WV6xlKYdAZ/KIjTJsC2zpaEHst5JeWIHL5dvWk=",
-        "ref": "refs/heads/main",
-        "rev": "ba2ed2564c688f81a2597136ab9e55021ee63d84",
-        "revCount": 3246,
+        "lastModified": 1776322119,
+        "narHash": "sha256-GUKERyQzozk1t18Rbwe0x6sWwWgSJq7xH7FSaiSINRM=",
+        "ref": "refs/heads/johnw/review-refactor-api",
+        "rev": "e70d3b266394dabbea456a2e8a29d96f12f879f3",
+        "revCount": 3422,
         "type": "git",
         "url": "file:///Users/johnw/src/git-ai/main"
       },
@@ -5256,11 +5256,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776200994,
-        "narHash": "sha256-nQVZEkzyxU601doUiGewJVNjXQ5ayGaQxfglMjNKtoQ=",
+        "lastModified": 1776275869,
+        "narHash": "sha256-jo1o8Gy3WSHGV52Hm9I1GAvXudw99w8jULpg1aKDNx0=",
         "ref": "refs/heads/main",
-        "rev": "413669f301df50be990422e79ba6ab23c1195ade",
-        "revCount": 8440,
+        "rev": "4183661e094e4e1117e3cdd475da4269be1a90dc",
+        "revCount": 8462,
         "type": "git",
         "url": "file:///Users/johnw/src/ledger/main"
       },

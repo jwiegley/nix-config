@@ -37,14 +37,14 @@ final: prev: {
     with prev;
     buildGoModule rec {
       pname = "hfdownloader";
-      version = "3.0.3";
+      version = "3.0.4";
       vendorHash = "sha256-DUALCwhuwQZ94uOVjw5wyY8z3fYr9WyDwVc89U34ytM=";
 
       src = fetchFromGitHub {
         owner = "bodaay";
         repo = "HuggingFaceModelDownloader";
         rev = "v${version}";
-        hash = "sha256-QpDtUAzR0sPKL/EwS5IhjtgE1bDj4ompAYMvK8kEOQs=";
+        hash = "sha256-5fwNajsj13YlWSz11uwS/LHasjgkNQJw4RbEFs4uLA0=";
       };
 
       meta = with lib; {
@@ -57,12 +57,12 @@ final: prev: {
 
   # llama.cpp - LLM inference with GGUF models
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "8747";
+    version = "8808";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-ITtF7KmOagRE69FWde3iiQE2N+tUucApUdRRS4LyitU=";
+      hash = "sha256-m3YtHqJOMYwqTnymrpIL08dgctEFa+knbaCVbJePPh0=";
     };
     postPatch = "";
     preConfigure = ''
@@ -84,13 +84,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "199";
+      version = "202";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-5dGILqoQWMn+PGxgKdMn3LvWB2U5YrgKy3kE8O+RVeM=";
+        hash = "sha256-WvS8W2rg+pLX/iNqgslhFru1hptO5ki1izpwsoRgXRo=";
       };
 
       ui =
@@ -106,7 +106,7 @@ final: prev: {
 
           sourceRoot = "source/ui-svelte";
 
-          npmDepsHash = "sha256-gTDsuWPLCWsPltioziygFmSQFdLqjkZpmmVWIWoZwoc=";
+          npmDepsHash = "sha256-6D4F58sSBkr7FKKO34gDhnZ9uN/SfsyYn1xJjYsMeq4=";
 
           postInstall = ''
             rm -rf $out/lib
@@ -122,7 +122,7 @@ final: prev: {
     with prev;
     prev.llama-swap.overrideAttrs (attrs: rec {
       inherit version src;
-      # vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      # vendorHash = "sha256-6D4F58sSBkr7FKKO34gDhnZ9uN/SfsyYn1xJjYsMeq4=";
       preBuild = ''
         cp -r ${ui}/ui_dist proxy/
       '';

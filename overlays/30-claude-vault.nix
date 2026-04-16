@@ -8,13 +8,13 @@ final: prev: {
     with prev;
     rustPlatform.buildRustPackage rec {
       pname = "claude-vault";
-      version = "0.1.2";
+      version = "0.1.3";
 
       src = fetchFromGitHub {
         owner = "kuroko1t";
         repo = "claude-vault";
         tag = "v${version}";
-        hash = "sha256-YkumepLBY/kt78yYtl0RQilwW61uSC6v6E7aqnz6+i8=";
+        hash = "sha256-Och7ISW88DN4ZWTCDT84HD2E2tVOPWeTFjodrCDFzD4=";
       };
 
       cargoHash = "sha256-BX35eHAvC8GUCaByJVCkNz6xAVHBOxAPeeuDNmHAphc=";
