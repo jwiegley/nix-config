@@ -85,6 +85,7 @@ rec {
       rlwrap
       screen
       sdcv
+      shellcheck
       shfmt
       tealdeer
       tmux

@@ -17,32 +17,33 @@
   inputs,
   ...
 }:
-
 let
-  home = config.home.homeDirectory;
-  tmpdir = "/tmp";
-
   inherit (pkgs.stdenv) isDarwin isLinux;
 
-  userName = "John Wiegley";
-  userEmail = "johnw@newartisans.com";
-  master_key = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
-  signing_key = "12D70076AB504679";
-
-  gitPkg =
-    if inputs ? git-ai then inputs.git-ai.packages.${pkgs.stdenv.hostPlatform.system}.default else null;
-
-  ca-bundle_path = "${pkgs.cacert}/etc/ssl/certs/";
-  ca-bundle_crt = "${ca-bundle_path}/ca-bundle.crt";
-  emacs-server = "${tmpdir}/johnw-emacs/server";
-  emacsclient = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";
-
-  identityDir = if isDarwin then "${home}/${hostname}" else "${home}/.ssh";
-
+  # Shared variables - also imported by sub-modules
+  vars = import ./vars.nix {
+    inherit
+      pkgs
+      lib
+      config
+      hostname
+      inputs
+      ;
+  };
 in
 {
   imports =
-    lib.optionals (inputs ? git-ai) [
+    # Extracted sub-modules for better organization
+    [
+      ./git.nix
+      ./ssh.nix
+      ./zsh.nix
+      ./xdg-symlinks.nix
+      ./email.nix
+      ./launchd.nix
+    ]
+    # Conditional flake input modules
+    ++ lib.optionals (inputs ? git-ai) [
       inputs.git-ai.homeManagerModules.default
     ]
     ++ lib.optionals (inputs ? promptdeploy) [
@@ -55,7 +56,7 @@ in
           programs.promptdeploy = {
             enable = true;
             package = inputs.promptdeploy.packages.${pkgs.stdenv.hostPlatform.system}.default;
-            sourceDir = "${home}/src/promptdeploy";
+            sourceDir = "${vars.home}/src/promptdeploy";
             targets = [ "local" ];
           };
         }
@@ -71,9 +72,9 @@ in
       CABAL_CONFIG = "${config.xdg.configHome}/cabal/config";
       CARGO_HOME = "${config.xdg.dataHome}/cargo";
       CLICOLOR = "yes";
-      EDITOR = lib.mkDefault "${emacsclient}";
-      EMACS_SERVER_FILE = "${emacs-server}";
-      EMAIL = "${userEmail}";
+      EDITOR = lib.mkDefault vars.emacsclient;
+      EMACS_SERVER_FILE = "${vars.emacs-server}";
+      EMAIL = vars.userEmail;
       ET_NO_TELEMETRY = "1";
       FONTCONFIG_FILE = "${config.xdg.configHome}/fontconfig/fonts.conf";
       FONTCONFIG_PATH = "${config.xdg.configHome}/fontconfig";
@@ -84,13 +85,13 @@ in
       LESSHISTFILE = "${config.xdg.cacheHome}/less/history";
       LITELLM_PROXY_URL = "http://litellm.vulcan.lan";
       LLM_USER_PATH = "${config.xdg.configHome}/llm";
-      NIX_CONF = "${home}/src/nix";
+      NIX_CONF = "${vars.home}/src/nix";
       NLTK_DATA = "${config.xdg.dataHome}/nltk";
       PARALLEL_HOME = "${config.xdg.cacheHome}/parallel";
       PROFILE_DIR = "${config.home.profileDirectory}";
       RUSTUP_HOME = "${config.xdg.dataHome}/rustup";
       SCREENRC = "${config.xdg.configHome}/screen/config";
-      SSL_CERT_FILE = "${ca-bundle_crt}";
+      SSL_CERT_FILE = "${vars.ca-bundle_crt}";
       STARDICT_DATA_DIR = "${config.xdg.dataHome}/dictionary";
       TIKTOKEN_CACHE_DIR = "${config.xdg.cacheHome}/tiktoken";
       TRAVIS_CONFIG_PATH = "${config.xdg.configHome}/travis";
@@ -110,7 +111,7 @@ in
       GTAGSCONF = "${pkgs.global}/share/gtags/gtags.conf";
       NODE_EXTRA_CA_CERTS = "${config.xdg.configHome}/ragflow/root_ca.crt";
       VAGRANT_DEFAULT_PROVIDER = "vmware_desktop";
-      VAGRANT_VMWARE_CLONE_DIRECTORY = "${home}/Machines/vagrant";
+      VAGRANT_VMWARE_CLONE_DIRECTORY = "${vars.home}/Machines/vagrant";
       SSH_AUTH_SOCK = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
     }
     // lib.optionalAttrs isLinux {
@@ -128,176 +129,44 @@ in
     };
 
     sessionPath = [
-      "${home}/src/scripts"
-      "${home}/.local/bin"
+      "${vars.home}/src/scripts"
+      "${vars.home}/.local/bin"
     ]
     ++ lib.optionals isDarwin [
-      "${home}/work/positron/bin"
+      "${vars.home}/work/positron/bin"
       "/usr/local/bin"
       "/usr/local/zfs/bin"
       "/opt/homebrew/bin"
       "/opt/homebrew/opt/node@22/bin"
     ];
 
-    activation = { }; # promptdeploy activation is managed by programs.promptdeploy
+    activation = { };
 
-    file =
-      let
-        mkLink = config.lib.file.mkOutOfStoreSymlink;
-      in
-      {
-        "Library/LaunchAgents/com.newartisans.cleanup.plist" = lib.mkIf (isDarwin && hostname == "hera") {
-          text = ''
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            <plist version="1.0">
-            <dict>
-              <key>Label</key>
-              <string>com.newartisans.cleanup</string>
-              <key>EnvironmentVariables</key>
-              <dict>
-                <key>PYTHONPATH</key>
-                <string>${pkgs.dirscan}/${pkgs.python3.sitePackages}</string>
-              </dict>
-              <key>ProgramArguments</key>
-              <array>
-                <string>/usr/bin/python3</string>
-                <string>${pkgs.dirscan}/bin/.cleanup-wrapped</string>
-                <string>-u</string>
-              </array>
-              <key>StartInterval</key>
-              <integer>86400</integer>
-              <key>RunAtLoad</key>
-              <false/>
-              <key>StandardOutPath</key>
-              <string>${home}/Library/Logs/cleanup.stdout.log</string>
-              <key>StandardErrorPath</key>
-              <string>${home}/Library/Logs/cleanup.stderr.log</string>
-            </dict>
-            </plist>
-          '';
-        };
+    file = {
+      ".ledgerrc".text = ''
+        --file ${vars.home}/doc/accounts/main.ledger
+        --input-date-format %Y/%m/%d
+        --date-format %Y/%m/%d
+      '';
 
-        ".ledgerrc".text = ''
-          --file ${home}/doc/accounts/main.ledger
-          --input-date-format %Y/%m/%d
-          --date-format %Y/%m/%d
-        '';
+      ".curlrc".text = ''
+        capath=${vars.ca-bundle_path}
+        cacert=${config.xdg.configHome}/curl/ca-bundle.crt
+      '';
 
-        ".curlrc".text = ''
-          capath=${ca-bundle_path}
-          cacert=${config.xdg.configHome}/curl/ca-bundle.crt
-        '';
-
-        ".wgetrc".text = ''
-          ca_directory = ${ca-bundle_path}
-          ca_certificate = ${ca-bundle_crt}
-        '';
-
-      }
-      // lib.optionalAttrs (inputs ? llm-agents) {
-        ".local/bin/claude".source = mkLink "${
-          inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
-        }/bin/claude";
-      }
-      // lib.optionalAttrs (pkgs ? sherlock-db) {
-        ".claude/skills/sherlock/SKILL.md".source = "${pkgs.sherlock-db}/share/sherlock/SKILL.md";
-        ".claude/skills/sherlock/sherlock".source = "${pkgs.sherlock-db}/bin/sherlock";
-      }
-      // lib.optionalAttrs isDarwin {
-        ".aider".source = mkLink "${config.xdg.configHome}/aider";
-        ".codex".source = mkLink "${config.xdg.configHome}/codex";
-        ".cups".source = mkLink "${config.xdg.configHome}/cups";
-        ".cursor".source = mkLink "${config.xdg.configHome}/cursor";
-        ".dbvis".source = mkLink "${config.xdg.configHome}/dbvis";
-        ".factory".source = mkLink "${config.xdg.configHome}/factory";
-        ".gemini".source = mkLink "${config.xdg.configHome}/gemini";
-        ".gist".source = mkLink "${config.xdg.configHome}/gist/api_key";
-        ".gnupg".source = mkLink "${config.xdg.configHome}/gnupg";
-        ".jq".source = mkLink "${config.xdg.configHome}/jq/config";
-        ".jupyter".source = mkLink "${config.xdg.configHome}/jupyter";
-        ".kube".source = mkLink "${config.xdg.configHome}/kube";
-        ".mitmproxy".source = mkLink "${config.xdg.configHome}/mitmproxy";
-        ".parallel".source = mkLink "${config.xdg.configHome}/parallel";
-        ".sage".source = mkLink "${config.xdg.configHome}/sage";
-
-        ".diffusionbee".source = mkLink "${config.xdg.dataHome}/diffusionbee";
-        ".docker".source = mkLink "${config.xdg.dataHome}/docker";
-        ".vscode".source = mkLink "${config.xdg.dataHome}/vscode";
-        ".w3m".source = mkLink "${config.xdg.dataHome}/w3m";
-        ".wget-hsts".source = mkLink "${config.xdg.dataHome}/wget/hsts";
-
-        ".bun".source = mkLink "${config.xdg.cacheHome}/bun";
-        ".cargo".source = mkLink "${config.xdg.cacheHome}/cargo";
-        ".rustup".source = mkLink "${config.xdg.cacheHome}/rustup";
-        ".npm".source = mkLink "${config.xdg.cacheHome}/npm";
-        ".ollama".source = mkLink "${config.xdg.cacheHome}/ollama";
-        ".swiftpm".source = mkLink "${config.xdg.cacheHome}/swiftpm";
-        ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";
-
-        ".emacs.d".source = mkLink "${home}/src/dot-emacs";
-        "dl".source = mkLink "${home}/Downloads";
-        "db".source = mkLink "${home}/Databases";
-        "Recordings".source =
-          mkLink "${home}/Library/Mobile Documents/iCloud~com~openplanetsoftware~just-press-record/Documents";
-
-        "pos".source = mkLink "${home}/work/positron";
-        "tron".source = mkLink "${home}/work/positron/tron";
-        "srp".source = mkLink "${home}/work/regional-statistics/srp-db";
-
-        "News".source = mkLink "${config.xdg.dataHome}/gnus/News";
-      }
-      // lib.optionalAttrs (isDarwin && hostname == "hera") {
-        "Archives".source = mkLink "/Volumes/ext/Archives";
-        "Audio".source = mkLink "/Volumes/ext/Audio";
-        "Photos".source = mkLink "/Volumes/ext/Photos";
-      }
-      // lib.optionalAttrs (isDarwin && (hostname == "hera" || hostname == "clio")) {
-        "org".source = mkLink "${home}/doc/org";
-
-        "Mobile".source = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs/Plain Org";
-        "Drafts".source =
-          mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
-        "Inbox".source = mkLink "${home}/Library/Application Support/DEVONthink/Inbox";
-        "iCloud".source = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
-      }
-      // lib.optionalAttrs isLinux {
-        # Factory CLI (droid) expects ripgrep at this location
-        ".factory/bin/rg".source = "${pkgs.ripgrep}/bin/rg";
-      };
-  };
-
-  accounts.email = {
-    certificatesFile = ca-bundle_crt;
-
-    accounts.fastmail = {
-      realName = userName;
-      address = userEmail;
-      aliases = [
-        "jwiegley@gmail.com"
-        "johnw@gnu.org"
-        "jwiegley@positron.ai"
-      ];
-      flavor = "fastmail.com";
-      passwordCommand = "${pkgs.pass}/bin/pass show smtp.fastmail.com";
-      primary = true;
-      imap = {
-        tls = {
-          enable = true;
-          useStartTls = false;
-        };
-      };
-      smtp = {
-        tls = {
-          enable = true;
-          useStartTls = true;
-        };
-      };
-      gpg = {
-        key = signing_key;
-        signByDefault = false;
-        encryptByDefault = false;
-      };
+      ".wgetrc".text = ''
+        ca_directory = ${vars.ca-bundle_path}
+        ca_certificate = ${vars.ca-bundle_crt}
+      '';
+    }
+    // lib.optionalAttrs (inputs ? llm-agents) {
+      ".local/bin/claude".source = config.lib.file.mkOutOfStoreSymlink "${
+        inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
+      }/bin/claude";
+    }
+    // lib.optionalAttrs (pkgs ? sherlock-db) {
+      ".claude/skills/sherlock/SKILL.md".source = "${pkgs.sherlock-db}/share/sherlock/SKILL.md";
+      ".claude/skills/sherlock/sherlock".source = "${pkgs.sherlock-db}/bin/sherlock";
     };
   };
 
@@ -319,7 +188,7 @@ in
           "*positron-ai*"
         ];
         defaultPromptStorage = "notes";
-        featureFlags.asyncMode = true;
+        featureFlags.asyncMode = false;
       };
     };
 
@@ -360,10 +229,6 @@ in
 
           line_break.disabled = true;
 
-          # Disable git_status to prevent broken pipe errors in git-annex
-          # repos. git_status runs `git status` which triggers the annex
-          # filter-process; starship's command_timeout kills the pipe
-          # before git-annex finishes, causing hPutBuf errors.
           git_status.disabled = true;
         }
       ];
@@ -391,14 +256,9 @@ in
       ''
       + lib.optionalString isDarwin ''
 
-        # Use tmux's process-level directory tracking instead of shell escapes.
-        # #{pane_current_path} is populated by tmux reading the actual working
-        # directory of the pane's foreground process from the OS (via libproc
-        # on macOS), so it works for Claude Code, vim, or any other program.
         set-option -g set-titles on
         set-option -g set-titles-string "#{b:pane_current_path}"
 
-        # For iTerm2 native integration
         set-option -g automatic-rename on
         set-option -g automatic-rename-format "#{b:pane_current_path}"
       '';
@@ -406,7 +266,7 @@ in
 
     home-manager = {
       enable = true;
-      path = lib.mkIf isDarwin "${home}/src/nix/home-manager";
+      path = lib.mkIf isDarwin "${vars.home}/src/nix/home-manager";
     };
 
     browserpass = {
@@ -434,214 +294,13 @@ in
       ];
     };
 
-    bash = {
-      enable = true;
-      bashrcExtra = lib.mkBefore ''
-        source /etc/bashrc
-      '';
-    };
-
-    zsh = rec {
-      dotDir = "${config.xdg.configHome}/zsh";
-
-      enable = true;
-      enableCompletion = lib.mkDefault true;
-
-      autosuggestion.enable = true;
-      syntaxHighlighting.enable = true;
-
-      history = {
-        size = 50000;
-        save = 500000;
-        path = "${config.xdg.configHome}/zsh/history";
-        ignoreDups = true;
-        share = true;
-        append = true;
-        extended = true;
-      };
-
-      sessionVariables = {
-        ALTERNATE_EDITOR = "${pkgs.vim}/bin/vi";
-        LC_CTYPE = "en_US.UTF-8";
-        LEDGER_COLOR = "true";
-        LESS = "-FRSXM";
-        LESSCHARSET = "utf-8";
-        PAGER = "less";
-        TINC_USE_NIX = "yes";
-        WORDCHARS = "";
-
-        ZSH_THEME_GIT_PROMPT_CACHE = "yes";
-        ZSH_THEME_GIT_PROMPT_CHANGED = "%{$fg[yellow]%}%{✚%G%}";
-        ZSH_THEME_GIT_PROMPT_STASHED = "%{$fg_bold[yellow]%}%{⚑%G%}";
-        ZSH_THEME_GIT_PROMPT_UPSTREAM_FRONT = " {%{$fg[yellow]%}";
-      }
-      // lib.optionalAttrs isDarwin {
-        ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX = "YES";
-      };
-
-      localVariables = {
-        RPROMPT = if isDarwin then "%F{cyan}[\\$PERSONA]%f %F{green}%~%f" else "%F{green}%~%f";
-        PROMPT = "%B%m %b\\$(git_super_status)%(!.#.$) ";
-        PROMPT_DIRTRIM = "2";
-      };
-
-      shellAliases = {
-        vi = "${pkgs.vim}/bin/vim";
-        b = "${gitPkg}/bin/git b";
-        l = "${gitPkg}/bin/git l";
-        w = "${gitPkg}/bin/git w";
-        ga = "${pkgs.git-annex}/bin/git-annex";
-        good = "${gitPkg}/bin/git bisect good";
-        bad = "${gitPkg}/bin/git bisect bad";
-        par = "${pkgs.parallel}/bin/parallel";
-        rX = "${pkgs.coreutils}/bin/chmod -R ugo+rX";
-        scp = "${pkgs.rsync}/bin/rsync -aP --inplace";
-
-        # Use whichever cabal is on the PATH.
-        cb = "cabal build";
-        cn = "cabal configure --enable-tests --enable-benchmarks";
-        cnp =
-          "cabal configure --enable-tests --enable-benchmarks "
-          + "--enable-profiling --ghc-options=-fprof-auto";
-
-        rehash = "hash -r";
-      }
-      // lib.optionalAttrs isDarwin {
-        switch = "${pkgs.nix-scripts}/bin/u ${hostname} switch";
-        proc = "${pkgs.darwin.ps}/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
-        nstat =
-          "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
-          + " | ${pkgs.gnugrep}/bin/egrep -v \"(lo0|vmnet|169\\.254|255\\.255)\""
-          + " | ${pkgs.coreutils}/bin/tail -n +5";
-        wipe = "${pkgs.srm}/bin/srm -vfr";
-      }
-      // lib.optionalAttrs isLinux {
-        switch = "sudo nixos-rebuild switch --flake /etc/nixos#${hostname}";
-        proc = "ps axwwww | grep -i";
-      };
-
-      envExtra = lib.optionalString isLinux ''
-        # Source Nix environment for ALL zsh invocations (including non-interactive
-        # SSH remote commands like iTerm2's tmux -CC integration). Mirrors NixOS's
-        # /etc/zshenv approach. Idempotent on NixOS; required on Ubuntu/non-NixOS.
-        if [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
-          . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-        elif [[ -f ~/.nix-profile/etc/profile.d/nix.sh ]]; then
-          . ~/.nix-profile/etc/profile.d/nix.sh
-        fi
-      '';
-
-      profileExtra = ''
-        setopt extended_glob
-      ''
-      + lib.optionalString isLinux ''
-        . ${pkgs.zsh-z}/share/zsh-z/zsh-z.plugin.zsh
-      '';
-
-      initContent = ''
-        # Make sure that fzf does not override the meaning of ^T
-        bindkey '^T' transpose-chars
-        bindkey -e
-
-        if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
-            unsetopt zle
-            unset zle_bracketed_paste
-            export PROMPT='$ '
-            export RPROMPT=""
-            export PS1='$ '
-      ''
-      + (
-        if isDarwin then
-          ''
-            else
-                . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
-                . ${config.xdg.configHome}/shellfish/shellfishrc
-
-                fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
-
-                ${lib.optionalString (hostname == "hera") ''
-                  # OpenClaw Completion
-                  [[ -f "${home}/.openclaw/completions/openclaw.zsh" ]] && \
-                    source "${home}/.openclaw/completions/openclaw.zsh"
-                ''}
-
-                # Set terminal/tmux title to current directory
-                __update_terminal_title() {
-                  # Use both OSC 0 (icon+title) and OSC 2 (title only)
-                  # %~ expands to current directory with ~ substitution
-                  print -Pn "\e]0;%~\a"
-                  # Also set tmux pane title for native integration
-                  if [[ -n "$TMUX" ]]; then
-                    print -Pn "\e]2;%~\a"
-                  fi
-                }
-
-                # Auto-load persona environment on shell start
-                if [[ -f "$HOME/.config/persona/current" ]]; then
-                  eval "$(command persona --env)"
-                fi
-
-                autoload -Uz add-zsh-hook
-                add-zsh-hook chpwd __update_terminal_title
-                add-zsh-hook precmd __update_terminal_title
-
-                # Reset terminal state before each prompt to prevent
-                # accumulated escape sequence corruption (especially
-                # over SSH with tmux -CC, and after Claude Code exits)
-                __reset_broken_terminal() {
-                  printf '%b' '\e[0m\e(B\e)0\017\e[?5l\e7\e[0;0r\e8'
-                  # Reset Kitty keyboard protocol and modifyOtherKeys
-                  # (Claude Code enables these and may not clean up on crash)
-                  printf '\e[>0u\e[>4;0m' 2>/dev/null
-                }
-                add-zsh-hook precmd __reset_broken_terminal
-
-                # Restore native zsh completions for commands that need
-                # SSH-based remote path completion (overridden by carapace)
-                autoload -Uz _rsync && compdef _rsync rsync
-                autoload -Uz _ssh && compdef _ssh ssh scp sftp
-            fi
-          ''
-        else
-          ''
-            else
-                autoload -Uz compinit
-                compinit
-
-                # Reset terminal state before each prompt to prevent
-                # accumulated escape sequence corruption (especially
-                # over SSH with tmux -CC, and after Claude Code exits)
-                autoload -Uz add-zsh-hook
-                __reset_broken_terminal() {
-                  printf '%b' '\e[0m\e(B\e)0\017\e[?5l\e7\e[0;0r\e8'
-                  # Reset Kitty keyboard protocol and modifyOtherKeys
-                  # (Claude Code enables these and may not clean up on crash)
-                  printf '\e[>0u\e[>4;0m' 2>/dev/null
-                }
-                add-zsh-hook precmd __reset_broken_terminal
-            fi
-          ''
-      );
-
-      plugins = lib.optionals isDarwin [
-        {
-          name = "iterm2_shell_integration";
-          src = pkgs.fetchurl {
-            url = "https://iterm2.com/shell_integration/zsh";
-            sha256 = "0yhfnaigim95sk1idrc3hpwii8hfhjl5m3lyc0ip3vi1a9npq0li";
-            # date = 2025-03-19T15:01:02-0700;
-          };
-        }
-      ];
-    };
-
     password-store = {
       enable = true;
       package = pkgs.pass.withExtensions (exts: [
         exts.pass-otp
         exts.pass-genphrase
       ]);
-      settings.PASSWORD_STORE_DIR = "${home}/doc/.password-store";
+      settings.PASSWORD_STORE_DIR = "${vars.home}/doc/.password-store";
     };
 
     gpg = {
@@ -649,7 +308,7 @@ in
       homedir = "${config.xdg.configHome}/gnupg";
       settings = {
         use-agent = true;
-        default-key = master_key;
+        default-key = vars.master_key;
         auto-key-locate = "keyserver";
         keyserver = "keys.openpgp.org";
         keyserver-options = "no-honor-keyserver-url include-revoked auto-key-retrieve";
@@ -666,7 +325,7 @@ in
     gh = {
       enable = true;
       settings = {
-        editor = lib.mkDefault emacsclient;
+        editor = lib.mkDefault vars.emacsclient;
         git_protocol = "ssh";
         aliases = {
           co = "pr checkout";
@@ -674,482 +333,6 @@ in
           prs = "pr list -A jwiegley";
         };
       };
-    };
-
-    git = {
-      enable = true;
-      package = gitPkg;
-
-      signing = lib.mkDefault {
-        format = "openpgp";
-        key = signing_key;
-        signByDefault = true;
-      };
-
-      includes = [
-        { path = "~/.config/git/persona.gitconfig"; }
-      ];
-
-      settings = {
-        alias = {
-          amend = "commit --amend -C HEAD";
-          authors =
-            ''!"${gitPkg}/bin/git log --pretty=format:%aN''
-            + " | ${pkgs.coreutils}/bin/sort"
-            + " | ${pkgs.coreutils}/bin/uniq -c"
-            + " | ${pkgs.coreutils}/bin/sort -rn\"";
-          b = "branch --color -v";
-          ca = "commit --amend";
-          changes = "diff --name-status -r";
-          clone = "clone --recursive";
-          co = "checkout";
-          cp = "cherry-pick";
-          dc = "diff --cached";
-          dh = "diff HEAD";
-          ds = "diff --staged";
-          from = "!${gitPkg}/bin/git bisect start && ${gitPkg}/bin/git bisect bad HEAD && ${gitPkg}/bin/git bisect good";
-          ls-ignored = "ls-files --exclude-standard --ignored --others";
-          rc = "rebase --continue";
-          rh = "reset --hard";
-          ri = "rebase --interactive";
-          rs = "rebase --skip";
-          ru = "remote update --prune";
-          snap = "!${gitPkg}/bin/git stash" + " && ${gitPkg}/bin/git stash apply";
-          snaplog =
-            "!${gitPkg}/bin/git log refs/snapshots/refs/heads/" + "$(${gitPkg}/bin/git rev-parse HEAD)";
-          spull =
-            "!${gitPkg}/bin/git stash" + " && ${gitPkg}/bin/git pull" + " && ${gitPkg}/bin/git stash pop";
-          su = "submodule update --init --recursive";
-          unstage = "reset --soft HEAD^";
-          w = "status -sb";
-          wr = "worktree remove";
-          wdiff = "diff --color-words";
-          l =
-            "log --graph --pretty=format:'%Cred%h%Creset"
-            + " —%Cblue%d%Creset %s %Cgreen(%cr)%Creset'"
-            + " --abbrev-commit --date=relative --show-notes=*";
-        };
-
-        user = {
-          name = userName;
-          email = userEmail;
-        };
-
-        core = {
-          editor = lib.mkDefault emacsclient;
-          trustctime = false;
-          pager = "${pkgs.less}/bin/less --tabs=4 -RFX";
-          logAllRefUpdates = true;
-          precomposeunicode = false;
-          whitespace = "trailing-space,space-before-tab";
-        };
-
-        branch.autosetupmerge = true;
-        commit.gpgsign = lib.mkDefault true;
-        commit.status = false;
-        github.user = "jwiegley";
-        credential.helper = lib.mkDefault "${pkgs.pass-git-helper}/bin/pass-git-helper";
-        hub.protocol = "${pkgs.openssh}/bin/ssh";
-        mergetool.keepBackup = true;
-        pull.rebase = true;
-        rebase.autosquash = true;
-        rebase.autoStash = true;
-        rerere.enabled = true;
-        rerere.autoupdate = true;
-        init.defaultBranch = "main";
-
-        "merge \"ours\"".driver = true;
-        "magithub \"ci\"".enabled = false;
-
-        http = {
-          sslCAinfo = ca-bundle_crt;
-          sslverify = true;
-        };
-
-        color = {
-          status = "auto";
-          diff = "auto";
-          branch = "auto";
-          interactive = "auto";
-          ui = "auto";
-          sh = "auto";
-        };
-
-        push = {
-          autoSetupRemote = true;
-          default = "simple";
-        };
-
-        "merge \"mergiraf\"" = {
-          name = "mergiraf";
-          driver = "${pkgs.mergiraf}/bin/mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L";
-        };
-
-        merge = {
-          conflictstyle = "diff3";
-          stat = true;
-        };
-
-        "color \"sh\"" = {
-          branch = "yellow reverse";
-          workdir = "blue bold";
-          dirty = "red";
-          dirty-stash = "red";
-          repo-state = "red";
-        };
-
-        annex = {
-          backends = "BLAKE2B512E";
-          alwayscommit = false;
-        };
-
-        "filter \"media\"" = {
-          required = true;
-          clean = "${gitPkg}/bin/git media clean %f";
-          smudge = "${gitPkg}/bin/git media smudge %f";
-        };
-
-        diff = {
-          ignoreSubmodules = "dirty";
-          renames = "copies";
-          mnemonicprefix = true;
-        };
-
-        advice = {
-          statusHints = false;
-          pushNonFastForward = false;
-          objectNameWarning = "false";
-        };
-
-        "filter \"lfs\"" = {
-          clean = "git-lfs clean -- %f";
-          smudge = "git-lfs smudge --skip -- %f";
-          required = true;
-        };
-
-        "url \"git://github.com/ghc/packages-\"".insteadOf = "git://github.com/ghc/packages/";
-        "url \"http://github.com/ghc/packages-\"".insteadOf = "http://github.com/ghc/packages/";
-        "url \"https://github.com/ghc/packages-\"".insteadOf = "https://github.com/ghc/packages/";
-        "url \"ssh://git@github.com/ghc/packages-\"".insteadOf = "ssh://git@github.com/ghc/packages/";
-        "url \"git@github.com:/ghc/packages-\"".insteadOf = "git@github.com:/ghc/packages/";
-      }
-      // lib.optionalAttrs (pkgs ? git-scripts) {
-        "merge \"merge-changelog\"" = {
-          name = "GNU-style ChangeLog merge driver";
-          driver = "${pkgs.git-scripts}/bin/git-merge-changelog %O %A %B";
-        };
-      };
-
-      ignores = [
-        "#*#"
-        "*.a"
-        "*.agdai"
-        "*.aux"
-        "*.dylib"
-        "*.elc"
-        "*.glob"
-        "*.hi"
-        "*.la"
-        "*.lia.cache"
-        "*.lra.cache"
-        "*.nia.cache"
-        "*.nra.cache"
-        "*.o"
-        "*.so"
-        "*.v.d"
-        "*.v.tex"
-        "*.vio"
-        "*.vo"
-        "*.vok"
-        "*.vos"
-        "*~"
-        ".*.aux"
-        ".DS_Store"
-        ".localized"
-        ".Makefile.d"
-        ".clean"
-        ".coq-native/"
-        ".coqdeps.d"
-        ".direnv/"
-        ".envrc"
-        ".envrc.cache"
-        ".envrc.override"
-        ".ghc.environment.x86_64-darwin-*"
-        ".ghc.environment.x86_64-linux-*"
-        ".makefile"
-        ".pact-history"
-        "TAGS"
-        "cabal.project.local*"
-        "settings.local.json"
-        ".taskmaster"
-        "prd.txt"
-        "prd.md"
-        "default.hoo"
-        "default.warn"
-        "dist-newstyle/"
-        "ghc[0-9]*_[0-9]*/"
-        "input-haskell-*.tar.gz"
-        "input-haskell-*.txt"
-        "result"
-        "result-*"
-        "tags"
-      ];
-
-      attributes = [
-        "*.java merge=mergiraf"
-        "*.properties merge=mergiraf"
-        "*.kt merge=mergiraf"
-        "*.rs merge=mergiraf"
-        "*.go merge=mergiraf"
-        "go.mod merge=mergiraf"
-        "go.sum merge=mergiraf"
-        "go.work.sum merge=mergiraf"
-        "*.ini merge=mergiraf"
-        "*.js merge=mergiraf"
-        "*.jsx merge=mergiraf"
-        "*.mjs merge=mergiraf"
-        "*.json merge=mergiraf"
-        "*.yml merge=mergiraf"
-        "*.yaml merge=mergiraf"
-        "pyproject.toml merge=mergiraf"
-        "*.toml merge=mergiraf"
-        "*.html merge=mergiraf"
-        "*.htm merge=mergiraf"
-        "*.xhtml merge=mergiraf"
-        "*.xml merge=mergiraf"
-        "*.c merge=mergiraf"
-        "*.h merge=mergiraf"
-        "*.cc merge=mergiraf"
-        "*.hh merge=mergiraf"
-        "*.cpp merge=mergiraf"
-        "*.hpp merge=mergiraf"
-        "*.cxx merge=mergiraf"
-        "*.hxx merge=mergiraf"
-        "*.cs merge=mergiraf"
-        "*.dart merge=mergiraf"
-        "*.dts merge=mergiraf"
-        "*.scala merge=mergiraf"
-        "*.sbt merge=mergiraf"
-        "*.ts merge=mergiraf"
-        "*.tsx merge=mergiraf"
-        "*.py merge=mergiraf"
-        "*.php merge=mergiraf"
-        "*.sol merge=mergiraf"
-        "*.lua merge=mergiraf"
-        "*.rb merge=mergiraf"
-        "*.ex merge=mergiraf"
-        "*.exs merge=mergiraf"
-        "*.nix merge=mergiraf"
-        "*.sv merge=mergiraf"
-        "*.svh merge=mergiraf"
-        "*.md merge=mergiraf"
-        "*.hcl merge=mergiraf"
-        "*.tf merge=mergiraf"
-        "*.tfvars merge=mergiraf"
-        "*.ml merge=mergiraf"
-        "*.mli merge=mergiraf"
-        "*.hs merge=mergiraf"
-        "*.mk merge=mergiraf"
-        "Makefile merge=mergiraf"
-        "GNUmakefile merge=mergiraf"
-        "*.bzl merge=mergiraf"
-        "*.bazel merge=mergiraf"
-        "BUILD merge=mergiraf"
-        "WORKSPACE merge=mergiraf"
-        "*.cmake merge=mergiraf"
-        "CMakeLists.txt merge=mergiraf"
-      ];
-    };
-
-    ssh = {
-      enable = true;
-      enableDefaultConfig = false;
-
-      matchBlocks =
-        let
-          withIdentity =
-            attrs:
-            attrs
-            // {
-              identityFile = "${identityDir}/id_${hostname}";
-              identitiesOnly = true;
-            };
-
-          controlMastered =
-            attrs:
-            attrs
-            // {
-              controlMaster = "auto";
-              controlPath = "${tmpdir}/ssh-%u-%r@%h:%p";
-              controlPersist = "1800";
-            };
-
-          onHost =
-            proxyJump: hostAddr:
-            {
-              hostname = hostAddr;
-            }
-            // lib.optionalAttrs (hostAddr != proxyJump) { inherit proxyJump; };
-
-          localBind = here: there: {
-            bind = {
-              port = here;
-            };
-            host = {
-              address = "127.0.0.1";
-              port = there;
-            };
-          };
-        in
-        rec {
-          defaults = {
-            host = "*";
-
-            userKnownHostsFile = "${config.xdg.configHome}/ssh/known_hosts";
-            hashKnownHosts = true;
-            serverAliveInterval = 60;
-            forwardAgent = false;
-
-            extraOptions = {
-              IgnoreUnknown = "UseKeychain";
-            }
-            // lib.optionalAttrs isDarwin {
-              UseKeychain = "yes";
-              AddKeysToAgent = "yes";
-            };
-          };
-
-          # Hera
-
-          hera = {
-            hostname = "hera.lan";
-            compression = false;
-            forwardAgent = true;
-          };
-
-          mssql = onHost "hera" "192.168.64.3";
-          deimos = onHost "hera" "192.168.221.128";
-          simon = onHost "hera" "172.16.194.158";
-
-          minerva = {
-            hostname = "192.168.199.128";
-            compression = false;
-          };
-
-          # Clio
-
-          clio = withIdentity {
-            hostname = "clio.lan";
-            compression = false;
-            forwardAgent = true;
-          };
-
-          neso = withIdentity (onHost "clio" "192.168.100.130");
-
-          # Vulcan
-
-          vulcan = controlMastered (withIdentity {
-            hostname = "192.168.1.2";
-            compression = false;
-            forwardAgent = true;
-
-            remoteForwards = [ (localBind 8317 8317) ];
-          });
-
-          gitea = controlMastered (withIdentity {
-            user = "gitea";
-            hostname = if hostname == "vulcan" then "localhost" else "192.168.1.2";
-            port = 2222;
-            compression = false;
-          });
-
-          # Council
-
-          "srp vps" = controlMastered {
-            user = "johnw";
-            hostname = "vps-b30dd5a8.vps.ovh.ca";
-          };
-
-          # Work
-
-          ghpos = {
-            user = "git";
-            hostname = "github.com";
-            identityFile = "${config.xdg.configHome}/ssh/id_positron";
-            identitiesOnly = true;
-
-            controlMaster = "no";
-            controlPath = "none";
-          };
-
-          positron = controlMastered {
-            host = "pos andoria andoria-* delphi-* agentsrv labmgr";
-            user = "jwiegley";
-            identityFile = "${config.xdg.configHome}/ssh/id_positron";
-            identitiesOnly = true;
-          };
-
-          "pos andoria" = controlMastered {
-            user = "jwiegley";
-            hostname = "andoria-08";
-          };
-
-          git-ai = controlMastered {
-            host = "git-ai";
-            user = "johnw";
-            identityFile = "${config.xdg.configHome}/ssh/id_git-ai";
-            identitiesOnly = true;
-          };
-
-          # Other servers
-
-          router = withIdentity {
-            hostname = "192.168.1.1";
-            compression = false;
-          };
-
-          asus1 = {
-            hostname = "asus-bq16-pro-ap.lan";
-            port = 2204;
-            user = "router";
-            compression = false;
-          };
-          asus2 = {
-            hostname = "asus-bq16-pro-node.lan";
-            port = 2204;
-            user = "router";
-            compression = false;
-          };
-
-          elpa = {
-            hostname = "elpa.gnu.org";
-            user = "root";
-          };
-          savannah.hostname = "git.sv.gnu.org";
-          fencepost.hostname = "fencepost.gnu.org";
-
-          savannah_gnu_org = withIdentity {
-            host = lib.concatStringsSep " " [
-              "git.savannah.gnu.org"
-              "git.sv.gnu.org"
-              "git.savannah.nongnu.org"
-              "git.sv.nongnu.org"
-            ];
-          };
-
-          haskell_org = {
-            host = "*haskell.org";
-            user = "root";
-            identityFile = "${config.xdg.configHome}/ssh/id_haskell";
-            identitiesOnly = true;
-          };
-          mail.hostname = "mail.haskell.org";
-
-          hf = withIdentity {
-            host = "hf.co";
-            user = "git";
-          };
-        };
     };
   };
 
@@ -1160,33 +343,6 @@ in
       defaultCacheTtl = 86400;
       maxCacheTtl = 86400;
       pinentry.package = pkgs.pinentry_mac;
-    };
-  };
-
-  launchd.agents = lib.mkIf (isDarwin && hostname == "hera") {
-    move-audio-files = {
-      enable = true;
-      config = {
-        ProgramArguments = [ "${home}/src/nix/bin/move-audio-files" ];
-        StartInterval = 3600;
-        StandardOutPath = "${home}/Library/Logs/move-audio-files.stdout.log";
-        StandardErrorPath = "${home}/Library/Logs/move-audio-files.stderr.log";
-        RunAtLoad = false;
-      };
-    };
-
-    ollama-serve = {
-      enable = true;
-      config = {
-        ProgramArguments = [
-          "${pkgs.ollama}/bin/ollama"
-          "serve"
-        ];
-        KeepAlive = true;
-        RunAtLoad = true;
-        StandardOutPath = "${home}/Library/Logs/ollama.log";
-        StandardErrorPath = "${home}/Library/Logs/ollama.log";
-      };
     };
   };
 
