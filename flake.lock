@@ -7019,11 +7019,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1776194307,
-        "narHash": "sha256-bdd9vsN43qLukDIe+iVdTEMrpOSSkeEyFrB9S3ZxFlg=",
+        "lastModified": 1776466908,
+        "narHash": "sha256-4X+EDPPCDPcoSGO6CEviDiqx833z+PhNZMpuFqvyzmY=",
         "ref": "refs/heads/main",
-        "rev": "b5fc25451a895ea14a1d42eaaa37b25dd8dd73bc",
-        "revCount": 1380,
+        "rev": "961241f1b5d64014047a45581482fc629e2dfbf8",
+        "revCount": 1381,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
