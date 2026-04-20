@@ -3,20 +3,10 @@
   lib,
   config,
   hostname,
-  inputs,
+  vars,
   ...
 }:
 let
-  vars = import ./vars.nix {
-    inherit
-      pkgs
-      lib
-      config
-      hostname
-      inputs
-      ;
-  };
-
   inherit (vars) isDarwin isLinux gitPkg;
 
   dotDir = "${config.xdg.configHome}/zsh";
@@ -122,96 +112,86 @@ in
       . ${pkgs.zsh-z}/share/zsh-z/zsh-z.plugin.zsh
     '';
 
-    initContent =
-      let
-        common-begin = [
-          "# Make sure that fzf does not override the meaning of ^T"
-          "bindkey '^T' transpose-chars"
-          "bindkey -e"
-          ""
-          "if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then"
-          "    unsetopt zle"
-          "    unset zle_bracketed_paste"
-          "    export PROMPT='$ '"
-          "    export RPROMPT=\"\""
-          "    export PS1='$ '"
-          "else"
-        ];
+    initContent = ''
+      # Make sure that fzf does not override the meaning of ^T
+      bindkey '^T' transpose-chars
+      bindkey -e
 
-        darwin-section = [
-          "    . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration"
-          "    . ${config.xdg.configHome}/shellfish/shellfishrc"
-          ""
-          "    fpath=(\"${config.xdg.configHome}/zsh/completions\" $fpath)"
-          ""
-        ]
-        ++ lib.optionals (hostname == "hera") [
-          "    # OpenClaw Completion"
-          "    [[ -f \"${vars.home}/.openclaw/completions/openclaw.zsh\" ]] && \\"
-          "      source \"${vars.home}/.openclaw/completions/openclaw.zsh\""
-        ];
+      if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
+          unsetopt zle
+          unset zle_bracketed_paste
+          export PROMPT='$ '
+          export RPROMPT=""
+          export PS1='$ '
+    ''
+    + lib.optionalString isDarwin ''
+      else
+          . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
+          . ${config.xdg.configHome}/shellfish/shellfishrc
 
-        reset-terminal-common = [
-          ""
-          "    # Reset terminal state before each prompt to prevent"
-          "    # accumulated escape sequence corruption (especially"
-          "    # over SSH with tmux -CC, and after Claude Code exits)"
-          "    __reset_broken_terminal() {"
-          "      printf '%b' '\\e[0m\\e(B\\e)0\\017\\e[?5l\\e7\\e[0;0r\\e8'"
-          "      # Reset Kitty keyboard protocol and modifyOtherKeys"
-          "      # (Claude Code enables these and may not clean up on crash)"
-          "      printf '\\e[>0u\\e[>4;0m' 2>/dev/null"
-          "    }"
-          "    autoload -Uz add-zsh-hook"
-          "    add-zsh-hook precmd __reset_broken_terminal"
-        ];
+          fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
 
-        darwin-after = [
-          ""
-          "    # Set terminal/tmux title to current directory"
-          "    __update_terminal_title() {"
-          "      print -Pn \"\\e]0;%~\\a\""
-          "      if [[ -n \"$TMUX\" ]]; then"
-          "        print -Pn \"\\e]2;%~\\a\""
-          "      fi"
-          "    }"
-          ""
-          "    # Auto-load persona environment on shell start"
-          "    if [[ -f \"$HOME/.config/persona/current\" ]]; then"
-          "      eval \"$(command persona --env)\""
-          "    fi"
-          ""
-          "    autoload -Uz add-zsh-hook"
-          "    add-zsh-hook chpwd __update_terminal_title"
-          "    add-zsh-hook precmd __update_terminal_title"
-          ""
-        ]
-        ++ reset-terminal-common
-        ++ [
-          ""
-          "    # Restore native zsh completions for commands that need"
-          "    # SSH-based remote path completion (overridden by carapace)"
-          "    autoload -Uz _rsync && compdef _rsync rsync"
-          "    autoload -Uz _ssh && compdef _ssh ssh scp sftp"
-          "fi"
-        ];
+          ${lib.optionalString (hostname == "hera") ''
+            # OpenClaw Completion
+            [[ -f "${vars.home}/.openclaw/completions/openclaw.zsh" ]] && \
+              source "${vars.home}/.openclaw/completions/openclaw.zsh"
+          ''}
 
-        linux-section = [
-          "    autoload -Uz compinit"
-          "    compinit"
-          ""
-        ]
-        ++ reset-terminal-common
-        ++ [
-          "fi"
-        ];
-      in
-      lib.concatStringsSep "\n" (
-        common-begin
-        ++ darwin-section
-        ++ lib.optionals isDarwin darwin-after
-        ++ lib.optionals isLinux linux-section
-      );
+          # Set terminal/tmux title to current directory
+          __update_terminal_title() {
+            # Use both OSC 0 (icon+title) and OSC 2 (title only)
+            # %~ expands to current directory with ~ substitution
+            print -Pn "\e]0;%~\a"
+            # Also set tmux pane title for native integration
+            if [[ -n "$TMUX" ]]; then
+              print -Pn "\e]2;%~\a"
+            fi
+          }
+
+          # Auto-load persona environment on shell start
+          if [[ -f "$HOME/.config/persona/current" ]]; then
+            eval "$(command persona --env)"
+          fi
+
+          autoload -Uz add-zsh-hook
+          add-zsh-hook chpwd __update_terminal_title
+          add-zsh-hook precmd __update_terminal_title
+
+          # Reset terminal state before each prompt to prevent
+          # accumulated escape sequence corruption (especially
+          # over SSH with tmux -CC, and after Claude Code exits)
+          __reset_broken_terminal() {
+            printf '%b' '\e[0m\e(B\e)0\017\e[?5l\e7\e[0;0r\e8'
+            # Reset Kitty keyboard protocol and modifyOtherKeys
+            # (Claude Code enables these and may not clean up on crash)
+            printf '\e[>0u\e[>4;0m' 2>/dev/null
+          }
+          add-zsh-hook precmd __reset_broken_terminal
+
+          # Restore native zsh completions for commands that need
+          # SSH-based remote path completion (overridden by carapace)
+          autoload -Uz _rsync && compdef _rsync rsync
+          autoload -Uz _ssh && compdef _ssh ssh scp sftp
+      fi
+    ''
+    + lib.optionalString isLinux ''
+      else
+          autoload -Uz compinit
+          compinit
+
+          # Reset terminal state before each prompt to prevent
+          # accumulated escape sequence corruption (especially
+          # over SSH with tmux -CC, and after Claude Code exits)
+          autoload -Uz add-zsh-hook
+          __reset_broken_terminal() {
+            printf '%b' '\e[0m\e(B\e)0\017\e[?5l\e7\e[0;0r\e8'
+            # Reset Kitty keyboard protocol and modifyOtherKeys
+            # (Claude Code enables these and may not clean up on crash)
+            printf '\e[>0u\e[>4;0m' 2>/dev/null
+          }
+          add-zsh-hook precmd __reset_broken_terminal
+      fi
+    '';
 
     plugins = lib.optionals isDarwin [
       {

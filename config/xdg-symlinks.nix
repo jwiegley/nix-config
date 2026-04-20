@@ -3,20 +3,10 @@
   lib,
   config,
   hostname,
-  inputs,
+  vars,
   ...
 }:
 let
-  vars = import ./vars.nix {
-    inherit
-      pkgs
-      lib
-      config
-      hostname
-      inputs
-      ;
-  };
-
   inherit (vars) home isDarwin isLinux;
 
   mkLink = config.lib.file.mkOutOfStoreSymlink;
@@ -58,7 +48,7 @@ in
       "dl".source = mkLink "${home}/Downloads";
       "db".source = mkLink "${home}/Databases";
       "Recordings".source =
-        mkLink "${home}/Library/Mobile Documents/iCloud~com~newartisans~just-press-record/Documents";
+        mkLink "${home}/Library/Mobile Documents/iCloud~com~openplanetsoftware~just-press-record/Documents";
 
       "pos".source = mkLink "${home}/work/positron";
       "tron".source = mkLink "${home}/work/positron/tron";

@@ -1,9 +1,9 @@
 {
   pkgs,
-  lib,
   config,
   hostname,
   inputs,
+  ...
 }:
 
 let
@@ -18,7 +18,10 @@ let
   signing_key = "12D70076AB504679";
 
   gitPkg =
-    if inputs ? git-ai then inputs.git-ai.packages.${pkgs.stdenv.hostPlatform.system}.default else null;
+    if inputs ? git-ai then
+      inputs.git-ai.packages.${pkgs.stdenv.hostPlatform.system}.default
+    else
+      pkgs.git;
 
   ca-bundle_path = "${pkgs.cacert}/etc/ssl/certs/";
   ca-bundle_crt = "${ca-bundle_path}/ca-bundle.crt";

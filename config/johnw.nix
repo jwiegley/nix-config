@@ -24,7 +24,6 @@ let
   vars = import ./vars.nix {
     inherit
       pkgs
-      lib
       config
       hostname
       inputs
@@ -32,6 +31,8 @@ let
   };
 in
 {
+  _module.args.vars = vars;
+
   imports =
     # Extracted sub-modules for better organization
     [
@@ -64,7 +65,7 @@ in
     ];
 
   home = {
-    stateVersion = lib.mkDefault "24.11";
+    stateVersion = lib.mkDefault "24.11"; # overridden by wrappers; fallback only
 
     sessionVariables = {
       DISABLE_AUTOUPDATER = "1";
@@ -139,8 +140,6 @@ in
       "/opt/homebrew/bin"
       "/opt/homebrew/opt/node@22/bin"
     ];
-
-    activation = { };
 
     file = {
       ".ledgerrc".text = ''

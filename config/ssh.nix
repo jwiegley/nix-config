@@ -1,25 +1,12 @@
 {
-  pkgs,
   lib,
   config,
   hostname,
-  inputs,
+  vars,
   ...
 }:
 let
-  vars = import ./vars.nix {
-    inherit
-      pkgs
-      lib
-      config
-      hostname
-      inputs
-      ;
-  };
-
-  inherit (vars) isDarwin identityDir;
-
-  tmpdir = "/tmp";
+  inherit (vars) isDarwin identityDir tmpdir;
 in
 {
   programs.ssh = {

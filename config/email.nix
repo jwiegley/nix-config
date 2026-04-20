@@ -1,22 +1,9 @@
 {
   pkgs,
-  lib,
-  config,
-  hostname,
-  inputs,
+  vars,
   ...
 }:
 let
-  vars = import ./vars.nix {
-    inherit
-      pkgs
-      lib
-      config
-      hostname
-      inputs
-      ;
-  };
-
   inherit (vars)
     userEmail
     userName

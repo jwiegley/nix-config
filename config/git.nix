@@ -1,22 +1,10 @@
 {
   pkgs,
   lib,
-  config,
-  hostname,
-  inputs,
+  vars,
   ...
 }:
 let
-  vars = import ./vars.nix {
-    inherit
-      pkgs
-      lib
-      config
-      hostname
-      inputs
-      ;
-  };
-
   inherit (vars)
     gitPkg
     userName
@@ -25,7 +13,7 @@ let
     ca-bundle_crt
     ;
 
-  # Generate mergiraf attributes from a list (Finding 2)
+  # Generate mergiraf attributes from a list
   mergirafExts = [
     "java"
     "properties"
