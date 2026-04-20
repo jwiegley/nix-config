@@ -356,8 +356,8 @@ let
         src = fetchFromGitHub {
           owner = "justinbarclay";
           repo = "1password.el";
-          rev = "bccba07435682d2925ac357f60568acc99c72ae1";
-          sha256 = "sha256-RmC92SWzcNtiDWRgP0zwsxLb/lMJOYebW9pFwPCflDo=";
+          rev = "8c3e35808ed21332e5eb054a495cce6f0c8f5b25";
+          sha256 = "sha256-RC3/fLSdH7H78f2wjXnXoOIi1zIZNG4EW/rBwGEXEz0=";
           # date = 2025-06-21T15:35:42-07:00;
         };
         buildInputs = with eself; [ aio ];
@@ -488,8 +488,8 @@ let
         src = fetchFromGitHub {
           owner = "kmontag";
           repo = "macher";
-          rev = "16672b88967c3ea452d8670285e2ab7fc705ce17";
-          sha256 = "sha256-F37OGrSNFM98sjQDlbSW79sCxnrHWZ7MO52O5VtOn4M=";
+          rev = "2a4d2ce81076134c7521bfd3a345c5440c440c2f";
+          sha256 = "sha256-ckIivUXNweZAH2FjX+oNIYWKrFgqMvuxmeGmhT8WEYw=";
           # date = 2025-08-20T19:15:22-07:00;
         };
         buildInputs = with eself; [ gptel ];

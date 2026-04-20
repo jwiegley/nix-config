@@ -9,14 +9,14 @@ final: prev: {
     with prev.python3Packages;
     buildPythonApplication rec {
       pname = "cozempic";
-      version = "1.7.1";
+      version = "1.8.3";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "Ruya-AI";
         repo = "cozempic";
         tag = "v${version}";
-        hash = "sha256-y2zjkb2dbV+puqMYyDborp0wXGuc97oE+/0e9+WrpA8=";
+        hash = "sha256-EZfhu5gzNLVNtcWDc2nSlbMBybFKm3BKq12jcdGewD0=";
       };
 
       build-system = [ setuptools ];
