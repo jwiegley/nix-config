@@ -21,8 +21,7 @@
     };
 
     llm-agents = {
-      # url = "github:numtide/llm-agents.nix";
-      url = "github:bgamari-positron/llm-agents.nix";
+      url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
