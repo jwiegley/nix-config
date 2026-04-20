@@ -5298,15 +5298,15 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1776371380,
-        "narHash": "sha256-UzTE2pDqcBbn30elFzzWv9hWhTIPP6hHBrQKprdBfrk=",
-        "owner": "bgamari-positron",
+        "lastModified": 1776696859,
+        "narHash": "sha256-4uNSs7ZABo7vcda2hEnvRhaBnfN59J1yIumPnxSO90w=",
+        "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "619f510cfca7b1661105c548916c106c865148c4",
+        "rev": "97a297df87c428863a9e985fefc908613410ae73",
         "type": "github"
       },
       "original": {
-        "owner": "bgamari-positron",
+        "owner": "numtide",
         "repo": "llm-agents.nix",
         "type": "github"
       }
