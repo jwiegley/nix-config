@@ -204,17 +204,11 @@ rec {
       git-my
       git-octopus
       graphite-cli
-    ]
-    ++ lib.optional (pkgs ? git-pr) (lib.hiPrio pkgs.git-pr)
-    ++ [
       git-quick-stats
       git-quickfix
       git-recent
       git-reparent
       git-repo
-    ]
-    ++ lib.optional (pkgs ? git-scripts) (lib.lowPrio pkgs.git-scripts)
-    ++ [
       git-secret
       git-series
       git-sizer
@@ -231,7 +225,10 @@ rec {
       tig
       top-git
       subversion
+      tea
     ]
+    ++ lib.optional (pkgs ? git-pr) (lib.hiPrio pkgs.git-pr)
+    ++ lib.optional (pkgs ? git-scripts) (lib.lowPrio pkgs.git-scripts)
 
     # ── Nix Tools ────────────────────────────────────────────────────
     ++ [

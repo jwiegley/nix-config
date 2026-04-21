@@ -1,7 +1,7 @@
 # overlays/30-git-tools.nix
 # Purpose: Git-related tools and extensions
 # Dependencies: None (uses only prev)
-# Packages: git-lfs, git-pr, git-scripts
+# Packages: git-lfs, git-pr, git-scripts, tea
 # Note: git-scripts requires paths.git-scripts
 final: prev:
 
@@ -51,6 +51,21 @@ prev.lib.optionalAttrs prev.stdenv.isDarwin {
 
 }
 // {
+
+  # go-git v5 lowercases extension names on read but the allowlist maps use
+  # mixed case, so repos with `extensions.worktreeConfig=true` (left behind by
+  # `git worktree` operations) fail the allowlist check. Patching the vendored
+  # copy preserves the extension and lets tea read worktree-enabled repos.
+  # Vendor tree is only materialized at configurePhase, so patch in preBuild.
+  tea = prev.tea.overrideAttrs (old: {
+    preBuild = (old.preBuild or "") + ''
+      chmod -R u+w vendor/github.com/go-git/go-git/v5
+      substituteInPlace vendor/github.com/go-git/go-git/v5/repository_extensions.go \
+        --replace-fail '"worktreeConfig":  {},' '"worktreeconfig":  {},'
+      sed -i 's|"noop-v1": {},|&\n\t\t"worktreeconfig": {},|' \
+        vendor/github.com/go-git/go-git/v5/repository_extensions.go
+    '';
+  });
 
   # Create and update GitHub PRs with stacked commits
   git-pr =
