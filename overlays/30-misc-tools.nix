@@ -1,7 +1,8 @@
 # overlays/30-misc-tools.nix
 # Purpose: Miscellaneous utility tools (file management, shell, security)
 # Dependencies: None (uses only prev)
-# Packages: hammer, linkdups, lipotell, sift, sshify, z, pass-git-helper, yamale
+# Packages: hammer, linkdups, lipotell, sift, sshify, z
+# Note: pass-git-helper, yamale, gogcli removed (now in nixpkgs)
 final: prev: {
 
   # Fix broken symlinks
@@ -200,95 +201,6 @@ final: prev: {
         license = licenses.mit;
         maintainers = with maintainers; [ jwiegley ];
         platforms = platforms.unix;
-      };
-    };
-
-  # Git credential helper using pass password manager
-  pass-git-helper =
-    with prev;
-    with python3Packages;
-    buildPythonPackage rec {
-      pname = "pass-git-helper";
-      version = "4a7b42b4";
-
-      src = fetchFromGitHub {
-        owner = "languitar";
-        repo = "pass-git-helper";
-        rev = "4a7b42b414d39a969ad8180192b41f8b80a943df";
-        sha256 = "sha256-aKZC8AhG1zZpXwRMEr2zJQVIF/712FJyq2RNs5E8kVo=";
-        # date = 2025-10-02T16:40:46+02:00;
-      };
-
-      dependencies = [
-        pyxdg
-      ];
-      doCheck = false;
-
-      pyproject = true;
-      build-system = [ setuptools ];
-
-      meta = {
-        homepage = "https://github.com/languitar/pass-git-helper";
-        description = "A git credential helper interfacing with pass, the standard unix password manager";
-        license = lib.licenses.lgpl3;
-        maintainers = with lib.maintainers; [ jwiegley ];
-      };
-    };
-
-  # YAML schema validator
-  yamale =
-    with prev;
-    with python3Packages;
-    buildPythonPackage rec {
-      pname = "yamale";
-      version = "c203d14b";
-
-      src = fetchFromGitHub {
-        owner = "23andMe";
-        repo = "Yamale";
-        rev = "c203d14bface6f35693874a8e4ee39079bcb9094";
-        sha256 = "sha256-/Ax6EYZH8SEWJ2RIGOW7cotuALDaG/w/4twsXG+VSTw=";
-        # date = 2025-10-27T13:56:16-04:00;
-      };
-
-      dependencies = [ pyyaml ];
-
-      pyproject = true;
-      build-system = [ setuptools ];
-
-      meta = {
-        homepage = "https://github.com/23andMe/Yamale";
-        description = "A schema and validator for YAML";
-        license = lib.licenses.mit;
-        maintainers = with lib.maintainers; [ jwiegley ];
-      };
-    };
-
-  # Google Suite CLI: Gmail, GCal, GDrive, GContacts
-  # Pinned to v0.11.0: v0.12.0+ requires go >= 1.26.2, but pinned nixpkgs
-  # only provides go_1_26 at 1.26.1 (go_1_27 does not yet exist).
-  gogcli =
-    with prev;
-    (buildGoModule.override { go = go_1_26; }) rec {
-      pname = "gogcli";
-      version = "0.11.0";
-
-      src = fetchFromGitHub {
-        owner = "steipete";
-        repo = "gogcli";
-        rev = "v${version}";
-        hash = "sha256-hJU40ysjRx4p9SWGmbhhpToYCpk3DcMAWCnKqxHRmh0=";
-      };
-
-      vendorHash = "sha256-WGRlv3UsK3SVBQySD7uZ8+FiRl03p0rzjBm9Se1iITs=";
-
-      doCheck = false;
-
-      meta = {
-        homepage = "https://github.com/steipete/gogcli";
-        description = "Google Suite CLI: Gmail, GCal, GDrive, GContacts";
-        license = lib.licenses.mit;
-        maintainers = with lib.maintainers; [ jwiegley ];
       };
     };
 
