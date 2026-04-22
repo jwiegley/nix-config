@@ -250,7 +250,7 @@ let
           sha256 = "sha256-xUBQrQpw+JZxcqT1fy/8C2tjKwa7sLFHXamBm45Fa4Y=";
           # date = 2025-07-16T14:21:52-04:00;
         };
-        propagatedBuildInputs = with eself; [
+        propagatedBuildInputs = [
           (prev.emacs-lsp-booster.override { inherit (eself) emacs; })
         ];
       };
@@ -858,7 +858,7 @@ in
       withImageMagick = true;
       withNativeCompilation = false;
     }).overrideAttrs
-      (attrs: rec {
+      (attrs: {
         version = "31.0.50";
         env = {
           NATIVE_FULL_AOT = "1";

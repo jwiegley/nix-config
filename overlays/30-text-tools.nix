@@ -53,7 +53,7 @@ in
   hyperorg =
     with prev;
     with python3Packages;
-    buildPythonPackage rec {
+    buildPythonPackage {
       pname = "hyperorg";
       version = "a814c4bf5e";
       pyproject = true;
