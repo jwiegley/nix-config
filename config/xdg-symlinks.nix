@@ -53,6 +53,7 @@ in
       "pos".source = mkLink "${home}/work/positron";
       "tron".source = mkLink "${home}/work/positron/tron";
       "srp".source = mkLink "${home}/work/regional-statistics/srp-db";
+      "git-ai".source = mkLink "${home}/work/git-ai/git-ai";
 
       "News".source = mkLink "${config.xdg.dataHome}/gnus/News";
     }

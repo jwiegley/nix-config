@@ -1382,17 +1382,17 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1776371296,
-        "narHash": "sha256-D2RQVGBGoO7QSj1s8V8cO2n7a7YfpsOQGL0JrBZNkP0=",
-        "ref": "refs/heads/main",
-        "rev": "60df2ff696153e6a53308091d25bd6ed8c6982d7",
-        "revCount": 3435,
+        "lastModified": 1776881254,
+        "narHash": "sha256-VkYwF9pcjnEmxIWbp0PqWlaxaWNpIrqaOOQ0qP/imus=",
+        "ref": "refs/heads/johnw/review-attribution-test-guidelines",
+        "rev": "7d62af73caff1d1120329409f3dade87e1aea7c7",
+        "revCount": 3526,
         "type": "git",
-        "url": "file:///Users/johnw/src/git-ai/main"
+        "url": "file:///Users/johnw/work/git-ai/git-ai/main"
       },
       "original": {
         "type": "git",
-        "url": "file:///Users/johnw/src/git-ai/main"
+        "url": "file:///Users/johnw/work/git-ai/git-ai/main"
       }
     },
     "git-all": {
@@ -5256,11 +5256,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776809304,
-        "narHash": "sha256-qatw4pEINYRdxvW0FckzM80dGDgXtFx5zDeOT4Fslm8=",
-        "ref": "refs/heads/johnw/fix-664",
-        "rev": "1d34c8f9d7ff6443d40adb77f4c0961aeaea0875",
-        "revCount": 8510,
+        "lastModified": 1776840394,
+        "narHash": "sha256-+tFaHSuVUG2IqkkI1hNJFlsHpxPJ01yANhuACeRckUE=",
+        "ref": "refs/heads/main",
+        "rev": "71e80d7f29d336df382f77cf44394505ad61cd5a",
+        "revCount": 8541,
         "type": "git",
         "url": "file:///Users/johnw/src/ledger/main"
       },
@@ -7019,11 +7019,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1776466908,
-        "narHash": "sha256-4X+EDPPCDPcoSGO6CEviDiqx833z+PhNZMpuFqvyzmY=",
+        "lastModified": 1776878112,
+        "narHash": "sha256-eSAbbd0SO6mkRxns0msiu+ZoLH5qd8ov+XQsDFUsUG4=",
         "ref": "refs/heads/main",
-        "rev": "961241f1b5d64014047a45581482fc629e2dfbf8",
-        "revCount": 1381,
+        "rev": "a9585bb5ab4fbb48003f0404f53039f8f33e6e44",
+        "revCount": 1382,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },

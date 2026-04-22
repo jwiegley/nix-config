@@ -143,8 +143,8 @@ in
         };
 
         git-ai = controlMastered {
-          host = "git-ai";
-          user = "johnw";
+          hostname = "ec2-3-134-98-233.us-east-2.compute.amazonaws.com";
+          user = "ubuntu";
           identityFile = "${config.xdg.configHome}/ssh/id_git-ai";
           identitiesOnly = true;
         };
