@@ -344,8 +344,8 @@ let
         src = fetchFromGitHub {
           owner = "emarsden";
           repo = "pgmacs";
-          rev = "b69ba762ad0a02cf9682a104ab7386e09ec80d23";
-          sha256 = "sha256-6zsr9J6Mt6aEz+ILR53E4p1VoOffT5C7CSuWOx6Xw4o=";
+          rev = "b27999b6b2676514dae6c879e7a72a2beca58a39";
+          sha256 = "sha256-cM69R2kz65h8G9hnqDpETD0A/zIbxZ1kK6+gA+V7bhE=";
           # date = 2025-09-29T11:18:24+02:00;
         };
         buildInputs = with eself; [ pg ];

@@ -57,12 +57,12 @@ final: prev: {
 
   # llama.cpp - LLM inference with GGUF models
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "8870";
+    version = "8884";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-2UgcL9mCTPWfBfEuTSqbrId1HKbhqPXabsszNJ+8fZY=";
+      hash = "sha256-pQvoAIcoYkCI2z93YQP737Zuj3PzpgPGlR5HezRneSE=";
     };
     postPatch = "";
     preConfigure = ''
@@ -84,13 +84,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "204";
+      version = "205";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-rXjJHTB5P3N9qq7FidY/t02izOW5je8lT3bFP19ciN4=";
+        hash = "sha256-3hcNkah30BS3OVQAyVfpu2j0i3sZ7pYqMZhOpiCbwwA=";
       };
 
       ui =
@@ -122,7 +122,7 @@ final: prev: {
     with prev;
     prev.llama-swap.overrideAttrs (attrs: rec {
       inherit version src;
-      vendorHash = "sha256-bgDrXNuudKhdwOCBLodG1cTLSRKban+69wA9hWEKkoI=";
+      vendorHash = "sha256-tOOZgugiVcICYg9HyeTolyAg+YZWtxSJTvAuwfMazHQ=";
       preBuild = ''
         cp -r ${ui}/ui_dist proxy/
       '';
@@ -219,14 +219,14 @@ final: prev: {
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "mlx-lm";
-      version = "0.31.2";
+      version = "0.31.3";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "ml-explore";
         repo = "mlx-lm";
         tag = "v${version}";
-        hash = "sha256-Ujt0KMs4dzIlbg7cg72TudAvlwJ4uWEG5Lx7+5j8cOU=";
+        hash = "sha256-DPOJfsIucG8mWt4ZKenymCJo/i9Jw+a+iuIygIIYkA8=";
       };
 
       build-system = [ setuptools ];
