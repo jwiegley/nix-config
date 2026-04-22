@@ -5256,11 +5256,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776707715,
-        "narHash": "sha256-sCnfzamU6Fw2P9x/iAze8/5dvkdZ+N6I8LtqGhoLI+A=",
-        "ref": "refs/heads/johnw/fix-697",
-        "rev": "501a5dbe060ac0cd0da529446a036bee73ecb02d",
-        "revCount": 8476,
+        "lastModified": 1776809304,
+        "narHash": "sha256-qatw4pEINYRdxvW0FckzM80dGDgXtFx5zDeOT4Fslm8=",
+        "ref": "refs/heads/johnw/fix-664",
+        "rev": "1d34c8f9d7ff6443d40adb77f4c0961aeaea0875",
+        "revCount": 8510,
         "type": "git",
         "url": "file:///Users/johnw/src/ledger/main"
       },
@@ -6815,11 +6815,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776383534,
-        "narHash": "sha256-82+7fN976zTq64iJo2Me9Fxm77YvNZRZbfo27fjKj18=",
+        "lastModified": 1776805987,
+        "narHash": "sha256-a9xdaPhRq03hTQp01eMYWBj5OF3PNbEQ8IevBl+6jec=",
         "ref": "refs/heads/main",
-        "rev": "4d7a4b1364523a6ae79fb533eb63ad1fae4247f3",
-        "revCount": 225,
+        "rev": "0b45b41d6c8d1b7727a73ff71f7a56c4dd29e78f",
+        "revCount": 226,
         "shallow": false,
         "submodules": true,
         "type": "git",

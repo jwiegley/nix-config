@@ -265,20 +265,22 @@ final: prev: {
     };
 
   # Google Suite CLI: Gmail, GCal, GDrive, GContacts
+  # Pinned to v0.11.0: v0.12.0+ requires go >= 1.26.2, but pinned nixpkgs
+  # only provides go_1_26 at 1.26.1 (go_1_27 does not yet exist).
   gogcli =
     with prev;
     (buildGoModule.override { go = go_1_26; }) rec {
       pname = "gogcli";
-      version = "0.13.0";
+      version = "0.11.0";
 
       src = fetchFromGitHub {
         owner = "steipete";
         repo = "gogcli";
         rev = "v${version}";
-        hash = "sha256-UN1dW3VX7N3fymn8y40Xd0sIznihjeeLtb1nHOEMDcY=";
+        hash = "sha256-hJU40ysjRx4p9SWGmbhhpToYCpk3DcMAWCnKqxHRmh0=";
       };
 
-      vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      vendorHash = "sha256-WGRlv3UsK3SVBQySD7uZ8+FiRl03p0rzjBm9Se1iITs=";
 
       doCheck = false;
 
