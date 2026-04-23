@@ -4867,11 +4867,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776891022,
-        "narHash": "sha256-vEe2f4NEhMvaNDpM1pla4hteaIIGQyAMKUfIBPLasr0=",
+        "lastModified": 1776904464,
+        "narHash": "sha256-sBUCj7/4d3Hoevpu3oQp8ccJNA1EDeVmFi1F8O6VJro=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "508daf831ab8d1b143d908239c39a7d8d39561b2",
+        "rev": "667b3c47325441e6a444faaf405bba76ec70338a",
         "type": "github"
       },
       "original": {
@@ -5251,22 +5251,20 @@
     },
     "ledger": {
       "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
+        "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1776840394,
-        "narHash": "sha256-+tFaHSuVUG2IqkkI1hNJFlsHpxPJ01yANhuACeRckUE=",
-        "ref": "refs/heads/main",
-        "rev": "71e80d7f29d336df382f77cf44394505ad61cd5a",
-        "revCount": 8541,
-        "type": "git",
-        "url": "file:///Users/johnw/src/ledger/main"
+        "lastModified": 1776892377,
+        "narHash": "sha256-VuipB0b8iAcSRH9f3XSfdymnYWZ+d9LRXK5WZC8pM+o=",
+        "owner": "ledger",
+        "repo": "ledger",
+        "rev": "873a3f4ac788a5137c7d48bd4d4bc8328250d90b",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/ledger/main"
+        "owner": "ledger",
+        "repo": "ledger",
+        "type": "github"
       }
     },
     "libgit2-src": {
@@ -6453,6 +6451,22 @@
     },
     "nixpkgs_3": {
       "locked": {
+        "lastModified": 1772736753,
+        "narHash": "sha256-au/m3+EuBLoSzWUCb64a/MZq6QUtOV8oC0D9tY2scPQ=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "917fec990948658ef1ccd07cef2a1ef060786846",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_4": {
+      "locked": {
         "lastModified": 1776329215,
         "narHash": "sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw=",
         "owner": "NixOS",
@@ -6467,7 +6481,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_4": {
+    "nixpkgs_5": {
       "locked": {
         "lastModified": 1771369470,
         "narHash": "sha256-0NBlEBKkN3lufyvFegY4TYv5mCNHbi5OmBDrzihbBMQ=",
@@ -6483,7 +6497,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_5": {
+    "nixpkgs_6": {
       "locked": {
         "lastModified": 1773597492,
         "narHash": "sha256-hQ284SkIeNaeyud+LS0WVLX+WL2rxcVZLFEaK0e03zg=",
@@ -6499,7 +6513,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_6": {
+    "nixpkgs_7": {
       "locked": {
         "lastModified": 1773597492,
         "narHash": "sha256-hQ284SkIeNaeyud+LS0WVLX+WL2rxcVZLFEaK0e03zg=",
@@ -6518,7 +6532,7 @@
     "obr": {
       "inputs": {
         "flake-utils": "flake-utils_8",
-        "nixpkgs": "nixpkgs_4",
+        "nixpkgs": "nixpkgs_5",
         "org2jsonl": "org2jsonl",
         "rust-overlay": "rust-overlay_3"
       },
@@ -6758,7 +6772,7 @@
       "inputs": {
         "crane": "crane_2",
         "flake-utils": "flake-utils_11",
-        "nixpkgs": "nixpkgs_5",
+        "nixpkgs": "nixpkgs_6",
         "rust-overlay": "rust-overlay_4"
       },
       "locked": {
@@ -6815,11 +6829,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776898251,
-        "narHash": "sha256-Gulul3k8yvumsdQ9zLEuriZMYxsLqIEQ7lOjbLsBVZo=",
+        "lastModified": 1776907213,
+        "narHash": "sha256-4JznDXBDLpMXoc1DVaMpE9bwpRQ0DLzD5upNQJ8vbNw=",
         "ref": "refs/heads/main",
-        "rev": "a3851f057823e6d711f3b41dcd801cbb3eadab59",
-        "revCount": 234,
+        "rev": "c484bffae107677259c0f2e3d6761ddd554f80af",
+        "revCount": 251,
         "shallow": false,
         "submodules": true,
         "type": "git",
@@ -6859,7 +6873,7 @@
     "rag-client": {
       "inputs": {
         "flake-utils": "flake-utils_14",
-        "nixpkgs": "nixpkgs_6"
+        "nixpkgs": "nixpkgs_7"
       },
       "locked": {
         "lastModified": 1774907281,
@@ -6915,7 +6929,7 @@
         "ledger": "ledger",
         "llm-agents": "llm-agents",
         "mcp-servers-nix": "mcp-servers-nix",
-        "nixpkgs": "nixpkgs_3",
+        "nixpkgs": "nixpkgs_4",
         "obr": "obr",
         "org-jw": "org-jw",
         "org2jsonl": "org2jsonl_2",

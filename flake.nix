@@ -25,13 +25,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    ledger = {
-      url = "git+file:///Users/johnw/src/ledger/main";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    ledger.url = "github:ledger/ledger";
+    # ledger = {
+    #   url = "git+file:///Users/johnw/src/ledger/main";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
 
     org-jw.url = "github:jwiegley/org-jw";
-    # ledger.url = "github:ledger/ledger";
     rag-client.url = "github:jwiegley/rag-client";
 
     promptdeploy = {
