@@ -130,6 +130,16 @@ in
           controlPath = "none";
         };
 
+        ghai = {
+          user = "git";
+          hostname = "github.com";
+          identityFile = "${config.xdg.configHome}/ssh/id_git-ai";
+          identitiesOnly = true;
+
+          controlMaster = "no";
+          controlPath = "none";
+        };
+
         positron = controlMastered {
           host = "pos andoria andoria-* delphi-* agentsrv labmgr";
           user = "jwiegley";
