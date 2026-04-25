@@ -1,0 +1,31 @@
+Subject: Use ts_language_abi_version for tree-sitter 0.25+ compatibility
+
+tree-sitter 0.25+ renamed ts_language_version to ts_language_abi_version.
+This patch adapts the two call sites used by the Unix build. The Windows
+delayed-loading path still uses the old name because it isn't compiled
+on Darwin; leaving it untouched keeps the blast radius minimal.
+
+Upstream GNU Emacs master has a more thorough fix; this is a minimal
+rename to get the macport building against tree-sitter >= 0.25.
+
+diff --git a/src/treesit.c b/src/treesit.c
+--- a/src/treesit.c
++++ b/src/treesit.c
+@@ -746,7 +746,7 @@ treesit_load_language (Lisp_Object language_symbol,
+     {
+       *signal_symbol = Qtreesit_load_language_error;
+       *signal_data = list2 (Qversion_mismatch,
+-			    make_fixnum (ts_language_version (lang)));
++			    make_fixnum (ts_language_abi_version (lang)));
+       return NULL;
+     }
+   return lang;
+@@ -817,7 +817,7 @@ DEFUN ("treesit-language-abi-version", Ftreesit_language_abi_version,
+ 							       &signal_data);
+       if (ts_language == NULL)
+ 	return Qnil;
+-      uint32_t version =  ts_language_version (ts_language);
++      uint32_t version =  ts_language_abi_version (ts_language);
+       return make_fixnum((ptrdiff_t) version);
+     }
+ }

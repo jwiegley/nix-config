@@ -8,7 +8,8 @@
 with pkgs;
 let
   inherit (stdenv)
-    isDarwin # isLinux
+    isDarwin
+    isLinux
     ;
   sys = pkgs.stdenv.hostPlatform.system;
 
@@ -81,7 +82,6 @@ rec {
       eza
       fzf
       nnn
-      ratpoison
       rlwrap
       screen
       sdcv
@@ -517,7 +517,10 @@ rec {
     ]
     ++ lib.optionals isDarwin (optPkg "vllm-mlx")
 
-    # # ── Linux-Only Packages ──────────────────────────────────────────
+    # ── Linux-Only Packages ──────────────────────────────────────────
+    ++ lib.optionals isLinux [
+      ratpoison # X11 WM; not usable on Darwin
+    ]
     # ++ lib.optionals isLinux (optPkg "cpx")
 
     # ── Host-Specific Packages (hera) ────────────────────────────────

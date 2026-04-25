@@ -804,6 +804,10 @@ in
           prev.automake
           prev.pkg-config
         ];
+        # tree-sitter >= 0.25 renamed ts_language_version -> ts_language_abi_version.
+        # emacs-mac macport 30.2.50 still uses the old name; rename the two call
+        # sites so it builds against the current tree-sitter in nixpkgs.
+        patches = (attrs.patches or [ ]) ++ [ ./emacs/patches/treesit-abi-version.patch ];
       });
   emacs30MacPortPackages = final.emacs30MacPortPackagesNg;
   emacs30MacPortPackagesNg = mkEmacsPackages final.emacs30-macport;
