@@ -10,6 +10,39 @@ final: prev: {
     doCheck = false;
   });
 
+  # Fix zsh-5.9 lost-SIGCHLD hang after the 2026-04-18 darwin stdenv reshuffle
+  # (nixpkgs PR #508474, "darwin: migrate source releases from apple-sdk to
+  # darwin"). On the new stdenv, zsh's runtime autoconf probe in configure.ac
+  # ("if POSIX sigsuspend() works") fails inside the build sandbox -- the
+  # test program forks, the child exits, the parent calls sigsuspend() with
+  # an empty mask expecting the SIGCHLD handler to fire, but the handler
+  # never observes the signal in the sandbox. Autoconf records
+  # zsh_cv_sys_sigsuspend=no, which causes BROKEN_POSIX_SIGSUSPEND to be
+  # defined. Src/signals.c:signal_suspend() then compiles the workaround
+  # branch (sigprocmask SIG_UNBLOCK + pause()) instead of the atomic
+  # sigsuspend(&saved_mask). The pause()-based path has a wide race window
+  # in which a SIGCHLD from an exiting $(...) command-substitution child
+  # fires its handler before pause() blocks, leaving zsh wedged in
+  # __sigsuspend forever waiting for a wakeup that already arrived. Symptom:
+  # interactive zsh hangs mid-init (clio: during `eval "$(starship init)"`)
+  # or mid-precmd (hera: $(hostname -f) in iterm2 hook); no child in ps,
+  # pipe writer end already closed. macOS's actual sigsuspend() works fine
+  # outside the sandbox -- libSystem.B.dylib still exports _sigsuspend. So
+  # short-circuit the broken sandbox-side runtime test by pre-populating the
+  # autoconf cache.
+  # Verify after rebuild:
+  #   nix log <zsh.drv>          should show "POSIX sigsuspend() works... yes"
+  #   nm -u .../bin/zsh          should show _sigsuspend, NOT _pause
+  #   timeout 5 zsh -ic 'echo X' should print X and exit 0 in <1s
+  zsh = prev.zsh.overrideAttrs (
+    oldAttrs:
+    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+      preConfigure = (oldAttrs.preConfigure or "") + ''
+        export zsh_cv_sys_sigsuspend=yes
+      '';
+    }
+  );
+
   # Fix samba build failure on macOS
   # Clang rejects discard_const in static initializers as non-constant expressions
   # Patch the test file's STR_VAL macro to use a simple cast instead
