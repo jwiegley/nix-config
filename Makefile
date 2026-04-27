@@ -215,7 +215,22 @@ clean:
 	nix-collect-garbage --delete-older-than $(MAX_AGE)d
 	sudo nix-collect-garbage --delete-older-than $(MAX_AGE)d
 
-purge:
+scour:
+	rm -fr $(HOME)/Library/Caches/pip
+	rm -fr $(HOME)/.cache/cabal
+	rm -fr $(HOME)/.cache/cargo
+	rm -fr $(HOME)/.cache/ccache
+	rm -fr $(HOME)/.cache/ghcide
+	rm -fr $(HOME)/.cache/hie-bios
+	rm -fr $(HOME)/.cache/nix
+	rm -fr $(HOME)/.cache/npm
+	rm -fr $(HOME)/.cache/pnpm
+	rm -fr $(HOME)/.cache/rustup
+	rm -fr $(HOME)/.cache/swiftpm
+	rm -fr $(HOME)/.cache/uv
+	rm -fr $(HOME)/.cache/.bun
+
+purge: scour
 	$(call delete-generations-all,1)
 	nix-collect-garbage --delete-old
 	sudo nix-collect-garbage --delete-old
