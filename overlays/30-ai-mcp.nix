@@ -156,13 +156,13 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     with prev;
     buildNpmPackage (finalAttrs: {
       pname = "context-hub";
-      version = "596506eb";
+      version = "9be8ba13";
 
       src = fetchFromGitHub {
         owner = "andrewyng";
         repo = "context-hub";
-        rev = "596506ebb4d53cfbc6ae458b731e0b1a18790f9e";
-        hash = "sha256-ozn5yrdtoPqcw/PiHJLHXT4Ayyed1AS1zak5a83pIQA=";
+        rev = "9be8ba138ba7b1655057cc1a717fead1fa69c5c8";
+        hash = "sha256-LkBoyboTfyHtg0LWbOaAOBjYJMsRi/F/pafvbqUVeTg=";
       };
 
       npmDepsHash = "sha256-AIjQTnfeXt8ROhHcS2vuYQ2HbXdI/MFa4/wnuQknjKA=";
@@ -197,16 +197,16 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     with final;
     buildNpmPackage (finalAttrs: {
       pname = "claude-code-acp";
-      version = "0.30.0";
+      version = "0.31.1";
 
       src = fetchFromGitHub {
         owner = "zed-industries";
         repo = "claude-code-acp";
         rev = "v${finalAttrs.version}";
-        hash = "sha256-Fb5P9LUPIeVYZ7LDVreHZCtuXUtHNdZjqC4gRVGVg50=";
+        hash = "sha256-awVHze7iSsr55tUEUomecTgK2FdDRXzV0yNKRZgPl8U=";
       };
 
-      npmDepsHash = "sha256-lF1me4oRLCol2Nx14BWjognjmzK6GzHZJajS6s4tJSQ=";
+      npmDepsHash = "sha256-Gchsxz00MhTqW5x61psoU+Xc6VP0Qv1KaeKBzDOhO6Y=";
 
       dontNpmBuild = false;
 
