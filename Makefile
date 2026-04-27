@@ -217,6 +217,7 @@ clean:
 
 scour:
 	rm -fr $(HOME)/Library/Caches/pip
+	rm -fr $(HOME)/.cache/bun
 	rm -fr $(HOME)/.cache/cabal
 	rm -fr $(HOME)/.cache/cargo
 	rm -fr $(HOME)/.cache/ccache
