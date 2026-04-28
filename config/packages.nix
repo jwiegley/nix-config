@@ -454,7 +454,6 @@ rec {
       if inputs ? llm-agents then
         (with inputs.llm-agents.packages.${sys}; [
           claude-code
-          claude-code-acp
           ccusage
           droid
           opencode

@@ -1,8 +1,8 @@
 # overlays/30-ai-mcp.nix
 # Purpose: Model Context Protocol (MCP) servers and Claude Code tools
-# Dependencies: Uses final for python3Packages and claude-code-acp; uses prev elsewhere
+# Dependencies: Uses final for python3Packages; uses prev elsewhere
 # Packages: pal-mcp-server, mcp-server-sequential-thinking, rustdocs-mcp-server,
-#           browser-control-mcp, claude-code-acp, context-hub
+#           browser-control-mcp, context-hub
 final: prev:
 
 prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
@@ -185,45 +185,6 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
         homepage = "https://github.com/andrewyng/context-hub";
         license = licenses.mit;
         mainProgram = "chub";
-        maintainers = [ maintainers.jwiegley ];
-        platforms = platforms.all;
-      };
-    });
-
-  # Claude Code ACP - Use Claude Code from ACP-compatible clients
-  # NOTE: Using 'final' here because claude-code-acp may need packages
-  # defined earlier in this overlay
-  claude-code-acp =
-    with final;
-    buildNpmPackage (finalAttrs: {
-      pname = "claude-code-acp";
-      version = "0.31.1";
-
-      src = fetchFromGitHub {
-        owner = "zed-industries";
-        repo = "claude-code-acp";
-        rev = "v${finalAttrs.version}";
-        hash = "sha256-awVHze7iSsr55tUEUomecTgK2FdDRXzV0yNKRZgPl8U=";
-      };
-
-      npmDepsHash = "sha256-Gchsxz00MhTqW5x61psoU+Xc6VP0Qv1KaeKBzDOhO6Y=";
-
-      dontNpmBuild = false;
-
-      npmFlags = [ "--ignore-scripts" ];
-
-      makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
-
-      passthru.updateScript = nix-update-script { };
-
-      # Version check disabled - command doesn't support --version flag
-      doInstallCheck = false;
-
-      meta = with lib; {
-        description = "Use Claude Code from any ACP-compatible clients such as Zed";
-        homepage = "https://github.com/zed-industries/claude-code-acp";
-        license = licenses.asl20;
-        mainProgram = "claude-code-acp";
         maintainers = [ maintainers.jwiegley ];
         platforms = platforms.all;
       };
