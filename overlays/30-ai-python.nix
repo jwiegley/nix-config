@@ -85,18 +85,18 @@ in
             let
               mlxMetalWheel = pfinal.fetchPypi {
                 pname = "mlx_metal";
-                version = "0.31.1";
+                version = "0.31.2";
                 format = "wheel";
                 dist = "py3";
                 python = "py3";
                 platform = "macosx_14_0_arm64";
-                hash = "sha256-cHQRdBMdv3/dR5y3MOBuCMNY6sO/eQXZ6ITnlgz91bg=";
+                hash = "sha256-slOFvO4Y/BlAkiVbi1O5o9hInrZQ5ZFg8bV6rdB6otw=";
               };
             in
             {
               # Use pre-built wheel from PyPI that includes Metal support
               # Building from source fails in Nix sandbox due to Metal tools being unavailable
-              version = "0.31.1";
+              version = "0.31.2";
               pyproject = null;
               format = "wheel";
               patches = [ ]; # Wheel doesn't need patches
@@ -106,13 +106,13 @@ in
               pythonRemoveDeps = [ "mlx-metal" ];
               src = pfinal.fetchPypi {
                 pname = "mlx";
-                version = "0.31.1";
+                version = "0.31.2";
                 format = "wheel";
                 dist = "cp313";
                 python = "cp313";
                 abi = "cp313";
                 platform = "macosx_14_0_arm64";
-                hash = "sha256-mm00EPyVG9KFCP7ZwatdmQP29rsQHDpdY9QZHUmjhKE=";
+                hash = "sha256-Gz+w3alVsNVSzle91vQrMwmrIbBn5AWH1oSEQ9MH6R8=";
               };
               nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ prev.unzip ];
               # Merge mlx-metal (Metal GPU kernels, split out since 0.31.x) into
