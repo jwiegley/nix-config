@@ -252,6 +252,7 @@ rec {
       cmake
       doxygen
       go-jira
+      bun
       graphviz-nox
       igrep
       jdk
