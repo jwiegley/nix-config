@@ -41,7 +41,6 @@ in
       ./zsh.nix
       ./xdg-symlinks.nix
       ./email.nix
-      ./launchd.nix
     ]
     # Conditional flake input modules
     ++ lib.optionals (inputs ? git-ai) [
