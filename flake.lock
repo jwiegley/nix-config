@@ -7017,11 +7017,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1777414396,
-        "narHash": "sha256-DXESjGlklpOOvy524XvGlKe4luZOPm5LUwEAICJV4uA=",
+        "lastModified": 1777423258,
+        "narHash": "sha256-u6m1/MAARwYSRHPBvAHIjW8deifBL6RgOESr3cgv2To=",
         "ref": "refs/heads/main",
-        "rev": "0953c5d525df32fd9d2f18dc9463bc8653f4cbc6",
-        "revCount": 1387,
+        "rev": "8deb60159987ad5cc779eca62b4e11bd7245322e",
+        "revCount": 1388,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
