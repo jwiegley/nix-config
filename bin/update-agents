@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+if [[ -d /etc/nixos ]]; then
+    cd /etc/nixos
+else
+    cd ~/src/nix
+fi
+
+(brew update ; brew upgrade --greedy) &> /tmp/brew.log &
+
+nix flake update --commit-lock-file llm-agents
+
+if [[ -d /etc/srp-next ]]; then
+    sudo nixos-rebuild switch --flake '.#ovh-vps'
+elif [[ -d /etc/nixos ]]; then
+    sudo nixos-rebuild switch --flake '.#vulcan'
+else
+    u switch
+fi
+
+git push
+
+wait

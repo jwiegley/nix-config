@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+update ~/doc ~/src ~/Models ~/Databases
+
+pushme andoria hera
+pushme git-ai hera
+
+pushme hera@6 clio@6 tank@1
+
+upgrade hera || echo "upgrade hera exited with $?"
+
+(cd $NIX_CONF; changes)
+
+sleep 10
+
+pushme hera@6 clio@6
+
+update-remote
