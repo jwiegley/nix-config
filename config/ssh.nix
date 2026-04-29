@@ -6,9 +6,14 @@
   ...
 }:
 let
-  inherit (vars) isDarwin identityDir tmpdir;
+  inherit (vars) isDarwin identityDir;
 in
 {
+  home.activation.createSshSocketDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    run mkdir -p "${config.home.homeDirectory}/.ssh/sockets"
+    run chmod 700 "${config.home.homeDirectory}/.ssh/sockets"
+  '';
+
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
@@ -28,7 +33,11 @@ in
           attrs
           // {
             controlMaster = "auto";
-            controlPath = "${tmpdir}/ssh-%u-%r@%h:%p";
+            # %C is a SHA-1 hash of %l%h%p%r (40 hex chars). Using the literal
+            # %h hostname overflows macOS's 104-byte unix-domain-socket limit
+            # for hosts with long FQDNs (e.g. ec2-...compute.amazonaws.com)
+            # once OpenSSH appends its random temp-file suffix.
+            controlPath = "${config.home.homeDirectory}/.ssh/sockets/%C";
             controlPersist = "1800";
           };
 
@@ -59,9 +68,11 @@ in
           forwardAgent = false;
 
           extraOptions = {
-            IgnoreUnknown = "UseKeychain";
+            StrictHostKeyChecking = "yes";
+            VerifyHostKeyDNS = "yes";
           }
           // lib.optionalAttrs isDarwin {
+            IgnoreUnknown = "UseKeychain";
             UseKeychain = "yes";
             AddKeysToAgent = "yes";
           };
