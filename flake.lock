@@ -827,11 +827,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1774372690,
-        "narHash": "sha256-R+IBQI2CBiVv4kJbpCZRkkOuwErAu3Vo2+FSekMvBHk=",
+        "lastModified": 1777489577,
+        "narHash": "sha256-R49T7O7I9AIoGawphsR3kNTh536JMhLuYGJZzzw9ntg=",
         "ref": "refs/heads/master",
-        "rev": "ebd982db332d7597d129b854a6688c415b3d947b",
-        "revCount": 181673,
+        "rev": "d278e51f43c51a65e3086fff9ea9cb4b18ff2d21",
+        "revCount": 182031,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -1962,11 +1962,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1762312887,
-        "narHash": "sha256-A7T8mXGsoZ3DhCk9u06vOoovJwKUSU+FMOfZU4Ukh/U=",
+        "lastModified": 1777496198,
+        "narHash": "sha256-Jp/OI4mvH+2lBMMyxa/6Ouy0d6h4MgVxgvqLwKF5LN8=",
         "ref": "refs/heads/master",
-        "rev": "0ed61d0f4a16aa2d205362f7bef4aee964ec913a",
-        "revCount": 2106,
+        "rev": "023b4124ab791e3b436b554434be42f2f86a2f7b",
+        "revCount": 2124,
         "type": "git",
         "url": "file:///Users/johnw/src/hakyll"
       },
@@ -4866,11 +4866,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1777476904,
-        "narHash": "sha256-EeLoE8n4+QCbteyAsYXxhfr97RFfWL1ga0xwfL6lpKw=",
+        "lastModified": 1777498633,
+        "narHash": "sha256-+3xXjfFz7y1gNG/9tQgjdxFKsQZYcDUxz1RbzmdgXj8=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "8c8e5389e75a36bee53920de8ee24f017b3ae03e",
+        "rev": "503480e51357c7beca8c19bde560af1491a372d0",
         "type": "github"
       },
       "original": {
@@ -5280,11 +5280,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1777439951,
-        "narHash": "sha256-1Bs4ZbBayXWicrOrQQn3/BnnqhEy+tQjdFn40wHu1dw=",
+        "lastModified": 1777499052,
+        "narHash": "sha256-rY2SMqiKC7cqwTN0ZZvl+m6dgtEqUOcXUqsZh9PlLKM=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "2641c18f5bb9d0b95e81beca1b0415e174d7e650",
+        "rev": "a20b082977f6f456908a29239ecd73eb1a863768",
         "type": "github"
       },
       "original": {
@@ -6451,11 +6451,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1777270315,
-        "narHash": "sha256-yKB4G6cKsQsWN7M6rZGk6gkJPDNPIzT05y4qzRyCDlI=",
+        "lastModified": 1777395829,
+        "narHash": "sha256-HposVFZcsBCevgqLR73w/BpSe8J1lMgw5kASnnxO3A4=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "6368eda62c9775c38ef7f714b2555a741c20c72d",
+        "rev": "e75f25705c2934955ee5075e62530d74aca973c6",
         "type": "github"
       },
       "original": {
@@ -6792,11 +6792,11 @@
     "pal-mcp-server": {
       "flake": false,
       "locked": {
-        "lastModified": 1773338687,
-        "narHash": "sha256-niod8nGeHOYNjAfOnXfruhsHy5rNnk2LbpDFaQ5Zy8g=",
+        "lastModified": 1777318109,
+        "narHash": "sha256-enqf2kyDXgPvBKDTHUuJefr72DR9AkJS9TmvInmCV7I=",
         "ref": "refs/heads/main",
-        "rev": "7a50def9300b1795ed88a3a8853accc85f26c41c",
-        "revCount": 1153,
+        "rev": "7af02582fa45cbad953048e410891631dd278430",
+        "revCount": 1156,
         "type": "git",
         "url": "file:///Users/johnw/src/pal-mcp-server"
       },
@@ -6841,11 +6841,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1774901262,
-        "narHash": "sha256-CSiOqfzGM4UUQJvPg0QtzDuMQzNQMWykmokl2pOdKw4=",
+        "lastModified": 1777496575,
+        "narHash": "sha256-ALJTzd+cNzIOhy4p2A4ib8Fz6HlvbTqlyIOYyY8WaaI=",
         "ref": "refs/heads/master",
-        "rev": "e71324f198b823fe6527acdea09df5e6fac62e45",
-        "revCount": 227,
+        "rev": "f66aeacff1436ee353cf5911142c03c5389ec58a",
+        "revCount": 228,
         "type": "git",
         "url": "file:///Users/johnw/src/pushme"
       },
@@ -7018,11 +7018,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1777423258,
-        "narHash": "sha256-u6m1/MAARwYSRHPBvAHIjW8deifBL6RgOESr3cgv2To=",
+        "lastModified": 1777504761,
+        "narHash": "sha256-jMOqwhQ7ZBNToqwdOOTuj+HAUMZuXS3hBVkJsfJmGdg=",
         "ref": "refs/heads/main",
-        "rev": "8deb60159987ad5cc779eca62b4e11bd7245322e",
-        "revCount": 1388,
+        "rev": "b6d3dd40622ff4b1199e6de50d649418fa6ec57d",
+        "revCount": 1392,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
