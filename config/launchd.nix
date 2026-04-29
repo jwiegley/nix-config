@@ -221,16 +221,6 @@ in
         };
       };
 
-      move-audio-files = {
-        serviceConfig = {
-          ProgramArguments = [ "${home}/src/nix/bin/move-audio-files" ];
-          StartInterval = 3600;
-          StandardOutPath = "${home}/Library/Logs/move-audio-files.stdout.log";
-          StandardErrorPath = "${home}/Library/Logs/move-audio-files.stderr.log";
-          RunAtLoad = false;
-        };
-      };
-
       ollama-serve = {
         serviceConfig = {
           ProgramArguments = [

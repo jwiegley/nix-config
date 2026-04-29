@@ -14,14 +14,14 @@ pre-commit:
       glob: "*.{sh,bash}"
       run: |
         for f in bin/de bin/u bin/upgrade bin/myhost bin/git-sha \
-                 bin/move-audio-files bin/persona bin/yubikey-switch build; do
+                 bin/persona bin/yubikey-switch build; do
           shellcheck --severity=warning "$f"
         done
     shell-format:
       glob: "*.{sh,bash}"
       run: |
         for f in bin/de bin/u bin/upgrade bin/myhost bin/git-sha \
-                 bin/move-audio-files bin/persona bin/yubikey-switch build; do
+                 bin/persona bin/yubikey-switch build; do
           shfmt -i 4 -d "$f"
         done
     python-lint:
