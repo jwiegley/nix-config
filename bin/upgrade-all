@@ -11,7 +11,10 @@ pushme hera@6 clio@6 tank@1
 
 upgrade hera || echo "upgrade hera exited with $?"
 
-(cd $NIX_CONF; changes)
+(
+    cd $NIX_CONF
+    changes
+)
 
 sleep 10
 

@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 
 if [[ -d /etc/nixos ]]; then
-    cd /etc/nixos
+    cd /etc/nixos || exit
 else
-    cd ~/src/nix
+    cd ~/src/nix || exit
 fi
 
-(brew update ; brew upgrade --greedy) &> /tmp/brew.log &
+(
+    brew update
+    brew upgrade --greedy
+) &>/tmp/brew.log &
 
 nix flake update --commit-lock-file llm-agents
 

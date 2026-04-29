@@ -4,36 +4,33 @@ set -euo pipefail
 
 PROJECTS="$HOME/.config/projects"
 
-for dir in                                      \
-    src                                         \
-    Models                                      \
-    doc                                         \
-    Databases
-do
+for dir in \
+    src \
+    Models \
+    doc \
+    Databases; do
     path="$HOME/$dir"
     update "$path"
 
-    find "$path" -mindepth 1 -maxdepth 1 -type d | while read project
-    do
-	if [[ -d "$project/.git" ]]
-	then
-            ( echo "### $project" ;             \
-              cd "$project" ;                   \
-              git pull --rebase || exit 0       \
+    find "$path" -mindepth 1 -maxdepth 1 -type d | while read project; do
+        if [[ -d "$project/.git" ]]; then
+            (
+                echo "### $project"
+                cd "$project"
+                git pull --rebase || exit 0
             )
-	fi
+        fi
     done
 done
 
 readarray -t projects < <(egrep -v '^(#.+)?$$' "$PROJECTS")
 
-for project in "${projects[@]}"
-do
-    if [[ -d "$project/.git" ]]
-    then
-        ( echo "### $project" ;                 \
-          cd "$project" ;                       \
-          git pull --rebase || exit 0           \
+for project in "${projects[@]}"; do
+    if [[ -d "$project/.git" ]]; then
+        (
+            echo "### $project"
+            cd "$project"
+            git pull --rebase || exit 0
         )
     fi
 done
