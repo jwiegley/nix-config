@@ -309,12 +309,15 @@ in
       };
 
       flatten-recordings = {
-        script = "${pkgs.my-scripts}/bin/flatten-recordings";
+        script = ''
+          export PATH="${pkgs.my-scripts}/bin:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+          exec ${pkgs.my-scripts}/bin/flatten-recordings
+        '';
         serviceConfig = {
           StartInterval = 900; # Run every 15 minutes (900 seconds)
           RunAtLoad = true; # Run once at startup
-          StandardOutPath = "${xdg_cacheHome}/flatten-recordings-stdout.log";
-          StandardErrorPath = "${xdg_cacheHome}/flatten-recordings-stderr.log";
+          StandardOutPath = "${home}/Library/Logs/flatten-recordings-stdout.log";
+          StandardErrorPath = "${home}/Library/Logs/flatten-recordings-stderr.log";
         };
       };
     };
