@@ -4,6 +4,7 @@
   config,
   hostname,
   inputs,
+  vulcan-crt,
   ...
 }:
 
@@ -324,7 +325,7 @@ in
       ];
     };
 
-    overlays = import ./overlays.nix { inherit inputs; };
+    overlays = import ./overlays.nix { inherit inputs vulcan-crt; };
   };
 
   nix =

@@ -77,6 +77,10 @@
       url = "git+file:///Users/johnw/src/pal-mcp-server";
       flake = false;
     };
+    vulcan-crt = {
+      url = "file:///Users/johnw/.config/curl/vulcan-root-ca.crt";
+      flake = false;
+    };
   };
 
   outputs =
@@ -101,6 +105,7 @@
                   darwin
                   hostname
                   inputs
+                  vulcan-crt
                   ;
               };
               modules = [
@@ -143,7 +148,9 @@
             home-manager.lib.homeManagerConfiguration {
               pkgs = import nixpkgs {
                 inherit system;
-                overlays = import ./config/overlays.nix { inherit inputs; };
+                overlays = import ./config/overlays.nix {
+                  inherit vulcan-crt inputs;
+                };
               };
               extraSpecialArgs = { inherit hostname inputs; };
               modules = [

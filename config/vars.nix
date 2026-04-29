@@ -23,7 +23,11 @@ let
     else
       pkgs.git;
 
-  ca-bundle_path = "${pkgs.cacert}/etc/ssl/certs/";
+  # Use the merged bundle (system + Vulcan CA) when our overlay is loaded;
+  # otherwise fall back to the stock cacert. NixOS hosts that don't import
+  # config/overlays.nix should add the Vulcan CA via security.pki.certificateFiles.
+  ca-bundle_pkg = pkgs.ca-bundle-with-vulcan or pkgs.cacert;
+  ca-bundle_path = "${ca-bundle_pkg}/etc/ssl/certs/";
   ca-bundle_crt = "${ca-bundle_path}/ca-bundle.crt";
   emacs-server = "${tmpdir}/johnw-emacs/server";
   emacsclient = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";

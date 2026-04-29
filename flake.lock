@@ -6926,7 +6926,8 @@
         "scripts": "scripts",
         "sizes": "sizes",
         "trade-journal": "trade-journal",
-        "una": "una"
+        "una": "una",
+        "vulcan-crt": "vulcan-crt"
       }
     },
     "rust-overlay": {
@@ -7566,6 +7567,18 @@
       "original": {
         "type": "git",
         "url": "file:///Users/johnw/src/una"
+      }
+    },
+    "vulcan-crt": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-Ka18IPs5a5bZJGw8OP3Wn3x58FegZEuzhihaNe/xslI=",
+        "type": "file",
+        "url": "file:///Users/johnw/.config/curl/vulcan-root-ca.crt"
+      },
+      "original": {
+        "type": "file",
+        "url": "file:///Users/johnw/.config/curl/vulcan-root-ca.crt"
       }
     }
   },
