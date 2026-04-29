@@ -2,29 +2,12 @@
 
 set -euo pipefail
 
-PROJECTS="$HOME/.config/projects"
-
-readarray -t projects < <(egrep -v '^(#.+)?$$' "$PROJECTS")
-
-for project in "${projects[@]}"; do
-    if [[ -d "$project/.git" ]]; then
-        (
-            echo "✅ $project"
-            cd "$project"
-            git pull --rebase || exit 0
-        )
-    fi
-done
-
 for dir in \
     src \
     Models \
     doc \
     Databases; do
-    path="$HOME/$dir"
-    update "$path"
-
-    find "$path" -name .git -type d -print | sort | while read gitdir; do
+    find "$HOME/$dir" -name .git -type d -print | sort | while read gitdir; do
         (
             dir="$gitdir/.."
             cd "$dir"
