@@ -1,21 +1,10 @@
 #!/usr/bin/env bash
-
-set -euo pipefail
-
-for dir in \
-    src \
-    Models \
-    doc \
-    Databases; do
-    find "$HOME/$dir" -name .git -type d -print | sort | while read gitdir; do
-        (
-            dir="$gitdir/.."
-            cd "$dir"
-
-            echo "✅ $PWD"
-            git fetch --all --tags || exit 0
-            git remote update || exit 0
-            git pull --rebase || exit 0
-        )
-    done
-done
+find -L \
+    ~/src/ \
+    ~/Models/ \
+    ~/doc/ \
+    ~/db/ \
+    -name .git -type d \
+    \! -path '*/gists/*' \
+    -print0 |
+    parallel -0 -j4 "update {//}"
