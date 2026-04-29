@@ -13,16 +13,22 @@ pre-commit:
     shell-lint:
       glob: "*.{sh,bash}"
       run: |
-        for f in bin/de bin/u bin/upgrade bin/myhost bin/git-sha \
-                 bin/persona bin/yubikey-switch build; do
-          shellcheck --severity=warning "$f"
+        for f in bin/*; do
+          if [[ $f != bin/nix-shell-sample && \
+                $f != bin/update-overlay \
+             ]]; then
+            shellcheck --severity=warning "$f"
+          fi
         done
     shell-format:
       glob: "*.{sh,bash}"
       run: |
-        for f in bin/de bin/u bin/upgrade bin/myhost bin/git-sha \
-                 bin/persona bin/yubikey-switch build; do
-          shfmt -i 4 -d "$f"
+        for f in bin/*; do
+          if [[ $f != bin/nix-shell-sample && \
+                $f != bin/update-overlay \
+             ]]; then
+             shfmt -i 4 -d "$f"
+          fi
         done
     python-lint:
       glob: "*.py"
