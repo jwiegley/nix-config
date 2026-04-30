@@ -2,12 +2,12 @@
 
 set -euo pipefail
 
-update ~/doc ~/src ~/Models ~/Databases
+update-and-pull &
 
-pushme andoria hera
-pushme git-ai hera
+pushme andoria hera &
+pushme git-ai hera &
 
-pushme hera@6 clio@6 tank@1
+wait
 
 upgrade hera || echo "upgrade hera exited with $?"
 
@@ -16,8 +16,6 @@ upgrade hera || echo "upgrade hera exited with $?"
     changes
 )
 
-sleep 10
-
-pushme hera@6 clio@6
+pushme hera@6 clio@6 tank@1
 
 update-remote
