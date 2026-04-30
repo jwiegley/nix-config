@@ -162,6 +162,61 @@ final: prev: {
     doCheck = false;
   });
 
+  # Fix openmpi 5.0.10 configure failure on Darwin: "checking for pmix.h... no".
+  #
+  # Root cause is in nixpkgs's pmix-6.1.0 package, introduced by upstream
+  # commit 71580b9d4ff1 (2026-04-21, PR #512074, "pmix: ensure build info
+  # pointing to dev outputs is removed"). That commit added:
+  #
+  #   substituteInPlace ./src/mca/pinstalldirs/config/pinstall_dirs.h.in \
+  #     --replace-fail '@includedir@' ""
+  #
+  # which strips dev-output references from libpmix's pinstalldirs. The
+  # resulting libpmix has the includedir token compiled in as the empty
+  # string, so share/pmix/pmixcc-wrapper-data.txt's
+  #
+  #   includedir=${includedir}
+  #   preprocessor_flags=-I${includedir} -I${includedir}/pmix ...
+  #
+  # produces the broken cppflags
+  #
+  #   -I /pmix
+  #
+  # that openmpi's PMIx wrapper-compiler probe reports in its config log.
+  # The probe then fails to find pmix.h and configure aborts with
+  # "External PMIx requested but not found."
+  #
+  # On Linux this is masked because the package emits a separate `dev`
+  # output and pmix's postFixup wraps $dev/bin/pmixcc with
+  #
+  #   wrapProgram --set PMIX_INCLUDEDIR "${!outputDev}/include"
+  #               --set PMIX_PKGDATADIR "${!outputDev}/share/pmix"
+  #
+  # so the env var feeds the correct path back into libpmix's runtime
+  # token expansion. On Darwin the outputs list is gated on isLinux, so
+  # there is no dev output and the postFixup wrapping never runs --
+  # leaving the broken wrapper compiler as the only path openmpi can take
+  # on Darwin (lib/pkgconfig/pmix.pc is well-formed but openmpi reports
+  # `pkg-config module exists... no` because pmix is a buildInput only on
+  # Linux and Nix's setup-hook does not add pmix/lib/pkgconfig to
+  # PKG_CONFIG_PATH on Darwin).
+  #
+  # Fix: replicate the Linux wrapper for $out/bin/pmixcc on Darwin. With
+  # pmixcc returning the real include paths, openmpi's wrapper-compiler
+  # probe succeeds, finds pmix.h, and configure proceeds.
+  pmix = prev.pmix.overrideAttrs (
+    oldAttrs:
+    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+      postFixup = (oldAttrs.postFixup or "") + ''
+        if [ -x "$out/bin/pmixcc" ]; then
+          wrapProgram "$out/bin/pmixcc" \
+            --set PMIX_INCLUDEDIR "$out/include" \
+            --set PMIX_PKGDATADIR "$out/share/pmix"
+        fi
+      '';
+    }
+  );
+
   # ntp, apr-util, libcdio-paranoia are pinned to last-known-good nixpkgs
   # in 00-last-known-good.nix (the 2026-04-23 bump broke them on Darwin).
 
