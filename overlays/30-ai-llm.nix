@@ -9,13 +9,13 @@ final: prev: {
     with prev;
     stdenv.mkDerivation rec {
       name = "gguf-tools-${version}";
-      version = "a3257ff3";
+      version = "eb37f8a0";
 
       src = fetchFromGitHub {
         owner = "antirez";
         repo = "gguf-tools";
-        rev = "a3257ff3cb8aed8b60ba3243c70b85a17491d7d6";
-        sha256 = "1dgm1l194blgcbg1ma1lmzprydfgbbkv5bvp1mpdg6ysc2g6i8d4";
+        rev = "eb37f8a0679133a3b0919cae29cbb96b4555cb8e";
+        sha256 = "sha256-pDdG2b/+MjR7ZmHSlOTDzW7ZoZ8nv1vL5vxcg6iU4jo=";
         # date = 2025-08-28T16:35:01+02:00;
       };
 
