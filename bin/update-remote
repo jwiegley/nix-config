@@ -5,8 +5,7 @@ set -euo pipefail
 # Run each command in its own tmux pane within the current window
 tmux split-window "ssh clio 'upgrade clio' ; echo 'clio done — press Enter' ; read"
 tmux split-window "ssh vulcan '(cd /etc/nixos ; nix flake update --commit-lock-file && sudo nixos-rebuild switch --flake \".#vulcan\")' ; echo 'vulcan done — press Enter' ; read"
-tmux split-window "ssh vps '(cd /etc/nixos ; nix flake update --commit-lock-file && sudo nixos-rebuild switch --flake \".#ovh-vps\")' ; echo 'vulcan done — press Enter' ; read"
-tmux select-layout even-vertical
+tmux split-window "ssh vps '(cd /etc/nixos ; nix flake update --commit-lock-file && sudo nixos-rebuild switch --flake \".#ovh-vps\")' ; echo 'vps done — press Enter' ; read"
 
 # Run the last one in the current pane
 
@@ -38,8 +37,10 @@ HOSTS=(
 
 # All of the hosts share the same home directory via NFS
 ssh andoria-08 "(cd /home/jwiegley/.config/home-manager ; nix flake update --commit-lock-file)"
-ssh git-ai "(cd /home/jwiegley/.config/home-manager ; nix flake update --commit-lock-file)"
+ssh git-ai "(cd /home/ubuntu/.config/home-manager ; nix flake update --commit-lock-file)"
 
 for host in "${HOSTS[@]}"; do
-    ssh "$host" nix run home-manager/master switch
+    tmux split-window "ssh $host nix run home-manager/master switch"
 done
+
+tmux select-layout even-vertical
