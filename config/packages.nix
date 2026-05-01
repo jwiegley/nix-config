@@ -159,6 +159,7 @@ rec {
       iperf3
       lftp
       mitmproxy
+      mosh
       mtr
       nmap
       openssh
