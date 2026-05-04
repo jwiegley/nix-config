@@ -314,6 +314,7 @@ rec {
       highlight
       html-tidy
       inkscape.out
+      khal
       librsvg
       pandoc
       pdfgrep
