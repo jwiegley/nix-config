@@ -65,7 +65,7 @@ with epkgs;
   (exclude consult-flycheck)
   consult-gh
   consult-gh-embark
-  consult-gh-forge
+  (exclude consult-gh-forge)
   consult-gh-with-pr-review
   (exclude consult-git-log-grep)
   consult-hoogle
@@ -146,7 +146,7 @@ with epkgs;
   (exclude flycheck-haskell)
   focus
   font-lock-studio
-  forge
+  (exclude forge)
   free-keys
   fsrs
   (exclude fullframe)
@@ -221,7 +221,7 @@ with epkgs;
   (exclude magit-lfs)
   magit-popup
   magit-tbdiff
-  magit-todos
+  (exclude magit-todos)
   major-mode-hydra
   malyon
   marginalia
@@ -308,7 +308,7 @@ with epkgs;
   org-vcard
   org-web-tools
   orgit
-  orgit-forge
+  (exclude orgit-forge)
   (exclude origami)
   (exclude osm)
   outline-indent
