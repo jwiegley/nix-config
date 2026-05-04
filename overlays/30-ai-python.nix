@@ -76,6 +76,16 @@ in
             hash = "sha256-baAfEY4hEN3wOEicgE53gY71IX003JYFyyZaNJ7U8UA=";
           };
         });
+
+        # accelerate 1.13.0 added test_env_var_device, which mocks
+        # torch.<device>.set_device. On Darwin <device> is "mps", but
+        # torch 2.11.0 lacks torch.mps.set_device, so the patch() call
+        # raises AttributeError before the mock can take effect.
+        accelerate = pprev.accelerate.overridePythonAttrs (oldAttrs: {
+          disabledTests = (oldAttrs.disabledTests or [ ]) ++ [
+            "test_env_var_device"
+          ];
+        });
       }
       // {
 
