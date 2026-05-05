@@ -186,7 +186,6 @@ in
           "*positron-ai*"
         ];
         defaultPromptStorage = "notes";
-        featureFlags.asyncMode = true;
       };
     };
 
