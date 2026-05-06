@@ -5238,11 +5238,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1777591119,
-        "narHash": "sha256-uQB5aSGsEC2cyPFtbNS2wpbL4tRpFAayURm/D9KZzeM=",
+        "lastModified": 1778022549,
+        "narHash": "sha256-ie18DYLversmPAlO5H1DgaI4cwIGE107G+I6HZsuzjA=",
         "owner": "ledger",
         "repo": "ledger",
-        "rev": "f715a6fe46992ba9d941297184ed46c49b26f7fb",
+        "rev": "21a84425bb7c651d890ee363f14d28ce646acadf",
         "type": "github"
       },
       "original": {
@@ -5300,11 +5300,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1777555748,
-        "narHash": "sha256-RvKwvF868YY6HCfVC3K1kVrlUOnn4ynWxAi5PujhFXo=",
+        "lastModified": 1778081100,
+        "narHash": "sha256-2EZbzE/rGpP47JzDzvsP2mfZNvhY7DGH2hIPHjSKRJQ=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "39253ce656ff86527a060148c40901bbbde6a4c2",
+        "rev": "a9876095f52588e7739e642d286b9748a36609f4",
         "type": "github"
       },
       "original": {
@@ -6451,11 +6451,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1777918403,
-        "narHash": "sha256-7QiZv0LcW1yIOLo2LNuCQjWon1Z1r99FwK24hbtBOF4=",
+        "lastModified": 1778036283,
+        "narHash": "sha256-62EWg6lI0qyzm7oAx5cAnGkLutvJsRBe0KkEW2JDZCE=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "afc5551119aae6eab73a95c1960891cfe63204f6",
+        "rev": "ed67bc86e84e51d4a88e73c7fd36006dc876476f",
         "type": "github"
       },
       "original": {
@@ -6813,11 +6813,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1778014268,
-        "narHash": "sha256-+HpQcZ1dTsp9/WEF8UpCg/1sxzUTKllrfnvxWnxTJ+w=",
+        "lastModified": 1778090623,
+        "narHash": "sha256-C852P86uGquCq7s0RBi9MHplxTEPneaCUspyEuRbBIg=",
         "ref": "refs/heads/main",
-        "rev": "0bbf326387030a8b018a47a89b090b75976872a8",
-        "revCount": 270,
+        "rev": "bc41d6d591ebabc079fe073d4a25baf217e76b33",
+        "revCount": 271,
         "shallow": false,
         "submodules": true,
         "type": "git",
