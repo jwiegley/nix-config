@@ -33,12 +33,6 @@
 
     org-jw.url = "github:jwiegley/org-jw";
     rag-client.url = "github:jwiegley/rag-client";
-
-    promptdeploy = {
-      url = "git+file:///Users/johnw/src/promptdeploy?shallow=0&submodules=1";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     git-ai.url = "git+file:///Users/johnw/work/git-ai/git-ai/main";
     git-all.url = "git+file:///Users/johnw/src/git-all";
     gitlib.url = "git+file:///Users/johnw/src/gitlib?submodules=0";

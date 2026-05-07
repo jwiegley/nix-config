@@ -72,7 +72,6 @@ rec {
     ++ inputPkg "gh-to-org"
     ++ inputPkg "obr"
     ++ inputPkg "org2jsonl"
-    ++ inputPkg "promptdeploy"
 
     # ── Shell & Terminal Utilities ───────────────────────────────────
     ++ [

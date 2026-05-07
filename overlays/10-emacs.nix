@@ -488,8 +488,8 @@ let
         src = fetchFromGitHub {
           owner = "kmontag";
           repo = "macher";
-          rev = "293384813e4d40d878acea6ef970a20ebbc8ebea";
-          sha256 = "sha256-YZHkbg2AZbXlbLq67q/Ztqct+/Wx65dT1sQnMJrbNP4=";
+          rev = "55e75f2ee27eedc3cbf7e8bfcef27bcce11e3540";
+          sha256 = "sha256-zxysDeUDZ4AnjMn3WkK/TOMVwM8oPjC3FPAQeg6d6Ps=";
           # date = 2025-08-20T19:15:22-07:00;
         };
         buildInputs = with eself; [ gptel ];

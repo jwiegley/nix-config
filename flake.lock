@@ -1363,11 +1363,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1777999742,
-        "narHash": "sha256-5bFqSyZJ6meVFIdLh/vlEI2IHGZspKaASRrwrCo06LY=",
+        "lastModified": 1778085659,
+        "narHash": "sha256-Px4ptkI3CXB2iylUc2fU7V5Le0H/+rd2Z85SfxJ4igM=",
         "ref": "refs/heads/main",
-        "rev": "2d4444a9de7fa010c2c463eeb87302daee79a998",
-        "revCount": 3953,
+        "rev": "f0a35603f7f5e5488c2250aa2a19bd246a784651",
+        "revCount": 4001,
         "type": "git",
         "url": "file:///Users/johnw/work/git-ai/git-ai/main"
       },

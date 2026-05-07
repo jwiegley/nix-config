@@ -26,7 +26,6 @@ This is a personal Nix configuration repository for managing macOS (Darwin), Nix
 ### Cross-platform portability notes
 
 - Packages only available in Darwin overlays (e.g., `git-pr`, `git-scripts`) are wrapped with `lib.optional (pkgs ? name)` in `config/packages.nix` via the `optPkg` helper
-- The `promptdeploy` import in `config/johnw.nix` is guarded with `lib.optionals (inputs ? promptdeploy)`
 - Darwin-only packages (`siege`, `global`) are in the Darwin-only section of `packages.nix`
 - NixOS hosts (vulcan, vps) must explicitly import any nix-config overlay they want via `inherit` in their local `overlays/default.nix`
 - Changes intended for vps or andoria must be pushed to GitHub (`git push github main`) since they pull from `github:jwiegley/nix-config`
