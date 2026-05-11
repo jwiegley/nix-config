@@ -457,11 +457,11 @@ rec {
         (with inputs.llm-agents.packages.${sys}; [
           claude-code
           ccusage
+          codex
           droid
-          opencode
+          gemini-cli
           ollama
-          # gemini-cli
-          # codex
+          opencode
         ])
       else
         [ ]
