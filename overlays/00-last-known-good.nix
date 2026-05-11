@@ -24,12 +24,30 @@ let
     rev = "b86751bc4085f48661017fa226dee99fab6c651b";
     sha256 = "sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw=";
   };
+
+  # Last good nixpkgs rev before nixpkgs PR 517610 (merged 2026-05-07)
+  # bumped mesa 26.0.6 -> 26.1.0 without verifying Darwin builds. The new
+  # mesa.aarch64-darwin output has no Hydra build / no cache.nixos.org entry,
+  # and the new kosmickrisp Vulkan driver pulls in apple-sdk-26.0 + llvm-21
+  # + SPIRV-LLVM-Translator-21, making a local rebuild slow and fragile.
+  # Pin mesa together with its xorg-server/xquartz consumers so the closure
+  # stays self-consistent. Drop these once Hydra is green on aarch64-darwin.
+  preMesa26_1 = nixpkgs {
+    rev = "f77951fcf0348ac9a4a5fc6c44c104d1387042d4";
+    sha256 = "071sf9pckmxxwgpgx5jp2snjiq5bj5xm5vqfhhsvk82ad01azrw7";
+  };
 in
 {
   inherit (lastGood)
     ntp
     aprutil
     libcdio-paranoia
+    ;
+
+  inherit (preMesa26_1)
+    mesa
+    xorg-server
+    xquartz
     ;
 
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
