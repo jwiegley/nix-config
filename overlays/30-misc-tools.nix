@@ -2,8 +2,23 @@
 # Purpose: Miscellaneous utility tools (file management, shell, security)
 # Dependencies: None (uses only prev)
 # Packages: hammer, linkdups, lipotell, sift, sshify, z
-# Note: pass-git-helper, yamale, gogcli removed (now in nixpkgs)
+# Note: pass-git-helper, yamale removed (now in nixpkgs)
 final: prev: {
+
+  # Bump gogcli ahead of nixpkgs (still at 0.11.0 under steipete/gogcli).
+  # Upstream moved to openclaw/gogcli; Go module path is unchanged.
+  gogcli = prev.gogcli.overrideAttrs (
+    finalAttrs: _oldAttrs: {
+      version = "0.16.0";
+      src = prev.fetchFromGitHub {
+        owner = "openclaw";
+        repo = "gogcli";
+        tag = "v${finalAttrs.version}";
+        hash = "sha256-92gPKSuwx+52NNiLfnkDV6pQaEmLtexs7uAuWl/g7JU=";
+      };
+      vendorHash = "sha256-z2cfslfJjstLzCP0qNZXwiwDkyerIMNlhGqyKSejHXA=";
+    }
+  );
 
   # Fix broken symlinks
   hammer =
