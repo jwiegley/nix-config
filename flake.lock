@@ -1363,17 +1363,17 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1778515399,
-        "narHash": "sha256-7cnk2vzj2QHGAC5u6C0X82sSsMVTzSbiCHP3743zkN8=",
-        "ref": "refs/heads/main",
-        "rev": "8e349459f5b01d14bf96fc00f2d9fd836757fc90",
-        "revCount": 4035,
+        "lastModified": 1778696021,
+        "narHash": "sha256-jtxjsS9gYvNgy3otuG9iYZyRMALGwEXbwIhQpj+l7ZU=",
+        "ref": "refs/heads/johnw/nix-features",
+        "rev": "df6df6fe041abf9b607d2491e472dfe950b3d003",
+        "revCount": 4036,
         "type": "git",
-        "url": "file:///Users/johnw/work/git-ai/git-ai/main"
+        "url": "file:///Users/johnw/work/git-ai/git-ai/nix-features"
       },
       "original": {
         "type": "git",
-        "url": "file:///Users/johnw/work/git-ai/git-ai/main"
+        "url": "file:///Users/johnw/work/git-ai/git-ai/nix-features"
       }
     },
     "git-all": {
@@ -5262,11 +5262,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1778650849,
-        "narHash": "sha256-rGb5Lywt3gMaWaVBLlWNTgypCWjiekuYG0i39Q6qusY=",
+        "lastModified": 1778698878,
+        "narHash": "sha256-3EetYABz/ApgQQ9Bi4W4EUoNt+QGu7MES4Jl/sziXa0=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "63eaec5890d3dfab83d7fdee5a2dd2bad06e165b",
+        "rev": "5083305560b9209ec0b10b8689a162927b598540",
         "type": "github"
       },
       "original": {
