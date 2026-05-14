@@ -164,12 +164,27 @@ in
       enable = true;
       installHooks = true;
       settings = {
+        apiKeyFile = "${vars.home}/.git-ai/api-key";
+
         promptStorage = "local";
         includePromptsInRepositories = [
           "ghpos:positron-ai/*"
           "*positron-ai*"
         ];
         defaultPromptStorage = "notes";
+
+        featureFlags = {
+          # transcriptSweep is the only flag whose release default differs
+          # from the debug default — enable here if you want it on in release:
+          transcriptSweep = true;
+
+          # Uncomment to override other flags from their release defaults:
+          # rewriteStash = true;             # already true by default
+          # authKeyring = false;             # already false by default
+          # gitHooksEnabled = false;         # already false by default
+          # gitHooksExternallyManaged = false; # already false by default
+          # transcriptStreaming = true;      # already true by default
+        };
       };
     };
 
