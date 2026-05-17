@@ -179,7 +179,6 @@ in
       "cardhop"
       "choosy"
       "claude"
-      "claudebar"
       "conductor"
       "corelocationcli"
       "cursor"
