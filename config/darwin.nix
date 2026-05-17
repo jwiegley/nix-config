@@ -133,7 +133,14 @@ in
     onActivation = {
       autoUpdate = false;
       upgrade = false;
-      cleanup = "zap"; # Remove uninstalled pkgs and dependencies
+      # NOTE: "zap" is broken by nix-darwin upstream: it passes `--zap` to
+      # `brew bundle [install]`, but Homebrew 4.6+ rejects that flag on the
+      # implicit `install` subcommand (it is now valid only on `cleanup`).
+      # See nix-darwin PR #1774 (currently open/unmerged). Until that lands,
+      # use "uninstall" so activation succeeds; casks won't be zapped, only
+      # uninstalled. Revert to "zap" once PR #1774 is merged and we bump the
+      # `darwin` input past it.
+      cleanup = "uninstall"; # Remove uninstalled pkgs and dependencies
     };
 
     taps = [
