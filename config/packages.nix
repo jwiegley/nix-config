@@ -13,13 +13,29 @@ let
     ;
   sys = pkgs.stdenv.hostPlatform.system;
 
-  # Helper to conditionally include a package from a flake input.
-  # Returns a singleton list if the input exists, empty list otherwise.
-  inputPkg = name: if inputs ? ${name} then [ inputs.${name}.packages.${sys}.default ] else [ ];
-
   # Helper to conditionally include a package that may come from an overlay.
   # Returns a singleton list if the package exists in pkgs, empty list otherwise.
   optPkg = name: if pkgs ? ${name} then [ pkgs.${name} ] else [ ];
+
+  # Flake inputs whose default package should NOT be auto-installed.
+  # They expose packages.${sys}.default but are consumed differently:
+  # system tooling, overlays, modules, or explicit handling elsewhere
+  # in this file. Edit this list when adding such an input.
+  nonUserPackageInputs = [
+    "darwin" # nix-darwin tooling
+    "home-manager" # home-manager tooling
+    "llm-agents" # multi-package; specific packages chosen below
+    "dirscan" # consumed via 30-data-tools overlay
+    "git-ai" # consumed via overlay / home-manager module
+    "hakyll" # local dev source only, not installed
+  ];
+
+  # Auto-install every flake input that exposes packages.${sys}.default
+  # and isn't in the block-list above. Tolerates hosts (e.g. NixOS) that
+  # import this file with a smaller set of inputs.
+  userPackageInputs = lib.filterAttrs (
+    name: v: !(lib.elem name nonUserPackageInputs) && v ? packages.${sys}.default
+  ) inputs;
 in
 rec {
   exe = if stdenv.targetPlatform.isx86_64 then haskell.lib.justStaticExecutables else lib.id;
@@ -37,8 +53,6 @@ rec {
     else
       null;
   emacsHEADEnv = if pkgs ? emacsHEADEnv then pkgs.emacsHEADEnv myEmacsPackages else null;
-
-  rag-client = if inputs ? rag-client then inputs.rag-client.packages.${sys}.default else null;
 
   package-list =
 
@@ -59,19 +73,8 @@ rec {
       (exe haskellPackages.pointfree)
     ]
 
-    # ── Custom Flake Inputs ──────────────────────────────────────────
-    ++ inputPkg "git-all"
-    ++ inputPkg "gitlib"
-    ++ inputPkg "hours"
-    ++ inputPkg "org-jw"
-    ++ inputPkg "pushme"
-    ++ inputPkg "renamer"
-    ++ inputPkg "sizes"
-    ++ inputPkg "trade-journal"
-    ++ inputPkg "una"
-    ++ inputPkg "gh-to-org"
-    ++ inputPkg "obr"
-    ++ inputPkg "org2jsonl"
+    # ── Custom Flake Inputs (auto-discovered) ────────────────────────
+    ++ lib.mapAttrsToList (_: v: v.packages.${sys}.default) userPackageInputs
 
     # ── Shell & Terminal Utilities ───────────────────────────────────
     ++ [
@@ -450,7 +453,6 @@ rec {
     ++ optPkg "claude-vault"
     ++ optPkg "cozempic"
     ++ optPkg "claude-replay"
-    ++ lib.optional (rag-client != null) rag-client
     ++ (
       if inputs ? llm-agents then
         (with inputs.llm-agents.packages.${sys}; [
