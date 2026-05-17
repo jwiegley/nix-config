@@ -261,6 +261,13 @@ u repl
   - Running flake operations as root creates stale cache entries that cause NAR hash mismatches during `darwin-rebuild switch`
   - Always update/lock as the regular user; only `darwin-rebuild switch` needs sudo
 
+- **CRITICAL: New `.nix` files must be `git add`-ed before they're visible to flake commands**:
+  - Flake CLI commands (`nix build .#…`, `./build …`, `darwin-rebuild`) only see files tracked by git. Untracked files are silently invisible during evaluation.
+  - Symptom: an overlay/module that exists on disk evaluates as missing — e.g. `error: attribute 'myLib' missing` even though `overlays/00-lib.nix` is present and defines it.
+  - Confusingly, `nix eval --impure --expr 'builtins.getFlake (toString ./.)'` and other expression-form evaluations DO see untracked files, so a quick sanity check can falsely pass. The asymmetry is the give-away.
+  - Fix: `git add path/to/new.nix`. A staged-but-uncommitted file is enough — you don't have to commit.
+  - Applies to any new file: overlays, host configs, modules, helper libs. Renames count as add+remove for this purpose.
+
 - **Modifying input URLs in `flake.nix`**:
   - After changing ANY input URL (e.g., adding `?shallow=0`, changing branch), always re-lock: `nix flake lock`
   - Changing URL parameters changes the input identity and invalidates the lock hash
