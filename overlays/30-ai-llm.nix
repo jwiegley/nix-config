@@ -56,6 +56,8 @@ final: prev: {
     };
 
   # llama.cpp - LLM inference with GGUF models
+  # NOTE: As of b9190+, the webui was relocated from tools/server/webui
+  # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
     version = "9194";
     src = prev.fetchFromGitHub {
@@ -65,18 +67,19 @@ final: prev: {
       hash = "sha256-r5zXkexwwCrFzYvV9sg+/RnBbbiYYNLelZAzeceWYWQ=";
     };
     postPatch = "";
+    npmRoot = "tools/ui";
     preConfigure = ''
       prependToVar cmakeFlags "-DLLAMA_BUILD_COMMIT:STRING=b${version}"
-      pushd tools/server/webui
+      pushd tools/ui
       npm run build
       popd
     '';
-    npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    npmDepsHash = "sha256-WaEePrEZ7O/7deP2KJhe0AwiSKYA8HOqETmMHUkmBe0=";
     npmDeps = prev.fetchNpmDeps {
       name = "llama-cpp-${version}-npm-deps";
       inherit src;
       inherit (attrs) patches;
-      preBuild = "pushd tools/server/webui";
+      preBuild = "pushd tools/ui";
       hash = npmDepsHash;
     };
   });
@@ -122,7 +125,7 @@ final: prev: {
     with prev;
     prev.llama-swap.overrideAttrs (attrs: rec {
       inherit version src;
-      vendorHash = "sha256-NJqEJ+XTdpPFtJJxP4CGu+JDUW7lKDcFgsixQJ3SXtQ=";
+      vendorHash = "sha256-QysQ7YdwJcLTziwL25j73n3tQVvzVQIFxN4GkTU8JZg=";
       preBuild = ''
         cp -r ${ui}/ui_dist proxy/
       '';
