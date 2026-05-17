@@ -134,7 +134,9 @@ u repl
   - **Loading mechanism**: All `.nix` files in overlays/ are automatically imported on Darwin (by flake.nix) and on andoria (by config/overlays.nix). NixOS hosts (vulcan, vps) selectively import individual overlay files.
   - **Categories**:
     - `00-last-known-good.nix`: Pin packages to specific nixpkgs revisions
-    - `00-lib.nix`: Shared utility functions (mkScriptPackage, mkSimpleGitHubPackage, filterGitSource)
+    - `00-lib.nix`: Shared overlay helpers exposed via `pkgs.myLib`:
+      - `mkScriptPackage`: wrap a directory of executables into a `$out/bin` package
+      - `mkSimpleGitHubBinary`: fetch a single-binary script from a GitHub repo
     - `10-coq.nix`: Coq theorem prover with IDE disabled
     - `10-emacs.nix`: Emacs with MacPort patches, custom packages, and variants
     - `15-darwin-fixes.nix`: Darwin-specific package fixes (time, zbar)
