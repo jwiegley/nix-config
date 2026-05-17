@@ -9,13 +9,13 @@ final: prev: {
     with prev;
     stdenv.mkDerivation rec {
       name = "gguf-tools-${version}";
-      version = "eb37f8a0";
+      version = "fdfafbed";
 
       src = fetchFromGitHub {
         owner = "antirez";
         repo = "gguf-tools";
-        rev = "eb37f8a0679133a3b0919cae29cbb96b4555cb8e";
-        sha256 = "sha256-pDdG2b/+MjR7ZmHSlOTDzW7ZoZ8nv1vL5vxcg6iU4jo=";
+        rev = "fdfafbed766db0a1e9019b07994cd88f133d1aab";
+        sha256 = "sha256-nkt/JbpeVb3AxSkDVhiwWfQF+r3orhzauq9T/y038CY=";
         # date = 2025-08-28T16:35:01+02:00;
       };
 
@@ -57,12 +57,12 @@ final: prev: {
 
   # llama.cpp - LLM inference with GGUF models
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "9106";
+    version = "9194";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-hGNtnuNnsKIyFexln6pdHe0b1wcs71SNVJg41Mv+pMc=";
+      hash = "sha256-r5zXkexwwCrFzYvV9sg+/RnBbbiYYNLelZAzeceWYWQ=";
     };
     postPatch = "";
     preConfigure = ''
@@ -71,7 +71,7 @@ final: prev: {
       npm run build
       popd
     '';
-    npmDepsHash = "sha256-cV3noOyKmst9vfxyvkCNhihPgwfVGhmPPT4UMloeWZM=";
+    npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
     npmDeps = prev.fetchNpmDeps {
       name = "llama-cpp-${version}-npm-deps";
       inherit src;
@@ -84,13 +84,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "211";
+      version = "214";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-npUwXuhpsuQ71Qs1iyyssGjvtiA+dGFnETKNxTs92Ak=";
+        hash = "sha256-W75Rttl4cJ7cwSF3lCyIq6I1oB8qd9Hc0euaMj0rbBc=";
       };
 
       ui =
@@ -106,7 +106,7 @@ final: prev: {
 
           sourceRoot = "source/ui-svelte";
 
-          npmDepsHash = "sha256-JoVpW5+Er6K81wcVZwDJ2cEEB7awUg+TGrzzmWvbaU4=";
+          npmDepsHash = "sha256-NJqEJ+XTdpPFtJJxP4CGu+JDUW7lKDcFgsixQJ3SXtQ=";
 
           postInstall = ''
             rm -rf $out/lib
@@ -122,7 +122,7 @@ final: prev: {
     with prev;
     prev.llama-swap.overrideAttrs (attrs: rec {
       inherit version src;
-      vendorHash = "sha256-JHBqAQ4OtfQSEfOYCWUh1ovcINAYPJSBFu1A64h0t04=";
+      vendorHash = "sha256-NJqEJ+XTdpPFtJJxP4CGu+JDUW7lKDcFgsixQJ3SXtQ=";
       preBuild = ''
         cp -r ${ui}/ui_dist proxy/
       '';

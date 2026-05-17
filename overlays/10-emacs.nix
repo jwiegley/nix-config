@@ -413,8 +413,8 @@ let
         src = fetchFromGitHub {
           owner = "jdtsmith";
           repo = "ultra-scroll-mac";
-          rev = "c6decf7754edda0aa7c5a775b7d6147490a8f464";
-          sha256 = "sha256-GuUeJnntpLAiY+4NWtuvCewRLfpHQB/74oxqVVRFuUA=";
+          rev = "f38653053b5c9bbe8dbcb6b2236ab8997fc2f9bb";
+          sha256 = "sha256-vTox9o5QLsBXKIi+Hru2CAmMXuTIPcxP2/fgiOO0Xio=";
           # date = 2025-07-25T13:45:38-04:00;
         };
       };

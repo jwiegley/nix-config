@@ -47,7 +47,7 @@ final: prev:
       owner = "brendano";
       repo = "tsvutils";
       rev = "a286c8179342285803871834bb92c39cd52e516d";
-      sha256 = "1jrg36ckvpmwjx9350lizfjghr3pfrmad0p3qibxwj14qw3wplni";
+      sha256 = "sha256-0dLLB8ckSN5XxOOCpmp2d2T4pPuRgjJSl7zePZkZL8s=";
     };
     description = "Utilities for processing tab-separated files";
     homepage = "https://github.com/brendano/tsvutils";
