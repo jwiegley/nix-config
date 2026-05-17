@@ -81,18 +81,6 @@ final: prev: {
     }
   );
 
-  # Fix git-branchless build failure
-  # Upstream postPatch glob for esl01-indexedlog vendor crate doesn't match
-  # the new cargo vendor layout (crates are now under source-registry-0/)
-  # With nullglob, the failed glob expands to nothing, making cd go to $HOME (/homeless-shelter)
-  git-branchless = prev.git-branchless.overrideAttrs (oldAttrs: {
-    postPatch =
-      builtins.replaceStrings
-        [ "../git-branchless-*-vendor/esl01-indexedlog-*/" ]
-        [ "../git-branchless-*-vendor/source-registry-0/esl01-indexedlog-*/" ]
-        (oldAttrs.postPatch or "");
-  });
-
   # Fix squashfsTools build failure on macOS
   # mksquashfs.c uses Linux st_atim but Darwin uses st_atimespec
   squashfsTools = prev.squashfsTools.overrideAttrs (

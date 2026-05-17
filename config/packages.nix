@@ -187,7 +187,6 @@ rec {
       git-annex-remote-rclone
       git-absorb
       git-autofixup
-      git-branchless
       git-branchstack
       git-cliff
       git-crypt
