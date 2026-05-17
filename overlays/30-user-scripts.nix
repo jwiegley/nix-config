@@ -1,6 +1,6 @@
 # overlays/30-user-scripts.nix
 # Purpose: Personal script collections
-# Dependencies: Uses final for perl and haskellPackages (cross-overlay reference)
+# Dependencies: prev.myLib (from 00-lib.nix); final for perl/haskellPackages
 # Packages: nix-scripts, my-scripts
 # Notes:
 #   - nix-scripts from this repository's bin/ directory
@@ -9,62 +9,27 @@ final: prev:
 
 let
   paths = import ../config/paths.nix { inherit (prev) inputs; };
+  inherit (prev.myLib) mkScriptPackage;
 in
 {
 
-  # Scripts from this repository's bin/ directory
-  nix-scripts =
-    with prev;
-    stdenv.mkDerivation {
-      name = "nix-scripts";
-
-      src = ../bin;
-
-      buildInputs = [ ];
-
-      installPhase = ''
-        mkdir -p $out/bin
-        find . -maxdepth 1 \( -type f -o -type l \) -executable \
-            -exec cp -pL {} $out/bin \;
-      '';
-
-      meta = with prev.lib; {
-        description = "Nix configuration scripts";
-        homepage = "https://github.com/jwiegley";
-        license = licenses.mit;
-        maintainers = with maintainers; [ jwiegley ];
-        platforms = platforms.unix;
-      };
-    };
+  nix-scripts = mkScriptPackage {
+    name = "nix-scripts";
+    src = ../bin;
+    description = "Nix configuration scripts";
+  };
 
 }
 // prev.lib.optionalAttrs (paths.scripts != null) {
 
-  # Personal scripts collection
-  my-scripts =
-    with final;
-    stdenv.mkDerivation {
-      name = "my-scripts";
-
-      src = paths.scripts;
-
-      buildInputs = [ ];
-
-      installPhase = ''
-        mkdir -p $out/bin
-        find . -maxdepth 1 \( -type f -o -type l \) -executable \
-            -exec cp -pL {} $out/bin \;
-        ${final.perl}/bin/perl -i -pe \
-            's^#!/usr/bin/env runhaskell^#!${final.haskellPackages.ghc}/bin/runhaskell^;' $out/bin/*
-      '';
-
-      meta = with prev.lib; {
-        description = "John Wiegley's various scripts";
-        homepage = "https://github.com/jwiegley";
-        license = licenses.mit;
-        maintainers = with maintainers; [ jwiegley ];
-        platforms = platforms.unix;
-      };
-    };
+  my-scripts = mkScriptPackage {
+    name = "my-scripts";
+    src = paths.scripts;
+    description = "John Wiegley's various scripts";
+    extraInstall = ''
+      ${final.perl}/bin/perl -i -pe \
+          's^#!/usr/bin/env runhaskell^#!${final.haskellPackages.ghc}/bin/runhaskell^;' $out/bin/*
+    '';
+  };
 
 }

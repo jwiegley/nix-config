@@ -1,7 +1,8 @@
 # overlays/30-misc-tools.nix
 # Purpose: Miscellaneous utility tools (file management, shell, security)
-# Dependencies: None (uses only prev)
-# Packages: hammer, linkdups, lipotell, sift, sshify, z
+# Dependencies: prev.myLib (from 00-lib.nix) for the single-binary jwiegley
+#               packages; everything else uses prev directly.
+# Packages: gogcli (bumped), hammer, linkdups, lipotell, sift, sshify, z
 # Note: pass-git-helper, yamale removed (now in nixpkgs)
 final: prev: {
 
@@ -20,170 +21,45 @@ final: prev: {
     }
   );
 
-  # Fix broken symlinks
-  hammer =
-    with prev;
-    stdenv.mkDerivation rec {
-      name = "hammer-${version}";
-      version = "b5a7543b";
+  hammer = prev.myLib.mkSimpleGitHubBinary {
+    pname = "hammer";
+    version = "b5a7543b";
+    rev = "b5a7543b4741d9b54dad49ecfca8908a4aedf124";
+    sha256 = "sha256-SGHB8UTJ9cT/hZiv4V/rc3GwKlB6r9WCYsMXFA+Iw4c=";
+    description = "A tool for fixing broken symlinks";
+  };
 
-      src = fetchFromGitHub {
-        owner = "jwiegley";
-        repo = "hammer";
-        rev = "b5a7543b4741d9b54dad49ecfca8908a4aedf124";
-        sha256 = "sha256-SGHB8UTJ9cT/hZiv4V/rc3GwKlB6r9WCYsMXFA+Iw4c=";
-        # date = 2011-09-10T19:08:08-05:00;
-      };
+  linkdups = prev.myLib.mkSimpleGitHubBinary {
+    pname = "linkdups";
+    version = "e1d5b82d";
+    rev = "e1d5b82da048300a78f2fc7d62f200bbfc5d973b";
+    sha256 = "sha256-N0MAdqn8yHrEvAbbtfHhToa9Kefs6LSwA/tVPUzWOSs=";
+    description = "A tool for hard-linking duplicate files";
+  };
 
-      phases = [
-        "unpackPhase"
-        "installPhase"
-      ];
+  lipotell = prev.myLib.mkSimpleGitHubBinary {
+    pname = "lipotell";
+    version = "1502a475";
+    rev = "1502a4753f42618efcf2d0d561c818af377b0d92";
+    sha256 = "sha256-TnaiGFXRzc4hwSgKvmxHJcCQW6H9Qh7VWQL+RoFb024=";
+    description = "A tool to find large files within a directory";
+  };
 
-      installPhase = ''
-        mkdir -p $out/bin
-        cp -p hammer $out/bin
-      '';
+  sift = prev.myLib.mkSimpleGitHubBinary {
+    pname = "sift";
+    version = "c823f340";
+    rev = "c823f340be8818cc7aa970f9da4c81247f5b5535";
+    sha256 = "1yadjgjcghi2fhyayl3ry67w3cz6f7w0ibni9dikdp3vnxp94y58";
+    description = "A tool for sifting apart large patch files";
+  };
 
-      meta = {
-        homepage = "https://github.com/jwiegley/hammer";
-        description = "A tool for fixing broken symlinks";
-        license = lib.licenses.mit;
-        maintainers = with lib.maintainers; [ jwiegley ];
-      };
-    };
-
-  # Hard-link duplicate files to save space
-  linkdups =
-    with prev;
-    stdenv.mkDerivation rec {
-      name = "linkdups-${version}";
-      version = "e1d5b82d";
-
-      src = fetchFromGitHub {
-        owner = "jwiegley";
-        repo = "linkdups";
-        rev = "e1d5b82da048300a78f2fc7d62f200bbfc5d973b";
-        sha256 = "sha256-N0MAdqn8yHrEvAbbtfHhToa9Kefs6LSwA/tVPUzWOSs=";
-        # date = 2025-05-13T11:29:24-07:00;
-      };
-
-      phases = [
-        "unpackPhase"
-        "installPhase"
-      ];
-
-      installPhase = ''
-        mkdir -p $out/bin
-        cp -p linkdups $out/bin
-      '';
-
-      meta = {
-        homepage = "https://github.com/jwiegley/linkdups";
-        description = "A tool for hard-linking duplicate files";
-        license = lib.licenses.mit;
-        maintainers = with lib.maintainers; [ jwiegley ];
-      };
-    };
-
-  # Find large files within a directory
-  lipotell =
-    with prev;
-    stdenv.mkDerivation rec {
-      name = "lipotell-${version}";
-      version = "1502a475";
-
-      src = fetchFromGitHub {
-        owner = "jwiegley";
-        repo = "lipotell";
-        rev = "1502a4753f42618efcf2d0d561c818af377b0d92";
-        sha256 = "sha256-TnaiGFXRzc4hwSgKvmxHJcCQW6H9Qh7VWQL+RoFb024=";
-        # date = 2011-09-10T18:57:01-05:00;
-      };
-
-      phases = [
-        "unpackPhase"
-        "installPhase"
-      ];
-
-      installPhase = ''
-        mkdir -p $out/bin
-        cp -p lipotell $out/bin
-      '';
-
-      meta = {
-        homepage = "https://github.com/jwiegley/lipotell";
-        description = "A tool to find large files within a directory";
-        license = lib.licenses.mit;
-        maintainers = with lib.maintainers; [ jwiegley ];
-      };
-    };
-
-  # Sift apart large patch files
-  sift =
-    with prev;
-    stdenv.mkDerivation rec {
-      name = "sift-${version}";
-      version = "c823f340";
-
-      src = fetchFromGitHub {
-        owner = "jwiegley";
-        repo = "sift";
-        rev = "c823f340be8818cc7aa970f9da4c81247f5b5535";
-        sha256 = "1yadjgjcghi2fhyayl3ry67w3cz6f7w0ibni9dikdp3vnxp94y58";
-        # date = 2011-09-10T19:05:37-05:00;
-      };
-
-      phases = [
-        "unpackPhase"
-        "installPhase"
-      ];
-
-      installPhase = ''
-        mkdir -p $out/bin
-        cp -p sift $out/bin
-      '';
-
-      meta = {
-        homepage = "https://github.com/jwiegley/sift";
-        description = "A tool for sifting apart large patch files";
-        license = lib.licenses.mit;
-        maintainers = with lib.maintainers; [ jwiegley ];
-      };
-    };
-
-  # Install SSH authorized_keys on remote servers
-  sshify =
-    with prev;
-    stdenv.mkDerivation rec {
-      name = "sshify-${version}";
-      version = "a6fb0d52";
-
-      src = fetchFromGitHub {
-        owner = "jwiegley";
-        repo = "sshify";
-        rev = "a6fb0d529ec01158dd031431099b0ba8c8d64eb6";
-        sha256 = "sha256-wl2BZhVIpIFrcReQrMbkbxkrPA7vKKdkPfAYo5IlbIs=";
-        # date = 2018-01-27T17:11:59-08:00;
-      };
-
-      phases = [
-        "unpackPhase"
-        "installPhase"
-      ];
-
-      installPhase = ''
-        mkdir -p $out/bin
-        cp -p sshify $out/bin
-      '';
-
-      meta = {
-        homepage = "https://github.com/jwiegley/sshify";
-        description = "A tool for installing SSH authorized_key on remote servers";
-        license = lib.licenses.mit;
-        maintainers = with lib.maintainers; [ jwiegley ];
-      };
-    };
+  sshify = prev.myLib.mkSimpleGitHubBinary {
+    pname = "sshify";
+    version = "a6fb0d52";
+    rev = "a6fb0d529ec01158dd031431099b0ba8c8d64eb6";
+    sha256 = "sha256-wl2BZhVIpIFrcReQrMbkbxkrPA7vKKdkPfAYo5IlbIs=";
+    description = "A tool for installing SSH authorized_key on remote servers";
+  };
 
   # Track most-used directories based on frecency
   z =
