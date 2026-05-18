@@ -276,25 +276,6 @@ in
         serviceConfig.KeepAlive = true;
       };
 
-      drafts-mcp-server = {
-        script = ''
-          export PATH="${pkgs.nodejs_22}/bin:$PATH"
-          export HOME="/Users/johnw"
-          # supergateway wraps the stdio-only drafts-mcp-server as HTTP/SSE
-          # so OpenClaw on vulcan can reach it via nginx reverse proxy.
-          # Packages are cached by npx after first download.
-          exec npx -y supergateway \
-            --port 8808 \
-            --stdio "npx -y @agiletortoise/drafts-mcp-server"
-        '';
-        serviceConfig = {
-          RunAtLoad = true;
-          KeepAlive = true;
-          StandardOutPath = "${xdg_cacheHome}/drafts-mcp-server-stdout.log";
-          StandardErrorPath = "${xdg_cacheHome}/drafts-mcp-server-stderr.log";
-        };
-      };
-
       flatten-recordings = {
         script = ''
           export PATH="${pkgs.my-scripts}/bin:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
