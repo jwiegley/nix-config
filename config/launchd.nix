@@ -221,19 +221,6 @@ in
         };
       };
 
-      ollama-serve = {
-        serviceConfig = {
-          ProgramArguments = [
-            "${pkgs.ollama}/bin/ollama"
-            "serve"
-          ];
-          KeepAlive = true;
-          RunAtLoad = true;
-          StandardOutPath = "${home}/Library/Logs/ollama.log";
-          StandardErrorPath = "${home}/Library/Logs/ollama.log";
-        };
-      };
-
       docker-desktop = {
         script = "/usr/bin/open -a /Applications/Docker.app";
         serviceConfig = {

@@ -461,7 +461,6 @@ rec {
           codex
           droid
           gemini-cli
-          ollama
           opencode
         ])
       else

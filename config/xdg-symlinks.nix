@@ -40,7 +40,6 @@ in
       ".cargo".source = mkLink "${config.xdg.cacheHome}/cargo";
       ".rustup".source = mkLink "${config.xdg.cacheHome}/rustup";
       ".npm".source = mkLink "${config.xdg.cacheHome}/npm";
-      ".ollama".source = mkLink "${config.xdg.cacheHome}/ollama";
       ".swiftpm".source = mkLink "${config.xdg.cacheHome}/swiftpm";
       ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";
 
