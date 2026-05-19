@@ -284,8 +284,12 @@ in
         serviceConfig = {
           StartInterval = 900; # Run every 15 minutes (900 seconds)
           RunAtLoad = true; # Run once at startup
-          StandardOutPath = "${home}/Library/Logs/flatten-recordings-stdout.log";
-          StandardErrorPath = "${home}/Library/Logs/flatten-recordings-stderr.log";
+          # The script itself writes structured timestamped log lines to this
+          # file via its log() helper. Pointing launchd's stdout/stderr at the
+          # same file catches anything that escapes the script's own logging
+          # (e.g., a failure before the trap is installed).
+          StandardOutPath = "${home}/Library/Logs/flatten-recordings.log";
+          StandardErrorPath = "${home}/Library/Logs/flatten-recordings.log";
         };
       };
     };
