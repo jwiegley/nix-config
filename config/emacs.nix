@@ -213,7 +213,6 @@ with epkgs;
   (exclude lsp-mode)
   (exclude lsp-ui)
   lua-mode
-  macher
   macrostep
   magit
   (exclude magit-annex)
@@ -366,7 +365,6 @@ with epkgs;
   selected
   separedit
   (exclude shackle)
-  shell-maker
   shell-toggle
   shift-number
   sky-color-clock
