@@ -451,7 +451,6 @@ rec {
     ++ optPkg "qdrant-web-ui"
     ++ optPkg "agnix"
     ++ optPkg "claude-vault"
-    ++ optPkg "cozempic"
     ++ optPkg "claude-replay"
     ++ (
       if inputs ? llm-agents then
