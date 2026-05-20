@@ -1,7 +1,7 @@
 # overlays/30-ai-llm.nix
 # Purpose: Large Language Model inference tools
 # Dependencies: Uses final for python3Packages in mlx-lm; uses prev elsewhere
-# Packages: gguf-tools, hfdownloader, llama-cpp, llama-swap, mlx-lm
+# Packages: gguf-tools, hfdownloader, llama-cpp, llama-swap, mlx-lm, mtplx
 final: prev: {
 
   # GGUF file manipulation tools
@@ -59,12 +59,12 @@ final: prev: {
   # NOTE: As of b9190+, the webui was relocated from tools/server/webui
   # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "9194";
+    version = "9253";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-r5zXkexwwCrFzYvV9sg+/RnBbbiYYNLelZAzeceWYWQ=";
+      hash = "sha256-EehegfVuh3Y88bjCzMU5Mgkc+ZqhPwBVrRR2oaYwCaw=";
     };
     postPatch = "";
     npmRoot = "tools/ui";
@@ -74,7 +74,7 @@ final: prev: {
       npm run build
       popd
     '';
-    npmDepsHash = "sha256-WaEePrEZ7O/7deP2KJhe0AwiSKYA8HOqETmMHUkmBe0=";
+    npmDepsHash = "sha256-Iyg8FpcTKf2UYHuK7mA3cTAqVaLcQPcS0YCa5Qf01Gc=";
     npmDeps = prev.fetchNpmDeps {
       name = "llama-cpp-${version}-npm-deps";
       inherit src;
@@ -87,13 +87,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "214";
+      version = "216";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-W75Rttl4cJ7cwSF3lCyIq6I1oB8qd9Hc0euaMj0rbBc=";
+        hash = "sha256-FuGy+5Ziu4zIheiYzH9GwbkKXzMibR0VlagTNTcSp4A=";
       };
 
       ui =
@@ -247,6 +247,57 @@ final: prev: {
         homepage = "https://github.com/mlx-explore/mlx-lm";
         license = lib.licenses.mit;
         maintainers = with lib.maintainers; [ jwiegley ];
+      };
+    };
+
+  # mtplx - MTP speculative decoding runtime for Apple Silicon (MLX-native)
+  mtplx =
+    with final;
+    with final.python3Packages;
+    buildPythonApplication rec {
+      pname = "mtplx";
+      version = "0.3.7";
+      pyproject = null;
+      format = "wheel";
+
+      src = fetchPypi {
+        inherit pname version;
+        format = "wheel";
+        dist = "py3";
+        python = "py3";
+        hash = "sha256-246JJhnR6ssBr1qPetgFXrjoMLW3BwR+Ud+f3c6LMzY=";
+      };
+
+      # nixpkgs ships slightly older fastapi (0.128) and uvicorn (0.40);
+      # mtplx pins >=0.136 / >=0.46 but works fine with these versions.
+      # pythonRelaxDeps doesn't rewrite wheel METADATA, so skip the check.
+      dontCheckRuntimeDeps = true;
+
+      dependencies = [
+        fastapi
+        huggingface-hub
+        mlx
+        mlx-lm
+        nanobind
+        numpy
+        pydantic
+        rich
+        safetensors
+        uvicorn
+      ];
+
+      dontBuild = true;
+      doCheck = false;
+
+      pythonImportsCheck = [ "mtplx" ];
+
+      meta = {
+        description = "MTP speculative decoding runtime for Apple Silicon (MLX-native)";
+        homepage = "https://github.com/youssofal/MTPLX";
+        license = lib.licenses.asl20;
+        platforms = [ "aarch64-darwin" ];
+        maintainers = with lib.maintainers; [ jwiegley ];
+        mainProgram = "mtplx";
       };
     };
 

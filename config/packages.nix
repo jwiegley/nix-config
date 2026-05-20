@@ -516,6 +516,7 @@ rec {
       xquartz
     ]
     ++ lib.optionals isDarwin (optPkg "vllm-mlx")
+    ++ lib.optionals isDarwin (optPkg "mtplx")
 
     # ── Linux-Only Packages ──────────────────────────────────────────
     ++ lib.optionals isLinux [
