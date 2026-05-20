@@ -265,17 +265,6 @@ in
         serviceConfig.KeepAlive = true;
       };
 
-      chrome-debug = {
-        script = ''
-          /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
-              --headless=new \
-              --remote-debugging-port=9223 \
-              --user-data-dir=/tmp/chrome-debug
-        '';
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = true;
-      };
-
       flatten-recordings = {
         script = ''
           export PATH="${pkgs.my-scripts}/bin:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
