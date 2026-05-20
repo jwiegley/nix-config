@@ -251,54 +251,76 @@ final: prev: {
     };
 
   # mtplx - MTP speculative decoding runtime for Apple Silicon (MLX-native)
+  # Built as buildPythonPackage + python.withPackages (rather than
+  # buildPythonApplication) because mtplx spawns its server via
+  # `os.execvpe(sys.executable, ["-m", "mtplx.server.openai", ...])`
+  # (see mtplx/commands/public.py). buildPythonApplication's wrapper
+  # uses site.addsitedir at runtime — that mutates sys.path of the
+  # current interpreter only and does not propagate to subprocesses,
+  # so the spawned python cannot import mtplx. python.withPackages
+  # installs mtplx as a real site-package in the env, so subprocesses
+  # using sys.executable resolve mtplx via NIX_PYTHONPATH.
   mtplx =
-    with final;
-    with final.python3Packages;
-    buildPythonApplication rec {
-      pname = "mtplx";
-      version = "0.3.7";
-      pyproject = null;
-      format = "wheel";
+    let
+      pyPkg =
+        with final;
+        with final.python3Packages;
+        buildPythonPackage rec {
+          pname = "mtplx";
+          version = "0.3.7";
+          pyproject = null;
+          format = "wheel";
 
-      src = fetchPypi {
-        inherit pname version;
-        format = "wheel";
-        dist = "py3";
-        python = "py3";
-        hash = "sha256-246JJhnR6ssBr1qPetgFXrjoMLW3BwR+Ud+f3c6LMzY=";
-      };
+          src = fetchPypi {
+            inherit pname version;
+            format = "wheel";
+            dist = "py3";
+            python = "py3";
+            hash = "sha256-246JJhnR6ssBr1qPetgFXrjoMLW3BwR+Ud+f3c6LMzY=";
+          };
 
-      # nixpkgs ships slightly older fastapi (0.128) and uvicorn (0.40);
-      # mtplx pins >=0.136 / >=0.46 but works fine with these versions.
-      # pythonRelaxDeps doesn't rewrite wheel METADATA, so skip the check.
-      dontCheckRuntimeDeps = true;
+          # nixpkgs ships slightly older fastapi (0.128) and uvicorn (0.40);
+          # mtplx pins >=0.136 / >=0.46 but works fine with these versions.
+          # pythonRelaxDeps doesn't rewrite wheel METADATA, so skip the check.
+          dontCheckRuntimeDeps = true;
 
-      dependencies = [
-        fastapi
-        huggingface-hub
-        mlx
-        mlx-lm
-        nanobind
-        numpy
-        pydantic
-        rich
-        safetensors
-        uvicorn
-      ];
+          propagatedBuildInputs = [
+            fastapi
+            huggingface-hub
+            mlx
+            mlx-lm
+            nanobind
+            numpy
+            pydantic
+            rich
+            safetensors
+            uvicorn
+          ];
 
-      dontBuild = true;
-      doCheck = false;
+          dontBuild = true;
+          doCheck = false;
 
-      pythonImportsCheck = [ "mtplx" ];
+          pythonImportsCheck = [ "mtplx" ];
+        };
 
-      meta = {
-        description = "MTP speculative decoding runtime for Apple Silicon (MLX-native)";
-        homepage = "https://github.com/youssofal/MTPLX";
-        license = lib.licenses.asl20;
-        platforms = [ "aarch64-darwin" ];
-        maintainers = with lib.maintainers; [ jwiegley ];
-        mainProgram = "mtplx";
-      };
-    };
+      pyEnv = final.python3.withPackages (_: [ pyPkg ]);
+    in
+    final.runCommand "mtplx-${pyPkg.version}"
+      {
+        inherit (pyPkg) version;
+        meta = {
+          description = "MTP speculative decoding runtime for Apple Silicon (MLX-native)";
+          homepage = "https://github.com/youssofal/MTPLX";
+          license = final.lib.licenses.asl20;
+          platforms = [ "aarch64-darwin" ];
+          maintainers = with final.lib.maintainers; [ jwiegley ];
+          mainProgram = "mtplx";
+        };
+      }
+      ''
+        mkdir -p $out/bin
+        ln -s ${pyEnv}/bin/mtplx $out/bin/mtplx
+        ln -s ${pyEnv}/bin/mtplx-tune $out/bin/mtplx-tune
+      '';
 
 }
