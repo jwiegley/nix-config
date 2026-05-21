@@ -59,12 +59,12 @@ final: prev: {
   # NOTE: As of b9190+, the webui was relocated from tools/server/webui
   # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "9253";
+    version = "9265";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-EehegfVuh3Y88bjCzMU5Mgkc+ZqhPwBVrRR2oaYwCaw=";
+      hash = "sha256-aRabesT1N4owaUYQeIZwLeNnMzz08GoBIhRxODNYLFI=";
     };
     postPatch = "";
     npmRoot = "tools/ui";
