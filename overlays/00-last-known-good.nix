@@ -20,6 +20,9 @@ let
   #   - libcdio-paranoia: ./getopt.h K&R decl conflicts with unistd.h
   #   - python3Packages.av: pythonImportsCheckPhase OOMs loading ffmpeg syms
   #   - python3Packages.openai-whisper: ffmpeg-subprocess test fails in sandbox
+  #   - folly: UninitializedMemoryHacksTest.cpp.o fails to compile with
+  #     `__sanitizer_annotate_contiguous_container` undeclared under
+  #     clang-21 + libc++ in SDK 14.4 (regression in folly 2026.01.19.00)
   lastGood = nixpkgs {
     rev = "b86751bc4085f48661017fa226dee99fab6c651b";
     sha256 = "sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw=";
@@ -38,10 +41,22 @@ let
   };
 in
 {
+  # Meta/Facebook C++ libraries must be pinned together for closure
+  # consistency: fbthrift links against folly headers, watchman pulls in
+  # fizz/mvfst/wangle/edencommon, etc. Mixing old folly with new fizz makes
+  # every fizz test fail at runtime (ABI mismatch).
   inherit (lastGood)
     ntp
     aprutil
     libcdio-paranoia
+    folly
+    fizz
+    mvfst
+    wangle
+    fbthrift
+    fb303
+    edencommon
+    watchman
     ;
 
   inherit (preMesa26_1)
