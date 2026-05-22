@@ -278,6 +278,7 @@ in
     ]
     ++ lib.optionals (hostname == "clio") [
       "aldente"
+      "betterdisplay"
       "wifi-explorer"
     ];
 
