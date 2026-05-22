@@ -71,7 +71,16 @@ final: prev: {
     preConfigure = ''
       prependToVar cmakeFlags "-DLLAMA_BUILD_COMMIT:STRING=b${version}"
       pushd tools/ui
-      npm run build
+      # node 24.15.0's libuv has a kqueue assertion bug that triggers
+      # SIGABRT on exit (`Assertion failed: (errno == EINTR), function
+      # uv__io_poll, file kqueue.c, line 279`). The build artifacts under
+      # build/tools/ui/dist/ are written before the abort, so accept the
+      # non-zero exit only when the expected output actually exists.
+      npm run build || true
+      [[ -f ../../build/tools/ui/dist/index.html ]] || {
+        echo "ERROR: tools/ui/dist/index.html not produced — npm run build genuinely failed" >&2
+        exit 1
+      }
       popd
     '';
     npmDepsHash = "sha256-Iyg8FpcTKf2UYHuK7mA3cTAqVaLcQPcS0YCa5Qf01Gc=";
