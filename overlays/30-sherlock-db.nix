@@ -5,16 +5,16 @@
 final: prev:
 
 let
-  version = "1.3.0";
+  version = "1.4.0";
 
   srcs = {
     aarch64-darwin = {
       url = "https://github.com/michaelbromley/sherlock/releases/download/v${version}/sherlock-darwin-arm64";
-      hash = "sha256-l1dfzfjHDFhM9+Ro8E3jYJgSAYUOn898VUluoqGqKBw=";
+      hash = "sha256-k43lSCVvcMnqN1tf+lY02JfkhrKPHc4OZJVAxghqink=";
     };
     x86_64-linux = {
       url = "https://github.com/michaelbromley/sherlock/releases/download/v${version}/sherlock-linux-x64";
-      hash = "sha256-u/XyOTbwZXjTqidkAIhLOs51i/lVRlcHYCm+wv7Di+M=";
+      hash = "sha256-+AfcIZIp7rJP+tDSSjb3Xt0kY3dkmN3oKOWiDX7SPg4=";
     };
   };
 
