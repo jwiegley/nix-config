@@ -18,35 +18,35 @@ in
     enable = true;
     enableDefaultConfig = false;
 
-    matchBlocks =
+    settings =
       let
         withIdentity =
           attrs:
           attrs
           // {
-            identityFile = "${identityDir}/id_${hostname}";
-            identitiesOnly = true;
+            IdentityFile = "${identityDir}/id_${hostname}";
+            IdentitiesOnly = true;
           };
 
         controlMastered =
           attrs:
           attrs
           // {
-            controlMaster = "auto";
+            ControlMaster = "auto";
             # %C is a SHA-1 hash of %l%h%p%r (40 hex chars). Using the literal
             # %h hostname overflows macOS's 104-byte unix-domain-socket limit
             # for hosts with long FQDNs (e.g. ec2-...compute.amazonaws.com)
             # once OpenSSH appends its random temp-file suffix.
-            controlPath = "${config.home.homeDirectory}/.ssh/sockets/%C";
-            controlPersist = "1800";
+            ControlPath = "${config.home.homeDirectory}/.ssh/sockets/%C";
+            ControlPersist = "1800";
           };
 
         onHost =
           proxyJump: hostAddr:
           {
-            hostname = hostAddr;
+            HostName = hostAddr;
           }
-          // lib.optionalAttrs (hostAddr != proxyJump) { inherit proxyJump; };
+          // lib.optionalAttrs (hostAddr != proxyJump) { ProxyJump = proxyJump; };
 
         localBind = here: there: {
           bind = {
@@ -59,31 +59,27 @@ in
         };
       in
       rec {
-        defaults = {
-          host = "*";
+        "*" = {
+          UserKnownHostsFile = "${config.xdg.configHome}/ssh/known_hosts";
+          HashKnownHosts = true;
+          ServerAliveInterval = 60;
+          ForwardAgent = false;
 
-          userKnownHostsFile = "${config.xdg.configHome}/ssh/known_hosts";
-          hashKnownHosts = true;
-          serverAliveInterval = 60;
-          forwardAgent = false;
-
-          extraOptions = {
-            StrictHostKeyChecking = "yes";
-            VerifyHostKeyDNS = "yes";
-          }
-          // lib.optionalAttrs isDarwin {
-            IgnoreUnknown = "UseKeychain";
-            UseKeychain = "yes";
-            AddKeysToAgent = "yes";
-          };
+          StrictHostKeyChecking = "yes";
+          VerifyHostKeyDNS = "yes";
+        }
+        // lib.optionalAttrs isDarwin {
+          IgnoreUnknown = "UseKeychain";
+          UseKeychain = "yes";
+          AddKeysToAgent = "yes";
         };
 
         # Hera
 
         hera = {
-          hostname = "hera.lan";
-          compression = false;
-          forwardAgent = true;
+          HostName = "hera.lan";
+          Compression = false;
+          ForwardAgent = true;
         };
 
         mssql = onHost "hera" "192.168.64.3";
@@ -91,16 +87,16 @@ in
         simon = onHost "hera" "172.16.194.158";
 
         minerva = {
-          hostname = "192.168.199.128";
-          compression = false;
+          HostName = "192.168.199.128";
+          Compression = false;
         };
 
         # Clio
 
         clio = withIdentity {
-          hostname = "clio.lan";
-          compression = false;
-          forwardAgent = true;
+          HostName = "clio.lan";
+          Compression = false;
+          ForwardAgent = true;
         };
 
         neso = withIdentity (onHost "clio" "192.168.100.130");
@@ -108,115 +104,108 @@ in
         # Vulcan
 
         vulcan = controlMastered (withIdentity {
-          hostname = "192.168.1.2";
-          compression = false;
-          forwardAgent = true;
+          HostName = "192.168.1.2";
+          Compression = false;
+          ForwardAgent = true;
 
-          remoteForwards = [ (localBind 8317 8317) ];
+          RemoteForward = [ (localBind 8317 8317) ];
         });
 
         gitea = controlMastered (withIdentity {
-          user = "gitea";
-          hostname = if hostname == "vulcan" then "localhost" else "192.168.1.2";
-          port = 2222;
-          compression = false;
+          User = "gitea";
+          HostName = if hostname == "vulcan" then "localhost" else "192.168.1.2";
+          Port = 2222;
+          Compression = false;
         });
 
         # Council
 
         "srp vps" = controlMastered {
-          user = "johnw";
-          hostname = "vps-b30dd5a8.vps.ovh.ca";
+          User = "johnw";
+          HostName = "vps-b30dd5a8.vps.ovh.ca";
         };
 
         # Work
 
         ghpos = {
-          user = "git";
-          hostname = "github.com";
-          identityFile = "${config.xdg.configHome}/ssh/id_positron";
-          identitiesOnly = true;
+          User = "git";
+          HostName = "github.com";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
+          IdentitiesOnly = true;
 
-          controlMaster = "no";
-          controlPath = "none";
+          ControlMaster = "no";
+          ControlPath = "none";
         };
 
         ghai = {
-          user = "git";
-          hostname = "github.com";
-          identityFile = "${config.xdg.configHome}/ssh/id_git-ai";
-          identitiesOnly = true;
+          User = "git";
+          HostName = "github.com";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_git-ai";
+          IdentitiesOnly = true;
 
-          controlMaster = "no";
-          controlPath = "none";
+          ControlMaster = "no";
+          ControlPath = "none";
         };
 
         positron = controlMastered {
-          host = "pos andoria andoria-* delphi-* agentsrv labmgr";
-          user = "jwiegley";
-          identityFile = "${config.xdg.configHome}/ssh/id_positron";
-          identitiesOnly = true;
+          header = "Host pos andoria andoria-* delphi-* agentsrv labmgr";
+          User = "jwiegley";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
+          IdentitiesOnly = true;
         };
 
         "pos andoria" = controlMastered {
-          user = "jwiegley";
-          hostname = "andoria-08";
+          User = "jwiegley";
+          HostName = "andoria-08";
         };
 
         git-ai = controlMastered {
-          hostname = "ec2-3-134-98-233.us-east-2.compute.amazonaws.com";
-          user = "ubuntu";
-          identityFile = "${config.xdg.configHome}/ssh/id_git-ai";
-          identitiesOnly = true;
+          HostName = "ec2-3-134-98-233.us-east-2.compute.amazonaws.com";
+          User = "ubuntu";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_git-ai";
+          IdentitiesOnly = true;
         };
 
         # Other servers
 
         router = withIdentity {
-          hostname = "192.168.1.1";
-          compression = false;
+          HostName = "192.168.1.1";
+          Compression = false;
         };
 
         asus1 = {
-          hostname = "asus-bq16-pro-ap.lan";
-          port = 2204;
-          user = "router";
-          compression = false;
+          HostName = "asus-bq16-pro-ap.lan";
+          Port = 2204;
+          User = "router";
+          Compression = false;
         };
         asus2 = {
-          hostname = "asus-bq16-pro-node.lan";
-          port = 2204;
-          user = "router";
-          compression = false;
+          HostName = "asus-bq16-pro-node.lan";
+          Port = 2204;
+          User = "router";
+          Compression = false;
         };
 
         elpa = {
-          hostname = "elpa.gnu.org";
-          user = "root";
+          HostName = "elpa.gnu.org";
+          User = "root";
         };
-        savannah.hostname = "git.sv.gnu.org";
-        fencepost.hostname = "fencepost.gnu.org";
+        savannah.HostName = "git.sv.gnu.org";
+        fencepost.HostName = "fencepost.gnu.org";
 
         savannah_gnu_org = withIdentity {
-          host = lib.concatStringsSep " " [
-            "git.savannah.gnu.org"
-            "git.sv.gnu.org"
-            "git.savannah.nongnu.org"
-            "git.sv.nongnu.org"
-          ];
+          header = "Host git.savannah.gnu.org git.sv.gnu.org git.savannah.nongnu.org git.sv.nongnu.org";
         };
 
-        haskell_org = {
-          host = "*haskell.org";
-          user = "root";
-          identityFile = "${config.xdg.configHome}/ssh/id_haskell";
-          identitiesOnly = true;
+        "*haskell.org" = {
+          User = "root";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_haskell";
+          IdentitiesOnly = true;
         };
-        mail.hostname = "mail.haskell.org";
+        mail.HostName = "mail.haskell.org";
 
-        hf = withIdentity {
-          host = "hf.co";
-          user = "git";
+        "hf.co" = withIdentity {
+          User = "git";
         };
       };
   };
