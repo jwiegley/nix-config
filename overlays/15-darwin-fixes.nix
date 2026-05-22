@@ -145,6 +145,21 @@ final: prev: {
     doCheck = false;
   });
 
+  # Fix opencv4 pythonImportsCheck failure on macOS: libopencv_hdf.dylib
+  # records its libhdf5 dependency with an absolute path that has opencv's
+  # own /nix/store/...-opencv-4.13.0 prefix instead of hdf5-cpp's store
+  # path, so dyld searches `<opencv>//nix/store/.../opencv-4.13.0/lib/
+  # libhdf5.310.dylib` (note the doubled prefix) and fails. The hdf module
+  # is only exposed via libopencv_hdf and isn't exercised by vllm-mlx (the
+  # only consumer here), so disable BUILD_opencv_hdf to sidestep the
+  # broken rpath/install-name on Darwin.
+  opencv4 = prev.opencv4.overrideAttrs (
+    oldAttrs:
+    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+      cmakeFlags = (oldAttrs.cmakeFlags or [ ]) ++ [ "-DBUILD_opencv_hdf=OFF" ];
+    }
+  );
+
   # Fix chromaprint test OOM on macOS (ffmpeg transitive)
   chromaprint = prev.chromaprint.overrideAttrs (_: {
     doCheck = false;
