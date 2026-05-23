@@ -267,16 +267,32 @@ in
 
       flatten-recordings = {
         script = ''
-          export PATH="${pkgs.my-scripts}/bin:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
-          exec ${pkgs.my-scripts}/bin/flatten-recordings
+          export PATH="${pkgs.my-scripts}/bin:${pkgs.fswatch}/bin:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
+          # Sweep anything that accumulated while we were not running.
+          ${pkgs.my-scripts}/bin/flatten-recordings || true
+
+          # Then react to filesystem changes under ~/Recordings instead of
+          # polling every 15 minutes. --latency 5 coalesces bursts; the
+          # script is idempotent and re-sweeps the whole directory on each
+          # invocation, so an occasional duplicate event is harmless.
+          ${pkgs.fswatch}/bin/fswatch --recursive --latency 5 \
+                --event=Created --event=Updated \
+                --event=MovedTo --event=Renamed \
+                "${home}/Recordings" |
+            while read -r _; do
+              ${pkgs.my-scripts}/bin/flatten-recordings || true
+            done
         '';
         serviceConfig = {
-          StartInterval = 900; # Run every 15 minutes (900 seconds)
-          RunAtLoad = true; # Run once at startup
-          # The script itself writes structured timestamped log lines to this
-          # file via its log() helper. Pointing launchd's stdout/stderr at the
-          # same file catches anything that escapes the script's own logging
-          # (e.g., a failure before the trap is installed).
+          RunAtLoad = true; # Initial sweep at login.
+          KeepAlive = true; # Relaunch the fswatch loop if it ever exits.
+          # Without these two, launchd classifies the agent as background
+          # work and throttles its I/O when the display is off — the cause
+          # of the 2.4h stall on a 105 KB archive mv on 2026-05-22.
+          LowPriorityIO = false;
+          LowPriorityBackgroundIO = false;
+          ProcessType = "Standard";
           StandardOutPath = "${home}/Library/Logs/flatten-recordings.log";
           StandardErrorPath = "${home}/Library/Logs/flatten-recordings.log";
         };
