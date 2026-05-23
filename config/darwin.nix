@@ -439,6 +439,15 @@ in
       fi
     '';
 
+    # Hera is a desktop and hosts LLM services that need to stay reachable
+    # at any hour. Force the configured value so it can't drift back via
+    # System Settings or `pmset` from another shell. disksleep/displaysleep
+    # are intentionally left unmanaged so they can still be tuned via the
+    # Settings app.
+    activationScripts.postActivation.text = lib.mkIf (hostname == "hera") ''
+      /usr/bin/pmset -a sleep 0
+    '';
+
     primaryUser = "johnw";
 
     defaults = {
