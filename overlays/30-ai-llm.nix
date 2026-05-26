@@ -375,6 +375,7 @@ final: prev: {
         mlx-lm
         mlx-embeddings
         mlx-vlm
+        mlx-audio
         dflash-mlx
         regex
         transformers

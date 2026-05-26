@@ -142,9 +142,8 @@ in
 
         # omlx requires mlx_vlm.speculative (DDTree drafters), introduced
         # after the 0.4.4 release in nixpkgs. Pin to the 0.5.0 commit that
-        # omlx itself pins (f96138e). mlx-audio is imported lazily inside
-        # load_audio() and isn't packaged in nixpkgs, so drop that runtime
-        # dep; llguidance (new in 0.5.0) is available in nixpkgs.
+        # omlx itself pins (f96138e). llguidance and mlx-audio (both new in
+        # 0.5.0) are added below; mlx-audio is defined in this overlay.
         mlx-vlm = pprev.mlx-vlm.overridePythonAttrs (oldAttrs: {
           version = "0.5.0";
           src = prev.fetchFromGitHub {
@@ -153,8 +152,10 @@ in
             rev = "f96138eef1f5ce7fb5d97f8dd41a664a195b5659";
             hash = "sha256-Rz0t7g6qBcXS6IRwVyau410qpD3H3aEnLLvMenQ58Uc=";
           };
-          dependencies = (oldAttrs.dependencies or [ ]) ++ [ pfinal.llguidance ];
-          pythonRemoveDeps = (oldAttrs.pythonRemoveDeps or [ ]) ++ [ "mlx-audio" ];
+          dependencies = (oldAttrs.dependencies or [ ]) ++ [
+            pfinal.llguidance
+            pfinal.mlx-audio
+          ];
           doCheck = false;
         });
 
@@ -251,6 +252,167 @@ in
             description = "Lossless DFlash speculative decoding for MLX on Apple Silicon";
             homepage = "https://github.com/bstnxbt/dflash-mlx";
             license = prev.lib.licenses.asl20;
+            platforms = [ "aarch64-darwin" ];
+          };
+        };
+
+        # ── mlx-audio and its missing dependencies ──────────────────────
+        # omlx's [audio] extra (tts/stt/sts) pulls mlx-audio, which in turn
+        # needs three packages absent from nixpkgs: pyloudnorm,
+        # phonemizer-fork, and espeakng-loader.
+
+        # dlinfo (phonemizer / phonemizer-fork dep) is flagged broken on
+        # Darwin in nixpkgs. The package itself works on Mac (it uses
+        # dyld_find); only its glibc-specific test suite — which probes for
+        # libc.so/libdl.so by Linux soname — fails. Unbreak it and skip the
+        # inapplicable tests, keeping the import check.
+        dlinfo = pprev.dlinfo.overridePythonAttrs (old: {
+          doCheck = false;
+          pythonImportsCheck = (old.pythonImportsCheck or [ ]) ++ [ "dlinfo" ];
+          meta = old.meta // {
+            broken = false;
+          };
+        });
+
+        pyloudnorm = pfinal.buildPythonPackage rec {
+          pname = "pyloudnorm";
+          version = "0.2.0";
+          pyproject = true;
+
+          src = pfinal.fetchPypi {
+            inherit pname version;
+            hash = "sha256-i/WXZY6k4ZdcJ1rfSQ9t61Np6kCfKQH5OZFe+ktoGxY=";
+          };
+
+          build-system = [ pfinal.setuptools ];
+          dependencies = with pfinal; [
+            numpy
+            scipy
+          ];
+
+          pythonImportsCheck = [ "pyloudnorm" ];
+
+          meta = {
+            description = "Implementation of ITU-R BS.1770-4 loudness algorithm";
+            homepage = "https://github.com/csteinmetz1/pyloudnorm";
+            license = prev.lib.licenses.mit;
+          };
+        };
+
+        # phonemizer-fork is a maintained fork of phonemizer; it imports as
+        # the `phonemizer` namespace and locates espeak-ng via espeakng-loader.
+        phonemizer-fork = pfinal.buildPythonPackage rec {
+          pname = "phonemizer-fork";
+          version = "3.3.2";
+          pyproject = true;
+
+          src = pfinal.fetchPypi {
+            pname = "phonemizer_fork";
+            inherit version;
+            hash = "sha256-EOFugn0EQ7CHBi4htV6AXACYnPE0Oy6B5zTK5fbAz2k=";
+          };
+
+          build-system = [ pfinal.hatchling ];
+          dependencies = with pfinal; [
+            attrs
+            dlinfo
+            joblib
+            segments
+            typing-extensions
+          ];
+
+          pythonImportsCheck = [ "phonemizer" ];
+
+          meta = {
+            description = "Simple text-to-phonemes converter for multiple languages (maintained fork)";
+            homepage = "https://github.com/bootphon/phonemizer";
+            license = prev.lib.licenses.gpl3Only;
+          };
+        };
+
+        # espeakng-loader ships a prebuilt espeak-ng inside the wheel and
+        # exposes its library/data paths. Use the arm64 macOS wheel.
+        espeakng-loader = pfinal.buildPythonPackage rec {
+          pname = "espeakng-loader";
+          version = "0.2.4";
+          format = "wheel";
+
+          src = pfinal.fetchPypi {
+            pname = "espeakng_loader";
+            inherit version;
+            format = "wheel";
+            dist = "py3";
+            python = "py3";
+            abi = "none";
+            platform = "macosx_11_0_arm64";
+            hash = "sha256-0nzcoxESIm5ymdhWLoidPjih5IBVye44G0XWaQcu5Z8=";
+          };
+
+          pythonImportsCheck = [ "espeakng_loader" ];
+
+          meta = {
+            description = "Loader providing a bundled espeak-ng library and data";
+            homepage = "https://github.com/thewh1teagle/espeakng-loader";
+            license = prev.lib.licenses.mit;
+            platforms = [ "aarch64-darwin" ];
+          };
+        };
+
+        # mlx-audio - TTS/STT/STS inference for Apple Silicon. Pinned to the
+        # exact commit omlx pins. mlx-lm is pinned ==0.31.1 upstream; relax
+        # it to use our 0.31.3. Runtime dep check is skipped because the
+        # [audio] extras resolve through optional namespaces.
+        mlx-audio = pfinal.buildPythonPackage rec {
+          pname = "mlx-audio";
+          version = "0.4.3";
+          pyproject = true;
+
+          src = prev.fetchFromGitHub {
+            owner = "Blaizzy";
+            repo = "mlx-audio";
+            rev = "51753266e0a4f766fd5e6fbc46652224efc23981";
+            hash = "sha256-2MbcOFk/lx1UNqFlyxYl03cL8yFUprZdgcb6eo5SX6w=";
+          };
+
+          build-system = [
+            pfinal.setuptools
+            pfinal.wheel
+          ];
+
+          dontCheckRuntimeDeps = true;
+
+          dependencies = with pfinal; [
+            # core
+            mlx
+            numpy
+            huggingface-hub
+            transformers
+            mlx-lm
+            tqdm
+            sounddevice
+            miniaudio
+            pyloudnorm
+            numba
+            librosa
+            protobuf
+            # tts + stt + sts extras
+            tiktoken
+            mistral-common
+            sentencepiece
+            misaki
+            num2words
+            spacy
+            phonemizer-fork
+            espeakng-loader
+            webrtcvad
+          ];
+
+          pythonImportsCheck = [ "mlx_audio" ];
+
+          meta = {
+            description = "TTS/STT/STS inference for Apple Silicon via MLX";
+            homepage = "https://github.com/Blaizzy/mlx-audio";
+            license = prev.lib.licenses.mit;
             platforms = [ "aarch64-darwin" ];
           };
         };
