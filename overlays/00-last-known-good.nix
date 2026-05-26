@@ -39,6 +39,20 @@ let
     rev = "f77951fcf0348ac9a4a5fc6c44c104d1387042d4";
     sha256 = "071sf9pckmxxwgpgx5jp2snjiq5bj5xm5vqfhhsvk82ad01azrw7";
   };
+
+  # Last good nixpkgs rev (== prior flake.lock pin, 2026-05-22) before the
+  # 2026-05-25 nixpkgs bump (rev f9d8b659...) shipped rclone 1.74.2, which
+  # unconditionally switched `buildInputs` from `macfuse-stubs` (Darwin) to
+  # `fuse3` (Linux-only). The new derivation does not provide `fuse.h` on
+  # Darwin, so cgofuse fails:
+  #     vendor/.../cgofuse/fuse/host_cgo.go:119:10:
+  #       fatal error: 'fuse.h' file not found
+  # 1.74.1 from this rev still uses macfuse-stubs and builds cleanly on
+  # aarch64-darwin. Drop this once nixpkgs restores the Darwin code path.
+  preRcloneFuse3Break = nixpkgs {
+    rev = "6dedf69f94d03cbe7bdde106f2d4c23ae2a853bf";
+    sha256 = "1bfzsicfxydyki256r34096v9zvj0j16zvs52ca56raczxgxrr40";
+  };
 in
 {
   # Meta/Facebook C++ libraries must be pinned together for closure
@@ -63,6 +77,12 @@ in
     mesa
     xorg-server
     xquartz
+    ;
+
+  # Pin rclone (and thus its consumers via the overlay) until nixpkgs
+  # restores Darwin fuse support. See `preRcloneFuse3Break` above.
+  inherit (preRcloneFuse3Break)
+    rclone
     ;
 
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
