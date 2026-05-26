@@ -96,13 +96,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "216";
+      version = "217";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-FuGy+5Ziu4zIheiYzH9GwbkKXzMibR0VlagTNTcSp4A=";
+        hash = "sha256-8n6JlxJKuzszGoOGzq0jmKNlljc6mgJdgLsP9fWHb2M=";
       };
 
       ui =
