@@ -59,12 +59,12 @@ final: prev: {
   # NOTE: As of b9190+, the webui was relocated from tools/server/webui
   # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "9265";
+    version = "9333";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-aRabesT1N4owaUYQeIZwLeNnMzz08GoBIhRxODNYLFI=";
+      hash = "sha256-rcgUHahUGf7GBM5Bv/+HBsyFWoYYo0Ohuk11n37KThU=";
     };
     postPatch = "";
     npmRoot = "tools/ui";
@@ -73,11 +73,11 @@ final: prev: {
       pushd tools/ui
       # node 24.15.0's libuv has a kqueue assertion bug that triggers
       # SIGABRT on exit (`Assertion failed: (errno == EINTR), function
-      # uv__io_poll, file kqueue.c, line 279`). The build artifacts under
-      # build/tools/ui/dist/ are written before the abort, so accept the
+      # uv__io_poll, file kqueue.c, line 279`). The vite plugin writes
+      # the final dist/index.html before the abort, so accept the
       # non-zero exit only when the expected output actually exists.
       npm run build || true
-      [[ -f ../../build/tools/ui/dist/index.html ]] || {
+      [[ -f dist/index.html ]] || {
         echo "ERROR: tools/ui/dist/index.html not produced — npm run build genuinely failed" >&2
         exit 1
       }
