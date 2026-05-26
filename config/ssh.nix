@@ -108,6 +108,10 @@ in
           Compression = false;
           ForwardAgent = true;
 
+          ServerAliveInterval = 30;
+          ServerAliveCountMax = 6;
+          TCPKeepAlive = true;
+
           RemoteForward = [ (localBind 8317 8317) ];
         });
 
