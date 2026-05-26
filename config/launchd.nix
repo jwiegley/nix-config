@@ -199,7 +199,11 @@ in
         script = "exec ${pkgs.omlx}/bin/omlx serve --base-path /Users/johnw/.config/omlx/.omlx";
         serviceConfig = {
           RunAtLoad = true;
-          KeepAlive = true;
+          # Restart on crash but not on clean exit, and throttle restarts so
+          # a persistent startup failure (missing model, port in use) backs
+          # off instead of spin-looping and flooding the log.
+          KeepAlive.SuccessfulExit = false;
+          ThrottleInterval = 30;
           StandardOutPath = "/Users/johnw/.local/share/omlx/logs/launchd.log";
           StandardErrorPath = "/Users/johnw/.local/share/omlx/logs/launchd.log";
         };
