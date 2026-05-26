@@ -50,6 +50,11 @@ in
   home = {
     stateVersion = lib.mkDefault "24.11"; # overridden by wrappers; fallback only
 
+    # Both nixpkgs and home-manager track unstable; the version-string
+    # comparison is meaningless until home-manager's master bumps
+    # release.json from 26.05 to 26.11. Drop this once that lands.
+    enableNixpkgsReleaseCheck = false;
+
     sessionVariables = {
       DISABLE_AUTOUPDATER = "1";
       B2_ACCOUNT_INFO = "${config.xdg.configHome}/backblaze-b2/account_info";
