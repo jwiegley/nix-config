@@ -156,13 +156,13 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     with prev;
     buildNpmPackage (finalAttrs: {
       pname = "context-hub";
-      version = "04c149cd";
+      version = "0e886b3e";
 
       src = fetchFromGitHub {
         owner = "andrewyng";
         repo = "context-hub";
-        rev = "04c149cd82d23d037e157d5920b80b0ca10d84b5";
-        hash = "sha256-BU6SIt5brANngEqVdquQEA6LZcCSH1PNLg5k2b94naM=";
+        rev = "0e886b3ee141b1759142424d303b17351b798456";
+        hash = "sha256-lgF0xL8UpqDIJBfLBHRy+EWRCU3bdGz1aTYtdFhJ1RY=";
       };
 
       npmDepsHash = "sha256-AIjQTnfeXt8ROhHcS2vuYQ2HbXdI/MFa4/wnuQknjKA=";
