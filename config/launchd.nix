@@ -196,7 +196,7 @@ in
         };
 
       omlx = {
-        script = "exec /opt/homebrew/bin/omlx serve --base-path /Users/johnw/.config/omlx/.omlx";
+        script = "exec ${pkgs.omlx}/bin/omlx serve --base-path /Users/johnw/.config/omlx/.omlx";
         serviceConfig = {
           RunAtLoad = true;
           KeepAlive = true;

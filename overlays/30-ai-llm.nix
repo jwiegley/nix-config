@@ -332,4 +332,96 @@ final: prev: {
         ln -s ${pyEnv}/bin/mtplx-tune $out/bin/mtplx-tune
       '';
 
+  # omlx - LLM inference server optimized for Apple Silicon
+  # NOTE: Using 'final' so deps resolve against our extended python3Packages
+  # (mlx wheel override, mlx-embeddings, dflash-mlx). omlx is pure Python;
+  # the Homebrew formula's Rust dependency was only for transitive wheels
+  # (pydantic-core, tiktoken) which nixpkgs supplies prebuilt.
+  omlx =
+    with final;
+    with final.python3Packages;
+    buildPythonApplication rec {
+      pname = "omlx";
+      version = "0.3.11";
+      pyproject = true;
+
+      src = fetchFromGitHub {
+        owner = "jundot";
+        repo = "omlx";
+        tag = "v${version}";
+        hash = "sha256-HulLMgByshCmxn9+/Eg+BNabOa8zq/OkQigmoHllc48=";
+      };
+
+      # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git
+      # commits via PEP 508 direct references, which fail in the Nix sandbox.
+      # Strip the URLs (targeted replacements so an upstream format change
+      # surfaces as a build error rather than a silent dependency mismatch)
+      # so resolution lands on our overlay/nixpkgs versions.
+      postPatch = ''
+        substituteInPlace pyproject.toml \
+          --replace-fail '"mlx-lm @ git+https://github.com/ml-explore/mlx-lm@ed1fca4cef15a824c5f1702c80f70b4cffc8e4dd"' '"mlx-lm"' \
+          --replace-fail '"mlx-embeddings @ git+https://github.com/Blaizzy/mlx-embeddings@32981fa4e8064ed664b52071789dd18271fe4206"' '"mlx-embeddings"' \
+          --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@f96138eef1f5ce7fb5d97f8dd41a664a195b5659"' '"mlx-vlm"' \
+          --replace-fail '"dflash-mlx @ git+https://github.com/bstnxbt/dflash-mlx@1ba671372b289c025b435c1a13aabb4bfb80b183"' '"dflash-mlx"'
+      '';
+
+      build-system = [
+        setuptools
+        wheel
+      ];
+
+      dependencies = [
+        mlx
+        mlx-lm
+        mlx-embeddings
+        mlx-vlm
+        dflash-mlx
+        regex
+        transformers
+        mistral-common
+        tokenizers
+        huggingface-hub
+        numpy
+        tqdm
+        pyyaml
+        itsdangerous
+        jinja2
+        sentencepiece
+        tiktoken
+        protobuf
+        requests
+        socksio
+        tabulate
+        psutil
+        fastapi
+        uvicorn
+        python-multipart
+        jsonschema
+        openai-harmony
+        pillow
+      ];
+
+      doCheck = false;
+      pythonImportsCheck = [ "omlx" ];
+
+      # Smoke test that the wrapped entry point runs. omlx's CLI uses
+      # subcommands (serve/launch/diagnose) and has no --version flag, so
+      # exercise --help, which builds the full argparse tree and exits 0.
+      doInstallCheck = true;
+      installCheckPhase = ''
+        runHook preInstallCheck
+        $out/bin/omlx --help > /dev/null
+        runHook postInstallCheck
+      '';
+
+      meta = {
+        description = "LLM inference server optimized for Apple Silicon";
+        homepage = "https://github.com/jundot/omlx";
+        license = lib.licenses.asl20;
+        platforms = [ "aarch64-darwin" ];
+        mainProgram = "omlx";
+        maintainers = with lib.maintainers; [ jwiegley ];
+      };
+    };
+
 }

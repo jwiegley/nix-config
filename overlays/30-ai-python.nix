@@ -140,6 +140,24 @@ in
 
         llm-mlx = pfinal.callPackage llm-mlx { };
 
+        # omlx requires mlx_vlm.speculative (DDTree drafters), introduced
+        # after the 0.4.4 release in nixpkgs. Pin to the 0.5.0 commit that
+        # omlx itself pins (f96138e). mlx-audio is imported lazily inside
+        # load_audio() and isn't packaged in nixpkgs, so drop that runtime
+        # dep; llguidance (new in 0.5.0) is available in nixpkgs.
+        mlx-vlm = pprev.mlx-vlm.overridePythonAttrs (oldAttrs: {
+          version = "0.5.0";
+          src = prev.fetchFromGitHub {
+            owner = "Blaizzy";
+            repo = "mlx-vlm";
+            rev = "f96138eef1f5ce7fb5d97f8dd41a664a195b5659";
+            hash = "sha256-Rz0t7g6qBcXS6IRwVyau410qpD3H3aEnLLvMenQ58Uc=";
+          };
+          dependencies = (oldAttrs.dependencies or [ ]) ++ [ pfinal.llguidance ];
+          pythonRemoveDeps = (oldAttrs.pythonRemoveDeps or [ ]) ++ [ "mlx-audio" ];
+          doCheck = false;
+        });
+
         mlx-speech = pfinal.buildPythonPackage {
           pname = "mlx-speech";
           version = "0-unstable-2025-03-30";
@@ -200,6 +218,40 @@ in
             description = "MLX-based text embeddings for Apple Silicon";
             homepage = "https://github.com/Blaizzy/mlx-embeddings";
             license = prev.lib.licenses.asl20;
+          };
+        };
+
+        # dflash-mlx - lossless DFlash speculative decoding for MLX.
+        # Required by omlx; not in nixpkgs. Pin the exact commit omlx pins
+        # (1ba6713, itself version 0.1.7) so the speculative-decode Metal
+        # kernels match what omlx was tested against — the v0.1.7 release
+        # tag is a slightly later commit.
+        dflash-mlx = pfinal.buildPythonPackage rec {
+          pname = "dflash-mlx";
+          version = "0.1.7";
+          pyproject = true;
+
+          src = prev.fetchFromGitHub {
+            owner = "bstnxbt";
+            repo = "dflash-mlx";
+            rev = "1ba671372b289c025b435c1a13aabb4bfb80b183";
+            hash = "sha256-goVSVNnlC97SIs4zaczK0Yp4l+wkWpvN4mkDTmoPXB0=";
+          };
+
+          build-system = [ pfinal.setuptools ];
+
+          dependencies = with pfinal; [
+            mlx
+            mlx-lm
+          ];
+
+          pythonImportsCheck = [ "dflash_mlx" ];
+
+          meta = {
+            description = "Lossless DFlash speculative decoding for MLX on Apple Silicon";
+            homepage = "https://github.com/bstnxbt/dflash-mlx";
+            license = prev.lib.licenses.asl20;
+            platforms = [ "aarch64-darwin" ];
           };
         };
 

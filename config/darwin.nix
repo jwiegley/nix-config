@@ -148,7 +148,6 @@ in
       "steipete/tap"
       "antoniorodr/memo"
       "withgraphite/tap"
-      "jundot/omlx"
     ];
     brews = [
       "ykman"
@@ -165,7 +164,6 @@ in
       "steipete/tap/imsg"
       "antoniorodr/memo/memo"
       "withgraphite/tap/graphite"
-      "jundot/omlx/omlx"
     ];
 
     casks = [
@@ -425,19 +423,6 @@ in
 
   system = {
     stateVersion = 4;
-
-    # Patch Homebrew formulas before `brew bundle` runs (extraActivation is
-    # position 4 in the activation sequence; homebrew is position 23).
-    activationScripts.extraActivation.text = ''
-      # omlx formula: pyo3 extension modules need dynamic_lookup on macOS so
-      # Python C API symbols resolve at runtime via the interpreter.
-      # Upstream: https://github.com/jundot/omlx/issues/747
-      FORMULA="/opt/homebrew/Library/Taps/jundot/homebrew-omlx/Formula/omlx.rb"
-      if [ -f "$FORMULA" ] && ! grep -q 'RUSTFLAGS' "$FORMULA"; then
-        echo >&2 "Patching omlx formula for pyo3 RUSTFLAGS..."
-        ${pkgs.gnused}/bin/sed -i 's|ENV.append "LDFLAGS", "-Wl,-headerpad_max_install_names"|&\n\n    # pyo3 extension modules on macOS need dynamic_lookup\n    ENV.append "RUSTFLAGS", "-C link-arg=-undefined -C link-arg=dynamic_lookup"|' "$FORMULA"
-      fi
-    '';
 
     # Hera is a desktop and hosts LLM services that need to stay reachable
     # at any hour. Force the configured value so it can't drift back via

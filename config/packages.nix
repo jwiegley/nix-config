@@ -517,6 +517,7 @@ rec {
     ]
     ++ lib.optionals isDarwin (optPkg "vllm-mlx")
     ++ lib.optionals isDarwin (optPkg "mtplx")
+    ++ lib.optionals isDarwin (optPkg "omlx")
 
     # ── Linux-Only Packages ──────────────────────────────────────────
     ++ lib.optionals isLinux [
