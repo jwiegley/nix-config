@@ -1,4 +1,10 @@
 #!/bin/bash
+set -euo pipefail
+
+if [[ $# -ne 2 ]]; then
+    echo "Usage: git-sha <owner/repo> <rev>" >&2
+    exit 1
+fi
 
 nix-prefetch-git --no-deepClone --quiet \
-    git://github.com/$1.git $2 | jq -r .sha256
+    "https://github.com/${1}.git" "$2" | jq -r .sha256
