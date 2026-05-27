@@ -427,6 +427,7 @@ with epkgs;
   wgrep
   (exclude which-key)
   whitespace-cleanup-mode
+  wikipedia
   window-purpose
   word-count-mode
   writeroom-mode

@@ -444,6 +444,27 @@ let
         ];
       };
 
+      wikipedia = compileEmacsFiles {
+        name = "wikipedia";
+        src = fetchFromGitHub {
+          owner = "benthamite";
+          repo = "wikipedia";
+          rev = "aabe51b97e335711481c2a8db3336f9e5222fa19";
+          sha256 = "sha256-sD/J7opejCIKlhIv/F3W4SNHK64Gt0YF+q4PR09edBo=";
+          # date = 2026-04-20T14:13:55Z;
+        };
+        # transient and gptel are loaded at byte-compile time and pull in
+        # compat + cond-let; the builder runs `emacs -Q` so these transitive
+        # deps must be listed explicitly to be on the load path.
+        buildInputs = with eself; [
+          mediawiki
+          transient
+          gptel
+          compat
+          cond-let
+        ];
+      };
+
       word-count-mode = compileEmacsFiles {
         name = "word-count-mode";
         src = fetchFromGitHub {
