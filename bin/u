@@ -1,7 +1,9 @@
 #!/bin/bash
 
-sudo /bin/launchctl limit maxfiles 524288 524288
-ulimit -n 65536
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    sudo /bin/launchctl limit maxfiles 524288 524288
+    ulimit -n 65536
+fi
 
 if [[ "$1" == "vulcan" ]]; then
     HOSTNAME=vulcan
@@ -37,21 +39,21 @@ else
     exit 1
 fi
 
-MAKEARGS="-C $NIX_CONF -f Makefile"
+MAKEARGS=(-C "$NIX_CONF" -f Makefile)
 
 if [[ -n $BUILDER && $HOSTNAME != "$BUILDER" ]]; then
-    MAKEARGS="$MAKEARGS BUILDER=$BUILDER"
-    echo BUILDER=$BUILDER
+    MAKEARGS+=(BUILDER="$BUILDER")
+    echo "BUILDER=$BUILDER"
 fi
 if [[ -n $CACHE && $HOSTNAME != "$CACHE" ]]; then
-    MAKEARGS="$MAKEARGS CACHE=$CACHE"
-    echo CACHE=$CACHE
+    MAKEARGS+=(CACHE="$CACHE")
+    echo "CACHE=$CACHE"
 fi
 
 cd "$NIX_CONF" || exit 1
 
 echo "HOSTNAME=$HOSTNAME"
 echo "REMOTES=\"$REMOTES\""
-echo "MAKEARGS=\"$MAKEARGS\""
+echo "MAKEARGS=\"${MAKEARGS[*]}\""
 
-exec make $MAKEARGS HOSTNAME=$HOSTNAME REMOTES="$REMOTES" "$@"
+exec make "${MAKEARGS[@]}" HOSTNAME="$HOSTNAME" REMOTES="$REMOTES" "$@"
