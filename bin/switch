@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-set -eou pipefile
+set -eou pipefail
 
 if [[ -d /etc/nixos ]]; then
     cd /etc/nixos
-    sudo nixos-rebuild switch --flake .\#$(hostname)
+    sudo nixos-rebuild switch --flake ".#$(hostname)"
 elif [[ -d ~/.config/home-manager ]]; then
     ~/.config/home-manager
     nix run home-manager/master -- switch
 else
-    u $(hostname) switch
+    u "$(hostname)" switch
 fi
