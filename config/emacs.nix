@@ -216,6 +216,7 @@ with epkgs;
   macrostep
   magit
   (exclude magit-annex)
+  magit-gt
   (exclude magit-imerge)
   (exclude magit-lfs)
   magit-popup

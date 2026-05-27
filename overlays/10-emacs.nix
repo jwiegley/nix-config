@@ -327,6 +327,30 @@ let
         ];
       };
 
+      magit-gt = compileEmacsFiles {
+        name = "magit-gt";
+        src = fetchFromGitHub {
+          owner = "ajbt200128";
+          repo = "magit-gt";
+          rev = "9ae3737a8563ad2b4f4956b39abd3cf3ee4c23b0";
+          sha256 = "sha256-yguceZ/OormX+2MhUHZ/QF3xmRJ07LXOBr0XNpjxvA8=";
+          # date = 2025-04-09T17:08:09Z;
+        };
+        # magit-gt does (require 'magit) at top level; the builder runs
+        # `emacs -Q`, so magit plus the deps it pulls in at byte-compile
+        # time must be listed explicitly to be on the load path.
+        buildInputs = with eself; [
+          magit
+          magit-section
+          transient
+          with-editor
+          dash
+          compat
+          cond-let
+          llama
+        ];
+      };
+
       moccur-edit = compileEmacsFiles {
         name = "moccur-edit";
         src = fetchFromGitHub {
