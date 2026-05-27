@@ -5,19 +5,19 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
     ulimit -n 65536
 fi
 
-if [[ "$1" == "vulcan" ]]; then
+if [[ "$1" =~ [Vv]ulcan ]]; then
     HOSTNAME=vulcan
     REMOTES=clio
     shift 1
 
-elif [[ "$1" == "hera" ]]; then
+elif [[ "$1" =~ [Hh]era ]]; then
     HOSTNAME=hera
-    REMOTES="clio"
+    REMOTES=clio
     shift 1
 
-elif [[ "$1" == "clio" ]]; then
+elif [[ "$1" =~ [Cc]lio ]]; then
     HOSTNAME=clio
-    REMOTES="hera"
+    REMOTES=hera
     # if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
     shift 1
 
@@ -27,11 +27,11 @@ elif [[ $(hostname) =~ [Vv]ulcan ]]; then
 
 elif [[ $(hostname) =~ [Hh]era ]]; then
     HOSTNAME=hera
-    REMOTES="clio"
+    REMOTES=clio
 
 elif [[ $(hostname) =~ [Cc]lio ]]; then
     HOSTNAME=clio
-    REMOTES="hera"
+    REMOTES=hera
     # if [ -z ${BUILDER+x} ]; then BUILDER=vulcan; fi
 
 else
