@@ -95,7 +95,16 @@ in
       proc = "ps axwwww | grep -i";
     };
 
-    envExtra = lib.optionalString isLinux ''
+    # Keep ssh/scp/sftp/rsync out of carapace's hands so zsh's native
+    # completions stay in effect for them. The native _ssh/_rsync completers
+    # list remote paths over SSH (e.g. `scp host:<TAB>`); carapace's own
+    # completers do not. carapace's bridge is sourced late in .zshrc, so
+    # setting this in .zshenv (via envExtra) guarantees it is exported before
+    # that bridge runs and decides which commands to claim.
+    envExtra = ''
+      export CARAPACE_EXCLUDES=ssh,scp,sftp,rsync
+    ''
+    + lib.optionalString isLinux ''
       if [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
         . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
       elif [[ -f ~/.nix-profile/etc/profile.d/nix.sh ]]; then
@@ -166,10 +175,9 @@ in
           }
           add-zsh-hook precmd __reset_broken_terminal
 
-          # Restore native zsh completions for commands that need
-          # SSH-based remote path completion (overridden by carapace)
-          autoload -Uz _rsync && compdef _rsync rsync
-          autoload -Uz _ssh && compdef _ssh ssh scp sftp
+          # Native remote-path completion for ssh/scp/sftp/rsync is preserved
+          # by keeping these commands out of carapace (see CARAPACE_EXCLUDES in
+          # envExtra above); compinit then auto-registers _ssh/_rsync for them.
       fi
     ''
     + lib.optionalString isLinux ''
