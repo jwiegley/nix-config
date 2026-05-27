@@ -6973,11 +6973,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1779910158,
-        "narHash": "sha256-Q4NdBXtyty/0CATxMwt/E9/bFYuY7xoF5eD4z8gRUS0=",
+        "lastModified": 1779914721,
+        "narHash": "sha256-H85NlPOywr3OF0pipC1aJxnZZfQguaeXH/JEzf0hTzQ=",
         "ref": "refs/heads/main",
-        "rev": "0611eb51d9066bf61c52e480299271e1a59fbc17",
-        "revCount": 1407,
+        "rev": "5fe215ce2e092665d21ace09e53a2533a4612d79",
+        "revCount": 1408,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
