@@ -155,6 +155,34 @@ in
       ".claude/skills/sherlock/SKILL.md".source = "${pkgs.sherlock-db}/share/sherlock/SKILL.md";
       ".claude/skills/sherlock/sherlock".source = "${pkgs.sherlock-db}/bin/sherlock";
     };
+
+    # claude-mem (Fix C): its observation generator spawns headless `claude`,
+    # but `claude` on $PATH resolves to ~/src/scripts/claude (the `ai` gateway
+    # wrapper, since sessionPath lists src/scripts before .local/bin). The
+    # wrapper emits a "Preflight" banner that breaks claude-mem's stream-json
+    # SDK, so every observation fails in a retry loop. Pin CLAUDE_CODE_PATH to
+    # the real claude-code binary. settings.json is mutable and owned by
+    # claude-mem, so patch it in place (idempotent) rather than symlinking.
+    activation.claudeMemRealClaude = lib.mkIf (inputs ? llm-agents) (
+      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        cm_settings="${vars.home}/.claude-mem/settings.json"
+        cm_claude="${vars.home}/.local/bin/claude"
+        if [ -f "$cm_settings" ]; then
+          cm_cur="$(${pkgs.jq}/bin/jq -r '.CLAUDE_CODE_PATH // ""' "$cm_settings" 2>/dev/null || true)"
+          if [ "$cm_cur" != "$cm_claude" ]; then
+            cm_tmp="$(mktemp "$cm_settings.XXXXXX" 2>/dev/null || true)"
+            if [ -n "$cm_tmp" ] && ${pkgs.jq}/bin/jq --arg p "$cm_claude" '.CLAUDE_CODE_PATH = $p' "$cm_settings" > "$cm_tmp" 2>/dev/null; then
+              cm_mode="$(stat -f '%Lp' "$cm_settings" 2>/dev/null || stat -c '%a' "$cm_settings" 2>/dev/null || echo 644)"
+              chmod "$cm_mode" "$cm_tmp"
+              $DRY_RUN_CMD mv "$cm_tmp" "$cm_settings"
+              echo "claude-mem: pinned CLAUDE_CODE_PATH -> $cm_claude"
+            elif [ -n "$cm_tmp" ]; then
+              rm -f "$cm_tmp"
+            fi
+          fi
+        fi
+      ''
+    );
   };
 
   programs = {
