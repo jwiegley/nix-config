@@ -87,6 +87,13 @@ EOF
         fi
 
         if [[ -f Cargo.toml || -f ../Cargo.toml ]]; then
+            # uname -m reports "arm64" on Apple Silicon, but Cargo's target
+            # triple uses "aarch64". Translate so the per-triple PATH entries
+            # (used only for --target builds) actually resolve.
+            arch_triple=$(uname -m)-apple-darwin
+            if [[ "$arch_triple" == "arm64-apple-darwin" ]]; then
+                arch_triple="aarch64-apple-darwin"
+            fi
             cat >>.envrc <<EOF
 
 export CARGO_TARGET_DIR=$PRODUCTS/target
@@ -95,8 +102,10 @@ export CARGO_HOME=\$CARGO_TARGET_DIR/.cargo-home
 # export RUSTUP_TOOLCHAIN=1.60.0-x86_64-apple-darwin
 # export RUSTC_WRAPPER=$(which sccache)
 export PATH=\$PATH:\$CARGO_HOME/bin
-export PATH=\$PATH:\$CARGO_TARGET_DIR/x86_64-apple-darwin/debug
-export PATH=\$PATH:\$CARGO_TARGET_DIR/x86_64-apple-darwin/release
+export PATH=\$PATH:\$CARGO_TARGET_DIR/debug
+export PATH=\$PATH:\$CARGO_TARGET_DIR/release
+export PATH=\$PATH:\$CARGO_TARGET_DIR/${arch_triple}/debug
+export PATH=\$PATH:\$CARGO_TARGET_DIR/${arch_triple}/release
 EOF
         fi
     fi
