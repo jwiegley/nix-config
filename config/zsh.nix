@@ -84,7 +84,6 @@ in
       rehash = "hash -r";
     }
     // lib.optionalAttrs isDarwin {
-      switch = "${pkgs.nix-scripts}/bin/u ${hostname} switch";
       proc = "${pkgs.darwin.ps}/bin/ps axwwww | ${pkgs.gnugrep}/bin/grep -i";
       nstat =
         "${pkgs.darwin.network_cmds}/bin/netstat -nr -f inet"
@@ -93,7 +92,6 @@ in
       wipe = "${pkgs.srm}/bin/srm -vfr";
     }
     // lib.optionalAttrs isLinux {
-      switch = "sudo nixos-rebuild switch --flake /etc/nixos#${hostname}";
       proc = "ps axwwww | grep -i";
     };
 
