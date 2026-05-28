@@ -152,7 +152,7 @@ in
         };
 
         positron = controlMastered {
-          header = "Host pos andoria andoria-* delphi-* agentsrv labmgr";
+          header = "Host pos andoria andoria-* delphi-* agentsrv labmgr sw-dev-01";
           User = "jwiegley";
           IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
           IdentitiesOnly = true;
@@ -161,6 +161,11 @@ in
         "pos andoria" = controlMastered {
           User = "jwiegley";
           HostName = "andoria-08";
+        };
+
+        dev = controlMastered {
+          User = "jwiegley";
+          HostName = "sw-dev-01";
         };
 
         git-ai = controlMastered {
