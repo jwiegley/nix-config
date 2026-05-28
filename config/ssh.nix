@@ -161,11 +161,15 @@ in
         "pos andoria" = controlMastered {
           User = "jwiegley";
           HostName = "andoria-08";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
+          IdentitiesOnly = true;
         };
 
         dev = controlMastered {
           User = "jwiegley";
           HostName = "sw-dev-01";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
+          IdentitiesOnly = true;
         };
 
         git-ai = controlMastered {
