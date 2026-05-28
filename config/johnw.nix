@@ -172,7 +172,7 @@ in
           if [ "$cm_cur" != "$cm_claude" ]; then
             cm_tmp="$(mktemp "$cm_settings.XXXXXX" 2>/dev/null || true)"
             if [ -n "$cm_tmp" ] && ${pkgs.jq}/bin/jq --arg p "$cm_claude" '.CLAUDE_CODE_PATH = $p' "$cm_settings" > "$cm_tmp" 2>/dev/null; then
-              cm_mode="$(stat -f '%Lp' "$cm_settings" 2>/dev/null || stat -c '%a' "$cm_settings" 2>/dev/null || echo 644)"
+              cm_mode="$(stat -c '%a' "$cm_settings" 2>/dev/null || stat -f '%Lp' "$cm_settings" 2>/dev/null || echo 644)"
               chmod "$cm_mode" "$cm_tmp"
               $DRY_RUN_CMD mv "$cm_tmp" "$cm_settings"
               echo "claude-mem: pinned CLAUDE_CODE_PATH -> $cm_claude"
