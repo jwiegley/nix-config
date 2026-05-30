@@ -37,14 +37,14 @@ final: prev: {
     with prev;
     buildGoModule rec {
       pname = "hfdownloader";
-      version = "3.0.4";
+      version = "3.1.0";
       vendorHash = "sha256-DUALCwhuwQZ94uOVjw5wyY8z3fYr9WyDwVc89U34ytM=";
 
       src = fetchFromGitHub {
         owner = "bodaay";
         repo = "HuggingFaceModelDownloader";
         rev = "v${version}";
-        hash = "sha256-5fwNajsj13YlWSz11uwS/LHasjgkNQJw4RbEFs4uLA0=";
+        hash = "sha256-nIu6c/i4+P/jdtderEN6xmQaxtVHOutx6xEYQOdUSVE=";
       };
 
       meta = with lib; {
@@ -59,12 +59,12 @@ final: prev: {
   # NOTE: As of b9190+, the webui was relocated from tools/server/webui
   # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "9377";
+    version = "9436";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-OLsMI8F53D2dFTw2+03qu1MNRRQrxyiO7WcN+DHs+ZU=";
+      hash = "sha256-YE/OANWZLdYn5+CGYF/A3P5e9EX9prMF+rbLkvEGISc=";
     };
     postPatch = "";
     npmRoot = "tools/ui";
@@ -96,13 +96,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "217";
+      version = "219";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-8n6JlxJKuzszGoOGzq0jmKNlljc6mgJdgLsP9fWHb2M=";
+        hash = "sha256-iqf4jXI6bkVPCcGwX0+0DMBsOEqHFwhZFz/qWNZ8YWU=";
       };
 
       ui =
@@ -111,9 +111,16 @@ final: prev: {
           pname = "llama-swap-ui";
           inherit version src;
 
+          # llama-swap 219 relocated the svelte build output from
+          # ../proxy/ui_dist to ../internal/server/ui_dist (see
+          # ui-svelte/vite.config.ts). Redirect it to this derivation's $out so
+          # vite writes into a writable path instead of the read-only source
+          # tree. --replace-fail aborts if the upstream literal ever changes
+          # again (the old silent --replace is what left this build broken on
+          # the 217->219 bump).
           postPatch = ''
             substituteInPlace vite.config.ts \
-            --replace '../proxy/ui_dist' '${placeholder "out"}/ui_dist'
+            --replace-fail '"../internal/server/ui_dist"' '"${placeholder "out"}/ui_dist"'
           '';
 
           sourceRoot = "source/ui-svelte";
@@ -134,8 +141,19 @@ final: prev: {
     with prev;
     prev.llama-swap.overrideAttrs (attrs: rec {
       inherit version src;
-      vendorHash = "sha256-QysQ7YdwJcLTziwL25j73n3tQVvzVQIFxN4GkTU8JZg=";
+      vendorHash = "sha256-b+RreafBMCWT/jbWTlXaiDRzA4DRe76WaCEbrfRxV/4=";
       preBuild = ''
+        # llama-swap 219 serves the web UI from internal/server/ui_dist
+        # (//go:embed in internal/server/ui.go, where the main binary reads
+        # it). The repo ships only a placeholder.txt there to keep the embed
+        # valid before a build, so replace it with the real vite output.
+        rm -rf internal/server/ui_dist
+        cp -r ${ui}/ui_dist internal/server/
+
+        # cmd/legacy still imports the proxy package, whose ui_embed.go also
+        # has //go:embed ui_dist. That directory is not shipped in the source
+        # tarball, so create it too or the (default subPackages=null) build of
+        # cmd/legacy fails with "pattern ui_dist: no matching files found".
         cp -r ${ui}/ui_dist proxy/
       '';
       ldflags = [
