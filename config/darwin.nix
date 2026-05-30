@@ -133,14 +133,34 @@ in
     onActivation = {
       autoUpdate = false;
       upgrade = false;
-      # NOTE: "zap" is broken by nix-darwin upstream: it passes `--zap` to
-      # `brew bundle [install]`, but Homebrew 4.6+ rejects that flag on the
-      # implicit `install` subcommand (it is now valid only on `cleanup`).
-      # See nix-darwin PR #1774 (currently open/unmerged). Until that lands,
-      # use "uninstall" so activation succeeds; casks won't be zapped, only
-      # uninstalled. Revert to "zap" once PR #1774 is merged and we bump the
-      # `darwin` input past it.
+      # NOTE: Homebrew's bundle-subcommand refactor (Homebrew/brew@f38cd4b)
+      # broke nix-darwin's cleanup handling in two ways:
+      #   1. "zap" passes `--zap` to the implicit `brew bundle install`
+      #      subcommand, which now rejects it (valid only on `cleanup`).
+      #   2. "uninstall" passes a bare `--cleanup`; Homebrew 5.1.x now refuses
+      #      it non-interactively, requiring one of `--force-cleanup`,
+      #      `--force`, or $HOMEBREW_ASK (see `brew bundle install` manpage).
+      #      Symptom during `u switch`: `Error: Invalid usage: \`brew bundle
+      #      install --cleanup\` requires \`--force\`, \`--force-cleanup\` or
+      #      \`$HOMEBREW_ASK\`.`
+      #
+      # The pinned `darwin` input is already at lnl7/nix-darwin master HEAD,
+      # and master still emits a bare `--cleanup` for "uninstall", so there is
+      # no newer rev to bump to. nix-darwin PR #1774 only fixes the "zap" path
+      # (via a separate `brew bundle cleanup --force --zap` call) and leaves
+      # "uninstall" emitting a bare `--cleanup`, so it would not fix this even
+      # if merged.
+      #
+      # Fix: keep "uninstall" (so brews/casks dropped from the lists below are
+      # still uninstalled) and append `--force-cleanup` via `extraFlags`. The
+      # module appends extraFlags right after `--cleanup`, yielding the
+      # required `... --cleanup --force-cleanup`. We avoid $HOMEBREW_ASK
+      # because it makes activation interactive (bad for automated switches).
+      # Revisit "zap" only once PR #1774 lands AND the "uninstall" path is also
+      # fixed upstream; if switching to "zap" later, `--force-cleanup` here
+      # becomes a no-op and should be removed.
       cleanup = "uninstall"; # Remove uninstalled pkgs and dependencies
+      extraFlags = [ "--force-cleanup" ]; # Homebrew 5.1.x: required by --cleanup
     };
 
     taps = [
