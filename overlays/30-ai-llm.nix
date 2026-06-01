@@ -59,12 +59,12 @@ final: prev: {
   # NOTE: As of b9190+, the webui was relocated from tools/server/webui
   # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "9451";
+    version = "9459";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-VU6r3yNQmhhlTyj5/qCr31fLLSQNsbcKvdaKZkkjl1o=";
+      hash = "sha256-r68f+qlmMvbM7k6/szp8PheeslW6xRND7QseuYOPiOw=";
     };
     postPatch = "";
     npmRoot = "tools/ui";
@@ -360,14 +360,14 @@ final: prev: {
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "omlx";
-      version = "0.3.12";
+      version = "0.4.0rc1";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "jundot";
         repo = "omlx";
         tag = "v${version}";
-        hash = "sha256-ABPorJLiTXMa9+nuguvkFxS/DDzcZhksmypG1PzZkuQ=";
+        hash = "sha256-ZeH89qS9J+BLkEPEtdrEVnFg3f5bY0vH/HUyEDk4gGQ=";
       };
 
       # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git
@@ -379,8 +379,8 @@ final: prev: {
         substituteInPlace pyproject.toml \
           --replace-fail '"mlx-lm @ git+https://github.com/ml-explore/mlx-lm@ed1fca4cef15a824c5f1702c80f70b4cffc8e4dd"' '"mlx-lm"' \
           --replace-fail '"mlx-embeddings @ git+https://github.com/Blaizzy/mlx-embeddings@32981fa4e8064ed664b52071789dd18271fe4206"' '"mlx-embeddings"' \
-          --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@f96138eef1f5ce7fb5d97f8dd41a664a195b5659"' '"mlx-vlm"' \
-          --replace-fail '"dflash-mlx @ git+https://github.com/bstnxbt/dflash-mlx@1ba671372b289c025b435c1a13aabb4bfb80b183"' '"dflash-mlx"'
+          --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@6f60ee4458d85b636e2e6c09c33d32fc360d5e62"' '"mlx-vlm"' \
+          --replace-fail '"dflash-mlx @ git+https://github.com/bstnxbt/dflash-mlx@39b2520e805f1d1be3852c62944b389cff73fa35"' '"dflash-mlx"'
       '';
 
       build-system = [
