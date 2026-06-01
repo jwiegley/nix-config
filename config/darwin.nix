@@ -165,8 +165,6 @@ in
 
     taps = [
       "graelo/tap"
-      "steipete/tap"
-      "antoniorodr/memo"
       "withgraphite/tap"
     ];
     brews = [
@@ -180,9 +178,6 @@ in
       "openssl"
       "z3"
       "claude-code-templates"
-      "steipete/tap/remindctl"
-      "steipete/tap/imsg"
-      "antoniorodr/memo/memo"
       "withgraphite/tap/graphite"
     ];
 
