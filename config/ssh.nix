@@ -42,13 +42,6 @@ in
             ControlPersist = "1800";
           };
 
-        _matchHost = host: hostAddr: {
-          hostname = hostAddr;
-          match = ''
-            host ${host} exec "${pkgs.unixtools.ping}/bin/ping -c1 -W50 -n -q ${hostAddr} > /dev/null 2>&1"
-          '';
-        };
-
         onHost =
           proxyJump: hostAddr:
           {
@@ -109,28 +102,13 @@ in
 
         neso = withIdentity (onHost "clio" "192.168.100.130");
 
-        # Vulcan
-
-        vulcan_wifi = lib.hm.dag.entryBefore [ "vulcan_ethernet" ] (
-          controlMastered (withIdentity {
-            HostName = "192.168.3.16";
-            Compression = false;
-
-            ForwardAgent = true;
-
-            ServerAliveInterval = 30;
-            ServerAliveCountMax = 6;
-            TCPKeepAlive = true;
-
-            RemoteForward = [ (localBind 8317 8317) ];
-
-            Match = ''
-              host vulcan exec "${pkgs.bash}/bin/bash -c '[[ $(${pkgs.my-scripts}/bin/ipaddr bridge0) == 192.168.1.5 ]]'"
-            '';
-          })
-        );
-
-        vulcan_ethernet = controlMastered (withIdentity {
+        # Vulcan — `vulcan` is the always-present base alias (the wired
+        # address) so `ssh vulcan` resolves on every host, remote consumers
+        # included. The WiFi-segment override is merged in conditionally after
+        # the settings attrset (below), because its Match probe runs
+        # pkgs.my-scripts, which exists only where the flake provides a
+        # `scripts` input (hera/clio/vulcan).
+        vulcan = controlMastered (withIdentity {
           HostName = "192.168.1.2";
           Compression = false;
           ForwardAgent = true;
@@ -246,6 +224,20 @@ in
 
         "hf.co" = withIdentity {
           User = "git";
+        };
+      }
+      # WiFi-segment override for `ssh vulcan` (commit 6653579): when the
+      # client sits on Vulcan's own WiFi segment, reach it via its WiFi NIC so
+      # the path stays symmetric. The Match probe runs pkgs.my-scripts' `ipaddr`,
+      # which exists only where the flake provides a `scripts` input, so guard
+      # the whole block — remote consumers (andoria, ovh-vps) lack that input
+      # and would otherwise abort evaluation. Ordered before the base `vulcan`
+      # via dag.entryBefore; only HostName is overridden, so ControlMaster, the
+      # reverse tunnel, keepalives and identity are inherited from `vulcan`.
+      // lib.optionalAttrs (pkgs ? my-scripts) {
+        vulcan_wifi = lib.hm.dag.entryBefore [ "vulcan" ] {
+          header = ''Match host vulcan exec "${pkgs.bash}/bin/bash -c '[[ $(${pkgs.my-scripts}/bin/ipaddr bridge0) == 192.168.1.5 ]]'"'';
+          HostName = "192.168.3.16";
         };
       };
   };

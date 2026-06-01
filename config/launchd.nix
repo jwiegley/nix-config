@@ -268,6 +268,12 @@ in
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = true;
       };
+    }
+    # `flatten-recordings` shells out to pkgs.my-scripts/bin/flatten-recordings,
+    # which exists only where the flake provides a `scripts` input. Guard the
+    # whole agent so a Darwin consumer without that input still evaluates
+    # (mirrors the config/ssh.nix guard).
+    // lib.optionalAttrs (pkgs ? my-scripts) {
 
       flatten-recordings = {
         script = ''
