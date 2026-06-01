@@ -826,11 +826,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1780315425,
-        "narHash": "sha256-SJukvAF3S+eqZuQKLUGEd/EYMQ0DwC47EOus/6B1lIs=",
+        "lastModified": 1780337506,
+        "narHash": "sha256-uQkwHTXkmA+auNJkG7U5y7Z9NLTmSTMz2n9Ii1zBnQw=",
         "ref": "refs/heads/master",
-        "rev": "94eb6389d403eb1b71a81ecdc3b8416cf5f850d6",
-        "revCount": 182428,
+        "rev": "bfa4d6dd400f18832aa19df3cdd41bfd763c85f7",
+        "revCount": 182431,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -5261,11 +5261,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1780293406,
-        "narHash": "sha256-OdVUSGJCuIi33eWsIT0Cmvw3HvfsSslwuKTBUrY1zcc=",
+        "lastModified": 1780336909,
+        "narHash": "sha256-oImIjseTTAevypeKKVZCqDuQCBV9wIgA7H+JiYRRnAA=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "0e4618ed6c946427e3d036925f98211220834892",
+        "rev": "b6ed2dab949b5ff15d5ce802ffe8bf12acc0229f",
         "type": "github"
       },
       "original": {
@@ -6432,11 +6432,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1780030872,
-        "narHash": "sha256-u6WU/yd/o8iYQrHX3RAwO1hYa3LkoSL+WNQD0rJfJZQ=",
+        "lastModified": 1780246643,
+        "narHash": "sha256-4T1KWX7xWGQMs9hNZ24IOY3aYOi8D6+5WtkNRBSttB8=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "e9a7635a57597d9754eccebdfc7045e6c8600e6b",
+        "rev": "3109eaae18e09d0b8aef23dc2579e7d94b8d4b4e",
         "type": "github"
       },
       "original": {
