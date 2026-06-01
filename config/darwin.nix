@@ -133,34 +133,35 @@ in
     onActivation = {
       autoUpdate = false;
       upgrade = false;
-      # NOTE: Homebrew's bundle-subcommand refactor (Homebrew/brew@f38cd4b)
-      # broke nix-darwin's cleanup handling in two ways:
-      #   1. "zap" passes `--zap` to the implicit `brew bundle install`
-      #      subcommand, which now rejects it (valid only on `cleanup`).
-      #   2. "uninstall" passes a bare `--cleanup`; Homebrew 5.1.x now refuses
-      #      it non-interactively, requiring one of `--force-cleanup`,
-      #      `--force`, or $HOMEBREW_ASK (see `brew bundle install` manpage).
-      #      Symptom during `u switch`: `Error: Invalid usage: \`brew bundle
-      #      install --cleanup\` requires \`--force\`, \`--force-cleanup\` or
-      #      \`$HOMEBREW_ASK\`.`
+      # NOTE: nix-darwin's `homebrew` module turns `onActivation.cleanup` into
+      # flags on the implicit `brew bundle install` run during activation:
+      #   cleanup = "uninstall" -> `brew bundle ... --cleanup`
+      #   cleanup = "zap"       -> `brew bundle ... --cleanup --zap`
+      # with anything in `extraFlags` appended right after `--cleanup`.
       #
-      # The pinned `darwin` input is already at lnl7/nix-darwin master HEAD,
-      # and master still emits a bare `--cleanup` for "uninstall", so there is
-      # no newer rev to bump to. nix-darwin PR #1774 only fixes the "zap" path
-      # (via a separate `brew bundle cleanup --force --zap` call) and leaves
-      # "uninstall" emitting a bare `--cleanup`, so it would not fix this even
-      # if merged.
+      # What `--cleanup` *requires* differs by Homebrew version, which is why a
+      # config that worked on one machine failed on another with a different
+      # brew:
+      #   * Some intermediate Homebrew 5.1.x refused a bare `--cleanup`
+      #     non-interactively: `Invalid usage: brew bundle install --cleanup
+      #     requires --force, --force-cleanup or $HOMEBREW_ASK`.
+      #   * Homebrew 5.1.14 dropped `--force-cleanup` entirely (it is no longer
+      #     a valid `brew bundle install` option) and made `--cleanup` mean
+      #     "same as cleanup --force" -- i.e. already forced/non-interactive.
+      #     Passing `--force-cleanup` there fails during `u <host>
+      #     upgrade-tasks` with `Error: invalid option: --force-cleanup`.
+      # So `--force-cleanup` is NOT portable across brew versions. `--force`
+      # is: older brew lists it as an accepted alternative, and 5.1.14 still
+      # accepts it (harmless there, since `--cleanup` is already forced). Hence
+      # `extraFlags = [ "--force" ]` works on every brew we run.
       #
-      # Fix: keep "uninstall" (so brews/casks dropped from the lists below are
-      # still uninstalled) and append `--force-cleanup` via `extraFlags`. The
-      # module appends extraFlags right after `--cleanup`, yielding the
-      # required `... --cleanup --force-cleanup`. We avoid $HOMEBREW_ASK
-      # because it makes activation interactive (bad for automated switches).
-      # Revisit "zap" only once PR #1774 lands AND the "uninstall" path is also
-      # fixed upstream; if switching to "zap" later, `--force-cleanup` here
-      # becomes a no-op and should be removed.
+      # The locked nix-darwin still emits a bare `--cleanup` for "uninstall"
+      # (upstream fixes so far only address the "zap" path), so no `darwin`
+      # input bump removes the need for this. We keep "uninstall" so brews/casks
+      # dropped from the lists below are still removed, and avoid $HOMEBREW_ASK
+      # (it makes activation interactive, which is bad for automated switches).
       cleanup = "uninstall"; # Remove uninstalled pkgs and dependencies
-      extraFlags = [ "--force-cleanup" ]; # Homebrew 5.1.x: required by --cleanup
+      extraFlags = [ "--force" ]; # portable force flag for `brew bundle --cleanup`
     };
 
     taps = [
