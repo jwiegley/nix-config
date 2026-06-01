@@ -1,4 +1,5 @@
 {
+  pkgs,
   lib,
   config,
   hostname,
@@ -40,6 +41,13 @@ in
             ControlPath = "${config.home.homeDirectory}/.ssh/sockets/%C";
             ControlPersist = "1800";
           };
+
+        _matchHost = host: hostAddr: {
+          hostname = hostAddr;
+          match = ''
+            host ${host} exec "${pkgs.unixtools.ping}/bin/ping -c1 -W50 -n -q ${hostAddr} > /dev/null 2>&1"
+          '';
+        };
 
         onHost =
           proxyJump: hostAddr:
@@ -103,7 +111,26 @@ in
 
         # Vulcan
 
-        vulcan = controlMastered (withIdentity {
+        vulcan_wifi = lib.hm.dag.entryBefore [ "vulcan_ethernet" ] (
+          controlMastered (withIdentity {
+            HostName = "192.168.3.16";
+            Compression = false;
+
+            ForwardAgent = true;
+
+            ServerAliveInterval = 30;
+            ServerAliveCountMax = 6;
+            TCPKeepAlive = true;
+
+            RemoteForward = [ (localBind 8317 8317) ];
+
+            Match = ''
+              host vulcan exec "${pkgs.bash}/bin/bash -c '[[ $(${pkgs.my-scripts}/bin/ipaddr bridge0) == 192.168.1.5 ]]'"
+            '';
+          })
+        );
+
+        vulcan_ethernet = controlMastered (withIdentity {
           HostName = "192.168.1.2";
           Compression = false;
           ForwardAgent = true;
