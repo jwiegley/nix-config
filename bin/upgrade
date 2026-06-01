@@ -1,10 +1,28 @@
 #!/usr/bin/env bash
 
-case $1 in
-hera)
+if [[ "$(uname -s)" == "Darwin" ]]; then
     sudo /bin/launchctl limit maxfiles 524288 524288
     ulimit -n 65536
+fi
+
+HOST=${1:-$(hostname)}
+
+if [[ $HOST =~ [Vv]ulcan ]]; then
+    HOST=vulcan
+elif [[ $HOST =~ [Hh]era ]]; then
+    HOST=hera
+elif [[ $HOST =~ [Cc]lio ]]; then
+    HOST=clio
+else
+    echo "upgrade script does not recognize hostname '$HOST'"
+    exit 1
+fi
+
+case $HOST in
+hera)
+    ulimit -n 65536
     cd ~/src/nix || exit
+    update-and-pull
     u hera update
     python bin/update-overlay --all
     ./build system
@@ -13,7 +31,6 @@ hera)
     ;;
 
 clio)
-    sudo /bin/launchctl limit maxfiles 524288 524288
     ulimit -n 65536
     cd ~/src/nix || exit
     ./build system
