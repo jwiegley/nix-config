@@ -21,6 +21,20 @@ final: prev: {
     }
   );
 
+  # highlight 4.20 (pulled in by the latest nixpkgs bump) already includes
+  # the shellscript crash fix (gitlab commit 2c0e9529) upstream, but nixpkgs
+  # still lists shellscript-crash-fix.patch in `patches`. Applying it now
+  # fails with "Reversed (or previously applied) patch detected", breaking
+  # the build. Drop the redundant patch; remove this override once nixpkgs
+  # stops carrying it.
+  highlight = prev.highlight.overrideAttrs (
+    _finalAttrs: oldAttrs: {
+      patches = builtins.filter (p: !prev.lib.hasInfix "shellscript-crash-fix" (p.name or "")) (
+        oldAttrs.patches or [ ]
+      );
+    }
+  );
+
   hammer = prev.myLib.mkSimpleGitHubBinary {
     pname = "hammer";
     version = "b5a7543b";
