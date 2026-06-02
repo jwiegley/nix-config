@@ -47,11 +47,6 @@ in
       PAGER = "less";
       TINC_USE_NIX = "yes";
       WORDCHARS = "";
-
-      ZSH_THEME_GIT_PROMPT_CACHE = "yes";
-      ZSH_THEME_GIT_PROMPT_CHANGED = "%{$fg[yellow]%}%{✚%G%}";
-      ZSH_THEME_GIT_PROMPT_STASHED = "%{$fg_bold[yellow]%}%{⚑%G%}";
-      ZSH_THEME_GIT_PROMPT_UPSTREAM_FRONT = " {%{$fg[yellow]%}";
     }
     // lib.optionalAttrs isDarwin {
       ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX = "YES";
@@ -59,7 +54,7 @@ in
 
     localVariables = {
       RPROMPT = if isDarwin then "%F{cyan}[\\$PERSONA]%f %F{green}%~%f" else "%F{green}%~%f";
-      PROMPT = "%B%m %b\\$(git_super_status)%(!.#.$) ";
+      PROMPT = "%B%m %b%(!.#.$) ";
       PROMPT_DIRTRIM = "2";
     };
 
