@@ -203,6 +203,7 @@ in
       "discord"
       "docker-desktop"
       "drivedx"
+      # "dropzone"
       "element"
       "fantastical"
       "github"
