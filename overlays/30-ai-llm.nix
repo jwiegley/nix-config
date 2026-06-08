@@ -360,14 +360,14 @@ final: prev: {
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "omlx";
-      version = "0.4.0";
+      version = "0.4.2rc1";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "jundot";
         repo = "omlx";
         tag = "v${version}";
-        hash = "sha256-DJz3D9GnDdXyjvx+1m8ogjily79Fg5jFvpzjSITazuQ=";
+        hash = "sha256-Jsxn4Yvo3jhDA7k1kBNWEOSUhgEji9IH8H/JMfhsccE=";
       };
 
       # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git
@@ -377,16 +377,22 @@ final: prev: {
       # so resolution lands on our overlay/nixpkgs versions.
       postPatch = ''
         substituteInPlace pyproject.toml \
-          --replace-fail '"mlx-lm @ git+https://github.com/ml-explore/mlx-lm@ed1fca4cef15a824c5f1702c80f70b4cffc8e4dd"' '"mlx-lm"' \
+          --replace-fail '"mlx-lm @ git+https://github.com/ml-explore/mlx-lm@bdb77dae5389d193dcc333bed891d33f6b668285"' '"mlx-lm"' \
           --replace-fail '"mlx-embeddings @ git+https://github.com/Blaizzy/mlx-embeddings@32981fa4e8064ed664b52071789dd18271fe4206"' '"mlx-embeddings"' \
-          --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@6f60ee4458d85b636e2e6c09c33d32fc360d5e62"' '"mlx-vlm"' \
-          --replace-fail '"dflash-mlx @ git+https://github.com/bstnxbt/dflash-mlx@39b2520e805f1d1be3852c62944b389cff73fa35"' '"dflash-mlx"'
+          --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@526c210b8ef841a2906beb2805e9c41b8b77f4e7"' '"mlx-vlm"' \
+          --replace-fail '"dflash-mlx @ git+https://github.com/bstnxbt/dflash-mlx@b7f192b62bc5a59cad41fda888c1118c60fc58b1"' '"dflash-mlx"'
       '';
 
       build-system = [
         setuptools
         wheel
       ];
+
+      # v0.4.2rc1's pyproject pins numpy<2.4, but the entire mlx stack in this
+      # overlay (mlx, mlx-lm, mlx-vlm, transformers) is built against nixpkgs'
+      # numpy 2.4.x. omlx itself only uses numpy array ops that are stable
+      # across the 2.x line, so relax the upper bound rather than fork numpy.
+      pythonRelaxDeps = [ "numpy" ];
 
       dependencies = [
         mlx
@@ -418,6 +424,18 @@ final: prev: {
         jsonschema
         openai-harmony
         pillow
+        # v0.4.2rc1 added markitdown[pdf,docx,pptx]==0.1.6; server.py imports
+        # omlx.api.markitdown at module load. nixpkgs' markitdown 0.1.6 already
+        # propagates the pdf (pdfplumber/pdfminer-six), docx (mammoth), and
+        # pptx (python-pptx) backends omlx actually uses for file conversion.
+        #
+        # Drop the speechrecognition input: it is markitdown's audio backend
+        # (omlx never transcribes audio via markitdown) and currently drags in
+        # faster-whisper -> av, where nixpkgs builds av against a different
+        # python3 patch release than the rest of the set, which throws a
+        # "Python version mismatch" at eval. Nulling it keeps every document
+        # backend while sidestepping the broken audio subtree.
+        (markitdown.override { speechrecognition = null; })
       ];
 
       doCheck = false;
