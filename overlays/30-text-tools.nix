@@ -18,15 +18,15 @@ in
     with python3Packages;
     buildPythonPackage rec {
       pname = "filetags";
-      version = "8585c6f9";
+      version = "89b9d704";
       name = "${pname}-${version}";
       pyproject = false;
 
       src = fetchFromGitHub {
         owner = "novoid";
         repo = "filetags";
-        rev = "8585c6f964babbfe166841d6786bb924952669d1";
-        sha256 = "sha256-SmDfcjCJ9EFabveKGpX64sBGVB4CVntR//e9jHdyVxY=";
+        rev = "89b9d704cb8d663936b99e17f296f9e4d8a30c5b";
+        sha256 = "sha256-z1kiwms85p8JjI4H4HuWxjUk0NbTYD+jo8JNCXKXN9k=";
         # date = "2025-09-15T13:27:03+02:00";
       };
 
