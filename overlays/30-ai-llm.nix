@@ -37,14 +37,14 @@ final: prev: {
     with prev;
     buildGoModule rec {
       pname = "hfdownloader";
-      version = "3.1.0";
+      version = "3.1.1";
       vendorHash = "sha256-DUALCwhuwQZ94uOVjw5wyY8z3fYr9WyDwVc89U34ytM=";
 
       src = fetchFromGitHub {
         owner = "bodaay";
         repo = "HuggingFaceModelDownloader";
         rev = "v${version}";
-        hash = "sha256-nIu6c/i4+P/jdtderEN6xmQaxtVHOutx6xEYQOdUSVE=";
+        hash = "sha256-rNsnpYmbu8q5d4oJZPqQv4jKs5beg4L8MKFAVJr48mY=";
       };
 
       meta = with lib; {
