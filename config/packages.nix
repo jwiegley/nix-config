@@ -475,6 +475,8 @@ rec {
     ++ optPkg "playwright-mcp"
     ++ optPkg "github-mcp-server"
     ++ optPkg "stock-trader-mcp"
+    # drafts-mcp-server is macOS-only (drives Drafts.app via AppleScript)
+    ++ lib.optionals isDarwin (optPkg "drafts-mcp-server")
     ++ (
       if pkgs ? mcp-server-sequential-thinking then
         [ (lib.hiPrio pkgs.mcp-server-sequential-thinking) ]

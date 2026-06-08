@@ -190,6 +190,38 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
       };
     });
 
+  # drafts-mcp-server - MCP server that drives the Drafts app on macOS via
+  # AppleScript (osascript). macOS-only by design (the upstream package.json
+  # declares `"os": ["darwin"]`): it cannot run on Linux, so meta.platforms is
+  # darwin and config/packages.nix installs it only under `isDarwin`. The
+  # TypeScript source is compiled to dist/ by `tsc` (npm run build).
+  drafts-mcp-server =
+    with prev;
+    buildNpmPackage (finalAttrs: {
+      pname = "drafts-mcp-server";
+      version = "1.0.12";
+
+      src = fetchFromGitHub {
+        owner = "agiletortoise";
+        repo = "drafts-mcp-server";
+        tag = "v${finalAttrs.version}";
+        hash = "sha256-SZp//UKyFfwJyu7Cn5pG3Rp7P9l+4ElDZO7vYp78WzY=";
+      };
+
+      npmDepsHash = "sha256-nypoTffI8WIF9Et2GWLe/3odNJka9MSYuaP7xtLIoyg=";
+
+      makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
+
+      meta = with lib; {
+        description = "MCP server that lets AI assistants drive the Drafts app on macOS via AppleScript";
+        homepage = "https://github.com/agiletortoise/drafts-mcp-server";
+        license = licenses.mit;
+        mainProgram = "drafts-mcp-server";
+        maintainers = [ maintainers.jwiegley ];
+        platforms = platforms.darwin;
+      };
+    });
+
 }
 // prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? stock-trader) {
 
