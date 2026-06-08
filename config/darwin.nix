@@ -529,7 +529,7 @@ in
 
       dock = {
         autohide = true;
-        orientation = "right";
+        orientation = if hostname == "clio" then "left" else "right";
         launchanim = false;
         show-process-indicators = true;
         show-recents = false;
