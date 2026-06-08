@@ -826,11 +826,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1780396988,
-        "narHash": "sha256-SWNcFFTBtboxz8TUEbcZayQoGEZZBIlZQgVBF+z27AA=",
+        "lastModified": 1780806040,
+        "narHash": "sha256-1FZj0+mZy2wEVXV7nTOxjVau140jcjEaafMMpEkh00U=",
         "ref": "refs/heads/master",
-        "rev": "2db5a145acbbe84042128806d8b2e333495cf70e",
-        "revCount": 182432,
+        "rev": "fa528b4e5c13f4a8738defff6fd6db3988c500d0",
+        "revCount": 182500,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -1362,11 +1362,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1780169120,
-        "narHash": "sha256-9J+vDbE+3H/ck+0c3jZ2lLA8WfI1pouuWaBeAOWyKp8=",
+        "lastModified": 1780701865,
+        "narHash": "sha256-jZJgyN4BdH05TJK+N+i7JLrfrr+1+S1QfeJbzOFeyfc=",
         "ref": "refs/heads/main",
-        "rev": "4c3be1c2baef13749a89efec32c8f28e78bdebce",
-        "revCount": 4210,
+        "rev": "5647ea559450b5a9d7841f27fc4406ddc090facf",
+        "revCount": 4348,
         "type": "git",
         "url": "file:///Users/johnw/work/git-ai/git-ai/main"
       },
@@ -4847,11 +4847,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1780885330,
-        "narHash": "sha256-aMA5oAq2Iv467U9s8YOb50DYQT9w0WJbyWqwlzHuLMs=",
+        "lastModified": 1780929421,
+        "narHash": "sha256-vpQnB8Hiaeke7pvkl18Uv1zJjHd9EHxLaKmvhHxOiyo=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "4fe95527cbe952713318ada8a4d122e1a6ab120f",
+        "rev": "5c34a3c7590cfadd0784ee879998509daf3e665b",
         "type": "github"
       },
       "original": {
@@ -5281,11 +5281,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1780199444,
-        "narHash": "sha256-W2jQfpjQXqdVTB6Pt49Gie6g8ydyGKlxZDMJnZEeFS8=",
+        "lastModified": 1780915237,
+        "narHash": "sha256-9qMC1lJ1jkEPvbWquWFFENVTfmOS20w1qvvH7vBRhL8=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "a8a354fbb77dc527daadfc25bba6cd324e383fcc",
+        "rev": "a5a4db8f4fa5406390c99f628b3ff36819ea3677",
         "type": "github"
       },
       "original": {
