@@ -521,8 +521,8 @@ let
         src = fetchFromGitHub {
           owner = "karthink";
           repo = "gptel-quick";
-          rev = "018ff2be8f860a1e8fe3966eec418ad635620c38";
-          sha256 = "sha256-7a5+YQifwtVYHP6qQXS1yxA42bVGXmErirra0TrSSQ0=";
+          rev = "36fe296e016449433fa1213f4b89cb8dc7d4db5e";
+          sha256 = "sha256-W2cEtjhoXxAhMxycLAg0qe2Ehpgn1L/m1VcpZu/Trsw=";
           # date = 2025-06-01T11:07:58-07:00;
         };
         buildInputs = with eself; [ gptel ];
