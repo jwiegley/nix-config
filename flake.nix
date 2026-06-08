@@ -71,6 +71,10 @@
       url = "git+file:///Users/johnw/src/pal-mcp-server";
       flake = false;
     };
+    stock-trader = {
+      url = "git+file:///Users/johnw/src/stock-trader";
+      flake = false;
+    };
     vulcan-crt = {
       url = "file:///Users/johnw/.config/curl/vulcan-root-ca.crt";
       flake = false;

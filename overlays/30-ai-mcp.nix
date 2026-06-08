@@ -191,3 +191,38 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     });
 
 }
+// prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? stock-trader) {
+
+  # stock-trader-mcp - REST-wrapper MCP server for the live stock-trader
+  # service (8 core + 10 Alpha Vantage tools), the same tools OpenClaw uses.
+  # A single script depending only on mcp + requests; the source lives in the
+  # stock-trader repo (flake = false input). Bakes in the merged Vulcan CA
+  # bundle (system roots + Vulcan's private root CA) so requests can verify
+  # https://trader.vulcan.lan; both the CA bundle and base URL stay overridable
+  # via the environment.
+  stock-trader-mcp =
+    let
+      pyEnv = final.python3.withPackages (ps: [
+        ps.mcp
+        ps.requests
+      ]);
+      script = final.writeText "stock-trader-mcp.py" (
+        builtins.readFile "${prev.inputs.stock-trader}/scripts/stock-trader-mcp.py"
+      );
+      caBundle =
+        if prev ? ca-bundle-with-vulcan then
+          "${prev.ca-bundle-with-vulcan}/etc/ssl/certs/ca-bundle.crt"
+        else
+          "${prev.cacert}/etc/ssl/certs/ca-bundle.crt";
+    in
+    final.writeShellApplication {
+      name = "stock-trader-mcp";
+      runtimeInputs = [ pyEnv ];
+      text = ''
+        export REQUESTS_CA_BUNDLE="''${REQUESTS_CA_BUNDLE:-${caBundle}}"
+        export STOCK_TRADER_BASE_URL="''${STOCK_TRADER_BASE_URL:-https://trader.vulcan.lan}"
+        exec python3 "${script}" "$@"
+      '';
+    };
+
+}

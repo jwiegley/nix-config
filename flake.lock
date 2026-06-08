@@ -6880,6 +6880,7 @@
         "renamer": "renamer",
         "scripts": "scripts",
         "sizes": "sizes",
+        "stock-trader": "stock-trader",
         "trade-journal": "trade-journal",
         "una": "una",
         "vulcan-crt": "vulcan-crt"
@@ -7168,6 +7169,22 @@
         "owner": "input-output-hk",
         "repo": "stackage.nix",
         "type": "github"
+      }
+    },
+    "stock-trader": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1780946339,
+        "narHash": "sha256-w7rRbmPM+DZaEMHE1i5YYm/HKDZBa5MW4SzhWOSWxWs=",
+        "ref": "refs/heads/main",
+        "rev": "f5eec2302a43cd3f66f73665bdffa84c87936375",
+        "revCount": 139,
+        "type": "git",
+        "url": "file:///Users/johnw/src/stock-trader"
+      },
+      "original": {
+        "type": "git",
+        "url": "file:///Users/johnw/src/stock-trader"
       }
     },
     "systems": {

@@ -474,6 +474,7 @@ rec {
     ++ optPkg "context7-mcp"
     ++ optPkg "playwright-mcp"
     ++ optPkg "github-mcp-server"
+    ++ optPkg "stock-trader-mcp"
     ++ (
       if pkgs ? mcp-server-sequential-thinking then
         [ (lib.hiPrio pkgs.mcp-server-sequential-thinking) ]
