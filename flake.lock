@@ -7174,11 +7174,11 @@
     "stock-trader": {
       "flake": false,
       "locked": {
-        "lastModified": 1781026462,
-        "narHash": "sha256-doC0SNBwe0ol5M7rw9J9unxqdjwBk8+Ei5oOYnfcrQU=",
+        "lastModified": 1781041206,
+        "narHash": "sha256-hYsJWIEegyw546i+YmEJGCZaDh+q7WiXKdqntfhv6h0=",
         "ref": "refs/heads/feature/live-data-freshness",
-        "rev": "dfb16f76409b9828baf0c2a176f72b73e640f748",
-        "revCount": 148,
+        "rev": "4a7b45d5bd9427d228990403d8b9e4b871257425",
+        "revCount": 184,
         "type": "git",
         "url": "file:///Users/johnw/src/stock-trader"
       },
