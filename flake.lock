@@ -5261,11 +5261,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1781022973,
-        "narHash": "sha256-s1AMm5xRfVr00iSPekLIoArElu3Uj+4iM+hIcKlz1oY=",
+        "lastModified": 1781032293,
+        "narHash": "sha256-/ylPOaovf4K4vI1XxWo7my72C1OJyDCrvrPT08rSYh4=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "54131e201725c5bb5fd559a96af92894e6627939",
+        "rev": "8f3ed60fe9cf8f45956e597cc4a0eeae78ae5150",
         "type": "github"
       },
       "original": {
@@ -6974,11 +6974,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1780209424,
-        "narHash": "sha256-Oe7VO9iOEPDWmnl4LH0SyYAybTLhBjgxUihOW9K7ivQ=",
+        "lastModified": 1780953508,
+        "narHash": "sha256-5d4fAxz114R1aNQ+GXicDH2CK9Myt5e4CCSLJsnNQtI=",
         "ref": "refs/heads/main",
-        "rev": "e63a15a18f2ecb7cf83d9163831447c934c9c8d6",
-        "revCount": 1414,
+        "rev": "2aaf4086c38d998dd6aec6acf608dbb3ab596ff6",
+        "revCount": 1417,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
@@ -7174,11 +7174,11 @@
     "stock-trader": {
       "flake": false,
       "locked": {
-        "lastModified": 1780946339,
-        "narHash": "sha256-w7rRbmPM+DZaEMHE1i5YYm/HKDZBa5MW4SzhWOSWxWs=",
-        "ref": "refs/heads/main",
-        "rev": "f5eec2302a43cd3f66f73665bdffa84c87936375",
-        "revCount": 139,
+        "lastModified": 1781026462,
+        "narHash": "sha256-doC0SNBwe0ol5M7rw9J9unxqdjwBk8+Ei5oOYnfcrQU=",
+        "ref": "refs/heads/feature/live-data-freshness",
+        "rev": "dfb16f76409b9828baf0c2a176f72b73e640f748",
+        "revCount": 148,
         "type": "git",
         "url": "file:///Users/johnw/src/stock-trader"
       },
