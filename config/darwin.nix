@@ -35,6 +35,13 @@ in
             # GnuPG auth key stored on Yubikeys
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJAj2IzkXyXEl+ReCg9H+t55oa6GIiumPWeufcYCWy3F cardno:31_768_527"
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb cardno:14_476_831"
+
+            # drafts-mcp bridge (vulcan drafts-mcp.service) — pinned to exec
+            # drafts-mcp-server ONLY; SSH_ORIGINAL_COMMAND is ignored by the
+            # forced command. `restrict` disables pty/forwarding/X11/agent.
+            # This is the per-key least-privilege gate (NOT key-files.nix,
+            # which grants an unrestricted login shell).
+            "command=\"/etc/profiles/per-user/johnw/bin/drafts-mcp-server\",restrict,no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfhC6rPhjkSucPkTuL+On43E4udAss806oVAqNso3Qy drafts-bridge@vulcan"
           ];
           keyFiles =
             # Each machine accepts SSH key authentication from the rest
