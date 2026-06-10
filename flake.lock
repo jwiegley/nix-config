@@ -826,11 +826,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1780806040,
-        "narHash": "sha256-1FZj0+mZy2wEVXV7nTOxjVau140jcjEaafMMpEkh00U=",
+        "lastModified": 1781106850,
+        "narHash": "sha256-8qXzcmonpdoL+yNawgdMJKnrH1N6PbjYsFJxlyOnLsY=",
         "ref": "refs/heads/master",
-        "rev": "fa528b4e5c13f4a8738defff6fd6db3988c500d0",
-        "revCount": 182500,
+        "rev": "8decb653ffd8b046ffcccb5e9aa2e8a820ce6ab0",
+        "revCount": 182532,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -1362,11 +1362,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1780701865,
-        "narHash": "sha256-jZJgyN4BdH05TJK+N+i7JLrfrr+1+S1QfeJbzOFeyfc=",
+        "lastModified": 1780974896,
+        "narHash": "sha256-ME9L4rY265rVcDbeOkDzIJ4mQKl9XU8GQQzqHLD7JLo=",
         "ref": "refs/heads/main",
-        "rev": "5647ea559450b5a9d7841f27fc4406ddc090facf",
-        "revCount": 4348,
+        "rev": "eb52ba92df25cb8df039c41a82444a4078004b9d",
+        "revCount": 4359,
         "type": "git",
         "url": "file:///Users/johnw/work/git-ai/git-ai/main"
       },
@@ -4847,11 +4847,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781102921,
-        "narHash": "sha256-RnV6ngnudMp9tmfl9Wyrjnk84NkkzbJpuJKQ7bp0wHE=",
+        "lastModified": 1781115031,
+        "narHash": "sha256-WrHqMjiilIoqF1Lu5mxt9ypdl+VsNfX323LR4PcY4Bs=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "74887eaee2995bbdba1f0fbd64e43c1d14a86eca",
+        "rev": "f96f717a47589c9d0b6e21f1a0d0d42d2c576f18",
         "type": "github"
       },
       "original": {
