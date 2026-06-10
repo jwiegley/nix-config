@@ -383,6 +383,7 @@ rec {
       kew
       qrencode
       vega-lite
+      yt-dlp
       zbar
     ]
 
