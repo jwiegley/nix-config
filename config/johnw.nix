@@ -155,6 +155,25 @@ in
       ".claude/skills/sherlock/SKILL.md".source = "${pkgs.sherlock-db}/share/sherlock/SKILL.md";
       ".claude/skills/sherlock/sherlock".source = "${pkgs.sherlock-db}/bin/sherlock";
     }
+    // lib.optionalAttrs (isDarwin && hostname == "hera") {
+      # Syncthing ignore patterns for ~/Public (see services.syncthing
+      # below). Ignores are per-device and never synced, so this mirrors the
+      # vulcan-side ignorePatterns plus macOS-specific entries: "Drop Box" is
+      # the macOS public-folder inbox and stays local rather than landing on
+      # a LAN share.
+      "Public/.stignore".text = ''
+        .DS_Store
+        ._*
+        .Spotlight-V100
+        .Trashes
+        .fseventsd
+        .TemporaryItems
+        .localized
+        desktop.ini
+        Thumbs.db
+        Drop Box
+      '';
+    }
     // lib.optionalAttrs isDarwin {
       # Homebrew 5.1.x enforces tap-trust (HOMEBREW_REQUIRE_TAP_TRUST is on by
       # default in this rollout). During `darwin-rebuild switch`, nix-darwin runs
@@ -397,6 +416,52 @@ in
       defaultCacheTtl = 86400;
       maxCacheTtl = 86400;
       pinentry.package = pkgs.pinentry_mac;
+    };
+
+    # Two-way mirror of vulcan's /tank/Public onto ~/Public (hera only).
+    # The daemon runs as launchd.agents.syncthing; declarative settings are
+    # applied by the syncthing-init agent over the REST API. The device
+    # identity is pre-seeded in ~/Library/Application Support/Syncthing
+    # (key/cert generated 2026-06-10), so the ID below on vulcan's side and
+    # vulcan's ID here are both real — never placeholders: overrideDevices
+    # defaults to true and would delete an unlisted peer. The GUI stays on
+    # the 127.0.0.1:8384 default and gets no credentials (loopback on a
+    # single-user machine); deliberately NO `settings.gui` attribute — a
+    # partial PUT to /rest/config/gui rotates the API key on every activation
+    # (verified 2026-06-10). The matching .stignore is seeded via home.file
+    # below (this home-manager module has no ignorePatterns option); the
+    # vulcan side carries the same patterns declaratively.
+    syncthing = lib.mkIf (hostname == "hera") {
+      enable = true;
+      settings = {
+        devices.vulcan = {
+          # vulcan's real device ID; regenerating vulcan's seed identity
+          # (/var/lib/syncthing-seed) requires updating this pin.
+          id = "IPWC66H-N6RPNOM-HSX6NKH-Y7MEFTP-GNM75K7-5L6BRIW-OILLNGQ-VQK4ZA2";
+          addresses = [
+            "tcp://vulcan.lan:22000"
+            "dynamic"
+          ];
+        };
+
+        folders."tank-public" = {
+          path = "${vars.home}/Public";
+          label = "Public";
+          devices = [ "vulcan" ];
+          type = "sendreceive";
+        };
+
+        options = {
+          # LAN-only posture, matching vulcan: no global discovery, relays,
+          # NAT traversal, or phone-home.
+          globalAnnounceEnabled = false;
+          relaysEnabled = false;
+          natEnabled = false;
+          localAnnounceEnabled = true;
+          urAccepted = -1;
+          crashReportingEnabled = false;
+        };
+      };
     };
   };
 
