@@ -67,6 +67,8 @@ in
       "Mobile".source = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs/Plain Org";
       "Drafts".source =
         mkLink "${home}/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents";
+      "PDFExpert".source =
+        mkLink "${home}/Library/Mobile Documents/3L68KQB4HG~com~readdle~CommonDocuments/Documents";
       "Inbox".source = mkLink "${home}/Library/Application Support/DEVONthink/Inbox";
       "iCloud".source = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs";
     }
