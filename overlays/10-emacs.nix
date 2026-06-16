@@ -473,8 +473,8 @@ let
         src = fetchFromGitHub {
           owner = "benthamite";
           repo = "wikipedia";
-          rev = "aabe51b97e335711481c2a8db3336f9e5222fa19";
-          sha256 = "sha256-sD/J7opejCIKlhIv/F3W4SNHK64Gt0YF+q4PR09edBo=";
+          rev = "d7219cd453a93b93598a339d20927bdf60eded8d";
+          sha256 = "sha256-+gLcdDb3xZJS47dzScBT3ZkR+ZXaUhWt9bZvE1MDO7M=";
           # date = 2026-04-20T14:13:55Z;
         };
         # transient and gptel are loaded at byte-compile time and pull in
