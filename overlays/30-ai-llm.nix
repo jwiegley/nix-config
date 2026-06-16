@@ -96,13 +96,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "224";
+      version = "226";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-MM9r3wneqM1eaVrPZG0Oo8tDPbx/uGApUTuI+dt3cCw=";
+        hash = "sha256-w27S9JQyEMKc0dUkL9ATFXhh0jaEneb55neoNdFn/68=";
       };
 
       ui =
@@ -141,7 +141,7 @@ final: prev: {
     with prev;
     prev.llama-swap.overrideAttrs (attrs: rec {
       inherit version src;
-      vendorHash = "sha256-b+RreafBMCWT/jbWTlXaiDRzA4DRe76WaCEbrfRxV/4=";
+      vendorHash = "sha256-/IFiRXyiKL2+YfMUSHfCizNFuxj/VVuN20mwnpC12o0=";
       preBuild = ''
         # llama-swap 219 serves the web UI from internal/server/ui_dist
         # (//go:embed in internal/server/ui.go, where the main binary reads
