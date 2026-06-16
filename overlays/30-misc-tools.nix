@@ -10,14 +10,14 @@ final: prev: {
   # Upstream moved to openclaw/gogcli; Go module path is unchanged.
   gogcli = prev.gogcli.overrideAttrs (
     finalAttrs: _oldAttrs: {
-      version = "0.23.0";
+      version = "0.27.1";
       src = prev.fetchFromGitHub {
         owner = "openclaw";
         repo = "gogcli";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-A1x8VeFQfL7zuYWFGODkXhm3XXXNFfFQdreF1fG8jfA=";
+        hash = "sha256-DmvhUY3AZfVMHklc4ShcEvs+LramD53GvGzQ2zVoqg4=";
       };
-      vendorHash = "sha256-ElQF27p/kDaRSCwUuWLHV4AJ36ZlNI0OmqemmiJHBkE=";
+      vendorHash = "sha256-JrRIUYpw2lAD0ezi0HTZvS42OS7vP8DAHU3m0u3eCbM=";
     }
   );
 
