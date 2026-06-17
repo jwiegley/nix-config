@@ -20,6 +20,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
+from urllib.request import urlopen
 
 
 # ANSI color codes
@@ -53,6 +55,7 @@ class PackageInfo:
     file_path: Path
     owner: str = ""
     repo: str = ""
+    npm_package: str = ""
     version: str = ""
     version_prefix: str = ""  # e.g., "v", "b", ""
     src_hash: str = ""
@@ -74,6 +77,7 @@ class PackageInfo:
     uses_commit: bool = False  # True if rev = "full-commit-hash" pattern
     full_rev: str = ""  # Full commit hash if uses_commit
     hash_format: str = "sri"  # "sri" (sha256-...) or "base32" (old format)
+    source_type: str = "github"  # github, npm
 
 
 @dataclass
@@ -307,15 +311,20 @@ class OverlayParser:
         if len(block.split('\n')) > 200:
             return None
 
-        # Extract GitHub owner/repo from the block
+        # Extract GitHub owner/repo or npm package name from the block
         owner_match = re.search(r'owner\s*=\s*"([^"]+)"', block)
         repo_match = re.search(r'repo\s*=\s*"([^"]+)"', block)
+        npm_package_match = re.search(r'npmPackage\s*=\s*"([^"]+)"', block)
 
-        if not owner_match or not repo_match:
+        if npm_package_match:
+            info.source_type = "npm"
+            info.npm_package = npm_package_match.group(1)
+        elif owner_match and repo_match:
+            info.source_type = "github"
+            info.owner = owner_match.group(1)
+            info.repo = repo_match.group(1)
+        else:
             return None
-
-        info.owner = owner_match.group(1)
-        info.repo = repo_match.group(1)
 
         # Extract version - multiple patterns
         version_patterns = [
@@ -355,8 +364,8 @@ class OverlayParser:
             info.version = version_match.group(1)
             info.raw_version_pattern = version_match.group(0)
 
-        # Extract source hash (SRI format: sha256-... or base32 format: old nix hash)
-        sri_match = re.search(r'hash\s*=\s*"(sha256-[^"]+)"', block)
+        # Extract source hash (SRI format: sha256-/sha512-... or base32 format)
+        sri_match = re.search(r'hash\s*=\s*"(sha(?:256|512)-[^"]+)"', block)
         base32_match = re.search(r'sha256\s*=\s*"([^"]+)"', block)
 
         if sri_match:
@@ -441,6 +450,37 @@ class GitHubClient:
             except Exception:
                 pass
         return None
+
+
+class NpmRegistryClient:
+    """Client for npm registry metadata using only the Python standard library."""
+
+    def get_version(
+        self,
+        package_name: str,
+        requested_version: Optional[str] = None,
+    ) -> Optional[tuple[str, str]]:
+        """Return an npm version and tarball integrity hash."""
+        encoded = quote(package_name, safe="@")
+        url = f"https://registry.npmjs.org/{encoded}"
+
+        try:
+            with urlopen(url, timeout=30) as response:
+                data = json.load(response)
+        except Exception as e:
+            print(f"  Error fetching npm metadata: {e}", file=sys.stderr)
+            return None
+
+        version = requested_version or data.get("dist-tags", {}).get("latest")
+        if not version:
+            return None
+
+        version_info = data.get("versions", {}).get(version, {})
+        integrity = version_info.get("dist", {}).get("integrity")
+        if not integrity:
+            return None
+
+        return version, integrity
 
 
 class HashComputer:
@@ -863,7 +903,7 @@ Examples:
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true",
-        help="Show skipped packages (no GitHub source)"
+        help="Show skipped packages (no supported source)"
     )
 
     args = parser.parse_args()
@@ -881,6 +921,7 @@ Examples:
     nix_dir = Path(__file__).parent.parent.resolve()
     sources = make_overlay_sources(args, nix_dir)
     github_client = GitHubClient()
+    npm_client = NpmRegistryClient()
     updater = OverlayUpdater()
     targets = collect_targets(args, sources)
 
@@ -894,16 +935,16 @@ Examples:
         info = source.parser.find_package(package_name)
         if not info:
             if args.all:
-                # In --all mode, silently skip packages without GitHub info
+                # In --all mode, silently skip packages without source metadata.
                 if args.verbose:
                     print(
                         f"{Colors.DIM}{source.name}/{package_name}: "
-                        f"skipped (no GitHub source){Colors.RESET}"
+                        f"skipped (no supported source){Colors.RESET}"
                     )
                 skipped_count += 1
             else:
                 print(
-                    f"{Colors.RED}{package_name}: not found or no GitHub source"
+                    f"{Colors.RED}{package_name}: not found or no supported source"
                     f"{Colors.RESET}"
                 )
                 fail_count += 1
@@ -931,7 +972,24 @@ Examples:
         new_version = None
         new_full_rev = None
 
-        if args.version:
+        if info.source_type == "npm":
+            if args.version:
+                npm_version = npm_client.get_version(info.npm_package, args.version)
+                if not npm_version:
+                    print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
+                    fail_count += 1
+                    continue
+                new_version, new_src_hash = npm_version
+                latest_tag = new_version
+            else:
+                npm_version = npm_client.get_version(info.npm_package)
+                if not npm_version:
+                    print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
+                    fail_count += 1
+                    continue
+                new_version, new_src_hash = npm_version
+                latest_tag = new_version
+        elif args.version:
             latest_tag = args.version
             if not latest_tag.startswith(("v", "b")):
                 latest_tag = f"{info.version_prefix}{args.version}"
@@ -970,7 +1028,8 @@ Examples:
         print(f"{Colors.YELLOW}→ {new_version}{Colors.RESET}", end="")
 
         # Compute new source hash
-        new_src_hash = source.hash_computer.compute_src_hash(info.owner, info.repo, latest_tag)
+        if info.source_type != "npm":
+            new_src_hash = source.hash_computer.compute_src_hash(info.owner, info.repo, latest_tag)
         if not new_src_hash:
             print(f" {Colors.RED}✗ hash failed{Colors.RESET}")
             fail_count += 1

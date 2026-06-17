@@ -449,6 +449,7 @@ rec {
     ]
     ++ optPkg "guidellm"
     ++ optPkg "llama-swap"
+    ++ optPkg "lazycodex-ai"
     ++ optPkg "gguf-tools"
     ++ optPkg "qdrant-web-ui"
     ++ optPkg "agnix"
