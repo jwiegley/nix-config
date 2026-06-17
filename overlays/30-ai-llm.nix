@@ -59,12 +59,12 @@ final: prev: {
   # NOTE: As of b9190+, the webui was relocated from tools/server/webui
   # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "9672";
+    version = "9684";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-/0qfu4QT1CFt1zBmaMvWGiOiRLqHp2ovhdpiirmvMOU=";
+      hash = "sha256-mR7U0yr5vJA7broKOk8FI4gV266guAPpfr9ckBMdSZg=";
     };
     postPatch = "";
     npmRoot = "tools/ui";
@@ -83,7 +83,7 @@ final: prev: {
       }
       popd
     '';
-    npmDepsHash = "sha256-T6CpsyZ1zxU9uEr/9JcmABCrtaB9aCz2EpdTS0IJzX0=";
+    npmDepsHash = "sha256-0dctM/apI3ysMIEVBaBXO9hZMWskpJpNpOws1gwiOYc=";
     npmDeps = prev.fetchNpmDeps {
       name = "llama-cpp-${version}-npm-deps";
       inherit src;
@@ -96,13 +96,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "226";
+      version = "227";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-w27S9JQyEMKc0dUkL9ATFXhh0jaEneb55neoNdFn/68=";
+        hash = "sha256-FPLc4VK5GsIgkqKGXA5t41tuVAku+ZCfdt5JbQQsSyg=";
       };
 
       ui =
@@ -141,7 +141,7 @@ final: prev: {
     with prev;
     prev.llama-swap.overrideAttrs (attrs: rec {
       inherit version src;
-      vendorHash = "sha256-/IFiRXyiKL2+YfMUSHfCizNFuxj/VVuN20mwnpC12o0=";
+      vendorHash = "sha256-is8pm5g27in/LraLVJUzsa7EPqs+C3qzY8OQ/DXe98A=";
       preBuild = ''
         # llama-swap 219 serves the web UI from internal/server/ui_dist
         # (//go:embed in internal/server/ui.go, where the main binary reads
