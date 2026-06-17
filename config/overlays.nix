@@ -16,26 +16,14 @@
 
 let
   overlayDir = ../overlays;
-  aiOverlayFiles = [
-    "30-agnix.nix"
-    "30-ai-llm.nix"
-    "30-ai-mcp.nix"
-    "30-ai-python.nix"
-    "30-claude-vault.nix"
-    "30-sherlock-db.nix"
-    "30-vllm-mlx.nix"
-  ];
-  skipVendoredAiOverlays = inputs ? ai-nix;
   isImportableOverlay =
     n:
-    (
-      builtins.match ".*\\.nix" n != null || builtins.pathExists (overlayDir + ("/" + n + "/default.nix"))
-    )
-    && !(skipVendoredAiOverlays && builtins.elem n aiOverlayFiles);
+    builtins.match ".*\\.nix" n != null
+    || builtins.pathExists (overlayDir + ("/" + n + "/default.nix"));
 in
 [
   # Inject flake inputs so overlays can access them via prev.inputs
-  (final: prev: { inherit inputs; })
+  (_final: _prev: { inherit inputs; })
 ]
 ++ (
   if inputs ? ai-nix then
@@ -44,7 +32,7 @@ in
     [
       inputs.mcp-servers-nix.overlays.default
 
-      (final: prev: {
+      (_final: prev: {
         github-mcp-server =
           prev.callPackage (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")
             { };
@@ -61,7 +49,7 @@ in
     [ ]
   else
     [
-      (final: prev: {
+      (_final: prev: {
         ca-bundle-with-vulcan = prev.runCommand "ca-bundle-with-vulcan" { } ''
           mkdir -p $out/etc/ssl/certs
           cat ${prev.cacert}/etc/ssl/certs/ca-bundle.crt ${vulcan-crt} \

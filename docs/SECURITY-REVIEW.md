@@ -96,30 +96,26 @@
 
 #### 8. Pre-built binaries without source verification
 
-- **Files:** `overlays/30-sherlock-db.nix`, `overlays/30-git-tools.nix` (git-lfs on Darwin)
-- **Risk:** These overlays download pre-built binaries from GitHub releases and install them directly. While hashes are pinned (providing integrity), there is no source verification — the binary could differ from the published source code. The `sherlock-db` overlay correctly declares `sourceProvenance = [ sourceTypes.binaryNativeCode ]` but this does not mitigate the trust issue.
+- **Files:** `inputs.ai-nix` Sherlock overlay, `overlays/30-git-tools.nix` (git-lfs on Darwin)
+- **Risk:** These overlays download pre-built binaries from GitHub releases and install them directly. While hashes are pinned (providing integrity), there is no source verification — the binary could differ from the published source code. The `sherlock-db` package correctly declares `sourceProvenance = [ sourceTypes.binaryNativeCode ]` but this does not mitigate the trust issue.
 - **Remediation:**
   1. Prefer building from source when possible.
   2. For pre-built binaries, verify GPG signatures or checksums published alongside the release.
   3. Consider using `nix-auth` or a separate verification step.
   4. Document the trust decision in comments.
 
-#### 9. vllm-mlx bypasses Nix purity via `uv tool install` at runtime
+#### 9. vllm-mlx uses a pre-built PyPI wheel
 
-- **File:** `overlays/30-vllm-mlx.nix`
-- **Risk:** The wrapper script runs `uv tool install vllm-mlx` on first invocation, installing Python packages from PyPI outside of Nix's control. This means:
-  - The installed packages are not reproducible (PyPI serves different content over time).
-  - No hash verification of the runtime-installed packages.
-  - The `~/.local/share/uv/tools` directory is outside the Nix store and not garbage-collected.
-  - Security updates must be applied manually by the user.
+- **File:** `inputs.ai-nix` vllm-mlx overlay
+- **Risk:** The package installs a pinned wheel from PyPI rather than building from source. The fixed-output hash provides reproducibility and integrity for the selected artifact, but it still trusts the upstream wheel build process.
 - **Remediation:**
-  1. Build vllm-mlx as a proper Python derivation using `python3.pkgs.buildPythonApplication` with pinned dependencies.
-  2. If Apple Metal requirements prevent sandboxed builds, use a FOD (fixed-output derivation) with `fetchurl` for the wheel, similar to how other Python packages are handled.
-  3. At minimum, add a hash check for the installed tool version and warn when the installed version differs from the Nix-declared version.
+  1. Prefer building vllm-mlx from source when its build is practical in the Nix sandbox.
+  2. When using wheels, continue pinning the exact URL and hash.
+  3. Track upstream release provenance and signatures if they become available.
 
 #### 10. Pervasive `doCheck = false` across overlays
 
-- **Files:** `overlays/30-ai-llm.nix`, `overlays/30-ai-mcp.nix`, `overlays/30-ai-python.nix`, `overlays/15-darwin-fixes.nix`
+- **Files:** `inputs.ai-nix` AI overlays, `overlays/15-darwin-fixes.nix`
 - **Risk:** Many overlay packages disable test suites with `doCheck = false` or `doInstallCheck = false`. This means the build succeeds even if the package is broken. While often necessary for Python packages with complex test dependencies or Darwin-specific build issues, it reduces confidence in build correctness.
 - **Remediation:**
   1. Enable tests where feasible and add `doCheck = true` with appropriate `checkInputs`.
@@ -197,7 +193,7 @@ The following practices are already in place and demonstrate security awareness:
 | Flake lock file pins inputs | `flake.lock` | All input revisions are locked |
 | `verify-inputs` Makefile target | `Makefile` | Checks for NAR hash mismatches |
 | `permittedInsecurePackages` empty | `config/darwin.nix` | No insecure packages whitelisted |
-| `sourceProvenance` declared | `overlays/30-sherlock-db.nix` | Binary provenance is documented |
+| `sourceProvenance` declared | `inputs.ai-nix` Sherlock package | Binary provenance is documented |
 | MSSQL password via file, not hardcoded | `config/darwin.nix:560` | Better than plaintext in config |
 | Chrome debug bound to localhost | `config/darwin.nix:761` | Not exposed on all interfaces |
 | Autossh tunnel bound to localhost | `config/darwin.nix:732-735` | Forwardings use `127.0.0.1` |

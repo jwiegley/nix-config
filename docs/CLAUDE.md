@@ -140,7 +140,9 @@ u repl
     - `10-coq.nix`: Coq theorem prover with IDE disabled
     - `10-emacs.nix`: Emacs with MacPort patches, custom packages, and variants
     - `15-darwin-fixes.nix`: Darwin-specific package fixes (time, zbar)
-    - `30-ai-*.nix`: AI/ML tools split into llm, mcp, and python overlays
+    - AI/ML tools come from the sibling `ai-nix` flake input
+      (`inputs.ai-nix.overlays.default`), with only private local wrappers kept
+      in this repository
     - `30-data-tools.nix`: Data processing utilities (hashdb, dirscan, tsvutils)
     - `30-git-tools.nix`: Git extensions (git-lfs, git-pr, git-scripts)
     - `30-ledger.nix`: Ledger CLI accounting from local source
