@@ -8,7 +8,7 @@ fi
 
 (
     brew update
-    brew upgrade --greedy
+    brew upgrade --greedy --yes
 ) &>/tmp/brew.log &
 
 nix flake update --commit-lock-file llm-agents
