@@ -13,6 +13,7 @@ Examples:
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -73,6 +74,17 @@ class PackageInfo:
     uses_commit: bool = False  # True if rev = "full-commit-hash" pattern
     full_rev: str = ""  # Full commit hash if uses_commit
     hash_format: str = "sri"  # "sri" (sha256-...) or "base32" (old format)
+
+
+@dataclass
+class OverlaySource:
+    """An overlay tree that can be scanned and updated."""
+
+    name: str
+    repo_dir: Path
+    overlays_dir: Path
+    parser: "OverlayParser"
+    hash_computer: "HashComputer"
 
 
 class OverlayParser:
@@ -434,8 +446,8 @@ class GitHubClient:
 class HashComputer:
     """Compute Nix hashes for various package types."""
 
-    def __init__(self, nix_dir: Path):
-        self.nix_dir = nix_dir
+    def __init__(self, repo_dir: Path):
+        self.repo_dir = repo_dir
 
     def compute_src_hash(self, owner: str, repo: str, rev: str) -> Optional[str]:
         """Compute source hash using nix-prefetch-github."""
@@ -471,10 +483,35 @@ class HashComputer:
 
         # Build the package and capture the error with the correct hash
         try:
+            build_script = self.repo_dir / "build"
+            if build_script.exists():
+                command = ["./build", "pkg", package_name]
+            else:
+                expr = f"""
+let
+  flake = builtins.getFlake "path:{self.repo_dir}";
+  system = builtins.currentSystem;
+  pkgs = import flake.inputs.nixpkgs {{
+    inherit system;
+    overlays = [ flake.overlays.default ];
+    config.allowUnfree = true;
+  }};
+in
+  pkgs.{json.dumps(package_name)}
+"""
+                command = [
+                    "nix",
+                    "build",
+                    "--impure",
+                    "--no-link",
+                    "--expr",
+                    expr,
+                ]
+
             result = subprocess.run(
-                ["./build", "pkg", package_name],
+                command,
                 capture_output=True, text=True, timeout=600,
-                cwd=self.nix_dir
+                cwd=self.repo_dir
             )
 
             # Even if build succeeds, we might need the hash from output
@@ -498,6 +535,85 @@ class HashComputer:
             print(f"  Error computing {hash_type}: {e}", file=sys.stderr)
 
         return None
+
+
+def resolve_ai_nix_dir(nix_dir: Path, raw_path: Optional[Path]) -> Path:
+    """Resolve the ai-nix checkout path from CLI, env, or sibling default."""
+    if raw_path is not None:
+        return raw_path.expanduser().resolve()
+
+    from_env = os.environ.get("AI_NIX_DIR")
+
+    if from_env:
+        return Path(from_env).expanduser().resolve()
+
+    return (nix_dir.parent / "ai-nix").resolve()
+
+
+def make_overlay_sources(args, nix_dir: Path) -> list[OverlaySource]:
+    """Create the ordered list of overlay trees to update."""
+    local_overlays_dir = args.overlays_dir.resolve()
+    sources = [
+        OverlaySource(
+            name="nix",
+            repo_dir=nix_dir,
+            overlays_dir=local_overlays_dir,
+            parser=OverlayParser(local_overlays_dir),
+            hash_computer=HashComputer(nix_dir),
+        )
+    ]
+
+    if args.no_ai_nix:
+        return sources
+
+    ai_nix_dir = resolve_ai_nix_dir(nix_dir, args.ai_nix_dir)
+    ai_nix_overlays_dir = ai_nix_dir / "overlays"
+    if ai_nix_overlays_dir.is_dir():
+        sources.append(
+            OverlaySource(
+                name="ai-nix",
+                repo_dir=ai_nix_dir,
+                overlays_dir=ai_nix_overlays_dir,
+                parser=OverlayParser(ai_nix_overlays_dir),
+                hash_computer=HashComputer(ai_nix_dir),
+            )
+        )
+    elif args.verbose:
+        print(
+            f"{Colors.DIM}ai-nix: skipped; no overlays directory at "
+            f"{ai_nix_overlays_dir}{Colors.RESET}"
+        )
+
+    return sources
+
+
+def collect_targets(args, sources: list[OverlaySource]) -> list[tuple[OverlaySource, str]]:
+    """Collect package update targets across all configured overlay trees."""
+    targets: list[tuple[OverlaySource, str]] = []
+
+    if args.all:
+        total = 0
+        for source in sources:
+            packages = source.parser.find_all_packages()
+            if args.packages:
+                packages = [p for p in packages if p in args.packages]
+            total += len(packages)
+            print(f"Found {len(packages)} packages in {source.name} overlay files")
+            targets.extend((source, package) for package in packages)
+        print(f"Found {total} packages across {len(sources)} overlay trees")
+        return targets
+
+    for package in args.packages:
+        matches = [
+            source for source in sources
+            if source.parser.find_package(package) is not None
+        ]
+        if matches:
+            targets.extend((source, package) for source in matches)
+        else:
+            targets.append((sources[0], package))
+
+    return targets
 
 
 class OverlayUpdater:
@@ -699,6 +815,7 @@ Examples:
   update-overlay -V 1.2.3 browser-control-mcp  Force specific version
   update-overlay --all --dry-run         Preview updates for all packages
   update-overlay --all --no-build        Update all packages (src hash only)
+  update-overlay --no-ai-nix --all       Update only this repository
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -718,6 +835,14 @@ Examples:
         "--overlays-dir", "-d", type=Path,
         default=Path(__file__).parent.parent / "overlays",
         help="Directory containing overlay files"
+    )
+    parser.add_argument(
+        "--ai-nix-dir", type=Path,
+        help="Path to the ai-nix checkout (default: $AI_NIX_DIR or ../ai-nix)"
+    )
+    parser.add_argument(
+        "--no-ai-nix", action="store_true",
+        help="Only update this repository's overlays"
     )
     parser.add_argument(
         "--no-build", action="store_true",
@@ -742,37 +867,33 @@ Examples:
         parser.error("Cannot use --version with --all")
 
     nix_dir = Path(__file__).parent.parent.resolve()
-    overlay_parser = OverlayParser(args.overlays_dir)
+    sources = make_overlay_sources(args, nix_dir)
     github_client = GitHubClient()
-    hash_computer = HashComputer(nix_dir)
     updater = OverlayUpdater()
-
-    # Determine which packages to process
-    if args.all:
-        packages = overlay_parser.find_all_packages()
-        print(f"Found {len(packages)} packages in overlay files")
-        if args.packages:
-            # If both --all and package names given, filter to just those
-            packages = [p for p in packages if p in args.packages]
-            print(f"Filtered to {len(packages)} specified packages")
-    else:
-        packages = args.packages
+    targets = collect_targets(args, sources)
 
     success_count = 0
     fail_count = 0
     skipped_count = 0
+    changed_sources: set[str] = set()
 
-    for package_name in packages:
+    for source, package_name in targets:
         # Find package in overlays
-        info = overlay_parser.find_package(package_name)
+        info = source.parser.find_package(package_name)
         if not info:
             if args.all:
                 # In --all mode, silently skip packages without GitHub info
                 if args.verbose:
-                    print(f"{Colors.DIM}{package_name}: skipped (no GitHub source){Colors.RESET}")
+                    print(
+                        f"{Colors.DIM}{source.name}/{package_name}: "
+                        f"skipped (no GitHub source){Colors.RESET}"
+                    )
                 skipped_count += 1
             else:
-                print(f"{Colors.RED}{package_name}: not found or no GitHub source{Colors.RESET}")
+                print(
+                    f"{Colors.RED}{package_name}: not found or no GitHub source"
+                    f"{Colors.RESET}"
+                )
                 fail_count += 1
             continue
 
@@ -789,7 +910,7 @@ Examples:
         hash_info = f" [{','.join(hash_types)}]" if len(hash_types) > 1 else ""
 
         # Compact package info
-        pkg_display = f"{Colors.BOLD}{package_name}{Colors.RESET}"
+        pkg_display = f"{Colors.BOLD}{source.name}/{package_name}{Colors.RESET}"
         version_display = f"{Colors.DIM}{info.version}{Colors.RESET}"
         print(f"{pkg_display} {version_display}{hash_info}", end=" ")
 
@@ -837,7 +958,7 @@ Examples:
         print(f"{Colors.YELLOW}→ {new_version}{Colors.RESET}", end="")
 
         # Compute new source hash
-        new_src_hash = hash_computer.compute_src_hash(info.owner, info.repo, latest_tag)
+        new_src_hash = source.hash_computer.compute_src_hash(info.owner, info.repo, latest_tag)
         if not new_src_hash:
             print(f" {Colors.RED}✗ hash failed{Colors.RESET}")
             fail_count += 1
@@ -860,25 +981,25 @@ Examples:
         if not args.no_build and not args.dry_run:
             if info.vendor_hash:
                 updater.set_dummy_hash(info.file_path, package_name, 'vendorHash', info.vendor_hash)
-                new_vendor_hash = hash_computer.compute_vendor_hash(package_name)
+                new_vendor_hash = source.hash_computer.compute_vendor_hash(package_name)
                 if new_vendor_hash:
                     extra_hashes.append("vendor")
 
             if info.cargo_hash:
                 updater.set_dummy_hash(info.file_path, package_name, 'cargoHash', info.cargo_hash)
-                new_cargo_hash = hash_computer.compute_cargo_hash(package_name)
+                new_cargo_hash = source.hash_computer.compute_cargo_hash(package_name)
                 if new_cargo_hash:
                     extra_hashes.append("cargo")
 
             if info.npm_deps_hash:
                 updater.set_dummy_hash(info.file_path, package_name, 'npmDepsHash', info.npm_deps_hash)
-                new_npm_deps_hash = hash_computer.compute_npm_deps_hash(package_name)
+                new_npm_deps_hash = source.hash_computer.compute_npm_deps_hash(package_name)
                 if new_npm_deps_hash:
                     extra_hashes.append("npm")
 
         # Final update with all hashes
         if not args.dry_run:
-            info = overlay_parser.find_package(package_name)
+            info = source.parser.find_package(package_name)
             updater.update_package(
                 info, new_version, new_src_hash,
                 new_vendor_hash=new_vendor_hash,
@@ -887,6 +1008,7 @@ Examples:
                 new_full_rev=new_full_rev,
                 dry_run=False
             )
+            changed_sources.add(source.name)
 
         success_count += 1
         extra_info = f" +{','.join(extra_hashes)}" if extra_hashes else ""
@@ -900,6 +1022,15 @@ Examples:
     skipped_str = f"{skipped_count} up-to-date"
     failed_str = f"{Colors.RED}{fail_count} failed{Colors.RESET}" if fail_count else f"{fail_count} failed"
     print(f"\n{Colors.BOLD}Summary:{Colors.RESET} {updated_str}, {skipped_str}, {failed_str}")
+
+    if "ai-nix" in changed_sources:
+        ai_source = next(source for source in sources if source.name == "ai-nix")
+        print(
+            f"\n{Colors.YELLOW}ai-nix changed at {ai_source.repo_dir}.{Colors.RESET}\n"
+            "Commit and push ai-nix, then update this repo's lock with:\n"
+            "  nix flake update ai-nix"
+        )
+
     return 0 if fail_count == 0 else 1
 
 

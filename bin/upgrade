@@ -23,6 +23,9 @@ hera)
     ulimit -n 65536
     cd ~/src/nix || exit
     update-and-pull
+    if [[ -d ~/src/ai-nix/.git ]]; then
+        git -C ~/src/ai-nix pull --ff-only
+    fi
     u hera update
     python bin/update-overlay --all
     ./build system

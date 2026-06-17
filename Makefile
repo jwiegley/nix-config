@@ -5,9 +5,14 @@ MAX_AGE	   = 28
 NIX_CONF   = $(HOME)/src/nix
 NIXOPTS	   =
 PROJECTS   = $(HOME)/.config/projects
+AI_NIX	   ?= $(HOME)/src/ai-nix
 
 ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
+endif
+
+ifneq ($(wildcard $(AI_NIX)/flake.nix),)
+NIXOPTS	  := $(NIXOPTS) --override-input ai-nix $(AI_NIX)
 endif
 
 .PHONY: all verify-inputs lock-local build switch update update-projects upgrade-tasks upgrade \
@@ -110,12 +115,12 @@ lock-local: verify-inputs
 
 build:
 	$(call announce,darwin-rebuild build --flake .#$(HOSTNAME))
-	@sudo darwin-rebuild build --flake .#$(HOSTNAME)
+	@sudo darwin-rebuild build --flake .#$(HOSTNAME) $(NIXOPTS)
 	@rm -f result*
 
 switch: lock-local
 	$(call announce,darwin-rebuild switch --flake .#$(HOSTNAME))
-	@sudo darwin-rebuild switch --flake .#$(HOSTNAME)
+	@sudo darwin-rebuild switch --flake .#$(HOSTNAME) $(NIXOPTS)
 	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"
 
 update:
