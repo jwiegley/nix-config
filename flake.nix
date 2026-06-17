@@ -57,6 +57,7 @@
         (import ./overlays/30-ai-python.nix)
         (import ./overlays/30-ai-llm.nix)
         (import ./overlays/30-ai-mcp.nix)
+        (import ./overlays/30-lazycodex.nix)
         (import ./overlays/30-agnix.nix)
         (import ./overlays/30-claude-vault.nix)
         (import ./overlays/30-sherlock-db.nix)
@@ -141,6 +142,7 @@
         ++ opt "github-mcp-server"
         ++ opt "guidellm"
         ++ opt "hfdownloader"
+        ++ opt "lazycodex-ai"
         ++ opt "llama-swap"
         ++ opt "openai-whisper"
         ++ opt "pal-mcp-server"
