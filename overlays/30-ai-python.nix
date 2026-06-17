@@ -358,6 +358,32 @@ in
           };
         };
 
+        cohere-melody = pfinal.buildPythonPackage rec {
+          pname = "cohere-melody";
+          version = "0.9.0";
+          format = "wheel";
+
+          src = pfinal.fetchPypi {
+            pname = "cohere_melody";
+            inherit version;
+            format = "wheel";
+            dist = "cp313";
+            python = "cp313";
+            abi = "cp313";
+            platform = "macosx_11_0_arm64";
+            hash = "sha256-gU6PlYufxOy6AnmNlHsdIQrP8wnISRl2+AIR0wV5jac=";
+          };
+
+          pythonImportsCheck = [ "cohere_melody" ];
+
+          meta = {
+            description = "Templating rendering and generation parsing for Cohere models";
+            homepage = "https://github.com/cohere-ai/melody";
+            license = prev.lib.licenses.mit;
+            platforms = [ "aarch64-darwin" ];
+          };
+        };
+
         # mlx-audio - TTS/STT/STS inference for Apple Silicon. Pinned to the
         # exact commit omlx pins. mlx-lm is pinned ==0.31.1 upstream; relax
         # it to use our 0.31.3. Runtime dep check is skipped because the

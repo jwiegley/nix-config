@@ -292,7 +292,7 @@ class OverlayParser:
         # Sanity check: a single package definition shouldn't span hundreds of lines.
         # If the block is unreasonably large, it's likely a function/let-binding that
         # contains nested packages, not an actual package definition.
-        if len(block.split('\n')) > 100:
+        if len(block.split('\n')) > 200:
             return None
 
         # Extract GitHub owner/repo from the block

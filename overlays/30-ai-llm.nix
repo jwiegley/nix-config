@@ -59,12 +59,12 @@ final: prev: {
   # NOTE: As of b9190+, the webui was relocated from tools/server/webui
   # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
   llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "9684";
+    version = "9688";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-mR7U0yr5vJA7broKOk8FI4gV266guAPpfr9ckBMdSZg=";
+      hash = "sha256-o5zGZ/zRTm5oeCnIn3ZdQ9IjTrTBr8rbgkGHY4ksV5c=";
     };
     postPatch = "";
     npmRoot = "tools/ui";
@@ -360,14 +360,14 @@ final: prev: {
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "omlx";
-      version = "0.4.2rc1";
+      version = "0.4.4";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "jundot";
         repo = "omlx";
         tag = "v${version}";
-        hash = "sha256-Jsxn4Yvo3jhDA7k1kBNWEOSUhgEji9IH8H/JMfhsccE=";
+        hash = "sha256-JzdoiDf3wDvQHoHvHWUPPBp++Zl1/GDbLmr2/ududSs=";
       };
 
       # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git
@@ -377,10 +377,10 @@ final: prev: {
       # so resolution lands on our overlay/nixpkgs versions.
       postPatch = ''
         substituteInPlace pyproject.toml \
-          --replace-fail '"mlx-lm @ git+https://github.com/ml-explore/mlx-lm@bdb77dae5389d193dcc333bed891d33f6b668285"' '"mlx-lm"' \
+          --replace-fail '"mlx-lm @ git+https://github.com/ml-explore/mlx-lm@2c008fd0252b2c569227d12568356ab88ab0560a"' '"mlx-lm"' \
           --replace-fail '"mlx-embeddings @ git+https://github.com/Blaizzy/mlx-embeddings@32981fa4e8064ed664b52071789dd18271fe4206"' '"mlx-embeddings"' \
-          --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@526c210b8ef841a2906beb2805e9c41b8b77f4e7"' '"mlx-vlm"' \
-          --replace-fail '"dflash-mlx @ git+https://github.com/bstnxbt/dflash-mlx@b7f192b62bc5a59cad41fda888c1118c60fc58b1"' '"dflash-mlx"'
+          --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@086ab9d5d575fec64d8d8ad907ce000007c25c1a"' '"mlx-vlm"' \
+          --replace-fail '"dflash-mlx @ git+https://github.com/bstnxbt/dflash-mlx@5d70faebe3d0af0a3dae76fcc15cc731f7ba46da"' '"dflash-mlx"'
       '';
 
       build-system = [
@@ -388,11 +388,14 @@ final: prev: {
         wheel
       ];
 
-      # v0.4.2rc1's pyproject pins numpy<2.4, but the entire mlx stack in this
-      # overlay (mlx, mlx-lm, mlx-vlm, transformers) is built against nixpkgs'
-      # numpy 2.4.x. omlx itself only uses numpy array ops that are stable
-      # across the 2.x line, so relax the upper bound rather than fork numpy.
-      pythonRelaxDeps = [ "numpy" ];
+      # v0.4.4's pyproject pins numpy<2.4 and transformers>=5.7.0, but the
+      # entire mlx stack in this overlay is built against nixpkgs' numpy 2.4.x
+      # and transformers 5.5.x. omlx itself only uses stable numpy array ops,
+      # and the import/CLI smoke checks pass with the local transformers.
+      pythonRelaxDeps = [
+        "numpy"
+        "transformers"
+      ];
 
       dependencies = [
         mlx
@@ -411,6 +414,7 @@ final: prev: {
         pyyaml
         itsdangerous
         jinja2
+        rich
         sentencepiece
         tiktoken
         protobuf
@@ -418,13 +422,15 @@ final: prev: {
         socksio
         tabulate
         psutil
+        setproctitle
         fastapi
         uvicorn
         python-multipart
         jsonschema
         openai-harmony
+        cohere-melody
         pillow
-        # v0.4.2rc1 added markitdown[pdf,docx,pptx]==0.1.6; server.py imports
+        # v0.4.4 includes markitdown[pdf,docx,pptx]==0.1.6; server.py imports
         # omlx.api.markitdown at module load. nixpkgs' markitdown 0.1.6 already
         # propagates the pdf (pdfplumber/pdfminer-six), docx (mammoth), and
         # pptx (python-pptx) backends omlx actually uses for file conversion.
