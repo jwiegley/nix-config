@@ -4847,11 +4847,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781533608,
-        "narHash": "sha256-Mgsu/x5cs8EqlhIQ7bMBo14LpkAYtgzDbG/S/eattJA=",
+        "lastModified": 1781642113,
+        "narHash": "sha256-mAR7KTS9rjreTcXCNqfCbN96mnhJO8lDQq1vl7GviBQ=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "8aec76cc1e045f37b55d82ca3cee4910ae04d3db",
+        "rev": "df4e0465717a2d34f05b8ccd967275aaf3ceaa01",
         "type": "github"
       },
       "original": {
@@ -5261,11 +5261,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1781591100,
-        "narHash": "sha256-8ndljm4ics0tWVy/K9zolJiGD2LAVp9RtYnIpIpgp+o=",
+        "lastModified": 1781639184,
+        "narHash": "sha256-4Vf0XxtqXtm2hEtNXCygimX8qZLrzqf/JYJnCC/kak4=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "53673313e86582f3ac7050ff826158fd843c219d",
+        "rev": "e8b1d3eec15ec415dc7dac59b98693872138e414",
         "type": "github"
       },
       "original": {
@@ -6432,11 +6432,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1781454065,
-        "narHash": "sha256-d2xfDjnfRuf/xYGdu9VVRHiav/2w5hDL/5cw2TuVAXw=",
+        "lastModified": 1781607440,
+        "narHash": "sha256-rxO+uc/KFbSJp+pgyXRuAX6QlG9hJdnt0BXpEQRXY+U=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "9eac87a12312b8f60dd52e1c6e1a265f6fc7f5fc",
+        "rev": "3e41b24abd260e8f71dbe2f5737d24122f972158",
         "type": "github"
       },
       "original": {
@@ -6773,11 +6773,11 @@
     "pal-mcp-server": {
       "flake": false,
       "locked": {
-        "lastModified": 1777318109,
-        "narHash": "sha256-enqf2kyDXgPvBKDTHUuJefr72DR9AkJS9TmvInmCV7I=",
+        "lastModified": 1781642958,
+        "narHash": "sha256-GuLlN0C4PZ63Bk1uuDPTJ6WRLEseF1VXhRqt6zf86w8=",
         "ref": "refs/heads/main",
-        "rev": "7af02582fa45cbad953048e410891631dd278430",
-        "revCount": 1156,
+        "rev": "72778520552263c0fd0337596098210eb4335f2a",
+        "revCount": 1177,
         "type": "git",
         "url": "file:///Users/johnw/src/pal-mcp-server"
       },

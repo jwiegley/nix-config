@@ -242,6 +242,7 @@ with epkgs;
   multi-vterm
   multifiles
   multiple-cursors
+  nael
   (exclude names)
   nginx-mode
   nix-mode

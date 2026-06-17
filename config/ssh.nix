@@ -157,7 +157,7 @@ in
         };
 
         positron = controlMastered {
-          header = "Host pos andoria andoria-* delphi-* agentsrv labmgr sw-dev-01";
+          header = "Host andoria-* delphi-* agentsrv labmgr sw-dev-01";
           User = "jwiegley";
           IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
           IdentitiesOnly = true;
