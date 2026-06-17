@@ -484,7 +484,7 @@ class HashComputer:
         # Build the package and capture the error with the correct hash
         try:
             build_script = self.repo_dir / "build"
-            if build_script.exists():
+            if build_script.is_file() and os.access(build_script, os.X_OK):
                 command = ["./build", "pkg", package_name]
             else:
                 expr = f"""
@@ -553,15 +553,18 @@ def resolve_ai_nix_dir(nix_dir: Path, raw_path: Optional[Path]) -> Path:
 def make_overlay_sources(args, nix_dir: Path) -> list[OverlaySource]:
     """Create the ordered list of overlay trees to update."""
     local_overlays_dir = args.overlays_dir.resolve()
-    sources = [
-        OverlaySource(
-            name="nix",
-            repo_dir=nix_dir,
-            overlays_dir=local_overlays_dir,
-            parser=OverlayParser(local_overlays_dir),
-            hash_computer=HashComputer(nix_dir),
+    sources = []
+
+    if not args.only_ai_nix:
+        sources.append(
+            OverlaySource(
+                name="nix",
+                repo_dir=nix_dir,
+                overlays_dir=local_overlays_dir,
+                parser=OverlayParser(local_overlays_dir),
+                hash_computer=HashComputer(nix_dir),
+            )
         )
-    ]
 
     if args.no_ai_nix:
         return sources
@@ -578,11 +581,12 @@ def make_overlay_sources(args, nix_dir: Path) -> list[OverlaySource]:
                 hash_computer=HashComputer(ai_nix_dir),
             )
         )
-    elif args.verbose:
-        print(
-            f"{Colors.DIM}ai-nix: skipped; no overlays directory at "
-            f"{ai_nix_overlays_dir}{Colors.RESET}"
-        )
+    else:
+        message = f"ai-nix: no overlays directory at {ai_nix_overlays_dir}"
+        if args.only_ai_nix:
+            raise SystemExit(message)
+        if args.verbose:
+            print(f"{Colors.DIM}{message}{Colors.RESET}")
 
     return sources
 
@@ -816,6 +820,7 @@ Examples:
   update-overlay --all --dry-run         Preview updates for all packages
   update-overlay --all --no-build        Update all packages (src hash only)
   update-overlay --no-ai-nix --all       Update only this repository
+  update-overlay --only-ai-nix --all     Update only the ai-nix overlay tree
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -845,6 +850,10 @@ Examples:
         help="Only update this repository's overlays"
     )
     parser.add_argument(
+        "--only-ai-nix", action="store_true",
+        help="Only update the ai-nix overlay tree"
+    )
+    parser.add_argument(
         "--no-build", action="store_true",
         help="Skip computing vendorHash/cargoHash/npmDepsHash (faster but incomplete)"
     )
@@ -865,6 +874,9 @@ Examples:
 
     if args.all and args.version:
         parser.error("Cannot use --version with --all")
+
+    if args.no_ai_nix and args.only_ai_nix:
+        parser.error("Cannot use --no-ai-nix with --only-ai-nix")
 
     nix_dir = Path(__file__).parent.parent.resolve()
     sources = make_overlay_sources(args, nix_dir)

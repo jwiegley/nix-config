@@ -1,26 +1,103 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 if [[ -d /etc/nixos ]]; then
-    cd /etc/nixos || exit
+    config_dir=/etc/nixos
 else
-    cd ~/src/nix || exit
+    config_dir=${NIX_CONFIG_DIR:-$HOME/src/nix}
+fi
+
+ai_nix_dir=${AI_NIX_DIR:-$HOME/src/ai-nix}
+brew_pid=
+
+if [[ ! -f $ai_nix_dir/flake.nix ]]; then
+    echo "update-agents: ai-nix checkout not found at $ai_nix_dir" >&2
+    echo "Set AI_NIX_DIR or clone https://github.com/jwiegley/ai-nix there." >&2
+    exit 1
+fi
+
+if command -v brew >/dev/null 2>&1; then
+    (
+        brew update
+        brew upgrade --greedy --yes
+    ) &>/tmp/brew.log &
+    brew_pid=$!
+fi
+
+git_pull_clean() {
+    local repo=$1
+    if [[ -n $(git -C "$repo" status --porcelain) ]]; then
+        echo "update-agents: refusing to auto-update dirty repo: $repo" >&2
+        exit 1
+    fi
+    git -C "$repo" pull --ff-only
+}
+
+commit_if_changed() {
+    local repo=$1
+    local message=$2
+
+    if git -C "$repo" diff --quiet && git -C "$repo" diff --cached --quiet; then
+        return 1
+    fi
+
+    git -C "$repo" add -u
+    git -C "$repo" commit -m "$message"
+    return 0
+}
+
+with_nixos_build_lock() {
+    local lock=/etc/nixos/.nixos-build
+
+    for _ in {1..60}; do
+        if [[ ! -e $lock ]]; then
+            sudo touch "$lock"
+            trap 'sudo rm -f /etc/nixos/.nixos-build' RETURN
+            "$@"
+            sudo rm -f "$lock"
+            trap - RETURN
+            return
+        fi
+        sleep 10
+    done
+
+    echo "update-agents: $lock still exists after 10 minutes" >&2
+    exit 1
+}
+
+git_pull_clean "$ai_nix_dir"
+git_pull_clean "$config_dir"
+
+(
+    cd "$ai_nix_dir"
+    nix flake update
+    python "$config_dir/bin/update-overlay" --only-ai-nix --all --ai-nix-dir "$ai_nix_dir"
+    nix run .#format
+    nix run .#check
+)
+
+if commit_if_changed "$ai_nix_dir" "Update AI tools"; then
+    git -C "$ai_nix_dir" push
 fi
 
 (
-    brew update
-    brew upgrade --greedy --yes
-) &>/tmp/brew.log &
+    cd "$config_dir"
+    nix flake update ai-nix
+)
 
-nix flake update --commit-lock-file llm-agents
+commit_if_changed "$config_dir" "Update AI agents" || true
 
 if [[ -d /etc/srp-next ]]; then
-    sudo nixos-rebuild switch --flake '.#ovh-vps'
+    with_nixos_build_lock sudo nixos-rebuild switch --flake "$config_dir#ovh-vps"
 elif [[ -d /etc/nixos ]]; then
-    sudo nixos-rebuild switch --flake '.#vulcan'
+    with_nixos_build_lock sudo nixos-rebuild switch --flake "$config_dir#vulcan"
 else
     u switch
 fi
 
-git push
+git -C "$config_dir" push
 
-wait
+if [[ -n $brew_pid ]]; then
+    wait "$brew_pid"
+fi
