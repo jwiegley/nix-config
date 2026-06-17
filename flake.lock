@@ -116,7 +116,6 @@
       "original": {
         "owner": "git-ai-project",
         "repo": "git-ai",
-        "rev": "4a9b16f24f11a38e315310fb4dad4c55e3f695fd",
         "type": "github"
       }
     },
@@ -132,17 +131,16 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1781700620,
-        "narHash": "sha256-n1/qGJMy/KdY8hVxNNwOrT1ISXoeXnWpV7rOwqOrmOw=",
+        "lastModified": 1781724197,
+        "narHash": "sha256-5FdH7phYfv/PWd9Vte8ZUY/JPH/4z9EKxcVHP1jWzi4=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "9bbc8a186eb5fa1e570179a61d870b7cb929a578",
+        "rev": "63a52eaaad78bc115a9a9209f9c101db86b3ee23",
         "type": "github"
       },
       "original": {
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "9bbc8a186eb5fa1e570179a61d870b7cb929a578",
         "type": "github"
       }
     },
@@ -163,7 +161,6 @@
       "original": {
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "6fadaf0ecad1e971e6582c09ac90330a6f73dd92",
         "type": "github"
       }
     },
@@ -178,8 +175,8 @@
       },
       "original": {
         "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
         "repo": "nixpkgs",
-        "rev": "3e41b24abd260e8f71dbe2f5737d24122f972158",
         "type": "github"
       }
     },
@@ -196,7 +193,6 @@
       "original": {
         "owner": "BeehiveInnovations",
         "repo": "pal-mcp-server",
-        "rev": "7afc7c1cc96e23992c8f105f960132c657883bb1",
         "type": "github"
       }
     },

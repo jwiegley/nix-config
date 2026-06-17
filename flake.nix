@@ -2,25 +2,25 @@
   description = "Portable Nix dev shell for AI CLI and MCP tooling";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/3e41b24abd260e8f71dbe2f5737d24122f972158";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     mcp-servers-nix = {
-      url = "github:natsukium/mcp-servers-nix/6fadaf0ecad1e971e6582c09ac90330a6f73dd92";
+      url = "github:natsukium/mcp-servers-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     llm-agents = {
-      url = "github:numtide/llm-agents.nix/9bbc8a186eb5fa1e570179a61d870b7cb929a578";
+      url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     git-ai = {
-      url = "github:git-ai-project/git-ai/4a9b16f24f11a38e315310fb4dad4c55e3f695fd";
+      url = "github:git-ai-project/git-ai";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     pal-mcp-server = {
-      url = "github:BeehiveInnovations/pal-mcp-server/7afc7c1cc96e23992c8f105f960132c657883bb1";
+      url = "github:BeehiveInnovations/pal-mcp-server";
       flake = false;
     };
   };
