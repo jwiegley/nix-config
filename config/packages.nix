@@ -24,6 +24,7 @@ let
   nonUserPackageInputs = [
     "darwin" # nix-darwin tooling
     "home-manager" # home-manager tooling
+    "ai-nix" # consumed via overlay
     "llm-agents" # multi-package; specific packages chosen below
     "dirscan" # consumed via 30-data-tools overlay
     "git-ai" # consumed via overlay / home-manager module
@@ -441,8 +442,49 @@ rec {
     ]
 
     # ── AI & LLM Tools ──────────────────────────────────────────────
-    ++ (if inputs ? ai-nix then inputs.ai-nix.lib.aiPackagesFor pkgs else [ ])
+    ++ [
+      (lib.hiPrio llama-cpp)
+      openmpi
+      qdrant
+    ]
+    ++ optPkg "guidellm"
+    ++ optPkg "llama-swap"
+    ++ optPkg "gguf-tools"
+    ++ optPkg "qdrant-web-ui"
+    ++ optPkg "agnix"
+    ++ optPkg "claude-vault"
+    ++ optPkg "claude-replay"
+    ++ (
+      if inputs ? llm-agents then
+        (with inputs.llm-agents.packages.${sys}; [
+          claude-code
+          ccusage
+          codex
+          droid
+          gemini-cli
+          opencode
+        ])
+      else
+        [ ]
+    )
+
+    # ── MCP Servers & Agent Tools ────────────────────────────────────
+    ++ optPkg "sherlock-db"
+    ++ optPkg "pal-mcp-server"
+    ++ optPkg "rustdocs-mcp-server"
+    ++ optPkg "context-hub"
+    ++ optPkg "context7-mcp"
+    ++ optPkg "playwright-mcp"
+    ++ optPkg "github-mcp-server"
     ++ optPkg "stock-trader-mcp"
+    # drafts-mcp-server is macOS-only (drives Drafts.app via AppleScript)
+    ++ lib.optionals isDarwin (optPkg "drafts-mcp-server")
+    ++ (
+      if pkgs ? mcp-server-sequential-thinking then
+        [ (lib.hiPrio pkgs.mcp-server-sequential-thinking) ]
+      else
+        [ ]
+    )
 
     # ── User Scripts & Custom Packages ───────────────────────────────
     ++ (if pkgs ? my-scripts then [ (lib.lowPrio pkgs.my-scripts) ] else [ ])
@@ -478,6 +520,9 @@ rec {
       terminal-notifier
       xquartz
     ]
+    ++ lib.optionals isDarwin (optPkg "vllm-mlx")
+    ++ lib.optionals isDarwin (optPkg "mtplx")
+    ++ lib.optionals isDarwin (optPkg "omlx")
 
     # ── Linux-Only Packages ──────────────────────────────────────────
     ++ lib.optionals isLinux [
@@ -486,11 +531,21 @@ rec {
     # ++ lib.optionals isLinux (optPkg "cpx")
 
     # ── Host-Specific Packages (hera) ────────────────────────────────
-    ++ lib.optionals (hostname == "hera") [
-      himalaya
-      openai-whisper
-      openhue-cli
-      soco-cli
-      spotify-player
-    ];
+    ++ lib.optionals (hostname == "hera") (
+      [
+        himalaya
+        openai-whisper
+        openhue-cli
+        soco-cli
+        spotify-player
+      ]
+      ++ (
+        if inputs ? llm-agents then
+          (with inputs.llm-agents.packages.${sys}; [
+            mcporter
+          ])
+        else
+          [ ]
+      )
+    );
 }
