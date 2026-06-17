@@ -16,7 +16,7 @@
     };
 
     ai-nix = {
-      url = "path:/Users/johnw/src/ai-nix";
+      url = "github:jwiegley/ai-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

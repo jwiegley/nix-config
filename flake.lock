@@ -171,14 +171,17 @@
         "pal-mcp-server": "pal-mcp-server"
       },
       "locked": {
-        "lastModified": 1781725971,
-        "narHash": "sha256-21jsYE4Rsd44pOLfr0GsU0+N1Ch8VkSf0npyelUjU4g=",
-        "path": "/Users/johnw/src/ai-nix",
-        "type": "path"
+        "lastModified": 1781727532,
+        "narHash": "sha256-7nlkVL5YIl9LxzritTkSVCfsKmONrinDL7Og3gsWjCA=",
+        "owner": "jwiegley",
+        "repo": "ai-nix",
+        "rev": "d8a39d8ae80b5db145f53b01eba135d3b2a86156",
+        "type": "github"
       },
       "original": {
-        "path": "/Users/johnw/src/ai-nix",
-        "type": "path"
+        "owner": "jwiegley",
+        "repo": "ai-nix",
+        "type": "github"
       }
     },
     "blueprint": {

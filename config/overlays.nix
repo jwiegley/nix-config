@@ -35,9 +35,9 @@ let
     || builtins.pathExists (overlayDir + ("/" + n + "/default.nix"));
 in
 [
-  # Inject flake inputs so overlays can access them via prev.inputs
-  (_final: _prev: { inherit inputs; })
   inputs.ai-nix.overlays.default
+  # Restore this flake's inputs after ai-nix applies its own overlay stack.
+  (_final: _prev: { inherit inputs; })
 ]
 ++ (
   # A merged CA bundle (system roots + Vulcan's private root CA), built as a
