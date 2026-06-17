@@ -5261,11 +5261,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1781700620,
-        "narHash": "sha256-n1/qGJMy/KdY8hVxNNwOrT1ISXoeXnWpV7rOwqOrmOw=",
+        "lastModified": 1781722919,
+        "narHash": "sha256-16rglXnvbmekmMWk6LFpmPFacMe7ZWCjSuuOGLGVFI4=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "9bbc8a186eb5fa1e570179a61d870b7cb929a578",
+        "rev": "12fa390a62a3a8a86e1094e9e24c954d2e46c9bd",
         "type": "github"
       },
       "original": {
