@@ -2,7 +2,7 @@
 # Purpose: Python package extensions for AI/ML tools
 # Dependencies: None (uses only prev)
 # Extends: pythonPackagesExtensions (mlx, llm-mlx, pymssql fixes, mitmproxy-macos)
-final: prev:
+_final: prev:
 
 let
   llm-mlx =
@@ -475,7 +475,7 @@ in
 
         # ibis-framework: DuckDB backend tests fail (SystemError) and pythonImportsCheck
         # tries to import ibis.backends.duckdb which needs the optional duckdb module
-        ibis-framework = pprev.ibis-framework.overrideAttrs (old: {
+        ibis-framework = pprev.ibis-framework.overrideAttrs (_old: {
           doCheck = false;
           doInstallCheck = false;
           installCheckPhase = "true";

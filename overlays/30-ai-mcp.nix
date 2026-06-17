@@ -49,7 +49,7 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
 // {
 
   # Fix: npm prune removes @types/node, then prepare script tries to rebuild
-  mcp-server-sequential-thinking = prev.mcp-server-sequential-thinking.overrideAttrs (old: {
+  mcp-server-sequential-thinking = prev.mcp-server-sequential-thinking.overrideAttrs (_old: {
     dontNpmPrune = true;
   });
 
@@ -150,7 +150,7 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
   # Context Hub - AI agent documentation CLI and MCP server
   context-hub =
     with prev;
-    buildNpmPackage (finalAttrs: {
+    buildNpmPackage (_finalAttrs: {
       pname = "context-hub";
       version = "67dcbeb2";
 

@@ -2,7 +2,7 @@
 # Purpose: agnix - Linter and LSP for AI coding assistant config files
 # Dependencies: Uses prev only
 # Packages: agnix
-final: prev: {
+_final: prev: {
 
   agnix =
     with prev;

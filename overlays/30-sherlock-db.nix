@@ -2,7 +2,7 @@
 # Purpose: Sherlock - read-only database query tool for AI assistants
 # Dependencies: None (uses pre-built binaries from GitHub releases)
 # Packages: sherlock-db
-final: prev:
+_final: prev:
 
 let
   version = "1.4.0";

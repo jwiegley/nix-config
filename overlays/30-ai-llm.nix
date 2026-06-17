@@ -106,7 +106,7 @@ final: prev: {
 
       ui =
         with prev;
-        buildNpmPackage (finalAttrs: {
+        buildNpmPackage (_finalAttrs: {
           pname = "llama-swap-ui";
           inherit version src;
 
@@ -138,7 +138,7 @@ final: prev: {
         });
     in
     with prev;
-    prev.llama-swap.overrideAttrs (attrs: rec {
+    prev.llama-swap.overrideAttrs (_attrs: rec {
       inherit version src;
       vendorHash = "sha256-is8pm5g27in/LraLVJUzsa7EPqs+C3qzY8OQ/DXe98A=";
       preBuild = ''

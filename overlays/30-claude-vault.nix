@@ -2,7 +2,7 @@
 # Purpose: claude-vault - Archive Claude Code conversations into searchable SQLite
 # Dependencies: Uses prev only
 # Packages: claude-vault
-final: prev: {
+_final: prev: {
 
   claude-vault =
     with prev;
