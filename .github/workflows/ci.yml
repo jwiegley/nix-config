@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Validate lefthook
+        run: nix develop --command lefthook validate
+
+      - name: Format check
+        run: nix run .#format-check
+
+      - name: Lint
+        run: nix run .#lint
+
+      - name: Tests
+        run: nix run .#test
+
+      - name: Build
+        run: nix build --print-build-logs .#default
+
+      - name: No warnings
+        run: nix run .#no-warnings
+
+      - name: Coverage check
+        run: nix run .#coverage-check
+
+      - name: Performance check
+        run: nix run .#profile-check
+
+      - name: Fuzz target
+        run: nix run .#fuzz
+
+      - name: Memory check
+        run: nix run .#memory-check
+
+      - name: Flake check
+        run: nix flake check --print-build-logs
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-nix-reports
+          path: |
+            build/coverage
+            build/profile
+            build/fuzz
+            build/memory
+          if-no-files-found: ignore
