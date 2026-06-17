@@ -1,0 +1,4 @@
+{
+  "metric": "quality_check_file_coverage",
+  "minimum_percent": 100
+}

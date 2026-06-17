@@ -41,7 +41,9 @@
         "x86_64-linux"
       ];
 
-      forAllSystems = nixpkgs.lib.genAttrs systems;
+      inherit (nixpkgs) lib;
+
+      forAllSystems = lib.genAttrs systems;
 
       overlays = [
         (_final: _prev: { inherit inputs; })
@@ -151,9 +153,136 @@
         ]
         ++ lib.optionals pkgs.stdenv.isDarwin (opt "drafts-mcp-server")
         ++ lib.optionals appleSilicon (opt "mlx-lm" ++ opt "mtplx" ++ opt "omlx" ++ opt "vllm-mlx");
+
+      devToolPackages =
+        pkgs: with pkgs; [
+          deadnix
+          findutils
+          gawk
+          git
+          gnugrep
+          gnused
+          hyperfine
+          jq
+          lefthook
+          nix
+          nixfmt
+          shellcheck
+          shfmt
+          statix
+        ];
+
+      qualityInputs = pkgs: rec {
+        common = with pkgs; [
+          bash
+          coreutils
+          findutils
+          gawk
+          git
+          gnugrep
+          gnused
+          jq
+        ];
+
+        format =
+          common
+          ++ (with pkgs; [
+            nixfmt
+            shfmt
+          ]);
+        lint =
+          common
+          ++ (with pkgs; [
+            deadnix
+            shellcheck
+            statix
+          ]);
+        test = common ++ (with pkgs; [ nix ]);
+        build = common ++ (with pkgs; [ nix ]);
+        coverage = common;
+        profile =
+          common
+          ++ (with pkgs; [
+            hyperfine
+            nixfmt
+          ]);
+        fuzz = common ++ (with pkgs; [ nix ]);
+        memory = common;
+        all =
+          common
+          ++ (with pkgs; [
+            deadnix
+            hyperfine
+            nix
+            nixfmt
+            shellcheck
+            shfmt
+            statix
+          ]);
+      };
+
+      sourceForChecks = lib.cleanSourceWith {
+        src = ./.;
+        filter =
+          path: _type:
+          let
+            name = builtins.baseNameOf path;
+          in
+          !(
+            name == ".git"
+            || name == ".direnv"
+            || name == "build"
+            || name == "result"
+            || lib.hasPrefix "result-" name
+          );
+      };
+
+      scriptRoot = ./scripts;
+
+      mkScriptPackage =
+        pkgs: name: scriptName: runtimeInputs:
+        pkgs.writeShellApplication {
+          name = "ai-nix-${name}";
+          inherit runtimeInputs;
+          text = ''
+            exec ${pkgs.bash}/bin/bash ${scriptRoot}/${scriptName} "$@"
+          '';
+        };
+
+      mkScriptApp =
+        pkgs: name: scriptName: runtimeInputs:
+        let
+          package = mkScriptPackage pkgs name scriptName runtimeInputs;
+        in
+        {
+          type = "app";
+          program = "${package}/bin/ai-nix-${name}";
+          meta.description = "Run the ai-nix ${name} target";
+        };
+
+      mkScriptCheck =
+        pkgs: name: scriptName: runtimeInputs: extraEnv:
+        pkgs.runCommand "ai-nix-${name}"
+          {
+            nativeBuildInputs = runtimeInputs;
+          }
+          ''
+            export HOME=$TMPDIR
+            export AI_NIX_ROOT=${sourceForChecks}
+            export AI_NIX_OUTPUT_ROOT=$TMPDIR/build
+            ${extraEnv}
+
+            ${pkgs.bash}/bin/bash ${scriptRoot}/${scriptName}
+
+            mkdir -p "$out"
+            if [ -d "$AI_NIX_OUTPUT_ROOT" ]; then
+              cp -R "$AI_NIX_OUTPUT_ROOT"/. "$out"/
+            fi
+            touch "$out/${name}.ok"
+          '';
     in
     {
-      overlays.default = nixpkgs.lib.composeManyExtensions overlays;
+      overlays.default = lib.composeManyExtensions overlays;
 
       lib.aiPackagesFor = aiPackagesFor;
 
@@ -164,7 +293,7 @@
         in
         {
           default = pkgs.mkShell {
-            packages = aiPackagesFor pkgs;
+            packages = aiPackagesFor pkgs ++ devToolPackages pkgs;
 
             shellHook = ''
               export DISABLE_AUTOUPDATER="1"
@@ -192,26 +321,68 @@
         }
       );
 
+      apps = forAllSystems (
+        system:
+        let
+          pkgs = mkPkgs system;
+          inputs = qualityInputs pkgs;
+          app =
+            name: scriptName: runtimeInputs:
+            mkScriptApp pkgs name scriptName runtimeInputs;
+        in
+        {
+          format = app "format" "format.sh" inputs.format;
+          format-check = app "format-check" "format-check.sh" inputs.format;
+          lint = app "lint" "lint.sh" inputs.lint;
+          test = app "test" "test.sh" inputs.test;
+          build-check = app "build-check" "build-check.sh" inputs.build;
+          no-warnings = app "no-warnings" "no-warnings.sh" inputs.build;
+          coverage = app "coverage" "coverage.sh" inputs.coverage;
+          coverage-check = app "coverage-check" "coverage-check.sh" (inputs.coverage ++ [ pkgs.jq ]);
+          profile = app "profile" "profile.sh" inputs.profile;
+          profile-check = app "profile-check" "profile-check.sh" inputs.profile;
+          fuzz = app "fuzz" "fuzz.sh" inputs.fuzz;
+          memory-check = app "memory-check" "memory-check.sh" inputs.memory;
+          check = app "check" "check.sh" inputs.all;
+          default = self.apps.${system}.check;
+        }
+      );
+
+      checks = forAllSystems (
+        system:
+        let
+          pkgs = mkPkgs system;
+          inputs = qualityInputs pkgs;
+          check =
+            name: scriptName: runtimeInputs: extraEnv:
+            mkScriptCheck pkgs name scriptName runtimeInputs extraEnv;
+        in
+        {
+          build = self.packages.${system}.default;
+          format = check "format" "format-check.sh" inputs.format "";
+          lint = check "lint" "lint.sh" inputs.lint "";
+          tests = check "tests" "test.sh" inputs.test ''
+            export AI_NIX_TEST_SOURCE_ONLY=1
+          '';
+          coverage = check "coverage" "coverage-check.sh" (inputs.coverage ++ [ pkgs.jq ]) "";
+          profile = check "profile" "profile-check.sh" inputs.profile ''
+            export AI_NIX_PROFILE_RUNS=1
+            export AI_NIX_PROFILE_WARMUP=0
+          '';
+          fuzz = check "fuzz" "fuzz.sh" inputs.fuzz ''
+            export AI_NIX_FUZZ_ITERATIONS=2
+          '';
+          memory = check "memory" "memory-check.sh" inputs.memory "";
+          no-warnings = check "no-warnings" "lint.sh" inputs.lint "";
+        }
+      );
+
       formatter = forAllSystems (
         system:
         let
           pkgs = mkPkgs system;
         in
-        pkgs.writeShellApplication {
-          name = "ai-nix-fmt";
-          runtimeInputs = [
-            pkgs.findutils
-            pkgs.nixfmt
-          ];
-          text = ''
-            if [ "$#" -eq 0 ]; then
-              mapfile -t nix_files < <(find . -name '*.nix' -not -path './.git/*')
-              set -- "''${nix_files[@]}"
-            fi
-
-            exec nixfmt "$@"
-          '';
-        }
+        mkScriptPackage pkgs "format" "format.sh" (qualityInputs pkgs).format
       );
     };
 }

@@ -1,0 +1,5 @@
+{
+  "metric": "format_check_mean_seconds",
+  "mean_seconds": 2.0,
+  "threshold": 0.05
+}
