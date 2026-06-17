@@ -16,19 +16,41 @@
 
 let
   overlayDir = ../overlays;
+  aiOverlayFiles = [
+    "30-agnix.nix"
+    "30-ai-llm.nix"
+    "30-ai-mcp.nix"
+    "30-ai-python.nix"
+    "30-claude-vault.nix"
+    "30-sherlock-db.nix"
+    "30-vllm-mlx.nix"
+  ];
+  skipVendoredAiOverlays = inputs ? ai-nix;
+  isImportableOverlay =
+    n:
+    (
+      builtins.match ".*\\.nix" n != null || builtins.pathExists (overlayDir + ("/" + n + "/default.nix"))
+    )
+    && !(skipVendoredAiOverlays && builtins.elem n aiOverlayFiles);
 in
 [
   # Inject flake inputs so overlays can access them via prev.inputs
   (final: prev: { inherit inputs; })
-
-  inputs.mcp-servers-nix.overlays.default
-
-  (final: prev: {
-    github-mcp-server =
-      prev.callPackage (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")
-        { };
-  })
 ]
+++ (
+  if inputs ? ai-nix then
+    [ inputs.ai-nix.overlays.default ]
+  else
+    [
+      inputs.mcp-servers-nix.overlays.default
+
+      (final: prev: {
+        github-mcp-server =
+          prev.callPackage (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")
+            { };
+      })
+    ]
+)
 ++ (
   # A merged CA bundle (system roots + Vulcan's private root CA), built as a
   # standalone derivation rather than overriding `cacert` itself. Overriding
@@ -51,8 +73,6 @@ in
 ++ (
   with builtins;
   map (n: import (overlayDir + ("/" + n))) (
-    filter (n: match ".*\\.nix" n != null || pathExists (overlayDir + ("/" + n + "/default.nix"))) (
-      attrNames (readDir overlayDir)
-    )
+    filter isImportableOverlay (attrNames (readDir overlayDir))
   )
 )

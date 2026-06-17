@@ -15,6 +15,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    ai-nix = {
+      url = "path:/Users/johnw/src/ai-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     mcp-servers-nix = {
       url = "github:natsukium/mcp-servers-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -153,9 +158,16 @@
               extraSpecialArgs = { inherit hostname inputs; };
               modules = [
                 (
-                  args:
+                  {
+                    pkgs,
+                    hostname,
+                    inputs,
+                    ...
+                  }:
                   let
-                    packages = import ./config/packages.nix args;
+                    packages = import ./config/packages.nix {
+                      inherit hostname inputs pkgs;
+                    };
                   in
                   {
                     imports = [ ./config/johnw.nix ];
