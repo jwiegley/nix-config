@@ -53,9 +53,10 @@ echo '└───────────────────────�
 
 ### Coq projects
 
-echo ~/src/category-theory
+echo ~/src/category-theory/master
 (
-    cd ~/src/category-theory || exit
+    cd ~/src/category-theory/master || exit
+    echo ~/src/category-theory/master
     source .envrc
     nix develop -c echo hello
 ) >/tmp/category-theory-build.log 2>&1
