@@ -905,6 +905,10 @@ Examples:
         "--verbose", "-v", action="store_true",
         help="Show skipped packages (no supported source)"
     )
+    parser.add_argument(
+        "--no-ai-nix-advice", action="store_true",
+        help="Do not print the manual ai-nix commit/update-lock advice"
+    )
 
     args = parser.parse_args()
 
@@ -1094,7 +1098,7 @@ Examples:
     failed_str = f"{Colors.RED}{fail_count} failed{Colors.RESET}" if fail_count else f"{fail_count} failed"
     print(f"\n{Colors.BOLD}Summary:{Colors.RESET} {updated_str}, {skipped_str}, {failed_str}")
 
-    if "ai-nix" in changed_sources:
+    if "ai-nix" in changed_sources and not args.no_ai_nix_advice:
         ai_source = next(source for source in sources if source.name == "ai-nix")
         print(
             f"\n{Colors.YELLOW}ai-nix changed at {ai_source.repo_dir}.{Colors.RESET}\n"

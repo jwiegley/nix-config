@@ -38,13 +38,22 @@ commit_if_changed() {
     local repo=$1
     local message=$2
 
-    if git -C "$repo" diff --quiet && git -C "$repo" diff --cached --quiet; then
+    if [[ -z $(git -C "$repo" status --porcelain) ]]; then
         return 1
     fi
 
-    git -C "$repo" add -u
+    git -C "$repo" add -A
     git -C "$repo" commit -m "$message"
     return 0
+}
+
+commit_and_push_if_changed() {
+    local repo=$1
+    local message=$2
+
+    if commit_if_changed "$repo" "$message"; then
+        git -C "$repo" push
+    fi
 }
 
 with_nixos_build_lock() {
@@ -72,14 +81,20 @@ git_pull_clean "$config_dir"
 (
     cd "$ai_nix_dir"
     nix flake update
-    python "$config_dir/bin/update-overlay" --only-ai-nix --all --ai-nix-dir "$ai_nix_dir"
+    python "$config_dir/bin/update-overlay" \
+        --only-ai-nix \
+        --all \
+        --ai-nix-dir "$ai_nix_dir" \
+        --no-ai-nix-advice
     nix run .#format
-    nix run .#check
 )
 
-if commit_if_changed "$ai_nix_dir" "Update AI tools"; then
-    git -C "$ai_nix_dir" push
-fi
+commit_and_push_if_changed "$ai_nix_dir" "Update AI tools"
+
+(
+    cd "$ai_nix_dir"
+    nix run .#check
+)
 
 (
     cd "$config_dir"
