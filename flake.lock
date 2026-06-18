@@ -819,11 +819,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781242433,
-        "narHash": "sha256-bchLZZ3sRn740zyvD2icZSnNoTaanN0nw7l6fjVXO+E=",
+        "lastModified": 1781761792,
+        "narHash": "sha256-rCPytmKNjctLloB6UgK5CRrHSwV4b0ygxtJLPPp8R14=",
         "owner": "lnl7",
         "repo": "nix-darwin",
-        "rev": "aabb2037edfc0f210723b72cd5f528aab5dd3f0b",
+        "rev": "a1fa429e945becaf60468600daf649be4ba0350c",
         "type": "github"
       },
       "original": {
@@ -856,11 +856,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1781702223,
-        "narHash": "sha256-em1YtilwQO7IucupbpGZIW2JVzrtnk6mmC0vXamXSSk=",
+        "lastModified": 1781797758,
+        "narHash": "sha256-Dv0LTGjGU3ujxeOmK2nxZrxivTCw4+OVUXlK3LKAP8w=",
         "ref": "refs/heads/master",
-        "rev": "d0b693e3e9bab30b558962991c55a2f07721fb3f",
-        "revCount": 182589,
+        "rev": "6f2cc5417fc568edc719227019bfdc3cae205f6c",
+        "revCount": 182592,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -4919,11 +4919,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781711298,
-        "narHash": "sha256-/lyUJK9dwG16FGlL6Yz+yMmHhRSWCXiyzjvaohIrwbw=",
+        "lastModified": 1781802085,
+        "narHash": "sha256-2Msxl9DcRaoGQzcs10RHscfS/iM0ZaoSLo2ZwT04RZA=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "fa4e2f7e101c2a656bdd910e49ae485bd2d8a358",
+        "rev": "8af17160d162bda6f0861c5c7249347c5df16635",
         "type": "github"
       },
       "original": {
@@ -5375,11 +5375,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781692185,
-        "narHash": "sha256-Fof2NDs2JDsuzQdrBRKFsXfsczpPVQ2HXtcdNlpfCpQ=",
+        "lastModified": 1781740712,
+        "narHash": "sha256-iYOpMOMY5L3U1Yx/gJqqpEtTd808TErhKf4ggq09I6w=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "6fadaf0ecad1e971e6582c09ac90330a6f73dd92",
+        "rev": "a4c4f28c472f72fbab064a0d3faa0b887f6f5dd5",
         "type": "github"
       },
       "original": {
@@ -6883,11 +6883,11 @@
     "pal-mcp-server_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1781642958,
-        "narHash": "sha256-GuLlN0C4PZ63Bk1uuDPTJ6WRLEseF1VXhRqt6zf86w8=",
+        "lastModified": 1781719457,
+        "narHash": "sha256-ITGd3s3Ml7CtNyvHf0qWcBxQyElOqGTV+q8FzgJOAo4=",
         "ref": "refs/heads/main",
-        "rev": "72778520552263c0fd0337596098210eb4335f2a",
-        "revCount": 1177,
+        "rev": "50b4a9013f7f10986f2353073416a5f53ee8f523",
+        "revCount": 1181,
         "type": "git",
         "url": "file:///Users/johnw/src/pal-mcp-server"
       },
