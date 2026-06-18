@@ -173,31 +173,6 @@ in
         Thumbs.db
         Drop Box
       '';
-    }
-    // lib.optionalAttrs isDarwin {
-      # Homebrew 5.1.x enforces tap-trust (HOMEBREW_REQUIRE_TAP_TRUST is on by
-      # default in this rollout). During `darwin-rebuild switch`, nix-darwin runs
-      # `brew bundle` with a stripped environment (`sudo --preserve-env=PATH`),
-      # so XDG_CONFIG_HOME is unset and Homebrew reads ~/.homebrew/trust.json --
-      # NOT the ~/.config/homebrew/trust.json that an interactive `brew trust`
-      # writes. Without a trust entry there, the activation-time bundle hard-fails
-      # with "Refusing to load formula ... from untrusted tap". Declare trust for
-      # our non-official taps so pumas, huggingface-cli-full and graphite load.
-      #
-      # Homebrew bundle runs (activate:~1231) BEFORE home-manager links files
-      # (~1247), so the very first switch after adding this still needs the file
-      # to pre-exist; it is seeded out-of-band once, then this keeps it in sync.
-      ".homebrew/trust.json".text = builtins.toJSON {
-        trustedtaps = [
-          "graelo/tap"
-          "withgraphite/tap"
-        ];
-        trustedformulae = [
-          "graelo/tap/pumas"
-          "graelo/tap/huggingface-cli-full"
-          "withgraphite/tap/graphite"
-        ];
-      };
     };
 
     # claude-mem (Fix C): its observation generator spawns headless `claude`,

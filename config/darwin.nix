@@ -13,6 +13,19 @@ let
 
   xdg_configHome = "${home}/.config";
 
+  homebrewTrustJson = pkgs.writeText "homebrew-trust.json" (
+    builtins.toJSON {
+      trustedtaps = [
+        "graelo/tap"
+        "withgraphite/tap"
+      ];
+      trustedformulae = [
+        "graelo/tap/pumas"
+        "graelo/tap/huggingface-cli-full"
+        "withgraphite/tap/graphite"
+      ];
+    }
+  );
 in
 {
   imports = [ ./launchd.nix ];
@@ -447,6 +460,16 @@ in
 
   system = {
     stateVersion = 4;
+
+    # Homebrew 5.1.x enforces tap trust during nix-darwin's Homebrew activation
+    # before Home Manager links files. It also rejects trust stores whose real
+    # path lives under the root-owned Nix store, so this must be a real user-owned
+    # file in ~/.homebrew rather than a home.file symlink.
+    activationScripts.preActivation.text = ''
+      /usr/bin/install -d -o johnw -g staff -m 0755 ${home}/.homebrew
+      /bin/rm -f ${home}/.homebrew/trust.json
+      /usr/bin/install -o johnw -g staff -m 0644 ${homebrewTrustJson} ${home}/.homebrew/trust.json
+    '';
 
     # Hera is a desktop and hosts LLM services that need to stay reachable
     # at any hour. Force the configured value so it can't drift back via
