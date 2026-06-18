@@ -196,6 +196,11 @@ in
         stat = true;
       };
 
+      trace2 = {
+        eventTarget = "af_unix:stream:${vars.home}/.git-ai/internal/daemon/trace2.sock";
+        eventNesting = 10;
+      };
+
       "color \"sh\"" = {
         branch = "yellow reverse";
         workdir = "blue bold";
