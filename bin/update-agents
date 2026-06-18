@@ -2,6 +2,43 @@
 
 set -euo pipefail
 
+run_switch=true
+run_brew=true
+
+usage() {
+    cat <<'EOF'
+usage: update-agents [--no-switch] [--no-brew]
+
+Update ai-nix tools, commit and push ai-nix, update this flake's ai-nix lock,
+and optionally switch the host.
+
+Options:
+  --no-switch  Skip the final NixOS/nix-darwin switch
+  --no-brew    Skip the background Homebrew update/upgrade
+EOF
+}
+
+while (($#)); do
+    case $1 in
+    --no-switch)
+        run_switch=false
+        ;;
+    --no-brew)
+        run_brew=false
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        echo "update-agents: unknown option: $1" >&2
+        usage >&2
+        exit 2
+        ;;
+    esac
+    shift
+done
+
 if [[ -d /etc/nixos ]]; then
     config_dir=/etc/nixos
 else
@@ -17,7 +54,7 @@ if [[ ! -f $ai_nix_dir/flake.nix ]]; then
     exit 1
 fi
 
-if command -v brew >/dev/null 2>&1; then
+if [[ $run_brew == true ]] && command -v brew >/dev/null 2>&1; then
     (
         brew update
         brew upgrade --greedy --yes
@@ -103,12 +140,14 @@ commit_and_push_if_changed "$ai_nix_dir" "Update AI tools"
 
 commit_if_changed "$config_dir" "Update AI agents" || true
 
-if [[ -d /etc/srp-next ]]; then
-    with_nixos_build_lock sudo nixos-rebuild switch --flake "$config_dir#ovh-vps"
-elif [[ -d /etc/nixos ]]; then
-    with_nixos_build_lock sudo nixos-rebuild switch --flake "$config_dir#vulcan"
-else
-    u switch
+if [[ $run_switch == true ]]; then
+    if [[ -d /etc/srp-next ]]; then
+        with_nixos_build_lock sudo nixos-rebuild switch --flake "$config_dir#ovh-vps"
+    elif [[ -d /etc/nixos ]]; then
+        with_nixos_build_lock sudo nixos-rebuild switch --flake "$config_dir#vulcan"
+    else
+        u switch
+    fi
 fi
 
 git -C "$config_dir" push
