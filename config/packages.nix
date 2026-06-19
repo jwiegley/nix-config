@@ -285,7 +285,7 @@ rec {
             stdenv
             venvShellHook
           ]
-          ++ lib.optional (python-pkgs ? mlx-speech) python-pkgs.mlx-speech
+          ++ lib.optional (isDarwin && python-pkgs ? mlx-speech) python-pkgs.mlx-speech
         )
       ))
       pyright # LSP server for Python
