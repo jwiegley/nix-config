@@ -86,7 +86,7 @@ final: prev: {
     npmDeps = prev.fetchNpmDeps {
       name = "llama-cpp-${version}-npm-deps";
       inherit src;
-      inherit (attrs) patches;
+      patches = attrs.patches or [ ];
       preBuild = "pushd tools/ui";
       hash = npmDepsHash;
     };
