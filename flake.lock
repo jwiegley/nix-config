@@ -7134,11 +7134,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773725742,
-        "narHash": "sha256-rC+74V62szu2RfrSj48TypBy6jv/w3Pbfye/Q5Q470g=",
+        "lastModified": 1781829612,
+        "narHash": "sha256-dZWB8gGTGo05E5exRArqKPJRiAP/3TdRP4Hhowi8mNA=",
         "ref": "refs/heads/master",
-        "rev": "57ec510dd40f6cb5bb8219b8a46a9bab3c3e86f9",
-        "revCount": 91,
+        "rev": "dceb5b81d8f28f211adf452352bbb17ca26e7b52",
+        "revCount": 93,
         "type": "git",
         "url": "file:///Users/johnw/src/sizes"
       },
