@@ -368,8 +368,8 @@ let
         src = fetchFromGitHub {
           owner = "emarsden";
           repo = "pgmacs";
-          rev = "87a0e9cce6760ae3f06f940afada75da807a2b83";
-          sha256 = "sha256-aKSUDefoXmjBNZH18ChrJmZ1yNPwo6Ejf37nDfBiKWw=";
+          rev = "dac5e52e91d64a87c328ca3f708fca34742b616d";
+          sha256 = "sha256-a9TKkWmxUlmoBdU4BEkTsWWObifTJfFxEfc6QH8uxVY=";
           # date = 2025-09-29T11:18:24+02:00;
         };
         buildInputs = with eself; [ pg ];
@@ -533,8 +533,8 @@ let
         src = fetchFromGitHub {
           owner = "kmontag";
           repo = "macher";
-          rev = "55e75f2ee27eedc3cbf7e8bfcef27bcce11e3540";
-          sha256 = "sha256-zxysDeUDZ4AnjMn3WkK/TOMVwM8oPjC3FPAQeg6d6Ps=";
+          rev = "67972625ae052a5a07929043324fbd3b6b2fc08a";
+          sha256 = "sha256-PnSaB/HhW3rNYff+d0vojKhDsIu8EMxPF9G28mWHtkQ=";
           # date = 2025-08-20T19:15:22-07:00;
         };
         buildInputs = with eself; [ gptel ];
