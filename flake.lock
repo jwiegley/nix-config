@@ -171,11 +171,11 @@
         "pal-mcp-server": "pal-mcp-server"
       },
       "locked": {
-        "lastModified": 1782121962,
-        "narHash": "sha256-h/xpzoaLwxoeHESnN41TRjyCq8Qdg6FDjOIPweuAhNM=",
+        "lastModified": 1782146534,
+        "narHash": "sha256-F3MFSJTgyE1Yg25+bmvnFLO35O+YG3B7sVn2pvQAf3I=",
         "owner": "jwiegley",
         "repo": "ai-nix",
-        "rev": "eae479b16f999078125adf46f7dd3d31c3c83772",
+        "rev": "7872965603f2d48320d17f54c155c8fe9bcd1f46",
         "type": "github"
       },
       "original": {
@@ -1414,11 +1414,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1782083765,
-        "narHash": "sha256-RgSfdMAO/DwoGmIQknhqhypUcz+3id5hXvqU0cRMXs4=",
+        "lastModified": 1782145642,
+        "narHash": "sha256-Hau8sJy6FONrBDgYGbnidIRCO3mea+CVPWOJtqjdBCQ=",
         "owner": "git-ai-project",
         "repo": "git-ai",
-        "rev": "9ed421949c06217e1d60983a53eb2c395079b013",
+        "rev": "446861d56304fc19d3990dc4e88b82c8d30518f6",
         "type": "github"
       },
       "original": {
@@ -5355,11 +5355,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782014763,
-        "narHash": "sha256-q9vaMcXibF2Jzog5Mx8l2JYxOSzi6bp2d3PLisH3kyM=",
+        "lastModified": 1782128392,
+        "narHash": "sha256-siQ+9TPmjBNWpjXRtepnTcUA09QNQi6FC90PRNIAiIo=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "ea6feb73a131cb0c1cfca2dcce4cbcedf0455123",
+        "rev": "8b646823c150e8fa510b5117c9729d102ae8e95f",
         "type": "github"
       },
       "original": {
