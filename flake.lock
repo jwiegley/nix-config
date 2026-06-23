@@ -856,11 +856,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1782095431,
-        "narHash": "sha256-LUc/zKTtoPENfF1IcxU5H60a/YItgFIkctqSnGaOdGk=",
+        "lastModified": 1782146810,
+        "narHash": "sha256-ec70Ym5ihqcYHdPYBAgWVxqhfHRnXcUNN0XCHStvMEw=",
         "ref": "refs/heads/master",
-        "rev": "b3574e6464b0cce4a878106c07f1ea8f65989a6b",
-        "revCount": 182633,
+        "rev": "eba26e9489faf8b0716401a27e3b8d60bfa4120a",
+        "revCount": 182639,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -1434,11 +1434,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1782083765,
-        "narHash": "sha256-RgSfdMAO/DwoGmIQknhqhypUcz+3id5hXvqU0cRMXs4=",
+        "lastModified": 1782184015,
+        "narHash": "sha256-uYdxIB74UszwavKay/FF1OOlvRvLDRHlKGp+9bXCHT4=",
         "ref": "refs/heads/main",
-        "rev": "9ed421949c06217e1d60983a53eb2c395079b013",
-        "revCount": 4767,
+        "rev": "e2fe585fc11e946d6dd6b0041f5c0e1f5bd0b716",
+        "revCount": 4780,
         "type": "git",
         "url": "file:///Users/johnw/work/git-ai/git-ai/main"
       },
@@ -4919,11 +4919,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782103446,
-        "narHash": "sha256-+vMR3KPBVoY9nJrQI9qje5H1vmv51dJgMYkUuYimtJg=",
+        "lastModified": 1782166451,
+        "narHash": "sha256-SA7LyrayyZBvtzZnesnSLV7haciFuVLeZaX2hd5v4j4=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "d8dac1f668fd861369571be3678ec75b1573e7e3",
+        "rev": "471a1d2f840eb7fcbdfd541d99c13a64096f46db",
         "type": "github"
       },
       "original": {
@@ -5375,11 +5375,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782014763,
-        "narHash": "sha256-q9vaMcXibF2Jzog5Mx8l2JYxOSzi6bp2d3PLisH3kyM=",
+        "lastModified": 1782128392,
+        "narHash": "sha256-siQ+9TPmjBNWpjXRtepnTcUA09QNQi6FC90PRNIAiIo=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "ea6feb73a131cb0c1cfca2dcce4cbcedf0455123",
+        "rev": "8b646823c150e8fa510b5117c9729d102ae8e95f",
         "type": "github"
       },
       "original": {

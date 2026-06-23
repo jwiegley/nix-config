@@ -224,6 +224,7 @@ in
         ignoreSubmodules = "dirty";
         renames = "copies";
         mnemonicprefix = true;
+        algorithm = "histogram";
       };
 
       advice = {

@@ -146,18 +146,8 @@ in
           ControlPath = "none";
         };
 
-        ghai = {
-          User = "git";
-          HostName = "github.com";
-          IdentityFile = "${config.xdg.configHome}/ssh/id_git-ai";
-          IdentitiesOnly = true;
-
-          ControlMaster = "no";
-          ControlPath = "none";
-        };
-
         positron = controlMastered {
-          header = "Host andoria-* delphi-* agentsrv labmgr sw-dev-01";
+          header = "Host andoria-* delphi-* sw-dev-* agentsrv labmgr";
           User = "jwiegley";
           IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
           IdentitiesOnly = true;
@@ -175,6 +165,16 @@ in
           HostName = "sw-dev-01";
           IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
           IdentitiesOnly = true;
+        };
+
+        ghai = {
+          User = "git";
+          HostName = "github.com";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_git-ai";
+          IdentitiesOnly = true;
+
+          ControlMaster = "no";
+          ControlPath = "none";
         };
 
         git-ai = controlMastered {
