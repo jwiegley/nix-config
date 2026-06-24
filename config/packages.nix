@@ -291,6 +291,7 @@ rec {
       pyright # LSP server for Python
       protobufc
       ruby
+      scc
       sccache
       tlaplus
       uv
