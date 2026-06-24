@@ -160,6 +160,14 @@ in
           IdentitiesOnly = true;
         };
 
+        atlas = controlMastered {
+          header = "Host atlas-*";
+          User = "positron";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
+          IdentitiesOnly = true;
+          ProxyJump = "positron-api";
+        };
+
         "pos andoria" = controlMastered {
           User = "jwiegley";
           HostName = "andoria-08";
