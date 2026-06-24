@@ -76,12 +76,12 @@ final: prev: {
   # NOTE: As of b9190+, the webui was relocated from tools/server/webui
   # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
   llama-cpp = (prev.llama-cpp.override { inherit (final) nodejs_latest; }).overrideAttrs (attrs: rec {
-    version = "9776";
+    version = "9782";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-pama4JmU8BeKrwfZ19GcbQd5Rbdzihcl07Z6jw047jA=";
+      hash = "sha256-bAZymldT+hwTX4OyPvYjkTJ6EcIf3Quv6qJCTAHvvEk=";
     };
     postPatch = "";
     npmRoot = "tools/ui";
@@ -100,7 +100,7 @@ final: prev: {
       }
       popd
     '';
-    npmDepsHash = "sha256-0dctM/apI3ysMIEVBaBXO9hZMWskpJpNpOws1gwiOYc=";
+    npmDepsHash = "sha256-X1DZgmhS/zHTqDT5zq0kywwntthcJ9vRXeqyO3zz6UU=";
     npmDeps = prev.fetchNpmDeps {
       name = "llama-cpp-${version}-npm-deps";
       inherit src;
