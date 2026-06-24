@@ -197,7 +197,7 @@ in
       };
 
       trace2 = {
-        eventTarget = "af_unix:stream:${vars.home}/.git-ai/internal/daemon/trace2.sock";
+        eventTarget = "af_unix:stream:/tmp/.git-ai/internal/daemon/trace2.sock";
         eventNesting = 10;
       };
 
