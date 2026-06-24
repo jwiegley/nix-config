@@ -151,6 +151,13 @@ in
           User = "jwiegley";
           IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
           IdentitiesOnly = true;
+          ForwardAgent = true;
+        };
+
+        positron-api = controlMastered {
+          User = "positron";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
+          IdentitiesOnly = true;
         };
 
         "pos andoria" = controlMastered {
@@ -158,6 +165,7 @@ in
           HostName = "andoria-08";
           IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
           IdentitiesOnly = true;
+          ForwardAgent = true;
         };
 
         dev = controlMastered {
