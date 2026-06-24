@@ -3,6 +3,24 @@
 # Dependencies: Uses final for python3Packages in mlx-lm; uses prev elsewhere
 # Packages: gguf-tools, hfdownloader, llama-cpp, llama-swap, mlx-lm, mtplx
 final: prev: {
+  # Node 26.3.1 has two fs.cp socket tests that fail under the macOS Nix
+  # sandbox. Keep the override scoped to Darwin and to the specific tests.
+  nodejs-slim_26 = prev.nodejs-slim_26.overrideAttrs (
+    attrs:
+    prev.lib.optionalAttrs prev.stdenv.buildPlatform.isDarwin {
+      checkFlags = map (
+        flag:
+        if prev.lib.hasPrefix "CI_SKIP_TESTS=" flag then
+          "${flag},test-fs-cp-async-socket,test-fs-cp-sync-copy-socket-error"
+        else
+          flag
+      ) (attrs.checkFlags or [ ]);
+    }
+  );
+
+  nodejs_26 = prev.nodejs_26.override { nodejs-slim = final.nodejs-slim_26; };
+  nodejs-slim_latest = final.nodejs-slim_26;
+  nodejs_latest = final.nodejs_26;
 
   # GGUF file manipulation tools
   gguf-tools =
@@ -57,13 +75,13 @@ final: prev: {
   # llama.cpp - LLM inference with GGUF models
   # NOTE: As of b9190+, the webui was relocated from tools/server/webui
   # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
-  llama-cpp = prev.llama-cpp.overrideAttrs (attrs: rec {
-    version = "9774";
+  llama-cpp = (prev.llama-cpp.override { inherit (final) nodejs_latest; }).overrideAttrs (attrs: rec {
+    version = "9776";
     src = prev.fetchFromGitHub {
       owner = "ggml-org";
       repo = "llama.cpp";
       tag = "b${version}";
-      hash = "sha256-Eyj4U6Iiq+CShwvCjCGtGJHunIDJGRaSOZQA3ioSIEY=";
+      hash = "sha256-pama4JmU8BeKrwfZ19GcbQd5Rbdzihcl07Z6jw047jA=";
     };
     postPatch = "";
     npmRoot = "tools/ui";
