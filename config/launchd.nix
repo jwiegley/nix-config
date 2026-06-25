@@ -225,6 +225,40 @@ in
         };
       };
 
+      # Self-heal for SyncThing. SyncThing runs as the home-manager agent
+      # `org.nix-community.home.syncthing` (services.syncthing in johnw.nix),
+      # which KeepAlive=true keeps alive *once loaded*. But home-manager's
+      # Darwin activation reloads a changed agent with `launchctl bootout`
+      # followed by `launchctl bootstrap`, and it ignores a failed bootstrap
+      # and continues — so a `u switch` that updates SyncThing can leave the
+      # agent unloaded in *no* domain (observed 2026-06-25: a syncthing bump
+      # booted out the running daemon and the re-bootstrap did not take,
+      # leaving it down). KeepAlive cannot recover that because nothing is
+      # loaded. This watchdog re-registers it. It targets gui/$uid to match
+      # the current home-manager (which hard-codes the gui domain for agents).
+      syncthing-watchdog = {
+        script = ''
+          label=org.nix-community.home.syncthing
+          uid="$(/usr/bin/id -u)"
+          plist="${home}/Library/LaunchAgents/$label.plist"
+
+          if /bin/launchctl print "gui/$uid/$label" >/dev/null 2>&1; then
+            # Registered — ensure it is actually running (no-op if it already is).
+            /bin/launchctl kickstart "gui/$uid/$label" >/dev/null 2>&1 || true
+          elif [ -f "$plist" ]; then
+            # Not registered: re-bootstrap it ourselves and note it in the log.
+            echo "$(/bin/date '+%Y-%m-%d %H:%M:%S') re-bootstrapping $label into gui/$uid"
+            /bin/launchctl bootstrap "gui/$uid" "$plist" || true
+          fi
+        '';
+        serviceConfig = {
+          RunAtLoad = true; # check immediately after login / activation
+          StartInterval = 180; # and re-check every 3 minutes
+          StandardOutPath = "${home}/Library/Logs/syncthing-watchdog.log";
+          StandardErrorPath = "${home}/Library/Logs/syncthing-watchdog.log";
+        };
+      };
+
       docker-desktop = {
         script = "/usr/bin/open -a /Applications/Docker.app";
         serviceConfig = {
