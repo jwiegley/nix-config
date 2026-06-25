@@ -2,12 +2,14 @@
 
 set -eou pipefail
 
-if [[ -d /etc/nixos ]]; then
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    exec u switch
+elif [[ -d /etc/nixos ]]; then
     cd /etc/nixos
-    sudo nixos-rebuild switch --flake ".#$(hostname)"
+    exec sudo nixos-rebuild switch --flake ".#$(hostname)"
 elif [[ -d ~/.config/home-manager ]]; then
-    ~/.config/home-manager
-    nix run home-manager/master -- switch
+    cd ~/.config/home-manager
+    exec nix run home-manager/master -- switch
 else
-    u "$(hostname)" switch
+    exec u "$(hostname)" switch
 fi
