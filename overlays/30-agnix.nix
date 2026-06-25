@@ -8,16 +8,16 @@ _final: prev: {
     with prev;
     rustPlatform.buildRustPackage rec {
       pname = "agnix";
-      version = "0.35.0";
+      version = "0.36.0";
 
       src = fetchFromGitHub {
         owner = "avifenesh";
         repo = "agnix";
         tag = "v${version}";
-        hash = "sha256-gEORDvC57fYXmoqDYZnKXedPbedHX+cLNjZdrlv9fr0=";
+        hash = "sha256-Gun9CaP8hC5EGDnBY7xn2wyeASgYMGpLTgh562Aqld4=";
       };
 
-      cargoHash = "sha256-6+lrhU46Jc86+GCN1LEoFcQTwPbF4slqyn8DbmImb4U=";
+      cargoHash = "sha256-iRptfdjkN68GnGqJK+r+5vrqnkOg2ut/clnlnEbn5zo=";
 
       # Build all workspace binaries (CLI, LSP, MCP server)
       cargoBuildFlags = [
