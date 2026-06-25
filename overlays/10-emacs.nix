@@ -188,8 +188,8 @@ let
         src = fetchFromGitHub {
           owner = "armindarvish";
           repo = "consult-omni";
-          rev = "bdcd5a065340dce9906ac5c5f359906d31877963";
-          sha256 = "sha256-vmKKEmZpzHQ8RDbTuoTCWGRypLfMiHrEv9Zw0G6K1pg=";
+          rev = "3a126ee54479755408faed10da945dbc2366303b";
+          sha256 = "sha256-8Koe6IO2+/HvDb2IE1dc/DY3hGmNWcEMAfz6d0gdT7k=";
           # date = "2025-09-27T22:49:03-07:00";
         };
         propagatedBuildInputs = with eself; [
