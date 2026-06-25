@@ -171,11 +171,11 @@
         "pal-mcp-server": "pal-mcp-server"
       },
       "locked": {
-        "lastModified": 1782322761,
-        "narHash": "sha256-nvODBql7IhO8YqTH02TmjYe/lgn5kAkbAW/3YU1AUmo=",
+        "lastModified": 1782410537,
+        "narHash": "sha256-U4ByIEjaj4grd6Sm0Yv24lF0kS1FcCmKO6klsBM2cwQ=",
         "owner": "jwiegley",
         "repo": "ai-nix",
-        "rev": "94b7f451c71f13129daa82bd3b50cd708f855ecf",
+        "rev": "09ff75a2bbafee007a93c1a7d352210177583332",
         "type": "github"
       },
       "original": {
@@ -856,11 +856,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1782146810,
-        "narHash": "sha256-ec70Ym5ihqcYHdPYBAgWVxqhfHRnXcUNN0XCHStvMEw=",
+        "lastModified": 1782403502,
+        "narHash": "sha256-hXOhiLF/9vdlxMnIO7jD9ZOIBdSQhWkrDDz7rZnmS9E=",
         "ref": "refs/heads/master",
-        "rev": "eba26e9489faf8b0716401a27e3b8d60bfa4120a",
-        "revCount": 182639,
+        "rev": "b66c995d5fb060b79bf866aa8d760ff0857ae32e",
+        "revCount": 182663,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -1414,11 +1414,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1782322159,
-        "narHash": "sha256-fzd0YnNb5Eaub8Nje+Z9LhaVtHNsomRD2wB1tvn6r50=",
+        "lastModified": 1782403618,
+        "narHash": "sha256-BkJuBKmL6QrxtsVrpaXWK95gU1JfWSY2xG+WbASlbQE=",
         "owner": "git-ai-project",
         "repo": "git-ai",
-        "rev": "6abc2d581e449ff9c716d4c5f1fbefbcb0d749dc",
+        "rev": "11d9468a7f4cf22772c157937f1375d7219884fa",
         "type": "github"
       },
       "original": {
@@ -1434,11 +1434,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1782184015,
-        "narHash": "sha256-uYdxIB74UszwavKay/FF1OOlvRvLDRHlKGp+9bXCHT4=",
+        "lastModified": 1782403618,
+        "narHash": "sha256-BkJuBKmL6QrxtsVrpaXWK95gU1JfWSY2xG+WbASlbQE=",
         "ref": "refs/heads/main",
-        "rev": "e2fe585fc11e946d6dd6b0041f5c0e1f5bd0b716",
-        "revCount": 4780,
+        "rev": "11d9468a7f4cf22772c157937f1375d7219884fa",
+        "revCount": 4849,
         "type": "git",
         "url": "file:///Users/johnw/work/git-ai/git-ai/main"
       },
@@ -4919,11 +4919,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782166451,
-        "narHash": "sha256-SA7LyrayyZBvtzZnesnSLV7haciFuVLeZaX2hd5v4j4=",
+        "lastModified": 1782358560,
+        "narHash": "sha256-vCcLh9pw3XO/+Lxk8r6xv6QnoCrTfGqiACcI7O637Wg=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "471a1d2f840eb7fcbdfd541d99c13a64096f46db",
+        "rev": "3a70e333f2950c302e875c44cfcfaff3f80f36bc",
         "type": "github"
       },
       "original": {
@@ -5334,11 +5334,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1782280168,
-        "narHash": "sha256-VjXPtEjoUNoBWXHmsC+TarsozLXqgbIvAFBYq09Pqmk=",
+        "lastModified": 1782366663,
+        "narHash": "sha256-hcxEl/eWQQaYkUqygP4ca8S7WlX9c6vqgvQCqtV3vuw=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "3c9586476ad8afad108db3b6586384685ce85747",
+        "rev": "5f9d86061f538b3f5f3568583c001fb9c0705b71",
         "type": "github"
       },
       "original": {
@@ -5375,11 +5375,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782128392,
-        "narHash": "sha256-siQ+9TPmjBNWpjXRtepnTcUA09QNQi6FC90PRNIAiIo=",
+        "lastModified": 1782205542,
+        "narHash": "sha256-GmD3s4qEEslKqUNK+2gFFPHMzsmJUTi1j+9KirbkUto=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "8b646823c150e8fa510b5117c9729d102ae8e95f",
+        "rev": "f4524b1ab386b574f557db05cb02bee02c4497a2",
         "type": "github"
       },
       "original": {
@@ -6526,11 +6526,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1781607440,
-        "narHash": "sha256-rxO+uc/KFbSJp+pgyXRuAX6QlG9hJdnt0BXpEQRXY+U=",
+        "lastModified": 1782175435,
+        "narHash": "sha256-EMzXKmnOtBQ2MnvpiNOm7E+kOMvdPrIKaeg52Tip2Uk=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "3e41b24abd260e8f71dbe2f5737d24122f972158",
+        "rev": "89570f24e97e614aa34aa9ab1c927b6578a43775",
         "type": "github"
       },
       "original": {
