@@ -75,40 +75,42 @@ final: prev: {
   # llama.cpp - LLM inference with GGUF models
   # NOTE: As of b9190+, the webui was relocated from tools/server/webui
   # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
-  llama-cpp = (prev.llama-cpp.override { inherit (final) nodejs_latest; }).overrideAttrs (attrs: rec {
-    version = "9789";
-    src = prev.fetchFromGitHub {
-      owner = "ggml-org";
-      repo = "llama.cpp";
-      tag = "b${version}";
-      hash = "sha256-wdlC0soVb3L+ooV7PlMt/MZhmWQbyxAVeUomkxufJck=";
-    };
-    postPatch = "";
-    npmRoot = "tools/ui";
-    preConfigure = ''
-      prependToVar cmakeFlags "-DLLAMA_BUILD_COMMIT:STRING=b${version}"
-      pushd tools/ui
-      # node 24.15.0's libuv has a kqueue assertion bug that triggers
-      # SIGABRT on exit (`Assertion failed: (errno == EINTR), function
-      # uv__io_poll, file kqueue.c, line 279`). The vite plugin writes
-      # the final dist/index.html before the abort, so accept the
-      # non-zero exit only when the expected output actually exists.
-      npm run build || true
-      [[ -f dist/index.html ]] || {
-        echo "ERROR: tools/ui/dist/index.html not produced — npm run build genuinely failed" >&2
-        exit 1
-      }
-      popd
-    '';
-    npmDepsHash = "sha256-X1DZgmhS/zHTqDT5zq0kywwntthcJ9vRXeqyO3zz6UU=";
-    npmDeps = prev.fetchNpmDeps {
-      name = "llama-cpp-${version}-npm-deps";
-      inherit src;
-      patches = attrs.patches or [ ];
-      preBuild = "pushd tools/ui";
-      hash = npmDepsHash;
-    };
-  });
+  llama-cpp =
+    (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs
+      (attrs: rec {
+        version = "9789";
+        src = prev.fetchFromGitHub {
+          owner = "ggml-org";
+          repo = "llama.cpp";
+          tag = "b${version}";
+          hash = "sha256-wdlC0soVb3L+ooV7PlMt/MZhmWQbyxAVeUomkxufJck=";
+        };
+        postPatch = "";
+        npmRoot = "tools/ui";
+        preConfigure = ''
+          prependToVar cmakeFlags "-DLLAMA_BUILD_COMMIT:STRING=b${version}"
+          pushd tools/ui
+          # node 24.15.0's libuv has a kqueue assertion bug that triggers
+          # SIGABRT on exit (`Assertion failed: (errno == EINTR), function
+          # uv__io_poll, file kqueue.c, line 279`). The vite plugin writes
+          # the final dist/index.html before the abort, so accept the
+          # non-zero exit only when the expected output actually exists.
+          npm run build || true
+          [[ -f dist/index.html ]] || {
+            echo "ERROR: tools/ui/dist/index.html not produced — npm run build genuinely failed" >&2
+            exit 1
+          }
+          popd
+        '';
+        npmDepsHash = "sha256-X1DZgmhS/zHTqDT5zq0kywwntthcJ9vRXeqyO3zz6UU=";
+        npmDeps = prev.fetchNpmDeps {
+          name = "llama-cpp-${version}-npm-deps";
+          inherit src;
+          patches = attrs.patches or [ ];
+          preBuild = "pushd tools/ui";
+          hash = npmDepsHash;
+        };
+      });
 
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
