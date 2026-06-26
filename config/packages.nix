@@ -319,6 +319,7 @@ rec {
       inkscape.out
       khal
       librsvg
+      mdformat
       pandoc
       pdfgrep
       plantuml
