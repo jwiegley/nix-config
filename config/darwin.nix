@@ -21,7 +21,6 @@ let
       ];
       trustedformulae = [
         "graelo/tap/pumas"
-        "graelo/tap/huggingface-cli-full"
         "withgraphite/tap/graphite"
       ];
     }
@@ -195,7 +194,7 @@ in
       "llm"
       "sqlcmd"
       "graelo/tap/pumas"
-      "graelo/tap/huggingface-cli-full"
+      "hf"
       "openssl"
       "z3"
       "claude-code-templates"
