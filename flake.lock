@@ -856,11 +856,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1782485558,
-        "narHash": "sha256-T3YWNuHSEQGhQ+0+ApkL1ijXyuw++A61ALA4qNl9VsU=",
+        "lastModified": 1782556426,
+        "narHash": "sha256-ph683CgUQQv9m4sYvijtSfTGyfqpZUfoQSneNJ1KqI0=",
         "ref": "refs/heads/master",
-        "rev": "5995c27abb0937e8ca21a7e9b5cd891541bde430",
-        "revCount": 182672,
+        "rev": "b24ed25b39f346370e1b90eebe86fcacdd4e48e3",
+        "revCount": 182707,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -4919,11 +4919,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782423922,
-        "narHash": "sha256-qPNd6lUohHP5gcJhqQ7rLV87RwIx0xYR2A4Frb9Zjc4=",
+        "lastModified": 1782522538,
+        "narHash": "sha256-CvOaUvJ+mXlxU3m2cPWKcOAhtKETsPUYhq+Xa5ewBp4=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "5d320ab301cfaaca7d32514f13815d19d109f5f4",
+        "rev": "8d8a6cc50ddc60748791a14ee1163c865ec57635",
         "type": "github"
       },
       "original": {
@@ -6907,11 +6907,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1777496575,
-        "narHash": "sha256-ALJTzd+cNzIOhy4p2A4ib8Fz6HlvbTqlyIOYyY8WaaI=",
+        "lastModified": 1782595559,
+        "narHash": "sha256-Mz9tFaXAidtYSThs3OwtKUwnoEyfFCT39bB1If78giQ=",
         "ref": "refs/heads/master",
-        "rev": "f66aeacff1436ee353cf5911142c03c5389ec58a",
-        "revCount": 228,
+        "rev": "f8ea0cc7c47a7ea8e6d3755f58284b0b8a9ad42d",
+        "revCount": 230,
         "type": "git",
         "url": "file:///Users/johnw/src/pushme"
       },
