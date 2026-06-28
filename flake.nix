@@ -315,7 +315,9 @@
     {
       overlays.default = lib.composeManyExtensions overlays;
 
-      lib.aiPackagesFor = aiPackagesFor;
+      lib = {
+        inherit aiPackagesFor patchAgentPackage;
+      };
 
       devShells = forAllSystems (
         system:
