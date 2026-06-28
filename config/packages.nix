@@ -17,6 +17,15 @@ let
   # Returns a singleton list if the package exists in pkgs, empty list otherwise.
   optPkg = name: if pkgs ? ${name} then [ pkgs.${name} ] else [ ];
 
+  agentPackages = inputs.llm-agents.packages.${sys} or { };
+  patchAgentPackage =
+    if inputs ? ai-nix && inputs.ai-nix ? lib && inputs.ai-nix.lib ? patchAgentPackage then
+      inputs.ai-nix.lib.patchAgentPackage pkgs
+    else
+      _name: package: package;
+  optAgent =
+    name: if agentPackages ? ${name} then [ (patchAgentPackage name agentPackages.${name}) ] else [ ];
+
   # Flake inputs whose default package should NOT be auto-installed.
   # They expose packages.${sys}.default but are consumed differently:
   # system tooling, overlays, modules, or explicit handling elsewhere
@@ -457,19 +466,12 @@ rec {
     ++ optPkg "agnix"
     ++ optPkg "claude-vault"
     ++ optPkg "claude-replay"
-    ++ (
-      if inputs ? llm-agents then
-        (with inputs.llm-agents.packages.${sys}; [
-          claude-code
-          ccusage
-          codex
-          droid
-          gemini-cli
-          opencode
-        ])
-      else
-        [ ]
-    )
+    ++ optAgent "claude-code"
+    ++ optAgent "ccusage"
+    ++ optAgent "codex"
+    ++ optAgent "droid"
+    ++ optAgent "gemini-cli"
+    ++ optAgent "opencode"
 
     # ── MCP Servers & Agent Tools ────────────────────────────────────
     ++ optPkg "sherlock-db"
@@ -542,13 +544,6 @@ rec {
         soco-cli
         spotify-player
       ]
-      ++ (
-        if inputs ? llm-agents then
-          (with inputs.llm-agents.packages.${sys}; [
-            mcporter
-          ])
-        else
-          [ ]
-      )
+      ++ optAgent "mcporter"
     );
 }
