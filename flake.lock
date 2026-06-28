@@ -171,11 +171,11 @@
         "pal-mcp-server": "pal-mcp-server"
       },
       "locked": {
-        "lastModified": 1782684460,
-        "narHash": "sha256-q0GI7HpDZFk128c6Hyj5gGzMFab63lu0bIPnigwTN00=",
+        "lastModified": 1782684537,
+        "narHash": "sha256-behREKc1w9LvmbU6rYuSqkyZnZWSvrFrLg/ZdBJQXvY=",
         "owner": "jwiegley",
         "repo": "ai-nix",
-        "rev": "329803ee2693cb4b68e521366ae3e51cc307ff77",
+        "rev": "637d3ee6f4656bc5649006e205c0c80b060348a7",
         "type": "github"
       },
       "original": {
@@ -5334,11 +5334,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1782671781,
-        "narHash": "sha256-kl5x9e+vRZSn/NGYupGG93N1GW6dT84Nyfq5qH5Wqms=",
+        "lastModified": 1782682256,
+        "narHash": "sha256-7gPwna/GoCQyH7KPfRZANeP7k37RO8vVZv2oPDrO7hQ=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "e88176081e35fc1a4136f77cc6436dc400706078",
+        "rev": "744a2a102bc57df8a606164292178fab9087b072",
         "type": "github"
       },
       "original": {
