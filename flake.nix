@@ -78,12 +78,41 @@
         else
           [ ];
 
+      patchAgentPackage =
+        pkgs: name: package:
+        if name == "gemini-cli" && (package.version or null) == "0.49.0" && package ? overrideAttrs then
+          package.overrideAttrs (
+            old:
+            let
+              postPatch =
+                builtins.replaceStrings [ "\nnode " ] [ "\n${pkgs.lib.getExe pkgs.nodejs} " ]
+                  old.postPatch;
+            in
+            {
+              inherit postPatch;
+              # llm-agents.nix 0.49.0 runs a Node script in postPatch. That
+              # postPatch also runs inside fetchNpmDeps, whose default build
+              # inputs do not include nodejs.
+              npmDeps = pkgs.fetchNpmDeps {
+                name = "${old.pname}-${old.version}-npm-deps-aligned";
+                inherit (old) src;
+                inherit postPatch;
+                hash = old.npmDepsHash;
+                fetcherVersion = old.npmDepsFetcherVersion;
+                nativeBuildInputs = [ pkgs.nodejs ];
+              };
+            }
+          )
+        else
+          package;
+
       optAgent =
-        system: name:
+        pkgs: name:
         let
+          system = pkgs.stdenv.hostPlatform.system;
           agentPackages = llm-agents.packages.${system} or { };
         in
-        if agentPackages ? ${name} then [ agentPackages.${name} ] else [ ];
+        if agentPackages ? ${name} then [ (patchAgentPackage pkgs name agentPackages.${name}) ] else [ ];
 
       pythonAiEnv =
         pkgs:
@@ -113,7 +142,7 @@
           system = pkgs.stdenv.hostPlatform.system;
           inherit (pkgs) lib;
           opt = optPkg pkgs;
-          agent = optAgent system;
+          agent = optAgent pkgs;
           appleSilicon = pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64;
           gitAiPackages = git-ai.packages.${system} or { };
         in

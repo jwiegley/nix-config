@@ -5,8 +5,19 @@
 final: prev: {
 
   vllm-mlx =
+    let
+      inherit (final) python3Packages;
+      gradioForVllm =
+        (python3Packages.gradio.override { inherit (python3Packages) gradio; }).overridePythonAttrs
+          (_: {
+            # gradio 6.9.0 allows Starlette 1.x at runtime, but its wheel
+            # metadata still says starlette<1.0. nixpkgs currently ships
+            # starlette 1.1.0.
+            dontCheckRuntimeDeps = true;
+          });
+    in
     with final;
-    with final.python3Packages;
+    with python3Packages;
     buildPythonApplication rec {
       pname = "vllm-mlx";
       version = "0.2.8";
@@ -33,7 +44,7 @@ final: prev: {
         pillow
         tqdm
         pyyaml
-        gradio
+        gradioForVllm
         requests
         tabulate
         opencv4
