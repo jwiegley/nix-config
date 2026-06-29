@@ -471,8 +471,8 @@ rec {
     ++ optAgent "ccusage"
     ++ optAgent "codex"
     ++ optAgent "droid"
-    ++ optAgent "gemini-cli"
     ++ optAgent "opencode"
+    # ++ optAgent "gemini-cli"
 
     # ── MCP Servers & Agent Tools ────────────────────────────────────
     ++ optPkg "sherlock-db"
