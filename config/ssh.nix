@@ -77,7 +77,7 @@ in
 
         # Hera
 
-        hera = {
+        hera = withIdentity {
           HostName = "hera.lan";
           Compression = false;
           ForwardAgent = true;
