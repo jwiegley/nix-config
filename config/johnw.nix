@@ -41,6 +41,7 @@ in
       ./zsh.nix
       ./xdg-symlinks.nix
       ./email.nix
+      ./syncthing-positron.nix
     ]
     # Conditional flake input modules
     ++ lib.optionals (inputs ? git-ai) [
