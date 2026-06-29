@@ -115,13 +115,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "230";
+      version = "231";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-zj+MV5uzfj5wsEBpEy0hb60iQBSDvGb9+J9O9GfDpio=";
+        hash = "sha256-sGC5KyGZqLfl9zrbjLTqedNQv2ubYDftUOSZ6jO1ZIY=";
       };
 
       ui =
@@ -144,7 +144,7 @@ final: prev: {
 
           sourceRoot = "source/ui-svelte";
 
-          npmDepsHash = "sha256-NJqEJ+XTdpPFtJJxP4CGu+JDUW7lKDcFgsixQJ3SXtQ=";
+          npmDepsHash = "sha256-cAdFKDhmyaYCoKqSYEuAhu29rBxs7i8uTmU2SHwTLnY=";
 
           postInstall = ''
             rm -rf $out/lib
