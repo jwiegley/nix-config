@@ -9,6 +9,20 @@ let
   home = "/Users/johnw";
   xdg_configHome = "${home}/.config";
   xdg_cacheHome = "${home}/.cache";
+  eternalTerminalConfig = pkgs.writeText "et.cfg" ''
+    ; et.cfg : Config file for Eternal Terminal
+    ;
+
+    [Networking]
+    port = 2022
+
+    [Debug]
+    verbose = 0
+    silent = 0
+    logsize = 20971520
+    telemetry = false
+    logdirectory = /Library/Logs/EternalTerminal
+  '';
 
 in
 {
@@ -77,6 +91,21 @@ in
       };
     }
     // lib.optionalAttrs (hostname == "hera") {
+      eternal-terminal = {
+        script = ''
+          exec ${pkgs.eternal-terminal}/bin/etserver --cfgfile ${eternalTerminalConfig}
+        '';
+        serviceConfig = {
+          RunAtLoad = true;
+          KeepAlive = true;
+          ThrottleInterval = 30;
+          SoftResourceLimits.NumberOfFiles = 4096;
+          HardResourceLimits.NumberOfFiles = 4096;
+          StandardOutPath = "/Library/Logs/eternal-terminal-launchd.log";
+          StandardErrorPath = "/Library/Logs/eternal-terminal-launchd.log";
+        };
+      };
+
       "sysctl-vram-limit" = {
         script = ''
           # This leaves 64 GB of working memory remaining
