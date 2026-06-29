@@ -1052,25 +1052,60 @@ Examples:
         new_cargo_hash = None
         new_npm_deps_hash = None
         extra_hashes = []
+        hash_failed = False
 
         if not args.no_build and not args.dry_run:
-            if info.vendor_hash:
-                updater.set_dummy_hash(info.file_path, package_name, 'vendorHash', info.vendor_hash)
-                new_vendor_hash = source.hash_computer.compute_vendor_hash(package_name)
-                if new_vendor_hash:
-                    extra_hashes.append("vendor")
+            def apply_computed_hash(**hashes):
+                current_info = source.parser.find_package(package_name)
+                if current_info:
+                    updater.update_package(
+                        current_info,
+                        new_version,
+                        new_src_hash,
+                        new_vendor_hash=hashes.get("vendor"),
+                        new_cargo_hash=hashes.get("cargo"),
+                        new_npm_deps_hash=hashes.get("npm"),
+                        new_full_rev=new_full_rev,
+                        dry_run=False
+                    )
 
-            if info.cargo_hash:
-                updater.set_dummy_hash(info.file_path, package_name, 'cargoHash', info.cargo_hash)
-                new_cargo_hash = source.hash_computer.compute_cargo_hash(package_name)
-                if new_cargo_hash:
-                    extra_hashes.append("cargo")
-
+            # Compute hashes for nested/build-time dependencies before hashes
+            # for packages that may consume them. Otherwise Nix can report an
+            # npmDepsHash mismatch while we are trying to compute vendorHash.
             if info.npm_deps_hash:
                 updater.set_dummy_hash(info.file_path, package_name, 'npmDepsHash', info.npm_deps_hash)
                 new_npm_deps_hash = source.hash_computer.compute_npm_deps_hash(package_name)
                 if new_npm_deps_hash:
+                    apply_computed_hash(npm=new_npm_deps_hash)
                     extra_hashes.append("npm")
+                else:
+                    apply_computed_hash(npm=info.npm_deps_hash)
+                    hash_failed = True
+
+            if not hash_failed and info.cargo_hash:
+                updater.set_dummy_hash(info.file_path, package_name, 'cargoHash', info.cargo_hash)
+                new_cargo_hash = source.hash_computer.compute_cargo_hash(package_name)
+                if new_cargo_hash:
+                    apply_computed_hash(cargo=new_cargo_hash)
+                    extra_hashes.append("cargo")
+                else:
+                    apply_computed_hash(cargo=info.cargo_hash)
+                    hash_failed = True
+
+            if not hash_failed and info.vendor_hash:
+                updater.set_dummy_hash(info.file_path, package_name, 'vendorHash', info.vendor_hash)
+                new_vendor_hash = source.hash_computer.compute_vendor_hash(package_name)
+                if new_vendor_hash:
+                    apply_computed_hash(vendor=new_vendor_hash)
+                    extra_hashes.append("vendor")
+                else:
+                    apply_computed_hash(vendor=info.vendor_hash)
+                    hash_failed = True
+
+        if hash_failed:
+            print(f" {Colors.RED}✗ hash failed{Colors.RESET}")
+            fail_count += 1
+            continue
 
         # Final update with all hashes
         if not args.dry_run:
