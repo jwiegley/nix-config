@@ -29,6 +29,20 @@ let
       inputs
       ;
   };
+
+  syncthingMacosJunkIgnore = ''
+    .DS_Store
+    ._*
+    .Spotlight-V100
+    .Trashes
+    .fseventsd
+    .TemporaryItems
+    .localized
+    desktop.ini
+    Thumbs.db
+  '';
+
+  videoInboxIgnoreFile = pkgs.writeText "syncthing-video-inbox.stignore" syncthingMacosJunkIgnore;
 in
 {
   _module.args.vars = vars;
@@ -162,19 +176,21 @@ in
       # vulcan-side ignorePatterns plus macOS-specific entries: "Drop Box" is
       # the macOS public-folder inbox and stays local rather than landing on
       # a LAN share.
-      "Public/.stignore".text = ''
-        .DS_Store
-        ._*
-        .Spotlight-V100
-        .Trashes
-        .fseventsd
-        .TemporaryItems
-        .localized
-        desktop.ini
-        Thumbs.db
+      "Public/.stignore".text = syncthingMacosJunkIgnore + ''
         Drop Box
       '';
     };
+
+    activation.syncthingVideoInboxIgnore = lib.mkIf (isDarwin && hostname == "hera") (
+      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        video_inbox=/Volumes/ext/Video
+        if [ -d "$video_inbox" ]; then
+          $DRY_RUN_CMD install -m 0644 ${videoInboxIgnoreFile} "$video_inbox/.stignore"
+        else
+          echo "syncthing: $video_inbox is not mounted; skipping Video-Inbox .stignore"
+        fi
+      ''
+    );
 
     # claude-mem (Fix C): its observation generator spawns headless `claude`,
     # but `claude` on $PATH resolves to ~/src/scripts/claude (the `ai` gateway
@@ -423,6 +439,13 @@ in
         folders."tank-public" = {
           path = "${vars.home}/Public";
           label = "Public";
+          devices = [ "vulcan" ];
+          type = "sendreceive";
+        };
+
+        folders."tank-video-inbox" = {
+          path = "/Volumes/ext/Video";
+          label = "Video-Inbox";
           devices = [ "vulcan" ];
           type = "sendreceive";
         };
