@@ -81,7 +81,16 @@ in
   ];
 
   environment = {
-    systemPackages = with pkgs; [ ];
+    systemPackages =
+      with pkgs;
+      lib.optionals
+        (lib.elem hostname [
+          "hera"
+          "clio"
+        ])
+        [
+          eternal-terminal
+        ];
 
     etc = lib.mkIf (hostname == "hera") {
       # ZFS configuration for OpenZFS on macOS (hera only)

@@ -91,6 +91,7 @@ rec {
       bashInteractive
       bash-completion
       bat
+      eternal-terminal
       eza
       fzf
       nnn
