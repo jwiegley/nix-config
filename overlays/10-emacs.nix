@@ -477,13 +477,13 @@ let
           sha256 = "sha256-+gLcdDb3xZJS47dzScBT3ZkR+ZXaUhWt9bZvE1MDO7M=";
           # date = 2026-04-20T14:13:55Z;
         };
-        # transient and gptel are loaded at byte-compile time and pull in
-        # compat + cond-let; the builder runs `emacs -Q` so these transitive
-        # deps must be listed explicitly to be on the load path.
+        # transient, gptel, and llama are loaded at byte-compile time; the
+        # builder runs `emacs -Q` so transitive deps must be listed explicitly.
         buildInputs = with eself; [
           mediawiki
           transient
           gptel
+          llama
           compat
           cond-let
         ];
@@ -533,8 +533,8 @@ let
         src = fetchFromGitHub {
           owner = "kmontag";
           repo = "macher";
-          rev = "67972625ae052a5a07929043324fbd3b6b2fc08a";
-          sha256 = "sha256-PnSaB/HhW3rNYff+d0vojKhDsIu8EMxPF9G28mWHtkQ=";
+          rev = "44950accf782b2ae0a29f48bc85fb4842bc38ab1";
+          sha256 = "sha256-FKFHKnhs6GkjUFiF03x/b9kMg4hwgh8Pf0vu55eE3CM=";
           # date = 2025-08-20T19:15:22-07:00;
         };
         buildInputs = with eself; [ gptel ];
@@ -680,8 +680,8 @@ let
         src = fetchFromGitHub {
           owner = "bohonghuang";
           repo = "org-srs";
-          rev = "c0aff45392b1f836fd943467cc266cef50899a44";
-          sha256 = "sha256-yV7F0DimnGyAKMQuXVsm3I9dH4t0ZNvTs82pkez9bC8=";
+          rev = "e6e5fbfcb8beb520141edac647ccb76af9b71df6";
+          sha256 = "sha256-0PzJ58nCcRnOldvrAW0Wl2ns1xmH3XbzgmalPyNgOKU=";
           # date = 2025-09-21T19:33:28+08:00;
         };
         buildInputs = with eself; [
