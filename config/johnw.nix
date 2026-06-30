@@ -106,7 +106,7 @@ in
       RCLONE_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/rclone";
       RESTIC_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/restic";
       FILTER_BRANCH_SQUELCH_WARNING = "1";
-      HF_HUB_ENABLE_HF_TRANSFER = "1";
+      HF_XET_HIGH_PERFORMANCE = "1";
       LLAMA_INDEX_CACHE_DIR = "${config.xdg.cacheHome}/llama-index";
     }
     // lib.optionalAttrs isDarwin {
