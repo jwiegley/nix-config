@@ -78,12 +78,12 @@ final: prev: {
   llama-cpp =
     (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs
       (attrs: rec {
-        version = "9842";
+        version = "9843";
         src = prev.fetchFromGitHub {
           owner = "ggml-org";
           repo = "llama.cpp";
           tag = "b${version}";
-          hash = "sha256-UCvHL+BeAZTt6FB5Gi7GhGgBexy+yCLp11Mu4BaqSec=";
+          hash = "sha256-GHMmGHPphkbAWh82xmo96DbQh/1vIzzbkBsRF/bIr5Y=";
         };
         postPatch = "";
         npmRoot = "tools/ui";
@@ -115,13 +115,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "232";
+      version = "233";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-qeoE2o+xgMWGxhit+uW7xxQ7RQSgGk/K0sS2L5JXys4=";
+        hash = "sha256-r+yVs1D4WjzhY29Dr8uMesoHGV0lCzljxpmIaI9DzmU=";
       };
 
       ui =
@@ -196,6 +196,20 @@ final: prev: {
       pyarrow = pprev.pyarrow.overrideAttrs (_: {
         doCheck = false;
         doInstallCheck = false;
+      });
+    })
+    # nltk 3.9.4's nltk/test/unit/test_pickle_load_warnings.py runs a test whose
+    # body does `import nltk.app.chartparser_app` -> tkinter -> _tkinter, which is
+    # absent in the headless nixpkgs python3. That single failure cascades through
+    # rouge-score -> lm-eval / mlx-lm / omlx / python3-env / ai-nix-toolchain.
+    # nixpkgs Hydra builds python WITH tkinter, so upstream only disables this on
+    # Darwin in master commit a56d36b (2026-06-29), which postdates our locked rev.
+    # Mirror that fix; drop this once our nixpkgs follows a rev >= a56d36b.
+    (_: pprev: {
+      nltk = pprev.nltk.overrideAttrs (old: {
+        disabledTests = (old.disabledTests or [ ]) ++ [
+          "test_chartparser_app_uses_pickle_load_not_pickle_load_standard"
+        ];
       });
     })
   ];
