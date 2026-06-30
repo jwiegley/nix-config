@@ -25,7 +25,8 @@ let
   andoriaDeviceId = "7QZW6HH-7XS3VJ5-YUOA4IU-AMTL2GY-FZFET4D-ADEJVHG-34QXSQU-45GEZQ5";
 
   folderId = "positron-home";
-  tunnelAddress = "tcp://127.0.0.1:22001";
+  heraTailscaleIP = "100.120.206.121";
+  andoriaTailscaleIP = "100.85.190.60";
   versionsPath = "${config.xdg.stateHome}/syncthing/versions/${folderId}";
 
   positronIgnore = ''
@@ -70,7 +71,11 @@ let
     *~
     .*.aux
     .*.cache
+    .autoagent
+    .bun
     .cabal*
+    .cache
+    .cargo
     .cargo-home
     .envrc
     .ghc.*
@@ -82,11 +87,12 @@ let
     Makefile.coq
     Makefile.coq.conf
     bash_snapshots
-    build-debug
     build
+    build-debug
     cabal.project.local*
-    dist-newstyle
     dist
+    dist-newstyle
+    gen
     node_modules
     result
     result-*
@@ -94,6 +100,8 @@ let
 
     # pushme filesets/work_positron.yaml Common.ExtraFilters.
     /*-tmp
+    /.claude
+    /.codex
     /.local/lib
     /.local/share/cargo
     /.local/share/rustup
@@ -120,13 +128,13 @@ in
         (lib.optionalAttrs isHera {
           andoria = {
             id = andoriaDeviceId;
-            addresses = [ tunnelAddress ];
+            addresses = [ "tcp://${andoriaTailscaleIP}:22000" ];
           };
         })
         (lib.optionalAttrs isAndoria {
           hera = {
             id = heraDeviceId;
-            addresses = [ tunnelAddress ];
+            addresses = [ "tcp://${heraTailscaleIP}:22000" ];
           };
         })
       ];
@@ -154,7 +162,7 @@ in
     }
     // lib.optionalAttrs isAndoria {
       options = {
-        listenAddresses = [ "tcp://127.0.0.1:22000" ];
+        listenAddresses = [ "tcp://${andoriaTailscaleIP}:22000" ];
         globalAnnounceEnabled = false;
         relaysEnabled = false;
         natEnabled = false;

@@ -326,28 +326,6 @@ in
         };
       };
 
-      autossh-andoria-syncthing = {
-        script = ''
-          export AUTOSSH_GATETIME=0
-          export SSH_AUTH_SOCK="${xdg_configHome}/gnupg/S.gpg-agent.ssh"
-          ${pkgs.autossh}/bin/autossh -M 0 -N andoria-08 \
-              -o "ControlMaster=no"                       \
-              -o "ControlPath=none"                       \
-              -o "ServerAliveInterval=30"                 \
-              -o "ServerAliveCountMax=3"                  \
-              -o "ExitOnForwardFailure=yes"               \
-              -L 127.0.0.1:22001:127.0.0.1:22000          \
-              -R 127.0.0.1:22001:127.0.0.1:22000
-        '';
-        serviceConfig = {
-          RunAtLoad = true;
-          KeepAlive = true;
-          ThrottleInterval = 30;
-          StandardOutPath = "${xdg_cacheHome}/autossh-andoria-syncthing.log";
-          StandardErrorPath = "${xdg_cacheHome}/autossh-andoria-syncthing.log";
-        };
-      };
-
       vlc-telnet = {
         script = ''
           /Applications/VLC.app/Contents/MacOS/VLC \
