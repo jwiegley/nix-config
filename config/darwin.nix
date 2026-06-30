@@ -259,6 +259,7 @@ in
       "path-finder"
       "pdf-expert"
       "postman"
+      "shottr"
       "signal"
       "slack"
       "steam"
