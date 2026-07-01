@@ -19,6 +19,7 @@
 }:
 let
   inherit (pkgs.stdenv) isDarwin isLinux;
+  isPositronRemoteLinux = isLinux && config.home.username == "jwiegley";
 
   # Shared variables - also imported by sub-modules
   vars = import ./vars.nix {
@@ -165,6 +166,20 @@ in
       ".local/bin/claude".source = config.lib.file.mkOutOfStoreSymlink "${
         inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
       }/bin/claude";
+    }
+    // lib.optionalAttrs isPositronRemoteLinux {
+      ".local/bin/agent-deck-remote-env" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          set -euo pipefail
+          uid=$(id -u)
+          export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$uid}"
+          export TMUX_TMPDIR="''${TMUX_TMPDIR:-$XDG_RUNTIME_DIR}"
+          export CLAUDE_CONFIG_DIR="$HOME/.claude"
+          exec "$HOME/.nix-profile/bin/agent-deck" "$@"
+        '';
+      };
     }
     // lib.optionalAttrs (pkgs ? sherlock-db) {
       ".claude/skills/sherlock/SKILL.md".source = "${pkgs.sherlock-db}/share/sherlock/SKILL.md";
