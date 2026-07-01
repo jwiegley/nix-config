@@ -20,7 +20,7 @@
     };
 
     pal-mcp-server = {
-      url = "github:BeehiveInnovations/pal-mcp-server";
+      url = "github:jwiegley/pal-mcp-server";
       flake = false;
     };
   };

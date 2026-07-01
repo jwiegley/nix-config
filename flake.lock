@@ -183,15 +183,15 @@
     "pal-mcp-server": {
       "flake": false,
       "locked": {
-        "lastModified": 1765818451,
-        "narHash": "sha256-N10TLndisNT48NVT8OZs7hZFf4D6j8ekPU7RfqwkqY0=",
-        "owner": "BeehiveInnovations",
+        "lastModified": 1781719457,
+        "narHash": "sha256-ITGd3s3Ml7CtNyvHf0qWcBxQyElOqGTV+q8FzgJOAo4=",
+        "owner": "jwiegley",
         "repo": "pal-mcp-server",
-        "rev": "7afc7c1cc96e23992c8f105f960132c657883bb1",
+        "rev": "50b4a9013f7f10986f2353073416a5f53ee8f523",
         "type": "github"
       },
       "original": {
-        "owner": "BeehiveInnovations",
+        "owner": "jwiegley",
         "repo": "pal-mcp-server",
         "type": "github"
       }

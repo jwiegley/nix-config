@@ -15,7 +15,7 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     with final.python3Packages;
     buildPythonApplication {
       pname = "pal-mcp-server";
-      version = "9.8.2";
+      version = "1.2.1";
       pyproject = true;
 
       src = prev.inputs.pal-mcp-server;
@@ -29,17 +29,18 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
         mcp
         google-genai
         openai
+        anthropic
         pydantic
         python-dotenv
       ];
 
-      env.SETUPTOOLS_SCM_PRETEND_VERSION = "9.8.2";
+      env.SETUPTOOLS_SCM_PRETEND_VERSION = "1.2.1";
 
       doCheck = false;
 
       meta = {
         description = "AI-powered MCP server with multiple model providers";
-        homepage = "https://github.com/BeehiveInnovations/pal-mcp-server";
+        homepage = "https://github.com/jwiegley/pal-mcp-server";
         license = lib.licenses.mit;
         mainProgram = "pal-mcp-server";
       };
