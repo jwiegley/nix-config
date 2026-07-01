@@ -19,6 +19,11 @@ The shell currently brings in:
 
 - agent CLIs from `llm-agents.nix`: `claude`, `ccusage`, `codex`, `droid`,
   `gemini`, `mcporter`, and `opencode`
+- `agent-deck`, a tmux-based TUI that runs and switches between many concurrent
+  agent sessions (Claude, Codex, Gemini, OpenCode, and more) from one terminal.
+  It requires `tmux` at runtime; the package carries `tmux` and `git` only as a
+  fallback, so your own `tmux`/`git` still win and attaching to a session
+  yourself (`tmux attach`) uses the `tmux` on your PATH
 - `git-ai` in its minimal form, so `git-ai` is available without replacing
   `git`
 - LazyCodex, via the pinned `lazycodex-ai` installer CLI

@@ -54,6 +54,7 @@
             prev.callPackage (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")
               { };
         })
+        (import ./overlays/30-agent-deck.nix)
         (import ./overlays/30-ai-python.nix)
         (import ./overlays/30-ai-llm.nix)
         (import ./overlays/30-ai-mcp.nix)
@@ -162,6 +163,7 @@
         ++ agent "gemini-cli"
         ++ agent "mcporter"
         ++ agent "opencode"
+        ++ opt "agent-deck"
         ++ opt "agnix"
         ++ opt "claude-replay"
         ++ opt "claude-vault"
