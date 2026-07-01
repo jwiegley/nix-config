@@ -77,6 +77,7 @@ let
     .cache
     .cargo
     .cargo-home
+    .direnv
     .envrc
     .ghc.*
     .lake
