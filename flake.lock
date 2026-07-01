@@ -171,11 +171,11 @@
         "pal-mcp-server": "pal-mcp-server"
       },
       "locked": {
-        "lastModified": 1782923126,
-        "narHash": "sha256-ZW3sHBXnnkaGQ7z87Dl9oV/Rpl5DWVlx3Ndy0AYOWqE=",
+        "lastModified": 1782938268,
+        "narHash": "sha256-+hRS/tqfWLacLhrdTYLkIRqfE5ry6RauXnUNuH6B2PI=",
         "owner": "jwiegley",
         "repo": "ai-nix",
-        "rev": "b62861d7e6e83cdee91c462149c4468375c15b2d",
+        "rev": "4bd852195d24b8a25354d3260e254659ff4d4cb8",
         "type": "github"
       },
       "original": {
