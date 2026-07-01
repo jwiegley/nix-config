@@ -81,7 +81,61 @@
 
       patchAgentPackage =
         pkgs: name: package:
-        if name == "gemini-cli" && (package.version or null) == "0.49.0" && package ? overrideAttrs then
+        if name == "codex" then
+          let
+            codexWrapper = pkgs.writeShellScript "codex" ''
+              set -euo pipefail
+
+              codex_shared_home="''${CODEX_HOME:-''${HOME:?}/.codex}"
+              codex_host="$(${pkgs.coreutils}/bin/uname -n 2>/dev/null || true)"
+              codex_host="''${codex_host%%.*}"
+              codex_host="$(${pkgs.coreutils}/bin/printf '%s' "''${codex_host:-unknown}" | ${pkgs.coreutils}/bin/tr -c 'A-Za-z0-9_.-' '_')"
+
+              codex_host_root="$codex_shared_home/hosts/$codex_host"
+              codex_host_home="$codex_host_root/home"
+              ${pkgs.coreutils}/bin/mkdir -p "$codex_host_home"
+
+              for codex_shared_entry in \
+                .credentials.json \
+                .personality_migration \
+                .prompt-deploy-manifest.json \
+                agents \
+                auth.json \
+                config.toml \
+                hooks.json \
+                plugins \
+                rules \
+                skills
+              do
+                codex_source="$codex_shared_home/$codex_shared_entry"
+                codex_target="$codex_host_home/$codex_shared_entry"
+                if { [ -e "$codex_source" ] || [ -L "$codex_source" ]; } \
+                  && { [ ! -e "$codex_target" ] && [ ! -L "$codex_target" ]; }; then
+                  ${pkgs.coreutils}/bin/ln -s "$codex_source" "$codex_target" 2>/dev/null || true
+                fi
+              done
+
+              export CODEX_HOME="$codex_host_home"
+              export CODEX_SQLITE_HOME="''${CODEX_SQLITE_HOME:-$codex_host_root/sqlite}"
+
+              ${pkgs.coreutils}/bin/mkdir -p "$CODEX_SQLITE_HOME"
+              exec -a codex @codex_unwrapped@ "$@"
+            '';
+          in
+          pkgs.symlinkJoin {
+            name = "${package.name or name}-host-state";
+            paths = [ package ];
+            postBuild = ''
+              rm -f "$out/bin/codex"
+              install -m 0755 ${codexWrapper} "$out/bin/codex"
+              substituteInPlace "$out/bin/codex" \
+                --replace-fail '@codex_unwrapped@' "${package}/bin/codex"
+            '';
+            meta = package.meta or { };
+          }
+        else if
+          name == "gemini-cli" && (package.version or null) == "0.49.0" && package ? overrideAttrs
+        then
           package.overrideAttrs (
             old:
             let
