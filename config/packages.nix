@@ -464,6 +464,7 @@ rec {
     ++ optPkg "lazycodex-ai"
     ++ optPkg "gguf-tools"
     ++ optPkg "qdrant-web-ui"
+    ++ optPkg "agent-deck"
     ++ optPkg "agnix"
     ++ optPkg "claude-vault"
     ++ optPkg "claude-replay"
