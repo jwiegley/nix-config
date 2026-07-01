@@ -350,10 +350,13 @@ in
           # Sweep anything that accumulated while we were not running.
           ${pkgs.my-scripts}/bin/flatten-recordings || true
 
-          # Then react to filesystem changes under ~/Recordings instead of
-          # polling every 15 minutes. --latency 5 coalesces bursts; the
-          # script is idempotent and re-sweeps the whole directory on each
-          # invocation, so an occasional duplicate event is harmless.
+          # Then react to filesystem changes under ~/Recordings for low
+          # latency. --latency 5 coalesces bursts; the script is idempotent
+          # and re-sweeps the whole directory on each invocation, so an
+          # occasional duplicate event is harmless. A long-lived fswatch can
+          # silently stop delivering events (its FSEvents stream is severed
+          # but the process stays alive, so KeepAlive never restarts it); the
+          # flatten-recordings-sweep timer below is the safety net for that.
           ${pkgs.fswatch}/bin/fswatch --recursive --latency 5 \
                 --event=Created --event=Updated \
                 --event=MovedTo --event=Renamed \
@@ -368,6 +371,34 @@ in
           # Without these two, launchd classifies the agent as background
           # work and throttles its I/O when the display is off — the cause
           # of the 2.4h stall on a 105 KB archive mv on 2026-05-22.
+          LowPriorityIO = false;
+          LowPriorityBackgroundIO = false;
+          ProcessType = "Standard";
+          StandardOutPath = "${home}/Library/Logs/flatten-recordings.log";
+          StandardErrorPath = "${home}/Library/Logs/flatten-recordings.log";
+        };
+      };
+
+      # Periodic safety-net sweep. The fswatch agent above is a single
+      # long-lived watcher; if its event stream is severed (e.g. by the
+      # filesystem churn of a `darwin-rebuild switch` activation) the process
+      # stays alive but stops delivering events, and KeepAlive cannot detect
+      # a silent-but-alive watcher — so recordings pile up unnoticed (this
+      # happened 2026-06-30: a watcher went mute at ~15:50 and five
+      # recordings sat unprocessed for hours). This timer guarantees a sweep
+      # every 15 minutes regardless. flatten-recordings holds a
+      # single-instance lock, so overlap with an fswatch-triggered run is
+      # harmless — the loser logs already_running and exits.
+      flatten-recordings-sweep = {
+        script = ''
+          export PATH="${pkgs.my-scripts}/bin:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+          ${pkgs.my-scripts}/bin/flatten-recordings || true
+        '';
+        serviceConfig = {
+          RunAtLoad = true; # Sweep once at login/activation.
+          StartInterval = 900; # And every 15 minutes thereafter.
+          # Match the fswatch agent: don't let launchd throttle this agent's
+          # I/O when the display is off (the 2026-05-22 archive-stall cause).
           LowPriorityIO = false;
           LowPriorityBackgroundIO = false;
           ProcessType = "Standard";
