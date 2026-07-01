@@ -69,10 +69,6 @@
       url = "github:jwiegley/org2tc";
       flake = false;
     };
-    pal-mcp-server = {
-      url = "git+file:///Users/johnw/src/pal-mcp-server";
-      flake = false;
-    };
     stock-trader = {
       url = "git+file:///Users/johnw/src/stock-trader";
       flake = false;
