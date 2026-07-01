@@ -171,11 +171,11 @@
         "pal-mcp-server": "pal-mcp-server"
       },
       "locked": {
-        "lastModified": 1782852414,
-        "narHash": "sha256-aUdkXECQKcHxu2EP9fMcb/EL/FiS6DDNtXpc6lJNxtI=",
+        "lastModified": 1782888517,
+        "narHash": "sha256-xRC4v8tcxVwnsxzRs2CeuhRsWa9bRNhuUBYW54QAI5o=",
         "owner": "jwiegley",
         "repo": "ai-nix",
-        "rev": "12985d519785a8c52418aac81ecc202643b9cb62",
+        "rev": "4b599224fb65317227edcc69c219834513419ed7",
         "type": "github"
       },
       "original": {
@@ -6867,33 +6867,17 @@
     "pal-mcp-server": {
       "flake": false,
       "locked": {
-        "lastModified": 1765818451,
-        "narHash": "sha256-N10TLndisNT48NVT8OZs7hZFf4D6j8ekPU7RfqwkqY0=",
-        "owner": "BeehiveInnovations",
-        "repo": "pal-mcp-server",
-        "rev": "7afc7c1cc96e23992c8f105f960132c657883bb1",
-        "type": "github"
-      },
-      "original": {
-        "owner": "BeehiveInnovations",
-        "repo": "pal-mcp-server",
-        "type": "github"
-      }
-    },
-    "pal-mcp-server_2": {
-      "flake": false,
-      "locked": {
         "lastModified": 1781719457,
         "narHash": "sha256-ITGd3s3Ml7CtNyvHf0qWcBxQyElOqGTV+q8FzgJOAo4=",
-        "ref": "refs/heads/main",
+        "owner": "jwiegley",
+        "repo": "pal-mcp-server",
         "rev": "50b4a9013f7f10986f2353073416a5f53ee8f523",
-        "revCount": 1181,
-        "type": "git",
-        "url": "file:///Users/johnw/src/pal-mcp-server"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/pal-mcp-server"
+        "owner": "jwiegley",
+        "repo": "pal-mcp-server",
+        "type": "github"
       }
     },
     "pushme": {
@@ -6988,7 +6972,6 @@
         "org-jw": "org-jw",
         "org2jsonl": "org2jsonl_2",
         "org2tc": "org2tc",
-        "pal-mcp-server": "pal-mcp-server_2",
         "pushme": "pushme",
         "rag-client": "rag-client",
         "renamer": "renamer",
