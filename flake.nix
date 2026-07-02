@@ -85,40 +85,90 @@
           let
             codexWrapper = pkgs.writeShellScript "codex" ''
               set -euo pipefail
+              umask 077
 
+              # $HOME (and so ~/.codex) is shared over NFS across hosts.
+              # Concurrent cross-host writers corrupt SQLite databases, so
+              # keep CODEX_HOME shared and move only the conflict-prone
+              # state -- the SQLite databases and the fixed-name tui log --
+              # to machine-local disk.  Everything else (config, auth,
+              # sessions, history, prompts) stays shared.
               codex_shared_home="''${CODEX_HOME:-''${HOME:?}/.codex}"
-              codex_host="$(${pkgs.coreutils}/bin/uname -n 2>/dev/null || true)"
-              codex_host="''${codex_host%%.*}"
-              codex_host="$(${pkgs.coreutils}/bin/printf '%s' "''${codex_host:-unknown}" | ${pkgs.coreutils}/bin/tr -c 'A-Za-z0-9_.-' '_')"
+              codex_uid="$(${pkgs.coreutils}/bin/id -u)"
+              codex_local_root="/var/tmp/codex-$codex_uid"
+              export CODEX_SQLITE_HOME="''${CODEX_SQLITE_HOME:-$codex_local_root/sqlite}"
 
-              codex_host_root="$codex_shared_home/hosts/$codex_host"
-              codex_host_home="$codex_host_root/home"
-              ${pkgs.coreutils}/bin/mkdir -p "$codex_host_home"
+              # /var/tmp is world-writable: fail closed, and loudly, if the
+              # local root cannot be created or is not a plain directory we
+              # own (pre-creation / symlink planting by another local user).
+              # Falling back to the shared home would silently reintroduce
+              # the cross-host corruption this wrapper exists to prevent.
+              # The root is validated and locked down to 700 before anything
+              # is created beneath it.
+              if ! ${pkgs.coreutils}/bin/mkdir -p "$codex_local_root"; then
+                echo "codex: cannot create host-local state under $codex_local_root" >&2
+                exit 1
+              fi
+              if [ -L "$codex_local_root" ] || [ ! -d "$codex_local_root" ] \
+                || [ "$(${pkgs.coreutils}/bin/stat -c %u "$codex_local_root")" != "$codex_uid" ]; then
+                echo "codex: refusing $codex_local_root: not a directory owned by uid $codex_uid" >&2
+                exit 1
+              fi
+              ${pkgs.coreutils}/bin/chmod 700 "$codex_local_root" 2>/dev/null || true
+              if ! ${pkgs.coreutils}/bin/mkdir -p \
+                  "$codex_local_root/sqlite" "$codex_local_root/log" \
+                || [ -L "$codex_local_root/sqlite" ] || [ -L "$codex_local_root/log" ]; then
+                echo "codex: cannot create state directories under $codex_local_root" >&2
+                exit 1
+              fi
+              ${pkgs.coreutils}/bin/chmod 700 \
+                "$codex_local_root/sqlite" "$codex_local_root/log" 2>/dev/null || true
 
-              for codex_shared_entry in \
-                .credentials.json \
-                .personality_migration \
-                .prompt-deploy-manifest.json \
-                agents \
-                auth.json \
-                config.toml \
-                hooks.json \
-                plugins \
-                rules \
-                skills
-              do
-                codex_source="$codex_shared_home/$codex_shared_entry"
-                codex_target="$codex_host_home/$codex_shared_entry"
-                if { [ -e "$codex_source" ] || [ -L "$codex_source" ]; } \
-                  && { [ ! -e "$codex_target" ] && [ ! -L "$codex_target" ]; }; then
-                  ${pkgs.coreutils}/bin/ln -s "$codex_source" "$codex_target" 2>/dev/null || true
+              # One-time seed per host: carry accumulated memories from the
+              # shared home into this host's local databases.  The mkdir is
+              # an atomic mutex so concurrent first runs seed at most once,
+              # and the temp-copy + no-clobber mv means no codex ever
+              # observes a partially copied file.  The mutex is released
+              # after every attempt: the file-existence guard prevents
+              # steady-state re-seeding, while a transiently failed copy
+              # (NFS stall) can retry on the next launch.  Only the main DB
+              # file is copied: it is self-consistent as of its last
+              # checkpoint, whereas a -wal/-shm trio copied from a live NFS
+              # database can be mutually inconsistent.  (A torn copy of a
+              # concurrently-written main file is possible during the
+              # transition window; codex detects and rebuilds a bad DB.)
+              # The state DB rebuilds itself from shared rollout files;
+              # logs and goals start fresh.
+              if [ -f "$codex_shared_home/memories_1.sqlite" ] \
+                && [ ! -e "$CODEX_SQLITE_HOME/memories_1.sqlite" ] \
+                && ${pkgs.coreutils}/bin/mkdir "$CODEX_SQLITE_HOME/.memories-seed-lock" 2>/dev/null; then
+                codex_seed_tmp="$CODEX_SQLITE_HOME/.memories_1.sqlite.seed.$$"
+                trap '${pkgs.coreutils}/bin/rm -f "$codex_seed_tmp" 2>/dev/null;
+                      ${pkgs.coreutils}/bin/rmdir "$CODEX_SQLITE_HOME/.memories-seed-lock" 2>/dev/null' \
+                  EXIT INT TERM
+                if ${pkgs.coreutils}/bin/cp \
+                    "$codex_shared_home/memories_1.sqlite" "$codex_seed_tmp" 2>/dev/null; then
+                  ${pkgs.coreutils}/bin/mv -n \
+                    "$codex_seed_tmp" "$CODEX_SQLITE_HOME/memories_1.sqlite" 2>/dev/null || true
                 fi
-              done
+                ${pkgs.coreutils}/bin/rm -f "$codex_seed_tmp" 2>/dev/null || true
+                ${pkgs.coreutils}/bin/rmdir "$CODEX_SQLITE_HOME/.memories-seed-lock" 2>/dev/null || true
+                trap - EXIT INT TERM
+              fi
 
-              export CODEX_HOME="$codex_host_home"
-              export CODEX_SQLITE_HOME="''${CODEX_SQLITE_HOME:-$codex_host_root/sqlite}"
+              # The tui appends to a fixed-name, lock-free log and unlinks it
+              # on startup; cross-host that tears lines and litters .nfs*
+              # files.  Point the shared log path at machine-local disk.
+              codex_log_dir="$codex_shared_home/log"
+              if [ -d "$codex_log_dir" ] && [ ! -L "$codex_log_dir" ]; then
+                ${pkgs.coreutils}/bin/rmdir "$codex_log_dir" 2>/dev/null \
+                  || ${pkgs.coreutils}/bin/mv "$codex_log_dir" "$codex_log_dir.pre-host-state.$$" 2>/dev/null \
+                  || true
+              fi
+              if [ ! -e "$codex_log_dir" ] && [ ! -L "$codex_log_dir" ]; then
+                ${pkgs.coreutils}/bin/ln -s "$codex_local_root/log" "$codex_log_dir" 2>/dev/null || true
+              fi
 
-              ${pkgs.coreutils}/bin/mkdir -p "$CODEX_SQLITE_HOME"
               exec -a codex @codex_unwrapped@ "$@"
             '';
           in
