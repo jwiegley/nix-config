@@ -247,7 +247,7 @@ in
     };
 
     git-ai = lib.mkIf vars.gitAiEnabled {
-      enable = true;
+      enable = false;
       installHooks = true;
       settings = {
         apiKeyFile = "${vars.home}/.git-ai/api-key";
