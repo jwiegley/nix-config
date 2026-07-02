@@ -275,6 +275,7 @@ in
       "visual-studio-code"
       "vlc"
       "whatsapp"
+      "whimsical"
       "wireshark-app"
       "wispr-flow"
       "xnviewmp"

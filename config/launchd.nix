@@ -27,6 +27,128 @@ let
     telemetry = false
     logdirectory = /Library/Logs/EternalTerminal
   '';
+  spotlightTransientDirs = [
+    "${home}/.cache"
+    "${home}/.cache/cargo"
+    "${home}/.cache/sccache"
+    "${home}/.cargo"
+    "${home}/.config/codex/.tmp"
+    "${home}/.local/share/cargo"
+    "${home}/.local/share/rustup"
+    "${home}/.rustup"
+    "${home}/.sccache"
+    "${home}/Library/Caches"
+    "${home}/Library/Developer/CoreSimulator/Caches"
+    "${home}/Library/Developer/Xcode/DerivedData"
+  ];
+  spotlightTransientRoots = [
+    "${home}/.config"
+    "${home}/Products"
+    "${home}/doc"
+    "${home}/hera"
+    "${home}/src"
+    "${home}/work"
+  ];
+  spotlightTransientNames = [
+    ".cache"
+    ".*.cache"
+    ".cabal*"
+    ".cargo-home"
+    ".direnv"
+    ".devenv"
+    ".git"
+    ".gradle"
+    ".ghc.*"
+    ".hg"
+    ".jj"
+    ".lake"
+    ".mypy_cache"
+    ".next"
+    ".nox"
+    ".pytest_cache"
+    ".ruff_cache"
+    ".svelte-kit"
+    ".swiftpm"
+    ".terraform"
+    ".tmp"
+    ".tox"
+    ".vagrant"
+    ".venv"
+    ".build"
+    "__pycache__"
+    "Pods"
+    "MAlonzo"
+    "bash_snapshots"
+    "bazel-*"
+    "build"
+    "build-debug"
+    "coverage"
+    "dist"
+    "dist-newstyle"
+    "htmlcov"
+    "node_modules"
+    "result"
+    "result-*"
+    "target"
+    "target-*"
+    "venv"
+  ];
+  spotlightTransientFindExpr = lib.concatMapStringsSep " -o " (
+    name: "-name ${lib.escapeShellArg name}"
+  ) spotlightTransientNames;
+  spotlightTransientExclusions = pkgs.writeShellScript "spotlight-transient-exclusions" ''
+    set -eu
+
+    mark_dir() {
+      dir="$1"
+      [ -d "$dir" ] || return 0
+
+      marker="$dir/.metadata_never_index"
+      if [ ! -e "$marker" ]; then
+        : > "$marker"
+        echo "$(/bin/date '+%Y-%m-%d %H:%M:%S') marked $dir"
+      fi
+    }
+
+    mark_cargo_target() {
+      target="$1"
+      mark_dir "$target"
+
+      for dir in "$target/doc" "$target/package" "$target/tmp" "$target/.cargo-home"; do
+        mark_dir "$dir"
+      done
+
+      /usr/bin/find "$target" -xdev -mindepth 1 -maxdepth 1 -type d -print 2>/dev/null |
+        while IFS= read -r profile_dir; do
+          mark_dir "$profile_dir"
+          for dir in \
+            "$profile_dir/.fingerprint" \
+            "$profile_dir/build" \
+            "$profile_dir/deps" \
+            "$profile_dir/examples" \
+            "$profile_dir/incremental" \
+            "$profile_dir/native"; do
+            mark_dir "$dir"
+          done
+        done
+    }
+
+    for dir in ${lib.escapeShellArgs spotlightTransientDirs}; do
+      mark_dir "$dir"
+    done
+
+    for root in ${lib.escapeShellArgs spotlightTransientRoots}; do
+      [ -d "$root" ] || continue
+
+      /usr/bin/find "$root" -xdev -type d \( ${spotlightTransientFindExpr} \) -prune -print 2>/dev/null |
+        while IFS= read -r dir; do
+          case "''${dir##*/}" in
+            target) mark_cargo_target "$dir" ;;
+            *) mark_dir "$dir" ;;
+          esac
+        done
+    done
+  '';
 
 in
 {
@@ -335,6 +457,19 @@ in
         '';
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = true;
+      };
+
+      spotlight-transient-exclusions = {
+        script = "exec ${spotlightTransientExclusions}";
+        serviceConfig = {
+          RunAtLoad = true;
+          StartInterval = 3600;
+          LowPriorityIO = true;
+          LowPriorityBackgroundIO = true;
+          ProcessType = "Background";
+          StandardOutPath = "${home}/Library/Logs/spotlight-transient-exclusions.log";
+          StandardErrorPath = "${home}/Library/Logs/spotlight-transient-exclusions.log";
+        };
       };
     }
     # `flatten-recordings` shells out to pkgs.my-scripts/bin/flatten-recordings,
