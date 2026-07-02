@@ -120,6 +120,9 @@ in
     }
     // lib.optionalAttrs isLinux {
       FACTORY_AUTO_UPDATE = "false";
+    }
+    // lib.optionalAttrs (!vars.gitAiEnabled) {
+      GIT_AI_INSTALL_DEV_HOOKS = "0";
     };
 
     sessionSearchVariables = {
@@ -243,7 +246,7 @@ in
       nix-direnv.enable = true;
     };
 
-    git-ai = {
+    git-ai = lib.mkIf vars.gitAiEnabled {
       enable = true;
       installHooks = true;
       settings = {

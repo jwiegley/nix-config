@@ -6,6 +6,7 @@
 }:
 let
   inherit (vars)
+    gitAiEnabled
     gitPkg
     userName
     userEmail
@@ -196,11 +197,6 @@ in
         stat = true;
       };
 
-      trace2 = {
-        eventTarget = "af_unix:stream:/tmp/.git-ai/internal/daemon/trace2.sock";
-        eventNesting = 10;
-      };
-
       "color \"sh\"" = {
         branch = "yellow reverse";
         workdir = "blue bold";
@@ -244,6 +240,12 @@ in
       "url \"https://github.com/ghc/packages-\"".insteadOf = "https://github.com/ghc/packages/";
       "url \"ssh://git@github.com/ghc/packages-\"".insteadOf = "ssh://git@github.com/ghc/packages/";
       "url \"git@github.com:/ghc/packages-\"".insteadOf = "git@github.com:/ghc/packages/";
+    }
+    // lib.optionalAttrs gitAiEnabled {
+      trace2 = {
+        eventTarget = "af_unix:stream:/tmp/.git-ai/internal/daemon/trace2.sock";
+        eventNesting = 10;
+      };
     }
     // lib.optionalAttrs (pkgs ? git-scripts) {
       "merge \"merge-changelog\"" = {
