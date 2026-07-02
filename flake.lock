@@ -4881,11 +4881,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782881387,
-        "narHash": "sha256-HvlS1KDGXDjd1bNzzPvH1mkDJATlDAfVYfTh//wJBEA=",
+        "lastModified": 1782964450,
+        "narHash": "sha256-2rwNd77TzZ4sDDvMam0IXFXN5IfC35mifoeKS0uAc/4=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "d32537981c036473cf6990ae03176a5d84c43b29",
+        "rev": "ebc87daabc8d3f595e9a8b67107eaaa8115ad582",
         "type": "github"
       },
       "original": {
@@ -5337,11 +5337,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782786003,
-        "narHash": "sha256-jZ+N/sWZV7jbOQVDN8ZBqaQFe94CrUrhIIibvmFc9tM=",
+        "lastModified": 1782934515,
+        "narHash": "sha256-61JrAVt4UMHzgwlVpYdHJyEeDiiv/pVi50p4uemuMA4=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "e2e5ce54691fc6c851e7365da0cd67ad88962c4c",
+        "rev": "d8569ee97f135adbf350f2e8d07d23a3c988e226",
         "type": "github"
       },
       "original": {
@@ -6472,11 +6472,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1782760764,
-        "narHash": "sha256-N66fYdUuZ9hpdM7jsQ7CUWtLJduqGDyTGCaLR62CXaQ=",
+        "lastModified": 1782821651,
+        "narHash": "sha256-D5jO0ME1lA9bDHnd5kVawBwItG/N4oZr3FlXmMzLec8=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "7a1a64774a5fd0b0cd39ac95d0e170ace8b266a0",
+        "rev": "e52c192be9d7b2c4bd4aed326c8731b35f8bb75c",
         "type": "github"
       },
       "original": {
@@ -7021,11 +7021,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1782943762,
-        "narHash": "sha256-VgM/53UVi3TCtWCN00nP/PzzhbqFdEFsqomuNZxaMrQ=",
+        "lastModified": 1782971281,
+        "narHash": "sha256-tNTAC3pAm+TXsQBDQQ1hVia9P8dhIGYUCJ8AYGdKuls=",
         "ref": "refs/heads/main",
-        "rev": "54c89eb9b00e4300141d0044e2ba4fce8711bea7",
-        "revCount": 1433,
+        "rev": "e8ceefab38d4ed0be3e8cf6ac5bd875cfac2bb69",
+        "revCount": 1435,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
