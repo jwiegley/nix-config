@@ -25,6 +25,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    git-ai.follows = "ai-nix/git-ai";
     llm-agents.follows = "ai-nix/llm-agents";
 
     ledger.url = "github:ledger/ledger";
@@ -35,7 +36,6 @@
 
     org-jw.url = "github:jwiegley/org-jw";
     rag-client.url = "github:jwiegley/rag-client";
-    git-ai.url = "git+file:///Users/johnw/work/git-ai/git-ai/main";
     git-all.url = "git+file:///Users/johnw/src/git-all";
     gitlib.url = "git+file:///Users/johnw/src/gitlib?submodules=0";
     hakyll.url = "git+file:///Users/johnw/src/hakyll";
