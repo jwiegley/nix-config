@@ -220,6 +220,34 @@ final: prev: {
     }
   );
 
+  # Fix graphite-cli 1.8.6 on Darwin. The 1.8.6 bump (nixpkgs PR #527044)
+  # switched to the prebuilt vercel/pkg binary, which breaks twice here:
+  #
+  #   1. postInstall runs `$out/bin/gt completion` to generate bash/zsh/fish
+  #      completions, but gt now creates $HOME/.config/graphite/aliases
+  #      before printing anything. With the build's nonexistent
+  #      HOME=/homeless-shelter it exits 1 with empty stdout and stderr, so
+  #      installShellCompletion aborts on the zero-size file. Point HOME at
+  #      a writable directory so the completion calls succeed.
+  #
+  #   2. vercel/pkg appends its snapshot filesystem after the Mach-O image,
+  #      and fixupPhase's strip rewrites the binary and drops that trailing
+  #      data (86764960 -> 61766832 bytes), leaving a gt that dies with
+  #      "Pkg: Error reading from file." Upstream guards against exactly
+  #      this on Linux (dontFixup) but left fixup enabled on Darwin, and
+  #      the build still succeeds because completions are generated before
+  #      fixup runs. dontStrip keeps the binary byte-identical.
+  graphite-cli = prev.graphite-cli.overrideAttrs (
+    oldAttrs:
+    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+      dontStrip = true;
+      postInstall = ''
+        export HOME="$(mktemp -d)"
+      ''
+      + (oldAttrs.postInstall or "");
+    }
+  );
+
   # ntp, apr-util, libcdio-paranoia are pinned to last-known-good nixpkgs
   # in 00-last-known-good.nix (the 2026-04-23 bump broke them on Darwin).
 
