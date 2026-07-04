@@ -262,6 +262,19 @@ rec {
     # ── Programming Languages & Dev Tools ────────────────────────────
     ++ [
       act
+      # Agda with registered libraries. Version-aligned with agda2-mode
+      # (config/emacs.nix) by construction: both derive from the same
+      # haskellPackages.Agda. That Agda depends on top-level pkgs.emacs,
+      # which overlays/10-emacs.nix maps to emacs30-macport on Darwin
+      # (emacs30 on Linux), so Agda and its library set build locally
+      # instead of substituting, and rebuild when this overlay's emacs
+      # changes.
+      (agda.withPackages (
+        agda-pkgs: with agda-pkgs; [
+          agda-categories
+          standard-library
+        ]
+      ))
       cmake
       doxygen
       go-jira

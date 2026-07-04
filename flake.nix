@@ -144,6 +144,10 @@
             home-manager.lib.homeManagerConfiguration {
               pkgs = import nixpkgs {
                 inherit system;
+                # Match nixpkgs.config.allowUnfree in config/darwin.nix;
+                # without it the package-list (graphite-cli et al.) refuses
+                # to evaluate on the standalone Linux surface.
+                config.allowUnfree = true;
                 overlays = import ./config/overlays.nix {
                   inherit vulcan-crt inputs;
                 };
