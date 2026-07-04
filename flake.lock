@@ -106,11 +106,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1782963982,
-        "narHash": "sha256-4TccrssT3SAD3FJsI3cBGH2L1Losj1LuQySjGoaDxZc=",
+        "lastModified": 1783032881,
+        "narHash": "sha256-ifcrQ8GVJ0V3DIpJP0r7JCMyWSMJyW5W5V/vokKw+MI=",
         "owner": "git-ai-project",
         "repo": "git-ai",
-        "rev": "12ab969b00cf4496fb27d8278ce046ef0d41118e",
+        "rev": "3aabd55cd8dd8593a14522d9768cdecf3909a2d9",
         "type": "github"
       },
       "original": {
@@ -131,11 +131,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1783014537,
-        "narHash": "sha256-QRwMf1krc5mExs5WRa7sDHuHJSPuaE/zjYsY/NQaz/0=",
+        "lastModified": 1783088904,
+        "narHash": "sha256-8fzF4l1nxWOiTqkCQl/K/PpN4TSQG1N+fRpEZxzuNeY=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "93ad4b82e1864c4f6a178bcacd06792289ba8d56",
+        "rev": "a02dbad78bd0d12ad152729c60874bdfc3122232",
         "type": "github"
       },
       "original": {
