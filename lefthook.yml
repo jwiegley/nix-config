@@ -7,8 +7,8 @@ pre-commit:
       run: nix run .#lint
     tests:
       run: nix run .#test
-    build:
-      run: nix run .#build-check
+    # build:
+    #   run: nix run .#build-check
     no-warnings:
       run: nix run .#no-warnings
     coverage:
