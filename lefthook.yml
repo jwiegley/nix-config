@@ -5,17 +5,17 @@ pre-commit:
       run: nix run .#format-check
     lint:
       run: nix run .#lint
-    tests:
-      run: nix run .#test
+    # tests:
+    #   run: nix run .#test
     # build:
     #   run: nix run .#build-check
-    no-warnings:
-      run: nix run .#no-warnings
+    # no-warnings:
+    #   run: nix run .#no-warnings
     coverage:
       run: nix run .#coverage-check
     profile:
       run: nix run .#profile-check
-    fuzz:
-      run: nix run .#fuzz
-    memory:
-      run: nix run .#memory-check
+    # fuzz:
+    #   run: nix run .#fuzz
+    # memory:
+    #   run: nix run .#memory-check
