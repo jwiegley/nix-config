@@ -53,6 +53,17 @@ let
     rev = "6dedf69f94d03cbe7bdde106f2d4c23ae2a853bf";
     sha256 = "1bfzsicfxydyki256r34096v9zvj0j16zvs52ca56raczxgxrr40";
   };
+
+  # Last good nixpkgs rev (== prior flake.lock pin, 2026-07-02) before the
+  # 2026-07-05 bump (rev 19a8a1e6...) shipped a nixos-render-docs that
+  # removed the --toc-depth flag ("use --sidebar-depth instead"). nix-darwin
+  # (a1fa429, currently upstream HEAD) still passes --toc-depth when
+  # building darwin-manual-html, so the manual and darwin-help fail. Drop
+  # this once nix-darwin switches to --sidebar-depth.
+  preTocDepthRemoval = nixpkgs {
+    rev = "9e92285f211dad236540fd617d7e30e0b99bc0e1";
+    sha256 = "sha256-AXmz9ho4Lud5CsbrZsuSVwpQZ4o5FgZ1chxBn5cJ8+0=";
+  };
 in
 {
   # Meta/Facebook C++ libraries must be pinned together for closure
@@ -83,6 +94,12 @@ in
   # restores Darwin fuse support. See `preRcloneFuse3Break` above.
   inherit (preRcloneFuse3Break)
     rclone
+    ;
+
+  # Pin nixos-render-docs until nix-darwin adapts to the removal of
+  # --toc-depth. See `preTocDepthRemoval` above.
+  inherit (preTocDepthRemoval)
+    nixos-render-docs
     ;
 
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [

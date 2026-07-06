@@ -25,6 +25,25 @@ in
     '';
   });
 
+  # git-branchstack 0.2.0 (PyPI, Jan 2022 -- upstream's last release) pins
+  # git-revise==0.7.0, which the 2026-07-05 nixpkgs bump broke by moving
+  # python3Packages.git-revise to 0.8.0 (pythonRuntimeDepsCheckHook rejects
+  # the wheel). The 0.2.0 release also lacks upstream's bec4034 fix for a
+  # runtime ValueError with any git-revise carrying the editor-cwd change
+  # (git-revise#118), which 0.8.0 does. Build from upstream master (has the
+  # fix, still pins ==0.7.0 in setup.py) and relax the pin. Drop this if
+  # upstream ever cuts a release and nixpkgs picks it up.
+  git-branchstack = prev.git-branchstack.overrideAttrs (old: {
+    version = "0.2.0-unstable-2025-02-07";
+    src = prev.fetchFromGitHub {
+      owner = "krobelus";
+      repo = "git-branchstack";
+      rev = "94563ec53ead302a3eca9edccfafa0af6c3c43c0";
+      hash = "sha256-d8PQTxkPOHA/OE085dGTnI8tJmiac5f8Q7VHirQ6Yho=";
+    };
+    pythonRelaxDeps = (old.pythonRelaxDeps or [ ]) ++ [ "git-revise" ];
+  });
+
 }
 // prev.lib.optionalAttrs (paths.git-scripts != null) {
 

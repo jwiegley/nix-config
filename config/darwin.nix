@@ -471,6 +471,15 @@ in
   system = {
     stateVersion = 4;
 
+    # darwin-uninstaller embeds a minimal darwinSystem eval that uses plain
+    # nixpkgs without our overlays, so the nixos-render-docs pin in
+    # overlays/00-last-known-good.nix cannot reach it and its bundled manual
+    # fails on the removed --toc-depth flag (see that overlay's comment).
+    # Nothing here needs the uninstaller; if it's ever wanted, run
+    # `nix run nix-darwin#darwin-uninstaller` instead. Re-enable once
+    # nix-darwin switches its manual to --sidebar-depth.
+    tools.darwin-uninstaller.enable = false;
+
     # Homebrew 5.1.x enforces tap trust during nix-darwin's Homebrew activation
     # before Home Manager links files. It also rejects trust stores whose real
     # path lives under the root-owned Nix store, so this must be a real user-owned
