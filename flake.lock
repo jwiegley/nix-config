@@ -106,11 +106,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1783299277,
-        "narHash": "sha256-SfycZoJotyPjBbvusNKQZEdN/wPArWHmQ/csjVO+6Os=",
+        "lastModified": 1783032881,
+        "narHash": "sha256-ifcrQ8GVJ0V3DIpJP0r7JCMyWSMJyW5W5V/vokKw+MI=",
         "owner": "git-ai-project",
         "repo": "git-ai",
-        "rev": "4241a8366f9782b856921cc2b3a5f969ee1b2b9a",
+        "rev": "3aabd55cd8dd8593a14522d9768cdecf3909a2d9",
         "type": "github"
       },
       "original": {
