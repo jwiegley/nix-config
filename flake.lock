@@ -106,11 +106,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1783032881,
-        "narHash": "sha256-ifcrQ8GVJ0V3DIpJP0r7JCMyWSMJyW5W5V/vokKw+MI=",
+        "lastModified": 1783341043,
+        "narHash": "sha256-73rOe9a//RwZ/nEpd0Yf0mTtFPSvbRRlud/ddAsMZ78=",
         "owner": "git-ai-project",
         "repo": "git-ai",
-        "rev": "3aabd55cd8dd8593a14522d9768cdecf3909a2d9",
+        "rev": "be89a03c3d5c32fab0283a0187e8b3d3f80da16d",
         "type": "github"
       },
       "original": {
@@ -131,11 +131,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1783243767,
-        "narHash": "sha256-iiQL/IHgQlmnZgKgs4wBOiDA9+S3tRFsQPRxtYIhUYo=",
+        "lastModified": 1783335367,
+        "narHash": "sha256-TJ4+wYOJYYX+z//9C4psF0e1K8TgXrWRITnERhL/oP8=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "22f1080fb54a217bdda6cfd6eca5dbf9e7afddac",
+        "rev": "5dd40d7cef40fce5ac4f922b92d92373ef71daf2",
         "type": "github"
       },
       "original": {
@@ -151,11 +151,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783220794,
-        "narHash": "sha256-ynyinghI6g9YDpNdee7QdP9lGT47vOTXNCRVAP8p+Zw=",
+        "lastModified": 1783349948,
+        "narHash": "sha256-69nHSCOh8jNeQy/QkfNucB7lax9WA40JDqOH6Du/4CQ=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "14686054fc50e5a806ca0bde41733179ba2d5244",
+        "rev": "cc794d2e26180cbccf91af4cf33a16ac705a6714",
         "type": "github"
       },
       "original": {
