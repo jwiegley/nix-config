@@ -276,6 +276,7 @@ rec {
         ]
       ))
       cmake
+      cmdperf
       doxygen
       go-jira
       bun

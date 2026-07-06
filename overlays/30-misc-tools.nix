@@ -2,9 +2,43 @@
 # Purpose: Miscellaneous utility tools (file management, shell, security)
 # Dependencies: prev.myLib (from 00-lib.nix) for the single-binary jwiegley
 #               packages; everything else uses prev directly.
-# Packages: gogcli (bumped), hammer, linkdups, lipotell, sift, sshify, z
+# Packages: cmdperf, gogcli (bumped), hammer, linkdups, lipotell, sift, sshify, z
 # Note: pass-git-helper, yamale removed (now in nixpkgs)
 final: prev: {
+
+  # cmdperf: command performance benchmarking (hyperfine-style). Not in
+  # nixpkgs. Pure Go, upstream builds with CGO disabled; goreleaser's
+  # default ldflags stamp main.version.
+  cmdperf = prev.buildGoModule (finalAttrs: {
+    pname = "cmdperf";
+    version = "0.1.4";
+
+    src = prev.fetchFromGitHub {
+      owner = "miklosn";
+      repo = "cmdperf";
+      tag = "v${finalAttrs.version}";
+      hash = "sha256-KNPf9LI1rUD6NY+gO1maTZwMPq/kCDl2tL2dMd5DOhc=";
+    };
+
+    vendorHash = "sha256-k0dvd34KiPNb/wViaaSUQy04LSIsxQHWNwLM5blfDMo=";
+
+    subPackages = [ "cmd/cmdperf" ];
+
+    env.CGO_ENABLED = 0;
+
+    ldflags = [
+      "-s"
+      "-w"
+      "-X main.version=${finalAttrs.version}"
+    ];
+
+    meta = {
+      description = "Command performance benchmarking";
+      homepage = "https://github.com/miklosn/cmdperf";
+      license = prev.lib.licenses.mit;
+      mainProgram = "cmdperf";
+    };
+  });
 
   # Bump gogcli ahead of nixpkgs (still at 0.11.0 under steipete/gogcli).
   # Upstream moved to openclaw/gogcli; Go module path is unchanged.
