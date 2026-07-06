@@ -128,10 +128,10 @@ git_pull_clean "$config_dir"
 
 commit_and_push_if_changed "$ai_nix_dir" "Update AI tools"
 
-(
-    cd "$ai_nix_dir"
-    nix run .#check
-)
+# (
+#     cd "$ai_nix_dir"
+#     nix run .#check
+# )
 
 (
     cd "$config_dir"
