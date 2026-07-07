@@ -819,11 +819,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781761792,
-        "narHash": "sha256-rCPytmKNjctLloB6UgK5CRrHSwV4b0ygxtJLPPp8R14=",
+        "lastModified": 1783395956,
+        "narHash": "sha256-AAbexQvDoK+6GFJdhY6kqjA+6ECKRkidgWxkn4gMwAA=",
         "owner": "lnl7",
         "repo": "nix-darwin",
-        "rev": "a1fa429e945becaf60468600daf649be4ba0350c",
+        "rev": "d5bd9cd77aea4c0a8f49e7fd85545671a208ed15",
         "type": "github"
       },
       "original": {
@@ -4881,11 +4881,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783358420,
-        "narHash": "sha256-UEyBpf+XmQe8laXfDzIlo11Er7E0rKrLS8jeMnMj0Ds=",
+        "lastModified": 1783388784,
+        "narHash": "sha256-w+YU5vatysjLZIg1wOKSzo/RL9Z66eBQuIjVnBM/1Zg=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "0d33882bd46c1f9ef62276700f5e5f2bd6ff6604",
+        "rev": "63d02d1c19f1c2b47a5bc7e55c620b6af7b218a6",
         "type": "github"
       },
       "original": {
@@ -7021,11 +7021,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1783137167,
-        "narHash": "sha256-CkNjhoVCCyir3jjTwWWSYnLARN+Y/dV+s2XLJg3zHtc=",
+        "lastModified": 1783430230,
+        "narHash": "sha256-oSX4f1vuEES1+jHV15FsbLFHI7SVyPwYLyFDdMm50e4=",
         "ref": "refs/heads/main",
-        "rev": "198982602de0a0e1f26a914639036cdc70cc7cd6",
-        "revCount": 1440,
+        "rev": "3565950ef05143a198ea75e4072098ac987df5f0",
+        "revCount": 1441,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
