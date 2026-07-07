@@ -34,7 +34,7 @@ in
   # fix, still pins ==0.7.0 in setup.py) and relax the pin. Drop this if
   # upstream ever cuts a release and nixpkgs picks it up.
   git-branchstack = prev.git-branchstack.overrideAttrs (old: {
-    version = "0.2.0-unstable-2025-02-07";
+    version = "94563ec5";
     src = prev.fetchFromGitHub {
       owner = "krobelus";
       repo = "git-branchstack";

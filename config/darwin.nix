@@ -80,6 +80,15 @@ in
     liberation_ttf
   ];
 
+  documentation = {
+    # nix-darwin ≥ 320cbf5 (PR #1818) builds the HTML manual with
+    # `nixos-render-docs --sidebar-depth`, which requires nixpkgs ≥ 2026-07-03
+    # (nixpkgs PR #537810). Our nixpkgs pin predates that, so skip the HTML
+    # manual (and its darwin-help wrapper); man pages are unaffected. Remove
+    # once the nixpkgs pin advances past 2026-07-03.
+    doc.enable = false;
+  };
+
   environment = {
     systemPackages =
       with pkgs;

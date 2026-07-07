@@ -246,8 +246,8 @@ let
         src = fetchFromGitHub {
           owner = "jdtsmith";
           repo = "eglot-booster";
-          rev = "cab7803c4f0adc7fff9da6680f90110674bb7a22";
-          sha256 = "sha256-xUBQrQpw+JZxcqT1fy/8C2tjKwa7sLFHXamBm45Fa4Y=";
+          rev = "510f579409627c333ef0e9157db713b1004da842";
+          sha256 = "sha256-HhWR40j/WFcorp8QttXtOz5yxL1B4JUXL+9IuNpoND0=";
           # date = 2025-07-16T14:21:52-04:00;
         };
         propagatedBuildInputs = [
@@ -368,8 +368,8 @@ let
         src = fetchFromGitHub {
           owner = "emarsden";
           repo = "pgmacs";
-          rev = "dac5e52e91d64a87c328ca3f708fca34742b616d";
-          sha256 = "sha256-a9TKkWmxUlmoBdU4BEkTsWWObifTJfFxEfc6QH8uxVY=";
+          rev = "fdc5a6f5c2e49c9316dde78185475ce8cdb66d67";
+          sha256 = "sha256-yjsjhsBx6CQVDBR9z1rnLoEgWxpOaLC/Rv0vZYw9ji0=";
           # date = 2025-09-29T11:18:24+02:00;
         };
         buildInputs = with eself; [ pg ];

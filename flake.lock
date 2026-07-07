@@ -856,11 +856,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1782556426,
-        "narHash": "sha256-ph683CgUQQv9m4sYvijtSfTGyfqpZUfoQSneNJ1KqI0=",
+        "lastModified": 1783436461,
+        "narHash": "sha256-xEQTfoOdGIglBtD3qNPIzEjiIfZzn1WZm8roq8QcW7I=",
         "ref": "refs/heads/master",
-        "rev": "b24ed25b39f346370e1b90eebe86fcacdd4e48e3",
-        "revCount": 182707,
+        "rev": "202d29726d8a8494637cd54c6dc09bffcda6bd24",
+        "revCount": 182802,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -4881,11 +4881,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783388784,
-        "narHash": "sha256-w+YU5vatysjLZIg1wOKSzo/RL9Z66eBQuIjVnBM/1Zg=",
+        "lastModified": 1783436070,
+        "narHash": "sha256-F80z1JoiJgZyTT5D+3siLOVzqmCEphLR7t0Ym/I2CLI=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "63d02d1c19f1c2b47a5bc7e55c620b6af7b218a6",
+        "rev": "f09af49406ffad37acb6538d3207189a1a1e0b7e",
         "type": "github"
       },
       "original": {
