@@ -143,21 +143,41 @@ in
 
         llm-mlx = pfinal.callPackage llm-mlx { };
 
+        # mlx-lm: nixpkgs ships the v0.31.3 release tag; omlx pins ab1806e
+        # (tag + 15 commits), which adds the CVE-2026-5843 fix (model_file
+        # execution gated behind trust_remote_code), the DeepSeek/GLM DSA
+        # indexer RoPE fix, and Qwen 3.5 pipelining. Pin the exact commit
+        # omlx was tested against. Keep in sync with the top-level mlx-lm
+        # app in 30-ai-llm.nix.
+        mlx-lm = pprev.mlx-lm.overridePythonAttrs (_oldAttrs: {
+          version = "0.31.3-unstable-2026-07-07";
+          src = prev.fetchFromGitHub {
+            owner = "ml-explore";
+            repo = "mlx-lm";
+            rev = "ab1806e8f5d6aa035973af194a1b9198ab4754dc";
+            hash = "sha256-C8KF9q/gxR+YTH8Pg9qmQ/mFnVHQ30vl4BBUQl8IPP4=";
+          };
+        });
+
         # omlx requires mlx_vlm.speculative (DDTree drafters), introduced
-        # after the 0.4.4 release in nixpkgs. Pin to the 0.5.0 commit that
-        # omlx itself pins (f96138e). llguidance and mlx-audio (both new in
-        # 0.5.0) are added below; mlx-audio is defined in this overlay.
+        # after the 0.4.4 release in nixpkgs. Pin to the exact commit omlx
+        # 0.5.0 pins (78b96eb, upstream 0.6.3) — omlx vendors a MiniMax M3
+        # compat patch written against this rev. llguidance and mlx-audio
+        # are added below; mlx-audio is defined in this overlay.
+        # python-multipart/starlette joined requirements.txt after 0.5.0;
+        # starlette already propagates via fastapi.
         mlx-vlm = pprev.mlx-vlm.overridePythonAttrs (oldAttrs: {
-          version = "0.5.0";
+          version = "0.6.3";
           src = prev.fetchFromGitHub {
             owner = "Blaizzy";
             repo = "mlx-vlm";
-            rev = "f96138eef1f5ce7fb5d97f8dd41a664a195b5659";
-            hash = "sha256-Rz0t7g6qBcXS6IRwVyau410qpD3H3aEnLLvMenQ58Uc=";
+            rev = "78b96eb5462141447b9a6b4943ef553891da56dd";
+            hash = "sha256-JEECMpjP7YK2Y59g54KVWtBKZsfB+rOK4dQlPabLjF8=";
           };
           dependencies = (oldAttrs.dependencies or [ ]) ++ [
             pfinal.llguidance
             pfinal.mlx-audio
+            pfinal.python-multipart
           ];
           doCheck = false;
         });
@@ -227,19 +247,19 @@ in
 
         # dflash-mlx - lossless DFlash speculative decoding for MLX.
         # Required by omlx; not in nixpkgs. Pin the exact commit omlx pins
-        # (1ba6713, itself version 0.1.7) so the speculative-decode Metal
-        # kernels match what omlx was tested against — the v0.1.7 release
-        # tag is a slightly later commit.
+        # (9ca0028, version 0.1.10: Apple G17 NAX verify, prefix snapshot
+        # metrics, CopySpec mode, full-context draft-layer cache checks) so
+        # the speculative-decode kernels match what omlx was tested against.
         dflash-mlx = pfinal.buildPythonPackage rec {
           pname = "dflash-mlx";
-          version = "0.1.7";
+          version = "0.1.10";
           pyproject = true;
 
           src = prev.fetchFromGitHub {
             owner = "bstnxbt";
             repo = "dflash-mlx";
-            rev = "1ba671372b289c025b435c1a13aabb4bfb80b183";
-            hash = "sha256-goVSVNnlC97SIs4zaczK0Yp4l+wkWpvN4mkDTmoPXB0=";
+            rev = "9ca002898b48e14c9727dec17299f497e8467870";
+            hash = "sha256-qhbmkL0Ay9aF1tjZP5bLbqh33969hE6rA41XlaB2Vvs=";
           };
 
           build-system = [ pfinal.setuptools ];

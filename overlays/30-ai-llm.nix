@@ -281,14 +281,17 @@ final: prev: {
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "mlx-lm";
-      version = "0.31.3";
+      # ab1806e = v0.31.3 + 15 commits: the exact commit omlx pins, with
+      # the CVE-2026-5843 trust_remote_code fix. Keep in sync with the
+      # python3Packages.mlx-lm override in 30-ai-python.nix.
+      version = "0.31.3-unstable-2026-07-07";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "ml-explore";
         repo = "mlx-lm";
-        tag = "v${version}";
-        hash = "sha256-DPOJfsIucG8mWt4ZKenymCJo/i9Jw+a+iuIygIIYkA8=";
+        rev = "ab1806e8f5d6aa035973af194a1b9198ab4754dc";
+        hash = "sha256-C8KF9q/gxR+YTH8Pg9qmQ/mFnVHQ30vl4BBUQl8IPP4=";
       };
 
       build-system = [ setuptools ];
@@ -406,12 +409,22 @@ final: prev: {
       # Strip the URLs (targeted replacements so an upstream format change
       # surfaces as a build error rather than a silent dependency mismatch)
       # so resolution lands on our overlay/nixpkgs versions.
+      #
+      # v0.5.0 added cmake/nanobind to [build-system] requires for the
+      # optional custom Metal kernels (omlx.custom_kernels.*, gated behind
+      # OMLX_WITH_CUSTOM_KERNEL in setup.py, default off). We don't build
+      # them — the Metal toolchain is unavailable in the sandbox — but
+      # `python -m build --no-isolation` still validates build requires,
+      # so drop the two we don't supply. The mlx==0.31.2 build requirement
+      # stays: it's satisfied by our mlx wheel override.
       postPatch = ''
         substituteInPlace pyproject.toml \
-          --replace-fail '"mlx-lm @ git+https://github.com/ml-explore/mlx-lm@2c008fd0252b2c569227d12568356ab88ab0560a"' '"mlx-lm"' \
+          --replace-fail '"cmake>=3.27",' "" \
+          --replace-fail '"nanobind==2.12.0",' "" \
+          --replace-fail '"mlx-lm @ git+https://github.com/ml-explore/mlx-lm@ab1806e8f5d6aa035973af194a1b9198ab4754dc"' '"mlx-lm"' \
           --replace-fail '"mlx-embeddings @ git+https://github.com/Blaizzy/mlx-embeddings@32981fa4e8064ed664b52071789dd18271fe4206"' '"mlx-embeddings"' \
-          --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@086ab9d5d575fec64d8d8ad907ce000007c25c1a"' '"mlx-vlm"' \
-          --replace-fail '"dflash-mlx @ git+https://github.com/bstnxbt/dflash-mlx@5d70faebe3d0af0a3dae76fcc15cc731f7ba46da"' '"dflash-mlx"'
+          --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@78b96eb5462141447b9a6b4943ef553891da56dd"' '"mlx-vlm"' \
+          --replace-fail '"dflash-mlx @ git+https://github.com/bstnxbt/dflash-mlx@9ca002898b48e14c9727dec17299f497e8467870"' '"dflash-mlx"'
       '';
 
       build-system = [
