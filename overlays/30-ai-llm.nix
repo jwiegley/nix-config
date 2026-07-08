@@ -78,12 +78,12 @@ final: prev: {
   llama-cpp =
     (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs
       (attrs: rec {
-        version = "9895";
+        version = "9925";
         src = prev.fetchFromGitHub {
           owner = "ggml-org";
           repo = "llama.cpp";
           tag = "b${version}";
-          hash = "sha256-u3tNkMSMNR3NiShMKE3zBeV+S7vEoCHJbYmHZMEfcsU=";
+          hash = "sha256-PBWHXmrLa7KDxW+YOSHbqGDj2Lru2ne1dcjztqBNiV0=";
         };
         postPatch = "";
         npmRoot = "tools/ui";
@@ -102,7 +102,7 @@ final: prev: {
           }
           popd
         '';
-        npmDepsHash = "sha256-X1DZgmhS/zHTqDT5zq0kywwntthcJ9vRXeqyO3zz6UU=";
+        npmDepsHash = "sha256-6s9skw1wzEfm9QKktTqea3J+oudQAsS6O2VnZEMXAdw=";
         npmDeps = prev.fetchNpmDeps {
           name = "llama-cpp-${version}-npm-deps";
           inherit src;
@@ -115,13 +115,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "235";
+      version = "236";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-Klfm1xl8mtRpbxS0H9IEktmda6wWn0XaHVnr7GOce9o=";
+        hash = "sha256-hjkekOZkPEeCVmtJUP0SenrzB38bpaq69JydyyZ4QZw=";
       };
 
       ui =
@@ -160,7 +160,7 @@ final: prev: {
     with prev;
     prev.llama-swap.overrideAttrs (_attrs: rec {
       inherit version src;
-      vendorHash = "sha256-is8pm5g27in/LraLVJUzsa7EPqs+C3qzY8OQ/DXe98A=";
+      vendorHash = "sha256-jQRnFGqQvk6my7ejnesv1pylCmEXLs9GKbQJEZdsaYg=";
       preBuild = ''
         # llama-swap 219 serves the web UI from internal/server/ui_dist
         # (//go:embed in internal/server/ui.go, where the main binary reads
@@ -391,14 +391,14 @@ final: prev: {
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "omlx";
-      version = "0.4.4";
+      version = "0.5.0.dev1";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "jundot";
         repo = "omlx";
         tag = "v${version}";
-        hash = "sha256-JzdoiDf3wDvQHoHvHWUPPBp++Zl1/GDbLmr2/ududSs=";
+        hash = "sha256-bb67+h6JyWTcOJwcQDjMaT/w5+u+Un3UtU6CbZSS2KU=";
       };
 
       # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git

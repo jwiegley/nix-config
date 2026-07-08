@@ -7,12 +7,12 @@ _final: prev: {
     with prev;
     stdenvNoCC.mkDerivation rec {
       pname = "lazycodex-ai";
-      version = "4.15.1";
+      version = "4.16.0";
       npmPackage = "lazycodex-ai";
 
       src = fetchurl {
         url = "https://registry.npmjs.org/${npmPackage}/-/${npmPackage}-${version}.tgz";
-        hash = "sha512-T3EayC0BtNlY5tCz7DPqM4a3B/Z/VlRRNG8r4VXXn1/b0Orv9p4Js3lpx5oy2XFJLTeiiCFfSTSU+Es20MDm+A==";
+        hash = "sha512-EUUbCdKKQ01xS2S6/x3qlTXNrw7fnjfi1dl2vFvNpcIQlFxEYGY9HyHTWxv+Kde3hT13SPP8wLBq+X9oCEIQGw==";
       };
 
       sourceRoot = "package";
