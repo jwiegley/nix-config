@@ -176,6 +176,14 @@ in
           ForwardAgent = true;
         };
 
+        "gpu gpu-server" = controlMastered {
+          User = "jwiegley";
+          HostName = "gpu-server";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
+          IdentitiesOnly = true;
+          ForwardAgent = true;
+        };
+
         dev = controlMastered {
           User = "jwiegley";
           HostName = "sw-dev-01";
