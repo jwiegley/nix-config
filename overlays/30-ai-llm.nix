@@ -78,12 +78,12 @@ final: prev: {
   llama-cpp =
     (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs
       (attrs: rec {
-        version = "9925";
+        version = "9927";
         src = prev.fetchFromGitHub {
           owner = "ggml-org";
           repo = "llama.cpp";
           tag = "b${version}";
-          hash = "sha256-PBWHXmrLa7KDxW+YOSHbqGDj2Lru2ne1dcjztqBNiV0=";
+          hash = "sha256-Yx2+/NjvZ+DonFUqzgMdfaf/w5uDcY9bYsb27TDBWbY=";
         };
         postPatch = "";
         npmRoot = "tools/ui";
@@ -284,7 +284,7 @@ final: prev: {
       # ab1806e = v0.31.3 + 15 commits: the exact commit omlx pins, with
       # the CVE-2026-5843 trust_remote_code fix. Keep in sync with the
       # python3Packages.mlx-lm override in 30-ai-python.nix.
-      version = "0.31.3-unstable-2026-07-07";
+      version = "ab1806e8";
       pyproject = true;
 
       src = fetchFromGitHub {
