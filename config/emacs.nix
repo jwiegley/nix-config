@@ -370,7 +370,6 @@ with epkgs;
   (exclude popper)
   popup-ruler
   pp-c-l
-  poly-org
   (exclude prescient)
   pretty-hydra
   prodigy
