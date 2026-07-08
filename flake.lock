@@ -856,11 +856,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1783436461,
-        "narHash": "sha256-xEQTfoOdGIglBtD3qNPIzEjiIfZzn1WZm8roq8QcW7I=",
+        "lastModified": 1783526004,
+        "narHash": "sha256-izqNlubGsAXZlOclvZBkYUS6MjdZjPywHCSP08cdMlM=",
         "ref": "refs/heads/master",
-        "rev": "202d29726d8a8494637cd54c6dc09bffcda6bd24",
-        "revCount": 182802,
+        "rev": "d7b070b74c5f0f34cf2298e218c1701d52e35c7a",
+        "revCount": 182806,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },
@@ -4881,11 +4881,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783436070,
-        "narHash": "sha256-F80z1JoiJgZyTT5D+3siLOVzqmCEphLR7t0Ym/I2CLI=",
+        "lastModified": 1783525612,
+        "narHash": "sha256-OEFYdbtG6Qy04KGteknnrx15Uo2XXkYVuUvBvFNEn+Q=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "f09af49406ffad37acb6538d3207189a1a1e0b7e",
+        "rev": "1aac8895fea6fcabc6a0184c63a80fb2f99fd208",
         "type": "github"
       },
       "original": {
@@ -5337,11 +5337,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783349948,
-        "narHash": "sha256-69nHSCOh8jNeQy/QkfNucB7lax9WA40JDqOH6Du/4CQ=",
+        "lastModified": 1783475267,
+        "narHash": "sha256-pZ/IeIHIKvCVyvJng2Fx268hPCmJTCXOTIGbGylaB14=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "cc794d2e26180cbccf91af4cf33a16ac705a6714",
+        "rev": "207ee8dda98410bd1abdacdaf3ceff57fd90c4d1",
         "type": "github"
       },
       "original": {
