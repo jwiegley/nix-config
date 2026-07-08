@@ -281,6 +281,7 @@ rec {
       go-jira
       bun
       graphviz-nox
+      hurl
       igrep
       jdk
       just

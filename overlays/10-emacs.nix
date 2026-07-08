@@ -161,6 +161,39 @@ let
 
       ########################################################################
 
+      anvil =
+        (compileEmacsFiles {
+          name = "anvil";
+          src = fetchFromGitHub {
+            owner = "zawatton";
+            repo = "anvil.el";
+            rev = "574568a95a2bd8fceca6c9cd3bec0f94ecf0e6a9";
+            sha256 = "sha256-z/wYZKkXyE3/7d6MSZ4RJpXcxBGyMdrx6Ndid7Yz5iw=";
+            # date = 2026-07-04T05:05:52+00:00;
+          };
+        }).overrideAttrs
+          (attrs: {
+            # anvil-server-commands.el resolves anvil-stdio.sh (the MCP stdio
+            # bridge) next to the installed lisp via locate-library, so it
+            # must ship alongside the *.el files.
+            installPhase = attrs.installPhase + ''
+              install anvil-stdio.sh $out/share/emacs/site-lisp
+            '';
+          });
+
+      ecard = compileEmacsFiles {
+        name = "ecard";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "ecard";
+          rev = "e79cd68c49466f132142b5ce1a4eaa4fbb47fb8c";
+          sha256 = "sha256-2c7xlowQBOZqtqtZ/s2BBvKFX33SheTkFYdKoJhBbR8=";
+        };
+        preBuild = ''
+          rm -f *-test.el *-examples.el ecard-benchmark.el ecard-carddav-mock.el
+        '';
+      };
+
       awesome-tray = compileEmacsFiles {
         name = "awesome-tray";
         src = fetchFromGitHub {
@@ -542,6 +575,40 @@ let
 
       ########################################################################
 
+      # Org 9.8.7 from Savannah, replacing both the Org bundled with Emacs
+      # and nixpkgs' GNU ELPA org package. emacsWithPackages puts package
+      # site-lisp ahead of Emacs's own lisp, so this shadows the built-in
+      # Org everywhere, and every package below listing `org` in its
+      # buildInputs byte-compiles against it. This must stay a melpaBuild
+      # (not compileEmacsFiles) so packages declaring a versioned
+      # dependency on org keep working. A bare git checkout lacks
+      # org-version.el and org-loaddefs.el — org.el refuses to load
+      # without them — so run Org's own `make autoloads` before
+      # package-build assembles the package. The etc/ data files must be
+      # installed under etc/ next to the lisp: oc-csl and ox-odt resolve
+      # them relative to the installed oc.el/ox-odt.el.
+      org = esuper.melpaBuild {
+        pname = "org";
+        version = "9.8.7";
+        src = fetchgit {
+          url = "https://git.savannah.gnu.org/git/emacs/org-mode.git";
+          rev = "refs/tags/release_9.8.7";
+          sha256 = "sha256-7ZmwAkVjEf+a8I9zBE9IMdGdvTdDwM8DXFkG+f1oHZo=";
+          # date = 2026-07-04T07:34:28+02:00;
+        };
+        commit = "cdc16898fd46a30d7187c0a5830b2b898ffbd2de";
+        files = ''
+          ("lisp/*.el"
+           ("etc" "etc/ORG-NEWS")
+           ("etc/styles" "etc/styles/*")
+           ("etc/csl" "etc/csl/*")
+           ("etc/schema" "etc/schema/*"))
+        '';
+        preBuild = ''
+          make autoloads ORGVERSION=9.8.7 GITVERSION=release_9.8.7
+        '';
+      };
+
       org-annotate = compileEmacsFiles {
         name = "org-annotate";
         src = fetchFromGitHub {
@@ -792,6 +859,529 @@ let
       #     platforms = lib.platforms.unix;
       #   };
       # };
+
+      ########################################################################
+      # Former ~/.emacs.d/lisp git submodules, pinned to the exact revs that
+      # were checked out when migrated to Nix (2026-07-07). Packages that
+      # exist upstream in MELPA keep their melpaBuild (and autoloads) with
+      # only the src swapped; personal/unpublished ones use compileEmacsFiles.
+
+      alert = esuper.alert.overrideAttrs (_: {
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "alert";
+          rev = "31fc56855289d0846e73d7ca9b84b628aeac16a0";
+          sha256 = "sha256-i4aEOsUTsNKpRrztk0uY9+zxK7QCqUP6+Qc/h7H1AOw=";
+        };
+      });
+
+      chess = compileEmacsFiles {
+        name = "chess";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "emacs-chess";
+          rev = "e51e89fa22159988139e5a03dc29ea20e5f9b501";
+          sha256 = "sha256-Cdk81K0KU6q7NIJnsD5D8bY+7fCzjQ+h6HhyWFw/vOI=";
+        };
+      };
+
+      elisp-dev-mcp = esuper.elisp-dev-mcp.overrideAttrs (_: {
+        src = fetchFromGitHub {
+          owner = "laurynas-biveinis";
+          repo = "elisp-mcp-dev";
+          rev = "d70a8f38ededefb7e3d11f3e2b519bf754a54d1a";
+          sha256 = "sha256-7DewDcG9q61N6aMoGwyUFMkt/HNKf5LGxoocMe73pk4=";
+        };
+      });
+
+      git-undo = esuper.git-undo.overrideAttrs (_: {
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "git-undo-el";
+          rev = "1e94d2dad39ffa168005dee182dde5694416d9c9";
+          sha256 = "sha256-EppewewNPWVbQN76LVoebtKu+FOFCnWDhDeUognPmAo=";
+        };
+      });
+
+      # gptel pinned to the rev formerly checked out in ~/.emacs.d/lisp/gptel,
+      # overriding the stock MELPA gptel's src. This MUST stay a melpaBuild
+      # (src override, not compileEmacsFiles) so it keeps package.el version
+      # metadata: gptel-fn-complete and other gptel-* packages declare a versioned
+      # dependency `(gptel "0.9.8")`, which a compileEmacsFiles package (no
+      # version) cannot satisfy. The rev's Package-Requires is only transient +
+      # compat, so the stock propagatedBuildInputs already suffice.
+      gptel = esuper.gptel.overrideAttrs (_: {
+        src = fetchFromGitHub {
+          owner = "karthink";
+          repo = "gptel";
+          rev = "ebf0f3d8e9932e0ac6de82542220864cc17f6784";
+          sha256 = "sha256-GN9O9leU1CNbB27gVVzzCP8RtaPtZxspnirbxCk+/xU=";
+        };
+      });
+
+      ledger-mode = esuper.ledger-mode.overrideAttrs (_: {
+        src = fetchFromGitHub {
+          owner = "ledger";
+          repo = "ledger-mode";
+          rev = "b43c9d04e03048763cf37696a63ee2232ac88567";
+          sha256 = "sha256-obLSghymXakHNMz5RmCpHZhune1oYLU6ME3GzDpLwOA=";
+        };
+      });
+
+      mcp-server-lib = esuper.mcp-server-lib.overrideAttrs (_: {
+        src = fetchFromGitHub {
+          owner = "laurynas-biveinis";
+          repo = "mcp-server-lib.el";
+          rev = "dec55e6405987250256a81efe92d65bdfa8a140c";
+          sha256 = "sha256-zaeysvqWmRGheDkILGI/0F4+lz9VYunHVXJzK4zkhsM=";
+        };
+      });
+
+      org-autolist = esuper.org-autolist.overrideAttrs (_: {
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "org-autolist";
+          rev = "c37e390de4874eab06f6343e6e8dc6cf35f35a8e";
+          sha256 = "sha256-ox4DTLEys8OpKdF4TOA//KJByk8DOD65nq3bmpZpp0U=";
+        };
+      });
+
+      vulpea = compileEmacsFiles {
+        name = "vulpea";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "vulpea";
+          rev = "ea5d6e551115ed2d6b6aedc14e3aaf2f28283310";
+          sha256 = "sha256-okgbgzQRG18yIaxePoTI1uFP6b4j/mB22tYlaEhd0wk=";
+        };
+        buildInputs = with eself; [
+          org-roam
+          dash
+          s
+          f
+          compat
+          emacsql
+          magit-section
+          cond-let
+          llama
+        ];
+      };
+
+      claude-code-ide = compileEmacsFiles {
+        name = "claude-code-ide";
+        src = fetchFromGitHub {
+          owner = "manzaltu";
+          repo = "claude-code-ide.el";
+          rev = "cc508396a09e98931bb588da8542b73fa07733e2";
+          sha256 = "sha256-pL5PNnemuXHHhQ0wEqhoagyKNdx+ywb2EEru8XWJ0Lc=";
+        };
+        buildInputs = with eself; [
+          websocket
+          web-server
+          transient
+          flycheck
+          compat
+          cond-let
+          llama
+        ];
+      };
+
+      copy-code = compileEmacsFiles {
+        name = "copy-code";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "emacs-copy-code";
+          rev = "0a122d04caab1e1cd903b9287f21884d210b13a2";
+          sha256 = "sha256-lgnWn+o6IRKvK9NQfm7bUUe/z2CsZIeKt9tZpSn1phk=";
+        };
+      };
+
+      gptel-emacs-tools = compileEmacsFiles {
+        name = "gptel-emacs-tools";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "gptel-emacs-tools";
+          rev = "1ae5e496ea7fe8d3eacf7a6ffe5f5c2eb6a5e756";
+          sha256 = "sha256-K0EZc2aei5PNCQ7ZsgLo012xUWGVaqlQZHWAlMPOxeA=";
+        };
+        buildInputs = with eself; [
+          gptel
+          transient
+          compat
+        ];
+      };
+
+      gptel-litellm = compileEmacsFiles {
+        name = "gptel-litellm";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "gptel-litellm";
+          rev = "c6b8603816dd72ab9ee0aaf8c8382f0fcaefe15b";
+          sha256 = "sha256-MEkkjI3BFCXkVbc5PidNwqef1KMKZvonTcLCGozjBmA=";
+        };
+        buildInputs = with eself; [
+          gptel
+          transient
+          compat
+          uuidgen
+        ];
+      };
+
+      gptel-prompts = compileEmacsFiles {
+        name = "gptel-prompts";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "gptel-prompts";
+          rev = "be29a9aa471e5f398cb5e1c2ce9f40a9f2b36281";
+          sha256 = "sha256-a853fJjP4O2Jn7UPHI00W3AcUEDXShoePeE2aO3C4kw=";
+        };
+        buildInputs = with eself; [
+          gptel
+          transient
+          compat
+        ];
+      };
+
+      gptel-rag = compileEmacsFiles {
+        name = "gptel-rag";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "gptel-rag";
+          rev = "eadf31e78ffcb2923eacb85492e681755035e462";
+          sha256 = "sha256-aA9HjDfxwmxRMdMWjCpjNNaCpuJWKB4wIu/kGTsw00c=";
+        };
+        buildInputs = with eself; [
+          gptel
+          transient
+          compat
+        ];
+      };
+
+      hash-store = compileEmacsFiles {
+        name = "hash-store";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "hash-store";
+          rev = "2074c01f051733600e94b26809f4c3ba1f26086e";
+          sha256 = "sha256-bKjiStot9Plja5I+ZpOVQOlx4StxGlviMWU7YPuPHEg=";
+        };
+      };
+
+      haskell-config = compileEmacsFiles {
+        name = "haskell-config";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "haskell-config";
+          rev = "9f42695fc99aeb6251e5394103d97ad00e2bf0dc";
+          sha256 = "sha256-uj11pONsDv5L8xAKv5kEWNbbPus+4TmpDrtf91lb8Sc=";
+        };
+        buildInputs = with eself; [
+          proof-general
+        ];
+      };
+
+      initsplit = compileEmacsFiles {
+        name = "initsplit";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "initsplit";
+          rev = "e488e8f95661a8daf9c66241ce58bb6650d91751";
+          sha256 = "sha256-+OXdyAFCLwQhpyCsu94lAhVEeCwi7hc/xcmC3frtc+M=";
+        };
+      };
+
+      llm-tool-collection = compileEmacsFiles {
+        name = "llm-tool-collection";
+        src = fetchFromGitHub {
+          owner = "skissue";
+          repo = "llm-tool-collection";
+          rev = "b9fd45bedf3e0fb07d289730991199ae18785157";
+          sha256 = "sha256-40BSMoM25tdgXeH5+labLYqCPCK4SEuAWovOeJxnzNo=";
+        };
+      };
+
+      loeb = compileEmacsFiles {
+        name = "loeb";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "emacs-loeb";
+          rev = "5e66a400102e2ae3e958dc6922436019ffaa18c9";
+          sha256 = "sha256-ajiNxKP8ycjQ1JufqM9Fu6mFW95Jbn1Y3pJzvO7ru8Y=";
+        };
+      };
+
+      lzw = compileEmacsFiles {
+        name = "lzw";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "emacs-lzw";
+          rev = "27f4c8ed656dba8d90764a1669b0abe25d52d327";
+          sha256 = "sha256-llQvVnsRkLU/fHu5Yi/HLSdR4Qtq6Uqck+kVlxpQ5dc=";
+        };
+      };
+
+      machines =
+        (compileEmacsFiles {
+          name = "machines";
+          src = fetchFromGitHub {
+            owner = "jwiegley";
+            repo = "machines";
+            rev = "ba64481bfbe20b76ad1df89f2d5b116bdb81c78e";
+            sha256 = "sha256-R6eoASGGXIcu4CWiX+KPPF93juFcRG2eNJFNFRvtlso=";
+          };
+          # m-gptel.el (require 'gptel-curl) no longer compiles: gptel dropped
+          # gptel-curl.el, so this optional integration is dead in the source
+          # checkout too (nothing loads it — m.el is the only feature). Ship it
+          # as source only, matching the submodule's stale-.elc behaviour.
+          preBuild = ''
+            rm -f m-gptel.el
+          '';
+        }).overrideAttrs
+          (attrs: {
+            installPhase = attrs.installPhase + ''
+              install $src/m-gptel.el $out/share/emacs/site-lisp
+            '';
+          });
+
+      magit-ai = compileEmacsFiles {
+        name = "magit-ai";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "magit-ai";
+          rev = "3f7fce8ebb0ff5f2bbfaaea502231b3c62c1bbe2";
+          sha256 = "sha256-AL3ehGl6+b/mQXBRt8RN12xPfJYZ8V45xECETFO1ksc=";
+        };
+        buildInputs = with eself; [
+          magit
+          transient
+          compat
+          dash
+          magit-section
+          with-editor
+          llama
+          cond-let
+        ];
+      };
+
+      ob-gptel = compileEmacsFiles {
+        name = "ob-gptel";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "ob-gptel";
+          rev = "71584eb30e8317cf36104cec78b6d53c4433cae7";
+          sha256 = "sha256-cSbhEeAOitGbbq5Ep8axypALc0ueuVKwk/uIfrXaG1g=";
+        };
+        buildInputs = with eself; [
+          gptel
+          transient
+          compat
+          pending
+          aio
+        ];
+      };
+
+      org-agenda-overlay = compileEmacsFiles {
+        name = "org-agenda-overlay";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "org-agenda-overlay";
+          rev = "a8e6a0052e91e3a8582fd073436b005711a10307";
+          sha256 = "sha256-tsCH2TGz+BfV2uMC17LPktemgcHdlJmZ/f1kN/HkE7Y=";
+        };
+      };
+
+      org-context = compileEmacsFiles {
+        name = "org-context";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "org-context";
+          rev = "de0da4e8f000d7a9078d056749c3b8ebfa6b6547";
+          sha256 = "sha256-zsH6dOMbE+hdWFOY6rJmDegQhlu+pu42nOX9DRnvLl4=";
+        };
+      };
+
+      org-devonthink = compileEmacsFiles {
+        name = "org-devonthink";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "org-devonthink";
+          rev = "37314ea676f1349125efbe89a890a586298b1687";
+          sha256 = "sha256-UTY2PnYnT3GAQWBf7WH8Djl6llTjj+ip5kCuvlhZ5Iw=";
+        };
+        buildInputs = with eself; [
+          org-roam
+          dash
+          s
+          f
+          compat
+          emacsql
+          magit-section
+          cond-let
+          llama
+        ];
+      };
+
+      org-drafts = compileEmacsFiles {
+        name = "org-drafts";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "org-drafts";
+          rev = "b9302b746fcfce7365ec525a63112700999baa6e";
+          sha256 = "sha256-HaeAK4Vq+A38k6d0xoz1gU1zFtAN0EMWk/MwOzPpTVQ=";
+        };
+        buildInputs = with eself; [
+          copy-as-format
+          pretty-hydra
+          hydra
+          s
+          dash
+          lv
+        ];
+      };
+
+      org-hash = compileEmacsFiles {
+        name = "org-hash";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "org-hash";
+          rev = "53a7474d93e0fad888538fc51eb0ebf9cfa7b20d";
+          sha256 = "sha256-34PW7WQOLEZN4SvHXS1x7i3Q2IvhwZKhK2cXxNOGxYQ=";
+        };
+      };
+
+      org-table-loeb = compileEmacsFiles {
+        name = "org-table-loeb";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "org-table-loeb";
+          rev = "f90f334bfe77470f7cb0d945231c04de637ce11e";
+          sha256 = "sha256-9XyQnYiAEjl7UW7IAMWLnSQoaauwZLa4d07F+go0kAE=";
+        };
+        preBuild = ''
+          rm -f test-*.el *-test*.el
+        '';
+      };
+
+      org-wiki = compileEmacsFiles {
+        name = "org-wiki";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "org-wiki";
+          rev = "1c8f21ef5eed00c744199d225bb902f064b50a70";
+          sha256 = "sha256-yOss7m6a5Gbfot/4SzqhhuHMwbkbNAgHJ8r9xNM/Evk=";
+        };
+        buildInputs = with eself; [
+          mcp-server-lib
+          org-roam
+          org-ql
+          dash
+          s
+          f
+          compat
+          emacsql
+          magit-section
+          peg
+          ts
+        ];
+      };
+
+      pending = compileEmacsFiles {
+        name = "pending";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "pending";
+          rev = "b3192937905bdcfff3d3eed0b94aabae5bbfbc14";
+          sha256 = "sha256-pQSlOF+MI/xBOifenI0XyIXc58fHetH1ybQTj3BX/Yo=";
+        };
+        buildInputs = with eself; [
+          aio
+        ];
+      };
+
+      pl = compileEmacsFiles {
+        name = "pl";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "emacs-pl";
+          rev = "c5ee5646a49efd3a27f78ba6e139067fbd67f99d";
+          sha256 = "sha256-OAwJzXoIonmEIOdL6v+Lq8qlsUTCivKFm+qs5WDNk9w=";
+        };
+      };
+
+      springboard = compileEmacsFiles {
+        name = "springboard";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "springboard";
+          rev = "012c44daa6d487d29fe265d92082fda7c2e03c6c";
+          sha256 = "sha256-AGx373prCFCrfsIE5gMMe/2Jf/Mc+PZubDPMpnFgXoo=";
+        };
+        buildInputs = with eself; [
+          helm
+          async
+          wfnames
+          ivy
+          helm-core
+        ];
+      };
+
+      stock-quote = compileEmacsFiles {
+        name = "stock-quote";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "stock-quote";
+          rev = "8e3fc578fcbb8468104a43438c748e2a4f9ee0d6";
+          sha256 = "sha256-qgHToyKuJd1MwkgDMIBqaQOrdifbm+Cj1yV8WjIJ6nk=";
+        };
+      };
+
+      vulpea-field = compileEmacsFiles {
+        name = "vulpea-field";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "vulpea-field";
+          rev = "dfb6d9032d771fd9bd87f35db8fa0af6c7355931";
+          sha256 = "sha256-1xKPIDHSyi0yOvyUfjxGXA1gobg2K1hUqtJlGgor3vg=";
+        };
+        buildInputs = with eself; [
+          vulpea
+          org-roam
+          dash
+          s
+          f
+          compat
+          emacsql
+          magit-section
+          cond-let
+          llama
+        ];
+      };
+
+      wombag = compileEmacsFiles {
+        name = "wombag";
+        src = fetchFromGitHub {
+          owner = "karthink";
+          repo = "wombag";
+          rev = "62f8e7ae8c8f26a834a66fb5a179693bd8078839";
+          sha256 = "sha256-YhjOXbqfnlwoZ6Hu/DLDTz7ErWcWALiYlvmQMCmJj0k=";
+        };
+        buildInputs = with eself; [
+          compat
+          emacsql
+          request
+        ];
+      };
+
+      z3 = compileEmacsFiles {
+        name = "z3";
+        src = fetchFromGitHub {
+          owner = "jwiegley";
+          repo = "emacs-z3";
+          rev = "ce2d19772ac8fd8e1d17238238dc9a152eddc25f";
+          sha256 = "sha256-wU556v+oarKug/Sx86HjLglOt48RfkBMNUwR7xre5Z8=";
+        };
+      };
+
     };
 
   mkEmacsPackages =

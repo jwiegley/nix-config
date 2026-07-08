@@ -82,10 +82,12 @@ in
 
   documentation = {
     # nix-darwin ≥ 320cbf5 (PR #1818) builds the HTML manual with
-    # `nixos-render-docs --sidebar-depth`, which requires nixpkgs ≥ 2026-07-03
-    # (nixpkgs PR #537810). Our nixpkgs pin predates that, so skip the HTML
+    # `nixos-render-docs --sidebar-depth`, which requires a nixos-render-docs
+    # from nixpkgs ≥ 2026-07-03 (nixpkgs PR #537810). The manual derivation
+    # resolves nixos-render-docs from an older nixpkgs instantiation than the
+    # root flake input (root f205b557 already has the flag), so skip the HTML
     # manual (and its darwin-help wrapper); man pages are unaffected. Remove
-    # once the nixpkgs pin advances past 2026-07-03.
+    # once `nix build` of darwin-manual-html succeeds with docs enabled.
     doc.enable = false;
   };
 

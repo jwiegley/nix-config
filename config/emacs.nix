@@ -12,8 +12,10 @@ with epkgs;
   aggressive-indent
   aider
   (exclude aio)
+  alert
   (exclude all-the-icons)
   (exclude anki-editor)
+  anvil
   aria2
   ascii
   async
@@ -43,11 +45,13 @@ with epkgs;
   (exclude centaur-tabs)
   (exclude centered-cursor-mode)
   change-inner
+  chess
   citar
   citar-embark
   (exclude citar-org-node)
   citar-org-roam
   (exclude citre)
+  claude-code-ide
   cmake-font-lock
   cmake-mode
   col-highlight
@@ -108,6 +112,7 @@ with epkgs;
   (exclude easysession)
   eat
   (exclude ebdb)
+  ecard
   edbi
   edit-env
   edit-indirect
@@ -117,6 +122,7 @@ with epkgs;
   eglot-booster
   el-job
   elisp-depend
+  elisp-dev-mcp
   elisp-docstring-mode
   elisp-slime-nav
   elmacro
@@ -147,10 +153,12 @@ with epkgs;
   focus
   font-lock-studio
   (exclude forge)
+  format-all
   free-keys
   fsrs
   (exclude fullframe)
   ghub
+  git-annex
   git-link
   git-timemachine
   (exclude git-undo)
@@ -162,11 +170,16 @@ with epkgs;
   goto-last-change
   gptel
   (exclude gptel-aibo)
+  gptel-emacs-tools
   gptel-fn-complete
   (exclude gptel-got)
+  gptel-litellm
+  gptel-prompts
   gptel-quick
+  gptel-rag
   graphviz-dot-mode
   (exclude hammy)
+  hash-store
   haskell-mode
   hcl-mode
   helpful
@@ -208,13 +221,16 @@ with epkgs;
   literate-calc-mode
   lively
   llama
+  llm-tool-collection
   (exclude lsp-bridge)
   (exclude lsp-haskell)
   (exclude lsp-mode)
   (exclude lsp-ui)
   lua-mode
+  machines
   macrostep
   magit
+  magit-ai
   (exclude magit-annex)
   magit-gt
   (exclude magit-imerge)
@@ -230,6 +246,8 @@ with epkgs;
   math-symbol-lists
   mc-calc
   mc-extras
+  mcp
+  mcp-server-lib
   mediawiki
   memory-usage
   (exclude mic-paren)
@@ -246,15 +264,18 @@ with epkgs;
   (exclude names)
   nginx-mode
   nix-mode
+  nix-update
   nov
   (exclude oauth2)
   ob-emamux
+  ob-gptel
   ob-restclient
   olivetti
   onepassword-el
   operate-on-number
   orderless
   org
+  org-agenda-overlay
   (exclude org-alert)
   org-anki
   org-annotate
@@ -265,11 +286,15 @@ with epkgs;
   (exclude org-caldav)
   org-checklist
   org-contacts
+  org-context
+  org-devonthink
+  org-drafts
   org-drill
   org-edna
   org-extra-emphasis
   (exclude org-fancy-priorities)
   (exclude org-gcal)
+  org-hash
   org-margin
   (exclude org-mem)
   org-mime
@@ -302,12 +327,14 @@ with epkgs;
   org-superstar
   org-table-color
   org-table-highlight
+  org-table-loeb
   org-tidy
   (exclude org-timeline)
   org-transclusion
   (exclude org-upcoming-modeline)
   org-vcard
   org-web-tools
+  org-wiki
   orgit
   (exclude orgit-forge)
   (exclude origami)
@@ -330,6 +357,7 @@ with epkgs;
   pcre2el
   pdf-tools
   pdfgrep
+  pending
   persistent-scratch
   persistent-soft
   pg
@@ -342,6 +370,7 @@ with epkgs;
   (exclude popper)
   popup-ruler
   pp-c-l
+  poly-org
   (exclude prescient)
   pretty-hydra
   prodigy
@@ -421,6 +450,7 @@ with epkgs;
   vterm
   (exclude vterm-tmux)
   vulpea
+  vulpea-field
   vundo
   w3m
   wat-mode
@@ -431,6 +461,7 @@ with epkgs;
   whitespace-cleanup-mode
   wikipedia
   window-purpose
+  wombag
   word-count-mode
   writeroom-mode
   (exclude x86-lookup)
@@ -440,6 +471,7 @@ with epkgs;
   yaml-mode
   (exclude yaoddmuse)
   yasnippet
+  z3
   z3-mode
   zoom
   ztree
