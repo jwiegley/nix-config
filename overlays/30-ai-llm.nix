@@ -78,12 +78,12 @@ final: prev: {
   llama-cpp =
     (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs
       (attrs: rec {
-        version = "9927";
+        version = "9940";
         src = prev.fetchFromGitHub {
           owner = "ggml-org";
           repo = "llama.cpp";
           tag = "b${version}";
-          hash = "sha256-Yx2+/NjvZ+DonFUqzgMdfaf/w5uDcY9bYsb27TDBWbY=";
+          hash = "sha256-FtlueoIGu8IHDHR27MY7LeKPUhz6teqoT10RjlhIxtE=";
         };
         postPatch = "";
         npmRoot = "tools/ui";
@@ -284,14 +284,14 @@ final: prev: {
       # ab1806e = v0.31.3 + 15 commits: the exact commit omlx pins, with
       # the CVE-2026-5843 trust_remote_code fix. Keep in sync with the
       # python3Packages.mlx-lm override in 30-ai-python.nix.
-      version = "ab1806e8";
+      version = "a790972f";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "ml-explore";
         repo = "mlx-lm";
-        rev = "ab1806e8f5d6aa035973af194a1b9198ab4754dc";
-        hash = "sha256-C8KF9q/gxR+YTH8Pg9qmQ/mFnVHQ30vl4BBUQl8IPP4=";
+        rev = "a790972f0f844d81067ed45c28b524220a10c019";
+        hash = "sha256-TQ7TBhhucPRTtAOI+RKOEgPXtvABpQna9GMT5ZCPYCc=";
       };
 
       build-system = [ setuptools ];
@@ -394,14 +394,14 @@ final: prev: {
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "omlx";
-      version = "0.5.0.dev1";
+      version = "0.5.0rc1";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "jundot";
         repo = "omlx";
         tag = "v${version}";
-        hash = "sha256-bb67+h6JyWTcOJwcQDjMaT/w5+u+Un3UtU6CbZSS2KU=";
+        hash = "sha256-1ivf1+2KcwtuPpqujidNnazyUd895C69LfY40kbqo4M=";
       };
 
       # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git
