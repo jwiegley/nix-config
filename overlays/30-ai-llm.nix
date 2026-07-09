@@ -415,12 +415,12 @@ final: prev: {
       # OMLX_WITH_CUSTOM_KERNEL in setup.py, default off). We don't build
       # them — the Metal toolchain is unavailable in the sandbox — but
       # `python -m build --no-isolation` still validates build requires,
-      # so drop the two we don't supply. The mlx==0.31.2 build requirement
+      # so drop the two we don't supply. The mlx==0.32.0 build requirement
       # stays: it's satisfied by our mlx wheel override.
       postPatch = ''
         substituteInPlace pyproject.toml \
           --replace-fail '"cmake>=3.27",' "" \
-          --replace-fail '"nanobind==2.12.0",' "" \
+          --replace-fail '"nanobind==2.13.0",' "" \
           --replace-fail '"mlx-lm @ git+https://github.com/ml-explore/mlx-lm@ab1806e8f5d6aa035973af194a1b9198ab4754dc"' '"mlx-lm"' \
           --replace-fail '"mlx-embeddings @ git+https://github.com/Blaizzy/mlx-embeddings@32981fa4e8064ed664b52071789dd18271fe4206"' '"mlx-embeddings"' \
           --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@78b96eb5462141447b9a6b4943ef553891da56dd"' '"mlx-vlm"' \
