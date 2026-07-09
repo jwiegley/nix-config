@@ -122,7 +122,7 @@ with epkgs;
   eglot-booster
   el-job
   elisp-depend
-  elisp-dev-mcp
+  (exclude elisp-dev-mcp)
   elisp-docstring-mode
   elisp-slime-nav
   elmacro
@@ -247,7 +247,7 @@ with epkgs;
   mc-calc
   mc-extras
   mcp
-  mcp-server-lib
+  (exclude mcp-server-lib)
   mediawiki
   memory-usage
   (exclude mic-paren)
