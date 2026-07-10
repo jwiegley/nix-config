@@ -78,12 +78,12 @@ final: prev: {
   llama-cpp =
     (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs
       (attrs: rec {
-        version = "9947";
+        version = "9952";
         src = prev.fetchFromGitHub {
           owner = "ggml-org";
           repo = "llama.cpp";
           tag = "b${version}";
-          hash = "sha256-BpKntYxHyUcLwYYy4RjjRC6Xwe/5WHnLcbPbgcJ2YrI=";
+          hash = "sha256-WXrGJxHcKJKfLM0AKQt2pKCyxvTxjOhGSrDPJOEBIsc=";
         };
         postPatch = "";
         npmRoot = "tools/ui";
@@ -115,13 +115,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "236";
+      version = "237";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-hjkekOZkPEeCVmtJUP0SenrzB38bpaq69JydyyZ4QZw=";
+        hash = "sha256-MwshI3FYqBsaoMyfeC3xE5Bf7r5t9CpPKS7ynzO6WN0=";
       };
 
       ui =
@@ -394,14 +394,14 @@ final: prev: {
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "omlx";
-      version = "0.5.0rc1";
+      version = "0.5.0";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "jundot";
         repo = "omlx";
         tag = "v${version}";
-        hash = "sha256-1ivf1+2KcwtuPpqujidNnazyUd895C69LfY40kbqo4M=";
+        hash = "sha256-JPfggHEotvF60S2v0LatV0v9g0G43Z5y7CiMNK4J5ig=";
       };
 
       # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git

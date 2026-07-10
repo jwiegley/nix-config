@@ -106,11 +106,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1783640419,
-        "narHash": "sha256-VMD37/ksmW984SPlb/tR9AnJwhgOBiKN6Tqx0DuBSEk=",
+        "lastModified": 1783703268,
+        "narHash": "sha256-fVrsKdlvy0AENgCUj9UfFOmKA4O46OaC6KVqMroMnCc=",
         "owner": "git-ai-project",
         "repo": "git-ai",
-        "rev": "fcee8e1b2f6d75f4a97f77dfa0b581f54d6327cb",
+        "rev": "497b43662dfe10bf5d2a7fcfa2633e2e381e9a9c",
         "type": "github"
       },
       "original": {
@@ -131,11 +131,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1783656972,
-        "narHash": "sha256-M30foxi+2JXQ8KEIeWIKpB2uVpDYOw0XGI/gOaTb38I=",
+        "lastModified": 1783669679,
+        "narHash": "sha256-WDGDMsPXxceC0k1ktqcobmwE4GCTrzzULUKlp1CzSKQ=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "d17493b6a6d08cc1846a17175df67cd603c80c7d",
+        "rev": "6e9f6664e72433966557ab83a7c3e8c0bbf64a44",
         "type": "github"
       },
       "original": {
@@ -151,11 +151,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783625129,
-        "narHash": "sha256-KbgYw2+VZW0wuh4TAJR0NzYm+V2S/e7aBmZFy3Duz/s=",
+        "lastModified": 1783692120,
+        "narHash": "sha256-buuxk/mFp4ieDm5wAqJdCYF66O1E/sV4X/oPzDtrYN0=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "731790038b20a444ecfc262ef4f62ac7808035da",
+        "rev": "a30d74f267fdec486c8500dbf73980f097d5f0d7",
         "type": "github"
       },
       "original": {
@@ -166,11 +166,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1783279667,
-        "narHash": "sha256-/NAkDSsve+GNM0Bt6tleJdCGfsTlK89nPjkVOzZMo0s=",
+        "lastModified": 1783475452,
+        "narHash": "sha256-3S92fSuv32mjJz2Qb2F4405c21J55F4NIphz5K6hxco=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "f205b5574fd0cb7da5b702a2da51507b7f4fdd1b",
+        "rev": "05988b07fb05cbcb50be6bce197b4b5f75b5e61b",
         "type": "github"
       },
       "original": {
@@ -183,11 +183,11 @@
     "pal-mcp-server": {
       "flake": false,
       "locked": {
-        "lastModified": 1781719457,
-        "narHash": "sha256-ITGd3s3Ml7CtNyvHf0qWcBxQyElOqGTV+q8FzgJOAo4=",
+        "lastModified": 1783626489,
+        "narHash": "sha256-atrpDdkikaq+A8akggcWCGagfejBrq9OVkyY6CQB6EY=",
         "owner": "jwiegley",
         "repo": "pal-mcp-server",
-        "rev": "50b4a9013f7f10986f2353073416a5f53ee8f523",
+        "rev": "89f05d7cc5ecacaf527d2d6fbacc68a6b6a7534d",
         "type": "github"
       },
       "original": {
