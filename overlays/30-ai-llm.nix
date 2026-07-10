@@ -78,12 +78,12 @@ final: prev: {
   llama-cpp =
     (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs
       (attrs: rec {
-        version = "9941";
+        version = "9947";
         src = prev.fetchFromGitHub {
           owner = "ggml-org";
           repo = "llama.cpp";
           tag = "b${version}";
-          hash = "sha256-5KWYTReyB05MWksZbv+RWnH4qdUPptSWAaPKysBIvsw=";
+          hash = "sha256-BpKntYxHyUcLwYYy4RjjRC6Xwe/5WHnLcbPbgcJ2YrI=";
         };
         postPatch = "";
         npmRoot = "tools/ui";
