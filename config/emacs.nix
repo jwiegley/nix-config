@@ -16,6 +16,7 @@ with epkgs;
   (exclude all-the-icons)
   (exclude anki-editor)
   anvil
+  anvil-ide
   aria2
   ascii
   async
