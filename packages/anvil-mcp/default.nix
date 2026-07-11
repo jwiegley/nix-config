@@ -18,9 +18,11 @@
   pkg-config,
   python3,
   ripgrep,
+  runCommand,
   rustPlatform,
   stdenv,
   symlinkJoin,
+  util-linux ? null,
   useDedicatedDarwinEmacs ? false,
   useHeadlessEmacs ? false,
   writeShellApplication,
@@ -42,6 +44,11 @@ let
     rev = nelispRev;
     hash = "sha256-m90HzB7fNnibaIDFaPr8RufhMS86PQJWTEHKopxh32Q=";
   };
+
+  nelispLispSrc = runCommand "nelisp-${nelispVersion}-lisp" { } ''
+    mkdir -p "$out"
+    cp -R ${nelispSrc}/src/. "$out/"
+  '';
 
   standaloneAnvilSrc = fetchFromGitHub {
     owner = "zawatton";
@@ -81,7 +88,7 @@ let
     version = nelispVersion;
     src = nelispSrc;
 
-    cargoLock.lockFile = "${nelispSrc}/Cargo.lock";
+    cargoLock.lockFile = ./Cargo.lock;
     cargoBuildFlags = [
       "-p"
       "anvil-runtime"
@@ -160,7 +167,7 @@ let
           exit 2
         fi
 
-        export NELISP_SRC_DIR="${nelispSrc}/src"
+        export NELISP_SRC_DIR="${nelispLispSrc}"
         export ANVIL_EL_DIR="${standaloneAnvilSrc}"
         exec "${linuxRuntime}/bin/anvil-runtime" mcp serve
       '';
@@ -172,6 +179,7 @@ let
           backend = "nelisp";
           inherit
             linuxRuntime
+            nelispLispSrc
             nelispRev
             nelispSrc
             nelispVersion
@@ -226,28 +234,89 @@ let
   defaultRuntimeRoot =
     if stdenv.isLinux then "/run/user/$(id -u)/anvil-emacs" else "/tmp/anvil-emacs-$(id -u)";
 
+  privateDirectoryFunctions = ''
+    validate_host_component() {
+      case "$1" in
+        "" | "." | ".." | *[!A-Za-z0-9._-]*)
+          echo "anvil-mcp: unsafe host component: $1" >&2
+          return 64
+          ;;
+      esac
+    }
+
+    private_directory() {
+      path="$1"
+      label="$2"
+      expected_uid=$(id -u)
+
+      if [ -L "$path" ]; then
+        echo "anvil-mcp: $label must not be a symbolic link: $path" >&2
+        return 77
+      fi
+
+      if [ ! -e "$path" ]; then
+        if ! (umask 077 && mkdir -- "$path"); then
+          if [ ! -e "$path" ] && [ ! -L "$path" ]; then
+            echo "anvil-mcp: failed to create $label: $path" >&2
+            return 77
+          fi
+        fi
+      fi
+
+      if [ -L "$path" ]; then
+        echo "anvil-mcp: $label must not be a symbolic link: $path" >&2
+        return 77
+      fi
+      if [ ! -d "$path" ]; then
+        echo "anvil-mcp: $label must be a directory: $path" >&2
+        return 77
+      fi
+
+      owner_uid=$(stat -c '%u' -- "$path") || {
+        echo "anvil-mcp: cannot inspect owner of $label: $path" >&2
+        return 77
+      }
+      mode=$(stat -c '%a' -- "$path") || {
+        echo "anvil-mcp: cannot inspect mode of $label: $path" >&2
+        return 77
+      }
+      if [ "$owner_uid" != "$expected_uid" ]; then
+        echo "anvil-mcp: $label must be owned by uid $expected_uid (found $owner_uid): $path" >&2
+        return 77
+      fi
+      if [ "$mode" != 700 ]; then
+        echo "anvil-mcp: $label must have mode 0700 (found $mode): $path" >&2
+        return 77
+      fi
+    }
+  '';
+
   dedicatedWorkerInit = writeText "anvil-headless-worker-init.el" ''
     ;;; anvil-headless-worker-init.el --- Isolated Anvil worker
 
-    (let* ((state-root (getenv "ANVIL_EMACS_STATE_DIR"))
+    (let* ((runtime-root (getenv "XDG_RUNTIME_DIR"))
+           (state-root (getenv "ANVIL_EMACS_STATE_DIR"))
            (worker-name (format "%s" (or (daemonp) "worker")))
            (state-dir
             (and state-root
                  (expand-file-name
                   (concat "workers/" worker-name "/") state-root)))
            (temp-dir
-            (and state-dir (expand-file-name "tmp/" state-dir)))
+            (and runtime-root
+                 (expand-file-name
+                  (concat "workers/" worker-name "/tmp/") runtime-root)))
            (cache-dir
             (and state-dir (expand-file-name "cache/" state-dir))))
-      (unless state-dir
-        (error "ANVIL_EMACS_STATE_DIR is required for Anvil workers"))
+      (unless (and state-dir temp-dir)
+        (error "Anvil workers require state and runtime directories"))
       (make-directory temp-dir t)
       (make-directory cache-dir t)
       (setenv "TMPDIR" temp-dir)
       (setenv "TMP" temp-dir)
       (setenv "TEMP" temp-dir)
       (setenv "XDG_CACHE_HOME" cache-dir)
-      (setq user-emacs-directory (file-name-as-directory state-dir)
+      (setq native-comp-jit-compilation nil
+            user-emacs-directory (file-name-as-directory state-dir)
             package-user-dir (expand-file-name "elpa" state-dir)
             custom-file (expand-file-name "custom.el" state-dir)
             temporary-file-directory (file-name-as-directory temp-dir)
@@ -279,16 +348,18 @@ let
   '';
 
   dedicatedInit = writeText "anvil-headless-init.el" ''
-    (let* ((state-dir (getenv "ANVIL_EMACS_STATE_DIR"))
-           (temp-dir (and state-dir (expand-file-name "tmp/" state-dir)))
+    (let* ((runtime-dir (getenv "XDG_RUNTIME_DIR"))
+           (state-dir (getenv "ANVIL_EMACS_STATE_DIR"))
+           (temp-dir (and runtime-dir (expand-file-name "tmp/" runtime-dir)))
            (org-root
             (file-name-as-directory
              (expand-file-name
               (or (getenv "ANVIL_EMACS_ORG_ROOT") "~/org")))))
-      (unless (and state-dir (file-directory-p state-dir))
-        (error "ANVIL_EMACS_STATE_DIR must name an existing directory"))
+      (unless (and state-dir temp-dir (file-directory-p state-dir))
+        (error "Anvil requires existing state and runtime directories"))
       (make-directory temp-dir t)
-      (setq user-emacs-directory (file-name-as-directory state-dir)
+      (setq native-comp-jit-compilation nil
+            user-emacs-directory (file-name-as-directory state-dir)
             package-user-dir (expand-file-name "elpa" state-dir)
             custom-file (expand-file-name "custom.el" state-dir)
             temporary-file-directory (file-name-as-directory temp-dir)
@@ -406,21 +477,38 @@ let
       hostname
       pythonWithPyMuPDF
       ripgrep
-    ];
+    ]
+    ++ lib.optionals stdenv.isLinux [ util-linux ];
     text = ''
+      ${privateDirectoryFunctions}
+
       short_host="''${ANVIL_EMACS_HOST:-$(hostname -s)}"
+      validate_host_component "$short_host"
 
       runtime_root="''${ANVIL_EMACS_RUNTIME_ROOT:-${defaultRuntimeRoot}}"
       runtime_dir="$runtime_root/$short_host"
       state_root="''${ANVIL_EMACS_STATE_ROOT:-/var/tmp/anvil-emacs-$(id -u)}"
       state_dir="$state_root/$short_host"
 
-      install -d -m 0700         "$runtime_dir"         "$state_dir"         "$state_dir/cache"         "$state_dir/tmp"
+      private_directory "$runtime_root" "runtime root"
+      private_directory "$runtime_dir" "host runtime directory"
+      private_directory "$state_root" "state root"
+      private_directory "$state_dir" "host state directory"
+      ${lib.optionalString stdenv.isLinux ''
+        exec 9<"$state_dir"
+        if ! flock -n 9; then
+          echo "anvil-mcp: another dedicated daemon holds the state lock: $state_dir" >&2
+          exit 75
+        fi
+        rm -rf -- "$runtime_dir/tmp" "$runtime_dir/workers"
+      ''}
+      private_directory "$state_dir/cache" "host cache directory"
+      private_directory "$runtime_dir/tmp" "host temporary directory"
 
       export XDG_RUNTIME_DIR="$runtime_dir"
       export XDG_CACHE_HOME="$state_dir/cache"
       export ANVIL_EMACS_STATE_DIR="$state_dir"
-      export TMPDIR="$state_dir/tmp"
+      export TMPDIR="$runtime_dir/tmp"
       export TMP="$TMPDIR"
       export TEMP="$TMPDIR"
 
@@ -440,6 +528,8 @@ let
       hostname
     ];
     text = ''
+      ${privateDirectoryFunctions}
+
       server_id=anvil
       socket="''${ANVIL_EMACS_SOCKET:-}"
 
@@ -495,12 +585,30 @@ let
 
       if [ -z "$socket" ]; then
         short_host="''${ANVIL_EMACS_HOST:-$(hostname -s)}"
+        validate_host_component "$short_host"
         runtime_root="''${ANVIL_EMACS_RUNTIME_ROOT:-${defaultRuntimeRoot}}"
-        socket="$runtime_root/$short_host/emacs/server"
+        runtime_dir="$runtime_root/$short_host"
+        private_directory "$runtime_root" "runtime root"
+        private_directory "$runtime_dir" "host runtime directory"
+        socket="$runtime_dir/emacs/server"
       fi
 
       ready=
       for _ in $(seq 1 120); do
+        if [ -L "$socket" ]; then
+          echo "anvil-mcp: Emacs socket must not be a symbolic link: $socket" >&2
+          exit 77
+        fi
+        if [ -e "$socket" ]; then
+          socket_owner=$(stat -c '%u' -- "$socket") || {
+            echo "anvil-mcp: cannot inspect Emacs socket owner: $socket" >&2
+            exit 77
+          }
+          if [ "$socket_owner" != "$(id -u)" ]; then
+            echo "anvil-mcp: Emacs socket must be owned by uid $(id -u) (found $socket_owner): $socket" >&2
+            exit 77
+          fi
+        fi
         if [ -S "$socket" ]           && "${dedicatedEmacs}/bin/emacsclient" -s "$socket" -e t >/dev/null 2>&1; then
           ready=1
           break

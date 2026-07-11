@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  options,
   pkgs,
   ...
 }:
@@ -13,6 +14,11 @@ let
     useHeadlessEmacs = isLinux && cfg.useHeadlessEmacs;
     useDedicatedDarwinEmacs = isDarwin && cfg.useDedicatedDarwinEmacs;
   };
+  launchdAgentOptions =
+    if options ? launchd && options.launchd ? agents then
+      options.launchd.agents.type.nestedTypes.elemType.getSubOptions [ ]
+    else
+      { };
 in
 {
   options.johnw.anvil = {
@@ -56,7 +62,6 @@ in
     (lib.mkIf (isDarwin && cfg.useDedicatedDarwinEmacs) {
       launchd.agents.anvil-headless-emacs = {
         enable = true;
-        domain = "user";
         config = {
           ProgramArguments = [ "${anvilMcp}/bin/anvil-headless-emacs" ];
           RunAtLoad = true;
@@ -68,9 +73,10 @@ in
           LowPriorityIO = false;
           LowPriorityBackgroundIO = false;
           ThrottleInterval = 10;
-          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/anvil-headless-emacs.log";
-          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/anvil-headless-emacs.log";
         };
+      }
+      // lib.optionalAttrs (launchdAgentOptions ? domain) {
+        domain = "user";
       };
     })
   ];

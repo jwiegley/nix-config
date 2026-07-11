@@ -89,6 +89,16 @@
         "aarch64-linux"
         "x86_64-linux"
       ];
+      pkgsFor = forAllSystems (
+        system:
+        import nixpkgs {
+          inherit system;
+          overlays = nixpkgs.lib.optionals (system == "aarch64-darwin") [
+            (_final: _prev: { inherit inputs; })
+            (import ./overlays/10-emacs.nix)
+          ];
+        }
+      );
     in
     rec {
       darwinConfigurations =
@@ -130,31 +140,23 @@
 
       packages = {
         "aarch64-darwin" = {
-          anvil-mcp = darwinPackages.callPackage ./packages/anvil-mcp { };
-          anvil-mcp-dedicated = darwinPackages.callPackage ./packages/anvil-mcp {
+          anvil-mcp = pkgsFor."aarch64-darwin".callPackage ./packages/anvil-mcp { };
+          anvil-mcp-dedicated = pkgsFor."aarch64-darwin".callPackage ./packages/anvil-mcp {
             useDedicatedDarwinEmacs = true;
           };
         };
-        "aarch64-linux" =
-          let
-            pkgs = import nixpkgs { system = "aarch64-linux"; };
-          in
-          {
-            anvil-mcp = pkgs.callPackage ./packages/anvil-mcp { };
-            anvil-mcp-headless = pkgs.callPackage ./packages/anvil-mcp {
-              useHeadlessEmacs = true;
-            };
+        "aarch64-linux" = {
+          anvil-mcp = pkgsFor."aarch64-linux".callPackage ./packages/anvil-mcp { };
+          anvil-mcp-headless = pkgsFor."aarch64-linux".callPackage ./packages/anvil-mcp {
+            useHeadlessEmacs = true;
           };
-        "x86_64-linux" =
-          let
-            pkgs = import nixpkgs { system = "x86_64-linux"; };
-          in
-          {
-            anvil-mcp = pkgs.callPackage ./packages/anvil-mcp { };
-            anvil-mcp-headless = pkgs.callPackage ./packages/anvil-mcp {
-              useHeadlessEmacs = true;
-            };
+        };
+        "x86_64-linux" = {
+          anvil-mcp = pkgsFor."x86_64-linux".callPackage ./packages/anvil-mcp { };
+          anvil-mcp-headless = pkgsFor."x86_64-linux".callPackage ./packages/anvil-mcp {
+            useHeadlessEmacs = true;
           };
+        };
       };
 
       # Shared home-manager module for cross-platform use.
@@ -221,7 +223,7 @@
       devShells = forAllSystems (
         system:
         let
-          pkgs = import nixpkgs { inherit system; };
+          pkgs = pkgsFor.${system};
         in
         {
           default = pkgs.mkShell {

@@ -92,7 +92,7 @@ def main() -> None:
                     "clientInfo": {"name": "nix-smoke", "version": "1"},
                 },
             ),
-            request(None, "initialized"),
+            request(None, "notifications/initialized"),
             request(2, "tools/list"),
             request(
                 3,
@@ -153,15 +153,14 @@ def main() -> None:
     names = [tool["name"] for tool in tools]
     if len(names) != len(set(names)):
         raise AssertionError(f"duplicate tools returned: {names}")
+    if names == ["hello"]:
+        raise AssertionError("runtime exposed the placeholder registry")
     if set(names) != EXPECTED_TOOLS:
         missing = sorted(EXPECTED_TOOLS - set(names))
         unexpected = sorted(set(names) - EXPECTED_TOOLS)
         raise AssertionError(
             f"unexpected tool surface: missing={missing}, unexpected={unexpected}"
         )
-    if names == ["hello"]:
-        raise AssertionError("runtime exposed the placeholder registry")
-
     exists_result = response_by_id(responses, 3)["result"]
     assert exists_result["isError"] is False
     assert exists_result["value"]["exists"] is True

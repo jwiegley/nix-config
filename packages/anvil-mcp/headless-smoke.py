@@ -103,6 +103,13 @@ TYPED_TOOLS = {
     "sqlite-query",
 }
 
+WORKER_SPECS = (
+    (":read", "anvil-worker-read-1"),
+    (":read", "anvil-worker-read-2"),
+    (":write", "anvil-worker-write-1"),
+    (":batch", "anvil-worker-batch-1"),
+)
+
 
 def request(identifier: int | None, method: str, params: object | None = None) -> str:
     frame: dict[str, object] = {"jsonrpc": "2.0", "method": method}
@@ -118,15 +125,31 @@ def run_transcript(
 ) -> list[dict[str, object]]:
     env = os.environ.copy()
     env["ANVIL_EMACS_HOST"] = host
-    completed = subprocess.run(
-        [str(launcher), f"--server-id={server_id}"],
-        check=False,
-        env=env,
-        input="\n".join(frames) + "\n",
-        text=True,
-        capture_output=True,
-        timeout=60,
-    )
+    try:
+        completed = subprocess.run(
+            [str(launcher), f"--server-id={server_id}"],
+            check=False,
+            env=env,
+            input="\n".join(frames) + "\n",
+            text=True,
+            capture_output=True,
+            timeout=300,
+        )
+    except subprocess.TimeoutExpired as error:
+        stdout = (
+            error.stdout.decode(errors="replace")
+            if isinstance(error.stdout, bytes)
+            else error.stdout
+        )
+        stderr = (
+            error.stderr.decode(errors="replace")
+            if isinstance(error.stderr, bytes)
+            else error.stderr
+        )
+        raise AssertionError(
+            f"{host}/{server_id} timed out after {error.timeout}s\n"
+            f"stdout:\n{stdout or ''}\nstderr:\n{stderr or ''}"
+        ) from error
     if completed.returncode != 0:
         raise AssertionError(
             f"{host}/{server_id} exited {completed.returncode}\n"
@@ -164,8 +187,130 @@ def assert_tool_success(response: dict[str, object], needle: str) -> None:
     result = response["result"]
     if isinstance(result, dict) and result.get("isError") is True:
         raise AssertionError(f"tool call reported an error: {result}")
-    if needle not in json.dumps(result, sort_keys=True).lower():
+    if needle.lower() not in json.dumps(result, sort_keys=True).lower():
         raise AssertionError(f"tool result did not contain {needle!r}: {result}")
+
+
+def worker_snapshot_expression() -> str:
+    """Return Elisp that validates and snapshots every worker lane."""
+    worker_expression = r"""
+(condition-case err
+    (let ((name (format "%s" (daemonp))))
+      (with-temp-file (expand-file-name "worker.pid" user-emacs-directory)
+        (insert (number-to-string (emacs-pid))))
+      (list name
+            (emacs-pid)
+            user-emacs-directory
+            temporary-file-directory
+            (getenv "TMPDIR")
+            (getenv "TMP")
+            (getenv "TEMP")
+            (getenv "XDG_CACHE_HOME")
+            (if (bound-and-true-p server-use-tcp) "tcp" "local")
+            (if (bound-and-true-p server-use-tcp)
+                server-auth-dir
+              server-socket-dir)
+            anvil-server-schema-cache-file))
+  (error (list "snapshot-error" (error-message-string err))))
+""".strip()
+    specs = " ".join(f"({lane} {json.dumps(name)})" for lane, name in WORKER_SPECS)
+    return f"""
+(progn
+  (require 'cl-lib)
+  (unless anvil-worker--pool
+    (anvil-worker--init-pool))
+  (anvil-worker-spawn)
+  (cl-labels
+      ((all-workers-ready-p
+        ()
+        (let ((ready t))
+          (anvil-worker--map-pool
+           (lambda (worker)
+             (unless (anvil-worker--worker-alive-p worker)
+               (setq ready nil))))
+          ready)))
+    (let ((deadline (+ (float-time) 30)))
+      (while (and (< (float-time) deadline) (not (all-workers-ready-p)))
+        (sleep-for 0.1))
+      (unless (all-workers-ready-p)
+        (error "not every Anvil worker became ready")))
+  (json-serialize
+   (vconcat
+    (mapcar
+     (lambda (spec)
+       (let ((snapshot
+              (server-eval-at (cadr spec) (read {json.dumps(worker_expression)}))))
+         (unless (equal (car snapshot) (cadr spec))
+           (error "worker snapshot mismatch: %S" snapshot))
+         (vconcat snapshot)))
+     '({specs}))))))
+""".strip()
+
+
+def assert_worker_snapshot(response: dict[str, object], host: str) -> None:
+    result = response["result"]
+    if not isinstance(result, dict) or result.get("isError") is True:
+        raise AssertionError(f"worker snapshot failed: {result}")
+    content = result.get("content")
+    if not isinstance(content, list) or len(content) != 1:
+        raise AssertionError(f"unexpected worker snapshot content: {result}")
+    text = content[0].get("text")
+    if not isinstance(text, str):
+        raise AssertionError(f"worker snapshot text is missing: {result}")
+    try:
+        snapshots = json.loads(json.loads(text))
+    except (TypeError, json.JSONDecodeError) as error:
+        raise AssertionError(f"invalid worker snapshot JSON: {text}") from error
+    if not isinstance(snapshots, list) or len(snapshots) != len(WORKER_SPECS):
+        raise AssertionError(f"unexpected worker snapshots: {snapshots}")
+
+    state_root = Path(os.environ["ANVIL_EMACS_STATE_ROOT"]) / host / "workers"
+    runtime_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "workers"
+    socket_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "emacs"
+    for snapshot, (_, name) in zip(snapshots, WORKER_SPECS, strict=True):
+        if not isinstance(snapshot, list) or len(snapshot) != 11:
+            raise AssertionError(f"malformed {name} snapshot: {snapshot}")
+        if snapshot[0] != name:
+            raise AssertionError(f"worker dispatch mismatch: {snapshot[0]} != {name}")
+        if not isinstance(snapshot[1], int) or snapshot[1] <= 0:
+            raise AssertionError(f"invalid {name} PID: {snapshot[1]}")
+        state_dir = state_root / name
+        temp_dir = runtime_root / name / "tmp"
+        expected_paths = [
+            state_dir,
+            temp_dir,
+            temp_dir,
+            temp_dir,
+            temp_dir,
+            state_dir / "cache",
+        ]
+        actual_paths = snapshot[2:8]
+        if not all(isinstance(path, str) for path in actual_paths):
+            raise AssertionError(f"{name} returned non-path state: {snapshot}")
+        if [Path(path) for path in actual_paths] != expected_paths:
+            raise AssertionError(
+                f"{name} escaped host-local isolation:\n"
+                f"actual={actual_paths}\nexpected={expected_paths}"
+            )
+        transport = snapshot[8]
+        server_dir = snapshot[9]
+        if transport == "local":
+            expected_server_dir = socket_root
+        elif transport == "tcp":
+            expected_server_dir = state_dir / "server"
+        else:
+            raise AssertionError(f"unknown {name} server transport: {transport}")
+        if not isinstance(server_dir, str) or Path(server_dir) != expected_server_dir:
+            raise AssertionError(
+                f"{name} server path escaped isolation: "
+                f"{server_dir} != {expected_server_dir}"
+            )
+        expected_schema = temp_dir / "anvil-schema-cache.el"
+        if not isinstance(snapshot[10], str) or Path(snapshot[10]) != expected_schema:
+            raise AssertionError(
+                f"{name} schema cache escaped isolation: "
+                f"{snapshot[10]} != {expected_schema}"
+            )
 
 
 def main() -> None:
@@ -180,6 +325,7 @@ def main() -> None:
         "capabilities": {},
         "clientInfo": {"name": "nix-headless-smoke", "version": "1"},
     }
+    snapshot_expression = worker_snapshot_expression()
 
     main_responses = run_transcript(
         launcher,
@@ -235,19 +381,7 @@ def main() -> None:
                 "tools/call",
                 {
                     "name": "emacs-eval",
-                    "arguments": {
-                        "expression": (
-                            r"(let ((deadline (+ (float-time) 30))) "
-                            r"(while (and (< (float-time) deadline) "
-                            r"(not (anvil-worker-alive-p 0 :read))) "
-                            r"(sleep-for 0.1)) "
-                            r"(unless (anvil-worker-alive-p 0 :read) "
-                            r'(error "read worker did not become ready")) '
-                            r'(anvil-worker-call "(list (getenv \"TMPDIR\") '
-                            r'(getenv \"XDG_CACHE_HOME\"))" '
-                            r":kind :read :timeout 30))"
-                        )
-                    },
+                    "arguments": {"expression": snapshot_expression},
                 },
             ),
         ],
@@ -260,11 +394,30 @@ def main() -> None:
             f"unexpected={sorted(main_names - (MAIN_ONLY_TOOLS | TYPED_TOOLS))}"
         )
     assert_tool_success(response_by_id(main_responses, 3), "42")
-    assert_tool_success(response_by_id(main_responses, 4), "content")
+    assert_tool_success(response_by_id(main_responses, 4), "server_id=anvil")
     assert_tool_success(response_by_id(main_responses, 5), "headlessorgneedle")
     response_by_id(main_responses, 6)
     assert_tool_success(response_by_id(main_responses, 7), "headlesssemanticneedle")
-    assert_tool_success(response_by_id(main_responses, 8), "workers/anvil-worker-read-")
+    assert_worker_snapshot(response_by_id(main_responses, 8), "host-a")
+
+    secondary_responses = run_transcript(
+        launcher,
+        "host-b",
+        "anvil",
+        [
+            request(21, "initialize", initialize),
+            request(None, "notifications/initialized"),
+            request(
+                22,
+                "tools/call",
+                {
+                    "name": "emacs-eval",
+                    "arguments": {"expression": snapshot_expression},
+                },
+            ),
+        ],
+    )
+    assert_worker_snapshot(response_by_id(secondary_responses, 22), "host-b")
 
     typed_responses = run_transcript(
         launcher,
@@ -291,7 +444,7 @@ def main() -> None:
             f"missing={sorted(TYPED_TOOLS - typed_names)}, "
             f"unexpected={sorted(typed_names - TYPED_TOOLS)}"
         )
-    assert_tool_success(response_by_id(typed_responses, 13), "content")
+    assert_tool_success(response_by_id(typed_responses, 13), "server_id=anvil")
     print(
         "PASS: two isolated daemons, "
         f"{len(main_names)} unified tools, {len(typed_names)} typed tools"
