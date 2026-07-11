@@ -482,6 +482,13 @@ let
     text = ''
       ${privateDirectoryFunctions}
 
+      umask 077
+      ${lib.optionalString stdenv.isDarwin ''
+        if [ "''${ANVIL_EMACS_USE_SYSTEM_LOG:-}" = 1 ]; then
+          exec > >(/usr/bin/logger -t anvil-headless-emacs) 2>&1
+        fi
+      ''}
+
       short_host="''${ANVIL_EMACS_HOST:-$(hostname -s)}"
       validate_host_component "$short_host"
 
@@ -495,6 +502,11 @@ let
       private_directory "$state_root" "state root"
       private_directory "$state_dir" "host state directory"
       ${lib.optionalString stdenv.isLinux ''
+        exec 8<"$runtime_dir"
+        if ! flock -n 8; then
+          echo "anvil-mcp: another dedicated daemon holds the runtime lock: $runtime_dir" >&2
+          exit 75
+        fi
         exec 9<"$state_dir"
         if ! flock -n 9; then
           echo "anvil-mcp: another dedicated daemon holds the state lock: $state_dir" >&2
@@ -502,8 +514,26 @@ let
         fi
         rm -rf -- "$runtime_dir/tmp" "$runtime_dir/workers"
       ''}
-      private_directory "$state_dir/cache" "host cache directory"
+
+      private_directory "$runtime_dir/emacs" "Emacs socket directory"
       private_directory "$runtime_dir/tmp" "host temporary directory"
+      private_directory "$runtime_dir/workers" "worker runtime root"
+      private_directory "$state_dir/cache" "host cache directory"
+      private_directory "$state_dir/eln-cache" "host native-comp cache"
+      private_directory "$state_dir/semantic" "host semantic state directory"
+      private_directory "$state_dir/workers" "worker state root"
+      for worker in \
+        anvil-worker-read-1 \
+        anvil-worker-read-2 \
+        anvil-worker-write-1 \
+        anvil-worker-batch-1; do
+        private_directory "$runtime_dir/workers/$worker" "$worker runtime directory"
+        private_directory "$runtime_dir/workers/$worker/tmp" "$worker temporary directory"
+        private_directory "$state_dir/workers/$worker" "$worker state directory"
+        private_directory "$state_dir/workers/$worker/cache" "$worker cache directory"
+        private_directory "$state_dir/workers/$worker/eln-cache" "$worker native-comp cache"
+        private_directory "$state_dir/workers/$worker/server" "$worker server directory"
+      done
 
       export XDG_RUNTIME_DIR="$runtime_dir"
       export XDG_CACHE_HOME="$state_dir/cache"
@@ -599,7 +629,11 @@ let
           echo "anvil-mcp: Emacs socket must not be a symbolic link: $socket" >&2
           exit 77
         fi
-        if [ -e "$socket" ]; then
+        if [ -e "$socket" ] && [ ! -S "$socket" ]; then
+          echo "anvil-mcp: Emacs socket path must be a socket: $socket" >&2
+          exit 77
+        fi
+        if [ -S "$socket" ]; then
           socket_owner=$(stat -c '%u' -- "$socket") || {
             echo "anvil-mcp: cannot inspect Emacs socket owner: $socket" >&2
             exit 77
@@ -608,10 +642,10 @@ let
             echo "anvil-mcp: Emacs socket must be owned by uid $(id -u) (found $socket_owner): $socket" >&2
             exit 77
           fi
-        fi
-        if [ -S "$socket" ]           && "${dedicatedEmacs}/bin/emacsclient" -s "$socket" -e t >/dev/null 2>&1; then
-          ready=1
-          break
+          if "${dedicatedEmacs}/bin/emacsclient" -s "$socket" -e t >/dev/null 2>&1; then
+            ready=1
+            break
+          fi
         fi
         sleep 0.25
       done

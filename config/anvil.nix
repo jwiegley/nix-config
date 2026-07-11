@@ -64,6 +64,7 @@ in
         enable = true;
         config = {
           ProgramArguments = [ "${anvilMcp}/bin/anvil-headless-emacs" ];
+          EnvironmentVariables.ANVIL_EMACS_USE_SYSTEM_LOG = "1";
           RunAtLoad = true;
           KeepAlive = {
             Crashed = true;

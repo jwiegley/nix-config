@@ -223,7 +223,7 @@
       devShells = forAllSystems (
         system:
         let
-          pkgs = pkgsFor.${system};
+          pkgs = import nixpkgs { inherit system; };
         in
         {
           default = pkgs.mkShell {
