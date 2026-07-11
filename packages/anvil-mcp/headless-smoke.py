@@ -103,12 +103,32 @@ TYPED_TOOLS = {
     "sqlite-query",
 }
 
-WORKER_SPECS = (
-    (":read", "anvil-worker-read-1"),
-    (":read", "anvil-worker-read-2"),
-    (":write", "anvil-worker-write-1"),
-    (":batch", "anvil-worker-batch-1"),
-)
+WorkerSpecs = tuple[tuple[str, str], ...]
+
+
+def parse_worker_specs(raw: str) -> WorkerSpecs:
+    """Parse and validate the Nix-owned worker roster."""
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise AssertionError(f"invalid worker roster JSON: {raw}") from error
+    if not isinstance(data, list) or not data:
+        raise AssertionError(f"worker roster must be a non-empty list: {data}")
+
+    specs: list[tuple[str, str]] = []
+    names: set[str] = set()
+    for item in data:
+        if not isinstance(item, dict):
+            raise AssertionError(f"invalid worker roster entry: {item}")
+        lane = item.get("lane")
+        name = item.get("name")
+        if lane not in {":read", ":write", ":batch"} or not isinstance(name, str):
+            raise AssertionError(f"invalid worker roster entry: {item}")
+        if name in names:
+            raise AssertionError(f"duplicate worker name: {name}")
+        names.add(name)
+        specs.append((lane, name))
+    return tuple(specs)
 
 
 def request(identifier: int | None, method: str, params: object | None = None) -> str:
@@ -191,7 +211,7 @@ def assert_tool_success(response: dict[str, object], needle: str) -> None:
         raise AssertionError(f"tool result did not contain {needle!r}: {result}")
 
 
-def worker_snapshot_expression() -> str:
+def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
     """Return Elisp that validates and snapshots every worker lane."""
     worker_expression = r"""
 (condition-case err
@@ -210,10 +230,14 @@ def worker_snapshot_expression() -> str:
             (if (bound-and-true-p server-use-tcp)
                 server-auth-dir
               server-socket-dir)
-            anvil-server-schema-cache-file))
+            anvil-server-schema-cache-file
+            ;; The wrapper closes the directory-backed lock descriptors.
+            ;; Emacs may reuse these numbers for sockets during startup.
+            (if (file-directory-p "/dev/fd/8") t :false)
+            (if (file-directory-p "/dev/fd/9") t :false)))
   (error (list "snapshot-error" (error-message-string err))))
 """.strip()
-    specs = " ".join(f"({lane} {json.dumps(name)})" for lane, name in WORKER_SPECS)
+    specs = " ".join(f"({lane} {json.dumps(name)})" for lane, name in worker_specs)
     return f"""
 (progn
   (require 'cl-lib)
@@ -239,7 +263,10 @@ def worker_snapshot_expression() -> str:
     (mapcar
      (lambda (spec)
        (let ((snapshot
-              (server-eval-at (cadr spec) (read {json.dumps(worker_expression)}))))
+              (with-timeout
+                  (10 (error "worker snapshot timed out: %s" (cadr spec)))
+                (server-eval-at
+                 (cadr spec) (read {json.dumps(worker_expression)})))))
          (unless (equal (car snapshot) (cadr spec))
            (error "worker snapshot mismatch: %S" snapshot))
          (vconcat snapshot)))
@@ -247,7 +274,9 @@ def worker_snapshot_expression() -> str:
 """.strip()
 
 
-def assert_worker_snapshot(response: dict[str, object], host: str) -> None:
+def assert_worker_snapshot(
+    response: dict[str, object], host: str, worker_specs: WorkerSpecs
+) -> None:
     result = response["result"]
     if not isinstance(result, dict) or result.get("isError") is True:
         raise AssertionError(f"worker snapshot failed: {result}")
@@ -261,14 +290,14 @@ def assert_worker_snapshot(response: dict[str, object], host: str) -> None:
         snapshots = json.loads(json.loads(text))
     except (TypeError, json.JSONDecodeError) as error:
         raise AssertionError(f"invalid worker snapshot JSON: {text}") from error
-    if not isinstance(snapshots, list) or len(snapshots) != len(WORKER_SPECS):
+    if not isinstance(snapshots, list) or len(snapshots) != len(worker_specs):
         raise AssertionError(f"unexpected worker snapshots: {snapshots}")
 
     state_root = Path(os.environ["ANVIL_EMACS_STATE_ROOT"]) / host / "workers"
     runtime_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "workers"
     socket_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "emacs"
-    for snapshot, (_, name) in zip(snapshots, WORKER_SPECS, strict=True):
-        if not isinstance(snapshot, list) or len(snapshot) != 11:
+    for snapshot, (_, name) in zip(snapshots, worker_specs, strict=True):
+        if not isinstance(snapshot, list) or len(snapshot) != 13:
             raise AssertionError(f"malformed {name} snapshot: {snapshot}")
         if snapshot[0] != name:
             raise AssertionError(f"worker dispatch mismatch: {snapshot[0]} != {name}")
@@ -311,13 +340,20 @@ def assert_worker_snapshot(response: dict[str, object], host: str) -> None:
                 f"{name} schema cache escaped isolation: "
                 f"{snapshot[10]} != {expected_schema}"
             )
+        if snapshot[11:] != [False, False]:
+            raise AssertionError(
+                f"{name} inherited daemon lock descriptors: {snapshot[11:]}"
+            )
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: headless-smoke.py /path/to/anvil-mcp")
+    if len(sys.argv) != 3:
+        raise SystemExit(
+            "usage: headless-smoke.py /path/to/anvil-mcp WORKER_SPECS_JSON"
+        )
 
     launcher = Path(sys.argv[1]).resolve()
+    worker_specs = parse_worker_specs(sys.argv[2])
     org_root = Path.home() / "org"
     org_file = org_root / "smoke.org"
     initialize = {
@@ -325,7 +361,7 @@ def main() -> None:
         "capabilities": {},
         "clientInfo": {"name": "nix-headless-smoke", "version": "1"},
     }
-    snapshot_expression = worker_snapshot_expression()
+    snapshot_expression = worker_snapshot_expression(worker_specs)
 
     main_responses = run_transcript(
         launcher,
@@ -398,7 +434,7 @@ def main() -> None:
     assert_tool_success(response_by_id(main_responses, 5), "headlessorgneedle")
     response_by_id(main_responses, 6)
     assert_tool_success(response_by_id(main_responses, 7), "headlesssemanticneedle")
-    assert_worker_snapshot(response_by_id(main_responses, 8), "host-a")
+    assert_worker_snapshot(response_by_id(main_responses, 8), "host-a", worker_specs)
 
     secondary_responses = run_transcript(
         launcher,
@@ -417,7 +453,9 @@ def main() -> None:
             ),
         ],
     )
-    assert_worker_snapshot(response_by_id(secondary_responses, 22), "host-b")
+    assert_worker_snapshot(
+        response_by_id(secondary_responses, 22), "host-b", worker_specs
+    )
 
     typed_responses = run_transcript(
         launcher,

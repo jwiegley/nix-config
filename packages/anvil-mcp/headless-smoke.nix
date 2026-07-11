@@ -5,9 +5,14 @@
   lib,
   python3,
   runCommand,
-  stdenv,
 }:
 
+let
+  inherit (anvilMcp) workerNames;
+  firstWorker = builtins.head workerNames;
+  expectedWorkerCount = 2 * builtins.length workerNames;
+  workerSpecsJson = builtins.toJSON anvilMcp.workerSpecs;
+in
 runCommand "anvil-mcp-dedicated-smoke"
   {
     nativeBuildInputs = [
@@ -25,16 +30,14 @@ runCommand "anvil-mcp-dedicated-smoke"
     export ANVIL_EMACS_STATE_ROOT="$smoke_root/state"
     install -d -m 0700 "$HOME" "$HOME/org"
     printf '%s\n' '* Headless Anvil' 'headlessorgneedle headlesssemanticneedle'       >"$HOME/org/smoke.org"
-    ${lib.optionalString stdenv.isLinux ''
-      install -d -m 0700 \
-        "$ANVIL_EMACS_RUNTIME_ROOT" \
-        "$ANVIL_EMACS_RUNTIME_ROOT/host-b" \
-        "$ANVIL_EMACS_RUNTIME_ROOT/host-b/tmp" \
-        "$ANVIL_EMACS_RUNTIME_ROOT/host-b/workers" \
-        "$ANVIL_EMACS_RUNTIME_ROOT/host-b/workers/stale-before-start"
-      touch "$ANVIL_EMACS_RUNTIME_ROOT/host-b/tmp/stale-before-start"
-      touch "$ANVIL_EMACS_RUNTIME_ROOT/host-b/workers/stale-before-start/sentinel"
-    ''}
+    install -d -m 0700 \
+      "$ANVIL_EMACS_RUNTIME_ROOT" \
+      "$ANVIL_EMACS_RUNTIME_ROOT/host-b" \
+      "$ANVIL_EMACS_RUNTIME_ROOT/host-b/tmp" \
+      "$ANVIL_EMACS_RUNTIME_ROOT/host-b/workers" \
+      "$ANVIL_EMACS_RUNTIME_ROOT/host-b/workers/stale-before-start"
+    touch "$ANVIL_EMACS_RUNTIME_ROOT/host-b/tmp/stale-before-start"
+    touch "$ANVIL_EMACS_RUNTIME_ROOT/host-b/workers/stale-before-start/sentinel"
 
     pid_a=
     pid_b=
@@ -146,7 +149,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       "$smoke_root/nested-state/hostile/workers" \
       "$smoke_root/nested-state-target"
     ln -s "$smoke_root/nested-state-target" \
-      "$smoke_root/nested-state/hostile/workers/anvil-worker-read-1"
+      "$smoke_root/nested-state/hostile/workers/${firstWorker}"
     assert_rejected worker-state-symlink "must not be a symbolic link" \
       env ANVIL_EMACS_HOST=hostile \
       ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/nested-runtime" \
@@ -159,7 +162,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       "$smoke_root/nested-mode-state/hostile" \
       "$smoke_root/nested-mode-state/hostile/workers"
     install -d -m 0755 \
-      "$smoke_root/nested-mode-state/hostile/workers/anvil-worker-read-1"
+      "$smoke_root/nested-mode-state/hostile/workers/${firstWorker}"
     assert_rejected worker-state-mode "must have mode 0700" \
       env ANVIL_EMACS_HOST=hostile \
       ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/nested-mode-runtime" \
@@ -177,7 +180,8 @@ runCommand "anvil-mcp-dedicated-smoke"
 
     # Invoke the launcher before host-a has a socket. This proves that an MCP
     # client started during login or a service restart waits for readiness.
-    if ! ${python3}/bin/python ${./headless-smoke.py}       ${anvilMcp}/bin/anvil-mcp; then
+    if ! ${python3}/bin/python ${./headless-smoke.py} \
+      ${anvilMcp}/bin/anvil-mcp ${lib.escapeShellArg workerSpecsJson}; then
       cat "$smoke_root/host-a.log" "$smoke_root/host-b.log" >&2
       exit 1
     fi
@@ -216,43 +220,63 @@ runCommand "anvil-mcp-dedicated-smoke"
       ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/responsive-wrong-type" \
       ${anvilMcp}/bin/anvil-mcp
 
-    ${lib.optionalString stdenv.isLinux ''
-      if [ -e "$ANVIL_EMACS_RUNTIME_ROOT/host-b/tmp/stale-before-start" ]; then
-        echo "host runtime temp was not pruned after taking both daemon locks" >&2
-        exit 1
-      fi
-      if [ -e "$ANVIL_EMACS_RUNTIME_ROOT/host-b/workers/stale-before-start" ]; then
-        echo "stale worker runtime was not pruned after taking both daemon locks" >&2
-        exit 1
-      fi
+    if [ -e "$ANVIL_EMACS_RUNTIME_ROOT/host-b/tmp/stale-before-start" ]; then
+      echo "host runtime temp was not pruned after taking both daemon locks" >&2
+      exit 1
+    fi
+    if [ -e "$ANVIL_EMACS_RUNTIME_ROOT/host-b/workers/stale-before-start" ]; then
+      echo "stale worker runtime was not pruned after taking both daemon locks" >&2
+      exit 1
+    fi
 
-      touch "$ANVIL_EMACS_RUNTIME_ROOT/host-a/tmp/live-sentinel"
-      assert_status duplicate-runtime-lock "holds the runtime lock" 75 \
-        env ANVIL_EMACS_HOST=host-a \
-        ANVIL_EMACS_RUNTIME_ROOT="$ANVIL_EMACS_RUNTIME_ROOT" \
-        ANVIL_EMACS_STATE_ROOT="$smoke_root/different-state" \
-        ${anvilMcp}/bin/anvil-headless-emacs
-      if [ ! -e "$ANVIL_EMACS_RUNTIME_ROOT/host-a/tmp/live-sentinel" ]; then
-        echo "runtime-lock rejection pruned live daemon state" >&2
-        exit 1
-      fi
+    touch "$ANVIL_EMACS_RUNTIME_ROOT/host-a/tmp/live-sentinel"
+    assert_status duplicate-runtime-lock "holds the runtime lock" 75 \
+      env ANVIL_EMACS_HOST=host-a \
+      ANVIL_EMACS_RUNTIME_ROOT="$ANVIL_EMACS_RUNTIME_ROOT" \
+      ANVIL_EMACS_STATE_ROOT="$smoke_root/different-state" \
+      ${anvilMcp}/bin/anvil-headless-emacs
+    if [ ! -e "$ANVIL_EMACS_RUNTIME_ROOT/host-a/tmp/live-sentinel" ]; then
+      echo "runtime-lock rejection pruned live daemon state" >&2
+      exit 1
+    fi
 
-      alternate_runtime="$smoke_root/alternate-runtime"
-      install -d -m 0700 \
-        "$alternate_runtime" \
-        "$alternate_runtime/host-a" \
-        "$alternate_runtime/host-a/tmp"
-      touch "$alternate_runtime/host-a/tmp/live-sentinel"
-      assert_status duplicate-state-lock "holds the state lock" 75 \
-        env ANVIL_EMACS_HOST=host-a \
-        ANVIL_EMACS_RUNTIME_ROOT="$alternate_runtime" \
-        ANVIL_EMACS_STATE_ROOT="$ANVIL_EMACS_STATE_ROOT" \
-        ${anvilMcp}/bin/anvil-headless-emacs
-      if [ ! -e "$alternate_runtime/host-a/tmp/live-sentinel" ]; then
-        echo "state-lock rejection pruned the alternate runtime" >&2
-        exit 1
-      fi
-    ''}
+    launchd_conflict_log="$smoke_root/launchd-lock-conflict.log"
+    if ! ${coreutils}/bin/timeout 5 env \
+      ANVIL_EMACS_HOST=host-a \
+      ANVIL_EMACS_RUNTIME_ROOT="$ANVIL_EMACS_RUNTIME_ROOT" \
+      ANVIL_EMACS_STATE_ROOT="$smoke_root/launchd-state" \
+      ANVIL_EMACS_LOCK_CONFLICT_STATUS=0 \
+      ${anvilMcp}/bin/anvil-headless-emacs \
+      >"$launchd_conflict_log" 2>&1; then
+      echo "launchd-style lock contention did not exit successfully" >&2
+      cat "$launchd_conflict_log" >&2
+      exit 1
+    fi
+    if ! grep -F "holds the runtime lock" "$launchd_conflict_log" >/dev/null; then
+      echo "launchd-style contention did not report the held lock" >&2
+      cat "$launchd_conflict_log" >&2
+      exit 1
+    fi
+    if [ ! -e "$ANVIL_EMACS_RUNTIME_ROOT/host-a/tmp/live-sentinel" ]; then
+      echo "launchd-style contention pruned live daemon state" >&2
+      exit 1
+    fi
+
+    alternate_runtime="$smoke_root/alternate-runtime"
+    install -d -m 0700 \
+      "$alternate_runtime" \
+      "$alternate_runtime/host-a" \
+      "$alternate_runtime/host-a/tmp"
+    touch "$alternate_runtime/host-a/tmp/live-sentinel"
+    assert_status duplicate-state-lock "holds the state lock" 75 \
+      env ANVIL_EMACS_HOST=host-a \
+      ANVIL_EMACS_RUNTIME_ROOT="$alternate_runtime" \
+      ANVIL_EMACS_STATE_ROOT="$ANVIL_EMACS_STATE_ROOT" \
+      ${anvilMcp}/bin/anvil-headless-emacs
+    if [ ! -e "$alternate_runtime/host-a/tmp/live-sentinel" ]; then
+      echo "state-lock rejection pruned the alternate runtime" >&2
+      exit 1
+    fi
 
     for cache in       "$ANVIL_EMACS_RUNTIME_ROOT/host-a/tmp/anvil-schema-cache.el"       "$ANVIL_EMACS_RUNTIME_ROOT/host-b/tmp/anvil-schema-cache.el"; do
       if [ ! -f "$cache" ]; then
@@ -298,11 +322,7 @@ runCommand "anvil-mcp-dedicated-smoke"
     worker_pids="$smoke_root/worker-pids"
     : >"$worker_pids"
     for host in host-a host-b; do
-      for worker in \
-        anvil-worker-read-1 \
-        anvil-worker-read-2 \
-        anvil-worker-write-1 \
-        anvil-worker-batch-1; do
+      for worker in ${lib.escapeShellArgs workerNames}; do
         pid_file="$ANVIL_EMACS_STATE_ROOT/$host/workers/$worker/worker.pid"
         if [ ! -f "$pid_file" ]; then
           echo "missing worker PID snapshot: $pid_file" >&2
@@ -322,8 +342,8 @@ runCommand "anvil-mcp-dedicated-smoke"
         printf '%s\n' "$worker_pid" >>"$worker_pids"
       done
     done
-    if [ "$(wc -l <"$worker_pids" | tr -d '[:space:]')" -ne 8 ] \
-      || [ "$(sort -u "$worker_pids" | wc -l | tr -d '[:space:]')" -ne 8 ]; then
+    if [ "$(wc -l <"$worker_pids" | tr -d '[:space:]')" -ne ${toString expectedWorkerCount} ] \
+      || [ "$(sort -u "$worker_pids" | wc -l | tr -d '[:space:]')" -ne ${toString expectedWorkerCount} ]; then
       echo "worker PIDs are missing or shared across hosts" >&2
       cat "$worker_pids" >&2
       exit 1
@@ -371,40 +391,38 @@ runCommand "anvil-mcp-dedicated-smoke"
       fi
     done <"$worker_pids"
 
-    ${lib.optionalString stdenv.isLinux ''
-      ANVIL_EMACS_HOST=host-a \
-        ${anvilMcp}/bin/anvil-headless-emacs \
-        >"$smoke_root/host-a-restart.log" 2>&1 &
-      pid_restart=$!
-      restart_ready=
-      restart_socket="$ANVIL_EMACS_RUNTIME_ROOT/host-a/emacs/server"
-      for _ in $(seq 1 120); do
-        if [ -S "$restart_socket" ] \
-          && ${anvilMcp.dedicatedEmacs}/bin/emacsclient \
-            -s "$restart_socket" -e t >/dev/null 2>&1; then
-          restart_ready=1
-          break
-        fi
-        sleep 0.25
-      done
-      if [ -z "$restart_ready" ]; then
-        echo "daemon failed to reacquire locks after clean shutdown" >&2
-        cat "$smoke_root/host-a-restart.log" >&2
-        exit 1
+    ANVIL_EMACS_HOST=host-a \
+      ${anvilMcp}/bin/anvil-headless-emacs \
+      >"$smoke_root/host-a-restart.log" 2>&1 &
+    pid_restart=$!
+    restart_ready=
+    restart_socket="$ANVIL_EMACS_RUNTIME_ROOT/host-a/emacs/server"
+    for _ in $(seq 1 120); do
+      if [ -S "$restart_socket" ] \
+        && ${anvilMcp.dedicatedEmacs}/bin/emacsclient \
+          -s "$restart_socket" -e t >/dev/null 2>&1; then
+        restart_ready=1
+        break
       fi
-      if ! ${anvilMcp.dedicatedEmacs}/bin/emacsclient -s "$restart_socket" \
-        -e "(progn (run-at-time 0.1 nil #'kill-emacs) t)" >/dev/null; then
-        echo "failed to stop restarted daemon" >&2
-        cat "$smoke_root/host-a-restart.log" >&2
-        exit 1
-      fi
-      if ! wait "$pid_restart"; then
-        echo "restarted daemon exited unsuccessfully" >&2
-        cat "$smoke_root/host-a-restart.log" >&2
-        exit 1
-      fi
-      pid_restart=
-    ''}
+      sleep 0.25
+    done
+    if [ -z "$restart_ready" ]; then
+      echo "daemon failed to reacquire locks after clean shutdown" >&2
+      cat "$smoke_root/host-a-restart.log" >&2
+      exit 1
+    fi
+    if ! ${anvilMcp.dedicatedEmacs}/bin/emacsclient -s "$restart_socket" \
+      -e "(progn (run-at-time 0.1 nil #'kill-emacs) t)" >/dev/null; then
+      echo "failed to stop restarted daemon" >&2
+      cat "$smoke_root/host-a-restart.log" >&2
+      exit 1
+    fi
+    if ! wait "$pid_restart"; then
+      echo "restarted daemon exited unsuccessfully" >&2
+      cat "$smoke_root/host-a-restart.log" >&2
+      exit 1
+    fi
+    pid_restart=
 
     touch "$out"
   ''

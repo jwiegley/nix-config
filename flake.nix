@@ -89,15 +89,19 @@
         "aarch64-linux"
         "x86_64-linux"
       ];
+      stockPkgsFor = forAllSystems (system: import nixpkgs { inherit system; });
       pkgsFor = forAllSystems (
         system:
-        import nixpkgs {
-          inherit system;
-          overlays = nixpkgs.lib.optionals (system == "aarch64-darwin") [
-            (_final: _prev: { inherit inputs; })
-            (import ./overlays/10-emacs.nix)
-          ];
-        }
+        if system == "aarch64-darwin" then
+          import nixpkgs {
+            inherit system;
+            overlays = [
+              (_final: _prev: { inherit inputs; })
+              (import ./overlays/10-emacs.nix)
+            ];
+          }
+        else
+          stockPkgsFor.${system}
       );
     in
     rec {
@@ -218,12 +222,12 @@
           "jwiegley@x86_64-linux" = mkLinuxHome "jwiegley" "linux" "x86_64-linux";
         };
 
-      formatter = forAllSystems (system: (import nixpkgs { inherit system; }).nixfmt);
+      formatter = forAllSystems (system: stockPkgsFor.${system}.nixfmt);
 
       devShells = forAllSystems (
         system:
         let
-          pkgs = import nixpkgs { inherit system; };
+          pkgs = stockPkgsFor.${system};
         in
         {
           default = pkgs.mkShell {
@@ -243,7 +247,7 @@
       checks = forAllSystems (
         system:
         let
-          pkgs = import nixpkgs { inherit system; };
+          pkgs = stockPkgsFor.${system};
           src = builtins.path {
             path = ./.;
             name = "nix-config-src";

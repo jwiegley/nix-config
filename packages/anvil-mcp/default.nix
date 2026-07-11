@@ -8,6 +8,7 @@
   emacsPackages ? null,
   fetchFromGitHub,
   findutils,
+  flock,
   gawk,
   git,
   gnugrep,
@@ -22,7 +23,6 @@
   rustPlatform,
   stdenv,
   symlinkJoin,
-  util-linux ? null,
   useDedicatedDarwinEmacs ? false,
   useHeadlessEmacs ? false,
   writeShellApplication,
@@ -37,6 +37,37 @@ let
   currentAnvilVersion = "1.3.0";
   currentAnvilRev = "574568a95a2bd8fceca6c9cd3bec0f94ecf0e6a9";
   anvilIdeRev = "0e6130457ac2bdc6c6db2eebeba67a5223231190";
+
+  workerSpecs = [
+    {
+      lane = ":read";
+      name = "anvil-worker-read-1";
+    }
+    {
+      lane = ":read";
+      name = "anvil-worker-read-2";
+    }
+    {
+      lane = ":write";
+      name = "anvil-worker-write-1";
+    }
+    {
+      lane = ":batch";
+      name = "anvil-worker-batch-1";
+    }
+  ];
+  workerNames = builtins.map (spec: spec.name) workerSpecs;
+  workerPoolSizes = {
+    read = builtins.length (builtins.filter (spec: spec.lane == ":read") workerSpecs);
+    write = builtins.length (builtins.filter (spec: spec.lane == ":write") workerSpecs);
+    batch = builtins.length (builtins.filter (spec: spec.lane == ":batch") workerSpecs);
+  };
+  workerNamesElisp = "(" + lib.concatMapStringsSep " " (name: builtins.toJSON name) workerNames + ")";
+  workerSpecsElisp =
+    "("
+    + lib.concatMapStringsSep " " (spec: "(${spec.lane} ${builtins.toJSON spec.name})") workerSpecs
+    + ")";
+  workerNamesShell = lib.concatMapStringsSep " " lib.escapeShellArg workerNames;
 
   nelispSrc = fetchFromGitHub {
     owner = "zawatton";
@@ -103,6 +134,7 @@ let
     patches = [
       ./no-placeholder-fallback.patch
       ./portable-c-char.patch
+      ./standard-initialized-notification.patch
     ];
 
     nativeBuildInputs = [ pkg-config ];
@@ -294,7 +326,8 @@ let
   dedicatedWorkerInit = writeText "anvil-headless-worker-init.el" ''
     ;;; anvil-headless-worker-init.el --- Isolated Anvil worker
 
-    (let* ((runtime-root (getenv "XDG_RUNTIME_DIR"))
+    (let* ((expected-worker-names '${workerNamesElisp})
+           (runtime-root (getenv "XDG_RUNTIME_DIR"))
            (state-root (getenv "ANVIL_EMACS_STATE_DIR"))
            (worker-name (format "%s" (or (daemonp) "worker")))
            (state-dir
@@ -307,6 +340,8 @@ let
                   (concat "workers/" worker-name "/tmp/") runtime-root)))
            (cache-dir
             (and state-dir (expand-file-name "cache/" state-dir))))
+      (unless (member worker-name expected-worker-names)
+        (error "Unexpected Anvil worker daemon name: %s" worker-name))
       (unless (and state-dir temp-dir)
         (error "Anvil workers require state and runtime directories"))
       (make-directory temp-dir t)
@@ -347,6 +382,20 @@ let
     (anvil-server-start)
   '';
 
+  dedicatedWorkerEmacs = writeShellApplication {
+    name = "anvil-worker-emacs";
+    text = ''
+      exec 8<&- 9<&-
+      for fd in 8 9; do
+        if [ -e "/dev/fd/$fd" ]; then
+          echo "anvil-mcp: worker inherited daemon lock descriptor $fd" >&2
+          exit 70
+        fi
+      done
+      exec "${dedicatedEmacs}/bin/emacs" "$@"
+    '';
+  };
+
   dedicatedInit = writeText "anvil-headless-init.el" ''
     (let* ((runtime-dir (getenv "XDG_RUNTIME_DIR"))
            (state-dir (getenv "ANVIL_EMACS_STATE_DIR"))
@@ -359,6 +408,10 @@ let
         (error "Anvil requires existing state and runtime directories"))
       (make-directory temp-dir t)
       (setq native-comp-jit-compilation nil
+            anvil-eval-timeout 120
+            anvil-worker-read-pool-size ${toString workerPoolSizes.read}
+            anvil-worker-write-pool-size ${toString workerPoolSizes.write}
+            anvil-worker-batch-pool-size ${toString workerPoolSizes.batch}
             user-emacs-directory (file-name-as-directory state-dir)
             package-user-dir (expand-file-name "elpa" state-dir)
             custom-file (expand-file-name "custom.el" state-dir)
@@ -432,7 +485,7 @@ let
     (condition-case err
         (progn
           (setq anvil-pdf-python "${pythonWithPyMuPDF}/bin/python3"
-                anvil-worker-emacs-bin "${dedicatedEmacs}/bin/emacs"
+                anvil-worker-emacs-bin "${dedicatedWorkerEmacs}/bin/anvil-worker-emacs"
                 anvil-worker-init-file "${dedicatedWorkerInit}"
                 anvil-optional-modules
                 '(ide elisp sexp semantic sqlite pdf cron state shell-filter
@@ -451,6 +504,16 @@ let
             (error "Anvil requires PyMuPDF"))
 
           (anvil-enable)
+          (let (actual-worker-specs)
+            (dolist (lane '(:read :write :batch))
+              (let ((pool (plist-get anvil-worker--pool lane)))
+                (dotimes (index (length pool))
+                  (push (list lane (plist-get (aref pool index) :name))
+                        actual-worker-specs))))
+            (setq actual-worker-specs (nreverse actual-worker-specs))
+            (unless (equal actual-worker-specs '${workerSpecsElisp})
+              (error "Anvil worker roster drifted: actual=%S expected=%S"
+                     actual-worker-specs '${workerSpecsElisp})))
           (dolist (module (append anvil-modules anvil-optional-modules))
             (unless (memq module anvil--loaded-modules)
               (error "Anvil failed to load required module: %s" module)))
@@ -470,6 +533,7 @@ let
       dedicatedEmacs
       diffutils
       findutils
+      flock
       gawk
       git
       gnugrep
@@ -477,8 +541,7 @@ let
       hostname
       pythonWithPyMuPDF
       ripgrep
-    ]
-    ++ lib.optionals stdenv.isLinux [ util-linux ];
+    ];
     text = ''
       ${privateDirectoryFunctions}
 
@@ -496,24 +559,30 @@ let
       runtime_dir="$runtime_root/$short_host"
       state_root="''${ANVIL_EMACS_STATE_ROOT:-/var/tmp/anvil-emacs-$(id -u)}"
       state_dir="$state_root/$short_host"
+      lock_conflict_status="''${ANVIL_EMACS_LOCK_CONFLICT_STATUS:-75}"
+      case "$lock_conflict_status" in
+        0|75) ;;
+        *)
+          echo "anvil-mcp: ANVIL_EMACS_LOCK_CONFLICT_STATUS must be 0 or 75" >&2
+          exit 64
+          ;;
+      esac
 
       private_directory "$runtime_root" "runtime root"
       private_directory "$runtime_dir" "host runtime directory"
       private_directory "$state_root" "state root"
       private_directory "$state_dir" "host state directory"
-      ${lib.optionalString stdenv.isLinux ''
-        exec 8<"$runtime_dir"
-        if ! flock -n 8; then
-          echo "anvil-mcp: another dedicated daemon holds the runtime lock: $runtime_dir" >&2
-          exit 75
-        fi
-        exec 9<"$state_dir"
-        if ! flock -n 9; then
-          echo "anvil-mcp: another dedicated daemon holds the state lock: $state_dir" >&2
-          exit 75
-        fi
-        rm -rf -- "$runtime_dir/tmp" "$runtime_dir/workers"
-      ''}
+      exec 8<"$runtime_dir"
+      if ! flock -n 8; then
+        echo "anvil-mcp: another dedicated daemon holds the runtime lock: $runtime_dir" >&2
+        exit "$lock_conflict_status"
+      fi
+      exec 9<"$state_dir"
+      if ! flock -n 9; then
+        echo "anvil-mcp: another dedicated daemon holds the state lock: $state_dir" >&2
+        exit "$lock_conflict_status"
+      fi
+      rm -rf -- "$runtime_dir/tmp" "$runtime_dir/workers"
 
       private_directory "$runtime_dir/emacs" "Emacs socket directory"
       private_directory "$runtime_dir/tmp" "host temporary directory"
@@ -522,11 +591,7 @@ let
       private_directory "$state_dir/eln-cache" "host native-comp cache"
       private_directory "$state_dir/semantic" "host semantic state directory"
       private_directory "$state_dir/workers" "worker state root"
-      for worker in \
-        anvil-worker-read-1 \
-        anvil-worker-read-2 \
-        anvil-worker-write-1 \
-        anvil-worker-batch-1; do
+      for worker in ${workerNamesShell}; do
         private_directory "$runtime_dir/workers/$worker" "$worker runtime directory"
         private_directory "$runtime_dir/workers/$worker/tmp" "$worker temporary directory"
         private_directory "$state_dir/workers/$worker" "$worker state directory"
@@ -677,7 +742,11 @@ let
         dedicatedDaemon
         dedicatedEmacs
         dedicatedInit
+        dedicatedWorkerEmacs
         dedicatedWorkerInit
+        workerNames
+        workerPoolSizes
+        workerSpecs
         ;
     };
     meta = commonMeta // {

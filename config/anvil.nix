@@ -53,6 +53,7 @@ in
         Service = {
           ExecStart = "${anvilMcp}/bin/anvil-headless-emacs";
           Restart = "on-failure";
+          RestartPreventExitStatus = 75;
           RestartSec = 5;
         };
         Install.WantedBy = [ "default.target" ];
@@ -64,7 +65,10 @@ in
         enable = true;
         config = {
           ProgramArguments = [ "${anvilMcp}/bin/anvil-headless-emacs" ];
-          EnvironmentVariables.ANVIL_EMACS_USE_SYSTEM_LOG = "1";
+          EnvironmentVariables = {
+            ANVIL_EMACS_LOCK_CONFLICT_STATUS = "0";
+            ANVIL_EMACS_USE_SYSTEM_LOG = "1";
+          };
           RunAtLoad = true;
           KeepAlive = {
             Crashed = true;
