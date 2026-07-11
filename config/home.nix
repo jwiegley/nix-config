@@ -19,6 +19,11 @@ in
 {
   imports = [ ./johnw.nix ];
 
+  johnw.anvil.useDedicatedDarwinEmacs = lib.elem hostname [
+    "hera"
+    "clio"
+  ];
+
   home = {
     # Darwin has been on 23.11 longer than NixOS
     stateVersion = "23.11";
