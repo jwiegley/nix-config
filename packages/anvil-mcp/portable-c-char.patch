@@ -1,0 +1,11 @@
+--- a/build-tool/src/eval/ffi.rs
++++ b/build-tool/src/eval/ffi.rs
+@@ -261,7 +261,7 @@
+             ":double" => Sexp::Float(cif.call::<f64>(code, &arg_refs)),
+             ":pointer" => Sexp::Int(cif.call::<*const c_void>(code, &arg_refs) as i64),
+             ":string" => {
+-                let p = cif.call::<*const i8>(code, &arg_refs);
++                let p = cif.call::<*const std::ffi::c_char>(code, &arg_refs);
+                 if p.is_null() {
+                     Sexp::Nil
+                 } else {

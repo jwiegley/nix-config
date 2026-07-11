@@ -128,6 +128,35 @@
 
       darwinPackages = darwinConfigurations."hera".pkgs;
 
+      packages = {
+        "aarch64-darwin" = {
+          anvil-mcp = darwinPackages.callPackage ./packages/anvil-mcp { };
+          anvil-mcp-dedicated = darwinPackages.callPackage ./packages/anvil-mcp {
+            useDedicatedDarwinEmacs = true;
+          };
+        };
+        "aarch64-linux" =
+          let
+            pkgs = import nixpkgs { system = "aarch64-linux"; };
+          in
+          {
+            anvil-mcp = pkgs.callPackage ./packages/anvil-mcp { };
+            anvil-mcp-headless = pkgs.callPackage ./packages/anvil-mcp {
+              useHeadlessEmacs = true;
+            };
+          };
+        "x86_64-linux" =
+          let
+            pkgs = import nixpkgs { system = "x86_64-linux"; };
+          in
+          {
+            anvil-mcp = pkgs.callPackage ./packages/anvil-mcp { };
+            anvil-mcp-headless = pkgs.callPackage ./packages/anvil-mcp {
+              useHeadlessEmacs = true;
+            };
+          };
+      };
+
       # Shared home-manager module for cross-platform use.
       # NixOS hosts import this via: inputs.nix-config (flake = false)
       # and then: imports = [ "${inputs.nix-config}/config/johnw.nix" ];
@@ -278,6 +307,19 @@
                 ruff check ${src}/bin/update-overlay
                 touch $out
               '';
+        }
+        // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
+          anvil-mcp = pkgs.callPackage ./packages/anvil-mcp/smoke.nix {
+            anvilMcp = packages.${system}.anvil-mcp;
+          };
+          anvil-mcp-headless = pkgs.callPackage ./packages/anvil-mcp/headless-smoke.nix {
+            anvilMcp = packages.${system}.anvil-mcp-headless;
+          };
+        }
+        // pkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+          anvil-mcp-dedicated = pkgs.callPackage ./packages/anvil-mcp/headless-smoke.nix {
+            anvilMcp = packages.${system}.anvil-mcp-dedicated;
+          };
         }
       );
     };

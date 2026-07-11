@@ -51,6 +51,7 @@ in
   imports =
     # Extracted sub-modules for better organization
     [
+      ./anvil.nix
       ./git.nix
       ./ssh.nix
       ./zsh.nix
