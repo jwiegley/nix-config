@@ -1,0 +1,184 @@
+Fix the anvil worker pool killing its own workers.
+
+Three related fixes to anvil-worker.el:
+
+1. anvil-worker--server-file-stale-p probed the socket by re-expanding
+   its basename against the *current* server-socket-dir.  The pool caches
+   absolute socket paths at init; if the user customizes server-socket-dir
+   later in init, every probe looks in the wrong directory, condemns the
+   healthy worker, deletes its live socket, and orphans the daemon.
+   Probe the cached path itself instead.
+
+2. Workers are spawned with -Q and so bound their sockets in the default
+   socket directory, not necessarily where the pool looks.  Propagate the
+   pool-cached socket directory into the generated worker init file.
+
+3. A worker still loading its init could be declared dead by the health
+   timer and doubled by a same-named twin daemon; twins fight over one
+   socket path.  Add anvil-worker-spawn-grace (45s) suppression.
+
+--- a/anvil-worker.el	2026-07-11 10:31:14.607673942 -0700
++++ b/anvil-worker.el	2026-07-11 10:32:41.277172409 -0700
+@@ -162,6 +162,15 @@
+   :type 'integer
+   :group 'anvil-worker)
+ 
++(defcustom anvil-worker-spawn-grace 45
++  "Seconds after spawning a worker before it may be respawned.
++Guards against the health timer (or overlapping `anvil-enable'
++calls) spawning a same-named twin daemon while a previous spawn
++is still starting up; twins fight over one socket path and orphan
++each other."
++  :type 'integer
++  :group 'anvil-worker)
++
+ (defcustom anvil-worker-lifecycle-log
+   (expand-file-name "anvil-worker.log" user-emacs-directory)
+   "Append-only log of worker lifecycle events."
+@@ -478,12 +487,19 @@
+         (coding-system-for-write 'utf-8-unix))
+     (write-region line nil anvil-worker-lifecycle-log 'append 'no-message)))
+ 
+-(defun anvil-worker--generate-init-file ()
++(defun anvil-worker--generate-init-file (&optional socket-dir)
+   "Generate a minimal init file for worker daemons.
+ Always regenerates.  A cached file can go stale when anvil itself
+ moves on disk (the previous path gets baked into `load-path'), so
+ we unconditionally rewrite from the current `locate-library'
+-result.  Signals if `anvil-server' cannot be located."
++result.  Signals if `anvil-server' cannot be located.
++
++SOCKET-DIR, when non-nil, is the directory in which the worker
++must bind its server socket — the directory the pool's cached
++server-file paths point into.  Without it a -Q worker binds in
++the default socket directory, which need not match where the
++pool looks (the user may have customized `server-socket-dir'
++after the pool was initialised)."
+   (let* ((init-file (expand-file-name "anvil-worker-init.el"
+                                       user-emacs-directory))
+          (located (locate-library "anvil-server"))
+@@ -492,6 +508,12 @@
+       (error "anvil-worker: cannot locate anvil-server in load-path"))
+     (with-temp-buffer
+       (insert ";;; anvil-worker-init.el --- Auto-generated -*- lexical-binding: t; -*-\n\n")
++      (when socket-dir
++        (insert "(require 'server)\n")
++        (insert (format "(setq server-use-tcp %S)\n" server-use-tcp))
++        (insert (format "(setq %s %S)\n\n"
++                        (if server-use-tcp 'server-auth-dir 'server-socket-dir)
++                        socket-dir)))
+       (insert (format "(add-to-list 'load-path %S)\n" anvil-dir))
+       (insert "(require 'anvil-server)\n")
+       (insert "(require 'anvil-server-commands)\n\n")
+@@ -595,12 +617,26 @@
+ (defun anvil-worker--server-file-stale-p (server-file)
+   "Return non-nil if SERVER-FILE no longer points at a live server.
+ TCP auth files are checked via the recorded PID.  Local socket
+-servers are checked via `server-running-p' on the socket basename."
++servers are probed by connecting to SERVER-FILE itself.  The
++probe must not re-derive the path from the socket's basename and
++the current `server-socket-dir': the pool cached SERVER-FILE at
++initialisation, and if `server-socket-dir' changed since (users
++customize it at any point during init), a name-based check would
++look in the wrong directory and condemn every healthy worker —
++deleting live sockets and orphaning the daemons behind them."
+   (if server-use-tcp
+       (let ((pid (anvil-worker--server-file-pid server-file)))
+         (or (null pid)
+             (null (process-attributes pid))))
+-    (not (server-running-p (file-name-nondirectory server-file)))))
++    (condition-case nil
++        (progn
++          (delete-process
++           (make-network-process
++            :name "anvil-worker-stale-check"
++            :family 'local :server nil :noquery t
++            :service server-file))
++          nil)
++      (file-error t))))
+ 
+ (defun anvil-worker--worker-alive-p (worker)
+   "Return non-nil if WORKER plist is reachable.
+@@ -673,37 +709,56 @@
+       nil)
+      (t t))))
+ 
++(defvar anvil-worker--spawn-times (make-hash-table :test #'equal)
++  "Worker name → `float-time' of the most recent spawn attempt.
++Keyed by name rather than stored in the worker plist so the
++record survives `anvil-worker--init-pool' discarding pool state.")
++
+ (defun anvil-worker--spawn-worker (worker)
+   "Spawn WORKER if not already alive.  Returns the start-process or nil.
+ Uses `anvil-worker--quick-alive-p' (file + PID only, no probe)
+ so the spawn path never blocks on `accept-process-output'.
+-Batch-lane spawns also schedule a deferred warmup so common
+-libraries are loaded before the first real dispatch."
+-  (if (anvil-worker--quick-alive-p worker)
+-      (progn
+-        (anvil-worker--log
+-         'spawn-skipped
+-         (format "%s already alive" (plist-get worker :name)))
+-        nil)
+-    (let* ((init-file (or anvil-worker-init-file
+-                         (anvil-worker--generate-init-file)))
+-           (name (plist-get worker :name))
+-           (proc (start-process
+-                  (format "anvil-worker-spawn-%s" name)
+-                  (get-buffer-create (format " *%s*" name))
+-                  anvil-worker-emacs-bin
+-                  (concat "--fg-daemon=" name)
+-                  "-Q"
+-                  "-l" init-file)))
+-      (set-process-query-on-exit-flag proc nil)
++Respawns within `anvil-worker-spawn-grace' seconds of the last
++spawn are suppressed so a worker still loading its init file is
++not doubled by a same-named twin daemon.  Batch-lane spawns also
++schedule a deferred warmup so common libraries are loaded before
++the first real dispatch."
++  (let* ((name (plist-get worker :name))
++         (last (gethash name anvil-worker--spawn-times)))
++    (cond
++     ((anvil-worker--quick-alive-p worker)
++      (anvil-worker--log
++       'spawn-skipped
++       (format "%s already alive" name))
++      nil)
++     ((and last (< (- (float-time) last) anvil-worker-spawn-grace))
+       (anvil-worker--log
+-       'spawn
+-       (format "%s lane=%s pid=%d"
+-               name
+-               (anvil-worker--lane-name (plist-get worker :lane))
+-               (process-id proc)))
+-      (anvil-worker--maybe-schedule-warmup worker)
+-      proc)))
++       'spawn-suppressed
++       (format "%s spawned %.1fs ago, within %ds grace"
++               name (- (float-time) last) anvil-worker-spawn-grace))
++      nil)
++     (t
++      (puthash name (float-time) anvil-worker--spawn-times)
++      (let* ((init-file (or anvil-worker-init-file
++                            (anvil-worker--generate-init-file
++                             (file-name-directory
++                              (plist-get worker :server-file)))))
++             (proc (start-process
++                    (format "anvil-worker-spawn-%s" name)
++                    (get-buffer-create (format " *%s*" name))
++                    anvil-worker-emacs-bin
++                    (concat "--fg-daemon=" name)
++                    "-Q"
++                    "-l" init-file)))
++        (set-process-query-on-exit-flag proc nil)
++        (anvil-worker--log
++         'spawn
++         (format "%s lane=%s pid=%d"
++                 name
++                 (anvil-worker--lane-name (plist-get worker :lane))
++                 (process-id proc)))
++        (anvil-worker--maybe-schedule-warmup worker)
++        proc)))))
+ 
+ (defun anvil-worker--map-pool (fn)
+   "Apply FN to every worker plist in the pool, in lane order."

@@ -171,6 +171,15 @@ let
             sha256 = "sha256-z/wYZKkXyE3/7d6MSZ4RJpXcxBGyMdrx6Ndid7Yz5iw=";
             # date = 2026-07-04T05:05:52+00:00;
           };
+          # Worker-pool fixes (see the patch header): probe the cached
+          # socket path in the stale check instead of re-expanding its
+          # basename against the current `server-socket-dir', tell
+          # spawned -Q workers where to bind their sockets, and add a
+          # spawn grace period so slow-starting workers are not doubled
+          # by same-named twin daemons.  lisp/anvil-ext.el in dot-emacs
+          # carries equivalent advice overlays for sessions running an
+          # unpatched build.
+          patches = [ ./emacs/patches/anvil-worker-pool.patch ];
         }).overrideAttrs
           (attrs: {
             # anvil-server-commands.el resolves anvil-stdio.sh (the MCP stdio
