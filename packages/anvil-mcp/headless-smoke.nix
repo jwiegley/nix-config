@@ -31,6 +31,42 @@ runCommand "anvil-mcp-dedicated-smoke"
     install -d -m 0700 "$HOME" "$HOME/org"
     printf '%s\n' '* Headless Anvil' 'headlessorgneedle headlesssemanticneedle'       >"$HOME/org/smoke.org"
 
+    install -d -m 0700 "$HOME/login-bin"
+    printf '%s\n' '#!/bin/sh' 'printf login-shell-command' \
+      >"$HOME/login-bin/anvil-login-shell"
+    chmod 0700 "$HOME/login-bin/anvil-login-shell"
+    printf '%s\n' 'export PATH="$HOME/login-bin:$PATH"' \
+      >"$HOME/.bash_profile"
+
+    install -d -m 0700 \
+      "$HOME/direnv-a" "$HOME/direnv-a/bin" \
+      "$HOME/direnv-b" "$HOME/direnv-b/bin" \
+      "$HOME/direnv-plain"
+    printf '%s\n' \
+      'export ANVIL_DIRENV_MARKER=project-a' \
+      'PATH_add "$PWD/bin"' \
+      >"$HOME/direnv-a/.envrc"
+    printf '%s\n' \
+      'export ANVIL_DIRENV_MARKER=project-b' \
+      'PATH_add "$PWD/bin"' \
+      >"$HOME/direnv-b/.envrc"
+    printf '%s\n' '#!/bin/sh' 'printf project-a-command' \
+      >"$HOME/direnv-a/bin/anvil-direnv-a"
+    printf '%s\n' '#!/bin/sh' 'printf project-b-command' \
+      >"$HOME/direnv-b/bin/anvil-direnv-b"
+    chmod 0700 \
+      "$HOME/direnv-a/bin/anvil-direnv-a" \
+      "$HOME/direnv-b/bin/anvil-direnv-b"
+    touch "$HOME/direnv-a/visited.txt" "$HOME/direnv-b/visited.txt"
+    (
+      cd "$HOME/direnv-a"
+      ${anvilMcp.direnv}/bin/direnv allow >/dev/null
+    )
+    (
+      cd "$HOME/direnv-b"
+      ${anvilMcp.direnv}/bin/direnv allow >/dev/null
+    )
+
     worker_pool_test_tmp="$smoke_root/worker-pool-test-tmp"
     install -d -m 0700 "$worker_pool_test_tmp"
     TMPDIR="$worker_pool_test_tmp" \

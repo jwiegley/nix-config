@@ -3,9 +3,11 @@
   callPackage,
   coreutils,
   diffutils,
+  direnv,
   emacs ? null,
   emacs30-nox ? emacs,
   emacsPackages ? null,
+  emacsPackagesFor,
   fetchFromGitHub,
   findutils,
   gawk,
@@ -234,6 +236,28 @@ let
     ) "the dedicated Anvil backend requires an Emacs package";
     if stdenv.isDarwin then emacs else emacs30-nox;
 
+  dedicatedEmacsPackages = emacsPackagesFor dedicatedEmacs;
+  dedicatedRuntimeEmacs = dedicatedEmacsPackages.emacsWithPackages (epkgs: [
+    epkgs.direnv
+    epkgs.exec-path-from-shell
+  ]);
+
+  dedicatedLockedRuntimeInputs = [
+    bash
+    coreutils
+    dedicatedRuntimeEmacs
+    diffutils
+    direnv
+    findutils
+    gawk
+    git
+    gnugrep
+    gnused
+    pythonWithPyMuPDF
+    ripgrep
+  ];
+  dedicatedRequiredExecPath = map (package: "${lib.getBin package}/bin") dedicatedLockedRuntimeInputs;
+
   dedicatedAnvil =
     if stdenv.isDarwin then
       assert lib.assertMsg (
@@ -323,6 +347,107 @@ let
     }
   '';
 
+  dedicatedEnvironmentInit = writeText "anvil-headless-environment-init.el" ''
+    ;;; anvil-headless-environment-init.el --- Project environment support
+
+    (require 'exec-path-from-shell)
+    (require 'direnv)
+
+    (defconst anvil-headless--emacs-bin-directory
+      (file-name-as-directory "${dedicatedRuntimeEmacs}/bin")
+      "Directory containing the dedicated Emacs and emacsclient binaries.")
+
+    (defconst anvil-headless--direnv-executable
+      "${direnv}/bin/direnv"
+      "Pinned direnv executable for the dedicated Anvil environment.")
+
+    ;; Append only known packaged tools after login/project paths.  Do not
+    ;; resurrect arbitrary PATH entries inherited from launchd or a caller.
+    (defconst anvil-headless--required-exec-path
+      '(${lib.concatMapStringsSep "\n        " builtins.toJSON dedicatedRequiredExecPath}))
+
+    (defun anvil-headless--restore-required-exec-path (&rest _args)
+      "Keep dedicated Emacs and packaged tools reachable after PATH changes."
+      (setq exec-path
+            (cons anvil-headless--emacs-bin-directory
+                  (delete anvil-headless--emacs-bin-directory exec-path)))
+      (dolist (directory anvil-headless--required-exec-path)
+        (unless (member directory exec-path)
+          (setq exec-path (append exec-path (list directory)))))
+      (let ((path (mapconcat #'identity exec-path
+                             path-separator)))
+        (setenv "PATH" path)
+        (when (boundp 'eshell-path-env)
+          (if (local-variable-p 'process-environment)
+              (setq-local eshell-path-env path)
+            (setq-default eshell-path-env path)))))
+
+    ;; Workers inherit the root daemon's already-imported login environment.
+    ;; Avoid launching four more interactive login shells during staggered
+    ;; worker startup.
+    (unless (equal (getenv "ANVIL_EMACS_WORKER") "1")
+      (exec-path-from-shell-initialize))
+    (anvil-headless--restore-required-exec-path)
+    (setq direnv--executable anvil-headless--direnv-executable)
+    (advice-add 'direnv-update-directory-environment
+                :after #'anvil-headless--restore-required-exec-path)
+
+    (defun anvil-headless--direnv-update-current-buffer ()
+      "Give a visited local file its own direnv-derived process environment."
+      (when-let ((directory (direnv--directory)))
+        (unless (file-remote-p directory)
+          (unless (local-variable-p 'process-environment)
+            (setq-local process-environment
+                        (copy-sequence
+                         (default-value 'process-environment))))
+          (unless (local-variable-p 'exec-path)
+            (setq-local exec-path
+                        (copy-sequence (default-value 'exec-path))))
+          (unless (local-variable-p 'direnv--active-directory)
+            (setq-local direnv--active-directory nil))
+          (unless (equal direnv--active-directory directory)
+            (direnv-update-directory-environment directory)))))
+
+    ;; `change-major-mode-after-body-hook' runs before the mode's own hook,
+    ;; so Eglot, Flycheck, and similar mode-hook clients see the project env.
+    ;; Refresh again before file-local variables and after visiting as guards
+    ;; against modes that change `default-directory'.
+    (add-hook 'change-major-mode-after-body-hook
+              #'anvil-headless--direnv-update-current-buffer)
+    (add-hook 'before-hack-local-variables-hook
+              #'anvil-headless--direnv-update-current-buffer)
+    (add-hook 'find-file-hook
+              #'anvil-headless--direnv-update-current-buffer)
+
+    (defun anvil-headless--direnv-wrap-shell-command (command cwd)
+      "Run COMMAND in CWD's direnv without changing the daemon environment."
+      (if (or (null cwd)
+              (file-remote-p cwd)
+              (not (file-directory-p (expand-file-name cwd))))
+          command
+        (let ((directory (file-truename (expand-file-name cwd))))
+          (mapconcat
+           #'shell-quote-argument
+           (list anvil-headless--direnv-executable
+                 "exec"
+                 directory
+                 shell-file-name
+                 shell-command-switch
+                 command)
+           " "))))
+
+    (defun anvil-headless--direnv-around-host-run
+        (original command coding cwd timeout)
+      "Apply CWD's direnv only to the child spawned by ORIGINAL."
+      (funcall original
+               (anvil-headless--direnv-wrap-shell-command command cwd)
+               coding cwd timeout))
+
+    (with-eval-after-load 'anvil-host
+      (advice-add 'anvil-host--run
+                  :around #'anvil-headless--direnv-around-host-run))
+  '';
+
   dedicatedWorkerInit = writeText "anvil-headless-worker-init.el" ''
     ;;; anvil-headless-worker-init.el --- Isolated Anvil worker
 
@@ -361,6 +486,7 @@ let
         (startup-redirect-eln-cache
          (expand-file-name "eln-cache/" state-dir))))
 
+    (load "${dedicatedEnvironmentInit}" nil nil t)
     (add-to-list 'load-path "${dedicatedAnvil}/share/emacs/site-lisp")
     (add-to-list 'load-path "${dedicatedAnvilIde}/share/emacs/site-lisp")
     (require 'anvil-server)
@@ -389,7 +515,8 @@ let
       # process-scoped and therefore not inherited by workers; close their
       # descriptor copies as a backstop and to avoid needless retention.
       exec 8<&- 9<&-
-      exec "${dedicatedEmacs}/bin/emacs" "$@"
+      export ANVIL_EMACS_WORKER=1
+      exec "${dedicatedRuntimeEmacs}/bin/emacs" "$@"
     '';
   };
 
@@ -499,6 +626,7 @@ let
         (startup-redirect-eln-cache
          (expand-file-name "eln-cache/" state-dir))))
 
+    (load "${dedicatedEnvironmentInit}" nil nil t)
     (require 'anvil)
     (require 'anvil-server-commands)
 
@@ -596,19 +724,8 @@ let
 
   dedicatedLockedStage = writeShellApplication {
     name = "anvil-headless-emacs-locked";
-    runtimeInputs = [
-      bash
-      coreutils
-      dedicatedEmacs
-      diffutils
-      findutils
-      gawk
-      git
-      gnugrep
-      gnused
-      pythonWithPyMuPDF
-      ripgrep
-    ];
+    runtimeInputs = dedicatedLockedRuntimeInputs;
+    inheritPath = false;
     text = ''
       ${privateDirectoryFunctions}
 
@@ -647,7 +764,7 @@ let
       export TMP="$TMPDIR"
       export TEMP="$TMPDIR"
 
-      exec "${dedicatedEmacs}/bin/emacs"         --quick         --fg-daemon=server         --directory "${dedicatedAnvil}/share/emacs/site-lisp"         --directory "${dedicatedAnvilIde}/share/emacs/site-lisp"         --load "${dedicatedInit}"
+      exec "${dedicatedRuntimeEmacs}/bin/emacs"         --quick         --fg-daemon=server         --directory "${dedicatedAnvil}/share/emacs/site-lisp"         --directory "${dedicatedAnvilIde}/share/emacs/site-lisp"         --load "${dedicatedInit}"
     '';
   };
 
@@ -702,7 +819,7 @@ let
     runtimeInputs = [
       bash
       coreutils
-      dedicatedEmacs
+      dedicatedRuntimeEmacs
       gawk
       gnugrep
       gnused
@@ -793,7 +910,7 @@ let
             echo "anvil-mcp: Emacs socket must be owned by uid $(id -u) (found $socket_owner): $socket" >&2
             exit 77
           fi
-          if "${dedicatedEmacs}/bin/emacsclient" -s "$socket" -e t >/dev/null 2>&1; then
+          if "${dedicatedRuntimeEmacs}/bin/emacsclient" -s "$socket" -e t >/dev/null 2>&1; then
             ready=1
             break
           fi
@@ -827,7 +944,10 @@ let
         dedicatedAnvilIde
         dedicatedDaemon
         dedicatedEmacs
+        dedicatedEnvironmentInit
         dedicatedInit
+        dedicatedRuntimeEmacs
+        direnv
         dedicatedWorkerEmacs
         dedicatedWorkerInit
         workerNames

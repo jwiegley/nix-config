@@ -211,6 +211,154 @@ def assert_tool_success(response: dict[str, object], needle: str) -> None:
         raise AssertionError(f"tool result did not contain {needle!r}: {result}")
 
 
+def decode_eval_json(response: dict[str, object]) -> object:
+    """Decode JSON returned through the printed emacs-eval string."""
+    result = response["result"]
+    if not isinstance(result, dict) or result.get("isError") is True:
+        raise AssertionError(f"emacs-eval failed: {result}")
+    content = result.get("content")
+    if not isinstance(content, list) or len(content) != 1:
+        raise AssertionError(f"unexpected emacs-eval content: {result}")
+    text = content[0].get("text")
+    if not isinstance(text, str):
+        raise AssertionError(f"emacs-eval text is missing: {result}")
+    try:
+        return json.loads(json.loads(text))
+    except (TypeError, json.JSONDecodeError) as error:
+        raise AssertionError(f"invalid emacs-eval JSON: {text}") from error
+
+
+def resolved_path(value: object, label: str) -> Path:
+    """Return a normalized path or fail with a focused assertion."""
+    if not isinstance(value, str):
+        raise AssertionError(f"{label} is not a path: {value!r}")
+    return Path(value).resolve()
+
+
+def direnv_buffer_expression() -> str:
+    """Return Elisp that proves visited buffers retain isolated environments."""
+    project_a = Path.home() / "direnv-a"
+    project_b = Path.home() / "direnv-b"
+    file_a = project_a / "visited.txt"
+    file_b = project_b / "visited.txt"
+    return f"""
+(progn
+  (require 'json)
+  (setq anvil-headless-smoke--mode-marker :false
+        anvil-headless-smoke--mode-executable :false)
+  (defun anvil-headless-smoke--mode-probe ()
+    (when (string-suffix-p "/direnv-a/visited.txt"
+                           (or buffer-file-name ""))
+      (setq anvil-headless-smoke--mode-marker
+            (or (getenv "ANVIL_DIRENV_MARKER") :false)
+            anvil-headless-smoke--mode-executable
+            (or (executable-find "anvil-direnv-a") :false))))
+  (add-hook 'text-mode-hook #'anvil-headless-smoke--mode-probe)
+  (unwind-protect
+      (let* ((buffer-a (find-file-noselect {json.dumps(str(file_a))}))
+             (buffer-b (find-file-noselect {json.dumps(str(file_b))}))
+             (row-a
+              (with-current-buffer buffer-a
+                (vector
+                 (or (getenv "ANVIL_DIRENV_MARKER") :false)
+                 (or (executable-find "anvil-direnv-a") :false)
+                 (or (executable-find "anvil-direnv-b") :false)
+                 (or (executable-find "emacsclient") :false)
+                 (and (local-variable-p 'process-environment) t)
+                 (and (local-variable-p 'exec-path) t)
+                 direnv--active-directory)))
+             (row-b
+              (with-current-buffer buffer-b
+                (vector
+                 (or (getenv "ANVIL_DIRENV_MARKER") :false)
+                 (or (executable-find "anvil-direnv-b") :false)
+                 (or (executable-find "anvil-direnv-a") :false)
+                 (or (executable-find "emacsclient") :false)
+                 (and (local-variable-p 'process-environment) t)
+                 (and (local-variable-p 'exec-path) t)
+                 direnv--active-directory)))
+             (default-marker
+              (let ((process-environment
+                     (default-value 'process-environment)))
+                (or (getenv "ANVIL_DIRENV_MARKER") :false))))
+        (json-serialize
+         (vector row-a row-b default-marker
+                 (and (featurep 'direnv) t)
+                 (and (featurep 'exec-path-from-shell) t)
+                 (vector anvil-headless-smoke--mode-marker
+                         anvil-headless-smoke--mode-executable)
+                 (or (executable-find "anvil-login-shell") :false))))
+    (remove-hook 'text-mode-hook #'anvil-headless-smoke--mode-probe)
+    (fmakunbound 'anvil-headless-smoke--mode-probe)))
+""".strip()
+
+
+def assert_direnv_buffers(response: dict[str, object]) -> None:
+    """Validate per-buffer direnv isolation and required executable paths."""
+    data = decode_eval_json(response)
+    if not isinstance(data, list) or len(data) != 7:
+        raise AssertionError(f"unexpected direnv buffer result: {data}")
+    (
+        row_a,
+        row_b,
+        default_marker,
+        has_direnv,
+        has_shell_import,
+        mode_probe,
+        login_path,
+    ) = data
+    project_a = Path.home() / "direnv-a"
+    project_b = Path.home() / "direnv-b"
+    expected_rows = (
+        (
+            row_a,
+            "project-a",
+            project_a / "bin" / "anvil-direnv-a",
+            project_a,
+        ),
+        (
+            row_b,
+            "project-b",
+            project_b / "bin" / "anvil-direnv-b",
+            project_b,
+        ),
+    )
+    for row, marker, executable, project in expected_rows:
+        if not isinstance(row, list) or len(row) != 7:
+            raise AssertionError(f"malformed direnv row: {row}")
+        if (
+            row[0] != marker
+            or resolved_path(row[1], f"{project} executable") != executable.resolve()
+            or row[2] is not False
+        ):
+            raise AssertionError(f"wrong project environment for {project}: {row}")
+        if not isinstance(row[3], str) or Path(row[3]).name != "emacsclient":
+            raise AssertionError(f"emacsclient disappeared from PATH: {row}")
+        if row[4:6] != [True, True]:
+            raise AssertionError(f"environment is not buffer-local: {row}")
+        if resolved_path(row[6], f"{project} active directory") != project.resolve():
+            raise AssertionError(f"direnv active directory mismatch: {row}")
+    if default_marker is not False:
+        raise AssertionError(f"project environment leaked globally: {data}")
+    if [has_direnv, has_shell_import] != [True, True]:
+        raise AssertionError(f"environment packages were not loaded: {data}")
+    expected_mode_executable = project_a / "bin" / "anvil-direnv-a"
+    if (
+        not isinstance(mode_probe, list)
+        or len(mode_probe) != 2
+        or mode_probe[0] != "project-a"
+        or resolved_path(mode_probe[1], "mode-hook executable")
+        != expected_mode_executable.resolve()
+    ):
+        raise AssertionError(f"mode hook ran before direnv activation: {mode_probe}")
+    expected_login_path = Path.home() / "login-bin" / "anvil-login-shell"
+    if (
+        resolved_path(login_path, "root login-shell executable")
+        != expected_login_path.resolve()
+    ):
+        raise AssertionError(f"root did not import the login-shell PATH: {login_path}")
+
+
 def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
     """Return Elisp that validates and snapshots every worker lane."""
     worker_expression = r"""
@@ -244,7 +392,22 @@ def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
                 t :false)
             (if (and (file-exists-p "/dev/fd/9")
                      (file-equal-p "/dev/fd/9" state-lock))
-                t :false)))
+                t :false)
+            (and (featurep 'direnv) t)
+            (and (featurep 'exec-path-from-shell) t)
+            (with-current-buffer
+                (find-file-noselect
+                 (expand-file-name "direnv-a/visited.txt" (getenv "HOME")))
+              (or (getenv "ANVIL_DIRENV_MARKER") :false))
+            (with-current-buffer
+                (find-file-noselect
+                 (expand-file-name "direnv-a/visited.txt" (getenv "HOME")))
+              (or (executable-find "anvil-direnv-a") :false))
+            (with-current-buffer
+                (find-file-noselect
+                 (expand-file-name "direnv-a/visited.txt" (getenv "HOME")))
+              (or (executable-find "emacsclient") :false))
+            (or (executable-find "anvil-login-shell") :false)))
   (error (list "snapshot-error" (error-message-string err))))
 """.strip()
     specs = " ".join(f"({lane} {json.dumps(name)})" for lane, name in worker_specs)
@@ -307,7 +470,7 @@ def assert_worker_snapshot(
     runtime_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "workers"
     socket_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "emacs"
     for snapshot, (_, name) in zip(snapshots, worker_specs, strict=True):
-        if not isinstance(snapshot, list) or len(snapshot) != 13:
+        if not isinstance(snapshot, list) or len(snapshot) != 19:
             raise AssertionError(f"malformed {name} snapshot: {snapshot}")
         if snapshot[0] != name:
             raise AssertionError(f"worker dispatch mismatch: {snapshot[0]} != {name}")
@@ -350,10 +513,32 @@ def assert_worker_snapshot(
                 f"{name} schema cache escaped isolation: "
                 f"{snapshot[10]} != {expected_schema}"
             )
-        if snapshot[11:] != [False, False]:
+        if snapshot[11:13] != [False, False]:
             raise AssertionError(
-                f"{name} retained daemon lock-file descriptors: {snapshot[11:]}"
+                f"{name} retained daemon lock-file descriptors: {snapshot[11:13]}"
             )
+        if snapshot[13:15] != [True, True]:
+            raise AssertionError(
+                f"{name} did not load direnv environment support: {snapshot[13:15]}"
+            )
+        expected_project_command = Path.home() / "direnv-a" / "bin" / "anvil-direnv-a"
+        if (
+            snapshot[15] != "project-a"
+            or resolved_path(snapshot[16], f"{name} project executable")
+            != expected_project_command.resolve()
+        ):
+            raise AssertionError(f"{name} did not inherit the project env: {snapshot}")
+        if (
+            not isinstance(snapshot[17], str)
+            or Path(snapshot[17]).name != "emacsclient"
+        ):
+            raise AssertionError(f"{name} lost emacsclient from PATH: {snapshot}")
+        expected_login_command = Path.home() / "login-bin" / "anvil-login-shell"
+        if (
+            resolved_path(snapshot[18], f"{name} login-shell executable")
+            != expected_login_command.resolve()
+        ):
+            raise AssertionError(f"{name} did not inherit the login PATH: {snapshot}")
 
 
 def main() -> None:
@@ -372,6 +557,10 @@ def main() -> None:
         "clientInfo": {"name": "nix-headless-smoke", "version": "1"},
     }
     snapshot_expression = worker_snapshot_expression(worker_specs)
+    buffer_environment_expression = direnv_buffer_expression()
+    project_a = Path.home() / "direnv-a"
+    project_b = Path.home() / "direnv-b"
+    project_plain = Path.home() / "direnv-plain"
 
     main_responses = run_transcript(
         launcher,
@@ -430,6 +619,60 @@ def main() -> None:
                     "arguments": {"expression": snapshot_expression},
                 },
             ),
+            request(
+                9,
+                "tools/call",
+                {
+                    "name": "emacs-eval",
+                    "arguments": {"expression": buffer_environment_expression},
+                },
+            ),
+            request(
+                10,
+                "tools/call",
+                {
+                    "name": "shell-run",
+                    "arguments": {
+                        "cmd": (
+                            "printf '%s:%s' \"$ANVIL_DIRENV_MARKER\" "
+                            '"$(anvil-direnv-a)"'
+                        ),
+                        "filter": "",
+                        "cwd": str(project_a),
+                    },
+                },
+            ),
+            request(
+                11,
+                "tools/call",
+                {
+                    "name": "shell-run",
+                    "arguments": {
+                        "cmd": (
+                            "printf '%s:%s' \"$ANVIL_DIRENV_MARKER\" "
+                            '"$(anvil-direnv-b)"'
+                        ),
+                        "filter": "",
+                        "cwd": str(project_b),
+                    },
+                },
+            ),
+            request(
+                12,
+                "tools/call",
+                {
+                    "name": "shell-run",
+                    "arguments": {
+                        "cmd": (
+                            "printf '%s:%s' "
+                            '"${ANVIL_DIRENV_MARKER-unset}" '
+                            '"$(command -v anvil-direnv-a || printf missing)"'
+                        ),
+                        "filter": "",
+                        "cwd": str(project_plain),
+                    },
+                },
+            ),
         ],
     )
     main_names = tool_names(response_by_id(main_responses, 2))
@@ -445,6 +688,14 @@ def main() -> None:
     response_by_id(main_responses, 6)
     assert_tool_success(response_by_id(main_responses, 7), "headlesssemanticneedle")
     assert_worker_snapshot(response_by_id(main_responses, 8), "host-a", worker_specs)
+    assert_direnv_buffers(response_by_id(main_responses, 9))
+    assert_tool_success(
+        response_by_id(main_responses, 10), "project-a:project-a-command"
+    )
+    assert_tool_success(
+        response_by_id(main_responses, 11), "project-b:project-b-command"
+    )
+    assert_tool_success(response_by_id(main_responses, 12), "unset:missing")
 
     secondary_responses = run_transcript(
         launcher,
