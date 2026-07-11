@@ -1,6 +1,6 @@
 Fix the anvil worker pool killing its own workers.
 
-Three related fixes to anvil-worker.el:
+Five related fixes to anvil-worker.el:
 
 1. anvil-worker--server-file-stale-p probed the socket by re-expanding
    its basename against the *current* server-socket-dir.  The pool caches
@@ -17,8 +17,16 @@ Three related fixes to anvil-worker.el:
    timer and doubled by a same-named twin daemon; twins fight over one
    socket path.  Add anvil-worker-spawn-grace (45s) suppression.
 
---- a/anvil-worker.el	2026-07-11 10:31:14.607673942 -0700
-+++ b/anvil-worker.el	2026-07-11 10:32:41.277172409 -0700
+4. Once that grace suppresses a health-timer respawn, the worker's
+   recorded state is already dead.  Retry spawning on every dead tick,
+   while continuing to log only state transitions; the grace period is
+   the retry rate limiter.
+
+5. An intentional pool kill/reset must not inherit stale spawn-grace
+   timestamps.  Clear the grace table when killing the pool.
+
+--- a/anvil-worker.el
++++ b/anvil-worker.el
 @@ -162,6 +162,15 @@
    :type 'integer
    :group 'anvil-worker)
@@ -99,7 +107,22 @@ Three related fixes to anvil-worker.el:
  
  (defun anvil-worker--worker-alive-p (worker)
    "Return non-nil if WORKER plist is reachable.
-@@ -673,37 +709,56 @@
+@@ -658,10 +694,10 @@
+   "Fast, non-blocking alive check for WORKER.
+ Unlike `anvil-worker--worker-alive-p', this never spawns an
+ `emacsclient' probe — it only checks file existence plus cheap
+-liveness (`server-running-p' for local sockets, PID parsing for
+-TCP auth files).  Returns non-nil when the server file exists and
+-still points at a live server.  Deletes stale server files as a side
+-effect."
++liveness (a direct connect probe on the cached socket path for
++local sockets, PID parsing for TCP auth files).  Returns non-nil
++when the server file exists and still points at a live server.
++Deletes stale server files as a side effect."
+   (let ((server-file (plist-get worker :server-file)))
+     (cond
+      ((not (file-exists-p server-file)) nil)
+@@ -673,37 +709,57 @@
        nil)
       (t t))))
  
@@ -110,8 +133,8 @@ Three related fixes to anvil-worker.el:
 +
  (defun anvil-worker--spawn-worker (worker)
    "Spawn WORKER if not already alive.  Returns the start-process or nil.
- Uses `anvil-worker--quick-alive-p' (file + PID only, no probe)
- so the spawn path never blocks on `accept-process-output'.
+-Uses `anvil-worker--quick-alive-p' (file + PID only, no probe)
+-so the spawn path never blocks on `accept-process-output'.
 -Batch-lane spawns also schedule a deferred warmup so common
 -libraries are loaded before the first real dispatch."
 -  (if (anvil-worker--quick-alive-p worker)
@@ -131,6 +154,9 @@ Three related fixes to anvil-worker.el:
 -                  "-Q"
 -                  "-l" init-file)))
 -      (set-process-query-on-exit-flag proc nil)
++Uses `anvil-worker--quick-alive-p' (a direct local-socket connect
++or TCP PID lookup, with no `emacsclient' subprocess) so the spawn
++path never blocks on `accept-process-output'.
 +Respawns within `anvil-worker-spawn-grace' seconds of the last
 +spawn are suppressed so a worker still loading its init file is
 +not doubled by a same-named twin daemon.  Batch-lane spawns also
@@ -140,11 +166,6 @@ Three related fixes to anvil-worker.el:
 +         (last (gethash name anvil-worker--spawn-times)))
 +    (cond
 +     ((anvil-worker--quick-alive-p worker)
-+      (anvil-worker--log
-+       'spawn-skipped
-+       (format "%s already alive" name))
-+      nil)
-+     ((and last (< (- (float-time) last) anvil-worker-spawn-grace))
        (anvil-worker--log
 -       'spawn
 -       (format "%s lane=%s pid=%d"
@@ -153,6 +174,11 @@ Three related fixes to anvil-worker.el:
 -               (process-id proc)))
 -      (anvil-worker--maybe-schedule-warmup worker)
 -      proc)))
++       'spawn-skipped
++       (format "%s already alive" name))
++      nil)
++     ((and last (< (- (float-time) last) anvil-worker-spawn-grace))
++      (anvil-worker--log
 +       'spawn-suppressed
 +       (format "%s spawned %.1fs ago, within %ds grace"
 +               name (- (float-time) last) anvil-worker-spawn-grace))
@@ -182,3 +208,31 @@ Three related fixes to anvil-worker.el:
  
  (defun anvil-worker--map-pool (fn)
    "Apply FN to every worker plist in the pool, in lane order."
+@@ -737,6 +793,7 @@
+ (defun anvil-worker-kill ()
+   "Kill every worker daemon in every lane."
+   (interactive)
++  (clrhash anvil-worker--spawn-times)
+   (anvil-worker--map-pool
+    (lambda (worker)
+      (when (anvil-worker--worker-alive-p worker)
+@@ -985,5 +1042,5 @@
+ (defun anvil-worker--health-check-one (worker)
+-  "Inspect WORKER and respawn it if it transitioned to dead."
++  "Inspect WORKER and make a rate-limited respawn attempt while dead."
+   (let ((alive (anvil-worker--worker-alive-p worker))
+         (last  (plist-get worker :last-state))
+         (name  (plist-get worker :name))
+@@ -1003,8 +1060,10 @@
+       (anvil-worker--spawn-worker worker))
+      ((and (eq last 'dead) alive)
+       (anvil-worker--log 'recovered (format "%s lane=%s" name lane))
+-      (plist-put worker :last-state 'alive)))))
++      (plist-put worker :last-state 'alive))
++     ((and (eq last 'dead) (not alive))
++      (anvil-worker--spawn-worker worker)))))
+-
++
+ (defun anvil-worker--health-check ()
+   "Sweep every lane and respawn dead workers.  Logs only transitions."
+   (unless anvil-worker--pool

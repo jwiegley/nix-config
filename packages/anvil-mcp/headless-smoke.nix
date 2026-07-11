@@ -30,6 +30,18 @@ runCommand "anvil-mcp-dedicated-smoke"
     export ANVIL_EMACS_STATE_ROOT="$smoke_root/state"
     install -d -m 0700 "$HOME" "$HOME/org"
     printf '%s\n' '* Headless Anvil' 'headlessorgneedle headlesssemanticneedle'       >"$HOME/org/smoke.org"
+
+    worker_pool_test_tmp="$smoke_root/worker-pool-test-tmp"
+    install -d -m 0700 "$worker_pool_test_tmp"
+    TMPDIR="$worker_pool_test_tmp" \
+      TMP="$worker_pool_test_tmp" \
+      TEMP="$worker_pool_test_tmp" \
+      ${anvilMcp.dedicatedEmacs}/bin/emacs --quick --batch \
+      --directory "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp" \
+      --load ${./worker-pool-test.el} \
+      --funcall ert-run-tests-batch-and-exit
+    rm -rf "$worker_pool_test_tmp"
+
     install -d -m 0700 \
       "$ANVIL_EMACS_RUNTIME_ROOT" \
       "$ANVIL_EMACS_RUNTIME_ROOT/host-b" \
@@ -42,10 +54,13 @@ runCommand "anvil-mcp-dedicated-smoke"
     pid_a=
     pid_b=
     pid_restart=
+    pid_crash=
+    pid_crash_restart=
+    crash_child_pid=
     cleanup() {
       status=$?
       set +e
-      for host in host-a host-b; do
+      for host in host-a host-b host-crash; do
         socket="$ANVIL_EMACS_RUNTIME_ROOT/$host/emacs/server"
         if [ -S "$socket" ]; then
           ${anvilMcp.dedicatedEmacs}/bin/emacsclient             -s "$socket" -e '(kill-emacs)' >/dev/null 2>&1 || true
@@ -54,9 +69,14 @@ runCommand "anvil-mcp-dedicated-smoke"
       if [ -n "$pid_a" ]; then kill "$pid_a" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_b" ]; then kill "$pid_b" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_restart" ]; then kill "$pid_restart" >/dev/null 2>&1 || true; fi
+      if [ -n "$pid_crash" ]; then kill "$pid_crash" >/dev/null 2>&1 || true; fi
+      if [ -n "$pid_crash_restart" ]; then kill "$pid_crash_restart" >/dev/null 2>&1 || true; fi
+      if [ -n "$crash_child_pid" ]; then kill "$crash_child_pid" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_a" ]; then wait "$pid_a" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_b" ]; then wait "$pid_b" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_restart" ]; then wait "$pid_restart" >/dev/null 2>&1 || true; fi
+      if [ -n "$pid_crash" ]; then wait "$pid_crash" >/dev/null 2>&1 || true; fi
+      if [ -n "$pid_crash_restart" ]; then wait "$pid_crash_restart" >/dev/null 2>&1 || true; fi
       rm -rf "$smoke_root"
       return "$status"
     }
@@ -423,6 +443,139 @@ runCommand "anvil-mcp-dedicated-smoke"
       exit 1
     fi
     pid_restart=
+
+    # A tool-spawned child may inherit fds 8/9 and outlive a crashed daemon,
+    # but POSIX process locks themselves must not survive the fork.  Verify the
+    # descriptors identify the exact runtime and state lock files, SIGKILL the
+    # service-root Emacs, then prove a fresh daemon can start while that child
+    # is alive.
+    crash_child_script="$smoke_root/lock-child.py"
+    printf '%s\n' \
+      'import os' \
+      'import stat' \
+      'import sys' \
+      'import time' \
+      'for fd, lock_path in ((8, sys.argv[3]), (9, sys.argv[4])):' \
+      '    fd_info = os.fstat(fd)' \
+      '    path_info = os.stat(lock_path, follow_symlinks=False)' \
+      '    if not stat.S_ISREG(fd_info.st_mode):' \
+      '        raise SystemExit(70)' \
+      '    if (fd_info.st_dev, fd_info.st_ino) != (path_info.st_dev, path_info.st_ino):' \
+      '        raise SystemExit(70)' \
+      'with open(sys.argv[1], "w", encoding="utf-8") as pid_file:' \
+      '    pid_file.write(f"{os.getpid()}\n")' \
+      'open(sys.argv[2], "w", encoding="utf-8").close()' \
+      'time.sleep(30)' \
+      >"$crash_child_script"
+
+    ANVIL_EMACS_HOST=host-crash \
+      ${anvilMcp}/bin/anvil-headless-emacs \
+      >"$smoke_root/host-crash.log" 2>&1 &
+    pid_crash=$!
+    crash_socket="$ANVIL_EMACS_RUNTIME_ROOT/host-crash/emacs/server"
+    crash_ready=
+    for _ in $(seq 1 120); do
+      if [ -S "$crash_socket" ] \
+        && ${anvilMcp.dedicatedEmacs}/bin/emacsclient \
+          -s "$crash_socket" -e t >/dev/null 2>&1; then
+        crash_ready=1
+        break
+      fi
+      if ! kill -0 "$pid_crash" 2>/dev/null; then
+        break
+      fi
+      sleep 0.25
+    done
+    if [ -z "$crash_ready" ]; then
+      echo "crash-test daemon failed to become ready" >&2
+      cat "$smoke_root/host-crash.log" >&2
+      exit 1
+    fi
+
+    crash_child_pid_file="$smoke_root/lock-child.pid"
+    crash_child_ready_file="$smoke_root/lock-child.ready"
+    if ! ${anvilMcp.dedicatedEmacs}/bin/emacsclient -s "$crash_socket" \
+      -e "(make-process :name \"anvil-lock-child\" :command '(\"${python3}/bin/python\" \"$crash_child_script\" \"$crash_child_pid_file\" \"$crash_child_ready_file\" \"$ANVIL_EMACS_RUNTIME_ROOT/host-crash/.anvil-headless-emacs.lock\" \"$ANVIL_EMACS_STATE_ROOT/host-crash/.anvil-headless-emacs.lock\") :connection-type 'pipe :noquery t)" \
+      >/dev/null; then
+      echo "failed to start the crash-test child" >&2
+      exit 1
+    fi
+    for _ in $(seq 1 100); do
+      if [ -f "$crash_child_ready_file" ]; then
+        break
+      fi
+      sleep 0.02
+    done
+    if [ ! -f "$crash_child_ready_file" ] || [ ! -f "$crash_child_pid_file" ]; then
+      echo "crash-test child did not inherit the exact lock-file descriptors" >&2
+      exit 1
+    fi
+    crash_child_pid=$(cat "$crash_child_pid_file")
+    case "$crash_child_pid" in
+      "" | *[!0-9]*)
+        echo "invalid crash-test child PID: $crash_child_pid" >&2
+        exit 1
+        ;;
+    esac
+    if ! kill -0 "$crash_child_pid" 2>/dev/null; then
+      echo "crash-test child is not alive before daemon crash" >&2
+      exit 1
+    fi
+
+    actual_emacs_pid=$(${anvilMcp.dedicatedEmacs}/bin/emacsclient \
+      -s "$crash_socket" -e '(emacs-pid)')
+    if [ "$actual_emacs_pid" != "$pid_crash" ]; then
+      echo "service PID $pid_crash is not root Emacs PID $actual_emacs_pid" >&2
+      exit 1
+    fi
+    kill -KILL "$actual_emacs_pid"
+    wait "$pid_crash" >/dev/null 2>&1 || true
+    pid_crash=
+    if ! kill -0 "$crash_child_pid" 2>/dev/null; then
+      echo "tool child did not survive the root-daemon crash" >&2
+      exit 1
+    fi
+
+    ANVIL_EMACS_HOST=host-crash \
+      ${anvilMcp}/bin/anvil-headless-emacs \
+      >"$smoke_root/host-crash-restart.log" 2>&1 &
+    pid_crash_restart=$!
+    crash_restart_ready=
+    for _ in $(seq 1 120); do
+      if [ -S "$crash_socket" ] \
+        && ${anvilMcp.dedicatedEmacs}/bin/emacsclient \
+          -s "$crash_socket" -e t >/dev/null 2>&1; then
+        crash_restart_ready=1
+        break
+      fi
+      if ! kill -0 "$pid_crash_restart" 2>/dev/null; then
+        break
+      fi
+      sleep 0.25
+    done
+    if [ -z "$crash_restart_ready" ]; then
+      echo "fresh daemon failed to reacquire locks after SIGKILL" >&2
+      cat "$smoke_root/host-crash-restart.log" >&2
+      exit 1
+    fi
+    if ! kill -0 "$crash_child_pid" 2>/dev/null; then
+      echo "tool child died before lock reacquisition completed" >&2
+      exit 1
+    fi
+    kill "$crash_child_pid" >/dev/null 2>&1 || true
+    crash_child_pid=
+
+    if ! ${anvilMcp.dedicatedEmacs}/bin/emacsclient -s "$crash_socket" \
+      -e "(progn (run-at-time 0.1 nil #'kill-emacs) t)" >/dev/null; then
+      echo "failed to stop the crash-test replacement daemon" >&2
+      exit 1
+    fi
+    if ! wait "$pid_crash_restart"; then
+      echo "crash-test replacement daemon exited unsuccessfully" >&2
+      cat "$smoke_root/host-crash-restart.log" >&2
+      exit 1
+    fi
+    pid_crash_restart=
 
     touch "$out"
   ''

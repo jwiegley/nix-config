@@ -8,7 +8,6 @@
   emacsPackages ? null,
   fetchFromGitHub,
   findutils,
-  flock,
   gawk,
   git,
   gnugrep,
@@ -245,6 +244,7 @@ let
       (callPackage ../../overlays/emacs/builder.nix {
         emacs = dedicatedEmacs;
         name = "anvil";
+        patches = [ ../../overlays/emacs/patches/anvil-worker-pool.patch ];
         src = currentAnvilSrc;
       }).overrideAttrs
         (attrs: {
@@ -385,17 +385,86 @@ let
   dedicatedWorkerEmacs = writeShellApplication {
     name = "anvil-worker-emacs";
     text = ''
+      # Fds 8/9 carry the root daemon's POSIX lock files.  POSIX locks are
+      # process-scoped and therefore not inherited by workers; close their
+      # descriptor copies as a backstop and to avoid needless retention.
       exec 8<&- 9<&-
-      for fd in 8 9; do
-        if [ -e "/dev/fd/$fd" ]; then
-          echo "anvil-mcp: worker inherited daemon lock descriptor $fd" >&2
-          exit 70
-        fi
-      done
       exec "${dedicatedEmacs}/bin/emacs" "$@"
     '';
   };
 
+  dedicatedLockLauncher = writeText "anvil-lock-launcher.py" ''
+    import errno
+    import fcntl
+    import os
+    import stat
+    import sys
+
+    EXIT_SOFTWARE = 70
+    EXIT_CONFIG = 77
+    LOCK_NAME = ".anvil-headless-emacs.lock"
+
+
+    def fail(message, status=EXIT_SOFTWARE):
+        print(f"anvil-mcp: {message}", file=sys.stderr)
+        raise SystemExit(status)
+
+
+    def acquire_lock(directory, target_fd, kind, conflict_status):
+        lock_path = os.path.join(directory, LOCK_NAME)
+        flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            source_fd = os.open(lock_path, flags, 0o600)
+        except OSError as error:
+            fail(f"cannot open {kind} lock file {lock_path}: {error}", EXIT_CONFIG)
+
+        info = os.fstat(source_fd)
+        if not stat.S_ISREG(info.st_mode):
+            os.close(source_fd)
+            fail(f"{kind} lock must be a regular file: {lock_path}", EXIT_CONFIG)
+        if info.st_uid != os.getuid():
+            os.close(source_fd)
+            fail(f"{kind} lock must be owned by uid {os.getuid()}: {lock_path}", EXIT_CONFIG)
+        os.fchmod(source_fd, 0o600)
+
+        # POSIX process locks are released when this process closes any fd for
+        # the file.  Move the fd and close the original before taking the lock.
+        if source_fd == target_fd:
+            os.set_inheritable(target_fd, True)
+        else:
+            os.dup2(source_fd, target_fd, inheritable=True)
+            os.close(source_fd)
+
+        try:
+            fcntl.lockf(target_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as error:
+            if error.errno in (errno.EACCES, errno.EAGAIN):
+                fail(
+                    f"another dedicated daemon holds the {kind} lock: {directory}",
+                    conflict_status,
+                )
+            fail(f"cannot acquire {kind} lock {lock_path}: {error}")
+        return lock_path
+
+
+    if len(sys.argv) != 5:
+        fail(
+            "usage: anvil-lock-launcher.py RUNTIME_DIR STATE_DIR "
+            "CONFLICT_STATUS LOCKED_STAGE"
+        )
+
+    runtime_dir, state_dir, status_text, locked_stage = sys.argv[1:]
+    try:
+        lock_conflict_status = int(status_text)
+    except ValueError:
+        fail(f"invalid lock conflict status: {status_text}")
+    if lock_conflict_status not in (0, 75):
+        fail(f"invalid lock conflict status: {lock_conflict_status}")
+
+    acquire_lock(runtime_dir, 8, "runtime", lock_conflict_status)
+    acquire_lock(state_dir, 9, "state", lock_conflict_status)
+    os.execv(locked_stage, [locked_stage, runtime_dir, state_dir])
+  '';
   dedicatedInit = writeText "anvil-headless-init.el" ''
     (let* ((runtime-dir (getenv "XDG_RUNTIME_DIR"))
            (state-dir (getenv "ANVIL_EMACS_STATE_DIR"))
@@ -525,22 +594,70 @@ let
        (kill-emacs 70)))
   '';
 
-  dedicatedDaemon = writeShellApplication {
-    name = "anvil-headless-emacs";
+  dedicatedLockedStage = writeShellApplication {
+    name = "anvil-headless-emacs-locked";
     runtimeInputs = [
       bash
       coreutils
       dedicatedEmacs
       diffutils
       findutils
-      flock
       gawk
       git
       gnugrep
       gnused
-      hostname
       pythonWithPyMuPDF
       ripgrep
+    ];
+    text = ''
+      ${privateDirectoryFunctions}
+
+      if [ "$#" -ne 2 ]; then
+        echo "anvil-mcp: locked stage requires runtime and state directories" >&2
+        exit 70
+      fi
+      runtime_dir="$1"
+      state_dir="$2"
+
+      # Fds 8/9 carry POSIX process locks acquired by the launcher.  They
+      # survive this exec chain into Emacs, but the locks themselves are not
+      # inherited by forked tool or worker processes.
+      rm -rf -- "$runtime_dir/tmp" "$runtime_dir/workers"
+
+      private_directory "$runtime_dir/emacs" "Emacs socket directory"
+      private_directory "$runtime_dir/tmp" "host temporary directory"
+      private_directory "$runtime_dir/workers" "worker runtime root"
+      private_directory "$state_dir/cache" "host cache directory"
+      private_directory "$state_dir/eln-cache" "host native-comp cache"
+      private_directory "$state_dir/semantic" "host semantic state directory"
+      private_directory "$state_dir/workers" "worker state root"
+      for worker in ${workerNamesShell}; do
+        private_directory "$runtime_dir/workers/$worker" "$worker runtime directory"
+        private_directory "$runtime_dir/workers/$worker/tmp" "$worker temporary directory"
+        private_directory "$state_dir/workers/$worker" "$worker state directory"
+        private_directory "$state_dir/workers/$worker/cache" "$worker cache directory"
+        private_directory "$state_dir/workers/$worker/eln-cache" "$worker native-comp cache"
+        private_directory "$state_dir/workers/$worker/server" "$worker server directory"
+      done
+
+      export XDG_RUNTIME_DIR="$runtime_dir"
+      export XDG_CACHE_HOME="$state_dir/cache"
+      export ANVIL_EMACS_STATE_DIR="$state_dir"
+      export TMPDIR="$runtime_dir/tmp"
+      export TMP="$TMPDIR"
+      export TEMP="$TMPDIR"
+
+      exec "${dedicatedEmacs}/bin/emacs"         --quick         --fg-daemon=server         --directory "${dedicatedAnvil}/share/emacs/site-lisp"         --directory "${dedicatedAnvilIde}/share/emacs/site-lisp"         --load "${dedicatedInit}"
+    '';
+  };
+
+  dedicatedDaemon = writeShellApplication {
+    name = "anvil-headless-emacs";
+    runtimeInputs = [
+      bash
+      coreutils
+      hostname
+      python3
     ];
     text = ''
       ${privateDirectoryFunctions}
@@ -572,45 +689,14 @@ let
       private_directory "$runtime_dir" "host runtime directory"
       private_directory "$state_root" "state root"
       private_directory "$state_dir" "host state directory"
-      exec 8<"$runtime_dir"
-      if ! flock -n 8; then
-        echo "anvil-mcp: another dedicated daemon holds the runtime lock: $runtime_dir" >&2
-        exit "$lock_conflict_status"
-      fi
-      exec 9<"$state_dir"
-      if ! flock -n 9; then
-        echo "anvil-mcp: another dedicated daemon holds the state lock: $state_dir" >&2
-        exit "$lock_conflict_status"
-      fi
-      rm -rf -- "$runtime_dir/tmp" "$runtime_dir/workers"
 
-      private_directory "$runtime_dir/emacs" "Emacs socket directory"
-      private_directory "$runtime_dir/tmp" "host temporary directory"
-      private_directory "$runtime_dir/workers" "worker runtime root"
-      private_directory "$state_dir/cache" "host cache directory"
-      private_directory "$state_dir/eln-cache" "host native-comp cache"
-      private_directory "$state_dir/semantic" "host semantic state directory"
-      private_directory "$state_dir/workers" "worker state root"
-      for worker in ${workerNamesShell}; do
-        private_directory "$runtime_dir/workers/$worker" "$worker runtime directory"
-        private_directory "$runtime_dir/workers/$worker/tmp" "$worker temporary directory"
-        private_directory "$state_dir/workers/$worker" "$worker state directory"
-        private_directory "$state_dir/workers/$worker/cache" "$worker cache directory"
-        private_directory "$state_dir/workers/$worker/eln-cache" "$worker native-comp cache"
-        private_directory "$state_dir/workers/$worker/server" "$worker server directory"
-      done
-
-      export XDG_RUNTIME_DIR="$runtime_dir"
-      export XDG_CACHE_HOME="$state_dir/cache"
-      export ANVIL_EMACS_STATE_DIR="$state_dir"
-      export TMPDIR="$runtime_dir/tmp"
-      export TMP="$TMPDIR"
-      export TEMP="$TMPDIR"
-
-      exec "${dedicatedEmacs}/bin/emacs"         --quick         --fg-daemon=server         --directory "${dedicatedAnvil}/share/emacs/site-lisp"         --directory "${dedicatedAnvilIde}/share/emacs/site-lisp"         --load "${dedicatedInit}"
+      # Keep the service PID unchanged across Python, the locked shell stage,
+      # and foreground Emacs so POSIX locks are released atomically on exit.
+      exec "${python3}/bin/python3" -I -S "${dedicatedLockLauncher}" \
+        "$runtime_dir" "$state_dir" "$lock_conflict_status" \
+        "${dedicatedLockedStage}/bin/anvil-headless-emacs-locked"
     '';
   };
-
   dedicatedLauncher = writeShellApplication {
     name = "anvil-mcp";
     runtimeInputs = [

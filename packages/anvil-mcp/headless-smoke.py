@@ -215,7 +215,13 @@ def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
     """Return Elisp that validates and snapshots every worker lane."""
     worker_expression = r"""
 (condition-case err
-    (let ((name (format "%s" (daemonp))))
+    (let* ((name (format "%s" (daemonp)))
+           (runtime-lock
+            (expand-file-name ".anvil-headless-emacs.lock"
+                              (getenv "XDG_RUNTIME_DIR")))
+           (state-lock
+            (expand-file-name ".anvil-headless-emacs.lock"
+                              (getenv "ANVIL_EMACS_STATE_DIR"))))
       (with-temp-file (expand-file-name "worker.pid" user-emacs-directory)
         (insert (number-to-string (emacs-pid))))
       (list name
@@ -231,10 +237,14 @@ def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
                 server-auth-dir
               server-socket-dir)
             anvil-server-schema-cache-file
-            ;; The wrapper closes the directory-backed lock descriptors.
-            ;; Emacs may reuse these numbers for sockets during startup.
-            (if (file-directory-p "/dev/fd/8") t :false)
-            (if (file-directory-p "/dev/fd/9") t :false)))
+            ;; Emacs may reuse these descriptor numbers after the wrapper
+            ;; closes them, so compare file identity rather than existence.
+            (if (and (file-exists-p "/dev/fd/8")
+                     (file-equal-p "/dev/fd/8" runtime-lock))
+                t :false)
+            (if (and (file-exists-p "/dev/fd/9")
+                     (file-equal-p "/dev/fd/9" state-lock))
+                t :false)))
   (error (list "snapshot-error" (error-message-string err))))
 """.strip()
     specs = " ".join(f"({lane} {json.dumps(name)})" for lane, name in worker_specs)
@@ -342,7 +352,7 @@ def assert_worker_snapshot(
             )
         if snapshot[11:] != [False, False]:
             raise AssertionError(
-                f"{name} inherited daemon lock descriptors: {snapshot[11:]}"
+                f"{name} retained daemon lock-file descriptors: {snapshot[11:]}"
             )
 
 
