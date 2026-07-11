@@ -1,5 +1,6 @@
 {
   anvilMcp,
+  bash,
   coreutils,
   findutils,
   lib,
@@ -28,6 +29,8 @@ runCommand "anvil-mcp-dedicated-smoke"
     export HOME="$smoke_root/home"
     export ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/runtime"
     export ANVIL_EMACS_STATE_ROOT="$smoke_root/state"
+    export ANVIL_EMACS_LOCK_REFRESH_SECONDS=0.2
+    export SHELL="${bash}/bin/bash"
     install -d -m 0700 "$HOME" "$HOME/org"
     printf '%s\n' '* Headless Anvil' 'headlessorgneedle headlesssemanticneedle'       >"$HOME/org/smoke.org"
 
@@ -35,12 +38,16 @@ runCommand "anvil-mcp-dedicated-smoke"
     printf '%s\n' '#!/bin/sh' 'printf login-shell-command' \
       >"$HOME/login-bin/anvil-login-shell"
     chmod 0700 "$HOME/login-bin/anvil-login-shell"
-    printf '%s\n' 'export PATH="$HOME/login-bin:$PATH"' \
+    printf '%s\n' \
+      'case "$-" in *i*) exit 42 ;; esac' \
+      'export PATH="$HOME/login-bin:$PATH"' \
       >"$HOME/.bash_profile"
 
     install -d -m 0700 \
       "$HOME/direnv-a" "$HOME/direnv-a/bin" \
       "$HOME/direnv-b" "$HOME/direnv-b/bin" \
+      "$HOME/direnv-c" "$HOME/direnv-c/bin" \
+      "$HOME/direnv-blocked" \
       "$HOME/direnv-plain"
     printf '%s\n' \
       'export ANVIL_DIRENV_MARKER=project-a' \
@@ -50,20 +57,36 @@ runCommand "anvil-mcp-dedicated-smoke"
       'export ANVIL_DIRENV_MARKER=project-b' \
       'PATH_add "$PWD/bin"' \
       >"$HOME/direnv-b/.envrc"
+    printf '%s\n' \
+      'export ANVIL_DIRENV_MARKER=project-c' \
+      'export PATH="$PWD/bin"' \
+      >"$HOME/direnv-c/.envrc"
+    printf '%s\n' 'export ANVIL_DIRENV_MARKER=blocked' \
+      >"$HOME/direnv-blocked/.envrc"
     printf '%s\n' '#!/bin/sh' 'printf project-a-command' \
       >"$HOME/direnv-a/bin/anvil-direnv-a"
     printf '%s\n' '#!/bin/sh' 'printf project-b-command' \
       >"$HOME/direnv-b/bin/anvil-direnv-b"
+    printf '%s\n' '#!/bin/sh' 'printf project-c-command' \
+      >"$HOME/direnv-c/bin/anvil-direnv-c"
     chmod 0700 \
       "$HOME/direnv-a/bin/anvil-direnv-a" \
-      "$HOME/direnv-b/bin/anvil-direnv-b"
-    touch "$HOME/direnv-a/visited.txt" "$HOME/direnv-b/visited.txt"
+      "$HOME/direnv-b/bin/anvil-direnv-b" \
+      "$HOME/direnv-c/bin/anvil-direnv-c"
+    touch \
+      "$HOME/direnv-a/visited.txt" \
+      "$HOME/direnv-b/visited.txt" \
+      "$HOME/direnv-c/visited.txt"
     (
       cd "$HOME/direnv-a"
       ${anvilMcp.direnv}/bin/direnv allow >/dev/null
     )
     (
       cd "$HOME/direnv-b"
+      ${anvilMcp.direnv}/bin/direnv allow >/dev/null
+    )
+    (
+      cd "$HOME/direnv-c"
       ${anvilMcp.direnv}/bin/direnv allow >/dev/null
     )
 
@@ -93,6 +116,8 @@ runCommand "anvil-mcp-dedicated-smoke"
     pid_crash=
     pid_crash_restart=
     crash_child_pid=
+    classic_lock_pid=
+    tamper_watchdog=
     cleanup() {
       status=$?
       set +e
@@ -108,11 +133,14 @@ runCommand "anvil-mcp-dedicated-smoke"
       if [ -n "$pid_crash" ]; then kill "$pid_crash" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_crash_restart" ]; then kill "$pid_crash_restart" >/dev/null 2>&1 || true; fi
       if [ -n "$crash_child_pid" ]; then kill "$crash_child_pid" >/dev/null 2>&1 || true; fi
+      if [ -n "$classic_lock_pid" ]; then kill "$classic_lock_pid" >/dev/null 2>&1 || true; fi
+      if [ -n "$tamper_watchdog" ]; then kill "$tamper_watchdog" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_a" ]; then wait "$pid_a" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_b" ]; then wait "$pid_b" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_restart" ]; then wait "$pid_restart" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_crash" ]; then wait "$pid_crash" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_crash_restart" ]; then wait "$pid_crash_restart" >/dev/null 2>&1 || true; fi
+      if [ -n "$tamper_watchdog" ]; then wait "$tamper_watchdog" >/dev/null 2>&1 || true; fi
       rm -rf "$smoke_root"
       return "$status"
     }
@@ -124,7 +152,18 @@ runCommand "anvil-mcp-dedicated-smoke"
       wanted_status="$3"
       shift 3
       log="$smoke_root/$label.log"
-      if ${coreutils}/bin/timeout 5 "$@" >"$log" 2>&1; then
+      timeout_seconds="''${ANVIL_SMOKE_ASSERT_TIMEOUT:-5}"
+      case "$timeout_seconds" in
+        "" | *[!0-9]*)
+          echo "invalid smoke assertion timeout: $timeout_seconds" >&2
+          return 1
+          ;;
+      esac
+      if [ "$timeout_seconds" -le 0 ]; then
+        echo "invalid smoke assertion timeout: $timeout_seconds" >&2
+        return 1
+      fi
+      if ${coreutils}/bin/timeout "$timeout_seconds" "$@" >"$log" 2>&1; then
         echo "$label unexpectedly succeeded" >&2
         cat "$log" >&2
         return 1
@@ -154,6 +193,19 @@ runCommand "anvil-mcp-dedicated-smoke"
       shift 2
       assert_status "$label" "$expected" 77 "$@"
     }
+
+    bad_home="$smoke_root/bad-login-home"
+    install -d -m 0700 \
+      "$bad_home" "$bad_home/org" \
+      "$smoke_root/bad-login-runtime" "$smoke_root/bad-login-state"
+    printf '%s\n' 'exit 1' >"$bad_home/.bash_profile"
+    ANVIL_SMOKE_ASSERT_TIMEOUT=20 \
+      assert_status login-shell-failure "headless startup failed" 70 \
+      env HOME="$bad_home" SHELL="${bash}/bin/bash" \
+      ANVIL_EMACS_HOST=bad-login \
+      ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/bad-login-runtime" \
+      ANVIL_EMACS_STATE_ROOT="$smoke_root/bad-login-state" \
+      ${anvilMcp}/bin/anvil-headless-emacs
 
     install -d -m 0700 "$smoke_root/runtime-link-target"
     ln -s "$smoke_root/runtime-link-target" "$smoke_root/runtime-link"
@@ -197,6 +249,93 @@ runCommand "anvil-mcp-dedicated-smoke"
       ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/state-test-runtime" \
       ANVIL_EMACS_STATE_ROOT=${anvilMcp} \
       ${anvilMcp}/bin/anvil-headless-emacs
+
+    install -d -m 0700 \
+      "$smoke_root/hostile-lock-runtime" \
+      "$smoke_root/hostile-lock-runtime/hostile" \
+      "$smoke_root/hostile-lock-state"
+    touch "$smoke_root/lock-symlink-target"
+    ln -s "$smoke_root/lock-symlink-target" \
+      "$smoke_root/hostile-lock-runtime/hostile/.anvil-headless-emacs.lock"
+    assert_rejected runtime-lock-symlink "cannot open runtime lock file" \
+      env ANVIL_EMACS_HOST=hostile \
+      ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/hostile-lock-runtime" \
+      ANVIL_EMACS_STATE_ROOT="$smoke_root/hostile-lock-state" \
+      ${anvilMcp}/bin/anvil-headless-emacs
+
+    install -d -m 0700 \
+      "$smoke_root/nonregular-lock-runtime" \
+      "$smoke_root/nonregular-lock-runtime/hostile" \
+      "$smoke_root/nonregular-lock-state"
+    mkfifo "$smoke_root/nonregular-lock-runtime/hostile/.anvil-headless-emacs.lock"
+    assert_rejected runtime-lock-nonregular "lock must be a regular file" \
+      env ANVIL_EMACS_HOST=hostile \
+      ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/nonregular-lock-runtime" \
+      ANVIL_EMACS_STATE_ROOT="$smoke_root/nonregular-lock-state" \
+      ${anvilMcp}/bin/anvil-headless-emacs
+
+    install -d -m 0700 \
+      "$smoke_root/refresh-runtime" \
+      "$smoke_root/refresh-state"
+    for invalid_refresh in nan inf; do
+      assert_rejected "lock-refresh-$invalid_refresh" "must be positive and finite" \
+        env ANVIL_EMACS_HOST=hostile \
+        ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/refresh-runtime" \
+        ANVIL_EMACS_STATE_ROOT="$smoke_root/refresh-state" \
+        ANVIL_EMACS_LOCK_REFRESH_SECONDS="$invalid_refresh" \
+        ${anvilMcp}/bin/anvil-headless-emacs
+    done
+
+    install -d -m 0700 "$smoke_root/identical-roots"
+    assert_rejected identical-roots "runtime and state directories must be distinct" \
+      env ANVIL_EMACS_HOST=hostile \
+      ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/identical-roots" \
+      ANVIL_EMACS_STATE_ROOT="$smoke_root/identical-roots" \
+      ${anvilMcp}/bin/anvil-headless-emacs
+
+    install -d -m 0700 \
+      "$smoke_root/exec-runtime" "$smoke_root/exec-state"
+    assert_status locked-stage-exec "cannot exec locked stage" 70 \
+      ${python3}/bin/python3 -I -S ${anvilMcp.dedicatedLockLauncher} \
+      "$smoke_root/exec-runtime" "$smoke_root/exec-state" 75 \
+      "$smoke_root/nonexistent-locked-stage"
+
+    classic_lock_script="$smoke_root/classic-lock.py"
+    printf '%s\n' \
+      'import fcntl' \
+      'import os' \
+      'import sys' \
+      'import time' \
+      'fd = os.open(sys.argv[1], os.O_RDWR | os.O_CREAT, 0o600)' \
+      'fcntl.lockf(fd, fcntl.LOCK_EX)' \
+      'open(sys.argv[2], "w", encoding="utf-8").close()' \
+      'time.sleep(30)' \
+      >"$classic_lock_script"
+    install -d -m 0700 \
+      "$smoke_root/classic-runtime" \
+      "$smoke_root/classic-runtime/legacy" \
+      "$smoke_root/classic-state"
+    classic_ready="$smoke_root/classic-lock.ready"
+    ${python3}/bin/python3 "$classic_lock_script" \
+      "$smoke_root/classic-runtime/legacy/.anvil-headless-emacs.lock" \
+      "$classic_ready" &
+    classic_lock_pid=$!
+    for _ in $(seq 1 100); do
+      if [ -e "$classic_ready" ]; then break; fi
+      sleep 0.02
+    done
+    if [ ! -e "$classic_ready" ]; then
+      echo "classic POSIX lock holder did not become ready" >&2
+      exit 1
+    fi
+    assert_status mixed-classic-ofd-lock "holds the runtime lock" 75 \
+      env ANVIL_EMACS_HOST=legacy \
+      ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/classic-runtime" \
+      ANVIL_EMACS_STATE_ROOT="$smoke_root/classic-state" \
+      ${anvilMcp}/bin/anvil-headless-emacs
+    kill "$classic_lock_pid"
+    wait "$classic_lock_pid" >/dev/null 2>&1 || true
+    classic_lock_pid=
 
     install -d -m 0700 \
       "$smoke_root/nested-runtime" \
@@ -244,6 +383,24 @@ runCommand "anvil-mcp-dedicated-smoke"
 
     if [ ! -S "$ANVIL_EMACS_RUNTIME_ROOT/host-a/emacs/server" ]       || [ ! -S "$ANVIL_EMACS_RUNTIME_ROOT/host-b/emacs/server" ]; then
       cat "$smoke_root/host-a.log" "$smoke_root/host-b.log" >&2
+      exit 1
+    fi
+
+    runtime_lock="$ANVIL_EMACS_RUNTIME_ROOT/host-a/.anvil-headless-emacs.lock"
+    state_lock="$ANVIL_EMACS_STATE_ROOT/host-a/.anvil-headless-emacs.lock"
+    touch -t 197001010000 "$runtime_lock" "$state_lock"
+    locks_refreshed=
+    for _ in $(seq 1 50); do
+      if [ -n "$(find "$runtime_lock" "$state_lock" -mmin -1 -print -quit)" ] \
+        && [ "$(find "$runtime_lock" "$state_lock" -mmin -1 | wc -l | tr -d '[:space:]')" -eq 2 ]; then
+        locks_refreshed=1
+        break
+      fi
+      sleep 0.1
+    done
+    if [ -z "$locks_refreshed" ]; then
+      echo "lock heartbeat did not refresh aged lock files" >&2
+      stat "$runtime_lock" "$state_lock" >&2 || true
       exit 1
     fi
 
@@ -467,24 +624,100 @@ runCommand "anvil-mcp-dedicated-smoke"
       cat "$smoke_root/host-a-restart.log" >&2
       exit 1
     fi
+
+    for lock_path in "$runtime_lock" "$state_lock"; do
+      old_identity=$(stat -c '%d:%i' -- "$lock_path")
+      replacement="$lock_path.replacement"
+      touch "$replacement"
+      chmod 0600 "$replacement"
+      mv -f -- "$replacement" "$lock_path"
+      new_identity=$(stat -c '%d:%i' -- "$lock_path")
+      if [ "$old_identity" = "$new_identity" ]; then
+        echo "lock-path replacement did not change inode: $lock_path" >&2
+        exit 1
+      fi
+    done
+
+    tamper_done="$smoke_root/lock-tamper.done"
+    (
+      sleep 5
+      if [ ! -e "$tamper_done" ]; then
+        kill -TERM "$pid_restart" >/dev/null 2>&1 || true
+      fi
+    ) &
+    tamper_watchdog=$!
+    if wait "$pid_restart"; then
+      tamper_status=0
+    else
+      tamper_status=$?
+    fi
+    touch "$tamper_done"
+    kill "$tamper_watchdog" >/dev/null 2>&1 || true
+    wait "$tamper_watchdog" >/dev/null 2>&1 || true
+    tamper_watchdog=
+    pid_restart=
+    if [ "$tamper_status" -ne 137 ]; then
+      echo "lock heartbeat exited root with status $tamper_status instead of SIGKILL" >&2
+      cat "$smoke_root/host-a-restart.log" >&2
+      exit 1
+    fi
+    if ${anvilMcp.dedicatedEmacs}/bin/emacsclient -s "$restart_socket" \
+      -e t >/dev/null 2>&1; then
+      echo "replaced-lock root remained connectable after heartbeat failure" >&2
+      exit 1
+    fi
+
+    ANVIL_EMACS_HOST=host-a \
+      ${anvilMcp}/bin/anvil-headless-emacs \
+      >"$smoke_root/host-a-lock-recovery.log" 2>&1 &
+    pid_restart=$!
+    restart_ready=
+    for _ in $(seq 1 120); do
+      if [ -S "$restart_socket" ] \
+        && ${anvilMcp.dedicatedEmacs}/bin/emacsclient \
+          -s "$restart_socket" -e t >/dev/null 2>&1; then
+        restart_ready=1
+        break
+      fi
+      if ! kill -0 "$pid_restart" 2>/dev/null; then
+        break
+      fi
+      sleep 0.25
+    done
+    if [ -z "$restart_ready" ]; then
+      echo "daemon failed to reacquire locks after lock-path replacement" >&2
+      cat "$smoke_root/host-a-lock-recovery.log" >&2
+      exit 1
+    fi
+    actual_restart_pid=$(${anvilMcp.dedicatedEmacs}/bin/emacsclient \
+      -s "$restart_socket" -e '(emacs-pid)')
+    if [ "$actual_restart_pid" != "$pid_restart" ]; then
+      echo "replacement service PID $pid_restart is not root Emacs PID $actual_restart_pid" >&2
+      exit 1
+    fi
+    assert_status replaced-lock-exclusive "holds the runtime lock" 75 \
+      env ANVIL_EMACS_HOST=host-a \
+      ANVIL_EMACS_RUNTIME_ROOT="$ANVIL_EMACS_RUNTIME_ROOT" \
+      ANVIL_EMACS_STATE_ROOT="$ANVIL_EMACS_STATE_ROOT" \
+      ${anvilMcp}/bin/anvil-headless-emacs
+
     if ! ${anvilMcp.dedicatedEmacs}/bin/emacsclient -s "$restart_socket" \
       -e "(progn (run-at-time 0.1 nil #'kill-emacs) t)" >/dev/null; then
       echo "failed to stop restarted daemon" >&2
-      cat "$smoke_root/host-a-restart.log" >&2
+      cat "$smoke_root/host-a-lock-recovery.log" >&2
       exit 1
     fi
     if ! wait "$pid_restart"; then
       echo "restarted daemon exited unsuccessfully" >&2
-      cat "$smoke_root/host-a-restart.log" >&2
+      cat "$smoke_root/host-a-lock-recovery.log" >&2
       exit 1
     fi
     pid_restart=
 
-    # A tool-spawned child may inherit fds 8/9 and outlive a crashed daemon,
-    # but POSIX process locks themselves must not survive the fork.  Verify the
-    # descriptors identify the exact runtime and state lock files, SIGKILL the
-    # service-root Emacs, then prove a fresh daemon can start while that child
-    # is alive.
+    # An arbitrary root-spawned child can inherit the OFD lock descriptions.
+    # Verify this fails closed after a root SIGKILL: a replacement is rejected
+    # until the child exits.  Dedicated workers and shell tools are separately
+    # required to close these descriptors before running user work.
     crash_child_script="$smoke_root/lock-child.py"
     printf '%s\n' \
       'import os' \
@@ -571,6 +804,22 @@ runCommand "anvil-mcp-dedicated-smoke"
       echo "tool child did not survive the root-daemon crash" >&2
       exit 1
     fi
+    assert_status inherited-ofd-lock "holds the runtime lock" 75 \
+      env ANVIL_EMACS_HOST=host-crash \
+      ANVIL_EMACS_RUNTIME_ROOT="$ANVIL_EMACS_RUNTIME_ROOT" \
+      ANVIL_EMACS_STATE_ROOT="$ANVIL_EMACS_STATE_ROOT" \
+      ${anvilMcp}/bin/anvil-headless-emacs
+
+    kill "$crash_child_pid"
+    for _ in $(seq 1 100); do
+      if ! kill -0 "$crash_child_pid" 2>/dev/null; then break; fi
+      sleep 0.02
+    done
+    if kill -0 "$crash_child_pid" 2>/dev/null; then
+      echo "crash-test child did not release inherited OFD locks" >&2
+      exit 1
+    fi
+    crash_child_pid=
 
     ANVIL_EMACS_HOST=host-crash \
       ${anvilMcp}/bin/anvil-headless-emacs \
@@ -594,13 +843,6 @@ runCommand "anvil-mcp-dedicated-smoke"
       cat "$smoke_root/host-crash-restart.log" >&2
       exit 1
     fi
-    if ! kill -0 "$crash_child_pid" 2>/dev/null; then
-      echo "tool child died before lock reacquisition completed" >&2
-      exit 1
-    fi
-    kill "$crash_child_pid" >/dev/null 2>&1 || true
-    crash_child_pid=
-
     if ! ${anvilMcp.dedicatedEmacs}/bin/emacsclient -s "$crash_socket" \
       -e "(progn (run-at-time 0.1 nil #'kill-emacs) t)" >/dev/null; then
       echo "failed to stop the crash-test replacement daemon" >&2

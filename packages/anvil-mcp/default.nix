@@ -256,7 +256,9 @@ let
     pythonWithPyMuPDF
     ripgrep
   ];
-  dedicatedRequiredExecPath = map (package: "${lib.getBin package}/bin") dedicatedLockedRuntimeInputs;
+  dedicatedRequiredExecPath = map (package: "${lib.getBin package}/bin") (
+    lib.remove dedicatedRuntimeEmacs dedicatedLockedRuntimeInputs
+  );
 
   dedicatedAnvil =
     if stdenv.isDarwin then
@@ -347,11 +349,28 @@ let
     }
   '';
 
+  dedicatedChildShell = writeShellApplication {
+    name = "anvil-headless-child-shell";
+    text = ''
+      real_shell="''${ANVIL_HEADLESS_REAL_SHELL:-}"
+      if [ -z "$real_shell" ]; then
+        echo "anvil-mcp: missing real shell for dedicated child" >&2
+        exit 70
+      fi
+      exec 8<&- 9<&-
+      unset ANVIL_HEADLESS_REAL_SHELL
+      exec "$real_shell" "$@"
+    '';
+  };
+
   dedicatedEnvironmentInit = writeText "anvil-headless-environment-init.el" ''
-    ;;; anvil-headless-environment-init.el --- Project environment support
+    ;;; anvil-headless-environment-init.el --- Project environment support -*- lexical-binding: t; -*-
 
     (require 'exec-path-from-shell)
     (require 'direnv)
+    (require 'json)
+    (require 'seq)
+    (setq direnv-always-show-summary nil)
 
     (defconst anvil-headless--emacs-bin-directory
       (file-name-as-directory "${dedicatedRuntimeEmacs}/bin")
@@ -368,9 +387,17 @@ let
 
     (defun anvil-headless--restore-required-exec-path (&rest _args)
       "Keep dedicated Emacs and packaged tools reachable after PATH changes."
-      (setq exec-path
-            (cons anvil-headless--emacs-bin-directory
-                  (delete anvil-headless--emacs-bin-directory exec-path)))
+      (let* ((normalized
+              (delete-dups
+               (mapcar
+                (lambda (directory)
+                  (if (stringp directory)
+                      (directory-file-name directory)
+                    directory))
+                exec-path)))
+             (emacs-bin
+              (directory-file-name anvil-headless--emacs-bin-directory)))
+        (setq exec-path (cons emacs-bin (delete emacs-bin normalized))))
       (dolist (directory anvil-headless--required-exec-path)
         (unless (member directory exec-path)
           (setq exec-path (append exec-path (list directory)))))
@@ -386,6 +413,7 @@ let
     ;; Avoid launching four more interactive login shells during staggered
     ;; worker startup.
     (unless (equal (getenv "ANVIL_EMACS_WORKER") "1")
+      (setq exec-path-from-shell-arguments '("-l"))
       (exec-path-from-shell-initialize))
     (anvil-headless--restore-required-exec-path)
     (setq direnv--executable anvil-headless--direnv-executable)
@@ -419,29 +447,40 @@ let
     (add-hook 'find-file-hook
               #'anvil-headless--direnv-update-current-buffer)
 
-    (defun anvil-headless--direnv-wrap-shell-command (command cwd)
-      "Run COMMAND in CWD's direnv without changing the daemon environment."
-      (if (or (null cwd)
-              (file-remote-p cwd)
-              (not (file-directory-p (expand-file-name cwd))))
-          command
-        (let ((directory (file-truename (expand-file-name cwd))))
-          (mapconcat
-           #'shell-quote-argument
-           (list anvil-headless--direnv-executable
-                 "exec"
-                 directory
-                 shell-file-name
-                 shell-command-switch
-                 command)
-           " "))))
-
     (defun anvil-headless--direnv-around-host-run
         (original command coding cwd timeout)
-      "Apply CWD's direnv only to the child spawned by ORIGINAL."
-      (funcall original
-               (anvil-headless--direnv-wrap-shell-command command cwd)
-               coding cwd timeout))
+      "Run ORIGINAL with CWD's buffer-local direnv and closed lock fds."
+      (let ((real-shell (or shell-file-name "/bin/sh"))
+            (child-process-environment (copy-sequence process-environment))
+            (child-exec-path (copy-sequence exec-path)))
+        (when (and cwd
+                   (not (file-remote-p cwd))
+                   (file-directory-p (expand-file-name cwd)))
+          (with-temp-buffer
+            (setq default-directory
+                  (file-name-as-directory
+                   (file-truename (expand-file-name cwd))))
+            (setq-local process-environment child-process-environment)
+            (setq-local exec-path child-exec-path)
+            (setq-local direnv--active-directory nil)
+            ;; direnv.el treats a blocked or missing envrc as an unchanged
+            ;; environment.  Keep its diagnostic chatter out of MCP results.
+            (condition-case nil
+                (let ((inhibit-message t)
+                      (message-log-max nil)
+                      (direnv-always-show-summary nil))
+                  (direnv-update-directory-environment default-directory))
+              (error nil))
+            (anvil-headless--restore-required-exec-path)
+            (setq child-process-environment
+                  (copy-sequence process-environment)
+                  child-exec-path (copy-sequence exec-path))))
+        (let ((process-environment child-process-environment)
+              (exec-path child-exec-path)
+              (shell-file-name
+               "${dedicatedChildShell}/bin/anvil-headless-child-shell"))
+          (setenv "ANVIL_HEADLESS_REAL_SHELL" real-shell)
+          (funcall original command coding cwd timeout))))
 
     (with-eval-after-load 'anvil-host
       (advice-add 'anvil-host--run
@@ -449,7 +488,7 @@ let
   '';
 
   dedicatedWorkerInit = writeText "anvil-headless-worker-init.el" ''
-    ;;; anvil-headless-worker-init.el --- Isolated Anvil worker
+    ;;; anvil-headless-worker-init.el --- Isolated Anvil worker -*- lexical-binding: t; -*-
 
     (let* ((expected-worker-names '${workerNamesElisp})
            (runtime-root (getenv "XDG_RUNTIME_DIR"))
@@ -506,14 +545,15 @@ let
       :description "Evaluate Emacs Lisp on the isolated Anvil worker"
       :server-id "worker")
     (anvil-server-start)
+    (with-temp-file (expand-file-name "worker.pid" user-emacs-directory)
+      (insert (number-to-string (emacs-pid)) "\n"))
   '';
 
   dedicatedWorkerEmacs = writeShellApplication {
     name = "anvil-worker-emacs";
     text = ''
-      # Fds 8/9 carry the root daemon's POSIX lock files.  POSIX locks are
-      # process-scoped and therefore not inherited by workers; close their
-      # descriptor copies as a backstop and to avoid needless retention.
+      # Fds 8/9 carry the root daemon's OFD locks.  Close the inherited
+      # descriptions before worker Emacs starts so only the root owns them.
       exec 8<&- 9<&-
       export ANVIL_EMACS_WORKER=1
       exec "${dedicatedRuntimeEmacs}/bin/emacs" "$@"
@@ -521,15 +561,20 @@ let
   };
 
   dedicatedLockLauncher = writeText "anvil-lock-launcher.py" ''
+    import ctypes
     import errno
     import fcntl
+    import math
     import os
+    import signal
     import stat
     import sys
+    import time
 
     EXIT_SOFTWARE = 70
     EXIT_CONFIG = 77
     LOCK_NAME = ".anvil-headless-emacs.lock"
+    DEFAULT_REFRESH_SECONDS = 6 * 60 * 60
 
 
     def fail(message, status=EXIT_SOFTWARE):
@@ -537,33 +582,71 @@ let
         raise SystemExit(status)
 
 
+    def ofd_lock_bytes():
+        if sys.platform == "darwin":
+            class Flock(ctypes.Structure):
+                _fields_ = [
+                    ("l_start", ctypes.c_longlong),
+                    ("l_len", ctypes.c_longlong),
+                    ("l_pid", ctypes.c_int),
+                    ("l_type", ctypes.c_short),
+                    ("l_whence", ctypes.c_short),
+                ]
+
+            command = getattr(fcntl, "F_OFD_SETLK", 90)
+        elif sys.platform.startswith("linux"):
+            class Flock(ctypes.Structure):
+                _fields_ = [
+                    ("l_type", ctypes.c_short),
+                    ("l_whence", ctypes.c_short),
+                    ("l_start", ctypes.c_longlong),
+                    ("l_len", ctypes.c_longlong),
+                    ("l_pid", ctypes.c_int),
+                ]
+
+            command = getattr(fcntl, "F_OFD_SETLK", 37)
+        else:
+            fail(f"open-file-description locks unsupported on {sys.platform}")
+
+        lock = Flock()
+        lock.l_type = fcntl.F_WRLCK
+        lock.l_whence = os.SEEK_SET
+        return command, bytes(lock)
+
+
     def acquire_lock(directory, target_fd, kind, conflict_status):
         lock_path = os.path.join(directory, LOCK_NAME)
-        flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+        if not hasattr(os, "O_NOFOLLOW"):
+            fail("this platform lacks O_NOFOLLOW", EXIT_CONFIG)
+        flags = os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW
         try:
             source_fd = os.open(lock_path, flags, 0o600)
         except OSError as error:
             fail(f"cannot open {kind} lock file {lock_path}: {error}", EXIT_CONFIG)
 
-        info = os.fstat(source_fd)
-        if not stat.S_ISREG(info.st_mode):
-            os.close(source_fd)
-            fail(f"{kind} lock must be a regular file: {lock_path}", EXIT_CONFIG)
-        if info.st_uid != os.getuid():
-            os.close(source_fd)
-            fail(f"{kind} lock must be owned by uid {os.getuid()}: {lock_path}", EXIT_CONFIG)
-        os.fchmod(source_fd, 0o600)
-
-        # POSIX process locks are released when this process closes any fd for
-        # the file.  Move the fd and close the original before taking the lock.
-        if source_fd == target_fd:
-            os.set_inheritable(target_fd, True)
-        else:
-            os.dup2(source_fd, target_fd, inheritable=True)
-            os.close(source_fd)
-
         try:
-            fcntl.lockf(target_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            info = os.fstat(source_fd)
+            if not stat.S_ISREG(info.st_mode):
+                os.close(source_fd)
+                fail(f"{kind} lock must be a regular file: {lock_path}", EXIT_CONFIG)
+            if info.st_uid != os.getuid():
+                os.close(source_fd)
+                fail(
+                    f"{kind} lock must be owned by uid {os.getuid()}: {lock_path}",
+                    EXIT_CONFIG,
+                )
+            os.fchmod(source_fd, 0o600)
+            if source_fd == target_fd:
+                os.set_inheritable(target_fd, True)
+            else:
+                os.dup2(source_fd, target_fd, inheritable=True)
+                os.close(source_fd)
+        except OSError as error:
+            fail(f"cannot prepare {kind} lock file {lock_path}: {error}")
+
+        command, lock_data = ofd_lock_bytes()
+        try:
+            fcntl.fcntl(target_fd, command, lock_data)
         except OSError as error:
             if error.errno in (errno.EACCES, errno.EAGAIN):
                 fail(
@@ -571,7 +654,49 @@ let
                     conflict_status,
                 )
             fail(f"cannot acquire {kind} lock {lock_path}: {error}")
-        return lock_path
+        return lock_path, (info.st_dev, info.st_ino)
+
+
+    def heartbeat_fail_closed(parent_pid):
+        # Do not signal a stale or reused PID after the heartbeat is reparented.
+        if os.getppid() == parent_pid:
+            try:
+                os.kill(parent_pid, signal.SIGKILL)
+            except OSError:
+                pass
+        os._exit(0)
+
+
+    def heartbeat(parent_pid, lock_identities, refresh_seconds):
+        try:
+            null_fd = os.open(os.devnull, os.O_RDWR)
+            for target in (0, 1, 2):
+                os.dup2(null_fd, target)
+            if null_fd > 2:
+                os.close(null_fd)
+            # Close the OFD-lock descriptions at 8 and 9, plus any other
+            # daemon/service descriptors inherited before exec.
+            os.closerange(3, 256)
+            next_refresh = 0.0
+            poll_seconds = min(1.0, max(0.05, refresh_seconds))
+            while os.getppid() == parent_pid:
+                now = time.monotonic()
+                refresh_due = now >= next_refresh
+                for lock_path, expected in lock_identities:
+                    info = os.stat(lock_path, follow_symlinks=False)
+                    if (
+                        not stat.S_ISREG(info.st_mode)
+                        or (info.st_dev, info.st_ino) != expected
+                    ):
+                        heartbeat_fail_closed(parent_pid)
+                    if refresh_due:
+                        os.utime(lock_path, follow_symlinks=False)
+                if refresh_due:
+                    next_refresh = now + refresh_seconds
+                time.sleep(poll_seconds)
+        except BaseException:
+            heartbeat_fail_closed(parent_pid)
+        os._exit(0)
 
 
     if len(sys.argv) != 5:
@@ -588,11 +713,50 @@ let
     if lock_conflict_status not in (0, 75):
         fail(f"invalid lock conflict status: {lock_conflict_status}")
 
-    acquire_lock(runtime_dir, 8, "runtime", lock_conflict_status)
-    acquire_lock(state_dir, 9, "state", lock_conflict_status)
-    os.execv(locked_stage, [locked_stage, runtime_dir, state_dir])
+    try:
+        refresh_seconds = float(
+            os.environ.get(
+                "ANVIL_EMACS_LOCK_REFRESH_SECONDS",
+                str(DEFAULT_REFRESH_SECONDS),
+            )
+        )
+    except ValueError:
+        fail("ANVIL_EMACS_LOCK_REFRESH_SECONDS must be numeric", EXIT_CONFIG)
+    if not math.isfinite(refresh_seconds) or refresh_seconds <= 0:
+        fail(
+            "ANVIL_EMACS_LOCK_REFRESH_SECONDS must be positive and finite",
+            EXIT_CONFIG,
+        )
+
+    try:
+        runtime_info = os.stat(runtime_dir, follow_symlinks=False)
+        state_info = os.stat(state_dir, follow_symlinks=False)
+    except OSError as error:
+        fail(f"cannot compare runtime and state directories: {error}", EXIT_CONFIG)
+    if (runtime_info.st_dev, runtime_info.st_ino) == (
+        state_info.st_dev,
+        state_info.st_ino,
+    ):
+        fail("runtime and state directories must be distinct", EXIT_CONFIG)
+
+    runtime_lock = acquire_lock(runtime_dir, 8, "runtime", lock_conflict_status)
+    state_lock = acquire_lock(state_dir, 9, "state", lock_conflict_status)
+    parent_pid = os.getpid()
+    try:
+        heartbeat_pid = os.fork()
+    except OSError as error:
+        fail(f"cannot start lock refresh heartbeat: {error}")
+    if heartbeat_pid == 0:
+        heartbeat(parent_pid, (runtime_lock, state_lock), refresh_seconds)
+
+    try:
+        os.execv(locked_stage, [locked_stage, runtime_dir, state_dir])
+    except OSError as error:
+        fail(f"cannot exec locked stage {locked_stage}: {error}")
   '';
   dedicatedInit = writeText "anvil-headless-init.el" ''
+    ;;; anvil-headless-init.el --- Dedicated Anvil root -*- lexical-binding: t; -*-
+
     (let* ((runtime-dir (getenv "XDG_RUNTIME_DIR"))
            (state-dir (getenv "ANVIL_EMACS_STATE_DIR"))
            (temp-dir (and runtime-dir (expand-file-name "tmp/" runtime-dir)))
@@ -626,7 +790,6 @@ let
         (startup-redirect-eln-cache
          (expand-file-name "eln-cache/" state-dir))))
 
-    (load "${dedicatedEnvironmentInit}" nil nil t)
     (require 'anvil)
     (require 'anvil-server-commands)
 
@@ -681,6 +844,7 @@ let
 
     (condition-case err
         (progn
+          (load "${dedicatedEnvironmentInit}" nil nil t)
           (setq anvil-pdf-python "${pythonWithPyMuPDF}/bin/python3"
                 anvil-worker-emacs-bin "${dedicatedWorkerEmacs}/bin/anvil-worker-emacs"
                 anvil-worker-init-file "${dedicatedWorkerInit}"
@@ -736,9 +900,9 @@ let
       runtime_dir="$1"
       state_dir="$2"
 
-      # Fds 8/9 carry POSIX process locks acquired by the launcher.  They
-      # survive this exec chain into Emacs, but the locks themselves are not
-      # inherited by forked tool or worker processes.
+      # Fds 8/9 carry OFD locks acquired by the launcher.  They survive
+      # this exec chain into root Emacs.  Worker and shell wrappers close their
+      # inherited descriptions immediately so they cannot prolong ownership.
       rm -rf -- "$runtime_dir/tmp" "$runtime_dir/workers"
 
       private_directory "$runtime_dir/emacs" "Emacs socket directory"
@@ -807,8 +971,8 @@ let
       private_directory "$state_root" "state root"
       private_directory "$state_dir" "host state directory"
 
-      # Keep the service PID unchanged across Python, the locked shell stage,
-      # and foreground Emacs so POSIX locks are released atomically on exit.
+      # Preserve one service PID across Python, the locked shell stage, and
+      # foreground Emacs while keeping the OFD lock descriptions open across exec.
       exec "${python3}/bin/python3" -I -S "${dedicatedLockLauncher}" \
         "$runtime_dir" "$state_dir" "$lock_conflict_status" \
         "${dedicatedLockedStage}/bin/anvil-headless-emacs-locked"
@@ -942,10 +1106,13 @@ let
         currentAnvilVersion
         dedicatedAnvil
         dedicatedAnvilIde
+        dedicatedChildShell
         dedicatedDaemon
         dedicatedEmacs
         dedicatedEnvironmentInit
         dedicatedInit
+        dedicatedLockLauncher
+        dedicatedLockedStage
         dedicatedRuntimeEmacs
         direnv
         dedicatedWorkerEmacs
