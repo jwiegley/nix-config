@@ -953,6 +953,13 @@ def daemon_environment(args: argparse.Namespace) -> dict[str, str]:
     return environment
 
 
+def transport_environment() -> dict[str, str]:
+    """Return a client environment that cannot launch a fallback editor."""
+    environment = os.environ.copy()
+    environment.pop("ALTERNATE_EDITOR", None)
+    return environment
+
+
 def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
     command = [
         args.python,
@@ -1474,6 +1481,7 @@ def safe_socket_ready(socket_path: Path, emacsclient: str) -> bool:
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
+            env=transport_environment(),
             timeout=2.0,
             check=False,
         )
@@ -1542,7 +1550,7 @@ def bridge_main(args: argparse.Namespace) -> None:
     try:
         wait_for_daemon(args)
         socket_path = runtime_dir / "emacs" / "server"
-        environment = os.environ.copy()
+        environment = transport_environment()
         environment["ANVIL_EMACS_SOCKET"] = str(socket_path)
         os.execve(
             args.stdio,

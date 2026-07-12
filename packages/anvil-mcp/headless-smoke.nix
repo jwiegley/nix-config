@@ -100,6 +100,10 @@ runCommand "anvil-mcp-dedicated-smoke"
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./stdio-concurrency-test.py} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh
+    ${coreutils}/bin/timeout 60 \
+      ${python3}/bin/python3 -I -B -u ${./alternate-editor-test.py} \
+      ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh \
+      ${anvilMcp.dedicatedRuntimeEmacs}/bin/emacsclient
 
     init_compile_dir="$smoke_root/init-byte-compile"
     install -d -m 0700 "$init_compile_dir"
@@ -210,14 +214,29 @@ runCommand "anvil-mcp-dedicated-smoke"
     install -d -m 0700 "$agent_home"
     agent_runtime_root=$(mktemp -d /tmp/ar.XXXXXX)
     agent_state_root=$(mktemp -d /tmp/as.XXXXXX)
+    agent_alternate_editor="$smoke_root/agent-alternate-editor"
+    agent_alternate_editor_marker="$smoke_root/agent-alternate-editor-used"
+    printf '%s\n' \
+      '#!${bash}/bin/bash' \
+      'touch "$ANVIL_ALTERNATE_EDITOR_MARKER"' \
+      >"$agent_alternate_editor"
+    chmod 0700 "$agent_alternate_editor"
+    # The real smoke forces a watchdog restart while both bridges stay live.
+    # A transport regression would invoke this harmless marker executable.
     ${coreutils}/bin/env -u XDG_CONFIG_HOME \
       HOME="$agent_home" \
       ANVIL_EMACS_RUNTIME_ROOT="$agent_runtime_root" \
       ANVIL_EMACS_STATE_ROOT="$agent_state_root" \
+      ALTERNATE_EDITOR="$agent_alternate_editor" \
+      ANVIL_ALTERNATE_EDITOR_MARKER="$agent_alternate_editor_marker" \
       ${python3}/bin/python3 -I -B -u \
       ${anvilMcp.dedicatedAgentSupervisorSmoke} \
       ${anvilMcp}/bin/anvil-mcp \
       ${anvilMcp.dedicatedAgentSupervisor}
+    if [ -e "$agent_alternate_editor_marker" ]; then
+      echo "agent supervisor smoke invoked ALTERNATE_EDITOR" >&2
+      exit 1
+    fi
     rm -rf "$agent_runtime_root" "$agent_state_root"
     agent_runtime_root=
     agent_state_root=

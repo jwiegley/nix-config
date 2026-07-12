@@ -187,6 +187,7 @@ let
             ./emacs/patches/anvil-host-child-bindings.patch
             ./emacs/patches/anvil-root-watchdog.patch
             ./emacs/patches/anvil-stdio-at-most-once.patch
+            ./emacs/patches/anvil-stdio-no-alternate-editor.patch
           ];
         }).overrideAttrs
           (attrs: {

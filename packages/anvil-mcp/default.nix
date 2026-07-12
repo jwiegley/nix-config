@@ -278,6 +278,7 @@ let
           ../../overlays/emacs/patches/anvil-host-child-bindings.patch
           ../../overlays/emacs/patches/anvil-root-watchdog.patch
           ../../overlays/emacs/patches/anvil-stdio-at-most-once.patch
+          ../../overlays/emacs/patches/anvil-stdio-no-alternate-editor.patch
         ];
         src = currentAnvilSrc;
       }).overrideAttrs
@@ -2206,6 +2207,10 @@ let
               --ready-seconds "''${ANVIL_AGENT_READY_SECONDS:-120}"
       ''}
 
+      # The per-agent path execs its supervisor above, preserving the daemon's
+      # environment.  Only the shared-daemon path reaches this client guard.
+      unset ALTERNATE_EDITOR
+
       if [ -z "$socket" ]; then
         short_host="''${ANVIL_EMACS_HOST:-$(hostname -s)}"
         validate_host_component "$short_host"
@@ -2358,6 +2363,9 @@ let
             exit 2
             ;;
         esac
+
+        # The MCP bridge must never launch an interactive fallback editor.
+        unset ALTERNATE_EDITOR
 
         exec "${emacsPackages.anvil}/share/emacs/site-lisp/anvil-stdio.sh"           "--socket=$socket"           "--server-id=$server_id"
       '';

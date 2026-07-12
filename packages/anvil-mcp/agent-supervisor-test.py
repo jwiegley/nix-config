@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import socket
 import stat
 from types import SimpleNamespace
 import subprocess
@@ -1569,6 +1570,110 @@ class AgentSupervisorTests(unittest.TestCase):
         )
         self.assertFalse(stale_state.exists())
         self.assertEqual(outside.read_text(), "preserve me too")
+
+    def test_daemon_environment_preserves_alternate_editor(self):
+        args = self.prepare()
+        with mock.patch.dict(
+            os.environ,
+            {"ALTERNATE_EDITOR": "/tmp/user-editor"},
+        ):
+            environment = SUPERVISOR.daemon_environment(args)
+
+        self.assertEqual(environment["ALTERNATE_EDITOR"], "/tmp/user-editor")
+
+    def test_socket_readiness_drops_alternate_editor(self):
+        socket_path = self.root / "readiness.sock"
+        completed = subprocess.CompletedProcess(
+            args=["/emacsclient"],
+            returncode=0,
+            stdout=b"t\n",
+        )
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server_socket:
+            server_socket.bind(str(socket_path))
+            with (
+                mock.patch.dict(
+                    os.environ,
+                    {
+                        "ALTERNATE_EDITOR": "/tmp/must-not-run",
+                        "ANVIL_TRANSPORT_SENTINEL": "preserved",
+                    },
+                ),
+                mock.patch.object(
+                    SUPERVISOR.subprocess,
+                    "run",
+                    return_value=completed,
+                ) as run,
+            ):
+                self.assertTrue(
+                    SUPERVISOR.safe_socket_ready(socket_path, "/emacsclient")
+                )
+
+        environment = run.call_args.kwargs["env"]
+        self.assertNotIn("ALTERNATE_EDITOR", environment)
+        self.assertEqual(
+            environment["ANVIL_TRANSPORT_SENTINEL"],
+            "preserved",
+        )
+
+    def test_bridge_stdio_environment_drops_alternate_editor(self):
+        bridge_args = SimpleNamespace(
+            daemon="/daemon",
+            emacsclient="/emacsclient",
+            grace_seconds=0.5,
+            host="hera",
+            parent_guard="/parent-guard",
+            python=sys.executable,
+            ready_seconds=1.0,
+            runtime_root=str(self.runtime_root),
+            server_id="anvil",
+            state_root=str(self.state_root),
+            stdio="/stdio",
+        )
+        owner_identity = SUPERVISOR.process_start_identity(os.getpid())
+        captured = {}
+
+        class ExecCaptured(Exception):
+            pass
+
+        def capture_execve(path, arguments, environment):
+            captured.update(
+                path=path,
+                arguments=arguments,
+                environment=environment.copy(),
+            )
+            raise ExecCaptured
+
+        with (
+            mock.patch.dict(
+                os.environ,
+                {
+                    "ALTERNATE_EDITOR": "/tmp/must-not-run",
+                    "ANVIL_TRANSPORT_SENTINEL": "preserved",
+                },
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "identify_owner",
+                return_value=(os.getpid(), owner_identity),
+            ),
+            mock.patch.object(SUPERVISOR, "wait_for_daemon"),
+            mock.patch.object(
+                SUPERVISOR.os,
+                "execve",
+                side_effect=capture_execve,
+            ),
+        ):
+            with self.assertRaises(ExecCaptured):
+                SUPERVISOR.bridge_main(bridge_args)
+
+        environment = captured["environment"]
+        self.assertEqual(captured["path"], "/stdio")
+        self.assertNotIn("ALTERNATE_EDITOR", environment)
+        self.assertEqual(
+            environment["ANVIL_TRANSPORT_SENTINEL"],
+            "preserved",
+        )
+        self.assertTrue(environment["ANVIL_EMACS_SOCKET"].endswith("/server"))
 
     def test_nan_timeouts_are_rejected(self):
         for option in ("--grace-seconds", "--ready-seconds"):
