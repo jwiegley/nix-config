@@ -23,7 +23,7 @@ hera)
     ulimit -n 65536
     cd ~/src/nix || exit
     update-and-pull
-    ./bin/update-agents --no-switch --no-
+    ./bin/update-agents --no-switch --no-brew
     u hera update
     python bin/update-overlay --no-ai-nix --all
     ./build system
