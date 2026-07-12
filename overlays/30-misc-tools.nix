@@ -4,7 +4,20 @@
 #               packages; everything else uses prev directly.
 # Packages: cmdperf, gogcli (bumped), hammer, linkdups, lipotell, sift, sshify, z
 # Note: pass-git-helper, yamale removed (now in nixpkgs)
-final: prev: {
+final: prev:
+let
+  # gogcli 0.34.0 requires the Go 1.26.5 security release, one patch ahead
+  # of the Go compiler in the currently locked nixpkgs.
+  go_1_26_5 = prev.buildPackages.go_1_26.overrideAttrs {
+    version = "1.26.5";
+    src = prev.fetchurl {
+      url = "https://go.dev/dl/go1.26.5.src.tar.gz";
+      hash = "sha256-SVvkvIcXasVnOS5bQRar2YRm0z17SdQedkzMaXay3EI=";
+    };
+  };
+  buildGo1265Module = prev.buildGo126Module.override { go = go_1_26_5; };
+in
+{
 
   # cmdperf: command performance benchmarking (hyperfine-style). Not in
   # nixpkgs. Pure Go, upstream builds with CGO disabled; goreleaser's
@@ -42,14 +55,14 @@ final: prev: {
 
   # Bump gogcli ahead of nixpkgs (still at 0.11.0 under steipete/gogcli).
   # Upstream moved to openclaw/gogcli; Go module path is unchanged.
-  gogcli = prev.gogcli.overrideAttrs (
+  gogcli = (prev.gogcli.override { buildGoModule = buildGo1265Module; }).overrideAttrs (
     finalAttrs: _oldAttrs: {
-      version = "0.33.0";
+      version = "0.34.0";
       src = prev.fetchFromGitHub {
         owner = "openclaw";
         repo = "gogcli";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-TpIqsXKnBQ1XrscXWLOxbjO1woqBqZQf0vsVtRaqK94=";
+        hash = "sha256-3iVxq8AIzRebHiHxcagJaKKfqWKPiiKG4GMczm+AODU=";
       };
       vendorHash = "sha256-MAbbCLdoOLWer7HO3+RZJuN10gLeTgN6/CbNn6pzGwQ=";
     }
