@@ -95,10 +95,10 @@ runCommand "anvil-mcp-dedicated-smoke"
     )
 
     ${coreutils}/bin/timeout 60 \
-      ${python3}/bin/python3 -B -u ${./watchdog-test.py} \
+      ${python3}/bin/python3 -I -B -u ${./watchdog-test.py} \
       ${anvilMcp.dedicatedLockLauncher}
     ${coreutils}/bin/timeout 60 \
-      ${python3}/bin/python3 -B -u ${./stdio-concurrency-test.py} \
+      ${python3}/bin/python3 -I -B -u ${./stdio-concurrency-test.py} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh
 
     init_compile_dir="$smoke_root/init-byte-compile"
@@ -200,7 +200,7 @@ runCommand "anvil-mcp-dedicated-smoke"
     trap cleanup EXIT
 
     ANVIL_AGENT_SUPERVISOR=${anvilMcp.dedicatedAgentSupervisor} \
-      ${python3}/bin/python3 -B -u \
+      ${python3}/bin/python3 -I -B -u \
       ${anvilMcp.dedicatedAgentSupervisorTest}
     # Keep Darwin Unix-domain worker socket names under its 104-byte
     # limit while preserving the full HOST/agents/KEY hierarchy.
@@ -214,7 +214,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       HOME="$agent_home" \
       ANVIL_EMACS_RUNTIME_ROOT="$agent_runtime_root" \
       ANVIL_EMACS_STATE_ROOT="$agent_state_root" \
-      ${python3}/bin/python3 -B -u \
+      ${python3}/bin/python3 -I -B -u \
       ${anvilMcp.dedicatedAgentSupervisorSmoke} \
       ${anvilMcp}/bin/anvil-mcp \
       ${anvilMcp.dedicatedAgentSupervisor}
@@ -458,7 +458,7 @@ runCommand "anvil-mcp-dedicated-smoke"
 
     # Invoke the launcher before host-a has a socket. This proves that an MCP
     # client started during login or a service restart waits for readiness.
-    if ! ${python3}/bin/python ${./headless-smoke.py} \
+    if ! ${python3}/bin/python -I ${./headless-smoke.py} \
       ${hostAnvilMcp}/bin/anvil-mcp ${lib.escapeShellArg workerSpecsJson}; then
       cat "$smoke_root/host-a.log" "$smoke_root/host-b.log" >&2
       exit 1
