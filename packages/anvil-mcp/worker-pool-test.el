@@ -4,6 +4,17 @@
 (require 'ert)
 (require 'anvil-worker)
 
+(ert-deftest anvil-worker-emacsclient-args-disable-fallback-editors ()
+  "Unix and TCP clients must fail closed when their worker endpoint is absent."
+  (let ((server-use-tcp nil))
+    (should
+     (equal (anvil-worker--emacsclient-server-args "/tmp/worker.sock")
+            '("-a" "false" "-s" "/tmp/worker.sock"))))
+  (let ((server-use-tcp t))
+    (should
+     (equal (anvil-worker--emacsclient-server-args "/tmp/worker.auth")
+            '("-a" "false" "-f" "/tmp/worker.auth")))))
+
 (ert-deftest anvil-worker-health-retries-an-already-dead-worker ()
   "A dead-to-dead health tick retries spawning without logging a transition."
   (let ((worker (list :name "anvil-worker-read-test"
@@ -100,7 +111,7 @@
     (cl-letf (((symbol-function 'make-process)
                (lambda (&rest args)
                  (should (equal (plist-get args :command)
-                                '("emacsclient" "-s"
+                                '("emacsclient" "-a" "false" "-s"
                                   "/tmp/anvil-worker-read-test"
                                   "-e" "(kill-emacs)")))
                  stop-process))

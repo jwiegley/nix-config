@@ -2177,6 +2177,10 @@ let
           ;;
       esac
 
+      # Scrub before either the per-agent or shared-daemon path.  The
+      # supervisor repeats this for daemon and transport subprocesses.
+      unset ALTERNATE_EDITOR
+
       ${lib.optionalString usePerAgentDaemon ''
         if [ -n "$socket" ]; then
           echo "anvil-mcp: --socket cannot override a per-agent daemon" >&2
@@ -2206,10 +2210,6 @@ let
               --grace-seconds "''${ANVIL_AGENT_GRACE_SECONDS:-5}" \
               --ready-seconds "''${ANVIL_AGENT_READY_SECONDS:-120}"
       ''}
-
-      # The per-agent path execs its supervisor above, preserving the daemon's
-      # environment.  Only the shared-daemon path reaches this client guard.
-      unset ALTERNATE_EDITOR
 
       if [ -z "$socket" ]; then
         short_host="''${ANVIL_EMACS_HOST:-$(hostname -s)}"

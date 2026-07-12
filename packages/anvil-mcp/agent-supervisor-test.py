@@ -1571,15 +1571,19 @@ class AgentSupervisorTests(unittest.TestCase):
         self.assertFalse(stale_state.exists())
         self.assertEqual(outside.read_text(), "preserve me too")
 
-    def test_daemon_environment_preserves_alternate_editor(self):
+    def test_daemon_environment_drops_alternate_editor(self):
         args = self.prepare()
         with mock.patch.dict(
             os.environ,
-            {"ALTERNATE_EDITOR": "/tmp/user-editor"},
+            {
+                "ALTERNATE_EDITOR": "/tmp/user-editor",
+                "ANVIL_DAEMON_SENTINEL": "preserved",
+            },
         ):
             environment = SUPERVISOR.daemon_environment(args)
 
-        self.assertEqual(environment["ALTERNATE_EDITOR"], "/tmp/user-editor")
+        self.assertNotIn("ALTERNATE_EDITOR", environment)
+        self.assertEqual(environment["ANVIL_DAEMON_SENTINEL"], "preserved")
 
     def test_socket_readiness_drops_alternate_editor(self):
         socket_path = self.root / "readiness.sock"

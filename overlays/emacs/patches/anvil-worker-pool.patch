@@ -3,7 +3,8 @@ Fix worker pool socket, spawn, and hung-worker recovery.
 The patch keeps cached socket paths authoritative, propagates that path into
 -Q workers, rate-limits startup respawns without sliding the grace window,
 tracks exact worker process objects owned by the root Emacs, and recovers an
-idle connectable worker only after repeated full-probe failures.  Busy workers
+idle connectable worker only after repeated full-probe failures.  Every worker
+`emacsclient' argv disables alternate-editor fallback centrally.  Busy workers
 are never killed; unowned workers are reported once and left untouched.  Pool
 shutdown bounds its graceful request and confirms an owned hard-stop fallback
 before discarding the worker process object.  Health and deferred-spawn timers
@@ -81,6 +82,20 @@ ownership removal is process-identity-safe.
                      :last-state nil)))
        (setq anvil-worker--pool
              (plist-put anvil-worker--pool lane vec))))
+@@ -538,10 +571,10 @@
+ (defun anvil-worker--emacsclient-server-args (server-file)
+-  "Return the `emacsclient' option list to address SERVER-FILE.
++  "Return `emacsclient' options for SERVER-FILE, disabling fallback editors.
+ Uses `-f' (TCP authentication file) when `server-use-tcp' is
+ non-nil, and `-s' (Unix socket name) otherwise.  Required because
+ emacsclient on Emacs.app / Emacs 31 enforces this distinction —
+ passing `-f' to a Unix socket fails with \"error accessing server
+ file\" (issue #16)."
+   (if server-use-tcp
+-      (list "-f" server-file)
+-    (list "-s" server-file)))
++      (list "-a" "false" "-f" server-file)
++    (list "-a" "false" "-s" server-file)))
 @@ -595,12 +628,26 @@
  (defun anvil-worker--server-file-stale-p (server-file)
    "Return non-nil if SERVER-FILE no longer points at a live server.

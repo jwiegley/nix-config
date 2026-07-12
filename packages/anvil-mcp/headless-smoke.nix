@@ -463,6 +463,8 @@ runCommand "anvil-mcp-dedicated-smoke"
     (
       sleep 1
       export ANVIL_EMACS_HOST=host-a
+      export ALTERNATE_EDITOR="$agent_alternate_editor"
+      export ANVIL_ALTERNATE_EDITOR_MARKER="$agent_alternate_editor_marker"
       # A timer-starving synchronous smoke request runs for four seconds.
       # Keep the ordinary watchdog deadline shorter so that missing sync
       # lease coverage deterministically kills this test daemon.
@@ -487,6 +489,35 @@ runCommand "anvil-mcp-dedicated-smoke"
       cat "$smoke_root/host-a.log" "$smoke_root/host-b.log" >&2
       exit 1
     fi
+
+    # Exercise the worker-side client inside a daemon that actually inherited
+    # a hostile editor.  The deliberately absent worker socket must fail closed
+    # through the centralized `-a false' argv and never invoke the marker.
+    root_socket="$ANVIL_EMACS_RUNTIME_ROOT/host-a/emacs/server"
+    daemon_has_hostile_editor=$(
+      ${anvilMcp.dedicatedEmacs}/bin/emacsclient -a false -s "$root_socket" \
+        -e "(equal (getenv \"ALTERNATE_EDITOR\") \"$agent_alternate_editor\")"
+    )
+    if [ "$daemon_has_hostile_editor" != t ]; then
+      echo "host daemon did not inherit the hostile ALTERNATE_EDITOR fixture" >&2
+      exit 1
+    fi
+    missing_worker_socket="$ANVIL_EMACS_RUNTIME_ROOT/host-a/workers/missing-alternate-editor"
+    rm -f -- "$missing_worker_socket"
+    missing_worker_status=$(
+      ${anvilMcp.dedicatedEmacs}/bin/emacsclient -a false -s "$root_socket" \
+        -e "(let ((server-use-tcp nil)) (apply #'call-process \"emacsclient\" nil nil nil (append (anvil-worker--emacsclient-server-args \"$missing_worker_socket\") (list \"-e\" \"t\"))))"
+    )
+    if [ -e "$agent_alternate_editor_marker" ]; then
+      echo "daemon-side worker client invoked ALTERNATE_EDITOR" >&2
+      exit 1
+    fi
+    case "$missing_worker_status" in
+      "" | 0)
+        echo "missing worker socket did not fail closed: $missing_worker_status" >&2
+        exit 1
+        ;;
+    esac
 
     runtime_lock="$ANVIL_EMACS_RUNTIME_ROOT/host-a/.anvil-headless-emacs.lock"
     state_lock="$ANVIL_EMACS_STATE_ROOT/host-a/.anvil-headless-emacs.lock"

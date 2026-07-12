@@ -948,6 +948,7 @@ def daemon_environment(args: argparse.Namespace) -> dict[str, str]:
             "ANVIL_HEADLESS_PARENT_PID": str(os.getpid()),
         }
     )
+    environment.pop("ALTERNATE_EDITOR", None)
     environment.pop("ANVIL_EMACS_SOCKET", None)
     environment.pop("ANVIL_EMACS_USE_SYSTEM_LOG", None)
     return environment
