@@ -1085,6 +1085,65 @@ def owner_seed_record(args: argparse.Namespace) -> dict[str, object]:
     }
 
 
+def publish_owner_seed_if_absent(args: argparse.Namespace) -> None:
+    """Publish owner identity under the lock used by richer status writers."""
+    deadline = time.monotonic() + STARTUP_STATUS_RETRY_SECONDS
+    failures = 0
+    expected_owner = (args.owner_pid, args.owner_start_identity)
+    while True:
+        lock_descriptor = None
+        try:
+            locked = try_supervisor_lock(args.runtime_dir)
+            if locked is None:
+                existing_owner = read_status_owner(
+                    args.runtime_dir,
+                    args.agent_key,
+                )
+                if existing_owner == expected_owner:
+                    return
+                if existing_owner is not None:
+                    raise ConfigurationError(
+                        "existing agent owner status does not match this owner"
+                    )
+            else:
+                lock_descriptor, lock_identity = locked
+                validate_supervisor_lock(
+                    lock_descriptor,
+                    args.runtime_dir / LOCK_NAME,
+                    lock_identity,
+                )
+                existing_owner = read_status_owner(
+                    args.runtime_dir,
+                    args.agent_key,
+                )
+                if existing_owner is not None and existing_owner != expected_owner:
+                    raise ConfigurationError(
+                        "existing agent owner status does not match this owner"
+                    )
+                if existing_owner is None:
+                    write_status(args, owner_seed_record(args))
+                return
+        except ConfigurationError:
+            raise
+        except RuntimeError as error:
+            raise TimeoutError(
+                "agent supervisor lock validation failed"
+            ) from error
+        except OSError as error:
+            if not transient_supervisor_error(error):
+                raise
+        finally:
+            if lock_descriptor is not None:
+                os.close(lock_descriptor)
+        failures += 1
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                "agent supervisor owner status was unavailable"
+            )
+        time.sleep(min(restart_backoff_seconds(failures), remaining))
+
+
 def status_record(
     args: argparse.Namespace,
     daemon: subprocess.Popen[bytes] | None,
@@ -1457,6 +1516,10 @@ def bridge_main(args: argparse.Namespace) -> None:
         args.runtime_dir = runtime_dir
         args.state_dir = state_dir
         args.leases_dir = leases_dir
+        # Make every published instance attributable before pruning siblings or
+        # registering a lease.  The supervisor lock preserves an existing
+        # richer record while serializing repair of invalid status.
+        publish_owner_seed_if_absent(args)
         prune_orphaned_state(
             runtime_dir.parent,
             state_dir.parent,
@@ -1471,6 +1534,10 @@ def bridge_main(args: argparse.Namespace) -> None:
         )
     except ConfigurationError as error:
         fail(str(error), EXIT_CONFIG)
+    except TimeoutError as error:
+        fail(str(error), EXIT_UNAVAILABLE)
+    except OSError as error:
+        fail(f"cannot prepare MCP bridge: {error}")
 
     try:
         wait_for_daemon(args)

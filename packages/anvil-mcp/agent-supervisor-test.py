@@ -1296,6 +1296,140 @@ class AgentSupervisorTests(unittest.TestCase):
         self.assertFalse(stale.runtime_dir.exists())
         self.assertFalse(stale.state_dir.exists())
 
+    def test_owner_seed_preserves_status_held_by_concurrent_supervisor(self):
+        args = self.prepare()
+        richer = SUPERVISOR.status_record(args, None, 7)
+        locked = SUPERVISOR.try_supervisor_lock(args.runtime_dir)
+        self.assertIsNotNone(locked)
+        lock_descriptor, _lock_identity = locked
+        try:
+            SUPERVISOR.write_status(args, richer)
+            before = (args.runtime_dir / SUPERVISOR.STATUS_NAME).stat()
+            SUPERVISOR.publish_owner_seed_if_absent(args)
+            after = (args.runtime_dir / SUPERVISOR.STATUS_NAME).stat()
+        finally:
+            os.close(lock_descriptor)
+
+        self.assertEqual(self.read_status(args), richer)
+        self.assertEqual((before.st_dev, before.st_ino), (after.st_dev, after.st_ino))
+
+    def test_owner_seed_repairs_invalid_status_while_holding_lock(self):
+        args = self.prepare()
+        status_path = args.runtime_dir / SUPERVISOR.STATUS_NAME
+        status_path.write_text("not json\n", encoding="utf-8")
+        status_path.chmod(0o600)
+
+        SUPERVISOR.publish_owner_seed_if_absent(args)
+
+        self.assertEqual(
+            SUPERVISOR.read_status_owner(args.runtime_dir, args.agent_key),
+            (args.owner_pid, args.owner_start_identity),
+        )
+        status = self.read_status(args)
+        self.assertIsNone(status["supervisor_pid"])
+        self.assertIsNone(status["daemon_pid"])
+
+    def test_owner_seed_rejects_mismatched_status_as_configuration_error(self):
+        args = self.prepare()
+        mismatched = SUPERVISOR.owner_seed_record(args)
+        mismatched["owner_pid"] = args.owner_pid + 1
+        mismatched["owner_start_identity"] = "injected-mismatched-generation"
+        SUPERVISOR.write_status(args, mismatched)
+
+        with self.assertRaises(SUPERVISOR.ConfigurationError):
+            SUPERVISOR.publish_owner_seed_if_absent(args)
+
+    def test_owner_seed_rejects_locked_mismatched_status_as_configuration_error(
+        self,
+    ):
+        args = self.prepare()
+        mismatched = SUPERVISOR.owner_seed_record(args)
+        mismatched["owner_pid"] = args.owner_pid + 1
+        mismatched["owner_start_identity"] = "injected-locked-generation"
+        locked = SUPERVISOR.try_supervisor_lock(args.runtime_dir)
+        self.assertIsNotNone(locked)
+        lock_descriptor, _lock_identity = locked
+        try:
+            SUPERVISOR.write_status(args, mismatched)
+            with self.assertRaises(SUPERVISOR.ConfigurationError):
+                SUPERVISOR.publish_owner_seed_if_absent(args)
+        finally:
+            os.close(lock_descriptor)
+
+    def test_bridge_seeds_owner_before_pruning_and_dead_owner_is_prunable(self):
+        owner_pid, owner_identity = self.start_owner()
+        bridge_args = SimpleNamespace(
+            daemon="/daemon",
+            emacsclient="/emacsclient",
+            grace_seconds=0.5,
+            host="hera",
+            parent_guard="/parent-guard",
+            python=sys.executable,
+            ready_seconds=1.0,
+            runtime_root=str(self.runtime_root),
+            server_id="anvil",
+            state_root=str(self.state_root),
+            stdio="/stdio",
+        )
+        captured = {}
+
+        class InjectedBridgeKill(Exception):
+            pass
+
+        def interrupt_at_prune(runtime_agents, state_agents, current_agent_key):
+            runtime_dir = runtime_agents / current_agent_key
+            captured["runtime_dir"] = runtime_dir
+            captured["state_dir"] = state_agents / current_agent_key
+            captured["owner"] = SUPERVISOR.read_status_owner(
+                runtime_dir,
+                current_agent_key,
+            )
+            raise InjectedBridgeKill
+
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "identify_owner",
+                return_value=(owner_pid, owner_identity),
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "prune_orphaned_state",
+                side_effect=interrupt_at_prune,
+            ),
+        ):
+            with self.assertRaises(InjectedBridgeKill):
+                SUPERVISOR.bridge_main(bridge_args)
+
+        self.assertEqual(captured["owner"], (owner_pid, owner_identity))
+        status = json.loads(
+            (captured["runtime_dir"] / SUPERVISOR.STATUS_NAME).read_text()
+        )
+        self.assertIsNone(status["supervisor_pid"])
+        self.assertIsNone(status["daemon_pid"])
+
+        current = self.prepare()
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertTrue(captured["runtime_dir"].exists())
+        self.assertTrue(captured["state_dir"].exists())
+
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertFalse(captured["runtime_dir"].exists())
+        self.assertFalse(captured["state_dir"].exists())
+
     def test_dead_owner_runtime_and_state_are_pruned_after_supervisor_kill(self):
         owner_pid, owner_identity = self.start_owner()
         stale = self.prepare(
