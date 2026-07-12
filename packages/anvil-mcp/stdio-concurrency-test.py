@@ -14,7 +14,39 @@ import tempfile
 import time
 
 
-def wait_for_file(path: Path, process: subprocess.Popen[str], timeout: float) -> None:
+FIRST_PROBE_TIMEOUT_SECONDS = 10
+SECOND_PROBE_TIMEOUT_SECONDS = 1
+EMACSCLIENT_TIMEOUT_SECONDS = 10
+FIRST_READY_DELAY_SECONDS = 2
+BRIDGE_WAIT_TIMEOUT_SECONDS = EMACSCLIENT_TIMEOUT_SECONDS + 2
+
+
+def collect_bridge_diagnostics(process: subprocess.Popen[str], debug_log: Path) -> str:
+    """Return currently available stderr and debug-log text without blocking."""
+    stderr_text = ""
+    if process.stderr is not None:
+        try:
+            os.set_blocking(process.stderr.fileno(), False)
+            stderr_text = process.stderr.read() or ""
+        except (BlockingIOError, OSError):
+            stderr_text = "<unavailable>"
+    try:
+        debug_text = debug_log.read_text(encoding="utf-8") if debug_log.exists() else ""
+    except OSError as error:
+        debug_text = f"<unavailable: {error}>"
+    return (
+        f"returncode={process.poll()!r}\n"
+        f"stderr:\n{stderr_text.strip() or '<empty>'}\n"
+        f"debug log:\n{debug_text.strip() or '<empty>'}"
+    )
+
+
+def wait_for_file(
+    path: Path,
+    process: subprocess.Popen[str],
+    timeout: float,
+    debug_log: Path,
+) -> None:
     """Wait for PATH while failing early if PROCESS exits."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -22,10 +54,14 @@ def wait_for_file(path: Path, process: subprocess.Popen[str], timeout: float) ->
             return
         if process.poll() is not None:
             raise AssertionError(
-                f"first bridge exited before dispatch: {process.returncode}"
+                "first bridge exited before dispatch:\n"
+                f"{collect_bridge_diagnostics(process, debug_log)}"
             )
         time.sleep(0.02)
-    raise AssertionError("first bridge never entered its serialized dispatch")
+    raise AssertionError(
+        f"first bridge never entered its serialized dispatch after {timeout:.1f}s:\n"
+        f"{collect_bridge_diagnostics(process, debug_log)}"
+    )
 
 
 def start_bridge(
@@ -58,14 +94,21 @@ def start_bridge(
     return process
 
 
-def finish_bridge(process: subprocess.Popen[str], timeout: float) -> tuple[str, str]:
+def finish_bridge(
+    process: subprocess.Popen[str],
+    timeout: float,
+    debug_log: Path,
+    label: str,
+) -> tuple[str, str]:
     """Wait for PROCESS without asking communicate() to flush closed stdin."""
     try:
         process.wait(timeout=timeout)
     except subprocess.TimeoutExpired as error:
+        diagnostics = collect_bridge_diagnostics(process, debug_log)
         cleanup_bridge(process)
         raise AssertionError(
-            "stdio bridge exceeded its overall readiness budget"
+            f"{label} stdio bridge exceeded its {timeout:.1f}s readiness budget:\n"
+            f"{diagnostics}"
         ) from error
     assert process.stdout is not None
     assert process.stderr is not None
@@ -112,6 +155,7 @@ expression = sys.argv[-1]
 with open(os.environ["FAKE_SERVER_LOCK"], "a+", encoding="utf-8") as handle:
     fcntl.flock(handle, fcntl.LOCK_EX)
     if expression == "t":
+        time.sleep(float(os.environ["FAKE_READY_SLEEP"]))
         print("t")
     else:
         Path(os.environ["FAKE_DISPATCH_STARTED"]).touch()
@@ -128,9 +172,10 @@ with open(os.environ["FAKE_SERVER_LOCK"], "a+", encoding="utf-8") as handle:
                 "PATH": f"{fake_bin}{os.pathsep}{environment['PATH']}",
                 "FAKE_SERVER_LOCK": str(lock),
                 "FAKE_DISPATCH_STARTED": str(dispatch_started),
+                "FAKE_READY_SLEEP": "0",
                 "EMACS_MCP_DEBUG_LOG": str(debug_log),
-                "ANVIL_EMACSCLIENT_PROBE_TIMEOUT": "1",
-                "ANVIL_EMACSCLIENT_TIMEOUT": "10",
+                "ANVIL_EMACSCLIENT_PROBE_TIMEOUT": str(SECOND_PROBE_TIMEOUT_SECONDS),
+                "ANVIL_EMACSCLIENT_TIMEOUT": str(EMACSCLIENT_TIMEOUT_SECONDS),
                 "ANVIL_EMACSCLIENT_RETRY_DELAY_MS": "0",
             }
         )
@@ -138,12 +183,33 @@ with open(os.environ["FAKE_SERVER_LOCK"], "a+", encoding="utf-8") as handle:
         first: subprocess.Popen[str] | None = None
         second: subprocess.Popen[str] | None = None
         try:
-            first = start_bridge(stdio, environment, request_id=1, dispatch_sleep=4.0)
-            wait_for_file(dispatch_started, first, timeout=3.0)
+            first_environment = environment | {
+                "ANVIL_EMACSCLIENT_PROBE_TIMEOUT": str(FIRST_PROBE_TIMEOUT_SECONDS),
+                "FAKE_READY_SLEEP": str(FIRST_READY_DELAY_SECONDS),
+            }
+            first = start_bridge(
+                stdio, first_environment, request_id=1, dispatch_sleep=4.0
+            )
+            wait_for_file(
+                dispatch_started,
+                first,
+                timeout=BRIDGE_WAIT_TIMEOUT_SECONDS,
+                debug_log=debug_log,
+            )
             second = start_bridge(stdio, environment, request_id=2, dispatch_sleep=0.0)
 
-            first_out, first_err = finish_bridge(first, timeout=12.0)
-            second_out, second_err = finish_bridge(second, timeout=12.0)
+            first_out, first_err = finish_bridge(
+                first,
+                timeout=BRIDGE_WAIT_TIMEOUT_SECONDS,
+                debug_log=debug_log,
+                label="first",
+            )
+            second_out, second_err = finish_bridge(
+                second,
+                timeout=BRIDGE_WAIT_TIMEOUT_SECONDS,
+                debug_log=debug_log,
+                label="second",
+            )
             if first.returncode != 0 or second.returncode != 0:
                 raise AssertionError(
                     "bridge failed:\n"
