@@ -149,7 +149,7 @@ upgrade-tasks: switch travel-ready
 	elif [[ -f /usr/local/bin/brew ]]; then		\
 	    eval "$(/usr/local/bin/brew shellenv)";	\
 	fi
-	brew upgrade --greedy
+	brew upgrade --greedy --yes
 
 upgrade: update upgrade-tasks
 
