@@ -13,6 +13,7 @@ let
   anvilMcp = pkgs.callPackage ../packages/anvil-mcp {
     useHeadlessEmacs = isLinux && cfg.useHeadlessEmacs;
     useDedicatedDarwinEmacs = isDarwin && cfg.useDedicatedDarwinEmacs;
+    inherit (cfg) usePerAgentDaemon;
   };
   launchdAgentOptions =
     if options ? launchd && options.launchd ? agents then
@@ -40,6 +41,17 @@ in
         instead of the interactive development Emacs.
       '';
     };
+
+    usePerAgentDaemon = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        In dedicated-Emacs mode, give each owning Codex OS process its own
+        supervised headless Emacs daemon. The anvil and emacs-eval bridges,
+        including internal subagents, share that process-local pool; separate
+        Codex and agent-deck processes receive isolated pools.
+      '';
+    };
   };
 
   config = lib.mkMerge [
@@ -47,7 +59,7 @@ in
       home.packages = [ anvilMcp ];
     }
 
-    (lib.mkIf (isLinux && cfg.useHeadlessEmacs) {
+    (lib.mkIf (isLinux && cfg.useHeadlessEmacs && !cfg.usePerAgentDaemon) {
       systemd.user.services.anvil-headless-emacs = {
         Unit.Description = "Dedicated headless Emacs for Anvil MCP";
         Service = {
@@ -60,7 +72,7 @@ in
       };
     })
 
-    (lib.mkIf (isDarwin && cfg.useDedicatedDarwinEmacs) {
+    (lib.mkIf (isDarwin && cfg.useDedicatedDarwinEmacs && !cfg.usePerAgentDaemon) {
       launchd.agents.anvil-headless-emacs = {
         enable = true;
         config = {
@@ -81,7 +93,11 @@ in
         };
       }
       // lib.optionalAttrs (launchdAgentOptions ? domain) {
-        domain = "user";
+        # Keychain-backed tools such as gh require the login GUI bootstrap
+        # namespace. After activation, verify without exposing credentials:
+        # launchctl print gui/$UID/org.nix-community.home.anvil-headless-emacs
+        # and run gh auth status through Anvil's shell-run tool.
+        domain = "gui";
       };
     })
   ];

@@ -252,7 +252,7 @@ are never killed; unowned workers are reported once and left untouched.
 +
  (defun anvil-worker--map-pool (fn)
    "Apply FN to every worker plist in the pool, in lane order."
-@@ -737,15 +844,23 @@
+@@ -737,15 +844,32 @@
  (defun anvil-worker-kill ()
    "Kill every worker daemon in every lane."
    (interactive)
@@ -269,6 +269,15 @@ are never killed; unowned workers are reported once and left untouched.
 +     (let* ((name (plist-get worker :name))
 +            (owned (gethash name anvil-worker--owned-processes)))
 +       (cond
++        ((and (processp owned)
++              (process-live-p owned)
++              (anvil-worker--worker-alive-p worker))
++         (ignore-errors
++           (apply #'call-process "emacsclient" nil nil nil
++                  (append (anvil-worker--emacsclient-server-args
++                           (plist-get worker :server-file))
++                          (list "-e" "(kill-emacs)"))))
++         (anvil-worker--log 'killed name))
 +        ((and (processp owned) (process-live-p owned))
 +         (ignore-errors (kill-process owned))
 +         (anvil-worker--log 'killed name))

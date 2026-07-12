@@ -26,6 +26,7 @@
   symlinkJoin,
   useDedicatedDarwinEmacs ? false,
   useHeadlessEmacs ? false,
+  usePerAgentDaemon ? true,
   writeShellApplication,
   writeText,
 }:
@@ -270,7 +271,14 @@ let
       (callPackage ../../overlays/emacs/builder.nix {
         emacs = dedicatedEmacs;
         name = "anvil";
-        patches = [ ../../overlays/emacs/patches/anvil-worker-pool.patch ];
+        patches = [
+          # Load-bearing order: host-child bindings target the issue-53 host.
+          ../../overlays/emacs/patches/anvil-issue-53-hang-fixes.patch
+          ../../overlays/emacs/patches/anvil-worker-pool.patch
+          ../../overlays/emacs/patches/anvil-host-child-bindings.patch
+          ../../overlays/emacs/patches/anvil-root-watchdog.patch
+          ../../overlays/emacs/patches/anvil-stdio-at-most-once.patch
+        ];
         src = currentAnvilSrc;
       }).overrideAttrs
         (attrs: {
@@ -349,6 +357,260 @@ let
     }
   '';
 
+  dedicatedParentGuardLauncher = writeText "anvil-parent-guard.py" ''
+    import ctypes
+    import errno
+    import os
+    import select
+    import signal
+    import sys
+
+    EXIT_SOFTWARE = 70
+    READY_TIMEOUT_SECONDS = 5.0
+
+
+    def fail(message):
+        print(f"anvil-mcp: parent guard: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_SOFTWARE)
+
+
+    def close_lock_fds():
+        for descriptor in (8, 9):
+            try:
+                os.close(descriptor)
+            except OSError as error:
+                if error.errno != errno.EBADF:
+                    fail(f"cannot close lock fd {descriptor}: {error}")
+
+
+    def validate_parent_pid(raw):
+        if not raw or not raw.isascii() or not raw.isdecimal():
+            fail("ANVIL_HEADLESS_PARENT_PID must be a decimal PID")
+        parent_pid = int(raw)
+        if parent_pid <= 1:
+            fail("ANVIL_HEADLESS_PARENT_PID must be greater than one")
+        if os.getppid() != parent_pid:
+            fail(
+                f"expected owner pid {parent_pid}, "
+                f"found parent pid {os.getppid()}"
+            )
+        return parent_pid
+
+
+    def install_linux_parent_death_signal(expected_parent):
+        libc = ctypes.CDLL(None, use_errno=True)
+        if libc.prctl(1, signal.SIGKILL, 0, 0, 0) != 0:
+            error = ctypes.get_errno()
+            fail(f"prctl(PR_SET_PDEATHSIG) failed: {os.strerror(error)}")
+        if os.getppid() != expected_parent:
+            os.kill(os.getpid(), signal.SIGKILL)
+
+
+    def terminate_target(target_pid, group):
+        try:
+            if group:
+                # The PGID remains allocated while any non-detached member
+                # survives, even after the shell leader itself has exited.
+                os.killpg(target_pid, signal.SIGKILL)
+            else:
+                os.kill(target_pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+        except OSError:
+            pass
+
+
+    def move_guard_out_of_target_group(target_pid):
+        guard_pid = os.getpid()
+        if os.getpgrp() != guard_pid:
+            os.setpgid(0, 0)
+        if os.getpgrp() != guard_pid or os.getpgrp() == target_pid:
+            raise RuntimeError("guard does not own a distinct process group")
+
+
+    def close_guard_descriptors(ready_fd):
+        null_fd = os.open(os.devnull, os.O_RDWR)
+        for descriptor in (0, 1, 2):
+            os.dup2(null_fd, descriptor)
+        if null_fd > 2 and null_fd != ready_fd:
+            os.close(null_fd)
+        try:
+            descriptor_limit = int(os.sysconf("SC_OPEN_MAX"))
+        except (OSError, TypeError, ValueError):
+            descriptor_limit = 65536
+        descriptor_limit = max(256, min(descriptor_limit, 1048576))
+        os.closerange(3, ready_fd)
+        os.closerange(ready_fd + 1, descriptor_limit)
+
+
+    def install_guard_signal_handlers(target_pid, group):
+        handled = (signal.SIGINT, signal.SIGHUP, signal.SIGTERM)
+        if hasattr(signal, "pthread_sigmask"):
+            signal.pthread_sigmask(signal.SIG_UNBLOCK, handled)
+
+        def stop_guard(_signum, _frame):
+            terminate_target(target_pid, group)
+            os._exit(0)
+
+        for signum in handled:
+            signal.signal(signum, stop_guard)
+
+
+    def guard_linux(root_pid, target_pid, group, ready_fd):
+        root_fd = os.pidfd_open(root_pid, 0)
+        target_fd = os.pidfd_open(target_pid, 0)
+        poller = select.poll()
+        poller.register(root_fd, select.POLLIN)
+        poller.register(target_fd, select.POLLIN)
+        if poller.poll(0):
+            raise RuntimeError("root or target exited before guard readiness")
+        install_guard_signal_handlers(target_pid, group)
+        os.write(ready_fd, b"R")
+        os.close(ready_fd)
+        while True:
+            for descriptor, _event in poller.poll():
+                if descriptor == root_fd:
+                    terminate_target(target_pid, group)
+                    os._exit(0)
+                if descriptor == target_fd:
+                    if group:
+                        terminate_target(target_pid, True)
+                    os._exit(0)
+
+
+    def guard_darwin(root_pid, target_pid, group, ready_fd):
+        queue = select.kqueue()
+        flags = select.KQ_EV_ADD | select.KQ_EV_ENABLE
+        changes = [
+            select.kevent(
+                root_pid,
+                filter=select.KQ_FILTER_PROC,
+                flags=flags,
+                fflags=select.KQ_NOTE_EXIT,
+            ),
+            select.kevent(
+                target_pid,
+                filter=select.KQ_FILTER_PROC,
+                flags=flags,
+                fflags=select.KQ_NOTE_EXIT,
+            ),
+        ]
+        queue.control(changes, 0, 0)
+        if queue.control(None, 2, 0):
+            raise RuntimeError("root or target exited before guard readiness")
+        install_guard_signal_handlers(target_pid, group)
+        os.write(ready_fd, b"R")
+        os.close(ready_fd)
+        while True:
+            for event in queue.control(None, 2, None):
+                if event.ident == root_pid:
+                    terminate_target(target_pid, group)
+                    os._exit(0)
+                if event.ident == target_pid:
+                    if group:
+                        terminate_target(target_pid, True)
+                    os._exit(0)
+
+
+    def run_guard(root_pid, target_pid, group, ready_fd):
+        try:
+            close_guard_descriptors(ready_fd)
+            close_lock_fds()
+            move_guard_out_of_target_group(target_pid)
+            if sys.platform.startswith("linux"):
+                guard_linux(root_pid, target_pid, group, ready_fd)
+            elif sys.platform == "darwin":
+                guard_darwin(root_pid, target_pid, group, ready_fd)
+            else:
+                raise RuntimeError(f"unsupported platform: {sys.platform}")
+        except BaseException:
+            terminate_target(target_pid, group)
+            try:
+                os.close(ready_fd)
+            except OSError:
+                pass
+            os._exit(EXIT_SOFTWARE)
+
+
+    if len(sys.argv) < 3 or sys.argv[1] not in (
+        "exact",
+        "group",
+        "external-group",
+    ):
+        fail(
+            "usage: anvil-parent-guard.py "
+            "exact|group|external-group PROGRAM [ARG ...]"
+        )
+
+    signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+    close_lock_fds()
+    mode = sys.argv[1]
+    external_owner = mode == "external-group"
+    program_argv = sys.argv[2:]
+    target_pid = os.getpid()
+    root_pid = validate_parent_pid(
+        os.environ.pop("ANVIL_HEADLESS_PARENT_PID", None)
+    )
+
+    if sys.platform.startswith("linux"):
+        if not hasattr(os, "pidfd_open"):
+            fail("Linux requires pidfd_open")
+        # PR_SET_PDEATHSIG tracks the particular parent thread which created
+        # this process. That is correct for our single-threaded Python daemon
+        # parents, but not for multithreaded Codex/Tokio. External owners use
+        # the guard's pidfd for process-wide death notification instead.
+        if not external_owner:
+            install_linux_parent_death_signal(root_pid)
+    elif sys.platform != "darwin" or not hasattr(select, "kqueue"):
+        fail(f"unsupported platform: {sys.platform}")
+
+    group = mode in ("group", "external-group")
+    if group and os.getpgrp() != target_pid:
+        try:
+            os.setpgid(0, 0)
+        except OSError as error:
+            fail(f"cannot establish target process group: {error}")
+    if group and os.getpgrp() != target_pid:
+        fail("target is not its process-group leader")
+
+    ready_read, ready_write = os.pipe()
+    try:
+        guard_pid = os.fork()
+    except OSError as error:
+        fail(f"cannot fork guard: {error}")
+
+    if guard_pid == 0:
+        os.close(ready_read)
+        run_guard(root_pid, target_pid, group, ready_write)
+        os._exit(0)
+
+    os.close(ready_write)
+    readable, _, _ = select.select(
+        [ready_read], [], [], READY_TIMEOUT_SECONDS
+    )
+    ready = os.read(ready_read, 1) if readable else b""
+    os.close(ready_read)
+    if ready != b"R":
+        terminate_target(guard_pid, False)
+        try:
+            os.waitpid(guard_pid, 0)
+        except ChildProcessError:
+            pass
+        fail("guard did not become ready")
+    if os.getppid() != root_pid:
+        os.kill(os.getpid(), signal.SIGKILL)
+
+    try:
+        os.execvpe(program_argv[0], program_argv, os.environ)
+    except OSError as error:
+        terminate_target(guard_pid, False)
+        fail(f"cannot exec {program_argv[0]}: {error}")
+  '';
+
+  dedicatedAgentSupervisor = writeText "anvil-agent-supervisor.py" (
+    builtins.readFile ./agent-supervisor.py
+  );
+
   dedicatedChildShell = writeShellApplication {
     name = "anvil-headless-child-shell";
     text = ''
@@ -359,7 +621,8 @@ let
       fi
       exec 8<&- 9<&-
       unset ANVIL_HEADLESS_REAL_SHELL
-      exec "$real_shell" "$@"
+      exec "${python3}/bin/python3" -I -S "${dedicatedParentGuardLauncher}" \
+        group "$real_shell" "$@"
     '';
   };
 
@@ -368,9 +631,21 @@ let
 
     (require 'exec-path-from-shell)
     (require 'direnv)
+    ;; json-parse-string decodes the pinned direnv status gate below.
     (require 'json)
-    (require 'seq)
     (setq direnv-always-show-summary nil)
+
+    ;; These variables are defined by the packaged anvil-host patch.  Bare
+    ;; declarations make the bindings below dynamic under lexical compilation.
+    (defvar anvil-host-child-process-environment)
+    (defvar anvil-host-child-exec-path)
+    (defvar anvil-host-child-shell-file-name)
+    (defvar anvil-host-child-shell-command-switch)
+
+    (defvar anvil-headless--baseline-process-environment nil)
+    (defvar anvil-headless--baseline-exec-path nil)
+    (defvar anvil-headless--baseline-shell-file-name nil)
+    (defvar anvil-headless--baseline-shell-command-switch nil)
 
     (defconst anvil-headless--emacs-bin-directory
       (file-name-as-directory "${dedicatedRuntimeEmacs}/bin")
@@ -420,21 +695,129 @@ let
     (advice-add 'direnv-update-directory-environment
                 :after #'anvil-headless--restore-required-exec-path)
 
+    (defconst anvil-headless--direnv-bookkeeping-variables
+      '("DIRENV_DIFF" "DIRENV_DIR" "DIRENV_FILE" "DIRENV_WATCHES"))
+
+    (defun anvil-headless--environment-with (environment name value)
+      "Return a copy of ENVIRONMENT with NAME set to VALUE."
+      (let ((process-environment (copy-sequence environment)))
+        (setenv name value)
+        process-environment))
+
+    (defun anvil-headless--snapshot-baseline-environment ()
+      "Freeze this daemon's imported login environment before any request."
+      (let ((environment (copy-sequence process-environment)))
+        (dolist (name
+                 (append
+                  '("ANVIL_HEADLESS_PARENT_PID"
+                    "ANVIL_HEADLESS_REAL_SHELL")
+                  anvil-headless--direnv-bookkeeping-variables))
+          (setq environment
+                (anvil-headless--environment-with
+                 environment name nil)))
+        (setq anvil-headless--baseline-process-environment environment
+              anvil-headless--baseline-exec-path (copy-sequence exec-path)
+              anvil-headless--baseline-shell-file-name shell-file-name
+              anvil-headless--baseline-shell-command-switch
+              shell-command-switch))
+      (unless (and (listp anvil-headless--baseline-process-environment)
+                   (listp anvil-headless--baseline-exec-path)
+                   (stringp anvil-headless--baseline-shell-file-name)
+                   (stringp anvil-headless--baseline-shell-command-switch))
+        (error "Anvil could not snapshot its baseline environment")))
+
+    (defun anvil-headless--strip-direnv-bookkeeping ()
+      "Remove direnv's internal state from the current process environment."
+      (dolist (name anvil-headless--direnv-bookkeeping-variables)
+        (setenv name nil)))
+
+    (defun anvil-headless--direnv-allowed-p (directory)
+      "Return non-nil only when DIRECTORY has an explicitly allowed envrc."
+      (condition-case nil
+          (with-temp-buffer
+            (let ((default-directory
+                   (file-name-as-directory (expand-file-name directory)))
+                  (coding-system-for-read 'utf-8-unix))
+              (when
+                  (zerop
+                   (call-process
+                    anvil-headless--direnv-executable nil (list t nil) nil
+                    "status" "--json"))
+                (let* ((document
+                        (json-parse-string
+                         (buffer-string)
+                         :object-type 'hash-table
+                         :array-type 'list
+                         :null-object nil
+                         :false-object nil))
+                       (state (and (hash-table-p document)
+                                   (gethash "state" document)))
+                       (found (and (hash-table-p state)
+                                   (gethash "foundRC" state))))
+                  (and (hash-table-p found)
+                       (eql (gethash "allowed" found) 0))))))
+        (error nil)))
+
+    (defun anvil-headless--restore-direnv-baseline
+        (environment executable-path active-directory)
+      "Restore pre-update ENVIRONMENT, EXECUTABLE-PATH, and ACTIVE-DIRECTORY."
+      (setq-local process-environment environment)
+      (setq-local exec-path executable-path)
+      (setq-local direnv--active-directory active-directory)
+      (anvil-headless--strip-direnv-bookkeeping)
+      nil)
+
+    (defun anvil-headless--restore-immutable-direnv-baseline ()
+      "Restore this buffer to the daemon's immutable login environment."
+      (unless (and anvil-headless--baseline-process-environment
+                   anvil-headless--baseline-exec-path)
+        (error "Anvil baseline environment is unavailable"))
+      (anvil-headless--restore-direnv-baseline
+       (copy-sequence anvil-headless--baseline-process-environment)
+       (copy-sequence anvil-headless--baseline-exec-path)
+       nil))
+
+    (defun anvil-headless--apply-direnv-if-allowed (directory)
+      "Apply DIRECTORY's envrc only while its pinned status remains allowed."
+      (if (not (anvil-headless--direnv-allowed-p directory))
+          (anvil-headless--restore-immutable-direnv-baseline)
+        (condition-case nil
+            (progn
+              (let ((inhibit-message t)
+                    (message-log-max nil)
+                    (direnv-always-show-summary nil))
+                (direnv-update-directory-environment directory))
+              ;; Close the allow-hash race: if status changed while export
+              ;; ran, discard the entire update rather than only its marker.
+              (if (anvil-headless--direnv-allowed-p directory)
+                  t
+                (anvil-headless--restore-immutable-direnv-baseline)))
+          (error
+           (anvil-headless--restore-immutable-direnv-baseline)))))
+
     (defun anvil-headless--direnv-update-current-buffer ()
-      "Give a visited local file its own direnv-derived process environment."
+      "Give a visited local file its own allowed direnv environment."
       (when-let ((directory (direnv--directory)))
         (unless (file-remote-p directory)
+          (unless (and anvil-headless--baseline-process-environment
+                       anvil-headless--baseline-exec-path)
+            (error "Anvil baseline environment is unavailable"))
           (unless (local-variable-p 'process-environment)
             (setq-local process-environment
                         (copy-sequence
-                         (default-value 'process-environment))))
+                         anvil-headless--baseline-process-environment)))
           (unless (local-variable-p 'exec-path)
             (setq-local exec-path
-                        (copy-sequence (default-value 'exec-path))))
+                        (copy-sequence
+                         anvil-headless--baseline-exec-path)))
           (unless (local-variable-p 'direnv--active-directory)
             (setq-local direnv--active-directory nil))
-          (unless (equal direnv--active-directory directory)
-            (direnv-update-directory-environment directory)))))
+          (if (equal direnv--active-directory directory)
+              ;; Recheck an already-loaded buffer: a newly blocked envrc must
+              ;; lose both user variables and direnv bookkeeping immediately.
+              (unless (anvil-headless--direnv-allowed-p directory)
+                (anvil-headless--restore-immutable-direnv-baseline))
+            (anvil-headless--apply-direnv-if-allowed directory)))))
 
     ;; `change-major-mode-after-body-hook' runs before the mode's own hook,
     ;; so Eglot, Flycheck, and similar mode-hook clients see the project env.
@@ -449,10 +832,16 @@ let
 
     (defun anvil-headless--direnv-around-host-run
         (original command coding cwd timeout)
-      "Run ORIGINAL with CWD's buffer-local direnv and closed lock fds."
-      (let ((real-shell (or shell-file-name "/bin/sh"))
-            (child-process-environment (copy-sequence process-environment))
-            (child-exec-path (copy-sequence exec-path)))
+      "Run ORIGINAL with a baseline-derived, allowed child environment."
+      (unless (and anvil-headless--baseline-process-environment
+                   anvil-headless--baseline-exec-path)
+        (error "Anvil baseline environment is unavailable"))
+      (let ((real-shell anvil-headless--baseline-shell-file-name)
+            (child-process-environment
+             (copy-sequence
+              anvil-headless--baseline-process-environment))
+            (child-exec-path
+             (copy-sequence anvil-headless--baseline-exec-path)))
         (when (and cwd
                    (not (file-remote-p cwd))
                    (file-directory-p (expand-file-name cwd)))
@@ -463,23 +852,31 @@ let
             (setq-local process-environment child-process-environment)
             (setq-local exec-path child-exec-path)
             (setq-local direnv--active-directory nil)
-            ;; direnv.el treats a blocked or missing envrc as an unchanged
-            ;; environment.  Keep its diagnostic chatter out of MCP results.
-            (condition-case nil
-                (let ((inhibit-message t)
-                      (message-log-max nil)
-                      (direnv-always-show-summary nil))
-                  (direnv-update-directory-environment default-directory))
-              (error nil))
+            (anvil-headless--apply-direnv-if-allowed default-directory)
             (anvil-headless--restore-required-exec-path)
             (setq child-process-environment
                   (copy-sequence process-environment)
                   child-exec-path (copy-sequence exec-path))))
-        (let ((process-environment child-process-environment)
-              (exec-path child-exec-path)
-              (shell-file-name
-               "${dedicatedChildShell}/bin/anvil-headless-child-shell"))
-          (setenv "ANVIL_HEADLESS_REAL_SHELL" real-shell)
+        ;; Inject guard controls after direnv so an envrc cannot spoof them.
+        (setq child-process-environment
+              (anvil-headless--environment-with
+               child-process-environment
+               "ANVIL_HEADLESS_PARENT_PID"
+               (number-to-string (emacs-pid))))
+        (setq child-process-environment
+              (anvil-headless--environment-with
+               child-process-environment
+               "ANVIL_HEADLESS_REAL_SHELL" real-shell))
+        ;; These special variables remain dynamically visible while ORIGINAL
+        ;; waits, but the anvil-host patch applies their values only inside
+        ;; make-process.  Root callbacks keep their baseline environment.
+        (let ((anvil-host-child-process-environment
+               child-process-environment)
+              (anvil-host-child-exec-path child-exec-path)
+              (anvil-host-child-shell-file-name
+               "${dedicatedChildShell}/bin/anvil-headless-child-shell")
+              (anvil-host-child-shell-command-switch
+               anvil-headless--baseline-shell-command-switch))
           (funcall original command coding cwd timeout))))
 
     (with-eval-after-load 'anvil-host
@@ -489,6 +886,9 @@ let
 
   dedicatedWorkerInit = writeText "anvil-headless-worker-init.el" ''
     ;;; anvil-headless-worker-init.el --- Isolated Anvil worker -*- lexical-binding: t; -*-
+
+    (defvar anvil-server-schema-cache-file)
+    (declare-function anvil-headless--snapshot-baseline-environment nil ())
 
     (let* ((expected-worker-names '${workerNamesElisp})
            (runtime-root (getenv "XDG_RUNTIME_DIR"))
@@ -526,6 +926,7 @@ let
          (expand-file-name "eln-cache/" state-dir))))
 
     (load "${dedicatedEnvironmentInit}" nil nil t)
+    (anvil-headless--snapshot-baseline-environment)
     (add-to-list 'load-path "${dedicatedAnvil}/share/emacs/site-lisp")
     (add-to-list 'load-path "${dedicatedAnvilIde}/share/emacs/site-lisp")
     (require 'anvil-server)
@@ -553,10 +954,11 @@ let
     name = "anvil-worker-emacs";
     text = ''
       # Fds 8/9 carry the root daemon's OFD locks.  Close the inherited
-      # descriptions before worker Emacs starts so only the root owns them.
+      # descriptions before starting the exact-PID worker containment guard.
       exec 8<&- 9<&-
       export ANVIL_EMACS_WORKER=1
-      exec "${dedicatedRuntimeEmacs}/bin/emacs" "$@"
+      exec "${python3}/bin/python3" -I -S "${dedicatedParentGuardLauncher}" \
+        exact "${dedicatedRuntimeEmacs}/bin/emacs" "$@"
     '';
   };
 
@@ -574,7 +976,13 @@ let
     EXIT_SOFTWARE = 70
     EXIT_CONFIG = 77
     LOCK_NAME = ".anvil-headless-emacs.lock"
+    PULSE_NAME = ".anvil-root-pulse"
+    LEASE_NAME = ".anvil-root-async-lease"
     DEFAULT_REFRESH_SECONDS = 6 * 60 * 60
+    DEFAULT_STARTUP_SECONDS = 120
+    DEFAULT_NORMAL_SECONDS = 45
+    DEFAULT_ASYNC_SECONDS = 600
+    DEFAULT_PULSE_SECONDS = 1
 
 
     def fail(message, status=EXIT_SOFTWARE):
@@ -657,45 +1065,499 @@ let
         return lock_path, (info.st_dev, info.st_ino)
 
 
-    def heartbeat_fail_closed(parent_pid):
-        # Do not signal a stale or reused PID after the heartbeat is reparented.
-        if os.getppid() == parent_pid:
+    def positive_seconds(name, default):
+        raw = os.environ.get(name, str(default))
+        try:
+            value = float(raw)
+        except ValueError:
+            fail(f"{name} must be numeric", EXIT_CONFIG)
+        if not math.isfinite(value) or value <= 0:
+            fail(f"{name} must be positive and finite", EXIT_CONFIG)
+        return value
+
+
+    def file_generation(info):
+        return info.st_mtime_ns, info.st_ctime_ns
+
+
+    def compensate_scheduler_gap(
+        now,
+        last_poll,
+        poll_seconds,
+        started,
+        last_progress,
+        lease_started,
+    ):
+        elapsed_since_poll = now - last_poll
+        if elapsed_since_poll <= 3.0 * poll_seconds:
+            return started, last_progress, lease_started
+        unexpected_gap = max(0.0, elapsed_since_poll - poll_seconds)
+        return tuple(
+            None if anchor is None else anchor + unexpected_gap
+            for anchor in (started, last_progress, lease_started)
+        )
+
+
+    def deadline_expired(now, anchor, seconds):
+        return anchor is not None and now - anchor >= seconds
+
+
+    def open_monitor_file(directory, name, initial, mode):
+        path = os.path.join(directory, name)
+        directory_fd = None
+        descriptor = None
+        try:
+            directory_fd = os.open(
+                directory,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+            )
+            directory_info = os.fstat(directory_fd)
+            if (
+                not stat.S_ISDIR(directory_info.st_mode)
+                or directory_info.st_uid != os.getuid()
+                or stat.S_IMODE(directory_info.st_mode) != 0o700
+            ):
+                raise OSError(errno.EPERM, "unsafe monitor directory")
+
             try:
-                os.kill(parent_pid, signal.SIGKILL)
-            except OSError:
+                stale_info = os.stat(
+                    name,
+                    dir_fd=directory_fd,
+                    follow_symlinks=False,
+                )
+            except FileNotFoundError:
                 pass
+            else:
+                if (
+                    not stat.S_ISREG(stale_info.st_mode)
+                    or stale_info.st_uid != os.getuid()
+                    or stale_info.st_nlink != 1
+                ):
+                    raise OSError(errno.EPERM, "unsafe stale monitor file")
+                try:
+                    os.unlink(name, dir_fd=directory_fd)
+                except FileNotFoundError:
+                    pass
+
+            descriptor = os.open(
+                name,
+                os.O_RDWR
+                | os.O_CREAT
+                | os.O_EXCL
+                | os.O_NOFOLLOW,
+                mode,
+                dir_fd=directory_fd,
+            )
+            info = os.fstat(descriptor)
+            path_info = os.stat(
+                name,
+                dir_fd=directory_fd,
+                follow_symlinks=False,
+            )
+            if (
+                not stat.S_ISREG(info.st_mode)
+                or info.st_uid != os.getuid()
+                or info.st_nlink != 1
+                or not stat.S_ISREG(path_info.st_mode)
+                or path_info.st_uid != os.getuid()
+                or path_info.st_nlink != 1
+                or (path_info.st_dev, path_info.st_ino)
+                != (info.st_dev, info.st_ino)
+            ):
+                raise OSError(errno.EPERM, "unsafe new monitor file")
+            os.fchmod(descriptor, mode)
+            written = os.write(descriptor, initial)
+            if written != len(initial):
+                raise OSError(errno.EIO, "short watchdog state write")
+            os.fsync(descriptor)
+            info = os.fstat(descriptor)
+            os.set_inheritable(descriptor, False)
+            return (
+                path,
+                descriptor,
+                (info.st_dev, info.st_ino),
+                file_generation(info),
+            )
+        except OSError as error:
+            if descriptor is not None:
+                try:
+                    os.close(descriptor)
+                except OSError:
+                    pass
+            fail(f"cannot prepare watchdog state {path}: {error}", EXIT_CONFIG)
+        finally:
+            if directory_fd is not None:
+                try:
+                    os.close(directory_fd)
+                except OSError:
+                    pass
+
+
+    def validate_lock_files(lock_identities):
+        for lock_path, expected in lock_identities:
+            info = os.stat(lock_path, follow_symlinks=False)
+            if (
+                not stat.S_ISREG(info.st_mode)
+                or info.st_uid != os.getuid()
+                or (info.st_dev, info.st_ino) != expected
+            ):
+                raise RuntimeError(f"lock identity changed: {lock_path}")
+
+
+    def monitor_file_info(entry):
+        path, descriptor, expected, _initial = entry
+        descriptor_info = os.fstat(descriptor)
+        path_info = os.stat(path, follow_symlinks=False)
+        if (
+            not stat.S_ISREG(descriptor_info.st_mode)
+            or descriptor_info.st_uid != os.getuid()
+            or descriptor_info.st_nlink != 1
+            or not stat.S_ISREG(path_info.st_mode)
+            or path_info.st_uid != os.getuid()
+            or (descriptor_info.st_dev, descriptor_info.st_ino) != expected
+            or (path_info.st_dev, path_info.st_ino) != expected
+        ):
+            raise RuntimeError(f"watchdog identity changed: {path}")
+        return descriptor_info
+
+
+    def monitor_file_generation(entry):
+        return file_generation(monitor_file_info(entry))
+
+
+    def lease_state_from_info(info):
+        mode = stat.S_IMODE(info.st_mode)
+        if mode == 0o600:
+            return "active"
+        if mode == 0o400:
+            return "idle"
+        raise RuntimeError(f"invalid async lease mode: {mode:o}")
+
+
+    def monitor_snapshot(pulse_entry, lease_entry):
+        pulse_info = monitor_file_info(pulse_entry)
+        lease_info = monitor_file_info(lease_entry)
+        return (
+            file_generation(pulse_info),
+            file_generation(lease_info),
+            lease_state_from_info(lease_info),
+        )
+
+
+    def close_monitor_descriptors(keep):
+        candidates = None
+        for descriptor_root in ("/dev/fd", "/proc/self/fd"):
+            try:
+                candidates = [
+                    int(name)
+                    for name in os.listdir(descriptor_root)
+                    if name.isdecimal()
+                ]
+                break
+            except OSError:
+                continue
+        if candidates is not None:
+            for descriptor in candidates:
+                if descriptor >= 3 and descriptor not in keep:
+                    try:
+                        os.close(descriptor)
+                    except OSError as error:
+                        if error.errno != errno.EBADF:
+                            raise
+            return
+
+        try:
+            descriptor_limit = int(os.sysconf("SC_OPEN_MAX"))
+        except (OSError, TypeError, ValueError):
+            descriptor_limit = 65536
+        descriptor_limit = max(256, min(descriptor_limit, 65536))
+        cursor = 3
+        for descriptor in sorted(set(keep)):
+            if descriptor < 3:
+                continue
+            os.closerange(cursor, min(descriptor, descriptor_limit))
+            cursor = descriptor + 1
+        if cursor < descriptor_limit:
+            os.closerange(cursor, descriptor_limit)
+
+
+    def refresh_durable_state(state_root):
+        directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        entry_flags = (
+            os.O_RDONLY
+            | os.O_NOFOLLOW
+            | getattr(os, "O_NONBLOCK", 0)
+        )
+
+        def open_owned_entry(directory_fd, name, expected, flags, display):
+            try:
+                descriptor = os.open(name, flags, dir_fd=directory_fd)
+            except FileNotFoundError:
+                return None
+            except OSError as error:
+                if error.errno in (errno.ELOOP, errno.ENOTDIR):
+                    return None
+                raise
+            info = os.fstat(descriptor)
+            if info.st_uid != os.getuid():
+                os.close(descriptor)
+                raise RuntimeError(f"durable state owner changed: {display}")
+            if (info.st_dev, info.st_ino) != expected:
+                # Volatile state such as a SQLite WAL may be recreated
+                # between lstat and open.  The opened fd is still confined
+                # by O_NOFOLLOW; skip the new generation until next refresh.
+                os.close(descriptor)
+                return None
+            return descriptor
+
+        def walk_directory(path, directory_fd):
+            info = os.fstat(directory_fd)
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid():
+                raise RuntimeError(f"unsafe durable state directory: {path}")
+            os.utime(directory_fd)
+            try:
+                with os.scandir(directory_fd) as entries:
+                    names = [entry.name for entry in entries]
+            except FileNotFoundError:
+                return
+
+            for name in names:
+                display = os.path.join(path, name)
+                try:
+                    info = os.stat(
+                        name,
+                        dir_fd=directory_fd,
+                        follow_symlinks=False,
+                    )
+                except FileNotFoundError:
+                    continue
+                if stat.S_ISLNK(info.st_mode):
+                    continue
+                if info.st_uid != os.getuid():
+                    raise RuntimeError(
+                        f"durable state owner changed: {display}"
+                    )
+                expected = (info.st_dev, info.st_ino)
+                if stat.S_ISDIR(info.st_mode):
+                    child_fd = open_owned_entry(
+                        directory_fd,
+                        name,
+                        expected,
+                        directory_flags,
+                        display,
+                    )
+                    if child_fd is None:
+                        continue
+                    try:
+                        walk_directory(display, child_fd)
+                    finally:
+                        os.close(child_fd)
+                elif stat.S_ISREG(info.st_mode):
+                    child_fd = open_owned_entry(
+                        directory_fd,
+                        name,
+                        expected,
+                        entry_flags,
+                        display,
+                    )
+                    if child_fd is None:
+                        continue
+                    try:
+                        child_info = os.fstat(child_fd)
+                        if stat.S_ISREG(child_info.st_mode):
+                            os.utime(child_fd)
+                    finally:
+                        os.close(child_fd)
+
+        try:
+            root_fd = os.open(state_root, directory_flags)
+        except FileNotFoundError:
+            return
+        try:
+            walk_directory(state_root, root_fd)
+        finally:
+            os.close(root_fd)
+
+
+    def kill_parent_if(parent_pid, verifier):
+        if os.getppid() != parent_pid:
+            os._exit(0)
+        try:
+            still_failed = verifier()
+        except BaseException:
+            still_failed = True
+        if not still_failed:
+            return False
+        if os.getppid() != parent_pid:
+            os._exit(0)
+        try:
+            os.kill(parent_pid, signal.SIGKILL)
+        except OSError:
+            pass
         os._exit(0)
 
 
-    def heartbeat(parent_pid, lock_identities, refresh_seconds):
+    def monitor(
+        parent_pid,
+        lock_identities,
+        state_root,
+        pulse_entry,
+        lease_entry,
+        refresh_seconds,
+        pulse_seconds,
+        startup_seconds,
+        normal_seconds,
+        async_seconds,
+    ):
         try:
             null_fd = os.open(os.devnull, os.O_RDWR)
             for target in (0, 1, 2):
                 os.dup2(null_fd, target)
             if null_fd > 2:
                 os.close(null_fd)
-            # Close the OFD-lock descriptions at 8 and 9, plus any other
-            # daemon/service descriptors inherited before exec.
-            os.closerange(3, 256)
+            close_monitor_descriptors((pulse_entry[1], lease_entry[1]))
+
+            poll_seconds = min(0.5, max(0.05, pulse_seconds / 2.0))
+            started = time.monotonic()
+            last_poll = started
+            last_progress = None
+            lease_started = None
+            armed = False
+            (
+                pulse_generation,
+                lease_generation,
+                lease_state,
+            ) = monitor_snapshot(pulse_entry, lease_entry)
             next_refresh = 0.0
-            poll_seconds = min(1.0, max(0.05, refresh_seconds))
+
             while os.getppid() == parent_pid:
                 now = time.monotonic()
-                refresh_due = now >= next_refresh
-                for lock_path, expected in lock_identities:
-                    info = os.stat(lock_path, follow_symlinks=False)
-                    if (
-                        not stat.S_ISREG(info.st_mode)
-                        or (info.st_dev, info.st_ino) != expected
+                (
+                    started,
+                    last_progress,
+                    lease_started,
+                ) = compensate_scheduler_gap(
+                    now,
+                    last_poll,
+                    poll_seconds,
+                    started,
+                    last_progress,
+                    lease_started,
+                )
+                last_poll = now
+
+                try:
+                    validate_lock_files(lock_identities)
+                    (
+                        current_pulse,
+                        current_lease,
+                        current_lease_state,
+                    ) = monitor_snapshot(pulse_entry, lease_entry)
+                except BaseException:
+                    def still_broken():
+                        validate_lock_files(lock_identities)
+                        monitor_snapshot(pulse_entry, lease_entry)
+                        return False
+
+                    kill_parent_if(parent_pid, still_broken)
+                    continue
+
+                if current_lease != lease_generation:
+                    lease_generation = current_lease
+                    lease_state = current_lease_state
+                    if armed:
+                        last_progress = now
+                    lease_started = now if lease_state == "active" else None
+                else:
+                    lease_state = current_lease_state
+
+                if not armed:
+                    if current_pulse != pulse_generation:
+                        armed = True
+                        pulse_generation = current_pulse
+                        last_progress = now
+                        if lease_state == "active":
+                            lease_started = now
+                    elif deadline_expired(
+                        now, started, startup_seconds
                     ):
-                        heartbeat_fail_closed(parent_pid)
-                    if refresh_due:
-                        os.utime(lock_path, follow_symlinks=False)
-                if refresh_due:
+                        snapshot = (
+                            current_pulse,
+                            current_lease,
+                            current_lease_state,
+                        )
+
+                        def startup_still_expired():
+                            validate_lock_files(lock_identities)
+                            latest = monitor_snapshot(
+                                pulse_entry, lease_entry
+                            )
+                            return (
+                                latest == snapshot
+                                and deadline_expired(
+                                    time.monotonic(),
+                                    started,
+                                    startup_seconds,
+                                )
+                            )
+
+                        kill_parent_if(parent_pid, startup_still_expired)
+                else:
+                    if current_pulse != pulse_generation:
+                        pulse_generation = current_pulse
+                        last_progress = now
+
+                    deadline_start = (
+                        lease_started
+                        if lease_state == "active"
+                        else last_progress
+                    )
+                    deadline_seconds = (
+                        async_seconds
+                        if lease_state == "active"
+                        else normal_seconds
+                    )
+                    if deadline_expired(
+                        now, deadline_start, deadline_seconds
+                    ):
+                        snapshot = (
+                            current_pulse,
+                            current_lease,
+                            current_lease_state,
+                        )
+
+                        def activity_still_expired():
+                            validate_lock_files(lock_identities)
+                            latest = monitor_snapshot(
+                                pulse_entry, lease_entry
+                            )
+                            return (
+                                latest == snapshot
+                                and deadline_expired(
+                                    time.monotonic(),
+                                    deadline_start,
+                                    deadline_seconds,
+                                )
+                            )
+
+                        kill_parent_if(parent_pid, activity_still_expired)
+
+                if now >= next_refresh:
+                    try:
+                        for lock_path, _expected in lock_identities:
+                            os.utime(lock_path, follow_symlinks=False)
+                        refresh_durable_state(state_root)
+                    except BaseException:
+                        def refresh_still_broken():
+                            validate_lock_files(lock_identities)
+                            refresh_durable_state(state_root)
+                            return False
+
+                        kill_parent_if(parent_pid, refresh_still_broken)
                     next_refresh = now + refresh_seconds
                 time.sleep(poll_seconds)
         except BaseException:
-            heartbeat_fail_closed(parent_pid)
+            kill_parent_if(parent_pid, lambda: True)
         os._exit(0)
 
 
@@ -713,18 +1575,37 @@ let
     if lock_conflict_status not in (0, 75):
         fail(f"invalid lock conflict status: {lock_conflict_status}")
 
-    try:
-        refresh_seconds = float(
-            os.environ.get(
-                "ANVIL_EMACS_LOCK_REFRESH_SECONDS",
-                str(DEFAULT_REFRESH_SECONDS),
-            )
-        )
-    except ValueError:
-        fail("ANVIL_EMACS_LOCK_REFRESH_SECONDS must be numeric", EXIT_CONFIG)
-    if not math.isfinite(refresh_seconds) or refresh_seconds <= 0:
+    refresh_seconds = positive_seconds(
+        "ANVIL_EMACS_LOCK_REFRESH_SECONDS", DEFAULT_REFRESH_SECONDS
+    )
+    startup_seconds = positive_seconds(
+        "ANVIL_EMACS_WATCHDOG_STARTUP_SECONDS", DEFAULT_STARTUP_SECONDS
+    )
+    normal_seconds = positive_seconds(
+        "ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS", DEFAULT_NORMAL_SECONDS
+    )
+    async_seconds = positive_seconds(
+        "ANVIL_EMACS_WATCHDOG_ASYNC_SECONDS", DEFAULT_ASYNC_SECONDS
+    )
+    pulse_seconds = positive_seconds(
+        "ANVIL_EMACS_WATCHDOG_PULSE_SECONDS", DEFAULT_PULSE_SECONDS
+    )
+    if normal_seconds < 3.0 * pulse_seconds:
         fail(
-            "ANVIL_EMACS_LOCK_REFRESH_SECONDS must be positive and finite",
+            "ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS must be at least "
+            "three pulse intervals",
+            EXIT_CONFIG,
+        )
+    if startup_seconds < 3.0 * pulse_seconds:
+        fail(
+            "ANVIL_EMACS_WATCHDOG_STARTUP_SECONDS must be at least "
+            "three pulse intervals",
+            EXIT_CONFIG,
+        )
+    if async_seconds < normal_seconds:
+        fail(
+            "ANVIL_EMACS_WATCHDOG_ASYNC_SECONDS must not be shorter "
+            "than the normal deadline",
             EXIT_CONFIG,
         )
 
@@ -741,14 +1622,37 @@ let
 
     runtime_lock = acquire_lock(runtime_dir, 8, "runtime", lock_conflict_status)
     state_lock = acquire_lock(state_dir, 9, "state", lock_conflict_status)
+    pulse_entry = open_monitor_file(
+        runtime_dir, PULSE_NAME, b"pulse:boot\n", 0o600
+    )
+    lease_entry = open_monitor_file(
+        runtime_dir, LEASE_NAME, b"lease\n", 0o400
+    )
+    os.environ["ANVIL_EMACS_WATCHDOG_PULSE_FILE"] = pulse_entry[0]
+    os.environ["ANVIL_EMACS_WATCHDOG_LEASE_FILE"] = lease_entry[0]
+    os.environ["ANVIL_EMACS_WATCHDOG_PULSE_SECONDS"] = str(pulse_seconds)
+
     parent_pid = os.getpid()
     try:
-        heartbeat_pid = os.fork()
+        monitor_pid = os.fork()
     except OSError as error:
-        fail(f"cannot start lock refresh heartbeat: {error}")
-    if heartbeat_pid == 0:
-        heartbeat(parent_pid, (runtime_lock, state_lock), refresh_seconds)
+        fail(f"cannot start root watchdog monitor: {error}")
+    if monitor_pid == 0:
+        monitor(
+            parent_pid,
+            (runtime_lock, state_lock),
+            state_dir,
+            pulse_entry,
+            lease_entry,
+            refresh_seconds,
+            pulse_seconds,
+            startup_seconds,
+            normal_seconds,
+            async_seconds,
+        )
 
+    os.close(pulse_entry[1])
+    os.close(lease_entry[1])
     try:
         os.execv(locked_stage, [locked_stage, runtime_dir, state_dir])
     except OSError as error:
@@ -756,6 +1660,37 @@ let
   '';
   dedicatedInit = writeText "anvil-headless-init.el" ''
     ;;; anvil-headless-init.el --- Dedicated Anvil root -*- lexical-binding: t; -*-
+
+    (defvar anvil-eval-timeout)
+    (defvar anvil-worker-read-pool-size)
+    (defvar anvil-worker-write-pool-size)
+    (defvar anvil-worker-batch-pool-size)
+    (defvar anvil-server-schema-cache-file)
+    (defvar anvil-org-allowed-files-enabled)
+    (defvar org-directory)
+    (defvar org-agenda-files)
+    (defvar anvil-semantic-roots)
+    (defvar anvil-semantic-db-path)
+    (defvar anvil-pdf-python)
+    (defvar anvil-worker-emacs-bin)
+    (defvar anvil-worker-init-file)
+    (defvar anvil-optional-modules)
+    (defvar anvil-server-autostart-on-request)
+    (defvar anvil-worker--pool)
+    (defvar anvil-modules)
+    (defvar anvil--loaded-modules)
+    (defvar anvil-headless--baseline-process-environment)
+    (defvar anvil-headless--baseline-exec-path)
+    (declare-function anvil-headless--snapshot-baseline-environment nil ())
+    (declare-function anvil-worker-kill "anvil-worker" ())
+    (defvar anvil-eval-async-active-function)
+    (defvar anvil-eval-async-idle-function)
+    (defvar anvil-eval-async-cleanup-failure-function)
+    (defvar anvil-headless--watchdog-pulse-file nil)
+    (defvar anvil-headless--watchdog-lease-file nil)
+    (defvar anvil-headless--watchdog-pulse-seconds nil)
+    (defvar anvil-headless--watchdog-pulse-counter 0)
+    (defvar anvil-headless--watchdog-timer nil)
 
     (let* ((runtime-dir (getenv "XDG_RUNTIME_DIR"))
            (state-dir (getenv "ANVIL_EMACS_STATE_DIR"))
@@ -790,8 +1725,83 @@ let
         (startup-redirect-eln-cache
          (expand-file-name "eln-cache/" state-dir))))
 
+    (defun anvil-headless--watchdog-write (path value)
+      "Write VALUE to the existing watchdog file at PATH without replacing it."
+      (unless (and (stringp path)
+                   (file-regular-p path)
+                   (not (file-symlink-p path)))
+        (error "Unsafe Anvil watchdog file: %S" path))
+      (let ((coding-system-for-write 'utf-8-unix)
+            (create-lockfiles nil))
+        (write-region value nil path nil 'silent)))
+
+    (defun anvil-headless--watchdog-pulse ()
+      "Record one root event-loop progress pulse, failing closed on error."
+      (condition-case err
+          (progn
+            (setq anvil-headless--watchdog-pulse-counter
+                  (1+ anvil-headless--watchdog-pulse-counter))
+            (anvil-headless--watchdog-write
+             anvil-headless--watchdog-pulse-file
+             (format "pulse:%d\n"
+                     anvil-headless--watchdog-pulse-counter)))
+        (error
+         (message "Anvil watchdog pulse failed: %s"
+                  (error-message-string err))
+         (kill-emacs 70))))
+
+    (defun anvil-headless--watchdog-set-lease-state (active)
+      "Set the fixed lease inode to ACTIVE or idle without rewriting it."
+      (let ((path anvil-headless--watchdog-lease-file)
+            (mode (if active #o600 #o400)))
+        (unless (and (stringp path)
+                     (file-regular-p path)
+                     (not (file-symlink-p path)))
+          (error "Unsafe Anvil watchdog lease file: %S" path))
+        (set-file-modes path mode)
+        (unless (and (file-regular-p path)
+                     (not (file-symlink-p path))
+                     (= (logand (or (file-modes path) 0) #o777) mode))
+          (error "Anvil watchdog lease mode transition failed: %S" path))))
+
+    (defun anvil-headless--watchdog-async-active (_job-id)
+      "Extend the watchdog lease while an async job is evaluating."
+      (anvil-headless--watchdog-set-lease-state t))
+
+    (defun anvil-headless--watchdog-async-idle (_job-id)
+      "Return the watchdog lease to idle after an async job."
+      (anvil-headless--watchdog-set-lease-state nil))
+
+    (defun anvil-headless--watchdog-cleanup-failed (job-id error-data)
+      "Fail the dedicated daemon closed after JOB-ID cleanup ERROR-DATA."
+      (message "Anvil async watchdog cleanup failed for %s: %S"
+               job-id error-data)
+      (kill-emacs 70))
+
+    (defun anvil-headless--watchdog-arm ()
+      "Arm the external root watchdog after the MCP server is ready."
+      (setq anvil-headless--watchdog-pulse-file
+            (getenv "ANVIL_EMACS_WATCHDOG_PULSE_FILE")
+            anvil-headless--watchdog-lease-file
+            (getenv "ANVIL_EMACS_WATCHDOG_LEASE_FILE")
+            anvil-headless--watchdog-pulse-seconds
+            (string-to-number
+             (or (getenv "ANVIL_EMACS_WATCHDOG_PULSE_SECONDS") "")))
+      (unless (and anvil-headless--watchdog-pulse-file
+                   anvil-headless--watchdog-lease-file
+                   (> anvil-headless--watchdog-pulse-seconds 0))
+        (error "Anvil watchdog environment is incomplete"))
+      (anvil-headless--watchdog-set-lease-state nil)
+      (anvil-headless--watchdog-pulse)
+      (setq anvil-headless--watchdog-timer
+            (run-at-time
+             anvil-headless--watchdog-pulse-seconds
+             anvil-headless--watchdog-pulse-seconds
+             #'anvil-headless--watchdog-pulse)))
+
     (require 'anvil)
     (require 'anvil-server-commands)
+    (require 'anvil-worker)
 
     ;; Keep promptdeploy's one universal "anvil" registration complete in
     ;; dedicated mode.  The upstream split "emacs-eval" registry remains
@@ -836,6 +1846,23 @@ let
          typed-tools)
         (anvil-server--tools-list-cache-invalidate "anvil")))
 
+    (defun anvil-headless--with-parent-pid-for-worker
+        (original &rest args)
+      "Spawn a worker from immutable root login environment snapshots."
+      (unless (and anvil-headless--baseline-process-environment
+                   anvil-headless--baseline-exec-path)
+        (error "Anvil worker baseline environment is unavailable"))
+      (let ((process-environment
+             (copy-sequence
+              anvil-headless--baseline-process-environment))
+            (exec-path
+             (copy-sequence anvil-headless--baseline-exec-path)))
+        (setenv "ANVIL_HEADLESS_REAL_SHELL" nil)
+        (setenv "ANVIL_HEADLESS_PARENT_PID" nil)
+        (setenv "ANVIL_HEADLESS_PARENT_PID"
+                (number-to-string (emacs-pid)))
+        (apply original args)))
+
     (advice-add 'anvil-server-register-tool
                 :around #'anvil-headless--mirror-typed-tool)
     (advice-add 'anvil-server-unregister-tool
@@ -845,6 +1872,7 @@ let
     (condition-case err
         (progn
           (load "${dedicatedEnvironmentInit}" nil nil t)
+          (anvil-headless--snapshot-baseline-environment)
           (setq anvil-pdf-python "${pythonWithPyMuPDF}/bin/python3"
                 anvil-worker-emacs-bin "${dedicatedWorkerEmacs}/bin/anvil-worker-emacs"
                 anvil-worker-init-file "${dedicatedWorkerInit}"
@@ -864,6 +1892,11 @@ let
                                  "-c" "import fitz"))
             (error "Anvil requires PyMuPDF"))
 
+          (unless (fboundp 'anvil-worker--spawn-worker)
+            (error "Anvil worker spawn function is unavailable"))
+          (advice-add 'anvil-worker--spawn-worker
+                      :around
+                      #'anvil-headless--with-parent-pid-for-worker)
           (anvil-enable)
           (let (actual-worker-specs)
             (dolist (lane '(:read :write :batch))
@@ -878,8 +1911,15 @@ let
           (dolist (module (append anvil-modules anvil-optional-modules))
             (unless (memq module anvil--loaded-modules)
               (error "Anvil failed to load required module: %s" module)))
+          (setq anvil-eval-async-active-function
+                #'anvil-headless--watchdog-async-active
+                anvil-eval-async-idle-function
+                #'anvil-headless--watchdog-async-idle
+                anvil-eval-async-cleanup-failure-function
+                #'anvil-headless--watchdog-cleanup-failed)
           (add-hook 'kill-emacs-hook #'anvil-worker-kill)
-          (anvil-server-start))
+          (anvil-server-start)
+          (anvil-headless--watchdog-arm))
       (error
        (message "Anvil headless startup failed: %s"
                 (error-message-string err))
@@ -954,9 +1994,16 @@ let
       validate_host_component "$short_host"
 
       runtime_root="''${ANVIL_EMACS_RUNTIME_ROOT:-${defaultRuntimeRoot}}"
-      runtime_dir="$runtime_root/$short_host"
       state_root="''${ANVIL_EMACS_STATE_ROOT:-/var/tmp/anvil-emacs-$(id -u)}"
-      state_dir="$state_root/$short_host"
+      runtime_dir="''${ANVIL_EMACS_RUNTIME_DIR:-}"
+      state_dir="''${ANVIL_EMACS_STATE_DIR:-}"
+      if [ -z "$runtime_dir" ] && [ -z "$state_dir" ]; then
+        runtime_dir="$runtime_root/$short_host"
+        state_dir="$state_root/$short_host"
+      elif [ -z "$runtime_dir" ] || [ -z "$state_dir" ]; then
+        echo "anvil-mcp: exact runtime and state directories must be set together" >&2
+        exit 64
+      fi
       lock_conflict_status="''${ANVIL_EMACS_LOCK_CONFLICT_STATUS:-75}"
       case "$lock_conflict_status" in
         0|75) ;;
@@ -988,6 +2035,7 @@ let
       gnugrep
       gnused
       hostname
+      python3
     ];
     text = ''
       ${privateDirectoryFunctions}
@@ -1044,6 +2092,36 @@ let
           exit 2
           ;;
       esac
+
+      ${lib.optionalString usePerAgentDaemon ''
+        if [ -n "$socket" ]; then
+          echo "anvil-mcp: --socket cannot override a per-agent daemon" >&2
+          exit 64
+        fi
+        short_host="''${ANVIL_EMACS_HOST:-$(hostname -s)}"
+        validate_host_component "$short_host"
+        runtime_root="''${ANVIL_EMACS_RUNTIME_ROOT:-${defaultRuntimeRoot}}"
+        state_root="''${ANVIL_EMACS_STATE_ROOT:-/var/tmp/anvil-emacs-$(id -u)}"
+        private_directory "$runtime_root" "runtime root"
+        private_directory "$runtime_root/$short_host" "host runtime directory"
+        private_directory "$state_root" "state root"
+        private_directory "$state_root/$short_host" "host state directory"
+        ANVIL_HEADLESS_PARENT_PID="$PPID" \
+          exec "${python3}/bin/python3" -I -S \
+            "${dedicatedParentGuardLauncher}" external-group \
+            "${python3}/bin/python3" -I -S "${dedicatedAgentSupervisor}" \
+              --server-id "$server_id" \
+              --host "$short_host" \
+              --runtime-root "$runtime_root" \
+              --state-root "$state_root" \
+              --daemon "${dedicatedDaemon}/bin/anvil-headless-emacs" \
+              --stdio "${dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh" \
+              --emacsclient "${dedicatedRuntimeEmacs}/bin/emacsclient" \
+              --python "${python3}/bin/python3" \
+              --parent-guard "${dedicatedParentGuardLauncher}" \
+              --grace-seconds "''${ANVIL_AGENT_GRACE_SECONDS:-5}" \
+              --ready-seconds "''${ANVIL_AGENT_READY_SECONDS:-120}"
+      ''}
 
       if [ -z "$socket" ]; then
         short_host="''${ANVIL_EMACS_HOST:-$(hostname -s)}"
@@ -1114,6 +2192,7 @@ let
         dedicatedLockLauncher
         dedicatedLockedStage
         dedicatedRuntimeEmacs
+        dedicatedAgentSupervisor
         direnv
         dedicatedWorkerEmacs
         dedicatedWorkerInit
@@ -1121,6 +2200,8 @@ let
         workerPoolSizes
         workerSpecs
         ;
+      dedicatedAgentSupervisorSmoke = ./agent-supervisor-smoke.py;
+      dedicatedAgentSupervisorTest = ./agent-supervisor-test.py;
     };
     meta = commonMeta // {
       description = "Dedicated-Emacs Anvil MCP launcher";

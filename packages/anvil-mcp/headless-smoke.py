@@ -577,6 +577,45 @@ def assert_worker_snapshot(
             raise AssertionError(f"{name} did not inherit the login PATH: {snapshot}")
 
 
+def spawn_baseline_expression() -> str:
+    """Probe the installed worker-spawn wrapper under a contaminated environment."""
+    return r"""
+(progn
+  (unless
+      (advice-member-p
+       #'anvil-headless--with-parent-pid-for-worker
+       'anvil-worker--spawn-worker)
+    (error "worker spawn baseline advice is not installed"))
+  (let ((process-environment (copy-sequence process-environment))
+        (exec-path (cons "/timer-contamination"
+                         (copy-sequence exec-path))))
+    (setenv "ANVIL_DIRENV_MARKER" "timer-contamination")
+    (json-serialize
+     (anvil-headless--with-parent-pid-for-worker
+      (lambda ()
+        (vector
+         (or (getenv "ANVIL_DIRENV_MARKER") :false)
+         (if (member "/timer-contamination" exec-path) t :false)
+         (or (getenv "ANVIL_HEADLESS_PARENT_PID") :false)
+         (number-to-string (emacs-pid))))))))
+""".strip()
+
+
+def assert_spawn_baseline(response: dict[str, object]) -> None:
+    """Validate the immutable environment and parent used by worker spawn."""
+    snapshot = decode_eval_json(response)
+    if not isinstance(snapshot, list) or len(snapshot) != 4:
+        raise AssertionError(f"malformed worker spawn snapshot: {snapshot}")
+    if snapshot[:2] != [False, False]:
+        raise AssertionError(f"spawn wrapper retained the project env: {snapshot}")
+    if (
+        not isinstance(snapshot[2], str)
+        or not snapshot[2].isdecimal()
+        or snapshot[2] != snapshot[3]
+    ):
+        raise AssertionError(f"spawn wrapper used the wrong parent PID: {snapshot}")
+
+
 def main() -> None:
     if len(sys.argv) != 3:
         raise SystemExit(
@@ -594,6 +633,7 @@ def main() -> None:
     }
     snapshot_expression = worker_snapshot_expression(worker_specs)
     buffer_environment_expression = direnv_buffer_expression()
+    spawn_environment_expression = spawn_baseline_expression()
     project_a = Path.home() / "direnv-a"
     project_b = Path.home() / "direnv-b"
     project_plain = Path.home() / "direnv-plain"
@@ -778,12 +818,24 @@ def main() -> None:
                     "name": "shell-run",
                     "arguments": {
                         "cmd": (
-                            "printf '%s:blocked-command' "
-                            '"${ANVIL_DIRENV_MARKER-unset}"'
+                            "printf '%s:%s:%s:%s:%s:blocked-command' "
+                            '"${ANVIL_DIRENV_MARKER-unset}" '
+                            '"${DIRENV_DIFF-unset}" '
+                            '"${DIRENV_DIR-unset}" '
+                            '"${DIRENV_FILE-unset}" '
+                            '"${DIRENV_WATCHES-unset}"'
                         ),
                         "filter": "",
                         "cwd": str(project_blocked),
                     },
+                },
+            ),
+            request(
+                18,
+                "tools/call",
+                {
+                    "name": "emacs-eval",
+                    "arguments": {"expression": spawn_environment_expression},
                 },
             ),
         ],
@@ -822,8 +874,9 @@ def main() -> None:
     )
     assert_tool_success(
         response_by_id(main_responses, 17),
-        "unset:blocked-command",
+        "unset:unset:unset:unset:unset:blocked-command",
     )
+    assert_spawn_baseline(response_by_id(main_responses, 18))
     for identifier in (10, 11, 16, 17):
         assert_tool_omits(response_by_id(main_responses, identifier), "direnv:")
 

@@ -10,6 +10,7 @@
 
 let
   inherit (anvilMcp) workerNames;
+  hostAnvilMcp = anvilMcp.override { usePerAgentDaemon = false; };
   firstWorker = builtins.head workerNames;
   expectedWorkerCount = 2 * builtins.length workerNames;
   workerSpecsJson = builtins.toJSON anvilMcp.workerSpecs;
@@ -21,6 +22,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       anvilMcp.dedicatedEmacs
       coreutils
       findutils
+      hostAnvilMcp
       python3
     ];
   }
@@ -31,6 +33,8 @@ runCommand "anvil-mcp-dedicated-smoke"
     export ANVIL_EMACS_STATE_ROOT="$smoke_root/state"
     export ANVIL_EMACS_LOCK_REFRESH_SECONDS=0.2
     export SHELL="${bash}/bin/bash"
+    # Host-daemon tests below use an explicit package variant; the per-agent
+    # launcher has no identity-dependent fallback path.
     install -d -m 0700 "$HOME" "$HOME/org"
     printf '%s\n' '* Headless Anvil' 'headlessorgneedle headlesssemanticneedle'       >"$HOME/org/smoke.org"
 
@@ -90,6 +94,32 @@ runCommand "anvil-mcp-dedicated-smoke"
       ${anvilMcp.direnv}/bin/direnv allow >/dev/null
     )
 
+    ${python3}/bin/python3 -B -u ${./watchdog-test.py} \
+      ${anvilMcp.dedicatedLockLauncher}
+
+    init_compile_dir="$smoke_root/init-byte-compile"
+    install -d -m 0700 "$init_compile_dir"
+    install -m 0600 ${anvilMcp.dedicatedEnvironmentInit} \
+      "$init_compile_dir/anvil-headless-environment-init.el"
+    install -m 0600 ${anvilMcp.dedicatedWorkerInit} \
+      "$init_compile_dir/anvil-headless-worker-init.el"
+    install -m 0600 ${anvilMcp.dedicatedInit} \
+      "$init_compile_dir/anvil-headless-init.el"
+    TMPDIR="$init_compile_dir" TMP="$init_compile_dir" TEMP="$init_compile_dir" \
+      ${coreutils}/bin/timeout 60 \
+      ${anvilMcp.dedicatedRuntimeEmacs}/bin/emacs --quick --batch \
+      --directory "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp" \
+      --directory "${anvilMcp.dedicatedAnvilIde}/share/emacs/site-lisp" \
+      --eval '(setq byte-compile-error-on-warn t)' \
+      --funcall batch-byte-compile \
+      "$init_compile_dir/anvil-headless-environment-init.el" \
+      "$init_compile_dir/anvil-headless-worker-init.el" \
+      "$init_compile_dir/anvil-headless-init.el"
+    for source in "$init_compile_dir"/*.el; do
+      test -f "$source"c
+    done
+    rm -rf "$init_compile_dir"
+
     worker_pool_test_tmp="$smoke_root/worker-pool-test-tmp"
     install -d -m 0700 "$worker_pool_test_tmp"
     TMPDIR="$worker_pool_test_tmp" \
@@ -100,6 +130,22 @@ runCommand "anvil-mcp-dedicated-smoke"
       --load ${./worker-pool-test.el} \
       --funcall ert-run-tests-batch-and-exit
     rm -rf "$worker_pool_test_tmp"
+
+    hang_test_tmp="$smoke_root/hang-regression-test"
+    install -d -m 0700 "$hang_test_tmp"
+    install -m 0600 ${./anvil-hang-regression-test.el} \
+      "$hang_test_tmp/anvil-hang-regression-test.el"
+    install -m 0600 ${./anvil-offload-stub.el} \
+      "$hang_test_tmp/anvil-offload-stub.el"
+    PATH="${coreutils}/bin:${bash}/bin:/usr/bin:/bin" \
+      TMPDIR="$hang_test_tmp" TMP="$hang_test_tmp" TEMP="$hang_test_tmp" \
+      ${coreutils}/bin/timeout 60 \
+      ${anvilMcp.dedicatedEmacs}/bin/emacs --quick --batch \
+      --directory "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp" \
+      --directory "$hang_test_tmp" \
+      --load "$hang_test_tmp/anvil-hang-regression-test.el" \
+      --funcall ert-run-tests-batch-and-exit
+    rm -rf "$hang_test_tmp"
 
     install -d -m 0700 \
       "$ANVIL_EMACS_RUNTIME_ROOT" \
@@ -118,6 +164,8 @@ runCommand "anvil-mcp-dedicated-smoke"
     crash_child_pid=
     classic_lock_pid=
     tamper_watchdog=
+    agent_runtime_root=
+    agent_state_root=
     cleanup() {
       status=$?
       set +e
@@ -141,10 +189,27 @@ runCommand "anvil-mcp-dedicated-smoke"
       if [ -n "$pid_crash" ]; then wait "$pid_crash" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_crash_restart" ]; then wait "$pid_crash_restart" >/dev/null 2>&1 || true; fi
       if [ -n "$tamper_watchdog" ]; then wait "$tamper_watchdog" >/dev/null 2>&1 || true; fi
-      rm -rf "$smoke_root"
+      rm -rf "$agent_runtime_root" "$agent_state_root" "$smoke_root"
       return "$status"
     }
     trap cleanup EXIT
+
+    ANVIL_AGENT_SUPERVISOR=${anvilMcp.dedicatedAgentSupervisor} \
+      ${python3}/bin/python3 -B -u \
+      ${anvilMcp.dedicatedAgentSupervisorTest}
+    # Keep Darwin Unix-domain worker socket names under its 104-byte
+    # limit while preserving the full HOST/agents/KEY hierarchy.
+    agent_runtime_root=$(mktemp -d /tmp/ar.XXXXXX)
+    agent_state_root=$(mktemp -d /tmp/as.XXXXXX)
+    ANVIL_EMACS_RUNTIME_ROOT="$agent_runtime_root" \
+      ANVIL_EMACS_STATE_ROOT="$agent_state_root" \
+      ${python3}/bin/python3 -B -u \
+      ${anvilMcp.dedicatedAgentSupervisorSmoke} \
+      ${anvilMcp}/bin/anvil-mcp \
+      ${anvilMcp.dedicatedAgentSupervisor}
+    rm -rf "$agent_runtime_root" "$agent_state_root"
+    agent_runtime_root=
+    agent_state_root=
 
     assert_status() {
       label="$1"
@@ -376,7 +441,7 @@ runCommand "anvil-mcp-dedicated-smoke"
     # Invoke the launcher before host-a has a socket. This proves that an MCP
     # client started during login or a service restart waits for readiness.
     if ! ${python3}/bin/python ${./headless-smoke.py} \
-      ${anvilMcp}/bin/anvil-mcp ${lib.escapeShellArg workerSpecsJson}; then
+      ${hostAnvilMcp}/bin/anvil-mcp ${lib.escapeShellArg workerSpecsJson}; then
       cat "$smoke_root/host-a.log" "$smoke_root/host-b.log" >&2
       exit 1
     fi
@@ -388,19 +453,53 @@ runCommand "anvil-mcp-dedicated-smoke"
 
     runtime_lock="$ANVIL_EMACS_RUNTIME_ROOT/host-a/.anvil-headless-emacs.lock"
     state_lock="$ANVIL_EMACS_STATE_ROOT/host-a/.anvil-headless-emacs.lock"
-    touch -t 197001010000 "$runtime_lock" "$state_lock"
-    locks_refreshed=
+    host_state="$ANVIL_EMACS_STATE_ROOT/host-a"
+    semantic_dir="$host_state/semantic"
+    semantic_index="$semantic_dir/index.db"
+    if [ ! -d "$host_state" ] || [ -L "$host_state" ] \
+      || [ ! -d "$semantic_dir" ] || [ -L "$semantic_dir" ] \
+      || [ ! -f "$semantic_index" ] || [ -L "$semantic_index" ]; then
+      echo "durable semantic state is missing or unsafe" >&2
+      ls -ld "$host_state" "$semantic_dir" "$semantic_index" >&2 || true
+      exit 1
+    fi
+    semantic_identity=$(stat -c '%d:%i' -- "$semantic_index")
+    refresh_cutoff=$(date +%s)
+    touch -t 197001010000 \
+      "$runtime_lock" "$state_lock" "$host_state" "$semantic_dir" "$semantic_index"
+    heartbeat_targets_refreshed=
     for _ in $(seq 1 50); do
-      if [ -n "$(find "$runtime_lock" "$state_lock" -mmin -1 -print -quit)" ] \
-        && [ "$(find "$runtime_lock" "$state_lock" -mmin -1 | wc -l | tr -d '[:space:]')" -eq 2 ]; then
-        locks_refreshed=1
+      heartbeat_targets_refreshed=1
+      for target in \
+        "$runtime_lock" "$state_lock" "$host_state" "$semantic_dir" "$semantic_index"; do
+        if ! target_mtime=$(stat -c %Y -- "$target") \
+          || [ "$target_mtime" -lt "$refresh_cutoff" ]; then
+          heartbeat_targets_refreshed=
+          break
+        fi
+      done
+      if [ -n "$heartbeat_targets_refreshed" ]; then
+        break
+      fi
+      if ! kill -0 "$pid_a" 2>/dev/null; then
         break
       fi
       sleep 0.1
     done
-    if [ -z "$locks_refreshed" ]; then
-      echo "lock heartbeat did not refresh aged lock files" >&2
-      stat "$runtime_lock" "$state_lock" >&2 || true
+    if [ -z "$heartbeat_targets_refreshed" ]; then
+      echo "watchdog heartbeat did not refresh locks and durable state" >&2
+      stat \
+        "$runtime_lock" "$state_lock" "$host_state" "$semantic_dir" "$semantic_index" \
+        >&2 || true
+      exit 1
+    fi
+    if [ "$(stat -c '%d:%i' -- "$semantic_index")" != "$semantic_identity" ]; then
+      echo "durable-state refresh replaced the semantic index" >&2
+      exit 1
+    fi
+    if ! ${anvilMcp.dedicatedEmacs}/bin/emacsclient \
+      -s "$ANVIL_EMACS_RUNTIME_ROOT/host-a/emacs/server" -e t >/dev/null; then
+      echo "durable-state refresh disrupted the root daemon" >&2
       exit 1
     fi
 
@@ -410,7 +509,7 @@ runCommand "anvil-mcp-dedicated-smoke"
     assert_rejected responsive-unsafe-root "must have mode 0700" \
       env ANVIL_EMACS_HOST=host-a \
       ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/responsive-open" \
-      ${anvilMcp}/bin/anvil-mcp
+      ${hostAnvilMcp}/bin/anvil-mcp
 
     install -d -m 0700 \
       "$smoke_root/responsive-symlink" \
@@ -421,7 +520,7 @@ runCommand "anvil-mcp-dedicated-smoke"
     assert_rejected responsive-symlink-socket "must not be a symbolic link" \
       env ANVIL_EMACS_HOST=host-a \
       ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/responsive-symlink" \
-      ${anvilMcp}/bin/anvil-mcp
+      ${hostAnvilMcp}/bin/anvil-mcp
 
     install -d -m 0700 \
       "$smoke_root/responsive-wrong-type" \
@@ -431,7 +530,7 @@ runCommand "anvil-mcp-dedicated-smoke"
     assert_rejected responsive-wrong-socket-type "must be a socket" \
       env ANVIL_EMACS_HOST=host-a \
       ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/responsive-wrong-type" \
-      ${anvilMcp}/bin/anvil-mcp
+      ${hostAnvilMcp}/bin/anvil-mcp
 
     if [ -e "$ANVIL_EMACS_RUNTIME_ROOT/host-b/tmp/stale-before-start" ]; then
       echo "host runtime temp was not pruned after taking both daemon locks" >&2
@@ -701,15 +800,97 @@ runCommand "anvil-mcp-dedicated-smoke"
       ANVIL_EMACS_STATE_ROOT="$ANVIL_EMACS_STATE_ROOT" \
       ${anvilMcp}/bin/anvil-headless-emacs
 
-    if ! ${anvilMcp.dedicatedEmacs}/bin/emacsclient -s "$restart_socket" \
-      -e "(progn (run-at-time 0.1 nil #'kill-emacs) t)" >/dev/null; then
-      echo "failed to stop restarted daemon" >&2
+    if [ -L "$state_lock" ] || [ ! -f "$state_lock" ]; then
+      echo "state lock is missing or unsafe before deletion test" >&2
+      exit 1
+    fi
+    rm -f -- "$state_lock"
+    if [ -e "$state_lock" ] || [ -L "$state_lock" ]; then
+      echo "state lock deletion did not remove the directory entry" >&2
+      exit 1
+    fi
+
+    deletion_done="$smoke_root/lock-deletion.done"
+    (
+      sleep 5
+      if [ ! -e "$deletion_done" ]; then
+        kill -TERM "$pid_restart" >/dev/null 2>&1 || true
+      fi
+    ) &
+    tamper_watchdog=$!
+    if wait "$pid_restart"; then
+      deletion_status=0
+    else
+      deletion_status=$?
+    fi
+    touch "$deletion_done"
+    kill "$tamper_watchdog" >/dev/null 2>&1 || true
+    wait "$tamper_watchdog" >/dev/null 2>&1 || true
+    tamper_watchdog=
+    pid_restart=
+    if [ "$deletion_status" -ne 137 ]; then
+      echo "deleted-lock heartbeat exited root with status $deletion_status instead of SIGKILL" >&2
       cat "$smoke_root/host-a-lock-recovery.log" >&2
       exit 1
     fi
+    if ${anvilMcp.dedicatedEmacs}/bin/emacsclient -s "$restart_socket" \
+      -e t >/dev/null 2>&1; then
+      echo "deleted-lock root remained connectable after heartbeat failure" >&2
+      exit 1
+    fi
+
+    ANVIL_EMACS_HOST=host-a \
+      ${anvilMcp}/bin/anvil-headless-emacs \
+      >"$smoke_root/host-a-lock-deletion-recovery.log" 2>&1 &
+    pid_restart=$!
+    restart_ready=
+    for _ in $(seq 1 120); do
+      if [ -S "$restart_socket" ] \
+        && ${anvilMcp.dedicatedEmacs}/bin/emacsclient \
+          -s "$restart_socket" -e t >/dev/null 2>&1; then
+        restart_ready=1
+        break
+      fi
+      if ! kill -0 "$pid_restart" 2>/dev/null; then
+        break
+      fi
+      sleep 0.25
+    done
+    if [ -z "$restart_ready" ]; then
+      echo "daemon failed to reacquire locks after state-lock deletion" >&2
+      cat "$smoke_root/host-a-lock-deletion-recovery.log" >&2
+      exit 1
+    fi
+    actual_restart_pid=$(${anvilMcp.dedicatedEmacs}/bin/emacsclient \
+      -s "$restart_socket" -e '(emacs-pid)')
+    if [ "$actual_restart_pid" != "$pid_restart" ]; then
+      echo "deletion-recovery PID $pid_restart is not root Emacs PID $actual_restart_pid" >&2
+      exit 1
+    fi
+    for lock_path in "$runtime_lock" "$state_lock"; do
+      if [ -L "$lock_path" ] || [ ! -f "$lock_path" ] \
+        || [ "$(stat -c %u -- "$lock_path")" != "$(id -u)" ] \
+        || [ "$(stat -c %a -- "$lock_path")" != 600 ]; then
+        echo "recreated lock is missing or unsafe: $lock_path" >&2
+        stat "$lock_path" >&2 || true
+        exit 1
+      fi
+    done
+    assert_status deleted-state-lock-exclusive "holds the state lock" 75 \
+      env ANVIL_EMACS_HOST=host-a \
+      ANVIL_EMACS_RUNTIME_ROOT="$alternate_runtime" \
+      ANVIL_EMACS_STATE_ROOT="$ANVIL_EMACS_STATE_ROOT" \
+      ${anvilMcp}/bin/anvil-headless-emacs
+
+    if ! ${anvilMcp.dedicatedEmacs}/bin/emacsclient -s "$restart_socket" \
+      -e "(progn (run-at-time 0.1 nil #'kill-emacs) t)" >/dev/null; then
+      echo "failed to stop deletion-recovery daemon" >&2
+      cat "$smoke_root/host-a-lock-deletion-recovery.log" >&2
+      exit 1
+    fi
     if ! wait "$pid_restart"; then
-      echo "restarted daemon exited unsuccessfully" >&2
-      cat "$smoke_root/host-a-lock-recovery.log" >&2
+      echo "deletion-recovery daemon exited unsuccessfully" >&2
+      cat "$smoke_root/host-a-lock-deletion-recovery.log" >&2
       exit 1
     fi
     pid_restart=

@@ -20,6 +20,13 @@
 let
   inherit (pkgs.stdenv) isDarwin isLinux;
   isPositronRemoteLinux = isLinux && config.home.username == "jwiegley";
+  dedicatedAnvilLinuxHosts = [
+    "vulcan"
+    "andoria-08"
+    "andoria-t2"
+    "delphi-3bd4"
+    "gpu-server"
+  ];
 
   # Shared variables - also imported by sub-modules
   vars = import ./vars.nix {
@@ -62,6 +69,15 @@ in
     ++ lib.optionals (inputs ? git-ai) [
       inputs.git-ai.homeManagerModules.default
     ];
+
+  # These workstations default to complete, dedicated Emacs-backed Anvil.
+  # `mkDefault` preserves the per-host Boolean escape hatch back to NeLisp.
+  # The shared Andoria Home Manager flake currently supplies "andoria-08" on
+  # every NFS client; the runtime still derives the real host name for sockets.
+  johnw.anvil = lib.mkIf isLinux {
+    useHeadlessEmacs = lib.mkDefault (lib.elem hostname dedicatedAnvilLinuxHosts);
+    usePerAgentDaemon = lib.mkDefault true;
+  };
 
   home = {
     stateVersion = lib.mkDefault "24.11"; # overridden by wrappers; fallback only

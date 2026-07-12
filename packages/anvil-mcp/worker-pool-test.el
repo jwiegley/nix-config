@@ -40,6 +40,79 @@
     (should (= (hash-table-count anvil-worker--spawn-times) 0))
     (should (= (hash-table-count anvil-worker--owned-processes) 0))))
 
+(ert-deftest anvil-worker-kill-gracefully-stops-responsive-owned-worker ()
+  "A healthy owned worker runs kill-emacs hooks instead of receiving SIGKILL."
+  (let ((anvil-worker--spawn-times (make-hash-table :test #'equal))
+        (anvil-worker--owned-processes (make-hash-table :test #'equal))
+        (worker (list :name "anvil-worker-read-test"
+                      :lane :read
+                      :server-file "/tmp/anvil-worker-read-test"))
+        (owned 'owned-process)
+        (sentinel (make-temp-name
+                   (expand-file-name "anvil-worker-cleanup-"
+                                     temporary-file-directory)))
+        (hard-kills 0))
+    (puthash "anvil-worker-read-test" owned
+             anvil-worker--owned-processes)
+    (unwind-protect
+        (cl-letf (((symbol-function 'anvil-worker--map-pool)
+                   (lambda (function) (funcall function worker)))
+                  ((symbol-function 'processp)
+                   (lambda (process) (eq process owned)))
+                  ((symbol-function 'process-live-p)
+                   (lambda (process) (eq process owned)))
+                  ((symbol-function 'anvil-worker--worker-alive-p)
+                   (lambda (_worker) t))
+                  ((symbol-function 'anvil-worker--emacsclient-server-args)
+                   (lambda (_server-file) '("-s" "/tmp/test-socket")))
+                  ((symbol-function 'call-process)
+                   (lambda (_program _infile _destination _display &rest args)
+                     (should (member "(kill-emacs)" args))
+                     (with-temp-file sentinel (insert "clean\n"))
+                     0))
+                  ((symbol-function 'kill-process)
+                   (lambda (_process) (cl-incf hard-kills)))
+                  ((symbol-function 'anvil-worker--log)
+                   (lambda (&rest _args))))
+          (anvil-worker-kill)
+          (should (file-exists-p sentinel))
+          (should (= hard-kills 0))
+          (should (= (hash-table-count
+                      anvil-worker--owned-processes)
+                     0)))
+      (when (file-exists-p sentinel)
+        (delete-file sentinel)))))
+
+(ert-deftest anvil-worker-kill-hard-stops-unresponsive-owned-worker ()
+  "An owned worker that cannot answer the full probe is hard-killed."
+  (let ((anvil-worker--spawn-times (make-hash-table :test #'equal))
+        (anvil-worker--owned-processes (make-hash-table :test #'equal))
+        (worker (list :name "anvil-worker-read-test"
+                      :lane :read
+                      :server-file "/tmp/anvil-worker-read-test"))
+        (owned 'owned-process)
+        (graceful-calls 0)
+        (hard-kills 0))
+    (puthash "anvil-worker-read-test" owned
+             anvil-worker--owned-processes)
+    (cl-letf (((symbol-function 'anvil-worker--map-pool)
+               (lambda (function) (funcall function worker)))
+              ((symbol-function 'processp)
+               (lambda (process) (eq process owned)))
+              ((symbol-function 'process-live-p)
+               (lambda (process) (eq process owned)))
+              ((symbol-function 'anvil-worker--worker-alive-p)
+               (lambda (_worker) nil))
+              ((symbol-function 'call-process)
+               (lambda (&rest _args) (cl-incf graceful-calls)))
+              ((symbol-function 'kill-process)
+               (lambda (_process) (cl-incf hard-kills)))
+              ((symbol-function 'anvil-worker--log)
+               (lambda (&rest _args))))
+      (anvil-worker-kill))
+    (should (= graceful-calls 0))
+    (should (= hard-kills 1))))
+
 (ert-deftest anvil-worker-quick-check-documents-the-direct-probe ()
   "The packaged documentation must describe its patched liveness mechanism."
   (should (string-match-p

@@ -179,7 +179,15 @@ let
           # by same-named twin daemons.  lisp/anvil-ext.el in dot-emacs
           # carries equivalent advice overlays for sessions running an
           # unpatched build.
-          patches = [ ./emacs/patches/anvil-worker-pool.patch ];
+          patches = [
+            # Load-bearing order: host-child bindings are rebased against
+            # the interrupt-safe host implementation introduced here.
+            ./emacs/patches/anvil-issue-53-hang-fixes.patch
+            ./emacs/patches/anvil-worker-pool.patch
+            ./emacs/patches/anvil-host-child-bindings.patch
+            ./emacs/patches/anvil-root-watchdog.patch
+            ./emacs/patches/anvil-stdio-at-most-once.patch
+          ];
         }).overrideAttrs
           (attrs: {
             # anvil-server-commands.el resolves anvil-stdio.sh (the MCP stdio
