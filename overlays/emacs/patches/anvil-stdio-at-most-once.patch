@@ -1,16 +1,19 @@
 Make the stdio bridge dispatch every JSON-RPC request at most once.
 
-Only the side-effect-free readiness probe is retried while a daemon starts.
-After readiness, init, stop, and JSON-RPC expressions run exactly once.
+Only the side-effect-free readiness probe is retried while a daemon starts or
+a sibling bridge occupies its event loop.  After readiness, init, stop, and
+JSON-RPC expressions run exactly once.
 Ambiguous post-dispatch failures produce a correlated structured error with
 phase/dispatched/replayed fields instead of replaying a mutation.
 
 --- a/anvil-stdio.sh
 +++ b/anvil-stdio.sh
-@@ -83,15 +83,39 @@
+@@ -83,55 +83,91 @@
  # 60 * 100ms = 6 seconds of tolerance.
  ANVIL_EMACSCLIENT_RETRY_MAX=${ANVIL_EMACSCLIENT_RETRY_MAX:-60}
  ANVIL_EMACSCLIENT_RETRY_DELAY_MS=${ANVIL_EMACSCLIENT_RETRY_DELAY_MS:-100}
++# Per-attempt readiness timeout.  Timed-out readiness probes are replayed
++# until the overall emacsclient budget expires; the probe expression is pure.
 +ANVIL_EMACSCLIENT_PROBE_TIMEOUT=${ANVIL_EMACSCLIENT_PROBE_TIMEOUT:-5}
 +ANVIL_EMACSCLIENT_TIMEOUT=${ANVIL_EMACSCLIENT_TIMEOUT:-330}
  
@@ -25,7 +28,7 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 +# Run one emacsclient invocation under a hard timeout.  This helper never
 +# retries: callers must decide whether the expression is safe to replay.
 +anvil_emacsclient_once() {
-+	local stderr_file="$1"
+ 	local stderr_file="$1"
 +	local timeout_seconds="$2"
 +	shift 2
 +	if [ "${1-}" = "--" ]; then shift; fi
@@ -48,15 +51,18 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 +	return "$rc"
 +}
 +
-+# Retry only the side-effect-free readiness expression.  A connectable but
-+# hung daemon times out once and fails immediately; only missing/refused socket
-+# races are replayed while a daemon is starting.
++# Retry only the side-effect-free readiness expression.  A sibling bridge may
++# occupy the single Emacs server event loop longer than one probe timeout, so
++# timeout exits are replayed until ANVIL_EMACSCLIENT_TIMEOUT is exhausted.
++# Missing/refused socket races retain their independent attempt limit.
 +anvil_emacsclient_probe_retry() {
- 	local stderr_file="$1"
++	local stderr_file="$1"
  	shift
  	if [ "${1-}" = "--" ]; then shift; fi
-@@ -99,39 +123,28 @@
- 	local attempt=0 out="" rc=0
+ 
+-	local attempt=0 out="" rc=0
++	local socket_attempt=0 timeout_attempt=0 out="" rc=0
++	local started_seconds=$SECONDS this_timeout elapsed remaining
  	while :; do
 -		set +e
 -		# VAL-PATCH-TIMEOUT-V2: hard wall-clock cap on emacsclient.
@@ -73,40 +79,60 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 -		elif command -v perl >/dev/null 2>&1; then
 -			out=$(perl -e 'alarm shift @ARGV; exec @ARGV' \
 -				"$_anvil_tmo" emacsclient "$@" 2>"$stderr_file")
--		else
++		this_timeout=$ANVIL_EMACSCLIENT_PROBE_TIMEOUT
++		if [ "$ANVIL_EMACSCLIENT_TIMEOUT" = "0" ]; then
++			# A disabled overall timeout means one unbounded readiness wait.
++			this_timeout=0
+ 		else
 -			out=$(emacsclient "$@" 2>"$stderr_file")
--		fi
-+		if out=$(anvil_emacsclient_once "$stderr_file" \
-+			"$ANVIL_EMACSCLIENT_PROBE_TIMEOUT" -- "$@"); then rc=0; else rc=$?; fi
++			elapsed=$((SECONDS - started_seconds))
++			remaining=$((ANVIL_EMACSCLIENT_TIMEOUT - elapsed))
++			if [ "$remaining" -le 0 ]; then
++				mcp_debug_log "PROBE-WAIT-EXHAUSTED" \
++					"timeouts=$timeout_attempt budget=${ANVIL_EMACSCLIENT_TIMEOUT}s rc=$rc"
++				printf '%s' "$out"
++				return "$rc"
++			fi
++			if [ "$this_timeout" -eq 0 ] \
++				|| [ "$this_timeout" -gt "$remaining" ]; then
++				this_timeout=$remaining
++			fi
+ 		fi
 -		rc=$?
 -		set -e
++		if out=$(anvil_emacsclient_once "$stderr_file" \
++			"$this_timeout" -- "$@"); then rc=0; else rc=$?; fi
  		if [ "$rc" -eq 0 ]; then
  			printf '%s' "$out"
  			return 0
  		fi
 +		case "$rc" in
 +		124|142)
-+			mcp_debug_log "PROBE-TIMEOUT" "rc=$rc"
-+			printf '%s' "$out"
-+			return "$rc"
++			timeout_attempt=$((timeout_attempt + 1))
++			mcp_debug_log "PROBE-TIMEOUT" \
++				"attempt=$timeout_attempt rc=$rc budget=${ANVIL_EMACSCLIENT_TIMEOUT}s"
++			continue
 +			;;
 +		esac
  		if [ -s "$stderr_file" ] \
  			&& grep -qE "can't find socket|Connection refused|server.*not.*running|No such file or directory" "$stderr_file"; then
- 			attempt=$((attempt + 1))
- 			if [ "$attempt" -ge "$ANVIL_EMACSCLIENT_RETRY_MAX" ]; then
+-			attempt=$((attempt + 1))
+-			if [ "$attempt" -ge "$ANVIL_EMACSCLIENT_RETRY_MAX" ]; then
 -				mcp_debug_log "RETRY-EXHAUSTED" "attempts=$attempt max=$ANVIL_EMACSCLIENT_RETRY_MAX rc=$rc"
-+				mcp_debug_log "PROBE-RETRY-EXHAUSTED" "attempts=$attempt max=$ANVIL_EMACSCLIENT_RETRY_MAX rc=$rc"
++			socket_attempt=$((socket_attempt + 1))
++			if [ "$socket_attempt" -ge "$ANVIL_EMACSCLIENT_RETRY_MAX" ]; then
++				mcp_debug_log "PROBE-RETRY-EXHAUSTED" "attempts=$socket_attempt max=$ANVIL_EMACSCLIENT_RETRY_MAX rc=$rc"
  				printf '%s' "$out"
  				return "$rc"
  			fi
- 			if [ "$attempt" -eq 1 ] || [ $((attempt % 10)) -eq 0 ]; then
+-			if [ "$attempt" -eq 1 ] || [ $((attempt % 10)) -eq 0 ]; then
 -				mcp_debug_log "RETRY" "attempt=$attempt rc=$rc stderr=$(tr '\n' ' ' <"$stderr_file" | cut -c1-120)"
-+				mcp_debug_log "PROBE-RETRY" "attempt=$attempt rc=$rc stderr=$(tr '\n' ' ' <"$stderr_file" | cut -c1-120)"
++			if [ "$socket_attempt" -eq 1 ] || [ $((socket_attempt % 10)) -eq 0 ]; then
++				mcp_debug_log "PROBE-RETRY" "attempt=$socket_attempt rc=$rc stderr=$(tr '\n' ' ' <"$stderr_file" | cut -c1-120)"
  			fi
  			if [ "$ANVIL_EMACSCLIENT_RETRY_DELAY_MS" -gt 0 ]; then
  				local delay_sec
-@@ -140,12 +156,18 @@
+@@ -140,12 +176,18 @@
  			fi
  			continue
  		fi
@@ -126,7 +152,7 @@ phase/dispatched/replayed fields instead of replaying a mutation.
  # Parse command line arguments
  while [ $# -gt 0 ]; do
  	case "$1" in
-@@ -205,27 +227,38 @@
+@@ -205,27 +247,38 @@
  	mcp_debug_log "INFO" "Using default server-id: $SERVER_ID"
  fi
  
@@ -175,7 +201,7 @@ phase/dispatched/replayed fields instead of replaying a mutation.
  else
  	mcp_debug_log "INFO" "Skipping init function call (none provided)"
  fi
-@@ -303,6 +336,43 @@
+@@ -303,6 +356,43 @@
  	printf 'Content-Length: %s\r\n\r\n%s' "$n" "$body"
  }
  
@@ -219,7 +245,7 @@ phase/dispatched/replayed fields instead of replaying a mutation.
  # Process input and print response
  while IFS= read -r line; do
  	# T71: detect framing.  An MCP framed request begins with
-@@ -324,6 +394,25 @@
+@@ -324,6 +414,25 @@
  	# Log the incoming request
  	mcp_debug_log "REQUEST" "$line"
  
@@ -245,7 +271,7 @@ phase/dispatched/replayed fields instead of replaying a mutation.
  	# Base64 encode the raw JSON to avoid emacsclient transport issues
  	# with a specific combination of length, UTF-8 characters, and quoting
  	# that occurs in Test 5 with the Lithuanian letter 'ą'
-@@ -335,23 +424,26 @@
+@@ -335,23 +444,26 @@
  	# Handle nil responses from notifications by converting to empty string
  	elisp_expr="(base64-encode-string (encode-coding-string (or (anvil-server-process-jsonrpc (base64-decode-string \"$base64_input\") \"$SERVER_ID\") \"\") 'utf-8 t) t)"
  
@@ -277,7 +303,7 @@ phase/dispatched/replayed fields instead of replaying a mutation.
  
  	mcp_debug_log "BASE64-RESPONSE" "$base64_response"
  
-@@ -405,62 +497,56 @@
+@@ -405,62 +517,56 @@
  	set -e
  	if [ "$_anvil_decode_rc" != 0 ]; then
  		mcp_debug_log "DECODE-ERROR" "rc=$_anvil_decode_rc stderr=$(cat "$_anvil_decode_err" 2>/dev/null | tr '\n' ' ') input_head=${base64_response:0:160}"

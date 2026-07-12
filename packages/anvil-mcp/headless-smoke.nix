@@ -96,6 +96,8 @@ runCommand "anvil-mcp-dedicated-smoke"
 
     ${python3}/bin/python3 -B -u ${./watchdog-test.py} \
       ${anvilMcp.dedicatedLockLauncher}
+    ${python3}/bin/python3 -B -u ${./stdio-concurrency-test.py} \
+      ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh
 
     init_compile_dir="$smoke_root/init-byte-compile"
     install -d -m 0700 "$init_compile_dir"
@@ -164,6 +166,7 @@ runCommand "anvil-mcp-dedicated-smoke"
     crash_child_pid=
     classic_lock_pid=
     tamper_watchdog=
+    agent_home=
     agent_runtime_root=
     agent_state_root=
     cleanup() {
@@ -189,7 +192,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       if [ -n "$pid_crash" ]; then wait "$pid_crash" >/dev/null 2>&1 || true; fi
       if [ -n "$pid_crash_restart" ]; then wait "$pid_crash_restart" >/dev/null 2>&1 || true; fi
       if [ -n "$tamper_watchdog" ]; then wait "$tamper_watchdog" >/dev/null 2>&1 || true; fi
-      rm -rf "$agent_runtime_root" "$agent_state_root" "$smoke_root"
+      rm -rf "$agent_home" "$agent_runtime_root" "$agent_state_root" "$smoke_root"
       return "$status"
     }
     trap cleanup EXIT
@@ -199,9 +202,15 @@ runCommand "anvil-mcp-dedicated-smoke"
       ${anvilMcp.dedicatedAgentSupervisorTest}
     # Keep Darwin Unix-domain worker socket names under its 104-byte
     # limit while preserving the full HOST/agents/KEY hierarchy.
+    # A distinct empty HOME proves root and worker startup never create
+    # ~/.emacs.d while preserving HOME for login-shell and direnv behavior.
+    agent_home="$smoke_root/agent-home"
+    install -d -m 0700 "$agent_home"
     agent_runtime_root=$(mktemp -d /tmp/ar.XXXXXX)
     agent_state_root=$(mktemp -d /tmp/as.XXXXXX)
-    ANVIL_EMACS_RUNTIME_ROOT="$agent_runtime_root" \
+    ${coreutils}/bin/env -u XDG_CONFIG_HOME \
+      HOME="$agent_home" \
+      ANVIL_EMACS_RUNTIME_ROOT="$agent_runtime_root" \
       ANVIL_EMACS_STATE_ROOT="$agent_state_root" \
       ${python3}/bin/python3 -B -u \
       ${anvilMcp.dedicatedAgentSupervisorSmoke} \
@@ -210,6 +219,7 @@ runCommand "anvil-mcp-dedicated-smoke"
     rm -rf "$agent_runtime_root" "$agent_state_root"
     agent_runtime_root=
     agent_state_root=
+    agent_home=
 
     assert_status() {
       label="$1"
@@ -432,6 +442,12 @@ runCommand "anvil-mcp-dedicated-smoke"
     (
       sleep 1
       export ANVIL_EMACS_HOST=host-a
+      # A timer-starving synchronous smoke request runs for four seconds.
+      # Keep the ordinary watchdog deadline shorter so that missing sync
+      # lease coverage deterministically kills this test daemon.
+      export ANVIL_EMACS_WATCHDOG_PULSE_SECONDS=0.5
+      export ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS=3
+      export ANVIL_EMACS_WATCHDOG_ASYNC_SECONDS=15
       exec ${anvilMcp}/bin/anvil-headless-emacs
     ) >"$smoke_root/host-a.log" 2>&1 &
     pid_a=$!

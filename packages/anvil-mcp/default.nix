@@ -631,8 +631,6 @@ let
 
     (require 'exec-path-from-shell)
     (require 'direnv)
-    ;; json-parse-string decodes the pinned direnv status gate below.
-    (require 'json)
     (setq direnv-always-show-summary nil)
 
     ;; These variables are defined by the packaged anvil-host patch.  Bare
@@ -956,9 +954,40 @@ let
       # Fds 8/9 carry the root daemon's OFD locks.  Close the inherited
       # descriptions before starting the exact-PID worker containment guard.
       exec 8<&- 9<&-
+
+      worker_name=
+      for argument in "$@"; do
+        case "$argument" in
+          --daemon=* | --fg-daemon=*)
+            worker_name="''${argument#*=}"
+            ;;
+        esac
+      done
+      worker_allowed=
+      for expected_worker in ${workerNamesShell}; do
+        if [ "$worker_name" = "$expected_worker" ]; then
+          worker_allowed=1
+          break
+        fi
+      done
+      if [ -z "$worker_allowed" ]; then
+        echo "anvil-mcp: missing or unexpected worker daemon name: $worker_name" >&2
+        exit 70
+      fi
+      if [ -z "''${ANVIL_EMACS_STATE_DIR:-}" ]; then
+        echo "anvil-mcp: worker requires ANVIL_EMACS_STATE_DIR" >&2
+        exit 70
+      fi
+      worker_state_dir="$ANVIL_EMACS_STATE_DIR/workers/$worker_name"
+      if [ ! -d "$worker_state_dir" ] || [ -L "$worker_state_dir" ]; then
+        echo "anvil-mcp: unsafe worker state directory: $worker_state_dir" >&2
+        exit 70
+      fi
+
       export ANVIL_EMACS_WORKER=1
       exec "${python3}/bin/python3" -I -S "${dedicatedParentGuardLauncher}" \
-        exact "${dedicatedRuntimeEmacs}/bin/emacs" "$@"
+        exact "${dedicatedRuntimeEmacs}/bin/emacs" \
+        --quick "--init-directory=$worker_state_dir" "$@"
     '';
   };
 
@@ -1691,6 +1720,9 @@ let
     (defvar anvil-headless--watchdog-pulse-seconds nil)
     (defvar anvil-headless--watchdog-pulse-counter 0)
     (defvar anvil-headless--watchdog-timer nil)
+    (defvar anvil-headless--watchdog-async-jobs
+      (make-hash-table :test 'equal))
+    (defvar anvil-headless--watchdog-sync-dispatch-depth 0)
 
     (let* ((runtime-dir (getenv "XDG_RUNTIME_DIR"))
            (state-dir (getenv "ANVIL_EMACS_STATE_DIR"))
@@ -1764,13 +1796,48 @@ let
                      (= (logand (or (file-modes path) 0) #o777) mode))
           (error "Anvil watchdog lease mode transition failed: %S" path))))
 
-    (defun anvil-headless--watchdog-async-active (_job-id)
-      "Extend the watchdog lease while an async job is evaluating."
-      (anvil-headless--watchdog-set-lease-state t))
+    (defun anvil-headless--watchdog-refresh-lease-state ()
+      "Reflect all synchronous and asynchronous work in the watchdog lease."
+      (anvil-headless--watchdog-set-lease-state
+       (or (> anvil-headless--watchdog-sync-dispatch-depth 0)
+           (> (hash-table-count anvil-headless--watchdog-async-jobs) 0))))
 
-    (defun anvil-headless--watchdog-async-idle (_job-id)
-      "Return the watchdog lease to idle after an async job."
-      (anvil-headless--watchdog-set-lease-state nil))
+    (defun anvil-headless--watchdog-async-active (job-id)
+      "Extend the watchdog lease while async JOB-ID is evaluating."
+      (let ((already-active
+             (gethash job-id anvil-headless--watchdog-async-jobs)))
+        (puthash job-id t anvil-headless--watchdog-async-jobs)
+        (condition-case err
+            (anvil-headless--watchdog-refresh-lease-state)
+          (error
+           (unless already-active
+             (remhash job-id anvil-headless--watchdog-async-jobs))
+           (signal (car err) (cdr err))))))
+
+    (defun anvil-headless--watchdog-async-idle (job-id)
+      "Release JOB-ID without shortening another request's watchdog lease."
+      (remhash job-id anvil-headless--watchdog-async-jobs)
+      (anvil-headless--watchdog-refresh-lease-state))
+
+    (defun anvil-headless--watchdog-sync-dispatch (original &rest args)
+      "Run synchronous JSON-RPC dispatch through ORIGINAL under a lease."
+      (setq anvil-headless--watchdog-sync-dispatch-depth
+            (1+ anvil-headless--watchdog-sync-dispatch-depth))
+      (let ((lease-entered nil))
+        (unwind-protect
+            (progn
+              (anvil-headless--watchdog-refresh-lease-state)
+              (setq lease-entered t)
+              (apply original args))
+          (setq anvil-headless--watchdog-sync-dispatch-depth
+                (max 0 (1- anvil-headless--watchdog-sync-dispatch-depth)))
+          (when lease-entered
+            (condition-case err
+                (anvil-headless--watchdog-refresh-lease-state)
+              (error
+               (message "Anvil synchronous watchdog cleanup failed: %s"
+                        (error-message-string err))
+               (kill-emacs 70)))))))
 
     (defun anvil-headless--watchdog-cleanup-failed (job-id error-data)
       "Fail the dedicated daemon closed after JOB-ID cleanup ERROR-DATA."
@@ -1780,7 +1847,9 @@ let
 
     (defun anvil-headless--watchdog-arm ()
       "Arm the external root watchdog after the MCP server is ready."
-      (setq anvil-headless--watchdog-pulse-file
+      (clrhash anvil-headless--watchdog-async-jobs)
+      (setq anvil-headless--watchdog-sync-dispatch-depth 0
+            anvil-headless--watchdog-pulse-file
             (getenv "ANVIL_EMACS_WATCHDOG_PULSE_FILE")
             anvil-headless--watchdog-lease-file
             (getenv "ANVIL_EMACS_WATCHDOG_LEASE_FILE")
@@ -1856,7 +1925,9 @@ let
              (copy-sequence
               anvil-headless--baseline-process-environment))
             (exec-path
-             (copy-sequence anvil-headless--baseline-exec-path)))
+             (copy-sequence anvil-headless--baseline-exec-path))
+            (default-directory
+             (file-name-as-directory user-emacs-directory)))
         (setenv "ANVIL_HEADLESS_REAL_SHELL" nil)
         (setenv "ANVIL_HEADLESS_PARENT_PID" nil)
         (setenv "ANVIL_HEADLESS_PARENT_PID"
@@ -1897,6 +1968,9 @@ let
           (advice-add 'anvil-worker--spawn-worker
                       :around
                       #'anvil-headless--with-parent-pid-for-worker)
+          (advice-add 'anvil-server-process-jsonrpc
+                      :around
+                      #'anvil-headless--watchdog-sync-dispatch)
           (anvil-enable)
           (let (actual-worker-specs)
             (dolist (lane '(:read :write :batch))
@@ -1968,7 +2042,16 @@ let
       export TMP="$TMPDIR"
       export TEMP="$TMPDIR"
 
-      exec "${dedicatedRuntimeEmacs}/bin/emacs"         --quick         --fg-daemon=server         --directory "${dedicatedAnvil}/share/emacs/site-lisp"         --directory "${dedicatedAnvilIde}/share/emacs/site-lisp"         --load "${dedicatedInit}"
+      # Bind state before daemon/package startup.  Keeping HOME unchanged is
+      # required for login-shell and direnv behavior, so redirect Emacs's
+      # startup state explicitly instead of substituting a synthetic HOME.
+      exec "${dedicatedRuntimeEmacs}/bin/emacs" \
+        --quick \
+        "--init-directory=$state_dir" \
+        --fg-daemon=server \
+        --directory "${dedicatedAnvil}/share/emacs/site-lisp" \
+        --directory "${dedicatedAnvilIde}/share/emacs/site-lisp" \
+        --load "${dedicatedInit}"
     '';
   };
 

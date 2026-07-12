@@ -382,6 +382,65 @@ def eval_value(response: dict[str, object]):
     return json.loads(response_text(response))
 
 
+def snapshot_home(home: Path) -> dict[str, tuple[int, int, int]]:
+    """Capture subject-visible HOME entries without following symlinks."""
+    root_info = home.lstat()
+    snapshot: dict[str, tuple[int, int, int]] = {
+        ".": (root_info.st_mode, root_info.st_size, root_info.st_mtime_ns),
+    }
+    for directory, subdirectories, filenames in os.walk(home, followlinks=False):
+        directory_path = Path(directory)
+        for name in (*subdirectories, *filenames):
+            path = directory_path / name
+            info = path.lstat()
+            snapshot[str(path.relative_to(home))] = (
+                info.st_mode,
+                info.st_size,
+                info.st_mtime_ns,
+            )
+    return snapshot
+
+
+def assert_home_unchanged(
+    home: Path,
+    baseline: dict[str, tuple[int, int, int]],
+) -> None:
+    current = snapshot_home(home)
+    changed = sorted(
+        name
+        for name in baseline.keys() | current.keys()
+        if baseline.get(name) != current.get(name)
+    )
+    if changed:
+        raise AssertionError(
+            "per-agent daemon wrote under shared HOME: "
+            + ", ".join(changed[:20])
+        )
+
+
+def verify_home_snapshot_detects_ephemeral_child() -> None:
+    """Prove create-then-remove activity remains visible through HOME."""
+    with tempfile.TemporaryDirectory() as temporary:
+        home = Path(temporary)
+        baseline = snapshot_home(home)
+        probe = home / "anvil-ephemeral-state"
+        probe.write_text("temporary\n")
+        probe.unlink()
+        current_info = home.lstat()
+        os.utime(
+            home,
+            ns=(
+                current_info.st_atime_ns,
+                max(current_info.st_mtime_ns, baseline["."][2] + 1),
+            ),
+        )
+        try:
+            assert_home_unchanged(home, baseline)
+        except AssertionError:
+            return
+        raise AssertionError("HOME root metadata was omitted from its snapshot")
+
+
 def call_after_readiness(
     bridge: ProxyBridge,
     name: str,
@@ -481,6 +540,9 @@ def main() -> None:
     module = load_supervisor(Path(sys.argv[2]).resolve())
     runtime_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"])
     state_root = Path(os.environ["ANVIL_EMACS_STATE_ROOT"])
+    home = Path.home()
+    verify_home_snapshot_detects_ephemeral_child()
+    home_baseline = snapshot_home(home)
 
     assert_launcher_rejects(
         launcher,
@@ -590,8 +652,7 @@ def main() -> None:
         }
         if len(sockets) != 3 or not all(path.is_socket() for path in sockets):
             raise AssertionError(f"isolated sockets are missing: {sockets}")
-        if str(Path.home()) in str(runtime_dir) or str(Path.home()) in str(state_dir):
-            raise AssertionError("per-agent state leaked into shared HOME")
+        assert_home_unchanged(home, home_baseline)
 
         agent_runtime_dir = (
             runtime_root / HOST_ONE / "agents" / other_agent_key
@@ -729,6 +790,7 @@ def main() -> None:
             bridge.close()
         for owner in reversed(owners):
             owner.close()
+    assert_home_unchanged(home, home_baseline)
 
 
 if __name__ == "__main__":

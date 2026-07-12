@@ -21,7 +21,6 @@ import sys
 import time
 
 
-EXIT_USAGE = 64
 EXIT_UNAVAILABLE = 69
 EXIT_SOFTWARE = 70
 EXIT_CONFIG = 77
@@ -37,7 +36,24 @@ SERVER_IDS = frozenset(("anvil", "emacs-eval"))
 MAX_LEASE_BYTES = 8192
 POLL_SECONDS = 0.25
 DAEMON_STOP_SECONDS = 5.0
-RESTART_BACKOFF_SECONDS = 0.5
+RESTART_BACKOFF_INITIAL_SECONDS = 0.5
+RESTART_BACKOFF_MAX_SECONDS = 60.0
+RESTART_STABLE_SECONDS = 30.0
+LIFECYCLE_REFRESH_SECONDS = 60.0
+TRANSIENT_ERRNOS = frozenset(
+    error
+    for error in (
+        errno.EAGAIN,
+        errno.EBUSY,
+        errno.EINTR,
+        errno.EIO,
+        errno.EMFILE,
+        errno.ENFILE,
+        errno.ENOSPC,
+        getattr(errno, "EDQUOT", None),
+    )
+    if error is not None
+)
 _LINUX_BOOT_ID: str | None = None
 _LINUX_BOOT_ID_INITIALIZED = False
 _DARWIN_LIBPROC = None
@@ -79,23 +95,45 @@ def validate_server_id(raw: str) -> str:
 
 def ensure_private_directory(path: Path) -> None:
     """Create PATH once and reject links, foreign owners, and broad modes."""
+    created = False
     try:
         path.mkdir(mode=0o700)
+        created = True
     except FileExistsError:
         pass
     except OSError as error:
-        raise ConfigurationError(f"cannot create private directory {path}: {error}")
+        raise ConfigurationError(
+            f"cannot create private directory {path}: {error}"
+        ) from error
 
     try:
         info = path.lstat()
     except OSError as error:
-        raise ConfigurationError(f"cannot inspect private directory {path}: {error}")
+        raise ConfigurationError(
+            f"cannot inspect private directory {path}: {error}"
+        ) from error
     if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
         raise ConfigurationError(f"private path is not a real directory: {path}")
     if info.st_uid != os.getuid():
         raise ConfigurationError(
             f"private directory {path} is not owned by uid {os.getuid()}"
         )
+    if created:
+        descriptor = os.open(
+            path,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        )
+        try:
+            opened = os.fstat(descriptor)
+            if (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
+                raise ConfigurationError(f"private directory changed: {path}")
+            os.fchmod(descriptor, 0o700)
+        finally:
+            os.close(descriptor)
+        current = path.lstat()
+        if (current.st_dev, current.st_ino) != (info.st_dev, info.st_ino):
+            raise ConfigurationError(f"private directory was replaced: {path}")
+        info = current
     if stat.S_IMODE(info.st_mode) != 0o700:
         raise ConfigurationError(f"private directory must have mode 0700: {path}")
 
@@ -335,6 +373,7 @@ def atomic_json(
     data: dict[str, object],
     *,
     replace: bool,
+    durable: bool = True,
 ) -> Path:
     """Publish one complete, private JSON file within DIRECTORY."""
     payload = (json.dumps(data, sort_keys=True, separators=(",", ":")) + "\n").encode()
@@ -360,8 +399,10 @@ def atomic_json(
             or info.st_nlink != 1
         ):
             raise ConfigurationError("unsafe temporary lifecycle record")
+        os.fchmod(descriptor, 0o600)
         write_all(descriptor, payload)
-        os.fsync(descriptor)
+        if durable:
+            os.fsync(descriptor)
         os.close(descriptor)
         descriptor = None
         if not replace:
@@ -377,7 +418,8 @@ def atomic_json(
             src_dir_fd=directory_fd,
             dst_dir_fd=directory_fd,
         )
-        os.fsync(directory_fd)
+        if durable:
+            os.fsync(directory_fd)
         return directory / final_name
     finally:
         if descriptor is not None:
@@ -494,10 +536,6 @@ def read_lease(
     finally:
         if descriptor is not None:
             os.close(descriptor)
-        if identity is not None:
-            # Invalid records are removed by the caller after it has learned
-            # whether a parsed record was returned.
-            pass
 
 
 def live_leases(
@@ -642,17 +680,85 @@ def remove_instance_tree(path: Path) -> None:
         os.close(parent_fd)
 
 
+def read_status_owner(
+    runtime_dir: Path,
+    agent_key: str,
+) -> tuple[int, str] | None:
+    """Read the trusted owner identity from a private supervisor status."""
+    directory_fd = None
+    descriptor = None
+    try:
+        directory_fd = os.open(
+            runtime_dir,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        )
+        directory_info = os.fstat(directory_fd)
+        if (
+            not stat.S_ISDIR(directory_info.st_mode)
+            or directory_info.st_uid != os.getuid()
+            or stat.S_IMODE(directory_info.st_mode) != 0o700
+        ):
+            return None
+        descriptor = os.open(
+            STATUS_NAME,
+            os.O_RDONLY | os.O_NOFOLLOW,
+            dir_fd=directory_fd,
+        )
+        descriptor_info = os.fstat(descriptor)
+        path_info = os.stat(
+            STATUS_NAME,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+        identity = (descriptor_info.st_dev, descriptor_info.st_ino)
+        if (
+            not stat.S_ISREG(descriptor_info.st_mode)
+            or descriptor_info.st_uid != os.getuid()
+            or descriptor_info.st_nlink != 1
+            or stat.S_IMODE(descriptor_info.st_mode) != 0o600
+            or (path_info.st_dev, path_info.st_ino) != identity
+        ):
+            return None
+        payload = os.read(descriptor, MAX_LEASE_BYTES + 1)
+        if len(payload) > MAX_LEASE_BYTES:
+            return None
+        record = json.loads(payload.decode("utf-8"))
+        if not isinstance(record, dict):
+            return None
+        owner_pid = record.get("owner_pid")
+        owner_identity = record.get("owner_start_identity")
+        if (
+            record.get("format") != 1
+            or record.get("agent_key") != agent_key
+            or not isinstance(owner_pid, int)
+            or owner_pid <= 1
+            or not isinstance(owner_identity, str)
+            or not owner_identity
+        ):
+            return None
+        return owner_pid, owner_identity
+    except (FileNotFoundError, PermissionError, OSError, ValueError, UnicodeError):
+        return None
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if directory_fd is not None:
+            os.close(directory_fd)
+
+
 def prune_orphaned_state(
     runtime_agents: Path,
     state_agents: Path,
     current_agent_key: str,
 ) -> None:
-    """Prune reboot leftovers after the local runtime hierarchy vanished."""
-    try:
-        names = os.listdir(state_agents)
-    except FileNotFoundError:
-        return
-    for name in names:
+    """Prune dead owners' runtime trees and their corresponding state."""
+    names: set[str] = set()
+    for agents_dir in (runtime_agents, state_agents):
+        try:
+            names.update(os.listdir(agents_dir))
+        except (FileNotFoundError, PermissionError, OSError):
+            continue
+    for name in sorted(names):
         if name == current_agent_key or AGENT_KEY_PATTERN.fullmatch(name) is None:
             continue
         runtime_path = runtime_agents / name
@@ -666,7 +772,36 @@ def prune_orphaned_state(
             and not stat.S_ISLNK(runtime_info.st_mode)
             and runtime_info.st_uid == os.getuid()
         ):
-            continue
+            owner = read_status_owner(runtime_path, name)
+            if (
+                owner is None
+                or process_start_identity(owner[0]) == owner[1]
+            ):
+                continue
+            try:
+                locked = try_supervisor_lock(runtime_path)
+            except (ConfigurationError, FileNotFoundError, OSError):
+                continue
+            if locked is None:
+                continue
+            lock_descriptor, lock_identity = locked
+            try:
+                validate_supervisor_lock(
+                    lock_descriptor,
+                    runtime_path / LOCK_NAME,
+                    lock_identity,
+                )
+                confirmed = read_status_owner(runtime_path, name)
+                if (
+                    confirmed is None
+                    or process_start_identity(confirmed[0]) == confirmed[1]
+                ):
+                    continue
+                remove_instance_tree(runtime_path)
+            except (ConfigurationError, FileNotFoundError, OSError, RuntimeError):
+                continue
+            finally:
+                os.close(lock_descriptor)
         try:
             remove_instance_tree(state_agents / name)
         except (ConfigurationError, FileNotFoundError, OSError):
@@ -788,7 +923,6 @@ def close_descriptors_except(keep: set[int]) -> None:
                     if error.errno != errno.EBADF:
                         raise
         return
-
     try:
         limit = int(os.sysconf("SC_OPEN_MAX"))
     except (OSError, TypeError, ValueError):
@@ -859,26 +993,107 @@ def stop_daemon(process: subprocess.Popen[bytes] | None) -> None:
         pass
 
 
-def write_status(
+def restart_backoff_seconds(failures: int) -> float:
+    """Return a capped delay for at least one consecutive failure."""
+    delay = RESTART_BACKOFF_INITIAL_SECONDS
+    for _unused in range(max(0, min(failures - 1, 64))):
+        delay = min(RESTART_BACKOFF_MAX_SECONDS, delay * 2)
+        if delay >= RESTART_BACKOFF_MAX_SECONDS:
+            break
+    return delay
+
+
+def transient_supervisor_error(error: OSError) -> bool:
+    return error.errno in TRANSIENT_ERRNOS
+
+
+def refresh_private_record(directory_fd: int, name: str) -> bool:
+    """Refresh one unchanged private record through a validated descriptor."""
+    descriptor = None
+    try:
+        descriptor = os.open(
+            name,
+            os.O_RDONLY | os.O_NOFOLLOW,
+            dir_fd=directory_fd,
+        )
+        descriptor_info = os.fstat(descriptor)
+        path_info = os.stat(
+            name,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+        if (
+            not stat.S_ISREG(descriptor_info.st_mode)
+            or descriptor_info.st_uid != os.getuid()
+            or descriptor_info.st_nlink != 1
+            or stat.S_IMODE(descriptor_info.st_mode) != 0o600
+            or (descriptor_info.st_dev, descriptor_info.st_ino)
+            != (path_info.st_dev, path_info.st_ino)
+        ):
+            return False
+        os.utime(descriptor)
+        return True
+    except (FileNotFoundError, PermissionError, OSError):
+        return False
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def refresh_lifecycle_records(
+    lock_descriptor: int,
+    runtime_dir: Path,
+    leases_dir: Path,
+) -> bool:
+    """Keep long-lived lifecycle records safe from age-based cleaners."""
+    os.utime(lock_descriptor)
+    runtime_fd = os.open(
+        runtime_dir,
+        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+    )
+    try:
+        status_present = refresh_private_record(runtime_fd, STATUS_NAME)
+    finally:
+        os.close(runtime_fd)
+
+    leases_fd = os.open(
+        leases_dir,
+        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+    )
+    try:
+        for name in os.listdir(leases_fd):
+            if name.startswith("lease-") and name.endswith(".json"):
+                refresh_private_record(leases_fd, name)
+    finally:
+        os.close(leases_fd)
+    return status_present
+
+
+def status_record(
     args: argparse.Namespace,
     daemon: subprocess.Popen[bytes] | None,
     lease_count: int,
-) -> None:
+) -> dict[str, object]:
     daemon_pid = None if daemon is None or daemon.poll() is not None else daemon.pid
+    return {
+        "daemon_pid": daemon_pid,
+        "format": 1,
+        "lease_count": lease_count,
+        "agent_key": args.agent_key,
+        "owner_pid": args.owner_pid,
+        "owner_start_identity": args.owner_start_identity,
+        "supervisor_pid": os.getpid(),
+        "supervisor_start_identity": process_start_identity(os.getpid()),
+    }
+
+
+def write_status(args: argparse.Namespace, record: dict[str, object]) -> None:
     atomic_json(
         args.runtime_dir,
         STATUS_NAME,
-        {
-            "daemon_pid": daemon_pid,
-            "format": 1,
-            "lease_count": lease_count,
-            "agent_key": args.agent_key,
-            "owner_pid": args.owner_pid,
-            "owner_start_identity": args.owner_start_identity,
-            "supervisor_pid": os.getpid(),
-            "supervisor_start_identity": process_start_identity(os.getpid()),
-        },
+        record,
         replace=True,
+        durable=False,
     )
 
 
@@ -888,8 +1103,16 @@ def supervisor_loop(
     lock_identity: tuple[int, int],
 ) -> None:
     daemon: subprocess.Popen[bytes] | None = None
+    daemon_started_at: float | None = None
+    daemon_observed_stable = False
+    daemon_failures = 0
     empty_since: float | None = None
     next_start = 0.0
+    next_refresh = 0.0
+    status_cache: dict[str, object] | None = None
+    status_failures = 0
+    next_status_attempt = 0.0
+    transient_failures = 0
     stopping = False
     owner_dead = False
 
@@ -903,61 +1126,127 @@ def supervisor_loop(
 
     try:
         while not stopping:
-            validate_supervisor_lock(
-                lock_descriptor,
-                args.runtime_dir / LOCK_NAME,
-                lock_identity,
-            )
-            if (
-                process_start_identity(args.owner_pid)
-                != args.owner_start_identity
-            ):
-                owner_dead = True
-                live_leases(
-                    args.leases_dir,
-                    args.agent_key,
-                    args.owner_pid,
-                    args.owner_start_identity,
+            try:
+                validate_supervisor_lock(
+                    lock_descriptor,
+                    args.runtime_dir / LOCK_NAME,
+                    lock_identity,
                 )
-                break
-            leases = live_leases(
-                args.leases_dir,
-                args.agent_key,
-                args.owner_pid,
-                args.owner_start_identity,
-                owner_validated=True,
-            )
-            now = time.monotonic()
-            if daemon is not None and daemon.poll() is not None:
-                daemon = None
-                next_start = max(next_start, now + RESTART_BACKOFF_SECONDS)
-
-            if leases:
-                empty_since = None
-                if daemon is None and now >= next_start:
-                    daemon = start_daemon(args)
-            else:
-                if empty_since is None:
-                    empty_since = now
-                if now - empty_since >= args.grace_seconds:
-                    stop_daemon(daemon)
-                    daemon = None
-                    # Remain as a lightweight owner-lifetime supervisor. This
-                    # closes registration-vs-cleanup races and lets a later
-                    # bridge in the same Codex process restart the daemon.
-                    refreshed = live_leases(
+                if (
+                    process_start_identity(args.owner_pid)
+                    != args.owner_start_identity
+                ):
+                    owner_dead = True
+                    live_leases(
                         args.leases_dir,
                         args.agent_key,
                         args.owner_pid,
                         args.owner_start_identity,
-                        owner_validated=True,
                     )
-                    if refreshed:
-                        leases = refreshed
-                        empty_since = None
-                        next_start = 0.0
+                    break
+                leases = live_leases(
+                    args.leases_dir,
+                    args.agent_key,
+                    args.owner_pid,
+                    args.owner_start_identity,
+                    owner_validated=True,
+                )
+                now = time.monotonic()
+                if daemon is not None and daemon.poll() is not None:
+                    if daemon_observed_stable:
+                        daemon_failures = 0
+                    daemon_failures += 1
+                    daemon = None
+                    daemon_started_at = None
+                    daemon_observed_stable = False
+                    next_start = max(
+                        next_start,
+                        now + restart_backoff_seconds(daemon_failures),
+                    )
+                elif (
+                    daemon is not None
+                    and daemon_started_at is not None
+                    and now - daemon_started_at >= RESTART_STABLE_SECONDS
+                ):
+                    daemon_observed_stable = True
 
-            write_status(args, daemon, len(leases))
+                if leases:
+                    empty_since = None
+                    if daemon is None and now >= next_start:
+                        daemon = start_daemon(args)
+                        daemon_started_at = now
+                        daemon_observed_stable = False
+                else:
+                    if empty_since is None:
+                        empty_since = now
+                    if now - empty_since >= args.grace_seconds:
+                        stop_daemon(daemon)
+                        daemon = None
+                        daemon_started_at = None
+                        daemon_observed_stable = False
+                        daemon_failures = 0
+                        next_start = 0.0
+                        # Remain as a lightweight owner-lifetime supervisor.
+                        # This closes registration-vs-cleanup races and lets a
+                        # later bridge in the same Codex process restart it.
+                        refreshed = live_leases(
+                            args.leases_dir,
+                            args.agent_key,
+                            args.owner_pid,
+                            args.owner_start_identity,
+                            owner_validated=True,
+                        )
+                        if refreshed:
+                            leases = refreshed
+                            empty_since = None
+
+                if now >= next_refresh:
+                    if not refresh_lifecycle_records(
+                        lock_descriptor,
+                        args.runtime_dir,
+                        args.leases_dir,
+                    ):
+                        status_cache = None
+                    next_refresh = now + LIFECYCLE_REFRESH_SECONDS
+
+                record = status_record(args, daemon, len(leases))
+                if record != status_cache and now >= next_status_attempt:
+                    try:
+                        write_status(args, record)
+                    except OSError as error:
+                        if not transient_supervisor_error(error):
+                            raise
+                        status_failures += 1
+                        next_status_attempt = (
+                            now + restart_backoff_seconds(status_failures)
+                        )
+                    else:
+                        status_cache = record
+                        status_failures = 0
+                        next_status_attempt = 0.0
+            except OSError as error:
+                if not transient_supervisor_error(error):
+                    raise
+                transient_failures += 1
+                retry_deadline = (
+                    time.monotonic()
+                    + restart_backoff_seconds(transient_failures)
+                )
+                while not stopping:
+                    if (
+                        process_start_identity(args.owner_pid)
+                        != args.owner_start_identity
+                    ):
+                        owner_dead = True
+                        break
+                    remaining = retry_deadline - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    time.sleep(min(POLL_SECONDS, remaining))
+                if owner_dead or stopping:
+                    break
+                continue
+            transient_failures = 0
             time.sleep(POLL_SECONDS)
     finally:
         stop_daemon(daemon)
@@ -987,6 +1276,7 @@ def spawn_supervisor_if_absent(args: argparse.Namespace) -> bool:
         os.close(ready_read)
         try:
             os.setsid()
+            os.chdir("/")
             null_descriptor = os.open(os.devnull, os.O_RDWR)
             for descriptor in (0, 1, 2):
                 os.dup2(null_descriptor, descriptor)
@@ -1023,7 +1313,7 @@ def spawn_supervisor_if_absent(args: argparse.Namespace) -> bool:
             os.waitpid(child_pid, 0)
         except ChildProcessError:
             pass
-        raise RuntimeError("agent supervisor did not become ready")
+        raise TimeoutError("agent supervisor did not become ready")
     return True
 
 
@@ -1144,9 +1434,9 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--grace-seconds", type=float, default=5.0)
     parser.add_argument("--ready-seconds", type=float, default=120.0)
     args = parser.parse_args(argv)
-    if args.grace_seconds < 0.25 or args.grace_seconds > 300:
+    if not (0.25 <= args.grace_seconds <= 300):
         parser.error("--grace-seconds must be between 0.25 and 300")
-    if args.ready_seconds < 1 or args.ready_seconds > 300:
+    if not (1 <= args.ready_seconds <= 300):
         parser.error("--ready-seconds must be between 1 and 300")
     return args
 

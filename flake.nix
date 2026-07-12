@@ -168,10 +168,11 @@
       # and then: imports = [ "${inputs.nix-config}/config/johnw.nix" ];
       homeManagerModules.johnw = import ./config/johnw.nix;
 
-      # Standalone home-manager configurations for Linux hosts.
-      # Usage:
-      #   home-manager switch --flake ~/src/nix#johnw@aarch64-linux
-      #   home-manager switch --flake ~/src/nix#jwiegley@x86_64-linux
+      # Generic standalone Home Manager configurations used for evaluation and
+      # smoke tests.  Their synthetic hostname is deliberately "linux", so
+      # host-gated features retain their defaults.  Real machines switch their
+      # own flakes: /etc/nixos on NixOS hosts such as Vulcan and VPS, and
+      # ~/.config/home-manager on the shared-home Andoria/Delphi/GPU hosts.
       homeConfigurations =
         let
           mkLinuxHome =
@@ -216,9 +217,9 @@
             };
         in
         {
-          # vulcan, vps
+          # Generic ARM64 Linux evaluation surface (not a host switch target).
           "johnw@aarch64-linux" = mkLinuxHome "johnw" "linux" "aarch64-linux";
-          # andoria-*, delphi-*
+          # Generic AMD64 Linux evaluation surface (not a host switch target).
           "jwiegley@x86_64-linux" = mkLinuxHome "jwiegley" "linux" "x86_64-linux";
         };
 

@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import stat
 import subprocess
 import sys
 
@@ -588,23 +589,34 @@ def spawn_baseline_expression() -> str:
     (error "worker spawn baseline advice is not installed"))
   (let ((process-environment (copy-sequence process-environment))
         (exec-path (cons "/timer-contamination"
-                         (copy-sequence exec-path))))
+                         (copy-sequence exec-path)))
+        (contaminated-directory
+         (make-temp-file "anvil-deleted-project-" t)))
     (setenv "ANVIL_DIRENV_MARKER" "timer-contamination")
-    (json-serialize
-     (anvil-headless--with-parent-pid-for-worker
-      (lambda ()
-        (vector
-         (or (getenv "ANVIL_DIRENV_MARKER") :false)
-         (if (member "/timer-contamination" exec-path) t :false)
-         (or (getenv "ANVIL_HEADLESS_PARENT_PID") :false)
-         (number-to-string (emacs-pid))))))))
+    (unwind-protect
+        (let ((default-directory
+               (file-name-as-directory contaminated-directory)))
+          (delete-directory contaminated-directory)
+          (json-serialize
+           (anvil-headless--with-parent-pid-for-worker
+            (lambda ()
+              (vector
+               (or (getenv "ANVIL_DIRENV_MARKER") :false)
+               (if (member "/timer-contamination" exec-path) t :false)
+               (or (getenv "ANVIL_HEADLESS_PARENT_PID") :false)
+               (number-to-string (emacs-pid))
+               default-directory
+               user-emacs-directory
+               (call-process "true" nil nil nil))))))
+      (when (file-exists-p contaminated-directory)
+        (delete-directory contaminated-directory t)))))
 """.strip()
 
 
-def assert_spawn_baseline(response: dict[str, object]) -> None:
+def assert_spawn_baseline(response: dict[str, object], host: str) -> None:
     """Validate the immutable environment and parent used by worker spawn."""
     snapshot = decode_eval_json(response)
-    if not isinstance(snapshot, list) or len(snapshot) != 4:
+    if not isinstance(snapshot, list) or len(snapshot) != 7:
         raise AssertionError(f"malformed worker spawn snapshot: {snapshot}")
     if snapshot[:2] != [False, False]:
         raise AssertionError(f"spawn wrapper retained the project env: {snapshot}")
@@ -614,6 +626,79 @@ def assert_spawn_baseline(response: dict[str, object]) -> None:
         or snapshot[2] != snapshot[3]
     ):
         raise AssertionError(f"spawn wrapper used the wrong parent PID: {snapshot}")
+    expected_directory = Path(os.environ["ANVIL_EMACS_STATE_ROOT"]) / host
+    if (
+        not isinstance(snapshot[4], str)
+        or not isinstance(snapshot[5], str)
+        or Path(snapshot[4]) != expected_directory
+        or Path(snapshot[5]) != expected_directory
+        or snapshot[6] != 0
+    ):
+        raise AssertionError(
+            "spawn wrapper retained a deleted project directory: "
+            f"{snapshot}, expected={expected_directory}"
+        )
+
+
+def watchdog_lease_expression() -> str:
+    """Exercise synchronous leasing and overlapping async-job accounting."""
+    return r"""
+(progn
+  (unless
+      (advice-member-p
+       #'anvil-headless--watchdog-sync-dispatch
+       'anvil-server-process-jsonrpc)
+    (error "synchronous watchdog advice is not installed"))
+  (let ((first "smoke-overlap-first")
+        (second "smoke-overlap-second")
+        (lease anvil-headless--watchdog-lease-file)
+        first-count second-count remaining-count remaining-mode
+        final-count final-mode)
+    (unless (= (hash-table-count anvil-headless--watchdog-async-jobs) 0)
+      (error "watchdog async job table was not initially empty"))
+    ;; Starve normal Emacs timers beyond the smoke daemon's three-second
+    ;; ordinary deadline.  The external watchdog must honor this request's
+    ;; synchronous lease and leave the root alive.
+    (let ((deadline (+ (float-time) 4.0)))
+      (while (< (float-time) deadline)))
+    (unwind-protect
+        (progn
+          (anvil-headless--watchdog-async-active first)
+          (setq first-count
+                (hash-table-count anvil-headless--watchdog-async-jobs))
+          (anvil-headless--watchdog-async-active second)
+          (setq second-count
+                (hash-table-count anvil-headless--watchdog-async-jobs))
+          (anvil-headless--watchdog-async-idle first)
+          (setq remaining-count
+                (hash-table-count anvil-headless--watchdog-async-jobs)
+                remaining-mode (logand (file-modes lease) #o777))
+          (anvil-headless--watchdog-async-idle second)
+          (setq final-count
+                (hash-table-count anvil-headless--watchdog-async-jobs)
+                final-mode (logand (file-modes lease) #o777))
+          (json-serialize
+           (vector
+            anvil-headless--watchdog-sync-dispatch-depth
+            (logand (file-modes lease) #o777)
+            first-count second-count remaining-count remaining-mode
+            final-count final-mode)))
+      (remhash first anvil-headless--watchdog-async-jobs)
+      (remhash second anvil-headless--watchdog-async-jobs)
+      (anvil-headless--watchdog-refresh-lease-state))))
+""".strip()
+
+
+def assert_watchdog_lease(response: dict[str, object], lease: Path) -> None:
+    """Validate sync lease state, async refcounting, and final idle state."""
+    snapshot = decode_eval_json(response)
+    expected = [1, 0o600, 1, 2, 1, 0o600, 0, 0o600]
+    if snapshot != expected:
+        raise AssertionError(
+            f"watchdog lease/refcount mismatch: {snapshot} != {expected}"
+        )
+    if stat.S_IMODE(lease.stat().st_mode) != 0o400:
+        raise AssertionError("synchronous watchdog lease did not return to idle")
 
 
 def main() -> None:
@@ -634,6 +719,7 @@ def main() -> None:
     snapshot_expression = worker_snapshot_expression(worker_specs)
     buffer_environment_expression = direnv_buffer_expression()
     spawn_environment_expression = spawn_baseline_expression()
+    watchdog_expression = watchdog_lease_expression()
     project_a = Path.home() / "direnv-a"
     project_b = Path.home() / "direnv-b"
     project_plain = Path.home() / "direnv-plain"
@@ -648,6 +734,11 @@ def main() -> None:
         Path(os.environ["ANVIL_EMACS_STATE_ROOT"])
         / "host-a"
         / ".anvil-headless-emacs.lock"
+    )
+    watchdog_lease = (
+        Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"])
+        / "host-a"
+        / ".anvil-root-async-lease"
     )
     lock_fd_command = (
         "if { [ -e /dev/fd/8 ] && "
@@ -838,6 +929,14 @@ def main() -> None:
                     "arguments": {"expression": spawn_environment_expression},
                 },
             ),
+            request(
+                19,
+                "tools/call",
+                {
+                    "name": "emacs-eval",
+                    "arguments": {"expression": watchdog_expression},
+                },
+            ),
         ],
     )
     main_names = tool_names(response_by_id(main_responses, 2))
@@ -876,7 +975,8 @@ def main() -> None:
         response_by_id(main_responses, 17),
         "unset:unset:unset:unset:unset:blocked-command",
     )
-    assert_spawn_baseline(response_by_id(main_responses, 18))
+    assert_spawn_baseline(response_by_id(main_responses, 18), "host-a")
+    assert_watchdog_lease(response_by_id(main_responses, 19), watchdog_lease)
     for identifier in (10, 11, 16, 17):
         assert_tool_omits(response_by_id(main_responses, identifier), "direnv:")
 
