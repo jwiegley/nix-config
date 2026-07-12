@@ -829,11 +829,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1783526004,
-        "narHash": "sha256-izqNlubGsAXZlOclvZBkYUS6MjdZjPywHCSP08cdMlM=",
+        "lastModified": 1783777161,
+        "narHash": "sha256-kpA1JDXSxEDnRMNenR7r1txYg6zeZTX2jwgpjkLayus=",
         "ref": "refs/heads/master",
-        "rev": "d7b070b74c5f0f34cf2298e218c1701d52e35c7a",
-        "revCount": 182806,
+        "rev": "c6147e2b539dc3490b47a924bed86da00cc763a7",
+        "revCount": 182822,
         "type": "git",
         "url": "file:///Users/johnw/Databases/emacs"
       },

@@ -205,7 +205,7 @@ let
           owner = "zawatton";
           repo = "anvil-ide.el";
           rev = "0e6130457ac2bdc6c6db2eebeba67a5223231190";
-          sha256 = "18nrzrcxm9bkpii7pwabx62jg1nkypcsnm1cr18dddmg6h75xn1g";
+          sha256 = "sha256-L9heDjSvttZQyCxUq9n104YnhelL8XtivHOl2ln+2aI=";
           # date = 2026-04-27T08:48:09+09:00;
         };
         propagatedBuildInputs = with eself; [
