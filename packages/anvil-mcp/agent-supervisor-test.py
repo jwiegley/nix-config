@@ -686,7 +686,7 @@ class AgentSupervisorTests(unittest.TestCase):
         original_write_status = SUPERVISOR.write_status
 
         def flaky_write_status(inner_args, record):
-            if not failure_marker.exists():
+            if record["daemon_pid"] is not None and not failure_marker.exists():
                 failure_marker.write_text("failed\n")
                 raise OSError(SUPERVISOR.errno.ENOSPC, "injected ENOSPC")
             original_write_status(inner_args, record)
@@ -701,7 +701,15 @@ class AgentSupervisorTests(unittest.TestCase):
             ),
         ):
             self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(args))
-            status = self.remember_status(eventually(lambda: self.read_status(args)))
+            status = self.remember_status(
+                eventually(
+                    lambda: (
+                        (current := self.read_status(args))["daemon_pid"]
+                        is not None
+                        and current
+                    )
+                )
+            )
         self.assertTrue(failure_marker.exists())
         time.sleep(0.2)
         current = self.read_status(args)
@@ -924,7 +932,10 @@ class AgentSupervisorTests(unittest.TestCase):
             after = status_path.stat()
 
         self.assertEqual((after.st_dev, after.st_ino), (before.st_dev, before.st_ino))
-        self.assertEqual(status_writes.read_text().splitlines(), ["write"])
+        self.assertEqual(
+            status_writes.read_text().splitlines(),
+            ["write", "write", "write"],
+        )
         lease.unlink()
 
     def test_same_owner_server_bridges_converge_restart_and_cleanup(self):
@@ -935,7 +946,15 @@ class AgentSupervisorTests(unittest.TestCase):
         self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(args))
         self.assertFalse(SUPERVISOR.spawn_supervisor_if_absent(args))
 
-        status = self.remember_status(eventually(lambda: self.read_status(args)))
+        status = self.remember_status(
+            eventually(
+                lambda: (
+                    (current := self.read_status(args))["lease_count"] == 2
+                    and current["daemon_pid"] is not None
+                    and current
+                )
+            )
+        )
         self.assertEqual(status["lease_count"], 2)
         self.assertEqual(status["agent_key"], args.agent_key)
         self.assertEqual(status["owner_pid"], args.owner_pid)
@@ -1025,10 +1044,22 @@ class AgentSupervisorTests(unittest.TestCase):
         self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(first_args))
         self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(second_args))
         first = self.remember_status(
-            eventually(lambda: self.read_status(first_args))
+            eventually(
+                lambda: (
+                    (current := self.read_status(first_args))["daemon_pid"]
+                    is not None
+                    and current
+                )
+            )
         )
         second = self.remember_status(
-            eventually(lambda: self.read_status(second_args))
+            eventually(
+                lambda: (
+                    (current := self.read_status(second_args))["daemon_pid"]
+                    is not None
+                    and current
+                )
+            )
         )
         self.assertNotEqual(first["supervisor_pid"], second["supervisor_pid"])
         self.assertNotEqual(first["daemon_pid"], second["daemon_pid"])
@@ -1062,7 +1093,15 @@ class AgentSupervisorTests(unittest.TestCase):
         (args.state_dir / "outside-link").symlink_to(outside)
         SUPERVISOR.start_daemon = fake_start_daemon
         self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(args))
-        status = self.remember_status(eventually(lambda: self.read_status(args)))
+        status = self.remember_status(
+            eventually(
+                lambda: (
+                    (current := self.read_status(args))["daemon_pid"]
+                    is not None
+                    and current
+                )
+            )
+        )
         self.assertIsNotNone(status["daemon_pid"])
         self.assertEqual(self.live(args), [record])
 
@@ -1088,6 +1127,175 @@ class AgentSupervisorTests(unittest.TestCase):
         )
         owner_process.wait(timeout=3)
 
+    def test_initial_status_precedes_readiness_and_enables_orphan_pruning(
+        self,
+    ):
+        owner_pid, owner_identity = self.start_owner()
+        stale = self.prepare(
+            owner_pid=owner_pid,
+            owner_start_identity=owner_identity,
+        )
+        self.register(stale, "anvil")
+        (stale.state_dir / "large-cache").write_text("stale\n")
+        loop_entered = self.root / "initial-status-loop-entered"
+        child_failed_once = self.root / "initial-status-child-failed-once"
+        parent_pid = os.getpid()
+        original_write_status = SUPERVISOR.write_status
+
+        def transient_child_write(inner_args, record):
+            if os.getpid() != parent_pid and not child_failed_once.exists():
+                child_failed_once.write_text("failed\n")
+                raise OSError(SUPERVISOR.errno.ENOSPC, "injected ENOSPC")
+            original_write_status(inner_args, record)
+
+        def stall_before_loop_status(
+            _args,
+            _lock_descriptor,
+            _lock_identity,
+        ):
+            loop_entered.write_text("entered\n")
+            while True:
+                signal.pause()
+
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "supervisor_loop",
+                stall_before_loop_status,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "write_status",
+                transient_child_write,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "RESTART_BACKOFF_INITIAL_SECONDS",
+                0.01,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "RESTART_BACKOFF_MAX_SECONDS",
+                0.01,
+            ),
+        ):
+            self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(stale))
+            eventually(loop_entered.exists)
+            self.assertTrue(child_failed_once.exists())
+            status = self.remember_status(self.read_status(stale))
+            self.assertEqual(status["owner_pid"], owner_pid)
+            self.assertEqual(status["owner_start_identity"], owner_identity)
+            self.assertIsNone(status["daemon_pid"])
+            self.assertEqual(status["lease_count"], 0)
+            os.kill(status["supervisor_pid"], signal.SIGKILL)
+            self.assertTrue(reap_child(status["supervisor_pid"]))
+        self.supervisor_pids.remove(status["supervisor_pid"])
+
+        current = self.prepare()
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertTrue(
+            stale.runtime_dir.exists(),
+            "a live owner must not be pruned",
+        )
+        self.assertTrue(
+            stale.state_dir.exists(),
+            "a live owner must not be pruned",
+        )
+
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertFalse(stale.runtime_dir.exists())
+        self.assertFalse(stale.state_dir.exists())
+
+    def test_child_status_failure_retains_owner_seed_for_pruning(self):
+        owner_pid, owner_identity = self.start_owner()
+        stale = self.prepare(
+            owner_pid=owner_pid,
+            owner_start_identity=owner_identity,
+        )
+        self.register(stale, "anvil")
+        (stale.state_dir / "large-cache").write_text("stale\n")
+        child_attempts = self.root / "initial-status-child-attempts"
+        parent_pid = os.getpid()
+        original_write_status = SUPERVISOR.write_status
+
+        def fail_child_status(inner_args, record):
+            if os.getpid() != parent_pid:
+                with child_attempts.open("a", encoding="ascii") as stream:
+                    stream.write("failed\n")
+                raise OSError(SUPERVISOR.errno.ENOSPC, "injected ENOSPC")
+            original_write_status(inner_args, record)
+
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "write_status",
+                fail_child_status,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "STARTUP_STATUS_RETRY_SECONDS",
+                0.05,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "RESTART_BACKOFF_INITIAL_SECONDS",
+                0.01,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "RESTART_BACKOFF_MAX_SECONDS",
+                0.01,
+            ),
+        ):
+            with self.assertRaisesRegex(
+                TimeoutError,
+                "agent supervisor did not become ready",
+            ):
+                SUPERVISOR.spawn_supervisor_if_absent(stale)
+
+        self.assertGreaterEqual(len(child_attempts.read_text().splitlines()), 2)
+        seed = self.read_status(stale)
+        self.assertEqual(seed["owner_pid"], owner_pid)
+        self.assertEqual(seed["owner_start_identity"], owner_identity)
+        self.assertIsNone(seed["supervisor_pid"])
+        self.assertIsNone(seed["supervisor_start_identity"])
+        self.assertIsNone(seed["daemon_pid"])
+
+        current = self.prepare()
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertTrue(stale.runtime_dir.exists(), "a live owner must not be pruned")
+        self.assertTrue(stale.state_dir.exists(), "a live owner must not be pruned")
+
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertFalse(stale.runtime_dir.exists())
+        self.assertFalse(stale.state_dir.exists())
+
     def test_dead_owner_runtime_and_state_are_pruned_after_supervisor_kill(self):
         owner_pid, owner_identity = self.start_owner()
         stale = self.prepare(
@@ -1098,7 +1306,15 @@ class AgentSupervisorTests(unittest.TestCase):
         (stale.state_dir / "large-cache").write_text("stale\n")
         SUPERVISOR.start_daemon = fake_start_daemon
         self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(stale))
-        status = self.remember_status(eventually(lambda: self.read_status(stale)))
+        status = self.remember_status(
+            eventually(
+                lambda: (
+                    (current := self.read_status(stale))["daemon_pid"]
+                    is not None
+                    and current
+                )
+            )
+        )
         os.kill(status["supervisor_pid"], signal.SIGKILL)
         self.assertTrue(reap_child(status["supervisor_pid"]))
         self.supervisor_pids.remove(status["supervisor_pid"])
@@ -1115,8 +1331,14 @@ class AgentSupervisorTests(unittest.TestCase):
             current.state_dir.parent,
             current.agent_key,
         )
-        self.assertTrue(stale.runtime_dir.exists(), "a live owner must not be pruned")
-        self.assertTrue(stale.state_dir.exists(), "a live owner must not be pruned")
+        self.assertTrue(
+            stale.runtime_dir.exists(),
+            "a live owner must not be pruned",
+        )
+        self.assertTrue(
+            stale.state_dir.exists(),
+            "a live owner must not be pruned",
+        )
 
         owner_process = next(
             process for process in self.owner_processes if process.pid == owner_pid
@@ -1141,7 +1363,15 @@ class AgentSupervisorTests(unittest.TestCase):
         (stale.state_dir / "large-cache").write_text("stale\n")
         SUPERVISOR.start_daemon = fake_start_daemon
         self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(stale))
-        status = self.remember_status(eventually(lambda: self.read_status(stale)))
+        status = self.remember_status(
+            eventually(
+                lambda: (
+                    (current := self.read_status(stale))["daemon_pid"]
+                    is not None
+                    and current
+                )
+            )
+        )
 
         os.kill(status["supervisor_pid"], signal.SIGTERM)
         wait_status = wait_child_status(status["supervisor_pid"])
@@ -1163,8 +1393,14 @@ class AgentSupervisorTests(unittest.TestCase):
             current.state_dir.parent,
             current.agent_key,
         )
-        self.assertTrue(stale.runtime_dir.exists(), "a live owner must not be pruned")
-        self.assertTrue(stale.state_dir.exists(), "a live owner must not be pruned")
+        self.assertTrue(
+            stale.runtime_dir.exists(),
+            "a live owner must not be pruned",
+        )
+        self.assertTrue(
+            stale.state_dir.exists(),
+            "a live owner must not be pruned",
+        )
 
         owner_process = next(
             process for process in self.owner_processes if process.pid == owner_pid
@@ -1212,6 +1448,48 @@ class AgentSupervisorTests(unittest.TestCase):
                 self.assertEqual(raised.exception.code, 2)
                 self.assertIn("must be between", stderr.getvalue())
 
+    def test_parent_lock_runtime_failure_maps_to_unavailable_without_traceback(
+        self,
+    ):
+        bridge_args = SimpleNamespace(
+            daemon="/daemon",
+            emacsclient="/emacsclient",
+            grace_seconds=0.5,
+            host="hera",
+            parent_guard="/parent-guard",
+            python=sys.executable,
+            ready_seconds=1.0,
+            runtime_root=str(self.runtime_root),
+            server_id="anvil",
+            state_root=str(self.state_root),
+            stdio="/stdio",
+        )
+        owner_identity = SUPERVISOR.process_start_identity(os.getpid())
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "identify_owner",
+                return_value=(os.getpid(), owner_identity),
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "validate_supervisor_lock",
+                side_effect=RuntimeError("injected lock identity change"),
+            ),
+            contextlib.redirect_stderr(stderr),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                SUPERVISOR.bridge_main(bridge_args)
+
+        self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_UNAVAILABLE)
+        self.assertEqual(
+            stderr.getvalue(),
+            "anvil-mcp: per-agent daemon: "
+            "agent supervisor lock validation failed\n",
+        )
+        self.assertNotIn("Traceback", stderr.getvalue())
+
     def test_supervisor_readiness_timeout_maps_to_unavailable(self):
         args = self.prepare()
         lock_descriptor = os.open(os.devnull, os.O_RDONLY)
@@ -1221,6 +1499,8 @@ class AgentSupervisorTests(unittest.TestCase):
                 "try_supervisor_lock",
                 return_value=(lock_descriptor, (1, 1)),
             ),
+            mock.patch.object(SUPERVISOR, "validate_supervisor_lock"),
+            mock.patch.object(SUPERVISOR, "publish_startup_status"),
             mock.patch.object(SUPERVISOR.os, "fork", return_value=4242),
             mock.patch.object(SUPERVISOR.os, "kill"),
             mock.patch.object(SUPERVISOR.os, "waitpid"),

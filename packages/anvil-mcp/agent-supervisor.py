@@ -36,6 +36,8 @@ SERVER_IDS = frozenset(("anvil", "emacs-eval"))
 MAX_LEASE_BYTES = 8192
 POLL_SECONDS = 0.25
 DAEMON_STOP_SECONDS = 5.0
+SUPERVISOR_HANDSHAKE_SECONDS = 5.0
+STARTUP_STATUS_RETRY_SECONDS = 4.0
 RESTART_BACKOFF_INITIAL_SECONDS = 0.5
 RESTART_BACKOFF_MAX_SECONDS = 60.0
 RESTART_STABLE_SECONDS = 30.0
@@ -1069,22 +1071,37 @@ def refresh_lifecycle_records(
     return status_present
 
 
+def owner_seed_record(args: argparse.Namespace) -> dict[str, object]:
+    """Return trusted ownership without claiming a live supervisor or daemon."""
+    return {
+        "daemon_pid": None,
+        "format": 1,
+        "lease_count": 0,
+        "agent_key": args.agent_key,
+        "owner_pid": args.owner_pid,
+        "owner_start_identity": args.owner_start_identity,
+        "supervisor_pid": None,
+        "supervisor_start_identity": None,
+    }
+
+
 def status_record(
     args: argparse.Namespace,
     daemon: subprocess.Popen[bytes] | None,
     lease_count: int,
 ) -> dict[str, object]:
-    daemon_pid = None if daemon is None or daemon.poll() is not None else daemon.pid
-    return {
-        "daemon_pid": daemon_pid,
-        "format": 1,
-        "lease_count": lease_count,
-        "agent_key": args.agent_key,
-        "owner_pid": args.owner_pid,
-        "owner_start_identity": args.owner_start_identity,
-        "supervisor_pid": os.getpid(),
-        "supervisor_start_identity": process_start_identity(os.getpid()),
-    }
+    record = owner_seed_record(args)
+    record.update(
+        {
+            "daemon_pid": (
+                None if daemon is None or daemon.poll() is not None else daemon.pid
+            ),
+            "lease_count": lease_count,
+            "supervisor_pid": os.getpid(),
+            "supervisor_start_identity": process_start_identity(os.getpid()),
+        }
+    )
+    return record
 
 
 def write_status(args: argparse.Namespace, record: dict[str, object]) -> None:
@@ -1095,6 +1112,27 @@ def write_status(args: argparse.Namespace, record: dict[str, object]) -> None:
         replace=True,
         durable=False,
     )
+
+
+def publish_startup_status(
+    args: argparse.Namespace,
+    record: dict[str, object],
+) -> None:
+    """Publish required startup state with bounded transient retries."""
+    deadline = time.monotonic() + STARTUP_STATUS_RETRY_SECONDS
+    failures = 0
+    while True:
+        try:
+            write_status(args, record)
+            return
+        except OSError as error:
+            if not transient_supervisor_error(error):
+                raise
+            failures += 1
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise
+            time.sleep(min(restart_backoff_seconds(failures), remaining))
 
 
 def supervisor_loop(
@@ -1264,7 +1302,39 @@ def spawn_supervisor_if_absent(args: argparse.Namespace) -> bool:
     if locked is None:
         return False
     lock_descriptor, lock_identity = locked
-    ready_read, ready_write = os.pipe()
+    try:
+        validate_supervisor_lock(
+            lock_descriptor,
+            args.runtime_dir / LOCK_NAME,
+            lock_identity,
+        )
+        # Seed only authenticated owner identity.  The child replaces this
+        # before readiness with its own identity, but a failed fork or child
+        # publication still leaves enough evidence for later safe pruning.
+        publish_startup_status(args, owner_seed_record(args))
+    except ConfigurationError:
+        os.close(lock_descriptor)
+        raise
+    except RuntimeError as error:
+        os.close(lock_descriptor)
+        raise TimeoutError(
+            "agent supervisor lock validation failed"
+        ) from error
+    except OSError as error:
+        os.close(lock_descriptor)
+        if transient_supervisor_error(error):
+            raise TimeoutError(
+                "agent supervisor owner status was unavailable"
+            ) from error
+        raise
+    except BaseException:
+        os.close(lock_descriptor)
+        raise
+    try:
+        ready_read, ready_write = os.pipe()
+    except OSError:
+        os.close(lock_descriptor)
+        raise
     try:
         child_pid = os.fork()
     except OSError:
@@ -1288,6 +1358,10 @@ def spawn_supervisor_if_absent(args: argparse.Namespace) -> bool:
                 args.runtime_dir / LOCK_NAME,
                 lock_identity,
             )
+            # Replace the parent seed with this child's identity before
+            # readiness.  A transient store failure retries within the
+            # parent's bounded handshake; a persistent failure emits no R.
+            publish_startup_status(args, status_record(args, None, 0))
             os.write(ready_write, b"R")
             os.close(ready_write)
             supervisor_loop(args, lock_descriptor, lock_identity)
@@ -1301,7 +1375,12 @@ def spawn_supervisor_if_absent(args: argparse.Namespace) -> bool:
 
     os.close(ready_write)
     os.close(lock_descriptor)
-    readable, _, _ = select.select([ready_read], [], [], 5.0)
+    readable, _, _ = select.select(
+        [ready_read],
+        [],
+        [],
+        SUPERVISOR_HANDSHAKE_SECONDS,
+    )
     ready = os.read(ready_read, 1) if readable else b""
     os.close(ready_read)
     if ready != b"R":
