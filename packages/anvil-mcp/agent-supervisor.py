@@ -1250,12 +1250,12 @@ def supervisor_loop(
             time.sleep(POLL_SECONDS)
     finally:
         stop_daemon(daemon)
-        try:
-            (args.runtime_dir / STATUS_NAME).unlink()
-        except FileNotFoundError:
-            pass
         if owner_dead:
             cleanup_instance(args)
+        # Preserve a trusted owner identity after an externally requested or
+        # fatal supervisor exit.  A replacement supervisor overwrites this
+        # record; if no replacement starts, a later agent can still prove the
+        # owner generation died and safely reap both instance trees.
         os.close(lock_descriptor)
 
 

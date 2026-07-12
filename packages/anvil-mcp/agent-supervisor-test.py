@@ -75,6 +75,20 @@ def reap_child(pid: int, timeout: float = 3.0) -> bool:
     return False
 
 
+def wait_child_status(pid: int, timeout: float = 3.0) -> int:
+    """Reap PID within TIMEOUT and return its wait status."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            waited, status = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError as error:
+            raise AssertionError(f"child {pid} was already reaped") from error
+        if waited == pid:
+            return status
+        time.sleep(0.02)
+    raise AssertionError(f"child {pid} did not exit within {timeout}s")
+
+
 class AgentSupervisorTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -775,6 +789,89 @@ class AgentSupervisorTests(unittest.TestCase):
         )
         lease.unlink()
 
+    def test_persistent_fatal_loop_failure_tears_down_but_retains_owner(self):
+        owner_pid, owner_identity = self.start_owner()
+        args = self.prepare(
+            owner_pid=owner_pid,
+            owner_start_identity=owner_identity,
+        )
+        self.register(args, "anvil")
+        trigger = self.root / "fatal-enoent-trigger"
+        trigger.write_text("idle\n")
+        original_live_leases = SUPERVISOR.live_leases
+
+        def fatal_live_leases(*inner_args, **inner_kwargs):
+            if trigger.read_text() == "armed\n":
+                raise OSError(SUPERVISOR.errno.ENOENT, "injected ENOENT")
+            return original_live_leases(*inner_args, **inner_kwargs)
+
+        SUPERVISOR.start_daemon = fake_start_daemon
+        with (
+            mock.patch.object(SUPERVISOR, "live_leases", fatal_live_leases),
+            mock.patch.object(SUPERVISOR, "POLL_SECONDS", 0.01),
+        ):
+            self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(args))
+            status = self.remember_status(
+                eventually(
+                    lambda: (
+                        (current := self.read_status(args))["daemon_pid"]
+                        is not None
+                        and current
+                    )
+                )
+            )
+            trigger.write_text("armed\n")
+            wait_status = wait_child_status(status["supervisor_pid"])
+
+        self.supervisor_pids.remove(status["supervisor_pid"])
+        self.assertEqual(os.waitstatus_to_exitcode(wait_status), SUPERVISOR.EXIT_SOFTWARE)
+        eventually(
+            lambda: SUPERVISOR.process_start_identity(status["daemon_pid"])
+            is None
+        )
+        self.daemon_pids.remove(status["daemon_pid"])
+
+        # Fatal teardown releases process resources but deliberately retains
+        # the authenticated owner record.  Unlinking it here would recreate
+        # the status-less orphan that owner-death pruning cannot classify.
+        self.assertEqual(
+            SUPERVISOR.read_status_owner(args.runtime_dir, args.agent_key),
+            (owner_pid, owner_identity),
+        )
+        locked = SUPERVISOR.try_supervisor_lock(args.runtime_dir)
+        self.assertIsNotNone(locked)
+        lock_descriptor, lock_identity = locked
+        try:
+            SUPERVISOR.validate_supervisor_lock(
+                lock_descriptor,
+                args.runtime_dir / SUPERVISOR.LOCK_NAME,
+                lock_identity,
+            )
+        finally:
+            os.close(lock_descriptor)
+
+        current = self.prepare()
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertTrue(args.runtime_dir.exists())
+        self.assertTrue(args.state_dir.exists())
+
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertFalse(args.runtime_dir.exists())
+        self.assertFalse(args.state_dir.exists())
+
     def test_idle_status_is_cached_and_lifecycle_records_are_refreshed(self):
         args = self.prepare()
         record = SUPERVISOR.status_record(args, None, 0)
@@ -1011,6 +1108,54 @@ class AgentSupervisorTests(unittest.TestCase):
             is None
         )
         self.daemon_pids.remove(status["daemon_pid"])
+
+        current = self.prepare()
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertTrue(stale.runtime_dir.exists(), "a live owner must not be pruned")
+        self.assertTrue(stale.state_dir.exists(), "a live owner must not be pruned")
+
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertFalse(stale.runtime_dir.exists())
+        self.assertFalse(stale.state_dir.exists())
+
+    def test_clean_supervisor_stop_retains_status_for_owner_death_prune(self):
+        owner_pid, owner_identity = self.start_owner()
+        stale = self.prepare(
+            owner_pid=owner_pid,
+            owner_start_identity=owner_identity,
+        )
+        self.register(stale, "anvil")
+        (stale.state_dir / "large-cache").write_text("stale\n")
+        SUPERVISOR.start_daemon = fake_start_daemon
+        self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(stale))
+        status = self.remember_status(eventually(lambda: self.read_status(stale)))
+
+        os.kill(status["supervisor_pid"], signal.SIGTERM)
+        wait_status = wait_child_status(status["supervisor_pid"])
+        self.supervisor_pids.remove(status["supervisor_pid"])
+        self.assertEqual(os.waitstatus_to_exitcode(wait_status), 0)
+        eventually(
+            lambda: SUPERVISOR.process_start_identity(status["daemon_pid"])
+            is None
+        )
+        self.daemon_pids.remove(status["daemon_pid"])
+        self.assertEqual(
+            SUPERVISOR.read_status_owner(stale.runtime_dir, stale.agent_key),
+            (owner_pid, owner_identity),
+        )
 
         current = self.prepare()
         SUPERVISOR.prune_orphaned_state(

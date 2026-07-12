@@ -94,9 +94,11 @@ runCommand "anvil-mcp-dedicated-smoke"
       ${anvilMcp.direnv}/bin/direnv allow >/dev/null
     )
 
-    ${python3}/bin/python3 -B -u ${./watchdog-test.py} \
+    ${coreutils}/bin/timeout 60 \
+      ${python3}/bin/python3 -B -u ${./watchdog-test.py} \
       ${anvilMcp.dedicatedLockLauncher}
-    ${python3}/bin/python3 -B -u ${./stdio-concurrency-test.py} \
+    ${coreutils}/bin/timeout 60 \
+      ${python3}/bin/python3 -B -u ${./stdio-concurrency-test.py} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh
 
     init_compile_dir="$smoke_root/init-byte-compile"

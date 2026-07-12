@@ -311,7 +311,7 @@
                   fi
                 done
                 echo "Running ruff..."
-                ruff check ${src}/bin/update-overlay
+                ruff check ${src}/bin/update-overlay ${src}/packages/anvil-mcp
                 touch $out
               '';
         }
