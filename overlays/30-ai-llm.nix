@@ -284,14 +284,14 @@ final: prev: {
       # ab1806e = v0.31.3 + 15 commits: the exact commit omlx pins, with
       # the CVE-2026-5843 trust_remote_code fix. Keep in sync with the
       # python3Packages.mlx-lm override in 30-ai-python.nix.
-      version = "a790972f";
+      version = "15b522f5";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "ml-explore";
         repo = "mlx-lm";
-        rev = "a790972f0f844d81067ed45c28b524220a10c019";
-        hash = "sha256-TQ7TBhhucPRTtAOI+RKOEgPXtvABpQna9GMT5ZCPYCc=";
+        rev = "15b522f593b7ca5fbc0cac6f7572d40859d2d8fe";
+        hash = "sha256-SQ6kax74O4c85ldIy44oZuOvSf1AVuFqDbYyePH2hLk=";
       };
 
       build-system = [ setuptools ];
