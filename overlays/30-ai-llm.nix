@@ -1,7 +1,8 @@
 # overlays/30-ai-llm.nix
 # Purpose: Large Language Model inference tools
 # Dependencies: Uses final for python3Packages in mlx-lm; uses prev elsewhere
-# Packages: gguf-tools, hfdownloader, llama-cpp, llama-swap, mlx-lm, mtplx
+# Packages: aiperf, gguf-tools, guidellm, hfdownloader, llama-cpp, llama-swap,
+# mlx-lm, mtplx
 final: prev: {
   # Node 26.3.1 has two fs.cp socket tests that fail under the macOS Nix
   # sandbox. Keep the override scoped to Darwin and to the specific tests.
@@ -213,6 +214,245 @@ final: prev: {
       });
     })
   ];
+
+  # AIPerf - Generative AI model-server benchmarking
+  aiperf =
+    let
+      # AIPerf 0.11.0 requires Python >=3.10,<3.14. nixpkgs' default Python is
+      # 3.14, so keep this application and its private dependencies on 3.13.
+      ps = prev.python313Packages;
+
+      crick = ps.buildPythonPackage rec {
+        pname = "crick";
+        version = "0.0.8";
+        pyproject = true;
+
+        src = ps.fetchPypi {
+          inherit pname version;
+          hash = "sha256-lzuDFf3XK961/fTWsvREdT/A69Y4Dzj44ROPj/h5fZk=";
+        };
+
+        build-system = [
+          ps.setuptools
+          ps.setuptools-scm
+          ps.cython
+          ps.numpy
+          ps.versioneer
+        ];
+
+        # The compiled extensions import NumPy at runtime even though crick's
+        # upstream wheel metadata does not declare that dependency.
+        dependencies = [ ps.numpy ];
+
+        # Upstream tests import the source tree before the Cython extensions
+        # are installed and fail collection with a missing crick.numpy_version.
+        # Retain the installed-module check and exercise TDigest below.
+        doCheck = false;
+        pythonImportsCheck = [ "crick" ];
+
+        meta = {
+          description = "High-performance approximate and streaming algorithms";
+          homepage = "https://github.com/dask/crick";
+          license = prev.lib.licenses.bsd3;
+        };
+      };
+
+      kaleido = ps.buildPythonPackage rec {
+        pname = "kaleido";
+        version = "1.2.0";
+        format = "wheel";
+
+        src = prev.fetchurl {
+          url = "https://files.pythonhosted.org/packages/4b/97/f6de8d4af54d6401d6581a686cce3e3e2371a79ba459a449104e026c08bc/kaleido-${version}-py3-none-any.whl";
+          hash = "sha256-wn7YK1Hfa5I9DmVv6sIhNDoNvNL7m8fmsduX9h6aFRM=";
+        };
+
+        dependencies = [
+          ps.choreographer
+          ps.logistro
+          ps.orjson
+          ps.packaging
+          ps.pytest-timeout
+        ];
+
+        # The wheel bundles a browser-bearing suite that needs Chrome and
+        # additional test-only dependencies. Keep the browser external while
+        # retaining the import check and AIPerf's plugin validation below.
+        doCheck = false;
+        pythonImportsCheck = [ "kaleido" ];
+
+        meta = {
+          description = "Static image export for web-based visualization libraries";
+          homepage = "https://github.com/plotly/Kaleido";
+          license = prev.lib.licenses.mit;
+        };
+      };
+
+      # This rendering-sensitive assertion is the sole failure on Hera:
+      # 2274 passed, 59 skipped, 5 xfailed, 1 failed.
+      aiperfSeaborn = ps.seaborn.overridePythonAttrs (old: {
+        disabledTests =
+          (old.disabledTests or [ ])
+          ++ prev.lib.optionals prev.stdenv.isDarwin [
+            "test_ticklabels_overlap"
+          ];
+      });
+
+      # Cyclopts' interactive Zsh harness nondeterministically fails to reach
+      # its prompt in the Darwin sandbox. Remove only Zsh from that one
+      # cross-shell matrix; static Zsh tests and Bash/Fish behavior stay on.
+      aiperfCyclopts =
+        if prev.stdenv.isDarwin then
+          ps.cyclopts.overridePythonAttrs (old: {
+            postPatch = (old.postPatch or "") + ''
+              substituteInPlace tests/completion/test_behavior.py \
+                --replace-fail 'params=["bash", "zsh", "fish"]' \
+                'params=["bash", "fish"]'
+            '';
+          })
+        else
+          ps.cyclopts;
+    in
+    ps.buildPythonApplication rec {
+      pname = "aiperf";
+      version = "0.11.0";
+      format = "wheel";
+
+      src = prev.fetchurl {
+        url = "https://files.pythonhosted.org/packages/a7/89/38715fbd81e36e54b0d7913204a29e419795b3cf613703ec0c3bdc470a9d/aiperf-${version}-py3-none-any.whl";
+        hash = "sha256-Fjjyk9BdQmFCXKiBQCoQAxNrbecrrHKpUEKPMrbhkmA=";
+      };
+
+      dependencies =
+        (with ps; [
+          aiofiles
+          aiohttp
+          dash
+          dash-bootstrap-components
+          datasets
+          fastapi
+          ffmpeg-python
+          huggingface-hub
+          jinja2
+          jmespath
+          matplotlib
+          msgspec
+          numpy
+          nvidia-ml-py
+          optuna
+          orjson
+          pandas
+          pillow
+          plotly
+          prometheus-client
+          protobuf
+          psutil
+          pyarrow
+          pydantic
+          pydantic-settings
+          pyzmq
+          rich
+          ruamel-yaml
+          scipy
+          sentencepiece
+          setproctitle
+          soundfile
+          starlette-compress
+          textual
+          tiktoken
+          tqdm
+          transformers
+          uvicorn
+          uvloop
+          zstandard
+        ])
+        ++ ps.uvicorn.optional-dependencies.standard
+        ++ [
+          crick
+          aiperfCyclopts
+          kaleido
+          aiperfSeaborn
+        ];
+
+      # These pinned nixpkgs packages are newer than AIPerf's compatible-release
+      # constraints. Keep every other runtime constraint check active.
+      pythonRelaxDeps = [
+        "aiofiles"
+        "aiohttp"
+        "dash"
+        "jmespath"
+        "pandas"
+        "pillow"
+        "plotly"
+        "prometheus-client"
+        "psutil"
+        "pyzmq"
+        "rich"
+        "ruamel-yaml"
+        "textual"
+      ];
+
+      # ffmpeg-python is only the graph builder. AIPerf checks for the real
+      # executable before synthesizing video inputs.
+      nativeBuildInputs = [ prev.makeWrapper ];
+      makeWrapperArgs = [
+        "--prefix PATH : ${prev.lib.makeBinPath [ prev.ffmpeg-headless ]}"
+      ];
+
+      # The wheel contains no source test suite. Exercise the installed CLI
+      # and packaged resources in installCheckPhase instead.
+      pythonImportsCheck = [
+        "aiperf"
+        "aiperf.cli"
+      ];
+
+      installCheckPhase = ''
+        export HOME="$TMPDIR/home"
+        export XDG_CACHE_HOME="$HOME/.cache"
+        export HF_HUB_OFFLINE=1
+        export TRANSFORMERS_OFFLINE=1
+        export COLUMNS=120
+        mkdir -p "$HOME" "$XDG_CACHE_HOME"
+
+        ${ps.python.withPackages (_: [ crick ])}/bin/python - <<'PY'
+        from crick import TDigest
+
+        digest = TDigest()
+        digest.update([1.0, 2.0, 3.0])
+        assert digest.quantile(0.5) == 2.0
+        PY
+
+        version="$($out/bin/aiperf --version)"
+        test "$version" = "${version}"
+
+        $out/bin/aiperf --help > "$TMPDIR/help.txt"
+        grep -F "NVIDIA AIPerf v${version}" "$TMPDIR/help.txt"
+        grep -F "Installed Plugin Packages: aiperf (v${version})" "$TMPDIR/help.txt"
+
+        $out/bin/aiperf plugins --all --validate > "$TMPDIR/plugins.txt"
+        grep -F "All checks passed" "$TMPDIR/plugins.txt"
+
+        $out/bin/aiperf profile --help > "$TMPDIR/profile-help.txt"
+        grep -F "Benchmark generative AI models" "$TMPDIR/profile-help.txt"
+
+        $out/bin/aiperf config init --list > /dev/null
+        $out/bin/aiperf config init --template minimal \
+          --output "$TMPDIR/minimal.yaml"
+        $out/bin/aiperf config validate "$TMPDIR/minimal.yaml"
+      '';
+
+      meta = {
+        description = "Performance testing for generative AI model servers";
+        homepage = "https://github.com/ai-dynamo/aiperf";
+        license = prev.lib.licenses.asl20;
+        mainProgram = "aiperf";
+        platforms = [
+          "aarch64-darwin"
+          "aarch64-linux"
+          "x86_64-linux"
+        ];
+      };
+    };
 
   # guidellm - LLM deployment benchmarking tool
   guidellm =

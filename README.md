@@ -29,7 +29,7 @@ The shell currently brings in:
 - LazyCodex, via the pinned `lazycodex-ai` installer CLI
 - Simon Willison's `llm` CLI, with the MLX plugin on Apple Silicon
 - local inference and model tools: `llama.cpp`, `llama-swap`, `gguf-tools`,
-  `hfdownloader`, `guidellm`, `qdrant`, and `qdrant-web-ui`
+  `hfdownloader`, `aiperf`, `guidellm`, `qdrant`, and `qdrant-web-ui`
 - Apple Silicon MLX tools when available: `mlx-lm`, `mtplx`, `omlx`, and
   `vllm-mlx`
 - MCP servers and agent helpers: PAL, Sequential Thinking, Context7,

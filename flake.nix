@@ -268,6 +268,7 @@
         ++ agent "mcporter"
         ++ agent "opencode"
         ++ agent "pi"
+        ++ opt "aiperf"
         ++ opt "agent-deck"
         ++ opt "agnix"
         ++ opt "claude-replay"
