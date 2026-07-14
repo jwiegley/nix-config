@@ -625,13 +625,14 @@ final: prev: {
       '';
 
   # omlx - LLM inference server optimized for Apple Silicon
-  # NOTE: Using 'final' so deps resolve against our extended python3Packages
-  # (mlx wheel override, mlx-embeddings, dflash-mlx). omlx is pure Python;
-  # the Homebrew formula's Rust dependency was only for transitive wheels
-  # (pydantic-core, tiktoken) which nixpkgs supplies prebuilt.
+  # NOTE: omlx requires Python >=3.11,<3.14. Keep the complete application on
+  # Python 3.13 so its native MLX and Cohere wheels share one ABI, while still
+  # resolving deps against our extended package set (mlx wheel override,
+  # mlx-embeddings, dflash-mlx). omlx itself is pure Python; the Homebrew
+  # formula's Rust dependency was only for transitive wheels.
   omlx =
     with final;
-    with final.python3Packages;
+    with final.python313Packages;
     buildPythonApplication rec {
       pname = "omlx";
       version = "0.5.1";

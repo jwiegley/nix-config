@@ -96,6 +96,13 @@ in
           oldAttrs:
           prev.lib.optionalAttrs (prev.stdenv.isDarwin && prev.stdenv.isAarch64) (
             let
+              pythonTag = "cp${pfinal.python.sourceVersion.major}${pfinal.python.sourceVersion.minor}";
+              wheelHashes = {
+                cp311 = "sha256-csYFNo0UXHVodwV9fjxU8WnJiZ/h+DIyv7OmNCVh4jQ=";
+                cp312 = "sha256-6lpZQ1XInACV6rpBP9OdTKqGQvoTQy37DJNU0UEEZGc=";
+                cp313 = "sha256-q7eG7h6WOHWb6CWDIi/H0JxWUO+QrSt8XafRkxqGdtw=";
+                cp314 = "sha256-LuebH4wsKjKa/JXs59zgvnmNQ/PedxpjcNK5+XArvZo=";
+              };
               mlxMetalWheel = pfinal.fetchPypi {
                 pname = "mlx_metal";
                 version = "0.32.0";
@@ -107,8 +114,9 @@ in
               };
             in
             {
-              # Use pre-built wheel from PyPI that includes Metal support
-              # Building from source fails in Nix sandbox due to Metal tools being unavailable
+              # Use the pre-built wheel matching this package set's CPython
+              # ABI. Building from source fails in the Nix sandbox because the
+              # Metal toolchain is unavailable.
               version = "0.32.0";
               pyproject = null;
               format = "wheel";
@@ -121,18 +129,18 @@ in
                 pname = "mlx";
                 version = "0.32.0";
                 format = "wheel";
-                dist = "cp313";
-                python = "cp313";
-                abi = "cp313";
+                dist = pythonTag;
+                python = pythonTag;
+                abi = pythonTag;
                 platform = "macosx_14_0_arm64";
-                hash = "sha256-q7eG7h6WOHWb6CWDIi/H0JxWUO+QrSt8XafRkxqGdtw=";
+                hash = wheelHashes.${pythonTag} or (throw "mlx has no wheel for ${pythonTag}");
               };
               nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ prev.unzip ];
               # Merge mlx-metal (Metal GPU kernels, split out since 0.31.x) into
               # this derivation to avoid namespace-package file collisions in buildEnv.
               postInstall = ''
                 unzip -o ${mlxMetalWheel} -d $TMPDIR/mlx-metal
-                siteDir=$out/lib/python3.13/site-packages/mlx
+                siteDir=$out/${pfinal.python.sitePackages}/mlx
                 cp -r $TMPDIR/mlx-metal/mlx/lib     $siteDir/
                 cp -r $TMPDIR/mlx-metal/mlx/include  $siteDir/
                 cp -r $TMPDIR/mlx-metal/mlx/share    $siteDir/
@@ -381,31 +389,43 @@ in
           };
         };
 
-        cohere-melody = pfinal.buildPythonPackage rec {
-          pname = "cohere-melody";
-          version = "0.9.0";
-          format = "wheel";
-
-          src = pfinal.fetchPypi {
-            pname = "cohere_melody";
-            inherit version;
+        cohere-melody =
+          let
+            pythonTag = "cp${pfinal.python.sourceVersion.major}${pfinal.python.sourceVersion.minor}";
+            wheelHashes = {
+              cp311 = "sha256-4J4083no3JSGfKd8vWOIWQoLmICaEwrXDKIfhqU3sxo=";
+              cp312 = "sha256-82DpFigLhoT/KQTVZk4/AnlVqO7hwGCSMjlulsfQB6o=";
+              cp313 = "sha256-gU6PlYufxOy6AnmNlHsdIQrP8wnISRl2+AIR0wV5jac=";
+              cp314 = "sha256-YHOU39HJ+Noyu7tbD0W0quP3ghXRzYHok4TER5V3Ggc=";
+            };
+          in
+          pfinal.buildPythonPackage rec {
+            pname = "cohere-melody";
+            version = "0.9.0";
             format = "wheel";
-            dist = "cp313";
-            python = "cp313";
-            abi = "cp313";
-            platform = "macosx_11_0_arm64";
-            hash = "sha256-gU6PlYufxOy6AnmNlHsdIQrP8wnISRl2+AIR0wV5jac=";
-          };
 
-          pythonImportsCheck = [ "cohere_melody" ];
+            # Melody is a native Rust extension. Select the wheel matching the
+            # package set instead of installing a CPython 3.13 module into 3.14.
+            src = pfinal.fetchPypi {
+              pname = "cohere_melody";
+              inherit version;
+              format = "wheel";
+              dist = pythonTag;
+              python = pythonTag;
+              abi = pythonTag;
+              platform = "macosx_11_0_arm64";
+              hash = wheelHashes.${pythonTag} or (throw "cohere-melody has no wheel for ${pythonTag}");
+            };
 
-          meta = {
-            description = "Templating rendering and generation parsing for Cohere models";
-            homepage = "https://github.com/cohere-ai/melody";
-            license = prev.lib.licenses.mit;
-            platforms = [ "aarch64-darwin" ];
+            pythonImportsCheck = [ "cohere_melody" ];
+
+            meta = {
+              description = "Templating rendering and generation parsing for Cohere models";
+              homepage = "https://github.com/cohere-ai/melody";
+              license = prev.lib.licenses.mit;
+              platforms = [ "aarch64-darwin" ];
+            };
           };
-        };
 
         # mlx-audio - TTS/STT/STS inference for Apple Silicon. Pinned to the
         # exact commit omlx pins. mlx-lm is pinned ==0.31.1 upstream; relax
