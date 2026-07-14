@@ -145,7 +145,7 @@ let
     assertion = false;
     message = "Anvil client convergence requires the pinned promptdeploy input on ${hostname}";
   };
-  promptdeployRevision = "4c9b2c1c10df5048b239051d79c3df00b1d0276b";
+  promptdeployRevision = "708656cc252d846cd3450358602bcfd8f1ce4f50";
 in
 assert lib.assertMsg (isLinux || isDarwin) "Anvil Home Manager smoke requires Linux or Darwin";
 assert lib.assertMsg (
