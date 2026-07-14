@@ -18,7 +18,7 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 
 --- a/anvil-stdio.sh
 +++ b/anvil-stdio.sh
-@@ -24,51 +24,239 @@
+@@ -24,51 +24,240 @@
  SOCKET=""
  SERVER_ID=""
  EMACS_MCP_DEBUG_LOG=${EMACS_MCP_DEBUG_LOG:-""}
@@ -261,7 +261,7 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 +		"$deadline" "$stderr_mode" "$input_mode" "$input" "$@")
 +	runner=$!
 +	if IFS= read -r -d '' -t "$deadline" ANVIL_MCP_RUN_OUTPUT <&7; then
-+		if IFS= read -r -t 1 status <&7 \
++		if IFS= read -r -t "$ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT" status <&7 \
 +			&& [[ "$status" =~ ^[0-9]+$ ]] \
 +			&& [ "$status" -le 255 ]; then
 +			ANVIL_MCP_RUN_STATUS=$status
@@ -274,7 +274,8 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 +			if ! IFS= read -r -d '' \
 +				-t "$ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT" _ <&7; then
 +				kill -USR1 "$runner" 2>/dev/null || :
-+				IFS= read -r -d '' -t 1 _ <&7 || :
++				IFS= read -r -d '' \
++					-t "$ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT" _ <&7 || :
 +			fi
 +			kill -KILL "$runner" 2>/dev/null || :
 +		fi
@@ -285,7 +286,7 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
  # --- Retry wrapper for emacsclient ------------------------------------
  # Absorbs the ~few-second window where `emacs --daemon' is being
  # restarted: emacsclient then fails with "can't find socket" /
-@@ -83,69 +271,188 @@
+@@ -83,69 +272,188 @@
  # 60 * 100ms = 6 seconds of tolerance.
  ANVIL_EMACSCLIENT_RETRY_MAX=${ANVIL_EMACSCLIENT_RETRY_MAX:-60}
  ANVIL_EMACSCLIENT_RETRY_DELAY_MS=${ANVIL_EMACSCLIENT_RETRY_DELAY_MS:-100}
@@ -420,8 +421,7 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 +		if [ "$ANVIL_EMACSCLIENT_READINESS_TIMEOUT" = "0" ]; then
 +			# A disabled overall timeout means one unbounded readiness wait.
 +			this_timeout=0
- 		else
--			out=$(emacsclient "$@" 2>"$stderr_file")
++		else
 +			elapsed=$((SECONDS - started_seconds))
 +			remaining=$((ANVIL_EMACSCLIENT_READINESS_TIMEOUT - elapsed))
 +			if [ "$remaining" -le 0 ]; then
@@ -437,7 +437,8 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 +		fi
 +		if out=$(anvil_emacsclient_once "$this_timeout" -- "$@"); then
 +			rc=0
-+		else
+ 		else
+-			out=$(emacsclient "$@" 2>"$stderr_file")
 +			rc=$?
  		fi
 -		rc=$?
@@ -512,7 +513,7 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
  # Parse command line arguments
  while [ $# -gt 0 ]; do
  	case "$1" in
-@@ -205,27 +512,39 @@
+@@ -205,27 +513,41 @@
  	mcp_debug_log "INFO" "Using default server-id: $SERVER_ID"
  fi
  
@@ -535,6 +536,7 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 +	init_probe_output=$(anvil_emacsclient_probe_retry -- \
 +		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} -e t)
 +	INIT_READY_RC=$?
++	INIT_RC=$INIT_READY_RC
  	set -e
 +	if [ "$INIT_READY_RC" -ne 0 ]; then
 +		anvil_mcp_log_probe_stderr "INIT-PROBE-STDERR" "$init_probe_output"
@@ -564,10 +566,11 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 +		fi
  	fi
 -	rm -f "$init_stderr_file"
++	mcp_debug_log "INIT-RC" "$INIT_RC"
  else
  	mcp_debug_log "INFO" "Skipping init function call (none provided)"
  fi
-@@ -255,6 +574,7 @@
+@@ -255,6 +577,7 @@
  anvil_mcp_read_framed_message() {
  	local first_line="$1"
  	local header_line content_length=""
@@ -575,7 +578,7 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
  
  	# Process the already-consumed first line.
  	# Strip trailing CR (DOS line endings).
-@@ -277,15 +597,26 @@
+@@ -277,15 +600,26 @@
  	if [ -z "$content_length" ]; then
  		return 2
  	fi
@@ -597,18 +600,18 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 +		"$ANVIL_MCP_HEAD" -c "$content_length"
 +	exec 5<&-
 +	if [ "$ANVIL_MCP_RUN_STATUS" -ne 0 ]; then
++		return 1
++	fi
++	local LC_ALL=C
++	if [ "${#ANVIL_MCP_RUN_OUTPUT}" -ne "$content_length" ]; then
  		return 1
  	fi
 -	printf '%s' "$body"
-+	local LC_ALL=C
-+	if [ "${#ANVIL_MCP_RUN_OUTPUT}" -ne "$content_length" ]; then
-+		return 1
-+	fi
 +	ANVIL_MCP_FRAME_BODY=$ANVIL_MCP_RUN_OUTPUT
  	return 0
  }
  
-@@ -295,14 +626,175 @@
+@@ -295,14 +629,175 @@
  # (not characters) because the MCP spec mandates byte length.
  anvil_mcp_emit_framed_response() {
  	local body="$1"
@@ -789,7 +792,7 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
  # Process input and print response
  while IFS= read -r line; do
  	# T71: detect framing.  An MCP framed request begins with
-@@ -315,52 +807,117 @@
+@@ -315,52 +810,116 @@
  		_anvil_framed=1
  		mcp_debug_log "FRAMING" "Content-Length detected"
  		# Re-read full framed message; reuse the already-consumed line.
@@ -812,10 +815,26 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
  	# Log the incoming request
 -	mcp_debug_log "REQUEST" "$line"
 +	mcp_debug_log "REQUEST" "bytes=${#line} head=${line:0:160}"
-+
+ 
+-	# Base64 encode the raw JSON to avoid emacsclient transport issues
+-	# with a specific combination of length, UTF-8 characters, and quoting
+-	# that occurs in Test 5 with the Lithuanian letter 'ą'
+-	base64_input=$(echo -n "$line" | base64)
+-	mcp_debug_log "BASE64-INPUT" "$base64_input"
+-
+-	# Process JSON-RPC request and return the result with proper UTF-8 encoding
+-	# Encode the response to base64 to avoid any character encoding issues
+-	# Handle nil responses from notifications by converting to empty string
+-	elisp_expr="(base64-encode-string (encode-coding-string (or (anvil-server-process-jsonrpc (base64-decode-string \"$base64_input\") \"$SERVER_ID\") \"\") 'utf-8 t) t)"
+-
+-	# Get response from emacsclient (with retry across daemon restarts).
+-	# Capture stderr for debugging and rc for logging only; existing code
+-	# downstream treats an empty `base64_response' as a soft failure.
+-	stderr_file="/tmp/mcp-stderr.$$-$(date +%s%N)"
 +	# Parse top-level metadata before touching Emacs.  This gives error paths a
 +	# correct correlation id and lets initialize use its shorter startup cap.
-+	set +e
+ 	set +e
+-	base64_response=$(anvil_emacsclient_retry "$stderr_file" -- \
 +	_anvil_metadata=$(anvil_mcp_request_metadata "$line")
 +	_anvil_metadata_rc=$?
 +	set -e
@@ -829,7 +848,6 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 +	_anvil_startup=${_anvil_metadata_rest%%|*}
 +	_anvil_metadata_rest=${_anvil_metadata_rest#*|}
 +	_anvil_request_b64=${_anvil_metadata_rest%%|*}
-+	_anvil_request_id=${_anvil_metadata_rest#*|}
 +	_anvil_request_id=null
 +	case "$_anvil_request_kind" in
 +	request)
@@ -853,27 +871,11 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 +		continue
 +		;;
 +	esac
- 
--	# Base64 encode the raw JSON to avoid emacsclient transport issues
--	# with a specific combination of length, UTF-8 characters, and quoting
--	# that occurs in Test 5 with the Lithuanian letter 'ą'
--	base64_input=$(echo -n "$line" | base64)
--	mcp_debug_log "BASE64-INPUT" "$base64_input"
--
--	# Process JSON-RPC request and return the result with proper UTF-8 encoding
--	# Encode the response to base64 to avoid any character encoding issues
--	# Handle nil responses from notifications by converting to empty string
--	elisp_expr="(base64-encode-string (encode-coding-string (or (anvil-server-process-jsonrpc (base64-decode-string \"$base64_input\") \"$SERVER_ID\") \"\") 'utf-8 t) t)"
--
--	# Get response from emacsclient (with retry across daemon restarts).
--	# Capture stderr for debugging and rc for logging only; existing code
--	# downstream treats an empty `base64_response' as a soft failure.
--	stderr_file="/tmp/mcp-stderr.$$-$(date +%s%N)"
++
 +	# A harmless readiness probe is the only expression this bridge may replay.
 +	# Once it succeeds, the JSON-RPC expression below is dispatched exactly once.
 +	probe_output=""
- 	set +e
--	base64_response=$(anvil_emacsclient_retry "$stderr_file" -- \
++	set +e
 +	probe_output=$(anvil_emacsclient_probe_retry -- \
 +		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} -e t)
 +	_anvil_probe_rc=$?
@@ -944,7 +946,7 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
  	fi
  
  	# Repair Windows MSYS frame-boundary corruption.
-@@ -371,96 +928,76 @@
+@@ -371,96 +930,78 @@
  	# the client's read buffer.  When that happens, the tail of the frame
  	# loses its `-print-nonl ' prefix and emacsclient prints it as
  	#   *ERROR*: Unknown message: <tail>
@@ -1065,6 +1067,7 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 +	stop_probe_output=$(anvil_emacsclient_probe_retry -- \
 +		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} -e t)
 +	STOP_READY_RC=$?
++	STOP_RC=$STOP_READY_RC
  	set -e
 +	if [ "$STOP_READY_RC" -ne 0 ]; then
 +		anvil_mcp_log_probe_stderr "STOP-PROBE-STDERR" "$stop_probe_output"
@@ -1094,6 +1097,7 @@ macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pi
 +		fi
  	fi
 -	rm -f "$stop_stderr_file"
++	mcp_debug_log "STOP-RC" "$STOP_RC"
  else
  	mcp_debug_log "INFO" "Skipping stop function call (none provided)"
  fi

@@ -4,10 +4,10 @@ The shell tool has no stdin parameter.  Leaving the pipe write end open makes
 commands such as cat, grep, and rg-without-a-path wait until the tool timeout.
 
 diff --git c/anvil-host.el w/anvil-host.el
-index 67d14cb..bae3a32 100644
+index 2213486..e9c2c75 100644
 --- c/anvil-host.el
 +++ w/anvil-host.el
-@@ -127,6 +127,14 @@ buffers."
+@@ -153,6 +153,14 @@ buffers."
                     :sentinel #'ignore
                     :command
                     (list shell-file-name shell-command-switch command))))

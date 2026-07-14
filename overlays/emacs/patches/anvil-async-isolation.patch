@@ -1,5 +1,5 @@
 diff --git a/anvil-eval.el b/anvil-eval.el
-index c98e6df..aa5201b 100644
+index c98e6df..5805d2a 100644
 --- a/anvil-eval.el
 +++ b/anvil-eval.el
 @@ -23,7 +23,11 @@
@@ -42,7 +42,7 @@ index c98e6df..aa5201b 100644
  
    MCP Parameters:
      expression - Emacs Lisp expression to evaluate (string, required)
-@@ -253,69 +265,374 @@ globals/functions or when recovering from a bad exploratory session."
+@@ -253,69 +265,379 @@ globals/functions or when recovering from a bad exploratory session."
  (defvar anvil-eval--async-jobs (make-hash-table :test 'equal)
    "Hash table mapping job-id to async job plists.
  Each job records :status, :result, :expression and :start-time.
@@ -346,10 +346,15 @@ index c98e6df..aa5201b 100644
 +                      (lambda (future)
 +                        (anvil-eval--async-settled job-id future)))))
 +                (setq job (gethash job-id anvil-eval--async-jobs))
-+                (when (and job (not (anvil-eval--async-terminal-p job)))
-+                  (setq job (plist-put job :future future))
-+                  (setq job (plist-put job :context nil))
-+                  (puthash job-id job anvil-eval--async-jobs)))
++                (if (and job (not (anvil-eval--async-terminal-p job)))
++                    (progn
++                      (setq job (plist-put job :future future))
++                      (setq job (plist-put job :context nil))
++                      (puthash job-id job anvil-eval--async-jobs))
++                  ;; Cancellation or timeout may terminalize the job while the
++                  ;; child is spawning.  Never leave that freshly owned child
++                  ;; alive without a job that can cancel or collect it.
++                  (anvil-future-kill future 'stale-job)))
 +            (error
 +             (anvil-eval--async-terminalize
 +              job-id 'error
@@ -469,7 +474,7 @@ index c98e6df..aa5201b 100644
  
  (defun anvil-eval--format-seconds (seconds)
    "Format SECONDS as a compact duration string, or return \"N/A\"."
-@@ -323,6 +640,39 @@ MCP Parameters:
+@@ -323,6 +645,39 @@ MCP Parameters:
        (format "%.1fs" seconds)
      "N/A"))
  
@@ -509,7 +514,7 @@ index c98e6df..aa5201b 100644
  (defun anvil-eval--result (job-id)
    "Get the result of an async job.
  Returns status, age, queue wait, runtime and result.  Completed
-@@ -354,9 +704,15 @@ MCP Parameters:
+@@ -354,9 +709,15 @@ MCP Parameters:
                        (and run-start
                             (float-time
                              (time-subtract (or finish now)
@@ -528,7 +533,7 @@ index c98e6df..aa5201b 100644
              (remhash job-id anvil-eval--async-jobs))
            (format
             (concat "status: %s\n"
-@@ -435,6 +791,7 @@ upstream `server-execute' behaviour."
+@@ -435,6 +796,7 @@ upstream `server-execute' behaviour."
  
  (defun anvil-eval-enable ()
    "Register eval tools and install advice."
@@ -536,7 +541,7 @@ index c98e6df..aa5201b 100644
    (setq anvil-eval--server-id
          (or (and (boundp 'anvil-server-id) anvil-server-id) "anvil"))
    ;; Install advice
-@@ -454,9 +811,10 @@ upstream `server-execute' behaviour."
+@@ -454,9 +816,10 @@ upstream `server-execute' behaviour."
     :intent '(eval)
     :layer 'dev
     :description
@@ -550,7 +555,7 @@ index c98e6df..aa5201b 100644
     :server-id anvil-eval--server-id)
    (anvil-server-register-tool
     #'anvil-eval--async
-@@ -464,10 +822,13 @@ reading data. For heavy operations use emacs-eval-async instead."
+@@ -464,10 +827,13 @@ reading data. For heavy operations use emacs-eval-async instead."
     :intent '(eval)
     :layer 'dev
     :description
@@ -568,7 +573,7 @@ index c98e6df..aa5201b 100644
     :server-id anvil-eval--server-id)
    (anvil-server-register-tool
     #'anvil-eval--result
-@@ -479,6 +840,15 @@ Retrieve result with emacs-eval-result tool using the returned job ID."
+@@ -479,6 +845,15 @@ Retrieve result with emacs-eval-result tool using the returned job ID."
  Returns status (running/done/error), age, queue wait, runtime, and result.
  Poll this until status is 'done' or 'error'."
     :server-id anvil-eval--server-id)
@@ -584,7 +589,7 @@ index c98e6df..aa5201b 100644
    (anvil-server-register-tool
     #'anvil-eval--jobs
     :id "emacs-eval-jobs"
-@@ -509,9 +879,11 @@ NeLisp globals across calls, so it behaves as a practical MCP REPL."
+@@ -509,9 +884,11 @@ NeLisp globals across calls, so it behaves as a practical MCP REPL."
  
  (defun anvil-eval-disable ()
    "Unregister eval tools and remove advice."
@@ -610,7 +615,7 @@ index ce7275f..104c477 100644
              "bisect-test" "bisect-cancel" "bisect-last-result"
              "git-commit-message" "git-pr-body"
 diff --git a/anvil-offload.el b/anvil-offload.el
-index 18408b4..afbfc12 100644
+index 18408b4..136b37d 100644
 --- a/anvil-offload.el
 +++ b/anvil-offload.el
 @@ -21,7 +21,9 @@
@@ -692,7 +697,7 @@ index 18408b4..afbfc12 100644
    "Wire-format version spoken by the offload REPL pool.")
  
  (defconst anvil-offload--frame-prefix "ANVIL-OFFLOAD "
-@@ -153,6 +195,34 @@ Created lazily in `anvil-offload--ensure-pending'.")
+@@ -153,6 +195,52 @@ Created lazily in `anvil-offload--ensure-pending'.")
    (or anvil-offload--pending
        (setq anvil-offload--pending (make-hash-table :test 'eql))))
  
@@ -704,30 +709,48 @@ index 18408b4..afbfc12 100644
 +            (make-hash-table :test 'eq))))
 +
 +(defun anvil-offload--hard-delete-process (proc)
-+  "Clear and hard-delete the exact owned subprocess PROC."
++  "Hard-delete the exact owned subprocess PROC.
++Pool and isolated-process tracking are cleared only after PROC is
++observed dead.  If either termination operation signals or PROC stays
++live, retain its tracking so an owned live child cannot become orphaned."
 +  (when (processp proc)
-+    (when anvil-offload--pool
-+      (dotimes (i (length anvil-offload--pool))
-+        (when (eq proc (aref anvil-offload--pool i))
-+          (aset anvil-offload--pool i nil))))
-+    (when (hash-table-p anvil-offload--isolated-processes)
-+      (remhash proc anvil-offload--isolated-processes))
-+    (when (process-live-p proc)
-+      (let ((inhibit-quit t))
-+        (condition-case err
-+            (progn
++    (let (termination-errors)
++      (when (process-live-p proc)
++        (let ((inhibit-quit t))
++          (condition-case err
 +              (kill-process proc)
-+              (when (process-live-p proc)
-+                (delete-process proc)))
-+          (error
-+           (ignore-errors (delete-process proc))
-+           (message "anvil-offload: could not hard-delete child %s: %s"
-+                    (process-name proc) (error-message-string err))))))))
++            ((error quit)
++             (push (format "kill-process: %s" (error-message-string err))
++                   termination-errors)))
++          (when (process-live-p proc)
++            (condition-case err
++                (delete-process proc)
++              ((error quit)
++               (push (format "delete-process: %s"
++                             (error-message-string err))
++                     termination-errors))))))
++      (if (or termination-errors (process-live-p proc))
++          (progn
++            (message
++             "anvil-offload: child %s remains tracked after failed hard delete%s"
++             (process-name proc)
++             (if termination-errors
++                 (format ": %s"
++                         (string-join (nreverse termination-errors) "; "))
++               ""))
++            nil)
++        (when anvil-offload--pool
++          (dotimes (i (length anvil-offload--pool))
++            (when (eq proc (aref anvil-offload--pool i))
++              (aset anvil-offload--pool i nil))))
++        (when (hash-table-p anvil-offload--isolated-processes)
++          (remhash proc anvil-offload--isolated-processes))
++        t))))
 +
  ;;; REPL init file
  
  (defconst anvil-offload--repl-body
-@@ -184,6 +254,7 @@ has the latest partial state if the call is killed over budget.\"
+@@ -184,6 +272,7 @@ has the latest partial state if the call is killed over budget.\"
        (let* ((msg (read t))
               (id (and (listp msg) (plist-get msg :id)))
               (payload (and (listp msg) (plist-get msg :payload)))
@@ -735,7 +758,7 @@ index 18408b4..afbfc12 100644
               (form (and payload
                          (car (read-from-string
                                (decode-coding-string
-@@ -191,6 +262,8 @@ has the latest partial state if the call is killed over budget.\"
+@@ -191,6 +280,8 @@ has the latest partial state if the call is killed over budget.\"
                                 'utf-8-unix))))))
          (when id
            (let* ((anvil-offload--repl-current-id id)
@@ -744,7 +767,7 @@ index 18408b4..afbfc12 100644
                   (reply
                    (condition-case err
                        (list :id id
-@@ -199,7 +272,9 @@ has the latest partial state if the call is killed over budget.\"
+@@ -199,7 +290,9 @@ has the latest partial state if the call is killed over budget.\"
                                (let ((standard-output (current-buffer)))
                                  (eval form t))))
                      (error (list :id id :error (format \"%%S\" err))))))
@@ -755,7 +778,7 @@ index 18408b4..afbfc12 100644
    (end-of-file (kill-emacs 0)))
  " anvil-offload--frame-prefix)
    "Body of the REPL loop written into the subprocess init file.")
-@@ -227,11 +302,60 @@ has the latest partial state if the call is killed over budget.\"
+@@ -227,11 +320,60 @@ has the latest partial state if the call is killed over budget.\"
    result
    err
    checkpoint             ; latest (:value V :cursor C) from subprocess, or nil
@@ -817,7 +840,7 @@ index 18408b4..afbfc12 100644
    (anvil-future--status future))
  
  (defun anvil-future-checkpoint (future)
-@@ -241,11 +365,11 @@ last handed to `anvil-preempt-checkpoint' inside the REPL."
+@@ -241,11 +383,11 @@ last handed to `anvil-preempt-checkpoint' inside the REPL."
    (anvil-future--checkpoint future))
  
  (defun anvil-future-done-p (future)
@@ -831,7 +854,7 @@ index 18408b4..afbfc12 100644
    (pcase (anvil-future--status future)
      ('done      (anvil-future--result future))
      ('error     (error "anvil-offload: remote error: %s"
-@@ -298,13 +422,10 @@ fallback timer."
+@@ -298,13 +440,10 @@ fallback timer."
  The subprocess keeps running; its eventual reply is silently
  discarded.  To hard-stop offload work, call `anvil-future-kill'
  \(per-future) or `anvil-offload-stop-repl' (whole pool)."
@@ -847,7 +870,7 @@ index 18408b4..afbfc12 100644
    "Hard-kill the subprocess slot owning pending FUTURE.
  Unlike `anvil-future-cancel', this terminates the REPL process so a
  runaway call cannot keep tying up its pool slot.  The future is
-@@ -316,23 +437,18 @@ The elapsed wall time (seconds since the future's `created-at') is
+@@ -316,23 +455,18 @@ The elapsed wall time (seconds since the future's `created-at') is
  stored in `anvil-future--err'.  Repeated calls are idempotent.  Return
  FUTURE."
    (when (eq 'pending (anvil-future--status future))
@@ -880,7 +903,7 @@ index 18408b4..afbfc12 100644
    future)
  
  (defun anvil-future-elapsed (future)
-@@ -366,68 +482,126 @@ unconditionally.  Returns VALUE."
+@@ -366,68 +500,126 @@ unconditionally.  Returns VALUE."
               "\n")))
    value)
  
@@ -1053,7 +1076,7 @@ index 18408b4..afbfc12 100644
  
  (defun anvil-offload--sentinel (proc event)
    "Handle death of PROC; fail only the pending futures bound to PROC.
-@@ -442,26 +616,38 @@ the new REPL's pending futures.  EVENT describes the process status."
+@@ -442,26 +634,38 @@ the new REPL's pending futures.  EVENT describes the process status."
        ;; performs this finalization synchronously after it has serviced
        ;; PROC, so this timer is an idempotent fallback for other callers.
        (run-at-time 0 nil #'anvil-offload--finalize-dead-process proc reason))
@@ -1102,7 +1125,7 @@ index 18408b4..afbfc12 100644
                  :connection-type 'pipe
                  :coding 'utf-8-unix
                  :noquery t
-@@ -470,8 +656,21 @@ diagnostic, not load-bearing for dispatch."
+@@ -470,8 +674,21 @@ diagnostic, not load-bearing for dispatch."
      (process-put proc 'anvil-pending-bytes "")
      (process-put proc 'anvil-offload-protocol-version
                   anvil-offload--protocol-version)
@@ -1124,7 +1147,7 @@ index 18408b4..afbfc12 100644
  (defun anvil-offload--ensure-pool-vector ()
    "Ensure `anvil-offload--pool' is a vector sized to the current size."
    (let ((n (max 1 anvil-offload-pool-size)))
-@@ -507,7 +706,7 @@ diagnostic, not load-bearing for dispatch."
+@@ -507,7 +724,7 @@ diagnostic, not load-bearing for dispatch."
  
  ;;;###autoload
  (defun anvil-offload-stop-repl ()
@@ -1133,7 +1156,7 @@ index 18408b4..afbfc12 100644
  Pending futures bound to those processes settle as errored via
  `anvil-offload--sentinel'.  The next `anvil-offload' call will
  rebuild the pool using the current `anvil-offload-pool-size'."
-@@ -518,7 +717,15 @@ rebuild the pool using the current `anvil-offload-pool-size'."
+@@ -518,7 +735,15 @@ rebuild the pool using the current `anvil-offload-pool-size'."
          (when (and p (process-live-p p))
            (kill-process p))
          (aset anvil-offload--pool i nil))))
@@ -1150,7 +1173,7 @@ index 18408b4..afbfc12 100644
  
  ;;;###autoload
  (defun anvil-offload-repl-alive-p ()
-@@ -554,46 +761,100 @@ in the subprocess.  Returns a list of forms (possibly empty)."
+@@ -554,46 +779,100 @@ in the subprocess.  Returns a list of forms (possibly empty)."
                               requires)))))
      (append
       (and extra-load-path
@@ -1453,10 +1476,10 @@ index b87c295..b398858 100644
  ;;; anvil-offload-test.el ends here
 diff --git a/tests/anvil-eval-async-isolation-test.el b/tests/anvil-eval-async-isolation-test.el
 new file mode 100644
-index 0000000..b2598c3
+index 0000000..2f03661
 --- /dev/null
 +++ b/tests/anvil-eval-async-isolation-test.el
-@@ -0,0 +1,790 @@
+@@ -0,0 +1,876 @@
 +;;; anvil-eval-async-isolation-test.el --- Isolated async eval regressions -*- lexical-binding: t; -*-
 +
 +;;; Commentary:
@@ -2035,6 +2058,92 @@ index 0000000..b2598c3
 +            (should-not (process-live-p child)))
 +        (when (process-live-p child)
 +          (delete-process child))))))
++
++(ert-deftest
++    anvil-eval-async-isolation-pump-kills-terminalized-spawn ()
++  "A job terminalized during spawn cannot orphan its fresh child."
++  (anvil-eval-async-isolation-test--with-clean-state
++    (let ((proc
++           (anvil-eval-async-isolation-test--idle-process
++            "anvil-async-stale-spawn"))
++          job-id
++          future)
++      (unwind-protect
++          (cl-letf
++              (((symbol-function 'anvil-eval--async-schedule-pump)
++                #'ignore)
++               ((symbol-function 'anvil-offload-isolated)
++                (lambda (_form &rest keys)
++                  (setq future
++                        (make-anvil-future
++                         :id 701
++                         :process proc
++                         :status 'pending
++                         :isolated-p t
++                         :on-start (plist-get keys :on-start)
++                         :on-settle (plist-get keys :on-settle)))
++                  (puthash 701 future (anvil-offload--ensure-pending))
++                  (puthash proc t
++                           (anvil-offload--ensure-isolated-processes))
++                  (anvil-eval--async-terminalize
++                   job-id 'error "Error: cancelled during spawn" 'cancelled)
++                  future)))
++            (setq job-id
++                  (anvil-eval-async-isolation-test--job-id
++                   (anvil-eval--async "(while t)" 8)))
++            (anvil-eval--async-pump)
++            (let ((job (gethash job-id anvil-eval--async-jobs)))
++              (should (eq 'error (plist-get job :status)))
++              (should (eq 'cancelled (plist-get job :reason)))
++              (should (eq 'killed (anvil-future-status future)))
++              (should (eq 'stale-job
++                          (anvil-future--terminal-reason future)))
++              (should-not
++               (gethash 701 (anvil-offload--ensure-pending)))
++              (should-not
++               (gethash proc (anvil-offload--ensure-isolated-processes)))
++              (should-not (process-live-p proc))
++              (should (= 0 anvil-eval--async-active-count))))
++        (when (process-live-p proc)
++          (delete-process proc))))))
++
++(ert-deftest
++    anvil-eval-async-isolation-hard-delete-preserves-live-tracking ()
++  "Failed hard deletion cannot untrack a still-live owned child."
++  (let* ((proc
++          (anvil-eval-async-isolation-test--idle-process
++           "anvil-async-hard-delete-tracking"))
++         (anvil-offload--pool (vector proc))
++         (anvil-offload--isolated-processes (make-hash-table :test 'eq)))
++    (puthash proc t anvil-offload--isolated-processes)
++    (unwind-protect
++        (progn
++          (cl-letf (((symbol-function 'kill-process) #'ignore)
++                    ((symbol-function 'delete-process) #'ignore))
++            (anvil-offload--hard-delete-process proc))
++          (should (process-live-p proc))
++          (should (eq proc (aref anvil-offload--pool 0)))
++          (should (gethash proc anvil-offload--isolated-processes))
++          (cl-letf
++              (((symbol-function 'kill-process)
++                (lambda (_proc) (error "kill refused")))
++               ((symbol-function 'delete-process)
++                (lambda (_proc) (error "delete refused"))))
++            (anvil-offload--hard-delete-process proc))
++          (should (process-live-p proc))
++          (should (eq proc (aref anvil-offload--pool 0)))
++          (should (gethash proc anvil-offload--isolated-processes))
++          (delete-process proc)
++          (let ((deadline (+ (float-time) 1)))
++            (while (and (process-live-p proc)
++                        (< (float-time) deadline))
++              (accept-process-output proc 0.01 nil t)))
++          (should-not (process-live-p proc))
++          (anvil-offload--hard-delete-process proc)
++          (should-not (aref anvil-offload--pool 0))
++          (should-not (gethash proc anvil-offload--isolated-processes)))
++      (when (process-live-p proc)
++        (delete-process proc)))))
 +
 +(ert-deftest anvil-eval-async-isolation-rejects-cross-process-frames ()
 +  "Started, checkpoint, and terminal frames cannot settle a peer process."

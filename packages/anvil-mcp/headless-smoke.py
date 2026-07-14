@@ -220,6 +220,15 @@ def assert_tool_success(response: dict[str, object], needle: str) -> None:
         raise AssertionError(f"tool result did not contain {needle!r}: {result}")
 
 
+def assert_tool_failure(response: dict[str, object], needle: str) -> None:
+    """Require one MCP tool failure containing a non-sensitive diagnostic."""
+    result = response.get("result")
+    if not isinstance(result, dict) or result.get("isError") is not True:
+        raise AssertionError(f"tool call unexpectedly succeeded: {result}")
+    if needle.lower() not in json.dumps(result, sort_keys=True).lower():
+        raise AssertionError(f"tool failure did not contain {needle!r}: {result}")
+
+
 def tool_result_text(response: dict[str, object]) -> str:
     """Return the single text block from a successful MCP tool result."""
     result = response["result"]
@@ -272,11 +281,13 @@ def direnv_buffer_expression() -> str:
     project_c = Path.home() / "direnv-c"
     project_unset = Path.home() / "direnv-unset"
     project_spoof = Path.home() / "direnv-spoof"
+    project_failing = Path.home() / "direnv-failing"
     file_a = project_a / "visited.txt"
     file_b = project_b / "visited.txt"
     file_c = project_c / "visited.txt"
     file_unset = project_unset / "visited.txt"
     file_spoof = project_spoof / "visited.txt"
+    file_failing = project_failing / "visited.txt"
     return f"""
 (progn
   (require 'json)
@@ -318,6 +329,7 @@ def direnv_buffer_expression() -> str:
               (with-current-buffer buffer-c
                 (vector
                  (or (getenv "ANVIL_DIRENV_MARKER") :false)
+                 (or (getenv "ANVIL_DIRENV_BRACE") :false)
                  (or (executable-find "anvil-direnv-c") :false)
                  (or (executable-find "emacsclient") :false)
                  (or (executable-find "rg") :false)
@@ -346,12 +358,23 @@ def direnv_buffer_expression() -> str:
                  (and (local-variable-p 'process-environment) t)
                  (and (local-variable-p 'exec-path) t)
                  direnv--active-directory)))
+             (row-failing
+              (with-current-buffer
+                  (find-file-noselect {json.dumps(str(file_failing))})
+                (vector
+                 (or (getenv "ANVIL_DIRENV_MARKER") :false)
+                 (or (executable-find "anvil-direnv-failing") :false)
+                 (or direnv--active-directory :false)
+                 (or (getenv "DIRENV_DIFF") :false)
+                 (and (local-variable-p 'process-environment) t)
+                 (and (local-variable-p 'exec-path) t)
+                 (or (getenv "PATH") :false))))
              (default-marker
               (let ((process-environment
                      (default-value 'process-environment)))
                 (or (getenv "ANVIL_DIRENV_MARKER") :false))))
         (json-serialize
-         (vector row-a row-b row-c row-unset row-spoof default-marker
+         (vector row-a row-b row-c row-unset row-spoof row-failing default-marker
                  (and (featurep 'direnv) t)
                  (and (featurep 'exec-path-from-shell) t)
                  (vector anvil-headless-smoke--mode-marker
@@ -365,7 +388,7 @@ def direnv_buffer_expression() -> str:
 def assert_direnv_buffers(response: dict[str, object]) -> None:
     """Validate per-buffer direnv isolation and required executable paths."""
     data = decode_eval_json(response)
-    if not isinstance(data, list) or len(data) != 10:
+    if not isinstance(data, list) or len(data) != 11:
         raise AssertionError(f"unexpected direnv buffer result: {data}")
     (
         row_a,
@@ -373,6 +396,7 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
         row_c,
         row_unset,
         row_spoof,
+        row_failing,
         default_marker,
         has_direnv,
         has_shell_import,
@@ -384,6 +408,7 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
     project_c = Path.home() / "direnv-c"
     project_unset = Path.home() / "direnv-unset"
     project_spoof = Path.home() / "direnv-spoof"
+    project_failing = Path.home() / "direnv-failing"
     expected_rows = (
         (
             row_a,
@@ -414,27 +439,27 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
         if resolved_path(row[6], f"{project} active directory") != project.resolve():
             raise AssertionError(f"direnv active directory mismatch: {row}")
 
-    if not isinstance(row_c, list) or len(row_c) != 9:
+    if not isinstance(row_c, list) or len(row_c) != 10:
         raise AssertionError(f"malformed PATH-replacement row: {row_c}")
     expected_c = project_c / "bin" / "anvil-direnv-c"
     if (
-        row_c[0] != "project-c"
-        or resolved_path(row_c[1], "project-c executable") != expected_c.resolve()
+        row_c[0:2] != ["project-c", "prefix{suffix"]
+        or resolved_path(row_c[2], "project-c executable") != expected_c.resolve()
     ):
         raise AssertionError(f"PATH-replacing envrc was not applied: {row_c}")
-    emacsclient = resolved_path(row_c[2], "project-c emacsclient")
-    resolved_path(row_c[3], "project-c rg")
-    if resolved_path(row_c[4], "project-c exec-path head") != emacsclient.parent:
+    emacsclient = resolved_path(row_c[3], "project-c emacsclient")
+    resolved_path(row_c[4], "project-c rg")
+    if resolved_path(row_c[5], "project-c exec-path head") != emacsclient.parent:
         raise AssertionError(f"dedicated Emacs bin is not first in exec-path: {row_c}")
-    if row_c[5:7] != [True, True]:
+    if row_c[6:8] != [True, True]:
         raise AssertionError(f"project-c environment is not buffer-local: {row_c}")
-    if resolved_path(row_c[7], "project-c active directory") != project_c.resolve():
+    if resolved_path(row_c[8], "project-c active directory") != project_c.resolve():
         raise AssertionError(f"project-c active directory mismatch: {row_c}")
-    if not isinstance(row_c[8], str):
+    if not isinstance(row_c[9], str):
         raise AssertionError(f"project-c PATH is missing: {row_c}")
-    path_entries = [Path(entry).resolve() for entry in row_c[8].split(os.pathsep)]
+    path_entries = [Path(entry).resolve() for entry in row_c[9].split(os.pathsep)]
     if path_entries.count(emacsclient.parent) != 1:
-        raise AssertionError(f"dedicated Emacs bin is duplicated in PATH: {row_c[8]}")
+        raise AssertionError(f"dedicated Emacs bin is duplicated in PATH: {row_c[9]}")
 
     expected_root_socket = (
         Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / "host-a" / "emacs" / "server"
@@ -465,6 +490,20 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
             or resolved_path(row[5], f"{project} active directory") != project.resolve()
         ):
             raise AssertionError(f"guard state was not restored for {project}: {row}")
+
+    if not isinstance(row_failing, list) or len(row_failing) != 7:
+        raise AssertionError(f"malformed failing-direnv row: {row_failing}")
+    if row_failing[:4] != [False, False, False, False]:
+        raise AssertionError(f"failed envrc leaked environment state: {row_failing}")
+    if row_failing[4:6] != [True, True] or not isinstance(row_failing[6], str):
+        raise AssertionError(
+            f"failed envrc lost its clean buffer baseline: {row_failing}"
+        )
+    failing_bin = (project_failing / "bin").resolve()
+    if failing_bin in [
+        Path(entry).resolve() for entry in row_failing[6].split(os.pathsep)
+    ]:
+        raise AssertionError(f"failed envrc leaked its PATH entry: {row_failing}")
 
     if default_marker is not False:
         raise AssertionError(f"project environment leaked globally: {data}")
@@ -1015,6 +1054,8 @@ def main() -> None:
     project_unset = Path.home() / "direnv-unset"
     project_spoof = Path.home() / "direnv-spoof"
     project_blocked = Path.home() / "direnv-blocked"
+    project_failing = Path.home() / "direnv-failing"
+    failing_shell_marker = Path.home() / "direnv-failing-shell-ran"
     runtime_lock = (
         Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"])
         / "host-a"
@@ -1184,8 +1225,8 @@ def main() -> None:
                     "name": "shell-run",
                     "arguments": {
                         "cmd": (
-                            "printf '%s:%s:' \"$ANVIL_DIRENV_MARKER\" "
-                            '"$(anvil-direnv-c)"; rg --version'
+                            "printf '%s:%s:%s:' \"$ANVIL_DIRENV_MARKER\" "
+                            '"$ANVIL_DIRENV_BRACE" "$(anvil-direnv-c)"; rg --version'
                         ),
                         "filter": "",
                         "cwd": str(project_c),
@@ -1227,6 +1268,18 @@ def main() -> None:
                     "arguments": {"expression": watchdog_expression},
                 },
             ),
+            request(
+                20,
+                "tools/call",
+                {
+                    "name": "shell-run",
+                    "arguments": {
+                        "cmd": f"printf ran > {shlex.quote(str(failing_shell_marker))}",
+                        "filter": "",
+                        "cwd": str(project_failing),
+                    },
+                },
+            ),
         ],
     )
     main_names = tool_names(response_by_id(main_responses, 2))
@@ -1240,7 +1293,7 @@ def main() -> None:
     assert_tool_success(response_by_id(main_responses, 3), "42")
     assert_tool_success(response_by_id(main_responses, 4), "server_id=anvil")
     assert_tool_success(response_by_id(main_responses, 5), "headlessorgneedle")
-    response_by_id(main_responses, 6)
+    assert_tool_success(response_by_id(main_responses, 6), ":files")
     assert_tool_success(response_by_id(main_responses, 7), "headlesssemanticneedle")
     assert_worker_snapshot(response_by_id(main_responses, 8), "host-a", worker_specs)
     assert_direnv_buffers(response_by_id(main_responses, 9))
@@ -1260,7 +1313,7 @@ def main() -> None:
     assert_tool_success(response_by_id(main_responses, 15), "lock-fds-closed")
     assert_tool_success(
         response_by_id(main_responses, 16),
-        "project-c:project-c-command:ripgrep",
+        "project-c:prefix{suffix:project-c-command:ripgrep",
     )
     assert_tool_success(
         response_by_id(main_responses, 17),
@@ -1268,6 +1321,9 @@ def main() -> None:
     )
     assert_spawn_baseline(response_by_id(main_responses, 18), "host-a")
     assert_watchdog_lease(response_by_id(main_responses, 19), watchdog_lease)
+    assert_tool_failure(response_by_id(main_responses, 20), "direnv environment failed")
+    if failing_shell_marker.exists():
+        raise AssertionError("shell-run executed after an allowed envrc failed")
     for identifier in (10, 11, 16, 17):
         assert_tool_omits(response_by_id(main_responses, identifier), "direnv:")
 

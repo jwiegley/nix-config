@@ -51,12 +51,13 @@ let
     bridgeDispatchSeconds = 150;
     bridgeReadinessSeconds = 20;
     bridgeStartupDispatchSeconds = 20;
-    clientStartupSeconds = 180;
+    clientStartupSeconds = 210;
     clientToolSeconds = 210;
     cooperativeSyncSeconds = 120;
     emacsclientKillSeconds = 1;
     emacsclientProbeSeconds = 5;
     frameReadSeconds = 10;
+    parentGuardReadySeconds = 5;
     requestParseSeconds = 2;
     shellSyncSeconds = 120;
     supervisorReadySeconds = 120;
@@ -516,6 +517,11 @@ let
         (attrs: {
           installPhase = attrs.installPhase + ''
             install -m755 anvil-stdio.sh "$out/share/emacs/site-lisp"
+            mkdir -p "$out/share/emacs/site-lisp/tests"
+            install -m644 \
+              tests/anvil-eval-async-isolation-test.el \
+              tests/anvil-server-unified-registry-test.el \
+              "$out/share/emacs/site-lisp/tests"
           '';
         });
 
@@ -598,7 +604,7 @@ let
     import sys
 
     EXIT_SOFTWARE = 70
-    READY_TIMEOUT_SECONDS = 5.0
+    READY_TIMEOUT_SECONDS = ${toString timeoutPolicy.parentGuardReadySeconds}.0
 
 
     def fail(message):
@@ -1114,6 +1120,37 @@ let
     (anvil-headless--restore-required-exec-path)
     (setq direnv--executable anvil-headless--direnv-executable)
 
+    (defun anvil-headless--direnv-export-checked (directory)
+      "Run one pinned direnv export for DIRECTORY and reject every failure."
+      (let ((environment process-environment)
+            (stderr-tempfile (make-temp-file "anvil-direnv-stderr")))
+        (unwind-protect
+            (with-current-buffer (get-buffer-create direnv--output-buffer-name)
+              (erase-buffer)
+              (let* ((default-directory directory)
+                     (process-environment environment)
+                     (exit-code
+                      (call-process
+                       anvil-headless--direnv-executable nil
+                       `(t ,stderr-tempfile) nil "export" "json")))
+                (unless (and (integerp exit-code) (zerop exit-code))
+                  ;; Do not copy stderr into the error: envrc output may
+                  ;; contain project secrets.  The caller needs only a
+                  ;; fail-closed result.
+                  (error "direnv export failed"))
+                (unless (zerop (buffer-size))
+                  (goto-char (point-min))
+                  (let ((json-key-type 'string)
+                        (json-object-type 'alist))
+                    (prog1 (json-read-object)
+                      (skip-chars-forward " \t\r\n")
+                      (unless (eobp)
+                        (error "direnv export returned trailing output")))))))
+          (delete-file stderr-tempfile))))
+
+    (advice-add 'direnv--export
+                :override #'anvil-headless--direnv-export-checked)
+
     (defun anvil-headless--guard-direnv-update (original &rest args)
       "Run ORIGINAL and restore immutable guard controls even on failure."
       (unwind-protect
@@ -1209,7 +1246,8 @@ let
        (copy-sequence anvil-headless--baseline-exec-path)
        nil))
 
-    (defun anvil-headless--apply-direnv-if-allowed (directory)
+    (defun anvil-headless--apply-direnv-if-allowed
+        (directory &optional fail-on-export-error)
       "Apply DIRECTORY's envrc only while its pinned status remains allowed."
       (if (not (anvil-headless--direnv-allowed-p directory))
           (anvil-headless--restore-immutable-direnv-baseline)
@@ -1223,9 +1261,15 @@ let
               ;; ran, discard the entire update rather than only its marker.
               (if (anvil-headless--direnv-allowed-p directory)
                   t
-                (anvil-headless--restore-immutable-direnv-baseline)))
+                (anvil-headless--restore-immutable-direnv-baseline)
+                (when fail-on-export-error
+                  (error "Allowed direnv environment changed during export"))
+                nil))
           (error
-           (anvil-headless--restore-immutable-direnv-baseline)))))
+           (anvil-headless--restore-immutable-direnv-baseline)
+           (when fail-on-export-error
+             (error "Allowed direnv environment failed to load"))
+           nil))))
 
     (defun anvil-headless--direnv-update-current-buffer ()
       "Give a visited local file its own allowed direnv environment."
@@ -1284,7 +1328,7 @@ let
             (setq-local process-environment child-process-environment)
             (setq-local exec-path child-exec-path)
             (setq-local direnv--active-directory nil)
-            (anvil-headless--apply-direnv-if-allowed default-directory)
+            (anvil-headless--apply-direnv-if-allowed default-directory t)
             (anvil-headless--restore-required-exec-path)
             (setq child-process-environment
                   (copy-sequence process-environment)

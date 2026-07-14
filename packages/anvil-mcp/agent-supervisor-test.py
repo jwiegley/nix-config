@@ -1965,6 +1965,126 @@ for line in sys.stdin:
         self.assertFalse(stale.runtime_dir.exists())
         self.assertFalse(stale.state_dir.exists())
 
+    def test_interrupted_status_last_reap_is_recovered_on_next_prune(self):
+        owner_pid, owner_identity = self.start_owner()
+        stale = self.prepare(
+            owner_pid=owner_pid,
+            owner_start_identity=owner_identity,
+        )
+        SUPERVISOR.write_status(stale, SUPERVISOR.owner_seed_record(stale))
+        (stale.state_dir / "large-cache").write_text("stale\n")
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+
+        current = self.prepare()
+        runtime_parent = stale.runtime_dir.parent.stat()
+        original_rmdir = SUPERVISOR.os.rmdir
+        interrupted = False
+
+        def interrupt_final_runtime_rmdir(path, *, dir_fd=None):
+            nonlocal interrupted
+            parent = os.fstat(dir_fd) if dir_fd is not None else None
+            if (
+                not interrupted
+                and path == stale.runtime_dir.name
+                and parent is not None
+                and (parent.st_dev, parent.st_ino)
+                == (runtime_parent.st_dev, runtime_parent.st_ino)
+            ):
+                interrupted = True
+                raise OSError(SUPERVISOR.errno.EINTR, "injected reap interruption")
+            return original_rmdir(path, dir_fd=dir_fd)
+
+        with mock.patch.object(
+            SUPERVISOR.os,
+            "rmdir",
+            side_effect=interrupt_final_runtime_rmdir,
+        ):
+            SUPERVISOR.prune_orphaned_state(
+                current.runtime_dir.parent,
+                current.state_dir.parent,
+                current.agent_key,
+            )
+
+        self.assertTrue(interrupted)
+        self.assertFalse(stale.state_dir.exists())
+        self.assertTrue(stale.runtime_dir.is_dir())
+        self.assertEqual(list(stale.runtime_dir.iterdir()), [])
+
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertFalse(stale.runtime_dir.exists())
+
+    def test_prune_never_unlinks_a_replacement_after_releasing_lock_path(self):
+        owner_pid, owner_identity = self.start_owner()
+        stale = self.prepare(
+            owner_pid=owner_pid,
+            owner_start_identity=owner_identity,
+        )
+        SUPERVISOR.write_status(stale, SUPERVISOR.owner_seed_record(stale))
+        (stale.state_dir / "stale-cache").write_text("stale\n")
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+
+        live_identity = SUPERVISOR.process_start_identity(os.getpid())
+        self.assertIsNotNone(live_identity)
+        replacement = SimpleNamespace(**vars(stale))
+        replacement.owner_pid = os.getpid()
+        replacement.owner_start_identity = live_identity
+        replacement_record = SUPERVISOR.owner_seed_record(replacement)
+        runtime_identity = stale.runtime_dir.stat()
+        original_unlink = SUPERVISOR.os.unlink
+        injected = False
+
+        def install_replacement_after_lock_unlink(path, *, dir_fd=None):
+            nonlocal injected
+            directory = os.fstat(dir_fd) if dir_fd is not None else None
+            is_stale_runtime = directory is not None and (
+                directory.st_dev,
+                directory.st_ino,
+            ) == (runtime_identity.st_dev, runtime_identity.st_ino)
+            result = original_unlink(path, dir_fd=dir_fd)
+            if not injected and is_stale_runtime and path == SUPERVISOR.LOCK_NAME:
+                injected = True
+                lock_path = stale.runtime_dir / SUPERVISOR.LOCK_NAME
+                lock_path.write_text("replacement lock\n")
+                lock_path.chmod(0o600)
+                SUPERVISOR.write_status(stale, replacement_record)
+                SUPERVISOR.ensure_private_directory(stale.state_dir)
+                (stale.state_dir / "replacement-cache").write_text("live\n")
+            return result
+
+        current = self.prepare()
+        with mock.patch.object(
+            SUPERVISOR.os,
+            "unlink",
+            side_effect=install_replacement_after_lock_unlink,
+        ):
+            SUPERVISOR.prune_orphaned_state(
+                current.runtime_dir.parent,
+                current.state_dir.parent,
+                current.agent_key,
+            )
+
+        self.assertTrue(injected)
+        self.assertEqual(
+            SUPERVISOR.read_status_owner(stale.runtime_dir, stale.agent_key),
+            (os.getpid(), live_identity),
+        )
+        self.assertEqual(
+            (stale.state_dir / "replacement-cache").read_text(),
+            "live\n",
+        )
+
     def test_clean_supervisor_stop_retains_status_for_owner_death_prune(self):
         owner_pid, owner_identity = self.start_owner()
         stale = self.prepare(
@@ -2095,6 +2215,195 @@ for line in sys.stdin:
         self.assertIn(b"stderr-marker", payload)
         self.assertNotIn(b"stale diagnostic content", payload)
 
+    def test_daemon_diagnostic_drain_is_bounded_with_continuous_writer(self):
+        process = SimpleNamespace(
+            _anvil_diagnostic_read_fd=101,
+            _anvil_diagnostic_output_fd=102,
+            _anvil_diagnostic_written=0,
+        )
+        chunk = b"x" * 16384
+        with (
+            mock.patch.object(SUPERVISOR.os, "read", return_value=chunk) as read,
+            mock.patch.object(SUPERVISOR, "write_all") as write_all,
+        ):
+            SUPERVISOR.drain_daemon_diagnostic(process)
+
+        self.assertEqual(
+            read.call_count,
+            SUPERVISOR.MAX_DAEMON_DIAGNOSTIC_DRAIN_BYTES // len(chunk),
+        )
+        self.assertEqual(
+            process._anvil_diagnostic_written,
+            SUPERVISOR.MAX_DAEMON_DIAGNOSTIC_BYTES,
+        )
+        self.assertEqual(write_all.call_count, read.call_count)
+
+    def test_start_daemon_closes_diagnostic_when_pipe_creation_fails(self):
+        args = self.prepare()
+        diagnostic = os.open(os.devnull, os.O_WRONLY)
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "open_daemon_diagnostic",
+                return_value=diagnostic,
+            ),
+            mock.patch.object(
+                SUPERVISOR.os,
+                "pipe",
+                side_effect=OSError(SUPERVISOR.errno.EMFILE, "injected pipe failure"),
+            ),
+        ):
+            with self.assertRaises(OSError):
+                SUPERVISOR.start_daemon(args)
+        with self.assertRaises(OSError):
+            os.fstat(diagnostic)
+
+    def test_start_daemon_closes_all_descriptors_when_set_blocking_fails(self):
+        args = self.prepare()
+        diagnostic = os.open(os.devnull, os.O_WRONLY)
+        read_descriptor, write_descriptor = os.pipe()
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "open_daemon_diagnostic",
+                return_value=diagnostic,
+            ),
+            mock.patch.object(
+                SUPERVISOR.os,
+                "pipe",
+                return_value=(read_descriptor, write_descriptor),
+            ),
+            mock.patch.object(
+                SUPERVISOR.os,
+                "set_blocking",
+                side_effect=OSError(SUPERVISOR.errno.EIO, "injected setup failure"),
+            ),
+            mock.patch.object(SUPERVISOR.subprocess, "Popen") as popen,
+        ):
+            with self.assertRaises(OSError):
+                SUPERVISOR.start_daemon(args)
+        popen.assert_not_called()
+        for descriptor in (diagnostic, read_descriptor, write_descriptor):
+            with self.assertRaises(OSError):
+                os.fstat(descriptor)
+
+    def test_close_daemon_diagnostic_closes_both_fds_after_drain_error(self):
+        read_descriptor, write_descriptor = os.pipe()
+        output_descriptor = os.open(os.devnull, os.O_WRONLY)
+        process = SimpleNamespace(
+            _anvil_diagnostic_read_fd=read_descriptor,
+            _anvil_diagnostic_output_fd=output_descriptor,
+            _anvil_diagnostic_written=0,
+        )
+        os.close(write_descriptor)
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "drain_daemon_diagnostic",
+                side_effect=OSError(SUPERVISOR.errno.EIO, "injected drain failure"),
+            ),
+            self.assertRaises(OSError),
+        ):
+            SUPERVISOR.close_daemon_diagnostic(process)
+        self.assertIsNone(process._anvil_diagnostic_read_fd)
+        self.assertIsNone(process._anvil_diagnostic_output_fd)
+        for descriptor in (read_descriptor, output_descriptor):
+            with self.assertRaises(OSError):
+                os.fstat(descriptor)
+
+    def test_stop_daemon_reaps_without_deleting_state_early(self):
+        class FakeProcess:
+            pid = 4242
+
+            def __init__(self):
+                self.wait_timeouts = []
+
+            def poll(self):
+                return None
+
+            def wait(self, timeout=None):
+                self.wait_timeouts.append(timeout)
+                if len(self.wait_timeouts) == 1:
+                    raise subprocess.TimeoutExpired(["daemon"], timeout)
+                return -signal.SIGKILL
+
+        process = FakeProcess()
+        with (
+            mock.patch.object(SUPERVISOR.os, "killpg") as killpg,
+            mock.patch.object(SUPERVISOR, "close_daemon_diagnostic") as close,
+        ):
+            SUPERVISOR.stop_daemon(process)
+        self.assertEqual(
+            process.wait_timeouts,
+            [SUPERVISOR.DAEMON_STOP_SECONDS, SUPERVISOR.DAEMON_STOP_SECONDS],
+        )
+        self.assertEqual(
+            killpg.call_args_list,
+            [
+                mock.call(process.pid, signal.SIGTERM),
+                mock.call(process.pid, signal.SIGKILL),
+            ],
+        )
+        close.assert_called_once_with(process)
+
+    def test_stop_daemon_post_kill_timeout_is_bounded(self):
+        class FakeProcess:
+            pid = 4242
+
+            def __init__(self):
+                self.wait_timeouts = []
+
+            def poll(self):
+                return None
+
+            def wait(self, timeout=None):
+                self.wait_timeouts.append(timeout)
+                raise subprocess.TimeoutExpired(["daemon"], timeout)
+
+        process = FakeProcess()
+        with (
+            mock.patch.object(SUPERVISOR.os, "killpg") as killpg,
+            mock.patch.object(SUPERVISOR, "close_daemon_diagnostic") as close,
+            self.assertRaises(subprocess.TimeoutExpired),
+        ):
+            SUPERVISOR.stop_daemon(process)
+        self.assertEqual(
+            process.wait_timeouts,
+            [SUPERVISOR.DAEMON_STOP_SECONDS, SUPERVISOR.DAEMON_STOP_SECONDS],
+        )
+        self.assertEqual(
+            killpg.call_args_list,
+            [
+                mock.call(process.pid, signal.SIGTERM),
+                mock.call(process.pid, signal.SIGKILL),
+            ],
+        )
+        close.assert_called_once_with(process)
+
+    def test_supervisor_does_not_cleanup_when_daemon_reap_fails(self):
+        args = self.prepare()
+        lock_descriptor = os.open(os.devnull, os.O_RDONLY)
+        with (
+            mock.patch.object(SUPERVISOR, "validate_supervisor_lock"),
+            mock.patch.object(
+                SUPERVISOR,
+                "validate_process_identity",
+                return_value=SUPERVISOR.LifecycleState.DEAD,
+            ),
+            mock.patch.object(SUPERVISOR, "live_leases", return_value=[]),
+            mock.patch.object(
+                SUPERVISOR,
+                "stop_daemon",
+                side_effect=RuntimeError("injected reap failure"),
+            ),
+            mock.patch.object(SUPERVISOR, "cleanup_instance") as cleanup,
+            self.assertRaisesRegex(RuntimeError, "injected reap failure"),
+        ):
+            SUPERVISOR.supervisor_loop(args, lock_descriptor, (1, 1))
+        cleanup.assert_not_called()
+        with self.assertRaises(OSError):
+            os.fstat(lock_descriptor)
+
     def test_daemon_diagnostic_refuses_symlink_target(self):
         args = self.prepare()
         outside = self.root / "outside-diagnostic"
@@ -2163,6 +2472,90 @@ for line in sys.stdin:
             "preserved",
         )
 
+    def test_startup_retries_one_supervisor_handshake_timeout(self):
+        args = self.prepare()
+        args.emacsclient = "/emacsclient"
+        args.ready_seconds = 1.0
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "validate_process_identity",
+                return_value=SUPERVISOR.LifecycleState.LIVE,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "spawn_supervisor_if_absent",
+                side_effect=[TimeoutError("injected handshake timeout"), False],
+            ) as spawn,
+            mock.patch.object(
+                SUPERVISOR,
+                "safe_socket_ready",
+                side_effect=[False, True],
+            ) as ready,
+            mock.patch.object(
+                SUPERVISOR,
+                "restart_backoff_seconds",
+                return_value=0.0,
+            ),
+        ):
+            SUPERVISOR.wait_for_daemon(args)
+        self.assertEqual(spawn.call_count, 2)
+        self.assertEqual(ready.call_count, 2)
+
+    def test_startup_retries_one_transient_supervisor_spawn_error(self):
+        args = self.prepare()
+        args.emacsclient = "/emacsclient"
+        args.ready_seconds = 1.0
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "validate_process_identity",
+                return_value=SUPERVISOR.LifecycleState.LIVE,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "spawn_supervisor_if_absent",
+                side_effect=[
+                    OSError(SUPERVISOR.errno.EAGAIN, "injected EAGAIN"),
+                    False,
+                ],
+            ) as spawn,
+            mock.patch.object(
+                SUPERVISOR,
+                "safe_socket_ready",
+                side_effect=[False, True],
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "restart_backoff_seconds",
+                return_value=0.0,
+            ),
+        ):
+            SUPERVISOR.wait_for_daemon(args)
+        self.assertEqual(spawn.call_count, 2)
+
+    def test_startup_propagates_nontransient_supervisor_spawn_error(self):
+        args = self.prepare()
+        args.emacsclient = "/emacsclient"
+        args.ready_seconds = 1.0
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "validate_process_identity",
+                return_value=SUPERVISOR.LifecycleState.LIVE,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "spawn_supervisor_if_absent",
+                side_effect=OSError(SUPERVISOR.errno.EPERM, "injected EPERM"),
+            ),
+            mock.patch.object(SUPERVISOR, "safe_socket_ready") as ready,
+            self.assertRaises(OSError) as raised,
+        ):
+            SUPERVISOR.wait_for_daemon(args)
+        self.assertEqual(raised.exception.errno, SUPERVISOR.errno.EPERM)
+        ready.assert_not_called()
+
     def test_stdio_child_inherits_pipes_and_drops_alternate_editor(self):
         args = self.prepare()
         args.server_id = "anvil"
@@ -2214,6 +2607,21 @@ for line in sys.stdin:
             args.python,
         )
         self.assertTrue(options["env"]["ANVIL_EMACS_SOCKET"].endswith("/server"))
+
+    def test_stop_stdio_bridge_reports_failed_post_kill_reap(self):
+        process = mock.Mock()
+        process.poll.return_value = None
+        process.wait.side_effect = subprocess.TimeoutExpired(["/stdio"], 5)
+
+        with self.assertRaisesRegex(
+            TimeoutError,
+            "stdio bridge did not exit after SIGKILL",
+        ):
+            SUPERVISOR.stop_stdio_bridge(process)
+
+        process.terminate.assert_called_once_with()
+        process.kill.assert_called_once_with()
+        self.assertEqual(process.wait.call_count, 2)
 
     def test_bridge_caretaker_retains_identity_and_lease(self):
         bridge_args = SimpleNamespace(
@@ -2498,7 +2906,7 @@ for line in sys.stdin:
             mock.patch.object(SUPERVISOR, "publish_startup_status"),
             mock.patch.object(SUPERVISOR.os, "fork", return_value=4242),
             mock.patch.object(SUPERVISOR.os, "kill"),
-            mock.patch.object(SUPERVISOR.os, "waitpid"),
+            mock.patch.object(SUPERVISOR, "waitpid_bounded", return_value=True),
         ):
             with self.assertRaisesRegex(
                 TimeoutError,
@@ -2540,6 +2948,45 @@ for line in sys.stdin:
             stderr.getvalue(),
             "anvil-mcp: per-agent daemon: agent supervisor did not become ready\n",
         )
+
+    def test_failed_handshake_reap_is_bounded_and_remembered(self):
+        args = self.prepare()
+        lock_descriptor = os.open(os.devnull, os.O_RDONLY)
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "try_supervisor_lock",
+                return_value=(lock_descriptor, (1, 1)),
+            ),
+            mock.patch.object(SUPERVISOR, "validate_supervisor_lock"),
+            mock.patch.object(SUPERVISOR, "publish_startup_status"),
+            mock.patch.object(SUPERVISOR.os, "fork", return_value=4242),
+            mock.patch.object(SUPERVISOR.os, "kill"),
+            mock.patch.object(
+                SUPERVISOR,
+                "waitpid_bounded",
+                return_value=False,
+            ) as waitpid,
+        ):
+            with self.assertRaisesRegex(TimeoutError, "could not be reaped"):
+                SUPERVISOR.spawn_supervisor_if_absent(args, handshake_seconds=0)
+
+        waitpid.assert_called_once_with(4242, SUPERVISOR.DAEMON_STOP_SECONDS)
+        self.assertEqual(args._supervisor_child_pids, {4242})
+
+    def test_waitpid_bounded_never_uses_blocking_wait(self):
+        with (
+            mock.patch.object(
+                SUPERVISOR.os,
+                "waitpid",
+                return_value=(0, 0),
+            ) as waitpid,
+            mock.patch.object(SUPERVISOR.time, "sleep") as sleep,
+        ):
+            self.assertFalse(SUPERVISOR.waitpid_bounded(4242, 0))
+
+        waitpid.assert_called_once_with(4242, os.WNOHANG)
+        sleep.assert_not_called()
 
 
 if __name__ == "__main__":

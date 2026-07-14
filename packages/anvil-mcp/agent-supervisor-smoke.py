@@ -19,6 +19,16 @@ import traceback
 
 HOST_ONE = "shared-home-a"
 HOST_TWO = "shared-home-b"
+MAX_RESPONSE_FRAME_BYTES = 16 * 1024 * 1024
+RESPONSE_READ_BYTES = 64 * 1024
+BRIDGE_EOF_WAIT_SECONDS = 10.0
+BRIDGE_TERM_WAIT_SECONDS = 5.0
+BRIDGE_KILL_WAIT_SECONDS = 5.0
+BRIDGE_CLOSE_BOUND_SECONDS = (
+    BRIDGE_EOF_WAIT_SECONDS + BRIDGE_TERM_WAIT_SECONDS + BRIDGE_KILL_WAIT_SECONDS
+)
+RPC_SCHEDULING_MARGIN_SECONDS = 10.0
+CLEANUP_RETRY_ATTEMPTS = 2
 
 
 def load_supervisor(path: Path):
@@ -62,8 +72,8 @@ class BridgeProcess:
                 "ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS": os.environ.get(
                     "ANVIL_SMOKE_WATCHDOG_NORMAL_SECONDS", "10"
                 ),
-                "ANVIL_EMACS_WATCHDOG_ASYNC_SECONDS": os.environ.get(
-                    "ANVIL_SMOKE_WATCHDOG_ASYNC_SECONDS", "15"
+                "ANVIL_EMACS_WATCHDOG_DISPATCH_SECONDS": os.environ.get(
+                    "ANVIL_SMOKE_WATCHDOG_DISPATCH_SECONDS", "15"
                 ),
                 "ANVIL_EMACS_WATCHDOG_PULSE_SECONDS": "0.25",
                 "ANVIL_AGENT_GRACE_SECONDS": "0.5",
@@ -81,6 +91,15 @@ class BridgeProcess:
             bufsize=1,
         )
         self.next_id = 1
+        self.response_buffer = bytearray()
+        if self.process.stdout is None:
+            self.close()
+            raise AssertionError("bridge stdout is unavailable")
+        try:
+            os.set_blocking(self.process.stdout.fileno(), False)
+        except BaseException:
+            self.close()
+            raise
 
     @property
     def pid(self) -> int:
@@ -115,29 +134,72 @@ class BridgeProcess:
         return identifier
 
     def receive_response(self, timeout: float = 60.0) -> dict[str, object]:
-        """Read one response, allowing callers to collect out of order."""
+        """Read one newline frame under a monotonic deadline."""
         if self.process.stdout is None:
             raise AssertionError("bridge stdout is unavailable")
+        descriptor = self.process.stdout.fileno()
+        deadline = time.monotonic() + timeout
         selector = selectors.DefaultSelector()
-        selector.register(self.process.stdout, selectors.EVENT_READ)
+        selector.register(descriptor, selectors.EVENT_READ)
         try:
-            ready = selector.select(timeout)
+            while True:
+                newline = self.response_buffer.find(b"\n")
+                if newline >= 0:
+                    if newline > MAX_RESPONSE_FRAME_BYTES:
+                        raise AssertionError(
+                            "bridge response frame exceeded size limit"
+                        )
+                    raw = bytes(self.response_buffer[:newline])
+                    del self.response_buffer[: newline + 1]
+                    response = json.loads(raw.decode("utf-8"))
+                    if not isinstance(response, dict):
+                        raise AssertionError(
+                            f"bridge returned a non-object response: {response!r}"
+                        )
+                    return response
+                if len(self.response_buffer) > MAX_RESPONSE_FRAME_BYTES:
+                    raise AssertionError("bridge response frame exceeded size limit")
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise AssertionError(
+                        f"bridge response timed out; stderr:\n{self.stderr()}"
+                    )
+                if not selector.select(remaining):
+                    raise AssertionError(
+                        f"bridge response timed out; stderr:\n{self.stderr()}"
+                    )
+                try:
+                    chunk = os.read(descriptor, RESPONSE_READ_BYTES)
+                except BlockingIOError:
+                    continue
+                if not chunk:
+                    raise AssertionError(
+                        f"bridge exited while awaiting a response with "
+                        f"{self.process.poll()}; stderr:\n{self.stderr()}"
+                    )
+                self.response_buffer.extend(chunk)
         finally:
             selector.close()
-        if not ready:
-            raise AssertionError(
-                f"bridge response timed out; stderr:\n{self.stderr()}"
-            )
-        line = self.process.stdout.readline()
-        if not line:
-            raise AssertionError(
-                f"bridge exited while awaiting a response with "
-                f"{self.process.poll()}; stderr:\n{self.stderr()}"
-            )
-        response = json.loads(line)
-        if not isinstance(response, dict):
-            raise AssertionError(f"bridge returned a non-object response: {response!r}")
-        return response
+
+    def has_complete_response(self) -> bool:
+        """Read at most one available chunk and report a complete frame."""
+        if b"\n" in self.response_buffer:
+            return True
+        if self.process.stdout is None:
+            raise AssertionError("bridge stdout is unavailable")
+        try:
+            chunk = os.read(self.process.stdout.fileno(), RESPONSE_READ_BYTES)
+        except BlockingIOError:
+            return False
+        if not chunk:
+            return False
+        self.response_buffer.extend(chunk)
+        newline = self.response_buffer.find(b"\n")
+        if newline > MAX_RESPONSE_FRAME_BYTES or (
+            newline < 0 and len(self.response_buffer) > MAX_RESPONSE_FRAME_BYTES
+        ):
+            raise AssertionError("bridge response frame exceeded size limit")
+        return newline >= 0
 
     def request(
         self,
@@ -148,9 +210,7 @@ class BridgeProcess:
         identifier = self.send_request(method, params)
         response = self.receive_response(timeout)
         if response.get("id") != identifier:
-            raise AssertionError(
-                f"response id mismatch for {method}: {response!r}"
-            )
+            raise AssertionError(f"response id mismatch for {method}: {response!r}")
         return response
 
     def initialize(self) -> None:
@@ -182,21 +242,42 @@ class BridgeProcess:
         )
 
     def close(self) -> None:
-        if self.process.poll() is None and self.process.stdin is not None:
-            try:
-                self.process.stdin.close()
-            except BrokenPipeError:
-                pass
         try:
-            self.process.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            self.process.terminate()
+            if self.process.poll() is None and self.process.stdin is not None:
+                try:
+                    self.process.stdin.close()
+                except BrokenPipeError:
+                    pass
             try:
-                self.process.wait(timeout=5)
+                self.process.wait(timeout=BRIDGE_EOF_WAIT_SECONDS)
             except subprocess.TimeoutExpired:
-                self.process.kill()
-                self.process.wait(timeout=5)
-        self.stderr_file.close()
+                self.process.terminate()
+                try:
+                    self.process.wait(timeout=BRIDGE_TERM_WAIT_SECONDS)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait(timeout=BRIDGE_KILL_WAIT_SECONDS)
+        finally:
+            if not self.stderr_file.closed:
+                self.stderr_file.close()
+
+
+def close_bridge_mapping(bridges: dict[str, BridgeProcess]) -> list[Exception]:
+    """Attempt every close, retaining ownership only for failed reaps."""
+    errors: list[Exception] = []
+    for bridge_id in reversed(tuple(bridges)):
+        try:
+            bridges[bridge_id].close()
+        except Exception as error:
+            errors.append(error)
+        else:
+            bridges.pop(bridge_id, None)
+    return errors
+
+
+def cleanup_error_text(label: str, errors: list[Exception]) -> str:
+    details = "; ".join(f"{type(error).__name__}: {error}" for error in errors)
+    return f"{label} cleanup failed: {details}"
 
 
 def owner_proxy_main(connection, launcher_raw: str) -> None:
@@ -226,15 +307,26 @@ def owner_proxy_main(connection, launcher_raw: str) -> None:
                         request["timeout"],
                     )
                 elif operation == "close":
-                    bridge = bridges.pop(request["bridge_id"], None)
+                    bridge_id = request["bridge_id"]
+                    bridge = bridges.get(bridge_id)
                     if bridge is not None:
                         bridge.close()
+                        bridges.pop(bridge_id, None)
                     value = None
                 elif operation == "shutdown":
-                    for bridge in reversed(tuple(bridges.values())):
-                        bridge.close()
-                    bridges.clear()
-                    connection.send({"ok": True, "value": None})
+                    errors = close_bridge_mapping(bridges)
+                    if errors:
+                        connection.send(
+                            {
+                                "ok": False,
+                                "error": cleanup_error_text("owner bridge", errors),
+                            }
+                        )
+                        # Retain the mapping and control pipe so a later close
+                        # can retry the exact children that failed to reap.
+                        continue
+                    else:
+                        connection.send({"ok": True, "value": None})
                     return
                 else:
                     raise AssertionError(f"unknown proxy operation: {operation}")
@@ -245,8 +337,9 @@ def owner_proxy_main(connection, launcher_raw: str) -> None:
     except EOFError:
         pass
     finally:
-        for bridge in reversed(tuple(bridges.values())):
-            bridge.close()
+        errors = close_bridge_mapping(bridges)
+        if errors:
+            print(cleanup_error_text("owner final bridge", errors), file=sys.stderr)
         connection.close()
 
 
@@ -264,20 +357,36 @@ class OwnerProxy:
             args=(child_connection, str(launcher)),
             name=name,
         )
-        self.process.start()
-        child_connection.close()
         self.bridge_ids: set[str] = set()
-        if not self.connection.poll(20):
-            self.process.join(timeout=0)
-            exitcode = self.process.exitcode
-            self.close()
-            raise AssertionError(
-                f"owner proxy {name} did not become ready; exitcode={exitcode}"
-            )
-        ready = self.connection.recv()
-        if not ready.get("ok") or ready.get("value", {}).get("pid") != self.pid:
-            self.close()
-            raise AssertionError(f"owner proxy {name} failed startup: {ready}")
+        self.connection_closed = False
+        try:
+            self.process.start()
+            child_connection.close()
+            if not self.connection.poll(20):
+                self.process.join(timeout=0)
+                exitcode = self.process.exitcode
+                raise AssertionError(
+                    f"owner proxy {name} did not become ready; exitcode={exitcode}"
+                )
+            ready = self.connection.recv()
+            if not ready.get("ok") or ready.get("value", {}).get("pid") != self.pid:
+                raise AssertionError(f"owner proxy {name} failed startup: {ready}")
+        except BaseException:
+            try:
+                self.terminate_abruptly()
+            except BaseException:
+                pass
+            raise
+        finally:
+            child_connection.close()
+
+    def is_alive(self) -> bool:
+        return self.process.pid is not None and self.process.is_alive()
+
+    def close_connection(self) -> None:
+        if not self.connection_closed:
+            self.connection.close()
+            self.connection_closed = True
 
     @property
     def pid(self) -> int:
@@ -286,10 +395,9 @@ class OwnerProxy:
         return self.process.pid
 
     def rpc(self, payload: dict[str, object], timeout: float = 30.0):
-        if not self.process.is_alive():
+        if self.connection_closed or not self.is_alive():
             raise AssertionError(
-                f"owner proxy {self.process.name} exited with "
-                f"{self.process.exitcode}"
+                f"owner proxy {self.process.name} exited with {self.process.exitcode}"
             )
         self.connection.send(payload)
         if not self.connection.poll(timeout):
@@ -318,35 +426,62 @@ class OwnerProxy:
     def close_bridge(self, bridge_id: str) -> None:
         if bridge_id not in self.bridge_ids:
             return
-        self.rpc({"operation": "close", "bridge_id": bridge_id}, timeout=20)
+        self.rpc(
+            {"operation": "close", "bridge_id": bridge_id},
+            timeout=BRIDGE_CLOSE_BOUND_SECONDS + RPC_SCHEDULING_MARGIN_SECONDS,
+        )
         self.bridge_ids.remove(bridge_id)
 
     def close(self) -> None:
-        if self.process.is_alive():
-            try:
-                self.rpc({"operation": "shutdown"}, timeout=45)
-            except (AssertionError, BrokenPipeError, EOFError, OSError):
-                pass
-        self.process.join(timeout=10)
-        if self.process.is_alive():
-            self.process.terminate()
-            self.process.join(timeout=5)
-        if self.process.is_alive():
-            self.process.kill()
-            self.process.join(timeout=5)
-        self.bridge_ids.clear()
-        self.connection.close()
+        bridge_count = len(self.bridge_ids)
+        shutdown_timeout = (
+            bridge_count * BRIDGE_CLOSE_BOUND_SECONDS + RPC_SCHEDULING_MARGIN_SECONDS
+        )
+        if self.is_alive():
+            if self.connection_closed:
+                raise RuntimeError(
+                    f"owner proxy {self.process.name} lost its cleanup channel"
+                )
+            # A failed response leaves the child proxy and its bridge mapping
+            # alive.  Propagate without joining or closing the pipe so the
+            # exact same resources remain retryable.
+            self.rpc(
+                {"operation": "shutdown"},
+                timeout=max(RPC_SCHEDULING_MARGIN_SECONDS, shutdown_timeout),
+            )
+        try:
+            if self.process.pid is not None:
+                self.process.join(timeout=max(10.0, shutdown_timeout))
+            if self.is_alive():
+                self.process.terminate()
+                self.process.join(timeout=5)
+            if self.is_alive():
+                self.process.kill()
+                self.process.join(timeout=5)
+            if self.is_alive():
+                raise TimeoutError(
+                    f"owner proxy {self.process.name} could not be reaped"
+                )
+            self.bridge_ids.clear()
+        finally:
+            self.close_connection()
 
     def terminate_abruptly(self) -> None:
         """Model an owning Codex process exiting with live MCP children."""
-        if self.process.is_alive():
-            self.process.terminate()
-            self.process.join(timeout=10)
-        if self.process.is_alive():
-            self.process.kill()
-            self.process.join(timeout=5)
-        self.bridge_ids.clear()
-        self.connection.close()
+        try:
+            if self.is_alive():
+                self.process.terminate()
+                self.process.join(timeout=10)
+            if self.is_alive():
+                self.process.kill()
+                self.process.join(timeout=5)
+            if self.is_alive():
+                raise TimeoutError(
+                    f"owner proxy {self.process.name} could not be reaped"
+                )
+            self.bridge_ids.clear()
+        finally:
+            self.close_connection()
 
 
 class ProxyBridge:
@@ -406,6 +541,87 @@ class ProxyBridge:
             return
         self.owner.close_bridge(self.bridge_id)
         self.closed = True
+
+
+def attempt_close_resources(
+    bridges: list[ProxyBridge],
+    owners: list[OwnerProxy],
+) -> list[Exception]:
+    """Attempt every bridge and owner close, even after an earlier failure."""
+    errors: list[Exception] = []
+    for resource in (*reversed(bridges), *reversed(owners)):
+        try:
+            resource.close()
+        except Exception as error:
+            errors.append(error)
+    return errors
+
+
+def close_smoke_resources(
+    bridges: list[ProxyBridge],
+    owners: list[OwnerProxy],
+) -> None:
+    """Retry cleanup, force remaining proxies down, and aggregate failures."""
+    errors: list[Exception] = []
+    for _attempt in range(CLEANUP_RETRY_ATTEMPTS):
+        attempt_errors = attempt_close_resources(bridges, owners)
+        errors.extend(attempt_errors)
+        if not attempt_errors:
+            break
+
+    forced: list[dict[str, object]] = []
+    for owner in reversed(owners):
+        if not owner.is_alive() and owner.connection_closed:
+            continue
+        forced.append(
+            {
+                "name": owner.process.name,
+                "pid": owner.process.pid,
+                "bridge_ids": sorted(owner.bridge_ids),
+            }
+        )
+        try:
+            owner.terminate_abruptly()
+        except Exception as error:
+            errors.append(error)
+    if errors:
+        detail = cleanup_error_text("smoke resource", errors)
+        if forced:
+            detail = f"{detail}; forced_proxies={forced!r}"
+        raise RuntimeError(detail) from errors[0]
+
+
+def acquire_owner(
+    owners: list[OwnerProxy],
+    bridges: list[ProxyBridge],
+    launcher: Path,
+    name: str,
+) -> OwnerProxy:
+    """Acquire an owner or clean every resource acquired before it."""
+    try:
+        owner = OwnerProxy(launcher, name)
+    except BaseException:
+        close_smoke_resources(bridges, owners)
+        raise
+    owners.append(owner)
+    return owner
+
+
+def acquire_bridge(
+    owners: list[OwnerProxy],
+    bridges: list[ProxyBridge],
+    owner: OwnerProxy,
+    server_id: str,
+    host: str,
+) -> ProxyBridge:
+    """Acquire a bridge or clean every resource acquired before it."""
+    try:
+        bridge = owner.spawn_bridge(server_id, host)
+    except BaseException:
+        close_smoke_resources(bridges, owners)
+        raise
+    bridges.append(bridge)
+    return bridge
 
 
 def read_running_status(path: Path) -> dict[str, object] | bool:
@@ -537,8 +753,7 @@ def assert_home_unchanged(
     )
     if changed:
         raise AssertionError(
-            "per-agent daemon wrote under shared HOME: "
-            + ", ".join(changed[:20])
+            "per-agent daemon wrote under shared HOME: " + ", ".join(changed[:20])
         )
 
 
@@ -616,9 +831,7 @@ def worker_pids(bridge: ProxyBridge) -> list[int]:
     (json-serialize (vconcat (sort pids #'<)))))
 """.strip()
     encoded = eval_value(
-        bridge.call_tool(
-            "emacs-eval", {"expression": expression}, timeout=110
-        )
+        bridge.call_tool("emacs-eval", {"expression": expression}, timeout=110)
     )
     if not isinstance(encoded, str):
         raise AssertionError(f"worker PID expression was not JSON: {encoded!r}")
@@ -675,9 +888,27 @@ def verify_generation_rollover(
     module,
 ) -> None:
     """Keep an old bridge pinned while a new package generation starts."""
-    old_owner = OwnerProxy(old_launcher, "old-generation-owner")
-    new_owner = OwnerProxy(new_launcher, "new-generation-owner")
-    old_bridge = old_owner.spawn_bridge("anvil", "generation-rollover")
+    owners: list[OwnerProxy] = []
+    bridges: list[ProxyBridge] = []
+    old_owner = acquire_owner(
+        owners,
+        bridges,
+        old_launcher,
+        "old-generation-owner",
+    )
+    new_owner = acquire_owner(
+        owners,
+        bridges,
+        new_launcher,
+        "new-generation-owner",
+    )
+    old_bridge = acquire_bridge(
+        owners,
+        bridges,
+        old_owner,
+        "anvil",
+        "generation-rollover",
+    )
     new_bridge: ProxyBridge | None = None
     instances: list[dict[str, object]] = []
     try:
@@ -699,12 +930,19 @@ def verify_generation_rollover(
         instances.append(old_instance)
         old_generation = old_instance["status"]["generation"]
         old_daemon = old_instance["status"]["daemon_pid"]
-        if eval_value(
-            old_bridge.call_tool("emacs-eval", {"expression": "(+ 40 2)"})
-        ) != 42:
+        if (
+            eval_value(old_bridge.call_tool("emacs-eval", {"expression": "(+ 40 2)"}))
+            != 42
+        ):
             raise AssertionError("old generation failed before rollover")
 
-        new_bridge = new_owner.spawn_bridge("anvil", "generation-rollover")
+        new_bridge = acquire_bridge(
+            owners,
+            bridges,
+            new_owner,
+            "anvil",
+            "generation-rollover",
+        )
         new_bridge.initialize()
         new_instance = validate_bridge_instance(
             eventually(
@@ -742,23 +980,20 @@ def verify_generation_rollover(
             raise AssertionError(
                 f"new launcher displaced the old generation: {old_status}"
             )
-        if eval_value(
-            new_bridge.call_tool("emacs-eval", {"expression": "(+ 20 22)"})
-        ) != 42:
+        if (
+            eval_value(new_bridge.call_tool("emacs-eval", {"expression": "(+ 20 22)"}))
+            != 42
+        ):
             raise AssertionError("new generation did not serve a real request")
         new_bridge.close()
-        if eval_value(
-            old_bridge.call_tool("emacs-eval", {"expression": "(+ 21 21)"})
-        ) != 42:
+        if (
+            eval_value(old_bridge.call_tool("emacs-eval", {"expression": "(+ 21 21)"}))
+            != 42
+        ):
             raise AssertionError("closing the new generation harmed the old bridge")
         old_bridge.close()
     finally:
-        if new_bridge is not None and not new_bridge.closed:
-            new_bridge.close()
-        if not old_bridge.closed:
-            old_bridge.close()
-        new_owner.close()
-        old_owner.close()
+        close_smoke_resources(bridges, owners)
     for instance in instances:
         eventually(lambda instance=instance: not instance["runtime_dir"].exists())
         eventually(lambda instance=instance: not instance["state_dir"].exists())
@@ -771,8 +1006,16 @@ def verify_readiness_crash_recovery(
     module,
 ) -> None:
     """Recover behind one MCP pipe when the first root dies before readiness."""
-    owner = OwnerProxy(launcher, "readiness-crash-owner")
-    bridge = owner.spawn_bridge("anvil", "readiness-crash")
+    owners: list[OwnerProxy] = []
+    bridges: list[ProxyBridge] = []
+    owner = acquire_owner(owners, bridges, launcher, "readiness-crash-owner")
+    bridge = acquire_bridge(
+        owners,
+        bridges,
+        owner,
+        "anvil",
+        "readiness-crash",
+    )
     instance: dict[str, object] | None = None
     try:
         bridge.initialize()
@@ -801,15 +1044,11 @@ def verify_readiness_crash_recovery(
             raise AssertionError(
                 f"readiness crash was not retained in status: {status}"
             )
-        if eval_value(
-            bridge.call_tool("emacs-eval", {"expression": "(+ 39 3)"})
-        ) != 42:
+        if eval_value(bridge.call_tool("emacs-eval", {"expression": "(+ 39 3)"})) != 42:
             raise AssertionError("same bridge failed after readiness crash")
         bridge.close()
     finally:
-        if not bridge.closed:
-            bridge.close()
-        owner.close()
+        close_smoke_resources(bridges, owners)
     if instance is not None:
         eventually(lambda: not instance["runtime_dir"].exists())
         eventually(lambda: not instance["state_dir"].exists())
@@ -857,15 +1096,41 @@ def main() -> None:
 
     owners: list[OwnerProxy] = []
     bridges: list[ProxyBridge] = []
-    main_owner = OwnerProxy(launcher, "codex-main-owner")
-    owners.append(main_owner)
-    other_owner = OwnerProxy(launcher, "codex-agent-deck-owner")
-    owners.append(other_owner)
-    main_typed = main_owner.spawn_bridge("anvil", HOST_ONE)
-    main_eval = main_owner.spawn_bridge("emacs-eval", HOST_ONE)
-    other_agent = other_owner.spawn_bridge("anvil", HOST_ONE)
-    other_host = main_owner.spawn_bridge("anvil", HOST_TWO)
-    bridges.extend((main_typed, main_eval, other_agent, other_host))
+    main_owner = acquire_owner(owners, bridges, launcher, "codex-main-owner")
+    other_owner = acquire_owner(
+        owners,
+        bridges,
+        launcher,
+        "codex-agent-deck-owner",
+    )
+    main_typed = acquire_bridge(
+        owners,
+        bridges,
+        main_owner,
+        "anvil",
+        HOST_ONE,
+    )
+    main_eval = acquire_bridge(
+        owners,
+        bridges,
+        main_owner,
+        "emacs-eval",
+        HOST_ONE,
+    )
+    other_agent = acquire_bridge(
+        owners,
+        bridges,
+        other_owner,
+        "anvil",
+        HOST_ONE,
+    )
+    other_host = acquire_bridge(
+        owners,
+        bridges,
+        main_owner,
+        "anvil",
+        HOST_TWO,
+    )
     try:
         for bridge in bridges:
             bridge.initialize()
@@ -906,7 +1171,9 @@ def main() -> None:
             instance["status"]["generation"] for instance in instances.values()
         }
         if len(generations) != 1:
-            raise AssertionError(f"one launcher exposed mixed generations: {generations}")
+            raise AssertionError(
+                f"one launcher exposed mixed generations: {generations}"
+            )
         assert_home_unchanged(home, home_baseline)
 
         agent_instance = instances["other-agent"]
@@ -951,9 +1218,7 @@ def main() -> None:
             original_supervisor_pid
         )
         original_daemon_pid = typed_instance["status"]["daemon_pid"]
-        original_daemon_identity = module.process_start_identity(
-            original_daemon_pid
-        )
+        original_daemon_identity = module.process_start_identity(original_daemon_pid)
         os.kill(original_supervisor_pid, signal.SIGKILL)
         caretaker_recovered = eventually(
             lambda: (
@@ -978,9 +1243,7 @@ def main() -> None:
             timeout=150,
         )
         if eval_value(caretaker_probe) != 42:
-            raise AssertionError(
-                f"same stdio pipe did not recover: {caretaker_probe}"
-            )
+            raise AssertionError(f"same stdio pipe did not recover: {caretaker_probe}")
         if time.monotonic() - recovery_started >= 150:
             raise AssertionError("same-pipe supervisor recovery exceeded its bound")
         for pid, identity in (
@@ -998,15 +1261,13 @@ def main() -> None:
         supervisor_pid = typed_instance["status"]["supervisor_pid"]
         eval_daemon_pid = eval_instance["status"]["daemon_pid"]
         workers = worker_pids(main_typed)
-        worker_identities = {
-            pid: module.process_start_identity(pid) for pid in workers
-        }
+        worker_identities = {pid: module.process_start_identity(pid) for pid in workers}
         if any(identity is None for identity in worker_identities.values()):
             raise AssertionError(f"worker identity disappeared: {worker_identities}")
 
         nonce = typed_instance["runtime_dir"] / "watchdog-dispatch-nonce"
         hanging_expression = (
-            f"(progn (write-region \"once\\n\" nil {json.dumps(str(nonce))} "
+            f'(progn (write-region "once\\n" nil {json.dumps(str(nonce))} '
             "t 'silent) (while t))"
         )
         hung_response = main_typed.call_tool(
@@ -1029,11 +1290,8 @@ def main() -> None:
             raise AssertionError("root restart replaced the owning supervisor")
         if (
             restarted.get("restart_count", 0) < 1
-            or not str(restarted.get("restart_reason", "")).startswith(
-                "daemon-exited:"
-            )
-            or restarted.get("generation")
-            != typed_instance["status"]["generation"]
+            or not str(restarted.get("restart_reason", "")).startswith("daemon-exited:")
+            or restarted.get("generation") != typed_instance["status"]["generation"]
         ):
             raise AssertionError(f"restart diagnostics were not retained: {restarted}")
         if nonce.read_text().splitlines() != ["once"]:
@@ -1057,8 +1315,7 @@ def main() -> None:
         eventually(lambda: not typed_instance["runtime_dir"].exists())
         eventually(lambda: not typed_instance["state_dir"].exists())
         eventually(
-            lambda: module.process_start_identity(restarted_pid)
-            != restarted_identity
+            lambda: module.process_start_identity(restarted_pid) != restarted_identity
         )
         assert_typed_registry_probe(main_eval, launcher)
 
@@ -1068,8 +1325,9 @@ def main() -> None:
         eventually(lambda: not eval_instance["runtime_dir"].exists())
         eventually(lambda: not eval_instance["state_dir"].exists())
         eventually(
-            lambda: module.process_start_identity(eval_daemon_pid)
-            != eval_daemon_identity
+            lambda: (
+                module.process_start_identity(eval_daemon_pid) != eval_daemon_identity
+            )
         )
         for pid, identity in worker_identities.items():
             eventually(
@@ -1081,10 +1339,7 @@ def main() -> None:
         main_owner.close()
         owners.remove(main_owner)
     finally:
-        for bridge in reversed(bridges):
-            bridge.close()
-        for owner in reversed(owners):
-            owner.close()
+        close_smoke_resources(bridges, owners)
     assert_home_unchanged(home, home_baseline)
 
 

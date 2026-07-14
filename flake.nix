@@ -315,9 +315,18 @@
                 touch $out
               '';
 
+        }
+        // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux || system == "aarch64-darwin") {
           anvil-home-manager = pkgs.callPackage ./packages/anvil-mcp/home-manager-smoke.nix {
             homeManagerLib = home-manager.lib;
             testPkgs = pkgsFor.${system};
+          };
+          anvil-mcp-persistent-soak = pkgs.callPackage ./packages/anvil-mcp/persistent-bridge-soak.nix {
+            anvilMcp =
+              if pkgs.stdenv.isLinux then
+                packages.${system}.anvil-mcp-headless
+              else
+                packages.${system}.anvil-mcp-dedicated;
           };
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {

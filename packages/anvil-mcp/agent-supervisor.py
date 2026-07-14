@@ -40,6 +40,7 @@ RECORD_FORMAT_V1 = 1
 RECORD_FORMAT_V2 = 2
 MAX_LEASE_BYTES = 8192
 MAX_DAEMON_DIAGNOSTIC_BYTES = 128 * 1024
+MAX_DAEMON_DIAGNOSTIC_DRAIN_BYTES = 128 * 1024
 POLL_SECONDS = 0.25
 CARETAKER_ENSURE_SECONDS = 0.5
 CARETAKER_ENSURE_MAX_BACKOFF_SECONDS = 5.0
@@ -686,9 +687,16 @@ def live_leases(
         os.close(directory_fd)
 
 
-def remove_directory_contents(directory_fd: int, device: int) -> None:
+def remove_directory_contents(
+    directory_fd: int,
+    device: int,
+    *,
+    final_names: tuple[str, ...] = (),
+) -> None:
     """Remove one private tree through descriptors without following links."""
     for name in os.listdir(directory_fd):
+        if name in final_names:
+            continue
         try:
             info = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
         except FileNotFoundError:
@@ -728,9 +736,14 @@ def remove_directory_contents(directory_fd: int, device: int) -> None:
             os.rmdir(name, dir_fd=directory_fd)
         else:
             os.unlink(name, dir_fd=directory_fd)
+    for final_name in final_names:
+        try:
+            os.unlink(final_name, dir_fd=directory_fd)
+        except FileNotFoundError:
+            pass
 
 
-def remove_instance_tree(path: Path) -> None:
+def remove_instance_tree(path: Path, *, final_names: tuple[str, ...] = ()) -> None:
     """Remove one agent instance while preserving any symlink targets."""
     parent_fd = os.open(
         path.parent,
@@ -766,7 +779,11 @@ def remove_instance_tree(path: Path) -> None:
             or identity != (path_info.st_dev, path_info.st_ino)
         ):
             raise ConfigurationError("unsafe agent-instance directory")
-        remove_directory_contents(child_fd, opened.st_dev)
+        remove_directory_contents(
+            child_fd,
+            opened.st_dev,
+            final_names=final_names,
+        )
         os.close(child_fd)
         child_fd = None
         current = os.stat(
@@ -781,6 +798,42 @@ def remove_instance_tree(path: Path) -> None:
         if child_fd is not None:
             os.close(child_fd)
         os.close(parent_fd)
+
+
+def statusless_runtime_is_empty(
+    runtime_path: Path,
+    lock_identity: tuple[int, int],
+) -> bool:
+    """Recognize only an interrupted, already-emptied runtime reap."""
+    directory_fd = None
+    try:
+        directory_fd = os.open(
+            runtime_path,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        )
+        opened = os.fstat(directory_fd)
+        path_info = runtime_path.lstat()
+        if (
+            not stat.S_ISDIR(opened.st_mode)
+            or opened.st_uid != os.getuid()
+            or stat.S_IMODE(opened.st_mode) != 0o700
+            or (opened.st_dev, opened.st_ino) != (path_info.st_dev, path_info.st_ino)
+        ):
+            return False
+        names = set(os.listdir(directory_fd))
+        if names != {LOCK_NAME}:
+            return False
+        lock_info = os.stat(
+            LOCK_NAME,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+        return (lock_info.st_dev, lock_info.st_ino) == lock_identity
+    except (FileNotFoundError, PermissionError, OSError):
+        return False
+    finally:
+        if directory_fd is not None:
+            os.close(directory_fd)
 
 
 def read_status_lifecycle(
@@ -890,6 +943,7 @@ def prune_orphaned_state(
         if name == current_agent_key or AGENT_KEY_PATTERN.fullmatch(name) is None:
             continue
         runtime_path = runtime_agents / name
+        state_path = state_agents / name
         try:
             runtime_info = runtime_path.lstat()
         except FileNotFoundError:
@@ -901,10 +955,10 @@ def prune_orphaned_state(
             and runtime_info.st_uid == os.getuid()
         ):
             owner = read_status_owner(runtime_path, name)
-            if (
-                owner is None
-                or validate_process_identity(owner[0], owner[1])
-                is not LifecycleState.DEAD
+            if owner is None and os.path.lexists(state_path):
+                continue
+            if owner is not None and (
+                validate_process_identity(owner[0], owner[1]) is not LifecycleState.DEAD
             ):
                 continue
             try:
@@ -921,19 +975,45 @@ def prune_orphaned_state(
                     lock_identity,
                 )
                 confirmed = read_status_owner(runtime_path, name)
-                if (
+                if owner is None:
+                    if (
+                        confirmed is not None
+                        or os.path.lexists(state_path)
+                        or not statusless_runtime_is_empty(
+                            runtime_path,
+                            lock_identity,
+                        )
+                    ):
+                        continue
+                elif (
                     confirmed is None
                     or validate_process_identity(confirmed[0], confirmed[1])
                     is not LifecycleState.DEAD
                 ):
                     continue
-                remove_instance_tree(runtime_path)
+                else:
+                    # Remove state first.  If runtime removal is interrupted
+                    # after its owner record is unlinked, a later pass can
+                    # identify the empty status-less tree without risking a
+                    # freshly starting instance (which has a state twin and a
+                    # leases directory).
+                    remove_instance_tree(state_path)
+                # Keep the named, locked inode reachable while deleting the
+                # deferred owner record.  Once LOCK_NAME is unlinked, another
+                # supervisor may create a replacement, so perform no further
+                # unlinks after that point; a non-empty rmdir then preserves
+                # the replacement tree.
+                remove_instance_tree(
+                    runtime_path,
+                    final_names=(STATUS_NAME, LOCK_NAME),
+                )
             except (ConfigurationError, FileNotFoundError, OSError, RuntimeError):
                 continue
             finally:
                 os.close(lock_descriptor)
+            continue
         try:
-            remove_instance_tree(state_agents / name)
+            remove_instance_tree(state_path)
         except (ConfigurationError, FileNotFoundError, OSError):
             continue
 
@@ -1138,9 +1218,13 @@ def drain_daemon_diagnostic(process: subprocess.Popen[bytes] | None) -> None:
     if read_descriptor is None:
         return
     written = getattr(process, "_anvil_diagnostic_written", 0)
-    while True:
+    drained = 0
+    while drained < MAX_DAEMON_DIAGNOSTIC_DRAIN_BYTES:
         try:
-            chunk = os.read(read_descriptor, 16384)
+            chunk = os.read(
+                read_descriptor,
+                min(16384, MAX_DAEMON_DIAGNOSTIC_DRAIN_BYTES - drained),
+            )
         except BlockingIOError:
             break
         except OSError as error:
@@ -1151,6 +1235,7 @@ def drain_daemon_diagnostic(process: subprocess.Popen[bytes] | None) -> None:
             os.close(read_descriptor)
             setattr(process, "_anvil_diagnostic_read_fd", None)
             break
+        drained += len(chunk)
         remaining = max(0, MAX_DAEMON_DIAGNOSTIC_BYTES - written)
         if remaining and output_descriptor is not None:
             retained = chunk[:remaining]
@@ -1163,15 +1248,25 @@ def close_daemon_diagnostic(process: subprocess.Popen[bytes] | None) -> None:
     """Finish and close a daemon's supervisor-owned diagnostic descriptors."""
     if process is None:
         return
-    drain_daemon_diagnostic(process)
+    pending_error: BaseException | None = None
+    try:
+        drain_daemon_diagnostic(process)
+    except BaseException as error:
+        pending_error = error
     for attribute in (
         "_anvil_diagnostic_read_fd",
         "_anvil_diagnostic_output_fd",
     ):
         descriptor = getattr(process, attribute, None)
+        setattr(process, attribute, None)
         if descriptor is not None:
-            os.close(descriptor)
-            setattr(process, attribute, None)
+            try:
+                os.close(descriptor)
+            except OSError as error:
+                if pending_error is None:
+                    pending_error = error
+    if pending_error is not None:
+        raise pending_error
 
 
 def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
@@ -1183,10 +1278,13 @@ def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
         "group",
         args.daemon,
     ]
-    diagnostic_descriptor = open_daemon_diagnostic(args.runtime_dir)
-    read_descriptor, write_descriptor = os.pipe()
-    os.set_blocking(read_descriptor, False)
+    diagnostic_descriptor: int | None = None
+    read_descriptor: int | None = None
+    write_descriptor: int | None = None
     try:
+        diagnostic_descriptor = open_daemon_diagnostic(args.runtime_dir)
+        read_descriptor, write_descriptor = os.pipe()
+        os.set_blocking(read_descriptor, False)
         process = subprocess.Popen(
             command,
             stdin=subprocess.DEVNULL,
@@ -1197,11 +1295,18 @@ def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
             close_fds=True,
         )
     except BaseException:
-        os.close(read_descriptor)
-        os.close(diagnostic_descriptor)
+        for descriptor in (
+            read_descriptor,
+            write_descriptor,
+            diagnostic_descriptor,
+        ):
+            if descriptor is not None:
+                try:
+                    os.close(descriptor)
+                except OSError:
+                    pass
         raise
-    finally:
-        os.close(write_descriptor)
+    os.close(write_descriptor)
     setattr(process, "_anvil_diagnostic_read_fd", read_descriptor)
     setattr(process, "_anvil_diagnostic_output_fd", diagnostic_descriptor)
     setattr(process, "_anvil_diagnostic_written", 0)
@@ -1211,23 +1316,25 @@ def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
 def stop_daemon(process: subprocess.Popen[bytes] | None) -> None:
     if process is None:
         return
-    if process.poll() is None:
-        try:
-            os.killpg(process.pid, signal.SIGTERM)
-        except ProcessLookupError:
-            pass
-        try:
-            process.wait(timeout=DAEMON_STOP_SECONDS)
-        except subprocess.TimeoutExpired:
+    try:
+        if process.poll() is None:
             try:
-                os.killpg(process.pid, signal.SIGKILL)
+                os.killpg(process.pid, signal.SIGTERM)
             except ProcessLookupError:
                 pass
             try:
                 process.wait(timeout=DAEMON_STOP_SECONDS)
             except subprocess.TimeoutExpired:
-                pass
-    close_daemon_diagnostic(process)
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                # SIGKILL cannot be ignored, but an uninterruptible kernel wait
+                # can still prevent reaping indefinitely.  Bound this wait and
+                # let the caller preserve lifecycle state on failure.
+                process.wait(timeout=DAEMON_STOP_SECONDS)
+    finally:
+        close_daemon_diagnostic(process)
 
 
 def restart_backoff_seconds(failures: int) -> float:
@@ -1607,17 +1714,50 @@ def supervisor_loop(
             transient_failures = 0
             time.sleep(POLL_SECONDS)
     finally:
-        stop_daemon(daemon)
-        if owner_dead:
-            cleanup_instance(args)
-        # Preserve a trusted owner identity after an externally requested or
-        # fatal supervisor exit.  A replacement supervisor overwrites this
-        # record; if no replacement starts, a later agent can still prove the
-        # owner generation died and safely reap both instance trees.
-        os.close(lock_descriptor)
+        try:
+            stop_daemon(daemon)
+            if owner_dead:
+                cleanup_instance(args)
+            # Preserve a trusted owner identity after an externally requested
+            # or fatal supervisor exit.  A replacement supervisor overwrites
+            # this record; if no replacement starts, a later agent can still
+            # prove the owner generation died and safely reap both trees.
+        finally:
+            os.close(lock_descriptor)
 
 
-def spawn_supervisor_if_absent(args: argparse.Namespace) -> bool:
+def waitpid_bounded(pid: int, timeout_seconds: float) -> bool:
+    """Reap PID without allowing an uninterruptible child to hang the bridge."""
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        try:
+            waited, _status = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            return True
+        except InterruptedError:
+            continue
+        if waited == pid:
+            return True
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+        time.sleep(min(0.01, remaining))
+
+
+def remember_supervisor_child(args: argparse.Namespace, child_pid: int) -> None:
+    """Retain ownership of a supervisor child until a later bounded reap."""
+    children = getattr(args, "_supervisor_child_pids", None)
+    if children is None:
+        children = set()
+        args._supervisor_child_pids = children
+    children.add(child_pid)
+
+
+def spawn_supervisor_if_absent(
+    args: argparse.Namespace,
+    *,
+    handshake_seconds: float = SUPERVISOR_HANDSHAKE_SECONDS,
+) -> bool:
     locked = try_supervisor_lock(args.runtime_dir)
     if locked is None:
         return False
@@ -1697,7 +1837,7 @@ def spawn_supervisor_if_absent(args: argparse.Namespace) -> bool:
         [ready_read],
         [],
         [],
-        SUPERVISOR_HANDSHAKE_SECONDS,
+        handshake_seconds,
     )
     ready = os.read(ready_read, 1) if readable else b""
     os.close(ready_read)
@@ -1706,20 +1846,21 @@ def spawn_supervisor_if_absent(args: argparse.Namespace) -> bool:
             os.kill(child_pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
-        try:
-            os.waitpid(child_pid, 0)
-        except ChildProcessError:
-            pass
+        if not waitpid_bounded(child_pid, DAEMON_STOP_SECONDS):
+            remember_supervisor_child(args, child_pid)
+            raise TimeoutError(
+                "agent supervisor did not become ready and could not be reaped"
+            )
         raise TimeoutError("agent supervisor did not become ready")
-    children = getattr(args, "_supervisor_child_pids", None)
-    if children is None:
-        children = set()
-        args._supervisor_child_pids = children
-    children.add(child_pid)
+    remember_supervisor_child(args, child_pid)
     return True
 
 
-def safe_socket_ready(socket_path: Path, emacsclient: str) -> bool:
+def safe_socket_ready(
+    socket_path: Path,
+    emacsclient: str,
+    timeout_seconds: float = 2.0,
+) -> bool:
     try:
         info = socket_path.lstat()
     except FileNotFoundError:
@@ -1739,7 +1880,7 @@ def safe_socket_ready(socket_path: Path, emacsclient: str) -> bool:
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             env=transport_environment(),
-            timeout=2.0,
+            timeout=timeout_seconds,
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
@@ -1750,7 +1891,11 @@ def safe_socket_ready(socket_path: Path, emacsclient: str) -> bool:
 def wait_for_daemon(args: argparse.Namespace) -> None:
     deadline = time.monotonic() + args.ready_seconds
     socket_path = args.runtime_dir / "emacs" / "server"
-    while time.monotonic() < deadline:
+    failures = 0
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
         owner_state = validate_process_identity(
             args.owner_pid,
             args.owner_start_identity,
@@ -1758,12 +1903,34 @@ def wait_for_daemon(args: argparse.Namespace) -> None:
         if owner_state is LifecycleState.DEAD:
             raise ConfigurationError("MCP bridge process generation changed")
         if owner_state is LifecycleState.UNAVAILABLE:
-            time.sleep(POLL_SECONDS)
+            time.sleep(min(POLL_SECONDS, remaining))
             continue
-        spawn_supervisor_if_absent(args)
-        if safe_socket_ready(socket_path, args.emacsclient):
+        delay = POLL_SECONDS
+        try:
+            spawn_supervisor_if_absent(
+                args,
+                handshake_seconds=min(SUPERVISOR_HANDSHAKE_SECONDS, remaining),
+            )
+        except TimeoutError:
+            failures += 1
+            delay = restart_backoff_seconds(failures)
+        except OSError as error:
+            if not transient_supervisor_error(error):
+                raise
+            failures += 1
+            delay = restart_backoff_seconds(failures)
+        else:
+            failures = 0
+        remaining = deadline - time.monotonic()
+        if remaining > 0 and safe_socket_ready(
+            socket_path,
+            args.emacsclient,
+            min(2.0, remaining),
+        ):
             return
-        time.sleep(POLL_SECONDS)
+        remaining = deadline - time.monotonic()
+        if remaining > 0:
+            time.sleep(min(delay, remaining))
     raise TimeoutError(f"dedicated Emacs did not become ready at {socket_path}")
 
 
@@ -1816,7 +1983,7 @@ def stop_stdio_bridge(process: subprocess.Popen[bytes]) -> None:
     try:
         process.terminate()
     except ProcessLookupError:
-        return
+        pass
     try:
         process.wait(timeout=DAEMON_STOP_SECONDS)
         return
@@ -1824,11 +1991,11 @@ def stop_stdio_bridge(process: subprocess.Popen[bytes]) -> None:
         try:
             process.kill()
         except ProcessLookupError:
-            return
+            pass
     try:
         process.wait(timeout=DAEMON_STOP_SECONDS)
-    except subprocess.TimeoutExpired:
-        pass
+    except subprocess.TimeoutExpired as error:
+        raise TimeoutError("stdio bridge did not exit after SIGKILL") from error
 
 
 def caretake_stdio_bridge(args: argparse.Namespace) -> int:

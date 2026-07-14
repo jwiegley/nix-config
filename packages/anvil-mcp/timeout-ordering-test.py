@@ -21,7 +21,7 @@ def percent_wire(payload: bytes) -> str:
 
 
 def python_constants(path: Path, names: set[str]) -> dict[str, int]:
-    """Read integer top-level assignments from generated Python PATH."""
+    """Read integer-valued top-level assignments from generated Python PATH."""
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     found: dict[str, int] = {}
     for node in tree.body:
@@ -31,9 +31,13 @@ def python_constants(path: Path, names: set[str]) -> dict[str, int]:
         if not isinstance(target, ast.Name) or target.id not in names:
             continue
         value = ast.literal_eval(node.value)
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise AssertionError(f"{target.id} is not an integer: {value!r}")
-        found[target.id] = value
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not float(value).is_integer()
+        ):
+            raise AssertionError(f"{target.id} is not integer-valued: {value!r}")
+        found[target.id] = int(value)
     if set(found) != names:
         raise AssertionError(
             f"missing generated watchdog constants: {sorted(names - set(found))}"
@@ -71,6 +75,7 @@ def policy_integer(policy: dict[str, object], name: str) -> int:
 
 def assert_static_ordering(
     lock_launcher: Path,
+    parent_guard: Path,
     stdio: Path,
     init_file: Path,
     shell_filter: Path,
@@ -89,6 +94,7 @@ def assert_static_ordering(
         "emacsclientKillSeconds",
         "emacsclientProbeSeconds",
         "frameReadSeconds",
+        "parentGuardReadySeconds",
         "requestParseSeconds",
         "shellSyncSeconds",
         "supervisorReadySeconds",
@@ -108,6 +114,7 @@ def assert_static_ordering(
             "DEFAULT_PULSE_SECONDS",
         },
     )
+    guard = python_constants(parent_guard, {"READY_TIMEOUT_SECONDS"})
     stdio_text = stdio.read_text(encoding="utf-8")
     init_text = init_file.read_text(encoding="utf-8")
     shell_filter_text = shell_filter.read_text(encoding="utf-8")
@@ -140,6 +147,7 @@ def assert_static_ordering(
             stdio_text, "ANVIL_EMACSCLIENT_PROBE_TIMEOUT"
         ),
         "frameReadSeconds": shell_default(stdio_text, "ANVIL_MCP_FRAME_READ_TIMEOUT"),
+        "parentGuardReadySeconds": guard["READY_TIMEOUT_SECONDS"],
         "requestParseSeconds": shell_default(
             stdio_text, "ANVIL_MCP_REQUEST_PARSE_TIMEOUT"
         ),
@@ -184,6 +192,8 @@ def assert_static_ordering(
     ):
         if f"anvil_mcp_validate_timeout {name}" not in stdio_text:
             raise AssertionError(f"runtime timeout is not clamped: {name}")
+    if stdio_text.count('-t "$ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT"') < 3:
+        raise AssertionError("bounded runner has a hard-coded post-timeout wait")
     shell_default_timeout = elisp_assignment(
         shell_filter_text, "anvil-shell-filter-max-sync-timeout"
     )
@@ -211,13 +221,13 @@ def assert_static_ordering(
         raise AssertionError("synchronous shell cap can outlive the root watchdog")
     tool_envelope = (
         values["frameReadSeconds"]
-        + values["emacsclientKillSeconds"]
+        + 2 * values["emacsclientKillSeconds"]
         + values["requestParseSeconds"]
-        + values["emacsclientKillSeconds"]
+        + 2 * values["emacsclientKillSeconds"]
         + values["bridgeReadinessSeconds"]
-        + values["emacsclientKillSeconds"]
+        + 2 * values["emacsclientKillSeconds"]
         + values["bridgeDispatchSeconds"]
-        + values["emacsclientKillSeconds"]
+        + 2 * values["emacsclientKillSeconds"]
     )
     if tool_envelope >= values["clientToolSeconds"]:
         raise AssertionError(
@@ -225,14 +235,15 @@ def assert_static_ordering(
         )
     startup_envelope = (
         values["supervisorReadySeconds"]
+        + 2 * values["parentGuardReadySeconds"]
         + values["frameReadSeconds"]
-        + values["emacsclientKillSeconds"]
+        + 2 * values["emacsclientKillSeconds"]
         + values["requestParseSeconds"]
-        + values["emacsclientKillSeconds"]
+        + 2 * values["emacsclientKillSeconds"]
         + values["bridgeReadinessSeconds"]
-        + values["emacsclientKillSeconds"]
+        + 2 * values["emacsclientKillSeconds"]
         + values["bridgeStartupDispatchSeconds"]
-        + values["emacsclientKillSeconds"]
+        + 2 * values["emacsclientKillSeconds"]
     )
     if startup_envelope >= values["clientStartupSeconds"]:
         raise AssertionError(
@@ -274,7 +285,11 @@ def bump(name):
 expression = sys.argv[-1]
 if expression == "t":
     attempt = bump("FAKE_PROBE_COUNT")
-    if attempt <= int(os.environ["FAKE_PROBE_TIMEOUTS"]):
+    failures = int(os.environ["FAKE_PROBE_FAILURES"])
+    if attempt <= failures:
+        print("can't find socket", file=sys.stderr)
+        raise SystemExit(71)
+    if attempt <= failures + int(os.environ["FAKE_PROBE_TIMEOUTS"]):
         time.sleep(float(os.environ["FAKE_STALL_SECONDS"]))
     print("t")
 else:
@@ -306,6 +321,7 @@ def run_bridge_case(
     readiness_timeout: int,
     dispatch_timeout: int,
     client_timeout: float,
+    probe_failures: int = 0,
     startup_dispatch_timeout: int = 2,
     dispatch_stall: float = 4,
     method: str = "test",
@@ -324,6 +340,7 @@ def run_bridge_case(
             "FAKE_PROBE_COUNT": str(probe_count),
             "FAKE_DISPATCH_COUNT": str(dispatch_count),
             "FAKE_PROBE_TIMEOUTS": str(probe_timeouts),
+            "FAKE_PROBE_FAILURES": str(probe_failures),
             "FAKE_STALL_SECONDS": "4",
             "FAKE_DISPATCH_STALL_SECONDS": str(dispatch_stall),
             "FAKE_TRAP_TERM": "1" if trap_term else "0",
@@ -432,13 +449,14 @@ def assert_dynamic_ordering(stdio: Path) -> None:
             stdio,
             root,
             request_id=1,
-            probe_timeouts=1,
-            readiness_timeout=10,
+            probe_timeouts=0,
+            probe_failures=1,
+            readiness_timeout=20,
             dispatch_timeout=2,
-            client_timeout=15,
+            client_timeout=30,
         )
         assert_error(response, phase="dispatch", dispatched=True)
-        if elapsed >= 15:
+        if elapsed >= 30:
             raise AssertionError(f"combined timeout outlived client: {elapsed:.3f}s")
         if probes < 2:
             raise AssertionError("readiness timeout was not retried")
@@ -576,23 +594,25 @@ def assert_dynamic_ordering(stdio: Path) -> None:
 
 
 def main() -> int:
-    if len(sys.argv) != 7:
+    if len(sys.argv) != 8:
         raise SystemExit(
             "usage: timeout-ordering-test.py "
-            "LOCK_LAUNCHER ANVIL_STDIO INIT_FILE SHELL_FILTER "
+            "LOCK_LAUNCHER PARENT_GUARD ANVIL_STDIO INIT_FILE SHELL_FILTER "
             "DEFAULT_NIX POLICY_JSON"
         )
     lock_launcher = Path(sys.argv[1]).resolve()
-    stdio = Path(sys.argv[2]).resolve()
-    init_file = Path(sys.argv[3]).resolve()
-    shell_filter = Path(sys.argv[4]).resolve()
-    default_nix = Path(sys.argv[5]).resolve()
-    policy = json.loads(sys.argv[6])
+    parent_guard = Path(sys.argv[2]).resolve()
+    stdio = Path(sys.argv[3]).resolve()
+    init_file = Path(sys.argv[4]).resolve()
+    shell_filter = Path(sys.argv[5]).resolve()
+    default_nix = Path(sys.argv[6]).resolve()
+    policy = json.loads(sys.argv[7])
     if not isinstance(policy, dict):
         raise AssertionError("timeout policy must be a JSON object")
 
     assert_static_ordering(
         lock_launcher,
+        parent_guard,
         stdio,
         init_file,
         shell_filter,

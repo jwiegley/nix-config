@@ -201,6 +201,11 @@ let
             # must ship alongside the *.el files.
             installPhase = attrs.installPhase + ''
               install anvil-stdio.sh $out/share/emacs/site-lisp
+              mkdir -p $out/share/emacs/site-lisp/tests
+              install -m644 \
+                tests/anvil-eval-async-isolation-test.el \
+                tests/anvil-server-unified-registry-test.el \
+                $out/share/emacs/site-lisp/tests
             '';
           });
 

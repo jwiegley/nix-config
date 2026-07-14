@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Callable
 import errno
 import json
 import os
@@ -17,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from typing import BinaryIO
 
 
 REPLY_TIMEOUT_SECONDS = 3.0
@@ -107,10 +109,12 @@ case "$expression" in
     '(test-init)')
         bump "$FAKE_INIT_COUNT"
         printf 't\n'
+        exit 71
         ;;
     '(test-stop)')
         bump "$FAKE_STOP_COUNT"
         printf 't\n'
+        exit 72
         ;;
     *)
         bump "$FAKE_DISPATCH_COUNT"
@@ -622,7 +626,9 @@ def wait_for_bridge_ready(
     """Wait until startup logging proves the bridge entered its read loop."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if debug_log.is_file() and "MCP-READY: stdio request loop" in safe_text(debug_log):
+        if debug_log.is_file() and "MCP-READY: stdio request loop" in safe_text(
+            debug_log
+        ):
             return
         if process.poll() is not None:
             raise AssertionError(
@@ -639,7 +645,7 @@ def wait_for_dispatch_complete(
     process: subprocess.Popen[bytes],
     ack_fifo: Path,
     expected: int,
-    before_release: object | None = None,
+    before_release: Callable[[], object] | None = None,
     timeout: float = 15.0,
 ) -> None:
     """Wait for dispatch, inject races, then release the fake client."""
@@ -656,7 +662,7 @@ def wait_for_dispatch_complete(
                     f"expected dispatch {expected}, observed {observed}"
                 )
             if before_release is not None:
-                before_release()  # type: ignore[operator]
+                before_release()
             while time.monotonic() < deadline:
                 try:
                     descriptor = os.open(
@@ -694,14 +700,14 @@ def assert_no_capture_paths(temp_dir: Path) -> None:
         )
 
 
-def wait_until(predicate: object, timeout: float) -> bool:
+def wait_until(predicate: Callable[[], object], timeout: float) -> bool:
     """Poll zero-argument PREDICATE until true or TIMEOUT expires."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if predicate():  # type: ignore[operator]
+        if predicate():
             return True
         time.sleep(0.02)
-    return bool(predicate())  # type: ignore[operator]
+    return bool(predicate())
 
 
 def assert_no_helper(helper_marker: Path) -> None:
@@ -1378,7 +1384,9 @@ def run_cumulative_frame_budget(
             if time.monotonic() > deadline:
                 raise AssertionError("frame stages reset the cumulative deadline")
             if read_count(paths["dispatch_count"]) != 0:
-                raise AssertionError("incomplete cumulative frame reached stateful Emacs")
+                raise AssertionError(
+                    "incomplete cumulative frame reached stateful Emacs"
+                )
             if not wait_until(lambda: not process_group_alive(process.pid), 2):
                 raise AssertionError("cumulative-frame bridge group survived exit")
         finally:
@@ -1631,6 +1639,7 @@ def run_positive(
             paths["dispatch_count"],
         )
         clean = False
+        lifecycle_log: BinaryIO | None = None
         try:
             wait_for_bridge_ready(paths["debug_log"], process)
             assert_no_capture_paths(paths["temp"])
@@ -1639,6 +1648,7 @@ def run_positive(
                 5,
             ):
                 raise AssertionError("init did not complete during startup")
+            lifecycle_log = paths["debug_log"].open("rb")
             original_pid = process.pid
             if process.stdin is None or process.stdout is None:
                 raise AssertionError("bridge pipes are unavailable")
@@ -1737,6 +1747,22 @@ def run_positive(
                     f"unexpected final readiness count: "
                     f"{read_count(paths['probe_count'])}"
                 )
+            lifecycle_log.seek(0)
+            lifecycle_text = lifecycle_log.read().decode(
+                "utf-8",
+                errors="replace",
+            )
+            for expected in (
+                "MCP-INIT-READY-RC: 0",
+                "MCP-INIT-RC: 71",
+                "MCP-STOP-READY-RC: 0",
+                "MCP-STOP-RC: 72",
+            ):
+                if lifecycle_text.count(expected) != 1:
+                    raise AssertionError(
+                        f"missing or duplicate lifecycle log {expected!r}: "
+                        f"{lifecycle_text[-4000:]}"
+                    )
             assert_no_helper(paths["helper_marker"])
             if not wait_until(
                 lambda: not process_group_alive(process.pid),
@@ -1745,6 +1771,8 @@ def run_positive(
                 raise AssertionError("detached cleanup process survived bridge exit")
             clean = True
         finally:
+            if lifecycle_log is not None:
+                lifecycle_log.close()
             reader.close()
             if not clean:
                 terminate_bridge(process)

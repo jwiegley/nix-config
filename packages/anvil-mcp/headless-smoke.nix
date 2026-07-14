@@ -8,7 +8,6 @@
   lib,
   python3,
   runCommand,
-  unixtools,
   writeShellApplication,
 }:
 
@@ -81,6 +80,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       "$HOME/direnv-unset" "$HOME/direnv-unset/bin" \
       "$HOME/direnv-spoof" "$HOME/direnv-spoof/bin" \
       "$HOME/direnv-blocked" \
+      "$HOME/direnv-failing" "$HOME/direnv-failing/bin" \
       "$HOME/direnv-plain"
     printf '%s\n' \
       'export ANVIL_DIRENV_MARKER=project-a' \
@@ -92,6 +92,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       >"$HOME/direnv-b/.envrc"
     printf '%s\n' \
       'export ANVIL_DIRENV_MARKER=project-c' \
+      'export ANVIL_DIRENV_BRACE=prefix{suffix' \
       'export PATH="$PWD/bin"' \
       >"$HOME/direnv-c/.envrc"
     printf '%s\n' \
@@ -106,6 +107,11 @@ runCommand "anvil-mcp-dedicated-smoke"
       >"$HOME/direnv-spoof/.envrc"
     printf '%s\n' 'export ANVIL_DIRENV_MARKER=blocked' \
       >"$HOME/direnv-blocked/.envrc"
+    printf '%s\n' \
+      'export ANVIL_DIRENV_MARKER=must-not-leak' \
+      'PATH_add "$PWD/bin"' \
+      'exit 7' \
+      >"$HOME/direnv-failing/.envrc"
     printf '%s\n' '#!/bin/sh' 'printf project-a-command' \
       >"$HOME/direnv-a/bin/anvil-direnv-a"
     printf '%s\n' '#!/bin/sh' 'printf project-b-command' \
@@ -116,18 +122,22 @@ runCommand "anvil-mcp-dedicated-smoke"
       >"$HOME/direnv-unset/bin/anvil-direnv-unset"
     printf '%s\n' '#!/bin/sh' 'printf project-spoof-command' \
       >"$HOME/direnv-spoof/bin/anvil-direnv-spoof"
+    printf '%s\n' '#!/bin/sh' 'printf failing-command-ran' \
+      >"$HOME/direnv-failing/bin/anvil-direnv-failing"
     chmod 0700 \
       "$HOME/direnv-a/bin/anvil-direnv-a" \
       "$HOME/direnv-b/bin/anvil-direnv-b" \
       "$HOME/direnv-c/bin/anvil-direnv-c" \
       "$HOME/direnv-unset/bin/anvil-direnv-unset" \
-      "$HOME/direnv-spoof/bin/anvil-direnv-spoof"
+      "$HOME/direnv-spoof/bin/anvil-direnv-spoof" \
+      "$HOME/direnv-failing/bin/anvil-direnv-failing"
     touch \
       "$HOME/direnv-a/visited.txt" \
       "$HOME/direnv-b/visited.txt" \
       "$HOME/direnv-c/visited.txt" \
       "$HOME/direnv-unset/visited.txt" \
-      "$HOME/direnv-spoof/visited.txt"
+      "$HOME/direnv-spoof/visited.txt" \
+      "$HOME/direnv-failing/visited.txt"
     (
       cd "$HOME/direnv-a"
       ${anvilMcp.direnv}/bin/direnv allow >/dev/null
@@ -148,6 +158,10 @@ runCommand "anvil-mcp-dedicated-smoke"
       cd "$HOME/direnv-spoof"
       ${anvilMcp.direnv}/bin/direnv allow >/dev/null
     )
+    (
+      cd "$HOME/direnv-failing"
+      ${anvilMcp.direnv}/bin/direnv allow >/dev/null
+    )
 
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./watchdog-test.py} \
@@ -155,6 +169,7 @@ runCommand "anvil-mcp-dedicated-smoke"
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./timeout-ordering-test.py} \
       ${anvilMcp.dedicatedLockLauncher} \
+      ${anvilMcp.dedicatedParentGuardLauncher} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh \
       ${anvilMcp.dedicatedInit} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-shell-filter.el \
@@ -217,6 +232,26 @@ runCommand "anvil-mcp-dedicated-smoke"
       --load ${./worker-pool-test.el} \
       --funcall ert-run-tests-batch-and-exit
     rm -rf "$worker_pool_test_tmp"
+
+    upstream_regression_tmp="$smoke_root/upstream-regression-tests"
+    install -d -m 0700 "$upstream_regression_tmp"
+    TMPDIR="$upstream_regression_tmp" \
+      TMP="$upstream_regression_tmp" \
+      TEMP="$upstream_regression_tmp" \
+      ${coreutils}/bin/timeout 60 \
+      ${anvilMcp.dedicatedEmacs}/bin/emacs --quick --batch \
+      --directory "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp" \
+      --load "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/tests/anvil-eval-async-isolation-test.el" \
+      --eval '(let ((names (list "anvil-eval-async-isolation-pump-kills-terminalized-spawn" "anvil-eval-async-isolation-hard-delete-preserves-live-tracking")) (selector "anvil-eval-async-isolation-\\(pump-kills-terminalized-spawn\\|hard-delete-preserves-live-tracking\\)")) (dolist (name names) (unless (ert-get-test (intern name)) (error "Missing required ERT test: %s" name))) (unless (= (length (ert-select-tests selector t)) 2) (error "Expected exactly two focused async regressions")) (ert-run-tests-batch-and-exit selector))'
+    TMPDIR="$upstream_regression_tmp" \
+      TMP="$upstream_regression_tmp" \
+      TEMP="$upstream_regression_tmp" \
+      ${coreutils}/bin/timeout 60 \
+      ${anvilMcp.dedicatedEmacs}/bin/emacs --quick --batch \
+      --directory "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp" \
+      --load "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/tests/anvil-server-unified-registry-test.el" \
+      --funcall ert-run-tests-batch-and-exit
+    rm -rf "$upstream_regression_tmp"
 
     hang_test_tmp="$smoke_root/hang-regression-test"
     install -d -m 0700 "$hang_test_tmp"
@@ -318,28 +353,6 @@ runCommand "anvil-mcp-dedicated-smoke"
       echo "agent supervisor smoke invoked ALTERNATE_EDITOR" >&2
       exit 1
     fi
-    (
-      soak_home=$(mktemp -d /tmp/ah.XXXXXX)
-      soak_runtime_root=$(mktemp -d /tmp/ar.XXXXXX)
-      soak_state_root=$(mktemp -d /tmp/as.XXXXXX)
-      trap 'rm -rf "$soak_home" "$soak_runtime_root" "$soak_state_root"' EXIT
-      ${coreutils}/bin/env -u XDG_CONFIG_HOME \
-        HOME="$soak_home" \
-        SHELL="${bash}/bin/bash" \
-        ANVIL_EMACS_RUNTIME_ROOT="$soak_runtime_root" \
-        ANVIL_EMACS_STATE_ROOT="$soak_state_root" \
-        ANVIL_PERSISTENT_SOAK_CYCLES=25 \
-        ANVIL_PERSISTENT_SOAK_HEALTHY_SECONDS=${toString anvilMcp.timeoutPolicy.clientToolSeconds} \
-        ${coreutils}/bin/timeout 1200 \
-        ${python3}/bin/python3 -I -B -u \
-        ${anvilMcp.dedicatedPersistentBridgeSoak} \
-        ${anvilMcp}/bin/anvil-mcp \
-        ${anvilMcp.dedicatedAgentSupervisor} \
-        ${anvilMcp.dedicatedAgentSupervisorSmoke} \
-        ${anvilMcp.git}/bin/git \
-        ${anvilMcp.direnv}/bin/direnv \
-        ${unixtools.ps}/bin/ps
-    )
     ${coreutils}/bin/timeout 300 \
       ${python3}/bin/python3 -I -B -u ${./legacy-migration-test.py} \
       ${hostAnvilMcp}/bin/anvil-headless-emacs \

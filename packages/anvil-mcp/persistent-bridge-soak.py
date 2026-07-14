@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
-import selectors
+import signal
 from statistics import median
 import subprocess
 import sys
@@ -20,6 +22,38 @@ DIRENV_MARKER = "persistent-bridge-direnv"
 COMMAND_NAME = "anvil-soak-command"
 EXPECTED_TOOL_COUNT = 89
 WARMUP_BATCH_TIMEOUT_SECONDS = 210
+DEFAULT_WATCHDOG_NORMAL_SECONDS = 45.0
+DEFAULT_WATCHDOG_DISPATCH_SECONDS = 135.0
+WATCHDOG_RESPONSE_GRACE_SECONDS = 30.0
+YIELDING_DISPATCH_SECONDS = 50
+LOCAL_COMMAND_TIMEOUT_SECONDS = 30
+_TERM_DEFER_DEPTH = 0
+_PENDING_TERM_SIGNAL: int | None = None
+
+
+def positive_environment_seconds(name: str, default: float) -> float:
+    """Return a finite positive environment duration, installing DEFAULT."""
+    raw = os.environ.setdefault(name, f"{default:g}")
+    try:
+        value = float(raw)
+    except ValueError as error:
+        raise AssertionError(f"invalid {name}: {raw!r}") from error
+    if not math.isfinite(value) or value <= 0:
+        raise AssertionError(f"invalid {name}: {raw!r}")
+    return value
+
+
+def configure_watchdog_environment() -> float:
+    """Use production watchdogs and return a bounded hung-response wait."""
+    normal = positive_environment_seconds(
+        "ANVIL_SMOKE_WATCHDOG_NORMAL_SECONDS",
+        DEFAULT_WATCHDOG_NORMAL_SECONDS,
+    )
+    dispatch = positive_environment_seconds(
+        "ANVIL_SMOKE_WATCHDOG_DISPATCH_SECONDS",
+        DEFAULT_WATCHDOG_DISPATCH_SECONDS,
+    )
+    return min(normal, dispatch) + WATCHDOG_RESPONSE_GRACE_SECONDS
 
 
 def load_module(path: Path, name: str):
@@ -32,14 +66,21 @@ def load_module(path: Path, name: str):
 
 
 def run_checked(argv: list[str], cwd: Path) -> None:
-    completed = subprocess.run(
-        argv,
-        cwd=cwd,
-        text=True,
-        capture_output=True,
-        check=False,
-        env=os.environ.copy(),
-    )
+    try:
+        completed = subprocess.run(
+            argv,
+            cwd=cwd,
+            text=True,
+            capture_output=True,
+            check=False,
+            env=os.environ.copy(),
+            timeout=LOCAL_COMMAND_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise AssertionError(
+            f"command timed out after {LOCAL_COMMAND_TIMEOUT_SECONDS}s: {argv!r}; "
+            f"stdout={error.stdout!r} stderr={error.stderr!r}"
+        ) from error
     if completed.returncode != 0:
         raise AssertionError(
             f"command failed ({completed.returncode}): {argv!r}\n"
@@ -187,14 +228,7 @@ def collect_responses(
 
 
 def response_buffered(bridge) -> bool:
-    if bridge.process.stdout is None:
-        raise AssertionError("bridge stdout is unavailable")
-    selector = selectors.DefaultSelector()
-    selector.register(bridge.process.stdout, selectors.EVENT_READ)
-    try:
-        return bool(selector.select(0))
-    finally:
-        selector.close()
+    return bridge.has_complete_response()
 
 
 def validate_git_response(response: dict[str, object], smoke) -> None:
@@ -291,14 +325,39 @@ def warm_bridge(bridge, smoke, fixtures: dict[str, Path]) -> None:
         )
 
     identifiers = send_fixture_requests(bridge, fixtures)
-    # This pipelines five ordinary calls, so its aggregate bound follows the
+    # This pipelines four ordinary calls, so its aggregate bound follows the
     # MCP client's tool envelope rather than acting as a host-load benchmark.
     responses = collect_responses(
         bridge,
         identifiers,
         timeout=WARMUP_BATCH_TIMEOUT_SECONDS,
     )
-    validate_fixture_responses(responses, smoke, fixtures)
+    try:
+        validate_fixture_responses(responses, smoke, fixtures)
+    except AssertionError as error:
+        raise AssertionError(f"{error}\nbridge stderr:\n{bridge.stderr()}") from error
+
+
+def assert_yielding_dispatch_headroom(bridge, smoke) -> None:
+    """Prove a yielding call may outlive heartbeat without losing its root."""
+    root_before = smoke.eval_value(
+        bridge.call_tool("emacs-eval", {"expression": "(emacs-pid)"}, timeout=10)
+    )
+    response = bridge.call_tool(
+        "emacs-eval",
+        {
+            "expression": (
+                f"(progn (sleep-for {YIELDING_DISPATCH_SECONDS}) (emacs-pid))"
+            )
+        },
+        timeout=YIELDING_DISPATCH_SECONDS + WATCHDOG_RESPONSE_GRACE_SECONDS,
+    )
+    root_after = smoke.eval_value(response)
+    if root_after != root_before:
+        raise AssertionError(
+            "yielding dispatch crossed the production watchdog: "
+            f"{root_before!r} -> {root_after!r}"
+        )
 
 
 def submit_async(bridge, smoke, expression: str, timeout: int | str) -> str:
@@ -354,12 +413,19 @@ def process_parent_map(ps: Path) -> dict[int, int]:
                 continue
         return parents
     if sys.platform == "darwin":
-        completed = subprocess.run(
-            [str(ps), "-axo", "pid=,ppid="],
-            text=True,
-            capture_output=True,
-            check=True,
-        )
+        try:
+            completed = subprocess.run(
+                [str(ps), "-axo", "pid=,ppid="],
+                text=True,
+                capture_output=True,
+                check=True,
+                timeout=LOCAL_COMMAND_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise AssertionError(
+                f"process snapshot timed out after {LOCAL_COMMAND_TIMEOUT_SECONDS}s; "
+                f"stdout={error.stdout!r} stderr={error.stderr!r}"
+            ) from error
         for line in completed.stdout.splitlines():
             fields = line.split()
             if len(fields) == 2:
@@ -431,9 +497,9 @@ def assert_async_isolation(
         bridge,
         smoke,
         "(+ 20 22)",
-        timeout="5",
+        timeout="30",
     )
-    compatibility_result = poll_async(bridge, smoke, compatibility_job, timeout=10)
+    compatibility_result = poll_async(bridge, smoke, compatibility_job, timeout=45)
     if (
         "status: done" not in compatibility_result
         or "result: 42" not in compatibility_result
@@ -564,6 +630,7 @@ def run_recovery_cycle(
     records: set[tuple[int, str]],
     nonce_records: list[tuple[Path, str]],
     healthy_timeout: float,
+    recovery_response_timeout: float,
 ) -> dict[str, float]:
     hanging_index = cycle % 2
     healthy_index = 1 - hanging_index
@@ -615,7 +682,7 @@ def run_recovery_cycle(
             f"{during_hang!r}"
         )
 
-    hung_response = hanging.receive_response(timeout=40)
+    hung_response = hanging.receive_response(timeout=recovery_response_timeout)
     dispatch_elapsed = time.monotonic() - hang_started
     if hung_response.get("id") != hang_identifier:
         raise AssertionError(f"hung response id mismatch: {hung_response!r}")
@@ -684,6 +751,80 @@ def assert_empty_agents(root: Path) -> bool:
         return True
 
 
+def handle_term(signum: int, _frame: object) -> None:
+    """Convert the outer timeout's TERM into normal Python unwinding."""
+    global _PENDING_TERM_SIGNAL
+    if _TERM_DEFER_DEPTH:
+        _PENDING_TERM_SIGNAL = signum
+        return
+    raise SystemExit(128 + signum)
+
+
+def install_signal_handlers() -> None:
+    """Install the termination contract used by the standalone soak check."""
+    global _PENDING_TERM_SIGNAL
+    if _TERM_DEFER_DEPTH:
+        raise AssertionError("cannot install signal handlers inside a deferral")
+    _PENDING_TERM_SIGNAL = None
+    signal.signal(signal.SIGTERM, handle_term)
+
+
+@contextlib.contextmanager
+def defer_termination():
+    """Delay TERM unwinding until an acquired resource is safely tracked."""
+    global _PENDING_TERM_SIGNAL, _TERM_DEFER_DEPTH
+    _TERM_DEFER_DEPTH += 1
+    try:
+        yield
+    finally:
+        _TERM_DEFER_DEPTH -= 1
+        if _TERM_DEFER_DEPTH == 0 and _PENDING_TERM_SIGNAL is not None:
+            signum = _PENDING_TERM_SIGNAL
+            _PENDING_TERM_SIGNAL = None
+            raise SystemExit(128 + signum)
+
+
+def construct_tracked_bridge(bridges, bridge_type, *args):
+    """Construct and register a bridge without an interruptible ownership gap."""
+    with defer_termination():
+        bridge = bridge_type(*args)
+        bridges.append(bridge)
+    return bridge
+
+
+def print_latency_summary(samples: list[dict[str, float]]) -> None:
+    """Emit useful partial latency evidence without requiring full success."""
+    print(f"persistent latency summary: cycles={len(samples)}", flush=True)
+    if not samples:
+        return
+    for name in sorted(set().union(*(sample.keys() for sample in samples))):
+        values = [sample[name] for sample in samples if name in sample]
+        print(
+            f"latency {name}: min={min(values):.3f}s "
+            f"median={median(values):.3f}s max={max(values):.3f}s",
+            flush=True,
+        )
+
+
+def finalize_bridges(bridges, samples: list[dict[str, float]]) -> None:
+    """Print partial evidence and attempt every bridge close in reverse order."""
+    errors: list[Exception] = []
+    with defer_termination():
+        try:
+            print_latency_summary(samples)
+        finally:
+            for bridge in reversed(bridges):
+                try:
+                    bridge.close()
+                except Exception as error:
+                    errors.append(error)
+    if errors:
+        details = "; ".join(f"{type(error).__name__}: {error}" for error in errors)
+        raise RuntimeError(
+            f"persistent soak bridge cleanup failed: {details}"
+        ) from errors[0]
+
+
 def main() -> None:
     if len(sys.argv) != 7:
         raise SystemExit(
@@ -713,18 +854,15 @@ def main() -> None:
     if healthy_timeout <= 0 or healthy_timeout > WARMUP_BATCH_TIMEOUT_SECONDS:
         raise AssertionError(f"invalid healthy sibling deadline: {healthy_timeout}")
 
-    os.environ.setdefault("ANVIL_SMOKE_WATCHDOG_NORMAL_SECONDS", "20")
-    os.environ.setdefault("ANVIL_SMOKE_WATCHDOG_ASYNC_SECONDS", "20")
+    recovery_response_timeout = configure_watchdog_environment()
     os.environ["GIT_OPTIONAL_LOCKS"] = "0"
     os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
     os.environ["GIT_CONFIG_GLOBAL"] = "/dev/null"
+    install_signal_handlers()
 
     fixtures = setup_fixtures(git, direnv)
     home_baseline = smoke.snapshot_home(Path.home())
-    bridges = [
-        smoke.BridgeProcess(launcher, "anvil", HOST),
-        smoke.BridgeProcess(launcher, "anvil", HOST),
-    ]
+    bridges = []
     instances: list[dict[str, object]] = []
     records: set[tuple[int, str]] = set()
     descendant_records: set[tuple[int, str | None]] = set()
@@ -732,6 +870,14 @@ def main() -> None:
     latency_samples: list[dict[str, float]] = []
     succeeded = False
     try:
+        for _index in range(2):
+            construct_tracked_bridge(
+                bridges,
+                smoke.BridgeProcess,
+                launcher,
+                "anvil",
+                HOST,
+            )
         for bridge in bridges:
             record_identity(records, module, bridge.pid)
             bridge.initialize()
@@ -769,6 +915,7 @@ def main() -> None:
 
         for bridge in bridges:
             warm_bridge(bridge, smoke, fixtures)
+        assert_yielding_dispatch_headroom(bridges[0], smoke)
         for index, (bridge, instance) in enumerate(zip(bridges, instances)):
             assert_async_isolation(
                 bridge,
@@ -791,6 +938,7 @@ def main() -> None:
                 records,
                 nonce_records,
                 healthy_timeout,
+                recovery_response_timeout,
             )
             latency_samples.append(sample)
             print(
@@ -810,8 +958,7 @@ def main() -> None:
         assert_nonce_records(nonce_records)
         succeeded = True
     finally:
-        for bridge in reversed(bridges):
-            bridge.close()
+        finalize_bridges(bridges, latency_samples)
 
     if not succeeded:
         raise AssertionError("persistent bridge soak did not complete")

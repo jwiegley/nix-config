@@ -7,7 +7,7 @@ phase, and never resynchronize after a partial request.
 
 --- a/anvil-stdio.sh
 +++ b/anvil-stdio.sh
-@@ -311,7 +315,7 @@
+@@ -312,7 +312,7 @@
  anvil_mcp_validate_timeout ANVIL_MCP_REQUEST_PARSE_TIMEOUT \
  	"$ANVIL_MCP_REQUEST_PARSE_TIMEOUT" 2
  anvil_mcp_validate_timeout ANVIL_MCP_FRAME_READ_TIMEOUT \
@@ -16,7 +16,7 @@ phase, and never resynchronize after a partial request.
  
  ANVIL_MCP_PYTHON=$(type -P python3 || :)
  ANVIL_MCP_EMACSCLIENT=$(type -P emacsclient || :)
-@@ -573,7 +577,8 @@
+@@ -576,7 +576,8 @@
  # EOF or malformed framing, 2 if no Content-Length header found.
  anvil_mcp_read_framed_message() {
  	local first_line="$1"
@@ -26,7 +26,7 @@ phase, and never resynchronize after a partial request.
  	ANVIL_MCP_FRAME_BODY=""
  
  	# Process the already-consumed first line.
-@@ -583,8 +588,15 @@
+@@ -586,8 +587,15 @@
  		content_length="${BASH_REMATCH[1]}"
  	fi
  
@@ -44,7 +44,7 @@ phase, and never resynchronize after a partial request.
  		header_line="${header_line%$'\r'}"
  		if [ -z "$header_line" ]; then
  			break
-@@ -602,11 +614,13 @@
+@@ -605,11 +613,13 @@
  		return 3
  	fi
  
@@ -62,7 +62,7 @@ phase, and never resynchronize after a partial request.
  		"$ANVIL_MCP_HEAD" -c "$content_length"
  	exec 5<&-
  	if [ "$ANVIL_MCP_RUN_STATUS" -ne 0 ]; then
-@@ -795,8 +809,28 @@
+@@ -798,8 +808,28 @@
  	anvil_mcp_emit_response "$framed" "$response"
  }
  
@@ -93,7 +93,7 @@ phase, and never resynchronize after a partial request.
  	# T71: detect framing.  An MCP framed request begins with
  	# `Content-Length:' (case-insensitive); legacy line-delimited
  	# requests begin with `{'.
-@@ -807,7 +841,8 @@
+@@ -810,7 +840,8 @@
  		_anvil_framed=1
  		mcp_debug_log "FRAMING" "Content-Length detected"
  		# Re-read full framed message; reuse the already-consumed line.
