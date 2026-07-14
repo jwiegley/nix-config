@@ -267,6 +267,7 @@
         ++ agent "gemini-cli"
         ++ agent "mcporter"
         ++ agent "opencode"
+        ++ agent "pi"
         ++ opt "agent-deck"
         ++ opt "agnix"
         ++ opt "claude-replay"
