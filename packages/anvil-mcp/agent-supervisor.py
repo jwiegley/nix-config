@@ -1489,9 +1489,14 @@ def remove_directory_contents(
                 if (
                     not stat.S_ISDIR(opened.st_mode)
                     or opened.st_uid != os.getuid()
+                    or identity != (info.st_dev, info.st_ino)
                     or identity != (current.st_dev, current.st_ino)
                 ):
                     raise ConfigurationError("private state directory changed")
+                if stat.S_IMODE(opened.st_mode) != 0o700:
+                    # Read-only caches are common beneath private tmp trees.
+                    # Widen only the validated, owner-owned open directory.
+                    os.fchmod(child_fd, 0o700)
                 remove_directory_contents(child_fd, device)
             finally:
                 os.close(child_fd)

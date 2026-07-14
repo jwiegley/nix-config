@@ -3507,6 +3507,46 @@ for line in sys.stdin:
             "live\n",
         )
 
+    def test_remove_instance_tree_rejects_preopen_child_replacement(self):
+        current = self.prepare()
+        child = current.state_dir / "cache"
+        child.mkdir()
+        (child / "original").write_text("preserve original\n")
+        displaced = current.state_dir / "displaced-cache"
+        replacement = self.root / "replacement-cache"
+        replacement.mkdir()
+        (replacement / "sentinel").write_text("preserve replacement\n")
+        original_open = SUPERVISOR.os.open
+        swapped = False
+
+        def swap_child_before_open(path, flags, mode=0o777, *, dir_fd=None):
+            nonlocal swapped
+            if path == child.name and not swapped:
+                swapped = True
+                child.rename(displaced)
+                replacement.rename(child)
+                child.chmod(0o555)
+            return original_open(path, flags, mode, dir_fd=dir_fd)
+
+        with mock.patch.object(
+            SUPERVISOR.os,
+            "open",
+            side_effect=swap_child_before_open,
+        ):
+            with self.assertRaisesRegex(
+                SUPERVISOR.ConfigurationError,
+                "private state directory changed",
+            ):
+                SUPERVISOR.remove_instance_tree(current.state_dir)
+
+        self.assertTrue(swapped)
+        self.assertEqual((displaced / "original").read_text(), "preserve original\n")
+        self.assertEqual(
+            (child / "sentinel").read_text(),
+            "preserve replacement\n",
+        )
+        self.assertEqual(stat.S_IMODE(child.stat().st_mode), 0o555)
+
     def test_clean_supervisor_stop_retains_status_for_owner_death_prune(self):
         owner_pid, owner_identity = self.start_owner()
         stale = self.prepare(
@@ -3579,7 +3619,12 @@ for line in sys.stdin:
         SUPERVISOR.ensure_private_directory(stale_state)
         outside = self.root / "reboot-outside-sentinel"
         outside.write_text("preserve me too")
-        (stale_state / "outside-link").symlink_to(outside)
+        read_only = stale_state / "read-only" / "nested"
+        read_only.mkdir(parents=True)
+        (read_only / "stale-cache").write_text("remove me")
+        (read_only / "outside-link").symlink_to(outside)
+        read_only.chmod(0o555)
+        read_only.parent.chmod(0o555)
 
         SUPERVISOR.prune_orphaned_state(
             current.runtime_dir.parent,
