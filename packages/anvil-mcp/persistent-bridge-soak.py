@@ -27,8 +27,31 @@ DEFAULT_WATCHDOG_DISPATCH_SECONDS = 135.0
 WATCHDOG_RESPONSE_GRACE_SECONDS = 30.0
 YIELDING_DISPATCH_SECONDS = 50
 LOCAL_COMMAND_TIMEOUT_SECONDS = 30
+NONCE_START_TIMEOUT_SECONDS = 10.0
+OLD_ROOT_EXIT_TIMEOUT_SECONDS = 15.0
+CYCLE_SCHEDULING_GRACE_SECONDS = 10.0
+BRIDGE_CLOSE_BOUND_SECONDS = 20.0
+BRIDGE_CLEANUP_SCHEDULING_GRACE_SECONDS = 20.0
+DEFAULT_SETUP_TIMEOUT_SECONDS = 885.0
+DEFAULT_CYCLE_TIMEOUT_SECONDS = 190.0
+DEFAULT_INVENTORY_TIMEOUT_SECONDS = 30.0
+DEFAULT_BRIDGE_CLEANUP_TIMEOUT_SECONDS = 60.0
+DEFAULT_POST_CLEANUP_TIMEOUT_SECONDS = 135.0
+DEFAULT_HEALTHY_TIMEOUT_SECONDS = (
+    min(DEFAULT_WATCHDOG_NORMAL_SECONDS, DEFAULT_WATCHDOG_DISPATCH_SECONDS)
+    - NONCE_START_TIMEOUT_SECONDS
+)
+DEFAULT_RESTART_TIMEOUT_SECONDS = 40.0
+DEFAULT_READINESS_TIMEOUT_SECONDS = 45.0
 _TERM_DEFER_DEPTH = 0
 _PENDING_TERM_SIGNAL: int | None = None
+_PENDING_PHASE_TIMEOUT: SoakPhaseTimeout | None = None
+PhaseTimeoutState = tuple[str, tuple[float, float], float, object, float]
+_PHASE_TIMEOUT_STATE: PhaseTimeoutState | None = None
+
+
+class SoakPhaseTimeout(TimeoutError):
+    """A named soak phase exceeded its whole-phase deadline."""
 
 
 def positive_environment_seconds(name: str, default: float) -> float:
@@ -54,6 +77,145 @@ def configure_watchdog_environment() -> float:
         DEFAULT_WATCHDOG_DISPATCH_SECONDS,
     )
     return min(normal, dispatch) + WATCHDOG_RESPONSE_GRACE_SECONDS
+
+
+def configure_soak_timeout_environment(
+    recovery_response_timeout: float,
+) -> dict[str, float]:
+    """Load soak phase bounds and validate their overlapping-cycle policy."""
+    timeouts = {
+        "setup": positive_environment_seconds(
+            "ANVIL_PERSISTENT_SOAK_SETUP_SECONDS",
+            DEFAULT_SETUP_TIMEOUT_SECONDS,
+        ),
+        "cycle": positive_environment_seconds(
+            "ANVIL_PERSISTENT_SOAK_CYCLE_SECONDS",
+            DEFAULT_CYCLE_TIMEOUT_SECONDS,
+        ),
+        "inventory": positive_environment_seconds(
+            "ANVIL_PERSISTENT_SOAK_INVENTORY_SECONDS",
+            DEFAULT_INVENTORY_TIMEOUT_SECONDS,
+        ),
+        "bridge_cleanup": positive_environment_seconds(
+            "ANVIL_PERSISTENT_SOAK_BRIDGE_CLEANUP_SECONDS",
+            DEFAULT_BRIDGE_CLEANUP_TIMEOUT_SECONDS,
+        ),
+        "post_cleanup": positive_environment_seconds(
+            "ANVIL_PERSISTENT_SOAK_POST_CLEANUP_SECONDS",
+            DEFAULT_POST_CLEANUP_TIMEOUT_SECONDS,
+        ),
+        "healthy": positive_environment_seconds(
+            "ANVIL_PERSISTENT_SOAK_HEALTHY_SECONDS",
+            DEFAULT_HEALTHY_TIMEOUT_SECONDS,
+        ),
+        "restart": positive_environment_seconds(
+            "ANVIL_PERSISTENT_SOAK_RESTART_SECONDS",
+            DEFAULT_RESTART_TIMEOUT_SECONDS,
+        ),
+        "readiness": positive_environment_seconds(
+            "ANVIL_PERSISTENT_SOAK_READINESS_SECONDS",
+            DEFAULT_READINESS_TIMEOUT_SECONDS,
+        ),
+    }
+    normal = float(os.environ["ANVIL_SMOKE_WATCHDOG_NORMAL_SECONDS"])
+    dispatch = float(os.environ["ANVIL_SMOKE_WATCHDOG_DISPATCH_SECONDS"])
+    overlap_window = min(normal, dispatch)
+    sequential_overlap = NONCE_START_TIMEOUT_SECONDS + timeouts["healthy"]
+    if sequential_overlap > overlap_window:
+        raise AssertionError(
+            "nonce-start plus healthy-sibling bounds must fit sequentially "
+            "inside the watchdog overlap window: "
+            f"nonce={NONCE_START_TIMEOUT_SECONDS:g} "
+            f"healthy={timeouts['healthy']:g} watchdog={overlap_window:g}"
+        )
+    minimum_cycle = (
+        recovery_response_timeout
+        + timeouts["restart"]
+        + OLD_ROOT_EXIT_TIMEOUT_SECONDS
+        + timeouts["readiness"]
+        + CYCLE_SCHEDULING_GRACE_SECONDS
+    )
+    if timeouts["cycle"] < minimum_cycle:
+        raise AssertionError(
+            f"cycle bound {timeouts['cycle']:g}s is below its named phases "
+            f"{minimum_cycle:g}s"
+        )
+    minimum_cleanup = (
+        2 * BRIDGE_CLOSE_BOUND_SECONDS + BRIDGE_CLEANUP_SCHEDULING_GRACE_SECONDS
+    )
+    if timeouts["bridge_cleanup"] < minimum_cleanup:
+        raise AssertionError(
+            f"bridge cleanup bound {timeouts['bridge_cleanup']:g}s is below "
+            f"two closes plus scheduling grace ({minimum_cleanup:g}s)"
+        )
+    return timeouts
+
+
+def _phase_timeout_handler(signum: int, _frame: object) -> None:
+    global _PENDING_PHASE_TIMEOUT
+    state = _PHASE_TIMEOUT_STATE
+    if state is None:
+        raise SoakPhaseTimeout(f"unexpected phase timer signal {signum}")
+    name, _previous_timer, seconds, _previous_handler, _started_at = state
+    error = SoakPhaseTimeout(f"{name} exceeded {seconds:g}s")
+    if _TERM_DEFER_DEPTH:
+        _PENDING_PHASE_TIMEOUT = error
+        return
+    raise error
+
+
+def arm_phase_timeout(name: str, seconds: float) -> None:
+    """Arm one process-local whole-phase deadline."""
+    global _PHASE_TIMEOUT_STATE
+    if _PHASE_TIMEOUT_STATE is not None:
+        raise AssertionError("nested soak phase deadlines are unsupported")
+    if _PENDING_PHASE_TIMEOUT is not None:
+        raise AssertionError("cannot arm a phase with a deferred timeout pending")
+    if not hasattr(signal, "SIGALRM") or not hasattr(signal, "setitimer"):
+        raise AssertionError("soak phase deadlines require POSIX interval timers")
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    previous_timer = signal.setitimer(signal.ITIMER_REAL, 0)
+    _PHASE_TIMEOUT_STATE = (
+        name,
+        previous_timer,
+        seconds,
+        previous_handler,
+        time.monotonic(),
+    )
+    try:
+        signal.signal(signal.SIGALRM, _phase_timeout_handler)
+        signal.setitimer(signal.ITIMER_REAL, seconds)
+    except BaseException:
+        _PHASE_TIMEOUT_STATE = None
+        signal.signal(signal.SIGALRM, previous_handler)
+        signal.setitimer(signal.ITIMER_REAL, *previous_timer)
+        raise
+
+
+def disarm_phase_timeout() -> None:
+    """Disarm the active phase deadline and restore any prior timer."""
+    global _PHASE_TIMEOUT_STATE
+    state = _PHASE_TIMEOUT_STATE
+    if state is None:
+        return
+    _name, previous_timer, _seconds, previous_handler, started_at = state
+    signal.setitimer(signal.ITIMER_REAL, 0)
+    _PHASE_TIMEOUT_STATE = None
+    signal.signal(signal.SIGALRM, previous_handler)
+    previous_delay, previous_interval = previous_timer
+    if previous_delay > 0:
+        remaining = max(previous_delay - (time.monotonic() - started_at), 1e-6)
+        signal.setitimer(signal.ITIMER_REAL, remaining, previous_interval)
+
+
+@contextlib.contextmanager
+def phase_timeout(name: str, seconds: float):
+    """Bound a named soak phase and always restore process timer state."""
+    arm_phase_timeout(name, seconds)
+    try:
+        yield
+    finally:
+        disarm_phase_timeout()
 
 
 def load_module(path: Path, name: str):
@@ -631,6 +793,8 @@ def run_recovery_cycle(
     nonce_records: list[tuple[Path, str]],
     healthy_timeout: float,
     recovery_response_timeout: float,
+    restart_timeout: float,
+    readiness_timeout: float,
 ) -> dict[str, float]:
     hanging_index = cycle % 2
     healthy_index = 1 - hanging_index
@@ -660,7 +824,7 @@ def run_recovery_cycle(
         "tools/call",
         {"name": "emacs-eval", "arguments": {"expression": expression}},
     )
-    smoke.eventually(nonce.exists, timeout=10)
+    smoke.eventually(nonce.exists, timeout=NONCE_START_TIMEOUT_SECONDS)
     if response_buffered(hanging):
         raise AssertionError("hung request completed before sibling work began")
 
@@ -682,7 +846,12 @@ def run_recovery_cycle(
             f"{during_hang!r}"
         )
 
-    hung_response = hanging.receive_response(timeout=recovery_response_timeout)
+    response_remaining = recovery_response_timeout - (time.monotonic() - hang_started)
+    if response_remaining <= 0:
+        raise AssertionError(
+            "hung response exceeded its absolute watchdog-response deadline"
+        )
+    hung_response = hanging.receive_response(timeout=response_remaining)
     dispatch_elapsed = time.monotonic() - hang_started
     if hung_response.get("id") != hang_identifier:
         raise AssertionError(f"hung response id mismatch: {hung_response!r}")
@@ -697,7 +866,7 @@ def run_recovery_cycle(
             and current["daemon_pid"] != old_root
             and current
         ),
-        timeout=150,
+        timeout=restart_timeout,
     )
     restart_elapsed = time.monotonic() - restart_started
     if (
@@ -709,7 +878,7 @@ def run_recovery_cycle(
         raise AssertionError(f"recovery changed bridge ownership: {restarted!r}")
     smoke.eventually(
         lambda: module.process_start_identity(old_root) != old_root_identity,
-        timeout=15,
+        timeout=OLD_ROOT_EXIT_TIMEOUT_SECONDS,
     )
 
     healthy_after = smoke.read_running_status(healthy_instance["status_path"])
@@ -727,7 +896,7 @@ def run_recovery_cycle(
         hanging,
         "emacs-eval",
         {"expression": "(+ 40 2)"},
-        timeout=150,
+        timeout=readiness_timeout,
     )
     readiness_elapsed = time.monotonic() - readiness_started
     if smoke.eval_value(recovered) != 42:
@@ -762,26 +931,32 @@ def handle_term(signum: int, _frame: object) -> None:
 
 def install_signal_handlers() -> None:
     """Install the termination contract used by the standalone soak check."""
-    global _PENDING_TERM_SIGNAL
+    global _PENDING_PHASE_TIMEOUT, _PENDING_TERM_SIGNAL
     if _TERM_DEFER_DEPTH:
         raise AssertionError("cannot install signal handlers inside a deferral")
+    _PENDING_PHASE_TIMEOUT = None
     _PENDING_TERM_SIGNAL = None
     signal.signal(signal.SIGTERM, handle_term)
 
 
 @contextlib.contextmanager
 def defer_termination():
-    """Delay TERM unwinding until an acquired resource is safely tracked."""
-    global _PENDING_TERM_SIGNAL, _TERM_DEFER_DEPTH
+    """Delay TERM and phase unwinding across resource-ownership gaps."""
+    global _PENDING_PHASE_TIMEOUT, _PENDING_TERM_SIGNAL, _TERM_DEFER_DEPTH
     _TERM_DEFER_DEPTH += 1
     try:
         yield
     finally:
         _TERM_DEFER_DEPTH -= 1
-        if _TERM_DEFER_DEPTH == 0 and _PENDING_TERM_SIGNAL is not None:
+        if _TERM_DEFER_DEPTH == 0:
             signum = _PENDING_TERM_SIGNAL
+            phase_error = _PENDING_PHASE_TIMEOUT
             _PENDING_TERM_SIGNAL = None
-            raise SystemExit(128 + signum)
+            _PENDING_PHASE_TIMEOUT = None
+            if signum is not None:
+                raise SystemExit(128 + signum)
+            if phase_error is not None:
+                raise phase_error
 
 
 def construct_tracked_bridge(bridges, bridge_type, *args):
@@ -809,20 +984,28 @@ def print_latency_summary(samples: list[dict[str, float]]) -> None:
 def finalize_bridges(bridges, samples: list[dict[str, float]]) -> None:
     """Print partial evidence and attempt every bridge close in reverse order."""
     errors: list[Exception] = []
-    with defer_termination():
-        try:
-            print_latency_summary(samples)
-        finally:
-            for bridge in reversed(bridges):
-                try:
-                    bridge.close()
-                except Exception as error:
-                    errors.append(error)
+    phase_errors: list[SoakPhaseTimeout] = []
+    try:
+        with defer_termination():
+            try:
+                print_latency_summary(samples)
+            finally:
+                for bridge in reversed(bridges):
+                    try:
+                        bridge.close()
+                    except SoakPhaseTimeout as error:
+                        phase_errors.append(error)
+                    except Exception as error:
+                        errors.append(error)
+    except SoakPhaseTimeout as error:
+        phase_errors.append(error)
     if errors:
         details = "; ".join(f"{type(error).__name__}: {error}" for error in errors)
         raise RuntimeError(
             f"persistent soak bridge cleanup failed: {details}"
         ) from errors[0]
+    if phase_errors:
+        raise phase_errors[0]
 
 
 def main() -> None:
@@ -843,25 +1026,16 @@ def main() -> None:
     runtime_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"])
     state_root = Path(os.environ["ANVIL_EMACS_STATE_ROOT"])
     cycles = int(os.environ.get("ANVIL_PERSISTENT_SOAK_CYCLES", "25"))
-    healthy_timeout = float(
-        os.environ.get(
-            "ANVIL_PERSISTENT_SOAK_HEALTHY_SECONDS",
-            str(WARMUP_BATCH_TIMEOUT_SECONDS),
-        )
-    )
     if cycles < 1 or cycles > 100:
         raise AssertionError(f"invalid soak cycle count: {cycles}")
-    if healthy_timeout <= 0 or healthy_timeout > WARMUP_BATCH_TIMEOUT_SECONDS:
-        raise AssertionError(f"invalid healthy sibling deadline: {healthy_timeout}")
 
     recovery_response_timeout = configure_watchdog_environment()
+    phase_timeouts = configure_soak_timeout_environment(recovery_response_timeout)
     os.environ["GIT_OPTIONAL_LOCKS"] = "0"
     os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
     os.environ["GIT_CONFIG_GLOBAL"] = "/dev/null"
     install_signal_handlers()
 
-    fixtures = setup_fixtures(git, direnv)
-    home_baseline = smoke.snapshot_home(Path.home())
     bridges = []
     instances: list[dict[str, object]] = []
     records: set[tuple[int, str]] = set()
@@ -869,7 +1043,12 @@ def main() -> None:
     nonce_records: list[tuple[Path, str]] = []
     latency_samples: list[dict[str, float]] = []
     succeeded = False
+    fixtures: dict[str, Path] | None = None
+    home_baseline: dict[str, tuple[int, int, int]] | None = None
+    arm_phase_timeout("setup", phase_timeouts["setup"])
     try:
+        fixtures = setup_fixtures(git, direnv)
+        home_baseline = smoke.snapshot_home(Path.home())
         for _index in range(2):
             construct_tracked_bridge(
                 bridges,
@@ -927,63 +1106,85 @@ def main() -> None:
                 str(index),
             )
 
+        disarm_phase_timeout()
         for cycle in range(cycles):
-            sample = run_recovery_cycle(
-                cycle,
-                bridges,
-                instances,
-                smoke,
-                module,
-                fixtures,
-                records,
-                nonce_records,
-                healthy_timeout,
-                recovery_response_timeout,
-            )
-            latency_samples.append(sample)
-            print(
-                f"persistent recovery cycle {cycle + 1}/{cycles} passed "
-                f"(sibling={sample['sibling']:.3f}s "
-                f"dispatch={sample['dispatch']:.3f}s "
-                f"restart={sample['restart']:.3f}s "
-                f"readiness={sample['readiness']:.3f}s)"
-            )
+            with phase_timeout(
+                f"recovery cycle {cycle + 1}/{cycles}",
+                phase_timeouts["cycle"],
+            ):
+                sample = run_recovery_cycle(
+                    cycle,
+                    bridges,
+                    instances,
+                    smoke,
+                    module,
+                    fixtures,
+                    records,
+                    nonce_records,
+                    phase_timeouts["healthy"],
+                    recovery_response_timeout,
+                    phase_timeouts["restart"],
+                    phase_timeouts["readiness"],
+                )
+                latency_samples.append(sample)
+                print(
+                    f"persistent recovery cycle {cycle + 1}/{cycles} passed "
+                    f"(sibling={sample['sibling']:.3f}s "
+                    f"dispatch={sample['dispatch']:.3f}s "
+                    f"restart={sample['restart']:.3f}s "
+                    f"readiness={sample['readiness']:.3f}s)"
+                )
 
-        assert_nonce_records(nonce_records)
-        assert_no_latency_growth(latency_samples)
-        for bridge in bridges:
-            for pid in smoke.worker_pids(bridge):
-                record_identity(records, module, pid)
-            descendant_records.update(record_descendant_tree(module, bridge.pid, ps))
-        assert_nonce_records(nonce_records)
+        with phase_timeout("pre-cleanup inventory", phase_timeouts["inventory"]):
+            assert_nonce_records(nonce_records)
+            assert_no_latency_growth(latency_samples)
+            for bridge in bridges:
+                for pid in smoke.worker_pids(bridge):
+                    record_identity(records, module, pid)
+                descendant_records.update(
+                    record_descendant_tree(module, bridge.pid, ps)
+                )
+            assert_nonce_records(nonce_records)
         succeeded = True
     finally:
-        finalize_bridges(bridges, latency_samples)
+        disarm_phase_timeout()
+        with phase_timeout(
+            "bridge cleanup",
+            phase_timeouts["bridge_cleanup"],
+        ):
+            finalize_bridges(bridges, latency_samples)
 
     if not succeeded:
         raise AssertionError("persistent bridge soak did not complete")
-    for instance in instances:
-        smoke.eventually(lambda instance=instance: not instance["runtime_dir"].exists())
-        smoke.eventually(lambda instance=instance: not instance["state_dir"].exists())
-    for pid, identity in records:
-        smoke.eventually(
-            lambda pid=pid, identity=identity: (
-                module.process_start_identity(pid) != identity
-            ),
-            timeout=20,
-        )
-    for pid, identity in descendant_records:
-        smoke.eventually(
-            lambda pid=pid, identity=identity: descendant_record_gone(
-                module, pid, identity, ps
-            ),
-            timeout=20,
-        )
-    smoke.eventually(lambda: assert_empty_agents(runtime_root), timeout=20)
-    smoke.eventually(lambda: assert_empty_agents(state_root), timeout=20)
-    smoke.assert_home_unchanged(Path.home(), home_baseline)
-    if fixtures["alternate_marker"].exists():
-        raise AssertionError("persistent bridge soak invoked ALTERNATE_EDITOR")
+    if fixtures is None or home_baseline is None:
+        raise AssertionError("persistent bridge setup did not record its baseline")
+    with phase_timeout("post-cleanup verification", phase_timeouts["post_cleanup"]):
+        for instance in instances:
+            smoke.eventually(
+                lambda instance=instance: not instance["runtime_dir"].exists()
+            )
+            smoke.eventually(
+                lambda instance=instance: not instance["state_dir"].exists()
+            )
+        for pid, identity in records:
+            smoke.eventually(
+                lambda pid=pid, identity=identity: (
+                    module.process_start_identity(pid) != identity
+                ),
+                timeout=20,
+            )
+        for pid, identity in descendant_records:
+            smoke.eventually(
+                lambda pid=pid, identity=identity: descendant_record_gone(
+                    module, pid, identity, ps
+                ),
+                timeout=20,
+            )
+        smoke.eventually(lambda: assert_empty_agents(runtime_root), timeout=20)
+        smoke.eventually(lambda: assert_empty_agents(state_root), timeout=20)
+        smoke.assert_home_unchanged(Path.home(), home_baseline)
+        if fixtures["alternate_marker"].exists():
+            raise AssertionError("persistent bridge soak invoked ALTERNATE_EDITOR")
     print(
         f"PASS: {cycles} persistent per-bridge recovery cycles with "
         "async isolation, direnv, pipelined file/Org/Git/Elisp, and cleanup"

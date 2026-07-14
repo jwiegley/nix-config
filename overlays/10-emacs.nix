@@ -7,6 +7,7 @@
 final: prev:
 
 let
+  anvilSource = import ../packages/anvil-mcp/source.nix;
   paths = import ../config/paths.nix { inherit (prev) inputs; };
 
   myEmacsPackageOverrides =
@@ -165,35 +166,14 @@ let
         (compileEmacsFiles {
           name = "anvil";
           src = fetchFromGitHub {
-            owner = "zawatton";
-            repo = "anvil.el";
-            rev = "574568a95a2bd8fceca6c9cd3bec0f94ecf0e6a9";
-            sha256 = "sha256-z/wYZKkXyE3/7d6MSZ4RJpXcxBGyMdrx6Ndid7Yz5iw=";
-            # date = 2026-07-04T05:05:52+00:00;
+            inherit (anvilSource)
+              hash
+              owner
+              repo
+              rev
+              ;
+            # date = 2026-07-14T11:21:15+00:00;
           };
-          # Worker-pool fixes (see the patch header): probe the cached
-          # socket path in the stale check instead of re-expanding its
-          # basename against the current `server-socket-dir', tell
-          # spawned -Q workers where to bind their sockets, and add a
-          # spawn grace period so slow-starting workers are not doubled
-          # by same-named twin daemons.  lisp/anvil-ext.el in dot-emacs
-          # carries equivalent advice overlays for sessions running an
-          # unpatched build.
-          patches = [
-            # Load-bearing order: host-child bindings are rebased against
-            # the interrupt-safe host implementation introduced here.
-            ./emacs/patches/anvil-issue-53-hang-fixes.patch
-            ./emacs/patches/anvil-async-isolation.patch
-            ./emacs/patches/anvil-headless-emacs-path.patch
-            ./emacs/patches/anvil-unified-registry.patch
-            ./emacs/patches/anvil-worker-pool.patch
-            ./emacs/patches/anvil-host-child-bindings.patch
-            ./emacs/patches/anvil-host-stdin-eof.patch
-            ./emacs/patches/anvil-shell-sync-timeout.patch
-            ./emacs/patches/anvil-stdio-at-most-once.patch
-            ./emacs/patches/anvil-stdio-frame-deadline.patch
-            ./emacs/patches/anvil-stdio-no-alternate-editor.patch
-          ];
         }).overrideAttrs
           (attrs: {
             # anvil-server-commands.el resolves anvil-stdio.sh (the MCP stdio
@@ -204,6 +184,7 @@ let
               mkdir -p $out/share/emacs/site-lisp/tests
               install -m644 \
                 tests/anvil-eval-async-isolation-test.el \
+                tests/anvil-offload-ownership-test.el \
                 tests/anvil-server-unified-registry-test.el \
                 $out/share/emacs/site-lisp/tests
             '';

@@ -60,7 +60,13 @@ def eventually(predicate, timeout: float = 30.0):
 class BridgeProcess:
     """One real launcher process, spawned by an OwnerProxy process."""
 
-    def __init__(self, launcher: Path, server_id: str, host: str) -> None:
+    def __init__(
+        self,
+        launcher: Path,
+        server_id: str,
+        host: str,
+        environment_overrides: dict[str, str] | None = None,
+    ) -> None:
         environment = os.environ.copy()
         environment.update(
             {
@@ -80,6 +86,8 @@ class BridgeProcess:
                 "ANVIL_AGENT_READY_SECONDS": "120",
             }
         )
+        if environment_overrides is not None:
+            environment.update(environment_overrides)
         self.stderr_file = tempfile.TemporaryFile(mode="w+")
         self.process = subprocess.Popen(
             [str(launcher), f"--server-id={server_id}"],
@@ -298,6 +306,7 @@ def owner_proxy_main(connection, launcher_raw: str) -> None:
                         launcher,
                         request["server_id"],
                         request["host"],
+                        request.get("environment_overrides"),
                     )
                     value = {"pid": bridges[bridge_id].process.pid}
                 elif operation == "request":
@@ -410,7 +419,12 @@ class OwnerProxy:
             raise AssertionError(response.get("error", "owner proxy failed"))
         return response.get("value")
 
-    def spawn_bridge(self, server_id: str, host: str) -> "ProxyBridge":
+    def spawn_bridge(
+        self,
+        server_id: str,
+        host: str,
+        environment_overrides: dict[str, str] | None = None,
+    ) -> "ProxyBridge":
         bridge_id = f"bridge-{len(self.bridge_ids) + 1}-{server_id}-{host}"
         spawned = self.rpc(
             {
@@ -418,6 +432,7 @@ class OwnerProxy:
                 "bridge_id": bridge_id,
                 "server_id": server_id,
                 "host": host,
+                "environment_overrides": environment_overrides,
             }
         )
         self.bridge_ids.add(bridge_id)
@@ -613,10 +628,11 @@ def acquire_bridge(
     owner: OwnerProxy,
     server_id: str,
     host: str,
+    environment_overrides: dict[str, str] | None = None,
 ) -> ProxyBridge:
     """Acquire a bridge or clean every resource acquired before it."""
     try:
-        bridge = owner.spawn_bridge(server_id, host)
+        bridge = owner.spawn_bridge(server_id, host, environment_overrides)
     except BaseException:
         close_smoke_resources(bridges, owners)
         raise
@@ -880,6 +896,134 @@ def assert_typed_registry_probe(bridge: ProxyBridge, launcher: Path) -> None:
         raise AssertionError(f"direct typed registry stopped serving: {response}")
 
 
+def verify_dispatch_deadline(
+    launcher: Path,
+    runtime_root: Path,
+    state_root: Path,
+    module,
+) -> None:
+    """Kill a yielding dispatch before the independent heartbeat deadline."""
+    heartbeat_seconds = 30.0
+    dispatch_seconds = 3.0
+    response_timeout_seconds = 15.0
+    kill_bound_seconds = 20.0
+    clock_read_tolerance_seconds = 0.05
+    owners: list[OwnerProxy] = []
+    bridges: list[ProxyBridge] = []
+    owner = acquire_owner(owners, bridges, launcher, "dispatch-deadline-owner")
+    bridge = acquire_bridge(
+        owners,
+        bridges,
+        owner,
+        "anvil",
+        "dispatch-deadline",
+        {
+            "ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS": f"{heartbeat_seconds:g}",
+            "ANVIL_EMACS_WATCHDOG_DISPATCH_SECONDS": f"{dispatch_seconds:g}",
+        },
+    )
+    instance: dict[str, object] | None = None
+    try:
+        bridge.initialize()
+        instance = validate_bridge_instance(
+            eventually(
+                lambda: find_running_instance(
+                    runtime_root,
+                    "dispatch-deadline",
+                    bridge.pid,
+                    module,
+                )
+            ),
+            bridge,
+            "dispatch-deadline",
+            state_root,
+            module,
+        )
+        initial_status = instance["status"]
+        root_pid = initial_status["daemon_pid"]
+        root_identity = module.process_start_identity(root_pid)
+        supervisor_pid = initial_status["supervisor_pid"]
+        supervisor_identity = module.process_start_identity(supervisor_pid)
+        if root_identity is None or supervisor_identity is None:
+            raise AssertionError("dispatch-deadline process identity unavailable")
+        nonce = instance["runtime_dir"] / "dispatch-deadline-nonce"
+        yielding_expression = (
+            f'(progn (write-region "once\\n" nil {json.dumps(str(nonce))} '
+            "t 'silent) (while t (sit-for 0.1)))"
+        )
+
+        started = time.monotonic()
+        response = bridge.call_tool(
+            "emacs-eval",
+            {"expression": yielding_expression},
+            timeout=response_timeout_seconds,
+        )
+        elapsed = time.monotonic() - started
+        error = response.get("error")
+        data = error.get("data") if isinstance(error, dict) else None
+        expected_metadata = {
+            "phase": "dispatch",
+            "dispatched": True,
+            "replayed": False,
+        }
+        if not isinstance(data, dict) or any(
+            data.get(key) != value for key, value in expected_metadata.items()
+        ):
+            raise AssertionError(
+                f"dispatch deadline returned unsafe metadata: {response}"
+            )
+        if elapsed < dispatch_seconds - clock_read_tolerance_seconds:
+            raise AssertionError(
+                f"dispatch watchdog fired before its deadline: {elapsed:.3f}s"
+            )
+        if elapsed >= kill_bound_seconds or elapsed >= heartbeat_seconds:
+            raise AssertionError(
+                f"yielding dispatch escaped its independent deadline: {elapsed:.3f}s"
+            )
+        if nonce.read_text().splitlines() != ["once"]:
+            raise AssertionError("the yielding dispatch was replayed")
+
+        restarted = eventually(
+            lambda: (
+                (current := read_running_status(instance["status_path"]))
+                and current["daemon_pid"] != root_pid
+                and current
+            ),
+            timeout=60,
+        )
+        if (
+            restarted["supervisor_pid"] != supervisor_pid
+            or module.process_start_identity(supervisor_pid) != supervisor_identity
+            or restarted.get("restart_count", 0) < 1
+            or not str(restarted.get("restart_reason", "")).startswith("daemon-exited:")
+            or restarted.get("generation") != initial_status["generation"]
+        ):
+            raise AssertionError(
+                f"dispatch-deadline restart lost lifecycle state: {restarted}"
+            )
+        eventually(
+            lambda: module.process_start_identity(root_pid) != root_identity,
+            timeout=60,
+        )
+        recovered = call_after_readiness(
+            bridge,
+            "emacs-eval",
+            {"expression": "(+ 40 2)"},
+            timeout=150,
+        )
+        if eval_value(recovered) != 42:
+            raise AssertionError(
+                f"same bridge did not recover after dispatch deadline: {recovered}"
+            )
+        if nonce.read_text().splitlines() != ["once"]:
+            raise AssertionError("recovery replayed the yielding dispatch")
+    finally:
+        close_smoke_resources(bridges, owners)
+    if instance is not None:
+        eventually(lambda: not instance["runtime_dir"].exists(), timeout=60)
+        eventually(lambda: not instance["state_dir"].exists(), timeout=60)
+
+
 def verify_generation_rollover(
     old_launcher: Path,
     new_launcher: Path,
@@ -1078,6 +1222,12 @@ def main() -> None:
         64,
         "--socket cannot override a per-agent daemon",
         "--socket=/tmp/spoofed-anvil-socket",
+    )
+    verify_dispatch_deadline(
+        launcher,
+        runtime_root,
+        state_root,
+        module,
     )
     if rollover_launcher is not None and readiness_crash_launcher is not None:
         verify_generation_rollover(

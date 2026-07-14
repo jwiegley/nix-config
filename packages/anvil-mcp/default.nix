@@ -35,12 +35,16 @@
 }:
 
 let
+  anvilSource = import ./source.nix;
+  boundedSyncSeconds = 120;
   nelispVersion = "0.5.1";
   nelispRev = "f753209d53b372933b829345fe4373acad67bcb5";
   standaloneAnvilVersion = "1.1.1";
   standaloneAnvilRev = "d50ce32b71c5fa46da3aa661481c8be44fee4f97";
-  currentAnvilVersion = "1.3.0";
-  currentAnvilRev = "574568a95a2bd8fceca6c9cd3bec0f94ecf0e6a9";
+  currentAnvilHash = anvilSource.hash;
+  currentAnvilOwner = anvilSource.owner;
+  currentAnvilRev = anvilSource.rev;
+  currentAnvilVersion = anvilSource.version;
   anvilIdeRev = "0e6130457ac2bdc6c6db2eebeba67a5223231190";
 
   # One ordered policy spans client startup, synchronous dispatch, the root
@@ -53,13 +57,14 @@ let
     bridgeStartupDispatchSeconds = 20;
     clientStartupSeconds = 210;
     clientToolSeconds = 210;
-    cooperativeSyncSeconds = 120;
+    cooperativeSyncSeconds = boundedSyncSeconds;
     emacsclientKillSeconds = 1;
     emacsclientProbeSeconds = 5;
     frameReadSeconds = 10;
+    hostShellSeconds = boundedSyncSeconds;
     parentGuardReadySeconds = 5;
-    requestParseSeconds = 2;
-    shellSyncSeconds = 120;
+    requestParseSeconds = 10;
+    shellSyncSeconds = boundedSyncSeconds;
     supervisorReadySeconds = 120;
     watchdogDispatchSeconds = 135;
     watchdogHeartbeatSeconds = 45;
@@ -118,10 +123,12 @@ let
   };
 
   currentAnvilSrc = fetchFromGitHub {
-    owner = "zawatton";
-    repo = "anvil.el";
-    rev = currentAnvilRev;
-    hash = "sha256-z/wYZKkXyE3/7d6MSZ4RJpXcxBGyMdrx6Ndid7Yz5iw=";
+    inherit (anvilSource)
+      hash
+      owner
+      repo
+      rev
+      ;
   };
 
   anvilIdeSrc = fetchFromGitHub {
@@ -498,20 +505,6 @@ let
       (callPackage ../../overlays/emacs/builder.nix {
         emacs = dedicatedEmacs;
         name = "anvil";
-        patches = [
-          # Load-bearing order: host-child bindings target the issue-53 host.
-          ../../overlays/emacs/patches/anvil-issue-53-hang-fixes.patch
-          ../../overlays/emacs/patches/anvil-async-isolation.patch
-          ../../overlays/emacs/patches/anvil-headless-emacs-path.patch
-          ../../overlays/emacs/patches/anvil-unified-registry.patch
-          ../../overlays/emacs/patches/anvil-worker-pool.patch
-          ../../overlays/emacs/patches/anvil-host-child-bindings.patch
-          ../../overlays/emacs/patches/anvil-host-stdin-eof.patch
-          ../../overlays/emacs/patches/anvil-shell-sync-timeout.patch
-          ../../overlays/emacs/patches/anvil-stdio-at-most-once.patch
-          ../../overlays/emacs/patches/anvil-stdio-frame-deadline.patch
-          ../../overlays/emacs/patches/anvil-stdio-no-alternate-editor.patch
-        ];
         src = currentAnvilSrc;
       }).overrideAttrs
         (attrs: {
@@ -520,6 +513,7 @@ let
             mkdir -p "$out/share/emacs/site-lisp/tests"
             install -m644 \
               tests/anvil-eval-async-isolation-test.el \
+              tests/anvil-offload-ownership-test.el \
               tests/anvil-server-unified-registry-test.el \
               "$out/share/emacs/site-lisp/tests"
           '';
@@ -1041,7 +1035,7 @@ let
     (require 'direnv)
     (setq direnv-always-show-summary nil)
 
-    ;; These variables are defined by the packaged anvil-host patch.  Bare
+    ;; These variables are defined by the packaged anvil-host source.  Bare
     ;; declarations make the bindings below dynamic under lexical compilation.
     (defvar anvil-host-child-process-environment)
     (defvar anvil-host-child-exec-path)
@@ -1348,7 +1342,7 @@ let
                child-process-environment
                "ANVIL_EMACS_SOCKET" anvil-headless--root-socket))
         ;; These special variables remain dynamically visible while ORIGINAL
-        ;; waits, but the anvil-host patch applies their values only inside
+        ;; waits, but the anvil-host implementation applies them only inside
         ;; make-process.  Root callbacks keep their baseline environment.
         (let ((anvil-host-child-process-environment
                child-process-environment)
@@ -2234,6 +2228,7 @@ let
 
         (defvar anvil-eval-timeout)
         (defvar anvil-eval-async-timeout)
+        (defvar anvil-host--default-timeout)
         (defvar anvil-shell-filter-max-sync-timeout)
         (defvar anvil-worker-read-pool-size)
         (defvar anvil-worker-write-pool-size)
@@ -2500,6 +2495,10 @@ let
                           :around
                           #'anvil-headless--watchdog-sync-dispatch)
               (anvil-enable)
+              ;; anvil-enable loads anvil-host, whose defconst resets this
+              ;; value.  Set the packaged policy only after module loading.
+              (setq anvil-host--default-timeout
+                    ${toString timeoutPolicy.hostShellSeconds})
               (anvil-headless--publish-unified-registry)
               (let (actual-worker-specs)
                 (dolist (lane '(:read :write :batch))
@@ -2799,6 +2798,8 @@ let
     passthru = {
       backend = "dedicated-emacs";
       inherit
+        currentAnvilHash
+        currentAnvilOwner
         currentAnvilRev
         currentAnvilSrc
         currentAnvilVersion
@@ -2929,7 +2930,12 @@ let
         version = currentAnvilVersion;
         passthru = {
           backend = "interactive-emacs";
-          inherit currentAnvilRev currentAnvilVersion;
+          inherit
+            currentAnvilHash
+            currentAnvilOwner
+            currentAnvilRev
+            currentAnvilVersion
+            ;
         };
         meta = commonMeta // {
           description = "Interactive-Emacs Anvil MCP launcher";

@@ -328,6 +328,7 @@
         // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux || system == "aarch64-darwin") {
           anvil-home-manager = pkgs.callPackage ./packages/anvil-mcp/home-manager-smoke.nix {
             homeManagerLib = home-manager.lib;
+            inherit inputs;
             testPkgs = pkgsFor.${system};
           };
           anvil-mcp-persistent-soak = pkgs.callPackage ./packages/anvil-mcp/persistent-bridge-soak.nix {

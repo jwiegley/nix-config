@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import math
 import os
 from pathlib import Path
 import signal
@@ -22,6 +23,183 @@ def load_module(path: Path, name: str):
     loaded = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(loaded)
     return loaded
+
+
+def test_timeout_budget(
+    soak_path: Path,
+    expected_normal: float,
+    expected_dispatch: float,
+    cycles: int,
+    margin_percent: int,
+    outer_timeout: float,
+) -> None:
+    """Prove Python enforces the same named phase budget derived by Nix."""
+    soak = load_module(soak_path, "persistent_soak_timeout_budget_test")
+    os.environ["ANVIL_SMOKE_WATCHDOG_NORMAL_SECONDS"] = f"{expected_normal:g}"
+    os.environ["ANVIL_SMOKE_WATCHDOG_DISPATCH_SECONDS"] = f"{expected_dispatch:g}"
+    response_timeout = soak.configure_watchdog_environment()
+    timeouts = soak.configure_soak_timeout_environment(response_timeout)
+    watchdog_window = min(expected_normal, expected_dispatch)
+    sequential_overlap = soak.NONCE_START_TIMEOUT_SECONDS + timeouts["healthy"]
+    if sequential_overlap != watchdog_window:
+        raise AssertionError(
+            "sequential watchdog budget drifted: "
+            f"nonce={soak.NONCE_START_TIMEOUT_SECONDS:g} "
+            f"healthy={timeouts['healthy']:g} watchdog={watchdog_window:g}"
+        )
+    with mock.patch.dict(
+        os.environ,
+        {"ANVIL_PERSISTENT_SOAK_HEALTHY_SECONDS": f"{watchdog_window:g}"},
+    ):
+        try:
+            soak.configure_soak_timeout_environment(response_timeout)
+        except AssertionError as error:
+            if "nonce-start plus healthy-sibling bounds" not in str(error):
+                raise
+        else:
+            raise AssertionError("legacy full-window healthy budget was accepted")
+
+    internal = (
+        timeouts["setup"]
+        + cycles * timeouts["cycle"]
+        + timeouts["inventory"]
+        + timeouts["bridge_cleanup"]
+        + timeouts["post_cleanup"]
+    )
+    expected_outer = internal + math.ceil(internal * margin_percent / 100)
+    if outer_timeout != expected_outer or outer_timeout > 2 * 60 * 60:
+        raise AssertionError(
+            f"outer timeout drifted: actual={outer_timeout:g} "
+            f"expected={expected_outer:g} internal={internal:g}"
+        )
+
+    original_handler = signal.getsignal(signal.SIGALRM)
+    original_timer = signal.setitimer(signal.ITIMER_REAL, 0)
+    restore_started = time.monotonic()
+    prior_firings: list[int] = []
+
+    def prior_handler(signum: int, _frame: object) -> None:
+        prior_firings.append(signum)
+
+    signal.signal(signal.SIGALRM, prior_handler)
+    signal.setitimer(signal.ITIMER_REAL, 0.75, 0.25)
+    started = time.monotonic()
+    try:
+        try:
+            with soak.phase_timeout("focused deadline regression", 0.05):
+                time.sleep(2)
+        except soak.SoakPhaseTimeout as error:
+            if "focused deadline regression exceeded" not in str(error):
+                raise
+        else:
+            raise AssertionError("whole-phase timer did not interrupt blocking work")
+        elapsed = time.monotonic() - started
+        restored_delay, restored_interval = signal.getitimer(signal.ITIMER_REAL)
+        if (
+            elapsed > 1
+            or signal.getsignal(signal.SIGALRM) is not prior_handler
+            or not 0 < restored_delay < 0.75
+            or restored_interval != 0.25
+            or prior_firings
+        ):
+            raise AssertionError(
+                "whole-phase timer was not bounded/restored: "
+                f"elapsed={elapsed:.3f} timer="
+                f"{(restored_delay, restored_interval)!r} "
+                f"firings={prior_firings!r}"
+            )
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, original_handler)
+        original_delay, original_interval = original_timer
+        if original_delay > 0:
+            remaining = max(
+                original_delay - (time.monotonic() - restore_started),
+                1e-6,
+            )
+            signal.setitimer(signal.ITIMER_REAL, remaining, original_interval)
+
+
+def test_phase_timeout_ownership(soak_path: Path) -> None:
+    """Defer phase alarms until acquired resources are tracked and cleaned."""
+    soak = load_module(soak_path, "persistent_soak_phase_ownership_test")
+
+    tracked = []
+
+    class AcquiredBridge:
+        def __init__(self):
+            signal.raise_signal(signal.SIGALRM)
+
+    try:
+        with soak.phase_timeout("constructor ownership", 60):
+            soak.construct_tracked_bridge(tracked, AcquiredBridge)
+    except soak.SoakPhaseTimeout as error:
+        if "constructor ownership exceeded" not in str(error):
+            raise
+    else:
+        raise AssertionError("constructor phase alarm was not delivered")
+    if len(tracked) != 1:
+        raise AssertionError("phase alarm escaped before bridge registration")
+
+    close_order: list[str] = []
+
+    class ClosingBridge:
+        def __init__(self, name: str, raise_timeout: bool = False):
+            self.name = name
+            self.raise_timeout = raise_timeout
+
+        def close(self):
+            close_order.append(self.name)
+            if self.raise_timeout:
+                raise soak.SoakPhaseTimeout(f"close {self.name}")
+
+    try:
+        soak.finalize_bridges(
+            [ClosingBridge("first"), ClosingBridge("second", True)],
+            [],
+        )
+    except soak.SoakPhaseTimeout as error:
+        if "close second" not in str(error):
+            raise
+    else:
+        raise AssertionError("explicit cleanup phase timeout was lost")
+    if close_order != ["second", "first"]:
+        raise AssertionError(f"cleanup stopped after phase timeout: {close_order!r}")
+
+    alarm_order: list[str] = []
+
+    class AlarmBridge:
+        def __init__(self, name: str, raise_alarm: bool = False):
+            self.name = name
+            self.raise_alarm = raise_alarm
+
+        def close(self):
+            alarm_order.append(f"start:{self.name}")
+            if self.raise_alarm:
+                signal.raise_signal(signal.SIGALRM)
+            alarm_order.append(f"done:{self.name}")
+
+    try:
+        with soak.phase_timeout("deferred cleanup", 60):
+            soak.finalize_bridges(
+                [AlarmBridge("first"), AlarmBridge("second", True)],
+                [],
+            )
+    except soak.SoakPhaseTimeout as error:
+        if "deferred cleanup exceeded" not in str(error):
+            raise
+    else:
+        raise AssertionError("deferred cleanup alarm was not delivered")
+    if alarm_order != [
+        "start:second",
+        "done:second",
+        "start:first",
+        "done:first",
+    ]:
+        raise AssertionError(f"alarm interrupted cleanup ownership: {alarm_order!r}")
+
+    with soak.phase_timeout("fresh phase", 1):
+        pass
 
 
 def test_response_reader(soak_path: Path, smoke_path: Path) -> None:
@@ -566,17 +744,30 @@ soak.main()
 
 
 def main() -> None:
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 9:
         raise SystemExit(
             "usage: persistent-bridge-soak-test.py "
             "SOAK_SCRIPT SMOKE_SCRIPT SUPERVISOR_SCRIPT "
-            "EXPECTED_NORMAL_SECONDS EXPECTED_DISPATCH_SECONDS"
+            "EXPECTED_NORMAL_SECONDS EXPECTED_DISPATCH_SECONDS "
+            "CYCLES MARGIN_PERCENT OUTER_TIMEOUT_SECONDS"
         )
     soak = Path(sys.argv[1]).resolve()
     smoke = Path(sys.argv[2]).resolve()
     supervisor = Path(sys.argv[3]).resolve()
     expected_normal = float(sys.argv[4])
     expected_dispatch = float(sys.argv[5])
+    cycles = int(sys.argv[6])
+    margin_percent = int(sys.argv[7])
+    outer_timeout = float(sys.argv[8])
+    test_timeout_budget(
+        soak,
+        expected_normal,
+        expected_dispatch,
+        cycles,
+        margin_percent,
+        outer_timeout,
+    )
+    test_phase_timeout_ownership(soak)
     test_response_reader(soak, smoke)
     test_cleanup_contract(smoke)
     test_cleanup_exit_bound(smoke)

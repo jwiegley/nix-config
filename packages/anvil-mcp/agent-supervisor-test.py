@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import contextlib
 import ctypes
+import errno
 import importlib.util
 import io
 import json
@@ -95,6 +96,141 @@ def wait_child_status(pid: int, timeout: float = 3.0) -> int:
     raise AssertionError(f"child {pid} did not exit within {timeout}s")
 
 
+def legacy_statusless_runtime_is_empty(
+    runtime_path: Path,
+    lock_identity: tuple[int, int],
+) -> bool:
+    """Frozen pre-marker predicate deployed before this rolling upgrade."""
+    directory_fd = None
+    try:
+        directory_fd = os.open(
+            runtime_path,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        )
+        opened = os.fstat(directory_fd)
+        path_info = runtime_path.lstat()
+        if (
+            not stat.S_ISDIR(opened.st_mode)
+            or opened.st_uid != os.getuid()
+            or stat.S_IMODE(opened.st_mode) != 0o700
+            or (opened.st_dev, opened.st_ino) != (path_info.st_dev, path_info.st_ino)
+            or set(os.listdir(directory_fd)) != {SUPERVISOR.LOCK_NAME}
+        ):
+            return False
+        lock_info = os.stat(
+            SUPERVISOR.LOCK_NAME,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+        return (lock_info.st_dev, lock_info.st_ino) == lock_identity
+    except (FileNotFoundError, PermissionError, OSError):
+        return False
+    finally:
+        if directory_fd is not None:
+            os.close(directory_fd)
+
+
+def legacy_prune_orphaned_state(
+    runtime_agents: Path,
+    state_agents: Path,
+    current_agent_key: str,
+) -> None:
+    """Frozen pre-marker pruning algorithm used by the deployed generation."""
+    names: set[str] = set()
+    for agents_dir in (runtime_agents, state_agents):
+        try:
+            names.update(os.listdir(agents_dir))
+        except (FileNotFoundError, PermissionError, OSError):
+            continue
+    for name in sorted(names):
+        if (
+            name == current_agent_key
+            or SUPERVISOR.AGENT_KEY_PATTERN.fullmatch(name) is None
+        ):
+            continue
+        runtime_path = runtime_agents / name
+        state_path = state_agents / name
+        try:
+            runtime_info = runtime_path.lstat()
+        except FileNotFoundError:
+            runtime_info = None
+        if (
+            runtime_info is not None
+            and stat.S_ISDIR(runtime_info.st_mode)
+            and not stat.S_ISLNK(runtime_info.st_mode)
+            and runtime_info.st_uid == os.getuid()
+        ):
+            owner = SUPERVISOR.read_status_owner(runtime_path, name)
+            if owner is None and os.path.lexists(state_path):
+                continue
+            if owner is not None and (
+                SUPERVISOR.validate_process_identity(owner[0], owner[1])
+                is not SUPERVISOR.LifecycleState.DEAD
+            ):
+                continue
+            try:
+                locked = SUPERVISOR.try_supervisor_lock(runtime_path)
+            except (
+                SUPERVISOR.ConfigurationError,
+                FileNotFoundError,
+                OSError,
+            ):
+                continue
+            if locked is None:
+                continue
+            lock_descriptor, lock_identity = locked
+            try:
+                SUPERVISOR.validate_supervisor_lock(
+                    lock_descriptor,
+                    runtime_path / SUPERVISOR.LOCK_NAME,
+                    lock_identity,
+                )
+                confirmed = SUPERVISOR.read_status_owner(runtime_path, name)
+                if owner is None:
+                    if (
+                        confirmed is not None
+                        or os.path.lexists(state_path)
+                        or not legacy_statusless_runtime_is_empty(
+                            runtime_path,
+                            lock_identity,
+                        )
+                    ):
+                        continue
+                elif (
+                    confirmed is None
+                    or SUPERVISOR.validate_process_identity(confirmed[0], confirmed[1])
+                    is not SUPERVISOR.LifecycleState.DEAD
+                ):
+                    continue
+                else:
+                    SUPERVISOR.remove_instance_tree(state_path)
+                SUPERVISOR.remove_instance_tree(
+                    runtime_path,
+                    final_names=(
+                        SUPERVISOR.STATUS_NAME,
+                        SUPERVISOR.LOCK_NAME,
+                    ),
+                )
+            except (
+                SUPERVISOR.ConfigurationError,
+                FileNotFoundError,
+                OSError,
+                RuntimeError,
+            ):
+                continue
+            finally:
+                os.close(lock_descriptor)
+            continue
+        try:
+            SUPERVISOR.remove_instance_tree(state_path)
+        except (
+            SUPERVISOR.ConfigurationError,
+            FileNotFoundError,
+            OSError,
+        ):
+            continue
+
+
 class AgentSupervisorTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -181,6 +317,9 @@ class AgentSupervisorTests(unittest.TestCase):
             self.state_root,
             host,
             agent_key,
+            owner_pid,
+            owner_start_identity,
+            generation,
         )
         return SimpleNamespace(
             agent_key=agent_key,
@@ -467,20 +606,50 @@ class AgentSupervisorTests(unittest.TestCase):
         )
         self.assertNotEqual(first_key, second_key)
         self.assertNotEqual(first_key, package_key)
+
+        live_pid = os.getpid()
+        live_identity = SUPERVISOR.process_start_identity(live_pid)
+        self.assertIsNotNone(live_identity)
+        live_keys = [
+            SUPERVISOR.derive_agent_key(
+                live_pid,
+                live_identity,
+                generation,
+            )
+            for generation in (TEST_GENERATION, OTHER_GENERATION)
+        ]
         first = SUPERVISOR.prepare_instance_directories(
             self.runtime_root,
             self.state_root,
             "hera",
-            first_key,
+            live_keys[0],
+            live_pid,
+            live_identity,
+            TEST_GENERATION,
         )[0]
         second = SUPERVISOR.prepare_instance_directories(
             self.runtime_root,
             self.state_root,
             "hera",
-            second_key,
+            live_keys[1],
+            live_pid,
+            live_identity,
+            OTHER_GENERATION,
         )[0]
         self.assertNotEqual(first, second)
         self.assertEqual(first.parent.name, "agents")
+        for key, generation in zip(
+            live_keys,
+            (TEST_GENERATION, OTHER_GENERATION),
+            strict=True,
+        ):
+            state, record, _identity = SUPERVISOR.read_creator_lifecycle(
+                first.parent,
+                key,
+            )
+            self.assertIs(state, SUPERVISOR.LifecycleState.LIVE)
+            self.assertEqual(record["generation"], generation)
+            self.assertEqual(record["agent_key"], key)
         for invalid in ("short", f"{first_key}/../spoof", first_key.upper()):
             with self.subTest(invalid=invalid):
                 with self.assertRaises(SUPERVISOR.ConfigurationError):
@@ -675,6 +844,19 @@ class AgentSupervisorTests(unittest.TestCase):
         finally:
             os.umask(old_umask)
         self.assertEqual(stat.S_IMODE(lease.stat().st_mode), 0o600)
+        self.assertEqual(self.live(args), [record])
+
+    def test_lease_publication_never_uses_creator_hardlink_transition(self):
+        args = self.prepare()
+        with mock.patch.object(
+            SUPERVISOR.os,
+            "link",
+            side_effect=AssertionError("lease publication used a hard link"),
+        ):
+            lease, record = self.register(args, "anvil")
+
+        self.assertTrue(lease.is_file())
+        self.assertEqual(lease.stat().st_nlink, 1)
         self.assertEqual(self.live(args), [record])
 
     def test_rapid_daemon_failures_back_off_exponentially(self):
@@ -1588,6 +1770,9 @@ for line in sys.stdin:
         )
         self.assertIsNotNone(status["daemon_pid"])
         self.assertEqual(self.live(args), [record])
+        marker = args.runtime_dir.parent / SUPERVISOR.creator_marker_name(
+            args.agent_key
+        )
 
         owner_process = next(
             process for process in self.owner_processes if process.pid == owner_pid
@@ -1597,6 +1782,7 @@ for line in sys.stdin:
         # registering bridge (this test process) deliberately remains live.
         eventually(lambda: not args.runtime_dir.exists())
         eventually(lambda: not args.state_dir.exists())
+        eventually(lambda: not marker.exists())
         self.assertTrue(outside.exists())
         self.assertEqual(outside.read_text(), "preserve me")
         self.assertFalse(lease.exists())
@@ -1980,28 +2166,55 @@ for line in sys.stdin:
         owner_process.wait(timeout=3)
 
         current = self.prepare()
-        runtime_parent = stale.runtime_dir.parent.stat()
+        runtime_identity = stale.runtime_dir.stat()
+        original_listdir = SUPERVISOR.os.listdir
         original_rmdir = SUPERVISOR.os.rmdir
         interrupted = False
 
-        def interrupt_final_runtime_rmdir(path, *, dir_fd=None):
+        def status_first_listdir(path):
+            names = original_listdir(path)
+            if isinstance(path, int):
+                directory = os.fstat(path)
+                if (directory.st_dev, directory.st_ino) == (
+                    runtime_identity.st_dev,
+                    runtime_identity.st_ino,
+                ):
+                    priority = {
+                        SUPERVISOR.STATUS_NAME: 0,
+                        SUPERVISOR.LOCK_NAME: 1,
+                        "leases": 2,
+                    }
+                    return sorted(
+                        names,
+                        key=lambda name: (priority.get(name, 3), name),
+                    )
+            return names
+
+        def interrupt_lease_rmdir(path, *, dir_fd=None):
             nonlocal interrupted
             parent = os.fstat(dir_fd) if dir_fd is not None else None
             if (
                 not interrupted
-                and path == stale.runtime_dir.name
+                and path == "leases"
                 and parent is not None
                 and (parent.st_dev, parent.st_ino)
-                == (runtime_parent.st_dev, runtime_parent.st_ino)
+                == (runtime_identity.st_dev, runtime_identity.st_ino)
             ):
                 interrupted = True
                 raise OSError(SUPERVISOR.errno.EINTR, "injected reap interruption")
             return original_rmdir(path, dir_fd=dir_fd)
 
-        with mock.patch.object(
-            SUPERVISOR.os,
-            "rmdir",
-            side_effect=interrupt_final_runtime_rmdir,
+        with (
+            mock.patch.object(
+                SUPERVISOR.os,
+                "listdir",
+                side_effect=status_first_listdir,
+            ),
+            mock.patch.object(
+                SUPERVISOR.os,
+                "rmdir",
+                side_effect=interrupt_lease_rmdir,
+            ),
         ):
             SUPERVISOR.prune_orphaned_state(
                 current.runtime_dir.parent,
@@ -2011,8 +2224,13 @@ for line in sys.stdin:
 
         self.assertTrue(interrupted)
         self.assertFalse(stale.state_dir.exists())
-        self.assertTrue(stale.runtime_dir.is_dir())
-        self.assertEqual(list(stale.runtime_dir.iterdir()), [])
+        self.assertEqual(
+            SUPERVISOR.read_status_owner(stale.runtime_dir, stale.agent_key),
+            (owner_pid, owner_identity),
+        )
+        self.assertTrue((stale.runtime_dir / SUPERVISOR.STATUS_NAME).is_file())
+        self.assertTrue((stale.runtime_dir / SUPERVISOR.LOCK_NAME).is_file())
+        self.assertTrue(stale.leases_dir.is_dir())
 
         SUPERVISOR.prune_orphaned_state(
             current.runtime_dir.parent,
@@ -2020,6 +2238,1210 @@ for line in sys.stdin:
             current.agent_key,
         )
         self.assertFalse(stale.runtime_dir.exists())
+
+    def test_markerless_legacy_runtime_is_preserved_without_age_inference(self):
+        generation = "3" * 64
+        owner_identity = SUPERVISOR.process_start_identity(os.getpid())
+        self.assertIsNotNone(owner_identity)
+        agent_key = SUPERVISOR.derive_agent_key(
+            os.getpid(),
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        state_agents = self.state_root / "hera" / "agents"
+        runtime_path = runtime_agents / agent_key
+        state_path = state_agents / agent_key
+        for path in (
+            self.runtime_root / "hera",
+            runtime_agents,
+            runtime_path,
+            self.state_root / "hera",
+            state_agents,
+        ):
+            SUPERVISOR.ensure_private_directory(path)
+
+        self.assertFalse(state_path.exists())
+        current_agent_key = "f" * 32
+        self.assertNotEqual(agent_key, current_agent_key)
+        with mock.patch.object(
+            SUPERVISOR.time,
+            "time_ns",
+            return_value=2**63 - 1,
+        ):
+            for _ in range(25):
+                SUPERVISOR.prune_orphaned_state(
+                    runtime_agents,
+                    state_agents,
+                    current_agent_key,
+                )
+
+        self.assertTrue(runtime_path.is_dir())
+        self.assertEqual(list(runtime_path.iterdir()), [])
+
+    def test_deployed_creator_pause_survives_new_pruner(self):
+        host = "hera"
+        owner_pid = os.getpid()
+        owner_identity = SUPERVISOR.process_start_identity(owner_pid)
+        self.assertIsNotNone(owner_identity)
+        generation = "2" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_host = self.runtime_root / host
+        runtime_agents = runtime_host / "agents"
+        runtime_path = runtime_agents / agent_key
+        state_host = self.state_root / host
+        state_agents = state_host / "agents"
+        state_path = state_agents / agent_key
+        leases_path = runtime_path / "leases"
+        runtime_published = threading.Event()
+        resume_creator = threading.Event()
+        worker_errors = []
+
+        def deployed_prepare_order():
+            try:
+                for path in (
+                    self.runtime_root,
+                    runtime_host,
+                    runtime_agents,
+                    runtime_path,
+                ):
+                    SUPERVISOR.ensure_private_directory(path)
+                runtime_published.set()
+                if not resume_creator.wait(timeout=10):
+                    raise TimeoutError("deployed creator did not resume")
+                for path in (
+                    self.state_root,
+                    state_host,
+                    state_agents,
+                    state_path,
+                    leases_path,
+                ):
+                    SUPERVISOR.ensure_private_directory(path)
+            except BaseException as error:
+                worker_errors.append(error)
+
+        worker = threading.Thread(target=deployed_prepare_order, daemon=True)
+        worker.start()
+        try:
+            self.assertTrue(runtime_published.wait(timeout=10))
+            self.assertFalse(state_path.exists())
+            self.assertFalse((runtime_path / SUPERVISOR.STATUS_NAME).exists())
+            self.assertFalse(
+                any(
+                    SUPERVISOR.creator_marker_agent_key(entry.name) == agent_key
+                    for entry in runtime_agents.iterdir()
+                )
+            )
+            with mock.patch.object(
+                SUPERVISOR.time,
+                "time_ns",
+                return_value=2**63 - 1,
+            ):
+                for _ in range(25):
+                    SUPERVISOR.prune_orphaned_state(
+                        runtime_agents,
+                        state_agents,
+                        "f" * 32,
+                    )
+            self.assertTrue(runtime_path.is_dir())
+            self.assertEqual(list(runtime_path.iterdir()), [])
+        finally:
+            resume_creator.set()
+            worker.join(timeout=10)
+
+        self.assertFalse(worker.is_alive())
+        if worker_errors:
+            raise AssertionError("deployed creator failed") from worker_errors[0]
+        self.assertTrue(state_path.is_dir())
+        self.assertTrue(leases_path.is_dir())
+        args = SimpleNamespace(
+            agent_key=agent_key,
+            generation=generation,
+            owner_pid=owner_pid,
+            owner_start_identity=owner_identity,
+            runtime_dir=runtime_path,
+        )
+        SUPERVISOR.publish_owner_seed_if_absent(args)
+        self.assertEqual(
+            SUPERVISOR.read_status_owner(runtime_path, agent_key),
+            (owner_pid, owner_identity),
+        )
+
+    def test_concurrent_statusless_runtime_creation_survives_prune_stress(self):
+        count = 16
+        host = "hera"
+        owner_pid = os.getpid()
+        owner_identity = SUPERVISOR.process_start_identity(owner_pid)
+        self.assertIsNotNone(owner_identity)
+        generations = [f"{index + 4:064x}" for index in range(count)]
+        agent_keys = [
+            SUPERVISOR.derive_agent_key(
+                owner_pid,
+                owner_identity,
+                generation,
+            )
+            for generation in generations
+        ]
+        runtime_agents = self.runtime_root / host / "agents"
+        state_agents = self.state_root / host / "agents"
+        runtime_paths = {runtime_agents / key for key in agent_keys}
+        current_agent_key = "f" * 32
+        self.assertNotIn(current_agent_key, agent_keys)
+
+        original_validate = SUPERVISOR.validate_initial_runtime_instance
+        all_runtime_published = threading.Barrier(count + 1)
+        resume_creation = threading.Event()
+        paused_paths: set[Path] = set()
+        pause_lock = threading.Lock()
+        results = []
+        worker_errors = []
+
+        def pause_after_runtime_publish(path, *identity):
+            original_validate(path, *identity)
+            with pause_lock:
+                pause = path in runtime_paths and path not in paused_paths
+                if pause:
+                    paused_paths.add(path)
+            if pause:
+                all_runtime_published.wait(timeout=10)
+                if not resume_creation.wait(timeout=10):
+                    raise TimeoutError("creation race test did not resume")
+
+        def create_instance(agent_key, generation):
+            try:
+                results.append(
+                    SUPERVISOR.prepare_instance_directories(
+                        self.runtime_root,
+                        self.state_root,
+                        host,
+                        agent_key,
+                        owner_pid,
+                        owner_identity,
+                        generation,
+                    )
+                )
+            except BaseException as error:
+                worker_errors.append(error)
+
+        workers = [
+            threading.Thread(
+                target=create_instance,
+                args=(agent_key, generation),
+                daemon=True,
+            )
+            for agent_key, generation in zip(
+                agent_keys,
+                generations,
+                strict=True,
+            )
+        ]
+        with mock.patch.object(
+            SUPERVISOR,
+            "validate_initial_runtime_instance",
+            side_effect=pause_after_runtime_publish,
+        ):
+            for worker in workers:
+                worker.start()
+            try:
+                all_runtime_published.wait(timeout=10)
+                newest_ns = max(
+                    max(path.stat().st_ctime_ns, path.stat().st_mtime_ns)
+                    for path in runtime_paths
+                )
+                well_past_former_grace = newest_ns + int(
+                    100 * SUPERVISOR.STARTUP_STATUS_RETRY_SECONDS * 1_000_000_000
+                )
+                with mock.patch.object(
+                    SUPERVISOR.time,
+                    "time_ns",
+                    return_value=well_past_former_grace,
+                ):
+                    for _ in range(25):
+                        SUPERVISOR.prune_orphaned_state(
+                            runtime_agents,
+                            state_agents,
+                            current_agent_key,
+                        )
+                self.assertTrue(all(path.is_dir() for path in runtime_paths))
+            finally:
+                resume_creation.set()
+                for worker in workers:
+                    worker.join(timeout=10)
+
+        self.assertFalse(
+            any(worker.is_alive() for worker in workers),
+            "concurrent directory creation did not finish",
+        )
+        if worker_errors:
+            raise AssertionError("concurrent creation failed") from worker_errors[0]
+        self.assertEqual(len(results), count)
+        for runtime_dir, state_dir, leases_dir in results:
+            self.assertTrue(runtime_dir.is_dir())
+            self.assertTrue(state_dir.is_dir())
+            self.assertTrue(leases_dir.is_dir())
+
+    def test_live_creator_can_resume_during_prune_after_arbitrary_pause(self):
+        host = "hera"
+        owner_pid = os.getpid()
+        owner_identity = SUPERVISOR.process_start_identity(owner_pid)
+        self.assertIsNotNone(owner_identity)
+        generation = "d" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / host / "agents"
+        state_agents = self.state_root / host / "agents"
+        runtime_path = runtime_agents / agent_key
+        original_validate = SUPERVISOR.validate_initial_runtime_instance
+        original_read_creator = SUPERVISOR.read_creator_lifecycle
+        runtime_published = threading.Event()
+        resume_creation = threading.Event()
+        creation_finished = threading.Event()
+        paused = False
+        results = []
+        worker_errors = []
+
+        def pause_after_runtime_publish(path, *identity):
+            nonlocal paused
+            original_validate(path, *identity)
+            if path == runtime_path and not paused:
+                paused = True
+                runtime_published.set()
+                if not resume_creation.wait(timeout=10):
+                    raise TimeoutError("creator did not resume during prune")
+
+        def create_instance():
+            try:
+                results.append(
+                    SUPERVISOR.prepare_instance_directories(
+                        self.runtime_root,
+                        self.state_root,
+                        host,
+                        agent_key,
+                        owner_pid,
+                        owner_identity,
+                        generation,
+                    )
+                )
+            except BaseException as error:
+                worker_errors.append(error)
+            finally:
+                creation_finished.set()
+
+        def resume_while_prune_holds_live_marker(runtime_parent, key):
+            result = original_read_creator(runtime_parent, key)
+            if key == agent_key and runtime_published.is_set():
+                resume_creation.set()
+                if not creation_finished.wait(timeout=10):
+                    raise TimeoutError("creator did not finish during prune")
+            return result
+
+        worker = threading.Thread(target=create_instance, daemon=True)
+        with mock.patch.object(
+            SUPERVISOR,
+            "validate_initial_runtime_instance",
+            side_effect=pause_after_runtime_publish,
+        ):
+            worker.start()
+            try:
+                self.assertTrue(runtime_published.wait(timeout=10))
+                changed = runtime_path.stat()
+                well_past_former_grace = max(
+                    changed.st_ctime_ns,
+                    changed.st_mtime_ns,
+                ) + int(100 * SUPERVISOR.STARTUP_STATUS_RETRY_SECONDS * 1_000_000_000)
+                with (
+                    mock.patch.object(
+                        SUPERVISOR,
+                        "read_creator_lifecycle",
+                        side_effect=resume_while_prune_holds_live_marker,
+                    ),
+                    mock.patch.object(
+                        SUPERVISOR.time,
+                        "time_ns",
+                        return_value=well_past_former_grace,
+                    ),
+                ):
+                    SUPERVISOR.prune_orphaned_state(
+                        runtime_agents,
+                        state_agents,
+                        "f" * 32,
+                    )
+            finally:
+                resume_creation.set()
+                worker.join(timeout=10)
+
+        self.assertFalse(worker.is_alive())
+        if worker_errors:
+            raise AssertionError("creator failed during prune") from worker_errors[0]
+        self.assertEqual(len(results), 1)
+        runtime_dir, state_dir, leases_dir = results[0]
+        self.assertTrue(runtime_dir.is_dir())
+        self.assertTrue(state_dir.is_dir())
+        self.assertTrue(leases_dir.is_dir())
+
+    def test_atomic_runtime_publication_survives_deployed_legacy_pruner(self):
+        host = "hera"
+        owner_pid = os.getpid()
+        owner_identity = SUPERVISOR.process_start_identity(owner_pid)
+        self.assertIsNotNone(owner_identity)
+        generation = "5" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / host / "agents"
+        state_agents = self.state_root / host / "agents"
+        runtime_path = runtime_agents / agent_key
+        state_path = state_agents / agent_key
+        stage_populated = threading.Event()
+        allow_publication = threading.Event()
+        runtime_published = threading.Event()
+        allow_state = threading.Event()
+        original_rename = SUPERVISOR.rename_noreplace
+        results = []
+        worker_errors = []
+
+        def pause_publication(directory_fd, source, destination):
+            if (
+                SUPERVISOR.instance_staging_details(source) is None
+                or destination != agent_key
+            ):
+                return original_rename(directory_fd, source, destination)
+            stage_populated.set()
+            if not allow_publication.wait(timeout=10):
+                raise TimeoutError("legacy-pruner test did not publish")
+            original_rename(directory_fd, source, destination)
+            runtime_published.set()
+            if not allow_state.wait(timeout=10):
+                raise TimeoutError("legacy-pruner test did not create state")
+
+        def create_instance():
+            try:
+                results.append(
+                    SUPERVISOR.prepare_instance_directories(
+                        self.runtime_root,
+                        self.state_root,
+                        host,
+                        agent_key,
+                        owner_pid,
+                        owner_identity,
+                        generation,
+                    )
+                )
+            except BaseException as error:
+                worker_errors.append(error)
+
+        worker = threading.Thread(target=create_instance, daemon=True)
+        with mock.patch.object(
+            SUPERVISOR,
+            "rename_noreplace",
+            side_effect=pause_publication,
+        ):
+            worker.start()
+            try:
+                self.assertTrue(stage_populated.wait(timeout=10))
+                stages = [
+                    entry
+                    for entry in runtime_agents.iterdir()
+                    if SUPERVISOR.instance_staging_details(entry.name) is not None
+                ]
+                self.assertEqual(len(stages), 1)
+                for _ in range(10):
+                    legacy_prune_orphaned_state(
+                        runtime_agents,
+                        state_agents,
+                        "f" * 32,
+                    )
+                self.assertTrue(stages[0].is_dir())
+                self.assertFalse(runtime_path.exists())
+
+                allow_publication.set()
+                self.assertTrue(runtime_published.wait(timeout=10))
+                self.assertTrue((runtime_path / SUPERVISOR.STATUS_NAME).is_file())
+                self.assertTrue((runtime_path / "leases").is_dir())
+                self.assertFalse(state_path.exists())
+                for _ in range(10):
+                    legacy_prune_orphaned_state(
+                        runtime_agents,
+                        state_agents,
+                        "f" * 32,
+                    )
+                self.assertTrue(runtime_path.is_dir())
+                self.assertEqual(
+                    SUPERVISOR.read_status_owner(runtime_path, agent_key),
+                    (owner_pid, owner_identity),
+                )
+            finally:
+                allow_publication.set()
+                allow_state.set()
+                worker.join(timeout=10)
+
+        self.assertFalse(worker.is_alive())
+        if worker_errors:
+            raise AssertionError(
+                "atomic runtime publication failed"
+            ) from worker_errors[0]
+        self.assertEqual(len(results), 1)
+        runtime_dir, state_dir, leases_dir = results[0]
+        self.assertEqual(runtime_dir, runtime_path)
+        self.assertEqual(state_dir, state_path)
+        self.assertTrue(leases_dir.is_dir())
+
+    def test_disappearing_runtime_conflict_is_not_recreated_by_validation(self):
+        owner_pid = os.getpid()
+        owner_identity = SUPERVISOR.process_start_identity(owner_pid)
+        self.assertIsNotNone(owner_identity)
+        generation = "3" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (self.runtime_root / "hera", runtime_agents):
+            SUPERVISOR.ensure_private_directory(path)
+        runtime_path = runtime_agents / agent_key
+        original_rename = SUPERVISOR.rename_noreplace
+        conflict_seen = False
+
+        def conflict_then_disappear(directory_fd, source, destination):
+            nonlocal conflict_seen
+            if (
+                SUPERVISOR.instance_staging_details(source) is None
+                or destination != agent_key
+            ):
+                return original_rename(directory_fd, source, destination)
+            runtime_path.mkdir(mode=0o700)
+            try:
+                return original_rename(directory_fd, source, destination)
+            except OSError:
+                conflict_seen = True
+                runtime_path.rmdir()
+                raise
+
+        with mock.patch.object(
+            SUPERVISOR,
+            "rename_noreplace",
+            side_effect=conflict_then_disappear,
+        ):
+            with self.assertRaisesRegex(
+                SUPERVISOR.ConfigurationError,
+                "published runtime directory is unavailable",
+            ):
+                SUPERVISOR.publish_initial_runtime_instance(
+                    runtime_agents,
+                    agent_key,
+                    owner_pid,
+                    owner_identity,
+                    generation,
+                )
+
+        self.assertTrue(conflict_seen)
+        self.assertFalse(os.path.lexists(runtime_path))
+        self.assertFalse(
+            any(
+                SUPERVISOR.instance_staging_details(entry.name) is not None
+                for entry in runtime_agents.iterdir()
+            )
+        )
+
+    def test_runtime_validation_rejects_final_inode_replacement(self):
+        owner_pid = os.getpid()
+        owner_identity = SUPERVISOR.process_start_identity(owner_pid)
+        self.assertIsNotNone(owner_identity)
+        generation = "2" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (self.runtime_root / "hera", runtime_agents):
+            SUPERVISOR.ensure_private_directory(path)
+        runtime_path = SUPERVISOR.publish_initial_runtime_instance(
+            runtime_agents,
+            agent_key,
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        displaced = runtime_agents / f".displaced-{agent_key}"
+        original_read_status = SUPERVISOR.read_status_lifecycle
+        replacement_installed = False
+
+        def read_then_replace(runtime_dir, observed_key, *, directory_fd=None):
+            nonlocal replacement_installed
+            if directory_fd is None:
+                result = original_read_status(runtime_dir, observed_key)
+            else:
+                result = original_read_status(
+                    runtime_dir,
+                    observed_key,
+                    directory_fd=directory_fd,
+                )
+            if not replacement_installed:
+                runtime_path.rename(displaced)
+                SUPERVISOR.ensure_private_directory(runtime_path)
+                SUPERVISOR.ensure_private_directory(runtime_path / "leases")
+                replacement_installed = True
+            return result
+
+        with mock.patch.object(
+            SUPERVISOR,
+            "read_status_lifecycle",
+            side_effect=read_then_replace,
+        ):
+            with self.assertRaisesRegex(
+                SUPERVISOR.ConfigurationError,
+                "published runtime directory changed",
+            ):
+                SUPERVISOR.validate_initial_runtime_instance(
+                    runtime_path,
+                    agent_key,
+                    owner_pid,
+                    owner_identity,
+                    generation,
+                )
+
+        self.assertTrue(replacement_installed)
+        self.assertFalse((runtime_path / SUPERVISOR.STATUS_NAME).exists())
+        self.assertTrue((runtime_path / "leases").is_dir())
+        self.assertTrue((displaced / SUPERVISOR.STATUS_NAME).is_file())
+        self.assertTrue((displaced / "leases").is_dir())
+
+    def test_runtime_publication_cleanup_preserves_swapped_stage(self):
+        owner_pid = os.getpid()
+        owner_identity = SUPERVISOR.process_start_identity(owner_pid)
+        self.assertIsNotNone(owner_identity)
+        generation = "6" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (self.runtime_root / "hera", runtime_agents):
+            SUPERVISOR.ensure_private_directory(path)
+        runtime_path = runtime_agents / agent_key
+        saved_stage = runtime_agents / f".saved-stage-{agent_key}"
+        replacement_stage = None
+        sentinel = None
+        original_rename = SUPERVISOR.rename_noreplace
+
+        def swap_stage_before_conflict(directory_fd, source, destination):
+            nonlocal replacement_stage, sentinel
+            if (
+                SUPERVISOR.instance_staging_details(source) is None
+                or destination != agent_key
+            ):
+                return original_rename(directory_fd, source, destination)
+
+            SUPERVISOR.ensure_private_directory(runtime_path)
+            SUPERVISOR.ensure_private_directory(runtime_path / "leases")
+            SUPERVISOR.atomic_json(
+                runtime_path,
+                SUPERVISOR.STATUS_NAME,
+                SUPERVISOR.owner_seed_record_fields(
+                    agent_key,
+                    owner_pid,
+                    owner_identity,
+                    generation,
+                ),
+                replace=False,
+            )
+            stage = runtime_agents / source
+            stage.rename(saved_stage)
+            stage.mkdir(mode=0o700)
+            replacement_stage = stage
+            sentinel = stage / "preserve"
+            sentinel.write_text("replacement\n")
+            raise FileExistsError(errno.EEXIST, "injected publication conflict")
+
+        with mock.patch.object(
+            SUPERVISOR,
+            "rename_noreplace",
+            side_effect=swap_stage_before_conflict,
+        ):
+            with self.assertRaisesRegex(
+                SUPERVISOR.ConfigurationError,
+                "agent-instance directory identity changed",
+            ):
+                SUPERVISOR.publish_initial_runtime_instance(
+                    runtime_agents,
+                    agent_key,
+                    owner_pid,
+                    owner_identity,
+                    generation,
+                )
+
+        self.assertIsNotNone(replacement_stage)
+        self.assertIsNotNone(sentinel)
+        self.assertTrue(replacement_stage.is_dir())
+        self.assertEqual(sentinel.read_text(), "replacement\n")
+        self.assertTrue(saved_stage.is_dir())
+        self.assertEqual(
+            SUPERVISOR.read_status_lifecycle(runtime_path, agent_key),
+            (owner_pid, owner_identity, generation, SUPERVISOR.RECORD_FORMAT_V2),
+        )
+
+    def test_runtime_validation_rejects_final_child_entry_replacements(self):
+        owner_pid = os.getpid()
+        owner_identity = SUPERVISOR.process_start_identity(owner_pid)
+        self.assertIsNotNone(owner_identity)
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (self.runtime_root / "hera", runtime_agents):
+            SUPERVISOR.ensure_private_directory(path)
+
+        for index, entry_name in enumerate(
+            (SUPERVISOR.STATUS_NAME, "leases"),
+            start=7,
+        ):
+            with self.subTest(entry_name=entry_name):
+                generation = f"{index:064x}"
+                agent_key = SUPERVISOR.derive_agent_key(
+                    owner_pid,
+                    owner_identity,
+                    generation,
+                )
+                runtime_path = SUPERVISOR.publish_initial_runtime_instance(
+                    runtime_agents,
+                    agent_key,
+                    owner_pid,
+                    owner_identity,
+                    generation,
+                )
+                displaced = runtime_path / f".displaced-{index}"
+                outside = self.root / f"outside-{index}"
+                if entry_name == "leases":
+                    outside.mkdir()
+                    (outside / "preserve").write_text("directory\n")
+                else:
+                    outside.write_text("status\n")
+                original_lstat = Path.lstat
+                runtime_lstats = 0
+
+                def swap_child_on_final_runtime_check(path, *args, **kwargs):
+                    nonlocal runtime_lstats
+                    result = original_lstat(path, *args, **kwargs)
+                    if path == runtime_path:
+                        runtime_lstats += 1
+                        if runtime_lstats == 2:
+                            entry = runtime_path / entry_name
+                            entry.rename(displaced)
+                            entry.symlink_to(
+                                outside,
+                                target_is_directory=entry_name == "leases",
+                            )
+                    return result
+
+                with mock.patch.object(
+                    Path,
+                    "lstat",
+                    autospec=True,
+                    side_effect=swap_child_on_final_runtime_check,
+                ):
+                    with self.assertRaisesRegex(
+                        SUPERVISOR.ConfigurationError,
+                        "published runtime .* changed",
+                    ):
+                        SUPERVISOR.validate_initial_runtime_instance(
+                            runtime_path,
+                            agent_key,
+                            owner_pid,
+                            owner_identity,
+                            generation,
+                        )
+
+                entry = runtime_path / entry_name
+                self.assertEqual(runtime_lstats, 2)
+                self.assertTrue(entry.is_symlink())
+                if entry_name == "leases":
+                    self.assertEqual(
+                        (outside / "preserve").read_text(),
+                        "directory\n",
+                    )
+                else:
+                    self.assertEqual(outside.read_text(), "status\n")
+
+    def test_dead_hidden_runtime_stage_and_marker_are_reclaimed(self):
+        owner_pid, owner_identity = self.start_owner()
+        generation = "4" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (self.runtime_root / "hera", runtime_agents):
+            SUPERVISOR.ensure_private_directory(path)
+        marker = SUPERVISOR.publish_creator_marker(
+            runtime_agents,
+            agent_key,
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        staging = runtime_agents / SUPERVISOR.instance_staging_name(
+            agent_key,
+            owner_pid,
+            generation,
+        )
+        staging.mkdir(mode=0o700)
+        SUPERVISOR.ensure_private_directory(staging)
+        SUPERVISOR.ensure_private_directory(staging / "leases")
+        SUPERVISOR.atomic_json(
+            staging,
+            SUPERVISOR.STATUS_NAME,
+            SUPERVISOR.owner_seed_record_fields(
+                agent_key,
+                owner_pid,
+                owner_identity,
+                generation,
+            ),
+            replace=False,
+        )
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+
+        SUPERVISOR.prune_orphaned_state(
+            runtime_agents,
+            self.state_root / "hera" / "agents",
+            "f" * 32,
+        )
+
+        self.assertFalse(staging.exists())
+        self.assertFalse(marker.exists())
+
+    def test_dead_hidden_runtime_prune_preserves_swapped_stage(self):
+        owner_pid, owner_identity = self.start_owner()
+        generation = "5" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (self.runtime_root / "hera", runtime_agents):
+            SUPERVISOR.ensure_private_directory(path)
+        marker = SUPERVISOR.publish_creator_marker(
+            runtime_agents,
+            agent_key,
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        staging = runtime_agents / SUPERVISOR.instance_staging_name(
+            agent_key,
+            owner_pid,
+            generation,
+        )
+        staging.mkdir(mode=0o700)
+        SUPERVISOR.ensure_private_directory(staging)
+        SUPERVISOR.ensure_private_directory(staging / "leases")
+        saved_stage = runtime_agents / f".saved-prune-stage-{agent_key}"
+        sentinel = staging / "original"
+        sentinel.write_text("original\n")
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+
+        original_remove = SUPERVISOR.remove_instance_tree
+        replacement_sentinel = None
+        observed_identity = None
+
+        def swap_before_guard(path, *, final_names=(), expected_identity=None):
+            nonlocal replacement_sentinel, observed_identity
+            if path == staging and replacement_sentinel is None:
+                observed_identity = expected_identity
+                staging.rename(saved_stage)
+                staging.mkdir(mode=0o700)
+                replacement_sentinel = staging / "preserve"
+                replacement_sentinel.write_text("replacement\n")
+            return original_remove(
+                path,
+                final_names=final_names,
+                expected_identity=expected_identity,
+            )
+
+        with mock.patch.object(
+            SUPERVISOR,
+            "remove_instance_tree",
+            side_effect=swap_before_guard,
+        ):
+            SUPERVISOR.prune_orphaned_state(
+                runtime_agents,
+                self.state_root / "hera" / "agents",
+                "f" * 32,
+            )
+
+        self.assertIsNotNone(observed_identity)
+        self.assertIsNotNone(replacement_sentinel)
+        self.assertEqual(replacement_sentinel.read_text(), "replacement\n")
+        self.assertEqual((saved_stage / "original").read_text(), "original\n")
+        self.assertTrue(marker.is_file())
+
+    def test_dead_creator_with_both_statusless_twins_is_reclaimed(self):
+        owner_pid, owner_identity = self.start_owner()
+        stale = self.prepare(
+            owner_pid=owner_pid,
+            owner_start_identity=owner_identity,
+            generation="e" * 64,
+        )
+        marker = stale.runtime_dir.parent / SUPERVISOR.creator_marker_name(
+            stale.agent_key
+        )
+        self.assertTrue(marker.is_file())
+        (stale.runtime_dir / SUPERVISOR.STATUS_NAME).unlink()
+        self.assertFalse((stale.runtime_dir / SUPERVISOR.STATUS_NAME).exists())
+
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+        current = self.prepare()
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+
+        self.assertFalse(stale.runtime_dir.exists())
+        self.assertFalse(stale.state_dir.exists())
+        self.assertFalse(marker.exists())
+
+    def test_dead_creator_with_unpaired_statusless_runtime_is_reclaimed(self):
+        owner_pid, owner_identity = self.start_owner()
+        generation = "c" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (
+            self.runtime_root / "hera",
+            runtime_agents,
+        ):
+            SUPERVISOR.ensure_private_directory(path)
+        marker = SUPERVISOR.publish_creator_marker(
+            runtime_agents,
+            agent_key,
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_path = runtime_agents / agent_key
+        SUPERVISOR.ensure_private_directory(runtime_path)
+
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+        SUPERVISOR.prune_orphaned_state(
+            runtime_agents,
+            self.state_root / "hera" / "agents",
+            "f" * 32,
+        )
+
+        self.assertFalse(runtime_path.exists())
+        self.assertFalse(marker.exists())
+
+    def test_unsafe_creator_marker_fails_closed(self):
+        owner_pid, owner_identity = self.start_owner()
+        stale = self.prepare(
+            owner_pid=owner_pid,
+            owner_start_identity=owner_identity,
+            generation="b" * 64,
+        )
+        marker = stale.runtime_dir.parent / SUPERVISOR.creator_marker_name(
+            stale.agent_key
+        )
+        marker.unlink()
+        sentinel = self.root / "creator-marker-sentinel"
+        sentinel.write_text("preserve\n")
+        marker.symlink_to(sentinel)
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+
+        SUPERVISOR.prune_orphaned_state(
+            stale.runtime_dir.parent,
+            stale.state_dir.parent,
+            "f" * 32,
+        )
+
+        self.assertTrue(stale.runtime_dir.is_dir())
+        self.assertTrue(stale.state_dir.is_dir())
+        self.assertTrue(marker.is_symlink())
+        self.assertEqual(sentinel.read_text(), "preserve\n")
+
+    def test_creator_publication_never_clobbers_concurrent_marker(self):
+        owner_pid = os.getpid()
+        owner_identity = SUPERVISOR.process_start_identity(owner_pid)
+        self.assertIsNotNone(owner_identity)
+        generation = "9" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (self.runtime_root / "hera", runtime_agents):
+            SUPERVISOR.ensure_private_directory(path)
+        marker = runtime_agents / SUPERVISOR.creator_marker_name(agent_key)
+        injected_payload = b'{"injected":true}\n'
+        original_rename = SUPERVISOR.rename_noreplace
+        injected = False
+
+        def inject_before_no_clobber_rename(directory_fd, source, destination):
+            nonlocal injected
+            if not injected:
+                injected = True
+                marker.write_bytes(injected_payload)
+                marker.chmod(0o600)
+            return original_rename(directory_fd, source, destination)
+
+        with mock.patch.object(
+            SUPERVISOR,
+            "rename_noreplace",
+            side_effect=inject_before_no_clobber_rename,
+        ):
+            with self.assertRaisesRegex(
+                SUPERVISOR.ConfigurationError,
+                "publication could not be verified",
+            ):
+                SUPERVISOR.publish_creator_marker(
+                    runtime_agents,
+                    agent_key,
+                    owner_pid,
+                    owner_identity,
+                    generation,
+                )
+
+        self.assertTrue(injected)
+        self.assertEqual(marker.read_bytes(), injected_payload)
+        self.assertFalse(
+            any(
+                SUPERVISOR.creator_staging_details(entry.name) is not None
+                for entry in runtime_agents.iterdir()
+            )
+        )
+
+    def test_same_key_creator_publication_is_concurrently_idempotent(self):
+        owner_pid = os.getpid()
+        owner_identity = SUPERVISOR.process_start_identity(owner_pid)
+        self.assertIsNotNone(owner_identity)
+        generation = "8" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (self.runtime_root / "hera", runtime_agents):
+            SUPERVISOR.ensure_private_directory(path)
+        start = threading.Barrier(3)
+        results = []
+        errors = []
+
+        def publish():
+            try:
+                start.wait(timeout=10)
+                results.append(
+                    SUPERVISOR.publish_creator_marker(
+                        runtime_agents,
+                        agent_key,
+                        owner_pid,
+                        owner_identity,
+                        generation,
+                    )
+                )
+            except BaseException as error:
+                errors.append(error)
+
+        workers = [threading.Thread(target=publish, daemon=True) for _ in range(2)]
+        for worker in workers:
+            worker.start()
+        start.wait(timeout=10)
+        for worker in workers:
+            worker.join(timeout=10)
+
+        self.assertFalse(any(worker.is_alive() for worker in workers))
+        if errors:
+            raise AssertionError("same-key creator publication failed") from errors[0]
+        marker = runtime_agents / SUPERVISOR.creator_marker_name(agent_key)
+        self.assertEqual(results, [marker, marker])
+        state, record, _identity = SUPERVISOR.read_creator_lifecycle(
+            runtime_agents,
+            agent_key,
+        )
+        self.assertIs(state, SUPERVISOR.LifecycleState.LIVE)
+        self.assertEqual(record["agent_key"], agent_key)
+        self.assertFalse(
+            any(
+                SUPERVISOR.creator_staging_details(entry.name) is not None
+                for entry in runtime_agents.iterdir()
+            )
+        )
+
+    def test_live_creator_staging_is_preserved_past_age_quarantine(self):
+        owner_pid = os.getpid()
+        owner_identity = SUPERVISOR.process_start_identity(owner_pid)
+        self.assertIsNotNone(owner_identity)
+        generation = "8" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (self.runtime_root / "hera", runtime_agents):
+            SUPERVISOR.ensure_private_directory(path)
+        staging = runtime_agents / SUPERVISOR.creator_staging_name(
+            agent_key,
+            owner_pid,
+            generation,
+        )
+        staging.write_bytes(b"partial")
+        staging.chmod(0o600)
+
+        with mock.patch.object(
+            SUPERVISOR.time,
+            "time_ns",
+            return_value=2**63 - 1,
+        ):
+            SUPERVISOR.prune_orphaned_state(
+                runtime_agents,
+                self.state_root / "hera" / "agents",
+                "f" * 32,
+            )
+
+        self.assertTrue(staging.is_file())
+
+    def test_dead_creator_partial_staging_is_reclaimed(self):
+        owner_pid, owner_identity = self.start_owner()
+        generation = "7" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (self.runtime_root / "hera", runtime_agents):
+            SUPERVISOR.ensure_private_directory(path)
+        staging = runtime_agents / SUPERVISOR.creator_staging_name(
+            agent_key,
+            owner_pid,
+            generation,
+        )
+        staging.write_bytes(b"partial")
+        staging.chmod(0o600)
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+
+        SUPERVISOR.prune_orphaned_state(
+            runtime_agents,
+            self.state_root / "hera" / "agents",
+            "f" * 32,
+        )
+
+        self.assertFalse(staging.exists())
+
+    def test_dead_creator_linked_staging_restores_and_reaps_marker(self):
+        owner_pid, owner_identity = self.start_owner()
+        generation = "6" * 64
+        agent_key = SUPERVISOR.derive_agent_key(
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        runtime_agents = self.runtime_root / "hera" / "agents"
+        for path in (self.runtime_root / "hera", runtime_agents):
+            SUPERVISOR.ensure_private_directory(path)
+        staging = runtime_agents / SUPERVISOR.creator_staging_name(
+            agent_key,
+            owner_pid,
+            generation,
+        )
+        marker = runtime_agents / SUPERVISOR.creator_marker_name(agent_key)
+        record = SUPERVISOR.creator_record(
+            agent_key,
+            owner_pid,
+            owner_identity,
+            generation,
+        )
+        staging.write_text(
+            json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
+        )
+        staging.chmod(0o600)
+        os.link(staging, marker)
+        self.assertEqual(staging.stat().st_nlink, 2)
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+
+        SUPERVISOR.prune_orphaned_state(
+            runtime_agents,
+            self.state_root / "hera" / "agents",
+            "f" * 32,
+        )
+
+        self.assertFalse(staging.exists())
+        self.assertFalse(marker.exists())
+
+    def test_cleanup_retains_dead_creator_marker_until_all_trees_are_removed(self):
+        owner_pid, owner_identity = self.start_owner()
+        stale = self.prepare(
+            owner_pid=owner_pid,
+            owner_start_identity=owner_identity,
+            generation="a" * 64,
+        )
+        marker = stale.runtime_dir.parent / SUPERVISOR.creator_marker_name(
+            stale.agent_key
+        )
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+
+        with mock.patch.object(
+            SUPERVISOR,
+            "remove_instance_tree",
+            side_effect=SUPERVISOR.ConfigurationError("injected cleanup failure"),
+        ):
+            SUPERVISOR.cleanup_instance(stale)
+
+        self.assertTrue(marker.is_file())
+        self.assertTrue(stale.runtime_dir.is_dir())
+        self.assertTrue(stale.state_dir.is_dir())
+
+        SUPERVISOR.cleanup_instance(stale)
+        self.assertFalse(marker.exists())
+        self.assertFalse(stale.runtime_dir.exists())
+        self.assertFalse(stale.state_dir.exists())
 
     def test_prune_never_unlinks_a_replacement_after_releasing_lock_path(self):
         owner_pid, owner_identity = self.start_owner()

@@ -35,7 +35,6 @@ let
   ++ dedicatedAnvilLinuxHosts;
   anvilClientConvergenceRequired = lib.elem hostname anvilClientHosts;
   promptdeployAvailable = inputs ? promptdeploy;
-  enablePromptdeploy = anvilClientConvergenceRequired && promptdeployAvailable;
   promptdeployRevision = "4c9b2c1c10df5048b239051d79c3df00b1d0276b";
 
   # Shared variables - also imported by sub-modules
@@ -239,16 +238,6 @@ in
   };
 
   programs = {
-    promptdeploy = lib.mkIf enablePromptdeploy {
-      enable = true;
-      expectedRevision = promptdeployRevision;
-      exactItems = [
-        "mcp:anvil"
-        "mcp:anvil-tools"
-        "skill:anvil"
-      ];
-    };
-
     direnv = {
       enable = true;
       enableBashIntegration = true;
@@ -425,6 +414,17 @@ in
           prs = "pr list -A jwiegley";
         };
       };
+    };
+  }
+  // lib.optionalAttrs promptdeployAvailable {
+    promptdeploy = {
+      enable = anvilClientConvergenceRequired;
+      expectedRevision = promptdeployRevision;
+      exactItems = [
+        "mcp:anvil"
+        "mcp:anvil-tools"
+        "skill:anvil"
+      ];
     };
   };
 

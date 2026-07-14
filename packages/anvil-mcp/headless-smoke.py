@@ -888,13 +888,14 @@ def poll_async(
     deadline = time.monotonic() + timeout_seconds
     last = ""
     while time.monotonic() < deadline:
+        remaining = max(1.0, deadline - time.monotonic())
         last = tool_result_text(
             call_tool(
                 launcher,
                 initialize,
                 "emacs-eval-result",
                 {"job-id": job_id},
-                timeout_seconds=5,
+                timeout_seconds=remaining,
             )
         )
         if "status: done" in last or "status: error" in last:
@@ -1014,8 +1015,19 @@ def assert_async_isolation(
         '(list (getenv "ANVIL_DIRENV_MARKER") '
         '(executable-find "anvil-direnv-a")))'
     )
-    environment_job = submit_async(launcher, initialize, environment_expression, 10)
-    environment_result = poll_async(launcher, initialize, environment_job, 8)
+    environment_timeout = 10
+    environment_job = submit_async(
+        launcher,
+        initialize,
+        environment_expression,
+        environment_timeout,
+    )
+    environment_result = poll_async(
+        launcher,
+        initialize,
+        environment_job,
+        environment_timeout + 5,
+    )
     if (
         "status: done" not in environment_result
         or "project-a" not in environment_result
@@ -1027,15 +1039,22 @@ def assert_async_isolation(
 
 
 def main() -> None:
-    if len(sys.argv) != 4 or not sys.argv[3].isdigit() or int(sys.argv[3]) <= 0:
+    if (
+        len(sys.argv) != 5
+        or not sys.argv[3].isdigit()
+        or int(sys.argv[3]) <= 0
+        or not sys.argv[4].isdigit()
+        or int(sys.argv[4]) <= 0
+    ):
         raise SystemExit(
             "usage: headless-smoke.py /path/to/anvil-mcp "
-            "WORKER_SPECS_JSON CLIENT_TOOL_SECONDS"
+            "WORKER_SPECS_JSON CLIENT_TOOL_SECONDS HOST_SHELL_SECONDS"
         )
 
     launcher = Path(sys.argv[1]).resolve()
     worker_specs = parse_worker_specs(sys.argv[2])
     client_tool_seconds = float(sys.argv[3])
+    host_shell_seconds = int(sys.argv[4])
     org_root = Path.home() / "org"
     org_file = org_root / "smoke.org"
     initialize = {
@@ -1280,6 +1299,43 @@ def main() -> None:
                     },
                 },
             ),
+            request(
+                21,
+                "tools/call",
+                {
+                    "name": "emacs-eval",
+                    "arguments": {"expression": "anvil-host--default-timeout"},
+                },
+            ),
+            request(
+                22,
+                "tools/call",
+                {
+                    "name": "shell-run",
+                    "arguments": {
+                        "cmd": (
+                            "rg -n 'anvil-eof-probe-no-match' >/dev/null; "
+                            "status=$?; printf 'pathless-rg:%s' \"$status\""
+                        ),
+                        "filter": "",
+                        "cwd": str(project_plain),
+                        "timeout_sec": 5,
+                    },
+                },
+            ),
+            request(
+                23,
+                "tools/call",
+                {
+                    "name": "shell-run",
+                    "arguments": {
+                        "cmd": "cat >/dev/null; printf stdin-eof",
+                        "filter": "",
+                        "cwd": str(project_plain),
+                        "timeout_sec": 5,
+                    },
+                },
+            ),
         ],
     )
     main_names = tool_names(response_by_id(main_responses, 2))
@@ -1322,12 +1378,19 @@ def main() -> None:
     assert_spawn_baseline(response_by_id(main_responses, 18), "host-a")
     assert_watchdog_lease(response_by_id(main_responses, 19), watchdog_lease)
     assert_tool_failure(response_by_id(main_responses, 20), "direnv environment failed")
+    assert_tool_success(response_by_id(main_responses, 21), str(host_shell_seconds))
+    assert_tool_success(response_by_id(main_responses, 22), "pathless-rg:1")
+    assert_tool_success(response_by_id(main_responses, 23), "stdin-eof")
     if failing_shell_marker.exists():
         raise AssertionError("shell-run executed after an allowed envrc failed")
     for identifier in (10, 11, 16, 17):
         assert_tool_omits(response_by_id(main_responses, identifier), "direnv:")
 
-    assert_async_isolation(launcher, initialize, watchdog_lease)
+    assert_async_isolation(
+        launcher,
+        initialize,
+        watchdog_lease,
+    )
 
     secondary_responses = run_transcript(
         launcher,

@@ -242,7 +242,15 @@ runCommand "anvil-mcp-dedicated-smoke"
       ${anvilMcp.dedicatedEmacs}/bin/emacs --quick --batch \
       --directory "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp" \
       --load "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/tests/anvil-eval-async-isolation-test.el" \
-      --eval '(let ((names (list "anvil-eval-async-isolation-pump-kills-terminalized-spawn" "anvil-eval-async-isolation-hard-delete-preserves-live-tracking")) (selector "anvil-eval-async-isolation-\\(pump-kills-terminalized-spawn\\|hard-delete-preserves-live-tracking\\)")) (dolist (name names) (unless (ert-get-test (intern name)) (error "Missing required ERT test: %s" name))) (unless (= (length (ert-select-tests selector t)) 2) (error "Expected exactly two focused async regressions")) (ert-run-tests-batch-and-exit selector))'
+      --eval '(let ((names (list "anvil-eval-async-isolation-pump-kills-terminalized-spawn" "anvil-eval-async-isolation-hard-delete-preserves-live-tracking" "anvil-eval-async-isolation-pool-resize-preserves-live-tracking" "anvil-eval-async-isolation-retirement-reentrancy-never-spawns" "anvil-eval-async-isolation-protocol-replacement-preserves-live-tracking" "anvil-eval-async-isolation-slot-spawn-rollback-retains-ownership" "anvil-eval-async-isolation-stop-repl-preserves-live-tracking")) (selector "anvil-eval-async-isolation-\\(pump-kills-terminalized-spawn\\|hard-delete-preserves-live-tracking\\|pool-resize-preserves-live-tracking\\|retirement-reentrancy-never-spawns\\|protocol-replacement-preserves-live-tracking\\|slot-spawn-rollback-retains-ownership\\|stop-repl-preserves-live-tracking\\)")) (dolist (name names) (unless (ert-get-test (intern name)) (error "Missing required ERT test: %s" name))) (unless (= (length (ert-select-tests selector t)) 7) (error "Expected exactly seven focused async regressions")) (ert-run-tests-batch-and-exit selector))'
+    TMPDIR="$upstream_regression_tmp" \
+      TMP="$upstream_regression_tmp" \
+      TEMP="$upstream_regression_tmp" \
+      ${coreutils}/bin/timeout 120 \
+      ${anvilMcp.dedicatedEmacs}/bin/emacs --quick --batch \
+      --directory "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp" \
+      --load "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/tests/anvil-offload-ownership-test.el" \
+      --funcall ert-run-tests-batch-and-exit
     TMPDIR="$upstream_regression_tmp" \
       TMP="$upstream_regression_tmp" \
       TEMP="$upstream_regression_tmp" \
@@ -605,7 +613,8 @@ runCommand "anvil-mcp-dedicated-smoke"
     if ! ${python3}/bin/python -I ${./headless-smoke.py} \
       ${hostAnvilMcp}/bin/anvil-mcp \
       ${lib.escapeShellArg workerSpecsJson} \
-      ${toString anvilMcp.timeoutPolicy.clientToolSeconds}; then
+      ${toString anvilMcp.timeoutPolicy.clientToolSeconds} \
+      ${toString anvilMcp.timeoutPolicy.hostShellSeconds}; then
       cat "$smoke_root/host-a.log" "$smoke_root/host-b.log" >&2
       exit 1
     fi

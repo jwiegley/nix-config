@@ -40,14 +40,59 @@
              (anvil-offload--ensure-pending))
     found))
 
+(defun anvil-hang-regression-test--assert-offload-clean ()
+  "Refuse to discard ownership state before subprocess cleanup converges."
+  (let ((deadline (+ (float-time) 1.0)))
+    (while (and (hash-table-p anvil-offload--pending)
+                (> (hash-table-count anvil-offload--pending) 0)
+                (< (float-time) deadline))
+      (accept-process-output nil 0.01)))
+  (let (owned pending)
+    (dolist (table (anvil-offload--registered-ownership-tables))
+      (maphash
+       (lambda (proc value)
+         (push (list table proc value) owned))
+       table))
+    (when (hash-table-p anvil-offload--pending)
+      (maphash (lambda (id _future) (push id pending))
+               anvil-offload--pending))
+    (when (or anvil-offload--pool
+              anvil-offload--pool-retiring-p
+              anvil-offload--pool-cleanup-active-p
+              anvil-offload--submission-active-p
+              anvil-offload--stop-retiring-p
+              anvil-offload--retired-pools
+              owned
+              pending)
+      (error
+       (concat
+        "hang regression cleanup did not converge: "
+        "pool=%S pool-retiring=%S cleanup-active=%S submission-active=%S stop-retiring=%S "
+        "retired=%S owned=%S pending=%S")
+       anvil-offload--pool
+       anvil-offload--pool-retiring-p
+       anvil-offload--pool-cleanup-active-p
+       anvil-offload--submission-active-p
+       anvil-offload--stop-retiring-p
+       anvil-offload--retired-pools
+       owned
+       pending))))
+
 (defun anvil-hang-regression-test--reset-offload ()
-  "Kill the offload pool and reset all request state."
-  (when anvil-offload--pool
-    (anvil-offload-stop-repl))
+  "Kill and reset offload state only after ownership convergence."
+  (anvil-offload-stop-repl)
+  (anvil-hang-regression-test--assert-offload-clean)
   (setq anvil-offload--pool nil
         anvil-offload--round-robin 0
         anvil-offload--next-id 0
-        anvil-offload--pending (make-hash-table :test 'eql))
+        anvil-offload--pending (make-hash-table :test 'eql)
+        anvil-offload--isolated-processes (make-hash-table :test 'eq)
+        anvil-offload--pool-retiring-p nil
+        anvil-offload--pool-cleanup-active-p nil
+        anvil-offload--submission-active-p nil
+        anvil-offload--stop-retiring-p nil
+        anvil-offload--retired-pools nil
+        anvil-offload--ownership-table-registry nil)
   (accept-process-output nil 0.05))
 
 (defun anvil-hang-regression-test--stub-tool (&optional timeout)
@@ -163,17 +208,19 @@ re-entering synchronous Anvil waits."
 (ert-deftest anvil-hang-regression-dead-repl-settles-without-timer ()
   "Awaiting a dead REPL must not depend on a zero-delay sentinel timer.
 
-The real child exits while `run-at-time' is intercepted, making the old
-`sit-for 0' fallback deterministically leave the future pending."
+The real child waits until its future is registered, then exits with its
+automatic sentinel disabled.  The production sentinel is invoked while
+`run-at-time' is intercepted, making the old `sit-for 0' fallback leave the
+future pending without depending on Emacs callback scheduling."
   (anvil-hang-regression-test--reset-offload)
   (let* ((proc
           (make-process
            :name "anvil-hang-dead-repl"
            :command
-           (list shell-file-name shell-command-switch "sleep 0.1; exit 7")
+           (list shell-file-name shell-command-switch "read ignored; exit 7")
            :connection-type 'pipe
            :noquery t
-           :sentinel #'anvil-offload--sentinel))
+           :sentinel #'ignore))
          (id 9001)
          (future
           (make-anvil-future :id id :process proc :status 'pending))
@@ -184,8 +231,18 @@ The real child exits while `run-at-time' is intercepted, making the old
                    (lambda (&rest args)
                      (setq deferred args)
                      'withheld-timer)))
-          (should (anvil-future-await future 2))
+          ;; Release the child only after its future and the timer stub are
+          ;; live.  Invoke the real sentinel explicitly after death: whether
+          ;; Emacs happens to dispatch a process sentinel during await is an
+          ;; event-loop detail, not part of the behavior under test.
+          (process-send-string proc "\n")
+          (should
+           (anvil-hang-regression-test--wait-until
+            (lambda () (not (process-live-p proc))) 2))
+          (anvil-offload--sentinel proc "exited abnormally with code 7\n")
           (should deferred)
+          (should (eq 'pending (anvil-future-status future)))
+          (should (anvil-future-await future 2))
           (should (eq 'error (anvil-future-status future)))
           (should (string-match-p "offload REPL exited"
                                   (anvil-future-error future)))

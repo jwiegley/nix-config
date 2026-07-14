@@ -1,5 +1,6 @@
 {
   homeManagerLib,
+  inputs,
   lib,
   runCommand,
   testPkgs,
@@ -70,6 +71,81 @@ let
       hostMode.config.systemd.user.services.anvil-headless-emacs
     else
       hostMode.config.launchd.agents.anvil-headless-emacs;
+
+  evaluateJohnw =
+    {
+      hostname,
+      moduleInputs ? inputs,
+    }:
+    homeManagerLib.homeManagerConfiguration {
+      pkgs = testPkgs;
+      extraSpecialArgs = {
+        inherit hostname;
+        inputs = moduleInputs;
+      };
+      modules = [
+        ../../config/johnw.nix
+        {
+          home = {
+            username = "anvil-test";
+            homeDirectory = "/tmp/anvil-home-manager-test";
+            stateVersion = "23.11";
+          };
+          targets.genericLinux.enable = isLinux;
+        }
+      ];
+    };
+  strippedInputs = builtins.removeAttrs inputs [ "promptdeploy" ];
+  managedHostnames = [
+    "hera"
+    "clio"
+    "vps"
+    "vulcan"
+    "andoria-08"
+    "andoria-t2"
+    "delphi-3bd4"
+    "gpu-server"
+  ];
+  expectedPromptdeployItems = [
+    "mcp:anvil"
+    "mcp:anvil-tools"
+    "skill:anvil"
+  ];
+  strippedUnmanaged = evaluateJohnw {
+    hostname = "unmanaged-anvil-test";
+    moduleInputs = strippedInputs;
+  };
+  managedWithPromptdeploy = map (hostname: {
+    inherit hostname;
+    promptdeploy = (evaluateJohnw { inherit hostname; }).config.programs.promptdeploy;
+  }) managedHostnames;
+  strippedManaged = map (hostname: {
+    inherit hostname;
+    evaluation = evaluateJohnw {
+      inherit hostname;
+      moduleInputs = strippedInputs;
+    };
+  }) managedHostnames;
+  unmanagedConfigurationEvaluation = builtins.tryEval strippedUnmanaged.config.home.username;
+
+  rawJohnw =
+    hostname: moduleInputs:
+    import ../../config/johnw.nix {
+      inherit hostname lib;
+      config = { };
+      inputs = moduleInputs;
+      pkgs = testPkgs;
+    };
+  rawStrippedUnmanaged = rawJohnw "unmanaged-anvil-test" strippedInputs;
+  rawStrippedManaged = map (hostname: {
+    inherit hostname;
+    module = rawJohnw hostname strippedInputs;
+  }) managedHostnames;
+  expectedConvergenceAssertion = hostname: {
+    assertion = false;
+    message = "Anvil client convergence requires the pinned promptdeploy input on ${hostname}";
+  };
+  promptdeployRevision = "4c9b2c1c10df5048b239051d79c3df00b1d0276b";
 in
 assert lib.assertMsg (isLinux || isDarwin) "Anvil Home Manager smoke requires Linux or Darwin";
 assert lib.assertMsg (
@@ -124,6 +200,31 @@ assert lib.assertMsg (
 assert lib.assertMsg (
   perAgentMode.config.home.sessionVariables.MCP_TIMEOUT == "210000"
 ) "Anvil dedicated mode drifted from the 210-second startup fallback";
+assert lib.assertMsg unmanagedConfigurationEvaluation.success
+  "an unmanaged host without promptdeploy did not evaluate cleanly";
+assert lib.assertMsg (
+  !(rawStrippedUnmanaged.programs ? promptdeploy)
+) "an unmanaged host unexpectedly defines promptdeploy";
+assert lib.assertMsg (
+  rawStrippedUnmanaged.assertions == [ ]
+) "an unmanaged host without promptdeploy has a failing assertion";
+assert lib.assertMsg (lib.all (
+  entry:
+  !(entry.module.programs ? promptdeploy)
+  && entry.module.assertions == [ (expectedConvergenceAssertion entry.hostname) ]
+) rawStrippedManaged) "a managed host lost its fail-closed promptdeploy assertion";
+assert lib.assertMsg (lib.all (
+  entry: !(builtins.tryEval entry.evaluation.config.home.username).success
+) strippedManaged) "a managed host without promptdeploy unexpectedly evaluated successfully";
+assert lib.assertMsg (lib.all
+  (
+    entry:
+    entry.promptdeploy.enable
+    && entry.promptdeploy.expectedRevision == promptdeployRevision
+    && entry.promptdeploy.exactItems == expectedPromptdeployItems
+  )
+  managedWithPromptdeploy
+) "a managed host drifted from the pinned promptdeploy convergence contract";
 runCommand "anvil-home-manager-smoke" { } ''
   touch "$out"
 ''

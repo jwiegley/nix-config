@@ -27,6 +27,10 @@ EXIT_SOFTWARE = 70
 EXIT_CONFIG = 77
 LOCK_NAME = ".anvil-agent-supervisor.lock"
 STATUS_NAME = ".anvil-agent-supervisor.json"
+CREATOR_MARKER_PREFIX = ".anvil-agent-creator-"
+CREATOR_STAGING_PREFIX = ".anvil-agent-creator-stage-"
+CREATOR_MARKER_SUFFIX = ".json"
+INSTANCE_STAGING_PREFIX = ".anvil-agent-instance-stage-"
 DAEMON_DIAGNOSTIC_NAME = ".anvil-daemon.log"
 AGENT_KEY_PATTERN = re.compile(r"[0-9a-f]{32}")
 GENERATION_PATTERN = re.compile(r"[0-9a-f]{64}")
@@ -161,31 +165,76 @@ def ensure_private_directory(path: Path) -> None:
         raise ConfigurationError(f"private directory must have mode 0700: {path}")
 
 
+def owner_seed_record_fields(
+    agent_key: str,
+    owner_pid: int,
+    owner_start_identity: str,
+    generation: str,
+) -> dict[str, object]:
+    """Return the complete v2 owner seed used before runtime publication."""
+    agent_key = validate_agent_key(agent_key)
+    generation = validate_generation(generation)
+    return {
+        "daemon_pid": None,
+        "format": RECORD_FORMAT_V2,
+        "version": RECORD_FORMAT_V2,
+        "generation": generation,
+        "lease_count": 0,
+        "agent_key": agent_key,
+        "owner_pid": owner_pid,
+        "owner_start_identity": owner_start_identity,
+        "restart_count": 0,
+        "restart_reason": None,
+        "supervisor_pid": None,
+        "supervisor_start_identity": None,
+    }
+
+
 def prepare_instance_directories(
     runtime_root: Path,
     state_root: Path,
     host: str,
     agent_key: str,
+    owner_pid: int,
+    owner_start_identity: str,
+    generation: str,
 ) -> tuple[Path, Path, Path]:
-    """Build HOST/agents/HEX trees without consulting HOME."""
+    """Build attributed HOST/agents/HEX trees without consulting HOME."""
     agent_key = validate_agent_key(agent_key)
     runtime_host = runtime_root / host
+    runtime_agents = runtime_host / "agents"
     state_host = state_root / host
-    paths = (
-        runtime_root,
-        runtime_host,
-        runtime_host / "agents",
-        runtime_host / "agents" / agent_key,
-        state_root,
-        state_host,
-        state_host / "agents",
-        state_host / "agents" / agent_key,
-    )
-    for path in paths:
+    state_agents = state_host / "agents"
+    for path in (runtime_root, runtime_host, runtime_agents):
         ensure_private_directory(path)
 
-    runtime_dir = paths[3]
-    state_dir = paths[7]
+    # New pruners honor this marker while the populated runtime tree is hidden.
+    # The final runtime publication itself must also be safe from the deployed
+    # pre-marker pruner during a rolling generation upgrade.
+    publish_creator_marker(
+        runtime_agents,
+        agent_key,
+        owner_pid,
+        owner_start_identity,
+        generation,
+    )
+
+    runtime_dir = runtime_agents / agent_key
+    state_dir = state_agents / agent_key
+    publish_initial_runtime_instance(
+        runtime_agents,
+        agent_key,
+        owner_pid,
+        owner_start_identity,
+        generation,
+    )
+
+    # Publish state only after the final runtime name already contains a live
+    # v2 status and a non-statusless leases directory.  The deployed old
+    # pruner therefore preserves the runtime throughout this remaining gap.
+    for path in (state_root, state_host, state_agents, state_dir):
+        ensure_private_directory(path)
+
     runtime_info = os.stat(runtime_dir, follow_symlinks=False)
     state_info = os.stat(state_dir, follow_symlinks=False)
     if (runtime_info.st_dev, runtime_info.st_ino) == (
@@ -195,7 +244,13 @@ def prepare_instance_directories(
         raise ConfigurationError("runtime and state instance directories coincide")
 
     leases_dir = runtime_dir / "leases"
-    ensure_private_directory(leases_dir)
+    validate_initial_runtime_instance(
+        runtime_dir,
+        agent_key,
+        owner_pid,
+        owner_start_identity,
+        generation,
+    )
     return runtime_dir, state_dir, leases_dir
 
 
@@ -433,16 +488,26 @@ def atomic_json(
     *,
     replace: bool,
     durable: bool = True,
+    temp_name: str | None = None,
+    no_clobber: bool = False,
 ) -> Path:
     """Publish one complete, private JSON file within DIRECTORY."""
     payload = (json.dumps(data, sort_keys=True, separators=(",", ":")) + "\n").encode()
     if len(payload) > MAX_LEASE_BYTES:
         raise ConfigurationError("lifecycle record is unexpectedly large")
+    if temp_name is None:
+        temp_name = f".tmp-{os.getpid()}-{os.urandom(16).hex()}"
+    if (
+        not isinstance(temp_name, str)
+        or not temp_name
+        or temp_name in (".", "..", final_name)
+        or "/" in temp_name
+    ):
+        raise ConfigurationError("unsafe temporary lifecycle record name")
     directory_fd = os.open(
         directory,
         os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
     )
-    temp_name = f".tmp-{os.getpid()}-{os.urandom(16).hex()}"
     descriptor = None
     try:
         descriptor = os.open(
@@ -464,19 +529,28 @@ def atomic_json(
             os.fsync(descriptor)
         os.close(descriptor)
         descriptor = None
-        if not replace:
-            try:
-                os.stat(final_name, dir_fd=directory_fd, follow_symlinks=False)
-            except FileNotFoundError:
-                pass
-            else:
-                raise FileExistsError(final_name)
-        os.rename(
-            temp_name,
-            final_name,
-            src_dir_fd=directory_fd,
-            dst_dir_fd=directory_fd,
-        )
+        if no_clobber:
+            if replace:
+                raise ConfigurationError("no-clobber publication cannot replace")
+            rename_noreplace(directory_fd, temp_name, final_name)
+        else:
+            if not replace:
+                try:
+                    os.stat(
+                        final_name,
+                        dir_fd=directory_fd,
+                        follow_symlinks=False,
+                    )
+                except FileNotFoundError:
+                    pass
+                else:
+                    raise FileExistsError(final_name)
+            os.rename(
+                temp_name,
+                final_name,
+                src_dir_fd=directory_fd,
+                dst_dir_fd=directory_fd,
+            )
         if durable:
             os.fsync(directory_fd)
         return directory / final_name
@@ -487,6 +561,701 @@ def atomic_json(
             os.unlink(temp_name, dir_fd=directory_fd)
         except FileNotFoundError:
             pass
+        os.close(directory_fd)
+
+
+def creator_marker_name(agent_key: str) -> str:
+    """Return the parent-level marker name for one generation-qualified key."""
+    return (
+        f"{CREATOR_MARKER_PREFIX}{validate_agent_key(agent_key)}{CREATOR_MARKER_SUFFIX}"
+    )
+
+
+def creator_marker_agent_key(name: str) -> str | None:
+    """Extract a valid agent key from a parent-level creator marker name."""
+    if not name.startswith(CREATOR_MARKER_PREFIX) or not name.endswith(
+        CREATOR_MARKER_SUFFIX
+    ):
+        return None
+    key = name[len(CREATOR_MARKER_PREFIX) : -len(CREATOR_MARKER_SUFFIX)]
+    try:
+        return validate_agent_key(key)
+    except ConfigurationError:
+        return None
+
+
+def creator_staging_name(
+    agent_key: str,
+    owner_pid: int,
+    generation: str,
+) -> str:
+    """Name an attributable pre-publication file for interrupted-start cleanup."""
+    agent_key = validate_agent_key(agent_key)
+    generation = validate_generation(generation)
+    if not isinstance(owner_pid, int) or owner_pid <= 1:
+        raise ConfigurationError("invalid creator PID")
+    return (
+        f"{CREATOR_STAGING_PREFIX}{agent_key}-{owner_pid}-{generation}-"
+        f"{os.urandom(16).hex()}{CREATOR_MARKER_SUFFIX}"
+    )
+
+
+def creator_staging_details(name: str) -> tuple[str, int, str] | None:
+    """Parse a creator staging name without trusting its file contents."""
+    if not name.startswith(CREATOR_STAGING_PREFIX) or not name.endswith(
+        CREATOR_MARKER_SUFFIX
+    ):
+        return None
+    body = name[len(CREATOR_STAGING_PREFIX) : -len(CREATOR_MARKER_SUFFIX)]
+    parts = body.split("-")
+    if len(parts) != 4:
+        return None
+    agent_key, pid_text, generation, token = parts
+    try:
+        agent_key = validate_agent_key(agent_key)
+        generation = validate_generation(generation)
+    except ConfigurationError:
+        return None
+    if (
+        not pid_text.isdecimal()
+        or int(pid_text) <= 1
+        or AGENT_KEY_PATTERN.fullmatch(token) is None
+    ):
+        return None
+    return agent_key, int(pid_text), generation
+
+
+def instance_staging_name(
+    agent_key: str,
+    owner_pid: int,
+    generation: str,
+) -> str:
+    """Name one hidden runtime tree before its atomic publication."""
+    agent_key = validate_agent_key(agent_key)
+    generation = validate_generation(generation)
+    if not isinstance(owner_pid, int) or owner_pid <= 1:
+        raise ConfigurationError("invalid creator PID")
+    return (
+        f"{INSTANCE_STAGING_PREFIX}{agent_key}-{owner_pid}-{generation}-"
+        f"{os.urandom(16).hex()}"
+    )
+
+
+def instance_staging_details(name: str) -> tuple[str, int, str] | None:
+    """Parse an attributed hidden runtime directory name."""
+    if not name.startswith(INSTANCE_STAGING_PREFIX):
+        return None
+    parts = name[len(INSTANCE_STAGING_PREFIX) :].split("-")
+    if len(parts) != 4:
+        return None
+    agent_key, pid_text, generation, token = parts
+    try:
+        agent_key = validate_agent_key(agent_key)
+        generation = validate_generation(generation)
+    except ConfigurationError:
+        return None
+    if (
+        not pid_text.isdecimal()
+        or int(pid_text) <= 1
+        or AGENT_KEY_PATTERN.fullmatch(token) is None
+    ):
+        return None
+    return agent_key, int(pid_text), generation
+
+
+def rename_noreplace(
+    directory_fd: int,
+    source: str,
+    destination: str,
+) -> None:
+    """Atomically rename one path while refusing any destination."""
+    library = ctypes.CDLL(None, use_errno=True)
+    source_bytes = os.fsencode(source)
+    destination_bytes = os.fsencode(destination)
+    if sys.platform == "darwin":
+        rename = getattr(library, "renameatx_np", None)
+        if rename is None:
+            raise ConfigurationError("renameatx_np is unavailable")
+        rename.argtypes = [
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_uint,
+        ]
+        rename.restype = ctypes.c_int
+        result = rename(
+            directory_fd,
+            source_bytes,
+            directory_fd,
+            destination_bytes,
+            0x00000004,  # RENAME_EXCL
+        )
+    elif sys.platform.startswith("linux"):
+        rename = getattr(library, "renameat2", None)
+        if rename is None:
+            raise ConfigurationError("renameat2 is unavailable")
+        rename.argtypes = [
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_uint,
+        ]
+        rename.restype = ctypes.c_int
+        result = rename(
+            directory_fd,
+            source_bytes,
+            directory_fd,
+            destination_bytes,
+            0x00000001,  # RENAME_NOREPLACE
+        )
+    else:
+        raise ConfigurationError("atomic no-replace rename is unsupported")
+    if result != 0:
+        error_number = ctypes.get_errno()
+        raise OSError(
+            error_number,
+            os.strerror(error_number),
+            destination,
+        )
+
+
+def prune_instance_staging(
+    runtime_agents: Path,
+    name: str,
+) -> tuple[str, bool] | None:
+    """Preserve a live hidden runtime tree or remove a dead one safely."""
+    details = instance_staging_details(name)
+    if details is None:
+        return None
+    agent_key, owner_pid, generation = details
+    staging = runtime_agents / name
+    try:
+        info = staging.lstat()
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or stat.S_ISLNK(info.st_mode)
+            or info.st_uid != os.getuid()
+            or stat.S_IMODE(info.st_mode) != 0o700
+        ):
+            return agent_key, False
+        staging_identity = (info.st_dev, info.st_ino)
+        owner_state, current_identity = process_start_state(owner_pid)
+        if owner_state is LifecycleState.UNAVAILABLE:
+            return agent_key, False
+        if owner_state is LifecycleState.LIVE and current_identity is not None:
+            try:
+                if (
+                    derive_agent_key(owner_pid, current_identity, generation)
+                    == agent_key
+                ):
+                    return agent_key, False
+            except ConfigurationError:
+                return agent_key, False
+        remove_instance_tree(
+            staging,
+            expected_identity=staging_identity,
+        )
+        return agent_key, not os.path.lexists(staging)
+    except (ConfigurationError, FileNotFoundError, PermissionError, OSError):
+        return agent_key, not os.path.lexists(staging)
+
+
+def prune_creator_staging(runtime_agents: Path, name: str) -> str | None:
+    """Reap one safe staging inode only after its encoded creator is dead."""
+    details = creator_staging_details(name)
+    if details is None:
+        return None
+    agent_key, owner_pid, generation = details
+    directory_fd = None
+    try:
+        directory_fd = os.open(
+            runtime_agents,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        )
+        directory_info = os.fstat(directory_fd)
+        if (
+            not stat.S_ISDIR(directory_info.st_mode)
+            or directory_info.st_uid != os.getuid()
+            or stat.S_IMODE(directory_info.st_mode) != 0o700
+        ):
+            return agent_key
+        try:
+            info = os.stat(
+                name,
+                dir_fd=directory_fd,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            return agent_key
+        identity = (info.st_dev, info.st_ino)
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.getuid()
+            or stat.S_IMODE(info.st_mode) != 0o600
+            or info.st_nlink not in (1, 2)
+        ):
+            return agent_key
+        if info.st_nlink == 2:
+            try:
+                marker_info = os.stat(
+                    creator_marker_name(agent_key),
+                    dir_fd=directory_fd,
+                    follow_symlinks=False,
+                )
+            except FileNotFoundError:
+                return agent_key
+            if (marker_info.st_dev, marker_info.st_ino) != identity:
+                return agent_key
+
+        owner_state, current_identity = process_start_state(owner_pid)
+        if owner_state is LifecycleState.UNAVAILABLE:
+            return agent_key
+        if owner_state is LifecycleState.LIVE:
+            if current_identity is None:
+                return agent_key
+            try:
+                current_key = derive_agent_key(
+                    owner_pid,
+                    current_identity,
+                    generation,
+                )
+            except ConfigurationError:
+                return agent_key
+            if current_key == agent_key:
+                return agent_key
+
+        unlink_if_identity(directory_fd, name, identity)
+        os.fsync(directory_fd)
+        return agent_key
+    except OSError:
+        return agent_key
+    finally:
+        if directory_fd is not None:
+            os.close(directory_fd)
+
+
+def creator_record(
+    agent_key: str,
+    owner_pid: int,
+    owner_start_identity: str,
+    generation: str,
+) -> dict[str, object]:
+    """Build a marker whose contents cryptographically bind to AGENT_KEY."""
+    agent_key = validate_agent_key(agent_key)
+    generation = validate_generation(generation)
+    if (
+        derive_agent_key(
+            owner_pid,
+            owner_start_identity,
+            generation,
+        )
+        != agent_key
+    ):
+        raise ConfigurationError("creator identity does not match agent key")
+    owner_state = validate_process_identity(owner_pid, owner_start_identity)
+    if owner_state is LifecycleState.UNAVAILABLE:
+        raise lifecycle_unavailable("creator process identity is unavailable")
+    if owner_state is not LifecycleState.LIVE:
+        raise ConfigurationError("creator process generation is not live")
+    return {
+        "agent_key": agent_key,
+        "format": RECORD_FORMAT_V2,
+        "generation": generation,
+        "owner_pid": owner_pid,
+        "owner_start_identity": owner_start_identity,
+        "uid": os.getuid(),
+        "version": RECORD_FORMAT_V2,
+    }
+
+
+def read_creator_lifecycle(
+    runtime_agents: Path,
+    agent_key: str,
+) -> tuple[
+    LifecycleState | None,
+    dict[str, object] | None,
+    tuple[int, int] | None,
+]:
+    """Read one safe creator marker; None means that no marker was published."""
+    name = creator_marker_name(agent_key)
+    directory_fd = None
+    descriptor = None
+    try:
+        directory_fd = os.open(
+            runtime_agents,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        )
+        directory_info = os.fstat(directory_fd)
+        if (
+            not stat.S_ISDIR(directory_info.st_mode)
+            or directory_info.st_uid != os.getuid()
+            or stat.S_IMODE(directory_info.st_mode) != 0o700
+        ):
+            return LifecycleState.UNAVAILABLE, None, None
+        try:
+            descriptor = os.open(
+                name,
+                os.O_RDONLY | os.O_NOFOLLOW,
+                dir_fd=directory_fd,
+            )
+        except FileNotFoundError:
+            return None, None, None
+        descriptor_info = os.fstat(descriptor)
+        try:
+            path_info = os.stat(
+                name,
+                dir_fd=directory_fd,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            return LifecycleState.UNAVAILABLE, None, None
+        identity = (descriptor_info.st_dev, descriptor_info.st_ino)
+        if (
+            not stat.S_ISREG(descriptor_info.st_mode)
+            or descriptor_info.st_uid != os.getuid()
+            or descriptor_info.st_nlink != 1
+            or stat.S_IMODE(descriptor_info.st_mode) != 0o600
+            or (path_info.st_dev, path_info.st_ino) != identity
+        ):
+            return LifecycleState.UNAVAILABLE, None, identity
+        payload = os.read(descriptor, MAX_LEASE_BYTES + 1)
+        if len(payload) > MAX_LEASE_BYTES:
+            return LifecycleState.UNAVAILABLE, None, identity
+        record = json.loads(payload.decode("utf-8"))
+        expected_keys = {
+            "agent_key",
+            "format",
+            "generation",
+            "owner_pid",
+            "owner_start_identity",
+            "uid",
+            "version",
+        }
+        if (
+            not isinstance(record, dict)
+            or set(record) != expected_keys
+            or record.get("format") != RECORD_FORMAT_V2
+            or record.get("version") != RECORD_FORMAT_V2
+            or record.get("uid") != os.getuid()
+            or record.get("agent_key") != agent_key
+        ):
+            return LifecycleState.UNAVAILABLE, None, identity
+        owner_pid = record.get("owner_pid")
+        owner_identity = record.get("owner_start_identity")
+        generation = record.get("generation")
+        if (
+            not isinstance(owner_pid, int)
+            or owner_pid <= 1
+            or not isinstance(owner_identity, str)
+            or not owner_identity
+        ):
+            return LifecycleState.UNAVAILABLE, None, identity
+        try:
+            generation = validate_generation(generation)
+            expected_key = derive_agent_key(
+                owner_pid,
+                owner_identity,
+                generation,
+            )
+        except ConfigurationError:
+            return LifecycleState.UNAVAILABLE, None, identity
+        if expected_key != agent_key:
+            return LifecycleState.UNAVAILABLE, None, identity
+        return (
+            validate_process_identity(owner_pid, owner_identity),
+            record,
+            identity,
+        )
+    except FileNotFoundError:
+        return None, None, None
+    except (OSError, ValueError, UnicodeError):
+        return LifecycleState.UNAVAILABLE, None, None
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if directory_fd is not None:
+            os.close(directory_fd)
+
+
+def publish_creator_marker(
+    runtime_agents: Path,
+    agent_key: str,
+    owner_pid: int,
+    owner_start_identity: str,
+    generation: str,
+) -> Path:
+    """Publish creator identity atomically before making its runtime tree."""
+    record = creator_record(
+        agent_key,
+        owner_pid,
+        owner_start_identity,
+        generation,
+    )
+    state, existing, _identity = read_creator_lifecycle(runtime_agents, agent_key)
+    if state is not None:
+        if state is not LifecycleState.LIVE or existing != record:
+            raise ConfigurationError("unsafe or mismatched creator marker")
+        return runtime_agents / creator_marker_name(agent_key)
+    try:
+        marker = atomic_json(
+            runtime_agents,
+            creator_marker_name(agent_key),
+            record,
+            replace=False,
+            temp_name=creator_staging_name(
+                agent_key,
+                owner_pid,
+                generation,
+            ),
+            no_clobber=True,
+        )
+    except FileExistsError:
+        marker = runtime_agents / creator_marker_name(agent_key)
+    state, existing, _identity = read_creator_lifecycle(runtime_agents, agent_key)
+    if state is not LifecycleState.LIVE or existing != record:
+        raise ConfigurationError("creator marker publication could not be verified")
+    return marker
+
+
+def validate_initial_runtime_instance(
+    runtime_dir: Path,
+    agent_key: str,
+    owner_pid: int,
+    owner_start_identity: str,
+    generation: str,
+) -> None:
+    """Require one pinned, populated runtime owned by this exact generation."""
+    directory_fd = None
+    leases_fd = None
+    try:
+        path_info = runtime_dir.lstat()
+        directory_fd = os.open(
+            runtime_dir,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        )
+        directory_info = os.fstat(directory_fd)
+        identity = (directory_info.st_dev, directory_info.st_ino)
+        if (
+            not stat.S_ISDIR(directory_info.st_mode)
+            or directory_info.st_uid != os.getuid()
+            or stat.S_IMODE(directory_info.st_mode) != 0o700
+            or identity != (path_info.st_dev, path_info.st_ino)
+        ):
+            raise ConfigurationError("published runtime directory is unsafe")
+
+        expected = (
+            owner_pid,
+            owner_start_identity,
+            generation,
+            RECORD_FORMAT_V2,
+        )
+        if (
+            read_status_lifecycle(
+                runtime_dir,
+                agent_key,
+                directory_fd=directory_fd,
+            )
+            != expected
+        ):
+            raise ConfigurationError("published runtime owner status is unavailable")
+
+        leases_info = os.stat(
+            "leases",
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+        leases_fd = os.open(
+            "leases",
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+            dir_fd=directory_fd,
+        )
+        opened_leases = os.fstat(leases_fd)
+        if (
+            not stat.S_ISDIR(opened_leases.st_mode)
+            or opened_leases.st_uid != os.getuid()
+            or stat.S_IMODE(opened_leases.st_mode) != 0o700
+            or (opened_leases.st_dev, opened_leases.st_ino)
+            != (leases_info.st_dev, leases_info.st_ino)
+        ):
+            raise ConfigurationError("published runtime leases directory is unsafe")
+
+        current = runtime_dir.lstat()
+        if identity != (current.st_dev, current.st_ino):
+            raise ConfigurationError("published runtime directory changed")
+        if (
+            read_status_lifecycle(
+                runtime_dir,
+                agent_key,
+                directory_fd=directory_fd,
+            )
+            != expected
+        ):
+            raise ConfigurationError("published runtime owner status changed")
+        current_leases = os.stat(
+            "leases",
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+        if (opened_leases.st_dev, opened_leases.st_ino) != (
+            current_leases.st_dev,
+            current_leases.st_ino,
+        ):
+            raise ConfigurationError("published runtime leases directory changed")
+    except FileNotFoundError as error:
+        raise ConfigurationError(
+            "published runtime directory is unavailable"
+        ) from error
+    except OSError as error:
+        raise ConfigurationError(
+            f"cannot validate published runtime directory: {error}"
+        ) from error
+    finally:
+        if leases_fd is not None:
+            os.close(leases_fd)
+        if directory_fd is not None:
+            os.close(directory_fd)
+
+
+def publish_initial_runtime_instance(
+    runtime_agents: Path,
+    agent_key: str,
+    owner_pid: int,
+    owner_start_identity: str,
+    generation: str,
+) -> Path:
+    """Publish a populated runtime directory atomically under its final key."""
+    agent_key = validate_agent_key(agent_key)
+    generation = validate_generation(generation)
+    runtime_dir = runtime_agents / agent_key
+    try:
+        runtime_dir.lstat()
+    except FileNotFoundError:
+        pass
+    else:
+        validate_initial_runtime_instance(
+            runtime_dir,
+            agent_key,
+            owner_pid,
+            owner_start_identity,
+            generation,
+        )
+        return runtime_dir
+
+    staging_name = instance_staging_name(agent_key, owner_pid, generation)
+    staging = runtime_agents / staging_name
+    staged_identity: tuple[int, int] | None = None
+    try:
+        try:
+            staging.mkdir(mode=0o700)
+        except FileExistsError as error:
+            raise ConfigurationError("runtime staging name collision") from error
+        ensure_private_directory(staging)
+        staged_info = staging.lstat()
+        staged_identity = (staged_info.st_dev, staged_info.st_ino)
+        ensure_private_directory(staging / "leases")
+        atomic_json(
+            staging,
+            STATUS_NAME,
+            owner_seed_record_fields(
+                agent_key,
+                owner_pid,
+                owner_start_identity,
+                generation,
+            ),
+            replace=False,
+            durable=True,
+        )
+        directory_fd = os.open(
+            runtime_agents,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        )
+        try:
+            parent_info = os.fstat(directory_fd)
+            if (
+                not stat.S_ISDIR(parent_info.st_mode)
+                or parent_info.st_uid != os.getuid()
+                or stat.S_IMODE(parent_info.st_mode) != 0o700
+            ):
+                raise ConfigurationError("unsafe runtime agents directory")
+            try:
+                rename_noreplace(
+                    directory_fd,
+                    staging_name,
+                    agent_key,
+                )
+            except OSError as error:
+                if error.errno not in (errno.EEXIST, errno.ENOTEMPTY):
+                    raise
+            else:
+                final_info = os.stat(
+                    agent_key,
+                    dir_fd=directory_fd,
+                    follow_symlinks=False,
+                )
+                if (final_info.st_dev, final_info.st_ino) != staged_identity:
+                    raise ConfigurationError("published runtime directory changed")
+                os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+
+        if staged_identity is not None and os.path.lexists(staging):
+            remove_instance_tree(
+                staging,
+                expected_identity=staged_identity,
+            )
+        validate_initial_runtime_instance(
+            runtime_dir,
+            agent_key,
+            owner_pid,
+            owner_start_identity,
+            generation,
+        )
+        return runtime_dir
+    except BaseException:
+        if staged_identity is not None and os.path.lexists(staging):
+            try:
+                remove_instance_tree(
+                    staging,
+                    expected_identity=staged_identity,
+                )
+            except (ConfigurationError, FileNotFoundError, OSError):
+                pass
+        raise
+
+
+def remove_dead_creator_marker(
+    runtime_agents: Path,
+    agent_key: str,
+    expected_identity: tuple[int, int],
+) -> bool:
+    """Unlink the same marker only while its exact creator remains dead."""
+    state, _record, identity = read_creator_lifecycle(runtime_agents, agent_key)
+    if state is None:
+        return True
+    if state is not LifecycleState.DEAD or identity != expected_identity:
+        return False
+    directory_fd = os.open(
+        runtime_agents,
+        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+    )
+    try:
+        directory_info = os.fstat(directory_fd)
+        if (
+            not stat.S_ISDIR(directory_info.st_mode)
+            or directory_info.st_uid != os.getuid()
+            or stat.S_IMODE(directory_info.st_mode) != 0o700
+        ):
+            return False
+        unlink_if_identity(
+            directory_fd,
+            creator_marker_name(agent_key),
+            expected_identity,
+        )
+        os.fsync(directory_fd)
+        return True
+    finally:
         os.close(directory_fd)
 
 
@@ -743,12 +1512,20 @@ def remove_directory_contents(
             pass
 
 
-def remove_instance_tree(path: Path, *, final_names: tuple[str, ...] = ()) -> None:
-    """Remove one agent instance while preserving any symlink targets."""
-    parent_fd = os.open(
-        path.parent,
-        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
-    )
+def remove_instance_tree(
+    path: Path,
+    *,
+    final_names: tuple[str, ...] = (),
+    expected_identity: tuple[int, int] | None = None,
+) -> None:
+    """Remove one exact agent instance without following links."""
+    try:
+        parent_fd = os.open(
+            path.parent,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        )
+    except FileNotFoundError:
+        return
     child_fd = None
     try:
         parent_info = os.fstat(parent_fd)
@@ -766,6 +1543,9 @@ def remove_instance_tree(path: Path, *, final_names: tuple[str, ...] = ()) -> No
             )
         except FileNotFoundError:
             return
+        path_identity = (path_info.st_dev, path_info.st_ino)
+        if expected_identity is not None and path_identity != expected_identity:
+            raise ConfigurationError("agent-instance directory identity changed")
         child_fd = os.open(
             path.name,
             os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
@@ -776,7 +1556,7 @@ def remove_instance_tree(path: Path, *, final_names: tuple[str, ...] = ()) -> No
         if (
             not stat.S_ISDIR(opened.st_mode)
             or opened.st_uid != os.getuid()
-            or identity != (path_info.st_dev, path_info.st_ino)
+            or identity != path_identity
         ):
             raise ConfigurationError("unsafe agent-instance directory")
         remove_directory_contents(
@@ -800,54 +1580,21 @@ def remove_instance_tree(path: Path, *, final_names: tuple[str, ...] = ()) -> No
         os.close(parent_fd)
 
 
-def statusless_runtime_is_empty(
-    runtime_path: Path,
-    lock_identity: tuple[int, int],
-) -> bool:
-    """Recognize only an interrupted, already-emptied runtime reap."""
-    directory_fd = None
-    try:
-        directory_fd = os.open(
-            runtime_path,
-            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
-        )
-        opened = os.fstat(directory_fd)
-        path_info = runtime_path.lstat()
-        if (
-            not stat.S_ISDIR(opened.st_mode)
-            or opened.st_uid != os.getuid()
-            or stat.S_IMODE(opened.st_mode) != 0o700
-            or (opened.st_dev, opened.st_ino) != (path_info.st_dev, path_info.st_ino)
-        ):
-            return False
-        names = set(os.listdir(directory_fd))
-        if names != {LOCK_NAME}:
-            return False
-        lock_info = os.stat(
-            LOCK_NAME,
-            dir_fd=directory_fd,
-            follow_symlinks=False,
-        )
-        return (lock_info.st_dev, lock_info.st_ino) == lock_identity
-    except (FileNotFoundError, PermissionError, OSError):
-        return False
-    finally:
-        if directory_fd is not None:
-            os.close(directory_fd)
-
-
 def read_status_lifecycle(
     runtime_dir: Path,
     agent_key: str,
+    *,
+    directory_fd: int | None = None,
 ) -> tuple[int, str, str | None, int] | None:
     """Read a trusted v1/v2 lifetime identity from private supervisor state."""
-    directory_fd = None
+    close_directory = directory_fd is None
     descriptor = None
     try:
-        directory_fd = os.open(
-            runtime_dir,
-            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
-        )
+        if directory_fd is None:
+            directory_fd = os.open(
+                runtime_dir,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+            )
         directory_info = os.fstat(directory_fd)
         if (
             not stat.S_ISDIR(directory_info.st_mode)
@@ -912,7 +1659,7 @@ def read_status_lifecycle(
     finally:
         if descriptor is not None:
             os.close(descriptor)
-        if directory_fd is not None:
+        if close_directory and directory_fd is not None:
             os.close(directory_fd)
 
 
@@ -932,30 +1679,67 @@ def prune_orphaned_state(
     state_agents: Path,
     current_agent_key: str,
 ) -> None:
-    """Prune dead owners' runtime trees and their corresponding state."""
+    """Prune dead creators' runtime trees, state twins, and ownership markers."""
     names: set[str] = set()
+    blocked_staging: set[str] = set()
     for agents_dir in (runtime_agents, state_agents):
         try:
-            names.update(os.listdir(agents_dir))
+            entries = os.listdir(agents_dir)
         except (FileNotFoundError, PermissionError, OSError):
             continue
+        for entry in entries:
+            if AGENT_KEY_PATTERN.fullmatch(entry) is not None:
+                names.add(entry)
+            elif agents_dir == runtime_agents:
+                instance_staging = prune_instance_staging(runtime_agents, entry)
+                if instance_staging is not None:
+                    staging_key, removed = instance_staging
+                    names.add(staging_key)
+                    if not removed:
+                        blocked_staging.add(staging_key)
+                    continue
+                staging_key = prune_creator_staging(runtime_agents, entry)
+                if staging_key is not None:
+                    names.add(staging_key)
+                    continue
+                marker_key = creator_marker_agent_key(entry)
+                if marker_key is not None:
+                    names.add(marker_key)
+
     for name in sorted(names):
-        if name == current_agent_key or AGENT_KEY_PATTERN.fullmatch(name) is None:
+        if name == current_agent_key or name in blocked_staging:
             continue
+        creator_state, _creator, creator_identity = read_creator_lifecycle(
+            runtime_agents,
+            name,
+        )
+        if creator_state in (LifecycleState.LIVE, LifecycleState.UNAVAILABLE):
+            continue
+
         runtime_path = runtime_agents / name
         state_path = state_agents / name
         try:
             runtime_info = runtime_path.lstat()
         except FileNotFoundError:
             runtime_info = None
-        if (
+        safe_runtime = (
             runtime_info is not None
             and stat.S_ISDIR(runtime_info.st_mode)
             and not stat.S_ISLNK(runtime_info.st_mode)
             and runtime_info.st_uid == os.getuid()
-        ):
+            and stat.S_IMODE(runtime_info.st_mode) == 0o700
+        )
+        if runtime_info is not None and not safe_runtime:
+            continue
+
+        if safe_runtime:
             owner = read_status_owner(runtime_path, name)
-            if owner is None and os.path.lexists(state_path):
+            # A deployed pre-marker creator publishes its empty runtime name
+            # before state, leases, or owner status.  No elapsed-time rule can
+            # distinguish a dead partial tree from that live process paused at
+            # an arbitrary syscall.  Preserve this legacy ambiguity forever;
+            # new generations are attributable through their creator marker.
+            if creator_state is None and owner is None:
                 continue
             if owner is not None and (
                 validate_process_identity(owner[0], owner[1]) is not LifecycleState.DEAD
@@ -968,23 +1752,33 @@ def prune_orphaned_state(
             if locked is None:
                 continue
             lock_descriptor, lock_identity = locked
+            reaped = False
             try:
                 validate_supervisor_lock(
                     lock_descriptor,
                     runtime_path / LOCK_NAME,
                     lock_identity,
                 )
-                confirmed = read_status_owner(runtime_path, name)
-                if owner is None:
+                confirmed_creator, _record, confirmed_creator_identity = (
+                    read_creator_lifecycle(runtime_agents, name)
+                )
+                if creator_state is LifecycleState.DEAD:
                     if (
-                        confirmed is not None
-                        or os.path.lexists(state_path)
-                        or not statusless_runtime_is_empty(
-                            runtime_path,
-                            lock_identity,
-                        )
+                        confirmed_creator is not LifecycleState.DEAD
+                        or confirmed_creator_identity != creator_identity
                     ):
                         continue
+                elif confirmed_creator is not None:
+                    continue
+
+                confirmed = read_status_owner(runtime_path, name)
+                if creator_state is LifecycleState.DEAD:
+                    if confirmed is not None and (
+                        validate_process_identity(confirmed[0], confirmed[1])
+                        is not LifecycleState.DEAD
+                    ):
+                        continue
+                    remove_instance_tree(state_path)
                 elif (
                     confirmed is None
                     or validate_process_identity(confirmed[0], confirmed[1])
@@ -992,39 +1786,78 @@ def prune_orphaned_state(
                 ):
                     continue
                 else:
-                    # Remove state first.  If runtime removal is interrupted
-                    # after its owner record is unlinked, a later pass can
-                    # identify the empty status-less tree without risking a
-                    # freshly starting instance (which has a state twin and a
-                    # leases directory).
                     remove_instance_tree(state_path)
+
                 # Keep the named, locked inode reachable while deleting the
                 # deferred owner record.  Once LOCK_NAME is unlinked, another
                 # supervisor may create a replacement, so perform no further
-                # unlinks after that point; a non-empty rmdir then preserves
-                # the replacement tree.
+                # runtime-tree unlinks after that point.
                 remove_instance_tree(
                     runtime_path,
                     final_names=(STATUS_NAME, LOCK_NAME),
                 )
+                reaped = True
             except (ConfigurationError, FileNotFoundError, OSError, RuntimeError):
                 continue
             finally:
                 os.close(lock_descriptor)
+
+            if (
+                reaped
+                and creator_state is LifecycleState.DEAD
+                and creator_identity is not None
+            ):
+                try:
+                    remove_dead_creator_marker(
+                        runtime_agents,
+                        name,
+                        creator_identity,
+                    )
+                except (ConfigurationError, FileNotFoundError, OSError):
+                    pass
             continue
+
         try:
             remove_instance_tree(state_path)
         except (ConfigurationError, FileNotFoundError, OSError):
             continue
+        if creator_state is LifecycleState.DEAD and creator_identity is not None:
+            try:
+                remove_dead_creator_marker(
+                    runtime_agents,
+                    name,
+                    creator_identity,
+                )
+            except (ConfigurationError, FileNotFoundError, OSError):
+                continue
 
 
 def cleanup_instance(args: argparse.Namespace) -> None:
     """Best-effort cleanup after the exact owning process generation dies."""
+    cleanup_complete = True
     for path in (args.state_dir, args.runtime_dir):
         try:
             remove_instance_tree(path)
         except (ConfigurationError, FileNotFoundError, OSError):
-            continue
+            cleanup_complete = False
+        if os.path.lexists(path):
+            cleanup_complete = False
+    if not cleanup_complete:
+        return
+
+    creator_state, _record, creator_identity = read_creator_lifecycle(
+        args.runtime_dir.parent,
+        args.agent_key,
+    )
+    if creator_state is LifecycleState.DEAD and creator_identity is not None:
+        try:
+            remove_dead_creator_marker(
+                args.runtime_dir.parent,
+                args.agent_key,
+                creator_identity,
+            )
+        except (ConfigurationError, FileNotFoundError, OSError):
+            pass
 
 
 def ofd_lock_bytes() -> tuple[int, bytes]:
@@ -1415,20 +2248,12 @@ def refresh_lifecycle_records(
 
 def owner_seed_record(args: argparse.Namespace) -> dict[str, object]:
     """Return trusted bridge ownership without claiming a live daemon."""
-    return {
-        "daemon_pid": None,
-        "format": RECORD_FORMAT_V2,
-        "version": RECORD_FORMAT_V2,
-        "generation": args.generation,
-        "lease_count": 0,
-        "agent_key": args.agent_key,
-        "owner_pid": args.owner_pid,
-        "owner_start_identity": args.owner_start_identity,
-        "restart_count": 0,
-        "restart_reason": None,
-        "supervisor_pid": None,
-        "supervisor_start_identity": None,
-    }
+    return owner_seed_record_fields(
+        args.agent_key,
+        args.owner_pid,
+        args.owner_start_identity,
+        args.generation,
+    )
 
 
 def publish_owner_seed_if_absent(args: argparse.Namespace) -> None:
@@ -2084,6 +2909,9 @@ def bridge_main(args: argparse.Namespace) -> None:
             Path(args.state_root),
             args.host,
             args.agent_key,
+            args.owner_pid,
+            args.owner_start_identity,
+            args.generation,
         )
         args.runtime_dir = runtime_dir
         args.state_dir = state_dir

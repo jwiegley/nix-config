@@ -21,6 +21,12 @@ The current worktrees and live consumers are authoritative. The following upstre
 - NeLisp v0.5.1 at `f753209d53b372933b829345fe4373acad67bcb5`; and
 - anvil.el v1.1.1 at `d50ce32b71c5fa46da3aa661481c8be44fee4f97`.
 
+The current interactive and dedicated service release is pinned centrally by
+`packages/anvil-mcp/source.nix` to John Wiegley's signed anvil.el commit
+`5a062f738501551614816e21a8753c94b36fcb9e`. That source includes the complete
+issue-53 lifecycle and wire-protocol hardening submitted upstream in PR 55;
+the former local eleven-patch stack has been removed.
+
 Current upstream documentation describes a Rust standalone path that has since been removed from NeLisp main. The later pure-Elisp launcher in anvil.el master does not match the current NeLisp executable path or command line, carries an unproved and materially smaller tool surface, and records a five-to-seven-minute cold load. The standalone branch therefore adopts the last reproducible released compatibility pair: NeLisp v0.5.1 with the byte-identical Anvil modules from anvil.el v1.1.1. This is a deliberate compatibility pin, not an assertion that current heads are interoperable.
 
 The dedicated branch uses current pinned anvil.el 1.3.0 and the separately pinned anvil-ide package. Linux pairs them with a Nix-built Emacs 30 no-X package; Darwin reuses the pinned MacPort Emacs while running a separate minimal daemon. The live interactive Mac remains the compatibility baseline at 13 `anvil` eval/IDE tools plus 65 `emacs-eval` typed tools. The dedicated daemon loads the complete configured optional set `(ide elisp sexp semantic sqlite pdf cron state shell-filter context)`, yielding 76 direct typed tools. It publishes those typed tools into the main `anvil` registry as well, producing one 89-tool registration compatible with static promptdeploy configuration; the direct typed registry remains available for diagnosis and worker offload.

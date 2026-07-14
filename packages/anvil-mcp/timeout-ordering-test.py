@@ -94,6 +94,7 @@ def assert_static_ordering(
         "emacsclientKillSeconds",
         "emacsclientProbeSeconds",
         "frameReadSeconds",
+        "hostShellSeconds",
         "parentGuardReadySeconds",
         "requestParseSeconds",
         "shellSyncSeconds",
@@ -140,6 +141,7 @@ def assert_static_ordering(
             stdio_text, "ANVIL_EMACSCLIENT_STARTUP_DISPATCH_TIMEOUT"
         ),
         "cooperativeSyncSeconds": elisp_assignment(init_text, "anvil-eval-timeout"),
+        "hostShellSeconds": elisp_assignment(init_text, "anvil-host--default-timeout"),
         "emacsclientKillSeconds": shell_default(
             stdio_text, "ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT"
         ),
@@ -214,6 +216,17 @@ def assert_static_ordering(
         < values["bridgeDispatchSeconds"]
     ):
         raise AssertionError(f"invalid synchronous timeout ladder: {values}")
+    if not (
+        values["hostShellSeconds"] <= values["cooperativeSyncSeconds"]
+        and values["hostShellSeconds"] < values["watchdogDispatchSeconds"]
+    ):
+        raise AssertionError("host shell default can outlive the root watchdog")
+    if not (
+        values["hostShellSeconds"]
+        == values["shellSyncSeconds"]
+        == values["cooperativeSyncSeconds"]
+    ):
+        raise AssertionError("bounded synchronous tool budgets drifted apart")
     if not (
         values["shellSyncSeconds"] <= values["cooperativeSyncSeconds"]
         and values["shellSyncSeconds"] < values["watchdogDispatchSeconds"]
@@ -437,7 +450,7 @@ def assert_error(
             raise AssertionError(f"wrong {key} for {phase} timeout: {data.get(key)!r}")
 
 
-def assert_dynamic_ordering(stdio: Path) -> None:
+def assert_dynamic_ordering(stdio: Path, policy: dict[str, object]) -> None:
     """Prove bounded recovery, hard kills, and startup-method selection."""
     with tempfile.TemporaryDirectory(prefix="anvil-timeout-ordering-") as raw:
         root = Path(raw)
@@ -558,13 +571,25 @@ def assert_dynamic_ordering(stdio: Path) -> None:
             "ANVIL_MCP_FRAME_READ_TIMEOUT": "1",
         }
         maxima = {
-            "ANVIL_EMACSCLIENT_PROBE_TIMEOUT": 5,
-            "ANVIL_EMACSCLIENT_READINESS_TIMEOUT": 20,
-            "ANVIL_EMACSCLIENT_STARTUP_DISPATCH_TIMEOUT": 20,
-            "ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT": 150,
-            "ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT": 1,
-            "ANVIL_MCP_REQUEST_PARSE_TIMEOUT": 2,
-            "ANVIL_MCP_FRAME_READ_TIMEOUT": 10,
+            "ANVIL_EMACSCLIENT_PROBE_TIMEOUT": policy_integer(
+                policy, "emacsclientProbeSeconds"
+            ),
+            "ANVIL_EMACSCLIENT_READINESS_TIMEOUT": policy_integer(
+                policy, "bridgeReadinessSeconds"
+            ),
+            "ANVIL_EMACSCLIENT_STARTUP_DISPATCH_TIMEOUT": policy_integer(
+                policy, "bridgeStartupDispatchSeconds"
+            ),
+            "ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT": policy_integer(
+                policy, "bridgeDispatchSeconds"
+            ),
+            "ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT": policy_integer(
+                policy, "emacsclientKillSeconds"
+            ),
+            "ANVIL_MCP_REQUEST_PARSE_TIMEOUT": policy_integer(
+                policy, "requestParseSeconds"
+            ),
+            "ANVIL_MCP_FRAME_READ_TIMEOUT": policy_integer(policy, "frameReadSeconds"),
         }
         request = '{"jsonrpc":"2.0","id":6,"method":"test"}\n'
         for name, maximum in maxima.items():
@@ -620,7 +645,7 @@ def main() -> int:
         policy,
     )
     print("timeout-ordering-static-ok", flush=True)
-    assert_dynamic_ordering(stdio)
+    assert_dynamic_ordering(stdio, policy)
     print("timeout-ordering-dynamic-ok", flush=True)
     return 0
 
