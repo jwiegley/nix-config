@@ -488,6 +488,7 @@ rec {
     ++ optAgent "codex"
     ++ optAgent "droid"
     ++ optAgent "opencode"
+    ++ optAgent "pi"
     # ++ optAgent "gemini-cli"
 
     # ── MCP Servers & Agent Tools ────────────────────────────────────
