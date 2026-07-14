@@ -187,6 +187,66 @@ def run_transcript(
     return [json.loads(line) for line in completed.stdout.splitlines() if line.strip()]
 
 
+def run_final_framed_transcript(
+    launcher: Path,
+    host: str,
+    server_id: str,
+    line_frames: list[str],
+    framed_frame: str,
+    timeout_seconds: float = 300,
+) -> list[dict[str, object]]:
+    """Run line requests followed by one final Content-Length request."""
+    env = os.environ.copy()
+    env["ANVIL_EMACS_HOST"] = host
+    framed_body = framed_frame.encode("utf-8")
+    prefix = "".join(f"{frame}\n" for frame in line_frames).encode("utf-8")
+    payload = (
+        prefix
+        + f"Content-Length: {len(framed_body)}\r\n\r\n".encode("ascii")
+        + framed_body
+    )
+    try:
+        completed = subprocess.run(
+            [str(launcher), f"--server-id={server_id}"],
+            check=False,
+            env=env,
+            input=payload,
+            capture_output=True,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise AssertionError(
+            f"{host}/{server_id} framed request timed out after {error.timeout}s"
+        ) from error
+    if completed.returncode != 0:
+        raise AssertionError(
+            f"{host}/{server_id} framed request exited {completed.returncode}\n"
+            f"stdout:\n{completed.stdout.decode(errors='replace')}\n"
+            f"stderr:\n{completed.stderr.decode(errors='replace')}"
+        )
+
+    responses: list[dict[str, object]] = []
+    output = completed.stdout
+    while output:
+        if output.lower().startswith(b"content-length:"):
+            header, separator, body_and_rest = output.partition(b"\r\n\r\n")
+            if not separator:
+                raise AssertionError(f"malformed framed response: {output[:200]!r}")
+            length = int(header.split(b":", 1)[1].strip())
+            body = body_and_rest[:length]
+            if len(body) != length:
+                raise AssertionError("truncated framed response")
+            responses.append(json.loads(body))
+            output = body_and_rest[length:]
+        else:
+            line, separator, output = output.partition(b"\n")
+            if not separator:
+                raise AssertionError(f"unterminated line response: {line[:200]!r}")
+            if line.strip():
+                responses.append(json.loads(line))
+    return responses
+
+
 def response_by_id(
     responses: list[dict[str, object]], identifier: int
 ) -> dict[str, object]:
@@ -1336,6 +1396,14 @@ def main() -> None:
                     },
                 },
             ),
+            request(
+                24,
+                "tools/call",
+                {
+                    "name": "nelisp-eval",
+                    "arguments": {"expression": "(+ 20 22)"},
+                },
+            ),
         ],
     )
     main_names = tool_names(response_by_id(main_responses, 2))
@@ -1381,10 +1449,31 @@ def main() -> None:
     assert_tool_success(response_by_id(main_responses, 21), str(host_shell_seconds))
     assert_tool_success(response_by_id(main_responses, 22), "pathless-rg:1")
     assert_tool_success(response_by_id(main_responses, 23), "stdin-eof")
+    assert_tool_success(response_by_id(main_responses, 24), "42")
     if failing_shell_marker.exists():
         raise AssertionError("shell-run executed after an allowed envrc failed")
     for identifier in (10, 11, 16, 17):
         assert_tool_omits(response_by_id(main_responses, identifier), "direnv:")
+
+    large_expression = '(length "雪' + ("x" * (512 * 1024)) + '")'
+    large_responses = run_final_framed_transcript(
+        launcher,
+        "host-a",
+        "anvil",
+        [
+            request(25, "initialize", initialize),
+            request(None, "notifications/initialized"),
+        ],
+        request(
+            26,
+            "tools/call",
+            {
+                "name": "emacs-eval",
+                "arguments": {"expression": large_expression},
+            },
+        ),
+    )
+    assert_tool_success(response_by_id(large_responses, 26), "524289")
 
     assert_async_isolation(
         launcher,

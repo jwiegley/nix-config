@@ -2782,11 +2782,16 @@ def reap_supervisor_children(args: argparse.Namespace) -> None:
 def start_stdio_bridge(args: argparse.Namespace) -> subprocess.Popen[bytes]:
     """Launch stdio on inherited pipes without observing MCP request bytes."""
     socket_path = args.runtime_dir / "emacs" / "server"
+    temporary_path = args.runtime_dir / "tmp"
     environment = transport_environment()
     environment["ANVIL_EMACS_SOCKET"] = str(socket_path)
+    environment["ANVIL_EMACS_RUNTIME_DIR"] = str(args.runtime_dir)
     environment["ANVIL_MCP_PARENT_GUARD"] = args.parent_guard
     environment["ANVIL_MCP_PARENT_GUARD_PYTHON"] = args.python
     environment["ANVIL_HEADLESS_PARENT_PID"] = str(os.getpid())
+    environment["TMPDIR"] = str(temporary_path)
+    environment["TMP"] = str(temporary_path)
+    environment["TEMP"] = str(temporary_path)
     return subprocess.Popen(
         [
             args.python,

@@ -4074,6 +4074,15 @@ for line in sys.stdin:
             args.python,
         )
         self.assertTrue(options["env"]["ANVIL_EMACS_SOCKET"].endswith("/server"))
+        self.assertEqual(
+            options["env"]["ANVIL_EMACS_RUNTIME_DIR"],
+            str(args.runtime_dir),
+        )
+        for name in ("TMPDIR", "TMP", "TEMP"):
+            self.assertEqual(
+                options["env"][name],
+                str(args.runtime_dir / "tmp"),
+            )
 
     def test_stop_stdio_bridge_reports_failed_post_kill_reap(self):
         process = mock.Mock()

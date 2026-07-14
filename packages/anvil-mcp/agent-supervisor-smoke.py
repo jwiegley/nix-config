@@ -1246,6 +1246,8 @@ def main() -> None:
 
     owners: list[OwnerProxy] = []
     bridges: list[ProxyBridge] = []
+    ambient_tmp = runtime_root / ".unusable-ambient-tmp"
+    ambient_tmp.write_text("not a directory\n")
     main_owner = acquire_owner(owners, bridges, launcher, "codex-main-owner")
     other_owner = acquire_owner(
         owners,
@@ -1259,6 +1261,11 @@ def main() -> None:
         main_owner,
         "anvil",
         HOST_ONE,
+        {
+            "TMPDIR": str(ambient_tmp),
+            "TMP": str(ambient_tmp),
+            "TEMP": str(ambient_tmp),
+        },
     )
     main_eval = acquire_bridge(
         owners,
@@ -1325,6 +1332,26 @@ def main() -> None:
                 f"one launcher exposed mixed generations: {generations}"
             )
         assert_home_unchanged(home, home_baseline)
+
+        # Exercise large-request staging through the production per-agent
+        # supervisor, not only through the separate host-daemon smoke.  This
+        # proves that its private runtime TMPDIR reaches the stdio bridge and
+        # that the staged request is removed before dispatch completes.
+        large_expression = '(length "雪' + ("x" * (512 * 1024)) + '")'
+        large_response = main_typed.call_tool(
+            "emacs-eval",
+            {"expression": large_expression},
+            timeout=150,
+        )
+        if eval_value(large_response) != 524289:
+            raise AssertionError(f"large per-agent request failed: {large_response}")
+        staged_paths = list(
+            (instances["main-typed"]["runtime_dir"] / "tmp").glob("anvil-mcp.*")
+        )
+        if staged_paths:
+            raise AssertionError(
+                f"large per-agent request left staged paths: {staged_paths}"
+            )
 
         agent_instance = instances["other-agent"]
         agent_supervisor_identity = module.process_start_identity(

@@ -107,6 +107,10 @@ bump() {
 }
 
 expression=${!#}
+if [[ ${#expression} -gt 100000 ]]; then
+    printf 'emacsclient expression exceeds portable argument ceiling\n' >&2
+    exit 75
+fi
 case "$expression" in
     t)
         bump "$FAKE_PROBE_COUNT"
@@ -1693,7 +1697,10 @@ def run_negative_control(
             "method": "test",
         }
         request_bytes = json_bytes(request_document)
-        metadata = f"request|0|{base64.b64encode(request_bytes).decode('ascii')}|91"
+        metadata = (
+            f"request|0|inline|{base64.b64encode(request_bytes).decode('ascii')}|"
+            f"{len(request_bytes)}|91"
+        )
 
         vulnerable = root / "anvil-stdio-vulnerable.sh"
         source = stdio.read_text(encoding="utf-8")
@@ -1983,6 +1990,135 @@ def run_positive(
                         stream.close()
 
 
+def run_large_request_metadata(
+    stdio: Path,
+    bash: str,
+    real_helpers: dict[str, str],
+) -> None:
+    """Prove large and pipelined requests preserve framing and the same pipe."""
+    with tempfile.TemporaryDirectory(prefix="anvil-stdio-large-request-") as raw_root:
+        root = Path(raw_root)
+        first = synthetic_dispatch_error("large|pipe", 70)
+        second = {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "result": "recovery-ok",
+        }
+        large_document = {
+            "jsonrpc": "2.0",
+            "id": "large|pipe",
+            "method": "test",
+            "params": {"raw": "雪" + ("x" * (512 * 1024))},
+        }
+        large_bytes = json_bytes(large_document)
+        environment, paths = build_fixture(
+            root,
+            real_helpers,
+            [
+                "%7b%00%7d",
+                percent_wire(json_bytes(second)),
+            ],
+            bash,
+        )
+        environment["ANVIL_MCP_FRAME_READ_TIMEOUT"] = "10"
+        symlink_temp = root / "tmp-link"
+        symlink_temp.symlink_to(paths["temp"], target_is_directory=True)
+        environment["TMPDIR"] = str(symlink_temp)
+        process = start_bridge(
+            bash,
+            stdio,
+            environment,
+            paths["bridge_stderr"],
+            "--socket=/tmp/anvil-large-request-test",
+            "--server-id=test",
+        )
+        reader = BinaryReader(
+            process,
+            paths["debug_log"],
+            paths["bridge_stderr"],
+            paths["helper_marker"],
+            paths["dispatch_count"],
+        )
+        clean = False
+        try:
+            wait_for_bridge_ready(paths["debug_log"], process)
+            original_pid = process.pid
+            if process.stdin is None or process.stdout is None:
+                raise AssertionError("bridge pipes are unavailable")
+            pipe_ids = (
+                os.fstat(process.stdin.fileno()).st_ino,
+                os.fstat(process.stdout.fileno()).st_ino,
+            )
+            try:
+                send(process, large_document, framed=True)
+                send(
+                    process,
+                    {"jsonrpc": "2.0", "id": 2, "method": "test"},
+                    framed=True,
+                )
+            except BrokenPipeError as error:
+                raise AssertionError(reader.diagnostics()) from error
+
+            def assert_staged_request() -> None:
+                directories = list(paths["temp"].glob("anvil-mcp.*"))
+                if len(directories) != 1:
+                    raise AssertionError(
+                        f"expected one private staging directory: {directories}"
+                    )
+                directory = directories[0]
+                if stat.S_IMODE(directory.stat().st_mode) != 0o700:
+                    raise AssertionError("request staging directory is not mode 0700")
+                requests = list(directory.glob("request.*.json"))
+                if len(requests) != 1:
+                    raise AssertionError(
+                        f"expected one staged request file: {requests}"
+                    )
+                staged = requests[0]
+                if stat.S_IMODE(staged.stat().st_mode) != 0o600:
+                    raise AssertionError("staged request is not mode 0600")
+                if staged.read_bytes() != large_bytes:
+                    raise AssertionError("staged request bytes differ")
+
+            wait_for_dispatch_complete(
+                paths["dispatch_complete"],
+                process,
+                paths["dispatch_ack_fifo"],
+                1,
+                assert_staged_request,
+            )
+            read_reply(reader, first, framed=True)
+            paths["dispatch_complete"].unlink()
+            assert_same_bridge(process, original_pid, pipe_ids)
+
+            wait_for_dispatch_complete(
+                paths["dispatch_complete"],
+                process,
+                paths["dispatch_ack_fifo"],
+                2,
+            )
+            read_reply(reader, second, framed=True)
+            paths["dispatch_complete"].unlink()
+            assert_same_bridge(process, original_pid, pipe_ids)
+            if read_count(paths["dispatch_count"]) != 2:
+                raise AssertionError("large request was replayed")
+
+            process.stdin.close()
+            process.wait(timeout=5)
+            if process.returncode != 0:
+                raise AssertionError(reader.diagnostics())
+            if not wait_until(lambda: not process_group_alive(process.pid), 2):
+                raise AssertionError("large-request process group survived exit")
+            clean = True
+        finally:
+            reader.close()
+            if not clean:
+                terminate_bridge(process)
+            else:
+                for stream in (process.stdout,):
+                    if stream is not None and not stream.closed:
+                        stream.close()
+
+
 def main() -> int:
     """Run negative and positive regressions with an explicit Bash."""
     if len(sys.argv) not in (3, 5):
@@ -2060,6 +2196,7 @@ def main() -> int:
             parent_guard,
             parent_guard_python,
         )
+    run_large_request_metadata(stdio, bash, real_helpers)
     run_positive(stdio, bash, real_helpers)
     print(f"stdio-postdispatch-ok bash={bash}")
     return 0

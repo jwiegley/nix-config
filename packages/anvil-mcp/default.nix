@@ -2230,6 +2230,7 @@ let
 
         (defvar anvil-eval-timeout)
         (defvar anvil-eval-async-timeout)
+        (defvar anvil-eval-nelisp-source-directory)
         (defvar anvil-host--default-timeout)
         (defvar anvil-shell-filter-max-sync-timeout)
         (defvar anvil-worker-read-pool-size)
@@ -2277,6 +2278,7 @@ let
           (setq native-comp-jit-compilation nil
                 anvil-eval-timeout ${toString timeoutPolicy.cooperativeSyncSeconds}
                 anvil-eval-async-timeout ${toString timeoutPolicy.asyncSeconds}
+                anvil-eval-nelisp-source-directory "${nelispLispSrc}"
                 anvil-shell-filter-max-sync-timeout ${toString timeoutPolicy.shellSyncSeconds}
                 anvil-worker-read-pool-size ${toString workerPoolSizes.read}
                 anvil-worker-write-pool-size ${toString workerPoolSizes.write}
