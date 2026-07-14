@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic tests for per-Codex-process Anvil daemon supervision."""
+"""Deterministic tests for per-MCP-bridge Anvil daemon supervision."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import io
 import json
 import os
 from pathlib import Path
+import selectors
 import signal
 import socket
 import stat
@@ -17,6 +18,7 @@ from types import SimpleNamespace
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from unittest import mock
@@ -33,6 +35,9 @@ if SPEC is None or SPEC.loader is None:
     raise RuntimeError(f"cannot load supervisor module: {MODULE_PATH}")
 SUPERVISOR = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(SUPERVISOR)
+
+TEST_GENERATION = "1" * 64
+OTHER_GENERATION = "2" * 64
 
 
 def eventually(predicate, timeout: float = 10.0):
@@ -149,9 +154,7 @@ class AgentSupervisorTests(unittest.TestCase):
             close_fds=True,
         )
         self.owner_processes.append(process)
-        identity = eventually(
-            lambda: SUPERVISOR.process_start_identity(process.pid)
-        )
+        identity = eventually(lambda: SUPERVISOR.process_start_identity(process.pid))
         return process.pid, identity
 
     def prepare(
@@ -160,6 +163,7 @@ class AgentSupervisorTests(unittest.TestCase):
         owner_pid: int | None = None,
         owner_start_identity: str | None = None,
         host: str = "hera",
+        generation: str = TEST_GENERATION,
     ):
         if owner_pid is None:
             owner_pid = os.getpid()
@@ -170,19 +174,19 @@ class AgentSupervisorTests(unittest.TestCase):
         agent_key = SUPERVISOR.derive_agent_key(
             owner_pid,
             owner_start_identity,
+            generation,
         )
-        runtime_dir, state_dir, leases_dir = (
-            SUPERVISOR.prepare_instance_directories(
-                self.runtime_root,
-                self.state_root,
-                host,
-                agent_key,
-            )
+        runtime_dir, state_dir, leases_dir = SUPERVISOR.prepare_instance_directories(
+            self.runtime_root,
+            self.state_root,
+            host,
+            agent_key,
         )
         return SimpleNamespace(
             agent_key=agent_key,
             daemon="unused",
             grace_seconds=0.5,
+            generation=generation,
             host=host,
             leases_dir=leases_dir,
             owner_pid=owner_pid,
@@ -211,6 +215,7 @@ class AgentSupervisorTests(unittest.TestCase):
             args.agent_key,
             args.owner_pid,
             args.owner_start_identity,
+            args.generation,
         )
 
     @staticmethod
@@ -220,6 +225,7 @@ class AgentSupervisorTests(unittest.TestCase):
             args.agent_key,
             args.owner_pid,
             args.owner_start_identity,
+            args.generation,
         )
 
     @staticmethod
@@ -229,6 +235,8 @@ class AgentSupervisorTests(unittest.TestCase):
             "anvil",
             "--host",
             "hera",
+            "--generation",
+            TEST_GENERATION,
             "--runtime-root",
             "/tmp/runtime",
             "--state-root",
@@ -260,9 +268,7 @@ class AgentSupervisorTests(unittest.TestCase):
                 "read_text",
                 side_effect=[boot_id + "\n", stat_record, stat_record],
             ) as read_text:
-                expected = (
-                    "linux:12345678-1234-5678-9abc-def012345678:987654"
-                )
+                expected = "linux:12345678-1234-5678-9abc-def012345678:987654"
                 self.assertEqual(SUPERVISOR.linux_process_start(42), expected)
                 self.assertEqual(SUPERVISOR.linux_process_start(42), expected)
                 self.assertEqual(read_text.call_count, 3)
@@ -306,6 +312,39 @@ class AgentSupervisorTests(unittest.TestCase):
         ):
             self.assertIsNone(SUPERVISOR.darwin_process_start(42))
 
+    def test_platform_process_probes_report_read_errors_as_unavailable(self):
+        old_boot_id = SUPERVISOR._LINUX_BOOT_ID
+        old_initialized = SUPERVISOR._LINUX_BOOT_ID_INITIALIZED
+        SUPERVISOR._LINUX_BOOT_ID = "12345678-1234-5678-9abc-def012345678"
+        SUPERVISOR._LINUX_BOOT_ID_INITIALIZED = True
+        try:
+            with mock.patch.object(
+                SUPERVISOR.Path,
+                "read_text",
+                side_effect=OSError(SUPERVISOR.errno.EIO, "injected EIO"),
+            ):
+                self.assertEqual(
+                    SUPERVISOR.linux_process_start_state(42),
+                    (SUPERVISOR.LifecycleState.UNAVAILABLE, None),
+                )
+        finally:
+            SUPERVISOR._LINUX_BOOT_ID = old_boot_id
+            SUPERVISOR._LINUX_BOOT_ID_INITIALIZED = old_initialized
+
+        def unavailable_proc_pidinfo(_pid, _flavor, _arg, _buffer, _size):
+            ctypes.set_errno(SUPERVISOR.errno.EIO)
+            return 0
+
+        with mock.patch.object(
+            SUPERVISOR,
+            "darwin_proc_pidinfo",
+            return_value=unavailable_proc_pidinfo,
+        ):
+            self.assertEqual(
+                SUPERVISOR.darwin_process_start_state(42),
+                (SUPERVISOR.LifecycleState.UNAVAILABLE, None),
+            )
+
     def test_exited_unreaped_owner_is_not_live(self):
         process = subprocess.Popen(
             [
@@ -320,112 +359,114 @@ class AgentSupervisorTests(unittest.TestCase):
         try:
             if process.stdout is None or process.stdout.read(1) != b"R":
                 self.fail("zombie fixture did not start")
-            eventually(
-                lambda: SUPERVISOR.process_start_identity(process.pid) is None
-            )
+            eventually(lambda: SUPERVISOR.process_start_identity(process.pid) is None)
         finally:
             if process.stdout is not None:
                 process.stdout.close()
             process.wait(timeout=3)
 
-    def test_owner_acquisition_rejects_reparent_and_identity_races(self):
+    def test_bridge_acquisition_uses_self_identity_not_parent_identity(self):
         stable = "linux:12345678-1234-5678-9abc-def012345678:10"
         with (
             mock.patch.object(
                 SUPERVISOR,
-                "owner_pipe_closed",
+                "input_pipe_closed",
                 return_value=False,
             ),
-            mock.patch.object(SUPERVISOR.os, "getppid", side_effect=[42, 42, 42]),
+            mock.patch.object(SUPERVISOR.os, "getpid", return_value=42),
+            mock.patch.object(SUPERVISOR.os, "getppid") as getppid,
             mock.patch.object(
                 SUPERVISOR,
                 "process_start_identity",
-                side_effect=[stable, stable],
+                return_value=stable,
             ),
         ):
-            self.assertEqual(SUPERVISOR.identify_owner(), (42, stable))
+            self.assertEqual(SUPERVISOR.identify_bridge(), (42, stable))
+            getppid.assert_not_called()
 
         with (
             mock.patch.object(
                 SUPERVISOR,
-                "owner_pipe_closed",
-                return_value=False,
-            ),
-            mock.patch.object(SUPERVISOR.os, "getppid", side_effect=[42, 43, 43]),
-            mock.patch.object(
-                SUPERVISOR,
-                "process_start_identity",
-                side_effect=[stable, stable],
-            ),
-        ):
-            with self.assertRaises(SUPERVISOR.ConfigurationError):
-                SUPERVISOR.identify_owner()
-
-        with (
-            mock.patch.object(
-                SUPERVISOR,
-                "owner_pipe_closed",
+                "input_pipe_closed",
                 side_effect=[False, True],
             ) as pipe_closed,
-            mock.patch.object(SUPERVISOR.os, "getppid", side_effect=[42, 42, 42]),
+            mock.patch.object(SUPERVISOR.os, "getpid", return_value=42),
             mock.patch.object(
                 SUPERVISOR,
                 "process_start_identity",
-                side_effect=[stable, stable],
+                return_value=stable,
             ),
         ):
             with self.assertRaises(SUPERVISOR.ConfigurationError):
-                SUPERVISOR.identify_owner()
+                SUPERVISOR.identify_bridge()
             self.assertEqual(pipe_closed.call_count, 2)
 
         with (
             mock.patch.object(
                 SUPERVISOR,
-                "owner_pipe_closed",
+                "input_pipe_closed",
                 return_value=False,
             ),
-            mock.patch.object(SUPERVISOR.os, "getppid", side_effect=[42, 42, 42]),
+            mock.patch.object(SUPERVISOR.os, "getpid", return_value=42),
             mock.patch.object(
                 SUPERVISOR,
                 "process_start_identity",
-                side_effect=[stable, stable + "-reused"],
+                return_value=None,
             ),
         ):
             with self.assertRaises(SUPERVISOR.ConfigurationError):
-                SUPERVISOR.identify_owner()
+                SUPERVISOR.identify_bridge()
 
-    def test_closed_owner_pipe_rejects_presample_reparenting(self):
+    def test_closed_input_pipe_rejects_bridge_before_sampling_identity(self):
         read_fd, write_fd = os.pipe()
         try:
             os.close(write_fd)
-            with mock.patch.object(SUPERVISOR.os, "getppid") as getppid:
+            with mock.patch.object(SUPERVISOR.os, "getpid") as getpid:
                 with self.assertRaises(SUPERVISOR.ConfigurationError):
-                    SUPERVISOR.identify_owner(read_fd)
-                getppid.assert_not_called()
+                    SUPERVISOR.identify_bridge(read_fd)
+                getpid.assert_not_called()
         finally:
             os.close(read_fd)
 
         read_fd, write_fd = os.pipe()
         try:
             os.write(write_fd, b"buffered MCP request")
-            self.assertFalse(SUPERVISOR.owner_pipe_closed(read_fd))
+            self.assertFalse(SUPERVISOR.input_pipe_closed(read_fd))
             self.assertEqual(os.read(read_fd, 20), b"buffered MCP request")
         finally:
             os.close(read_fd)
             os.close(write_fd)
 
-    def test_pid_generation_changes_agent_key_and_private_path(self):
-        first_key = SUPERVISOR.derive_agent_key(4242, "linux:boot-a:100", 501)
+    def test_bridge_and_package_generations_change_key_and_private_path(self):
+        first_key = SUPERVISOR.derive_agent_key(
+            4242,
+            "linux:boot-a:100",
+            TEST_GENERATION,
+            501,
+        )
         self.assertEqual(
             first_key,
-            SUPERVISOR.derive_agent_key(4242, "linux:boot-a:100", 501),
+            SUPERVISOR.derive_agent_key(
+                4242,
+                "linux:boot-a:100",
+                TEST_GENERATION,
+                501,
+            ),
         )
         second_key = SUPERVISOR.derive_agent_key(
             4242,
             "linux:boot-a:101",
+            TEST_GENERATION,
+            501,
+        )
+        package_key = SUPERVISOR.derive_agent_key(
+            4242,
+            "linux:boot-a:100",
+            OTHER_GENERATION,
             501,
         )
         self.assertNotEqual(first_key, second_key)
+        self.assertNotEqual(first_key, package_key)
         first = SUPERVISOR.prepare_instance_directories(
             self.runtime_root,
             self.state_root,
@@ -444,6 +485,10 @@ class AgentSupervisorTests(unittest.TestCase):
             with self.subTest(invalid=invalid):
                 with self.assertRaises(SUPERVISOR.ConfigurationError):
                     SUPERVISOR.validate_agent_key(invalid)
+        for invalid in ("short", "A" * 64, "g" * 64):
+            with self.subTest(generation=invalid):
+                with self.assertRaises(SUPERVISOR.ConfigurationError):
+                    SUPERVISOR.validate_generation(invalid)
 
     def test_host_and_agent_paths_are_private_and_disjoint_from_home(self):
         nfs_home = self.root / "shared-nfs-home"
@@ -481,12 +526,13 @@ class AgentSupervisorTests(unittest.TestCase):
     def test_lease_revalidates_bridge_and_owner_identities(self):
         args = self.prepare()
         lease, record = self.register(args, "anvil")
+        self.assertEqual(record["format"], 2)
+        self.assertEqual(record["version"], 2)
+        self.assertEqual(record["generation"], TEST_GENERATION)
         self.assertEqual(self.live(args), [record])
 
         stale = dict(record)
-        stale["bridge_start_identity"] = (
-            f"{record['bridge_start_identity']}-reused"
-        )
+        stale["bridge_start_identity"] = f"{record['bridge_start_identity']}-reused"
         lease.write_text(json.dumps(stale) + "\n")
         os.chmod(lease, 0o600)
         self.assertEqual(self.live(args), [])
@@ -500,9 +546,7 @@ class AgentSupervisorTests(unittest.TestCase):
         owner_lease, owner_record = self.register(owner_args, "anvil")
         self.assertEqual(self.live(owner_args), [owner_record])
         owner_process = next(
-            process
-            for process in self.owner_processes
-            if process.pid == owner_pid
+            process for process in self.owner_processes if process.pid == owner_pid
         )
         owner_process.terminate()
         owner_process.wait(timeout=3)
@@ -524,6 +568,104 @@ class AgentSupervisorTests(unittest.TestCase):
         self.assertFalse(symlink.exists())
         self.assertFalse(hardlink.exists())
         self.assertTrue(target.exists())
+
+    def test_lease_read_os_errors_are_unavailable_and_never_unlinked(self):
+        args = self.prepare()
+        lease, record = self.register(args, "anvil")
+        for error_number in (
+            SUPERVISOR.errno.ESTALE,
+            SUPERVISOR.errno.ETIMEDOUT,
+            SUPERVISOR.errno.ENOMEM,
+        ):
+            with self.subTest(error_number=error_number):
+                with mock.patch.object(
+                    SUPERVISOR.os,
+                    "read",
+                    side_effect=OSError(error_number, "injected read failure"),
+                ):
+                    with self.assertRaises(OSError) as raised:
+                        self.live(args)
+                self.assertEqual(raised.exception.errno, SUPERVISOR.errno.EAGAIN)
+                self.assertTrue(lease.exists())
+        self.assertEqual(self.live(args), [record])
+        lease.unlink()
+
+    def test_v1_lease_is_read_only_in_legacy_domain_and_pruned_from_v2(self):
+        args = self.prepare()
+        lease, record = self.register(args, "anvil")
+        legacy = dict(record)
+        legacy["format"] = 1
+        legacy.pop("version")
+        legacy.pop("generation")
+        lease.write_text(json.dumps(legacy) + "\n")
+        lease.chmod(0o600)
+
+        self.assertEqual(
+            SUPERVISOR.live_leases(
+                args.leases_dir,
+                args.agent_key,
+                args.owner_pid,
+                args.owner_start_identity,
+                None,
+            ),
+            [legacy],
+        )
+        self.assertEqual(self.live(args), [])
+        self.assertFalse(lease.exists())
+
+    def test_v1_status_preserves_live_owner_and_prunes_dead_owner(self):
+        owner_pid, owner_identity = self.start_owner()
+        stale = self.prepare(
+            owner_pid=owner_pid,
+            owner_start_identity=owner_identity,
+        )
+        legacy = SUPERVISOR.owner_seed_record(stale)
+        legacy["format"] = 1
+        for field in (
+            "generation",
+            "version",
+            "restart_count",
+            "restart_reason",
+        ):
+            legacy.pop(field)
+        SUPERVISOR.write_status(stale, legacy)
+
+        self.assertEqual(
+            SUPERVISOR.read_status_lifecycle(
+                stale.runtime_dir,
+                stale.agent_key,
+            ),
+            (owner_pid, owner_identity, None, 1),
+        )
+        current = self.prepare()
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertTrue(stale.runtime_dir.exists())
+        self.assertTrue(stale.state_dir.exists())
+
+        owner_process = next(
+            process for process in self.owner_processes if process.pid == owner_pid
+        )
+        owner_process.terminate()
+        owner_process.wait(timeout=3)
+        SUPERVISOR.prune_orphaned_state(
+            current.runtime_dir.parent,
+            current.state_dir.parent,
+            current.agent_key,
+        )
+        self.assertFalse(stale.runtime_dir.exists())
+        self.assertFalse(stale.state_dir.exists())
+
+    def test_v2_status_exposes_generation_and_record_version(self):
+        args = self.prepare()
+        SUPERVISOR.write_status(args, SUPERVISOR.owner_seed_record(args))
+        self.assertEqual(
+            SUPERVISOR.read_status_lifecycle(args.runtime_dir, args.agent_key),
+            (args.owner_pid, args.owner_start_identity, TEST_GENERATION, 2),
+        )
 
     def test_lease_mode_is_private_even_under_restrictive_umask(self):
         args = self.prepare()
@@ -576,17 +718,14 @@ class AgentSupervisorTests(unittest.TestCase):
                 if not attempt_log.exists():
                     return False
                 values = [
-                    float(line)
-                    for line in attempt_log.read_text().splitlines()
-                    if line
+                    float(line) for line in attempt_log.read_text().splitlines() if line
                 ]
                 return values if len(values) >= 4 else False
 
             timestamps = eventually(attempts, timeout=5)[:4]
 
         intervals = [
-            later - earlier
-            for earlier, later in zip(timestamps, timestamps[1:])
+            later - earlier for earlier, later in zip(timestamps, timestamps[1:])
         ]
         self.assertGreaterEqual(intervals[0], 0.045)
         self.assertGreaterEqual(intervals[1], 0.09)
@@ -705,8 +844,7 @@ class AgentSupervisorTests(unittest.TestCase):
             status = self.remember_status(
                 eventually(
                     lambda: (
-                        (current := self.read_status(args))["daemon_pid"]
-                        is not None
+                        (current := self.read_status(args))["daemon_pid"] is not None
                         and current
                     )
                 )
@@ -716,9 +854,344 @@ class AgentSupervisorTests(unittest.TestCase):
         current = self.read_status(args)
         self.assertEqual(current["supervisor_pid"], status["supervisor_pid"])
         self.assertEqual(current["daemon_pid"], status["daemon_pid"])
-        self.assertIsNotNone(
-            SUPERVISOR.process_start_identity(current["daemon_pid"])
+        self.assertIsNotNone(SUPERVISOR.process_start_identity(current["daemon_pid"]))
+        lease.unlink()
+
+    def test_transient_owner_probe_preserves_live_instance(self):
+        args = self.prepare()
+        lease, _record = self.register(args, "anvil")
+        trigger = self.root / "owner-probe-trigger"
+        failed = self.root / "owner-probe-failed"
+        recovered = self.root / "owner-probe-recovered"
+        original_validate = SUPERVISOR.validate_process_identity
+
+        def transient_owner_probe(pid, expected):
+            if pid == args.owner_pid and trigger.exists():
+                if not failed.exists():
+                    failed.write_text("failed\n")
+                    return SUPERVISOR.LifecycleState.UNAVAILABLE
+                if not recovered.exists():
+                    recovered.write_text("recovered\n")
+            return original_validate(pid, expected)
+
+        SUPERVISOR.start_daemon = fake_start_daemon
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "validate_process_identity",
+                side_effect=transient_owner_probe,
+            ),
+            mock.patch.object(SUPERVISOR, "POLL_SECONDS", 0.01),
+            mock.patch.object(
+                SUPERVISOR,
+                "RESTART_BACKOFF_INITIAL_SECONDS",
+                0.02,
+            ),
+        ):
+            self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(args))
+            status = self.remember_status(
+                eventually(
+                    lambda: (
+                        (current := self.read_status(args))["daemon_pid"] is not None
+                        and current
+                    )
+                )
+            )
+            supervisor_identity = SUPERVISOR.process_start_identity(
+                status["supervisor_pid"]
+            )
+            daemon_identity = SUPERVISOR.process_start_identity(status["daemon_pid"])
+            trigger.write_text("armed\n")
+            eventually(recovered.exists)
+            current = self.read_status(args)
+
+        self.assertTrue(failed.exists())
+        self.assertTrue(lease.exists())
+        self.assertTrue(args.runtime_dir.is_dir())
+        self.assertTrue(args.state_dir.is_dir())
+        self.assertEqual(current["supervisor_pid"], status["supervisor_pid"])
+        self.assertEqual(current["daemon_pid"], status["daemon_pid"])
+        self.assertEqual(
+            SUPERVISOR.process_start_identity(current["supervisor_pid"]),
+            supervisor_identity,
         )
+        self.assertEqual(
+            SUPERVISOR.process_start_identity(current["daemon_pid"]),
+            daemon_identity,
+        )
+        lease.unlink()
+
+    def test_transient_lease_read_preserves_valid_live_instance(self):
+        args = self.prepare()
+        lease, _record = self.register(args, "anvil")
+        trigger = self.root / "lease-read-trigger"
+        failed = self.root / "lease-read-failed"
+        recovered = self.root / "lease-read-recovered"
+        original_read_lease = SUPERVISOR.read_lease
+
+        def transient_lease_read(*inner_args, **inner_kwargs):
+            if trigger.exists():
+                if not failed.exists():
+                    with mock.patch.object(
+                        SUPERVISOR.os,
+                        "read",
+                        side_effect=OSError(
+                            SUPERVISOR.errno.EIO,
+                            "injected lease EIO",
+                        ),
+                    ):
+                        result = original_read_lease(
+                            *inner_args,
+                            **inner_kwargs,
+                        )
+                    failed.write_text(f"{result[0].value}\n")
+                    return result
+                if not recovered.exists():
+                    recovered.write_text("recovered\n")
+            return original_read_lease(*inner_args, **inner_kwargs)
+
+        SUPERVISOR.start_daemon = fake_start_daemon
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "read_lease",
+                side_effect=transient_lease_read,
+            ),
+            mock.patch.object(SUPERVISOR, "POLL_SECONDS", 0.01),
+            mock.patch.object(
+                SUPERVISOR,
+                "RESTART_BACKOFF_INITIAL_SECONDS",
+                0.02,
+            ),
+        ):
+            self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(args))
+            status = self.remember_status(
+                eventually(
+                    lambda: (
+                        (current := self.read_status(args))["daemon_pid"] is not None
+                        and current
+                    )
+                )
+            )
+            supervisor_identity = SUPERVISOR.process_start_identity(
+                status["supervisor_pid"]
+            )
+            daemon_identity = SUPERVISOR.process_start_identity(status["daemon_pid"])
+            trigger.write_text("armed\n")
+            eventually(recovered.exists)
+            current = self.read_status(args)
+
+        self.assertEqual(failed.read_text(), "unavailable\n")
+        self.assertTrue(lease.exists())
+        self.assertTrue(args.runtime_dir.is_dir())
+        self.assertTrue(args.state_dir.is_dir())
+        self.assertEqual(current["supervisor_pid"], status["supervisor_pid"])
+        self.assertEqual(current["daemon_pid"], status["daemon_pid"])
+        self.assertEqual(
+            SUPERVISOR.process_start_identity(current["supervisor_pid"]),
+            supervisor_identity,
+        )
+        self.assertEqual(
+            SUPERVISOR.process_start_identity(current["daemon_pid"]),
+            daemon_identity,
+        )
+        lease.unlink()
+
+    def test_real_stdio_pipe_and_instance_survive_transient_owner_probe(self):
+        args = self.prepare()
+        args.server_id = "anvil"
+        args.stdio = "/json-rpc-fixture"
+        lease, _record = self.register(args, "anvil")
+        trigger = self.root / "pipe-owner-probe-trigger"
+        failed = self.root / "pipe-owner-probe-failed"
+        recovered = self.root / "pipe-owner-probe-recovered"
+        original_validate = SUPERVISOR.validate_process_identity
+        holder = {}
+        responses = {}
+        worker_errors = []
+
+        def transient_supervisor_owner_probe(pid, expected):
+            if (
+                os.getpid() != args.owner_pid
+                and pid == args.owner_pid
+                and trigger.exists()
+            ):
+                if not failed.exists():
+                    failed.write_text("failed\n")
+                    return SUPERVISOR.LifecycleState.UNAVAILABLE
+                if not recovered.exists():
+                    recovered.write_text("recovered\n")
+            return original_validate(pid, expected)
+
+        stdio_script = """
+import json
+import sys
+
+for line in sys.stdin:
+    request = json.loads(line)
+    response = {
+        "jsonrpc": "2.0",
+        "id": request["id"],
+        "result": {"echo": request.get("params")},
+    }
+    print(json.dumps(response), flush=True)
+    if request.get("method") == "shutdown":
+        break
+"""
+
+        def start_real_stdio(_args):
+            process = subprocess.Popen(
+                [sys.executable, "-u", "-c", stdio_script],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                close_fds=True,
+            )
+            holder["process"] = process
+            return process
+
+        def rpc(process, identifier, method, params):
+            if process.stdin is None or process.stdout is None:
+                raise AssertionError("JSON-RPC fixture pipes are missing")
+            request = {
+                "jsonrpc": "2.0",
+                "id": identifier,
+                "method": method,
+                "params": params,
+            }
+            process.stdin.write(json.dumps(request) + "\n")
+            process.stdin.flush()
+            selector = selectors.DefaultSelector()
+            try:
+                selector.register(process.stdout, selectors.EVENT_READ)
+                if not selector.select(timeout=3):
+                    raise AssertionError("JSON-RPC fixture response timed out")
+            finally:
+                selector.close()
+            line = process.stdout.readline()
+            if not line:
+                stderr = ""
+                if process.stderr is not None:
+                    stderr = process.stderr.read()
+                raise AssertionError(f"JSON-RPC fixture exited early: {stderr}")
+            return json.loads(line)
+
+        SUPERVISOR.start_daemon = fake_start_daemon
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "validate_process_identity",
+                side_effect=transient_supervisor_owner_probe,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "start_stdio_bridge",
+                side_effect=start_real_stdio,
+            ) as start_stdio,
+            mock.patch.object(SUPERVISOR, "POLL_SECONDS", 0.01),
+            mock.patch.object(
+                SUPERVISOR,
+                "RESTART_BACKOFF_INITIAL_SECONDS",
+                0.02,
+            ),
+        ):
+            self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(args))
+            status = self.remember_status(
+                eventually(
+                    lambda: (
+                        (current := self.read_status(args))["daemon_pid"] is not None
+                        and current
+                    )
+                )
+            )
+            supervisor_identity = SUPERVISOR.process_start_identity(
+                status["supervisor_pid"]
+            )
+            daemon_identity = SUPERVISOR.process_start_identity(status["daemon_pid"])
+
+            def exercise_same_pipe():
+                try:
+                    process = eventually(lambda: holder.get("process"))
+                    responses["stdio_pid"] = process.pid
+                    responses["before"] = rpc(
+                        process,
+                        1,
+                        "ping",
+                        {"phase": "before"},
+                    )
+                    trigger.write_text("armed\n")
+                    eventually(recovered.exists)
+                    current = self.read_status(args)
+                    if current["supervisor_pid"] != status["supervisor_pid"]:
+                        raise AssertionError("transient probe replaced supervisor")
+                    if current["daemon_pid"] != status["daemon_pid"]:
+                        raise AssertionError("transient probe replaced daemon")
+                    if not lease.exists():
+                        raise AssertionError("transient probe removed lease")
+                    if not args.runtime_dir.is_dir() or not args.state_dir.is_dir():
+                        raise AssertionError("transient probe removed instance tree")
+                    responses["after"] = rpc(
+                        process,
+                        2,
+                        "ping",
+                        {"phase": "after"},
+                    )
+                    responses["shutdown"] = rpc(
+                        process,
+                        3,
+                        "shutdown",
+                        {},
+                    )
+                except BaseException as error:
+                    worker_errors.append(error)
+                    process = holder.get("process")
+                    if process is not None and process.poll() is None:
+                        process.kill()
+
+            worker = threading.Thread(target=exercise_same_pipe, daemon=True)
+            worker.start()
+            caretaker_status = SUPERVISOR.caretake_stdio_bridge(args)
+            worker.join(timeout=5)
+
+        process = holder.get("process")
+        if worker.is_alive():
+            if process is not None and process.poll() is None:
+                process.kill()
+            self.fail("same-pipe exercise did not terminate")
+        if worker_errors:
+            raise AssertionError("same-pipe exercise failed") from worker_errors[0]
+        self.assertEqual(caretaker_status, 0)
+        start_stdio.assert_called_once_with(args)
+        self.assertIsNotNone(process)
+        self.assertEqual(process.pid, responses["stdio_pid"])
+        self.assertEqual(
+            responses["before"]["result"]["echo"],
+            {"phase": "before"},
+        )
+        self.assertEqual(
+            responses["after"]["result"]["echo"],
+            {"phase": "after"},
+        )
+        self.assertEqual(responses["shutdown"]["id"], 3)
+        self.assertEqual(failed.read_text(), "failed\n")
+        self.assertTrue(lease.exists())
+        self.assertTrue(args.runtime_dir.is_dir())
+        self.assertTrue(args.state_dir.is_dir())
+        current = self.read_status(args)
+        self.assertEqual(current["supervisor_pid"], status["supervisor_pid"])
+        self.assertEqual(current["daemon_pid"], status["daemon_pid"])
+        self.assertEqual(
+            SUPERVISOR.process_start_identity(current["supervisor_pid"]),
+            supervisor_identity,
+        )
+        self.assertEqual(
+            SUPERVISOR.process_start_identity(current["daemon_pid"]),
+            daemon_identity,
+        )
+        for stream in (process.stdin, process.stdout, process.stderr):
+            if stream is not None:
+                stream.close()
         lease.unlink()
 
     def test_repeated_transient_loop_failures_recover_without_restart(self):
@@ -769,8 +1242,7 @@ class AgentSupervisorTests(unittest.TestCase):
             status = self.remember_status(
                 eventually(
                     lambda: (
-                        (current := self.read_status(args))["daemon_pid"]
-                        is not None
+                        (current := self.read_status(args))["daemon_pid"] is not None
                         and current
                     )
                 )
@@ -778,9 +1250,7 @@ class AgentSupervisorTests(unittest.TestCase):
             supervisor_identity = SUPERVISOR.process_start_identity(
                 status["supervisor_pid"]
             )
-            daemon_identity = SUPERVISOR.process_start_identity(
-                status["daemon_pid"]
-            )
+            daemon_identity = SUPERVISOR.process_start_identity(status["daemon_pid"])
             trigger.write_text("armed\n")
             eventually(lambda: recovered.read_text() == "recovered\n")
             current = self.read_status(args)
@@ -823,8 +1293,7 @@ class AgentSupervisorTests(unittest.TestCase):
             status = self.remember_status(
                 eventually(
                     lambda: (
-                        (current := self.read_status(args))["daemon_pid"]
-                        is not None
+                        (current := self.read_status(args))["daemon_pid"] is not None
                         and current
                     )
                 )
@@ -833,10 +1302,11 @@ class AgentSupervisorTests(unittest.TestCase):
             wait_status = wait_child_status(status["supervisor_pid"])
 
         self.supervisor_pids.remove(status["supervisor_pid"])
-        self.assertEqual(os.waitstatus_to_exitcode(wait_status), SUPERVISOR.EXIT_SOFTWARE)
+        self.assertEqual(
+            os.waitstatus_to_exitcode(wait_status), SUPERVISOR.EXIT_SOFTWARE
+        )
         eventually(
-            lambda: SUPERVISOR.process_start_identity(status["daemon_pid"])
-            is None
+            lambda: SUPERVISOR.process_start_identity(status["daemon_pid"]) is None
         )
         self.daemon_pids.remove(status["daemon_pid"])
 
@@ -909,8 +1379,7 @@ class AgentSupervisorTests(unittest.TestCase):
             self.remember_status(
                 eventually(
                     lambda: (
-                        (current := self.read_status(args))["daemon_pid"]
-                        is not None
+                        (current := self.read_status(args))["daemon_pid"] is not None
                         and current
                     )
                 )
@@ -939,68 +1408,79 @@ class AgentSupervisorTests(unittest.TestCase):
         )
         lease.unlink()
 
-    def test_same_owner_server_bridges_converge_restart_and_cleanup(self):
-        args = self.prepare()
-        first, _ = self.register(args, "anvil")
-        second, _ = self.register(args, "emacs-eval")
+    def test_sibling_bridges_under_one_parent_are_isolated(self):
+        first_pid, first_identity = self.start_owner()
+        second_pid, second_identity = self.start_owner()
+        first_args = self.prepare(
+            owner_pid=first_pid,
+            owner_start_identity=first_identity,
+        )
+        second_args = self.prepare(
+            owner_pid=second_pid,
+            owner_start_identity=second_identity,
+        )
+        first_lease, _ = self.register(first_args, "anvil")
+        second_lease, _ = self.register(second_args, "emacs-eval")
         SUPERVISOR.start_daemon = fake_start_daemon
-        self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(args))
-        self.assertFalse(SUPERVISOR.spawn_supervisor_if_absent(args))
+        self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(first_args))
+        self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(second_args))
 
-        status = self.remember_status(
+        first = self.remember_status(
             eventually(
                 lambda: (
-                    (current := self.read_status(args))["lease_count"] == 2
+                    (current := self.read_status(first_args))["lease_count"] == 1
                     and current["daemon_pid"] is not None
                     and current
                 )
             )
         )
-        self.assertEqual(status["lease_count"], 2)
-        self.assertEqual(status["agent_key"], args.agent_key)
-        self.assertEqual(status["owner_pid"], args.owner_pid)
-        original_daemon = status["daemon_pid"]
-        self.assertIsNotNone(original_daemon)
-
-        first.unlink()
-        surviving = self.remember_status(
+        second = self.remember_status(
             eventually(
                 lambda: (
-                    (current := self.read_status(args))["lease_count"] == 1
+                    (current := self.read_status(second_args))["lease_count"] == 1
+                    and current["daemon_pid"] is not None
                     and current
                 )
             )
         )
-        self.assertEqual(surviving["daemon_pid"], original_daemon)
+        self.assertNotEqual(first_args.agent_key, second_args.agent_key)
+        self.assertNotEqual(first_args.runtime_dir, second_args.runtime_dir)
+        self.assertNotEqual(first["supervisor_pid"], second["supervisor_pid"])
+        self.assertNotEqual(first["daemon_pid"], second["daemon_pid"])
+        for status, args in ((first, first_args), (second, second_args)):
+            self.assertEqual(status["format"], 2)
+            self.assertEqual(status["version"], 2)
+            self.assertEqual(status["generation"], TEST_GENERATION)
+            self.assertEqual(status["agent_key"], args.agent_key)
+            self.assertEqual(status["owner_pid"], args.owner_pid)
 
-        os.killpg(original_daemon, signal.SIGKILL)
+        old_daemon_pid = first["daemon_pid"]
+        os.killpg(old_daemon_pid, signal.SIGKILL)
+        # A successful signal transfers cleanup to the supervisor.  Forget the
+        # historical PGID immediately so even a restart timeout cannot make
+        # teardown target a host process that later reuses the numeric PID.
+        self.daemon_pids.discard(old_daemon_pid)
         restarted = self.remember_status(
             eventually(
                 lambda: (
-                    (current := self.read_status(args))["daemon_pid"]
-                    not in (None, original_daemon)
+                    (current := self.read_status(first_args))["daemon_pid"]
+                    not in (None, old_daemon_pid)
                     and current
                 )
             )
         )
-        self.assertEqual(restarted["supervisor_pid"], status["supervisor_pid"])
-
-        second.unlink()
-        idle = self.remember_status(
-            eventually(
-                lambda: (
-                    (current := self.read_status(args))["lease_count"] == 0
-                    and current["daemon_pid"] is None
-                    and current
-                )
-            )
+        self.assertNotIn(old_daemon_pid, self.daemon_pids)
+        self.assertIn(restarted["daemon_pid"], self.daemon_pids)
+        self.assertIn(second["daemon_pid"], self.daemon_pids)
+        self.assertEqual(restarted["supervisor_pid"], first["supervisor_pid"])
+        self.assertEqual(restarted["restart_count"], 1)
+        self.assertTrue(restarted["restart_reason"].startswith("daemon-exited:"))
+        self.assertEqual(
+            self.read_status(second_args)["daemon_pid"],
+            second["daemon_pid"],
         )
-        self.assertEqual(idle["supervisor_pid"], status["supervisor_pid"])
-        self.assertTrue(args.runtime_dir.exists())
-        eventually(
-            lambda: SUPERVISOR.process_start_identity(restarted["daemon_pid"])
-            is None
-        )
+        first_lease.unlink()
+        second_lease.unlink()
 
     def test_supervisor_detaches_cwd_and_preserves_exception_cause(self):
         args = self.prepare()
@@ -1015,9 +1495,11 @@ class AgentSupervisorTests(unittest.TestCase):
         with mock.patch.object(SUPERVISOR, "supervisor_loop", record_cwd):
             self.assertTrue(SUPERVISOR.spawn_supervisor_if_absent(args))
             recorded = eventually(
-                lambda: json.loads(child_record.read_text())
-                if child_record.exists()
-                else False
+                lambda: (
+                    json.loads(child_record.read_text())
+                    if child_record.exists()
+                    else False
+                )
             )
         os.waitpid(recorded["pid"], 0)
         self.assertEqual(recorded["cwd"], "/")
@@ -1047,8 +1529,7 @@ class AgentSupervisorTests(unittest.TestCase):
         first = self.remember_status(
             eventually(
                 lambda: (
-                    (current := self.read_status(first_args))["daemon_pid"]
-                    is not None
+                    (current := self.read_status(first_args))["daemon_pid"] is not None
                     and current
                 )
             )
@@ -1056,8 +1537,7 @@ class AgentSupervisorTests(unittest.TestCase):
         second = self.remember_status(
             eventually(
                 lambda: (
-                    (current := self.read_status(second_args))["daemon_pid"]
-                    is not None
+                    (current := self.read_status(second_args))["daemon_pid"] is not None
                     and current
                 )
             )
@@ -1068,12 +1548,16 @@ class AgentSupervisorTests(unittest.TestCase):
         first_lease.unlink()
         second_lease.unlink()
         eventually(
-            lambda: self.read_status(first_args)["daemon_pid"] is None
-            and self.read_status(first_args)["lease_count"] == 0
+            lambda: (
+                self.read_status(first_args)["daemon_pid"] is None
+                and self.read_status(first_args)["lease_count"] == 0
+            )
         )
         eventually(
-            lambda: self.read_status(second_args)["daemon_pid"] is None
-            and self.read_status(second_args)["lease_count"] == 0
+            lambda: (
+                self.read_status(second_args)["daemon_pid"] is None
+                and self.read_status(second_args)["lease_count"] == 0
+            )
         )
         for process in self.owner_processes[-2:]:
             process.terminate()
@@ -1097,8 +1581,7 @@ class AgentSupervisorTests(unittest.TestCase):
         status = self.remember_status(
             eventually(
                 lambda: (
-                    (current := self.read_status(args))["daemon_pid"]
-                    is not None
+                    (current := self.read_status(args))["daemon_pid"] is not None
                     and current
                 )
             )
@@ -1107,9 +1590,7 @@ class AgentSupervisorTests(unittest.TestCase):
         self.assertEqual(self.live(args), [record])
 
         owner_process = next(
-            process
-            for process in self.owner_processes
-            if process.pid == owner_pid
+            process for process in self.owner_processes if process.pid == owner_pid
         )
         owner_process.terminate()
         # Do not reap yet: zombie owners must already count as dead. The
@@ -1119,12 +1600,9 @@ class AgentSupervisorTests(unittest.TestCase):
         self.assertTrue(outside.exists())
         self.assertEqual(outside.read_text(), "preserve me")
         self.assertFalse(lease.exists())
-        self.assertIsNotNone(
-            SUPERVISOR.process_start_identity(record["bridge_pid"])
-        )
+        self.assertIsNotNone(SUPERVISOR.process_start_identity(record["bridge_pid"]))
         eventually(
-            lambda: SUPERVISOR.process_start_identity(status["daemon_pid"])
-            is None
+            lambda: SUPERVISOR.process_start_identity(status["daemon_pid"]) is None
         )
         owner_process.wait(timeout=3)
 
@@ -1267,7 +1745,7 @@ class AgentSupervisorTests(unittest.TestCase):
             ):
                 SUPERVISOR.spawn_supervisor_if_absent(stale)
 
-        self.assertGreaterEqual(len(child_attempts.read_text().splitlines()), 2)
+        self.assertGreaterEqual(len(child_attempts.read_text().splitlines()), 1)
         seed = self.read_status(stale)
         self.assertEqual(seed["owner_pid"], owner_pid)
         self.assertEqual(seed["owner_start_identity"], owner_identity)
@@ -1362,6 +1840,7 @@ class AgentSupervisorTests(unittest.TestCase):
         bridge_args = SimpleNamespace(
             daemon="/daemon",
             emacsclient="/emacsclient",
+            generation=TEST_GENERATION,
             grace_seconds=0.5,
             host="hera",
             parent_guard="/parent-guard",
@@ -1390,7 +1869,7 @@ class AgentSupervisorTests(unittest.TestCase):
         with (
             mock.patch.object(
                 SUPERVISOR,
-                "identify_owner",
+                "identify_bridge",
                 return_value=(owner_pid, owner_identity),
             ),
             mock.patch.object(
@@ -1444,8 +1923,7 @@ class AgentSupervisorTests(unittest.TestCase):
         status = self.remember_status(
             eventually(
                 lambda: (
-                    (current := self.read_status(stale))["daemon_pid"]
-                    is not None
+                    (current := self.read_status(stale))["daemon_pid"] is not None
                     and current
                 )
             )
@@ -1455,8 +1933,7 @@ class AgentSupervisorTests(unittest.TestCase):
         self.supervisor_pids.remove(status["supervisor_pid"])
         os.killpg(status["daemon_pid"], signal.SIGKILL)
         eventually(
-            lambda: SUPERVISOR.process_start_identity(status["daemon_pid"])
-            is None
+            lambda: SUPERVISOR.process_start_identity(status["daemon_pid"]) is None
         )
         self.daemon_pids.remove(status["daemon_pid"])
 
@@ -1501,8 +1978,7 @@ class AgentSupervisorTests(unittest.TestCase):
         status = self.remember_status(
             eventually(
                 lambda: (
-                    (current := self.read_status(stale))["daemon_pid"]
-                    is not None
+                    (current := self.read_status(stale))["daemon_pid"] is not None
                     and current
                 )
             )
@@ -1513,8 +1989,7 @@ class AgentSupervisorTests(unittest.TestCase):
         self.supervisor_pids.remove(status["supervisor_pid"])
         self.assertEqual(os.waitstatus_to_exitcode(wait_status), 0)
         eventually(
-            lambda: SUPERVISOR.process_start_identity(status["daemon_pid"])
-            is None
+            lambda: SUPERVISOR.process_start_identity(status["daemon_pid"]) is None
         )
         self.daemon_pids.remove(status["daemon_pid"])
         self.assertEqual(
@@ -1555,6 +2030,7 @@ class AgentSupervisorTests(unittest.TestCase):
         stale_key = SUPERVISOR.derive_agent_key(
             4242,
             "linux:old-boot:99",
+            TEST_GENERATION,
             os.getuid(),
         )
         stale_state = current.state_dir.parent / stale_key
@@ -1585,6 +2061,62 @@ class AgentSupervisorTests(unittest.TestCase):
         self.assertNotIn("ALTERNATE_EDITOR", environment)
         self.assertEqual(environment["ANVIL_DAEMON_SENTINEL"], "preserved")
 
+    def test_daemon_diagnostic_is_private_truncated_bounded_and_daemon_only(self):
+        args = self.prepare()
+        diagnostic = args.runtime_dir / SUPERVISOR.DAEMON_DIAGNOSTIC_NAME
+        diagnostic.write_text("stale diagnostic content\n")
+        diagnostic.chmod(0o600)
+        script = self.root / "diagnostic-daemon.py"
+        script.write_text(
+            "import os, sys\n"
+            "data = sys.stdin.buffer.read()\n"
+            "os.write(1, f'daemon-stdin-bytes={len(data)}\\n'.encode())\n"
+            "os.write(1, b'stdout-marker\\n')\n"
+            "os.write(2, b'stderr-marker\\n')\n"
+            f"os.write(1, b'x' * {SUPERVISOR.MAX_DAEMON_DIAGNOSTIC_BYTES + 4096})\n"
+        )
+        args.parent_guard = str(script)
+        args.daemon = "/unused-daemon"
+
+        process = SUPERVISOR.start_daemon(args)
+        while process.poll() is None:
+            SUPERVISOR.drain_daemon_diagnostic(process)
+            time.sleep(0.005)
+        SUPERVISOR.close_daemon_diagnostic(process)
+
+        payload = diagnostic.read_bytes()
+        self.assertEqual(
+            len(payload),
+            SUPERVISOR.MAX_DAEMON_DIAGNOSTIC_BYTES,
+        )
+        self.assertEqual(stat.S_IMODE(diagnostic.stat().st_mode), 0o600)
+        self.assertIn(b"daemon-stdin-bytes=0", payload)
+        self.assertIn(b"stdout-marker", payload)
+        self.assertIn(b"stderr-marker", payload)
+        self.assertNotIn(b"stale diagnostic content", payload)
+
+    def test_daemon_diagnostic_refuses_symlink_target(self):
+        args = self.prepare()
+        outside = self.root / "outside-diagnostic"
+        outside.write_text("preserve\n")
+        diagnostic = args.runtime_dir / SUPERVISOR.DAEMON_DIAGNOSTIC_NAME
+        diagnostic.symlink_to(outside)
+
+        with self.assertRaises(OSError):
+            SUPERVISOR.open_daemon_diagnostic(args.runtime_dir)
+        self.assertEqual(outside.read_text(), "preserve\n")
+
+    def test_daemon_diagnostic_validates_hardlink_before_truncating(self):
+        args = self.prepare()
+        outside = self.root / "outside-hardlinked-diagnostic"
+        outside.write_text("preserve hardlink target\n")
+        diagnostic = args.runtime_dir / SUPERVISOR.DAEMON_DIAGNOSTIC_NAME
+        os.link(outside, diagnostic)
+
+        with self.assertRaises(SUPERVISOR.ConfigurationError):
+            SUPERVISOR.open_daemon_diagnostic(args.runtime_dir)
+        self.assertEqual(outside.read_text(), "preserve hardlink target\n")
+
     def test_socket_readiness_drops_alternate_editor(self):
         socket_path = self.root / "readiness.sock"
         completed = subprocess.CompletedProcess(
@@ -1612,6 +2144,18 @@ class AgentSupervisorTests(unittest.TestCase):
                     SUPERVISOR.safe_socket_ready(socket_path, "/emacsclient")
                 )
 
+        self.assertEqual(
+            run.call_args.args[0],
+            [
+                "/emacsclient",
+                "-a",
+                "false",
+                "-s",
+                str(socket_path),
+                "-e",
+                "t",
+            ],
+        )
         environment = run.call_args.kwargs["env"]
         self.assertNotIn("ALTERNATE_EDITOR", environment)
         self.assertEqual(
@@ -1619,10 +2163,63 @@ class AgentSupervisorTests(unittest.TestCase):
             "preserved",
         )
 
-    def test_bridge_stdio_environment_drops_alternate_editor(self):
+    def test_stdio_child_inherits_pipes_and_drops_alternate_editor(self):
+        args = self.prepare()
+        args.server_id = "anvil"
+        args.stdio = "/stdio"
+        child = mock.Mock()
+        with (
+            mock.patch.dict(
+                os.environ,
+                {
+                    "ALTERNATE_EDITOR": "/tmp/must-not-run",
+                    "ANVIL_TRANSPORT_SENTINEL": "preserved",
+                },
+            ),
+            mock.patch.object(
+                SUPERVISOR.subprocess,
+                "Popen",
+                return_value=child,
+            ) as popen,
+        ):
+            self.assertIs(SUPERVISOR.start_stdio_bridge(args), child)
+
+        command = popen.call_args.args[0]
+        options = popen.call_args.kwargs
+        self.assertEqual(
+            command[:5],
+            [sys.executable, "-I", "-S", "unused", "group"],
+        )
+        self.assertEqual(command[5], "/stdio")
+        self.assertEqual(command[-1], "--server-id=anvil")
+        self.assertTrue(command[6].endswith("/emacs/server"))
+        self.assertIsNone(options["stdin"])
+        self.assertIsNone(options["stdout"])
+        self.assertIsNone(options["stderr"])
+        self.assertNotIn("ALTERNATE_EDITOR", options["env"])
+        self.assertEqual(
+            options["env"]["ANVIL_TRANSPORT_SENTINEL"],
+            "preserved",
+        )
+        self.assertEqual(
+            options["env"]["ANVIL_HEADLESS_PARENT_PID"],
+            str(os.getpid()),
+        )
+        self.assertEqual(
+            options["env"]["ANVIL_MCP_PARENT_GUARD"],
+            args.parent_guard,
+        )
+        self.assertEqual(
+            options["env"]["ANVIL_MCP_PARENT_GUARD_PYTHON"],
+            args.python,
+        )
+        self.assertTrue(options["env"]["ANVIL_EMACS_SOCKET"].endswith("/server"))
+
+    def test_bridge_caretaker_retains_identity_and_lease(self):
         bridge_args = SimpleNamespace(
             daemon="/daemon",
             emacsclient="/emacsclient",
+            generation=TEST_GENERATION,
             grace_seconds=0.5,
             host="hera",
             parent_guard="/parent-guard",
@@ -1636,16 +2233,20 @@ class AgentSupervisorTests(unittest.TestCase):
         owner_identity = SUPERVISOR.process_start_identity(os.getpid())
         captured = {}
 
-        class ExecCaptured(Exception):
-            pass
-
-        def capture_execve(path, arguments, environment):
-            captured.update(
-                path=path,
-                arguments=arguments,
-                environment=environment.copy(),
+        def inspect_caretaker(args):
+            captured["owner"] = (
+                args.owner_pid,
+                args.owner_start_identity,
             )
-            raise ExecCaptured
+            captured["agent_key"] = args.agent_key
+            captured["leases"] = SUPERVISOR.live_leases(
+                args.leases_dir,
+                args.agent_key,
+                args.owner_pid,
+                args.owner_start_identity,
+                args.generation,
+            )
+            return 0
 
         with (
             mock.patch.dict(
@@ -1657,27 +2258,180 @@ class AgentSupervisorTests(unittest.TestCase):
             ),
             mock.patch.object(
                 SUPERVISOR,
-                "identify_owner",
+                "identify_bridge",
                 return_value=(os.getpid(), owner_identity),
             ),
             mock.patch.object(SUPERVISOR, "wait_for_daemon"),
             mock.patch.object(
-                SUPERVISOR.os,
-                "execve",
-                side_effect=capture_execve,
+                SUPERVISOR,
+                "caretake_stdio_bridge",
+                side_effect=inspect_caretaker,
             ),
         ):
-            with self.assertRaises(ExecCaptured):
-                SUPERVISOR.bridge_main(bridge_args)
+            SUPERVISOR.bridge_main(bridge_args)
 
-        environment = captured["environment"]
-        self.assertEqual(captured["path"], "/stdio")
-        self.assertNotIn("ALTERNATE_EDITOR", environment)
+        self.assertEqual(captured["owner"], (os.getpid(), owner_identity))
+        self.assertEqual(len(captured["leases"]), 1)
+        self.assertEqual(captured["leases"][0]["bridge_pid"], os.getpid())
+        self.assertEqual(captured["leases"][0]["owner_pid"], os.getpid())
+        runtime_dir = self.runtime_root / "hera" / "agents" / captured["agent_key"]
         self.assertEqual(
-            environment["ANVIL_TRANSPORT_SENTINEL"],
-            "preserved",
+            SUPERVISOR.live_leases(
+                runtime_dir / "leases",
+                captured["agent_key"],
+                os.getpid(),
+                owner_identity,
+                TEST_GENERATION,
+            ),
+            [],
         )
-        self.assertTrue(environment["ANVIL_EMACS_SOCKET"].endswith("/server"))
+
+    def test_caretaker_reensures_supervisor_while_same_stdio_child_lives(self):
+        args = self.prepare()
+        args.server_id = "anvil"
+        args.stdio = "/stdio"
+
+        class FakeStdio:
+            def __init__(self):
+                self.returncode = None
+                self.waits = 0
+
+            def poll(self):
+                return self.returncode
+
+            def wait(self, timeout=None):
+                self.waits += 1
+                if self.waits < 3:
+                    raise subprocess.TimeoutExpired(["/stdio"], timeout)
+                self.returncode = 0
+                return 0
+
+            def terminate(self):
+                self.returncode = -signal.SIGTERM
+
+            def kill(self):
+                self.returncode = -signal.SIGKILL
+
+        child = FakeStdio()
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "start_stdio_bridge",
+                return_value=child,
+            ) as start_stdio,
+            mock.patch.object(
+                SUPERVISOR,
+                "spawn_supervisor_if_absent",
+                side_effect=[False, TimeoutError("transient"), True],
+            ) as ensure,
+            mock.patch.object(
+                SUPERVISOR,
+                "CARETAKER_ENSURE_SECONDS",
+                0.0,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "restart_backoff_seconds",
+                return_value=0.0,
+            ),
+        ):
+            self.assertEqual(SUPERVISOR.caretake_stdio_bridge(args), 0)
+
+        start_stdio.assert_called_once_with(args)
+        self.assertEqual(ensure.call_count, 3)
+        self.assertEqual(child.waits, 3)
+
+    def test_caretaker_preserves_stdio_child_during_transient_owner_probe(self):
+        args = self.prepare()
+        args.server_id = "anvil"
+        args.stdio = "/stdio"
+
+        class FakeStdio:
+            def __init__(self):
+                self.returncode = None
+                self.waits = 0
+                self.stopped = False
+
+            def poll(self):
+                return self.returncode
+
+            def wait(self, timeout=None):
+                self.waits += 1
+                if self.waits == 1:
+                    raise subprocess.TimeoutExpired(["/stdio"], timeout)
+                self.returncode = 0
+                return 0
+
+            def terminate(self):
+                self.stopped = True
+                self.returncode = -signal.SIGTERM
+
+            def kill(self):
+                self.stopped = True
+                self.returncode = -signal.SIGKILL
+
+        child = FakeStdio()
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "start_stdio_bridge",
+                return_value=child,
+            ) as start_stdio,
+            mock.patch.object(
+                SUPERVISOR,
+                "validate_process_identity",
+                side_effect=(
+                    SUPERVISOR.LifecycleState.UNAVAILABLE,
+                    SUPERVISOR.LifecycleState.LIVE,
+                ),
+            ) as owner_probe,
+            mock.patch.object(
+                SUPERVISOR,
+                "spawn_supervisor_if_absent",
+                return_value=False,
+            ) as ensure,
+            mock.patch.object(
+                SUPERVISOR,
+                "CARETAKER_ENSURE_SECONDS",
+                0.0,
+            ),
+            mock.patch.object(
+                SUPERVISOR,
+                "restart_backoff_seconds",
+                return_value=0.0,
+            ),
+        ):
+            self.assertEqual(SUPERVISOR.caretake_stdio_bridge(args), 0)
+
+        start_stdio.assert_called_once_with(args)
+        self.assertEqual(owner_probe.call_count, 2)
+        ensure.assert_called_once_with(args)
+        self.assertEqual(child.waits, 2)
+        self.assertFalse(child.stopped)
+
+    def test_ready_timeout_cannot_exceed_client_startup_policy(self):
+        accepted = SUPERVISOR.parse_arguments(
+            self.parser_arguments(
+                "--ready-seconds",
+                str(SUPERVISOR.MAX_READY_SECONDS),
+            )
+        )
+        self.assertEqual(
+            accepted.ready_seconds,
+            SUPERVISOR.MAX_READY_SECONDS,
+        )
+
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            with self.assertRaises(SystemExit) as raised:
+                SUPERVISOR.parse_arguments(
+                    self.parser_arguments(
+                        "--ready-seconds",
+                        str(SUPERVISOR.MAX_READY_SECONDS + 1),
+                    )
+                )
+        self.assertEqual(raised.exception.code, 2)
+        self.assertIn("must be between 1 and 120", stderr.getvalue())
 
     def test_nan_timeouts_are_rejected(self):
         for option in ("--grace-seconds", "--ready-seconds"):
@@ -1685,9 +2439,7 @@ class AgentSupervisorTests(unittest.TestCase):
                 stderr = io.StringIO()
                 with contextlib.redirect_stderr(stderr):
                     with self.assertRaises(SystemExit) as raised:
-                        SUPERVISOR.parse_arguments(
-                            self.parser_arguments(option, "nan")
-                        )
+                        SUPERVISOR.parse_arguments(self.parser_arguments(option, "nan"))
                 self.assertEqual(raised.exception.code, 2)
                 self.assertIn("must be between", stderr.getvalue())
 
@@ -1697,6 +2449,7 @@ class AgentSupervisorTests(unittest.TestCase):
         bridge_args = SimpleNamespace(
             daemon="/daemon",
             emacsclient="/emacsclient",
+            generation=TEST_GENERATION,
             grace_seconds=0.5,
             host="hera",
             parent_guard="/parent-guard",
@@ -1712,7 +2465,7 @@ class AgentSupervisorTests(unittest.TestCase):
         with (
             mock.patch.object(
                 SUPERVISOR,
-                "identify_owner",
+                "identify_bridge",
                 return_value=(os.getpid(), owner_identity),
             ),
             mock.patch.object(
@@ -1728,8 +2481,7 @@ class AgentSupervisorTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_UNAVAILABLE)
         self.assertEqual(
             stderr.getvalue(),
-            "anvil-mcp: per-agent daemon: "
-            "agent supervisor lock validation failed\n",
+            "anvil-mcp: per-agent daemon: agent supervisor lock validation failed\n",
         )
         self.assertNotIn("Traceback", stderr.getvalue())
 
@@ -1757,6 +2509,7 @@ class AgentSupervisorTests(unittest.TestCase):
         bridge_args = SimpleNamespace(
             daemon="/daemon",
             emacsclient="/emacsclient",
+            generation=TEST_GENERATION,
             host="hera",
             parent_guard="/parent-guard",
             python=sys.executable,
@@ -1770,15 +2523,13 @@ class AgentSupervisorTests(unittest.TestCase):
         with (
             mock.patch.object(
                 SUPERVISOR,
-                "identify_owner",
+                "identify_bridge",
                 return_value=(os.getpid(), owner_identity),
             ),
             mock.patch.object(
                 SUPERVISOR,
                 "wait_for_daemon",
-                side_effect=TimeoutError(
-                    "agent supervisor did not become ready"
-                ),
+                side_effect=TimeoutError("agent supervisor did not become ready"),
             ),
             contextlib.redirect_stderr(stderr),
         ):
@@ -1787,8 +2538,7 @@ class AgentSupervisorTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_UNAVAILABLE)
         self.assertEqual(
             stderr.getvalue(),
-            "anvil-mcp: per-agent daemon: "
-            "agent supervisor did not become ready\n",
+            "anvil-mcp: per-agent daemon: agent supervisor did not become ready\n",
         )
 
 

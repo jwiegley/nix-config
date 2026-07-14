@@ -10,11 +10,14 @@ let
   cfg = config.johnw.anvil;
   inherit (pkgs.stdenv) isDarwin isLinux;
 
+  dedicatedMode = (isLinux && cfg.useHeadlessEmacs) || (isDarwin && cfg.useDedicatedDarwinEmacs);
+
   anvilMcp = pkgs.callPackage ../packages/anvil-mcp {
     useHeadlessEmacs = isLinux && cfg.useHeadlessEmacs;
     useDedicatedDarwinEmacs = isDarwin && cfg.useDedicatedDarwinEmacs;
     inherit (cfg) usePerAgentDaemon;
   };
+  clientStartupTimeoutMilliseconds = 1000 * anvilMcp.timeoutPolicy.clientStartupSeconds;
   launchdAgentOptions =
     if options ? launchd && options.launchd ? agents then
       options.launchd.agents.type.nestedTypes.elemType.getSubOptions [ ]
@@ -46,26 +49,43 @@ in
       type = lib.types.bool;
       default = true;
       description = ''
-        In dedicated-Emacs mode, give each owning Codex OS process its own
-        supervised headless Emacs daemon. The anvil and emacs-eval bridges,
-        including internal subagents, share that process-local pool; separate
-        Codex and agent-deck processes receive isolated pools.
+        In dedicated-Emacs mode, give each MCP bridge its own supervised
+        headless Emacs daemon. Distinct Codex, Claude, and other agent bridge
+        processes receive isolated roots and worker pools. Logical agents that
+        share one client-side MCP byte stream necessarily share that bridge. A
+        host-scoped service is installed only when this option is false.
       '';
     };
   };
 
   config = lib.mkMerge [
-    {
-      home.packages = [ anvilMcp ];
-    }
+    { home.packages = [ anvilMcp ]; }
 
+    (lib.mkIf dedicatedMode {
+      # Claude reads this only at client startup.  The per-server rendered
+      # timeout remains authoritative for GUI clients that do not inherit the
+      # Home Manager session environment.  Preserve a larger user policy.
+      home.sessionVariables.MCP_TIMEOUT = lib.mkDefault (toString clientStartupTimeoutMilliseconds);
+      assertions = [
+        {
+          assertion =
+            let
+              timeout = toString (config.home.sessionVariables.MCP_TIMEOUT or "");
+            in
+            builtins.match "[0-9]+" timeout != null && lib.toInt timeout >= clientStartupTimeoutMilliseconds;
+          message = "Dedicated Anvil requires MCP_TIMEOUT to be at least ${toString clientStartupTimeoutMilliseconds} milliseconds";
+        }
+      ];
+    })
+
+    # Single-host compatibility services are an explicit fallback topology.
+    # Per-agent launchers own their supervisors and install no global service.
     (lib.mkIf (isLinux && cfg.useHeadlessEmacs && !cfg.usePerAgentDaemon) {
       systemd.user.services.anvil-headless-emacs = {
-        Unit.Description = "Dedicated headless Emacs for Anvil MCP";
+        Unit.Description = "Legacy-compatible headless Emacs for Anvil MCP";
         Service = {
           ExecStart = "${anvilMcp}/bin/anvil-headless-emacs";
-          Restart = "on-failure";
-          RestartPreventExitStatus = 75;
+          Restart = "always";
           RestartSec = 5;
         };
         Install.WantedBy = [ "default.target" ];
@@ -78,14 +98,13 @@ in
         config = {
           ProgramArguments = [ "${anvilMcp}/bin/anvil-headless-emacs" ];
           EnvironmentVariables = {
-            ANVIL_EMACS_LOCK_CONFLICT_STATUS = "0";
+            # Retry until any listener from the preceding generation exits,
+            # then take over the same legacy socket without a service gap.
+            ANVIL_EMACS_LOCK_CONFLICT_STATUS = "75";
             ANVIL_EMACS_USE_SYSTEM_LOG = "1";
           };
           RunAtLoad = true;
-          KeepAlive = {
-            Crashed = true;
-            SuccessfulExit = false;
-          };
+          KeepAlive = true;
           ProcessType = "Standard";
           LowPriorityIO = false;
           LowPriorityBackgroundIO = false;

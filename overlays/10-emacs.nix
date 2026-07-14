@@ -183,10 +183,15 @@ let
             # Load-bearing order: host-child bindings are rebased against
             # the interrupt-safe host implementation introduced here.
             ./emacs/patches/anvil-issue-53-hang-fixes.patch
+            ./emacs/patches/anvil-async-isolation.patch
+            ./emacs/patches/anvil-headless-emacs-path.patch
+            ./emacs/patches/anvil-unified-registry.patch
             ./emacs/patches/anvil-worker-pool.patch
             ./emacs/patches/anvil-host-child-bindings.patch
-            ./emacs/patches/anvil-root-watchdog.patch
+            ./emacs/patches/anvil-host-stdin-eof.patch
+            ./emacs/patches/anvil-shell-sync-timeout.patch
             ./emacs/patches/anvil-stdio-at-most-once.patch
+            ./emacs/patches/anvil-stdio-frame-deadline.patch
             ./emacs/patches/anvil-stdio-no-alternate-editor.patch
           ];
         }).overrideAttrs

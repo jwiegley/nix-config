@@ -3,17 +3,39 @@
   bash,
   coreutils,
   findutils,
+  gnugrep,
+  gnused,
   lib,
   python3,
   runCommand,
+  unixtools,
+  writeShellApplication,
 }:
 
 let
   inherit (anvilMcp) workerNames;
   hostAnvilMcp = anvilMcp.override { usePerAgentDaemon = false; };
+  rolloverAnvilMcp = anvilMcp.override { generationSalt = "rollover"; };
+  readinessCrashDaemon = writeShellApplication {
+    name = "anvil-headless-emacs";
+    runtimeInputs = [ coreutils ];
+    text = ''
+      sentinel="$ANVIL_EMACS_RUNTIME_DIR/.readiness-crashed-once"
+      if [ ! -e "$sentinel" ]; then
+        : >"$sentinel"
+        exit 70
+      fi
+      exec ${anvilMcp}/bin/anvil-headless-emacs
+    '';
+  };
+  readinessCrashAnvilMcp = anvilMcp.override {
+    agentDaemonOverride = readinessCrashDaemon;
+    generationSalt = "readiness-crash";
+  };
   firstWorker = builtins.head workerNames;
   expectedWorkerCount = 2 * builtins.length workerNames;
   workerSpecsJson = builtins.toJSON anvilMcp.workerSpecs;
+  timeoutPolicyJson = lib.escapeShellArg (builtins.toJSON anvilMcp.timeoutPolicy);
 in
 runCommand "anvil-mcp-dedicated-smoke"
   {
@@ -22,8 +44,12 @@ runCommand "anvil-mcp-dedicated-smoke"
       anvilMcp.dedicatedEmacs
       coreutils
       findutils
+      gnugrep
+      gnused
       hostAnvilMcp
       python3
+      readinessCrashAnvilMcp
+      rolloverAnvilMcp
     ];
   }
   ''
@@ -32,6 +58,7 @@ runCommand "anvil-mcp-dedicated-smoke"
     export ANVIL_EMACS_RUNTIME_ROOT="$smoke_root/runtime"
     export ANVIL_EMACS_STATE_ROOT="$smoke_root/state"
     export ANVIL_EMACS_LOCK_REFRESH_SECONDS=0.2
+    export ANVIL_PER_AGENT_LAUNCHER="${anvilMcp}/bin/anvil-mcp"
     export SHELL="${bash}/bin/bash"
     # Host-daemon tests below use an explicit package variant; the per-agent
     # launcher has no identity-dependent fallback path.
@@ -51,6 +78,8 @@ runCommand "anvil-mcp-dedicated-smoke"
       "$HOME/direnv-a" "$HOME/direnv-a/bin" \
       "$HOME/direnv-b" "$HOME/direnv-b/bin" \
       "$HOME/direnv-c" "$HOME/direnv-c/bin" \
+      "$HOME/direnv-unset" "$HOME/direnv-unset/bin" \
+      "$HOME/direnv-spoof" "$HOME/direnv-spoof/bin" \
       "$HOME/direnv-blocked" \
       "$HOME/direnv-plain"
     printf '%s\n' \
@@ -65,6 +94,16 @@ runCommand "anvil-mcp-dedicated-smoke"
       'export ANVIL_DIRENV_MARKER=project-c' \
       'export PATH="$PWD/bin"' \
       >"$HOME/direnv-c/.envrc"
+    printf '%s\n' \
+      'unset ANVIL_EMACS_SOCKET' \
+      'export ANVIL_DIRENV_MARKER=project-unset' \
+      'PATH_add "$PWD/bin"' \
+      >"$HOME/direnv-unset/.envrc"
+    printf '%s\n' \
+      'export ANVIL_EMACS_SOCKET="$PWD/spoofed-root"' \
+      'export ANVIL_DIRENV_MARKER=project-spoof' \
+      'PATH_add "$PWD/bin"' \
+      >"$HOME/direnv-spoof/.envrc"
     printf '%s\n' 'export ANVIL_DIRENV_MARKER=blocked' \
       >"$HOME/direnv-blocked/.envrc"
     printf '%s\n' '#!/bin/sh' 'printf project-a-command' \
@@ -73,14 +112,22 @@ runCommand "anvil-mcp-dedicated-smoke"
       >"$HOME/direnv-b/bin/anvil-direnv-b"
     printf '%s\n' '#!/bin/sh' 'printf project-c-command' \
       >"$HOME/direnv-c/bin/anvil-direnv-c"
+    printf '%s\n' '#!/bin/sh' 'printf project-unset-command' \
+      >"$HOME/direnv-unset/bin/anvil-direnv-unset"
+    printf '%s\n' '#!/bin/sh' 'printf project-spoof-command' \
+      >"$HOME/direnv-spoof/bin/anvil-direnv-spoof"
     chmod 0700 \
       "$HOME/direnv-a/bin/anvil-direnv-a" \
       "$HOME/direnv-b/bin/anvil-direnv-b" \
-      "$HOME/direnv-c/bin/anvil-direnv-c"
+      "$HOME/direnv-c/bin/anvil-direnv-c" \
+      "$HOME/direnv-unset/bin/anvil-direnv-unset" \
+      "$HOME/direnv-spoof/bin/anvil-direnv-spoof"
     touch \
       "$HOME/direnv-a/visited.txt" \
       "$HOME/direnv-b/visited.txt" \
-      "$HOME/direnv-c/visited.txt"
+      "$HOME/direnv-c/visited.txt" \
+      "$HOME/direnv-unset/visited.txt" \
+      "$HOME/direnv-spoof/visited.txt"
     (
       cd "$HOME/direnv-a"
       ${anvilMcp.direnv}/bin/direnv allow >/dev/null
@@ -93,10 +140,35 @@ runCommand "anvil-mcp-dedicated-smoke"
       cd "$HOME/direnv-c"
       ${anvilMcp.direnv}/bin/direnv allow >/dev/null
     )
+    (
+      cd "$HOME/direnv-unset"
+      ${anvilMcp.direnv}/bin/direnv allow >/dev/null
+    )
+    (
+      cd "$HOME/direnv-spoof"
+      ${anvilMcp.direnv}/bin/direnv allow >/dev/null
+    )
 
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./watchdog-test.py} \
       ${anvilMcp.dedicatedLockLauncher}
+    ${coreutils}/bin/timeout 60 \
+      ${python3}/bin/python3 -I -B -u ${./timeout-ordering-test.py} \
+      ${anvilMcp.dedicatedLockLauncher} \
+      ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh \
+      ${anvilMcp.dedicatedInit} \
+      ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-shell-filter.el \
+      ${./default.nix} \
+      ${timeoutPolicyJson}
+    ${coreutils}/bin/timeout 60 \
+      ${python3}/bin/python3 -I -B -u ${./stdio-reconnect-test.py} \
+      ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh
+    ${coreutils}/bin/timeout 120 \
+      ${python3}/bin/python3 -I -B -u ${./stdio-postdispatch-test.py} \
+      ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh \
+      ${bash}/bin/bash \
+      ${anvilMcp.dedicatedParentGuardLauncher} \
+      ${python3}/bin/python3
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./stdio-concurrency-test.py} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh
@@ -104,6 +176,10 @@ runCommand "anvil-mcp-dedicated-smoke"
       ${python3}/bin/python3 -I -B -u ${./alternate-editor-test.py} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh \
       ${anvilMcp.dedicatedRuntimeEmacs}/bin/emacsclient
+    ${coreutils}/bin/timeout 60 \
+      ${python3}/bin/python3 -I -B -u ${./safe-emacsclient-test.py} \
+      ${anvilMcp.dedicatedSafeEmacsclientGuard} \
+      ${anvilMcp.dedicatedSafeEmacsclient}/bin/emacsclient
 
     init_compile_dir="$smoke_root/init-byte-compile"
     install -d -m 0700 "$init_compile_dir"
@@ -111,6 +187,8 @@ runCommand "anvil-mcp-dedicated-smoke"
       "$init_compile_dir/anvil-headless-environment-init.el"
     install -m 0600 ${anvilMcp.dedicatedWorkerInit} \
       "$init_compile_dir/anvil-headless-worker-init.el"
+    install -m 0600 ${anvilMcp.dedicatedOffloadInit} \
+      "$init_compile_dir/anvil-headless-offload-init.el"
     install -m 0600 ${anvilMcp.dedicatedInit} \
       "$init_compile_dir/anvil-headless-init.el"
     TMPDIR="$init_compile_dir" TMP="$init_compile_dir" TEMP="$init_compile_dir" \
@@ -122,6 +200,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       --funcall batch-byte-compile \
       "$init_compile_dir/anvil-headless-environment-init.el" \
       "$init_compile_dir/anvil-headless-worker-init.el" \
+      "$init_compile_dir/anvil-headless-offload-init.el" \
       "$init_compile_dir/anvil-headless-init.el"
     for source in "$init_compile_dir"/*.el; do
       test -f "$source"c
@@ -232,11 +311,42 @@ runCommand "anvil-mcp-dedicated-smoke"
       ${python3}/bin/python3 -I -B -u \
       ${anvilMcp.dedicatedAgentSupervisorSmoke} \
       ${anvilMcp}/bin/anvil-mcp \
-      ${anvilMcp.dedicatedAgentSupervisor}
+      ${anvilMcp.dedicatedAgentSupervisor} \
+      ${rolloverAnvilMcp}/bin/anvil-mcp \
+      ${readinessCrashAnvilMcp}/bin/anvil-mcp
     if [ -e "$agent_alternate_editor_marker" ]; then
       echo "agent supervisor smoke invoked ALTERNATE_EDITOR" >&2
       exit 1
     fi
+    (
+      soak_home=$(mktemp -d /tmp/ah.XXXXXX)
+      soak_runtime_root=$(mktemp -d /tmp/ar.XXXXXX)
+      soak_state_root=$(mktemp -d /tmp/as.XXXXXX)
+      trap 'rm -rf "$soak_home" "$soak_runtime_root" "$soak_state_root"' EXIT
+      ${coreutils}/bin/env -u XDG_CONFIG_HOME \
+        HOME="$soak_home" \
+        SHELL="${bash}/bin/bash" \
+        ANVIL_EMACS_RUNTIME_ROOT="$soak_runtime_root" \
+        ANVIL_EMACS_STATE_ROOT="$soak_state_root" \
+        ANVIL_PERSISTENT_SOAK_CYCLES=25 \
+        ANVIL_PERSISTENT_SOAK_HEALTHY_SECONDS=${toString anvilMcp.timeoutPolicy.clientToolSeconds} \
+        ${coreutils}/bin/timeout 1200 \
+        ${python3}/bin/python3 -I -B -u \
+        ${anvilMcp.dedicatedPersistentBridgeSoak} \
+        ${anvilMcp}/bin/anvil-mcp \
+        ${anvilMcp.dedicatedAgentSupervisor} \
+        ${anvilMcp.dedicatedAgentSupervisorSmoke} \
+        ${anvilMcp.git}/bin/git \
+        ${anvilMcp.direnv}/bin/direnv \
+        ${unixtools.ps}/bin/ps
+    )
+    ${coreutils}/bin/timeout 300 \
+      ${python3}/bin/python3 -I -B -u ${./legacy-migration-test.py} \
+      ${hostAnvilMcp}/bin/anvil-headless-emacs \
+      ${hostAnvilMcp}/bin/anvil-mcp \
+      ${anvilMcp}/bin/anvil-headless-emacs \
+      ${anvilMcp}/bin/anvil-mcp \
+      ${anvilMcp.dedicatedRuntimeEmacs}/bin/emacsclient
     rm -rf "$agent_runtime_root" "$agent_state_root"
     agent_runtime_root=
     agent_state_root=
@@ -465,12 +575,12 @@ runCommand "anvil-mcp-dedicated-smoke"
       export ANVIL_EMACS_HOST=host-a
       export ALTERNATE_EDITOR="$agent_alternate_editor"
       export ANVIL_ALTERNATE_EDITOR_MARKER="$agent_alternate_editor_marker"
-      # A timer-starving synchronous smoke request runs for four seconds.
-      # Keep the ordinary watchdog deadline shorter so that missing sync
-      # lease coverage deterministically kills this test daemon.
+      # Use the packaged heartbeat and dispatch deadlines for this ordinary
+      # transcript.  The dedicated supervisor smoke separately injects a
+      # non-yielding request under accelerated deadlines and proves recovery;
+      # shortening this transcript instead turns host-wide macOS loader
+      # scheduling into a false root-hang signal.
       export ANVIL_EMACS_WATCHDOG_PULSE_SECONDS=0.5
-      export ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS=3
-      export ANVIL_EMACS_WATCHDOG_ASYNC_SECONDS=15
       exec ${anvilMcp}/bin/anvil-headless-emacs
     ) >"$smoke_root/host-a.log" 2>&1 &
     pid_a=$!
@@ -480,7 +590,9 @@ runCommand "anvil-mcp-dedicated-smoke"
     # Invoke the launcher before host-a has a socket. This proves that an MCP
     # client started during login or a service restart waits for readiness.
     if ! ${python3}/bin/python -I ${./headless-smoke.py} \
-      ${hostAnvilMcp}/bin/anvil-mcp ${lib.escapeShellArg workerSpecsJson}; then
+      ${hostAnvilMcp}/bin/anvil-mcp \
+      ${lib.escapeShellArg workerSpecsJson} \
+      ${toString anvilMcp.timeoutPolicy.clientToolSeconds}; then
       cat "$smoke_root/host-a.log" "$smoke_root/host-b.log" >&2
       exit 1
     fi

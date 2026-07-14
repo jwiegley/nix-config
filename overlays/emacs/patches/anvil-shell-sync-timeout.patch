@@ -1,0 +1,66 @@
+Bound synchronous shell tools to the MCP timeout envelope.
+
+A caller-supplied shell-run timeout previously bypassed the ordinary
+60-second default without any upper bound.  Because shell-run executes on
+the root Emacs event loop, a long override can monopolize the entire MCP
+root beyond the watchdog, bridge, and client deadlines.  Reject oversize
+synchronous requests before spawning a child; long builds belong in a
+native executor or the external asynchronous evaluation path.
+
+--- a/anvil-shell-filter.el
++++ b/anvil-shell-filter.el
+@@ -157,8 +157,16 @@
+ (defcustom anvil-shell-filter-default-timeout 60
+   "Timeout (seconds) for `anvil-shell-filter-run' shell invocations."
+   :type 'integer
+   :group 'anvil-shell-filter)
+ 
++(defcustom anvil-shell-filter-max-sync-timeout 120
++  "Maximum timeout accepted by synchronous shell MCP tools.
++
++Longer work must use native execution or external asynchronous evaluation
++so the root event loop remains inside its watchdog and client envelopes."
++  :type 'integer
++  :group 'anvil-shell-filter)
++
+ (defcustom anvil-shell-tee-grep-default-max-line-bytes 200
+   "Per-line truncation cap used by `anvil-shell-filter-tee-grep'.
+ Lines longer than this are wrapped with a `…(N bytes elided)' sentinel
+@@ -1147,5 +1155,19 @@
+ 
+ ;;;; --- shell-run orchestrator ---------------------------------------------
+ 
++(defun anvil-shell-filter--bounded-sync-timeout (timeout)
++  "Return TIMEOUT when it fits the synchronous MCP deadline.
++
++Larger values would pin the root event loop beyond its watchdog and
++client envelopes, so reject them before a child process is started."
++  (unless (and (numberp timeout) (>= timeout 0))
++    (user-error "shell-run timeout must be a non-negative number"))
++  (when (and (numberp anvil-shell-filter-max-sync-timeout)
++             (> timeout anvil-shell-filter-max-sync-timeout))
++    (user-error
++     "shell-run timeout %ss exceeds synchronous cap %ss; use native execution or emacs-eval-async"
++     timeout anvil-shell-filter-max-sync-timeout))
++  timeout)
++
+ ;;;###autoload
+ (defun anvil-shell-filter-run (cmd &rest opts)
+@@ -1172,5 +1195,7 @@
+          (trace-start (and trace-id (current-time)))
+          (filter-opt (or (plist-get opts :filter) 'auto))
+-         (timeout (or (plist-get opts :timeout)
+-                      anvil-shell-filter-default-timeout))
++         (timeout
++          (anvil-shell-filter--bounded-sync-timeout
++           (or (plist-get opts :timeout)
++               anvil-shell-filter-default-timeout)))
+          (cwd (plist-get opts :cwd))
+@@ -1283,3 +1308,5 @@
+-         (timeout (or (plist-get opts :timeout)
+-                      anvil-shell-filter-default-timeout))
++         (timeout
++          (anvil-shell-filter--bounded-sync-timeout
++           (or (plist-get opts :timeout)
++               anvil-shell-filter-default-timeout)))
+          (cwd (plist-get opts :cwd))

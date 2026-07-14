@@ -1,4 +1,5 @@
 {
+  agentDaemonOverride ? null,
   bash,
   callPackage,
   coreutils,
@@ -11,6 +12,7 @@
   fetchFromGitHub,
   findutils,
   gawk,
+  generationSalt ? "",
   git,
   gnugrep,
   gnused,
@@ -29,6 +31,7 @@
   usePerAgentDaemon ? true,
   writeShellApplication,
   writeText,
+  writeTextFile,
 }:
 
 let
@@ -39,6 +42,29 @@ let
   currentAnvilVersion = "1.3.0";
   currentAnvilRev = "574568a95a2bd8fceca6c9cd3bec0f94ecf0e6a9";
   anvilIdeRev = "0e6130457ac2bdc6c6db2eebeba67a5223231190";
+
+  # One ordered policy spans client startup, synchronous dispatch, the root
+  # watchdog, the stdio bridge, and isolated async children.  The packaged
+  # regression binds every generated artifact back to these values.
+  timeoutPolicy = {
+    asyncSeconds = 300;
+    bridgeDispatchSeconds = 150;
+    bridgeReadinessSeconds = 20;
+    bridgeStartupDispatchSeconds = 20;
+    clientStartupSeconds = 180;
+    clientToolSeconds = 210;
+    cooperativeSyncSeconds = 120;
+    emacsclientKillSeconds = 1;
+    emacsclientProbeSeconds = 5;
+    frameReadSeconds = 10;
+    requestParseSeconds = 2;
+    shellSyncSeconds = 120;
+    supervisorReadySeconds = 120;
+    watchdogDispatchSeconds = 135;
+    watchdogHeartbeatSeconds = 45;
+    watchdogPulseSeconds = 1;
+    watchdogStartupSeconds = 120;
+  };
 
   workerSpecs = [
     {
@@ -243,9 +269,209 @@ let
     epkgs.exec-path-from-shell
   ]);
 
+  dedicatedSafeEmacsclientGuard = writeText "anvil-safe-emacsclient.py" ''
+    import getopt
+    import os
+    import stat
+    import sys
+
+    SHORT_OPTIONS = "nqueHVtca:F:w:s:f:d:T:"
+    LONG_OPTIONS = [
+        "no-wait",
+        "quiet",
+        "suppress-output",
+        "eval",
+        "help",
+        "version",
+        "tty",
+        "nw",
+        "no-window-system",
+        "create-frame",
+        "reuse-frame",
+        "alternate-editor=",
+        "frame-parameters=",
+        "socket-name=",
+        "server-file=",
+        "display=",
+        "parent-id=",
+        "timeout=",
+        "tramp=",
+    ]
+    LONG_NAMES = tuple(option.removesuffix("=") for option in LONG_OPTIONS)
+    SHORT_OPTION_NAMES = frozenset(SHORT_OPTIONS.replace(":", ""))
+    TERMINAL_OPTIONS = frozenset(("-H", "--help", "-V", "--version"))
+    EXIT_USAGE = 64
+    EXIT_RECURSION = 69
+
+
+    def delegate(real_client, arguments):
+        os.execv(real_client, [real_client, *arguments])
+
+
+    def normalize_long_only(argument):
+        """Normalize getopt_long_only's single-dash long-option syntax."""
+        if not argument.startswith("-") or argument.startswith("--"):
+            return argument
+        candidate = argument[1:].split("=", 1)[0]
+        if len(candidate) == 1 and candidate in SHORT_OPTION_NAMES:
+            return argument
+        if candidate in LONG_NAMES:
+            return f"-{argument}"
+        matches = [name for name in LONG_NAMES if name.startswith(candidate)]
+        if len(matches) == 1:
+            return f"-{argument}"
+        return argument
+
+
+    def canonical_socket(target):
+        """Resolve TARGET using the same local-socket rules as Emacsclient."""
+        if "/" in target:
+            return os.path.realpath(target)
+        xdg_runtime = os.environ.get("XDG_RUNTIME_DIR")
+        if xdg_runtime is not None:
+            return os.path.realpath(f"{xdg_runtime}/emacs/{target}")
+        temporary = os.environ.get("TMPDIR")
+        if temporary is None and sys.platform == "darwin":
+            try:
+                temporary = os.confstr(65537)
+            except (OSError, ValueError):
+                temporary = None
+        if temporary is None:
+            temporary = "/tmp"
+        return os.path.realpath(
+            f"{temporary}/emacs{os.geteuid()}/{target}"
+        )
+
+
+    def same_socket(candidate, root_socket):
+        """Compare socket identity, returning None when root is unverifiable."""
+        root = os.path.realpath(root_socket)
+        if candidate == root:
+            return True
+        try:
+            root_info = os.stat(root, follow_symlinks=False)
+        except OSError:
+            # Losing the authoritative path must not turn a same-root alias
+            # into an apparently safe peer target.  The caller fails closed
+            # for this indeterminate state.
+            return None
+        if not stat.S_ISSOCK(root_info.st_mode):
+            return None
+        try:
+            candidate_info = os.stat(candidate, follow_symlinks=False)
+        except OSError:
+            return False
+        if not stat.S_ISSOCK(candidate_info.st_mode):
+            return False
+        return (candidate_info.st_dev, candidate_info.st_ino) == (
+            root_info.st_dev,
+            root_info.st_ino,
+        )
+
+
+    def terminal_precedes_parse_error(arguments):
+        """Return whether real getopt exits for help/version before an error."""
+        for end in range(1, len(arguments) + 1):
+            try:
+                options, _operands = getopt.gnu_getopt(
+                    arguments[:end], SHORT_OPTIONS, LONG_OPTIONS
+                )
+            except getopt.GetoptError as error:
+                if end < len(arguments) and "requires argument" in str(error):
+                    continue
+                return False
+            if any(option in TERMINAL_OPTIONS for option, _value in options):
+                return True
+        return False
+
+
+    def main():
+        if len(sys.argv) < 2:
+            raise SystemExit(EXIT_USAGE)
+        real_client = sys.argv[1]
+        arguments = sys.argv[2:]
+        root_socket = os.environ.get("ANVIL_EMACS_SOCKET")
+        if not root_socket:
+            delegate(real_client, arguments)
+
+        # Emacsclient uses getopt_long_only: in addition to ordinary short
+        # clusters and double-dash long options it accepts exact or unique
+        # long names after one dash (`-socket-name', `-so', and `-nw').
+        parse_arguments = [normalize_long_only(arg) for arg in arguments]
+        try:
+            options, _operands = getopt.gnu_getopt(
+                parse_arguments,
+                SHORT_OPTIONS,
+                LONG_OPTIONS,
+            )
+        except getopt.GetoptError:
+            if terminal_precedes_parse_error(parse_arguments):
+                delegate(real_client, arguments)
+            print(
+                "anvil-mcp: refusing an emacsclient invocation whose options "
+                "cannot be checked safely",
+                file=sys.stderr,
+            )
+            raise SystemExit(EXIT_USAGE)
+
+        socket_values = []
+        server_file_values = []
+        for option, value in options:
+            if option in ("-s", "--socket-name"):
+                socket_values.append(value)
+            elif option in ("-f", "--server-file"):
+                server_file_values.append(value)
+            elif option in TERMINAL_OPTIONS:
+                delegate(real_client, arguments)
+
+        socket_name = (
+            socket_values[-1]
+            if socket_values
+            else os.environ.get("EMACS_SOCKET_NAME")
+        )
+        if socket_name is not None:
+            effective_socket = canonical_socket(socket_name)
+        else:
+            server_file = (
+                server_file_values[-1]
+                if server_file_values
+                else os.environ.get("EMACS_SERVER_FILE")
+            )
+            if server_file is not None:
+                delegate(real_client, arguments)
+            # A guarded child with no explicit selector is attempting the
+            # authoritative active root, regardless of its direnv runtime.
+            effective_socket = os.path.realpath(root_socket)
+
+        same_root = same_socket(effective_socket, root_socket)
+        if same_root is not False:
+            print(
+                "anvil-mcp: refusing recursive or unverifiable emacsclient "
+                "call from the active Anvil root",
+                file=sys.stderr,
+            )
+            raise SystemExit(EXIT_RECURSION)
+        delegate(real_client, arguments)
+
+
+    if __name__ == "__main__":
+        main()
+  '';
+
+  dedicatedSafeEmacsclient = writeShellApplication {
+    name = "emacsclient";
+    runtimeInputs = [ python3 ];
+    text = ''
+      exec "${python3}/bin/python3" -I -S \
+        "${dedicatedSafeEmacsclientGuard}" \
+        "${dedicatedRuntimeEmacs}/bin/emacsclient" "$@"
+    '';
+  };
+
   dedicatedLockedRuntimeInputs = [
     bash
     coreutils
+    dedicatedSafeEmacsclient
     dedicatedRuntimeEmacs
     diffutils
     direnv
@@ -274,10 +500,15 @@ let
         patches = [
           # Load-bearing order: host-child bindings target the issue-53 host.
           ../../overlays/emacs/patches/anvil-issue-53-hang-fixes.patch
+          ../../overlays/emacs/patches/anvil-async-isolation.patch
+          ../../overlays/emacs/patches/anvil-headless-emacs-path.patch
+          ../../overlays/emacs/patches/anvil-unified-registry.patch
           ../../overlays/emacs/patches/anvil-worker-pool.patch
           ../../overlays/emacs/patches/anvil-host-child-bindings.patch
-          ../../overlays/emacs/patches/anvil-root-watchdog.patch
+          ../../overlays/emacs/patches/anvil-host-stdin-eof.patch
+          ../../overlays/emacs/patches/anvil-shell-sync-timeout.patch
           ../../overlays/emacs/patches/anvil-stdio-at-most-once.patch
+          ../../overlays/emacs/patches/anvil-stdio-frame-deadline.patch
           ../../overlays/emacs/patches/anvil-stdio-no-alternate-editor.patch
         ];
         src = currentAnvilSrc;
@@ -407,79 +638,114 @@ let
             os.kill(os.getpid(), signal.SIGKILL)
 
 
-    def terminate_target(target_pid, group):
+    def terminate_group(target_pid):
         try:
-            if group:
-                # The PGID remains allocated while any non-detached member
-                # survives, even after the shell leader itself has exited.
-                os.killpg(target_pid, signal.SIGKILL)
-            else:
-                os.kill(target_pid, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError):
-            pass
+            # The PGID remains allocated while any non-detached member
+            # survives, even after the shell leader itself has exited.
+            os.killpg(target_pid, signal.SIGKILL)
         except OSError:
             pass
 
 
-    def move_guard_out_of_target_group(target_pid):
-        guard_pid = os.getpid()
-        if os.getpgrp() != guard_pid:
-            os.setpgid(0, 0)
-        if os.getpgrp() != guard_pid or os.getpgrp() == target_pid:
-            raise RuntimeError("guard does not own a distinct process group")
+    def terminate_target(target_pid, group, state):
+        if group and state["committed"]:
+            # The guard itself anchors this PGID after the R/C/A handshake, so
+            # it cannot disappear or be reused when the target leader exits.
+            terminate_group(target_pid)
+            return
+        # Before commitment the target is blocked before exec and has no
+        # program descendants, so only its exact PID is safe to signal.
+        try:
+            os.kill(target_pid, signal.SIGKILL)
+        except OSError:
+            pass
 
 
-    def close_guard_descriptors(ready_fd):
+    def close_guard_descriptors(ready_fd, commit_fd):
+        preserved = sorted({ready_fd, commit_fd})
         null_fd = os.open(os.devnull, os.O_RDWR)
         for descriptor in (0, 1, 2):
             os.dup2(null_fd, descriptor)
-        if null_fd > 2 and null_fd != ready_fd:
+        if null_fd > 2 and null_fd not in preserved:
             os.close(null_fd)
         try:
             descriptor_limit = int(os.sysconf("SC_OPEN_MAX"))
         except (OSError, TypeError, ValueError):
             descriptor_limit = 65536
         descriptor_limit = max(256, min(descriptor_limit, 1048576))
-        os.closerange(3, ready_fd)
-        os.closerange(ready_fd + 1, descriptor_limit)
+        first = 3
+        for descriptor in preserved:
+            if first < descriptor:
+                os.closerange(first, descriptor)
+            first = descriptor + 1
+        os.closerange(first, descriptor_limit)
 
 
-    def install_guard_signal_handlers(target_pid, group):
+    def install_guard_signal_handlers(target_pid, group, state):
         handled = (signal.SIGINT, signal.SIGHUP, signal.SIGTERM)
         if hasattr(signal, "pthread_sigmask"):
             signal.pthread_sigmask(signal.SIG_UNBLOCK, handled)
 
         def stop_guard(_signum, _frame):
-            terminate_target(target_pid, group)
+            terminate_target(target_pid, group, state)
             os._exit(0)
 
         for signum in handled:
             signal.signal(signum, stop_guard)
 
 
-    def guard_linux(root_pid, target_pid, group, ready_fd):
+    def acknowledge_group_commit(target_pid, group, ready_fd, commit_fd, state):
+        try:
+            marker = os.read(commit_fd, 1)
+        except OSError as error:
+            raise RuntimeError(f"cannot read group commitment: {error}") from error
+        if marker != b"C":
+            raise RuntimeError("target did not commit its process group")
+        if group and os.getpgrp() != target_pid:
+            raise RuntimeError("guard did not enter the committed target group")
+        state["committed"] = group
+        try:
+            os.write(ready_fd, b"A")
+        except OSError as error:
+            raise RuntimeError(f"cannot acknowledge group commitment: {error}") from error
+        os.close(commit_fd)
+        os.close(ready_fd)
+
+
+    def guard_linux(root_pid, target_pid, group, ready_fd, commit_fd, state):
         root_fd = os.pidfd_open(root_pid, 0)
         target_fd = os.pidfd_open(target_pid, 0)
         poller = select.poll()
         poller.register(root_fd, select.POLLIN)
         poller.register(target_fd, select.POLLIN)
-        if poller.poll(0):
+        poller.register(commit_fd, select.POLLIN | select.POLLHUP | select.POLLERR)
+        if any(
+            descriptor in (root_fd, target_fd)
+            for descriptor, _event in poller.poll(0)
+        ):
             raise RuntimeError("root or target exited before guard readiness")
-        install_guard_signal_handlers(target_pid, group)
+        install_guard_signal_handlers(target_pid, group, state)
         os.write(ready_fd, b"R")
-        os.close(ready_fd)
         while True:
-            for descriptor, _event in poller.poll():
-                if descriptor == root_fd:
-                    terminate_target(target_pid, group)
-                    os._exit(0)
-                if descriptor == target_fd:
-                    if group:
-                        terminate_target(target_pid, True)
-                    os._exit(0)
+            events = poller.poll()
+            if any(descriptor == target_fd for descriptor, _event in events):
+                terminate_target(target_pid, group, state)
+                os._exit(0)
+            if any(descriptor == root_fd for descriptor, _event in events):
+                terminate_target(target_pid, group, state)
+                os._exit(0)
+            if any(descriptor == commit_fd for descriptor, _event in events):
+                poller.unregister(commit_fd)
+                acknowledge_group_commit(
+                    target_pid,
+                    group,
+                    ready_fd,
+                    commit_fd,
+                    state,
+                )
 
 
-    def guard_darwin(root_pid, target_pid, group, ready_fd):
+    def guard_darwin(root_pid, target_pid, group, ready_fd, commit_fd, state):
         queue = select.kqueue()
         flags = select.KQ_EV_ADD | select.KQ_EV_ENABLE
         changes = [
@@ -495,41 +761,96 @@ let
                 flags=flags,
                 fflags=select.KQ_NOTE_EXIT,
             ),
+            select.kevent(
+                commit_fd,
+                filter=select.KQ_FILTER_READ,
+                flags=flags,
+            ),
         ]
         queue.control(changes, 0, 0)
-        if queue.control(None, 2, 0):
+        initial = queue.control(None, 3, 0)
+        if any(
+            event.filter == select.KQ_FILTER_PROC
+            and event.ident in (root_pid, target_pid)
+            for event in initial
+        ):
             raise RuntimeError("root or target exited before guard readiness")
-        install_guard_signal_handlers(target_pid, group)
+        install_guard_signal_handlers(target_pid, group, state)
         os.write(ready_fd, b"R")
-        os.close(ready_fd)
         while True:
-            for event in queue.control(None, 2, None):
-                if event.ident == root_pid:
-                    terminate_target(target_pid, group)
-                    os._exit(0)
-                if event.ident == target_pid:
-                    if group:
-                        terminate_target(target_pid, True)
-                    os._exit(0)
+            events = queue.control(None, 3, None)
+            if any(
+                event.filter == select.KQ_FILTER_PROC
+                and event.ident == target_pid
+                for event in events
+            ):
+                terminate_target(target_pid, group, state)
+                os._exit(0)
+            if any(
+                event.filter == select.KQ_FILTER_PROC
+                and event.ident == root_pid
+                for event in events
+            ):
+                terminate_target(target_pid, group, state)
+                os._exit(0)
+            if any(
+                event.filter == select.KQ_FILTER_READ
+                and event.ident == commit_fd
+                for event in events
+            ):
+                queue.control(
+                    [
+                        select.kevent(
+                            commit_fd,
+                            filter=select.KQ_FILTER_READ,
+                            flags=select.KQ_EV_DELETE,
+                        )
+                    ],
+                    0,
+                    0,
+                )
+                acknowledge_group_commit(
+                    target_pid,
+                    group,
+                    ready_fd,
+                    commit_fd,
+                    state,
+                )
 
 
-    def run_guard(root_pid, target_pid, group, ready_fd):
+    def run_guard(root_pid, target_pid, group, ready_fd, commit_fd):
+        state = {"committed": False}
         try:
-            close_guard_descriptors(ready_fd)
-            close_lock_fds()
-            move_guard_out_of_target_group(target_pid)
+            # close_lock_fds() already ran before os.pipe(); calling it again
+            # could close a protocol FD that reused descriptor 8 or 9.
+            close_guard_descriptors(ready_fd, commit_fd)
             if sys.platform.startswith("linux"):
-                guard_linux(root_pid, target_pid, group, ready_fd)
+                guard_linux(
+                    root_pid,
+                    target_pid,
+                    group,
+                    ready_fd,
+                    commit_fd,
+                    state,
+                )
             elif sys.platform == "darwin":
-                guard_darwin(root_pid, target_pid, group, ready_fd)
+                guard_darwin(
+                    root_pid,
+                    target_pid,
+                    group,
+                    ready_fd,
+                    commit_fd,
+                    state,
+                )
             else:
                 raise RuntimeError(f"unsupported platform: {sys.platform}")
         except BaseException:
-            terminate_target(target_pid, group)
-            try:
-                os.close(ready_fd)
-            except OSError:
-                pass
+            terminate_target(target_pid, group, state)
+            for descriptor in (ready_fd, commit_fd):
+                try:
+                    os.close(descriptor)
+                except OSError:
+                    pass
             os._exit(EXIT_SOFTWARE)
 
 
@@ -566,45 +887,93 @@ let
         fail(f"unsupported platform: {sys.platform}")
 
     group = mode in ("group", "external-group")
-    if group and os.getpgrp() != target_pid:
-        try:
-            os.setpgid(0, 0)
-        except OSError as error:
-            fail(f"cannot establish target process group: {error}")
-    if group and os.getpgrp() != target_pid:
-        fail("target is not its process-group leader")
-
     ready_read, ready_write = os.pipe()
+    commit_read, commit_write = os.pipe()
     try:
         guard_pid = os.fork()
     except OSError as error:
+        for descriptor in (ready_read, ready_write, commit_read, commit_write):
+            os.close(descriptor)
         fail(f"cannot fork guard: {error}")
 
     if guard_pid == 0:
         os.close(ready_read)
-        run_guard(root_pid, target_pid, group, ready_write)
+        os.close(commit_write)
+        run_guard(
+            root_pid,
+            target_pid,
+            group,
+            ready_write,
+            commit_read,
+        )
         os._exit(0)
 
     os.close(ready_write)
-    readable, _, _ = select.select(
-        [ready_read], [], [], READY_TIMEOUT_SECONDS
-    )
-    ready = os.read(ready_read, 1) if readable else b""
-    os.close(ready_read)
-    if ready != b"R":
-        terminate_target(guard_pid, False)
+    os.close(commit_read)
+
+    def abort_guard(message):
+        for descriptor in (ready_read, commit_write):
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        terminate_target(guard_pid, False, {"committed": False})
         try:
             os.waitpid(guard_pid, 0)
         except ChildProcessError:
             pass
-        fail("guard did not become ready")
+        fail(message)
+
+    readable, _, _ = select.select(
+        [ready_read], [], [], READY_TIMEOUT_SECONDS
+    )
+    ready = os.read(ready_read, 1) if readable else b""
+    if ready != b"R":
+        abort_guard("guard did not become ready")
+    if os.getppid() != root_pid:
+        os.kill(os.getpid(), signal.SIGKILL)
+
+    # The target cannot exec until the monitor acknowledges commitment.  The
+    # monitor starts in this process's inherited group, so it remains movable
+    # by its exact unreaped parent until it joins and anchors target_pid.
+    if group and os.getpgrp() != target_pid:
+        try:
+            os.setpgid(0, 0)
+        except OSError as error:
+            abort_guard(f"cannot establish target process group: {error}")
+    if group and os.getpgrp() != target_pid:
+        abort_guard("target is not its process-group leader")
+    if group:
+        try:
+            os.setpgid(guard_pid, target_pid)
+            guard_group = os.getpgid(guard_pid)
+        except OSError as error:
+            abort_guard(f"cannot anchor target process group: {error}")
+        if guard_group != target_pid:
+            abort_guard("guard did not anchor the target process group")
+
+    try:
+        written = os.write(commit_write, b"C")
+    except OSError as error:
+        abort_guard(f"cannot commit target process group: {error}")
+    os.close(commit_write)
+    if written != 1:
+        abort_guard("target process-group commitment was incomplete")
+
+    readable, _, _ = select.select(
+        [ready_read], [], [], READY_TIMEOUT_SECONDS
+    )
+    acknowledged = os.read(ready_read, 1) if readable else b""
+    os.close(ready_read)
+    if acknowledged != b"A":
+        abort_guard("guard did not acknowledge target process group")
     if os.getppid() != root_pid:
         os.kill(os.getpid(), signal.SIGKILL)
 
     try:
         os.execvpe(program_argv[0], program_argv, os.environ)
     except OSError as error:
-        terminate_target(guard_pid, False)
+        terminate_target(guard_pid, False, {"committed": False})
         fail(f"cannot exec {program_argv[0]}: {error}")
   '';
 
@@ -612,20 +981,52 @@ let
     builtins.readFile ./agent-supervisor.py
   );
 
-  dedicatedChildShell = writeShellApplication {
-    name = "anvil-headless-child-shell";
+  dedicatedChildShellSource = writeTextFile {
+    name = "anvil-headless-child-shell.py";
+    executable = true;
     text = ''
-      real_shell="''${ANVIL_HEADLESS_REAL_SHELL:-}"
-      if [ -z "$real_shell" ]; then
-        echo "anvil-mcp: missing real shell for dedicated child" >&2
-        exit 70
-      fi
-      exec 8<&- 9<&-
-      unset ANVIL_HEADLESS_REAL_SHELL
-      exec "${python3}/bin/python3" -I -S "${dedicatedParentGuardLauncher}" \
-        group "$real_shell" "$@"
+      #!${python3}/bin/python3 -I
+      import errno
+      import os
+      import runpy
+      import sys
+
+
+      EXIT_SOFTWARE = 70
+      GUARD = ${builtins.toJSON (toString dedicatedParentGuardLauncher)}
+
+
+      def fail(message):
+          print(f"anvil-mcp: {message}", file=sys.stderr)
+          raise SystemExit(EXIT_SOFTWARE)
+
+
+      real_shell = os.environ.pop("ANVIL_HEADLESS_REAL_SHELL", "")
+      if not real_shell:
+          fail("missing real shell for dedicated child")
+
+      for descriptor in (8, 9):
+          try:
+              os.close(descriptor)
+          except OSError as error:
+              if error.errno != errno.EBADF:
+                  fail(f"cannot close lock fd {descriptor}: {error}")
+
+      sys.argv = [GUARD, "group", real_shell, *sys.argv[1:]]
+      runpy.run_path(GUARD, run_name="__main__")
     '';
   };
+
+  dedicatedChildShell = runCommand "anvil-headless-child-shell" { } ''
+    mkdir -p "$out/bin"
+    ln -s "${dedicatedChildShellSource}" \
+      "$out/bin/anvil-headless-child-shell"
+    "${python3}/bin/python3" -I -B \
+      ${./child-shell-test.py} \
+      "$out/bin/anvil-headless-child-shell" \
+      "${dedicatedParentGuardLauncher}" \
+      "${bash}/bin/bash"
+  '';
 
   dedicatedEnvironmentInit = writeText "anvil-headless-environment-init.el" ''
     ;;; anvil-headless-environment-init.el --- Project environment support -*- lexical-binding: t; -*-
@@ -646,9 +1047,22 @@ let
     (defvar anvil-headless--baseline-shell-file-name nil)
     (defvar anvil-headless--baseline-shell-command-switch nil)
 
+    (defconst anvil-headless--root-socket
+      (let ((socket (getenv "ANVIL_EMACS_SOCKET")))
+        (unless (and (stringp socket)
+                     (not (string= socket ""))
+                     (file-name-absolute-p socket))
+          (error "Anvil root socket environment is missing or invalid"))
+        (expand-file-name socket))
+      "Authoritative root socket, captured before project environments run.")
+
     (defconst anvil-headless--emacs-bin-directory
       (file-name-as-directory "${dedicatedRuntimeEmacs}/bin")
       "Directory containing the dedicated Emacs and emacsclient binaries.")
+
+    (defconst anvil-headless--safe-client-bin-directory
+      (file-name-as-directory "${dedicatedSafeEmacsclient}/bin")
+      "Directory containing the same-root recursion guard.")
 
     (defconst anvil-headless--direnv-executable
       "${direnv}/bin/direnv"
@@ -660,7 +1074,7 @@ let
       '(${lib.concatMapStringsSep "\n        " builtins.toJSON dedicatedRequiredExecPath}))
 
     (defun anvil-headless--restore-required-exec-path (&rest _args)
-      "Keep dedicated Emacs and packaged tools reachable after PATH changes."
+      "Restore packaged tools and immutable recursion-guard state."
       (let* ((normalized
               (delete-dups
                (mapcar
@@ -670,14 +1084,22 @@ let
                     directory))
                 exec-path)))
              (emacs-bin
-              (directory-file-name anvil-headless--emacs-bin-directory)))
-        (setq exec-path (cons emacs-bin (delete emacs-bin normalized))))
+              (directory-file-name anvil-headless--emacs-bin-directory))
+             (safe-client-bin
+              (directory-file-name
+               anvil-headless--safe-client-bin-directory)))
+        (setq exec-path
+              (cons safe-client-bin
+                    (cons emacs-bin
+                          (delete safe-client-bin
+                                  (delete emacs-bin normalized))))))
       (dolist (directory anvil-headless--required-exec-path)
         (unless (member directory exec-path)
           (setq exec-path (append exec-path (list directory)))))
       (let ((path (mapconcat #'identity exec-path
                              path-separator)))
         (setenv "PATH" path)
+        (setenv "ANVIL_EMACS_SOCKET" anvil-headless--root-socket)
         (when (boundp 'eshell-path-env)
           (if (local-variable-p 'process-environment)
               (setq-local eshell-path-env path)
@@ -691,8 +1113,15 @@ let
       (exec-path-from-shell-initialize))
     (anvil-headless--restore-required-exec-path)
     (setq direnv--executable anvil-headless--direnv-executable)
+
+    (defun anvil-headless--guard-direnv-update (original &rest args)
+      "Run ORIGINAL and restore immutable guard controls even on failure."
+      (unwind-protect
+          (apply original args)
+        (anvil-headless--restore-required-exec-path)))
+
     (advice-add 'direnv-update-directory-environment
-                :after #'anvil-headless--restore-required-exec-path)
+                :around #'anvil-headless--guard-direnv-update)
 
     (defconst anvil-headless--direnv-bookkeeping-variables
       '("DIRENV_DIFF" "DIRENV_DIR" "DIRENV_FILE" "DIRENV_WATCHES"))
@@ -706,6 +1135,10 @@ let
     (defun anvil-headless--snapshot-baseline-environment ()
       "Freeze this daemon's imported login environment before any request."
       (let ((environment (copy-sequence process-environment)))
+        (setq environment
+              (anvil-headless--environment-with
+               environment "ANVIL_EMACS_SOCKET"
+               anvil-headless--root-socket))
         (dolist (name
                  (append
                   '("ANVIL_HEADLESS_PARENT_PID"
@@ -866,6 +1299,10 @@ let
               (anvil-headless--environment-with
                child-process-environment
                "ANVIL_HEADLESS_REAL_SHELL" real-shell))
+        (setq child-process-environment
+              (anvil-headless--environment-with
+               child-process-environment
+               "ANVIL_EMACS_SOCKET" anvil-headless--root-socket))
         ;; These special variables remain dynamically visible while ORIGINAL
         ;; waits, but the anvil-host patch applies their values only inside
         ;; make-process.  Root callbacks keep their baseline environment.
@@ -949,6 +1386,38 @@ let
       (insert (number-to-string (emacs-pid)) "\n"))
   '';
 
+  dedicatedOffloadInit = writeText "anvil-headless-offload-init.el" ''
+    ;;; anvil-headless-offload-init.el --- One-shot async child -*- lexical-binding: t; -*-
+
+    (declare-function anvil-headless--snapshot-baseline-environment nil ())
+
+    (let* ((runtime-root (getenv "XDG_RUNTIME_DIR"))
+           (state-root (getenv "ANVIL_EMACS_STATE_DIR"))
+           (state-dir
+            (and state-root (expand-file-name "offload/" state-root)))
+           (temp-dir
+            (and runtime-root (expand-file-name "tmp/" runtime-root))))
+      (unless (and state-dir temp-dir
+                   (file-directory-p state-dir)
+                   (file-directory-p temp-dir))
+        (error "Anvil offload requires private state and runtime directories"))
+      (setq native-comp-jit-compilation nil
+            user-emacs-directory (file-name-as-directory state-dir)
+            package-user-dir (expand-file-name "elpa" state-dir)
+            custom-file (expand-file-name "custom.el" state-dir)
+            temporary-file-directory (file-name-as-directory temp-dir))
+      (when (fboundp 'startup-redirect-eln-cache)
+        (startup-redirect-eln-cache
+         (expand-file-name "eln-cache/" state-dir))))
+
+    ;; Avoid a second login-shell import.  The root passes its immutable
+    ;; already-imported baseline, while each request carries project context
+    ;; separately and binds it only around the submitted form.
+    (setenv "ANVIL_EMACS_WORKER" "1")
+    (load "${dedicatedEnvironmentInit}" nil nil t)
+    (anvil-headless--snapshot-baseline-environment)
+  '';
+
   dedicatedWorkerEmacs = writeShellApplication {
     name = "anvil-worker-emacs";
     text = ''
@@ -992,6 +1461,29 @@ let
     '';
   };
 
+  dedicatedOffloadEmacs = writeShellApplication {
+    name = "anvil-offload-emacs";
+    text = ''
+      # The root owns daemon-lifetime OFD locks; an isolated async child must
+      # not keep them alive after root replacement.
+      exec 8<&- 9<&-
+
+      if [ -z "''${ANVIL_HEADLESS_PARENT_PID:-}" ]; then
+        echo "anvil-mcp: offload child requires a root parent identity" >&2
+        exit 70
+      fi
+      if [ -z "''${ANVIL_EMACS_STATE_DIR:-}" ]; then
+        echo "anvil-mcp: offload child requires ANVIL_EMACS_STATE_DIR" >&2
+        exit 70
+      fi
+
+      export ANVIL_EMACS_WORKER=1
+      exec "${python3}/bin/python3" -I -S "${dedicatedParentGuardLauncher}" \
+        group "${dedicatedRuntimeEmacs}/bin/emacs" \
+        --quick "--init-directory=$ANVIL_EMACS_STATE_DIR/offload" "$@"
+    '';
+  };
+
   dedicatedLockLauncher = writeText "anvil-lock-launcher.py" ''
     import ctypes
     import errno
@@ -1009,10 +1501,10 @@ let
     PULSE_NAME = ".anvil-root-pulse"
     LEASE_NAME = ".anvil-root-async-lease"
     DEFAULT_REFRESH_SECONDS = 6 * 60 * 60
-    DEFAULT_STARTUP_SECONDS = 120
-    DEFAULT_NORMAL_SECONDS = 45
-    DEFAULT_ASYNC_SECONDS = 600
-    DEFAULT_PULSE_SECONDS = 1
+    DEFAULT_STARTUP_SECONDS = ${toString timeoutPolicy.watchdogStartupSeconds}
+    DEFAULT_NORMAL_SECONDS = ${toString timeoutPolicy.watchdogHeartbeatSeconds}
+    DEFAULT_DISPATCH_SECONDS = ${toString timeoutPolicy.watchdogDispatchSeconds}
+    DEFAULT_PULSE_SECONDS = ${toString timeoutPolicy.watchdogPulseSeconds}
 
 
     def fail(message, status=EXIT_SOFTWARE):
@@ -1116,15 +1608,15 @@ let
         poll_seconds,
         started,
         last_progress,
-        lease_started,
+        dispatch_started,
     ):
         elapsed_since_poll = now - last_poll
         if elapsed_since_poll <= 3.0 * poll_seconds:
-            return started, last_progress, lease_started
+            return started, last_progress, dispatch_started
         unexpected_gap = max(0.0, elapsed_since_poll - poll_seconds)
         return tuple(
             None if anchor is None else anchor + unexpected_gap
-            for anchor in (started, last_progress, lease_started)
+            for anchor in (started, last_progress, dispatch_started)
         )
 
 
@@ -1437,7 +1929,7 @@ let
         pulse_seconds,
         startup_seconds,
         normal_seconds,
-        async_seconds,
+        dispatch_seconds,
     ):
         try:
             null_fd = os.open(os.devnull, os.O_RDWR)
@@ -1451,7 +1943,7 @@ let
             started = time.monotonic()
             last_poll = started
             last_progress = None
-            lease_started = None
+            dispatch_started = None
             armed = False
             (
                 pulse_generation,
@@ -1465,14 +1957,14 @@ let
                 (
                     started,
                     last_progress,
-                    lease_started,
+                    dispatch_started,
                 ) = compensate_scheduler_gap(
                     now,
                     last_poll,
                     poll_seconds,
                     started,
                     last_progress,
-                    lease_started,
+                    dispatch_started,
                 )
                 last_poll = now
 
@@ -1497,7 +1989,9 @@ let
                     lease_state = current_lease_state
                     if armed:
                         last_progress = now
-                    lease_started = now if lease_state == "active" else None
+                    dispatch_started = (
+                        now if lease_state == "active" else None
+                    )
                 else:
                     lease_state = current_lease_state
 
@@ -1507,7 +2001,7 @@ let
                         pulse_generation = current_pulse
                         last_progress = now
                         if lease_state == "active":
-                            lease_started = now
+                            dispatch_started = now
                     elif deadline_expired(
                         now, started, startup_seconds
                     ):
@@ -1537,19 +2031,19 @@ let
                         pulse_generation = current_pulse
                         last_progress = now
 
-                    deadline_start = (
-                        lease_started
-                        if lease_state == "active"
-                        else last_progress
+                    # Heartbeat and dispatch deadlines are independent.  A
+                    # non-yielding handler stops the pulse; a recursive wait
+                    # can keep timers alive but cannot outlive its dispatch.
+                    heartbeat_expired = deadline_expired(
+                        now, last_progress, normal_seconds
                     )
-                    deadline_seconds = (
-                        async_seconds
-                        if lease_state == "active"
-                        else normal_seconds
+                    dispatch_expired = (
+                        lease_state == "active"
+                        and deadline_expired(
+                            now, dispatch_started, dispatch_seconds
+                        )
                     )
-                    if deadline_expired(
-                        now, deadline_start, deadline_seconds
-                    ):
+                    if heartbeat_expired or dispatch_expired:
                         snapshot = (
                             current_pulse,
                             current_lease,
@@ -1563,10 +2057,20 @@ let
                             )
                             return (
                                 latest == snapshot
-                                and deadline_expired(
-                                    time.monotonic(),
-                                    deadline_start,
-                                    deadline_seconds,
+                                and (
+                                    deadline_expired(
+                                        time.monotonic(),
+                                        last_progress,
+                                        normal_seconds,
+                                    )
+                                    or (
+                                        lease_state == "active"
+                                        and deadline_expired(
+                                            time.monotonic(),
+                                            dispatch_started,
+                                            dispatch_seconds,
+                                        )
+                                    )
                                 )
                             )
 
@@ -1614,8 +2118,8 @@ let
     normal_seconds = positive_seconds(
         "ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS", DEFAULT_NORMAL_SECONDS
     )
-    async_seconds = positive_seconds(
-        "ANVIL_EMACS_WATCHDOG_ASYNC_SECONDS", DEFAULT_ASYNC_SECONDS
+    dispatch_seconds = positive_seconds(
+        "ANVIL_EMACS_WATCHDOG_DISPATCH_SECONDS", DEFAULT_DISPATCH_SECONDS
     )
     pulse_seconds = positive_seconds(
         "ANVIL_EMACS_WATCHDOG_PULSE_SECONDS", DEFAULT_PULSE_SECONDS
@@ -1632,13 +2136,6 @@ let
             "three pulse intervals",
             EXIT_CONFIG,
         )
-    if async_seconds < normal_seconds:
-        fail(
-            "ANVIL_EMACS_WATCHDOG_ASYNC_SECONDS must not be shorter "
-            "than the normal deadline",
-            EXIT_CONFIG,
-        )
-
     try:
         runtime_info = os.stat(runtime_dir, follow_symlinks=False)
         state_info = os.stat(state_dir, follow_symlinks=False)
@@ -1678,7 +2175,7 @@ let
             pulse_seconds,
             startup_seconds,
             normal_seconds,
-            async_seconds,
+            dispatch_seconds,
         )
 
     os.close(pulse_entry[1])
@@ -1689,316 +2186,297 @@ let
         fail(f"cannot exec locked stage {locked_stage}: {error}")
   '';
   dedicatedInit = writeText "anvil-headless-init.el" ''
-    ;;; anvil-headless-init.el --- Dedicated Anvil root -*- lexical-binding: t; -*-
+        ;;; anvil-headless-init.el --- Dedicated Anvil root -*- lexical-binding: t; -*-
 
-    (defvar anvil-eval-timeout)
-    (defvar anvil-worker-read-pool-size)
-    (defvar anvil-worker-write-pool-size)
-    (defvar anvil-worker-batch-pool-size)
-    (defvar anvil-server-schema-cache-file)
-    (defvar anvil-org-allowed-files-enabled)
-    (defvar org-directory)
-    (defvar org-agenda-files)
-    (defvar anvil-semantic-roots)
-    (defvar anvil-semantic-db-path)
-    (defvar anvil-pdf-python)
-    (defvar anvil-worker-emacs-bin)
-    (defvar anvil-worker-init-file)
-    (defvar anvil-optional-modules)
-    (defvar anvil-server-autostart-on-request)
-    (defvar anvil-worker--pool)
-    (defvar anvil-modules)
-    (defvar anvil--loaded-modules)
-    (defvar anvil-headless--baseline-process-environment)
-    (defvar anvil-headless--baseline-exec-path)
-    (declare-function anvil-headless--snapshot-baseline-environment nil ())
-    (declare-function anvil-worker-kill "anvil-worker" ())
-    (defvar anvil-eval-async-active-function)
-    (defvar anvil-eval-async-idle-function)
-    (defvar anvil-eval-async-cleanup-failure-function)
-    (defvar anvil-headless--watchdog-pulse-file nil)
-    (defvar anvil-headless--watchdog-lease-file nil)
-    (defvar anvil-headless--watchdog-pulse-seconds nil)
-    (defvar anvil-headless--watchdog-pulse-counter 0)
-    (defvar anvil-headless--watchdog-timer nil)
-    (defvar anvil-headless--watchdog-async-jobs
-      (make-hash-table :test 'equal))
-    (defvar anvil-headless--watchdog-sync-dispatch-depth 0)
+        (defvar anvil-eval-timeout)
+        (defvar anvil-eval-async-timeout)
+        (defvar anvil-shell-filter-max-sync-timeout)
+        (defvar anvil-worker-read-pool-size)
+        (defvar anvil-worker-write-pool-size)
+        (defvar anvil-worker-batch-pool-size)
+        (defvar anvil-server-schema-cache-file)
+        (defvar anvil-org-allowed-files-enabled)
+        (defvar org-directory)
+        (defvar org-agenda-files)
+        (defvar anvil-semantic-roots)
+        (defvar anvil-semantic-db-path)
+        (defvar anvil-pdf-python)
+        (defvar anvil-offload-emacs-bin)
+        (defvar anvil-offload-init-files)
+        (defvar anvil-offload-spawn-environment-function)
+        (defvar anvil-offload-max-frame-bytes)
+        (defvar anvil-worker-emacs-bin)
+        (defvar anvil-worker-init-file)
+        (defvar anvil-optional-modules)
+        (defvar anvil-server-autostart-on-request)
+        (defvar anvil-worker--pool)
+        (defvar anvil-modules)
+        (defvar anvil--loaded-modules)
+        (defvar anvil-headless--baseline-process-environment)
+        (defvar anvil-headless--baseline-exec-path)
+        (declare-function anvil-headless--snapshot-baseline-environment nil ())
+        (declare-function anvil-worker-kill "anvil-worker" ())
+        (defvar anvil-headless--watchdog-pulse-file nil)
+        (defvar anvil-headless--watchdog-lease-file nil)
+        (defvar anvil-headless--watchdog-pulse-seconds nil)
+        (defvar anvil-headless--watchdog-pulse-counter 0)
+        (defvar anvil-headless--watchdog-timer nil)
+        (defvar anvil-headless--watchdog-sync-dispatch-depth 0)
 
-    (let* ((runtime-dir (getenv "XDG_RUNTIME_DIR"))
-           (state-dir (getenv "ANVIL_EMACS_STATE_DIR"))
-           (temp-dir (and runtime-dir (expand-file-name "tmp/" runtime-dir)))
-           (org-root
-            (file-name-as-directory
-             (expand-file-name
-              (or (getenv "ANVIL_EMACS_ORG_ROOT") "~/org")))))
-      (unless (and state-dir temp-dir (file-directory-p state-dir))
-        (error "Anvil requires existing state and runtime directories"))
-      (make-directory temp-dir t)
-      (setq native-comp-jit-compilation nil
-            anvil-eval-timeout 120
-            anvil-worker-read-pool-size ${toString workerPoolSizes.read}
-            anvil-worker-write-pool-size ${toString workerPoolSizes.write}
-            anvil-worker-batch-pool-size ${toString workerPoolSizes.batch}
-            user-emacs-directory (file-name-as-directory state-dir)
-            package-user-dir (expand-file-name "elpa" state-dir)
-            custom-file (expand-file-name "custom.el" state-dir)
-            temporary-file-directory (file-name-as-directory temp-dir)
-            anvil-server-schema-cache-file
-            (expand-file-name "anvil-schema-cache.el" temp-dir)
-            anvil-org-allowed-files-enabled nil
-            org-directory org-root
-            org-agenda-files
-            (and (file-directory-p org-root) (list org-root))
-            anvil-semantic-roots
-            (and (file-directory-p org-root) (list org-root))
-            anvil-semantic-db-path
-            (expand-file-name "semantic/index.db" state-dir))
-      (when (fboundp 'startup-redirect-eln-cache)
-        (startup-redirect-eln-cache
-         (expand-file-name "eln-cache/" state-dir))))
+        (let* ((runtime-dir (getenv "XDG_RUNTIME_DIR"))
+               (state-dir (getenv "ANVIL_EMACS_STATE_DIR"))
+               (temp-dir (and runtime-dir (expand-file-name "tmp/" runtime-dir)))
+               (org-root
+                (file-name-as-directory
+                 (expand-file-name
+                  (or (getenv "ANVIL_EMACS_ORG_ROOT") "~/org")))))
+          (unless (and state-dir temp-dir (file-directory-p state-dir))
+            (error "Anvil requires existing state and runtime directories"))
+          (make-directory temp-dir t)
+          (setq native-comp-jit-compilation nil
+                anvil-eval-timeout ${toString timeoutPolicy.cooperativeSyncSeconds}
+                anvil-eval-async-timeout ${toString timeoutPolicy.asyncSeconds}
+                anvil-shell-filter-max-sync-timeout ${toString timeoutPolicy.shellSyncSeconds}
+                anvil-worker-read-pool-size ${toString workerPoolSizes.read}
+                anvil-worker-write-pool-size ${toString workerPoolSizes.write}
+                anvil-worker-batch-pool-size ${toString workerPoolSizes.batch}
+                user-emacs-directory (file-name-as-directory state-dir)
+                package-user-dir (expand-file-name "elpa" state-dir)
+                custom-file (expand-file-name "custom.el" state-dir)
+                temporary-file-directory (file-name-as-directory temp-dir)
+                anvil-server-schema-cache-file
+                (expand-file-name "anvil-schema-cache.el" temp-dir)
+                anvil-org-allowed-files-enabled nil
+                org-directory org-root
+                org-agenda-files
+                (and (file-directory-p org-root) (list org-root))
+                anvil-semantic-roots
+                (and (file-directory-p org-root) (list org-root))
+                anvil-semantic-db-path
+                (expand-file-name "semantic/index.db" state-dir))
+          (when (fboundp 'startup-redirect-eln-cache)
+            (startup-redirect-eln-cache
+             (expand-file-name "eln-cache/" state-dir))))
 
-    (defun anvil-headless--watchdog-write (path value)
-      "Write VALUE to the existing watchdog file at PATH without replacing it."
-      (unless (and (stringp path)
-                   (file-regular-p path)
-                   (not (file-symlink-p path)))
-        (error "Unsafe Anvil watchdog file: %S" path))
-      (let ((coding-system-for-write 'utf-8-unix)
-            (create-lockfiles nil))
-        (write-region value nil path nil 'silent)))
+        (defun anvil-headless--watchdog-write (path value)
+          "Write VALUE to the existing watchdog file at PATH without replacing it."
+          (unless (and (stringp path)
+                       (file-regular-p path)
+                       (not (file-symlink-p path)))
+            (error "Unsafe Anvil watchdog file: %S" path))
+          (let ((coding-system-for-write 'utf-8-unix)
+                (create-lockfiles nil))
+            (write-region value nil path nil 'silent)))
 
-    (defun anvil-headless--watchdog-pulse ()
-      "Record one root event-loop progress pulse, failing closed on error."
-      (condition-case err
-          (progn
-            (setq anvil-headless--watchdog-pulse-counter
-                  (1+ anvil-headless--watchdog-pulse-counter))
-            (anvil-headless--watchdog-write
-             anvil-headless--watchdog-pulse-file
-             (format "pulse:%d\n"
-                     anvil-headless--watchdog-pulse-counter)))
-        (error
-         (message "Anvil watchdog pulse failed: %s"
-                  (error-message-string err))
-         (kill-emacs 70))))
+        (defun anvil-headless--watchdog-pulse ()
+          "Record one root event-loop progress pulse, failing closed on error."
+          (condition-case err
+              (progn
+                (setq anvil-headless--watchdog-pulse-counter
+                      (1+ anvil-headless--watchdog-pulse-counter))
+                (anvil-headless--watchdog-write
+                 anvil-headless--watchdog-pulse-file
+                 (format "pulse:%d\n"
+                         anvil-headless--watchdog-pulse-counter)))
+            (error
+             (message "Anvil watchdog pulse failed: %s"
+                      (error-message-string err))
+             (kill-emacs 70))))
 
-    (defun anvil-headless--watchdog-set-lease-state (active)
-      "Set the fixed lease inode to ACTIVE or idle without rewriting it."
-      (let ((path anvil-headless--watchdog-lease-file)
-            (mode (if active #o600 #o400)))
-        (unless (and (stringp path)
-                     (file-regular-p path)
-                     (not (file-symlink-p path)))
-          (error "Unsafe Anvil watchdog lease file: %S" path))
-        (set-file-modes path mode)
-        (unless (and (file-regular-p path)
-                     (not (file-symlink-p path))
-                     (= (logand (or (file-modes path) 0) #o777) mode))
-          (error "Anvil watchdog lease mode transition failed: %S" path))))
+        (defun anvil-headless--watchdog-set-lease-state (active)
+          "Set the fixed lease inode to ACTIVE or idle without rewriting it."
+          (let ((path anvil-headless--watchdog-lease-file)
+                (mode (if active #o600 #o400)))
+            (unless (and (stringp path)
+                         (file-regular-p path)
+                         (not (file-symlink-p path)))
+              (error "Unsafe Anvil watchdog lease file: %S" path))
+            (set-file-modes path mode)
+            (unless (and (file-regular-p path)
+                         (not (file-symlink-p path))
+                         (= (logand (or (file-modes path) 0) #o777) mode))
+              (error "Anvil watchdog lease mode transition failed: %S" path))))
 
-    (defun anvil-headless--watchdog-refresh-lease-state ()
-      "Reflect all synchronous and asynchronous work in the watchdog lease."
-      (anvil-headless--watchdog-set-lease-state
-       (or (> anvil-headless--watchdog-sync-dispatch-depth 0)
-           (> (hash-table-count anvil-headless--watchdog-async-jobs) 0))))
+        (defun anvil-headless--watchdog-refresh-lease-state ()
+          "Reflect synchronous request activity in the diagnostic lease."
+          (anvil-headless--watchdog-set-lease-state
+           (> anvil-headless--watchdog-sync-dispatch-depth 0)))
 
-    (defun anvil-headless--watchdog-async-active (job-id)
-      "Extend the watchdog lease while async JOB-ID is evaluating."
-      (let ((already-active
-             (gethash job-id anvil-headless--watchdog-async-jobs)))
-        (puthash job-id t anvil-headless--watchdog-async-jobs)
-        (condition-case err
-            (anvil-headless--watchdog-refresh-lease-state)
-          (error
-           (unless already-active
-             (remhash job-id anvil-headless--watchdog-async-jobs))
-           (signal (car err) (cdr err))))))
-
-    (defun anvil-headless--watchdog-async-idle (job-id)
-      "Release JOB-ID without shortening another request's watchdog lease."
-      (remhash job-id anvil-headless--watchdog-async-jobs)
-      (anvil-headless--watchdog-refresh-lease-state))
-
-    (defun anvil-headless--watchdog-sync-dispatch (original &rest args)
-      "Run synchronous JSON-RPC dispatch through ORIGINAL under a lease."
-      (setq anvil-headless--watchdog-sync-dispatch-depth
-            (1+ anvil-headless--watchdog-sync-dispatch-depth))
-      (let ((lease-entered nil))
-        (unwind-protect
-            (progn
-              (anvil-headless--watchdog-refresh-lease-state)
-              (setq lease-entered t)
-              (apply original args))
+        (defun anvil-headless--watchdog-sync-dispatch (original &rest args)
+          "Run synchronous JSON-RPC dispatch through ORIGINAL under a lease."
           (setq anvil-headless--watchdog-sync-dispatch-depth
-                (max 0 (1- anvil-headless--watchdog-sync-dispatch-depth)))
-          (when lease-entered
-            (condition-case err
-                (anvil-headless--watchdog-refresh-lease-state)
-              (error
-               (message "Anvil synchronous watchdog cleanup failed: %s"
-                        (error-message-string err))
-               (kill-emacs 70)))))))
+                (1+ anvil-headless--watchdog-sync-dispatch-depth))
+          (let ((lease-entered nil))
+            (unwind-protect
+                (progn
+                  (anvil-headless--watchdog-refresh-lease-state)
+                  (setq lease-entered t)
+                  (apply original args))
+              (setq anvil-headless--watchdog-sync-dispatch-depth
+                    (max 0 (1- anvil-headless--watchdog-sync-dispatch-depth)))
+              (when lease-entered
+                (condition-case err
+                    (anvil-headless--watchdog-refresh-lease-state)
+                  (error
+                   (message "Anvil synchronous watchdog cleanup failed: %s"
+                            (error-message-string err))
+                   (kill-emacs 70)))))))
 
-    (defun anvil-headless--watchdog-cleanup-failed (job-id error-data)
-      "Fail the dedicated daemon closed after JOB-ID cleanup ERROR-DATA."
-      (message "Anvil async watchdog cleanup failed for %s: %S"
-               job-id error-data)
-      (kill-emacs 70))
+        (defun anvil-headless--watchdog-arm ()
+          "Arm the external root watchdog after the MCP server is ready."
+          (setq anvil-headless--watchdog-sync-dispatch-depth 0
+                anvil-headless--watchdog-pulse-file
+                (getenv "ANVIL_EMACS_WATCHDOG_PULSE_FILE")
+                anvil-headless--watchdog-lease-file
+                (getenv "ANVIL_EMACS_WATCHDOG_LEASE_FILE")
+                anvil-headless--watchdog-pulse-seconds
+                (string-to-number
+                 (or (getenv "ANVIL_EMACS_WATCHDOG_PULSE_SECONDS") "")))
+          (unless (and anvil-headless--watchdog-pulse-file
+                       anvil-headless--watchdog-lease-file
+                       (> anvil-headless--watchdog-pulse-seconds 0))
+            (error "Anvil watchdog environment is incomplete"))
+          (anvil-headless--watchdog-set-lease-state nil)
+          (anvil-headless--watchdog-pulse)
+          (setq anvil-headless--watchdog-timer
+                (run-at-time
+                 anvil-headless--watchdog-pulse-seconds
+                 anvil-headless--watchdog-pulse-seconds
+                 #'anvil-headless--watchdog-pulse)))
 
-    (defun anvil-headless--watchdog-arm ()
-      "Arm the external root watchdog after the MCP server is ready."
-      (clrhash anvil-headless--watchdog-async-jobs)
-      (setq anvil-headless--watchdog-sync-dispatch-depth 0
-            anvil-headless--watchdog-pulse-file
-            (getenv "ANVIL_EMACS_WATCHDOG_PULSE_FILE")
-            anvil-headless--watchdog-lease-file
-            (getenv "ANVIL_EMACS_WATCHDOG_LEASE_FILE")
-            anvil-headless--watchdog-pulse-seconds
-            (string-to-number
-             (or (getenv "ANVIL_EMACS_WATCHDOG_PULSE_SECONDS") "")))
-      (unless (and anvil-headless--watchdog-pulse-file
-                   anvil-headless--watchdog-lease-file
-                   (> anvil-headless--watchdog-pulse-seconds 0))
-        (error "Anvil watchdog environment is incomplete"))
-      (anvil-headless--watchdog-set-lease-state nil)
-      (anvil-headless--watchdog-pulse)
-      (setq anvil-headless--watchdog-timer
-            (run-at-time
-             anvil-headless--watchdog-pulse-seconds
-             anvil-headless--watchdog-pulse-seconds
-             #'anvil-headless--watchdog-pulse)))
+        (require 'anvil)
+        (require 'anvil-server-commands)
+        (require 'anvil-worker)
 
-    (require 'anvil)
-    (require 'anvil-server-commands)
-    (require 'anvil-worker)
+        ;; Keep the direct typed registry diagnostic-only while publishing a
+        ;; union through the stable deployed id.  The typed modules register under
+        ;; "emacs-eval"; the eval/IDE modules use `anvil-server-id'.
+        (setq anvil-server-id "anvil")
 
-    ;; Keep promptdeploy's one universal "anvil" registration complete in
-    ;; dedicated mode.  The upstream split "emacs-eval" registry remains
-    ;; intact for direct diagnostics and the existing Darwin typed server.
-    (defvar anvil-headless--registering-tool nil)
+        (defun anvil-headless--mirror-registry-table
+            (registry-symbol source-id target-id)
+          "Copy SOURCE-ID entries in REGISTRY-SYMBOL into TARGET-ID.
+    Signal on collisions so the unified surface cannot silently replace a tool,
+    resource, or template already owned by the primary registry."
+          (let* ((registry (symbol-value registry-symbol))
+                 (source (gethash source-id registry)))
+            (when source
+              (let ((target
+                     (or (gethash target-id registry)
+                         (let ((table
+                                (make-hash-table :test (hash-table-test source))))
+                           (puthash target-id table registry)
+                           table))))
+                (maphash
+                 (lambda (key value)
+                   (when (gethash key target)
+                     (error "Anvil registry collision for %S in %s"
+                            key registry-symbol))
+                   (puthash key value target))
+                 source)))))
 
-    (defun anvil-headless--mirror-typed-tool (original handler &rest args)
-      (let ((outermost (not anvil-headless--registering-tool))
-            (anvil-headless--registering-tool t))
-        (let ((result (apply original handler args)))
-          (when (and outermost
-                     (equal (plist-get args :server-id) "emacs-eval"))
-            (let* ((tool-id (plist-get args :id))
-                   (typed-tools
-                    (anvil-server--get-server-tools "emacs-eval"))
-                   (tool (gethash tool-id typed-tools))
-                   (main-tools
-                    (anvil-server--get-server-tools "anvil")))
-              (unless tool
-                (error "Anvil typed tool disappeared after registration: %s"
-                       tool-id))
-              (puthash tool-id (copy-sequence tool) main-tools)
-              (anvil-server--tools-list-cache-invalidate "anvil")))
-          result)))
+        (defun anvil-headless--publish-unified-registry ()
+          "Mirror the direct typed surface into the stable Anvil registry."
+          (unless (gethash "emacs-eval" anvil-server--tools)
+            (error "Anvil direct typed registry is missing"))
+          (dolist (registry-symbol
+                   '(anvil-server--tools
+                     anvil-server--resources
+                     anvil-server--resource-templates))
+            (anvil-headless--mirror-registry-table
+             registry-symbol "emacs-eval" "anvil"))
+          (anvil-server--tools-list-cache-invalidate "anvil"))
 
-    (defun anvil-headless--mirror-typed-unregister
-        (original tool-id &optional server-id)
-      (let ((result (funcall original tool-id server-id)))
-        (when (equal server-id "emacs-eval")
-          (funcall original tool-id "anvil"))
-        result))
+        (defun anvil-headless--with-parent-pid-for-worker
+            (original &rest args)
+          "Spawn a worker from immutable root login environment snapshots."
+          (unless (and anvil-headless--baseline-process-environment
+                       anvil-headless--baseline-exec-path)
+            (error "Anvil worker baseline environment is unavailable"))
+          (let ((process-environment
+                 (copy-sequence
+                  anvil-headless--baseline-process-environment))
+                (exec-path
+                 (copy-sequence anvil-headless--baseline-exec-path))
+                (default-directory
+                 (file-name-as-directory user-emacs-directory)))
+            (setenv "ANVIL_HEADLESS_REAL_SHELL" nil)
+            (setenv "ANVIL_HEADLESS_PARENT_PID" nil)
+            (setenv "ANVIL_HEADLESS_PARENT_PID"
+                    (number-to-string (emacs-pid)))
+            (apply original args)))
 
-    (defun anvil-headless--mirror-existing-typed-tools ()
-      (let ((typed-tools
-             (anvil-server--get-server-tools "emacs-eval"))
-            (main-tools
-             (anvil-server--get-server-tools "anvil")))
-        (maphash
-         (lambda (tool-id tool)
-           (anvil-server--ref-counted-register
-            tool-id (copy-sequence tool) main-tools))
-         typed-tools)
-        (anvil-server--tools-list-cache-invalidate "anvil")))
+        (defun anvil-headless--offload-spawn-environment ()
+          "Return the immutable root baseline for one isolated async child."
+          (unless anvil-headless--baseline-process-environment
+            (error "Anvil offload baseline environment is unavailable"))
+          (let ((process-environment
+                 (copy-sequence anvil-headless--baseline-process-environment)))
+            ;; Inject containment controls after removing project-derived values.
+            (setenv "ANVIL_HEADLESS_PARENT_PID" (number-to-string (emacs-pid)))
+            (setenv "ANVIL_HEADLESS_REAL_SHELL" nil)
+            (setenv "ANVIL_EMACS_WORKER" "1")
+            process-environment))
 
-    (defun anvil-headless--with-parent-pid-for-worker
-        (original &rest args)
-      "Spawn a worker from immutable root login environment snapshots."
-      (unless (and anvil-headless--baseline-process-environment
-                   anvil-headless--baseline-exec-path)
-        (error "Anvil worker baseline environment is unavailable"))
-      (let ((process-environment
-             (copy-sequence
-              anvil-headless--baseline-process-environment))
-            (exec-path
-             (copy-sequence anvil-headless--baseline-exec-path))
-            (default-directory
-             (file-name-as-directory user-emacs-directory)))
-        (setenv "ANVIL_HEADLESS_REAL_SHELL" nil)
-        (setenv "ANVIL_HEADLESS_PARENT_PID" nil)
-        (setenv "ANVIL_HEADLESS_PARENT_PID"
-                (number-to-string (emacs-pid)))
-        (apply original args)))
+        (condition-case err
+            (progn
+              (load "${dedicatedEnvironmentInit}" nil nil t)
+              (anvil-headless--snapshot-baseline-environment)
+              (setq anvil-pdf-python "${pythonWithPyMuPDF}/bin/python3"
+                    anvil-offload-emacs-bin
+                    "${dedicatedOffloadEmacs}/bin/anvil-offload-emacs"
+                    anvil-offload-init-files (list "${dedicatedOffloadInit}")
+                    anvil-offload-spawn-environment-function
+                    #'anvil-headless--offload-spawn-environment
+                    anvil-offload-max-frame-bytes (* 2 1024 1024)
+                    anvil-worker-emacs-bin "${dedicatedWorkerEmacs}/bin/anvil-worker-emacs"
+                    anvil-worker-init-file "${dedicatedWorkerInit}"
+                    anvil-optional-modules
+                    '(ide elisp sexp semantic sqlite pdf cron state shell-filter
+                          context)
+                    anvil-server-autostart-on-request t)
 
-    (advice-add 'anvil-server-register-tool
-                :around #'anvil-headless--mirror-typed-tool)
-    (advice-add 'anvil-server-unregister-tool
-                :around #'anvil-headless--mirror-typed-unregister)
-    (anvil-headless--mirror-existing-typed-tools)
+              (unless (and (fboundp 'sqlite-available-p)
+                           (sqlite-available-p))
+                (error "Anvil requires Emacs SQLite support"))
+              (dolist (program '("emacs" "emacsclient"))
+                (unless (executable-find program)
+                  (error "Anvil requires %s on PATH" program)))
+              (unless (zerop
+                       (call-process anvil-pdf-python nil nil nil
+                                     "-c" "import fitz"))
+                (error "Anvil requires PyMuPDF"))
 
-    (condition-case err
-        (progn
-          (load "${dedicatedEnvironmentInit}" nil nil t)
-          (anvil-headless--snapshot-baseline-environment)
-          (setq anvil-pdf-python "${pythonWithPyMuPDF}/bin/python3"
-                anvil-worker-emacs-bin "${dedicatedWorkerEmacs}/bin/anvil-worker-emacs"
-                anvil-worker-init-file "${dedicatedWorkerInit}"
-                anvil-optional-modules
-                '(ide elisp sexp semantic sqlite pdf cron state shell-filter
-                      context)
-                anvil-server-autostart-on-request t)
-
-          (unless (and (fboundp 'sqlite-available-p)
-                       (sqlite-available-p))
-            (error "Anvil requires Emacs SQLite support"))
-          (dolist (program '("emacs" "emacsclient"))
-            (unless (executable-find program)
-              (error "Anvil requires %s on PATH" program)))
-          (unless (zerop
-                   (call-process anvil-pdf-python nil nil nil
-                                 "-c" "import fitz"))
-            (error "Anvil requires PyMuPDF"))
-
-          (unless (fboundp 'anvil-worker--spawn-worker)
-            (error "Anvil worker spawn function is unavailable"))
-          (advice-add 'anvil-worker--spawn-worker
-                      :around
-                      #'anvil-headless--with-parent-pid-for-worker)
-          (advice-add 'anvil-server-process-jsonrpc
-                      :around
-                      #'anvil-headless--watchdog-sync-dispatch)
-          (anvil-enable)
-          (let (actual-worker-specs)
-            (dolist (lane '(:read :write :batch))
-              (let ((pool (plist-get anvil-worker--pool lane)))
-                (dotimes (index (length pool))
-                  (push (list lane (plist-get (aref pool index) :name))
-                        actual-worker-specs))))
-            (setq actual-worker-specs (nreverse actual-worker-specs))
-            (unless (equal actual-worker-specs '${workerSpecsElisp})
-              (error "Anvil worker roster drifted: actual=%S expected=%S"
-                     actual-worker-specs '${workerSpecsElisp})))
-          (dolist (module (append anvil-modules anvil-optional-modules))
-            (unless (memq module anvil--loaded-modules)
-              (error "Anvil failed to load required module: %s" module)))
-          (setq anvil-eval-async-active-function
-                #'anvil-headless--watchdog-async-active
-                anvil-eval-async-idle-function
-                #'anvil-headless--watchdog-async-idle
-                anvil-eval-async-cleanup-failure-function
-                #'anvil-headless--watchdog-cleanup-failed)
-          (add-hook 'kill-emacs-hook #'anvil-worker-kill)
-          (anvil-server-start)
-          (anvil-headless--watchdog-arm))
-      (error
-       (message "Anvil headless startup failed: %s"
-                (error-message-string err))
-       (kill-emacs 70)))
+              (unless (fboundp 'anvil-worker--spawn-worker)
+                (error "Anvil worker spawn function is unavailable"))
+              (advice-add 'anvil-worker--spawn-worker
+                          :around
+                          #'anvil-headless--with-parent-pid-for-worker)
+              (advice-add 'anvil-server-process-jsonrpc
+                          :around
+                          #'anvil-headless--watchdog-sync-dispatch)
+              (anvil-enable)
+              (anvil-headless--publish-unified-registry)
+              (let (actual-worker-specs)
+                (dolist (lane '(:read :write :batch))
+                  (let ((pool (plist-get anvil-worker--pool lane)))
+                    (dotimes (index (length pool))
+                      (push (list lane (plist-get (aref pool index) :name))
+                            actual-worker-specs))))
+                (setq actual-worker-specs (nreverse actual-worker-specs))
+                (unless (equal actual-worker-specs '${workerSpecsElisp})
+                  (error "Anvil worker roster drifted: actual=%S expected=%S"
+                         actual-worker-specs '${workerSpecsElisp})))
+              (dolist (module (append anvil-modules anvil-optional-modules))
+                (unless (memq module anvil--loaded-modules)
+                  (error "Anvil failed to load required module: %s" module)))
+              (add-hook 'kill-emacs-hook #'anvil-worker-kill)
+              (anvil-server-start)
+              (anvil-headless--watchdog-arm))
+          (error
+           (message "Anvil headless startup failed: %s"
+                    (error-message-string err))
+           (kill-emacs 70)))
   '';
 
   dedicatedLockedStage = writeShellApplication {
@@ -2026,6 +2504,8 @@ let
       private_directory "$state_dir/cache" "host cache directory"
       private_directory "$state_dir/eln-cache" "host native-comp cache"
       private_directory "$state_dir/semantic" "host semantic state directory"
+      private_directory "$state_dir/offload" "offload state directory"
+      private_directory "$state_dir/offload/eln-cache" "offload native-comp cache"
       private_directory "$state_dir/workers" "worker state root"
       for worker in ${workerNamesShell}; do
         private_directory "$runtime_dir/workers/$worker" "$worker runtime directory"
@@ -2039,6 +2519,10 @@ let
       export XDG_RUNTIME_DIR="$runtime_dir"
       export XDG_CACHE_HOME="$state_dir/cache"
       export ANVIL_EMACS_STATE_DIR="$state_dir"
+      # Make the root socket explicit in every root-owned child environment.
+      # A nested anvil-mcp invocation then fails its per-agent socket-override
+      # guard immediately instead of waiting recursively on this same root.
+      export ANVIL_EMACS_SOCKET="$runtime_dir/emacs/server"
       export TMPDIR="$runtime_dir/tmp"
       export TMP="$TMPDIR"
       export TEMP="$TMPDIR"
@@ -2109,6 +2593,8 @@ let
         "${dedicatedLockedStage}/bin/anvil-headless-emacs-locked"
     '';
   };
+  dedicatedAgentDaemon = if agentDaemonOverride == null then dedicatedDaemon else agentDaemonOverride;
+  dedicatedGeneration = builtins.hashString "sha256" "${dedicatedAgentSupervisor}|${dedicatedParentGuardLauncher}|${dedicatedAgentDaemon}|${dedicatedAnvil}|${dedicatedAnvilIde}|${dedicatedOffloadEmacs}|${dedicatedOffloadInit}|${dedicatedSafeEmacsclient}|${generationSalt}";
   dedicatedLauncher = writeShellApplication {
     name = "anvil-mcp";
     runtimeInputs = [
@@ -2123,6 +2609,15 @@ let
     ];
     text = ''
       ${privateDirectoryFunctions}
+
+      if [ "''${ANVIL_MCP_LAUNCHER_GUARDED:-}" != "$$" ]; then
+        export ANVIL_MCP_LAUNCHER_GUARDED="$$"
+        ANVIL_HEADLESS_PARENT_PID="$PPID" \
+          exec "${python3}/bin/python3" -I -S \
+            "${dedicatedParentGuardLauncher}" external-group \
+            "$0" "$@"
+      fi
+      unset ANVIL_MCP_LAUNCHER_GUARDED
 
       server_id=anvil
       socket="''${ANVIL_EMACS_SOCKET:-}"
@@ -2194,21 +2689,19 @@ let
         private_directory "$runtime_root/$short_host" "host runtime directory"
         private_directory "$state_root" "state root"
         private_directory "$state_root/$short_host" "host state directory"
-        ANVIL_HEADLESS_PARENT_PID="$PPID" \
-          exec "${python3}/bin/python3" -I -S \
-            "${dedicatedParentGuardLauncher}" external-group \
-            "${python3}/bin/python3" -I -S "${dedicatedAgentSupervisor}" \
+        exec "${python3}/bin/python3" -I -S "${dedicatedAgentSupervisor}" \
               --server-id "$server_id" \
+              --generation "${dedicatedGeneration}" \
               --host "$short_host" \
               --runtime-root "$runtime_root" \
               --state-root "$state_root" \
-              --daemon "${dedicatedDaemon}/bin/anvil-headless-emacs" \
+              --daemon "${dedicatedAgentDaemon}/bin/anvil-headless-emacs" \
               --stdio "${dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh" \
               --emacsclient "${dedicatedRuntimeEmacs}/bin/emacsclient" \
               --python "${python3}/bin/python3" \
               --parent-guard "${dedicatedParentGuardLauncher}" \
               --grace-seconds "''${ANVIL_AGENT_GRACE_SECONDS:-5}" \
-              --ready-seconds "''${ANVIL_AGENT_READY_SECONDS:-120}"
+              --ready-seconds "''${ANVIL_AGENT_READY_SECONDS:-${toString timeoutPolicy.supervisorReadySeconds}}"
       ''}
 
       if [ -z "$socket" ]; then
@@ -2221,38 +2714,33 @@ let
         socket="$runtime_dir/emacs/server"
       fi
 
-      ready=
-      for _ in $(seq 1 120); do
-        if [ -L "$socket" ]; then
-          echo "anvil-mcp: Emacs socket must not be a symbolic link: $socket" >&2
+      if [ -L "$socket" ]; then
+        echo "anvil-mcp: Emacs socket must not be a symbolic link: $socket" >&2
+        exit 77
+      fi
+      if [ -e "$socket" ] && [ ! -S "$socket" ]; then
+        echo "anvil-mcp: Emacs socket path must be a socket: $socket" >&2
+        exit 77
+      fi
+      if [ -S "$socket" ]; then
+        socket_owner=$(stat -c '%u' -- "$socket") || {
+          echo "anvil-mcp: cannot inspect Emacs socket owner: $socket" >&2
+          exit 77
+        }
+        current_uid=$(id -u)
+        if [ "$socket_owner" != "$current_uid" ]; then
+          echo "anvil-mcp: Emacs socket must be owned by uid $current_uid (found $socket_owner): $socket" >&2
           exit 77
         fi
-        if [ -e "$socket" ] && [ ! -S "$socket" ]; then
-          echo "anvil-mcp: Emacs socket path must be a socket: $socket" >&2
-          exit 77
-        fi
-        if [ -S "$socket" ]; then
-          socket_owner=$(stat -c '%u' -- "$socket") || {
-            echo "anvil-mcp: cannot inspect Emacs socket owner: $socket" >&2
-            exit 77
-          }
-          if [ "$socket_owner" != "$(id -u)" ]; then
-            echo "anvil-mcp: Emacs socket must be owned by uid $(id -u) (found $socket_owner): $socket" >&2
-            exit 77
-          fi
-          if "${dedicatedRuntimeEmacs}/bin/emacsclient" -s "$socket" -e t >/dev/null 2>&1; then
-            ready=1
-            break
-          fi
-        fi
-        sleep 0.25
-      done
-      if [ -z "$ready" ]; then
-        echo "anvil-mcp: dedicated Emacs did not become ready at $socket" >&2
-        exit 69
       fi
 
-      exec "${dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh"         "--socket=$socket"         "--server-id=$server_id"
+      # The bridge owns bounded readiness retries; avoid an unguarded duplicate
+      # emacsclient probe in the launcher.
+      export ANVIL_MCP_PARENT_GUARD="${dedicatedParentGuardLauncher}"
+      export ANVIL_MCP_PARENT_GUARD_PYTHON="${python3}/bin/python3"
+      exec "${dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh" \
+        "--socket=$socket" \
+        "--server-id=$server_id"
     '';
   };
 
@@ -2279,17 +2767,25 @@ let
         dedicatedInit
         dedicatedLockLauncher
         dedicatedLockedStage
+        dedicatedParentGuardLauncher
+        dedicatedOffloadEmacs
+        dedicatedOffloadInit
         dedicatedRuntimeEmacs
+        dedicatedSafeEmacsclient
+        dedicatedSafeEmacsclientGuard
         dedicatedAgentSupervisor
         direnv
+        git
         dedicatedWorkerEmacs
         dedicatedWorkerInit
         workerNames
+        timeoutPolicy
         workerPoolSizes
         workerSpecs
         ;
       dedicatedAgentSupervisorSmoke = ./agent-supervisor-smoke.py;
       dedicatedAgentSupervisorTest = ./agent-supervisor-test.py;
+      dedicatedPersistentBridgeSoak = ./persistent-bridge-soak.py;
     };
     meta = commonMeta // {
       description = "Dedicated-Emacs Anvil MCP launcher";
@@ -2307,10 +2803,20 @@ let
         coreutils
         emacs
         gawk
+        python3
         gnugrep
         gnused
       ];
       text = ''
+        if [ "''${ANVIL_MCP_LAUNCHER_GUARDED:-}" != "$$" ]; then
+          export ANVIL_MCP_LAUNCHER_GUARDED="$$"
+          ANVIL_HEADLESS_PARENT_PID="$PPID" \
+            exec "${python3}/bin/python3" -I -S \
+              "${dedicatedParentGuardLauncher}" external-group \
+              "$0" "$@"
+        fi
+        unset ANVIL_MCP_LAUNCHER_GUARDED
+
         server_id=anvil
         socket="''${ANVIL_EMACS_SOCKET:-/tmp/johnw-emacs/server}"
 
@@ -2367,7 +2873,11 @@ let
         # The MCP bridge must never launch an interactive fallback editor.
         unset ALTERNATE_EDITOR
 
-        exec "${emacsPackages.anvil}/share/emacs/site-lisp/anvil-stdio.sh"           "--socket=$socket"           "--server-id=$server_id"
+        export ANVIL_MCP_PARENT_GUARD="${dedicatedParentGuardLauncher}"
+        export ANVIL_MCP_PARENT_GUARD_PYTHON="${python3}/bin/python3"
+        exec "${emacsPackages.anvil}/share/emacs/site-lisp/anvil-stdio.sh" \
+          "--socket=$socket" \
+          "--server-id=$server_id"
       '';
     }).overrideAttrs
       (_old: {

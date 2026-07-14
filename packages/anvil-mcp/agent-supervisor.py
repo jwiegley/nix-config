@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Agent supervisor for per-Codex-process dedicated Anvil Emacs daemons."""
+"""Supervisor for bridge-local dedicated Anvil Emacs daemons."""
 
 from __future__ import annotations
 
 import argparse
 import ctypes
 import errno
+from enum import Enum
 import fcntl
 import hashlib
 import json
@@ -26,17 +27,25 @@ EXIT_SOFTWARE = 70
 EXIT_CONFIG = 77
 LOCK_NAME = ".anvil-agent-supervisor.lock"
 STATUS_NAME = ".anvil-agent-supervisor.json"
+DAEMON_DIAGNOSTIC_NAME = ".anvil-daemon.log"
 AGENT_KEY_PATTERN = re.compile(r"[0-9a-f]{32}")
+GENERATION_PATTERN = re.compile(r"[0-9a-f]{64}")
 LINUX_BOOT_ID_PATTERN = re.compile(
     r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-"
     r"[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
 )
 HOST_PATTERN = re.compile(r"[A-Za-z0-9._-]+")
 SERVER_IDS = frozenset(("anvil", "emacs-eval"))
+RECORD_FORMAT_V1 = 1
+RECORD_FORMAT_V2 = 2
 MAX_LEASE_BYTES = 8192
+MAX_DAEMON_DIAGNOSTIC_BYTES = 128 * 1024
 POLL_SECONDS = 0.25
+CARETAKER_ENSURE_SECONDS = 0.5
+CARETAKER_ENSURE_MAX_BACKOFF_SECONDS = 5.0
 DAEMON_STOP_SECONDS = 5.0
 SUPERVISOR_HANDSHAKE_SECONDS = 5.0
+MAX_READY_SECONDS = 120.0
 STARTUP_STATUS_RETRY_SECONDS = 4.0
 RESTART_BACKOFF_INITIAL_SECONDS = 0.5
 RESTART_BACKOFF_MAX_SECONDS = 60.0
@@ -67,24 +76,35 @@ class ConfigurationError(RuntimeError):
     """A caller supplied unsafe or inconsistent lifecycle configuration."""
 
 
+class LifecycleState(Enum):
+    """Whether a lifecycle identity is live, dead, or temporarily unreadable."""
+
+    LIVE = "live"
+    DEAD = "dead"
+    UNAVAILABLE = "unavailable"
+
+
 def fail(message: str, status: int = EXIT_SOFTWARE) -> NoReturn:
     print(f"anvil-mcp: per-agent daemon: {message}", file=sys.stderr)
     raise SystemExit(status)
 
 
 def validate_agent_key(raw: str) -> str:
-    """Reject path-like or otherwise malformed owner identifiers."""
+    """Reject path-like or otherwise malformed bridge identifiers."""
     if not isinstance(raw, str) or AGENT_KEY_PATTERN.fullmatch(raw) is None:
-        raise ConfigurationError("invalid Codex owner identity hash")
+        raise ConfigurationError("invalid MCP bridge identity hash")
+    return raw
+
+
+def validate_generation(raw: str) -> str:
+    """Validate the immutable package-generation token supplied by Nix."""
+    if not isinstance(raw, str) or GENERATION_PATTERN.fullmatch(raw) is None:
+        raise ConfigurationError("invalid packaged runtime generation")
     return raw
 
 
 def validate_host(raw: str) -> str:
-    if (
-        not raw
-        or raw in (".", "..")
-        or HOST_PATTERN.fullmatch(raw) is None
-    ):
+    if not raw or raw in (".", "..") or HOST_PATTERN.fullmatch(raw) is None:
         raise ConfigurationError(f"unsafe host component: {raw!r}")
     return raw
 
@@ -213,10 +233,14 @@ def linux_boot_id() -> str | None:
     if _LINUX_BOOT_ID_INITIALIZED:
         return _LINUX_BOOT_ID
     try:
-        boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(
-            encoding="ascii"
-        ).strip()
-    except (FileNotFoundError, PermissionError, OSError):
+        boot_id = (
+            Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
+        )
+    except FileNotFoundError:
+        boot_id = ""
+    except OSError as error:
+        if transient_supervisor_error(error):
+            raise
         boot_id = ""
     _LINUX_BOOT_ID = (
         boot_id.lower()
@@ -227,23 +251,34 @@ def linux_boot_id() -> str | None:
     return _LINUX_BOOT_ID
 
 
-def linux_process_start(pid: int) -> str | None:
-    boot_id = linux_boot_id()
+def linux_process_start_state(pid: int) -> tuple[LifecycleState, str | None]:
+    """Probe one Linux PID without confusing read failure with process death."""
+    try:
+        boot_id = linux_boot_id()
+    except OSError:
+        return LifecycleState.UNAVAILABLE, None
     if boot_id is None:
-        return None
+        return LifecycleState.UNAVAILABLE, None
     try:
         raw = Path(f"/proc/{pid}/stat").read_text(encoding="ascii")
-    except (FileNotFoundError, PermissionError, ProcessLookupError, OSError):
-        return None
+    except (FileNotFoundError, ProcessLookupError):
+        return LifecycleState.DEAD, None
+    except OSError:
+        return LifecycleState.UNAVAILABLE, None
     closing = raw.rfind(")")
     if closing < 0:
-        return None
+        return LifecycleState.UNAVAILABLE, None
     fields = raw[closing + 2 :].split()
     if len(fields) <= 19 or not fields[19].isdecimal():
-        return None
+        return LifecycleState.UNAVAILABLE, None
     if fields[0] in ("Z", "X"):
-        return None
-    return f"linux:{boot_id}:{fields[19]}"
+        return LifecycleState.DEAD, None
+    return LifecycleState.LIVE, f"linux:{boot_id}:{fields[19]}"
+
+
+def linux_process_start(pid: int) -> str | None:
+    state, identity = linux_process_start_state(pid)
+    return identity if state is LifecycleState.LIVE else None
 
 
 def darwin_proc_pidinfo():
@@ -272,92 +307,113 @@ def darwin_proc_pidinfo():
     return _DARWIN_PROC_PIDINFO
 
 
-def darwin_process_start(pid: int) -> str | None:
+def darwin_process_start_state(pid: int) -> tuple[LifecycleState, str | None]:
+    """Probe one Darwin PID without treating libproc failure as death."""
     proc_pidinfo = darwin_proc_pidinfo()
     if proc_pidinfo is None:
-        return None
+        return LifecycleState.UNAVAILABLE, None
     info = DarwinBSDInfo()
-    result = proc_pidinfo(
-        pid,
-        3,  # PROC_PIDTBSDINFO
-        0,
-        ctypes.byref(info),
-        ctypes.sizeof(info),
-    )
-    if (
-        result != ctypes.sizeof(info)
-        or info.pbi_pid != pid
-        or info.pbi_status == 5  # SZOMB
-    ):
-        return None
-    return f"darwin:{info.pbi_start_tvsec}:{info.pbi_start_tvusec}"
+    ctypes.set_errno(0)
+    try:
+        result = proc_pidinfo(
+            pid,
+            3,  # PROC_PIDTBSDINFO
+            0,
+            ctypes.byref(info),
+            ctypes.sizeof(info),
+        )
+    except OSError:
+        return LifecycleState.UNAVAILABLE, None
+    if result == ctypes.sizeof(info) and info.pbi_pid == pid:
+        if info.pbi_status == 5:  # SZOMB
+            return LifecycleState.DEAD, None
+        identity = f"darwin:{info.pbi_start_tvsec}:{info.pbi_start_tvusec}"
+        return LifecycleState.LIVE, identity
+    error_number = ctypes.get_errno()
+    if result == 0 and error_number == errno.ESRCH:
+        return LifecycleState.DEAD, None
+    return LifecycleState.UNAVAILABLE, None
+
+
+def darwin_process_start(pid: int) -> str | None:
+    state, identity = darwin_process_start_state(pid)
+    return identity if state is LifecycleState.LIVE else None
+
+
+def process_start_state(pid: int) -> tuple[LifecycleState, str | None]:
+    """Return a tri-state PID-reuse-resistant process identity probe."""
+    if pid <= 1:
+        return LifecycleState.DEAD, None
+    if sys.platform.startswith("linux"):
+        return linux_process_start_state(pid)
+    if sys.platform == "darwin":
+        return darwin_process_start_state(pid)
+    return LifecycleState.UNAVAILABLE, None
 
 
 def process_start_identity(pid: int) -> str | None:
     """Return a PID-reuse-resistant operating-system start identity."""
-    if pid <= 1:
-        return None
-    if sys.platform.startswith("linux"):
-        return linux_process_start(pid)
-    if sys.platform == "darwin":
-        return darwin_process_start(pid)
-    return None
+    state, identity = process_start_state(pid)
+    return identity if state is LifecycleState.LIVE else None
+
+
+def validate_process_identity(pid: int, expected: str) -> LifecycleState:
+    """Validate EXPECTED while preserving temporary probe unavailability."""
+    state, identity = process_start_state(pid)
+    if state is not LifecycleState.LIVE:
+        return state
+    return LifecycleState.LIVE if identity == expected else LifecycleState.DEAD
+
+
+def lifecycle_unavailable(message: str) -> OSError:
+    """Return a retryable error for the supervisor's bounded backoff path."""
+    return OSError(errno.EAGAIN, message)
 
 
 def derive_agent_key(
-    owner_pid: int,
-    owner_start_identity: str,
+    bridge_pid: int,
+    bridge_start_identity: str,
+    generation: str,
     uid: int | None = None,
 ) -> str:
-    """Derive a private path component for one owning Codex process."""
-    if not isinstance(owner_pid, int) or owner_pid <= 1:
-        raise ConfigurationError("invalid owning Codex process PID")
-    if not isinstance(owner_start_identity, str) or not owner_start_identity:
-        raise ConfigurationError("invalid owning Codex process start identity")
-    owner_uid = os.getuid() if uid is None else uid
-    if not isinstance(owner_uid, int) or owner_uid < 0:
-        raise ConfigurationError("invalid owning Codex process uid")
+    """Derive one bridge- and package-generation-qualified path component."""
+    if not isinstance(bridge_pid, int) or bridge_pid <= 1:
+        raise ConfigurationError("invalid MCP bridge PID")
+    if not isinstance(bridge_start_identity, str) or not bridge_start_identity:
+        raise ConfigurationError("invalid MCP bridge start identity")
+    generation = validate_generation(generation)
+    bridge_uid = os.getuid() if uid is None else uid
+    if not isinstance(bridge_uid, int) or bridge_uid < 0:
+        raise ConfigurationError("invalid MCP bridge uid")
     material = (
-        f"anvil-codex-owner-v1\0{owner_uid}\0{owner_pid}\0"
-        f"{owner_start_identity}"
+        f"anvil-mcp-bridge-v2\0{bridge_uid}\0{bridge_pid}\0"
+        f"{bridge_start_identity}\0{generation}"
     ).encode("utf-8")
     return hashlib.sha256(material).hexdigest()[:32]
 
 
-def owner_pipe_closed(descriptor: int = 0) -> bool:
-    """Detect owner-pipe failure without consuming buffered MCP input."""
+def input_pipe_closed(descriptor: int = 0) -> bool:
+    """Detect MCP-input failure without consuming buffered requests."""
     try:
         poller = select.poll()
         failure_events = select.POLLHUP | select.POLLERR | select.POLLNVAL
         poller.register(descriptor, failure_events)
-        return any(
-            events & failure_events
-            for _descriptor, events in poller.poll(0)
-        )
+        return any(events & failure_events for _descriptor, events in poller.poll(0))
     except (OSError, ValueError):
         return True
 
 
-def identify_owner(input_descriptor: int = 0) -> tuple[int, str]:
-    """Identify the stable OS process that directly owns this MCP bridge."""
-    if owner_pipe_closed(input_descriptor):
-        raise ConfigurationError("owning Codex MCP input pipe is closed")
-    first_pid = os.getppid()
-    first_identity = process_start_identity(first_pid)
-    second_pid = os.getppid()
-    second_identity = process_start_identity(second_pid)
-    final_pid = os.getppid()
-    if first_identity is None or second_identity is None:
-        raise ConfigurationError("cannot identify the owning Codex process")
-    if (
-        first_pid != second_pid
-        or second_pid != final_pid
-        or first_identity != second_identity
-    ):
-        raise ConfigurationError("owning Codex process changed during startup")
-    if owner_pipe_closed(input_descriptor):
-        raise ConfigurationError("owning Codex MCP input pipe closed during startup")
-    return first_pid, first_identity
+def identify_bridge(input_descriptor: int = 0) -> tuple[int, str]:
+    """Identify this exact MCP bridge process generation without its parent."""
+    if input_pipe_closed(input_descriptor):
+        raise ConfigurationError("MCP input pipe is closed")
+    bridge_pid = os.getpid()
+    bridge_identity = process_start_identity(bridge_pid)
+    if bridge_identity is None:
+        raise ConfigurationError("cannot identify this MCP bridge process")
+    if input_pipe_closed(input_descriptor):
+        raise ConfigurationError("MCP input pipe closed during startup")
+    return bridge_pid, bridge_identity
 
 
 def write_all(descriptor: int, payload: bytes) -> None:
@@ -439,7 +495,9 @@ def register_lease(
     agent_key: str,
     owner_pid: int,
     owner_start_identity: str,
+    generation: str,
 ) -> tuple[Path, dict[str, object]]:
+    generation = validate_generation(generation)
     pid = os.getpid()
     identity = process_start_identity(pid)
     if identity is None:
@@ -447,7 +505,9 @@ def register_lease(
     token = os.urandom(16).hex()
     name = f"lease-{server_id}-{pid}-{token}.json"
     record: dict[str, object] = {
-        "format": 1,
+        "format": RECORD_FORMAT_V2,
+        "version": RECORD_FORMAT_V2,
+        "generation": generation,
         "bridge_pid": pid,
         "bridge_start_identity": identity,
         "agent_key": agent_key,
@@ -482,7 +542,8 @@ def read_lease(
     agent_key: str,
     owner_pid: int,
     owner_start_identity: str,
-) -> dict[str, object] | None:
+    generation: str | None,
+) -> tuple[LifecycleState, dict[str, object] | None]:
     descriptor = None
     identity: tuple[int, int] | None = None
     try:
@@ -501,12 +562,12 @@ def read_lease(
             or stat.S_IMODE(descriptor_info.st_mode) != 0o600
             or (path_info.st_dev, path_info.st_ino) != identity
         ):
-            return None
+            return LifecycleState.DEAD, None
         payload = os.read(descriptor, MAX_LEASE_BYTES + 1)
         if len(payload) > MAX_LEASE_BYTES:
-            return None
+            return LifecycleState.DEAD, None
         record = json.loads(payload.decode("utf-8"))
-        if not isinstance(record, dict) or set(record) != {
+        v1_keys = {
             "bridge_pid",
             "bridge_start_identity",
             "format",
@@ -515,12 +576,31 @@ def read_lease(
             "owner_start_identity",
             "server_id",
             "uid",
-        }:
-            return None
+        }
+        v2_keys = v1_keys | {"generation", "version"}
+        if not isinstance(record, dict):
+            return LifecycleState.DEAD, None
+        record_format = record.get("format")
+        if record_format == RECORD_FORMAT_V1:
+            if set(record) != v1_keys or generation is not None:
+                return LifecycleState.DEAD, None
+        elif record_format == RECORD_FORMAT_V2:
+            if (
+                set(record) != v2_keys
+                or record.get("version") != RECORD_FORMAT_V2
+                or generation is None
+                or record.get("generation") != generation
+            ):
+                return LifecycleState.DEAD, None
+            try:
+                validate_generation(record["generation"])
+            except ConfigurationError:
+                return LifecycleState.DEAD, None
+        else:
+            return LifecycleState.DEAD, None
         bridge_pid = record["bridge_pid"]
         if (
-            record["format"] != 1
-            or not isinstance(bridge_pid, int)
+            not isinstance(bridge_pid, int)
             or bridge_pid <= 1
             or record["uid"] != os.getuid()
             or record["server_id"] not in SERVER_IDS
@@ -528,13 +608,21 @@ def read_lease(
             or record["owner_pid"] != owner_pid
             or record["owner_start_identity"] != owner_start_identity
             or not isinstance(record["bridge_start_identity"], str)
-            or process_start_identity(bridge_pid)
-            != record["bridge_start_identity"]
         ):
-            return None
-        return record
-    except (FileNotFoundError, PermissionError, OSError, ValueError, UnicodeError):
-        return None
+            return LifecycleState.DEAD, None
+        bridge_state = validate_process_identity(
+            bridge_pid,
+            record["bridge_start_identity"],
+        )
+        if bridge_state is not LifecycleState.LIVE:
+            return bridge_state, None
+        return LifecycleState.LIVE, record
+    except (FileNotFoundError, ValueError, UnicodeError):
+        return LifecycleState.DEAD, None
+    except OSError as error:
+        if error.errno == errno.ELOOP:
+            return LifecycleState.DEAD, None
+        return LifecycleState.UNAVAILABLE, None
     finally:
         if descriptor is not None:
             os.close(descriptor)
@@ -545,6 +633,7 @@ def live_leases(
     agent_key: str,
     owner_pid: int,
     owner_start_identity: str,
+    generation: str | None,
     *,
     owner_validated: bool = False,
 ) -> list[dict[str, object]]:
@@ -553,9 +642,16 @@ def live_leases(
         os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
     )
     live: list[dict[str, object]] = []
-    owner_alive = owner_validated or (
-        process_start_identity(owner_pid) == owner_start_identity
+    owner_state = (
+        LifecycleState.LIVE
+        if owner_validated
+        else validate_process_identity(owner_pid, owner_start_identity)
     )
+    if owner_state is LifecycleState.UNAVAILABLE:
+        os.close(directory_fd)
+        raise lifecycle_unavailable("owner process identity is unavailable")
+    owner_alive = owner_state is LifecycleState.LIVE
+    unavailable = False
     try:
         for name in os.listdir(directory_fd):
             if not name.startswith("lease-") or not name.endswith(".json"):
@@ -565,21 +661,26 @@ def live_leases(
             except FileNotFoundError:
                 continue
             expected = (info.st_dev, info.st_ino)
-            record = (
+            lease_state, record = (
                 read_lease(
                     directory_fd,
                     name,
                     agent_key,
                     owner_pid,
                     owner_start_identity,
+                    generation,
                 )
                 if owner_alive
-                else None
+                else (LifecycleState.DEAD, None)
             )
-            if record is None:
+            if lease_state is LifecycleState.DEAD:
                 unlink_if_identity(directory_fd, name, expected)
-            else:
+            elif lease_state is LifecycleState.UNAVAILABLE:
+                unavailable = True
+            elif record is not None:
                 live.append(record)
+        if unavailable:
+            raise lifecycle_unavailable("lease lifecycle is unavailable")
         return live
     finally:
         os.close(directory_fd)
@@ -682,11 +783,11 @@ def remove_instance_tree(path: Path) -> None:
         os.close(parent_fd)
 
 
-def read_status_owner(
+def read_status_lifecycle(
     runtime_dir: Path,
     agent_key: str,
-) -> tuple[int, str] | None:
-    """Read the trusted owner identity from a private supervisor status."""
+) -> tuple[int, str, str | None, int] | None:
+    """Read a trusted v1/v2 lifetime identity from private supervisor state."""
     directory_fd = None
     descriptor = None
     try:
@@ -727,18 +828,32 @@ def read_status_owner(
         record = json.loads(payload.decode("utf-8"))
         if not isinstance(record, dict):
             return None
+        record_format = record.get("format")
         owner_pid = record.get("owner_pid")
         owner_identity = record.get("owner_start_identity")
         if (
-            record.get("format") != 1
-            or record.get("agent_key") != agent_key
+            record.get("agent_key") != agent_key
             or not isinstance(owner_pid, int)
             or owner_pid <= 1
             or not isinstance(owner_identity, str)
             or not owner_identity
         ):
             return None
-        return owner_pid, owner_identity
+        if record_format == RECORD_FORMAT_V1:
+            if "generation" in record or "version" in record:
+                return None
+            return owner_pid, owner_identity, None, RECORD_FORMAT_V1
+        if (
+            record_format != RECORD_FORMAT_V2
+            or record.get("version") != RECORD_FORMAT_V2
+        ):
+            return None
+        generation = record.get("generation")
+        try:
+            generation = validate_generation(generation)
+        except ConfigurationError:
+            return None
+        return owner_pid, owner_identity, generation, RECORD_FORMAT_V2
     except (FileNotFoundError, PermissionError, OSError, ValueError, UnicodeError):
         return None
     finally:
@@ -746,6 +861,17 @@ def read_status_owner(
             os.close(descriptor)
         if directory_fd is not None:
             os.close(directory_fd)
+
+
+def read_status_owner(
+    runtime_dir: Path,
+    agent_key: str,
+) -> tuple[int, str] | None:
+    """Read the lifetime PID/start identity from a safe v1 or v2 status."""
+    lifecycle = read_status_lifecycle(runtime_dir, agent_key)
+    if lifecycle is None:
+        return None
+    return lifecycle[0], lifecycle[1]
 
 
 def prune_orphaned_state(
@@ -777,7 +903,8 @@ def prune_orphaned_state(
             owner = read_status_owner(runtime_path, name)
             if (
                 owner is None
-                or process_start_identity(owner[0]) == owner[1]
+                or validate_process_identity(owner[0], owner[1])
+                is not LifecycleState.DEAD
             ):
                 continue
             try:
@@ -796,7 +923,8 @@ def prune_orphaned_state(
                 confirmed = read_status_owner(runtime_path, name)
                 if (
                     confirmed is None
-                    or process_start_identity(confirmed[0]) == confirmed[1]
+                    or validate_process_identity(confirmed[0], confirmed[1])
+                    is not LifecycleState.DEAD
                 ):
                     continue
                 remove_instance_tree(runtime_path)
@@ -821,6 +949,7 @@ def cleanup_instance(args: argparse.Namespace) -> None:
 
 def ofd_lock_bytes() -> tuple[int, bytes]:
     if sys.platform == "darwin":
+
         class Flock(ctypes.Structure):
             _fields_ = [
                 ("l_start", ctypes.c_longlong),
@@ -832,6 +961,7 @@ def ofd_lock_bytes() -> tuple[int, bytes]:
 
         command = getattr(fcntl, "F_OFD_SETLK", 90)
     elif sys.platform.startswith("linux"):
+
         class Flock(ctypes.Structure):
             _fields_ = [
                 ("l_type", ctypes.c_short),
@@ -909,9 +1039,7 @@ def close_descriptors_except(keep: set[int]) -> None:
     for descriptor_root in ("/dev/fd", "/proc/self/fd"):
         try:
             candidates = [
-                int(name)
-                for name in os.listdir(descriptor_root)
-                if name.isdecimal()
+                int(name) for name in os.listdir(descriptor_root) if name.isdecimal()
             ]
             break
         except OSError:
@@ -961,6 +1089,91 @@ def transport_environment() -> dict[str, str]:
     return environment
 
 
+def open_daemon_diagnostic(runtime_dir: Path) -> int:
+    """Open one private, truncate-on-launch daemon-only diagnostic file."""
+    directory_fd = os.open(
+        runtime_dir,
+        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+    )
+    descriptor = None
+    try:
+        descriptor = os.open(
+            DAEMON_DIAGNOSTIC_NAME,
+            os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW,
+            0o600,
+            dir_fd=directory_fd,
+        )
+        descriptor_info = os.fstat(descriptor)
+        path_info = os.stat(
+            DAEMON_DIAGNOSTIC_NAME,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+        identity = (descriptor_info.st_dev, descriptor_info.st_ino)
+        if (
+            not stat.S_ISREG(descriptor_info.st_mode)
+            or descriptor_info.st_uid != os.getuid()
+            or descriptor_info.st_nlink != 1
+            or (path_info.st_dev, path_info.st_ino) != identity
+        ):
+            raise ConfigurationError("unsafe daemon diagnostic file")
+        os.fchmod(descriptor, 0o600)
+        os.ftruncate(descriptor, 0)
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        return descriptor
+    except BaseException:
+        if descriptor is not None:
+            os.close(descriptor)
+        raise
+    finally:
+        os.close(directory_fd)
+
+
+def drain_daemon_diagnostic(process: subprocess.Popen[bytes] | None) -> None:
+    """Drain daemon output without blocking, retaining only a bounded prefix."""
+    if process is None:
+        return
+    read_descriptor = getattr(process, "_anvil_diagnostic_read_fd", None)
+    output_descriptor = getattr(process, "_anvil_diagnostic_output_fd", None)
+    if read_descriptor is None:
+        return
+    written = getattr(process, "_anvil_diagnostic_written", 0)
+    while True:
+        try:
+            chunk = os.read(read_descriptor, 16384)
+        except BlockingIOError:
+            break
+        except OSError as error:
+            if error.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                break
+            raise
+        if not chunk:
+            os.close(read_descriptor)
+            setattr(process, "_anvil_diagnostic_read_fd", None)
+            break
+        remaining = max(0, MAX_DAEMON_DIAGNOSTIC_BYTES - written)
+        if remaining and output_descriptor is not None:
+            retained = chunk[:remaining]
+            write_all(output_descriptor, retained)
+            written += len(retained)
+            setattr(process, "_anvil_diagnostic_written", written)
+
+
+def close_daemon_diagnostic(process: subprocess.Popen[bytes] | None) -> None:
+    """Finish and close a daemon's supervisor-owned diagnostic descriptors."""
+    if process is None:
+        return
+    drain_daemon_diagnostic(process)
+    for attribute in (
+        "_anvil_diagnostic_read_fd",
+        "_anvil_diagnostic_output_fd",
+    ):
+        descriptor = getattr(process, attribute, None)
+        if descriptor is not None:
+            os.close(descriptor)
+            setattr(process, attribute, None)
+
+
 def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
     command = [
         args.python,
@@ -970,37 +1183,51 @@ def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
         "group",
         args.daemon,
     ]
-    return subprocess.Popen(
-        command,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        env=daemon_environment(args),
-        start_new_session=True,
-        close_fds=True,
-    )
+    diagnostic_descriptor = open_daemon_diagnostic(args.runtime_dir)
+    read_descriptor, write_descriptor = os.pipe()
+    os.set_blocking(read_descriptor, False)
+    try:
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.DEVNULL,
+            stdout=write_descriptor,
+            stderr=write_descriptor,
+            env=daemon_environment(args),
+            start_new_session=True,
+            close_fds=True,
+        )
+    except BaseException:
+        os.close(read_descriptor)
+        os.close(diagnostic_descriptor)
+        raise
+    finally:
+        os.close(write_descriptor)
+    setattr(process, "_anvil_diagnostic_read_fd", read_descriptor)
+    setattr(process, "_anvil_diagnostic_output_fd", diagnostic_descriptor)
+    setattr(process, "_anvil_diagnostic_written", 0)
+    return process
 
 
 def stop_daemon(process: subprocess.Popen[bytes] | None) -> None:
-    if process is None or process.poll() is not None:
+    if process is None:
         return
-    try:
-        os.killpg(process.pid, signal.SIGTERM)
-    except ProcessLookupError:
-        pass
-    try:
-        process.wait(timeout=DAEMON_STOP_SECONDS)
-        return
-    except subprocess.TimeoutExpired:
-        pass
-    try:
-        os.killpg(process.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
-    try:
-        process.wait(timeout=DAEMON_STOP_SECONDS)
-    except subprocess.TimeoutExpired:
-        pass
+    if process.poll() is None:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            process.wait(timeout=DAEMON_STOP_SECONDS)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            try:
+                process.wait(timeout=DAEMON_STOP_SECONDS)
+            except subprocess.TimeoutExpired:
+                pass
+    close_daemon_diagnostic(process)
 
 
 def restart_backoff_seconds(failures: int) -> float:
@@ -1080,30 +1307,39 @@ def refresh_lifecycle_records(
 
 
 def owner_seed_record(args: argparse.Namespace) -> dict[str, object]:
-    """Return trusted ownership without claiming a live supervisor or daemon."""
+    """Return trusted bridge ownership without claiming a live daemon."""
     return {
         "daemon_pid": None,
-        "format": 1,
+        "format": RECORD_FORMAT_V2,
+        "version": RECORD_FORMAT_V2,
+        "generation": args.generation,
         "lease_count": 0,
         "agent_key": args.agent_key,
         "owner_pid": args.owner_pid,
         "owner_start_identity": args.owner_start_identity,
+        "restart_count": 0,
+        "restart_reason": None,
         "supervisor_pid": None,
         "supervisor_start_identity": None,
     }
 
 
 def publish_owner_seed_if_absent(args: argparse.Namespace) -> None:
-    """Publish owner identity under the lock used by richer status writers."""
+    """Publish bridge identity under the lock used by richer status writers."""
     deadline = time.monotonic() + STARTUP_STATUS_RETRY_SECONDS
     failures = 0
-    expected_owner = (args.owner_pid, args.owner_start_identity)
+    expected_owner = (
+        args.owner_pid,
+        args.owner_start_identity,
+        args.generation,
+        RECORD_FORMAT_V2,
+    )
     while True:
         lock_descriptor = None
         try:
             locked = try_supervisor_lock(args.runtime_dir)
             if locked is None:
-                existing_owner = read_status_owner(
+                existing_owner = read_status_lifecycle(
                     args.runtime_dir,
                     args.agent_key,
                 )
@@ -1111,7 +1347,7 @@ def publish_owner_seed_if_absent(args: argparse.Namespace) -> None:
                     return
                 if existing_owner is not None:
                     raise ConfigurationError(
-                        "existing agent owner status does not match this owner"
+                        "existing bridge status does not match this generation"
                     )
             else:
                 lock_descriptor, lock_identity = locked
@@ -1120,13 +1356,13 @@ def publish_owner_seed_if_absent(args: argparse.Namespace) -> None:
                     args.runtime_dir / LOCK_NAME,
                     lock_identity,
                 )
-                existing_owner = read_status_owner(
+                existing_owner = read_status_lifecycle(
                     args.runtime_dir,
                     args.agent_key,
                 )
                 if existing_owner is not None and existing_owner != expected_owner:
                     raise ConfigurationError(
-                        "existing agent owner status does not match this owner"
+                        "existing bridge status does not match this generation"
                     )
                 if existing_owner is None:
                     write_status(args, owner_seed_record(args))
@@ -1134,9 +1370,7 @@ def publish_owner_seed_if_absent(args: argparse.Namespace) -> None:
         except ConfigurationError:
             raise
         except RuntimeError as error:
-            raise TimeoutError(
-                "agent supervisor lock validation failed"
-            ) from error
+            raise TimeoutError("agent supervisor lock validation failed") from error
         except OSError as error:
             if not transient_supervisor_error(error):
                 raise
@@ -1146,9 +1380,7 @@ def publish_owner_seed_if_absent(args: argparse.Namespace) -> None:
         failures += 1
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            raise TimeoutError(
-                "agent supervisor owner status was unavailable"
-            )
+            raise TimeoutError("agent supervisor owner status was unavailable")
         time.sleep(min(restart_backoff_seconds(failures), remaining))
 
 
@@ -1156,6 +1388,8 @@ def status_record(
     args: argparse.Namespace,
     daemon: subprocess.Popen[bytes] | None,
     lease_count: int,
+    restart_count: int = 0,
+    restart_reason: str | None = None,
 ) -> dict[str, object]:
     record = owner_seed_record(args)
     record.update(
@@ -1164,6 +1398,8 @@ def status_record(
                 None if daemon is None or daemon.poll() is not None else daemon.pid
             ),
             "lease_count": lease_count,
+            "restart_count": restart_count,
+            "restart_reason": restart_reason,
             "supervisor_pid": os.getpid(),
             "supervisor_start_identity": process_start_identity(os.getpid()),
         }
@@ -1211,6 +1447,8 @@ def supervisor_loop(
     daemon_started_at: float | None = None
     daemon_observed_stable = False
     daemon_failures = 0
+    restart_count = 0
+    restart_reason: str | None = None
     empty_since: float | None = None
     next_start = 0.0
     next_refresh = 0.0
@@ -1237,16 +1475,20 @@ def supervisor_loop(
                     args.runtime_dir / LOCK_NAME,
                     lock_identity,
                 )
-                if (
-                    process_start_identity(args.owner_pid)
-                    != args.owner_start_identity
-                ):
+                owner_state = validate_process_identity(
+                    args.owner_pid,
+                    args.owner_start_identity,
+                )
+                if owner_state is LifecycleState.UNAVAILABLE:
+                    raise lifecycle_unavailable("owner process identity is unavailable")
+                if owner_state is LifecycleState.DEAD:
                     owner_dead = True
                     live_leases(
                         args.leases_dir,
                         args.agent_key,
                         args.owner_pid,
                         args.owner_start_identity,
+                        args.generation,
                     )
                     break
                 leases = live_leases(
@@ -1254,10 +1496,15 @@ def supervisor_loop(
                     args.agent_key,
                     args.owner_pid,
                     args.owner_start_identity,
+                    args.generation,
                     owner_validated=True,
                 )
                 now = time.monotonic()
+                drain_daemon_diagnostic(daemon)
                 if daemon is not None and daemon.poll() is not None:
+                    restart_reason = f"daemon-exited:{daemon.returncode}"
+                    restart_count += 1
+                    close_daemon_diagnostic(daemon)
                     if daemon_observed_stable:
                         daemon_failures = 0
                     daemon_failures += 1
@@ -1291,14 +1538,14 @@ def supervisor_loop(
                         daemon_observed_stable = False
                         daemon_failures = 0
                         next_start = 0.0
-                        # Remain as a lightweight owner-lifetime supervisor.
-                        # This closes registration-vs-cleanup races and lets a
-                        # later bridge in the same Codex process restart it.
+                        # Remain briefly as the bridge-lifetime supervisor.
+                        # This closes lease-removal races before bridge death.
                         refreshed = live_leases(
                             args.leases_dir,
                             args.agent_key,
                             args.owner_pid,
                             args.owner_start_identity,
+                            args.generation,
                             owner_validated=True,
                         )
                         if refreshed:
@@ -1314,7 +1561,13 @@ def supervisor_loop(
                         status_cache = None
                     next_refresh = now + LIFECYCLE_REFRESH_SECONDS
 
-                record = status_record(args, daemon, len(leases))
+                record = status_record(
+                    args,
+                    daemon,
+                    len(leases),
+                    restart_count,
+                    restart_reason,
+                )
                 if record != status_cache and now >= next_status_attempt:
                     try:
                         write_status(args, record)
@@ -1322,8 +1575,8 @@ def supervisor_loop(
                         if not transient_supervisor_error(error):
                             raise
                         status_failures += 1
-                        next_status_attempt = (
-                            now + restart_backoff_seconds(status_failures)
+                        next_status_attempt = now + restart_backoff_seconds(
+                            status_failures
                         )
                     else:
                         status_cache = record
@@ -1333,15 +1586,15 @@ def supervisor_loop(
                 if not transient_supervisor_error(error):
                     raise
                 transient_failures += 1
-                retry_deadline = (
-                    time.monotonic()
-                    + restart_backoff_seconds(transient_failures)
+                retry_deadline = time.monotonic() + restart_backoff_seconds(
+                    transient_failures
                 )
                 while not stopping:
-                    if (
-                        process_start_identity(args.owner_pid)
-                        != args.owner_start_identity
-                    ):
+                    owner_state = validate_process_identity(
+                        args.owner_pid,
+                        args.owner_start_identity,
+                    )
+                    if owner_state is LifecycleState.DEAD:
                         owner_dead = True
                         break
                     remaining = retry_deadline - time.monotonic()
@@ -1384,9 +1637,7 @@ def spawn_supervisor_if_absent(args: argparse.Namespace) -> bool:
         raise
     except RuntimeError as error:
         os.close(lock_descriptor)
-        raise TimeoutError(
-            "agent supervisor lock validation failed"
-        ) from error
+        raise TimeoutError("agent supervisor lock validation failed") from error
     except OSError as error:
         os.close(lock_descriptor)
         if transient_supervisor_error(error):
@@ -1460,6 +1711,11 @@ def spawn_supervisor_if_absent(args: argparse.Namespace) -> bool:
         except ChildProcessError:
             pass
         raise TimeoutError("agent supervisor did not become ready")
+    children = getattr(args, "_supervisor_child_pids", None)
+    if children is None:
+        children = set()
+        args._supervisor_child_pids = children
+    children.add(child_pid)
     return True
 
 
@@ -1478,7 +1734,7 @@ def safe_socket_ready(socket_path: Path, emacsclient: str) -> bool:
         return False
     try:
         result = subprocess.run(
-            [emacsclient, "-s", str(socket_path), "-e", "t"],
+            [emacsclient, "-a", "false", "-s", str(socket_path), "-e", "t"],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -1495,11 +1751,15 @@ def wait_for_daemon(args: argparse.Namespace) -> None:
     deadline = time.monotonic() + args.ready_seconds
     socket_path = args.runtime_dir / "emacs" / "server"
     while time.monotonic() < deadline:
-        if (
-            process_start_identity(args.owner_pid)
-            != args.owner_start_identity
-        ):
-            raise ConfigurationError("owning Codex process exited")
+        owner_state = validate_process_identity(
+            args.owner_pid,
+            args.owner_start_identity,
+        )
+        if owner_state is LifecycleState.DEAD:
+            raise ConfigurationError("MCP bridge process generation changed")
+        if owner_state is LifecycleState.UNAVAILABLE:
+            time.sleep(POLL_SECONDS)
+            continue
         spawn_supervisor_if_absent(args)
         if safe_socket_ready(socket_path, args.emacsclient):
             return
@@ -1507,14 +1767,150 @@ def wait_for_daemon(args: argparse.Namespace) -> None:
     raise TimeoutError(f"dedicated Emacs did not become ready at {socket_path}")
 
 
+def reap_supervisor_children(args: argparse.Namespace) -> None:
+    """Reap only supervisor children created by this bridge caretaker."""
+    children = getattr(args, "_supervisor_child_pids", None)
+    if not children:
+        return
+    for pid in tuple(children):
+        try:
+            waited, _status = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            children.discard(pid)
+        else:
+            if waited == pid:
+                children.discard(pid)
+
+
+def start_stdio_bridge(args: argparse.Namespace) -> subprocess.Popen[bytes]:
+    """Launch stdio on inherited pipes without observing MCP request bytes."""
+    socket_path = args.runtime_dir / "emacs" / "server"
+    environment = transport_environment()
+    environment["ANVIL_EMACS_SOCKET"] = str(socket_path)
+    environment["ANVIL_MCP_PARENT_GUARD"] = args.parent_guard
+    environment["ANVIL_MCP_PARENT_GUARD_PYTHON"] = args.python
+    environment["ANVIL_HEADLESS_PARENT_PID"] = str(os.getpid())
+    return subprocess.Popen(
+        [
+            args.python,
+            "-I",
+            "-S",
+            args.parent_guard,
+            "group",
+            args.stdio,
+            f"--socket={socket_path}",
+            f"--server-id={args.server_id}",
+        ],
+        stdin=None,
+        stdout=None,
+        stderr=None,
+        env=environment,
+        close_fds=True,
+    )
+
+
+def stop_stdio_bridge(process: subprocess.Popen[bytes]) -> None:
+    """Boundedly stop the inherited-pipe child when its caretaker must exit."""
+    if process.poll() is not None:
+        return
+    try:
+        process.terminate()
+    except ProcessLookupError:
+        return
+    try:
+        process.wait(timeout=DAEMON_STOP_SECONDS)
+        return
+    except subprocess.TimeoutExpired:
+        try:
+            process.kill()
+        except ProcessLookupError:
+            return
+    try:
+        process.wait(timeout=DAEMON_STOP_SECONDS)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def caretake_stdio_bridge(args: argparse.Namespace) -> int:
+    """Keep supervisor availability while stdio directly owns the MCP pipes."""
+    process = start_stdio_bridge(args)
+    stopping = False
+    ensure_failures = 0
+    next_ensure = 0.0
+    previous_handlers: dict[int, object] = {}
+
+    def request_stop(_signum: int, _frame: object) -> None:
+        nonlocal stopping
+        stopping = True
+
+    for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        previous_handlers[signum] = signal.getsignal(signum)
+        signal.signal(signum, request_stop)
+    try:
+        while not stopping and process.poll() is None:
+            reap_supervisor_children(args)
+            now = time.monotonic()
+            if now >= next_ensure:
+                owner_state = validate_process_identity(
+                    args.owner_pid,
+                    args.owner_start_identity,
+                )
+                if owner_state is LifecycleState.DEAD:
+                    raise ConfigurationError("MCP bridge process generation changed")
+                if owner_state is LifecycleState.UNAVAILABLE:
+                    ensure_failures += 1
+                    next_ensure = now + min(
+                        CARETAKER_ENSURE_MAX_BACKOFF_SECONDS,
+                        restart_backoff_seconds(ensure_failures),
+                    )
+                else:
+                    try:
+                        spawn_supervisor_if_absent(args)
+                    except TimeoutError:
+                        ensure_failures += 1
+                        next_ensure = now + min(
+                            CARETAKER_ENSURE_MAX_BACKOFF_SECONDS,
+                            restart_backoff_seconds(ensure_failures),
+                        )
+                    except OSError as error:
+                        if not transient_supervisor_error(error):
+                            raise
+                        ensure_failures += 1
+                        next_ensure = now + min(
+                            CARETAKER_ENSURE_MAX_BACKOFF_SECONDS,
+                            restart_backoff_seconds(ensure_failures),
+                        )
+                    else:
+                        ensure_failures = 0
+                        next_ensure = now + CARETAKER_ENSURE_SECONDS
+            try:
+                process.wait(timeout=POLL_SECONDS)
+            except subprocess.TimeoutExpired:
+                pass
+        if stopping:
+            stop_stdio_bridge(process)
+        returncode = process.poll()
+        if returncode is None:
+            return EXIT_SOFTWARE
+        return returncode if returncode >= 0 else 128 - returncode
+    finally:
+        if process.poll() is None:
+            stop_stdio_bridge(process)
+        reap_supervisor_children(args)
+        for signum, handler in previous_handlers.items():
+            signal.signal(signum, handler)
+
+
 def bridge_main(args: argparse.Namespace) -> None:
     try:
         args.server_id = validate_server_id(args.server_id)
         args.host = validate_host(args.host)
-        args.owner_pid, args.owner_start_identity = identify_owner()
+        args.generation = validate_generation(args.generation)
+        args.owner_pid, args.owner_start_identity = identify_bridge()
         args.agent_key = derive_agent_key(
             args.owner_pid,
             args.owner_start_identity,
+            args.generation,
         )
         runtime_dir, state_dir, leases_dir = prepare_instance_directories(
             Path(args.runtime_root),
@@ -1540,6 +1936,7 @@ def bridge_main(args: argparse.Namespace) -> None:
             args.agent_key,
             args.owner_pid,
             args.owner_start_identity,
+            args.generation,
         )
     except ConfigurationError as error:
         fail(str(error), EXIT_CONFIG)
@@ -1550,18 +1947,7 @@ def bridge_main(args: argparse.Namespace) -> None:
 
     try:
         wait_for_daemon(args)
-        socket_path = runtime_dir / "emacs" / "server"
-        environment = transport_environment()
-        environment["ANVIL_EMACS_SOCKET"] = str(socket_path)
-        os.execve(
-            args.stdio,
-            [
-                args.stdio,
-                f"--socket={socket_path}",
-                f"--server-id={args.server_id}",
-            ],
-            environment,
-        )
+        stdio_status = caretake_stdio_bridge(args)
     except ConfigurationError as error:
         fail(str(error), EXIT_CONFIG)
     except TimeoutError as error:
@@ -1573,12 +1959,15 @@ def bridge_main(args: argparse.Namespace) -> None:
             lease_path.unlink()
         except FileNotFoundError:
             pass
+    if stdio_status != 0:
+        raise SystemExit(stdio_status)
 
 
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--server-id", required=True)
     parser.add_argument("--host", required=True)
+    parser.add_argument("--generation", required=True)
     parser.add_argument("--runtime-root", required=True)
     parser.add_argument("--state-root", required=True)
     parser.add_argument("--daemon", required=True)
@@ -1591,8 +1980,8 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if not (0.25 <= args.grace_seconds <= 300):
         parser.error("--grace-seconds must be between 0.25 and 300")
-    if not (1 <= args.ready_seconds <= 300):
-        parser.error("--ready-seconds must be between 1 and 300")
+    if not (1 <= args.ready_seconds <= MAX_READY_SECONDS):
+        parser.error(f"--ready-seconds must be between 1 and {MAX_READY_SECONDS:g}")
     return args
 
 

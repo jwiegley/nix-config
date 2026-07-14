@@ -59,11 +59,11 @@ def load_watchdog_functions(launcher: Path) -> dict[str, object]:
 
 
 def assert_scheduler_math(namespace: dict[str, object]) -> None:
-    """Preserve lease time across scheduler gaps but expire ordinary hangs."""
+    """Compensate scheduler gaps without extending a hung root deadline."""
     compensate = namespace["compensate_scheduler_gap"]
     expired = namespace["deadline_expired"]
 
-    started, last_progress, lease_started = compensate(
+    started, last_progress, dispatch_started = compensate(
         650.0,
         550.0,
         0.5,
@@ -71,57 +71,62 @@ def assert_scheduler_math(namespace: dict[str, object]) -> None:
         0.0,
         0.0,
     )
-    if (started, last_progress, lease_started) != (99.5, 99.5, 99.5):
+    if (started, last_progress, dispatch_started) != (99.5, 99.5, 99.5):
         raise AssertionError(
             "100-second scheduler gap did not preserve deadline anchors: "
-            f"{(started, last_progress, lease_started)}"
+            f"{(started, last_progress, dispatch_started)}"
         )
-    if expired(650.0, lease_started, 600.0):
-        raise AssertionError("near-deadline async lease expired during scheduler gap")
-    if not expired(699.5, lease_started, 600.0):
+    if expired(144.0, last_progress, 45.0):
+        raise AssertionError("compensated root expired before its normal deadline")
+    if not expired(144.5, last_progress, 45.0):
         raise AssertionError(
-            "async lease did not expire after observable budget elapsed"
+            "compensated root did not expire after its normal deadline"
         )
+    if expired(234.0, dispatch_started, 135.0):
+        raise AssertionError("dispatch expired before its independent deadline")
+    if not expired(234.5, dispatch_started, 135.0):
+        raise AssertionError("dispatch did not expire at its independent deadline")
 
     started = 0.0
     last_progress = 0.0
-    lease_started = None
+    dispatch_started = None
     last_poll = 0.0
     for step in range(1, 91):
         now = step * 0.5
-        started, last_progress, lease_started = compensate(
+        started, last_progress, dispatch_started = compensate(
             now,
             last_poll,
             0.5,
             started,
             last_progress,
-            lease_started,
+            dispatch_started,
         )
         last_poll = now
-    if (started, last_progress, lease_started) != (0.0, 0.0, None):
+    if (started, last_progress, dispatch_started) != (0.0, 0.0, None):
         raise AssertionError("ordinary polls incorrectly received scheduler grace")
     if not expired(45.0, last_progress, 45.0):
         raise AssertionError("normal hung root did not expire at its deadline")
 
     started = 0.0
     last_progress = 0.0
-    lease_started = 0.0
+    dispatch_started = 0.0
     last_poll = 0.0
     for _ in range(4):
         now = last_poll + 2.0
-        started, last_progress, lease_started = compensate(
+        started, last_progress, dispatch_started = compensate(
             now,
             last_poll,
             0.5,
             started,
             last_progress,
-            lease_started,
+            dispatch_started,
         )
         last_poll = now
-    if now - lease_started != 2.0:
+    if now - last_progress != 2.0 or now - dispatch_started != 2.0:
         raise AssertionError(
             "repeated scheduler starvation did not count one poll per wake: "
-            f"elapsed={now - lease_started}"
+            f"heartbeat={now - last_progress}, "
+            f"dispatch={now - dispatch_started}"
         )
 
 
@@ -263,7 +268,6 @@ def assert_volatile_wal_is_benign(namespace: dict[str, object]) -> None:
             raise AssertionError("replacement WAL disappeared")
         if outside.stat().st_mtime_ns != outside_mtime:
             raise AssertionError("durable refresh followed a symlink outside state")
-
 
 
 def assert_descriptor_cleanup(namespace: dict[str, object]) -> None:

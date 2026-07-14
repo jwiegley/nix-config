@@ -314,6 +314,11 @@
                 ruff check ${src}/bin/update-overlay ${src}/packages/anvil-mcp
                 touch $out
               '';
+
+          anvil-home-manager = pkgs.callPackage ./packages/anvil-mcp/home-manager-smoke.nix {
+            homeManagerLib = home-manager.lib;
+            testPkgs = pkgsFor.${system};
+          };
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
           anvil-mcp = pkgs.callPackage ./packages/anvil-mcp/smoke.nix {

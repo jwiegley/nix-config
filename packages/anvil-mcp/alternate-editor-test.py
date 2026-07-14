@@ -46,7 +46,15 @@ with Path({str(marker)!r}).open("a", encoding="utf-8") as handle:
         contaminated = os.environ.copy()
         contaminated["ALTERNATE_EDITOR"] = str(alternate_editor)
         direct = subprocess.run(
-            [str(emacsclient), "-s", str(missing_socket), "-e", "t"],
+            [
+                str(emacsclient),
+                "-a",
+                str(alternate_editor),
+                "-s",
+                str(missing_socket),
+                "-e",
+                "t",
+            ],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

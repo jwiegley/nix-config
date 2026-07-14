@@ -6,15 +6,18 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import stat
 import subprocess
 import sys
+import time
 
-MAIN_ONLY_TOOLS = {
+EVAL_IDE_TOOLS = {
     "diagnostics",
     "emacs-eval",
     "emacs-eval-async",
+    "emacs-eval-cancel",
     "emacs-eval-jobs",
     "emacs-eval-result",
     "imenu_list_symbols",
@@ -143,7 +146,11 @@ def request(identifier: int | None, method: str, params: object | None = None) -
 
 
 def run_transcript(
-    launcher: Path, host: str, server_id: str, frames: list[str]
+    launcher: Path,
+    host: str,
+    server_id: str,
+    frames: list[str],
+    timeout_seconds: float = 300,
 ) -> list[dict[str, object]]:
     env = os.environ.copy()
     env["ANVIL_EMACS_HOST"] = host
@@ -155,7 +162,7 @@ def run_transcript(
             input="\n".join(frames) + "\n",
             text=True,
             capture_output=True,
-            timeout=300,
+            timeout=timeout_seconds,
         )
     except subprocess.TimeoutExpired as error:
         stdout = (
@@ -213,6 +220,20 @@ def assert_tool_success(response: dict[str, object], needle: str) -> None:
         raise AssertionError(f"tool result did not contain {needle!r}: {result}")
 
 
+def tool_result_text(response: dict[str, object]) -> str:
+    """Return the single text block from a successful MCP tool result."""
+    result = response["result"]
+    if not isinstance(result, dict) or result.get("isError") is True:
+        raise AssertionError(f"tool call failed: {result}")
+    content = result.get("content")
+    if not isinstance(content, list) or len(content) != 1:
+        raise AssertionError(f"unexpected tool content: {result}")
+    block = content[0]
+    if not isinstance(block, dict) or not isinstance(block.get("text"), str):
+        raise AssertionError(f"tool result has no text block: {result}")
+    return block["text"]
+
+
 def assert_tool_omits(response: dict[str, object], needle: str) -> None:
     """Assert a successful tool result contains no wrapper chatter."""
     result = response["result"]
@@ -249,9 +270,13 @@ def direnv_buffer_expression() -> str:
     project_a = Path.home() / "direnv-a"
     project_b = Path.home() / "direnv-b"
     project_c = Path.home() / "direnv-c"
+    project_unset = Path.home() / "direnv-unset"
+    project_spoof = Path.home() / "direnv-spoof"
     file_a = project_a / "visited.txt"
     file_b = project_b / "visited.txt"
     file_c = project_c / "visited.txt"
+    file_unset = project_unset / "visited.txt"
+    file_spoof = project_spoof / "visited.txt"
     return f"""
 (progn
   (require 'json)
@@ -301,12 +326,32 @@ def direnv_buffer_expression() -> str:
                  (and (local-variable-p 'exec-path) t)
                  direnv--active-directory
                  (or (getenv "PATH") :false))))
+             (row-unset
+              (with-current-buffer
+                  (find-file-noselect {json.dumps(str(file_unset))})
+                (vector
+                 (or (getenv "ANVIL_DIRENV_MARKER") :false)
+                 (or (executable-find "anvil-direnv-unset") :false)
+                 (or (getenv "ANVIL_EMACS_SOCKET") :false)
+                 (and (local-variable-p 'process-environment) t)
+                 (and (local-variable-p 'exec-path) t)
+                 direnv--active-directory)))
+             (row-spoof
+              (with-current-buffer
+                  (find-file-noselect {json.dumps(str(file_spoof))})
+                (vector
+                 (or (getenv "ANVIL_DIRENV_MARKER") :false)
+                 (or (executable-find "anvil-direnv-spoof") :false)
+                 (or (getenv "ANVIL_EMACS_SOCKET") :false)
+                 (and (local-variable-p 'process-environment) t)
+                 (and (local-variable-p 'exec-path) t)
+                 direnv--active-directory)))
              (default-marker
               (let ((process-environment
                      (default-value 'process-environment)))
                 (or (getenv "ANVIL_DIRENV_MARKER") :false))))
         (json-serialize
-         (vector row-a row-b row-c default-marker
+         (vector row-a row-b row-c row-unset row-spoof default-marker
                  (and (featurep 'direnv) t)
                  (and (featurep 'exec-path-from-shell) t)
                  (vector anvil-headless-smoke--mode-marker
@@ -320,12 +365,14 @@ def direnv_buffer_expression() -> str:
 def assert_direnv_buffers(response: dict[str, object]) -> None:
     """Validate per-buffer direnv isolation and required executable paths."""
     data = decode_eval_json(response)
-    if not isinstance(data, list) or len(data) != 8:
+    if not isinstance(data, list) or len(data) != 10:
         raise AssertionError(f"unexpected direnv buffer result: {data}")
     (
         row_a,
         row_b,
         row_c,
+        row_unset,
+        row_spoof,
         default_marker,
         has_direnv,
         has_shell_import,
@@ -335,6 +382,8 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
     project_a = Path.home() / "direnv-a"
     project_b = Path.home() / "direnv-b"
     project_c = Path.home() / "direnv-c"
+    project_unset = Path.home() / "direnv-unset"
+    project_spoof = Path.home() / "direnv-spoof"
     expected_rows = (
         (
             row_a,
@@ -387,6 +436,36 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
     if path_entries.count(emacsclient.parent) != 1:
         raise AssertionError(f"dedicated Emacs bin is duplicated in PATH: {row_c[8]}")
 
+    expected_root_socket = (
+        Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / "host-a" / "emacs" / "server"
+    )
+    guarded_rows = (
+        (
+            row_unset,
+            "project-unset",
+            project_unset / "bin" / "anvil-direnv-unset",
+            project_unset,
+        ),
+        (
+            row_spoof,
+            "project-spoof",
+            project_spoof / "bin" / "anvil-direnv-spoof",
+            project_spoof,
+        ),
+    )
+    for row, marker, executable, project in guarded_rows:
+        if not isinstance(row, list) or len(row) != 6:
+            raise AssertionError(f"malformed guarded direnv row: {row}")
+        if (
+            row[0] != marker
+            or resolved_path(row[1], f"{project} executable") != executable.resolve()
+            or resolved_path(row[2], f"{project} root socket")
+            != expected_root_socket.resolve()
+            or row[3:5] != [True, True]
+            or resolved_path(row[5], f"{project} active directory") != project.resolve()
+        ):
+            raise AssertionError(f"guard state was not restored for {project}: {row}")
+
     if default_marker is not False:
         raise AssertionError(f"project environment leaked globally: {data}")
     if [has_direnv, has_shell_import] != [True, True]:
@@ -406,6 +485,40 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
         != expected_login_path.resolve()
     ):
         raise AssertionError(f"root did not import the login-shell PATH: {login_path}")
+
+
+def recursion_guard_command(project_command: str) -> str:
+    """Return a representative shell probe for restored socket guards."""
+    return f"""
+root_socket="$ANVIL_EMACS_RUNTIME_ROOT/host-a/emacs/server"
+other_socket="$ANVIL_EMACS_RUNTIME_ROOT/host-b/emacs/server"
+"$ANVIL_PER_AGENT_LAUNCHER" </dev/null >/dev/null 2>&1
+nested_status=$?
+emacsclient -a false -e t >/dev/null 2>&1
+implicit_status=$?
+emacsclient -a false -s "$root_socket" -e t >/dev/null 2>&1
+root_status=$?
+other_output=$(emacsclient -a false -s "$other_socket" -e t 2>/dev/null)
+other_status=$?
+printf '%s:%s:%s:nested=%s:implicit=%s:root=%s:other=%s:%s' \\
+  "$ANVIL_DIRENV_MARKER" "$({project_command})" "$ANVIL_EMACS_SOCKET" \\
+  "$nested_status" "$implicit_status" "$root_status" \\
+  "$other_status" "$other_output"
+""".strip()
+
+
+def assert_recursion_guards(
+    response: dict[str, object], marker: str, project_command: str
+) -> None:
+    """Validate representative guards without duplicating parser unit tests."""
+    root_socket = (
+        Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / "host-a" / "emacs" / "server"
+    )
+    expected = (
+        f"{marker}:{project_command}:{root_socket}:"
+        "nested=64:implicit=69:root=69:other=0:t"
+    )
+    assert_tool_success(response, expected)
 
 
 def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
@@ -446,17 +559,18 @@ def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
             (and (featurep 'exec-path-from-shell) t)
             (with-current-buffer
                 (find-file-noselect
-                 (expand-file-name "direnv-a/visited.txt" (getenv "HOME")))
+                 (expand-file-name "direnv-spoof/visited.txt" (getenv "HOME")))
               (or (getenv "ANVIL_DIRENV_MARKER") :false))
             (with-current-buffer
                 (find-file-noselect
-                 (expand-file-name "direnv-a/visited.txt" (getenv "HOME")))
-              (or (executable-find "anvil-direnv-a") :false))
+                 (expand-file-name "direnv-spoof/visited.txt" (getenv "HOME")))
+              (or (executable-find "anvil-direnv-spoof") :false))
             (with-current-buffer
                 (find-file-noselect
-                 (expand-file-name "direnv-a/visited.txt" (getenv "HOME")))
+                 (expand-file-name "direnv-spoof/visited.txt" (getenv "HOME")))
               (or (executable-find "emacsclient") :false))
-            (or (executable-find "anvil-login-shell") :false)))
+            (or (executable-find "anvil-login-shell") :false)
+            (or (getenv "ANVIL_EMACS_SOCKET") :false)))
   (error (list "snapshot-error" (error-message-string err))))
 """.strip()
     specs = " ".join(f"({lane} {json.dumps(name)})" for lane, name in worker_specs)
@@ -507,7 +621,7 @@ def assert_worker_snapshot(
     runtime_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "workers"
     socket_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "emacs"
     for snapshot, (_, name) in zip(snapshots, worker_specs, strict=True):
-        if not isinstance(snapshot, list) or len(snapshot) != 19:
+        if not isinstance(snapshot, list) or len(snapshot) != 20:
             raise AssertionError(f"malformed {name} snapshot: {snapshot}")
         if snapshot[0] != name:
             raise AssertionError(f"worker dispatch mismatch: {snapshot[0]} != {name}")
@@ -558,9 +672,11 @@ def assert_worker_snapshot(
             raise AssertionError(
                 f"{name} did not load direnv environment support: {snapshot[13:15]}"
             )
-        expected_project_command = Path.home() / "direnv-a" / "bin" / "anvil-direnv-a"
+        expected_project_command = (
+            Path.home() / "direnv-spoof" / "bin" / "anvil-direnv-spoof"
+        )
         if (
-            snapshot[15] != "project-a"
+            snapshot[15] != "project-spoof"
             or resolved_path(snapshot[16], f"{name} project executable")
             != expected_project_command.resolve()
         ):
@@ -576,6 +692,14 @@ def assert_worker_snapshot(
             != expected_login_command.resolve()
         ):
             raise AssertionError(f"{name} did not inherit the login PATH: {snapshot}")
+        expected_root_socket = (
+            Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "emacs" / "server"
+        )
+        if (
+            resolved_path(snapshot[19], f"{name} root socket")
+            != expected_root_socket.resolve()
+        ):
+            raise AssertionError(f"{name} inherited a spoofed root socket: {snapshot}")
 
 
 def spawn_baseline_expression() -> str:
@@ -641,7 +765,7 @@ def assert_spawn_baseline(response: dict[str, object], host: str) -> None:
 
 
 def watchdog_lease_expression() -> str:
-    """Exercise synchronous leasing and overlapping async-job accounting."""
+    """Exercise the synchronous diagnostic lease around one request."""
     return r"""
 (progn
   (unless
@@ -649,66 +773,230 @@ def watchdog_lease_expression() -> str:
        #'anvil-headless--watchdog-sync-dispatch
        'anvil-server-process-jsonrpc)
     (error "synchronous watchdog advice is not installed"))
-  (let ((first "smoke-overlap-first")
-        (second "smoke-overlap-second")
-        (lease anvil-headless--watchdog-lease-file)
-        first-count second-count remaining-count remaining-mode
-        final-count final-mode)
-    (unless (= (hash-table-count anvil-headless--watchdog-async-jobs) 0)
-      (error "watchdog async job table was not initially empty"))
-    ;; Starve normal Emacs timers beyond the smoke daemon's three-second
-    ;; ordinary deadline.  The external watchdog must honor this request's
-    ;; synchronous lease and leave the root alive.
-    (let ((deadline (+ (float-time) 4.0)))
-      (while (< (float-time) deadline)))
-    (unwind-protect
-        (progn
-          (anvil-headless--watchdog-async-active first)
-          (setq first-count
-                (hash-table-count anvil-headless--watchdog-async-jobs))
-          (anvil-headless--watchdog-async-active second)
-          (setq second-count
-                (hash-table-count anvil-headless--watchdog-async-jobs))
-          (anvil-headless--watchdog-async-idle first)
-          (setq remaining-count
-                (hash-table-count anvil-headless--watchdog-async-jobs)
-                remaining-mode (logand (file-modes lease) #o777))
-          (anvil-headless--watchdog-async-idle second)
-          (setq final-count
-                (hash-table-count anvil-headless--watchdog-async-jobs)
-                final-mode (logand (file-modes lease) #o777))
-          (json-serialize
-           (vector
-            anvil-headless--watchdog-sync-dispatch-depth
-            (logand (file-modes lease) #o777)
-            first-count second-count remaining-count remaining-mode
-            final-count final-mode)))
-      (remhash first anvil-headless--watchdog-async-jobs)
-      (remhash second anvil-headless--watchdog-async-jobs)
-      (anvil-headless--watchdog-refresh-lease-state))))
+  (json-serialize
+   (vector
+    anvil-headless--watchdog-sync-dispatch-depth
+    (logand (file-modes anvil-headless--watchdog-lease-file) #o777)
+    (if (boundp 'anvil-headless--watchdog-async-jobs) t :false))))
 """.strip()
 
 
 def assert_watchdog_lease(response: dict[str, object], lease: Path) -> None:
-    """Validate sync lease state, async refcounting, and final idle state."""
+    """Validate sync diagnostic state and the absence of async exemption."""
     snapshot = decode_eval_json(response)
-    expected = [1, 0o600, 1, 2, 1, 0o600, 0, 0o600]
+    expected = [1, 0o600, False]
     if snapshot != expected:
         raise AssertionError(
-            f"watchdog lease/refcount mismatch: {snapshot} != {expected}"
+            f"watchdog diagnostic lease mismatch: {snapshot} != {expected}"
         )
     if stat.S_IMODE(lease.stat().st_mode) != 0o400:
         raise AssertionError("synchronous watchdog lease did not return to idle")
 
 
+def call_tool(
+    launcher: Path,
+    initialize: dict[str, object],
+    name: str,
+    arguments: dict[str, object],
+    timeout_seconds: float = 10,
+) -> dict[str, object]:
+    """Call one tool through a fresh bridge with a bounded outer deadline."""
+    responses = run_transcript(
+        launcher,
+        "host-a",
+        "anvil",
+        [
+            request(1, "initialize", initialize),
+            request(None, "notifications/initialized"),
+            request(
+                2,
+                "tools/call",
+                {"name": name, "arguments": arguments},
+            ),
+        ],
+        timeout_seconds,
+    )
+    return response_by_id(responses, 2)
+
+
+def submit_async(
+    launcher: Path,
+    initialize: dict[str, object],
+    expression: str,
+    timeout_seconds: float,
+) -> str:
+    """Submit one isolated async expression and return its job ID."""
+    response = call_tool(
+        launcher,
+        initialize,
+        "emacs-eval-async",
+        {"expression": expression, "timeout": timeout_seconds},
+    )
+    text = tool_result_text(response)
+    match = re.search(r"\bjob-[0-9]+-[0-9]+\b", text)
+    if match is None:
+        raise AssertionError(f"async submission returned no job ID: {text}")
+    return match.group(0)
+
+
+def poll_async(
+    launcher: Path,
+    initialize: dict[str, object],
+    job_id: str,
+    timeout_seconds: float,
+) -> str:
+    """Poll JOB-ID through independent bridges until it becomes terminal."""
+    deadline = time.monotonic() + timeout_seconds
+    last = ""
+    while time.monotonic() < deadline:
+        last = tool_result_text(
+            call_tool(
+                launcher,
+                initialize,
+                "emacs-eval-result",
+                {"job-id": job_id},
+                timeout_seconds=5,
+            )
+        )
+        if "status: done" in last or "status: error" in last:
+            return last
+        time.sleep(0.1)
+    raise AssertionError(f"async job {job_id} did not settle: {last}")
+
+
+def process_alive(pid: int) -> bool:
+    """Return whether PID still names a live process."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+def assert_async_isolation(
+    launcher: Path,
+    initialize: dict[str, object],
+    watchdog_lease: Path,
+) -> None:
+    """Prove a wedged async child cannot wedge or exempt the root daemon."""
+    runtime = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / "host-a"
+    child_pid_file = runtime / "async-child.pid"
+    pulse_file = runtime / ".anvil-root-pulse"
+    child_pid_file.unlink(missing_ok=True)
+    pulse_before = pulse_file.read_text()
+
+    looping_expression = (
+        "(progn "
+        f"(with-temp-file {json.dumps(str(child_pid_file))} "
+        "(insert (number-to-string (emacs-pid)))) "
+        "(while t))"
+    )
+    # The timeout includes the one-shot Emacs cold start and its containment
+    # guard handshake.  Keep enough margin above the guard's own readiness
+    # ceiling that the expression demonstrably begins before it is killed.
+    async_timeout = 15
+    job_id = submit_async(
+        launcher,
+        initialize,
+        looping_expression,
+        async_timeout,
+    )
+
+    marker_deadline = time.monotonic() + 10
+    while not child_pid_file.exists() and time.monotonic() < marker_deadline:
+        time.sleep(0.05)
+    if not child_pid_file.exists():
+        terminal = poll_async(
+            launcher,
+            initialize,
+            job_id,
+            async_timeout + 5,
+        )
+        raise AssertionError(
+            "isolated async child never wrote its PID marker; "
+            f"terminal job state: {terminal}"
+        )
+    child_pid = int(child_pid_file.read_text().strip())
+
+    root_text = tool_result_text(
+        call_tool(
+            launcher,
+            initialize,
+            "emacs-eval",
+            {"expression": "(emacs-pid)"},
+            timeout_seconds=5,
+        )
+    )
+    root_match = re.search(r"\b[0-9]+\b", root_text)
+    if root_match is None:
+        raise AssertionError(f"root Emacs returned no PID: {root_text}")
+    root_pid = int(root_match.group(0))
+    if root_pid == child_pid:
+        raise AssertionError("async expression ran inside the root Emacs")
+
+    pulse_deadline = time.monotonic() + 2
+    while pulse_file.read_text() == pulse_before and time.monotonic() < pulse_deadline:
+        time.sleep(0.05)
+    if pulse_file.read_text() == pulse_before:
+        raise AssertionError("root watchdog stopped pulsing during async evaluation")
+    if stat.S_IMODE(watchdog_lease.stat().st_mode) != 0o400:
+        raise AssertionError("async evaluation incorrectly exempted the root watchdog")
+
+    terminal = poll_async(
+        launcher,
+        initialize,
+        job_id,
+        async_timeout + 5,
+    )
+    if "status: error" not in terminal or "timeout" not in terminal.lower():
+        raise AssertionError(f"looping async job did not time out: {terminal}")
+
+    death_deadline = time.monotonic() + 5
+    while process_alive(child_pid) and time.monotonic() < death_deadline:
+        time.sleep(0.05)
+    if process_alive(child_pid):
+        raise AssertionError(f"timed-out async child {child_pid} survived")
+
+    root_after = tool_result_text(
+        call_tool(
+            launcher,
+            initialize,
+            "emacs-eval",
+            {"expression": "(emacs-pid)"},
+            timeout_seconds=5,
+        )
+    )
+    if str(root_pid) not in root_after:
+        raise AssertionError(f"root daemon changed after async timeout: {root_after}")
+
+    project_file = Path.home() / "direnv-a" / "visited.txt"
+    environment_expression = (
+        f"(with-current-buffer (find-file-noselect {json.dumps(str(project_file))}) "
+        '(list (getenv "ANVIL_DIRENV_MARKER") '
+        '(executable-find "anvil-direnv-a")))'
+    )
+    environment_job = submit_async(launcher, initialize, environment_expression, 10)
+    environment_result = poll_async(launcher, initialize, environment_job, 8)
+    if (
+        "status: done" not in environment_result
+        or "project-a" not in environment_result
+        or "anvil-direnv-a" not in environment_result
+    ):
+        raise AssertionError(
+            f"isolated async child lost the project environment: {environment_result}"
+        )
+
+
 def main() -> None:
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 4 or not sys.argv[3].isdigit() or int(sys.argv[3]) <= 0:
         raise SystemExit(
-            "usage: headless-smoke.py /path/to/anvil-mcp WORKER_SPECS_JSON"
+            "usage: headless-smoke.py /path/to/anvil-mcp "
+            "WORKER_SPECS_JSON CLIENT_TOOL_SECONDS"
         )
 
     launcher = Path(sys.argv[1]).resolve()
     worker_specs = parse_worker_specs(sys.argv[2])
+    client_tool_seconds = float(sys.argv[3])
     org_root = Path.home() / "org"
     org_file = org_root / "smoke.org"
     initialize = {
@@ -724,6 +1012,8 @@ def main() -> None:
     project_b = Path.home() / "direnv-b"
     project_plain = Path.home() / "direnv-plain"
     project_c = Path.home() / "direnv-c"
+    project_unset = Path.home() / "direnv-unset"
+    project_spoof = Path.home() / "direnv-spoof"
     project_blocked = Path.home() / "direnv-blocked"
     runtime_lock = (
         Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"])
@@ -940,11 +1230,12 @@ def main() -> None:
         ],
     )
     main_names = tool_names(response_by_id(main_responses, 2))
-    if main_names != MAIN_ONLY_TOOLS | TYPED_TOOLS:
+    expected_tools = EVAL_IDE_TOOLS | TYPED_TOOLS
+    if main_names != expected_tools:
         raise AssertionError(
             "unexpected unified main surface: "
-            f"missing={sorted((MAIN_ONLY_TOOLS | TYPED_TOOLS) - main_names)}, "
-            f"unexpected={sorted(main_names - (MAIN_ONLY_TOOLS | TYPED_TOOLS))}"
+            f"missing={sorted(expected_tools - main_names)}, "
+            f"unexpected={sorted(main_names - expected_tools)}"
         )
     assert_tool_success(response_by_id(main_responses, 3), "42")
     assert_tool_success(response_by_id(main_responses, 4), "server_id=anvil")
@@ -980,6 +1271,8 @@ def main() -> None:
     for identifier in (10, 11, 16, 17):
         assert_tool_omits(response_by_id(main_responses, identifier), "direnv:")
 
+    assert_async_isolation(launcher, initialize, watchdog_lease)
+
     secondary_responses = run_transcript(
         launcher,
         "host-b",
@@ -1000,6 +1293,38 @@ def main() -> None:
     assert_worker_snapshot(
         response_by_id(secondary_responses, 22), "host-b", worker_specs
     )
+
+    guard_probes = (
+        (
+            "project-unset",
+            "project-unset-command",
+            "anvil-direnv-unset",
+            project_unset,
+        ),
+        (
+            "project-spoof",
+            "project-spoof-command",
+            "anvil-direnv-spoof",
+            project_spoof,
+        ),
+    )
+    for marker, expected_command, project_command, project in guard_probes:
+        try:
+            guard_response = call_tool(
+                launcher,
+                initialize,
+                "shell-run",
+                {
+                    "cmd": recursion_guard_command(project_command),
+                    "filter": "",
+                    "cwd": str(project),
+                },
+                client_tool_seconds,
+            )
+        except AssertionError as error:
+            raise AssertionError(f"{marker} recursion guard probe failed") from error
+        assert_recursion_guards(guard_response, marker, expected_command)
+        assert_tool_omits(guard_response, "direnv:")
 
     typed_responses = run_transcript(
         launcher,
@@ -1022,7 +1347,7 @@ def main() -> None:
     typed_names = tool_names(response_by_id(typed_responses, 12))
     if typed_names != TYPED_TOOLS:
         raise AssertionError(
-            "unexpected typed surface: "
+            "unexpected direct typed surface: "
             f"missing={sorted(TYPED_TOOLS - typed_names)}, "
             f"unexpected={sorted(typed_names - TYPED_TOOLS)}"
         )

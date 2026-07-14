@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import base64
 import json
 import os
 from pathlib import Path
@@ -14,11 +13,19 @@ import tempfile
 import time
 
 
-FIRST_PROBE_TIMEOUT_SECONDS = 10
+FIRST_PROBE_TIMEOUT_SECONDS = 5
 SECOND_PROBE_TIMEOUT_SECONDS = 1
-EMACSCLIENT_TIMEOUT_SECONDS = 10
+EMACSCLIENT_READINESS_TIMEOUT_SECONDS = 10
+EMACSCLIENT_DISPATCH_TIMEOUT_SECONDS = 10
 FIRST_READY_DELAY_SECONDS = 2
-BRIDGE_WAIT_TIMEOUT_SECONDS = EMACSCLIENT_TIMEOUT_SECONDS + 2
+BRIDGE_WAIT_TIMEOUT_SECONDS = (
+    max(EMACSCLIENT_READINESS_TIMEOUT_SECONDS, EMACSCLIENT_DISPATCH_TIMEOUT_SECONDS) + 2
+)
+
+
+def percent_wire(payload: bytes) -> str:
+    """Encode PAYLOAD for anvil-stdio's process-free response wire."""
+    return "".join(f"%{byte:02x}" for byte in payload)
 
 
 def collect_bridge_diagnostics(process: subprocess.Popen[str], debug_log: Path) -> str:
@@ -26,8 +33,18 @@ def collect_bridge_diagnostics(process: subprocess.Popen[str], debug_log: Path) 
     stderr_text = ""
     if process.stderr is not None:
         try:
-            os.set_blocking(process.stderr.fileno(), False)
-            stderr_text = process.stderr.read() or ""
+            stderr_fd = process.stderr.fileno()
+            os.set_blocking(stderr_fd, False)
+            chunks: list[bytes] = []
+            while True:
+                try:
+                    chunk = os.read(stderr_fd, 64 * 1024)
+                except BlockingIOError:
+                    break
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            stderr_text = b"".join(chunks).decode("utf-8", errors="replace")
         except (BlockingIOError, OSError):
             stderr_text = "<unavailable>"
     try:
@@ -74,9 +91,9 @@ def start_bridge(
     response = {"jsonrpc": "2.0", "id": request_id, "result": request_id}
     child_env = environment | {
         "FAKE_DISPATCH_SLEEP": str(dispatch_sleep),
-        "FAKE_RESPONSE_B64": base64.b64encode(
-            json.dumps(response, separators=(",", ":")).encode()
-        ).decode(),
+        "FAKE_RESPONSE_WIRE": percent_wire(
+            json.dumps(response, separators=(",", ":")).encode("utf-8")
+        ),
     }
     process = subprocess.Popen(
         [str(stdio), "--socket=/tmp/anvil-stdio-test", "--server-id=test"],
@@ -160,7 +177,7 @@ with open(os.environ["FAKE_SERVER_LOCK"], "a+", encoding="utf-8") as handle:
     else:
         Path(os.environ["FAKE_DISPATCH_STARTED"]).touch()
         time.sleep(float(os.environ["FAKE_DISPATCH_SLEEP"]))
-        print(json.dumps(os.environ["FAKE_RESPONSE_B64"]))
+        print(json.dumps(os.environ["FAKE_RESPONSE_WIRE"]))
 """,
             encoding="utf-8",
         )
@@ -175,7 +192,12 @@ with open(os.environ["FAKE_SERVER_LOCK"], "a+", encoding="utf-8") as handle:
                 "FAKE_READY_SLEEP": "0",
                 "EMACS_MCP_DEBUG_LOG": str(debug_log),
                 "ANVIL_EMACSCLIENT_PROBE_TIMEOUT": str(SECOND_PROBE_TIMEOUT_SECONDS),
-                "ANVIL_EMACSCLIENT_TIMEOUT": str(EMACSCLIENT_TIMEOUT_SECONDS),
+                "ANVIL_EMACSCLIENT_READINESS_TIMEOUT": str(
+                    EMACSCLIENT_READINESS_TIMEOUT_SECONDS
+                ),
+                "ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT": str(
+                    EMACSCLIENT_DISPATCH_TIMEOUT_SECONDS
+                ),
                 "ANVIL_EMACSCLIENT_RETRY_DELAY_MS": "0",
             }
         )

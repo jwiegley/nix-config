@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end smoke coverage for per-Codex-process Anvil daemons."""
+"""End-to-end smoke coverage for per-MCP-bridge Anvil daemons."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import multiprocessing
 import os
 from pathlib import Path
 import selectors
+import signal
 import subprocess
 import sys
 import tempfile
@@ -47,7 +48,7 @@ def eventually(predicate, timeout: float = 30.0):
 
 
 class BridgeProcess:
-    """One real launcher process, owned directly by an OwnerProxy process."""
+    """One real launcher process, spawned by an OwnerProxy process."""
 
     def __init__(self, launcher: Path, server_id: str, host: str) -> None:
         environment = os.environ.copy()
@@ -58,8 +59,12 @@ class BridgeProcess:
                 # Cold tool-schema setup can legitimately hold the root event
                 # loop for several seconds.  The infinite-loop check below still
                 # proves that the watchdog terminates and restarts a hung root.
-                "ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS": "10",
-                "ANVIL_EMACS_WATCHDOG_ASYNC_SECONDS": "15",
+                "ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS": os.environ.get(
+                    "ANVIL_SMOKE_WATCHDOG_NORMAL_SECONDS", "10"
+                ),
+                "ANVIL_EMACS_WATCHDOG_ASYNC_SECONDS": os.environ.get(
+                    "ANVIL_SMOKE_WATCHDOG_ASYNC_SECONDS", "15"
+                ),
                 "ANVIL_EMACS_WATCHDOG_PULSE_SECONDS": "0.25",
                 "ANVIL_AGENT_GRACE_SECONDS": "0.5",
                 "ANVIL_AGENT_READY_SECONDS": "120",
@@ -77,19 +82,25 @@ class BridgeProcess:
         )
         self.next_id = 1
 
+    @property
+    def pid(self) -> int:
+        if self.process.pid is None:
+            raise AssertionError("bridge has no PID")
+        return self.process.pid
+
     def stderr(self) -> str:
         self.stderr_file.flush()
         self.stderr_file.seek(0)
         return self.stderr_file.read()
 
-    def request(
+    def send_request(
         self,
         method: str,
         params: object | None = None,
-        timeout: float = 60.0,
-    ) -> dict[str, object]:
-        if self.process.stdin is None or self.process.stdout is None:
-            raise AssertionError("bridge pipes are unavailable")
+    ) -> int:
+        """Write one request without waiting, permitting pipelined calls."""
+        if self.process.stdin is None:
+            raise AssertionError("bridge stdin is unavailable")
         identifier = self.next_id
         self.next_id += 1
         frame: dict[str, object] = {
@@ -101,7 +112,12 @@ class BridgeProcess:
             frame["params"] = params
         self.process.stdin.write(json.dumps(frame, separators=(",", ":")) + "\n")
         self.process.stdin.flush()
+        return identifier
 
+    def receive_response(self, timeout: float = 60.0) -> dict[str, object]:
+        """Read one response, allowing callers to collect out of order."""
+        if self.process.stdout is None:
+            raise AssertionError("bridge stdout is unavailable")
         selector = selectors.DefaultSelector()
         selector.register(self.process.stdout, selectors.EVENT_READ)
         try:
@@ -110,20 +126,60 @@ class BridgeProcess:
             selector.close()
         if not ready:
             raise AssertionError(
-                f"bridge request {method} timed out; stderr:\n{self.stderr()}"
+                f"bridge response timed out; stderr:\n{self.stderr()}"
             )
         line = self.process.stdout.readline()
         if not line:
             raise AssertionError(
-                f"bridge exited during {method} with {self.process.poll()}; "
-                f"stderr:\n{self.stderr()}"
+                f"bridge exited while awaiting a response with "
+                f"{self.process.poll()}; stderr:\n{self.stderr()}"
             )
         response = json.loads(line)
+        if not isinstance(response, dict):
+            raise AssertionError(f"bridge returned a non-object response: {response!r}")
+        return response
+
+    def request(
+        self,
+        method: str,
+        params: object | None = None,
+        timeout: float = 60.0,
+    ) -> dict[str, object]:
+        identifier = self.send_request(method, params)
+        response = self.receive_response(timeout)
         if response.get("id") != identifier:
             raise AssertionError(
                 f"response id mismatch for {method}: {response!r}"
             )
         return response
+
+    def initialize(self) -> None:
+        response = self.request(
+            "initialize",
+            {
+                "protocolVersion": "2025-03-26",
+                "capabilities": {},
+                "clientInfo": {
+                    "name": "nix-persistent-bridge-smoke",
+                    "version": "1",
+                },
+            },
+            timeout=150,
+        )
+        if "error" in response:
+            raise AssertionError(f"initialize failed: {response}")
+
+    def call_tool(
+        self,
+        name: str,
+        arguments: dict[str, object],
+        timeout: float = 60.0,
+    ) -> dict[str, object]:
+        return self.request(
+            "tools/call",
+            {"name": name, "arguments": arguments},
+            timeout=timeout,
+        )
 
     def close(self) -> None:
         if self.process.poll() is None and self.process.stdin is not None:
@@ -144,7 +200,7 @@ class BridgeProcess:
 
 
 def owner_proxy_main(connection, launcher_raw: str) -> None:
-    """Own several bridges exactly as one Codex OS process would."""
+    """Spawn several sibling bridges from one long-lived client process."""
     launcher = Path(launcher_raw)
     bridges: dict[str, BridgeProcess] = {}
     try:
@@ -195,7 +251,7 @@ def owner_proxy_main(connection, launcher_raw: str) -> None:
 
 
 class OwnerProxy:
-    """A persistent stand-in for one Codex or agent-deck OS process."""
+    """A persistent stand-in for one Codex, Claude, or agent-deck client."""
 
     def __init__(self, launcher: Path, name: str) -> None:
         # The harness is single-threaded here, and fork avoids Darwin's
@@ -352,15 +408,83 @@ class ProxyBridge:
         self.closed = True
 
 
-def status_path(runtime_root: Path, host: str, agent_key: str, module) -> Path:
-    return runtime_root / host / "agents" / agent_key / module.STATUS_NAME
-
-
 def read_running_status(path: Path) -> dict[str, object] | bool:
     status = json.loads(path.read_text())
     if status.get("daemon_pid") is None:
         return False
     return status
+
+
+def find_running_instance(
+    runtime_root: Path,
+    host: str,
+    bridge_pid: int,
+    module,
+) -> tuple[Path, dict[str, object]] | bool:
+    agents = runtime_root / host / "agents"
+    try:
+        candidates = tuple(agents.iterdir())
+    except FileNotFoundError:
+        return False
+    for runtime_dir in candidates:
+        path = runtime_dir / module.STATUS_NAME
+        try:
+            status = json.loads(path.read_text())
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            continue
+        if status.get("owner_pid") == bridge_pid and status.get("daemon_pid"):
+            return path, status
+    return False
+
+
+def validate_bridge_instance(
+    found: tuple[Path, dict[str, object]],
+    bridge: ProxyBridge,
+    host: str,
+    state_root: Path,
+    module,
+) -> dict[str, object]:
+    path, status = found
+    bridge_identity = module.process_start_identity(bridge.pid)
+    generation = status.get("generation")
+    if (
+        status.get("format") != 2
+        or status.get("version") != 2
+        or not isinstance(generation, str)
+        or module.GENERATION_PATTERN.fullmatch(generation) is None
+        or status.get("owner_start_identity") != bridge_identity
+        or status.get("lease_count") != 1
+    ):
+        raise AssertionError(f"invalid bridge lifecycle status: {status}")
+    expected_key = module.derive_agent_key(
+        bridge.pid,
+        bridge_identity,
+        generation,
+    )
+    if status.get("agent_key") != expected_key or path.parent.name != expected_key:
+        raise AssertionError(f"bridge key did not use bridge self identity: {status}")
+    runtime_dir = path.parent
+    state_dir = state_root / host / "agents" / expected_key
+    socket_path = runtime_dir / "emacs" / "server"
+    diagnostic = runtime_dir / module.DAEMON_DIAGNOSTIC_NAME
+    if not socket_path.is_socket() or not state_dir.is_dir():
+        raise AssertionError(f"bridge instance paths are incomplete: {runtime_dir}")
+    diagnostic_info = diagnostic.stat()
+    if (
+        diagnostic_info.st_mode & 0o777 != 0o600
+        or diagnostic_info.st_size > module.MAX_DAEMON_DIAGNOSTIC_BYTES
+    ):
+        raise AssertionError(f"unsafe or unbounded daemon diagnostic: {diagnostic}")
+    return {
+        "bridge": bridge,
+        "bridge_identity": bridge_identity,
+        "diagnostic": diagnostic,
+        "runtime_dir": runtime_dir,
+        "socket": socket_path,
+        "state_dir": state_dir,
+        "status": status,
+        "status_path": path,
+    }
 
 
 def response_text(response: dict[str, object]) -> str:
@@ -520,7 +644,10 @@ def assert_launcher_rejects(
         text=True,
         capture_output=True,
         env=environment,
-        timeout=10,
+        # Darwin builders can briefly starve a cold Nix-store process while
+        # other live-daemon checks start.  The exact status/text below, not a
+        # scheduler-sensitive wall-clock threshold, proves fail-fast parsing.
+        timeout=30,
         check=False,
     )
     if completed.returncode != expected_status or expected_text not in completed.stderr:
@@ -530,14 +657,177 @@ def assert_launcher_rejects(
         )
 
 
+def assert_typed_registry_probe(bridge: ProxyBridge, launcher: Path) -> None:
+    """Require one real call through the direct typed-only registry."""
+    response = bridge.call_tool(
+        "file-read",
+        {"path": str(launcher)},
+    )
+    if "anvil-mcp" not in response_text(response):
+        raise AssertionError(f"direct typed registry stopped serving: {response}")
+
+
+def verify_generation_rollover(
+    old_launcher: Path,
+    new_launcher: Path,
+    runtime_root: Path,
+    state_root: Path,
+    module,
+) -> None:
+    """Keep an old bridge pinned while a new package generation starts."""
+    old_owner = OwnerProxy(old_launcher, "old-generation-owner")
+    new_owner = OwnerProxy(new_launcher, "new-generation-owner")
+    old_bridge = old_owner.spawn_bridge("anvil", "generation-rollover")
+    new_bridge: ProxyBridge | None = None
+    instances: list[dict[str, object]] = []
+    try:
+        old_bridge.initialize()
+        old_instance = validate_bridge_instance(
+            eventually(
+                lambda: find_running_instance(
+                    runtime_root,
+                    "generation-rollover",
+                    old_bridge.pid,
+                    module,
+                )
+            ),
+            old_bridge,
+            "generation-rollover",
+            state_root,
+            module,
+        )
+        instances.append(old_instance)
+        old_generation = old_instance["status"]["generation"]
+        old_daemon = old_instance["status"]["daemon_pid"]
+        if eval_value(
+            old_bridge.call_tool("emacs-eval", {"expression": "(+ 40 2)"})
+        ) != 42:
+            raise AssertionError("old generation failed before rollover")
+
+        new_bridge = new_owner.spawn_bridge("anvil", "generation-rollover")
+        new_bridge.initialize()
+        new_instance = validate_bridge_instance(
+            eventually(
+                lambda: find_running_instance(
+                    runtime_root,
+                    "generation-rollover",
+                    new_bridge.pid,
+                    module,
+                )
+            ),
+            new_bridge,
+            "generation-rollover",
+            state_root,
+            module,
+        )
+        instances.append(new_instance)
+        new_generation = new_instance["status"]["generation"]
+        if new_generation == old_generation:
+            raise AssertionError(
+                f"package rollover reused generation {old_generation!r}"
+            )
+        if (
+            new_instance["runtime_dir"] == old_instance["runtime_dir"]
+            or new_instance["state_dir"] == old_instance["state_dir"]
+            or new_instance["socket"] == old_instance["socket"]
+        ):
+            raise AssertionError("package generations shared mutable state")
+
+        old_status = read_running_status(old_instance["status_path"])
+        if (
+            not old_status
+            or old_status["generation"] != old_generation
+            or old_status["daemon_pid"] != old_daemon
+        ):
+            raise AssertionError(
+                f"new launcher displaced the old generation: {old_status}"
+            )
+        if eval_value(
+            new_bridge.call_tool("emacs-eval", {"expression": "(+ 20 22)"})
+        ) != 42:
+            raise AssertionError("new generation did not serve a real request")
+        new_bridge.close()
+        if eval_value(
+            old_bridge.call_tool("emacs-eval", {"expression": "(+ 21 21)"})
+        ) != 42:
+            raise AssertionError("closing the new generation harmed the old bridge")
+        old_bridge.close()
+    finally:
+        if new_bridge is not None and not new_bridge.closed:
+            new_bridge.close()
+        if not old_bridge.closed:
+            old_bridge.close()
+        new_owner.close()
+        old_owner.close()
+    for instance in instances:
+        eventually(lambda instance=instance: not instance["runtime_dir"].exists())
+        eventually(lambda instance=instance: not instance["state_dir"].exists())
+
+
+def verify_readiness_crash_recovery(
+    launcher: Path,
+    runtime_root: Path,
+    state_root: Path,
+    module,
+) -> None:
+    """Recover behind one MCP pipe when the first root dies before readiness."""
+    owner = OwnerProxy(launcher, "readiness-crash-owner")
+    bridge = owner.spawn_bridge("anvil", "readiness-crash")
+    instance: dict[str, object] | None = None
+    try:
+        bridge.initialize()
+        instance = validate_bridge_instance(
+            eventually(
+                lambda: find_running_instance(
+                    runtime_root,
+                    "readiness-crash",
+                    bridge.pid,
+                    module,
+                )
+            ),
+            bridge,
+            "readiness-crash",
+            state_root,
+            module,
+        )
+        sentinel = instance["runtime_dir"] / ".readiness-crashed-once"
+        status = instance["status"]
+        if not sentinel.is_file():
+            raise AssertionError("readiness crash wrapper never ran")
+        if (
+            status.get("restart_count", 0) < 1
+            or status.get("restart_reason") != "daemon-exited:70"
+        ):
+            raise AssertionError(
+                f"readiness crash was not retained in status: {status}"
+            )
+        if eval_value(
+            bridge.call_tool("emacs-eval", {"expression": "(+ 39 3)"})
+        ) != 42:
+            raise AssertionError("same bridge failed after readiness crash")
+        bridge.close()
+    finally:
+        if not bridge.closed:
+            bridge.close()
+        owner.close()
+    if instance is not None:
+        eventually(lambda: not instance["runtime_dir"].exists())
+        eventually(lambda: not instance["state_dir"].exists())
+
+
 def main() -> None:
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in (3, 5):
         raise SystemExit(
             "usage: agent-supervisor-smoke.py /path/to/anvil-mcp "
-            "/path/to/agent-supervisor.py"
+            "/path/to/agent-supervisor.py "
+            "[/path/to/rollover-anvil-mcp /path/to/readiness-crash-anvil-mcp]"
         )
     launcher = Path(sys.argv[1]).resolve()
     module = load_supervisor(Path(sys.argv[2]).resolve())
+    rollover_launcher = Path(sys.argv[3]).resolve() if len(sys.argv) == 5 else None
+    readiness_crash_launcher = (
+        Path(sys.argv[4]).resolve() if len(sys.argv) == 5 else None
+    )
     runtime_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"])
     state_root = Path(os.environ["ANVIL_EMACS_STATE_ROOT"])
     home = Path.home()
@@ -550,6 +840,20 @@ def main() -> None:
         "--socket cannot override a per-agent daemon",
         "--socket=/tmp/spoofed-anvil-socket",
     )
+    if rollover_launcher is not None and readiness_crash_launcher is not None:
+        verify_generation_rollover(
+            launcher,
+            rollover_launcher,
+            runtime_root,
+            state_root,
+            module,
+        )
+        verify_readiness_crash_recovery(
+            readiness_crash_launcher,
+            runtime_root,
+            state_root,
+            module,
+        )
 
     owners: list[OwnerProxy] = []
     bridges: list[ProxyBridge] = []
@@ -565,117 +869,67 @@ def main() -> None:
     try:
         for bridge in bridges:
             bridge.initialize()
-
-        main_owner_identity = eventually(
-            lambda: module.process_start_identity(main_owner.pid)
-        )
-        other_owner_identity = eventually(
-            lambda: module.process_start_identity(other_owner.pid)
-        )
-        main_agent_key = module.derive_agent_key(
-            main_owner.pid,
-            main_owner_identity,
-        )
-        other_agent_key = module.derive_agent_key(
-            other_owner.pid,
-            other_owner_identity,
-        )
-        main_status_path = status_path(
-            runtime_root,
-            HOST_ONE,
-            main_agent_key,
-            module,
-        )
-        agent_status_path = status_path(
-            runtime_root,
-            HOST_ONE,
-            other_agent_key,
-            module,
-        )
-        host_status_path = status_path(
-            runtime_root,
-            HOST_TWO,
-            main_agent_key,
-            module,
-        )
-        main_status = eventually(lambda: read_running_status(main_status_path))
-        agent_status = eventually(lambda: read_running_status(agent_status_path))
-        host_status = eventually(lambda: read_running_status(host_status_path))
-
-        # Both MCP servers (and therefore internal subagents) in one Codex OS
-        # process share one pool, while a separate Codex/agent-deck process does not.
-        if main_status["lease_count"] != 2:
-            raise AssertionError(
-                f"same-owner bridges did not converge: {main_status}"
-            )
-        if (
-            main_status["owner_pid"] != main_owner.pid
-            or main_status["owner_start_identity"] != main_owner_identity
-            or main_status["agent_key"] != main_agent_key
+        instances = {}
+        for name, bridge, host in (
+            ("main-typed", main_typed, HOST_ONE),
+            ("main-eval", main_eval, HOST_ONE),
+            ("other-agent", other_agent, HOST_ONE),
+            ("other-host", other_host, HOST_TWO),
         ):
-            raise AssertionError(f"main owner identity was not retained: {main_status}")
-        if (
-            agent_status["owner_pid"] != other_owner.pid
-            or agent_status["agent_key"] != other_agent_key
-        ):
-            raise AssertionError(
-                f"separate Codex owner identity was not retained: {agent_status}"
+            found = eventually(
+                lambda bridge=bridge, host=host: find_running_instance(
+                    runtime_root,
+                    host,
+                    bridge.pid,
+                    module,
+                )
             )
-        pids = {
-            main_status["daemon_pid"],
-            agent_status["daemon_pid"],
-            host_status["daemon_pid"],
+            instances[name] = validate_bridge_instance(
+                found,
+                bridge,
+                host,
+                state_root,
+                module,
+            )
+
+        # Every launcher bridge is its own lifecycle domain.  This includes
+        # the two siblings created by the exact same client process.
+        for field in ("agent_key", "daemon_pid", "supervisor_pid"):
+            values = {instance["status"][field] for instance in instances.values()}
+            if len(values) != len(instances):
+                raise AssertionError(f"bridge instances shared {field}: {values}")
+        for field in ("runtime_dir", "state_dir", "socket"):
+            values = {instance[field] for instance in instances.values()}
+            if len(values) != len(instances):
+                raise AssertionError(f"bridge instances shared {field}: {values}")
+        generations = {
+            instance["status"]["generation"] for instance in instances.values()
         }
-        supervisors = {
-            main_status["supervisor_pid"],
-            agent_status["supervisor_pid"],
-            host_status["supervisor_pid"],
-        }
-        if len(pids) != 3 or len(supervisors) != 3:
-            raise AssertionError("owner or host instances shared a process")
-        runtime_dir = runtime_root / HOST_ONE / "agents" / main_agent_key
-        state_dir = state_root / HOST_ONE / "agents" / main_agent_key
-        sockets = {
-            runtime_dir / "emacs" / "server",
-            runtime_root
-            / HOST_ONE
-            / "agents"
-            / other_agent_key
-            / "emacs"
-            / "server",
-            runtime_root
-            / HOST_TWO
-            / "agents"
-            / main_agent_key
-            / "emacs"
-            / "server",
-        }
-        if len(sockets) != 3 or not all(path.is_socket() for path in sockets):
-            raise AssertionError(f"isolated sockets are missing: {sockets}")
+        if len(generations) != 1:
+            raise AssertionError(f"one launcher exposed mixed generations: {generations}")
         assert_home_unchanged(home, home_baseline)
 
-        agent_runtime_dir = (
-            runtime_root / HOST_ONE / "agents" / other_agent_key
-        )
-        agent_state_dir = state_root / HOST_ONE / "agents" / other_agent_key
-        other_bridge_identity = module.process_start_identity(other_agent.pid)
+        agent_instance = instances["other-agent"]
         agent_supervisor_identity = module.process_start_identity(
-            agent_status["supervisor_pid"]
+            agent_instance["status"]["supervisor_pid"]
         )
         agent_daemon_identity = module.process_start_identity(
-            agent_status["daemon_pid"]
+            agent_instance["status"]["daemon_pid"]
         )
         other_owner.terminate_abruptly()
         owners.remove(other_owner)
         other_agent.closed = True
         bridges.remove(other_agent)
-        eventually(lambda: not agent_status_path.exists())
-        eventually(lambda: not agent_runtime_dir.exists())
-        eventually(lambda: not agent_state_dir.exists())
+        eventually(lambda: not agent_instance["status_path"].exists())
+        eventually(lambda: not agent_instance["runtime_dir"].exists())
+        eventually(lambda: not agent_instance["state_dir"].exists())
         for pid, identity in (
-            (other_agent.pid, other_bridge_identity),
-            (agent_status["supervisor_pid"], agent_supervisor_identity),
-            (agent_status["daemon_pid"], agent_daemon_identity),
+            (other_agent.pid, agent_instance["bridge_identity"]),
+            (
+                agent_instance["status"]["supervisor_pid"],
+                agent_supervisor_identity,
+            ),
+            (agent_instance["status"]["daemon_pid"], agent_daemon_identity),
         ):
             eventually(
                 lambda pid=pid, identity=identity: (
@@ -685,16 +939,64 @@ def main() -> None:
 
         other_host.close()
         bridges.remove(other_host)
-        eventually(
-            lambda: (
-                (current := json.loads(host_status_path.read_text()))
-                and current["lease_count"] == 0
-                and current["daemon_pid"] is None
-            )
-        )
+        host_instance = instances["other-host"]
+        eventually(lambda: not host_instance["runtime_dir"].exists())
+        eventually(lambda: not host_instance["state_dir"].exists())
 
-        root_pid = main_status["daemon_pid"]
-        supervisor_pid = main_status["supervisor_pid"]
+        typed_instance = instances["main-typed"]
+        eval_instance = instances["main-eval"]
+        bridge_identity = module.process_start_identity(main_typed.pid)
+        original_supervisor_pid = typed_instance["status"]["supervisor_pid"]
+        original_supervisor_identity = module.process_start_identity(
+            original_supervisor_pid
+        )
+        original_daemon_pid = typed_instance["status"]["daemon_pid"]
+        original_daemon_identity = module.process_start_identity(
+            original_daemon_pid
+        )
+        os.kill(original_supervisor_pid, signal.SIGKILL)
+        caretaker_recovered = eventually(
+            lambda: (
+                (current := read_running_status(typed_instance["status_path"]))
+                and current["supervisor_pid"] != original_supervisor_pid
+                and current["daemon_pid"] != original_daemon_pid
+                and current
+            ),
+            timeout=150,
+        )
+        if module.process_start_identity(main_typed.pid) != bridge_identity:
+            raise AssertionError("supervisor recovery replaced the bridge process")
+        if caretaker_recovered["owner_pid"] != main_typed.pid:
+            raise AssertionError(
+                f"caretaker lost bridge ownership: {caretaker_recovered}"
+            )
+        recovery_started = time.monotonic()
+        caretaker_probe = call_after_readiness(
+            main_typed,
+            "emacs-eval",
+            {"expression": "(+ 21 21)"},
+            timeout=150,
+        )
+        if eval_value(caretaker_probe) != 42:
+            raise AssertionError(
+                f"same stdio pipe did not recover: {caretaker_probe}"
+            )
+        if time.monotonic() - recovery_started >= 150:
+            raise AssertionError("same-pipe supervisor recovery exceeded its bound")
+        for pid, identity in (
+            (original_supervisor_pid, original_supervisor_identity),
+            (original_daemon_pid, original_daemon_identity),
+        ):
+            eventually(
+                lambda pid=pid, identity=identity: (
+                    module.process_start_identity(pid) != identity
+                )
+            )
+        typed_instance["status"] = caretaker_recovered
+
+        root_pid = typed_instance["status"]["daemon_pid"]
+        supervisor_pid = typed_instance["status"]["supervisor_pid"]
+        eval_daemon_pid = eval_instance["status"]["daemon_pid"]
         workers = worker_pids(main_typed)
         worker_identities = {
             pid: module.process_start_identity(pid) for pid in workers
@@ -702,7 +1004,7 @@ def main() -> None:
         if any(identity is None for identity in worker_identities.values()):
             raise AssertionError(f"worker identity disappeared: {worker_identities}")
 
-        nonce = runtime_dir / "watchdog-dispatch-nonce"
+        nonce = typed_instance["runtime_dir"] / "watchdog-dispatch-nonce"
         hanging_expression = (
             f"(progn (write-region \"once\\n\" nil {json.dumps(str(nonce))} "
             "t 'silent) (while t))"
@@ -718,15 +1020,28 @@ def main() -> None:
             )
         restarted = eventually(
             lambda: (
-                (current := read_running_status(main_status_path))
+                (current := read_running_status(typed_instance["status_path"]))
                 and current["daemon_pid"] != root_pid
                 and current
             )
         )
         if restarted["supervisor_pid"] != supervisor_pid:
             raise AssertionError("root restart replaced the owning supervisor")
+        if (
+            restarted.get("restart_count", 0) < 1
+            or not str(restarted.get("restart_reason", "")).startswith(
+                "daemon-exited:"
+            )
+            or restarted.get("generation")
+            != typed_instance["status"]["generation"]
+        ):
+            raise AssertionError(f"restart diagnostics were not retained: {restarted}")
         if nonce.read_text().splitlines() != ["once"]:
             raise AssertionError("the ambiguous hung request was replayed")
+        eval_status = read_running_status(eval_instance["status_path"])
+        if not eval_status or eval_status["daemon_pid"] != eval_daemon_pid:
+            raise AssertionError("hung sibling restarted the independent eval daemon")
+        assert_typed_registry_probe(main_eval, launcher)
         recovered = call_after_readiness(
             main_typed,
             "emacs-eval",
@@ -739,36 +1054,22 @@ def main() -> None:
         restarted_identity = module.process_start_identity(restarted_pid)
         main_typed.close()
         bridges.remove(main_typed)
-        surviving = eventually(
-            lambda: (
-                (current := read_running_status(main_status_path))
-                and current["lease_count"] == 1
-                and current
-            )
-        )
-        if surviving["daemon_pid"] != restarted_pid:
-            raise AssertionError("one bridge exit stopped the shared agent daemon")
-        surviving_probe = main_eval.call_tool("anvil-worker-probe", {})
-        if "error" in surviving_probe:
-            raise AssertionError(
-                f"surviving typed bridge lost the daemon: {surviving_probe}"
-            )
-
-        main_eval.close()
-        bridges.remove(main_eval)
-        idle = eventually(
-            lambda: (
-                (current := json.loads(main_status_path.read_text()))
-                and current["lease_count"] == 0
-                and current["daemon_pid"] is None
-                and current
-            )
-        )
-        if idle["supervisor_pid"] != supervisor_pid:
-            raise AssertionError("idle state replaced the owner supervisor")
+        eventually(lambda: not typed_instance["runtime_dir"].exists())
+        eventually(lambda: not typed_instance["state_dir"].exists())
         eventually(
             lambda: module.process_start_identity(restarted_pid)
             != restarted_identity
+        )
+        assert_typed_registry_probe(main_eval, launcher)
+
+        eval_daemon_identity = module.process_start_identity(eval_daemon_pid)
+        main_eval.close()
+        bridges.remove(main_eval)
+        eventually(lambda: not eval_instance["runtime_dir"].exists())
+        eventually(lambda: not eval_instance["state_dir"].exists())
+        eventually(
+            lambda: module.process_start_identity(eval_daemon_pid)
+            != eval_daemon_identity
         )
         for pid, identity in worker_identities.items():
             eventually(
@@ -777,14 +1078,8 @@ def main() -> None:
                 )
             )
 
-        host_runtime_dir = runtime_root / HOST_TWO / "agents" / main_agent_key
-        host_state_dir = state_root / HOST_TWO / "agents" / main_agent_key
         main_owner.close()
         owners.remove(main_owner)
-        eventually(lambda: not runtime_dir.exists())
-        eventually(lambda: not state_dir.exists())
-        eventually(lambda: not host_runtime_dir.exists())
-        eventually(lambda: not host_state_dir.exists())
     finally:
         for bridge in reversed(bridges):
             bridge.close()

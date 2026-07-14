@@ -17,6 +17,7 @@
 (require 'anvil-offload)
 (require 'anvil-server)
 (require 'anvil-host)
+(require 'anvil-shell-filter)
 
 (defconst anvil-hang-regression-test--tests-directory
   (file-name-directory (or load-file-name buffer-file-name))
@@ -225,7 +226,8 @@ future first."
             (anvil-offload--sentinel proc "finished\n"))
           (should deferred)
           (should (eq 'pending (anvil-future-status future)))
-          (anvil-offload--dispatch-reply (list :id id :ok 'late-reply))
+          (anvil-offload--dispatch-reply
+           proc (list :id id :ok 'late-reply))
           (apply (nth 2 deferred) (nthcdr 3 deferred))
           (should (eq 'done (anvil-future-status future)))
           (should (eq 'late-reply (anvil-future-value future))))
@@ -233,6 +235,37 @@ future first."
         (delete-process proc))
       (remhash id (anvil-offload--ensure-pending))
       (anvil-hang-regression-test--reset-offload))))
+
+(ert-deftest anvil-hang-regression-shell-sync-timeout-cap ()
+  "Oversize synchronous shell requests must fail before spawning a child."
+  (let ((anvil-shell-filter-max-sync-timeout 2)
+        shell-called
+        timeout-seen)
+    (cl-letf (((symbol-function 'anvil-shell)
+               (lambda (_cmd opts)
+                 (setq shell-called t
+                       timeout-seen (plist-get opts :timeout))
+                 '(:exit 0 :stdout "" :stderr "")))
+              ((symbol-function 'anvil-shell-filter--tee-put)
+               (lambda (_raw) "test-tee")))
+      (should-error (anvil-shell-filter-run "true" :timeout 3)
+                    :type 'user-error)
+      (should-not shell-called)
+      (let ((result (anvil-shell-filter-run "true" :timeout 2)))
+        (should shell-called)
+        (should (= 2 timeout-seen))
+        (should (zerop (plist-get result :exit)))))))
+
+(ert-deftest anvil-hang-regression-host-stdin-is-eof ()
+  "A host command that reads stdin must receive EOF instead of timing out."
+  (let ((result
+         (anvil-host--run
+          "cat >/dev/null; printf 'stdin-eof\\n'"
+          'utf-8
+          temporary-file-directory
+          1)))
+    (should (equal '(0 "stdin-eof\n" "") result))))
+
 
 (ert-deftest anvil-hang-regression-host-quit-cleans-processes-and-buffers ()
   "A `keyboard-quit' during a host shell must delete all temporary state."
@@ -278,35 +311,62 @@ future first."
         (kill-buffer stderr-buffer)))))
 
 (ert-deftest anvil-hang-regression-host-drains-final-stdout-after-exit ()
-  "A child shell's final stdout must survive its tracked wrapper's exit."
+  "A tracked shell's final stdout must survive that shell's exit.
+
+The tracked process writes the final bytes itself.  An auxiliary wrapper would
+only add a second dynamic-loader launch and make this drain regression depend
+on host-wide loader scheduling."
   (skip-unless
    (and (memq system-type '(darwin gnu/linux))
-        (file-executable-p "/bin/sh")
-        (executable-find "echo")))
-  (let ((wrapper
-         (make-temp-file
-          "anvil-host-wrapper-" nil ".sh"
-          "#!/bin/sh\n/bin/sh \"$@\"\nexit $?\n"))
-        failures)
+        (file-executable-p shell-file-name)))
+  (let (failures)
+    (dotimes (iteration 100)
+      (let ((result
+             (anvil-shell
+              "printf prefix; printf suffix"
+              '(:timeout 15 :max-output nil))))
+        (unless
+            (and (zerop (plist-get result :exit))
+                 (equal "prefixsuffix" (plist-get result :stdout))
+                 (string-empty-p (plist-get result :stderr)))
+          (push (cons iteration result) failures))))
+    (should-not failures)))
+
+(ert-deftest
+    anvil-hang-regression-shell-filter-does-not-wait-for-detached-pipe-holder ()
+  "A detached child retaining stdout and stderr must not delay shell-filter."
+  (skip-unless
+   (and (memq system-type '(darwin gnu/linux))
+        (executable-find "nohup")
+        (executable-find "sleep")))
+  (let ((pid-file (make-temp-file "anvil-shell-filter-child-"))
+        child-pid)
     (unwind-protect
-        (progn
-          (set-file-modes wrapper #o700)
-          (let ((shell-file-name wrapper))
-            (dotimes (iteration 50)
-              (let ((result
-                     (anvil-shell
-                      (format "printf prefix; %s -n suffix"
-                              (shell-quote-argument
-                               (executable-find "echo")))
-                      '(:timeout 15 :max-output nil))))
-                (unless
-                    (and (zerop (plist-get result :exit))
-                         (equal "prefixsuffix"
-                                (plist-get result :stdout))
-                         (string-empty-p (plist-get result :stderr)))
-                  (push (cons iteration result) failures)))))
-          (should-not failures))
-      (delete-file wrapper))))
+        (let* ((command
+                (format "%s %s 5 & echo $! > %s; printf ready"
+                        (shell-quote-argument (executable-find "nohup"))
+                        (shell-quote-argument (executable-find "sleep"))
+                        (shell-quote-argument pid-file)))
+               (started (float-time))
+               (result
+                (cl-letf (((symbol-function 'anvil-shell-filter--tee-put)
+                           (lambda (_raw) "test-tee")))
+                  (anvil-shell-filter-run command :timeout 3)))
+               (elapsed (- (float-time) started)))
+          (setq child-pid
+                (string-to-number
+                 (string-trim
+                  (with-temp-buffer
+                    (insert-file-contents pid-file)
+                    (buffer-string)))))
+          (should (> child-pid 1))
+          (should (process-attributes child-pid))
+          (should (zerop (plist-get result :exit)))
+          (should (equal "ready" (plist-get result :compressed)))
+          (should (< elapsed 2.0)))
+      (when (and (integerp child-pid) (> child-pid 1))
+        (ignore-errors (signal-process child-pid 9)))
+      (delete-file pid-file))))
 
 (ert-deftest anvil-hang-regression-host-drains-stderr-while-running ()
   "A stderr flood larger than pipe capacity must complete without timeout."

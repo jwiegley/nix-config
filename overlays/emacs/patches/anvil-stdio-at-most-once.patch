@@ -1,21 +1,320 @@
 Make the stdio bridge dispatch every JSON-RPC request at most once.
 
 Only the side-effect-free readiness probe is retried while a daemon starts or
-a sibling bridge occupies its event loop.  After readiness, init, stop, and
-JSON-RPC expressions run exactly once.
-Ambiguous post-dispatch failures produce a correlated structured error with
+a sibling bridge occupies its event loop. After readiness, init, stop, and
+JSON-RPC expressions run exactly once. A bounded JSON parser preserves exact
+top-level request ids and recognizes initialize without trusting nested fields.
+Ambiguous post-dispatch failures produce correlated structured errors with
 phase/dispatched/replayed fields instead of replaying a mutation.
+
+Every external program runs under a Bash-owned deadline implemented with process
+substitution and builtin read -t, so a loader-frozen child is bounded without GNU
+timeout. When configured, the parent guard validates the runner's pre-dispatch
+numeric identity, arms pidfd/kqueue before moving the target process group, and
+reaps that group on runner or bridge death. Stateful stderr uses a process-lifetime
+sink FD. After dispatch, response validation, normalization, UTF-8 byte framing,
+NUL rejection, and bounded-chunk streaming use Bash builtins only, including on
+macOS Bash 3.2. Incomplete frames fail closed rather than desynchronizing the pipe.
 
 --- a/anvil-stdio.sh
 +++ b/anvil-stdio.sh
-@@ -83,55 +83,91 @@
+@@ -24,51 +24,239 @@
+ SOCKET=""
+ SERVER_ID=""
+ EMACS_MCP_DEBUG_LOG=${EMACS_MCP_DEBUG_LOG:-""}
++ANVIL_MCP_PARENT_GUARD=${ANVIL_MCP_PARENT_GUARD:-""}
++ANVIL_MCP_PARENT_GUARD_PYTHON=${ANVIL_MCP_PARENT_GUARD_PYTHON:-""}
+ 
+-# GNU base64 tolerates stray non-alphabet bytes with --ignore-garbage;
+-# BSD/macOS base64 has no such flag.  Probe once at startup and pass
+-# the flag only where supported.
+-if printf 'Zg==' | base64 -d --ignore-garbage >/dev/null 2>&1; then
+-	_anvil_b64_flags="--ignore-garbage"
+-else
+-	_anvil_b64_flags=""
++# Keep a restrictive mask for a caller-selected debug log.  Stateful stderr is
++# discarded through a sink opened once at startup; creating and later cleaning
++# one pathname per request would reintroduce loader-dependent helpers.
++umask 077
++if ! exec 8>/dev/null; then
++	echo "anvil-mcp: cannot open dispatch stderr sink" >&2
++	exit 70
++fi
++ANVIL_MCP_RESPONSE_PENDING=0
++
++# Bash 4.2+ can format wall-clock time without execing `date'.  Older Bash
++# releases (notably macOS Bash 3.2) retain a process-free relative timestamp.
++_anvil_printf_time=0
++if printf -v _anvil_timestamp_probe '%(%Y)T' -1 2>/dev/null; then
++	_anvil_printf_time=1
+ fi
++unset _anvil_timestamp_probe
+ 
+-# Debug logging setup
++# Debug logging setup.  Open one regular, non-symlink destination before any
++# request.  During a stateful dispatch logging is suppressed completely, so
++# diagnostics can never delay delivery of an already-executed response.
+ if [ -n "$EMACS_MCP_DEBUG_LOG" ]; then
+-	# Verify log file is writable
+-	if ! touch "$EMACS_MCP_DEBUG_LOG" 2>/dev/null; then
+-		echo "Error: Cannot write to debug log file: $EMACS_MCP_DEBUG_LOG" >&2
+-		exit 1
++	if [ -L "$EMACS_MCP_DEBUG_LOG" ] \
++		|| { [ -e "$EMACS_MCP_DEBUG_LOG" ] && [ ! -f "$EMACS_MCP_DEBUG_LOG" ]; }; then
++		echo "anvil-mcp: debug log must be a regular non-symlink file" >&2
++		exit 64
++	fi
++	if ! : >>"$EMACS_MCP_DEBUG_LOG" || [ ! -f "$EMACS_MCP_DEBUG_LOG" ]; then
++		echo "anvil-mcp: cannot create debug log: $EMACS_MCP_DEBUG_LOG" >&2
++		exit 70
++	fi
++	if ! exec 9>>"$EMACS_MCP_DEBUG_LOG"; then
++		echo "anvil-mcp: cannot open debug log: $EMACS_MCP_DEBUG_LOG" >&2
++		exit 70
+ 	fi
+ 
+-	# Helper function for debug logging
+ 	mcp_debug_log() {
+-		local direction="$1"
+-		local message="$2"
+-		local timestamp
+-		timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+-		echo "[$timestamp] [$$] MCP-${direction}: ${message}" >>"$EMACS_MCP_DEBUG_LOG"
++		local direction="$1" message="$2" timestamp
++		[ "$ANVIL_MCP_RESPONSE_PENDING" -eq 0 ] || return 0
++		message="${message:0:2048}"
++		if [ "$_anvil_printf_time" -eq 1 ]; then
++			printf -v timestamp '%(%Y-%m-%d %H:%M:%S)T' -1
++		else
++			printf -v timestamp '+%ss' "$SECONDS"
++		fi
++		printf '[%s] [%s] MCP-%s: %s\n' \
++			"$timestamp" "$$" "$direction" "$message" >&9 2>/dev/null || true
+ 	}
+ 
+ 	mcp_debug_log "INFO" "Debug logging enabled"
+ 
+-	# Log version/path so future failure reports can tell which copy of
+-	# anvil-stdio.sh was actually executed (opencode/zed MCP configs
+-	# sometimes point to a checkout other than the user's working copy).
++	# Log the path and resolved steady-state tools without starting diagnostic
++	# helpers.  A debug-only git/stat/dirname freeze must not block MCP startup.
+ 	_anvil_script_path="$0"
+-	_anvil_script_dir="$(cd "$(dirname "$0")" 2>/dev/null && pwd || echo '?')"
+-	_anvil_git_sha="$(git -C "$_anvil_script_dir" rev-parse --short HEAD 2>/dev/null || echo 'no-git')"
+-	_anvil_mtime="$(stat -c %Y "$_anvil_script_path" 2>/dev/null || stat -f %m "$_anvil_script_path" 2>/dev/null || echo 'unknown')"
+-	mcp_debug_log "INFO" "anvil-stdio.sh path=$_anvil_script_path git=$_anvil_git_sha mtime=$_anvil_mtime"
+-	mcp_debug_log "INFO" "tooling bash=$(command -v bash || echo '?') sed=$(command -v sed || echo '?') tr=$(command -v tr || echo '?') base64=$(command -v base64 || echo '?') emacsclient=$(command -v emacsclient || echo '?')"
++	mcp_debug_log "INFO" "anvil-stdio.sh path=$_anvil_script_path"
++	mcp_debug_log "INFO" \
++		"tooling bash=$(command -v bash || printf '?') python3=$(command -v python3 || printf '?') emacsclient=$(command -v emacsclient || printf '?')"
+ else
+-	# No-op function when debug logging is disabled
+ 	mcp_debug_log() {
+ 		:
+ 	}
+ fi
+ 
++# Probe diagnostics are captured before dispatch and may therefore share the
++# readiness command's combined output.  No capture pathname is needed.
++anvil_mcp_log_probe_stderr() {
++	local direction="$1" text="$2"
++	[ -n "$text" ] || return 0
++	text="${text//$'\n'/ }"
++	mcp_debug_log "$direction" "${text:0:4096}"
++}
++
++# FD 8 is a process-lifetime stderr sink opened before any stateful dispatch.
++# These hooks remain explicit so capture setup failure is still distinguishable
++# from an ambiguous post-dispatch failure, without per-request files or reads.
++anvil_mcp_capture_begin() {
++	: >&8
++}
++
++anvil_mcp_capture_finish() {
++	:
++}
++
++# Run one text-only external program under a Bash-owned deadline.  GNU
++# `timeout' cannot bound its own dynamic-loader startup; process substitution
++# plus builtin `read -t' can.  The runner discovers its real PID through a
++# pre-dispatch Python child because Bash 3.2 reports stale $$/$PPID values in
++# subshells.  A delayed guard loader must validate that numeric owner instead
++# of adopting a reparent/subreaper.  NUL is forbidden in helper output.
++anvil_mcp_exec_program() {
++	if [ -n "$ANVIL_MCP_PARENT_GUARD" ]; then
++		ANVIL_HEADLESS_PARENT_PID="$ANVIL_MCP_RUNNER_PID" exec \
++			"$ANVIL_MCP_PARENT_GUARD_PYTHON" -I -S \
++			"$ANVIL_MCP_PARENT_GUARD" group "$@"
++	else
++		exec "$@"
++	fi
++}
++
++anvil_mcp_exec_child() {
++	local stderr_mode="$1" input_mode="$2" input="$3"
++	shift 3
++	exec 7<&- 9>&-
++	case "$input_mode:$stderr_mode" in
++	input:merge)
++		anvil_mcp_exec_program "$@" < <(printf '%s' "$input") 2>&1 8>&-
++		;;
++	input:separate)
++		anvil_mcp_exec_program "$@" < <(printf '%s' "$input") 2>&8 8>&-
++		;;
++	descriptor:merge)
++		anvil_mcp_exec_program "$@" <&5 5<&- 2>&1 8>&-
++		;;
++	descriptor:separate)
++		anvil_mcp_exec_program "$@" <&5 5<&- 2>&8 8>&-
++		;;
++	inherit:merge)
++		anvil_mcp_exec_program "$@" 2>&1 8>&-
++		;;
++	inherit:separate)
++		anvil_mcp_exec_program "$@" 2>&8 8>&-
++		;;
++	null:merge)
++		anvil_mcp_exec_program "$@" </dev/null 2>&1 8>&-
++		;;
++	null:separate)
++		anvil_mcp_exec_program "$@" </dev/null 2>&8 8>&-
++		;;
++	*)
++		printf 'anvil-mcp: invalid bounded-run mode: %s/%s' \
++			"$input_mode" "$stderr_mode"
++		return 64
++		;;
++	esac
++}
++
++anvil_mcp_run_child() {
++	local guard_deadline="$1" stderr_mode="$2" input_mode="$3" input="$4"
++	local child="" rc=70 runner_pid="" timed_out=0
++	shift 4
++
++	# A guarded launch keeps its Python loader in the bridge group until the
++	# loaded guard validates the exact runner and moves the target.  Timeout
++	# signals cover the pre-group PID and post-group PGID.
++	trap '
++		timed_out=1
++		[ -z "$child" ] || kill -TERM "$child" 2>/dev/null || :
++		[ -z "$child" ] || kill -TERM -- "-$child" 2>/dev/null || :
++	' TERM
++	trap '
++		timed_out=1
++		[ -z "$child" ] || kill -KILL "$child" 2>/dev/null || :
++		[ -z "$child" ] || kill -KILL -- "-$child" 2>/dev/null || :
++	' USR1
++
++	if [ -n "$ANVIL_MCP_PARENT_GUARD" ]; then
++		[ "$guard_deadline" -le 5 ] || guard_deadline=5
++		exec 4< <(exec "$ANVIL_MCP_PARENT_GUARD_PYTHON" -I -S -c \
++			'import os; print(os.getppid())' 2>/dev/null)
++		child=$!
++		if ! IFS= read -r -t "$guard_deadline" runner_pid <&4; then
++			exec 4<&-
++			kill -KILL "$child" 2>/dev/null || :
++			trap - TERM USR1
++			printf '\0%s\n' 124
++			return
++		fi
++		exec 4<&-
++		case "$runner_pid" in
++		""|*[!0-9]*|0|1)
++			kill -KILL "$child" 2>/dev/null || :
++			trap - TERM USR1
++			printf '\0%s\n' 70
++			return
++			;;
++		esac
++		ANVIL_MCP_RUNNER_PID=$runner_pid
++		child=""
++	else
++		set -m
++	fi
++
++	anvil_mcp_exec_child "$stderr_mode" "$input_mode" "$input" "$@" &
++	child=$!
++	while :; do
++		if wait "$child"; then rc=0; else rc=$?; fi
++		kill -0 "$child" 2>/dev/null || break
++	done
++	trap - TERM USR1
++	# A leader that daemonized must not leave same-group descendants holding
++	# the result pipe open after the direct child exits.
++	kill -KILL -- "-$child" 2>/dev/null || :
++	[ "$timed_out" -eq 0 ] || rc=124
++	printf '\0%s\n' "$rc"
++}
++
++# Results are returned in ANVIL_MCP_RUN_OUTPUT / STATUS.  A missing sentinel is
++# always a timeout/failure; partial output is deliberately ignored.
++anvil_mcp_run_bounded() {
++	local deadline="$1" stderr_mode="$2" input_mode="$3" input="$4"
++	local runner status=""
++	shift 4
++	ANVIL_MCP_RUN_OUTPUT=""
++	ANVIL_MCP_RUN_STATUS=70
++
++	exec 7< <(anvil_mcp_run_child \
++		"$deadline" "$stderr_mode" "$input_mode" "$input" "$@")
++	runner=$!
++	if IFS= read -r -d '' -t "$deadline" ANVIL_MCP_RUN_OUTPUT <&7; then
++		if IFS= read -r -t 1 status <&7 \
++			&& [[ "$status" =~ ^[0-9]+$ ]] \
++			&& [ "$status" -le 255 ]; then
++			ANVIL_MCP_RUN_STATUS=$status
++		fi
++	else
++		ANVIL_MCP_RUN_OUTPUT=""
++		ANVIL_MCP_RUN_STATUS=124
++		if kill -0 "$runner" 2>/dev/null; then
++			kill -TERM "$runner" 2>/dev/null || :
++			if ! IFS= read -r -d '' \
++				-t "$ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT" _ <&7; then
++				kill -USR1 "$runner" 2>/dev/null || :
++				IFS= read -r -d '' -t 1 _ <&7 || :
++			fi
++			kill -KILL "$runner" 2>/dev/null || :
++		fi
++	fi
++	exec 7<&-
++}
++
+ # --- Retry wrapper for emacsclient ------------------------------------
+ # Absorbs the ~few-second window where `emacs --daemon' is being
+ # restarted: emacsclient then fails with "can't find socket" /
+@@ -83,69 +271,188 @@
  # 60 * 100ms = 6 seconds of tolerance.
  ANVIL_EMACSCLIENT_RETRY_MAX=${ANVIL_EMACSCLIENT_RETRY_MAX:-60}
  ANVIL_EMACSCLIENT_RETRY_DELAY_MS=${ANVIL_EMACSCLIENT_RETRY_DELAY_MS:-100}
 +# Per-attempt readiness timeout.  Timed-out readiness probes are replayed
-+# until the overall emacsclient budget expires; the probe expression is pure.
++# only within the bounded readiness phase; the probe expression is pure.
++# Runtime overrides may shorten these values for tests or local policy, but
++# may never enlarge the package's cross-client safety envelope.
 +ANVIL_EMACSCLIENT_PROBE_TIMEOUT=${ANVIL_EMACSCLIENT_PROBE_TIMEOUT:-5}
-+ANVIL_EMACSCLIENT_TIMEOUT=${ANVIL_EMACSCLIENT_TIMEOUT:-330}
++ANVIL_EMACSCLIENT_READINESS_TIMEOUT=${ANVIL_EMACSCLIENT_READINESS_TIMEOUT:-20}
++ANVIL_EMACSCLIENT_STARTUP_DISPATCH_TIMEOUT=${ANVIL_EMACSCLIENT_STARTUP_DISPATCH_TIMEOUT:-20}
++ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT=${ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT:-150}
++ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT=${ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT:-1}
++ANVIL_MCP_REQUEST_PARSE_TIMEOUT=${ANVIL_MCP_REQUEST_PARSE_TIMEOUT:-2}
++ANVIL_MCP_FRAME_READ_TIMEOUT=${ANVIL_MCP_FRAME_READ_TIMEOUT:-10}
++readonly ANVIL_MCP_MAX_REQUEST_BYTES=16777216
++
++anvil_mcp_validate_timeout() {
++	local name="$1" value="$2" maximum="$3"
++	case "$value" in
++	""|*[!0-9]*)
++		echo "anvil-mcp: $name must be an integer between 1 and $maximum" >&2
++		return 64
++		;;
++	esac
++	if [ "$value" -lt 1 ] || [ "$value" -gt "$maximum" ]; then
++		echo "anvil-mcp: $name must be between 1 and $maximum seconds" >&2
++		return 64
++	fi
++}
  
 -# anvil_emacsclient_retry STDERR_FILE -- EMACSCLIENT_ARGS...
 -#
@@ -25,42 +324,80 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 -# immediately so genuine faults aren't masked.
 -# Prints emacsclient's stdout on success; exits with emacsclient's rc.
 -anvil_emacsclient_retry() {
+-	local stderr_file="$1"
++anvil_mcp_validate_timeout ANVIL_EMACSCLIENT_PROBE_TIMEOUT \
++	"$ANVIL_EMACSCLIENT_PROBE_TIMEOUT" 5
++anvil_mcp_validate_timeout ANVIL_EMACSCLIENT_READINESS_TIMEOUT \
++	"$ANVIL_EMACSCLIENT_READINESS_TIMEOUT" 20
++anvil_mcp_validate_timeout ANVIL_EMACSCLIENT_STARTUP_DISPATCH_TIMEOUT \
++	"$ANVIL_EMACSCLIENT_STARTUP_DISPATCH_TIMEOUT" 20
++anvil_mcp_validate_timeout ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT \
++	"$ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT" 150
++anvil_mcp_validate_timeout ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT \
++	"$ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT" 1
++anvil_mcp_validate_timeout ANVIL_MCP_REQUEST_PARSE_TIMEOUT \
++	"$ANVIL_MCP_REQUEST_PARSE_TIMEOUT" 2
++anvil_mcp_validate_timeout ANVIL_MCP_FRAME_READ_TIMEOUT \
++	"$ANVIL_MCP_FRAME_READ_TIMEOUT" 150
++
++ANVIL_MCP_PYTHON=$(type -P python3 || :)
++ANVIL_MCP_EMACSCLIENT=$(type -P emacsclient || :)
++ANVIL_MCP_HEAD=$(type -P head || :)
++ANVIL_MCP_SLEEP=$(type -P sleep || :)
++for _anvil_program in \
++	ANVIL_MCP_PYTHON ANVIL_MCP_EMACSCLIENT ANVIL_MCP_HEAD ANVIL_MCP_SLEEP; do
++	if [ -z "${!_anvil_program}" ]; then
++		echo "anvil-mcp: ${_anvil_program#ANVIL_MCP_} is required" >&2
++		exit 69
++	fi
++done
++readonly ANVIL_MCP_PYTHON ANVIL_MCP_EMACSCLIENT ANVIL_MCP_HEAD ANVIL_MCP_SLEEP
++unset _anvil_program
++if [ -n "$ANVIL_MCP_PARENT_GUARD" ]; then
++	[ -n "$ANVIL_MCP_PARENT_GUARD_PYTHON" ] \
++		|| ANVIL_MCP_PARENT_GUARD_PYTHON=$ANVIL_MCP_PYTHON
++	case "$ANVIL_MCP_PARENT_GUARD:$ANVIL_MCP_PARENT_GUARD_PYTHON" in
++	/*:/*) ;;
++	*)
++		echo "anvil-mcp: parent guard paths must be absolute" >&2
++		exit 64
++		;;
++	esac
++	if [ ! -r "$ANVIL_MCP_PARENT_GUARD" ] \
++		|| [ ! -x "$ANVIL_MCP_PARENT_GUARD_PYTHON" ]; then
++		echo "anvil-mcp: parent guard or its Python is unavailable" >&2
++		exit 69
++	fi
++elif [ -n "$ANVIL_MCP_PARENT_GUARD_PYTHON" ]; then
++	echo "anvil-mcp: parent guard Python was set without a guard" >&2
++	exit 64
++fi
++readonly ANVIL_MCP_PARENT_GUARD ANVIL_MCP_PARENT_GUARD_PYTHON
++
 +# Run one emacsclient invocation under a hard timeout.  This helper never
 +# retries: callers must decide whether the expression is safe to replay.
 +anvil_emacsclient_once() {
- 	local stderr_file="$1"
-+	local timeout_seconds="$2"
-+	shift 2
-+	if [ "${1-}" = "--" ]; then shift; fi
-+
++	local timeout_seconds="$1"
+ 	shift
+ 	if [ "${1-}" = "--" ]; then shift; fi
+ 
+-	local attempt=0 out="" rc=0
 +	local out="" rc=0
-+	# Capture failure inside conditionals, where errexit is suppressed.
-+	# Do not toggle the caller's shell options from inside this helper:
-+	# a nonzero return must reach the caller so it can synthesize a reply.
-+	if [ "$timeout_seconds" = "0" ]; then
-+		if out=$(emacsclient "$@" 2>"$stderr_file"); then rc=0; else rc=$?; fi
-+	elif command -v timeout >/dev/null 2>&1; then
-+		if out=$(timeout "$timeout_seconds" emacsclient "$@" 2>"$stderr_file"); then rc=0; else rc=$?; fi
-+	elif command -v perl >/dev/null 2>&1; then
-+		if out=$(perl -e 'alarm shift @ARGV; exec @ARGV' \
-+			"$timeout_seconds" emacsclient "$@" 2>"$stderr_file"); then rc=0; else rc=$?; fi
-+	else
-+		if out=$(emacsclient "$@" 2>"$stderr_file"); then rc=0; else rc=$?; fi
-+	fi
++	anvil_mcp_run_bounded "$timeout_seconds" merge null "" \
++		"$ANVIL_MCP_EMACSCLIENT" -a false "$@"
++	out=$ANVIL_MCP_RUN_OUTPUT
++	rc=$ANVIL_MCP_RUN_STATUS
 +	printf '%s' "$out"
 +	return "$rc"
 +}
 +
 +# Retry only the side-effect-free readiness expression.  A sibling bridge may
 +# occupy the single Emacs server event loop longer than one probe timeout, so
-+# timeout exits are replayed until ANVIL_EMACSCLIENT_TIMEOUT is exhausted.
++# timeout exits are replayed until ANVIL_EMACSCLIENT_READINESS_TIMEOUT expires.
 +# Missing/refused socket races retain their independent attempt limit.
 +anvil_emacsclient_probe_retry() {
-+	local stderr_file="$1"
- 	shift
- 	if [ "${1-}" = "--" ]; then shift; fi
- 
--	local attempt=0 out="" rc=0
++	if [ "${1-}" = "--" ]; then shift; fi
++
 +	local socket_attempt=0 timeout_attempt=0 out="" rc=0
 +	local started_seconds=$SECONDS this_timeout elapsed remaining
  	while :; do
@@ -80,16 +417,16 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 -			out=$(perl -e 'alarm shift @ARGV; exec @ARGV' \
 -				"$_anvil_tmo" emacsclient "$@" 2>"$stderr_file")
 +		this_timeout=$ANVIL_EMACSCLIENT_PROBE_TIMEOUT
-+		if [ "$ANVIL_EMACSCLIENT_TIMEOUT" = "0" ]; then
++		if [ "$ANVIL_EMACSCLIENT_READINESS_TIMEOUT" = "0" ]; then
 +			# A disabled overall timeout means one unbounded readiness wait.
 +			this_timeout=0
  		else
 -			out=$(emacsclient "$@" 2>"$stderr_file")
 +			elapsed=$((SECONDS - started_seconds))
-+			remaining=$((ANVIL_EMACSCLIENT_TIMEOUT - elapsed))
++			remaining=$((ANVIL_EMACSCLIENT_READINESS_TIMEOUT - elapsed))
 +			if [ "$remaining" -le 0 ]; then
 +				mcp_debug_log "PROBE-WAIT-EXHAUSTED" \
-+					"timeouts=$timeout_attempt budget=${ANVIL_EMACSCLIENT_TIMEOUT}s rc=$rc"
++					"timeouts=$timeout_attempt budget=${ANVIL_EMACSCLIENT_READINESS_TIMEOUT}s rc=$rc"
 +				printf '%s' "$out"
 +				return "$rc"
 +			fi
@@ -97,28 +434,35 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 +				|| [ "$this_timeout" -gt "$remaining" ]; then
 +				this_timeout=$remaining
 +			fi
++		fi
++		if out=$(anvil_emacsclient_once "$this_timeout" -- "$@"); then
++			rc=0
++		else
++			rc=$?
  		fi
 -		rc=$?
 -		set -e
-+		if out=$(anvil_emacsclient_once "$stderr_file" \
-+			"$this_timeout" -- "$@"); then rc=0; else rc=$?; fi
  		if [ "$rc" -eq 0 ]; then
  			printf '%s' "$out"
  			return 0
  		fi
-+		case "$rc" in
-+		124|142)
-+			timeout_attempt=$((timeout_attempt + 1))
-+			mcp_debug_log "PROBE-TIMEOUT" \
-+				"attempt=$timeout_attempt rc=$rc budget=${ANVIL_EMACSCLIENT_TIMEOUT}s"
-+			continue
-+			;;
-+		esac
- 		if [ -s "$stderr_file" ] \
- 			&& grep -qE "can't find socket|Connection refused|server.*not.*running|No such file or directory" "$stderr_file"; then
+-		if [ -s "$stderr_file" ] \
+-			&& grep -qE "can't find socket|Connection refused|server.*not.*running|No such file or directory" "$stderr_file"; then
 -			attempt=$((attempt + 1))
 -			if [ "$attempt" -ge "$ANVIL_EMACSCLIENT_RETRY_MAX" ]; then
 -				mcp_debug_log "RETRY-EXHAUSTED" "attempts=$attempt max=$ANVIL_EMACSCLIENT_RETRY_MAX rc=$rc"
++		case "$rc" in
++		124|137|142)
++			timeout_attempt=$((timeout_attempt + 1))
++			mcp_debug_log "PROBE-TIMEOUT" \
++				"attempt=$timeout_attempt rc=$rc budget=${ANVIL_EMACSCLIENT_READINESS_TIMEOUT}s"
++			continue
++			;;
++		esac
++		if [[ "$out" == *"can't find socket"* \
++			|| "$out" == *"Connection refused"* \
++			|| "$out" == *server*not*running* \
++			|| "$out" == *"No such file or directory"* ]]; then
 +			socket_attempt=$((socket_attempt + 1))
 +			if [ "$socket_attempt" -ge "$ANVIL_EMACSCLIENT_RETRY_MAX" ]; then
 +				mcp_debug_log "PROBE-RETRY-EXHAUSTED" "attempts=$socket_attempt max=$ANVIL_EMACSCLIENT_RETRY_MAX rc=$rc"
@@ -128,11 +472,20 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 -			if [ "$attempt" -eq 1 ] || [ $((attempt % 10)) -eq 0 ]; then
 -				mcp_debug_log "RETRY" "attempt=$attempt rc=$rc stderr=$(tr '\n' ' ' <"$stderr_file" | cut -c1-120)"
 +			if [ "$socket_attempt" -eq 1 ] || [ $((socket_attempt % 10)) -eq 0 ]; then
-+				mcp_debug_log "PROBE-RETRY" "attempt=$socket_attempt rc=$rc stderr=$(tr '\n' ' ' <"$stderr_file" | cut -c1-120)"
++				local probe_summary="${out//$'\n'/ }"
++				mcp_debug_log "PROBE-RETRY" \
++					"attempt=$socket_attempt rc=$rc stderr=${probe_summary:0:120}"
  			fi
  			if [ "$ANVIL_EMACSCLIENT_RETRY_DELAY_MS" -gt 0 ]; then
  				local delay_sec
-@@ -140,12 +176,18 @@
+-				delay_sec=$(awk -v ms="$ANVIL_EMACSCLIENT_RETRY_DELAY_MS" 'BEGIN{printf "%.3f", ms/1000}')
+-				sleep "$delay_sec"
++				printf -v delay_sec '%d.%03d' \
++					"$((ANVIL_EMACSCLIENT_RETRY_DELAY_MS / 1000))" \
++					"$((ANVIL_EMACSCLIENT_RETRY_DELAY_MS % 1000))"
++				local delay_cap=$((ANVIL_EMACSCLIENT_RETRY_DELAY_MS / 1000 + 1))
++				anvil_mcp_run_bounded "$delay_cap" merge null "" \
++					"$ANVIL_MCP_SLEEP" "$delay_sec"
  			fi
  			continue
  		fi
@@ -143,16 +496,23 @@ phase/dispatched/replayed fields instead of replaying a mutation.
  }
  
 +anvil_emacsclient_dispatch_once() {
-+	local stderr_file="$1"
++	local timeout_seconds="$1"
 +	shift
 +	if [ "${1-}" = "--" ]; then shift; fi
-+	anvil_emacsclient_once "$stderr_file" "$ANVIL_EMACSCLIENT_TIMEOUT" -- "$@"
++
++	local out="" rc=0
++	anvil_mcp_run_bounded "$timeout_seconds" separate null "" \
++		"$ANVIL_MCP_EMACSCLIENT" -a false "$@"
++	out=$ANVIL_MCP_RUN_OUTPUT
++	rc=$ANVIL_MCP_RUN_STATUS
++	printf '%s' "$out"
++	return "$rc"
 +}
 +
  # Parse command line arguments
  while [ $# -gt 0 ]; do
  	case "$1" in
-@@ -205,27 +247,38 @@
+@@ -205,27 +512,39 @@
  	mcp_debug_log "INFO" "Using default server-id: $SERVER_ID"
  fi
  
@@ -164,44 +524,101 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 +	mcp_debug_log "INIT-CALL" "readiness probe, then one emacsclient -e ($INIT_FUNCTION)"
  
 -	# Execute the command and capture output and return code
-+	init_probe_stderr_file="/tmp/mcp-init-probe-stderr.$$-$(date +%s%N)"
- 	init_stderr_file="/tmp/mcp-init-stderr.$$-$(date +%s%N)"
+-	init_stderr_file="/tmp/mcp-init-stderr.$$-$(date +%s%N)"
 -	mcp_debug_log "INIT-STDERR-FILE" "$init_stderr_file"
++	init_probe_output=""
  	set +e
 -	INIT_OUTPUT=$(anvil_emacsclient_retry "$init_stderr_file" -- \
 -		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} \
 -		-e "($INIT_FUNCTION)")
 -	INIT_RC=$?
-+	anvil_emacsclient_probe_retry "$init_probe_stderr_file" -- \
-+		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} -e t >/dev/null
++	init_probe_output=$(anvil_emacsclient_probe_retry -- \
++		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} -e t)
 +	INIT_READY_RC=$?
-+	if [ "$INIT_READY_RC" -eq 0 ]; then
-+		INIT_OUTPUT=$(anvil_emacsclient_dispatch_once "$init_stderr_file" -- \
-+			${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} \
-+			-e "($INIT_FUNCTION)")
-+		INIT_RC=$?
-+	else
-+		INIT_OUTPUT=""
-+		INIT_RC=$INIT_READY_RC
-+	fi
  	set -e
++	if [ "$INIT_READY_RC" -ne 0 ]; then
++		anvil_mcp_log_probe_stderr "INIT-PROBE-STDERR" "$init_probe_output"
++	fi
++	mcp_debug_log "INIT-READY-RC" "$INIT_READY_RC"
  
 -	# Log results
-+	mcp_debug_log "INIT-READY-RC" "$INIT_READY_RC"
- 	mcp_debug_log "INIT-RC" "$INIT_RC"
- 	mcp_debug_log "INIT-OUTPUT" "$INIT_OUTPUT"
-+	if [ -s "$init_probe_stderr_file" ]; then
-+		mcp_debug_log "INIT-PROBE-STDERR" "$(cat "$init_probe_stderr_file")"
-+	fi
- 	if [ -s "$init_stderr_file" ]; then
- 		mcp_debug_log "INIT-STDERR" "$(cat "$init_stderr_file")"
+-	mcp_debug_log "INIT-RC" "$INIT_RC"
+-	mcp_debug_log "INIT-OUTPUT" "$INIT_OUTPUT"
+-	if [ -s "$init_stderr_file" ]; then
+-		mcp_debug_log "INIT-STDERR" "$(cat "$init_stderr_file")"
++	if [ "$INIT_READY_RC" -eq 0 ]; then
++		if anvil_mcp_capture_begin; then
++			ANVIL_MCP_RESPONSE_PENDING=1
++			set +e
++			anvil_emacsclient_dispatch_once \
++				"$ANVIL_EMACSCLIENT_STARTUP_DISPATCH_TIMEOUT" -- \
++				${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} \
++				-e "($INIT_FUNCTION)" >/dev/null
++			INIT_RC=$?
++			set -e
++			anvil_mcp_capture_finish
++			ANVIL_MCP_RESPONSE_PENDING=0
++		else
++			INIT_RC=74
++			mcp_debug_log "INIT-CAPTURE" "failed before dispatch rc=$INIT_RC"
++		fi
  	fi
 -	rm -f "$init_stderr_file"
-+	rm -f "$init_probe_stderr_file" "$init_stderr_file"
  else
  	mcp_debug_log "INFO" "Skipping init function call (none provided)"
  fi
-@@ -303,6 +356,43 @@
+@@ -255,6 +574,7 @@
+ anvil_mcp_read_framed_message() {
+ 	local first_line="$1"
+ 	local header_line content_length=""
++	ANVIL_MCP_FRAME_BODY=""
+ 
+ 	# Process the already-consumed first line.
+ 	# Strip trailing CR (DOS line endings).
+@@ -277,15 +597,26 @@
+ 	if [ -z "$content_length" ]; then
+ 		return 2
+ 	fi
++	if [ "${#content_length}" -gt 8 ] \
++		|| [ "$content_length" -gt "$ANVIL_MCP_MAX_REQUEST_BYTES" ]; then
++		return 3
++	fi
+ 
+-	# Read exactly content_length bytes of body.
+-	# `head -c N` is portable across GNU/BSD coreutils for byte count.
+-	local body
+-	body=$(head -c "$content_length")
+-	if [ -z "$body" ]; then
++	# Read exactly content_length bytes.  The bounded runner preserves trailing
++	# newlines that command substitution would strip and kills a loader-stuck
++	# `head' before any stateful dispatch.
++	exec 5<&0
++	anvil_mcp_run_bounded "$ANVIL_MCP_FRAME_READ_TIMEOUT" merge descriptor "" \
++		"$ANVIL_MCP_HEAD" -c "$content_length"
++	exec 5<&-
++	if [ "$ANVIL_MCP_RUN_STATUS" -ne 0 ]; then
+ 		return 1
+ 	fi
+-	printf '%s' "$body"
++	local LC_ALL=C
++	if [ "${#ANVIL_MCP_RUN_OUTPUT}" -ne "$content_length" ]; then
++		return 1
++	fi
++	ANVIL_MCP_FRAME_BODY=$ANVIL_MCP_RUN_OUTPUT
+ 	return 0
+ }
+ 
+@@ -295,14 +626,175 @@
+ # (not characters) because the MCP spec mandates byte length.
+ anvil_mcp_emit_framed_response() {
+ 	local body="$1"
+-	local n
+-	# `wc -c' counts bytes (LANG=C ensures no locale weirdness).
+-	n=$(LC_ALL=C printf '%s' "$body" | wc -c)
+-	# Strip leading whitespace from wc output (BSD pads).
+-	n="${n##* }"
++	local LC_ALL=C
++	local n=${#body}
  	printf 'Content-Length: %s\r\n\r\n%s' "$n" "$body"
  }
  
@@ -211,113 +628,391 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 +	if [ "$framed" = "1" ]; then
 +		anvil_mcp_emit_framed_response "$body"
 +	else
-+		echo "$body"
++		printf '%s\n' "$body"
 +	fi
++	ANVIL_MCP_RESPONSE_PENDING=0
 +}
 +
-+# Emit a correlated error only for requests carrying a non-null id.
-+# Notifications remain silent.  The data object makes the at-most-once
-+# boundary explicit to callers deciding whether a human should retry.
-+anvil_mcp_synthetic_error() {
-+	local request="$1"
-+	local framed="$2"
-+	local phase="$3"
-+	local dispatched="$4"
-+	local client_rc="$5"
-+	local request_id message response
++# Decode and emit a validated percent-byte wire without materializing another
++# full response string.  Global substitution is quadratic in macOS Bash 3.2;
++# splitting once and printing each byte remains linear for large responses.
++anvil_mcp_emit_wire_response() {
++	local framed="$1" wire="$2" wire_length byte_count
++	local offset=0 chunk_chars=49152 chunk
++	local LC_ALL=C
++	local -a bytes
++	wire_length=${#wire}
++	byte_count=$((wire_length / 3))
 +
-+	request_id=$(printf '%s' "$request" \
-+		| sed -nE 's/.*"id"[[:space:]]*:[[:space:]]*([0-9]+|"[^"]*"|null).*/\1/p' \
-+		| head -1)
-+	if [ -z "$request_id" ] || [ "$request_id" = "null" ]; then
++	if [ "$framed" = "1" ]; then
++		printf 'Content-Length: %s\r\n\r\n' "$byte_count"
++	fi
++	while [ "$offset" -lt "$wire_length" ]; do
++		chunk="${wire:offset:chunk_chars}"
++		bytes=()
++		IFS='%' read -r -a bytes <<<"$chunk"
++		unset 'bytes[0]'
++		printf '%b' "${bytes[@]/#/\\x}"
++		offset=$((offset + chunk_chars))
++	done
++	if [ "$framed" != "1" ]; then
++		printf '\n'
++	fi
++	ANVIL_MCP_RESPONSE_PENDING=0
++}
++
++# Parse only bounded request metadata outside Emacs.  The root may be dead on
++# the error path, so correlation cannot depend on another emacsclient call.
++# Output is KIND|STARTUP|BASE64(JSON-REQUEST)|JSON-ID.  The request encoding is
++# reused for dispatch, so no separate base64 process starts after parsing.
++anvil_mcp_request_metadata() {
++	local request="$1"
++	if [ "${#request}" -gt "$ANVIL_MCP_MAX_REQUEST_BYTES" ]; then
++		printf 'parse-error|0||null'
 +		return 0
 +	fi
-+	case "$phase" in
-+	readiness) message="daemon readiness probe failed before dispatch" ;;
-+	*) message="daemon response was ambiguous after one dispatch" ;;
++	anvil_mcp_run_bounded "$ANVIL_MCP_REQUEST_PARSE_TIMEOUT" \
++		merge input "$request" "$ANVIL_MCP_PYTHON" -I -S -c '
++import base64
++import json
++import math
++import sys
++
++maximum = int(sys.argv[1])
++raw = sys.stdin.buffer.read(maximum + 1)
++
++def emit(kind, startup, request_id):
++    encoded_request = base64.b64encode(raw).decode("ascii")
++    encoded_id = json.dumps(
++        request_id,
++        ensure_ascii=True,
++        separators=(",", ":"),
++    )
++    print(f"{kind}|{1 if startup else 0}|{encoded_request}|{encoded_id}")
++
++if len(raw) > maximum:
++    emit("parse-error", False, None)
++else:
++    try:
++        document = json.loads(
++            raw,
++            parse_constant=lambda value: (_ for _ in ()).throw(
++                ValueError(value)
++            ),
++        )
++    except (UnicodeDecodeError, ValueError):
++        emit("parse-error", False, None)
++    else:
++        if not isinstance(document, dict):
++            emit("invalid-request", False, None)
++        else:
++            startup = document.get("method") == "initialize"
++            if "id" not in document:
++                emit("notification", startup, None)
++            else:
++                request_id = document["id"]
++                valid_id = (
++                    request_id is None
++                    or isinstance(request_id, str)
++                    or (
++                        not isinstance(request_id, bool)
++                        and isinstance(request_id, int)
++                    )
++                    or (
++                        isinstance(request_id, float)
++                        and math.isfinite(request_id)
++                    )
++                )
++                if valid_id:
++                    emit("request", startup, request_id)
++                else:
++                    emit("invalid-request", startup, None)
++' "$ANVIL_MCP_MAX_REQUEST_BYTES"
++	printf '%s' "$ANVIL_MCP_RUN_OUTPUT"
++	return "$ANVIL_MCP_RUN_STATUS"
++}
++
++# Emit a correlated at-most-once error.  Notifications remain silent;
++# malformed input receives a protocol error with id null.
++anvil_mcp_synthetic_error() {
++	local request_kind="$1"
++	local request_id="$2"
++	local framed="$3"
++	local phase="$4"
++	local dispatched="$5"
++	local client_rc="$6"
++	local code message response
++
++	case "$request_kind" in
++	notification)
++		ANVIL_MCP_RESPONSE_PENDING=0
++		return 0
++		;;
++	parse-error)
++		request_id=null
++		phase=parse
++		dispatched=false
++		code=-32700
++		message="invalid JSON-RPC input before dispatch"
++		;;
++	invalid-request)
++		request_id=null
++		phase=parse
++		dispatched=false
++		code=-32600
++		message="invalid JSON-RPC request before dispatch"
++		;;
++	request)
++		code=-32603
++		case "$phase" in
++		readiness) message="daemon readiness probe failed before dispatch" ;;
++		capture) message="bridge capture setup failed before dispatch" ;;
++		*) message="daemon response was ambiguous after one dispatch" ;;
++		esac
++		;;
++	*)
++		request_id=null
++		phase=parse
++		dispatched=false
++		code=-32603
++		message="bounded JSON-RPC metadata parsing failed"
++		;;
 +	esac
-+	response=$(printf '{"jsonrpc":"2.0","id":%s,"error":{"code":-32603,"message":"Bridge synthetic error: %s","data":{"phase":"%s","dispatched":%s,"replayed":false,"emacsclientRc":%s}}}' \
-+		"$request_id" "$message" "$phase" "$dispatched" "$client_rc")
-+	mcp_debug_log "SYNTH-ERROR" "id=$request_id phase=$phase dispatched=$dispatched replayed=false rc=$client_rc"
++	printf -v response '{"jsonrpc":"2.0","id":%s,"error":{"code":%s,"message":"Bridge synthetic error: %s","data":{"phase":"%s","dispatched":%s,"replayed":false,"emacsclientRc":%s}}}' \
++		"$request_id" "$code" "$message" "$phase" "$dispatched" "$client_rc"
++	if [ "$dispatched" = "false" ]; then
++		mcp_debug_log "SYNTH-ERROR" "id=$request_id phase=$phase dispatched=false replayed=false rc=$client_rc"
++	fi
 +	anvil_mcp_emit_response "$framed" "$response"
 +}
 +
  # Process input and print response
  while IFS= read -r line; do
  	# T71: detect framing.  An MCP framed request begins with
-@@ -324,6 +414,25 @@
- 	# Log the incoming request
- 	mcp_debug_log "REQUEST" "$line"
- 
-+	# A harmless readiness probe is the only expression this bridge may replay.
-+	# Once it succeeds, the JSON-RPC expression below is dispatched exactly once.
-+	probe_stderr_file="/tmp/mcp-probe-stderr.$$-$(date +%s%N)"
-+	set +e
-+	anvil_emacsclient_probe_retry "$probe_stderr_file" -- \
-+		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} -e t >/dev/null
-+	_anvil_probe_rc=$?
-+	set -e
-+	if [ "$_anvil_probe_rc" -ne 0 ]; then
-+		if [ -s "$probe_stderr_file" ]; then
-+			mcp_debug_log "PROBE-STDERR" "$(cat "$probe_stderr_file")"
+@@ -315,52 +807,117 @@
+ 		_anvil_framed=1
+ 		mcp_debug_log "FRAMING" "Content-Length detected"
+ 		# Re-read full framed message; reuse the already-consumed line.
+-		line=$(anvil_mcp_read_framed_message "$_anvil_first_line") || {
+-			mcp_debug_log "FRAMING-ERROR" "rc=$? first=$_anvil_first_line"
+-			continue
+-		}
++		if anvil_mcp_read_framed_message "$_anvil_first_line"; then
++			line=$ANVIL_MCP_FRAME_BODY
++		else
++			_anvil_frame_rc=$?
++			mcp_debug_log "FRAMING-ERROR" \
++				"rc=$_anvil_frame_rc first=$_anvil_first_line"
++			# The header and some body bytes may already be consumed.  Continuing
++			# would reinterpret a delayed remainder as another request.
++			exit 65
 +		fi
-+		rm -f "$probe_stderr_file"
-+		anvil_mcp_synthetic_error \
-+			"$line" "$_anvil_framed" readiness false "$_anvil_probe_rc"
+ 	fi
+ 
+ 	# Log the incoming request
+-	mcp_debug_log "REQUEST" "$line"
++	mcp_debug_log "REQUEST" "bytes=${#line} head=${line:0:160}"
++
++	# Parse top-level metadata before touching Emacs.  This gives error paths a
++	# correct correlation id and lets initialize use its shorter startup cap.
++	set +e
++	_anvil_metadata=$(anvil_mcp_request_metadata "$line")
++	_anvil_metadata_rc=$?
++	set -e
++	if [ "$_anvil_metadata_rc" -ne 0 ]; then
++		anvil_mcp_synthetic_error unknown null "$_anvil_framed" \
++			parse false "$_anvil_metadata_rc"
 +		continue
 +	fi
-+	rm -f "$probe_stderr_file"
-+
- 	# Base64 encode the raw JSON to avoid emacsclient transport issues
- 	# with a specific combination of length, UTF-8 characters, and quoting
- 	# that occurs in Test 5 with the Lithuanian letter 'ą'
-@@ -335,23 +444,26 @@
- 	# Handle nil responses from notifications by converting to empty string
- 	elisp_expr="(base64-encode-string (encode-coding-string (or (anvil-server-process-jsonrpc (base64-decode-string \"$base64_input\") \"$SERVER_ID\") \"\") 'utf-8 t) t)"
++	_anvil_metadata_rest=${_anvil_metadata#*|}
++	_anvil_request_kind=${_anvil_metadata%%|*}
++	_anvil_startup=${_anvil_metadata_rest%%|*}
++	_anvil_metadata_rest=${_anvil_metadata_rest#*|}
++	_anvil_request_b64=${_anvil_metadata_rest%%|*}
++	_anvil_request_id=${_anvil_metadata_rest#*|}
++	_anvil_request_id=null
++	case "$_anvil_request_kind" in
++	request)
++		_anvil_request_id=${_anvil_metadata_rest#*|}
++		if [ -z "$_anvil_request_id" ]; then
++			anvil_mcp_synthetic_error unknown null "$_anvil_framed" \
++				parse false 70
++			continue
++		fi
++		;;
++	notification)
++		;;
++	parse-error|invalid-request)
++		anvil_mcp_synthetic_error "$_anvil_request_kind" null \
++			"$_anvil_framed" parse false 0
++		continue
++		;;
++	*)
++		anvil_mcp_synthetic_error unknown null "$_anvil_framed" \
++			parse false 70
++		continue
++		;;
++	esac
  
+-	# Base64 encode the raw JSON to avoid emacsclient transport issues
+-	# with a specific combination of length, UTF-8 characters, and quoting
+-	# that occurs in Test 5 with the Lithuanian letter 'ą'
+-	base64_input=$(echo -n "$line" | base64)
+-	mcp_debug_log "BASE64-INPUT" "$base64_input"
+-
+-	# Process JSON-RPC request and return the result with proper UTF-8 encoding
+-	# Encode the response to base64 to avoid any character encoding issues
+-	# Handle nil responses from notifications by converting to empty string
+-	elisp_expr="(base64-encode-string (encode-coding-string (or (anvil-server-process-jsonrpc (base64-decode-string \"$base64_input\") \"$SERVER_ID\") \"\") 'utf-8 t) t)"
+-
 -	# Get response from emacsclient (with retry across daemon restarts).
 -	# Capture stderr for debugging and rc for logging only; existing code
 -	# downstream treats an empty `base64_response' as a soft failure.
-+	# Dispatch the potentially stateful request exactly once.  Any failure
-+	# after this point is ambiguous and is never replayed automatically.
- 	stderr_file="/tmp/mcp-stderr.$$-$(date +%s%N)"
+-	stderr_file="/tmp/mcp-stderr.$$-$(date +%s%N)"
++	# A harmless readiness probe is the only expression this bridge may replay.
++	# Once it succeeds, the JSON-RPC expression below is dispatched exactly once.
++	probe_output=""
  	set +e
 -	base64_response=$(anvil_emacsclient_retry "$stderr_file" -- \
-+	base64_response=$(anvil_emacsclient_dispatch_once "$stderr_file" -- \
++	probe_output=$(anvil_emacsclient_probe_retry -- \
++		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} -e t)
++	_anvil_probe_rc=$?
++	set -e
++	if [ "$_anvil_probe_rc" -ne 0 ]; then
++		anvil_mcp_log_probe_stderr "PROBE-STDERR" "$probe_output"
++	fi
++	if [ "$_anvil_probe_rc" -ne 0 ]; then
++		anvil_mcp_synthetic_error \
++			"$_anvil_request_kind" "$_anvil_request_id" \
++			"$_anvil_framed" readiness false "$_anvil_probe_rc"
++		continue
++	fi
++
++	# The bounded metadata parser already encoded the raw request.  Reuse that
++	# ASCII value rather than launching a second pre-dispatch helper.
++	base64_input=$_anvil_request_b64
++	mcp_debug_log "BASE64-INPUT" "bytes=${#base64_input}"
++
++	# Process JSON-RPC and return an ASCII percent-byte wire value.  The bridge
++	# decodes this with Bash builtins after dispatch, so a cold sed/tr/grep/base64
++	# process can never wedge the already-dispatched MCP request.
++	elisp_expr="(mapconcat (lambda (byte) (format \"%%%02x\" byte)) (encode-coding-string (or (anvil-server-process-jsonrpc (base64-decode-string \"$base64_input\") \"$SERVER_ID\") \"\") 'utf-8 t) \"\")"
++
++	# Dispatch the potentially stateful request exactly once.  Initialize has
++	# a shorter cap so daemon readiness plus initialization remains inside the
++	# client startup envelope; ordinary tools retain the full dispatch budget.
++	_anvil_dispatch_timeout="$ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT"
++	if [ "$_anvil_startup" = "1" ]; then
++		_anvil_dispatch_timeout="$ANVIL_EMACSCLIENT_STARTUP_DISPATCH_TIMEOUT"
++	fi
++	if ! anvil_mcp_capture_begin; then
++		anvil_mcp_synthetic_error \
++			"$_anvil_request_kind" "$_anvil_request_id" \
++			"$_anvil_framed" capture false 74
++		continue
++	fi
++	ANVIL_MCP_RESPONSE_PENDING=1
++	set +e
++	wire_response=$(anvil_emacsclient_dispatch_once \
++		"$_anvil_dispatch_timeout" -- \
  		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} \
  		-e "$elisp_expr")
  	_anvil_client_rc=$?
  	set -e
- 	mcp_debug_log "EMACSCLIENT-RC" "$_anvil_client_rc"
- 
+-	mcp_debug_log "EMACSCLIENT-RC" "$_anvil_client_rc"
+-
 -	# Check for stderr output
- 	if [ -s "$stderr_file" ]; then
- 		mcp_debug_log "EMACSCLIENT-STDERR" "$(cat "$stderr_file")"
- 	fi
- 	rm -f "$stderr_file"
+-	if [ -s "$stderr_file" ]; then
+-		mcp_debug_log "EMACSCLIENT-STDERR" "$(cat "$stderr_file")"
+-	fi
+-	rm -f "$stderr_file"
+-
+-	mcp_debug_log "BASE64-RESPONSE" "$base64_response"
+-
+-	# Handle the base64 response - first strip quotes if present
+-	if [[ "$base64_response" == \"* && "$base64_response" == *\" ]]; then
+-		# Remove the surrounding quotes
+-		base64_response="${base64_response:1:${#base64_response}-2}"
+-		# Unescape any quotes inside
+-		base64_response="${base64_response//\\\"/\"}"
++	anvil_mcp_capture_finish
 +	if [ "$_anvil_client_rc" -ne 0 ]; then
 +		anvil_mcp_synthetic_error \
-+			"$line" "$_anvil_framed" dispatch true "$_anvil_client_rc"
-+		continue
-+	fi
- 
- 	mcp_debug_log "BASE64-RESPONSE" "$base64_response"
- 
-@@ -405,62 +517,56 @@
- 	set -e
- 	if [ "$_anvil_decode_rc" != 0 ]; then
- 		mcp_debug_log "DECODE-ERROR" "rc=$_anvil_decode_rc stderr=$(cat "$_anvil_decode_err" 2>/dev/null | tr '\n' ' ') input_head=${base64_response:0:160}"
-+		rm -f "$_anvil_decode_err"
-+		anvil_mcp_synthetic_error \
-+			"$line" "$_anvil_framed" dispatch true "$_anvil_decode_rc"
++			"$_anvil_request_kind" "$_anvil_request_id" \
++			"$_anvil_framed" dispatch true "$_anvil_client_rc"
 +		continue
  	fi
- 	rm -f "$_anvil_decode_err"
  
- 	mcp_debug_log "RESPONSE" "$formatted_response"
+ 	# Repair Windows MSYS frame-boundary corruption.
+@@ -371,96 +928,76 @@
+ 	# the client's read buffer.  When that happens, the tail of the frame
+ 	# loses its `-print-nonl ' prefix and emacsclient prints it as
+ 	#   *ERROR*: Unknown message: <tail>
+-	# interleaved with the legitimate base64 payload.  Strip those
+-	# injection markers with `sed s///g' (POSIX BRE, so `\*' is
+-	# unambiguously a literal asterisk on every sed implementation --
+-	# unlike `awk' where `\*' in ERE is treated differently by gawk /
+-	# mawk / busybox / git-bash-bundled awk and may cause the strip to
+-	# silently fail).  Then remove ALL CR/LF bytes; frame boundaries
+-	# leave CRLF behind, and `tr' is trivially portable.  `--ignore-
+-	# garbage' on the base64 decoder is NOT sufficient on its own: the
+-	# marker text "ERROR Unknown message" is 15 base64-alphabet bytes
+-	# that the decoder happily consumes as payload, throwing off the
+-	# multiple-of-4 requirement and yielding `invalid input' under
+-	# `set -e -o pipefail'.  Stripping the marker textually, before
+-	# decoding, is what makes Windows work at all.
++	# interleaved with the legitimate payload.  Bash parameter expansion
++	# removes those markers and CR/LF frame boundaries without launching a
++	# post-dispatch helper process.
+ 	# (No-op on Linux/macOS where one frame fits in one read.)
+-	base64_response=$(printf '%s' "$base64_response" \
+-		| sed 's/\*ERROR\*: Unknown message: //g' \
+-		| tr -d '\r\n')
+-
+-	# Diagnostic: confirm strip actually happened.  If markers survived,
+-	# base64 -d will almost certainly fail below, and we want the log to
+-	# say so out loud rather than just ending at BASE64-RESPONSE.
+-	_anvil_marker_survivors=$(printf '%s' "$base64_response" | grep -c '\*ERROR\*' || true)
+-	mcp_debug_log "INFO" "after-strip len=${#base64_response} markers=$_anvil_marker_survivors"
+-
+-	# Decode the base64 content (lenient against stray non-base64 bytes).
+-	# Capture rc/stderr explicitly so that a decode failure is logged
+-	# instead of silently killing the script under `set -e -o pipefail'.
+-	_anvil_decode_err="/tmp/mcp-decode-err.$$-$(date +%s%N)"
+-	set +e
+-	formatted_response=$(printf '%s' "$base64_response" | base64 -d $_anvil_b64_flags 2>"$_anvil_decode_err")
+-	_anvil_decode_rc=$?
+-	set -e
+-	if [ "$_anvil_decode_rc" != 0 ]; then
+-		mcp_debug_log "DECODE-ERROR" "rc=$_anvil_decode_rc stderr=$(cat "$_anvil_decode_err" 2>/dev/null | tr '\n' ' ') input_head=${base64_response:0:160}"
++	wire_response="${wire_response//\*ERROR\*: Unknown message: /}"
++	wire_response="${wire_response//$'\r'/}"
++	wire_response="${wire_response//$'\n'/}"
++
++	# Strip the Lisp string quotes after normalizing frame corruption: MSYS
++	# may leave a trailing CR after command substitution removes the newline.
++	# The wire alphabet contains only `%` and hexadecimal digits, so it needs
++	# no quote or backslash unescaping.
++	if [[ "$wire_response" == \"* && "$wire_response" == *\" ]]; then
++		wire_response="${wire_response:1:${#wire_response}-2}"
++	fi
++
++	# Validate the wire before streaming it.  NUL cannot exist in a Bash
++	# variable and is never present in valid serialized JSON, so reject %00
++	# explicitly instead of silently truncating the response.
++	if [[ ! "$wire_response" =~ ^(%[0-9A-Fa-f]{2})*$ ]] \
++		|| [[ "$wire_response" == *%00* ]]; then
++		anvil_mcp_synthetic_error \
++			"$_anvil_request_kind" "$_anvil_request_id" \
++			"$_anvil_framed" dispatch true 70
++		continue
+ 	fi
+-	rm -f "$_anvil_decode_err"
+-
+-	mcp_debug_log "RESPONSE" "$formatted_response"
  
 -	# Only output non-empty responses
- 	if [ -n "$formatted_response" ]; then
+-	if [ -n "$formatted_response" ]; then
 -		if [ "$_anvil_framed" = "1" ]; then
 -			# T71: framed output for MCP-compliant clients.
 -			anvil_mcp_emit_framed_response "$formatted_response"
@@ -325,7 +1020,8 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 -			# Legacy line-delimited output (dev / test mode).
 -			echo "$formatted_response"
 -		fi
-+		anvil_mcp_emit_response "$_anvil_framed" "$formatted_response"
++	if [ -n "$wire_response" ]; then
++		anvil_mcp_emit_wire_response "$_anvil_framed" "$wire_response"
  	else
 -		# VAL-PATCH-ALWAYS-REPLY: empty daemon output for a
 -		# request-with-id would otherwise hang the MCP client
@@ -345,7 +1041,8 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 -			fi
 -		fi
 +		anvil_mcp_synthetic_error \
-+			"$line" "$_anvil_framed" dispatch true "$_anvil_client_rc"
++			"$_anvil_request_kind" "$_anvil_request_id" \
++			"$_anvil_framed" dispatch true "$_anvil_client_rc"
  	fi
  done
  
@@ -358,39 +1055,45 @@ phase/dispatched/replayed fields instead of replaying a mutation.
 +	mcp_debug_log "STOP-CALL" "readiness probe, then one emacsclient -e ($STOP_FUNCTION)"
  
 -	# Execute the command and capture output and return code
-+	stop_probe_stderr_file="/tmp/mcp-stop-probe-stderr.$$-$(date +%s%N)"
- 	stop_stderr_file="/tmp/mcp-stop-stderr.$$-$(date +%s%N)"
+-	stop_stderr_file="/tmp/mcp-stop-stderr.$$-$(date +%s%N)"
++	stop_probe_output=""
  	set +e
 -	STOP_OUTPUT=$(anvil_emacsclient_retry "$stop_stderr_file" -- \
 -		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} \
 -		-e "($STOP_FUNCTION)")
 -	STOP_RC=$?
-+	anvil_emacsclient_probe_retry "$stop_probe_stderr_file" -- \
-+		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} -e t >/dev/null
++	stop_probe_output=$(anvil_emacsclient_probe_retry -- \
++		${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} -e t)
 +	STOP_READY_RC=$?
-+	if [ "$STOP_READY_RC" -eq 0 ]; then
-+		STOP_OUTPUT=$(anvil_emacsclient_dispatch_once "$stop_stderr_file" -- \
-+			${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} \
-+			-e "($STOP_FUNCTION)")
-+		STOP_RC=$?
-+	else
-+		STOP_OUTPUT=""
-+		STOP_RC=$STOP_READY_RC
-+	fi
  	set -e
++	if [ "$STOP_READY_RC" -ne 0 ]; then
++		anvil_mcp_log_probe_stderr "STOP-PROBE-STDERR" "$stop_probe_output"
++	fi
++	mcp_debug_log "STOP-READY-RC" "$STOP_READY_RC"
  
 -	# Log results
-+	mcp_debug_log "STOP-READY-RC" "$STOP_READY_RC"
- 	mcp_debug_log "STOP-RC" "$STOP_RC"
- 	mcp_debug_log "STOP-OUTPUT" "$STOP_OUTPUT"
-+	if [ -s "$stop_probe_stderr_file" ]; then
-+		mcp_debug_log "STOP-PROBE-STDERR" "$(cat "$stop_probe_stderr_file")"
-+	fi
- 	if [ -s "$stop_stderr_file" ]; then
- 		mcp_debug_log "STOP-STDERR" "$(cat "$stop_stderr_file")"
+-	mcp_debug_log "STOP-RC" "$STOP_RC"
+-	mcp_debug_log "STOP-OUTPUT" "$STOP_OUTPUT"
+-	if [ -s "$stop_stderr_file" ]; then
+-		mcp_debug_log "STOP-STDERR" "$(cat "$stop_stderr_file")"
++	if [ "$STOP_READY_RC" -eq 0 ]; then
++		if anvil_mcp_capture_begin; then
++			ANVIL_MCP_RESPONSE_PENDING=1
++			set +e
++			anvil_emacsclient_dispatch_once \
++				"$ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT" -- \
++				${SOCKET_OPTIONS[@]+"${SOCKET_OPTIONS[@]}"} \
++				-e "($STOP_FUNCTION)" >/dev/null
++			STOP_RC=$?
++			set -e
++			anvil_mcp_capture_finish
++			ANVIL_MCP_RESPONSE_PENDING=0
++		else
++			STOP_RC=74
++			mcp_debug_log "STOP-CAPTURE" "failed before dispatch rc=$STOP_RC"
++		fi
  	fi
 -	rm -f "$stop_stderr_file"
-+	rm -f "$stop_probe_stderr_file" "$stop_stderr_file"
  else
  	mcp_debug_log "INFO" "Skipping stop function call (none provided)"
  fi

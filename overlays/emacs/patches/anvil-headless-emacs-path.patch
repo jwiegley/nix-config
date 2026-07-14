@@ -1,0 +1,50 @@
+diff --git a/anvil-elisp.el b/anvil-elisp.el
+index 7adb7ec..00d933e 100644
+--- a/anvil-elisp.el
++++ b/anvil-elisp.el
+@@ -861,7 +861,12 @@ single-element list."
+ 
+ (defun anvil-elisp--ert-distilled-command (files load-path-dirs selector)
+   "Build an `emacs --batch -Q' command for FILES, LOAD-PATH-DIRS, and SELECTOR."
+-  (let ((command (list invocation-name "--batch" "-Q")))
++  (let* ((emacs-bin
++          (if (and (stringp invocation-name)
++                   (stringp invocation-directory))
++              (expand-file-name invocation-name invocation-directory)
++            invocation-name))
++         (command (list emacs-bin "--batch" "-Q")))
+     (dolist (dir load-path-dirs)
+       (setq command (append command (list "-L" dir))))
+     (setq command (append command (list "-l" "ert")))
+diff --git a/tests/anvil-new-tools-test.el b/tests/anvil-new-tools-test.el
+index 3d912c5..cf45e58 100644
+--- a/tests/anvil-new-tools-test.el
++++ b/tests/anvil-new-tools-test.el
+@@ -174,6 +174,27 @@
+                        (buffer-string))))))
+       (ignore-errors (delete-directory dir t)))))
+ 
++(ert-deftest anvil-tools-test-ert-run-distilled-without-emacs-on-path ()
++  "The batch runner uses the current Emacs absolute path in a headless environment."
++  (let* ((dir (make-temp-file "anvil-ert-distilled-no-path-" t))
++         (empty-path (expand-file-name "empty-path" dir))
++         (file (expand-file-name "pass-test.el" dir))
++         (process-environment (copy-sequence process-environment)))
++    (unwind-protect
++        (progn
++          (make-directory empty-path)
++          (anvil-new-tools-test--write-ert-suite
++           file
++           "(ert-deftest anvil-tools-distilled-no-path () (should t))\n")
++          (setenv "PATH" empty-path)
++          (let* ((out (anvil-elisp--ert-run-distilled
++                       (list file) (list dir) dir nil 30 nil))
++                 (res (anvil-new-tools-test--read-plist out)))
++            (should (= 1 (plist-get res :ran)))
++            (should (= 0 (plist-get res :unexpected)))
++            (should (= 0 (plist-get res :exit-code)))))
++      (ignore-errors (delete-directory dir t)))))
++
+ (ert-deftest anvil-tools-test-ert-run-distilled-failure ()
+   "A failing test reports the failure digest and a bounded backtrace head."
+   (let* ((dir (make-temp-file "anvil-ert-distilled-fail-" t))
