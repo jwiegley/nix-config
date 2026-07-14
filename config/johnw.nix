@@ -27,6 +27,15 @@ let
     "delphi-3bd4"
     "gpu-server"
   ];
+  anvilClientHosts = [
+    "hera"
+    "clio"
+  ]
+  ++ dedicatedAnvilLinuxHosts;
+  anvilClientConvergenceRequired = lib.elem hostname anvilClientHosts;
+  promptdeployAvailable = inputs ? promptdeploy;
+  enablePromptdeploy = anvilClientConvergenceRequired && promptdeployAvailable;
+  promptdeployRevision = "4c9b2c1c10df5048b239051d79c3df00b1d0276b";
 
   # Shared variables - also imported by sub-modules
   vars = import ./vars.nix {
@@ -52,9 +61,17 @@ in
       ./email.nix
     ]
     # Conditional flake input modules
+    ++ lib.optionals promptdeployAvailable [
+      inputs.promptdeploy.homeManagerModules.default
+    ]
     ++ lib.optionals (inputs ? git-ai) [
       inputs.git-ai.homeManagerModules.default
     ];
+
+  assertions = lib.optional anvilClientConvergenceRequired {
+    assertion = promptdeployAvailable;
+    message = "Anvil client convergence requires the pinned promptdeploy input on ${hostname}";
+  };
 
   # These workstations default to complete, dedicated Emacs-backed Anvil.
   # `mkDefault` preserves the per-host Boolean escape hatch back to NeLisp.
@@ -221,6 +238,16 @@ in
   };
 
   programs = {
+    promptdeploy = lib.mkIf enablePromptdeploy {
+      enable = true;
+      expectedRevision = promptdeployRevision;
+      exactItems = [
+        "mcp:anvil"
+        "mcp:anvil-tools"
+        "skill:anvil"
+      ];
+    };
+
     direnv = {
       enable = true;
       enableBashIntegration = true;
