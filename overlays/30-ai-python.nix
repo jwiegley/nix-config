@@ -305,6 +305,31 @@ in
           };
         });
 
+        # frictionless adds every optional extra to its check inputs, including
+        # the top-level visidata package built with the default Python. OMLX's
+        # Python 3.13 audio closure does not use that optional integration, so
+        # keep its install checks while removing only the cross-ABI check edge.
+        frictionless = pprev.frictionless.overridePythonAttrs (
+          oldAttrs:
+          prev.lib.optionalAttrs (pfinal.python.pythonVersion == "3.13") {
+            nativeCheckInputs = builtins.filter (input: prev.lib.getName input != "visidata") (
+              oldAttrs.nativeCheckInputs or [ ]
+            );
+          }
+        );
+
+        # pdfplumber lists pandas-stubs as a development dependency, but its Nix
+        # check phase only runs pytest (not mypy). Avoid building the outdated
+        # stubs against Pandas 3 for OMLX's Python 3.13 closure.
+        pdfplumber = pprev.pdfplumber.overridePythonAttrs (
+          oldAttrs:
+          prev.lib.optionalAttrs (pfinal.python.pythonVersion == "3.13") {
+            nativeCheckInputs = builtins.filter (input: prev.lib.getName input != "pandas-stubs") (
+              oldAttrs.nativeCheckInputs or [ ]
+            );
+          }
+        );
+
         pyloudnorm = pfinal.buildPythonPackage rec {
           pname = "pyloudnorm";
           version = "0.2.0";
