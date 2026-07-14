@@ -30,6 +30,7 @@ let
   anvilClientHosts = [
     "hera"
     "clio"
+    "vps"
   ]
   ++ dedicatedAnvilLinuxHosts;
   anvilClientConvergenceRequired = lib.elem hostname anvilClientHosts;
