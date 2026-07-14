@@ -16,7 +16,7 @@
     };
 
     promptdeploy = {
-      url = "github:jwiegley/promptdeploy/708656cc252d846cd3450358602bcfd8f1ce4f50";
+      url = "github:jwiegley/promptdeploy/4192b7e24ecd9d5a6883716dc110faeb33462b75";
       inputs = {
         flake-utils.follows = "git-all/flake-utils";
         nixpkgs.follows = "nixpkgs";
