@@ -474,6 +474,7 @@ rec {
       openmpi
       qdrant
     ]
+    ++ optPkg "aiperf"
     ++ optPkg "guidellm"
     ++ optPkg "llama-swap"
     ++ optPkg "lazycodex-ai"
