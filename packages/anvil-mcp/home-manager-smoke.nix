@@ -96,16 +96,7 @@ let
       ];
     };
   strippedInputs = builtins.removeAttrs inputs [ "promptdeploy" ];
-  managedHostnames = [
-    "hera"
-    "clio"
-    "vps"
-    "vulcan"
-    "andoria-08"
-    "andoria-t2"
-    "delphi-3bd4"
-    "gpu-server"
-  ];
+  managedHostnames = (import ../../config/anvil-hosts.nix).clients;
   expectedPromptdeployItems = [
     "mcp:anvil"
     "mcp:anvil-tools"

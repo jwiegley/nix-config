@@ -45,7 +45,7 @@ let
   currentAnvilOwner = anvilSource.owner;
   currentAnvilRev = anvilSource.rev;
   currentAnvilVersion = anvilSource.version;
-  anvilIdeRev = "0e6130457ac2bdc6c6db2eebeba67a5223231190";
+  anvilIdeSource = anvilSource.ide;
 
   # One ordered policy spans client startup, synchronous dispatch, the root
   # watchdog, the stdio bridge, and isolated async children.  The packaged
@@ -132,10 +132,12 @@ let
   };
 
   anvilIdeSrc = fetchFromGitHub {
-    owner = "zawatton";
-    repo = "anvil-ide.el";
-    rev = anvilIdeRev;
-    hash = "sha256-L9heDjSvttZQyCxUq9n104YnhelL8XtivHOl2ln+2aI=";
+    inherit (anvilIdeSource)
+      hash
+      owner
+      repo
+      rev
+      ;
   };
 
   commonMeta = {

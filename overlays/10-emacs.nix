@@ -8,6 +8,7 @@ final: prev:
 
 let
   anvilSource = import ../packages/anvil-mcp/source.nix;
+  anvilIdeSource = anvilSource.ide;
   paths = import ../config/paths.nix { inherit (prev) inputs; };
 
   myEmacsPackageOverrides =
@@ -172,7 +173,6 @@ let
               repo
               rev
               ;
-            # date = 2026-07-14T11:21:15+00:00;
           };
         }).overrideAttrs
           (attrs: {
@@ -193,11 +193,12 @@ let
       anvil-ide = compileEmacsFiles {
         name = "anvil-ide";
         src = fetchFromGitHub {
-          owner = "zawatton";
-          repo = "anvil-ide.el";
-          rev = "0e6130457ac2bdc6c6db2eebeba67a5223231190";
-          sha256 = "sha256-L9heDjSvttZQyCxUq9n104YnhelL8XtivHOl2ln+2aI=";
-          # date = 2026-04-27T08:48:09+09:00;
+          inherit (anvilIdeSource)
+            hash
+            owner
+            repo
+            rev
+            ;
         };
         propagatedBuildInputs = with eself; [
           anvil

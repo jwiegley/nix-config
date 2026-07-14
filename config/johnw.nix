@@ -20,19 +20,9 @@
 let
   inherit (pkgs.stdenv) isDarwin isLinux;
   isPositronRemoteLinux = isLinux && config.home.username == "jwiegley";
-  dedicatedAnvilLinuxHosts = [
-    "vulcan"
-    "andoria-08"
-    "andoria-t2"
-    "delphi-3bd4"
-    "gpu-server"
-  ];
-  anvilClientHosts = [
-    "hera"
-    "clio"
-    "vps"
-  ]
-  ++ dedicatedAnvilLinuxHosts;
+  anvilHosts = import ./anvil-hosts.nix;
+  dedicatedAnvilLinuxHosts = anvilHosts.dedicatedLinux;
+  anvilClientHosts = anvilHosts.clients;
   anvilClientConvergenceRequired = lib.elem hostname anvilClientHosts;
   promptdeployAvailable = inputs ? promptdeploy;
   promptdeployRevision = "4192b7e24ecd9d5a6883716dc110faeb33462b75";

@@ -274,6 +274,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       --directory "${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp" \
       --directory "$hang_test_tmp" \
       --load "$hang_test_tmp/anvil-hang-regression-test.el" \
+      --eval '(dolist (name (mapcar (function intern) (list "anvil-hang-regression-shell-sync-timeout-cap" "anvil-hang-regression-host-stdin-is-eof" "anvil-hang-regression-shell-filter-does-not-wait-for-detached-pipe-holder"))) (unless (ert-get-test name) (error "Missing required repo-local ERT test: %s" name)))' \
       --funcall ert-run-tests-batch-and-exit
     rm -rf "$hang_test_tmp"
 

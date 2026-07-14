@@ -463,6 +463,32 @@ def wait_for_file(path: Path, process: subprocess.Popen[str]) -> None:
     raise AssertionError(f"soak main did not reach signal point: {path}")
 
 
+def wait_for_launcher_starts(
+    path: Path, process: subprocess.Popen[str], expected: int
+) -> None:
+    """Wait for EXPECTED launcher start records without losing process custody."""
+    deadline = time.monotonic() + 30
+    observed: list[str] = []
+    while time.monotonic() < deadline:
+        if path.exists():
+            observed = path.read_text(encoding="utf-8").splitlines()
+            starts = [line for line in observed if line.startswith("start:")]
+            if len(starts) >= expected:
+                return
+        returncode = process.poll()
+        if returncode is not None:
+            stdout, stderr = process.communicate()
+            raise AssertionError(
+                f"soak main exited {returncode} before {expected} launcher starts: "
+                f"launcher={observed!r} stdout={stdout!r} stderr={stderr!r}"
+            )
+        time.sleep(0.02)
+    raise AssertionError(
+        f"launchers did not reach {expected} start records: "
+        f"launcher={observed!r}"
+    )
+
+
 def write_fake_launcher(path: Path) -> None:
     """Create a real child process that exits only after bridge stdin closes."""
     path.write_text(
@@ -602,7 +628,8 @@ class InstrumentedBridge(base_bridge):
             stream.write(f"constructed:{self.pid}\n")
         if scenario == "during" and self.order == 1:
             ready.write_text("inside second constructor\n", encoding="utf-8")
-            time.sleep(2)
+            while soak._PENDING_TERM_SIGNAL is None:
+                time.sleep(0.02)
 
     def initialize(self):
         if scenario == "both" and self.order == 0:
@@ -687,6 +714,11 @@ soak.main()
         )
         try:
             wait_for_file(ready, process)
+            wait_for_launcher_starts(
+                launcher_log,
+                process,
+                1 if scenario == "between" else 2,
+            )
             process.send_signal(signal.SIGTERM)
             stdout, stderr = process.communicate(timeout=50)
         except BaseException as error:

@@ -7,6 +7,12 @@
 ;; whose zero-delay sentinel timer is withheld, and host shells that are
 ;; interrupted or fill their stderr pipe.  Every wait has a bounded deadline
 ;; and every test tears down the processes it creates.
+;;
+;; This file is deliberately a superset of upstream's
+;; tests/anvil-hang-regression-test.el.  Do not deduplicate it unless upstream
+;; also contains `anvil-hang-regression-shell-sync-timeout-cap',
+;; `anvil-hang-regression-host-stdin-is-eof', and
+;; `anvil-hang-regression-shell-filter-does-not-wait-for-detached-pipe-holder'.
 
 ;;; Code:
 
