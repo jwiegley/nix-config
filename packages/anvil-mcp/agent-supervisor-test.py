@@ -39,6 +39,12 @@ SPEC.loader.exec_module(SUPERVISOR)
 
 TEST_GENERATION = "1" * 64
 OTHER_GENERATION = "2" * 64
+TEST_WORKER_NAMES = (
+    "anvil-worker-read-1",
+    "anvil-worker-read-2",
+    "anvil-worker-write-1",
+    "anvil-worker-batch-1",
+)
 
 
 def eventually(predicate, timeout: float = 10.0):
@@ -233,7 +239,10 @@ def legacy_prune_orphaned_state(
 
 class AgentSupervisorTests(unittest.TestCase):
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory()
+        # Keep bridge_main fixtures below the same portable AF_UNIX ceiling
+        # enforced in production.  Darwin's default per-user TMPDIR is itself
+        # long enough to make every otherwise-valid fixture socket impossible.
+        self.temporary = tempfile.TemporaryDirectory(dir="/tmp")
         self.root = Path(self.temporary.name)
         self.root.chmod(0o700)
         self.runtime_root = self.root / "runtime"
@@ -392,6 +401,11 @@ class AgentSupervisorTests(unittest.TestCase):
             sys.executable,
             "--parent-guard",
             "/parent-guard",
+            *(
+                argument
+                for worker_name in TEST_WORKER_NAMES
+                for argument in ("--worker-name", worker_name)
+            ),
             *extra,
         ]
 
@@ -693,6 +707,298 @@ class AgentSupervisorTests(unittest.TestCase):
             two.leases_dir,
         ):
             self.assertEqual(path.stat().st_mode & 0o777, 0o700)
+
+    def test_bridge_rejects_overlong_socket_path_before_publication(self):
+        owner_pid, owner_identity = self.start_owner()
+        host = "h" * 80
+        bridge_args = SimpleNamespace(
+            daemon="/daemon",
+            emacsclient="/emacsclient",
+            generation=TEST_GENERATION,
+            grace_seconds=0.5,
+            host=host,
+            parent_guard="/parent-guard",
+            python=sys.executable,
+            ready_seconds=120.0,
+            runtime_root=str(self.runtime_root),
+            server_id="anvil",
+            state_root=str(self.state_root),
+            stdio="/stdio",
+            worker_names=TEST_WORKER_NAMES,
+        )
+        with mock.patch.object(
+            SUPERVISOR,
+            "identify_bridge",
+            return_value=(owner_pid, owner_identity),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                SUPERVISOR.bridge_main(bridge_args)
+        self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_CONFIG)
+        self.assertFalse((self.runtime_root / host).exists())
+        self.assertFalse((self.state_root / host).exists())
+
+    def test_bridge_rejects_coincident_roots_before_publication(self):
+        alias = self.root / "runtime-alias"
+        alias.symlink_to(self.runtime_root, target_is_directory=True)
+        for suffix, state_root in (
+            ("lexical", self.runtime_root),
+            ("alias", alias),
+        ):
+            host = f"coincident-roots-{suffix}"
+            bridge_args = SimpleNamespace(
+                daemon="/daemon",
+                emacsclient="/emacsclient",
+                generation=TEST_GENERATION,
+                grace_seconds=0.5,
+                host=host,
+                parent_guard="/parent-guard",
+                python=sys.executable,
+                ready_seconds=120.0,
+                runtime_root=str(self.runtime_root),
+                server_id="anvil",
+                state_root=str(state_root),
+                stdio="/stdio",
+                worker_names=TEST_WORKER_NAMES,
+            )
+            with self.subTest(suffix=suffix):
+                with mock.patch.object(
+                    SUPERVISOR,
+                    "identify_bridge",
+                    side_effect=AssertionError(
+                        "input probe ran before root validation"
+                    ),
+                ):
+                    with contextlib.redirect_stderr(io.StringIO()):
+                        with self.assertRaises(SystemExit) as raised:
+                            SUPERVISOR.bridge_main(bridge_args)
+                self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_CONFIG)
+                self.assertFalse((self.runtime_root / host).exists())
+
+    @staticmethod
+    def runtime_root_for_socket_length(name: str, target: int) -> Path:
+        agent_key = "a" * 32
+        for size in range(1, target + 1):
+            root = Path("/" + ("r" * size))
+            path = root / "host" / "agents" / agent_key / "emacs" / name
+            if len(os.fsencode(path)) == target:
+                return root
+        raise AssertionError(f"cannot construct {target}-byte socket path")
+
+    @staticmethod
+    def host_runtime_root_for_socket_length(name: str, target: int) -> Path:
+        for size in range(1, target + 1):
+            root = Path("/" + ("r" * size))
+            path = root / "host" / "emacs" / name
+            if len(os.fsencode(path)) == target:
+                return root
+        raise AssertionError(f"cannot construct {target}-byte host socket path")
+
+    def test_socket_limit_includes_workers_and_terminating_nul(self):
+        agent_key = "a" * 32
+        worker_name = "anvil-worker-write-1"
+        limit = SUPERVISOR.unix_socket_path_limit_bytes()
+        accepted_root = self.runtime_root_for_socket_length(worker_name, limit)
+        accepted = SUPERVISOR.validate_emacs_socket_paths(
+            accepted_root,
+            "host",
+            agent_key,
+            (worker_name,),
+        )
+        self.assertEqual(len(os.fsencode(accepted[-1])), limit)
+
+        root_only_fits = self.runtime_root_for_socket_length("server", limit)
+        with self.assertRaisesRegex(
+            SUPERVISOR.ConfigurationError,
+            "platform Unix socket limit",
+        ):
+            SUPERVISOR.validate_emacs_socket_paths(
+                root_only_fits,
+                "host",
+                agent_key,
+                (worker_name,),
+            )
+
+    def test_explicit_socket_path_has_the_same_strict_ceiling(self):
+        limit = SUPERVISOR.unix_socket_path_limit_bytes()
+        accepted = Path("/" + ("s" * (limit - 1)))
+        rejected = Path("/" + ("s" * limit))
+        self.assertEqual(SUPERVISOR.validate_socket_path(accepted), accepted)
+        for raw in (rejected, "relative/server", "/tmp/../tmp/server"):
+            with self.subTest(raw=raw):
+                with self.assertRaises(SUPERVISOR.ConfigurationError):
+                    SUPERVISOR.validate_socket_path(raw)
+
+    def test_linux_default_accepts_shared_work_host_worker_roster(self):
+        agent_key = "a" * 32
+        expected_lengths = {
+            "andoria-08": 103,
+            "andoria-t2": 103,
+            "delphi-3bd4": 104,
+            "gpu-server": 103,
+        }
+        with mock.patch.object(SUPERVISOR.sys, "platform", "linux"):
+            for host, expected in expected_lengths.items():
+                with self.subTest(host=host):
+                    paths = SUPERVISOR.validate_emacs_socket_paths(
+                        Path("/run/user/158771033/anvil"),
+                        host,
+                        agent_key,
+                        TEST_WORKER_NAMES,
+                    )
+                    longest = max(len(os.fsencode(path)) for path in paths)
+                    self.assertEqual(longest, expected)
+                    self.assertLessEqual(
+                        longest,
+                        SUPERVISOR.unix_socket_path_limit_bytes(),
+                    )
+
+    def test_host_socket_limit_includes_packaged_workers(self):
+        limit = SUPERVISOR.unix_socket_path_limit_bytes()
+        worker_name = "anvil-worker-write-1"
+        accepted_root = self.host_runtime_root_for_socket_length(
+            worker_name,
+            limit,
+        )
+        accepted = SUPERVISOR.validate_host_emacs_socket_paths(
+            accepted_root,
+            "host",
+            (worker_name,),
+        )
+        self.assertLessEqual(len(os.fsencode(accepted[-1])), limit)
+
+        root_only_fits = self.host_runtime_root_for_socket_length(
+            "server",
+            limit,
+        )
+        with self.assertRaisesRegex(
+            SUPERVISOR.ConfigurationError,
+            "platform Unix socket limit",
+        ):
+            SUPERVISOR.validate_host_emacs_socket_paths(
+                root_only_fits,
+                "host",
+                (worker_name,),
+            )
+
+    def test_roots_must_be_absolute_and_normalized(self):
+        self.assertEqual(
+            SUPERVISOR.validate_root_path(self.runtime_root, "runtime root"),
+            self.runtime_root,
+        )
+        for raw in (
+            "relative",
+            "/tmp/../var/tmp",
+            "/tmp/./state",
+            "/tmp//state",
+            "//tmp/state",
+            "/tmp/state/",
+        ):
+            with self.subTest(raw=raw):
+                with self.assertRaisesRegex(
+                    SUPERVISOR.ConfigurationError,
+                    "absolute normalized path",
+                ):
+                    SUPERVISOR.validate_root_path(raw, "runtime root")
+
+    def test_exact_daemon_directories_receive_socket_preflight(self):
+        args = SimpleNamespace(
+            host="hera",
+            runtime_dir=str(self.root / "exact-runtime"),
+            runtime_root=str(self.runtime_root),
+            state_dir=str(self.root / "exact-state"),
+            state_root=str(self.state_root),
+            worker_names=TEST_WORKER_NAMES,
+        )
+        SUPERVISOR.host_socket_preflight_main(args)
+        args.runtime_dir = "/tmp/../tmp/exact-runtime"
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                SUPERVISOR.host_socket_preflight_main(args)
+        self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_CONFIG)
+
+        overlong_runtime = Path("/" + ("x" * SUPERVISOR.unix_socket_path_limit_bytes()))
+        args.runtime_dir = str(overlong_runtime)
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                SUPERVISOR.host_socket_preflight_main(args)
+        self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_CONFIG)
+        self.assertFalse(overlong_runtime.exists())
+        self.assertFalse(Path(args.state_dir).exists())
+
+    def test_daemon_preflight_rejects_coincident_paths_without_residue(self):
+        host = "coincident-host"
+        args = SimpleNamespace(
+            host=host,
+            runtime_dir=None,
+            runtime_root=str(self.runtime_root),
+            state_dir=None,
+            state_root=str(self.runtime_root),
+            worker_names=TEST_WORKER_NAMES,
+        )
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                SUPERVISOR.host_socket_preflight_main(args)
+        self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_CONFIG)
+        self.assertFalse((self.runtime_root / host).exists())
+
+        exact = self.root / "coincident-exact"
+        args.state_root = str(self.state_root)
+        args.runtime_dir = str(exact)
+        args.state_dir = str(exact)
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                SUPERVISOR.host_socket_preflight_main(args)
+        self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_CONFIG)
+        self.assertFalse(exact.exists())
+
+        real_exact = self.root / "real-exact"
+        real_exact.mkdir(mode=0o700)
+        alias_exact = self.root / "alias-exact"
+        alias_exact.symlink_to(real_exact, target_is_directory=True)
+        args.runtime_dir = str(real_exact)
+        args.state_dir = str(alias_exact)
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                SUPERVISOR.host_socket_preflight_main(args)
+        self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_CONFIG)
+        self.assertFalse((real_exact / "emacs").exists())
+
+        absent_upper = self.root / "AbsentExact"
+        absent_lower = self.root / "absentexact"
+        args.runtime_dir = str(absent_upper)
+        args.state_dir = str(absent_lower)
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                SUPERVISOR.host_socket_preflight_main(args)
+        self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_CONFIG)
+        self.assertFalse(absent_upper.exists())
+        self.assertFalse(absent_lower.exists())
+
+        absent_nfc = self.root / "CaféExact"
+        absent_nfd = self.root / "Cafe\N{COMBINING ACUTE ACCENT}Exact"
+        args.runtime_dir = str(absent_nfc)
+        args.state_dir = str(absent_nfd)
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                SUPERVISOR.host_socket_preflight_main(args)
+        self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_CONFIG)
+        self.assertFalse(absent_nfc.exists())
+        self.assertFalse(absent_nfd.exists())
+
+    def test_worker_roster_rejects_duplicates_and_path_components(self):
+        for names in (
+            (),
+            ("duplicate", "duplicate"),
+            ("../worker",),
+            ("worker/name",),
+            (".",),
+            ("server",),
+            ("Server",),
+            ("Worker", "worker"),
+        ):
+            with self.subTest(names=names):
+                with self.assertRaises(SUPERVISOR.ConfigurationError):
+                    SUPERVISOR.validate_worker_names(names)
 
     def test_lease_revalidates_bridge_and_owner_identities(self):
         args = self.prepare()
@@ -2038,6 +2344,7 @@ for line in sys.stdin:
             server_id="anvil",
             state_root=str(self.state_root),
             stdio="/stdio",
+            worker_names=TEST_WORKER_NAMES,
         )
         captured = {}
 
@@ -4127,6 +4434,7 @@ for line in sys.stdin:
             server_id="anvil",
             state_root=str(self.state_root),
             stdio="/stdio",
+            worker_names=TEST_WORKER_NAMES,
         )
         owner_identity = SUPERVISOR.process_start_identity(os.getpid())
         captured = {}
@@ -4357,6 +4665,7 @@ for line in sys.stdin:
             server_id="anvil",
             state_root=str(self.state_root),
             stdio="/stdio",
+            worker_names=TEST_WORKER_NAMES,
         )
         owner_identity = SUPERVISOR.process_start_identity(os.getpid())
         stderr = io.StringIO()
@@ -4415,6 +4724,7 @@ for line in sys.stdin:
             server_id="anvil",
             state_root=str(self.state_root),
             stdio="/stdio",
+            worker_names=TEST_WORKER_NAMES,
         )
         owner_identity = SUPERVISOR.process_start_identity(os.getpid())
         stderr = io.StringIO()

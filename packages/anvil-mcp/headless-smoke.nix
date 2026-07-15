@@ -78,6 +78,7 @@ runCommand "anvil-mcp-dedicated-smoke"
     export ANVIL_MCP_CLIENT_TOOL_SECONDS=${toString anvilMcp.timeoutPolicy.clientToolSeconds}
     export ANVIL_PER_AGENT_LAUNCHER="${anvilMcp}/bin/anvil-mcp"
     export ANVIL_LAUNCH_BASELINE=clean-baseline
+    export ANVIL_HEADLESS_DAEMON="${hostAnvilMcp}/bin/anvil-headless-emacs"
     export SHELL="${bash}/bin/bash"
     # Host-daemon tests below use an explicit package variant; the per-agent
     # launcher has no identity-dependent fallback path.

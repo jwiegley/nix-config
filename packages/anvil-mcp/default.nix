@@ -104,6 +104,9 @@ let
     + lib.concatMapStringsSep " " (spec: "(${spec.lane} ${builtins.toJSON spec.name})") workerSpecs
     + ")";
   workerNamesShell = lib.concatMapStringsSep " " lib.escapeShellArg workerNames;
+  workerSupervisorArgsShell = lib.concatMapStringsSep " " (
+    name: "--worker-name=${lib.escapeShellArg name}"
+  ) workerNames;
 
   nelispSrc = fetchFromGitHub {
     owner = "zawatton";
@@ -588,7 +591,7 @@ let
   pythonWithPyMuPDF = python3.withPackages (ps: [ ps.pymupdf ]);
 
   defaultRuntimeRoot =
-    if stdenv.isLinux then "/run/user/$(id -u)/anvil-emacs" else "/tmp/anvil-emacs-$(id -u)";
+    if stdenv.isLinux then "/run/user/$(id -u)/anvil" else "/tmp/anvil-emacs-$(id -u)";
 
   privateDirectoryFunctions = ''
     validate_host_component() {
@@ -3080,6 +3083,14 @@ let
         echo "anvil-mcp: exact runtime and state directories must be set together" >&2
         exit 64
       fi
+      "${python3}/bin/python3" -I -S "${dedicatedAgentSupervisor}" \
+        --validate-host-sockets \
+        --runtime-root "$runtime_root" \
+        --state-root "$state_root" \
+        --runtime-dir "$runtime_dir" \
+        --state-dir "$state_dir" \
+        --host "$short_host" \
+        ${workerSupervisorArgsShell}
       lock_conflict_status="''${ANVIL_EMACS_LOCK_CONFLICT_STATUS:-75}"
       case "$lock_conflict_status" in
         0|75) ;;
@@ -3197,10 +3208,6 @@ let
         validate_host_component "$short_host"
         runtime_root="''${ANVIL_EMACS_RUNTIME_ROOT:-${defaultRuntimeRoot}}"
         state_root="''${ANVIL_EMACS_STATE_ROOT:-/var/tmp/anvil-emacs-$(id -u)}"
-        private_directory "$runtime_root" "runtime root"
-        private_directory "$runtime_root/$short_host" "host runtime directory"
-        private_directory "$state_root" "state root"
-        private_directory "$state_root/$short_host" "host state directory"
         exec "${python3}/bin/python3" -I -S "${dedicatedAgentSupervisor}" \
               --server-id "$server_id" \
               --generation "${dedicatedGeneration}" \
@@ -3212,6 +3219,7 @@ let
               --emacsclient "${dedicatedRuntimeEmacs}/bin/emacsclient" \
               --python "${python3}/bin/python3" \
               --parent-guard "${dedicatedParentGuardLauncher}" \
+              ${workerSupervisorArgsShell} \
               --grace-seconds "''${ANVIL_AGENT_GRACE_SECONDS:-5}" \
               --ready-seconds "''${ANVIL_AGENT_READY_SECONDS:-${toString timeoutPolicy.supervisorReadySeconds}}"
       ''}
@@ -3220,12 +3228,22 @@ let
         short_host="''${ANVIL_EMACS_HOST:-$(hostname -s)}"
         validate_host_component "$short_host"
         runtime_root="''${ANVIL_EMACS_RUNTIME_ROOT:-${defaultRuntimeRoot}}"
+        state_root="''${ANVIL_EMACS_STATE_ROOT:-/var/tmp/anvil-emacs-$(id -u)}"
+        "${python3}/bin/python3" -I -S "${dedicatedAgentSupervisor}" \
+          --validate-host-sockets \
+          --runtime-root "$runtime_root" \
+          --state-root "$state_root" \
+          --host "$short_host" \
+          ${workerSupervisorArgsShell}
         runtime_dir="$runtime_root/$short_host"
         private_directory "$runtime_root" "runtime root"
         private_directory "$runtime_dir" "host runtime directory"
         socket="$runtime_dir/emacs/server"
       fi
 
+      "${python3}/bin/python3" -I -S "${dedicatedAgentSupervisor}" \
+        --validate-explicit-socket \
+        --socket "$socket"
       if [ -L "$socket" ]; then
         echo "anvil-mcp: Emacs socket must not be a symbolic link: $socket" >&2
         exit 77

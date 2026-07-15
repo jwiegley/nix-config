@@ -20,6 +20,7 @@ import stat
 import subprocess
 import sys
 import time
+import unicodedata
 
 
 EXIT_UNAVAILABLE = 69
@@ -39,12 +40,17 @@ LINUX_BOOT_ID_PATTERN = re.compile(
     r"[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
 )
 HOST_PATTERN = re.compile(r"[A-Za-z0-9._-]+")
+WORKER_NAME_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 SERVER_IDS = frozenset(("anvil", "emacs-eval"))
 RECORD_FORMAT_V1 = 1
 RECORD_FORMAT_V2 = 2
 MAX_LEASE_BYTES = 8192
 MAX_DAEMON_DIAGNOSTIC_BYTES = 128 * 1024
 MAX_DAEMON_DIAGNOSTIC_DRAIN_BYTES = 128 * 1024
+# sockaddr_un.sun_path includes its terminating NUL: 104 bytes on Darwin and
+# 108 on Linux.  Unknown supported-by-Python platforms use the safer ceiling.
+DARWIN_UNIX_SOCKET_PATH_BYTES = 103
+LINUX_UNIX_SOCKET_PATH_BYTES = 107
 POLL_SECONDS = 0.25
 CARETAKER_ENSURE_SECONDS = 0.5
 CARETAKER_ENSURE_MAX_BACKOFF_SECONDS = 5.0
@@ -128,6 +134,132 @@ def validate_server_id(raw: str) -> str:
     if raw not in SERVER_IDS:
         raise ConfigurationError(f"unsupported server id: {raw!r}")
     return raw
+
+
+def unix_socket_path_limit_bytes(platform: str | None = None) -> int:
+    """Return the pathname-byte ceiling for this supported kernel."""
+    platform = sys.platform if platform is None else platform
+    if platform.startswith("linux"):
+        return LINUX_UNIX_SOCKET_PATH_BYTES
+    return DARWIN_UNIX_SOCKET_PATH_BYTES
+
+
+def validate_root_path(raw: str | Path, label: str) -> Path:
+    """Return an absolute, lexically normalized private-state root."""
+    try:
+        raw_path = os.fspath(raw)
+    except TypeError as error:
+        raise ConfigurationError(
+            f"{label} is not a filesystem path: {raw!r}"
+        ) from error
+    if not isinstance(raw_path, str):
+        raise ConfigurationError(f"{label} is not a text path: {raw!r}")
+    normalized = os.path.abspath(os.path.normpath(raw_path))
+    if (
+        not os.path.isabs(raw_path)
+        or raw_path.startswith("//")
+        or raw_path != normalized
+    ):
+        raise ConfigurationError(
+            f"{label} must be an absolute normalized path: {raw!r}"
+        )
+    return Path(raw_path)
+
+
+def validate_distinct_paths(runtime_path: Path, state_path: Path, label: str) -> None:
+    """Reject a runtime/state pair that already resolves to one location."""
+    runtime_canonical = Path(os.path.realpath(os.fspath(runtime_path)))
+    state_canonical = Path(os.path.realpath(os.fspath(state_path)))
+    runtime_key = unicodedata.normalize("NFC", os.fspath(runtime_canonical)).casefold()
+    state_key = unicodedata.normalize("NFC", os.fspath(state_canonical)).casefold()
+    try:
+        same_inode = os.path.samefile(runtime_path, state_path)
+    except FileNotFoundError:
+        same_inode = False
+    except OSError as error:
+        raise ConfigurationError(f"cannot compare {label} paths: {error}") from error
+    if (
+        runtime_path == state_path
+        or runtime_canonical == state_canonical
+        or runtime_key == state_key
+        or same_inode
+    ):
+        raise ConfigurationError(
+            f"{label}: runtime and state directories must be distinct"
+        )
+
+
+def validate_worker_names(raw_names: list[str] | tuple[str, ...]) -> tuple[str, ...]:
+    """Validate the Nix-generated worker roster as safe socket basenames."""
+    if not raw_names:
+        raise ConfigurationError("missing packaged worker roster")
+    names: list[str] = []
+    seen: set[str] = set()
+    for raw in raw_names:
+        if (
+            not isinstance(raw, str)
+            or raw in ("", ".", "..")
+            or WORKER_NAME_PATTERN.fullmatch(raw) is None
+        ):
+            raise ConfigurationError(f"unsafe worker name: {raw!r}")
+        key = raw.casefold()
+        if key == "server":
+            raise ConfigurationError(f"reserved worker name: {raw!r}")
+        if key in seen:
+            raise ConfigurationError(f"duplicate worker name: {raw!r}")
+        seen.add(key)
+        names.append(raw)
+    return tuple(names)
+
+
+def validate_socket_paths(
+    socket_root: Path,
+    worker_names: list[str] | tuple[str, ...],
+) -> tuple[Path, ...]:
+    """Return every root and worker socket path or reject an impossible one."""
+    worker_names = validate_worker_names(worker_names)
+    socket_paths = tuple(socket_root / name for name in ("server", *worker_names))
+    for socket_path in socket_paths:
+        validate_socket_path(socket_path)
+    return socket_paths
+
+
+def validate_socket_path(raw: str | Path) -> Path:
+    """Validate one absolute socket pathname against the kernel ceiling."""
+    socket_path = validate_root_path(raw, "Emacs socket path")
+    limit = unix_socket_path_limit_bytes()
+    encoded = os.fsencode(socket_path)
+    if len(encoded) > limit:
+        raise ConfigurationError(
+            "Emacs socket path exceeds the platform Unix socket limit "
+            f"({len(encoded)} > {limit} bytes): {socket_path}"
+        )
+    return socket_path
+
+
+def validate_emacs_socket_paths(
+    runtime_root: Path,
+    host: str,
+    agent_key: str,
+    worker_names: list[str] | tuple[str, ...],
+) -> tuple[Path, ...]:
+    """Return every prospective socket path or reject before publication."""
+    runtime_root = validate_root_path(runtime_root, "runtime root")
+    host = validate_host(host)
+    agent_key = validate_agent_key(agent_key)
+    socket_root = runtime_root / host / "agents" / agent_key / "emacs"
+    return validate_socket_paths(socket_root, worker_names)
+
+
+def validate_host_emacs_socket_paths(
+    runtime_root: Path,
+    host: str,
+    worker_names: list[str] | tuple[str, ...],
+) -> tuple[Path, ...]:
+    """Validate the shared host-daemon root and worker socket paths."""
+    runtime_root = validate_root_path(runtime_root, "runtime root")
+    host = validate_host(host)
+    return validate_socket_paths(runtime_root / host / "emacs", worker_names)
 
 
 def ensure_private_directory(path: Path) -> None:
@@ -2932,6 +3064,19 @@ def bridge_main(args: argparse.Namespace) -> None:
         args.server_id = validate_server_id(args.server_id)
         args.host = validate_host(args.host)
         args.generation = validate_generation(args.generation)
+        runtime_root = validate_root_path(args.runtime_root, "runtime root")
+        state_root = validate_root_path(args.state_root, "state root")
+        validate_distinct_paths(runtime_root, state_root, "Anvil root")
+        args.worker_names = validate_worker_names(args.worker_names)
+        # Every agent key has the same fixed width.  Validate the complete
+        # prospective roster before consulting the MCP pipe or publishing any
+        # directory, so impossible configuration always fails deterministically.
+        validate_emacs_socket_paths(
+            runtime_root,
+            args.host,
+            "0" * 32,
+            args.worker_names,
+        )
         args.owner_pid, args.owner_start_identity = identify_bridge()
         args.agent_key = derive_agent_key(
             args.owner_pid,
@@ -2939,8 +3084,8 @@ def bridge_main(args: argparse.Namespace) -> None:
             args.generation,
         )
         runtime_dir, state_dir, leases_dir = prepare_instance_directories(
-            Path(args.runtime_root),
-            Path(args.state_root),
+            runtime_root,
+            state_root,
             args.host,
             args.agent_key,
             args.owner_pid,
@@ -2992,6 +3137,58 @@ def bridge_main(args: argparse.Namespace) -> None:
         raise SystemExit(stdio_status)
 
 
+def host_socket_preflight_main(args: argparse.Namespace) -> None:
+    """Validate shared-host roots and socket paths without publishing state."""
+    try:
+        runtime_root = validate_root_path(args.runtime_root, "runtime root")
+        state_root = validate_root_path(args.state_root, "state root")
+        validate_distinct_paths(runtime_root, state_root, "Anvil root")
+        if bool(args.runtime_dir) != bool(args.state_dir):
+            raise ConfigurationError(
+                "exact runtime and state directories must be set together"
+            )
+        if args.runtime_dir:
+            runtime_dir = validate_root_path(args.runtime_dir, "runtime directory")
+            state_dir = validate_root_path(args.state_dir, "state directory")
+            validate_distinct_paths(runtime_dir, state_dir, "exact Anvil directory")
+            validate_socket_paths(runtime_dir / "emacs", args.worker_names)
+        else:
+            validate_host_emacs_socket_paths(
+                runtime_root,
+                args.host,
+                args.worker_names,
+            )
+    except ConfigurationError as error:
+        fail(str(error), EXIT_CONFIG)
+
+
+def parse_host_socket_preflight_arguments(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--runtime-root", required=True)
+    parser.add_argument("--state-root", required=True)
+    parser.add_argument("--host", required=True)
+    parser.add_argument("--runtime-dir")
+    parser.add_argument("--state-dir")
+    parser.add_argument(
+        "--worker-name", action="append", dest="worker_names", required=True
+    )
+    return parser.parse_args(argv)
+
+
+def explicit_socket_preflight_main(args: argparse.Namespace) -> None:
+    """Validate one caller-supplied host socket without publishing state."""
+    try:
+        validate_socket_path(args.socket)
+    except ConfigurationError as error:
+        fail(str(error), EXIT_CONFIG)
+
+
+def parse_explicit_socket_preflight_arguments(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--socket", required=True)
+    return parser.parse_args(argv)
+
+
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--server-id", required=True)
@@ -3004,6 +3201,9 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--emacsclient", required=True)
     parser.add_argument("--python", required=True)
     parser.add_argument("--parent-guard", required=True)
+    parser.add_argument(
+        "--worker-name", action="append", dest="worker_names", required=True
+    )
     parser.add_argument("--grace-seconds", type=float, default=5.0)
     parser.add_argument("--ready-seconds", type=float, default=120.0)
     args = parser.parse_args(argv)
@@ -3015,7 +3215,16 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
-    bridge_main(parse_arguments(sys.argv[1:] if argv is None else argv))
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["--validate-host-sockets"]:
+        host_socket_preflight_main(parse_host_socket_preflight_arguments(argv[1:]))
+        return
+    if argv[:1] == ["--validate-explicit-socket"]:
+        explicit_socket_preflight_main(
+            parse_explicit_socket_preflight_arguments(argv[1:])
+        )
+        return
+    bridge_main(parse_arguments(argv))
 
 
 if __name__ == "__main__":

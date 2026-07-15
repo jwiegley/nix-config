@@ -190,6 +190,165 @@ def run_transcript(
     return [json.loads(line) for line in completed.stdout.splitlines() if line.strip()]
 
 
+def assert_overlong_socket_path_fails_fast(launcher: Path) -> None:
+    """Reject an impossible AF_UNIX path before the readiness deadline."""
+    host = "h" * 80
+    env = os.environ.copy()
+    env["ANVIL_EMACS_HOST"] = host
+    env["ANVIL_AGENT_READY_SECONDS"] = "120"
+    started = time.monotonic()
+    try:
+        completed = subprocess.run(
+            [str(launcher), "--server-id=anvil"],
+            check=False,
+            env=env,
+            input=b"",
+            capture_output=True,
+            timeout=5,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise AssertionError(
+            "overlong Anvil socket path reached the readiness wait"
+        ) from error
+    elapsed = time.monotonic() - started
+    stderr = completed.stderr.decode(errors="replace")
+    if completed.returncode != 77 or "platform Unix socket limit" not in stderr:
+        raise AssertionError(
+            "overlong Anvil socket path did not fail as configuration: "
+            f"rc={completed.returncode} elapsed={elapsed:.3f}s stderr={stderr!r}"
+        )
+    runtime_host = Path(env["ANVIL_EMACS_RUNTIME_ROOT"]) / host
+    state_host = Path(env["ANVIL_EMACS_STATE_ROOT"]) / host
+    if runtime_host.exists() or state_host.exists():
+        raise AssertionError("overlong Anvil socket path published host state")
+
+
+def assert_overlong_explicit_socket_fails_fast(launcher: Path) -> None:
+    """Reject an explicit impossible socket before readiness or publication."""
+    host = "explicit-overlong"
+    socket_path = "/" + ("s" * 200)
+    env = os.environ.copy()
+    env["ANVIL_EMACS_HOST"] = host
+    started = time.monotonic()
+    try:
+        completed = subprocess.run(
+            [str(launcher), f"--socket={socket_path}", "--server-id=anvil"],
+            check=False,
+            env=env,
+            input=b"",
+            capture_output=True,
+            timeout=5,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise AssertionError("overlong explicit socket reached readiness") from error
+    elapsed = time.monotonic() - started
+    stderr = completed.stderr.decode(errors="replace")
+    if completed.returncode != 77 or "platform Unix socket limit" not in stderr:
+        raise AssertionError(
+            "overlong explicit socket did not fail as configuration: "
+            f"rc={completed.returncode} elapsed={elapsed:.3f}s stderr={stderr!r}"
+        )
+    runtime_host = Path(env["ANVIL_EMACS_RUNTIME_ROOT"]) / host
+    state_host = Path(env["ANVIL_EMACS_STATE_ROOT"]) / host
+    if runtime_host.exists() or state_host.exists():
+        raise AssertionError("overlong explicit socket published host state")
+
+
+def assert_overlong_daemon_socket_paths_fail_fast(daemon: Path) -> None:
+    """Reject impossible default and exact daemon paths without residue."""
+    base_env = os.environ.copy()
+    base_env["ANVIL_EMACS_LOCK_CONFLICT_STATUS"] = "75"
+    cases: list[tuple[str, dict[str, str], tuple[Path, ...], str]] = []
+
+    default_host = "d" * 80
+    default_env = base_env.copy()
+    default_env["ANVIL_EMACS_HOST"] = default_host
+    default_env.pop("ANVIL_EMACS_RUNTIME_DIR", None)
+    default_env.pop("ANVIL_EMACS_STATE_DIR", None)
+    cases.append(
+        (
+            "default",
+            default_env,
+            (
+                Path(default_env["ANVIL_EMACS_RUNTIME_ROOT"]) / default_host,
+                Path(default_env["ANVIL_EMACS_STATE_ROOT"]) / default_host,
+            ),
+            "platform Unix socket limit",
+        )
+    )
+
+    exact_runtime = Path(base_env["ANVIL_EMACS_RUNTIME_ROOT"]) / ("x" * 100)
+    exact_state = Path(base_env["ANVIL_EMACS_STATE_ROOT"]) / "exact-overlong"
+    exact_env = base_env.copy()
+    exact_env["ANVIL_EMACS_HOST"] = "exact-overlong"
+    exact_env["ANVIL_EMACS_RUNTIME_DIR"] = str(exact_runtime)
+    exact_env["ANVIL_EMACS_STATE_DIR"] = str(exact_state)
+    cases.append(
+        (
+            "exact",
+            exact_env,
+            (exact_runtime, exact_state),
+            "platform Unix socket limit",
+        )
+    )
+
+    coincident_host = "coincident-default"
+    coincident_env = base_env.copy()
+    coincident_env["ANVIL_EMACS_HOST"] = coincident_host
+    coincident_env["ANVIL_EMACS_STATE_ROOT"] = coincident_env[
+        "ANVIL_EMACS_RUNTIME_ROOT"
+    ]
+    coincident_env.pop("ANVIL_EMACS_RUNTIME_DIR", None)
+    coincident_env.pop("ANVIL_EMACS_STATE_DIR", None)
+    cases.append(
+        (
+            "coincident default",
+            coincident_env,
+            (Path(coincident_env["ANVIL_EMACS_RUNTIME_ROOT"]) / coincident_host,),
+            "runtime and state directories must be distinct",
+        )
+    )
+
+    coincident_exact = Path(base_env["ANVIL_EMACS_RUNTIME_ROOT"]) / "coincident-exact"
+    coincident_exact_env = base_env.copy()
+    coincident_exact_env["ANVIL_EMACS_HOST"] = "coincident-exact"
+    coincident_exact_env["ANVIL_EMACS_RUNTIME_DIR"] = str(coincident_exact)
+    coincident_exact_env["ANVIL_EMACS_STATE_DIR"] = str(coincident_exact)
+    cases.append(
+        (
+            "coincident exact",
+            coincident_exact_env,
+            (coincident_exact,),
+            "runtime and state directories must be distinct",
+        )
+    )
+
+    for label, env, unpublished_paths, expected_error in cases:
+        started = time.monotonic()
+        try:
+            completed = subprocess.run(
+                [str(daemon)],
+                check=False,
+                env=env,
+                input=b"",
+                capture_output=True,
+                timeout=5,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise AssertionError(
+                f"overlong {label} daemon path reached startup"
+            ) from error
+        elapsed = time.monotonic() - started
+        stderr = completed.stderr.decode(errors="replace")
+        if completed.returncode != 77 or expected_error not in stderr:
+            raise AssertionError(
+                f"overlong {label} daemon path did not fail as configuration: "
+                f"rc={completed.returncode} elapsed={elapsed:.3f}s stderr={stderr!r}"
+            )
+        if any(path.exists() for path in unpublished_paths):
+            raise AssertionError(f"overlong {label} daemon path published state")
+
+
 def run_final_framed_transcript(
     launcher: Path,
     host: str,
@@ -1880,6 +2039,12 @@ def main() -> None:
         )
 
     launcher = Path(sys.argv[1]).resolve()
+    per_agent_launcher = Path(os.environ["ANVIL_PER_AGENT_LAUNCHER"]).resolve()
+    headless_daemon = Path(os.environ["ANVIL_HEADLESS_DAEMON"]).resolve()
+    assert_overlong_explicit_socket_fails_fast(launcher)
+    assert_overlong_socket_path_fails_fast(launcher)
+    assert_overlong_socket_path_fails_fast(per_agent_launcher)
+    assert_overlong_daemon_socket_paths_fail_fast(headless_daemon)
     inner_launcher = Path(sys.argv[2]).resolve()
     worker_specs = parse_worker_specs(sys.argv[3])
     client_tool_seconds = float(sys.argv[4])
