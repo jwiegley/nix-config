@@ -71,7 +71,7 @@ in
           };
           WorkingDirectory = homeDirectory;
           RunAtLoad = true;
-          KeepAlive = true;
+          KeepAlive.PathState."${conductorDirectory}/bridge.py" = true;
           StandardOutPath = "${conductorDirectory}/bridge.log";
           StandardErrorPath = "${conductorDirectory}/bridge.log";
           ThrottleInterval = 10;
