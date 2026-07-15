@@ -10,6 +10,13 @@
 let
   policy = anvilMcp.timeoutPolicy;
   soakCycles = 25;
+  soakBridgeCount = 2;
+  # The 25-cycle subprocess derives to a 160m02s TERM deadline and a 161m32s
+  # absolute SIGKILL horizon.  Keep a nearby finite ceiling without reducing
+  # any recovery cycle, nested call bound, named phase, or process margin.
+  soakKillAfterSeconds = 90;
+  soakProcessHardCeilingSeconds = 162 * 60;
+  soakFocusedTimeoutSeconds = 420;
   watchdogResponseGraceSeconds = 30;
   watchdogWindowSeconds =
     if policy.watchdogHeartbeatSeconds < policy.watchdogDispatchSeconds then
@@ -26,6 +33,39 @@ let
   soakHealthySeconds = watchdogWindowSeconds - soakNonceStartSeconds;
   soakRestartSeconds = 2 * policy.bridgeReadinessSeconds;
   soakReadinessSeconds = watchdogWindowSeconds;
+  soakFixtureCommandCount = 4;
+  soakLocalCommandSeconds = 30;
+  soakInstanceDiscoverySeconds = 150;
+  soakToolsListSeconds = 60;
+  soakToolCallSeconds = 10;
+  soakAsyncSubmissionSeconds = 30;
+  soakAsyncCompatibilityPollSeconds = 45;
+  soakAsyncProjectPollSeconds = 25;
+  soakAsyncMarkerSeconds = 15;
+  soakAsyncPulseSeconds = 3;
+  soakAsyncChildExitSeconds = 10;
+  soakWorkerInventorySeconds = 110;
+  soakProcessSnapshotSeconds = 30;
+  soakSetupSchedulingGraceSeconds = 40;
+  soakInventorySchedulingGraceSeconds = 30;
+  soakYieldingResponseSeconds = 50 + watchdogResponseGraceSeconds;
+  soakAsyncChildIsolationSeconds =
+    soakAsyncSubmissionSeconds
+    + soakAsyncMarkerSeconds
+    + soakAsyncProjectPollSeconds
+    + soakAsyncChildExitSeconds;
+  soakAsyncIsolationSeconds =
+    soakAsyncSubmissionSeconds
+    + soakAsyncCompatibilityPollSeconds
+    + soakAsyncSubmissionSeconds
+    + soakAsyncProjectPollSeconds
+    + soakAsyncSubmissionSeconds
+    + soakAsyncMarkerSeconds
+    + soakToolCallSeconds
+    + soakAsyncPulseSeconds
+    + soakAsyncProjectPollSeconds
+    + soakAsyncChildExitSeconds;
+  soakWarmBridgeSeconds = soakToolsListSeconds + 3 * soakToolCallSeconds + policy.clientToolSeconds;
   soakCycleBudgetSeconds =
     watchdogResponseBudgetSeconds
     + soakRestartSeconds
@@ -34,14 +74,26 @@ let
     + policy.frameReadSeconds;
 
   # Fixed work is split into enforced phases rather than an opaque allowance.
-  # Setup covers two bridge boot/warmup envelopes, the yielding proof, and two
-  # async-isolation checks.  Inventory, two bounded closes, and post-cleanup
-  # verification each have their own process-local alarm in the driver.
+  # Setup and inventory add every sequential nested timeout plus explicit
+  # scheduling grace.  Post-recovery inventory proves successful child
+  # offload isolation on each recovered bridge before worker/process custody.
   soakSetupSeconds =
-    2 * (policy.bridgeDispatchSeconds + policy.clientToolSeconds)
-    + watchdogResponseBudgetSeconds
-    + 2 * watchdogWindowSeconds;
-  soakInventorySeconds = 3 * policy.frameReadSeconds;
+    soakFixtureCommandCount * soakLocalCommandSeconds
+    +
+      soakBridgeCount
+      * (
+        policy.clientStartupSeconds
+        + soakInstanceDiscoverySeconds
+        + soakWarmBridgeSeconds
+        + soakAsyncIsolationSeconds
+      )
+    + soakToolCallSeconds
+    + soakYieldingResponseSeconds
+    + soakSetupSchedulingGraceSeconds;
+  soakInventorySeconds =
+    soakBridgeCount
+    * (soakAsyncChildIsolationSeconds + soakWorkerInventorySeconds + soakProcessSnapshotSeconds)
+    + soakInventorySchedulingGraceSeconds;
   soakCleanupSchedulingGraceSeconds = 2 * policy.frameReadSeconds;
   soakBridgeCleanupSeconds = 2 * policy.bridgeReadinessSeconds + soakCleanupSchedulingGraceSeconds;
   soakPostCleanupSeconds = policy.watchdogDispatchSeconds;
@@ -55,11 +107,15 @@ let
   soakMarginSeconds = builtins.div (soakInternalBudgetSeconds * soakMarginPercent + 99) 100;
   soakTimeoutSeconds = soakInternalBudgetSeconds + soakMarginSeconds;
 in
+assert soakCycles >= 25;
+assert soakMarginPercent >= 20;
+assert soakKillAfterSeconds > 0;
+assert soakKillAfterSeconds > soakBridgeCleanupSeconds;
 assert soakHealthySeconds > 0;
 assert soakNonceStartSeconds + soakHealthySeconds <= watchdogWindowSeconds;
 assert soakMarginSeconds * 100 >= soakInternalBudgetSeconds * soakMarginPercent;
 assert soakTimeoutSeconds > soakInternalBudgetSeconds;
-assert soakTimeoutSeconds <= 2 * 60 * 60;
+assert soakTimeoutSeconds + soakKillAfterSeconds <= soakProcessHardCeilingSeconds;
 runCommand "anvil-mcp-persistent-soak"
   {
     nativeBuildInputs = [
@@ -84,11 +140,16 @@ runCommand "anvil-mcp-persistent-soak"
       marginPercent = soakMarginPercent;
       marginSeconds = soakMarginSeconds;
       timeoutSeconds = soakTimeoutSeconds;
+      killAfterSeconds = soakKillAfterSeconds;
+      hardCeilingSeconds = soakProcessHardCeilingSeconds;
+      focusedTimeoutSeconds = soakFocusedTimeoutSeconds;
     };
   }
   ''
-    ${coreutils}/bin/timeout --signal=TERM --kill-after=60 420 \
+    ${coreutils}/bin/timeout --signal=TERM --kill-after=${toString soakKillAfterSeconds} ${toString soakFocusedTimeoutSeconds} \
       ${coreutils}/bin/env \
+      ANVIL_MCP_CLIENT_STARTUP_SECONDS=${toString policy.clientStartupSeconds} \
+      ANVIL_MCP_CLIENT_TOOL_SECONDS=${toString policy.clientToolSeconds} \
       ANVIL_PERSISTENT_SOAK_SETUP_SECONDS=${toString soakSetupSeconds} \
       ANVIL_PERSISTENT_SOAK_CYCLE_SECONDS=${toString soakCycleBudgetSeconds} \
       ANVIL_PERSISTENT_SOAK_INVENTORY_SECONDS=${toString soakInventorySeconds} \
@@ -106,7 +167,9 @@ runCommand "anvil-mcp-persistent-soak"
       ${toString anvilMcp.timeoutPolicy.watchdogDispatchSeconds} \
       ${toString soakCycles} \
       ${toString soakMarginPercent} \
-      ${toString soakTimeoutSeconds}
+      ${toString soakTimeoutSeconds} \
+      ${toString soakKillAfterSeconds} \
+      ${toString soakProcessHardCeilingSeconds}
 
     soak_home=$(mktemp -d /tmp/ah.XXXXXX)
     soak_runtime_root=$(mktemp -d /tmp/ar.XXXXXX)
@@ -124,6 +187,8 @@ runCommand "anvil-mcp-persistent-soak"
       ANVIL_EMACS_RUNTIME_ROOT="$soak_runtime_root" \
       ANVIL_EMACS_STATE_ROOT="$soak_state_root" \
       ANVIL_EMACS_LOCK_REFRESH_SECONDS=0.2 \
+      ANVIL_MCP_CLIENT_STARTUP_SECONDS=${toString policy.clientStartupSeconds} \
+      ANVIL_MCP_CLIENT_TOOL_SECONDS=${toString policy.clientToolSeconds} \
       ANVIL_PER_AGENT_LAUNCHER="${anvilMcp}/bin/anvil-mcp" \
       ANVIL_PERSISTENT_SOAK_CYCLES=${toString soakCycles} \
       ANVIL_PERSISTENT_SOAK_SETUP_SECONDS=${toString soakSetupSeconds} \
@@ -136,7 +201,7 @@ runCommand "anvil-mcp-persistent-soak"
       ANVIL_PERSISTENT_SOAK_READINESS_SECONDS=${toString soakReadinessSeconds} \
       ANVIL_SMOKE_WATCHDOG_NORMAL_SECONDS=${toString anvilMcp.timeoutPolicy.watchdogHeartbeatSeconds} \
       ANVIL_SMOKE_WATCHDOG_DISPATCH_SECONDS=${toString anvilMcp.timeoutPolicy.watchdogDispatchSeconds} \
-      ${coreutils}/bin/timeout --signal=TERM --kill-after=60 ${toString soakTimeoutSeconds} \
+      ${coreutils}/bin/timeout --signal=TERM --kill-after=${toString soakKillAfterSeconds} ${toString soakTimeoutSeconds} \
       ${python3}/bin/python3 -I -B -u \
       ${anvilMcp.dedicatedPersistentBridgeSoak} \
       ${anvilMcp}/bin/anvil-mcp \

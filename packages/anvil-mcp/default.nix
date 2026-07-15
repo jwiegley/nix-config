@@ -173,6 +173,8 @@ let
           "    cleaner,"
           "    \"--direnv\","
           "    ${builtins.toJSON "${direnv}/bin/direnv"},"
+          "    \"--parent-guard\","
+          "    ${builtins.toJSON (toString dedicatedParentGuardLauncher)},"
           "    \"--neutral\","
           "    ${builtins.toJSON (toString dedicatedDirenvNeutral)},"
           "    \"--timeout-seconds\","
@@ -1162,10 +1164,48 @@ let
           ${toString timeoutPolicy.direnvExportSeconds}
           "Maximum seconds for one pinned direnv environment export.")
 
+        (defconst anvil-headless--direnv-export-max-stdout-bytes
+          (* 4 1024 1024)
+          "Maximum bytes retained from one direnv environment export.")
+
+        (defconst anvil-headless--direnv-status-max-stdout-bytes
+          (* 1024 1024)
+          "Maximum bytes retained from one direnv status query.")
+
+        (defconst anvil-headless--direnv-max-stderr-bytes
+          (* 256 1024)
+          "Maximum diagnostic bytes retained from one direnv subprocess.")
+
+        (defconst anvil-headless--environment-max-output-chunks 4096
+          "Maximum filter fragments retained from one environment stream.")
+
+        (defun anvil-headless--capture-bounded-output (state limit chunk)
+          "Append binary CHUNK to STATE without retaining more than LIMIT bytes."
+          (let ((size (string-bytes chunk))
+                (used (aref state 1)))
+            (if (or (aref state 2)
+                    (>= (aref state 3)
+                        anvil-headless--environment-max-output-chunks)
+                    (> size (- limit used)))
+                (aset state 2 t)
+              (aset state 0 (cons chunk (aref state 0)))
+              (aset state 1 (+ used size))
+              (aset state 3 (1+ (aref state 3))))))
+
+        (defun anvil-headless--check-output-limits
+            (stdout-state stderr-state)
+          "Signal a content-free error if either bounded output STATE overflowed."
+          (cond
+           ((aref stdout-state 2)
+            (error "Anvil environment stdout exceeded its capture limit"))
+           ((aref stderr-state 2)
+            (error "Anvil environment stderr exceeded its capture limit"))))
+
         (defun anvil-headless--run-process-responsive
-            (program arguments directory timeout)
+            (program arguments directory timeout stdout-limit stderr-limit)
           "Run PROGRAM with ARGUMENTS in DIRECTORY within TIMEOUT seconds.
-    Return (EXIT STDOUT STDERR) without exposing output or project bindings.
+    Retain at most STDOUT-LIMIT and STDERR-LIMIT bytes and return
+    (EXIT STDOUT STDERR) without exposing output or project bindings.
     This function prepares the environment consumed by anvil-host--run and must
     therefore use the lower-level transaction helpers instead of recursing through
     the direnv advice on that function."
@@ -1173,20 +1213,53 @@ let
                        anvil-headless--baseline-exec-path
                        anvil-headless--baseline-default-directory)
             (error "Anvil baseline environment is unavailable"))
-          (let* ((resources (anvil-host--resource-state))
+          (unless (and (numberp timeout) (> timeout 0))
+            (error "Anvil environment timeout must be positive"))
+          (dolist (limit (list stdout-limit stderr-limit))
+            (unless (and (integerp limit) (>= limit 0))
+              (error "Anvil environment byte limits must be nonnegative integers")))
+          ;; Capture the caller's project state before installing the daemon
+          ;; baseline around any operation that can yield to an unrelated callback.
+          (let* ((child-directory
+                  (file-name-as-directory (expand-file-name directory)))
+                 (child-environment
+                  (let ((process-environment
+                         (copy-sequence process-environment)))
+                    (setenv "ANVIL_HEADLESS_PARENT_PID"
+                            (number-to-string (emacs-pid)))
+                    (copy-sequence process-environment)))
+                 (child-exec-path (copy-sequence exec-path))
                  (outer-inhibit-quit inhibit-quit))
-            (when (aref resources 3)
-              (error "Anvil environment submission is already active"))
-            (let ((inhibit-quit t))
-              (aset resources 3 t)
-              (unwind-protect
-                  (let ((inhibit-quit outer-inhibit-quit))
-                    (anvil-headless--run-process-responsive-transaction
-                     program arguments directory timeout))
-                (aset resources 3 nil)))))
+            (let ((default-directory
+                   anvil-headless--baseline-default-directory)
+                  (process-environment
+                   (copy-sequence
+                    anvil-headless--baseline-process-environment))
+                  (exec-path
+                   (copy-sequence anvil-headless--baseline-exec-path))
+                  (shell-file-name
+                   anvil-headless--baseline-shell-file-name)
+                  (shell-command-switch
+                   anvil-headless--baseline-shell-command-switch)
+                  (anvil-host-child-process-environment nil)
+                  (anvil-host-child-exec-path nil)
+                  (anvil-host-child-shell-file-name nil)
+                  (anvil-host-child-shell-command-switch nil))
+              (let ((resources (anvil-host--resource-state)))
+                (when (aref resources 3)
+                  (error "Anvil environment submission is already active"))
+                (let ((inhibit-quit t))
+                  (aset resources 3 t)
+                  (unwind-protect
+                      (let ((inhibit-quit outer-inhibit-quit))
+                        (anvil-headless--run-process-responsive-transaction
+                         program arguments child-directory child-environment
+                         child-exec-path timeout stdout-limit stderr-limit))
+                    (aset resources 3 nil)))))))
 
         (defun anvil-headless--run-process-responsive-transaction
-            (program arguments directory timeout)
+            (program arguments child-directory child-environment child-exec-path
+                     timeout stdout-limit stderr-limit)
           "Run one guarded environment subprocess transaction."
           (anvil-host--resource-state)
           (when (anvil-host--cleanup-active-p)
@@ -1203,26 +1276,19 @@ let
                  (stderr-name
                   (anvil-host--unique-process-name
                    "anvil-environment-stderr-"))
-                 (child-directory
-                  (file-name-as-directory (expand-file-name directory)))
-                 (child-environment
-                  (let ((process-environment
-                         (copy-sequence process-environment)))
-                    (setenv "ANVIL_HEADLESS_PARENT_PID"
-                            (number-to-string (emacs-pid)))
-                    (copy-sequence process-environment)))
-                 (child-exec-path (copy-sequence exec-path))
-                 stdout-chunks
-                 stderr-chunks
+                 (stdout-state (vector nil 0 nil 0))
+                 (stderr-state (vector nil 0 nil 0))
                  (stdout-filter
                   (lambda (_process chunk)
                     (unwind-protect
-                        (push chunk stdout-chunks)
+                        (anvil-headless--capture-bounded-output
+                         stdout-state stdout-limit chunk)
                       (anvil-host--scrub-code-conversion-work-buffer))))
                  (stderr-filter
                   (lambda (_process chunk)
                     (unwind-protect
-                        (push chunk stderr-chunks)
+                        (anvil-headless--capture-bounded-output
+                         stderr-state stderr-limit chunk)
                       (anvil-host--scrub-code-conversion-work-buffer))))
                  stderr-constructor-started-p
                  stderr-constructor-before
@@ -1389,11 +1455,15 @@ let
                         (funcall
                          anvil-host--accept-process-output-primitive
                          process 0.05 nil nil)
+                        (anvil-headless--check-output-limits
+                         stdout-state stderr-state)
                         (when (and (processp stderr-process)
                                    (process-live-p stderr-process))
                           (funcall
                            anvil-host--accept-process-output-primitive
-                           stderr-process 0 nil nil)))
+                           stderr-process 0 nil nil)
+                          (anvil-headless--check-output-limits
+                           stdout-state stderr-state)))
                       (when (process-live-p process)
                         (error
                          "Anvil environment process timed out after %ss"
@@ -1406,18 +1476,24 @@ let
                           (funcall
                            anvil-host--accept-process-output-primitive
                            stderr-process 0.02 nil nil)
+                          (anvil-headless--check-output-limits
+                           stdout-state stderr-state)
                           (funcall
                            anvil-host--accept-process-output-primitive
-                           process 0 nil nil))))
+                           process 0 nil nil)
+                          (anvil-headless--check-output-limits
+                           stdout-state stderr-state))))
                     (funcall anvil-host--accept-process-output-primitive
-                             process 0.01 nil nil))
+                             process 0.01 nil nil)
+                    (anvil-headless--check-output-limits
+                     stdout-state stderr-state))
                   (list
                    (process-exit-status process)
                    (anvil-host--decode-output
-                    (apply #'concat (nreverse stdout-chunks))
+                    (apply #'concat (nreverse (aref stdout-state 0)))
                     'utf-8-unix)
                    (anvil-host--decode-output
-                    (apply #'concat (nreverse stderr-chunks))
+                    (apply #'concat (nreverse (aref stderr-state 0)))
                     'utf-8-unix)))
               ;; Recover exact post-snapshot children on every exit, including
               ;; constructor throws and queued quits, before releasing the public
@@ -1508,7 +1584,9 @@ let
           (let* ((result
                   (anvil-headless--run-process-responsive
                    anvil-headless--direnv-executable '("export" "json")
-                   directory anvil-headless--direnv-export-timeout))
+                   directory anvil-headless--direnv-export-timeout
+                   anvil-headless--direnv-export-max-stdout-bytes
+                   anvil-headless--direnv-max-stderr-bytes))
                  (exit-code (nth 0 result))
                  (stdout (nth 1 result)))
             (unless (and (integerp exit-code) (zerop exit-code))
@@ -1562,7 +1640,11 @@ let
         (defun anvil-headless--snapshot-baseline-environment ()
           "Freeze the cleaner-restored login environment before any request."
           (let ((environment (copy-sequence process-environment))
-                (baseline-exec-path (copy-sequence exec-path)))
+                (baseline-exec-path (copy-sequence exec-path))
+                (baseline-default-directory
+                 (file-name-as-directory
+                  (file-truename
+                   (expand-file-name user-emacs-directory)))))
             (setq environment
                   (anvil-headless--environment-with
                    environment "ANVIL_EMACS_SOCKET"
@@ -1581,14 +1663,15 @@ let
                   anvil-headless--baseline-shell-command-switch
                   shell-command-switch
                   anvil-headless--baseline-default-directory
-                  (file-name-as-directory
-                   (file-truename (expand-file-name default-directory))))
+                  baseline-default-directory)
             ;; A request evaluated in a buffer without local bindings must see the
             ;; same immutable baseline as new buffers, workers, and offload children.
             (set-default 'process-environment (copy-sequence environment))
             (set-default 'exec-path (copy-sequence baseline-exec-path))
+            (set-default 'default-directory baseline-default-directory)
             (kill-local-variable 'process-environment)
-            (kill-local-variable 'exec-path))
+            (kill-local-variable 'exec-path)
+            (kill-local-variable 'default-directory))
           (unless (and (listp anvil-headless--baseline-process-environment)
                        (listp anvil-headless--baseline-exec-path)
                        (stringp anvil-headless--baseline-shell-file-name)
@@ -1617,7 +1700,9 @@ let
               (let* ((result
                       (anvil-headless--run-process-responsive
                        anvil-headless--direnv-executable '("status" "--json")
-                       directory anvil-headless--direnv-status-timeout))
+                       directory anvil-headless--direnv-status-timeout
+                       anvil-headless--direnv-status-max-stdout-bytes
+                       anvil-headless--direnv-max-stderr-bytes))
                      (exit-code (nth 0 result)))
                 (unless (and (integerp exit-code) (zerop exit-code))
                   (error "direnv status failed"))
@@ -1765,19 +1850,20 @@ let
           (unless (and anvil-headless--baseline-process-environment
                        anvil-headless--baseline-exec-path)
             (error "Anvil baseline environment is unavailable"))
-          (let ((real-shell anvil-headless--baseline-shell-file-name)
+          (let ((effective-cwd (or cwd default-directory))
+                (real-shell anvil-headless--baseline-shell-file-name)
                 (child-process-environment
                  (copy-sequence
                   anvil-headless--baseline-process-environment))
                 (child-exec-path
                  (copy-sequence anvil-headless--baseline-exec-path)))
-            (when (and cwd
-                       (not (file-remote-p cwd))
-                       (file-directory-p (expand-file-name cwd)))
+            (when (and effective-cwd
+                       (not (file-remote-p effective-cwd))
+                       (file-directory-p (expand-file-name effective-cwd)))
               (with-temp-buffer
                 (setq default-directory
                       (file-name-as-directory
-                       (file-truename (expand-file-name cwd))))
+                       (file-truename (expand-file-name effective-cwd))))
                 (setq-local process-environment child-process-environment)
                 (setq-local exec-path child-exec-path)
                 (setq-local direnv--active-directory nil)

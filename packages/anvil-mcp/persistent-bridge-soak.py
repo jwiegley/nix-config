@@ -21,22 +21,55 @@ HOST = "persistent-soak"
 DIRENV_MARKER = "persistent-bridge-direnv"
 COMMAND_NAME = "anvil-soak-command"
 EXPECTED_TOOL_COUNT = 89
-WARMUP_BATCH_TIMEOUT_SECONDS = 210
+BRIDGE_COUNT = 2
+FIXTURE_COMMAND_COUNT = 4
+DEFAULT_CLIENT_STARTUP_SECONDS = 330.0
+DEFAULT_CLIENT_TOOL_SECONDS = 330.0
 DEFAULT_WATCHDOG_NORMAL_SECONDS = 45.0
-DEFAULT_WATCHDOG_DISPATCH_SECONDS = 135.0
+DEFAULT_WATCHDOG_DISPATCH_SECONDS = 225.0
 WATCHDOG_RESPONSE_GRACE_SECONDS = 30.0
 YIELDING_DISPATCH_SECONDS = 50
 LOCAL_COMMAND_TIMEOUT_SECONDS = 30
+INSTANCE_DISCOVERY_TIMEOUT_SECONDS = 150.0
+TOOLS_LIST_TIMEOUT_SECONDS = 60.0
+TOOL_CALL_TIMEOUT_SECONDS = 10.0
+ASYNC_SUBMISSION_TIMEOUT_SECONDS = 30.0
+ASYNC_COMPATIBILITY_POLL_TIMEOUT_SECONDS = 45.0
+ASYNC_PROJECT_POLL_TIMEOUT_SECONDS = 25.0
+ASYNC_MARKER_TIMEOUT_SECONDS = 15.0
+ASYNC_PULSE_TIMEOUT_SECONDS = 3.0
+ASYNC_CHILD_EXIT_TIMEOUT_SECONDS = 10.0
+WORKER_INVENTORY_TIMEOUT_SECONDS = 110.0
+SETUP_SCHEDULING_GRACE_SECONDS = 40.0
+INVENTORY_SCHEDULING_GRACE_SECONDS = 30.0
 NONCE_START_TIMEOUT_SECONDS = 10.0
 OLD_ROOT_EXIT_TIMEOUT_SECONDS = 15.0
 CYCLE_SCHEDULING_GRACE_SECONDS = 10.0
 BRIDGE_CLOSE_BOUND_SECONDS = 20.0
 BRIDGE_CLEANUP_SCHEDULING_GRACE_SECONDS = 20.0
-DEFAULT_SETUP_TIMEOUT_SECONDS = 885.0
+ASYNC_CHILD_ISOLATION_BOUND_SECONDS = (
+    ASYNC_SUBMISSION_TIMEOUT_SECONDS
+    + ASYNC_MARKER_TIMEOUT_SECONDS
+    + ASYNC_PROJECT_POLL_TIMEOUT_SECONDS
+    + ASYNC_CHILD_EXIT_TIMEOUT_SECONDS
+)
+ASYNC_ISOLATION_BOUND_SECONDS = (
+    ASYNC_SUBMISSION_TIMEOUT_SECONDS
+    + ASYNC_COMPATIBILITY_POLL_TIMEOUT_SECONDS
+    + ASYNC_SUBMISSION_TIMEOUT_SECONDS
+    + ASYNC_PROJECT_POLL_TIMEOUT_SECONDS
+    + ASYNC_SUBMISSION_TIMEOUT_SECONDS
+    + ASYNC_MARKER_TIMEOUT_SECONDS
+    + TOOL_CALL_TIMEOUT_SECONDS
+    + ASYNC_PULSE_TIMEOUT_SECONDS
+    + ASYNC_PROJECT_POLL_TIMEOUT_SECONDS
+    + ASYNC_CHILD_EXIT_TIMEOUT_SECONDS
+)
+DEFAULT_SETUP_TIMEOUT_SECONDS = 2496.0
 DEFAULT_CYCLE_TIMEOUT_SECONDS = 190.0
-DEFAULT_INVENTORY_TIMEOUT_SECONDS = 30.0
+DEFAULT_INVENTORY_TIMEOUT_SECONDS = 470.0
 DEFAULT_BRIDGE_CLEANUP_TIMEOUT_SECONDS = 60.0
-DEFAULT_POST_CLEANUP_TIMEOUT_SECONDS = 135.0
+DEFAULT_POST_CLEANUP_TIMEOUT_SECONDS = 225.0
 DEFAULT_HEALTHY_TIMEOUT_SECONDS = (
     min(DEFAULT_WATCHDOG_NORMAL_SECONDS, DEFAULT_WATCHDOG_DISPATCH_SECONDS)
     - NONCE_START_TIMEOUT_SECONDS
@@ -119,6 +152,14 @@ def configure_soak_timeout_environment(
     }
     normal = float(os.environ["ANVIL_SMOKE_WATCHDOG_NORMAL_SECONDS"])
     dispatch = float(os.environ["ANVIL_SMOKE_WATCHDOG_DISPATCH_SECONDS"])
+    client_startup = positive_environment_seconds(
+        "ANVIL_MCP_CLIENT_STARTUP_SECONDS",
+        DEFAULT_CLIENT_STARTUP_SECONDS,
+    )
+    client_tool = positive_environment_seconds(
+        "ANVIL_MCP_CLIENT_TOOL_SECONDS",
+        DEFAULT_CLIENT_TOOL_SECONDS,
+    )
     overlap_window = min(normal, dispatch)
     sequential_overlap = NONCE_START_TIMEOUT_SECONDS + timeouts["healthy"]
     if sequential_overlap > overlap_window:
@@ -139,6 +180,42 @@ def configure_soak_timeout_environment(
         raise AssertionError(
             f"cycle bound {timeouts['cycle']:g}s is below its named phases "
             f"{minimum_cycle:g}s"
+        )
+    minimum_setup = (
+        FIXTURE_COMMAND_COUNT * LOCAL_COMMAND_TIMEOUT_SECONDS
+        + BRIDGE_COUNT
+        * (
+            client_startup
+            + INSTANCE_DISCOVERY_TIMEOUT_SECONDS
+            + TOOLS_LIST_TIMEOUT_SECONDS
+            + 3 * TOOL_CALL_TIMEOUT_SECONDS
+            + client_tool
+            + ASYNC_ISOLATION_BOUND_SECONDS
+        )
+        + TOOL_CALL_TIMEOUT_SECONDS
+        + YIELDING_DISPATCH_SECONDS
+        + WATCHDOG_RESPONSE_GRACE_SECONDS
+        + SETUP_SCHEDULING_GRACE_SECONDS
+    )
+    if timeouts["setup"] < minimum_setup:
+        raise AssertionError(
+            f"setup bound {timeouts['setup']:g}s is below its sequential "
+            f"nested bounds plus scheduling grace ({minimum_setup:g}s)"
+        )
+    minimum_inventory = (
+        BRIDGE_COUNT
+        * (
+            ASYNC_CHILD_ISOLATION_BOUND_SECONDS
+            + WORKER_INVENTORY_TIMEOUT_SECONDS
+            + LOCAL_COMMAND_TIMEOUT_SECONDS
+        )
+        + INVENTORY_SCHEDULING_GRACE_SECONDS
+    )
+    if timeouts["inventory"] < minimum_inventory:
+        raise AssertionError(
+            f"inventory bound {timeouts['inventory']:g}s is below its "
+            f"sequential nested bounds plus scheduling grace "
+            f"({minimum_inventory:g}s)"
         )
     minimum_cleanup = (
         2 * BRIDGE_CLOSE_BOUND_SECONDS + BRIDGE_CLEANUP_SCHEDULING_GRACE_SECONDS
@@ -169,7 +246,7 @@ def arm_phase_timeout(name: str, seconds: float) -> None:
     global _PHASE_TIMEOUT_STATE
     if _PHASE_TIMEOUT_STATE is not None:
         raise AssertionError("nested soak phase deadlines are unsupported")
-    if _PENDING_PHASE_TIMEOUT is not None:
+    if _PENDING_PHASE_TIMEOUT is not None and _TERM_DEFER_DEPTH == 0:
         raise AssertionError("cannot arm a phase with a deferred timeout pending")
     if not hasattr(signal, "SIGALRM") or not hasattr(signal, "setitimer"):
         raise AssertionError("soak phase deadlines require POSIX interval timers")
@@ -349,6 +426,27 @@ def async_loop_expression(project_file: Path, marker: Path) -> str:
 """.strip()
 
 
+def async_success_probe_expression(project_file: Path, marker: Path) -> str:
+    """Return a finite offload that stays alive long enough to identify."""
+    return f"""
+(let* ((buffer (find-file-noselect {json.dumps(str(project_file))}))
+       local)
+  (unwind-protect
+      (setq local
+            (with-current-buffer buffer
+              (vector (getenv "ANVIL_SOAK_DIRENV")
+                      (executable-find "{COMMAND_NAME}"))))
+    (when (buffer-live-p buffer)
+      (kill-buffer buffer)))
+  (with-temp-file {json.dumps(str(marker))}
+    (insert
+     (json-serialize
+      (vector (emacs-pid) (aref local 0) (aref local 1)))))
+  (sleep-for 5)
+  (+ 20 22))
+""".strip()
+
+
 def parse_direnv_response(response: dict[str, object], smoke, command: Path) -> None:
     encoded = smoke.eval_value(response)
     if not isinstance(encoded, str):
@@ -443,7 +541,7 @@ def send_fixture_requests(bridge, fixtures: dict[str, Path]) -> dict[str, int]:
 
 
 def warm_bridge(bridge, smoke, fixtures: dict[str, Path]) -> None:
-    listed = bridge.request("tools/list", timeout=60)
+    listed = bridge.request("tools/list", timeout=TOOLS_LIST_TIMEOUT_SECONDS)
     tools = listed.get("result", {}).get("tools")
     if not isinstance(tools, list) or len(tools) != EXPECTED_TOOL_COUNT:
         raise AssertionError(f"unexpected tool registry: {listed!r}")
@@ -466,19 +564,27 @@ def warm_bridge(bridge, smoke, fixtures: dict[str, Path]) -> None:
         raise AssertionError(f"async timeout schema is not numeric: {async_tool!r}")
 
     root_before_timeout = smoke.eval_value(
-        bridge.call_tool("emacs-eval", {"expression": "(emacs-pid)"}, timeout=10)
+        bridge.call_tool(
+            "emacs-eval",
+            {"expression": "(emacs-pid)"},
+            timeout=TOOL_CALL_TIMEOUT_SECONDS,
+        )
     )
     timeout_response = bridge.call_tool(
         "shell-run",
         {"cmd": "sleep 2", "timeout_sec": "1"},
-        timeout=10,
+        timeout=TOOL_CALL_TIMEOUT_SECONDS,
     )
     if "shell timeout after 1s" not in json.dumps(timeout_response):
         raise AssertionError(
             f"shell operation did not time out explicitly: {timeout_response!r}"
         )
     root_after_timeout = smoke.eval_value(
-        bridge.call_tool("emacs-eval", {"expression": "(emacs-pid)"}, timeout=10)
+        bridge.call_tool(
+            "emacs-eval",
+            {"expression": "(emacs-pid)"},
+            timeout=TOOL_CALL_TIMEOUT_SECONDS,
+        )
     )
     if root_after_timeout != root_before_timeout:
         raise AssertionError(
@@ -492,7 +598,7 @@ def warm_bridge(bridge, smoke, fixtures: dict[str, Path]) -> None:
     responses = collect_responses(
         bridge,
         identifiers,
-        timeout=WARMUP_BATCH_TIMEOUT_SECONDS,
+        timeout=smoke.CLIENT_TOOL_SECONDS,
     )
     try:
         validate_fixture_responses(responses, smoke, fixtures)
@@ -503,7 +609,11 @@ def warm_bridge(bridge, smoke, fixtures: dict[str, Path]) -> None:
 def assert_yielding_dispatch_headroom(bridge, smoke) -> None:
     """Prove a yielding call may outlive heartbeat without losing its root."""
     root_before = smoke.eval_value(
-        bridge.call_tool("emacs-eval", {"expression": "(emacs-pid)"}, timeout=10)
+        bridge.call_tool(
+            "emacs-eval",
+            {"expression": "(emacs-pid)"},
+            timeout=TOOL_CALL_TIMEOUT_SECONDS,
+        )
     )
     response = bridge.call_tool(
         "emacs-eval",
@@ -526,7 +636,7 @@ def submit_async(bridge, smoke, expression: str, timeout: int | str) -> str:
     response = bridge.call_tool(
         "emacs-eval-async",
         {"expression": expression, "timeout": timeout},
-        timeout=30,
+        timeout=ASYNC_SUBMISSION_TIMEOUT_SECONDS,
     )
     text = smoke.response_text(response)
     match = re.search(r"\bjob-[0-9]+-[0-9]+\b", text)
@@ -538,17 +648,22 @@ def submit_async(bridge, smoke, expression: str, timeout: int | str) -> str:
 def poll_async(bridge, smoke, job_id: str, timeout: float) -> str:
     deadline = time.monotonic() + timeout
     last = ""
-    while time.monotonic() < deadline:
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
         last = smoke.response_text(
             bridge.call_tool(
                 "emacs-eval-result",
                 {"job-id": job_id},
-                timeout=10,
+                timeout=min(10, remaining),
             )
         )
         if "status: done" in last or "status: error" in last:
             return last
-        time.sleep(0.1)
+        remaining = deadline - time.monotonic()
+        if remaining > 0:
+            time.sleep(min(0.1, remaining))
     raise AssertionError(f"async job {job_id} did not settle: {last}")
 
 
@@ -633,7 +748,11 @@ def descendant_record_gone(module, pid: int, identity: str | None, ps: Path) -> 
     return module.process_start_identity(pid) != identity
 
 
-def assert_pulse_changes(path: Path, before: str, timeout: float = 3.0) -> None:
+def assert_pulse_changes(
+    path: Path,
+    before: str,
+    timeout: float = ASYNC_PULSE_TIMEOUT_SECONDS,
+) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
@@ -646,6 +765,74 @@ def assert_pulse_changes(path: Path, before: str, timeout: float = 3.0) -> None:
     raise AssertionError(f"root watchdog pulse stopped changing: {path}")
 
 
+def read_complete_async_marker(path: Path) -> list[object] | None:
+    """Return a complete child marker, tolerating an in-progress write."""
+    try:
+        child_info = json.loads(path.read_text())
+    except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if (
+        not isinstance(child_info, list)
+        or len(child_info) != 3
+        or not isinstance(child_info[0], int)
+    ):
+        return None
+    return child_info
+
+
+def assert_async_compatibility(bridge, smoke) -> None:
+    """Prove callers with the legacy string timeout remain compatible."""
+    compatibility_job = submit_async(
+        bridge,
+        smoke,
+        "(+ 20 22)",
+        timeout="30",
+    )
+    compatibility_result = poll_async(
+        bridge,
+        smoke,
+        compatibility_job,
+        timeout=ASYNC_COMPATIBILITY_POLL_TIMEOUT_SECONDS,
+    )
+    if (
+        "status: done" not in compatibility_result
+        or "result: 42" not in compatibility_result
+    ):
+        raise AssertionError(
+            f"cached string timeout caller failed: {compatibility_result}"
+        )
+
+
+def assert_project_async_execution(bridge, smoke, fixtures: dict[str, Path]) -> None:
+    """Prove a finite async job receives its project environment."""
+    finite_job = submit_async(
+        bridge,
+        smoke,
+        direnv_expression(fixtures["project_file"]),
+        timeout=15,
+    )
+    finite_result = poll_async(
+        bridge,
+        smoke,
+        finite_job,
+        timeout=ASYNC_PROJECT_POLL_TIMEOUT_SECONDS,
+    )
+    if (
+        "status: done" not in finite_result
+        or DIRENV_MARKER not in finite_result
+        or COMMAND_NAME not in finite_result
+    ):
+        raise AssertionError(
+            f"finite async job lost the project environment: {finite_result}"
+        )
+
+
+def assert_async_execution(bridge, smoke, fixtures: dict[str, Path]) -> None:
+    """Prove compatibility and project-aware async jobs complete."""
+    assert_async_compatibility(bridge, smoke)
+    assert_project_async_execution(bridge, smoke, fixtures)
+
+
 def assert_async_isolation(
     bridge,
     instance: dict[str, object],
@@ -655,36 +842,7 @@ def assert_async_isolation(
     records: set[tuple[int, str]],
     suffix: str,
 ) -> None:
-    compatibility_job = submit_async(
-        bridge,
-        smoke,
-        "(+ 20 22)",
-        timeout="30",
-    )
-    compatibility_result = poll_async(bridge, smoke, compatibility_job, timeout=45)
-    if (
-        "status: done" not in compatibility_result
-        or "result: 42" not in compatibility_result
-    ):
-        raise AssertionError(
-            f"cached string timeout caller failed: {compatibility_result}"
-        )
-
-    finite_job = submit_async(
-        bridge,
-        smoke,
-        direnv_expression(fixtures["project_file"]),
-        timeout=15,
-    )
-    finite_result = poll_async(bridge, smoke, finite_job, timeout=25)
-    if (
-        "status: done" not in finite_result
-        or DIRENV_MARKER not in finite_result
-        or COMMAND_NAME not in finite_result
-    ):
-        raise AssertionError(
-            f"finite async job lost the project environment: {finite_result}"
-        )
+    assert_async_execution(bridge, smoke, fixtures)
 
     runtime_dir = instance["runtime_dir"]
     if not isinstance(runtime_dir, Path):
@@ -702,14 +860,10 @@ def assert_async_isolation(
         async_loop_expression(fixtures["project_file"], marker),
         timeout=15,
     )
-    smoke.eventually(marker.exists, timeout=15)
-    child_info = json.loads(marker.read_text())
-    if (
-        not isinstance(child_info, list)
-        or len(child_info) != 3
-        or not isinstance(child_info[0], int)
-    ):
-        raise AssertionError(f"invalid async child marker: {child_info!r}")
+    child_info = smoke.eventually(
+        lambda: read_complete_async_marker(marker),
+        timeout=ASYNC_MARKER_TIMEOUT_SECONDS,
+    )
     child_pid, local_marker, executable = child_info
     child_identity = record_identity(records, module, child_pid)
     if child_pid == root_pid:
@@ -720,7 +874,11 @@ def assert_async_isolation(
         raise AssertionError(f"async child lost direnv: {child_info!r}")
 
     current_root = smoke.eval_value(
-        bridge.call_tool("emacs-eval", {"expression": "(emacs-pid)"}, timeout=10)
+        bridge.call_tool(
+            "emacs-eval",
+            {"expression": "(emacs-pid)"},
+            timeout=TOOL_CALL_TIMEOUT_SECONDS,
+        )
     )
     if current_root != root_pid:
         raise AssertionError(
@@ -728,12 +886,17 @@ def assert_async_isolation(
         )
     assert_pulse_changes(pulse, pulse_before)
 
-    terminal = poll_async(bridge, smoke, job_id, timeout=25)
+    terminal = poll_async(
+        bridge,
+        smoke,
+        job_id,
+        timeout=ASYNC_PROJECT_POLL_TIMEOUT_SECONDS,
+    )
     if "status: error" not in terminal or "timeout" not in terminal.lower():
         raise AssertionError(f"looping async job did not time out: {terminal}")
     smoke.eventually(
         lambda: module.process_start_identity(child_pid) != child_identity,
-        timeout=10,
+        timeout=ASYNC_CHILD_EXIT_TIMEOUT_SECONDS,
     )
     status = smoke.read_running_status(instance["status_path"])
     if (
@@ -742,6 +905,64 @@ def assert_async_isolation(
         or module.process_start_identity(root_pid) != root_identity
     ):
         raise AssertionError(f"async timeout damaged the root daemon: {status!r}")
+
+
+def assert_recovered_async_isolation(
+    bridge,
+    instance: dict[str, object],
+    smoke,
+    module,
+    fixtures: dict[str, Path],
+    records: set[tuple[int, str]],
+    suffix: str,
+) -> None:
+    """Prove a recovered root still offloads a successful project-aware job."""
+    runtime_dir = instance["runtime_dir"]
+    if not isinstance(runtime_dir, Path):
+        raise AssertionError(f"invalid runtime directory: {runtime_dir!r}")
+    marker = runtime_dir / f"recovered-async-child-{suffix}.json"
+    marker.unlink(missing_ok=True)
+    root_pid = instance["status"]["daemon_pid"]
+    root_identity = record_identity(records, module, root_pid)
+
+    job_id = submit_async(
+        bridge,
+        smoke,
+        async_success_probe_expression(fixtures["project_file"], marker),
+        timeout=15,
+    )
+    child_info = smoke.eventually(
+        lambda: read_complete_async_marker(marker),
+        timeout=ASYNC_MARKER_TIMEOUT_SECONDS,
+    )
+    child_pid, local_marker, executable = child_info
+    child_identity = record_identity(records, module, child_pid)
+    if child_pid == root_pid:
+        raise AssertionError("recovered async expression ran inside the root daemon")
+    if local_marker != DIRENV_MARKER or executable != str(
+        fixtures["command"].resolve()
+    ):
+        raise AssertionError(f"recovered async child lost direnv: {child_info!r}")
+
+    terminal = poll_async(
+        bridge,
+        smoke,
+        job_id,
+        timeout=ASYNC_PROJECT_POLL_TIMEOUT_SECONDS,
+    )
+    if "status: done" not in terminal or "result: 42" not in terminal:
+        raise AssertionError(f"recovered async child did not complete: {terminal}")
+    smoke.eventually(
+        lambda: module.process_start_identity(child_pid) != child_identity,
+        timeout=ASYNC_CHILD_EXIT_TIMEOUT_SECONDS,
+    )
+    status = smoke.read_running_status(instance["status_path"])
+    if (
+        not status
+        or status["daemon_pid"] != root_pid
+        or module.process_start_identity(root_pid) != root_identity
+    ):
+        raise AssertionError(f"recovered async work damaged the root: {status!r}")
 
 
 def assert_synthetic_dispatch_error(response: dict[str, object]) -> None:
@@ -1008,6 +1229,18 @@ def finalize_bridges(bridges, samples: list[dict[str, float]]) -> None:
         raise phase_errors[0]
 
 
+def finalize_bridges_with_timeout(
+    bridges,
+    samples: list[dict[str, float]],
+    timeout: float,
+) -> None:
+    """Transfer every bridge into bounded cleanup without a signal gap."""
+    with defer_termination():
+        disarm_phase_timeout()
+        with phase_timeout("bridge cleanup", timeout):
+            finalize_bridges(bridges, samples)
+
+
 def main() -> None:
     if len(sys.argv) != 7:
         raise SystemExit(
@@ -1049,7 +1282,7 @@ def main() -> None:
     try:
         fixtures = setup_fixtures(git, direnv)
         home_baseline = smoke.snapshot_home(Path.home())
-        for _index in range(2):
+        for _index in range(BRIDGE_COUNT):
             construct_tracked_bridge(
                 bridges,
                 smoke.BridgeProcess,
@@ -1067,7 +1300,7 @@ def main() -> None:
                     bridge.pid,
                     module,
                 ),
-                timeout=150,
+                timeout=INSTANCE_DISCOVERY_TIMEOUT_SECONDS,
             )
             instance = smoke.validate_bridge_instance(
                 found,
@@ -1135,10 +1368,35 @@ def main() -> None:
                     f"readiness={sample['readiness']:.3f}s)"
                 )
 
-        with phase_timeout("pre-cleanup inventory", phase_timeouts["inventory"]):
+        with phase_timeout(
+            "post-recovery async and pre-cleanup inventory",
+            phase_timeouts["inventory"],
+        ):
             assert_nonce_records(nonce_records)
             assert_no_latency_growth(latency_samples)
-            for bridge in bridges:
+            for index, (bridge, instance) in enumerate(zip(bridges, instances)):
+                expected_root = instance["status"]["daemon_pid"]
+                expected_identity = record_identity(records, module, expected_root)
+                assert_recovered_async_isolation(
+                    bridge,
+                    instance,
+                    smoke,
+                    module,
+                    fixtures,
+                    records,
+                    str(index),
+                )
+                current = smoke.read_running_status(instance["status_path"])
+                if (
+                    not current
+                    or current["daemon_pid"] != expected_root
+                    or module.process_start_identity(expected_root)
+                    != expected_identity
+                ):
+                    raise AssertionError(
+                        "post-recovery async work changed the root daemon: "
+                        f"{current!r}"
+                    )
                 for pid in smoke.worker_pids(bridge):
                     record_identity(records, module, pid)
                 descendant_records.update(
@@ -1147,12 +1405,11 @@ def main() -> None:
             assert_nonce_records(nonce_records)
         succeeded = True
     finally:
-        disarm_phase_timeout()
-        with phase_timeout(
-            "bridge cleanup",
+        finalize_bridges_with_timeout(
+            bridges,
+            latency_samples,
             phase_timeouts["bridge_cleanup"],
-        ):
-            finalize_bridges(bridges, latency_samples)
+        )
 
     if not succeeded:
         raise AssertionError("persistent bridge soak did not complete")

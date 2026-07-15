@@ -69,6 +69,7 @@ called.write_text(json.dumps({{
     "argv": sys.argv[1:],
     "cwd": os.getcwd(),
     "stdin": sys.stdin.buffer.read().decode("utf-8"),
+    "guard_parent": os.environ.get("ANVIL_HEADLESS_PARENT_PID"),
 }}))
 mode = os.environ.get("FAKE_MODE", "raw")
 if mode == "nonzero":
@@ -83,6 +84,26 @@ if mode == "timeout":
         raise SystemExit(0)
     time.sleep(30)
     raise SystemExit(0)
+if mode in ("leader-zero", "leader-nonzero"):
+    child = os.fork()
+    if child == 0:
+        for descriptor in (0, 1, 2):
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        Path(os.environ["FAKE_CHILD_PID"]).write_text(str(os.getpid()))
+        time.sleep(30)
+        os._exit(0)
+    deadline = time.monotonic() + 5
+    while (not Path(os.environ["FAKE_CHILD_PID"]).exists()
+           and time.monotonic() < deadline):
+        time.sleep(0.001)
+    if mode == "leader-nonzero":
+        os._exit(9)
+    sys.stdout.buffer.write(base64.b64decode(os.environ["FAKE_RAW_B64"]))
+    sys.stdout.buffer.flush()
+    os._exit(0)
 if mode == "large":
     sys.stdout.buffer.write(b"x" * (4 * 1024 * 1024 + 1))
     raise SystemExit(0)
@@ -156,6 +177,8 @@ print(json.dumps({{
             CLEANER,
             "--direnv",
             str(direnv or self.fake_direnv),
+            "--parent-guard",
+            PARENT_GUARD,
             "--neutral",
             str(self.neutral),
             "--timeout-seconds",
@@ -324,6 +347,35 @@ print(json.dumps({{
         self.assertEqual(invocation["argv"], ["export", "json"])
         self.assertEqual(Path(invocation["cwd"]).resolve(), self.neutral.resolve())
         self.assertEqual(invocation["stdin"], "")
+        self.assertIsNone(invocation["guard_parent"])
+
+    def test_exited_direnv_leader_cannot_abandon_descendants(self) -> None:
+        for mode in ("leader-zero", "leader-nonzero"):
+            with self.subTest(mode=mode):
+                self.called.unlink(missing_ok=True)
+                self.child_pid.unlink(missing_ok=True)
+                self.target_ran.unlink(missing_ok=True)
+                environment = self.active_environment()
+                environment["FAKE_MODE"] = mode
+                patch: dict[str, str | None] = {
+                    name: None for name in ACTIVE_KEYS
+                }
+                self.install_patch(environment, patch)
+                completed, _ = self.invoke(environment)
+                if mode == "leader-zero":
+                    self.assertEqual(completed.returncode, 0, completed.stderr)
+                    self.assertTrue(self.target_ran.exists())
+                else:
+                    self.assert_generic_failure(completed)
+                self.assertTrue(self.child_pid.exists())
+                child = int(self.child_pid.read_text())
+                deadline = time.monotonic() + 3
+                while self.process_is_running(child) and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                self.assertFalse(
+                    self.process_is_running(child),
+                    "direnv descendant escaped guarded cleanup",
+                )
 
     def test_partial_context_fails_before_direnv_or_target(self) -> None:
         for name in ACTIVE_KEYS:
@@ -582,6 +634,7 @@ print(json.dumps({{
                 with self.assertRaises(module.TerminationRequested):
                     module.read_bounded_export(
                         str(self.fake_direnv),
+                        PARENT_GUARD,
                         str(self.neutral),
                         30,
                         environment,
@@ -664,7 +717,10 @@ print(json.dumps({{
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: clean-environment-test.py CLEANER")
+    if len(sys.argv) != 3:
+        raise SystemExit(
+            "usage: clean-environment-test.py CLEANER PARENT_GUARD"
+        )
+    PARENT_GUARD = str(Path(sys.argv.pop()).resolve())
     CLEANER = str(Path(sys.argv.pop()).resolve())
     unittest.main()

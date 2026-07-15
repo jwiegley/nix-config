@@ -117,25 +117,29 @@ def fail() -> NoReturn:
 
 def parse_arguments(
     arguments: list[str],
-) -> tuple[str, str, float, list[str]]:
+) -> tuple[str, str, str, float, list[str]]:
     """Parse the fixed internal wrapper protocol."""
     if (
-        len(arguments) < 9
+        len(arguments) < 11
         or arguments[1] != "--direnv"
-        or arguments[3] != "--neutral"
-        or arguments[5] != "--timeout-seconds"
-        or arguments[7] != "--"
+        or arguments[3] != "--parent-guard"
+        or arguments[5] != "--neutral"
+        or arguments[7] != "--timeout-seconds"
+        or arguments[9] != "--"
     ):
         raise SanitizerError("invalid invocation")
     direnv = arguments[2]
-    neutral = arguments[4]
+    parent_guard = arguments[4]
+    neutral = arguments[6]
     try:
-        timeout = float(arguments[6])
+        timeout = float(arguments[8])
     except ValueError as error:
         raise SanitizerError("invalid timeout") from error
-    target = arguments[8:]
+    target = arguments[10:]
     if (
         not os.path.isabs(direnv)
+        or not os.path.isabs(parent_guard)
+        or not os.path.isfile(parent_guard)
         or not os.path.isabs(neutral)
         or not os.path.isdir(neutral)
         or not math.isfinite(timeout)
@@ -145,43 +149,62 @@ def parse_arguments(
         or not os.path.isabs(target[0])
     ):
         raise SanitizerError("invalid invocation")
-    return direnv, neutral, timeout, target
+    return direnv, parent_guard, neutral, timeout, target
+
+
+def wait_for_process_group_exit(group_id: int) -> None:
+    """Wait a bounded interval for the exact guarded group to disappear."""
+    deadline = time.monotonic() + CLEANUP_WAIT_SECONDS
+    while True:
+        try:
+            # This is a read-only existence probe.  Once the Popen leader has
+            # been reaped its PID could in principle be reused, so never send a
+            # destructive signal from this path.
+            os.killpg(group_id, 0)
+        except ProcessLookupError:
+            return
+        except PermissionError:
+            pass
+        if time.monotonic() >= deadline:
+            raise SanitizerError("export group cleanup timeout")
+        time.sleep(0.01)
 
 
 def kill_process_group(process: subprocess.Popen[bytes]) -> None:
-    """Kill and reap PROCESS plus every descendant without an unbounded wait."""
+    """Kill and reap PROCESS plus its same-group descendants within a bound."""
     previous_mask = block_termination_signals()
     try:
-        # A completed Popen has already reaped its leader.  Never signal that
-        # numeric group after it can be recycled for an unrelated process.
-        if process.returncode is not None:
-            return
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        except OSError:
+        # A completed Popen has already reaped its leader.  In that case the
+        # parent guard, rather than this numeric PGID, owns descendant cleanup.
+        if process.returncode is None:
             try:
-                process.kill()
+                os.killpg(process.pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
-        try:
-            process.wait(timeout=CLEANUP_WAIT_SECONDS)
-        except subprocess.TimeoutExpired:
-            try:
-                process.kill()
-            except ProcessLookupError:
-                pass
+            except OSError:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
             try:
                 process.wait(timeout=CLEANUP_WAIT_SECONDS)
-            except subprocess.TimeoutExpired as error:
-                raise SanitizerError("export cleanup timeout") from error
+            except subprocess.TimeoutExpired:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
+                try:
+                    process.wait(timeout=CLEANUP_WAIT_SECONDS)
+                except subprocess.TimeoutExpired as error:
+                    raise SanitizerError("export cleanup timeout") from error
+        wait_for_process_group_exit(process.pid)
     finally:
         restore_signal_mask(previous_mask)
 
 
 def read_bounded_export(
     direnv: str,
+    parent_guard: str,
     neutral: str,
     timeout: float,
     environment: dict[str, str],
@@ -189,19 +212,29 @@ def read_bounded_export(
     """Run pinned direnv and return one bounded JSON export."""
     process: subprocess.Popen[bytes] | None = None
     try:
-        # A handled signal may arrive after Popen has created the detached
+        # A handled signal may arrive after Popen has created the guarded
         # child but before Python publishes its exact object to PROCESS.  Block
         # across that assignment so every unwind has exact kill/reap custody.
         previous_mask = block_termination_signals()
         try:
+            guarded_environment = environment.copy()
+            guarded_environment["ANVIL_HEADLESS_PARENT_PID"] = str(os.getpid())
             process = subprocess.Popen(
-                [direnv, "export", "json"],
+                [
+                    sys.executable,
+                    "-I",
+                    "-B",
+                    parent_guard,
+                    "group",
+                    direnv,
+                    "export",
+                    "json",
+                ],
                 cwd=neutral,
-                env=environment,
+                env=guarded_environment,
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
-                start_new_session=True,
                 close_fds=True,
             )
         finally:
@@ -236,6 +269,10 @@ def read_bounded_export(
             status = process.wait(timeout=remaining)
         except subprocess.TimeoutExpired as error:
             raise SanitizerError("export timeout") from error
+        # The target leader is now reaped, but the parent guard anchored its
+        # group before exec and kills every same-group descendant on that exit.
+        # Do not publish a cleaned environment until the group is gone.
+        wait_for_process_group_exit(process.pid)
         if status != 0:
             raise SanitizerError("export failed")
         return b"".join(chunks)
@@ -300,6 +337,7 @@ def parse_patch(document: bytes) -> dict[str, str | None]:
 def clean_environment(
     environment: dict[str, str],
     direnv: str,
+    parent_guard: str,
     neutral: str,
     timeout: float,
 ) -> dict[str, str]:
@@ -311,7 +349,7 @@ def clean_environment(
     if not cleaned.get("DIRENV_DIFF"):
         raise SanitizerError("partial direnv context")
     patch = parse_patch(
-        read_bounded_export(direnv, neutral, timeout, cleaned)
+        read_bounded_export(direnv, parent_guard, neutral, timeout, cleaned)
     )
     for name, replacement in patch.items():
         if replacement is None:
@@ -332,9 +370,11 @@ def main() -> NoReturn:
             # ORIGINALS is now published locally, so a deferred signal can
             # safely unwind through the outer termination boundary.
             restore_signal_mask(previous_mask)
-            direnv, neutral, timeout, target = parse_arguments(sys.argv)
+            direnv, parent_guard, neutral, timeout, target = parse_arguments(
+                sys.argv
+            )
             environment = clean_environment(
-                dict(os.environ), direnv, neutral, timeout
+                dict(os.environ), direnv, parent_guard, neutral, timeout
             )
             restore_termination_handlers(originals)
             os.execve(target[0], target, environment)

@@ -220,7 +220,8 @@ runCommand "anvil-mcp-dedicated-smoke"
     ${coreutils}/bin/timeout 120 \
       ${python3}/bin/python3 -I -B -u \
       ${anvilMcp.dedicatedCleanEnvironmentTest} \
-      ${anvilMcp.dedicatedCleanEnvironment}
+      ${anvilMcp.dedicatedCleanEnvironment} \
+      ${anvilMcp.dedicatedParentGuardLauncher}
 
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./watchdog-test.py} \
@@ -704,7 +705,9 @@ runCommand "anvil-mcp-dedicated-smoke"
         ${hostAnvilMcp.dedicatedLauncherInner}/bin/anvil-mcp-inner \
         ${lib.escapeShellArg workerSpecsJson} \
         ${toString anvilMcp.timeoutPolicy.clientToolSeconds} \
-        ${toString anvilMcp.timeoutPolicy.hostShellSeconds}
+        ${toString anvilMcp.timeoutPolicy.hostShellSeconds} \
+        ${python3}/bin/python3 \
+        ${./environment-output-probe.py}
     ); then
       cat "$smoke_root/host-a.log" "$smoke_root/host-b.log" >&2
       exit 1

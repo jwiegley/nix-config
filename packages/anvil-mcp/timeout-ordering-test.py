@@ -220,7 +220,8 @@ def assert_static_ordering(
     if "ANVIL_EMACSCLIENT_TIMEOUT" in stdio_text:
         raise AssertionError("legacy overloaded emacsclient timeout remains")
     for fragment in (
-        "IFS= read -r -d '' -t",
+        "IFS= read -r -d '' -n",
+        '-t "$remaining" chunk <&7',
         'ANVIL_HEADLESS_PARENT_PID="$ANVIL_MCP_RUNNER_PID"',
         "import os; print(os.getppid())",
         "set -m",
@@ -244,8 +245,14 @@ def assert_static_ordering(
     ):
         if f"anvil_mcp_validate_timeout {name}" not in stdio_text:
             raise AssertionError(f"runtime timeout is not clamped: {name}")
-    if stdio_text.count('-t "$ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT"') < 3:
-        raise AssertionError("bounded runner has a hard-coded post-timeout wait")
+    direct_kill_waits = stdio_text.count(
+        '-t "$ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT"'
+    )
+    bounded_discard_waits = stdio_text.count(
+        "anvil_mcp_discard_until_sentinel \\\n"
+    )
+    if direct_kill_waits < 2 or bounded_discard_waits < 4:
+        raise AssertionError("bounded runner cleanup lacks policy-controlled waits")
     shell_default_timeout = elisp_assignment(
         shell_filter_text, "anvil-shell-filter-max-sync-timeout"
     )

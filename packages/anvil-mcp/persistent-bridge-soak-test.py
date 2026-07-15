@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import math
 import os
 from pathlib import Path
@@ -32,6 +33,8 @@ def test_timeout_budget(
     cycles: int,
     margin_percent: int,
     outer_timeout: float,
+    kill_after: float,
+    hard_ceiling: float,
 ) -> None:
     """Prove Python enforces the same named phase budget derived by Nix."""
     soak = load_module(soak_path, "persistent_soak_timeout_budget_test")
@@ -59,6 +62,19 @@ def test_timeout_budget(
         else:
             raise AssertionError("legacy full-window healthy budget was accepted")
 
+    for variable, expected_fragment in (
+        ("ANVIL_PERSISTENT_SOAK_SETUP_SECONDS", "setup bound"),
+        ("ANVIL_PERSISTENT_SOAK_INVENTORY_SECONDS", "inventory bound"),
+    ):
+        with mock.patch.dict(os.environ, {variable: "1"}):
+            try:
+                soak.configure_soak_timeout_environment(response_timeout)
+            except AssertionError as error:
+                if expected_fragment not in str(error):
+                    raise
+            else:
+                raise AssertionError(f"undersized {variable} was accepted")
+
     internal = (
         timeouts["setup"]
         + cycles * timeouts["cycle"]
@@ -67,10 +83,17 @@ def test_timeout_budget(
         + timeouts["post_cleanup"]
     )
     expected_outer = internal + math.ceil(internal * margin_percent / 100)
-    if outer_timeout != expected_outer or outer_timeout > 2 * 60 * 60:
+    if (
+        kill_after <= 0
+        or hard_ceiling > 162 * 60
+        or outer_timeout != expected_outer
+        or kill_after <= timeouts["bridge_cleanup"]
+        or outer_timeout + kill_after > hard_ceiling
+    ):
         raise AssertionError(
             f"outer timeout drifted: actual={outer_timeout:g} "
-            f"expected={expected_outer:g} internal={internal:g}"
+            f"expected={expected_outer:g} internal={internal:g} "
+            f"kill-after={kill_after:g} hard-ceiling={hard_ceiling:g}"
         )
 
     original_handler = signal.getsignal(signal.SIGALRM)
@@ -198,6 +221,52 @@ def test_phase_timeout_ownership(soak_path: Path) -> None:
     ]:
         raise AssertionError(f"alarm interrupted cleanup ownership: {alarm_order!r}")
 
+    transition_order: list[str] = []
+
+    class TransitionBridge:
+        def __init__(self, name: str):
+            self.name = name
+
+        def close(self):
+            transition_order.append(self.name)
+
+    original_term_handler = signal.getsignal(signal.SIGTERM)
+    original_disarm = soak.disarm_phase_timeout
+    disarm_calls = 0
+
+    def signal_at_cleanup_boundary() -> None:
+        nonlocal disarm_calls
+        original_disarm()
+        disarm_calls += 1
+        if disarm_calls == 1:
+            signal.raise_signal(signal.SIGTERM)
+
+    soak.install_signal_handlers()
+    try:
+        with mock.patch.object(
+            soak,
+            "disarm_phase_timeout",
+            side_effect=signal_at_cleanup_boundary,
+        ):
+            try:
+                soak.finalize_bridges_with_timeout(
+                    [TransitionBridge("first"), TransitionBridge("second")],
+                    [],
+                    60,
+                )
+            except SystemExit as error:
+                if error.code != 128 + signal.SIGTERM:
+                    raise
+            else:
+                raise AssertionError("cleanup-boundary TERM was not delivered")
+    finally:
+        original_disarm()
+        signal.signal(signal.SIGTERM, original_term_handler)
+    if transition_order != ["second", "first"]:
+        raise AssertionError(
+            f"cleanup-boundary TERM skipped bridge closes: {transition_order!r}"
+        )
+
     with soak.phase_timeout("fresh phase", 1):
         pass
 
@@ -240,6 +309,101 @@ def test_response_reader(soak_path: Path, smoke_path: Path) -> None:
         os.close(write_descriptor)
         stdout.close()
         stderr.close()
+
+
+def test_async_poll_deadline(soak_path: Path) -> None:
+    """Prove the nested result request cannot overrun the poll deadline."""
+    soak = load_module(soak_path, "persistent_soak_async_poll_test")
+    observed: list[float] = []
+
+    class Bridge:
+        def call_tool(self, _name, _arguments, timeout):
+            observed.append(timeout)
+            return object()
+
+    class Smoke:
+        @staticmethod
+        def response_text(_response) -> str:
+            return "status: done\nresult: 42"
+
+    result = soak.poll_async(Bridge(), Smoke(), "job-1-1", timeout=0.01)
+    if result != "status: done\nresult: 42":
+        raise AssertionError(f"unexpected async poll result: {result!r}")
+    if len(observed) != 1 or not 0 < observed[0] <= 0.01:
+        raise AssertionError(f"async result request escaped deadline: {observed!r}")
+
+
+def test_async_marker_readiness(soak_path: Path) -> None:
+    """Prove empty and partial marker writes cannot escape readiness polling."""
+    soak = load_module(soak_path, "persistent_soak_async_marker_test")
+    with tempfile.TemporaryDirectory() as temporary:
+        marker = Path(temporary) / "marker.json"
+        for raw in (b"", b"[123,", b"[123,\"marker\"]", b"\xff"):
+            marker.write_bytes(raw)
+            if soak.read_complete_async_marker(marker) is not None:
+                raise AssertionError(f"partial async marker was accepted: {raw!r}")
+        expected = [123, "marker", "/project/bin/command"]
+        marker.write_text(json.dumps(expected), encoding="utf-8")
+        if soak.read_complete_async_marker(marker) != expected:
+            raise AssertionError("complete async marker was not accepted")
+
+
+def test_recovered_async_requires_child(soak_path: Path) -> None:
+    """Prove an in-root async fallback cannot satisfy recovery evidence."""
+    soak = load_module(soak_path, "persistent_soak_recovered_async_test")
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        runtime = root / "runtime"
+        project = root / "project"
+        runtime.mkdir()
+        project.mkdir()
+        project_file = project / "visited.txt"
+        command = project / "anvil-soak-command"
+        project_file.write_text("project\n", encoding="utf-8")
+        command.write_text("command\n", encoding="utf-8")
+        marker = runtime / "recovered-async-child-test.json"
+        root_pid = os.getpid()
+
+        class Module:
+            @staticmethod
+            def process_start_identity(pid: int) -> str:
+                return f"identity-{pid}"
+
+        class Smoke:
+            @staticmethod
+            def eventually(predicate, timeout):
+                result = predicate()
+                if not result:
+                    raise AssertionError(f"predicate failed within {timeout:g}s")
+                return result
+
+        def submit_in_root(*_args, **_kwargs) -> str:
+            marker.write_text(
+                json.dumps([root_pid, soak.DIRENV_MARKER, str(command.resolve())]),
+                encoding="utf-8",
+            )
+            return "job-1-1"
+
+        with mock.patch.object(soak, "submit_async", side_effect=submit_in_root):
+            try:
+                soak.assert_recovered_async_isolation(
+                    object(),
+                    {
+                        "runtime_dir": runtime,
+                        "status": {"daemon_pid": root_pid},
+                        "status_path": root / "status.json",
+                    },
+                    Smoke(),
+                    Module(),
+                    {"project_file": project_file, "command": command},
+                    set(),
+                    "test",
+                )
+            except AssertionError as error:
+                if "inside the root daemon" not in str(error):
+                    raise
+            else:
+                raise AssertionError("in-root recovered async fallback was accepted")
 
 
 def test_cleanup_contract(smoke_path: Path) -> None:
@@ -776,12 +940,13 @@ soak.main()
 
 
 def main() -> None:
-    if len(sys.argv) != 9:
+    if len(sys.argv) != 11:
         raise SystemExit(
             "usage: persistent-bridge-soak-test.py "
             "SOAK_SCRIPT SMOKE_SCRIPT SUPERVISOR_SCRIPT "
             "EXPECTED_NORMAL_SECONDS EXPECTED_DISPATCH_SECONDS "
-            "CYCLES MARGIN_PERCENT OUTER_TIMEOUT_SECONDS"
+            "CYCLES MARGIN_PERCENT OUTER_TIMEOUT_SECONDS KILL_AFTER_SECONDS "
+            "HARD_CEILING_SECONDS"
         )
     soak = Path(sys.argv[1]).resolve()
     smoke = Path(sys.argv[2]).resolve()
@@ -791,6 +956,8 @@ def main() -> None:
     cycles = int(sys.argv[6])
     margin_percent = int(sys.argv[7])
     outer_timeout = float(sys.argv[8])
+    kill_after = float(sys.argv[9])
+    hard_ceiling = float(sys.argv[10])
     test_timeout_budget(
         soak,
         expected_normal,
@@ -798,9 +965,14 @@ def main() -> None:
         cycles,
         margin_percent,
         outer_timeout,
+        kill_after,
+        hard_ceiling,
     )
     test_phase_timeout_ownership(soak)
     test_response_reader(soak, smoke)
+    test_async_poll_deadline(soak)
+    test_async_marker_readiness(soak)
+    test_recovered_async_requires_child(soak)
     test_cleanup_contract(smoke)
     test_cleanup_exit_bound(smoke)
     for scenario in ("between", "during", "both", "cleanup"):

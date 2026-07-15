@@ -1530,7 +1530,7 @@ def assert_slow_direnv_keeps_root_responsive(
     launcher: Path,
     initialize: dict[str, object],
 ) -> None:
-    """Exercise the direct helper and real shell route while each is blocked."""
+    """Prove slow direnv yields timers while stateful requests serialize."""
     project = (Path.home() / "direnv-slow").resolve()
     arm = Path.home() / "direnv-slow-arm"
     started = Path.home() / "direnv-slow-started"
@@ -1613,7 +1613,16 @@ def assert_slow_direnv_keeps_root_responsive(
             (or (getenv "ANVIL_DIRENV_MARKER") :false)
             (or (getenv "ANVIL_DIRENV_SECRET") :false)
             default-directory
-            (or callback :false))))
+            (or callback :false)
+            anvil-headless--baseline-default-directory
+            (if (and (fboundp 'mutexp)
+                     (boundp 'anvil-eval--request-mutex)
+                     (mutexp anvil-eval--request-mutex)
+                     (advice-member-p
+                      #'anvil-eval--request-mutex-advice
+                      'anvil-server-process-jsonrpc))
+                t
+              :false))))
       (when (timerp timer)
         (cancel-timer timer)))))
 """.strip()
@@ -1621,7 +1630,7 @@ def assert_slow_direnv_keeps_root_responsive(
     reset_gate()
     arm.touch()
     try:
-        with ThreadPoolExecutor(max_workers=1) as executor:
+        with ThreadPoolExecutor(max_workers=2) as executor:
             slow = executor.submit(
                 call_tool,
                 launcher,
@@ -1633,15 +1642,20 @@ def assert_slow_direnv_keeps_root_responsive(
             try:
                 wait_for(started, slow, "direct direnv helper")
                 wait_for(callback_seen, slow, "direct direnv callback")
-                fast = decode_eval_json(
-                    call_tool(
-                        launcher,
-                        initialize,
-                        "emacs-eval",
-                        {"expression": fast_expression},
-                        timeout_seconds=10,
-                    )
+                queued_direct = executor.submit(
+                    call_tool,
+                    launcher,
+                    initialize,
+                    "emacs-eval",
+                    {"expression": fast_expression},
+                    30,
                 )
+                time.sleep(0.1)
+                if queued_direct.done():
+                    queued_direct.result()
+                    raise AssertionError(
+                        "stateful request bypassed direct direnv serialization"
+                    )
                 if slow.done():
                     raise AssertionError(
                         "direct direnv helper returned before its release gate"
@@ -1649,6 +1663,7 @@ def assert_slow_direnv_keeps_root_responsive(
             finally:
                 release.touch()
             direct = decode_eval_json(slow.result(timeout=15))
+            fast = decode_eval_json(queued_direct.result(timeout=15))
             post_direct = decode_eval_json(
                 call_tool(
                     launcher,
@@ -1667,14 +1682,22 @@ def assert_slow_direnv_keeps_root_responsive(
         or not isinstance(post_direct, list)
         or len(post_direct) != 7
         or not isinstance(direct, list)
-        or len(direct) != 5
+        or len(direct) != 7
     ):
         raise AssertionError(
             "invalid direct direnv snapshots: "
             f"fast={fast}, post={post_direct}, direct={direct}"
         )
     root_pid, root_directory, *root_state = fast
-    direct_pid, marker, secret, project_directory, callback = direct
+    (
+        direct_pid,
+        marker,
+        secret,
+        project_directory,
+        callback,
+        baseline_directory,
+        mutex_wired,
+    ) = direct
     if direct_pid != root_pid:
         raise AssertionError(
             f"direct helper changed root Emacs: {direct_pid} != {root_pid}"
@@ -1683,6 +1706,8 @@ def assert_slow_direnv_keeps_root_responsive(
         raise AssertionError(f"direct helper missed project env: {direct}")
     if Path(project_directory).resolve() != project:
         raise AssertionError(f"direct helper used wrong directory: {direct}")
+    if mutex_wired is not True:
+        raise AssertionError(f"stateful request mutex is not active: {direct}")
     if (
         not strict_json_equal(root_state[0:3], [False, False, False])
         or root_state[4] is not False
@@ -1698,24 +1723,33 @@ def assert_slow_direnv_keeps_root_responsive(
         )
     if not isinstance(callback, list) or len(callback) != 6:
         raise AssertionError(f"responsive callback did not run: {callback}")
-    expected_callback = [
-        root_directory,
+    if (
+        not isinstance(callback[0], str)
+        or not isinstance(baseline_directory, str)
+        or Path(callback[0]).resolve() != Path(baseline_directory).resolve()
+        or Path(callback[0]).resolve() == project
+    ):
+        raise AssertionError(
+            "responsive callback did not use the immutable root directory: "
+            f"callback={callback[0]!r}, baseline={baseline_directory!r}"
+        )
+    expected_callback_state = [
         root_state[0],
         root_state[1],
         root_state[2],
         root_state[3],
         True,
     ]
-    if not strict_json_equal(callback, expected_callback):
+    if not strict_json_equal(callback[1:], expected_callback_state):
         raise AssertionError(
             f"responsive callback inherited project state: {callback} "
-            f"!= {expected_callback}"
+            f"!= [baseline-directory, {expected_callback_state}]"
         )
 
     reset_gate()
     arm.touch()
     try:
-        with ThreadPoolExecutor(max_workers=1) as executor:
+        with ThreadPoolExecutor(max_workers=2) as executor:
             slow_shell = executor.submit(
                 call_tool,
                 launcher,
@@ -1723,8 +1757,10 @@ def assert_slow_direnv_keeps_root_responsive(
                 "shell-run",
                 {
                     "cmd": (
-                        "printf '%s:%s' "
-                        '"$ANVIL_DIRENV_MARKER" "$ANVIL_HEADLESS_PARENT_PID"'
+                        "printf '%s:%s:%s' "
+                        '"$ANVIL_DIRENV_MARKER" '
+                        '"${ANVIL_HEADLESS_PARENT_PID-unset}" '
+                        '"${ANVIL_HEADLESS_REAL_SHELL-unset}"'
                     ),
                     "filter": "",
                     "cwd": str(project),
@@ -1733,15 +1769,20 @@ def assert_slow_direnv_keeps_root_responsive(
             )
             try:
                 wait_for(started, slow_shell, "shell-run direnv helper")
-                shell_fast = decode_eval_json(
-                    call_tool(
-                        launcher,
-                        initialize,
-                        "emacs-eval",
-                        {"expression": fast_expression},
-                        timeout_seconds=10,
-                    )
+                queued_shell = executor.submit(
+                    call_tool,
+                    launcher,
+                    initialize,
+                    "emacs-eval",
+                    {"expression": fast_expression},
+                    30,
                 )
+                time.sleep(0.1)
+                if queued_shell.done():
+                    queued_shell.result()
+                    raise AssertionError(
+                        "stateful request bypassed shell direnv serialization"
+                    )
                 if slow_shell.done():
                     raise AssertionError(
                         "shell-run returned before its direnv release gate"
@@ -1749,6 +1790,7 @@ def assert_slow_direnv_keeps_root_responsive(
             finally:
                 release.touch()
             shell_response = slow_shell.result(timeout=15)
+            shell_fast = decode_eval_json(queued_shell.result(timeout=15))
             shell_after = decode_eval_json(
                 call_tool(
                     launcher,
@@ -1769,7 +1811,7 @@ def assert_slow_direnv_keeps_root_responsive(
         or shell_fast[6] is not False
     ):
         raise AssertionError(
-            f"shell overlap leaked project state or output: {shell_fast}"
+            f"serialized shell follow-up leaked project state or output: {shell_fast}"
         )
     if (
         not isinstance(shell_after, list)
@@ -1779,7 +1821,235 @@ def assert_slow_direnv_keeps_root_responsive(
         or shell_after[6] is not False
     ):
         raise AssertionError(f"shell direnv output leaked after release: {shell_after}")
-    assert_shell_result(shell_response, f"project-slow:{root_pid}")
+    assert_shell_result(shell_response, "project-slow:unset:unset")
+
+
+def assert_environment_runner_boundaries(
+    launcher: Path,
+    initialize: dict[str, object],
+    python: Path,
+    probe: Path,
+) -> None:
+    """Prove baseline isolation, byte caps, group cleanup, and recovery."""
+    project = (Path.home() / "direnv-plain").resolve()
+    runtime = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / "host-a"
+    stdout_child = runtime / "environment-stdout-child.pid"
+    stderr_child = runtime / "environment-stderr-child.pid"
+    for marker in (stdout_child, stderr_child):
+        marker.unlink(missing_ok=True)
+
+    expression = f"""
+(progn
+  (require 'cl-lib)
+  (require 'json)
+  (let ((python {json.dumps(str(python))})
+        (probe {json.dumps(str(probe))})
+        (project {json.dumps(str(project) + os.sep)})
+        (stdout-pid {json.dumps(str(stdout_child))})
+        (stderr-pid {json.dumps(str(stderr_child))})
+        foreign
+        preflight
+        context
+        recovered
+        stdout-error
+        stderr-error
+        zero-error
+        boundary-length
+        empty-length
+        fragmented-bounded
+        (retry-needed t))
+    (unwind-protect
+        (with-temp-buffer
+          (setq default-directory project)
+          (setq-local process-environment
+                      (copy-sequence
+                       anvil-headless--baseline-process-environment))
+          (setenv "ANVIL_RUNNER_MARKER" "project-runner")
+          (setenv "PATH"
+                  (concat "/project-runner/bin" path-separator
+                          (or (getenv "PATH") "")))
+          (setq-local exec-path
+                      (cons "/project-runner/bin"
+                            (copy-sequence
+                             anvil-headless--baseline-exec-path)))
+          (setq foreign
+                (make-process
+                 :name "anvil-environment-preflight-foreign"
+                 :buffer nil
+                 :command
+                 (list python "-I" "-c"
+                       (concat "import sys,time;time.sleep(.2);"
+                               "sys.stdout.write('x');sys.stdout.flush()"))
+                 :coding 'binary
+                 :connection-type 'pipe
+                 :noquery t
+                 :sentinel #'ignore
+                 :filter
+                 (lambda (_process _chunk)
+                   (setq preflight
+                         (vector
+                          default-directory
+                          (or (getenv "ANVIL_RUNNER_MARKER") :false)
+                          (or (getenv "PATH") :false)
+                          (car exec-path)
+                          (if (or anvil-host-child-process-environment
+                                  anvil-host-child-exec-path
+                                  anvil-host-child-shell-file-name
+                                  anvil-host-child-shell-command-switch)
+                              t :false))))))
+          (cl-letf
+              (((symbol-function 'anvil-host--retired-empty-p)
+                (lambda () (not retry-needed)))
+               ((symbol-function 'anvil-host--retry-retired-processes)
+                (lambda ()
+                  (let ((deadline (+ (float-time) 5)))
+                    (while (and (not preflight)
+                                (< (float-time) deadline))
+                      (accept-process-output foreign 0.05)))
+                  (unless preflight
+                    (error "foreign preflight filter did not run"))
+                  (setq retry-needed nil))))
+            (setq context
+                  (nth 1
+                       (anvil-headless--run-process-responsive
+                        python (list "-I" probe "context") project
+                        5 4096 4096))))
+          (setq stdout-error
+                (condition-case error
+                    (progn
+                      (anvil-headless--run-process-responsive
+                       python (list "-I" probe "stdout" stdout-pid) project
+                       5 4096 4096)
+                      "missing stdout overflow")
+                  (error (error-message-string error))))
+          (setq stderr-error
+                (condition-case error
+                    (progn
+                      (anvil-headless--run-process-responsive
+                       python (list "-I" probe "stderr" stderr-pid) project
+                       5 4096 4096)
+                      "missing stderr overflow")
+                  (error (error-message-string error))))
+          (setq boundary-length
+                (length
+                 (nth 1
+                      (anvil-headless--run-process-responsive
+                       python (list "-I" probe "boundary") project
+                       5 4096 4096))))
+          (setq empty-length
+                (length
+                 (nth 1
+                      (anvil-headless--run-process-responsive
+                       python (list "-I" probe "empty") project
+                       5 0 0))))
+          (setq zero-error
+                (condition-case error
+                    (progn
+                      (anvil-headless--run-process-responsive
+                       python (list "-I" probe "one") project
+                       5 0 0)
+                      "missing zero-limit overflow")
+                  (error (error-message-string error))))
+          (setq recovered
+                (nth 1
+                     (anvil-headless--run-process-responsive
+                      python (list "-I" probe "context") project
+                      5 4096 4096)))
+          (let ((state (vector nil 0 nil 0)))
+            (dotimes (_ 4097)
+              (anvil-headless--capture-bounded-output state 8192 "x"))
+            (setq fragmented-bounded
+                  (vector (aref state 1) (aref state 2)
+                          (aref state 3) (length (aref state 0)))))
+          (json-serialize
+           (vector preflight context stdout-error stderr-error
+                   boundary-length empty-length zero-error recovered
+                   (if (anvil-host--retired-empty-p) t :false)
+                   fragmented-bounded)))
+      (when (processp foreign)
+        (ignore-errors (delete-process foreign))))))
+""".strip()
+
+    result = decode_eval_json(
+        call_tool(
+            launcher,
+            initialize,
+            "emacs-eval",
+            {"expression": expression},
+            timeout_seconds=30,
+        )
+    )
+    if not isinstance(result, list) or len(result) != 10:
+        raise AssertionError(f"invalid environment runner result: {result}")
+    (
+        preflight,
+        context_raw,
+        stdout_error,
+        stderr_error,
+        boundary_length,
+        empty_length,
+        zero_error,
+        recovered_raw,
+        retired_empty,
+        fragmented_bounded,
+    ) = result
+    baseline_directory = (
+        Path(os.environ["ANVIL_EMACS_STATE_ROOT"]) / "host-a"
+    ).resolve()
+    if (
+        not isinstance(preflight, list)
+        or len(preflight) != 5
+        or resolved_path(preflight[0], "preflight baseline")
+        != baseline_directory
+        or preflight[1] is not False
+        or not isinstance(preflight[2], str)
+        or preflight[2].startswith("/project-runner/bin")
+        or preflight[3] == "/project-runner/bin"
+        or preflight[4] is not False
+    ):
+        raise AssertionError(f"preflight callback inherited project state: {preflight}")
+    try:
+        context = json.loads(context_raw)
+        recovered = json.loads(recovered_raw)
+    except (TypeError, json.JSONDecodeError) as error:
+        raise AssertionError(f"runner returned invalid context: {result}") from error
+    expected_context = {
+        "cwd": str(project),
+        "marker": "project-runner",
+    }
+    for label, snapshot in (("initial", context), ("recovered", recovered)):
+        if (
+            not isinstance(snapshot, dict)
+            or snapshot.get("cwd") != expected_context["cwd"]
+            or snapshot.get("marker") != expected_context["marker"]
+            or not str(snapshot.get("path", "")).startswith(
+                "/project-runner/bin"
+            )
+        ):
+            raise AssertionError(f"{label} child lost captured project state: {snapshot}")
+    for label, message in (
+        ("stdout", stdout_error),
+        ("stderr", stderr_error),
+        ("zero", zero_error),
+    ):
+        if not isinstance(message, str) or "exceeded" not in message:
+            raise AssertionError(f"{label} byte limit did not fail closed: {message}")
+    if [boundary_length, empty_length, retired_empty] != [4096, 0, True]:
+        raise AssertionError(f"environment runner boundaries failed: {result}")
+    if fragmented_bounded != [4096, True, 4096, 4096]:
+        raise AssertionError(
+            f"fragmented output escaped capture bound: {fragmented_bounded}"
+        )
+
+    for label, marker in (("stdout", stdout_child), ("stderr", stderr_child)):
+        if not marker.exists():
+            raise AssertionError(f"{label} overflow child wrote no PID marker")
+        pid = int(marker.read_text())
+        deadline = time.monotonic() + 5
+        while process_alive(pid) and time.monotonic() < deadline:
+            time.sleep(0.05)
+        if process_alive(pid):
+            raise AssertionError(f"{label} overflow descendant {pid} survived")
 
 
 def submit_async(
@@ -1842,11 +2112,12 @@ def decode_done_async_json(result: str) -> object:
         raise AssertionError(f"async job returned invalid JSON: {result}") from error
 
 
-def assert_offload_launch_baseline(
+def assert_offload_request_context(
     launcher: Path,
     initialize: dict[str, object],
+    request_directory: Path,
 ) -> None:
-    """Prove a fresh isolated child starts outside the launch project."""
+    """Prove an isolated child has a clean spawn and request-local directory."""
     expected_login = (Path.home() / "login-bin" / "anvil-login-shell").resolve()
     expression = f"""
 (progn
@@ -1867,9 +2138,7 @@ def assert_offload_launch_baseline(
 """.strip()
     job_id = submit_async(launcher, initialize, expression, 10)
     result = decode_done_async_json(poll_async(launcher, initialize, job_id, 15))
-    expected_directory = (
-        Path(os.environ["ANVIL_EMACS_STATE_ROOT"]) / "host-a"
-    ).resolve()
+    expected_directory = request_directory.resolve()
     if (
         not isinstance(result, list)
         or len(result) != 3
@@ -1877,7 +2146,9 @@ def assert_offload_launch_baseline(
         or resolved_path(result[1], "offload default directory") != expected_directory
         or resolved_path(result[2], "offload login executable") != expected_login
     ):
-        raise AssertionError(f"offload inherited the launch project: {result}")
+        raise AssertionError(
+            f"offload lost its clean spawn or request directory: {result}"
+        )
 
 
 def process_alive(pid: int) -> bool:
@@ -2026,16 +2297,19 @@ def assert_async_isolation(
 
 def main() -> None:
     if (
-        len(sys.argv) != 6
+        len(sys.argv) != 8
         or not sys.argv[4].isdigit()
         or int(sys.argv[4]) <= 0
         or not sys.argv[5].isdigit()
         or int(sys.argv[5]) <= 0
+        or not Path(sys.argv[6]).is_file()
+        or not os.access(sys.argv[6], os.X_OK)
+        or not Path(sys.argv[7]).is_file()
     ):
         raise SystemExit(
             "usage: headless-smoke.py /path/to/anvil-mcp "
             "/path/to/anvil-mcp-inner WORKER_SPECS_JSON "
-            "CLIENT_TOOL_SECONDS HOST_SHELL_SECONDS"
+            "CLIENT_TOOL_SECONDS HOST_SHELL_SECONDS PYTHON OUTPUT_PROBE"
         )
 
     launcher = Path(sys.argv[1]).resolve()
@@ -2049,6 +2323,8 @@ def main() -> None:
     worker_specs = parse_worker_specs(sys.argv[3])
     client_tool_seconds = float(sys.argv[4])
     host_shell_seconds = int(sys.argv[5])
+    environment_python = Path(sys.argv[6]).resolve()
+    environment_probe = Path(sys.argv[7]).resolve()
     org_root = Path.home() / "org"
     org_file = org_root / "smoke.org"
     initialize = {
@@ -2394,7 +2670,10 @@ def main() -> None:
     assert_shell_result(
         response_by_id(main_responses, 11), "project-b:project-b-command"
     )
-    expected_login_shell = (Path.home() / "login-bin" / "anvil-login-shell").resolve()
+    # `command -v` preserves the lexical PATH entry.  On Darwin `/tmp` resolves
+    # to `/private/tmp`, so compare the same uncanonicalized login PATH here;
+    # canonical executable identity is verified separately above.
+    expected_login_shell = Path.home() / "login-bin" / "anvil-login-shell"
     assert_shell_result(
         response_by_id(main_responses, 12),
         f"unset:unset:clean-baseline:missing:missing:{expected_login_shell}",
@@ -2486,7 +2765,7 @@ def main() -> None:
     )
     assert_tool_text(response_by_id(large_responses, 26), "524289")
 
-    assert_offload_launch_baseline(launcher, initialize)
+    assert_offload_request_context(launcher, initialize, launch_directory)
     assert_async_isolation(
         launcher,
         initialize,
@@ -2494,6 +2773,12 @@ def main() -> None:
     )
     assert_direnv_nonlocal_exit_restores_baseline(launcher, initialize)
     assert_slow_direnv_keeps_root_responsive(launcher, initialize)
+    assert_environment_runner_boundaries(
+        launcher,
+        initialize,
+        environment_python,
+        environment_probe,
+    )
 
     secondary_responses = run_transcript(
         launcher,
@@ -2573,7 +2858,9 @@ def main() -> None:
             f"missing={sorted(TYPED_TOOLS - typed_names)}, "
             f"unexpected={sorted(typed_names - TYPED_TOOLS)}"
         )
-    assert_tool_success(response_by_id(typed_responses, 13), "server_id=anvil")
+    typed_read = response_by_id(typed_responses, 13)
+    assert_tool_success(typed_read, "runpy.run_path(cleaner")
+    assert_tool_success(typed_read, "anvil-mcp-inner")
     print(
         "PASS: two isolated daemons, "
         f"{len(main_names)} unified tools, {len(typed_names)} typed tools"
