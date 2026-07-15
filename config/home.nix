@@ -17,7 +17,14 @@ let
   packages = import ./packages.nix args;
 in
 {
-  imports = [ ./johnw.nix ];
+  imports = [
+    ./agent-deck.nix
+    ./johnw.nix
+  ];
+
+  # Run one Discord gateway client. Enabling this on Clio as well would
+  # make both hosts compete for the same bot connection.
+  johnw.agentDeck.enableConductorDiscordBridge = hostname == "hera";
 
   johnw.anvil = {
     useDedicatedDarwinEmacs = lib.elem hostname [
