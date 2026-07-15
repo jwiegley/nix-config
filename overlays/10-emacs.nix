@@ -184,6 +184,7 @@ let
               mkdir -p $out/share/emacs/site-lisp/tests
               install -m644 \
                 tests/anvil-eval-async-isolation-test.el \
+                tests/anvil-host-reentrancy-test.el \
                 tests/anvil-offload-ownership-test.el \
                 tests/anvil-server-unified-registry-test.el \
                 $out/share/emacs/site-lisp/tests

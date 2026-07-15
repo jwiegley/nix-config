@@ -81,6 +81,16 @@ class ConfigurationError(RuntimeError):
     """A caller supplied unsafe or inconsistent lifecycle configuration."""
 
 
+def daemon_ready_expression(server_id: str) -> str:
+    """Return the fail-closed readiness probe for one validated server ID."""
+    if server_id not in SERVER_IDS:
+        raise ConfigurationError("unsupported server id")
+    return (
+        "(and (fboundp 'anvil-headless--ready-p) "
+        f'(anvil-headless--ready-p "{server_id}"))'
+    )
+
+
 class LifecycleState(Enum):
     """Whether a lifecycle identity is live, dead, or temporarily unreadable."""
 
@@ -1995,6 +2005,7 @@ def daemon_environment(args: argparse.Namespace) -> dict[str, str]:
         }
     )
     environment.pop("ALTERNATE_EDITOR", None)
+    environment.pop("ANVIL_MCP_READINESS_MODE", None)
     environment.pop("ANVIL_EMACS_SOCKET", None)
     environment.pop("ANVIL_EMACS_USE_SYSTEM_LOG", None)
     return environment
@@ -2689,6 +2700,7 @@ def spawn_supervisor_if_absent(
 def safe_socket_ready(
     socket_path: Path,
     emacsclient: str,
+    server_id: str,
     timeout_seconds: float = 2.0,
 ) -> bool:
     try:
@@ -2705,7 +2717,15 @@ def safe_socket_ready(
         return False
     try:
         result = subprocess.run(
-            [emacsclient, "-a", "false", "-s", str(socket_path), "-e", "t"],
+            [
+                emacsclient,
+                "-a",
+                "false",
+                "-s",
+                str(socket_path),
+                "-e",
+                daemon_ready_expression(server_id),
+            ],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -2755,6 +2775,7 @@ def wait_for_daemon(args: argparse.Namespace) -> None:
         if remaining > 0 and safe_socket_ready(
             socket_path,
             args.emacsclient,
+            args.server_id,
             min(2.0, remaining),
         ):
             return
@@ -2789,6 +2810,9 @@ def start_stdio_bridge(args: argparse.Namespace) -> subprocess.Popen[bytes]:
     environment["ANVIL_MCP_PARENT_GUARD"] = args.parent_guard
     environment["ANVIL_MCP_PARENT_GUARD_PYTHON"] = args.python
     environment["ANVIL_HEADLESS_PARENT_PID"] = str(os.getpid())
+    # The bridge constructs a fixed predicate from its validated server ID.
+    # Overwrite any project-provided mode after transport sanitization.
+    environment["ANVIL_MCP_READINESS_MODE"] = "headless"
     environment["TMPDIR"] = str(temporary_path)
     environment["TMP"] = str(temporary_path)
     environment["TEMP"] = str(temporary_path)

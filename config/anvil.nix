@@ -17,7 +17,7 @@ let
     useDedicatedDarwinEmacs = isDarwin && cfg.useDedicatedDarwinEmacs;
     inherit (cfg) usePerAgentDaemon;
   };
-  clientStartupTimeoutMilliseconds = 1000 * anvilMcp.timeoutPolicy.clientStartupSeconds;
+  clientToolTimeoutMilliseconds = 1000 * anvilMcp.timeoutPolicy.clientToolSeconds;
   launchdAgentOptions =
     if options ? launchd && options.launchd ? agents then
       options.launchd.agents.type.nestedTypes.elemType.getSubOptions [ ]
@@ -65,15 +65,15 @@ in
       # Claude reads this only at client startup.  The per-server rendered
       # timeout remains authoritative for GUI clients that do not inherit the
       # Home Manager session environment.  Preserve a larger user policy.
-      home.sessionVariables.MCP_TIMEOUT = lib.mkDefault (toString clientStartupTimeoutMilliseconds);
+      home.sessionVariables.MCP_TIMEOUT = lib.mkDefault (toString clientToolTimeoutMilliseconds);
       assertions = [
         {
           assertion =
             let
               timeout = toString (config.home.sessionVariables.MCP_TIMEOUT or "");
             in
-            builtins.match "[0-9]+" timeout != null && lib.toInt timeout >= clientStartupTimeoutMilliseconds;
-          message = "Dedicated Anvil requires MCP_TIMEOUT to be at least ${toString clientStartupTimeoutMilliseconds} milliseconds";
+            builtins.match "[0-9]+" timeout != null && lib.toInt timeout >= clientToolTimeoutMilliseconds;
+          message = "Dedicated Anvil requires MCP_TIMEOUT to be at least ${toString clientToolTimeoutMilliseconds} milliseconds";
         }
       ];
     })

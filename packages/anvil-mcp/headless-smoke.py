@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
@@ -151,6 +152,7 @@ def run_transcript(
     server_id: str,
     frames: list[str],
     timeout_seconds: float = 300,
+    cwd: Path | None = None,
 ) -> list[dict[str, object]]:
     env = os.environ.copy()
     env["ANVIL_EMACS_HOST"] = host
@@ -158,6 +160,7 @@ def run_transcript(
         completed = subprocess.run(
             [str(launcher), f"--server-id={server_id}"],
             check=False,
+            cwd=cwd,
             env=env,
             input="\n".join(frames) + "\n",
             text=True,
@@ -280,6 +283,15 @@ def assert_tool_success(response: dict[str, object], needle: str) -> None:
         raise AssertionError(f"tool result did not contain {needle!r}: {result}")
 
 
+def assert_tool_text(response: dict[str, object], expected: str) -> None:
+    """Require an exact successful text result."""
+    actual = tool_result_text(response)
+    if actual != expected:
+        raise AssertionError(
+            f"tool result differed: expected {expected!r}, received {actual!r}"
+        )
+
+
 def assert_tool_failure(response: dict[str, object], needle: str) -> None:
     """Require one MCP tool failure containing a non-sensitive diagnostic."""
     result = response.get("result")
@@ -301,6 +313,71 @@ def tool_result_text(response: dict[str, object]) -> str:
     if not isinstance(block, dict) or not isinstance(block.get("text"), str):
         raise AssertionError(f"tool result has no text block: {result}")
     return block["text"]
+
+
+def parse_pid_response(response: dict[str, object], label: str) -> int:
+    """Return one exact decimal PID from an emacs-eval response."""
+    text = tool_result_text(response)
+    match = re.fullmatch(r"\s*([0-9]+)\s*", text)
+    if match is None:
+        raise AssertionError(f"{label} returned no exact PID: {text!r}")
+    return int(match.group(1))
+
+
+def decode_shell_result(response: dict[str, object]) -> dict[str, object]:
+    """Decode the structured payload returned by shell-run."""
+    text = tool_result_text(response)
+    try:
+        payload = json.loads(text)
+    except (TypeError, json.JSONDecodeError) as error:
+        raise AssertionError(f"shell-run returned invalid JSON: {text!r}") from error
+    if not isinstance(payload, dict):
+        raise AssertionError(f"shell-run returned a non-object payload: {payload!r}")
+    return payload
+
+
+def assert_shell_result(
+    response: dict[str, object], expected_stdout: str, expected_exit: int = 0
+) -> None:
+    """Require exact shell-run exit status and untruncated output."""
+    payload = decode_shell_result(response)
+    exit_status = payload.get("exit")
+    truncated = payload.get("truncated")
+    if (
+        type(exit_status) is not int
+        or exit_status != expected_exit
+        or payload.get("compressed") != expected_stdout
+        or payload.get("stderr") != ""
+        or not (truncated is None or truncated is False)
+    ):
+        raise AssertionError(
+            "shell-run result did not match exactly: "
+            f"expected exit={expected_exit}, stdout={expected_stdout!r}; "
+            f"received {payload!r}"
+        )
+
+
+def assert_shell_prefix(
+    response: dict[str, object], expected_prefix: str, expected_exit: int = 0
+) -> None:
+    """Require exact shell metadata and a specific stdout prefix."""
+    payload = decode_shell_result(response)
+    exit_status = payload.get("exit")
+    stdout = payload.get("compressed")
+    truncated = payload.get("truncated")
+    if (
+        type(exit_status) is not int
+        or exit_status != expected_exit
+        or not isinstance(stdout, str)
+        or not stdout.startswith(expected_prefix)
+        or payload.get("stderr") != ""
+        or not (truncated is None or truncated is False)
+    ):
+        raise AssertionError(
+            "shell-run prefix contract failed: "
+            f"expected exit={expected_exit}, prefix={expected_prefix!r}; "
+            f"received {payload!r}"
+        )
 
 
 def assert_tool_omits(response: dict[str, object], needle: str) -> None:
@@ -334,6 +411,22 @@ def resolved_path(value: object, label: str) -> Path:
     return Path(value).resolve()
 
 
+def strict_json_equal(actual: object, expected: object) -> bool:
+    """Compare decoded JSON without Python's bool/int equivalence."""
+    if type(actual) is not type(expected):
+        return False
+    if isinstance(expected, list):
+        return len(actual) == len(expected) and all(
+            strict_json_equal(left, right)
+            for left, right in zip(actual, expected, strict=True)
+        )
+    if isinstance(expected, dict):
+        return actual.keys() == expected.keys() and all(
+            strict_json_equal(actual[key], value) for key, value in expected.items()
+        )
+    return actual == expected
+
+
 def direnv_buffer_expression() -> str:
     """Return Elisp that proves visited buffers retain isolated environments."""
     project_a = Path.home() / "direnv-a"
@@ -342,6 +435,7 @@ def direnv_buffer_expression() -> str:
     project_unset = Path.home() / "direnv-unset"
     project_spoof = Path.home() / "direnv-spoof"
     project_failing = Path.home() / "direnv-failing"
+    project_a_activation_count = Path.home() / "direnv-a-enter-count"
     file_a = project_a / "visited.txt"
     file_b = project_b / "visited.txt"
     file_c = project_c / "visited.txt"
@@ -350,6 +444,7 @@ def direnv_buffer_expression() -> str:
     file_failing = project_failing / "visited.txt"
     return f"""
 (progn
+  (require 'cl-lib)
   (require 'json)
   (setq anvil-headless-smoke--mode-marker :false
         anvil-headless-smoke--mode-executable :false)
@@ -432,23 +527,64 @@ def direnv_buffer_expression() -> str:
              (default-marker
               (let ((process-environment
                      (default-value 'process-environment)))
-                (or (getenv "ANVIL_DIRENV_MARKER") :false))))
+                (or (getenv "ANVIL_DIRENV_MARKER") :false)))
+             (launch-audit
+              (let ((project-a-bin
+                     (directory-file-name
+                      (expand-file-name "bin" {json.dumps(str(project_a))}))))
+                (cl-labels
+                    ((normalize-directory
+                      (directory)
+                      (and (stringp directory)
+                           (directory-file-name
+                            (file-truename directory))))
+                     (snapshot
+                      ()
+                      (vector
+                       (or (getenv "ANVIL_DIRENV_MARKER") :false)
+                       (or (getenv "ANVIL_LAUNCH_SECRET") :false)
+                       (or (getenv "ANVIL_LAUNCH_BASELINE") :false)
+                       (or (executable-find "anvil-launch-contamination") :false)
+                       (or (getenv "DIRENV_DIFF") :false)
+                       (cl-count (normalize-directory project-a-bin)
+                                 exec-path
+                                 :key #'normalize-directory
+                                 :test #'equal)
+                       default-directory
+                       anvil-headless--baseline-default-directory
+                       (if (local-variable-p 'process-environment) t :false)
+                       (if (local-variable-p 'exec-path) t :false))))
+                  (vector
+                   (snapshot)
+                   (let ((process-environment
+                          (default-value 'process-environment))
+                         (exec-path (default-value 'exec-path)))
+                     (snapshot))
+                   (with-temp-buffer (snapshot))
+                   (with-current-buffer buffer-a (snapshot))
+                   (with-current-buffer buffer-b (snapshot)))))))
         (json-serialize
          (vector row-a row-b row-c row-unset row-spoof row-failing default-marker
                  (and (featurep 'direnv) t)
                  (and (featurep 'exec-path-from-shell) t)
                  (vector anvil-headless-smoke--mode-marker
                          anvil-headless-smoke--mode-executable)
-                 (or (executable-find "anvil-login-shell") :false))))
+                 (or (executable-find "anvil-login-shell") :false)
+                 launch-audit
+                 (string-to-number
+                  (with-temp-buffer
+                    (insert-file-contents
+                     {json.dumps(str(project_a_activation_count))})
+                    (buffer-string))))))
     (remove-hook 'text-mode-hook #'anvil-headless-smoke--mode-probe)
     (fmakunbound 'anvil-headless-smoke--mode-probe)))
 """.strip()
 
 
-def assert_direnv_buffers(response: dict[str, object]) -> None:
-    """Validate per-buffer direnv isolation and required executable paths."""
+def assert_direnv_buffers(response: dict[str, object], request_directory: Path) -> Path:
+    """Validate request context, daemon baseline, and per-buffer direnv isolation."""
     data = decode_eval_json(response)
-    if not isinstance(data, list) or len(data) != 11:
+    if not isinstance(data, list) or len(data) != 13:
         raise AssertionError(f"unexpected direnv buffer result: {data}")
     (
         row_a,
@@ -462,6 +598,8 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
         has_shell_import,
         mode_probe,
         login_path,
+        launch_audit,
+        project_a_activation_count,
     ) = data
     project_a = Path.home() / "direnv-a"
     project_b = Path.home() / "direnv-b"
@@ -494,7 +632,7 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
             raise AssertionError(f"wrong project environment for {project}: {row}")
         if not isinstance(row[3], str) or Path(row[3]).name != "emacsclient":
             raise AssertionError(f"emacsclient disappeared from PATH: {row}")
-        if row[4:6] != [True, True]:
+        if not strict_json_equal(row[4:6], [True, True]):
             raise AssertionError(f"environment is not buffer-local: {row}")
         if resolved_path(row[6], f"{project} active directory") != project.resolve():
             raise AssertionError(f"direnv active directory mismatch: {row}")
@@ -503,7 +641,7 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
         raise AssertionError(f"malformed PATH-replacement row: {row_c}")
     expected_c = project_c / "bin" / "anvil-direnv-c"
     if (
-        row_c[0:2] != ["project-c", "prefix{suffix"]
+        not strict_json_equal(row_c[0:2], ["project-c", "prefix{suffix"])
         or resolved_path(row_c[2], "project-c executable") != expected_c.resolve()
     ):
         raise AssertionError(f"PATH-replacing envrc was not applied: {row_c}")
@@ -511,7 +649,7 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
     resolved_path(row_c[4], "project-c rg")
     if resolved_path(row_c[5], "project-c exec-path head") != emacsclient.parent:
         raise AssertionError(f"dedicated Emacs bin is not first in exec-path: {row_c}")
-    if row_c[6:8] != [True, True]:
+    if not strict_json_equal(row_c[6:8], [True, True]):
         raise AssertionError(f"project-c environment is not buffer-local: {row_c}")
     if resolved_path(row_c[8], "project-c active directory") != project_c.resolve():
         raise AssertionError(f"project-c active directory mismatch: {row_c}")
@@ -546,16 +684,18 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
             or resolved_path(row[1], f"{project} executable") != executable.resolve()
             or resolved_path(row[2], f"{project} root socket")
             != expected_root_socket.resolve()
-            or row[3:5] != [True, True]
+            or not strict_json_equal(row[3:5], [True, True])
             or resolved_path(row[5], f"{project} active directory") != project.resolve()
         ):
             raise AssertionError(f"guard state was not restored for {project}: {row}")
 
     if not isinstance(row_failing, list) or len(row_failing) != 7:
         raise AssertionError(f"malformed failing-direnv row: {row_failing}")
-    if row_failing[:4] != [False, False, False, False]:
+    if not strict_json_equal(row_failing[:4], [False, False, False, False]):
         raise AssertionError(f"failed envrc leaked environment state: {row_failing}")
-    if row_failing[4:6] != [True, True] or not isinstance(row_failing[6], str):
+    if not strict_json_equal(row_failing[4:6], [True, True]) or not isinstance(
+        row_failing[6], str
+    ):
         raise AssertionError(
             f"failed envrc lost its clean buffer baseline: {row_failing}"
         )
@@ -567,7 +707,93 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
 
     if default_marker is not False:
         raise AssertionError(f"project environment leaked globally: {data}")
-    if [has_direnv, has_shell_import] != [True, True]:
+
+    if not isinstance(launch_audit, list) or len(launch_audit) != 5:
+        raise AssertionError(f"malformed launch contamination audit: {launch_audit}")
+    root_launch, default_launch, plain_launch, project_a_launch, project_b_launch = (
+        launch_audit
+    )
+    expected_request_directory = request_directory.resolve()
+    expected_baseline_directory = (
+        Path(os.environ["ANVIL_EMACS_STATE_ROOT"]) / "host-a"
+    ).resolve()
+    baseline_directory: Path | None = None
+    for label, row in (
+        ("root", root_launch),
+        ("default", default_launch),
+        ("no-env", plain_launch),
+    ):
+        if not isinstance(row, list) or len(row) != 10:
+            raise AssertionError(f"malformed {label} launch audit: {row}")
+        row_baseline = resolved_path(row[7], f"{label} baseline directory")
+        if (
+            not row_baseline.is_dir()
+            or row_baseline != expected_baseline_directory
+            or row_baseline == expected_request_directory
+        ):
+            raise AssertionError(f"{label} daemon baseline is not the state dir: {row}")
+        if baseline_directory is None:
+            baseline_directory = row_baseline
+        elif row_baseline != baseline_directory:
+            raise AssertionError(f"{label} daemon baseline drifted: {row}")
+        if (
+            not strict_json_equal(
+                row[:6], [False, False, "clean-baseline", False, False, 0]
+            )
+            or resolved_path(row[6], f"{label} request directory")
+            != expected_request_directory
+            or not strict_json_equal(row[8:10], [False, False])
+        ):
+            raise AssertionError(
+                f"{label} retained the daemon launch environment: {row}"
+            )
+    if baseline_directory is None:
+        raise AssertionError("launch audit did not establish a daemon baseline")
+
+    if (
+        not isinstance(project_a_launch, list)
+        or len(project_a_launch) != 10
+        or not strict_json_equal(
+            project_a_launch[:4],
+            ["project-a", False, "clean-baseline", False],
+        )
+        or not isinstance(project_a_launch[4], str)
+        or type(project_a_launch[5]) is not int
+        or project_a_launch[5] != 1
+        or resolved_path(project_a_launch[6], "project-a request directory")
+        != project_a.resolve()
+        or resolved_path(project_a_launch[7], "project-a baseline directory")
+        != baseline_directory
+        or not strict_json_equal(project_a_launch[8:10], [True, True])
+    ):
+        raise AssertionError(
+            f"project-a environment was not isolated: {project_a_launch}"
+        )
+    if type(project_a_activation_count) is not int or project_a_activation_count != 1:
+        raise AssertionError(
+            f"project-a envrc did not run exactly once: {project_a_activation_count}"
+        )
+    if (
+        not isinstance(project_b_launch, list)
+        or len(project_b_launch) != 10
+        or not strict_json_equal(
+            project_b_launch[:4],
+            ["project-b", False, "clean-baseline", False],
+        )
+        or not isinstance(project_b_launch[4], str)
+        or type(project_b_launch[5]) is not int
+        or project_b_launch[5] != 0
+        or resolved_path(project_b_launch[6], "project-b request directory")
+        != project_b.resolve()
+        or resolved_path(project_b_launch[7], "project-b baseline directory")
+        != baseline_directory
+        or not strict_json_equal(project_b_launch[8:10], [True, True])
+    ):
+        raise AssertionError(
+            f"project-b inherited the launch project: {project_b_launch}"
+        )
+
+    if not strict_json_equal([has_direnv, has_shell_import], [True, True]):
         raise AssertionError(f"environment packages were not loaded: {data}")
     expected_mode_executable = project_a / "bin" / "anvil-direnv-a"
     if (
@@ -584,6 +810,48 @@ def assert_direnv_buffers(response: dict[str, object]) -> None:
         != expected_login_path.resolve()
     ):
         raise AssertionError(f"root did not import the login-shell PATH: {login_path}")
+
+    return baseline_directory
+
+
+def request_context_expression() -> str:
+    """Return a clean root snapshot that distinguishes baseline from client cwd."""
+    return r"""
+(progn
+  (require 'json)
+  (json-serialize
+   (vector
+    default-directory
+    anvil-headless--baseline-default-directory
+    (or (getenv "ANVIL_LAUNCH_SECRET") :false)
+    (or (getenv "ANVIL_LAUNCH_BASELINE") :false)
+    (or (executable-find "anvil-launch-contamination") :false)
+    (or (getenv "DIRENV_DIFF") :false)
+    (if (local-variable-p 'process-environment) t :false)
+    (if (local-variable-p 'exec-path) t :false))))
+""".strip()
+
+
+def assert_request_context(
+    response: dict[str, object],
+    request_directory: Path,
+    baseline_directory: Path,
+) -> None:
+    """Prove client cwd is request-local without contaminating the daemon baseline."""
+    snapshot = decode_eval_json(response)
+    if (
+        not isinstance(snapshot, list)
+        or len(snapshot) != 8
+        or resolved_path(snapshot[0], "request directory")
+        != request_directory.resolve()
+        or resolved_path(snapshot[1], "daemon baseline directory")
+        != baseline_directory.resolve()
+        or not strict_json_equal(
+            snapshot[2:8],
+            [False, "clean-baseline", False, False, False, False],
+        )
+    ):
+        raise AssertionError(f"request context leaked or lost isolation: {snapshot}")
 
 
 def recursion_guard_command(project_command: str) -> str:
@@ -617,7 +885,7 @@ def assert_recursion_guards(
         f"{marker}:{project_command}:{root_socket}:"
         "nested=64:implicit=69:root=69:other=0:t"
     )
-    assert_tool_success(response, expected)
+    assert_shell_result(response, expected)
 
 
 def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
@@ -656,6 +924,14 @@ def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
                 t :false)
             (and (featurep 'direnv) t)
             (and (featurep 'exec-path-from-shell) t)
+            (vector
+             (or (getenv "ANVIL_LAUNCH_SECRET") :false)
+             (or (getenv "ANVIL_LAUNCH_BASELINE") :false)
+             (or (executable-find "anvil-launch-contamination") :false)
+             (or (getenv "DIRENV_DIFF") :false)
+             default-directory
+             (if (local-variable-p 'process-environment) t :false)
+             (if (local-variable-p 'exec-path) t :false))
             (with-current-buffer
                 (find-file-noselect
                  (expand-file-name "direnv-spoof/visited.txt" (getenv "HOME")))
@@ -720,11 +996,11 @@ def assert_worker_snapshot(
     runtime_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "workers"
     socket_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "emacs"
     for snapshot, (_, name) in zip(snapshots, worker_specs, strict=True):
-        if not isinstance(snapshot, list) or len(snapshot) != 20:
+        if not isinstance(snapshot, list) or len(snapshot) != 21:
             raise AssertionError(f"malformed {name} snapshot: {snapshot}")
         if snapshot[0] != name:
             raise AssertionError(f"worker dispatch mismatch: {snapshot[0]} != {name}")
-        if not isinstance(snapshot[1], int) or snapshot[1] <= 0:
+        if type(snapshot[1]) is not int or snapshot[1] <= 0:
             raise AssertionError(f"invalid {name} PID: {snapshot[1]}")
         state_dir = state_root / name
         temp_dir = runtime_root / name / "tmp"
@@ -763,31 +1039,48 @@ def assert_worker_snapshot(
                 f"{name} schema cache escaped isolation: "
                 f"{snapshot[10]} != {expected_schema}"
             )
-        if snapshot[11:13] != [False, False]:
+        if not strict_json_equal(snapshot[11:13], [False, False]):
             raise AssertionError(
                 f"{name} retained daemon lock-file descriptors: {snapshot[11:13]}"
             )
-        if snapshot[13:15] != [True, True]:
+        if not strict_json_equal(snapshot[13:15], [True, True]):
             raise AssertionError(
                 f"{name} did not load direnv environment support: {snapshot[13:15]}"
+            )
+        launch_state = snapshot[15]
+        expected_root_directory = (
+            Path(os.environ["ANVIL_EMACS_STATE_ROOT"]) / host
+        ).resolve()
+        if (
+            not isinstance(launch_state, list)
+            or len(launch_state) != 7
+            or not strict_json_equal(
+                launch_state[:4], [False, "clean-baseline", False, False]
+            )
+            or resolved_path(launch_state[4], f"{name} baseline directory")
+            != expected_root_directory
+            or not strict_json_equal(launch_state[5:7], [False, False])
+        ):
+            raise AssertionError(
+                f"{name} inherited the daemon launch direnv: {launch_state}"
             )
         expected_project_command = (
             Path.home() / "direnv-spoof" / "bin" / "anvil-direnv-spoof"
         )
         if (
-            snapshot[15] != "project-spoof"
-            or resolved_path(snapshot[16], f"{name} project executable")
+            snapshot[16] != "project-spoof"
+            or resolved_path(snapshot[17], f"{name} project executable")
             != expected_project_command.resolve()
         ):
             raise AssertionError(f"{name} did not inherit the project env: {snapshot}")
         if (
-            not isinstance(snapshot[17], str)
-            or Path(snapshot[17]).name != "emacsclient"
+            not isinstance(snapshot[18], str)
+            or Path(snapshot[18]).name != "emacsclient"
         ):
             raise AssertionError(f"{name} lost emacsclient from PATH: {snapshot}")
         expected_login_command = Path.home() / "login-bin" / "anvil-login-shell"
         if (
-            resolved_path(snapshot[18], f"{name} login-shell executable")
+            resolved_path(snapshot[19], f"{name} login-shell executable")
             != expected_login_command.resolve()
         ):
             raise AssertionError(f"{name} did not inherit the login PATH: {snapshot}")
@@ -795,7 +1088,7 @@ def assert_worker_snapshot(
             Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / host / "emacs" / "server"
         )
         if (
-            resolved_path(snapshot[19], f"{name} root socket")
+            resolved_path(snapshot[20], f"{name} root socket")
             != expected_root_socket.resolve()
         ):
             raise AssertionError(f"{name} inherited a spoofed root socket: {snapshot}")
@@ -841,7 +1134,7 @@ def assert_spawn_baseline(response: dict[str, object], host: str) -> None:
     snapshot = decode_eval_json(response)
     if not isinstance(snapshot, list) or len(snapshot) != 7:
         raise AssertionError(f"malformed worker spawn snapshot: {snapshot}")
-    if snapshot[:2] != [False, False]:
+    if not strict_json_equal(snapshot[:2], [False, False]):
         raise AssertionError(f"spawn wrapper retained the project env: {snapshot}")
     if (
         not isinstance(snapshot[2], str)
@@ -855,6 +1148,7 @@ def assert_spawn_baseline(response: dict[str, object], host: str) -> None:
         or not isinstance(snapshot[5], str)
         or Path(snapshot[4]) != expected_directory
         or Path(snapshot[5]) != expected_directory
+        or type(snapshot[6]) is not int
         or snapshot[6] != 0
     ):
         raise AssertionError(
@@ -884,7 +1178,7 @@ def assert_watchdog_lease(response: dict[str, object], lease: Path) -> None:
     """Validate sync diagnostic state and the absence of async exemption."""
     snapshot = decode_eval_json(response)
     expected = [1, 0o600, False]
-    if snapshot != expected:
+    if not strict_json_equal(snapshot, expected):
         raise AssertionError(
             f"watchdog diagnostic lease mismatch: {snapshot} != {expected}"
         )
@@ -918,6 +1212,417 @@ def call_tool(
     return response_by_id(responses, 2)
 
 
+def assert_direnv_nonlocal_exit_restores_baseline(
+    launcher: Path,
+    initialize: dict[str, object],
+) -> None:
+    """Reject project state after every fallible allow-status boundary."""
+    expression = r"""
+(progn
+  (require 'cl-lib)
+  (require 'json)
+  (let (rows)
+    (dolist (phase '(initial final active))
+      (dolist (mode '(quit throw))
+        (with-temp-buffer
+          (setq default-directory temporary-file-directory)
+          (setq-local process-environment
+                      (copy-sequence
+                       anvil-headless--baseline-process-environment))
+          (setq-local exec-path
+                      (copy-sequence anvil-headless--baseline-exec-path))
+          (setq-local direnv--active-directory nil)
+          ;; Start with stale project state so an exit before export is also
+          ;; required to restore the immutable baseline.
+          (setenv "ANVIL_DIRENV_MARKER" "stale-project")
+          (setq-local exec-path '("/stale-project"))
+          (setq-local direnv--active-directory
+                      (if (eq phase 'active)
+                          "/active-project/"
+                        "/stale-project/"))
+          (let ((status-calls 0)
+                (directory "/active-project/")
+                outcome)
+            (cl-letf
+                (((symbol-function 'direnv-update-directory-environment)
+                  (lambda (_directory)
+                    (setenv "ANVIL_DIRENV_MARKER" "fresh-project")
+                    (setq-local exec-path '("/fresh-project"))
+                    (setq-local direnv--active-directory
+                                "/fresh-project/")))
+                 ((symbol-function 'direnv--directory)
+                  (lambda () directory))
+                 ((symbol-function 'anvil-headless--direnv-allowed-p)
+                  (lambda (&rest _args)
+                    (setq status-calls (1+ status-calls))
+                    (let ((exit-now
+                           (or (memq phase '(initial active))
+                               (and (eq phase 'final)
+                                    (= status-calls 2)))))
+                      (if (not exit-now)
+                          t
+                        (if (eq mode 'quit)
+                            (signal 'quit nil)
+                          (throw 'anvil-direnv-smoke-exit
+                                 "throw-original")))))))
+              (setq outcome
+                    (if (eq mode 'quit)
+                        (condition-case nil
+                            (progn
+                              (if (eq phase 'active)
+                                  (anvil-headless--direnv-update-current-buffer)
+                                (anvil-headless--apply-direnv-if-allowed
+                                 directory t))
+                              "returned")
+                          (quit "quit-original"))
+                      (catch 'anvil-direnv-smoke-exit
+                        (if (eq phase 'active)
+                            (anvil-headless--direnv-update-current-buffer)
+                          (anvil-headless--apply-direnv-if-allowed
+                           directory t))
+                        "returned"))))
+            (push
+             (vector
+              (format "%s-%s" phase mode)
+              outcome
+              status-calls
+              (or (getenv "ANVIL_DIRENV_MARKER") :false)
+              (or direnv--active-directory :false)
+              (equal exec-path anvil-headless--baseline-exec-path)
+              (equal process-environment
+                     anvil-headless--baseline-process-environment))
+             rows)))))
+    (dolist (phase '(missing remote discovery-quit discovery-throw))
+      (with-temp-buffer
+        (setq default-directory temporary-file-directory)
+        (setq-local process-environment
+                    (copy-sequence
+                     anvil-headless--baseline-process-environment))
+        (setq-local exec-path '("/stale-discovery"))
+        (setq-local direnv--active-directory "/stale-discovery/")
+        (setenv "ANVIL_DIRENV_MARKER" "stale-discovery")
+        (let (outcome)
+          (cl-letf
+              (((symbol-function 'direnv--directory)
+                (lambda ()
+                  (pcase phase
+                    ('missing nil)
+                    ('remote "/ssh:example:/project/")
+                    ('discovery-quit (signal 'quit nil))
+                    ('discovery-throw
+                     (throw 'anvil-direnv-smoke-exit
+                            "throw-original"))))))
+            (setq outcome
+                  (pcase phase
+                    ('discovery-quit
+                     (condition-case nil
+                         (progn
+                           (anvil-headless--direnv-update-current-buffer)
+                           "returned")
+                       (quit "quit-original")))
+                    ('discovery-throw
+                     (catch 'anvil-direnv-smoke-exit
+                       (anvil-headless--direnv-update-current-buffer)
+                       "returned"))
+                    (_
+                     (anvil-headless--direnv-update-current-buffer)
+                     "returned"))))
+          (push
+           (vector
+            (symbol-name phase)
+            outcome
+            0
+            (or (getenv "ANVIL_DIRENV_MARKER") :false)
+            (or direnv--active-directory :false)
+            (equal exec-path anvil-headless--baseline-exec-path)
+            (equal process-environment
+                   anvil-headless--baseline-process-environment))
+           rows))))
+    (json-serialize (vconcat (nreverse rows)))))
+""".strip()
+    result = decode_eval_json(
+        call_tool(
+            launcher,
+            initialize,
+            "emacs-eval",
+            {"expression": expression},
+            timeout_seconds=10,
+        )
+    )
+    expected = [
+        ["initial-quit", "quit-original", 1, False, False, True, True],
+        ["initial-throw", "throw-original", 1, False, False, True, True],
+        ["final-quit", "quit-original", 2, False, False, True, True],
+        ["final-throw", "throw-original", 2, False, False, True, True],
+        ["active-quit", "quit-original", 1, False, False, True, True],
+        ["active-throw", "throw-original", 1, False, False, True, True],
+        ["missing", "returned", 0, False, False, True, True],
+        ["remote", "returned", 0, False, False, True, True],
+        ["discovery-quit", "quit-original", 0, False, False, True, True],
+        ["discovery-throw", "throw-original", 0, False, False, True, True],
+    ]
+    if not strict_json_equal(result, expected):
+        raise AssertionError(
+            f"direnv nonlocal exit retained project state: {result} != {expected}"
+        )
+
+
+def assert_slow_direnv_keeps_root_responsive(
+    launcher: Path,
+    initialize: dict[str, object],
+) -> None:
+    """Exercise the direct helper and real shell route while each is blocked."""
+    project = (Path.home() / "direnv-slow").resolve()
+    arm = Path.home() / "direnv-slow-arm"
+    started = Path.home() / "direnv-slow-started"
+    callback_seen = Path.home() / "direnv-slow-callback"
+    release = Path.home() / "direnv-slow-release"
+
+    def reset_gate() -> None:
+        for marker in (arm, started, callback_seen, release):
+            marker.unlink(missing_ok=True)
+
+    def wait_for(marker: Path, future: object, label: str) -> None:
+        deadline = time.monotonic() + 10
+        while not marker.exists() and time.monotonic() < deadline:
+            if future.done():  # type: ignore[attr-defined]
+                future.result()  # type: ignore[attr-defined]
+                raise AssertionError(f"{label} returned before {marker.name}")
+            time.sleep(0.01)
+        if not marker.exists():
+            raise AssertionError(f"{label} never created {marker.name}")
+
+    fast_expression = """
+(progn
+  (require 'json)
+  (let ((canary (concat "direnv-secret-" "canary"))
+        exposed)
+    (dolist (buffer (buffer-list))
+      (with-current-buffer buffer
+        (save-restriction
+          (widen)
+          (when (string-match-p (regexp-quote canary) (buffer-string))
+            (setq exposed t)))))
+    (json-serialize
+     (vector
+      (emacs-pid)
+      default-directory
+      (or (getenv "ANVIL_DIRENV_MARKER") :false)
+      (or (getenv "ANVIL_DIRENV_SECRET") :false)
+      (or (getenv "DIRENV_DIFF") :false)
+      (car exec-path)
+      (if exposed t :false)))))
+""".strip()
+
+    direct_expression = f"""
+(progn
+  (require 'json)
+  (let (timer callback)
+    (unwind-protect
+        (with-temp-buffer
+          (setq default-directory {json.dumps(str(project) + os.sep)})
+          (setq-local process-environment
+                      (copy-sequence
+                       anvil-headless--baseline-process-environment))
+          (setq-local exec-path
+                      (copy-sequence anvil-headless--baseline-exec-path))
+          (setq-local direnv--active-directory nil)
+          (setq timer
+                (run-at-time
+                 0.01 0.01
+                 (lambda ()
+                   ;; The initial direnv status call may yield too.  Record
+                   ;; responsiveness only after the fixture's slow export has
+                   ;; entered its release gate.
+                   (when (file-exists-p {json.dumps(str(started))})
+                     (setq callback
+                           (vector
+                            default-directory
+                            (or (getenv "ANVIL_DIRENV_MARKER") :false)
+                            (or (getenv "ANVIL_DIRENV_SECRET") :false)
+                            (or (getenv "DIRENV_DIFF") :false)
+                            (car exec-path)
+                            t))
+                     (write-region
+                      "" nil {json.dumps(str(callback_seen))} nil 'silent)
+                     (when (timerp timer)
+                       (cancel-timer timer))))))
+          (anvil-headless--apply-direnv-if-allowed default-directory t)
+          (json-serialize
+           (vector
+            (emacs-pid)
+            (or (getenv "ANVIL_DIRENV_MARKER") :false)
+            (or (getenv "ANVIL_DIRENV_SECRET") :false)
+            default-directory
+            (or callback :false))))
+      (when (timerp timer)
+        (cancel-timer timer)))))
+""".strip()
+
+    reset_gate()
+    arm.touch()
+    try:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            slow = executor.submit(
+                call_tool,
+                launcher,
+                initialize,
+                "emacs-eval",
+                {"expression": direct_expression},
+                30,
+            )
+            try:
+                wait_for(started, slow, "direct direnv helper")
+                wait_for(callback_seen, slow, "direct direnv callback")
+                fast = decode_eval_json(
+                    call_tool(
+                        launcher,
+                        initialize,
+                        "emacs-eval",
+                        {"expression": fast_expression},
+                        timeout_seconds=10,
+                    )
+                )
+                if slow.done():
+                    raise AssertionError(
+                        "direct direnv helper returned before its release gate"
+                    )
+            finally:
+                release.touch()
+            direct = decode_eval_json(slow.result(timeout=15))
+            post_direct = decode_eval_json(
+                call_tool(
+                    launcher,
+                    initialize,
+                    "emacs-eval",
+                    {"expression": fast_expression},
+                    timeout_seconds=10,
+                )
+            )
+    finally:
+        reset_gate()
+
+    if (
+        not isinstance(fast, list)
+        or len(fast) != 7
+        or not isinstance(post_direct, list)
+        or len(post_direct) != 7
+        or not isinstance(direct, list)
+        or len(direct) != 5
+    ):
+        raise AssertionError(
+            "invalid direct direnv snapshots: "
+            f"fast={fast}, post={post_direct}, direct={direct}"
+        )
+    root_pid, root_directory, *root_state = fast
+    direct_pid, marker, secret, project_directory, callback = direct
+    if direct_pid != root_pid:
+        raise AssertionError(
+            f"direct helper changed root Emacs: {direct_pid} != {root_pid}"
+        )
+    if marker != "project-slow" or secret != "direnv-secret-canary":
+        raise AssertionError(f"direct helper missed project env: {direct}")
+    if Path(project_directory).resolve() != project:
+        raise AssertionError(f"direct helper used wrong directory: {direct}")
+    if (
+        not strict_json_equal(root_state[0:3], [False, False, False])
+        or root_state[4] is not False
+    ):
+        raise AssertionError(f"project state or output leaked into root: {fast}")
+    if (
+        post_direct[0] != root_pid
+        or not strict_json_equal(post_direct[2:5], [False, False, False])
+        or post_direct[6] is not False
+    ):
+        raise AssertionError(
+            f"project state or decoded output leaked after release: {post_direct}"
+        )
+    if not isinstance(callback, list) or len(callback) != 6:
+        raise AssertionError(f"responsive callback did not run: {callback}")
+    expected_callback = [
+        root_directory,
+        root_state[0],
+        root_state[1],
+        root_state[2],
+        root_state[3],
+        True,
+    ]
+    if not strict_json_equal(callback, expected_callback):
+        raise AssertionError(
+            f"responsive callback inherited project state: {callback} "
+            f"!= {expected_callback}"
+        )
+
+    reset_gate()
+    arm.touch()
+    try:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            slow_shell = executor.submit(
+                call_tool,
+                launcher,
+                initialize,
+                "shell-run",
+                {
+                    "cmd": (
+                        "printf '%s:%s' "
+                        '"$ANVIL_DIRENV_MARKER" "$ANVIL_HEADLESS_PARENT_PID"'
+                    ),
+                    "filter": "",
+                    "cwd": str(project),
+                },
+                30,
+            )
+            try:
+                wait_for(started, slow_shell, "shell-run direnv helper")
+                shell_fast = decode_eval_json(
+                    call_tool(
+                        launcher,
+                        initialize,
+                        "emacs-eval",
+                        {"expression": fast_expression},
+                        timeout_seconds=10,
+                    )
+                )
+                if slow_shell.done():
+                    raise AssertionError(
+                        "shell-run returned before its direnv release gate"
+                    )
+            finally:
+                release.touch()
+            shell_response = slow_shell.result(timeout=15)
+            shell_after = decode_eval_json(
+                call_tool(
+                    launcher,
+                    initialize,
+                    "emacs-eval",
+                    {"expression": fast_expression},
+                    timeout_seconds=10,
+                )
+            )
+    finally:
+        reset_gate()
+
+    if (
+        not isinstance(shell_fast, list)
+        or len(shell_fast) != 7
+        or shell_fast[0] != root_pid
+        or not strict_json_equal(shell_fast[2:5], [False, False, False])
+        or shell_fast[6] is not False
+    ):
+        raise AssertionError(
+            f"shell overlap leaked project state or output: {shell_fast}"
+        )
+    if (
+        not isinstance(shell_after, list)
+        or len(shell_after) != 7
+        or shell_after[0] != root_pid
+        or not strict_json_equal(shell_after[2:5], [False, False, False])
+        or shell_after[6] is not False
+    ):
+        raise AssertionError(f"shell direnv output leaked after release: {shell_after}")
+    assert_shell_result(shell_response, f"project-slow:{root_pid}")
+
+
 def submit_async(
     launcher: Path,
     initialize: dict[str, object],
@@ -932,10 +1637,10 @@ def submit_async(
         {"expression": expression, "timeout": timeout_seconds},
     )
     text = tool_result_text(response)
-    match = re.search(r"\bjob-[0-9]+-[0-9]+\b", text)
+    match = re.fullmatch(r"Job started: (job-[0-9]+-[0-9]+)\s*", text)
     if match is None:
-        raise AssertionError(f"async submission returned no job ID: {text}")
-    return match.group(0)
+        raise AssertionError(f"async submission returned no exact job ID: {text}")
+    return match.group(1)
 
 
 def poll_async(
@@ -958,10 +1663,62 @@ def poll_async(
                 timeout_seconds=remaining,
             )
         )
-        if "status: done" in last or "status: error" in last:
+        if last.startswith("status: done\n") or last.startswith("status: error\n"):
             return last
         time.sleep(0.1)
     raise AssertionError(f"async job {job_id} did not settle: {last}")
+
+
+def decode_done_async_json(result: str) -> object:
+    """Decode one JSON value from a terminal asynchronous result."""
+    if not result.startswith("status: done\n"):
+        raise AssertionError(f"async job did not finish successfully: {result}")
+    matches = re.findall(r"(?m)^result: (.*)$", result)
+    if len(matches) != 1:
+        raise AssertionError(f"async job returned no unique result: {result}")
+    try:
+        serialized = json.loads(matches[0])
+        return json.loads(serialized)
+    except (TypeError, json.JSONDecodeError) as error:
+        raise AssertionError(f"async job returned invalid JSON: {result}") from error
+
+
+def assert_offload_launch_baseline(
+    launcher: Path,
+    initialize: dict[str, object],
+) -> None:
+    """Prove a fresh isolated child starts outside the launch project."""
+    expected_login = (Path.home() / "login-bin" / "anvil-login-shell").resolve()
+    expression = f"""
+(progn
+  (require 'json)
+  (let ((login (executable-find "anvil-login-shell")))
+    (when (or (getenv "ANVIL_LAUNCH_SECRET")
+              (not (equal (getenv "ANVIL_LAUNCH_BASELINE") "clean-baseline"))
+              (executable-find "anvil-launch-contamination")
+              (getenv "DIRENV_DIFF")
+              (local-variable-p 'process-environment)
+              (local-variable-p 'exec-path)
+              (not (and login
+                        (equal (file-truename login)
+                               {json.dumps(str(expected_login))}))))
+      (error "offload launch environment is contaminated"))
+    (json-serialize
+     (vector "clean-offload" default-directory login))))
+""".strip()
+    job_id = submit_async(launcher, initialize, expression, 10)
+    result = decode_done_async_json(poll_async(launcher, initialize, job_id, 15))
+    expected_directory = (
+        Path(os.environ["ANVIL_EMACS_STATE_ROOT"]) / "host-a"
+    ).resolve()
+    if (
+        not isinstance(result, list)
+        or len(result) != 3
+        or result[0] != "clean-offload"
+        or resolved_path(result[1], "offload default directory") != expected_directory
+        or resolved_path(result[2], "offload login executable") != expected_login
+    ):
+        raise AssertionError(f"offload inherited the launch project: {result}")
 
 
 def process_alive(pid: int) -> bool:
@@ -1018,19 +1775,16 @@ def assert_async_isolation(
         )
     child_pid = int(child_pid_file.read_text().strip())
 
-    root_text = tool_result_text(
+    root_pid = parse_pid_response(
         call_tool(
             launcher,
             initialize,
             "emacs-eval",
             {"expression": "(emacs-pid)"},
             timeout_seconds=5,
-        )
+        ),
+        "root Emacs",
     )
-    root_match = re.search(r"\b[0-9]+\b", root_text)
-    if root_match is None:
-        raise AssertionError(f"root Emacs returned no PID: {root_text}")
-    root_pid = int(root_match.group(0))
     if root_pid == child_pid:
         raise AssertionError("async expression ran inside the root Emacs")
 
@@ -1048,7 +1802,7 @@ def assert_async_isolation(
         job_id,
         async_timeout + 5,
     )
-    if "status: error" not in terminal or "timeout" not in terminal.lower():
+    if not terminal.startswith("status: error\n") or "timeout" not in terminal.lower():
         raise AssertionError(f"looping async job did not time out: {terminal}")
 
     death_deadline = time.monotonic() + 5
@@ -1057,24 +1811,32 @@ def assert_async_isolation(
     if process_alive(child_pid):
         raise AssertionError(f"timed-out async child {child_pid} survived")
 
-    root_after = tool_result_text(
+    root_after = parse_pid_response(
         call_tool(
             launcher,
             initialize,
             "emacs-eval",
             {"expression": "(emacs-pid)"},
             timeout_seconds=5,
-        )
+        ),
+        "root Emacs after async timeout",
     )
-    if str(root_pid) not in root_after:
-        raise AssertionError(f"root daemon changed after async timeout: {root_after}")
+    if root_after != root_pid:
+        raise AssertionError(
+            f"root daemon changed after async timeout: {root_pid} -> {root_after}"
+        )
 
     project_file = Path.home() / "direnv-a" / "visited.txt"
-    environment_expression = (
-        f"(with-current-buffer (find-file-noselect {json.dumps(str(project_file))}) "
-        '(list (getenv "ANVIL_DIRENV_MARKER") '
-        '(executable-find "anvil-direnv-a")))'
-    )
+    environment_expression = f"""
+(progn
+  (require 'json)
+  (with-current-buffer
+      (find-file-noselect {json.dumps(str(project_file))})
+    (json-serialize
+     (vector
+      (or (getenv "ANVIL_DIRENV_MARKER") :false)
+      (or (executable-find "anvil-direnv-a") :false)))))
+""".strip()
     environment_timeout = 10
     environment_job = submit_async(
         launcher,
@@ -1082,16 +1844,21 @@ def assert_async_isolation(
         environment_expression,
         environment_timeout,
     )
-    environment_result = poll_async(
-        launcher,
-        initialize,
-        environment_job,
-        environment_timeout + 5,
+    environment_result = decode_done_async_json(
+        poll_async(
+            launcher,
+            initialize,
+            environment_job,
+            environment_timeout + 5,
+        )
     )
+    expected_executable = (project_file.parent / "bin" / "anvil-direnv-a").resolve()
     if (
-        "status: done" not in environment_result
-        or "project-a" not in environment_result
-        or "anvil-direnv-a" not in environment_result
+        not isinstance(environment_result, list)
+        or len(environment_result) != 2
+        or environment_result[0] != "project-a"
+        or resolved_path(environment_result[1], "async project executable")
+        != expected_executable
     ):
         raise AssertionError(
             f"isolated async child lost the project environment: {environment_result}"
@@ -1100,21 +1867,23 @@ def assert_async_isolation(
 
 def main() -> None:
     if (
-        len(sys.argv) != 5
-        or not sys.argv[3].isdigit()
-        or int(sys.argv[3]) <= 0
+        len(sys.argv) != 6
         or not sys.argv[4].isdigit()
         or int(sys.argv[4]) <= 0
+        or not sys.argv[5].isdigit()
+        or int(sys.argv[5]) <= 0
     ):
         raise SystemExit(
             "usage: headless-smoke.py /path/to/anvil-mcp "
-            "WORKER_SPECS_JSON CLIENT_TOOL_SECONDS HOST_SHELL_SECONDS"
+            "/path/to/anvil-mcp-inner WORKER_SPECS_JSON "
+            "CLIENT_TOOL_SECONDS HOST_SHELL_SECONDS"
         )
 
     launcher = Path(sys.argv[1]).resolve()
-    worker_specs = parse_worker_specs(sys.argv[2])
-    client_tool_seconds = float(sys.argv[3])
-    host_shell_seconds = int(sys.argv[4])
+    inner_launcher = Path(sys.argv[2]).resolve()
+    worker_specs = parse_worker_specs(sys.argv[3])
+    client_tool_seconds = float(sys.argv[4])
+    host_shell_seconds = int(sys.argv[5])
     org_root = Path.home() / "org"
     org_file = org_root / "smoke.org"
     initialize = {
@@ -1124,8 +1893,10 @@ def main() -> None:
     }
     snapshot_expression = worker_snapshot_expression(worker_specs)
     buffer_environment_expression = direnv_buffer_expression()
+    request_context = request_context_expression()
     spawn_environment_expression = spawn_baseline_expression()
     watchdog_expression = watchdog_lease_expression()
+    launch_directory = Path.home() / "direnv-launch"
     project_a = Path.home() / "direnv-a"
     project_b = Path.home() / "direnv-b"
     project_plain = Path.home() / "direnv-plain"
@@ -1177,6 +1948,14 @@ def main() -> None:
                 {
                     "name": "file-read",
                     "arguments": {"path": str(launcher)},
+                },
+            ),
+            request(
+                25,
+                "tools/call",
+                {
+                    "name": "file-read",
+                    "arguments": {"path": str(inner_launcher)},
                 },
             ),
             request(
@@ -1260,9 +2039,13 @@ def main() -> None:
                     "name": "shell-run",
                     "arguments": {
                         "cmd": (
-                            "printf '%s:%s' "
+                            "printf '%s:%s:%s:%s:%s:%s' "
                             '"${ANVIL_DIRENV_MARKER-unset}" '
-                            '"$(command -v anvil-direnv-a || printf missing)"'
+                            '"${ANVIL_LAUNCH_SECRET-unset}" '
+                            '"${ANVIL_LAUNCH_BASELINE-unset}" '
+                            '"$(command -v anvil-launch-contamination || printf missing)" '
+                            '"$(command -v anvil-direnv-a || printf missing)" '
+                            '"$(command -v anvil-login-shell || printf missing)"'
                         ),
                         "filter": "",
                         "cwd": str(project_plain),
@@ -1389,7 +2172,7 @@ def main() -> None:
                 {
                     "name": "shell-run",
                     "arguments": {
-                        "cmd": "cat >/dev/null; printf stdin-eof",
+                        "cmd": "cat >/dev/null && printf stdin-eof",
                         "filter": "",
                         "cwd": str(project_plain),
                         "timeout_sec": 5,
@@ -1404,7 +2187,23 @@ def main() -> None:
                     "arguments": {"expression": "(+ 20 22)"},
                 },
             ),
+            request(
+                27,
+                "tools/call",
+                {
+                    "name": "shell-run",
+                    "arguments": {
+                        "cmd": (
+                            "printf '%s:%s:%s:%s' \"$(pwd -P)\" "
+                            '"$ANVIL_LAUNCH_SECRET" "$ANVIL_LAUNCH_BASELINE" '
+                            '"$(anvil-launch-contamination)"'
+                        ),
+                        "filter": "",
+                    },
+                },
+            ),
         ],
+        cwd=launch_directory,
     )
     main_names = tool_names(response_by_id(main_responses, 2))
     expected_tools = EVAL_IDE_TOOLS | TYPED_TOOLS
@@ -1414,46 +2213,93 @@ def main() -> None:
             f"missing={sorted(expected_tools - main_names)}, "
             f"unexpected={sorted(main_names - expected_tools)}"
         )
-    assert_tool_success(response_by_id(main_responses, 3), "42")
-    assert_tool_success(response_by_id(main_responses, 4), "server_id=anvil")
+    assert_tool_text(response_by_id(main_responses, 3), "42")
+    assert_tool_success(response_by_id(main_responses, 4), "anvil-clean-environment.py")
+    assert_tool_success(response_by_id(main_responses, 25), "server_id=anvil")
     assert_tool_success(response_by_id(main_responses, 5), "headlessorgneedle")
     assert_tool_success(response_by_id(main_responses, 6), ":files")
     assert_tool_success(response_by_id(main_responses, 7), "headlesssemanticneedle")
     assert_worker_snapshot(response_by_id(main_responses, 8), "host-a", worker_specs)
-    assert_direnv_buffers(response_by_id(main_responses, 9))
-    assert_tool_success(
+    baseline_directory = assert_direnv_buffers(
+        response_by_id(main_responses, 9), launch_directory
+    )
+    assert_shell_result(
         response_by_id(main_responses, 10), "project-a:project-a-command"
     )
-    assert_tool_success(
+    assert_shell_result(
         response_by_id(main_responses, 11), "project-b:project-b-command"
     )
-    assert_tool_success(response_by_id(main_responses, 12), "unset:missing")
+    expected_login_shell = (Path.home() / "login-bin" / "anvil-login-shell").resolve()
+    assert_shell_result(
+        response_by_id(main_responses, 12),
+        f"unset:unset:clean-baseline:missing:missing:{expected_login_shell}",
+    )
     assert_tool_success(
         response_by_id(main_responses, 13), ".anvil-headless-emacs.lock"
     )
     assert_tool_success(
         response_by_id(main_responses, 14), ".anvil-headless-emacs.lock"
     )
-    assert_tool_success(response_by_id(main_responses, 15), "lock-fds-closed")
-    assert_tool_success(
+    assert_shell_result(response_by_id(main_responses, 15), "lock-fds-closed")
+    assert_shell_prefix(
         response_by_id(main_responses, 16),
         "project-c:prefix{suffix:project-c-command:ripgrep",
     )
-    assert_tool_success(
+    assert_shell_result(
         response_by_id(main_responses, 17),
         "unset:unset:unset:unset:unset:blocked-command",
     )
     assert_spawn_baseline(response_by_id(main_responses, 18), "host-a")
     assert_watchdog_lease(response_by_id(main_responses, 19), watchdog_lease)
     assert_tool_failure(response_by_id(main_responses, 20), "direnv environment failed")
-    assert_tool_success(response_by_id(main_responses, 21), str(host_shell_seconds))
-    assert_tool_success(response_by_id(main_responses, 22), "pathless-rg:1")
-    assert_tool_success(response_by_id(main_responses, 23), "stdin-eof")
-    assert_tool_success(response_by_id(main_responses, 24), "42")
+    assert_tool_text(response_by_id(main_responses, 21), str(host_shell_seconds))
+    assert_shell_result(response_by_id(main_responses, 22), "pathless-rg:1")
+    assert_shell_result(response_by_id(main_responses, 23), "stdin-eof")
+    assert_tool_text(response_by_id(main_responses, 24), "42")
+    assert_shell_result(
+        response_by_id(main_responses, 27),
+        f"{launch_directory.resolve()}:direnv-launch-secret-canary:"
+        "launch-overwrite:launch-contamination-command",
+    )
     if failing_shell_marker.exists():
         raise AssertionError("shell-run executed after an allowed envrc failed")
     for identifier in (10, 11, 16, 17):
         assert_tool_omits(response_by_id(main_responses, identifier), "direnv:")
+
+    context_frames = [
+        request(1, "initialize", initialize),
+        request(None, "notifications/initialized"),
+        request(
+            2,
+            "tools/call",
+            {
+                "name": "emacs-eval",
+                "arguments": {"expression": request_context},
+            },
+        ),
+    ]
+    other_context = run_transcript(
+        launcher,
+        "host-a",
+        "anvil",
+        context_frames,
+        client_tool_seconds,
+        cwd=project_plain,
+    )
+    assert_request_context(
+        response_by_id(other_context, 2), project_plain, baseline_directory
+    )
+    restored_context = run_transcript(
+        launcher,
+        "host-a",
+        "anvil",
+        context_frames,
+        client_tool_seconds,
+        cwd=launch_directory,
+    )
+    assert_request_context(
+        response_by_id(restored_context, 2), launch_directory, baseline_directory
+    )
 
     large_expression = '(length "雪' + ("x" * (512 * 1024)) + '")'
     large_responses = run_final_framed_transcript(
@@ -1473,13 +2319,16 @@ def main() -> None:
             },
         ),
     )
-    assert_tool_success(response_by_id(large_responses, 26), "524289")
+    assert_tool_text(response_by_id(large_responses, 26), "524289")
 
+    assert_offload_launch_baseline(launcher, initialize)
     assert_async_isolation(
         launcher,
         initialize,
         watchdog_lease,
     )
+    assert_direnv_nonlocal_exit_restores_baseline(launcher, initialize)
+    assert_slow_direnv_keeps_root_responsive(launcher, initialize)
 
     secondary_responses = run_transcript(
         launcher,

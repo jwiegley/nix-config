@@ -12,6 +12,11 @@ import sys
 import tempfile
 
 
+# Loading the macOS Emacs client can exceed five seconds under concurrent Nix
+# builds; the enclosing smoke still bounds this entire test at 60 seconds.
+DIRECT_FALLBACK_TIMEOUT_SECONDS = 15
+
+
 def failure(command: subprocess.CompletedProcess[str]) -> str:
     """Return compact subprocess details for an assertion failure."""
     return (
@@ -60,7 +65,7 @@ with Path({str(marker)!r}).open("a", encoding="utf-8") as handle:
             stderr=subprocess.PIPE,
             env=contaminated,
             text=True,
-            timeout=5,
+            timeout=DIRECT_FALLBACK_TIMEOUT_SECONDS,
             check=False,
         )
         if direct.returncode != 0 or not marker.is_file():
@@ -116,7 +121,16 @@ with Path({str(marker)!r}).open("a", encoding="utf-8") as handle:
             "replayed": False,
             "emacsclientRc": 1,
         }
-        if response.get("id") != request_id or data != expected:
+        if (
+            type(response.get("id")) is not int
+            or response.get("id") != request_id
+            or type(data) is not dict
+            or data.keys() != expected.keys()
+            or any(
+                type(data[key]) is not type(value) or data[key] != value
+                for key, value in expected.items()
+            )
+        ):
             raise AssertionError(f"unexpected bridge response: {response!r}")
 
     print("alternate editor test: reproduced fallback and blocked transport use")

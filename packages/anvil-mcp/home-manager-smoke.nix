@@ -95,8 +95,39 @@ let
         }
       ];
     };
+  evaluateDarwinHome =
+    { hostname }:
+    homeManagerLib.homeManagerConfiguration {
+      pkgs = testPkgs;
+      extraSpecialArgs = {
+        inherit hostname inputs;
+      };
+      modules = [
+        ../../config/home.nix
+        {
+          home = {
+            username = "anvil-test";
+            homeDirectory = "/tmp/anvil-home-manager-test";
+            # This topology check uses a minimal package set without John's
+            # custom overlays.  Package selection itself is proved above by
+            # perAgentMode; force unrelated Darwin packages out of this eval.
+            packages = lib.mkForce [ ];
+          };
+        }
+      ];
+    };
+  darwinHostnames = [
+    "hera"
+    "clio"
+  ];
+  darwinEvaluations = lib.genAttrs darwinHostnames (
+    hostname: evaluateDarwinHome { inherit hostname; }
+  );
+
   strippedInputs = builtins.removeAttrs inputs [ "promptdeploy" ];
-  managedHostnames = (import ../../config/anvil-hosts.nix).clients;
+  anvilHosts = import ../../config/anvil-hosts.nix;
+  managedHostnames = anvilHosts.clients;
+  managedEvaluations = lib.genAttrs managedHostnames (hostname: evaluateJohnw { inherit hostname; });
   expectedPromptdeployItems = [
     "mcp:anvil"
     "mcp:anvil-tools"
@@ -108,7 +139,7 @@ let
   };
   managedWithPromptdeploy = map (hostname: {
     inherit hostname;
-    promptdeploy = (evaluateJohnw { inherit hostname; }).config.programs.promptdeploy;
+    promptdeploy = managedEvaluations.${hostname}.config.programs.promptdeploy;
   }) managedHostnames;
   strippedManaged = map (hostname: {
     inherit hostname;
@@ -136,7 +167,8 @@ let
     assertion = false;
     message = "Anvil client convergence requires the pinned promptdeploy input on ${hostname}";
   };
-  promptdeployRevision = "4192b7e24ecd9d5a6883716dc110faeb33462b75";
+  promptdeployRevision = "c308988401fe9a7087aedfeba38bd59143f4cc7d";
+  promptdeployAnvilConfig = builtins.readFile "${inputs.promptdeploy}/mcp/anvil.yaml";
 in
 assert lib.assertMsg (isLinux || isDarwin) "Anvil Home Manager smoke requires Linux or Darwin";
 assert lib.assertMsg (
@@ -189,8 +221,8 @@ assert lib.assertMsg (
   !isDarwin || hostService.config.KeepAlive
 ) "Anvil Darwin service is no longer kept alive";
 assert lib.assertMsg (
-  perAgentMode.config.home.sessionVariables.MCP_TIMEOUT == "210000"
-) "Anvil dedicated mode drifted from the 210-second startup fallback";
+  perAgentMode.config.home.sessionVariables.MCP_TIMEOUT == "330000"
+) "Anvil dedicated mode drifted from the 330-second tool fallback";
 assert lib.assertMsg unmanagedConfigurationEvaluation.success
   "an unmanaged host without promptdeploy did not evaluate cleanly";
 assert lib.assertMsg (
@@ -216,6 +248,45 @@ assert lib.assertMsg (lib.all
   )
   managedWithPromptdeploy
 ) "a managed host drifted from the pinned promptdeploy convergence contract";
+assert lib.assertMsg (lib.hasInfix ''
+  codex:
+    startup_timeout_sec: 330
+    tool_timeout_sec: 330
+'' promptdeployAnvilConfig) "pinned promptdeploy lost the Anvil Codex 330-second deadline contract";
+assert lib.assertMsg (
+  !isDarwin
+  || lib.all (
+    hostname:
+    let
+      evaluation = darwinEvaluations.${hostname};
+    in
+    evaluation.config.johnw.anvil.useDedicatedDarwinEmacs
+    && evaluation.config.johnw.anvil.usePerAgentDaemon
+    && !(servicePresent evaluation)
+  ) darwinHostnames
+) "a Darwin host wrapper drifted from per-agent dedicated-Emacs topology";
+assert lib.assertMsg (
+  !isLinux
+  || (
+    anvilHosts.dedicatedLinux != [ ]
+    && lib.all (
+      hostname:
+      builtins.hasAttr hostname managedEvaluations
+      && (
+        let
+          evaluation = managedEvaluations.${hostname};
+        in
+        backends evaluation == [ "dedicated-emacs" ]
+        && evaluation.config.johnw.anvil.usePerAgentDaemon
+        && !(servicePresent evaluation)
+      )
+    ) anvilHosts.dedicatedLinux
+  )
+) "a dedicated Linux host drifted from per-agent dedicated-Emacs topology";
+assert lib.assertMsg (
+  !isLinux
+  || (builtins.hasAttr "vps" managedEvaluations && backends managedEvaluations.vps == [ "nelisp" ])
+) "vps did not select NeLisp";
 runCommand "anvil-home-manager-smoke" { } ''
   touch "$out"
 ''

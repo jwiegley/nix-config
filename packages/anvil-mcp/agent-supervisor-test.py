@@ -300,6 +300,7 @@ class AgentSupervisorTests(unittest.TestCase):
         owner_start_identity: str | None = None,
         host: str = "hera",
         generation: str = TEST_GENERATION,
+        server_id: str = "anvil",
     ):
         if owner_pid is None:
             owner_pid = os.getpid()
@@ -333,6 +334,7 @@ class AgentSupervisorTests(unittest.TestCase):
             parent_guard="unused",
             python=sys.executable,
             runtime_dir=runtime_dir,
+            server_id=server_id,
             state_dir=state_dir,
         )
 
@@ -3640,12 +3642,14 @@ for line in sys.stdin:
             os.environ,
             {
                 "ALTERNATE_EDITOR": "/tmp/user-editor",
+                "ANVIL_MCP_READINESS_MODE": "injected-project-mode",
                 "ANVIL_DAEMON_SENTINEL": "preserved",
             },
         ):
             environment = SUPERVISOR.daemon_environment(args)
 
         self.assertNotIn("ALTERNATE_EDITOR", environment)
+        self.assertNotIn("ANVIL_MCP_READINESS_MODE", environment)
         self.assertEqual(environment["ANVIL_DAEMON_SENTINEL"], "preserved")
 
     def test_daemon_diagnostic_is_private_truncated_bounded_and_daemon_only(self):
@@ -3893,7 +3897,7 @@ for line in sys.stdin:
             SUPERVISOR.open_daemon_diagnostic(args.runtime_dir)
         self.assertEqual(outside.read_text(), "preserve hardlink target\n")
 
-    def test_socket_readiness_drops_alternate_editor(self):
+    def test_socket_readiness_requires_initialized_daemon(self):
         socket_path = self.root / "readiness.sock"
         completed = subprocess.CompletedProcess(
             args=["/emacsclient"],
@@ -3917,7 +3921,7 @@ for line in sys.stdin:
                 ) as run,
             ):
                 self.assertTrue(
-                    SUPERVISOR.safe_socket_ready(socket_path, "/emacsclient")
+                    SUPERVISOR.safe_socket_ready(socket_path, "/emacsclient", "anvil")
                 )
 
         self.assertEqual(
@@ -3929,9 +3933,18 @@ for line in sys.stdin:
                 "-s",
                 str(socket_path),
                 "-e",
-                "t",
+                "(and (fboundp 'anvil-headless--ready-p) "
+                '(anvil-headless--ready-p "anvil"))',
             ],
         )
+        self.assertEqual(
+            SUPERVISOR.daemon_ready_expression("emacs-eval"),
+            "(and (fboundp 'anvil-headless--ready-p) "
+            '(anvil-headless--ready-p "emacs-eval"))',
+        )
+        with self.assertRaises(SUPERVISOR.ConfigurationError):
+            SUPERVISOR.daemon_ready_expression("unknown")
+
         environment = run.call_args.kwargs["env"]
         self.assertNotIn("ALTERNATE_EDITOR", environment)
         self.assertEqual(
@@ -4073,6 +4086,7 @@ for line in sys.stdin:
             options["env"]["ANVIL_MCP_PARENT_GUARD_PYTHON"],
             args.python,
         )
+        self.assertEqual(options["env"]["ANVIL_MCP_READINESS_MODE"], "headless")
         self.assertTrue(options["env"]["ANVIL_EMACS_SOCKET"].endswith("/server"))
         self.assertEqual(
             options["env"]["ANVIL_EMACS_RUNTIME_DIR"],

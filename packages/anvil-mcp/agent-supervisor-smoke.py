@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import importlib.util
 import json
 import multiprocessing
@@ -13,6 +14,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import traceback
 
@@ -29,6 +31,13 @@ BRIDGE_CLOSE_BOUND_SECONDS = (
 )
 RPC_SCHEDULING_MARGIN_SECONDS = 10.0
 CLEANUP_RETRY_ATTEMPTS = 2
+try:
+    CLIENT_STARTUP_SECONDS = int(os.environ["ANVIL_MCP_CLIENT_STARTUP_SECONDS"])
+    CLIENT_TOOL_SECONDS = int(os.environ["ANVIL_MCP_CLIENT_TOOL_SECONDS"])
+except (KeyError, ValueError) as error:
+    raise RuntimeError("missing or invalid client timeout policy") from error
+if CLIENT_STARTUP_SECONDS <= 0 or CLIENT_TOOL_SECONDS <= 0:
+    raise RuntimeError("client timeouts must be positive")
 
 
 def load_supervisor(path: Path):
@@ -38,6 +47,27 @@ def load_supervisor(path: Path):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def strict_json_equal(actual: object, expected: object) -> bool:
+    """Compare decoded JSON without Python's bool/int equivalence."""
+    if type(actual) is not type(expected):
+        return False
+    if isinstance(expected, list):
+        return len(actual) == len(expected) and all(
+            strict_json_equal(left, right)
+            for left, right in zip(actual, expected, strict=True)
+        )
+    if isinstance(expected, dict):
+        return actual.keys() == expected.keys() and all(
+            strict_json_equal(actual[key], value) for key, value in expected.items()
+        )
+    return actual == expected
+
+
+def positive_json_int(value: object) -> bool:
+    """Return whether VALUE is a positive JSON integer, excluding booleans."""
+    return type(value) is int and value > 0
 
 
 def eventually(predicate, timeout: float = 30.0):
@@ -232,7 +262,7 @@ class BridgeProcess:
                     "version": "1",
                 },
             },
-            timeout=150,
+            timeout=CLIENT_STARTUP_SECONDS,
         )
         if "error" in response:
             raise AssertionError(f"initialize failed: {response}")
@@ -534,7 +564,7 @@ class ProxyBridge:
                     "version": "1",
                 },
             },
-            timeout=150,
+            timeout=CLIENT_STARTUP_SECONDS,
         )
         if "error" in response:
             raise AssertionError(f"initialize failed: {response}")
@@ -685,6 +715,7 @@ def validate_bridge_instance(
         or not isinstance(generation, str)
         or module.GENERATION_PATTERN.fullmatch(generation) is None
         or status.get("owner_start_identity") != bridge_identity
+        or type(status.get("lease_count")) is not int
         or status.get("lease_count") != 1
     ):
         raise AssertionError(f"invalid bridge lifecycle status: {status}")
@@ -736,6 +767,102 @@ def response_text(response: dict[str, object]) -> str:
 
 def eval_value(response: dict[str, object]):
     return json.loads(response_text(response))
+
+
+def assert_clean_launch_environment(
+    bridge: ProxyBridge, launch_directory: Path, state_dir: Path
+) -> None:
+    """Prove one per-agent daemon starts from the sanitized login baseline."""
+    expression = r"""
+(progn
+  (require 'json)
+  (json-serialize
+   (vector
+    (or (getenv "ANVIL_LAUNCH_SECRET") :false)
+    (or (getenv "ANVIL_LAUNCH_BASELINE") :false)
+    (or (executable-find "anvil-launch-contamination") :false)
+    (or (getenv "DIRENV_DIFF") :false)
+    anvil-headless--baseline-default-directory
+    default-directory
+    (if (local-variable-p 'process-environment) t :false)
+    (if (local-variable-p 'exec-path) t :false)
+    (or (executable-find "anvil-login-shell") :false)
+    (vector
+     (if (anvil-headless--ready-p "anvil") t :false)
+     (if (anvil-headless--ready-p "emacs-eval") t :false)
+     (if (anvil-headless--ready-p "unknown") t :false)))))
+""".strip()
+    encoded = eval_value(
+        bridge.call_tool("emacs-eval", {"expression": expression}, timeout=60)
+    )
+    if not isinstance(encoded, str):
+        raise AssertionError(f"per-agent launch snapshot was not JSON: {encoded!r}")
+    snapshot = json.loads(encoded)
+    expected_login = (Path.home() / "login-bin" / "anvil-login-shell").resolve()
+    if (
+        not isinstance(snapshot, list)
+        or len(snapshot) != 10
+        or not strict_json_equal(snapshot[:4], [False, "clean-baseline", False, False])
+        or not isinstance(snapshot[4], str)
+        or not Path(snapshot[4]).is_absolute()
+        or not Path(snapshot[4]).is_dir()
+        or Path(snapshot[4]).resolve() != state_dir.resolve()
+        or Path(snapshot[4]).resolve() == launch_directory.resolve()
+        or not isinstance(snapshot[5], str)
+        or Path(snapshot[5]).resolve() != launch_directory.resolve()
+        or not strict_json_equal(snapshot[6:8], [False, False])
+        or not isinstance(snapshot[8], str)
+        or Path(snapshot[8]).resolve() != expected_login
+        or not strict_json_equal(snapshot[9], [True, True, False])
+    ):
+        raise AssertionError(
+            f"per-agent daemon retained launch contamination: {snapshot!r}"
+        )
+
+
+def assert_clean_typed_launch_environment(bridge: ProxyBridge, state_dir: Path) -> None:
+    """Prove the direct typed registry receives the sanitized login baseline."""
+    command = (
+        "printf 'secret=%s\\nbaseline=%s\\ndirenv=%s\\n' "
+        '"${ANVIL_LAUNCH_SECRET-absent}" '
+        '"${ANVIL_LAUNCH_BASELINE-absent}" '
+        '"${DIRENV_DIFF-absent}"; '
+        "if command -v anvil-launch-contamination >/dev/null 2>&1; "
+        "then printf 'launch=present\\n'; "
+        "else printf 'launch=absent\\n'; fi; "
+        "printf 'login=%s\\n' \"$(command -v anvil-login-shell || true)\""
+    )
+    result = eval_value(
+        bridge.call_tool(
+            "shell-run",
+            {"cmd": command, "cwd": str(state_dir), "filter": ""},
+            timeout=60,
+        )
+    )
+    expected_login = Path.home() / "login-bin" / "anvil-login-shell"
+    output = result.get("compressed") if isinstance(result, dict) else None
+    truncated = result.get("truncated") if isinstance(result, dict) else None
+    lines = output.splitlines() if isinstance(output, str) else []
+    if (
+        not isinstance(result, dict)
+        or type(result.get("exit")) is not int
+        or result.get("exit") != 0
+        or result.get("stderr") != ""
+        or not (truncated is None or truncated is False)
+        or lines[:4]
+        != [
+            "secret=absent",
+            "baseline=clean-baseline",
+            "direnv=absent",
+            "launch=absent",
+        ]
+        or len(lines) != 5
+        or not lines[4].startswith("login=")
+        or Path(lines[4].removeprefix("login=")).resolve() != expected_login.resolve()
+    ):
+        raise AssertionError(
+            f"typed per-agent daemon retained launch contamination: {result!r}"
+        )
 
 
 def snapshot_home(home: Path) -> dict[str, tuple[int, int, int]]:
@@ -854,7 +981,7 @@ def worker_pids(bridge: ProxyBridge) -> list[int]:
     pids = json.loads(encoded)
     if not isinstance(pids, list) or len(pids) != 4:
         raise AssertionError(f"all four workers did not start: {pids!r}")
-    if not all(isinstance(pid, int) and pid > 1 for pid in pids):
+    if not all(type(pid) is int and pid > 1 for pid in pids):
         raise AssertionError(f"invalid worker PIDs: {pids!r}")
     return pids
 
@@ -966,8 +1093,9 @@ def verify_dispatch_deadline(
             "dispatched": True,
             "replayed": False,
         }
-        if not isinstance(data, dict) or any(
-            data.get(key) != value for key, value in expected_metadata.items()
+        if not isinstance(data, dict) or not strict_json_equal(
+            {key: data.get(key) for key in expected_metadata},
+            expected_metadata,
         ):
             raise AssertionError(
                 f"dispatch deadline returned unsafe metadata: {response}"
@@ -994,7 +1122,7 @@ def verify_dispatch_deadline(
         if (
             restarted["supervisor_pid"] != supervisor_pid
             or module.process_start_identity(supervisor_pid) != supervisor_identity
-            or restarted.get("restart_count", 0) < 1
+            or not positive_json_int(restarted.get("restart_count"))
             or not str(restarted.get("restart_reason", "")).startswith("daemon-exited:")
             or restarted.get("generation") != initial_status["generation"]
         ):
@@ -1009,7 +1137,7 @@ def verify_dispatch_deadline(
             bridge,
             "emacs-eval",
             {"expression": "(+ 40 2)"},
-            timeout=150,
+            timeout=CLIENT_STARTUP_SECONDS,
         )
         if eval_value(recovered) != 42:
             raise AssertionError(
@@ -1182,7 +1310,7 @@ def verify_readiness_crash_recovery(
         if not sentinel.is_file():
             raise AssertionError("readiness crash wrapper never ran")
         if (
-            status.get("restart_count", 0) < 1
+            not positive_json_int(status.get("restart_count"))
             or status.get("restart_reason") != "daemon-exited:70"
         ):
             raise AssertionError(
@@ -1190,6 +1318,88 @@ def verify_readiness_crash_recovery(
             )
         if eval_value(bridge.call_tool("emacs-eval", {"expression": "(+ 39 3)"})) != 42:
             raise AssertionError("same bridge failed after readiness crash")
+
+        runtime_dir = instance["runtime_dir"]
+        arm = runtime_dir / ".readiness-gate-arm"
+        started = runtime_dir / ".readiness-gate-started"
+        release = runtime_dir / ".readiness-gate-release"
+        nonce = runtime_dir / ".readiness-gate-nonce"
+        for marker in (arm, started, release, nonce):
+            marker.unlink(missing_ok=True)
+        arm.touch()
+        release_published = False
+        bridge_identity = module.process_start_identity(bridge.pid)
+        root_pid = status["daemon_pid"]
+        root_identity = module.process_start_identity(root_pid)
+        if bridge_identity is None or root_identity is None:
+            raise AssertionError("readiness-gate process identity unavailable")
+        try:
+            os.killpg(root_pid, signal.SIGKILL)
+            gated = eventually(
+                lambda: (
+                    (current := read_running_status(instance["status_path"]))
+                    and current["daemon_pid"] != root_pid
+                    and started.is_file()
+                    and instance["socket"].is_socket()
+                    and current
+                ),
+                timeout=CLIENT_STARTUP_SECONDS,
+            )
+            call_entered = threading.Event()
+            expression = (
+                f'(progn (write-region "once\\n" nil '
+                f"{json.dumps(str(nonce))} t 'silent) 42)"
+            )
+
+            def issue_gated_request() -> dict[str, object]:
+                call_entered.set()
+                return bridge.call_tool(
+                    "emacs-eval",
+                    {"expression": expression},
+                    timeout=CLIENT_STARTUP_SECONDS,
+                )
+
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(issue_gated_request)
+                if not call_entered.wait(timeout=5):
+                    raise AssertionError("gated request thread did not start")
+                try:
+                    time.sleep(0.75)
+                    if future.done():
+                        raise AssertionError(
+                            f"request escaped the final-readiness gate: {future.result()}"
+                        )
+                    if nonce.exists():
+                        raise AssertionError(
+                            "request reached the daemon before final readiness"
+                        )
+                finally:
+                    release.touch()
+                    release_published = True
+                gated_response = future.result(timeout=CLIENT_STARTUP_SECONDS)
+
+            if eval_value(gated_response) != 42:
+                raise AssertionError(
+                    f"same bridge failed after readiness gate: {gated_response}"
+                )
+            if nonce.read_text().splitlines() != ["once"]:
+                raise AssertionError("gated request was lost or replayed")
+            if module.process_start_identity(bridge.pid) != bridge_identity:
+                raise AssertionError("readiness recovery replaced the stdio bridge")
+            if (
+                gated["supervisor_pid"] != status["supervisor_pid"]
+                or not positive_json_int(gated.get("restart_count"))
+                or gated.get("generation") != status.get("generation")
+            ):
+                raise AssertionError(
+                    f"readiness-gated restart lost lifecycle state: {gated}"
+                )
+        finally:
+            if not release_published:
+                release.touch()
+            arm.unlink(missing_ok=True)
+            started.unlink(missing_ok=True)
+            release.unlink(missing_ok=True)
         bridge.close()
     finally:
         close_smoke_resources(bridges, owners)
@@ -1214,6 +1424,7 @@ def main() -> None:
     runtime_root = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"])
     state_root = Path(os.environ["ANVIL_EMACS_STATE_ROOT"])
     home = Path.home()
+    launch_directory = Path.cwd().resolve()
     verify_home_snapshot_detects_ephemeral_child()
     home_baseline = snapshot_home(home)
 
@@ -1292,11 +1503,11 @@ def main() -> None:
         for bridge in bridges:
             bridge.initialize()
         instances = {}
-        for name, bridge, host in (
-            ("main-typed", main_typed, HOST_ONE),
-            ("main-eval", main_eval, HOST_ONE),
-            ("other-agent", other_agent, HOST_ONE),
-            ("other-host", other_host, HOST_TWO),
+        for name, bridge, host, server_id in (
+            ("main-typed", main_typed, HOST_ONE, "anvil"),
+            ("main-eval", main_eval, HOST_ONE, "emacs-eval"),
+            ("other-agent", other_agent, HOST_ONE, "anvil"),
+            ("other-host", other_host, HOST_TWO, "anvil"),
         ):
             found = eventually(
                 lambda bridge=bridge, host=host: find_running_instance(
@@ -1313,6 +1524,22 @@ def main() -> None:
                 state_root,
                 module,
             )
+            try:
+                if server_id == "anvil":
+                    assert_clean_launch_environment(
+                        bridge,
+                        launch_directory,
+                        instances[name]["state_dir"],
+                    )
+                else:
+                    assert_clean_typed_launch_environment(
+                        bridge, instances[name]["state_dir"]
+                    )
+            except AssertionError as error:
+                raise AssertionError(
+                    f"{name} ({server_id}, {host}) "
+                    f"launch-environment check failed: {error}"
+                ) from error
 
         # Every launcher bridge is its own lifecycle domain.  This includes
         # the two siblings created by the exact same client process.
@@ -1341,7 +1568,7 @@ def main() -> None:
         large_response = main_typed.call_tool(
             "emacs-eval",
             {"expression": large_expression},
-            timeout=150,
+            timeout=CLIENT_TOOL_SECONDS,
         )
         if eval_value(large_response) != 524289:
             raise AssertionError(f"large per-agent request failed: {large_response}")
@@ -1404,7 +1631,7 @@ def main() -> None:
                 and current["daemon_pid"] != original_daemon_pid
                 and current
             ),
-            timeout=150,
+            timeout=CLIENT_STARTUP_SECONDS,
         )
         if module.process_start_identity(main_typed.pid) != bridge_identity:
             raise AssertionError("supervisor recovery replaced the bridge process")
@@ -1417,11 +1644,11 @@ def main() -> None:
             main_typed,
             "emacs-eval",
             {"expression": "(+ 21 21)"},
-            timeout=150,
+            timeout=CLIENT_STARTUP_SECONDS,
         )
         if eval_value(caretaker_probe) != 42:
             raise AssertionError(f"same stdio pipe did not recover: {caretaker_probe}")
-        if time.monotonic() - recovery_started >= 150:
+        if time.monotonic() - recovery_started >= CLIENT_STARTUP_SECONDS:
             raise AssertionError("same-pipe supervisor recovery exceeded its bound")
         for pid, identity in (
             (original_supervisor_pid, original_supervisor_identity),
@@ -1466,7 +1693,7 @@ def main() -> None:
         if restarted["supervisor_pid"] != supervisor_pid:
             raise AssertionError("root restart replaced the owning supervisor")
         if (
-            restarted.get("restart_count", 0) < 1
+            not positive_json_int(restarted.get("restart_count"))
             or not str(restarted.get("restart_reason", "")).startswith("daemon-exited:")
             or restarted.get("generation") != typed_instance["status"]["generation"]
         ):

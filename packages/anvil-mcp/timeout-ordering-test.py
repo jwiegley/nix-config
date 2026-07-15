@@ -65,6 +65,33 @@ def elisp_assignment(text: str, symbol: str) -> int:
     return int(match.group(1))
 
 
+def cleaner_timeout(path: Path) -> int:
+    """Return the fixed pre-entry direnv timeout from a generated wrapper."""
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    for node in tree.body:
+        if (
+            not isinstance(node, ast.Assign)
+            or len(node.targets) != 1
+            or not isinstance(node.targets[0], ast.Attribute)
+            or not isinstance(node.targets[0].value, ast.Name)
+            or node.targets[0].value.id != "sys"
+            or node.targets[0].attr != "argv"
+            or not isinstance(node.value, ast.List)
+        ):
+            continue
+        elements = node.value.elts
+        for index, element in enumerate(elements[:-1]):
+            if (
+                isinstance(element, ast.Constant)
+                and element.value == "--timeout-seconds"
+                and isinstance(elements[index + 1], ast.Constant)
+            ):
+                value = elements[index + 1].value
+                if isinstance(value, str) and value.isdigit() and int(value) > 0:
+                    return int(value)
+    raise AssertionError("generated cleaner wrapper has no fixed timeout")
+
+
 def policy_integer(policy: dict[str, object], name: str) -> int:
     """Return one positive integer timeout from POLICY."""
     value = policy.get(name)
@@ -76,9 +103,11 @@ def policy_integer(policy: dict[str, object], name: str) -> int:
 def assert_static_ordering(
     lock_launcher: Path,
     parent_guard: Path,
+    clean_wrapper: Path,
     stdio: Path,
     init_file: Path,
     shell_filter: Path,
+    environment_init: Path,
     default_nix: Path,
     policy: dict[str, object],
 ) -> None:
@@ -91,6 +120,8 @@ def assert_static_ordering(
         "clientStartupSeconds",
         "clientToolSeconds",
         "cooperativeSyncSeconds",
+        "direnvExportSeconds",
+        "direnvStatusSeconds",
         "emacsclientKillSeconds",
         "emacsclientProbeSeconds",
         "frameReadSeconds",
@@ -116,9 +147,17 @@ def assert_static_ordering(
         },
     )
     guard = python_constants(parent_guard, {"READY_TIMEOUT_SECONDS"})
+    cleaner_preentry_seconds = cleaner_timeout(clean_wrapper)
+    if cleaner_preentry_seconds != values["direnvStatusSeconds"]:
+        raise AssertionError(
+            "cleaner pre-entry timeout drift: "
+            f"policy={values['direnvStatusSeconds']} "
+            f"wrapper={cleaner_preentry_seconds}"
+        )
     stdio_text = stdio.read_text(encoding="utf-8")
     init_text = init_file.read_text(encoding="utf-8")
     shell_filter_text = shell_filter.read_text(encoding="utf-8")
+    environment_init_text = environment_init.read_text(encoding="utf-8")
     default_nix_text = default_nix.read_text(encoding="utf-8")
     generation_lines = [
         line
@@ -127,8 +166,13 @@ def assert_static_ordering(
     ]
     if len(generation_lines) != 1:
         raise AssertionError("dedicated generation definition is ambiguous")
-    if "${dedicatedParentGuardLauncher}" not in generation_lines[0]:
-        raise AssertionError("parent guard is absent from dedicated generation")
+    for component in (
+        "${dedicatedParentGuardLauncher}",
+        "${dedicatedCleanEnvironment}",
+        "${dedicatedDirenvNeutral}",
+    ):
+        if component not in generation_lines[0]:
+            raise AssertionError(f"{component} is absent from dedicated generation")
     actual = {
         "asyncSeconds": elisp_assignment(init_text, "anvil-eval-async-timeout"),
         "bridgeDispatchSeconds": shell_default(
@@ -141,6 +185,12 @@ def assert_static_ordering(
             stdio_text, "ANVIL_EMACSCLIENT_STARTUP_DISPATCH_TIMEOUT"
         ),
         "cooperativeSyncSeconds": elisp_assignment(init_text, "anvil-eval-timeout"),
+        "direnvExportSeconds": elisp_assignment(
+            environment_init_text, "anvil-headless--direnv-export-timeout"
+        ),
+        "direnvStatusSeconds": elisp_assignment(
+            environment_init_text, "anvil-headless--direnv-status-timeout"
+        ),
         "hostShellSeconds": elisp_assignment(init_text, "anvil-host--default-timeout"),
         "emacsclientKillSeconds": shell_default(
             stdio_text, "ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT"
@@ -216,11 +266,19 @@ def assert_static_ordering(
         < values["bridgeDispatchSeconds"]
     ):
         raise AssertionError(f"invalid synchronous timeout ladder: {values}")
+    direnv_host_envelope = (
+        2 * values["direnvStatusSeconds"]
+        + values["direnvExportSeconds"]
+        + values["hostShellSeconds"]
+    )
     if not (
         values["hostShellSeconds"] <= values["cooperativeSyncSeconds"]
-        and values["hostShellSeconds"] < values["watchdogDispatchSeconds"]
+        and direnv_host_envelope < values["watchdogDispatchSeconds"]
+        and values["watchdogDispatchSeconds"] < values["bridgeDispatchSeconds"]
     ):
-        raise AssertionError("host shell default can outlive the root watchdog")
+        raise AssertionError(
+            "direnv preparation plus host shell can outlive an outer watchdog"
+        )
     if not (
         values["hostShellSeconds"]
         == values["shellSyncSeconds"]
@@ -247,8 +305,9 @@ def assert_static_ordering(
             "parse, readiness, and dispatch can outlive the MCP client tool deadline"
         )
     startup_envelope = (
-        values["supervisorReadySeconds"]
-        + 2 * values["parentGuardReadySeconds"]
+        values["direnvStatusSeconds"]
+        + values["supervisorReadySeconds"]
+        + 4 * values["parentGuardReadySeconds"]
         + values["frameReadSeconds"]
         + 2 * values["emacsclientKillSeconds"]
         + values["requestParseSeconds"]
@@ -260,7 +319,7 @@ def assert_static_ordering(
     )
     if startup_envelope >= values["clientStartupSeconds"]:
         raise AssertionError(
-            "supervisor, parse, readiness, and initialize dispatch can outlive "
+            "cleaner, supervisor, parse, readiness, and initialize dispatch can outlive "
             "the MCP client startup deadline"
         )
     if values["bridgeStartupDispatchSeconds"] >= values["cooperativeSyncSeconds"]:
@@ -446,8 +505,9 @@ def assert_error(
         "replayed": False,
     }
     for key, value in expected.items():
-        if data.get(key) != value:
-            raise AssertionError(f"wrong {key} for {phase} timeout: {data.get(key)!r}")
+        actual = data.get(key)
+        if type(actual) is not type(value) or actual != value:
+            raise AssertionError(f"wrong {key} for {phase} timeout: {actual!r}")
 
 
 def assert_dynamic_ordering(stdio: Path, policy: dict[str, object]) -> None:
@@ -619,28 +679,32 @@ def assert_dynamic_ordering(stdio: Path, policy: dict[str, object]) -> None:
 
 
 def main() -> int:
-    if len(sys.argv) != 8:
+    if len(sys.argv) != 10:
         raise SystemExit(
             "usage: timeout-ordering-test.py "
-            "LOCK_LAUNCHER PARENT_GUARD ANVIL_STDIO INIT_FILE SHELL_FILTER "
-            "DEFAULT_NIX POLICY_JSON"
+            "LOCK_LAUNCHER PARENT_GUARD CLEAN_WRAPPER ANVIL_STDIO INIT_FILE "
+            "SHELL_FILTER ENVIRONMENT_INIT DEFAULT_NIX POLICY_JSON"
         )
     lock_launcher = Path(sys.argv[1]).resolve()
     parent_guard = Path(sys.argv[2]).resolve()
-    stdio = Path(sys.argv[3]).resolve()
-    init_file = Path(sys.argv[4]).resolve()
-    shell_filter = Path(sys.argv[5]).resolve()
-    default_nix = Path(sys.argv[6]).resolve()
-    policy = json.loads(sys.argv[7])
+    clean_wrapper = Path(sys.argv[3]).resolve()
+    stdio = Path(sys.argv[4]).resolve()
+    init_file = Path(sys.argv[5]).resolve()
+    shell_filter = Path(sys.argv[6]).resolve()
+    environment_init = Path(sys.argv[7]).resolve()
+    default_nix = Path(sys.argv[8]).resolve()
+    policy = json.loads(sys.argv[9])
     if not isinstance(policy, dict):
         raise AssertionError("timeout policy must be a JSON object")
 
     assert_static_ordering(
         lock_launcher,
         parent_guard,
+        clean_wrapper,
         stdio,
         init_file,
         shell_filter,
+        environment_init,
         default_nix,
         policy,
     )

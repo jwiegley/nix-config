@@ -51,13 +51,15 @@ let
   # watchdog, the stdio bridge, and isolated async children.  The packaged
   # regression binds every generated artifact back to these values.
   timeoutPolicy = {
-    asyncSeconds = 300;
-    bridgeDispatchSeconds = 150;
+    asyncSeconds = 600;
+    bridgeDispatchSeconds = 240;
     bridgeReadinessSeconds = 20;
     bridgeStartupDispatchSeconds = 20;
-    clientStartupSeconds = 210;
-    clientToolSeconds = 210;
+    clientStartupSeconds = 330;
+    clientToolSeconds = 330;
     cooperativeSyncSeconds = boundedSyncSeconds;
+    direnvExportSeconds = 60;
+    direnvStatusSeconds = 10;
     emacsclientKillSeconds = 1;
     emacsclientProbeSeconds = 5;
     frameReadSeconds = 10;
@@ -66,7 +68,7 @@ let
     requestParseSeconds = 10;
     shellSyncSeconds = boundedSyncSeconds;
     supervisorReadySeconds = 120;
-    watchdogDispatchSeconds = 135;
+    watchdogDispatchSeconds = 225;
     watchdogHeartbeatSeconds = 45;
     watchdogPulseSeconds = 1;
     watchdogStartupSeconds = 120;
@@ -139,6 +141,47 @@ let
       rev
       ;
   };
+
+  dedicatedDirenvNeutral = runCommand "anvil-direnv-neutral" { } ''
+    mkdir -p "$out"
+  '';
+
+  dedicatedCleanEnvironment = writeText "anvil-clean-environment.py" (
+    builtins.readFile ./clean-environment.py
+  );
+
+  dedicatedCleanWrapper =
+    {
+      name,
+      target,
+    }:
+    writeTextFile {
+      name = "${name}-clean-entrypoint";
+      destination = "/bin/${name}";
+      executable = true;
+      text =
+        builtins.concatStringsSep "\n" [
+          "#!${python3}/bin/python3 -I"
+          "import runpy"
+          "import sys"
+          ""
+          "cleaner = ${builtins.toJSON (toString dedicatedCleanEnvironment)}"
+          "sys.argv = ["
+          "    cleaner,"
+          "    \"--direnv\","
+          "    ${builtins.toJSON "${direnv}/bin/direnv"},"
+          "    \"--neutral\","
+          "    ${builtins.toJSON (toString dedicatedDirenvNeutral)},"
+          "    \"--timeout-seconds\","
+          "    ${builtins.toJSON (toString timeoutPolicy.direnvStatusSeconds)},"
+          "    \"--\","
+          "    ${builtins.toJSON target},"
+          "    *sys.argv[1:],"
+          "]"
+          "runpy.run_path(cleaner, run_name=\"__main__\")"
+        ]
+        + "\n";
+    };
 
   commonMeta = {
     description = "Cross-platform launcher for the Anvil MCP server";
@@ -497,7 +540,7 @@ let
     lib.remove dedicatedRuntimeEmacs dedicatedLockedRuntimeInputs
   );
 
-  dedicatedAnvil =
+  dedicatedAnvilBase =
     if stdenv.isDarwin then
       assert lib.assertMsg (
         emacsPackages != null && emacsPackages ? anvil
@@ -515,11 +558,24 @@ let
             mkdir -p "$out/share/emacs/site-lisp/tests"
             install -m644 \
               tests/anvil-eval-async-isolation-test.el \
+              tests/anvil-host-reentrancy-test.el \
               tests/anvil-offload-ownership-test.el \
               tests/anvil-server-unified-registry-test.el \
               "$out/share/emacs/site-lisp/tests"
           '';
         });
+
+  dedicatedAnvil = dedicatedAnvilBase.overrideAttrs (attrs: {
+    installPhase = attrs.installPhase + ''
+      substituteInPlace "$out/share/emacs/site-lisp/anvil-stdio.sh" \
+        --replace-fail \
+          'ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT:-150' \
+          'ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT:-${toString timeoutPolicy.bridgeDispatchSeconds}' \
+        --replace-fail \
+          '"$ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT" 150' \
+          '"$ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT" ${toString timeoutPolicy.bridgeDispatchSeconds}'
+    '';
+  });
 
   dedicatedAnvilIde = callPackage ../../overlays/emacs/builder.nix {
     emacs = dedicatedEmacs;
@@ -1031,186 +1087,540 @@ let
   '';
 
   dedicatedEnvironmentInit = writeText "anvil-headless-environment-init.el" ''
-    ;;; anvil-headless-environment-init.el --- Project environment support -*- lexical-binding: t; -*-
+        ;;; anvil-headless-environment-init.el --- Project environment support -*- lexical-binding: t; -*-
 
-    (require 'exec-path-from-shell)
-    (require 'direnv)
-    (setq direnv-always-show-summary nil)
+        (require 'exec-path-from-shell)
+        (require 'direnv)
+        (add-to-list 'load-path "${dedicatedAnvil}/share/emacs/site-lisp")
+        (require 'anvil-host)
+        (setq direnv-always-show-summary nil)
 
-    ;; These variables are defined by the packaged anvil-host source.  Bare
-    ;; declarations make the bindings below dynamic under lexical compilation.
-    (defvar anvil-host-child-process-environment)
-    (defvar anvil-host-child-exec-path)
-    (defvar anvil-host-child-shell-file-name)
-    (defvar anvil-host-child-shell-command-switch)
+        ;; These variables are defined by the packaged anvil-host source.  Bare
+        ;; declarations make the bindings below dynamic under lexical compilation.
+        (defvar anvil-host-child-process-environment)
+        (defvar anvil-host-child-exec-path)
+        (defvar anvil-host-child-shell-file-name)
+        (defvar anvil-host-child-shell-command-switch)
 
-    (defvar anvil-headless--baseline-process-environment nil)
-    (defvar anvil-headless--baseline-exec-path nil)
-    (defvar anvil-headless--baseline-shell-file-name nil)
-    (defvar anvil-headless--baseline-shell-command-switch nil)
+        (defvar anvil-headless--baseline-process-environment nil)
+        (defvar anvil-headless--baseline-exec-path nil)
+        (defvar anvil-headless--baseline-shell-file-name nil)
+        (defvar anvil-headless--baseline-shell-command-switch nil)
+        (defvar anvil-headless--baseline-default-directory nil)
+        (defvar anvil-headless--ready nil)
+        (defvar anvil-server--running)
+        (defvar anvil-server--tools)
 
-    (defconst anvil-headless--root-socket
-      (let ((socket (getenv "ANVIL_EMACS_SOCKET")))
-        (unless (and (stringp socket)
-                     (not (string= socket ""))
-                     (file-name-absolute-p socket))
-          (error "Anvil root socket environment is missing or invalid"))
-        (expand-file-name socket))
-      "Authoritative root socket, captured before project environments run.")
+        (defun anvil-headless--ready-p (&optional server-id)
+          "Return non-nil when SERVER-ID's complete tool surface is ready."
+          (and anvil-headless--ready
+               (boundp 'anvil-server--running)
+               anvil-server--running
+               (boundp 'anvil-server--tools)
+               (hash-table-p anvil-server--tools)
+               (let* ((server-id (or server-id "anvil"))
+                      (required-tool
+                       (cond
+                        ((equal server-id "anvil") "emacs-eval")
+                        ((equal server-id "emacs-eval") "file-read")))
+                      (registry
+                       (and required-tool
+                            (gethash server-id anvil-server--tools))))
+                 (and (hash-table-p registry)
+                      (gethash required-tool registry)
+                      t))))
 
-    (defconst anvil-headless--emacs-bin-directory
-      (file-name-as-directory "${dedicatedRuntimeEmacs}/bin")
-      "Directory containing the dedicated Emacs and emacsclient binaries.")
+        (defconst anvil-headless--root-socket
+          (let ((socket (getenv "ANVIL_EMACS_SOCKET")))
+            (unless (and (stringp socket)
+                         (not (string= socket ""))
+                         (file-name-absolute-p socket))
+              (error "Anvil root socket environment is missing or invalid"))
+            (expand-file-name socket))
+          "Authoritative root socket, captured before project environments run.")
 
-    (defconst anvil-headless--safe-client-bin-directory
-      (file-name-as-directory "${dedicatedSafeEmacsclient}/bin")
-      "Directory containing the same-root recursion guard.")
+        (defconst anvil-headless--emacs-bin-directory
+          (file-name-as-directory "${dedicatedRuntimeEmacs}/bin")
+          "Directory containing the dedicated Emacs and emacsclient binaries.")
 
-    (defconst anvil-headless--direnv-executable
-      "${direnv}/bin/direnv"
-      "Pinned direnv executable for the dedicated Anvil environment.")
+        (defconst anvil-headless--safe-client-bin-directory
+          (file-name-as-directory "${dedicatedSafeEmacsclient}/bin")
+          "Directory containing the same-root recursion guard.")
 
-    ;; Append only known packaged tools after login/project paths.  Do not
-    ;; resurrect arbitrary PATH entries inherited from launchd or a caller.
-    (defconst anvil-headless--required-exec-path
-      '(${lib.concatMapStringsSep "\n        " builtins.toJSON dedicatedRequiredExecPath}))
+        (defconst anvil-headless--direnv-executable
+          "${direnv}/bin/direnv"
+          "Pinned direnv executable for the dedicated Anvil environment.")
 
-    (defun anvil-headless--restore-required-exec-path (&rest _args)
-      "Restore packaged tools and immutable recursion-guard state."
-      (let* ((normalized
-              (delete-dups
-               (mapcar
-                (lambda (directory)
-                  (if (stringp directory)
-                      (directory-file-name directory)
-                    directory))
-                exec-path)))
-             (emacs-bin
-              (directory-file-name anvil-headless--emacs-bin-directory))
-             (safe-client-bin
-              (directory-file-name
-               anvil-headless--safe-client-bin-directory)))
-        (setq exec-path
-              (cons safe-client-bin
-                    (cons emacs-bin
-                          (delete safe-client-bin
-                                  (delete emacs-bin normalized))))))
-      (dolist (directory anvil-headless--required-exec-path)
-        (unless (member directory exec-path)
-          (setq exec-path (append exec-path (list directory)))))
-      (let ((path (mapconcat #'identity exec-path
-                             path-separator)))
-        (setenv "PATH" path)
-        (setenv "ANVIL_EMACS_SOCKET" anvil-headless--root-socket)
-        (when (boundp 'eshell-path-env)
-          (if (local-variable-p 'process-environment)
-              (setq-local eshell-path-env path)
-            (setq-default eshell-path-env path)))))
+        (defconst anvil-headless--direnv-status-timeout
+          ${toString timeoutPolicy.direnvStatusSeconds}
+          "Maximum seconds for one pinned direnv status query.")
 
-    ;; Workers inherit the root daemon's already-imported login environment.
-    ;; Avoid launching four more interactive login shells during staggered
-    ;; worker startup.
-    (unless (equal (getenv "ANVIL_EMACS_WORKER") "1")
-      (setq exec-path-from-shell-arguments '("-l"))
-      (exec-path-from-shell-initialize))
-    (anvil-headless--restore-required-exec-path)
-    (setq direnv--executable anvil-headless--direnv-executable)
+        (defconst anvil-headless--direnv-export-timeout
+          ${toString timeoutPolicy.direnvExportSeconds}
+          "Maximum seconds for one pinned direnv environment export.")
 
-    (defun anvil-headless--direnv-export-checked (directory)
-      "Run one pinned direnv export for DIRECTORY and reject every failure."
-      (let ((environment process-environment)
-            (stderr-tempfile (make-temp-file "anvil-direnv-stderr")))
-        (unwind-protect
-            (with-current-buffer (get-buffer-create direnv--output-buffer-name)
-              (erase-buffer)
-              (let* ((default-directory directory)
-                     (process-environment environment)
-                     (exit-code
-                      (call-process
-                       anvil-headless--direnv-executable nil
-                       `(t ,stderr-tempfile) nil "export" "json")))
+        (defun anvil-headless--run-process-responsive
+            (program arguments directory timeout)
+          "Run PROGRAM with ARGUMENTS in DIRECTORY within TIMEOUT seconds.
+    Return (EXIT STDOUT STDERR) without exposing output or project bindings.
+    This function prepares the environment consumed by anvil-host--run and must
+    therefore use the lower-level transaction helpers instead of recursing through
+    the direnv advice on that function."
+          (unless (and anvil-headless--baseline-process-environment
+                       anvil-headless--baseline-exec-path
+                       anvil-headless--baseline-default-directory)
+            (error "Anvil baseline environment is unavailable"))
+          (let* ((resources (anvil-host--resource-state))
+                 (outer-inhibit-quit inhibit-quit))
+            (when (aref resources 3)
+              (error "Anvil environment submission is already active"))
+            (let ((inhibit-quit t))
+              (aset resources 3 t)
+              (unwind-protect
+                  (let ((inhibit-quit outer-inhibit-quit))
+                    (anvil-headless--run-process-responsive-transaction
+                     program arguments directory timeout))
+                (aset resources 3 nil)))))
+
+        (defun anvil-headless--run-process-responsive-transaction
+            (program arguments directory timeout)
+          "Run one guarded environment subprocess transaction."
+          (anvil-host--resource-state)
+          (when (anvil-host--cleanup-active-p)
+            (error "Anvil host cleanup is already active"))
+          (unless (anvil-host--retired-empty-p)
+            (anvil-host--retry-retired-processes))
+          (when (or (anvil-host--cleanup-active-p)
+                    (not (anvil-host--retired-empty-p)))
+            (error "Anvil retained host cleanup has not converged"))
+          (anvil-host--retired-table)
+          (let* ((process-name
+                  (anvil-host--unique-process-name
+                   "anvil-environment-process-"))
+                 (stderr-name
+                  (anvil-host--unique-process-name
+                   "anvil-environment-stderr-"))
+                 (child-directory
+                  (file-name-as-directory (expand-file-name directory)))
+                 (child-environment
+                  (let ((process-environment
+                         (copy-sequence process-environment)))
+                    (setenv "ANVIL_HEADLESS_PARENT_PID"
+                            (number-to-string (emacs-pid)))
+                    (copy-sequence process-environment)))
+                 (child-exec-path (copy-sequence exec-path))
+                 stdout-chunks
+                 stderr-chunks
+                 (stdout-filter
+                  (lambda (_process chunk)
+                    (unwind-protect
+                        (push chunk stdout-chunks)
+                      (anvil-host--scrub-code-conversion-work-buffer))))
+                 (stderr-filter
+                  (lambda (_process chunk)
+                    (unwind-protect
+                        (push chunk stderr-chunks)
+                      (anvil-host--scrub-code-conversion-work-buffer))))
+                 stderr-constructor-started-p
+                 stderr-constructor-before
+                 stderr-constructor-processes
+                 stderr-constructor-complete-p
+                 stderr-constructor-invalid-p
+                 main-constructor-started-p
+                 main-constructor-before
+                 main-constructor-processes
+                 main-constructor-complete-p
+                 main-constructor-invalid-p
+                 process
+                 stderr-process)
+            (unwind-protect
+                (progn
+                  ;; A pipe process needs a buffer anchor at construction time.
+                  ;; The captured constructor cannot yield through runtime advice;
+                  ;; detach the anchor immediately and keep bytes only in lexical
+                  ;; filter state.
+                  (let ((default-directory
+                         anvil-headless--baseline-default-directory)
+                        (process-environment
+                         (copy-sequence
+                          anvil-headless--baseline-process-environment))
+                        (exec-path
+                         (copy-sequence anvil-headless--baseline-exec-path))
+                        (shell-file-name
+                         anvil-headless--baseline-shell-file-name)
+                        (shell-command-switch
+                         anvil-headless--baseline-shell-command-switch)
+                        (anvil-host-child-process-environment nil)
+                        (anvil-host-child-exec-path nil)
+                        (anvil-host-child-shell-file-name nil)
+                        (anvil-host-child-shell-command-switch nil))
+                    (setq stderr-constructor-before
+                          (funcall anvil-host--process-list-primitive)
+                          stderr-constructor-started-p t)
+                    (setq stderr-process
+                          (funcall anvil-host--make-pipe-process-primitive
+                           :name stderr-name
+                           :buffer (current-buffer)
+                           :coding 'binary
+                           :noquery t
+                           :sentinel #'ignore
+                           :filter stderr-filter))
+                    (setq stderr-constructor-processes
+                          (anvil-host--new-processes-since
+                           stderr-constructor-before)
+                          stderr-constructor-complete-p t))
+                  (let ((valid
+                         (and
+                          (processp stderr-process)
+                          (not (memq stderr-process
+                                     stderr-constructor-before))
+                          (eq
+                           (funcall anvil-host--process-filter-primitive
+                                    stderr-process)
+                           stderr-filter))))
+                    (setq stderr-constructor-invalid-p (not valid))
+                    (anvil-host--detach-constructor-processes
+                     (if valid
+                         (cl-remove-if-not
+                          (lambda (candidate)
+                            (anvil-host--process-matches-constructor-p
+                             candidate stderr-name stderr-filter))
+                          stderr-constructor-processes)
+                       stderr-constructor-processes))
+                    (unless valid
+                      (if (memq stderr-process stderr-constructor-before)
+                          (error
+                           "Anvil pipe constructor returned a preexisting process")
+                        (error
+                         "Anvil pipe constructor returned an invalid process"))))
+                  ;; The parent guard owns the complete direnv process group.
+                  ;; Project-specific bindings exist only for this captured spawn.
+                  (let ((default-directory child-directory)
+                        (process-environment child-environment)
+                        (exec-path child-exec-path)
+                        (shell-file-name
+                         anvil-headless--baseline-shell-file-name)
+                        (shell-command-switch
+                         anvil-headless--baseline-shell-command-switch))
+                    (setq main-constructor-before
+                          (funcall anvil-host--process-list-primitive)
+                          main-constructor-started-p t)
+                    (setq process
+                          (funcall anvil-host--make-process-primitive
+                           :name process-name
+                           :buffer nil
+                           :stderr stderr-process
+                           :filter stdout-filter
+                           :command
+                           (append
+                            (list "${python3}/bin/python3" "-I" "-B"
+                                  "${dedicatedParentGuardLauncher}"
+                                  "group" program)
+                            arguments)
+                           :coding '(binary . binary)
+                           :connection-type 'pipe
+                           :noquery t
+                           :sentinel #'ignore))
+                    (setq main-constructor-processes
+                          (anvil-host--new-processes-since
+                           main-constructor-before)
+                          main-constructor-complete-p t))
+                  (let ((valid
+                         (and
+                          (processp process)
+                          (not (memq process main-constructor-before))
+                          (eq
+                           (funcall anvil-host--process-filter-primitive
+                                    process)
+                           stdout-filter))))
+                    (setq main-constructor-invalid-p (not valid))
+                    (anvil-host--detach-constructor-processes
+                     (if valid
+                         (cl-remove-if-not
+                          (lambda (candidate)
+                            (anvil-host--process-matches-constructor-p
+                             candidate process-name stdout-filter))
+                          main-constructor-processes)
+                       main-constructor-processes))
+                    (unless valid
+                      (cond
+                       ((not (processp process))
+                        (error "Anvil environment process did not start"))
+                       ((memq process main-constructor-before)
+                        (error
+                         "Anvil process constructor returned a preexisting process"))
+                       (t
+                        (error
+                         "Anvil process constructor returned an invalid process")))))
+                  ;; Every event-loop yield runs under the immutable daemon
+                  ;; baseline, so unrelated callbacks cannot inherit a project's
+                  ;; direnv state.
+                  (let ((default-directory
+                         anvil-headless--baseline-default-directory)
+                        (process-environment
+                         (copy-sequence
+                          anvil-headless--baseline-process-environment))
+                        (exec-path
+                         (copy-sequence anvil-headless--baseline-exec-path))
+                        (shell-file-name
+                         anvil-headless--baseline-shell-file-name)
+                        (shell-command-switch
+                         anvil-headless--baseline-shell-command-switch)
+                        (anvil-host-child-process-environment nil)
+                        (anvil-host-child-exec-path nil)
+                        (anvil-host-child-shell-file-name nil)
+                        (anvil-host-child-shell-command-switch nil))
+                    (condition-case error
+                        (funcall
+                         anvil-host--process-send-eof-primitive process)
+                      (error
+                       (when (process-live-p process)
+                         (signal (car error) (cdr error)))))
+                    ;; The immutable baseline bindings above remain in
+                    ;; force while all process output is serviced.  This keeps
+                    ;; Emacs server sockets and foreign helper filters responsive
+                    ;; without exposing the child environment to callbacks.
+                    (let ((deadline (+ (float-time) timeout)))
+                      (while (and (process-live-p process)
+                                  (< (float-time) deadline))
+                        (funcall
+                         anvil-host--accept-process-output-primitive
+                         process 0.05 nil nil)
+                        (when (and (processp stderr-process)
+                                   (process-live-p stderr-process))
+                          (funcall
+                           anvil-host--accept-process-output-primitive
+                           stderr-process 0 nil nil)))
+                      (when (process-live-p process)
+                        (error
+                         "Anvil environment process timed out after %ss"
+                         timeout)))
+                    (when (and (processp stderr-process)
+                               (process-live-p stderr-process))
+                      (let ((deadline (+ (float-time) 0.25)))
+                        (while (and (process-live-p stderr-process)
+                                    (< (float-time) deadline))
+                          (funcall
+                           anvil-host--accept-process-output-primitive
+                           stderr-process 0.02 nil nil)
+                          (funcall
+                           anvil-host--accept-process-output-primitive
+                           process 0 nil nil))))
+                    (funcall anvil-host--accept-process-output-primitive
+                             process 0.01 nil nil))
+                  (list
+                   (process-exit-status process)
+                   (anvil-host--decode-output
+                    (apply #'concat (nreverse stdout-chunks))
+                    'utf-8-unix)
+                   (anvil-host--decode-output
+                    (apply #'concat (nreverse stderr-chunks))
+                    'utf-8-unix)))
+              ;; Recover exact post-snapshot children on every exit, including
+              ;; constructor throws and queued quits, before releasing the public
+              ;; submission guard.
+              (let ((inhibit-quit t)
+                    (default-directory
+                     anvil-headless--baseline-default-directory)
+                    (process-environment
+                     (copy-sequence
+                      anvil-headless--baseline-process-environment))
+                    (exec-path
+                     (copy-sequence anvil-headless--baseline-exec-path))
+                    (shell-file-name
+                     anvil-headless--baseline-shell-file-name)
+                    (shell-command-switch
+                     anvil-headless--baseline-shell-command-switch)
+                    (anvil-host-child-process-environment nil)
+                    (anvil-host-child-exec-path nil)
+                    (anvil-host-child-shell-file-name nil)
+                    (anvil-host-child-shell-command-switch nil))
+                (let* ((processes
+                        (anvil-host--transaction-processes
+                         process process-name stdout-filter
+                         main-constructor-started-p main-constructor-before
+                         main-constructor-complete-p
+                         main-constructor-invalid-p
+                         main-constructor-processes))
+                       (stderr-processes
+                        (anvil-host--transaction-processes
+                         stderr-process stderr-name stderr-filter
+                         stderr-constructor-started-p
+                         stderr-constructor-before
+                         stderr-constructor-complete-p
+                         stderr-constructor-invalid-p
+                         stderr-constructor-processes))
+                       (metadata
+                        (anvil-host--candidate-metadata
+                         processes stderr-processes)))
+                  (anvil-host--retire-resources metadata))))))
+        ;; Append only known packaged tools after login/project paths.  Do not
+        ;; resurrect arbitrary PATH entries inherited from launchd or a caller.
+        (defconst anvil-headless--required-exec-path
+          '(${lib.concatMapStringsSep "\n        " builtins.toJSON dedicatedRequiredExecPath}))
+
+        (defun anvil-headless--restore-required-exec-path (&rest _args)
+          "Restore packaged tools and immutable recursion-guard state."
+          (let* ((normalized
+                  (delete-dups
+                   (mapcar
+                    (lambda (directory)
+                      (if (stringp directory)
+                          (directory-file-name directory)
+                        directory))
+                    exec-path)))
+                 (emacs-bin
+                  (directory-file-name anvil-headless--emacs-bin-directory))
+                 (safe-client-bin
+                  (directory-file-name
+                   anvil-headless--safe-client-bin-directory)))
+            (setq exec-path
+                  (cons safe-client-bin
+                        (cons emacs-bin
+                              (delete safe-client-bin
+                                      (delete emacs-bin normalized))))))
+          (dolist (directory anvil-headless--required-exec-path)
+            (unless (member directory exec-path)
+              (setq exec-path (append exec-path (list directory)))))
+          (let ((path (mapconcat #'identity exec-path
+                                 path-separator)))
+            (setenv "PATH" path)
+            (setenv "ANVIL_EMACS_SOCKET" anvil-headless--root-socket)
+            (when (boundp 'eshell-path-env)
+              (if (local-variable-p 'process-environment)
+                  (setq-local eshell-path-env path)
+                (setq-default eshell-path-env path)))))
+
+        ;; Workers inherit the root daemon's already-imported login environment.
+        ;; Avoid launching four more interactive login shells during staggered
+        ;; worker startup.
+        (unless (equal (getenv "ANVIL_EMACS_WORKER") "1")
+          (setq exec-path-from-shell-arguments '("-l"))
+          (exec-path-from-shell-initialize))
+        (anvil-headless--restore-required-exec-path)
+        (setq direnv--executable anvil-headless--direnv-executable)
+
+        (defun anvil-headless--direnv-export-checked (directory)
+          "Run one pinned direnv export for DIRECTORY and reject every failure."
+          (let* ((result
+                  (anvil-headless--run-process-responsive
+                   anvil-headless--direnv-executable '("export" "json")
+                   directory anvil-headless--direnv-export-timeout))
+                 (exit-code (nth 0 result))
+                 (stdout (nth 1 result)))
+            (unless (and (integerp exit-code) (zerop exit-code))
+              ;; Do not copy stderr into the error: envrc output may contain
+              ;; project secrets.  The caller needs only a fail-closed result.
+              (error "direnv export failed"))
+            ;; Parse directly from the lexical string.  In particular, never copy
+            ;; the complete project environment into direnv's persistent output
+            ;; buffer where a reentrant MCP callback could inspect it.
+            (let ((document
+                   (json-parse-string
+                    stdout
+                    :object-type 'hash-table
+                    :array-type 'list
+                    :null-object nil
+                    :false-object nil))
+                  environment)
+              (unless (hash-table-p document)
+                (error "direnv export returned an invalid environment"))
+              (maphash
+               (lambda (name value)
+                 (unless (and (stringp name)
+                              (or (null value) (stringp value)))
+                   (error "direnv export returned an invalid environment"))
+                 (push (cons name value) environment))
+               document)
+              (nreverse environment))))
+
+        (advice-add 'direnv--export
+                    :override #'anvil-headless--direnv-export-checked)
+
+        (defun anvil-headless--guard-direnv-update (original &rest args)
+          "Run ORIGINAL and restore immutable guard controls even on failure."
+          (unwind-protect
+              (apply original args)
+            (anvil-headless--restore-required-exec-path)))
+
+        (advice-add 'direnv-update-directory-environment
+                    :around #'anvil-headless--guard-direnv-update)
+
+        (defconst anvil-headless--direnv-bookkeeping-variables
+          '("DIRENV_DIFF" "DIRENV_DIR" "DIRENV_FILE" "DIRENV_WATCHES"
+            "DIRENV_DUMP_FILE_PATH"))
+
+        (defun anvil-headless--environment-with (environment name value)
+          "Return a copy of ENVIRONMENT with NAME set to VALUE."
+          (let ((process-environment (copy-sequence environment)))
+            (setenv name value)
+            process-environment))
+
+        (defun anvil-headless--snapshot-baseline-environment ()
+          "Freeze the cleaner-restored login environment before any request."
+          (let ((environment (copy-sequence process-environment))
+                (baseline-exec-path (copy-sequence exec-path)))
+            (setq environment
+                  (anvil-headless--environment-with
+                   environment "ANVIL_EMACS_SOCKET"
+                   anvil-headless--root-socket))
+            (dolist (name
+                     (append
+                      '("ANVIL_HEADLESS_PARENT_PID"
+                        "ANVIL_HEADLESS_REAL_SHELL")
+                      anvil-headless--direnv-bookkeeping-variables))
+              (setq environment
+                    (anvil-headless--environment-with
+                     environment name nil)))
+            (setq anvil-headless--baseline-process-environment environment
+                  anvil-headless--baseline-exec-path baseline-exec-path
+                  anvil-headless--baseline-shell-file-name shell-file-name
+                  anvil-headless--baseline-shell-command-switch
+                  shell-command-switch
+                  anvil-headless--baseline-default-directory
+                  (file-name-as-directory
+                   (file-truename (expand-file-name default-directory))))
+            ;; A request evaluated in a buffer without local bindings must see the
+            ;; same immutable baseline as new buffers, workers, and offload children.
+            (set-default 'process-environment (copy-sequence environment))
+            (set-default 'exec-path (copy-sequence baseline-exec-path))
+            (kill-local-variable 'process-environment)
+            (kill-local-variable 'exec-path))
+          (unless (and (listp anvil-headless--baseline-process-environment)
+                       (listp anvil-headless--baseline-exec-path)
+                       (stringp anvil-headless--baseline-shell-file-name)
+                       (stringp anvil-headless--baseline-shell-command-switch)
+                       (stringp anvil-headless--baseline-default-directory)
+                       (file-directory-p
+                        anvil-headless--baseline-default-directory))
+            (error "Anvil could not snapshot its baseline environment")))
+
+        (defun anvil-headless--strip-direnv-bookkeeping ()
+          "Remove direnv's internal state from the current process environment."
+          (dolist (name anvil-headless--direnv-bookkeeping-variables)
+            (setenv name nil)))
+
+        (defun anvil-headless--canonical-direnv-directory (directory)
+          "Return DIRECTORY in one stable, physical directory form."
+          (file-name-as-directory
+           (file-truename (expand-file-name directory))))
+
+        (defun anvil-headless--direnv-allowed-p
+            (directory &optional fail-on-error)
+          "Return non-nil only when DIRECTORY has an explicitly allowed envrc.
+    When FAIL-ON-ERROR is non-nil, signal a generic error if pinned direnv status
+    cannot complete or return valid JSON."
+          (condition-case nil
+              (let* ((result
+                      (anvil-headless--run-process-responsive
+                       anvil-headless--direnv-executable '("status" "--json")
+                       directory anvil-headless--direnv-status-timeout))
+                     (exit-code (nth 0 result)))
                 (unless (and (integerp exit-code) (zerop exit-code))
-                  ;; Do not copy stderr into the error: envrc output may
-                  ;; contain project secrets.  The caller needs only a
-                  ;; fail-closed result.
-                  (error "direnv export failed"))
-                (unless (zerop (buffer-size))
-                  (goto-char (point-min))
-                  (let ((json-key-type 'string)
-                        (json-object-type 'alist))
-                    (prog1 (json-read-object)
-                      (skip-chars-forward " \t\r\n")
-                      (unless (eobp)
-                        (error "direnv export returned trailing output")))))))
-          (delete-file stderr-tempfile))))
-
-    (advice-add 'direnv--export
-                :override #'anvil-headless--direnv-export-checked)
-
-    (defun anvil-headless--guard-direnv-update (original &rest args)
-      "Run ORIGINAL and restore immutable guard controls even on failure."
-      (unwind-protect
-          (apply original args)
-        (anvil-headless--restore-required-exec-path)))
-
-    (advice-add 'direnv-update-directory-environment
-                :around #'anvil-headless--guard-direnv-update)
-
-    (defconst anvil-headless--direnv-bookkeeping-variables
-      '("DIRENV_DIFF" "DIRENV_DIR" "DIRENV_FILE" "DIRENV_WATCHES"))
-
-    (defun anvil-headless--environment-with (environment name value)
-      "Return a copy of ENVIRONMENT with NAME set to VALUE."
-      (let ((process-environment (copy-sequence environment)))
-        (setenv name value)
-        process-environment))
-
-    (defun anvil-headless--snapshot-baseline-environment ()
-      "Freeze this daemon's imported login environment before any request."
-      (let ((environment (copy-sequence process-environment)))
-        (setq environment
-              (anvil-headless--environment-with
-               environment "ANVIL_EMACS_SOCKET"
-               anvil-headless--root-socket))
-        (dolist (name
-                 (append
-                  '("ANVIL_HEADLESS_PARENT_PID"
-                    "ANVIL_HEADLESS_REAL_SHELL")
-                  anvil-headless--direnv-bookkeeping-variables))
-          (setq environment
-                (anvil-headless--environment-with
-                 environment name nil)))
-        (setq anvil-headless--baseline-process-environment environment
-              anvil-headless--baseline-exec-path (copy-sequence exec-path)
-              anvil-headless--baseline-shell-file-name shell-file-name
-              anvil-headless--baseline-shell-command-switch
-              shell-command-switch))
-      (unless (and (listp anvil-headless--baseline-process-environment)
-                   (listp anvil-headless--baseline-exec-path)
-                   (stringp anvil-headless--baseline-shell-file-name)
-                   (stringp anvil-headless--baseline-shell-command-switch))
-        (error "Anvil could not snapshot its baseline environment")))
-
-    (defun anvil-headless--strip-direnv-bookkeeping ()
-      "Remove direnv's internal state from the current process environment."
-      (dolist (name anvil-headless--direnv-bookkeeping-variables)
-        (setenv name nil)))
-
-    (defun anvil-headless--direnv-allowed-p (directory)
-      "Return non-nil only when DIRECTORY has an explicitly allowed envrc."
-      (condition-case nil
-          (with-temp-buffer
-            (let ((default-directory
-                   (file-name-as-directory (expand-file-name directory)))
-                  (coding-system-for-read 'utf-8-unix))
-              (when
-                  (zerop
-                   (call-process
-                    anvil-headless--direnv-executable nil (list t nil) nil
-                    "status" "--json"))
+                  (error "direnv status failed"))
                 (let* ((document
                         (json-parse-string
-                         (buffer-string)
+                         (nth 1 result)
                          :object-type 'hash-table
                          :array-type 'list
                          :null-object nil
@@ -1220,144 +1630,188 @@ let
                        (found (and (hash-table-p state)
                                    (gethash "foundRC" state))))
                   (and (hash-table-p found)
-                       (eql (gethash "allowed" found) 0))))))
-        (error nil)))
+                       (eql (gethash "allowed" found) 0))))
+            (error
+             (when fail-on-error
+               (error "direnv status failed"))
+             nil)))
 
-    (defun anvil-headless--restore-direnv-baseline
-        (environment executable-path active-directory)
-      "Restore pre-update ENVIRONMENT, EXECUTABLE-PATH, and ACTIVE-DIRECTORY."
-      (setq-local process-environment environment)
-      (setq-local exec-path executable-path)
-      (setq-local direnv--active-directory active-directory)
-      (anvil-headless--strip-direnv-bookkeeping)
-      nil)
+        (defun anvil-headless--restore-direnv-baseline
+            (environment executable-path active-directory)
+          "Restore pre-update ENVIRONMENT, EXECUTABLE-PATH, and ACTIVE-DIRECTORY."
+          (setq-local process-environment environment)
+          (setq-local exec-path executable-path)
+          (setq-local direnv--active-directory active-directory)
+          (anvil-headless--strip-direnv-bookkeeping)
+          nil)
 
-    (defun anvil-headless--restore-immutable-direnv-baseline ()
-      "Restore this buffer to the daemon's immutable login environment."
-      (unless (and anvil-headless--baseline-process-environment
-                   anvil-headless--baseline-exec-path)
-        (error "Anvil baseline environment is unavailable"))
-      (anvil-headless--restore-direnv-baseline
-       (copy-sequence anvil-headless--baseline-process-environment)
-       (copy-sequence anvil-headless--baseline-exec-path)
-       nil))
-
-    (defun anvil-headless--apply-direnv-if-allowed
-        (directory &optional fail-on-export-error)
-      "Apply DIRECTORY's envrc only while its pinned status remains allowed."
-      (if (not (anvil-headless--direnv-allowed-p directory))
-          (anvil-headless--restore-immutable-direnv-baseline)
-        (condition-case nil
-            (progn
-              (let ((inhibit-message t)
-                    (message-log-max nil)
-                    (direnv-always-show-summary nil))
-                (direnv-update-directory-environment directory))
-              ;; Close the allow-hash race: if status changed while export
-              ;; ran, discard the entire update rather than only its marker.
-              (if (anvil-headless--direnv-allowed-p directory)
-                  t
-                (anvil-headless--restore-immutable-direnv-baseline)
-                (when fail-on-export-error
-                  (error "Allowed direnv environment changed during export"))
-                nil))
-          (error
-           (anvil-headless--restore-immutable-direnv-baseline)
-           (when fail-on-export-error
-             (error "Allowed direnv environment failed to load"))
-           nil))))
-
-    (defun anvil-headless--direnv-update-current-buffer ()
-      "Give a visited local file its own allowed direnv environment."
-      (when-let ((directory (direnv--directory)))
-        (unless (file-remote-p directory)
+        (defun anvil-headless--restore-immutable-direnv-baseline ()
+          "Restore this buffer to the daemon's immutable login environment."
           (unless (and anvil-headless--baseline-process-environment
                        anvil-headless--baseline-exec-path)
             (error "Anvil baseline environment is unavailable"))
-          (unless (local-variable-p 'process-environment)
-            (setq-local process-environment
-                        (copy-sequence
-                         anvil-headless--baseline-process-environment)))
-          (unless (local-variable-p 'exec-path)
-            (setq-local exec-path
-                        (copy-sequence
-                         anvil-headless--baseline-exec-path)))
-          (unless (local-variable-p 'direnv--active-directory)
-            (setq-local direnv--active-directory nil))
-          (if (equal direnv--active-directory directory)
-              ;; Recheck an already-loaded buffer: a newly blocked envrc must
-              ;; lose both user variables and direnv bookkeeping immediately.
-              (unless (anvil-headless--direnv-allowed-p directory)
-                (anvil-headless--restore-immutable-direnv-baseline))
-            (anvil-headless--apply-direnv-if-allowed directory)))))
+          (anvil-headless--restore-direnv-baseline
+           (copy-sequence anvil-headless--baseline-process-environment)
+           (copy-sequence anvil-headless--baseline-exec-path)
+           nil))
 
-    ;; `change-major-mode-after-body-hook' runs before the mode's own hook,
-    ;; so Eglot, Flycheck, and similar mode-hook clients see the project env.
-    ;; Refresh again before file-local variables and after visiting as guards
-    ;; against modes that change `default-directory'.
-    (add-hook 'change-major-mode-after-body-hook
-              #'anvil-headless--direnv-update-current-buffer)
-    (add-hook 'before-hack-local-variables-hook
-              #'anvil-headless--direnv-update-current-buffer)
-    (add-hook 'find-file-hook
-              #'anvil-headless--direnv-update-current-buffer)
+        (defun anvil-headless--apply-direnv-if-allowed
+            (directory &optional fail-on-export-error)
+          "Apply DIRECTORY's envrc only while its pinned status remains allowed."
+          (let (committed)
+            (unwind-protect
+                (condition-case nil
+                    (if (not (anvil-headless--direnv-allowed-p
+                              directory fail-on-export-error))
+                        nil
+                      (let ((inhibit-message t)
+                            (message-log-max nil)
+                            (direnv-always-show-summary nil))
+                        (direnv-update-directory-environment directory))
+                      ;; Close the allow-hash race.  No project environment is
+                      ;; committed until the second pinned status succeeds.
+                      (if (anvil-headless--direnv-allowed-p
+                           directory fail-on-export-error)
+                          (progn
+                            (setq committed t)
+                            t)
+                        (when fail-on-export-error
+                          (error
+                           "Allowed direnv environment changed during export"))
+                        nil))
+                  (error
+                   (when fail-on-export-error
+                     (error "Allowed direnv environment failed to load"))
+                   nil))
+              ;; The initial status, export, and final status form one transaction.
+              ;; Error, quit, and tagged exits all restore the immutable baseline
+              ;; while the original nonlocal exit remains in flight.
+              (unless committed
+                (anvil-headless--restore-immutable-direnv-baseline)))))
 
-    (defun anvil-headless--direnv-around-host-run
-        (original command coding cwd timeout)
-      "Run ORIGINAL with a baseline-derived, allowed child environment."
-      (unless (and anvil-headless--baseline-process-environment
-                   anvil-headless--baseline-exec-path)
-        (error "Anvil baseline environment is unavailable"))
-      (let ((real-shell anvil-headless--baseline-shell-file-name)
-            (child-process-environment
-             (copy-sequence
-              anvil-headless--baseline-process-environment))
-            (child-exec-path
-             (copy-sequence anvil-headless--baseline-exec-path)))
-        (when (and cwd
-                   (not (file-remote-p cwd))
-                   (file-directory-p (expand-file-name cwd)))
-          (with-temp-buffer
-            (setq default-directory
-                  (file-name-as-directory
-                   (file-truename (expand-file-name cwd))))
-            (setq-local process-environment child-process-environment)
-            (setq-local exec-path child-exec-path)
-            (setq-local direnv--active-directory nil)
-            (anvil-headless--apply-direnv-if-allowed default-directory t)
-            (anvil-headless--restore-required-exec-path)
+        (defun anvil-headless--retain-active-direnv-if-allowed (directory)
+          "Keep the active env for DIRECTORY only after a fresh allowed status."
+          (let (verified)
+            (unwind-protect
+                (when (anvil-headless--direnv-allowed-p directory)
+                  (setq verified t))
+              (unless verified
+                (anvil-headless--restore-immutable-direnv-baseline)))
+            verified))
+
+        (defun anvil-headless--direnv-update-current-buffer ()
+          "Keep only a freshly verified local direnv environment in this buffer."
+          (unless (and anvil-headless--baseline-process-environment
+                       anvil-headless--baseline-exec-path)
+            (error "Anvil baseline environment is unavailable"))
+          (let (committed)
+            (unwind-protect
+                (let ((directory (direnv--directory)))
+                  (when (and directory (not (file-remote-p directory)))
+                    ;; Darwin exposes the same path through /tmp and /private/tmp.
+                    ;; Canonicalize before comparing with direnv's retained state
+                    ;; so repeated visit hooks do not export the envrc twice.
+                    (setq directory
+                          (anvil-headless--canonical-direnv-directory directory))
+                    (unless (local-variable-p 'process-environment)
+                      (setq-local process-environment
+                                  (copy-sequence
+                                   anvil-headless--baseline-process-environment)))
+                    (unless (local-variable-p 'exec-path)
+                      (setq-local exec-path
+                                  (copy-sequence
+                                   anvil-headless--baseline-exec-path)))
+                    (unless (local-variable-p 'direnv--active-directory)
+                      (setq-local direnv--active-directory nil))
+                    (when
+                        (if (equal direnv--active-directory directory)
+                            ;; Recheck an already-loaded buffer: a newly blocked
+                            ;; envrc or nonlocal status exit loses project state.
+                            (anvil-headless--retain-active-direnv-if-allowed
+                             directory)
+                          (anvil-headless--apply-direnv-if-allowed directory))
+                      (setq committed t))))
+              ;; Missing/remote discovery and every nonlocal exit fail closed.
+              (unless committed
+                (anvil-headless--restore-immutable-direnv-baseline)))
+            committed))
+
+        (defun anvil-headless--direnv-update-before-mode-hook ()
+          "Prepare the project environment before the real major-mode hook."
+          ;; `normal-mode' first runs this hook in a provisional
+          ;; `fundamental-mode', then discards every buffer-local value before
+          ;; selecting the file's real mode.  Export only for that real mode;
+          ;; genuinely fundamental files are refreshed by the visit hooks below.
+          (unless (eq major-mode 'fundamental-mode)
+            (anvil-headless--direnv-update-current-buffer)))
+
+        ;; `change-major-mode-after-body-hook' runs before the mode's own hook,
+        ;; so Eglot, Flycheck, and similar mode-hook clients see the project env.
+        ;; Refresh again before file-local variables and after visiting as guards
+        ;; against modes that change `default-directory'.
+        (add-hook 'change-major-mode-after-body-hook
+                  #'anvil-headless--direnv-update-before-mode-hook)
+        (add-hook 'before-hack-local-variables-hook
+                  #'anvil-headless--direnv-update-current-buffer)
+        (add-hook 'find-file-hook
+                  #'anvil-headless--direnv-update-current-buffer)
+
+        (defun anvil-headless--direnv-around-host-run
+            (original command coding cwd timeout)
+          "Run ORIGINAL with a baseline-derived, allowed child environment."
+          (unless (and anvil-headless--baseline-process-environment
+                       anvil-headless--baseline-exec-path)
+            (error "Anvil baseline environment is unavailable"))
+          (let ((real-shell anvil-headless--baseline-shell-file-name)
+                (child-process-environment
+                 (copy-sequence
+                  anvil-headless--baseline-process-environment))
+                (child-exec-path
+                 (copy-sequence anvil-headless--baseline-exec-path)))
+            (when (and cwd
+                       (not (file-remote-p cwd))
+                       (file-directory-p (expand-file-name cwd)))
+              (with-temp-buffer
+                (setq default-directory
+                      (file-name-as-directory
+                       (file-truename (expand-file-name cwd))))
+                (setq-local process-environment child-process-environment)
+                (setq-local exec-path child-exec-path)
+                (setq-local direnv--active-directory nil)
+                (anvil-headless--apply-direnv-if-allowed default-directory t)
+                (anvil-headless--restore-required-exec-path)
+                (setq child-process-environment
+                      (copy-sequence process-environment)
+                      child-exec-path (copy-sequence exec-path))))
+            ;; Inject guard controls after direnv so an envrc cannot spoof them.
             (setq child-process-environment
-                  (copy-sequence process-environment)
-                  child-exec-path (copy-sequence exec-path))))
-        ;; Inject guard controls after direnv so an envrc cannot spoof them.
-        (setq child-process-environment
-              (anvil-headless--environment-with
-               child-process-environment
-               "ANVIL_HEADLESS_PARENT_PID"
-               (number-to-string (emacs-pid))))
-        (setq child-process-environment
-              (anvil-headless--environment-with
-               child-process-environment
-               "ANVIL_HEADLESS_REAL_SHELL" real-shell))
-        (setq child-process-environment
-              (anvil-headless--environment-with
-               child-process-environment
-               "ANVIL_EMACS_SOCKET" anvil-headless--root-socket))
-        ;; These special variables remain dynamically visible while ORIGINAL
-        ;; waits, but the anvil-host implementation applies them only inside
-        ;; make-process.  Root callbacks keep their baseline environment.
-        (let ((anvil-host-child-process-environment
-               child-process-environment)
-              (anvil-host-child-exec-path child-exec-path)
-              (anvil-host-child-shell-file-name
-               "${dedicatedChildShell}/bin/anvil-headless-child-shell")
-              (anvil-host-child-shell-command-switch
-               anvil-headless--baseline-shell-command-switch))
-          (funcall original command coding cwd timeout))))
+                  (anvil-headless--environment-with
+                   child-process-environment
+                   "ANVIL_HEADLESS_PARENT_PID"
+                   (number-to-string (emacs-pid))))
+            (setq child-process-environment
+                  (anvil-headless--environment-with
+                   child-process-environment
+                   "ANVIL_HEADLESS_REAL_SHELL" real-shell))
+            (setq child-process-environment
+                  (anvil-headless--environment-with
+                   child-process-environment
+                   "ANVIL_EMACS_SOCKET" anvil-headless--root-socket))
+            ;; These special variables remain dynamically visible while ORIGINAL
+            ;; waits, but the anvil-host implementation applies them only inside
+            ;; make-process.  Root callbacks keep their baseline environment.
+            (let ((anvil-host-child-process-environment
+                   child-process-environment)
+                  (anvil-host-child-exec-path child-exec-path)
+                  (anvil-host-child-shell-file-name
+                   "${dedicatedChildShell}/bin/anvil-headless-child-shell")
+                  (anvil-host-child-shell-command-switch
+                   anvil-headless--baseline-shell-command-switch))
+              (funcall original command coding cwd timeout))))
 
-    (with-eval-after-load 'anvil-host
-      (advice-add 'anvil-host--run
-                  :around #'anvil-headless--direnv-around-host-run))
+        (with-eval-after-load 'anvil-host
+          (advice-add 'anvil-host--run
+                      :around #'anvil-headless--direnv-around-host-run))
   '';
 
   dedicatedWorkerInit = writeText "anvil-headless-worker-init.el" ''
@@ -2256,6 +2710,7 @@ let
         (defvar anvil--loaded-modules)
         (defvar anvil-headless--baseline-process-environment)
         (defvar anvil-headless--baseline-exec-path)
+        (defvar anvil-headless--ready)
         (declare-function anvil-headless--snapshot-baseline-environment nil ())
         (declare-function anvil-worker-kill "anvil-worker" ())
         (defvar anvil-headless--watchdog-pulse-file nil)
@@ -2519,7 +2974,10 @@ let
                   (error "Anvil failed to load required module: %s" module)))
               (add-hook 'kill-emacs-hook #'anvil-worker-kill)
               (anvil-server-start)
-              (anvil-headless--watchdog-arm))
+              (anvil-headless--watchdog-arm)
+              ;; The supervisor probes this final publication, not the socket:
+              ;; daemon-mode Emacs exposes its server before init is complete.
+              (setq anvil-headless--ready t))
           (error
            (message "Anvil headless startup failed: %s"
                     (error-message-string err))
@@ -2577,6 +3035,9 @@ let
       # Bind state before daemon/package startup.  Keeping HOME unchanged is
       # required for login-shell and direnv behavior, so redirect Emacs's
       # startup state explicitly instead of substituting a synthetic HOME.
+      # The trusted state directory also prevents a caller's project cwd from
+      # becoming the root daemon's immutable default directory.
+      cd -- "$state_dir"
       exec "${dedicatedRuntimeEmacs}/bin/emacs" \
         --quick \
         "--init-directory=$state_dir" \
@@ -2587,8 +3048,8 @@ let
     '';
   };
 
-  dedicatedDaemon = writeShellApplication {
-    name = "anvil-headless-emacs";
+  dedicatedDaemonInner = writeShellApplication {
+    name = "anvil-headless-emacs-inner";
     runtimeInputs = [
       bash
       coreutils
@@ -2640,10 +3101,14 @@ let
         "${dedicatedLockedStage}/bin/anvil-headless-emacs-locked"
     '';
   };
+  dedicatedDaemon = dedicatedCleanWrapper {
+    name = "anvil-headless-emacs";
+    target = "${dedicatedDaemonInner}/bin/anvil-headless-emacs-inner";
+  };
   dedicatedAgentDaemon = if agentDaemonOverride == null then dedicatedDaemon else agentDaemonOverride;
-  dedicatedGeneration = builtins.hashString "sha256" "${dedicatedAgentSupervisor}|${dedicatedParentGuardLauncher}|${dedicatedAgentDaemon}|${dedicatedAnvil}|${dedicatedAnvilIde}|${dedicatedOffloadEmacs}|${dedicatedOffloadInit}|${dedicatedSafeEmacsclient}|${generationSalt}";
-  dedicatedLauncher = writeShellApplication {
-    name = "anvil-mcp";
+  dedicatedGeneration = builtins.hashString "sha256" "${dedicatedAgentSupervisor}|${dedicatedParentGuardLauncher}|${dedicatedAgentDaemon}|${dedicatedCleanEnvironment}|${dedicatedDirenvNeutral}|${dedicatedAnvil}|${dedicatedAnvilIde}|${dedicatedOffloadEmacs}|${dedicatedOffloadInit}|${dedicatedSafeEmacsclient}|${generationSalt}";
+  dedicatedLauncherInner = writeShellApplication {
+    name = "anvil-mcp-inner";
     runtimeInputs = [
       bash
       coreutils
@@ -2785,10 +3250,18 @@ let
       # emacsclient probe in the launcher.
       export ANVIL_MCP_PARENT_GUARD="${dedicatedParentGuardLauncher}"
       export ANVIL_MCP_PARENT_GUARD_PYTHON="${python3}/bin/python3"
+      # Shared dedicated daemons need the same final-registry predicate on
+      # every request as per-agent daemons; the upstream bridge validates the
+      # mode and constructs the fixed predicate from this server ID.
+      export ANVIL_MCP_READINESS_MODE=headless
       exec "${dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh" \
         "--socket=$socket" \
         "--server-id=$server_id"
     '';
+  };
+  dedicatedLauncher = dedicatedCleanWrapper {
+    name = "anvil-mcp";
+    target = "${dedicatedLauncherInner}/bin/anvil-mcp-inner";
   };
 
   dedicatedPackage = symlinkJoin {
@@ -2810,10 +3283,14 @@ let
         dedicatedAnvil
         dedicatedAnvilIde
         dedicatedChildShell
+        dedicatedCleanEnvironment
         dedicatedDaemon
+        dedicatedDaemonInner
+        dedicatedDirenvNeutral
         dedicatedEmacs
         dedicatedEnvironmentInit
         dedicatedInit
+        dedicatedLauncherInner
         dedicatedLockLauncher
         dedicatedLockedStage
         dedicatedParentGuardLauncher
@@ -2834,6 +3311,7 @@ let
         ;
       dedicatedAgentSupervisorSmoke = ./agent-supervisor-smoke.py;
       dedicatedAgentSupervisorTest = ./agent-supervisor-test.py;
+      dedicatedCleanEnvironmentTest = ./clean-environment-test.py;
       dedicatedPersistentBridgeSoak = ./persistent-bridge-soak.py;
     };
     meta = commonMeta // {
