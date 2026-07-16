@@ -1,9 +1,9 @@
 {
-  date = "2026-07-16T09:52:46-07:00";
-  hash = "sha256-ntbkGTOQA5NfQO5s0LOxBPf2/rJ8XGBbbMcdE77KTc8=";
+  date = "2026-07-16T10:34:18-07:00";
+  hash = "sha256-fJcDw+6JKc47Sad1GTHu3apkCSM5YOJQj4B02YlIK4g=";
   owner = "jwiegley";
   repo = "anvil.el";
-  rev = "50a218a3041ac9b552e009c2c17dcf6605a78590";
+  rev = "01eecf6348e7e9e6462bddd89b1cbc03c157a7d6";
   version = "1.3.0";
 
   ide = {
