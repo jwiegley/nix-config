@@ -23,16 +23,17 @@ _final: prev: {
       # any thread whose rollout session_meta says thread_source=subagent —
       # resume loads it and goal mode auto-continues, but the first typed
       # message exits the TUI with "Error: turn/start failed in TUI", killing
-      # the tmux session in an error loop. Subagent threads also fire the
-      # same agent-turn-complete notify hook as the main thread, and
-      # agent-deck rebound tool_data.codex_session_id to the child id with no
-      # quality gate, so restarts resumed the wrong thread. The patch adds a
-      # hook-side gate (reject rebinds to subagent-sourced rollouts) and a
+      # the tmux session in an error loop. agent-deck rebinds
+      # tool_data.codex_session_id to a subagent id via three id-rotation
+      # paths (the agent-turn-complete notify hook, the live-process FD probe,
+      # and the cold-start disk scan), none of which had a quality gate, so a
+      # restart then resumed the wrong thread. The patch adds a rebind gate on
+      # all three paths (reject subagent-sourced candidates) plus a
       # restart-time safety net (launch subagent-sourced bindings with
       # `codex fork <sid>`, which carries the context into a fresh
       # user-sourced thread). Committed locally as jwiegley/agent-deck
-      # e6fe4b9c; go.mod untouched, so vendorHash is unaffected. DROP once an
-      # upstream release past v1.9.73 ships the fix.
+      # 41d42f9e; go.mod untouched, so vendorHash is unaffected. DROP once an
+      # upstream release past v1.9.73 ships the fix (PR #1622).
       patches = [ ./patches/agent-deck-codex-subagent-gate.patch ];
 
       # Only the user-facing TUI/CLI. cmd/agent-deck-test-server is a test helper
