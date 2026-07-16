@@ -19,6 +19,7 @@
   "A dead-to-dead health tick retries spawning without logging a transition."
   (let ((worker (list :name "anvil-worker-read-test"
                       :lane :read
+                      :demanded t
                       :last-state 'dead))
         (spawn-count 0)
         logs)
@@ -459,6 +460,7 @@
          (worker (list :name "anvil-worker-read-test"
                        :lane :read
                        :busy nil
+                       :demanded t
                        :hung-checks 0
                        :last-state 'alive))
          (owned 'owned-process)
@@ -506,6 +508,7 @@
         (worker (list :name "anvil-worker-read-test"
                       :lane :read
                       :busy t
+                      :demanded t
                       :hung-checks 0
                       :last-state 'alive))
         (terminate-count 0))
@@ -528,6 +531,7 @@
         (worker (list :name "anvil-worker-read-test"
                       :lane :read
                       :busy nil
+                      :demanded t
                       :hung-checks 0
                       :last-state 'alive))
         logs)

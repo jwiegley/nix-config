@@ -1113,6 +1113,17 @@ def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
   (require 'cl-lib)
   (unless anvil-worker--pool
     (anvil-worker--init-pool))
+  (let ((demanded-count 0))
+    (anvil-worker--map-pool
+     (lambda (worker)
+       (when (plist-get worker :demanded)
+         (setq demanded-count (1+ demanded-count)))))
+    (let ((cold-state
+           (list anvil-worker-eager-spawn
+                 (hash-table-count anvil-worker--owned-processes)
+                 demanded-count)))
+      (unless (equal cold-state '(nil 0 0))
+        (error "Anvil worker pool did not start cold: %S" cold-state))))
   (anvil-worker-spawn)
   (cl-labels
       ((all-workers-ready-p

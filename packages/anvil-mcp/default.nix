@@ -2779,6 +2779,7 @@ let
         (defvar anvil-worker-read-pool-size)
         (defvar anvil-worker-write-pool-size)
         (defvar anvil-worker-batch-pool-size)
+        (defvar anvil-worker-eager-spawn)
         (defvar anvil-server-schema-cache-file)
         (defvar anvil-org-allowed-files-enabled)
         (defvar org-directory)
@@ -2827,6 +2828,7 @@ let
                 anvil-worker-read-pool-size ${toString workerPoolSizes.read}
                 anvil-worker-write-pool-size ${toString workerPoolSizes.write}
                 anvil-worker-batch-pool-size ${toString workerPoolSizes.batch}
+                anvil-worker-eager-spawn nil
                 user-emacs-directory (file-name-as-directory state-dir)
                 package-user-dir (expand-file-name "elpa" state-dir)
                 custom-file (expand-file-name "custom.el" state-dir)
