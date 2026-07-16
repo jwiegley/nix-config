@@ -79,12 +79,12 @@ final: prev: {
   llama-cpp =
     (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs
       (attrs: rec {
-        version = "10011";
+        version = "10046";
         src = prev.fetchFromGitHub {
           owner = "ggml-org";
           repo = "llama.cpp";
           tag = "b${version}";
-          hash = "sha256-AUC6og5opBCmh3nRSUU357aRYRqIZmhaH0yLYXcsBEM=";
+          hash = "sha256-IkVzcKbiQkciqxSWgU3i7yPNpyIVAVHK9y0g8eXZiRc=";
         };
         postPatch = "";
         npmRoot = "tools/ui";
@@ -116,13 +116,13 @@ final: prev: {
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "239";
+      version = "240";
 
       src = prev.fetchFromGitHub {
         owner = "mostlygeek";
         repo = "llama-swap";
         rev = "v${version}";
-        hash = "sha256-AzQUMHGQK6OUCEEHO/jkx4mu9Ed6AG9I9+okO4cO1MQ=";
+        hash = "sha256-WTAHPWIxUbKdB249ScUcsn3F9TFwS2SZwxleYW9/w78=";
       };
 
       ui =
