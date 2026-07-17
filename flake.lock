@@ -6798,34 +6798,6 @@
         "type": "github"
       }
     },
-    "promptdeploy": {
-      "inputs": {
-        "flake-utils": [
-          "git-all",
-          "flake-utils"
-        ],
-        "home-manager": [
-          "home-manager"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1784089963,
-        "narHash": "sha256-86Zsf+TjMpiY84EGDol1HE6p0KIeIalUfqHfJXj+QcQ=",
-        "owner": "jwiegley",
-        "repo": "promptdeploy",
-        "rev": "c308988401fe9a7087aedfeba38bd59143f4cc7d",
-        "type": "github"
-      },
-      "original": {
-        "owner": "jwiegley",
-        "repo": "promptdeploy",
-        "rev": "c308988401fe9a7087aedfeba38bd59143f4cc7d",
-        "type": "github"
-      }
-    },
     "pushme": {
       "inputs": {
         "flake-utils": "flake-utils_12",
@@ -6921,7 +6893,6 @@
         "org-jw": "org-jw",
         "org2jsonl": "org2jsonl_2",
         "org2tc": "org2tc",
-        "promptdeploy": "promptdeploy",
         "pushme": "pushme",
         "rag-client": "rag-client",
         "renamer": "renamer",

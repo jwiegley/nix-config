@@ -35,8 +35,6 @@ Updated: 2026-07-14
 - Unrelated working-tree changes appeared after the initial clean check. They
   belong to another agent and must not be inspected, edited, staged, or
   committed by this work.
-- Anvil is available through a dedicated Emacs daemon. Its modified-buffer
-  checks cover only that isolated daemon, not a separate interactive Emacs.
 - PAL is not registered on this host, so no PAL consensus call is available.
 - `ai-nix` format, lint, source tests, and flake evaluation passed. Its full
   aggregate build reached an unrelated existing `cohere-melody` native-module

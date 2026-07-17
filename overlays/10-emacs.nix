@@ -7,8 +7,6 @@
 final: prev:
 
 let
-  anvilSource = import ../packages/anvil-mcp/source.nix;
-  anvilIdeSource = anvilSource.ide;
   paths = import ../config/paths.nix { inherit (prev) inputs; };
 
   myEmacsPackageOverrides =
@@ -162,52 +160,6 @@ let
           null;
 
       ########################################################################
-
-      anvil =
-        (compileEmacsFiles {
-          name = "anvil";
-          src = fetchFromGitHub {
-            inherit (anvilSource)
-              hash
-              owner
-              repo
-              rev
-              ;
-          };
-        }).overrideAttrs
-          (attrs: {
-            # anvil-server-commands.el resolves anvil-stdio.sh (the MCP stdio
-            # bridge) next to the installed lisp via locate-library, so it
-            # must ship alongside the *.el files.
-            installPhase = attrs.installPhase + ''
-              install anvil-stdio.sh $out/share/emacs/site-lisp
-              mkdir -p $out/share/emacs/site-lisp/tests
-              install -m644 \
-                tests/anvil-eval-async-isolation-test.el \
-                tests/anvil-host-reentrancy-test.el \
-                tests/anvil-offload-ownership-test.el \
-                tests/anvil-server-unified-registry-test.el \
-                $out/share/emacs/site-lisp/tests
-            '';
-          });
-
-      anvil-ide = compileEmacsFiles {
-        name = "anvil-ide";
-        src = fetchFromGitHub {
-          inherit (anvilIdeSource)
-            hash
-            owner
-            repo
-            rev
-            ;
-        };
-        propagatedBuildInputs = with eself; [
-          anvil
-        ];
-        buildInputs = with eself; [
-          anvil
-        ];
-      };
 
       ecard = compileEmacsFiles {
         name = "ecard";

@@ -15,15 +15,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    promptdeploy = {
-      url = "github:jwiegley/promptdeploy/c308988401fe9a7087aedfeba38bd59143f4cc7d";
-      inputs = {
-        flake-utils.follows = "git-all/flake-utils";
-        nixpkgs.follows = "nixpkgs";
-        home-manager.follows = "home-manager";
-      };
-    };
-
     ai-nix = {
       url = "github:jwiegley/ai-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -99,19 +90,6 @@
         "x86_64-linux"
       ];
       stockPkgsFor = forAllSystems (system: import nixpkgs { inherit system; });
-      pkgsFor = forAllSystems (
-        system:
-        if system == "aarch64-darwin" then
-          import nixpkgs {
-            inherit system;
-            overlays = [
-              (_final: _prev: { inherit inputs; })
-              (import ./overlays/10-emacs.nix)
-            ];
-          }
-        else
-          stockPkgsFor.${system}
-      );
     in
     rec {
       darwinConfigurations =
@@ -150,27 +128,6 @@
         };
 
       darwinPackages = darwinConfigurations."hera".pkgs;
-
-      packages = {
-        "aarch64-darwin" = {
-          anvil-mcp = pkgsFor."aarch64-darwin".callPackage ./packages/anvil-mcp { };
-          anvil-mcp-dedicated = pkgsFor."aarch64-darwin".callPackage ./packages/anvil-mcp {
-            useDedicatedDarwinEmacs = true;
-          };
-        };
-        "aarch64-linux" = {
-          anvil-mcp = pkgsFor."aarch64-linux".callPackage ./packages/anvil-mcp { };
-          anvil-mcp-headless = pkgsFor."aarch64-linux".callPackage ./packages/anvil-mcp {
-            useHeadlessEmacs = true;
-          };
-        };
-        "x86_64-linux" = {
-          anvil-mcp = pkgsFor."x86_64-linux".callPackage ./packages/anvil-mcp { };
-          anvil-mcp-headless = pkgsFor."x86_64-linux".callPackage ./packages/anvil-mcp {
-            useHeadlessEmacs = true;
-          };
-        };
-      };
 
       # Shared home-manager module for cross-platform use.
       # NixOS hosts import this via: inputs.nix-config (flake = false)
@@ -320,37 +277,10 @@
                   fi
                 done
                 echo "Running ruff..."
-                ruff check ${src}/bin/update-overlay ${src}/packages/anvil-mcp
+                ruff check ${src}/bin/update-overlay
                 touch $out
               '';
 
-        }
-        // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux || system == "aarch64-darwin") {
-          anvil-home-manager = pkgs.callPackage ./packages/anvil-mcp/home-manager-smoke.nix {
-            homeManagerLib = home-manager.lib;
-            inherit inputs;
-            testPkgs = pkgsFor.${system};
-          };
-          anvil-mcp-persistent-soak = pkgs.callPackage ./packages/anvil-mcp/persistent-bridge-soak.nix {
-            anvilMcp =
-              if pkgs.stdenv.isLinux then
-                packages.${system}.anvil-mcp-headless
-              else
-                packages.${system}.anvil-mcp-dedicated;
-          };
-        }
-        // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
-          anvil-mcp = pkgs.callPackage ./packages/anvil-mcp/smoke.nix {
-            anvilMcp = packages.${system}.anvil-mcp;
-          };
-          anvil-mcp-headless = pkgs.callPackage ./packages/anvil-mcp/headless-smoke.nix {
-            anvilMcp = packages.${system}.anvil-mcp-headless;
-          };
-        }
-        // pkgs.lib.optionalAttrs (system == "aarch64-darwin") {
-          anvil-mcp-dedicated = pkgs.callPackage ./packages/anvil-mcp/headless-smoke.nix {
-            anvilMcp = packages.${system}.anvil-mcp-dedicated;
-          };
         }
       );
     };

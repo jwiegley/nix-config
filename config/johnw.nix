@@ -20,12 +20,6 @@
 let
   inherit (pkgs.stdenv) isDarwin isLinux;
   isPositronRemoteLinux = isLinux && config.home.username == "jwiegley";
-  anvilHosts = import ./anvil-hosts.nix;
-  dedicatedAnvilLinuxHosts = anvilHosts.dedicatedLinux;
-  anvilClientHosts = anvilHosts.clients;
-  anvilClientConvergenceRequired = lib.elem hostname anvilClientHosts;
-  promptdeployAvailable = inputs ? promptdeploy;
-  promptdeployRevision = "c308988401fe9a7087aedfeba38bd59143f4cc7d";
 
   # Shared variables - also imported by sub-modules
   vars = import ./vars.nix {
@@ -43,7 +37,6 @@ in
   imports =
     # Extracted sub-modules for better organization
     [
-      ./anvil.nix
       ./git.nix
       ./ssh.nix
       ./zsh.nix
@@ -51,26 +44,9 @@ in
       ./email.nix
     ]
     # Conditional flake input modules
-    ++ lib.optionals promptdeployAvailable [
-      inputs.promptdeploy.homeManagerModules.default
-    ]
     ++ lib.optionals (inputs ? git-ai) [
       inputs.git-ai.homeManagerModules.default
     ];
-
-  assertions = lib.optional anvilClientConvergenceRequired {
-    assertion = promptdeployAvailable;
-    message = "Anvil client convergence requires the pinned promptdeploy input on ${hostname}";
-  };
-
-  # These workstations default to complete, dedicated Emacs-backed Anvil.
-  # `mkDefault` preserves the per-host Boolean escape hatch back to NeLisp.
-  # The shared Andoria Home Manager flake currently supplies "andoria-08" on
-  # every NFS client; the runtime still derives the real host name for sockets.
-  johnw.anvil = lib.mkIf isLinux {
-    useHeadlessEmacs = lib.mkDefault (lib.elem hostname dedicatedAnvilLinuxHosts);
-    usePerAgentDaemon = lib.mkDefault true;
-  };
 
   home = {
     stateVersion = lib.mkDefault "24.11"; # overridden by wrappers; fallback only
@@ -404,17 +380,6 @@ in
           prs = "pr list -A jwiegley";
         };
       };
-    };
-  }
-  // lib.optionalAttrs promptdeployAvailable {
-    promptdeploy = {
-      enable = anvilClientConvergenceRequired;
-      expectedRevision = promptdeployRevision;
-      exactItems = [
-        "mcp:anvil"
-        "mcp:anvil-tools"
-        "skill:anvil"
-      ];
     };
   };
 
