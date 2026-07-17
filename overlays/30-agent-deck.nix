@@ -34,7 +34,10 @@ _final: prev: {
       # user-sourced thread). Committed locally as jwiegley/agent-deck
       # 41d42f9e; go.mod untouched, so vendorHash is unaffected. DROP once an
       # upstream release past v1.9.73 ships the fix (PR #1622).
-      patches = [ ./patches/agent-deck-codex-subagent-gate.patch ];
+      patches = [
+        ./patches/agent-deck-codex-subagent-gate.patch
+        ./patches/agent-deck-discord-typing-best-effort.patch
+      ];
 
       # Only the user-facing TUI/CLI. cmd/agent-deck-test-server is a test helper
       # and is not shipped by upstream (goreleaser builds cmd/agent-deck alone).

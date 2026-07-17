@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Wiegley <johnw@newartisans.com>
+Date: Thu, 16 Jul 2026 20:30:00 -0700
+Subject: [PATCH] fix(conductor): keep Discord delivery independent of typing
+
+Discord can fail the typing indicator request with a transient HTTP 500 before
+the conductor message is delivered. Treat typing as best-effort so inbound
+Discord messages still reach the conductor when that happens.
+---
+ internal/session/conductor_bridge.py | 20 +++++++++++++++++++-
+ 1 file changed, 19 insertions(+), 1 deletion(-)
+
+diff --git i/internal/session/conductor_bridge.py w/internal/session/conductor_bridge.py
+index ad49d3ab..a381134c 100755
+--- i/internal/session/conductor_bridge.py
++++ w/internal/session/conductor_bridge.py
+@@ -18,6 +18,7 @@ Dependencies: pip3 install toml aiogram slack-bolt slack-sdk discord.py
+ 
+ from __future__ import annotations
+ 
++import contextlib
+ import asyncio
+ import functools
+ import json
+@@ -2512,7 +2513,16 @@ def create_discord_bot(config: dict):
+             "Discord message -> [%s]: %s",
+             target["name"], cleaned_msg[:100],
+         )
+-        async with message.channel.typing():
++        async def _best_effort_typing():
++            try:
++                async with message.channel.typing():
++                    while True:
++                        await asyncio.sleep(5)
++            except Exception as exc:
++                log.warning("Discord typing indicator failed; continuing message delivery: %s", exc)
++
++        typing_task = asyncio.create_task(_best_effort_typing())
++        try:
+             loop = asyncio.get_event_loop()
+             ok, response, still_running = await loop.run_in_executor(
+                 None,
+@@ -2524,6 +2534,10 @@ def create_discord_bot(config: dict):
+                     response_timeout=RESPONSE_TIMEOUT,
+                 ),
+             )
++        finally:
++            typing_task.cancel()
++            with contextlib.suppress(asyncio.CancelledError):
++                await typing_task
+         if not ok:
+             if still_running:
+                 # The message WAS delivered; the single turn just outran the
+-- 
+2.50.1
