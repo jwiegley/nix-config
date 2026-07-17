@@ -57,9 +57,14 @@ keep_vars                                       \
     ITERM_SESSION_ID                            \
     NIX_PATH                                    \
     PERSONA                                     \
+    PROMPT                                      \
+    RPROMPT                                     \
     SECURITYSESSIONID                           \
     SSH_AUTH_SOCK                               \
     SSL_CERT_FILE                               \
+    STARSHIP_CONFIG                             \
+    STARSHIP_SESSION_KEY                        \
+    STARSHIP_SHELL                              \
     TERM                                        \
     TERM_SESSION_ID                             \
     TMPDIR                                      \
@@ -114,15 +119,22 @@ fi
 export NIXPKGS_ALLOW_UNFREE=1
 export NIXPKGS_ALLOW_BROKEN=1
 
+# Keep prompt/session state out of the cache; the generated .envrc preserves
+# each caller's live values across both load and unload.
 SCRIPT="unset         \
     ALTERNATE_EDITOR  \
     EDITOR            \
     EMACS_SERVER_FILE \
     ITERM_SESSION_ID  \
     NIX_PATH          \
+    PROMPT            \
+    RPROMPT           \
     SECURITYSESSIONID \
     SSH_AUTH_SOCK     \
     SSL_CERT_FILE     \
+    STARSHIP_CONFIG   \
+    STARSHIP_SESSION_KEY \
+    STARSHIP_SHELL    \
     TERM              \
     TERM_SESSION_ID;  \
 if [[ -f .env ]]; then set -a; source .env; set +a; fi; \
