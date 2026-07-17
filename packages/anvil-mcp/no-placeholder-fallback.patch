@@ -1,0 +1,36 @@
+--- a/anvil-runtime/src/bin/anvil-runtime.rs
++++ b/anvil-runtime/src/bin/anvil-runtime.rs
+@@ -5,3 +5,3 @@
+-//! runtime.  This launcher prefers the evaluator-backed anvil-host
+-//! registry and falls back to the placeholder registry when bootstrap
+-//! fails so the server still starts cleanly.
++//! runtime.  This launcher uses evaluator-backed anvil-host tools and
++//! fails closed when bootstrap fails, rather than serving the one-tool
++//! placeholder registry.
+@@ -13 +13 @@
+-use anvil_runtime::mcp::{serve_with, PlaceholderRegistry};
++use anvil_runtime::mcp::serve_with;
+@@ -71,21 +71,14 @@
+         },
+         Err(err) => {
+             eprintln!(
+-                "anvil-runtime: warning: anvil-tools bootstrap failed (src={}, host={}, shell={}, data={}): {}",
++                "anvil-runtime: anvil-tools bootstrap failed (src={}, host={}, shell={}, data={}): {}",
+                 src_dir.display(),
+                 anvil_host.display(),
+                 anvil_shell_filter.display(),
+                 anvil_data.display(),
+                 err
+             );
+-            let registry = PlaceholderRegistry::new();
+-            match serve_with(stdin.lock(), stdout.lock(), &registry) {
+-                Ok(()) => ExitCode::SUCCESS,
+-                Err(err) => {
+-                    eprintln!("anvil-runtime: {}", err);
+-                    ExitCode::FAILURE
+-                }
+-            }
++            ExitCode::FAILURE
+         }
+     }
+ }

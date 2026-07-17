@@ -6,6 +6,7 @@
 
 {
   pkgs,
+  lib,
   config,
   hostname,
   inputs,
@@ -24,6 +25,15 @@ in
   # Run one Discord gateway client. Enabling this on Clio as well would
   # make both hosts compete for the same bot connection.
   johnw.agentDeck.enableConductorDiscordBridge = hostname == "hera";
+
+  johnw.anvil = {
+    useDedicatedDarwinEmacs = lib.elem hostname [
+      "hera"
+      "clio"
+    ];
+    # The code is ready on both hosts; deploy and prove Hera before Clio.
+    usePerAgentDaemon = true;
+  };
 
   home = {
     # Darwin has been on 23.11 longer than NixOS

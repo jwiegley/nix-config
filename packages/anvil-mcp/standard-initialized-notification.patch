@@ -1,0 +1,24 @@
+--- a/anvil-runtime/src/mcp/dispatch.rs
++++ b/anvil-runtime/src/mcp/dispatch.rs
+@@ -110,7 +110,7 @@ fn dispatch_method<R: ToolRegistry>(
+
+     let result = match req.method.as_str() {
+         "initialize" => Some(handle_initialize(state, &req.params)),
+-        "initialized" => {
++        "initialized" | "notifications/initialized" => {
+             // Notification: mark the session live and stay silent.
+             state.initialized = true;
+             None
+@@ -239,10 +239,10 @@ mod tests {
+     }
+
+     #[test]
+-    fn initialized_notification_marks_session_and_stays_silent() {
++    fn standard_initialized_notification_marks_session_and_stays_silent() {
+         let mut st = DispatchState::new();
+         let reg = PlaceholderRegistry::new();
+-        let line = frame("initialized", None, None);
++        let line = frame("notifications/initialized", None, None);
+         match handle_frame(&mut st, &reg, &line) {
+             DispatchOutcome::NoReply => {}
+             other => panic!("expected NoReply, got {:?}", other),
