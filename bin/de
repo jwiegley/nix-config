@@ -33,9 +33,11 @@ fi
 if [[ ! -f .envrc ]]; then
     cat >.envrc <<'EOF'
 keep_vars() {
-    local v
-    for k in $@; do
-        eval "v=\$$k"
+    local k v
+    DIRENV_kept=
+    for k in "$@"; do
+        [[ -v $k ]] || continue
+        v=${!k}
         DIRENV_kept="$DIRENV_kept"$(printf "%s=%s\000" "$k" "$v" | base64)
     done
 }
