@@ -8,34 +8,18 @@ _final: prev: {
     with prev;
     buildGoModule rec {
       pname = "agent-deck";
-      version = "1.9.73";
+      version = "1.10.10";
 
       src = fetchFromGitHub {
         owner = "asheshgoplani";
         repo = "agent-deck";
         tag = "v${version}";
-        hash = "sha256-4LbeRiaFIn4Nx/VtDvhJAaeA7YB6i2VX8wZhJ75qw5k=";
+        hash = "sha256-7JDWo/FKZdlr88ZCetWOWnPRgNzLbB4f1hOPIddA6Pg=";
       };
 
-      vendorHash = "sha256-teB9HxMGOe5YGW0RGxVOhkDPyczCDdjATRV9Mn9ixDU=";
+      vendorHash = "sha256-XOhLr599GEMwJNdGD4/C28zZNmTD4hGTsFN2mGvUDXA=";
 
-      # 2026-07-15 ares fleet incident: codex refuses user-initiated turns on
-      # any thread whose rollout session_meta says thread_source=subagent —
-      # resume loads it and goal mode auto-continues, but the first typed
-      # message exits the TUI with "Error: turn/start failed in TUI", killing
-      # the tmux session in an error loop. agent-deck rebinds
-      # tool_data.codex_session_id to a subagent id via three id-rotation
-      # paths (the agent-turn-complete notify hook, the live-process FD probe,
-      # and the cold-start disk scan), none of which had a quality gate, so a
-      # restart then resumed the wrong thread. The patch adds a rebind gate on
-      # all three paths (reject subagent-sourced candidates) plus a
-      # restart-time safety net (launch subagent-sourced bindings with
-      # `codex fork <sid>`, which carries the context into a fresh
-      # user-sourced thread). Committed locally as jwiegley/agent-deck
-      # 41d42f9e; go.mod untouched, so vendorHash is unaffected. DROP once an
-      # upstream release past v1.9.73 ships the fix (PR #1622).
       patches = [
-        ./patches/agent-deck-codex-subagent-gate.patch
         ./patches/agent-deck-discord-typing-best-effort.patch
       ];
 
