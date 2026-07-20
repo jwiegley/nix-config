@@ -635,14 +635,14 @@ final: prev: {
     with final.python313Packages;
     buildPythonApplication rec {
       pname = "omlx";
-      version = "0.5.1";
+      version = "0.5.2.dev1";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "jundot";
         repo = "omlx";
         tag = "v${version}";
-        hash = "sha256-yVciBOWpqFH7o825jvwczJmaX+JTQCdmJxuWknWf7vo=";
+        hash = "sha256-hOBJoZSCku1sXJQzuip/intdzhcwkBu7yWdbjQXIf0I=";
       };
 
       # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git
