@@ -126,16 +126,16 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
     with prev;
     buildNpmPackage (finalAttrs: {
       pname = "claude-replay";
-      version = "0.8.1";
+      version = "0.9.0";
 
       src = fetchFromGitHub {
         owner = "es617";
         repo = "claude-replay";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-RtXNyweM/VsmaDY1lKJCBs35Zzauskx7u8Y7vIeQExE=";
+        hash = "sha256-aOH/dH1HByuTLzBSZO2WLsMmTU2wDijbWEXAKnsoiD8=";
       };
 
-      npmDepsHash = "sha256-/ugRMr+XXpTxKbqooFjDTR/dqZmZ/a1NBERLhBeOeCg=";
+      npmDepsHash = "sha256-d3OdO3rotMeKmCb5N+V9bWdlGPeQ9cQ9NaNBrptFJL4=";
 
       makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
 
