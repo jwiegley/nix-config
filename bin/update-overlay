@@ -279,6 +279,8 @@ class OverlayParser:
                 # If brace depth is 0 or negative, and we find a new definition
                 # at same/lower indent, we're done
                 if brace_depth <= 0 and current_indent <= start_indent:
+                    if re.match(r'^in(?:\s|$)', stripped):
+                        break
                     if re.match(r'^[a-zA-Z_][a-zA-Z0-9_-]*\s*=', stripped):
                         break
                     # Also stop at closing brace at same/lower indent
@@ -731,6 +733,9 @@ class OverlayUpdater:
                 # If brace depth is 0 or negative, and we find a new definition
                 # at same/lower indent, we're done
                 if brace_depth <= 0 and current_indent <= start_indent:
+                    if re.match(r'^in(?:\s|$)', stripped):
+                        end_idx = i - 1
+                        break
                     if re.match(r'^[a-zA-Z_][a-zA-Z0-9_-]*\s*=', stripped):
                         end_idx = i - 1
                         break
