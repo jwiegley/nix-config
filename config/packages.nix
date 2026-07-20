@@ -524,11 +524,8 @@ rec {
 
     # ── Miscellaneous ────────────────────────────────────────────────
     ++ [
-      caligula
-      cargo-cache
       mcat
       taskjuggler
-      # khard # Build broken on aarch64-linux (nixpkgs issue)
     ]
 
     # ── Darwin-Only Packages ─────────────────────────────────────────
