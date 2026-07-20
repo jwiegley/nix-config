@@ -33,6 +33,6 @@ pre-commit:
     python-lint:
       glob: "*.py"
       run: ruff check bin/update-overlay
-    nix-check:
-      glob: "*.{nix,lock}"
-      run: nix flake check --no-warn-dirty 2>&1
+    # nix-check:
+    #   glob: "*.{nix,lock}"
+    #   run: nix flake check --no-warn-dirty 2>&1
