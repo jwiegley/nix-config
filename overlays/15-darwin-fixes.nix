@@ -204,9 +204,12 @@ in
   );
 
   # Fix chromaprint test OOM on macOS (ffmpeg transitive)
-  chromaprint = prev.chromaprint.overrideAttrs (_: {
-    doCheck = false;
-  });
+  chromaprint = prev.chromaprint.overrideAttrs (
+    _:
+    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+      doCheck = false;
+    }
+  );
 
   # Fix openmpi 5.0.10 configure failure on Darwin: "checking for pmix.h... no".
   #
