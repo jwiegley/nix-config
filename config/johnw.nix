@@ -227,22 +227,6 @@ in
     );
   };
 
-  nix = lib.mkIf isPositronRemoteLinux {
-    package = lib.mkDefault pkgs.nix;
-    settings = {
-      cores = lib.mkDefault 32;
-      experimental-features = [
-        "nix-command"
-        "flakes"
-      ];
-      extra-substituters = [ "https://cache.iog.io" ];
-      substituters = [
-        "https://cache.nixos.org"
-        "https://tron.cachix.org"
-      ];
-    };
-  };
-
   programs = {
     direnv = {
       enable = true;
@@ -455,6 +439,15 @@ in
   xdg = {
     enable = true;
     configFile = {
+      "nix/nix.conf" = lib.mkIf isPositronRemoteLinux {
+        text = ''
+          cores = 32
+          experimental-features = nix-command flakes
+          extra-substituters = https://cache.iog.io
+          substituters = https://cache.nixos.org https://tron.cachix.org
+        '';
+      };
+
       "aspell/config".text = ''
         local-data-dir ${pkgs.aspell}/lib/aspell
         data-dir ${pkgs.aspellDicts.en}/lib/aspell

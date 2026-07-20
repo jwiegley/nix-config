@@ -133,18 +133,12 @@ let
     hostname = "andoria-08";
     username = "jwiegley";
   };
-  expectedPositronNixSettings = {
-    cores = 32;
-    experimental-features = [
-      "nix-command"
-      "flakes"
-    ];
-    extra-substituters = [ "https://cache.iog.io" ];
-    substituters = [
-      "https://cache.nixos.org"
-      "https://tron.cachix.org"
-    ];
-  };
+  expectedPositronNixConfig = ''
+    cores = 32
+    experimental-features = nix-command flakes
+    extra-substituters = https://cache.iog.io
+    substituters = https://cache.nixos.org https://tron.cachix.org
+  '';
   expectedPromptdeployItems =
     hostname:
     [
@@ -254,18 +248,18 @@ assert lib.assertMsg (
 assert lib.assertMsg unmanagedConfigurationEvaluation.success
   "an unmanaged host without promptdeploy did not evaluate cleanly";
 assert lib.assertMsg (
-  !isLinux || positronRemoteLinux.config.nix.settings == expectedPositronNixSettings
+  !isLinux || positronRemoteLinux.config.nix.package == null
+) "a Positron Linux host shadows the system Nix package";
+assert lib.assertMsg (
+  !isLinux
+  || positronRemoteLinux.config.xdg.configFile."nix/nix.conf".text == expectedPositronNixConfig
 ) "a Positron Linux host drifted from its user-level Nix settings";
 assert lib.assertMsg (
   !isLinux
-  || (
-    !(builtins.hasAttr "trusted-public-keys" positronRemoteLinux.config.nix.settings)
-    && !(builtins.hasAttr "extra-trusted-public-keys" positronRemoteLinux.config.nix.settings)
+  || !(lib.hasInfix "trusted-public-keys"
+    positronRemoteLinux.config.xdg.configFile."nix/nix.conf".text
   )
 ) "a Positron Linux host tried to set daemon-owned trust keys";
-assert lib.assertMsg (
-  !isLinux || builtins.hasAttr "nix/nix.conf" positronRemoteLinux.config.xdg.configFile
-) "a Positron Linux host no longer owns its user-level nix.conf";
 assert lib.assertMsg (
   !(rawStrippedUnmanaged.programs ? promptdeploy)
 ) "an unmanaged host unexpectedly defines promptdeploy";
