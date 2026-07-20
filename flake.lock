@@ -6827,22 +6827,23 @@
         "nixpkgs": [
           "nixpkgs"
         ],
-        "ponytail": "ponytail",
-        "translate-tool": "translate-tool"
+        "ponytail": "ponytail"
       },
       "locked": {
-        "lastModified": 1784268729,
-        "narHash": "sha256-ziMtrTqBaUcti3PKNkE3mNfjtoXQbuigS5jxWLEWZPY=",
-        "owner": "jwiegley",
-        "repo": "promptdeploy",
-        "rev": "37f5b1a010ecc3ad309cac48f40a8d2e40a513a1",
-        "type": "github"
+        "lastModified": 1784577926,
+        "narHash": "sha256-+TQMtfyV5IoOMOxfVOXFEB7lVOmHVOrB6HgrTogy2UQ=",
+        "ref": "refs/heads/main",
+        "rev": "b08b0ac48a2b26bd3a347f560e031e7baa7076ea",
+        "revCount": 531,
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/jwiegley/promptdeploy"
       },
       "original": {
-        "owner": "jwiegley",
-        "repo": "promptdeploy",
-        "rev": "37f5b1a010ecc3ad309cac48f40a8d2e40a513a1",
-        "type": "github"
+        "rev": "b08b0ac48a2b26bd3a347f560e031e7baa7076ea",
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/jwiegley/promptdeploy"
       }
     },
     "pushme": {
@@ -7546,23 +7547,6 @@
       "original": {
         "type": "git",
         "url": "file:///Users/johnw/src/trade-journal"
-      }
-    },
-    "translate-tool": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1776110818,
-        "narHash": "sha256-P27Hvn8p1+BN8z6g/aFk91BFtL9SMQiMNFYayKn5xyY=",
-        "owner": "jwiegley",
-        "repo": "translate-tool",
-        "rev": "bffdb7ba3e5db603ea1390fee555354c1d45d642",
-        "type": "github"
-      },
-      "original": {
-        "owner": "jwiegley",
-        "repo": "translate-tool",
-        "rev": "bffdb7ba3e5db603ea1390fee555354c1d45d642",
-        "type": "github"
       }
     },
     "treefmt-nix": {

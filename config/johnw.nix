@@ -25,7 +25,7 @@ let
   anvilClientHosts = anvilHosts.clients;
   anvilClientConvergenceRequired = lib.elem hostname anvilClientHosts;
   promptdeployAvailable = inputs ? promptdeploy;
-  promptdeployRevision = "37f5b1a010ecc3ad309cac48f40a8d2e40a513a1";
+  promptdeployRevision = "b08b0ac48a2b26bd3a347f560e031e7baa7076ea";
 
   # Shared variables - also imported by sub-modules
   vars = import ./vars.nix {
@@ -413,7 +413,16 @@ in
       exactItems = [
         "mcp:anvil"
         "skill:anvil"
-      ];
+      ]
+      ++
+        lib.optionals
+          (lib.elem hostname [
+            "hera"
+            "clio"
+          ])
+          [
+            "mcp:devonthink"
+          ];
     };
   };
 

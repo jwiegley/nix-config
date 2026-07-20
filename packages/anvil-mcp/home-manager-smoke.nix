@@ -128,10 +128,21 @@ let
   anvilHosts = import ../../config/anvil-hosts.nix;
   managedHostnames = anvilHosts.clients;
   managedEvaluations = lib.genAttrs managedHostnames (hostname: evaluateJohnw { inherit hostname; });
-  expectedPromptdeployItems = [
-    "mcp:anvil"
-    "skill:anvil"
-  ];
+  expectedPromptdeployItems =
+    hostname:
+    [
+      "mcp:anvil"
+      "skill:anvil"
+    ]
+    ++
+      lib.optionals
+        (lib.elem hostname [
+          "hera"
+          "clio"
+        ])
+        [
+          "mcp:devonthink"
+        ];
   strippedUnmanaged = evaluateJohnw {
     hostname = "unmanaged-anvil-test";
     moduleInputs = strippedInputs;
@@ -166,8 +177,9 @@ let
     assertion = false;
     message = "Anvil client convergence requires the pinned promptdeploy input on ${hostname}";
   };
-  promptdeployRevision = "37f5b1a010ecc3ad309cac48f40a8d2e40a513a1";
+  promptdeployRevision = "b08b0ac48a2b26bd3a347f560e031e7baa7076ea";
   promptdeployAnvilConfig = builtins.readFile "${inputs.promptdeploy}/mcp/anvil.yaml";
+  promptdeployDevonthinkConfig = builtins.readFile "${inputs.promptdeploy}/mcp/devonthink.yaml";
 in
 assert lib.assertMsg (isLinux || isDarwin) "Anvil Home Manager smoke requires Linux or Darwin";
 assert lib.assertMsg (
@@ -243,7 +255,7 @@ assert lib.assertMsg (lib.all
     entry:
     entry.promptdeploy.enable
     && entry.promptdeploy.expectedRevision == promptdeployRevision
-    && entry.promptdeploy.exactItems == expectedPromptdeployItems
+    && entry.promptdeploy.exactItems == expectedPromptdeployItems entry.hostname
   )
   managedWithPromptdeploy
 ) "a managed host drifted from the pinned promptdeploy convergence contract";
@@ -252,6 +264,8 @@ assert lib.assertMsg (lib.hasInfix ''
     startup_timeout_sec: 330
     tool_timeout_sec: 330
 '' promptdeployAnvilConfig) "pinned promptdeploy lost the Anvil Codex 330-second deadline contract";
+assert lib.assertMsg (lib.hasInfix "name: devonthink" promptdeployDevonthinkConfig)
+  "pinned promptdeploy lost the DEVONthink MCP definition";
 assert lib.assertMsg (
   !isDarwin
   || lib.all (
