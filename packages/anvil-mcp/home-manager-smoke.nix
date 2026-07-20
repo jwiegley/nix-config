@@ -194,7 +194,7 @@ let
     assertion = false;
     message = "Anvil client convergence requires the pinned promptdeploy input on ${hostname}";
   };
-  promptdeployRevision = "b08b0ac48a2b26bd3a347f560e031e7baa7076ea";
+  promptdeployRevision = "56f8e02fbc4a86031a5dbc434693d947f7ba90af";
   promptdeployAnvilConfig = builtins.readFile "${inputs.promptdeploy}/mcp/anvil.yaml";
   promptdeployDevonthinkConfig = builtins.readFile "${inputs.promptdeploy}/mcp/devonthink.yaml";
 in

@@ -25,7 +25,7 @@ let
   anvilClientHosts = anvilHosts.clients;
   anvilClientConvergenceRequired = lib.elem hostname anvilClientHosts;
   promptdeployAvailable = inputs ? promptdeploy;
-  promptdeployRevision = "b08b0ac48a2b26bd3a347f560e031e7baa7076ea";
+  promptdeployRevision = "56f8e02fbc4a86031a5dbc434693d947f7ba90af";
 
   # Shared variables - also imported by sub-modules
   vars = import ./vars.nix {
