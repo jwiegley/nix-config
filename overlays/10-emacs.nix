@@ -596,8 +596,8 @@ let
         src = fetchFromGitHub {
           owner = "kmontag";
           repo = "macher";
-          rev = "44950accf782b2ae0a29f48bc85fb4842bc38ab1";
-          sha256 = "sha256-FKFHKnhs6GkjUFiF03x/b9kMg4hwgh8Pf0vu55eE3CM=";
+          rev = "b6e51cb9a01c87e36d8920d947ed171bf21c8287";
+          sha256 = "sha256-f3G4EmOpmHWakfGQC5eaCDtSmBmZB4OxgYglyec/qvM=";
           # date = 2025-08-20T19:15:22-07:00;
         };
         buildInputs = with eself; [ gptel ];
@@ -1002,8 +1002,8 @@ let
         src = fetchFromGitHub {
           owner = "manzaltu";
           repo = "claude-code-ide.el";
-          rev = "cc508396a09e98931bb588da8542b73fa07733e2";
-          sha256 = "sha256-pL5PNnemuXHHhQ0wEqhoagyKNdx+ywb2EEru8XWJ0Lc=";
+          rev = "e3422540eee799547923ffcbaafb78b332bb7e94";
+          sha256 = "sha256-h7hC7GG2gLvrTGlZWMLBycXBNUvCD8I094z8290djv4=";
         };
         buildInputs = with eself; [
           websocket

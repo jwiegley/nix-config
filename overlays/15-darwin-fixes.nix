@@ -1,14 +1,51 @@
 # overlays/15-darwin-fixes.nix
 # Purpose: Fixes for packages that fail to build or test on macOS (Darwin)
 # Dependencies: None (uses only prev)
-# Packages: libvirt, samba, z3, fsspec
-final: prev: {
+final: prev:
+let
+  useLld =
+    package:
+    if prev.stdenv.isDarwin then
+      package.overrideAttrs (oldAttrs: {
+        nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ prev.llvmPackages.lld ];
+        env = (oldAttrs.env or { }) // {
+          NIX_CFLAGS_LINK = (oldAttrs.env.NIX_CFLAGS_LINK or "") + " -fuse-ld=lld";
+        };
+      })
+    else
+      package;
+in
+{
 
   # Fix libvirt test failure on macOS
   # qemucapabilitiestest fails with Linux-specific QEMU capability checks
   libvirt = prev.libvirt.overrideAttrs (oldAttrs: {
     doCheck = false;
   });
+
+  # ld64 957.1 still relies on undefined iterator behavior in its Objective-C
+  # stubs pass. libc++ hardening turns that into a SIGTRAP for these packages.
+  # Use lld only here instead of overriding ld64 and invalidating all of stdenv.
+  contacts = useLld prev.contacts;
+  caligula = useLld prev.caligula;
+  spotify-player = useLld prev.spotify-player;
+
+  # Poppler 26.06.0 adds a std::mutex to its GObject-backed PopplerPage but
+  # leaves it zero-initialized. That happens to work on glibc, while Darwin's
+  # pthread_mutex_lock returns EINVAL and crashes every GLib page render.
+  # Apply the upstream constructor/destructor fix included after the release.
+  poppler =
+    if prev.stdenv.isDarwin then
+      prev.poppler.overrideAttrs (oldAttrs: {
+        patches = (oldAttrs.patches or [ ]) ++ [
+          (prev.fetchpatch {
+            url = "https://gitlab.freedesktop.org/poppler/poppler/-/commit/08f4bca6a669f9fce75dbab743db559a86591738.patch";
+            hash = "sha256-ploZV/lH9ZNeHzpGieDe49NcLvy7ii+fKzdzClJnlb8=";
+          })
+        ];
+      })
+    else
+      prev.poppler;
 
   # Fix zsh-5.9 lost-SIGCHLD hang after the 2026-04-18 darwin stdenv reshuffle
   # (nixpkgs PR #508474, "darwin: migrate source releases from apple-sdk to
@@ -101,6 +138,7 @@ final: prev: {
   # Python-package-level overrides.
   #   - fsspec: tests fail with "OSError: AF_UNIX path too long" (Nix store paths)
   #   - mirakuru: tests exit 1 on macOS (pytest-postgresql transitive)
+  #   - imageio: test_lagging_video_stream times out waiting for its subprocess
   #   - gradio: test_video_postprocess_converts_to_playable_format fails
   #     because video_is_playable returns False in the sandbox (ffmpeg probe).
   #     Uses overrideAttrs (not overridePythonAttrs) so .override is preserved,
@@ -117,6 +155,11 @@ final: prev: {
       // (prev.lib.optionalAttrs (pprev ? mirakuru) {
         mirakuru = pprev.mirakuru.overridePythonAttrs (_: {
           doCheck = false;
+        });
+      })
+      // (prev.lib.optionalAttrs (prev.stdenv.isDarwin && pprev ? imageio) {
+        imageio = pprev.imageio.overridePythonAttrs (oldAttrs: {
+          disabledTests = (oldAttrs.disabledTests or [ ]) ++ [ "test_lagging_video_stream" ];
         });
       })
       // (prev.lib.optionalAttrs (pprev ? gradio) {

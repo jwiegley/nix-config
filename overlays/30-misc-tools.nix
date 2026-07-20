@@ -57,12 +57,12 @@ in
   # Upstream moved to openclaw/gogcli; Go module path is unchanged.
   gogcli = (prev.gogcli.override { buildGoModule = buildGo1265Module; }).overrideAttrs (
     finalAttrs: _oldAttrs: {
-      version = "0.34.0";
+      version = "0.34.1";
       src = prev.fetchFromGitHub {
         owner = "openclaw";
         repo = "gogcli";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-3iVxq8AIzRebHiHxcagJaKKfqWKPiiKG4GMczm+AODU=";
+        hash = "sha256-ocC+A63GLrZQA3mXEPjIfsM7Af9NiYjGF8DZI/2yNS0=";
       };
       vendorHash = "sha256-MAbbCLdoOLWer7HO3+RZJuN10gLeTgN6/CbNn6pzGwQ=";
     }
