@@ -5,7 +5,17 @@ set -e
 # I use this to keep build products in a separate directory tree.
 PRODUCTS=""
 if [[ -d $HOME/Products ]]; then
-    PRODUCTS=$(echo $PWD | sed -E 's/\b(src)\b/Products/')
+    case $PWD in
+    "$HOME/src" | "$HOME/src"/*)
+        PRODUCTS="$HOME/Products${PWD#"$HOME/src"}"
+        ;;
+    "$HOME/hera" | "$HOME/hera"/*)
+        PRODUCTS="$HOME/Products/hera${PWD#"$HOME/hera"}"
+        ;;
+    *)
+        PRODUCTS=$PWD
+        ;;
+    esac
     echo "There is a ~/Products directory"
 fi
 
@@ -28,6 +38,13 @@ fi
 if [[ -n ${BUILDER+x} ]]; then
     NIXOPTS+=(--option builders "ssh-ng://${BUILDER}")
     echo "Using builder: ssh-ng://${BUILDER}"
+fi
+
+if [[ -n "$PRODUCTS" && (-f Cargo.toml || -f ../Cargo.toml) ]]; then
+    cargo_target_dir=$PRODUCTS/target
+    mkdir -p "$cargo_target_dir"
+    [[ -e "$cargo_target_dir/.metadata_never_index" ]] ||
+        : >"$cargo_target_dir/.metadata_never_index"
 fi
 
 if [[ ! -f .envrc ]]; then
@@ -103,7 +120,7 @@ EOF
             fi
             cat >>.envrc <<EOF
 
-export CARGO_TARGET_DIR=$PRODUCTS/target
+export CARGO_TARGET_DIR=$cargo_target_dir
 export CARGO_HOME=\$CARGO_TARGET_DIR/.cargo-home
 # export RUSTUP_HOME=\$CARGO_TARGET_DIR/.rustup-home
 # export RUSTUP_TOOLCHAIN=1.60.0-x86_64-apple-darwin

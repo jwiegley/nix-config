@@ -37,13 +37,13 @@ let
     "${home}/.local/share/rustup"
     "${home}/.rustup"
     "${home}/.sccache"
+    "${home}/Products"
     "${home}/Library/Caches"
     "${home}/Library/Developer/CoreSimulator/Caches"
     "${home}/Library/Developer/Xcode/DerivedData"
   ];
   spotlightTransientRoots = [
     "${home}/.config"
-    "${home}/Products"
     "${home}/doc"
     "${home}/hera"
     "${home}/src"
