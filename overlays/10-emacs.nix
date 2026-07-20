@@ -166,6 +166,7 @@ let
       anvil =
         (compileEmacsFiles {
           name = "anvil";
+          patches = [ ../packages/anvil-mcp/orphan-safe-test-fixtures.patch ];
           src = fetchFromGitHub {
             inherit (anvilSource)
               hash
@@ -187,6 +188,7 @@ let
                 tests/anvil-host-reentrancy-test.el \
                 tests/anvil-offload-ownership-test.el \
                 tests/anvil-server-unified-registry-test.el \
+                tests/anvil-stdio-readiness-test.py \
                 $out/share/emacs/site-lisp/tests
             '';
           });

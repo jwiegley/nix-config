@@ -1324,8 +1324,17 @@ def verify_readiness_crash_recovery(
         started = runtime_dir / ".readiness-gate-started"
         release = runtime_dir / ".readiness-gate-release"
         nonce = runtime_dir / ".readiness-gate-nonce"
+
+        def publish_release() -> None:
+            descriptor = os.open(release, os.O_WRONLY | os.O_NONBLOCK)
+            try:
+                os.write(descriptor, b"x\n")
+            finally:
+                os.close(descriptor)
+
         for marker in (arm, started, release, nonce):
             marker.unlink(missing_ok=True)
+        os.mkfifo(release)
         arm.touch()
         release_published = False
         bridge_identity = module.process_start_identity(bridge.pid)
@@ -1374,7 +1383,7 @@ def verify_readiness_crash_recovery(
                             "request reached the daemon before final readiness"
                         )
                 finally:
-                    release.touch()
+                    publish_release()
                     release_published = True
                 gated_response = future.result(timeout=CLIENT_STARTUP_SECONDS)
 
@@ -1396,7 +1405,10 @@ def verify_readiness_crash_recovery(
                 )
         finally:
             if not release_published:
-                release.touch()
+                try:
+                    publish_release()
+                except OSError:
+                    pass
             arm.unlink(missing_ok=True)
             started.unlink(missing_ok=True)
             release.unlink(missing_ok=True)

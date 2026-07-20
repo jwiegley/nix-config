@@ -163,22 +163,79 @@ def write_helper_wrapper(
     bash: str,
     name: str,
     real_helper: str,
+    block_timeout_seconds: int = 30,
 ) -> None:
     """Forward before dispatch; otherwise record and block on a FIFO."""
+    if block_timeout_seconds <= 0:
+        raise ValueError("block_timeout_seconds must be positive")
     source = r"""#!__BASH__
 set -u
 if [[ -e "$FAKE_DISPATCH_COMPLETE" ]]; then
     printf '{"pid":%s,"program":"__NAME__"}\n' "$$" \
         > "$FAKE_POSTDISPATCH_HELPER"
-    IFS= read -r _ < "$FAKE_HELPER_BLOCK_FIFO"
-    exit 125
+    # Preserve the blocking FIFO-open contract, but guarantee that a
+    # hard-interrupted fixture cannot survive indefinitely.
+    exec __PYTHON__ -c \
+        'import os, signal, sys; signal.alarm(__BLOCK_TIMEOUT_SECONDS__); os.read(os.open(sys.argv[1], os.O_RDONLY), 1)' \
+        "$FAKE_HELPER_BLOCK_FIFO"
 fi
 exec __REAL_HELPER__ "$@"
 """
     source = source.replace("__BASH__", bash)
+    source = source.replace("__PYTHON__", shlex.quote(sys.executable))
+    source = source.replace("__BLOCK_TIMEOUT_SECONDS__", str(block_timeout_seconds))
     source = source.replace("__NAME__", name)
     source = source.replace("__REAL_HELPER__", shlex.quote(real_helper))
     make_executable(path, source)
+
+
+def run_helper_self_expiry(
+    bash: str,
+    real_helpers: dict[str, str],
+) -> None:
+    """A blocked post-dispatch fixture self-terminates after its deadline."""
+    with tempfile.TemporaryDirectory(prefix="anvil-helper-expiry-") as raw:
+        root = Path(raw)
+        wrapper = root / "rm"
+        dispatch_complete = root / "dispatch-complete"
+        helper_marker = root / "postdispatch-helper"
+        helper_fifo = root / "helper-block.fifo"
+        dispatch_complete.touch()
+        os.mkfifo(helper_fifo)
+        write_helper_wrapper(
+            wrapper,
+            bash,
+            "rm",
+            real_helpers["rm"],
+            block_timeout_seconds=1,
+        )
+        environment = os.environ.copy()
+        environment.update(
+            {
+                "FAKE_DISPATCH_COMPLETE": str(dispatch_complete),
+                "FAKE_POSTDISPATCH_HELPER": str(helper_marker),
+                "FAKE_HELPER_BLOCK_FIFO": str(helper_fifo),
+            }
+        )
+        process = subprocess.Popen(
+            [bash, str(wrapper), "-f", "--", str(root / "unused")],
+            env=environment,
+        )
+        try:
+            if not wait_until(helper_marker.is_file, 2):
+                raise AssertionError("bounded helper did not reach its wait")
+            marker = json.loads(helper_marker.read_text(encoding="utf-8"))
+            if int(marker["pid"]) != process.pid:
+                raise AssertionError("bounded helper changed process identity")
+            process.wait(timeout=3)
+            if process.returncode != -signal.SIGALRM:
+                raise AssertionError(
+                    f"bounded helper exited with {process.returncode}, not SIGALRM"
+                )
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=5)
 
 
 def write_blocking_predispatch_wrapper(path: Path, bash: str, name: str) -> None:
@@ -2551,6 +2608,7 @@ def main() -> int:
             raise AssertionError(f"required helper is unavailable: {name}")
         real_helpers[name] = program
 
+    run_helper_self_expiry(bash, real_helpers)
     run_negative_control(stdio, bash, real_helpers)
     run_nonfinite_identifier(stdio, bash, real_helpers)
     run_predispatch_freeze(stdio, bash, real_helpers)

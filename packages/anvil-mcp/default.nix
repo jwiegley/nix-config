@@ -555,6 +555,7 @@ let
       (callPackage ../../overlays/emacs/builder.nix {
         emacs = dedicatedEmacs;
         name = "anvil";
+        patches = [ ./orphan-safe-test-fixtures.patch ];
         src = currentAnvilSrc;
       }).overrideAttrs
         (attrs: {
@@ -566,6 +567,7 @@ let
               tests/anvil-host-reentrancy-test.el \
               tests/anvil-offload-ownership-test.el \
               tests/anvil-server-unified-registry-test.el \
+              tests/anvil-stdio-readiness-test.py \
               "$out/share/emacs/site-lisp/tests"
           '';
         });

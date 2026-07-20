@@ -23,10 +23,10 @@ let
       started="$ANVIL_EMACS_RUNTIME_DIR/.readiness-gate-started"
       release="$ANVIL_EMACS_RUNTIME_DIR/.readiness-gate-release"
       if [ -e "$arm" ]; then
-        : >"$started"
-        while [ ! -e "$release" ]; do
-          sleep 0.02
-        done
+        {
+          : >"$started"
+          IFS= read -r -t 30 _ || exit 75
+        } <>"$release"
       fi
       exec ${bash}/bin/bash "$@"
     '';
@@ -147,8 +147,10 @@ runCommand "anvil-mcp-dedicated-smoke"
     printf '%s\n' \
       'if [ -e "$HOME/direnv-slow-arm" ]; then' \
       '  printf direnv-secret-canary >&2' \
-      '  printf started > "$HOME/direnv-slow-started"' \
-      '  while [ ! -e "$HOME/direnv-slow-release" ]; do sleep 0.01; done' \
+      '  {' \
+      '    printf started > "$HOME/direnv-slow-started"' \
+      '    IFS= read -r -t 30 _ || exit 75' \
+      '  } <> "$HOME/direnv-slow-release"' \
       'fi' \
       'export ANVIL_DIRENV_MARKER=project-slow' \
       'export ANVIL_DIRENV_SECRET=direnv-secret-canary' \
@@ -248,7 +250,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       ${python3}/bin/python3
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u \
-      ${anvilMcp.currentAnvilSrc}/tests/anvil-stdio-readiness-test.py \
+      ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/tests/anvil-stdio-readiness-test.py \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh \
       ${bash}/bin/bash
     ${coreutils}/bin/timeout 60 \

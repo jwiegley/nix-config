@@ -1552,6 +1552,13 @@ def assert_slow_direnv_keeps_root_responsive(
         for marker in (arm, started, callback_seen, release):
             marker.unlink(missing_ok=True)
 
+    def publish_release() -> None:
+        descriptor = os.open(release, os.O_WRONLY | os.O_NONBLOCK)
+        try:
+            os.write(descriptor, b"x\n")
+        finally:
+            os.close(descriptor)
+
     def wait_for(marker: Path, future: object, label: str) -> None:
         deadline = time.monotonic() + 10
         while not marker.exists() and time.monotonic() < deadline:
@@ -1639,6 +1646,7 @@ def assert_slow_direnv_keeps_root_responsive(
 """.strip()
 
     reset_gate()
+    os.mkfifo(release)
     arm.touch()
     try:
         with ThreadPoolExecutor(max_workers=2) as executor:
@@ -1672,7 +1680,11 @@ def assert_slow_direnv_keeps_root_responsive(
                         "direct direnv helper returned before its release gate"
                     )
             finally:
-                release.touch()
+                try:
+                    publish_release()
+                except OSError:
+                    if not slow.done():
+                        raise
             direct = decode_eval_json(slow.result(timeout=15))
             fast = decode_eval_json(queued_direct.result(timeout=15))
             post_direct = decode_eval_json(
@@ -1758,6 +1770,7 @@ def assert_slow_direnv_keeps_root_responsive(
         )
 
     reset_gate()
+    os.mkfifo(release)
     arm.touch()
     try:
         with ThreadPoolExecutor(max_workers=2) as executor:
@@ -1799,7 +1812,11 @@ def assert_slow_direnv_keeps_root_responsive(
                         "shell-run returned before its direnv release gate"
                     )
             finally:
-                release.touch()
+                try:
+                    publish_release()
+                except OSError:
+                    if not slow_shell.done():
+                        raise
             shell_response = slow_shell.result(timeout=15)
             shell_fast = decode_eval_json(queued_shell.result(timeout=15))
             shell_after = decode_eval_json(
