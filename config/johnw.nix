@@ -227,6 +227,22 @@ in
     );
   };
 
+  nix = lib.mkIf isPositronRemoteLinux {
+    package = lib.mkDefault pkgs.nix;
+    settings = {
+      cores = lib.mkDefault 32;
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
+      extra-substituters = [ "https://cache.iog.io" ];
+      substituters = [
+        "https://cache.nixos.org"
+        "https://tron.cachix.org"
+      ];
+    };
+  };
+
   programs = {
     direnv = {
       enable = true;

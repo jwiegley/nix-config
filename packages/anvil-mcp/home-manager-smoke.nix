@@ -76,6 +76,7 @@ let
     {
       hostname,
       moduleInputs ? inputs,
+      username ? "anvil-test",
     }:
     homeManagerLib.homeManagerConfiguration {
       pkgs = testPkgs;
@@ -87,7 +88,7 @@ let
         ../../config/johnw.nix
         {
           home = {
-            username = "anvil-test";
+            inherit username;
             homeDirectory = "/tmp/anvil-home-manager-test";
             stateVersion = "23.11";
           };
@@ -128,6 +129,22 @@ let
   anvilHosts = import ../../config/anvil-hosts.nix;
   managedHostnames = anvilHosts.clients;
   managedEvaluations = lib.genAttrs managedHostnames (hostname: evaluateJohnw { inherit hostname; });
+  positronRemoteLinux = evaluateJohnw {
+    hostname = "andoria-08";
+    username = "jwiegley";
+  };
+  expectedPositronNixSettings = {
+    cores = 32;
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    extra-substituters = [ "https://cache.iog.io" ];
+    substituters = [
+      "https://cache.nixos.org"
+      "https://tron.cachix.org"
+    ];
+  };
   expectedPromptdeployItems =
     hostname:
     [
@@ -236,6 +253,19 @@ assert lib.assertMsg (
 ) "Anvil dedicated mode drifted from the 330-second tool fallback";
 assert lib.assertMsg unmanagedConfigurationEvaluation.success
   "an unmanaged host without promptdeploy did not evaluate cleanly";
+assert lib.assertMsg (
+  !isLinux || positronRemoteLinux.config.nix.settings == expectedPositronNixSettings
+) "a Positron Linux host drifted from its user-level Nix settings";
+assert lib.assertMsg (
+  !isLinux
+  || (
+    !(builtins.hasAttr "trusted-public-keys" positronRemoteLinux.config.nix.settings)
+    && !(builtins.hasAttr "extra-trusted-public-keys" positronRemoteLinux.config.nix.settings)
+  )
+) "a Positron Linux host tried to set daemon-owned trust keys";
+assert lib.assertMsg (
+  !isLinux || builtins.hasAttr "nix/nix.conf" positronRemoteLinux.config.xdg.configFile
+) "a Positron Linux host no longer owns its user-level nix.conf";
 assert lib.assertMsg (
   !(rawStrippedUnmanaged.programs ? promptdeploy)
 ) "an unmanaged host unexpectedly defines promptdeploy";
