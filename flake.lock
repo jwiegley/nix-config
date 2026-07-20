@@ -7042,11 +7042,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1784222549,
-        "narHash": "sha256-/bb9ir5pfc+KI3/vpSAqud71xmFukS9MsYREOTZdufE=",
+        "lastModified": 1784587347,
+        "narHash": "sha256-q9GcnxiCgR9/FG7TeIWXqT4I7CZj/RM9/nGBbDZAjrs=",
         "ref": "refs/heads/main",
-        "rev": "0d05a14db566b234e1fde6ed746a3e6940515fa1",
-        "revCount": 1445,
+        "rev": "0667f34f99cfab8be0f022cce74701b6d7886cd4",
+        "revCount": 1451,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
