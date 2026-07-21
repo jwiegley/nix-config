@@ -6830,17 +6830,17 @@
         "ponytail": "ponytail"
       },
       "locked": {
-        "lastModified": 1784589501,
-        "narHash": "sha256-0qFjQ1BWDTjg5b6+6ef9RfvVvq8anM91y+5lS4oqT1E=",
+        "lastModified": 1784605292,
+        "narHash": "sha256-G5jKItpWdBO0mpSzNNMWJ9K4sZYXYJFA4m2asdgtCCI=",
         "ref": "refs/heads/main",
-        "rev": "56f8e02fbc4a86031a5dbc434693d947f7ba90af",
-        "revCount": 533,
+        "rev": "40a3751b0c0e24b85d5ffe1215a62fd44beaa46d",
+        "revCount": 534,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/jwiegley/promptdeploy"
       },
       "original": {
-        "rev": "56f8e02fbc4a86031a5dbc434693d947f7ba90af",
+        "rev": "40a3751b0c0e24b85d5ffe1215a62fd44beaa46d",
         "submodules": true,
         "type": "git",
         "url": "https://github.com/jwiegley/promptdeploy"

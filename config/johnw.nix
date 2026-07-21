@@ -25,7 +25,7 @@ let
   anvilClientHosts = anvilHosts.clients;
   anvilClientConvergenceRequired = lib.elem hostname anvilClientHosts;
   promptdeployAvailable = inputs ? promptdeploy;
-  promptdeployRevision = "56f8e02fbc4a86031a5dbc434693d947f7ba90af";
+  promptdeployRevision = "40a3751b0c0e24b85d5ffe1215a62fd44beaa46d";
 
   # Shared variables - also imported by sub-modules
   vars = import ./vars.nix {
@@ -49,6 +49,7 @@ in
       ./zsh.nix
       ./xdg-symlinks.nix
       ./email.nix
+      ./llm-clients.nix
     ]
     # Conditional flake input modules
     ++ lib.optionals promptdeployAvailable [
@@ -187,7 +188,7 @@ in
           set -euo pipefail
           uid=$(id -u)
           export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$uid}"
-          export TMUX_TMPDIR="''${TMUX_TMPDIR:-$XDG_RUNTIME_DIR}"
+          unset TMUX_TMPDIR
           export CLAUDE_CONFIG_DIR="$HOME/.claude"
           exec "$HOME/.nix-profile/bin/agent-deck" "$@"
         '';
