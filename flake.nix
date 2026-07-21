@@ -15,15 +15,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    promptdeploy = {
-      url = "git+https://github.com/jwiegley/promptdeploy?rev=40a3751b0c0e24b85d5ffe1215a62fd44beaa46d&submodules=1";
-      inputs = {
-        flake-utils.follows = "git-all/flake-utils";
-        nixpkgs.follows = "nixpkgs";
-        home-manager.follows = "home-manager";
-      };
-    };
-
     ai-nix = {
       url = "github:jwiegley/ai-nix";
       inputs.nixpkgs.follows = "nixpkgs";

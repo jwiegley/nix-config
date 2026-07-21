@@ -22,10 +22,6 @@ let
   isPositronRemoteLinux = isLinux && config.home.username == "jwiegley";
   anvilHosts = import ./anvil-hosts.nix;
   dedicatedAnvilLinuxHosts = anvilHosts.dedicatedLinux;
-  anvilClientHosts = anvilHosts.clients;
-  anvilClientConvergenceRequired = lib.elem hostname anvilClientHosts;
-  promptdeployAvailable = inputs ? promptdeploy;
-  promptdeployRevision = "40a3751b0c0e24b85d5ffe1215a62fd44beaa46d";
 
   # Shared variables - also imported by sub-modules
   vars = import ./vars.nix {
@@ -49,20 +45,11 @@ in
       ./zsh.nix
       ./xdg-symlinks.nix
       ./email.nix
-      ./llm-clients.nix
     ]
     # Conditional flake input modules
-    ++ lib.optionals promptdeployAvailable [
-      inputs.promptdeploy.homeManagerModules.default
-    ]
     ++ lib.optionals (inputs ? git-ai) [
       inputs.git-ai.homeManagerModules.default
     ];
-
-  assertions = lib.optional anvilClientConvergenceRequired {
-    assertion = promptdeployAvailable;
-    message = "Anvil client convergence requires the pinned promptdeploy input on ${hostname}";
-  };
 
   # These workstations default to complete, dedicated Emacs-backed Anvil.
   # `mkDefault` preserves the per-host Boolean escape hatch back to NeLisp.
@@ -405,25 +392,6 @@ in
           prs = "pr list -A jwiegley";
         };
       };
-    };
-  }
-  // lib.optionalAttrs promptdeployAvailable {
-    promptdeploy = {
-      enable = anvilClientConvergenceRequired;
-      expectedRevision = promptdeployRevision;
-      exactItems = [
-        "mcp:anvil"
-        "skill:anvil"
-      ]
-      ++
-        lib.optionals
-          (lib.elem hostname [
-            "hera"
-            "clio"
-          ])
-          [
-            "mcp:devonthink"
-          ];
     };
   };
 

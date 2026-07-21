@@ -125,7 +125,6 @@ let
     hostname: evaluateDarwinHome { inherit hostname; }
   );
 
-  strippedInputs = builtins.removeAttrs inputs [ "promptdeploy" ];
   anvilHosts = import ../../config/anvil-hosts.nix;
   managedHostnames = anvilHosts.clients;
   managedEvaluations = lib.genAttrs managedHostnames (hostname: evaluateJohnw { inherit hostname; });
@@ -139,58 +138,6 @@ let
     extra-substituters = https://cache.iog.io
     substituters = https://cache.nixos.org https://tron.cachix.org
   '';
-  expectedPromptdeployItems =
-    hostname:
-    [
-      "mcp:anvil"
-      "skill:anvil"
-    ]
-    ++
-      lib.optionals
-        (lib.elem hostname [
-          "hera"
-          "clio"
-        ])
-        [
-          "mcp:devonthink"
-        ];
-  strippedUnmanaged = evaluateJohnw {
-    hostname = "unmanaged-anvil-test";
-    moduleInputs = strippedInputs;
-  };
-  managedWithPromptdeploy = map (hostname: {
-    inherit hostname;
-    promptdeploy = managedEvaluations.${hostname}.config.programs.promptdeploy;
-  }) managedHostnames;
-  strippedManaged = map (hostname: {
-    inherit hostname;
-    evaluation = evaluateJohnw {
-      inherit hostname;
-      moduleInputs = strippedInputs;
-    };
-  }) managedHostnames;
-  unmanagedConfigurationEvaluation = builtins.tryEval strippedUnmanaged.config.home.username;
-
-  rawJohnw =
-    hostname: moduleInputs:
-    import ../../config/johnw.nix {
-      inherit hostname lib;
-      config = { };
-      inputs = moduleInputs;
-      pkgs = testPkgs;
-    };
-  rawStrippedUnmanaged = rawJohnw "unmanaged-anvil-test" strippedInputs;
-  rawStrippedManaged = map (hostname: {
-    inherit hostname;
-    module = rawJohnw hostname strippedInputs;
-  }) managedHostnames;
-  expectedConvergenceAssertion = hostname: {
-    assertion = false;
-    message = "Anvil client convergence requires the pinned promptdeploy input on ${hostname}";
-  };
-  promptdeployRevision = "56f8e02fbc4a86031a5dbc434693d947f7ba90af";
-  promptdeployAnvilConfig = builtins.readFile "${inputs.promptdeploy}/mcp/anvil.yaml";
-  promptdeployDevonthinkConfig = builtins.readFile "${inputs.promptdeploy}/mcp/devonthink.yaml";
 in
 assert lib.assertMsg (isLinux || isDarwin) "Anvil Home Manager smoke requires Linux or Darwin";
 assert lib.assertMsg (
@@ -245,8 +192,6 @@ assert lib.assertMsg (
 assert lib.assertMsg (
   perAgentMode.config.home.sessionVariables.MCP_TIMEOUT == "330000"
 ) "Anvil dedicated mode drifted from the 330-second tool fallback";
-assert lib.assertMsg unmanagedConfigurationEvaluation.success
-  "an unmanaged host without promptdeploy did not evaluate cleanly";
 assert lib.assertMsg (
   !isLinux || positronRemoteLinux.config.nix.package == null
 ) "a Positron Linux host shadows the system Nix package";
@@ -260,36 +205,9 @@ assert lib.assertMsg (
     positronRemoteLinux.config.xdg.configFile."nix/nix.conf".text
   )
 ) "a Positron Linux host tried to set daemon-owned trust keys";
-assert lib.assertMsg (
-  !(rawStrippedUnmanaged.programs ? promptdeploy)
-) "an unmanaged host unexpectedly defines promptdeploy";
-assert lib.assertMsg (
-  rawStrippedUnmanaged.assertions == [ ]
-) "an unmanaged host without promptdeploy has a failing assertion";
 assert lib.assertMsg (lib.all (
-  entry:
-  !(entry.module.programs ? promptdeploy)
-  && entry.module.assertions == [ (expectedConvergenceAssertion entry.hostname) ]
-) rawStrippedManaged) "a managed host lost its fail-closed promptdeploy assertion";
-assert lib.assertMsg (lib.all (
-  entry: !(builtins.tryEval entry.evaluation.config.home.username).success
-) strippedManaged) "a managed host without promptdeploy unexpectedly evaluated successfully";
-assert lib.assertMsg (lib.all
-  (
-    entry:
-    entry.promptdeploy.enable
-    && entry.promptdeploy.expectedRevision == promptdeployRevision
-    && entry.promptdeploy.exactItems == expectedPromptdeployItems entry.hostname
-  )
-  managedWithPromptdeploy
-) "a managed host drifted from the pinned promptdeploy convergence contract";
-assert lib.assertMsg (lib.hasInfix ''
-  codex:
-    startup_timeout_sec: 330
-    tool_timeout_sec: 330
-'' promptdeployAnvilConfig) "pinned promptdeploy lost the Anvil Codex 330-second deadline contract";
-assert lib.assertMsg (lib.hasInfix "name: devonthink" promptdeployDevonthinkConfig)
-  "pinned promptdeploy lost the DEVONthink MCP definition";
+  hostname: !(managedEvaluations.${hostname}.config.programs ? promptdeploy)
+) managedHostnames) "a managed host unexpectedly defines promptdeploy";
 assert lib.assertMsg (
   !isDarwin
   || lib.all (
