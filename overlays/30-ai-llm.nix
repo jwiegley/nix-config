@@ -79,12 +79,12 @@ final: prev: {
   llama-cpp =
     (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs
       (attrs: rec {
-        version = "10069";
+        version = "10076";
         src = prev.fetchFromGitHub {
           owner = "ggml-org";
           repo = "llama.cpp";
           tag = "b${version}";
-          hash = "sha256-mjHeImLxneKvBIAMEM+0sB7syy1408sX1GuWfVC5D6E=";
+          hash = "sha256-U5S1cFMQTOY17acCKGLGymkSttAq71td8O+0v452Dss=";
         };
         postPatch = "";
         npmRoot = "tools/ui";
@@ -103,7 +103,7 @@ final: prev: {
           }
           popd
         '';
-        npmDepsHash = "sha256-6s9skw1wzEfm9QKktTqea3J+oudQAsS6O2VnZEMXAdw=";
+        npmDepsHash = "sha256-B7uEynAG70a3xauBKc20RuFa9cnWaWzVBCh+LPLBnIM=";
         npmDeps = prev.fetchNpmDeps {
           name = "llama-cpp-${version}-npm-deps";
           inherit src;
@@ -524,14 +524,14 @@ final: prev: {
       # ab1806e = v0.31.3 + 15 commits: the exact commit omlx pins, with
       # the CVE-2026-5843 trust_remote_code fix. Keep in sync with the
       # python3Packages.mlx-lm override in 30-ai-python.nix.
-      version = "15b522f5";
+      version = "cf10f962";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "ml-explore";
         repo = "mlx-lm";
-        rev = "15b522f593b7ca5fbc0cac6f7572d40859d2d8fe";
-        hash = "sha256-SQ6kax74O4c85ldIy44oZuOvSf1AVuFqDbYyePH2hLk=";
+        rev = "cf10f962b7a20e63a6df43dbf0faf06070153d40";
+        hash = "sha256-aa9lo0Molev2jbX/BUStUPzqmZD6Cm822gHkspZ5PiU=";
       };
 
       build-system = [ setuptools ];
@@ -635,14 +635,14 @@ final: prev: {
     with final.python313Packages;
     buildPythonApplication rec {
       pname = "omlx";
-      version = "0.5.2rc1";
+      version = "0.5.2";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "jundot";
         repo = "omlx";
         tag = "v${version}";
-        hash = "sha256-kmLsCQLB/VTIeWWwIqJi1ceLeVPTlBPIu0zKnqmdyw4=";
+        hash = "sha256-SqatMdcQxsVw+O1x4CRdJB3aqNsxXxjhASObvY70h2Q=";
       };
 
       # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git
