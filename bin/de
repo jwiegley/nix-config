@@ -75,6 +75,9 @@ keep_vars                                       \
     GH_ACCOUNT                                  \
     ITERM_SESSION_ID                            \
     NIX_PATH                                    \
+    GIT_PAGER                                   \
+    PAGER                                       \
+    NO_COLOR                                    \
     PERSONA                                     \
     PROMPT                                      \
     RPROMPT                                     \
