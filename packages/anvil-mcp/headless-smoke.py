@@ -2355,6 +2355,7 @@ def main() -> None:
     environment_probe = Path(sys.argv[7]).resolve()
     org_root = Path.home() / "org"
     org_file = org_root / "smoke.org"
+    yaml_file = Path.home() / "models.yaml"
     initialize = {
         "protocolVersion": "2025-03-26",
         "capabilities": {},
@@ -2671,6 +2672,42 @@ def main() -> None:
                     },
                 },
             ),
+            request(
+                28,
+                "tools/call",
+                {
+                    "name": "emacs-eval",
+                    "arguments": {
+                        "expression": (
+                            "(with-temp-buffer "
+                            f"(setq buffer-file-name {json.dumps(str(yaml_file))}) "
+                            "(set-auto-mode) "
+                            "(list major-mode "
+                            "(treesit-language-available-p 'yaml) "
+                            "(not (null (treesit-parser-list)))))"
+                        )
+                    },
+                },
+            ),
+            request(
+                29,
+                "tools/call",
+                {
+                    "name": "treesit_info",
+                    "arguments": {
+                        "file-path": str(yaml_file),
+                        "whole_file": "t",
+                    },
+                },
+            ),
+            request(
+                30,
+                "tools/call",
+                {
+                    "name": "file-outline",
+                    "arguments": {"path": str(yaml_file)},
+                },
+            ),
         ],
         cwd=launch_directory,
     )
@@ -2733,6 +2770,19 @@ def main() -> None:
         f"{launch_directory.resolve()}:direnv-launch-secret-canary:"
         "launch-overwrite:launch-contamination-command",
     )
+    assert_tool_text(
+        response_by_id(main_responses, 28), "(yaml-ts-mode t t)"
+    )
+    assert_tool_success(response_by_id(main_responses, 29), "stream")
+    assert_tool_success(response_by_id(main_responses, 29), "block_mapping_pair")
+    yaml_outline = tool_result_text(response_by_id(main_responses, 30))
+    for expected in (':format "yaml"', ':count 6', '"small-model"', '"key4"'):
+        if expected not in yaml_outline:
+            raise AssertionError(
+                f"YAML outline omitted {expected!r}: {yaml_outline!r}"
+            )
+    if "display_name" in yaml_outline:
+        raise AssertionError(f"YAML outline included scalar leaves: {yaml_outline!r}")
     if failing_shell_marker.exists():
         raise AssertionError("shell-run executed after an allowed envrc failed")
     for identifier in (10, 11, 16, 17):

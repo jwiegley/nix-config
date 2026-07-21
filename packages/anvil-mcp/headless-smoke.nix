@@ -84,6 +84,15 @@ runCommand "anvil-mcp-dedicated-smoke"
     # launcher has no identity-dependent fallback path.
     install -d -m 0700 "$HOME" "$HOME/org"
     printf '%s\n' '* Headless Anvil' 'headlessorgneedle headlesssemanticneedle'       >"$HOME/org/smoke.org"
+    printf '%s\n' \
+      'version: 1' \
+      'providers:' \
+      '  local:' \
+      '    models:' \
+      '      small-model:' \
+      '        display_name: Small Model' \
+      '    tags: [fast, local]' \
+      >"$HOME/models.yaml"
 
     install -d -m 0700 "$HOME/login-bin"
     printf '%s\n' '#!/bin/sh' 'printf login-shell-command' \

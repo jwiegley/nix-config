@@ -322,6 +322,9 @@ let
     if stdenv.isDarwin then emacs else emacs30-nox;
 
   dedicatedEmacsPackages = emacsPackagesFor dedicatedEmacs;
+  dedicatedTreeSitterGrammars = dedicatedEmacsPackages.treesit-grammars.with-grammars (grammars: [
+    grammars.tree-sitter-yaml
+  ]);
   dedicatedRuntimeEmacs = dedicatedEmacsPackages.emacsWithPackages (epkgs: [
     epkgs.direnv
     epkgs.exec-path-from-shell
@@ -1098,6 +1101,12 @@ let
 
         (require 'exec-path-from-shell)
         (require 'direnv)
+        (require 'treesit)
+        (add-to-list 'treesit-extra-load-path "${dedicatedTreeSitterGrammars}/lib/")
+        (unless (treesit-ready-p 'yaml t)
+          (error "Dedicated Anvil Emacs requires the YAML tree-sitter grammar"))
+        (require 'yaml-ts-mode)
+        (add-to-list 'auto-mode-alist '("\\.ya?ml\\'" . yaml-ts-mode))
         (add-to-list 'load-path "${dedicatedAnvil}/share/emacs/site-lisp")
         (require 'anvil-host)
         (setq direnv-always-show-summary nil)
@@ -3405,6 +3414,7 @@ let
         dedicatedOffloadEmacs
         dedicatedOffloadInit
         dedicatedRuntimeEmacs
+        dedicatedTreeSitterGrammars
         dedicatedSafeEmacsclient
         dedicatedSafeEmacsclientGuard
         dedicatedAgentSupervisor
