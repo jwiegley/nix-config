@@ -89,6 +89,44 @@ in
             "test_env_var_device"
           ];
         });
+
+        # omlx 0.5.2 imports the Xet session-cancellation API added by this
+        # matching huggingface-hub/hf-xet release pair.
+        hf-xet = pprev.hf-xet.overridePythonAttrs (_oldAttrs: rec {
+          version = "1.5.1";
+          src = prev.fetchFromGitHub {
+            owner = "huggingface";
+            repo = "xet-core";
+            tag = "v${version}";
+            hash = "sha256-TqSErydAOaHzCN7qglO/aqMF8BWYXvEv09adhxTwny0=";
+          };
+          sourceRoot = "${src.name}/hf_xet";
+          cargoDeps = prev.rustPlatform.fetchCargoVendor {
+            pname = "hf-xet";
+            inherit version src sourceRoot;
+            hash = "sha256-pwHUIkx+Dk8fGOVxRJKLswLjQB+sKzpyOOeqV6+Xyxo=";
+          };
+        });
+
+        huggingface-hub = pprev.huggingface-hub.overridePythonAttrs (oldAttrs: rec {
+          version = "1.19.0";
+          src = prev.fetchFromGitHub {
+            owner = "huggingface";
+            repo = "huggingface_hub";
+            tag = "v${version}";
+            hash = "sha256-gFOeYwsZTlXSgnuYsUqLv2OB8rsiI5QIeZFY8mH+Ke8=";
+          };
+          postPatch = (oldAttrs.postPatch or "") + ''
+            substituteInPlace src/huggingface_hub/cli/_cli_utils.py \
+              --replace-fail "and error.possibilities:" "and getattr(error, 'possibilities', []):"
+          '';
+          pythonRelaxDeps = (oldAttrs.pythonRelaxDeps or [ ]) ++ [ "click" ];
+          dependencies =
+            map (dependency: if (dependency.pname or "") == "hf-xet" then pfinal.hf-xet else dependency) (
+              oldAttrs.dependencies or [ ]
+            )
+            ++ [ pfinal.click ];
+        });
       }
       // {
 
