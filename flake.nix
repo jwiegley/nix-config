@@ -265,6 +265,7 @@
         ++ agent "codex"
         ++ agent "droid"
         ++ agent "gemini-cli"
+        ++ agent "git-surgeon"
         ++ agent "mcporter"
         ++ agent "opencode"
         ++ agent "pi"
