@@ -24,6 +24,10 @@ The shell currently brings in:
   It requires `tmux` at runtime; the package carries `tmux` and `git` only as a
   fallback, so your own `tmux`/`git` still win and attaching to a session
   yourself (`tmux attach`) uses the `tmux` on your PATH
+- Plasma Fractal and its `wiki` companion, providing hierarchical agent loops
+  in Git worktrees and tmux. The package includes complete upstream `fractal`
+  and `wiki` skill trees but does not install them into agent homes; skill
+  selection is owned by the separate Nix-managed agent configuration
 - `git-ai` in its minimal form, so `git-ai` is available without replacing
   `git`
 - LazyCodex, via the pinned `lazycodex-ai` installer CLI
@@ -87,3 +91,7 @@ nix run .#check
 
 Keeping these checks boring is the point: if the shell stops building, I want
 to find out before I try to use it in the middle of something else.
+
+Fractal is exposed as `plasma-fractal` because Nixpkgs already uses `fractal`
+for the GNOME Matrix client. Keep the Fractal and Wiki package versions and
+skill-resource checks aligned when updating either wheel.

@@ -55,6 +55,7 @@
               { };
         })
         (import ./overlays/30-agent-deck.nix)
+        (import ./overlays/30-fractal.nix)
         (import ./overlays/30-ai-python.nix)
         (import ./overlays/30-ai-llm.nix)
         (import ./overlays/30-ai-mcp.nix)
@@ -271,6 +272,8 @@
         ++ agent "pi"
         ++ opt "aiperf"
         ++ opt "agent-deck"
+        ++ opt "plasma-wiki"
+        ++ opt "plasma-fractal"
         ++ opt "agnix"
         ++ opt "claude-replay"
         ++ opt "claude-vault"
@@ -460,6 +463,7 @@
             paths = aiPackagesFor pkgs;
             ignoreCollisions = true;
           };
+          inherit (pkgs) plasma-fractal plasma-wiki;
         }
       );
 
@@ -501,6 +505,7 @@
         in
         {
           build = self.packages.${system}.default;
+          fractal-smoke = pkgs.callPackage ./overlays/tests/plasma-fractal-smoke.nix { };
           format = check "format" "format-check.sh" inputs.format "";
           lint = check "lint" "lint.sh" inputs.lint "";
           tests = check "tests" "test.sh" inputs.test ''

@@ -24,3 +24,5 @@ system=$("${nix_cmd[@]}" eval --impure --raw --expr 'builtins.currentSystem')
 "${nix_cmd[@]}" flake show --no-write-lock-file >/dev/null
 "${nix_cmd[@]}" eval --raw ".#packages.${system}.default.name" >/dev/null
 "${nix_cmd[@]}" eval --raw ".#devShells.${system}.default.name" >/dev/null
+test "$("${nix_cmd[@]}" eval --raw ".#packages.${system}.plasma-wiki.version")" = "1.1.0"
+test "$("${nix_cmd[@]}" eval --raw ".#packages.${system}.plasma-fractal.version")" = "1.0.0"
