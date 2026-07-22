@@ -99,6 +99,9 @@ Create or modify only these implementation surfaces:
   tests/agent-resources.nix
   tests/agent-wrappers.nix
   tests/agent-wrappers.sh
+  tests/node-runtime-guard.cjs
+  tests/recording-https-bridge-oracle.py
+  tests/run-bridge-oracle.sh
 
 /Users/johnw/src/nix.worktrees/nix-managed-agent-config/
   flake.nix
@@ -265,6 +268,9 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 - Create: `/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources/patches/mcp-remote-header-only.patch`
 - Create: `/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources/tests/agent-wrappers.nix`
 - Create: `/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources/tests/agent-wrappers.sh`
+- Create: `/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources/tests/node-runtime-guard.cjs`
+- Create: `/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources/tests/recording-https-bridge-oracle.py`
+- Create: `/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources/tests/run-bridge-oracle.sh`
 
 **Consumes:** the unchanged public function signature `lib.patchAgentPackage pkgs name package`, the existing Codex host-local SQLite/log behavior, and the exact frozen `mcp-remote` source recorded above. Source inspection has already proved Pi's pinned adapter expands header environment references natively, while Droid passes its `mcp.json` argv literally and therefore needs the bridge.
 
