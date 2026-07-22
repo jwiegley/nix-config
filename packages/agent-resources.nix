@@ -1,5 +1,6 @@
 {
   buildNpmPackage,
+  fetchzip,
   inputs,
   lib,
   runCommand,
@@ -32,6 +33,54 @@ let
     copy_skill ${lib.escapeShellArg "${inputs.ponytail}/skills/${name}"} \
       ${lib.escapeShellArg name}
   '') ponytailSkills;
+
+  piQuietFiles = [
+    "package.json"
+    "CHANGELOG.md"
+    "README.md"
+    "src/classify.ts"
+    "src/command.ts"
+    "src/compaction.ts"
+    "src/config.ts"
+    "src/format.ts"
+    "src/history.ts"
+    "src/index.ts"
+    "src/result-content.ts"
+    "src/shell.ts"
+    "src/tool-renderer-api.ts"
+    "src/tools-meta.ts"
+    "src/tools.ts"
+  ];
+
+  copyPiQuietFiles = lib.concatMapStringsSep "\n" (relative: ''
+    cp -- ${lib.escapeShellArg "${inputs.pi-quiet}/packages/pi-quiet/${relative}"} \
+      "$pi_quiet"/${lib.escapeShellArg relative}
+  '') piQuietFiles;
+
+  piOpenaiServerCompactionFiles = [
+    "package.json"
+    "LICENSE.md"
+    "README.md"
+    "src/config.ts"
+    "src/custom-stream.ts"
+    "src/index.ts"
+    "src/openai-ws-connection.ts"
+    "src/openai-ws-stream.ts"
+    "src/openai.ts"
+    "src/remote-compaction.ts"
+    "src/state.ts"
+    "src/stream-message-shared.ts"
+  ];
+
+  copyPiOpenaiServerCompactionFiles = lib.concatMapStringsSep "\n" (relative: ''
+    cp -- ${lib.escapeShellArg "${inputs.pi-openai-server-compaction}/${relative}"} \
+      "$pi_openai_server_compaction"/${lib.escapeShellArg relative}
+  '') piOpenaiServerCompactionFiles;
+
+  wsSource = fetchzip {
+    url = "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz";
+    hash = "sha256-+o96RaViEX6JAoRI5JCLDJDcIXj+XbaH0+wSM9F2pBw=";
+  };
 
   piMcpAdapter = buildNpmPackage {
     pname = "pi-mcp-adapter";
@@ -82,6 +131,12 @@ assert
   builtins.hashFile "sha256" "${inputs.pi-mcp-adapter}/package-lock.json"
   == "156cd7b65090cb5600651b40563dea3974fbeeaa7dbb6346f3deb0e9e0528bd0";
 assert
+  builtins.hashFile "sha256" "${inputs.pi-openai-server-compaction}/package.json"
+  == "f9cf0b5aaa73c1a3cf4ed92ba55c4c9f2784e46ef39c29822b279f3410452110";
+assert
+  builtins.hashFile "sha256" "${inputs.pi-quiet}/packages/pi-quiet/package.json"
+  == "1b370c62fdf7b3b5a9fb35b45ba0cf0e3ceefa35e037f7cd9911b816ad03e4fa";
+assert
   builtins.hashFile "sha256" "${inputs.pi-subagent}/package-lock.json"
   == "a7fbb2c6c10ee6af111dcf7a10064770cc360e818b6f424854c231ed6872d5ff";
 runCommand "agent-resources" { } ''
@@ -123,6 +178,20 @@ runCommand "agent-resources" { } ''
 
   extensions="$out/share/agent-resources/pi-extensions"
   mkdir "$extensions"
+
+  pi_openai_server_compaction="$extensions/pi-openai-server-compaction"
+  mkdir "$pi_openai_server_compaction"
+  mkdir "$pi_openai_server_compaction/src"
+  mkdir -p "$pi_openai_server_compaction/node_modules/ws"
+  ${copyPiOpenaiServerCompactionFiles}
+  cp -R -- ${lib.escapeShellArg "${wsSource}"}/. \
+    "$pi_openai_server_compaction/node_modules/ws"/
+
+  pi_quiet="$extensions/pi-quiet"
+  mkdir "$pi_quiet"
+  mkdir "$pi_quiet/src"
+  ${copyPiQuietFiles}
+  cp -- ${lib.escapeShellArg "${inputs.pi-quiet}/LICENSE"} "$pi_quiet/LICENSE"
 
   pi_mcp="$extensions/pi-mcp-adapter"
   pi_mcp_source=${lib.escapeShellArg "${piMcpAdapter}/lib/node_modules/pi-mcp-adapter"}

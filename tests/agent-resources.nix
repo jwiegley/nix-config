@@ -5,6 +5,8 @@
   translate-tool ? null,
   gitSurgeonSource ? null,
   piMcpAdapter ? null,
+  piOpenaiServerCompaction ? null,
+  piQuiet ? null,
   piSubagent ? null,
   piPackage,
 }:
@@ -49,7 +51,46 @@ let
   resources = pkgs.agent-resources;
   haveSources =
     superpowers != null && ponytail != null && translate-tool != null && gitSurgeonSource != null;
-  havePiSources = piMcpAdapter != null && piSubagent != null;
+  havePiSources =
+    piMcpAdapter != null && piOpenaiServerCompaction != null && piQuiet != null && piSubagent != null;
+
+  piQuietFiles = [
+    "package.json"
+    "CHANGELOG.md"
+    "README.md"
+    "src/classify.ts"
+    "src/command.ts"
+    "src/compaction.ts"
+    "src/config.ts"
+    "src/format.ts"
+    "src/history.ts"
+    "src/index.ts"
+    "src/result-content.ts"
+    "src/shell.ts"
+    "src/tool-renderer-api.ts"
+    "src/tools-meta.ts"
+    "src/tools.ts"
+  ];
+
+  piOpenaiServerCompactionFiles = [
+    "package.json"
+    "LICENSE.md"
+    "README.md"
+    "src/config.ts"
+    "src/custom-stream.ts"
+    "src/index.ts"
+    "src/openai-ws-connection.ts"
+    "src/openai-ws-stream.ts"
+    "src/openai.ts"
+    "src/remote-compaction.ts"
+    "src/state.ts"
+    "src/stream-message-shared.ts"
+  ];
+
+  wsSource = pkgs.fetchzip {
+    url = "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz";
+    hash = "sha256-+o96RaViEX6JAoRI5JCLDJDcIXj+XbaH0+wSM9F2pBw=";
+  };
 
   piMcpFiles = [
     "cli.js"
@@ -119,6 +160,9 @@ let
   ];
 
   piMcpFileArgs = lib.escapeShellArgs ([ "package.json" ] ++ piMcpFiles);
+  piQuietFileArgs = lib.escapeShellArgs piQuietFiles;
+  piQuietPackagedFileArgs = lib.escapeShellArgs (piQuietFiles ++ [ "LICENSE" ]);
+  piOpenaiServerCompactionFileArgs = lib.escapeShellArgs piOpenaiServerCompactionFiles;
   piSubagentFileArgs = lib.escapeShellArgs ([ "package.json" ] ++ piSubagentFiles);
 
   expectedPins = [
@@ -173,6 +217,36 @@ let
       name = "pi-mcp-adapter lock hash";
       actual = builtins.hashFile "sha256" "${piMcpAdapter}/package-lock.json";
       expected = "156cd7b65090cb5600651b40563dea3974fbeeaa7dbb6346f3deb0e9e0528bd0";
+    }
+    {
+      name = "pi-openai-server-compaction revision";
+      actual = piOpenaiServerCompaction.rev or null;
+      expected = "c6d593087709e9481223dc6c6c2269b371b5e055";
+    }
+    {
+      name = "pi-openai-server-compaction NAR hash";
+      actual = piOpenaiServerCompaction.narHash or null;
+      expected = "sha256-SFGcISdYblxGonhipIHPAOons8MdwYtu+A+WbHnNSVg=";
+    }
+    {
+      name = "pi-openai-server-compaction manifest hash";
+      actual = builtins.hashFile "sha256" "${piOpenaiServerCompaction}/package.json";
+      expected = "f9cf0b5aaa73c1a3cf4ed92ba55c4c9f2784e46ef39c29822b279f3410452110";
+    }
+    {
+      name = "pi-quiet revision";
+      actual = piQuiet.rev or null;
+      expected = "b281afef4e61188e7aa76aaa114ba505274fa7bc";
+    }
+    {
+      name = "pi-quiet NAR hash";
+      actual = piQuiet.narHash or null;
+      expected = "sha256-CScA35fG/xSgtJrWGf36G5oEv3Y+P5sSHjsy4NXkL94=";
+    }
+    {
+      name = "pi-quiet manifest hash";
+      actual = builtins.hashFile "sha256" "${piQuiet}/packages/pi-quiet/package.json";
+      expected = "1b370c62fdf7b3b5a9fb35b45ba0cf0e3ceefa35e037f7cd9911b816ad03e4fa";
     }
     {
       name = "pi-subagent revision";
@@ -486,7 +560,7 @@ else
 
       extensions=${resources}/share/agent-resources/pi-extensions
       missing_extensions=
-      for name in pi-mcp-adapter pi-subagent; do
+      for name in pi-mcp-adapter pi-openai-server-compaction pi-quiet pi-subagent; do
         if [ ! -d "$extensions/$name" ] || [ -L "$extensions/$name" ]; then
           missing_extensions="$missing_extensions $name"
         fi
@@ -500,10 +574,176 @@ else
 
       ${lib.optionalString havePiSources ''
         mcp="$extensions/pi-mcp-adapter"
+        openai_compaction="$extensions/pi-openai-server-compaction"
+        quiet="$extensions/pi-quiet"
         subagent="$extensions/pi-subagent"
 
         validate_tree "$mcp"
+        validate_tree "$openai_compaction"
+        validate_tree "$quiet"
         validate_tree "$subagent"
+
+        quiet_expected="$TMPDIR/pi-quiet-expected"
+        mkdir -p "$quiet_expected/src"
+        for relative in ${piQuietFileArgs}; do
+          cp -a -- ${lib.escapeShellArg "${piQuiet}/packages/pi-quiet"}/"$relative" \
+            "$quiet_expected/$relative"
+        done
+        cp -a -- ${lib.escapeShellArg "${piQuiet}/LICENSE"} "$quiet_expected/LICENSE"
+
+        openai_compaction_expected="$TMPDIR/pi-openai-server-compaction-expected"
+        mkdir -p "$openai_compaction_expected/src" \
+          "$openai_compaction_expected/node_modules/ws"
+        for relative in ${piOpenaiServerCompactionFileArgs}; do
+          cp -a -- ${lib.escapeShellArg "${piOpenaiServerCompaction}"}/"$relative" \
+            "$openai_compaction_expected/$relative"
+        done
+        cp -a -- ${lib.escapeShellArg "${wsSource}"}/. \
+          "$openai_compaction_expected/node_modules/ws"/
+
+        find "$quiet_expected" "$openai_compaction_expected" -type d \
+          -exec chmod 0555 {} +
+
+        write_manifest "$quiet_expected" "$TMPDIR/expected-quiet.manifest"
+        write_manifest "$quiet" "$TMPDIR/actual-quiet.manifest"
+        cmp "$TMPDIR/expected-quiet.manifest" "$TMPDIR/actual-quiet.manifest" \
+          || fail "pi-quiet framed path/type/mode/link/content manifest differs"
+
+        write_manifest "$openai_compaction_expected" \
+          "$TMPDIR/expected-openai-compaction.manifest"
+        write_manifest "$openai_compaction" \
+          "$TMPDIR/actual-openai-compaction.manifest"
+        cmp "$TMPDIR/expected-openai-compaction.manifest" \
+          "$TMPDIR/actual-openai-compaction.manifest" \
+          || fail "pi-openai-server-compaction framed manifest differs"
+
+        for relative in ${piQuietPackagedFileArgs}; do
+          [ -f "$quiet/$relative" ] && [ ! -L "$quiet/$relative" ] \
+            || fail "missing regular pi-quiet file: $relative"
+        done
+
+        jq -e '
+          .name == "@zenspc/pi-quiet"
+          and .version == "0.4.0"
+          and .type == "module"
+          and .license == "MIT"
+          and .peerDependencies == {
+            "@earendil-works/pi-coding-agent": "*",
+            "@earendil-works/pi-tui": "*"
+          }
+          and .pi.extensions == ["./src/index.ts"]
+          and (.dependencies // {}) == {}
+          and ((.scripts // {})
+            | (has("preinstall") or has("install") or has("postinstall") or has("prepare"))
+            | not)
+        ' "$quiet/package.json" >/dev/null \
+          || fail "invalid pi-quiet package manifest"
+
+        jq -e '
+          .name == "pi-openai-server-compaction"
+          and .version == "0.1.0"
+          and .private == true
+          and .type == "module"
+          and .license == "MIT"
+          and .engines.node == ">=22"
+          and .dependencies == {"ws":"^8.18.0"}
+          and .peerDependencies == {
+            "@earendil-works/pi-agent-core": ">=0.80.9 <0.81.0",
+            "@earendil-works/pi-ai": ">=0.80.9 <0.81.0",
+            "@earendil-works/pi-coding-agent": ">=0.80.9 <0.81.0"
+          }
+          and .pi.extensions == ["./src/index.ts"]
+          and ((.scripts // {})
+            | (has("preinstall") or has("install") or has("postinstall") or has("prepare"))
+            | not)
+        ' "$openai_compaction/package.json" >/dev/null \
+          || fail "invalid pi-openai-server-compaction package manifest"
+
+        jq -e '
+          .name == "ws"
+          and .version == "8.18.3"
+          and .license == "MIT"
+          and .engines.node == ">=10.0.0"
+          and (.dependencies // {}) == {}
+          and .peerDependencies == {
+            "bufferutil": "^4.0.1",
+            "utf-8-validate": ">=5.0.2"
+          }
+          and .peerDependenciesMeta == {
+            "bufferutil": {"optional":true},
+            "utf-8-validate": {"optional":true}
+          }
+        ' "$openai_compaction/node_modules/ws/package.json" >/dev/null \
+          || fail "invalid pi-openai-server-compaction ws closure"
+
+        test "$(sha256sum "$quiet/LICENSE" | cut -d' ' -f1)" \
+          = fb5278571984b1db0ef5ef82656aac3a9f5ac607b3349cf27c6e220d62b66db1
+        test "$(sha256sum "$quiet/src/index.ts" | cut -d' ' -f1)" \
+          = 95dd3737e4d620a4d0895bb8e4ea521b9dec13483c8c73ee6045310bd5978661
+        test "$(sha256sum "$openai_compaction/LICENSE.md" | cut -d' ' -f1)" \
+          = 0d4484983377237e9aa2a3e4192087c3bbccc196223fc098d0bca60d25f78577
+        test "$(sha256sum "$openai_compaction/src/index.ts" | cut -d' ' -f1)" \
+          = 477adf73e0bd37047f3f597531a49528e122312c9c2590874a7caf283ed19607
+        test "$(sha256sum "$openai_compaction/node_modules/ws/package.json" | cut -d' ' -f1)" \
+          = aaedef2a72b60db8fb36d9b46c48d44986051785a2b6450c62994603c85dd959
+
+        node --experimental-strip-types --test \
+          ${lib.escapeShellArg "${piQuiet}/packages/pi-quiet/src"}/*.test.ts
+
+        # This proves only that both entrypoints load under the packaged Pi.
+        # It does not override the compaction extension's incompatible peer range.
+        pi_smoke="$TMPDIR/pi-entrypoint-smoke"
+        mkdir -p "$pi_smoke/home" "$pi_smoke/agent"
+
+        run_pi_entrypoint_smoke() {
+          entrypoint=$1
+          output=$2
+          (
+            cd "$pi_smoke/home"
+            HOME="$pi_smoke/home" PI_CODING_AGENT_DIR="$pi_smoke/agent" PI_OFFLINE=1 \
+              ${lib.getExe piPackage} \
+              --mode rpc --no-session --offline \
+              --no-extensions --no-skills --no-prompt-templates \
+              --no-context-files --no-approve \
+              --extension "$entrypoint" </dev/null >"$output" 2>&1
+          )
+        }
+
+        quiet_smoke_output="$pi_smoke/pi-quiet.log"
+        run_pi_entrypoint_smoke "$quiet/src/index.ts" "$quiet_smoke_output" \
+          || { cat "$quiet_smoke_output" >&2; fail "pi-quiet entrypoint failed to load"; }
+
+        compaction_smoke_output="$pi_smoke/pi-openai-server-compaction.log"
+        run_pi_entrypoint_smoke \
+          "$openai_compaction/src/index.ts" "$compaction_smoke_output" \
+          || { cat "$compaction_smoke_output" >&2; fail "pi-openai-server-compaction entrypoint failed to load"; }
+
+        invalid_smoke_output="$pi_smoke/invalid-extension.log"
+        if run_pi_entrypoint_smoke \
+          "$openai_compaction/src/config.ts" "$invalid_smoke_output"; then
+          fail "Pi RPC smoke accepted an extension without a factory export"
+        fi
+        grep -F "Extension does not export a valid factory function" \
+          "$invalid_smoke_output" >/dev/null \
+          || { cat "$invalid_smoke_output" >&2; fail "Pi RPC smoke failed for an unrelated reason"; }
+
+        node --experimental-import-meta-resolve --experimental-strip-types \
+          --input-type=module -e '
+          import fs from "node:fs";
+          import path from "node:path";
+          import { pathToFileURL } from "node:url";
+          const root = process.argv[1];
+          const wsRoot = fs.realpathSync(path.join(root, "node_modules/ws"));
+          const resolved = import.meta.resolve("ws", pathToFileURL(path.join(root, "src/index.ts")));
+          const real = fs.realpathSync(new URL(resolved));
+          if (real !== wsRoot && !real.startsWith(wsRoot + path.sep)) {
+            throw new Error("ws resolution escaped packaged closure: " + real);
+          }
+          const module = await import(pathToFileURL(path.join(root, "src/openai-ws-connection.ts")));
+          if (typeof module.OpenAIWebSocketManager !== "function") {
+            throw new Error("OpenAIWebSocketManager export is missing");
+          }
+        ' "$openai_compaction"
 
         printf '%s\0' ${piMcpFileArgs} node_modules \
           | sort -z >"$TMPDIR/expected-mcp-top-level"
