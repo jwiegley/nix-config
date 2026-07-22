@@ -611,16 +611,17 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
 - Create: `/Users/johnw/src/nix.worktrees/nix-managed-agent-config/config/ai/renderers/pi.nix`
 - Modify: `/Users/johnw/src/nix.worktrees/nix-managed-agent-config/packages/ai-home-manager-smoke.nix`
+- Modify: `/Users/johnw/src/nix.worktrees/nix-managed-agent-config/flake.nix` to pass the pinned resource package into the plain-nixpkgs smoke check
 
 **Consumes:** Tasks 2 and 5, plus the exact Pi inventory in the approved design; promptdeploy is not a Pi oracle.
 
 **Produces:** Pi-native leaves and a structural guard description for mutable adapter settings.
 
-- [ ] **Step 1: Add the failing exact Pi inventory.**
+- [x] **Step 1: Add the failing exact Pi inventory.**
 
   Hera must have 26 subagents in `.pi/agent/agents`, 59 personal command templates plus two static prompts in `.pi/agent/prompts`, seven providers with 87 Hera-selected model pairs and no default, exactly six global MCP servers (`Ref`, `context-hub`, `context7`, `perplexity`, `sequential-thinking`, `anvil`), and exact links to both packaged extensions. Pi must receive no `.pi` skill copy; it discovers the 38 shared skills and 59 `command-*` plus two `prompt-*` projections from Hera Codex's `.agents/skills`. Clio and every Linux profile receive no Pi leaves.
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
   ```sh
   cd /Users/johnw/src/nix.worktrees/nix-managed-agent-config
@@ -630,7 +631,7 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
   Expected: Pi files, models, MCP catalog, and extension links are absent.
 
-- [ ] **Step 3: Implement native Pi leaves only.**
+- [x] **Step 3: Implement native Pi leaves only.**
 
   Generate `models.json` and `$XDG_CONFIG_HOME/mcp/mcp.json` with native runtime references. Use the pinned Pi package's documented provider adapter names; do not infer fields from live state. Link `pi-mcp-adapter` and `pi-subagent` package roots directly. Return:
 
@@ -643,11 +644,11 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
   Preserve mutable `settings.json`, adapter `settings`, cache, OAuth state, auth, sessions, model store, and package selections.
 
-- [ ] **Step 4: Assert all deliberate exclusions.**
+- [x] **Step 4: Assert all deliberate exclusions.**
 
   Reject Pi PAL, DEVONthink, Drafts, memory-vault, stock-trader, hooks, marketplaces, `anvil-tools`, `llama-cpp-remote`, an emitted default, `.pi` skill copies, wrapper code, and runtime install actions. Assert Hera Pi is enabled only with the Hera Codex profile that owns shared skills/projections.
 
-- [ ] **Step 5: Run GREEN.**
+- [x] **Step 5: Run GREEN.**
 
   ```sh
   cd /Users/johnw/src/nix.worktrees/nix-managed-agent-config
@@ -657,7 +658,7 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
   Expected: exact Pi inventory, native JSON parsing, extension closure, shared-skill dependency, and all exclusions pass.
 
-- [ ] **Step 6: Review, fess-audit, and commit.**
+- [x] **Step 6: Review, fess-audit, and commit.**
 
   Review against Pi's direct design contract rather than legacy parity; run the fess audit; commit as `feat: render native Pi configuration`.
 

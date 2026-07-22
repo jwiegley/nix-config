@@ -326,6 +326,7 @@
 
           ai-home-manager-smoke = pkgs.callPackage ./packages/ai-home-manager-smoke.nix {
             inherit src;
+            agentResources = ai-nix.packages.${system}.agent-resources;
           };
         }
         // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux || system == "aarch64-darwin") {

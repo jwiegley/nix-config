@@ -1,4 +1,8 @@
-{ pkgs, src }:
+{
+  pkgs,
+  src,
+  agentResources,
+}:
 
 let
   inherit (pkgs) lib;
@@ -765,6 +769,7 @@ let
     "vulcan-opencode"
   ];
   droidProfileIds = [ "hera-droid" ];
+  piProfileIds = sortedNames (lib.filterAttrs (_: profile: profile.client == "pi") catalog.profiles);
   fixtureHomeDirectory = "/Users/smoke";
   fixtureXdgConfigHome = "${fixtureHomeDirectory}/.config";
   selectedFor =
@@ -783,6 +788,10 @@ let
   codexRendererPath = "${src}/config/ai/renderers/codex.nix";
   openCodeRendererPath = "${src}/config/ai/renderers/opencode.nix";
   droidRendererPath = "${src}/config/ai/renderers/droid.nix";
+  piRendererPath = "${src}/config/ai/renderers/pi.nix";
+  piPkgs = pkgs // {
+    agent-resources = agentResources;
+  };
   claudeRenderer =
     if builtins.pathExists claudeRendererPath then
       import claudeRendererPath { inherit lib pkgs; }
@@ -803,6 +812,14 @@ let
       import droidRendererPath { inherit lib pkgs; }
     else
       throw "Task 7 RED: config/ai/renderers/droid.nix is missing";
+  piRenderer =
+    if builtins.pathExists piRendererPath then
+      import piRendererPath {
+        inherit lib;
+        pkgs = piPkgs;
+      }
+    else
+      throw "Task 8 RED: config/ai/renderers/pi.nix is missing";
 
   renderClaude =
     profileId:
@@ -840,10 +857,35 @@ let
       homeDirectory = fixtureHomeDirectory;
       xdgConfigHome = fixtureXdgConfigHome;
     };
+  renderPi =
+    profileId:
+    piRenderer {
+      profile = catalog.profiles.${profileId};
+      selected = selectedFor profileId;
+      modelData = selectedModelDataFor profileId;
+      homeDirectory = fixtureHomeDirectory;
+      xdgConfigHome = fixtureXdgConfigHome;
+    };
   renderedClaude = lib.genAttrs claudeProfileIds renderClaude;
   renderedCodex = lib.genAttrs codexProfileIds renderCodex;
   renderedOpenCode = lib.genAttrs openCodeProfileIds renderOpenCode;
   renderedDroid = lib.genAttrs droidProfileIds renderDroid;
+  renderedPi = lib.genAttrs piProfileIds renderPi;
+  expectedPiRenderKeys = [
+    "companions"
+    "files"
+    "mutableMcpGuard"
+    "requiredEnvNames"
+  ];
+  validatePiRenderShape =
+    render:
+    if sortedNames render == expectedPiRenderKeys then
+      true
+    else
+      throw "unexpected Pi renderer output shape";
+  piUnexpectedOutputProbe = renderedPi.hera-pi // {
+    packages = [ ];
+  };
   droidMissingProviderTypeProbe =
     let
       data = selectedModelDataFor "hera-droid";
@@ -862,6 +904,35 @@ let
       homeDirectory = fixtureHomeDirectory;
       xdgConfigHome = fixtureXdgConfigHome;
     };
+  piUnknownAgentToolProbe = piRenderer {
+    profile = catalog.profiles.hera-pi;
+    selected = (selectedFor "hera-pi") // {
+      agents = (selectFor "hera-pi" catalog.items.agents) // {
+        bash-reviewer = catalog.items.agents.bash-reviewer // {
+          metadata = catalog.items.agents.bash-reviewer.metadata // {
+            tools = "Unknown";
+          };
+        };
+      };
+    };
+    modelData = selectedModelDataFor "hera-pi";
+    homeDirectory = fixtureHomeDirectory;
+    xdgConfigHome = fixtureXdgConfigHome;
+  };
+  piNonstandardXdgProbe = piRenderer {
+    profile = catalog.profiles.hera-pi;
+    selected = selectedFor "hera-pi";
+    modelData = selectedModelDataFor "hera-pi";
+    homeDirectory = fixtureHomeDirectory;
+    xdgConfigHome = "${fixtureHomeDirectory}/xdg-config";
+  };
+  piWrongProfileProbe = piRenderer {
+    profile = catalog.profiles.vulcan-opencode;
+    selected = selectedFor "hera-pi";
+    modelData = selectedModelDataFor "hera-pi";
+    homeDirectory = fixtureHomeDirectory;
+    xdgConfigHome = fixtureXdgConfigHome;
+  };
   codexMetadataProbeItem = catalog.items.agents.bash-reviewer // {
     name = "metadata-probe";
     metadata = catalog.items.agents.bash-reviewer.metadata // {
@@ -1183,6 +1254,70 @@ let
     mcpServers = lib.mapAttrs expectedDroidMcpServer (selectFor "hera-droid" catalog.items.mcpServers);
   };
 
+  piProviderApis = {
+    positron-anthropic = "anthropic-messages";
+    positron-google = "google-generative-ai";
+    positron-openai = "openai-responses";
+    nvidia = "openai-completions";
+    litellm = "openai-completions";
+    omlx = "openai-completions";
+    llama-cpp-local = "openai-completions";
+  };
+  renderPiCredential =
+    credential:
+    if isTypedEnv credential then "$" + "{" + credential.env + "}" else credential.nonSecret;
+  expectedPiModel =
+    model:
+    {
+      inherit (model) id;
+      name = model.displayName;
+      maxTokens = model.outputLimit or model.maxOutputTokens;
+    }
+    // lib.optionalAttrs (model ? contextLimit) {
+      contextWindow = model.contextLimit;
+    };
+  expectedPiProvider = providerName: provider: {
+    api = piProviderApis.${providerName};
+    apiKey = renderPiCredential provider.apiKey;
+    inherit (provider) baseUrl;
+    models = map expectedPiModel (
+      orderedValues (
+        lib.filterAttrs (_: model: model.provider == providerName) (selectedModels "hera-pi")
+      )
+    );
+  };
+  expectedPiModels = {
+    providers = lib.mapAttrs expectedPiProvider (selectedProviders "hera-pi");
+  };
+  renderPiSecretReferences =
+    value:
+    if isTypedEnv value then
+      "$" + "{" + value.env + "}"
+    else if builtins.isAttrs value then
+      lib.mapAttrs (_: renderPiSecretReferences) value
+    else if builtins.isList value then
+      map renderPiSecretReferences value
+    else
+      value;
+  expectedPiMcpServer =
+    _name: server:
+    let
+      transport = renderPiSecretReferences server.transport;
+    in
+    if transport ? url then
+      {
+        inherit (transport) url headers;
+        oauth = false;
+      }
+    else
+      {
+        inherit (transport) command args;
+      }
+      // lib.optionalAttrs (transport ? env) { inherit (transport) env; };
+  expectedPiMcp = {
+    mcpServers = lib.mapAttrs expectedPiMcpServer (selectFor "hera-pi" catalog.items.mcpServers);
+  };
+
   expectedClaudeSettings =
     profileId:
     let
@@ -1263,6 +1398,31 @@ let
         "${root}/nix-managed-settings.json"
       ]
     );
+  piExtensionSources = {
+    pi-mcp-adapter = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter";
+    pi-subagent = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-subagent";
+  };
+  expectedPiPaths =
+    profileId:
+    let
+      root = catalog.profiles.${profileId}.root;
+    in
+    lib.sort builtins.lessThan (
+      map (name: "${root}/agents/${name}.md") (selectedNames profileId "agents")
+      ++ map (name: "${root}/prompts/${name}.md") (selectedNames profileId "commands")
+      ++ map (name: "${root}/prompts/${name}.md") (selectedNames profileId "prompts")
+      ++ [
+        ".config/mcp/mcp.json"
+        "${root}/extensions/pi-mcp-adapter"
+        "${root}/extensions/pi-subagent"
+        "${root}/models.json"
+      ]
+    );
+  piSharedSkillPaths = lib.sort builtins.lessThan (
+    map (name: ".agents/skills/${name}") (selectedNames "hera-codex" "skills")
+    ++ map (name: ".agents/skills/command-${name}") (selectedNames "hera-codex" "commands")
+    ++ map (name: ".agents/skills/prompt-${name}") (selectedNames "hera-codex" "prompts")
+  );
   forbiddenClaudePaths =
     profileId:
     let
@@ -1315,6 +1475,30 @@ let
       "${root}/auth.json"
       "${root}/history.jsonl"
       "${root}/sessions"
+    ];
+  forbiddenPiPaths =
+    profileId:
+    let
+      root = catalog.profiles.${profileId}.root;
+    in
+    [
+      root
+      ".agents"
+      ".agents/skills"
+      ".mcp.json"
+      ".pi/mcp.json"
+      "${root}/auth.json"
+      "${root}/git"
+      "${root}/mcp-cache.json"
+      "${root}/mcp-npx-cache.json"
+      "${root}/mcp-oauth"
+      "${root}/mcp-onboarding.json"
+      "${root}/mcp.json"
+      "${root}/models-store.json"
+      "${root}/npm"
+      "${root}/sessions"
+      "${root}/settings.json"
+      "${root}/skills"
     ];
 
   documentSource =
@@ -1392,6 +1576,36 @@ let
     // lib.optionalAttrs (item.metadata ? tools) {
       tools = lib.genAttrs toolNames (name: builtins.elem name enabled);
     };
+  normalizePiAgentTools =
+    tools:
+    if tools == "Read, Grep, Glob, Bash" then
+      "read,grep,find,bash"
+    else if
+      tools == [
+        "mcp__perplexity__perplexity_search_web"
+        "WebFetch"
+      ]
+    then
+      "mcp"
+    else
+      throw "unsupported Pi agent tools: ${builtins.toJSON tools}";
+  expectedPiAgentMetadata =
+    item:
+    removeAttrs item.metadata [ "tools" ]
+    // lib.optionalAttrs (item.metadata ? tools) {
+      tools = normalizePiAgentTools item.metadata.tools;
+    };
+  expectedPiCommandMetadata =
+    item:
+    lib.optionalAttrs (item.metadata ? description) {
+      inherit (item.metadata) description;
+    }
+    //
+      lib.optionalAttrs
+        (builtins.hasAttr "argument-hint" item.metadata && builtins.isString item.metadata."argument-hint")
+        {
+          inherit (item.metadata) argument-hint;
+        };
 
   claudeDocumentRecords = lib.concatMap (
     profileId:
@@ -1610,12 +1824,71 @@ let
       expectedText = builtins.readFile item.source;
     }) (selectFor profileId catalog.items.prompts)
   ) droidProfileIds;
+  piDocumentRecords = lib.concatMap (
+    profileId:
+    let
+      profile = catalog.profiles.${profileId};
+      render = renderedPi.${profileId};
+      file = path: render.files.${path};
+    in
+    [
+      {
+        kind = "json";
+        label = "${profileId} models";
+        path = documentSource "${profileId}-models.json" (file "${profile.root}/models.json");
+        expected = expectedPiModels;
+        forbidden = [
+          "{env:"
+          "$env:"
+          "llama-cpp-remote"
+          "?apiKey="
+        ];
+      }
+      {
+        kind = "json";
+        label = "${profileId} MCP";
+        path = documentSource "${profileId}-mcp.json" (file ".config/mcp/mcp.json");
+        expected = expectedPiMcp;
+        forbidden = [
+          "anvil-tools"
+          "devonthink"
+          "drafts"
+          "imports"
+          "memory-vault"
+          "pal"
+          "stock-trader"
+          "?apiKey="
+        ];
+      }
+    ]
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "frontmatter";
+      label = "${profileId} agent ${name}";
+      path = documentSource "${profileId}-agent-${name}.md" (file "${profile.root}/agents/${name}.md");
+      expectedMetadata = expectedPiAgentMetadata item;
+      expectedBody = builtins.readFile item.source;
+    }) (selectFor profileId catalog.items.agents)
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "frontmatter";
+      label = "${profileId} command ${name}";
+      path = documentSource "${profileId}-command-${name}.md" (file "${profile.root}/prompts/${name}.md");
+      expectedMetadata = expectedPiCommandMetadata item;
+      expectedBody = builtins.readFile item.source;
+    }) (selectFor profileId catalog.items.commands)
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "text";
+      label = "${profileId} prompt ${name}";
+      path = documentSource "${profileId}-prompt-${name}.md" (file "${profile.root}/prompts/${name}.md");
+      expectedText = builtins.readFile item.source;
+    }) (selectFor profileId catalog.items.prompts)
+  ) piProfileIds;
   rendererDocumentManifest = pkgs.writeText "ai-renderer-document-fixtures.json" (
     builtins.toJSON (
       claudeDocumentRecords
       ++ codexDocumentRecords
       ++ openCodeDocumentRecords
       ++ droidDocumentRecords
+      ++ piDocumentRecords
       ++ [ codexMetadataProbeRecord ]
     )
   );
@@ -1642,6 +1915,16 @@ let
       "REF_API_KEY"
     ];
   };
+  piRequiredEnvNames = [
+    "ANTHROPIC_API_KEY"
+    "CONTEXT7_API_KEY"
+    "GEMINI_API_KEY"
+    "LITELLM_API_KEY"
+    "NVIDIA_API_KEY"
+    "OPENAI_API_KEY"
+    "PERPLEXITY_API_KEY"
+    "REF_API_KEY"
+  ];
 
   rendererChecks =
     lib.concatMap (
@@ -1808,7 +2091,97 @@ let
           item.source
         )
       ) (selectFor profileId catalog.items.skills)
-    ) droidProfileIds;
+    ) droidProfileIds
+    ++ lib.concatMap (
+      profileId:
+      let
+        profile = catalog.profiles.${profileId};
+        render = renderedPi.${profileId};
+        paths = sortedNames render.files;
+        providerCounts = lib.mapAttrs (
+          _: provider: builtins.length provider.models
+        ) expectedPiModels.providers;
+        piOwnedSkillPaths = builtins.filter (
+          path: lib.hasPrefix "${profile.root}/skills/" path || lib.hasPrefix ".agents/skills/" path
+        ) paths;
+      in
+      [
+        (expectEqual "${profileId} exact path inventory" paths (expectedPiPaths profileId))
+        (expectEqual "${profileId} exact path inventory hash" (builtins.hashString "sha256" (
+          builtins.toJSON paths
+        )) "6174c0ec024069b44cf17b37f940caeec54bd5230761f2d4367dc529c2f1e841")
+        (expectEqual "${profileId} path count" (builtins.length paths) 91)
+        (expectEqual "${profileId} exact renderer output shape" (validatePiRenderShape render) true)
+        (expectReject "Pi unexpected renderer output accepted" (
+          validatePiRenderShape piUnexpectedOutputProbe
+        ))
+        (expectEqual "${profileId} companions" render.companions [ ])
+        (expectEqual "${profileId} required environment" render.requiredEnvNames piRequiredEnvNames)
+        (expectEqual "${profileId} mutable MCP guard" render.mutableMcpGuard {
+          path = ".pi/agent/mcp.json";
+          forbiddenKeys = [
+            "mcpServers"
+            "imports"
+          ];
+        })
+        (expectEqual "${profileId} mutable roots remain unmanaged" (lib.intersectLists paths (
+          forbiddenPiPaths profileId
+        )) [ ])
+        (expectEqual "${profileId} owns no skill leaves" piOwnedSkillPaths [ ])
+        (expectReject "Pi unknown agent tool accepted"
+          piUnknownAgentToolProbe.files.".pi/agent/agents/bash-reviewer.md".text
+        )
+        (expectReject "Pi nonstandard XDG config home accepted" piNonstandardXdgProbe.companions)
+        (expectReject "Pi non-Hera/non-Pi profile accepted" piWrongProfileProbe.companions)
+        (expectEqual "${profileId} provider set" (sortedNames expectedPiModels.providers) [
+          "litellm"
+          "llama-cpp-local"
+          "nvidia"
+          "omlx"
+          "positron-anthropic"
+          "positron-google"
+          "positron-openai"
+        ])
+        (expectEqual "${profileId} provider model counts" providerCounts {
+          litellm = 50;
+          llama-cpp-local = 24;
+          nvidia = 1;
+          omlx = 5;
+          positron-anthropic = 4;
+          positron-google = 2;
+          positron-openai = 1;
+        })
+        (expectEqual "${profileId} model count" (lib.foldl' (
+          count: provider: count + builtins.length provider.models
+        ) 0 (builtins.attrValues expectedPiModels.providers)) 87)
+        (expectEqual "${profileId} semantic models oracle" (builtins.hashString "sha256" (
+          builtins.toJSON expectedPiModels
+        )) "13f4f451f744569ce416e389bb285db5638c0aeadc2a8117de679e88b28f7157")
+        (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) [
+          "Ref"
+          "anvil"
+          "context-hub"
+          "context7"
+          "perplexity"
+          "sequential-thinking"
+        ])
+        (expectEqual "${profileId} semantic MCP oracle" (builtins.hashString "sha256" (
+          builtins.toJSON expectedPiMcp
+        )) "03e18dfc387f1c07a8550ea3c997160e16c054819e4dc35aeeaa78c2ab5d9fdf")
+        (expectEqual "${profileId} MCP extension link"
+          render.files."${profile.root}/extensions/pi-mcp-adapter"
+          { source = piExtensionSources.pi-mcp-adapter; }
+        )
+        (expectEqual "${profileId} subagent extension link"
+          render.files."${profile.root}/extensions/pi-subagent"
+          { source = piExtensionSources.pi-subagent; }
+        )
+        (expectEqual "${profileId} shared skill inventory count" (builtins.length piSharedSkillPaths) 99)
+        (expectEqual "${profileId} shared skills are Hera Codex-owned" (builtins.filter (
+          path: lib.hasPrefix ".agents/skills/" path
+        ) (sortedNames renderedCodex.hera-codex.files)) piSharedSkillPaths)
+      ]
+    ) piProfileIds;
 
   candidate = {
     inherit (catalog) profiles items;
@@ -2189,6 +2562,12 @@ let
     (expectEqual "canonical validation" (catalog.validate candidate) true)
     (expectEqual "profile IDs" (sortedNames catalog.profiles) expectedProfileIds)
     (expectEqual "profile expectation coverage" (sortedNames profileExpectations) expectedProfileIds)
+    (expectEqual "Pi profile inventory" piProfileIds [ "hera-pi" ])
+    (expectEqual "Pi Hera-only host" catalog.profiles.hera-pi.host "hera")
+    (expectEqual "Pi Hera-only platform" catalog.profiles.hera-pi.platform "darwin")
+    (expectEqual "Pi shared-skill owner host" catalog.profiles.hera-codex.host
+      catalog.profiles.hera-pi.host
+    )
     (expectEqual "profile root coverage" (lib.mapAttrs (
       _: profile: profile.root
     ) catalog.profiles) expectedProfileRoots)
@@ -2374,6 +2753,13 @@ pkgs.runCommand "ai-home-manager-smoke"
     ];
   }
   ''
+    test -f "${piExtensionSources.pi-mcp-adapter}/package.json"
+    test -f "${piExtensionSources.pi-mcp-adapter}/index.ts"
+    test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/@modelcontextprotocol/sdk"
+    test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/zod"
+    test -f "${piExtensionSources.pi-subagent}/package.json"
+    test -f "${piExtensionSources.pi-subagent}/index.ts"
+
     python3 -I - "${rendererDocumentManifest}" <<'PY'
     import json
     import subprocess
@@ -2631,7 +3017,7 @@ pkgs.runCommand "ai-home-manager-smoke"
     renderers = root / "renderers"
     if renderers.exists():
         expected_root.add("renderers")
-        expected_renderers = {"claude.nix", "codex.nix", "droid.nix", "opencode.nix"}
+        expected_renderers = {"claude.nix", "codex.nix", "droid.nix", "opencode.nix", "pi.nix"}
         actual_renderers = {entry.name for entry in renderers.iterdir()}
         if actual_renderers != expected_renderers:
             errors.append(

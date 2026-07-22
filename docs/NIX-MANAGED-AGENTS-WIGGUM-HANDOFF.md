@@ -44,6 +44,7 @@ Replace promptdeploy as the active desired-state mechanism for Claude Code, Code
 - Task 5 is committed as `87edae37cf9e4917af1c0d81072d45756f277f49` (`feat: add typed agent catalog and models`), with exact selector, model, secret-reference, and unsafe-name rejection fixtures.
 - Task 6 is committed as `28dff70475c346b5bb06e6309fa078067e92e38c` (`feat: render Claude and Codex configuration`) after focused smoke, static hygiene, reproducibility rebuild, and independent design/security/fess PASS.
 - Task 7 renders complete OpenCode and Droid contracts. Exact inventories, native documents, 87 Droid models, seven Droid MCP servers, provider/default behavior, tool normalization, typed-reference routing, and mutable exclusions pass the focused smoke plus a reproducibility rebuild; independent design, security, and fess re-reviews pass. Task 9 must install the pinned `agent-http-header-bridge` whenever Droid is selected and assert PATH resolution.
+- Task 8 renders the Hera-only Pi contract as exactly 91 owned leaves: 26 agents, 61 prompts, seven providers with 87 models and no default, six global MCP servers, and two direct extension roots. The focused smoke, static hygiene, exact path/model/MCP oracles, negative profile/XDG/tool probes, and reproducibility rebuild pass; independent design, security, and fess re-reviews pass. Task 9 must apply the recorded Pi mutable-shadow guard matrix at the pre-link boundary.
 - Promptdeploy, ai-nix, and nix-config inventories were completed read-only under `/tmp/wg-nix-managed-ai/`.
 - The corrected 13-task plan passed independent scope, security, and final fess review; Tasks 1–12 are approved to begin.
 - Baseline ai-nix `nix flake check -L path:.` completed successfully, including the existing Gradio build and 757-test suite.
@@ -60,4 +61,4 @@ Replace promptdeploy as the active desired-state mechanism for Claude Code, Code
 
 ## Resume point
 
-Begin Task 8 from the Task 7 commit containing this handoff update, starting with the named Hera-only Pi RED inventory in the approved plan. Continue using the local ai-nix override until its reviewed feature branch is published and pinned. Do not execute Task 13 without separate durable authority.
+Begin Task 9 from the Task 8 commit containing this handoff update. Integrate the rendered leaves through Home Manager, enforce the previous-generation collision/tamper checks and the recorded Pi mutable-shadow guard matrix, and install/assert the pinned Droid header bridge only when Droid is selected. Continue using the local ai-nix override until its reviewed feature branch is published and pinned. Do not execute Task 13 without separate durable authority.
