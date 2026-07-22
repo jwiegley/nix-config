@@ -34,7 +34,7 @@ Replace promptdeploy as the active desired-state mechanism for Claude Code, Code
 ## Current state
 
 - Approved design is committed in nix-config.
-- Both isolated implementation worktrees exist and contain no implementation commits.
+- Task 1 is committed in ai-nix as `651cf6593cf4b7a3c4202e35dd495353d389f4c5`: the immutable skill-resource package contains the exact 22-name set and passed focused/full gates plus independent scope, security, and fess review. The nix-config implementation worktree remains at its approved planning commit.
 - Promptdeploy, ai-nix, and nix-config inventories were completed read-only under `/tmp/wg-nix-managed-ai/`.
 - The corrected 13-task plan passed independent scope, security, and final fess review; Tasks 1–12 are approved to begin.
 - Baseline ai-nix `nix flake check -L path:.` completed successfully, including the existing Gradio build and 757-test suite.
@@ -51,4 +51,4 @@ Replace promptdeploy as the active desired-state mechanism for Claude Code, Code
 
 ## Resume point
 
-Commit the approved plan/design/handoff/ledger documentation, then begin Task 1 in the ai-nix worktree with its required RED check.
+Begin Task 2 in the ai-nix worktree with its required RED extension-closure check; preserve the clean Task 1 commit as the review boundary.

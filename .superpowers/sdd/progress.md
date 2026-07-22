@@ -7,7 +7,7 @@ Planning gate: passed independent scope, security, and final fess review. Tasks 
 
 | Task | State | RED evidence | GREEN evidence | Review | Commit |
 | --- | --- | --- | --- | --- | --- |
-| 1. Static external resources | pending | — | — | — | — |
+| 1. Static external resources | complete | Missing `pkgs.agent-resources` at evaluation | Focused check, public package build, and full `nix flake check -L path:.` exited 0; exact 22-name manifest passed | Scope, security, and fess PASS | ai-nix `651cf6593cf4b7a3c4202e35dd495353d389f4c5` |
 | 2. Pi extensions | pending | — | — | — | — |
 | 3. Managed wrappers | pending | — | — | — | — |
 | 4. Frozen oracle and canonical assets | pending | — | — | — | — |
@@ -34,3 +34,5 @@ Planning gate: passed independent scope, security, and final fess review. Tasks 
 - Planning review attempt 2 resolved the original scope/security findings but found stale design authority, an unowned bridge contingency, impossible oracle filesystem wording, a contradictory credential-presence boundary, and incomplete ai-nix lint coverage.
 - Bridge inspection proved unmodified `mcp-remote` unsafe for this contract because static-header 401s enter OAuth/browser state. The plan now pins it with one static-header-only patch, no replacement proxy.
 - Planning review attempt 3 passed scope and security; the final fess audit found seven specification/test/documentation gaps. All seven were corrected and the independent fess re-review passed.
+- Task 1 RED setup first exposed an unquoted zsh flake-reference glob and then a test-only Nix string parse error; quoting the reference and replacing the empty `read -d` literal produced the required missing-`pkgs.agent-resources` RED.
+- Task 1 GREEN iteration corrected only temporary expected-tree permissions. Independent review then caught Statix's one-target CLI contract; separate lint invocations fixed it. The final focused check, public package build, full flake gate, and three re-reviews all passed.
