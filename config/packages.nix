@@ -486,6 +486,7 @@ rec {
     ++ optPkg "claude-replay"
     ++ optAgent "claude-code"
     ++ optAgent "ccusage"
+    ++ optAgent "ccstatusline"
     ++ optAgent "codex"
     ++ optAgent "droid"
     ++ optAgent "git-surgeon"
