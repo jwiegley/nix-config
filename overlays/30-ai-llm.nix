@@ -514,43 +514,9 @@ final: prev: {
     };
 
   # mlx-lm - Apple MLX-based LLM inference
-  # NOTE: Using 'final' here because mlx-lm needs final python3Packages
-  # which may include our pythonPackagesExtensions modifications
-  mlx-lm =
-    with final;
-    with final.python3Packages;
-    buildPythonApplication rec {
-      pname = "mlx-lm";
-      # ab1806e = v0.31.3 + 15 commits: the exact commit omlx pins, with
-      # the CVE-2026-5843 trust_remote_code fix. Keep in sync with the
-      # python3Packages.mlx-lm override in 30-ai-python.nix.
-      version = "cf10f962";
-      pyproject = true;
-
-      src = fetchFromGitHub {
-        owner = "ml-explore";
-        repo = "mlx-lm";
-        rev = "cf10f962b7a20e63a6df43dbf0faf06070153d40";
-        hash = "sha256-aa9lo0Molev2jbX/BUStUPzqmZD6Cm822gHkspZ5PiU=";
-      };
-
-      build-system = [ setuptools ];
-      dependencies = [
-        mlx
-        transformers
-        protobuf
-        jinja2
-        sentencepiece
-      ];
-
-      doCheck = false; # Tests require additional dependencies
-
-      meta = {
-        description = "LLM access to models using MLX";
-        homepage = "https://github.com/mlx-explore/mlx-lm";
-        license = lib.licenses.mit;
-      };
-    };
+  # Keep a single definition: the Python package override is pinned to the
+  # exact revision required by omlx and carries nixpkgs' dependency policy.
+  mlx-lm = final.python3Packages.mlx-lm;
 
   # mtplx - MTP speculative decoding runtime for Apple Silicon (MLX-native)
   # Built as buildPythonPackage + python.withPackages (rather than

@@ -9,8 +9,14 @@ final: prev: {
       inherit (final) python3Packages;
       gradioForVllm =
         (python3Packages.gradio.override { inherit (python3Packages) gradio; }).overridePythonAttrs
-          (_: {
-            # gradio 6.9.0 allows Starlette 1.x at runtime, but its wheel
+          (oldAttrs: {
+            # huggingface_hub probes its online agent registry while building
+            # request headers. Keep Gradio's sandboxed test suite offline.
+            env = (oldAttrs.env or { }) // {
+              HF_HUB_OFFLINE = "1";
+            };
+
+            # Gradio allows Starlette 1.x at runtime, but its wheel
             # metadata still says starlette<1.0. nixpkgs currently ships
             # starlette 1.1.0.
             dontCheckRuntimeDeps = true;
