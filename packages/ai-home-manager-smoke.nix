@@ -2,6 +2,9 @@
   pkgs,
   src,
   agentResources,
+  homeManagerLib,
+  inputs,
+  testPkgsFor,
 }:
 
 let
@@ -2552,6 +2555,636 @@ let
     "REF_API_KEY"
   ];
 
+  task9AiModulePath = "${src}/config/ai.nix";
+  task9PreflightPath = "${src}/config/ai/preflight.nix";
+  task9AiModule =
+    if builtins.pathExists task9AiModulePath && builtins.pathExists task9PreflightPath then
+      import task9AiModulePath
+    else
+      throw "Task 9 RED: config/ai.nix and config/ai/preflight.nix are missing";
+  task9PreflightFactory =
+    if builtins.pathExists task9PreflightPath then
+      import task9PreflightPath {
+        lib = lib // {
+          inherit (homeManagerLib) hm;
+        };
+        inherit pkgs;
+      }
+    else
+      throw "Task 9 RED: config/ai/preflight.nix is missing";
+
+  task9RenderedByProfile =
+    renderedClaude // renderedCodex // renderedOpenCode // renderedDroid // renderedPi;
+  task9ExpectedProfileIds = {
+    hera = [
+      "hera-claude-personal"
+      "hera-claude-positron"
+      "hera-codex"
+      "hera-opencode"
+      "hera-droid"
+      "hera-pi"
+    ];
+    clio = [
+      "clio-claude-personal"
+      "clio-claude-positron"
+      "clio-codex"
+      "clio-opencode"
+    ];
+    vulcan = [
+      "vulcan-claude-personal"
+      "vulcan-opencode"
+    ];
+    vps = [ "vps-claude-personal" ];
+    shared-work = [
+      "shared-work-claude-positron"
+      "shared-work-codex"
+      "shared-work-opencode-positron"
+    ];
+    personal-linux = [ "vps-claude-personal" ];
+  };
+  task9ExpectedClients = {
+    hera = [
+      "claude"
+      "codex"
+      "droid"
+      "opencode"
+      "pi"
+    ];
+    clio = [
+      "claude"
+      "codex"
+      "opencode"
+    ];
+    vulcan = [
+      "claude"
+      "opencode"
+    ];
+    vps = [ "claude" ];
+    shared-work = [
+      "claude"
+      "codex"
+      "opencode"
+    ];
+    personal-linux = [ "claude" ];
+  };
+  task9ExpectedLeafCounts = {
+    hera = 671;
+    clio = 510;
+    vulcan = 255;
+    vps = 129;
+    shared-work = 388;
+    personal-linux = 129;
+  };
+  task9RawPathsForClass =
+    homeClass:
+    lib.concatMap (
+      profileId: builtins.attrNames task9RenderedByProfile.${profileId}.files
+    ) task9ExpectedProfileIds.${homeClass};
+  task9PathsForClass =
+    homeClass: lib.sort builtins.lessThan (lib.unique (task9RawPathsForClass homeClass));
+  task9ForbiddenParentPaths = [
+    ".agents"
+    ".agents/skills"
+    ".claude"
+    ".codex"
+    ".config/claude"
+    ".config/claude/personal"
+    ".config/claude/positron"
+    ".config/codex"
+    ".config/factory"
+    ".config/mcp"
+    ".config/opencode"
+    ".factory"
+    ".pi"
+    ".pi/agent"
+  ];
+  task9SherlockPaths = [
+    ".claude/skills/sherlock"
+    ".claude/skills/sherlock/SKILL.md"
+    ".claude/skills/sherlock/sherlock"
+  ];
+  task9ManagedPrefixes = [
+    ".agents/skills"
+    ".claude/agents"
+    ".claude/commands"
+    ".claude/skills"
+    ".codex/agents"
+    ".config/claude/personal/agents"
+    ".config/claude/personal/commands"
+    ".config/claude/personal/skills"
+    ".config/claude/positron/agents"
+    ".config/claude/positron/commands"
+    ".config/claude/positron/skills"
+    ".config/codex/agents"
+    ".config/factory/droids"
+    ".config/factory/skills"
+    ".config/opencode/agents"
+    ".config/opencode/commands"
+    ".config/opencode/skills"
+    ".pi/agent/agents"
+    ".pi/agent/prompts"
+  ];
+  task9ManagedExactPaths = [
+    ".claude/nix-managed-mcp.json"
+    ".claude/nix-managed-settings.json"
+    ".claude/statusline-command.sh"
+    ".codex/nix-managed.config.toml"
+    ".config/claude/personal/nix-managed-mcp.json"
+    ".config/claude/personal/nix-managed-settings.json"
+    ".config/claude/personal/statusline-command.sh"
+    ".config/claude/positron/nix-managed-mcp.json"
+    ".config/claude/positron/nix-managed-settings.json"
+    ".config/claude/positron/statusline-command.sh"
+    ".config/codex/nix-managed.config.toml"
+    ".config/factory/mcp.json"
+    ".config/factory/nix-managed-settings.json"
+    ".config/mcp/mcp.json"
+    ".config/opencode/opencode.json"
+    ".pi/agent/extensions/pi-mcp-adapter"
+    ".pi/agent/extensions/pi-subagent"
+    ".pi/agent/models.json"
+  ];
+  task9IsManagedHomePath =
+    path:
+    !(builtins.elem path task9SherlockPaths)
+    && (
+      builtins.elem path task9ManagedExactPaths
+      || lib.any (prefix: lib.hasPrefix "${prefix}/" path) task9ManagedPrefixes
+    );
+  task9ValidRelativePath =
+    path:
+    let
+      parts = lib.splitString "/" path;
+    in
+    path != ""
+    && !(lib.hasPrefix "/" path)
+    && builtins.all (part: part != "" && part != "." && part != "..") parts;
+  task9OwnsAncestor =
+    paths: path: lib.any (other: other != path && lib.hasPrefix "${path}/" other) paths;
+
+  mkTask9AiEvaluation =
+    {
+      hostname,
+      username,
+      system,
+      homeClass ? null,
+    }:
+    let
+      fixturePkgs = testPkgsFor.${system};
+      homeDirectory = "/tmp/nix-managed-ai-${username}-${hostname}";
+    in
+    homeManagerLib.homeManagerConfiguration {
+      pkgs = fixturePkgs;
+      extraSpecialArgs = {
+        inherit hostname inputs;
+      }
+      // lib.optionalAttrs (homeClass != null) {
+        nixManagedAiHomeClass = homeClass;
+      };
+      modules = [
+        task9AiModule
+        {
+          home = {
+            inherit homeDirectory username;
+            stateVersion = "23.11";
+          };
+          # homeManagerConfiguration injects its own source at equal priority;
+          # normalize only this standalone fixture instead of the live checkout.
+          programs.home-manager.path = lib.mkForce (toString inputs.home-manager);
+          targets.genericLinux.enable = fixturePkgs.stdenv.isLinux;
+          xdg.enable = true;
+        }
+      ];
+    };
+
+  task9FixtureSpecs = {
+    hera = {
+      hostname = "hera";
+      username = "johnw";
+      system = "aarch64-darwin";
+      expectedClass = "hera";
+    };
+    clio = {
+      hostname = "clio";
+      username = "johnw";
+      system = "aarch64-darwin";
+      expectedClass = "clio";
+    };
+    vulcan = {
+      hostname = "vulcan";
+      username = "johnw";
+      system = "x86_64-linux";
+      expectedClass = "vulcan";
+    };
+    vps = {
+      hostname = "vps";
+      username = "johnw";
+      system = "x86_64-linux";
+      expectedClass = "vps";
+    };
+    shared = {
+      hostname = "vulcan";
+      username = "jwiegley";
+      system = "x86_64-linux";
+      expectedClass = "shared-work";
+    };
+    personal-synthetic = {
+      hostname = "linux";
+      username = "johnw";
+      system = "aarch64-linux";
+      homeClass = "personal-linux";
+      expectedClass = "personal-linux";
+    };
+    shared-synthetic = {
+      hostname = "linux";
+      username = "jwiegley";
+      system = "x86_64-linux";
+      expectedClass = "shared-work";
+    };
+  };
+  task9Evaluations = lib.mapAttrs (
+    _: spec: mkTask9AiEvaluation (builtins.removeAttrs spec [ "expectedClass" ])
+  ) task9FixtureSpecs;
+  task9InvalidPersonalSynthetic = mkTask9AiEvaluation {
+    hostname = "linux";
+    username = "jwiegley";
+    system = "aarch64-linux";
+    homeClass = "personal-linux";
+  };
+  task9UnknownHomeClass = mkTask9AiEvaluation {
+    hostname = "unknown-host";
+    username = "johnw";
+    system = "x86_64-linux";
+  };
+  task9BridgeFor = system: inputs.ai-nix.packages.${system}.agent-http-header-bridge;
+  task9HasBridge =
+    system: evaluation:
+    lib.any (
+      package: toString package == toString (task9BridgeFor system)
+    ) evaluation.config.home.packages;
+  task9ClientsIn =
+    evaluation:
+    let
+      files = evaluation.config.home.file;
+      markers = {
+        claude = [
+          ".claude/nix-managed-settings.json"
+          ".config/claude/personal/nix-managed-settings.json"
+          ".config/claude/positron/nix-managed-settings.json"
+        ];
+        codex = [
+          ".codex/nix-managed.config.toml"
+          ".config/codex/nix-managed.config.toml"
+        ];
+        droid = [ ".config/factory/nix-managed-settings.json" ];
+        opencode = [ ".config/opencode/opencode.json" ];
+        pi = [ ".pi/agent/models.json" ];
+      };
+    in
+    builtins.filter (client: lib.any (path: builtins.hasAttr path files) markers.${client}) (
+      builtins.attrNames markers
+    );
+  task9HasPiGuard =
+    evaluation:
+    lib.hasInfix ".pi/agent/mcp.json" evaluation.config.home.activation.aiManagedPreflight.data;
+  task9ActivationOrder =
+    evaluation:
+    map (entry: entry.name) (homeManagerLib.hm.dag.topoSort evaluation.config.home.activation).result;
+  task9IndexOf =
+    needle: values:
+    let
+      match = lib.findFirst (entry: entry.value == needle) null (
+        lib.imap0 (index: value: { inherit index value; }) values
+      );
+    in
+    if match == null then -1 else match.index;
+  task9OrderingIsExact =
+    evaluation:
+    let
+      order = task9ActivationOrder evaluation;
+      preflight = task9IndexOf "aiManagedPreflight" order;
+      collision = task9IndexOf "checkLinkTargets" order;
+      boundary = task9IndexOf "writeBoundary" order;
+      links = task9IndexOf "linkGeneration" order;
+    in
+    preflight >= 0 && preflight < collision && collision < boundary && boundary < links;
+
+  task9FixtureChecks = lib.concatLists (
+    lib.mapAttrsToList (
+      name: spec:
+      let
+        evaluation = task9Evaluations.${name};
+        inherit (spec) expectedClass;
+        expectedPaths = task9PathsForClass expectedClass;
+        actualClients = task9ClientsIn evaluation;
+      in
+      [
+        (expectEqual "${name} exact AI paths" (builtins.filter task9IsManagedHomePath (
+          sortedNames evaluation.config.home.file
+        )) expectedPaths)
+        (expectEqual "${name} exact AI leaf count" (builtins.length expectedPaths)
+          task9ExpectedLeafCounts.${expectedClass}
+        )
+        (expectEqual "${name} enabled clients" actualClients task9ExpectedClients.${expectedClass})
+        (expectEqual "${name} Droid bridge selection" (task9HasBridge spec.system evaluation) (
+          name == "hera"
+        ))
+        (expectEqual "${name} preflight DAG edge"
+          evaluation.config.home.activation.aiManagedPreflight.before
+          [ "checkLinkTargets" ]
+        )
+        (expectEqual "${name} Pi shadow guard selection" (task9HasPiGuard evaluation) (name == "hera"))
+        (expectEqual "${name} activation ordering" (task9OrderingIsExact evaluation) true)
+      ]
+    ) task9FixtureSpecs
+  );
+  task9PathChecks = lib.concatMap (
+    homeClass:
+    let
+      rawPaths = task9RawPathsForClass homeClass;
+      paths = task9PathsForClass homeClass;
+    in
+    [
+      (expectEqual "${homeClass} has one writer per leaf" (builtins.length rawPaths) (
+        builtins.length paths
+      ))
+      (expectEqual "${homeClass} has only relative normalized paths"
+        (builtins.all task9ValidRelativePath paths)
+        true
+      )
+      (expectEqual "${homeClass} owns no mutable parent root"
+        (lib.intersectLists paths task9ForbiddenParentPaths)
+        [ ]
+      )
+      (expectEqual "${homeClass} owns no ancestor of another leaf"
+        (builtins.any (task9OwnsAncestor paths) paths)
+        false
+      )
+      (expectEqual "${homeClass} excludes the Sherlock writer"
+        (lib.intersectLists paths task9SherlockPaths)
+        [ ]
+      )
+    ]
+  ) (builtins.attrNames task9ExpectedProfileIds);
+
+  mkTask9JohnwEvaluation =
+    {
+      hostname,
+      username,
+      system,
+      homeClass ? null,
+    }:
+    let
+      fixturePkgs = testPkgsFor.${system};
+      homeDirectory = "/tmp/nix-managed-ai-${username}-${hostname}";
+    in
+    homeManagerLib.homeManagerConfiguration {
+      pkgs = fixturePkgs;
+      extraSpecialArgs = {
+        inherit hostname inputs;
+      }
+      // lib.optionalAttrs (homeClass != null) {
+        nixManagedAiHomeClass = homeClass;
+      };
+      modules = [
+        (import (
+          if fixturePkgs.stdenv.isDarwin then "${src}/config/home.nix" else "${src}/config/johnw.nix"
+        ))
+        {
+          home = {
+            inherit homeDirectory username;
+            stateVersion = "23.11";
+          };
+          # homeManagerConfiguration injects its own source at equal priority;
+          # normalize only this standalone fixture instead of the live checkout.
+          programs.home-manager.path = lib.mkForce (toString inputs.home-manager);
+          targets.genericLinux.enable = fixturePkgs.stdenv.isLinux;
+          xdg.enable = true;
+        }
+      ];
+    };
+  task9JohnwEvaluations = lib.mapAttrs (
+    _: spec: mkTask9JohnwEvaluation (builtins.removeAttrs spec [ "expectedClass" ])
+  ) task9FixtureSpecs;
+  task9JohnwHera = task9JohnwEvaluations.hera;
+  task9JohnwPersonalSynthetic = task9JohnwEvaluations.personal-synthetic;
+  task9JohnwSharedSynthetic = task9JohnwEvaluations.shared-synthetic;
+  task9AiPathsIn =
+    evaluation:
+    lib.sort builtins.lessThan (
+      builtins.filter task9IsManagedHomePath (builtins.attrNames evaluation.config.home.file)
+    );
+  task9IntegratedPathChecks = lib.mapAttrsToList (
+    name: spec:
+    expectEqual "Task 9 integrated ${name} exact AI paths" (task9AiPathsIn
+      task9JohnwEvaluations.${name}
+    ) (task9PathsForClass spec.expectedClass)
+  ) task9FixtureSpecs;
+  task9ClaudeMemData = task9JohnwHera.config.home.activation.claudeMemRealClaude.data;
+
+  task9DarwinPkgs = testPkgsFor.aarch64-darwin;
+  task9WrappedClaude =
+    inputs.ai-nix.lib.patchAgentPackage task9DarwinPkgs "claude-code"
+      inputs.llm-agents.packages.aarch64-darwin.claude-code;
+  task9HeraBridge = task9BridgeFor "aarch64-darwin";
+  task9HeraPackages =
+    (import "${src}/config/packages.nix" {
+      hostname = "hera";
+      inherit inputs;
+      pkgs = task9DarwinPkgs;
+    }).package-list;
+  task9HeraHasPackage =
+    package: lib.any (candidate: toString candidate == toString package) task9HeraPackages;
+  task9AgentDeckEvaluation = homeManagerLib.homeManagerConfiguration {
+    pkgs = task9DarwinPkgs;
+    modules = [
+      (import "${src}/config/agent-deck.nix")
+      {
+        home = {
+          username = "johnw";
+          homeDirectory = "/Users/johnw";
+          stateVersion = "23.11";
+        };
+        johnw.agentDeck.enableConductorDiscordBridge = true;
+        xdg.enable = true;
+      }
+    ];
+  };
+  task9ExpectedAgentDeckPath =
+    "${task9AgentDeckEvaluation.config.home.profileDirectory}/bin:"
+    + "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+  task9PackageSource = builtins.readFile "${src}/config/packages.nix";
+  task9FlakeSource = builtins.readFile "${src}/flake.nix";
+
+  task9PreflightWithPi = task9PreflightFactory {
+    newPaths = [
+      ".config/claude/personal/agents/new.md"
+      ".config/claude/personal/agents/retained.md"
+    ];
+    piGuard = {
+      path = ".pi/agent/mcp.json";
+      forbiddenKeys = [
+        "mcpServers"
+        "imports"
+      ];
+    };
+  };
+  task9PreflightWithoutPi = task9PreflightFactory {
+    newPaths = [
+      ".config/claude/personal/agents/new.md"
+      ".config/claude/personal/agents/retained.md"
+    ];
+  };
+  task9PreflightScript = pkgs.writeShellScript "task9-ai-preflight" task9PreflightWithPi.script;
+  task9PreflightBoundedScript = pkgs.writeShellScript "task9-ai-preflight-bounded" ''
+    exec ${pkgs.coreutils}/bin/timeout 2 ${task9PreflightScript}
+  '';
+  task9PreflightNoPiScript = pkgs.writeShellScript "task9-ai-preflight-no-pi" task9PreflightWithoutPi.script;
+  task9InvalidPreflightProbe = task9PreflightFactory {
+    newPaths = [ ".config/not-a-managed-ai-leaf" ];
+  };
+  task9SherlockAncestorProbe = task9PreflightFactory {
+    newPaths = [ ".claude/skills/sherlock" ];
+  };
+
+  task9Checks = [
+    (expectEqual "Task 9 preflight output shape" (sortedNames task9PreflightWithPi) [
+      "activation"
+      "script"
+    ])
+    (expectEqual "Task 9 preflight direct DAG edge" task9PreflightWithPi.activation.before [
+      "checkLinkTargets"
+    ])
+    (expectEqual "Task 9 preflight has no after edge" task9PreflightWithPi.activation.after [ ])
+    (expectEqual "Task 9 Pi guard is selected"
+      (lib.hasInfix ".pi/agent/mcp.json" task9PreflightWithPi.script)
+      true
+    )
+    (expectEqual "Task 9 non-Pi guard omits Pi state"
+      (lib.hasInfix ".pi/agent/mcp.json" task9PreflightWithoutPi.script)
+      false
+    )
+    (expectEqual "Task 9 preflight has no persistent ownership machinery" (lib.any
+      (fragment: lib.hasInfix fragment task9PreflightWithPi.script)
+      [
+        "adoption-state"
+        "ledger"
+        "manifest"
+        "ownership"
+        "receipt"
+        "stamp"
+      ]
+    ) false)
+    (expectReject "Task 9 unmanaged path accepted by preflight" task9InvalidPreflightProbe)
+    (expectReject "Task 9 Sherlock ancestor accepted by preflight" task9SherlockAncestorProbe)
+    (expectEqual "Task 9 direct raw Claude writer removed"
+      (builtins.hasAttr ".local/bin/claude" task9JohnwHera.config.home.file)
+      false
+    )
+    (expectEqual "Task 9 Sherlock SKILL writer preserved"
+      (builtins.hasAttr ".claude/skills/sherlock/SKILL.md" task9JohnwHera.config.home.file)
+      true
+    )
+    (expectEqual "Task 9 Sherlock executable writer preserved"
+      (builtins.hasAttr ".claude/skills/sherlock/sherlock" task9JohnwHera.config.home.file)
+      true
+    )
+    (expectEqual "Task 9 Codex alias preserved"
+      (builtins.hasAttr ".codex" task9JohnwHera.config.home.file)
+      true
+    )
+    (expectEqual "Task 9 Factory alias preserved"
+      (builtins.hasAttr ".factory" task9JohnwHera.config.home.file)
+      true
+    )
+    (expectEqual "Task 9 Linux Factory ripgrep alias preserved"
+      (builtins.hasAttr ".factory/bin/rg" task9JohnwPersonalSynthetic.config.home.file)
+      true
+    )
+    (expectEqual "Task 9 personal synthetic hostname is unchanged"
+      task9JohnwPersonalSynthetic.config.home.sessionVariables.HOSTNAME
+      "linux"
+    )
+    (expectEqual "Task 9 shared synthetic hostname is unchanged"
+      task9JohnwSharedSynthetic.config.home.sessionVariables.HOSTNAME
+      "linux"
+    )
+    (expectEqual "Task 9 personal synthetic exact AI paths" (task9AiPathsIn task9JohnwPersonalSynthetic)
+      (task9PathsForClass "personal-linux")
+    )
+    (expectEqual "Task 9 shared synthetic exact AI paths" (task9AiPathsIn task9JohnwSharedSynthetic) (
+      task9PathsForClass "shared-work"
+    ))
+    (expectEqual "Task 9 shared agent-deck helper preserved"
+      (builtins.hasAttr ".local/bin/agent-deck-remote-env" task9JohnwSharedSynthetic.config.home.file)
+      true
+    )
+    (expectEqual "Task 9 managed profile precedes preserved PATH prefixes"
+      (lib.take 3 task9JohnwHera.config.home.sessionPath)
+      [
+        "${task9JohnwHera.config.home.profileDirectory}/bin"
+        "${task9JohnwHera.config.home.homeDirectory}/src/scripts"
+        "${task9JohnwHera.config.home.homeDirectory}/.local/bin"
+      ]
+    )
+    (expectEqual "Task 9 standalone fixture normalizes Home Manager source"
+      task9JohnwHera.config.programs.home-manager.path
+      (toString inputs.home-manager)
+    )
+    (expectEqual "Task 9 claude-mem uses raw private command"
+      (lib.hasInfix "${task9JohnwHera.config.home.profileDirectory}/bin/claude-real" task9ClaudeMemData)
+      true
+    )
+    (expectEqual "Task 9 claude-mem no longer uses raw bypass"
+      (lib.hasInfix ".local/bin/claude" task9ClaudeMemData)
+      false
+    )
+    (expectEqual "Task 9 real Hera packages include patched Claude"
+      (task9HeraHasPackage task9WrappedClaude)
+      true
+    )
+    (expectEqual "Task 9 integrated Hera packages include Droid bridge"
+      (task9HasBridge "aarch64-darwin" task9JohnwHera)
+      true
+    )
+    (expectEqual "Task 9 integrated Hera omits legacy Pi root writer"
+      (builtins.hasAttr ".pi" task9JohnwHera.config.home.file)
+      false
+    )
+    (expectEqual "Task 9 integrated Hera owns Pi agent leaves" (lib.any (
+      path: lib.hasPrefix ".pi/agent/" path
+    ) (builtins.attrNames task9JohnwHera.config.home.file)) true)
+    (expectEqual "Task 9 real Hera packages include persona provider"
+      (task9HeraHasPackage task9DarwinPkgs.nix-scripts)
+      true
+    )
+    (expectEqual "Task 9 package path still calls ai-nix patching"
+      (lib.hasInfix "patchAgentPackage name agentPackages.\${name}" task9PackageSource)
+      true
+    )
+    (expectEqual "Task 9 Claude package selection remains patched"
+      (lib.hasInfix "++ optAgent \"claude-code\"" task9PackageSource)
+      true
+    )
+    (expectEqual "Task 9 personal Linux fixture is explicit"
+      (lib.hasInfix "nixManagedAiHomeClass = \"personal-linux\"" task9FlakeSource)
+      true
+    )
+    (expectReject "Task 9 personal Linux fixture accepted wrong user" task9InvalidPersonalSynthetic.activationPackage.drvPath)
+    (expectReject "Task 9 unknown home class accepted" task9UnknownHomeClass.activationPackage.drvPath)
+    (expectEqual "Task 9 agent-deck bridge PATH"
+      task9AgentDeckEvaluation.config.launchd.agents.agent-deck-conductor-bridge.config.EnvironmentVariables.PATH
+      task9ExpectedAgentDeckPath
+    )
+    (expectEqual "Task 9 agent-deck notifier PATH"
+      task9AgentDeckEvaluation.config.launchd.agents.agent-deck-transition-notifier.config.EnvironmentVariables.PATH
+      task9ExpectedAgentDeckPath
+    )
+  ]
+  ++ task9FixtureChecks
+  ++ task9PathChecks
+  ++ task9IntegratedPathChecks;
+
   contractChecks = [
     (expectEqual "OpenCode bash-reviewer tool oracle" (builtins.hashString "sha256" (
       builtins.toJSON (expectedOpenCodeAgentMetadata catalog.items.agents.bash-reviewer)
@@ -2741,13 +3374,15 @@ let
     (expectReject "anvil-tools accepted" (validateWithItems anvilToolsItems))
   ]
   ++ profileChecks
-  ++ rendererChecks;
+  ++ rendererChecks
+  ++ task9Checks;
 in
 assert builtins.deepSeq contractChecks true;
 
 pkgs.runCommand "ai-home-manager-smoke"
   {
     nativeBuildInputs = [
+      pkgs.findutils
       pkgs.jq
       pkgs.python3
     ];
@@ -2759,6 +3394,438 @@ pkgs.runCommand "ai-home-manager-smoke"
     test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/zod"
     test -f "${piExtensionSources.pi-subagent}/package.json"
     test -f "${piExtensionSources.pi-subagent}/index.ts"
+
+
+    ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "aarch64-darwin") ''
+      profile_path="${task9JohnwHera.config.home.path}"
+      test -x "$profile_path/bin/claude"
+      test -x "$profile_path/bin/claude-real"
+      test -x "$profile_path/bin/agent-http-header-bridge"
+      test -x "$profile_path/bin/persona"
+      grep -Fq 'classify_managed_artifacts' "$profile_path/bin/claude"
+      ! grep -Fq 'classify_managed_artifacts' "$profile_path/bin/claude-real"
+      test "$(readlink -e "$profile_path/bin/claude")" \
+        = "$(readlink -e "${task9WrappedClaude}/bin/claude")"
+      test "$(readlink -e "$profile_path/bin/claude-real")" \
+        = "$(readlink -e "${task9WrappedClaude}/bin/claude-real")"
+      test "$(readlink -e "$profile_path/bin/agent-http-header-bridge")" \
+        = "$(readlink -e "${task9HeraBridge}/bin/agent-http-header-bridge")"
+      test "$(readlink "${task9JohnwHera.config.home.file.".codex".source}")" \
+        = "${task9JohnwHera.config.xdg.configHome}/codex"
+      test "$(readlink "${task9JohnwHera.config.home.file.".factory".source}")" \
+        = "${task9JohnwHera.config.xdg.configHome}/factory"
+      test -f "${task9JohnwHera.config.home.file.".claude/skills/sherlock/SKILL.md".source}"
+
+      droid_command="$("${pkgs.jq}/bin/jq" -er '.mcpServers.Ref.command' \
+        "${task9JohnwHera.config.home.file.".config/factory/mcp.json".source}")"
+      test "$droid_command" = agent-http-header-bridge
+
+      fixture_home="${task9JohnwHera.config.home.homeDirectory}"
+      profile_dir="${task9JohnwHera.config.home.profileDirectory}"
+      legacy_bin="$fixture_home/src/scripts"
+      rm -rf "$fixture_home"
+      mkdir -p "$legacy_bin" "$fixture_home/.config/zsh"
+      printf '#!/bin/sh\necho legacy-claude\n' > "$legacy_bin/claude"
+      chmod +x "$legacy_bin/claude"
+      ln -s "$profile_path" "$profile_dir"
+      ln -s "${task9JohnwHera.config.home.file.".zshenv".source}" "$fixture_home/.zshenv"
+      ln -s "${task9JohnwHera.config.home.file.".config/zsh/.zshenv".source}" \
+        "$fixture_home/.config/zsh/.zshenv"
+      ln -s "${task9JohnwHera.config.home.file.".config/zsh/.zprofile".source}" \
+        "$fixture_home/.config/zsh/.zprofile"
+      env -u __HM_SESS_VARS_SOURCED \
+        -u __HM_ZSH_SESS_VARS_SOURCED \
+        -u ZDOTDIR \
+        TASK9_PROFILE="$profile_dir" \
+        TASK9_DROID_COMMAND="$droid_command" \
+        HOME="$fixture_home" \
+        PATH="/usr/bin:/bin" \
+        TERM=dumb \
+        "${task9JohnwHera.config.programs.zsh.package}/bin/zsh" -l -c '
+          set -eo pipefail
+          case "$PATH" in
+            "${task9JohnwHera.config.home.profileDirectory}/bin":*) ;;
+            *) exit 1 ;;
+          esac
+          test "$(command -v claude)" = "$TASK9_PROFILE/bin/claude"
+          test "$(command -v claude-real)" = "$TASK9_PROFILE/bin/claude-real"
+          test "$(command -v "$TASK9_DROID_COMMAND")" \
+            = "$TASK9_PROFILE/bin/$TASK9_DROID_COMMAND"
+          test "$(command -v persona)" = "$TASK9_PROFILE/bin/persona"
+        '
+      rm -rf "${task9JohnwHera.config.home.homeDirectory}"
+
+      activation="${task9Evaluations.hera.activationPackage}/activate"
+      preflight_line="$(grep -nF '_iNote "Activating %s" "aiManagedPreflight"' "$activation" | head -1 | cut -d: -f1)"
+      collision_line="$(grep -nF '_iNote "Activating %s" "checkLinkTargets"' "$activation" | head -1 | cut -d: -f1)"
+      boundary_line="$(grep -nF '_iNote "Activating %s" "writeBoundary"' "$activation" | head -1 | cut -d: -f1)"
+      links_line="$(grep -nF '_iNote "Activating %s" "linkGeneration"' "$activation" | head -1 | cut -d: -f1)"
+      test -n "$preflight_line"
+      test "$preflight_line" -lt "$collision_line"
+      test "$collision_line" -lt "$boundary_line"
+      test "$boundary_line" -lt "$links_line"
+    ''}
+
+    preflight_root="$TMPDIR/task9-preflight"
+    mkdir -p "$preflight_root"
+    digest_script="$TMPDIR/task9-tree-digest.py"
+    cat > "$digest_script" <<'PY'
+    import hashlib
+    import os
+    import stat
+    import sys
+    from pathlib import Path
+
+    root = Path(sys.argv[1])
+    records = []
+    for directory, directories, files in os.walk(root, followlinks=False):
+        base = Path(directory)
+        for name in sorted(directories + files):
+            path = base / name
+            relative = path.relative_to(root).as_posix()
+            mode = path.lstat().st_mode
+            if stat.S_ISLNK(mode):
+                payload = os.fsencode(os.readlink(path))
+                kind = b"l"
+            elif stat.S_ISREG(mode):
+                payload = path.read_bytes()
+                kind = b"f"
+            elif stat.S_ISDIR(mode):
+                payload = b""
+                kind = b"d"
+            else:
+                payload = b""
+                kind = b"o"
+            records.append(
+                relative.encode()
+                + b"\0"
+                + kind
+                + b"\0"
+                + oct(stat.S_IMODE(mode)).encode()
+                + b"\0"
+                + hashlib.sha256(payload).hexdigest().encode()
+                + b"\0"
+            )
+    print(hashlib.sha256(b"".join(sorted(records))).hexdigest())
+    PY
+
+    new_path=".config/claude/personal/agents/new.md"
+    retained_path=".config/claude/personal/agents/retained.md"
+    removed_path=".config/claude/personal/agents/removed.md"
+    legacy_claude=".local/bin/claude"
+
+    make_leaf() {
+      root=$1
+      path=$2
+      value=$3
+      mkdir -p "$root/$(dirname "$path")"
+      printf '%s' "$value" > "$root/$path"
+    }
+
+    link_old_leaf() {
+      path=$1
+      mkdir -p "$case_home/$(dirname "$path")"
+      ln -s "$old_files/$path" "$case_home/$path"
+    }
+
+    setup_empty_case() {
+      label=$1
+      case_root="$preflight_root/$label"
+      case_home="$case_root/home"
+      old_gen=
+      old_files=
+      old_override=
+      mkdir -p "$case_home"
+    }
+
+    setup_old_case() {
+      setup_empty_case "$1"
+      old_gen="$case_root/old-generation"
+      old_files="$case_root/old-files"
+      mkdir -p "$old_gen" "$old_files"
+      ln -s "$old_files" "$old_gen/home-files"
+
+      make_leaf "$old_files" "$retained_path" retained
+      make_leaf "$old_files" "$removed_path" removed
+      make_leaf "$old_files" "$legacy_claude" legacy
+      symlink_leaf=".config/claude/personal/agents/symlinked.md"
+      symlink_source="$case_root/symlink-source.md"
+      printf '%s' symlinked > "$symlink_source"
+      mkdir -p "$old_files/$(dirname "$symlink_leaf")"
+      ln -s "$symlink_source" "$old_files/$symlink_leaf"
+      make_leaf "$old_files" ".claude/skills/sherlock/SKILL.md" sherlock
+      make_leaf "$old_files" ".claude/skills/sherlock/sherlock" sherlock-bin
+
+      link_old_leaf "$retained_path"
+      link_old_leaf "$removed_path"
+      link_old_leaf "$legacy_claude"
+      link_old_leaf "$symlink_leaf"
+    }
+
+    tree_digest() {
+      python3 -I "$digest_script" "$case_root"
+    }
+
+    run_checked() {
+      expected=$1
+      label=$2
+      fragment=$3
+      script=$4
+      old_mode=$5
+      output="$TMPDIR/task9-$label.output"
+      before="$(tree_digest)"
+      set +e
+      if [ "$old_mode" = absent ]; then
+        env -u oldGenPath HOME="$case_home" "$script" >"$output" 2>&1
+      else
+        env oldGenPath="''${old_override:-$old_gen}" HOME="$case_home" \
+          "$script" >"$output" 2>&1
+      fi
+      status=$?
+      set -e
+      after="$(tree_digest)"
+      if [ "$before" != "$after" ]; then
+        echo "Task 9 preflight case mutated its input tree: $label" >&2
+        return 1
+      fi
+      if grep -Fq SECRET_SENTINEL "$output"; then
+        echo "Task 9 preflight case leaked file content: $label" >&2
+        return 1
+      fi
+      if [ "$expected" = pass ]; then
+        if [ "$status" -ne 0 ] || [ -s "$output" ]; then
+          echo "Task 9 preflight case should have passed silently: $label" >&2
+          sed 's/^/  /' "$output" >&2
+          return 1
+        fi
+      else
+        case "$label" in
+          first-adoption-collision | new-*)
+            expected_output="$fragment: remove or migrate the existing path before switching"
+            ;;
+          missing-* | old-home-files-not-directory | unreadable-old-files)
+            expected_output="''${old_override:-$old_gen}/home-files: $fragment"
+            ;;
+          retained-* | removed-* | legacy-*)
+            expected_output="$fragment: restore the exact previous Home Manager link before switching"
+            ;;
+          pi-*)
+            expected_output="$fragment: keep valid adapter JSON without top-level mcpServers or imports"
+            ;;
+          *)
+            echo "Task 9 preflight case has no expected diagnostic: $label" >&2
+            return 1
+            ;;
+        esac
+        actual_output="$(<"$output")"
+        if [ "$status" -eq 0 ] || [ "$actual_output" != "$expected_output" ]; then
+          echo "Task 9 preflight case did not reject as expected: $label" >&2
+          sed 's/^/  /' "$output" >&2
+          return 1
+        fi
+      fi
+    }
+
+    setup_empty_case first-adoption
+    run_checked pass first-adoption "" "${task9PreflightScript}" absent
+
+    setup_empty_case first-adoption-collision
+    make_leaf "$case_home" "$new_path" collision
+    run_checked fail first-adoption-collision "$new_path" "${task9PreflightScript}" absent
+
+    setup_empty_case new-ancestor-file
+    make_leaf "$case_home" ".config/claude/personal/agents" collision
+    run_checked fail new-ancestor-file "$new_path" "${task9PreflightScript}" absent
+
+    setup_empty_case new-valid-ancestor-symlink
+    mkdir -p "$case_root/claude-root/personal/agents" "$case_home/.config"
+    ln -s "$case_root/claude-root" "$case_home/.config/claude"
+    run_checked fail new-valid-ancestor-symlink "$new_path" "${task9PreflightScript}" absent
+
+    setup_empty_case new-dangling-parent
+    mkdir -p "$case_home/.config/claude/personal"
+    ln -s "$case_root/missing" "$case_home/.config/claude/personal/agents"
+    run_checked fail new-dangling-parent "$new_path" "${task9PreflightScript}" absent
+
+    setup_old_case new-old-directory-shadow
+    mkdir -p "$old_files/$new_path" "$case_home/$new_path"
+    run_checked fail new-old-directory-shadow "$new_path" "${task9PreflightScript}" present
+
+    setup_empty_case missing-old-generation
+    old_override="$case_root/missing-generation"
+    run_checked fail missing-old-generation \
+      "restore the previous Home Manager generation before switching" \
+      "${task9PreflightScript}" present
+
+    setup_empty_case missing-home-files
+    old_gen="$case_root/old-generation"
+    mkdir -p "$old_gen"
+    run_checked fail missing-home-files \
+      "restore the previous Home Manager generation before switching" \
+      "${task9PreflightScript}" present
+
+    setup_empty_case old-home-files-not-directory
+    old_gen="$case_root/old-generation"
+    mkdir -p "$old_gen"
+    make_leaf "$old_gen" home-files wrong-type
+    run_checked fail old-home-files-not-directory \
+      "restore the previous Home Manager generation before switching" \
+      "${task9PreflightScript}" present
+
+    setup_old_case unreadable-old-files
+    mkdir -p "$old_files/unreadable"
+    chmod 000 "$old_files/unreadable"
+    run_checked fail unreadable-old-files \
+      "restore the previous Home Manager generation before switching" \
+      "${task9PreflightScript}" present
+
+    setup_old_case all-three-classes
+    run_checked pass all-three-classes "" "${task9PreflightScript}" present
+
+    setup_old_case new-file
+    make_leaf "$case_home" "$new_path" collision
+    run_checked fail new-file "$new_path" "${task9PreflightScript}" present
+
+    setup_old_case new-directory
+    mkdir -p "$case_home/$new_path"
+    run_checked fail new-directory "$new_path" "${task9PreflightScript}" present
+
+    setup_old_case new-valid-symlink
+    make_leaf "$case_root" unrelated target
+    mkdir -p "$case_home/$(dirname "$new_path")"
+    ln -s "$case_root/unrelated" "$case_home/$new_path"
+    run_checked fail new-valid-symlink "$new_path" "${task9PreflightScript}" present
+
+    setup_old_case new-dangling-symlink
+    mkdir -p "$case_home/$(dirname "$new_path")"
+    ln -s "$case_root/missing" "$case_home/$new_path"
+    run_checked fail new-dangling-symlink "$new_path" "${task9PreflightScript}" present
+
+    setup_old_case retained-missing
+    rm "$case_home/$retained_path"
+    run_checked fail retained-missing "$retained_path" "${task9PreflightScript}" present
+
+    setup_old_case retained-early-large-enumeration
+    early_path=".agents/skills/000-early/SKILL.md"
+    make_leaf "$old_files" "$early_path" early
+    for index in $(seq -w 1 2048); do
+      bulk_path=".agents/skills/z-$index/SKILL.md"
+      make_leaf "$old_files" "$bulk_path" bulk
+      link_old_leaf "$bulk_path"
+    done
+    run_checked fail retained-early-large-enumeration "$early_path"       "${task9PreflightScript}" present
+
+    setup_old_case retained-file
+    rm "$case_home/$retained_path"
+    make_leaf "$case_home" "$retained_path" replacement
+    run_checked fail retained-file "$retained_path" "${task9PreflightScript}" present
+
+    setup_old_case retained-retargeted
+    make_leaf "$case_root" alternate different
+    rm "$case_home/$retained_path"
+    ln -s "$case_root/alternate" "$case_home/$retained_path"
+    run_checked fail retained-retargeted "$retained_path" "${task9PreflightScript}" present
+
+    setup_old_case retained-same-payload
+    make_leaf "$case_root" alternate retained
+    rm "$case_home/$retained_path"
+    ln -s "$case_root/alternate" "$case_home/$retained_path"
+    run_checked fail retained-same-payload "$retained_path" "${task9PreflightScript}" present
+
+    setup_old_case retained-dangling
+    rm "$case_home/$retained_path"
+    ln -s "$case_root/missing" "$case_home/$retained_path"
+    run_checked fail retained-dangling "$retained_path" "${task9PreflightScript}" present
+
+    setup_old_case removed-missing
+    rm "$case_home/$removed_path"
+    run_checked fail removed-missing "$removed_path" "${task9PreflightScript}" present
+
+    setup_old_case removed-symlink-leaf-missing
+    rm "$case_home/$symlink_leaf"
+    run_checked fail removed-symlink-leaf-missing "$symlink_leaf"       "${task9PreflightScript}" present
+
+    setup_old_case removed-file
+    rm "$case_home/$removed_path"
+    make_leaf "$case_home" "$removed_path" replacement
+    run_checked fail removed-file "$removed_path" "${task9PreflightScript}" present
+
+    setup_old_case removed-dangling
+    rm "$case_home/$removed_path"
+    ln -s "$case_root/missing" "$case_home/$removed_path"
+    run_checked fail removed-dangling "$removed_path" "${task9PreflightScript}" present
+
+    setup_old_case removed-retargeted
+    make_leaf "$case_root" alternate removed
+    rm "$case_home/$removed_path"
+    ln -s "$case_root/alternate" "$case_home/$removed_path"
+    run_checked fail removed-retargeted "$removed_path" "${task9PreflightScript}" present
+
+    setup_old_case legacy-claude-missing
+    rm "$case_home/$legacy_claude"
+    run_checked fail legacy-claude-missing "$legacy_claude" "${task9PreflightScript}" present
+
+    setup_old_case legacy-claude-retargeted
+    make_leaf "$case_root" alternate legacy
+    rm "$case_home/$legacy_claude"
+    ln -s "$case_root/alternate" "$case_home/$legacy_claude"
+    run_checked fail legacy-claude-retargeted "$legacy_claude" \
+      "${task9PreflightScript}" present
+
+    write_pi() {
+      value=$1
+      mkdir -p "$case_home/.pi/agent"
+      printf '%s' "$value" > "$case_home/.pi/agent/mcp.json"
+    }
+
+    setup_empty_case pi-empty-object
+    write_pi '{}'
+    run_checked pass pi-empty-object "" "${task9PreflightScript}" absent
+
+    setup_empty_case pi-benign-nested
+    write_pi '{"settings":{"mcpServers":{}},"unknown":{"imports":[]}}'
+    run_checked pass pi-benign-nested "" "${task9PreflightScript}" absent
+
+    setup_empty_case pi-benign-symlink
+    make_leaf "$case_root" pi-settings '{}'
+    mkdir -p "$case_home/.pi/agent"
+    ln -s "$case_root/pi-settings" "$case_home/.pi/agent/mcp.json"
+    run_checked pass pi-benign-symlink "" "${task9PreflightScript}" absent
+
+    setup_empty_case pi-mcp-servers
+    write_pi '{"mcpServers":null}'
+    run_checked fail pi-mcp-servers ".pi/agent/mcp.json" "${task9PreflightScript}" absent
+
+    setup_empty_case pi-imports
+    write_pi '{"imports":[]}'
+    run_checked fail pi-imports ".pi/agent/mcp.json" "${task9PreflightScript}" absent
+
+    setup_empty_case pi-malformed
+    write_pi '{SECRET_SENTINEL'
+    run_checked fail pi-malformed ".pi/agent/mcp.json" "${task9PreflightScript}" absent
+
+    setup_empty_case pi-fifo
+    mkdir -p "$case_home/.pi/agent"
+    mkfifo "$case_home/.pi/agent/mcp.json"
+    run_checked fail pi-fifo ".pi/agent/mcp.json"       "${task9PreflightBoundedScript}" absent
+
+    for pi_case in array string number true false null; do
+      setup_empty_case "pi-$pi_case"
+      case "$pi_case" in
+        array) write_pi '[]' ;;
+        string) write_pi '"text"' ;;
+        number) write_pi '0' ;;
+        true) write_pi 'true' ;;
+        false) write_pi 'false' ;;
+        null) write_pi 'null' ;;
+      esac
+      run_checked fail "pi-$pi_case" ".pi/agent/mcp.json" \
+        "${task9PreflightScript}" absent
+    done
+
+    setup_empty_case non-pi-ignores-adapter
+    write_pi '{"mcpServers":null}'
+    run_checked pass non-pi-ignores-adapter "" "${task9PreflightNoPiScript}" absent
 
     python3 -I - "${rendererDocumentManifest}" <<'PY'
     import json
@@ -3012,6 +4079,7 @@ pkgs.runCommand "ai-home-manager-smoke"
     expected_root = set(expected) | {
         "catalog.nix",
         "models.nix",
+        "preflight.nix",
         "statusline-command.sh",
     }
     renderers = root / "renderers"
@@ -3028,6 +4096,8 @@ pkgs.runCommand "ai-home-manager-smoke"
         for name in expected_renderers:
             if not (renderers / name).is_file():
                 errors.append(f"not a regular renderer: renderers/{name}")
+    if not (root / "preflight.nix").is_file():
+        errors.append("not a regular file: preflight.nix")
     actual_root = {entry.name for entry in root.iterdir()}
     if actual_root != expected_root:
         errors.append(

@@ -103,6 +103,14 @@
         else
           stockPkgsFor.${system}
       );
+      agentTestPkgsFor = forAllSystems (
+        system:
+        import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+          overlays = import ./config/overlays.nix { inherit inputs; };
+        }
+      );
     in
     rec {
       darwinConfigurations =
@@ -176,7 +184,12 @@
       homeConfigurations =
         let
           mkLinuxHome =
-            username: hostname: system:
+            {
+              username,
+              hostname,
+              system,
+              nixManagedAiHomeClass ? null,
+            }:
             home-manager.lib.homeManagerConfiguration {
               pkgs = import nixpkgs {
                 inherit system;
@@ -188,7 +201,12 @@
                   inherit vulcan-crt inputs;
                 };
               };
-              extraSpecialArgs = { inherit hostname inputs; };
+              extraSpecialArgs = {
+                inherit hostname inputs;
+              }
+              // nixpkgs.lib.optionalAttrs (nixManagedAiHomeClass != null) {
+                inherit nixManagedAiHomeClass;
+              };
               modules = [
                 (
                   {
@@ -218,9 +236,18 @@
         in
         {
           # Generic ARM64 Linux evaluation surface (not a host switch target).
-          "johnw@aarch64-linux" = mkLinuxHome "johnw" "linux" "aarch64-linux";
+          "johnw@aarch64-linux" = mkLinuxHome {
+            username = "johnw";
+            hostname = "linux";
+            system = "aarch64-linux";
+            nixManagedAiHomeClass = "personal-linux";
+          };
           # Generic AMD64 Linux evaluation surface (not a host switch target).
-          "jwiegley@x86_64-linux" = mkLinuxHome "jwiegley" "linux" "x86_64-linux";
+          "jwiegley@x86_64-linux" = mkLinuxHome {
+            username = "jwiegley";
+            hostname = "linux";
+            system = "x86_64-linux";
+          };
         };
 
       formatter = forAllSystems (system: stockPkgsFor.${system}.nixfmt);
@@ -319,8 +346,10 @@
               '';
 
           ai-home-manager-smoke = pkgs.callPackage ./packages/ai-home-manager-smoke.nix {
-            inherit src;
+            inherit inputs src;
             agentResources = ai-nix.packages.${system}.agent-resources;
+            homeManagerLib = home-manager.lib;
+            testPkgsFor = agentTestPkgsFor;
           };
         }
         // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux || system == "aarch64-darwin") {
