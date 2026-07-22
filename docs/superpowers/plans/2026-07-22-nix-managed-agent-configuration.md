@@ -423,21 +423,21 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
 **Produces:** pure catalog/model data with `profiles`, `items`, `selectorCoverage`, `matches`, `select`, and `validate`; no environment or live-state reads.
 
-- [ ] **Step 1: Add failing selector, inventory, and secret fixtures.**
+- [x] **Step 1: Add failing selector, inventory, and secret fixtures.**
 
-  Assert all 16 stable profile IDs: six Hera, four Clio, two Vulcan, one VPS, and three shared-work profiles. Assert 26 agents; personal/Positron command counts 59/58; shared Codex union 65; two Droid command projections; 38 broad skills plus Claude-only Forge and Positron-only Retest; two prompts; exact MCP/hook/marketplace sets; eight providers and 111 source provider/model pairs. Negative fixtures must reject unknown selector values, duplicate skill names/target paths, unsupported override fields, multiple MCP transports, literal secrets, secret-bearing URL query values, malformed env names, missing renderers, defaults filtered from their profile, and any `anvil-tools` item. Add per-client/server capability fixtures proving how Ref and Context7 environment-backed headers reach Claude, Codex, OpenCode, Droid, and Pi without URL/argv/file/log materialization; missing variables must fail with bounded redacted errors.
+  Assert all 16 stable profile IDs: six Hera, four Clio, two Vulcan, one VPS, and three shared-work profiles. Assert 26 agents; personal/Positron command counts 59/58; shared Codex union 65; two Droid command projections; 38 broad skills plus Claude-only Forge and Positron-only Retest; two prompts; exact MCP/hook/marketplace sets; eight providers and 111 source provider/model pairs. Negative fixtures must reject unknown selector values, duplicate skill names/target paths, unsupported override fields, multiple MCP transports, literal secrets, secret-bearing URL query values, malformed env names, missing renderers, defaults filtered from their profile, and any `anvil-tools` item. Add compact per-client policy rows and the ten Ref/Context7 client/server capability rows without putting rendered environment syntax in canonical data. Record missing-variable behavior truthfully: Claude preserves the placeholder with a warning, Codex omits the header, and OpenCode/Pi substitute an empty value while OAuth remains disabled or suppressed; their eventual unauthenticated connection must be rejected with redacted diagnostics. Droid alone performs the bounded redacted preflight. Exercise the actual rendered syntax and process boundaries in Tasks 6–9, where client documents exist.
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
   ```sh
   cd /Users/johnw/src/nix.worktrees/nix-managed-agent-config
-  nix build -L path:.#checks.aarch64-darwin.ai-home-manager-smoke \
-    --override-input ai-nix path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources
+  nix build -L 'path:.#checks.aarch64-darwin.ai-home-manager-smoke' \
+    --override-input ai-nix 'path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources'
   ```
 
   Expected: `catalog.nix` and `models.nix` are missing; negative fixtures must not fail because of malformed test expressions.
 
-- [ ] **Step 3: Implement only the approved selector algebra.**
+- [x] **Step 3: Implement only the approved selector algebra.**
 
   Use these exact semantics in `catalog.nix`:
 
@@ -459,29 +459,29 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
   Values within a dimension are ORed, dimensions are ANDed, missing dimensions are unrestricted, and `excludeProfiles` is the only negative field. Add no dependency graph, groups, priority, or fallback rule.
 
-- [ ] **Step 4: Transcribe the catalog and complete selector ledger.**
+- [x] **Step 4: Transcribe the catalog and complete selector ledger.**
 
   Use attr keys as stable names. Agents select all five clients. Commands select Claude/Codex/OpenCode/Pi except `discover-bundles` and `restack`, which also select Droid as skills. External skill sources come only from `resources`; no same-name local copy remains. Encode the exact MCP sets from the frozen report, including DEVONthink only for Hera/Clio Claude personal and OpenCode, `drafts-hera` only for Vulcan Claude, and PAL for all Claude plus Hera Droid. Encode all legacy target/tag/allow/deny mappings and explicit GPTel/git-ai exclusions.
 
-- [ ] **Step 5: Transcribe model data and typed references.**
+- [x] **Step 5: Transcribe model data and typed references.**
 
   `models.nix` returns `{ providers; models; profileDefaults; syncInputs; }`. Preserve all eight providers and 111 source pairs, model-level Hera selectors, Clio-only `llama-cpp-remote`, and the OpenCode default `litellm` / `hera/omlx/Qwen3.6-27B-oQ4e-mtp` only when both survive selection. Droid and Pi emit no default. Ref is `https://api.ref.tools/mcp` with `x-ref-api-key = { env = "REF_API_KEY"; }`; Context7 uses an environment-backed header. Canonical data contains no `${VAR}`, `{env:VAR}`, `$VAR`, query token, or expanded value.
 
-- [ ] **Step 6: Verify the already-selected native and bridge secret paths.**
+- [x] **Step 6: Pin the native policy ledger and reuse the bridge proof.**
 
-  Exercise the exact installed client/server versions with synthetic variables and inspect argv, generated bytes, store closure, and logs. Claude, Codex, OpenCode, and Pi use their proven native header/environment fields. Droid alone renders the Task 3 `agent-http-header-bridge` command with the nonsecret URL, header name, and environment-variable name; no resolved value or `${VAR}` expansion is performed by Nix or Droid. Reuse Task 3's missing-variable, rejected-credential, redaction, no-OAuth, and leakage checks instead of adding another bridge.
+  Pin Claude 2.1.217, Codex 0.144.6, OpenCode 1.18.4, Droid 0.177.0, Pi 0.81.1, pi-mcp-adapter 2.11.0, and mcp-remote 0.1.38 alongside the abstract native/bridge policy rows. Task 5 is pure data and produces no client document, so the exact installed-client argv/generated-byte/store/log tests run with their renderers in Tasks 6–9. Reuse Task 3's Droid bridge missing-variable, rejected-credential, redaction, no-OAuth, and leakage proof. Droid alone renders `agent-http-header-bridge` with the nonsecret URL, header name, and environment-variable name; add no wrapper or second bridge.
 
-- [ ] **Step 7: Run GREEN.**
+- [x] **Step 7: Run GREEN.**
 
   ```sh
   cd /Users/johnw/src/nix.worktrees/nix-managed-agent-config
-  nix build -L path:.#checks.aarch64-darwin.ai-home-manager-smoke \
-    --override-input ai-nix path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources
+  nix build -L 'path:.#checks.aarch64-darwin.ai-home-manager-smoke' \
+    --override-input ai-nix 'path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources'
   ```
 
   Expected: all exact inventories and selector-coverage rows match; Vulcan OpenCode validly has no default; evaluation succeeds with the eight secret variables unset.
 
-- [ ] **Step 8: Review, fess-audit, and commit.**
+- [x] **Step 8: Review, fess-audit, and commit.**
 
   Independently review selectors, defaults, and secret typing against the oracle ledger; run the fess audit; commit as `feat: add typed agent catalog and models`.
 
