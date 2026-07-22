@@ -29,6 +29,16 @@
       flake = false;
     };
 
+    pi-mcp-adapter = {
+      url = "github:nicobailon/pi-mcp-adapter/82724dccc13a49310530898f922bafff12b7f3fe";
+      flake = false;
+    };
+
+    pi-subagent = {
+      url = "github:mjakl/pi-subagent/70248dcf7c8a5ca74497e817a699f009c55e6917";
+      flake = false;
+    };
+
     git-ai = {
       url = "github:git-ai-project/git-ai";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -527,8 +537,15 @@
           build = self.packages.${system}.default;
           fractal-smoke = pkgs.callPackage ./overlays/tests/plasma-fractal-smoke.nix { };
           agent-resources = pkgs.callPackage ./tests/agent-resources.nix {
-            inherit (pkgs.inputs) superpowers ponytail translate-tool;
+            inherit (pkgs.inputs)
+              ponytail
+              superpowers
+              translate-tool
+              ;
             gitSurgeonSource = pkgs.inputs.llm-agents.packages.${system}.git-surgeon.src;
+            piMcpAdapter = pkgs.inputs.pi-mcp-adapter;
+            piSubagent = pkgs.inputs.pi-subagent;
+            piPackage = pkgs.inputs.llm-agents.packages.${system}.pi;
           };
           format = check "format" "format-check.sh" inputs.format "";
           lint = check "lint" "lint.sh" inputs.lint "";

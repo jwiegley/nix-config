@@ -170,6 +170,40 @@
         "type": "github"
       }
     },
+    "pi-mcp-adapter": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783097853,
+        "narHash": "sha256-JjYS9tPSoVuubdmHTqTNNYfDJOc9CBPvVbIxvdJWi7M=",
+        "owner": "nicobailon",
+        "repo": "pi-mcp-adapter",
+        "rev": "82724dccc13a49310530898f922bafff12b7f3fe",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nicobailon",
+        "repo": "pi-mcp-adapter",
+        "rev": "82724dccc13a49310530898f922bafff12b7f3fe",
+        "type": "github"
+      }
+    },
+    "pi-subagent": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783671111,
+        "narHash": "sha256-TyeqNoz5RLRlDWY4rcZbOY/UCHOMiNIjuGsW2xZoTEE=",
+        "owner": "mjakl",
+        "repo": "pi-subagent",
+        "rev": "70248dcf7c8a5ca74497e817a699f009c55e6917",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mjakl",
+        "repo": "pi-subagent",
+        "rev": "70248dcf7c8a5ca74497e817a699f009c55e6917",
+        "type": "github"
+      }
+    },
     "ponytail": {
       "flake": false,
       "locked": {
@@ -194,6 +228,8 @@
         "mcp-servers-nix": "mcp-servers-nix",
         "nixpkgs": "nixpkgs",
         "pal-mcp-server": "pal-mcp-server",
+        "pi-mcp-adapter": "pi-mcp-adapter",
+        "pi-subagent": "pi-subagent",
         "ponytail": "ponytail",
         "superpowers": "superpowers",
         "translate-tool": "translate-tool"

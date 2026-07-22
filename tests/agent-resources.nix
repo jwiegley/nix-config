@@ -4,6 +4,9 @@
   ponytail ? null,
   translate-tool ? null,
   gitSurgeonSource ? null,
+  piMcpAdapter ? null,
+  piSubagent ? null,
+  piPackage,
 }:
 
 let
@@ -46,6 +49,77 @@ let
   resources = pkgs.agent-resources;
   haveSources =
     superpowers != null && ponytail != null && translate-tool != null && gitSurgeonSource != null;
+  havePiSources = piMcpAdapter != null && piSubagent != null;
+
+  piMcpFiles = [
+    "cli.js"
+    "agent-dir.ts"
+    "index.ts"
+    "error-signal.ts"
+    "state.ts"
+    "utils.ts"
+    "abort.ts"
+    "tool-metadata.ts"
+    "init.ts"
+    "ui-session.ts"
+    "proxy-modes.ts"
+    "direct-tools.ts"
+    "commands.ts"
+    "onboarding-state.ts"
+    "mcp-setup-panel.ts"
+    "types.ts"
+    "ui-stream-types.ts"
+    "config.ts"
+    "server-manager.ts"
+    "sampling-handler.ts"
+    "elicitation-handler.ts"
+    "tool-registrar.ts"
+    "tool-result-renderer.ts"
+    "mcp-output-guard.ts"
+    "resource-tools.ts"
+    "lifecycle.ts"
+    "metadata-cache.ts"
+    "host-html-template.ts"
+    "ui-resource-handler.ts"
+    "consent-manager.ts"
+    "ui-server.ts"
+    "glimpse-ui.ts"
+    "npx-resolver.ts"
+    "oauth-handler.ts"
+    "mcp-auth.ts"
+    "mcp-oauth-provider.ts"
+    "mcp-callback-server.ts"
+    "mcp-auth-flow.ts"
+    "mcp-panel.ts"
+    "panel-keys.ts"
+    "logger.ts"
+    "errors.ts"
+    "app-bridge.bundle.js"
+    "banner.png"
+    "README.md"
+    "CHANGELOG.md"
+    "LICENSE"
+  ];
+
+  piSubagentFiles = [
+    "index.ts"
+    "agents.ts"
+    "contract.ts"
+    "output.ts"
+    "runner.ts"
+    "runner-cli.js"
+    "runner-events.js"
+    "session-lock.ts"
+    "session-paths.ts"
+    "render.ts"
+    "types.ts"
+    "agents/oracle.md"
+    "README.md"
+    "LICENSE"
+  ];
+
+  piMcpFileArgs = lib.escapeShellArgs ([ "package.json" ] ++ piMcpFiles);
+  piSubagentFileArgs = lib.escapeShellArgs ([ "package.json" ] ++ piSubagentFiles);
 
   expectedPins = [
     {
@@ -78,6 +152,43 @@ let
       actual = translate-tool.narHash or null;
       expected = "sha256-P27Hvn8p1+BN8z6g/aFk91BFtL9SMQiMNFYayKn5xyY=";
     }
+    {
+      name = "llm-agents Pi version";
+      actual = piPackage.version or null;
+      expected = "0.81.1";
+    }
+  ]
+  ++ lib.optionals havePiSources [
+    {
+      name = "pi-mcp-adapter revision";
+      actual = piMcpAdapter.rev or null;
+      expected = "82724dccc13a49310530898f922bafff12b7f3fe";
+    }
+    {
+      name = "pi-mcp-adapter NAR hash";
+      actual = piMcpAdapter.narHash or null;
+      expected = "sha256-JjYS9tPSoVuubdmHTqTNNYfDJOc9CBPvVbIxvdJWi7M=";
+    }
+    {
+      name = "pi-mcp-adapter lock hash";
+      actual = builtins.hashFile "sha256" "${piMcpAdapter}/package-lock.json";
+      expected = "156cd7b65090cb5600651b40563dea3974fbeeaa7dbb6346f3deb0e9e0528bd0";
+    }
+    {
+      name = "pi-subagent revision";
+      actual = piSubagent.rev or null;
+      expected = "70248dcf7c8a5ca74497e817a699f009c55e6917";
+    }
+    {
+      name = "pi-subagent NAR hash";
+      actual = piSubagent.narHash or null;
+      expected = "sha256-TyeqNoz5RLRlDWY4rcZbOY/UCHOMiNIjuGsW2xZoTEE=";
+    }
+    {
+      name = "pi-subagent lock hash";
+      actual = builtins.hashFile "sha256" "${piSubagent}/package-lock.json";
+      expected = "a7fbb2c6c10ee6af111dcf7a10064770cc360e818b6f424854c231ed6872d5ff";
+    }
   ];
 
   badPins = builtins.filter (pin: pin.actual != pin.expected) expectedPins;
@@ -99,6 +210,112 @@ let
     copy_expected_tree ${lib.escapeShellArg "${ponytail}/skills/${name}"} "$expected/${name}"
     chmod --reference=${lib.escapeShellArg "${ponytail}/skills/${name}"} "$expected/${name}"
   '') ponytailSkills;
+
+  piClosureCheck = pkgs.writeText "check-pi-extension-closure.mjs" ''
+    import fs from "node:fs";
+    import path from "node:path";
+    import { pathToFileURL } from "node:url";
+
+    const [mcpRoot, lockFile] = process.argv.slice(2);
+
+    function fail(message) {
+      console.error("Pi extension closure check: " + message);
+      process.exit(1);
+    }
+
+    const lock = JSON.parse(fs.readFileSync(lockFile, "utf8"));
+    if (lock.lockfileVersion !== 3) fail("unexpected pi-mcp-adapter lockfile version");
+
+    const locked = new Map(Object.entries(lock.packages).filter(([name]) => name !== ""));
+    const actual = new Set();
+
+    function visitNodeModules(nodeModules, prefix) {
+      if (!fs.existsSync(nodeModules)) return;
+      for (const entry of fs.readdirSync(nodeModules, { withFileTypes: true })) {
+        if (entry.name === ".bin" || entry.name.startsWith(".")) continue;
+        if (entry.name.startsWith("@")) {
+          const scope = path.join(nodeModules, entry.name);
+          for (const child of fs.readdirSync(scope, { withFileTypes: true })) {
+            if (!child.isDirectory()) continue;
+            visitPackage(path.join(scope, child.name), prefix + "node_modules/" + entry.name + "/" + child.name);
+          }
+        } else if (entry.isDirectory()) {
+          visitPackage(path.join(nodeModules, entry.name), prefix + "node_modules/" + entry.name);
+        }
+      }
+    }
+
+    function visitPackage(root, key) {
+      if (!fs.existsSync(path.join(root, "package.json"))) return;
+      actual.add(key);
+      visitNodeModules(path.join(root, "node_modules"), key + "/");
+    }
+
+    visitNodeModules(path.join(mcpRoot, "node_modules"), "");
+
+    for (const name of actual) {
+      const metadata = locked.get(name);
+      if (!metadata) fail("installed package is absent from package-lock.json: " + name);
+      if (metadata.dev === true) fail("development package leaked into closure: " + name);
+      if (!metadata.integrity) fail("installed package lacks locked integrity: " + name);
+    }
+
+    for (const [name, metadata] of locked) {
+      if (metadata.dev !== true && metadata.optional !== true && !actual.has(name)) {
+        fail("required locked package is absent from closure: " + name);
+      }
+    }
+
+    const expectedDirect = {
+      "@earendil-works/pi-ai": "0.74.2",
+      "@earendil-works/pi-tui": "0.74.2",
+      "@modelcontextprotocol/ext-apps": "1.7.4",
+      "@modelcontextprotocol/sdk": "1.29.0",
+      "open": "10.2.0",
+      "recheck": "4.5.0",
+      "typebox": "1.3.3",
+      "zod": "4.4.3"
+    };
+    for (const [name, version] of Object.entries(expectedDirect)) {
+      const key = "node_modules/" + name;
+      if (locked.get(key)?.version !== version) {
+        fail("unexpected locked version for " + name);
+      }
+      if (!actual.has(key)) fail("missing direct runtime dependency: " + name);
+    }
+
+    const runtimeImports = [
+      "@earendil-works/pi-ai",
+      "@earendil-works/pi-tui",
+      "@modelcontextprotocol/ext-apps/app-bridge",
+      "@modelcontextprotocol/sdk/client/auth.js",
+      "@modelcontextprotocol/sdk/client/index.js",
+      "@modelcontextprotocol/sdk/client/sse.js",
+      "@modelcontextprotocol/sdk/client/stdio.js",
+      "@modelcontextprotocol/sdk/client/streamableHttp.js",
+      "@modelcontextprotocol/sdk/types.js",
+      "@modelcontextprotocol/sdk/validation/ajv",
+      "open",
+      "recheck",
+      "typebox",
+      "zod"
+    ];
+    const parent = pathToFileURL(path.join(mcpRoot, "index.ts")).href;
+    const closure = fs.realpathSync(path.join(mcpRoot, "node_modules"));
+    for (const specifier of runtimeImports) {
+      let resolved;
+      try {
+        resolved = import.meta.resolve(specifier, parent);
+      } catch (error) {
+        fail("cannot resolve runtime import " + specifier + ": " + error.message);
+      }
+      if (!resolved.startsWith("file:")) fail("non-file runtime import: " + specifier);
+      const real = fs.realpathSync(new URL(resolved));
+      if (real !== closure && !real.startsWith(closure + path.sep)) {
+        fail("runtime import escapes packaged closure: " + specifier + " -> " + real);
+      }
+    }
+  '';
 in
 assert resources != null;
 if !haveSources then
@@ -114,6 +331,8 @@ else
         pkgs.coreutils
         pkgs.findutils
         pkgs.gnugrep
+        pkgs.jq
+        pkgs.nodejs
       ];
     }
     ''
@@ -264,6 +483,105 @@ else
       write_manifest "$actual" "$TMPDIR/actual.manifest"
       cmp "$TMPDIR/expected.manifest" "$TMPDIR/actual.manifest" \
         || fail "framed path/type/mode/link/content manifests differ"
+
+      extensions=${resources}/share/agent-resources/pi-extensions
+      missing_extensions=
+      for name in pi-mcp-adapter pi-subagent; do
+        if [ ! -d "$extensions/$name" ] || [ -L "$extensions/$name" ]; then
+          missing_extensions="$missing_extensions $name"
+        fi
+      done
+      [ -z "$missing_extensions" ] \
+        || fail "missing Pi extension roots:$missing_extensions"
+
+      ${lib.optionalString (!havePiSources) ''
+        fail "Pi extension roots exist but pinned source inputs are unavailable"
+      ''}
+
+      ${lib.optionalString havePiSources ''
+        mcp="$extensions/pi-mcp-adapter"
+        subagent="$extensions/pi-subagent"
+
+        validate_tree "$mcp"
+        validate_tree "$subagent"
+
+        printf '%s\0' ${piMcpFileArgs} node_modules \
+          | sort -z >"$TMPDIR/expected-mcp-top-level"
+        find -P "$mcp" -mindepth 1 -maxdepth 1 -printf '%f\0' \
+          | sort -z >"$TMPDIR/actual-mcp-top-level"
+        cmp "$TMPDIR/expected-mcp-top-level" "$TMPDIR/actual-mcp-top-level" \
+          || fail "pi-mcp-adapter packaged file set differs"
+
+        for relative in ${piMcpFileArgs}; do
+          [ -f "$mcp/$relative" ] && [ ! -L "$mcp/$relative" ] \
+            || fail "missing regular pi-mcp-adapter file: $relative"
+          cmp ${lib.escapeShellArg "${piMcpAdapter}"}/"$relative" "$mcp/$relative" \
+            || fail "modified pi-mcp-adapter file: $relative"
+        done
+
+        printf '%s\0' ${piSubagentFileArgs} \
+          | sort -z >"$TMPDIR/expected-subagent-files"
+        find -P "$subagent" -mindepth 1 -type f -printf '%P\0' \
+          | sort -z >"$TMPDIR/actual-subagent-files"
+        cmp "$TMPDIR/expected-subagent-files" "$TMPDIR/actual-subagent-files" \
+          || fail "pi-subagent packaged file set differs"
+        printf 'agents\0' >"$TMPDIR/expected-subagent-dirs"
+        find -P "$subagent" -mindepth 1 -type d -printf '%P\0' \
+          | sort -z >"$TMPDIR/actual-subagent-dirs"
+        cmp "$TMPDIR/expected-subagent-dirs" "$TMPDIR/actual-subagent-dirs" \
+          || fail "pi-subagent directory set differs"
+
+        for relative in ${piSubagentFileArgs}; do
+          [ -f "$subagent/$relative" ] && [ ! -L "$subagent/$relative" ] \
+            || fail "missing regular pi-subagent file: $relative"
+          cmp ${lib.escapeShellArg "${piSubagent}"}/"$relative" "$subagent/$relative" \
+            || fail "modified pi-subagent file: $relative"
+        done
+
+        jq -e '
+          .name == "pi-mcp-adapter"
+          and .version == "2.11.0"
+          and .type == "module"
+          and .bin == {"pi-mcp-adapter":"cli.js"}
+          and .pi.extensions == ["./index.ts"]
+          and ((.scripts // {})
+            | (has("preinstall") or has("install") or has("postinstall") or has("prepare"))
+            | not)
+        ' "$mcp/package.json" >/dev/null \
+          || fail "invalid pi-mcp-adapter package manifest"
+
+        jq -e '
+          .name == "@mjakl/pi-subagent"
+          and .version == "3.0.0"
+          and .type == "module"
+          and .main == "index.ts"
+          and .pi.extensions == ["./index.ts"]
+          and .peerDependencies == {
+            "@earendil-works/pi-agent-core": ">=0.80.5",
+            "@earendil-works/pi-ai": ">=0.80.5",
+            "@earendil-works/pi-coding-agent": ">=0.80.5",
+            "@earendil-works/pi-tui": ">=0.80.5",
+            "typebox": "*"
+          }
+          and ((.scripts // {})
+            | (has("preinstall") or has("install") or has("postinstall") or has("prepare"))
+            | not)
+        ' "$subagent/package.json" >/dev/null \
+          || fail "invalid pi-subagent package manifest"
+
+        jq -e '
+          .name == "@earendil-works/pi-coding-agent"
+          and .version == "0.81.1"
+          and .dependencies["@earendil-works/pi-agent-core"] == "^0.81.1"
+          and .dependencies["@earendil-works/pi-ai"] == "^0.81.1"
+          and .dependencies["@earendil-works/pi-tui"] == "^0.81.1"
+          and .dependencies.typebox == "1.1.38"
+        ' ${lib.escapeShellArg "${piPackage}/libexec/pi/package.json"} >/dev/null \
+          || fail "llm-agents Pi package does not satisfy pi-subagent peers"
+
+        node --experimental-import-meta-resolve ${piClosureCheck} \
+          "$mcp" ${lib.escapeShellArg "${piMcpAdapter}/package-lock.json"}
+      ''}
 
       mkdir -p "$out"
       printf '%s\n' ${expectedSkillArgs} >"$out/skills.txt"

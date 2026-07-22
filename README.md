@@ -55,6 +55,9 @@ nix build .#agent-resources
 ```
 
 Its skills are rooted at `share/agent-resources/skills/<name>` in the output.
+Pinned Pi extensions are rooted at
+`share/agent-resources/pi-extensions/<name>`; they are immutable extension
+trees for direct linking, not registrations or mutable `pi install` state.
 
 ## Checks
 
