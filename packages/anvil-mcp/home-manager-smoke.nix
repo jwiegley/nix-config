@@ -126,8 +126,23 @@ let
   );
 
   anvilHosts = import ../../config/anvil-hosts.nix;
-  managedHostnames = anvilHosts.clients;
-  managedEvaluations = lib.genAttrs managedHostnames (hostname: evaluateJohnw { inherit hostname; });
+  sharedLinuxHostnames = lib.remove "vulcan" anvilHosts.dedicatedLinux;
+  managedHostnames =
+    if isDarwin then
+      darwinHostnames
+    else
+      [
+        "vps"
+        "vulcan"
+      ]
+      ++ sharedLinuxHostnames;
+  managedEvaluations = lib.genAttrs managedHostnames (
+    hostname:
+    evaluateJohnw {
+      inherit hostname;
+      username = if builtins.elem hostname sharedLinuxHostnames then "jwiegley" else "johnw";
+    }
+  );
   positronRemoteLinux = evaluateJohnw {
     hostname = "andoria-08";
     username = "jwiegley";
