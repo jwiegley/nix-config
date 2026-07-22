@@ -4,6 +4,12 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
+    # Rust 1.96.1 with nixpkgs LLVM 21 cannot compile Qdrant's AVX-512 code.
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay/47759faaddf38fadaf172151ca9df8adae9c0b2e";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     mcp-servers-nix = {
       url = "github:natsukium/mcp-servers-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -77,6 +83,31 @@
 
       overlays = [
         (_final: _prev: { inherit inputs; })
+        (
+          _final: prev:
+          prev.lib.optionalAttrs
+            (
+              prev.stdenv.buildPlatform.system == "x86_64-linux"
+              && prev.stdenv.hostPlatform.system == "x86_64-linux"
+            )
+            (
+              let
+                rustPkgs = import inputs.nixpkgs {
+                  system = "x86_64-linux";
+                  overlays = [ inputs.rust-overlay.overlays.default ];
+                };
+                rust195 = rustPkgs.rust-bin.stable."1.95.0".minimal;
+                rustPlatform195 = prev.makeRustPlatform {
+                  cargo = rust195;
+                  rustc = rust195;
+                };
+              in
+              assert rust195.version == "1.95.0";
+              {
+                qdrant = prev.qdrant.override { rustPlatform = rustPlatform195; };
+              }
+            )
+        )
         mcp-servers-nix.overlays.default
         git-ai.overlays.default
         (_final: prev: {
