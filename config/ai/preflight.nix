@@ -50,6 +50,7 @@ let
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
     ".pi/agent/extensions/pi-mcp-adapter"
+    ".pi/agent/extensions/pi-quiet"
     ".pi/agent/extensions/pi-subagent"
     ".pi/agent/models.json"
   ];
@@ -154,6 +155,7 @@ let
         .config/mcp/mcp.json | \
         .config/opencode/opencode.json | \
         .pi/agent/extensions/pi-mcp-adapter | \
+        .pi/agent/extensions/pi-quiet | \
         .pi/agent/extensions/pi-subagent | \
         .pi/agent/models.json | \
         .local/bin/claude)
