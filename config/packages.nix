@@ -474,6 +474,8 @@ rec {
       openmpi
       qdrant
     ]
+    ++ optPkg "plasma-wiki"
+    ++ optPkg "plasma-fractal"
     ++ optPkg "aiperf"
     ++ optPkg "guidellm"
     ++ optPkg "llama-swap"
