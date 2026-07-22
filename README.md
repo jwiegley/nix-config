@@ -45,6 +45,17 @@ The shell sets only non-secret runtime defaults: updater suppression, Hugging
 Face transfer support, and CA bundle variables. It doesn't include API keys,
 private paths, hostnames, or client configuration.
 
+## Immutable agent resources
+
+The separate `agent-resources` package contains pinned skill trees without
+adding them to the default toolchain or development shell:
+
+```sh
+nix build .#agent-resources
+```
+
+Its skills are rooted at `share/agent-resources/skills/<name>` in the output.
+
 ## Checks
 
 The flake exposes the repository checks as apps, so CI, lefthook, and local
