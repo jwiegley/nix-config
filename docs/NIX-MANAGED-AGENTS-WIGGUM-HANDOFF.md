@@ -37,6 +37,7 @@ Replace promptdeploy as the active desired-state mechanism for Claude Code, Code
 - Task 1 is committed in ai-nix as `651cf6593cf4b7a3c4202e35dd495353d389f4c5`: the immutable skill-resource package contains the exact 22-name set and passed focused/full gates plus independent scope, security, and fess review. The nix-config implementation worktree remains at its approved planning commit.
 - Task 2 source authority was recorded before implementation: pi-mcp-adapter `82724dccc13a49310530898f922bafff12b7f3fe` (`2.11.0`, Pi `./index.ts`, bin `cli.js`, lock `156cd7b65090cb5600651b40563dea3974fbeeaa7dbb6346f3deb0e9e0528bd0`) and pi-subagent `70248dcf7c8a5ca74497e817a699f009c55e6917` (`3.0.0`, main/Pi `index.ts`, lock `a7fbb2c6c10ee6af111dcf7a10064770cc360e818b6f424854c231ed6872d5ff`). Current Pi `0.81.1` satisfies all four `>=0.80.5` peers.
 - Task 2's no-installer boundary covers packaging, Home Manager activation, registration, and initial extension discovery. The exact unmodified adapter retains its explicit operational `npx` MCP-launch/cache behavior and optional global Glimpse discovery; prohibiting those later configured behaviors would require an out-of-scope upstream patch.
+- Task 2 is committed in ai-nix as `47f7a52ce140e0f5cccef18e0e5e9c617c0f0504`: both immutable Pi extension roots passed the focused/public/full gates and an isolated explicit-root offline RPC smoke. The build asserts each pristine upstream lock hash before normalizing three adapter dev-only entries that lack integrity in the build copy; the packaged closure remains production-only.
 - Promptdeploy, ai-nix, and nix-config inventories were completed read-only under `/tmp/wg-nix-managed-ai/`.
 - The corrected 13-task plan passed independent scope, security, and final fess review; Tasks 1–12 are approved to begin.
 - Baseline ai-nix `nix flake check -L path:.` completed successfully, including the existing Gradio build and 757-test suite.
@@ -53,4 +54,4 @@ Replace promptdeploy as the active desired-state mechanism for Claude Code, Code
 
 ## Resume point
 
-Begin Task 2 in the ai-nix worktree with its required RED extension-closure check; preserve the clean Task 1 commit as the review boundary.
+Begin Task 3 in the ai-nix worktree by recording the five required non-target derivation paths, then add the parsing-complete wrapper/bridge RED check; preserve Task 2 commit `47f7a52ce140e0f5cccef18e0e5e9c617c0f0504` as the review boundary.
