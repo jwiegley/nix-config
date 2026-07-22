@@ -160,6 +160,9 @@ let
     newPaths = paths;
     inherit piGuard;
   };
+  modelSync = (import ./ai/model-sync.nix { inherit lib pkgs; }) {
+    inherit (modelData) syncInputs;
+  };
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
   droidSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "droid") profileIds;
 in
@@ -224,6 +227,11 @@ in
   home = {
     file = mergedFiles;
     packages = lib.optional droidSelected inputs.ai-nix.packages.${system}.agent-http-header-bridge;
-    activation.aiManagedPreflight = preflight.activation;
+    activation = {
+      aiManagedPreflight = preflight.activation;
+    }
+    // lib.optionalAttrs (hostname == "hera" && isDarwin) {
+      aiManagedModelSync = modelSync.activation;
+    };
   };
 }
