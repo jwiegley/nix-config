@@ -38,7 +38,8 @@ let
     "dirscan" # consumed via 30-data-tools overlay
     "git-ai" # consumed via overlay / home-manager module
     "hakyll" # local dev source only, not installed
-  ];
+  ]
+  ++ lib.optional isLinux "trade-journal";
 
   # Auto-install every flake input that exposes packages.${sys}.default
   # and isn't in the block-list above. Tolerates hosts (e.g. NixOS) that
