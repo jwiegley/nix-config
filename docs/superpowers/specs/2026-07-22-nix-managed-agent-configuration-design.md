@@ -1,8 +1,8 @@
 # Nix-Managed Agent Configuration Design
 
-Status: approved conceptual design; written specification awaiting user review.
+Status: approved for implementation on 2026-07-22.
 Date: 2026-07-22
-Scope: design only. This document does not authorize implementation, deployment, or retirement.
+Scope: Tasks 1–12 are authorized for implementation and ordinary publication. Task 13 host mutation, rollback-window closure, and promptdeploy retirement remain separately fail-closed.
 
 ## Executive decision
 
@@ -80,7 +80,7 @@ The architecture has three deliberately small layers:
 2. Five client renderers translate the selected catalog into native client formats and exact destination paths.
 3. Home Manager declares only those leaf files, generated config documents, scripts, and packages that Nix owns.
 
-`ai-nix` remains the package boundary. It supplies executable wrappers, packaged upstream resources, and immutable skill trees. It does not own fleet selection or Home Manager file placement. `/Users/johnw/src/nix` owns profiles, selection, rendering, and leaf declarations.
+`ai-nix` remains the package boundary. It supplies executable wrappers, the pinned single-purpose Droid HTTP-header bridge, packaged upstream resources, and immutable skill trees. It does not own fleet selection or Home Manager file placement. `/Users/johnw/src/nix` owns profiles, selection, rendering, and leaf declarations.
 
 ### Repository layout
 
@@ -194,7 +194,7 @@ An explicit user `--profile` conflicts with managed selection and fails unless `
 
 OpenCode's complete `opencode.json` is declaratively owned. The generated document adopts existing static keys such as `$schema`, `disabled_providers`, and `instructions` in addition to selected MCP servers, providers, models, and any default that survives filtering. Agents, commands, and skills are exact managed leaves.
 
-OpenCode uses native `{env:VAR}` and `{file:path}` references and needs no wrapper. Runtime data, state, cache, and npm/package trees remain mutable.
+OpenCode uses native `{env:VAR}` references and needs no wrapper. Runtime data, state, cache, and npm/package trees remain mutable.
 
 Commands that mutate the owned configuration, including `opencode mcp add`, are unsupported in the managed profile. Ordinary Home Manager symlinks cannot prevent a client from unlinking them, so pre-activation and verification checks detect a missing/replaced link or changed target and fail closed. They never silently overwrite the replacement; the intended change must be moved into Nix or the unmanaged collision resolved explicitly.
 
@@ -234,8 +234,9 @@ Pi has no legacy promptdeploy target. Its acceptance oracle is therefore the exa
 - translate-tool glossary and related resources.
 - `pi-mcp-adapter`.
 - `pi-subagent`.
+- Patched `mcp-remote` for Droid's static-header-only bridge.
 
-It exposes these as immutable trees beneath an `agent-resources` package/output and supplies the needed wrappers. `config/ai.nix` chooses and links resources from that package. There is no copied deployment bundle, promptdeploy receipt, or dependence on transitive root flake inputs.
+It exposes skill/extension resources as immutable trees beneath an `agent-resources` package/output and supplies the needed wrappers and pinned bridge. `config/ai.nix` chooses and links resources from that package. There is no copied deployment bundle, promptdeploy receipt, or dependence on transitive root flake inputs.
 
 Packaging does not imply selection. `catalog.nix` explicitly selects Superpowers and git-surgeon for every enabled skill-capable client profile, selects translate-tool resources according to their current skill selectors, and applies Ponytail's static-skill contract below. Pi consumes selected shared skills through `~/.agents/skills`; the other clients receive their native skill leaves.
 
@@ -264,7 +265,7 @@ Evaluation never reads `.env`, password stores, SOPS data, or live client config
 | Client | Native runtime form |
 |---|---|
 | Claude | `${VAR}` |
-| OpenCode | `{env:VAR}` or `{file:path}` |
+| OpenCode | `{env:VAR}` |
 | Codex | native environment-key fields, `env_http_headers`, or bearer-token environment fields |
 | Droid | `${VAR_NAME}` for custom models; stdio children inherit the environment |
 | Pi | `$VAR` or `${VAR}` |
@@ -279,7 +280,7 @@ Acceptance exercises terminal, agent-deck, and applicable GUI launch surfaces wi
 
 Ref uses `https://api.ref.tools/mcp` with the supported `x-ref-api-key` header rather than a query-string token. Context7 likewise uses an environment-backed header. This avoids Codex's lack of URL environment expansion and keeps credentials out of URLs.
 
-If a Droid or Pi HTTP bridge cannot express header indirection natively, the bridge resolves the credential inside its own process. It must never put the resolved value in argv, a URL, a generated file, a derivation argument, or a diagnostic. Shell tracing is disabled and errors are redacted.
+The pinned Pi adapter expands header environment references natively. Droid does not, so `ai-nix` supplies one patched `mcp-remote` static-header-only bridge. That bridge process is the sole approved stdio child allowed to inherit the named credential. It skips OAuth discovery, configuration and browser paths, rejects missing variables, 401 responses, redirects, and debug mode, deletes the consumed variable from its own environment after in-process expansion, spawns no further subprocess, and emits only bounded redacted errors. The resolved credential may exist only in that process's inherited environment until deletion, its header map, and the outbound TLS request; it never enters argv, a URL, any further child environment, generated files, derivation arguments, cache paths, persistence, or diagnostics.
 
 Nix store paths are world-readable. Assertions reject literal secret-shaped values where a typed reference is required, and verification scans rendered outputs and their closures for forbidden resolved values. A synthetic sentinel test supplements these structural checks but is not the only proof.
 
@@ -450,11 +451,11 @@ Persistent adoption, force, reconciliation, and transaction machinery are unnece
 - `ai-nix` is the only packaging source for external resources required by all consumers.
 - One managed path has one declarative writer.
 - Mutable client state is never captured merely to simplify parity.
-- No resolved secret enters a world-readable or observable channel.
+- No resolved secret enters a world-readable, persisted, logged, argv, or unapproved process channel; the sole bridge exception is its inherited environment, in-process header map, and outbound TLS request.
 - No NFS-shared profile points at an unrealized local-store path.
 - No runtime hostname decision for the shared work home trusts the configured Andoria-08 label.
 - No deployment operation uses SSH or rsync.
-- No implementation begins until the user accepts this written specification.
+- Implementation proceeds only under the recorded approval; Task 13 still requires its separate durable host-mutation and retirement authority.
 
 ## Design review record
 
@@ -477,4 +478,4 @@ Adversarial review materially changed the design before approval. It identified 
 - Ponytail's static-skill boundary and exclusion of dormant runtime/plugin payloads.
 - Explicit adoption of Droid's live `pal` entry.
 
-This document incorporates those corrections and represents the approved conceptual design. The next gate is user review of this durable specification. An implementation plan and code changes are intentionally deferred.
+This document incorporates those corrections and is the approved design. The user subsequently approved the active implementation objective on 2026-07-22, authorizing the reviewed implementation and ordinary branch publication through Task 12. The implementation plan remains the operational authority for sequencing and verification; Task 13 still requires its separate durable host-mutation and retirement record.
