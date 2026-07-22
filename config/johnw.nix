@@ -39,6 +39,7 @@ in
   imports =
     # Extracted sub-modules for better organization
     [
+      ./ai.nix
       ./anvil.nix
       ./fractal.nix
       ./git.nix
@@ -135,6 +136,7 @@ in
     };
 
     sessionPath = [
+      "${config.home.profileDirectory}/bin"
       "${vars.home}/src/scripts"
       "${vars.home}/.local/bin"
     ]
@@ -163,11 +165,6 @@ in
         ca_certificate = ${vars.ca-bundle_crt}
       '';
     }
-    // lib.optionalAttrs (inputs ? llm-agents) {
-      ".local/bin/claude".source = config.lib.file.mkOutOfStoreSymlink "${
-        inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
-      }/bin/claude";
-    }
     // lib.optionalAttrs isPositronRemoteLinux {
       ".local/bin/agent-deck-remote-env" = {
         executable = true;
@@ -187,17 +184,12 @@ in
       ".claude/skills/sherlock/sherlock".source = "${pkgs.sherlock-db}/bin/sherlock";
     };
 
-    # claude-mem (Fix C): its observation generator spawns headless `claude`,
-    # but `claude` on $PATH resolves to ~/src/scripts/claude (the `ai` gateway
-    # wrapper, since sessionPath lists src/scripts before .local/bin). The
-    # wrapper emits a "Preflight" banner that breaks claude-mem's stream-json
-    # SDK, so every observation fails in a retry loop. Pin CLAUDE_CODE_PATH to
-    # the real claude-code binary. settings.json is mutable and owned by
-    # claude-mem, so patch it in place (idempotent) rather than symlinking.
-    activation.claudeMemRealClaude = lib.mkIf (inputs ? llm-agents) (
+    # claude-mem needs the injection-free private command from the patched
+    # ai-nix package. Its settings remain mutable, so update only the path.
+    activation.claudeMemRealClaude = lib.mkIf (inputs ? ai-nix && inputs ? llm-agents) (
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         cm_settings="${vars.home}/.claude-mem/settings.json"
-        cm_claude="${vars.home}/.local/bin/claude"
+        cm_claude="${config.home.profileDirectory}/bin/claude-real"
         if [ -f "$cm_settings" ]; then
           cm_cur="$(${pkgs.jq}/bin/jq -r '.CLAUDE_CODE_PATH // ""' "$cm_settings" 2>/dev/null || true)"
           if [ "$cm_cur" != "$cm_claude" ]; then
