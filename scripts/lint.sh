@@ -10,7 +10,9 @@ enter_repo
 
 statix check flake.nix
 statix check overlays
-deadnix --fail flake.nix overlays
+statix check packages
+statix check tests
+deadnix --fail flake.nix overlays packages tests
 
 if has_shell_files; then
 	find_shell_files0 | xargs -0 -r shellcheck -x

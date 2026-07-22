@@ -170,13 +170,33 @@
         "type": "github"
       }
     },
+    "ponytail": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784151135,
+        "narHash": "sha256-Y7d4s7uqjH6IbEXhqAiQ+yaxr6iiGcv2X64LuMtG1T8=",
+        "owner": "DietrichGebert",
+        "repo": "ponytail",
+        "rev": "16f29800fd2681bdf24f3eb4ccffe38be3baec6b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "DietrichGebert",
+        "repo": "ponytail",
+        "rev": "16f29800fd2681bdf24f3eb4ccffe38be3baec6b",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "git-ai": "git-ai",
         "llm-agents": "llm-agents",
         "mcp-servers-nix": "mcp-servers-nix",
         "nixpkgs": "nixpkgs",
-        "pal-mcp-server": "pal-mcp-server"
+        "pal-mcp-server": "pal-mcp-server",
+        "ponytail": "ponytail",
+        "superpowers": "superpowers",
+        "translate-tool": "translate-tool"
       }
     },
     "rust-overlay": {
@@ -197,6 +217,23 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "superpowers": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783029415,
+        "narHash": "sha256-kHdQ9e44doBk2yYW88tMSCqVG8ycYcvJSZlrIziXhpA=",
+        "owner": "obra",
+        "repo": "superpowers",
+        "rev": "d884ae04edebef577e82ff7c4e143debd0bbec99",
+        "type": "github"
+      },
+      "original": {
+        "owner": "obra",
+        "repo": "superpowers",
+        "rev": "d884ae04edebef577e82ff7c4e143debd0bbec99",
         "type": "github"
       }
     },
@@ -227,6 +264,23 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "translate-tool": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1776110818,
+        "narHash": "sha256-P27Hvn8p1+BN8z6g/aFk91BFtL9SMQiMNFYayKn5xyY=",
+        "owner": "jwiegley",
+        "repo": "translate-tool",
+        "rev": "bffdb7ba3e5db603ea1390fee555354c1d45d642",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jwiegley",
+        "repo": "translate-tool",
+        "rev": "bffdb7ba3e5db603ea1390fee555354c1d45d642",
         "type": "github"
       }
     },

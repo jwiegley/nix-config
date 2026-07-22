@@ -14,6 +14,21 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    superpowers = {
+      url = "github:obra/superpowers/d884ae04edebef577e82ff7c4e143debd0bbec99";
+      flake = false;
+    };
+
+    ponytail = {
+      url = "github:DietrichGebert/ponytail/16f29800fd2681bdf24f3eb4ccffe38be3baec6b";
+      flake = false;
+    };
+
+    translate-tool = {
+      url = "github:jwiegley/translate-tool/bffdb7ba3e5db603ea1390fee555354c1d45d642";
+      flake = false;
+    };
+
     git-ai = {
       url = "github:git-ai-project/git-ai";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -54,6 +69,7 @@
             prev.callPackage (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")
               { };
         })
+        (import ./overlays/30-agent-resources.nix)
         (import ./overlays/30-agent-deck.nix)
         (import ./overlays/30-fractal.nix)
         (import ./overlays/30-ai-python.nix)
@@ -463,7 +479,11 @@
             paths = aiPackagesFor pkgs;
             ignoreCollisions = true;
           };
-          inherit (pkgs) plasma-fractal plasma-wiki;
+          inherit (pkgs)
+             agent-resources
+            plasma-fractal
+            plasma-wiki
+            ;
         }
       );
 
@@ -506,6 +526,10 @@
         {
           build = self.packages.${system}.default;
           fractal-smoke = pkgs.callPackage ./overlays/tests/plasma-fractal-smoke.nix { };
+          agent-resources = pkgs.callPackage ./tests/agent-resources.nix {
+            inherit (pkgs.inputs) superpowers ponytail translate-tool;
+            gitSurgeonSource = pkgs.inputs.llm-agents.packages.${system}.git-surgeon.src;
+          };
           format = check "format" "format-check.sh" inputs.format "";
           lint = check "lint" "lint.sh" inputs.lint "";
           tests = check "tests" "test.sh" inputs.test ''
