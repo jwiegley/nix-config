@@ -6993,11 +6993,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1784693291,
-        "narHash": "sha256-dpUroRfANBQ8XtdzUC5j5ZTPr6g2RGk532/qKSav1Yk=",
+        "lastModified": 1784694065,
+        "narHash": "sha256-ponKaN90wRrXj+ty1p2EWoC6lE39HuGr849VYR/KHPI=",
         "ref": "refs/heads/main",
-        "rev": "0dc52ece19545da9e5384a996e46bff89814d7bf",
-        "revCount": 1457,
+        "rev": "97d373eba5606af9f89c46db4da01c2d1883a23b",
+        "revCount": 1458,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
