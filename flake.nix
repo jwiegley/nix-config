@@ -1819,6 +1819,28 @@
             meta = package.meta or { };
           }
         else if
+          name == "pi"
+          && pkgs.stdenv.isLinux
+          && (package.version or null) == "0.81.1"
+          && package ? overrideAttrs
+        then
+          let
+            dynamicLinker = pkgs.stdenv.cc.bintools.dynamicLinker;
+          in
+          package.overrideAttrs (old: {
+            # Bun's compiled Linux executable names the dynamic loader as a
+            # shared dependency.  Invoking it normally mixes the Nix loader
+            # with the host libc and segfaults; run it through the matching
+            # loader and library directory instead.
+            postInstall = (old.postInstall or "") + ''
+              mv "$out/libexec/pi/pi" "$out/libexec/pi/pi.bin"
+              makeWrapper ${pkgs.lib.escapeShellArg dynamicLinker} "$out/libexec/pi/pi" \
+                --add-flags ${pkgs.lib.escapeShellArg "--library-path ${builtins.dirOf dynamicLinker}"} \
+                --add-flags ${pkgs.lib.escapeShellArg "--argv0 pi"} \
+                --add-flags "$out/libexec/pi/pi.bin"
+            '';
+          })
+        else if
           name == "gemini-cli" && (package.version or null) == "0.49.0" && package ? overrideAttrs
         then
           package.overrideAttrs (
@@ -2154,7 +2176,7 @@
             gitSurgeonSource = pkgs.inputs.llm-agents.packages.${system}.git-surgeon.src;
             piMcpAdapter = pkgs.inputs.pi-mcp-adapter;
             piSubagent = pkgs.inputs.pi-subagent;
-            piPackage = pkgs.inputs.llm-agents.packages.${system}.pi;
+            piPackage = patchAgentPackage pkgs "pi" pkgs.inputs.llm-agents.packages.${system}.pi;
           };
           agent-wrappers = pkgs.callPackage ./tests/agent-wrappers.nix {
             inherit patchAgentPackage;
