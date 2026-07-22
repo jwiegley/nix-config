@@ -59,6 +59,27 @@ Pinned Pi extensions are rooted at
 `share/agent-resources/pi-extensions/<name>`; they are immutable extension
 trees for direct linking, not registrations or mutable `pi install` state.
 
+## Managed agent wrappers
+
+`lib.patchAgentPackage` adds managed-config selection to the Claude, Codex,
+and Droid packages. A wholly absent managed artifact set delegates unchanged,
+a complete regular-file set selects the managed configuration, and a partial
+or invalid set fails closed. Set `AI_NIX_BYPASS_MANAGED_CONFIG=1` for explicit
+recovery without disabling the wrappers' pre-existing host-local behavior.
+The Claude package also exposes `claude-real` for callers that deliberately
+need the unwrapped executable.
+
+The separate `agent-http-header-bridge` package is the narrow HTTPS header
+bridge used by Droid MCP entries:
+
+```sh
+nix run .#agent-http-header-bridge -- \
+  https://example.invalid/mcp Authorization API_TOKEN
+```
+
+Its final argument names a required environment variable; the credential is
+resolved only inside the bridge process and is never passed in its argv.
+
 ## Checks
 
 The flake exposes the repository checks as apps, so CI, lefthook, and local

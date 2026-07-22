@@ -1,8 +1,7 @@
 # overlays/30-ai-mcp.nix
 # Purpose: Model Context Protocol (MCP) servers and Claude Code tools
 # Dependencies: Uses final for python3Packages; uses prev elsewhere
-# Packages: pal-mcp-server, mcp-server-sequential-thinking, rustdocs-mcp-server,
-#           browser-control-mcp, context-hub
+# Includes MCP servers, Claude Code tools, and agent-http-header-bridge.
 final: prev:
 
 prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
@@ -48,6 +47,104 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
 
 }
 // {
+
+  agent-http-header-bridge =
+    let
+      source = prev.inputs.mcp-remote;
+      sourcePackage = builtins.fromJSON (builtins.readFile "${source}/package.json");
+      lockHash = builtins.hashFile "sha256" "${source}/pnpm-lock.yaml";
+      pnpm = prev.pnpm_10.override { nodejs-slim = prev.nodejs_22; };
+      proxy =
+        assert sourcePackage.version == "0.1.38";
+        assert lockHash == "598f60becf15b3197fce5c4e38e8158f3db2f774d218a443e50b3b5e2b098542";
+        prev.stdenv.mkDerivation (finalAttrs: {
+          pname = "agent-http-header-bridge-proxy";
+          inherit (sourcePackage) version;
+          inherit source;
+          src = source;
+
+          patches = [ ../patches/mcp-remote-header-only.patch ];
+
+          nativeBuildInputs = [
+            prev.nodejs_22
+            pnpm
+            prev.pnpmConfigHook
+          ];
+
+          pnpmDeps = prev.fetchPnpmDeps {
+            inherit (finalAttrs) pname version src;
+            inherit pnpm;
+            fetcherVersion = 3;
+            hash = "sha256-8aV/WRBrcezMb8HyRKW89v11MumgQnQwSBde5MZkzos=";
+          };
+
+          buildPhase = ''
+            runHook preBuild
+            pnpm run check
+            pnpm run test:unit
+            pnpm run build
+            pnpm prune --prod --ignore-scripts
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+            bridge_lib="$out/libexec/agent-http-header-bridge"
+            install -d "$bridge_lib"
+            install -m0755 dist/proxy.js "$bridge_lib/proxy.js"
+            install -m0644 dist/chunk-*.js "$bridge_lib/"
+            install -m0644 package.json "$bridge_lib/package.json"
+            cp -R node_modules "$bridge_lib/node_modules"
+            install -Dm0644 LICENSE \
+              "$out/share/licenses/agent-http-header-bridge/LICENSE"
+            runHook postInstall
+          '';
+        });
+    in
+    prev.writeShellApplication {
+      name = "agent-http-header-bridge";
+      passthru = {
+        inherit lockHash proxy source;
+        inherit (source) narHash rev;
+      };
+      text = ''
+        fail_invalid() {
+          printf '%s\n' 'agent-http-header-bridge: invalid invocation' >&2
+          exit 2
+        }
+
+        fail_credential() {
+          printf '%s\n' 'agent-http-header-bridge: credential unavailable' >&2
+          exit 2
+        }
+
+        [ "$#" -eq 3 ] || fail_invalid
+        bridge_url=$1
+        bridge_header=$2
+        bridge_environment=$3
+
+        [[ "$bridge_url" =~ ^https://[^[:space:]]+$ ]] || fail_invalid
+        bridge_header_pattern="^[!#$%&'*+.^_\`|~0-9A-Za-z-]+$"
+        [[ "$bridge_header" =~ $bridge_header_pattern ]] || fail_invalid
+        [[ "$bridge_environment" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || fail_invalid
+        if [[ ! -v $bridge_environment ]] || [ -z "''${!bridge_environment}" ]; then
+          fail_credential
+        fi
+
+        bridge_placeholder='$'"{$bridge_environment}"
+        exec -a agent-http-header-bridge ${prev.nodejs_22}/bin/node \
+          ${proxy}/libexec/agent-http-header-bridge/proxy.js \
+          "$bridge_url" --header "$bridge_header: $bridge_placeholder" \
+          --header-only --transport http-only --silent
+      '';
+      meta = {
+        description = "Credential-safe static-header bridge for Droid MCP servers";
+        homepage = "https://github.com/geelen/mcp-remote";
+        license = prev.lib.licenses.mit;
+        mainProgram = "agent-http-header-bridge";
+        platforms = prev.lib.platforms.all;
+      };
+    };
 
   # Fix: npm prune removes @types/node, then prepare script tries to rebuild
   mcp-server-sequential-thinking = prev.mcp-server-sequential-thinking.overrideAttrs (_old: {
