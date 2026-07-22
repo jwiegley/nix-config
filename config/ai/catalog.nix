@@ -986,6 +986,8 @@ let
     );
 
   validHeaderName = name: builtins.match "^[A-Za-z0-9_-]+$" name != null;
+  validItemName =
+    name: builtins.isString name && builtins.match "^[A-Za-z0-9][A-Za-z0-9._-]*$" name != null;
 
   validArgument =
     value:
@@ -1106,7 +1108,10 @@ let
         lib.mapAttrsToList (
           category: itemSet:
           lib.mapAttrsToList (
-            key: item: ensure (item.name == key) "item key/name mismatch in ${category}/${key}"
+            key: item:
+            ensure (
+              validItemName key && item.name == key
+            ) "unsafe item name or key/name mismatch in ${category}/${key}"
           ) itemSet
         ) items
       );
