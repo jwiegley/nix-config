@@ -10,16 +10,106 @@
 let
   inherit (pkgs) lib;
 
-  modelData = import "${src}/config/ai/models.nix" { };
-  catalog = import "${src}/config/ai/catalog.nix" {
-    inherit lib modelData;
-    resources = "/agent-resources";
+  registryPath = "${src}/config/ai/model-registry.json";
+  rawModelRegistry = builtins.fromJSON (builtins.readFile registryPath);
+  modelPolicy = import "${src}/config/ai/model-policy.nix";
+  loadModelData = args: import "${src}/config/ai/models.nix" args;
+  modelData = loadModelData { };
+  catalogFor =
+    data:
+    import "${src}/config/ai/catalog.nix" {
+      inherit lib;
+      modelData = data;
+      resources = "/agent-resources";
+    };
+  catalog = catalogFor modelData;
+
+  replaceAt =
+    index: transform: values:
+    lib.imap0 (current: value: if current == index then transform value else value) values;
+  withProvider =
+    transform:
+    rawModelRegistry
+    // {
+      providers = replaceAt 0 transform rawModelRegistry.providers;
+    };
+  withModel =
+    transform:
+    rawModelRegistry
+    // {
+      models = replaceAt 0 transform rawModelRegistry.models;
+    };
+  loadRegistry = registry: loadModelData { inherit registry; };
+  expectRegistryReject = label: registry: expectReject label (loadRegistry registry);
+  expectPolicyReject =
+    label: policy:
+    expectReject label (loadModelData {
+      inherit policy;
+      registry = rawModelRegistry;
+    });
+
+  alternateRegistry = rawModelRegistry // {
+    selections = rawModelRegistry.selections // {
+      default = {
+        provider = "nvidia";
+        model = "qwen/qwen3-coder-480b-a35b-instruct";
+      };
+      claudeDefault = {
+        provider = "positron-anthropic";
+        model = "claude-opus-4-7";
+      };
+      claudeHaiku = {
+        provider = "positron-anthropic";
+        model = "claude-haiku-4-5-20251001";
+      };
+      claudeSubagent = {
+        provider = "positron-anthropic";
+        model = "claude-sonnet-4-6";
+      };
+    };
   };
+  alternateModelData = loadRegistry alternateRegistry;
+  alternateCatalog = catalogFor alternateModelData;
+
+  renamedCredentialRegistry = rawModelRegistry // {
+    providers = map (
+      provider:
+      if provider.id == "nvidia" then
+        provider
+        // {
+          apiKey.env = "NVIDIA_RENAMED_API_KEY";
+        }
+      else
+        provider
+    ) rawModelRegistry.providers;
+  };
+  renamedCredentialModelData = loadRegistry renamedCredentialRegistry;
+  renamedCredentialCatalog = catalogFor renamedCredentialModelData;
+
+  routeKey = model: "${model.provider}/${model.id}";
+  addedRouteKeys = [
+    "litellm/openrouter/moonshotai/kimi-k3"
+    "litellm/openrouter/qwen/qwen3.7-max"
+  ];
+  legacyComparableModels =
+    let
+      common = builtins.filter (
+        model: !builtins.elem (routeKey model) addedRouteKeys
+      ) rawModelRegistry.models;
+      glm = builtins.head (
+        builtins.filter (model: routeKey model == "litellm/openrouter/z-ai/glm-5.2") common
+      );
+      withoutGlm = builtins.filter (model: routeKey model != "litellm/openrouter/z-ai/glm-5.2") common;
+    in
+    lib.take 28 withoutGlm ++ [ glm ] ++ lib.drop 28 withoutGlm;
 
   sortedNames = set: lib.sort builtins.lessThan (builtins.attrNames set);
   expectEqual =
     label: actual: expected:
-    if actual == expected then true else throw label;
+    if actual == expected then
+      true
+    else
+      throw "${label}: expected ${builtins.toJSON expected}, got ${builtins.toJSON actual}";
   expectReject =
     label: value:
     if (builtins.tryEval (builtins.deepSeq value true)).success then throw label else true;
@@ -596,8 +686,8 @@ let
       mcpServers = personalOpenCodeMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 81;
-      modelHash = "7e658d57ea24da18e172d473ff6c6f2cef456e41b0456d22747013672e83f051";
+      models = 83;
+      modelHash = "60109176ccaac86f841e538f1e757a9953442c8ebc831b511ef26019d978d0aa";
       hasDefault = true;
     };
     "hera-claude-personal" = {
@@ -633,8 +723,8 @@ let
       mcpServers = droidMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 87;
-      modelHash = "fc7f339312782066a7444b79bc909f81ce55e2828550e9610ded47ab03e44394";
+      models = 89;
+      modelHash = "ecf118199fe8b4526a9f944a9d59f35b5f75923403c882b459dba994d2ccb2dd";
       hasDefault = false;
     };
     "hera-opencode" = {
@@ -643,8 +733,8 @@ let
       mcpServers = personalOpenCodeMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 80;
-      modelHash = "9faaba3cf26377b1a9d1e0ea96a57176aef6b3343ed1308a0ad6e583cccf5537";
+      models = 82;
+      modelHash = "c6d7301ca2d9ab1a5e632d549fc42d108509ad36c6c8df34bed8cd590a2af338";
       hasDefault = true;
     };
     "hera-pi" = {
@@ -653,8 +743,8 @@ let
       mcpServers = baseMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 87;
-      modelHash = "fc7f339312782066a7444b79bc909f81ce55e2828550e9610ded47ab03e44394";
+      models = 89;
+      modelHash = "ecf118199fe8b4526a9f944a9d59f35b5f75923403c882b459dba994d2ccb2dd";
       hasDefault = false;
     };
     "shared-work-claude-positron" = {
@@ -681,8 +771,8 @@ let
       mcpServers = baseMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 57;
-      modelHash = "b6f1fd6e19a8f7b7ea10f702878a4e1e8fc8245b6e7e4bb9561a0b24fb482af5";
+      models = 59;
+      modelHash = "5dd3cfd64201309b07b82f0330c3093c03d2745753c163b732c8217ed54880ea";
       hasDefault = true;
     };
     "vps-claude-personal" = {
@@ -851,6 +941,28 @@ let
       homeDirectory = fixtureHomeDirectory;
       xdgConfigHome = fixtureXdgConfigHome;
     };
+  renamedCredentialProfileId = "clio-opencode";
+  renamedCredentialProfile = renamedCredentialCatalog.profiles.${renamedCredentialProfileId};
+  renamedCredentialSelected = lib.mapAttrs (
+    _category: itemSet: renamedCredentialCatalog.select renamedCredentialProfile itemSet
+  ) renamedCredentialCatalog.items;
+  renamedCredentialProviders = renamedCredentialCatalog.select renamedCredentialProfile renamedCredentialModelData.providers;
+  renamedCredentialModels = lib.filterAttrs (
+    _name: model:
+    builtins.hasAttr model.provider renamedCredentialProviders
+    && renamedCredentialCatalog.matches renamedCredentialProfile (model.selectors or { })
+  ) renamedCredentialModelData.models;
+  renamedCredentialOpenCode = openCodeRenderer {
+    profile = renamedCredentialProfile;
+    selected = renamedCredentialSelected;
+    modelData = {
+      providers = renamedCredentialProviders;
+      models = renamedCredentialModels;
+      default = renamedCredentialModelData.profileDefaults.${renamedCredentialProfileId};
+    };
+    homeDirectory = fixtureHomeDirectory;
+    xdgConfigHome = fixtureXdgConfigHome;
+  };
   renderDroid =
     profileId:
     droidRenderer {
@@ -1892,13 +2004,23 @@ let
       ++ openCodeDocumentRecords
       ++ droidDocumentRecords
       ++ piDocumentRecords
-      ++ [ codexMetadataProbeRecord ]
+      ++ [
+        codexMetadataProbeRecord
+        {
+          kind = "json";
+          label = "renamed provider credential reaches OpenCode";
+          path = renamedCredentialOpenCode.files."${renamedCredentialProfile.root}/opencode.json".source;
+          expected = lib.recursiveUpdate (expectedOpenCodeConfig renamedCredentialProfileId) {
+            provider.nvidia.options.apiKey = "{env:NVIDIA_RENAMED_API_KEY}";
+          };
+        }
+      ]
     )
   );
   openCodeConfigHashes = {
-    clio-opencode = "2cfce0cf31a594bd18c746034848898f98e29388a50f0d713ba5d5af23b16940";
-    hera-opencode = "bb97240e133ee0a302b17687e36bc8b44d3376db79e8d22ddfbe6aab7380d2cd";
-    shared-work-opencode-positron = "58eb4ae9b89664d7d8f645c9c65e78386f7cdca2c1db1019018d74d86f816920";
+    clio-opencode = "7540ff41e2232abfc5f4435e4e6a3418c55d6b532205bb549f78600e1e243340";
+    hera-opencode = "f448925de464c301356ae10f044069b64a138ddf49613e5523b646da6c52f8c9";
+    shared-work-opencode-positron = "76949916454407e41d08c5467a424ebc62c86592398d872f2a340ec6aa1736e3";
     vulcan-opencode = "abe5634f22008b605ec8012906fa4df89b8d6846bc0e3c152c5b65cd0afc94ce";
   };
   openCodeRequiredEnvNames = {
@@ -2055,21 +2177,21 @@ let
           forbiddenDroidPaths profileId
         )) [ ])
         (expectEqual "${profileId} custom model count" (builtins.length expectedDroidSettings.customModels)
-          87
+          89
         )
         (expectEqual "${profileId} semantic settings oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedDroidSettings
-        )) "df74f9b51d56ff6700ffb35f3da7c51622be37769569bc8dc9a4d230d0bfbcb4")
+        )) "e370071ea1b0132a6e700a9bf314519053a810e5e0f4c90b7b1c3f9eb620513e")
         (expectEqual "${profileId} custom model provider counts" providerCounts {
           anthropic = 4;
-          generic-chat-completion-api = 81;
+          generic-chat-completion-api = 83;
           openai = 2;
         })
         (expectEqual "${profileId} LiteLLM extras count" (builtins.length (
           builtins.filter (
             model: model ? extraArgs && model ? extraHeaders
           ) expectedDroidSettings.customModels
-        )) 50)
+        )) 52)
         (expectEqual "${profileId} settings omit default"
           (builtins.hasAttr "defaultModel" expectedDroidSettings)
           false
@@ -2146,7 +2268,7 @@ let
           "positron-openai"
         ])
         (expectEqual "${profileId} provider model counts" providerCounts {
-          litellm = 50;
+          litellm = 52;
           llama-cpp-local = 24;
           nvidia = 1;
           omlx = 5;
@@ -2156,10 +2278,10 @@ let
         })
         (expectEqual "${profileId} model count" (lib.foldl' (
           count: provider: count + builtins.length provider.models
-        ) 0 (builtins.attrValues expectedPiModels.providers)) 87)
+        ) 0 (builtins.attrValues expectedPiModels.providers)) 89)
         (expectEqual "${profileId} semantic models oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedPiModels
-        )) "13f4f451f744569ce416e389bb285db5638c0aeadc2a8117de679e88b28f7157")
+        )) "fba2882ce84eef7fdb455cf9442370831e86e7aa9350cb307a7483eb062a22d3")
         (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) [
           "Ref"
           "anvil"
@@ -2288,6 +2410,13 @@ let
       };
     };
   };
+  providerOnlyEnvItems = catalog.items // {
+    mcpServers = catalog.items.mcpServers // {
+      Ref = lib.recursiveUpdate catalog.items.mcpServers.Ref {
+        transport.headers."x-ref-api-key".env = "NVIDIA_API_KEY";
+      };
+    };
+  };
   withPalLiteralEnv =
     name:
     catalog.items
@@ -2362,38 +2491,21 @@ let
       vulcan-opencode = modelData.profileDefaults.hera-opencode;
     };
   };
-  literalProviderSecretModels = modelData // {
-    providers = modelData.providers // {
-      litellm = modelData.providers.litellm // {
-        apiKey = "literal-secret";
-      };
+  unknownPolicyField = modelPolicy // {
+    defaultModel = {
+      provider = "litellm";
+      model = "forbidden";
     };
   };
-  providerQuerySecretModels = modelData // {
-    providers = modelData.providers // {
-      litellm = modelData.providers.litellm // {
-        baseUrl = "https://litellm.vulcan.lan/v1/?apiKey=literal-secret";
-      };
+  unknownProviderPolicy = modelPolicy // {
+    providers = modelPolicy.providers // {
+      unknown = { };
     };
   };
-  providerRenderedUrlModels = modelData // {
-    providers = modelData.providers // {
-      litellm = modelData.providers.litellm // {
-        baseUrl = "https://litellm.vulcan.lan/" + "$" + "{LITELLM_API_KEY}";
-      };
-    };
-  };
-  providerHttpDowngradeModels = modelData // {
-    providers = modelData.providers // {
-      litellm = modelData.providers.litellm // {
-        baseUrl = "http://litellm.vulcan.lan/v1/";
-      };
-    };
-  };
-  badPublicSentinelModels = modelData // {
-    providers = modelData.providers // {
-      llama-cpp-local = modelData.providers.llama-cpp-local // {
-        apiKey.nonSecret = "literal-secret";
+  concreteProviderPolicy = modelPolicy // {
+    providers = modelPolicy.providers // {
+      litellm = modelPolicy.providers.litellm // {
+        baseUrl = "https://forbidden.invalid/v1";
       };
     };
   };
@@ -3242,6 +3354,259 @@ let
     (expectEqual "shared Codex skills" (selectedNames "shared-work-codex" "skills") (
       lib.sort builtins.lessThan (broadSkills ++ [ "retest" ])
     ))
+    (expectEqual "registry schema version" rawModelRegistry.schemaVersion 2)
+    (expectEqual "registry top-level keys" (sortedNames rawModelRegistry) [
+      "models"
+      "providers"
+      "schemaVersion"
+      "selections"
+    ])
+    (expectEqual "registry provider count" (builtins.length rawModelRegistry.providers) 8)
+    (expectEqual "registry route count" (builtins.length rawModelRegistry.models) 113)
+    (expectEqual "provider facts match the frozen pre-migration snapshot"
+      (builtins.hashString "sha256" (builtins.toJSON rawModelRegistry.providers))
+      "076062e3c88481110f5dce4e857907502f38477a4f061580d31f0f8c4b5b5802"
+    )
+    (expectEqual "common model facts and relative order match the frozen snapshot"
+      (builtins.hashString "sha256" (builtins.toJSON legacyComparableModels))
+      "ac36d02b1f6d5839b059322ea642287167ac73a2f840b9136e74c0fdd6432cdc"
+    )
+    (expectEqual "registry additions are exactly the two audited routes" (map routeKey (
+      builtins.filter (model: builtins.elem (routeKey model) addedRouteKeys) rawModelRegistry.models
+    )) addedRouteKeys)
+    (expectEqual "GLM-5.2 new source index" (routeKey (
+      builtins.elemAt rawModelRegistry.models 32
+    )) "litellm/openrouter/z-ai/glm-5.2")
+    (expectEqual "GLM-5.2 frozen source index" (routeKey (
+      builtins.elemAt legacyComparableModels 28
+    )) "litellm/openrouter/z-ai/glm-5.2")
+    (expectEqual "selection projection" modelData.selections rawModelRegistry.selections)
+    (expectEqual "provider source order" (map (provider: provider.sourceOrder) (
+      lib.sort (left: right: left.sourceOrder < right.sourceOrder) (
+        builtins.attrValues modelData.providers
+      )
+    )) (lib.range 0 7))
+    (expectEqual "model source order" (map (model: model.sourceOrder) (
+      lib.sort (left: right: left.sourceOrder < right.sourceOrder) (builtins.attrValues modelData.models)
+    )) (lib.range 0 112))
+    (expectEqual "alternate Claude default selection reaches catalog"
+      alternateCatalog.items.settings.settings.base.model
+      alternateRegistry.selections.claudeDefault.model
+    )
+    (expectEqual "alternate Claude Haiku selection reaches catalog"
+      alternateCatalog.items.settings.settings.base.env.ANTHROPIC_DEFAULT_HAIKU_MODEL
+      alternateRegistry.selections.claudeHaiku.model
+    )
+    (expectEqual "alternate Claude subagent selection reaches catalog"
+      alternateCatalog.items.settings.settings.base.env.CLAUDE_CODE_SUBAGENT_MODEL
+      alternateRegistry.selections.claudeSubagent.model
+    )
+    (expectEqual "alternate OpenCode default fan-out" alternateModelData.profileDefaults {
+      clio-opencode = alternateRegistry.selections.default;
+      hera-opencode = alternateRegistry.selections.default;
+      shared-work-opencode-positron = alternateRegistry.selections.default;
+    })
+    (expectEqual "alternate synchronization selection" alternateModelData.syncInputs {
+      chatUrl = "https://integrate.api.nvidia.com/v1/chat/completions";
+      inherit (alternateRegistry.selections.default) model provider;
+    })
+    (expectEqual "renamed provider credential remains catalog-valid" (renamedCredentialCatalog.validate
+      { }
+    ) true)
+    (expectEqual "renamed provider credential reaches required environment metadata"
+      renamedCredentialOpenCode.requiredEnvNames
+      [
+        "CONTEXT7_API_KEY"
+        "LITELLM_API_KEY"
+        "NVIDIA_RENAMED_API_KEY"
+        "PERPLEXITY_API_KEY"
+        "REF_API_KEY"
+      ]
+    )
+    (expectRegistryReject "unknown registry key accepted" (rawModelRegistry // { forbidden = true; }))
+    (expectRegistryReject "old registry version accepted" (rawModelRegistry // { schemaVersion = 1; }))
+    (expectRegistryReject "non-integer registry version accepted" (
+      rawModelRegistry // { schemaVersion = "2"; }
+    ))
+    (expectRegistryReject "missing registry selections accepted" (
+      removeAttrs rawModelRegistry [ "selections" ]
+    ))
+    (expectRegistryReject "unknown selection accepted" (
+      rawModelRegistry
+      // {
+        selections = rawModelRegistry.selections // {
+          forbidden = rawModelRegistry.selections.default;
+        };
+      }
+    ))
+    (expectRegistryReject "missing selection field accepted" (
+      rawModelRegistry
+      // {
+        selections = rawModelRegistry.selections // {
+          default = removeAttrs rawModelRegistry.selections.default [ "model" ];
+        };
+      }
+    ))
+    (expectRegistryReject "empty selection value accepted" (
+      rawModelRegistry
+      // {
+        selections = rawModelRegistry.selections // {
+          default = rawModelRegistry.selections.default // {
+            model = "";
+          };
+        };
+      }
+    ))
+    (expectRegistryReject "dangling selection provider accepted" (
+      rawModelRegistry
+      // {
+        selections = rawModelRegistry.selections // {
+          default = {
+            provider = "missing";
+            model = rawModelRegistry.selections.default.model;
+          };
+        };
+      }
+    ))
+    (expectRegistryReject "dangling selection model accepted" (
+      rawModelRegistry
+      // {
+        selections = rawModelRegistry.selections // {
+          default = rawModelRegistry.selections.default // {
+            model = "missing";
+          };
+        };
+      }
+    ))
+    (expectRegistryReject "provider array type accepted" (rawModelRegistry // { providers = { }; }))
+    (expectRegistryReject "duplicate provider ID accepted" (
+      rawModelRegistry
+      // {
+        providers = rawModelRegistry.providers ++ [ (builtins.head rawModelRegistry.providers) ];
+      }
+    ))
+    (expectRegistryReject "unknown provider field accepted" (
+      withProvider (provider: provider // { accessToken = "literal-secret"; })
+    ))
+    (expectRegistryReject "empty provider ID accepted" (
+      withProvider (provider: provider // { id = ""; })
+    ))
+    (expectRegistryReject "malformed environment credential accepted" (
+      withProvider (provider: provider // { apiKey.env = "bad-name"; })
+    ))
+    (expectRegistryReject "multi-field credential accepted" (
+      withProvider (
+        provider:
+        provider
+        // {
+          apiKey = {
+            env = "ANTHROPIC_API_KEY";
+            secret = "literal-secret";
+          };
+        }
+      )
+    ))
+    (expectRegistryReject "literal credential accepted" (
+      withProvider (provider: provider // { apiKey.literal = "literal-secret"; })
+    ))
+    (expectRegistryReject "unapproved public sentinel accepted by registry" (
+      withProvider (provider: provider // { apiKey.nonSecret = "literal-secret"; })
+    ))
+    (expectRegistryReject "another provider's public sentinel accepted" (
+      withProvider (
+        provider:
+        provider
+        // {
+          apiKey = {
+            nonSecret = "dummy-key";
+          };
+        }
+      )
+    ))
+    (expectRegistryReject "unsafe HTTP provider URL accepted" (
+      withProvider (provider: provider // { baseUrl = "http://example.invalid/v1"; })
+    ))
+    (expectRegistryReject "another provider's insecure URL accepted" (
+      withProvider (provider: provider // { baseUrl = "http://localhost:8080/v1"; })
+    ))
+    (expectRegistryReject "provider URL query accepted" (
+      withProvider (provider: provider // { baseUrl = "https://example.invalid/v1?token=secret"; })
+    ))
+    (expectRegistryReject "provider URL placeholder accepted" (
+      withProvider (
+        provider:
+        provider
+        // {
+          baseUrl = "https://example.invalid/" + "$" + "{TOKEN}";
+        }
+      )
+    ))
+    (expectRegistryReject "provider URL dollar variable accepted" (
+      withProvider (provider: provider // { baseUrl = "https://example.invalid/$TOKEN"; })
+    ))
+    (expectRegistryReject "provider URL env placeholder accepted" (
+      withProvider (provider: provider // { baseUrl = "https://example.invalid/{env:TOKEN}"; })
+    ))
+    (expectRegistryReject "empty provider hosts accepted" (
+      withProvider (provider: provider // { hosts = [ ]; })
+    ))
+    (expectRegistryReject "duplicate provider host accepted" (
+      withProvider (
+        provider:
+        provider
+        // {
+          hosts = [
+            "clio"
+            "clio"
+          ];
+        }
+      )
+    ))
+    (expectRegistryReject "unknown provider host accepted" (
+      withProvider (provider: provider // { hosts = [ "unknown" ]; })
+    ))
+    (expectRegistryReject "model array type accepted" (rawModelRegistry // { models = { }; }))
+    (expectRegistryReject "duplicate model route accepted" (
+      rawModelRegistry
+      // {
+        models = rawModelRegistry.models ++ [ (builtins.head rawModelRegistry.models) ];
+      }
+    ))
+    (expectRegistryReject "unknown model field accepted" (
+      withModel (model: model // { apiToken = "literal-secret"; })
+    ))
+    (expectRegistryReject "empty model ID accepted" (withModel (model: model // { id = ""; })))
+    (expectRegistryReject "dangling model provider accepted" (
+      withModel (model: model // { provider = "missing"; })
+    ))
+    (expectRegistryReject "zero maximum output accepted" (
+      withModel (model: model // { maxOutputTokens = 0; })
+    ))
+    (expectRegistryReject "negative context limit accepted" (
+      withModel (model: model // { contextLimit = -1; })
+    ))
+    (expectRegistryReject "string output limit accepted" (
+      withModel (model: model // { outputLimit = "65536"; })
+    ))
+    (expectRegistryReject "empty model hosts accepted" (withModel (model: model // { hosts = [ ]; })))
+    (expectRegistryReject "duplicate model host accepted" (
+      withModel (
+        model:
+        model
+        // {
+          hosts = [
+            "hera"
+            "hera"
+          ];
+        }
+      )
+    ))
+    (expectRegistryReject "unknown model host accepted" (
+      withModel (model: model // { hosts = [ "unknown" ]; })
+    ))
+    (expectPolicyReject "unknown model policy field accepted" unknownPolicyField)
+    (expectPolicyReject "unknown provider policy accepted" unknownProviderPolicy)
+    (expectPolicyReject "concrete provider fact accepted in policy" concreteProviderPolicy)
     (expectEqual "providers" (sortedNames modelData.providers) expectedProviders)
     (expectEqual "provider base URLs" (lib.mapAttrs (
       _: provider: provider.baseUrl
@@ -3256,10 +3621,10 @@ let
       ];
       hosts = [ "clio" ];
     })
-    (expectEqual "model pair count" (builtins.length (sortedNames modelData.models)) 111)
+    (expectEqual "model pair count" (builtins.length (sortedNames modelData.models)) 113)
     (expectEqual "model pair key hash" (builtins.hashString "sha256" (
       builtins.toJSON (sortedNames modelData.models)
-    )) "71d39c94a5dc7781336fe763b1ed4fa8a39915a21de72acfa9bcf94cda9cad82")
+    )) "5a9d725f2eb96be4a8e689d543a20a0c678abd9878268994cb1f184e9718669f")
     (expectEqual "sync inputs" modelData.syncInputs {
       chatUrl = "https://litellm.vulcan.lan/v1/chat/completions";
       model = "hera/omlx/Qwen3.6-27B-oQ4e-mtp";
@@ -3339,6 +3704,9 @@ let
     (expectReject "secret query accepted" (validateWithItems querySecretItems))
     (expectReject "malformed env name accepted" (validateWithItems malformedEnvItems))
     (expectReject "undeclared env name accepted" (validateWithItems undeclaredEnvItems))
+    (expectReject "provider-only environment reference accepted by MCP validation" (
+      validateWithItems providerOnlyEnvItems
+    ))
     (expectReject "literal access token accepted" (
       validateWithItems (withPalLiteralEnv "ACCESS_TOKEN")
     ))
@@ -3366,11 +3734,6 @@ let
     (expectReject "insecure HTTP MCP URL accepted" (validateWithItems insecureHttpItems))
     (expectReject "missing renderer accepted" (validateWithProfiles missingRendererProfiles))
     (expectReject "filtered default accepted" (validateWithModels filteredDefaultModels))
-    (expectReject "literal provider secret accepted" (validateWithModels literalProviderSecretModels))
-    (expectReject "provider query secret accepted" (validateWithModels providerQuerySecretModels))
-    (expectReject "provider rendered URL accepted" (validateWithModels providerRenderedUrlModels))
-    (expectReject "provider HTTP downgrade accepted" (validateWithModels providerHttpDowngradeModels))
-    (expectReject "unapproved public sentinel accepted" (validateWithModels badPublicSentinelModels))
     (expectReject "anvil-tools accepted" (validateWithItems anvilToolsItems))
   ]
   ++ profileChecks
@@ -3965,7 +4328,9 @@ pkgs.runCommand "ai-home-manager-smoke"
         if not (root / category).is_dir()
     ]
     missing.extend(
-        name for name in ("catalog.nix", "models.nix") if not (root / name).is_file()
+        name
+        for name in ("catalog.nix", "model-policy.nix", "model-registry.json", "models.nix")
+        if not (root / name).is_file()
     )
     statusline = root / "statusline-command.sh"
     if not statusline.is_file():
@@ -4078,6 +4443,8 @@ pkgs.runCommand "ai-home-manager-smoke"
     }
     expected_root = set(expected) | {
         "catalog.nix",
+        "model-policy.nix",
+        "model-registry.json",
         "models.nix",
         "preflight.nix",
         "statusline-command.sh",

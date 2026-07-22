@@ -19,6 +19,9 @@ let
   isTypedEnv =
     value:
     builtins.isAttrs value && builtins.attrNames value == [ "env" ] && builtins.isString value.env;
+  providerRequiredEnvNames = lib.concatMap (
+    provider: lib.optional (isTypedEnv provider.apiKey) provider.apiKey.env
+  ) (builtins.attrValues modelData.providers);
 
   renderSecretReferences =
     value:
@@ -189,13 +192,14 @@ in
 
   companions = [ ];
 
-  requiredEnvNames = [
-    "CONTEXT7_API_KEY"
-  ]
-  ++ lib.optional (modelData.providers ? litellm) "LITELLM_API_KEY"
-  ++ [
-    "NVIDIA_API_KEY"
-    "PERPLEXITY_API_KEY"
-    "REF_API_KEY"
-  ];
+  requiredEnvNames = lib.unique (
+    lib.sort builtins.lessThan (
+      [
+        "CONTEXT7_API_KEY"
+        "PERPLEXITY_API_KEY"
+        "REF_API_KEY"
+      ]
+      ++ providerRequiredEnvNames
+    )
+  );
 }

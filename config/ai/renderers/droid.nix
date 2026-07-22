@@ -20,6 +20,9 @@ let
   json = pkgs.formats.json { };
 
   isTypedEnv = value: builtins.isAttrs value && builtins.attrNames value == [ "env" ];
+  providerRequiredEnvNames = lib.concatMap (
+    provider: lib.optional (isTypedEnv provider.apiKey) provider.apiKey.env
+  ) (builtins.attrValues modelData.providers);
   renderCredential =
     credential:
     if isTypedEnv credential then
@@ -147,14 +150,17 @@ in
     "${root}/nix-managed-settings.json"
     "${root}/mcp.json"
   ];
-  requiredEnvNames = [
-    "ANTHROPIC_API_KEY"
-    "CONTEXT7_API_KEY"
-    "GEMINI_API_KEY"
-    "LITELLM_API_KEY"
-    "NVIDIA_API_KEY"
-    "OPENAI_API_KEY"
-    "PERPLEXITY_API_KEY"
-    "REF_API_KEY"
-  ];
+  requiredEnvNames = lib.unique (
+    lib.sort builtins.lessThan (
+      [
+        "ANTHROPIC_API_KEY"
+        "CONTEXT7_API_KEY"
+        "GEMINI_API_KEY"
+        "OPENAI_API_KEY"
+        "PERPLEXITY_API_KEY"
+        "REF_API_KEY"
+      ]
+      ++ providerRequiredEnvNames
+    )
+  );
 }
