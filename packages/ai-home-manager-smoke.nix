@@ -758,13 +758,31 @@ let
     "hera-codex"
     "shared-work-codex"
   ];
+  openCodeProfileIds = [
+    "clio-opencode"
+    "hera-opencode"
+    "shared-work-opencode-positron"
+    "vulcan-opencode"
+  ];
+  droidProfileIds = [ "hera-droid" ];
   fixtureHomeDirectory = "/Users/smoke";
   fixtureXdgConfigHome = "${fixtureHomeDirectory}/.config";
   selectedFor =
     profileId: lib.mapAttrs (_category: itemSet: selectFor profileId itemSet) catalog.items;
+  selectedModelDataFor =
+    profileId:
+    {
+      providers = selectedProviders profileId;
+      models = selectedModels profileId;
+    }
+    // lib.optionalAttrs (builtins.hasAttr profileId modelData.profileDefaults) {
+      default = modelData.profileDefaults.${profileId};
+    };
 
   claudeRendererPath = "${src}/config/ai/renderers/claude.nix";
   codexRendererPath = "${src}/config/ai/renderers/codex.nix";
+  openCodeRendererPath = "${src}/config/ai/renderers/opencode.nix";
+  droidRendererPath = "${src}/config/ai/renderers/droid.nix";
   claudeRenderer =
     if builtins.pathExists claudeRendererPath then
       import claudeRendererPath { inherit lib pkgs; }
@@ -775,6 +793,16 @@ let
       import codexRendererPath { inherit lib pkgs; }
     else
       throw "Task 6 RED: config/ai/renderers/codex.nix is missing";
+  openCodeRenderer =
+    if builtins.pathExists openCodeRendererPath then
+      import openCodeRendererPath { inherit lib pkgs; }
+    else
+      throw "Task 7 RED: config/ai/renderers/opencode.nix is missing";
+  droidRenderer =
+    if builtins.pathExists droidRendererPath then
+      import droidRendererPath { inherit lib pkgs; }
+    else
+      throw "Task 7 RED: config/ai/renderers/droid.nix is missing";
 
   renderClaude =
     profileId:
@@ -794,8 +822,46 @@ let
       homeDirectory = fixtureHomeDirectory;
       xdgConfigHome = fixtureXdgConfigHome;
     };
+  renderOpenCode =
+    profileId:
+    openCodeRenderer {
+      profile = catalog.profiles.${profileId};
+      selected = selectedFor profileId;
+      modelData = selectedModelDataFor profileId;
+      homeDirectory = fixtureHomeDirectory;
+      xdgConfigHome = fixtureXdgConfigHome;
+    };
+  renderDroid =
+    profileId:
+    droidRenderer {
+      profile = catalog.profiles.${profileId};
+      selected = selectedFor profileId;
+      modelData = selectedModelDataFor profileId;
+      homeDirectory = fixtureHomeDirectory;
+      xdgConfigHome = fixtureXdgConfigHome;
+    };
   renderedClaude = lib.genAttrs claudeProfileIds renderClaude;
   renderedCodex = lib.genAttrs codexProfileIds renderCodex;
+  renderedOpenCode = lib.genAttrs openCodeProfileIds renderOpenCode;
+  renderedDroid = lib.genAttrs droidProfileIds renderDroid;
+  droidMissingProviderTypeProbe =
+    let
+      data = selectedModelDataFor "hera-droid";
+      provider = data.providers.nvidia;
+    in
+    droidRenderer {
+      profile = catalog.profiles.hera-droid;
+      selected = selectedFor "hera-droid";
+      modelData = data // {
+        providers = data.providers // {
+          nvidia = provider // {
+            droid = builtins.removeAttrs provider.droid [ "providerType" ];
+          };
+        };
+      };
+      homeDirectory = fixtureHomeDirectory;
+      xdgConfigHome = fixtureXdgConfigHome;
+    };
   codexMetadataProbeItem = catalog.items.agents.bash-reviewer // {
     name = "metadata-probe";
     metadata = catalog.items.agents.bash-reviewer.metadata // {
@@ -963,6 +1029,160 @@ let
   expectedCodexMcp =
     profileId: lib.mapAttrs (_: expectedCodexMcpServer) (selectFor profileId catalog.items.mcpServers);
 
+  renderOpenCodeSecretReferences =
+    value:
+    if isTypedEnv value then
+      "{env:${value.env}}"
+    else if builtins.isAttrs value then
+      lib.mapAttrs (_: renderOpenCodeSecretReferences) value
+    else if builtins.isList value then
+      map renderOpenCodeSecretReferences value
+    else
+      value;
+  expectedOpenCodeMcpServer =
+    server:
+    let
+      transport = renderOpenCodeSecretReferences server.transport;
+      native =
+        if transport ? url then
+          {
+            type = "remote";
+            inherit (transport) url;
+          }
+          // lib.optionalAttrs (transport ? headers) { inherit (transport) headers; }
+        else
+          {
+            type = "local";
+            command = [ transport.command ] ++ transport.args;
+          }
+          // lib.optionalAttrs (transport ? env) { environment = transport.env; };
+    in
+    lib.recursiveUpdate native (server.overrides.opencode or { });
+  expectedOpenCodeMcp =
+    profileId:
+    lib.mapAttrs (_: expectedOpenCodeMcpServer) (selectFor profileId catalog.items.mcpServers);
+  renderOpenCodeCredential =
+    credential: if isTypedEnv credential then "{env:${credential.env}}" else credential.nonSecret;
+
+  orderedValues =
+    set: lib.sort (left: right: left.sourceOrder < right.sourceOrder) (builtins.attrValues set);
+  expectedOpenCodeModel =
+    model:
+    {
+      name = model.displayName;
+    }
+    // lib.optionalAttrs (model ? contextLimit || model ? outputLimit) {
+      limit =
+        lib.optionalAttrs (model ? contextLimit) { context = model.contextLimit; }
+        // lib.optionalAttrs (model ? outputLimit) { output = model.outputLimit; };
+    };
+  expectedOpenCodeProvider = profileId: providerName: provider: {
+    inherit (provider.opencode) name npm;
+    options = {
+      apiKey = renderOpenCodeCredential provider.apiKey;
+      baseURL = provider.baseUrl;
+      inherit (provider.opencode) timeout;
+    };
+    models = lib.listToAttrs (
+      map (model: lib.nameValuePair model.id (expectedOpenCodeModel model)) (
+        orderedValues (
+          lib.filterAttrs (_: model: model.provider == providerName) (selectedModels profileId)
+        )
+      )
+    );
+  };
+  expectedOpenCodeConfig =
+    profileId:
+    let
+      default = modelData.profileDefaults.${profileId} or null;
+    in
+    {
+      "$schema" = "https://opencode.ai/config.json";
+      disabled_providers = [
+        "openai"
+        "gemini"
+        "anthropic"
+      ];
+      instructions = [
+        "CLAUDE.md"
+        "AGENTS.md"
+      ];
+      mcp = expectedOpenCodeMcp profileId;
+      provider = lib.mapAttrs (expectedOpenCodeProvider profileId) (selectedProviders profileId);
+    }
+    // lib.optionalAttrs (default != null) {
+      model = "${default.provider}/${default.model}";
+      small_model = "${default.provider}/${default.model}";
+    };
+
+  renderDroidSecretReference = value: if isTypedEnv value then "$" + "{" + value.env + "}" else value;
+  renderDroidCredential =
+    credential:
+    if isTypedEnv credential then renderDroidSecretReference credential else credential.nonSecret;
+  expectedDroidModel =
+    index: model:
+    let
+      provider = (selectedProviders "hera-droid").${model.provider};
+      displayName = "[${provider.displayName}] ${model.displayName}";
+    in
+    {
+      apiKey = renderDroidCredential provider.apiKey;
+      inherit (provider) baseUrl;
+      inherit displayName index;
+      id = "custom:${lib.replaceStrings [ " " ] [ "-" ] displayName}-${toString index}";
+      model = model.id;
+      noImageSupport = provider.droid.noImageSupport or false;
+      provider = provider.droid.providerType;
+    }
+    // lib.optionalAttrs (model ? maxOutputTokens) {
+      inherit (model) maxOutputTokens;
+    }
+    // lib.optionalAttrs (provider.droid ? extraArgs) {
+      inherit (provider.droid) extraArgs;
+    }
+    // lib.optionalAttrs (provider.droid ? extraHeaders) {
+      inherit (provider.droid) extraHeaders;
+    };
+  expectedDroidSettings = {
+    customModels = lib.imap0 expectedDroidModel (orderedValues (selectedModels "hera-droid"));
+  };
+  expectedDroidMcpServer =
+    name: server:
+    let
+      inherit (server) transport;
+      headerNames = sortedNames (transport.headers or { });
+      bridge = builtins.elem name [
+        "Ref"
+        "context7"
+      ];
+      literalEnv = lib.filterAttrs (_: value: !isTypedEnv value) (transport.env or { });
+    in
+    if bridge then
+      assert builtins.length headerNames == 1;
+      let
+        headerName = builtins.head headerNames;
+      in
+      {
+        type = "stdio";
+        disabled = false;
+        command = "agent-http-header-bridge";
+        args = [
+          transport.url
+          headerName
+          transport.headers.${headerName}.env
+        ];
+      }
+    else
+      {
+        type = "stdio";
+        disabled = false;
+        inherit (transport) command args;
+      }
+      // lib.optionalAttrs (literalEnv != { }) { env = literalEnv; };
+  expectedDroidMcp = {
+    mcpServers = lib.mapAttrs expectedDroidMcpServer (selectFor "hera-droid" catalog.items.mcpServers);
+  };
+
   expectedClaudeSettings =
     profileId:
     let
@@ -1016,6 +1236,33 @@ let
       ++ map (name: ".agents/skills/prompt-${name}") (selectedNames profileId "prompts")
       ++ [ "${root}/nix-managed.config.toml" ]
     );
+  expectedOpenCodePaths =
+    profileId:
+    let
+      root = catalog.profiles.${profileId}.root;
+    in
+    lib.sort builtins.lessThan (
+      map (name: "${root}/agents/${name}.md") (selectedNames profileId "agents")
+      ++ map (name: "${root}/commands/${name}.md") (selectedNames profileId "commands")
+      ++ map (name: "${root}/skills/${name}") (selectedNames profileId "skills")
+      ++ map (name: "${root}/commands/${name}.md") (selectedNames profileId "prompts")
+      ++ [ "${root}/opencode.json" ]
+    );
+  expectedDroidPaths =
+    profileId:
+    let
+      root = catalog.profiles.${profileId}.root;
+    in
+    lib.sort builtins.lessThan (
+      map (name: "${root}/droids/${name}.md") (selectedNames profileId "agents")
+      ++ map (name: "${root}/skills/${name}") (selectedNames profileId "skills")
+      ++ map (name: "${root}/skills/${name}") (selectedNames profileId "commands")
+      ++ map (name: "${root}/skills/${name}") (selectedNames profileId "prompts")
+      ++ [
+        "${root}/mcp.json"
+        "${root}/nix-managed-settings.json"
+      ]
+    );
   forbiddenClaudePaths =
     profileId:
     let
@@ -1041,6 +1288,33 @@ let
       "${root}/hooks.json"
       "${root}/auth.json"
       "${root}/history.jsonl"
+    ];
+  forbiddenOpenCodePaths =
+    profileId:
+    let
+      root = catalog.profiles.${profileId}.root;
+    in
+    [
+      root
+      "${root}/auth.json"
+      "${root}/bun.lock"
+      "${root}/node_modules"
+      "${root}/package.json"
+      ".cache/opencode"
+      ".local/share/opencode"
+      ".local/state/opencode"
+    ];
+  forbiddenDroidPaths =
+    profileId:
+    let
+      root = catalog.profiles.${profileId}.root;
+    in
+    [
+      root
+      "${root}/settings.json"
+      "${root}/auth.json"
+      "${root}/history.jsonl"
+      "${root}/sessions"
     ];
 
   documentSource =
@@ -1075,6 +1349,49 @@ let
     + "If the prompt contains `$ARGUMENTS`, interpret it as those arguments.\n\n"
     + "Prompt:\n\n"
     + builtins.readFile source;
+  openCodeBuiltinTools = [
+    "bash"
+    "edit"
+    "glob"
+    "grep"
+    "list"
+    "lsp"
+    "patch"
+    "question"
+    "read"
+    "skill"
+    "task"
+    "todoread"
+    "todowrite"
+    "webfetch"
+    "websearch"
+    "write"
+  ];
+  normalizeOpenCodeTool =
+    tool:
+    let
+      call = builtins.match "([^()]*)[(].*" tool;
+      bare = if call == null then tool else builtins.head call;
+      withoutMcp = lib.removePrefix "mcp__" bare;
+    in
+    lib.toLower (lib.replaceStrings [ "__" ] [ "_" ] withoutMcp);
+  expectedOpenCodeAgentMetadata =
+    item:
+    let
+      declared =
+        if !(item.metadata ? tools) then
+          [ ]
+        else if builtins.isList item.metadata.tools then
+          item.metadata.tools
+        else
+          lib.splitString ", " item.metadata.tools;
+      enabled = map normalizeOpenCodeTool declared;
+      toolNames = lib.unique (lib.sort builtins.lessThan (openCodeBuiltinTools ++ enabled));
+    in
+    removeAttrs item.metadata [ "tools" ]
+    // lib.optionalAttrs (item.metadata ? tools) {
+      tools = lib.genAttrs toolNames (name: builtins.elem name enabled);
+    };
 
   claudeDocumentRecords = lib.concatMap (
     profileId:
@@ -1195,9 +1512,136 @@ let
         codexMetadataProbe.files.".config/codex/agents/metadata-probe.toml";
     expected = codexAgentObject codexMetadataProbeItem;
   };
+  openCodeDocumentRecords = lib.concatMap (
+    profileId:
+    let
+      profile = catalog.profiles.${profileId};
+      render = renderedOpenCode.${profileId};
+      file = path: render.files.${path};
+    in
+    [
+      {
+        kind = "json";
+        label = "${profileId} complete config";
+        path = documentSource "${profileId}-opencode.json" (file "${profile.root}/opencode.json");
+        expected = expectedOpenCodeConfig profileId;
+        forbidden = [
+          ("$" + "{")
+          "$env:"
+          "?apiKey="
+        ];
+      }
+    ]
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "frontmatter";
+      label = "${profileId} agent ${name}";
+      path = documentSource "${profileId}-agent-${name}.md" (file "${profile.root}/agents/${name}.md");
+      expectedMetadata = expectedOpenCodeAgentMetadata item;
+      expectedBody = builtins.readFile item.source;
+    }) (selectFor profileId catalog.items.agents)
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "frontmatter";
+      label = "${profileId} command ${name}";
+      path = documentSource "${profileId}-command-${name}.md" (
+        file "${profile.root}/commands/${name}.md"
+      );
+      expectedMetadata = item.metadata;
+      expectedBody = builtins.readFile item.source;
+    }) (selectFor profileId catalog.items.commands)
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "text";
+      label = "${profileId} prompt ${name}";
+      path = documentSource "${profileId}-prompt-${name}.md" (file "${profile.root}/commands/${name}.md");
+      expectedText = builtins.readFile item.source;
+    }) (selectFor profileId catalog.items.prompts)
+  ) openCodeProfileIds;
+  droidDocumentRecords = lib.concatMap (
+    profileId:
+    let
+      profile = catalog.profiles.${profileId};
+      render = renderedDroid.${profileId};
+      file = path: render.files.${path};
+    in
+    [
+      {
+        kind = "json";
+        label = "${profileId} model settings";
+        path = documentSource "${profileId}-settings.json" (
+          file "${profile.root}/nix-managed-settings.json"
+        );
+        expected = expectedDroidSettings;
+        forbidden = [
+          "defaultModel"
+          "?apiKey="
+        ];
+      }
+      {
+        kind = "json";
+        label = "${profileId} MCP";
+        path = documentSource "${profileId}-mcp.json" (file "${profile.root}/mcp.json");
+        expected = expectedDroidMcp;
+        forbidden = [
+          "{env:"
+          "anvil-tools"
+          "?apiKey="
+        ];
+      }
+    ]
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "frontmatter";
+      label = "${profileId} droid ${name}";
+      path = documentSource "${profileId}-droid-${name}.md" (file "${profile.root}/droids/${name}.md");
+      expectedMetadata = item.metadata;
+      expectedBody = builtins.readFile item.source;
+    }) (selectFor profileId catalog.items.agents)
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "frontmatter";
+      label = "${profileId} command projection ${name}";
+      sourceDirectory = (file "${profile.root}/skills/${name}").source;
+      path = "${(file "${profile.root}/skills/${name}").source}/SKILL.md";
+      expectedMetadata = item.metadata;
+      expectedBody = builtins.readFile item.source;
+    }) (selectFor profileId catalog.items.commands)
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "text";
+      label = "${profileId} prompt projection ${name}";
+      sourceDirectory = (file "${profile.root}/skills/${name}").source;
+      path = "${(file "${profile.root}/skills/${name}").source}/SKILL.md";
+      expectedText = builtins.readFile item.source;
+    }) (selectFor profileId catalog.items.prompts)
+  ) droidProfileIds;
   rendererDocumentManifest = pkgs.writeText "ai-renderer-document-fixtures.json" (
-    builtins.toJSON (claudeDocumentRecords ++ codexDocumentRecords ++ [ codexMetadataProbeRecord ])
+    builtins.toJSON (
+      claudeDocumentRecords
+      ++ codexDocumentRecords
+      ++ openCodeDocumentRecords
+      ++ droidDocumentRecords
+      ++ [ codexMetadataProbeRecord ]
+    )
   );
+  openCodeConfigHashes = {
+    clio-opencode = "2cfce0cf31a594bd18c746034848898f98e29388a50f0d713ba5d5af23b16940";
+    hera-opencode = "bb97240e133ee0a302b17687e36bc8b44d3376db79e8d22ddfbe6aab7380d2cd";
+    shared-work-opencode-positron = "58eb4ae9b89664d7d8f645c9c65e78386f7cdca2c1db1019018d74d86f816920";
+    vulcan-opencode = "abe5634f22008b605ec8012906fa4df89b8d6846bc0e3c152c5b65cd0afc94ce";
+  };
+  openCodeRequiredEnvNames = {
+    clio-opencode = [
+      "CONTEXT7_API_KEY"
+      "LITELLM_API_KEY"
+      "NVIDIA_API_KEY"
+      "PERPLEXITY_API_KEY"
+      "REF_API_KEY"
+    ];
+    hera-opencode = openCodeRequiredEnvNames.clio-opencode;
+    shared-work-opencode-positron = openCodeRequiredEnvNames.clio-opencode;
+    vulcan-opencode = [
+      "CONTEXT7_API_KEY"
+      "NVIDIA_API_KEY"
+      "PERPLEXITY_API_KEY"
+      "REF_API_KEY"
+    ];
+  };
 
   rendererChecks =
     lib.concatMap (
@@ -1263,7 +1707,108 @@ let
           item.source
         )
       ) (selectFor profileId catalog.items.skills)
-    ) codexProfileIds;
+    ) codexProfileIds
+    ++ lib.concatMap (
+      profileId:
+      let
+        profile = catalog.profiles.${profileId};
+        render = renderedOpenCode.${profileId};
+        paths = sortedNames render.files;
+      in
+      [
+        (expectEqual "${profileId} exact path inventory" paths (expectedOpenCodePaths profileId))
+        (expectEqual "${profileId} path count" (builtins.length paths) 126)
+        (expectEqual "${profileId} companions" render.companions [ ])
+        (expectEqual "${profileId} required environment" render.requiredEnvNames
+          openCodeRequiredEnvNames.${profileId}
+        )
+        (expectEqual "${profileId} mutable roots remain unmanaged" (lib.intersectLists paths (
+          forbiddenOpenCodePaths profileId
+        )) [ ])
+        (expectEqual "${profileId} semantic config oracle" (builtins.hashString "sha256" (
+          builtins.toJSON (expectedOpenCodeConfig profileId)
+        )) openCodeConfigHashes.${profileId})
+      ]
+      ++ lib.mapAttrsToList (
+        name: item:
+        (expectEqual "${profileId} skill source ${name}"
+          render.files."${profile.root}/skills/${name}".source
+          item.source
+        )
+      ) (selectFor profileId catalog.items.skills)
+    ) openCodeProfileIds
+    ++ lib.concatMap (
+      profileId:
+      let
+        profile = catalog.profiles.${profileId};
+        render = renderedDroid.${profileId};
+        paths = sortedNames render.files;
+        providerCounts = lib.foldl' (
+          counts: model: counts // { ${model.provider} = (counts.${model.provider} or 0) + 1; }
+        ) { } expectedDroidSettings.customModels;
+      in
+      [
+        (expectEqual "${profileId} exact path inventory" paths (expectedDroidPaths profileId))
+        (expectEqual "${profileId} path count" (builtins.length paths) 70)
+        (expectReject "Droid missing provider type accepted" droidMissingProviderTypeProbe.companions)
+        (expectEqual "${profileId} companions" render.companions [
+          "${profile.root}/nix-managed-settings.json"
+          "${profile.root}/mcp.json"
+        ])
+        (expectEqual "${profileId} required environment" render.requiredEnvNames [
+          "ANTHROPIC_API_KEY"
+          "CONTEXT7_API_KEY"
+          "GEMINI_API_KEY"
+          "LITELLM_API_KEY"
+          "NVIDIA_API_KEY"
+          "OPENAI_API_KEY"
+          "PERPLEXITY_API_KEY"
+          "REF_API_KEY"
+        ])
+        (expectEqual "${profileId} mutable roots remain unmanaged" (lib.intersectLists paths (
+          forbiddenDroidPaths profileId
+        )) [ ])
+        (expectEqual "${profileId} custom model count" (builtins.length expectedDroidSettings.customModels)
+          87
+        )
+        (expectEqual "${profileId} semantic settings oracle" (builtins.hashString "sha256" (
+          builtins.toJSON expectedDroidSettings
+        )) "df74f9b51d56ff6700ffb35f3da7c51622be37769569bc8dc9a4d230d0bfbcb4")
+        (expectEqual "${profileId} custom model provider counts" providerCounts {
+          anthropic = 4;
+          generic-chat-completion-api = 81;
+          openai = 2;
+        })
+        (expectEqual "${profileId} LiteLLM extras count" (builtins.length (
+          builtins.filter (
+            model: model ? extraArgs && model ? extraHeaders
+          ) expectedDroidSettings.customModels
+        )) 50)
+        (expectEqual "${profileId} settings omit default"
+          (builtins.hasAttr "defaultModel" expectedDroidSettings)
+          false
+        )
+        (expectEqual "${profileId} semantic MCP oracle" (builtins.hashString "sha256" (
+          builtins.toJSON expectedDroidMcp
+        )) "1c67464e875534e546c17d017253563f4875b871d827a059826a429e3eff4e29")
+        (expectEqual "${profileId} MCP set" (sortedNames expectedDroidMcp.mcpServers) [
+          "Ref"
+          "anvil"
+          "context-hub"
+          "context7"
+          "pal"
+          "perplexity"
+          "sequential-thinking"
+        ])
+      ]
+      ++ lib.mapAttrsToList (
+        name: item:
+        (expectEqual "${profileId} skill source ${name}"
+          render.files."${profile.root}/skills/${name}".source
+          item.source
+        )
+      ) (selectFor profileId catalog.items.skills)
+    ) droidProfileIds;
 
   candidate = {
     inherit (catalog) profiles items;
@@ -1635,6 +2180,12 @@ let
   ];
 
   contractChecks = [
+    (expectEqual "OpenCode bash-reviewer tool oracle" (builtins.hashString "sha256" (
+      builtins.toJSON (expectedOpenCodeAgentMetadata catalog.items.agents.bash-reviewer)
+    )) "27eaf3302a4ff6cd97d4a0f5a7027d57c121f362318c1b4d011b0fce691b3e1a")
+    (expectEqual "OpenCode web-searcher tool oracle" (builtins.hashString "sha256" (
+      builtins.toJSON (expectedOpenCodeAgentMetadata catalog.items.agents.web-searcher)
+    )) "409fdb2458acb50672c6a07b60486fb5c0b4c47efec6fccf45158815b82d2736")
     (expectEqual "canonical validation" (catalog.validate candidate) true)
     (expectEqual "profile IDs" (sortedNames catalog.profiles) expectedProfileIds)
     (expectEqual "profile expectation coverage" (sortedNames profileExpectations) expectedProfileIds)
@@ -1860,9 +2411,10 @@ pkgs.runCommand "ai-home-manager-smoke"
 
         if record["kind"] == "json":
             parsed = subprocess.run(
-                ["jq", "-e", ".", str(path)],
+                ["jq", "-e", "."],
                 check=False,
                 capture_output=True,
+                input=text,
                 text=True,
             )
             if parsed.returncode:
@@ -1882,6 +2434,21 @@ pkgs.runCommand "ai-home-manager-smoke"
         elif record["kind"] == "text":
             if text != record["expectedText"]:
                 errors.append(f"{label}: exact text mismatch")
+        elif record["kind"] == "frontmatter":
+            if text.startswith("---\n"):
+                try:
+                    metadata_text, body = text[4:].split("\n---\n", 1)
+                    metadata = json.loads(metadata_text)
+                except (ValueError, json.JSONDecodeError) as error:
+                    errors.append(f"{label}: invalid frontmatter: {error}")
+                    continue
+            else:
+                metadata = {}
+                body = text
+            if metadata != record["expectedMetadata"]:
+                errors.append(f"{label}: semantic frontmatter mismatch")
+            if body != record["expectedBody"]:
+                errors.append(f"{label}: exact body mismatch")
         else:
             errors.append(f"{label}: unknown fixture kind {record['kind']!r}")
 
@@ -2064,7 +2631,7 @@ pkgs.runCommand "ai-home-manager-smoke"
     renderers = root / "renderers"
     if renderers.exists():
         expected_root.add("renderers")
-        expected_renderers = {"claude.nix", "codex.nix"}
+        expected_renderers = {"claude.nix", "codex.nix", "droid.nix", "opencode.nix"}
         actual_renderers = {entry.name for entry in renderers.iterdir()}
         if actual_renderers != expected_renderers:
             errors.append(
