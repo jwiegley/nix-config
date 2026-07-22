@@ -40,6 +40,16 @@
       flake = false;
     };
 
+    pi-openai-server-compaction = {
+      url = "github:algal/pi-openai-server-compaction/c6d593087709e9481223dc6c6c2269b371b5e055";
+      flake = false;
+    };
+
+    pi-quiet = {
+      url = "github:zenspc/pi-extensions/b281afef4e61188e7aa76aaa114ba505274fa7bc";
+      flake = false;
+    };
+
     pi-subagent = {
       url = "github:mjakl/pi-subagent/70248dcf7c8a5ca74497e817a699f009c55e6917";
       flake = false;
@@ -2206,6 +2216,8 @@
               ;
             gitSurgeonSource = pkgs.inputs.llm-agents.packages.${system}.git-surgeon.src;
             piMcpAdapter = pkgs.inputs.pi-mcp-adapter;
+            piOpenaiServerCompaction = pkgs.inputs.pi-openai-server-compaction;
+            piQuiet = pkgs.inputs.pi-quiet;
             piSubagent = pkgs.inputs.pi-subagent;
             piPackage = patchAgentPackage pkgs "pi" pkgs.inputs.llm-agents.packages.${system}.pi;
           };

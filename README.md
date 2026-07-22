@@ -58,6 +58,12 @@ Its skills are rooted at `share/agent-resources/skills/<name>` in the output.
 Pinned Pi extensions are rooted at
 `share/agent-resources/pi-extensions/<name>`; they are immutable extension
 trees for direct linking, not registrations or mutable `pi install` state.
+`pi-openai-server-compaction` is packaged but must not be linked into the
+current Pi 0.81.1 profile: upstream declares support for Pi `>=0.80.9 <0.81.0`
+and has an [open 0.81.1 streaming bug][pi-compaction-81]. Keep it inactive
+until upstream supports the packaged Pi version.
+
+[pi-compaction-81]: https://github.com/algal/pi-openai-server-compaction/issues/2
 
 ## Managed agent wrappers
 

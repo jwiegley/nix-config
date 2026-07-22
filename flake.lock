@@ -204,6 +204,40 @@
         "type": "github"
       }
     },
+    "pi-openai-server-compaction": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784314274,
+        "narHash": "sha256-SFGcISdYblxGonhipIHPAOons8MdwYtu+A+WbHnNSVg=",
+        "owner": "algal",
+        "repo": "pi-openai-server-compaction",
+        "rev": "c6d593087709e9481223dc6c6c2269b371b5e055",
+        "type": "github"
+      },
+      "original": {
+        "owner": "algal",
+        "repo": "pi-openai-server-compaction",
+        "rev": "c6d593087709e9481223dc6c6c2269b371b5e055",
+        "type": "github"
+      }
+    },
+    "pi-quiet": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784727372,
+        "narHash": "sha256-CScA35fG/xSgtJrWGf36G5oEv3Y+P5sSHjsy4NXkL94=",
+        "owner": "zenspc",
+        "repo": "pi-extensions",
+        "rev": "b281afef4e61188e7aa76aaa114ba505274fa7bc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zenspc",
+        "repo": "pi-extensions",
+        "rev": "b281afef4e61188e7aa76aaa114ba505274fa7bc",
+        "type": "github"
+      }
+    },
     "pi-subagent": {
       "flake": false,
       "locked": {
@@ -247,6 +281,8 @@
         "nixpkgs": "nixpkgs",
         "pal-mcp-server": "pal-mcp-server",
         "pi-mcp-adapter": "pi-mcp-adapter",
+        "pi-openai-server-compaction": "pi-openai-server-compaction",
+        "pi-quiet": "pi-quiet",
         "pi-subagent": "pi-subagent",
         "ponytail": "ponytail",
         "rust-overlay": "rust-overlay_2",
