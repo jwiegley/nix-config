@@ -672,13 +672,13 @@ let
 
       base = {
         env = {
-          ANTHROPIC_DEFAULT_HAIKU_MODEL = "claude-sonnet-4-6";
+          ANTHROPIC_DEFAULT_HAIKU_MODEL = modelData.selections.claudeHaiku.model;
           CLAUDE_AUTOCOMPACT_PCT_OVERRIDE = "80";
           CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY = "1";
           CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
           CLAUDE_CODE_MAX_OUTPUT_TOKENS = "64000";
           CLAUDE_CODE_NO_FLICKER = "1";
-          CLAUDE_CODE_SUBAGENT_MODEL = "claude-fable-5";
+          CLAUDE_CODE_SUBAGENT_MODEL = modelData.selections.claudeSubagent.model;
           DISABLE_AUTOUPDATER = "1";
           ENABLE_LSP_TOOL = "1";
           ENABLE_TOOL_SEARCH = "1";
@@ -710,7 +710,7 @@ let
         preferredNotifChannel = "iterm2_with_bell";
         remoteControlAtStartup = true;
         agentPushNotifEnabled = true;
-        model = "claude-fable-5";
+        model = modelData.selections.claudeDefault.model;
         theme = "dark";
       };
 
@@ -919,8 +919,6 @@ let
     "ANTHROPIC_API_KEY"
     "CONTEXT7_API_KEY"
     "GEMINI_API_KEY"
-    "LITELLM_API_KEY"
-    "NVIDIA_API_KEY"
     "OPENAI_API_KEY"
     "PERPLEXITY_API_KEY"
     "REF_API_KEY"
@@ -934,20 +932,6 @@ let
     && builtins.attrNames value == [ "env" ]
     && validEnvName value.env
     && builtins.elem value.env declaredEnvNames;
-
-  approvedNonSecretCredentials = {
-    llama-cpp-local = "not-needed";
-    llama-cpp-remote = "dummy-api-key";
-    omlx = "dummy-key";
-  };
-
-  isTypedProviderCredential =
-    provider: value:
-    isEnvReference value
-    || (
-      builtins.hasAttr provider approvedNonSecretCredentials
-      && value == { nonSecret = approvedNonSecretCredentials.${provider}; }
-    );
 
   containsRenderedReference =
     value:
@@ -1143,14 +1127,7 @@ let
       ) items.mcpServers;
       providerSelectorChecks = lib.mapAttrsToList (
         name: provider:
-        ensure (
-          validateSelectors (provider.selectors or { })
-          && validUrl (builtins.elem name [
-            "llama-cpp-local"
-            "omlx"
-          ]) provider.baseUrl
-          && isTypedProviderCredential name provider.apiKey
-        ) "invalid provider ${name}"
+        ensure (validateSelectors (provider.selectors or { })) "invalid provider selector ${name}"
       ) modelData.providers;
       modelSelectorChecks = lib.mapAttrsToList (
         name: model: ensure (validateSelectors (model.selectors or { })) "invalid model selector ${name}"

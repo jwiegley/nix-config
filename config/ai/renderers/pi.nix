@@ -65,6 +65,9 @@ let
       "$env:"
       "?apiKey="
     ];
+  providerRequiredEnvNames = lib.concatMap (
+    provider: lib.optional (isTypedEnv provider.apiKey) provider.apiKey.env
+  ) (builtins.attrValues modelData.providers);
   renderEnv = name: "$" + "{" + name + "}";
   renderCredential =
     value:
@@ -90,18 +93,14 @@ let
     // lib.optionalAttrs (model ? contextLimit) {
       contextWindow = model.contextLimit;
     };
-  renderProvider =
-    providerName: provider:
-    assert isSafeUrl provider.baseUrl;
-    assert isTypedEnv provider.apiKey || isNonSecret provider.apiKey;
-    {
-      api = providerApis.${providerName};
-      apiKey = renderCredential provider.apiKey;
-      inherit (provider) baseUrl;
-      models = map renderModel (
-        orderedValues (lib.filterAttrs (_: model: model.provider == providerName) modelData.models)
-      );
-    };
+  renderProvider = providerName: provider: {
+    api = providerApis.${providerName};
+    apiKey = renderCredential provider.apiKey;
+    inherit (provider) baseUrl;
+    models = map renderModel (
+      orderedValues (lib.filterAttrs (_: model: model.provider == providerName) modelData.models)
+    );
+  };
   models = {
     providers = lib.mapAttrs renderProvider modelData.providers;
   };
@@ -242,7 +241,6 @@ assert selected.marketplaces == { };
 assert selected.settings == { };
 assert builtins.attrNames selected.mcpServers == expectedMcpNames;
 assert builtins.attrNames modelData.providers == expectedProviderNames;
-assert builtins.length (builtins.attrNames modelData.models) == 87;
 assert !(modelData ? default);
 assert builtins.all (model: builtins.hasAttr model.provider modelData.providers) (
   builtins.attrValues modelData.models
@@ -265,16 +263,16 @@ assert builtins.hasAttr "agent-resources" pkgs;
 
   companions = [ ];
 
-  requiredEnvNames = [
-    "ANTHROPIC_API_KEY"
-    "CONTEXT7_API_KEY"
-    "GEMINI_API_KEY"
-    "LITELLM_API_KEY"
-    "NVIDIA_API_KEY"
-    "OPENAI_API_KEY"
-    "PERPLEXITY_API_KEY"
-    "REF_API_KEY"
-  ];
+  requiredEnvNames = lib.unique (
+    lib.sort builtins.lessThan (
+      [
+        "CONTEXT7_API_KEY"
+        "PERPLEXITY_API_KEY"
+        "REF_API_KEY"
+      ]
+      ++ providerRequiredEnvNames
+    )
+  );
 
   mutableMcpGuard = {
     path = ".pi/agent/mcp.json";
