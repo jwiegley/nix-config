@@ -3297,6 +3297,284 @@ let
   ++ task9PathChecks
   ++ task9IntegratedPathChecks;
 
+  task10ModelSyncPath = "${src}/config/ai/model-sync.nix";
+  task10ModelSyncSource =
+    if builtins.pathExists task10ModelSyncPath then
+      builtins.readFile task10ModelSyncPath
+    else
+      throw "Task 10 RED: config/ai/model-sync.nix is missing";
+  task10ModelSyncFactory = import task10ModelSyncPath {
+    lib = lib // {
+      inherit (homeManagerLib) hm;
+    };
+    inherit pkgs;
+  };
+
+  task10FakeDispatcher = pkgs.writeShellScript "task10-fake-dispatcher" ''
+    set -eu
+
+    tool=$1
+    shift
+    : "''${TASK10_LOG:?}"
+    : "''${TASK10_FAKE_STATE:?}"
+    state=$TASK10_FAKE_STATE
+
+    log_call() {
+      printf '%s' "$tool" >> "$TASK10_LOG"
+      for argument in "$@"; do
+        printf '\t%s' "$argument" >> "$TASK10_LOG"
+      done
+      printf '\n' >> "$TASK10_LOG"
+    }
+
+    case "$tool" in
+      pgrep)
+        log_call "$@"
+        [ "$#" -eq 2 ] && [ "$1" = -x ] || exit 90
+        [ "''${TASK10_FAIL_AT:-}" != pgrep-error ] || exit 2
+        [ -f "$state/running" ] || exit 1
+        IFS= read -r running < "$state/running" || true
+        [ "$running" = "$2" ]
+        ;;
+
+      devonthinkKeyPresent)
+        log_call "$@"
+        [ "$#" -eq 0 ] || exit 91
+        [ -s "$state/devonthink-credential" ]
+        ${pkgs.coreutils}/bin/cat "$state/devonthink-credential"
+        ${pkgs.coreutils}/bin/cat "$state/devonthink-credential" >&2
+        ;;
+
+      security)
+        log_call "$@"
+        [ "$#" -eq 5 ] || exit 92
+        [ "$1" = find-generic-password ]
+        [ "$2" = -s ] && [ "$3" = "iTerm2 API Keys" ]
+        [ "$4" = -a ] && [ "$5" = "OpenAI API Key for iTerm2" ]
+        [ -f "$state/iterm-key-metadata" ]
+        ${pkgs.coreutils}/bin/cat "$state/devonthink-credential"
+        ${pkgs.coreutils}/bin/cat "$state/devonthink-credential" >&2
+        ;;
+
+      defaults)
+        log_call "$@"
+        [ "$#" -ge 3 ] || exit 93
+        operation=$1
+        domain=$2
+        key=$3
+        case "$domain|$key" in
+          "com.devon-technologies.think|ChatEngine")
+            slot=devonthink.ChatEngine; kind=-int; wanted=2; stored=2; updater=devonthink ;;
+          "com.devon-technologies.think|ChatModel-OpenAI (Compatible)")
+            slot=devonthink.ChatModel; kind=-string
+            wanted="''${TASK10_EXPECTED_MODEL:?}"; stored=$wanted; updater=devonthink ;;
+          "com.devon-technologies.think|OpenAI (Compatible)URL")
+            slot=devonthink.ChatURL; kind=-string
+            wanted="''${TASK10_EXPECTED_URL:?}"; stored=$wanted; updater=devonthink ;;
+          "com.devon-technologies.think|ChatSummaryEngine")
+            slot=devonthink.ChatSummaryEngine; kind=-int; wanted=2; stored=2; updater=devonthink ;;
+          "com.devon-technologies.think|ChatSummaryModel")
+            slot=devonthink.ChatSummaryModel; kind=-string
+            wanted="''${TASK10_EXPECTED_MODEL:?}"; stored=$wanted; updater=devonthink ;;
+          "com.googlecode.iterm2|UseRecommendedAIModel")
+            slot=iterm.UseRecommendedAIModel; kind=-bool; wanted=false; stored=0; updater=iterm ;;
+          "com.googlecode.iterm2|AiModel")
+            slot=iterm.AiModel; kind=-string
+            wanted="''${TASK10_EXPECTED_MODEL:?}"; stored=$wanted; updater=iterm ;;
+          "com.googlecode.iterm2|AITermAPI")
+            slot=iterm.AITermAPI; kind=-int; wanted=1; stored=1; updater=iterm ;;
+          "com.googlecode.iterm2|AitermURL")
+            slot=iterm.AitermURL; kind=-string
+            wanted="''${TASK10_EXPECTED_URL:?}"; stored=$wanted; updater=iterm ;;
+          "com.googlecode.iterm2|AIVendor")
+            slot=iterm.AIVendor; kind=-int; wanted=2; stored=2; updater=iterm ;;
+          *) exit 94 ;;
+        esac
+
+        case "$operation" in
+          read)
+            [ "$#" -eq 3 ] || exit 95
+            [ "''${TASK10_FAIL_AT:-}" != "$updater-verify" ] || exit 96
+            [ -f "$state/prefs/$slot" ] || exit 1
+            ${pkgs.coreutils}/bin/cat "$state/prefs/$slot"
+            ;;
+          write)
+            [ "$#" -eq 5 ] || exit 97
+            [ "$4" = "$kind" ] && [ "$5" = "$wanted" ] || exit 98
+            [ "''${TASK10_FAIL_AT:-}" != "$updater-update" ] || exit 99
+            ${pkgs.coreutils}/bin/mkdir -p "$state/prefs"
+            printf '%s' "$stored" > "$state/prefs/$slot"
+            ;;
+          *) exit 100 ;;
+        esac
+        ;;
+
+      mkdir)
+        log_call "$@"
+        [ "$#" -eq 3 ] && [ "$1" = -p ] && [ "$2" = -- ] || exit 101
+        exec ${pkgs.coreutils}/bin/mkdir "$@"
+        ;;
+      mktemp)
+        log_call "$@"
+        [ "$#" -eq 1 ]
+        [ "$1" = "$XDG_STATE_HOME/nix-managed-ai/model-sync-v1.sha256.tmp.XXXXXX" ]
+        exec ${pkgs.coreutils}/bin/mktemp "$@"
+        ;;
+      mv)
+        log_call "$@"
+        [ "$#" -eq 4 ] && [ "$1" = -fT ] && [ "$2" = -- ] || exit 102
+        case "$3" in
+          "$XDG_STATE_HOME/nix-managed-ai/model-sync-v1.sha256.tmp."*) ;;
+          *) exit 103 ;;
+        esac
+        [ "$4" = "$XDG_STATE_HOME/nix-managed-ai/model-sync-v1.sha256" ] || exit 104
+        [ "''${TASK10_FAIL_AT:-}" != rename ] || exit 105
+        exec ${pkgs.coreutils}/bin/mv "$@"
+        ;;
+      rm)
+        log_call "$@"
+        [ "$#" -eq 3 ] && [ "$1" = -f ] && [ "$2" = -- ] || exit 106
+        case "$3" in
+          "$XDG_STATE_HOME/nix-managed-ai/model-sync-v1.sha256.tmp."*) ;;
+          *) exit 107 ;;
+        esac
+        exec ${pkgs.coreutils}/bin/rm "$@"
+        ;;
+      *) exit 108 ;;
+    esac
+  '';
+
+  task10ToolNames = [
+    "defaults"
+    "devonthinkKeyPresent"
+    "mkdir"
+    "mktemp"
+    "mv"
+    "pgrep"
+    "rm"
+    "security"
+  ];
+  task10FakeTools = lib.genAttrs task10ToolNames (
+    name:
+    toString (
+      pkgs.writeShellScript "task10-fake-${name}" ''
+        exec ${task10FakeDispatcher} ${lib.escapeShellArg name} "$@"
+      ''
+    )
+  );
+  task10Sync = task10ModelSyncFactory {
+    inherit (modelData) syncInputs;
+    tools = task10FakeTools;
+  };
+  task10ChangedSync = task10ModelSyncFactory {
+    inherit (alternateModelData) syncInputs;
+    tools = task10FakeTools;
+  };
+  task10EmptyModelProbe = task10ModelSyncFactory {
+    syncInputs = modelData.syncInputs // {
+      model = "";
+    };
+    tools = task10FakeTools;
+  };
+  task10Script = pkgs.writeShellScript "task10-model-sync" task10Sync.script;
+  task10ChangedScript = pkgs.writeShellScript "task10-model-sync-changed" task10ChangedSync.script;
+  task10DigestFor =
+    syncInputs:
+    builtins.hashString "sha256" (
+      builtins.toJSON {
+        schema = 1;
+        inherit (syncInputs) provider model chatUrl;
+      }
+    );
+  task10Digest = task10DigestFor modelData.syncInputs;
+  task10ChangedDigest = task10DigestFor alternateModelData.syncInputs;
+  task10HasActivation =
+    evaluation: builtins.hasAttr "aiManagedModelSync" evaluation.config.home.activation;
+  task10HeraOrder = task9ActivationOrder task9Evaluations.hera;
+  task10Count = needle: builtins.length (lib.splitString needle task10ModelSyncSource) - 1;
+  task10ForbiddenSourceFragments = [
+    "defaults export"
+    "PromptdeployOpenAICompatibleKeyHash"
+    "find-generic-password -w"
+    "security -w"
+    "NSProcessInfo"
+    "processInfo.environment"
+    "getenv("
+    "ObjC.unwrap"
+    "setObjectForKey"
+    "ANTHROPIC_API_KEY"
+    "CONTEXT7_API_KEY"
+    "GEMINI_API_KEY"
+    "LITELLM_API_KEY"
+    "NVIDIA_API_KEY"
+    "OPENAI_API_KEY"
+    "PERPLEXITY_API_KEY"
+    "REF_API_KEY"
+    "console.log("
+    "sha256sum"
+    "shasum"
+    "openssl dgst"
+  ];
+
+  task10Checks = [
+    (expectEqual "Task 10 factory output shape" (sortedNames task10Sync) [
+      "activation"
+      "digest"
+      "script"
+    ])
+    (expectEqual "Task 10 tool seam is exact" (sortedNames task10FakeTools) task10ToolNames)
+    (expectEqual "Task 10 factory DAG edge" task10Sync.activation.after [ "linkGeneration" ])
+    (expectEqual "Task 10 factory has no before edge" task10Sync.activation.before [ ])
+    (expectEqual "Task 10 Hera activation exists" (task10HasActivation task9Evaluations.hera) true)
+    (expectEqual "Task 10 Clio activation is absent" (task10HasActivation task9Evaluations.clio) false)
+    (expectEqual "Task 10 Linux activations are absent"
+      (lib.mapAttrs (_: task10HasActivation) (
+        builtins.removeAttrs task9Evaluations [
+          "hera"
+          "clio"
+        ]
+      ))
+      {
+        personal-synthetic = false;
+        shared = false;
+        shared-synthetic = false;
+        vps = false;
+        vulcan = false;
+      }
+    )
+    (expectEqual "Task 10 runs after linkGeneration" (
+      task9IndexOf "aiManagedModelSync" task10HeraOrder > task9IndexOf "linkGeneration" task10HeraOrder
+    ) true)
+    (expectEqual "Task 10 generated activation carries exact DAG edge"
+      task9Evaluations.hera.config.home.activation.aiManagedModelSync.after
+      [ "linkGeneration" ]
+    )
+    (expectEqual "Task 10 digest oracle" task10Sync.digest task10Digest)
+    (expectEqual "Task 10 changed digest oracle" task10ChangedSync.digest task10ChangedDigest)
+    (expectEqual "Task 10 digest changes with selection" (task10Digest != task10ChangedDigest) true)
+    (expectReject "Task 10 empty synchronization input accepted" task10EmptyModelProbe)
+    (expectEqual "Task 10 source omits forbidden credential operations" (lib.any (
+      fragment: lib.hasInfix fragment task10ModelSyncSource
+    ) task10ForbiddenSourceFragments) false)
+    (expectEqual "Task 10 credential key is confined to the Boolean probe"
+      (task10Count "OpenAI (Compatible)Key")
+      1
+    )
+    (expectEqual "Task 10 has one centralized exact-key defaults read"
+      (task10Count ''"$defaults_tool" read "$domain" "$key"'')
+      1
+    )
+    (expectEqual "Task 10 has one centralized exact-key defaults write"
+      (task10Count ''"$defaults_tool" write "$domain" "$key" "$type" "$value"'')
+      1
+    )
+    (expectEqual "Task 10 uses only the exact output-discarded iTerm metadata query" (task10Count ''
+      "$security_tool" find-generic-password \
+              -s "iTerm2 API Keys" \
+              -a "OpenAI API Key for iTerm2" \
+              >/dev/null 2>&1'') 2)
+  ];
+
   contractChecks = [
     (expectEqual "OpenCode bash-reviewer tool oracle" (builtins.hashString "sha256" (
       builtins.toJSON (expectedOpenCodeAgentMetadata catalog.items.agents.bash-reviewer)
@@ -3738,7 +4016,8 @@ let
   ]
   ++ profileChecks
   ++ rendererChecks
-  ++ task9Checks;
+  ++ task9Checks
+  ++ task10Checks;
 in
 assert builtins.deepSeq contractChecks true;
 
@@ -4329,7 +4608,13 @@ pkgs.runCommand "ai-home-manager-smoke"
     ]
     missing.extend(
         name
-        for name in ("catalog.nix", "model-policy.nix", "model-registry.json", "models.nix")
+        for name in (
+            "catalog.nix",
+            "model-policy.nix",
+            "model-registry.json",
+            "model-sync.nix",
+            "models.nix",
+        )
         if not (root / name).is_file()
     )
     statusline = root / "statusline-command.sh"
@@ -4445,6 +4730,7 @@ pkgs.runCommand "ai-home-manager-smoke"
         "catalog.nix",
         "model-policy.nix",
         "model-registry.json",
+        "model-sync.nix",
         "models.nix",
         "preflight.nix",
         "statusline-command.sh",
@@ -4533,6 +4819,265 @@ pkgs.runCommand "ai-home-manager-smoke"
             print(f"  {error}", file=sys.stderr)
         raise SystemExit(1)
     PY
+
+    task10_root="$TMPDIR/task10-model-sync"
+    task10_sentinel='TASK10-CREDENTIAL-SENTINEL-DO-NOT-LEAK'
+    mkdir -p "$task10_root"
+
+    task10_new_case() {
+      label=$1
+      task10_case="$task10_root/$label"
+      rm -rf "$task10_case"
+      mkdir -p "$task10_case/fake/prefs" "$task10_case/xdg-state"
+      export TASK10_FAKE_STATE="$task10_case/fake"
+      export TASK10_LOG="$task10_case/invocations.log"
+      export XDG_STATE_HOME="$task10_case/xdg-state"
+      export TASK10_EXPECTED_MODEL='${modelData.syncInputs.model}'
+      export TASK10_EXPECTED_URL='${modelData.syncInputs.chatUrl}'
+      unset TASK10_FAIL_AT
+      : > "$TASK10_LOG"
+      : > "$task10_case/stdout"
+      : > "$task10_case/stderr"
+      printf '%s' "$task10_sentinel" > "$TASK10_FAKE_STATE/devonthink-credential"
+      : > "$TASK10_FAKE_STATE/iterm-key-metadata"
+      task10_stamp="$XDG_STATE_HOME/nix-managed-ai/model-sync-v1.sha256"
+    }
+
+    task10_assert_redacted() {
+      for output in "$TASK10_LOG" "$task10_case/stdout" "$task10_case/stderr"; do
+        ! grep -Fq "$task10_sentinel" "$output"
+      done
+      test '${task10Digest}' != "$task10_sentinel"
+      test '${task10ChangedDigest}' != "$task10_sentinel"
+      if [ -e "$task10_stamp" ] && [ ! -d "$task10_stamp" ]; then
+        ! grep -Fq "$task10_sentinel" "$task10_stamp"
+      fi
+      ! find "$TASK10_FAKE_STATE/prefs" -type f -exec grep -Fq "$task10_sentinel" {} \; \
+        -print | grep -q .
+    }
+
+    task10_run_ok() {
+      "$1" > "$task10_case/stdout" 2> "$task10_case/stderr"
+      task10_assert_redacted
+    }
+
+    task10_run_fail() {
+      if "$1" > "$task10_case/stdout" 2> "$task10_case/stderr"; then
+        echo "Task 10 expected failure: $task10_case" >&2
+        exit 1
+      fi
+      task10_assert_redacted
+    }
+
+    task10_assert_exact_app_calls() {
+      ${pkgs.python3}/bin/python3 - \
+        "$TASK10_LOG" "$TASK10_EXPECTED_MODEL" "$TASK10_EXPECTED_URL" <<'PY'
+    import os
+    import sys
+
+    log_path, model, url = sys.argv[1:]
+    with open(log_path, encoding="utf-8") as stream:
+        calls = [tuple(line.rstrip("\n").split("\t")) for line in stream]
+
+    defaults = sorted(call[1:] for call in calls if call[0] == "defaults")
+    devon = "com.devon-technologies.think"
+    iterm = "com.googlecode.iterm2"
+    writes = [
+        ("write", devon, "ChatEngine", "-int", "2"),
+        ("write", devon, "ChatModel-OpenAI (Compatible)", "-string", model),
+        ("write", devon, "OpenAI (Compatible)URL", "-string", url),
+        ("write", devon, "ChatSummaryEngine", "-int", "2"),
+        ("write", devon, "ChatSummaryModel", "-string", model),
+        ("write", iterm, "UseRecommendedAIModel", "-bool", "false"),
+        ("write", iterm, "AiModel", "-string", model),
+        ("write", iterm, "AITermAPI", "-int", "1"),
+        ("write", iterm, "AitermURL", "-string", url),
+        ("write", iterm, "AIVendor", "-int", "2"),
+    ]
+    expected_defaults = sorted(
+        writes + [("read", domain, key) for _, domain, key, _, _ in writes]
+    )
+    if defaults != expected_defaults:
+        raise SystemExit(
+            f"defaults allowlist mismatch:\nactual={defaults!r}\n"
+            f"expected={expected_defaults!r}"
+        )
+
+    expected_security = (
+        "find-generic-password",
+        "-s",
+        "iTerm2 API Keys",
+        "-a",
+        "OpenAI API Key for iTerm2",
+    )
+    security = [call[1:] for call in calls if call[0] == "security"]
+    if security != [expected_security, expected_security]:
+        raise SystemExit(f"security metadata calls mismatch: {security!r}")
+
+    probes = [call[1:] for call in calls if call[0] == "devonthinkKeyPresent"]
+    if probes != [(), ()]:
+        raise SystemExit(f"DEVONthink Boolean probes mismatch: {probes!r}")
+
+    pgrep = [call[1:] for call in calls if call[0] == "pgrep"]
+    expected_pgrep = [
+        ("-x", "DEVONthink"),
+        ("-x", "DEVONthink 3"),
+        ("-x", "iTerm2"),
+    ]
+    if pgrep != expected_pgrep:
+        raise SystemExit(f"process guard calls mismatch: {pgrep!r}")
+
+    state_dir = os.path.join(os.environ["XDG_STATE_HOME"], "nix-managed-ai")
+    stamp = os.path.join(state_dir, "model-sync-v1.sha256")
+    expected_exact = {
+        "mkdir": [("-p", "--", state_dir)],
+        "mktemp": [(stamp + ".tmp.XXXXXX",)],
+        "rm": [],
+    }
+    for tool, expected in expected_exact.items():
+        actual = [call[1:] for call in calls if call[0] == tool]
+        if actual != expected:
+            raise SystemExit(f"{tool} calls mismatch: {actual!r}")
+
+    moves = [call[1:] for call in calls if call[0] == "mv"]
+    if len(moves) != 1:
+        raise SystemExit(f"mv call count mismatch: {moves!r}")
+    move = moves[0]
+    if (
+        len(move) != 4
+        or move[:2] != ("-fT", "--")
+        or not move[2].startswith(stamp + ".tmp.")
+        or move[3] != stamp
+    ):
+        raise SystemExit(f"atomic mv shape mismatch: {move!r}")
+
+    expected_tools = {
+        "defaults",
+        "devonthinkKeyPresent",
+        "mkdir",
+        "mktemp",
+        "mv",
+        "pgrep",
+        "security",
+    }
+    actual_tools = {call[0] for call in calls}
+    if actual_tools != expected_tools:
+        raise SystemExit(f"successful tool inventory mismatch: {actual_tools!r}")
+    PY
+    }
+
+    # First run writes only the ten approved fields, verifies them, and stamps.
+    task10_new_case first
+    task10_run_ok '${task10Script}'
+    test "$(cat "$task10_stamp")" = '${task10Digest}'
+    task10_assert_exact_app_calls
+    test -z "$(find "$(dirname "$task10_stamp")" -name 'model-sync-v1.sha256.tmp.*' -print)"
+
+    # The digest fast path invokes no parameterized tool at all.
+    : > "$TASK10_LOG"
+    task10_run_ok '${task10Script}'
+    test ! -s "$TASK10_LOG"
+    test "$(cat "$task10_stamp")" = '${task10Digest}'
+
+    # A corrupt multi-line stamp is never accepted as an unchanged digest.
+    printf '%s\n' corrupt-trailing-line >> "$task10_stamp"
+    : > "$TASK10_LOG"
+    task10_run_ok '${task10Script}'
+    test "$(cat "$task10_stamp")" = '${task10Digest}'
+    task10_assert_exact_app_calls
+
+    # A changed nonsecret selection updates once and replaces the digest.
+    : > "$TASK10_LOG"
+    export TASK10_EXPECTED_MODEL='${alternateModelData.syncInputs.model}'
+    export TASK10_EXPECTED_URL='${alternateModelData.syncInputs.chatUrl}'
+    task10_run_ok '${task10ChangedScript}'
+    test "$(cat "$task10_stamp")" = '${task10ChangedDigest}'
+    task10_assert_exact_app_calls
+
+    # Every guarded process independently blocks before credentials or writes.
+    task10_process_index=0
+    for process_name in DEVONthink 'DEVONthink 3' iTerm2; do
+      task10_process_index=$((task10_process_index + 1))
+      task10_new_case "running-$task10_process_index"
+      printf '%s' "$process_name" > "$TASK10_FAKE_STATE/running"
+      task10_run_fail '${task10Script}'
+      test ! -e "$task10_stamp"
+      ! grep -Eq $'^(defaults|devonthinkKeyPresent|security)\t' "$TASK10_LOG"
+      grep -Fq "pgrep	-x	$process_name" "$TASK10_LOG"
+    done
+
+    # An indeterminate process check fails closed.
+    task10_new_case pgrep-error
+    export TASK10_FAIL_AT=pgrep-error
+    task10_run_fail '${task10Script}'
+    test ! -e "$task10_stamp"
+    ! grep -Eq $'^(defaults|devonthinkKeyPresent|security)\t' "$TASK10_LOG"
+
+    # Missing credential-presence metadata blocks before any preference write.
+    task10_new_case missing-devonthink-key
+    rm "$TASK10_FAKE_STATE/devonthink-credential"
+    task10_run_fail '${task10Script}'
+    test ! -e "$task10_stamp"
+    ! grep -Fq $'defaults\twrite\t' "$TASK10_LOG"
+
+    task10_new_case missing-iterm-key
+    rm "$TASK10_FAKE_STATE/iterm-key-metadata"
+    task10_run_fail '${task10Script}'
+    test ! -e "$task10_stamp"
+    ! grep -Fq $'defaults\twrite\t' "$TASK10_LOG"
+
+    # Failure in the first updater never starts the second updater or stamps.
+    task10_new_case first-updater-failure
+    export TASK10_FAIL_AT=devonthink-update
+    task10_run_fail '${task10Script}'
+    test ! -e "$task10_stamp"
+    ! grep -Fq $'defaults\twrite\tcom.googlecode.iterm2\t' "$TASK10_LOG"
+
+    # Failure in the second updater preserves the old stamp; retry succeeds.
+    task10_new_case second-updater-failure
+    mkdir -p "$(dirname "$task10_stamp")"
+    printf '%s' stale-digest > "$task10_stamp"
+    export TASK10_FAIL_AT=iterm-update
+    task10_run_fail '${task10Script}'
+    test "$(cat "$task10_stamp")" = stale-digest
+    grep -Fq $'defaults\twrite\tcom.devon-technologies.think\t' "$TASK10_LOG"
+    grep -Fq $'defaults\twrite\tcom.googlecode.iterm2\t' "$TASK10_LOG"
+    unset TASK10_FAIL_AT
+    : > "$TASK10_LOG"
+    task10_run_ok '${task10Script}'
+    test "$(cat "$task10_stamp")" = '${task10Digest}'
+    task10_assert_exact_app_calls
+
+    # Readback failure also preserves the old digest and retries cleanly.
+    task10_new_case verification-failure
+    mkdir -p "$(dirname "$task10_stamp")"
+    printf '%s' old-digest > "$task10_stamp"
+    export TASK10_FAIL_AT=iterm-verify
+    task10_run_fail '${task10Script}'
+    test "$(cat "$task10_stamp")" = old-digest
+    unset TASK10_FAIL_AT
+    : > "$TASK10_LOG"
+    task10_run_ok '${task10Script}'
+    test "$(cat "$task10_stamp")" = '${task10Digest}'
+
+    # Failed atomic replacement preserves the old stamp and removes its temp.
+    task10_new_case rename-failure
+    mkdir -p "$(dirname "$task10_stamp")"
+    printf '%s' '${task10Digest}' > "$task10_stamp"
+    export TASK10_EXPECTED_MODEL='${alternateModelData.syncInputs.model}'
+    export TASK10_EXPECTED_URL='${alternateModelData.syncInputs.chatUrl}'
+    export TASK10_FAIL_AT=rename
+    task10_run_fail '${task10ChangedScript}'
+    test "$(cat "$task10_stamp")" = '${task10Digest}'
+    test -z "$(find "$(dirname "$task10_stamp")" -name 'model-sync-v1.sha256.tmp.*' -print)"
+    grep -Fq $'mv\t-fT\t--\t' "$TASK10_LOG"
+    grep -Fq $'rm\t-f\t--\t' "$TASK10_LOG"
+
+    unset TASK10_FAIL_AT
+    : > "$TASK10_LOG"
+    task10_run_ok '${task10ChangedScript}'
+    test "$(cat "$task10_stamp")" = '${task10ChangedDigest}'
+    test -z "$(find "$(dirname "$task10_stamp")" -name 'model-sync-v1.sha256.tmp.*' -print)"
 
     touch "$out"
   ''
