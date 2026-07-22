@@ -256,6 +256,7 @@ assert builtins.hasAttr "agent-resources" pkgs;
     // promptFiles
     // {
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
+      "${root}/extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
       "${root}/extensions/pi-subagent".source = "${extensionRoot}/pi-subagent";
       "${root}/models.json".source = json.generate "pi-${profile.id}-models.json" models;
       "${globalMcpPath}".source = json.generate "pi-${profile.id}-mcp.json" mcp;

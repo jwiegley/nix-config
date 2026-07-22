@@ -1515,6 +1515,7 @@ let
     );
   piExtensionSources = {
     pi-mcp-adapter = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter";
+    pi-quiet = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-quiet";
     pi-subagent = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-subagent";
   };
   expectedPiPaths =
@@ -1529,6 +1530,7 @@ let
       ++ [
         ".config/mcp/mcp.json"
         "${root}/extensions/pi-mcp-adapter"
+        "${root}/extensions/pi-quiet"
         "${root}/extensions/pi-subagent"
         "${root}/models.json"
       ]
@@ -2234,8 +2236,8 @@ let
         (expectEqual "${profileId} exact path inventory" paths (expectedPiPaths profileId))
         (expectEqual "${profileId} exact path inventory hash" (builtins.hashString "sha256" (
           builtins.toJSON paths
-        )) "6174c0ec024069b44cf17b37f940caeec54bd5230761f2d4367dc529c2f1e841")
-        (expectEqual "${profileId} path count" (builtins.length paths) 91)
+        )) "395f2eed10d33054339d5f5648b03e596efe3c04f420fe4eb84c8fef242cdad6")
+        (expectEqual "${profileId} path count" (builtins.length paths) 92)
         (expectEqual "${profileId} exact renderer output shape" (validatePiRenderShape render) true)
         (expectReject "Pi unexpected renderer output accepted" (
           validatePiRenderShape piUnexpectedOutputProbe
@@ -2301,6 +2303,20 @@ let
           render.files."${profile.root}/extensions/pi-subagent"
           { source = piExtensionSources.pi-subagent; }
         )
+        (expectEqual "${profileId} quiet extension link" render.files."${profile.root}/extensions/pi-quiet"
+          { source = piExtensionSources.pi-quiet; }
+        )
+        (expectEqual "${profileId} exact extension names" (sortedNames piExtensionSources) [
+          "pi-mcp-adapter"
+          "pi-quiet"
+          "pi-subagent"
+        ])
+        (expectEqual "${profileId} extension sources are unique" (builtins.length (
+          lib.unique (builtins.attrValues piExtensionSources)
+        )) (builtins.length (builtins.attrValues piExtensionSources)))
+        (expectEqual "${profileId} incompatible compaction aliases remain inactive" (builtins.filter (
+          path: lib.hasInfix "pi-openai-server-compaction" path
+        ) paths) [ ])
         (expectEqual "${profileId} shared skill inventory count" (builtins.length piSharedSkillPaths) 99)
         (expectEqual "${profileId} shared skills are Hera Codex-owned" (builtins.filter (
           path: lib.hasPrefix ".agents/skills/" path
@@ -2740,7 +2756,7 @@ let
     personal-linux = [ "claude" ];
   };
   task9ExpectedLeafCounts = {
-    hera = 671;
+    hera = 672;
     clio = 510;
     vulcan = 255;
     vps = 129;
@@ -2813,6 +2829,7 @@ let
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
     ".pi/agent/extensions/pi-mcp-adapter"
+    ".pi/agent/extensions/pi-quiet"
     ".pi/agent/extensions/pi-subagent"
     ".pi/agent/models.json"
   ];
@@ -4034,6 +4051,8 @@ pkgs.runCommand "ai-home-manager-smoke"
     test -f "${piExtensionSources.pi-mcp-adapter}/index.ts"
     test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/@modelcontextprotocol/sdk"
     test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/zod"
+    test -f "${piExtensionSources.pi-quiet}/package.json"
+    test -f "${piExtensionSources.pi-quiet}/src/index.ts"
     test -f "${piExtensionSources.pi-subagent}/package.json"
     test -f "${piExtensionSources.pi-subagent}/index.ts"
 
