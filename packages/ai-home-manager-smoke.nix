@@ -3592,6 +3592,36 @@ let
               >/dev/null 2>&1'') 2)
   ];
 
+  task11PackageListFor =
+    system:
+    (import "${src}/config/packages.nix" {
+      hostname = "linux";
+      inherit inputs;
+      pkgs = testPkgsFor.${system};
+    }).package-list;
+  task11HasPackage =
+    package: packages: lib.any (candidate: toString candidate == toString package) packages;
+  task11PackageChecks = [
+    (expectEqual "Task 11 ARM Linux excludes trade-journal"
+      (task11HasPackage inputs.trade-journal.packages.aarch64-linux.default (
+        task11PackageListFor "aarch64-linux"
+      ))
+      false
+    )
+    (expectEqual "Task 11 x86 Linux excludes trade-journal"
+      (task11HasPackage inputs.trade-journal.packages.x86_64-linux.default (
+        task11PackageListFor "x86_64-linux"
+      ))
+      false
+    )
+    (expectEqual "Task 11 Darwin retains trade-journal"
+      (task11HasPackage inputs.trade-journal.packages.aarch64-darwin.default (
+        task11PackageListFor "aarch64-darwin"
+      ))
+      true
+    )
+  ];
+
   contractChecks = [
     (expectEqual "OpenCode bash-reviewer tool oracle" (builtins.hashString "sha256" (
       builtins.toJSON (expectedOpenCodeAgentMetadata catalog.items.agents.bash-reviewer)
@@ -4034,7 +4064,8 @@ let
   ++ profileChecks
   ++ rendererChecks
   ++ task9Checks
-  ++ task10Checks;
+  ++ task10Checks
+  ++ task11PackageChecks;
 in
 assert builtins.deepSeq contractChecks true;
 
