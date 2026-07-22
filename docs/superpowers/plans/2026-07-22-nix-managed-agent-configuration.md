@@ -563,43 +563,43 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
 **Produces:** a complete declarative OpenCode document and exact Droid leaves/settings/MCP companions.
 
-- [ ] **Step 1: Add failing native contract fixtures.**
+- [x] **Step 1: Add failing native contract fixtures.**
 
-  Assert OpenCode owns complete `opencode.json`, agents, commands plus two prompts, and skills. Required provider/model counts are Hera 80, Clio 81, Vulcan 10, and shared work 57; only Vulcan omits the default. Assert Droid owns 26 droids, 38 selected skill trees, two command-as-skill trees, two prompt-as-skill trees, complete `mcp.json` with source-safe PAL, and `nix-managed-settings.json` containing 87 custom-model pairs and no default.
+  Assert OpenCode owns complete `opencode.json`, agents, commands plus two prompts, and skills. Required model counts are Hera 80, Clio 81, Vulcan 10, and shared work 57; provider counts are 4, 5, 3, and 4 respectively; only Vulcan omits the default. Assert Droid owns 26 droids, 38 selected skill trees, two command-as-skill trees, two prompt-as-skill trees, complete `mcp.json` with source-safe PAL, and `nix-managed-settings.json` containing 87 custom-model pairs and no default.
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
   ```sh
   cd /Users/johnw/src/nix.worktrees/nix-managed-agent-config
-  nix build -L path:.#checks.aarch64-darwin.ai-home-manager-smoke \
-    --override-input ai-nix path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources
+  nix build -L 'path:.#checks.aarch64-darwin.ai-home-manager-smoke' \
+    --override-input ai-nix 'path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources'
   ```
 
   Expected: OpenCode/Droid renderer outputs are missing.
 
-- [ ] **Step 3: Implement complete OpenCode generation.**
+- [x] **Step 3: Implement complete OpenCode generation.**
 
   Generate one complete JSON object with `$schema`, the separately reviewed nonsecret `disabled_providers` and `instructions` adoption record, selected provider/model/default data, and selected MCP entries. If that three-key nonsecret adoption record is unavailable, stop without opening an expanded live config. Translate the catalog's sole typed secret form only to native `{env:VAR}` references. Do not add a file-secret form, wrapper, or ownership of data/state/cache/npm trees.
 
-- [ ] **Step 4: Implement exact Droid generation.**
+- [x] **Step 4: Implement exact Droid generation.**
 
-  Generate native frontmatter for droids, complete immutable skill roots, complete `mcp.json`, and the settings overlay. Render Ref and Context7 as stdio entries invoking `agent-http-header-bridge` with only URL, header name, and environment-variable name; the Droid parent environment is inherited and no secret is materialized. Adopt PAL from frozen `mcp/pal.yaml` by replacing its three references with typed environment references while preserving `DISABLED_TOOLS=testgen,secaudit,docgen,tracer` and `DEFAULT_MODEL=auto`; never copy live PAL bytes. Emit companions `.config/factory/nix-managed-settings.json` and `.config/factory/mcp.json`, which resolve through Hera's preserved `~/.factory` alias.
+  Generate native frontmatter for droids, complete immutable skill roots, complete `mcp.json`, and the settings overlay. Render Ref and Context7 as stdio entries invoking `agent-http-header-bridge` with only URL, header name, and environment-variable name; the Droid parent environment is inherited and no secret is materialized. Adopt PAL from frozen `mcp/pal.yaml`: retain its three typed references in the catalog and required-environment contract, inherit them from Droid's parent environment instead of emitting them in stdio `env`, and preserve `DISABLED_TOOLS=testgen,secaudit,docgen,tracer` plus `DEFAULT_MODEL=auto`; never copy live PAL bytes. Emit companions `.config/factory/nix-managed-settings.json` and `.config/factory/mcp.json`, which resolve through Hera's preserved `~/.factory` alias.
 
-- [ ] **Step 5: Parse and compare native output.**
+- [x] **Step 5: Parse and compare native output.**
 
   Parse all JSON independently, assert exact MCP sets per profile, validate OpenCode static keys from the approved nonsecret record, and prove no renderer reads or merges a live file. Reject any unmanaged Droid MCP entry beyond the adopted PAL mapping during migration, not at render time.
 
-- [ ] **Step 6: Run GREEN.**
+- [x] **Step 6: Run GREEN.**
 
   ```sh
   cd /Users/johnw/src/nix.worktrees/nix-managed-agent-config
-  nix build -L path:.#checks.aarch64-darwin.ai-home-manager-smoke \
-    --override-input ai-nix path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources
+  nix build -L 'path:.#checks.aarch64-darwin.ai-home-manager-smoke' \
+    --override-input ai-nix 'path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources'
   ```
 
-  Expected: native JSON parses; exact counts/default omissions/MCP sets pass; closure scans contain references only.
+  Expected: native JSON parses; exact counts/default omissions/MCP sets and unresolved native-reference/forbidden-fragment checks pass.
 
-- [ ] **Step 7: Review, fess-audit, and commit.**
+- [x] **Step 7: Review, fess-audit, and commit.**
 
   Review complete-file ownership, adopted static keys, PAL's source-safe mapping, and mutable-state exclusions; run the fess audit; commit as `feat: render OpenCode and Droid configuration`.
 
@@ -679,7 +679,7 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
 - [ ] **Step 1: Add failing Home Manager/profile/ownership fixtures.**
 
-  Evaluate Hera, Clio, Vulcan, VPS, shared `jwiegley`, and both synthetic Linux outputs. Pass an explicit private test-only `personal-linux` home class to `johnw@aarch64-linux`, yielding personal Claude instead of an empty AI selection; keep Vulcan-only OpenCode host-specific. Assert exact enabled clients, no duplicate path, no parent-root ownership, both Darwin Claude persona roots, wrapper/raw resolution, and preserved `bin/persona`/XDG aliases. In temporary homes test new, retained, and removed paths; absent first adoption; intact prior-generation symlink; new-path collision as file/directory/unrelated symlink; previously managed path missing; replaced/retargeted prior link; a same-payload symlink with a different literal target; tampered and missing removed paths; benign/missing Pi adapter JSON; forbidden `mcpServers`; forbidden `imports`; malformed JSON. Inspect DAG ordering to prove the guard precedes Home Manager's collision/backup/link mutation.
+  Evaluate Hera, Clio, Vulcan, VPS, shared `jwiegley`, and both synthetic Linux outputs. Pass an explicit private test-only `personal-linux` home class to `johnw@aarch64-linux`, yielding personal Claude instead of an empty AI selection; keep Vulcan-only OpenCode host-specific. Assert exact enabled clients, no duplicate path, no parent-root ownership, both Darwin Claude persona roots, wrapper/raw resolution, and preserved `bin/persona`/XDG aliases. For Hera Droid, assert `agent-http-header-bridge` is present in `home.packages` and the literal MCP command resolves from the resulting PATH. In temporary homes test new, retained, and removed paths; absent first adoption; intact prior-generation symlink; new-path collision as file/directory/unrelated symlink; previously managed path missing; replaced/retargeted prior link; a same-payload symlink with a different literal target; tampered and missing removed paths; benign/missing Pi adapter JSON; forbidden `mcpServers`; forbidden `imports`; malformed JSON. Inspect DAG ordering to prove the guard precedes Home Manager's collision/backup/link mutation.
 
 - [ ] **Step 2: Run RED.**
 
@@ -693,7 +693,7 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
 - [ ] **Step 3: Integrate the explicit fleet profiles.**
 
-  Import `./ai.nix` once from `config/johnw.nix`. Hera selects six profiles, Clio four, Vulcan two, VPS one, and Linux user `jwiegley` the three shared-work profiles regardless of configured hostname. Merge renderer `files` only after asserting unique relative paths. Declare every complete skill directory as one immutable leaf and every generated config as one file; do not use recursive ownership on a mutable parent.
+  Import `./ai.nix` once from `config/johnw.nix`. Hera selects six profiles, Clio four, Vulcan two, VPS one, and Linux user `jwiegley` the three shared-work profiles regardless of configured hostname. Merge renderer `files` only after asserting unique relative paths. When Droid is selected, add the pinned `agent-http-header-bridge` package to `home.packages`. Declare every complete skill directory as one immutable leaf and every generated config as one file; do not use recursive ownership on a mutable parent.
 
 - [ ] **Step 4: Remove only overlapping legacy Nix writers/bypasses.**
 
