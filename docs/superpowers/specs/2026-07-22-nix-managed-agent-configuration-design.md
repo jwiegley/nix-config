@@ -163,7 +163,7 @@ Home Manager owns the smallest complete leaf that can be declarative. It never o
 | Client | Nix-owned state | Mutable state left to client/user | Launch contract |
 |---|---|---|---|
 | Claude | Selected agents, commands, skills, statusline script, `nix-managed-settings.json`, `nix-managed-mcp.json` | `settings.json`, profile `.claude.json`, auth, sessions, projects, caches | `ai-nix` wrapper injects both managed files |
-| Codex | Selected agent TOML, `hooks.json`, exact user skill trees, `nix-managed.config.toml` | Base `config.toml`, auth, sessions, history, SQLite, logs, system skills | Wrapper selects profile `nix-managed` |
+| Codex | Selected agent TOML, exact user skill trees, `nix-managed.config.toml` with inline hooks | Base `config.toml`, global `hooks.json`, auth, sessions, history, SQLite, logs, system skills | Wrapper selects profile `nix-managed` on effective runtime surfaces |
 | OpenCode | Complete `opencode.json`, selected agents, commands, skills | Data, state, cache, npm/package trees | Native loading; no wrapper |
 | Droid | Selected droids, command-as-skill trees, skills, `mcp.json`, `nix-managed-settings.json` | Base `settings.json`, auth, trusted folders, UI state, sessions | Wrapper injects managed settings |
 | Pi | Prompts, subagent definitions, `models.json`, extensions, standard global MCP catalog | `settings.json`, auth, sessions, model store, package selections, settings-only adapter override/cache/OAuth | Native discovery and pinned extensions |
@@ -184,11 +184,11 @@ The ordinary `claude` command must resolve to this wrapper. The current direct `
 
 ### Codex
 
-Codex receives exact selected agent TOML files, the selected hooks document, exact user skill trees under `~/.agents/skills`, and `$CODEX_HOME/nix-managed.config.toml`. The wrapper invokes Codex with `--profile nix-managed`, which layers that file over the mutable base configuration.
+Codex receives exact selected agent TOML files, exact user skill trees under `~/.agents/skills`, and `$CODEX_HOME/nix-managed.config.toml`, with the selected hook declarations embedded in that profile layer. Codex 0.144.6 effectively applies a config profile for interactive use, `exec`, `review`, `resume`, `archive`, `delete`, `unarchive`, `fork`, `sandbox`, and exactly `debug prompt-input`; the wrapper invokes those surfaces with `--profile nix-managed`, which layers that file over the mutable base configuration. Although `mcp` accepts the flag syntactically, this release discards the selected layer after migration validation and operates on mutable base configuration, so every `mcp` command delegates unchanged. Other configuration, diagnostic, completion, and server-management surfaces likewise delegate. A separate `$CODEX_HOME/hooks.json` is deliberately not managed because pinned Codex discovers that file from both base and profile layers in the same directory; embedding hooks in the selected TOML layer prevents delegated commands from inheriting personal hooks.
 
 The base `config.toml` remains mutable because it contains project trust and runtime state as well as legacy expanded values. Authentication, sessions, history, SQLite, logs, caches, and bundled/system skills remain unmanaged. Existing `ai-nix` behavior that keeps shared `CODEX_HOME` while relocating only SQLite and logs remains compatible.
 
-An explicit user `--profile` conflicts with managed selection and fails unless `AI_NIX_BYPASS_MANAGED_CONFIG=1` is set.
+On a command surface receiving managed selection, an explicit user `--profile` conflicts and fails unless `AI_NIX_BYPASS_MANAGED_CONFIG=1` is set. The conflict scan ends at `--` and rejects only positions Codex itself parses as a config profile; child-command flags are preserved on both managed and delegated surfaces.
 
 ### OpenCode
 
@@ -290,7 +290,7 @@ Live expanded Claude, Droid, or OpenCode files are never copied into fixtures or
 
 Provider and model selection is profile-aware. A renderer emits a default only if both its provider and model survive filtering. OpenCode on Vulcan may intentionally have no Nix-managed default because the litellm provider is excluded; this is valid and must not be repaired by reintroducing the provider.
 
-Claude hook groups, marketplaces, plugins, and settings are rendered into its managed settings supplement. Codex's current hook document is wholly agent-deck sourced and becomes an exact managed `hooks.json` once parity is proven; exact ownership is mandatory, not optional. OpenCode's complete config includes both adopted static keys and rendered dynamic sections. Droid's managed overlay contains only declarative static values.
+Claude hook groups, marketplaces, plugins, and settings are rendered into its managed settings supplement. Codex's current hook declarations are wholly agent-deck sourced and become an exact inline section of `nix-managed.config.toml` once parity is proven; the global `hooks.json` remains unmanaged. OpenCode's complete config includes both adopted static keys and rendered dynamic sections. Droid's managed overlay contains only declarative static values.
 
 No general JSON merge-patch engine survives. Nix expressions directly compose the final attribute sets, including intentional deletions.
 
@@ -335,7 +335,7 @@ Every destination is classified before mutation:
 
 Backups preserve file type, modes, ownership where relevant, and symlink metadata. The backup root is atomically created in a host-local `0700` directory after refusing symlinks and verifying its owner. Secret-bearing backups are encrypted or remain in that protected host-local root.
 
-The mutation journal contains only paths, file types, modes, hashes, backup references, and expected pre/post states. It never contains before/after fragments or credential-bearing bytes. The migration removes only exact legacy leaves and exact promptdeploy-owned fragments, including profile-local Claude entries, Codex base blocks, and Droid `customModels`; it preserves all unrelated content.
+The mutation journal contains only paths, file types, modes, hashes, backup references, and expected pre/post states. It never contains before/after fragments or credential-bearing bytes. The migration removes only exact legacy leaves and exact promptdeploy-owned fragments, including profile-local Claude entries, Codex base blocks, proven legacy hook declarations from the global `$CODEX_HOME/hooks.json`, and Droid `customModels`; it preserves unrelated global hook entries and all other content, stopping on drift or ambiguous ownership. After cleanup, a delegated Codex config-loading surface must prove the managed hook sentinel absent before the selected profile is enabled.
 
 Activation is a two-phase cutover, not an atomicity claim. The old Home Manager generation, complete backup inventory, legacy manifests, and mutation journal are retained. On failure or rollback, the runbook reactivates the old generation and restores every removed/adopted whole leaf, legacy manifest, and mixed mutable file, then verifies path type, mode, and hash. Restore refuses to overwrite a path that no longer matches the journaled post-cutover state; such a path requires an explicit merge. Home Manager rollback alone is insufficient.
 
