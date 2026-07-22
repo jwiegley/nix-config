@@ -744,6 +744,527 @@ let
     ) profileExpectations
   );
 
+  claudeProfileIds = [
+    "clio-claude-personal"
+    "clio-claude-positron"
+    "hera-claude-personal"
+    "hera-claude-positron"
+    "shared-work-claude-positron"
+    "vps-claude-personal"
+    "vulcan-claude-personal"
+  ];
+  codexProfileIds = [
+    "clio-codex"
+    "hera-codex"
+    "shared-work-codex"
+  ];
+  fixtureHomeDirectory = "/Users/smoke";
+  fixtureXdgConfigHome = "${fixtureHomeDirectory}/.config";
+  selectedFor =
+    profileId: lib.mapAttrs (_category: itemSet: selectFor profileId itemSet) catalog.items;
+
+  claudeRendererPath = "${src}/config/ai/renderers/claude.nix";
+  codexRendererPath = "${src}/config/ai/renderers/codex.nix";
+  claudeRenderer =
+    if builtins.pathExists claudeRendererPath then
+      import claudeRendererPath { inherit lib pkgs; }
+    else
+      throw "Task 6 RED: config/ai/renderers/claude.nix is missing";
+  codexRenderer =
+    if builtins.pathExists codexRendererPath then
+      import codexRendererPath { inherit lib pkgs; }
+    else
+      throw "Task 6 RED: config/ai/renderers/codex.nix is missing";
+
+  renderClaude =
+    profileId:
+    claudeRenderer {
+      profile = catalog.profiles.${profileId};
+      selected = selectedFor profileId;
+      inherit modelData;
+      homeDirectory = fixtureHomeDirectory;
+      xdgConfigHome = fixtureXdgConfigHome;
+    };
+  renderCodex =
+    profileId:
+    codexRenderer {
+      profile = catalog.profiles.${profileId};
+      selected = selectedFor profileId;
+      inherit modelData;
+      homeDirectory = fixtureHomeDirectory;
+      xdgConfigHome = fixtureXdgConfigHome;
+    };
+  renderedClaude = lib.genAttrs claudeProfileIds renderClaude;
+  renderedCodex = lib.genAttrs codexProfileIds renderCodex;
+  codexMetadataProbeItem = catalog.items.agents.bash-reviewer // {
+    name = "metadata-probe";
+    metadata = catalog.items.agents.bash-reviewer.metadata // {
+      name = "metadata-probe";
+      tools = "must-be-removed";
+      future_native_field = "must-be-preserved";
+    };
+  };
+  codexMetadataProbe = codexRenderer {
+    profile = catalog.profiles.hera-codex;
+    selected = (selectedFor "hera-codex") // {
+      agents.metadata-probe = codexMetadataProbeItem;
+    };
+    inherit modelData;
+    homeDirectory = fixtureHomeDirectory;
+    xdgConfigHome = fixtureXdgConfigHome;
+  };
+
+  mkCommandHook = command: attributes: {
+    hooks = [
+      (
+        {
+          type = "command";
+          inherit command;
+        }
+        // attributes
+      )
+    ];
+  };
+  expectedAgentDeckClaudeHooks = {
+    SessionStart = [ (mkCommandHook "agent-deck hook-handler" { async = true; }) ];
+    UserPromptSubmit = [ (mkCommandHook "agent-deck hook-handler" { async = true; }) ];
+    Stop = [ (mkCommandHook "agent-deck hook-handler" { }) ];
+    PermissionRequest = [ (mkCommandHook "agent-deck hook-handler" { }) ];
+    Notification = [
+      (
+        (mkCommandHook "agent-deck hook-handler" { async = true; })
+        // {
+          matcher = "permission_prompt|elicitation_dialog";
+        }
+      )
+    ];
+    SessionEnd = [ (mkCommandHook "agent-deck hook-handler" { async = true; }) ];
+    PreCompact = [ (mkCommandHook "agent-deck hook-handler" { }) ];
+  };
+  expectedClaudeCodeHooks.Stop = [
+    (
+      (mkCommandHook "printf '\\a' > /dev/tty 2>/dev/null || true" { })
+      // {
+        matcher = ".*";
+      }
+    )
+  ];
+  expectedClaudeVaultHooks = {
+    PreCompact = [ (mkCommandHook "claude-vault import >/dev/null 2>&1" { }) ];
+    SessionEnd = [ (mkCommandHook "claude-vault import >/dev/null 2>&1 &" { }) ];
+  };
+  mergeHookSets = hookSets: lib.zipAttrsWith (_event: bodies: lib.concatLists bodies) hookSets;
+  expectedClaudeHooks = mergeHookSets [
+    expectedAgentDeckClaudeHooks
+    expectedClaudeCodeHooks
+    expectedClaudeVaultHooks
+  ];
+  expectedCodexHooks = {
+    SessionStart = [
+      (
+        (mkCommandHook "agent-deck hook-handler" { })
+        // {
+          matcher = "startup|resume|clear|compact";
+        }
+      )
+    ];
+    UserPromptSubmit = [ (mkCommandHook "agent-deck hook-handler" { }) ];
+    Stop = [ (mkCommandHook "agent-deck hook-handler" { }) ];
+    PermissionRequest = [
+      (
+        (mkCommandHook "agent-deck hook-handler" { })
+        // {
+          matcher = "*";
+        }
+      )
+    ];
+    PreCompact = [
+      (
+        (mkCommandHook "agent-deck hook-handler" { })
+        // {
+          matcher = "manual|auto";
+        }
+      )
+    ];
+  };
+  expectedExtraKnownMarketplaces = {
+    claude-code-plugins.source = {
+      source = "github";
+      repo = "anthropics/claude-code";
+    };
+  };
+  expectedEnabledPlugins = {
+    "frontend-design@claude-code-plugins" = true;
+    "clangd-lsp@claude-plugins-official" = true;
+    "pyright-lsp@claude-plugins-official" = true;
+    "rust-analyzer-lsp@claude-plugins-official" = true;
+    "superpowers@claude-plugins-official" = true;
+  };
+
+  isTypedEnv =
+    value: builtins.isAttrs value && sortedNames value == [ "env" ] && builtins.isString value.env;
+  renderClaudeSecretReferences =
+    value:
+    if isTypedEnv value then
+      "$" + "{" + value.env + "}"
+    else if builtins.isAttrs value then
+      lib.mapAttrs (_: renderClaudeSecretReferences) value
+    else if builtins.isList value then
+      map renderClaudeSecretReferences value
+    else
+      value;
+  expectedClaudeMcpServer =
+    server:
+    let
+      transport = renderClaudeSecretReferences server.transport;
+      native =
+        if transport ? url then
+          {
+            type = "http";
+            inherit (transport) url;
+          }
+          // lib.optionalAttrs (transport ? headers) { inherit (transport) headers; }
+        else
+          {
+            inherit (transport) command args;
+          }
+          // lib.optionalAttrs (transport ? env) { inherit (transport) env; };
+    in
+    lib.recursiveUpdate native (server.overrides.claude or { });
+  expectedCodexMcpServer =
+    server:
+    let
+      inherit (server) transport;
+      typedEnv = lib.filterAttrs (_: isTypedEnv) (transport.env or { });
+      literalEnv = lib.filterAttrs (_: value: !isTypedEnv value) (transport.env or { });
+      native =
+        if transport ? url then
+          {
+            inherit (transport) url;
+          }
+          // lib.optionalAttrs (transport ? headers) {
+            env_http_headers = lib.mapAttrs (_: reference: reference.env) transport.headers;
+          }
+        else
+          {
+            inherit (transport) command args;
+          }
+          // lib.optionalAttrs (literalEnv != { }) { env = literalEnv; }
+          // lib.optionalAttrs (typedEnv != { }) {
+            env_vars = map (name: typedEnv.${name}.env) (sortedNames typedEnv);
+          };
+    in
+    lib.recursiveUpdate native (server.overrides.codex or { });
+  expectedClaudeMcp = profileId: {
+    mcpServers = lib.mapAttrs (_: expectedClaudeMcpServer) (
+      selectFor profileId catalog.items.mcpServers
+    );
+  };
+  expectedCodexMcp =
+    profileId: lib.mapAttrs (_: expectedCodexMcpServer) (selectFor profileId catalog.items.mcpServers);
+
+  expectedClaudeSettings =
+    profileId:
+    let
+      profile = catalog.profiles.${profileId};
+      deletions = expectedSettingsItem.intentionalDeletions.${profileId} or [ ];
+    in
+    removeAttrs expectedSettingsItem.base deletions
+    // {
+      statusLine = {
+        type = "command";
+        command = "bash ${fixtureHomeDirectory}/${profile.root}/statusline-command.sh";
+      };
+      hooks = expectedClaudeHooks;
+      extraKnownMarketplaces = expectedExtraKnownMarketplaces;
+      enabledPlugins = expectedEnabledPlugins;
+    };
+  expectedCodexManaged = profileId: {
+    notify = [
+      "agent-deck"
+      "codex-notify"
+    ];
+    hooks = expectedCodexHooks;
+    mcp_servers = expectedCodexMcp profileId;
+  };
+
+  expectedClaudePaths =
+    profileId:
+    let
+      root = catalog.profiles.${profileId}.root;
+    in
+    lib.sort builtins.lessThan (
+      map (name: "${root}/agents/${name}.md") (selectedNames profileId "agents")
+      ++ map (name: "${root}/commands/${name}.md") (selectedNames profileId "commands")
+      ++ map (name: "${root}/skills/${name}") (selectedNames profileId "skills")
+      ++ map (name: "${root}/commands/${name}.md") (selectedNames profileId "prompts")
+      ++ [
+        "${root}/statusline-command.sh"
+        "${root}/nix-managed-settings.json"
+        "${root}/nix-managed-mcp.json"
+      ]
+    );
+  expectedCodexPaths =
+    profileId:
+    let
+      root = catalog.profiles.${profileId}.root;
+    in
+    lib.sort builtins.lessThan (
+      map (name: "${root}/agents/${name}.toml") (selectedNames profileId "agents")
+      ++ map (name: ".agents/skills/${name}") (selectedNames profileId "skills")
+      ++ map (name: ".agents/skills/command-${name}") (selectedNames profileId "commands")
+      ++ map (name: ".agents/skills/prompt-${name}") (selectedNames profileId "prompts")
+      ++ [ "${root}/nix-managed.config.toml" ]
+    );
+  forbiddenClaudePaths =
+    profileId:
+    let
+      root = catalog.profiles.${profileId}.root;
+    in
+    [
+      root
+      "${root}/settings.json"
+      "${root}/.claude.json"
+      "${root}/auth.json"
+      "${root}/history.jsonl"
+    ];
+  forbiddenCodexPaths =
+    profileId:
+    let
+      root = catalog.profiles.${profileId}.root;
+    in
+    [
+      root
+      ".agents"
+      ".agents/skills"
+      "${root}/config.toml"
+      "${root}/hooks.json"
+      "${root}/auth.json"
+      "${root}/history.jsonl"
+    ];
+
+  documentSource =
+    label: file:
+    file.source or (
+      if file ? text then
+        { inlineText = file.text; }
+      else
+        throw "rendered file ${label} has neither source nor text"
+    );
+  claudeMarkdown =
+    item:
+    if item.metadata == { } then
+      builtins.readFile item.source
+    else
+      "---\n${builtins.toJSON item.metadata}\n---\n${builtins.readFile item.source}";
+  codexAgentObject =
+    item:
+    removeAttrs item.metadata [ "tools" ]
+    // {
+      developer_instructions = builtins.readFile item.source;
+    };
+  codexProjectionMetadata = prefix: name: metadata: {
+    name = "${prefix}-${name}";
+    description = metadata.description or "Promptdeploy ${prefix} '${name}'.";
+  };
+  codexProjectionText =
+    kind: name: metadata: source:
+    "---\n${builtins.toJSON metadata}\n---\n"
+    + "Use this skill for the promptdeploy ${kind} '${name}'.\n\n"
+    + "Treat the user's current request as the arguments for the prompt below. "
+    + "If the prompt contains `$ARGUMENTS`, interpret it as those arguments.\n\n"
+    + "Prompt:\n\n"
+    + builtins.readFile source;
+
+  claudeDocumentRecords = lib.concatMap (
+    profileId:
+    let
+      profile = catalog.profiles.${profileId};
+      render = renderedClaude.${profileId};
+      file = path: render.files.${path};
+    in
+    [
+      {
+        kind = "json";
+        label = "${profileId} settings";
+        path = documentSource "${profileId}-settings.json" (
+          file "${profile.root}/nix-managed-settings.json"
+        );
+        expected = expectedClaudeSettings profileId;
+        forbidden = [
+          "_source"
+          "mcpServers"
+          "intentionalDeletions"
+          "targetPaths"
+        ];
+      }
+      {
+        kind = "json";
+        label = "${profileId} MCP";
+        path = documentSource "${profileId}-mcp.json" (file "${profile.root}/nix-managed-mcp.json");
+        expected = expectedClaudeMcp profileId;
+        forbidden = [
+          "{env:"
+          "$env:"
+          "?apiKey="
+        ];
+      }
+      {
+        kind = "text";
+        label = "${profileId} statusline";
+        path = documentSource "${profileId}-statusline.sh" (file "${profile.root}/statusline-command.sh");
+        expectedText = builtins.readFile "${src}/config/ai/statusline-command.sh";
+      }
+    ]
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "text";
+      label = "${profileId} agent ${name}";
+      path = documentSource "${profileId}-agent-${name}.md" (file "${profile.root}/agents/${name}.md");
+      expectedText = claudeMarkdown item;
+    }) (selectFor profileId catalog.items.agents)
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "text";
+      label = "${profileId} command ${name}";
+      path = documentSource "${profileId}-command-${name}.md" (
+        file "${profile.root}/commands/${name}.md"
+      );
+      expectedText = claudeMarkdown item;
+    }) (selectFor profileId catalog.items.commands)
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "text";
+      label = "${profileId} prompt ${name}";
+      path = documentSource "${profileId}-prompt-${name}.md" (file "${profile.root}/commands/${name}.md");
+      expectedText = builtins.readFile item.source;
+    }) (selectFor profileId catalog.items.prompts)
+  ) claudeProfileIds;
+
+  codexDocumentRecords = lib.concatMap (
+    profileId:
+    let
+      profile = catalog.profiles.${profileId};
+      render = renderedCodex.${profileId};
+      file = path: render.files.${path};
+    in
+    [
+      {
+        kind = "toml";
+        label = "${profileId} managed config";
+        path = documentSource "${profileId}-managed.toml" (file "${profile.root}/nix-managed.config.toml");
+        expected = expectedCodexManaged profileId;
+        forbidden = [
+          ("$" + "{")
+          "{env:"
+          "$env:"
+          "?apiKey="
+        ];
+      }
+    ]
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "toml";
+      label = "${profileId} agent ${name}";
+      path = documentSource "${profileId}-agent-${name}.toml" (
+        file "${profile.root}/agents/${name}.toml"
+      );
+      expected = codexAgentObject item;
+    }) (selectFor profileId catalog.items.agents)
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "text";
+      label = "${profileId} command projection ${name}";
+      sourceDirectory = (file ".agents/skills/command-${name}").source;
+      path = "${(file ".agents/skills/command-${name}").source}/SKILL.md";
+      expectedText = codexProjectionText "command" name (codexProjectionMetadata "command" name
+        item.metadata
+      ) item.source;
+    }) (selectFor profileId catalog.items.commands)
+    ++ lib.mapAttrsToList (name: item: {
+      kind = "text";
+      label = "${profileId} prompt projection ${name}";
+      sourceDirectory = (file ".agents/skills/prompt-${name}").source;
+      path = "${(file ".agents/skills/prompt-${name}").source}/SKILL.md";
+      expectedText = codexProjectionText "prompt" name {
+        name = "prompt-${name}";
+        description = "Promptdeploy rendered prompt '${name}'.";
+      } item.source;
+    }) (selectFor profileId catalog.items.prompts)
+  ) codexProfileIds;
+  codexMetadataProbeRecord = {
+    kind = "toml";
+    label = "Codex future metadata preservation";
+    path =
+      documentSource "codex-metadata-probe.toml"
+        codexMetadataProbe.files.".config/codex/agents/metadata-probe.toml";
+    expected = codexAgentObject codexMetadataProbeItem;
+  };
+  rendererDocumentManifest = pkgs.writeText "ai-renderer-document-fixtures.json" (
+    builtins.toJSON (claudeDocumentRecords ++ codexDocumentRecords ++ [ codexMetadataProbeRecord ])
+  );
+
+  rendererChecks =
+    lib.concatMap (
+      profileId:
+      let
+        profile = catalog.profiles.${profileId};
+        render = renderedClaude.${profileId};
+        paths = sortedNames render.files;
+      in
+      [
+        (expectEqual "${profileId} exact path inventory" paths (expectedClaudePaths profileId))
+        (expectEqual "${profileId} path count" (builtins.length paths) 129)
+        (expectEqual "${profileId} companions" render.companions [
+          "${profile.root}/nix-managed-settings.json"
+          "${profile.root}/nix-managed-mcp.json"
+        ])
+        (expectEqual "${profileId} required environment" render.requiredEnvNames [
+          "ANTHROPIC_API_KEY"
+          "CONTEXT7_API_KEY"
+          "GEMINI_API_KEY"
+          "OPENAI_API_KEY"
+          "PERPLEXITY_API_KEY"
+          "REF_API_KEY"
+        ])
+        (expectEqual "${profileId} mutable roots remain unmanaged" (lib.intersectLists paths (
+          forbiddenClaudePaths profileId
+        )) [ ])
+      ]
+      ++ lib.mapAttrsToList (
+        name: item:
+        (expectEqual "${profileId} skill source ${name}"
+          render.files."${profile.root}/skills/${name}".source
+          item.source
+        )
+      ) (selectFor profileId catalog.items.skills)
+    ) claudeProfileIds
+    ++ lib.concatMap (
+      profileId:
+      let
+        profile = catalog.profiles.${profileId};
+        render = renderedCodex.${profileId};
+        paths = sortedNames render.files;
+        expectedCount = if profileId == "shared-work-codex" then 133 else 126;
+      in
+      [
+        (expectEqual "${profileId} exact path inventory" paths (expectedCodexPaths profileId))
+        (expectEqual "${profileId} path count" (builtins.length paths) expectedCount)
+        (expectEqual "${profileId} companions" render.companions [
+          "${profile.root}/nix-managed.config.toml"
+        ])
+        (expectEqual "${profileId} required environment" render.requiredEnvNames [
+          "CONTEXT7_API_KEY"
+          "PERPLEXITY_API_KEY"
+          "REF_API_KEY"
+        ])
+        (expectEqual "${profileId} mutable roots remain unmanaged" (lib.intersectLists paths (
+          forbiddenCodexPaths profileId
+        )) [ ])
+      ]
+      ++ lib.mapAttrsToList (
+        name: item:
+        (expectEqual "${profileId} skill source ${name}" render.files.".agents/skills/${name}".source
+          item.source
+        )
+      ) (selectFor profileId catalog.items.skills)
+    ) codexProfileIds;
+
   candidate = {
     inherit (catalog) profiles items;
     inherit modelData;
@@ -768,6 +1289,13 @@ let
     skills = catalog.items.skills // {
       duplicate-anvil = catalog.items.skills.anvil // {
         name = "anvil";
+      };
+    };
+  };
+  unsafeItemNameItems = catalog.items // {
+    skills = removeAttrs catalog.items.skills [ "anvil" ] // {
+      "../../.ssh" = catalog.items.skills.anvil // {
+        name = "../../.ssh";
       };
     };
   };
@@ -1238,6 +1766,7 @@ let
       })
     ))
     (expectReject "duplicate skill name accepted" (validateWithItems duplicateSkillItems))
+    (expectReject "unsafe item name accepted" (validateWithItems unsafeItemNameItems))
     (expectReject "duplicate target path accepted" (validateWithItems duplicatePathItems))
     (expectReject "unsupported override field accepted" (validateWithItems badOverrideItems))
     (expectReject "unsupported override client accepted" (validateWithItems badOverrideClientItems))
@@ -1281,15 +1810,88 @@ let
     (expectReject "unapproved public sentinel accepted" (validateWithModels badPublicSentinelModels))
     (expectReject "anvil-tools accepted" (validateWithItems anvilToolsItems))
   ]
-  ++ profileChecks;
+  ++ profileChecks
+  ++ rendererChecks;
 in
 assert builtins.deepSeq contractChecks true;
 
 pkgs.runCommand "ai-home-manager-smoke"
   {
-    nativeBuildInputs = [ pkgs.python3 ];
+    nativeBuildInputs = [
+      pkgs.jq
+      pkgs.python3
+    ];
   }
   ''
+    python3 -I - "${rendererDocumentManifest}" <<'PY'
+    import json
+    import subprocess
+    import sys
+    import tomllib
+    from pathlib import Path
+
+    records = json.loads(Path(sys.argv[1]).read_text())
+    errors = []
+
+    for record in records:
+        label = record["label"]
+        document = record["path"]
+        if isinstance(document, dict):
+            text = document["inlineText"]
+        else:
+            path = Path(document)
+            if not path.is_file():
+                errors.append(f"{label}: not a regular file: {path}")
+                continue
+            text = path.read_text()
+
+        if "sourceDirectory" in record:
+            source_directory = Path(record["sourceDirectory"])
+            if not source_directory.is_dir():
+                errors.append(
+                    f"{label}: projection source is not a directory: {source_directory}"
+                )
+            elif {entry.name for entry in source_directory.iterdir()} != {"SKILL.md"}:
+                errors.append(f"{label}: projection directory must contain only SKILL.md")
+
+        for fragment in record.get("forbidden", []):
+            if fragment in text:
+                errors.append(f"{label}: contains forbidden fragment {fragment!r}")
+
+        if record["kind"] == "json":
+            parsed = subprocess.run(
+                ["jq", "-e", ".", str(path)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if parsed.returncode:
+                errors.append(f"{label}: jq rejected JSON: {parsed.stderr.strip()}")
+                continue
+            actual = json.loads(text)
+            if actual != record["expected"]:
+                errors.append(f"{label}: semantic JSON mismatch")
+        elif record["kind"] == "toml":
+            try:
+                actual = tomllib.loads(text)
+            except tomllib.TOMLDecodeError as error:
+                errors.append(f"{label}: tomllib rejected TOML: {error}")
+                continue
+            if actual != record["expected"]:
+                errors.append(f"{label}: semantic TOML mismatch")
+        elif record["kind"] == "text":
+            if text != record["expectedText"]:
+                errors.append(f"{label}: exact text mismatch")
+        else:
+            errors.append(f"{label}: unknown fixture kind {record['kind']!r}")
+
+    if errors:
+        print("ai-home-manager-smoke: renderer document check failed:", file=sys.stderr)
+        for error in errors:
+            print(f"  {error}", file=sys.stderr)
+        raise SystemExit(1)
+    PY
+
     python3 -I - "${src}/config/ai" <<'PY'
     import hashlib
     import os
@@ -1459,6 +2061,20 @@ pkgs.runCommand "ai-home-manager-smoke"
         "models.nix",
         "statusline-command.sh",
     }
+    renderers = root / "renderers"
+    if renderers.exists():
+        expected_root.add("renderers")
+        expected_renderers = {"claude.nix", "codex.nix"}
+        actual_renderers = {entry.name for entry in renderers.iterdir()}
+        if actual_renderers != expected_renderers:
+            errors.append(
+                "renderer inventory mismatch: "
+                f"missing={sorted(expected_renderers - actual_renderers)!r} "
+                f"unexpected={sorted(actual_renderers - expected_renderers)!r}"
+            )
+        for name in expected_renderers:
+            if not (renderers / name).is_file():
+                errors.append(f"not a regular renderer: renderers/{name}")
     actual_root = {entry.name for entry in root.iterdir()}
     if actual_root != expected_root:
         errors.append(

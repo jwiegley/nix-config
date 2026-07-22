@@ -6,7 +6,7 @@
 
 **Architecture:** `/Users/johnw/src/ai-nix` packages pinned external resources, three thin executable wrappers, and the one standard Droid HTTP-header bridge required by its installed client. `/Users/johnw/src/nix` owns the canonical catalog, model data, five native renderers, explicit profile selection, exact Home Manager leaves, previous-generation safety checks, and the Hera-only model-sync activation. Promptdeploy is used once from a frozen nonsecret snapshot as a read-only parity oracle; no converter, manifest, deployer, merge engine, SSH/rsync deployment path, or runtime installer survives.
 
-**Tech Stack:** Nix flakes, Home Manager activation DAGs, `pkgs.formats.json`, `lib.generators.toTOML`, shell checks in Nix derivations, Python `tomllib` for independent TOML parsing, `jq` for independent JSON parsing, and immutable inputs from `llm-agents.nix` and pinned upstream sources.
+**Tech Stack:** Nix flakes, Home Manager activation DAGs, `pkgs.formats.json`, `pkgs.formats.toml`, shell checks in Nix derivations, Python `tomllib` for independent TOML parsing, `jq` for independent JSON parsing, and immutable inputs from `llm-agents.nix` and pinned upstream sources.
 
 ## Global Constraints
 
@@ -494,26 +494,27 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 - Create: `/Users/johnw/src/nix.worktrees/nix-managed-agent-config/config/ai/renderers/claude.nix`
 - Create: `/Users/johnw/src/nix.worktrees/nix-managed-agent-config/config/ai/renderers/codex.nix`
 - Modify: `/Users/johnw/src/nix.worktrees/nix-managed-agent-config/packages/ai-home-manager-smoke.nix`
+- Modify: `/Users/johnw/src/nix.worktrees/nix-managed-agent-config/config/ai/catalog.nix`
 
 **Consumes:** Task 5's renderer interface, catalog selection, model data, canonical assets, and external resources.
 
 **Produces:** exact relative Home Manager leaves, fixed managed-artifact lists, and required environment-variable names for Claude and Codex.
 
-- [ ] **Step 1: Add failing per-profile renderer fixtures.**
+- [x] **Step 1: Add failing per-profile renderer fixtures.**
 
-  Claude fixtures require selected agents/commands/skills, a profile-derived statusline script, `nix-managed-settings.json`, and `nix-managed-mcp.json`; hooks, marketplaces, plugins, and static settings belong only in the settings supplement. For every Claude profile, compare parsed semantic objects—not counts—for every base settings key, the complete environment map, sandbox/model/theme/effort/statusline values, all three hook event bodies, both marketplace source records, every enabled plugin, and intentional deletions. `preferredNotifChannel = "iterm2_with_bell"` exists only in Hera/Clio personal and is absent from Positron, Vulcan, VPS, and shared work; promptdeploy `_source`, base `mcpServers`, and removed ownership metadata are absent everywhere. Codex fixtures require agent TOML, exact inline hook event bodies and `notify = [ "agent-deck" "codex-notify" ]` inside `nix-managed.config.toml`, selected user skill directories, 59/65 command projections as appropriate, and two prompt projections. Assert neither renderer replaces mutable `settings.json`, `.claude.json`, `config.toml`, auth, history, or a parent root.
+  Claude fixtures require selected agents/commands/skills, a profile-derived statusline script, `nix-managed-settings.json`, and `nix-managed-mcp.json`; hooks, marketplaces, plugins, and static settings belong only in the settings supplement. For every Claude profile, compare parsed semantic objects—not counts—for every base settings key, the complete environment map, sandbox/model/theme/effort/statusline values, all three hook event bodies, both marketplace definitions, the one external marketplace source record, every enabled plugin, and intentional deletions. `preferredNotifChannel = "iterm2_with_bell"` exists only in Hera/Clio personal and is absent from Positron, Vulcan, VPS, and shared work; promptdeploy `_source`, base `mcpServers`, and removed ownership metadata are absent everywhere. Codex fixtures require agent TOML, exact inline hook event bodies and `notify = [ "agent-deck" "codex-notify" ]` inside `nix-managed.config.toml`, selected user skill directories, 59/65 command projections as appropriate, and two prompt projections. Assert neither renderer replaces mutable `settings.json`, `.claude.json`, `config.toml`, auth, `history.jsonl`, or a parent root.
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
   ```sh
   cd /Users/johnw/src/nix.worktrees/nix-managed-agent-config
-  nix build -L path:.#checks.aarch64-darwin.ai-home-manager-smoke \
-    --override-input ai-nix path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources
+  nix build -L 'path:.#checks.aarch64-darwin.ai-home-manager-smoke' \
+    --override-input ai-nix 'path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources'
   ```
 
   Expected: renderer imports and companion artifacts are absent.
 
-- [ ] **Step 3: Implement the Claude renderer.**
+- [x] **Step 3: Implement the Claude renderer.**
 
   Render JSON with `pkgs.formats.json`; render frontmatter as a JSON object between YAML delimiters followed by the exact canonical body. Translate typed secrets to literal Claude `${VAR}` references without evaluating them. Derive statusline paths from `homeDirectory` and the profile root. Emit companions in this exact order:
 
@@ -526,25 +527,25 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
   Do not emit strict-MCP behavior or read mutable base files.
 
-- [ ] **Step 4: Implement the Codex renderer.**
+- [x] **Step 4: Implement the Codex renderer.**
 
-  Use `lib.generators.toTOML` for agents and the managed profile fragment. Drop Claude-only `tools`; put the body in `developer_instructions`. Render HTTP credentials only through Codex-native environment-key fields such as `env_http_headers`, never URL expansion. Preserve the exact agent-deck hook/notify declarations inline in the managed TOML layer; never emit the globally discovered `${profile.root}/hooks.json`. Use `profile.root = ".config/codex"` on Darwin and `profile.root = ".codex"` on Linux; emit only `${profile.root}/nix-managed.config.toml` so the wrapper reaches the Darwin leaf through the preserved `~/.codex -> ~/.config/codex` alias. Keep the base `${profile.root}/config.toml` and any unrelated global hooks mutable.
+  Use `pkgs.formats.toml` for agents and the managed profile fragment; this pinned nixpkgs does not expose `lib.generators.toTOML`. Drop Claude-only `tools`; put the body in `developer_instructions`. Render HTTP credentials only through Codex-native environment-key fields such as `env_http_headers`, never URL expansion. Preserve the exact agent-deck hook/notify declarations inline in the managed TOML layer; never emit the globally discovered `${profile.root}/hooks.json`. Use `profile.root = ".config/codex"` on Darwin and `profile.root = ".codex"` on Linux; emit only `${profile.root}/nix-managed.config.toml` so the wrapper reaches the Darwin leaf through the preserved `~/.codex -> ~/.config/codex` alias. Keep the base `${profile.root}/config.toml` and any unrelated global hooks mutable.
 
-- [ ] **Step 5: Independently parse and inspect every generated document.**
+- [x] **Step 5: Independently parse and inspect every generated document.**
 
-  Extend the check derivation to run `jq -e .` on JSON and Python `tomllib.load` on each TOML file. Compare frontmatter/body boundaries, exact path inventories, and the complete per-profile semantic settings/hook/marketplace/plugin/delete fixtures above; then scan the rendered closure for unique synthetic secret sentinels.
+  Extend the check derivation to run `jq -e .` on JSON and Python `tomllib.load` on each TOML file. Compare frontmatter/body boundaries, exact path inventories, and the complete per-profile semantic settings/hook/marketplace/plugin/delete fixtures above. Require every catalog item name to be one safe path segment, reject a traversal fixture, and compare exact native secret-reference forms; do not introduce synthetic secret values into renderer inputs or the Nix store.
 
-- [ ] **Step 6: Run GREEN.**
+- [x] **Step 6: Run GREEN.**
 
   ```sh
   cd /Users/johnw/src/nix.worktrees/nix-managed-agent-config
-  nix build -L path:.#checks.aarch64-darwin.ai-home-manager-smoke \
-    --override-input ai-nix path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources
+  nix build -L 'path:.#checks.aarch64-darwin.ai-home-manager-smoke' \
+    --override-input ai-nix 'path:/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources'
   ```
 
   Expected: every Claude/Codex document parses; all profile inventories and managed-artifact lists match; only variable names, never values, occur.
 
-- [ ] **Step 7: Review, fess-audit, and commit.**
+- [x] **Step 7: Review, fess-audit, and commit.**
 
   Review ownership, native syntax, relocation mappings, and body preservation; run the fess audit; commit as `feat: render Claude and Codex configuration`.
 
