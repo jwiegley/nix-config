@@ -9,6 +9,7 @@ let
   home = "/Users/johnw";
   xdg_configHome = "${home}/.config";
   xdg_cacheHome = "${home}/.cache";
+  recordingCaBundle = "${pkgs.ca-bundle-with-vulcan or pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
   runsEternalTerminal = lib.elem hostname [
     "hera"
     "clio"
@@ -447,6 +448,7 @@ in
       flatten-recordings = {
         script = ''
           export PATH="${pkgs.my-scripts}/bin:${pkgs.fswatch}/bin:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+          export SSL_CERT_FILE="${recordingCaBundle}"
 
           # Sweep anything that accumulated while we were not running.
           ${pkgs.my-scripts}/bin/flatten-recordings || true
@@ -493,6 +495,7 @@ in
       flatten-recordings-sweep = {
         script = ''
           export PATH="${pkgs.my-scripts}/bin:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+          export SSL_CERT_FILE="${recordingCaBundle}"
           ${pkgs.my-scripts}/bin/flatten-recordings || true
         '';
         serviceConfig = {

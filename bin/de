@@ -69,6 +69,7 @@ reset_kept() {
 
 keep_vars                                       \
     ALTERNATE_EDITOR                            \
+    COLORTERM                                   \
     EDITOR                                      \
     EMACS_SERVER_FILE                           \
     GIT_PROMPT_EXECUTABLE                       \
@@ -145,6 +146,7 @@ export NIXPKGS_ALLOW_BROKEN=1
 # each caller's live values across both load and unload.
 SCRIPT="unset         \
     ALTERNATE_EDITOR  \
+    COLORTERM         \
     EDITOR            \
     EMACS_SERVER_FILE \
     ITERM_SESSION_ID  \
