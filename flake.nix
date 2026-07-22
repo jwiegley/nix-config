@@ -324,6 +324,9 @@
                 touch $out
               '';
 
+          ai-home-manager-smoke = pkgs.callPackage ./packages/ai-home-manager-smoke.nix {
+            inherit src;
+          };
         }
         // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux || system == "aarch64-darwin") {
           anvil-home-manager = pkgs.callPackage ./packages/anvil-mcp/home-manager-smoke.nix {

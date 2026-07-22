@@ -340,11 +340,11 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
 **Produces:** a protected content-addressed source snapshot and target-root oracle outside Git, committed body-only canonical assets, and a nonsecret evidence document recording source revision, per-path hashes, tree inventories, selector coverage inputs, and reviewed transformations.
 
-- [ ] **Step 1: Register the initial failing asset check.**
+- [x] **Step 1: Register the initial failing asset check.**
 
   `packages/ai-home-manager-smoke.nix` must initially assert the exact 26 agent names, all 65 canonical command names, 18 repository-owned skill trees excluding the external `translate-en` copy, two static prompt files, and the statusline file. It must reject deployment fields (`only`, `except`, `droid_deploy`) in committed frontmatter and reject `.promptdeploy`, manifests, receipts, `.env`, selector-source JSON, and symlinks escaping `config/ai`.
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
   ```sh
   cd /Users/johnw/src/nix.worktrees/nix-managed-agent-config
@@ -354,15 +354,15 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
   Expected: `config/ai/agents`, `commands`, `skills`, `prompts`, and `statusline-command.sh` are missing. The check itself must parse and evaluate.
 
-- [ ] **Step 3: Build an explicit, reviewed source manifest before copying.**
+- [x] **Step 3: Build an explicit, reviewed source manifest before copying.**
 
-  Do not run `de`, `direnv`, `nix develop`, or `rsync`. Under a host-local state root verified not to be NFS, create a mode-`0700` staging directory. Enumerate every selected path into a reviewed manifest: `flake.nix`, `flake.lock`, `pyproject.toml`, `uv.lock`, `LICENSE.md`, `README.md`, `.gitmodules`, `deploy.yaml`, `settings.yaml`, `models.yaml`, `statusline-command.sh`; every path beneath `src`, `nix`, `bundles`, `agents`, `commands`, `skills`, `prompts`, `mcp`, `hooks`, and `marketplaces`; and only `translate-tool/skill/SKILL.md` plus `translate-tool/glossary.csv` from translate-tool. Before copying, recursively reject `.env*`, `.git`, `.direnv`, `.venv`, `__pycache__`, cache/auth/session/credential/database/key material, newline/control-character paths, special files, hard-linked regular files, and symlinks whose resolved target is outside the reviewed set. Review the complete manifest, not directory globs, before proceeding.
+  Do not run `de`, `direnv`, `nix develop`, or `rsync`. Under a host-local state root verified not to be NFS, create a mode-`0700` staging directory. Enumerate every selected path into a reviewed manifest: `flake.nix`, `flake.lock`, `pyproject.toml`, `uv.lock`, `LICENSE.md`, `README.md`, `.gitmodules`, `deploy.yaml`, `settings.yaml`, `models.yaml`, `statusline-command.sh`; every path beneath `src`, `nix`, `bundles`, `agents`, `commands`, `skills`, `prompts`, `mcp`, `hooks`, and `marketplaces`; and only `translate-tool/skill/SKILL.md`, `translate-tool/glossary.csv`, and the required approval-backed `translate-tool/skill/GLOSSARY.csv -> ../glossary.csv` symlink from translate-tool. Before copying, recursively reject `.env*`, `.git`, `.direnv`, `.venv`, `__pycache__`, cache/auth/session/credential/database/key material, newline/control-character paths, special files, hard-linked regular files, and symlinks whose resolved target is outside the reviewed set. Review the complete manifest, not directory globs, before proceeding.
 
-- [ ] **Step 4: Prove a framed source snapshot and finalize it atomically.**
+- [x] **Step 4: Prove a framed source snapshot and finalize it atomically.**
 
   For every selected directory, regular file, and symlink, record a NUL-framed tuple of relative path, type, numeric mode, symlink target, size, and SHA-256 content/tree digest. Copy one manifest entry at a time with type/mode preservation into staging; regenerate the framed manifest there; require byte equality with the pre-copy manifest and all hashes in **Frozen Source Authorities**. Derive the snapshot ID from that framed manifest. Set the staged source read-only, then atomically rename the complete staging root to a durable digest-keyed path such as `$XDG_STATE_HOME/nix-managed-ai/oracles/<digest>` after verifying owner, mode `0700`, non-symlink parents, and local filesystem. Record the Git revision and dirty/relevant-untracked classification separately; the immutable framed bytes, not revision alone, are authoritative.
 
-- [ ] **Step 5: Render Hera and Clio in an isolated, fail-loud environment.**
+- [x] **Step 5: Render Hera and Clio in an isolated, fail-loud environment.**
 
   This is the explicit exception to normal promptdeploy environment usage. Capture the absolute `nix` binary, create an empty synthetic HOME/XDG tree, and invoke only:
 
@@ -383,19 +383,19 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
   `SHIM_PATH` supplies failing/logging `ssh`, `scp`, `rsync`, `osascript`, `defaults`, `security`, `open`, and process-termination shims; any invocation fails the proof. Run named-app `validate`, two Hera deploys, and two Clio deploys into distinct roots using the same allowlist. Require second-deploy zero actions, literal `${VAR}` references preserved, every synthetic value absent from output/manifests/logs/closure, and no lock write. A process-level trace must prove promptdeploy never opens the original home, live client state, a secret source, or an unapproved project path; enumerate and permit only the synthetic trees plus required OS/Nix runtime paths such as `/nix/store`, the Nix daemon socket/configuration, dynamic-loader inputs, and system devices.
 
-- [ ] **Step 6: Run strict oracle verification and exact structural comparisons.**
+- [x] **Step 6: Run strict oracle verification and exact structural comparisons.**
 
-  Build the complete exact-selector union from the generated manifests and pass one repeated `--only-item` for every item to the named app's `verify --target-root` command under the same `env -i` harness. Independently parse every JSON/TOML artifact. Compare exact Hera/Clio manifest item maps, relative paths, file types, modes, symlink targets, and framed tree hashes; normalize only manifest timestamps and the approved semantic transformations. Require the four shared Claude trees to match one another and the four shared OpenCode trees to match one another; compare shared Codex as its union. After all app operations, regenerate the read-only source snapshot's framed manifest and require byte equality with both the pre-copy and staged-copy manifests. No count-only or unlisted-difference pass is allowed.
+  Build the complete exact-selector union from the generated manifests and pass one repeated `--only-item` for every item to the named app's `verify --target-root` command under the same `env -i` harness. Independently parse every JSON/TOML artifact. Compare exact Hera/Clio manifest item maps, relative paths, file types, modes, symlink targets, and framed tree hashes; normalize only manifest timestamps and the evidence-pinned Droid host model projection (87 Hera models and 88 Clio models). Require the four shared Claude trees to match one another and the four shared OpenCode trees to match one another; compare shared Codex as its union. After all app operations, regenerate the read-only source snapshot's framed manifest and require byte equality with both the pre-copy and staged-copy manifests. No count-only or unlisted-difference pass is allowed.
 
-- [ ] **Step 7: Extract canonical assets through canonical discovery and prove the result.**
+- [x] **Step 7: Extract canonical assets through canonical discovery and prove the result.**
 
   Use the Python runtime from the built named-app closure under `env -i` to call `list(SourceDiscovery(Path(snapshot)).discover_all())`; do not reimplement discovery with independent globs. Use the existing frontmatter stripping/serialization APIs and the oracle's rendered prompt bytes. If the built closure cannot expose those APIs under this harness, stop and correct the closure/harness; no independent extractor fallback is permitted. Copy only reviewed body assets, complete local skill trees, prompts, and statusline into `config/ai`; keep the transient selector JSON outside Git.
 
-- [ ] **Step 8: Establish the nonsecret adoption/evidence record.**
+- [x] **Step 8: Establish the nonsecret adoption/evidence record.**
 
   Record exact per-path evidence, selectors, target mappings, GPTel/git-ai exclusions, `anvil-tools`, Ref/native-secret transformations, relocations, Ponytail exclusions, source-safe Droid PAL, git-surgeon frozen-tree parity, and Pi's direct inventory. Establish OpenCode's adopted static document with a one-shot host-local whitelisting process whose input file is never opened, displayed, or logged in the agent/tool context and whose only output is a mode-`0600` JSON object containing exactly `$schema`, `disabled_providers`, and `instructions`. Independently reject a missing key, any fourth key, noncanonical types, or any secret-shaped value; record only the projection hash and reviewed nonsecret values. Never retain or fixture the expanded source. If that projection cannot be produced under these constraints, stop before Task 7.
 
-- [ ] **Step 9: Run GREEN.**
+- [x] **Step 9: Run GREEN.**
 
   ```sh
   cd /Users/johnw/src/nix.worktrees/nix-managed-agent-config
@@ -405,7 +405,7 @@ Preserve `config/xdg-symlinks.nix`, `bin/persona`, mutable client roots, and eve
 
   Expected: exact asset inventories and metadata-stripping checks pass, and a recursive scan finds no `.env`, manifest, selector-source file, receipt, or external working-tree symlink.
 
-- [ ] **Step 10: Review, fess-audit, and commit.**
+- [x] **Step 10: Review, fess-audit, and commit.**
 
   Compare names/bodies/tree hashes to the protected oracle, independently review the evidence document for secret leakage, run the fess audit, and commit as `feat: import canonical agent assets`.
 

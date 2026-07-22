@@ -1,0 +1,1 @@
+In PR $ARGUMENTS there are several open comments from my colleagues. I want you to address all of them, but instead of commenting in response, I want you to create a Markdown report containing the answer you would give to each comment’s author for every one of these comments to explain your fix or your clarification in response.
