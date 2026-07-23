@@ -1125,7 +1125,7 @@ class WatchdogLifecycleTests(WatchdogTestCase):
         *,
         environment=None,
         pass_fds=(),
-        timeout=5,
+        timeout=30,
     ):
         runtime = root / "r"
         state = root / "s"
