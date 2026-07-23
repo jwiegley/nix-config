@@ -3,23 +3,24 @@
 Plan: `docs/superpowers/plans/2026-07-22-nix-managed-agent-configuration.md`
 Design: `docs/superpowers/specs/2026-07-22-nix-managed-agent-configuration-design.md`
 
-Planning gate: passed independent scope, security, and final fess review. Tasks 1–12 are approved for implementation; Task 13 remains separately fail-closed.
+Completion gate: Tasks 1–11 and the llm-setup model-registry projection are implemented and verified. Tasks 12–13 were explicitly abandoned by the user and are superseded, not pending.
 
 | Task | State | RED evidence | GREEN evidence | Review | Commit |
 | --- | --- | --- | --- | --- | --- |
 | 1. Static external resources | complete | Missing `pkgs.agent-resources` at evaluation | Focused check, public package build, and full `nix flake check -L path:.` exited 0; exact 22-name manifest passed | Scope, security, and fess PASS | ai-nix `651cf6593cf4b7a3c4202e35dd495353d389f4c5` |
 | 2. Pi extensions | complete | Missing `pi-extensions/pi-mcp-adapter` and `pi-extensions/pi-subagent`; all Task 1 assertions remained green | Focused check `/nix/store/mv17wd7bf1v4wzx6pg4q83hyari9p5bx-agent-resources-check`, public package `/nix/store/rwa7n4cn1fgr5wy454vciy33qymcfg7g-agent-resources`, full `nix flake check -L path:.`, and explicit-root offline Pi RPC smoke passed | Scope, security, and fess PASS | ai-nix `47f7a52ce140e0f5cccef18e0e5e9c617c0f0504` |
 | 3. Managed wrappers | complete | Focused `agent-wrappers` check evaluated, then failed behaviorally because the wrappers still delegated, `claude-real` and the bridge output were absent, Codex omitted the managed profile, and partial states launched upstream | Focused `/nix/store/m4r8mjdkwpk9qk4jy9ajdznczjcd3qs7-agent-wrappers-check`, Task 2 regression `/nix/store/mv17wd7bf1v4wzx6pg4q83hyari9p5bx-agent-resources-check`, static hygiene, and full `nix flake check -L path:.` exited 0; all five protected derivation paths remained exact | Scope, security, and fess PASS | ai-nix `c0c194c78f54cd59c7176b0ba5f8515bbcde17db` |
-| 4. Frozen oracle and canonical assets | pending | — | — | — | — |
-| 5. Selectors and models | pending | — | — | — | — |
-| 6. Claude and Codex renderers | pending | — | — | — | — |
-| 7. OpenCode and Droid renderers | pending | — | — | — | — |
-| 8. Pi renderer | pending | — | — | — | — |
-| 9. Home Manager integration and activation guards | pending | — | — | — | — |
-| 10. Hera model synchronization | pending | — | — | — | — |
-| 11. Full fleet gates and ai-nix pin | pending | — | — | — | — |
-| 12. Migration and rollback runbook | pending | — | — | — | — |
-| 13. Fleet rollout, idempotence, and retirement | pending | — | — | — | — |
+| 4. Frozen oracle and canonical assets | complete | Missing canonical imported leaves | Exact canonical inventories and frozen parity checks passed | Scope, security, and fess PASS | nix `0f1b976ee7446b568cd032ec276ab7d6c359501c` |
+| 5. Selectors and models | complete | Missing typed selector/model contract | Exact selectors, models, secret references, and rejection fixtures passed | Scope, security, and fess PASS | nix `4336e1b470db07c3d920605ebd81118acd9a5783` |
+| 6. Claude and Codex renderers | complete | Renderer documents and exact leaves absent | Focused smoke, reproducibility, static hygiene, and wrapper resolution passed | Design, security, and fess PASS | nix `6701ad37c76c1e0672c54e9cabec527b4faa699d` |
+| 7. OpenCode and Droid renderers | complete | Native documents and bridge selection absent | Exact inventories, model/MCP/default behavior, and reproducibility passed | Design, security, and fess PASS | nix `d74134ebfd3031e9b0c1ee59c4a1d766cd963133` |
+| 8. Pi renderer | complete | Hera Pi leaves and extension roots absent | Exact inventory, JSON parsing, exclusions, and reproducibility passed | Design, security, and fess PASS | nix `834c3132190f4121c06f902e0eb226a3b3c3142e` |
+| 9. Home Manager integration and activation guards | complete | Fleet leaves and prior-generation guard absent | Host/profile matrix, exact-leaf ownership, preflight negatives, Pi guard, and bridge PATH checks passed | Independent source audit PASS | nix `154083d5a83bea85d6026388b91d8bdc2775d6f0` |
+| 10. Hera model synchronization | complete | Digest fast path and fake-tool harness absent | First/change/unchanged/failure/retry cases and secret-safety assertions passed | Independent source audit PASS | nix `604d565f0f4ec4c036f8bef4cb1b42d0394d0fd1` |
+| 11. Full fleet gates and ai-nix pin | complete | Four-system matrix and immutable pin incomplete | Four-system registration, Linux exclusions, published ai-nix pin, current-system full flake gate, and remote readback passed | Independent source audit PASS | nix series through `e93c87ecea894a41a4c655563cf0525522cbf4eb` |
+| Model-registry broadcast | complete | 113-route smoke expectations rejected the 119-route export | Two byte-identical exports, 24/24 ERT, focused Home Manager smoke, full Nix flake check, and remote branch readback passed | Independent fess PASS | llm-setup `821f8fa854f93fbad900271d4059899395ab8e57`; nix `75b072a30aeea1ea574b89c100dd4e01da17c356` |
+| 12. Migration and rollback runbook | superseded | — | Explicitly abandoned; no runbook or migration system is required | User scope decision | — |
+| 13. Fleet rollout, idempotence, and retirement | superseded | — | No activation, rollout, or retirement authorized or performed | User scope decision | — |
 
 ## Baseline evidence
 

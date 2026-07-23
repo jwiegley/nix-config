@@ -86,16 +86,22 @@ prompts, paths, and activation.
 ## Frozen migration parity
 
 The frozen Nix expression at `2c40781` contains 8 providers and 111 routes. The v2
-projection contains the same provider facts and 113 routes.
+projection contains the same provider facts and 119 routes.
 
 The only added routes are:
 
+- `positron-openai/gpt-5.6-luna`
+- `positron-openai/gpt-5.6-sol`
+- `positron-openai/gpt-5.6-terra`
+- `litellm/positron_openai/gpt-5.6-luna`
+- `litellm/positron_openai/gpt-5.6-sol`
+- `litellm/positron_openai/gpt-5.6-terra`
 - `litellm/openrouter/moonshotai/kimi-k3`
 - `litellm/openrouter/qwen/qwen3.7-max`
 
 Every common provider and model field is equal. Common route relative order is equal
 after accounting for the already-audited GLM-5.2 movement from frozen index 28 to
-generated index 32. The committed smoke gate records hashes of the frozen provider
+generated index 35. The committed smoke gate records hashes of the frozen provider
 facts and normalized common model facts so this exception cannot silently widen.
 
 ## Safety and scope
@@ -117,7 +123,7 @@ facts and normalized common model facts so this exception cannot silently widen.
 
 - [x] Add structured nonsecret provider facts and all four model selections.
 - [x] Project schema v2 as deterministic canonical JSON.
-- [x] Preserve the 8-provider/113-route authority anchors and exclude embedding and
+- [x] Preserve the 8-provider/119-route authority anchors and exclude embedding and
   reranker instances.
 - [x] Prove no credential lookup or file write occurs in the pure projection.
 
@@ -151,10 +157,10 @@ facts and normalized common model facts so this exception cannot silently widen.
 
 ### Task 5: verification and publication
 
-- [ ] Run the exporter twice and prove the second produces no byte or Git change.
-- [ ] Run Nix formatting, focused registry validation, Home Manager smoke, and
+- [x] Run the exporter twice and prove the second produces no byte or Git change.
+- [x] Run Nix formatting, focused registry validation, Home Manager smoke, and
   supported-platform evaluations.
-- [ ] Commit the llm-setup and Nix changes separately and publish their existing
+- [x] Commit the llm-setup and Nix changes separately and publish their existing
   branches.
-- [ ] Record exact revisions in the parent handoff.
-- [ ] Do not activate hosts or retire Promptdeploy without separate rollout authority.
+- [x] Record exact revisions in the parent handoff.
+- [x] Do not activate hosts or retire Promptdeploy without separate rollout authority.
