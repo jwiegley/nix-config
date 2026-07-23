@@ -555,7 +555,6 @@ let
       (callPackage ../../overlays/emacs/builder.nix {
         emacs = dedicatedEmacs;
         name = "anvil";
-        patches = [ ./orphan-safe-test-fixtures.patch ];
         src = currentAnvilSrc;
       }).overrideAttrs
         (attrs: {
