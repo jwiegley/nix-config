@@ -3592,35 +3592,56 @@ let
               >/dev/null 2>&1'') 2)
   ];
 
-  task11PackageListFor =
+  task11DarwinOnlyPackageInputs = [
+    "gitlib" # its default package is git-monitor
+    "hours"
+    "org-jw"
+    "pushme"
+    "renamer"
+    "trade-journal"
+  ];
+  task11PackageInputsFor =
+    system:
+    {
+      llm-agents.packages.${system} = { };
+      retained.packages.${system}.default = null;
+    }
+    // lib.genAttrs task11DarwinOnlyPackageInputs (_: {
+      packages.${system}.default = null;
+    });
+  task11UserPackageInputNamesFor =
     system:
     (import "${src}/config/packages.nix" {
       hostname = "linux";
-      inherit inputs;
+      inputs = task11PackageInputsFor system;
       pkgs = testPkgsFor.${system};
-    }).package-list;
-  task11HasPackage =
-    package: packages: lib.any (candidate: toString candidate == toString package) packages;
-  task11PackageChecks = [
-    (expectEqual "Task 11 ARM Linux excludes trade-journal"
-      (task11HasPackage inputs.trade-journal.packages.aarch64-linux.default (
-        task11PackageListFor "aarch64-linux"
-      ))
-      false
-    )
-    (expectEqual "Task 11 x86 Linux excludes trade-journal"
-      (task11HasPackage inputs.trade-journal.packages.x86_64-linux.default (
-        task11PackageListFor "x86_64-linux"
-      ))
-      false
-    )
-    (expectEqual "Task 11 Darwin retains trade-journal"
-      (task11HasPackage inputs.trade-journal.packages.aarch64-darwin.default (
-        task11PackageListFor "aarch64-darwin"
-      ))
-      true
-    )
-  ];
+    }).userPackageInputNames;
+  task11PackageChecks =
+    map
+      (
+        system:
+        expectEqual "Task 11 ${system} keeps only the unrelated auto package"
+          (task11UserPackageInputNamesFor system)
+          [ "retained" ]
+      )
+      [
+        "aarch64-linux"
+        "x86_64-linux"
+      ]
+    ++ [
+      (expectEqual "Task 11 Darwin retains the Darwin-only auto packages"
+        (task11UserPackageInputNamesFor "aarch64-darwin")
+        [
+          "gitlib"
+          "hours"
+          "org-jw"
+          "pushme"
+          "renamer"
+          "retained"
+          "trade-journal"
+        ]
+      )
+    ];
 
   contractChecks = [
     (expectEqual "OpenCode bash-reviewer tool oracle" (builtins.hashString "sha256" (

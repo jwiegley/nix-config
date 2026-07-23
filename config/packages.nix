@@ -27,9 +27,9 @@ let
     name: if agentPackages ? ${name} then [ (patchAgentPackage name agentPackages.${name}) ] else [ ];
 
   # Flake inputs whose default package should NOT be auto-installed.
-  # They expose packages.${sys}.default but are consumed differently:
-  # system tooling, overlays, modules, or explicit handling elsewhere
-  # in this file. Edit this list when adding such an input.
+  # The first group is consumed through tooling, overlays, modules, or
+  # explicit handling below. On Linux, the conditional group also excludes
+  # tools that are intentionally installed only on Darwin.
   nonUserPackageInputs = [
     "darwin" # nix-darwin tooling
     "home-manager" # home-manager tooling
@@ -39,7 +39,14 @@ let
     "git-ai" # consumed via overlay / home-manager module
     "hakyll" # local dev source only, not installed
   ]
-  ++ lib.optional isLinux "trade-journal";
+  ++ lib.optionals isLinux [
+    "gitlib" # its default package is git-monitor
+    "hours"
+    "org-jw"
+    "pushme"
+    "renamer"
+    "trade-journal"
+  ];
 
   # Auto-install every flake input that exposes packages.${sys}.default
   # and isn't in the block-list above. Tolerates hosts (e.g. NixOS) that
@@ -49,6 +56,8 @@ let
   ) inputs;
 in
 rec {
+  userPackageInputNames = builtins.attrNames userPackageInputs;
+
   exe = if stdenv.targetPlatform.isx86_64 then haskell.lib.justStaticExecutables else lib.id;
 
   myEmacsPackages = import ./emacs.nix pkgs;
