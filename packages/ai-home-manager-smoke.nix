@@ -88,6 +88,12 @@ let
 
   routeKey = model: "${model.provider}/${model.id}";
   addedRouteKeys = [
+    "positron-openai/gpt-5.6-luna"
+    "positron-openai/gpt-5.6-sol"
+    "positron-openai/gpt-5.6-terra"
+    "litellm/positron_openai/gpt-5.6-luna"
+    "litellm/positron_openai/gpt-5.6-sol"
+    "litellm/positron_openai/gpt-5.6-terra"
     "litellm/openrouter/moonshotai/kimi-k3"
     "litellm/openrouter/qwen/qwen3.7-max"
   ];
@@ -686,8 +692,8 @@ let
       mcpServers = personalOpenCodeMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 83;
-      modelHash = "60109176ccaac86f841e538f1e757a9953442c8ebc831b511ef26019d978d0aa";
+      models = 86;
+      modelHash = "3b5a0d30be47c760fa7767b8c9fd8642c4f13e40efe976a992504e418dc627d3";
       hasDefault = true;
     };
     "hera-claude-personal" = {
@@ -723,8 +729,8 @@ let
       mcpServers = droidMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 89;
-      modelHash = "ecf118199fe8b4526a9f944a9d59f35b5f75923403c882b459dba994d2ccb2dd";
+      models = 95;
+      modelHash = "dc4f8f5f161d5d27b28a34285199df08f19c4a1c434a7f2a66b7e52691da59e3";
       hasDefault = false;
     };
     "hera-opencode" = {
@@ -733,8 +739,8 @@ let
       mcpServers = personalOpenCodeMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 82;
-      modelHash = "c6d7301ca2d9ab1a5e632d549fc42d108509ad36c6c8df34bed8cd590a2af338";
+      models = 85;
+      modelHash = "0def1231294a566b6dff836f12949c600ef1297a3875801bb94fa5d130beb4b9";
       hasDefault = true;
     };
     "hera-pi" = {
@@ -743,8 +749,8 @@ let
       mcpServers = baseMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 89;
-      modelHash = "ecf118199fe8b4526a9f944a9d59f35b5f75923403c882b459dba994d2ccb2dd";
+      models = 95;
+      modelHash = "dc4f8f5f161d5d27b28a34285199df08f19c4a1c434a7f2a66b7e52691da59e3";
       hasDefault = false;
     };
     "shared-work-claude-positron" = {
@@ -771,8 +777,8 @@ let
       mcpServers = baseMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 59;
-      modelHash = "5dd3cfd64201309b07b82f0330c3093c03d2745753c163b732c8217ed54880ea";
+      models = 62;
+      modelHash = "e0d60522b590f6f91f0cac9a3cfc3ff733bf1f04d850dc49586d98beac6fd9d7";
       hasDefault = true;
     };
     "vps-claude-personal" = {
@@ -2020,9 +2026,9 @@ let
     )
   );
   openCodeConfigHashes = {
-    clio-opencode = "7540ff41e2232abfc5f4435e4e6a3418c55d6b532205bb549f78600e1e243340";
-    hera-opencode = "f448925de464c301356ae10f044069b64a138ddf49613e5523b646da6c52f8c9";
-    shared-work-opencode-positron = "76949916454407e41d08c5467a424ebc62c86592398d872f2a340ec6aa1736e3";
+    clio-opencode = "f7068bb4bda57585af29a25c12194be17b121ca2b9ad0c69a686d04a3c5f6e5e";
+    hera-opencode = "606a86d471b43ef8a933c077c43951dd13d1e7179d70e939933e13412eba684e";
+    shared-work-opencode-positron = "9eb4def690a44be5785fe0996655ec3f32eee53cc621f0e6aea14afffb032c27";
     vulcan-opencode = "abe5634f22008b605ec8012906fa4df89b8d6846bc0e3c152c5b65cd0afc94ce";
   };
   openCodeRequiredEnvNames = {
@@ -2179,21 +2185,21 @@ let
           forbiddenDroidPaths profileId
         )) [ ])
         (expectEqual "${profileId} custom model count" (builtins.length expectedDroidSettings.customModels)
-          89
+          95
         )
         (expectEqual "${profileId} semantic settings oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedDroidSettings
-        )) "e370071ea1b0132a6e700a9bf314519053a810e5e0f4c90b7b1c3f9eb620513e")
+        )) "b381ca88437dafb580cf6b087c1fdcc3afaed42fb73bee1cd34f5824ef69d5b0")
         (expectEqual "${profileId} custom model provider counts" providerCounts {
           anthropic = 4;
-          generic-chat-completion-api = 83;
-          openai = 2;
+          generic-chat-completion-api = 86;
+          openai = 5;
         })
         (expectEqual "${profileId} LiteLLM extras count" (builtins.length (
           builtins.filter (
             model: model ? extraArgs && model ? extraHeaders
           ) expectedDroidSettings.customModels
-        )) 52)
+        )) 55)
         (expectEqual "${profileId} settings omit default"
           (builtins.hasAttr "defaultModel" expectedDroidSettings)
           false
@@ -2270,20 +2276,20 @@ let
           "positron-openai"
         ])
         (expectEqual "${profileId} provider model counts" providerCounts {
-          litellm = 52;
+          litellm = 55;
           llama-cpp-local = 24;
           nvidia = 1;
           omlx = 5;
           positron-anthropic = 4;
           positron-google = 2;
-          positron-openai = 1;
+          positron-openai = 4;
         })
         (expectEqual "${profileId} model count" (lib.foldl' (
           count: provider: count + builtins.length provider.models
-        ) 0 (builtins.attrValues expectedPiModels.providers)) 89)
+        ) 0 (builtins.attrValues expectedPiModels.providers)) 95)
         (expectEqual "${profileId} semantic models oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedPiModels
-        )) "fba2882ce84eef7fdb455cf9442370831e86e7aa9350cb307a7483eb062a22d3")
+        )) "38b22071e9191140af54587cf5da65355743549ea6f7a7b2da56019c591084f9")
         (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) [
           "Ref"
           "anvil"
@@ -3737,7 +3743,7 @@ let
       "selections"
     ])
     (expectEqual "registry provider count" (builtins.length rawModelRegistry.providers) 8)
-    (expectEqual "registry route count" (builtins.length rawModelRegistry.models) 113)
+    (expectEqual "registry route count" (builtins.length rawModelRegistry.models) 119)
     (expectEqual "provider facts match the frozen pre-migration snapshot"
       (builtins.hashString "sha256" (builtins.toJSON rawModelRegistry.providers))
       "076062e3c88481110f5dce4e857907502f38477a4f061580d31f0f8c4b5b5802"
@@ -3746,11 +3752,11 @@ let
       (builtins.hashString "sha256" (builtins.toJSON legacyComparableModels))
       "ac36d02b1f6d5839b059322ea642287167ac73a2f840b9136e74c0fdd6432cdc"
     )
-    (expectEqual "registry additions are exactly the two audited routes" (map routeKey (
+    (expectEqual "registry additions are exactly the eight audited routes" (map routeKey (
       builtins.filter (model: builtins.elem (routeKey model) addedRouteKeys) rawModelRegistry.models
     )) addedRouteKeys)
     (expectEqual "GLM-5.2 new source index" (routeKey (
-      builtins.elemAt rawModelRegistry.models 32
+      builtins.elemAt rawModelRegistry.models 35
     )) "litellm/openrouter/z-ai/glm-5.2")
     (expectEqual "GLM-5.2 frozen source index" (routeKey (
       builtins.elemAt legacyComparableModels 28
@@ -3763,7 +3769,7 @@ let
     )) (lib.range 0 7))
     (expectEqual "model source order" (map (model: model.sourceOrder) (
       lib.sort (left: right: left.sourceOrder < right.sourceOrder) (builtins.attrValues modelData.models)
-    )) (lib.range 0 112))
+    )) (lib.range 0 118))
     (expectEqual "alternate Claude default selection reaches catalog"
       alternateCatalog.items.settings.settings.base.model
       alternateRegistry.selections.claudeDefault.model
@@ -3996,10 +4002,10 @@ let
       ];
       hosts = [ "clio" ];
     })
-    (expectEqual "model pair count" (builtins.length (sortedNames modelData.models)) 113)
+    (expectEqual "model pair count" (builtins.length (sortedNames modelData.models)) 119)
     (expectEqual "model pair key hash" (builtins.hashString "sha256" (
       builtins.toJSON (sortedNames modelData.models)
-    )) "5a9d725f2eb96be4a8e689d543a20a0c678abd9878268994cb1f184e9718669f")
+    )) "9751f3076d26deb382983076791c105f4de56edf7a22fd1db9685eaab28e0c31")
     (expectEqual "sync inputs" modelData.syncInputs {
       chatUrl = "https://litellm.vulcan.lan/v1/chat/completions";
       model = "hera/omlx/Qwen3.6-27B-oQ4e-mtp";
