@@ -2246,10 +2246,12 @@ def assert_async_isolation(
         "(insert (number-to-string (emacs-pid)))) "
         "(while t))"
     )
-    # The timeout includes the one-shot Emacs cold start and its containment
-    # guard handshake.  Keep enough margin above the guard's own readiness
-    # ceiling that the expression demonstrably begins before it is killed.
-    async_timeout = 15
+    # Bound each phase explicitly: the fresh bridge may spend 10 seconds
+    # submitting, the isolated child gets 10 seconds to publish its marker,
+    # and the concurrent root probe gets the 20-second bridge readiness
+    # budget plus a five-second margin before the child is killed.
+    root_probe_budget = 20
+    async_timeout = 45
     async_deadline = time.monotonic() + async_timeout
     job_id = submit_async(
         launcher,
@@ -2274,7 +2276,7 @@ def assert_async_isolation(
         )
     child_pid = int(child_pid_file.read_text().strip())
 
-    root_probe_timeout = async_deadline - time.monotonic()
+    root_probe_timeout = min(root_probe_budget, async_deadline - time.monotonic())
     if root_probe_timeout <= 0:
         raise AssertionError("async child expired before the root isolation probe")
     root_pid = parse_pid_response(
@@ -2288,7 +2290,9 @@ def assert_async_isolation(
         "root Emacs",
     )
     if time.monotonic() >= async_deadline:
-        raise AssertionError("root probe did not complete while the async child was live")
+        raise AssertionError(
+            "root probe did not complete while the async child was live"
+        )
     if root_pid == child_pid:
         raise AssertionError("async expression ran inside the root Emacs")
 
