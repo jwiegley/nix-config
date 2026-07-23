@@ -2935,7 +2935,11 @@ def reap_supervisor_children(args: argparse.Namespace) -> None:
 def start_stdio_bridge(args: argparse.Namespace) -> subprocess.Popen[bytes]:
     """Launch stdio on inherited pipes without observing MCP request bytes."""
     socket_path = args.runtime_dir / "emacs" / "server"
-    temporary_path = args.runtime_dir / "tmp"
+    # Root startup replaces runtime_dir/tmp on every watchdog restart.  Keep
+    # the bridge's response transaction directory outside that daemon-owned
+    # tree so the same MCP pipe can recover after the root is relaunched.
+    temporary_path = args.runtime_dir / "transport-tmp"
+    ensure_private_directory(temporary_path)
     environment = transport_environment()
     environment["ANVIL_EMACS_SOCKET"] = str(socket_path)
     environment["ANVIL_EMACS_RUNTIME_DIR"] = str(args.runtime_dir)

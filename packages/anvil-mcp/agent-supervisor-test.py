@@ -4399,11 +4399,16 @@ for line in sys.stdin:
             options["env"]["ANVIL_EMACS_RUNTIME_DIR"],
             str(args.runtime_dir),
         )
+        transport_tmp = args.runtime_dir / "transport-tmp"
         for name in ("TMPDIR", "TMP", "TEMP"):
             self.assertEqual(
                 options["env"][name],
-                str(args.runtime_dir / "tmp"),
+                str(transport_tmp),
             )
+        transport_info = transport_tmp.lstat()
+        self.assertTrue(stat.S_ISDIR(transport_info.st_mode))
+        self.assertEqual(stat.S_IMODE(transport_info.st_mode), 0o700)
+        self.assertEqual(transport_info.st_uid, os.getuid())
 
     def test_stop_stdio_bridge_reports_failed_post_kill_reap(self):
         process = mock.Mock()
