@@ -25,6 +25,9 @@ READY_OBSERVER_TIMEOUT_SECONDS = 30.0
 SUCCESS_REPLY_TIMEOUT_SECONDS = 30.0
 DISPATCH_OBSERVER_TIMEOUT_SECONDS = 45.0
 OWNER_DISPATCH_OBSERVER_TIMEOUT_SECONDS = 15.0
+PREDISPATCH_PARSE_TIMEOUT_SECONDS = 10
+PREDISPATCH_MARKER_TIMEOUT_SECONDS = 7
+PREDISPATCH_REPLY_TIMEOUT_SECONDS = 12
 BRIDGE_TERM_GRACE_SECONDS = 0.5
 BRIDGE_REAP_TIMEOUT_SECONDS = 10.0
 FRAME_EXIT_TIMEOUT_SECONDS = 5.0
@@ -128,14 +131,18 @@ def make_executable(path: Path, source: str) -> None:
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
 
 
-def write_fake_emacsclient(path: Path, _bash: str) -> None:
-    """Create a child-free Python emacsclient with controlled responses."""
-    source = r"""#!__PYTHON__
+def write_fake_emacsclient(path: Path, bash: str) -> None:
+    """Create a loader-light readiness probe and controlled Python client."""
+    python_source = r"""#!__PYTHON__
 import base64
 import os
 from pathlib import Path
 import re
 import sys
+import time
+
+if os.environ.get("FAKE_PYTHON_START_DELAY"):
+    time.sleep(float(os.environ["FAKE_PYTHON_START_DELAY"]))
 
 
 def emit(descriptor, payload):
@@ -264,7 +271,79 @@ else:
     else:
         emit(1, ('"' + marker + '"\n').encode())
 """.replace("__PYTHON__", sys.executable)
+    python_path = path.with_name(f"{path.name}-stateful.py")
+    make_executable(python_path, python_source)
+    source = r"""#!__BASH__
+set -u
+if [[ -n "${ALTERNATE_EDITOR+x}" ]]; then
+    printf '%s\n' 'ALTERNATE_EDITOR leaked into emacsclient' >&2
+    exit 78
+fi
+expression=
+if (( $# > 0 )); then
+    expression="${!#}"
+fi
+if [[ "$expression" == t ]]; then
+    count=0
+    if [[ -e "$FAKE_PROBE_COUNT" ]]; then
+        IFS= read -r count < "$FAKE_PROBE_COUNT"
+        case "$count" in
+        ''|*[!0-9]*)
+            printf '%s\n' 'invalid fake probe count' >&2
+            exit 70
+            ;;
+        esac
+    fi
+    if ! printf '%s' "$((count + 1))" > "$FAKE_PROBE_COUNT"; then
+        printf '%s\n' 'failed to record fake probe count' >&2
+        exit 74
+    fi
+    printf 't\n'
+    exit 0
+fi
+exec __PYTHON__ -I -B __PYTHON_PATH__ "$@"
+"""
+    source = source.replace("__BASH__", bash)
+    source = source.replace("__PYTHON__", shlex.quote(sys.executable))
+    source = source.replace("__PYTHON_PATH__", shlex.quote(str(python_path)))
     make_executable(path, source)
+
+
+def run_fake_readiness_fast_path_regression(bash: str) -> None:
+    """Readiness must not depend on starting the stateful Python fixture."""
+    with tempfile.TemporaryDirectory(prefix="anvil-fake-readiness-") as raw:
+        root = Path(raw)
+        fake = root / "emacsclient"
+        probe_count = root / "probe-count"
+        write_fake_emacsclient(fake, bash)
+        environment = os.environ.copy()
+        environment.pop("ALTERNATE_EDITOR", None)
+        environment["FAKE_PROBE_COUNT"] = str(probe_count)
+        environment["FAKE_PYTHON_START_DELAY"] = "30"
+        result = subprocess.run(
+            [str(fake), "--eval", "t"],
+            check=False,
+            capture_output=True,
+            env=environment,
+            timeout=10,
+        )
+        if result.returncode != 0 or result.stdout != b"t\n" or result.stderr:
+            raise AssertionError(
+                f"fake readiness fast path failed rc={result.returncode}"
+            )
+        if probe_count.read_text(encoding="ascii") != "1":
+            raise AssertionError("readiness did not record exactly one probe")
+
+        environment["FAKE_PROBE_COUNT"] = str(root / "missing" / "probe-count")
+        failed = subprocess.run(
+            [str(fake), "--eval", "t"],
+            check=False,
+            capture_output=True,
+            env=environment,
+            timeout=10,
+        )
+        if failed.returncode == 0 or failed.stdout:
+            raise AssertionError("readiness ignored a probe-count write failure")
 
 
 def write_helper_wrapper(
@@ -1257,6 +1336,28 @@ def wait_for_bridge_ready(
     )
 
 
+def unexpected_reply_summary(reader: BinaryReader, deadline: float) -> str:
+    """Consume one unexpected line reply and return only bounded metadata."""
+    body = reader.line(deadline)
+    try:
+        document = json.loads(body)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return f"unparseable-bytes={len(body)}"
+    if not isinstance(document, dict):
+        return f"json-type={type(document).__name__}"
+    error = document.get("error")
+    if not isinstance(error, dict):
+        return f"id={document.get('id')!r} error-type={type(error).__name__}"
+    data = error.get("data")
+    if not isinstance(data, dict):
+        data = {}
+    return (
+        f"id={document.get('id')!r} code={error.get('code')!r} "
+        f"phase={data.get('phase')} dispatched={data.get('dispatched')} "
+        f"rc={data.get('emacsclientRc')!r}"
+    )
+
+
 def wait_for_dispatch_complete(
     marker: Path,
     process: subprocess.Popen[bytes],
@@ -1264,8 +1365,9 @@ def wait_for_dispatch_complete(
     expected: int,
     before_release: object | None = None,
     timeout: float = DISPATCH_OBSERVER_TIMEOUT_SECONDS,
+    unexpected_reply_reader: BinaryReader | None = None,
 ) -> None:
-    """Wait for dispatch, inject races, then release the fake client."""
+    """Wait for dispatch or fail promptly when a pre-dispatch reply arrives."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if marker.is_file():
@@ -1305,6 +1407,17 @@ def wait_for_dispatch_complete(
                     os.close(descriptor)
                 return
             raise AssertionError("fake client did not open acknowledgement FIFO")
+        if unexpected_reply_reader is not None and (
+            unexpected_reply_reader.buffer or unexpected_reply_reader.selector.select(0)
+        ):
+            summary = unexpected_reply_summary(
+                unexpected_reply_reader,
+                min(deadline, time.monotonic() + 1),
+            )
+            raise AssertionError(
+                f"bridge replied before stateful dispatch: {summary}; "
+                f"{unexpected_reply_reader.diagnostics()}"
+            )
         if process.poll() is not None:
             root = marker.parent
             raise AssertionError(
@@ -1320,6 +1433,79 @@ def wait_for_dispatch_complete(
         f"debug={safe_text(root / 'stdio.log')} "
         f"stderr={safe_text(root / 'bridge.stderr')}"
     )
+
+
+def run_dispatch_observer_reply_regression() -> None:
+    """A pre-dispatch reply must end marker observation immediately."""
+    with tempfile.TemporaryDirectory(prefix="anvil-dispatch-observer-") as raw:
+        root = Path(raw)
+        marker = root / "dispatch-complete"
+        ack_fifo = root / "dispatch-ack.fifo"
+        bridge_stderr = root / "bridge.stderr"
+        helper_marker = root / "postdispatch-helper"
+        dispatch_count = root / "dispatch-count"
+        os.mkfifo(ack_fifo)
+        reply = {
+            "jsonrpc": "2.0",
+            "id": 32,
+            "error": {
+                "code": -32603,
+                "message": "synthetic fixture readiness failure",
+                "data": {
+                    "phase": "readiness",
+                    "dispatched": False,
+                    "replayed": False,
+                    "emacsclientRc": 124,
+                },
+            },
+        }
+        script = (
+            "import sys, time; "
+            f"sys.stdout.buffer.write({json_bytes(reply)!r} + b'\\n'); "
+            "sys.stdout.buffer.flush(); time.sleep(30)"
+        )
+        stderr_handle = bridge_stderr.open("wb")
+        try:
+            process = subprocess.Popen(
+                [sys.executable, "-I", "-S", "-c", script],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=stderr_handle,
+                start_new_session=os.name == "posix",
+            )
+        finally:
+            stderr_handle.close()
+        reader = BinaryReader(
+            process,
+            root / "stdio.log",
+            bridge_stderr,
+            helper_marker,
+            dispatch_count,
+        )
+        if not reader.selector.select(READY_OBSERVER_TIMEOUT_SECONDS):
+            reader.close()
+            terminate_bridge(process)
+            raise AssertionError("pre-dispatch reply fixture did not publish")
+        try:
+            try:
+                wait_for_dispatch_complete(
+                    marker,
+                    process,
+                    ack_fifo,
+                    1,
+                    unexpected_reply_reader=reader,
+                    timeout=5,
+                )
+            except AssertionError as error:
+                if "phase=readiness" not in str(error):
+                    raise AssertionError(
+                        f"observer hid the pre-dispatch phase: {error}"
+                    ) from error
+            else:
+                raise AssertionError("observer ignored a pre-dispatch reply")
+        finally:
+            reader.close()
+            terminate_bridge(process)
 
 
 def assert_no_capture_paths(temp_dir: Path) -> None:
@@ -1542,7 +1728,9 @@ def run_predispatch_freeze(
             [printf_wire(json_bytes(expected))],
             bash,
         )
-        environment["ANVIL_MCP_REQUEST_PARSE_TIMEOUT"] = "5"
+        environment["ANVIL_MCP_REQUEST_PARSE_TIMEOUT"] = str(
+            PREDISPATCH_PARSE_TIMEOUT_SECONDS
+        )
         python_wrapper = paths["binary"] / "python3"
         write_blocking_predispatch_wrapper(
             python_wrapper,
@@ -1580,15 +1768,20 @@ def run_predispatch_freeze(
                 process,
                 {"jsonrpc": "2.0", "id": 31, "method": "test"},
             )
-            if not wait_until(paths["predispatch_marker"].is_file, 5):
-                raise AssertionError("frozen pre-dispatch helper did not start")
+            if not wait_until(
+                paths["predispatch_marker"].is_file,
+                PREDISPATCH_MARKER_TIMEOUT_SECONDS,
+            ):
+                raise AssertionError(
+                    f"frozen pre-dispatch helper did not start: {reader.diagnostics()}"
+                )
             marker = json.loads(paths["predispatch_marker"].read_text(encoding="utf-8"))
             frozen_pid = int(marker["pid"])
             read_reply(
                 reader,
                 synthetic_parse_runner_error(124),
                 framed=False,
-                timeout_seconds=7,
+                timeout_seconds=PREDISPATCH_REPLY_TIMEOUT_SECONDS,
             )
             if read_count(paths["dispatch_count"]) != 0:
                 raise AssertionError("pre-dispatch failure reached stateful Emacs")
@@ -1611,6 +1804,7 @@ def run_predispatch_freeze(
                 process,
                 paths["dispatch_ack_fifo"],
                 1,
+                unexpected_reply_reader=reader,
             )
             read_reply(reader, expected, framed=False)
             paths["dispatch_complete"].unlink()
@@ -3576,6 +3770,8 @@ def main() -> int:
 
     run_bridge_reap_budget_regression()
     run_cleanup_rescan_regression(stdio)
+    run_fake_readiness_fast_path_regression(bash)
+    run_dispatch_observer_reply_regression()
 
     real_helpers: dict[str, str] = {}
     for name in HELPER_NAMES:
