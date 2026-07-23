@@ -2822,6 +2822,9 @@ let
           sortedNames evaluation.config.home.file
         )) expectedPaths)
         (expectEqual "${name} enabled clients" actualClients task9ExpectedClients.${expectedClass})
+        (expectEqual "${name} forces every managed AI leaf" (builtins.all (
+          path: evaluation.config.home.file.${path}.force
+        ) expectedPaths) true)
         (expectEqual "${name} Droid bridge selection" (task9HasBridge spec.system evaluation) (
           name == "hera"
         ))

@@ -225,7 +225,7 @@ in
   ];
 
   home = {
-    file = mergedFiles;
+    file = lib.mapAttrs (_: file: file // { force = true; }) mergedFiles;
     packages = lib.optional droidSelected inputs.ai-nix.packages.${system}.agent-http-header-bridge;
     activation = {
       aiManagedPreflight = preflight.activation;

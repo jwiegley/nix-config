@@ -122,14 +122,6 @@ let
       printf '%s\n' "$1" >> "$errors_file"
     }
 
-    report_tamper() {
-      report_error "$1: restore the exact previous Home Manager link before switching"
-    }
-
-    report_previous_generation() {
-      report_error "$1: restore the previous Home Manager generation before switching"
-    }
-
     path_kind() {
       if [ -L "$1" ]; then
         printf '%s' symlink
@@ -155,6 +147,21 @@ let
       current=$2
       kind="$(path_kind "$current")"
       report_error "$path: blocking leaf is a $kind: $current"
+    }
+
+    report_external_symlink() {
+      path=$1
+      current=$2
+      report_error "$path: blocking leaf is a symlink outside the Nix store: $current"
+    }
+
+    symlink_targets_nix_store() {
+      current=$1
+      normalized="$(${pkgs.coreutils}/bin/readlink -m -- "$current" 2>/dev/null || true)"
+      case "$normalized" in
+        ${builtins.storeDir} | ${builtins.storeDir}/*) return 0 ;;
+      esac
+      return 1
     }
 
     report_parent_collision() {
@@ -279,160 +286,29 @@ let
       return 0
     }
 
-    is_managed_ai_path() {
-      case "$1" in
-        .agents/skills/* | \
-        .claude/agents/* | .claude/commands/* | .claude/skills/* | \
-        .codex/agents/* | \
-        .config/claude/personal/agents/* | \
-        .config/claude/personal/commands/* | \
-        .config/claude/personal/skills/* | \
-        .config/claude/positron/agents/* | \
-        .config/claude/positron/commands/* | \
-        .config/claude/positron/skills/* | \
-        .config/codex/agents/* | \
-        .config/factory/droids/* | .config/factory/skills/* | \
-        .config/opencode/agents/* | \
-        .config/opencode/commands/* | \
-        .config/opencode/skills/* | \
-        .pi/agent/agents/* | .pi/agent/prompts/* | \
-        .claude/nix-managed-mcp.json | \
-        .claude/nix-managed-settings.json | \
-        .claude/statusline-command.sh | \
-        .codex/hooks.json | \
-        .codex/nix-managed.config.toml | \
-        .config/claude/personal/nix-managed-mcp.json | \
-        .config/claude/personal/nix-managed-settings.json | \
-        .config/claude/personal/statusline-command.sh | \
-        .config/claude/positron/nix-managed-mcp.json | \
-        .config/claude/positron/nix-managed-settings.json | \
-        .config/claude/positron/statusline-command.sh | \
-        .config/codex/hooks.json | \
-        .config/codex/nix-managed.config.toml | \
-        .config/factory/mcp.json | \
-        .config/factory/nix-managed-settings.json | \
-        .config/mcp/mcp.json | \
-        .config/opencode/opencode.json | \
-        .pi/agent/extensions/pi-mcp-adapter | \
-        .pi/agent/extensions/pi-quiet | \
-        .pi/agent/extensions/pi-subagent | \
-        .pi/agent/models.json | \
-        .local/bin/claude)
-          return 0
-          ;;
-      esac
-      return 1
-    }
-
-    is_separate_writer() {
-      case "$1" in
-        .claude/skills/sherlock/SKILL.md | \
-        .claude/skills/sherlock/sherlock)
-          return 0
-          ;;
-      esac
-      return 1
-    }
-
-    old_path_has_real_parents() {
-      path=$1
-      relative_parent="''${path%/*}"
-      candidate="$old_files"
-      remaining="$relative_parent"
-
-      while [ -n "$remaining" ]; do
-        case "$remaining" in
-          */*)
-            component="''${remaining%%/*}"
-            remaining="''${remaining#*/}"
-            ;;
-          *)
-            component="$remaining"
-            remaining=
-            ;;
-        esac
-        candidate="$candidate/$component"
-        if [ -L "$candidate" ] || [ ! -d "$candidate" ]; then
-          return 1
-        fi
-      done
-      return 0
-    }
-
-    old_leaf_is_managed() {
-      path=$1
-      [ -n "$old_files" ] || return 1
-      old_path_has_real_parents "$path" || return 1
-      [ -f "$old_files/$path" ] || [ -L "$old_files/$path" ]
-    }
-
-    check_previous_link() {
+    check_existing_managed_leaf() {
       path=$1
       current="$HOME/$path"
-      if [ ! -L "$current" ] || [ ! -e "$current" ]; then
-        report_tamper "$path"
+      if [ ! -e "$current" ] && [ ! -L "$current" ]; then
         return 0
       fi
-      actual_target="$(${pkgs.coreutils}/bin/readlink "$current" 2>/dev/null || true)"
-      if [ "$actual_target" != "$old_files/$path" ]; then
-        report_tamper "$path"
+      if [ -L "$current" ]; then
+        if symlink_targets_nix_store "$current"; then
+          return 0
+        fi
+        report_external_symlink "$path" "$current"
+        return 0
       fi
+      report_leaf_collision "$path" "$current"
       return 0
     }
-
-    old_files=
-    old_generation_valid=true
-    if [[ -v oldGenPath ]]; then
-      old_files="$(${pkgs.coreutils}/bin/readlink -e "$oldGenPath/home-files" 2>/dev/null || true)"
-      if [ -z "$old_files" ] || [ ! -d "$old_files" ]; then
-        report_previous_generation "$oldGenPath/home-files"
-        old_generation_valid=false
-      fi
-    fi
-
-    if [ "$old_generation_valid" = true ] && [ -n "$old_files" ]; then
-      if ${pkgs.findutils}/bin/find "$old_files" \( -type f -o -type l \) \
-        -printf '%P\0' 2>/dev/null \
-        | while IFS= read -r -d "" path; do
-          if is_managed_ai_path "$path" && ! is_separate_writer "$path"; then
-            check_previous_link "$path"
-            if ! check_path_parents "$path"; then
-              :
-            fi
-          fi
-        done
-      then
-        pipeline_status=( "''${PIPESTATUS[@]}" )
-      else
-        pipeline_status=( "''${PIPESTATUS[@]}" )
-      fi
-      if [ "''${pipeline_status[1]}" -ne 0 ]; then
-        report_previous_generation "$oldGenPath/home-files"
-      fi
-      if [ "''${pipeline_status[0]}" -ne 0 ]; then
-        report_previous_generation "$oldGenPath/home-files"
-      fi
-    fi
 
     while IFS= read -r path; do
       [ -n "$path" ] || continue
-      was_managed=false
-      if [ "$old_generation_valid" = true ] && old_leaf_is_managed "$path"; then
-        was_managed=true
-      fi
-
       if ! check_path_parents "$path"; then
         continue
       fi
-
-      if [ "$old_generation_valid" != true ] || [ "$was_managed" = true ]; then
-        continue
-      fi
-
-      current="$HOME/$path"
-      if [ -e "$current" ] || [ -L "$current" ]; then
-        report_leaf_collision "$path" "$current"
-      fi
+      check_existing_managed_leaf "$path"
     done < ${lib.escapeShellArg newPathsFile}
 
     ${piGuardScript}

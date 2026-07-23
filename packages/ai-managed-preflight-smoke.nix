@@ -52,6 +52,7 @@ let
     mkdir -p "$out"
     ln -s /tmp/task9-ai-preflight-store-escape "$out/personal"
   '';
+  task9RetainedStoreLeaf = pkgs.writeText "task9-retained-leaf" "retained";
   writePreflightScript =
     name: preflight:
     pkgs.writeShellScript name ''
@@ -194,7 +195,8 @@ pkgs.runCommand "ai-managed-preflight-smoke"
       make_leaf "$old_files" ".claude/skills/sherlock/SKILL.md" sherlock
       make_leaf "$old_files" ".claude/skills/sherlock/sherlock" sherlock-bin
 
-      link_old_leaf "$retained_path"
+      mkdir -p "$case_home/$(dirname "$retained_path")"
+      ln -s ${task9RetainedStoreLeaf} "$case_home/$retained_path"
       link_old_leaf "$removed_path"
       link_old_leaf "$legacy_claude"
       link_old_leaf "$symlink_leaf"
@@ -283,8 +285,9 @@ pkgs.runCommand "ai-managed-preflight-smoke"
           new-directory | new-old-directory-shadow)
             expected_output="$fragment: blocking leaf is a directory: $case_home/$fragment"
             ;;
-          new-valid-symlink | new-dangling-symlink)
-            expected_output="$fragment: blocking leaf is a symlink: $case_home/$fragment"
+          new-valid-symlink | new-dangling-symlink | \
+          retained-retargeted | retained-same-payload | retained-dangling)
+            expected_output="$fragment: blocking leaf is a symlink outside the Nix store: $case_home/$fragment"
             ;;
           new-ancestor-file)
             expected_output="$new_path: blocking parent is a regular file: $case_home/.config/claude/personal/agents
@@ -296,9 +299,7 @@ pkgs.runCommand "ai-managed-preflight-smoke"
             ;;
           retained-readonly-parent)
             expected_output="$new_path: blocking parent is an unwritable directory: $case_home/.config/claude/personal/agents
-    $removed_path: blocking parent is an unwritable directory: $case_home/.config/claude/personal/agents
-    $retained_path: blocking parent is an unwritable directory: $case_home/.config/claude/personal/agents
-    $symlink_leaf: blocking parent is an unwritable directory: $case_home/.config/claude/personal/agents"
+    $retained_path: blocking parent is an unwritable directory: $case_home/.config/claude/personal/agents"
             ;;
           new-unsearchable-parent)
             expected_output="$new_path: blocking parent is an unsearchable directory: $case_home/.config/claude/personal/agents
@@ -326,14 +327,8 @@ pkgs.runCommand "ai-managed-preflight-smoke"
           aggregate-*)
             expected_output="$fragment"
             ;;
-          missing-* | old-home-files-not-directory | unreadable-old-files)
-            expected_output="''${old_override:-$old_gen}/home-files: $fragment"
-            ;;
-          legacy-readonly-parent)
-            expected_output="$legacy_claude: blocking parent is an unwritable directory: $case_home/.local/bin"
-            ;;
-          retained-* | removed-* | legacy-*)
-            expected_output="$fragment: restore the exact previous Home Manager link before switching"
+          retained-file)
+            expected_output="$fragment: blocking leaf is a regular file: $case_home/$fragment"
             ;;
           pi-*)
             expected_output="$fragment: keep valid adapter JSON without top-level mcpServers or imports"
@@ -428,41 +423,32 @@ pkgs.runCommand "ai-managed-preflight-smoke"
 
     setup_empty_case missing-old-generation
     old_override="$case_root/missing-generation"
-    run_checked fail missing-old-generation \
-      "restore the previous Home Manager generation before switching" \
-      "${task9PreflightScript}" present
+    run_checked pass missing-old-generation "" "${task9PreflightScript}" present
 
     setup_empty_case aggregate-missing-old-generation-parent
     old_override="$case_root/missing-generation"
     mkdir -p "$case_home/.config"
     chmod 0555 "$case_home/.config"
     aggregate_output="$new_path: blocking parent is an unwritable directory: $case_home/.config
-    $retained_path: blocking parent is an unwritable directory: $case_home/.config
-    $old_override/home-files: restore the previous Home Manager generation before switching"
+    $retained_path: blocking parent is an unwritable directory: $case_home/.config"
     run_checked fail aggregate-missing-old-generation-parent "$aggregate_output" \
       "${task9PreflightScript}" present
 
     setup_empty_case missing-home-files
     old_gen="$case_root/old-generation"
     mkdir -p "$old_gen"
-    run_checked fail missing-home-files \
-      "restore the previous Home Manager generation before switching" \
-      "${task9PreflightScript}" present
+    run_checked pass missing-home-files "" "${task9PreflightScript}" present
 
     setup_empty_case old-home-files-not-directory
     old_gen="$case_root/old-generation"
     mkdir -p "$old_gen"
     make_leaf "$old_gen" home-files wrong-type
-    run_checked fail old-home-files-not-directory \
-      "restore the previous Home Manager generation before switching" \
-      "${task9PreflightScript}" present
+    run_checked pass old-home-files-not-directory "" "${task9PreflightScript}" present
 
     setup_old_case unreadable-old-files
     mkdir -p "$old_files/unreadable"
     chmod 000 "$old_files/unreadable"
-    run_checked fail unreadable-old-files \
-      "restore the previous Home Manager generation before switching" \
-      "${task9PreflightScript}" present
+    run_checked pass unreadable-old-files "" "${task9PreflightScript}" present
 
     setup_old_case aggregate-unreadable-old-files
     mkdir -p "$old_files/unreadable"
@@ -470,8 +456,7 @@ pkgs.runCommand "ai-managed-preflight-smoke"
     make_leaf "$case_home" "$new_path" collision
     make_leaf "$case_home" ".pi/agent/mcp.json" '{"imports":[]}'
     aggregate_output="$new_path: blocking leaf is a regular file: $case_home/$new_path
-    .pi/agent/mcp.json: keep valid adapter JSON without top-level mcpServers or imports
-    $old_gen/home-files: restore the previous Home Manager generation before switching"
+    .pi/agent/mcp.json: keep valid adapter JSON without top-level mcpServers or imports"
     run_checked fail aggregate-unreadable-old-files "$aggregate_output" \
       "${task9PreflightScript}" present
 
@@ -497,9 +482,34 @@ pkgs.runCommand "ai-managed-preflight-smoke"
     ln -s "$case_root/missing" "$case_home/$new_path"
     run_checked fail new-dangling-symlink "$new_path" "${task9PreflightScript}" present
 
+    setup_old_case new-store-symlink
+    mkdir -p "$case_home/$(dirname "$new_path")"
+    ln -s ${pkgs.coreutils}/bin/true "$case_home/$new_path"
+    run_checked pass new-store-symlink "" "${task9PreflightScript}" present
+
+    setup_old_case new-dangling-store-symlink
+    mkdir -p "$case_home/$(dirname "$new_path")"
+    ln -s ${builtins.storeDir}/00000000000000000000000000000000-missing "$case_home/$new_path"
+    run_checked pass new-dangling-store-symlink "" "${task9PreflightScript}" present
+
+    setup_old_case new-relative-store-symlink
+    mkdir -p "$case_home/$(dirname "$new_path")"
+    relative_target="$(realpath --relative-to="$(dirname "$case_home/$new_path")" \
+      ${pkgs.coreutils}/bin/true)"
+    ln -s "$relative_target" "$case_home/$new_path"
+    run_checked pass new-relative-store-symlink "" "${task9PreflightScript}" present
+
+    setup_old_case new-relative-dangling-store-symlink
+    mkdir -p "$case_home/$(dirname "$new_path")"
+    relative_target="$(realpath -m --relative-to="$(dirname "$case_home/$new_path")" \
+      ${builtins.storeDir}/00000000000000000000000000000000-missing)"
+    ln -s "$relative_target" "$case_home/$new_path"
+    run_checked pass new-relative-dangling-store-symlink "" \
+      "${task9PreflightScript}" present
+
     setup_old_case retained-missing
     rm "$case_home/$retained_path"
-    run_checked fail retained-missing "$retained_path" "${task9PreflightScript}" present
+    run_checked pass retained-missing "" "${task9PreflightScript}" present
 
     setup_old_case retained-readonly-parent
     mv "$case_home/.config/claude" "$case_root/claude-root"
@@ -507,11 +517,9 @@ pkgs.runCommand "ai-managed-preflight-smoke"
     chmod 0555 "$case_root/claude-root/personal/agents"
     run_checked fail retained-readonly-parent "$retained_path" "${task9PreflightScript}" present
 
-    setup_old_case aggregate-old-tamper
+    setup_old_case aggregate-old-missing
     rm "$case_home/$removed_path" "$case_home/$retained_path"
-    aggregate_output="$removed_path: restore the exact previous Home Manager link before switching
-    $retained_path: restore the exact previous Home Manager link before switching"
-    run_checked fail aggregate-old-tamper "$aggregate_output" "${task9PreflightScript}" present
+    run_checked pass aggregate-old-missing "" "${task9PreflightScript}" present
 
     setup_old_case retained-file
     rm "$case_home/$retained_path"
@@ -535,45 +543,54 @@ pkgs.runCommand "ai-managed-preflight-smoke"
     ln -s "$case_root/missing" "$case_home/$retained_path"
     run_checked fail retained-dangling "$retained_path" "${task9PreflightScript}" present
 
+    setup_old_case retained-store-symlink
+    rm "$case_home/$retained_path"
+    ln -s ${pkgs.coreutils}/bin/true "$case_home/$retained_path"
+    run_checked pass retained-store-symlink "" "${task9PreflightScript}" present
+
+    setup_old_case retained-dangling-store-symlink
+    rm "$case_home/$retained_path"
+    ln -s ${builtins.storeDir}/00000000000000000000000000000000-missing \
+      "$case_home/$retained_path"
+    run_checked pass retained-dangling-store-symlink "" "${task9PreflightScript}" present
+
     setup_old_case removed-missing
     rm "$case_home/$removed_path"
-    run_checked fail removed-missing "$removed_path" "${task9PreflightScript}" present
+    run_checked pass removed-missing "" "${task9PreflightScript}" present
 
     setup_old_case removed-symlink-leaf-missing
     rm "$case_home/$symlink_leaf"
-    run_checked fail removed-symlink-leaf-missing "$symlink_leaf"       "${task9PreflightScript}" present
+    run_checked pass removed-symlink-leaf-missing "" "${task9PreflightScript}" present
 
     setup_old_case removed-file
     rm "$case_home/$removed_path"
     make_leaf "$case_home" "$removed_path" replacement
-    run_checked fail removed-file "$removed_path" "${task9PreflightScript}" present
+    run_checked pass removed-file "" "${task9PreflightScript}" present
 
     setup_old_case removed-dangling
     rm "$case_home/$removed_path"
     ln -s "$case_root/missing" "$case_home/$removed_path"
-    run_checked fail removed-dangling "$removed_path" "${task9PreflightScript}" present
+    run_checked pass removed-dangling "" "${task9PreflightScript}" present
 
     setup_old_case removed-retargeted
     make_leaf "$case_root" alternate removed
     rm "$case_home/$removed_path"
     ln -s "$case_root/alternate" "$case_home/$removed_path"
-    run_checked fail removed-retargeted "$removed_path" "${task9PreflightScript}" present
+    run_checked pass removed-retargeted "" "${task9PreflightScript}" present
 
     setup_old_case legacy-claude-missing
     rm "$case_home/$legacy_claude"
-    run_checked fail legacy-claude-missing "$legacy_claude" "${task9PreflightScript}" present
+    run_checked pass legacy-claude-missing "" "${task9PreflightScript}" present
 
     setup_old_case legacy-claude-retargeted
     make_leaf "$case_root" alternate legacy
     rm "$case_home/$legacy_claude"
     ln -s "$case_root/alternate" "$case_home/$legacy_claude"
-    run_checked fail legacy-claude-retargeted "$legacy_claude" \
-      "${task9PreflightScript}" present
+    run_checked pass legacy-claude-retargeted "" "${task9PreflightScript}" present
 
     setup_old_case legacy-readonly-parent
     chmod 0555 "$case_home/.local/bin"
-    run_checked fail legacy-readonly-parent "$legacy_claude" \
-      "${task9PreflightScript}" present
+    run_checked pass legacy-readonly-parent "" "${task9PreflightScript}" present
 
     setup_empty_case shared-agent-directories
     for sibling in \
