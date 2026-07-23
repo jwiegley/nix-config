@@ -180,18 +180,18 @@
         "translate-tool": "translate-tool"
       },
       "locked": {
-        "lastModified": 1784772777,
-        "narHash": "sha256-0z/fdcRq9946EPWP1qlptZMfz8SZmEFlJlUwTmJk4rI=",
-        "ref": "refs/heads/main",
-        "rev": "8fbb74948523979a166f39326ca14af4647d5f2d",
-        "revCount": 95,
-        "type": "git",
-        "url": "https://github.com/jwiegley/ai-nix"
+        "lastModified": 1784785254,
+        "narHash": "sha256-EpmQYFWS8R6ZbjEFadPWTAruyZ1DP2473CxmNU1hyeY=",
+        "owner": "jwiegley",
+        "repo": "ai-nix",
+        "rev": "324e8f05b9651858564f533c85693ef1a620c394",
+        "type": "github"
       },
       "original": {
-        "rev": "8fbb74948523979a166f39326ca14af4647d5f2d",
-        "type": "git",
-        "url": "https://github.com/jwiegley/ai-nix"
+        "owner": "jwiegley",
+        "ref": "main",
+        "repo": "ai-nix",
+        "type": "github"
       }
     },
     "bun2nix": {
