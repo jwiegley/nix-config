@@ -125,9 +125,11 @@ printf '%s\\n%s' "$LITELLM_API_KEY" "$REF_API_KEY" >"$CAPTURE_ENV"
             )
             exec_index = argv.index("exec")
             provider_index = argv.index('model_provider="litellm"')
-            reasoning_index = argv.index('model_reasoning_effort="medium"')
+            reasoning_index = argv.index('model_reasoning_effort="ultra"')
             self.assertLess(exec_index, provider_index)
             self.assertLess(provider_index, reasoning_index)
+            self.assertEqual(argv.count('model_reasoning_effort="ultra"'), 1)
+            self.assertNotIn('model_reasoning_effort="medium"', argv)
             self.assertNotIn("-m", argv)
             self.assertNotIn("--model", argv)
             self.assertNotIn("gpt-5.6-sol", argv)
@@ -192,6 +194,62 @@ printf '%s\\0' "$@" >"$CAPTURE_ARGV"
                 self.assertNotIn("-m", argv)
                 self.assertNotIn("--model", argv)
                 self.assertFalse(any(arg.startswith("--model=") for arg in argv))
+
+    def test_preserves_intentional_non_medium_reasoning_override(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            pass_bin = root / "pass"
+            codex_bin = root / "codex-real"
+            argv_path = root / "argv"
+
+            write_executable(
+                pass_bin,
+                f"""#!/usr/bin/env bash
+case "$1" in
+  litellm.vulcan.lan) printf '%s\\n' '{SYNTHETIC_LITELLM_SECRET}' ;;
+  api.ref.tools) printf '%s\\n' '{SYNTHETIC_REF_SECRET}' ;;
+  *) exit 1 ;;
+esac
+""",
+            )
+            write_executable(
+                codex_bin,
+                """#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\0' "$@" >"$CAPTURE_ARGV"
+""",
+            )
+            result = subprocess.run(
+                [
+                    str(WRAPPER),
+                    "-c",
+                    'model_reasoning_effort="xhigh"',
+                    "resume",
+                    "session-id",
+                ],
+                capture_output=True,
+                text=True,
+                env={
+                    **os.environ,
+                    "CODEX_LITELLM_PASS_BIN": str(pass_bin),
+                    "CODEX_LITELLM_REAL_CODEX": str(codex_bin),
+                    "CAPTURE_ARGV": str(argv_path),
+                },
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            argv = [
+                item.decode()
+                for item in argv_path.read_bytes().split(b"\0")
+                if item
+            ]
+            self.assertIn('model_reasoning_effort="ultra"', argv)
+            self.assertIn('model_reasoning_effort="xhigh"', argv)
+            self.assertLess(
+                argv.index('model_reasoning_effort="ultra"'),
+                argv.index('model_reasoning_effort="xhigh"'),
+            )
 
     def test_empty_credential_fails_before_codex_runs(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -45,6 +45,10 @@ is_routed_model() {
     [[ $1 == "$routed_model" || $1 == "$short_model" ]]
 }
 
+is_generated_medium_effort() {
+    [[ $1 == 'model_reasoning_effort="medium"' ]]
+}
+
 forward_args=()
 while (($#)); do
     if [[ $1 == -- ]]; then
@@ -59,6 +63,18 @@ while (($#)); do
         shift
         continue
     fi
+    if [[ ($1 == -c || $1 == --config) && $# -ge 2 ]] && is_generated_medium_effort "$2"; then
+        shift 2
+        continue
+    fi
+    if [[ $1 == -c* ]] && is_generated_medium_effort "${1#-c}"; then
+        shift
+        continue
+    fi
+    if [[ $1 == --config=* ]] && is_generated_medium_effort "${1#--config=}"; then
+        shift
+        continue
+    fi
     forward_args+=("$1")
     shift
 done
@@ -70,6 +86,7 @@ litellm_args=(
     -c 'model_providers.litellm.base_url="https://litellm.vulcan.lan/v1"'
     -c 'model_providers.litellm.env_key="LITELLM_API_KEY"'
     -c 'model_providers.litellm.wire_api="responses"'
+    -c 'model_reasoning_effort="ultra"'
     -c 'shell_environment_policy.filters.LITELLM_API_KEY="exclude"'
     -c 'shell_environment_policy.set.LITELLM_API_KEY=""'
     -c 'shell_environment_policy.filters.REF_API_KEY="exclude"'

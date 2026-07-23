@@ -180,11 +180,11 @@
         "translate-tool": "translate-tool"
       },
       "locked": {
-        "lastModified": 1784828085,
-        "narHash": "sha256-ZqWKwgd043gdbEqNxZ6f/vQfNDaJbGJHMHgZVbS/Eaw=",
+        "lastModified": 1784842652,
+        "narHash": "sha256-hrkFx+/PGsjFtm+hNibCUAuy+iz3YWj35qNnd+x5Qyw=",
         "owner": "jwiegley",
         "repo": "ai-nix",
-        "rev": "c17255f34e6fd92be3540d419357ed2678a8931a",
+        "rev": "34a0a4d24548f7430ff5c9555f15d8fbda9f541d",
         "type": "github"
       },
       "original": {
