@@ -25,7 +25,7 @@ This work will:
 - install both packages through `/Users/johnw/src/nix/config/packages.nix` when the overlay makes them available;
 - support `aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`;
 - add a Nix smoke test that exercises a real local Fractal initialization; and
-- change Pi's live `toolPendingBg` from `#321205` to the final `#080604` after iterative visual calibration.
+- set Pi's live `toolPendingBg` value to the user-selected brown `#291B04`.
 
 This work will not:
 
@@ -247,18 +247,13 @@ Change the live custom theme at:
 /Users/johnw/.pi/agent/themes/dark-tool-backgrounds.json
 ```
 
-Only `vars.toolPendingBg` changes:
+The final user-selected value is:
 
 ```text
-#321205 -> #080604
+#291B04
 ```
 
-The completed-tool background remains `#180526`. Using WCAG linearized sRGB luminance:
-
-- completed purple `#180526`: `0.00442672`;
-- final pending brown `#080604`: `0.00190639`.
-
-The final value retains the 30-degree earthy-brown hue and 50% saturation of the preceding `#100c08` candidate while reducing its linear-sRGB luminance to 48.8%. It is therefore approximately half as luminous as the prior pending background and substantially darker than the completed purple. Pi themes hot-reload, so no process restart is required. Validation parses the JSON, verifies the exact two values, and confirms that all other theme fields remain unchanged.
+The completed-tool background remains `#180526`. Pi themes hot-reload, although `/reload` may still be used to force resource refresh. Validation parses the JSON, verifies the exact two values, and confirms that all other theme fields remain unchanged.
 
 ## Deliverables
 
@@ -292,5 +287,5 @@ The work is complete when all of the following hold:
 5. `nix` selects both packages through its existing optional-package mechanism.
 6. No skill destination, credential file, Fractal project, lock file, or host generation is mutated.
 7. The Option B handoff report is complete and independently actionable by the Nix-managed skills session.
-8. Pi's pending tool background is exactly `#080604`, its completed background remains `#180526`, and the custom theme remains otherwise unchanged.
+8. Pi's pending tool background is exactly `#291B04`, its completed background remains `#180526`, and the custom theme remains otherwise unchanged.
 9. Relevant checks pass without warnings, and final diffs contain no unrelated changes.
