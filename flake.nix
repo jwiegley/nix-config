@@ -2207,6 +2207,7 @@
         in
         {
           build = self.packages.${system}.default;
+          agent-deck-go-compat = pkgs.callPackage ./overlays/tests/agent-deck-go-compat.nix { };
           fractal-smoke = pkgs.callPackage ./overlays/tests/plasma-fractal-smoke.nix { };
           llama-cpp-platform-compat = pkgs.callPackage ./overlays/tests/llama-cpp-platform-compat.nix { };
           agent-resources = pkgs.callPackage ./tests/agent-resources.nix {

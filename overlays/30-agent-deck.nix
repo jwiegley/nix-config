@@ -1,12 +1,12 @@
 # overlays/30-agent-deck.nix
 # Purpose: agent-deck - Terminal (tmux) session manager for AI coding agents
-# Dependencies: Uses prev only
+# Dependencies: Uses prev only; Go 1.26 satisfies the upstream module floor
 # Packages: agent-deck
 _final: prev: {
 
   agent-deck =
     with prev;
-    buildGoModule rec {
+    buildGo126Module rec {
       pname = "agent-deck";
       version = "1.10.10";
 
