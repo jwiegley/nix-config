@@ -11,10 +11,10 @@ let
   policy = anvilMcp.timeoutPolicy;
   soakCycles = 25;
   soakBridgeCount = 2;
-  # The 25-cycle subprocess derives to a 160m02s TERM deadline and a 161m32s
+  # The 25-cycle subprocess derives to a 160m38s TERM deadline and a 161m58s
   # absolute SIGKILL horizon.  Keep a nearby finite ceiling without reducing
   # any recovery cycle, nested call bound, named phase, or process margin.
-  soakKillAfterSeconds = 90;
+  soakKillAfterSeconds = 80;
   soakProcessHardCeilingSeconds = 162 * 60;
   soakFocusedTimeoutSeconds = 420;
   watchdogResponseGraceSeconds = 30;
@@ -42,7 +42,17 @@ let
   soakAsyncCompatibilityPollSeconds = 45;
   soakAsyncProjectPollSeconds = 25;
   soakAsyncMarkerSeconds = 15;
+  soakAsyncMarkerSchedulingGraceSeconds = 5;
   soakAsyncPulseSeconds = 3;
+  soakAsyncResultPublicationGraceSeconds = 5;
+  soakAsyncLoopJobSeconds =
+    soakAsyncSubmissionSeconds
+    + soakAsyncMarkerSeconds
+    + soakToolCallSeconds
+    + soakAsyncPulseSeconds
+    + soakAsyncMarkerSchedulingGraceSeconds;
+  soakAsyncLoopSettleSeconds = soakAsyncLoopJobSeconds + soakAsyncResultPublicationGraceSeconds;
+  soakAsyncRecoveredSettleSeconds = soakAsyncMarkerSeconds + soakAsyncProjectPollSeconds;
   soakAsyncChildExitSeconds = 10;
   soakWorkerInventorySeconds = 110;
   soakProcessSnapshotSeconds = 30;
@@ -50,20 +60,14 @@ let
   soakInventorySchedulingGraceSeconds = 30;
   soakYieldingResponseSeconds = 50 + watchdogResponseGraceSeconds;
   soakAsyncChildIsolationSeconds =
-    soakAsyncSubmissionSeconds
-    + soakAsyncMarkerSeconds
-    + soakAsyncProjectPollSeconds
-    + soakAsyncChildExitSeconds;
+    soakAsyncSubmissionSeconds + soakAsyncRecoveredSettleSeconds + soakAsyncChildExitSeconds;
   soakAsyncIsolationSeconds =
     soakAsyncSubmissionSeconds
     + soakAsyncCompatibilityPollSeconds
     + soakAsyncSubmissionSeconds
     + soakAsyncProjectPollSeconds
     + soakAsyncSubmissionSeconds
-    + soakAsyncMarkerSeconds
-    + soakToolCallSeconds
-    + soakAsyncPulseSeconds
-    + soakAsyncProjectPollSeconds
+    + soakAsyncLoopSettleSeconds
     + soakAsyncChildExitSeconds;
   soakWarmBridgeSeconds = soakToolsListSeconds + 3 * soakToolCallSeconds + policy.clientToolSeconds;
   soakCycleBudgetSeconds =

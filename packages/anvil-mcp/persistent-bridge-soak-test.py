@@ -143,6 +143,351 @@ def test_timeout_budget(
             signal.setitimer(signal.ITIMER_REAL, remaining, original_interval)
 
 
+def test_async_marker_job_outlives_marker_wait(soak_path: Path) -> None:
+    """Keep marker-producing children alive beyond the marker wait window."""
+    soak = load_module(soak_path, "persistent_soak_async_marker_budget_test")
+    observed: list[float] = []
+
+    class MarkerWaitReached(Exception):
+        pass
+
+    class Smoke:
+        pass
+
+    def submit_async(_bridge, _smoke, _expression, timeout):
+        observed.append(timeout)
+        return "job-1-1"
+
+    def stop_at_marker(*_args, **_kwargs):
+        raise MarkerWaitReached
+
+    with tempfile.TemporaryDirectory() as temporary:
+        runtime = Path(temporary)
+        runtime.joinpath(".anvil-root-pulse").write_text("pulse\n")
+        instance = {
+            "runtime_dir": runtime,
+            "status": {"daemon_pid": 123},
+        }
+        fixtures = {"project_file": runtime / "project-file"}
+        with (
+            mock.patch.object(soak, "assert_async_execution"),
+            mock.patch.object(soak, "record_identity", return_value="identity-123"),
+            mock.patch.object(soak, "submit_async", side_effect=submit_async),
+            mock.patch.object(
+                soak, "wait_for_async_marker", side_effect=stop_at_marker
+            ),
+        ):
+            for function in (
+                soak.assert_async_isolation,
+                soak.assert_recovered_async_isolation,
+            ):
+                try:
+                    function(
+                        object(),
+                        instance,
+                        Smoke(),
+                        object(),
+                        fixtures,
+                        set(),
+                        "budget",
+                    )
+                except MarkerWaitReached:
+                    pass
+                else:
+                    raise AssertionError("marker wait probe did not reach its deadline")
+    expected_loop_timeout = (
+        soak.ASYNC_SUBMISSION_TIMEOUT_SECONDS
+        + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+        + soak.TOOL_CALL_TIMEOUT_SECONDS
+        + soak.ASYNC_PULSE_TIMEOUT_SECONDS
+        + soak.ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+    )
+    expected_recovered_timeout = (
+        soak.ASYNC_SUBMISSION_TIMEOUT_SECONDS
+        + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+        + 5.0
+        + soak.ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+    )
+    linger = getattr(soak, "ASYNC_RECOVERED_LINGER_SECONDS", None)
+    expression = soak.async_success_probe_expression(
+        Path("/project-file"), Path("/marker")
+    )
+    if linger != 5.0 or f"(sleep-for {linger:g})" not in expression:
+        raise AssertionError(
+            f"recovered child linger is not represented in its policy: {linger!r}"
+        )
+    if observed != [expected_loop_timeout, expected_recovered_timeout]:
+        raise AssertionError(
+            "async marker job can expire during its live-root proof: "
+            f"jobs={observed!r} expected="
+            f"{[expected_loop_timeout, expected_recovered_timeout]!r}"
+        )
+
+
+def test_async_loop_uses_remaining_settle_horizon(soak_path: Path) -> None:
+    """Spend marker and root-proof time inside one loop-settle horizon."""
+    soak = load_module(soak_path, "persistent_soak_async_settle_budget_test")
+    now = [100.0]
+    observed: dict[str, dict[str, float]] = {}
+
+    class PollReached(Exception):
+        pass
+
+    class Bridge:
+        def call_tool(self, name, _arguments, **bounds):
+            if name != "emacs-eval":
+                raise AssertionError(f"unexpected root probe: {name}")
+            observed["root"] = bounds
+            now[0] = 155.0
+            return object()
+
+    class Smoke:
+        @staticmethod
+        def eval_value(_response):
+            return 123
+
+    def submit_async(_bridge, _smoke, _expression, timeout):
+        expected = (
+            soak.ASYNC_SUBMISSION_TIMEOUT_SECONDS
+            + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+            + soak.TOOL_CALL_TIMEOUT_SECONDS
+            + soak.ASYNC_PULSE_TIMEOUT_SECONDS
+            + soak.ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+        )
+        if timeout != expected:
+            raise AssertionError(f"unexpected marker job timeout: {timeout:g}")
+        now[0] = 130.0
+        return "job-1-1"
+
+    def wait_for_async_marker(
+        _bridge, _smoke, _job_id, _marker, **bounds
+    ):
+        observed["marker"] = bounds
+        now[0] = 145.0
+        return [456, soak.DIRENV_MARKER, str(command.resolve())]
+
+    def assert_pulse_changes(_path, _before, **bounds):
+        observed["pulse"] = bounds
+        now[0] = 158.0
+
+    def poll_async(_bridge, _smoke, _job_id, **bounds):
+        observed["poll"] = bounds
+        raise PollReached
+
+    with tempfile.TemporaryDirectory() as temporary:
+        runtime = Path(temporary)
+        runtime.joinpath(".anvil-root-pulse").write_text("pulse\n")
+        command = runtime / "command"
+        instance = {
+            "runtime_dir": runtime,
+            "status": {"daemon_pid": 123},
+        }
+        fixtures = {
+            "project_file": runtime / "project-file",
+            "command": command,
+        }
+        with (
+            mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]),
+            mock.patch.object(soak, "assert_async_execution"),
+            mock.patch.object(soak, "record_identity", return_value="identity-123"),
+            mock.patch.object(soak, "submit_async", side_effect=submit_async),
+            mock.patch.object(
+                soak, "wait_for_async_marker", side_effect=wait_for_async_marker
+            ),
+            mock.patch.object(
+                soak, "assert_pulse_changes", side_effect=assert_pulse_changes
+            ),
+            mock.patch.object(soak, "poll_async", side_effect=poll_async),
+        ):
+            try:
+                soak.assert_async_isolation(
+                    Bridge(),
+                    instance,
+                    Smoke(),
+                    object(),
+                    fixtures,
+                    set(),
+                    "budget",
+                )
+            except PollReached:
+                pass
+            else:
+                raise AssertionError("loop settle probe did not reach result polling")
+    expected_loop_timeout = (
+        soak.ASYNC_SUBMISSION_TIMEOUT_SECONDS
+        + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+        + soak.TOOL_CALL_TIMEOUT_SECONDS
+        + soak.ASYNC_PULSE_TIMEOUT_SECONDS
+        + soak.ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+    )
+    expected_deadline = (
+        130.0 + expected_loop_timeout + soak.ASYNC_RESULT_PUBLICATION_GRACE_SECONDS
+    )
+    expected = {
+        "marker": {"deadline": expected_deadline},
+        "root": {"deadline": 155.0},
+        "pulse": {"deadline": 158.0},
+        "poll": {"deadline": expected_deadline},
+    }
+    if observed != expected:
+        raise AssertionError(
+            "async loop failed to preserve its settle horizon: "
+            f"actual={observed!r} expected={expected!r}"
+        )
+
+
+def test_recovered_async_uses_one_success_horizon(soak_path: Path) -> None:
+    """Spend recovered marker and result waits inside one success horizon."""
+    soak = load_module(soak_path, "persistent_soak_recovered_settle_budget_test")
+    now = [100.0]
+    observed: dict[str, dict[str, float]] = {}
+
+    class PollReached(Exception):
+        pass
+
+    def submit_async(_bridge, _smoke, _expression, timeout):
+        expected = (
+            soak.ASYNC_SUBMISSION_TIMEOUT_SECONDS
+            + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+            + soak.ASYNC_RECOVERED_LINGER_SECONDS
+            + soak.ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+        )
+        if timeout != expected:
+            raise AssertionError(f"unexpected recovered job timeout: {timeout:g}")
+        now[0] = 130.0
+        return "job-1-1"
+
+    def wait_for_async_marker(
+        _bridge, _smoke, _job_id, _marker, **bounds
+    ):
+        observed["marker"] = bounds
+        now[0] = 145.0
+        return [456, soak.DIRENV_MARKER, str(command.resolve())]
+
+    def poll_async(_bridge, _smoke, _job_id, **bounds):
+        observed["poll"] = bounds
+        raise PollReached
+
+    with tempfile.TemporaryDirectory() as temporary:
+        runtime = Path(temporary)
+        command = runtime / "command"
+        instance = {
+            "runtime_dir": runtime,
+            "status": {"daemon_pid": 123},
+        }
+        fixtures = {
+            "project_file": runtime / "project-file",
+            "command": command,
+        }
+        with (
+            mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]),
+            mock.patch.object(soak, "record_identity", return_value="identity-123"),
+            mock.patch.object(soak, "submit_async", side_effect=submit_async),
+            mock.patch.object(
+                soak, "wait_for_async_marker", side_effect=wait_for_async_marker
+            ),
+            mock.patch.object(soak, "poll_async", side_effect=poll_async),
+        ):
+            try:
+                soak.assert_recovered_async_isolation(
+                    object(),
+                    instance,
+                    object(),
+                    object(),
+                    fixtures,
+                    set(),
+                    "budget",
+                )
+            except PollReached:
+                pass
+            else:
+                raise AssertionError(
+                    "recovered settle probe did not reach result polling"
+                )
+    expected_deadline = (
+        130.0
+        + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+        + soak.ASYNC_PROJECT_POLL_TIMEOUT_SECONDS
+    )
+    expected = {
+        "marker": {"deadline": expected_deadline},
+        "poll": {"deadline": expected_deadline},
+    }
+    if observed != expected:
+        raise AssertionError(
+            "recovered async re-anchored its success horizon: "
+            f"actual={observed!r} expected={expected!r}"
+        )
+
+
+def test_async_marker_failure_diagnostics(soak_path: Path) -> None:
+    """Report bounded job state and marker metadata without marker contents."""
+    soak = load_module(soak_path, "persistent_soak_async_marker_diagnostic_test")
+    now = [100.0]
+    observed: list[dict[str, float]] = []
+    cases = (
+        ("status: error\nresult: Error: timeout before isolated child started", None),
+        ("status: error\nresult: Error: could not start isolated child", None),
+        ("status: running\nqueue-wait: 12.0s\nruntime: 2.0s", None),
+        ("status: running\nqueue-wait: 1.0s\nruntime: 14.0s", b"PRIVATE"),
+    )
+
+    class Smoke:
+        @staticmethod
+        def response_text(response):
+            return response
+
+    class Bridge:
+        def __init__(self, status):
+            self.status = status
+
+        def call_tool(self, name, arguments, **bounds):
+            if name != "emacs-eval-result" or arguments != {"job-id": "job-1-1"}:
+                raise AssertionError(f"unexpected diagnostic query: {name} {arguments!r}")
+            observed.append(bounds)
+            return self.status
+
+    with tempfile.TemporaryDirectory() as temporary:
+        marker = Path(temporary) / "marker.json"
+        for status, partial in cases:
+            now[0] = 100.0
+            marker.unlink(missing_ok=True)
+            if partial is not None:
+                marker.write_bytes(partial)
+            def sleep(delay):
+                now[0] += delay
+
+            try:
+                with (
+                    mock.patch.object(
+                        soak.time, "monotonic", side_effect=lambda: now[0]
+                    ),
+                    mock.patch.object(soak.time, "sleep", side_effect=sleep),
+                ):
+                    soak.wait_for_async_marker(
+                        Bridge(status),
+                        Smoke(),
+                        "job-1-1",
+                        marker,
+                        deadline=120.0,
+                    )
+            except AssertionError as error:
+                message = str(error)
+            else:
+                raise AssertionError("missing async marker did not fail")
+            expected_metadata = (
+                f"exists={partial is not None} bytes={0 if partial is None else len(partial)}"
+            )
+            if expected_metadata not in message or status not in message:
+                raise AssertionError(f"incomplete marker diagnostic: {message!r}")
+            if partial is not None and partial.decode() in message:
+                raise AssertionError("marker diagnostic exposed marker contents")
+    if observed != [{"deadline": 120.0}] * len(cases):
+        raise AssertionError(
+            f"marker diagnostics escaped their bounded deadline: {observed!r}"
+        )
+
+
 def test_healthy_sibling_deadline_preserves_watchdog_window(soak_path: Path) -> None:
     """Represent the shared nonce and healthy budget as one deadline."""
     soak = load_module(soak_path, "persistent_soak_healthy_budget_test")
@@ -654,6 +999,24 @@ def test_async_poll_deadline(soak_path: Path) -> None:
     if observed != [{"deadline": 125.0}]:
         raise AssertionError(
             f"async result request re-anchored its deadline: {observed!r}"
+        )
+
+    now[0] = 100.0
+    observed.clear()
+    with mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]):
+        try:
+            result = soak.poll_async(
+                Bridge(), Smoke(), "job-1-1", deadline=125.0
+            )
+        except TypeError as error:
+            raise AssertionError(
+                "async polling cannot accept an absolute deadline"
+            ) from error
+    if result != "status: done\nresult: 42":
+        raise AssertionError(f"unexpected absolute async poll result: {result!r}")
+    if observed != [{"deadline": 125.0}]:
+        raise AssertionError(
+            f"absolute async result request re-anchored its deadline: {observed!r}"
         )
 
 
@@ -1292,6 +1655,10 @@ def main() -> None:
         kill_after,
         hard_ceiling,
     )
+    test_async_marker_job_outlives_marker_wait(soak)
+    test_async_loop_uses_remaining_settle_horizon(soak)
+    test_recovered_async_uses_one_success_horizon(soak)
+    test_async_marker_failure_diagnostics(soak)
     test_healthy_sibling_deadline_preserves_watchdog_window(soak)
     test_recovery_cycle_uses_remaining_watchdog_window(soak)
     test_phase_timeout_ownership(soak)

@@ -37,7 +37,32 @@ ASYNC_SUBMISSION_TIMEOUT_SECONDS = 30.0
 ASYNC_COMPATIBILITY_POLL_TIMEOUT_SECONDS = 45.0
 ASYNC_PROJECT_POLL_TIMEOUT_SECONDS = 25.0
 ASYNC_MARKER_TIMEOUT_SECONDS = 15.0
+# The wall-clock job timer starts before submission returns.  Keep marker jobs
+# alive through marker discovery and the live-root proof, then leave room for
+# the looping probe to settle inside the following result-poll window.
+ASYNC_MARKER_SCHEDULING_GRACE_SECONDS = 5.0
 ASYNC_PULSE_TIMEOUT_SECONDS = 3.0
+ASYNC_RECOVERED_LINGER_SECONDS = 5.0
+ASYNC_LOOP_JOB_TIMEOUT_SECONDS = (
+    ASYNC_SUBMISSION_TIMEOUT_SECONDS
+    + ASYNC_MARKER_TIMEOUT_SECONDS
+    + TOOL_CALL_TIMEOUT_SECONDS
+    + ASYNC_PULSE_TIMEOUT_SECONDS
+    + ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+)
+ASYNC_RECOVERED_JOB_TIMEOUT_SECONDS = (
+    ASYNC_SUBMISSION_TIMEOUT_SECONDS
+    + ASYNC_MARKER_TIMEOUT_SECONDS
+    + ASYNC_RECOVERED_LINGER_SECONDS
+    + ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+)
+ASYNC_RESULT_PUBLICATION_GRACE_SECONDS = 5.0
+ASYNC_LOOP_SETTLE_TIMEOUT_SECONDS = (
+    ASYNC_LOOP_JOB_TIMEOUT_SECONDS + ASYNC_RESULT_PUBLICATION_GRACE_SECONDS
+)
+ASYNC_RECOVERED_SETTLE_TIMEOUT_SECONDS = (
+    ASYNC_MARKER_TIMEOUT_SECONDS + ASYNC_PROJECT_POLL_TIMEOUT_SECONDS
+)
 ASYNC_CHILD_EXIT_TIMEOUT_SECONDS = 10.0
 WORKER_INVENTORY_TIMEOUT_SECONDS = 110.0
 SETUP_SCHEDULING_GRACE_SECONDS = 40.0
@@ -49,8 +74,7 @@ BRIDGE_CLOSE_BOUND_SECONDS = 20.0
 BRIDGE_CLEANUP_SCHEDULING_GRACE_SECONDS = 20.0
 ASYNC_CHILD_ISOLATION_BOUND_SECONDS = (
     ASYNC_SUBMISSION_TIMEOUT_SECONDS
-    + ASYNC_MARKER_TIMEOUT_SECONDS
-    + ASYNC_PROJECT_POLL_TIMEOUT_SECONDS
+    + ASYNC_RECOVERED_SETTLE_TIMEOUT_SECONDS
     + ASYNC_CHILD_EXIT_TIMEOUT_SECONDS
 )
 ASYNC_ISOLATION_BOUND_SECONDS = (
@@ -59,13 +83,10 @@ ASYNC_ISOLATION_BOUND_SECONDS = (
     + ASYNC_SUBMISSION_TIMEOUT_SECONDS
     + ASYNC_PROJECT_POLL_TIMEOUT_SECONDS
     + ASYNC_SUBMISSION_TIMEOUT_SECONDS
-    + ASYNC_MARKER_TIMEOUT_SECONDS
-    + TOOL_CALL_TIMEOUT_SECONDS
-    + ASYNC_PULSE_TIMEOUT_SECONDS
-    + ASYNC_PROJECT_POLL_TIMEOUT_SECONDS
+    + ASYNC_LOOP_SETTLE_TIMEOUT_SECONDS
     + ASYNC_CHILD_EXIT_TIMEOUT_SECONDS
 )
-DEFAULT_SETUP_TIMEOUT_SECONDS = 2496.0
+DEFAULT_SETUP_TIMEOUT_SECONDS = 2526.0
 DEFAULT_CYCLE_TIMEOUT_SECONDS = 190.0
 DEFAULT_INVENTORY_TIMEOUT_SECONDS = 470.0
 DEFAULT_BRIDGE_CLEANUP_TIMEOUT_SECONDS = 60.0
@@ -459,7 +480,7 @@ def async_success_probe_expression(project_file: Path, marker: Path) -> str:
     (insert
      (json-serialize
       (vector (emacs-pid) (aref local 0) (aref local 1)))))
-  (sleep-for 5)
+  (sleep-for {ASYNC_RECOVERED_LINGER_SECONDS:g})
   (+ 20 22))
 """.strip()
 
@@ -662,8 +683,22 @@ def submit_async(bridge, smoke, expression: str, timeout: int | str) -> str:
     return match.group(0)
 
 
-def poll_async(bridge, smoke, job_id: str, timeout: float) -> str:
-    deadline = time.monotonic() + timeout
+def poll_async(
+    bridge,
+    smoke,
+    job_id: str,
+    timeout: float | None = None,
+    *,
+    deadline: float | None = None,
+) -> str:
+    if timeout is not None and deadline is not None:
+        raise AssertionError("async poll timeout and deadline are mutually exclusive")
+    if deadline is None:
+        if timeout is None:
+            raise AssertionError("async poll requires a timeout or deadline")
+        deadline = time.monotonic() + timeout
+    elif deadline <= time.monotonic():
+        raise AssertionError("async poll deadline has already expired")
     last = ""
     while True:
         remaining = deadline - time.monotonic()
@@ -768,17 +803,27 @@ def descendant_record_gone(module, pid: int, identity: str | None, ps: Path) -> 
 def assert_pulse_changes(
     path: Path,
     before: str,
-    timeout: float = ASYNC_PULSE_TIMEOUT_SECONDS,
+    timeout: float | None = None,
+    *,
+    deadline: float | None = None,
 ) -> None:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
+    if timeout is not None and deadline is not None:
+        raise AssertionError("pulse timeout and deadline are mutually exclusive")
+    if deadline is None:
+        deadline = time.monotonic() + (
+            ASYNC_PULSE_TIMEOUT_SECONDS if timeout is None else timeout
+        )
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
         try:
             current = path.read_text()
         except FileNotFoundError:
             current = ""
-        if current and current != before:
+        if current and current != before and time.monotonic() < deadline:
             return
-        time.sleep(0.05)
+        time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
     raise AssertionError(f"root watchdog pulse stopped changing: {path}")
 
 
@@ -795,6 +840,57 @@ def read_complete_async_marker(path: Path) -> list[object] | None:
     ):
         return None
     return child_info
+
+
+def wait_for_async_marker(
+    bridge,
+    smoke,
+    job_id: str,
+    marker: Path,
+    *,
+    deadline: float,
+) -> list[object]:
+    """Wait for a complete marker or fail with bounded job-state metadata."""
+    marker_deadline = min(
+        deadline,
+        time.monotonic() + ASYNC_MARKER_TIMEOUT_SECONDS,
+    )
+    while True:
+        remaining = marker_deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        child_info = read_complete_async_marker(marker)
+        if child_info is not None and time.monotonic() < marker_deadline:
+            return child_info
+        time.sleep(min(0.05, max(0.0, marker_deadline - time.monotonic())))
+    marker_error = AssertionError("condition did not become true")
+    try:
+        marker_size = marker.stat().st_size
+    except FileNotFoundError:
+        marker_exists = False
+        marker_size = 0
+    else:
+        marker_exists = True
+    now = time.monotonic()
+    diagnostic_deadline = min(deadline, now + TOOL_CALL_TIMEOUT_SECONDS)
+    if diagnostic_deadline <= now:
+        job_state = "<diagnostic deadline exhausted>"
+    else:
+        try:
+            response = bridge.call_tool(
+                "emacs-eval-result",
+                {"job-id": job_id},
+                deadline=diagnostic_deadline,
+            )
+            job_state = smoke.response_text(response)[:2000]
+        except SoakPhaseTimeout:
+            raise
+        except Exception as diagnostic_error:
+            job_state = f"<diagnostic {type(diagnostic_error).__name__}>"
+    raise AssertionError(
+        "async child marker did not become complete: "
+        f"exists={marker_exists} bytes={marker_size} job-state:\n{job_state}"
+    ) from marker_error
 
 
 def assert_async_compatibility(bridge, smoke) -> None:
@@ -875,11 +971,15 @@ def assert_async_isolation(
         bridge,
         smoke,
         async_loop_expression(fixtures["project_file"], marker),
-        timeout=15,
+        timeout=ASYNC_LOOP_JOB_TIMEOUT_SECONDS,
     )
-    child_info = smoke.eventually(
-        lambda: read_complete_async_marker(marker),
-        timeout=ASYNC_MARKER_TIMEOUT_SECONDS,
+    settle_deadline = time.monotonic() + ASYNC_LOOP_SETTLE_TIMEOUT_SECONDS
+    child_info = wait_for_async_marker(
+        bridge,
+        smoke,
+        job_id,
+        marker,
+        deadline=settle_deadline,
     )
     child_pid, local_marker, executable = child_info
     child_identity = record_identity(records, module, child_pid)
@@ -890,24 +990,38 @@ def assert_async_isolation(
     ):
         raise AssertionError(f"async child lost direnv: {child_info!r}")
 
+    root_probe_started = time.monotonic()
+    root_probe_deadline = min(
+        settle_deadline,
+        root_probe_started + TOOL_CALL_TIMEOUT_SECONDS,
+    )
+    if root_probe_deadline <= root_probe_started:
+        raise AssertionError("async root-probe deadline has already expired")
     current_root = smoke.eval_value(
         bridge.call_tool(
             "emacs-eval",
             {"expression": "(emacs-pid)"},
-            timeout=TOOL_CALL_TIMEOUT_SECONDS,
+            deadline=root_probe_deadline,
         )
     )
     if current_root != root_pid:
         raise AssertionError(
             f"root changed while async child ran: {current_root!r} != {root_pid}"
         )
-    assert_pulse_changes(pulse, pulse_before)
+    pulse_started = time.monotonic()
+    pulse_deadline = min(
+        settle_deadline,
+        pulse_started + ASYNC_PULSE_TIMEOUT_SECONDS,
+    )
+    if pulse_deadline <= pulse_started:
+        raise AssertionError("async pulse deadline has already expired")
+    assert_pulse_changes(pulse, pulse_before, deadline=pulse_deadline)
 
     terminal = poll_async(
         bridge,
         smoke,
         job_id,
-        timeout=ASYNC_PROJECT_POLL_TIMEOUT_SECONDS,
+        deadline=settle_deadline,
     )
     if "status: error" not in terminal or "timeout" not in terminal.lower():
         raise AssertionError(f"looping async job did not time out: {terminal}")
@@ -946,11 +1060,15 @@ def assert_recovered_async_isolation(
         bridge,
         smoke,
         async_success_probe_expression(fixtures["project_file"], marker),
-        timeout=15,
+        timeout=ASYNC_RECOVERED_JOB_TIMEOUT_SECONDS,
     )
-    child_info = smoke.eventually(
-        lambda: read_complete_async_marker(marker),
-        timeout=ASYNC_MARKER_TIMEOUT_SECONDS,
+    settle_deadline = time.monotonic() + ASYNC_RECOVERED_SETTLE_TIMEOUT_SECONDS
+    child_info = wait_for_async_marker(
+        bridge,
+        smoke,
+        job_id,
+        marker,
+        deadline=settle_deadline,
     )
     child_pid, local_marker, executable = child_info
     child_identity = record_identity(records, module, child_pid)
@@ -965,7 +1083,7 @@ def assert_recovered_async_isolation(
         bridge,
         smoke,
         job_id,
-        timeout=ASYNC_PROJECT_POLL_TIMEOUT_SECONDS,
+        deadline=settle_deadline,
     )
     if "status: done" not in terminal or "result: 42" not in terminal:
         raise AssertionError(f"recovered async child did not complete: {terminal}")
