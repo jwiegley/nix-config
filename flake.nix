@@ -2208,6 +2208,7 @@
         {
           build = self.packages.${system}.default;
           fractal-smoke = pkgs.callPackage ./overlays/tests/plasma-fractal-smoke.nix { };
+          llama-cpp-platform-compat = pkgs.callPackage ./overlays/tests/llama-cpp-platform-compat.nix { };
           agent-resources = pkgs.callPackage ./tests/agent-resources.nix {
             inherit (pkgs.inputs)
               ponytail
