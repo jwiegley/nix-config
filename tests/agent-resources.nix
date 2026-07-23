@@ -4,6 +4,7 @@
   ponytail ? null,
   translate-tool ? null,
   gitSurgeonSource ? null,
+  sourceOnlyResources ? null,
   piMcpAdapter ? null,
   piOpenaiServerCompaction ? null,
   piQuiet ? null,
@@ -392,6 +393,7 @@ let
   '';
 in
 assert resources != null;
+assert sourceOnlyResources != null;
 if !haveSources then
   throw "agent-resources check requires all pinned source roots"
 else if badPins != [ ] then
@@ -418,6 +420,9 @@ else
         printf 'agent-resources check: %s\n' "$*" >&2
         exit 1
       }
+
+      test ${sourceOnlyResources} = ${resources} \
+        || fail "source-only agent-resources derivation differs"
 
       copy_expected_tree() {
         source_tree=$1

@@ -15,10 +15,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    llm-agents = {
-      url = "github:numtide/llm-agents.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    llm-agents.url = "github:numtide/llm-agents.nix";
 
     superpowers = {
       url = "github:obra/superpowers/d884ae04edebef577e82ff7c4e143debd0bbec99";
@@ -2210,6 +2207,15 @@
           agent-deck-go-compat = pkgs.callPackage ./overlays/tests/agent-deck-go-compat.nix { };
           fractal-smoke = pkgs.callPackage ./overlays/tests/plasma-fractal-smoke.nix { };
           llama-cpp-platform-compat = pkgs.callPackage ./overlays/tests/llama-cpp-platform-compat.nix { };
+          llm-agents-nixpkgs-independent =
+            let
+              lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+              llmAgentsNode = lock.nodes.${lock.nodes.root.inputs.llm-agents};
+            in
+            if builtins.isString llmAgentsNode.inputs.nixpkgs then
+              pkgs.runCommand "llm-agents-nixpkgs-independent" { } "touch $out"
+            else
+              throw "ai-nix llm-agents must retain its own nixpkgs input";
           agent-resources = pkgs.callPackage ./tests/agent-resources.nix {
             inherit (pkgs.inputs)
               ponytail
@@ -2217,6 +2223,11 @@
               translate-tool
               ;
             gitSurgeonSource = pkgs.inputs.llm-agents.packages.${system}.git-surgeon.src;
+            sourceOnlyResources = pkgs.callPackage ./packages/agent-resources.nix {
+              inputs = pkgs.inputs // {
+                llm-agents = builtins.removeAttrs pkgs.inputs.llm-agents [ "packages" ];
+              };
+            };
             piMcpAdapter = pkgs.inputs.pi-mcp-adapter;
             piOpenaiServerCompaction = pkgs.inputs.pi-openai-server-compaction;
             piQuiet = pkgs.inputs.pi-quiet;

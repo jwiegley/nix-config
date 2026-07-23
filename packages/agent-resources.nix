@@ -1,15 +1,14 @@
 {
   buildNpmPackage,
+  callPackage,
   fetchzip,
   inputs,
   lib,
   runCommand,
-  stdenv,
 }:
 
 let
-  system = stdenv.hostPlatform.system;
-  gitSurgeonSource = inputs.llm-agents.packages.${system}.git-surgeon.src;
+  gitSurgeonSource = (callPackage "${inputs.llm-agents}/packages/git-surgeon/package.nix" { }).src;
 
   superpowersSkills = builtins.attrNames (
     lib.filterAttrs (_name: type: type == "directory") (builtins.readDir "${inputs.superpowers}/skills")
