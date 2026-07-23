@@ -1,0 +1,45 @@
+diff --git a/fractal/_scripts/init.sh b/fractal/_scripts/init.sh
+--- a/fractal/_scripts/init.sh
++++ b/fractal/_scripts/init.sh
+@@ -517 +517,2 @@
+-    cp "$NODE_SEED_DIR/NODE.md" "$NODE_DIR/NODE.md"
++    cp "$NODE_SEED_DIR/NODE.md" "$NODE_DIR/NODE.md"
++    chmod u+w "$NODE_DIR/NODE.md"
+@@ -534 +535,2 @@
+-        cp "$FILE" "$NODE_DIR/steps/$BASENAME"
++        cp "$FILE" "$NODE_DIR/steps/$BASENAME"
++        chmod u+w "$NODE_DIR/steps/$BASENAME"
+@@ -587 +589 @@
+-            chmod +x "$NODE_DIR/scripts/$BASENAME" 2>/dev/null || true
++            chmod u+wx "$NODE_DIR/scripts/$BASENAME" 2>/dev/null || true
+diff --git a/fractal/core/agent.py b/fractal/core/agent.py
+--- a/fractal/core/agent.py
++++ b/fractal/core/agent.py
+@@ -1053 +1053,3 @@
+-            shutil.copy(source, config_dir / cls.config_file)
++            destination = config_dir / cls.config_file
++            shutil.copy(source, destination)
++            destination.chmod(destination.stat().st_mode | 0o200)
+diff --git a/fractal/impl/codex.py b/fractal/impl/codex.py
+--- a/fractal/impl/codex.py
++++ b/fractal/impl/codex.py
+@@ -293,5 +293,18 @@
+     @classmethod
+     def _seed(cls: type[CodexAgent], node_dir: pathlib.Path) -> None:
+-        """Link the node's codex auth through to the global home."""
++        """Link node skills and global auth into the private codex home."""
++        # Keep codex-owned system skills inside its ignored home while exposing
++        # the node's immutable skill set through individual relative links.
++        skills = node_dir / f'.{cls.name}' / 'skills'
++        if skills.is_symlink():
++            skills.unlink()
++        skills.mkdir(exist_ok=True)
++        node_skills = node_dir / 'skills'
++        for source in sorted(node_skills.iterdir()):
++            if not source.is_dir() or source.name.startswith('.'):
++                continue
++            link = skills / source.name
++            if not link.exists() and not link.is_symlink():
++                link.symlink_to(pathlib.Path('../..') / 'skills' / source.name)
+         # codex auth must stay global: CODEX_HOME points at this node dir, but
+         # the credential is shared via a symlink to the global codex home --

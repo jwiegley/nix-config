@@ -31,12 +31,22 @@ let
     };
 
     dependencies = [ ps.typer ];
-    nativeBuildInputs = [ prev.makeWrapper ];
+    nativeBuildInputs = [
+      prev.makeWrapper
+      prev.patch
+    ];
     makeWrapperArgs = [
       "--prefix PATH : ${lib.makeBinPath wikiRuntime}"
     ];
 
     postInstall = ''
+      ${prev.patch}/bin/patch \
+        --batch \
+        --directory="$out/${ps.python.sitePackages}" \
+        --forward \
+        --fuzz=0 \
+        --strip=1 \
+        < ${../patches/plasma-wiki-writable-obsidian.patch}
       mkdir -p "$out/share/skills"
       ln -s "$out/${ps.python.sitePackages}/wiki/skills/wiki" \
         "$out/share/skills/wiki"
@@ -97,12 +107,22 @@ in
       ps.textual
       ps.typer
     ];
-    nativeBuildInputs = [ prev.makeWrapper ];
+    nativeBuildInputs = [
+      prev.makeWrapper
+      prev.patch
+    ];
     makeWrapperArgs = [
       "--prefix PATH : ${lib.makeBinPath fractalRuntime}"
     ];
 
     postInstall = ''
+      ${prev.patch}/bin/patch \
+        --batch \
+        --directory="$out/${ps.python.sitePackages}" \
+        --forward \
+        --fuzz=0 \
+        --strip=1 \
+        < ${../patches/plasma-fractal-nix-compat.patch}
       mkdir -p "$out/share/skills"
       ln -s "$out/${ps.python.sitePackages}/fractal/skills/fractal" \
         "$out/share/skills/fractal"

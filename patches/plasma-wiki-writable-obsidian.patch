@@ -1,0 +1,32 @@
+diff --git a/wiki/core/_obsidian.py b/wiki/core/_obsidian.py
+--- a/wiki/core/_obsidian.py
++++ b/wiki/core/_obsidian.py
+@@ -52 +52,2 @@
+-            shutil.copytree(template_dir, config_dir)
++            shutil.copytree(template_dir, config_dir)
++    _make_writable(config_dir)
+@@ -55 +56,13 @@
+-def merge_settings(
++
++
++def _make_writable(path: pathlib.Path) -> None:
++    """Make copied Obsidian files writable without following symlinks."""
++    if not path.exists():
++        return
++    for entry in (path, *path.rglob('*')):
++        if entry.is_symlink():
++            continue
++        entry.chmod(entry.stat().st_mode | 0o200)
++
++
++def merge_settings(
+diff --git a/wiki/core/wiki.py b/wiki/core/wiki.py
+--- a/wiki/core/wiki.py
++++ b/wiki/core/wiki.py
+@@ -533,3 +544,5 @@
+                 target = obsidian_dir / 'plugins' / source.name
+-                shutil.copytree(source, target, dirs_exist_ok=True)
++                _obsidian._make_writable(target)
++                shutil.copytree(source, target, dirs_exist_ok=True)
++                _obsidian._make_writable(target)
+                 # download pinned plugin code from its release, unless offline
