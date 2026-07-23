@@ -274,12 +274,17 @@ runCommand "anvil-mcp-dedicated-smoke"
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./stdio-reconnect-test.py} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh
-    ${coreutils}/bin/timeout 120 \
+    # Upstream grants the base post-dispatch suite 90 seconds.  This Nix
+    # variant adds 29 seconds of pre-dispatch regressions and permits each
+    # NUL-reader retry its production frame budget, so use the client-tool
+    # envelope while every protocol phase retains its stricter deadline.
+    ${coreutils}/bin/timeout --kill-after=30 ${toString anvilMcp.timeoutPolicy.clientToolSeconds} \
       ${python3}/bin/python3 -I -B -u ${./stdio-postdispatch-test.py} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh \
       ${bash}/bin/bash \
       ${anvilMcp.dedicatedParentGuardLauncher} \
-      ${python3}/bin/python3
+      ${python3}/bin/python3 \
+      ${toString anvilMcp.timeoutPolicy.frameReadSeconds}
     # Match upstream's whole-harness envelope; individual bridge phases keep
     # their stricter production deadlines.
     ${coreutils}/bin/timeout --kill-after=90 900 \
@@ -460,7 +465,7 @@ runCommand "anvil-mcp-dedicated-smoke"
         ANVIL_EMACS_STATE_ROOT="$watchdog_smoke_root/s" \
         ANVIL_EXPECTED_VERSION=${anvilMcp.currentAnvilVersion} \
         ANVIL_EXPECTED_ANVIL_REVISION=${anvilMcp.currentAnvilRev} \
-        ${coreutils}/bin/timeout 330 \
+        ${coreutils}/bin/timeout ${toString anvilMcp.timeoutPolicy.clientToolSeconds} \
         ${python3}/bin/python3 -I -B -u \
         ${anvilMcp.dedicatedAgentSupervisorSmoke} \
         --scenario watchdog-attribution \
@@ -769,6 +774,8 @@ runCommand "anvil-mcp-dedicated-smoke"
         ${lib.escapeShellArg workerSpecsJson} \
         ${toString anvilMcp.timeoutPolicy.clientToolSeconds} \
         ${toString anvilMcp.timeoutPolicy.hostShellSeconds} \
+        ${toString anvilMcp.timeoutPolicy.bridgeReadinessSeconds} \
+        ${toString anvilMcp.timeoutPolicy.workerSpawnSeconds} \
         ${python3}/bin/python3 \
         ${./environment-output-probe.py}
     ); then

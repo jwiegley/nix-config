@@ -52,26 +52,31 @@ let
   # regression binds every generated artifact back to these values.
   timeoutPolicy = {
     asyncSeconds = 600;
-    bridgeDispatchSeconds = 240;
-    bridgeReadinessSeconds = 20;
+    bridgeDispatchSeconds = 250;
+    bridgeReadinessSeconds = 30;
     bridgeStartupDispatchSeconds = 20;
-    clientStartupSeconds = 330;
-    clientToolSeconds = 330;
+    clientStartupSeconds = 540;
+    clientToolSeconds = 540;
     cooperativeSyncSeconds = boundedSyncSeconds;
     direnvExportSeconds = 60;
-    direnvStatusSeconds = 10;
+    direnvStatusSeconds = 20;
     emacsclientKillSeconds = 1;
-    emacsclientProbeSeconds = 5;
-    frameReadSeconds = 10;
+    emacsclientProbeSeconds = 20;
+    frameReadSeconds = 20;
     hostShellSeconds = boundedSyncSeconds;
-    parentGuardReadySeconds = 5;
-    requestParseSeconds = 10;
+    parentGuardReadySeconds = 10;
+    requestParseSeconds = 20;
+    runnerControlClockAllowanceSeconds = 2;
+    runnerControlSeconds = 10;
+    runnerDrainClockAllowanceSeconds = 2;
+    runnerIdentitySeconds = 5;
     shellSyncSeconds = boundedSyncSeconds;
     supervisorReadySeconds = 120;
     watchdogDispatchSeconds = 225;
     watchdogHeartbeatSeconds = 45;
     watchdogPulseSeconds = 1;
     watchdogStartupSeconds = 120;
+    workerSpawnSeconds = 30;
   };
 
   workerSpecs = [
@@ -575,11 +580,35 @@ let
     installPhase = attrs.installPhase + ''
       substituteInPlace "$out/share/emacs/site-lisp/anvil-stdio.sh" \
         --replace-fail \
+          'ANVIL_EMACSCLIENT_PROBE_TIMEOUT:-5' \
+          'ANVIL_EMACSCLIENT_PROBE_TIMEOUT:-${toString timeoutPolicy.emacsclientProbeSeconds}' \
+        --replace-fail \
+          '"$ANVIL_EMACSCLIENT_PROBE_TIMEOUT" 5' \
+          '"$ANVIL_EMACSCLIENT_PROBE_TIMEOUT" ${toString timeoutPolicy.emacsclientProbeSeconds}' \
+        --replace-fail \
+          'ANVIL_EMACSCLIENT_READINESS_TIMEOUT:-20' \
+          'ANVIL_EMACSCLIENT_READINESS_TIMEOUT:-${toString timeoutPolicy.bridgeReadinessSeconds}' \
+        --replace-fail \
+          '"$ANVIL_EMACSCLIENT_READINESS_TIMEOUT" 20' \
+          '"$ANVIL_EMACSCLIENT_READINESS_TIMEOUT" ${toString timeoutPolicy.bridgeReadinessSeconds}' \
+        --replace-fail \
           'ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT:-150' \
           'ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT:-${toString timeoutPolicy.bridgeDispatchSeconds}' \
         --replace-fail \
           '"$ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT" 150' \
-          '"$ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT" ${toString timeoutPolicy.bridgeDispatchSeconds}'
+          '"$ANVIL_EMACSCLIENT_DISPATCH_TIMEOUT" ${toString timeoutPolicy.bridgeDispatchSeconds}' \
+        --replace-fail \
+          'ANVIL_MCP_REQUEST_PARSE_TIMEOUT:-10' \
+          'ANVIL_MCP_REQUEST_PARSE_TIMEOUT:-${toString timeoutPolicy.requestParseSeconds}' \
+        --replace-fail \
+          '"$ANVIL_MCP_REQUEST_PARSE_TIMEOUT" 10' \
+          '"$ANVIL_MCP_REQUEST_PARSE_TIMEOUT" ${toString timeoutPolicy.requestParseSeconds}' \
+        --replace-fail \
+          'ANVIL_MCP_FRAME_READ_TIMEOUT:-10' \
+          'ANVIL_MCP_FRAME_READ_TIMEOUT:-${toString timeoutPolicy.frameReadSeconds}' \
+        --replace-fail \
+          '"$ANVIL_MCP_FRAME_READ_TIMEOUT" 10' \
+          '"$ANVIL_MCP_FRAME_READ_TIMEOUT" ${toString timeoutPolicy.frameReadSeconds}'
     '';
   });
 
@@ -660,6 +689,7 @@ let
     import select
     import signal
     import sys
+    import time
 
     EXIT_SOFTWARE = 70
     READY_TIMEOUT_SECONDS = ${toString timeoutPolicy.parentGuardReadySeconds}.0
@@ -991,6 +1021,7 @@ let
     group = mode in ("group", "external-group")
     ready_read, ready_write = os.pipe()
     commit_read, commit_write = os.pipe()
+    handshake_deadline = time.monotonic() + READY_TIMEOUT_SECONDS
     try:
         guard_pid = os.fork()
     except OSError as error:
@@ -1014,6 +1045,18 @@ let
     os.close(ready_write)
     os.close(commit_read)
 
+    def read_handshake_marker():
+        remaining = handshake_deadline - time.monotonic()
+        if remaining <= 0:
+            return b""
+        readable, _, _ = select.select([ready_read], [], [], remaining)
+        if not readable or time.monotonic() >= handshake_deadline:
+            return b""
+        marker = os.read(ready_read, 1)
+        if time.monotonic() >= handshake_deadline:
+            return b""
+        return marker
+
     def abort_guard(message):
         for descriptor in (ready_read, commit_write):
             try:
@@ -1027,10 +1070,7 @@ let
             pass
         fail(message)
 
-    readable, _, _ = select.select(
-        [ready_read], [], [], READY_TIMEOUT_SECONDS
-    )
-    ready = os.read(ready_read, 1) if readable else b""
+    ready = read_handshake_marker()
     if ready != b"R":
         abort_guard("guard did not become ready")
     if os.getppid() != root_pid:
@@ -1063,10 +1103,7 @@ let
     if written != 1:
         abort_guard("target process-group commitment was incomplete")
 
-    readable, _, _ = select.select(
-        [ready_read], [], [], READY_TIMEOUT_SECONDS
-    )
-    acknowledged = os.read(ready_read, 1) if readable else b""
+    acknowledged = read_handshake_marker()
     os.close(ready_read)
     if acknowledged != b"A":
         abort_guard("guard did not acknowledge target process group")
@@ -3796,6 +3833,7 @@ let
         (defvar anvil-worker-write-pool-size)
         (defvar anvil-worker-batch-pool-size)
         (defvar anvil-worker-eager-spawn)
+        (defvar anvil-worker-spawn-wait)
         (defvar anvil-server-schema-cache-file)
         (defvar anvil-org-allowed-files-enabled)
         (defvar org-directory)
@@ -3847,6 +3885,7 @@ let
                 anvil-worker-write-pool-size ${toString workerPoolSizes.write}
                 anvil-worker-batch-pool-size ${toString workerPoolSizes.batch}
                 anvil-worker-eager-spawn nil
+                anvil-worker-spawn-wait ${toString timeoutPolicy.workerSpawnSeconds}
                 user-emacs-directory (file-name-as-directory state-dir)
                 package-user-dir (expand-file-name "elpa" state-dir)
                 custom-file (expand-file-name "custom.el" state-dir)
@@ -4664,7 +4703,7 @@ let
 
         export ANVIL_MCP_PARENT_GUARD="${dedicatedParentGuardLauncher}"
         export ANVIL_MCP_PARENT_GUARD_PYTHON="${python3}/bin/python3"
-        exec "${emacsPackages.anvil}/share/emacs/site-lisp/anvil-stdio.sh" \
+        exec "${dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh" \
           "--socket=$socket" \
           "--server-id=$server_id"
       '';

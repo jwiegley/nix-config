@@ -11,11 +11,11 @@ let
   policy = anvilMcp.timeoutPolicy;
   soakCycles = 25;
   soakBridgeCount = 2;
-  # The 25-cycle subprocess derives to a 160m38s TERM deadline and a 161m58s
+  # The 25-cycle subprocess derives to a 198m14s TERM deadline and a 200m04s
   # absolute SIGKILL horizon.  Keep a nearby finite ceiling without reducing
   # any recovery cycle, nested call bound, named phase, or process margin.
-  soakKillAfterSeconds = 80;
-  soakProcessHardCeilingSeconds = 162 * 60;
+  soakKillAfterSeconds = 110;
+  soakProcessHardCeilingSeconds = 201 * 60;
   soakFocusedTimeoutSeconds = 420;
   watchdogResponseGraceSeconds = 30;
   watchdogWindowSeconds =

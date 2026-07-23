@@ -814,12 +814,12 @@ let
       )
       // {
         overrides = {
-          claude.timeout = 330000;
+          claude.timeout = 540000;
           codex = {
-            startup_timeout_sec = 330;
-            tool_timeout_sec = 330;
+            startup_timeout_sec = 540;
+            tool_timeout_sec = 540;
           };
-          opencode.timeout = 330000;
+          opencode.timeout = 540000;
         };
       };
 

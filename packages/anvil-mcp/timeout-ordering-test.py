@@ -128,12 +128,17 @@ def assert_static_ordering(
         "hostShellSeconds",
         "parentGuardReadySeconds",
         "requestParseSeconds",
+        "runnerControlClockAllowanceSeconds",
+        "runnerControlSeconds",
+        "runnerDrainClockAllowanceSeconds",
+        "runnerIdentitySeconds",
         "shellSyncSeconds",
         "supervisorReadySeconds",
         "watchdogDispatchSeconds",
         "watchdogHeartbeatSeconds",
         "watchdogPulseSeconds",
         "watchdogStartupSeconds",
+        "workerSpawnSeconds",
     )
     values = {name: policy_integer(policy, name) for name in keys}
 
@@ -203,6 +208,10 @@ def assert_static_ordering(
         "requestParseSeconds": shell_default(
             stdio_text, "ANVIL_MCP_REQUEST_PARSE_TIMEOUT"
         ),
+        "runnerControlSeconds": shell_default(
+            stdio_text, "ANVIL_MCP_RUNNER_CONTROL_TIMEOUT"
+        ),
+        "runnerIdentitySeconds": values["runnerIdentitySeconds"],
         "shellSyncSeconds": elisp_assignment(
             init_text, "anvil-shell-filter-max-sync-timeout"
         ),
@@ -210,6 +219,7 @@ def assert_static_ordering(
         "watchdogHeartbeatSeconds": watchdog["DEFAULT_NORMAL_SECONDS"],
         "watchdogPulseSeconds": watchdog["DEFAULT_PULSE_SECONDS"],
         "watchdogStartupSeconds": watchdog["DEFAULT_STARTUP_SECONDS"],
+        "workerSpawnSeconds": elisp_assignment(init_text, "anvil-worker-spawn-wait"),
     }
     for name, observed in actual.items():
         if observed != values[name]:
@@ -217,6 +227,49 @@ def assert_static_ordering(
                 f"generated timeout drift for {name}: "
                 f"policy={values[name]} artifact={observed}"
             )
+    runner_identity_fragment = (
+        f'[ "$guard_deadline" -le {values["runnerIdentitySeconds"]} ] '
+        f"|| guard_deadline={values['runnerIdentitySeconds']}"
+    )
+    if runner_identity_fragment not in stdio_text:
+        raise AssertionError("guarded runner identity timeout drifted")
+    if "control_deadline=$ANVIL_MCP_RUNNER_CONTROL_TIMEOUT" not in stdio_text:
+        raise AssertionError(
+            "runner READY/ACK control deadline is not independently bounded"
+        )
+    rounding_fragment = (
+        '[ "$elapsed" -eq 0 ] || remaining=$((remaining + 1))'
+    )
+    runner_start = stdio_text.index("anvil_mcp_run_bounded() {")
+    runner_end = stdio_text.index(
+        "\n}\n\n# A signal handler must never spawn", runner_start
+    )
+    runner_body = stdio_text[runner_start:runner_end]
+    drain_start = stdio_text.index("anvil_mcp_drain_runner_output() {")
+    drain_end = stdio_text.index("\n}\n\n# Converge", drain_start)
+    drain_body = stdio_text[drain_start:drain_end]
+    if (
+        values["runnerControlClockAllowanceSeconds"] != 2
+        or values["runnerDrainClockAllowanceSeconds"] != 2
+        or runner_body.count(rounding_fragment) != 2
+        or runner_body.count("remaining=$((control_deadline - elapsed))") != 2
+        or drain_body.count(rounding_fragment) != 1
+        or drain_body.count("remaining=$((grace - elapsed))") != 1
+        or drain_body.count('-t "$remaining"') != 1
+    ):
+        raise AssertionError(
+            "bounded runner whole-second allowance structure drifted"
+        )
+    interactive_bridge = 'exec "${dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh"'
+    if interactive_bridge not in default_nix_text:
+        raise AssertionError(
+            "interactive Darwin does not share the policy-adjusted bridge"
+        )
+    if (
+        'exec "${emacsPackages.anvil}/share/emacs/site-lisp/anvil-stdio.sh"'
+        in default_nix_text
+    ):
+        raise AssertionError("interactive Darwin still executes an unadjusted bridge")
     if "ANVIL_EMACSCLIENT_TIMEOUT" in stdio_text:
         raise AssertionError("legacy overloaded emacsclient timeout remains")
     for fragment in (
@@ -245,15 +298,12 @@ def assert_static_ordering(
         "ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT",
         "ANVIL_MCP_REQUEST_PARSE_TIMEOUT",
         "ANVIL_MCP_FRAME_READ_TIMEOUT",
+        "ANVIL_MCP_RUNNER_CONTROL_TIMEOUT",
     ):
         if f"anvil_mcp_validate_timeout {name}" not in stdio_text:
             raise AssertionError(f"runtime timeout is not clamped: {name}")
-    direct_kill_waits = stdio_text.count(
-        '-t "$ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT"'
-    )
-    bounded_retirement_waits = stdio_text.count(
-        "\tanvil_mcp_drain_runner_output\n"
-    )
+    direct_kill_waits = stdio_text.count('-t "$ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT"')
+    bounded_retirement_waits = stdio_text.count("\tanvil_mcp_drain_runner_output\n")
     if direct_kill_waits < 1 or bounded_retirement_waits < 2:
         raise AssertionError("bounded runner cleanup lacks policy-controlled waits")
     shell_default_timeout = elisp_assignment(
@@ -300,32 +350,47 @@ def assert_static_ordering(
         and values["shellSyncSeconds"] < values["watchdogDispatchSeconds"]
     ):
         raise AssertionError("synchronous shell cap can outlive the root watchdog")
-    tool_envelope = (
-        values["frameReadSeconds"]
-        + 2 * values["emacsclientKillSeconds"]
-        + values["requestParseSeconds"]
-        + 2 * values["emacsclientKillSeconds"]
-        + values["bridgeReadinessSeconds"]
-        + 2 * values["emacsclientKillSeconds"]
-        + values["bridgeDispatchSeconds"]
-        + 2 * values["emacsclientKillSeconds"]
+    bounded_runner_overhead = (
+        values["runnerControlSeconds"]
+        + values["runnerControlClockAllowanceSeconds"]
+        # One private-status read, then two bounded retirement drains.  Each
+        # drain can cross two whole-clock boundaries while consuming partial
+        # child records before its final bounded read.
+        + values["emacsclientKillSeconds"]
+        + 2
+        * (
+            values["emacsclientKillSeconds"]
+            + values["runnerDrainClockAllowanceSeconds"]
+        )
     )
-    if tool_envelope >= values["clientToolSeconds"]:
+    bounded_parse = values["requestParseSeconds"] + bounded_runner_overhead
+    inline_tool_envelope = (
+        values["frameReadSeconds"]
+        + bounded_runner_overhead
+        + 3 * bounded_parse
+        + values["bridgeReadinessSeconds"]
+        + bounded_runner_overhead
+        + values["bridgeDispatchSeconds"]
+        + bounded_runner_overhead
+    )
+    large_tool_envelope = inline_tool_envelope + bounded_parse
+    if large_tool_envelope >= values["clientToolSeconds"]:
         raise AssertionError(
-            "parse, readiness, and dispatch can outlive the MCP client tool deadline"
+            "large request parsing, readiness, and dispatch can outlive the MCP "
+            "client tool deadline"
         )
     startup_envelope = (
         values["direnvStatusSeconds"]
         + values["supervisorReadySeconds"]
-        + 4 * values["parentGuardReadySeconds"]
+        # Two nested parent guards each spend one absolute R/C/A deadline.
+        + 2 * values["parentGuardReadySeconds"]
         + values["frameReadSeconds"]
-        + 2 * values["emacsclientKillSeconds"]
-        + values["requestParseSeconds"]
-        + 2 * values["emacsclientKillSeconds"]
+        + bounded_runner_overhead
+        + 4 * bounded_parse
         + values["bridgeReadinessSeconds"]
-        + 2 * values["emacsclientKillSeconds"]
+        + bounded_runner_overhead
         + values["bridgeStartupDispatchSeconds"]
-        + 2 * values["emacsclientKillSeconds"]
+        + bounded_runner_overhead
     )
     if startup_envelope >= values["clientStartupSeconds"]:
         raise AssertionError(
@@ -336,6 +401,31 @@ def assert_static_ordering(
         raise AssertionError("initialize dispatch uses the ordinary tool budget")
     if values["emacsclientProbeSeconds"] > values["bridgeReadinessSeconds"]:
         raise AssertionError("one readiness probe exceeds the readiness budget")
+    guarded_child_startup = (
+        values["runnerIdentitySeconds"] + values["parentGuardReadySeconds"]
+    )
+    if not (
+        guarded_child_startup
+        < values["emacsclientProbeSeconds"]
+        < values["bridgeReadinessSeconds"]
+    ):
+        raise AssertionError("guarded readiness child cannot fit its outer budgets")
+    if guarded_child_startup >= values["frameReadSeconds"]:
+        raise AssertionError("guarded frame reader cannot fit its outer budget")
+    if guarded_child_startup >= values["requestParseSeconds"]:
+        raise AssertionError("guarded request parser cannot fit its outer budget")
+    if values["parentGuardReadySeconds"] >= values["direnvStatusSeconds"]:
+        raise AssertionError("guarded direnv status cannot fit its outer budget")
+    if values["parentGuardReadySeconds"] >= values["workerSpawnSeconds"]:
+        raise AssertionError("guarded worker cannot fit its spawn budget")
+    if (
+        values["runnerIdentitySeconds"]
+        + values["parentGuardReadySeconds"]
+        + values["watchdogDispatchSeconds"]
+        + 2 * values["emacsclientKillSeconds"]
+        >= values["bridgeDispatchSeconds"]
+    ):
+        raise AssertionError("guarded watchdog dispatch can outlive its bridge")
     if values["asyncSeconds"] <= values["clientToolSeconds"]:
         raise AssertionError(
             "async child budget must remain independent of the synchronous client call"
@@ -679,6 +769,7 @@ def assert_dynamic_ordering(stdio: Path, policy: dict[str, object]) -> None:
             "ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT": "1",
             "ANVIL_MCP_REQUEST_PARSE_TIMEOUT": "1",
             "ANVIL_MCP_FRAME_READ_TIMEOUT": "1",
+            "ANVIL_MCP_RUNNER_CONTROL_TIMEOUT": "1",
         }
         maxima = {
             "ANVIL_EMACSCLIENT_PROBE_TIMEOUT": policy_integer(
@@ -700,6 +791,9 @@ def assert_dynamic_ordering(stdio: Path, policy: dict[str, object]) -> None:
                 policy, "requestParseSeconds"
             ),
             "ANVIL_MCP_FRAME_READ_TIMEOUT": policy_integer(policy, "frameReadSeconds"),
+            "ANVIL_MCP_RUNNER_CONTROL_TIMEOUT": policy_integer(
+                policy, "runnerControlSeconds"
+            ),
         }
         request = '{"jsonrpc":"2.0","id":6,"method":"test"}\n'
         for name, maximum in maxima.items():

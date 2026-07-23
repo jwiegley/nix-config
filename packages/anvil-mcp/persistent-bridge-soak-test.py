@@ -38,6 +38,11 @@ def test_timeout_budget(
 ) -> None:
     """Prove Python enforces the same named phase budget derived by Nix."""
     soak = load_module(soak_path, "persistent_soak_timeout_budget_test")
+    if (
+        soak.DEFAULT_CLIENT_STARTUP_SECONDS,
+        soak.DEFAULT_CLIENT_TOOL_SECONDS,
+    ) != (540.0, 540.0):
+        raise AssertionError("standalone soak client defaults drifted from policy")
     os.environ["ANVIL_SMOKE_WATCHDOG_NORMAL_SECONDS"] = f"{expected_normal:g}"
     os.environ["ANVIL_SMOKE_WATCHDOG_DISPATCH_SECONDS"] = f"{expected_dispatch:g}"
     response_timeout = soak.configure_watchdog_environment()
@@ -85,7 +90,7 @@ def test_timeout_budget(
     expected_outer = internal + math.ceil(internal * margin_percent / 100)
     if (
         kill_after <= 0
-        or hard_ceiling > 162 * 60
+        or hard_ceiling > 201 * 60
         or outer_timeout != expected_outer
         or kill_after <= timeouts["bridge_cleanup"]
         or outer_timeout + kill_after > hard_ceiling

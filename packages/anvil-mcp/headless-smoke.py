@@ -151,7 +151,7 @@ def run_transcript(
     host: str,
     server_id: str,
     frames: list[str],
-    timeout_seconds: float = 300,
+    timeout_seconds: float,
     cwd: Path | None = None,
 ) -> list[dict[str, object]]:
     env = os.environ.copy()
@@ -371,7 +371,7 @@ def run_final_framed_transcript(
     server_id: str,
     line_frames: list[str],
     framed_frame: str,
-    timeout_seconds: float = 300,
+    timeout_seconds: float,
 ) -> list[dict[str, object]]:
     """Run line requests followed by one final Content-Length request."""
     env = os.environ.copy()
@@ -1078,7 +1078,21 @@ def assert_recursion_guards(
     assert_shell_result(response, expected)
 
 
-def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
+WORKER_SPAWN_STAGGER_SECONDS = 0.5
+
+
+def worker_spawn_budget_seconds(
+    worker_spawn_seconds: float, worker_count: int
+) -> float:
+    """Return the eager-roster budget including Anvil's spawn stagger."""
+    return worker_spawn_seconds + WORKER_SPAWN_STAGGER_SECONDS * max(
+        0, worker_count - 1
+    )
+
+
+def worker_snapshot_expression(
+    worker_specs: WorkerSpecs, worker_spawn_seconds: float
+) -> str:
     """Return Elisp that validates and snapshots every worker lane."""
     worker_expression = r"""
 (condition-case err
@@ -1143,6 +1157,7 @@ def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
   (error (list "snapshot-error" (error-message-string err))))
 """.strip()
     specs = " ".join(f"({lane} {json.dumps(name)})" for lane, name in worker_specs)
+    spawn_budget = worker_spawn_budget_seconds(worker_spawn_seconds, len(worker_specs))
     return f"""
 (progn
   (require 'cl-lib)
@@ -1161,19 +1176,35 @@ def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
         (error "Anvil worker pool did not start cold: %S" cold-state))))
   (anvil-worker-spawn)
   (cl-labels
-      ((all-workers-ready-p
-        ()
-        (let ((ready t))
+      ((unready-workers
+        (deadline)
+        (let (unready)
           (anvil-worker--map-pool
            (lambda (worker)
-             (unless (anvil-worker--worker-alive-p worker)
-               (setq ready nil))))
-          ready)))
-    (let ((deadline (+ (float-time) 30)))
-      (while (and (< (float-time) deadline) (not (all-workers-ready-p)))
-        (sleep-for 0.1))
-      (unless (all-workers-ready-p)
-        (error "not every Anvil worker became ready")))
+             (unless (anvil-worker--worker-alive-p worker deadline)
+               (push worker unready))))
+          (nreverse unready)))
+       (worker-lifecycle
+        (worker)
+        (let* ((name (plist-get worker :name))
+               (proc (gethash name anvil-worker--owned-processes))
+               (status (and (processp proc) (process-status proc))))
+          (list name
+                :demanded (and (plist-get worker :demanded) t)
+                :server-file (file-exists-p (plist-get worker :server-file))
+                :process-status status
+                :process-exit-status
+                (and (memq status '(exit signal failed))
+                     (process-exit-status proc))))))
+    (let* ((deadline (+ (float-time) {spawn_budget:.15g}))
+           (unready (unready-workers deadline)))
+      (while (and unready (< (float-time) deadline))
+        (sleep-for (min 0.1 (max 0.0 (- deadline (float-time)))))
+        (when (< (float-time) deadline)
+          (setq unready (unready-workers deadline))))
+      (when unready
+        (error "Anvil workers missed the eager-start deadline: %S"
+               (mapcar #'worker-lifecycle unready)))))
   (json-serialize
    (vconcat
     (mapcar
@@ -1396,7 +1427,7 @@ def call_tool(
     initialize: dict[str, object],
     name: str,
     arguments: dict[str, object],
-    timeout_seconds: float = 10,
+    timeout_seconds: float,
 ) -> dict[str, object]:
     """Call one tool through a fresh bridge with a bounded outer deadline."""
     responses = run_transcript(
@@ -1420,6 +1451,7 @@ def call_tool(
 def assert_direnv_nonlocal_exit_restores_baseline(
     launcher: Path,
     initialize: dict[str, object],
+    client_tool_seconds: float,
 ) -> None:
     """Reject project state after every fallible allow-status boundary."""
     expression = r"""
@@ -1551,7 +1583,7 @@ def assert_direnv_nonlocal_exit_restores_baseline(
             initialize,
             "emacs-eval",
             {"expression": expression},
-            timeout_seconds=10,
+            timeout_seconds=client_tool_seconds,
         )
     )
     expected = [
@@ -1575,6 +1607,7 @@ def assert_direnv_nonlocal_exit_restores_baseline(
 def assert_slow_direnv_keeps_root_responsive(
     launcher: Path,
     initialize: dict[str, object],
+    client_tool_seconds: float,
 ) -> None:
     """Prove slow direnv yields timers while stateful requests serialize."""
     project = (Path.home() / "direnv-slow").resolve()
@@ -1691,7 +1724,7 @@ def assert_slow_direnv_keeps_root_responsive(
                 initialize,
                 "emacs-eval",
                 {"expression": direct_expression},
-                30,
+                client_tool_seconds,
             )
             try:
                 wait_for(started, slow, "direct direnv helper")
@@ -1702,7 +1735,7 @@ def assert_slow_direnv_keeps_root_responsive(
                     initialize,
                     "emacs-eval",
                     {"expression": fast_expression},
-                    30,
+                    client_tool_seconds,
                 )
                 time.sleep(0.1)
                 if queued_direct.done():
@@ -1728,7 +1761,7 @@ def assert_slow_direnv_keeps_root_responsive(
                     initialize,
                     "emacs-eval",
                     {"expression": fast_expression},
-                    timeout_seconds=10,
+                    timeout_seconds=client_tool_seconds,
                 )
             )
     finally:
@@ -1824,7 +1857,7 @@ def assert_slow_direnv_keeps_root_responsive(
                     "filter": "",
                     "cwd": str(project),
                 },
-                30,
+                client_tool_seconds,
             )
             try:
                 wait_for(started, slow_shell, "shell-run direnv helper")
@@ -1834,7 +1867,7 @@ def assert_slow_direnv_keeps_root_responsive(
                     initialize,
                     "emacs-eval",
                     {"expression": fast_expression},
-                    30,
+                    client_tool_seconds,
                 )
                 time.sleep(0.1)
                 if queued_shell.done():
@@ -1860,7 +1893,7 @@ def assert_slow_direnv_keeps_root_responsive(
                     initialize,
                     "emacs-eval",
                     {"expression": fast_expression},
-                    timeout_seconds=10,
+                    timeout_seconds=client_tool_seconds,
                 )
             )
     finally:
@@ -1892,6 +1925,7 @@ def assert_environment_runner_boundaries(
     initialize: dict[str, object],
     python: Path,
     probe: Path,
+    client_tool_seconds: float,
 ) -> None:
     """Prove baseline isolation, byte caps, group cleanup, and recovery."""
     project = (Path.home() / "direnv-plain").resolve()
@@ -2039,7 +2073,7 @@ def assert_environment_runner_boundaries(
             initialize,
             "emacs-eval",
             {"expression": expression},
-            timeout_seconds=30,
+            timeout_seconds=client_tool_seconds,
         )
     )
     if not isinstance(result, list) or len(result) != 10:
@@ -2119,14 +2153,16 @@ def submit_async(
     launcher: Path,
     initialize: dict[str, object],
     expression: str,
-    timeout_seconds: float,
+    child_timeout_seconds: float,
+    client_tool_seconds: float,
 ) -> str:
     """Submit one isolated async expression and return its job ID."""
     response = call_tool(
         launcher,
         initialize,
         "emacs-eval-async",
-        {"expression": expression, "timeout": timeout_seconds},
+        {"expression": expression, "timeout": child_timeout_seconds},
+        timeout_seconds=client_tool_seconds,
     )
     text = tool_result_text(response)
     match = re.fullmatch(r"Job started: (job-[0-9]+-[0-9]+)\s*", text)
@@ -2139,20 +2175,27 @@ def poll_async(
     launcher: Path,
     initialize: dict[str, object],
     job_id: str,
-    timeout_seconds: float,
+    poll_window_seconds: float,
+    client_tool_seconds: float,
 ) -> str:
-    """Poll JOB-ID through independent bridges until it becomes terminal."""
-    deadline = time.monotonic() + timeout_seconds
+    """Poll JOB-ID through independently bounded bridges until terminal."""
+    # The async child owns its execution deadline.  This window bounds retries
+    # after completed status transports; any one fresh transport may still need
+    # the production client envelope to restart and reach the root daemon.
+    retry_deadline = time.monotonic() + poll_window_seconds
+    transport_deadline = retry_deadline + client_tool_seconds
     last = ""
-    while time.monotonic() < deadline:
-        remaining = max(1.0, deadline - time.monotonic())
+    while time.monotonic() < retry_deadline:
+        transport_remaining = transport_deadline - time.monotonic()
+        if transport_remaining <= 0:
+            break
         last = tool_result_text(
             call_tool(
                 launcher,
                 initialize,
                 "emacs-eval-result",
                 {"job-id": job_id},
-                timeout_seconds=remaining,
+                timeout_seconds=min(client_tool_seconds, transport_remaining),
             )
         )
         if last.startswith("status: done\n") or last.startswith("status: error\n"):
@@ -2179,6 +2222,7 @@ def assert_offload_request_context(
     launcher: Path,
     initialize: dict[str, object],
     request_directory: Path,
+    client_tool_seconds: float,
 ) -> None:
     """Prove an isolated child has a clean spawn and request-local directory."""
     expected_login = (Path.home() / "login-bin" / "anvil-login-shell").resolve()
@@ -2203,8 +2247,22 @@ def assert_offload_request_context(
     (json-serialize
      (vector "clean-offload" default-directory login))))
 """.strip()
-    job_id = submit_async(launcher, initialize, expression, 10)
-    result = decode_done_async_json(poll_async(launcher, initialize, job_id, 15))
+    job_id = submit_async(
+        launcher,
+        initialize,
+        expression,
+        10,
+        client_tool_seconds,
+    )
+    result = decode_done_async_json(
+        poll_async(
+            launcher,
+            initialize,
+            job_id,
+            15,
+            client_tool_seconds,
+        )
+    )
     expected_directory = request_directory.resolve()
     if (
         not isinstance(result, list)
@@ -2232,6 +2290,7 @@ def assert_async_isolation(
     initialize: dict[str, object],
     watchdog_lease: Path,
     client_tool_seconds: float,
+    bridge_readiness_seconds: float,
 ) -> None:
     """Prove a wedged async child cannot wedge or exempt the root daemon."""
     runtime = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / "host-a"
@@ -2246,18 +2305,19 @@ def assert_async_isolation(
         "(insert (number-to-string (emacs-pid)))) "
         "(while t))"
     )
-    # Bound each phase explicitly: the fresh bridge may spend 10 seconds
-    # submitting, the isolated child gets 10 seconds to publish its marker,
-    # and the concurrent root probe gets the 20-second bridge readiness
-    # budget plus a five-second margin before the child is killed.
-    root_probe_budget = 20
-    async_timeout = 45
+    # Bound each phase explicitly: fresh bridge submissions use the production
+    # client envelope, the isolated child gets 10 seconds to publish its marker,
+    # and the concurrent root probe gets the production bridge-readiness budget
+    # plus a five-second margin before the child is killed.
+    root_probe_budget = bridge_readiness_seconds
+    async_timeout = bridge_readiness_seconds + 25
     async_deadline = time.monotonic() + async_timeout
     job_id = submit_async(
         launcher,
         initialize,
         looping_expression,
         async_timeout,
+        client_tool_seconds,
     )
 
     marker_deadline = time.monotonic() + 10
@@ -2269,6 +2329,7 @@ def assert_async_isolation(
             initialize,
             job_id,
             async_timeout + 5,
+            client_tool_seconds,
         )
         raise AssertionError(
             "isolated async child never wrote its PID marker; "
@@ -2309,6 +2370,7 @@ def assert_async_isolation(
         initialize,
         job_id,
         async_timeout + 5,
+        client_tool_seconds,
     )
     if not terminal.startswith("status: error\n") or "timeout" not in terminal.lower():
         raise AssertionError(f"looping async job did not time out: {terminal}")
@@ -2351,6 +2413,7 @@ def assert_async_isolation(
         initialize,
         environment_expression,
         environment_timeout,
+        client_tool_seconds,
     )
     environment_result = decode_done_async_json(
         poll_async(
@@ -2358,6 +2421,7 @@ def assert_async_isolation(
             initialize,
             environment_job,
             environment_timeout + 5,
+            client_tool_seconds,
         )
     )
     expected_executable = (project_file.parent / "bin" / "anvil-direnv-a").resolve()
@@ -2375,19 +2439,24 @@ def assert_async_isolation(
 
 def main() -> None:
     if (
-        len(sys.argv) != 8
+        len(sys.argv) != 10
         or not sys.argv[4].isdigit()
         or int(sys.argv[4]) <= 0
         or not sys.argv[5].isdigit()
         or int(sys.argv[5]) <= 0
-        or not Path(sys.argv[6]).is_file()
-        or not os.access(sys.argv[6], os.X_OK)
-        or not Path(sys.argv[7]).is_file()
+        or not sys.argv[6].isdigit()
+        or int(sys.argv[6]) <= 0
+        or not sys.argv[7].isdigit()
+        or int(sys.argv[7]) <= 0
+        or not Path(sys.argv[8]).is_file()
+        or not os.access(sys.argv[8], os.X_OK)
+        or not Path(sys.argv[9]).is_file()
     ):
         raise SystemExit(
             "usage: headless-smoke.py /path/to/anvil-mcp "
             "/path/to/anvil-mcp-inner WORKER_SPECS_JSON "
-            "CLIENT_TOOL_SECONDS HOST_SHELL_SECONDS PYTHON OUTPUT_PROBE"
+            "CLIENT_TOOL_SECONDS HOST_SHELL_SECONDS BRIDGE_READINESS_SECONDS "
+            "WORKER_SPAWN_SECONDS PYTHON OUTPUT_PROBE"
         )
 
     launcher = Path(sys.argv[1]).resolve()
@@ -2401,8 +2470,10 @@ def main() -> None:
     worker_specs = parse_worker_specs(sys.argv[3])
     client_tool_seconds = float(sys.argv[4])
     host_shell_seconds = int(sys.argv[5])
-    environment_python = Path(sys.argv[6]).resolve()
-    environment_probe = Path(sys.argv[7]).resolve()
+    bridge_readiness_seconds = float(sys.argv[6])
+    worker_spawn_seconds = float(sys.argv[7])
+    environment_python = Path(sys.argv[8]).resolve()
+    environment_probe = Path(sys.argv[9]).resolve()
     org_root = Path.home() / "org"
     org_file = org_root / "smoke.org"
     initialize = {
@@ -2410,7 +2481,7 @@ def main() -> None:
         "capabilities": {},
         "clientInfo": {"name": "nix-headless-smoke", "version": "1"},
     }
-    snapshot_expression = worker_snapshot_expression(worker_specs)
+    snapshot_expression = worker_snapshot_expression(worker_specs, worker_spawn_seconds)
     buffer_environment_expression = direnv_buffer_expression()
     request_context = request_context_expression()
     spawn_environment_expression = spawn_baseline_expression()
@@ -2734,6 +2805,7 @@ def main() -> None:
                 },
             ),
         ],
+        client_tool_seconds,
         cwd=launch_directory,
     )
     main_names = tool_names(response_by_id(main_responses, 2))
@@ -2853,23 +2925,39 @@ def main() -> None:
                 "arguments": {"expression": large_expression},
             },
         ),
+        client_tool_seconds,
     )
     assert_tool_text(response_by_id(large_responses, 26), "524289")
 
-    assert_offload_request_context(launcher, initialize, launch_directory)
+    assert_offload_request_context(
+        launcher,
+        initialize,
+        launch_directory,
+        client_tool_seconds,
+    )
     assert_async_isolation(
         launcher,
         initialize,
         watchdog_lease,
         client_tool_seconds,
+        bridge_readiness_seconds,
     )
-    assert_direnv_nonlocal_exit_restores_baseline(launcher, initialize)
-    assert_slow_direnv_keeps_root_responsive(launcher, initialize)
+    assert_direnv_nonlocal_exit_restores_baseline(
+        launcher,
+        initialize,
+        client_tool_seconds,
+    )
+    assert_slow_direnv_keeps_root_responsive(
+        launcher,
+        initialize,
+        client_tool_seconds,
+    )
     assert_environment_runner_boundaries(
         launcher,
         initialize,
         environment_python,
         environment_probe,
+        client_tool_seconds,
     )
 
     secondary_responses = run_transcript(
@@ -2888,6 +2976,7 @@ def main() -> None:
                 },
             ),
         ],
+        client_tool_seconds,
     )
     assert_worker_snapshot(
         response_by_id(secondary_responses, 22), "host-b", worker_specs
@@ -2943,6 +3032,7 @@ def main() -> None:
                 },
             ),
         ],
+        client_tool_seconds,
     )
     typed_names = tool_names(response_by_id(typed_responses, 12))
     if typed_names != TYPED_TOOLS:

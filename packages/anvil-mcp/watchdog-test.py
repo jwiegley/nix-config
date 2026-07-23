@@ -370,6 +370,7 @@ def assert_descriptor_cleanup(namespace: dict[str, object]) -> None:
 
 RUN_ID = "0123456789abcdef0123456789abcdef"
 DAEMON_PID = 4242
+LIFECYCLE_OUTER_TIMEOUT_SECONDS = 10
 ACTIVITY_KEYS = {
     "schema_version",
     "run_id",
@@ -1216,7 +1217,7 @@ class WatchdogLifecycleTests(WatchdogTestCase):
                     "import time\ntime.sleep(5)\n",
                     environment=environment,
                     pass_fds=(write_descriptor,),
-                    timeout=3,
+                    timeout=LIFECYCLE_OUTER_TIMEOUT_SECONDS,
                 )
                 os.close(write_descriptor)
                 write_descriptor = None
@@ -1233,6 +1234,7 @@ class WatchdogLifecycleTests(WatchdogTestCase):
                 self.assertEqual(event["method"], "none")
                 self.assertIsNone(event["tool"])
                 self.assertEqual(event["run_id"], RUN_ID)
+                self.assertLess(event["daemon_uptime_ms"], 2_000)
             finally:
                 os.close(read_descriptor)
                 if write_descriptor is not None:
@@ -1289,7 +1291,7 @@ class WatchdogLifecycleTests(WatchdogTestCase):
                         stage_body,
                         environment=environment,
                         pass_fds=(write_descriptor,),
-                        timeout=3,
+                        timeout=LIFECYCLE_OUTER_TIMEOUT_SECONDS,
                     )
                     os.close(write_descriptor)
                     write_descriptor = None
@@ -1299,6 +1301,7 @@ class WatchdogLifecycleTests(WatchdogTestCase):
                     event = json.loads(os.read(read_descriptor, 513))
                     self.assertEqual(event["cause"], "startup-timeout")
                     self.assertEqual(event["phase"], "startup")
+                    self.assertLess(event["daemon_uptime_ms"], 2_000)
                 finally:
                     os.close(read_descriptor)
                     if write_descriptor is not None:

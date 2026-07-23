@@ -1858,6 +1858,8 @@ def run_default_parse_budget(
             paths["bridge_stderr"],
             "--socket=/tmp/anvil-parse-default-test",
             "--server-id=test",
+            initial_input=json_bytes({"jsonrpc": "2.0", "id": 30, "method": "test"})
+            + b"\n",
         )
         reader = BinaryReader(
             process,
@@ -1869,7 +1871,6 @@ def run_default_parse_budget(
         clean = False
         try:
             wait_for_bridge_ready(paths["debug_log"], process)
-            send(process, {"jsonrpc": "2.0", "id": 30, "method": "test"})
             wait_for_dispatch_complete(
                 paths["dispatch_complete"],
                 process,
@@ -1878,7 +1879,6 @@ def run_default_parse_budget(
             )
             read_reply(reader, expected, framed=False)
             paths["dispatch_complete"].unlink()
-            process.stdin.close()
             process.wait(timeout=5)
             if process.returncode != 0:
                 raise AssertionError(reader.diagnostics())
@@ -2323,6 +2323,7 @@ def run_nul_wire_rejection(
     stdio: Path,
     bash: str,
     real_helpers: dict[str, str],
+    frame_read_timeout_seconds: int = 10,
 ) -> None:
     """Reject raw NUL after synchronizing with the intended bounded reader."""
     cases = (
@@ -2401,7 +2402,9 @@ os.execv({real_python!r}, [{real_python!r}, *sys.argv[1:]])
                 environment.update(
                     {
                         "ANVIL_TEST_PYTHON_MARKER": str(marker),
-                        "ANVIL_MCP_FRAME_READ_TIMEOUT": "10",
+                        "ANVIL_MCP_FRAME_READ_TIMEOUT": str(
+                            frame_read_timeout_seconds
+                        ),
                     }
                 )
                 process = start_bridge(
@@ -2439,7 +2442,10 @@ os.execv({real_python!r}, [{real_python!r}, *sys.argv[1:]])
                             >= expected_occurrence
                         )
 
-                    if not wait_until(target_reader_started, 4.0):
+                    if not wait_until(
+                        target_reader_started,
+                        frame_read_timeout_seconds,
+                    ):
                         attempt_failures.append(
                             f"attempt={attempt} rc={process.poll()} "
                             f"marker={safe_text(marker)!r} "
@@ -3748,17 +3754,24 @@ def run_large_request_metadata(
 
 def main() -> int:
     """Run negative and positive regressions with an explicit Bash."""
-    if len(sys.argv) not in (3, 5):
+    if len(sys.argv) not in (3, 5, 6):
         raise SystemExit(
             f"usage: {Path(sys.argv[0]).name} "
-            "ANVIL_STDIO BASH [PARENT_GUARD GUARD_PYTHON]"
+            "ANVIL_STDIO BASH "
+            "[PARENT_GUARD GUARD_PYTHON [FRAME_READ_TIMEOUT_SECONDS]]"
         )
     stdio = Path(sys.argv[1]).resolve()
     bash = str(Path(sys.argv[2]).resolve())
-    parent_guard = Path(sys.argv[3]).resolve() if len(sys.argv) == 5 else None
+    parent_guard = Path(sys.argv[3]).resolve() if len(sys.argv) >= 5 else None
     parent_guard_python = (
-        str(Path(sys.argv[4]).resolve()) if len(sys.argv) == 5 else None
+        str(Path(sys.argv[4]).resolve()) if len(sys.argv) >= 5 else None
     )
+    try:
+        frame_read_timeout_seconds = int(sys.argv[5]) if len(sys.argv) == 6 else 10
+    except ValueError as error:
+        raise SystemExit("frame read timeout must be an integer") from error
+    if frame_read_timeout_seconds <= 0:
+        raise SystemExit("frame read timeout must be positive")
     if not stdio.is_file():
         raise SystemExit(f"not a file: {stdio}")
     if not Path(bash).is_file():
@@ -3825,7 +3838,12 @@ def main() -> int:
     )
     run_default_parse_budget(stdio, bash, real_helpers)
     run_idle_then_partial_first_line(stdio, bash, real_helpers)
-    run_nul_wire_rejection(stdio, bash, real_helpers)
+    run_nul_wire_rejection(
+        stdio,
+        bash,
+        real_helpers,
+        frame_read_timeout_seconds,
+    )
     run_stalled_frame_header(stdio, bash, real_helpers)
     run_truncated_frame(stdio, bash, real_helpers)
     run_cumulative_frame_budget(stdio, bash, real_helpers)
