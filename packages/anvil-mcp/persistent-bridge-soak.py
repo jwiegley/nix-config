@@ -228,6 +228,23 @@ def configure_soak_timeout_environment(
     return timeouts
 
 
+def healthy_sibling_deadline(
+    hang_started: float,
+    configured_timeout: float,
+    recovery_response_timeout: float,
+) -> float:
+    """Return the absolute end of the shared nonce and healthy window."""
+    configured_deadline = (
+        hang_started + NONCE_START_TIMEOUT_SECONDS + configured_timeout
+    )
+    watchdog_deadline = (
+        hang_started
+        + recovery_response_timeout
+        - WATCHDOG_RESPONSE_GRACE_SECONDS
+    )
+    return min(configured_deadline, watchdog_deadline)
+
+
 def _phase_timeout_handler(signum: int, _frame: object) -> None:
     global _PENDING_PHASE_TIMEOUT
     state = _PHASE_TIMEOUT_STATE
@@ -462,19 +479,19 @@ def parse_direnv_response(response: dict[str, object], smoke, command: Path) -> 
 def collect_responses(
     bridge,
     identifiers: dict[str, int],
-    timeout: float,
+    *,
+    deadline: float,
 ) -> dict[str, dict[str, object]]:
     by_identifier = {identifier: name for name, identifier in identifiers.items()}
     responses: dict[str, dict[str, object]] = {}
-    deadline = time.monotonic() + timeout
     while len(responses) < len(identifiers):
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise AssertionError(
-                f"pipelined responses exceeded {timeout}s: "
+                "pipelined responses exceeded their absolute deadline: "
                 f"received={sorted(responses)} expected={sorted(identifiers)}"
             )
-        response = bridge.receive_response(remaining)
+        response = bridge.receive_response(deadline=deadline)
         identifier = response.get("id")
         if identifier not in by_identifier:
             raise AssertionError(f"unexpected pipelined response id: {response!r}")
@@ -598,7 +615,7 @@ def warm_bridge(bridge, smoke, fixtures: dict[str, Path]) -> None:
     responses = collect_responses(
         bridge,
         identifiers,
-        timeout=smoke.CLIENT_TOOL_SECONDS,
+        deadline=time.monotonic() + smoke.CLIENT_TOOL_SECONDS,
     )
     try:
         validate_fixture_responses(responses, smoke, fixtures)
@@ -1041,6 +1058,7 @@ def run_recovery_cycle(
         f"{json.dumps(str(nonce))} t 'silent) (while t))"
     )
     hang_started = time.monotonic()
+    recovery_deadline = hang_started + recovery_response_timeout
     hang_identifier = hanging.send_request(
         "tools/call",
         {"name": "emacs-eval", "arguments": {"expression": expression}},
@@ -1050,8 +1068,17 @@ def run_recovery_cycle(
         raise AssertionError("hung request completed before sibling work began")
 
     sibling_started = time.monotonic()
+    healthy_deadline = healthy_sibling_deadline(
+        hang_started,
+        healthy_timeout,
+        recovery_response_timeout,
+    )
     identifiers = send_fixture_requests(healthy, fixtures)
-    responses = collect_responses(healthy, identifiers, timeout=healthy_timeout)
+    if time.monotonic() >= healthy_deadline:
+        raise AssertionError(
+            "healthy sibling requests exhausted the shared watchdog window"
+        )
+    responses = collect_responses(healthy, identifiers, deadline=healthy_deadline)
     validate_fixture_responses(responses, smoke, fixtures)
     sibling_elapsed = time.monotonic() - sibling_started
 
@@ -1067,12 +1094,11 @@ def run_recovery_cycle(
             f"{during_hang!r}"
         )
 
-    response_remaining = recovery_response_timeout - (time.monotonic() - hang_started)
-    if response_remaining <= 0:
+    if time.monotonic() >= recovery_deadline:
         raise AssertionError(
             "hung response exceeded its absolute watchdog-response deadline"
         )
-    hung_response = hanging.receive_response(timeout=response_remaining)
+    hung_response = hanging.receive_response(deadline=recovery_deadline)
     dispatch_elapsed = time.monotonic() - hang_started
     if hung_response.get("id") != hang_identifier:
         raise AssertionError(f"hung response id mismatch: {hung_response!r}")

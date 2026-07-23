@@ -189,16 +189,29 @@ class BridgeProcess:
         self.process.stdin.flush()
         return identifier
 
-    def receive_response(self, timeout: float = 60.0) -> dict[str, object]:
-        """Read one newline frame under a monotonic deadline."""
+    def receive_response(
+        self,
+        timeout: float | None = None,
+        *,
+        deadline: float | None = None,
+    ) -> dict[str, object]:
+        """Read one newline frame under a relative or absolute deadline."""
         if self.process.stdout is None:
             raise AssertionError("bridge stdout is unavailable")
+        if timeout is not None and deadline is not None:
+            raise AssertionError("response timeout and deadline are mutually exclusive")
+        if deadline is None:
+            deadline = time.monotonic() + (60.0 if timeout is None else timeout)
         descriptor = self.process.stdout.fileno()
-        deadline = time.monotonic() + timeout
         selector = selectors.DefaultSelector()
         selector.register(descriptor, selectors.EVENT_READ)
         try:
             while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise AssertionError(
+                        f"bridge response timed out; stderr:\n{self.stderr()}"
+                    )
                 newline = self.response_buffer.find(b"\n")
                 if newline >= 0:
                     if newline > MAX_RESPONSE_FRAME_BYTES:
@@ -215,11 +228,6 @@ class BridgeProcess:
                     return response
                 if len(self.response_buffer) > MAX_RESPONSE_FRAME_BYTES:
                     raise AssertionError("bridge response frame exceeded size limit")
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    raise AssertionError(
-                        f"bridge response timed out; stderr:\n{self.stderr()}"
-                    )
                 if not selector.select(remaining):
                     raise AssertionError(
                         f"bridge response timed out; stderr:\n{self.stderr()}"

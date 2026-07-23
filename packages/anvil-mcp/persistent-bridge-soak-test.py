@@ -143,6 +143,131 @@ def test_timeout_budget(
             signal.setitimer(signal.ITIMER_REAL, remaining, original_interval)
 
 
+def test_healthy_sibling_deadline_preserves_watchdog_window(soak_path: Path) -> None:
+    """Represent the shared nonce and healthy budget as one deadline."""
+    soak = load_module(soak_path, "persistent_soak_healthy_budget_test")
+    deadline_for = getattr(soak, "healthy_sibling_deadline", None)
+    if deadline_for is None:
+        raise AssertionError("healthy sibling budget has no absolute deadline")
+
+    cases = (
+        (100.0, 35.0, 75.0, 145.0),
+        (100.0, 20.0, 75.0, 130.0),
+        (100.0, 35.0, 60.0, 130.0),
+    )
+    for started, configured, response_timeout, expected in cases:
+        actual = deadline_for(started, configured, response_timeout)
+        if actual != expected:
+            raise AssertionError(
+                "healthy sibling deadline escaped its shared watchdog budget: "
+                f"started={started:g} configured={configured:g} "
+                f"actual={actual:g} expected={expected:g}"
+            )
+
+
+def test_recovery_cycle_uses_remaining_watchdog_window(soak_path: Path) -> None:
+    """Carry one absolute watchdog deadline through healthy collection."""
+    soak = load_module(soak_path, "persistent_soak_recovery_budget_test")
+    now = [100.0]
+    observed: list[dict[str, float]] = []
+    hung_receives: list[tuple[tuple[object, ...], dict[str, float]]] = []
+
+    class StopAfterHungResponse(Exception):
+        pass
+
+    class Bridge:
+        def __init__(self, name):
+            self.name = name
+
+        def send_request(self, _method, _arguments):
+            return 17
+
+        def has_complete_response(self):
+            return False
+
+        def receive_response(self, *args, **kwargs):
+            if self.name != "hanging":
+                raise AssertionError("healthy bridge bypassed response collection")
+            hung_receives.append((args, kwargs))
+            raise StopAfterHungResponse
+
+    old_status = {"daemon_pid": 101, "supervisor_pid": 201}
+    healthy_status = {"daemon_pid": 102, "supervisor_pid": 202}
+
+    class Smoke:
+        @staticmethod
+        def read_running_status(path):
+            return old_status if path == "old-status" else healthy_status
+
+        @staticmethod
+        def eventually(_predicate, timeout):
+            if timeout != soak.NONCE_START_TIMEOUT_SECONDS:
+                raise AssertionError(f"unexpected nonce timeout: {timeout:g}")
+            return True
+
+    class Module:
+        @staticmethod
+        def process_start_identity(pid):
+            return f"identity-{pid}"
+
+    def send_fixture_requests(_bridge, _fixtures):
+        now[0] = 103.0
+        return {"file": 1, "org": 2, "git": 3, "elisp": 4}
+
+    def collect_responses(_bridge, _identifiers, **bounds):
+        now[0] = 110.0
+        observed.append(bounds)
+        return {}
+
+    with (
+        mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]),
+        mock.patch.object(soak, "record_identity", return_value="identity-101"),
+        mock.patch.object(
+            soak,
+            "send_fixture_requests",
+            side_effect=send_fixture_requests,
+        ),
+        mock.patch.object(soak, "collect_responses", side_effect=collect_responses),
+        mock.patch.object(soak, "validate_fixture_responses"),
+    ):
+        try:
+            soak.run_recovery_cycle(
+                0,
+                [Bridge("hanging"), Bridge("healthy")],
+                [
+                    {"status_path": "old-status", "runtime_dir": Path("/tmp/old")},
+                    {
+                        "status_path": "healthy-status",
+                        "runtime_dir": Path("/tmp/healthy"),
+                    },
+                ],
+                Smoke(),
+                Module(),
+                {},
+                set(),
+                [],
+                35.0,
+                75.0,
+                40.0,
+                45.0,
+            )
+        except StopAfterHungResponse:
+            pass
+        else:
+            raise AssertionError("recovery cycle escaped the hung-response fixture")
+
+    if observed != [{"deadline": 145.0}]:
+        raise AssertionError(
+            "recovery cycle did not preserve the absolute watchdog deadline: "
+            f"{observed!r}"
+        )
+    if hung_receives != [((), {"deadline": 175.0})]:
+        raise AssertionError(
+            "recovery cycle re-anchored its watchdog-response deadline: "
+            f"{hung_receives!r}"
+        )
+
+
 def test_phase_timeout_ownership(soak_path: Path) -> None:
     """Defer phase alarms until acquired resources are tracked and cleaned."""
     soak = load_module(soak_path, "persistent_soak_phase_ownership_test")
@@ -305,6 +430,26 @@ def test_response_reader(soak_path: Path, smoke_path: Path) -> None:
         second = bridge.receive_response(timeout=1)
         if second.get("id") != 2:
             raise AssertionError(f"prefetched frame was lost: {second!r}")
+
+        bridge.response_buffer.extend(b'{"jsonrpc":"2.0","id":3}\n')
+        with mock.patch.object(
+            soak.time,
+            "monotonic",
+            side_effect=(103.0, 146.0),
+        ):
+            try:
+                soak.collect_responses(
+                    bridge,
+                    {"late": 3},
+                    deadline=145.0,
+                )
+            except AssertionError as error:
+                if "timed out" not in str(error):
+                    raise
+            else:
+                raise AssertionError(
+                    "prefetched response escaped its absolute deadline"
+                )
     finally:
         os.close(write_descriptor)
         stdout.close()
@@ -968,6 +1113,8 @@ def main() -> None:
         kill_after,
         hard_ceiling,
     )
+    test_healthy_sibling_deadline_preserves_watchdog_window(soak)
+    test_recovery_cycle_uses_remaining_watchdog_window(soak)
     test_phase_timeout_ownership(soak)
     test_response_reader(soak, smoke)
     test_async_poll_deadline(soak)
