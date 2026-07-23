@@ -180,16 +180,16 @@
         "translate-tool": "translate-tool"
       },
       "locked": {
-        "lastModified": 1784768740,
-        "narHash": "sha256-uksvUas+xuRHT21EKofvguaH0lwpnWwrnIVqP8UgPWA=",
+        "lastModified": 1784772777,
+        "narHash": "sha256-0z/fdcRq9946EPWP1qlptZMfz8SZmEFlJlUwTmJk4rI=",
         "ref": "refs/heads/main",
-        "rev": "22c8fda838cbabaaa4bf0fbcdd392b0af5f34f4c",
-        "revCount": 94,
+        "rev": "8fbb74948523979a166f39326ca14af4647d5f2d",
+        "revCount": 95,
         "type": "git",
         "url": "https://github.com/jwiegley/ai-nix"
       },
       "original": {
-        "rev": "22c8fda838cbabaaa4bf0fbcdd392b0af5f34f4c",
+        "rev": "8fbb74948523979a166f39326ca14af4647d5f2d",
         "type": "git",
         "url": "https://github.com/jwiegley/ai-nix"
       }

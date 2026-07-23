@@ -16,7 +16,7 @@
     };
 
     ai-nix = {
-      url = "git+https://github.com/jwiegley/ai-nix?rev=22c8fda838cbabaaa4bf0fbcdd392b0af5f34f4c";
+      url = "git+https://github.com/jwiegley/ai-nix?rev=8fbb74948523979a166f39326ca14af4647d5f2d";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
