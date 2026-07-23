@@ -1412,6 +1412,35 @@ let
     }
     // lib.optionalAttrs (model ? contextLimit) {
       contextWindow = model.contextLimit;
+    }
+    // lib.optionalAttrs (model.provider == "litellm" && model.id == "positron_openai/gpt-5.6-sol") {
+      api = "openai-responses";
+      reasoning = true;
+      input = [
+        "text"
+        "image"
+      ];
+      cost = {
+        input = 5;
+        output = 30;
+        cacheRead = 0.5;
+        cacheWrite = 6.25;
+        tiers = [
+          {
+            inputTokensAbove = 272000;
+            input = 10;
+            output = 45;
+            cacheRead = 1;
+            cacheWrite = 12.5;
+          }
+        ];
+      };
+      thinkingLevelMap = {
+        off = "none";
+        minimal = null;
+        xhigh = "xhigh";
+        max = null;
+      };
     };
   expectedPiProvider = providerName: provider: {
     api = piProviderApis.${providerName};
@@ -1426,6 +1455,9 @@ let
   expectedPiModels = {
     providers = lib.mapAttrs expectedPiProvider (selectedProviders "hera-pi");
   };
+  expectedPiGpt56Sol = lib.findFirst (
+    model: model.id == "positron_openai/gpt-5.6-sol"
+  ) null expectedPiModels.providers.litellm.models;
   renderPiSecretReferences =
     value:
     if isTypedEnv value then
@@ -2042,9 +2074,9 @@ let
     )
   );
   openCodeConfigHashes = {
-    clio-opencode = "f7068bb4bda57585af29a25c12194be17b121ca2b9ad0c69a686d04a3c5f6e5e";
-    hera-opencode = "606a86d471b43ef8a933c077c43951dd13d1e7179d70e939933e13412eba684e";
-    shared-work-opencode-positron = "9eb4def690a44be5785fe0996655ec3f32eee53cc621f0e6aea14afffb032c27";
+    clio-opencode = "2e9a91d6adaae2b1d444e246b0ac8e8dc93f2b411f40087abe76417a1da7e061";
+    hera-opencode = "e3247fa0cbfdbd183eaaf64b8b9185b293acd7e32fe91a83b52fdd8637966ad6";
+    shared-work-opencode-positron = "3708be3dec7ccd4fd5fb4becf333671e67d92eb8dd09266ea7a17d4cb880cd1f";
     vulcan-opencode = "abe5634f22008b605ec8012906fa4df89b8d6846bc0e3c152c5b65cd0afc94ce";
   };
   openCodeRequiredEnvNames = {
@@ -2205,7 +2237,7 @@ let
         )
         (expectEqual "${profileId} semantic settings oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedDroidSettings
-        )) "b381ca88437dafb580cf6b087c1fdcc3afaed42fb73bee1cd34f5824ef69d5b0")
+        )) "3a6d4ab3e321e490e8becd03fe344241eb0dd65d49671581808b1fc29a7f54e1")
         (expectEqual "${profileId} custom model provider counts" providerCounts {
           anthropic = 4;
           generic-chat-completion-api = 86;
@@ -2303,9 +2335,42 @@ let
         (expectEqual "${profileId} model count" (lib.foldl' (
           count: provider: count + builtins.length provider.models
         ) 0 (builtins.attrValues expectedPiModels.providers)) 95)
+        (expectEqual "${profileId} LiteLLM GPT-5.6 Sol" expectedPiGpt56Sol {
+          id = "positron_openai/gpt-5.6-sol";
+          name = "Gpt 5.6 Sol";
+          api = "openai-responses";
+          reasoning = true;
+          input = [
+            "text"
+            "image"
+          ];
+          contextWindow = 1050000;
+          maxTokens = 128000;
+          cost = {
+            input = 5;
+            output = 30;
+            cacheRead = 0.5;
+            cacheWrite = 6.25;
+            tiers = [
+              {
+                inputTokensAbove = 272000;
+                input = 10;
+                output = 45;
+                cacheRead = 1;
+                cacheWrite = 12.5;
+              }
+            ];
+          };
+          thinkingLevelMap = {
+            off = "none";
+            minimal = null;
+            xhigh = "xhigh";
+            max = null;
+          };
+        })
         (expectEqual "${profileId} semantic models oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedPiModels
-        )) "38b22071e9191140af54587cf5da65355743549ea6f7a7b2da56019c591084f9")
+        )) "6ef089012c73efc02e011c844c1b9c3685c2fc5edd3e87c764f1e2c1dc70e263")
         (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) [
           "Ref"
           "anvil"

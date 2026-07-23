@@ -140,7 +140,7 @@
       "provider": "positron-openai",
       "id": "gpt-5.6-sol",
       "displayName": "Gpt 5.6 Sol",
-      "maxOutputTokens": 32000
+      "maxOutputTokens": 128000
     },
     {
       "provider": "positron-openai",
@@ -380,9 +380,9 @@
       "provider": "litellm",
       "id": "positron_openai/gpt-5.6-sol",
       "displayName": "Gpt 5.6 Sol",
-      "maxOutputTokens": 65536,
-      "contextLimit": 262144,
-      "outputLimit": 65536
+      "maxOutputTokens": 128000,
+      "contextLimit": 1050000,
+      "outputLimit": 128000
     },
     {
       "provider": "litellm",

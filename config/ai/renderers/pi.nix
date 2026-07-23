@@ -93,6 +93,35 @@ let
     }
     // lib.optionalAttrs (model ? contextLimit) {
       contextWindow = model.contextLimit;
+    }
+    // lib.optionalAttrs (model.provider == "litellm" && model.id == "positron_openai/gpt-5.6-sol") {
+      api = "openai-responses";
+      reasoning = true;
+      input = [
+        "text"
+        "image"
+      ];
+      cost = {
+        input = 5;
+        output = 30;
+        cacheRead = 0.5;
+        cacheWrite = 6.25;
+        tiers = [
+          {
+            inputTokensAbove = 272000;
+            input = 10;
+            output = 45;
+            cacheRead = 1;
+            cacheWrite = 12.5;
+          }
+        ];
+      };
+      thinkingLevelMap = {
+        off = "none";
+        minimal = null;
+        xhigh = "xhigh";
+        max = null;
+      };
     };
   renderProvider = providerName: provider: {
     api = providerApis.${providerName};
