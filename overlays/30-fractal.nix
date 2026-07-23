@@ -123,6 +123,13 @@ in
         --fuzz=0 \
         --strip=1 \
         < ${../patches/plasma-fractal-nix-compat.patch}
+      ${prev.patch}/bin/patch \
+        --batch \
+        --directory="$out/${ps.python.sitePackages}" \
+        --forward \
+        --fuzz=0 \
+        --strip=1 \
+        < ${../patches/plasma-fractal-native-pi.patch}
       mkdir -p "$out/share/skills"
       ln -s "$out/${ps.python.sitePackages}/fractal/skills/fractal" \
         "$out/share/skills/fractal"
@@ -136,6 +143,7 @@ in
     pythonImportsCheck = [
       "fractal"
       "fractal.tui"
+      "fractal.impl.pi"
     ];
     doInstallCheck = true;
     installCheckPhase = ''
@@ -144,6 +152,7 @@ in
       test -f "$out/share/skills/fractal/SKILL.md"
       test -f "$out/share/skills/fractal/agents/openai.yaml"
       "$out/bin/fractal" --help > /dev/null
+      "$out/bin/fractal" node init --help | grep -F "pi" > /dev/null
       runHook postInstallCheck
     '';
 
