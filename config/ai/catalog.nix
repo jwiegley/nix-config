@@ -113,15 +113,550 @@ let
   select =
     profile: itemSet: lib.filterAttrs (_: item: matches profile (item.selectors or { })) itemSet;
 
-  agentMetadata = builtins.fromJSON ''
-    {"bash-reviewer":{"description":"Expert Bash/Shell script reviewer specializing in quoting correctness, POSIX compliance, security, and robustness patterns. Use when reviewing shell scripts or shell fragments embedded in CI configs, Makefiles, or installers.","name":"bash-reviewer","tools":"Read, Grep, Glob, Bash"},"coq-reviewer":{"description":"Expert Coq/Rocq code reviewer specializing in proof soundness, tactic hygiene, termination arguments, and proof engineering patterns. Use when reviewing Coq/Rocq (.v) proof developments.","name":"coq-reviewer","tools":"Read, Grep, Glob, Bash"},"cpp-pro":{"description":"Write idiomatic C++ with modern features, RAII, smart pointers, STL algorithms. Handles templates, move semantics, performance optimization. Use PROACTIVELY for C++ refactoring, memory safety, complex C++ patterns.","name":"cpp-pro"},"cpp-reviewer":{"description":"Expert C++ code reviewer specializing in memory safety, undefined behavior, modern C++ idioms, and concurrency. Use when reviewing C or C++ source and header changes.","name":"cpp-reviewer","tools":"Read, Grep, Glob, Bash"},"elisp-reviewer":{"description":"Expert Emacs Lisp code reviewer specializing in lexical binding, package conventions, macro hygiene, and performance. Use when reviewing Emacs Lisp (.el) code or Emacs configurations.","name":"elisp-reviewer","tools":"Read, Grep, Glob, Bash"},"emacs-lisp-pro":{"description":"Expert in Emacs Lisp language, editor environment, module system. Use PROACTIVELY for Emacs Lisp development, package management with use-package, Emacs Lisp expression development.","name":"emacs-lisp-pro"},"fess-auditor":{"description":"Runs the fess audit in a sub-agent and reports the evidence-backed results to the main session. Use after implementation or verification work when the main agent needs an honesty check.","name":"fess-auditor"},"haskell-pro":{"description":"Expert in Haskell, type-level programming, performance tuning, concurrency, and the Cabal/Stack/Nix build toolchain. Use PROACTIVELY for Haskell development, debugging type errors, diagnosing space leaks, and build configuration.","name":"haskell-pro"},"haskell-reviewer":{"description":"Expert Haskell code reviewer specializing in laziness pitfalls, type safety, space leaks, and idiomatic functional patterns. Use when reviewing Haskell (.hs/.lhs) changes.","name":"haskell-reviewer","tools":"Read, Grep, Glob, Bash"},"nix-pro":{"description":"Expert in NixOS configurations, Nix language, flakes, module system. Masters declarative system management, derivations, reproducible builds. Use PROACTIVELY for NixOS system configuration, package management, Nix expression development.","name":"nix-pro"},"nix-reviewer":{"description":"Expert Nix code reviewer specializing in reproducibility, flake hygiene, NixOS module design, and security. Use when reviewing Nix expressions, flakes, or NixOS/Home Manager modules.","name":"nix-reviewer","tools":"Read, Grep, Glob, Bash"},"perf-reviewer":{"description":"Cross-language performance reviewer specializing in algorithmic complexity, resource leaks, allocation patterns, and system-level bottlenecks. Use for a cross-cutting performance pass over a changeset, after or alongside language-specific review.","name":"perf-reviewer","tools":"Read, Grep, Glob, Bash"},"persian-translator":{"description":"Translate English language text into high quality, accurate Persian (Farsi) text.","name":"persian-translator"},"prd-architect":{"description":"Use this agent when you need to create, update, or refine a Product Requirements Document (PRD) for use with Task Master. This includes developing new PRDs, enhancing existing documents, and capturing significant architectural decisions. Use PROACTIVELY when a user describes a new project or feature set without a formal PRD, when technical decisions are being made that should be documented in requirements, when the user mentions uncertainty about project structure, testing, or architecture, or when an existing PRD appears incomplete or lacks critical sections.","name":"prd-architect"},"prompt-engineer":{"description":"Optimizes prompts for LLMs and AI systems. Use when building AI features, improving agent performance, crafting system prompts. Expert in prompt patterns and techniques.","name":"prompt-engineer"},"python-pro":{"description":"Write idiomatic Python with advanced features like decorators, generators, async/await. Optimizes performance, implements design patterns, ensures comprehensive testing. Use PROACTIVELY for Python refactoring, optimization, complex Python features.","name":"python-pro"},"python-reviewer":{"description":"Expert Python code reviewer specializing in type safety, security, common pitfalls, and idiomatic patterns. Use when reviewing Python (.py/.pyi) changes.","name":"python-reviewer","tools":"Read, Grep, Glob, Bash"},"rocq-pro":{"description":"Write correct Rocq code establishing proofs for theorems encoded as type specifications.","name":"rocq-pro"},"rust-pro":{"description":"Write idiomatic Rust with ownership patterns, lifetimes, trait implementations. Masters async/await, safe concurrency, zero-cost abstractions. Use PROACTIVELY for Rust memory safety, performance optimization, systems programming.","name":"rust-pro"},"rust-reviewer":{"description":"Expert Rust code reviewer specializing in ownership, unsafe code, error handling, and idiomatic patterns. Use when reviewing Rust (.rs) changes.","name":"rust-reviewer","tools":"Read, Grep, Glob, Bash"},"security-reviewer":{"description":"Cross-language security reviewer specializing in vulnerability detection, authentication, data exposure, and supply chain security. Use for a cross-cutting security pass over any changeset, especially code handling user input, auth, secrets, or network boundaries.","name":"security-reviewer","tools":"Read, Grep, Glob, Bash"},"sql-pro":{"description":"Write complex SQL queries, optimize execution plans, design normalized schemas. Masters CTEs, window functions, stored procedures. Use PROACTIVELY for query optimization, complex joins, database design.","name":"sql-pro"},"task-breakdown":{"description":"Expert in decomposing Org-mode tasks into complete, ordered, actionable subtasks with valid properties drawers. Use PROACTIVELY when asked to break down, decompose, or plan an Org-mode TODO item.","name":"task-breakdown"},"typescript-pro":{"description":"Expert in TypeScript specializing in type safety, monorepo architecture, advanced types, modern patterns. Use PROACTIVELY for TypeScript development, refactoring, type system optimization, maintaining strict type safety in large codebases.","name":"typescript-pro"},"typescript-reviewer":{"description":"Expert TypeScript code reviewer specializing in type safety, async correctness, security, and idiomatic patterns. Use when reviewing TypeScript or TSX changes.","name":"typescript-reviewer","tools":"Read, Grep, Glob, Bash"},"web-searcher":{"description":"Advanced web search specialist leveraging Perplexity.ai's AI-powered search capabilities for comprehensive research and information synthesis","name":"web-searcher","tools":["mcp__perplexity__perplexity_search_web","WebFetch"]}}
-  '';
-  commandMetadata = builtins.fromJSON ''
-    {"assess":{"description":"Deeply analyze co-worker comments on the current PR and present findings plus an approach for responding"},"bankruptcy":{},"breakdown":{"description":"Decompose a single Org-mode task into a comprehensive, ordered set of actionable subtasks in Org-mode format"},"bugbot":{"description":"Fix and resolve all automated bot comments (BugBot, Graphite, Cursor, Devin) on the current PR via a strict 5-phase protocol"},"bugbot-stack":{"description":"Address all bot comments on every PR in the current Graphite stack, fixing issues and resolving the comment threads"},"capture":{"description":"Capture a web page or file into the Org-mode wiki."},"cleanup":{"description":"Run lefthook pre-commit on every branch in the current Graphite stack, drop empty commits, amend formatting fixes, and restack","disable-model-invocation":true},"code-review":{"description":"Comprehensive repository health review using the agents named in arguments -- correctness, security, performance, structure, tests, and docs"},"commit":{"description":"Commit all work as a series of atomic, logically sequenced commits, each one coherent, reviewable, and revertible on its own"},"deep-review":{"allowed-tools":"Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(wc:*), Bash(gh pr diff:*), Task","argument-hint":["files","directories","commit range","or branch name"],"description":"Deep multi-language code review with specialist sub-agents"},"discover-bundles":{"description":"Find, verify, and rank external prompt and skill bundles that fit this repository, without installing them"},"eliminate-dead-code":{"argument-hint":[{"optional scope":"path"},"docs","imports","feature-flags","or empty for full repo"],"description":"Find and remove dead code and stale documentation with evidence-based safety, using a mark / debate / act / verify workflow"},"expense-report":{"argument-hint":"[receipt files/directory] [\"Trip Name\"]","description":"Parse receipts and generate a filled expense report spreadsheet"},"fess":{"description":"Fess up"},"fix":{"description":"Think, research, plan, act, review -- deeply analyze a GitHub issue, fix it step by step with regression tests, open a PR, and monitor CI"},"fix-alert":{"description":"Diagnose and resolve Alertmanager alerts using NixOS tools"},"fix-ci":{"description":"Diagnose and fix failing CI on this PR, push the fixes, and monitor with gh until all checks pass, addressing any bot comments along the way"},"fix-github-issue":{"description":"Analyze and fix a GitHub issue in a dedicated git worktree and branch, leaving the work uncommitted for review"},"fix-integration":{"description":"Diagnose and fix a Home Assistant integration whose config flow fails to load"},"fix-transcript":{"description":"Clean up a transcript file in place -- paragraphs, punctuation, capitalization -- without changing wording or meaning"},"flaky-rust":{"description":"Use rust-pro to diagnose and fix the flaky Rust tests reported in arguments so they become robust signals of correctness"},"forge":{"description":"Run the forge skill's multi-phase, multi-model collaborative workflow on the stated problem"},"gravity":{"description":"Act as gravity for an idea -- attack the weakest points, challenge assumptions, and expose what is missing, without sugarcoating"},"halt":{"description":"Bring work to a clean stopping point -- update the handoff document, commit and push, and produce a comprehensive remaining-scope plan/PRD with verifiable completion criteria"},"heavy":{"description":"Plan and execute a task with the full toolkit -- the standard pro-agent toolkit plus multi-model consensus via pal and Positron's Notion context"},"infer-tasks":{"description":"Extract a flat list of independently committed Org-mode task headlines from unstructured text, without decomposing into subtasks"},"initialize":{"description":"Analyze the codebase and create a CLAUDE.md covering common commands and big-picture architecture"},"install-service":{"argument-hint":"[service-name]","description":"Install and configure a service with nginx, monitoring, and secrets","disable-model-invocation":true},"journal":{"description":"Maintain an append-only learning journal for active work"},"lefthook":{"description":"Add a lefthook.yml that runs formatting, warning-free builds, tests, linting, and coverage checks on pre-commit"},"markdown":{"description":"Write the findings to a GitHub-flavored Markdown document using GitHub suggestion blocks, ready to paste into review comments"},"medium":{"description":"Plan and execute a task using the standard pro-agent toolkit, ensuring lint and type checks pass"},"meeting-notes":{"description":"Transform raw meeting notes into a structured, fact-only Markdown report -- metadata, themes, decisions, action items, open questions, and timeline. Use on a notes file passed as the argument, or to collect notes interactively when none is given."},"narrative":{"description":"Write a human-oriented development narrative from a journal, git history, working tree, and planning documents"},"nix-rebuild":{"description":"Use nix-pro to diagnose and fix a failing ./build system Nix rebuild","disable-model-invocation":true},"partner-cleanup":{"argument-hint":["optional observations directory"],"description":"Consume partner review observations, fix them through a sub-agent, and commit the cleanup"},"partner-collaborator":{"argument-hint":["optional baseline ref","commit range","or poll interval seconds"],"description":"Watch new commits and publish one atomic observation file per actionable review finding or worthwhile new idea"},"partner-reviewer":{"argument-hint":["optional baseline ref","commit range","or poll interval seconds"],"description":"Watch new commits and publish one atomic observation file per actionable review finding"},"prepare-with":{"description":"Use the named agents to deeply analyze the project and give expert guidance for constructing its CLAUDE.md"},"process-checklist":{"description":"Work through a Markdown checklist file, completing and checking off every unfinished task"},"productize":{"description":"Productize a repository -- README, LICENSE, flake.nix dev shell, formatting, linting, coverage, CI, and lefthook pre-commit checks"},"proofread":{"description":"Fix spelling, grammar, and punctuation errors in all Markdown, Org-mode, and text files while preserving style, tone, and meaning"},"push":{"description":"Commit all work via the commit command, then create a PR and push it to GitHub","disable-model-invocation":true},"query-builder":{"description":"Build an SQL query with sql-pro and the mssql MCP from schema alone, never revealing any table data"},"quick-review":{"allowed-tools":"Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(wc:*)","argument-hint":["files","commit range","or branch"],"description":"Quick single-pass code review (no sub-agents, faster but less thorough)"},"rebase":{"description":"Plan and execute a rebase onto a branch, resolving conflicts with haskell-pro and updating descendant branches and their PRs","disable-model-invocation":true},"rebase-and-fix":{"description":"Rebase the working tree onto a branch, resolving conflicts with haskell-pro and cpp-pro, then rewrite and force-push descendant branches"},"recommit":{"description":"Rebuild this branch as logical, successive commits from main, each passing CI on its own, ready for stacked PRs","disable-model-invocation":true},"remove-service":{"argument-hint":"[service-name]","description":"Remove a service from system, including nginx virtual hosts, monitoring, alerting, systemd services and timers, containers, Nagios, Alertmanager, Prometheus exporters, etc.","disable-model-invocation":true},"report":{"description":"Pause and create a comprehensive completion report detailing the remaining roadmap phase by phase -- open questions, design, implementation, testing, documentation, cleanup, and review -- for a reader familiar with the project."},"resolve":{"description":"Resolve the merge conflicts in the working tree, preserving both sides' intent; git add the results but do not commit"},"respond":{"description":"Draft a Markdown report answering every open reviewer comment on a PR, instead of replying on GitHub"},"restack":{"description":"Restack the entire Graphite stack onto main, resolving and verifying every conflict, then submit and report","disable-model-invocation":true},"retest":{"argument-hint":"[model|slug|tag…] [--all] [--no-perf] [--no-review] [--no-comments] [--no-semantic]","description":"Full model-support battery on any branch — rebuild, unit tests, FPGA correctness vs the HuggingFace transformers source of truth, code review, comment-check, and a perf pass. Derives the target model set from the branch diff."},"retest-categorical":{"argument-hint":"[model-tag…] [--no-perf] [--no-semantic]","description":"Full categorical-vs-legacy retest — rebuild, unit tests, FPGA byte-identity for every model, and a perf-divergence pass"},"review-github-pr":{"description":"Analyze and review a GitHub PR, reporting findings locally only -- never posting to GitHub"},"run-orchestrator":{"description":"Act as the project orchestrator -- analyze the work to be done and coordinate execution by spawning sub-agents with the Task tool"},"sec-audit":{"allowed-tools":"Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(grep:*), Bash(wc:*), Task","argument-hint":["files","directories","commit range","or branch"],"description":"Security-focused code review"},"sitrep":{"description":"Produce a concise situational report on the current project status, progress, blockers, estimates, and parallel work opportunities"},"smooth":{"description":"Lightly polish the given text -- simplify, trim duplication, fix grammar -- while preserving its voice, power, and content"},"teams":{"description":"Create an agent team to explore a problem from research, prior-art, UX, architecture, planning, and testing angles"},"transcribe-image":{"description":"Transcribe handwriting from images into paragraph-form Markdown, then re-review with pal for correctness and accuracy"},"tron-debug":{"description":"Debug the C++ produced by the Torch Fx ingest pipeline, tracing through the Bulk, Loopy, Tron, and CPP IRs"},"webfix":{"description":"Use Playwright with typescript-pro and python-pro to diagnose and fix issues in the current web application"},"wiggum":{"description":"Turn on autonomous-continuation mode -- run, checkpoint, and verify until done, following the wiggum loop methodology","disable-model-invocation":true}}
-  '';
-  discoveredSkillMetadata = builtins.fromJSON ''
-    {"anvil":{"description":"Use the available Anvil MCP backend — interactive Emacs, dedicated headless Emacs, or NeLisp — for structured file, Org, Git, data, and Elisp work. Detect the advertised capabilities, prefer typed and token-efficient operations, and apply live-session safety only where the backend actually reaches the user's interactive Emacs.","name":"anvil"},"caveman":{"description":"Compress and simplify prompts to preserve meaning while reducing use of context. Use when asked to compress, shorten, or \"caveman\" a prompt or other text, or when text must fit a smaller context budget without losing meaning.","name":"caveman"},"comment-audit":{"description":"Exhaustively verify code comments against the current state of a project. Use when asked to audit, fact-check, or validate comments/docstrings -- to confirm that every claim a comment makes is true, that any code shown in a comment actually works, and that everything a comment references still exists. Supports auditing an entire project or only the changes in a PR or stack of PRs. Triggers: \"check the comments\", \"are these comments still accurate\", \"audit comments in this PR\", \"verify the docstrings\".","name":"comment-audit"},"eliminate-dead-code":{"description":"Methodology for finding and removing dead code and stale documentation with evidence-based safety, using a mark / debate / act / verify workflow. Use when asked to remove dead code, unused symbols, unreachable branches, stale docs, unused imports, or dead feature flags -- gathering independent evidence before each removal and re-verifying build and tests after. The `/eliminate-dead-code` command turns it on.","name":"eliminate-dead-code"},"fix-all":{"description":"Fix all issues — no exceptions, no excuses. Fix every finding uncovered during the work, here and now. \"Out of scope,\" \"pre-existing,\" and \"follow-up ticket\" are not acceptable framings. Fixes go upstream, everything changed gets a real test, and no reward hacking.","name":"fix-all"},"fix-transcript":{"description":"Methodology for cleaning up a transcript file in place -- paragraphs, punctuation, capitalization -- without changing wording or meaning. Use when asked to clean, format, or fix a speech-to-text transcript, correcting technical vocabulary and spoken punctuation while preserving the speaker's words. The `/fix-transcript` command turns it on with the target file as its argument.","name":"fix-transcript"},"forge":{"description":"Multi-phase, multi-model deep analysis workflow for complex problems. This skill should be used when the user wants rigorous, multi-model collaborative analysis: deep research with Fable/Opus and PAL MCP consensus (GPT-5.5-Pro + Gemini 3 Pro), strategic planning, Fable/Opus execution with tests, comprehensive review, and adversarial devil's advocate critique. Invoke explicitly with /forge.\n","name":"forge"},"it-voice":{"description":"Guides writing and editing of technical documentation in an elevated, sedate, institutionally grounded register — measured, authoritative, and formal rather than casual or promotional. Applies when drafting or revising manuals, plans, runbooks, specifications, or policy documents, or when lifting an existing flat draft into this register.","name":"it-voice"},"johnw":{"description":"Write in John Wiegley's authentic voice. Use when drafting technical articles,\nblog posts, essays, or any written material that should read as if John wrote\nit himself. Captures patterns from 1,100+ posts spanning 1992-2026 across\nboth technical (newartisans) and personal (johnwiegley) blogs. Focuses on\ntechnical writing but incorporates cross-cutting voice patterns from the\nfull corpus.","name":"johnw"},"nixos":{"description":"Resolve NixOS issues using research and sequential thinking. Use when diagnosing or fixing problems on a NixOS host -- failed builds or switches, broken services or modules, configuration errors -- or whenever the user mentions NixOS, nixos-rebuild, or /etc/nixos.","name":"nixos"},"node-red":{"description":"Build, edit, and debug Node-RED flows on John's NixOS host (vulcan). Tuned to his actual plugin set, wiring conventions, naming style, and to the nodered_events PostgreSQL log + Grafana dashboard for chain tracing. Use whenever the user mentions Node-RED, flows.json, a flow tab name (Office, Schedule, Schedules, Pool Time, Away, Bedroom, TV Room, Institute Night, Debug), a Node-RED plugin or node type (chronos, api-call-service, api-current-state, server-state-changed, join-wait, actionflows, etc.), the Node-RED Events Grafana dashboard, or asks why a flow fired or didn't fire.","name":"node-red"},"parallelize":{"description":"Offload safe, independent subtasks to concurrent subagents while continuing your own work as the coordinator, then integrate what they return. Use when mid-task and some work could run in parallel without conflicting -- research, generating a standalone new file, tests for a stable interface, docs, or isolated analysis -- to accelerate without races. The coordinator alone runs git and mutates shared state; subagents read freely but write only to isolated namespaces and hand back artifacts. Triggers include \"parallelize this\", \"spin up subagents to help\", \"do these in parallel\", \"fan this out\".","name":"parallelize"},"persian":{"description":"Translate English language text into high quality, accurate Persian (Farsi) text using a team of specialist reviewers","name":"persian"},"retest":{"description":"Full model-support battery on any branch -- rebuild, unit tests, FPGA correctness vs the HuggingFace transformers source of truth, code review, comment-check, and a perf pass. Derives the target model set from the branch diff. Use when retesting a stack of PRs that adds or fixes support for one model or arch family on the FPGA pipeline.","name":"retest"},"skill-creator":{"description":"Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.","license":"Complete terms in LICENSE.txt","name":"skill-creator"},"swiftui":{"description":"Write, review, or improve SwiftUI code following best practices for state management, view composition, performance, modern APIs, Swift concurrency, and iOS 26+ Liquid Glass adoption. Use when building new SwiftUI features, refactoring existing views, reviewing code quality, or adopting modern SwiftUI patterns.","name":"swiftui"},"toolkit":{"description":"The standard tooling and working discipline for planning and executing a coding task -- GitHub CLI, codebase search, the language -pro agents, web research, sequential thinking, context7, and lint/type-check gating. The /medium and /heavy effort-tier commands build on it; load it when told to apply the standard toolkit.","name":"toolkit"},"wiggum":{"description":"Methodology for the user-triggered /wiggum command (do not self-invoke). An autonomous-continuation loop for long-running work -- run, checkpoint, and verify until a defined Definition of Done holds or a stop-and-escalate condition fires. Covers durable handoff state, baseline re-verification after context compaction, per-commit self-audit, work-unit commit and restack cadence, subagent fan-out limits, host-conditional anvil (live Emacs) tooling, and escalation.","name":"wiggum"}}
-  '';
+  agentMetadata = {
+    "bash-reviewer" = {
+      "description" =
+        "Expert Bash/Shell script reviewer specializing in quoting correctness, POSIX compliance, security, and robustness patterns. Use when reviewing shell scripts or shell fragments embedded in CI configs, Makefiles, or installers.";
+      "name" = "bash-reviewer";
+      "tools" = "Read, Grep, Glob, Bash";
+    };
+    "coq-reviewer" = {
+      "description" =
+        "Expert Coq/Rocq code reviewer specializing in proof soundness, tactic hygiene, termination arguments, and proof engineering patterns. Use when reviewing Coq/Rocq (.v) proof developments.";
+      "name" = "coq-reviewer";
+      "tools" = "Read, Grep, Glob, Bash";
+    };
+    "cpp-pro" = {
+      "description" =
+        "Write idiomatic C++ with modern features, RAII, smart pointers, STL algorithms. Handles templates, move semantics, performance optimization. Use PROACTIVELY for C++ refactoring, memory safety, complex C++ patterns.";
+      "name" = "cpp-pro";
+    };
+    "cpp-reviewer" = {
+      "description" =
+        "Expert C++ code reviewer specializing in memory safety, undefined behavior, modern C++ idioms, and concurrency. Use when reviewing C or C++ source and header changes.";
+      "name" = "cpp-reviewer";
+      "tools" = "Read, Grep, Glob, Bash";
+    };
+    "elisp-reviewer" = {
+      "description" =
+        "Expert Emacs Lisp code reviewer specializing in lexical binding, package conventions, macro hygiene, and performance. Use when reviewing Emacs Lisp (.el) code or Emacs configurations.";
+      "name" = "elisp-reviewer";
+      "tools" = "Read, Grep, Glob, Bash";
+    };
+    "emacs-lisp-pro" = {
+      "description" =
+        "Expert in Emacs Lisp language, editor environment, module system. Use PROACTIVELY for Emacs Lisp development, package management with use-package, Emacs Lisp expression development.";
+      "name" = "emacs-lisp-pro";
+    };
+    "fess-auditor" = {
+      "description" =
+        "Runs the fess audit in a sub-agent and reports the evidence-backed results to the main session. Use after implementation or verification work when the main agent needs an honesty check.";
+      "name" = "fess-auditor";
+    };
+    "haskell-pro" = {
+      "description" =
+        "Expert in Haskell, type-level programming, performance tuning, concurrency, and the Cabal/Stack/Nix build toolchain. Use PROACTIVELY for Haskell development, debugging type errors, diagnosing space leaks, and build configuration.";
+      "name" = "haskell-pro";
+    };
+    "haskell-reviewer" = {
+      "description" =
+        "Expert Haskell code reviewer specializing in laziness pitfalls, type safety, space leaks, and idiomatic functional patterns. Use when reviewing Haskell (.hs/.lhs) changes.";
+      "name" = "haskell-reviewer";
+      "tools" = "Read, Grep, Glob, Bash";
+    };
+    "nix-pro" = {
+      "description" =
+        "Expert in NixOS configurations, Nix language, flakes, module system. Masters declarative system management, derivations, reproducible builds. Use PROACTIVELY for NixOS system configuration, package management, Nix expression development.";
+      "name" = "nix-pro";
+    };
+    "nix-reviewer" = {
+      "description" =
+        "Expert Nix code reviewer specializing in reproducibility, flake hygiene, NixOS module design, and security. Use when reviewing Nix expressions, flakes, or NixOS/Home Manager modules.";
+      "name" = "nix-reviewer";
+      "tools" = "Read, Grep, Glob, Bash";
+    };
+    "perf-reviewer" = {
+      "description" =
+        "Cross-language performance reviewer specializing in algorithmic complexity, resource leaks, allocation patterns, and system-level bottlenecks. Use for a cross-cutting performance pass over a changeset, after or alongside language-specific review.";
+      "name" = "perf-reviewer";
+      "tools" = "Read, Grep, Glob, Bash";
+    };
+    "persian-translator" = {
+      "description" = "Translate English language text into high quality, accurate Persian (Farsi) text.";
+      "name" = "persian-translator";
+    };
+    "prd-architect" = {
+      "description" =
+        "Use this agent when you need to create, update, or refine a Product Requirements Document (PRD) for use with Task Master. This includes developing new PRDs, enhancing existing documents, and capturing significant architectural decisions. Use PROACTIVELY when a user describes a new project or feature set without a formal PRD, when technical decisions are being made that should be documented in requirements, when the user mentions uncertainty about project structure, testing, or architecture, or when an existing PRD appears incomplete or lacks critical sections.";
+      "name" = "prd-architect";
+    };
+    "prompt-engineer" = {
+      "description" =
+        "Optimizes prompts for LLMs and AI systems. Use when building AI features, improving agent performance, crafting system prompts. Expert in prompt patterns and techniques.";
+      "name" = "prompt-engineer";
+    };
+    "python-pro" = {
+      "description" =
+        "Write idiomatic Python with advanced features like decorators, generators, async/await. Optimizes performance, implements design patterns, ensures comprehensive testing. Use PROACTIVELY for Python refactoring, optimization, complex Python features.";
+      "name" = "python-pro";
+    };
+    "python-reviewer" = {
+      "description" =
+        "Expert Python code reviewer specializing in type safety, security, common pitfalls, and idiomatic patterns. Use when reviewing Python (.py/.pyi) changes.";
+      "name" = "python-reviewer";
+      "tools" = "Read, Grep, Glob, Bash";
+    };
+    "rocq-pro" = {
+      "description" =
+        "Write correct Rocq code establishing proofs for theorems encoded as type specifications.";
+      "name" = "rocq-pro";
+    };
+    "rust-pro" = {
+      "description" =
+        "Write idiomatic Rust with ownership patterns, lifetimes, trait implementations. Masters async/await, safe concurrency, zero-cost abstractions. Use PROACTIVELY for Rust memory safety, performance optimization, systems programming.";
+      "name" = "rust-pro";
+    };
+    "rust-reviewer" = {
+      "description" =
+        "Expert Rust code reviewer specializing in ownership, unsafe code, error handling, and idiomatic patterns. Use when reviewing Rust (.rs) changes.";
+      "name" = "rust-reviewer";
+      "tools" = "Read, Grep, Glob, Bash";
+    };
+    "security-reviewer" = {
+      "description" =
+        "Cross-language security reviewer specializing in vulnerability detection, authentication, data exposure, and supply chain security. Use for a cross-cutting security pass over any changeset, especially code handling user input, auth, secrets, or network boundaries.";
+      "name" = "security-reviewer";
+      "tools" = "Read, Grep, Glob, Bash";
+    };
+    "sql-pro" = {
+      "description" =
+        "Write complex SQL queries, optimize execution plans, design normalized schemas. Masters CTEs, window functions, stored procedures. Use PROACTIVELY for query optimization, complex joins, database design.";
+      "name" = "sql-pro";
+    };
+    "task-breakdown" = {
+      "description" =
+        "Expert in decomposing Org-mode tasks into complete, ordered, actionable subtasks with valid properties drawers. Use PROACTIVELY when asked to break down, decompose, or plan an Org-mode TODO item.";
+      "name" = "task-breakdown";
+    };
+    "typescript-pro" = {
+      "description" =
+        "Expert in TypeScript specializing in type safety, monorepo architecture, advanced types, modern patterns. Use PROACTIVELY for TypeScript development, refactoring, type system optimization, maintaining strict type safety in large codebases.";
+      "name" = "typescript-pro";
+    };
+    "typescript-reviewer" = {
+      "description" =
+        "Expert TypeScript code reviewer specializing in type safety, async correctness, security, and idiomatic patterns. Use when reviewing TypeScript or TSX changes.";
+      "name" = "typescript-reviewer";
+      "tools" = "Read, Grep, Glob, Bash";
+    };
+    "web-searcher" = {
+      "description" =
+        "Advanced web search specialist leveraging Perplexity.ai's AI-powered search capabilities for comprehensive research and information synthesis";
+      "name" = "web-searcher";
+      "tools" = [
+        "mcp__perplexity__perplexity_search_web"
+        "WebFetch"
+      ];
+    };
+  };
+  commandMetadata = {
+    "assess" = {
+      "description" =
+        "Deeply analyze co-worker comments on the current PR and present findings plus an approach for responding";
+    };
+    "bankruptcy" = { };
+    "breakdown" = {
+      "description" =
+        "Decompose a single Org-mode task into a comprehensive, ordered set of actionable subtasks in Org-mode format";
+    };
+    "bugbot" = {
+      "description" =
+        "Fix and resolve all automated bot comments (BugBot, Graphite, Cursor, Devin) on the current PR via a strict 5-phase protocol";
+    };
+    "bugbot-stack" = {
+      "description" =
+        "Address all bot comments on every PR in the current Graphite stack, fixing issues and resolving the comment threads";
+    };
+    "capture" = {
+      "description" = "Capture a web page or file into the Org-mode wiki.";
+    };
+    "cleanup" = {
+      "description" =
+        "Run lefthook pre-commit on every branch in the current Graphite stack, drop empty commits, amend formatting fixes, and restack";
+      "disable-model-invocation" = true;
+    };
+    "code-review" = {
+      "description" =
+        "Comprehensive repository health review using the agents named in arguments -- correctness, security, performance, structure, tests, and docs";
+    };
+    "commit" = {
+      "description" =
+        "Commit all work as a series of atomic, logically sequenced commits, each one coherent, reviewable, and revertible on its own";
+    };
+    "deep-review" = {
+      "allowed-tools" =
+        "Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(wc:*), Bash(gh pr diff:*), Task";
+      "argument-hint" = [
+        "files"
+        "directories"
+        "commit range"
+        "or branch name"
+      ];
+      "description" = "Deep multi-language code review with specialist sub-agents";
+    };
+    "discover-bundles" = {
+      "description" =
+        "Find, verify, and rank external prompt and skill bundles that fit this repository, without installing them";
+    };
+    "eliminate-dead-code" = {
+      "argument-hint" = [
+        {
+          "optional scope" = "path";
+        }
+        "docs"
+        "imports"
+        "feature-flags"
+        "or empty for full repo"
+      ];
+      "description" =
+        "Find and remove dead code and stale documentation with evidence-based safety, using a mark / debate / act / verify workflow";
+    };
+    "expense-report" = {
+      "argument-hint" = "[receipt files/directory] [\"Trip Name\"]";
+      "description" = "Parse receipts and generate a filled expense report spreadsheet";
+    };
+    "fess" = {
+      "description" = "Fess up";
+    };
+    "fix" = {
+      "description" =
+        "Think, research, plan, act, review -- deeply analyze a GitHub issue, fix it step by step with regression tests, open a PR, and monitor CI";
+    };
+    "fix-alert" = {
+      "description" = "Diagnose and resolve Alertmanager alerts using NixOS tools";
+    };
+    "fix-ci" = {
+      "description" =
+        "Diagnose and fix failing CI on this PR, push the fixes, and monitor with gh until all checks pass, addressing any bot comments along the way";
+    };
+    "fix-github-issue" = {
+      "description" =
+        "Analyze and fix a GitHub issue in a dedicated git worktree and branch, leaving the work uncommitted for review";
+    };
+    "fix-integration" = {
+      "description" = "Diagnose and fix a Home Assistant integration whose config flow fails to load";
+    };
+    "fix-transcript" = {
+      "description" =
+        "Clean up a transcript file in place -- paragraphs, punctuation, capitalization -- without changing wording or meaning";
+    };
+    "flaky-rust" = {
+      "description" =
+        "Use rust-pro to diagnose and fix the flaky Rust tests reported in arguments so they become robust signals of correctness";
+    };
+    "forge" = {
+      "description" =
+        "Run the forge skill's multi-phase, multi-model collaborative workflow on the stated problem";
+    };
+    "gravity" = {
+      "description" =
+        "Act as gravity for an idea -- attack the weakest points, challenge assumptions, and expose what is missing, without sugarcoating";
+    };
+    "halt" = {
+      "description" =
+        "Bring work to a clean stopping point -- update the handoff document, commit and push, and produce a comprehensive remaining-scope plan/PRD with verifiable completion criteria";
+    };
+    "heavy" = {
+      "description" =
+        "Plan and execute a task with the full toolkit -- the standard pro-agent toolkit plus multi-model consensus via pal and Positron's Notion context";
+    };
+    "infer-tasks" = {
+      "description" =
+        "Extract a flat list of independently committed Org-mode task headlines from unstructured text, without decomposing into subtasks";
+    };
+    "initialize" = {
+      "description" =
+        "Analyze the codebase and create a CLAUDE.md covering common commands and big-picture architecture";
+    };
+    "install-service" = {
+      "argument-hint" = "[service-name]";
+      "description" = "Install and configure a service with nginx, monitoring, and secrets";
+      "disable-model-invocation" = true;
+    };
+    "journal" = {
+      "description" = "Maintain an append-only learning journal for active work";
+    };
+    "lefthook" = {
+      "description" =
+        "Add a lefthook.yml that runs formatting, warning-free builds, tests, linting, and coverage checks on pre-commit";
+    };
+    "markdown" = {
+      "description" =
+        "Write the findings to a GitHub-flavored Markdown document using GitHub suggestion blocks, ready to paste into review comments";
+    };
+    "medium" = {
+      "description" =
+        "Plan and execute a task using the standard pro-agent toolkit, ensuring lint and type checks pass";
+    };
+    "meeting-notes" = {
+      "description" =
+        "Transform raw meeting notes into a structured, fact-only Markdown report -- metadata, themes, decisions, action items, open questions, and timeline. Use on a notes file passed as the argument, or to collect notes interactively when none is given.";
+    };
+    "narrative" = {
+      "description" =
+        "Write a human-oriented development narrative from a journal, git history, working tree, and planning documents";
+    };
+    "nix-rebuild" = {
+      "description" = "Use nix-pro to diagnose and fix a failing ./build system Nix rebuild";
+      "disable-model-invocation" = true;
+    };
+    "partner-cleanup" = {
+      "argument-hint" = [
+        "optional observations directory"
+      ];
+      "description" =
+        "Consume partner review observations, fix them through a sub-agent, and commit the cleanup";
+    };
+    "partner-collaborator" = {
+      "argument-hint" = [
+        "optional baseline ref"
+        "commit range"
+        "or poll interval seconds"
+      ];
+      "description" =
+        "Watch new commits and publish one atomic observation file per actionable review finding or worthwhile new idea";
+    };
+    "partner-reviewer" = {
+      "argument-hint" = [
+        "optional baseline ref"
+        "commit range"
+        "or poll interval seconds"
+      ];
+      "description" =
+        "Watch new commits and publish one atomic observation file per actionable review finding";
+    };
+    "prepare-with" = {
+      "description" =
+        "Use the named agents to deeply analyze the project and give expert guidance for constructing its CLAUDE.md";
+    };
+    "process-checklist" = {
+      "description" =
+        "Work through a Markdown checklist file, completing and checking off every unfinished task";
+    };
+    "productize" = {
+      "description" =
+        "Productize a repository -- README, LICENSE, flake.nix dev shell, formatting, linting, coverage, CI, and lefthook pre-commit checks";
+    };
+    "proofread" = {
+      "description" =
+        "Fix spelling, grammar, and punctuation errors in all Markdown, Org-mode, and text files while preserving style, tone, and meaning";
+    };
+    "push" = {
+      "description" = "Commit all work via the commit command, then create a PR and push it to GitHub";
+      "disable-model-invocation" = true;
+    };
+    "query-builder" = {
+      "description" =
+        "Build an SQL query with sql-pro and the mssql MCP from schema alone, never revealing any table data";
+    };
+    "quick-review" = {
+      "allowed-tools" = "Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(wc:*)";
+      "argument-hint" = [
+        "files"
+        "commit range"
+        "or branch"
+      ];
+      "description" = "Quick single-pass code review (no sub-agents, faster but less thorough)";
+    };
+    "rebase" = {
+      "description" =
+        "Plan and execute a rebase onto a branch, resolving conflicts with haskell-pro and updating descendant branches and their PRs";
+      "disable-model-invocation" = true;
+    };
+    "rebase-and-fix" = {
+      "description" =
+        "Rebase the working tree onto a branch, resolving conflicts with haskell-pro and cpp-pro, then rewrite and force-push descendant branches";
+    };
+    "recommit" = {
+      "description" =
+        "Rebuild this branch as logical, successive commits from main, each passing CI on its own, ready for stacked PRs";
+      "disable-model-invocation" = true;
+    };
+    "remove-service" = {
+      "argument-hint" = "[service-name]";
+      "description" =
+        "Remove a service from system, including nginx virtual hosts, monitoring, alerting, systemd services and timers, containers, Nagios, Alertmanager, Prometheus exporters, etc.";
+      "disable-model-invocation" = true;
+    };
+    "report" = {
+      "description" =
+        "Pause and create a comprehensive completion report detailing the remaining roadmap phase by phase -- open questions, design, implementation, testing, documentation, cleanup, and review -- for a reader familiar with the project.";
+    };
+    "resolve" = {
+      "description" =
+        "Resolve the merge conflicts in the working tree, preserving both sides' intent; git add the results but do not commit";
+    };
+    "respond" = {
+      "description" =
+        "Draft a Markdown report answering every open reviewer comment on a PR, instead of replying on GitHub";
+    };
+    "restack" = {
+      "description" =
+        "Restack the entire Graphite stack onto main, resolving and verifying every conflict, then submit and report";
+      "disable-model-invocation" = true;
+    };
+    "retest" = {
+      "argument-hint" =
+        "[model|slug|tag…] [--all] [--no-perf] [--no-review] [--no-comments] [--no-semantic]";
+      "description" =
+        "Full model-support battery on any branch — rebuild, unit tests, FPGA correctness vs the HuggingFace transformers source of truth, code review, comment-check, and a perf pass. Derives the target model set from the branch diff.";
+    };
+    "retest-categorical" = {
+      "argument-hint" = "[model-tag…] [--no-perf] [--no-semantic]";
+      "description" =
+        "Full categorical-vs-legacy retest — rebuild, unit tests, FPGA byte-identity for every model, and a perf-divergence pass";
+    };
+    "review-github-pr" = {
+      "description" =
+        "Analyze and review a GitHub PR, reporting findings locally only -- never posting to GitHub";
+    };
+    "run-orchestrator" = {
+      "description" =
+        "Act as the project orchestrator -- analyze the work to be done and coordinate execution by spawning sub-agents with the Task tool";
+    };
+    "sec-audit" = {
+      "allowed-tools" = "Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(grep:*), Bash(wc:*), Task";
+      "argument-hint" = [
+        "files"
+        "directories"
+        "commit range"
+        "or branch"
+      ];
+      "description" = "Security-focused code review";
+    };
+    "sitrep" = {
+      "description" =
+        "Produce a concise situational report on the current project status, progress, blockers, estimates, and parallel work opportunities";
+    };
+    "smooth" = {
+      "description" =
+        "Lightly polish the given text -- simplify, trim duplication, fix grammar -- while preserving its voice, power, and content";
+    };
+    "teams" = {
+      "description" =
+        "Create an agent team to explore a problem from research, prior-art, UX, architecture, planning, and testing angles";
+    };
+    "transcribe-image" = {
+      "description" =
+        "Transcribe handwriting from images into paragraph-form Markdown, then re-review with pal for correctness and accuracy";
+    };
+    "tron-debug" = {
+      "description" =
+        "Debug the C++ produced by the Torch Fx ingest pipeline, tracing through the Bulk, Loopy, Tron, and CPP IRs";
+    };
+    "webfix" = {
+      "description" =
+        "Use Playwright with typescript-pro and python-pro to diagnose and fix issues in the current web application";
+    };
+    "wiggum" = {
+      "description" =
+        "Turn on autonomous-continuation mode -- run, checkpoint, and verify until done, following the wiggum loop methodology";
+      "disable-model-invocation" = true;
+    };
+  };
+  discoveredSkillMetadata = {
+    "anvil" = {
+      "description" =
+        "Use the available Anvil MCP backend — interactive Emacs, dedicated headless Emacs, or NeLisp — for structured file, Org, Git, data, and Elisp work. Detect the advertised capabilities, prefer typed and token-efficient operations, and apply live-session safety only where the backend actually reaches the user's interactive Emacs.";
+      "name" = "anvil";
+    };
+    "caveman" = {
+      "description" =
+        "Compress and simplify prompts to preserve meaning while reducing use of context. Use when asked to compress, shorten, or \"caveman\" a prompt or other text, or when text must fit a smaller context budget without losing meaning.";
+      "name" = "caveman";
+    };
+    "comment-audit" = {
+      "description" =
+        "Exhaustively verify code comments against the current state of a project. Use when asked to audit, fact-check, or validate comments/docstrings -- to confirm that every claim a comment makes is true, that any code shown in a comment actually works, and that everything a comment references still exists. Supports auditing an entire project or only the changes in a PR or stack of PRs. Triggers: \"check the comments\", \"are these comments still accurate\", \"audit comments in this PR\", \"verify the docstrings\".";
+      "name" = "comment-audit";
+    };
+    "eliminate-dead-code" = {
+      "description" =
+        "Methodology for finding and removing dead code and stale documentation with evidence-based safety, using a mark / debate / act / verify workflow. Use when asked to remove dead code, unused symbols, unreachable branches, stale docs, unused imports, or dead feature flags -- gathering independent evidence before each removal and re-verifying build and tests after. The `/eliminate-dead-code` command turns it on.";
+      "name" = "eliminate-dead-code";
+    };
+    "fix-all" = {
+      "description" =
+        "Fix all issues — no exceptions, no excuses. Fix every finding uncovered during the work, here and now. \"Out of scope,\" \"pre-existing,\" and \"follow-up ticket\" are not acceptable framings. Fixes go upstream, everything changed gets a real test, and no reward hacking.";
+      "name" = "fix-all";
+    };
+    "fix-transcript" = {
+      "description" =
+        "Methodology for cleaning up a transcript file in place -- paragraphs, punctuation, capitalization -- without changing wording or meaning. Use when asked to clean, format, or fix a speech-to-text transcript, correcting technical vocabulary and spoken punctuation while preserving the speaker's words. The `/fix-transcript` command turns it on with the target file as its argument.";
+      "name" = "fix-transcript";
+    };
+    "forge" = {
+      "description" =
+        "Multi-phase, multi-model deep analysis workflow for complex problems. This skill should be used when the user wants rigorous, multi-model collaborative analysis: deep research with Fable/Opus and PAL MCP consensus (GPT-5.5-Pro + Gemini 3 Pro), strategic planning, Fable/Opus execution with tests, comprehensive review, and adversarial devil's advocate critique. Invoke explicitly with /forge.\n";
+      "name" = "forge";
+    };
+    "it-voice" = {
+      "description" =
+        "Guides writing and editing of technical documentation in an elevated, sedate, institutionally grounded register — measured, authoritative, and formal rather than casual or promotional. Applies when drafting or revising manuals, plans, runbooks, specifications, or policy documents, or when lifting an existing flat draft into this register.";
+      "name" = "it-voice";
+    };
+    "johnw" = {
+      "description" =
+        "Write in John Wiegley's authentic voice. Use when drafting technical articles,\nblog posts, essays, or any written material that should read as if John wrote\nit himself. Captures patterns from 1,100+ posts spanning 1992-2026 across\nboth technical (newartisans) and personal (johnwiegley) blogs. Focuses on\ntechnical writing but incorporates cross-cutting voice patterns from the\nfull corpus.";
+      "name" = "johnw";
+    };
+    "nixos" = {
+      "description" =
+        "Resolve NixOS issues using research and sequential thinking. Use when diagnosing or fixing problems on a NixOS host -- failed builds or switches, broken services or modules, configuration errors -- or whenever the user mentions NixOS, nixos-rebuild, or /etc/nixos.";
+      "name" = "nixos";
+    };
+    "node-red" = {
+      "description" =
+        "Build, edit, and debug Node-RED flows on John's NixOS host (vulcan). Tuned to his actual plugin set, wiring conventions, naming style, and to the nodered_events PostgreSQL log + Grafana dashboard for chain tracing. Use whenever the user mentions Node-RED, flows.json, a flow tab name (Office, Schedule, Schedules, Pool Time, Away, Bedroom, TV Room, Institute Night, Debug), a Node-RED plugin or node type (chronos, api-call-service, api-current-state, server-state-changed, join-wait, actionflows, etc.), the Node-RED Events Grafana dashboard, or asks why a flow fired or didn't fire.";
+      "name" = "node-red";
+    };
+    "parallelize" = {
+      "description" =
+        "Offload safe, independent subtasks to concurrent subagents while continuing your own work as the coordinator, then integrate what they return. Use when mid-task and some work could run in parallel without conflicting -- research, generating a standalone new file, tests for a stable interface, docs, or isolated analysis -- to accelerate without races. The coordinator alone runs git and mutates shared state; subagents read freely but write only to isolated namespaces and hand back artifacts. Triggers include \"parallelize this\", \"spin up subagents to help\", \"do these in parallel\", \"fan this out\".";
+      "name" = "parallelize";
+    };
+    "persian" = {
+      "description" =
+        "Translate English language text into high quality, accurate Persian (Farsi) text using a team of specialist reviewers";
+      "name" = "persian";
+    };
+    "retest" = {
+      "description" =
+        "Full model-support battery on any branch -- rebuild, unit tests, FPGA correctness vs the HuggingFace transformers source of truth, code review, comment-check, and a perf pass. Derives the target model set from the branch diff. Use when retesting a stack of PRs that adds or fixes support for one model or arch family on the FPGA pipeline.";
+      "name" = "retest";
+    };
+    "skill-creator" = {
+      "description" =
+        "Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.";
+      "license" = "Complete terms in LICENSE.txt";
+      "name" = "skill-creator";
+    };
+    "swiftui" = {
+      "description" =
+        "Write, review, or improve SwiftUI code following best practices for state management, view composition, performance, modern APIs, Swift concurrency, and iOS 26+ Liquid Glass adoption. Use when building new SwiftUI features, refactoring existing views, reviewing code quality, or adopting modern SwiftUI patterns.";
+      "name" = "swiftui";
+    };
+    "toolkit" = {
+      "description" =
+        "The standard tooling and working discipline for planning and executing a coding task -- GitHub CLI, codebase search, the language -pro agents, web research, sequential thinking, context7, and lint/type-check gating. The /medium and /heavy effort-tier commands build on it; load it when told to apply the standard toolkit.";
+      "name" = "toolkit";
+    };
+    "wiggum" = {
+      "description" =
+        "Methodology for the user-triggered /wiggum command (do not self-invoke). An autonomous-continuation loop for long-running work -- run, checkpoint, and verify until a defined Definition of Done holds or a stop-and-escalate condition fires. Covers durable handoff state, baseline re-verification after context compaction, per-commit self-audit, work-unit commit and restack cadence, subagent fan-out limits, host-conditional anvil (live Emacs) tooling, and escalation.";
+      "name" = "wiggum";
+    };
+  };
 
   personalFilenameTagCommands = [
     "capture"
