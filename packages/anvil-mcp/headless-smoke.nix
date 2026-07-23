@@ -233,7 +233,12 @@ runCommand "anvil-mcp-dedicated-smoke"
       ${python3}/bin/python3 -I -B -u ${./watchdog-test.py} \
       WatchdogProtocolTests WatchdogTransportTests \
       WatchdogLifecycleTests WatchdogCauseTests
-    ANVIL_DEDICATED_TELEMETRY_INIT=${anvilMcp.dedicatedTelemetryInit} \
+    watchdog_telemetry_tmp="$smoke_root/watchdog-telemetry-test-tmp"
+    install -d -m 0700 "$watchdog_telemetry_tmp"
+    TMPDIR="$watchdog_telemetry_tmp" \
+      TMP="$watchdog_telemetry_tmp" \
+      TEMP="$watchdog_telemetry_tmp" \
+      ANVIL_DEDICATED_TELEMETRY_INIT=${anvilMcp.dedicatedTelemetryInit} \
       ANVIL_DEDICATED_ANVIL=${anvilMcp.dedicatedAnvil} \
       ANVIL_TEST_EMACS_STORE=${anvilMcp.dedicatedRuntimeEmacs} \
       ${coreutils}/bin/timeout 60 \
@@ -246,6 +251,15 @@ runCommand "anvil-mcp-dedicated-smoke"
                   (error "expected 7 phase tests, selected %d"
                          (length selected)))
                 (ert-run-tests-batch-and-exit t))'
+    if [ ! -f "$watchdog_telemetry_tmp/anvil-runtime/anvil-schema-cache.el" ]; then
+      echo "watchdog telemetry fixture did not create its private schema cache" >&2
+      exit 1
+    fi
+    if [ -e "$TMPDIR/anvil-runtime/anvil-schema-cache.el" ]; then
+      echo "watchdog telemetry fixture created a shared schema cache" >&2
+      exit 1
+    fi
+    rm -rf "$watchdog_telemetry_tmp"
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./timeout-ordering-test.py} \
       ${anvilMcp.dedicatedLockLauncher} \
