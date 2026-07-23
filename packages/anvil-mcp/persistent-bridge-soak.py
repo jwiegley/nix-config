@@ -673,7 +673,7 @@ def poll_async(bridge, smoke, job_id: str, timeout: float) -> str:
             bridge.call_tool(
                 "emacs-eval-result",
                 {"job-id": job_id},
-                timeout=min(10, remaining),
+                deadline=deadline,
             )
         )
         if "status: done" in last or "status: error" in last:

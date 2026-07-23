@@ -269,10 +269,22 @@ class BridgeProcess:
         self,
         method: str,
         params: object | None = None,
-        timeout: float = 60.0,
+        timeout: float | None = None,
+        *,
+        deadline: float | None = None,
     ) -> dict[str, object]:
+        if deadline is not None:
+            if timeout is not None:
+                raise AssertionError(
+                    "request timeout and deadline are mutually exclusive"
+                )
+            if deadline <= time.monotonic():
+                raise AssertionError("request deadline has already expired")
         identifier = self.send_request(method, params)
-        response = self.receive_response(timeout)
+        if deadline is None:
+            response = self.receive_response(timeout)
+        else:
+            response = self.receive_response(deadline=deadline)
         if response.get("id") != identifier:
             raise AssertionError(f"response id mismatch for {method}: {response!r}")
         return response
@@ -297,12 +309,15 @@ class BridgeProcess:
         self,
         name: str,
         arguments: dict[str, object],
-        timeout: float = 60.0,
+        timeout: float | None = None,
+        *,
+        deadline: float | None = None,
     ) -> dict[str, object]:
         return self.request(
             "tools/call",
             {"name": name, "arguments": arguments},
             timeout=timeout,
+            deadline=deadline,
         )
 
     def close(self) -> None:

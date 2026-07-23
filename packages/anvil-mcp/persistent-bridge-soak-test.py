@@ -456,14 +456,56 @@ def test_response_reader(soak_path: Path, smoke_path: Path) -> None:
         stderr.close()
 
 
+def test_request_preserves_absolute_deadline(smoke_path: Path) -> None:
+    """Pass an absolute tool deadline unchanged into the frame reader."""
+    smoke = load_module(smoke_path, "agent_supervisor_smoke_request_deadline_test")
+    bridge = object.__new__(smoke.BridgeProcess)
+    with (
+        mock.patch.object(bridge, "send_request", return_value=23) as send_request,
+        mock.patch.object(
+            bridge,
+            "receive_response",
+            return_value={"jsonrpc": "2.0", "id": 23, "result": {}},
+        ) as receive_response,
+        mock.patch.object(smoke.time, "monotonic", return_value=100.0),
+    ):
+        for invalid in (
+            {"timeout": 1.0, "deadline": 145.0},
+            {"deadline": 99.0},
+        ):
+            try:
+                bridge.call_tool("emacs-eval-result", {}, **invalid)
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError(f"invalid response bounds were accepted: {invalid}")
+            if send_request.called:
+                raise AssertionError(
+                    f"invalid response bounds dispatched a request: {invalid}"
+                )
+        try:
+            response = bridge.call_tool("emacs-eval-result", {}, deadline=145.0)
+        except TypeError as error:
+            raise AssertionError("tool call cannot preserve an absolute deadline") from error
+    if response.get("id") != 23:
+        raise AssertionError(f"absolute-deadline tool call failed: {response!r}")
+    if receive_response.call_args != mock.call(deadline=145.0):
+        raise AssertionError(
+            "tool call re-anchored its absolute response deadline: "
+            f"{receive_response.call_args!r}"
+        )
+
+
 def test_async_poll_deadline(soak_path: Path) -> None:
     """Prove the nested result request cannot overrun the poll deadline."""
     soak = load_module(soak_path, "persistent_soak_async_poll_test")
-    observed: list[float] = []
+    now = [100.0]
+    observed: list[dict[str, float]] = []
 
     class Bridge:
-        def call_tool(self, _name, _arguments, timeout):
-            observed.append(timeout)
+        def call_tool(self, _name, _arguments, **bounds):
+            observed.append(bounds)
+            now[0] = 112.0
             return object()
 
     class Smoke:
@@ -471,11 +513,14 @@ def test_async_poll_deadline(soak_path: Path) -> None:
         def response_text(_response) -> str:
             return "status: done\nresult: 42"
 
-    result = soak.poll_async(Bridge(), Smoke(), "job-1-1", timeout=0.01)
+    with mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]):
+        result = soak.poll_async(Bridge(), Smoke(), "job-1-1", timeout=25.0)
     if result != "status: done\nresult: 42":
         raise AssertionError(f"unexpected async poll result: {result!r}")
-    if len(observed) != 1 or not 0 < observed[0] <= 0.01:
-        raise AssertionError(f"async result request escaped deadline: {observed!r}")
+    if observed != [{"deadline": 125.0}]:
+        raise AssertionError(
+            f"async result request re-anchored its deadline: {observed!r}"
+        )
 
 
 def test_async_marker_readiness(soak_path: Path) -> None:
@@ -1117,6 +1162,7 @@ def main() -> None:
     test_recovery_cycle_uses_remaining_watchdog_window(soak)
     test_phase_timeout_ownership(soak)
     test_response_reader(soak, smoke)
+    test_request_preserves_absolute_deadline(smoke)
     test_async_poll_deadline(soak)
     test_async_marker_readiness(soak)
     test_recovered_async_requires_child(soak)
