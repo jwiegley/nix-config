@@ -13,15 +13,7 @@ let
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
-  expectedProviderNames = [
-    "litellm"
-    "llama-cpp-local"
-    "nvidia"
-    "omlx"
-    "positron-anthropic"
-    "positron-google"
-    "positron-openai"
-  ];
+  expectedProviderNames = [ "litellm" ];
   expectedMcpNames = [
     "Ref"
     "anvil"
@@ -32,12 +24,6 @@ let
   ];
   providerApis = {
     litellm = "openai-completions";
-    llama-cpp-local = "openai-completions";
-    nvidia = "openai-completions";
-    omlx = "openai-completions";
-    positron-anthropic = "anthropic-messages";
-    positron-google = "google-generative-ai";
-    positron-openai = "openai-responses";
   };
   expectedHttpHeaders = {
     Ref = "x-ref-api-key";

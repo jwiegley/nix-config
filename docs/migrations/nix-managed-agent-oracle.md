@@ -355,7 +355,7 @@ Pi has no fabricated Promptdeploy target. Its direct acceptance inventory is:
 - 59 personal-selected native command templates plus 2 static prompts under ~/.pi/agent/prompts;
 - selected shared skills under ~/.agents/skills, including 6 Ponytail trees;
 - 59 command-* and 2 prompt-* Codex projections visible through the same shared skill root;
-- models.json providers positron-anthropic, positron-google, positron-openai, nvidia, litellm, omlx, and llama-cpp-local, with no Clio-only llama-cpp-remote and no managed default;
+- models.json contains only the litellm provider, with no direct-provider fallback and no managed default;
 - global MCP catalog entries Ref, context-hub, context7, perplexity, sequential-thinking, and Anvil;
 - pinned pi-mcp-adapter and pi-subagent extension roots.
 

@@ -1217,13 +1217,7 @@ let
   };
 
   piProviderApis = {
-    positron-anthropic = "anthropic-messages";
-    positron-google = "google-generative-ai";
-    positron-openai = "openai-responses";
-    nvidia = "openai-completions";
     litellm = "openai-completions";
-    omlx = "openai-completions";
-    llama-cpp-local = "openai-completions";
   };
   renderPiCredential =
     credential:
@@ -1913,12 +1907,8 @@ let
     ];
   };
   piRequiredEnvNames = [
-    "ANTHROPIC_API_KEY"
     "CONTEXT7_API_KEY"
-    "GEMINI_API_KEY"
     "LITELLM_API_KEY"
-    "NVIDIA_API_KEY"
-    "OPENAI_API_KEY"
     "PERPLEXITY_API_KEY"
     "REF_API_KEY"
   ];
@@ -2098,13 +2088,10 @@ let
         (expectReject "Pi non-Hera/non-Pi profile accepted" piWrongProfileProbe.companions)
         (expectEqual "${profileId} provider set" (sortedNames expectedPiModels.providers) [
           "litellm"
-          "llama-cpp-local"
-          "nvidia"
-          "omlx"
-          "positron-anthropic"
-          "positron-google"
-          "positron-openai"
         ])
+        (expectEqual "${profileId} selected models use only LiteLLM" (builtins.all (
+          model: model.provider == "litellm"
+        ) (builtins.attrValues (selectedModels profileId))) true)
         (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) [
           "Ref"
           "anvil"

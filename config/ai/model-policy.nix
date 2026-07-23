@@ -25,18 +25,12 @@
 
   providers = {
     positron-anthropic = {
-      selectors.clients = [
-        "droid"
-        "pi"
-      ];
+      selectors.clients = [ "droid" ];
       droid.providerType = "anthropic";
     };
 
     positron-google = {
-      selectors.clients = [
-        "droid"
-        "pi"
-      ];
+      selectors.clients = [ "droid" ];
       droid = {
         providerType = "generic-chat-completion-api";
         noImageSupport = true;
@@ -44,10 +38,7 @@
     };
 
     positron-openai = {
-      selectors.clients = [
-        "droid"
-        "pi"
-      ];
+      selectors.clients = [ "droid" ];
       droid.providerType = "openai";
     };
 
@@ -55,7 +46,6 @@
       selectors.clients = [
         "droid"
         "opencode"
-        "pi"
       ];
       droid.providerType = "openai";
       opencode = {
@@ -111,7 +101,6 @@
       selectors.clients = [
         "droid"
         "opencode"
-        "pi"
       ];
       droid = {
         providerType = "generic-chat-completion-api";
@@ -128,7 +117,6 @@
       selectors.clients = [
         "droid"
         "opencode"
-        "pi"
       ];
       droid = {
         providerType = "generic-chat-completion-api";
