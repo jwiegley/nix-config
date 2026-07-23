@@ -2231,6 +2231,7 @@ def assert_async_isolation(
     launcher: Path,
     initialize: dict[str, object],
     watchdog_lease: Path,
+    client_tool_seconds: float,
 ) -> None:
     """Prove a wedged async child cannot wedge or exempt the root daemon."""
     runtime = Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]) / "host-a"
@@ -2249,6 +2250,7 @@ def assert_async_isolation(
     # guard handshake.  Keep enough margin above the guard's own readiness
     # ceiling that the expression demonstrably begins before it is killed.
     async_timeout = 15
+    async_deadline = time.monotonic() + async_timeout
     job_id = submit_async(
         launcher,
         initialize,
@@ -2272,16 +2274,21 @@ def assert_async_isolation(
         )
     child_pid = int(child_pid_file.read_text().strip())
 
+    root_probe_timeout = async_deadline - time.monotonic()
+    if root_probe_timeout <= 0:
+        raise AssertionError("async child expired before the root isolation probe")
     root_pid = parse_pid_response(
         call_tool(
             launcher,
             initialize,
             "emacs-eval",
             {"expression": "(emacs-pid)"},
-            timeout_seconds=5,
+            timeout_seconds=root_probe_timeout,
         ),
         "root Emacs",
     )
+    if time.monotonic() >= async_deadline:
+        raise AssertionError("root probe did not complete while the async child was live")
     if root_pid == child_pid:
         raise AssertionError("async expression ran inside the root Emacs")
 
@@ -2314,7 +2321,7 @@ def assert_async_isolation(
             initialize,
             "emacs-eval",
             {"expression": "(emacs-pid)"},
-            timeout_seconds=5,
+            timeout_seconds=client_tool_seconds,
         ),
         "root Emacs after async timeout",
     )
@@ -2842,6 +2849,7 @@ def main() -> None:
         launcher,
         initialize,
         watchdog_lease,
+        client_tool_seconds,
     )
     assert_direnv_nonlocal_exit_restores_baseline(launcher, initialize)
     assert_slow_direnv_keeps_root_responsive(launcher, initialize)
