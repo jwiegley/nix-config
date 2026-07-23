@@ -4,61 +4,97 @@ Updated: 2026-07-22
 
 ## Objective
 
-Replace promptdeploy as the active desired-state mechanism for Claude Code, Codex, OpenCode, Droid, and Pi with immutable `ai-nix` resources/wrappers and exact Home Manager leaves, then execute the reviewed fleet migration and verify idempotence.
+Keep agent desired state declarative in Nix. Model definitions and selections are
+authored in `llm-setup.el`, projected as deterministic nonsecret JSON, and rendered
+by Nix for Claude Code, Codex, OpenCode, Droid, and Pi.
 
-## Authoritative artifacts
+## Current scope decision
+
+The user explicitly abandoned the migration/runbook/rollout system formerly described
+by Tasks 12–13. Do not create migration machinery, ownership manifests, deployment
+scripts, host rollout procedures, or Promptdeploy retirement automation. No host
+activation or fleet rollout was performed in this lane.
+
+Tasks 1–11 and the `llm-setup.el` model-registry projection are the completed
+implementation boundary. Merging feature branches, updating consumer locks, or
+activating a host requires a separate explicit request.
+
+## Reference artifacts and authority
 
 - Design: `docs/superpowers/specs/2026-07-22-nix-managed-agent-configuration-design.md`
-- Implementation plan: `docs/superpowers/plans/2026-07-22-nix-managed-agent-configuration.md`
+- Main implementation plan: `docs/superpowers/plans/2026-07-22-nix-managed-agent-configuration.md`
+- Model projection plan: `docs/superpowers/plans/2026-07-22-llm-setup-nix-model-registry.md`
 - Progress ledger: `.superpowers/sdd/progress.md`
 
-## Recorded authority
+The design is authoritative only for the declarative architecture implemented by
+Tasks 1–11. Every migration, runbook, rollout, rollback-window, and retirement
+portion of that design is historical and superseded by the current scope decision.
+The main plan is retained as historical design evidence. Its unchecked Tasks 9–11
+boxes are stale; the implementation, smoke fixtures, and independent source audit
+confirm those tasks are present. Its Tasks 12–13 are superseded and must not be
+resumed implicitly.
 
-- The user explicitly approved continuing the active implementation objective on 2026-07-22; earlier turns explicitly authorized ordinary commits and pushes in changed repositories.
-- Host mutation, rollback-window closure, and promptdeploy retirement remain fail-closed: authority must be recorded here immediately before execution, the command must run locally on the affected host, and no deployment SSH/rsync path may be introduced.
+## Published branches and revisions
 
-## Worktrees and branches
+- `ai-nix` branch `feat/nix-managed-agent-resources`:
+  `0b9941324daca4fba248de3174d20cb299bc5ad8`.
+  The Nix resource closure remains immutably pinned to reviewed revision
+  `8fbb74948523979a166f39326ca14af4647d5f2d`; the later commit removes only a
+  stale Promptdeploy-coupled test assertion.
+- `llm-setup` branch `feat/nix-model-registry`:
+  `821f8fa854f93fbad900271d4059899395ab8e57`.
+- `dot-emacs` branch `feat/llm-setup-nix-model-registry`:
+  `ae4a3cb8f4422ab97b269d1e2097263c04bb86ff`, whose
+  `lisp/llm-setup` gitlink points exactly to `821f8fa854f93fbad900271d4059899395ab8e57`.
+- `nix` branch `feat/nix-managed-agent-config`: model-registry implementation
+  commit `75b072a30aeea1ea574b89c100dd4e01da17c356`; the final branch head also
+  contains this closeout documentation.
 
-- nix-config: `/Users/johnw/src/nix.worktrees/nix-managed-agent-config`, branch `feat/nix-managed-agent-config`, based on design commit `e5e08e2b20229646e34f3dde570f345c4df85361`.
-- ai-nix: `/Users/johnw/src/ai-nix.worktrees/nix-managed-agent-resources`, branch `feat/nix-managed-agent-resources`, based on `0610fd1283cf5ee52a5c71cbc8411a647b37dd7c`.
-- promptdeploy: `/Users/johnw/src/promptdeploy`, read-only oracle. Preserve dirty `models.yaml`; do not edit or deploy from the historical Pi branch.
+All pushes are ordinary non-force pushes. Dirty main worktrees were preserved and no
+feature branch was merged.
+
+## Completed state
+
+- `llm-setup-reset` no longer emits `models.yaml`. It retains the independent
+  LiteLLM and llama-swap writers, publishes the Nix registry once, and updates GPTel.
+- The registry contains 8 providers and 119 routes. GPT-5.6 Luna, Sol, and Terra each
+  project once directly through `positron-openai` and once through LiteLLM.
+- Nix validates the schema and renders model/provider/default data for every managed
+  agent profile. Exact counts, route order, provider splits, and semantic hashes are
+  smoke-gated.
+- Home Manager owns exact immutable leaves, uses the previous generation for
+  collision/tamper checks, and structurally guards Pi mutable state.
+- DEVONthink/iTerm2 synchronization is Hera-only and digest-gated; an unchanged model
+  exits before application probes or writes.
+- Git Surgeon, Superpowers skills, Fractal, Pi Quiet, Pi MCP adapter, and Pi subagent
+  are present in the declarative closure. `pi-openai-server-compaction` exists once
+  in the pinned resource closure but is intentionally not linked while its upstream
+  peer range excludes packaged Pi 0.81.1.
+- `trade-journal`, `org-jw`, `renamer`, `hours`, `pushme`, and
+  `git-monitor` remain Darwin-only and are absent from Linux selections.
+- The smoke gate rejects reintroduction of `programs.promptdeploy`, and the current
+  host configurations do not define it. Promptdeploy is not a steady-state package
+  or activation dependency.
+
+## Fresh verification
+
+- `llm-setup`: 24/24 ERT tests, pre-commit checks, and
+  `nix flake check -L path:.` passed.
+- The registry exporter was run twice against the tracked Nix destination. Both runs
+  preserved inode `1074660653`, mtime `1784780095`, size `20062`, and SHA-256
+  `f590a61be069f84e8230854b04239219cc0dceb1863a57f8c91b31e939523164`.
+- Nix focused `ai-home-manager-smoke`, full `nix flake check -L path:.`, and
+  `lefthook run pre-commit --all-files` passed.
+- `ai-nix`: focused resource check, all eight current Darwin flake checks, and
+  lefthook passed. Native x86 CI was not restarted merely to rebuild GHC.
+- Independent audits found no source-level blocker in Tasks 9–11 or the model
+  projection.
 
 ## Preservation boundaries
 
-- Preserve user changes on nix-config main: `config/packages.nix` and `docs/PI-AGENT-WIGGUM-PLAN.md`.
-- Preserve promptdeploy `models.yaml` exactly as the frozen authoritative dirty input.
-- Never read `.env` or live secret-bearing client configuration.
-- Do not add a generic deployment, ownership-manifest, reconciliation, remote-copy, or runtime-install framework.
-- GPTel and git-ai remain untouched.
-
-## Current state
-
-- Approved design is committed in nix-config.
-- Task 1 is committed in ai-nix as `651cf6593cf4b7a3c4202e35dd495353d389f4c5`: the immutable skill-resource package contains the exact 22-name set and passed focused/full gates plus independent scope, security, and fess review. The nix-config implementation worktree remains at its approved planning commit.
-- Task 2 source authority was recorded before implementation: pi-mcp-adapter `82724dccc13a49310530898f922bafff12b7f3fe` (`2.11.0`, Pi `./index.ts`, bin `cli.js`, lock `156cd7b65090cb5600651b40563dea3974fbeeaa7dbb6346f3deb0e9e0528bd0`) and pi-subagent `70248dcf7c8a5ca74497e817a699f009c55e6917` (`3.0.0`, main/Pi `index.ts`, lock `a7fbb2c6c10ee6af111dcf7a10064770cc360e818b6f424854c231ed6872d5ff`). Current Pi `0.81.1` satisfies all four `>=0.80.5` peers.
-- Task 2's no-installer boundary covers packaging, Home Manager activation, registration, and initial extension discovery. The exact unmodified adapter retains its explicit operational `npx` MCP-launch/cache behavior and optional global Glimpse discovery; prohibiting those later configured behaviors would require an out-of-scope upstream patch.
-- Task 2 is committed in ai-nix as `47f7a52ce140e0f5cccef18e0e5e9c617c0f0504`: both immutable Pi extension roots passed the focused/public/full gates and an isolated explicit-root offline RPC smoke. The build asserts each pristine upstream lock hash before normalizing three adapter dev-only entries that lack integrity in the build copy; the packaged closure remains production-only.
-- Task 3 pre-RED inspection corrected pinned-client premises: Codex `0.144.6` effectively applies profile-v2 only on its explicit runtime surfaces, its `mcp` command discards a selected profile before operating on base config, and same-directory `hooks.json` is global across layers. The design/plan now require a fixed version-asserted recognizer, one managed Codex TOML artifact with inline hooks, the proven nonnetworked `debug prompt-input` oracle, and unchanged delegation elsewhere.
-- Task 3 is committed in ai-nix as `c0c194c78f54cd59c7176b0ba5f8515bbcde17db` after independent scope, security, and fess PASS. Managed Claude and Droid wrappers fail closed on partial state. Codex's version-asserted `0.144.6` recognizer preserves exact bypass/delegation behavior across root, top-level child, sandbox/review/debug, and nested `exec resume/review` scopes, including malformed options, lone `-`, scope-local duplicate flags, positional conflicts, comma-delimited images, comma-bearing non-image values, root strict/remote command compatibility, and syntactic remote-auth pairing without credential or endpoint inspection. The pinned `mcp-remote` bridge has one header-only patch that disables OAuth/browser/config flows, redirects, and reconnect retries while deleting the credential environment variable immediately after resolution. Final focused wrapper `/nix/store/m4r8mjdkwpk9qk4jy9ajdznczjcd3qs7-agent-wrappers-check`, Task 2 regression, static hygiene, and full flake gates passed; all five protected derivation paths remained exact.
-- Task 4 is committed as `48fee22356d883d297213cdb6271090cc87ec580` (`feat: import canonical agent assets`).
-- Task 5 is committed as `87edae37cf9e4917af1c0d81072d45756f277f49` (`feat: add typed agent catalog and models`), with exact selector, model, secret-reference, and unsafe-name rejection fixtures.
-- Task 6 is committed as `28dff70475c346b5bb06e6309fa078067e92e38c` (`feat: render Claude and Codex configuration`) after focused smoke, static hygiene, reproducibility rebuild, and independent design/security/fess PASS.
-- Task 7 renders complete OpenCode and Droid contracts. Exact inventories, native documents, 87 Droid models, seven Droid MCP servers, provider/default behavior, tool normalization, typed-reference routing, and mutable exclusions pass the focused smoke plus a reproducibility rebuild; independent design, security, and fess re-reviews pass. Task 9 must install the pinned `agent-http-header-bridge` whenever Droid is selected and assert PATH resolution.
-- Task 8 renders the Hera-only Pi contract as exactly 91 owned leaves: 26 agents, 61 prompts, seven providers with 87 models and no default, six global MCP servers, and two direct extension roots. The focused smoke, static hygiene, exact path/model/MCP oracles, negative profile/XDG/tool probes, and reproducibility rebuild pass; independent design, security, and fess re-reviews pass. Task 9 must apply the recorded Pi mutable-shadow guard matrix at the pre-link boundary.
-- Promptdeploy, ai-nix, and nix-config inventories were completed read-only under `/tmp/wg-nix-managed-ai/`.
-- The corrected 13-task plan passed independent scope, security, and final fess review; Tasks 1–12 are approved to begin.
-- Baseline ai-nix `nix flake check -L path:.` completed successfully, including the existing Gradio build and 757-test suite.
-- Baseline nix-config evaluation passed. The unrelated existing `anvil-mcp-dedicated-smoke` initially failed only after its functional assertions, when a non-atomic probe left an empty PID marker. Store/worktree hashes match. A fresh focused `nix build -L 'path:.#checks.aarch64-darwin.anvil-mcp-dedicated'` then exited 0, including all unit/integration groups and the final two-daemon smoke.
-- PAL/consensus review tools are unavailable in this session; independent read-only subagents provide the required review separation.
-
-## Operating discipline
-
-- Use Anvil first in nix-config and recheck modified file-backed Emacs buffers before each edit batch.
-- Execute tasks serially; use parallel agents only for isolated read-only review or `/tmp` artifacts.
-- For every logical work commit: RED test, expected failure, minimal GREEN, focused/full verification, task review, and fess audit.
-- Keep promptdeploy outside the steady-state closure. The secret-free oracle is an explicit exception to normal promptdeploy shell practice because installed `de` loads `.env` and invokes `nix develop`; oracle commands instead use the named `#promptdeploy` app under an allowlisted `env -i`, synthetic empty HOME, and `--no-write-lock-file`; every state-reading/writing command also uses a non-symlinked `--target-root`, while read-only `validate` is the sole parser-required exception.
-- Use path flakes and the local ai-nix override until the reviewed ai-nix revision is published and pinned.
-
-## Resume point
-
-Begin Task 9 from the Task 8 commit containing this handoff update. Integrate the rendered leaves through Home Manager, enforce the previous-generation collision/tamper checks and the recorded Pi mutable-shadow guard matrix, and install/assert the pinned Droid header bridge only when Droid is selected. Continue using the local ai-nix override until its reviewed feature branch is published and pinned. Do not execute Task 13 without separate durable authority.
+- Preserve the staged user-owned `/Users/johnw/src/promptdeploy/models.yaml`; this
+  lane did not edit or deploy Promptdeploy.
+- Preserve dirty main worktrees in `nix`, `ai-nix`, and `dot-emacs`.
+- Never read live credentials or secret-bearing expanded client configurations.
+- Do not activate hosts, merge branches, close rollback windows, or revive Tasks
+  12–13 without a new explicit request.
