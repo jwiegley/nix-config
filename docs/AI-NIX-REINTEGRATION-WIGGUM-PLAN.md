@@ -25,6 +25,8 @@ Return the maintained contents and published capabilities of `~/src/ai-nix` to `
 15. A final literal-reference audit leaves no live `ai-nix`, `AI_NIX`, sibling-path, retired CLI-flag, or old-URL dependency except intentional compatibility aliases and clearly marked historical records.
 16. `~/src/ai-nix` and its worktrees are retired only after their clean/branch/unintegrated-work state is proven and all source/history is recoverable from the unified repository; use a reversible archive step before deletion.
 17. The final work commit passes fess, no actionable partner observation remains, and parity checks prove both the old `ai-nix` contract and the approved per-machine MCP contract.
+18. Preserve evidence that `pi-subagent` launches headless Pi RPC child processes rather than tmux panes and that `pi-btw` was planned but never implemented or installed; do not fabricate or package a nonexistent extension, and identify the remaining implementation gap explicitly.
+19. Write a comprehensive Markdown audit under `~/dl` covering prompts, commands, agents, skills, MCP servers, extensions, and gaps for every configured tool/host combination. The audit must use fresh tmux sessions for each applicable combination, invoke each tool's own introspection capabilities, distinguish expected from observed resources, and record every unresolved hole.
 
 ## Planned Work Units
 
@@ -37,6 +39,7 @@ Return the maintained contents and published capabilities of `~/src/ai-nix` to `
 7. Consolidate active documentation, CI, and hooks; mark historical records accurately.
 8. Run full cross-platform and consumer verification, audits, partner cleanup, and local restack.
 9. Reversibly archive the standalone checkout and remove live user-state references after proving recoverability.
+10. Run the fresh-tmux cross-host/tool introspection matrix and write the comprehensive `~/dl` audit, including the verified `pi-subagent` and missing `pi-btw` conclusions.
 
 ## Selected Architecture
 

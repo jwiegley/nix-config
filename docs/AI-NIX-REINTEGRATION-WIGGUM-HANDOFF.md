@@ -20,6 +20,8 @@ Updated: 2026-07-23
 - Production consumers include Vulcan (`aarch64-linux`), Andoria’s four-host shared profile (`x86_64-linux`), and VPS (`x86_64-linux`), plus an auxiliary Git-AI VM configuration. Consumers rely on both raw `nix-config` source paths and `ai-nix` flake outputs.
 - MCP target deltas are frozen: Clio/Hera OpenCode gain Drafts and PAL; shared-work OpenCode gains PAL; Vulcan OpenCode gains `drafts-hera` and PAL; Hera Droid gains DEVONthink, Drafts, Memory Vault, and stock-trader; Hera Pi gains those four plus PAL. Target-only entries remain.
 - The existing `auto-compact-resume` Bun suite passes 12/12 before migration.
+- `pi-subagent` uses Node `spawn()` to launch independent headless Pi RPC children; it does not create tmux panes. Separate tmux orchestration remains possible for acceptance testing.
+- `pi-btw` was planned in future-work documents but was never implemented or installed, including on the `feat/pi-extra-extensions` branch. Treat it as an explicit missing extension, not lost content.
 - Fresh tmux lifecycle evidence for the installed Anvil artifact is under `/tmp/wg-anvil-lifecycle/evidence-20260723T231407Z`: clean shutdown removed the test daemon and both instance trees in 1 second; SIGKILL of only the test client removed them in 5 seconds. Only empty mode-0600 session-gate locks remain, as designed. The live profile selects resilience artifact `39f9c59bfc51379db6243b1be20edca1ea783c2b`, although `main` still pins `01eecf6348e7e9e6462bddd89b1cbc03c157a7d6`. A pre-existing orphan stdio process from an older store artifact was observed and left untouched.
 - LiteLLM attribution is resolved without reading prompts or secrets. The apparent requester `10.0.2.100` is the synthetic `tap0` address inside each rootless Podman namespace, not another machine. The eight 2026-07-23 Opus 4.7 requests came from Vulcan's `stock-trader.service`, which is deliberately pinned to Claude Agent SDK 0.1.30 and that model route. Historical Haiku requests comprise four DEVONthink calls and 27 OpenCode calls outside the initially queried July 16-24 window. `hera_vibe_proxy_credential` is LiteLLM's outbound credential name on both model deployments; the inbound LiteLLM key alias was `default`.
 
@@ -36,6 +38,7 @@ The existing password-store LiteLLM credential was mapped only in a temporary ch
 3. Import the standalone history through a real unrelated-history merge point, then move maintained content to the canonical root-owned implementation tree while retaining the portable `config/ai` export boundary.
 4. Keep the root on the old `ai-nix` input until the local portable subflake passes the compatibility oracle; then switch root composition and scripts.
 5. Package `auto-compact-resume` and implement MCP parity under failing renderer/selection tests before production changes.
+6. After implementation and consumer verification, start fresh tmux sessions for every applicable configured tool/host combination and write the comprehensive prompts/commands/agents/skills/MCP/extensions gap audit under `~/dl`, carrying forward the `pi-subagent` and missing `pi-btw` evidence.
 
 ## Stop-and-escalate counters
 
