@@ -75,6 +75,14 @@ recovery without disabling the wrappers' pre-existing host-local behavior.
 The Claude package also exposes `claude-real` for callers that deliberately
 need the unwrapped executable.
 
+For Codex, `~/.codex/nix-managed.config.toml` is an immutable default template.
+Managed launches atomically copy it to the writable host-local
+`/var/tmp/codex-$UID/nix-runtime.config.toml` and select the `nix-runtime`
+profile through a stable `~/.codex/nix-runtime.config.toml` symlink. This lets
+the TUI change its current model or reasoning effort without writing to the
+Nix store; the next managed launch restores the declared defaults. Bypass and
+delegated invocations neither refresh nor select the runtime profile.
+
 The separate `agent-http-header-bridge` package is the narrow HTTPS header
 bridge used by Droid MCP entries:
 

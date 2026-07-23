@@ -69,6 +69,8 @@ new_case() {
 	codex)
 		ROOT="$CASE_DIR/Codex Home With Spaces"
 		FIRST="$ROOT/nix-managed.config.toml"
+		CODEX_RUNTIME_LINK="$ROOT/nix-runtime.config.toml"
+		CODEX_RUNTIME_FILE="$CODEX_LOCAL_ROOT/nix-runtime.config.toml"
 		SECOND=
 		[ ! -e "$CODEX_LOCAL_ROOT" ] && [ ! -L "$CODEX_LOCAL_ROOT" ] ||
 			fail "Codex test root unexpectedly exists: $CODEX_LOCAL_ROOT"
@@ -256,7 +258,7 @@ assert_managed_argv() {
 	shift
 	case "$client" in
 	claude) assert_argv "$ARGV_FILE" --settings "$FIRST" --mcp-config "$SECOND" "$@" ;;
-	codex) assert_argv "$ARGV_FILE" --profile nix-managed "$@" ;;
+	codex) assert_argv "$ARGV_FILE" --profile nix-runtime "$@" ;;
 	droid) assert_argv "$ARGV_FILE" --settings "$FIRST" "$@" ;;
 	*) fail "unknown client: $client" ;;
 	esac
@@ -1033,6 +1035,105 @@ assert_codex_host_state() {
 		fail "Codex log link has the wrong target"
 }
 
+assert_codex_runtime_profile() {
+	[ -L "$CODEX_RUNTIME_LINK" ] ||
+		fail "Codex did not create the writable runtime profile link"
+	[ "$(readlink "$CODEX_RUNTIME_LINK")" = "$CODEX_RUNTIME_FILE" ] ||
+		fail "Codex runtime profile link has the wrong target"
+	[ -f "$CODEX_RUNTIME_FILE" ] && [ ! -L "$CODEX_RUNTIME_FILE" ] ||
+		fail "Codex runtime profile is not a regular host-local file"
+	[ "$(stat -c %a "$CODEX_RUNTIME_FILE")" = 600 ] ||
+		fail "Codex runtime profile does not have mode 0600"
+	[ -w "$CODEX_RUNTIME_FILE" ] ||
+		fail "Codex runtime profile is not writable"
+	cmp "$FIRST" "$CODEX_RUNTIME_FILE" ||
+		fail "Codex runtime profile does not match the managed template"
+	if find "$CODEX_LOCAL_ROOT" -maxdepth 1 \
+		-name '.nix-runtime.config.toml.*' -print -quit | grep -q .; then
+		fail "Codex left a runtime profile temporary file behind"
+	fi
+}
+
+assert_codex_runtime_profile_absent() {
+	[ ! -e "$CODEX_RUNTIME_LINK" ] && [ ! -L "$CODEX_RUNTIME_LINK" ] ||
+		fail "Codex created the runtime profile link outside managed mode"
+	[ ! -e "$CODEX_RUNTIME_FILE" ] && [ ! -L "$CODEX_RUNTIME_FILE" ] ||
+		fail "Codex created the runtime profile outside managed mode"
+}
+
+test_codex_runtime_profile() {
+	new_case codex runtime-profile-refresh
+	configure_state complete
+	invoke_agent codex 0 0 alpha
+	[ "$LAST_STATUS" -eq 0 ] || fail "managed Codex runtime profile launch failed"
+	assert_managed_argv codex alpha
+	assert_codex_runtime_profile
+
+	printf '%s\n' runtime-selection >"$CODEX_RUNTIME_LINK"
+	grep -Fx runtime-selection "$CODEX_RUNTIME_FILE" >/dev/null ||
+		fail "Codex runtime profile link is not writable"
+	invoke_agent codex 0 0 beta
+	[ "$LAST_STATUS" -eq 0 ] || fail "managed Codex runtime profile refresh failed"
+	assert_managed_argv codex beta
+	assert_codex_runtime_profile
+	finish_case codex
+
+	new_case codex runtime-profile-bypass
+	configure_state complete
+	invoke_agent codex 1 0 alpha
+	[ "$LAST_STATUS" -eq 0 ] || fail "Codex bypass launch failed"
+	assert_argv "$ARGV_FILE" alpha
+	assert_codex_runtime_profile_absent
+	finish_case codex
+
+	new_case codex runtime-profile-delegated
+	configure_state complete
+	invoke_agent codex 0 0 --version
+	[ "$LAST_STATUS" -eq 0 ] || fail "Codex delegated launch failed"
+	assert_argv "$ARGV_FILE" --version
+	assert_codex_runtime_profile_absent
+	finish_case codex
+}
+
+test_codex_runtime_profile_rejections() {
+	new_case codex runtime-link-regular
+	configure_state complete
+	printf '%s\n' local-collision >"$CODEX_RUNTIME_LINK"
+	invoke_agent codex 0 0 alpha
+	[ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a regular runtime link path"
+	assert_upstream_not_invoked
+	assert_bounded_redacted_error codex 0
+	finish_case codex
+
+	new_case codex runtime-link-retargeted
+	configure_state complete
+	ln -s "$CASE_DIR/external runtime" "$CODEX_RUNTIME_LINK"
+	invoke_agent codex 0 0 alpha
+	[ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a retargeted runtime profile link"
+	assert_upstream_not_invoked
+	assert_bounded_redacted_error codex 0
+	finish_case codex
+
+	new_case codex runtime-file-symlink
+	configure_state complete
+	mkdir -p "$CODEX_LOCAL_ROOT"
+	ln -s "$CASE_DIR/external runtime" "$CODEX_RUNTIME_FILE"
+	invoke_agent codex 0 0 alpha
+	[ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a symlink runtime profile"
+	assert_upstream_not_invoked
+	assert_bounded_redacted_error codex 0
+	finish_case codex
+
+	new_case codex runtime-file-directory
+	configure_state complete
+	mkdir -p "$CODEX_RUNTIME_FILE"
+	invoke_agent codex 0 0 alpha
+	[ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a directory runtime profile"
+	assert_upstream_not_invoked
+	assert_bounded_redacted_error codex 0
+	finish_case codex
+}
+
 test_codex_host_state() {
 	local seed
 
@@ -1090,7 +1191,7 @@ test_real_codex_profile_contract() {
 
 	mkdir -p "$codex_home"
 	printf 'developer_instructions = "%s"\n' "$marker" \
-		>"$codex_home/nix-managed.config.toml"
+		>"$codex_home/nix-runtime.config.toml"
 
 	if env HOME="$codex_home" CODEX_HOME="$codex_home" \
 		CODEX_SQLITE_HOME="$codex_home/sqlite" \
@@ -1106,7 +1207,7 @@ test_real_codex_profile_contract() {
 
 	if env HOME="$codex_home" CODEX_HOME="$codex_home" \
 		CODEX_SQLITE_HOME="$codex_home/sqlite" \
-		"$REAL_CODEX_BIN" --profile nix-managed debug prompt-input hello \
+		"$REAL_CODEX_BIN" --profile nix-runtime debug prompt-input hello \
 		>"$codex_home/with-profile.json" 2>"$codex_home/with-profile.stderr"; then
 		:
 	else
@@ -1125,14 +1226,14 @@ test_real_codex_profile_contract() {
 		printf 'env_key = "TASK3_ORACLE_API_KEY"\n'
 		printf 'wire_api = "responses"\n'
 		printf 'requires_openai_auth = false\n'
-	} >"$codex_home/nix-managed.config.toml"
+	} >"$codex_home/nix-runtime.config.toml"
 	if env HOME="$codex_home" CODEX_HOME="$codex_home" \
 		CODEX_SQLITE_HOME="$codex_home/sqlite" \
 		TASK3_ORACLE_API_KEY=not-a-real-key \
 		TASK3_NETWORK_GUARD_LOADED_FILE="$network_guard_loaded" \
 		TASK3_NETWORK_ATTEMPT_FILE="$network_hit" \
 		"$NETWORK_GUARD_VARIABLE=$NETWORK_GUARD_LIBRARY" \
-		"$REAL_CODEX_BIN" --profile nix-managed --strict-config \
+		"$REAL_CODEX_BIN" --profile nix-runtime --strict-config \
 		exec --skip-git-repo-check hello \
 		>"$codex_home/strict.stdout" 2>"$codex_home/strict.stderr"; then
 		fail "pinned Codex accepted an unknown strict profile field"
@@ -1218,6 +1319,8 @@ test_unset_home_bypass droid
 
 test_claude_real
 test_codex_host_state
+test_codex_runtime_profile
+test_codex_runtime_profile_rejections
 test_codex_command_scope
 test_codex_non_darwin_table
 test_real_codex_profile_contract

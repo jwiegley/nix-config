@@ -568,6 +568,79 @@
               }
 
               codex_managed_config="$codex_shared_home/nix-managed.config.toml"
+              codex_runtime_config="$codex_local_root/nix-runtime.config.toml"
+              codex_runtime_link="$codex_shared_home/nix-runtime.config.toml"
+
+              codex_reject_runtime_profile() {
+                printf 'codex: refusing unsafe runtime profile path: %s\n' "$1" >&2
+                return 2
+              }
+
+              codex_prepare_runtime_profile() {
+                local codex_runtime_owner codex_runtime_target codex_runtime_tmp
+
+                if [ -L "$codex_runtime_config" ]; then
+                  codex_reject_runtime_profile "$codex_runtime_config"
+                fi
+                if [ -e "$codex_runtime_config" ]; then
+                  if [ ! -f "$codex_runtime_config" ]; then
+                    codex_reject_runtime_profile "$codex_runtime_config"
+                  fi
+                  if ! codex_runtime_owner="$(${pkgs.coreutils}/bin/stat -c %u \
+                      "$codex_runtime_config" 2>/dev/null)" \
+                    || [ "$codex_runtime_owner" != "$codex_uid" ]; then
+                    codex_reject_runtime_profile "$codex_runtime_config"
+                  fi
+                fi
+
+                if [ ! -e "$codex_runtime_link" ] && [ ! -L "$codex_runtime_link" ]; then
+                  ${pkgs.coreutils}/bin/ln -s \
+                    "$codex_runtime_config" "$codex_runtime_link" 2>/dev/null || true
+                fi
+                if [ ! -L "$codex_runtime_link" ]; then
+                  codex_reject_runtime_profile "$codex_runtime_link"
+                fi
+                if ! codex_runtime_target="$(${pkgs.coreutils}/bin/readlink \
+                    "$codex_runtime_link" 2>/dev/null)" \
+                  || [ "$codex_runtime_target" != "$codex_runtime_config" ]; then
+                  codex_reject_runtime_profile "$codex_runtime_link"
+                fi
+
+                if ! codex_runtime_tmp="$(${pkgs.coreutils}/bin/mktemp \
+                    "$codex_local_root/.nix-runtime.config.toml.XXXXXX" 2>/dev/null)"; then
+                  printf 'codex: cannot refresh host-local runtime profile\n' >&2
+                  return 2
+                fi
+                trap '${pkgs.coreutils}/bin/rm -f "$codex_runtime_tmp" 2>/dev/null || true' \
+                  EXIT INT TERM
+                if ! ${pkgs.coreutils}/bin/cp -- \
+                    "$codex_managed_config" "$codex_runtime_tmp" 2>/dev/null \
+                  || ! ${pkgs.coreutils}/bin/chmod 600 "$codex_runtime_tmp" 2>/dev/null; then
+                  ${pkgs.coreutils}/bin/rm -f "$codex_runtime_tmp" 2>/dev/null || true
+                  trap - EXIT INT TERM
+                  printf 'codex: cannot refresh host-local runtime profile\n' >&2
+                  return 2
+                fi
+
+                # Recheck the destination immediately before the same-filesystem
+                # rename.  -T prevents a directory from being treated as a move
+                # target if the path changes after the initial validation.
+                if [ -L "$codex_runtime_config" ] \
+                  || { [ -e "$codex_runtime_config" ] && [ ! -f "$codex_runtime_config" ]; }; then
+                  ${pkgs.coreutils}/bin/rm -f "$codex_runtime_tmp" 2>/dev/null || true
+                  trap - EXIT INT TERM
+                  codex_reject_runtime_profile "$codex_runtime_config"
+                fi
+                if ! ${pkgs.coreutils}/bin/mv -fT -- \
+                    "$codex_runtime_tmp" "$codex_runtime_config" 2>/dev/null; then
+                  ${pkgs.coreutils}/bin/rm -f "$codex_runtime_tmp" 2>/dev/null || true
+                  trap - EXIT INT TERM
+                  printf 'codex: cannot refresh host-local runtime profile\n' >&2
+                  return 2
+                fi
+                trap - EXIT INT TERM
+              }
+
               if [ "''${AI_NIX_BYPASS_MANAGED_CONFIG:-}" != 1 ]; then
                 codex_state=$(classify_managed_artifacts "$codex_managed_config")
                 case "$codex_state" in
@@ -1783,7 +1856,8 @@
                         exit 2
                       fi
                       if [ "$codex_recognized" -eq 1 ]; then
-                        exec -a codex @codex_unwrapped@ --profile nix-managed "$@"
+                        codex_prepare_runtime_profile
+                        exec -a codex @codex_unwrapped@ --profile nix-runtime "$@"
                       fi
                     fi
                     ;;
