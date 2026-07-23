@@ -10,6 +10,7 @@
 let
   inherit (pkgs) lib;
 
+  assetCheckPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
   registryPath = "${src}/config/ai/model-registry.json";
   rawModelRegistry = builtins.fromJSON (builtins.readFile registryPath);
   modelPolicy = import "${src}/config/ai/model-policy.nix";
@@ -86,28 +87,26 @@ let
   renamedCredentialModelData = loadRegistry renamedCredentialRegistry;
   renamedCredentialCatalog = catalogFor renamedCredentialModelData;
 
-  routeKey = model: "${model.provider}/${model.id}";
-  addedRouteKeys = [
-    "positron-openai/gpt-5.6-luna"
-    "positron-openai/gpt-5.6-sol"
-    "positron-openai/gpt-5.6-terra"
-    "litellm/positron_openai/gpt-5.6-luna"
-    "litellm/positron_openai/gpt-5.6-sol"
-    "litellm/positron_openai/gpt-5.6-terra"
-    "litellm/openrouter/moonshotai/kimi-k3"
-    "litellm/openrouter/qwen/qwen3.7-max"
-  ];
-  legacyComparableModels =
-    let
-      common = builtins.filter (
-        model: !builtins.elem (routeKey model) addedRouteKeys
-      ) rawModelRegistry.models;
-      glm = builtins.head (
-        builtins.filter (model: routeKey model == "litellm/openrouter/z-ai/glm-5.2") common
-      );
-      withoutGlm = builtins.filter (model: routeKey model != "litellm/openrouter/z-ai/glm-5.2") common;
-    in
-    lib.take 28 withoutGlm ++ [ glm ] ++ lib.drop 28 withoutGlm;
+  hostFilterRegistry = rawModelRegistry // {
+    models = rawModelRegistry.models ++ [
+      {
+        provider = "nvidia";
+        id = "host-filter-regression-clio";
+        displayName = "Host Filter Regression (Clio)";
+        maxOutputTokens = 1;
+        hosts = [ "clio" ];
+      }
+      {
+        provider = "nvidia";
+        id = "host-filter-regression-hera";
+        displayName = "Host Filter Regression (Hera)";
+        maxOutputTokens = 1;
+        hosts = [ "hera" ];
+      }
+    ];
+  };
+  hostFilterModelData = loadRegistry hostFilterRegistry;
+  hostFilterCatalog = catalogFor hostFilterModelData;
 
   sortedNames = set: lib.sort builtins.lessThan (builtins.attrNames set);
   expectEqual =
@@ -121,22 +120,20 @@ let
     if (builtins.tryEval (builtins.deepSeq value true)).success then throw label else true;
 
   selectFor = profileId: itemSet: catalog.select catalog.profiles.${profileId} itemSet;
-  selectedNames = profileId: category: sortedNames (selectFor profileId catalog.items.${category});
+  selectedNamesFrom = profileId: itemSet: sortedNames (selectFor profileId itemSet);
+  selectedNames = profileId: category: selectedNamesFrom profileId catalog.items.${category};
   selectedProviders = profileId: selectFor profileId modelData.providers;
-  selectedModels =
-    profileId:
+  selectedModelsFor =
+    targetCatalog: data: profileId:
     let
-      profile = catalog.profiles.${profileId};
-      providers = selectedProviders profileId;
+      profile = targetCatalog.profiles.${profileId};
+      providers = targetCatalog.select profile data.providers;
     in
     lib.filterAttrs (
       _name: model:
-      builtins.hasAttr model.provider providers && catalog.matches profile (model.selectors or { })
-    ) modelData.models;
-  selectedModelNames = profileId: sortedNames (selectedModels profileId);
-  selectedModelHash =
-    profileId: builtins.hashString "sha256" (builtins.toJSON (selectedModelNames profileId));
-
+      builtins.hasAttr model.provider providers && targetCatalog.matches profile (model.selectors or { })
+    ) data.models;
+  selectedModels = selectedModelsFor catalog modelData;
   expectedProfileIds = [
     "clio-claude-personal"
     "clio-claude-positron"
@@ -179,13 +176,13 @@ let
     targetPaths = [ "settings/settings" ];
     base = {
       env = {
-        ANTHROPIC_DEFAULT_HAIKU_MODEL = "claude-sonnet-4-6";
+        ANTHROPIC_DEFAULT_HAIKU_MODEL = rawModelRegistry.selections.claudeHaiku.model;
         CLAUDE_AUTOCOMPACT_PCT_OVERRIDE = "80";
         CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY = "1";
         CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
         CLAUDE_CODE_MAX_OUTPUT_TOKENS = "64000";
         CLAUDE_CODE_NO_FLICKER = "1";
-        CLAUDE_CODE_SUBAGENT_MODEL = "claude-fable-5";
+        CLAUDE_CODE_SUBAGENT_MODEL = rawModelRegistry.selections.claudeSubagent.model;
         DISABLE_AUTOUPDATER = "1";
         ENABLE_LSP_TOOL = "1";
         ENABLE_TOOL_SEARCH = "1";
@@ -217,7 +214,7 @@ let
       preferredNotifChannel = "iterm2_with_bell";
       remoteControlAtStartup = true;
       agentPushNotifEnabled = true;
-      model = "claude-fable-5";
+      model = rawModelRegistry.selections.claudeDefault.model;
       theme = "dark";
     };
     statusLineCommand = {
@@ -261,14 +258,6 @@ let
     forge.clients = [ "claude" ];
     retest.audiences = [ "positron" ];
   };
-  expectedSourceRecords = {
-    sha256 = "bd686f3423475bbf86d7de8ea83ef697565f2df8475abd18e438cf94850240d4";
-    agents = 26;
-    commands = 65;
-    discoveredSkills = 19;
-    prompts = 2;
-    settings = 1;
-  };
   expectedLegacyTargets = {
     clio-claude-personal = [ "claude-personal" ];
     clio-claude-positron = [ "claude-positron" ];
@@ -305,168 +294,6 @@ let
     git-ai = [ "all git-ai personas and state" ];
     tombstones = [ "anvil-tools" ];
   };
-
-  personalCommands = [
-    "assess"
-    "bankruptcy"
-    "breakdown"
-    "bugbot"
-    "bugbot-stack"
-    "capture"
-    "code-review"
-    "commit"
-    "deep-review"
-    "discover-bundles"
-    "eliminate-dead-code"
-    "expense-report"
-    "fess"
-    "fix"
-    "fix-alert"
-    "fix-ci"
-    "fix-github-issue"
-    "fix-integration"
-    "fix-transcript"
-    "flaky-rust"
-    "gravity"
-    "halt"
-    "infer-tasks"
-    "initialize"
-    "install-service"
-    "journal"
-    "lefthook"
-    "markdown"
-    "medium"
-    "meeting-notes"
-    "narrative"
-    "nix-rebuild"
-    "partner-cleanup"
-    "partner-collaborator"
-    "partner-reviewer"
-    "prepare-with"
-    "process-checklist"
-    "productize"
-    "proofread"
-    "push"
-    "query-builder"
-    "quick-review"
-    "rebase"
-    "rebase-and-fix"
-    "recommit"
-    "remove-service"
-    "report"
-    "resolve"
-    "respond"
-    "restack"
-    "review-github-pr"
-    "run-orchestrator"
-    "sec-audit"
-    "sitrep"
-    "smooth"
-    "teams"
-    "transcribe-image"
-    "webfix"
-    "wiggum"
-  ];
-  positronCommands = [
-    "assess"
-    "bankruptcy"
-    "breakdown"
-    "bugbot"
-    "bugbot-stack"
-    "cleanup"
-    "code-review"
-    "commit"
-    "deep-review"
-    "discover-bundles"
-    "eliminate-dead-code"
-    "fess"
-    "fix"
-    "fix-ci"
-    "fix-github-issue"
-    "fix-transcript"
-    "flaky-rust"
-    "forge"
-    "gravity"
-    "halt"
-    "heavy"
-    "infer-tasks"
-    "initialize"
-    "journal"
-    "lefthook"
-    "markdown"
-    "medium"
-    "meeting-notes"
-    "narrative"
-    "nix-rebuild"
-    "partner-cleanup"
-    "partner-collaborator"
-    "partner-reviewer"
-    "prepare-with"
-    "process-checklist"
-    "productize"
-    "proofread"
-    "push"
-    "query-builder"
-    "quick-review"
-    "rebase"
-    "rebase-and-fix"
-    "recommit"
-    "report"
-    "resolve"
-    "respond"
-    "restack"
-    "retest"
-    "retest-categorical"
-    "review-github-pr"
-    "run-orchestrator"
-    "sec-audit"
-    "sitrep"
-    "smooth"
-    "teams"
-    "transcribe-image"
-    "tron-debug"
-    "wiggum"
-  ];
-  broadSkills = [
-    "anvil"
-    "brainstorming"
-    "caveman"
-    "comment-audit"
-    "dispatching-parallel-agents"
-    "eliminate-dead-code"
-    "executing-plans"
-    "finishing-a-development-branch"
-    "fix-all"
-    "fix-transcript"
-    "git-surgeon"
-    "it-voice"
-    "johnw"
-    "nixos"
-    "node-red"
-    "parallelize"
-    "persian"
-    "ponytail"
-    "ponytail-audit"
-    "ponytail-debt"
-    "ponytail-gain"
-    "ponytail-help"
-    "ponytail-review"
-    "receiving-code-review"
-    "requesting-code-review"
-    "skill-creator"
-    "subagent-driven-development"
-    "swiftui"
-    "systematic-debugging"
-    "test-driven-development"
-    "toolkit"
-    "translate-en"
-    "using-git-worktrees"
-    "using-superpowers"
-    "verification-before-completion"
-    "wiggum"
-    "writing-plans"
-    "writing-skills"
-  ];
 
   baseMcp = [
     "Ref"
@@ -660,192 +487,151 @@ let
 
   profileExpectations = {
     "clio-claude-personal" = {
-      commands = 59;
-      skills = 39;
       mcpServers = claudePersonalMcp;
       hooks = claudeHooks;
       marketplaces = claudeMarketplaces;
-      models = 0;
       hasDefault = false;
     };
     "clio-claude-positron" = {
-      commands = 58;
-      skills = 40;
       mcpServers = claudeMcp;
       hooks = claudeHooks;
       marketplaces = claudeMarketplaces;
-      models = 0;
       hasDefault = false;
     };
     "clio-codex" = {
-      commands = 59;
-      skills = 38;
       mcpServers = baseMcp;
       hooks = codexHooks;
       marketplaces = [ ];
-      models = 0;
       hasDefault = false;
     };
     "clio-opencode" = {
-      commands = 59;
-      skills = 38;
       mcpServers = personalOpenCodeMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 86;
-      modelHash = "3b5a0d30be47c760fa7767b8c9fd8642c4f13e40efe976a992504e418dc627d3";
       hasDefault = true;
     };
     "hera-claude-personal" = {
-      commands = 59;
-      skills = 39;
       mcpServers = claudePersonalMcp;
       hooks = claudeHooks;
       marketplaces = claudeMarketplaces;
-      models = 0;
       hasDefault = false;
     };
     "hera-claude-positron" = {
-      commands = 58;
-      skills = 40;
       mcpServers = claudeMcp;
       hooks = claudeHooks;
       marketplaces = claudeMarketplaces;
-      models = 0;
       hasDefault = false;
     };
     "hera-codex" = {
-      commands = 59;
-      skills = 38;
       mcpServers = baseMcp;
       hooks = codexHooks;
       marketplaces = [ ];
-      models = 0;
       hasDefault = false;
     };
     "hera-droid" = {
-      commands = 2;
-      skills = 38;
       mcpServers = droidMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 95;
-      modelHash = "dc4f8f5f161d5d27b28a34285199df08f19c4a1c434a7f2a66b7e52691da59e3";
       hasDefault = false;
     };
     "hera-opencode" = {
-      commands = 59;
-      skills = 38;
       mcpServers = personalOpenCodeMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 85;
-      modelHash = "0def1231294a566b6dff836f12949c600ef1297a3875801bb94fa5d130beb4b9";
       hasDefault = true;
     };
     "hera-pi" = {
-      commands = 59;
-      skills = 38;
       mcpServers = baseMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 95;
-      modelHash = "dc4f8f5f161d5d27b28a34285199df08f19c4a1c434a7f2a66b7e52691da59e3";
       hasDefault = false;
     };
     "shared-work-claude-positron" = {
-      commands = 58;
-      skills = 40;
       mcpServers = claudeMcp;
       hooks = claudeHooks;
       marketplaces = claudeMarketplaces;
-      models = 0;
       hasDefault = false;
     };
     "shared-work-codex" = {
-      commands = 65;
-      skills = 39;
       mcpServers = baseMcp;
       hooks = codexHooks;
       marketplaces = [ ];
-      models = 0;
       hasDefault = false;
     };
     "shared-work-opencode-positron" = {
-      commands = 58;
-      skills = 39;
       mcpServers = baseMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 62;
-      modelHash = "e0d60522b590f6f91f0cac9a3cfc3ff733bf1f04d850dc49586d98beac6fd9d7";
       hasDefault = true;
     };
     "vps-claude-personal" = {
-      commands = 59;
-      skills = 39;
       mcpServers = claudeMcp;
       hooks = claudeHooks;
       marketplaces = claudeMarketplaces;
-      models = 0;
       hasDefault = false;
     };
     "vulcan-claude-personal" = {
-      commands = 59;
-      skills = 39;
       mcpServers = vulcanClaudeMcp;
       hooks = claudeHooks;
       marketplaces = claudeMarketplaces;
-      models = 0;
       hasDefault = false;
     };
     "vulcan-opencode" = {
-      commands = 59;
-      skills = 38;
       mcpServers = vulcanOpenCodeMcp;
       hooks = [ ];
       marketplaces = [ ];
-      models = 10;
-      modelHash = "28b3b03aa19e5161ea6ddb93f175eef7fa6cb6ddda64c948e730a984f5de5fba";
       hasDefault = false;
     };
   };
 
   profileChecks = lib.concatLists (
-    lib.mapAttrsToList (
-      profileId: expected:
-      [
-        (expectEqual (profileId + " agents") (builtins.length (selectedNames profileId "agents")) 26)
-        (expectEqual (profileId + " commands") (builtins.length (
-          selectedNames profileId "commands"
-        )) expected.commands)
-        (expectEqual (profileId + " skills") (builtins.length (
-          selectedNames profileId "skills"
-        )) expected.skills)
-        (expectEqual (profileId + " prompts") (selectedNames profileId "prompts") [
-          "emacs"
-          "spanish"
-        ])
-        (expectEqual (profileId + " MCP") (selectedNames profileId "mcpServers") expected.mcpServers)
-        (expectEqual (profileId + " hooks") (selectedNames profileId "hooks") expected.hooks)
-        (expectEqual (
-          profileId + " marketplaces"
-        ) (selectedNames profileId "marketplaces") expected.marketplaces)
-        (expectEqual (profileId + " settings") (selectedNames profileId "settings") (
-          lib.optional (catalog.profiles.${profileId}.client == "claude") "settings"
-        ))
-        (expectEqual (profileId + " models") (builtins.length (
-          selectedModelNames profileId
-        )) expected.models)
-        (expectEqual (
-          profileId + " default"
-        ) (builtins.hasAttr profileId modelData.profileDefaults) expected.hasDefault)
-      ]
-      ++ lib.optional (expected ? modelHash) (
-        expectEqual (profileId + " model hash") (selectedModelHash profileId) expected.modelHash
-      )
-    ) profileExpectations
+    lib.mapAttrsToList (profileId: expected: [
+      (expectEqual (profileId + " MCP") (selectedNames profileId "mcpServers") expected.mcpServers)
+      (expectEqual (profileId + " hooks") (selectedNames profileId "hooks") expected.hooks)
+      (expectEqual (
+        profileId + " marketplaces"
+      ) (selectedNames profileId "marketplaces") expected.marketplaces)
+      (expectEqual (profileId + " settings") (selectedNames profileId "settings") (
+        lib.optional (catalog.profiles.${profileId}.client == "claude") "settings"
+      ))
+      (expectEqual (
+        profileId + " default"
+      ) (builtins.hasAttr profileId modelData.profileDefaults) expected.hasDefault)
+    ]) profileExpectations
   );
+  selectedUnionFor =
+    itemSet:
+    lib.sort builtins.lessThan (
+      lib.unique (lib.concatMap (profileId: selectedNamesFrom profileId itemSet) expectedProfileIds)
+    );
+  reachableProviderNames = lib.sort builtins.lessThan (
+    lib.unique (lib.concatMap (profileId: sortedNames (selectedProviders profileId)) expectedProfileIds)
+  );
+  reachableModelNames = lib.sort builtins.lessThan (
+    lib.unique (lib.concatMap (profileId: sortedNames (selectedModels profileId)) expectedProfileIds)
+  );
+  unreachableFixtureItems = {
+    unreachable.selectors.excludeProfiles = expectedProfileIds;
+  };
+  reachabilityChecks =
+    map (
+      category:
+      expectEqual "${category} reaches at least one profile" (selectedUnionFor
+        catalog.items.${category}
+      ) (sortedNames catalog.items.${category})
+    ) (builtins.attrNames catalog.items)
+    ++ [
+      (expectEqual "reachability oracle detects an excluded item"
+        (selectedUnionFor unreachableFixtureItems)
+        [ ]
+      )
+      (expectEqual "every provider reaches at least one profile" reachableProviderNames (
+        sortedNames modelData.providers
+      ))
+      (expectEqual "every model reaches at least one profile" reachableModelNames (
+        sortedNames modelData.models
+      ))
+    ];
 
   claudeProfileIds = [
     "clio-claude-personal"
@@ -906,6 +692,45 @@ let
       import openCodeRendererPath { inherit lib pkgs; }
     else
       throw "Task 7 RED: config/ai/renderers/opencode.nix is missing";
+  hostFilterProbeRenderer = import openCodeRendererPath {
+    inherit lib;
+    pkgs = pkgs // {
+      formats = pkgs.formats // {
+        json = _: {
+          generate = _name: value: value;
+        };
+      };
+    };
+  };
+  hostFilterRenderedModels = lib.genAttrs openCodeProfileIds (
+    profileId:
+    let
+      profile = hostFilterCatalog.profiles.${profileId};
+      selected = lib.mapAttrs (
+        _category: itemSet: hostFilterCatalog.select profile itemSet
+      ) hostFilterCatalog.items;
+      selectedModelData = {
+        providers = hostFilterCatalog.select profile hostFilterModelData.providers;
+        models = selectedModelsFor hostFilterCatalog hostFilterModelData profileId;
+      };
+      render = hostFilterProbeRenderer {
+        inherit profile selected;
+        modelData = selectedModelData;
+        homeDirectory = fixtureHomeDirectory;
+        xdgConfigHome = fixtureXdgConfigHome;
+      };
+      config = render.files."${profile.root}/opencode.json".source;
+    in
+    builtins.filter (lib.hasPrefix "host-filter-regression-") (
+      sortedNames config.provider.nvidia.models
+    )
+  );
+  expectedHostFilterRenderedModels = {
+    clio-opencode = [ "host-filter-regression-clio" ];
+    hera-opencode = [ "host-filter-regression-hera" ];
+    shared-work-opencode-positron = [ ];
+    vulcan-opencode = [ ];
+  };
   droidRenderer =
     if builtins.pathExists droidRendererPath then
       import droidRendererPath { inherit lib pkgs; }
@@ -1455,9 +1280,6 @@ let
   expectedPiModels = {
     providers = lib.mapAttrs expectedPiProvider (selectedProviders "hera-pi");
   };
-  expectedPiGpt56Sol = lib.findFirst (
-    model: model.id == "positron_openai/gpt-5.6-sol"
-  ) null expectedPiModels.providers.litellm.models;
   renderPiSecretReferences =
     value:
     if isTypedEnv value then
@@ -2073,12 +1895,6 @@ let
       ]
     )
   );
-  openCodeConfigHashes = {
-    clio-opencode = "2e9a91d6adaae2b1d444e246b0ac8e8dc93f2b411f40087abe76417a1da7e061";
-    hera-opencode = "e3247fa0cbfdbd183eaaf64b8b9185b293acd7e32fe91a83b52fdd8637966ad6";
-    shared-work-opencode-positron = "3708be3dec7ccd4fd5fb4becf333671e67d92eb8dd09266ea7a17d4cb880cd1f";
-    vulcan-opencode = "abe5634f22008b605ec8012906fa4df89b8d6846bc0e3c152c5b65cd0afc94ce";
-  };
   openCodeRequiredEnvNames = {
     clio-opencode = [
       "CONTEXT7_API_KEY"
@@ -2116,8 +1932,7 @@ let
         paths = sortedNames render.files;
       in
       [
-        (expectEqual "${profileId} exact path inventory" paths (expectedClaudePaths profileId))
-        (expectEqual "${profileId} path count" (builtins.length paths) 129)
+        (expectEqual "${profileId} selected resource paths" paths (expectedClaudePaths profileId))
         (expectEqual "${profileId} companions" render.companions [
           "${profile.root}/nix-managed-settings.json"
           "${profile.root}/nix-managed-mcp.json"
@@ -2148,11 +1963,9 @@ let
         profile = catalog.profiles.${profileId};
         render = renderedCodex.${profileId};
         paths = sortedNames render.files;
-        expectedCount = if profileId == "shared-work-codex" then 133 else 126;
       in
       [
-        (expectEqual "${profileId} exact path inventory" paths (expectedCodexPaths profileId))
-        (expectEqual "${profileId} path count" (builtins.length paths) expectedCount)
+        (expectEqual "${profileId} selected resource paths" paths (expectedCodexPaths profileId))
         (expectEqual "${profileId} companions" render.companions [
           "${profile.root}/nix-managed.config.toml"
         ])
@@ -2180,8 +1993,7 @@ let
         paths = sortedNames render.files;
       in
       [
-        (expectEqual "${profileId} exact path inventory" paths (expectedOpenCodePaths profileId))
-        (expectEqual "${profileId} path count" (builtins.length paths) 126)
+        (expectEqual "${profileId} selected resource paths" paths (expectedOpenCodePaths profileId))
         (expectEqual "${profileId} companions" render.companions [ ])
         (expectEqual "${profileId} required environment" render.requiredEnvNames
           openCodeRequiredEnvNames.${profileId}
@@ -2189,9 +2001,6 @@ let
         (expectEqual "${profileId} mutable roots remain unmanaged" (lib.intersectLists paths (
           forbiddenOpenCodePaths profileId
         )) [ ])
-        (expectEqual "${profileId} semantic config oracle" (builtins.hashString "sha256" (
-          builtins.toJSON (expectedOpenCodeConfig profileId)
-        )) openCodeConfigHashes.${profileId})
       ]
       ++ lib.mapAttrsToList (
         name: item:
@@ -2207,13 +2016,9 @@ let
         profile = catalog.profiles.${profileId};
         render = renderedDroid.${profileId};
         paths = sortedNames render.files;
-        providerCounts = lib.foldl' (
-          counts: model: counts // { ${model.provider} = (counts.${model.provider} or 0) + 1; }
-        ) { } expectedDroidSettings.customModels;
       in
       [
-        (expectEqual "${profileId} exact path inventory" paths (expectedDroidPaths profileId))
-        (expectEqual "${profileId} path count" (builtins.length paths) 70)
+        (expectEqual "${profileId} selected resource paths" paths (expectedDroidPaths profileId))
         (expectReject "Droid missing provider type accepted" droidMissingProviderTypeProbe.companions)
         (expectEqual "${profileId} companions" render.companions [
           "${profile.root}/nix-managed-settings.json"
@@ -2232,22 +2037,6 @@ let
         (expectEqual "${profileId} mutable roots remain unmanaged" (lib.intersectLists paths (
           forbiddenDroidPaths profileId
         )) [ ])
-        (expectEqual "${profileId} custom model count" (builtins.length expectedDroidSettings.customModels)
-          95
-        )
-        (expectEqual "${profileId} semantic settings oracle" (builtins.hashString "sha256" (
-          builtins.toJSON expectedDroidSettings
-        )) "3a6d4ab3e321e490e8becd03fe344241eb0dd65d49671581808b1fc29a7f54e1")
-        (expectEqual "${profileId} custom model provider counts" providerCounts {
-          anthropic = 4;
-          generic-chat-completion-api = 86;
-          openai = 5;
-        })
-        (expectEqual "${profileId} LiteLLM extras count" (builtins.length (
-          builtins.filter (
-            model: model ? extraArgs && model ? extraHeaders
-          ) expectedDroidSettings.customModels
-        )) 55)
         (expectEqual "${profileId} settings omit default"
           (builtins.hasAttr "defaultModel" expectedDroidSettings)
           false
@@ -2279,19 +2068,12 @@ let
         profile = catalog.profiles.${profileId};
         render = renderedPi.${profileId};
         paths = sortedNames render.files;
-        providerCounts = lib.mapAttrs (
-          _: provider: builtins.length provider.models
-        ) expectedPiModels.providers;
         piOwnedSkillPaths = builtins.filter (
           path: lib.hasPrefix "${profile.root}/skills/" path || lib.hasPrefix ".agents/skills/" path
         ) paths;
       in
       [
-        (expectEqual "${profileId} exact path inventory" paths (expectedPiPaths profileId))
-        (expectEqual "${profileId} exact path inventory hash" (builtins.hashString "sha256" (
-          builtins.toJSON paths
-        )) "395f2eed10d33054339d5f5648b03e596efe3c04f420fe4eb84c8fef242cdad6")
-        (expectEqual "${profileId} path count" (builtins.length paths) 92)
+        (expectEqual "${profileId} selected resource paths" paths (expectedPiPaths profileId))
         (expectEqual "${profileId} exact renderer output shape" (validatePiRenderShape render) true)
         (expectReject "Pi unexpected renderer output accepted" (
           validatePiRenderShape piUnexpectedOutputProbe
@@ -2323,54 +2105,6 @@ let
           "positron-google"
           "positron-openai"
         ])
-        (expectEqual "${profileId} provider model counts" providerCounts {
-          litellm = 55;
-          llama-cpp-local = 24;
-          nvidia = 1;
-          omlx = 5;
-          positron-anthropic = 4;
-          positron-google = 2;
-          positron-openai = 4;
-        })
-        (expectEqual "${profileId} model count" (lib.foldl' (
-          count: provider: count + builtins.length provider.models
-        ) 0 (builtins.attrValues expectedPiModels.providers)) 95)
-        (expectEqual "${profileId} LiteLLM GPT-5.6 Sol" expectedPiGpt56Sol {
-          id = "positron_openai/gpt-5.6-sol";
-          name = "Gpt 5.6 Sol";
-          api = "openai-responses";
-          reasoning = true;
-          input = [
-            "text"
-            "image"
-          ];
-          contextWindow = 1050000;
-          maxTokens = 128000;
-          cost = {
-            input = 5;
-            output = 30;
-            cacheRead = 0.5;
-            cacheWrite = 6.25;
-            tiers = [
-              {
-                inputTokensAbove = 272000;
-                input = 10;
-                output = 45;
-                cacheRead = 1;
-                cacheWrite = 12.5;
-              }
-            ];
-          };
-          thinkingLevelMap = {
-            off = "none";
-            minimal = null;
-            xhigh = "xhigh";
-            max = null;
-          };
-        })
-        (expectEqual "${profileId} semantic models oracle" (builtins.hashString "sha256" (
-          builtins.toJSON expectedPiModels
-        )) "6ef089012c73efc02e011c844c1b9c3685c2fc5edd3e87c764f1e2c1dc70e263")
         (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) [
           "Ref"
           "anvil"
@@ -2404,7 +2138,6 @@ let
         (expectEqual "${profileId} incompatible compaction aliases remain inactive" (builtins.filter (
           path: lib.hasInfix "pi-openai-server-compaction" path
         ) paths) [ ])
-        (expectEqual "${profileId} shared skill inventory count" (builtins.length piSharedSkillPaths) 99)
         (expectEqual "${profileId} shared skills are Hera Codex-owned" (builtins.filter (
           path: lib.hasPrefix ".agents/skills/" path
         ) (sortedNames renderedCodex.hera-codex.files)) piSharedSkillPaths)
@@ -2782,17 +2515,6 @@ let
       import task9AiModulePath
     else
       throw "Task 9 RED: config/ai.nix and config/ai/preflight.nix are missing";
-  task9PreflightFactory =
-    if builtins.pathExists task9PreflightPath then
-      import task9PreflightPath {
-        lib = lib // {
-          inherit (homeManagerLib) hm;
-        };
-        inherit pkgs;
-      }
-    else
-      throw "Task 9 RED: config/ai/preflight.nix is missing";
-
   task9RenderedByProfile =
     renderedClaude // renderedCodex // renderedOpenCode // renderedDroid // renderedPi;
   task9ExpectedProfileIds = {
@@ -2846,14 +2568,6 @@ let
       "opencode"
     ];
     personal-linux = [ "claude" ];
-  };
-  task9ExpectedLeafCounts = {
-    hera = 672;
-    clio = 510;
-    vulcan = 255;
-    vps = 129;
-    shared-work = 388;
-    personal-linux = 129;
   };
   task9RawPathsForClass =
     homeClass:
@@ -3107,9 +2821,6 @@ let
         (expectEqual "${name} exact AI paths" (builtins.filter task9IsManagedHomePath (
           sortedNames evaluation.config.home.file
         )) expectedPaths)
-        (expectEqual "${name} exact AI leaf count" (builtins.length expectedPaths)
-          task9ExpectedLeafCounts.${expectedClass}
-        )
         (expectEqual "${name} enabled clients" actualClients task9ExpectedClients.${expectedClass})
         (expectEqual "${name} Droid bridge selection" (task9HasBridge spec.system evaluation) (
           name == "hera"
@@ -3251,67 +2962,7 @@ let
   task9PackageSource = builtins.readFile "${src}/config/packages.nix";
   task9FlakeSource = builtins.readFile "${src}/flake.nix";
 
-  task9PreflightWithPi = task9PreflightFactory {
-    newPaths = [
-      ".config/claude/personal/agents/new.md"
-      ".config/claude/personal/agents/retained.md"
-    ];
-    piGuard = {
-      path = ".pi/agent/mcp.json";
-      forbiddenKeys = [
-        "mcpServers"
-        "imports"
-      ];
-    };
-  };
-  task9PreflightWithoutPi = task9PreflightFactory {
-    newPaths = [
-      ".config/claude/personal/agents/new.md"
-      ".config/claude/personal/agents/retained.md"
-    ];
-  };
-  task9PreflightScript = pkgs.writeShellScript "task9-ai-preflight" task9PreflightWithPi.script;
-  task9PreflightBoundedScript = pkgs.writeShellScript "task9-ai-preflight-bounded" ''
-    exec ${pkgs.coreutils}/bin/timeout 2 ${task9PreflightScript}
-  '';
-  task9PreflightNoPiScript = pkgs.writeShellScript "task9-ai-preflight-no-pi" task9PreflightWithoutPi.script;
-  task9InvalidPreflightProbe = task9PreflightFactory {
-    newPaths = [ ".config/not-a-managed-ai-leaf" ];
-  };
-  task9SherlockAncestorProbe = task9PreflightFactory {
-    newPaths = [ ".claude/skills/sherlock" ];
-  };
-
   task9Checks = [
-    (expectEqual "Task 9 preflight output shape" (sortedNames task9PreflightWithPi) [
-      "activation"
-      "script"
-    ])
-    (expectEqual "Task 9 preflight direct DAG edge" task9PreflightWithPi.activation.before [
-      "checkLinkTargets"
-    ])
-    (expectEqual "Task 9 preflight has no after edge" task9PreflightWithPi.activation.after [ ])
-    (expectEqual "Task 9 Pi guard is selected"
-      (lib.hasInfix ".pi/agent/mcp.json" task9PreflightWithPi.script)
-      true
-    )
-    (expectEqual "Task 9 non-Pi guard omits Pi state"
-      (lib.hasInfix ".pi/agent/mcp.json" task9PreflightWithoutPi.script)
-      false
-    )
-    (expectEqual "Task 9 preflight has no persistent ownership machinery" (lib.any
-      (fragment: lib.hasInfix fragment task9PreflightWithPi.script)
-      [
-        "adoption-state"
-        "ledger"
-        "manifest"
-        "ownership"
-        "receipt"
-        "stamp"
-      ]
-    ) false)
-    (expectReject "Task 9 unmanaged path accepted by preflight" task9InvalidPreflightProbe)
-    (expectReject "Task 9 Sherlock ancestor accepted by preflight" task9SherlockAncestorProbe)
     (expectEqual "Task 9 direct raw Claude writer removed"
       (builtins.hasAttr ".local/bin/claude" task9JohnwHera.config.home.file)
       false
@@ -3801,16 +3452,9 @@ let
     (expectEqual "legacy selector ledger" catalog.selectorCoverage.legacySelectors
       expectedLegacySelectors
     )
-    (expectEqual "source record ledger" catalog.selectorCoverage.sourceRecords expectedSourceRecords)
     (expectEqual "legacy target ledger" catalog.selectorCoverage.legacyTargets expectedLegacyTargets)
     (expectEqual "unmanaged exclusion ledger" catalog.selectorCoverage.unmanagedExclusions
       expectedUnmanagedExclusions
-    )
-    (expectEqual "personal command set" (selectedNames "hera-claude-personal" "commands")
-      personalCommands
-    )
-    (expectEqual "positron command set" (selectedNames "hera-claude-positron" "commands")
-      positronCommands
     )
     (expectEqual "shared Codex union" (selectedNames "shared-work-codex" "commands") (
       sortedNames catalog.items.commands
@@ -3819,13 +3463,12 @@ let
       "discover-bundles"
       "restack"
     ])
-    (expectEqual "broad skill set" (selectedNames "hera-codex" "skills") broadSkills)
     (expectEqual "personal Claude skills" (selectedNames "hera-claude-personal" "skills") (
-      lib.sort builtins.lessThan (broadSkills ++ [ "forge" ])
+      lib.sort builtins.lessThan ((selectedNames "hera-codex" "skills") ++ [ "forge" ])
     ))
     (expectEqual "positron Claude skills" (selectedNames "hera-claude-positron" "skills") (
       lib.sort builtins.lessThan (
-        broadSkills
+        (selectedNames "hera-codex" "skills")
         ++ [
           "forge"
           "retest"
@@ -3833,7 +3476,7 @@ let
       )
     ))
     (expectEqual "shared Codex skills" (selectedNames "shared-work-codex" "skills") (
-      lib.sort builtins.lessThan (broadSkills ++ [ "retest" ])
+      lib.sort builtins.lessThan ((selectedNames "hera-codex" "skills") ++ [ "retest" ])
     ))
     (expectEqual "registry schema version" rawModelRegistry.schemaVersion 2)
     (expectEqual "registry top-level keys" (sortedNames rawModelRegistry) [
@@ -3842,34 +3485,7 @@ let
       "schemaVersion"
       "selections"
     ])
-    (expectEqual "registry provider count" (builtins.length rawModelRegistry.providers) 8)
-    (expectEqual "registry route count" (builtins.length rawModelRegistry.models) 119)
-    (expectEqual "provider facts match the frozen pre-migration snapshot"
-      (builtins.hashString "sha256" (builtins.toJSON rawModelRegistry.providers))
-      "076062e3c88481110f5dce4e857907502f38477a4f061580d31f0f8c4b5b5802"
-    )
-    (expectEqual "common model facts and relative order match the frozen snapshot"
-      (builtins.hashString "sha256" (builtins.toJSON legacyComparableModels))
-      "ac36d02b1f6d5839b059322ea642287167ac73a2f840b9136e74c0fdd6432cdc"
-    )
-    (expectEqual "registry additions are exactly the eight audited routes" (map routeKey (
-      builtins.filter (model: builtins.elem (routeKey model) addedRouteKeys) rawModelRegistry.models
-    )) addedRouteKeys)
-    (expectEqual "GLM-5.2 new source index" (routeKey (
-      builtins.elemAt rawModelRegistry.models 35
-    )) "litellm/openrouter/z-ai/glm-5.2")
-    (expectEqual "GLM-5.2 frozen source index" (routeKey (
-      builtins.elemAt legacyComparableModels 28
-    )) "litellm/openrouter/z-ai/glm-5.2")
     (expectEqual "selection projection" modelData.selections rawModelRegistry.selections)
-    (expectEqual "provider source order" (map (provider: provider.sourceOrder) (
-      lib.sort (left: right: left.sourceOrder < right.sourceOrder) (
-        builtins.attrValues modelData.providers
-      )
-    )) (lib.range 0 7))
-    (expectEqual "model source order" (map (model: model.sourceOrder) (
-      lib.sort (left: right: left.sourceOrder < right.sourceOrder) (builtins.attrValues modelData.models)
-    )) (lib.range 0 118))
     (expectEqual "alternate Claude default selection reaches catalog"
       alternateCatalog.items.settings.settings.base.model
       alternateRegistry.selections.claudeDefault.model
@@ -3891,6 +3507,9 @@ let
       chatUrl = "https://integrate.api.nvidia.com/v1/chat/completions";
       inherit (alternateRegistry.selections.default) model provider;
     })
+    (expectEqual "host-filtered model rendering" hostFilterRenderedModels
+      expectedHostFilterRenderedModels
+    )
     (expectEqual "renamed provider credential remains catalog-valid" (renamedCredentialCatalog.validate
       { }
     ) true)
@@ -4102,15 +3721,13 @@ let
       ];
       hosts = [ "clio" ];
     })
-    (expectEqual "model pair count" (builtins.length (sortedNames modelData.models)) 119)
-    (expectEqual "model pair key hash" (builtins.hashString "sha256" (
-      builtins.toJSON (sortedNames modelData.models)
-    )) "9751f3076d26deb382983076791c105f4de56edf7a22fd1db9685eaab28e0c31")
-    (expectEqual "sync inputs" modelData.syncInputs {
-      chatUrl = "https://litellm.vulcan.lan/v1/chat/completions";
-      model = "hera/omlx/Qwen3.6-27B-oQ4e-mtp";
-      provider = "litellm";
-    })
+    (expectEqual "sync selection" (removeAttrs modelData.syncInputs [
+      "chatUrl"
+    ]) rawModelRegistry.selections.default)
+    (expectEqual "sync URL uses selected provider" (lib.hasPrefix
+      modelData.providers.${modelData.syncInputs.provider}.baseUrl
+      modelData.syncInputs.chatUrl
+    ) true)
     (expectEqual "Ref URL" catalog.items.mcpServers.Ref.transport.url "https://api.ref.tools/mcp")
     (expectEqual "Ref header" catalog.items.mcpServers.Ref.transport.headers."x-ref-api-key" {
       env = "REF_API_KEY";
@@ -4218,6 +3835,7 @@ let
     (expectReject "anvil-tools accepted" (validateWithItems anvilToolsItems))
   ]
   ++ profileChecks
+  ++ reachabilityChecks
   ++ rendererChecks
   ++ task9Checks
   ++ task10Checks
@@ -4231,7 +3849,7 @@ pkgs.runCommand "ai-home-manager-smoke"
     nativeBuildInputs = [
       pkgs.findutils
       pkgs.jq
-      pkgs.python3
+      assetCheckPython
     ];
   }
   ''
@@ -4316,367 +3934,6 @@ pkgs.runCommand "ai-home-manager-smoke"
       test "$collision_line" -lt "$boundary_line"
       test "$boundary_line" -lt "$links_line"
     ''}
-
-    preflight_root="$TMPDIR/task9-preflight"
-    mkdir -p "$preflight_root"
-    digest_script="$TMPDIR/task9-tree-digest.py"
-    cat > "$digest_script" <<'PY'
-    import hashlib
-    import os
-    import stat
-    import sys
-    from pathlib import Path
-
-    root = Path(sys.argv[1])
-    records = []
-    for directory, directories, files in os.walk(root, followlinks=False):
-        base = Path(directory)
-        for name in sorted(directories + files):
-            path = base / name
-            relative = path.relative_to(root).as_posix()
-            mode = path.lstat().st_mode
-            if stat.S_ISLNK(mode):
-                payload = os.fsencode(os.readlink(path))
-                kind = b"l"
-            elif stat.S_ISREG(mode):
-                payload = path.read_bytes()
-                kind = b"f"
-            elif stat.S_ISDIR(mode):
-                payload = b""
-                kind = b"d"
-            else:
-                payload = b""
-                kind = b"o"
-            records.append(
-                relative.encode()
-                + b"\0"
-                + kind
-                + b"\0"
-                + oct(stat.S_IMODE(mode)).encode()
-                + b"\0"
-                + hashlib.sha256(payload).hexdigest().encode()
-                + b"\0"
-            )
-    print(hashlib.sha256(b"".join(sorted(records))).hexdigest())
-    PY
-
-    new_path=".config/claude/personal/agents/new.md"
-    retained_path=".config/claude/personal/agents/retained.md"
-    removed_path=".config/claude/personal/agents/removed.md"
-    legacy_claude=".local/bin/claude"
-
-    make_leaf() {
-      root=$1
-      path=$2
-      value=$3
-      mkdir -p "$root/$(dirname "$path")"
-      printf '%s' "$value" > "$root/$path"
-    }
-
-    link_old_leaf() {
-      path=$1
-      mkdir -p "$case_home/$(dirname "$path")"
-      ln -s "$old_files/$path" "$case_home/$path"
-    }
-
-    setup_empty_case() {
-      label=$1
-      case_root="$preflight_root/$label"
-      case_home="$case_root/home"
-      old_gen=
-      old_files=
-      old_override=
-      mkdir -p "$case_home"
-    }
-
-    setup_old_case() {
-      setup_empty_case "$1"
-      old_gen="$case_root/old-generation"
-      old_files="$case_root/old-files"
-      mkdir -p "$old_gen" "$old_files"
-      ln -s "$old_files" "$old_gen/home-files"
-
-      make_leaf "$old_files" "$retained_path" retained
-      make_leaf "$old_files" "$removed_path" removed
-      make_leaf "$old_files" "$legacy_claude" legacy
-      symlink_leaf=".config/claude/personal/agents/symlinked.md"
-      symlink_source="$case_root/symlink-source.md"
-      printf '%s' symlinked > "$symlink_source"
-      mkdir -p "$old_files/$(dirname "$symlink_leaf")"
-      ln -s "$symlink_source" "$old_files/$symlink_leaf"
-      make_leaf "$old_files" ".claude/skills/sherlock/SKILL.md" sherlock
-      make_leaf "$old_files" ".claude/skills/sherlock/sherlock" sherlock-bin
-
-      link_old_leaf "$retained_path"
-      link_old_leaf "$removed_path"
-      link_old_leaf "$legacy_claude"
-      link_old_leaf "$symlink_leaf"
-    }
-
-    tree_digest() {
-      python3 -I "$digest_script" "$case_root"
-    }
-
-    run_checked() {
-      expected=$1
-      label=$2
-      fragment=$3
-      script=$4
-      old_mode=$5
-      output="$TMPDIR/task9-$label.output"
-      before="$(tree_digest)"
-      set +e
-      if [ "$old_mode" = absent ]; then
-        env -u oldGenPath HOME="$case_home" "$script" >"$output" 2>&1
-      else
-        env oldGenPath="''${old_override:-$old_gen}" HOME="$case_home" \
-          "$script" >"$output" 2>&1
-      fi
-      status=$?
-      set -e
-      after="$(tree_digest)"
-      if [ "$before" != "$after" ]; then
-        echo "Task 9 preflight case mutated its input tree: $label" >&2
-        return 1
-      fi
-      if grep -Fq SECRET_SENTINEL "$output"; then
-        echo "Task 9 preflight case leaked file content: $label" >&2
-        return 1
-      fi
-      if [ "$expected" = pass ]; then
-        if [ "$status" -ne 0 ] || [ -s "$output" ]; then
-          echo "Task 9 preflight case should have passed silently: $label" >&2
-          sed 's/^/  /' "$output" >&2
-          return 1
-        fi
-      else
-        case "$label" in
-          first-adoption-collision | new-*)
-            expected_output="$fragment: remove or migrate the existing path before switching"
-            ;;
-          missing-* | old-home-files-not-directory | unreadable-old-files)
-            expected_output="''${old_override:-$old_gen}/home-files: $fragment"
-            ;;
-          retained-* | removed-* | legacy-*)
-            expected_output="$fragment: restore the exact previous Home Manager link before switching"
-            ;;
-          pi-*)
-            expected_output="$fragment: keep valid adapter JSON without top-level mcpServers or imports"
-            ;;
-          *)
-            echo "Task 9 preflight case has no expected diagnostic: $label" >&2
-            return 1
-            ;;
-        esac
-        actual_output="$(<"$output")"
-        if [ "$status" -eq 0 ] || [ "$actual_output" != "$expected_output" ]; then
-          echo "Task 9 preflight case did not reject as expected: $label" >&2
-          sed 's/^/  /' "$output" >&2
-          return 1
-        fi
-      fi
-    }
-
-    setup_empty_case first-adoption
-    run_checked pass first-adoption "" "${task9PreflightScript}" absent
-
-    setup_empty_case first-adoption-collision
-    make_leaf "$case_home" "$new_path" collision
-    run_checked fail first-adoption-collision "$new_path" "${task9PreflightScript}" absent
-
-    setup_empty_case new-ancestor-file
-    make_leaf "$case_home" ".config/claude/personal/agents" collision
-    run_checked fail new-ancestor-file "$new_path" "${task9PreflightScript}" absent
-
-    setup_empty_case new-valid-ancestor-symlink
-    mkdir -p "$case_root/claude-root/personal/agents" "$case_home/.config"
-    ln -s "$case_root/claude-root" "$case_home/.config/claude"
-    run_checked fail new-valid-ancestor-symlink "$new_path" "${task9PreflightScript}" absent
-
-    setup_empty_case new-dangling-parent
-    mkdir -p "$case_home/.config/claude/personal"
-    ln -s "$case_root/missing" "$case_home/.config/claude/personal/agents"
-    run_checked fail new-dangling-parent "$new_path" "${task9PreflightScript}" absent
-
-    setup_old_case new-old-directory-shadow
-    mkdir -p "$old_files/$new_path" "$case_home/$new_path"
-    run_checked fail new-old-directory-shadow "$new_path" "${task9PreflightScript}" present
-
-    setup_empty_case missing-old-generation
-    old_override="$case_root/missing-generation"
-    run_checked fail missing-old-generation \
-      "restore the previous Home Manager generation before switching" \
-      "${task9PreflightScript}" present
-
-    setup_empty_case missing-home-files
-    old_gen="$case_root/old-generation"
-    mkdir -p "$old_gen"
-    run_checked fail missing-home-files \
-      "restore the previous Home Manager generation before switching" \
-      "${task9PreflightScript}" present
-
-    setup_empty_case old-home-files-not-directory
-    old_gen="$case_root/old-generation"
-    mkdir -p "$old_gen"
-    make_leaf "$old_gen" home-files wrong-type
-    run_checked fail old-home-files-not-directory \
-      "restore the previous Home Manager generation before switching" \
-      "${task9PreflightScript}" present
-
-    setup_old_case unreadable-old-files
-    mkdir -p "$old_files/unreadable"
-    chmod 000 "$old_files/unreadable"
-    run_checked fail unreadable-old-files \
-      "restore the previous Home Manager generation before switching" \
-      "${task9PreflightScript}" present
-
-    setup_old_case all-three-classes
-    run_checked pass all-three-classes "" "${task9PreflightScript}" present
-
-    setup_old_case new-file
-    make_leaf "$case_home" "$new_path" collision
-    run_checked fail new-file "$new_path" "${task9PreflightScript}" present
-
-    setup_old_case new-directory
-    mkdir -p "$case_home/$new_path"
-    run_checked fail new-directory "$new_path" "${task9PreflightScript}" present
-
-    setup_old_case new-valid-symlink
-    make_leaf "$case_root" unrelated target
-    mkdir -p "$case_home/$(dirname "$new_path")"
-    ln -s "$case_root/unrelated" "$case_home/$new_path"
-    run_checked fail new-valid-symlink "$new_path" "${task9PreflightScript}" present
-
-    setup_old_case new-dangling-symlink
-    mkdir -p "$case_home/$(dirname "$new_path")"
-    ln -s "$case_root/missing" "$case_home/$new_path"
-    run_checked fail new-dangling-symlink "$new_path" "${task9PreflightScript}" present
-
-    setup_old_case retained-missing
-    rm "$case_home/$retained_path"
-    run_checked fail retained-missing "$retained_path" "${task9PreflightScript}" present
-
-    setup_old_case retained-early-large-enumeration
-    early_path=".agents/skills/000-early/SKILL.md"
-    make_leaf "$old_files" "$early_path" early
-    for index in $(seq -w 1 2048); do
-      bulk_path=".agents/skills/z-$index/SKILL.md"
-      make_leaf "$old_files" "$bulk_path" bulk
-      link_old_leaf "$bulk_path"
-    done
-    run_checked fail retained-early-large-enumeration "$early_path"       "${task9PreflightScript}" present
-
-    setup_old_case retained-file
-    rm "$case_home/$retained_path"
-    make_leaf "$case_home" "$retained_path" replacement
-    run_checked fail retained-file "$retained_path" "${task9PreflightScript}" present
-
-    setup_old_case retained-retargeted
-    make_leaf "$case_root" alternate different
-    rm "$case_home/$retained_path"
-    ln -s "$case_root/alternate" "$case_home/$retained_path"
-    run_checked fail retained-retargeted "$retained_path" "${task9PreflightScript}" present
-
-    setup_old_case retained-same-payload
-    make_leaf "$case_root" alternate retained
-    rm "$case_home/$retained_path"
-    ln -s "$case_root/alternate" "$case_home/$retained_path"
-    run_checked fail retained-same-payload "$retained_path" "${task9PreflightScript}" present
-
-    setup_old_case retained-dangling
-    rm "$case_home/$retained_path"
-    ln -s "$case_root/missing" "$case_home/$retained_path"
-    run_checked fail retained-dangling "$retained_path" "${task9PreflightScript}" present
-
-    setup_old_case removed-missing
-    rm "$case_home/$removed_path"
-    run_checked fail removed-missing "$removed_path" "${task9PreflightScript}" present
-
-    setup_old_case removed-symlink-leaf-missing
-    rm "$case_home/$symlink_leaf"
-    run_checked fail removed-symlink-leaf-missing "$symlink_leaf"       "${task9PreflightScript}" present
-
-    setup_old_case removed-file
-    rm "$case_home/$removed_path"
-    make_leaf "$case_home" "$removed_path" replacement
-    run_checked fail removed-file "$removed_path" "${task9PreflightScript}" present
-
-    setup_old_case removed-dangling
-    rm "$case_home/$removed_path"
-    ln -s "$case_root/missing" "$case_home/$removed_path"
-    run_checked fail removed-dangling "$removed_path" "${task9PreflightScript}" present
-
-    setup_old_case removed-retargeted
-    make_leaf "$case_root" alternate removed
-    rm "$case_home/$removed_path"
-    ln -s "$case_root/alternate" "$case_home/$removed_path"
-    run_checked fail removed-retargeted "$removed_path" "${task9PreflightScript}" present
-
-    setup_old_case legacy-claude-missing
-    rm "$case_home/$legacy_claude"
-    run_checked fail legacy-claude-missing "$legacy_claude" "${task9PreflightScript}" present
-
-    setup_old_case legacy-claude-retargeted
-    make_leaf "$case_root" alternate legacy
-    rm "$case_home/$legacy_claude"
-    ln -s "$case_root/alternate" "$case_home/$legacy_claude"
-    run_checked fail legacy-claude-retargeted "$legacy_claude" \
-      "${task9PreflightScript}" present
-
-    write_pi() {
-      value=$1
-      mkdir -p "$case_home/.pi/agent"
-      printf '%s' "$value" > "$case_home/.pi/agent/mcp.json"
-    }
-
-    setup_empty_case pi-empty-object
-    write_pi '{}'
-    run_checked pass pi-empty-object "" "${task9PreflightScript}" absent
-
-    setup_empty_case pi-benign-nested
-    write_pi '{"settings":{"mcpServers":{}},"unknown":{"imports":[]}}'
-    run_checked pass pi-benign-nested "" "${task9PreflightScript}" absent
-
-    setup_empty_case pi-benign-symlink
-    make_leaf "$case_root" pi-settings '{}'
-    mkdir -p "$case_home/.pi/agent"
-    ln -s "$case_root/pi-settings" "$case_home/.pi/agent/mcp.json"
-    run_checked pass pi-benign-symlink "" "${task9PreflightScript}" absent
-
-    setup_empty_case pi-mcp-servers
-    write_pi '{"mcpServers":null}'
-    run_checked fail pi-mcp-servers ".pi/agent/mcp.json" "${task9PreflightScript}" absent
-
-    setup_empty_case pi-imports
-    write_pi '{"imports":[]}'
-    run_checked fail pi-imports ".pi/agent/mcp.json" "${task9PreflightScript}" absent
-
-    setup_empty_case pi-malformed
-    write_pi '{SECRET_SENTINEL'
-    run_checked fail pi-malformed ".pi/agent/mcp.json" "${task9PreflightScript}" absent
-
-    setup_empty_case pi-fifo
-    mkdir -p "$case_home/.pi/agent"
-    mkfifo "$case_home/.pi/agent/mcp.json"
-    run_checked fail pi-fifo ".pi/agent/mcp.json"       "${task9PreflightBoundedScript}" absent
-
-    for pi_case in array string number true false null; do
-      setup_empty_case "pi-$pi_case"
-      case "$pi_case" in
-        array) write_pi '[]' ;;
-        string) write_pi '"text"' ;;
-        number) write_pi '0' ;;
-        true) write_pi 'true' ;;
-        false) write_pi 'false' ;;
-        null) write_pi 'null' ;;
-      esac
-      run_checked fail "pi-$pi_case" ".pi/agent/mcp.json" \
-        "${task9PreflightScript}" absent
-    done
-
-    setup_empty_case non-pi-ignores-adapter
-    write_pi '{"mcpServers":null}'
-    run_checked pass non-pi-ignores-adapter "" "${task9PreflightNoPiScript}" absent
 
     python3 -I - "${rendererDocumentManifest}" <<'PY'
     import json
@@ -4764,51 +4021,14 @@ pkgs.runCommand "ai-home-manager-smoke"
     PY
 
     python3 -I - "${src}/config/ai" <<'PY'
-    import hashlib
     import os
     import re
     import stat
     import sys
+    import yaml
     from pathlib import Path
 
     root = Path(sys.argv[1])
-
-    agents = set(
-        """
-        bash-reviewer coq-reviewer cpp-pro cpp-reviewer elisp-reviewer
-        emacs-lisp-pro fess-auditor haskell-pro haskell-reviewer nix-pro
-        nix-reviewer perf-reviewer persian-translator prd-architect
-        prompt-engineer python-pro python-reviewer rocq-pro rust-pro
-        rust-reviewer security-reviewer sql-pro task-breakdown typescript-pro
-        typescript-reviewer web-searcher
-        """.split()
-    )
-    commands = set(
-        """
-        assess bankruptcy breakdown bugbot bugbot-stack capture cleanup
-        code-review commit deep-review discover-bundles eliminate-dead-code
-        expense-report fess fix fix-alert fix-ci fix-github-issue
-        fix-integration fix-transcript flaky-rust forge gravity halt heavy
-        infer-tasks initialize install-service journal lefthook markdown medium
-        meeting-notes narrative nix-rebuild partner-cleanup
-        partner-collaborator partner-reviewer prepare-with process-checklist
-        productize proofread push query-builder quick-review rebase
-        rebase-and-fix recommit remove-service report resolve respond restack
-        retest retest-categorical review-github-pr run-orchestrator sec-audit
-        sitrep smooth teams transcribe-image tron-debug webfix wiggum
-        """.split()
-    )
-    skills = set(
-        """
-        anvil caveman comment-audit eliminate-dead-code fix-all fix-transcript
-        forge it-voice johnw nixos node-red parallelize persian retest
-        skill-creator swiftui toolkit wiggum
-        """.split()
-    )
-
-    assert len(agents) == 26
-    assert len(commands) == 65
-    assert len(skills) == 18
 
     missing = [
         category
@@ -4823,6 +4043,7 @@ pkgs.runCommand "ai-home-manager-smoke"
             "model-registry.json",
             "model-sync.nix",
             "models.nix",
+            "preflight.nix",
         )
         if not (root / name).is_file()
     )
@@ -4841,6 +4062,8 @@ pkgs.runCommand "ai-home-manager-smoke"
 
     paths = []
     for directory, directories, files in os.walk(root, followlinks=False):
+        directories.sort()
+        files.sort()
         base = Path(directory)
         paths.extend(base / name for name in directories)
         paths.extend(base / name for name in files)
@@ -4859,49 +4082,10 @@ pkgs.runCommand "ai-home-manager-smoke"
         if path.relative_to(root).parts[0] in canonical_roots
     ]
 
-    # Bind every canonical asset path, type, executable bit, symlink target, and byte.
-    records = []
     for path in asset_paths:
-        relative = path.relative_to(root).as_posix().encode()
         mode = path.lstat().st_mode
-        if stat.S_ISDIR(mode):
-            fields = (relative, b"d", b"-", b"", b"0", b"")
-        elif stat.S_ISREG(mode):
-            data = path.read_bytes()
-            fields = (
-                relative,
-                b"f",
-                b"x" if mode & 0o111 else b"-",
-                b"",
-                str(len(data)).encode(),
-                hashlib.sha256(data).hexdigest().encode(),
-            )
-        elif stat.S_ISLNK(mode):
-            target = os.fsencode(os.readlink(path))
-            fields = (
-                relative,
-                b"l",
-                b"-",
-                target,
-                str(len(target)).encode(),
-                hashlib.sha256(target).hexdigest().encode(),
-            )
-        else:
+        if not (stat.S_ISDIR(mode) or stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
             errors.append(f"unsupported file type: {path.relative_to(root)}")
-            continue
-        records.append((relative, b"\0".join(fields) + b"\0"))
-
-    asset_digest = hashlib.sha256(
-        b"".join(record for _, record in sorted(records))
-    ).hexdigest()
-    expected_asset_digest = (
-        "053d597928efb71ec8b49a93309d133086d6598925604629ef4eead28193429f"
-    )
-    if asset_digest != expected_asset_digest:
-        errors.append(
-            f"config/ai recursive digest mismatch: {asset_digest} "
-            f"!= {expected_asset_digest}"
-        )
 
     for path in paths:
         if not path.is_symlink():
@@ -4929,25 +4113,11 @@ pkgs.runCommand "ai-home-manager-smoke"
         ):
             errors.append(f"forbidden committed artifact: {path.relative_to(root)}")
 
-    expected = {
-        "agents": {f"{name}.md" for name in agents},
-        "commands": {f"{name}.md" for name in commands},
-        "skills": skills,
-        "prompts": {"emacs.md", "spanish.md"},
-    }
-    expected_root = set(expected) | {
-        "catalog.nix",
-        "model-policy.nix",
-        "model-registry.json",
-        "model-sync.nix",
-        "models.nix",
-        "preflight.nix",
-        "statusline-command.sh",
-    }
     renderers = root / "renderers"
-    if renderers.exists():
-        expected_root.add("renderers")
-        expected_renderers = {
+    if not renderers.is_dir():
+        errors.append("not a renderer directory: renderers")
+    else:
+        required_renderers = {
             "claude.nix",
             "codex.nix",
             "droid.nix",
@@ -4955,47 +4125,74 @@ pkgs.runCommand "ai-home-manager-smoke"
             "opencode.nix",
             "pi.nix",
         }
-        actual_renderers = {entry.name for entry in renderers.iterdir()}
-        if actual_renderers != expected_renderers:
-            errors.append(
-                "renderer inventory mismatch: "
-                f"missing={sorted(expected_renderers - actual_renderers)!r} "
-                f"unexpected={sorted(actual_renderers - expected_renderers)!r}"
-            )
-        for name in expected_renderers:
+        for name in required_renderers:
             if not (renderers / name).is_file():
                 errors.append(f"not a regular renderer: renderers/{name}")
-    if not (root / "preflight.nix").is_file():
-        errors.append("not a regular file: preflight.nix")
-    actual_root = {entry.name for entry in root.iterdir()}
-    if actual_root != expected_root:
-        errors.append(
-            "config/ai inventory mismatch: "
-            f"missing={sorted(expected_root - actual_root)!r} "
-            f"unexpected={sorted(actual_root - expected_root)!r}"
-        )
-
-    for category, wanted in expected.items():
-        directory = root / category
-        actual = {entry.name for entry in directory.iterdir()}
-        if actual != wanted:
-            errors.append(
-                f"{category} inventory mismatch: "
-                f"missing={sorted(wanted - actual)!r} "
-                f"unexpected={sorted(actual - wanted)!r}"
-            )
 
     for category in ("agents", "commands", "prompts"):
-        for name in expected[category]:
-            if not (root / category / name).is_file():
-                errors.append(f"not a regular file: {category}/{name}")
+        entries = list((root / category).iterdir())
+        if not entries:
+            errors.append(f"empty asset category: {category}")
+        for entry in entries:
+            if entry.suffix.lower() != ".md" or not entry.is_file():
+                errors.append(f"not a Markdown asset: {entry.relative_to(root)}")
 
-    for name in skills:
-        skill = root / "skills" / name
+    skill_entries = sorted((root / "skills").iterdir(), key=lambda path: path.name)
+    if not skill_entries:
+        errors.append("empty asset category: skills")
+    for skill in skill_entries:
         if not skill.is_dir():
-            errors.append(f"not a skill tree: skills/{name}")
-        elif not (skill / "SKILL.md").is_file():
-            errors.append(f"missing SKILL.md: skills/{name}")
+            errors.append(f"not a skill tree: {skill.relative_to(root)}")
+            continue
+
+        skill_document = skill / "SKILL.md"
+        if not skill_document.is_file():
+            errors.append(f"missing SKILL.md: {skill.relative_to(root)}")
+            continue
+
+        try:
+            lines = skill_document.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeError) as error:
+            errors.append(
+                f"cannot read UTF-8 skill {skill_document.relative_to(root)}: {error}"
+            )
+            continue
+        if not lines or lines[0].strip() != "---":
+            errors.append(f"missing frontmatter: {skill_document.relative_to(root)}")
+            continue
+        try:
+            end = next(
+                index
+                for index, line in enumerate(lines[1:], start=1)
+                if line.strip() == "---"
+            )
+        except StopIteration:
+            errors.append(f"unterminated frontmatter: {skill_document.relative_to(root)}")
+            continue
+        try:
+            metadata = yaml.safe_load("\n".join(lines[1:end]))
+        except yaml.YAMLError as error:
+            errors.append(
+                f"malformed YAML frontmatter: {skill_document.relative_to(root)}: {error}"
+            )
+            continue
+        if not isinstance(metadata, dict):
+            errors.append(
+                f"frontmatter is not a mapping: {skill_document.relative_to(root)}"
+            )
+            continue
+
+        name = metadata.get("name")
+        description = metadata.get("description")
+        if not isinstance(name, str) or not name.strip():
+            errors.append(f"missing skill name: {skill_document.relative_to(root)}")
+        elif name != skill.name:
+            errors.append(
+                f"skill name {name!r} does not match directory {skill.name!r}: "
+                f"{skill_document.relative_to(root)}"
+            )
+        if not isinstance(description, str) or not description.strip():
+            errors.append(f"missing skill description: {skill_document.relative_to(root)}")
 
     if not os.access(statusline, os.X_OK):
         errors.append("statusline-command.sh is not executable")

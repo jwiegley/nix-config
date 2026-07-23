@@ -7,7 +7,7 @@
     },
     "claudeDefault": {
       "provider": "positron-anthropic",
-      "model": "claude-fable-5"
+      "model": "claude-opus-4-8[1m]"
     },
     "claudeHaiku": {
       "provider": "positron-anthropic",
@@ -15,7 +15,7 @@
     },
     "claudeSubagent": {
       "provider": "positron-anthropic",
-      "model": "claude-fable-5"
+      "model": "claude-opus-4-8"
     }
   },
   "providers": [
@@ -104,6 +104,18 @@
       "provider": "positron-anthropic",
       "id": "claude-opus-4-7",
       "displayName": "Claude Opus 4.7",
+      "maxOutputTokens": 32768
+    },
+    {
+      "provider": "positron-anthropic",
+      "id": "claude-opus-4-8[1m]",
+      "displayName": "Claude Opus 4.8",
+      "maxOutputTokens": 32768
+    },
+    {
+      "provider": "positron-anthropic",
+      "id": "claude-opus-4-8",
+      "displayName": "Claude Opus 4.8",
       "maxOutputTokens": 32768
     },
     {
@@ -238,6 +250,22 @@
       "provider": "litellm",
       "id": "positron_anthropic/claude-opus-4-7",
       "displayName": "Claude Opus 4.7",
+      "maxOutputTokens": 65536,
+      "contextLimit": 262144,
+      "outputLimit": 65536
+    },
+    {
+      "provider": "litellm",
+      "id": "positron_anthropic/claude-opus-4-8[1m]",
+      "displayName": "Claude Opus 4.8",
+      "maxOutputTokens": 65536,
+      "contextLimit": 262144,
+      "outputLimit": 65536
+    },
+    {
+      "provider": "litellm",
+      "id": "positron_anthropic/claude-opus-4-8",
+      "displayName": "Claude Opus 4.8",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536

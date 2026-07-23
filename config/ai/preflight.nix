@@ -74,6 +74,12 @@ let
   newPathsFile = pkgs.writeText "nix-managed-ai-paths" (
     lib.concatStringsSep "\n" sortedPaths + lib.optionalString (sortedPaths != [ ]) "\n"
   );
+  progressMessage =
+    let
+      count = builtins.length sortedPaths;
+      noun = if count == 1 then "path" else "paths";
+    in
+    "Checking ${toString count} Nix-managed AI leaf ${noun} for blockers...";
   piGuardValid =
     piGuard == null
     || (
@@ -99,27 +105,176 @@ let
          else false
          end' \
         "$pi_path" >/dev/null 2>&1; then
-        printf '%s\n' \
-          '${piGuard.path}: keep valid adapter JSON without top-level mcpServers or imports' >&2
-        exit 1
+        report_error \
+          '${piGuard.path}: keep valid adapter JSON without top-level mcpServers or imports'
       fi
     fi
   '';
 
   script = ''
-    fail_collision() {
-      printf '%s\n' "$1: remove or migrate the existing path before switching" >&2
-      exit 1
+    errors_file="$(${pkgs.coreutils}/bin/mktemp \
+      "''${TMPDIR:-/tmp}/nix-managed-ai-preflight.XXXXXX")"
+    printf '%s\n' ${lib.escapeShellArg progressMessage}
+
+    report_error() {
+      printf '%s\n' "$1" >> "$errors_file"
     }
 
-    fail_tamper() {
-      printf '%s\n' "$1: restore the exact previous Home Manager link before switching" >&2
-      exit 1
+    report_tamper() {
+      report_error "$1: restore the exact previous Home Manager link before switching"
     }
 
-    fail_previous_generation() {
-      printf '%s\n' "$1: restore the previous Home Manager generation before switching" >&2
-      exit 1
+    report_previous_generation() {
+      report_error "$1: restore the previous Home Manager generation before switching"
+    }
+
+    path_kind() {
+      if [ -L "$1" ]; then
+        printf '%s' symlink
+      elif [ -f "$1" ]; then
+        printf '%s' 'regular file'
+      elif [ -d "$1" ]; then
+        printf '%s' directory
+      elif [ -p "$1" ]; then
+        printf '%s' FIFO
+      elif [ -S "$1" ]; then
+        printf '%s' socket
+      elif [ -b "$1" ]; then
+        printf '%s' 'block device'
+      elif [ -c "$1" ]; then
+        printf '%s' 'character device'
+      else
+        printf '%s' 'special path'
+      fi
+    }
+
+    report_leaf_collision() {
+      path=$1
+      current=$2
+      kind="$(path_kind "$current")"
+      report_error "$path: blocking leaf is a $kind: $current"
+    }
+
+    report_parent_collision() {
+      path=$1
+      parent=$2
+      kind=$3
+      case "$kind" in
+        [aeiouAEIOU]*) article=an ;;
+        *) article=a ;;
+      esac
+      report_error "$path: blocking parent is $article $kind: $parent"
+    }
+
+    check_shared_alias() {
+      path=$1
+      parent=$2
+      resolved="$(${pkgs.coreutils}/bin/readlink -e "$parent" 2>/dev/null || true)"
+      if [ -z "$resolved" ] || [ ! -d "$resolved" ] || [ ! -x "$resolved" ]; then
+        report_parent_collision "$path" "$parent" 'unusable symlink'
+        return 1
+      fi
+      case "$resolved" in
+        ${builtins.storeDir} | ${builtins.storeDir}/*)
+          report_error "$path: blocking parent is a symlink into the Nix store: $parent"
+          return 1
+          ;;
+      esac
+      if [ ! -w "$resolved" ]; then
+        report_error \
+          "$path: blocking parent is a symlink to an unwritable directory: $parent"
+        return 1
+      fi
+      return 0
+    }
+
+    check_traversable_parent() {
+      path=$1
+      parent=$2
+      if [ -L "$parent" ]; then
+        if ! check_shared_alias "$path" "$parent"; then
+          return 1
+        fi
+      elif [ -d "$parent" ]; then
+        if [ ! -x "$parent" ]; then
+          report_parent_collision "$path" "$parent" 'unsearchable directory'
+          return 1
+        fi
+      elif [ -e "$parent" ]; then
+        report_parent_collision "$path" "$parent" "$(path_kind "$parent")"
+        return 1
+      else
+        report_parent_collision "$path" "$parent" 'missing directory'
+        return 1
+      fi
+      return 0
+    }
+
+    check_writable_parent() {
+      path=$1
+      parent=$2
+      if [ -L "$parent" ]; then
+        if ! check_shared_alias "$path" "$parent"; then
+          return 1
+        fi
+      elif [ -d "$parent" ]; then
+        if [ ! -w "$parent" ] && [ ! -x "$parent" ]; then
+          report_parent_collision "$path" "$parent" \
+            'unwritable and unsearchable directory'
+          return 1
+        elif [ ! -w "$parent" ]; then
+          report_parent_collision "$path" "$parent" 'unwritable directory'
+          return 1
+        elif [ ! -x "$parent" ]; then
+          report_parent_collision "$path" "$parent" 'unsearchable directory'
+          return 1
+        fi
+      elif [ -e "$parent" ]; then
+        report_parent_collision "$path" "$parent" "$(path_kind "$parent")"
+        return 1
+      else
+        report_parent_collision "$path" "$parent" 'missing directory'
+        return 1
+      fi
+      return 0
+    }
+
+    check_path_parents() {
+      path=$1
+      parent="$HOME"
+      remaining="''${path%/*}"
+
+      while [ -n "$remaining" ]; do
+        case "$remaining" in
+          */*)
+            component="''${remaining%%/*}"
+            remaining="''${remaining#*/}"
+            ;;
+          *)
+            component="$remaining"
+            remaining=
+            ;;
+        esac
+        candidate="$parent/$component"
+
+        if [ -L "$candidate" ] || [ -d "$candidate" ]; then
+          if [ -n "$remaining" ]; then
+            if ! check_traversable_parent "$path" "$candidate"; then
+              return 1
+            fi
+          elif ! check_writable_parent "$path" "$candidate"; then
+            return 1
+          fi
+        elif [ -e "$candidate" ]; then
+          report_parent_collision "$path" "$candidate" "$(path_kind "$candidate")"
+          return 1
+        else
+          check_writable_parent "$path" "$parent"
+          return $?
+        fi
+        parent="$candidate"
+      done
+      return 0
     }
 
     is_managed_ai_path() {
@@ -175,32 +330,71 @@ let
       return 1
     }
 
+    old_path_has_real_parents() {
+      path=$1
+      relative_parent="''${path%/*}"
+      candidate="$old_files"
+      remaining="$relative_parent"
+
+      while [ -n "$remaining" ]; do
+        case "$remaining" in
+          */*)
+            component="''${remaining%%/*}"
+            remaining="''${remaining#*/}"
+            ;;
+          *)
+            component="$remaining"
+            remaining=
+            ;;
+        esac
+        candidate="$candidate/$component"
+        if [ -L "$candidate" ] || [ ! -d "$candidate" ]; then
+          return 1
+        fi
+      done
+      return 0
+    }
+
+    old_leaf_is_managed() {
+      path=$1
+      [ -n "$old_files" ] || return 1
+      old_path_has_real_parents "$path" || return 1
+      [ -f "$old_files/$path" ] || [ -L "$old_files/$path" ]
+    }
+
     check_previous_link() {
       path=$1
       current="$HOME/$path"
       if [ ! -L "$current" ] || [ ! -e "$current" ]; then
-        fail_tamper "$path"
+        report_tamper "$path"
+        return 0
       fi
       actual_target="$(${pkgs.coreutils}/bin/readlink "$current" 2>/dev/null || true)"
       if [ "$actual_target" != "$old_files/$path" ]; then
-        fail_tamper "$path"
+        report_tamper "$path"
       fi
+      return 0
     }
 
     old_files=
+    old_generation_valid=true
     if [[ -v oldGenPath ]]; then
       old_files="$(${pkgs.coreutils}/bin/readlink -e "$oldGenPath/home-files" 2>/dev/null || true)"
       if [ -z "$old_files" ] || [ ! -d "$old_files" ]; then
-        fail_previous_generation "$oldGenPath/home-files"
+        report_previous_generation "$oldGenPath/home-files"
+        old_generation_valid=false
       fi
     fi
 
-    if [ -n "$old_files" ]; then
+    if [ "$old_generation_valid" = true ] && [ -n "$old_files" ]; then
       if ${pkgs.findutils}/bin/find "$old_files" \( -type f -o -type l \) \
         -printf '%P\0' 2>/dev/null \
         | while IFS= read -r -d "" path; do
           if is_managed_ai_path "$path" && ! is_separate_writer "$path"; then
             check_previous_link "$path"
+            if ! check_path_parents "$path"; then
+              :
+            fi
           fi
         done
       then
@@ -209,33 +403,42 @@ let
         pipeline_status=( "''${PIPESTATUS[@]}" )
       fi
       if [ "''${pipeline_status[1]}" -ne 0 ]; then
-        exit "''${pipeline_status[1]}"
+        report_previous_generation "$oldGenPath/home-files"
       fi
       if [ "''${pipeline_status[0]}" -ne 0 ]; then
-        fail_previous_generation "$oldGenPath/home-files"
+        report_previous_generation "$oldGenPath/home-files"
       fi
     fi
 
     while IFS= read -r path; do
       [ -n "$path" ] || continue
-      if [ -n "$old_files" ] \
-        && { [ -f "$old_files/$path" ] || [ -L "$old_files/$path" ]; }; then
+      was_managed=false
+      if [ "$old_generation_valid" = true ] && old_leaf_is_managed "$path"; then
+        was_managed=true
+      fi
+
+      if ! check_path_parents "$path"; then
         continue
       fi
+
+      if [ "$old_generation_valid" != true ] || [ "$was_managed" = true ]; then
+        continue
+      fi
+
       current="$HOME/$path"
       if [ -e "$current" ] || [ -L "$current" ]; then
-        fail_collision "$path"
+        report_leaf_collision "$path" "$current"
       fi
-      parent="''${current%/*}"
-      while [ "$parent" != "$HOME" ]; do
-        if [ -L "$parent" ] || { [ -e "$parent" ] && [ ! -d "$parent" ]; }; then
-          fail_collision "$path"
-        fi
-        parent="''${parent%/*}"
-      done
     done < ${lib.escapeShellArg newPathsFile}
 
     ${piGuardScript}
+
+    if [ -s "$errors_file" ]; then
+      LC_ALL=C ${pkgs.coreutils}/bin/sort -u "$errors_file" >&2
+      ${pkgs.coreutils}/bin/rm -f "$errors_file"
+      exit 1
+    fi
+    ${pkgs.coreutils}/bin/rm -f "$errors_file"
   '';
 in
 assert builtins.isList newPaths;

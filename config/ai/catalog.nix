@@ -1323,15 +1323,6 @@ let
       profiles = builtins.attrNames catalogProfiles;
     };
 
-    sourceRecords = {
-      sha256 = "bd686f3423475bbf86d7de8ea83ef697565f2df8475abd18e438cf94850240d4";
-      agents = 26;
-      commands = 65;
-      discoveredSkills = 19;
-      prompts = 2;
-      settings = 1;
-    };
-
     legacySelectors = {
       filenameTags = {
         personalCommands = personalFilenameTagCommands;

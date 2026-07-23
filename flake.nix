@@ -357,6 +357,10 @@
             homeManagerLib = home-manager.lib;
             testPkgsFor = agentTestPkgsFor;
           };
+          ai-managed-preflight-smoke = pkgs.callPackage ./packages/ai-managed-preflight-smoke.nix {
+            inherit src;
+            homeManagerLib = home-manager.lib;
+          };
         }
         // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux || system == "aarch64-darwin") {
           anvil-home-manager = pkgs.callPackage ./packages/anvil-mcp/home-manager-smoke.nix {
