@@ -992,6 +992,22 @@ let
   renderedOpenCode = lib.genAttrs openCodeProfileIds renderOpenCode;
   renderedDroid = lib.genAttrs droidProfileIds renderDroid;
   renderedPi = lib.genAttrs piProfileIds renderPi;
+  claudeCommandPromptCollisionProbe =
+    let
+      profileId = "vps-claude-personal";
+      selected = selectedFor profileId;
+    in
+    claudeRenderer {
+      profile = catalog.profiles.${profileId};
+      selected = selected // {
+        prompts = selected.prompts // {
+          bankruptcy = builtins.head (builtins.attrValues selected.prompts);
+        };
+      };
+      inherit modelData;
+      homeDirectory = fixtureHomeDirectory;
+      xdgConfigHome = fixtureXdgConfigHome;
+    };
   expectedPiRenderKeys = [
     "companions"
     "files"
@@ -2328,7 +2344,12 @@ let
           path: lib.hasPrefix ".agents/skills/" path
         ) (sortedNames renderedCodex.hera-codex.files)) piSharedSkillPaths)
       ]
-    ) piProfileIds;
+    ) piProfileIds
+    ++ [
+      (expectReject "Claude command-prompt target collision accepted" (
+        builtins.attrNames claudeCommandPromptCollisionProbe.files
+      ))
+    ];
 
   candidate = {
     inherit (catalog) profiles items;
@@ -3124,6 +3145,10 @@ let
       (expectEqual "Task 9 preserves separate Fractal skill writers" (builtins.filter (
         path: builtins.hasAttr path task9JohnwHera.config.home.file
       ) task9FractalPaths) task9FractalPaths)
+      (expectEqual "Task 9 omits stale Fractal Pi model writer"
+        (builtins.hasAttr "pi/agent/models.json" task9JohnwHera.config.xdg.configFile)
+        false
+      )
     ];
   task9ClaudeMemData = task9JohnwHera.config.home.activation.claudeMemRealClaude.data;
 
@@ -4145,6 +4170,8 @@ pkgs.runCommand "ai-home-manager-smoke"
     ];
   }
   ''
+    python3 "${src}/packages/statusline-command-test.py"
+
     test -f "${piExtensionSources.pi-mcp-adapter}/package.json"
     test -f "${piExtensionSources.pi-mcp-adapter}/index.ts"
     test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/@modelcontextprotocol/sdk"
@@ -4803,7 +4830,7 @@ pkgs.runCommand "ai-home-manager-smoke"
         b"".join(record for _, record in sorted(records))
     ).hexdigest()
     expected_asset_digest = (
-        "422c4e45bc09b660118f3f3651f7fbce632ec07dbc678105c323ab5cb74e1768"
+        "053d597928efb71ec8b49a93309d133086d6598925604629ef4eead28193429f"
     )
     if asset_digest != expected_asset_digest:
         errors.append(
@@ -4855,7 +4882,14 @@ pkgs.runCommand "ai-home-manager-smoke"
     renderers = root / "renderers"
     if renderers.exists():
         expected_root.add("renderers")
-        expected_renderers = {"claude.nix", "codex.nix", "droid.nix", "opencode.nix", "pi.nix"}
+        expected_renderers = {
+            "claude.nix",
+            "codex.nix",
+            "droid.nix",
+            "merge-files.nix",
+            "opencode.nix",
+            "pi.nix",
+        }
         actual_renderers = {entry.name for entry in renderers.iterdir()}
         if actual_renderers != expected_renderers:
             errors.append(
@@ -5111,14 +5145,17 @@ pkgs.runCommand "ai-home-manager-smoke"
     test "$(cat "$task10_stamp")" = '${task10ChangedDigest}'
     task10_assert_exact_app_calls
 
-    # Every guarded process independently blocks before credentials or writes.
+    # Every guarded process independently defers before credentials or writes.
     task10_process_index=0
     for process_name in DEVONthink 'DEVONthink 3' iTerm2; do
       task10_process_index=$((task10_process_index + 1))
       task10_new_case "running-$task10_process_index"
       printf '%s' "$process_name" > "$TASK10_FAKE_STATE/running"
-      task10_run_fail '${task10Script}'
+      task10_run_ok '${task10Script}'
       test ! -e "$task10_stamp"
+      grep -Fq \
+        'nix-managed model sync: deferred while DEVONthink or iTerm2 is running' \
+        "$task10_case/stderr"
       ! grep -Eq $'^(defaults|devonthinkKeyPresent|security)\t' "$TASK10_LOG"
       grep -Fq "pgrep	-x	$process_name" "$TASK10_LOG"
     done

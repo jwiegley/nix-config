@@ -149,7 +149,10 @@ let
         || app_is_running "DEVONthink 3" \
         || app_is_running "iTerm2"
       then
-        fail "DEVONthink and iTerm2 must be closed"
+        printf '%s\n' \
+          "nix-managed model sync: deferred while DEVONthink or iTerm2 is running" \
+          >&2
+        exit 0
       fi
 
       "$devonthink_key_present" >/dev/null 2>&1 \

@@ -15,6 +15,7 @@ assert builtins.isString xdgConfigHome;
 let
   inherit (profile) root;
   json = pkgs.formats.json { };
+  mergeFiles = import ./merge-files.nix { inherit lib; };
 
   isTypedEnv =
     value:
@@ -181,14 +182,15 @@ let
   ) selected.prompts;
 in
 {
-  files =
+  files = mergeFiles [
     agents
-    // commands
-    // skills
-    // prompts
-    // {
+    commands
+    skills
+    prompts
+    {
       "${root}/opencode.json".source = json.generate "opencode-${profile.id}.json" config;
-    };
+    }
+  ];
 
   companions = [ ];
 

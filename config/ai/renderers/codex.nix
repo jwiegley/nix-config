@@ -14,6 +14,7 @@ assert builtins.isString xdgConfigHome;
 
 let
   toml = pkgs.formats.toml { };
+  mergeFiles = import ./merge-files.nix { inherit lib; };
 
   sortedNames = set: lib.sort builtins.lessThan (builtins.attrNames set);
 
@@ -107,14 +108,15 @@ let
   managedPath = "${profile.root}/nix-managed.config.toml";
 in
 {
-  files =
+  files = mergeFiles [
     agentFiles
-    // skillFiles
-    // commandFiles
-    // promptFiles
-    // {
+    skillFiles
+    commandFiles
+    promptFiles
+    {
       "${managedPath}".source = toml.generate "codex-nix-managed.config.toml" managedConfig;
-    };
+    }
+  ];
 
   companions = [ managedPath ];
 

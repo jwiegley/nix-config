@@ -14,6 +14,7 @@ assert builtins.isString xdgConfigHome;
 let
   inherit (profile) root;
   json = pkgs.formats.json { };
+  mergeFiles = import ./merge-files.nix { inherit lib; };
 
   renderMarkdown =
     item:
@@ -118,18 +119,19 @@ let
   ) selected.prompts;
 in
 {
-  files =
+  files = mergeFiles [
     agents
-    // commands
-    // skills
-    // prompts
-    // {
+    commands
+    skills
+    prompts
+    {
       "${root}/statusline-command.sh".source = ../statusline-command.sh;
       "${root}/nix-managed-settings.json".source =
         json.generate "claude-${profile.id}-nix-managed-settings.json" settings;
       "${root}/nix-managed-mcp.json".source =
         json.generate "claude-${profile.id}-nix-managed-mcp.json" mcp;
-    };
+    }
+  ];
 
   companions = [
     "${root}/nix-managed-settings.json"

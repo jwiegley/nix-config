@@ -18,6 +18,7 @@ assert builtins.isString xdgConfigHome;
 let
   inherit (profile) root;
   json = pkgs.formats.json { };
+  mergeFiles = import ./merge-files.nix { inherit lib; };
 
   isTypedEnv = value: builtins.isAttrs value && builtins.attrNames value == [ "env" ];
   providerRequiredEnvNames = lib.concatMap (
@@ -135,16 +136,17 @@ let
   ) selected.prompts;
 in
 {
-  files =
+  files = mergeFiles [
     agents
-    // skills
-    // commands
-    // prompts
-    // {
+    skills
+    commands
+    prompts
+    {
       "${root}/nix-managed-settings.json".source =
         json.generate "droid-${profile.id}-nix-managed-settings.json" settings;
       "${root}/mcp.json".source = json.generate "droid-${profile.id}-mcp.json" mcp;
-    };
+    }
+  ];
 
   companions = [
     "${root}/nix-managed-settings.json"
