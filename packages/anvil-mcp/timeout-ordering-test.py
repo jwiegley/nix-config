@@ -152,6 +152,19 @@ def assert_static_ordering(
         },
     )
     guard = python_constants(parent_guard, {"READY_TIMEOUT_SECONDS"})
+    parent_guard_text = parent_guard.read_text(encoding="utf-8")
+    if "os.waitpid(guard_pid, 0)" in parent_guard_text:
+        raise AssertionError("parent-guard abort still uses blocking waitpid")
+    for fragment in (
+        "def reap_guard_until_handshake_deadline():",
+        "os.waitpid(guard_pid, os.WNOHANG)",
+        "remaining = handshake_deadline - time.monotonic()",
+        "time.sleep(min(0.01, remaining))",
+    ):
+        if fragment not in parent_guard_text:
+            raise AssertionError(
+                f"parent-guard abort lacks bounded reap fragment: {fragment!r}"
+            )
     cleaner_preentry_seconds = cleaner_timeout(clean_wrapper)
     if cleaner_preentry_seconds != values["direnvStatusSeconds"]:
         raise AssertionError(
@@ -171,13 +184,18 @@ def assert_static_ordering(
     ]
     if len(generation_lines) != 1:
         raise AssertionError("dedicated generation definition is ambiguous")
+    generation_line = generation_lines[0]
+    if "anvil-agentdeck-session-protocol-v1|${generationSalt}" not in generation_line:
+        raise AssertionError("dedicated generation is not the stable protocol epoch")
     for component in (
         "${dedicatedParentGuardLauncher}",
         "${dedicatedCleanEnvironment}",
         "${dedicatedDirenvNeutral}",
     ):
-        if component not in generation_lines[0]:
-            raise AssertionError(f"{component} is absent from dedicated generation")
+        if component in generation_line:
+            raise AssertionError(
+                f"implementation component {component} leaked into protocol epoch"
+            )
     actual = {
         "asyncSeconds": elisp_assignment(init_text, "anvil-eval-async-timeout"),
         "bridgeDispatchSeconds": shell_default(

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end smoke coverage for per-MCP-bridge Anvil daemons."""
+"""End-to-end smoke coverage for agent-owned Anvil daemons."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ import traceback
 HOST_ONE = "shared-home-a"
 HOST_TWO = "shared-home-b"
 MAX_RESPONSE_FRAME_BYTES = 16 * 1024 * 1024
+DEFAULT_INSTANCE_ID = object()
 RESPONSE_READ_BYTES = 64 * 1024
 BRIDGE_EOF_WAIT_SECONDS = 10.0
 BRIDGE_TERM_WAIT_SECONDS = 5.0
@@ -116,6 +117,10 @@ class BridgeProcess:
         environment_overrides: dict[str, str] | None = None,
     ) -> None:
         environment = os.environ.copy()
+        # A direct harness bridge is unmanaged unless its spawning OwnerProxy
+        # explicitly supplies an agent-deck session identity.  Do not inherit
+        # the test runner's own agent-deck marker by accident.
+        environment.pop("AGENTDECK_INSTANCE_ID", None)
         environment.update(
             {
                 "ANVIL_EMACS_HOST": host,
@@ -162,6 +167,11 @@ class BridgeProcess:
         if self.process.pid is None:
             raise AssertionError("bridge has no PID")
         return self.process.pid
+
+    @property
+    def owner_pid(self) -> int:
+        """Return the unmanaged bridge's per-transport lifecycle owner."""
+        return self.pid
 
     def stderr(self) -> str:
         self.stderr_file.flush()
@@ -483,7 +493,11 @@ def cleanup_error_text(label: str, errors: list[Exception]) -> str:
     return f"{label} cleanup failed: {details}"
 
 
-def owner_proxy_main(connection, launcher_raw: str) -> None:
+def owner_proxy_main(
+    connection,
+    launcher_raw: str,
+    instance_id: str | None,
+) -> None:
     """Spawn several sibling bridges from one long-lived client process."""
     launcher = Path(launcher_raw)
     bridges: dict[str, BridgeProcess] = {}
@@ -497,11 +511,16 @@ def owner_proxy_main(connection, launcher_raw: str) -> None:
                     bridge_id = request["bridge_id"]
                     if bridge_id in bridges:
                         raise AssertionError(f"duplicate bridge id: {bridge_id}")
+                    environment_overrides = dict(
+                        request.get("environment_overrides") or {}
+                    )
+                    if instance_id is not None:
+                        environment_overrides["AGENTDECK_INSTANCE_ID"] = instance_id
                     bridges[bridge_id] = BridgeProcess(
                         launcher,
                         request["server_id"],
                         request["host"],
-                        request.get("environment_overrides"),
+                        environment_overrides,
                     )
                     value = {"pid": bridges[bridge_id].process.pid}
                 elif operation == "request":
@@ -517,6 +536,10 @@ def owner_proxy_main(connection, launcher_raw: str) -> None:
                     if bridge is not None:
                         bridge.close()
                         bridges.pop(bridge_id, None)
+                    value = None
+                elif operation == "signal":
+                    bridge = bridges[request["bridge_id"]]
+                    os.kill(bridge.process.pid, request["signum"])
                     value = None
                 elif operation == "shutdown":
                     errors = close_bridge_mapping(bridges)
@@ -549,9 +572,14 @@ def owner_proxy_main(connection, launcher_raw: str) -> None:
 
 
 class OwnerProxy:
-    """A persistent stand-in for one Codex, Claude, or agent-deck client."""
+    """Model one external owner process and its child-launch topology."""
 
-    def __init__(self, launcher: Path, name: str) -> None:
+    def __init__(
+        self,
+        launcher: Path,
+        name: str,
+        instance_id: str | None = None,
+    ) -> None:
         # The harness is single-threaded here, and fork avoids Darwin's
         # import-based spawn bootstrap inside a Nix build sandbox.
         context = multiprocessing.get_context("fork")
@@ -559,9 +587,10 @@ class OwnerProxy:
         self.connection = parent_connection
         self.process = context.Process(
             target=owner_proxy_main,
-            args=(child_connection, str(launcher)),
+            args=(child_connection, str(launcher), instance_id),
             name=name,
         )
+        self.instance_id = instance_id
         self.bridge_ids: set[str] = set()
         self.connection_closed = False
         try:
@@ -698,7 +727,7 @@ class OwnerProxy:
             self.close_connection()
 
     def terminate_abruptly(self) -> None:
-        """Model an owning Codex process exiting with live MCP children."""
+        """Terminate the synthetic external owner with live launchers."""
         try:
             if self.is_alive():
                 self.process.terminate()
@@ -721,6 +750,11 @@ class ProxyBridge:
         self.bridge_id = bridge_id
         self.pid = pid
         self.closed = False
+
+    @property
+    def owner_pid(self) -> int:
+        """Return the lifecycle owner used by this managed/unmanaged bridge."""
+        return self.owner.pid if self.owner.instance_id is not None else self.pid
 
     def request(
         self,
@@ -786,6 +820,16 @@ class ProxyBridge:
         self.owner.close_bridge(self.bridge_id)
         self.closed = True
 
+    def signal(self, signum: int) -> None:
+        """Signal the real outer Anvil launcher root."""
+        self.owner.rpc(
+            {
+                "operation": "signal",
+                "bridge_id": self.bridge_id,
+                "signum": signum,
+            }
+        )
+
 
 def attempt_close_resources(
     bridges: list[ProxyBridge],
@@ -840,10 +884,14 @@ def acquire_owner(
     bridges: list[ProxyBridge],
     launcher: Path,
     name: str,
+    instance_id: str | None | object = DEFAULT_INSTANCE_ID,
 ) -> OwnerProxy:
     """Acquire an owner or clean every resource acquired before it."""
+    resolved_instance_id = name if instance_id is DEFAULT_INSTANCE_ID else instance_id
+    if resolved_instance_id is not None and not isinstance(resolved_instance_id, str):
+        raise AssertionError("invalid owner instance identity")
     try:
-        owner = OwnerProxy(launcher, name)
+        owner = OwnerProxy(launcher, name, resolved_instance_id)
     except BaseException:
         close_smoke_resources(bridges, owners)
         raise
@@ -879,7 +927,7 @@ def read_running_status(path: Path) -> dict[str, object] | bool:
 def find_running_instance(
     runtime_root: Path,
     host: str,
-    bridge_pid: int,
+    bridge: BridgeProcess | ProxyBridge,
     module,
 ) -> tuple[Path, dict[str, object]] | bool:
     agents = runtime_root / host / "agents"
@@ -893,7 +941,28 @@ def find_running_instance(
             status = json.loads(path.read_text())
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             continue
-        if status.get("owner_pid") == bridge_pid and status.get("daemon_pid"):
+        generation = status.get("generation")
+        if (
+            not isinstance(generation, str)
+            or module.GENERATION_PATTERN.fullmatch(generation) is None
+        ):
+            continue
+        instance_id = (
+            bridge.owner.instance_id if isinstance(bridge, ProxyBridge) else None
+        )
+        owner_identity = module.process_start_identity(bridge.owner_pid)
+        if owner_identity is None:
+            continue
+        expected_key = (
+            module.derive_managed_agent_key(instance_id, generation)
+            if instance_id is not None
+            else module.derive_agent_key(
+                bridge.owner_pid,
+                owner_identity,
+                generation,
+            )
+        )
+        if path.parent.name == expected_key and status.get("daemon_pid"):
             return path, status
     return False
 
@@ -904,27 +973,38 @@ def validate_bridge_instance(
     host: str,
     state_root: Path,
     module,
+    expected_lease_count: int = 1,
 ) -> dict[str, object]:
     path, status = found
+    owner_identity = module.process_start_identity(bridge.owner_pid)
     bridge_identity = module.process_start_identity(bridge.pid)
     generation = status.get("generation")
     if (
-        status.get("format") != 2
+        owner_identity is None
+        or bridge_identity is None
+        or status.get("format") != 2
         or status.get("version") != 2
         or not isinstance(generation, str)
         or module.GENERATION_PATTERN.fullmatch(generation) is None
-        or status.get("owner_start_identity") != bridge_identity
+        or not positive_json_int(status.get("owner_pid"))
+        or not isinstance(status.get("owner_start_identity"), str)
+        or not status.get("owner_start_identity")
         or type(status.get("lease_count")) is not int
-        or status.get("lease_count") != 1
+        or status.get("lease_count") != expected_lease_count
     ):
         raise AssertionError(f"invalid bridge lifecycle status: {status}")
-    expected_key = module.derive_agent_key(
-        bridge.pid,
-        bridge_identity,
-        generation,
+    instance_id = bridge.owner.instance_id if isinstance(bridge, ProxyBridge) else None
+    expected_key = (
+        module.derive_managed_agent_key(instance_id, generation)
+        if instance_id is not None
+        else module.derive_agent_key(
+            bridge.owner_pid,
+            owner_identity,
+            generation,
+        )
     )
     if status.get("agent_key") != expected_key or path.parent.name != expected_key:
-        raise AssertionError(f"bridge key did not use bridge self identity: {status}")
+        raise AssertionError(f"bridge key did not use its lifecycle domain: {status}")
     runtime_dir = path.parent
     state_dir = state_root / host / "agents" / expected_key
     socket_path = runtime_dir / "emacs" / "server"
@@ -940,6 +1020,7 @@ def validate_bridge_instance(
     return {
         "bridge": bridge,
         "bridge_identity": bridge_identity,
+        "owner_identity": owner_identity,
         "diagnostic": diagnostic,
         "runtime_dir": runtime_dir,
         "socket": socket_path,
@@ -1188,6 +1269,57 @@ def worker_pids(bridge: ProxyBridge) -> list[int]:
     return pids
 
 
+def snapshot_visible_descendant_identities(
+    seed_pids: set[int],
+    module,
+) -> dict[int, str]:
+    """Snapshot exact descendant identities visible in one process-table read."""
+    completed = subprocess.run(
+        ["ps", "-axo", "pid=,ppid="],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise AssertionError(
+            f"process ancestry snapshot failed with status {completed.returncode}"
+        )
+    parent_by_pid: dict[int, int] = {}
+    for line in completed.stdout.splitlines():
+        fields = line.split()
+        if len(fields) != 2:
+            continue
+        try:
+            pid, parent_pid = (int(field) for field in fields)
+        except ValueError:
+            continue
+        parent_by_pid[pid] = parent_pid
+
+    descendants = set(seed_pids)
+    changed = True
+    while changed:
+        changed = False
+        for pid, parent_pid in parent_by_pid.items():
+            if parent_pid in descendants and pid not in descendants:
+                descendants.add(pid)
+                changed = True
+
+    identities = {
+        pid: identity
+        for pid in descendants
+        if (identity := module.process_start_identity(pid)) is not None
+    }
+    missing_seeds = seed_pids - identities.keys()
+    if missing_seeds:
+        raise AssertionError(
+            f"process ancestry seeds disappeared during snapshot: {sorted(missing_seeds)}"
+        )
+    return identities
+
+
 def assert_launcher_rejects(
     launcher: Path,
     expected_status: int,
@@ -1259,7 +1391,7 @@ def verify_dispatch_deadline(
                 lambda: find_running_instance(
                     runtime_root,
                     "dispatch-deadline",
-                    bridge.pid,
+                    bridge,
                     module,
                 )
             ),
@@ -1392,7 +1524,7 @@ def verify_generation_rollover(
                 lambda: find_running_instance(
                     runtime_root,
                     "generation-rollover",
-                    old_bridge.pid,
+                    old_bridge,
                     module,
                 )
             ),
@@ -1423,7 +1555,7 @@ def verify_generation_rollover(
                 lambda: find_running_instance(
                     runtime_root,
                     "generation-rollover",
-                    new_bridge.pid,
+                    new_bridge,
                     module,
                 )
             ),
@@ -1498,7 +1630,7 @@ def verify_readiness_crash_recovery(
                 lambda: find_running_instance(
                     runtime_root,
                     "readiness-crash",
-                    bridge.pid,
+                    bridge,
                     module,
                 )
             ),
@@ -1877,7 +2009,12 @@ def verify_watchdog_cause(
     try:
         bridge.initialize()
         found = eventually(
-            lambda: find_running_instance(runtime_root, host, bridge.pid, module),
+            lambda: find_running_instance(
+                runtime_root,
+                host,
+                bridge,
+                module,
+            ),
             timeout=CLIENT_STARTUP_SECONDS,
         )
         _status_path, discovered_status = found
@@ -2049,6 +2186,225 @@ def verify_watchdog_attribution(
         )
 
 
+def verify_unmanaged_siblings_are_isolated(
+    launcher: Path,
+    runtime_root: Path,
+    state_root: Path,
+    module,
+) -> None:
+    """Prove two unmanaged sibling transports do not share mutable state."""
+    owners: list[OwnerProxy] = []
+    bridges: list[ProxyBridge] = []
+    instances: list[dict[str, object]] = []
+    owner = acquire_owner(
+        owners,
+        bridges,
+        launcher,
+        "unmanaged-sibling-owner",
+        instance_id=None,
+    )
+    first = acquire_bridge(
+        owners,
+        bridges,
+        owner,
+        "anvil",
+        "unmanaged-siblings",
+    )
+    second = acquire_bridge(
+        owners,
+        bridges,
+        owner,
+        "emacs-eval",
+        "unmanaged-siblings",
+    )
+    try:
+        for bridge in (first, second):
+            bridge.initialize()
+            instances.append(
+                validate_bridge_instance(
+                    eventually(
+                        lambda bridge=bridge: find_running_instance(
+                            runtime_root,
+                            "unmanaged-siblings",
+                            bridge,
+                            module,
+                        )
+                    ),
+                    bridge,
+                    "unmanaged-siblings",
+                    state_root,
+                    module,
+                )
+            )
+        for field in ("agent_key", "daemon_pid", "supervisor_pid"):
+            if instances[0]["status"][field] == instances[1]["status"][field]:
+                raise AssertionError(f"unmanaged sibling bridges shared {field}")
+        for field in ("runtime_dir", "state_dir", "socket"):
+            if instances[0][field] == instances[1][field]:
+                raise AssertionError(f"unmanaged sibling bridges shared {field}")
+
+        first.close()
+        bridges.remove(first)
+        eventually(lambda: not instances[0]["runtime_dir"].exists(), timeout=60)
+        if not read_running_status(instances[1]["status_path"]):
+            raise AssertionError("closing one unmanaged sibling stopped the other")
+        second.close()
+        bridges.remove(second)
+    finally:
+        close_smoke_resources(bridges, owners)
+    for instance in instances:
+        eventually(lambda instance=instance: not instance["runtime_dir"].exists())
+        eventually(lambda instance=instance: not instance["state_dir"].exists())
+
+
+def verify_managed_session_anvil_owned_cleanup(
+    launcher: Path,
+    runtime_root: Path,
+    state_root: Path,
+    module,
+) -> None:
+    """Exercise sibling preservation and final Anvil-owned cleanup."""
+    owners: list[OwnerProxy] = []
+    bridges: list[ProxyBridge] = []
+    session_id = "packaged-shared-session-term"
+    first_owner = acquire_owner(
+        owners,
+        bridges,
+        launcher,
+        "shared-session-owner-a",
+        instance_id=session_id,
+    )
+    second_owner = acquire_owner(
+        owners,
+        bridges,
+        launcher,
+        "shared-session-owner-b",
+        instance_id=session_id,
+    )
+    first = acquire_bridge(
+        owners,
+        bridges,
+        first_owner,
+        "anvil",
+        "managed-session-term",
+    )
+    second = acquire_bridge(
+        owners,
+        bridges,
+        second_owner,
+        "anvil",
+        "managed-session-term",
+    )
+    instance: dict[str, object] | None = None
+    try:
+        first.initialize()
+        second.initialize()
+        instance = validate_bridge_instance(
+            eventually(
+                lambda: (
+                    (found := find_running_instance(
+                        runtime_root,
+                        "managed-session-term",
+                        first,
+                        module,
+                    ))
+                    and found[1].get("lease_count") == 2
+                    and found
+                )
+            ),
+            first,
+            "managed-session-term",
+            state_root,
+            module,
+            expected_lease_count=2,
+        )
+        second_found = eventually(
+            lambda: find_running_instance(
+                runtime_root,
+                "managed-session-term",
+                second,
+                module,
+            )
+        )
+        if second_found[0] != instance["status_path"]:
+            raise AssertionError("distinct owners in one session used separate roots")
+
+        status = instance["status"]
+        supervisor_pid = status["supervisor_pid"]
+        daemon_pid = status["daemon_pid"]
+        supervisor_identity = module.process_start_identity(supervisor_pid)
+        daemon_identity = module.process_start_identity(daemon_pid)
+        first_identity = module.process_start_identity(first.pid)
+        if None in (supervisor_identity, daemon_identity, first_identity):
+            raise AssertionError("managed session process identity disappeared")
+
+        first.signal(signal.SIGTERM)
+        eventually(
+            lambda: module.process_start_identity(first.pid) != first_identity,
+            timeout=60,
+        )
+        remaining = eventually(
+            lambda: (
+                (current := read_running_status(instance["status_path"]))
+                and current.get("lease_count") == 1
+                and current
+            ),
+            timeout=60,
+        )
+        if (
+            remaining["supervisor_pid"] != supervisor_pid
+            or remaining["daemon_pid"] != daemon_pid
+            or module.process_start_identity(supervisor_pid) != supervisor_identity
+            or module.process_start_identity(daemon_pid) != daemon_identity
+        ):
+            raise AssertionError("one owner TERM replaced the shared session root")
+        if eval_value(
+            second.call_tool("emacs-eval", {"expression": "(+ 40 2)"})
+        ) != 42:
+            raise AssertionError("surviving session owner lost the shared root")
+        first.close()
+        bridges.remove(first)
+
+        known_pids = {
+            second.pid,
+            supervisor_pid,
+            daemon_pid,
+            *worker_pids(second),
+        }
+        final_identities = {
+            pid: module.process_start_identity(pid) for pid in known_pids
+        }
+        if any(identity is None for identity in final_identities.values()):
+            raise AssertionError(
+                f"known Anvil identity disappeared before final TERM: "
+                f"{final_identities}"
+            )
+        second.signal(signal.SIGTERM)
+        second_identity = final_identities[second.pid]
+        eventually(
+            lambda: module.process_start_identity(second.pid) != second_identity,
+            timeout=90,
+        )
+        eventually(
+            lambda: (
+                not instance["runtime_dir"].exists()
+                and not instance["state_dir"].exists()
+                and all(
+                    module.process_start_identity(pid) != identity
+                    for pid, identity in final_identities.items()
+                )
+            ),
+            timeout=90,
+        )
+        second.close()
+        bridges.remove(second)
+    finally:
+        close_smoke_resources(bridges, owners)
+    if instance is not None:
+        if instance["runtime_dir"].exists() or instance["state_dir"].exists():
+            raise AssertionError("final session owner left lifecycle state behind")
+
+
 def main() -> None:
     if sys.argv[1:3] == ["--scenario", "watchdog-attribution"]:
         if len(sys.argv) != 5:
@@ -2095,6 +2451,18 @@ def main() -> None:
         "--socket=/tmp/spoofed-anvil-socket",
     )
     verify_dispatch_deadline(
+        launcher,
+        runtime_root,
+        state_root,
+        module,
+    )
+    verify_unmanaged_siblings_are_isolated(
+        launcher,
+        runtime_root,
+        state_root,
+        module,
+    )
+    verify_managed_session_anvil_owned_cleanup(
         launcher,
         runtime_root,
         state_root,
@@ -2152,6 +2520,13 @@ def main() -> None:
         "anvil",
         HOST_ONE,
     )
+    other_eval = acquire_bridge(
+        owners,
+        bridges,
+        other_owner,
+        "emacs-eval",
+        HOST_ONE,
+    )
     other_host = acquire_bridge(
         owners,
         bridges,
@@ -2163,18 +2538,25 @@ def main() -> None:
         for bridge in bridges:
             bridge.initialize()
         instances = {}
-        for name, bridge, host, server_id in (
-            ("main-typed", main_typed, HOST_ONE, "anvil"),
-            ("main-eval", main_eval, HOST_ONE, "emacs-eval"),
-            ("other-agent", other_agent, HOST_ONE, "anvil"),
-            ("other-host", other_host, HOST_TWO, "anvil"),
+        for name, bridge, host, server_id, expected_leases in (
+            ("main-typed", main_typed, HOST_ONE, "anvil", 2),
+            ("main-eval", main_eval, HOST_ONE, "emacs-eval", 2),
+            ("other-agent", other_agent, HOST_ONE, "anvil", 2),
+            ("other-eval", other_eval, HOST_ONE, "emacs-eval", 2),
+            ("other-host", other_host, HOST_TWO, "anvil", 1),
         ):
             found = eventually(
-                lambda bridge=bridge, host=host: find_running_instance(
-                    runtime_root,
-                    host,
-                    bridge.pid,
-                    module,
+                lambda bridge=bridge, host=host, expected_leases=expected_leases: (
+                    (
+                        found := find_running_instance(
+                            runtime_root,
+                            host,
+                            bridge,
+                            module,
+                        )
+                    )
+                    and found[1].get("lease_count") == expected_leases
+                    and found
                 )
             )
             instances[name] = validate_bridge_instance(
@@ -2183,6 +2565,7 @@ def main() -> None:
                 host,
                 state_root,
                 module,
+                expected_leases,
             )
             try:
                 if server_id == "anvil":
@@ -2201,16 +2584,49 @@ def main() -> None:
                     f"launch-environment check failed: {error}"
                 ) from error
 
-        # Every launcher bridge is its own lifecycle domain.  This includes
-        # the two siblings created by the exact same client process.
+        # Sibling transports from one agent-deck client share one root on one
+        # host.  A different client or host remains a separate lifecycle domain.
+        main_typed_instance = instances["main-typed"]
+        main_eval_instance = instances["main-eval"]
+        other_agent_instance = instances["other-agent"]
+        other_eval_instance = instances["other-eval"]
+        other_host_instance = instances["other-host"]
         for field in ("agent_key", "daemon_pid", "supervisor_pid"):
-            values = {instance["status"][field] for instance in instances.values()}
-            if len(values) != len(instances):
-                raise AssertionError(f"bridge instances shared {field}: {values}")
+            if (
+                main_typed_instance["status"][field]
+                != main_eval_instance["status"][field]
+            ):
+                raise AssertionError(f"sibling bridges did not share {field}")
         for field in ("runtime_dir", "state_dir", "socket"):
-            values = {instance[field] for instance in instances.values()}
-            if len(values) != len(instances):
-                raise AssertionError(f"bridge instances shared {field}: {values}")
+            if main_typed_instance[field] != main_eval_instance[field]:
+                raise AssertionError(f"sibling bridges did not share {field}")
+        for field in ("agent_key", "daemon_pid", "supervisor_pid"):
+            if (
+                main_typed_instance["status"][field]
+                == other_agent_instance["status"][field]
+            ):
+                raise AssertionError(f"distinct agent owners shared {field}")
+            if (
+                other_agent_instance["status"][field]
+                != other_eval_instance["status"][field]
+            ):
+                raise AssertionError(
+                    f"abrupt-owner sibling bridges did not share {field}"
+                )
+        if (
+            main_typed_instance["status"]["agent_key"]
+            != other_host_instance["status"]["agent_key"]
+        ):
+            raise AssertionError("one owner did not retain its key across hosts")
+        for field in ("daemon_pid", "supervisor_pid"):
+            if (
+                main_typed_instance["status"][field]
+                == other_host_instance["status"][field]
+            ):
+                raise AssertionError(f"distinct hosts shared {field}")
+        for field in ("runtime_dir", "state_dir", "socket"):
+            if main_typed_instance[field] == other_host_instance[field]:
+                raise AssertionError(f"distinct hosts shared {field}")
         generations = {
             instance["status"]["generation"] for instance in instances.values()
         }
@@ -2241,38 +2657,76 @@ def main() -> None:
             )
 
         agent_instance = instances["other-agent"]
-        agent_supervisor_identity = module.process_start_identity(
-            agent_instance["status"]["supervisor_pid"]
-        )
-        agent_daemon_identity = module.process_start_identity(
-            agent_instance["status"]["daemon_pid"]
+        agent_workers = worker_pids(other_agent)
+        assert_typed_registry_probe(other_eval, launcher)
+        lease_records = [
+            json.loads(path.read_text())
+            for path in (agent_instance["runtime_dir"] / "leases").glob(
+                "lease-*.json"
+            )
+        ]
+        if (
+            len(lease_records) != 2
+            or len(
+                {
+                    (record["bridge_pid"], record["bridge_start_identity"])
+                    for record in lease_records
+                }
+            )
+            != 2
+        ):
+            raise AssertionError(
+                f"abrupt-owner siblings lacked two exact leases: {lease_records}"
+            )
+        owned_identities = snapshot_visible_descendant_identities(
+            {
+                other_owner.pid,
+                other_agent.pid,
+                other_eval.pid,
+                agent_instance["status"]["supervisor_pid"],
+                agent_instance["status"]["daemon_pid"],
+                *agent_workers,
+            },
+            module,
         )
         other_owner.terminate_abruptly()
         owners.remove(other_owner)
         other_agent.closed = True
+        other_eval.closed = True
         bridges.remove(other_agent)
+        bridges.remove(other_eval)
         eventually(lambda: not agent_instance["status_path"].exists())
         eventually(lambda: not agent_instance["runtime_dir"].exists())
         eventually(lambda: not agent_instance["state_dir"].exists())
-        for pid, identity in (
-            (other_agent.pid, agent_instance["bridge_identity"]),
-            (
-                agent_instance["status"]["supervisor_pid"],
-                agent_supervisor_identity,
-            ),
-            (agent_instance["status"]["daemon_pid"], agent_daemon_identity),
-        ):
+        for pid, identity in owned_identities.items():
             eventually(
                 lambda pid=pid, identity=identity: (
                     module.process_start_identity(pid) != identity
                 )
             )
+        expected_host_one_keys = {main_typed_instance["status"]["agent_key"]}
+        runtime_keys = {
+            path.name
+            for path in (runtime_root / HOST_ONE / "agents").iterdir()
+            if path.is_dir()
+        }
+        state_keys = {
+            path.name
+            for path in (state_root / HOST_ONE / "agents").iterdir()
+            if path.is_dir()
+        }
+        if runtime_keys != expected_host_one_keys or state_keys != expected_host_one_keys:
+            raise AssertionError(
+                "abrupt owner left an alternate runtime/state key: "
+                f"runtime={runtime_keys}, state={state_keys}"
+            )
+        assert_typed_registry_probe(main_eval, launcher)
 
         other_host.close()
         bridges.remove(other_host)
         host_instance = instances["other-host"]
-        eventually(lambda: not host_instance["runtime_dir"].exists())
-        eventually(lambda: not host_instance["state_dir"].exists())
+        eventually(lambda: not host_instance["runtime_dir"].exists(), timeout=60)
+        eventually(lambda: not host_instance["state_dir"].exists(), timeout=60)
 
         typed_instance = instances["main-typed"]
         eval_instance = instances["main-eval"]
@@ -2295,9 +2749,9 @@ def main() -> None:
         )
         if module.process_start_identity(main_typed.pid) != bridge_identity:
             raise AssertionError("supervisor recovery replaced the bridge process")
-        if caretaker_recovered["owner_pid"] != main_typed.pid:
+        if caretaker_recovered["owner_pid"] != main_typed.owner_pid:
             raise AssertionError(
-                f"caretaker lost bridge ownership: {caretaker_recovered}"
+                f"caretaker lost external owner identity: {caretaker_recovered}"
             )
         recovery_started = time.monotonic()
         caretaker_probe = call_after_readiness(
@@ -2320,10 +2774,10 @@ def main() -> None:
                 )
             )
         typed_instance["status"] = caretaker_recovered
+        eval_instance["status"] = caretaker_recovered
 
         root_pid = typed_instance["status"]["daemon_pid"]
         supervisor_pid = typed_instance["status"]["supervisor_pid"]
-        eval_daemon_pid = eval_instance["status"]["daemon_pid"]
         workers = worker_pids(main_typed)
         worker_identities = {pid: module.process_start_identity(pid) for pid in workers}
         if any(identity is None for identity in worker_identities.values()):
@@ -2361,8 +2815,12 @@ def main() -> None:
         if nonce.read_text().splitlines() != ["once"]:
             raise AssertionError("the ambiguous hung request was replayed")
         eval_status = read_running_status(eval_instance["status_path"])
-        if not eval_status or eval_status["daemon_pid"] != eval_daemon_pid:
-            raise AssertionError("hung sibling restarted the independent eval daemon")
+        if (
+            not eval_status
+            or eval_status["daemon_pid"] != restarted["daemon_pid"]
+            or eval_status["supervisor_pid"] != restarted["supervisor_pid"]
+        ):
+            raise AssertionError("shared sibling did not follow the restarted root")
         assert_typed_registry_probe(main_eval, launcher)
         recovered = call_after_readiness(
             main_typed,
@@ -2374,31 +2832,41 @@ def main() -> None:
 
         restarted_pid = restarted["daemon_pid"]
         restarted_identity = module.process_start_identity(restarted_pid)
-        main_typed.close()
-        bridges.remove(main_typed)
-        eventually(lambda: not typed_instance["runtime_dir"].exists())
-        eventually(lambda: not typed_instance["state_dir"].exists())
-        eventually(
-            lambda: module.process_start_identity(restarted_pid) != restarted_identity
-        )
-        assert_typed_registry_probe(main_eval, launcher)
-
-        eval_daemon_identity = module.process_start_identity(eval_daemon_pid)
-        main_eval.close()
-        bridges.remove(main_eval)
-        eventually(lambda: not eval_instance["runtime_dir"].exists())
-        eventually(lambda: not eval_instance["state_dir"].exists())
-        eventually(
-            lambda: (
-                module.process_start_identity(eval_daemon_pid) != eval_daemon_identity
-            )
-        )
+        if restarted_identity is None:
+            raise AssertionError("restarted shared root identity disappeared")
         for pid, identity in worker_identities.items():
             eventually(
                 lambda pid=pid, identity=identity: (
                     module.process_start_identity(pid) != identity
                 )
             )
+
+        main_typed.close()
+        bridges.remove(main_typed)
+        eventually(
+            lambda: (
+                (current := read_running_status(typed_instance["status_path"]))
+                and current["lease_count"] == 1
+                and current["daemon_pid"] == restarted_pid
+                and current
+            )
+        )
+        if module.process_start_identity(restarted_pid) != restarted_identity:
+            raise AssertionError("closing one sibling stopped the shared root")
+        if (
+            not typed_instance["runtime_dir"].exists()
+            or not typed_instance["state_dir"].exists()
+        ):
+            raise AssertionError("closing one sibling removed the shared instance")
+        assert_typed_registry_probe(main_eval, launcher)
+
+        main_eval.close()
+        bridges.remove(main_eval)
+        eventually(lambda: not eval_instance["runtime_dir"].exists(), timeout=60)
+        eventually(lambda: not eval_instance["state_dir"].exists(), timeout=60)
+        eventually(
+            lambda: module.process_start_identity(restarted_pid) != restarted_identity
+        )
 
         main_owner.close()
         owners.remove(main_owner)

@@ -686,6 +686,7 @@ let
     import ctypes
     import errno
     import os
+    import re
     import select
     import signal
     import sys
@@ -693,6 +694,12 @@ let
 
     EXIT_SOFTWARE = 70
     READY_TIMEOUT_SECONDS = ${toString timeoutPolicy.parentGuardReadySeconds}.0
+    GUARDED_OWNER_PID_ENV = "ANVIL_MCP_GUARDED_OWNER_PID"
+    GUARDED_OWNER_START_ENV = "ANVIL_MCP_GUARDED_OWNER_START_IDENTITY"
+    LINUX_BOOT_ID_PATTERN = re.compile(
+        r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-"
+        r"[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
+    )
 
 
     def fail(message):
@@ -732,6 +739,101 @@ let
         if bridge_pid <= 1:
             fail("ANVIL_HEADLESS_BRIDGE_PID must be greater than one")
         return bridge_pid
+
+
+    class DarwinBSDInfo(ctypes.Structure):
+        _fields_ = [
+            ("pbi_flags", ctypes.c_uint32),
+            ("pbi_status", ctypes.c_uint32),
+            ("pbi_xstatus", ctypes.c_uint32),
+            ("pbi_pid", ctypes.c_uint32),
+            ("pbi_ppid", ctypes.c_uint32),
+            ("pbi_uid", ctypes.c_uint32),
+            ("pbi_gid", ctypes.c_uint32),
+            ("pbi_ruid", ctypes.c_uint32),
+            ("pbi_rgid", ctypes.c_uint32),
+            ("pbi_svuid", ctypes.c_uint32),
+            ("pbi_svgid", ctypes.c_uint32),
+            ("pbi_rfu_1", ctypes.c_uint32),
+            ("pbi_comm", ctypes.c_char * 16),
+            ("pbi_name", ctypes.c_char * 32),
+            ("pbi_nfiles", ctypes.c_uint32),
+            ("pbi_pgid", ctypes.c_uint32),
+            ("pbi_pjobc", ctypes.c_uint32),
+            ("e_tdev", ctypes.c_uint32),
+            ("e_tpgid", ctypes.c_uint32),
+            ("pbi_nice", ctypes.c_int32),
+            ("pbi_start_tvsec", ctypes.c_uint64),
+            ("pbi_start_tvusec", ctypes.c_uint64),
+        ]
+
+
+    def linux_process_start_identity(pid):
+        try:
+            with open(
+                "/proc/sys/kernel/random/boot_id", encoding="ascii"
+            ) as stream:
+                boot_id = stream.read().strip()
+            with open(f"/proc/{pid}/stat", encoding="ascii") as stream:
+                raw = stream.read()
+        except (FileNotFoundError, ProcessLookupError, OSError, UnicodeError):
+            return None
+        if LINUX_BOOT_ID_PATTERN.fullmatch(boot_id) is None:
+            return None
+        closing = raw.rfind(")")
+        if closing < 0:
+            return None
+        fields = raw[closing + 2 :].split()
+        if (
+            len(fields) <= 19
+            or not fields[19].isdecimal()
+            or fields[0] in ("Z", "X")
+        ):
+            return None
+        return f"linux:{boot_id.lower()}:{fields[19]}"
+
+
+    def darwin_process_start_identity(pid):
+        try:
+            library = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
+            proc_pidinfo = library.proc_pidinfo
+            proc_pidinfo.argtypes = [
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_uint64,
+                ctypes.c_void_p,
+                ctypes.c_int,
+            ]
+            proc_pidinfo.restype = ctypes.c_int
+            info = DarwinBSDInfo()
+            ctypes.set_errno(0)
+            result = proc_pidinfo(
+                pid,
+                3,
+                0,
+                ctypes.byref(info),
+                ctypes.sizeof(info),
+            )
+        except (OSError, AttributeError):
+            return None
+        if (
+            result != ctypes.sizeof(info)
+            or info.pbi_pid != pid
+            or info.pbi_status == 5
+            or (info.pbi_start_tvsec == 0 and info.pbi_start_tvusec == 0)
+        ):
+            return None
+        return f"darwin:{info.pbi_start_tvsec}:{info.pbi_start_tvusec}"
+
+
+    def process_start_identity(pid):
+        if pid <= 1:
+            return None
+        if sys.platform.startswith("linux"):
+            return linux_process_start_identity(pid)
+        if sys.platform == "darwin":
+            return darwin_process_start_identity(pid)
+        return None
 
 
     def install_linux_parent_death_signal(expected_parent):
@@ -999,9 +1101,18 @@ let
     external_owner = mode == "external-group"
     program_argv = sys.argv[2:]
     target_pid = os.getpid()
+    os.environ.pop(GUARDED_OWNER_PID_ENV, None)
+    os.environ.pop(GUARDED_OWNER_START_ENV, None)
     root_pid = validate_parent_pid(
         os.environ.pop("ANVIL_HEADLESS_PARENT_PID", None)
     )
+    root_start_identity = (
+        process_start_identity(root_pid) if external_owner else None
+    )
+    if external_owner and root_start_identity is None:
+        fail("cannot identify external owner process generation")
+    if os.getppid() != root_pid:
+        os.kill(os.getpid(), signal.SIGKILL)
     bridge_pid = validate_bridge_pid(
         os.environ.pop("ANVIL_HEADLESS_BRIDGE_PID", None)
     )
@@ -1057,6 +1168,21 @@ let
             return b""
         return marker
 
+    def reap_guard_until_handshake_deadline():
+        while True:
+            try:
+                waited, _status = os.waitpid(guard_pid, os.WNOHANG)
+            except ChildProcessError:
+                return
+            except InterruptedError:
+                continue
+            if waited == guard_pid:
+                return
+            remaining = handshake_deadline - time.monotonic()
+            if remaining <= 0:
+                return
+            time.sleep(min(0.01, remaining))
+
     def abort_guard(message):
         for descriptor in (ready_read, commit_write):
             try:
@@ -1064,10 +1190,7 @@ let
             except OSError:
                 pass
         terminate_target(guard_pid, False, {"committed": False})
-        try:
-            os.waitpid(guard_pid, 0)
-        except ChildProcessError:
-            pass
+        reap_guard_until_handshake_deadline()
         fail(message)
 
     ready = read_handshake_marker()
@@ -1109,6 +1232,13 @@ let
         abort_guard("guard did not acknowledge target process group")
     if os.getppid() != root_pid:
         os.kill(os.getpid(), signal.SIGKILL)
+    if external_owner:
+        if process_start_identity(root_pid) != root_start_identity:
+            os.kill(os.getpid(), signal.SIGKILL)
+        if os.getppid() != root_pid:
+            os.kill(os.getpid(), signal.SIGKILL)
+        os.environ[GUARDED_OWNER_PID_ENV] = str(root_pid)
+        os.environ[GUARDED_OWNER_START_ENV] = root_start_identity
 
     try:
         os.execvpe(program_argv[0], program_argv, os.environ)
@@ -4397,7 +4527,10 @@ let
     target = "${watchdogCapabilityDaemonInner}/bin/anvil-watchdog-capability-daemon-inner";
   };
   dedicatedAgentDaemon = if agentDaemonOverride == null then dedicatedDaemon else agentDaemonOverride;
-  dedicatedGeneration = builtins.hashString "sha256" "${dedicatedAgentSupervisor}|${dedicatedParentGuardLauncher}|${dedicatedAgentDaemon}|${dedicatedCleanEnvironment}|${dedicatedDirenvNeutral}|${dedicatedAnvil}|${dedicatedAnvilIde}|${dedicatedOffloadEmacs}|${dedicatedOffloadInit}|${dedicatedSafeEmacsclient}|${generationSalt}";
+  # Compatible package rebuilds must not create a second root for one live
+  # agent-deck session.  This value is a protocol epoch, not a closure hash;
+  # generationSalt is reserved for tests and deliberate incompatible bumps.
+  dedicatedGeneration = builtins.hashString "sha256" "anvil-agentdeck-session-protocol-v1|${generationSalt}";
   dedicatedLauncherInner = writeShellApplication {
     name = "anvil-mcp-inner";
     runtimeInputs = [
