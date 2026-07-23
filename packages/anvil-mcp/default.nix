@@ -1885,7 +1885,7 @@ let
                   #'anvil-headless--direnv-update-current-buffer)
 
         (defun anvil-headless--direnv-around-host-run
-            (original command coding cwd timeout)
+            (original command coding cwd timeout &optional max-output)
           "Run ORIGINAL with a baseline-derived, allowed child environment."
           (unless (and anvil-headless--baseline-process-environment
                        anvil-headless--baseline-exec-path)
@@ -1936,7 +1936,7 @@ let
                    "${dedicatedChildShell}/bin/anvil-headless-child-shell")
                   (anvil-host-child-shell-command-switch
                    anvil-headless--baseline-shell-command-switch))
-              (funcall original command coding cwd timeout))))
+              (funcall original command coding cwd timeout max-output))))
 
         (with-eval-after-load 'anvil-host
           (advice-add 'anvil-host--run

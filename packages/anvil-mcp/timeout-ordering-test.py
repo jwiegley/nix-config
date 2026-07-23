@@ -16,7 +16,7 @@ import time
 
 
 def percent_wire(payload: bytes) -> str:
-    """Encode PAYLOAD for anvil-stdio's process-free response wire."""
+    """Encode PAYLOAD for the fake-client environment."""
     return "".join(f"%{byte:02x}" for byte in payload)
 
 
@@ -221,7 +221,10 @@ def assert_static_ordering(
         raise AssertionError("legacy overloaded emacsclient timeout remains")
     for fragment in (
         "IFS= read -r -d '' -n",
-        '-t "$remaining" chunk <&7',
+        'anvil_mcp_run_bounded "$frame_remaining" merge descriptor "" frame-body',
+        "chunk = os.read(0, min(65536, remaining))",
+        'local grace="${ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT:-1}"',
+        '-t "$remaining" ignored <&7',
         'ANVIL_HEADLESS_PARENT_PID="$ANVIL_MCP_RUNNER_PID"',
         "import os; print(os.getppid())",
         "set -m",
@@ -248,10 +251,10 @@ def assert_static_ordering(
     direct_kill_waits = stdio_text.count(
         '-t "$ANVIL_EMACSCLIENT_KILL_AFTER_TIMEOUT"'
     )
-    bounded_discard_waits = stdio_text.count(
-        "anvil_mcp_discard_until_sentinel \\\n"
+    bounded_retirement_waits = stdio_text.count(
+        "\tanvil_mcp_drain_runner_output\n"
     )
-    if direct_kill_waits < 2 or bounded_discard_waits < 4:
+    if direct_kill_waits < 1 or bounded_retirement_waits < 2:
         raise AssertionError("bounded runner cleanup lacks policy-controlled waits")
     shell_default_timeout = elisp_assignment(
         shell_filter_text, "anvil-shell-filter-max-sync-timeout"
@@ -342,10 +345,12 @@ def assert_static_ordering(
 def fake_emacsclient(path: Path) -> None:
     """Create a stateful fake client that can stall readiness and dispatch."""
     path.write_text(
-        f"""#!{sys.executable}
+        r"""#!__PYTHON__
+import base64
 import json
 import os
 from pathlib import Path
+import re
 import signal
 import sys
 import time
@@ -359,6 +364,44 @@ def bump(name):
         value = 0
     path.write_text(str(value + 1), encoding="utf-8")
     return value + 1
+
+
+def decode_wire(text):
+    if re.fullmatch(r"(?:%[0-9A-Fa-f]{2})*", text) is None:
+        raise ValueError("invalid fake response wire")
+    return bytes.fromhex(text.replace("%", ""))
+
+
+def publish_response(expression):
+    decoded = []
+    for payload in re.findall(
+        r'base64-decode-string "([A-Za-z0-9+/=]+)"', expression
+    ):
+        try:
+            value = base64.b64decode(payload, validate=True).decode("utf-8")
+        except (ValueError, UnicodeDecodeError):
+            continue
+        if os.path.isabs(value):
+            decoded.append(Path(value))
+    stages = []
+    for candidate in decoded:
+        match = re.fullmatch(r"\.response-tmp\.([0-9]+)\..+", candidate.name)
+        if match is not None and int(match.group(1)) > 0:
+            stages.append((candidate, int(match.group(1))))
+    if len(stages) != 1:
+        print(f"missing unique response stage: {decoded}", file=sys.stderr)
+        raise SystemExit(70)
+    stage, sequence = stages[0]
+    wire = decode_wire(os.environ["FAKE_RESPONSE_WIRE"])
+    final = stage.parent / f"response.{sequence}.json"
+    proof = stage.parent / f"proof.{sequence}.json"
+    with stage.open("wb") as stream:
+        stream.write(wire)
+    os.link(stage, final)
+    os.link(stage, proof)
+    stage.unlink()
+    marker = f"anvil-mcp-response-staged:{sequence}:{len(wire)}"
+    print(json.dumps(marker))
 
 
 expression = sys.argv[-1]
@@ -376,8 +419,8 @@ else:
     if os.environ.get("FAKE_TRAP_TERM") == "1":
         signal.signal(signal.SIGTERM, lambda _signum, _frame: None)
     time.sleep(float(os.environ["FAKE_DISPATCH_STALL_SECONDS"]))
-    print(json.dumps(os.environ["FAKE_RESPONSE_WIRE"]))
-""",
+    publish_response(expression)
+""".replace("__PYTHON__", sys.executable),
         encoding="utf-8",
     )
     path.chmod(path.stat().st_mode | stat.S_IXUSR)

@@ -248,11 +248,14 @@ runCommand "anvil-mcp-dedicated-smoke"
       ${bash}/bin/bash \
       ${anvilMcp.dedicatedParentGuardLauncher} \
       ${python3}/bin/python3
-    ${coreutils}/bin/timeout 60 \
+    # Match upstream's whole-harness envelope; individual bridge phases keep
+    # their stricter production deadlines.
+    ${coreutils}/bin/timeout --kill-after=90 900 \
       ${python3}/bin/python3 -I -B -u \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/tests/anvil-stdio-readiness-test.py \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh \
-      ${bash}/bin/bash
+      ${bash}/bin/bash \
+      ${anvilMcp.dedicatedRuntimeEmacs}/bin/emacs
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./stdio-concurrency-test.py} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh
