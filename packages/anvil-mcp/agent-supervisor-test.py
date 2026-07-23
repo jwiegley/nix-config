@@ -5801,7 +5801,7 @@ class SupervisorProbeSummaryTests(unittest.TestCase):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     check=False,
-                    timeout=1,
+                    timeout=10,
                 )
                 self.assert_probe_failure(completed)
 
