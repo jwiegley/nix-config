@@ -1324,8 +1324,10 @@ let
       "agent-deck"
       "codex-notify"
     ];
-    hooks = expectedCodexHooks;
     mcp_servers = expectedCodexMcp profileId;
+  };
+  expectedCodexHookFile = {
+    hooks = expectedCodexHooks;
   };
 
   expectedClaudePaths =
@@ -1354,7 +1356,10 @@ let
       ++ map (name: ".agents/skills/${name}") (selectedNames profileId "skills")
       ++ map (name: ".agents/skills/command-${name}") (selectedNames profileId "commands")
       ++ map (name: ".agents/skills/prompt-${name}") (selectedNames profileId "prompts")
-      ++ [ "${root}/nix-managed.config.toml" ]
+      ++ [
+        "${root}/hooks.json"
+        "${root}/nix-managed.config.toml"
+      ]
     );
   expectedOpenCodePaths =
     profileId:
@@ -1432,7 +1437,6 @@ let
       ".agents"
       ".agents/skills"
       "${root}/config.toml"
-      "${root}/hooks.json"
       "${root}/auth.json"
       "${root}/history.jsonl"
     ];
@@ -1675,6 +1679,12 @@ let
           "$env:"
           "?apiKey="
         ];
+      }
+      {
+        kind = "json";
+        label = "${profileId} hooks";
+        path = documentSource "${profileId}-hooks.json" (file "${profile.root}/hooks.json");
+        expected = expectedCodexHookFile;
       }
     ]
     ++ lib.mapAttrsToList (name: item: {
@@ -1957,6 +1967,7 @@ let
       [
         (expectEqual "${profileId} selected resource paths" paths (expectedCodexPaths profileId))
         (expectEqual "${profileId} companions" render.companions [
+          "${profile.root}/hooks.json"
           "${profile.root}/nix-managed.config.toml"
         ])
         (expectEqual "${profileId} required environment" render.requiredEnvNames [
@@ -2614,6 +2625,7 @@ let
     ".claude/nix-managed-settings.json"
     ".claude/statusline-command.sh"
     ".codex/nix-managed.config.toml"
+    ".codex/hooks.json"
     ".config/claude/personal/nix-managed-mcp.json"
     ".config/claude/personal/nix-managed-settings.json"
     ".config/claude/personal/statusline-command.sh"
@@ -2621,6 +2633,7 @@ let
     ".config/claude/positron/nix-managed-settings.json"
     ".config/claude/positron/statusline-command.sh"
     ".config/codex/nix-managed.config.toml"
+    ".config/codex/hooks.json"
     ".config/factory/mcp.json"
     ".config/factory/nix-managed-settings.json"
     ".config/mcp/mcp.json"

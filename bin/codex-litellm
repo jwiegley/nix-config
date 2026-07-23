@@ -15,31 +15,47 @@ if [[ ! -x $codex_bin ]]; then
     exit 1
 fi
 
-credential=""
-if ! credential=$("$pass_bin" litellm.vulcan.lan); then
-    echo "codex: LiteLLM credential is unavailable or empty" >&2
-    exit 1
-fi
-LITELLM_API_KEY=${credential%%$'\n'*}
-unset credential
-if [[ -z $LITELLM_API_KEY ]]; then
-    echo "codex: LiteLLM credential is unavailable or empty" >&2
-    exit 1
-fi
-export LITELLM_API_KEY
+load_credential() {
+    local entry=$1
+    local label=$2
+    local variable=$3
+    local credential=""
+
+    if ! credential=$("$pass_bin" "$entry"); then
+        echo "codex: $label credential is unavailable or empty" >&2
+        exit 1
+    fi
+    credential=${credential%%$'\n'*}
+    if [[ -z $credential ]]; then
+        echo "codex: $label credential is unavailable or empty" >&2
+        exit 1
+    fi
+    printf -v "$variable" '%s' "$credential"
+}
+
+LITELLM_API_KEY=""
+REF_API_KEY=""
+load_credential litellm.vulcan.lan LiteLLM LITELLM_API_KEY
+load_credential api.ref.tools Ref REF_API_KEY
+export LITELLM_API_KEY REF_API_KEY
 
 routed_model=positron_openai/gpt-5.6-sol
+short_model=gpt-5.6-sol
+is_routed_model() {
+    [[ $1 == "$routed_model" || $1 == "$short_model" ]]
+}
+
 forward_args=()
 while (($#)); do
     if [[ $1 == -- ]]; then
         forward_args+=("$@")
         break
     fi
-    if [[ ($1 == -m || $1 == --model) && $# -ge 2 && $2 == "$routed_model" ]]; then
+    if [[ ($1 == -m || $1 == --model) && $# -ge 2 ]] && is_routed_model "$2"; then
         shift 2
         continue
     fi
-    if [[ $1 == "--model=$routed_model" ]]; then
+    if [[ $1 == --model=* ]] && is_routed_model "${1#--model=}"; then
         shift
         continue
     fi
@@ -56,6 +72,8 @@ litellm_args=(
     -c 'model_providers.litellm.wire_api="responses"'
     -c 'shell_environment_policy.filters.LITELLM_API_KEY="exclude"'
     -c 'shell_environment_policy.set.LITELLM_API_KEY=""'
+    -c 'shell_environment_policy.filters.REF_API_KEY="exclude"'
+    -c 'shell_environment_policy.set.REF_API_KEY=""'
 )
 
 if [[ ${forward_args[0]:-} == exec ]]; then

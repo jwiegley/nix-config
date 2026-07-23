@@ -13,6 +13,7 @@ assert builtins.isString homeDirectory;
 assert builtins.isString xdgConfigHome;
 
 let
+  json = pkgs.formats.json { };
   toml = pkgs.formats.toml { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
@@ -50,10 +51,12 @@ let
   hookItems = builtins.attrValues selected.hooks;
   managedConfig = {
     notify = lib.concatMap (item: item.codex.notify or [ ]) hookItems;
+    mcp_servers = lib.mapAttrs (_: renderMcpServer) selected.mcpServers;
+  };
+  managedHooks = {
     hooks = lib.zipAttrsWith (_: bodies: lib.concatLists bodies) (
       map (item: item.hooks or { }) hookItems
     );
-    mcp_servers = lib.mapAttrs (_: renderMcpServer) selected.mcpServers;
   };
 
   projectionText =
@@ -106,6 +109,7 @@ let
   ) selected.prompts;
 
   managedPath = "${profile.root}/nix-managed.config.toml";
+  hooksPath = "${profile.root}/hooks.json";
 in
 {
   files = mergeFiles [
@@ -114,11 +118,15 @@ in
     commandFiles
     promptFiles
     {
+      "${hooksPath}".source = json.generate "codex-hooks.json" managedHooks;
       "${managedPath}".source = toml.generate "codex-nix-managed.config.toml" managedConfig;
     }
   ];
 
-  companions = [ managedPath ];
+  companions = [
+    hooksPath
+    managedPath
+  ];
 
   requiredEnvNames = [
     "CONTEXT7_API_KEY"

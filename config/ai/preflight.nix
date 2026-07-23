@@ -37,6 +37,7 @@ let
     ".claude/nix-managed-mcp.json"
     ".claude/nix-managed-settings.json"
     ".claude/statusline-command.sh"
+    ".codex/hooks.json"
     ".codex/nix-managed.config.toml"
     ".config/claude/personal/nix-managed-mcp.json"
     ".config/claude/personal/nix-managed-settings.json"
@@ -44,6 +45,7 @@ let
     ".config/claude/positron/nix-managed-mcp.json"
     ".config/claude/positron/nix-managed-settings.json"
     ".config/claude/positron/statusline-command.sh"
+    ".config/codex/hooks.json"
     ".config/codex/nix-managed.config.toml"
     ".config/factory/mcp.json"
     ".config/factory/nix-managed-settings.json"
@@ -297,6 +299,7 @@ let
         .claude/nix-managed-mcp.json | \
         .claude/nix-managed-settings.json | \
         .claude/statusline-command.sh | \
+        .codex/hooks.json | \
         .codex/nix-managed.config.toml | \
         .config/claude/personal/nix-managed-mcp.json | \
         .config/claude/personal/nix-managed-settings.json | \
@@ -304,6 +307,7 @@ let
         .config/claude/positron/nix-managed-mcp.json | \
         .config/claude/positron/nix-managed-settings.json | \
         .config/claude/positron/statusline-command.sh | \
+        .config/codex/hooks.json | \
         .config/codex/nix-managed.config.toml | \
         .config/factory/mcp.json | \
         .config/factory/nix-managed-settings.json | \
