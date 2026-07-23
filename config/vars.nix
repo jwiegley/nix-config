@@ -17,12 +17,12 @@ let
   master_key = "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2";
   signing_key = "12D70076AB504679";
 
-  gitAiEnabled =
-    (inputs ? git-ai)
-    && !(builtins.elem hostname [
-      "hera"
-      "jw"
-    ]);
+  gitAiEnabled = false;
+  #  (inputs ? git-ai)
+  #  && !(builtins.elem hostname [
+  #    "hera"
+  #    "jw"
+  #  ]);
 
   gitPkg =
     if gitAiEnabled then
