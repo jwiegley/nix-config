@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+set +x
+
+if (($# == 0)); then
+    echo "agent-deck-litellm-env: command is required" >&2
+    exit 2
+fi
+
+user=${USER:-$(id -un)}
+pass_bin=${AGENT_DECK_LITELLM_PASS_BIN:-/etc/profiles/per-user/${user}/bin/pass}
+
+if [[ ! -x $pass_bin ]]; then
+    echo "agent-deck-litellm-env: LiteLLM credential helper is unavailable" >&2
+    exit 1
+fi
+
+credential=""
+if ! credential=$("$pass_bin" litellm.vulcan.lan); then
+    echo "agent-deck-litellm-env: LiteLLM credential is unavailable or empty" >&2
+    exit 1
+fi
+LITELLM_API_KEY=${credential%%$'\n'*}
+unset credential
+
+if [[ -z $LITELLM_API_KEY ]]; then
+    echo "agent-deck-litellm-env: LiteLLM credential is unavailable or empty" >&2
+    exit 1
+fi
+
+export LITELLM_API_KEY
+exec "$@"
