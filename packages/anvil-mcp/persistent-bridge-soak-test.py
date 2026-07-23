@@ -496,6 +496,140 @@ def test_request_preserves_absolute_deadline(smoke_path: Path) -> None:
         )
 
 
+def test_readiness_retry_preserves_absolute_deadline(smoke_path: Path) -> None:
+    """Keep every readiness attempt and retry sleep inside one deadline."""
+    smoke = load_module(smoke_path, "agent_supervisor_smoke_readiness_deadline_test")
+    now = [100.0]
+    observed: list[dict[str, float]] = []
+    sleeps: list[float] = []
+
+    class Bridge:
+        def call_tool(self, _name, _arguments, **bounds):
+            observed.append(bounds)
+            if len(observed) == 1:
+                # A valid readiness response may take longer than the former
+                # nested 30-second cap while remaining inside the 45s phase.
+                now[0] = 132.0
+                return {
+                    "error": {
+                        "data": {
+                            "phase": "readiness",
+                            "dispatched": False,
+                            "replayed": False,
+                        }
+                    }
+                }
+            now[0] = 140.0
+            return {"result": {}}
+
+    def sleep(delay: float) -> None:
+        sleeps.append(delay)
+        now[0] += delay
+
+    with (
+        mock.patch.object(smoke.time, "monotonic", side_effect=lambda: now[0]),
+        mock.patch.object(smoke.time, "sleep", side_effect=sleep),
+    ):
+        response = smoke.call_after_readiness(
+            Bridge(), "emacs-eval", {"expression": "(+ 40 2)"}, timeout=45.0
+        )
+    if response != {"result": {}}:
+        raise AssertionError(f"readiness retry returned the wrong result: {response!r}")
+    if observed != [{"deadline": 145.0}, {"deadline": 145.0}]:
+        raise AssertionError(
+            f"readiness retry re-anchored its absolute deadline: {observed!r}"
+        )
+    if sleeps != [0.5]:
+        raise AssertionError(f"readiness retry cadence drifted: {sleeps!r}")
+
+    now[0] = 100.0
+    observed.clear()
+    sleeps.clear()
+
+    class LateBridge:
+        def call_tool(self, _name, _arguments, **bounds):
+            observed.append(bounds)
+            now[0] = 144.8
+            return {
+                "error": {
+                    "data": {
+                        "phase": "readiness",
+                        "dispatched": False,
+                        "replayed": False,
+                    }
+                }
+            }
+
+    with (
+        mock.patch.object(smoke.time, "monotonic", side_effect=lambda: now[0]),
+        mock.patch.object(smoke.time, "sleep", side_effect=sleep),
+    ):
+        try:
+            smoke.call_after_readiness(
+                LateBridge(),
+                "emacs-eval",
+                {"expression": "(+ 40 2)"},
+                timeout=45.0,
+            )
+        except AssertionError as error:
+            if "did not recover before deadline" not in str(error):
+                raise
+        else:
+            raise AssertionError("late readiness retry escaped its phase deadline")
+    if observed != [{"deadline": 145.0}]:
+        raise AssertionError(
+            f"late readiness retry lost its absolute deadline: {observed!r}"
+        )
+    if len(sleeps) != 1 or not 0 < sleeps[0] <= 0.21:
+        raise AssertionError(
+            f"readiness retry sleep crossed its phase deadline: {sleeps!r}"
+        )
+
+
+def test_proxy_bridge_preserves_absolute_deadline(smoke_path: Path) -> None:
+    """Carry an absolute deadline through the owner proxy unchanged."""
+    smoke = load_module(smoke_path, "agent_supervisor_smoke_proxy_deadline_test")
+    owner = SimpleNamespace(rpc=mock.Mock(return_value={"result": {}}))
+    bridge = smoke.ProxyBridge(owner, "bridge-1", 123)
+    with mock.patch.object(smoke.time, "monotonic", return_value=100.0):
+        try:
+            response = bridge.call_tool(
+                "emacs-eval", {"expression": "(+ 40 2)"}, deadline=145.0
+            )
+        except TypeError as error:
+            raise AssertionError(
+                "proxy tool call cannot preserve an absolute deadline"
+            ) from error
+    if response != {"result": {}}:
+        raise AssertionError(
+            f"proxy deadline call returned the wrong result: {response!r}"
+        )
+    expected_payload = {
+        "operation": "request",
+        "bridge_id": "bridge-1",
+        "method": "tools/call",
+        "params": {
+            "name": "emacs-eval",
+            "arguments": {"expression": "(+ 40 2)"},
+        },
+        "deadline": 145.0,
+    }
+    if owner.rpc.call_args != mock.call(expected_payload, deadline=145.0):
+        raise AssertionError(
+            f"proxy re-anchored its absolute deadline: {owner.rpc.call_args!r}"
+        )
+
+    owner.rpc.reset_mock()
+    bridge.call_tool("emacs-eval", {"expression": "(+ 40 2)"})
+    default_payload = dict(expected_payload)
+    default_payload.pop("deadline")
+    default_payload["timeout"] = 60.0
+    if owner.rpc.call_args != mock.call(default_payload, timeout=70.0):
+        raise AssertionError(
+            f"proxy default timeout compatibility drifted: {owner.rpc.call_args!r}"
+        )
+
+
 def test_async_poll_deadline(soak_path: Path) -> None:
     """Prove the nested result request cannot overrun the poll deadline."""
     soak = load_module(soak_path, "persistent_soak_async_poll_test")
@@ -1163,6 +1297,8 @@ def main() -> None:
     test_phase_timeout_ownership(soak)
     test_response_reader(soak, smoke)
     test_request_preserves_absolute_deadline(smoke)
+    test_proxy_bridge_preserves_absolute_deadline(smoke)
+    test_readiness_retry_preserves_absolute_deadline(smoke)
     test_async_poll_deadline(soak)
     test_async_marker_readiness(soak)
     test_recovered_async_requires_child(soak)

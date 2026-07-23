@@ -508,7 +508,8 @@ def owner_proxy_main(connection, launcher_raw: str) -> None:
                     value = bridges[request["bridge_id"]].request(
                         request["method"],
                         request.get("params"),
-                        request["timeout"],
+                        request.get("timeout"),
+                        deadline=request.get("deadline"),
                     )
                 elif operation == "close":
                     bridge_id = request["bridge_id"]
@@ -598,13 +599,33 @@ class OwnerProxy:
             raise AssertionError("owner proxy has no PID")
         return self.process.pid
 
-    def rpc(self, payload: dict[str, object], timeout: float = 30.0):
+    def rpc(
+        self,
+        payload: dict[str, object],
+        timeout: float | None = None,
+        *,
+        deadline: float | None = None,
+    ):
         if self.connection_closed or not self.is_alive():
             raise AssertionError(
                 f"owner proxy {self.process.name} exited with {self.process.exitcode}"
             )
+        if timeout is not None and deadline is not None:
+            raise AssertionError(
+                "owner RPC timeout and deadline are mutually exclusive"
+            )
+        if deadline is None:
+            poll_timeout = 30.0 if timeout is None else timeout
+        else:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise AssertionError("owner RPC deadline has already expired")
+            # The child bridge owns the exact response deadline.  Retain the
+            # existing scheduling margin only to collect its terminal reply,
+            # never to extend the request sent to the daemon.
+            poll_timeout = remaining + RPC_SCHEDULING_MARGIN_SECONDS
         self.connection.send(payload)
-        if not self.connection.poll(timeout):
+        if not self.connection.poll(poll_timeout):
             raise AssertionError(
                 f"owner proxy {self.process.name} timed out during "
                 f"{payload.get('operation')}"
@@ -705,18 +726,28 @@ class ProxyBridge:
         self,
         method: str,
         params: object | None = None,
-        timeout: float = 60.0,
+        timeout: float | None = None,
+        *,
+        deadline: float | None = None,
     ) -> dict[str, object]:
-        return self.owner.rpc(
-            {
-                "operation": "request",
-                "bridge_id": self.bridge_id,
-                "method": method,
-                "params": params,
-                "timeout": timeout,
-            },
-            timeout=timeout + 10,
-        )
+        if timeout is not None and deadline is not None:
+            raise AssertionError(
+                "proxy request timeout and deadline are mutually exclusive"
+            )
+        payload: dict[str, object] = {
+            "operation": "request",
+            "bridge_id": self.bridge_id,
+            "method": method,
+            "params": params,
+        }
+        if deadline is not None:
+            if deadline <= time.monotonic():
+                raise AssertionError("proxy request deadline has already expired")
+            payload["deadline"] = deadline
+            return self.owner.rpc(payload, deadline=deadline)
+        effective_timeout = 60.0 if timeout is None else timeout
+        payload["timeout"] = effective_timeout
+        return self.owner.rpc(payload, timeout=effective_timeout + 10)
 
     def initialize(self) -> None:
         response = self.request(
@@ -738,12 +769,15 @@ class ProxyBridge:
         self,
         name: str,
         arguments: dict[str, object],
-        timeout: float = 60.0,
+        timeout: float | None = None,
+        *,
+        deadline: float | None = None,
     ) -> dict[str, object]:
         return self.request(
             "tools/call",
             {"name": name, "arguments": arguments},
             timeout=timeout,
+            deadline=deadline,
         )
 
     def close(self) -> None:
@@ -1089,7 +1123,7 @@ def verify_home_snapshot_detects_ephemeral_child() -> None:
 
 
 def call_after_readiness(
-    bridge: ProxyBridge,
+    bridge: BridgeProcess | ProxyBridge,
     name: str,
     arguments: dict[str, object],
     timeout: float = 150.0,
@@ -1098,7 +1132,7 @@ def call_after_readiness(
     deadline = time.monotonic() + timeout
     last_response = None
     while time.monotonic() < deadline:
-        response = bridge.call_tool(name, arguments, timeout=30)
+        response = bridge.call_tool(name, arguments, deadline=deadline)
         if "error" not in response:
             return response
         error = response.get("error")
@@ -1111,7 +1145,10 @@ def call_after_readiness(
         ):
             raise AssertionError(f"unsafe recovery response: {response}")
         last_response = response
-        time.sleep(0.5)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        time.sleep(min(0.5, remaining))
     raise AssertionError(f"daemon did not recover before deadline: {last_response}")
 
 
