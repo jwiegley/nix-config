@@ -1083,6 +1083,9 @@ let
   dedicatedAgentSupervisor = writeText "anvil-agent-supervisor.py" (
     builtins.readFile ./agent-supervisor.py
   );
+  watchdogTestSupport = writeText "watchdog-test-support.py" (
+    builtins.readFile ./watchdog-test-support.py
+  );
 
   dedicatedChildShellSource = writeTextFile {
     name = "anvil-headless-child-shell.py";
@@ -2111,9 +2114,13 @@ let
     import ctypes
     import errno
     import fcntl
+    import json
     import math
     import os
+    import re
+    import secrets
     import signal
+    import socket
     import stat
     import sys
     import time
@@ -2123,6 +2130,68 @@ let
     LOCK_NAME = ".anvil-headless-emacs.lock"
     PULSE_NAME = ".anvil-root-pulse"
     LEASE_NAME = ".anvil-root-async-lease"
+    ACTIVITY_NAME = ".anvil-root-activity.sock"
+    UNIX_SOCKET_PATH_BYTES = 103 if sys.platform == "darwin" else 107
+    ACTIVITY_MAX_BYTES = 1024
+    EVENT_MAX_BYTES = 512
+    RUN_ID_PATTERN = re.compile(r"[0-9a-f]{32}")
+    TOOL_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,127}")
+    ACTIVITY_PHASES = frozenset((
+        "startup",
+        "parse",
+        "dispatch",
+        "tool-call",
+        "result-encode",
+        "response-write",
+        "idle",
+    ))
+    ACTIVITY_METHODS = frozenset((
+        "none",
+        "initialize",
+        "notifications/initialized",
+        "ping",
+        "tools/list",
+        "tools/call",
+        "resources/list",
+        "resources/read",
+        "resources/templates/list",
+        "other",
+    ))
+    WATCHDOG_CAUSES = frozenset((
+        "startup-timeout",
+        "heartbeat-timeout",
+        "dispatch-timeout",
+        "lock-integrity-failure",
+        "monitor-state-invalid",
+        "durable-refresh-failure",
+        "monitor-internal-error",
+    ))
+    ACTIVITY_KEYS = frozenset((
+        "schema_version",
+        "run_id",
+        "daemon_pid",
+        "sequence",
+        "phase",
+        "method",
+        "tool",
+        "phase_started_unix_ms",
+        "observed_at_unix_ms",
+    ))
+    EVENT_KEYS = frozenset((
+        "schema_version",
+        "run_id",
+        "daemon_pid",
+        "cause",
+        "phase",
+        "method",
+        "tool",
+        "observed_at_unix_ms",
+        "daemon_uptime_ms",
+        "heartbeat_age_ms",
+        "heartbeat_limit_ms",
+        "dispatch_age_ms",
+        "dispatch_limit_ms",
+    ))
     DEFAULT_REFRESH_SECONDS = 6 * 60 * 60
     DEFAULT_STARTUP_SECONDS = ${toString timeoutPolicy.watchdogStartupSeconds}
     DEFAULT_NORMAL_SECONDS = ${toString timeoutPolicy.watchdogHeartbeatSeconds}
@@ -2219,6 +2288,437 @@ let
         if not math.isfinite(value) or value <= 0:
             fail(f"{name} must be positive and finite", EXIT_CONFIG)
         return value
+
+
+    def strict_json_object(raw):
+        """Decode one strict UTF-8 JSON object without duplicate keys."""
+        if isinstance(raw, bytes):
+            text = raw.decode("utf-8", errors="strict")
+        elif isinstance(raw, str):
+            text = raw
+        else:
+            raise ValueError("JSON frame must be bytes or text")
+
+        def reject_constant(value):
+            raise ValueError(f"non-finite JSON constant: {value}")
+
+        def unique_object(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError(f"duplicate JSON key: {key}")
+                result[key] = value
+            return result
+
+        value = json.loads(
+            text,
+            object_pairs_hook=unique_object,
+            parse_constant=reject_constant,
+        )
+        if not isinstance(value, dict):
+            raise ValueError("JSON frame must be an object")
+        return value
+
+
+    def canonical_json_line(value):
+        return (
+            json.dumps(
+                value,
+                ensure_ascii=False,
+                allow_nan=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            + "\n"
+        ).encode("utf-8", errors="strict")
+
+
+    def frame_object(value, maximum_bytes):
+        if isinstance(value, (bytes, str)):
+            encoded = value if isinstance(value, bytes) else value.encode("utf-8")
+            if len(encoded) > maximum_bytes:
+                raise ValueError("JSON frame exceeds byte ceiling")
+            if encoded.endswith(b"\n"):
+                encoded = encoded[:-1]
+            if b"\n" in encoded or b"\r" in encoded:
+                raise ValueError("JSON frame contains an embedded newline")
+            value = strict_json_object(encoded)
+        elif not isinstance(value, dict):
+            raise ValueError("JSON frame must be an object")
+        if len(canonical_json_line(value)) > maximum_bytes:
+            raise ValueError("JSON frame exceeds byte ceiling")
+        return value
+
+
+    def exact_nonnegative_integer(value, field, positive=False):
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(f"{field} must be an integer")
+        if value < (1 if positive else 0):
+            raise ValueError(f"{field} is out of range")
+        return value
+
+
+    def validate_run_id(value):
+        if not isinstance(value, str) or RUN_ID_PATTERN.fullmatch(value) is None:
+            raise ValueError("run_id must be 32 lowercase hexadecimal characters")
+        return value
+
+
+    def validate_tool(value):
+        if value is not None and (
+            not isinstance(value, str) or TOOL_PATTERN.fullmatch(value) is None
+        ):
+            raise ValueError("tool is not telemetry-safe")
+        return value
+
+
+    def validate_activity(value, expected_run_id, expected_pid, last_sequence):
+        value = frame_object(value, ACTIVITY_MAX_BYTES)
+        if set(value) != ACTIVITY_KEYS:
+            raise ValueError("activity frame has the wrong key set")
+        if value["schema_version"] != 1 or isinstance(
+            value["schema_version"], bool
+        ):
+            raise ValueError("unsupported activity schema")
+        validate_run_id(value["run_id"])
+        if value["run_id"] != expected_run_id:
+            raise ValueError("activity run_id mismatch")
+        exact_nonnegative_integer(value["daemon_pid"], "daemon_pid", True)
+        if value["daemon_pid"] != expected_pid:
+            raise ValueError("activity daemon_pid mismatch")
+        exact_nonnegative_integer(value["sequence"], "sequence")
+        if value["sequence"] <= last_sequence:
+            raise ValueError("activity sequence did not advance")
+        if not isinstance(value["phase"], str) or value["phase"] not in ACTIVITY_PHASES:
+            raise ValueError("invalid activity phase")
+        if not isinstance(value["method"], str) or value["method"] not in ACTIVITY_METHODS:
+            raise ValueError("invalid activity method")
+        validate_tool(value["tool"])
+        exact_nonnegative_integer(
+            value["phase_started_unix_ms"], "phase_started_unix_ms"
+        )
+        exact_nonnegative_integer(
+            value["observed_at_unix_ms"], "observed_at_unix_ms"
+        )
+        return value
+
+
+    def validate_watchdog_event(value, expected_run_id, expected_pid):
+        value = frame_object(value, EVENT_MAX_BYTES)
+        if set(value) != EVENT_KEYS:
+            raise ValueError("watchdog event has the wrong key set")
+        if value["schema_version"] != 1 or isinstance(
+            value["schema_version"], bool
+        ):
+            raise ValueError("unsupported watchdog event schema")
+        validate_run_id(value["run_id"])
+        if value["run_id"] != expected_run_id:
+            raise ValueError("watchdog event run_id mismatch")
+        exact_nonnegative_integer(value["daemon_pid"], "daemon_pid", True)
+        if value["daemon_pid"] != expected_pid:
+            raise ValueError("watchdog event daemon_pid mismatch")
+        if not isinstance(value["cause"], str) or value["cause"] not in WATCHDOG_CAUSES:
+            raise ValueError("invalid watchdog cause")
+        if not isinstance(value["phase"], str) or value["phase"] not in ACTIVITY_PHASES | {"unknown"}:
+            raise ValueError("invalid watchdog phase")
+        if not isinstance(value["method"], str) or value["method"] not in ACTIVITY_METHODS:
+            raise ValueError("invalid watchdog method")
+        validate_tool(value["tool"])
+        for field in ("observed_at_unix_ms", "daemon_uptime_ms"):
+            exact_nonnegative_integer(value[field], field)
+        for age_field, limit_field in (
+            ("heartbeat_age_ms", "heartbeat_limit_ms"),
+            ("dispatch_age_ms", "dispatch_limit_ms"),
+        ):
+            age = value[age_field]
+            limit = value[limit_field]
+            if (age is None) != (limit is None):
+                raise ValueError(
+                    f"{age_field} and {limit_field} must have matching nullness"
+                )
+            if age is not None:
+                exact_nonnegative_integer(age, age_field)
+                exact_nonnegative_integer(limit, limit_field)
+        return value
+
+
+    def select_deadline_cause(
+        now,
+        heartbeat_anchor,
+        heartbeat_limit,
+        dispatch_anchor,
+        dispatch_limit,
+    ):
+        deadlines = []
+        if heartbeat_anchor is not None:
+            deadline = heartbeat_anchor + heartbeat_limit
+            if now >= deadline:
+                deadlines.append((deadline, "heartbeat-timeout"))
+        if dispatch_anchor is not None:
+            deadline = dispatch_anchor + dispatch_limit
+            if now >= deadline:
+                deadlines.append((deadline, "dispatch-timeout"))
+        if not deadlines:
+            return None
+        return min(deadlines, key=lambda item: item[0])[1]
+
+
+    def write_watchdog_event(descriptor, event):
+        """Best-effort one atomic nonblocking write of EVENT."""
+        try:
+            if os.fpathconf(descriptor, "PC_PIPE_BUF") < EVENT_MAX_BYTES:
+                return False
+            candidate = dict(event)
+            payload = canonical_json_line(candidate)
+            if len(payload) > EVENT_MAX_BYTES and candidate.get("tool") is not None:
+                candidate["tool"] = None
+                payload = canonical_json_line(candidate)
+            validate_watchdog_event(
+                candidate,
+                candidate.get("run_id"),
+                candidate.get("daemon_pid"),
+            )
+            if len(payload) > EVENT_MAX_BYTES:
+                return False
+            return os.write(descriptor, payload) == len(payload)
+        except BaseException:
+            return False
+
+
+    def validate_event_descriptor(descriptor):
+        if isinstance(descriptor, bool) or not isinstance(descriptor, int):
+            fail("watchdog event descriptor must be an integer", EXIT_CONFIG)
+        if descriptor <= 9:
+            fail("watchdog event descriptor must be above 9", EXIT_CONFIG)
+        try:
+            info = os.fstat(descriptor)
+            flags = fcntl.fcntl(descriptor, fcntl.F_GETFL)
+            pipe_buf = os.fpathconf(descriptor, "PC_PIPE_BUF")
+        except OSError as error:
+            fail(f"invalid watchdog event descriptor: {error}", EXIT_CONFIG)
+        if not stat.S_ISFIFO(info.st_mode):
+            fail("watchdog event descriptor is not a pipe", EXIT_CONFIG)
+        if flags & os.O_ACCMODE != os.O_WRONLY:
+            fail("watchdog event descriptor is not write-only", EXIT_CONFIG)
+        if not flags & os.O_NONBLOCK:
+            fail("watchdog event descriptor is blocking", EXIT_CONFIG)
+        if pipe_buf < EVENT_MAX_BYTES:
+            fail("watchdog event pipe has insufficient atomic capacity", EXIT_CONFIG)
+        return descriptor
+
+
+    def private_nonblocking_pipe():
+        read_descriptor = None
+        write_descriptor = None
+        high_descriptor = None
+        try:
+            read_descriptor, write_descriptor = os.pipe()
+            high_descriptor = fcntl.fcntl(write_descriptor, fcntl.F_DUPFD, 10)
+            os.close(write_descriptor)
+            write_descriptor = None
+            os.set_blocking(read_descriptor, False)
+            os.set_blocking(high_descriptor, False)
+            return read_descriptor, high_descriptor
+        except BaseException:
+            for descriptor in (read_descriptor, write_descriptor, high_descriptor):
+                if descriptor is not None:
+                    try:
+                        os.close(descriptor)
+                    except OSError:
+                        pass
+            raise
+
+
+    def configure_watchdog_capabilities(environment):
+        marker_name = "ANVIL_EMACS_WATCHDOG_SUPERVISED"
+        descriptor_name = "ANVIL_EMACS_WATCHDOG_EVENT_FD"
+        run_name = "ANVIL_EMACS_WATCHDOG_RUN_ID"
+        present = tuple(name in environment for name in (
+            marker_name,
+            descriptor_name,
+            run_name,
+        ))
+        if present == (False, False, False):
+            try:
+                discard_descriptor, event_descriptor = private_nonblocking_pipe()
+            except BaseException as error:
+                fail(f"cannot create compatibility watchdog pipe: {error}")
+            run_id = secrets.token_hex(16)
+            environment[run_name] = run_id
+            return {
+                "supervised": False,
+                "run_id": run_id,
+                "event_fd": event_descriptor,
+                "discard_fd": discard_descriptor,
+            }
+        if present != (True, True, True) or environment.get(marker_name) != "1":
+            fail("incomplete watchdog supervisor capabilities", EXIT_CONFIG)
+        run_id = environment[run_name]
+        try:
+            validate_run_id(run_id)
+        except ValueError as error:
+            fail(str(error), EXIT_CONFIG)
+        raw_descriptor = environment[descriptor_name]
+        if not raw_descriptor.isascii() or not raw_descriptor.isdecimal():
+            fail("watchdog event descriptor must be decimal", EXIT_CONFIG)
+        event_descriptor = validate_event_descriptor(int(raw_descriptor))
+        environment.pop(marker_name, None)
+        environment.pop(descriptor_name, None)
+        return {
+            "supervised": True,
+            "run_id": run_id,
+            "event_fd": event_descriptor,
+            "discard_fd": None,
+        }
+
+
+    def validate_activity_socket_path(runtime_dir):
+        path = os.path.join(runtime_dir, ACTIVITY_NAME)
+        if not os.path.isabs(runtime_dir) or os.path.normpath(runtime_dir) != runtime_dir:
+            fail("watchdog runtime directory must be absolute and normalized", EXIT_CONFIG)
+        encoded = os.fsencode(path)
+        if len(encoded) > UNIX_SOCKET_PATH_BYTES:
+            fail(
+                "watchdog activity socket exceeds the platform Unix socket limit",
+                EXIT_CONFIG,
+            )
+        return path
+
+
+    def open_activity_directory(path):
+        directory = os.path.dirname(path)
+        descriptor = os.open(
+            directory,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+        )
+        info = os.fstat(descriptor)
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.getuid()
+            or stat.S_IMODE(info.st_mode) != 0o700
+        ):
+            os.close(descriptor)
+            raise OSError(errno.EPERM, "unsafe activity socket directory")
+        return descriptor, os.path.basename(path)
+
+
+    def activity_entry_identity(directory_fd, name):
+        info = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+        if (
+            not stat.S_ISSOCK(info.st_mode)
+            or info.st_uid != os.getuid()
+            or info.st_nlink != 1
+            or stat.S_IMODE(info.st_mode) != 0o600
+        ):
+            raise OSError(errno.EPERM, "unsafe activity socket entry")
+        return info.st_dev, info.st_ino
+
+
+    def safe_unlink_activity(path, expected_identity):
+        directory_fd = None
+        try:
+            directory_fd, name = open_activity_directory(path)
+            try:
+                identity = activity_entry_identity(directory_fd, name)
+            except FileNotFoundError:
+                return True
+            if identity != tuple(expected_identity):
+                return False
+            os.unlink(name, dir_fd=directory_fd)
+            return True
+        except OSError:
+            return False
+        finally:
+            if directory_fd is not None:
+                os.close(directory_fd)
+
+
+    def prepare_activity_listener(runtime_dir):
+        path = validate_activity_socket_path(runtime_dir)
+        directory_fd = None
+        listener = None
+        identity = None
+        try:
+            directory_fd, name = open_activity_directory(path)
+            try:
+                stale_identity = activity_entry_identity(directory_fd, name)
+            except FileNotFoundError:
+                stale_identity = None
+            if stale_identity is not None:
+                os.unlink(name, dir_fd=directory_fd)
+
+            listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            listener.setblocking(False)
+            listener.bind(path)
+            os.chmod(path, 0o600, follow_symlinks=False)
+            identity = activity_entry_identity(directory_fd, name)
+            listener.listen(1)
+            return listener, (path, identity)
+        except BaseException:
+            if listener is not None:
+                listener.close()
+            if identity is not None:
+                safe_unlink_activity(path, identity)
+            fail("cannot prepare watchdog activity socket", EXIT_CONFIG)
+        finally:
+            if directory_fd is not None:
+                os.close(directory_fd)
+
+
+    def accept_activity_connection(listener, activity_entry):
+        try:
+            connection, _address = listener.accept()
+        except BlockingIOError:
+            return None
+        connection.setblocking(False)
+        if not safe_unlink_activity(activity_entry[0], activity_entry[1]):
+            connection.close()
+            raise RuntimeError("watchdog activity socket identity changed")
+        listener.close()
+        return connection
+
+
+    def drain_activity_connection(
+        connection,
+        pending,
+        expected_run_id,
+        expected_pid,
+        last_sequence,
+        activity,
+    ):
+        if connection is None:
+            return None, b"", activity, last_sequence
+        buffer = pending
+        budget = 4096
+        try:
+            while budget > 0:
+                try:
+                    chunk = connection.recv(min(4096, budget))
+                except BlockingIOError:
+                    break
+                if not chunk:
+                    connection.close()
+                    return None, b"", activity, last_sequence
+                budget -= len(chunk)
+                buffer += chunk
+                while b"\n" in buffer:
+                    frame, buffer = buffer.split(b"\n", 1)
+                    if len(frame) + 1 > ACTIVITY_MAX_BYTES:
+                        raise ValueError("activity frame exceeds byte ceiling")
+                    candidate = validate_activity(
+                        frame,
+                        expected_run_id,
+                        expected_pid,
+                        last_sequence,
+                    )
+                    activity = candidate
+                    last_sequence = candidate["sequence"]
+                if len(buffer) > ACTIVITY_MAX_BYTES:
+                    raise ValueError("activity partial frame exceeds byte ceiling")
+        except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
+            connection.close()
+            return None, b"", activity, last_sequence
+        return connection, buffer, activity, last_sequence
 
 
     def file_generation(info):
@@ -2524,7 +3024,53 @@ let
             os.close(root_fd)
 
 
-    def kill_parent_if(parent_pid, verifier):
+    def build_watchdog_event(
+        cause,
+        run_id,
+        parent_pid,
+        monitor_started,
+        now,
+        activity,
+        last_progress,
+        normal_seconds,
+        dispatch_started,
+        dispatch_seconds,
+    ):
+        def elapsed_ms(anchor):
+            if anchor is None:
+                return None
+            return max(0, int((now - anchor) * 1000))
+
+        return {
+            "schema_version": 1,
+            "run_id": run_id,
+            "daemon_pid": parent_pid,
+            "cause": cause,
+            "phase": activity.get("phase", "unknown"),
+            "method": activity.get("method", "none"),
+            "tool": activity.get("tool"),
+            "observed_at_unix_ms": max(0, int(time.time() * 1000)),
+            "daemon_uptime_ms": max(0, int((now - monitor_started) * 1000)),
+            "heartbeat_age_ms": elapsed_ms(last_progress),
+            "heartbeat_limit_ms": (
+                int(normal_seconds * 1000) if last_progress is not None else None
+            ),
+            "dispatch_age_ms": elapsed_ms(dispatch_started),
+            "dispatch_limit_ms": (
+                int(dispatch_seconds * 1000)
+                if dispatch_started is not None
+                else None
+            ),
+        }
+
+
+    def kill_parent_if(
+        parent_pid,
+        verifier,
+        event_descriptor,
+        event_factory,
+        activity_entry,
+    ):
         if os.getppid() != parent_pid:
             os._exit(0)
         try:
@@ -2535,6 +3081,14 @@ let
             return False
         if os.getppid() != parent_pid:
             os._exit(0)
+        try:
+            safe_unlink_activity(activity_entry[0], activity_entry[1])
+        except BaseException:
+            pass
+        try:
+            write_watchdog_event(event_descriptor, event_factory())
+        except BaseException:
+            pass
         try:
             os.kill(parent_pid, signal.SIGKILL)
         except OSError:
@@ -2548,32 +3102,83 @@ let
         state_root,
         pulse_entry,
         lease_entry,
+        event_descriptor,
+        discard_descriptor,
+        run_id,
+        activity_listener,
+        activity_entry,
         refresh_seconds,
         pulse_seconds,
         startup_seconds,
         normal_seconds,
         dispatch_seconds,
     ):
+        poll_seconds = min(0.5, max(0.05, pulse_seconds / 2.0))
+        monitor_started = time.monotonic()
+        started = monitor_started
+        last_poll = started
+        last_progress = None
+        dispatch_started = None
+        armed = False
+        pulse_generation = None
+        lease_generation = None
+        lease_state = None
+        next_refresh = 0.0
+        activity_connection = None
+        activity_pending = b""
+        activity_sequence = 0
+        observed_at_unix_ms = max(0, int(time.time() * 1000))
+        activity = {
+            "schema_version": 1,
+            "run_id": run_id,
+            "daemon_pid": parent_pid,
+            "sequence": 0,
+            "phase": "startup",
+            "method": "none",
+            "tool": None,
+            "phase_started_unix_ms": observed_at_unix_ms,
+            "observed_at_unix_ms": observed_at_unix_ms,
+        }
+
+        def kill_for(cause, verifier):
+            def event_factory():
+                return build_watchdog_event(
+                    cause,
+                    run_id,
+                    parent_pid,
+                    monitor_started,
+                    time.monotonic(),
+                    activity,
+                    last_progress,
+                    normal_seconds,
+                    dispatch_started,
+                    dispatch_seconds,
+                )
+
+            return kill_parent_if(
+                parent_pid,
+                verifier,
+                event_descriptor,
+                event_factory,
+                activity_entry,
+            )
+
         try:
+            signal.signal(signal.SIGPIPE, signal.SIG_IGN)
             null_fd = os.open(os.devnull, os.O_RDWR)
             for target in (0, 1, 2):
                 os.dup2(null_fd, target)
             if null_fd > 2:
                 os.close(null_fd)
-            close_monitor_descriptors((pulse_entry[1], lease_entry[1]))
-
-            poll_seconds = min(0.5, max(0.05, pulse_seconds / 2.0))
-            started = time.monotonic()
-            last_poll = started
-            last_progress = None
-            dispatch_started = None
-            armed = False
-            (
-                pulse_generation,
-                lease_generation,
-                lease_state,
-            ) = monitor_snapshot(pulse_entry, lease_entry)
-            next_refresh = 0.0
+            kept_descriptors = {
+                pulse_entry[1],
+                lease_entry[1],
+                event_descriptor,
+                activity_listener.fileno(),
+            }
+            if discard_descriptor is not None:
+                kept_descriptors.add(discard_descriptor)
+            close_monitor_descriptors(kept_descriptors)
 
             while os.getppid() == parent_pid:
                 now = time.monotonic()
@@ -2591,23 +3196,57 @@ let
                 )
                 last_poll = now
 
+                if activity_connection is None and activity_listener is not None:
+                    activity_connection = accept_activity_connection(
+                        activity_listener,
+                        activity_entry,
+                    )
+                    if activity_connection is not None:
+                        activity_listener = None
+                if activity_connection is not None:
+                    (
+                        activity_connection,
+                        activity_pending,
+                        activity,
+                        activity_sequence,
+                    ) = drain_activity_connection(
+                        activity_connection,
+                        activity_pending,
+                        run_id,
+                        parent_pid,
+                        activity_sequence,
+                        activity,
+                    )
+
                 try:
                     validate_lock_files(lock_identities)
+                except BaseException:
+                    def lock_still_broken():
+                        validate_lock_files(lock_identities)
+                        return False
+
+                    kill_for("lock-integrity-failure", lock_still_broken)
+                    continue
+
+                try:
                     (
                         current_pulse,
                         current_lease,
                         current_lease_state,
                     ) = monitor_snapshot(pulse_entry, lease_entry)
                 except BaseException:
-                    def still_broken():
-                        validate_lock_files(lock_identities)
+                    def monitor_state_still_broken():
                         monitor_snapshot(pulse_entry, lease_entry)
                         return False
 
-                    kill_parent_if(parent_pid, still_broken)
+                    kill_for("monitor-state-invalid", monitor_state_still_broken)
                     continue
 
-                if current_lease != lease_generation:
+                if pulse_generation is None:
+                    pulse_generation = current_pulse
+                    lease_generation = current_lease
+                    lease_state = current_lease_state
+                elif current_lease != lease_generation:
                     lease_generation = current_lease
                     lease_state = current_lease_state
                     if armed:
@@ -2648,7 +3287,7 @@ let
                                 )
                             )
 
-                        kill_parent_if(parent_pid, startup_still_expired)
+                        kill_for("startup-timeout", startup_still_expired)
                 else:
                     if current_pulse != pulse_generation:
                         pulse_generation = current_pulse
@@ -2657,16 +3296,14 @@ let
                     # Heartbeat and dispatch deadlines are independent.  A
                     # non-yielding handler stops the pulse; a recursive wait
                     # can keep timers alive but cannot outlive its dispatch.
-                    heartbeat_expired = deadline_expired(
-                        now, last_progress, normal_seconds
+                    deadline_cause = select_deadline_cause(
+                        now,
+                        last_progress,
+                        normal_seconds,
+                        dispatch_started if lease_state == "active" else None,
+                        dispatch_seconds,
                     )
-                    dispatch_expired = (
-                        lease_state == "active"
-                        and deadline_expired(
-                            now, dispatch_started, dispatch_seconds
-                        )
-                    )
-                    if heartbeat_expired or dispatch_expired:
+                    if deadline_cause is not None:
                         snapshot = (
                             current_pulse,
                             current_lease,
@@ -2697,7 +3334,7 @@ let
                                 )
                             )
 
-                        kill_parent_if(parent_pid, activity_still_expired)
+                        kill_for(deadline_cause, activity_still_expired)
 
                 if now >= next_refresh:
                     try:
@@ -2710,11 +3347,18 @@ let
                             refresh_durable_state(state_root)
                             return False
 
-                        kill_parent_if(parent_pid, refresh_still_broken)
+                        kill_for("durable-refresh-failure", refresh_still_broken)
                     next_refresh = now + refresh_seconds
                 time.sleep(poll_seconds)
         except BaseException:
-            kill_parent_if(parent_pid, lambda: True)
+            try:
+                kill_for("monitor-internal-error", lambda: True)
+            except BaseException:
+                try:
+                    os.kill(parent_pid, signal.SIGKILL)
+                except OSError:
+                    pass
+                os._exit(0)
         os._exit(0)
 
 
@@ -2770,8 +3414,10 @@ let
     ):
         fail("runtime and state directories must be distinct", EXIT_CONFIG)
 
+    capabilities = configure_watchdog_capabilities(os.environ)
     runtime_lock = acquire_lock(runtime_dir, 8, "runtime", lock_conflict_status)
     state_lock = acquire_lock(state_dir, 9, "state", lock_conflict_status)
+    activity_listener, activity_entry = prepare_activity_listener(runtime_dir)
     pulse_entry = open_monitor_file(
         runtime_dir, PULSE_NAME, b"pulse:boot\n", 0o600
     )
@@ -2781,11 +3427,15 @@ let
     os.environ["ANVIL_EMACS_WATCHDOG_PULSE_FILE"] = pulse_entry[0]
     os.environ["ANVIL_EMACS_WATCHDOG_LEASE_FILE"] = lease_entry[0]
     os.environ["ANVIL_EMACS_WATCHDOG_PULSE_SECONDS"] = str(pulse_seconds)
+    os.environ["ANVIL_EMACS_WATCHDOG_ACTIVITY_SOCKET"] = activity_entry[0]
+    os.environ["ANVIL_EMACS_WATCHDOG_RUN_ID"] = capabilities["run_id"]
 
     parent_pid = os.getpid()
     try:
         monitor_pid = os.fork()
     except OSError as error:
+        activity_listener.close()
+        safe_unlink_activity(activity_entry[0], activity_entry[1])
         fail(f"cannot start root watchdog monitor: {error}")
     if monitor_pid == 0:
         monitor(
@@ -2794,6 +3444,11 @@ let
             state_dir,
             pulse_entry,
             lease_entry,
+            capabilities["event_fd"],
+            capabilities["discard_fd"],
+            capabilities["run_id"],
+            activity_listener,
+            activity_entry,
             refresh_seconds,
             pulse_seconds,
             startup_seconds,
@@ -2803,10 +3458,241 @@ let
 
     os.close(pulse_entry[1])
     os.close(lease_entry[1])
+    os.close(capabilities["event_fd"])
+    if capabilities["discard_fd"] is not None:
+        os.close(capabilities["discard_fd"])
+    activity_listener.close()
     try:
         os.execv(locked_stage, [locked_stage, runtime_dir, state_dir])
     except OSError as error:
         fail(f"cannot exec locked stage {locked_stage}: {error}")
+  '';
+  dedicatedTelemetryInit = writeText "anvil-headless-watchdog-telemetry.el" ''
+    ;;; anvil-headless-watchdog-telemetry.el --- Root activity -*- lexical-binding: t; -*-
+
+    (require 'json)
+    (defconst anvil-headless--watchdog-telemetry-socket
+      (getenv "ANVIL_EMACS_WATCHDOG_ACTIVITY_SOCKET"))
+    (defconst anvil-headless--watchdog-telemetry-run-id
+      (getenv "ANVIL_EMACS_WATCHDOG_RUN_ID"))
+    (setenv "ANVIL_EMACS_WATCHDOG_ACTIVITY_SOCKET" nil)
+    (setenv "ANVIL_EMACS_WATCHDOG_RUN_ID" nil)
+
+    (defvar anvil-headless--watchdog-telemetry-process nil)
+    (defvar anvil-headless--watchdog-telemetry-disabled nil)
+    (defvar anvil-headless--watchdog-telemetry-diagnosed nil)
+    (defvar anvil-headless--watchdog-telemetry-sequence 0)
+    (defvar anvil-headless--watchdog-telemetry-phase-started-ms 0)
+    (defvar anvil-headless--watchdog-telemetry-last-transition nil)
+    (defvar anvil-headless--watchdog-telemetry-method "none")
+    (defvar anvil-headless--watchdog-telemetry-tool nil)
+    (defconst anvil-headless--watchdog-telemetry-methods
+      '("none"
+        "initialize"
+        "notifications/initialized"
+        "ping"
+        "tools/list"
+        "tools/call"
+        "resources/list"
+        "resources/read"
+        "resources/templates/list"
+        "other"))
+
+    (defun anvil-headless--watchdog-telemetry-disable ()
+      "Disable activity telemetry with one constant diagnostic."
+      (unless anvil-headless--watchdog-telemetry-disabled
+        (setq anvil-headless--watchdog-telemetry-disabled t)
+        (when anvil-headless--watchdog-telemetry-process
+          (condition-case nil
+              (delete-process anvil-headless--watchdog-telemetry-process)
+            (error nil)))
+        (setq anvil-headless--watchdog-telemetry-process nil))
+      (unless anvil-headless--watchdog-telemetry-diagnosed
+        (setq anvil-headless--watchdog-telemetry-diagnosed t)
+        (message "Anvil watchdog telemetry disabled")))
+
+    (defun anvil-headless--watchdog-telemetry-connect ()
+      "Connect once to the private watchdog activity endpoint."
+      (unless anvil-headless--watchdog-telemetry-disabled
+        (if (not (and
+                  (stringp anvil-headless--watchdog-telemetry-socket)
+                  (stringp anvil-headless--watchdog-telemetry-run-id)
+                  (string-match-p
+                   "\\`[0-9a-f]\\{32\\}\\'"
+                   anvil-headless--watchdog-telemetry-run-id)))
+            (anvil-headless--watchdog-telemetry-disable)
+          (condition-case nil
+              (setq anvil-headless--watchdog-telemetry-process
+                    (make-network-process
+                     :name "anvil-watchdog-activity"
+                     :family 'local
+                     :service anvil-headless--watchdog-telemetry-socket
+                     :coding '(utf-8-unix . utf-8-unix)
+                     :noquery t
+                     :buffer nil))
+            (error
+             (anvil-headless--watchdog-telemetry-disable))))))
+
+    (defun anvil-headless--watchdog-telemetry-now-ms ()
+      (max 0 (floor (* 1000 (float-time)))))
+
+    (defun anvil-headless--watchdog-telemetry-method (method)
+      (if (and (stringp method)
+               (member method
+                       anvil-headless--watchdog-telemetry-methods))
+          method
+        "other"))
+
+    (defun anvil-headless--watchdog-telemetry-tool-p (tool)
+      (and (stringp tool)
+           (string-match-p
+            "\\`[A-Za-z0-9][A-Za-z0-9._/-]\\{0,127\\}\\'"
+            tool)))
+
+    (defun anvil-headless--watchdog-telemetry-object-alist-p (value)
+      "Return non-nil when VALUE is a proper object-style alist."
+      (let ((rest value)
+            (valid t))
+        (while (and valid (consp rest))
+          (unless (consp (car rest))
+            (setq valid nil))
+          (setq rest (cdr rest)))
+        (and valid (null rest))))
+
+    (defun anvil-headless--watchdog-telemetry-registered-tool
+        (tool server-id)
+      (when (anvil-headless--watchdog-telemetry-tool-p tool)
+        (let* ((resolved-id
+                (if (fboundp 'anvil-server--resolve-id)
+                    (anvil-server--resolve-id server-id)
+                  server-id))
+               (table (and (boundp 'anvil-server--tools)
+                           (gethash resolved-id anvil-server--tools))))
+          (and table (gethash tool table) tool))))
+
+    (defun anvil-headless--watchdog-telemetry-send (frame)
+      (unless anvil-headless--watchdog-telemetry-disabled
+        (condition-case nil
+            (if (and anvil-headless--watchdog-telemetry-process
+                     (process-live-p
+                      anvil-headless--watchdog-telemetry-process))
+                (process-send-string
+                 anvil-headless--watchdog-telemetry-process frame)
+              (anvil-headless--watchdog-telemetry-disable))
+          (error
+           (anvil-headless--watchdog-telemetry-disable)))))
+
+    (defun anvil-headless--watchdog-telemetry-emit (phase)
+      "Emit PHASE unless its semantic transition is a duplicate."
+      (let ((transition
+             (list phase
+                   anvil-headless--watchdog-telemetry-method
+                   anvil-headless--watchdog-telemetry-tool)))
+        (unless (equal transition
+                       anvil-headless--watchdog-telemetry-last-transition)
+          (let ((now (anvil-headless--watchdog-telemetry-now-ms)))
+            (setq anvil-headless--watchdog-telemetry-last-transition
+                  transition
+                  anvil-headless--watchdog-telemetry-phase-started-ms now
+                  anvil-headless--watchdog-telemetry-sequence
+                  (1+ anvil-headless--watchdog-telemetry-sequence))
+            (let* ((json-encoding-pretty-print nil)
+                   (frame
+                    (concat
+                     (json-encode
+                      `((schema_version . 1)
+                        (run_id . ,anvil-headless--watchdog-telemetry-run-id)
+                        (daemon_pid . ,(emacs-pid))
+                        (sequence . ,anvil-headless--watchdog-telemetry-sequence)
+                        (phase . ,phase)
+                        (method . ,anvil-headless--watchdog-telemetry-method)
+                        (tool . ,anvil-headless--watchdog-telemetry-tool)
+                        (phase_started_unix_ms
+                         . ,anvil-headless--watchdog-telemetry-phase-started-ms)
+                        (observed_at_unix_ms . ,now)))
+                     "\n")))
+              (if (<= (string-bytes
+                       (encode-coding-string frame 'utf-8-unix t))
+                      1024)
+                  (anvil-headless--watchdog-telemetry-send frame)
+                (anvil-headless--watchdog-telemetry-disable)))))))
+
+    (defun anvil-headless--watchdog-telemetry-process-jsonrpc
+        (original &rest arguments)
+      (setq anvil-headless--watchdog-telemetry-method "none"
+            anvil-headless--watchdog-telemetry-tool nil)
+      (anvil-headless--watchdog-telemetry-emit "parse")
+      (unwind-protect
+          (apply original arguments)
+        (setq anvil-headless--watchdog-telemetry-method "none"
+              anvil-headless--watchdog-telemetry-tool nil)
+        (anvil-headless--watchdog-telemetry-emit "idle")))
+
+    (defun anvil-headless--watchdog-telemetry-dispatch
+        (original request &rest arguments)
+      (setq anvil-headless--watchdog-telemetry-method
+            (anvil-headless--watchdog-telemetry-method
+             (alist-get 'method request))
+            anvil-headless--watchdog-telemetry-tool nil)
+      (anvil-headless--watchdog-telemetry-emit "dispatch")
+      (apply original request arguments))
+
+    (defun anvil-headless--watchdog-telemetry-tool-call
+        (original id params method-metrics server-id)
+      (setq anvil-headless--watchdog-telemetry-method "tools/call"
+            anvil-headless--watchdog-telemetry-tool
+            (anvil-headless--watchdog-telemetry-registered-tool
+             (and
+              (anvil-headless--watchdog-telemetry-object-alist-p params)
+              (alist-get 'name params))
+             server-id))
+      (anvil-headless--watchdog-telemetry-emit "tool-call")
+      (funcall original id params method-metrics server-id))
+
+    (defun anvil-headless--watchdog-telemetry-result
+        (original &rest arguments)
+      (anvil-headless--watchdog-telemetry-emit "result-encode")
+      (apply original arguments))
+
+    (defun anvil-headless--watchdog-telemetry-response
+        (original &rest arguments)
+      (anvil-headless--watchdog-telemetry-emit "response-write")
+      (apply original arguments))
+
+    (defun anvil-headless--watchdog-telemetry-add-advice
+        (function advice)
+      (when (and (fboundp function)
+                 (not (advice-member-p advice function)))
+        (advice-add function :around advice)))
+
+    (defun anvil-headless--watchdog-telemetry-install ()
+      (anvil-headless--watchdog-telemetry-add-advice
+       'anvil-server-process-jsonrpc
+       #'anvil-headless--watchdog-telemetry-process-jsonrpc)
+      (anvil-headless--watchdog-telemetry-add-advice
+       'anvil-server--validate-and-dispatch-request
+       #'anvil-headless--watchdog-telemetry-dispatch)
+      (anvil-headless--watchdog-telemetry-add-advice
+       'anvil-server--handle-tools-call
+       #'anvil-headless--watchdog-telemetry-tool-call)
+      (dolist (function
+               '(anvil-server--enforce-inline-result-limit
+                 anvil-server--sanitize-tool-error))
+        (anvil-headless--watchdog-telemetry-add-advice
+         function #'anvil-headless--watchdog-telemetry-result))
+      (dolist (function
+               '(anvil-server--jsonrpc-response
+                 anvil-server--jsonrpc-error
+                 anvil-server--jsonrpc-response-from-result-json))
+        (anvil-headless--watchdog-telemetry-add-advice
+         function #'anvil-headless--watchdog-telemetry-response)))
+
+    (with-eval-after-load 'anvil-server
+      (anvil-headless--watchdog-telemetry-install))
+    (anvil-headless--watchdog-telemetry-connect)
+
+    (provide 'anvil-headless-watchdog-telemetry)
+    ;;; anvil-headless-watchdog-telemetry.el ends here
   '';
   dedicatedInit = writeText "anvil-headless-init.el" ''
         ;;; anvil-headless-init.el --- Dedicated Anvil root -*- lexical-binding: t; -*-
@@ -2849,6 +3735,8 @@ let
         (defvar anvil-headless--watchdog-pulse-counter 0)
         (defvar anvil-headless--watchdog-timer nil)
         (defvar anvil-headless--watchdog-sync-dispatch-depth 0)
+
+        (load "${dedicatedTelemetryInit}" nil nil t)
 
         (let* ((runtime-dir (getenv "XDG_RUNTIME_DIR"))
                (state-dir (getenv "ANVIL_EMACS_STATE_DIR"))
@@ -3244,6 +4132,141 @@ let
     name = "anvil-headless-emacs";
     target = "${dedicatedDaemonInner}/bin/anvil-headless-emacs-inner";
   };
+  watchdogCapabilityDescendantInit = writeText "anvil-watchdog-capability-descendant.el" ''
+    ;;; anvil-watchdog-capability-descendant.el --- Test capability hygiene -*- lexical-binding: t; -*-
+
+    (require 'json)
+
+    (let ((result (getenv "ANVIL_TEST_DESCENDANT_RESULT"))
+          (root-socket-identities
+           (json-parse-string
+            (or (getenv "ANVIL_TEST_ROOT_SOCKET_IDENTITIES") "[]")
+            :array-type 'list))
+          (event-pipe-inode
+           (string-to-number
+            (or (getenv "ANVIL_TEST_EVENT_PIPE_INODE") "0")))
+          (capability-keys
+           '("ANVIL_EMACS_WATCHDOG_SUPERVISED"
+             "ANVIL_EMACS_WATCHDOG_EVENT_FD"
+             "ANVIL_EMACS_WATCHDOG_ACTIVITY_SOCKET"
+             "ANVIL_EMACS_WATCHDOG_RUN_ID"))
+          inherited-root-socket-fds
+          inherited-event-pipe-fds)
+      (unless (and result (file-name-absolute-p result))
+        (error "Missing absolute descendant result path"))
+      (dotimes (offset 1021)
+        (let* ((descriptor (+ 3 offset))
+               (attributes
+                (ignore-errors
+                  (file-attributes (format "/dev/fd/%d" descriptor) 'string)))
+               (modes (and attributes (file-attribute-modes attributes))))
+          (when (and (stringp modes) (> (length modes) 0))
+            (let ((identity (file-attribute-file-identifier attributes)))
+              (cond
+               ((eq (aref modes 0) ?p)
+                (when (= (nth 0 identity) event-pipe-inode)
+                  (push descriptor inherited-event-pipe-fds)))
+               ((eq (aref modes 0) ?s)
+                (when (member (list (nth 0 identity) (nth 1 identity))
+                              root-socket-identities)
+                  (push descriptor inherited-root-socket-fds))))))))
+      (with-temp-file result
+        (insert
+         (json-serialize
+          `((present_keys
+             . ,(vconcat
+                 (delq nil
+                       (mapcar
+                        (lambda (name) (and (getenv name) name))
+                        capability-keys))))
+            (inherited_root_socket_fds
+             . ,(vconcat (nreverse inherited-root-socket-fds)))
+            (inherited_event_pipe_fds
+             . ,(vconcat (nreverse inherited-event-pipe-fds)))
+            (scan_first . 3)
+            (scan_last . 1023))))))
+  '';
+  watchdogCapabilityRootInit = writeText "anvil-watchdog-capability-root.el" ''
+    ;;; anvil-watchdog-capability-root.el --- Test the real root boundary -*- lexical-binding: t; -*-
+
+    (load "${dedicatedTelemetryInit}" nil nil t)
+    (unless (process-live-p anvil-headless--watchdog-telemetry-process)
+      (error "Root telemetry socket did not connect"))
+    (let (socket-identities)
+      (dotimes (offset 1021)
+        (let* ((descriptor (+ 3 offset))
+               (attributes
+                (ignore-errors
+                  (file-attributes (format "/dev/fd/%d" descriptor) 'string)))
+               (modes (and attributes (file-attribute-modes attributes))))
+          (when (and (stringp modes)
+                     (> (length modes) 0)
+                     (eq (aref modes 0) ?s))
+            (let ((identity (file-attribute-file-identifier attributes)))
+              (push (vector (nth 0 identity) (nth 1 identity))
+                    socket-identities)))))
+      (unless socket-identities
+        (error "Root telemetry connection exposed no socket identity"))
+      (setenv "ANVIL_TEST_ROOT_SOCKET_IDENTITIES"
+              (json-serialize (vconcat socket-identities)))
+      (with-temp-buffer
+        (let ((status
+               (call-process
+                "${dedicatedRuntimeEmacs}/bin/emacs" nil (list t t) nil
+                "--batch" "-Q" "-l" "${watchdogCapabilityDescendantInit}")))
+          (unless (eq status 0)
+            (error "Real Emacs descendant failed: %S: %s"
+                   status (buffer-string))))))
+    ;; Inject a causally ordered monitor failure only after the descendant has
+    ;; proved that no root capability leaked.  Lock validation runs on every
+    ;; monitor iteration and does not depend on pulse baselining.
+    (let* ((runtime (getenv "XDG_RUNTIME_DIR"))
+           (lock (expand-file-name ".anvil-headless-emacs.lock" runtime))
+           (replacement
+            (make-temp-file
+             (expand-file-name ".anvil-test-lock-replacement-" runtime))))
+      (unwind-protect
+          (progn
+            (set-file-modes replacement #o600)
+            (rename-file replacement lock t))
+        (when (file-exists-p replacement)
+          (delete-file replacement))))
+    (while t
+      (sleep-for 60))
+  '';
+  watchdogCapabilityLockedStage = writeShellApplication {
+    name = "anvil-watchdog-capability-locked";
+    runtimeInputs = [ dedicatedRuntimeEmacs ];
+    text = ''
+      if [ "$#" -ne 2 ]; then
+        echo "anvil-mcp: watchdog capability stage requires runtime and state directories" >&2
+        exit 64
+      fi
+      export XDG_RUNTIME_DIR="$1"
+      export ANVIL_EMACS_STATE_DIR="$2"
+      exec ${dedicatedRuntimeEmacs}/bin/emacs --batch -Q \
+        -l ${watchdogCapabilityRootInit}
+    '';
+  };
+  watchdogCapabilityDaemonInner = writeShellApplication {
+    name = "anvil-watchdog-capability-daemon-inner";
+    runtimeInputs = [ python3 ];
+    text = ''
+      runtime_dir="''${ANVIL_EMACS_RUNTIME_DIR:-}"
+      state_dir="''${ANVIL_EMACS_STATE_DIR:-}"
+      if [ -z "$runtime_dir" ] || [ -z "$state_dir" ]; then
+        echo "anvil-mcp: watchdog capability daemon requires exact directories" >&2
+        exit 64
+      fi
+      exec ${python3}/bin/python3 -I -S ${dedicatedLockLauncher} \
+        "$runtime_dir" "$state_dir" 75 \
+        ${watchdogCapabilityLockedStage}/bin/anvil-watchdog-capability-locked
+    '';
+  };
+  watchdogCapabilityDaemon = dedicatedCleanWrapper {
+    name = "anvil-watchdog-capability-daemon";
+    target = "${watchdogCapabilityDaemonInner}/bin/anvil-watchdog-capability-daemon-inner";
+  };
   dedicatedAgentDaemon = if agentDaemonOverride == null then dedicatedDaemon else agentDaemonOverride;
   dedicatedGeneration = builtins.hashString "sha256" "${dedicatedAgentSupervisor}|${dedicatedParentGuardLauncher}|${dedicatedAgentDaemon}|${dedicatedCleanEnvironment}|${dedicatedDirenvNeutral}|${dedicatedAnvil}|${dedicatedAnvilIde}|${dedicatedOffloadEmacs}|${dedicatedOffloadInit}|${dedicatedSafeEmacsclient}|${generationSalt}";
   dedicatedLauncherInner = writeShellApplication {
@@ -3436,6 +4459,7 @@ let
         dedicatedEmacs
         dedicatedEnvironmentInit
         dedicatedInit
+        dedicatedTelemetryInit
         dedicatedLauncherInner
         dedicatedLockLauncher
         dedicatedLockedStage
@@ -3454,6 +4478,8 @@ let
         timeoutPolicy
         workerPoolSizes
         workerSpecs
+        watchdogTestSupport
+        watchdogCapabilityDaemon
         ;
       dedicatedAgentSupervisorSmoke = ./agent-supervisor-smoke.py;
       dedicatedAgentSupervisorTest = ./agent-supervisor-test.py;

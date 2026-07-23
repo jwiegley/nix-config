@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 from typing import NoReturn
 import select
+import secrets
 import signal
 import stat
 import subprocess
@@ -33,6 +34,11 @@ CREATOR_STAGING_PREFIX = ".anvil-agent-creator-stage-"
 CREATOR_MARKER_SUFFIX = ".json"
 INSTANCE_STAGING_PREFIX = ".anvil-agent-instance-stage-"
 DAEMON_DIAGNOSTIC_NAME = ".anvil-daemon.log"
+ACTIVITY_SOCKET_NAME = ".anvil-root-activity.sock"
+WATCHDOG_SUPERVISED_ENV = "ANVIL_EMACS_WATCHDOG_SUPERVISED"
+WATCHDOG_EVENT_FD_ENV = "ANVIL_EMACS_WATCHDOG_EVENT_FD"
+WATCHDOG_RUN_ID_ENV = "ANVIL_EMACS_WATCHDOG_RUN_ID"
+WATCHDOG_EVENT_MAX_BYTES = 512
 AGENT_KEY_PATTERN = re.compile(r"[0-9a-f]{32}")
 GENERATION_PATTERN = re.compile(r"[0-9a-f]{64}")
 LINUX_BOOT_ID_PATTERN = re.compile(
@@ -224,14 +230,17 @@ def validate_socket_paths(
     return socket_paths
 
 
-def validate_socket_path(raw: str | Path) -> Path:
+def validate_socket_path(
+    raw: str | Path,
+    label: str = "Emacs socket path",
+) -> Path:
     """Validate one absolute socket pathname against the kernel ceiling."""
-    socket_path = validate_root_path(raw, "Emacs socket path")
+    socket_path = validate_root_path(raw, label)
     limit = unix_socket_path_limit_bytes()
     encoded = os.fsencode(socket_path)
     if len(encoded) > limit:
         raise ConfigurationError(
-            "Emacs socket path exceeds the platform Unix socket limit "
+            f"{label} exceeds the platform Unix socket limit "
             f"({len(encoded)} > {limit} bytes): {socket_path}"
         )
     return socket_path
@@ -247,7 +256,12 @@ def validate_emacs_socket_paths(
     runtime_root = validate_root_path(runtime_root, "runtime root")
     host = validate_host(host)
     agent_key = validate_agent_key(agent_key)
-    socket_root = runtime_root / host / "agents" / agent_key / "emacs"
+    runtime_dir = runtime_root / host / "agents" / agent_key
+    validate_socket_path(
+        runtime_dir / ACTIVITY_SOCKET_NAME,
+        "Anvil activity socket path",
+    )
+    socket_root = runtime_dir / "emacs"
     return validate_socket_paths(socket_root, worker_names)
 
 
@@ -259,7 +273,12 @@ def validate_host_emacs_socket_paths(
     """Validate the shared host-daemon root and worker socket paths."""
     runtime_root = validate_root_path(runtime_root, "runtime root")
     host = validate_host(host)
-    return validate_socket_paths(runtime_root / host / "emacs", worker_names)
+    runtime_dir = runtime_root / host
+    validate_socket_path(
+        runtime_dir / ACTIVITY_SOCKET_NAME,
+        "Anvil activity socket path",
+    )
+    return validate_socket_paths(runtime_dir / "emacs", worker_names)
 
 
 def ensure_private_directory(path: Path) -> None:
@@ -2140,7 +2159,39 @@ def daemon_environment(args: argparse.Namespace) -> dict[str, str]:
     environment.pop("ANVIL_MCP_READINESS_MODE", None)
     environment.pop("ANVIL_EMACS_SOCKET", None)
     environment.pop("ANVIL_EMACS_USE_SYSTEM_LOG", None)
+    environment.pop(WATCHDOG_SUPERVISED_ENV, None)
+    environment.pop(WATCHDOG_EVENT_FD_ENV, None)
+    environment.pop(WATCHDOG_RUN_ID_ENV, None)
     return environment
+
+
+def create_watchdog_event_pipe() -> tuple[int, int]:
+    """Return fresh nonblocking read/write ends with the writer above fd 9."""
+    read_descriptor: int | None = None
+    write_descriptor: int | None = None
+    high_write_descriptor: int | None = None
+    try:
+        read_descriptor, write_descriptor = os.pipe()
+        high_write_descriptor = fcntl.fcntl(write_descriptor, fcntl.F_DUPFD, 10)
+        os.close(write_descriptor)
+        write_descriptor = None
+        os.set_blocking(read_descriptor, False)
+        os.set_blocking(high_write_descriptor, False)
+        os.set_inheritable(read_descriptor, False)
+        os.set_inheritable(high_write_descriptor, False)
+        return read_descriptor, high_write_descriptor
+    except BaseException:
+        for descriptor in (
+            read_descriptor,
+            write_descriptor,
+            high_write_descriptor,
+        ):
+            if descriptor is not None:
+                try:
+                    os.close(descriptor)
+                except OSError:
+                    pass
+        raise
 
 
 def transport_environment() -> dict[str, str]:
@@ -2262,24 +2313,39 @@ def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
     diagnostic_descriptor: int | None = None
     read_descriptor: int | None = None
     write_descriptor: int | None = None
+    event_read_descriptor: int | None = None
+    event_write_descriptor: int | None = None
     try:
         diagnostic_descriptor = open_daemon_diagnostic(args.runtime_dir)
         read_descriptor, write_descriptor = os.pipe()
         os.set_blocking(read_descriptor, False)
+        event_read_descriptor, event_write_descriptor = create_watchdog_event_pipe()
+        run_id = secrets.token_hex(16)
+        environment = daemon_environment(args)
+        environment.update(
+            {
+                WATCHDOG_SUPERVISED_ENV: "1",
+                WATCHDOG_EVENT_FD_ENV: str(event_write_descriptor),
+                WATCHDOG_RUN_ID_ENV: run_id,
+            }
+        )
         process = subprocess.Popen(
             command,
             stdin=subprocess.DEVNULL,
             stdout=write_descriptor,
             stderr=write_descriptor,
-            env=daemon_environment(args),
+            env=environment,
             start_new_session=True,
             close_fds=True,
+            pass_fds=(event_write_descriptor,),
         )
     except BaseException:
         for descriptor in (
             read_descriptor,
             write_descriptor,
             diagnostic_descriptor,
+            event_read_descriptor,
+            event_write_descriptor,
         ):
             if descriptor is not None:
                 try:
@@ -2288,9 +2354,12 @@ def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
                     pass
         raise
     os.close(write_descriptor)
+    os.close(event_write_descriptor)
     setattr(process, "_anvil_diagnostic_read_fd", read_descriptor)
     setattr(process, "_anvil_diagnostic_output_fd", diagnostic_descriptor)
     setattr(process, "_anvil_diagnostic_written", 0)
+    setattr(process, "_anvil_watchdog_event_read_fd", event_read_descriptor)
+    setattr(process, "_anvil_watchdog_run_id", run_id)
     return process
 
 
@@ -3155,6 +3224,10 @@ def host_socket_preflight_main(args: argparse.Namespace) -> None:
             runtime_dir = validate_root_path(args.runtime_dir, "runtime directory")
             state_dir = validate_root_path(args.state_dir, "state directory")
             validate_distinct_paths(runtime_dir, state_dir, "exact Anvil directory")
+            validate_socket_path(
+                runtime_dir / ACTIVITY_SOCKET_NAME,
+                "Anvil activity socket path",
+            )
             validate_socket_paths(runtime_dir / "emacs", args.worker_names)
         else:
             validate_host_emacs_socket_paths(

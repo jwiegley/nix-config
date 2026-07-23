@@ -277,7 +277,23 @@ def assert_overlong_daemon_socket_paths_fail_fast(daemon: Path) -> None:
         )
     )
 
-    exact_runtime = Path(base_env["ANVIL_EMACS_RUNTIME_ROOT"]) / ("x" * 100)
+    socket_limit = 107 if sys.platform.startswith("linux") else 103
+    runtime_root = Path(base_env["ANVIL_EMACS_RUNTIME_ROOT"])
+    activity_name = ".anvil-root-activity.sock"
+    exact_component_bytes = (
+        socket_limit
+        + 1
+        - len(os.fsencode(runtime_root))
+        - len(os.fsencode(activity_name))
+        - 1
+    )
+    if exact_component_bytes < 1:
+        raise AssertionError("smoke runtime root leaves no socket boundary fixture")
+    exact_runtime = runtime_root / ("x" * exact_component_bytes)
+    if len(os.fsencode(exact_runtime / activity_name)) != socket_limit + 1:
+        raise AssertionError("activity socket boundary fixture has the wrong length")
+    if len(os.fsencode(exact_runtime / "emacs" / "server")) > socket_limit:
+        raise AssertionError("legacy Emacs socket does not fit boundary fixture")
     exact_state = Path(base_env["ANVIL_EMACS_STATE_ROOT"]) / "exact-overlong"
     exact_env = base_env.copy()
     exact_env["ANVIL_EMACS_HOST"] = "exact-overlong"
@@ -987,7 +1003,11 @@ def request_context_expression() -> str:
     (or (executable-find "anvil-launch-contamination") :false)
     (or (getenv "DIRENV_DIFF") :false)
     (if (local-variable-p 'process-environment) t :false)
-    (if (local-variable-p 'exec-path) t :false))))
+    (if (local-variable-p 'exec-path) t :false)
+    (or (getenv "ANVIL_EMACS_WATCHDOG_SUPERVISED") :false)
+    (or (getenv "ANVIL_EMACS_WATCHDOG_EVENT_FD") :false)
+    (or (getenv "ANVIL_EMACS_WATCHDOG_ACTIVITY_SOCKET") :false)
+    (or (getenv "ANVIL_EMACS_WATCHDOG_RUN_ID") :false))))
 """.strip()
 
 
@@ -1000,14 +1020,25 @@ def assert_request_context(
     snapshot = decode_eval_json(response)
     if (
         not isinstance(snapshot, list)
-        or len(snapshot) != 8
+        or len(snapshot) != 12
         or resolved_path(snapshot[0], "request directory")
         != request_directory.resolve()
         or resolved_path(snapshot[1], "daemon baseline directory")
         != baseline_directory.resolve()
         or not strict_json_equal(
-            snapshot[2:8],
-            [False, "clean-baseline", False, False, False, False],
+            snapshot[2:12],
+            [
+                False,
+                "clean-baseline",
+                False,
+                False,
+                False,
+                False,
+                False,
+                False,
+                False,
+                False,
+            ],
         )
     ):
         raise AssertionError(f"request context leaked or lost isolation: {snapshot}")
@@ -1090,7 +1121,11 @@ def worker_snapshot_expression(worker_specs: WorkerSpecs) -> str:
              (or (getenv "DIRENV_DIFF") :false)
              default-directory
              (if (local-variable-p 'process-environment) t :false)
-             (if (local-variable-p 'exec-path) t :false))
+             (if (local-variable-p 'exec-path) t :false)
+             (or (getenv "ANVIL_EMACS_WATCHDOG_SUPERVISED") :false)
+             (or (getenv "ANVIL_EMACS_WATCHDOG_EVENT_FD") :false)
+             (or (getenv "ANVIL_EMACS_WATCHDOG_ACTIVITY_SOCKET") :false)
+             (or (getenv "ANVIL_EMACS_WATCHDOG_RUN_ID") :false))
             (with-current-buffer
                 (find-file-noselect
                  (expand-file-name "direnv-spoof/visited.txt" (getenv "HOME")))
@@ -1223,13 +1258,13 @@ def assert_worker_snapshot(
         ).resolve()
         if (
             not isinstance(launch_state, list)
-            or len(launch_state) != 7
+            or len(launch_state) != 11
             or not strict_json_equal(
                 launch_state[:4], [False, "clean-baseline", False, False]
             )
             or resolved_path(launch_state[4], f"{name} baseline directory")
             != expected_root_directory
-            or not strict_json_equal(launch_state[5:7], [False, False])
+            or not strict_json_equal(launch_state[5:11], [False] * 6)
         ):
             raise AssertionError(
                 f"{name} inherited the daemon launch direnv: {launch_state}"
@@ -2155,6 +2190,10 @@ def assert_offload_request_context(
               (not (equal (getenv "ANVIL_LAUNCH_BASELINE") "clean-baseline"))
               (executable-find "anvil-launch-contamination")
               (getenv "DIRENV_DIFF")
+              (getenv "ANVIL_EMACS_WATCHDOG_SUPERVISED")
+              (getenv "ANVIL_EMACS_WATCHDOG_EVENT_FD")
+              (getenv "ANVIL_EMACS_WATCHDOG_ACTIVITY_SOCKET")
+              (getenv "ANVIL_EMACS_WATCHDOG_RUN_ID")
               (local-variable-p 'process-environment)
               (local-variable-p 'exec-path)
               (not (and login
@@ -2508,13 +2547,17 @@ def main() -> None:
                     "name": "shell-run",
                     "arguments": {
                         "cmd": (
-                            "printf '%s:%s:%s:%s:%s:%s' "
+                            "printf '%s:%s:%s:%s:%s:%s:%s:%s:%s:%s' "
                             '"${ANVIL_DIRENV_MARKER-unset}" '
                             '"${ANVIL_LAUNCH_SECRET-unset}" '
                             '"${ANVIL_LAUNCH_BASELINE-unset}" '
                             '"$(command -v anvil-launch-contamination || printf missing)" '
                             '"$(command -v anvil-direnv-a || printf missing)" '
-                            '"$(command -v anvil-login-shell || printf missing)"'
+                            '"$(command -v anvil-login-shell || printf missing)" '
+                            '"${ANVIL_EMACS_WATCHDOG_SUPERVISED-unset}" '
+                            '"${ANVIL_EMACS_WATCHDOG_EVENT_FD-unset}" '
+                            '"${ANVIL_EMACS_WATCHDOG_ACTIVITY_SOCKET-unset}" '
+                            '"${ANVIL_EMACS_WATCHDOG_RUN_ID-unset}"'
                         ),
                         "filter": "",
                         "cwd": str(project_plain),
@@ -2704,7 +2747,8 @@ def main() -> None:
     expected_login_shell = Path.home() / "login-bin" / "anvil-login-shell"
     assert_shell_result(
         response_by_id(main_responses, 12),
-        f"unset:unset:clean-baseline:missing:missing:{expected_login_shell}",
+        f"unset:unset:clean-baseline:missing:missing:{expected_login_shell}:"
+        "unset:unset:unset:unset",
     )
     assert_tool_success(
         response_by_id(main_responses, 13), ".anvil-headless-emacs.lock"

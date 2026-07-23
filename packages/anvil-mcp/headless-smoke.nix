@@ -225,9 +225,25 @@ runCommand "anvil-mcp-dedicated-smoke"
       ${anvilMcp.dedicatedCleanEnvironment} \
       ${anvilMcp.dedicatedParentGuardLauncher}
 
-    ${coreutils}/bin/timeout 60 \
+    ANVIL_WATCHDOG_TEST_SUPPORT=${anvilMcp.watchdogTestSupport} \
+      ANVIL_DEDICATED_LOCK_LAUNCHER=${anvilMcp.dedicatedLockLauncher} \
+      ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./watchdog-test.py} \
-      ${anvilMcp.dedicatedLockLauncher}
+      WatchdogProtocolTests WatchdogTransportTests \
+      WatchdogLifecycleTests WatchdogCauseTests
+    ANVIL_DEDICATED_TELEMETRY_INIT=${anvilMcp.dedicatedTelemetryInit} \
+      ANVIL_DEDICATED_ANVIL=${anvilMcp.dedicatedAnvil} \
+      ANVIL_TEST_EMACS_STORE=${anvilMcp.dedicatedRuntimeEmacs} \
+      ${coreutils}/bin/timeout 60 \
+      ${anvilMcp.dedicatedRuntimeEmacs}/bin/emacs --batch -Q \
+      -L ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp \
+      -l ert -l ${./watchdog-telemetry-test.el} \
+      --eval '(let* ((selector "^anvil-watchdog-telemetry-phase-")
+                     (selected (ert-select-tests selector t)))
+                (unless (= 7 (length selected))
+                  (error "expected 7 phase tests, selected %d"
+                         (length selected)))
+                (ert-run-tests-batch-and-exit t))'
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./timeout-ordering-test.py} \
       ${anvilMcp.dedicatedLockLauncher} \
@@ -278,6 +294,8 @@ runCommand "anvil-mcp-dedicated-smoke"
       "$init_compile_dir/anvil-headless-offload-init.el"
     install -m 0600 ${anvilMcp.dedicatedInit} \
       "$init_compile_dir/anvil-headless-init.el"
+    install -m 0600 ${anvilMcp.dedicatedTelemetryInit} \
+      "$init_compile_dir/anvil-headless-watchdog-telemetry.el"
     TMPDIR="$init_compile_dir" TMP="$init_compile_dir" TEMP="$init_compile_dir" \
       ${coreutils}/bin/timeout 60 \
       ${anvilMcp.dedicatedRuntimeEmacs}/bin/emacs --quick --batch \
@@ -288,6 +306,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       "$init_compile_dir/anvil-headless-environment-init.el" \
       "$init_compile_dir/anvil-headless-worker-init.el" \
       "$init_compile_dir/anvil-headless-offload-init.el" \
+      "$init_compile_dir/anvil-headless-watchdog-telemetry.el" \
       "$init_compile_dir/anvil-headless-init.el"
     for source in "$init_compile_dir"/*.el; do
       test -f "$source"c
@@ -406,7 +425,11 @@ runCommand "anvil-mcp-dedicated-smoke"
     }
     trap cleanup EXIT
 
-    ANVIL_AGENT_SUPERVISOR=${anvilMcp.dedicatedAgentSupervisor} \
+    ANVIL_DEDICATED_AGENT_SUPERVISOR=${anvilMcp.dedicatedAgentSupervisor} \
+      ANVIL_DEDICATED_LOCK_LAUNCHER=${anvilMcp.dedicatedLockLauncher} \
+      ANVIL_DEDICATED_PARENT_GUARD=${anvilMcp.dedicatedParentGuardLauncher} \
+      ANVIL_WATCHDOG_CAPABILITY_DAEMON=${anvilMcp.watchdogCapabilityDaemon}/bin/anvil-watchdog-capability-daemon \
+      ANVIL_WATCHDOG_TEST_SUPPORT=${anvilMcp.watchdogTestSupport} \
       ${python3}/bin/python3 -I -B -u \
       ${anvilMcp.dedicatedAgentSupervisorTest}
     # Keep Darwin Unix-domain worker socket names under its 104-byte

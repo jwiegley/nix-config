@@ -6,11 +6,13 @@ from __future__ import annotations
 import contextlib
 import ctypes
 import errno
+import fcntl
 import importlib.util
 import io
 import json
 import os
 from pathlib import Path
+import select
 import selectors
 import signal
 import socket
@@ -25,17 +27,68 @@ import unittest
 from unittest import mock
 
 
-MODULE_PATH = Path(
-    os.environ.get(
-        "ANVIL_AGENT_SUPERVISOR",
-        Path(__file__).with_name("agent-supervisor.py"),
+MODULE_RAW = os.environ.get("ANVIL_DEDICATED_AGENT_SUPERVISOR")
+if not MODULE_RAW:
+    raise RuntimeError("missing required ANVIL_DEDICATED_AGENT_SUPERVISOR")
+MODULE_PATH = Path(MODULE_RAW)
+if not MODULE_PATH.is_absolute() or not MODULE_PATH.is_file():
+    raise RuntimeError("ANVIL_DEDICATED_AGENT_SUPERVISOR must name an absolute file")
+if not str(MODULE_PATH).startswith("/nix/store/"):
+    raise RuntimeError(
+        "ANVIL_DEDICATED_AGENT_SUPERVISOR must name a realised store file"
     )
-)
+MODULE_PATH = MODULE_PATH.resolve()
 SPEC = importlib.util.spec_from_file_location("anvil_agent_supervisor", MODULE_PATH)
 if SPEC is None or SPEC.loader is None:
     raise RuntimeError(f"cannot load supervisor module: {MODULE_PATH}")
 SUPERVISOR = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(SUPERVISOR)
+if Path(SUPERVISOR.__file__).resolve() != MODULE_PATH:
+    raise RuntimeError("supervisor test module path identity changed")
+
+
+def required_store_path(name: str, *, executable: bool = False) -> Path:
+    """Return one exact realised path required by an integration fixture."""
+    raw = os.environ.get(name)
+    if not raw:
+        raise RuntimeError(f"missing required {name}")
+    path = Path(raw)
+    if (
+        not path.is_absolute()
+        or not path.is_file()
+        or not str(path).startswith("/nix/store/")
+        or (executable and not os.access(path, os.X_OK))
+    ):
+        raise RuntimeError(f"{name} must name an exact realised store file")
+    return path.resolve()
+
+
+PARENT_GUARD_PATH = required_store_path("ANVIL_DEDICATED_PARENT_GUARD")
+WATCHDOG_CAPABILITY_DAEMON = required_store_path(
+    "ANVIL_WATCHDOG_CAPABILITY_DAEMON",
+    executable=True,
+)
+WATCHDOG_TEST_SUPPORT_PATH = required_store_path("ANVIL_WATCHDOG_TEST_SUPPORT")
+WATCHDOG_TEST_SUPPORT_SPEC = importlib.util.spec_from_file_location(
+    "anvil_watchdog_test_support",
+    WATCHDOG_TEST_SUPPORT_PATH,
+)
+if WATCHDOG_TEST_SUPPORT_SPEC is None or WATCHDOG_TEST_SUPPORT_SPEC.loader is None:
+    raise RuntimeError(
+        f"cannot load watchdog test support: {WATCHDOG_TEST_SUPPORT_PATH}"
+    )
+WATCHDOG_TEST_SUPPORT = importlib.util.module_from_spec(WATCHDOG_TEST_SUPPORT_SPEC)
+WATCHDOG_TEST_SUPPORT_SPEC.loader.exec_module(WATCHDOG_TEST_SUPPORT)
+LOCK_LAUNCHER_PATH = required_store_path("ANVIL_DEDICATED_LOCK_LAUNCHER")
+WATCHDOG_LAUNCHER = WATCHDOG_TEST_SUPPORT.load_generated_launcher(
+    LOCK_LAUNCHER_PATH,
+    (
+        "EVENT_KEYS",
+        "EVENT_MAX_BYTES",
+        "canonical_json_line",
+        "write_watchdog_event",
+    ),
+)
 
 TEST_GENERATION = "1" * 64
 OTHER_GENERATION = "2" * 64
@@ -923,6 +976,36 @@ class AgentSupervisorTests(unittest.TestCase):
                 SUPERVISOR.host_socket_preflight_main(args)
         self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_CONFIG)
         self.assertFalse(overlong_runtime.exists())
+        self.assertFalse(Path(args.state_dir).exists())
+
+        limit = SUPERVISOR.unix_socket_path_limit_bytes()
+        activity_overlong_runtime = next(
+            runtime
+            for size in range(1, limit + 1)
+            if len(
+                os.fsencode(
+                    (runtime := Path("/" + ("a" * size)))
+                    / SUPERVISOR.ACTIVITY_SOCKET_NAME
+                )
+            )
+            == limit + 1
+        )
+        self.assertLessEqual(
+            len(os.fsencode(activity_overlong_runtime / "emacs" / "server")),
+            limit,
+        )
+        args.worker_names = ("w",)
+        for socket_path in SUPERVISOR.validate_socket_paths(
+            activity_overlong_runtime / "emacs",
+            args.worker_names,
+        ):
+            self.assertLessEqual(len(os.fsencode(socket_path)), limit)
+        args.runtime_dir = str(activity_overlong_runtime)
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                SUPERVISOR.host_socket_preflight_main(args)
+        self.assertEqual(raised.exception.code, SUPERVISOR.EXIT_CONFIG)
+        self.assertFalse(activity_overlong_runtime.exists())
         self.assertFalse(Path(args.state_dir).exists())
 
     def test_daemon_preflight_rejects_coincident_paths_without_residue(self):
@@ -4792,6 +4875,256 @@ for line in sys.stdin:
 
         waitpid.assert_called_once_with(4242, os.WNOHANG)
         sleep.assert_not_called()
+
+
+class SupervisorEventPipePlumbingTests(unittest.TestCase):
+    """Focused contracts for one supervisor-owned watchdog event pipe."""
+
+    setUp = AgentSupervisorTests.setUp
+    tearDown = AgentSupervisorTests.tearDown
+    prepare = AgentSupervisorTests.prepare
+
+    @staticmethod
+    def close_process_descriptors(process):
+        for attribute in (
+            "_anvil_diagnostic_read_fd",
+            "_anvil_diagnostic_output_fd",
+            "_anvil_watchdog_event_read_fd",
+        ):
+            descriptor = getattr(process, attribute, None)
+            setattr(process, attribute, None)
+            if descriptor is not None:
+                os.close(descriptor)
+
+    def test_start_daemon_passes_one_high_nonblocking_write_capability(self):
+        args = self.prepare()
+        child = SimpleNamespace(pid=4242)
+        captured = {}
+
+        def fake_popen(*_arguments, **options):
+            descriptor = options["pass_fds"][0]
+            captured["access_mode"] = (
+                fcntl.fcntl(descriptor, fcntl.F_GETFL) & os.O_ACCMODE
+            )
+            captured["blocking"] = os.get_blocking(descriptor)
+            captured["mode"] = os.fstat(descriptor).st_mode
+            return child
+
+        with mock.patch.object(
+            SUPERVISOR.subprocess,
+            "Popen",
+            side_effect=fake_popen,
+        ) as popen:
+            process = SUPERVISOR.start_daemon(args)
+        try:
+            options = popen.call_args.kwargs
+            self.assertEqual(len(options["pass_fds"]), 1)
+            event_write = options["pass_fds"][0]
+            self.assertGreater(event_write, 9)
+            self.assertEqual(captured["access_mode"], os.O_WRONLY)
+            self.assertFalse(captured["blocking"])
+            self.assertTrue(stat.S_ISFIFO(captured["mode"]))
+            self.assertEqual(
+                options["env"]["ANVIL_EMACS_WATCHDOG_SUPERVISED"],
+                "1",
+            )
+            self.assertEqual(
+                options["env"]["ANVIL_EMACS_WATCHDOG_EVENT_FD"],
+                str(event_write),
+            )
+            self.assertRegex(
+                options["env"]["ANVIL_EMACS_WATCHDOG_RUN_ID"],
+                r"^[0-9a-f]{32}$",
+            )
+            self.assertEqual(
+                process._anvil_watchdog_run_id,
+                options["env"]["ANVIL_EMACS_WATCHDOG_RUN_ID"],
+            )
+            self.assertFalse(os.get_blocking(process._anvil_watchdog_event_read_fd))
+            with self.assertRaises(OSError):
+                os.fstat(event_write)
+        finally:
+            self.close_process_descriptors(process)
+
+    def test_start_daemon_uses_fresh_run_id_per_launch(self):
+        args = self.prepare()
+        expected_ids = ("0" * 32, "1" * 32)
+        captured_ids = []
+        processes = []
+
+        def fake_popen(*_arguments, **options):
+            captured_ids.append(options["env"]["ANVIL_EMACS_WATCHDOG_RUN_ID"])
+            return SimpleNamespace(pid=4242 + len(captured_ids))
+
+        try:
+            with (
+                mock.patch.object(
+                    SUPERVISOR.secrets,
+                    "token_hex",
+                    side_effect=expected_ids,
+                ) as token_hex,
+                mock.patch.object(
+                    SUPERVISOR.subprocess,
+                    "Popen",
+                    side_effect=fake_popen,
+                ),
+            ):
+                processes.extend(
+                    (SUPERVISOR.start_daemon(args), SUPERVISOR.start_daemon(args))
+                )
+
+            self.assertEqual(token_hex.call_args_list, [mock.call(16), mock.call(16)])
+            self.assertEqual(captured_ids, list(expected_ids))
+            self.assertEqual(
+                [process._anvil_watchdog_run_id for process in processes],
+                list(expected_ids),
+            )
+        finally:
+            for process in processes:
+                self.close_process_descriptors(process)
+
+    def test_start_daemon_closes_event_pipe_on_launch_failure(self):
+        args = self.prepare()
+        read_descriptor, write_descriptor = os.pipe()
+        with (
+            mock.patch.object(
+                SUPERVISOR,
+                "create_watchdog_event_pipe",
+                return_value=(read_descriptor, write_descriptor),
+            ),
+            mock.patch.object(
+                SUPERVISOR.subprocess,
+                "Popen",
+                side_effect=OSError(errno.EIO, "injected launch failure"),
+            ),
+            self.assertRaises(OSError),
+        ):
+            SUPERVISOR.start_daemon(args)
+        for descriptor in (read_descriptor, write_descriptor):
+            with self.assertRaises(OSError):
+                os.fstat(descriptor)
+
+    def test_event_descriptor_survives_full_launch_chain_and_real_emacs_child(self):
+        args = self.prepare()
+        result_path = self.root / "real-emacs-descendant.json"
+        args.parent_guard = str(PARENT_GUARD_PATH)
+        args.daemon = str(WATCHDOG_CAPABILITY_DAEMON)
+        environment = {
+            "ANVIL_TEST_DESCENDANT_RESULT": str(result_path),
+            "ANVIL_EMACS_WATCHDOG_STARTUP_SECONDS": "60",
+            "ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS": "3",
+            "ANVIL_EMACS_WATCHDOG_DISPATCH_SECONDS": "5",
+            "ANVIL_EMACS_WATCHDOG_PULSE_SECONDS": "1",
+        }
+        create_event_pipe = SUPERVISOR.create_watchdog_event_pipe
+
+        def create_event_pipe_with_identity():
+            read_descriptor, write_descriptor = create_event_pipe()
+            os.environ["ANVIL_TEST_EVENT_PIPE_INODE"] = str(
+                os.fstat(read_descriptor).st_ino
+            )
+            return read_descriptor, write_descriptor
+
+        with (
+            mock.patch.dict(os.environ, environment, clear=False),
+            mock.patch.object(
+                SUPERVISOR,
+                "create_watchdog_event_pipe",
+                side_effect=create_event_pipe_with_identity,
+            ),
+        ):
+            # start_daemon normally runs only after the outer dedicated
+            # entrypoint has unloaded direnv.  Model that boundary explicitly
+            # when this focused fixture is invoked from a development shell.
+            for name in (
+                "DIRENV_DIFF",
+                "DIRENV_DIR",
+                "DIRENV_FILE",
+                "DIRENV_WATCHES",
+                "DIRENV_DUMP_FILE_PATH",
+            ):
+                os.environ.pop(name, None)
+            process = SUPERVISOR.start_daemon(args)
+        try:
+            try:
+                result_text = eventually(
+                    lambda: result_path.read_text() if result_path.exists() else None,
+                    timeout=30,
+                )
+            except AssertionError as error:
+                diagnostic_path = args.runtime_dir / SUPERVISOR.DAEMON_DIAGNOSTIC_NAME
+                daemon_status = process.poll()
+                if daemon_status is not None:
+                    SUPERVISOR.close_daemon_diagnostic(process)
+                diagnostic = (
+                    diagnostic_path.read_text(errors="replace")[-2000:]
+                    if diagnostic_path.exists()
+                    else "<missing>"
+                )
+                self.fail(
+                    f"{error}; daemon status={daemon_status}; diagnostic={diagnostic!r}"
+                )
+            payload = json.loads(result_text)
+            status = eventually(process.poll, timeout=20)
+            SUPERVISOR.close_daemon_diagnostic(process)
+            diagnostic = (
+                args.runtime_dir / SUPERVISOR.DAEMON_DIAGNOSTIC_NAME
+            ).read_text()
+            self.assertEqual(status, -signal.SIGKILL, diagnostic)
+            self.assertEqual(payload["present_keys"], [])
+            event_fd = process._anvil_watchdog_event_read_fd
+            self.assertEqual(payload["inherited_event_pipe_fds"], [])
+            self.assertEqual(payload["inherited_root_socket_fds"], [])
+            self.assertEqual(payload["scan_first"], 3)
+            self.assertEqual(payload["scan_last"], 1023)
+            readable, _, _ = select.select([event_fd], [], [], 1)
+            self.assertEqual(readable, [event_fd])
+            event_payload = os.read(event_fd, 513)
+            self.assertLessEqual(len(event_payload), 512)
+            event = json.loads(event_payload)
+            self.assertEqual(event["cause"], "lock-integrity-failure")
+            self.assertEqual(event["phase"], "startup")
+            self.assertEqual(event["method"], "none")
+            self.assertIsNone(event["tool"])
+            for field in (
+                "heartbeat_age_ms",
+                "heartbeat_limit_ms",
+                "dispatch_age_ms",
+                "dispatch_limit_ms",
+            ):
+                self.assertIsNone(event[field])
+            self.assertEqual(event["run_id"], process._anvil_watchdog_run_id)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=3)
+            SUPERVISOR.close_daemon_diagnostic(process)
+            descriptor = getattr(process, "_anvil_watchdog_event_read_fd", None)
+            process._anvil_watchdog_event_read_fd = None
+            if descriptor is not None:
+                os.close(descriptor)
+
+    def test_activity_path_is_preflighted_for_agent_and_shared_host(self):
+        limit = SUPERVISOR.unix_socket_path_limit_bytes()
+        old_suffix = "/emacs/server"
+        host_suffix = "/h" + old_suffix
+        root = Path("/" + ("x" * (limit - len(host_suffix) - 1)))
+        self.assertLessEqual(len(os.fsencode(root / "h" / "emacs" / "server")), limit)
+        with self.assertRaisesRegex(
+            SUPERVISOR.ConfigurationError,
+            "activity socket",
+        ):
+            SUPERVISOR.validate_host_emacs_socket_paths(root, "h", ("w",))
+        with self.assertRaisesRegex(
+            SUPERVISOR.ConfigurationError,
+            "activity socket",
+        ):
+            SUPERVISOR.validate_emacs_socket_paths(
+                root,
+                "h",
+                "a" * 32,
+                ("w",),
+            )
 
 
 if __name__ == "__main__":
