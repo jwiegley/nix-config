@@ -298,6 +298,7 @@ in
       focusEvents = true;
       aggressiveResize = false;
       extraConfig = ''
+        set-option -g prefix 'C-\'
         set-option -g allow-passthrough on
         set-option -g set-clipboard on
         set-option -g extended-keys off
