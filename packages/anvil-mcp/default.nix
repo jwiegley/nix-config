@@ -693,6 +693,17 @@ let
         return parent_pid
 
 
+    def validate_bridge_pid(raw):
+        if raw is None:
+            return None
+        if not raw or not raw.isascii() or not raw.isdecimal():
+            fail("ANVIL_HEADLESS_BRIDGE_PID must be a decimal PID")
+        bridge_pid = int(raw)
+        if bridge_pid <= 1:
+            fail("ANVIL_HEADLESS_BRIDGE_PID must be greater than one")
+        return bridge_pid
+
+
     def install_linux_parent_death_signal(expected_parent):
         libc = ctypes.CDLL(None, use_errno=True)
         if libc.prctl(1, signal.SIGKILL, 0, 0, 0) != 0:
@@ -776,26 +787,39 @@ let
         os.close(ready_fd)
 
 
-    def guard_linux(root_pid, target_pid, group, ready_fd, commit_fd, state):
+    def guard_linux(
+        root_pid,
+        target_pid,
+        bridge_pid,
+        group,
+        ready_fd,
+        commit_fd,
+        state,
+    ):
         root_fd = os.pidfd_open(root_pid, 0)
         target_fd = os.pidfd_open(target_pid, 0)
+        bridge_fd = os.pidfd_open(bridge_pid, 0) if bridge_pid is not None else None
         poller = select.poll()
         poller.register(root_fd, select.POLLIN)
         poller.register(target_fd, select.POLLIN)
+        if bridge_fd is not None:
+            poller.register(bridge_fd, select.POLLIN)
         poller.register(commit_fd, select.POLLIN | select.POLLHUP | select.POLLERR)
+        lifecycle_fds = {root_fd, target_fd}
+        if bridge_fd is not None:
+            lifecycle_fds.add(bridge_fd)
         if any(
-            descriptor in (root_fd, target_fd)
+            descriptor in lifecycle_fds
             for descriptor, _event in poller.poll(0)
         ):
-            raise RuntimeError("root or target exited before guard readiness")
+            raise RuntimeError(
+                "bridge, root, or target exited before guard readiness"
+            )
         install_guard_signal_handlers(target_pid, group, state)
         os.write(ready_fd, b"R")
         while True:
             events = poller.poll()
-            if any(descriptor == target_fd for descriptor, _event in events):
-                terminate_target(target_pid, group, state)
-                os._exit(0)
-            if any(descriptor == root_fd for descriptor, _event in events):
+            if any(descriptor in lifecycle_fds for descriptor, _event in events):
                 terminate_target(target_pid, group, state)
                 os._exit(0)
             if any(descriptor == commit_fd for descriptor, _event in events):
@@ -809,22 +833,29 @@ let
                 )
 
 
-    def guard_darwin(root_pid, target_pid, group, ready_fd, commit_fd, state):
+    def guard_darwin(
+        root_pid,
+        target_pid,
+        bridge_pid,
+        group,
+        ready_fd,
+        commit_fd,
+        state,
+    ):
         queue = select.kqueue()
         flags = select.KQ_EV_ADD | select.KQ_EV_ENABLE
+        lifecycle_pids = {root_pid, target_pid}
+        if bridge_pid is not None:
+            lifecycle_pids.add(bridge_pid)
         changes = [
             select.kevent(
-                root_pid,
+                process_pid,
                 filter=select.KQ_FILTER_PROC,
                 flags=flags,
                 fflags=select.KQ_NOTE_EXIT,
-            ),
-            select.kevent(
-                target_pid,
-                filter=select.KQ_FILTER_PROC,
-                flags=flags,
-                fflags=select.KQ_NOTE_EXIT,
-            ),
+            )
+            for process_pid in lifecycle_pids
+        ] + [
             select.kevent(
                 commit_fd,
                 filter=select.KQ_FILTER_READ,
@@ -832,27 +863,22 @@ let
             ),
         ]
         queue.control(changes, 0, 0)
-        initial = queue.control(None, 3, 0)
+        initial = queue.control(None, len(changes), 0)
         if any(
             event.filter == select.KQ_FILTER_PROC
-            and event.ident in (root_pid, target_pid)
+            and event.ident in lifecycle_pids
             for event in initial
         ):
-            raise RuntimeError("root or target exited before guard readiness")
+            raise RuntimeError(
+                "bridge, root, or target exited before guard readiness"
+            )
         install_guard_signal_handlers(target_pid, group, state)
         os.write(ready_fd, b"R")
         while True:
-            events = queue.control(None, 3, None)
+            events = queue.control(None, len(changes), None)
             if any(
                 event.filter == select.KQ_FILTER_PROC
-                and event.ident == target_pid
-                for event in events
-            ):
-                terminate_target(target_pid, group, state)
-                os._exit(0)
-            if any(
-                event.filter == select.KQ_FILTER_PROC
-                and event.ident == root_pid
+                and event.ident in lifecycle_pids
                 for event in events
             ):
                 terminate_target(target_pid, group, state)
@@ -882,7 +908,14 @@ let
                 )
 
 
-    def run_guard(root_pid, target_pid, group, ready_fd, commit_fd):
+    def run_guard(
+        root_pid,
+        target_pid,
+        bridge_pid,
+        group,
+        ready_fd,
+        commit_fd,
+    ):
         state = {"committed": False}
         try:
             # close_lock_fds() already ran before os.pipe(); calling it again
@@ -892,6 +925,7 @@ let
                 guard_linux(
                     root_pid,
                     target_pid,
+                    bridge_pid,
                     group,
                     ready_fd,
                     commit_fd,
@@ -901,6 +935,7 @@ let
                 guard_darwin(
                     root_pid,
                     target_pid,
+                    bridge_pid,
                     group,
                     ready_fd,
                     commit_fd,
@@ -937,6 +972,9 @@ let
     root_pid = validate_parent_pid(
         os.environ.pop("ANVIL_HEADLESS_PARENT_PID", None)
     )
+    bridge_pid = validate_bridge_pid(
+        os.environ.pop("ANVIL_HEADLESS_BRIDGE_PID", None)
+    )
 
     if sys.platform.startswith("linux"):
         if not hasattr(os, "pidfd_open"):
@@ -966,6 +1004,7 @@ let
         run_guard(
             root_pid,
             target_pid,
+            bridge_pid,
             group,
             ready_write,
             commit_read,
