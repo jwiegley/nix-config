@@ -43,11 +43,11 @@ def test_timeout_budget(
     response_timeout = soak.configure_watchdog_environment()
     timeouts = soak.configure_soak_timeout_environment(response_timeout)
     watchdog_window = min(expected_normal, expected_dispatch)
-    sequential_overlap = soak.NONCE_START_TIMEOUT_SECONDS + timeouts["healthy"]
+    sequential_overlap = soak.NONCE_START_BUDGET_SECONDS + timeouts["healthy"]
     if sequential_overlap != watchdog_window:
         raise AssertionError(
             "sequential watchdog budget drifted: "
-            f"nonce={soak.NONCE_START_TIMEOUT_SECONDS:g} "
+            f"nonce={soak.NONCE_START_BUDGET_SECONDS:g} "
             f"healthy={timeouts['healthy']:g} watchdog={watchdog_window:g}"
         )
     with mock.patch.dict(
@@ -510,12 +510,43 @@ def test_healthy_sibling_deadline_preserves_watchdog_window(soak_path: Path) -> 
             )
 
 
+def test_wait_for_nonce_uses_caller_deadline(soak_path: Path) -> None:
+    """Accept a late nonce only while the caller's absolute deadline remains."""
+    soak = load_module(soak_path, "persistent_soak_nonce_deadline_test")
+    now = [100.0]
+
+    class PathAppearingAfterLegacyBudget:
+        @staticmethod
+        def exists():
+            return now[0] >= 112.0
+
+    def advance(_seconds):
+        now[0] = 112.0
+
+    with (
+        mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]),
+        mock.patch.object(soak.time, "sleep", side_effect=advance),
+    ):
+        soak.wait_for_nonce(PathAppearingAfterLegacyBudget(), deadline=145.0)
+
+    now[0] = 145.0
+    with mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]):
+        try:
+            soak.wait_for_nonce(PathAppearingAfterLegacyBudget(), deadline=145.0)
+        except AssertionError as error:
+            if "shared watchdog deadline" not in str(error):
+                raise
+        else:
+            raise AssertionError("nonce at the absolute deadline was accepted")
+
+
 def test_recovery_cycle_uses_remaining_watchdog_window(soak_path: Path) -> None:
     """Carry one absolute watchdog deadline through healthy collection."""
     soak = load_module(soak_path, "persistent_soak_recovery_budget_test")
     now = [100.0]
     observed: list[dict[str, float]] = []
     hung_receives: list[tuple[tuple[object, ...], dict[str, float]]] = []
+    nonce_deadlines: list[float] = []
 
     class StopAfterHungResponse(Exception):
         pass
@@ -546,9 +577,7 @@ def test_recovery_cycle_uses_remaining_watchdog_window(soak_path: Path) -> None:
 
         @staticmethod
         def eventually(_predicate, timeout):
-            if timeout != soak.NONCE_START_TIMEOUT_SECONDS:
-                raise AssertionError(f"unexpected nonce timeout: {timeout:g}")
-            return True
+            raise AssertionError(f"legacy relative nonce timeout used: {timeout:g}")
 
     class Module:
         @staticmethod
@@ -556,17 +585,27 @@ def test_recovery_cycle_uses_remaining_watchdog_window(soak_path: Path) -> None:
             return f"identity-{pid}"
 
     def send_fixture_requests(_bridge, _fixtures):
-        now[0] = 103.0
+        now[0] = 113.0
         return {"file": 1, "org": 2, "git": 3, "elisp": 4}
 
     def collect_responses(_bridge, _identifiers, **bounds):
-        now[0] = 110.0
+        now[0] = 130.0
         observed.append(bounds)
         return {}
+
+    def wait_for_nonce(_path, *, deadline):
+        nonce_deadlines.append(deadline)
+        now[0] = 112.0
 
     with (
         mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]),
         mock.patch.object(soak, "record_identity", return_value="identity-101"),
+        mock.patch.object(
+            soak,
+            "wait_for_nonce",
+            side_effect=wait_for_nonce,
+            create=True,
+        ),
         mock.patch.object(
             soak,
             "send_fixture_requests",
@@ -605,6 +644,10 @@ def test_recovery_cycle_uses_remaining_watchdog_window(soak_path: Path) -> None:
         raise AssertionError(
             "recovery cycle did not preserve the absolute watchdog deadline: "
             f"{observed!r}"
+        )
+    if nonce_deadlines != [145.0]:
+        raise AssertionError(
+            f"nonce wait did not share the watchdog deadline: {nonce_deadlines!r}"
         )
     if hung_receives != [((), {"deadline": 175.0})]:
         raise AssertionError(
@@ -1660,6 +1703,7 @@ def main() -> None:
     test_recovered_async_uses_one_success_horizon(soak)
     test_async_marker_failure_diagnostics(soak)
     test_healthy_sibling_deadline_preserves_watchdog_window(soak)
+    test_wait_for_nonce_uses_caller_deadline(soak)
     test_recovery_cycle_uses_remaining_watchdog_window(soak)
     test_phase_timeout_ownership(soak)
     test_response_reader(soak, smoke)

@@ -29,8 +29,8 @@ let
   # the hung request's absolute watchdog deadline.  After that response, one
   # cycle has explicit restart, old-root exit, readiness, and scheduling
   # envelopes.
-  soakNonceStartSeconds = 10;
-  soakHealthySeconds = watchdogWindowSeconds - soakNonceStartSeconds;
+  soakNonceStartBudgetSeconds = 10;
+  soakHealthySeconds = watchdogWindowSeconds - soakNonceStartBudgetSeconds;
   soakRestartSeconds = 2 * policy.bridgeReadinessSeconds;
   soakReadinessSeconds = watchdogWindowSeconds;
   soakFixtureCommandCount = 4;
@@ -116,7 +116,7 @@ assert soakMarginPercent >= 20;
 assert soakKillAfterSeconds > 0;
 assert soakKillAfterSeconds > soakBridgeCleanupSeconds;
 assert soakHealthySeconds > 0;
-assert soakNonceStartSeconds + soakHealthySeconds <= watchdogWindowSeconds;
+assert soakNonceStartBudgetSeconds + soakHealthySeconds <= watchdogWindowSeconds;
 assert soakMarginSeconds * 100 >= soakInternalBudgetSeconds * soakMarginPercent;
 assert soakTimeoutSeconds > soakInternalBudgetSeconds;
 assert soakTimeoutSeconds + soakKillAfterSeconds <= soakProcessHardCeilingSeconds;
@@ -132,7 +132,7 @@ runCommand "anvil-mcp-persistent-soak"
       cycles = soakCycles;
       cycleSeconds = soakCycleBudgetSeconds;
       setupSeconds = soakSetupSeconds;
-      nonceStartSeconds = soakNonceStartSeconds;
+      nonceStartSeconds = soakNonceStartBudgetSeconds;
       healthySeconds = soakHealthySeconds;
       restartSeconds = soakRestartSeconds;
       readinessSeconds = soakReadinessSeconds;

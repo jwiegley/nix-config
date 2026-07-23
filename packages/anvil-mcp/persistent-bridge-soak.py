@@ -67,7 +67,7 @@ ASYNC_CHILD_EXIT_TIMEOUT_SECONDS = 10.0
 WORKER_INVENTORY_TIMEOUT_SECONDS = 110.0
 SETUP_SCHEDULING_GRACE_SECONDS = 40.0
 INVENTORY_SCHEDULING_GRACE_SECONDS = 30.0
-NONCE_START_TIMEOUT_SECONDS = 10.0
+NONCE_START_BUDGET_SECONDS = 10.0
 OLD_ROOT_EXIT_TIMEOUT_SECONDS = 15.0
 CYCLE_SCHEDULING_GRACE_SECONDS = 10.0
 BRIDGE_CLOSE_BOUND_SECONDS = 20.0
@@ -93,7 +93,7 @@ DEFAULT_BRIDGE_CLEANUP_TIMEOUT_SECONDS = 60.0
 DEFAULT_POST_CLEANUP_TIMEOUT_SECONDS = 225.0
 DEFAULT_HEALTHY_TIMEOUT_SECONDS = (
     min(DEFAULT_WATCHDOG_NORMAL_SECONDS, DEFAULT_WATCHDOG_DISPATCH_SECONDS)
-    - NONCE_START_TIMEOUT_SECONDS
+    - NONCE_START_BUDGET_SECONDS
 )
 DEFAULT_RESTART_TIMEOUT_SECONDS = 40.0
 DEFAULT_READINESS_TIMEOUT_SECONDS = 45.0
@@ -182,12 +182,12 @@ def configure_soak_timeout_environment(
         DEFAULT_CLIENT_TOOL_SECONDS,
     )
     overlap_window = min(normal, dispatch)
-    sequential_overlap = NONCE_START_TIMEOUT_SECONDS + timeouts["healthy"]
+    sequential_overlap = NONCE_START_BUDGET_SECONDS + timeouts["healthy"]
     if sequential_overlap > overlap_window:
         raise AssertionError(
             "nonce-start plus healthy-sibling bounds must fit sequentially "
             "inside the watchdog overlap window: "
-            f"nonce={NONCE_START_TIMEOUT_SECONDS:g} "
+            f"nonce={NONCE_START_BUDGET_SECONDS:g} "
             f"healthy={timeouts['healthy']:g} watchdog={overlap_window:g}"
         )
     minimum_cycle = (
@@ -256,7 +256,7 @@ def healthy_sibling_deadline(
 ) -> float:
     """Return the absolute end of the shared nonce and healthy window."""
     configured_deadline = (
-        hang_started + NONCE_START_TIMEOUT_SECONDS + configured_timeout
+        hang_started + NONCE_START_BUDGET_SECONDS + configured_timeout
     )
     watchdog_deadline = (
         hang_started
@@ -264,6 +264,18 @@ def healthy_sibling_deadline(
         - WATCHDOG_RESPONSE_GRACE_SECONDS
     )
     return min(configured_deadline, watchdog_deadline)
+
+
+def wait_for_nonce(path: Path, *, deadline: float) -> None:
+    """Wait for nonce publication inside the shared watchdog deadline."""
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        if path.exists() and time.monotonic() < deadline:
+            return
+        time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
+    raise AssertionError("nonce did not appear before the shared watchdog deadline")
 
 
 def _phase_timeout_handler(signum: int, _frame: object) -> None:
@@ -1177,20 +1189,20 @@ def run_recovery_cycle(
     )
     hang_started = time.monotonic()
     recovery_deadline = hang_started + recovery_response_timeout
-    hang_identifier = hanging.send_request(
-        "tools/call",
-        {"name": "emacs-eval", "arguments": {"expression": expression}},
-    )
-    smoke.eventually(nonce.exists, timeout=NONCE_START_TIMEOUT_SECONDS)
-    if response_buffered(hanging):
-        raise AssertionError("hung request completed before sibling work began")
-
-    sibling_started = time.monotonic()
     healthy_deadline = healthy_sibling_deadline(
         hang_started,
         healthy_timeout,
         recovery_response_timeout,
     )
+    hang_identifier = hanging.send_request(
+        "tools/call",
+        {"name": "emacs-eval", "arguments": {"expression": expression}},
+    )
+    wait_for_nonce(nonce, deadline=healthy_deadline)
+    if response_buffered(hanging):
+        raise AssertionError("hung request completed before sibling work began")
+
+    sibling_started = time.monotonic()
     identifiers = send_fixture_requests(healthy, fixtures)
     if time.monotonic() >= healthy_deadline:
         raise AssertionError(
