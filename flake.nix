@@ -312,7 +312,13 @@
                   fi
                 done
                 echo "Running ruff..."
-                ruff check ${src}/bin/update-overlay ${src}/bin/update-overlay-test.py ${src}/packages/anvil-mcp
+                ruff check \
+                  ${src}/bin/codex-litellm-test.py \
+                  ${src}/bin/update-overlay \
+                  ${src}/bin/update-overlay-test.py \
+                  ${src}/packages/anvil-mcp
+                echo "Running codex-litellm tests..."
+                python3 ${src}/bin/codex-litellm-test.py
                 echo "Running update-overlay tests..."
                 python3 ${src}/bin/update-overlay-test.py
                 touch $out
