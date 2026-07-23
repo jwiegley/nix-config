@@ -2797,6 +2797,10 @@ let
     ".claude/skills/sherlock/SKILL.md"
     ".claude/skills/sherlock/sherlock"
   ];
+  task9FractalPaths = [
+    ".agents/skills/fractal"
+    ".agents/skills/wiki"
+  ];
   task9ManagedPrefixes = [
     ".agents/skills"
     ".claude/agents"
@@ -2841,7 +2845,7 @@ let
   ];
   task9IsManagedHomePath =
     path:
-    !(builtins.elem path task9SherlockPaths)
+    !(builtins.elem path (task9SherlockPaths ++ task9FractalPaths))
     && (
       builtins.elem path task9ManagedExactPaths
       || lib.any (prefix: lib.hasPrefix "${prefix}/" path) task9ManagedPrefixes
@@ -3109,12 +3113,18 @@ let
     lib.sort builtins.lessThan (
       builtins.filter task9IsManagedHomePath (builtins.attrNames evaluation.config.home.file)
     );
-  task9IntegratedPathChecks = lib.mapAttrsToList (
-    name: spec:
-    expectEqual "Task 9 integrated ${name} exact AI paths" (task9AiPathsIn
-      task9JohnwEvaluations.${name}
-    ) (task9PathsForClass spec.expectedClass)
-  ) task9FixtureSpecs;
+  task9IntegratedPathChecks =
+    lib.mapAttrsToList (
+      name: spec:
+      expectEqual "Task 9 integrated ${name} exact AI paths" (task9AiPathsIn
+        task9JohnwEvaluations.${name}
+      ) (task9PathsForClass spec.expectedClass)
+    ) task9FixtureSpecs
+    ++ [
+      (expectEqual "Task 9 preserves separate Fractal skill writers" (builtins.filter (
+        path: builtins.hasAttr path task9JohnwHera.config.home.file
+      ) task9FractalPaths) task9FractalPaths)
+    ];
   task9ClaudeMemData = task9JohnwHera.config.home.activation.claudeMemRealClaude.data;
 
   task9DarwinPkgs = testPkgsFor.aarch64-darwin;
