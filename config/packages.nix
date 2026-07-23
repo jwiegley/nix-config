@@ -12,6 +12,8 @@ let
     isLinux
     ;
   sys = pkgs.stdenv.hostPlatform.system;
+  sourcePython313Packages = inputs.nixpkgs.legacyPackages.${sys}.python313Packages;
+  supportsAiperf = sourcePython313Packages ? choreographer && sourcePython313Packages ? logistro;
 
   # Helper to conditionally include a package that may come from an overlay.
   # Returns a singleton list if the package exists in pkgs, empty list otherwise.
@@ -486,7 +488,7 @@ rec {
     ]
     ++ optPkg "plasma-wiki"
     ++ optPkg "plasma-fractal"
-    ++ optPkg "aiperf"
+    ++ lib.optionals supportsAiperf (optPkg "aiperf")
     ++ optPkg "guidellm"
     ++ optPkg "llama-swap"
     ++ optPkg "lazycodex-ai"

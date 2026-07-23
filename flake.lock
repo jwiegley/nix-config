@@ -164,24 +164,34 @@
       "inputs": {
         "git-ai": "git-ai",
         "llm-agents": "llm-agents",
+        "mcp-remote": "mcp-remote",
         "mcp-servers-nix": "mcp-servers-nix",
         "nixpkgs": [
           "nixpkgs"
         ],
-        "pal-mcp-server": "pal-mcp-server"
+        "pal-mcp-server": "pal-mcp-server",
+        "pi-mcp-adapter": "pi-mcp-adapter",
+        "pi-openai-server-compaction": "pi-openai-server-compaction",
+        "pi-quiet": "pi-quiet",
+        "pi-subagent": "pi-subagent",
+        "ponytail": "ponytail",
+        "rust-overlay": "rust-overlay_2",
+        "superpowers": "superpowers",
+        "translate-tool": "translate-tool"
       },
       "locked": {
-        "lastModified": 1784749459,
-        "narHash": "sha256-vSTnolnso7W6PRKBCC4InY4D7KLjAlzRwHO3f4J6ZBk=",
-        "owner": "jwiegley",
-        "repo": "ai-nix",
-        "rev": "edae38849c9aba42ddcc0174bcae8dcb2b5e83fc",
-        "type": "github"
+        "lastModified": 1784768740,
+        "narHash": "sha256-uksvUas+xuRHT21EKofvguaH0lwpnWwrnIVqP8UgPWA=",
+        "ref": "refs/heads/main",
+        "rev": "22c8fda838cbabaaa4bf0fbcdd392b0af5f34f4c",
+        "revCount": 94,
+        "type": "git",
+        "url": "https://github.com/jwiegley/ai-nix"
       },
       "original": {
-        "owner": "jwiegley",
-        "repo": "ai-nix",
-        "type": "github"
+        "rev": "22c8fda838cbabaaa4bf0fbcdd392b0af5f34f4c",
+        "type": "git",
+        "url": "https://github.com/jwiegley/ai-nix"
       }
     },
     "bun2nix": {
@@ -5281,6 +5291,23 @@
         "type": "github"
       }
     },
+    "mcp-remote": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1770333622,
+        "narHash": "sha256-+oNI2Uq7gW3sLzJS4ky2+BXhTmo44+WpcdYgieGPpmI=",
+        "owner": "geelen",
+        "repo": "mcp-remote",
+        "rev": "02619aff36e79803d7c894e8c8ae7b34b2d11f8c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "geelen",
+        "repo": "mcp-remote",
+        "rev": "02619aff36e79803d7c894e8c8ae7b34b2d11f8c",
+        "type": "github"
+      }
+    },
     "mcp-servers-nix": {
       "inputs": {
         "nixpkgs": [
@@ -6511,7 +6538,7 @@
         "flake-utils": "flake-utils_8",
         "nixpkgs": "nixpkgs_4",
         "org2jsonl": "org2jsonl",
-        "rust-overlay": "rust-overlay_3"
+        "rust-overlay": "rust-overlay_4"
       },
       "locked": {
         "lastModified": 1773692632,
@@ -6729,7 +6756,7 @@
           "obr",
           "nixpkgs"
         ],
-        "rust-overlay": "rust-overlay_2"
+        "rust-overlay": "rust-overlay_3"
       },
       "locked": {
         "lastModified": 1771539100,
@@ -6750,7 +6777,7 @@
         "crane": "crane_2",
         "flake-utils": "flake-utils_11",
         "nixpkgs": "nixpkgs_5",
-        "rust-overlay": "rust-overlay_4"
+        "rust-overlay": "rust-overlay_5"
       },
       "locked": {
         "lastModified": 1773854790,
@@ -6795,6 +6822,91 @@
       "original": {
         "owner": "jwiegley",
         "repo": "pal-mcp-server",
+        "type": "github"
+      }
+    },
+    "pi-mcp-adapter": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783097853,
+        "narHash": "sha256-JjYS9tPSoVuubdmHTqTNNYfDJOc9CBPvVbIxvdJWi7M=",
+        "owner": "nicobailon",
+        "repo": "pi-mcp-adapter",
+        "rev": "82724dccc13a49310530898f922bafff12b7f3fe",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nicobailon",
+        "repo": "pi-mcp-adapter",
+        "rev": "82724dccc13a49310530898f922bafff12b7f3fe",
+        "type": "github"
+      }
+    },
+    "pi-openai-server-compaction": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784314274,
+        "narHash": "sha256-SFGcISdYblxGonhipIHPAOons8MdwYtu+A+WbHnNSVg=",
+        "owner": "algal",
+        "repo": "pi-openai-server-compaction",
+        "rev": "c6d593087709e9481223dc6c6c2269b371b5e055",
+        "type": "github"
+      },
+      "original": {
+        "owner": "algal",
+        "repo": "pi-openai-server-compaction",
+        "rev": "c6d593087709e9481223dc6c6c2269b371b5e055",
+        "type": "github"
+      }
+    },
+    "pi-quiet": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784727372,
+        "narHash": "sha256-CScA35fG/xSgtJrWGf36G5oEv3Y+P5sSHjsy4NXkL94=",
+        "owner": "zenspc",
+        "repo": "pi-extensions",
+        "rev": "b281afef4e61188e7aa76aaa114ba505274fa7bc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zenspc",
+        "repo": "pi-extensions",
+        "rev": "b281afef4e61188e7aa76aaa114ba505274fa7bc",
+        "type": "github"
+      }
+    },
+    "pi-subagent": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783671111,
+        "narHash": "sha256-TyeqNoz5RLRlDWY4rcZbOY/UCHOMiNIjuGsW2xZoTEE=",
+        "owner": "mjakl",
+        "repo": "pi-subagent",
+        "rev": "70248dcf7c8a5ca74497e817a699f009c55e6917",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mjakl",
+        "repo": "pi-subagent",
+        "rev": "70248dcf7c8a5ca74497e817a699f009c55e6917",
+        "type": "github"
+      }
+    },
+    "ponytail": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784151135,
+        "narHash": "sha256-Y7d4s7uqjH6IbEXhqAiQ+yaxr6iiGcv2X64LuMtG1T8=",
+        "owner": "DietrichGebert",
+        "repo": "ponytail",
+        "rev": "16f29800fd2681bdf24f3eb4ccffe38be3baec6b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "DietrichGebert",
+        "repo": "ponytail",
+        "rev": "16f29800fd2681bdf24f3eb4ccffe38be3baec6b",
         "type": "github"
       }
     },
@@ -6929,6 +7041,28 @@
     "rust-overlay_2": {
       "inputs": {
         "nixpkgs": [
+          "ai-nix",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1784697913,
+        "narHash": "sha256-DK+AmC9SQ9hmOFNIMu1l05gJtsmKyYsfJnuFtt1TnAU=",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "47759faaddf38fadaf172151ca9df8adae9c0b2e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "47759faaddf38fadaf172151ca9df8adae9c0b2e",
+        "type": "github"
+      }
+    },
+    "rust-overlay_3": {
+      "inputs": {
+        "nixpkgs": [
           "obr",
           "org2jsonl",
           "nixpkgs"
@@ -6948,7 +7082,7 @@
         "type": "github"
       }
     },
-    "rust-overlay_3": {
+    "rust-overlay_4": {
       "inputs": {
         "nixpkgs": [
           "obr",
@@ -6969,7 +7103,7 @@
         "type": "github"
       }
     },
-    "rust-overlay_4": {
+    "rust-overlay_5": {
       "inputs": {
         "nixpkgs": [
           "org2jsonl",
@@ -7204,6 +7338,23 @@
       "original": {
         "type": "git",
         "url": "file:///Users/johnw/src/stock-trader"
+      }
+    },
+    "superpowers": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783029415,
+        "narHash": "sha256-kHdQ9e44doBk2yYW88tMSCqVG8ycYcvJSZlrIziXhpA=",
+        "owner": "obra",
+        "repo": "superpowers",
+        "rev": "d884ae04edebef577e82ff7c4e143debd0bbec99",
+        "type": "github"
+      },
+      "original": {
+        "owner": "obra",
+        "repo": "superpowers",
+        "rev": "d884ae04edebef577e82ff7c4e143debd0bbec99",
+        "type": "github"
       }
     },
     "systems": {
@@ -7498,6 +7649,23 @@
       "original": {
         "type": "git",
         "url": "file:///Users/johnw/src/trade-journal"
+      }
+    },
+    "translate-tool": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1776110818,
+        "narHash": "sha256-P27Hvn8p1+BN8z6g/aFk91BFtL9SMQiMNFYayKn5xyY=",
+        "owner": "jwiegley",
+        "repo": "translate-tool",
+        "rev": "bffdb7ba3e5db603ea1390fee555354c1d45d642",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jwiegley",
+        "repo": "translate-tool",
+        "rev": "bffdb7ba3e5db603ea1390fee555354c1d45d642",
+        "type": "github"
       }
     },
     "treefmt-nix": {

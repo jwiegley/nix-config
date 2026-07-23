@@ -3616,6 +3616,35 @@ let
       inputs = task11PackageInputsFor system;
       pkgs = testPkgsFor.${system};
     }).userPackageInputNames;
+  task11SelectsAiperfFor =
+    python313Packages:
+    let
+      fixturePkgs = testPkgsFor.x86_64-linux;
+      selection = import "${src}/config/packages.nix" {
+        hostname = "linux";
+        inputs = (task11PackageInputsFor "x86_64-linux") // {
+          nixpkgs.legacyPackages."x86_64-linux".python313Packages = python313Packages;
+        };
+        isClientMachine = false;
+        pkgs = fixturePkgs;
+      };
+    in
+    builtins.elem fixturePkgs.aiperf selection.package-list;
+  task11AiperfChecks = [
+    (expectEqual "Task 11 AIPerf omits both missing source dependencies" (task11SelectsAiperfFor
+      { }
+    ) false)
+    (expectEqual "Task 11 AIPerf requires choreographer" (task11SelectsAiperfFor {
+      logistro = true;
+    }) false)
+    (expectEqual "Task 11 AIPerf requires logistro" (task11SelectsAiperfFor {
+      choreographer = true;
+    }) false)
+    (expectEqual "Task 11 AIPerf selects complete source dependencies" (task11SelectsAiperfFor {
+      choreographer = true;
+      logistro = true;
+    }) true)
+  ];
   task11PackageChecks =
     map
       (
@@ -4086,7 +4115,8 @@ let
   ++ rendererChecks
   ++ task9Checks
   ++ task10Checks
-  ++ task11PackageChecks;
+  ++ task11PackageChecks
+  ++ task11AiperfChecks;
 in
 assert builtins.deepSeq contractChecks true;
 
