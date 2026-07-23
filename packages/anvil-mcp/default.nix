@@ -2376,9 +2376,7 @@ let
         value = frame_object(value, ACTIVITY_MAX_BYTES)
         if set(value) != ACTIVITY_KEYS:
             raise ValueError("activity frame has the wrong key set")
-        if value["schema_version"] != 1 or isinstance(
-            value["schema_version"], bool
-        ):
+        if type(value["schema_version"]) is not int or value["schema_version"] != 1:
             raise ValueError("unsupported activity schema")
         validate_run_id(value["run_id"])
         if value["run_id"] != expected_run_id:
@@ -2407,9 +2405,7 @@ let
         value = frame_object(value, EVENT_MAX_BYTES)
         if set(value) != EVENT_KEYS:
             raise ValueError("watchdog event has the wrong key set")
-        if value["schema_version"] != 1 or isinstance(
-            value["schema_version"], bool
-        ):
+        if type(value["schema_version"]) is not int or value["schema_version"] != 1:
             raise ValueError("unsupported watchdog event schema")
         validate_run_id(value["run_id"])
         if value["run_id"] != expected_run_id:

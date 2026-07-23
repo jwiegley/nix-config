@@ -490,6 +490,24 @@ class WatchdogProtocolTests(WatchdogTestCase):
             with self.subTest(field=field), self.assertRaises(ValueError):
                 validate(valid_activity(**{field: True}), RUN_ID, DAEMON_PID, 0)
 
+    def test_activity_rejects_float_and_exponent_schema_versions(self):
+        validate = self.namespace["validate_activity"]
+        with self.assertRaises(ValueError):
+            validate(
+                valid_activity(schema_version=1.0),
+                RUN_ID,
+                DAEMON_PID,
+                0,
+            )
+        payload = json.dumps(
+            valid_activity(),
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+        payload = payload.replace(b'"schema_version":1', b'"schema_version":1e0')
+        with self.assertRaises(ValueError):
+            validate(payload, RUN_ID, DAEMON_PID, 0)
+
     def test_activity_rejects_wrong_types_for_every_enum(self):
         validate = self.namespace["validate_activity"]
         for field in ("phase", "method"):
@@ -570,6 +588,23 @@ class WatchdogCauseTests(WatchdogTestCase):
         ):
             with self.subTest(field=field), self.assertRaises(ValueError):
                 validate(valid_event(**{field: True}), RUN_ID, DAEMON_PID)
+
+    def test_event_rejects_float_and_exponent_schema_versions(self):
+        validate = self.namespace["validate_watchdog_event"]
+        with self.assertRaises(ValueError):
+            validate(
+                valid_event(schema_version=1.0),
+                RUN_ID,
+                DAEMON_PID,
+            )
+        payload = json.dumps(
+            valid_event(),
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+        payload = payload.replace(b'"schema_version":1', b'"schema_version":1e0')
+        with self.assertRaises(ValueError):
+            validate(payload, RUN_ID, DAEMON_PID)
 
     def test_event_rejects_wrong_types_for_every_enum(self):
         validate = self.namespace["validate_watchdog_event"]

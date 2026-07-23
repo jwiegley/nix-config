@@ -269,6 +269,17 @@ def validate_watchdog_event(
         if age is not None:
             exact_nonnegative_integer(age)
             exact_nonnegative_integer(limit)
+    payload = (
+        json.dumps(
+            value,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        + "\n"
+    ).encode("utf-8")
+    if len(payload) > WATCHDOG_EVENT_MAX_BYTES:
+        raise ValueError("watchdog event exceeds byte limit")
     return dict(value)
 
 
@@ -3028,6 +3039,8 @@ def supervisor_loop(
                         status_failures = 0
                         next_status_attempt = 0.0
             except OSError as error:
+                if exit_transaction_failed:
+                    raise
                 if not transient_supervisor_error(error):
                     raise
                 transient_failures += 1

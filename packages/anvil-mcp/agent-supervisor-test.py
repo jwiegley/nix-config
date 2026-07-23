@@ -5500,6 +5500,125 @@ class SupervisorWatchdogEventTests(unittest.TestCase):
         self.assertFalse((args.runtime_dir / SUPERVISOR.STATUS_NAME).exists())
         self.assert_closed(process, event_descriptor)
 
+    def test_natural_exit_finalizer_eio_is_not_retried_as_transient(self):
+        args = self.prepare(host="natural-finalizer-eio")
+        process = self.loop_process(event=None, pid=4702)
+        records = []
+        handlers = {}
+        sleep_count = 0
+        lock = SUPERVISOR.try_supervisor_lock(args.runtime_dir)
+        self.assertIsNotNone(lock)
+        lock_descriptor, lock_identity = lock
+        injected = OSError(errno.EIO, "injected natural-exit finalizer failure")
+        original_write_status = SUPERVISOR.write_status
+
+        def install_handler(signum, handler):
+            handlers[signum] = handler
+
+        def sleep(_seconds):
+            nonlocal sleep_count
+            sleep_count += 1
+            if sleep_count == 1:
+                process.returncode = -signal.SIGKILL
+            else:
+                handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+        def write_status(inner_args, record):
+            records.append(dict(record))
+            original_write_status(inner_args, record)
+
+        def stop(inner_process):
+            if inner_process is not None:
+                inner_process.returncode = -signal.SIGKILL
+
+        with (
+            mock.patch.object(SUPERVISOR.signal, "signal", side_effect=install_handler),
+            mock.patch.object(
+                SUPERVISOR, "start_daemon", return_value=process
+            ) as start,
+            mock.patch.object(SUPERVISOR, "live_leases", return_value=[Path("lease")]),
+            mock.patch.object(SUPERVISOR, "drain_daemon_diagnostic"),
+            mock.patch.object(
+                SUPERVISOR, "refresh_lifecycle_records", return_value=True
+            ),
+            mock.patch.object(SUPERVISOR, "restart_backoff_seconds", return_value=0),
+            mock.patch.object(SUPERVISOR, "POLL_SECONDS", 0),
+            mock.patch.object(SUPERVISOR.time, "sleep", side_effect=sleep),
+            mock.patch.object(SUPERVISOR, "write_status", side_effect=write_status),
+            mock.patch.object(SUPERVISOR, "stop_daemon", side_effect=stop),
+            mock.patch.object(SUPERVISOR.os, "read", side_effect=injected),
+            self.assertRaises(OSError) as raised,
+        ):
+            SUPERVISOR.supervisor_loop(args, lock_descriptor, lock_identity)
+
+        self.assertIs(raised.exception, injected)
+        start.assert_called_once()
+        self.assertTrue(records)
+        self.assertTrue(all(record["restart_count"] == 0 for record in records))
+        self.assertFalse((args.runtime_dir / SUPERVISOR.STATUS_NAME).exists())
+
+    def test_no_lease_finalizer_eio_is_not_retried_as_transient(self):
+        args = self.prepare(host="no-lease-finalizer-eio")
+        args.grace_seconds = 0
+        process = self.loop_process(event=None, pid=4703)
+        records = []
+        handlers = {}
+        sleep_count = 0
+        lease_calls = 0
+        lock = SUPERVISOR.try_supervisor_lock(args.runtime_dir)
+        self.assertIsNotNone(lock)
+        lock_descriptor, lock_identity = lock
+        injected = OSError(errno.EIO, "injected no-lease finalizer failure")
+        original_write_status = SUPERVISOR.write_status
+
+        def install_handler(signum, handler):
+            handlers[signum] = handler
+
+        def leases(*_arguments, **_options):
+            nonlocal lease_calls
+            lease_calls += 1
+            return [Path("lease")] if lease_calls == 1 else []
+
+        def sleep(_seconds):
+            nonlocal sleep_count
+            sleep_count += 1
+            if sleep_count > 1:
+                handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+        def write_status(inner_args, record):
+            records.append(dict(record))
+            original_write_status(inner_args, record)
+
+        def stop(inner_process):
+            if inner_process is not None:
+                inner_process.returncode = -signal.SIGKILL
+
+        with (
+            mock.patch.object(SUPERVISOR.signal, "signal", side_effect=install_handler),
+            mock.patch.object(
+                SUPERVISOR, "start_daemon", return_value=process
+            ) as start,
+            mock.patch.object(SUPERVISOR, "live_leases", side_effect=leases),
+            mock.patch.object(SUPERVISOR, "drain_daemon_diagnostic"),
+            mock.patch.object(
+                SUPERVISOR, "refresh_lifecycle_records", return_value=True
+            ),
+            mock.patch.object(SUPERVISOR, "restart_backoff_seconds", return_value=0),
+            mock.patch.object(SUPERVISOR, "POLL_SECONDS", 0),
+            mock.patch.object(SUPERVISOR.time, "sleep", side_effect=sleep),
+            mock.patch.object(SUPERVISOR, "write_status", side_effect=write_status),
+            mock.patch.object(SUPERVISOR, "stop_daemon", side_effect=stop),
+            mock.patch.object(SUPERVISOR.os, "read", side_effect=injected),
+            self.assertRaises(OSError) as raised,
+        ):
+            SUPERVISOR.supervisor_loop(args, lock_descriptor, lock_identity)
+
+        self.assertIs(raised.exception, injected)
+        start.assert_called_once()
+        self.assertTrue(records)
+        self.assertTrue(all(record["restart_count"] == 0 for record in records))
+        self.assertFalse((args.runtime_dir / SUPERVISOR.STATUS_NAME).exists())
+
 
 class SupervisorProbeSummaryTests(unittest.TestCase):
     """Fail-closed CLI boundary for bounded supervisor restart summaries."""
@@ -5865,6 +5984,24 @@ class SupervisorProbeSummaryTests(unittest.TestCase):
         args = self.prepare(host="probe-oversize")
         oversized = b"{" + (b" " * SUPERVISOR.MAX_LEASE_BYTES) + b"}\n"
         self.write_status_bytes(args, oversized)
+        self.assert_probe_failure(self.run_probe(args))
+
+        args = self.prepare(host="probe-watchdog-oversize")
+        watchdog = SupervisorWatchdogEventTests.valid_event(
+            observed_at_unix_ms=int("9" * SUPERVISOR.WATCHDOG_EVENT_MAX_BYTES)
+        )
+        event_payload = (
+            json.dumps(watchdog, sort_keys=True, separators=(",", ":")) + "\n"
+        ).encode()
+        self.assertGreater(len(event_payload), SUPERVISOR.WATCHDOG_EVENT_MAX_BYTES)
+        self.write_status_record(
+            args,
+            self.status_record(args, watchdog=watchdog, restart_count=1),
+        )
+        self.assertLess(
+            len(self.status_path(args).read_bytes()),
+            SUPERVISOR.MAX_LEASE_BYTES,
+        )
         self.assert_probe_failure(self.run_probe(args))
 
         dead = subprocess.Popen(
