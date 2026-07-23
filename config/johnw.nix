@@ -40,6 +40,7 @@ in
     # Extracted sub-modules for better organization
     [
       ./anvil.nix
+      ./fractal.nix
       ./git.nix
       ./ssh.nix
       ./zsh.nix
