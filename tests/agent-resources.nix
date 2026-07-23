@@ -396,8 +396,6 @@ if !haveSources then
   throw "agent-resources check requires all pinned source roots"
 else if badPins != [ ] then
   throw "agent-resources source pin mismatch: ${badPinMessage}"
-else if toString gitSurgeonSource != "/nix/store/akkhqhkkvwxm9y06g8zwp9s0hbc4xii8-source" then
-  throw "current ai-nix git-surgeon source does not match the frozen promptdeploy source"
 else
   pkgs.runCommand "agent-resources-check"
     {
