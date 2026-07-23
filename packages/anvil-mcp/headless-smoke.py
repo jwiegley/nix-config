@@ -285,7 +285,7 @@ def assert_overlong_daemon_socket_paths_fail_fast(daemon: Path) -> None:
         + 1
         - len(os.fsencode(runtime_root))
         - len(os.fsencode(activity_name))
-        - 1
+        - 2
     )
     if exact_component_bytes < 1:
         raise AssertionError("smoke runtime root leaves no socket boundary fixture")
