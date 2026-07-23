@@ -9,6 +9,7 @@ import json
 import multiprocessing
 import os
 from pathlib import Path
+import re
 import selectors
 import signal
 import subprocess
@@ -31,6 +32,23 @@ BRIDGE_CLOSE_BOUND_SECONDS = (
 )
 RPC_SCHEDULING_MARGIN_SECONDS = 10.0
 CLEANUP_RETRY_ATTEMPTS = 2
+WATCHDOG_SCENARIO_DIAGNOSTIC_BYTES = 64 * 1024
+WATCHDOG_SCENARIO_COMMAND_BYTES = 512
+WATCHDOG_EVENT_KEYS = {
+    "schema_version",
+    "run_id",
+    "daemon_pid",
+    "cause",
+    "phase",
+    "method",
+    "tool",
+    "observed_at_unix_ms",
+    "daemon_uptime_ms",
+    "heartbeat_age_ms",
+    "heartbeat_limit_ms",
+    "dispatch_age_ms",
+    "dispatch_limit_ms",
+}
 try:
     CLIENT_STARTUP_SECONDS = int(os.environ["ANVIL_MCP_CLIENT_STARTUP_SECONDS"])
     CLIENT_TOOL_SECONDS = int(os.environ["ANVIL_MCP_CLIENT_TOOL_SECONDS"])
@@ -298,6 +316,130 @@ class BridgeProcess:
         finally:
             if not self.stderr_file.closed:
                 self.stderr_file.close()
+
+
+class BoundedBridgeProcess(BridgeProcess):
+    """A direct bridge whose diagnostics stay in a fixed-size memory ring."""
+
+    def __init__(
+        self,
+        launcher: Path,
+        server_id: str,
+        host: str,
+        environment_overrides: dict[str, str],
+    ) -> None:
+        environment = os.environ.copy()
+        environment.update(
+            {
+                "ANVIL_EMACS_HOST": host,
+                "ANVIL_EMACS_WATCHDOG_STARTUP_SECONDS": "120",
+                "ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS": "10",
+                "ANVIL_EMACS_WATCHDOG_DISPATCH_SECONDS": "15",
+                "ANVIL_EMACS_WATCHDOG_PULSE_SECONDS": "0.25",
+                "ANVIL_AGENT_GRACE_SECONDS": "0.5",
+                "ANVIL_AGENT_READY_SECONDS": "120",
+            }
+        )
+        environment.update(environment_overrides)
+        stderr_read, stderr_write = os.pipe()
+        os.set_blocking(stderr_read, False)
+        self._stderr_read = stderr_read
+        self._stderr_buffer = bytearray()
+        self._stderr_total_bytes = 0
+        self._stderr_lock = threading.Lock()
+        self._stderr_stop = threading.Event()
+        self._stderr_thread: threading.Thread | None = None
+        try:
+            self.process = subprocess.Popen(
+                [str(launcher), f"--server-id={server_id}"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=stderr_write,
+                env=environment,
+                text=True,
+                bufsize=1,
+            )
+        except BaseException:
+            os.close(stderr_read)
+            raise
+        finally:
+            os.close(stderr_write)
+        self.next_id = 1
+        self.response_buffer = bytearray()
+        self._stderr_thread = threading.Thread(
+            target=self._drain_stderr,
+            name="watchdog-smoke-stderr",
+            daemon=True,
+        )
+        self._stderr_thread.start()
+        if self.process.stdout is None:
+            self.close()
+            raise AssertionError("bridge stdout is unavailable")
+        try:
+            os.set_blocking(self.process.stdout.fileno(), False)
+        except BaseException:
+            self.close()
+            raise
+
+    def _drain_stderr(self) -> None:
+        selector = selectors.DefaultSelector()
+        selector.register(self._stderr_read, selectors.EVENT_READ)
+        try:
+            while not self._stderr_stop.is_set():
+                if not selector.select(0.1):
+                    continue
+                try:
+                    chunk = os.read(self._stderr_read, RESPONSE_READ_BYTES)
+                except BlockingIOError:
+                    continue
+                if not chunk:
+                    return
+                with self._stderr_lock:
+                    self._stderr_total_bytes += len(chunk)
+                    self._stderr_buffer.extend(chunk)
+                    overflow = (
+                        len(self._stderr_buffer) - WATCHDOG_SCENARIO_DIAGNOSTIC_BYTES
+                    )
+                    if overflow > 0:
+                        del self._stderr_buffer[:overflow]
+        finally:
+            selector.close()
+
+    def stderr(self) -> str:
+        """Return bounded metadata only; never surface diagnostic contents."""
+        with self._stderr_lock:
+            return (
+                "<bounded bridge diagnostics: "
+                f"retained={len(self._stderr_buffer)} "
+                f"total={self._stderr_total_bytes}>"
+            )
+
+    def stderr_snapshot(self) -> bytes:
+        """Return the bounded raw ring for internal sentinel assertions only."""
+        with self._stderr_lock:
+            return bytes(self._stderr_buffer)
+
+    def close(self) -> None:
+        try:
+            if self.process.poll() is None and self.process.stdin is not None:
+                try:
+                    self.process.stdin.close()
+                except BrokenPipeError:
+                    pass
+            try:
+                self.process.wait(timeout=BRIDGE_EOF_WAIT_SECONDS)
+            except subprocess.TimeoutExpired:
+                self.process.terminate()
+                try:
+                    self.process.wait(timeout=BRIDGE_TERM_WAIT_SECONDS)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait(timeout=BRIDGE_KILL_WAIT_SECONDS)
+        finally:
+            self._stderr_stop.set()
+            if self._stderr_thread is not None:
+                self._stderr_thread.join(timeout=1)
+            os.close(self._stderr_read)
 
 
 def close_bridge_mapping(bridges: dict[str, BridgeProcess]) -> list[Exception]:
@@ -1420,7 +1562,453 @@ def verify_readiness_crash_recovery(
         eventually(lambda: not instance["state_dir"].exists())
 
 
+def run_bounded_command(
+    argv: list[str],
+    environment: dict[str, str],
+    description: str,
+    timeout: float = 30.0,
+) -> tuple[int, bytes, bytes]:
+    """Run a short probe without retaining or reporting unbounded output."""
+    process = subprocess.Popen(
+        argv,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=environment,
+    )
+    if process.stdout is None or process.stderr is None:
+        process.kill()
+        process.wait()
+        raise AssertionError(f"{description} output pipes were unavailable")
+    streams = {
+        process.stdout.fileno(): ("stdout", process.stdout),
+        process.stderr.fileno(): ("stderr", process.stderr),
+    }
+    buffers = {"stdout": bytearray(), "stderr": bytearray()}
+    selector = selectors.DefaultSelector()
+    for descriptor in streams:
+        os.set_blocking(descriptor, False)
+        selector.register(descriptor, selectors.EVENT_READ)
+    deadline = time.monotonic() + timeout
+    try:
+        while streams:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise AssertionError(f"{description} exceeded its time bound")
+            events = selector.select(remaining)
+            if not events:
+                raise AssertionError(f"{description} exceeded its time bound")
+            for key, _mask in events:
+                descriptor = key.fd
+                label, stream = streams[descriptor]
+                remaining_bytes = (
+                    WATCHDOG_SCENARIO_COMMAND_BYTES + 1 - len(buffers[label])
+                )
+                chunk = os.read(
+                    descriptor,
+                    min(RESPONSE_READ_BYTES, remaining_bytes),
+                )
+                if not chunk:
+                    selector.unregister(descriptor)
+                    stream.close()
+                    del streams[descriptor]
+                    continue
+                buffers[label].extend(chunk)
+                if len(buffers[label]) > WATCHDOG_SCENARIO_COMMAND_BYTES:
+                    raise AssertionError(f"{description} exceeded its output bound")
+        return (
+            process.wait(timeout=1),
+            bytes(buffers["stdout"]),
+            bytes(buffers["stderr"]),
+        )
+    finally:
+        selector.close()
+        if process.poll() is None:
+            process.kill()
+            process.wait(timeout=5)
+        for _label, stream in streams.values():
+            stream.close()
+
+
+def assert_secret_absent(payload: bytes, sentinel: bytes, label: str) -> None:
+    """Reject sentinel disclosure without ever including its value in output."""
+    if sentinel in payload:
+        raise AssertionError(f"{label} exposed the private sentinel")
+
+
+def read_bounded_status(path: Path, sentinel: bytes) -> dict[str, object]:
+    """Read one status under the same bound used for retained diagnostics."""
+    with path.open("rb") as stream:
+        payload = stream.read(WATCHDOG_SCENARIO_DIAGNOSTIC_BYTES + 1)
+    if len(payload) > WATCHDOG_SCENARIO_DIAGNOSTIC_BYTES:
+        raise AssertionError("watchdog status exceeded its size bound")
+    assert_secret_absent(payload, sentinel, "watchdog status")
+    status = json.loads(payload)
+    if not isinstance(status, dict):
+        raise AssertionError("watchdog status was not a JSON object")
+    return status
+
+
+def assert_revision_version(launcher: Path, sentinel: bytes) -> None:
+    environment = os.environ.copy()
+    environment["ANVIL_SECRET_SENTINEL"] = sentinel.decode("ascii")
+    status, stdout, stderr = run_bounded_command(
+        [str(launcher), "--version"],
+        environment,
+        "launcher version probe",
+    )
+    assert_secret_absent(stdout, sentinel, "launcher version stdout")
+    assert_secret_absent(stderr, sentinel, "launcher version stderr")
+    expected_version = os.environ.get("ANVIL_EXPECTED_VERSION")
+    expected_revision = os.environ.get("ANVIL_EXPECTED_ANVIL_REVISION")
+    if (
+        not isinstance(expected_version, str)
+        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,127}", expected_version) is None
+        or not isinstance(expected_revision, str)
+        or re.fullmatch(r"[0-9a-f]{40}", expected_revision) is None
+    ):
+        raise AssertionError("expected package version identity is unavailable")
+    expected = (
+        f"anvil-mcp {expected_version} (anvil {expected_revision}; dedicated Emacs)\n"
+    ).encode("ascii")
+    if status != 0 or stderr != b"" or stdout != expected:
+        raise AssertionError("launcher version did not carry the full Anvil revision")
+
+
+def assert_probe_summary(
+    supervisor: Path,
+    runtime_dir: Path,
+    agent_key: str,
+    restart_count: int,
+    cause: str,
+    phase: str,
+    tool: str,
+    sentinel: bytes,
+) -> None:
+    expected = (
+        f"root-restarts={restart_count} cause={cause} phase={phase} tool={tool}\n"
+    ).encode("ascii")
+    if len(expected) > 256:
+        raise AssertionError("expected probe summary exceeded its contract bound")
+    environment = os.environ.copy()
+    environment["ANVIL_SECRET_SENTINEL"] = sentinel.decode("ascii")
+    status, stdout, stderr = run_bounded_command(
+        [
+            sys.executable,
+            "-I",
+            "-S",
+            str(supervisor),
+            "--probe-summary",
+            "--runtime-dir",
+            str(runtime_dir),
+            "--agent-key",
+            agent_key,
+        ],
+        environment,
+        "supervisor summary probe",
+    )
+    assert_secret_absent(stdout, sentinel, "supervisor probe stdout")
+    assert_secret_absent(stderr, sentinel, "supervisor probe stderr")
+    if status != 0 or stderr != b"" or stdout != expected:
+        raise AssertionError("supervisor summary probe violated its exact contract")
+
+
+def assert_watchdog_event(
+    event: object,
+    cause: str,
+    daemon_pid: int,
+) -> None:
+    if not isinstance(event, dict) or set(event) != WATCHDOG_EVENT_KEYS:
+        raise AssertionError("last_watchdog did not retain the frozen event schema")
+    expected = {
+        "schema_version": 1,
+        "daemon_pid": daemon_pid,
+        "cause": cause,
+        "phase": "tool-call",
+        "method": "tools/call",
+        "tool": "emacs-eval",
+    }
+    if not strict_json_equal(
+        {key: event.get(key) for key in expected},
+        expected,
+    ):
+        raise AssertionError("last_watchdog lost exact request attribution")
+    run_id = event.get("run_id")
+    if not isinstance(run_id, str) or re.fullmatch(r"[0-9a-f]{32}", run_id) is None:
+        raise AssertionError("last_watchdog retained an invalid run identity")
+    for field in ("observed_at_unix_ms", "daemon_uptime_ms"):
+        value = event.get(field)
+        if type(value) is not int or value < 0:
+            raise AssertionError(f"last_watchdog retained invalid {field}")
+
+
+def assert_restart_status(
+    status: dict[str, object],
+    old_daemon_pid: int,
+    supervisor_pid: int,
+    generation: str,
+    expected_restart_count: int,
+) -> None:
+    reason = status.get("restart_reason")
+    if (
+        type(status.get("daemon_pid")) is not int
+        or status.get("daemon_pid") == old_daemon_pid
+        or status.get("supervisor_pid") != supervisor_pid
+        or status.get("generation") != generation
+        or type(status.get("restart_count")) is not int
+        or status.get("restart_count") != expected_restart_count
+        or reason != "daemon-exited:-9"
+    ):
+        raise AssertionError("watchdog restart accounting was not retained exactly")
+
+
+def assert_bounded_diagnostics(
+    instance: dict[str, object],
+    bridge: BoundedBridgeProcess,
+    sentinel: bytes,
+    module,
+) -> None:
+    diagnostic = instance["diagnostic"]
+    with diagnostic.open("rb") as stream:
+        payload = stream.read(module.MAX_DAEMON_DIAGNOSTIC_BYTES + 1)
+    if len(payload) > module.MAX_DAEMON_DIAGNOSTIC_BYTES:
+        raise AssertionError("daemon diagnostics exceeded their size bound")
+    assert_secret_absent(payload, sentinel, "daemon diagnostics")
+    bridge_diagnostics = bridge.stderr_snapshot()
+    if len(bridge_diagnostics) > WATCHDOG_SCENARIO_DIAGNOSTIC_BYTES:
+        raise AssertionError("bridge diagnostics exceeded their retention bound")
+    assert_secret_absent(bridge_diagnostics, sentinel, "bridge diagnostics")
+
+
+def verify_watchdog_cause(
+    launcher: Path,
+    supervisor: Path,
+    runtime_root: Path,
+    state_root: Path,
+    module,
+    sentinel: bytes,
+    cause: str,
+) -> None:
+    host = "wd-heartbeat" if cause == "heartbeat-timeout" else "wd-dispatch"
+    sentinel_path = f"/tmp/{sentinel.decode('ascii')}"
+    if cause == "heartbeat-timeout":
+        heartbeat_seconds = "5"
+        dispatch_seconds = "20"
+        expression = f'(let ((default-directory "{sentinel_path}/")) (while t))'
+    elif cause == "dispatch-timeout":
+        heartbeat_seconds = "30"
+        dispatch_seconds = "3"
+        expression = (
+            f'(let ((default-directory "{sentinel_path}/")) (while t (sit-for 0.1)))'
+        )
+    else:
+        raise AssertionError("unknown watchdog smoke cause")
+    bridge = BoundedBridgeProcess(
+        launcher,
+        "anvil",
+        host,
+        {
+            "ANVIL_EMACS_WATCHDOG_NORMAL_SECONDS": heartbeat_seconds,
+            "ANVIL_EMACS_WATCHDOG_DISPATCH_SECONDS": dispatch_seconds,
+            "ANVIL_SECRET_SENTINEL": sentinel.decode("ascii"),
+        },
+    )
+    instance: dict[str, object] | None = None
+    try:
+        bridge.initialize()
+        found = eventually(
+            lambda: find_running_instance(runtime_root, host, bridge.pid, module),
+            timeout=CLIENT_STARTUP_SECONDS,
+        )
+        _status_path, discovered_status = found
+        discovered_payload = json.dumps(
+            discovered_status,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+        assert_secret_absent(discovered_payload, sentinel, "initial watchdog status")
+        instance = validate_bridge_instance(
+            found,
+            bridge,
+            host,
+            state_root,
+            module,
+        )
+        initial_status = read_bounded_status(instance["status_path"], sentinel)
+        if (
+            "last_watchdog" not in initial_status
+            or initial_status["last_watchdog"] is not None
+        ):
+            raise AssertionError("new daemon did not begin with a null watchdog event")
+        initial_count = initial_status.get("restart_count")
+        root_pid = initial_status.get("daemon_pid")
+        supervisor_pid = initial_status.get("supervisor_pid")
+        generation = initial_status.get("generation")
+        if (
+            type(initial_count) is not int
+            or type(root_pid) is not int
+            or type(supervisor_pid) is not int
+            or not isinstance(generation, str)
+        ):
+            raise AssertionError("initial watchdog lifecycle accounting was invalid")
+        root_identity = module.process_start_identity(root_pid)
+        if root_identity is None:
+            raise AssertionError("initial watchdog root identity was unavailable")
+        primed = call_after_readiness(
+            bridge,
+            "emacs-eval",
+            {"expression": "(+ 40 2)"},
+            timeout=CLIENT_STARTUP_SECONDS,
+        )
+        if eval_value(primed) != 42:
+            raise AssertionError("watchdog attribution bridge did not become ready")
+
+        response = bridge.call_tool(
+            "emacs-eval",
+            {"expression": expression},
+            timeout=30,
+        )
+        if "error" not in response:
+            raise AssertionError("watchdog did not terminate the hanging request")
+        restarted = eventually(
+            lambda: (
+                (current := read_bounded_status(instance["status_path"], sentinel))
+                and type(current.get("daemon_pid")) is int
+                and current.get("daemon_pid") != root_pid
+                and current
+            ),
+            timeout=60,
+        )
+        assert_restart_status(
+            restarted,
+            root_pid,
+            supervisor_pid,
+            generation,
+            initial_count + 1,
+        )
+        assert_watchdog_event(restarted.get("last_watchdog"), cause, root_pid)
+        assert_probe_summary(
+            supervisor,
+            instance["runtime_dir"],
+            restarted["agent_key"],
+            initial_count + 1,
+            cause,
+            "tool-call",
+            "emacs-eval",
+            sentinel,
+        )
+        eventually(
+            lambda: module.process_start_identity(root_pid) != root_identity,
+            timeout=60,
+        )
+        recovered = call_after_readiness(
+            bridge,
+            "emacs-eval",
+            {"expression": "(+ 40 2)"},
+            timeout=CLIENT_STARTUP_SECONDS,
+        )
+        if eval_value(recovered) != 42:
+            raise AssertionError("watchdog-attributed bridge did not recover")
+
+        restarted_pid = restarted["daemon_pid"]
+        restarted_identity = module.process_start_identity(restarted_pid)
+        if restarted_identity is None:
+            raise AssertionError("restarted watchdog root identity was unavailable")
+        os.killpg(restarted_pid, signal.SIGKILL)
+        cleared = eventually(
+            lambda: (
+                (current := read_bounded_status(instance["status_path"], sentinel))
+                and type(current.get("daemon_pid")) is int
+                and current.get("daemon_pid") != restarted_pid
+                and current
+            ),
+            timeout=60,
+        )
+        assert_restart_status(
+            cleared,
+            restarted_pid,
+            supervisor_pid,
+            generation,
+            initial_count + 2,
+        )
+        if cleared.get("last_watchdog") is not None:
+            raise AssertionError("a no-event daemon exit retained stale attribution")
+        assert_probe_summary(
+            supervisor,
+            instance["runtime_dir"],
+            cleared["agent_key"],
+            initial_count + 2,
+            "none",
+            "unknown",
+            "none",
+            sentinel,
+        )
+        eventually(
+            lambda: module.process_start_identity(restarted_pid) != restarted_identity,
+            timeout=60,
+        )
+        cleared_recovery = call_after_readiness(
+            bridge,
+            "emacs-eval",
+            {"expression": "(+ 40 2)"},
+            timeout=CLIENT_STARTUP_SECONDS,
+        )
+        if eval_value(cleared_recovery) != 42:
+            raise AssertionError("no-event restart did not recover the same bridge")
+        assert_bounded_diagnostics(instance, bridge, sentinel, module)
+    finally:
+        bridge.close()
+        assert_secret_absent(
+            bridge.stderr_snapshot(),
+            sentinel,
+            "final bridge diagnostics",
+        )
+    if instance is not None:
+        eventually(lambda: not instance["runtime_dir"].exists(), timeout=60)
+        eventually(lambda: not instance["state_dir"].exists(), timeout=60)
+
+
+def verify_watchdog_attribution(
+    launcher: Path,
+    supervisor: Path,
+    runtime_root: Path,
+    state_root: Path,
+    module,
+) -> None:
+    sentinel = f"anvil-watchdog-private-{os.urandom(16).hex()}".encode("ascii")
+    assert_revision_version(launcher, sentinel)
+    for cause in ("heartbeat-timeout", "dispatch-timeout"):
+        verify_watchdog_cause(
+            launcher,
+            supervisor,
+            runtime_root,
+            state_root,
+            module,
+            sentinel,
+            cause,
+        )
+
+
 def main() -> None:
+    if sys.argv[1:3] == ["--scenario", "watchdog-attribution"]:
+        if len(sys.argv) != 5:
+            raise SystemExit(
+                "usage: agent-supervisor-smoke.py --scenario "
+                "watchdog-attribution /path/to/anvil-mcp "
+                "/path/to/agent-supervisor.py"
+            )
+        # Preserve the version-bearing package basename; the bin entry is a
+        # symlink to a differently named clean-wrapper derivation.
+        launcher = Path(sys.argv[3]).absolute()
+        supervisor = Path(sys.argv[4]).resolve()
+        verify_watchdog_attribution(
+            launcher,
+            supervisor,
+            Path(os.environ["ANVIL_EMACS_RUNTIME_ROOT"]),
+            Path(os.environ["ANVIL_EMACS_STATE_ROOT"]),
+            load_supervisor(supervisor),
+        )
+        return
     if len(sys.argv) not in (3, 5):
         raise SystemExit(
             "usage: agent-supervisor-smoke.py /path/to/anvil-mcp "

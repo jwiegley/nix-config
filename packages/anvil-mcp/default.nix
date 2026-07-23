@@ -3471,6 +3471,29 @@ let
     ;;; anvil-headless-watchdog-telemetry.el --- Root activity -*- lexical-binding: t; -*-
 
     (require 'json)
+    (declare-function anvil-headless--run-process-responsive nil
+                      (program arguments directory timeout
+                               stdout-limit stderr-limit))
+
+    (defconst anvil-headless--watchdog-probe-python
+      "${python3}/bin/python3")
+    (defconst anvil-headless--watchdog-probe-supervisor
+      "${dedicatedAgentSupervisor}")
+    (defconst anvil-headless--watchdog-probe-runtime-directory
+      (let ((runtime (getenv "XDG_RUNTIME_DIR")))
+        (when (and (stringp runtime)
+                   (file-name-absolute-p runtime))
+          (condition-case nil
+              (directory-file-name (file-truename runtime))
+            (error nil)))))
+    (defconst anvil-headless--watchdog-probe-agent-key
+      (when anvil-headless--watchdog-probe-runtime-directory
+        (let ((candidate
+               (file-name-nondirectory
+                anvil-headless--watchdog-probe-runtime-directory)))
+          (and (string-match-p "\\`[0-9a-f]\\{32\\}\\'" candidate)
+               candidate))))
+
     (defconst anvil-headless--watchdog-telemetry-socket
       (getenv "ANVIL_EMACS_WATCHDOG_ACTIVITY_SOCKET"))
     (defconst anvil-headless--watchdog-telemetry-run-id
@@ -3486,6 +3509,74 @@ let
     (defvar anvil-headless--watchdog-telemetry-last-transition nil)
     (defvar anvil-headless--watchdog-telemetry-method "none")
     (defvar anvil-headless--watchdog-telemetry-tool nil)
+
+    (defun anvil-headless--watchdog-probe-summary-p (summary)
+      "Return non-nil when SUMMARY is one complete bounded status line."
+      (save-match-data
+        (and
+         (stringp summary)
+         (<= (string-bytes summary) 256)
+         (string-match
+          (concat
+           "\\`root-restarts=\\(0\\|[1-9][0-9]*\\)"
+           " cause=\\(none\\|startup-timeout\\|heartbeat-timeout"
+           "\\|dispatch-timeout\\|lock-integrity-failure"
+           "\\|monitor-state-invalid\\|durable-refresh-failure"
+           "\\|monitor-internal-error\\)"
+           " phase=\\(unknown\\|startup\\|parse\\|dispatch\\|tool-call"
+           "\\|result-encode\\|response-write\\|idle\\)"
+           " tool=\\(none\\|[A-Za-z0-9][A-Za-z0-9._/-]\\{0,127\\}\\)\n\\'")
+          summary)
+         (or (not (equal (match-string 2 summary) "none"))
+             (and (equal (match-string 3 summary) "unknown")
+                  (equal (match-string 4 summary) "none"))))))
+
+    (defun anvil-headless--watchdog-probe-root-summary ()
+      "Return a validated root summary or the constant unavailable marker."
+      (condition-case nil
+          (if (not (and anvil-headless--watchdog-probe-runtime-directory
+                        anvil-headless--watchdog-probe-agent-key
+                        (fboundp 'anvil-headless--run-process-responsive)))
+              "unavailable"
+            (let ((result
+                   (anvil-headless--run-process-responsive
+                    anvil-headless--watchdog-probe-python
+                    (list
+                     "-I" "-S" anvil-headless--watchdog-probe-supervisor
+                     "--probe-summary"
+                     "--runtime-dir"
+                     anvil-headless--watchdog-probe-runtime-directory
+                     "--agent-key"
+                     anvil-headless--watchdog-probe-agent-key)
+                    anvil-headless--watchdog-probe-runtime-directory
+                    2 257 0)))
+              (if (and (listp result)
+                       (= (length result) 3)
+                       (integerp (nth 0 result))
+                       (= (nth 0 result) 0)
+                       (equal (nth 2 result) "")
+                       (anvil-headless--watchdog-probe-summary-p
+                        (nth 1 result)))
+                  (substring (nth 1 result) 0 -1)
+                "unavailable")))
+        (error "unavailable")))
+
+    (defun anvil-headless--watchdog-probe-around
+        (original &rest arguments)
+      "Append one bounded root status line to the worker probe result."
+      (concat (apply original arguments)
+              "\nroot-summary="
+              (anvil-headless--watchdog-probe-root-summary)))
+
+    (defun anvil-headless--watchdog-probe-install ()
+      "Install the root status extension on the worker probe once."
+      (when (and (fboundp 'anvil-worker--tool-probe)
+                 (not (advice-member-p
+                       #'anvil-headless--watchdog-probe-around
+                       'anvil-worker--tool-probe)))
+        (advice-add 'anvil-worker--tool-probe
+                    :around #'anvil-headless--watchdog-probe-around)))
+
     (defconst anvil-headless--watchdog-telemetry-methods
       '("none"
         "initialize"
@@ -3689,11 +3780,14 @@ let
 
     (with-eval-after-load 'anvil-server
       (anvil-headless--watchdog-telemetry-install))
+    (with-eval-after-load 'anvil-worker
+      (anvil-headless--watchdog-probe-install))
     (anvil-headless--watchdog-telemetry-connect)
 
     (provide 'anvil-headless-watchdog-telemetry)
     ;;; anvil-headless-watchdog-telemetry.el ends here
   '';
+
   dedicatedInit = writeText "anvil-headless-init.el" ''
         ;;; anvil-headless-init.el --- Dedicated Anvil root -*- lexical-binding: t; -*-
 
@@ -4327,7 +4421,7 @@ let
             exit 0
             ;;
           --version)
-            echo "anvil-mcp ${currentAnvilVersion} (dedicated Emacs)"
+            echo "anvil-mcp ${currentAnvilVersion} (anvil ${currentAnvilRev}; dedicated Emacs)"
             exit 0
             ;;
           *)

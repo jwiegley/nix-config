@@ -386,5 +386,87 @@
      (anvil-headless--watchdog-telemetry-registered-tool
       "نام-ابزار" anvil-watchdog-test--server-id))))
 
+(defconst anvil-watchdog-test--probe-summary
+  "root-restarts=3 cause=dispatch-timeout phase=tool-call tool=emacs-eval\n")
+
+(defun anvil-watchdog-test--call-probe-advice (runner)
+  "Call the generated worker-probe advice with RUNNER installed."
+  (let ((anvil-headless--watchdog-probe-python "/nix/store/test-python")
+        (anvil-headless--watchdog-probe-supervisor
+         "/nix/store/test-supervisor.py")
+        (anvil-headless--watchdog-probe-runtime-directory
+         "/private/tmp/anvil-runtime/0123456789abcdef0123456789abcdef")
+        (anvil-headless--watchdog-probe-agent-key
+         "0123456789abcdef0123456789abcdef"))
+    (cl-letf (((symbol-function 'anvil-headless--run-process-responsive)
+               runner))
+      (anvil-headless--watchdog-probe-around
+       (lambda () "worker-summary")))))
+
+(ert-deftest anvil-watchdog-telemetry-probe-valid-summary ()
+  (let (invocation)
+    (should
+     (equal
+      (anvil-watchdog-test--call-probe-advice
+       (lambda (&rest arguments)
+         (setq invocation arguments)
+         (list 0 anvil-watchdog-test--probe-summary "")))
+      (concat "worker-summary\nroot-summary="
+              (string-trim-right anvil-watchdog-test--probe-summary))))
+    (should
+     (equal
+      invocation
+      '("/nix/store/test-python"
+        ("-I" "-S" "/nix/store/test-supervisor.py"
+         "--probe-summary"
+         "--runtime-dir"
+         "/private/tmp/anvil-runtime/0123456789abcdef0123456789abcdef"
+         "--agent-key"
+         "0123456789abcdef0123456789abcdef")
+        "/private/tmp/anvil-runtime/0123456789abcdef0123456789abcdef"
+        2 257 0)))))
+
+(ert-deftest anvil-watchdog-telemetry-probe-invalid-output ()
+  (dolist (result
+           '((1 "" "")
+             (0 "root-restarts=0 cause=none phase=unknown tool=none" "")
+             (0 "root-restarts=x cause=none phase=unknown tool=none\n" "")
+             (0 "root-restarts=0 cause=other phase=unknown tool=none\n" "")
+             (0 "root-restarts=0 cause=none phase=other tool=none\n" "")
+             (0 "root-restarts=0 cause=none phase=unknown tool=none\nextra\n" "")
+             (0 "root-restarts=0 cause=none phase=unknown tool=none\n" "x")))
+    (should
+     (equal
+      (anvil-watchdog-test--call-probe-advice
+       (lambda (&rest _arguments) result))
+      "worker-summary\nroot-summary=unavailable"))))
+
+(ert-deftest anvil-watchdog-telemetry-probe-timeout-and-overflow ()
+  (dolist (runner
+           (list
+            (lambda (&rest _arguments) (error "private timeout detail"))
+            (lambda (&rest _arguments)
+              (list 0 (concat (make-string 257 ?x) "\n") ""))
+            (lambda (&rest _arguments)
+              (list 0 anvil-watchdog-test--probe-summary "x"))))
+    (should
+     (equal
+      (anvil-watchdog-test--call-probe-advice runner)
+      "worker-summary\nroot-summary=unavailable"))))
+
+(ert-deftest anvil-watchdog-telemetry-probe-adversarial-tool-label ()
+  (dolist (tool '("bad\nline" "bad\rline" "bad\tline" "bad\x1bline" "نام"))
+    (let ((result
+           (anvil-watchdog-test--call-probe-advice
+            (lambda (&rest _arguments)
+              (list
+               0
+               (format
+                "root-restarts=1 cause=heartbeat-timeout phase=tool-call tool=%s\n"
+                tool)
+               "")))))
+      (should (equal result "worker-summary\nroot-summary=unavailable"))
+      (should-not (string-match-p "[^\x20-\x7e\n]" result)))))
+
 (provide 'watchdog-telemetry-test)
 ;;; watchdog-telemetry-test.el ends here

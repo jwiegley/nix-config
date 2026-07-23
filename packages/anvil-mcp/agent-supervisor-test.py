@@ -4205,7 +4205,7 @@ for line in sys.stdin:
                 mock.call(process.pid, signal.SIGKILL),
             ],
         )
-        close.assert_called_once_with(process)
+        close.assert_not_called()
 
     def test_stop_daemon_post_kill_timeout_is_bounded(self):
         class FakeProcess:
@@ -4239,7 +4239,7 @@ for line in sys.stdin:
                 mock.call(process.pid, signal.SIGKILL),
             ],
         )
-        close.assert_called_once_with(process)
+        close.assert_not_called()
 
     def test_supervisor_does_not_cleanup_when_daemon_reap_fails(self):
         args = self.prepare()
@@ -4877,6 +4877,1026 @@ for line in sys.stdin:
         sleep.assert_not_called()
 
 
+class SupervisorWatchdogEventTests(unittest.TestCase):
+    """Strict ingestion and lifecycle attribution for one daemon exit."""
+
+    setUp = AgentSupervisorTests.setUp
+    tearDown = AgentSupervisorTests.tearDown
+    prepare = AgentSupervisorTests.prepare
+
+    RUN_ID = "a" * 32
+    DAEMON_PID = 4242
+
+    @classmethod
+    def valid_event(cls, **changes):
+        event = {
+            "schema_version": 1,
+            "run_id": cls.RUN_ID,
+            "daemon_pid": cls.DAEMON_PID,
+            "cause": "heartbeat-timeout",
+            "phase": "tool-call",
+            "method": "tools/call",
+            "tool": "emacs-eval",
+            "observed_at_unix_ms": 1_750_000_000_000,
+            "daemon_uptime_ms": 90_000,
+            "heartbeat_age_ms": 45_001,
+            "heartbeat_limit_ms": 45_000,
+            "dispatch_age_ms": 7_000,
+            "dispatch_limit_ms": 225_000,
+        }
+        event.update(changes)
+        if set(event) != set(WATCHDOG_LAUNCHER.EVENT_KEYS):
+            raise AssertionError("test event drifted from generated launcher schema")
+        return event
+
+    @staticmethod
+    def process_with_payload(payload: bytes, *, pid=DAEMON_PID, run_id=RUN_ID):
+        read_descriptor, write_descriptor = os.pipe()
+        os.set_blocking(read_descriptor, False)
+        os.set_blocking(write_descriptor, False)
+        if payload:
+            written = os.write(write_descriptor, payload)
+            if written != len(payload):
+                raise AssertionError("test event pipe accepted a partial write")
+        os.close(write_descriptor)
+        return SimpleNamespace(
+            pid=pid,
+            returncode=-signal.SIGKILL,
+            _anvil_watchdog_event_read_fd=read_descriptor,
+            _anvil_watchdog_run_id=run_id,
+            _anvil_diagnostic_read_fd=None,
+            _anvil_diagnostic_output_fd=None,
+            _anvil_diagnostic_written=0,
+            poll=lambda: -signal.SIGKILL,
+        )
+
+    @classmethod
+    def process_with_valid_event(cls, event=None):
+        event = cls.valid_event() if event is None else event
+        read_descriptor, write_descriptor = os.pipe()
+        os.set_blocking(read_descriptor, False)
+        os.set_blocking(write_descriptor, False)
+        if not WATCHDOG_LAUNCHER.write_watchdog_event(write_descriptor, event):
+            raise AssertionError("production watchdog writer rejected a valid fixture")
+        os.close(write_descriptor)
+        return SimpleNamespace(
+            pid=event["daemon_pid"],
+            returncode=-signal.SIGKILL,
+            _anvil_watchdog_event_read_fd=read_descriptor,
+            _anvil_watchdog_run_id=event["run_id"],
+            _anvil_diagnostic_read_fd=None,
+            _anvil_diagnostic_output_fd=None,
+            _anvil_diagnostic_written=0,
+            poll=lambda: -signal.SIGKILL,
+        )
+
+    def assert_closed(self, process, descriptor):
+        self.assertIsNone(process._anvil_watchdog_event_read_fd)
+        with self.assertRaises(OSError):
+            os.fstat(descriptor)
+
+    def test_valid_event_is_adopted_from_only_that_exited_process(self):
+        expected = self.valid_event()
+        process = self.process_with_valid_event(expected)
+        descriptor = process._anvil_watchdog_event_read_fd
+
+        self.assertEqual(SUPERVISOR.finalize_daemon_exit(process), expected)
+        self.assert_closed(process, descriptor)
+        self.assertIsNone(SUPERVISOR.finalize_daemon_exit(process))
+
+    def test_read_is_single_bounded_attempt_and_closes_on_every_path(self):
+        process = self.process_with_payload(b"")
+        descriptor = process._anvil_watchdog_event_read_fd
+        with mock.patch.object(
+            SUPERVISOR.os,
+            "read",
+            return_value=b"",
+        ) as read:
+            self.assertIsNone(
+                SUPERVISOR.read_watchdog_event(
+                    process,
+                    self.DAEMON_PID,
+                    self.RUN_ID,
+                )
+            )
+
+        read.assert_called_once_with(descriptor, 513)
+        self.assert_closed(process, descriptor)
+
+        process = self.process_with_payload(b"")
+        descriptor = process._anvil_watchdog_event_read_fd
+        injected = OSError(errno.EIO, "injected event read failure")
+        with (
+            mock.patch.object(SUPERVISOR.os, "read", side_effect=injected),
+            self.assertRaises(OSError) as raised,
+        ):
+            SUPERVISOR.read_watchdog_event(
+                process,
+                self.DAEMON_PID,
+                self.RUN_ID,
+            )
+        self.assertIs(raised.exception, injected)
+        self.assert_closed(process, descriptor)
+
+    def test_missing_partial_multiple_oversized_and_wrong_identity_are_rejected(self):
+        valid = WATCHDOG_LAUNCHER.canonical_json_line(self.valid_event())
+        stale = self.valid_event(run_id="b" * 32)
+        wrong_pid = self.valid_event(daemon_pid=self.DAEMON_PID + 1)
+        cases = {
+            "missing": b"",
+            "partial": valid[:-1],
+            "multiple": valid + valid,
+            "oversized": b"{" + (b" " * 511) + b"}\n",
+            "stale-run": WATCHDOG_LAUNCHER.canonical_json_line(stale),
+            "wrong-pid": WATCHDOG_LAUNCHER.canonical_json_line(wrong_pid),
+            "crlf": valid[:-1] + b"\r\n",
+            "extra-newline": valid + b"\n",
+        }
+        for name, payload in cases.items():
+            with self.subTest(name=name):
+                process = self.process_with_payload(payload)
+                descriptor = process._anvil_watchdog_event_read_fd
+                self.assertIsNone(
+                    SUPERVISOR.read_watchdog_event(
+                        process,
+                        self.DAEMON_PID,
+                        self.RUN_ID,
+                    )
+                )
+                self.assert_closed(process, descriptor)
+
+    def test_duplicate_nonfinite_unknown_and_invalid_utf8_are_rejected(self):
+        valid = WATCHDOG_LAUNCHER.canonical_json_line(self.valid_event())
+        unknown = self.valid_event()
+        unknown["sentinel"] = "must-never-appear"
+        cases = {
+            "duplicate": b'{"cause":"startup-timeout",' + valid[1:],
+            "nonfinite": valid.replace(
+                b'"daemon_uptime_ms":90000',
+                b'"daemon_uptime_ms":NaN',
+            ),
+            "exponent-schema": valid.replace(
+                b'"schema_version":1',
+                b'"schema_version":1e0',
+            ),
+            "unknown-key": WATCHDOG_LAUNCHER.canonical_json_line(unknown),
+            "invalid-utf8": b'{"sentinel":"\xff"}\n',
+        }
+        for name, payload in cases.items():
+            with self.subTest(name=name):
+                process = self.process_with_payload(payload)
+                descriptor = process._anvil_watchdog_event_read_fd
+                self.assertIsNone(
+                    SUPERVISOR.read_watchdog_event(
+                        process,
+                        self.DAEMON_PID,
+                        self.RUN_ID,
+                    )
+                )
+                self.assert_closed(process, descriptor)
+
+    def test_every_enum_boolean_integer_and_tool_violation_is_rejected(self):
+        mutations = {
+            "schema": {"schema_version": 2},
+            "float-schema": {"schema_version": 1.0},
+            "cause": {"cause": "watchdog-timeout"},
+            "phase": {"phase": "secret-phase"},
+            "method": {"method": "secret/method"},
+            "empty-tool": {"tool": ""},
+            "newline-tool": {"tool": "secret\nvalue"},
+            "long-tool": {"tool": "x" * 129},
+            "negative-time": {"daemon_uptime_ms": -1},
+        }
+        for field in (
+            "schema_version",
+            "daemon_pid",
+            "observed_at_unix_ms",
+            "daemon_uptime_ms",
+            "heartbeat_age_ms",
+            "heartbeat_limit_ms",
+            "dispatch_age_ms",
+            "dispatch_limit_ms",
+        ):
+            mutations[f"bool-{field}"] = {field: True}
+        for name, changes in mutations.items():
+            with self.subTest(name=name):
+                payload = WATCHDOG_LAUNCHER.canonical_json_line(
+                    self.valid_event(**changes)
+                )
+                process = self.process_with_payload(payload)
+                descriptor = process._anvil_watchdog_event_read_fd
+                self.assertIsNone(
+                    SUPERVISOR.read_watchdog_event(
+                        process,
+                        self.DAEMON_PID,
+                        self.RUN_ID,
+                    )
+                )
+                self.assert_closed(process, descriptor)
+
+    def test_optional_deadline_pairs_require_matching_nullness(self):
+        cases = (
+            {"heartbeat_age_ms": None, "heartbeat_limit_ms": 45_000},
+            {"heartbeat_age_ms": 45_001, "heartbeat_limit_ms": None},
+            {"dispatch_age_ms": None, "dispatch_limit_ms": 225_000},
+            {"dispatch_age_ms": 7_000, "dispatch_limit_ms": None},
+        )
+        for changes in cases:
+            with self.subTest(changes=changes):
+                process = self.process_with_payload(
+                    WATCHDOG_LAUNCHER.canonical_json_line(self.valid_event(**changes))
+                )
+                descriptor = process._anvil_watchdog_event_read_fd
+                self.assertIsNone(
+                    SUPERVISOR.read_watchdog_event(
+                        process,
+                        self.DAEMON_PID,
+                        self.RUN_ID,
+                    )
+                )
+                self.assert_closed(process, descriptor)
+
+    def test_finalizer_preserves_read_error_and_still_closes_diagnostics(self):
+        process = self.process_with_payload(b"")
+        event_descriptor = process._anvil_watchdog_event_read_fd
+        diagnostic_read, diagnostic_write = os.pipe()
+        diagnostic_output = os.open(os.devnull, os.O_WRONLY)
+        os.close(diagnostic_write)
+        process._anvil_diagnostic_read_fd = diagnostic_read
+        process._anvil_diagnostic_output_fd = diagnostic_output
+        injected = OSError(errno.EIO, "injected event read failure")
+        secondary = OSError(errno.EBADF, "injected diagnostic failure")
+
+        with (
+            mock.patch.object(SUPERVISOR.os, "read", side_effect=injected),
+            mock.patch.object(
+                SUPERVISOR,
+                "drain_daemon_diagnostic",
+                side_effect=secondary,
+            ),
+            self.assertRaises(OSError) as raised,
+        ):
+            SUPERVISOR.finalize_daemon_exit(process)
+
+        self.assertIs(raised.exception, injected)
+        self.assert_closed(process, event_descriptor)
+        self.assertIsNone(process._anvil_diagnostic_read_fd)
+        self.assertIsNone(process._anvil_diagnostic_output_fd)
+        for descriptor in (diagnostic_read, diagnostic_output):
+            with self.assertRaises(OSError):
+                os.fstat(descriptor)
+
+    class LoopProcess:
+        def __init__(self, event_process, pid):
+            self.pid = pid
+            self.returncode = None
+            self._anvil_watchdog_event_read_fd = (
+                event_process._anvil_watchdog_event_read_fd
+            )
+            self._anvil_watchdog_run_id = event_process._anvil_watchdog_run_id
+            self._anvil_diagnostic_read_fd = None
+            self._anvil_diagnostic_output_fd = None
+            self._anvil_diagnostic_written = 0
+
+        def poll(self):
+            return self.returncode
+
+    def loop_process(self, *, event=None, pid):
+        if event is None:
+            fixture = self.process_with_payload(
+                b"",
+                pid=pid,
+                run_id=chr(97 + (pid % 6)) * 32,
+            )
+        else:
+            event = dict(event, daemon_pid=pid)
+            fixture = self.process_with_valid_event(event)
+        return self.LoopProcess(fixture, pid)
+
+    def test_natural_exit_replaces_historical_watchdog_before_next_restart(self):
+        args = self.prepare()
+        event = self.valid_event(run_id="b" * 32)
+        first = self.loop_process(event=event, pid=4301)
+        second = self.loop_process(event=None, pid=4302)
+        third = self.loop_process(event=None, pid=4303)
+        processes = iter((first, second, third))
+        records = []
+        handlers = {}
+        sleep_count = 0
+        lock = SUPERVISOR.try_supervisor_lock(args.runtime_dir)
+        self.assertIsNotNone(lock)
+        lock_descriptor, lock_identity = lock
+
+        def install_handler(signum, handler):
+            handlers[signum] = handler
+
+        def sleep(_seconds):
+            nonlocal sleep_count
+            sleep_count += 1
+            if sleep_count == 1:
+                first.returncode = -signal.SIGKILL
+            elif sleep_count == 2:
+                second.returncode = 17
+            elif sleep_count == 3:
+                handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+        def stop(process):
+            if process is not None:
+                self.assertIsNotNone(os.fstat(lock_descriptor))
+                process.returncode = 0
+
+        with (
+            mock.patch.object(SUPERVISOR.signal, "signal", side_effect=install_handler),
+            mock.patch.object(SUPERVISOR, "start_daemon", side_effect=processes),
+            mock.patch.object(SUPERVISOR, "live_leases", return_value=[Path("lease")]),
+            mock.patch.object(SUPERVISOR, "drain_daemon_diagnostic"),
+            mock.patch.object(
+                SUPERVISOR, "refresh_lifecycle_records", return_value=True
+            ),
+            mock.patch.object(SUPERVISOR, "restart_backoff_seconds", return_value=0),
+            mock.patch.object(SUPERVISOR, "POLL_SECONDS", 0),
+            mock.patch.object(SUPERVISOR.time, "sleep", side_effect=sleep),
+            mock.patch.object(
+                SUPERVISOR,
+                "write_status",
+                side_effect=lambda _args, record: records.append(dict(record)),
+            ),
+            mock.patch.object(SUPERVISOR, "stop_daemon", side_effect=stop),
+        ):
+            SUPERVISOR.supervisor_loop(args, lock_descriptor, lock_identity)
+
+        first_exit = next(record for record in records if record["restart_count"] == 1)
+        second_exit = next(record for record in records if record["restart_count"] == 2)
+        terminal = records[-1]
+        self.assertEqual(first_exit["restart_reason"], "daemon-exited:-9")
+        self.assertEqual(first_exit["last_watchdog"], dict(event, daemon_pid=4301))
+        self.assertEqual(second_exit["restart_reason"], "daemon-exited:17")
+        self.assertIsNone(second_exit["last_watchdog"])
+        self.assertIsNone(terminal["daemon_pid"])
+        self.assertIsNone(terminal["last_watchdog"])
+        self.assertEqual(terminal["restart_count"], 2)
+        self.assertNotIn("sentinel", json.dumps(records))
+
+    def test_explicit_no_lease_stop_clears_event_without_restart_accounting(self):
+        args = self.prepare()
+        args.grace_seconds = 0.5
+        event = self.valid_event(run_id="c" * 32)
+        first = self.loop_process(event=event, pid=4401)
+        second = self.loop_process(
+            event=self.valid_event(run_id="d" * 32),
+            pid=4402,
+        )
+        processes = iter((first, second))
+        records = []
+        handlers = {}
+        sleep_count = 0
+        lease_calls = 0
+        clock = 0.0
+        lock = SUPERVISOR.try_supervisor_lock(args.runtime_dir)
+        self.assertIsNotNone(lock)
+        lock_descriptor, lock_identity = lock
+
+        def install_handler(signum, handler):
+            handlers[signum] = handler
+
+        def leases(*_arguments, **_options):
+            nonlocal lease_calls
+            lease_calls += 1
+            return [Path("lease")] if lease_calls <= 2 else []
+
+        def monotonic():
+            nonlocal clock
+            clock += 1.0
+            return clock
+
+        def sleep(_seconds):
+            nonlocal sleep_count
+            sleep_count += 1
+            if sleep_count == 1:
+                first.returncode = -signal.SIGKILL
+            elif sleep_count == 4:
+                handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+        def stop(process):
+            if process is not None:
+                process.returncode = -signal.SIGKILL
+
+        with (
+            mock.patch.object(SUPERVISOR.signal, "signal", side_effect=install_handler),
+            mock.patch.object(SUPERVISOR, "start_daemon", side_effect=processes),
+            mock.patch.object(SUPERVISOR, "live_leases", side_effect=leases),
+            mock.patch.object(SUPERVISOR, "drain_daemon_diagnostic"),
+            mock.patch.object(
+                SUPERVISOR, "refresh_lifecycle_records", return_value=True
+            ),
+            mock.patch.object(SUPERVISOR, "restart_backoff_seconds", return_value=0),
+            mock.patch.object(SUPERVISOR, "POLL_SECONDS", 0),
+            mock.patch.object(SUPERVISOR.time, "monotonic", side_effect=monotonic),
+            mock.patch.object(SUPERVISOR.time, "sleep", side_effect=sleep),
+            mock.patch.object(
+                SUPERVISOR,
+                "write_status",
+                side_effect=lambda _args, record: records.append(dict(record)),
+            ),
+            mock.patch.object(SUPERVISOR, "stop_daemon", side_effect=stop),
+        ):
+            SUPERVISOR.supervisor_loop(args, lock_descriptor, lock_identity)
+
+        stopped = [
+            record
+            for record in records
+            if record["restart_count"] == 1 and record["daemon_pid"] is None
+        ]
+        self.assertTrue(stopped)
+        self.assertTrue(all(record["last_watchdog"] is None for record in stopped))
+        self.assertTrue(
+            all(record["restart_reason"] == "daemon-exited:-9" for record in stopped)
+        )
+        self.assertFalse(any(record["restart_count"] > 1 for record in records))
+
+    def test_terminal_publication_failure_invalidates_only_captured_status(self):
+        for replace_status in (False, True):
+            with self.subTest(replace_status=replace_status):
+                args = self.prepare(host=f"terminal-{int(replace_status)}")
+                event = self.valid_event(run_id="d" * 32)
+                first = self.loop_process(event=event, pid=4501)
+                second = self.loop_process(event=None, pid=4502)
+                processes = iter((first, second))
+                handlers = {}
+                sleep_count = 0
+                replacement_payload = None
+                original_write_status = SUPERVISOR.write_status
+                status_path = args.runtime_dir / SUPERVISOR.STATUS_NAME
+                lock = SUPERVISOR.try_supervisor_lock(args.runtime_dir)
+                self.assertIsNotNone(lock)
+                lock_descriptor, lock_identity = lock
+
+                def install_handler(signum, handler):
+                    handlers[signum] = handler
+
+                def sleep(_seconds):
+                    nonlocal sleep_count
+                    sleep_count += 1
+                    if sleep_count == 1:
+                        first.returncode = -signal.SIGKILL
+                    elif sleep_count == 2:
+                        handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+                def stop(process):
+                    if process is not None:
+                        process.returncode = 0
+
+                def write_status(inner_args, record):
+                    nonlocal replacement_payload
+                    terminal = (
+                        record["daemon_pid"] is None
+                        and record["restart_count"] == 1
+                        and record["last_watchdog"] is None
+                    )
+                    if not terminal:
+                        original_write_status(inner_args, record)
+                        return
+                    self.assertIsNotNone(os.fstat(lock_descriptor))
+                    if replace_status:
+                        replacement = SUPERVISOR.owner_seed_record(inner_args)
+                        original_write_status(inner_args, replacement)
+                        replacement_payload = status_path.read_bytes()
+                    raise OSError(errno.EPERM, "injected terminal publication failure")
+
+                with (
+                    mock.patch.object(
+                        SUPERVISOR.signal,
+                        "signal",
+                        side_effect=install_handler,
+                    ),
+                    mock.patch.object(
+                        SUPERVISOR,
+                        "start_daemon",
+                        side_effect=processes,
+                    ),
+                    mock.patch.object(
+                        SUPERVISOR,
+                        "live_leases",
+                        return_value=[Path("lease")],
+                    ),
+                    mock.patch.object(SUPERVISOR, "drain_daemon_diagnostic"),
+                    mock.patch.object(
+                        SUPERVISOR,
+                        "refresh_lifecycle_records",
+                        return_value=True,
+                    ),
+                    mock.patch.object(
+                        SUPERVISOR,
+                        "restart_backoff_seconds",
+                        return_value=0,
+                    ),
+                    mock.patch.object(SUPERVISOR, "POLL_SECONDS", 0),
+                    mock.patch.object(SUPERVISOR.time, "sleep", side_effect=sleep),
+                    mock.patch.object(
+                        SUPERVISOR,
+                        "write_status",
+                        side_effect=write_status,
+                    ),
+                    mock.patch.object(SUPERVISOR, "stop_daemon", side_effect=stop),
+                ):
+                    try:
+                        SUPERVISOR.supervisor_loop(
+                            args,
+                            lock_descriptor,
+                            lock_identity,
+                        )
+                    except OSError as error:
+                        self.assertEqual(error.errno, errno.EPERM)
+
+                if replace_status:
+                    self.assertEqual(status_path.read_bytes(), replacement_payload)
+                else:
+                    self.assertFalse(status_path.exists())
+
+    def test_stop_timeout_invalidates_status_and_closes_exit_descriptors(self):
+        args = self.prepare(host="stop-timeout")
+        fixture = self.process_with_payload(b"", pid=4601, run_id="e" * 32)
+        process = self.LoopProcess(fixture, 4601)
+        diagnostic_read, diagnostic_write = os.pipe()
+        diagnostic_output = os.open(os.devnull, os.O_WRONLY)
+        os.close(diagnostic_write)
+        process._anvil_diagnostic_read_fd = diagnostic_read
+        process._anvil_diagnostic_output_fd = diagnostic_output
+        first_timeout = subprocess.TimeoutExpired(["daemon"], 5)
+        second_timeout = subprocess.TimeoutExpired(["daemon"], 5)
+        process.wait = mock.Mock(side_effect=(first_timeout, second_timeout))
+        handlers = {}
+        lock = SUPERVISOR.try_supervisor_lock(args.runtime_dir)
+        self.assertIsNotNone(lock)
+        lock_descriptor, lock_identity = lock
+
+        def install_handler(signum, handler):
+            handlers[signum] = handler
+
+        def sleep(_seconds):
+            handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+        event_descriptor = process._anvil_watchdog_event_read_fd
+        with (
+            mock.patch.object(SUPERVISOR.signal, "signal", side_effect=install_handler),
+            mock.patch.object(SUPERVISOR, "start_daemon", return_value=process),
+            mock.patch.object(SUPERVISOR, "live_leases", return_value=[Path("lease")]),
+            mock.patch.object(SUPERVISOR, "drain_daemon_diagnostic"),
+            mock.patch.object(
+                SUPERVISOR, "refresh_lifecycle_records", return_value=True
+            ),
+            mock.patch.object(SUPERVISOR, "POLL_SECONDS", 0),
+            mock.patch.object(SUPERVISOR.time, "sleep", side_effect=sleep),
+            mock.patch.object(SUPERVISOR.os, "killpg"),
+            self.assertRaises(subprocess.TimeoutExpired) as raised,
+        ):
+            SUPERVISOR.supervisor_loop(args, lock_descriptor, lock_identity)
+
+        self.assertIs(raised.exception, second_timeout)
+        self.assertFalse((args.runtime_dir / SUPERVISOR.STATUS_NAME).exists())
+        self.assert_closed(process, event_descriptor)
+        self.assertIsNone(process._anvil_diagnostic_read_fd)
+        self.assertIsNone(process._anvil_diagnostic_output_fd)
+        for descriptor in (diagnostic_read, diagnostic_output):
+            with self.assertRaises(OSError):
+                os.fstat(descriptor)
+
+    def test_finalizer_failure_invalidates_status_and_preserves_original_error(self):
+        args = self.prepare(host="finalizer-failure")
+        process = self.loop_process(event=None, pid=4701)
+        handlers = {}
+        lock = SUPERVISOR.try_supervisor_lock(args.runtime_dir)
+        self.assertIsNotNone(lock)
+        lock_descriptor, lock_identity = lock
+        injected = OSError(errno.EIO, "injected finalizer failure")
+        event_descriptor = process._anvil_watchdog_event_read_fd
+
+        def install_handler(signum, handler):
+            handlers[signum] = handler
+
+        def sleep(_seconds):
+            handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+        def stop(inner_process):
+            inner_process.returncode = 0
+
+        with (
+            mock.patch.object(SUPERVISOR.signal, "signal", side_effect=install_handler),
+            mock.patch.object(SUPERVISOR, "start_daemon", return_value=process),
+            mock.patch.object(SUPERVISOR, "live_leases", return_value=[Path("lease")]),
+            mock.patch.object(SUPERVISOR, "drain_daemon_diagnostic"),
+            mock.patch.object(
+                SUPERVISOR, "refresh_lifecycle_records", return_value=True
+            ),
+            mock.patch.object(SUPERVISOR, "POLL_SECONDS", 0),
+            mock.patch.object(SUPERVISOR.time, "sleep", side_effect=sleep),
+            mock.patch.object(SUPERVISOR, "stop_daemon", side_effect=stop),
+            mock.patch.object(SUPERVISOR.os, "read", side_effect=injected),
+            self.assertRaises(OSError) as raised,
+        ):
+            SUPERVISOR.supervisor_loop(args, lock_descriptor, lock_identity)
+
+        self.assertIs(raised.exception, injected)
+        self.assertFalse((args.runtime_dir / SUPERVISOR.STATUS_NAME).exists())
+        self.assert_closed(process, event_descriptor)
+
+
+class SupervisorProbeSummaryTests(unittest.TestCase):
+    """Fail-closed CLI boundary for bounded supervisor restart summaries."""
+
+    setUp = AgentSupervisorTests.setUp
+    tearDown = AgentSupervisorTests.tearDown
+    prepare = AgentSupervisorTests.prepare
+
+    STATUS_KEYS = frozenset(
+        (
+            "daemon_pid",
+            "format",
+            "version",
+            "generation",
+            "lease_count",
+            "agent_key",
+            "owner_pid",
+            "owner_start_identity",
+            "restart_count",
+            "restart_reason",
+            "supervisor_pid",
+            "supervisor_start_identity",
+            "last_watchdog",
+        )
+    )
+
+    @staticmethod
+    def probe_arguments(args):
+        return [
+            "--probe-summary",
+            "--runtime-dir",
+            str(args.runtime_dir),
+            "--agent-key",
+            args.agent_key,
+        ]
+
+    def run_probe(self, args, *, timeout=1.0):
+        return subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-S",
+                str(MODULE_PATH),
+                *self.probe_arguments(args),
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=timeout,
+        )
+
+    def run_probe_in_process(self, args):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        try:
+            with (
+                contextlib.redirect_stdout(stdout),
+                contextlib.redirect_stderr(stderr),
+            ):
+                SUPERVISOR.main(self.probe_arguments(args))
+        except SystemExit as error:
+            status = error.code if isinstance(error.code, int) else 1
+        else:
+            status = 0
+        return (
+            status,
+            stdout.getvalue().encode("utf-8"),
+            stderr.getvalue().encode("utf-8"),
+        )
+
+    def status_record(self, args, *, watchdog=None, restart_count=0):
+        record = SUPERVISOR.status_record(
+            args,
+            None,
+            0,
+            restart_count,
+            None if restart_count == 0 else "daemon-exited:-9",
+        )
+        record["last_watchdog"] = watchdog
+        self.assertEqual(set(record), set(self.STATUS_KEYS))
+        return record
+
+    @staticmethod
+    def status_path(args):
+        return args.runtime_dir / SUPERVISOR.STATUS_NAME
+
+    def write_status_bytes(self, args, payload):
+        path = self.status_path(args)
+        path.unlink(missing_ok=True)
+        path.write_bytes(payload)
+        path.chmod(0o600)
+        return path
+
+    def write_status_record(self, args, record):
+        return self.write_status_bytes(
+            args,
+            (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode(
+                "utf-8"
+            ),
+        )
+
+    def assert_probe_failure(self, completed):
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, b"")
+        self.assertEqual(completed.stderr, b"")
+
+    def test_owner_seed_has_complete_schema_and_null_watchdog(self):
+        args = self.prepare(host="probe-owner-seed")
+        record = SUPERVISOR.owner_seed_record(args)
+        self.assertEqual(set(record), set(self.STATUS_KEYS))
+        self.assertIsNone(record["last_watchdog"])
+
+    def test_valid_watchdog_and_null_status_render_one_exact_ascii_line(self):
+        event = SupervisorWatchdogEventTests.valid_event(
+            run_id="f" * 32,
+            daemon_pid=4801,
+            cause="dispatch-timeout",
+            phase="tool-call",
+            method="tools/call",
+            tool="emacs-eval",
+        )
+        cases = (
+            (
+                "event",
+                event,
+                7,
+                b"root-restarts=7 cause=dispatch-timeout "
+                b"phase=tool-call tool=emacs-eval\n",
+            ),
+            (
+                "null",
+                None,
+                0,
+                b"root-restarts=0 cause=none phase=unknown tool=none\n",
+            ),
+        )
+        for index, (name, watchdog, restart_count, expected) in enumerate(cases):
+            with self.subTest(name=name):
+                args = self.prepare(host=f"probe-valid-{index}")
+                self.write_status_record(
+                    args,
+                    self.status_record(
+                        args,
+                        watchdog=watchdog,
+                        restart_count=restart_count,
+                    ),
+                )
+                completed = self.run_probe(args)
+                self.assertEqual(completed.returncode, 0)
+                self.assertEqual(completed.stdout, expected)
+                self.assertEqual(completed.stderr, b"")
+                self.assertLessEqual(len(completed.stdout), 256)
+                self.assertEqual(
+                    completed.stdout.decode("ascii").encode("ascii"), expected
+                )
+
+    def test_cli_shape_is_exact_and_every_parse_failure_is_silent(self):
+        args = self.prepare(host="probe-cli")
+        self.write_status_record(args, self.status_record(args))
+        invalid_arguments = (
+            [],
+            ["--probe-summary"],
+            ["--probe-summary", "--agent-key", args.agent_key],
+            [
+                "--probe-summary",
+                "--agent-key",
+                args.agent_key,
+                "--runtime-dir",
+                str(args.runtime_dir),
+            ],
+            [*self.probe_arguments(args), "--extra"],
+            ["--probe-summary", "--runtime-dir", str(args.runtime_dir)],
+        )
+        for arguments in invalid_arguments:
+            with self.subTest(arguments=arguments):
+                completed = subprocess.run(
+                    [sys.executable, "-I", "-S", str(MODULE_PATH), *arguments],
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                    timeout=1,
+                )
+                self.assert_probe_failure(completed)
+
+    def test_symlink_fifo_socket_mode_owner_link_and_path_replacement_fail_closed(self):
+        def valid_fixture(host):
+            args = self.prepare(host=host)
+            self.write_status_record(args, self.status_record(args))
+            return args
+
+        args = valid_fixture("probe-symlink")
+        outside = self.root / "outside-status"
+        outside.write_bytes(self.status_path(args).read_bytes())
+        outside.chmod(0o600)
+        self.status_path(args).unlink()
+        self.status_path(args).symlink_to(outside)
+        self.assert_probe_failure(self.run_probe(args))
+
+        args = valid_fixture("probe-fifo")
+        self.status_path(args).unlink()
+        os.mkfifo(self.status_path(args), mode=0o600)
+        self.assert_probe_failure(self.run_probe(args, timeout=0.75))
+
+        args = valid_fixture("probe-socket")
+        self.status_path(args).unlink()
+        short_socket = self.root / "probe-status.sock"
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as status_socket:
+            status_socket.bind(str(short_socket))
+            os.replace(short_socket, self.status_path(args))
+            self.status_path(args).chmod(0o600)
+            self.assert_probe_failure(self.run_probe(args, timeout=0.75))
+
+        args = valid_fixture("probe-mode")
+        self.status_path(args).chmod(0o640)
+        self.assert_probe_failure(self.run_probe(args))
+
+        args = valid_fixture("probe-links")
+        os.link(self.status_path(args), args.runtime_dir / "extra-status-link")
+        self.assert_probe_failure(self.run_probe(args))
+
+        args = valid_fixture("probe-owner")
+        with mock.patch.object(SUPERVISOR.os, "getuid", return_value=os.getuid() + 1):
+            status, stdout, stderr = self.run_probe_in_process(args)
+        self.assertNotEqual(status, 0)
+        self.assertEqual(stdout, b"")
+        self.assertEqual(stderr, b"")
+
+        args = valid_fixture("probe-replaced")
+        replacement = self.root / "replacement-status"
+        replacement.write_bytes(self.status_path(args).read_bytes())
+        replacement.chmod(0o600)
+        original_open = SUPERVISOR.os.open
+        replaced = False
+
+        def open_then_replace(path, *arguments, **options):
+            nonlocal replaced
+            descriptor = original_open(path, *arguments, **options)
+            if path == SUPERVISOR.STATUS_NAME and not replaced:
+                replaced = True
+                os.replace(replacement, self.status_path(args))
+            return descriptor
+
+        with mock.patch.object(SUPERVISOR.os, "open", side_effect=open_then_replace):
+            status, stdout, stderr = self.run_probe_in_process(args)
+        self.assertTrue(replaced)
+        self.assertNotEqual(status, 0)
+        self.assertEqual(stdout, b"")
+        self.assertEqual(stderr, b"")
+
+    def test_probe_revalidates_status_and_runtime_after_the_bounded_read(self):
+        def run_mutation(host, mutate):
+            args = self.prepare(host=host)
+            self.write_status_record(args, self.status_record(args))
+            original_read = SUPERVISOR.os.read
+            mutated = False
+
+            def read_then_mutate(descriptor, size):
+                nonlocal mutated
+                payload = original_read(descriptor, size)
+                if size == SUPERVISOR.MAX_LEASE_BYTES + 1 and not mutated:
+                    mutated = True
+                    mutate(args)
+                return payload
+
+            with mock.patch.object(
+                SUPERVISOR.os,
+                "read",
+                side_effect=read_then_mutate,
+            ):
+                status, stdout, stderr = self.run_probe_in_process(args)
+            self.assertTrue(mutated)
+            self.assertNotEqual(status, 0)
+            self.assertEqual(stdout, b"")
+            self.assertEqual(stderr, b"")
+
+        def replace_status(args):
+            replacement = self.root / "post-read-replacement"
+            replacement.write_bytes(self.status_path(args).read_bytes())
+            replacement.chmod(0o600)
+            os.replace(replacement, self.status_path(args))
+
+        def add_status_link(args):
+            os.link(self.status_path(args), args.runtime_dir / "post-read-link")
+
+        def change_status_mode(args):
+            self.status_path(args).chmod(0o640)
+
+        def replace_runtime(args):
+            moved = self.root / "post-read-runtime-original"
+            os.replace(args.runtime_dir, moved)
+            args.runtime_dir.mkdir(mode=0o700)
+
+        for host, mutation in (
+            ("probe-post-read-replaced", replace_status),
+            ("probe-post-read-linked", add_status_link),
+            ("probe-post-read-mode", change_status_mode),
+            ("probe-post-read-runtime", replace_runtime),
+        ):
+            with self.subTest(host=host):
+                run_mutation(host, mutation)
+
+    def test_wrong_json_type_duplicates_schema_and_liveness_fail_silently(self):
+        cases = []
+
+        args = self.prepare(host="probe-json-list")
+        self.write_status_bytes(args, b"[]\n")
+        cases.append(("json-list", args))
+
+        args = self.prepare(host="probe-duplicate")
+        record = self.status_record(args)
+        payload = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
+        self.write_status_bytes(args, b'{"restart_count":0,' + payload[1:] + b"\n")
+        cases.append(("duplicate", args))
+
+        invalid_changes = (
+            ("unknown-key", {"unknown": "must-never-appear"}, ()),
+            ("format", {"format": 3}, ()),
+            ("version", {"version": 3}, ()),
+            ("generation", {"generation": "x" * 64}, ()),
+            ("agent-key", {"agent_key": "0" * 32}, ()),
+            ("lease-bool", {"lease_count": True}, ()),
+            ("restart-bool", {"restart_count": True}, ()),
+            ("restart-negative", {"restart_count": -1}, ()),
+            ("reason-control", {"restart_reason": "daemon-exited:-9\nsecret"}, ()),
+            ("supervisor-nullness", {"supervisor_start_identity": None}, ()),
+            ("daemon-bool", {"daemon_pid": True}, ()),
+            ("last-watchdog-type", {"last_watchdog": []}, ()),
+            (
+                "watchdog-cause",
+                {
+                    "last_watchdog": SupervisorWatchdogEventTests.valid_event(
+                        cause="other"
+                    )
+                },
+                (),
+            ),
+            (
+                "watchdog-tool",
+                {
+                    "last_watchdog": SupervisorWatchdogEventTests.valid_event(
+                        tool="secret\ttool"
+                    )
+                },
+                (),
+            ),
+            ("missing-field", {}, ("restart_reason",)),
+        )
+        for index, (name, changes, removals) in enumerate(invalid_changes):
+            args = self.prepare(host=f"probe-schema-{index}")
+            record = self.status_record(args)
+            record.update(changes)
+            for field in removals:
+                record.pop(field)
+            self.write_status_record(args, record)
+            cases.append((name, args))
+
+        for name, args in cases:
+            with self.subTest(name=name):
+                self.assert_probe_failure(self.run_probe(args))
+
+        args = self.prepare(host="probe-oversize")
+        oversized = b"{" + (b" " * SUPERVISOR.MAX_LEASE_BYTES) + b"}\n"
+        self.write_status_bytes(args, oversized)
+        self.assert_probe_failure(self.run_probe(args))
+
+        dead = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+        )
+        dead_identity = eventually(lambda: SUPERVISOR.process_start_identity(dead.pid))
+        dead.terminate()
+        dead.wait(timeout=3)
+        for index, fields in enumerate(
+            (
+                {
+                    "owner_pid": dead.pid,
+                    "owner_start_identity": dead_identity,
+                },
+                {
+                    "supervisor_pid": dead.pid,
+                    "supervisor_start_identity": dead_identity,
+                },
+            )
+        ):
+            with self.subTest(dead_identity=index):
+                args = self.prepare(host=f"probe-dead-{index}")
+                record = self.status_record(args)
+                record.update(fields)
+                self.write_status_record(args, record)
+                self.assert_probe_failure(self.run_probe(args))
+
+
 class SupervisorEventPipePlumbingTests(unittest.TestCase):
     """Focused contracts for one supervisor-owned watchdog event pipe."""
 
@@ -5003,6 +6023,96 @@ class SupervisorEventPipePlumbingTests(unittest.TestCase):
         for descriptor in (read_descriptor, write_descriptor):
             with self.assertRaises(OSError):
                 os.fstat(descriptor)
+
+    def test_start_daemon_rolls_back_every_post_spawn_setup_failure(self):
+        class SpawnedProcess:
+            pid = 4242
+
+            def __init__(self, failing_attribute=None):
+                object.__setattr__(self, "returncode", None)
+                object.__setattr__(self, "failing_attribute", failing_attribute)
+
+            def __setattr__(self, name, value):
+                if name == self.failing_attribute:
+                    raise OSError(errno.EIO, "injected attribute failure")
+                object.__setattr__(self, name, value)
+
+            def poll(self):
+                return self.returncode
+
+        for failure in ("event-close", "attribute"):
+            with self.subTest(failure=failure):
+                args = self.prepare(host=f"post-spawn-{failure}")
+                diagnostic = os.open(os.devnull, os.O_WRONLY)
+                read_descriptor, write_descriptor = os.pipe()
+                event_read, event_write = os.pipe()
+                process = SpawnedProcess(
+                    "_anvil_watchdog_run_id" if failure == "attribute" else None
+                )
+                real_close = SUPERVISOR.os.close
+                close_failed = False
+
+                def close_with_failure(descriptor):
+                    nonlocal close_failed
+                    if (
+                        failure == "event-close"
+                        and descriptor == event_write
+                        and not close_failed
+                    ):
+                        close_failed = True
+                        raise OSError(errno.EIO, "injected close failure")
+                    real_close(descriptor)
+
+                def stop(inner_process):
+                    self.assertIs(inner_process, process)
+                    inner_process.returncode = -signal.SIGTERM
+
+                with (
+                    mock.patch.object(
+                        SUPERVISOR,
+                        "open_daemon_diagnostic",
+                        return_value=diagnostic,
+                    ),
+                    mock.patch.object(
+                        SUPERVISOR.os,
+                        "pipe",
+                        return_value=(read_descriptor, write_descriptor),
+                    ),
+                    mock.patch.object(
+                        SUPERVISOR,
+                        "create_watchdog_event_pipe",
+                        return_value=(event_read, event_write),
+                    ),
+                    mock.patch.object(
+                        SUPERVISOR.subprocess,
+                        "Popen",
+                        return_value=process,
+                    ),
+                    mock.patch.object(
+                        SUPERVISOR,
+                        "stop_daemon",
+                        side_effect=stop,
+                    ) as stop_daemon,
+                    mock.patch.object(
+                        SUPERVISOR.os,
+                        "close",
+                        side_effect=close_with_failure,
+                    ),
+                    self.assertRaises(OSError),
+                ):
+                    SUPERVISOR.start_daemon(args)
+
+                stop_daemon.assert_called_once_with(process)
+                self.assertEqual(process.returncode, -signal.SIGTERM)
+                for descriptor in (
+                    diagnostic,
+                    read_descriptor,
+                    write_descriptor,
+                    event_read,
+                    event_write,
+                ):
+                    with self.assertRaises(OSError):
+                        os.fstat(descriptor)
 
     def test_event_descriptor_survives_full_launch_chain_and_real_emacs_child(self):
         args = self.prepare()

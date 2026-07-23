@@ -8,6 +8,7 @@
   lib,
   python3,
   runCommand,
+  unixtools,
   writeShellApplication,
 }:
 
@@ -66,6 +67,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       python3
       readinessCrashAnvilMcp
       rolloverAnvilMcp
+      unixtools.ps
     ];
   }
   ''
@@ -432,6 +434,25 @@ runCommand "anvil-mcp-dedicated-smoke"
       ANVIL_WATCHDOG_TEST_SUPPORT=${anvilMcp.watchdogTestSupport} \
       ${python3}/bin/python3 -I -B -u \
       ${anvilMcp.dedicatedAgentSupervisorTest}
+    (
+      watchdog_smoke_root=$(mktemp -d /tmp/aw.XXXXXX)
+      trap 'rm -rf -- "$watchdog_smoke_root"' EXIT
+      install -d -m 0700 \
+        "$watchdog_smoke_root/h" \
+        "$watchdog_smoke_root/r" \
+        "$watchdog_smoke_root/s"
+      HOME="$watchdog_smoke_root/h" \
+        ANVIL_EMACS_RUNTIME_ROOT="$watchdog_smoke_root/r" \
+        ANVIL_EMACS_STATE_ROOT="$watchdog_smoke_root/s" \
+        ANVIL_EXPECTED_VERSION=${anvilMcp.currentAnvilVersion} \
+        ANVIL_EXPECTED_ANVIL_REVISION=${anvilMcp.currentAnvilRev} \
+        ${coreutils}/bin/timeout 330 \
+        ${python3}/bin/python3 -I -B -u \
+        ${anvilMcp.dedicatedAgentSupervisorSmoke} \
+        --scenario watchdog-attribution \
+        ${anvilMcp}/bin/anvil-mcp \
+        ${anvilMcp.dedicatedAgentSupervisor}
+    )
     # Keep Darwin Unix-domain worker socket names under its 104-byte
     # limit while preserving the full HOST/agents/KEY hierarchy.
     # A distinct controlled HOME proves root and worker startup never

@@ -41,6 +41,8 @@ WATCHDOG_RUN_ID_ENV = "ANVIL_EMACS_WATCHDOG_RUN_ID"
 WATCHDOG_EVENT_MAX_BYTES = 512
 AGENT_KEY_PATTERN = re.compile(r"[0-9a-f]{32}")
 GENERATION_PATTERN = re.compile(r"[0-9a-f]{64}")
+TOOL_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,127}")
+RESTART_REASON_PATTERN = re.compile(r"daemon-exited:-?[0-9]+")
 LINUX_BOOT_ID_PATTERN = re.compile(
     r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-"
     r"[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
@@ -48,6 +50,77 @@ LINUX_BOOT_ID_PATTERN = re.compile(
 HOST_PATTERN = re.compile(r"[A-Za-z0-9._-]+")
 WORKER_NAME_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 SERVER_IDS = frozenset(("anvil", "emacs-eval"))
+WATCHDOG_CAUSES = frozenset(
+    (
+        "startup-timeout",
+        "heartbeat-timeout",
+        "dispatch-timeout",
+        "lock-integrity-failure",
+        "monitor-state-invalid",
+        "durable-refresh-failure",
+        "monitor-internal-error",
+    )
+)
+WATCHDOG_PHASES = frozenset(
+    (
+        "startup",
+        "parse",
+        "dispatch",
+        "tool-call",
+        "result-encode",
+        "response-write",
+        "idle",
+        "unknown",
+    )
+)
+WATCHDOG_METHODS = frozenset(
+    (
+        "none",
+        "initialize",
+        "notifications/initialized",
+        "ping",
+        "tools/list",
+        "tools/call",
+        "resources/list",
+        "resources/read",
+        "resources/templates/list",
+        "other",
+    )
+)
+WATCHDOG_EVENT_KEYS = frozenset(
+    (
+        "schema_version",
+        "run_id",
+        "daemon_pid",
+        "cause",
+        "phase",
+        "method",
+        "tool",
+        "observed_at_unix_ms",
+        "daemon_uptime_ms",
+        "heartbeat_age_ms",
+        "heartbeat_limit_ms",
+        "dispatch_age_ms",
+        "dispatch_limit_ms",
+    )
+)
+STATUS_KEYS = frozenset(
+    (
+        "daemon_pid",
+        "format",
+        "version",
+        "generation",
+        "lease_count",
+        "agent_key",
+        "owner_pid",
+        "owner_start_identity",
+        "restart_count",
+        "restart_reason",
+        "supervisor_pid",
+        "supervisor_start_identity",
+        "last_watchdog",
+    )
+)
 RECORD_FORMAT_V1 = 1
 RECORD_FORMAT_V2 = 2
 MAX_LEASE_BYTES = 8192
@@ -114,6 +187,89 @@ class LifecycleState(Enum):
 def fail(message: str, status: int = EXIT_SOFTWARE) -> NoReturn:
     print(f"anvil-mcp: per-agent daemon: {message}", file=sys.stderr)
     raise SystemExit(status)
+
+
+def strict_json_object(payload: bytes | str) -> dict[str, object]:
+    """Decode one UTF-8 JSON object without duplicate or non-finite values."""
+    text = (
+        payload.decode("utf-8", errors="strict")
+        if isinstance(payload, bytes)
+        else payload
+    )
+
+    def reject_constant(_value: str) -> NoReturn:
+        raise ValueError("non-finite JSON value")
+
+    def unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate JSON key")
+            result[key] = value
+        return result
+
+    value = json.loads(
+        text,
+        object_pairs_hook=unique_object,
+        parse_constant=reject_constant,
+    )
+    if not isinstance(value, dict):
+        raise ValueError("JSON value is not an object")
+    return value
+
+
+def exact_nonnegative_integer(value: object, *, positive: bool = False) -> int:
+    """Return VALUE as an exact nonnegative integer, rejecting booleans."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError("value is not an exact integer")
+    if value < (1 if positive else 0):
+        raise ValueError("integer is out of range")
+    return value
+
+
+def validate_watchdog_event(
+    value: object,
+    expected_pid: int | None = None,
+    expected_run_id: str | None = None,
+) -> dict[str, object]:
+    """Validate one complete watchdog event and return its sanitized object."""
+    if not isinstance(value, dict) or set(value) != WATCHDOG_EVENT_KEYS:
+        raise ValueError("watchdog event schema mismatch")
+    if type(value["schema_version"]) is not int or value["schema_version"] != 1:
+        raise ValueError("unsupported watchdog event schema")
+    run_id = value["run_id"]
+    if not isinstance(run_id, str) or AGENT_KEY_PATTERN.fullmatch(run_id) is None:
+        raise ValueError("invalid watchdog run id")
+    if expected_run_id is not None and run_id != expected_run_id:
+        raise ValueError("watchdog run id mismatch")
+    daemon_pid = exact_nonnegative_integer(value["daemon_pid"], positive=True)
+    if expected_pid is not None and daemon_pid != expected_pid:
+        raise ValueError("watchdog daemon pid mismatch")
+    if not isinstance(value["cause"], str) or value["cause"] not in WATCHDOG_CAUSES:
+        raise ValueError("invalid watchdog cause")
+    if not isinstance(value["phase"], str) or value["phase"] not in WATCHDOG_PHASES:
+        raise ValueError("invalid watchdog phase")
+    if not isinstance(value["method"], str) or value["method"] not in WATCHDOG_METHODS:
+        raise ValueError("invalid watchdog method")
+    tool = value["tool"]
+    if tool is not None and (
+        not isinstance(tool, str) or TOOL_PATTERN.fullmatch(tool) is None
+    ):
+        raise ValueError("invalid watchdog tool")
+    exact_nonnegative_integer(value["observed_at_unix_ms"])
+    exact_nonnegative_integer(value["daemon_uptime_ms"])
+    for age_name, limit_name in (
+        ("heartbeat_age_ms", "heartbeat_limit_ms"),
+        ("dispatch_age_ms", "dispatch_limit_ms"),
+    ):
+        age = value[age_name]
+        limit = value[limit_name]
+        if (age is None) != (limit is None):
+            raise ValueError("watchdog deadline fields have mismatched nullness")
+        if age is not None:
+            exact_nonnegative_integer(age)
+            exact_nonnegative_integer(limit)
+    return dict(value)
 
 
 def validate_agent_key(raw: str) -> str:
@@ -341,6 +497,7 @@ def owner_seed_record_fields(
         "version": RECORD_FORMAT_V2,
         "generation": generation,
         "lease_count": 0,
+        "last_watchdog": None,
         "agent_key": agent_key,
         "owner_pid": owner_pid,
         "owner_start_identity": owner_start_identity,
@@ -2301,6 +2458,64 @@ def close_daemon_diagnostic(process: subprocess.Popen[bytes] | None) -> None:
         raise pending_error
 
 
+def read_watchdog_event(
+    process: subprocess.Popen[bytes],
+    expected_pid: int,
+    expected_run_id: str,
+) -> dict[str, object] | None:
+    """Read and close one process-specific watchdog event capability."""
+    descriptor = getattr(process, "_anvil_watchdog_event_read_fd", None)
+    if descriptor is None:
+        return None
+    setattr(process, "_anvil_watchdog_event_read_fd", None)
+    try:
+        try:
+            payload = os.read(descriptor, WATCHDOG_EVENT_MAX_BYTES + 1)
+        except BlockingIOError:
+            return None
+        if (
+            not payload
+            or len(payload) > WATCHDOG_EVENT_MAX_BYTES
+            or not payload.endswith(b"\n")
+            or payload.count(b"\n") != 1
+            or b"\r" in payload
+        ):
+            return None
+        try:
+            value = strict_json_object(payload[:-1])
+            return validate_watchdog_event(value, expected_pid, expected_run_id)
+        except (TypeError, ValueError, UnicodeError):
+            return None
+    finally:
+        os.close(descriptor)
+
+
+def finalize_daemon_exit(
+    process: subprocess.Popen[bytes] | None,
+) -> dict[str, object] | None:
+    """Ingest one exit event and close all supervisor-owned diagnostics."""
+    if process is None:
+        return None
+    event: dict[str, object] | None = None
+    pending_error: BaseException | None = None
+    try:
+        event = read_watchdog_event(
+            process,
+            process.pid,
+            getattr(process, "_anvil_watchdog_run_id", ""),
+        )
+    except BaseException as error:
+        pending_error = error
+    try:
+        close_daemon_diagnostic(process)
+    except BaseException as error:
+        if pending_error is None:
+            pending_error = error
+    if pending_error is not None:
+        raise pending_error
+    return event
+
+
 def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
     command = [
         args.python,
@@ -2315,6 +2530,7 @@ def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
     write_descriptor: int | None = None
     event_read_descriptor: int | None = None
     event_write_descriptor: int | None = None
+    process: subprocess.Popen[bytes] | None = None
     try:
         diagnostic_descriptor = open_daemon_diagnostic(args.runtime_dir)
         read_descriptor, write_descriptor = os.pipe()
@@ -2339,7 +2555,22 @@ def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
             close_fds=True,
             pass_fds=(event_write_descriptor,),
         )
+        os.close(write_descriptor)
+        write_descriptor = None
+        os.close(event_write_descriptor)
+        event_write_descriptor = None
+        setattr(process, "_anvil_diagnostic_read_fd", read_descriptor)
+        setattr(process, "_anvil_diagnostic_output_fd", diagnostic_descriptor)
+        setattr(process, "_anvil_diagnostic_written", 0)
+        setattr(process, "_anvil_watchdog_event_read_fd", event_read_descriptor)
+        setattr(process, "_anvil_watchdog_run_id", run_id)
+        return process
     except BaseException:
+        if process is not None:
+            try:
+                stop_daemon(process)
+            except BaseException:
+                pass
         for descriptor in (
             read_descriptor,
             write_descriptor,
@@ -2353,38 +2584,26 @@ def start_daemon(args: argparse.Namespace) -> subprocess.Popen[bytes]:
                 except OSError:
                     pass
         raise
-    os.close(write_descriptor)
-    os.close(event_write_descriptor)
-    setattr(process, "_anvil_diagnostic_read_fd", read_descriptor)
-    setattr(process, "_anvil_diagnostic_output_fd", diagnostic_descriptor)
-    setattr(process, "_anvil_diagnostic_written", 0)
-    setattr(process, "_anvil_watchdog_event_read_fd", event_read_descriptor)
-    setattr(process, "_anvil_watchdog_run_id", run_id)
-    return process
 
 
 def stop_daemon(process: subprocess.Popen[bytes] | None) -> None:
     if process is None:
         return
-    try:
-        if process.poll() is None:
+    if process.poll() is None:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            process.wait(timeout=DAEMON_STOP_SECONDS)
+        except subprocess.TimeoutExpired:
             try:
-                os.killpg(process.pid, signal.SIGTERM)
+                os.killpg(process.pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
-            try:
-                process.wait(timeout=DAEMON_STOP_SECONDS)
-            except subprocess.TimeoutExpired:
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                # SIGKILL cannot be ignored, but an uninterruptible kernel wait
-                # can still prevent reaping indefinitely.  Bound this wait and
-                # let the caller preserve lifecycle state on failure.
-                process.wait(timeout=DAEMON_STOP_SECONDS)
-    finally:
-        close_daemon_diagnostic(process)
+            # SIGKILL cannot be ignored, but an uninterruptible kernel wait can
+            # still prevent reaping indefinitely.  Bound this second wait.
+            process.wait(timeout=DAEMON_STOP_SECONDS)
 
 
 def restart_backoff_seconds(failures: int) -> float:
@@ -2539,6 +2758,7 @@ def status_record(
     lease_count: int,
     restart_count: int = 0,
     restart_reason: str | None = None,
+    last_watchdog: dict[str, object] | None = None,
 ) -> dict[str, object]:
     record = owner_seed_record(args)
     record.update(
@@ -2547,6 +2767,7 @@ def status_record(
                 None if daemon is None or daemon.poll() is not None else daemon.pid
             ),
             "lease_count": lease_count,
+            "last_watchdog": last_watchdog,
             "restart_count": restart_count,
             "restart_reason": restart_reason,
             "supervisor_pid": os.getpid(),
@@ -2587,6 +2808,65 @@ def publish_startup_status(
             time.sleep(min(restart_backoff_seconds(failures), remaining))
 
 
+def status_entry_identity(runtime_dir: Path) -> tuple[int, int] | None:
+    """Capture the current status pathname identity through its private parent."""
+    directory_fd = os.open(
+        runtime_dir,
+        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+    )
+    try:
+        directory_info = os.fstat(directory_fd)
+        if (
+            not stat.S_ISDIR(directory_info.st_mode)
+            or directory_info.st_uid != os.getuid()
+            or stat.S_IMODE(directory_info.st_mode) != 0o700
+        ):
+            raise ConfigurationError("unsafe supervisor runtime directory")
+        try:
+            status_info = os.stat(
+                STATUS_NAME,
+                dir_fd=directory_fd,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            return None
+        return status_info.st_dev, status_info.st_ino
+    finally:
+        os.close(directory_fd)
+
+
+def invalidate_status_entry(
+    runtime_dir: Path,
+    expected_identity: tuple[int, int] | None,
+) -> None:
+    """Unlink only the status pathname captured before a failed transaction."""
+    if expected_identity is None:
+        return
+    directory_fd = os.open(
+        runtime_dir,
+        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+    )
+    try:
+        directory_info = os.fstat(directory_fd)
+        if (
+            not stat.S_ISDIR(directory_info.st_mode)
+            or directory_info.st_uid != os.getuid()
+            or stat.S_IMODE(directory_info.st_mode) != 0o700
+        ):
+            return
+        unlink_if_identity(directory_fd, STATUS_NAME, expected_identity)
+    finally:
+        os.close(directory_fd)
+
+
+def publish_terminal_status(
+    args: argparse.Namespace,
+    record: dict[str, object],
+) -> None:
+    """Publish terminal state with the same bounded retry policy as startup."""
+    publish_startup_status(args, record)
+
+
 def supervisor_loop(
     args: argparse.Namespace,
     lock_descriptor: int,
@@ -2598,6 +2878,8 @@ def supervisor_loop(
     daemon_failures = 0
     restart_count = 0
     restart_reason: str | None = None
+    last_watchdog: dict[str, object] | None = None
+    last_lease_count = 0
     empty_since: float | None = None
     next_start = 0.0
     next_refresh = 0.0
@@ -2607,6 +2889,7 @@ def supervisor_loop(
     transient_failures = 0
     stopping = False
     owner_dead = False
+    exit_transaction_failed = False
 
     def request_stop(_signum: int, _frame: object) -> None:
         nonlocal stopping
@@ -2648,12 +2931,17 @@ def supervisor_loop(
                     args.generation,
                     owner_validated=True,
                 )
+                last_lease_count = len(leases)
                 now = time.monotonic()
                 drain_daemon_diagnostic(daemon)
                 if daemon is not None and daemon.poll() is not None:
                     restart_reason = f"daemon-exited:{daemon.returncode}"
                     restart_count += 1
-                    close_daemon_diagnostic(daemon)
+                    try:
+                        last_watchdog = finalize_daemon_exit(daemon)
+                    except BaseException:
+                        exit_transaction_failed = True
+                        raise
                     if daemon_observed_stable:
                         daemon_failures = 0
                     daemon_failures += 1
@@ -2681,7 +2969,13 @@ def supervisor_loop(
                     if empty_since is None:
                         empty_since = now
                     if now - empty_since >= args.grace_seconds:
-                        stop_daemon(daemon)
+                        try:
+                            stop_daemon(daemon)
+                            finalize_daemon_exit(daemon)
+                            last_watchdog = None
+                        except BaseException:
+                            exit_transaction_failed = True
+                            raise
                         daemon = None
                         daemon_started_at = None
                         daemon_observed_stable = False
@@ -2699,6 +2993,7 @@ def supervisor_loop(
                         )
                         if refreshed:
                             leases = refreshed
+                            last_lease_count = len(leases)
                             empty_since = None
 
                 if now >= next_refresh:
@@ -2716,6 +3011,7 @@ def supervisor_loop(
                     len(leases),
                     restart_count,
                     restart_reason,
+                    last_watchdog,
                 )
                 if record != status_cache and now >= next_status_attempt:
                     try:
@@ -2756,14 +3052,56 @@ def supervisor_loop(
             transient_failures = 0
             time.sleep(POLL_SECONDS)
     finally:
+        prior_error = sys.exc_info()[1]
+        transaction_error: BaseException | None = (
+            prior_error if exit_transaction_failed else None
+        )
+        captured_status_identity: tuple[int, int] | None = None
         try:
-            stop_daemon(daemon)
-            if owner_dead:
+            try:
+                captured_status_identity = status_entry_identity(args.runtime_dir)
+            except BaseException as error:
+                if transaction_error is None:
+                    transaction_error = error
+            try:
+                stop_daemon(daemon)
+            except BaseException as error:
+                if transaction_error is None:
+                    transaction_error = error
+            try:
+                finalize_daemon_exit(daemon)
+            except BaseException as error:
+                if transaction_error is None:
+                    transaction_error = error
+            daemon = None
+            last_watchdog = None
+            if transaction_error is None:
+                try:
+                    publish_terminal_status(
+                        args,
+                        status_record(
+                            args,
+                            None,
+                            last_lease_count,
+                            restart_count,
+                            restart_reason,
+                            None,
+                        ),
+                    )
+                except BaseException as error:
+                    transaction_error = error
+            if transaction_error is not None:
+                try:
+                    invalidate_status_entry(
+                        args.runtime_dir,
+                        captured_status_identity,
+                    )
+                except BaseException:
+                    pass
+                if prior_error is None:
+                    raise transaction_error
+            elif owner_dead:
                 cleanup_instance(args)
-            # Preserve a trusted owner identity after an externally requested
-            # or fatal supervisor exit.  A replacement supervisor overwrites
-            # this record; if no replacement starts, a later agent can still
-            # prove the owner generation died and safely reap both trees.
         finally:
             os.close(lock_descriptor)
 
@@ -3260,6 +3598,169 @@ def explicit_socket_preflight_main(args: argparse.Namespace) -> None:
         fail(str(error), EXIT_CONFIG)
 
 
+def validate_probe_status(
+    record: object,
+    agent_key: str,
+) -> bytes:
+    """Validate one current status record and render its bounded summary."""
+    if not isinstance(record, dict) or set(record) != STATUS_KEYS:
+        raise ValueError("status schema mismatch")
+    if (
+        type(record["format"]) is not int
+        or record["format"] != RECORD_FORMAT_V2
+        or type(record["version"]) is not int
+        or record["version"] != RECORD_FORMAT_V2
+    ):
+        raise ValueError("unsupported status format")
+    validate_generation(record["generation"])
+    if record["agent_key"] != agent_key:
+        raise ValueError("status agent key mismatch")
+    lease_count = exact_nonnegative_integer(record["lease_count"])
+    restart_count = exact_nonnegative_integer(record["restart_count"])
+    del lease_count
+
+    owner_pid = exact_nonnegative_integer(record["owner_pid"], positive=True)
+    owner_identity = record["owner_start_identity"]
+    if not isinstance(owner_identity, str) or not owner_identity:
+        raise ValueError("invalid status owner identity")
+    if validate_process_identity(owner_pid, owner_identity) is not LifecycleState.LIVE:
+        raise ValueError("status owner is not live")
+
+    supervisor_pid = exact_nonnegative_integer(
+        record["supervisor_pid"],
+        positive=True,
+    )
+    supervisor_identity = record["supervisor_start_identity"]
+    if not isinstance(supervisor_identity, str) or not supervisor_identity:
+        raise ValueError("invalid status supervisor identity")
+    if (
+        validate_process_identity(supervisor_pid, supervisor_identity)
+        is not LifecycleState.LIVE
+    ):
+        raise ValueError("status supervisor is not live")
+
+    daemon_pid = record["daemon_pid"]
+    if daemon_pid is not None:
+        exact_nonnegative_integer(daemon_pid, positive=True)
+    restart_reason = record["restart_reason"]
+    if restart_count == 0:
+        if restart_reason is not None:
+            raise ValueError("unexpected restart reason")
+    elif (
+        not isinstance(restart_reason, str)
+        or RESTART_REASON_PATTERN.fullmatch(restart_reason) is None
+    ):
+        raise ValueError("invalid restart reason")
+
+    watchdog = record["last_watchdog"]
+    if watchdog is None:
+        cause = "none"
+        phase = "unknown"
+        tool = "none"
+    else:
+        event = validate_watchdog_event(watchdog)
+        if restart_count == 0:
+            raise ValueError("watchdog event has no restart")
+        cause = str(event["cause"])
+        phase = str(event["phase"])
+        tool_value = event["tool"]
+        tool = "none" if tool_value is None else str(tool_value)
+    payload = (
+        f"root-restarts={restart_count} cause={cause} phase={phase} tool={tool}\n"
+    ).encode("ascii", errors="strict")
+    if len(payload) > 256:
+        raise ValueError("probe summary exceeds byte limit")
+    return payload
+
+
+def validate_probe_runtime_entry(
+    runtime_dir: Path, directory_fd: int
+) -> tuple[int, int]:
+    """Return one still-current private runtime-directory identity."""
+    directory_info = os.fstat(directory_fd)
+    path_info = os.stat(runtime_dir, follow_symlinks=False)
+    identity = (directory_info.st_dev, directory_info.st_ino)
+    if (
+        not stat.S_ISDIR(directory_info.st_mode)
+        or directory_info.st_uid != os.getuid()
+        or stat.S_IMODE(directory_info.st_mode) != 0o700
+        or (path_info.st_dev, path_info.st_ino) != identity
+    ):
+        raise ConfigurationError("unsafe probe runtime directory")
+    return identity
+
+
+def validate_probe_status_entry(directory_fd: int, status_fd: int) -> tuple[int, int]:
+    """Return one still-current private status-entry identity."""
+    descriptor_info = os.fstat(status_fd)
+    status_info = os.stat(
+        STATUS_NAME,
+        dir_fd=directory_fd,
+        follow_symlinks=False,
+    )
+    identity = (descriptor_info.st_dev, descriptor_info.st_ino)
+    if (
+        not stat.S_ISREG(descriptor_info.st_mode)
+        or descriptor_info.st_uid != os.getuid()
+        or descriptor_info.st_nlink != 1
+        or stat.S_IMODE(descriptor_info.st_mode) != 0o600
+        or (status_info.st_dev, status_info.st_ino) != identity
+    ):
+        raise ConfigurationError("unsafe probe status entry")
+    return identity
+
+
+def read_probe_summary(runtime_raw: str, agent_key_raw: str) -> bytes:
+    """Read one private status entry without following or blocking on it."""
+    runtime_dir = validate_root_path(runtime_raw, "runtime directory")
+    agent_key = validate_agent_key(agent_key_raw)
+    if runtime_dir.name != agent_key:
+        raise ConfigurationError("runtime directory identity mismatch")
+    directory_fd = os.open(
+        runtime_dir,
+        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+    )
+    status_fd: int | None = None
+    try:
+        directory_identity = validate_probe_runtime_entry(runtime_dir, directory_fd)
+        status_fd = os.open(
+            STATUS_NAME,
+            os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+            dir_fd=directory_fd,
+        )
+        status_identity = validate_probe_status_entry(directory_fd, status_fd)
+        payload = os.read(status_fd, MAX_LEASE_BYTES + 1)
+        if (
+            not payload
+            or len(payload) > MAX_LEASE_BYTES
+            or not payload.endswith(b"\n")
+            or payload.count(b"\n") != 1
+            or b"\r" in payload
+        ):
+            raise ValueError("invalid probe status frame")
+        summary = validate_probe_status(strict_json_object(payload[:-1]), agent_key)
+        if (
+            validate_probe_runtime_entry(runtime_dir, directory_fd)
+            != directory_identity
+            or validate_probe_status_entry(directory_fd, status_fd) != status_identity
+        ):
+            raise ConfigurationError("probe status changed during read")
+        return summary
+    finally:
+        if status_fd is not None:
+            os.close(status_fd)
+        os.close(directory_fd)
+
+
+def probe_summary_main(runtime_dir: str, agent_key: str) -> None:
+    """Emit only a validated summary, failing without diagnostic output."""
+    try:
+        payload = read_probe_summary(runtime_dir, agent_key)
+        sys.stdout.write(payload.decode("ascii"))
+    except BaseException:
+        raise SystemExit(EXIT_UNAVAILABLE) from None
+
+
 def parse_explicit_socket_preflight_arguments(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--socket", required=True)
@@ -3293,6 +3794,13 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     argv = sys.argv[1:] if argv is None else argv
+    if not argv:
+        raise SystemExit(EXIT_CONFIG)
+    if argv[0] == "--probe-summary":
+        if len(argv) != 5 or argv[1] != "--runtime-dir" or argv[3] != "--agent-key":
+            raise SystemExit(EXIT_CONFIG)
+        probe_summary_main(argv[2], argv[4])
+        return
     if argv[:1] == ["--validate-host-sockets"]:
         host_socket_preflight_main(parse_host_socket_preflight_arguments(argv[1:]))
         return
