@@ -7277,11 +7277,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1784697474,
-        "narHash": "sha256-H99mJuG1KVMGEs73Xjkla45pS+jBof9czIhYaCwCGQg=",
+        "lastModified": 1784909217,
+        "narHash": "sha256-Y69tLAwQGurP2WxLn/oQQBtgQSECe58la1FHnca2fHk=",
         "ref": "refs/heads/main",
-        "rev": "2bfe4a4e9ead7eebd5805a84c761167fb86a2430",
-        "revCount": 1459,
+        "rev": "a84214c66dcf4d76ebcad0b1cf24627448213fe3",
+        "revCount": 1463,
         "type": "git",
         "url": "file:///Users/johnw/src/scripts"
       },
