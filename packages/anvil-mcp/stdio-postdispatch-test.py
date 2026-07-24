@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Callable
 import errno
 import json
 import os
@@ -1093,7 +1094,7 @@ def run_cleanup_race_program(
     input_bytes: bytes,
     marker: Path,
     release: Path,
-    publish: object,
+    publish: Callable[[], None],
 ) -> bytes:
     """Run SCRIPT through one deterministic snapshot/publication race."""
     environment = os.environ.copy()
@@ -1118,7 +1119,7 @@ def run_cleanup_race_program(
             if time.monotonic() >= deadline:
                 raise AssertionError("cleanup race did not reach snapshot barrier")
             time.sleep(0.01)
-        publish()  # type: ignore[operator]
+        publish()
         release.touch()
         stdout, stderr = process.communicate(input=input_bytes, timeout=10)
         if process.returncode != 0:

@@ -1683,9 +1683,8 @@ def test_session_gate_residue_contract(soak_path: Path) -> None:
         if not soak.assert_empty_agents(root):
             raise AssertionError("empty agent directory was rejected")
 
-        gate = agents / (
-            ".anvil-agent-session-gate-" + "a" * 32 + ".lock"
-        )
+        gate_name = ".anvil-agent-session-gate-" + "a" * 32 + ".lock"
+        gate = agents / gate_name
         gate.touch(mode=0o600)
         gate.chmod(0o600)
         if not soak.assert_empty_agents(root):
@@ -1698,6 +1697,51 @@ def test_session_gate_residue_contract(soak_path: Path) -> None:
         gate.chmod(0o644)
         if soak.assert_empty_agents(root):
             raise AssertionError("nonprivate session gate was accepted")
+        gate.chmod(0o600)
+
+        info = gate.lstat()
+        foreign_owner = SimpleNamespace(
+            st_mode=info.st_mode,
+            st_uid=info.st_uid + 1,
+            st_nlink=info.st_nlink,
+            st_size=info.st_size,
+        )
+        with mock.patch.object(Path, "lstat", return_value=foreign_owner):
+            if soak.assert_empty_agents(root):
+                raise AssertionError("foreign-owned session gate was accepted")
+        gate.unlink()
+
+        malformed = agents / (
+            ".anvil-agent-session-gate-" + "A" * 32 + ".lock"
+        )
+        malformed.touch(mode=0o600)
+        malformed.chmod(0o600)
+        if soak.assert_empty_agents(root):
+            raise AssertionError("malformed session gate name was accepted")
+        malformed.unlink()
+
+        gate.mkdir(mode=0o700)
+        if soak.assert_empty_agents(root):
+            raise AssertionError("session gate directory was accepted")
+        gate.rmdir()
+
+        target = root / "gate-target"
+        target.touch(mode=0o600)
+        gate.symlink_to(target)
+        if soak.assert_empty_agents(root):
+            raise AssertionError("session gate symlink was accepted")
+        gate.unlink()
+        target.unlink()
+
+        gate.touch(mode=0o600)
+        gate.chmod(0o600)
+        hardlink = agents / (
+            ".anvil-agent-session-gate-" + "b" * 32 + ".lock"
+        )
+        os.link(gate, hardlink)
+        if soak.assert_empty_agents(root):
+            raise AssertionError("hard-linked session gate was accepted")
+        hardlink.unlink()
         gate.unlink()
 
         unexpected = agents / "unexpected.lock"
