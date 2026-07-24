@@ -3020,10 +3020,11 @@ let
   task9FlakeSource = builtins.readFile "${src}/flake.nix";
 
   task9Checks = [
-    (expectEqual "Task 9 Hera Git-AI remains disabled" task9JohnwHera.config.programs.git-ai.enable
+    (expectEqual "Task 9 Hera Git-AI module evaluates disabled"
+      task9JohnwHera.config.programs.git-ai.enable
       false
     )
-    (expectEqual "Task 9 Hera Git-AI hook installation remains disabled"
+    (expectEqual "Task 9 Hera Git-AI hook installation evaluates disabled"
       task9JohnwHera.config.programs.git-ai.installHooks
       false
     )
