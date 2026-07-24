@@ -443,7 +443,7 @@ in
     # which exists only where the flake provides a `scripts` input. Guard the
     # whole agent so a Darwin consumer without that input still evaluates
     # (mirrors the config/ssh.nix guard).
-    // lib.optionalAttrs (pkgs ? my-scripts) {
+    // lib.optionalAttrs ((hostname == "hera") && (pkgs ? my-scripts)) {
 
       flatten-recordings = {
         script = ''
