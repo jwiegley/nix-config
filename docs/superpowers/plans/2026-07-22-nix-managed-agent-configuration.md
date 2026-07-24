@@ -1,5 +1,7 @@
 # Nix-Managed Agent Configuration Implementation Plan
 
+> Historical implementation plan: superseded by `AI-NIX-REINTEGRATION-WIGGUM-PLAN.md`. The separate worktrees, `ai-nix` overrides, and Superpowers workflow named below document the original execution and must not be followed as current commands.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace promptdeploy as the active desired-state mechanism for Claude Code, Codex, OpenCode, Droid, and Pi with immutable `ai-nix` resources/wrappers and exact Home Manager leaves in `/Users/johnw/src/nix`, then migrate and roll out the result across the approved fleet.

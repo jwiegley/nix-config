@@ -2,7 +2,9 @@
   pkgs,
   src,
   agentResources,
+  aiFlake,
   homeManagerLib,
+  piGallery,
   inputs,
   testPkgsFor,
 }:
@@ -21,9 +23,19 @@ let
     import "${src}/config/ai/catalog.nix" {
       inherit lib;
       modelData = data;
-      resources = "/agent-resources";
+      resources = agentResources;
     };
   catalog = catalogFor modelData;
+  externalAiOverlay = _final: _prev: { external-ai-marker = true; };
+  externalOverlayProbe =
+    (builtins.head (
+      import "${src}/config/overlays.nix" {
+        inherit inputs;
+        aiOverlay = externalAiOverlay;
+      }
+    ))
+      { }
+      { };
 
   replaceAt =
     index: transform: values:
@@ -336,28 +348,20 @@ let
     "perplexity"
     "sequential-thinking"
   ];
-  personalOpenCodeMcp = [
-    "Ref"
-    "anvil"
-    "context-hub"
-    "context7"
-    "devonthink"
-    "memory-vault"
-    "perplexity"
-    "sequential-thinking"
-    "stock-trader"
-  ];
+  personalOpenCodeMcp = claudePersonalMcp;
   vulcanOpenCodeMcp = [
     "Ref"
     "anvil"
     "context-hub"
     "context7"
+    "drafts-hera"
     "memory-vault"
+    "pal"
     "perplexity"
     "sequential-thinking"
     "stock-trader"
   ];
-  droidMcp = claudeMcp;
+  droidMcp = claudePersonalMcp;
   claudeHooks = [
     "agent-deck-claude"
     "claude-code"
@@ -382,12 +386,12 @@ let
         args = [ "--server-id=anvil" ];
       };
       overrides = {
-        claude.timeout = 330000;
+        claude.timeout = 540000;
         codex = {
-          startup_timeout_sec = 330;
-          tool_timeout_sec = 330;
+          startup_timeout_sec = 540;
+          tool_timeout_sec = 540;
         };
-        opencode.timeout = 330000;
+        opencode.timeout = 540000;
       };
     };
     context-hub = {
@@ -541,7 +545,7 @@ let
       hasDefault = true;
     };
     "hera-pi" = {
-      mcpServers = baseMcp;
+      mcpServers = claudePersonalMcp;
       hooks = [ ];
       marketplaces = [ ];
       hasDefault = false;
@@ -559,7 +563,7 @@ let
       hasDefault = false;
     };
     "shared-work-opencode-positron" = {
-      mcpServers = baseMcp;
+      mcpServers = claudeMcp;
       hooks = [ ];
       marketplaces = [ ];
       hasDefault = true;
@@ -676,6 +680,7 @@ let
   piRendererPath = "${src}/config/ai/renderers/pi.nix";
   piPkgs = pkgs // {
     agent-resources = agentResources;
+    pi-gallery = piGallery;
   };
   claudeRenderer =
     if builtins.pathExists claudeRendererPath then
@@ -997,7 +1002,6 @@ let
     "clangd-lsp@claude-plugins-official" = true;
     "pyright-lsp@claude-plugins-official" = true;
     "rust-analyzer-lsp@claude-plugins-official" = true;
-    "superpowers@claude-plugins-official" = true;
   };
 
   isTypedEnv =
@@ -1205,6 +1209,13 @@ let
           transport.headers.${headerName}.env
         ];
       }
+    else if transport ? url then
+      assert headerNames == [ ];
+      {
+        type = "http";
+        disabled = false;
+        inherit (transport) url;
+      }
     else
       {
         type = "stdio";
@@ -1216,9 +1227,6 @@ let
     mcpServers = lib.mapAttrs expectedDroidMcpServer (selectFor "hera-droid" catalog.items.mcpServers);
   };
 
-  piProviderApis = {
-    litellm = "openai-completions";
-  };
   renderPiCredential =
     credential:
     if isTypedEnv credential then "$" + "{" + credential.env + "}" else credential.nonSecret;
@@ -1261,18 +1269,94 @@ let
         max = null;
       };
     };
+  piLiteLLMApiKeyHelper = pkgs.writeShellScript "pi-litellm-api-key" ''
+    set -euo pipefail
+    set +x
+
+    pass_bin=''${PI_LITELLM_PASS_BIN:-${lib.getExe pkgs.pass}}
+    credential=""
+    if [[ ! -x $pass_bin ]] || ! credential="$("$pass_bin" litellm.vulcan.lan)"; then
+      echo "pi: LiteLLM credential is unavailable or empty" >&2
+      exit 1
+    fi
+    credential=''${credential%%$'\n'*}
+    if [[ -z $credential ]]; then
+      echo "pi: LiteLLM credential is unavailable or empty" >&2
+      exit 1
+    fi
+    printf '%s\n' "$credential"
+  '';
+  piLiteLLMApiKeyCommand = "!${piLiteLLMApiKeyHelper}";
   expectedPiProvider = providerName: provider: {
-    api = piProviderApis.${providerName};
-    apiKey = renderPiCredential provider.apiKey;
+    apiKey =
+      if providerName == "litellm" then piLiteLLMApiKeyCommand else renderPiCredential provider.apiKey;
     inherit (provider) baseUrl;
     models = map expectedPiModel (
       orderedValues (
-        lib.filterAttrs (_: model: model.provider == providerName) (selectedModels "hera-pi")
+        lib.filterAttrs (
+          _: model: model.provider == providerName && model.id == "positron_openai/gpt-5.6-sol"
+        ) (selectedModels "hera-pi")
       )
     );
   };
   expectedPiModels = {
-    providers = lib.mapAttrs expectedPiProvider (selectedProviders "hera-pi");
+    providers = lib.mapAttrs expectedPiProvider (selectedProviders "hera-pi") // {
+      router = {
+        api = "router-local-api";
+        apiKey = "pi-model-router";
+        baseUrl = "router://local";
+        models = [
+          {
+            id = "sol";
+            name = "Router sol";
+            reasoning = true;
+            input = [
+              "text"
+              "image"
+            ];
+            cost = {
+              input = 0;
+              output = 0;
+              cacheRead = 0;
+              cacheWrite = 0;
+            };
+            contextWindow = 1050000;
+            maxTokens = 128000;
+            thinkingLevelMap.xhigh = "xhigh";
+          }
+        ];
+      };
+    };
+  };
+  expectedPiRouter = {
+    debug = false;
+    phaseBias = 0.5;
+    models.sol = {
+      model = "litellm/positron_openai/gpt-5.6-sol";
+      contextWindow = 1050000;
+      maxTokens = 128000;
+      reasoning = true;
+      thinkingLevels = [
+        "low"
+        "medium"
+        "high"
+        "xhigh"
+      ];
+    };
+    profiles.sol = {
+      high = {
+        model = "sol";
+        thinking = "xhigh";
+      };
+      medium = {
+        model = "sol";
+        thinking = "medium";
+      };
+      low = {
+        model = "sol";
+        thinking = "low";
+      };
+    };
   };
   renderPiSecretReferences =
     value:
@@ -1291,9 +1375,10 @@ let
     in
     if transport ? url then
       {
-        inherit (transport) url headers;
+        inherit (transport) url;
         oauth = false;
       }
+      // lib.optionalAttrs (transport ? headers) { inherit (transport) headers; }
     else
       {
         inherit (transport) command args;
@@ -1301,6 +1386,44 @@ let
       // lib.optionalAttrs (transport ? env) { inherit (transport) env; };
   expectedPiMcp = {
     mcpServers = lib.mapAttrs expectedPiMcpServer (selectFor "hera-pi" catalog.items.mcpServers);
+  };
+  expectedPiKeybindings = {
+    "tui.editor.cursorUp" = [
+      "up"
+      "ctrl+p"
+    ];
+    "tui.editor.cursorDown" = [
+      "down"
+      "ctrl+n"
+    ];
+    "tui.editor.cursorLeft" = [
+      "left"
+      "ctrl+b"
+    ];
+    "tui.editor.cursorRight" = [
+      "right"
+      "ctrl+f"
+    ];
+    "tui.editor.cursorWordLeft" = [
+      "alt+left"
+      "alt+b"
+    ];
+    "tui.editor.cursorWordRight" = [
+      "alt+right"
+      "alt+f"
+    ];
+    "tui.editor.deleteCharForward" = [
+      "delete"
+      "ctrl+d"
+    ];
+    "tui.editor.deleteCharBackward" = [
+      "backspace"
+      "ctrl+h"
+    ];
+    "tui.input.newLine" = [
+      "shift+enter"
+      "ctrl+j"
+    ];
   };
 
   expectedClaudeSettings =
@@ -1389,9 +1512,10 @@ let
       ]
     );
   piExtensionSources = {
+    auto-compact-resume = "${../config/ai/extensions/auto-compact-resume/index.ts}";
+    nix-gallery = "${piPkgs.pi-gallery}/share/pi-gallery/index.ts";
     pi-mcp-adapter = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter";
     pi-quiet = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-quiet";
-    pi-subagent = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-subagent";
   };
   expectedPiPaths =
     profileId:
@@ -1404,9 +1528,12 @@ let
       ++ map (name: "${root}/prompts/${name}.md") (selectedNames profileId "prompts")
       ++ [
         ".config/mcp/mcp.json"
+        "${root}/extensions/auto-compact-resume/index.ts"
+        "${root}/extensions/nix-gallery/index.ts"
         "${root}/extensions/pi-mcp-adapter"
         "${root}/extensions/pi-quiet"
-        "${root}/extensions/pi-subagent"
+        "${root}/keybindings.json"
+        "${root}/model-router.json"
         "${root}/models.json"
       ]
     );
@@ -1831,6 +1958,13 @@ let
     [
       {
         kind = "json";
+        label = "${profileId} keybindings";
+        path = documentSource "${profileId}-keybindings.json" (file "${profile.root}/keybindings.json");
+        expected = expectedPiKeybindings;
+        forbidden = [ ];
+      }
+      {
+        kind = "json";
         label = "${profileId} models";
         path = documentSource "${profileId}-models.json" (file "${profile.root}/models.json");
         expected = expectedPiModels;
@@ -1843,17 +1977,24 @@ let
       }
       {
         kind = "json";
+        label = "${profileId} model router";
+        path = documentSource "${profileId}-model-router.json" (file "${profile.root}/model-router.json");
+        expected = expectedPiRouter;
+        forbidden = [
+          "classifierModel"
+          "maxSessionBudget"
+          "fallbacks"
+          "positron_openi/"
+        ];
+      }
+      {
+        kind = "json";
         label = "${profileId} MCP";
         path = documentSource "${profileId}-mcp.json" (file ".config/mcp/mcp.json");
         expected = expectedPiMcp;
         forbidden = [
           "anvil-tools"
-          "devonthink"
-          "drafts"
           "imports"
-          "memory-vault"
-          "pal"
-          "stock-trader"
           "?apiKey="
         ];
       }
@@ -1901,24 +2042,32 @@ let
   );
   openCodeRequiredEnvNames = {
     clio-opencode = [
+      "ANTHROPIC_API_KEY"
       "CONTEXT7_API_KEY"
+      "GEMINI_API_KEY"
       "LITELLM_API_KEY"
       "NVIDIA_API_KEY"
+      "OPENAI_API_KEY"
       "PERPLEXITY_API_KEY"
       "REF_API_KEY"
     ];
     hera-opencode = openCodeRequiredEnvNames.clio-opencode;
     shared-work-opencode-positron = openCodeRequiredEnvNames.clio-opencode;
     vulcan-opencode = [
+      "ANTHROPIC_API_KEY"
       "CONTEXT7_API_KEY"
+      "GEMINI_API_KEY"
       "NVIDIA_API_KEY"
+      "OPENAI_API_KEY"
       "PERPLEXITY_API_KEY"
       "REF_API_KEY"
     ];
   };
   piRequiredEnvNames = [
+    "ANTHROPIC_API_KEY"
     "CONTEXT7_API_KEY"
-    "LITELLM_API_KEY"
+    "GEMINI_API_KEY"
+    "OPENAI_API_KEY"
     "PERPLEXITY_API_KEY"
     "REF_API_KEY"
   ];
@@ -2044,16 +2193,8 @@ let
         )
         (expectEqual "${profileId} semantic MCP oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedDroidMcp
-        )) "1c67464e875534e546c17d017253563f4875b871d827a059826a429e3eff4e29")
-        (expectEqual "${profileId} MCP set" (sortedNames expectedDroidMcp.mcpServers) [
-          "Ref"
-          "anvil"
-          "context-hub"
-          "context7"
-          "pal"
-          "perplexity"
-          "sequential-thinking"
-        ])
+        )) "aec840738b1a86d59cea27f30c76da0c35aa747cfdcc69f33163fc7afa9284f4")
+        (expectEqual "${profileId} MCP set" (sortedNames expectedDroidMcp.mcpServers) claudePersonalMcp)
       ]
       ++ lib.mapAttrsToList (
         name: item:
@@ -2099,36 +2240,38 @@ let
         (expectReject "Pi non-Hera/non-Pi profile accepted" piWrongProfileProbe.companions)
         (expectEqual "${profileId} provider set" (sortedNames expectedPiModels.providers) [
           "litellm"
+          "router"
         ])
+        (expectEqual "${profileId} static Pi LiteLLM model set" (map (
+          model: model.id
+        ) expectedPiModels.providers.litellm.models) [ "positron_openai/gpt-5.6-sol" ])
         (expectEqual "${profileId} selected models use only LiteLLM" (builtins.all (
           model: model.provider == "litellm"
         ) (builtins.attrValues (selectedModels profileId))) true)
-        (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) [
-          "Ref"
-          "anvil"
-          "context-hub"
-          "context7"
-          "perplexity"
-          "sequential-thinking"
-        ])
+        (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) claudePersonalMcp)
         (expectEqual "${profileId} semantic MCP oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedPiMcp
-        )) "03e18dfc387f1c07a8550ea3c997160e16c054819e4dc35aeeaa78c2ab5d9fdf")
+        )) "c74e7c84f094593ea2f3decec5f10093f8c13b466061eeabb849d7f4d6aa4c91")
+        (expectEqual "${profileId} auto compact extension leaf"
+          "${render.files."${profile.root}/extensions/auto-compact-resume/index.ts".source}"
+          piExtensionSources.auto-compact-resume
+        )
+        (expectEqual "${profileId} gallery projection leaf"
+          render.files."${profile.root}/extensions/nix-gallery/index.ts"
+          { source = piExtensionSources.nix-gallery; }
+        )
         (expectEqual "${profileId} MCP extension link"
           render.files."${profile.root}/extensions/pi-mcp-adapter"
           { source = piExtensionSources.pi-mcp-adapter; }
-        )
-        (expectEqual "${profileId} subagent extension link"
-          render.files."${profile.root}/extensions/pi-subagent"
-          { source = piExtensionSources.pi-subagent; }
         )
         (expectEqual "${profileId} quiet extension link" render.files."${profile.root}/extensions/pi-quiet"
           { source = piExtensionSources.pi-quiet; }
         )
         (expectEqual "${profileId} exact extension names" (sortedNames piExtensionSources) [
+          "auto-compact-resume"
+          "nix-gallery"
           "pi-mcp-adapter"
           "pi-quiet"
-          "pi-subagent"
         ])
         (expectEqual "${profileId} extension sources are unique" (builtins.length (
           lib.unique (builtins.attrValues piExtensionSources)
@@ -2389,7 +2532,9 @@ let
   expectedAdapterVersions = {
     mcp-remote = "0.1.38";
     pi-mcp-adapter = "2.11.0";
-    pi-subagent = "3.0.0";
+    pi-model-router = "0.4.4";
+    pi-provider-litellm = "2.0.0";
+    pi-subagentura = "3.0.3";
   };
   expectedSecretRouting = {
     claude = {
@@ -2638,9 +2783,12 @@ let
     ".config/factory/nix-managed-settings.json"
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
+    ".pi/agent/extensions/auto-compact-resume/index.ts"
+    ".pi/agent/extensions/nix-gallery/index.ts"
     ".pi/agent/extensions/pi-mcp-adapter"
     ".pi/agent/extensions/pi-quiet"
-    ".pi/agent/extensions/pi-subagent"
+    ".pi/agent/keybindings.json"
+    ".pi/agent/model-router.json"
     ".pi/agent/models.json"
   ];
   task9IsManagedHomePath =
@@ -2755,7 +2903,7 @@ let
     username = "johnw";
     system = "x86_64-linux";
   };
-  task9BridgeFor = system: inputs.ai-nix.packages.${system}.agent-http-header-bridge;
+  task9BridgeFor = system: aiFlake.packages.${system}.agent-http-header-bridge;
   task9HasBridge =
     system: evaluation:
     lib.any (
@@ -2933,7 +3081,7 @@ let
 
   task9DarwinPkgs = testPkgsFor.aarch64-darwin;
   task9WrappedClaude =
-    inputs.ai-nix.lib.patchAgentPackage task9DarwinPkgs "claude-code"
+    aiFlake.lib.patchAgentPackage task9DarwinPkgs "claude-code"
       inputs.llm-agents.packages.aarch64-darwin.claude-code;
   task9HeraBridge = task9BridgeFor "aarch64-darwin";
   task9HeraPackages =
@@ -2966,6 +3114,21 @@ let
   task9FlakeSource = builtins.readFile "${src}/flake.nix";
 
   task9Checks = [
+    (expectEqual "Task 9 Hera has Node for Pi Subagentura"
+      (task9HeraHasPackage task9DarwinPkgs.nodejs_22)
+      true
+    )
+    (expectEqual "Task 9 Hera has tmux for Pi Subagentura" (task9HeraHasPackage task9DarwinPkgs.tmux)
+      true
+    )
+    (expectEqual "Task 9 Hera Git-AI module evaluates disabled"
+      task9JohnwHera.config.programs.git-ai.enable
+      false
+    )
+    (expectEqual "Task 9 Hera Git-AI hook installation evaluates disabled"
+      task9JohnwHera.config.programs.git-ai.installHooks
+      false
+    )
     (expectEqual "Task 9 direct raw Claude writer removed"
       (builtins.hasAttr ".local/bin/claude" task9JohnwHera.config.home.file)
       false
@@ -3047,9 +3210,13 @@ let
       (task9HeraHasPackage task9DarwinPkgs.nix-scripts)
       true
     )
-    (expectEqual "Task 9 package path still calls ai-nix patching"
-      (lib.hasInfix "patchAgentPackage name agentPackages.\${name}" task9PackageSource)
-      true
+    (expectEqual "Task 9 package path uses canonical local AI patching" (
+      lib.hasInfix "patchAgentPackage name agentPackages.\${name}" task9PackageSource
+      && !(lib.hasInfix "inputs.ai-nix" task9PackageSource)
+    ) true)
+    (expectEqual "Task 9 root flake no longer declares the retired AI input"
+      (lib.hasInfix "ai-nix =" task9FlakeSource)
+      false
     )
     (expectEqual "Task 9 Claude package selection remains patched"
       (lib.hasInfix "++ optAgent \"claude-code\"" task9PackageSource)
@@ -3433,6 +3600,10 @@ let
     ];
 
   contractChecks = [
+    (expectEqual "external AI overlay replaces local AI composition"
+      externalOverlayProbe.external-ai-marker
+      true
+    )
     (expectEqual "OpenCode bash-reviewer tool oracle" (builtins.hashString "sha256" (
       builtins.toJSON (expectedOpenCodeAgentMetadata catalog.items.agents.bash-reviewer)
     )) "27eaf3302a4ff6cd97d4a0f5a7027d57c121f362318c1b4d011b0fce691b3e1a")
@@ -3519,9 +3690,12 @@ let
     (expectEqual "renamed provider credential reaches required environment metadata"
       renamedCredentialOpenCode.requiredEnvNames
       [
+        "ANTHROPIC_API_KEY"
         "CONTEXT7_API_KEY"
+        "GEMINI_API_KEY"
         "LITELLM_API_KEY"
         "NVIDIA_RENAMED_API_KEY"
+        "OPENAI_API_KEY"
         "PERPLEXITY_API_KEY"
         "REF_API_KEY"
       ]
@@ -3858,15 +4032,34 @@ pkgs.runCommand "ai-home-manager-smoke"
   ''
     python3 "${src}/packages/statusline-command-test.py"
 
+    test -f "${piExtensionSources.auto-compact-resume}"
+    test -f "${piExtensionSources.nix-gallery}"
+    test -f "${piPkgs.pi-gallery}/share/pi-gallery/projection.json"
     test -f "${piExtensionSources.pi-mcp-adapter}/package.json"
     test -f "${piExtensionSources.pi-mcp-adapter}/index.ts"
     test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/@modelcontextprotocol/sdk"
     test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/zod"
     test -f "${piExtensionSources.pi-quiet}/package.json"
     test -f "${piExtensionSources.pi-quiet}/src/index.ts"
-    test -f "${piExtensionSources.pi-subagent}/package.json"
-    test -f "${piExtensionSources.pi-subagent}/index.ts"
 
+    helper_test="$TMPDIR/pi-litellm-api-key-test"
+    mkdir -p "$helper_test"
+    cat > "$helper_test/pass" <<'SH'
+    #!/bin/sh
+    test "$#" -eq 1
+    test "$1" = litellm.vulcan.lan
+    printf 'synthetic-first-line\nignored metadata\n'
+    SH
+    chmod +x "$helper_test/pass"
+    PI_LITELLM_PASS_BIN="$helper_test/pass" ${piLiteLLMApiKeyHelper} \
+      > "$helper_test/output" 2> "$helper_test/error"
+    test "$(cat "$helper_test/output")" = synthetic-first-line
+    test ! -s "$helper_test/error"
+    PI_LITELLM_PASS_BIN="$helper_test/missing" ${piLiteLLMApiKeyHelper} \
+      > "$helper_test/missing-output" 2> "$helper_test/missing-error" && exit 1
+    test ! -s "$helper_test/missing-output"
+    grep -Fx 'pi: LiteLLM credential is unavailable or empty' \
+      "$helper_test/missing-error" >/dev/null
 
     ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "aarch64-darwin") ''
       profile_path="${task9JohnwHera.config.home.path}"

@@ -1,0 +1,178 @@
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -12,0 +13,2 @@
++import { writeSync } from 'fs'
++import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+@@ -22,0 +25 @@
++  setSilent,
+@@ -27,0 +31,88 @@
++const HEADER_ONLY_INVALID = 'agent-http-header-bridge: invalid invocation'
++const HEADER_ONLY_CREDENTIAL = 'agent-http-header-bridge: credential unavailable'
++const HEADER_ONLY_TRANSPORT = 'agent-http-header-bridge: transport failed'
++
++let headerOnlyFailed = false
++
++function failHeaderOnly(message: string): never {
++  if (!headerOnlyFailed) {
++    headerOnlyFailed = true
++    writeSync(2, `${message}\n`)
++  }
++  process.exit(1)
++}
++
++function installHeaderOnlyErrorHandlers() {
++  process.on('uncaughtException', () => failHeaderOnly(HEADER_ONLY_TRANSPORT))
++  process.on('unhandledRejection', () => failHeaderOnly(HEADER_ONLY_TRANSPORT))
++}
++
++function parseHeaderOnlyArgs(args: string[]) {
++  if (
++    args.length !== 7 ||
++    args[1] !== '--header' ||
++    args[3] !== '--header-only' ||
++    args[4] !== '--transport' ||
++    args[5] !== 'http-only' ||
++    args[6] !== '--silent'
++  ) {
++    failHeaderOnly(HEADER_ONLY_INVALID)
++  }
++
++  let serverUrl: URL
++  try {
++    serverUrl = new URL(args[0])
++  } catch {
++    failHeaderOnly(HEADER_ONLY_INVALID)
++  }
++  if (serverUrl.protocol !== 'https:' || !serverUrl.hostname || serverUrl.username || serverUrl.password) {
++    failHeaderOnly(HEADER_ONLY_INVALID)
++  }
++
++  const headerArgument = args[2]
++  const headerMatch = /^([!#$%&'*+\-.^_`|~0-9A-Za-z]+): \$\{([A-Za-z_][A-Za-z0-9_]*)\}$/.exec(headerArgument)
++  if (!headerMatch || headerMatch[0] !== headerArgument) {
++    failHeaderOnly(HEADER_ONLY_INVALID)
++  }
++
++  const envName = headerMatch[2]
++  const headerValue = process.env[envName]
++  delete process.env[envName]
++  if (!headerValue || /[\u0000-\u001f\u007f]/.test(headerValue)) {
++    failHeaderOnly(HEADER_ONLY_CREDENTIAL)
++  }
++
++  const headers = Object.create(null) as Record<string, string>
++  headers[headerMatch[1]] = headerValue
++  return { serverUrl, headers }
++}
++
++const headerOnlyFetch: typeof fetch = (input, init) => fetch(input, { ...init, redirect: 'error' })
++
++async function runHeaderOnlyProxy(args: string[]) {
++  const { serverUrl, headers } = parseHeaderOnlyArgs(args)
++  const localTransport = new StdioServerTransport()
++  const remoteTransport = new StreamableHTTPClientTransport(serverUrl, {
++    fetch: headerOnlyFetch,
++    requestInit: { headers, redirect: 'error' },
++    reconnectionOptions: {
++      initialReconnectionDelay: 1000,
++      maxReconnectionDelay: 1000,
++      reconnectionDelayGrowFactor: 1,
++      maxRetries: 0,
++    },
++  })
++
++  mcpProxy({
++    transportToClient: localTransport,
++    transportToServer: remoteTransport,
++    onTransportError: () => failHeaderOnly(HEADER_ONLY_TRANSPORT),
++  })
++
++  await remoteTransport.start()
++  await localTransport.start()
++  setupSignalHandlers(async () => {
++    await Promise.allSettled([remoteTransport.close(), localTransport.close()])
++  })
++}
++
+@@ -167,18 +258,11 @@
+-// Parse command-line arguments and run the proxy
+-parseCommandLineArgs(process.argv.slice(2), 'Usage: npx tsx proxy.ts <https://server-url> [callback-port] [--debug]')
+-  .then(
+-    ({
+-      serverUrl,
+-      callbackPort,
+-      headers,
+-      transportStrategy,
+-      host,
+-      debug,
+-      staticOAuthClientMetadata,
+-      staticOAuthClientInfo,
+-      authorizeResource,
+-      ignoredTools,
+-      authTimeoutMs,
+-      serverUrlHash,
+-    }) => {
+-      return runProxy(
++const args = process.argv.slice(2)
++
++if (args.includes('--header-only')) {
++  setSilent()
++  installHeaderOnlyErrorHandlers()
++  runHeaderOnlyProxy(args).catch(() => failHeaderOnly(HEADER_ONLY_TRANSPORT))
++} else {
++  // Parse command-line arguments and run the proxy
++  parseCommandLineArgs(args, 'Usage: npx tsx proxy.ts <https://server-url> [callback-port] [--debug]')
++    .then(
++      ({
+@@ -189,0 +274 @@
++        debug,
+@@ -196,7 +281,21 @@
+-      )
+-    },
+-  )
+-  .catch((error) => {
+-    log('Fatal error:', error)
+-    process.exit(1)
+-  })
++      }) => {
++        return runProxy(
++          serverUrl,
++          callbackPort,
++          headers,
++          transportStrategy,
++          host,
++          staticOAuthClientMetadata,
++          staticOAuthClientInfo,
++          authorizeResource,
++          ignoredTools,
++          authTimeoutMs,
++          serverUrlHash,
++        )
++      },
++    )
++    .catch((error) => {
++      log('Fatal error:', error)
++      process.exit(1)
++    })
++}
+--- a/src/lib/utils.ts
++++ b/src/lib/utils.ts
+@@ -43,0 +44,4 @@
++export function setSilent() {
++  SILENT = true
++}
++
+@@ -134,0 +139 @@
++  onTransportError,
+@@ -138,0 +144 @@
++  onTransportError?: () => void
+@@ -244,0 +251,4 @@
++    if (onTransportError) {
++      onTransportError()
++      return
++    }
+@@ -249,0 +260,4 @@
++    if (onTransportError) {
++      onTransportError()
++      return
++    }

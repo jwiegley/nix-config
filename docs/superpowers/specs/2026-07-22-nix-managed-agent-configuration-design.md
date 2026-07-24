@@ -1,5 +1,7 @@
 # Nix-Managed Agent Configuration Design
 
+> Historical approved design: implementation has since been reintegrated into one repository and Superpowers has been replaced by Bigpowers. References to the standalone `ai-nix` checkout remain as contemporaneous design evidence, not live maintenance instructions.
+
 Status: approved for implementation on 2026-07-22.
 Date: 2026-07-22
 Scope: Tasks 1–12 are authorized for implementation and ordinary publication. Task 13 host mutation, rollback-window closure, and promptdeploy retirement remain separately fail-closed.
@@ -166,7 +168,7 @@ Home Manager owns the smallest complete leaf that can be declarative. It never o
 | Codex | Selected agent TOML, exact user skill trees, `nix-managed.config.toml`, and profile-root `hooks.json` | Base `config.toml`, auth, sessions, history, SQLite, logs, system skills | Wrapper selects profile `nix-managed` on effective runtime surfaces; base config retains hook trust state |
 | OpenCode | Complete `opencode.json`, selected agents, commands, skills | Data, state, cache, npm/package trees | Native loading; no wrapper |
 | Droid | Selected droids, command-as-skill trees, skills, `mcp.json`, `nix-managed-settings.json` | Base `settings.json`, auth, trusted folders, UI state, sessions | Wrapper injects managed settings |
-| Pi | Prompts, subagent definitions, `models.json`, extensions, standard global MCP catalog | `settings.json`, auth, sessions, model store, package selections, settings-only adapter override/cache/OAuth | Native discovery and pinned extensions |
+| Pi | Prompts, subagent definitions, `models.json`, `keybindings.json`, extensions, standard global MCP catalog | `settings.json`, auth, sessions, model store, package selections, settings-only adapter override/cache/OAuth | Native discovery and pinned extensions |
 
 Injecting wrappers are safe on installed-but-unmanaged profiles. With no managed artifacts present for the active root, the wrapper passes through without injection. With the complete expected artifact set present, it injects the managed flags. Partial presence fails with a clear repair message. This keeps the git-ai Claude persona, Codex on Vulcan, and Droid outside Hera usable without accidentally applying another profile.
 
@@ -176,7 +178,7 @@ All injecting wrappers use one escape hatch: `AI_NIX_BYPASS_MANAGED_CONFIG=1`. I
 
 Claude receives exact profile-local agent, command, and skill leaves, a generated statusline script, `nix-managed-settings.json`, and `nix-managed-mcp.json`. Hooks, marketplaces, plugins, and static managed settings live in the managed settings supplement. MCP servers live in the separate managed MCP document.
 
-The `ai-nix` Claude wrapper computes the active root from `${CLAUDE_CONFIG_DIR:-$HOME/.claude}` and supplies `--settings` and `--mcp-config`. It does not supply `--strict-mcp-config`, so project-local MCP configuration can still participate. Explicit conflicting `--settings` or `--mcp-config` arguments fail unless the bypass variable is set.
+The `ai-nix` Claude wrapper computes the active root from `${CLAUDE_CONFIG_DIR:-$HOME/.claude}` and supplies `--settings` plus `--mcp-config=<path>`. The MCP option and path must remain one argument: Claude Code 2.1.217 parses the separated variadic form by consuming following command words such as `mcp list` as additional configuration filenames. It does not supply `--strict-mcp-config`, so project-local MCP configuration can still participate. Explicit conflicting `--settings` or `--mcp-config` arguments fail unless the bypass variable is set. In this release, `claude mcp list` reports the persistent MCP registry and does not enumerate servers supplied only through the session's managed MCP supplement; wrapper acceptance therefore proves correct parsing, not session-only enumeration.
 
 The ordinary `claude` command must resolve to this wrapper. The current direct `~/.local/bin/claude` link to the llm-agents binary is removed or replaced. The raw binary is exposed under an explicit private name such as `claude-real` only for integrations such as claude-mem, whose configured path is updated accordingly.
 
@@ -210,37 +212,31 @@ The base `settings.json` remains mutable because it contains trusted folders and
 
 Pi is enabled only on Hera and uses Pi's native resource discovery rather than a promptdeploy runtime. Its exact owned paths and loading contracts are:
 
-- The 26 personal-selected agents render as `~/.pi/agent/agents/<name>.md` for `pi-subagent`.
+- The 26 personal-selected agents render as `~/.pi/agent/agents/<name>.md` for Pi's managed delegation and prompt surfaces.
 - The 59 personal-selected commands render as native `~/.pi/agent/prompts/<name>.md` templates.
 - The two pre-rendered prompts use the same native prompt directory.
 - Personal-selected shared skills remain under `~/.agents/skills/<name>/`; no skill tree is copied under `.pi`. This includes the six static Ponytail skills visible through Hera's Codex-owned shared root.
 - Codex parity also places 59 `command-*` and two `prompt-*` skill projections in `~/.agents/skills`. Pi natively discovers those projections in addition to its prompt templates. This duplication of entry surfaces is explicit inventory, not a second file copy or a wrapper filter.
-- `~/.pi/agent/models.json` contains only the `litellm` provider, with model-level Hera selectors applied. Pi never falls back to a direct provider; models without a LiteLLM route are excluded.
+- `~/.pi/agent/keybindings.json` is generated from the current nine-command Emacs-style map. The pre-existing mutable file remains untouched until a reversible backup immediately before the authorized activation.
+- `~/.pi/agent/models.json` contains the `litellm` provider plus the model router's local logical `router` provider. The only static LiteLLM model is `positron_openai/gpt-5.6-sol`; `pi-provider-litellm` owns dynamic discovery while the static entry guarantees Sol remains selectable. The provider key is a Nix-store `!command` helper that reads the first line of the existing password-store entry at request time, avoiding inherited-environment dependence without storing the credential. Pi never falls back to a direct provider.
+- `~/.pi/agent/model-router.json` defines `router/sol` with high, medium, and low heuristic tiers that all delegate to the verified Sol route while varying only its reasoning level. It defines no classifier, budget, fallback chain, or unverified model ID.
 - Pi's mutable `settings.json` remains authoritative for its selected default; this design emits no Pi default provider/model.
-- `~/.config/mcp/mcp.json` is the Nix-owned standard global catalog for Ref, context-hub, context7, `perplexity`, sequential-thinking, and Anvil. `~/.pi/agent/mcp.json` remains mutable only for adapter-level `settings`; global `mcpServers` and compatibility `imports` are forbidden because that higher-precedence file could shadow the Nix catalog. Migration and verification fail closed if either field appears. Adapter cache and OAuth state remain mutable.
-- `~/.pi/agent/extensions/pi-mcp-adapter` and `~/.pi/agent/extensions/pi-subagent` are exact Home Manager links to pinned `ai-nix` package roots and load through Pi's normal extension discovery.
+- `~/.config/mcp/mcp.json` is the Nix-owned Hera catalog for Ref, Anvil, Context Hub, Context7, DEVONthink, Drafts, Memory Vault, PAL, Perplexity, Sequential Thinking, and stock-trader. `~/.pi/agent/mcp.json` remains mutable only for adapter-level `settings`; global `mcpServers` and compatibility `imports` are forbidden because that higher-precedence file could shadow the Nix catalog. Migration and verification fail closed if either field appears. Adapter cache and OAuth state remain mutable.
+- `auto-compact-resume/index.ts`, `nix-gallery/index.ts`, `pi-mcp-adapter`, and `pi-quiet` are exact Home Manager leaves or links to immutable roots. The gallery loads Pi BTW, Artifacts, Insights, and Subagentura alongside the original package set; the retired `pi-subagent` root is not installed.
 
-Pi intentionally excludes PAL, DEVONthink, Drafts, memory-vault, stock-trader, hooks, and marketplaces because their selectors restrict them to other clients. The `anvil-tools` tombstone is also excluded. Global `/mcp setup`, imports, and server-definition toggles are unsupported; adapter-only settings may remain mutable. Trusted project `.mcp.json` and `.pi/mcp.json` additions retain their native project-local precedence and do not redefine the user-global source of truth.
+Pi intentionally excludes hooks, marketplaces, and the `anvil-tools` tombstone. Global `/mcp setup`, imports, and server-definition toggles are unsupported; adapter-only settings may remain mutable. Trusted project `.mcp.json` and `.pi/mcp.json` additions retain their native project-local precedence and do not redefine the user-global source of truth.
 
-Pi has no legacy promptdeploy target. Its acceptance oracle is therefore the exact agent, template, shared-skill, Codex-projection, model, MCP, and extension inventory above, not a fabricated parity comparison. Prompt templates retain native `$ARGUMENTS` behavior. Models and MCP use their native environment-reference syntax.
+Pi has no legacy promptdeploy target. Its acceptance oracle is therefore the exact agent, template, shared-skill, Codex-projection, keybinding, model, MCP, and extension inventory above, not a fabricated parity comparison. Prompt templates retain native `$ARGUMENTS` behavior. Models and MCP use their native environment-reference syntax.
 
-## External resources and `ai-nix`
+## External resources in the unified repository
 
-`ai-nix` pins and packages every external resource needed by flake-false consumers:
+The root flake and portable `config/ai` subflake coordinate exact external pins for Bigpowers, Ponytail, git-surgeon from the llm-agents source, translate-tool glossary resources, all fourteen Pi gallery packages, `pi-mcp-adapter`, and patched `mcp-remote` for Droid's static-header-only bridge.
 
-- Superpowers.
-- Ponytail.
-- git-surgeon from the llm-agents source.
-- translate-tool glossary and related resources.
-- `pi-mcp-adapter`.
-- `pi-subagent`.
-- Patched `mcp-remote` for Droid's static-header-only bridge.
+Repository-owned skill/extension resources remain immutable beneath `agent-resources`; the requested package gallery has separate immutable package roots and one generated `pi-gallery` projection. `config/ai.nix` chooses and links those outputs. There is no copied deployment bundle, promptdeploy receipt, runtime installer, or live dependency on a sibling `ai-nix` checkout.
 
-It exposes skill/extension resources as immutable trees beneath an `agent-resources` package/output and supplies the needed wrappers and pinned bridge. `config/ai.nix` chooses and links resources from that package. There is no copied deployment bundle, promptdeploy receipt, or dependence on transitive root flake inputs.
+Packaging does not imply selection. `catalog.nix` explicitly selects the complete Bigpowers release and git-surgeon for every enabled skill-capable client profile, selects translate-tool resources according to their current skill selectors, and applies Ponytail's static-skill contract below. Pi consumes selected shared skills through `~/.agents/skills`; the other clients receive their native skill leaves.
 
-Packaging does not imply selection. `catalog.nix` explicitly selects Superpowers and git-surgeon for every enabled skill-capable client profile, selects translate-tool resources according to their current skill selectors, and applies Ponytail's static-skill contract below. Pi consumes selected shared skills through `~/.agents/skills`; the other clients receive their native skill leaves.
-
-A skill name has one canonical source. When a pinned external tree supersedes a same-named local copy, the catalog references the external tree and removes the duplicate local entry; there is no precedence rule or last-writer behavior. Resource assembly rejects duplicate selected skill names before Home Manager constructs any destination. Upstream source pins live in `ai-nix`, where all consumers already obtain their package set.
+A skill name has one canonical source. When a pinned external tree supersedes a same-named local copy, the catalog references the external tree and removes the duplicate local entry; there is no precedence rule or last-writer behavior. Resource assembly rejects duplicate selected skill names before Home Manager constructs any destination. Upstream source pins are coordinated between the root and portable locks in one maintenance transaction.
 
 ### Ponytail static skills
 
@@ -250,7 +246,7 @@ Dormant Ponytail lifecycle hooks, ambient modes, status lines, runtime publicati
 
 ### Native contract references
 
-The Pi path and loading contracts follow its official [skills](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/skills.md), [settings](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/settings.md), and [models](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/models.md) documentation. The extension-specific paths follow [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) and [pi-subagent](https://github.com/mjakl/pi-subagent). Ref authentication uses its [documented header form](https://docs.ref.tools/context/install).
+The Pi path and loading contracts follow its official [skills](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/skills.md), [settings](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/settings.md), and [models](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/models.md) documentation. The extension-specific paths follow [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) and [pi-subagentura](https://github.com/lmn451/pi-subagentura). Ref authentication uses its [documented header form](https://docs.ref.tools/context/install).
 
 ## Secrets and runtime references
 
@@ -275,6 +271,8 @@ Evaluation never reads `.env`, password stores, SOPS data, or live client config
 Nix declares required variable names but never supplies their values. Claude, Codex, and Droid wrappers preserve the parent environment; OpenCode and Pi inherit it directly. No wrapper reads `.env`, a password store, SOPS material, or a live config file.
 
 Terminal launches receive variables from the user's existing session bootstrap. Agent-deck launches receive them from the agent-deck process environment, and that process must be restarted when its secret environment changes. Any GUI launch uses a user-controlled launch environment outside the Nix store. A missing required variable produces a bounded, redacted client/server error; it never falls back to a literal in generated configuration.
+
+**Supersession, 2026-07-23:** the later Agent Deck LiteLLM/Pi design introduced one narrow exception for Agent Deck's Hera launch surface. The existing `agent-deck-litellm-env` wrapper reads exactly the first lines of `litellm.vulcan.lan`, `api.ref.tools`, and `api.perplexity.ai` from the user's password store, exports them only to the launched Agent Deck process, and fails before launch if any is unavailable. This supersedes the two preceding no-password-store and inherited-Agent-Deck-environment statements for that surface only. Terminal and other GUI launches retain the original contract. Tests require exact argv preservation and prove synthetic values do not enter argv, stdout, stderr, generated files, or the Nix store.
 
 Acceptance exercises terminal, agent-deck, and applicable GUI launch surfaces with synthetic values, verifies every required value arrives unchanged and wrappers introduce no additional secret material, and checks that neither values nor derived tokens appear in argv, generated files, store closures, or logs.
 

@@ -5,14 +5,9 @@ MAX_AGE	   = 28
 NIX_CONF   = $(HOME)/src/nix
 NIXOPTS	   =
 PROJECTS   = $(HOME)/.config/projects
-AI_NIX	   ?= $(HOME)/src/ai-nix
 
 ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
-endif
-
-ifneq ($(wildcard $(AI_NIX)/flake.nix),)
-NIXOPTS	  := $(NIXOPTS) --override-input ai-nix $(AI_NIX)
 endif
 
 .PHONY: all verify-inputs lock-local build switch update update-projects upgrade-tasks upgrade \

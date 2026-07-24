@@ -38,16 +38,21 @@ def test_timeout_budget(
 ) -> None:
     """Prove Python enforces the same named phase budget derived by Nix."""
     soak = load_module(soak_path, "persistent_soak_timeout_budget_test")
+    if (
+        soak.DEFAULT_CLIENT_STARTUP_SECONDS,
+        soak.DEFAULT_CLIENT_TOOL_SECONDS,
+    ) != (540.0, 540.0):
+        raise AssertionError("standalone soak client defaults drifted from policy")
     os.environ["ANVIL_SMOKE_WATCHDOG_NORMAL_SECONDS"] = f"{expected_normal:g}"
     os.environ["ANVIL_SMOKE_WATCHDOG_DISPATCH_SECONDS"] = f"{expected_dispatch:g}"
     response_timeout = soak.configure_watchdog_environment()
     timeouts = soak.configure_soak_timeout_environment(response_timeout)
     watchdog_window = min(expected_normal, expected_dispatch)
-    sequential_overlap = soak.NONCE_START_TIMEOUT_SECONDS + timeouts["healthy"]
+    sequential_overlap = soak.NONCE_START_BUDGET_SECONDS + timeouts["healthy"]
     if sequential_overlap != watchdog_window:
         raise AssertionError(
             "sequential watchdog budget drifted: "
-            f"nonce={soak.NONCE_START_TIMEOUT_SECONDS:g} "
+            f"nonce={soak.NONCE_START_BUDGET_SECONDS:g} "
             f"healthy={timeouts['healthy']:g} watchdog={watchdog_window:g}"
         )
     with mock.patch.dict(
@@ -85,7 +90,7 @@ def test_timeout_budget(
     expected_outer = internal + math.ceil(internal * margin_percent / 100)
     if (
         kill_after <= 0
-        or hard_ceiling > 162 * 60
+        or hard_ceiling > 201 * 60
         or outer_timeout != expected_outer
         or kill_after <= timeouts["bridge_cleanup"]
         or outer_timeout + kill_after > hard_ceiling
@@ -141,6 +146,519 @@ def test_timeout_budget(
                 1e-6,
             )
             signal.setitimer(signal.ITIMER_REAL, remaining, original_interval)
+
+
+def test_async_marker_job_outlives_marker_wait(soak_path: Path) -> None:
+    """Keep marker-producing children alive beyond the marker wait window."""
+    soak = load_module(soak_path, "persistent_soak_async_marker_budget_test")
+    observed: list[float] = []
+
+    class MarkerWaitReached(Exception):
+        pass
+
+    class Smoke:
+        pass
+
+    def submit_async(_bridge, _smoke, _expression, timeout):
+        observed.append(timeout)
+        return "job-1-1"
+
+    def stop_at_marker(*_args, **_kwargs):
+        raise MarkerWaitReached
+
+    with tempfile.TemporaryDirectory() as temporary:
+        runtime = Path(temporary)
+        runtime.joinpath(".anvil-root-pulse").write_text("pulse\n")
+        instance = {
+            "runtime_dir": runtime,
+            "status": {"daemon_pid": 123},
+        }
+        fixtures = {"project_file": runtime / "project-file"}
+        with (
+            mock.patch.object(soak, "assert_async_execution"),
+            mock.patch.object(soak, "record_identity", return_value="identity-123"),
+            mock.patch.object(soak, "submit_async", side_effect=submit_async),
+            mock.patch.object(
+                soak, "wait_for_async_marker", side_effect=stop_at_marker
+            ),
+        ):
+            for function in (
+                soak.assert_async_isolation,
+                soak.assert_recovered_async_isolation,
+            ):
+                try:
+                    function(
+                        object(),
+                        instance,
+                        Smoke(),
+                        object(),
+                        fixtures,
+                        set(),
+                        "budget",
+                    )
+                except MarkerWaitReached:
+                    pass
+                else:
+                    raise AssertionError("marker wait probe did not reach its deadline")
+    expected_loop_timeout = (
+        soak.ASYNC_SUBMISSION_TIMEOUT_SECONDS
+        + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+        + soak.TOOL_CALL_TIMEOUT_SECONDS
+        + soak.ASYNC_PULSE_TIMEOUT_SECONDS
+        + soak.ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+    )
+    expected_recovered_timeout = (
+        soak.ASYNC_SUBMISSION_TIMEOUT_SECONDS
+        + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+        + 5.0
+        + soak.ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+    )
+    linger = getattr(soak, "ASYNC_RECOVERED_LINGER_SECONDS", None)
+    expression = soak.async_success_probe_expression(
+        Path("/project-file"), Path("/marker")
+    )
+    if linger != 5.0 or f"(sleep-for {linger:g})" not in expression:
+        raise AssertionError(
+            f"recovered child linger is not represented in its policy: {linger!r}"
+        )
+    if observed != [expected_loop_timeout, expected_recovered_timeout]:
+        raise AssertionError(
+            "async marker job can expire during its live-root proof: "
+            f"jobs={observed!r} expected="
+            f"{[expected_loop_timeout, expected_recovered_timeout]!r}"
+        )
+
+
+def test_async_loop_uses_remaining_settle_horizon(soak_path: Path) -> None:
+    """Spend marker and root-proof time inside one loop-settle horizon."""
+    soak = load_module(soak_path, "persistent_soak_async_settle_budget_test")
+    now = [100.0]
+    observed: dict[str, dict[str, float]] = {}
+
+    class PollReached(Exception):
+        pass
+
+    class Bridge:
+        def call_tool(self, name, _arguments, **bounds):
+            if name != "emacs-eval":
+                raise AssertionError(f"unexpected root probe: {name}")
+            observed["root"] = bounds
+            now[0] = 155.0
+            return object()
+
+    class Smoke:
+        @staticmethod
+        def eval_value(_response):
+            return 123
+
+    def submit_async(_bridge, _smoke, _expression, timeout):
+        expected = (
+            soak.ASYNC_SUBMISSION_TIMEOUT_SECONDS
+            + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+            + soak.TOOL_CALL_TIMEOUT_SECONDS
+            + soak.ASYNC_PULSE_TIMEOUT_SECONDS
+            + soak.ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+        )
+        if timeout != expected:
+            raise AssertionError(f"unexpected marker job timeout: {timeout:g}")
+        now[0] = 130.0
+        return "job-1-1"
+
+    def wait_for_async_marker(
+        _bridge, _smoke, _job_id, _marker, **bounds
+    ):
+        observed["marker"] = bounds
+        now[0] = 145.0
+        return [456, soak.DIRENV_MARKER, str(command.resolve())]
+
+    def assert_pulse_changes(_path, _before, **bounds):
+        observed["pulse"] = bounds
+        now[0] = 158.0
+
+    def poll_async(_bridge, _smoke, _job_id, **bounds):
+        observed["poll"] = bounds
+        raise PollReached
+
+    with tempfile.TemporaryDirectory() as temporary:
+        runtime = Path(temporary)
+        runtime.joinpath(".anvil-root-pulse").write_text("pulse\n")
+        command = runtime / "command"
+        instance = {
+            "runtime_dir": runtime,
+            "status": {"daemon_pid": 123},
+        }
+        fixtures = {
+            "project_file": runtime / "project-file",
+            "command": command,
+        }
+        with (
+            mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]),
+            mock.patch.object(soak, "assert_async_execution"),
+            mock.patch.object(soak, "record_identity", return_value="identity-123"),
+            mock.patch.object(soak, "submit_async", side_effect=submit_async),
+            mock.patch.object(
+                soak, "wait_for_async_marker", side_effect=wait_for_async_marker
+            ),
+            mock.patch.object(
+                soak, "assert_pulse_changes", side_effect=assert_pulse_changes
+            ),
+            mock.patch.object(soak, "poll_async", side_effect=poll_async),
+        ):
+            try:
+                soak.assert_async_isolation(
+                    Bridge(),
+                    instance,
+                    Smoke(),
+                    object(),
+                    fixtures,
+                    set(),
+                    "budget",
+                )
+            except PollReached:
+                pass
+            else:
+                raise AssertionError("loop settle probe did not reach result polling")
+    expected_loop_timeout = (
+        soak.ASYNC_SUBMISSION_TIMEOUT_SECONDS
+        + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+        + soak.TOOL_CALL_TIMEOUT_SECONDS
+        + soak.ASYNC_PULSE_TIMEOUT_SECONDS
+        + soak.ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+    )
+    expected_deadline = (
+        130.0 + expected_loop_timeout + soak.ASYNC_RESULT_PUBLICATION_GRACE_SECONDS
+    )
+    expected = {
+        "marker": {"deadline": expected_deadline},
+        "root": {"deadline": 155.0},
+        "pulse": {"deadline": 158.0},
+        "poll": {"deadline": expected_deadline},
+    }
+    if observed != expected:
+        raise AssertionError(
+            "async loop failed to preserve its settle horizon: "
+            f"actual={observed!r} expected={expected!r}"
+        )
+
+
+def test_recovered_async_uses_one_success_horizon(soak_path: Path) -> None:
+    """Spend recovered marker and result waits inside one success horizon."""
+    soak = load_module(soak_path, "persistent_soak_recovered_settle_budget_test")
+    now = [100.0]
+    observed: dict[str, dict[str, float]] = {}
+
+    class PollReached(Exception):
+        pass
+
+    def submit_async(_bridge, _smoke, _expression, timeout):
+        expected = (
+            soak.ASYNC_SUBMISSION_TIMEOUT_SECONDS
+            + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+            + soak.ASYNC_RECOVERED_LINGER_SECONDS
+            + soak.ASYNC_MARKER_SCHEDULING_GRACE_SECONDS
+        )
+        if timeout != expected:
+            raise AssertionError(f"unexpected recovered job timeout: {timeout:g}")
+        now[0] = 130.0
+        return "job-1-1"
+
+    def wait_for_async_marker(
+        _bridge, _smoke, _job_id, _marker, **bounds
+    ):
+        observed["marker"] = bounds
+        now[0] = 145.0
+        return [456, soak.DIRENV_MARKER, str(command.resolve())]
+
+    def poll_async(_bridge, _smoke, _job_id, **bounds):
+        observed["poll"] = bounds
+        raise PollReached
+
+    with tempfile.TemporaryDirectory() as temporary:
+        runtime = Path(temporary)
+        command = runtime / "command"
+        instance = {
+            "runtime_dir": runtime,
+            "status": {"daemon_pid": 123},
+        }
+        fixtures = {
+            "project_file": runtime / "project-file",
+            "command": command,
+        }
+        with (
+            mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]),
+            mock.patch.object(soak, "record_identity", return_value="identity-123"),
+            mock.patch.object(soak, "submit_async", side_effect=submit_async),
+            mock.patch.object(
+                soak, "wait_for_async_marker", side_effect=wait_for_async_marker
+            ),
+            mock.patch.object(soak, "poll_async", side_effect=poll_async),
+        ):
+            try:
+                soak.assert_recovered_async_isolation(
+                    object(),
+                    instance,
+                    object(),
+                    object(),
+                    fixtures,
+                    set(),
+                    "budget",
+                )
+            except PollReached:
+                pass
+            else:
+                raise AssertionError(
+                    "recovered settle probe did not reach result polling"
+                )
+    expected_deadline = (
+        130.0
+        + soak.ASYNC_MARKER_TIMEOUT_SECONDS
+        + soak.ASYNC_PROJECT_POLL_TIMEOUT_SECONDS
+    )
+    expected = {
+        "marker": {"deadline": expected_deadline},
+        "poll": {"deadline": expected_deadline},
+    }
+    if observed != expected:
+        raise AssertionError(
+            "recovered async re-anchored its success horizon: "
+            f"actual={observed!r} expected={expected!r}"
+        )
+
+
+def test_async_marker_failure_diagnostics(soak_path: Path) -> None:
+    """Report bounded job state and marker metadata without marker contents."""
+    soak = load_module(soak_path, "persistent_soak_async_marker_diagnostic_test")
+    now = [100.0]
+    observed: list[dict[str, float]] = []
+    cases = (
+        ("status: error\nresult: Error: timeout before isolated child started", None),
+        ("status: error\nresult: Error: could not start isolated child", None),
+        ("status: running\nqueue-wait: 12.0s\nruntime: 2.0s", None),
+        ("status: running\nqueue-wait: 1.0s\nruntime: 14.0s", b"PRIVATE"),
+    )
+
+    class Smoke:
+        @staticmethod
+        def response_text(response):
+            return response
+
+    class Bridge:
+        def __init__(self, status):
+            self.status = status
+
+        def call_tool(self, name, arguments, **bounds):
+            if name != "emacs-eval-result" or arguments != {"job-id": "job-1-1"}:
+                raise AssertionError(f"unexpected diagnostic query: {name} {arguments!r}")
+            observed.append(bounds)
+            return self.status
+
+    with tempfile.TemporaryDirectory() as temporary:
+        marker = Path(temporary) / "marker.json"
+        for status, partial in cases:
+            now[0] = 100.0
+            marker.unlink(missing_ok=True)
+            if partial is not None:
+                marker.write_bytes(partial)
+            def sleep(delay):
+                now[0] += delay
+
+            try:
+                with (
+                    mock.patch.object(
+                        soak.time, "monotonic", side_effect=lambda: now[0]
+                    ),
+                    mock.patch.object(soak.time, "sleep", side_effect=sleep),
+                ):
+                    soak.wait_for_async_marker(
+                        Bridge(status),
+                        Smoke(),
+                        "job-1-1",
+                        marker,
+                        deadline=120.0,
+                    )
+            except AssertionError as error:
+                message = str(error)
+            else:
+                raise AssertionError("missing async marker did not fail")
+            expected_metadata = (
+                f"exists={partial is not None} bytes={0 if partial is None else len(partial)}"
+            )
+            if expected_metadata not in message or status not in message:
+                raise AssertionError(f"incomplete marker diagnostic: {message!r}")
+            if partial is not None and partial.decode() in message:
+                raise AssertionError("marker diagnostic exposed marker contents")
+    if observed != [{"deadline": 120.0}] * len(cases):
+        raise AssertionError(
+            f"marker diagnostics escaped their bounded deadline: {observed!r}"
+        )
+
+
+def test_healthy_sibling_deadline_preserves_watchdog_window(soak_path: Path) -> None:
+    """Represent the shared nonce and healthy budget as one deadline."""
+    soak = load_module(soak_path, "persistent_soak_healthy_budget_test")
+    deadline_for = getattr(soak, "healthy_sibling_deadline", None)
+    if deadline_for is None:
+        raise AssertionError("healthy sibling budget has no absolute deadline")
+
+    cases = (
+        (100.0, 35.0, 75.0, 145.0),
+        (100.0, 20.0, 75.0, 130.0),
+        (100.0, 35.0, 60.0, 130.0),
+    )
+    for started, configured, response_timeout, expected in cases:
+        actual = deadline_for(started, configured, response_timeout)
+        if actual != expected:
+            raise AssertionError(
+                "healthy sibling deadline escaped its shared watchdog budget: "
+                f"started={started:g} configured={configured:g} "
+                f"actual={actual:g} expected={expected:g}"
+            )
+
+
+def test_wait_for_nonce_uses_caller_deadline(soak_path: Path) -> None:
+    """Accept a late nonce only while the caller's absolute deadline remains."""
+    soak = load_module(soak_path, "persistent_soak_nonce_deadline_test")
+    now = [100.0]
+
+    class PathAppearingAfterLegacyBudget:
+        @staticmethod
+        def exists():
+            return now[0] >= 112.0
+
+    def advance(_seconds):
+        now[0] = 112.0
+
+    with (
+        mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]),
+        mock.patch.object(soak.time, "sleep", side_effect=advance),
+    ):
+        soak.wait_for_nonce(PathAppearingAfterLegacyBudget(), deadline=145.0)
+
+    now[0] = 145.0
+    with mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]):
+        try:
+            soak.wait_for_nonce(PathAppearingAfterLegacyBudget(), deadline=145.0)
+        except AssertionError as error:
+            if "shared watchdog deadline" not in str(error):
+                raise
+        else:
+            raise AssertionError("nonce at the absolute deadline was accepted")
+
+
+def test_recovery_cycle_uses_remaining_watchdog_window(soak_path: Path) -> None:
+    """Carry one absolute watchdog deadline through healthy collection."""
+    soak = load_module(soak_path, "persistent_soak_recovery_budget_test")
+    now = [100.0]
+    observed: list[dict[str, float]] = []
+    hung_receives: list[tuple[tuple[object, ...], dict[str, float]]] = []
+    nonce_deadlines: list[float] = []
+
+    class StopAfterHungResponse(Exception):
+        pass
+
+    class Bridge:
+        def __init__(self, name):
+            self.name = name
+
+        def send_request(self, _method, _arguments):
+            return 17
+
+        def has_complete_response(self):
+            return False
+
+        def receive_response(self, *args, **kwargs):
+            if self.name != "hanging":
+                raise AssertionError("healthy bridge bypassed response collection")
+            hung_receives.append((args, kwargs))
+            raise StopAfterHungResponse
+
+    old_status = {"daemon_pid": 101, "supervisor_pid": 201}
+    healthy_status = {"daemon_pid": 102, "supervisor_pid": 202}
+
+    class Smoke:
+        @staticmethod
+        def read_running_status(path):
+            return old_status if path == "old-status" else healthy_status
+
+        @staticmethod
+        def eventually(_predicate, timeout):
+            raise AssertionError(f"legacy relative nonce timeout used: {timeout:g}")
+
+    class Module:
+        @staticmethod
+        def process_start_identity(pid):
+            return f"identity-{pid}"
+
+    def send_fixture_requests(_bridge, _fixtures):
+        now[0] = 113.0
+        return {"file": 1, "org": 2, "git": 3, "elisp": 4}
+
+    def collect_responses(_bridge, _identifiers, **bounds):
+        now[0] = 130.0
+        observed.append(bounds)
+        return {}
+
+    def wait_for_nonce(_path, *, deadline):
+        nonce_deadlines.append(deadline)
+        now[0] = 112.0
+
+    with (
+        mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]),
+        mock.patch.object(soak, "record_identity", return_value="identity-101"),
+        mock.patch.object(
+            soak,
+            "wait_for_nonce",
+            side_effect=wait_for_nonce,
+            create=True,
+        ),
+        mock.patch.object(
+            soak,
+            "send_fixture_requests",
+            side_effect=send_fixture_requests,
+        ),
+        mock.patch.object(soak, "collect_responses", side_effect=collect_responses),
+        mock.patch.object(soak, "validate_fixture_responses"),
+    ):
+        try:
+            soak.run_recovery_cycle(
+                0,
+                [Bridge("hanging"), Bridge("healthy")],
+                [
+                    {"status_path": "old-status", "runtime_dir": Path("/tmp/old")},
+                    {
+                        "status_path": "healthy-status",
+                        "runtime_dir": Path("/tmp/healthy"),
+                    },
+                ],
+                Smoke(),
+                Module(),
+                {},
+                set(),
+                [],
+                35.0,
+                75.0,
+                40.0,
+                45.0,
+            )
+        except StopAfterHungResponse:
+            pass
+        else:
+            raise AssertionError("recovery cycle escaped the hung-response fixture")
+
+    if observed != [{"deadline": 145.0}]:
+        raise AssertionError(
+            "recovery cycle did not preserve the absolute watchdog deadline: "
+            f"{observed!r}"
+        )
+    if nonce_deadlines != [145.0]:
+        raise AssertionError(
+            f"nonce wait did not share the watchdog deadline: {nonce_deadlines!r}"
+        )
+    if hung_receives != [((), {"deadline": 175.0})]:
+        raise AssertionError(
+            "recovery cycle re-anchored its watchdog-response deadline: "
+            f"{hung_receives!r}"
+        )
 
 
 def test_phase_timeout_ownership(soak_path: Path) -> None:
@@ -305,20 +823,216 @@ def test_response_reader(soak_path: Path, smoke_path: Path) -> None:
         second = bridge.receive_response(timeout=1)
         if second.get("id") != 2:
             raise AssertionError(f"prefetched frame was lost: {second!r}")
+
+        bridge.response_buffer.extend(b'{"jsonrpc":"2.0","id":3}\n')
+        with mock.patch.object(
+            soak.time,
+            "monotonic",
+            side_effect=(103.0, 146.0),
+        ):
+            try:
+                soak.collect_responses(
+                    bridge,
+                    {"late": 3},
+                    deadline=145.0,
+                )
+            except AssertionError as error:
+                if "timed out" not in str(error):
+                    raise
+            else:
+                raise AssertionError(
+                    "prefetched response escaped its absolute deadline"
+                )
     finally:
         os.close(write_descriptor)
         stdout.close()
         stderr.close()
 
 
+def test_request_preserves_absolute_deadline(smoke_path: Path) -> None:
+    """Pass an absolute tool deadline unchanged into the frame reader."""
+    smoke = load_module(smoke_path, "agent_supervisor_smoke_request_deadline_test")
+    bridge = object.__new__(smoke.BridgeProcess)
+    with (
+        mock.patch.object(bridge, "send_request", return_value=23) as send_request,
+        mock.patch.object(
+            bridge,
+            "receive_response",
+            return_value={"jsonrpc": "2.0", "id": 23, "result": {}},
+        ) as receive_response,
+        mock.patch.object(smoke.time, "monotonic", return_value=100.0),
+    ):
+        for invalid in (
+            {"timeout": 1.0, "deadline": 145.0},
+            {"deadline": 99.0},
+        ):
+            try:
+                bridge.call_tool("emacs-eval-result", {}, **invalid)
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError(f"invalid response bounds were accepted: {invalid}")
+            if send_request.called:
+                raise AssertionError(
+                    f"invalid response bounds dispatched a request: {invalid}"
+                )
+        try:
+            response = bridge.call_tool("emacs-eval-result", {}, deadline=145.0)
+        except TypeError as error:
+            raise AssertionError("tool call cannot preserve an absolute deadline") from error
+    if response.get("id") != 23:
+        raise AssertionError(f"absolute-deadline tool call failed: {response!r}")
+    if receive_response.call_args != mock.call(deadline=145.0):
+        raise AssertionError(
+            "tool call re-anchored its absolute response deadline: "
+            f"{receive_response.call_args!r}"
+        )
+
+
+def test_readiness_retry_preserves_absolute_deadline(smoke_path: Path) -> None:
+    """Keep every readiness attempt and retry sleep inside one deadline."""
+    smoke = load_module(smoke_path, "agent_supervisor_smoke_readiness_deadline_test")
+    now = [100.0]
+    observed: list[dict[str, float]] = []
+    sleeps: list[float] = []
+
+    class Bridge:
+        def call_tool(self, _name, _arguments, **bounds):
+            observed.append(bounds)
+            if len(observed) == 1:
+                # A valid readiness response may take longer than the former
+                # nested 30-second cap while remaining inside the 45s phase.
+                now[0] = 132.0
+                return {
+                    "error": {
+                        "data": {
+                            "phase": "readiness",
+                            "dispatched": False,
+                            "replayed": False,
+                        }
+                    }
+                }
+            now[0] = 140.0
+            return {"result": {}}
+
+    def sleep(delay: float) -> None:
+        sleeps.append(delay)
+        now[0] += delay
+
+    with (
+        mock.patch.object(smoke.time, "monotonic", side_effect=lambda: now[0]),
+        mock.patch.object(smoke.time, "sleep", side_effect=sleep),
+    ):
+        response = smoke.call_after_readiness(
+            Bridge(), "emacs-eval", {"expression": "(+ 40 2)"}, timeout=45.0
+        )
+    if response != {"result": {}}:
+        raise AssertionError(f"readiness retry returned the wrong result: {response!r}")
+    if observed != [{"deadline": 145.0}, {"deadline": 145.0}]:
+        raise AssertionError(
+            f"readiness retry re-anchored its absolute deadline: {observed!r}"
+        )
+    if sleeps != [0.5]:
+        raise AssertionError(f"readiness retry cadence drifted: {sleeps!r}")
+
+    now[0] = 100.0
+    observed.clear()
+    sleeps.clear()
+
+    class LateBridge:
+        def call_tool(self, _name, _arguments, **bounds):
+            observed.append(bounds)
+            now[0] = 144.8
+            return {
+                "error": {
+                    "data": {
+                        "phase": "readiness",
+                        "dispatched": False,
+                        "replayed": False,
+                    }
+                }
+            }
+
+    with (
+        mock.patch.object(smoke.time, "monotonic", side_effect=lambda: now[0]),
+        mock.patch.object(smoke.time, "sleep", side_effect=sleep),
+    ):
+        try:
+            smoke.call_after_readiness(
+                LateBridge(),
+                "emacs-eval",
+                {"expression": "(+ 40 2)"},
+                timeout=45.0,
+            )
+        except AssertionError as error:
+            if "did not recover before deadline" not in str(error):
+                raise
+        else:
+            raise AssertionError("late readiness retry escaped its phase deadline")
+    if observed != [{"deadline": 145.0}]:
+        raise AssertionError(
+            f"late readiness retry lost its absolute deadline: {observed!r}"
+        )
+    if len(sleeps) != 1 or not 0 < sleeps[0] <= 0.21:
+        raise AssertionError(
+            f"readiness retry sleep crossed its phase deadline: {sleeps!r}"
+        )
+
+
+def test_proxy_bridge_preserves_absolute_deadline(smoke_path: Path) -> None:
+    """Carry an absolute deadline through the owner proxy unchanged."""
+    smoke = load_module(smoke_path, "agent_supervisor_smoke_proxy_deadline_test")
+    owner = SimpleNamespace(rpc=mock.Mock(return_value={"result": {}}))
+    bridge = smoke.ProxyBridge(owner, "bridge-1", 123)
+    with mock.patch.object(smoke.time, "monotonic", return_value=100.0):
+        try:
+            response = bridge.call_tool(
+                "emacs-eval", {"expression": "(+ 40 2)"}, deadline=145.0
+            )
+        except TypeError as error:
+            raise AssertionError(
+                "proxy tool call cannot preserve an absolute deadline"
+            ) from error
+    if response != {"result": {}}:
+        raise AssertionError(
+            f"proxy deadline call returned the wrong result: {response!r}"
+        )
+    expected_payload = {
+        "operation": "request",
+        "bridge_id": "bridge-1",
+        "method": "tools/call",
+        "params": {
+            "name": "emacs-eval",
+            "arguments": {"expression": "(+ 40 2)"},
+        },
+        "deadline": 145.0,
+    }
+    if owner.rpc.call_args != mock.call(expected_payload, deadline=145.0):
+        raise AssertionError(
+            f"proxy re-anchored its absolute deadline: {owner.rpc.call_args!r}"
+        )
+
+    owner.rpc.reset_mock()
+    bridge.call_tool("emacs-eval", {"expression": "(+ 40 2)"})
+    default_payload = dict(expected_payload)
+    default_payload.pop("deadline")
+    default_payload["timeout"] = 60.0
+    if owner.rpc.call_args != mock.call(default_payload, timeout=70.0):
+        raise AssertionError(
+            f"proxy default timeout compatibility drifted: {owner.rpc.call_args!r}"
+        )
+
+
 def test_async_poll_deadline(soak_path: Path) -> None:
     """Prove the nested result request cannot overrun the poll deadline."""
     soak = load_module(soak_path, "persistent_soak_async_poll_test")
-    observed: list[float] = []
+    now = [100.0]
+    observed: list[dict[str, float]] = []
 
     class Bridge:
-        def call_tool(self, _name, _arguments, timeout):
-            observed.append(timeout)
+        def call_tool(self, _name, _arguments, **bounds):
+            observed.append(bounds)
+            now[0] = 112.0
             return object()
 
     class Smoke:
@@ -326,11 +1040,32 @@ def test_async_poll_deadline(soak_path: Path) -> None:
         def response_text(_response) -> str:
             return "status: done\nresult: 42"
 
-    result = soak.poll_async(Bridge(), Smoke(), "job-1-1", timeout=0.01)
+    with mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]):
+        result = soak.poll_async(Bridge(), Smoke(), "job-1-1", timeout=25.0)
     if result != "status: done\nresult: 42":
         raise AssertionError(f"unexpected async poll result: {result!r}")
-    if len(observed) != 1 or not 0 < observed[0] <= 0.01:
-        raise AssertionError(f"async result request escaped deadline: {observed!r}")
+    if observed != [{"deadline": 125.0}]:
+        raise AssertionError(
+            f"async result request re-anchored its deadline: {observed!r}"
+        )
+
+    now[0] = 100.0
+    observed.clear()
+    with mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]):
+        try:
+            result = soak.poll_async(
+                Bridge(), Smoke(), "job-1-1", deadline=125.0
+            )
+        except TypeError as error:
+            raise AssertionError(
+                "async polling cannot accept an absolute deadline"
+            ) from error
+    if result != "status: done\nresult: 42":
+        raise AssertionError(f"unexpected absolute async poll result: {result!r}")
+    if observed != [{"deadline": 125.0}]:
+        raise AssertionError(
+            f"absolute async result request re-anchored its deadline: {observed!r}"
+        )
 
 
 def test_async_marker_readiness(soak_path: Path) -> None:
@@ -486,7 +1221,7 @@ def test_cleanup_contract(smoke_path: Path) -> None:
 
     connection = RetryConnection()
     with mock.patch.object(smoke, "BridgeProcess", RetryBridge):
-        smoke.owner_proxy_main(connection, "/unused-launcher")
+        smoke.owner_proxy_main(connection, "/unused-launcher", None)
     if RetryBridge.attempts != 2:
         raise AssertionError("owner proxy exited instead of retrying failed cleanup")
     if not connection.closed or [item.get("ok") for item in connection.responses] != [
@@ -572,7 +1307,7 @@ smoke = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(smoke)
 
 
-def stubborn_proxy(connection, _launcher):
+def stubborn_proxy(connection, _launcher, _instance_id):
     connection.send({"ok": True, "value": {"pid": os.getpid()}})
     while True:
         request = connection.recv()
@@ -939,6 +1674,83 @@ soak.main()
             raise AssertionError(f"{scenario} left launcher processes alive: {leaked}")
 
 
+def test_session_gate_residue_contract(soak_path: Path) -> None:
+    soak = load_module(soak_path, "persistent_soak_session_gate_test")
+    with tempfile.TemporaryDirectory() as raw_root:
+        root = Path(raw_root)
+        agents = root / soak.HOST / "agents"
+        agents.mkdir(parents=True)
+        if not soak.assert_empty_agents(root):
+            raise AssertionError("empty agent directory was rejected")
+
+        gate_name = ".anvil-agent-session-gate-" + "a" * 32 + ".lock"
+        gate = agents / gate_name
+        gate.touch(mode=0o600)
+        gate.chmod(0o600)
+        if not soak.assert_empty_agents(root):
+            raise AssertionError("private empty session gate was treated as residue")
+
+        gate.write_text("occupied", encoding="utf-8")
+        if soak.assert_empty_agents(root):
+            raise AssertionError("nonempty session gate was accepted")
+        gate.write_text("", encoding="utf-8")
+        gate.chmod(0o644)
+        if soak.assert_empty_agents(root):
+            raise AssertionError("nonprivate session gate was accepted")
+        gate.chmod(0o600)
+
+        info = gate.lstat()
+        foreign_owner = SimpleNamespace(
+            st_mode=info.st_mode,
+            st_uid=info.st_uid + 1,
+            st_nlink=info.st_nlink,
+            st_size=info.st_size,
+        )
+        with mock.patch.object(Path, "lstat", return_value=foreign_owner):
+            if soak.assert_empty_agents(root):
+                raise AssertionError("foreign-owned session gate was accepted")
+        gate.unlink()
+
+        malformed = agents / (
+            ".anvil-agent-session-gate-" + "A" * 32 + ".lock"
+        )
+        malformed.touch(mode=0o600)
+        malformed.chmod(0o600)
+        if soak.assert_empty_agents(root):
+            raise AssertionError("malformed session gate name was accepted")
+        malformed.unlink()
+
+        gate.mkdir(mode=0o700)
+        if soak.assert_empty_agents(root):
+            raise AssertionError("session gate directory was accepted")
+        gate.rmdir()
+
+        target = root / "gate-target"
+        target.touch(mode=0o600)
+        gate.symlink_to(target)
+        if soak.assert_empty_agents(root):
+            raise AssertionError("session gate symlink was accepted")
+        gate.unlink()
+        target.unlink()
+
+        gate.touch(mode=0o600)
+        gate.chmod(0o600)
+        hardlink = agents / (
+            ".anvil-agent-session-gate-" + "b" * 32 + ".lock"
+        )
+        os.link(gate, hardlink)
+        if soak.assert_empty_agents(root):
+            raise AssertionError("hard-linked session gate was accepted")
+        hardlink.unlink()
+        gate.unlink()
+
+        unexpected = agents / "unexpected.lock"
+        unexpected.touch(mode=0o600)
+        unexpected.chmod(0o600)
+        if soak.assert_empty_agents(root):
+            raise AssertionError("unexpected agent artifact was accepted")
+
+
 def main() -> None:
     if len(sys.argv) != 11:
         raise SystemExit(
@@ -968,13 +1780,24 @@ def main() -> None:
         kill_after,
         hard_ceiling,
     )
+    test_async_marker_job_outlives_marker_wait(soak)
+    test_async_loop_uses_remaining_settle_horizon(soak)
+    test_recovered_async_uses_one_success_horizon(soak)
+    test_async_marker_failure_diagnostics(soak)
+    test_healthy_sibling_deadline_preserves_watchdog_window(soak)
+    test_wait_for_nonce_uses_caller_deadline(soak)
+    test_recovery_cycle_uses_remaining_watchdog_window(soak)
     test_phase_timeout_ownership(soak)
     test_response_reader(soak, smoke)
+    test_request_preserves_absolute_deadline(smoke)
+    test_proxy_bridge_preserves_absolute_deadline(smoke)
+    test_readiness_retry_preserves_absolute_deadline(smoke)
     test_async_poll_deadline(soak)
     test_async_marker_readiness(soak)
     test_recovered_async_requires_child(soak)
     test_cleanup_contract(smoke)
     test_cleanup_exit_bound(smoke)
+    test_session_gate_residue_contract(soak)
     for scenario in ("between", "during", "both", "cleanup"):
         run_signal_scenario(
             soak,

@@ -1,0 +1,180 @@
+diff --git i/dist/core/agent-session.js w/dist/core/agent-session.js
+index 6379a7b..8e71799 100644
+--- i/dist/core/agent-session.js
++++ w/dist/core/agent-session.js
+@@ -1960,13 +1960,13 @@ export class AgentSession {
+             .map(([name, definition]) => [
+             name,
+             {
+-                definition,
++                definition: this._extensionRunner.applyToolRenderers(definition),
+                 sourceInfo: createSyntheticSourceInfo(`<builtin:${name}>`, { source: "builtin" }),
+             },
+         ]));
+         for (const tool of allCustomTools) {
+             definitionRegistry.set(tool.definition.name, {
+-                definition: tool.definition,
++                definition: this._extensionRunner.applyToolRenderers(tool.definition, this._baseToolDefinitions.get(tool.definition.name)),
+                 sourceInfo: tool.sourceInfo,
+             });
+         }
+diff --git i/dist/core/extensions/loader.js w/dist/core/extensions/loader.js
+index 099e74e..27ad66d 100644
+--- i/dist/core/extensions/loader.js
++++ w/dist/core/extensions/loader.js
+@@ -200,6 +200,14 @@ function createExtensionAPI(extension, runtime, cwd, eventBus) {
+             });
+             runtime.refreshTools();
+         },
++        registerToolRenderer(wrapper) {
++            runtime.assertActive();
++            if (typeof wrapper !== "function") {
++                throw new TypeError("registerToolRenderer expects a one-argument wrapper function");
++            }
++            extension.toolRenderers.push(wrapper);
++            runtime.refreshTools();
++        },
+         registerCommand(name, options) {
+             runtime.assertActive();
+             extension.commands.set(name, {
+@@ -353,6 +361,7 @@ function createExtension(extensionPath, resolvedPath) {
+         sourceInfo: createSyntheticSourceInfo(extensionPath, { source, baseDir }),
+         handlers: new Map(),
+         tools: new Map(),
++        toolRenderers: [],
+         messageRenderers: new Map(),
+         entryRenderers: new Map(),
+         commands: new Map(),
+diff --git i/dist/core/extensions/runner.d.ts w/dist/core/extensions/runner.d.ts
+index 7a772b3..4111fff 100644
+--- i/dist/core/extensions/runner.d.ts
++++ w/dist/core/extensions/runner.d.ts
+@@ -9,7 +9,7 @@ import type { KeybindingsConfig } from "../keybindings.ts";
+ import type { ModelRegistry } from "../model-registry.ts";
+ import type { SessionManager } from "../session-manager.ts";
+ import type { BuildSystemPromptOptions } from "../system-prompt.ts";
+-import type { BeforeAgentStartEvent, BeforeAgentStartEventResult, BeforeProviderHeadersEvent, BeforeProviderRequestEvent, ContextEvent, EntryRenderer, Extension, ExtensionActions, ExtensionCommandContext, ExtensionCommandContextActions, ExtensionContext, ExtensionContextActions, ExtensionError, ExtensionEvent, ExtensionFlag, ExtensionMode, ExtensionRuntime, ExtensionShortcut, ExtensionUIContext, InputEvent, InputEventResult, InputSource, LoadExtensionsResult, MessageEndEvent, MessageRenderer, ProjectTrustContext, ProjectTrustEvent, ProjectTrustEventResult, ProviderConfig, RegisteredTool, ReplacedSessionContext, ResolvedCommand, ResourcesDiscoverEvent, SessionBeforeCompactResult, SessionBeforeForkResult, SessionBeforeSwitchResult, SessionBeforeTreeResult, SessionShutdownEvent, ToolCallEvent, ToolCallEventResult, ToolResultEvent, ToolResultEventResult, UserBashEvent, UserBashEventResult } from "./types.ts";
++import type { BeforeAgentStartEvent, BeforeAgentStartEventResult, BeforeProviderHeadersEvent, BeforeProviderRequestEvent, ContextEvent, EntryRenderer, Extension, ExtensionActions, ExtensionCommandContext, ExtensionCommandContextActions, ExtensionContext, ExtensionContextActions, ExtensionError, ExtensionEvent, ExtensionFlag, ExtensionMode, ExtensionRuntime, ExtensionShortcut, ExtensionUIContext, InputEvent, InputEventResult, InputSource, LoadExtensionsResult, MessageEndEvent, MessageRenderer, ProjectTrustContext, ProjectTrustEvent, ProjectTrustEventResult, ProviderConfig, RegisteredTool, ReplacedSessionContext, ToolDefinition, ResolvedCommand, ResourcesDiscoverEvent, SessionBeforeCompactResult, SessionBeforeForkResult, SessionBeforeSwitchResult, SessionBeforeTreeResult, SessionShutdownEvent, ToolCallEvent, ToolCallEventResult, ToolResultEvent, ToolResultEventResult, UserBashEvent, UserBashEventResult } from "./types.ts";
+ /** Combined result from all before_agent_start handlers */
+ interface BeforeAgentStartCombinedResult {
+     messages?: NonNullable<BeforeAgentStartEventResult["message"]>[];
+@@ -111,6 +111,7 @@ export declare class ExtensionRunner {
+     getAllRegisteredTools(): RegisteredTool[];
+     /** Get a tool definition by name. Returns undefined if not found. */
+     getToolDefinition(toolName: string): RegisteredTool["definition"] | undefined;
++    applyToolRenderers<T extends ToolDefinition>(definition: T, inheritedDefinition?: ToolDefinition): T;
+     getFlags(): Map<string, ExtensionFlag>;
+     setFlagValue(name: string, value: boolean | string): void;
+     getFlagValues(): Map<string, boolean | string>;
+diff --git i/dist/core/extensions/runner.js w/dist/core/extensions/runner.js
+index 321a877..7991aa1 100644
+--- i/dist/core/extensions/runner.js
++++ w/dist/core/extensions/runner.js
+@@ -2,6 +2,7 @@
+  * Extension runner - executes extensions and manages their lifecycle.
+  */
+ import { theme } from "../../modes/interactive/theme/theme.js";
++import { applyToolRendererWrappers } from "./tool-renderers.js";
+ // Extension shortcuts compete with canonical keybinding ids from keybindings.json.
+ // Only editor-global shortcuts are reserved here. Picker-specific bindings are not.
+ const RESERVED_KEYBINDINGS_FOR_EXTENSION_CONFLICTS = [
+@@ -297,6 +298,9 @@ export class ExtensionRunner {
+         }
+         return undefined;
+     }
++    applyToolRenderers(definition, inheritedDefinition) {
++        return applyToolRendererWrappers(this.extensions, definition, inheritedDefinition, (error) => this.emitError(error));
++    }
+     getFlags() {
+         const allFlags = new Map();
+         for (const ext of this.extensions) {
+diff --git i/dist/core/extensions/tool-renderers.d.ts w/dist/core/extensions/tool-renderers.d.ts
+new file mode 100644
+index 0000000..0d541ad
+--- /dev/null
++++ w/dist/core/extensions/tool-renderers.d.ts
+@@ -0,0 +1,8 @@
++import type { Extension, ToolDefinition } from "./types.js";
++/** Apply registered renderer wrappers without changing tool execution semantics. */
++export declare function applyToolRendererWrappers<T extends ToolDefinition>(extensions: Extension[], definition: T, inheritedDefinition?: ToolDefinition, onError?: (error: {
++    extensionPath: string;
++    event: "tool_renderer";
++    error: string;
++    stack?: string;
++}) => void): T;
+diff --git i/dist/core/extensions/tool-renderers.js w/dist/core/extensions/tool-renderers.js
+new file mode 100644
+index 0000000..b7e4ea7
+--- /dev/null
++++ w/dist/core/extensions/tool-renderers.js
+@@ -0,0 +1,32 @@
++/**
++ * Apply extension renderer wrappers to a copy of a tool definition.
++ * Execution, schema, prompt metadata, and active state remain untouched.
++ */
++export function applyToolRendererWrappers(extensions, definition, inheritedDefinition, onError = () => {}) {
++    let renderers = {
++        renderShell: definition.renderShell ?? inheritedDefinition?.renderShell,
++        renderCall: definition.renderCall ?? inheritedDefinition?.renderCall,
++        renderResult: definition.renderResult ?? inheritedDefinition?.renderResult,
++    };
++    const tool = { name: definition.name, label: definition.label };
++    for (const extension of extensions) {
++        for (const wrapper of extension.toolRenderers ?? []) {
++            try {
++                const wrapped = wrapper(tool, renderers);
++                if (!wrapped || typeof wrapped !== "object") {
++                    throw new TypeError("Tool renderer wrapper must return a renderer object");
++                }
++                renderers = { ...renderers, ...wrapped };
++            }
++            catch (error) {
++                onError({
++                    extensionPath: extension.path,
++                    event: "tool_renderer",
++                    error: error instanceof Error ? error.message : String(error),
++                    stack: error instanceof Error ? error.stack : undefined,
++                });
++            }
++        }
++    }
++    return { ...definition, ...renderers };
++}
+diff --git i/dist/core/extensions/types.d.ts w/dist/core/extensions/types.d.ts
+index 570fc53..c5ee19e 100644
+--- i/dist/core/extensions/types.d.ts
++++ w/dist/core/extensions/types.d.ts
+@@ -364,6 +364,16 @@ export interface ToolDefinition<TParams extends TSchema = TSchema, TDetails = un
+     /** Custom rendering for tool result display */
+     renderResult?: (result: AgentToolResult<TDetails>, options: ToolRenderResultOptions, theme: Theme, context: ToolRenderContext<TState, Static<TParams>>) => Component;
+ }
++export interface ToolRendererInfo {
++    name: string;
++    label?: string;
++}
++export interface StockToolRenderers {
++    renderShell?: "default" | "self";
++    renderCall?: ToolDefinition<any, any, any>["renderCall"];
++    renderResult?: ToolDefinition<any, any, any>["renderResult"];
++}
++export type ToolRendererWrapper = (tool: ToolRendererInfo, renderers: StockToolRenderers) => StockToolRenderers;
+ type AnyToolDefinition = ToolDefinition<any, any, any>;
+ /**
+  * Preserve parameter inference for standalone tool definitions.
+@@ -876,6 +886,8 @@ export interface ExtensionAPI {
+     on(event: "input", handler: ExtensionHandler<InputEvent, InputEventResult>): void;
+     /** Register a tool that the LLM can call. */
+     registerTool<TParams extends TSchema = TSchema, TDetails = unknown, TState = any>(tool: ToolDefinition<TParams, TDetails, TState>): void;
++    /** Wrap the effective renderers for every tool without changing execution. */
++    registerToolRenderer(wrapper: ToolRendererWrapper): void;
+     /** Register a custom command. */
+     registerCommand(name: string, options: Omit<RegisteredCommand, "name" | "sourceInfo">): void;
+     /** Register a keyboard shortcut. */
+@@ -1234,6 +1246,7 @@ export interface Extension {
+     sourceInfo: SourceInfo;
+     handlers: Map<string, HandlerFn[]>;
+     tools: Map<string, RegisteredTool>;
++    toolRenderers: ToolRendererWrapper[];
+     messageRenderers: Map<string, MessageRenderer>;
+     entryRenderers?: Map<string, EntryRenderer>;
+     commands: Map<string, RegisteredCommand>;

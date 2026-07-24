@@ -1,5 +1,7 @@
 # Pi Agent Wiggum Plan
 
+> Historical record: superseded by `AI-NIX-REINTEGRATION-WIGGUM-PLAN.md`. Paths and package choices below describe the state and intended work at the time; they are not active sibling-repository instructions.
+
 Status: original target frozen on 2026-07-14; expanded target approved on
 2026-07-22. These completion criteria may be clarified or extended, but not
 reduced.

@@ -23,6 +23,13 @@ let
   providerRequiredEnvNames = lib.concatMap (
     provider: lib.optional (isTypedEnv provider.apiKey) provider.apiKey.env
   ) (builtins.attrValues modelData.providers);
+  mcpRequiredEnvNames = lib.concatMap (
+    server:
+    lib.concatMap (value: lib.optional (isTypedEnv value) value.env) (
+      builtins.attrValues (server.transport.env or { })
+      ++ builtins.attrValues (server.transport.headers or { })
+    )
+  ) (builtins.attrValues selected.mcpServers);
 
   renderSecretReferences =
     value:
@@ -201,6 +208,7 @@ in
         "PERPLEXITY_API_KEY"
         "REF_API_KEY"
       ]
+      ++ mcpRequiredEnvNames
       ++ providerRequiredEnvNames
     )
   );

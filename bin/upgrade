@@ -25,7 +25,6 @@ hera)
     update-and-pull
     ./bin/update-agents --no-switch --no-brew
     u hera update
-    python bin/update-overlay --no-ai-nix --all
     ./build system
     u hera upgrade-tasks sign # check
     # notify "Nix on Hera upgraded"

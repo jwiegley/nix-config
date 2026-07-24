@@ -23,7 +23,7 @@ The current worktrees and live consumers are authoritative. The following upstre
 
 The current interactive and dedicated service release is pinned centrally by
 `packages/anvil-mcp/source.nix` to John Wiegley's anvil.el commit
-`74c33b38240809a6d37cbcac957ab04fb1525b78`. That source includes the complete
+`39f9c59bfc51379db6243b1be20edca1ea783c2b`. That source includes the complete
 issue-53 lifecycle and wire-protocol hardening, plus the final readiness,
 staged-request cleanup, signal-custody, and bounded-I/O corrections; the former
 local eleven-patch stack has been removed.
@@ -40,9 +40,9 @@ The dedicated branch uses current pinned anvil.el 1.3.0 and the separately pinne
 - `johnw.anvil.usePerAgentDaemon` defaults to `true` in dedicated mode: each logical MCP bridge gets a supervised root daemon identified by that bridge process and the immutable packaged generation. Distinct Codex and Claude agents must not share a root failure domain. Setting it to `false` selects the single host daemon fallback.
 - Agents register one unified `anvil` MCP transport. The dedicated daemon may retain its internal `emacs-eval` registry for implementation and direct diagnosis, but a second client registration must not silently share the same root or duplicate the failure domain.
 - Supervisor status, leases, sockets, and state are generation-aware. An already-running bridge remains pinned to its original generation until that bridge exits; a newly executed launcher must never attach to a responsive daemon from an older package generation.
-- Every request is at-most-once. Readiness probes may be retried before dispatch; a request that may have reached Emacs is never replayed. A wedged root is terminated within a documented finite deadline, its complete process group is reaped, and a subsequent request from the same still-running MCP bridge is served by a replacement root or receives a bounded structured error.
+- Every request is at-most-once. Readiness probes may be retried before dispatch; a request that may have reached Emacs is never replayed. A wedged root is terminated within a documented finite deadline, its Anvil-owned guarded process group is reaped, and a subsequent request from the same still-running MCP bridge is served by a replacement root or receives a bounded structured error.
 - Long-running asynchronous evaluation must execute outside the root Emacs event loop. It may not extend the synchronous root watchdog merely by marking a lease active. Direct or indirect attempts by a root-owned shell command to call the same root socket must fail immediately instead of deadlocking.
-- Timeout ordering is a declared cross-client contract: the 45-second heartbeat is shorter than the 120-second cooperative synchronous budget, which is shorter than the 225-second root watchdog and 240-second bridge-dispatch cap. Parsing is capped at ten seconds, readiness at 20 seconds, and each bounded emacsclient runner escalates from TERM to KILL after one second; supervisor teardown uses its separate bounded five-second waits. The full 288-second worst-case ordinary request envelope remains below the 330-second client limit. Startup uses a separate 20-second initialize cap; its 218-second serial cleaner, supervisor, parse/readiness, parent-guard, and kill-escalation envelope also fits beneath the package's 330-second client limit. Runtime overrides may shorten but not enlarge these maxima; asynchronous evaluation retains its independent 600-second default. Promptdeploy must render 330-second startup and tool deadlines. Home Manager exports `MCP_TIMEOUT=330000` only as an inherited startup fallback, so GUI-launched Darwin clients still require the rendered per-server timeout.
+- Timeout ordering is a declared cross-client contract: the 45-second heartbeat is shorter than the 120-second cooperative synchronous budget, which is shorter than the 225-second root watchdog and 250-second bridge-dispatch cap. Runner READY/ACK control has a configured ten-second budget plus a conservative two-second Bash 3.2 whole-clock allowance; guarded runner identity discovery is capped at five seconds, and the parent handshake at ten seconds. Parsing, frame reads, and each emacsclient probe are capped at 20 seconds, while readiness and aggregate worker spawning are capped at 30 seconds. Each bounded runner may then spend one one-second private-status wait and two retirement drains of at most three seconds each; supervisor teardown uses separate bounded five-second waits. The 474-second inline and 513-second large-request envelopes remain below the 540-second client tool limit. Startup uses a separate 20-second initialize cap; its conservative 443-second cleaner, supervisor, parse/readiness, parent-guard, and retirement envelope also fits beneath the 540-second client startup limit. Runtime overrides may shorten but not enlarge these maxima; asynchronous evaluation retains its independent 600-second default. Promptdeploy must render 540-second startup and tool deadlines. Home Manager exports `MCP_TIMEOUT=540000` only as an inherited startup fallback, so GUI-launched Darwin clients still require the rendered per-server timeout.
 - The NeLisp runtime closure contains no Emacs executable or Emacs package. The Linux headless closure deliberately contains `emacs30-nox` and current pinned anvil.el.
 - Both Darwin branches reuse the Emacs package built by `overlays/10-emacs.nix`; the dedicated branch is a separate process with `-Q`, minimal Anvil initialization, and isolated state.
 - Every actual Linux consumer imports `config/johnw.nix`; VPS deliberately omits `config/packages.nix`, while Vulcan and VPS omit the Emacs overlay. The shared Home Manager module is consequently the canonical installation point, and the headless package may not depend on importing the large Emacs overlay.
@@ -65,7 +65,7 @@ Add a self-contained package under `packages/anvil-mcp/` which dispatches by pla
 - On Linux with `useHeadlessEmacs = true`, build current pinned anvil.el and anvil-ide with `emacs30-nox`; provide `anvil-headless-emacs` and the same `anvil-mcp` command; load the complete configured optional module set; fail startup if any requested module or required runtime is unavailable; authenticate private runtime/state roots, nested worker directories, and socket ownership; establish a process-wide private umask; hold daemon-lifetime locks on both runtime and state identities; prune stale runtime temp/worker trees only after both locks; isolate root and worker state; and mirror typed registrations into the main registry so one static MCP definition exposes all 89 configured tools.
 - On Darwin with `useDedicatedDarwinEmacs = false`, invoke the existing packaged `anvil-stdio.sh` bridge with an `emacsclient` that reaches the interactive Emacs socket.
 - On Darwin with `useDedicatedDarwinEmacs = true`, reuse the pinned MacPort Emacs while loading the pinned Anvil and anvil-ide closures in `anvil-headless-emacs`; default to one supervised daemon per logical MCP bridge; key every instance by bridge process generation and packaged runtime generation; when `usePerAgentDaemon = false`, install a GUI-domain launchd agent, set exactly `ANVIL_EMACS_LOCK_CONFLICT_STATUS=75` and `ANVIL_EMACS_USE_SYSTEM_LOG=1`, and route startup diagnostics through the bounded macOS system logger; isolate every daemon's socket, schema cache, root state, and worker state from the interactive session and from other clients; and expose the unified 89-tool main registry.
-- In every dedicated per-agent backend, keep the bridge process alive across root replacement; publish authenticated generation-aware status and bounded private diagnostics; inject the exact root socket into child environments; reject same-root recursive transport; keep the root heartbeat deadline independent of asynchronous jobs; and kill the root process group when event-loop progress stops. Worker subprocesses are an explicit offload facility, not evidence that ordinary MCP handlers execute off-root.
+- In every dedicated per-agent backend, keep the bridge process alive across root replacement; publish authenticated generation-aware status and bounded private diagnostics; inject the exact root socket into child environments; reject same-root recursive transport; keep the root heartbeat deadline independent of asynchronous jobs; and kill the Anvil-owned guarded root process group when event-loop progress stops. Worker subprocesses are an explicit offload facility, not evidence that ordinary MCP handlers execute off-root.
 - `anvil-mcp --server-id=anvil` is valid for every backend. Darwin and headless Linux also accept `emacs-eval`. NeLisp rejects claims of a live Emacs evaluator.
 - Expose focused package and check attributes for each supported backend and platform, plus separate dedicated fast-smoke and 25-cycle persistent-soak checks; the fast check is not soak evidence.
 
@@ -97,16 +97,121 @@ Completion is established only when every item below has direct current-state ev
 6. The interactive Darwin launcher reaches the current live Emacs daemon: the main registration exposes 13 eval/IDE tools and the typed registration exposes 65 tools. The dedicated Darwin branch starts two simultaneously isolated test daemons, returns 89 unified main tools and 76 direct typed tools, handles real eval/file calls, stops its worker pools on exit, and leaves the interactive daemon responsive and unchanged.
 7. Both generic Linux Home Manager evaluation outputs contain the default selected package; they are not host switch targets. Evaluation of the actual Vulcan, VPS, and Andoria-08 consumer configurations with the local `nix-config` override contains the host-selected package. Both backend Boolean values evaluate. Dedicated per-agent mode omits global services; with `usePerAgentDaemon = false`, Linux contains the systemd user service and Darwin contains the GUI-domain launchd agent.
 8. Nix formatting, statix, deadnix, repository flake checks, focused package builds, and relevant Home Manager evaluations pass through the existing environment without `nix develop`.
-9. promptdeploy validation passes; focused selection tests prove the unified `anvil` server reaches every supported coding-agent target and the retired `anvil-tools` entry is removed everywhere; scratch rendering proves the correct Claude, Codex, Droid, and OpenCode forms, including exact 330-second startup and tool deadlines; and the complete promptdeploy flake check passes.
+9. promptdeploy validation passes; focused selection tests prove the unified `anvil` server reaches every supported coding-agent target and the retired `anvil-tools` entry is removed everywhere; scratch rendering proves the correct Claude, Codex, Droid, and OpenCode forms, including exact 540-second startup and tool deadlines; and the complete promptdeploy flake check passes.
 10. No rendered MCP command contains `/Users/johnw`, `/tmp/johnw-emacs/server`, or a Nix store path. The command is the bare `anvil-mcp`.
 11. The Anvil skill accurately states which tools are present in each backend, does not require `emacs-eval` before using standalone tools, and explains that dedicated Linux or Darwin daemons expose the configured typed surface through the main registration.
 12. Each logical work commit has a separate fess audit; all verified findings are addressed; no current non-hidden partner observation remains actionable; the final work commit receives a final audit; and each repository is current with its upstream base locally.
 13. User-owned changes and unsaved Emacs buffers remain intact. In particular, no disk edit overwrites an unsaved promptdeploy buffer.
 14. One top-level Codex session, one internal Codex agent with its own MCP transport, one Claude session, and a second concurrent client each resolve to distinct generation-qualified root sockets. Hanging one root does not delay liveness or a real request on any other root.
-15. Adversarial runtime tests cover a non-yielding synchronous form, same-root recursive shell transport, interrupted shell execution, an externally executed asynchronous form, daemon crash during readiness, daemon crash after dispatch, bridge/client exit, supervisor exit, and package-generation rollover. Every case terminates within its declared budget, never replays a dispatched mutation, reaps descendant processes, and either recovers behind the existing MCP pipe or returns a bounded structured error.
+15. Adversarial runtime tests cover a non-yielding synchronous form, same-root recursive shell transport, interrupted shell execution, an externally executed asynchronous form, daemon crash during readiness, daemon crash after dispatch, bridge/client exit, supervisor exit, and package-generation rollover. Every case terminates within its declared budget, never replays a dispatched mutation, retires the known Anvil-owned guarded identities exercised by that case, and either recovers behind the existing MCP pipe or returns a bounded structured error.
 16. A standalone persistent-soak check performs at least 25 recovery cycles plus concurrent ordinary file, Org, Git, and Elisp calls, proves that a yielding call can exceed the old 20-second deadline while retaining the same root PID, and interrupts production `main` before, during, and after bridge acquisition plus during finalization, with partial latency reporting and attempt-all signal-safe bridge cleanup. It leaves no stale leases, sockets, supervisors, daemons, workers, or duplicated mutations and shows no unbounded latency growth. The bounded dedicated fast smoke remains a separate gate and cannot substitute for this soak. Current Hera Codex and Claude clients then pass a concurrent soak after complete OS-process restarts; a logical session resume alone is not accepted as activation evidence.
 17. The same package and supervisor tests pass on Darwin ARM64, Vulcan ARM64 Linux, and the shared-home AMD64 Linux topology used by Andoria-08, Andoria-t2, Delphi-3bd4, and gpu-server. Host-qualified local state remains non-conflicting across the shared NFS home.
 
 ## Verification boundaries
 
 A successful build is insufficient evidence for runtime behavior; an initialize response is insufficient evidence for a real registry; and a source diff is insufficient evidence for deployment selection. Each claim is therefore proved at its own boundary: package closure, native MCP transcript, headless daemon, socket/state resolution, Home Manager option evaluation, actual consumer graph, rendered client configuration, live Darwin bridge, and independent audit.
+
+## 2026-07-23 agent-deck session-lifecycle amendment
+
+The user has made the live agent-deck session the tenancy bound for dedicated
+Anvil roots. A current census found 13 Anvil-bearing agent-deck session IDs but
+40 live transports, each with an attributable exact external-owner generation
+and bridge/root tree. There were no orphaned roots: the former per-owner design
+itself produced the excess. For agent-deck-managed clients, this section
+supersedes the per-logical-bridge and package-build-generation tenancy language
+in the Objective, Standing constraints, Darwin implementation contract, and
+Definition of Done item 14.
+Unmanaged clients retain the exact-owner, per-bridge fallback.
+
+Agent-deck opts a bridge into session sharing with a syntactically valid
+`AGENTDECK_INSTANCE_ID` marker. Malformed marker presence fails closed; marker
+absence selects the unmanaged fallback. The managed root key is derived from
+the current UID, the complete validated instance ID, and the stable
+`anvil-agentdeck-session-protocol-v1` epoch. The host-qualified runtime path
+remains an additional isolation boundary. Compatible package rebuilds and
+source-revision updates therefore join the existing session root instead of
+splitting it. Only a deliberate incompatible protocol-epoch bump (represented
+by the test-only generation salt), a distinct session ID, UID, or host creates
+a distinct managed root.
+
+Each bridge records two exact process generations in its own authenticated
+lease: the bridge PID/start identity and that transport's external-owner
+PID/start identity. The shared root is not owned by the first bridge's creator.
+The supervisor validates every lease against its own recorded bridge and owner,
+so one owner or bridge exiting removes only that lease while any surviving
+sibling keeps the same supervisor, root Emacs, and worker pool alive.
+
+Admission and retirement serialize on one persistent, private per-session gate
+outside the disposable runtime and state trees. A bridge holds the gate while
+it prepares or repairs the instance, prunes stale state, and publishes its
+lease. After the grace period with zero live leases, the supervisor acquires
+the same gate and rechecks the lease set. A newly admitted sibling cancels
+retirement; otherwise the supervisor stops and finalizes its daemon and
+workers, publishes terminal status, attempts authenticated removal of the
+session runtime, state, and creator records, and exits. The empty gate inode is
+intentionally retained so every later admission and retirement continues to
+use one lock namespace; it is synchronization metadata, not live session
+state. Reclaiming old gates safely requires a separate host-wide namespace
+lock. If removal cannot complete, attributable remnants remain available for a
+later identity-checked safe prune. Admission can therefore never attach to a
+root or directory tree actively being retired.
+
+Cross-session pruning uses that same target-session gate for staging cleanup,
+identity revalidation, and destructive removal. Because a bridge already holds
+its own session gate while pruning siblings, it only attempts each target gate
+once without waiting and skips a contended or unsafe target. It likewise only
+attempts the target supervisor lock. Concurrent sessions therefore defer
+cleanup instead of deadlocking or pruning a root during admission.
+
+The outer bridge installs its `SIGTERM`, `SIGINT`, and `SIGHUP` handler before
+entering the transaction, rather than only around steady-state stdio. A first
+signal unwinds validation, admission, readiness, stdio, or finalization into
+the same bounded cleanup path; subsequent signals cannot interrupt cleanup.
+Once a lease has been published, finalization retries its removal and lifecycle
+probes. The final Anvil bridge performs an internal bounded wait for the
+supervisor and daemon identities it observed and for private tree removal. This
+is a fail-closed Anvil optimization, not a process-tree retirement receipt for
+an external client.
+
+Agent Deck supplies the validated session identity and stops its own outer
+launcher or transport. Anvil validates bridge and owner leases and, after the
+final live lease and grace period, owns bounded eventual retirement of its
+supervisor, root Emacs, workers, sockets, and disposable private runtime/state.
+Agent Deck neither inspects nor signals internal Anvil process identities, and
+its transition does not claim synchronous retirement of an arbitrary
+descendant tree. A surviving sibling lease keeps the same canonical session
+root; a later admission is serialized against any retirement already in
+progress.
+
+Additional completion evidence is mandatory:
+
+18. Unit coverage reproduces the observed distribution of 40 distinct exact
+    owner/bridge generations over 13 instance IDs and proves exactly 13 managed
+    keys, supervisors, roots, locks, runtime trees, and state trees while all
+    40 leases are live. Losing one owner preserves its session's remaining
+    leases and root; losing the final owner retires only that session. The same
+    tests prove compatible builds share a key, an explicit incompatible epoch
+    does not, and unmanaged sibling owners remain distinct.
+19. The packaged smoke proves two real transports in distinct outer owner
+    processes but with one `AGENTDECK_INSTANCE_ID` share one supervisor, root,
+    and worker pool. Signalling one outer launcher root removes only its exact
+    lease; signalling the final launcher is followed by bounded eventual
+    retirement of the known Anvil-owned supervisor, root, workers, sockets, and
+    private runtime/state under normal cleanup. Failure-path tests retain
+    attributable remnants for later safe pruning. Admission/retirement overlap
+    tests exercise both lock orderings, and transaction-wide signal tests cover
+    preparation, readiness, steady state, and finalization.
+20. Cross-repository integration proves Agent Deck supplies a stable validated
+    instance identity and that stopping its outer launcher removes that
+    transport's lease. Nix/Anvil checks then prove sibling preservation and
+    final-lease cleanup of the Anvil-owned subtree. No test or implementation
+    depends on Agent Deck enumerating or signalling internal Anvil PIDs.
+21. After activation and complete client-process restarts on Hera, every live
+    Anvil-bearing session is warmed with a real call. The census must then show
+    no more than 13 canonical roots for the current 13 sessions, exactly one
+    root for each warmed session, no cross-session sharing, no duplicate root
+    within a session, and no process or disposable runtime/state entry outside
+    the live set. Persistent empty session gates are synchronization metadata,
+    are excluded from that disposable-state count, and are audited separately.
+    A controlled multi-transport session must additionally pass sibling-exit,
+    restart, final-exit, and residue checks.

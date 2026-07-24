@@ -22,6 +22,10 @@ MAX_LAUNCH_SECONDS = 4.0
 LATENCY_RUNS = 8
 DESCENDANT_READY_TIMEOUT_SECONDS = 10.0
 DESCENDANT_EXIT_TIMEOUT_SECONDS = 5.0
+DELAYED_GUARD_READY_SECONDS = 6.0
+DELAYED_GUARD_TIMEOUT_SECONDS = 15.0
+TEST_GUARD_HANDSHAKE_SECONDS = 4.0
+TEST_GUARD_PHASE_DELAY_SECONDS = 2.4
 
 
 class ProcessExitWatcher:
@@ -178,6 +182,208 @@ def decode_probe(
             raise AssertionError(f"wrong {key}: {payload!r}")
 
 
+def assert_parent_guard_tolerates_delayed_readiness(
+    guard: Path,
+    real_shell: Path,
+) -> None:
+    """Prove scheduler delay beyond five seconds cannot abort a fresh guard."""
+    with tempfile.TemporaryDirectory(prefix="anvil-guard-delayed-ready-") as raw:
+        instrumented_guard = Path(raw) / "guard.py"
+        source = guard.read_text(encoding="utf-8")
+        anchor = "        close_guard_descriptors(ready_fd, commit_fd)\n"
+        if source.count(anchor) != 1:
+            raise AssertionError("parent guard readiness setup drifted")
+        source = source.replace(
+            anchor,
+            anchor
+            + "        __import__('time').sleep("
+            + f"{DELAYED_GUARD_READY_SECONDS!r})\n",
+            1,
+        )
+        instrumented_guard.write_text(source, encoding="utf-8")
+
+        environment = os.environ.copy()
+        environment["ANVIL_HEADLESS_PARENT_PID"] = str(os.getpid())
+        environment.pop("ANVIL_HEADLESS_BRIDGE_PID", None)
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-S",
+                str(instrumented_guard),
+                "group",
+                str(real_shell),
+                "-c",
+                "true",
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=environment,
+            text=True,
+            timeout=DELAYED_GUARD_TIMEOUT_SECONDS,
+            check=False,
+        )
+        if completed.returncode != 0 or completed.stdout or completed.stderr:
+            raise AssertionError(
+                "parent guard rejected delayed monitor readiness: "
+                f"rc={completed.returncode} stdout={completed.stdout!r} "
+                f"stderr={completed.stderr!r}"
+            )
+
+
+def assert_parent_guard_uses_one_handshake_deadline(
+    guard: Path,
+) -> None:
+    """Prove the R and A waits cannot each consume the complete budget."""
+    with tempfile.TemporaryDirectory(prefix="anvil-guard-shared-deadline-") as raw:
+        directory = Path(raw)
+        instrumented_guard = directory / "guard.py"
+        queued_guard = directory / "queued-guard.py"
+        target = directory / "target.py"
+        target_marker = directory / "target-ran"
+        queued_marker = directory / "ack-queued"
+        original_source = guard.read_text(encoding="utf-8")
+        source = original_source
+        constant = "READY_TIMEOUT_SECONDS = 10.0\n"
+        ready_anchor = "        close_guard_descriptors(ready_fd, commit_fd)\n"
+        ack_anchor = '        os.write(ready_fd, b"A")\n'
+        if (
+            source.count(constant) != 1
+            or source.count(ready_anchor) != 1
+            or source.count(ack_anchor) != 1
+        ):
+            raise AssertionError("parent guard handshake instrumentation drifted")
+        source = source.replace(
+            constant,
+            f"READY_TIMEOUT_SECONDS = {TEST_GUARD_HANDSHAKE_SECONDS!r}\n",
+            1,
+        )
+        source = source.replace(
+            ready_anchor,
+            ready_anchor + f"        time.sleep({TEST_GUARD_PHASE_DELAY_SECONDS!r})\n",
+            1,
+        )
+        source = source.replace(
+            ack_anchor,
+            f"        time.sleep({TEST_GUARD_PHASE_DELAY_SECONDS!r})\n" + ack_anchor,
+            1,
+        )
+        instrumented_guard.write_text(source, encoding="utf-8")
+        target.write_text(
+            """import pathlib
+import sys
+
+pathlib.Path(sys.argv[1]).write_text("ran", encoding="utf-8")
+""",
+            encoding="utf-8",
+        )
+
+        environment = os.environ.copy()
+        environment["ANVIL_HEADLESS_PARENT_PID"] = str(os.getpid())
+        environment.pop("ANVIL_HEADLESS_BRIDGE_PID", None)
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-S",
+                str(instrumented_guard),
+                "group",
+                sys.executable,
+                "-I",
+                str(target),
+                str(target_marker),
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=environment,
+            text=True,
+            timeout=DELAYED_GUARD_TIMEOUT_SECONDS,
+            check=False,
+        )
+        if (
+            completed.returncode != EXIT_SOFTWARE
+            or completed.stdout
+            or "guard did not acknowledge target process group" not in completed.stderr
+            or target_marker.exists()
+        ):
+            raise AssertionError(
+                "parent guard did not enforce one handshake deadline: "
+                f"rc={completed.returncode} stdout={completed.stdout!r} "
+                f"stderr={completed.stderr!r} target_ran={target_marker.exists()}"
+            )
+
+        queued_anchor = "os.close(commit_write)\nif written != 1:\n"
+        if (
+            original_source.count(constant) != 1
+            or original_source.count(ack_anchor) != 1
+            or original_source.count(queued_anchor) != 1
+        ):
+            raise AssertionError("parent guard queued-marker instrumentation drifted")
+        queued_source = original_source.replace(
+            constant,
+            constant
+            + 'TEST_ACK_MARKER = os.environ.get("ANVIL_TEST_ACK_MARKER", "")\n',
+            1,
+        )
+        queued_source = queued_source.replace(
+            ack_anchor,
+            ack_anchor
+            + "        with open(TEST_ACK_MARKER, 'wb') as test_marker:\n"
+            + "            test_marker.write(b'A')\n",
+            1,
+        )
+        queued_source = queued_source.replace(
+            queued_anchor,
+            "os.close(commit_write)\n"
+            + "test_ack_deadline = time.monotonic() + "
+            + f"{DELAYED_GUARD_TIMEOUT_SECONDS!r}\n"
+            + "while not os.path.exists(TEST_ACK_MARKER):\n"
+            + "    if time.monotonic() >= test_ack_deadline:\n"
+            + "        abort_guard('test acknowledgement was not queued')\n"
+            + "    time.sleep(0.01)\n"
+            + "handshake_deadline = time.monotonic() - 1.0\n"
+            + "if written != 1:\n",
+            1,
+        )
+        queued_guard.write_text(queued_source, encoding="utf-8")
+        environment["ANVIL_TEST_ACK_MARKER"] = str(queued_marker)
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-S",
+                str(queued_guard),
+                "group",
+                sys.executable,
+                "-I",
+                str(target),
+                str(target_marker),
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=environment,
+            text=True,
+            timeout=DELAYED_GUARD_TIMEOUT_SECONDS,
+            check=False,
+        )
+        if (
+            completed.returncode != EXIT_SOFTWARE
+            or completed.stdout
+            or "guard did not acknowledge target process group" not in completed.stderr
+            or not queued_marker.exists()
+            or target_marker.exists()
+        ):
+            raise AssertionError(
+                "parent guard accepted an acknowledgement after its deadline: "
+                f"rc={completed.returncode} stdout={completed.stdout!r} "
+                f"stderr={completed.stderr!r} ack_queued={queued_marker.exists()} "
+                f"target_ran={target_marker.exists()}"
+            )
+
+
 def assert_committed_group_survives_leader_exit(
     guard: Path,
 ) -> None:
@@ -206,7 +412,7 @@ def assert_committed_group_survives_leader_exit(
         )
 
         source = guard.read_text(encoding="utf-8")
-        constant = "READY_TIMEOUT_SECONDS = 5.0\n"
+        constant = "READY_TIMEOUT_SECONDS = 10.0\n"
         if source.count(constant) != 1:
             raise AssertionError("parent guard readiness constant drifted")
         helper = """
@@ -554,9 +760,16 @@ def main() -> None:
         raise AssertionError("child launcher reintroduced an intermediate process hop")
 
     guard_source = guard.read_text(encoding="utf-8")
+    deadline_index = guard_source.index(
+        "handshake_deadline = time.monotonic() + READY_TIMEOUT_SECONDS"
+    )
+    if guard_source.count("read_handshake_marker()") != 3:
+        raise AssertionError("parent guard lacks one shared R/C/A deadline")
     main_start = guard_source.index('group = mode in ("group", "external-group")')
     fork_index = guard_source.index("guard_pid = os.fork()", main_start)
-    ready_index = guard_source.index("ready = os.read(", fork_index)
+    if not main_start < deadline_index < fork_index:
+        raise AssertionError("parent guard deadline starts after monitor creation")
+    ready_index = guard_source.index("ready = read_handshake_marker()", fork_index)
     target_group_index = guard_source.index("os.setpgid(0, 0)", ready_index)
     guard_group_index = guard_source.index(
         "os.setpgid(guard_pid, target_pid)",
@@ -564,7 +777,7 @@ def main() -> None:
     )
     commit_index = guard_source.index('os.write(commit_write, b"C")', guard_group_index)
     ack_index = guard_source.index(
-        "acknowledged = os.read(ready_read, 1)",
+        "acknowledged = read_handshake_marker()",
         commit_index,
     )
     exec_index = guard_source.index("os.execvpe(", ack_index)
@@ -645,6 +858,8 @@ def main() -> None:
                 )
             durations.append(elapsed)
 
+        assert_parent_guard_tolerates_delayed_readiness(guard, real_shell)
+        assert_parent_guard_uses_one_handshake_deadline(guard)
         assert_committed_group_survives_leader_exit(guard)
         assert_parent_death_reaps_descendant(
             launcher,

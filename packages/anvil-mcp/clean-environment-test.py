@@ -63,6 +63,14 @@ from pathlib import Path
 import sys
 import time
 
+
+def publish_child_pid():
+    path = Path(os.environ["FAKE_CHILD_PID"])
+    staging = path.with_name(f".{{path.name}}.{{os.getpid()}}.tmp")
+    staging.write_text(str(os.getpid()))
+    os.replace(staging, path)
+
+
 called = Path(os.environ["FAKE_CALLED"])
 called.write_text(json.dumps({{
     "pid": os.getpid(),
@@ -79,7 +87,7 @@ if mode == "nonzero":
 if mode == "timeout":
     child = os.fork()
     if child == 0:
-        Path(os.environ["FAKE_CHILD_PID"]).write_text(str(os.getpid()))
+        publish_child_pid()
         time.sleep(30)
         raise SystemExit(0)
     time.sleep(30)
@@ -92,7 +100,7 @@ if mode in ("leader-zero", "leader-nonzero"):
                 os.close(descriptor)
             except OSError:
                 pass
-        Path(os.environ["FAKE_CHILD_PID"]).write_text(str(os.getpid()))
+        publish_child_pid()
         time.sleep(30)
         os._exit(0)
     deadline = time.monotonic() + 5

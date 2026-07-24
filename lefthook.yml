@@ -11,28 +11,32 @@ pre-commit:
       glob: "*.nix"
       run: deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail .
     shell-lint:
-      glob: "*.{sh,bash}"
+      glob: "{bin/*,build,*.sh,*.bash}"
       run: |
-        for f in bin/*; do
-          if [[ $f != bin/nix-shell-sample && \
-                $f != bin/update-overlay \
-             ]]; then
+        for f in bin/* build; do
+          [[ -f $f ]] || continue
+          if head -1 "$f" | grep -q bash; then
             shellcheck --severity=warning "$f"
           fi
         done
     shell-format:
-      glob: "*.{sh,bash}"
+      glob: "{bin/*,build,*.sh,*.bash}"
       run: |
-        for f in bin/*; do
-          if [[ $f != bin/nix-shell-sample && \
-                $f != bin/update-overlay \
-             ]]; then
-             shfmt -i 4 -d "$f"
+        for f in bin/* build; do
+          [[ -f $f ]] || continue
+          if head -1 "$f" | grep -q bash; then
+            shfmt -i 4 -d "$f"
           fi
         done
     python-lint:
-      glob: "*.py"
-      run: ruff check bin/update-overlay
+      glob: "{*.py,bin/update-overlay}"
+      run: |
+        ruff check \
+          bin/agent-deck-litellm-env-test.py \
+          bin/codex-litellm-test.py \
+          bin/update-overlay \
+          bin/update-overlay-test.py
+        python3 -m unittest -v bin/update-overlay-test.py
     # nix-check:
     #   glob: "*.{nix,lock}"
     #   run: nix flake check --no-warn-dirty 2>&1

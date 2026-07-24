@@ -184,9 +184,9 @@ in
       ".claude/skills/sherlock/sherlock".source = "${pkgs.sherlock-db}/bin/sherlock";
     };
 
-    # claude-mem needs the injection-free private command from the patched
-    # ai-nix package. Its settings remain mutable, so update only the path.
-    activation.claudeMemRealClaude = lib.mkIf (inputs ? ai-nix && inputs ? llm-agents) (
+    # claude-mem needs the injection-free private command from the locally
+    # patched Claude package. Its settings remain mutable, so update only the path.
+    activation.claudeMemRealClaude = lib.mkIf (inputs ? llm-agents) (
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         cm_settings="${vars.home}/.claude-mem/settings.json"
         cm_claude="${config.home.profileDirectory}/bin/claude-real"
@@ -216,9 +216,9 @@ in
       nix-direnv.enable = true;
     };
 
-    git-ai = lib.mkIf vars.gitAiEnabled {
-      enable = false;
-      installHooks = true;
+    git-ai = {
+      enable = vars.gitAiEnabled;
+      installHooks = vars.gitAiEnabled;
       settings = {
         apiKeyFile = "${vars.home}/.git-ai/api-key";
 

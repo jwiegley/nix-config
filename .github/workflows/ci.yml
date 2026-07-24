@@ -35,7 +35,7 @@ jobs:
       - name: Lint shell scripts
         run: |
           nix shell nixpkgs#shellcheck -c bash -c '
-            for f in bin/de bin/u bin/upgrade bin/myhost bin/git-sha \
+            for f in bin/de bin/u bin/upgrade bin/update-agents bin/myhost bin/git-sha \
                      bin/move-audio-files bin/persona bin/yubikey-switch build; do
               shellcheck --severity=warning "$f"
             done
@@ -43,7 +43,7 @@ jobs:
       - name: Check shell formatting
         run: |
           nix shell nixpkgs#shfmt -c bash -c '
-            for f in bin/de bin/u bin/upgrade bin/myhost bin/git-sha \
+            for f in bin/de bin/u bin/upgrade bin/update-agents bin/myhost bin/git-sha \
                      bin/move-audio-files bin/persona bin/yubikey-switch build; do
               shfmt -i 4 -d "$f"
             done
@@ -56,4 +56,39 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Lint Python
-        run: nix shell nixpkgs#ruff -c ruff check bin/update-overlay
+        run: |
+          nix shell nixpkgs#ruff -c ruff check \
+            bin/agent-deck-litellm-env-test.py \
+            bin/codex-litellm-test.py \
+            bin/update-overlay \
+            bin/update-overlay-test.py
+      - name: Run focused Python tests
+        run: python3 -m unittest -v bin/update-overlay-test.py
+
+  portable-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Evaluate every portable AI system
+        run: nix flake check ./config/ai --all-systems --no-build
+
+  portable-native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            system: aarch64-darwin
+          - runner: ubuntu-24.04-arm
+            system: aarch64-linux
+          - runner: ubuntu-latest
+            system: x86_64-linux
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Build and load the Pi extension gallery
+        run: nix build --no-link "./config/ai#checks.${{ matrix.system }}.pi-gallery"
