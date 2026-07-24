@@ -69,6 +69,14 @@ let
       url = "https://registry.npmjs.org/@yeliu84/pi-model-router/-/pi-model-router-0.4.4.tgz";
       hash = "sha256-i5vZzLamyFEbyy+rZas4euSEneB8emIYPR6OoR7oasg=";
     };
+    pi-rewind = fetchurl {
+      url = "https://registry.npmjs.org/pi-rewind/-/pi-rewind-0.5.0.tgz";
+      hash = "sha256-1XufSO8QPfqZdmyWaeuwUptyipn8FT0AcH9zgIIvwTo=";
+    };
+    pi-scroll = fetchurl {
+      url = "https://registry.npmjs.org/pi-scroll/-/pi-scroll-0.1.2.tgz";
+      hash = "sha256-LfiA6Wz3888uO7ATZ4oiVS8p4+LqUccxfSxQT7tmt3Q=";
+    };
     agent-browser = fetchurl {
       url = "https://registry.npmjs.org/agent-browser/-/agent-browser-0.33.0.tgz";
       hash = "sha256-Zdcyp6DFLuT1kCXvBX7ztk2GqqdiYrpk9IrBF4iJz4M=";
@@ -571,6 +579,22 @@ let
     '';
   };
 
+  pi-rewind = mkCopyRoot {
+    pname = "pi-rewind";
+    version = "0.5.0";
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-rewind} -C ${root} --strip-components=1
+    '';
+  };
+
+  pi-scroll = mkCopyRoot {
+    pname = "pi-scroll";
+    version = "0.1.2";
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-scroll} -C ${root} --strip-components=1
+    '';
+  };
+
   lean-ctx = inputs.llm-agents.packages.${stdenv.hostPlatform.system}.lean-ctx;
 
   agent-browser =
@@ -625,6 +649,8 @@ let
     subagentura = packageRoot pi-subagentura "pi-subagentura";
     litellm = packageRoot pi-provider-litellm "pi-provider-litellm";
     router = packageRoot pi-model-router "pi-model-router";
+    rewind = packageRoot pi-rewind "pi-rewind";
+    scroll = packageRoot pi-scroll "pi-scroll";
     hashline = packageRoot pi-hashline-edit-pro "pi-hashline-edit-pro";
     web = packageRoot pi-web-access "pi-web-access";
     lens = packageRoot pi-lens "pi-lens";
@@ -711,6 +737,16 @@ let
         version = "0.4.4";
         extensions = [ "${roots.router}/extensions/index.ts" ];
       }
+      {
+        name = "pi-rewind";
+        version = "0.5.0";
+        extensions = [ "${roots.rewind}/src/index.ts" ];
+      }
+      {
+        name = "pi-scroll";
+        version = "0.1.2";
+        extensions = [ "${roots.scroll}/extensions/scroll.ts" ];
+      }
     ];
   };
 
@@ -736,6 +772,8 @@ let
               pi-subagentura
               pi-provider-litellm
               pi-model-router
+              pi-rewind
+              pi-scroll
               pi-web-access
               ;
           };
@@ -758,6 +796,8 @@ let
         import subagentura from ${builtins.toJSON "${roots.subagentura}/src/nix-bundle.js"};
         import litellm from ${builtins.toJSON "${roots.litellm}/dist/index.js"};
         import router from ${builtins.toJSON "${roots.router}/extensions/index.ts"};
+        import rewind from ${builtins.toJSON "${roots.rewind}/src/index.ts"};
+        import scroll from ${builtins.toJSON "${roots.scroll}/extensions/scroll.ts"};
 
         export default async function nixGallery(pi: unknown) {
           process.env.PI_WEB_ACCESS_PROVIDER = "perplexity";
@@ -779,6 +819,8 @@ let
             subagentura,
             litellm,
             router,
+            rewind,
+            scroll,
           ]) {
             await extension(pi as never);
           }
@@ -816,6 +858,8 @@ assert
     pi-subagentura
     pi-provider-litellm
     pi-model-router
+    pi-rewind
+    pi-scroll
     pi-web-access
     ;
 }

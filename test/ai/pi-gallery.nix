@@ -20,6 +20,8 @@ let
     subagentura = root piPackages.pi-subagentura "pi-subagentura";
     litellm = root piPackages.pi-provider-litellm "pi-provider-litellm";
     router = root piPackages.pi-model-router "pi-model-router";
+    rewind = root piPackages.pi-rewind "pi-rewind";
+    scroll = root piPackages.pi-scroll "pi-scroll";
     hashline = root piPackages.pi-hashline-edit-pro "pi-hashline-edit-pro";
     web = root piPackages.pi-web-access "pi-web-access";
     lens = root piPackages.pi-lens "pi-lens";
@@ -66,6 +68,8 @@ runCommand "pi-gallery-check"
     expect_version ${roots.subagentura}/package.json 3.0.3
     expect_version ${roots.litellm}/package.json 2.0.0
     expect_version ${roots.router}/package.json 0.4.4
+    expect_version ${roots.rewind}/package.json 0.5.0
+    expect_version ${roots.scroll}/package.json 0.1.2
     expect_version ${roots.hashline}/package.json 0.17.5
     expect_version ${roots.web}/package.json 0.13.0
     expect_version ${roots.lens}/package.json 3.8.71
@@ -121,6 +125,12 @@ runCommand "pi-gallery-check"
     [ -f ${roots.router}/extensions/index.ts ]
     [ -f ${roots.router}/extensions/routing.ts ]
     [ ! -e ${roots.router}/node_modules ]
+    [ -f ${roots.rewind}/src/index.ts ]
+    [ -f ${roots.rewind}/src/core.ts ]
+    [ ! -e ${roots.rewind}/node_modules ]
+    [ -f ${roots.scroll}/extensions/scroll.ts ]
+    [ -f ${roots.scroll}/src/search.ts ]
+    [ ! -e ${roots.scroll}/node_modules ]
 
     substitute ${./pi-subagentura-tmux.test.ts} "$TMPDIR/pi-subagentura-tmux.test.ts" \
       --replace-fail '__SUBAGENTURA_ROOT__' ${roots.subagentura}
@@ -173,7 +183,7 @@ runCommand "pi-gallery-check"
 
     [ -f ${gallery}/index.ts ]
     [ -f ${gallery}/projection.json ]
-    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq 13 ]
+    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq 15 ]
     [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq 7 ]
     jq -e '
       [.packages[].name] == [
@@ -189,7 +199,9 @@ runCommand "pi-gallery-check"
         "@ygncode/pi-insights",
         "pi-subagentura",
         "pi-provider-litellm",
-        "@yeliu84/pi-model-router"
+        "@yeliu84/pi-model-router",
+        "pi-rewind",
+        "pi-scroll"
       ]
       and (.packages[] | select(.name == "@dietrichgebert/ponytail") | .skills == [])
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
@@ -528,7 +540,9 @@ runCommand "pi-gallery-check"
               "btw:tangent",
               "cancel-all-flows",
               "insights",
+              "rewind",
               "router",
+              "scroll",
               "viewer",
               "workflow",
               "workflows"

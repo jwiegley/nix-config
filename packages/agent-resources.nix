@@ -99,7 +99,7 @@ let
     pname = "pi-mcp-adapter";
     version = "2.12.1";
     src = inputs.pi-mcp-adapter;
-    npmDepsHash = "sha256-9Z6zdIQ9y1AQICj3KKZ2UB5qlHlYXIygEqD9OGEQgx8=";
+    npmDepsHash = "sha256-Mxt5yq4UGxwVSIIC9B+fG2SS4BUNseyAL806Eb1I9YM=";
     npmInstallFlags = [ "--omit=dev" ];
     dontNpmBuild = true;
     postPatch = ''

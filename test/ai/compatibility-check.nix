@@ -60,9 +60,11 @@ let
       ];
     in
     [
-      (lib.assertMsg (
-        sortedNames actual.packages.${system} == contract.packages
-      ) "portable package contract changed for ${system}")
+      (lib.assertMsg (sortedNames actual.packages.${system} == contract.packages)
+        "portable package contract changed for ${system}: expected ${builtins.toJSON contract.packages}, got ${
+          builtins.toJSON (sortedNames actual.packages.${system})
+        }"
+      )
       (lib.assertMsg (
         sortedNames actual.apps.${system} == contract.apps
       ) "portable app contract changed for ${system}")

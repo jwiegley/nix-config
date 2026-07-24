@@ -2169,6 +2169,8 @@ in
         pi-model-router
         pi-ponytail
         pi-provider-litellm
+        pi-rewind
+        pi-scroll
         pi-subagentura
         pi-web-access
         plasma-fractal
@@ -2282,6 +2284,8 @@ in
             pi-subagentura
             pi-provider-litellm
             pi-model-router
+            pi-rewind
+            pi-scroll
             pi-web-access
             ;
         };
