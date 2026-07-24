@@ -9,8 +9,8 @@ usage() {
     cat <<'EOF'
 usage: update-agents [--no-switch] [--no-brew]
 
-Update ai-nix tools, commit and push ai-nix, update this flake's ai-nix lock,
-and optionally switch the host.
+Update the integrated AI inputs, both repository locks, and local overlays;
+commit once; optionally switch the host; then push the repository.
 
 Options:
   --no-switch  Skip the final NixOS/nix-darwin switch
@@ -45,14 +45,7 @@ else
     config_dir=${NIX_CONFIG_DIR:-$HOME/src/nix}
 fi
 
-ai_nix_dir=${AI_NIX_DIR:-$HOME/src/ai-nix}
 brew_pid=
-
-if [[ ! -f $ai_nix_dir/flake.nix ]]; then
-    echo "update-agents: ai-nix checkout not found at $ai_nix_dir" >&2
-    echo "Set AI_NIX_DIR or clone https://github.com/jwiegley/ai-nix there." >&2
-    exit 1
-fi
 
 if [[ $run_brew == true ]] && command -v brew >/dev/null 2>&1; then
     (
@@ -84,15 +77,6 @@ commit_if_changed() {
     return 0
 }
 
-commit_and_push_if_changed() {
-    local repo=$1
-    local message=$2
-
-    if commit_if_changed "$repo" "$message"; then
-        git -C "$repo" push
-    fi
-}
-
 with_nixos_build_lock() {
     local lock=/etc/nixos/.nixos-build
 
@@ -112,30 +96,15 @@ with_nixos_build_lock() {
     exit 1
 }
 
-git_pull_clean "$ai_nix_dir"
 git_pull_clean "$config_dir"
 
 (
-    cd "$ai_nix_dir"
-    nix flake update
-    python "$config_dir/bin/update-overlay" \
-        --only-ai-nix \
-        --all \
-        --ai-nix-dir "$ai_nix_dir" \
-        --no-ai-nix-advice
-    nix run .#format
-)
-
-commit_and_push_if_changed "$ai_nix_dir" "Update AI tools"
-
-# (
-#     cd "$ai_nix_dir"
-#     nix run .#check
-# )
-
-(
     cd "$config_dir"
-    nix flake update ai-nix
+    nix flake update
+    nix flake update --flake ./config/ai
+    python bin/update-overlay --all
+    nix run .#format
+    nix flake check ./config/ai --all-systems --no-build
 )
 
 commit_if_changed "$config_dir" "Update AI agents" || true

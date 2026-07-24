@@ -1,5 +1,7 @@
 # Nix-Managed Agent Configuration Design
 
+> Historical approved design: implementation has since been reintegrated into one repository and Superpowers has been replaced by Bigpowers. References to the standalone `ai-nix` checkout remain as contemporaneous design evidence, not live maintenance instructions.
+
 Status: approved for implementation on 2026-07-22.
 Date: 2026-07-22
 Scope: Tasks 1–12 are authorized for implementation and ordinary publication. Task 13 host mutation, rollback-window closure, and promptdeploy retirement remain separately fail-closed.

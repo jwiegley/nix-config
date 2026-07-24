@@ -33,6 +33,7 @@ Updated: 2026-07-23
 - LiteLLM attribution is resolved without reading prompts or secrets. The apparent requester `10.0.2.100` is the synthetic `tap0` address inside each rootless Podman namespace, not another machine. The eight 2026-07-23 Opus 4.7 requests came from Vulcan's `stock-trader.service`, which is deliberately pinned to Claude Agent SDK 0.1.30 and that model route. Historical Haiku requests comprise four DEVONthink calls and 27 OpenCode calls outside the initially queried July 16-24 window. `hera_vibe_proxy_credential` is LiteLLM's outbound credential name on both model deployments; the inbound LiteLLM key alias was `default`.
 - Pi's `MCP: 1/6` display is a live-connection count under the adapter's default lazy lifecycle, not a configured-server count. Live Pi processes lacked `REF_API_KEY` and `PERPLEXITY_API_KEY`; the branch now loads those two password-store entries alongside LiteLLM in the existing Agent Deck wrapper. A real bounded probe through the updated wrapper connected all six servers without exposing values. Activation remains deferred until the final authorized Nix switch.
 - Machine-local MCP parity is implemented under exact profile tests. Clio/Hera personal OpenCode receive Drafts and PAL; shared-work OpenCode receives PAL; Vulcan OpenCode receives `drafts-hera` and PAL; Hera Droid and Pi receive DEVONthink, Drafts, Memory Vault, PAL, and stock-trader. Authenticated Droid HTTP remains on the credential-safe bridge; headerless Memory Vault uses native HTTP; Pi uses native headerless HTTPS with OAuth disabled.
+- The active update/build path is now single-repository. `update-agents` updates both locks and the integrated overlay tree in one transaction; `update-overlay` recursively discovers `overlays/ai` while excluding fixtures and rejects all retired sibling flags; Makefile/build/upgrade contain no sibling override. Root CI evaluates all portable systems and assigns native Pi gallery checks to Darwin, ARM Linux, and x86 Linux runners.
 - Frozen package research identifies Hashline 0.17.5, Web Access 0.13.0, Lens 3.8.71, Bigpowers 2.82.3, Dynamic Workflows 3.4.1, Browser Native 0.2.72 with `agent-browser` 0.33.0, and Lean Ctx 3.9.12 with the existing native binary. Ponytail must reuse one newer canonical source. Hashline alone owns the replacement read/edit workflow; Web Access alone owns its three web tools; Lean Ctx's embedded bridge is its sole MCP source. Hashline's `replace` bypasses Lens's immediate `edit`/`write` pipeline and remains a required reported gap. Lens runtime downloaders must be disabled and tested through language-gated failing sentinels.
 - Official Pi 0.81.1 and current upstream have no `registerToolRenderer`. The requested seam is a private, version/digest-guarded one-argument Nix patch matching `pi-quiet`; do not describe it as an upstream release or use the incompatible old Styrene ABI.
 
@@ -44,11 +45,10 @@ The existing password-store LiteLLM credential was mapped only in a temporary ch
 
 ## Exact resume point
 
-1. Collapse update/build scripts, CI, hooks, and active documentation to one repository, removing sibling-checkout flags and live old URLs.
-2. Update Vulcan, Andoria, VPS, and auxiliary consumers to paired root-source and `dir=config/ai` inputs at one revision; regenerate every lock through its checkout's direnv.
-3. Restore a reachable genuine `x86_64-linux` builder and run `checks.x86_64-linux.pi-gallery`. Darwin and real ARM64 Linux package/loader checks pass; the x86 derivations evaluate, but ARM/QEMU fallback crashes target Node and is not accepted as x86 verification.
-4. Reconcile the Anvil source pin, finish consumer/full checks and audits, and activate only after the authorized final switch.
-5. Run fresh Codex runtime-switch, Anvil lifecycle, Pi package/MCP, and full tmux host/tool introspection before writing the comprehensive `~/dl` report and reversibly retiring the standalone checkout.
+1. Update Vulcan, Andoria, VPS, and auxiliary consumers to paired root-source and `dir=config/ai` inputs at one revision; regenerate every lock through its checkout's direnv.
+2. Restore a reachable genuine `x86_64-linux` builder and run `checks.x86_64-linux.pi-gallery`. Darwin and real ARM64 Linux package/loader checks pass; the x86 derivations evaluate, but ARM/QEMU fallback crashes target Node and is not accepted as x86 verification.
+3. Reconcile the Anvil source pin, finish consumer/full checks and audits, and activate only after the authorized final switch.
+4. Run fresh Codex runtime-switch, Anvil lifecycle, Pi package/MCP, and full tmux host/tool introspection before writing the comprehensive `~/dl` report and reversibly retiring the standalone checkout.
 
 ## Stop-and-escalate counters
 

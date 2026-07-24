@@ -121,12 +121,19 @@ class OverlayParser:
     def __init__(self, overlays_dir: Path):
         self.overlays_dir = overlays_dir
 
+    def _overlay_files(self) -> list[Path]:
+        """Return production overlay files, including the integrated AI subtree."""
+        return sorted(
+            path
+            for path in self.overlays_dir.rglob("*.nix")
+            if path.name not in self.SKIP_FILES
+            and "tests" not in path.relative_to(self.overlays_dir).parts
+        )
+
     def find_all_packages(self) -> list[str]:
         """Find all package names defined in overlay files."""
         packages = []
-        for overlay_file in self.overlays_dir.glob("*.nix"):
-            if overlay_file.name in self.SKIP_FILES:
-                continue
+        for overlay_file in self._overlay_files():
             packages.extend(self._find_packages_in_file(overlay_file))
         return sorted(set(packages) - self.SKIP_PACKAGES)
 
@@ -208,9 +215,7 @@ class OverlayParser:
 
     def find_package(self, package_name: str) -> Optional[PackageInfo]:
         """Find a package definition in overlay files."""
-        for overlay_file in self.overlays_dir.glob("*.nix"):
-            if overlay_file.name in self.SKIP_FILES:
-                continue
+        for overlay_file in self._overlay_files():
             result = self._parse_file_for_package(overlay_file, package_name)
             if result:
                 return result
@@ -579,58 +584,18 @@ in
         return None
 
 
-def resolve_ai_nix_dir(nix_dir: Path, raw_path: Optional[Path]) -> Path:
-    """Resolve the ai-nix checkout path from CLI, env, or sibling default."""
-    if raw_path is not None:
-        return raw_path.expanduser().resolve()
-
-    from_env = os.environ.get("AI_NIX_DIR")
-
-    if from_env:
-        return Path(from_env).expanduser().resolve()
-
-    return (nix_dir.parent / "ai-nix").resolve()
-
-
 def make_overlay_sources(args, nix_dir: Path) -> list[OverlaySource]:
-    """Create the ordered list of overlay trees to update."""
+    """Create the single integrated overlay tree to update."""
     local_overlays_dir = args.overlays_dir.resolve()
-    sources = []
-
-    if not args.only_ai_nix:
-        sources.append(
-            OverlaySource(
-                name="nix",
-                repo_dir=nix_dir,
-                overlays_dir=local_overlays_dir,
-                parser=OverlayParser(local_overlays_dir),
-                hash_computer=HashComputer(nix_dir),
-            )
+    return [
+        OverlaySource(
+            name="nix",
+            repo_dir=nix_dir,
+            overlays_dir=local_overlays_dir,
+            parser=OverlayParser(local_overlays_dir),
+            hash_computer=HashComputer(nix_dir),
         )
-
-    if args.no_ai_nix:
-        return sources
-
-    ai_nix_dir = resolve_ai_nix_dir(nix_dir, args.ai_nix_dir)
-    ai_nix_overlays_dir = ai_nix_dir / "overlays"
-    if ai_nix_overlays_dir.is_dir():
-        sources.append(
-            OverlaySource(
-                name="ai-nix",
-                repo_dir=ai_nix_dir,
-                overlays_dir=ai_nix_overlays_dir,
-                parser=OverlayParser(ai_nix_overlays_dir),
-                hash_computer=HashComputer(ai_nix_dir),
-            )
-        )
-    else:
-        message = f"ai-nix: no overlays directory at {ai_nix_overlays_dir}"
-        if args.only_ai_nix:
-            raise SystemExit(message)
-        if args.verbose:
-            print(f"{Colors.DIM}{message}{Colors.RESET}")
-
-    return sources
+    ]
 
 
 def collect_targets(args, sources: list[OverlaySource]) -> list[tuple[OverlaySource, str]]:
@@ -864,8 +829,6 @@ Examples:
   update-overlay -V 1.2.3 browser-control-mcp  Force specific version
   update-overlay --all --dry-run         Preview updates for all packages
   update-overlay --all --no-build        Update all packages (src hash only)
-  update-overlay --no-ai-nix --all       Update only this repository
-  update-overlay --only-ai-nix --all     Update only the ai-nix overlay tree
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -887,18 +850,6 @@ Examples:
         help="Directory containing overlay files"
     )
     parser.add_argument(
-        "--ai-nix-dir", type=Path,
-        help="Path to the ai-nix checkout (default: $AI_NIX_DIR or ../ai-nix)"
-    )
-    parser.add_argument(
-        "--no-ai-nix", action="store_true",
-        help="Only update this repository's overlays"
-    )
-    parser.add_argument(
-        "--only-ai-nix", action="store_true",
-        help="Only update the ai-nix overlay tree"
-    )
-    parser.add_argument(
         "--no-build", action="store_true",
         help="Skip computing vendorHash/cargoHash/npmDepsHash (faster but incomplete)"
     )
@@ -910,11 +861,6 @@ Examples:
         "--verbose", "-v", action="store_true",
         help="Show skipped packages (no supported source)"
     )
-    parser.add_argument(
-        "--no-ai-nix-advice", action="store_true",
-        help="Do not print the manual ai-nix commit/update-lock advice"
-    )
-
     args = parser.parse_args()
 
     # Validate arguments
@@ -923,9 +869,6 @@ Examples:
 
     if args.all and args.version:
         parser.error("Cannot use --version with --all")
-
-    if args.no_ai_nix and args.only_ai_nix:
-        parser.error("Cannot use --no-ai-nix with --only-ai-nix")
 
     nix_dir = Path(__file__).parent.parent.resolve()
     sources = make_overlay_sources(args, nix_dir)
@@ -937,8 +880,6 @@ Examples:
     success_count = 0
     fail_count = 0
     skipped_count = 0
-    changed_sources: set[str] = set()
-
     for source, package_name in targets:
         # Find package in overlays
         info = source.parser.find_package(package_name)
@@ -1123,8 +1064,6 @@ Examples:
                 new_full_rev=new_full_rev,
                 dry_run=False
             )
-            changed_sources.add(source.name)
-
         success_count += 1
         extra_info = f" +{','.join(extra_hashes)}" if extra_hashes else ""
         if args.dry_run:
@@ -1137,14 +1076,6 @@ Examples:
     skipped_str = f"{skipped_count} up-to-date"
     failed_str = f"{Colors.RED}{fail_count} failed{Colors.RESET}" if fail_count else f"{fail_count} failed"
     print(f"\n{Colors.BOLD}Summary:{Colors.RESET} {updated_str}, {skipped_str}, {failed_str}")
-
-    if "ai-nix" in changed_sources and not args.no_ai_nix_advice:
-        ai_source = next(source for source in sources if source.name == "ai-nix")
-        print(
-            f"\n{Colors.YELLOW}ai-nix changed at {ai_source.repo_dir}.{Colors.RESET}\n"
-            "Commit and push ai-nix, then update this repo's lock with:\n"
-            "  nix flake update ai-nix"
-        )
 
     return 0 if fail_count == 0 else 1
 

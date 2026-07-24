@@ -1,5 +1,7 @@
 # Pi Agent Wiggum Handoff
 
+> Historical checkpoint: superseded by `AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md`. Repository paths and versions below are retained as evidence of the 2026-07-14 state, not as current operating instructions.
+
 Updated: 2026-07-14
 
 ## Current state
