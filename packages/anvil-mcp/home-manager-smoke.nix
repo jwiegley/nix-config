@@ -205,8 +205,8 @@ assert lib.assertMsg (
   !isDarwin || hostService.config.KeepAlive
 ) "Anvil Darwin service is no longer kept alive";
 assert lib.assertMsg (
-  perAgentMode.config.home.sessionVariables.MCP_TIMEOUT == "330000"
-) "Anvil dedicated mode drifted from the 330-second tool fallback";
+  perAgentMode.config.home.sessionVariables.MCP_TIMEOUT == "540000"
+) "Anvil dedicated mode drifted from the 540-second tool fallback";
 assert lib.assertMsg (
   !isLinux || positronRemoteLinux.config.nix.package == null
 ) "a Positron Linux host shadows the system Nix package";

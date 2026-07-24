@@ -14,17 +14,19 @@ import tempfile
 
 
 def percent_wire(payload: bytes) -> str:
-    """Encode PAYLOAD for anvil-stdio's process-free response wire."""
+    """Encode PAYLOAD for the fake-client environment."""
     return "".join(f"%{byte:02x}" for byte in payload)
 
 
 def write_fake_emacsclient(path: Path) -> None:
     """Create a fake client controlled by a mutable daemon-state file."""
     path.write_text(
-        f"""#!{sys.executable}
+        r"""#!__PYTHON__
+import base64
 import json
 import os
 from pathlib import Path
+import re
 import sys
 
 
@@ -35,6 +37,44 @@ def bump(name):
     except FileNotFoundError:
         value = 0
     path.write_text(str(value + 1), encoding="utf-8")
+
+
+def decode_wire(text):
+    if re.fullmatch(r"(?:%[0-9A-Fa-f]{2})*", text) is None:
+        raise ValueError("invalid fake response wire")
+    return bytes.fromhex(text.replace("%", ""))
+
+
+def publish_response(expression):
+    decoded = []
+    for payload in re.findall(
+        r'base64-decode-string "([A-Za-z0-9+/=]+)"', expression
+    ):
+        try:
+            value = base64.b64decode(payload, validate=True).decode("utf-8")
+        except (ValueError, UnicodeDecodeError):
+            continue
+        if os.path.isabs(value):
+            decoded.append(Path(value))
+    stages = []
+    for candidate in decoded:
+        match = re.fullmatch(r"\.response-tmp\.([0-9]+)\..+", candidate.name)
+        if match is not None and int(match.group(1)) > 0:
+            stages.append((candidate, int(match.group(1))))
+    if len(stages) != 1:
+        print(f"missing unique response stage: {decoded}", file=sys.stderr)
+        raise SystemExit(70)
+    stage, sequence = stages[0]
+    wire = decode_wire(os.environ["FAKE_RESPONSE_WIRE"])
+    final = stage.parent / f"response.{sequence}.json"
+    proof = stage.parent / f"proof.{sequence}.json"
+    with stage.open("wb") as stream:
+        stream.write(wire)
+    os.link(stage, final)
+    os.link(stage, proof)
+    stage.unlink()
+    marker = f"anvil-mcp-response-staged:{sequence}:{len(wire)}"
+    print(json.dumps(marker))
 
 
 mode = Path(os.environ["FAKE_DAEMON_MODE"]).read_text(encoding="utf-8").strip()
@@ -50,8 +90,8 @@ else:
     if mode == "dispatch-fail":
         print("daemon exited during dispatch", file=sys.stderr)
         raise SystemExit(1)
-    print(json.dumps(os.environ["FAKE_RESPONSE_WIRE"]))
-""",
+    publish_response(expression)
+""".replace("__PYTHON__", sys.executable),
         encoding="utf-8",
     )
     path.chmod(path.stat().st_mode | stat.S_IXUSR)

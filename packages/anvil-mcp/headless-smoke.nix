@@ -8,6 +8,7 @@
   lib,
   python3,
   runCommand,
+  unixtools,
   writeShellApplication,
 }:
 
@@ -66,6 +67,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       python3
       readinessCrashAnvilMcp
       rolloverAnvilMcp
+      unixtools.ps
     ];
   }
   ''
@@ -225,9 +227,39 @@ runCommand "anvil-mcp-dedicated-smoke"
       ${anvilMcp.dedicatedCleanEnvironment} \
       ${anvilMcp.dedicatedParentGuardLauncher}
 
-    ${coreutils}/bin/timeout 60 \
+    ANVIL_WATCHDOG_TEST_SUPPORT=${anvilMcp.watchdogTestSupport} \
+      ANVIL_DEDICATED_LOCK_LAUNCHER=${anvilMcp.dedicatedLockLauncher} \
+      ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./watchdog-test.py} \
-      ${anvilMcp.dedicatedLockLauncher}
+      WatchdogProtocolTests WatchdogTransportTests \
+      WatchdogLifecycleTests WatchdogCauseTests
+    watchdog_telemetry_tmp="$smoke_root/watchdog-telemetry-test-tmp"
+    install -d -m 0700 "$watchdog_telemetry_tmp"
+    TMPDIR="$watchdog_telemetry_tmp" \
+      TMP="$watchdog_telemetry_tmp" \
+      TEMP="$watchdog_telemetry_tmp" \
+      ANVIL_DEDICATED_TELEMETRY_INIT=${anvilMcp.dedicatedTelemetryInit} \
+      ANVIL_DEDICATED_ANVIL=${anvilMcp.dedicatedAnvil} \
+      ANVIL_TEST_EMACS_STORE=${anvilMcp.dedicatedRuntimeEmacs} \
+      ${coreutils}/bin/timeout 60 \
+      ${anvilMcp.dedicatedRuntimeEmacs}/bin/emacs --batch -Q \
+      -L ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp \
+      -l ert -l ${./watchdog-telemetry-test.el} \
+      --eval '(let* ((selector "^anvil-watchdog-telemetry-phase-")
+                     (selected (ert-select-tests selector t)))
+                (unless (= 7 (length selected))
+                  (error "expected 7 phase tests, selected %d"
+                         (length selected)))
+                (ert-run-tests-batch-and-exit t))'
+    if [ ! -f "$watchdog_telemetry_tmp/anvil-runtime/anvil-schema-cache.el" ]; then
+      echo "watchdog telemetry fixture did not create its private schema cache" >&2
+      exit 1
+    fi
+    if [ -e "$TMPDIR/anvil-runtime/anvil-schema-cache.el" ]; then
+      echo "watchdog telemetry fixture created a shared schema cache" >&2
+      exit 1
+    fi
+    rm -rf "$watchdog_telemetry_tmp"
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./timeout-ordering-test.py} \
       ${anvilMcp.dedicatedLockLauncher} \
@@ -242,17 +274,25 @@ runCommand "anvil-mcp-dedicated-smoke"
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./stdio-reconnect-test.py} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh
-    ${coreutils}/bin/timeout 120 \
+    # Upstream grants the base post-dispatch suite 90 seconds.  This Nix
+    # variant adds 29 seconds of pre-dispatch regressions and permits each
+    # NUL-reader retry its production frame budget, so use the client-tool
+    # envelope while every protocol phase retains its stricter deadline.
+    ${coreutils}/bin/timeout --kill-after=30 ${toString anvilMcp.timeoutPolicy.clientToolSeconds} \
       ${python3}/bin/python3 -I -B -u ${./stdio-postdispatch-test.py} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh \
       ${bash}/bin/bash \
       ${anvilMcp.dedicatedParentGuardLauncher} \
-      ${python3}/bin/python3
-    ${coreutils}/bin/timeout 60 \
+      ${python3}/bin/python3 \
+      ${toString anvilMcp.timeoutPolicy.frameReadSeconds}
+    # Match upstream's whole-harness envelope; individual bridge phases keep
+    # their stricter production deadlines.
+    ${coreutils}/bin/timeout --kill-after=90 900 \
       ${python3}/bin/python3 -I -B -u \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/tests/anvil-stdio-readiness-test.py \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh \
-      ${bash}/bin/bash
+      ${bash}/bin/bash \
+      ${anvilMcp.dedicatedRuntimeEmacs}/bin/emacs
     ${coreutils}/bin/timeout 60 \
       ${python3}/bin/python3 -I -B -u ${./stdio-concurrency-test.py} \
       ${anvilMcp.dedicatedAnvil}/share/emacs/site-lisp/anvil-stdio.sh
@@ -275,6 +315,8 @@ runCommand "anvil-mcp-dedicated-smoke"
       "$init_compile_dir/anvil-headless-offload-init.el"
     install -m 0600 ${anvilMcp.dedicatedInit} \
       "$init_compile_dir/anvil-headless-init.el"
+    install -m 0600 ${anvilMcp.dedicatedTelemetryInit} \
+      "$init_compile_dir/anvil-headless-watchdog-telemetry.el"
     TMPDIR="$init_compile_dir" TMP="$init_compile_dir" TEMP="$init_compile_dir" \
       ${coreutils}/bin/timeout 60 \
       ${anvilMcp.dedicatedRuntimeEmacs}/bin/emacs --quick --batch \
@@ -285,6 +327,7 @@ runCommand "anvil-mcp-dedicated-smoke"
       "$init_compile_dir/anvil-headless-environment-init.el" \
       "$init_compile_dir/anvil-headless-worker-init.el" \
       "$init_compile_dir/anvil-headless-offload-init.el" \
+      "$init_compile_dir/anvil-headless-watchdog-telemetry.el" \
       "$init_compile_dir/anvil-headless-init.el"
     for source in "$init_compile_dir"/*.el; do
       test -f "$source"c
@@ -403,9 +446,32 @@ runCommand "anvil-mcp-dedicated-smoke"
     }
     trap cleanup EXIT
 
-    ANVIL_AGENT_SUPERVISOR=${anvilMcp.dedicatedAgentSupervisor} \
+    ANVIL_DEDICATED_AGENT_SUPERVISOR=${anvilMcp.dedicatedAgentSupervisor} \
+      ANVIL_DEDICATED_LOCK_LAUNCHER=${anvilMcp.dedicatedLockLauncher} \
+      ANVIL_DEDICATED_PARENT_GUARD=${anvilMcp.dedicatedParentGuardLauncher} \
+      ANVIL_WATCHDOG_CAPABILITY_DAEMON=${anvilMcp.watchdogCapabilityDaemon}/bin/anvil-watchdog-capability-daemon \
+      ANVIL_WATCHDOG_TEST_SUPPORT=${anvilMcp.watchdogTestSupport} \
       ${python3}/bin/python3 -I -B -u \
       ${anvilMcp.dedicatedAgentSupervisorTest}
+    (
+      watchdog_smoke_root=$(mktemp -d /tmp/aw.XXXXXX)
+      trap 'rm -rf -- "$watchdog_smoke_root"' EXIT
+      install -d -m 0700 \
+        "$watchdog_smoke_root/h" \
+        "$watchdog_smoke_root/r" \
+        "$watchdog_smoke_root/s"
+      HOME="$watchdog_smoke_root/h" \
+        ANVIL_EMACS_RUNTIME_ROOT="$watchdog_smoke_root/r" \
+        ANVIL_EMACS_STATE_ROOT="$watchdog_smoke_root/s" \
+        ANVIL_EXPECTED_VERSION=${anvilMcp.currentAnvilVersion} \
+        ANVIL_EXPECTED_ANVIL_REVISION=${anvilMcp.currentAnvilRev} \
+        ${coreutils}/bin/timeout ${toString anvilMcp.timeoutPolicy.clientToolSeconds} \
+        ${python3}/bin/python3 -I -B -u \
+        ${anvilMcp.dedicatedAgentSupervisorSmoke} \
+        --scenario watchdog-attribution \
+        ${anvilMcp}/bin/anvil-mcp \
+        ${anvilMcp.dedicatedAgentSupervisor}
+    )
     # Keep Darwin Unix-domain worker socket names under its 104-byte
     # limit while preserving the full HOST/agents/KEY hierarchy.
     # A distinct controlled HOME proves root and worker startup never
@@ -708,6 +774,8 @@ runCommand "anvil-mcp-dedicated-smoke"
         ${lib.escapeShellArg workerSpecsJson} \
         ${toString anvilMcp.timeoutPolicy.clientToolSeconds} \
         ${toString anvilMcp.timeoutPolicy.hostShellSeconds} \
+        ${toString anvilMcp.timeoutPolicy.bridgeReadinessSeconds} \
+        ${toString anvilMcp.timeoutPolicy.workerSpawnSeconds} \
         ${python3}/bin/python3 \
         ${./environment-output-probe.py}
     ); then

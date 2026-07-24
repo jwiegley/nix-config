@@ -304,7 +304,7 @@ future first."
                        timeout-seen (plist-get opts :timeout))
                  '(:exit 0 :stdout "" :stderr "")))
               ((symbol-function 'anvil-shell-filter--tee-put)
-               (lambda (_raw) "test-tee")))
+               (lambda (&rest _args) "test-tee")))
       (should-error (anvil-shell-filter-run "true" :timeout 3)
                     :type 'user-error)
       (should-not shell-called)
@@ -321,7 +321,8 @@ future first."
           'utf-8
           temporary-file-directory
           1)))
-    (should (equal '(0 "stdin-eof\n" "") result))))
+    (should
+     (equal '(0 "stdin-eof\n" "" 10 0 "stdin-eof\n" "") result))))
 
 (ert-deftest anvil-hang-regression-host-quit-cleans-exact-processes ()
   "A `keyboard-quit' during a host shell must release exact custody."
@@ -425,7 +426,7 @@ on host-wide loader scheduling."
                (started (float-time))
                (result
                 (cl-letf (((symbol-function 'anvil-shell-filter--tee-put)
-                           (lambda (_raw) "test-tee")))
+                           (lambda (&rest _args) "test-tee")))
                   (anvil-shell-filter-run command :timeout 3)))
                (elapsed (- (float-time) started)))
           (setq child-pid

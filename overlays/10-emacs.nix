@@ -166,7 +166,6 @@ let
       anvil =
         (compileEmacsFiles {
           name = "anvil";
-          patches = [ ../packages/anvil-mcp/orphan-safe-test-fixtures.patch ];
           src = fetchFromGitHub {
             inherit (anvilSource)
               hash

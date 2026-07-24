@@ -11,11 +11,11 @@ let
   policy = anvilMcp.timeoutPolicy;
   soakCycles = 25;
   soakBridgeCount = 2;
-  # The 25-cycle subprocess derives to a 160m02s TERM deadline and a 161m32s
+  # The 25-cycle subprocess derives to a 198m14s TERM deadline and a 200m04s
   # absolute SIGKILL horizon.  Keep a nearby finite ceiling without reducing
   # any recovery cycle, nested call bound, named phase, or process margin.
-  soakKillAfterSeconds = 90;
-  soakProcessHardCeilingSeconds = 162 * 60;
+  soakKillAfterSeconds = 110;
+  soakProcessHardCeilingSeconds = 201 * 60;
   soakFocusedTimeoutSeconds = 420;
   watchdogResponseGraceSeconds = 30;
   watchdogWindowSeconds =
@@ -29,8 +29,8 @@ let
   # the hung request's absolute watchdog deadline.  After that response, one
   # cycle has explicit restart, old-root exit, readiness, and scheduling
   # envelopes.
-  soakNonceStartSeconds = 10;
-  soakHealthySeconds = watchdogWindowSeconds - soakNonceStartSeconds;
+  soakNonceStartBudgetSeconds = 10;
+  soakHealthySeconds = watchdogWindowSeconds - soakNonceStartBudgetSeconds;
   soakRestartSeconds = 2 * policy.bridgeReadinessSeconds;
   soakReadinessSeconds = watchdogWindowSeconds;
   soakFixtureCommandCount = 4;
@@ -42,7 +42,17 @@ let
   soakAsyncCompatibilityPollSeconds = 45;
   soakAsyncProjectPollSeconds = 25;
   soakAsyncMarkerSeconds = 15;
+  soakAsyncMarkerSchedulingGraceSeconds = 5;
   soakAsyncPulseSeconds = 3;
+  soakAsyncResultPublicationGraceSeconds = 5;
+  soakAsyncLoopJobSeconds =
+    soakAsyncSubmissionSeconds
+    + soakAsyncMarkerSeconds
+    + soakToolCallSeconds
+    + soakAsyncPulseSeconds
+    + soakAsyncMarkerSchedulingGraceSeconds;
+  soakAsyncLoopSettleSeconds = soakAsyncLoopJobSeconds + soakAsyncResultPublicationGraceSeconds;
+  soakAsyncRecoveredSettleSeconds = soakAsyncMarkerSeconds + soakAsyncProjectPollSeconds;
   soakAsyncChildExitSeconds = 10;
   soakWorkerInventorySeconds = 110;
   soakProcessSnapshotSeconds = 30;
@@ -50,20 +60,14 @@ let
   soakInventorySchedulingGraceSeconds = 30;
   soakYieldingResponseSeconds = 50 + watchdogResponseGraceSeconds;
   soakAsyncChildIsolationSeconds =
-    soakAsyncSubmissionSeconds
-    + soakAsyncMarkerSeconds
-    + soakAsyncProjectPollSeconds
-    + soakAsyncChildExitSeconds;
+    soakAsyncSubmissionSeconds + soakAsyncRecoveredSettleSeconds + soakAsyncChildExitSeconds;
   soakAsyncIsolationSeconds =
     soakAsyncSubmissionSeconds
     + soakAsyncCompatibilityPollSeconds
     + soakAsyncSubmissionSeconds
     + soakAsyncProjectPollSeconds
     + soakAsyncSubmissionSeconds
-    + soakAsyncMarkerSeconds
-    + soakToolCallSeconds
-    + soakAsyncPulseSeconds
-    + soakAsyncProjectPollSeconds
+    + soakAsyncLoopSettleSeconds
     + soakAsyncChildExitSeconds;
   soakWarmBridgeSeconds = soakToolsListSeconds + 3 * soakToolCallSeconds + policy.clientToolSeconds;
   soakCycleBudgetSeconds =
@@ -112,7 +116,7 @@ assert soakMarginPercent >= 20;
 assert soakKillAfterSeconds > 0;
 assert soakKillAfterSeconds > soakBridgeCleanupSeconds;
 assert soakHealthySeconds > 0;
-assert soakNonceStartSeconds + soakHealthySeconds <= watchdogWindowSeconds;
+assert soakNonceStartBudgetSeconds + soakHealthySeconds <= watchdogWindowSeconds;
 assert soakMarginSeconds * 100 >= soakInternalBudgetSeconds * soakMarginPercent;
 assert soakTimeoutSeconds > soakInternalBudgetSeconds;
 assert soakTimeoutSeconds + soakKillAfterSeconds <= soakProcessHardCeilingSeconds;
@@ -128,7 +132,7 @@ runCommand "anvil-mcp-persistent-soak"
       cycles = soakCycles;
       cycleSeconds = soakCycleBudgetSeconds;
       setupSeconds = soakSetupSeconds;
-      nonceStartSeconds = soakNonceStartSeconds;
+      nonceStartSeconds = soakNonceStartBudgetSeconds;
       healthySeconds = soakHealthySeconds;
       restartSeconds = soakRestartSeconds;
       readinessSeconds = soakReadinessSeconds;
