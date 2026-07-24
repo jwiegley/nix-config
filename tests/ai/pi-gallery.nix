@@ -106,6 +106,7 @@ runCommand "pi-gallery-check"
     substitute ${./pi-subagentura-tmux.test.ts} "$TMPDIR/pi-subagentura-tmux.test.ts" \
       --replace-fail '__SUBAGENTURA_ROOT__' ${roots.subagentura}
     PI_SUBAGENTURA_TMUX_SOCKET="nix-gallery-$$" \
+      PI_SUBAGENTURA_TMUX_MARKER="$TMPDIR/subagentura-tmux-marker" \
       PATH=${lib.makeBinPath [ tmux ]}:$PATH \
       bun "$TMPDIR/pi-subagentura-tmux.test.ts" \
       | grep -Fx 'subagentura-tmux-contract-ok' >/dev/null
