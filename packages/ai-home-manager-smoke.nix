@@ -4,6 +4,7 @@
   agentResources,
   aiFlake,
   homeManagerLib,
+  piGallery,
   inputs,
   testPkgsFor,
 }:
@@ -677,6 +678,7 @@ let
   piRendererPath = "${src}/config/ai/renderers/pi.nix";
   piPkgs = pkgs // {
     agent-resources = agentResources;
+    pi-gallery = piGallery;
   };
   claudeRenderer =
     if builtins.pathExists claudeRendererPath then
@@ -1390,6 +1392,7 @@ let
     );
   piExtensionSources = {
     auto-compact-resume = "${../config/ai/extensions/auto-compact-resume/index.ts}";
+    nix-gallery = "${piPkgs.pi-gallery}/share/pi-gallery/index.ts";
     pi-mcp-adapter = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter";
     pi-quiet = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-quiet";
     pi-subagent = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-subagent";
@@ -1406,6 +1409,7 @@ let
       ++ [
         ".config/mcp/mcp.json"
         "${root}/extensions/auto-compact-resume/index.ts"
+        "${root}/extensions/nix-gallery/index.ts"
         "${root}/extensions/pi-mcp-adapter"
         "${root}/extensions/pi-quiet"
         "${root}/extensions/pi-subagent"
@@ -2120,6 +2124,10 @@ let
           "${render.files."${profile.root}/extensions/auto-compact-resume/index.ts".source}"
           piExtensionSources.auto-compact-resume
         )
+        (expectEqual "${profileId} gallery projection leaf"
+          render.files."${profile.root}/extensions/nix-gallery/index.ts"
+          { source = piExtensionSources.nix-gallery; }
+        )
         (expectEqual "${profileId} MCP extension link"
           render.files."${profile.root}/extensions/pi-mcp-adapter"
           { source = piExtensionSources.pi-mcp-adapter; }
@@ -2133,6 +2141,7 @@ let
         )
         (expectEqual "${profileId} exact extension names" (sortedNames piExtensionSources) [
           "auto-compact-resume"
+          "nix-gallery"
           "pi-mcp-adapter"
           "pi-quiet"
           "pi-subagent"
@@ -2646,6 +2655,7 @@ let
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
     ".pi/agent/extensions/auto-compact-resume/index.ts"
+    ".pi/agent/extensions/nix-gallery/index.ts"
     ".pi/agent/extensions/pi-mcp-adapter"
     ".pi/agent/extensions/pi-quiet"
     ".pi/agent/extensions/pi-subagent"
@@ -3871,6 +3881,8 @@ pkgs.runCommand "ai-home-manager-smoke"
     python3 "${src}/packages/statusline-command-test.py"
 
     test -f "${piExtensionSources.auto-compact-resume}"
+    test -f "${piExtensionSources.nix-gallery}"
+    test -f "${piPkgs.pi-gallery}/share/pi-gallery/projection.json"
     test -f "${piExtensionSources.pi-mcp-adapter}/package.json"
     test -f "${piExtensionSources.pi-mcp-adapter}/index.ts"
     test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/@modelcontextprotocol/sdk"

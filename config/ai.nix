@@ -164,6 +164,26 @@ let
   };
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
   droidSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "droid") profileIds;
+  piRuntimePackages = with pkgs; [
+    actionlint
+    agent-browser
+    ast-grep
+    bash-language-server
+    biome
+    gopls
+    lean-ctx
+    nil
+    pyright
+    ruff
+    rust-analyzer
+    shellcheck
+    shfmt
+    taplo
+    terraform-ls
+    typos
+    typescript-language-server
+    yaml-language-server
+  ];
 in
 {
   assertions = [
@@ -221,7 +241,9 @@ in
 
   home = {
     file = lib.mapAttrs (_: file: file // { force = true; }) mergedFiles;
-    packages = lib.optional droidSelected pkgs.agent-http-header-bridge;
+    packages =
+      lib.optional droidSelected pkgs.agent-http-header-bridge
+      ++ lib.optionals piSelected piRuntimePackages;
     activation = {
       aiManagedPreflight = preflight.activation;
     }

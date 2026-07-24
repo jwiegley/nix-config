@@ -2,6 +2,11 @@
   description = "Portable AI CLI and MCP tooling";
 
   inputs = {
+    agent-browser-source = {
+      url = "github:vercel-labs/agent-browser/1ed371f3af472cc0d6cd8fdaea75d1a085ff7534";
+      flake = false;
+    };
+
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     rust-overlay = {
@@ -33,6 +38,36 @@
 
     pi-mcp-adapter = {
       url = "github:nicobailon/pi-mcp-adapter/82724dccc13a49310530898f922bafff12b7f3fe";
+      flake = false;
+    };
+
+    pi-hashline-edit-pro = {
+      url = "github:YuGiMob/pi-hashline-edit-pro/5d97f2a0d8aaa0e06a637583845263ed2ca455f1";
+      flake = false;
+    };
+
+    pi-web-access = {
+      url = "github:nicobailon/pi-web-access/7bdc30a65cf77273eb9c0034647b373bda4060d7";
+      flake = false;
+    };
+
+    pi-lens = {
+      url = "github:apmantza/pi-lens/2ea8691a25e3a39bf944e0d1c5ed4178c50b55da";
+      flake = false;
+    };
+
+    pi-dynamic-workflows = {
+      url = "github:QuintinShaw/pi-dynamic-workflows/6d866e16396ca487dfde2591dd4d4e7ab04e9ba1";
+      flake = false;
+    };
+
+    pi-agent-browser-native = {
+      url = "github:fitchmultz/pi-agent-browser-native/211a012c9b199d758768e8ba729f35e11e661f65";
+      flake = false;
+    };
+
+    lean-ctx = {
+      url = "github:yvgude/lean-ctx/54e0a66bcbb9a6695e45848d3ea97a491a0b5275";
       flake = false;
     };
 

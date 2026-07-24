@@ -266,6 +266,7 @@ assert
   lib.intersectLists (builtins.attrNames selected.commands) (builtins.attrNames selected.prompts)
   == [ ];
 assert builtins.hasAttr "agent-resources" pkgs;
+assert builtins.hasAttr "pi-gallery" pkgs;
 {
   files = mergeFiles [
     agentFiles
@@ -273,6 +274,7 @@ assert builtins.hasAttr "agent-resources" pkgs;
     promptFiles
     {
       "${root}/extensions/auto-compact-resume/index.ts".source = autoCompactResumeSource;
+      "${root}/extensions/nix-gallery/index.ts".source = "${pkgs.pi-gallery}/share/pi-gallery/index.ts";
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
       "${root}/extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
       "${root}/extensions/pi-subagent".source = "${extensionRoot}/pi-subagent";

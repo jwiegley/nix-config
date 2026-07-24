@@ -6,7 +6,7 @@ Updated: 2026-07-23
 
 - Wiggum is active for `docs/AI-NIX-REINTEGRATION-WIGGUM-PLAN.md`.
 - Implementation is isolated at `/Users/johnw/src/nix.worktrees/ai-nix-reintegration` on `feat/ai-nix-reintegration`, based on `ea92bc4093bf55fe3e8f336c1f36a09cc497d4b5`. The standalone `ai-nix` checkout remains clean at `34a0a4d24548f7430ff5c9555f15d8fbda9f541d`.
-- The primary `/Users/johnw/src/nix` checkout has a concurrent, unrelated modification to `config/ai/model-registry.json`; do not stage, overwrite, or copy that file into this branch unless its owner commits it and the branch is deliberately updated.
+- The primary model-registry update and its partner-observation fix were committed on `main` and deliberately merged into this branch at `180628db`; the former concurrent-change warning is resolved.
 - The user approved the MCP/extension architecture and clarified that parity is the union of Claude Code and Codex MCPs per machine, applied to every other agent tool on that machine.
 - The mandatory PAL gate is resolved in favor of a thin portable `config/ai` subflake with one root-owned implementation tree.
 - The worktree has its own allowed direnv using copied ignored `.envrc` and `.envrc.cache`; no dependency was installed. Root and portable-subflake checks pass through that environment.
@@ -14,13 +14,16 @@ Updated: 2026-07-23
 - The target-side compatibility oracle was observed RED on missing `overlays.default`, then GREEN after the maintained overlays, patches, resources, wrappers, and substantive tests moved to root-owned paths. `config/ai/flake.lock` was regenerated at the prior immutable direct-input revisions rather than copied from the old repository.
 - `auto-compact-resume` source and corrected design/plan now live under `config/ai/extensions/auto-compact-resume`. The Pi renderer and preflight own only `.pi/agent/extensions/auto-compact-resume/index.ts`; the focused Home Manager check and explicit repository-source Pi loader smoke pass. Terminal-model handling and continuation-content coverage bring the committed Bun suite to 13/13.
 - The user expanded the frozen scope with eight Pi gallery packages, a one-argument renderer-wrapper seam, and a global Bigpowers-for-Superpowers replacement. Both PAL participants selected immutable Nix package roots, one generated Pi gallery projection extension, complete Bigpowers projection, and an exact-version Pi 0.81.1 renderer ABI patch; raw responses are `/tmp/wg-pal-litellm-20260723/pi-packages-{gpt,gemini}.json`.
+- Root commit `373ba3ba` removes the external `ai-nix` input, keeps Git-AI directly pinned, composes local AI overlays once, and unions portable AI with Anvil outputs. Commit `f5dfb610` replaces live Superpowers ownership with exact Bigpowers 2.82.3 resources across all five clients.
+- The eight requested Pi packages now have immutable Nix package roots and one `nix-gallery` leaf. Exact production closures exclude Pi-provided peers; Web Access defaults process-locally to Perplexity; Lens installers/npx fallback are disabled; Dynamic Workflows denies recursive `subagent`; Lean uses one native/MCP owner; Browser Native uses exact `agent-browser` 0.33.0 plus declarative Chromium; Ponytail has one canonical skill source; Hashline is forced to its supported WASM fallback because Bun fatally aborts on the optional N-API backend.
+- Pi 0.81.1 now carries a digest/version-guarded one-argument renderer-wrapper ABI with marker `1`. Source-level tests cover effective built-in inheritance, registration ordering, foreign/dynamic tools, unchanged execution/schema identity, full callback contexts/row state, throwing-wrapper fallback, reload isolation, and HTML export. A real `pi-quiet` RPC smoke proves it takes the built-in-plus-Foreign seam path.
 - Anvil is available through a dedicated Emacs daemon. Its modified-file buffer set was empty before this documentation batch; that does not prove a separate interactive Emacs has no unsaved buffers.
 
 ## Established findings
 
 - `ai-nix` has unrelated Git ancestry, but the original AI overlays lived in this repository until `bf2c73e363296c94794ef2268996ce7a8d7a8ce6` (`Remove vendored AI overlays`) on 2026-06-17. The preceding commits `c3ed3c0` and `295e383` introduced the split.
 - The standalone tree contains 11 maintained overlays, 5 patches, `agent-resources`, wrapper/package-selection logic embedded in its flake, and substantive resource/wrapper/bridge/overlay tests. Generated `build/`, `result`, `.envrc.cache`, the old lock, and synthetic coverage/profile/fuzz/memory reports must not migrate.
-- The root flake currently declares many `git+file:///Users/johnw/...` inputs and a private local CA file, so it cannot directly replace portable `ai-nix` outputs for remote consumers without an architecture change.
+- The root retains host-only `git+file:///Users/johnw/...` inputs and the private local CA, while the portable `config/ai` subflake remains the remote-safe output boundary. The root now consumes the canonical local implementation directly rather than an external `ai-nix` input.
 - Production consumers include Vulcan (`aarch64-linux`), Andoria’s four-host shared profile (`x86_64-linux`), and VPS (`x86_64-linux`), plus an auxiliary Git-AI VM configuration. Consumers rely on both raw `nix-config` source paths and `ai-nix` flake outputs.
 - MCP target deltas are frozen: Clio/Hera OpenCode gain Drafts and PAL; shared-work OpenCode gains PAL; Vulcan OpenCode gains `drafts-hera` and PAL; Hera Droid gains DEVONthink, Drafts, Memory Vault, and stock-trader; Hera Pi gains those four plus PAL. Target-only entries remain.
 - The existing `auto-compact-resume` Bun suite passes 12/12 before migration.
@@ -40,17 +43,18 @@ The existing password-store LiteLLM credential was mapped only in a temporary ch
 
 ## Exact resume point
 
-1. Switch the root flake's shared inputs and output unions to the local portable implementation while preserving existing Anvil packages/checks and root-only `x86_64-darwin` behavior.
-2. Write RED source/resource/namespace tests, then replace live Superpowers inputs, skills, bootstrap, and plugin with the complete frozen Bigpowers 80-skill/80-prompt projection across every client.
-3. Build the eight immutable Pi package roots and exact dependency/native closures, then generate the single `nix-gallery` projection extension without changing mutable Pi package settings.
-4. Add and verify the exact Pi 0.81.1 renderer-wrapper patch—including registration-order/full-context/dynamic-tool/HTML behavior—then integrate exact tool ownership, disabled Lens downloaders, native `lean-ctx`, exact `agent-browser`, Chromium, and Home Manager projection.
-5. Convert root overlays/package selection/resources from `inputs.ai-nix`, implement MCP parity, collapse scripts/CI/hooks/docs, and update every downstream source/directory-flake lock pair.
-6. Activate only after complete checks, then run Codex runtime-switch, Anvil lifecycle, Pi package/MCP, and full fresh-tmux host/tool introspection before writing the comprehensive `~/dl` report.
+1. Complete the remaining machine-local MCP selection/transport parity for OpenCode, Droid, and Pi, preserving target-only services and the tested Agent Deck credential bridge.
+2. Collapse update/build scripts, CI, hooks, and active documentation to one repository, removing sibling-checkout flags and live old URLs.
+3. Update Vulcan, Andoria, VPS, and auxiliary consumers to paired root-source and `dir=config/ai` inputs at one revision; regenerate every lock through its checkout's direnv.
+4. Restore a reachable genuine `x86_64-linux` builder and run `checks.x86_64-linux.pi-gallery`. Darwin and real ARM64 Linux package/loader checks pass; the x86 derivations evaluate, but ARM/QEMU fallback crashes target Node and is not accepted as x86 verification.
+5. Reconcile the Anvil source pin, finish consumer/full checks and audits, and activate only after the authorized final switch.
+6. Run fresh Codex runtime-switch, Anvil lifecycle, Pi package/MCP, and full tmux host/tool introspection before writing the comprehensive `~/dl` report and reversibly retiring the standalone checkout.
 
 ## Stop-and-escalate counters
 
 - PAL consensus gate: cleared after one blocked attempt; both required models completed through the existing LiteLLM endpoint.
-- Repeated build/test failure signature: none (0/3). The first Anvil lifecycle harness run had one harness-only stdin-liveness failure; after correcting the scratch harness, both lifecycle cases passed.
-- Unusable subagent output: none (0/2).
+- Repeated build/test failure signature: none (0/3). Hashline's optional native backend produced one reproducible Bun fatal abort and was corrected by removing that closure and forcing the upstream-supported WASM fallback; the aggregate loader then passed. The first Anvil lifecycle harness run had one harness-only stdin-liveness failure; after correcting the scratch harness, both lifecycle cases passed.
+- External builder blocker: `ssh-ng://root@nix-builder` does not resolve. The resulting x86 fallback runs on ARM under QEMU and crashes target Node during `npm ci`; x86 execution remains unverified until a genuine builder is reachable.
+- The user requested no further use of the subagents extension after a hung invocation; all subsequent work is direct.
 - Destructive/irreversible action: none attempted. Standalone repository retirement remains gated and no shared history was rewritten or pushed.
 - GPG signing gate: cleared after one blocked attempt; a direct signing probe and the subsequent signed cleanup commit succeeded without bypassing signing.

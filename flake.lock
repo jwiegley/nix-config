@@ -160,6 +160,23 @@
         "type": "github"
       }
     },
+    "agent-browser-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784827976,
+        "narHash": "sha256-praWvAgWoDmWqXzh/kxdfQAPGkVS4qkb0pPYtMWO/N8=",
+        "owner": "vercel-labs",
+        "repo": "agent-browser",
+        "rev": "1ed371f3af472cc0d6cd8fdaea75d1a085ff7534",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vercel-labs",
+        "repo": "agent-browser",
+        "rev": "1ed371f3af472cc0d6cd8fdaea75d1a085ff7534",
+        "type": "github"
+      }
+    },
     "bigpowers": {
       "flake": false,
       "locked": {
@@ -5208,6 +5225,23 @@
         "type": "github"
       }
     },
+    "lean-ctx": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784315475,
+        "narHash": "sha256-h0blm9mUezoMVZ7OaJDhfioTBKUiMk70KejC2gihgBc=",
+        "owner": "yvgude",
+        "repo": "lean-ctx",
+        "rev": "54e0a66bcbb9a6695e45848d3ea97a491a0b5275",
+        "type": "github"
+      },
+      "original": {
+        "owner": "yvgude",
+        "repo": "lean-ctx",
+        "rev": "54e0a66bcbb9a6695e45848d3ea97a491a0b5275",
+        "type": "github"
+      }
+    },
     "ledger": {
       "inputs": {
         "nixpkgs": "nixpkgs_2"
@@ -6794,6 +6828,74 @@
         "type": "github"
       }
     },
+    "pi-agent-browser-native": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784844978,
+        "narHash": "sha256-LMVvFkxiDN90lcTX54FmrwM0N/lLV+IJaCWzveHqpm8=",
+        "owner": "fitchmultz",
+        "repo": "pi-agent-browser-native",
+        "rev": "211a012c9b199d758768e8ba729f35e11e661f65",
+        "type": "github"
+      },
+      "original": {
+        "owner": "fitchmultz",
+        "repo": "pi-agent-browser-native",
+        "rev": "211a012c9b199d758768e8ba729f35e11e661f65",
+        "type": "github"
+      }
+    },
+    "pi-dynamic-workflows": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784758535,
+        "narHash": "sha256-lFb9rmmnywPwnZMBcfn5JusqASdaA1g7663s2znfS+o=",
+        "owner": "QuintinShaw",
+        "repo": "pi-dynamic-workflows",
+        "rev": "6d866e16396ca487dfde2591dd4d4e7ab04e9ba1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "QuintinShaw",
+        "repo": "pi-dynamic-workflows",
+        "rev": "6d866e16396ca487dfde2591dd4d4e7ab04e9ba1",
+        "type": "github"
+      }
+    },
+    "pi-hashline-edit-pro": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784847242,
+        "narHash": "sha256-UOAalDCmw/bnRWU76eIOP+sHBc43BmDXZF5D8J0v9G4=",
+        "owner": "YuGiMob",
+        "repo": "pi-hashline-edit-pro",
+        "rev": "5d97f2a0d8aaa0e06a637583845263ed2ca455f1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "YuGiMob",
+        "repo": "pi-hashline-edit-pro",
+        "rev": "5d97f2a0d8aaa0e06a637583845263ed2ca455f1",
+        "type": "github"
+      }
+    },
+    "pi-lens": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784568615,
+        "narHash": "sha256-lrBLV94SNHVFbt7leVjOY1dJV6HszjnOqTks8rFtfZk=",
+        "owner": "apmantza",
+        "repo": "pi-lens",
+        "rev": "2ea8691a25e3a39bf944e0d1c5ed4178c50b55da",
+        "type": "github"
+      },
+      "original": {
+        "owner": "apmantza",
+        "repo": "pi-lens",
+        "rev": "2ea8691a25e3a39bf944e0d1c5ed4178c50b55da",
+        "type": "github"
+      }
+    },
     "pi-mcp-adapter": {
       "flake": false,
       "locked": {
@@ -6859,6 +6961,23 @@
         "owner": "mjakl",
         "repo": "pi-subagent",
         "rev": "70248dcf7c8a5ca74497e817a699f009c55e6917",
+        "type": "github"
+      }
+    },
+    "pi-web-access": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782373265,
+        "narHash": "sha256-TPtkurLY8Z9qxa597e0C5yWlNvgz4ywv2GdQstTB33A=",
+        "owner": "nicobailon",
+        "repo": "pi-web-access",
+        "rev": "7bdc30a65cf77273eb9c0034647b373bda4060d7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nicobailon",
+        "repo": "pi-web-access",
+        "rev": "7bdc30a65cf77273eb9c0034647b373bda4060d7",
         "type": "github"
       }
     },
@@ -6948,6 +7067,7 @@
     },
     "root": {
       "inputs": {
+        "agent-browser-source": "agent-browser-source",
         "bigpowers": "bigpowers",
         "darwin": "darwin",
         "dirscan": "dirscan",
@@ -6960,6 +7080,7 @@
         "hakyll": "hakyll",
         "home-manager": "home-manager",
         "hours": "hours",
+        "lean-ctx": "lean-ctx",
         "ledger": "ledger",
         "llm-agents": "llm-agents",
         "mcp-remote": "mcp-remote",
@@ -6970,10 +7091,15 @@
         "org2jsonl": "org2jsonl_2",
         "org2tc": "org2tc",
         "pal-mcp-server": "pal-mcp-server",
+        "pi-agent-browser-native": "pi-agent-browser-native",
+        "pi-dynamic-workflows": "pi-dynamic-workflows",
+        "pi-hashline-edit-pro": "pi-hashline-edit-pro",
+        "pi-lens": "pi-lens",
         "pi-mcp-adapter": "pi-mcp-adapter",
         "pi-openai-server-compaction": "pi-openai-server-compaction",
         "pi-quiet": "pi-quiet",
         "pi-subagent": "pi-subagent",
+        "pi-web-access": "pi-web-access",
         "ponytail": "ponytail",
         "pushme": "pushme",
         "rag-client": "rag-client",

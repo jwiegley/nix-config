@@ -52,6 +52,7 @@ let
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
     ".pi/agent/extensions/auto-compact-resume/index.ts"
+    ".pi/agent/extensions/nix-gallery/index.ts"
     ".pi/agent/extensions/pi-mcp-adapter"
     ".pi/agent/extensions/pi-quiet"
     ".pi/agent/extensions/pi-subagent"

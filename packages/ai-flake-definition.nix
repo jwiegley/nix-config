@@ -1833,27 +1833,46 @@ let
         '';
         meta = package.meta or { };
       }
-    else if
-      name == "pi"
-      && pkgs.stdenv.isLinux
-      && (package.version or null) == "0.81.1"
-      && package ? overrideAttrs
-    then
-      let
-        dynamicLinker = pkgs.stdenv.cc.bintools.dynamicLinker;
-      in
+    else if name == "pi" then
+      assert (package.version or null) == "0.81.1";
+      assert package ? overrideAttrs;
       package.overrideAttrs (old: {
+        preInstall = ''
+          cat > pi-tool-renderer-wrapper.sha256 <<'EOF'
+          2cb700fcef4f36f853a22e2e90394d11e90fc3c0868d5c116cbf6cd00a680ae4  dist/core/agent-session.js
+          5ebc2b2d8e13e0d90d6279d34e016b6f441208af9e73f3d4e75975376eb8987c  dist/core/extensions/loader.js
+          5105a2d9097724972947860b81c5048109534fa909c07f7cc5495f3aaf30444b  dist/core/extensions/runner.js
+          b7878c503c0d4ef7a9ad878775b67a7e99ee8e56005d55e973c8aad4ca116b10  dist/core/extensions/runner.d.ts
+          ae5e0715c519006e744032ed50bb6552b9d4e3c17c600d046bf5c4d7160584ac  dist/core/extensions/types.d.ts
+          EOF
+          sha256sum -c pi-tool-renderer-wrapper.sha256
+          patch -p1 --fuzz=0 < ${../overlays/ai/patches/pi-tool-renderer-wrapper.patch}
+          ${pkgs.nodejs_22}/bin/node \
+            ${../tests/ai/pi-tool-renderer-wrapper.test.mjs} "$PWD"
+        ''
+        + (old.preInstall or "");
+
         # Bun's compiled Linux executable names the dynamic loader as a
-        # shared dependency.  Invoking it normally mixes the Nix loader
-        # with the host libc and segfaults; run it through the matching
-        # loader and library directory instead.
-        postInstall = (old.postInstall or "") + ''
-          mv "$out/libexec/pi/pi" "$out/libexec/pi/pi.bin"
-          makeWrapper ${pkgs.lib.escapeShellArg dynamicLinker} "$out/libexec/pi/pi" \
-            --add-flags ${pkgs.lib.escapeShellArg "--library-path ${builtins.dirOf dynamicLinker}"} \
-            --add-flags ${pkgs.lib.escapeShellArg "--argv0 pi"} \
-            --add-flags "$out/libexec/pi/pi.bin"
-        '';
+        # shared dependency. Invoking it normally mixes the Nix loader with
+        # the host libc and segfaults; retain the matching loader wrapper.
+        postInstall =
+          (old.postInstall or "")
+          + pkgs.lib.optionalString pkgs.stdenv.isLinux (
+            let
+              dynamicLinker = pkgs.stdenv.cc.bintools.dynamicLinker;
+            in
+            ''
+              mv "$out/libexec/pi/pi" "$out/libexec/pi/pi.bin"
+              makeWrapper ${pkgs.lib.escapeShellArg dynamicLinker} "$out/libexec/pi/pi" \
+                --add-flags ${pkgs.lib.escapeShellArg "--library-path ${builtins.dirOf dynamicLinker}"} \
+                --add-flags ${pkgs.lib.escapeShellArg "--argv0 pi"} \
+                --add-flags "$out/libexec/pi/pi.bin"
+            ''
+          );
+
+        passthru = (old.passthru or { }) // {
+          toolRendererWrapperAbi = 1;
+        };
       })
     else if
       name == "gemini-cli" && (package.version or null) == "0.49.0" && package ? overrideAttrs
@@ -2129,8 +2148,19 @@ in
     {
       default = mkAiToolchain pkgs;
       inherit (pkgs)
+        agent-browser
         agent-http-header-bridge
         agent-resources
+        bigpowers
+        lean-ctx
+        pi-agent-browser-native
+        pi-dynamic-workflows
+        pi-gallery
+        pi-hashline-edit-pro
+        pi-lean-ctx
+        pi-lens
+        pi-ponytail
+        pi-web-access
         plasma-fractal
         plasma-wiki
         ;
@@ -2211,6 +2241,25 @@ in
         agentHttpHeaderBridge = pkgs.agent-http-header-bridge or null;
         agentHttpHeaderBridgeOutput = pkgs.agent-http-header-bridge or null;
         mcpRemote = pkgs.inputs.mcp-remote or null;
+      };
+      pi-gallery = pkgs.callPackage ../tests/ai/pi-gallery.nix {
+        piPackage = patchAgentPackage pkgs "pi" pkgs.inputs.llm-agents.packages.${system}.pi;
+        piPackages = {
+          inherit (pkgs)
+            agent-browser
+            agent-resources
+            bigpowers
+            lean-ctx
+            pi-agent-browser-native
+            pi-dynamic-workflows
+            pi-gallery
+            pi-hashline-edit-pro
+            pi-lean-ctx
+            pi-lens
+            pi-ponytail
+            pi-web-access
+            ;
+        };
       };
       format = check "format" "format-check.sh" inputs.format "";
       lint = check "lint" "lint.sh" inputs.lint "";

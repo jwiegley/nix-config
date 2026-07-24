@@ -6,17 +6,24 @@
   ];
 
   inputs = [
+    "agent-browser-source"
     "bigpowers"
     "git-ai"
+    "lean-ctx"
     "llm-agents"
     "mcp-remote"
     "mcp-servers-nix"
     "nixpkgs"
     "pal-mcp-server"
+    "pi-agent-browser-native"
+    "pi-dynamic-workflows"
+    "pi-hashline-edit-pro"
+    "pi-lens"
     "pi-mcp-adapter"
     "pi-openai-server-compaction"
     "pi-quiet"
     "pi-subagent"
+    "pi-web-access"
     "ponytail"
     "rust-overlay"
     "translate-tool"
@@ -38,9 +45,20 @@
   ];
 
   packages = [
+    "agent-browser"
     "agent-http-header-bridge"
     "agent-resources"
+    "bigpowers"
     "default"
+    "lean-ctx"
+    "pi-agent-browser-native"
+    "pi-dynamic-workflows"
+    "pi-gallery"
+    "pi-hashline-edit-pro"
+    "pi-lean-ctx"
+    "pi-lens"
+    "pi-ponytail"
+    "pi-web-access"
     "plasma-fractal"
     "plasma-wiki"
   ];
@@ -76,6 +94,7 @@
     "llm-agents-nixpkgs-independent"
     "memory"
     "no-warnings"
+    "pi-gallery"
     "profile"
     "tests"
   ];
