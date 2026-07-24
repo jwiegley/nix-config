@@ -9,6 +9,8 @@ from pathlib import Path
 
 WRAPPER = Path(__file__).with_name("agent-deck-litellm-env")
 SYNTHETIC_SECRET = "synthetic-litellm-secret"
+SYNTHETIC_REF_SECRET = "synthetic-ref-secret"
+SYNTHETIC_PERPLEXITY_SECRET = "synthetic-perplexity-secret"
 
 
 def write_executable(path: Path, content: str) -> None:
@@ -29,8 +31,13 @@ class AgentDeckLiteLLMEnvTests(unittest.TestCase):
                 pass_bin,
                 f"""#!/usr/bin/env bash
 set -euo pipefail
-[[ $# == 1 && $1 == litellm.vulcan.lan ]]
-printf '%s\\n' '{SYNTHETIC_SECRET}' 'ignored-line'
+[[ $# == 1 ]]
+case $1 in
+  litellm.vulcan.lan) printf '%s\\n' '{SYNTHETIC_SECRET}' 'ignored-line' ;;
+  api.ref.tools) printf '%s\\n' '{SYNTHETIC_REF_SECRET}' ;;
+  api.perplexity.ai) printf '%s\\n' '{SYNTHETIC_PERPLEXITY_SECRET}' ;;
+  *) exit 1 ;;
+esac
 """,
             )
             write_executable(
@@ -38,7 +45,8 @@ printf '%s\\n' '{SYNTHETIC_SECRET}' 'ignored-line'
                 """#!/usr/bin/env bash
 set -euo pipefail
 printf '%s\\0' "$@" >"$CAPTURE_ARGV"
-printf '%s' "$LITELLM_API_KEY" >"$CAPTURE_ENV"
+printf '%s\\n%s\\n%s' \
+  "$LITELLM_API_KEY" "$REF_API_KEY" "$PERPLEXITY_API_KEY" >"$CAPTURE_ENV"
 """,
             )
 
@@ -56,14 +64,22 @@ printf '%s' "$LITELLM_API_KEY" >"$CAPTURE_ENV"
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(env_path.read_text(), SYNTHETIC_SECRET)
+            self.assertEqual(
+                env_path.read_text().splitlines(),
+                [SYNTHETIC_SECRET, SYNTHETIC_REF_SECRET, SYNTHETIC_PERPLEXITY_SECRET],
+            )
             self.assertEqual(
                 [item.decode() for item in argv_path.read_bytes().split(b"\0") if item],
                 ["first", "second value"],
             )
-            self.assertNotIn(SYNTHETIC_SECRET, result.stdout)
-            self.assertNotIn(SYNTHETIC_SECRET, result.stderr)
-            self.assertNotIn(SYNTHETIC_SECRET, argv_path.read_text())
+            for secret in (
+                SYNTHETIC_SECRET,
+                SYNTHETIC_REF_SECRET,
+                SYNTHETIC_PERPLEXITY_SECRET,
+            ):
+                self.assertNotIn(secret, result.stdout)
+                self.assertNotIn(secret, result.stderr)
+                self.assertNotIn(secret, argv_path.read_text())
 
     def test_empty_credential_fails_before_running_command(self):
         with tempfile.TemporaryDirectory() as temp_dir:
