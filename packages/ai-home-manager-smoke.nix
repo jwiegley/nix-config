@@ -57,7 +57,7 @@ let
       };
       claudeDefault = {
         provider = "positron-anthropic";
-        model = "claude-opus-4-7";
+        model = "claude-opus-4-8";
       };
       claudeHaiku = {
         provider = "positron-anthropic";
@@ -65,7 +65,7 @@ let
       };
       claudeSubagent = {
         provider = "positron-anthropic";
-        model = "claude-sonnet-4-6";
+        model = "claude-sonnet-5";
       };
     };
   };

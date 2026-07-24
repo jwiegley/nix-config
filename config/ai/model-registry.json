@@ -11,7 +11,7 @@
     },
     "claudeHaiku": {
       "provider": "positron-anthropic",
-      "model": "claude-sonnet-4-6"
+      "model": "claude-sonnet-5"
     },
     "claudeSubagent": {
       "provider": "positron-anthropic",
@@ -96,20 +96,14 @@
     },
     {
       "provider": "positron-anthropic",
+      "id": "claude-fable-5[1m]",
+      "displayName": "Claude Fable 5[1M]",
+      "maxOutputTokens": 32768
+    },
+    {
+      "provider": "positron-anthropic",
       "id": "claude-haiku-4-5-20251001",
       "displayName": "Claude Haiku 4.5",
-      "maxOutputTokens": 32768
-    },
-    {
-      "provider": "positron-anthropic",
-      "id": "claude-opus-4-7",
-      "displayName": "Claude Opus 4.7",
-      "maxOutputTokens": 32768
-    },
-    {
-      "provider": "positron-anthropic",
-      "id": "claude-opus-4-8[1m]",
-      "displayName": "Claude Opus 4.8",
       "maxOutputTokens": 32768
     },
     {
@@ -120,8 +114,20 @@
     },
     {
       "provider": "positron-anthropic",
-      "id": "claude-sonnet-4-6",
-      "displayName": "Claude Sonnet 4.6",
+      "id": "claude-opus-4-8[1m]",
+      "displayName": "Claude Opus 4.8",
+      "maxOutputTokens": 32768
+    },
+    {
+      "provider": "positron-anthropic",
+      "id": "claude-sonnet-5",
+      "displayName": "Claude Sonnet 5",
+      "maxOutputTokens": 32768
+    },
+    {
+      "provider": "positron-anthropic",
+      "id": "claude-sonnet-5[1m]",
+      "displayName": "Claude Sonnet 5[1M]",
       "maxOutputTokens": 32768
     },
     {
@@ -200,6 +206,14 @@
     },
     {
       "provider": "litellm",
+      "id": "positron_anthropic/claude-fable-5[1m]",
+      "displayName": "Claude Fable 5[1M]",
+      "maxOutputTokens": 65536,
+      "contextLimit": 262144,
+      "outputLimit": 65536
+    },
+    {
+      "provider": "litellm",
       "id": "anthropic/claude-fable-5",
       "displayName": "Claude Fable 5",
       "maxOutputTokens": 65536,
@@ -232,31 +246,15 @@
     },
     {
       "provider": "litellm",
-      "id": "hera/claude-opus-4-7-thinking-32000",
-      "displayName": "Claude Opus 4.7 (Thinking)",
+      "id": "hera/claude-opus-4-8-thinking-32000",
+      "displayName": "Claude Opus 4.8 (Thinking)",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536
     },
     {
       "provider": "litellm",
-      "id": "hera/claude-opus-4-7",
-      "displayName": "Claude Opus 4.7",
-      "maxOutputTokens": 65536,
-      "contextLimit": 262144,
-      "outputLimit": 65536
-    },
-    {
-      "provider": "litellm",
-      "id": "positron_anthropic/claude-opus-4-7",
-      "displayName": "Claude Opus 4.7",
-      "maxOutputTokens": 65536,
-      "contextLimit": 262144,
-      "outputLimit": 65536
-    },
-    {
-      "provider": "litellm",
-      "id": "positron_anthropic/claude-opus-4-8[1m]",
+      "id": "hera/claude-opus-4-8",
       "displayName": "Claude Opus 4.8",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
@@ -272,40 +270,56 @@
     },
     {
       "provider": "litellm",
-      "id": "anthropic/claude-opus-4-7",
-      "displayName": "Claude Opus 4.7",
+      "id": "positron_anthropic/claude-opus-4-8[1m]",
+      "displayName": "Claude Opus 4.8",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536
     },
     {
       "provider": "litellm",
-      "id": "hera/claude-sonnet-4-6-thinking-32000",
-      "displayName": "Claude Sonnet 4.6 (Thinking)",
+      "id": "anthropic/claude-opus-4-8",
+      "displayName": "Claude Opus 4.8",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536
     },
     {
       "provider": "litellm",
-      "id": "hera/claude-sonnet-4-6",
-      "displayName": "Claude Sonnet 4.6",
+      "id": "hera/claude-sonnet-5-thinking-32000",
+      "displayName": "Claude Sonnet 5 (Thinking)",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536
     },
     {
       "provider": "litellm",
-      "id": "positron_anthropic/claude-sonnet-4-6",
-      "displayName": "Claude Sonnet 4.6",
+      "id": "hera/claude-sonnet-5",
+      "displayName": "Claude Sonnet 5",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536
     },
     {
       "provider": "litellm",
-      "id": "anthropic/claude-sonnet-4-6",
-      "displayName": "Claude Sonnet 4.6",
+      "id": "positron_anthropic/claude-sonnet-5",
+      "displayName": "Claude Sonnet 5",
+      "maxOutputTokens": 65536,
+      "contextLimit": 262144,
+      "outputLimit": 65536
+    },
+    {
+      "provider": "litellm",
+      "id": "positron_anthropic/claude-sonnet-5[1m]",
+      "displayName": "Claude Sonnet 5[1M]",
+      "maxOutputTokens": 65536,
+      "contextLimit": 262144,
+      "outputLimit": 65536
+    },
+    {
+      "provider": "litellm",
+      "id": "anthropic/claude-sonnet-5",
+      "displayName": "Claude Sonnet 5",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536
