@@ -81,33 +81,64 @@ printf '%s\\n%s\\n%s' \
                 self.assertNotIn(secret, result.stderr)
                 self.assertNotIn(secret, argv_path.read_text())
 
-    def test_empty_credential_fails_before_running_command(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            pass_bin = root / "pass"
-            target_bin = root / "target"
-            invoked_path = root / "invoked"
+    def test_each_unavailable_credential_fails_before_running_command(self):
+        entries = (
+            "litellm.vulcan.lan",
+            "api.ref.tools",
+            "api.perplexity.ai",
+        )
+        for failure_mode in ("empty", "helper-failure"):
+            for failing_entry in entries:
+                with self.subTest(failure_mode=failure_mode, entry=failing_entry):
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        root = Path(temp_dir)
+                        pass_bin = root / "pass"
+                        target_bin = root / "target"
+                        invoked_path = root / "invoked"
 
-            write_executable(pass_bin, "#!/usr/bin/env bash\nexit 0\n")
-            write_executable(
-                target_bin,
-                f"#!/usr/bin/env bash\n: >'{invoked_path}'\n",
-            )
+                        write_executable(
+                            pass_bin,
+                            f"""#!/usr/bin/env bash
+set -euo pipefail
+[[ $# == 1 ]]
+[[ $FAILURE_MODE != helper-failure || $1 != $FAILING_ENTRY ]] || exit 1
+[[ $FAILURE_MODE != empty || $1 != $FAILING_ENTRY ]] || exit 0
+case $1 in
+  litellm.vulcan.lan) printf '%s\\n' '{SYNTHETIC_SECRET}' ;;
+  api.ref.tools) printf '%s\\n' '{SYNTHETIC_REF_SECRET}' ;;
+  api.perplexity.ai) printf '%s\\n' '{SYNTHETIC_PERPLEXITY_SECRET}' ;;
+  *) exit 1 ;;
+esac
+""",
+                        )
+                        write_executable(
+                            target_bin,
+                            f"#!/usr/bin/env bash\n: >'{invoked_path}'\n",
+                        )
 
-            result = subprocess.run(
-                [str(WRAPPER), str(target_bin)],
-                capture_output=True,
-                text=True,
-                env={
-                    **os.environ,
-                    "AGENT_DECK_LITELLM_PASS_BIN": str(pass_bin),
-                },
-                check=False,
-            )
+                        result = subprocess.run(
+                            [str(WRAPPER), str(target_bin)],
+                            capture_output=True,
+                            text=True,
+                            env={
+                                **os.environ,
+                                "AGENT_DECK_LITELLM_PASS_BIN": str(pass_bin),
+                                "FAILURE_MODE": failure_mode,
+                                "FAILING_ENTRY": failing_entry,
+                            },
+                            check=False,
+                        )
 
-            self.assertNotEqual(result.returncode, 0)
-            self.assertFalse(invoked_path.exists())
-            self.assertIn("credential is unavailable or empty", result.stderr)
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertFalse(invoked_path.exists())
+                        self.assertIn("credential is unavailable or empty", result.stderr)
+                        for secret in (
+                            SYNTHETIC_SECRET,
+                            SYNTHETIC_REF_SECRET,
+                            SYNTHETIC_PERPLEXITY_SECRET,
+                        ):
+                            self.assertNotIn(secret, result.stdout)
+                            self.assertNotIn(secret, result.stderr)
 
     def test_requires_a_command(self):
         result = subprocess.run(
