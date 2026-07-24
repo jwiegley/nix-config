@@ -61,6 +61,14 @@ let
       url = "https://registry.npmjs.org/pi-subagentura/-/pi-subagentura-3.0.3.tgz";
       hash = "sha256-8nSPMdy4LlJ1BIckjWdqFsSCcDo4uC5R9QqK6XJSVzU=";
     };
+    pi-provider-litellm = fetchurl {
+      url = "https://registry.npmjs.org/pi-provider-litellm/-/pi-provider-litellm-2.0.0.tgz";
+      hash = "sha256-icmK1hCeZMU9ZINgg9fN0DZL8e/fS2Nbq6oJ4AKgVRU=";
+    };
+    pi-model-router = fetchurl {
+      url = "https://registry.npmjs.org/@yeliu84/pi-model-router/-/pi-model-router-0.4.4.tgz";
+      hash = "sha256-i5vZzLamyFEbyy+rZas4euSEneB8emIYPR6OoR7oasg=";
+    };
     agent-browser = fetchurl {
       url = "https://registry.npmjs.org/agent-browser/-/agent-browser-0.33.0.tgz";
       hash = "sha256-Zdcyp6DFLuT1kCXvBX7ztk2GqqdiYrpk9IrBF4iJz4M=";
@@ -532,6 +540,37 @@ let
     '';
   };
 
+  pi-provider-litellm = mkCopyRoot {
+    pname = "pi-provider-litellm";
+    version = "2.0.0";
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-provider-litellm} -C ${root} \
+        --strip-components=1
+      # Preserve the managed MCP and skill surfaces unless mutable Pi settings opt in.
+      substituteInPlace ${root}/dist/index.js \
+        --replace-fail \
+          'const skillsEnabled = isFeatureEnabled(settings, "skills");' \
+          'const skillsEnabled = settings?.skills?.enabled === true;' \
+        --replace-fail \
+          'const mcpEnabled = isFeatureEnabled(settings, "mcp");' \
+          'const mcpEnabled = settings?.mcp?.enabled === true;'
+      # The packaged Pi loader maps peer root exports, not these lazy subpaths.
+      substituteInPlace ${root}/dist/provider.js \
+        --replace-fail \
+          $'import { createProvider } from "@earendil-works/pi-ai";\nimport { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";\nimport { openAIResponsesApi } from "@earendil-works/pi-ai/api/openai-responses.lazy";' \
+          'import { createProvider, openAICompletionsApi, openAIResponsesApi } from "@earendil-works/pi-ai";'
+    '';
+  };
+
+  pi-model-router = mkCopyRoot {
+    pname = "pi-model-router";
+    version = "0.4.4";
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-model-router} -C ${root} \
+        --strip-components=1
+    '';
+  };
+
   lean-ctx = inputs.llm-agents.packages.${stdenv.hostPlatform.system}.lean-ctx;
 
   agent-browser =
@@ -584,6 +623,8 @@ let
     artifacts = packageRoot pi-artifacts "pi-artifacts";
     insights = packageRoot pi-insights "pi-insights";
     subagentura = packageRoot pi-subagentura "pi-subagentura";
+    litellm = packageRoot pi-provider-litellm "pi-provider-litellm";
+    router = packageRoot pi-model-router "pi-model-router";
     hashline = packageRoot pi-hashline-edit-pro "pi-hashline-edit-pro";
     web = packageRoot pi-web-access "pi-web-access";
     lens = packageRoot pi-lens "pi-lens";
@@ -660,6 +701,16 @@ let
         extensions = [ "${roots.subagentura}/src/nix-bundle.js" ];
         skills = [ "${roots.subagentura}/skills/ralplan" ];
       }
+      {
+        name = "pi-provider-litellm";
+        version = "2.0.0";
+        extensions = [ "${roots.litellm}/dist/index.js" ];
+      }
+      {
+        name = "@yeliu84/pi-model-router";
+        version = "0.4.4";
+        extensions = [ "${roots.router}/extensions/index.ts" ];
+      }
     ];
   };
 
@@ -683,6 +734,8 @@ let
               pi-lens
               pi-ponytail
               pi-subagentura
+              pi-provider-litellm
+              pi-model-router
               pi-web-access
               ;
           };
@@ -703,6 +756,8 @@ let
         import artifacts from ${builtins.toJSON "${roots.artifacts}/extensions/nix-bundle.js"};
         import insights from ${builtins.toJSON "${roots.insights}/index.ts"};
         import subagentura from ${builtins.toJSON "${roots.subagentura}/src/nix-bundle.js"};
+        import litellm from ${builtins.toJSON "${roots.litellm}/dist/index.js"};
+        import router from ${builtins.toJSON "${roots.router}/extensions/index.ts"};
 
         export default async function nixGallery(pi: unknown) {
           process.env.PI_WEB_ACCESS_PROVIDER = "perplexity";
@@ -722,6 +777,8 @@ let
             artifacts,
             insights,
             subagentura,
+            litellm,
+            router,
           ]) {
             await extension(pi as never);
           }
@@ -778,6 +835,8 @@ assert inputs.lean-ctx.narHash == "sha256-h0blm9mUezoMVZ7OaJDhfioTBKUiMk70KejC2g
     pi-lens
     pi-ponytail
     pi-subagentura
+    pi-provider-litellm
+    pi-model-router
     pi-web-access
     ;
 }

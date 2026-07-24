@@ -356,7 +356,8 @@ Pi has no fabricated Promptdeploy target. Its direct acceptance inventory is:
 - selected shared skills under ~/.agents/skills, including 6 Ponytail trees;
 - 59 command-* and 2 prompt-* Codex projections visible through the same shared skill root;
 - keybindings.json contains the exact nine-command Emacs-style map;
-- models.json contains only the litellm provider, with no direct-provider fallback and no managed default;
+- models.json contains the LiteLLM provider plus the local logical router provider, guarantees only `positron_openai/gpt-5.6-sol` statically, resolves LiteLLM auth through a Nix-store password-command helper rather than inherited environment, and has no direct-provider fallback or managed default;
+- model-router.json exposes `router/sol` with high/medium/low heuristic tiers that vary Sol's reasoning level without introducing unverified model routes;
 - global MCP catalog entries Ref, Anvil, Context Hub, Context7, DEVONthink, Drafts, Memory Vault, PAL, Perplexity, Sequential Thinking, and stock-trader;
 - exact auto-compact-resume, nix-gallery, pi-mcp-adapter, and pi-quiet extension leaves;
 - immutable Pi BTW, Artifacts, Insights, and Subagentura roots in the gallery, with the old pi-subagent root absent.

@@ -27,9 +27,6 @@ let
     "sequential-thinking"
     "stock-trader"
   ];
-  providerApis = {
-    litellm = "openai-completions";
-  };
   expectedHttpHeaders = {
     Ref = "x-ref-api-key";
     context7 = "CONTEXT7_API_KEY";
@@ -43,11 +40,6 @@ let
     && builtins.attrNames value == [ "env" ]
     && builtins.isString value.env
     && builtins.match "^[A-Z][A-Z0-9_]*$" value.env != null;
-  isNonSecret =
-    value:
-    builtins.isAttrs value
-    && builtins.attrNames value == [ "nonSecret" ]
-    && builtins.isString value.nonSecret;
   isSafeUrl =
     value:
     builtins.isString value
@@ -58,8 +50,12 @@ let
       "?apiKey="
     ];
   providerRequiredEnvNames = lib.concatMap (
-    provider: lib.optional (isTypedEnv provider.apiKey) provider.apiKey.env
-  ) (builtins.attrValues modelData.providers);
+    providerName:
+    let
+      provider = modelData.providers.${providerName};
+    in
+    lib.optional (providerName != "litellm" && isTypedEnv provider.apiKey) provider.apiKey.env
+  ) (builtins.attrNames modelData.providers);
   mcpRequiredEnvNames = lib.concatMap (
     server:
     lib.concatMap (value: lib.optional (isTypedEnv value) value.env) (
@@ -68,14 +64,24 @@ let
     )
   ) (builtins.attrValues selected.mcpServers);
   renderEnv = name: "$" + "{" + name + "}";
-  renderCredential =
-    value:
-    if isTypedEnv value then
-      renderEnv value.env
-    else if isNonSecret value then
-      value.nonSecret
-    else
-      throw "unsupported Pi credential shape";
+  piLiteLLMApiKeyHelper = pkgs.writeShellScript "pi-litellm-api-key" ''
+    set -euo pipefail
+    set +x
+
+    pass_bin=''${PI_LITELLM_PASS_BIN:-${lib.getExe pkgs.pass}}
+    credential=""
+    if [[ ! -x $pass_bin ]] || ! credential="$("$pass_bin" litellm.vulcan.lan)"; then
+      echo "pi: LiteLLM credential is unavailable or empty" >&2
+      exit 1
+    fi
+    credential=''${credential%%$'\n'*}
+    if [[ -z $credential ]]; then
+      echo "pi: LiteLLM credential is unavailable or empty" >&2
+      exit 1
+    fi
+    printf '%s\n' "$credential"
+  '';
+  piLiteLLMApiKeyCommand = "!${piLiteLLMApiKeyHelper}";
 
   orderedValues =
     set: lib.sort (left: right: left.sourceOrder < right.sourceOrder) (builtins.attrValues set);
@@ -121,16 +127,79 @@ let
         max = null;
       };
     };
-  renderProvider = providerName: provider: {
-    api = providerApis.${providerName};
-    apiKey = renderCredential provider.apiKey;
-    inherit (provider) baseUrl;
-    models = map renderModel (
-      orderedValues (lib.filterAttrs (_: model: model.provider == providerName) modelData.models)
-    );
+  solModels = orderedValues (
+    lib.filterAttrs (
+      _: model: model.provider == "litellm" && model.id == "positron_openai/gpt-5.6-sol"
+    ) modelData.models
+  );
+  solModel = builtins.head solModels;
+  renderProvider =
+    providerName: provider:
+    assert providerName == "litellm";
+    {
+      apiKey = piLiteLLMApiKeyCommand;
+      inherit (provider) baseUrl;
+      models = map renderModel solModels;
+    };
+  routerProvider = {
+    api = "router-local-api";
+    apiKey = "pi-model-router";
+    baseUrl = "router://local";
+    models = [
+      {
+        id = "sol";
+        name = "Router sol";
+        reasoning = true;
+        input = [
+          "text"
+          "image"
+        ];
+        cost = {
+          input = 0;
+          output = 0;
+          cacheRead = 0;
+          cacheWrite = 0;
+        };
+        contextWindow = solModel.contextLimit;
+        maxTokens = solModel.outputLimit;
+        thinkingLevelMap.xhigh = "xhigh";
+      }
+    ];
   };
   models = {
-    providers = lib.mapAttrs renderProvider modelData.providers;
+    providers = lib.mapAttrs renderProvider modelData.providers // {
+      router = routerProvider;
+    };
+  };
+  modelRouter = {
+    debug = false;
+    phaseBias = 0.5;
+    models.sol = {
+      model = "litellm/${solModel.id}";
+      contextWindow = solModel.contextLimit;
+      maxTokens = solModel.outputLimit;
+      reasoning = true;
+      thinkingLevels = [
+        "low"
+        "medium"
+        "high"
+        "xhigh"
+      ];
+    };
+    profiles.sol = {
+      high = {
+        model = "sol";
+        thinking = "xhigh";
+      };
+      medium = {
+        model = "sol";
+        thinking = "medium";
+      };
+      low = {
+        model = "sol";
+        thinking = "low";
+      };
+    };
   };
 
   renderMcpEnvValue =
@@ -314,6 +383,9 @@ assert selected.marketplaces == { };
 assert selected.settings == { };
 assert builtins.attrNames selected.mcpServers == expectedMcpNames;
 assert builtins.attrNames modelData.providers == expectedProviderNames;
+assert builtins.length solModels == 1;
+assert solModel.contextLimit == 1050000;
+assert solModel.outputLimit == 128000;
 assert !(modelData ? default);
 assert builtins.all (model: builtins.hasAttr model.provider modelData.providers) (
   builtins.attrValues modelData.models
@@ -323,6 +395,7 @@ assert
   == [ ];
 assert builtins.hasAttr "agent-resources" pkgs;
 assert builtins.hasAttr "pi-gallery" pkgs;
+assert builtins.hasAttr "pass" pkgs;
 {
   files = mergeFiles [
     agentFiles
@@ -334,6 +407,7 @@ assert builtins.hasAttr "pi-gallery" pkgs;
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
       "${root}/extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
       "${root}/keybindings.json".source = json.generate "pi-${profile.id}-keybindings.json" keybindings;
+      "${root}/model-router.json".source = json.generate "pi-${profile.id}-model-router.json" modelRouter;
       "${root}/models.json".source = json.generate "pi-${profile.id}-models.json" models;
       "${globalMcpPath}".source = json.generate "pi-${profile.id}-mcp.json" mcp;
     }

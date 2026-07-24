@@ -1217,9 +1217,6 @@ let
     mcpServers = lib.mapAttrs expectedDroidMcpServer (selectFor "hera-droid" catalog.items.mcpServers);
   };
 
-  piProviderApis = {
-    litellm = "openai-completions";
-  };
   renderPiCredential =
     credential:
     if isTypedEnv credential then "$" + "{" + credential.env + "}" else credential.nonSecret;
@@ -1262,18 +1259,94 @@ let
         max = null;
       };
     };
+  piLiteLLMApiKeyHelper = pkgs.writeShellScript "pi-litellm-api-key" ''
+    set -euo pipefail
+    set +x
+
+    pass_bin=''${PI_LITELLM_PASS_BIN:-${lib.getExe pkgs.pass}}
+    credential=""
+    if [[ ! -x $pass_bin ]] || ! credential="$("$pass_bin" litellm.vulcan.lan)"; then
+      echo "pi: LiteLLM credential is unavailable or empty" >&2
+      exit 1
+    fi
+    credential=''${credential%%$'\n'*}
+    if [[ -z $credential ]]; then
+      echo "pi: LiteLLM credential is unavailable or empty" >&2
+      exit 1
+    fi
+    printf '%s\n' "$credential"
+  '';
+  piLiteLLMApiKeyCommand = "!${piLiteLLMApiKeyHelper}";
   expectedPiProvider = providerName: provider: {
-    api = piProviderApis.${providerName};
-    apiKey = renderPiCredential provider.apiKey;
+    apiKey =
+      if providerName == "litellm" then piLiteLLMApiKeyCommand else renderPiCredential provider.apiKey;
     inherit (provider) baseUrl;
     models = map expectedPiModel (
       orderedValues (
-        lib.filterAttrs (_: model: model.provider == providerName) (selectedModels "hera-pi")
+        lib.filterAttrs (
+          _: model: model.provider == providerName && model.id == "positron_openai/gpt-5.6-sol"
+        ) (selectedModels "hera-pi")
       )
     );
   };
   expectedPiModels = {
-    providers = lib.mapAttrs expectedPiProvider (selectedProviders "hera-pi");
+    providers = lib.mapAttrs expectedPiProvider (selectedProviders "hera-pi") // {
+      router = {
+        api = "router-local-api";
+        apiKey = "pi-model-router";
+        baseUrl = "router://local";
+        models = [
+          {
+            id = "sol";
+            name = "Router sol";
+            reasoning = true;
+            input = [
+              "text"
+              "image"
+            ];
+            cost = {
+              input = 0;
+              output = 0;
+              cacheRead = 0;
+              cacheWrite = 0;
+            };
+            contextWindow = 1050000;
+            maxTokens = 128000;
+            thinkingLevelMap.xhigh = "xhigh";
+          }
+        ];
+      };
+    };
+  };
+  expectedPiRouter = {
+    debug = false;
+    phaseBias = 0.5;
+    models.sol = {
+      model = "litellm/positron_openai/gpt-5.6-sol";
+      contextWindow = 1050000;
+      maxTokens = 128000;
+      reasoning = true;
+      thinkingLevels = [
+        "low"
+        "medium"
+        "high"
+        "xhigh"
+      ];
+    };
+    profiles.sol = {
+      high = {
+        model = "sol";
+        thinking = "xhigh";
+      };
+      medium = {
+        model = "sol";
+        thinking = "medium";
+      };
+      low = {
+        model = "sol";
+        thinking = "low";
+      };
+    };
   };
   renderPiSecretReferences =
     value:
@@ -1450,6 +1523,7 @@ let
         "${root}/extensions/pi-mcp-adapter"
         "${root}/extensions/pi-quiet"
         "${root}/keybindings.json"
+        "${root}/model-router.json"
         "${root}/models.json"
       ]
     );
@@ -1893,6 +1967,18 @@ let
       }
       {
         kind = "json";
+        label = "${profileId} model router";
+        path = documentSource "${profileId}-model-router.json" (file "${profile.root}/model-router.json");
+        expected = expectedPiRouter;
+        forbidden = [
+          "classifierModel"
+          "maxSessionBudget"
+          "fallbacks"
+          "positron_openi/"
+        ];
+      }
+      {
+        kind = "json";
         label = "${profileId} MCP";
         path = documentSource "${profileId}-mcp.json" (file ".config/mcp/mcp.json");
         expected = expectedPiMcp;
@@ -1971,7 +2057,6 @@ let
     "ANTHROPIC_API_KEY"
     "CONTEXT7_API_KEY"
     "GEMINI_API_KEY"
-    "LITELLM_API_KEY"
     "OPENAI_API_KEY"
     "PERPLEXITY_API_KEY"
     "REF_API_KEY"
@@ -2145,7 +2230,11 @@ let
         (expectReject "Pi non-Hera/non-Pi profile accepted" piWrongProfileProbe.companions)
         (expectEqual "${profileId} provider set" (sortedNames expectedPiModels.providers) [
           "litellm"
+          "router"
         ])
+        (expectEqual "${profileId} static Pi LiteLLM model set" (map (
+          model: model.id
+        ) expectedPiModels.providers.litellm.models) [ "positron_openai/gpt-5.6-sol" ])
         (expectEqual "${profileId} selected models use only LiteLLM" (builtins.all (
           model: model.provider == "litellm"
         ) (builtins.attrValues (selectedModels profileId))) true)
@@ -2433,6 +2522,8 @@ let
   expectedAdapterVersions = {
     mcp-remote = "0.1.38";
     pi-mcp-adapter = "2.11.0";
+    pi-model-router = "0.4.4";
+    pi-provider-litellm = "2.0.0";
     pi-subagentura = "3.0.3";
   };
   expectedSecretRouting = {
@@ -2687,6 +2778,7 @@ let
     ".pi/agent/extensions/pi-mcp-adapter"
     ".pi/agent/extensions/pi-quiet"
     ".pi/agent/keybindings.json"
+    ".pi/agent/model-router.json"
     ".pi/agent/models.json"
   ];
   task9IsManagedHomePath =
@@ -3936,6 +4028,24 @@ pkgs.runCommand "ai-home-manager-smoke"
     test -f "${piExtensionSources.pi-quiet}/package.json"
     test -f "${piExtensionSources.pi-quiet}/src/index.ts"
 
+    helper_test="$TMPDIR/pi-litellm-api-key-test"
+    mkdir -p "$helper_test"
+    cat > "$helper_test/pass" <<'SH'
+    #!/bin/sh
+    test "$#" -eq 1
+    test "$1" = litellm.vulcan.lan
+    printf 'synthetic-first-line\nignored metadata\n'
+    SH
+    chmod +x "$helper_test/pass"
+    PI_LITELLM_PASS_BIN="$helper_test/pass" ${piLiteLLMApiKeyHelper} \
+      > "$helper_test/output" 2> "$helper_test/error"
+    test "$(cat "$helper_test/output")" = synthetic-first-line
+    test ! -s "$helper_test/error"
+    PI_LITELLM_PASS_BIN="$helper_test/missing" ${piLiteLLMApiKeyHelper} \
+      > "$helper_test/missing-output" 2> "$helper_test/missing-error" && exit 1
+    test ! -s "$helper_test/missing-output"
+    grep -Fx 'pi: LiteLLM credential is unavailable or empty' \
+      "$helper_test/missing-error" >/dev/null
 
     ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "aarch64-darwin") ''
       profile_path="${task9JohnwHera.config.home.path}"

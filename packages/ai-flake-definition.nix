@@ -2162,7 +2162,9 @@ in
         pi-hashline-edit-pro
         pi-lean-ctx
         pi-lens
+        pi-model-router
         pi-ponytail
+        pi-provider-litellm
         pi-subagentura
         pi-web-access
         plasma-fractal
@@ -2265,6 +2267,8 @@ in
             pi-lens
             pi-ponytail
             pi-subagentura
+            pi-provider-litellm
+            pi-model-router
             pi-web-access
             ;
         };

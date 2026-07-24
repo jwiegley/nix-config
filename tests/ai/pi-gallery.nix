@@ -18,6 +18,8 @@ let
     artifacts = root piPackages.pi-artifacts "pi-artifacts";
     insights = root piPackages.pi-insights "pi-insights";
     subagentura = root piPackages.pi-subagentura "pi-subagentura";
+    litellm = root piPackages.pi-provider-litellm "pi-provider-litellm";
+    router = root piPackages.pi-model-router "pi-model-router";
     hashline = root piPackages.pi-hashline-edit-pro "pi-hashline-edit-pro";
     web = root piPackages.pi-web-access "pi-web-access";
     lens = root piPackages.pi-lens "pi-lens";
@@ -62,6 +64,8 @@ runCommand "pi-gallery-check"
     expect_version ${roots.artifacts}/package.json 0.9.0
     expect_version ${roots.insights}/package.json 1.0.1
     expect_version ${roots.subagentura}/package.json 3.0.3
+    expect_version ${roots.litellm}/package.json 2.0.0
+    expect_version ${roots.router}/package.json 0.4.4
     expect_version ${roots.hashline}/package.json 0.17.5
     expect_version ${roots.web}/package.json 0.13.0
     expect_version ${roots.lens}/package.json 3.8.71
@@ -102,6 +106,21 @@ runCommand "pi-gallery-check"
     [ -d ${roots.subagentura}/node_modules/ndjson ]
     [ ! -e ${roots.subagentura}/node_modules/@earendil-works ]
     [ ! -e ${roots.subagentura}/node_modules/typebox ]
+
+    [ -f ${roots.litellm}/dist/index.js ]
+    [ ! -e ${roots.litellm}/node_modules ]
+    grep -F 'settings?.skills?.enabled === true' ${roots.litellm}/dist/index.js >/dev/null \
+      || fail "LiteLLM Skills Gateway is not explicit opt-in"
+    grep -F 'settings?.mcp?.enabled === true' ${roots.litellm}/dist/index.js >/dev/null \
+      || fail "LiteLLM MCP discovery is not explicit opt-in"
+    ! grep -R -F '@earendil-works/pi-ai/api/' ${roots.litellm}/dist >/dev/null \
+      || fail "LiteLLM provider retains Pi peer subpath imports"
+    grep -F 'openAIResponsesApi } from "@earendil-works/pi-ai"' \
+      ${roots.litellm}/dist/provider.js >/dev/null \
+      || fail "LiteLLM provider does not use Pi's extension-safe root export"
+    [ -f ${roots.router}/extensions/index.ts ]
+    [ -f ${roots.router}/extensions/routing.ts ]
+    [ ! -e ${roots.router}/node_modules ]
 
     substitute ${./pi-subagentura-tmux.test.ts} "$TMPDIR/pi-subagentura-tmux.test.ts" \
       --replace-fail '__SUBAGENTURA_ROOT__' ${roots.subagentura}
@@ -154,7 +173,7 @@ runCommand "pi-gallery-check"
 
     [ -f ${gallery}/index.ts ]
     [ -f ${gallery}/projection.json ]
-    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq 11 ]
+    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq 13 ]
     [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq 7 ]
     jq -e '
       [.packages[].name] == [
@@ -168,13 +187,297 @@ runCommand "pi-gallery-check"
         "pi-btw",
         "@jakeryderv/pi-artifacts",
         "@ygncode/pi-insights",
-        "pi-subagentura"
+        "pi-subagentura",
+        "pi-provider-litellm",
+        "@yeliu84/pi-model-router"
       ]
       and (.packages[] | select(.name == "@dietrichgebert/ponytail") | .skills == [])
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
     grep -F 'PI_WEB_ACCESS_PROVIDER = "perplexity"' ${gallery}/index.ts >/dev/null
     grep -F 'PI_LENS_DISABLE_LSP_INSTALL = "1"' ${gallery}/index.ts >/dev/null
     grep -F 'LEAN_CTX_BIN' ${gallery}/index.ts >/dev/null
+    grep -F 'pi-provider-litellm' ${gallery}/index.ts >/dev/null
+    grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
+
+    provider_smoke="$TMPDIR/pi-provider-router-smoke"
+    mkdir -p "$provider_smoke/home" "$provider_smoke/agent" "$provider_smoke/project"
+    cat > "$provider_smoke/key-helper" <<'SH'
+    #!/bin/sh
+    test "$#" -eq 0
+    : > "$PI_LITELLM_HELPER_MARKER"
+    printf '%s\n' synthetic-key
+    SH
+    chmod +x "$provider_smoke/key-helper"
+    cat > "$provider_smoke/agent/models.json" <<JSON
+    {
+      "providers": {
+        "litellm": {
+          "baseUrl": "https://litellm.invalid/v1",
+          "apiKey": "!$provider_smoke/key-helper",
+          "models": [{
+            "id": "positron_openai/gpt-5.6-sol",
+            "name": "GPT 5.6 Sol",
+            "api": "openai-responses",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "contextWindow": 1050000,
+            "maxTokens": 128000,
+            "cost": {"input": 5, "output": 30, "cacheRead": 0.5, "cacheWrite": 6.25}
+          }]
+        },
+        "router": {
+          "baseUrl": "router://local",
+          "apiKey": "pi-model-router",
+          "api": "router-local-api",
+          "models": [{
+            "id": "sol",
+            "name": "Router sol",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "contextWindow": 1050000,
+            "maxTokens": 128000,
+            "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
+            "thinkingLevelMap": {"xhigh": "xhigh"}
+          }]
+        }
+      }
+    }
+    JSON
+    cat > "$provider_smoke/agent/models-store.json" <<JSON
+    {
+      "litellm": {
+        "checkedAt": $(date +%s)000,
+        "models": [{
+          "id": "native-provider-proof",
+          "name": "Native provider proof",
+          "provider": "litellm",
+          "api": "openai-completions",
+          "baseUrl": "https://litellm.invalid/v1",
+          "reasoning": false,
+          "input": ["text"],
+          "contextWindow": 128000,
+          "maxTokens": 4096,
+          "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}
+        }]
+      }
+    }
+    JSON
+    cat > "$provider_smoke/agent/model-router.json" <<'JSON'
+    {
+      "debug": false,
+      "phaseBias": 0.5,
+      "models": {
+        "sol": {
+          "model": "litellm/positron_openai/gpt-5.6-sol",
+          "contextWindow": 1050000,
+          "maxTokens": 128000,
+          "reasoning": true,
+          "thinkingLevels": ["low", "medium", "high", "xhigh"]
+        }
+      },
+      "profiles": {
+        "sol": {
+          "high": {"model": "sol", "thinking": "xhigh"},
+          "medium": {"model": "sol", "thinking": "medium"},
+          "low": {"model": "sol", "thinking": "low"}
+        }
+      }
+    }
+    JSON
+    (
+      cd "$provider_smoke/project"
+      env -u LITELLM_API_KEY -u LITELLM_API_KEY_HELPER \
+      HOME="$provider_smoke/home" \
+      PI_CODING_AGENT_DIR="$provider_smoke/agent" \
+      PI_LITELLM_HELPER_MARKER="$provider_smoke/list-helper-invoked" \
+      PI_OFFLINE=1 \
+      ${coreutils}/bin/timeout 60 \
+        ${lib.getExe piPackage} \
+        --offline --no-session --no-context-files \
+        --no-extensions --no-skills --no-prompt-templates \
+        --extension ${gallery}/index.ts --list-models \
+        >"$provider_smoke/models.log" 2>"$provider_smoke/error.log"
+    ) || {
+      cat "$provider_smoke/models.log" >&2
+      cat "$provider_smoke/error.log" >&2
+      fail "LiteLLM provider/router model listing failed"
+    }
+    grep -F 'litellm' "$provider_smoke/models.log" | \
+      grep -F 'positron_openai/gpt-5.6-sol' >/dev/null \
+      || fail "native LiteLLM provider did not expose positron_openai/gpt-5.6-sol"
+    grep -F 'litellm' "$provider_smoke/models.log" | \
+      grep -F 'native-provider-proof' >/dev/null \
+      || fail "LiteLLM native provider did not load its cached dynamic catalog"
+    grep -F 'router' "$provider_smoke/models.log" | grep -F 'sol' >/dev/null \
+      || fail "model router did not expose router/sol"
+
+    cat > "$provider_smoke/auth-probe.ts" <<'TS'
+    import { writeFileSync } from "node:fs";
+
+    export default function authProbe(pi: any) {
+      pi.on("session_start", async (_event: unknown, ctx: any) => {
+        const result = await ctx.modelRegistry.getProviderAuth("litellm");
+        if (result?.auth?.apiKey !== "synthetic-key") {
+          throw new Error("LiteLLM command credential did not resolve");
+        }
+        writeFileSync(process.env.PI_LITELLM_AUTH_MARKER!, "ok\n");
+      });
+    }
+    TS
+    rm -f "$provider_smoke/auth-helper-invoked" "$provider_smoke/auth-ok"
+    printf '%s\n' '{"type":"get_commands"}' | (
+      cd "$provider_smoke/project"
+      env -u LITELLM_API_KEY -u LITELLM_API_KEY_HELPER \
+      HOME="$provider_smoke/home" \
+      PI_CODING_AGENT_DIR="$provider_smoke/agent" \
+      PI_LITELLM_HELPER_MARKER="$provider_smoke/auth-helper-invoked" \
+      PI_LITELLM_AUTH_MARKER="$provider_smoke/auth-ok" \
+      PI_OFFLINE=1 \
+        ${coreutils}/bin/timeout 60 \
+        ${lib.getExe piPackage} \
+        --mode rpc --offline --no-session --no-context-files \
+        --no-extensions --no-skills --no-prompt-templates --no-approve \
+        --extension ${gallery}/index.ts \
+        --extension "$provider_smoke/auth-probe.ts"
+    ) >"$provider_smoke/auth-output.log" 2>"$provider_smoke/auth-error.log" || {
+      cat "$provider_smoke/auth-error.log" >&2
+      fail "LiteLLM command credential probe failed"
+    }
+    [ -f "$provider_smoke/auth-helper-invoked" ] \
+      || fail "LiteLLM command credential helper was not invoked"
+    grep -Fx ok "$provider_smoke/auth-ok" >/dev/null \
+      || fail "LiteLLM command credential did not reach the model registry"
+
+    routing_smoke="$TMPDIR/pi-model-router-smoke"
+    mkdir -p "$routing_smoke/home" "$routing_smoke/agent" "$routing_smoke/project"
+    cat > "$routing_smoke/agent/models.json" <<'JSON'
+    {
+      "providers": {
+        "router": {
+          "api": "router-local-api",
+          "apiKey": "pi-model-router",
+          "baseUrl": "router://local",
+          "models": [{
+            "id": "sol",
+            "name": "Router sol",
+            "reasoning": true,
+            "input": ["text"],
+            "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
+            "contextWindow": 128000,
+            "maxTokens": 16384,
+            "thinkingLevelMap": {"xhigh": "xhigh"}
+          }]
+        }
+      }
+    }
+    JSON
+    cat > "$routing_smoke/agent/model-router.json" <<'JSON'
+    {
+      "profiles": {
+        "sol": {
+          "high": {
+            "model": "synthetic/target",
+            "thinking": "xhigh",
+            "thinkingLevels": ["low", "medium", "high", "xhigh"]
+          },
+          "medium": {
+            "model": "synthetic/target",
+            "thinking": "medium",
+            "thinkingLevels": ["low", "medium", "high", "xhigh"]
+          },
+          "low": {
+            "model": "synthetic/target",
+            "thinking": "low",
+            "thinkingLevels": ["low", "medium", "high", "xhigh"]
+          }
+        }
+      }
+    }
+    JSON
+    cat > "$routing_smoke/synthetic.ts" <<'TS'
+    import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
+    import { registerApiProvider } from "@earendil-works/pi-ai/compat";
+
+    function syntheticStream(model: any, _context: any, options: any) {
+      const stream = createAssistantMessageEventStream();
+      queueMicrotask(() => {
+        const text = options?.reasoning ?? "off";
+        const message: any = {
+          role: "assistant",
+          content: [{ type: "text", text }],
+          api: model.api,
+          provider: model.provider,
+          model: model.id,
+          usage: {
+            input: 0,
+            output: 1,
+            cacheRead: 0,
+            cacheWrite: 0,
+            totalTokens: 1,
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+          },
+          stopReason: "stop",
+          timestamp: Date.now(),
+        };
+        stream.push({ type: "start", partial: message });
+        stream.push({ type: "text_start", contentIndex: 0, partial: message });
+        stream.push({ type: "text_delta", contentIndex: 0, delta: text, partial: message });
+        stream.push({ type: "text_end", contentIndex: 0, content: text, partial: message });
+        stream.push({ type: "done", reason: "stop", message });
+        stream.end();
+      });
+      return stream;
+    }
+
+    export default function synthetic(pi: any) {
+      registerApiProvider({
+        api: "synthetic-api",
+        stream: syntheticStream,
+        streamSimple: syntheticStream,
+      });
+      pi.registerProvider("synthetic", {
+        baseUrl: "synthetic://local",
+        apiKey: "synthetic",
+        api: "synthetic-api",
+        models: [{
+          id: "target",
+          name: "Synthetic",
+          reasoning: true,
+          input: ["text"],
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          contextWindow: 128000,
+          maxTokens: 16384,
+          thinkingLevelMap: { xhigh: "xhigh" },
+        }],
+      });
+    }
+    TS
+    while IFS='|' read -r prompt expected; do
+      env -u LITELLM_API_KEY -u LITELLM_API_KEY_HELPER \
+      HOME="$routing_smoke/home" \
+      PI_CODING_AGENT_DIR="$routing_smoke/agent" \
+      PI_OFFLINE=1 \
+        ${coreutils}/bin/timeout 60 \
+        ${lib.getExe piPackage} \
+        --print --offline --no-session --no-context-files \
+        --no-extensions --no-skills --no-prompt-templates --no-approve \
+        --extension ${gallery}/index.ts \
+        --extension "$routing_smoke/synthetic.ts" \
+        --provider router --model sol "$prompt" \
+        </dev/null >"$routing_smoke/output" 2>"$routing_smoke/error" || {
+          cat "$routing_smoke/error" >&2
+          fail "model router failed for expected $expected tier"
+        }
+      [ "$(cat "$routing_smoke/output")" = "$expected" ] || {
+        cat "$routing_smoke/output" >&2
+        cat "$routing_smoke/error" >&2
+        fail "model router did not select expected $expected reasoning tier"
+      }
+    done <<'CASES'
+    briefly answer|low
+    implement the change|medium
+    think deeply about this architecture|xhigh
+    CASES
 
     smoke="$TMPDIR/pi-gallery-smoke"
     mkdir -p "$smoke/home" "$smoke/agent" "$smoke/project" "$smoke/sentinels"
@@ -225,6 +528,7 @@ runCommand "pi-gallery-check"
               "btw:tangent",
               "cancel-all-flows",
               "insights",
+              "router",
               "viewer",
               "workflow",
               "workflows"

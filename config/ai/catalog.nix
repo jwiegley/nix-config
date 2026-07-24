@@ -1406,6 +1406,8 @@ let
     adapterVersions = {
       mcp-remote = "0.1.38";
       pi-mcp-adapter = "2.11.0";
+      pi-model-router = "0.4.4";
+      pi-provider-litellm = "2.0.0";
       pi-subagentura = "3.0.3";
     };
 
