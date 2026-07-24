@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "bigpowers": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784856653,
+        "narHash": "sha256-+tf3MrlvbGqI9T/vE3wGJmpaQ59wg6FZG0PrYTYQUMg=",
+        "owner": "danielvm-git",
+        "repo": "bigpowers",
+        "rev": "960ab5283e7b7766f02fbf8703da5bb6e997159d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "danielvm-git",
+        "repo": "bigpowers",
+        "rev": "960ab5283e7b7766f02fbf8703da5bb6e997159d",
+        "type": "github"
+      }
+    },
     "bun2nix": {
       "inputs": {
         "flake-parts": [
@@ -288,6 +305,7 @@
     },
     "root": {
       "inputs": {
+        "bigpowers": "bigpowers",
         "git-ai": "git-ai",
         "llm-agents": "llm-agents",
         "mcp-remote": "mcp-remote",
@@ -300,7 +318,6 @@
         "pi-subagent": "pi-subagent",
         "ponytail": "ponytail",
         "rust-overlay": "rust-overlay_2",
-        "superpowers": "superpowers",
         "translate-tool": "translate-tool"
       }
     },
@@ -343,23 +360,6 @@
         "owner": "oxalica",
         "repo": "rust-overlay",
         "rev": "47759faaddf38fadaf172151ca9df8adae9c0b2e",
-        "type": "github"
-      }
-    },
-    "superpowers": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1783029415,
-        "narHash": "sha256-kHdQ9e44doBk2yYW88tMSCqVG8ycYcvJSZlrIziXhpA=",
-        "owner": "obra",
-        "repo": "superpowers",
-        "rev": "d884ae04edebef577e82ff7c4e143debd0bbec99",
-        "type": "github"
-      },
-      "original": {
-        "owner": "obra",
-        "repo": "superpowers",
-        "rev": "d884ae04edebef577e82ff7c4e143debd0bbec99",
         "type": "github"
       }
     },

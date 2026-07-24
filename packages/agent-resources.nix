@@ -9,9 +9,18 @@
 
 let
   gitSurgeonSource = (callPackage "${inputs.llm-agents}/packages/git-surgeon/package.nix" { }).src;
-
-  superpowersSkills = builtins.attrNames (
-    lib.filterAttrs (_name: type: type == "directory") (builtins.readDir "${inputs.superpowers}/skills")
+  bigpowers = import ../config/ai/bigpowers-resources.nix;
+  bigpowersSkills = builtins.attrNames (
+    lib.filterAttrs (_name: type: type == "directory") (
+      builtins.readDir "${inputs.bigpowers}/.pi/skills"
+    )
+  );
+  bigpowersPrompts = map (lib.removeSuffix ".md") (
+    builtins.attrNames (
+      lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".md" name) (
+        builtins.readDir "${inputs.bigpowers}/.pi/prompts"
+      )
+    )
   );
 
   ponytailSkills = [
@@ -23,10 +32,15 @@ let
     "ponytail-help"
   ];
 
-  copySuperpowersSkills = lib.concatMapStringsSep "\n" (name: ''
-    copy_skill ${lib.escapeShellArg "${inputs.superpowers}/skills/${name}"} \
-      ${lib.escapeShellArg name} ${lib.escapeShellArg "${inputs.superpowers}/LICENSE"}
-  '') superpowersSkills;
+  copyBigpowersSkills = lib.concatMapStringsSep "\n" (name: ''
+    copy_skill ${lib.escapeShellArg "${inputs.bigpowers}/.pi/skills/${name}"} \
+      ${lib.escapeShellArg name} ${lib.escapeShellArg "${inputs.bigpowers}/LICENSE"}
+  '') bigpowers.names;
+
+  copyBigpowersPrompts = lib.concatMapStringsSep "\n" (name: ''
+    cp -- ${lib.escapeShellArg "${inputs.bigpowers}/.pi/prompts/${name}.md"} \
+      "$prompts"/${lib.escapeShellArg "${name}.md"}
+  '') bigpowers.names;
 
   copyPonytailSkills = lib.concatMapStringsSep "\n" (name: ''
     copy_skill ${lib.escapeShellArg "${inputs.ponytail}/skills/${name}"} \
@@ -126,6 +140,19 @@ let
       "$pi_subagent"/${lib.escapeShellArg relative}
   '') piSubagentFiles;
 in
+assert bigpowersSkills == bigpowers.names;
+assert bigpowersPrompts == bigpowers.names;
+assert inputs.bigpowers.rev == bigpowers.revision;
+assert inputs.bigpowers.narHash == bigpowers.narHash;
+assert
+  builtins.hashFile "sha256" "${inputs.bigpowers}/package.json"
+  == "b95b2a687178b1d7314cc5cd66f6655269565b54abd139bc7b314c096aa3ddfb";
+assert
+  builtins.hashFile "sha256" "${inputs.bigpowers}/.pi/package.json"
+  == "3546705df79cc06abfb92ca3f97b01592da4c30bb7d837db496551401c9979a2";
+assert
+  builtins.hashFile "sha256" "${inputs.bigpowers}/LICENSE"
+  == "ab5c332485a9ffad649f5a341d5ecfd35abff52249bf2a5c958f168a002ce376";
 assert
   builtins.hashFile "sha256" "${inputs.pi-mcp-adapter}/package-lock.json"
   == "156cd7b65090cb5600651b40563dea3974fbeeaa7dbb6346f3deb0e9e0528bd0";
@@ -162,7 +189,7 @@ runCommand "agent-resources" { } ''
     fi
   }
 
-  ${copySuperpowersSkills}
+  ${copyBigpowersSkills}
   ${copyPonytailSkills}
   copy_skill ${lib.escapeShellArg "${gitSurgeonSource}/skills/git-surgeon"} \
     git-surgeon ${lib.escapeShellArg "${gitSurgeonSource}/LICENSE"}
@@ -174,6 +201,10 @@ runCommand "agent-resources" { } ''
     "$translate/SKILL.md"
   cp -- ${lib.escapeShellArg "${inputs.translate-tool}/glossary.csv"} \
     "$translate/GLOSSARY.csv"
+
+  prompts="$out/share/agent-resources/prompts/bigpowers"
+  mkdir -p "$prompts"
+  ${copyBigpowersPrompts}
 
   extensions="$out/share/agent-resources/pi-extensions"
   mkdir "$extensions"

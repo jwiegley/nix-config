@@ -6,6 +6,7 @@
   ];
 
   inputs = [
+    "bigpowers"
     "git-ai"
     "llm-agents"
     "mcp-remote"
@@ -18,7 +19,6 @@
     "pi-subagent"
     "ponytail"
     "rust-overlay"
-    "superpowers"
     "translate-tool"
   ];
 

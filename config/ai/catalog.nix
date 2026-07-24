@@ -709,6 +709,8 @@ let
   });
   commands = mkDocumentItems ./commands "commands" ".md" commandMetadata commandSelectors;
 
+  bigpowers = import ./bigpowers-resources.nix;
+
   localBroadSkills = [
     "anvil"
     "caveman"
@@ -728,10 +730,6 @@ let
     "wiggum"
   ];
   externalBroadSkills = [
-    "brainstorming"
-    "dispatching-parallel-agents"
-    "executing-plans"
-    "finishing-a-development-branch"
     "git-surgeon"
     "ponytail"
     "ponytail-audit"
@@ -739,17 +737,7 @@ let
     "ponytail-gain"
     "ponytail-help"
     "ponytail-review"
-    "receiving-code-review"
-    "requesting-code-review"
-    "subagent-driven-development"
-    "systematic-debugging"
-    "test-driven-development"
     "translate-en"
-    "using-git-worktrees"
-    "using-superpowers"
-    "verification-before-completion"
-    "writing-plans"
-    "writing-skills"
   ];
   resourceSkills = resources + "/share/agent-resources/skills";
 
@@ -766,20 +754,36 @@ let
   broadExternalSkillItems = lib.genAttrs externalBroadSkills (
     name: mkSkill resourceSkills name { clients = contentClients; }
   );
+  bigpowersSkillItems = lib.genAttrs bigpowers.names (
+    name: mkSkill resourceSkills name { clients = contentClients; }
+  );
   skills =
     broadLocalSkillItems
     // broadExternalSkillItems
+    // bigpowersSkillItems
     // {
       forge = mkSkill ./skills "forge" { clients = [ "claude" ]; };
       retest = mkSkill ./skills "retest" { audiences = [ "positron" ]; };
     };
 
-  prompts = lib.genAttrs [ "emacs" "spanish" ] (name: {
+  builtInPrompts = lib.genAttrs [ "emacs" "spanish" ] (name: {
     inherit name;
     source = ./prompts + "/${name}.md";
     targetPaths = [ "prompts/${name}.md" ];
     selectors.clients = contentClients;
   });
+  bigpowersPrompts = lib.listToAttrs (
+    map (
+      resourceName:
+      lib.nameValuePair "bigpowers-${resourceName}" {
+        name = "bigpowers-${resourceName}";
+        source = resources + "/share/agent-resources/prompts/bigpowers/${resourceName}.md";
+        targetPaths = [ "prompts/bigpowers-${resourceName}.md" ];
+        selectors.clients = contentClients;
+      }
+    ) bigpowers.names
+  );
+  prompts = builtInPrompts // bigpowersPrompts;
 
   typedEnv = env: { inherit env; };
   baseMcpSelectors = {
@@ -1183,7 +1187,6 @@ let
       selectors.clients = [ "claude" ];
       targetPaths = [ "marketplaces/claude-plugins-official" ];
       plugins = {
-        superpowers = true;
         clangd-lsp = true;
         pyright-lsp = true;
         rust-analyzer-lsp = true;

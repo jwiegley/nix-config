@@ -22,7 +22,7 @@ let
     import "${src}/config/ai/catalog.nix" {
       inherit lib;
       modelData = data;
-      resources = "/agent-resources";
+      resources = agentResources;
     };
   catalog = catalogFor modelData;
 
@@ -998,7 +998,6 @@ let
     "clangd-lsp@claude-plugins-official" = true;
     "pyright-lsp@claude-plugins-official" = true;
     "rust-analyzer-lsp@claude-plugins-official" = true;
-    "superpowers@claude-plugins-official" = true;
   };
 
   isTypedEnv =

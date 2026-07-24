@@ -1,6 +1,6 @@
 {
   pkgs,
-  superpowers ? null,
+  bigpowers ? null,
   ponytail ? null,
   translate-tool ? null,
   gitSurgeonSource ? null,
@@ -15,22 +15,8 @@
 let
   inherit (pkgs) lib;
 
-  superpowersSkills = [
-    "brainstorming"
-    "dispatching-parallel-agents"
-    "executing-plans"
-    "finishing-a-development-branch"
-    "receiving-code-review"
-    "requesting-code-review"
-    "subagent-driven-development"
-    "systematic-debugging"
-    "test-driven-development"
-    "using-git-worktrees"
-    "using-superpowers"
-    "verification-before-completion"
-    "writing-plans"
-    "writing-skills"
-  ];
+  bigpowersResources = import ../../config/ai/bigpowers-resources.nix;
+  bigpowersSkills = bigpowersResources.names;
 
   ponytailSkills = [
     "ponytail"
@@ -42,7 +28,7 @@ let
   ];
 
   expectedSkills =
-    superpowersSkills
+    bigpowersSkills
     ++ ponytailSkills
     ++ [
       "git-surgeon"
@@ -51,7 +37,7 @@ let
 
   resources = pkgs.agent-resources;
   haveSources =
-    superpowers != null && ponytail != null && translate-tool != null && gitSurgeonSource != null;
+    bigpowers != null && ponytail != null && translate-tool != null && gitSurgeonSource != null;
   havePiSources =
     piMcpAdapter != null && piOpenaiServerCompaction != null && piQuiet != null && piSubagent != null;
 
@@ -168,14 +154,29 @@ let
 
   expectedPins = [
     {
-      name = "superpowers revision";
-      actual = superpowers.rev or null;
-      expected = "d884ae04edebef577e82ff7c4e143debd0bbec99";
+      name = "bigpowers revision";
+      actual = bigpowers.rev or null;
+      expected = bigpowersResources.revision;
     }
     {
-      name = "superpowers NAR hash";
-      actual = superpowers.narHash or null;
-      expected = "sha256-kHdQ9e44doBk2yYW88tMSCqVG8ycYcvJSZlrIziXhpA=";
+      name = "bigpowers NAR hash";
+      actual = bigpowers.narHash or null;
+      expected = bigpowersResources.narHash;
+    }
+    {
+      name = "bigpowers package manifest hash";
+      actual = builtins.hashFile "sha256" "${bigpowers}/package.json";
+      expected = "b95b2a687178b1d7314cc5cd66f6655269565b54abd139bc7b314c096aa3ddfb";
+    }
+    {
+      name = "bigpowers Pi manifest hash";
+      actual = builtins.hashFile "sha256" "${bigpowers}/.pi/package.json";
+      expected = "3546705df79cc06abfb92ca3f97b01592da4c30bb7d837db496551401c9979a2";
+    }
+    {
+      name = "bigpowers license hash";
+      actual = builtins.hashFile "sha256" "${bigpowers}/LICENSE";
+      expected = "ab5c332485a9ffad649f5a341d5ecfd35abff52249bf2a5c958f168a002ce376";
     }
     {
       name = "ponytail revision";
@@ -272,14 +273,14 @@ let
   ) badPins;
 
   expectedSkillArgs = lib.escapeShellArgs expectedSkills;
-  superpowersSkillArgs = lib.escapeShellArgs superpowersSkills;
+  bigpowersSkillArgs = lib.escapeShellArgs bigpowersSkills;
   ponytailSkillArgs = lib.escapeShellArgs ponytailSkills;
 
-  copySuperpowersExpected = lib.concatMapStringsSep "\n" (name: ''
-    copy_expected_tree ${lib.escapeShellArg "${superpowers}/skills/${name}"} "$expected/${name}"
-    cp -a -- ${lib.escapeShellArg "${superpowers}/LICENSE"} "$expected/${name}/LICENSE"
-    chmod --reference=${lib.escapeShellArg "${superpowers}/skills/${name}"} "$expected/${name}"
-  '') superpowersSkills;
+  copyBigpowersExpected = lib.concatMapStringsSep "\n" (name: ''
+    copy_expected_tree ${lib.escapeShellArg "${bigpowers}/.pi/skills/${name}"} "$expected/${name}"
+    cp -a -- ${lib.escapeShellArg "${bigpowers}/LICENSE"} "$expected/${name}/LICENSE"
+    chmod --reference=${lib.escapeShellArg "${bigpowers}/.pi/skills/${name}"} "$expected/${name}"
+  '') bigpowersSkills;
 
   copyPonytailExpected = lib.concatMapStringsSep "\n" (name: ''
     copy_expected_tree ${lib.escapeShellArg "${ponytail}/skills/${name}"} "$expected/${name}"
@@ -491,7 +492,7 @@ else
         done < <(find -P "$tree" -mindepth 1 -print0 | sort -z)
       }
 
-      ${copySuperpowersExpected}
+      ${copyBigpowersExpected}
       ${copyPonytailExpected}
       copy_expected_tree \
         ${lib.escapeShellArg "${gitSurgeonSource}/skills/git-surgeon"} \
@@ -518,7 +519,7 @@ else
       find -P "$actual" -mindepth 1 -maxdepth 1 -printf '%f\0' \
         | sort -z >"$TMPDIR/actual-names"
       cmp "$TMPDIR/expected-names" "$TMPDIR/actual-names" \
-        || fail "skill name set differs from the expected 22 names"
+        || fail "skill name set differs from the expected Bigpowers replacement set"
 
       for name in ${expectedSkillArgs}; do
         [ -d "$actual/$name" ] && [ ! -L "$actual/$name" ] \
@@ -527,7 +528,7 @@ else
           || fail "missing regular SKILL.md: $name"
       done
 
-      for name in ${superpowersSkillArgs} git-surgeon; do
+      for name in ${bigpowersSkillArgs} git-surgeon; do
         [ -f "$actual/$name/LICENSE" ] && [ ! -L "$actual/$name/LICENSE" ] \
           || fail "missing regular injected LICENSE: $name"
       done
@@ -560,6 +561,18 @@ else
       write_manifest "$actual" "$TMPDIR/actual.manifest"
       cmp "$TMPDIR/expected.manifest" "$TMPDIR/actual.manifest" \
         || fail "framed path/type/mode/link/content manifests differ"
+
+      actual_prompts=${resources}/share/agent-resources/prompts/bigpowers
+      expected_prompts="$TMPDIR/expected-prompts"
+      mkdir "$expected_prompts"
+      for name in ${bigpowersSkillArgs}; do
+        cp -a -- ${lib.escapeShellArg "${bigpowers}/.pi/prompts"}/"$name.md" \
+          "$expected_prompts/$name.md"
+      done
+      write_manifest "$expected_prompts" "$TMPDIR/expected-prompts.manifest"
+      write_manifest "$actual_prompts" "$TMPDIR/actual-prompts.manifest"
+      cmp "$TMPDIR/expected-prompts.manifest" "$TMPDIR/actual-prompts.manifest" \
+        || fail "Bigpowers prompt manifest differs"
 
       extensions=${resources}/share/agent-resources/pi-extensions
       missing_extensions=

@@ -2189,8 +2189,8 @@ in
           throw "ai-nix llm-agents must retain its own nixpkgs input";
       agent-resources = pkgs.callPackage ../tests/ai/agent-resources.nix {
         inherit (pkgs.inputs)
+          bigpowers
           ponytail
-          superpowers
           translate-tool
           ;
         gitSurgeonSource = pkgs.inputs.llm-agents.packages.${system}.git-surgeon.src;

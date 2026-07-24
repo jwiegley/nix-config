@@ -16,8 +16,8 @@
 
     llm-agents.url = "github:numtide/llm-agents.nix";
 
-    superpowers = {
-      url = "github:obra/superpowers/d884ae04edebef577e82ff7c4e143debd0bbec99";
+    bigpowers = {
+      url = "github:danielvm-git/bigpowers/960ab5283e7b7766f02fbf8703da5bb6e997159d";
       flake = false;
     };
 
