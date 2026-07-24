@@ -168,7 +168,7 @@ Home Manager owns the smallest complete leaf that can be declarative. It never o
 | Codex | Selected agent TOML, exact user skill trees, `nix-managed.config.toml`, and profile-root `hooks.json` | Base `config.toml`, auth, sessions, history, SQLite, logs, system skills | Wrapper selects profile `nix-managed` on effective runtime surfaces; base config retains hook trust state |
 | OpenCode | Complete `opencode.json`, selected agents, commands, skills | Data, state, cache, npm/package trees | Native loading; no wrapper |
 | Droid | Selected droids, command-as-skill trees, skills, `mcp.json`, `nix-managed-settings.json` | Base `settings.json`, auth, trusted folders, UI state, sessions | Wrapper injects managed settings |
-| Pi | Prompts, subagent definitions, `models.json`, extensions, standard global MCP catalog | `settings.json`, auth, sessions, model store, package selections, settings-only adapter override/cache/OAuth | Native discovery and pinned extensions |
+| Pi | Prompts, subagent definitions, `models.json`, `keybindings.json`, extensions, standard global MCP catalog | `settings.json`, auth, sessions, model store, package selections, settings-only adapter override/cache/OAuth | Native discovery and pinned extensions |
 
 Injecting wrappers are safe on installed-but-unmanaged profiles. With no managed artifacts present for the active root, the wrapper passes through without injection. With the complete expected artifact set present, it injects the managed flags. Partial presence fails with a clear repair message. This keeps the git-ai Claude persona, Codex on Vulcan, and Droid outside Hera usable without accidentally applying another profile.
 

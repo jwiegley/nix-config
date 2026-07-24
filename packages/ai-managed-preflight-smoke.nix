@@ -35,6 +35,9 @@ let
   task9PiLeafPreflight = preflightFactory {
     newPaths = [ ".pi/agent/agents/bash-reviewer.md" ];
   };
+  task9PiKeybindingsPreflight = preflightFactory {
+    newPaths = [ ".pi/agent/keybindings.json" ];
+  };
   task9SharedLeafPreflight = preflightFactory {
     newPaths = [
       ".agents/skills/nix-managed/SKILL.md"
@@ -65,6 +68,7 @@ let
   '';
   task9PreflightNoPiScript = writePreflightScript "task9-ai-preflight-no-pi" task9PreflightWithoutPi;
   task9PiLeafPreflightScript = writePreflightScript "task9-ai-pi-leaf-preflight" task9PiLeafPreflight;
+  task9PiKeybindingsPreflightScript = writePreflightScript "task9-ai-pi-keybindings-preflight" task9PiKeybindingsPreflight;
   task9SharedLeafPreflightScript = writePreflightScript "task9-ai-shared-leaf-preflight" task9SharedLeafPreflight;
   invalidPreflightProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".config/not-a-managed-ai-leaf" ];
@@ -151,6 +155,7 @@ pkgs.runCommand "ai-managed-preflight-smoke"
     retained_path=".config/claude/personal/agents/retained.md"
     removed_path=".config/claude/personal/agents/removed.md"
     pi_leaf_path=".pi/agent/agents/bash-reviewer.md"
+    pi_keybindings_path=".pi/agent/keybindings.json"
     legacy_claude=".local/bin/claude"
 
     make_leaf() {
@@ -249,7 +254,7 @@ pkgs.runCommand "ai-managed-preflight-smoke"
         return 1
       fi
       case "$script" in
-        *task9-ai-pi-leaf-preflight)
+        *task9-ai-pi-leaf-preflight | *task9-ai-pi-keybindings-preflight)
           expected_count=1
           expected_noun=path
           ;;
@@ -321,7 +326,7 @@ pkgs.runCommand "ai-managed-preflight-smoke"
             expected_output="$new_path: blocking parent is a symlink into the Nix store: $case_home/.config/claude
     $retained_path: blocking parent is a symlink into the Nix store: $case_home/.config/claude"
             ;;
-          shared-pi-leaf-collision)
+          shared-pi-leaf-collision | pi-keybindings-collision)
             expected_output="$fragment: blocking leaf is a regular file: $case_home/$fragment"
             ;;
           aggregate-*)
@@ -619,6 +624,11 @@ pkgs.runCommand "ai-managed-preflight-smoke"
     make_leaf "$pi_root" "agent/agents/bash-reviewer.md" unmanaged
     run_checked fail shared-pi-leaf-collision "$pi_leaf_path" \
       "${task9PiLeafPreflightScript}" present
+
+    setup_empty_case pi-keybindings-collision
+    make_leaf "$case_home" "$pi_keybindings_path" unmanaged
+    run_checked fail pi-keybindings-collision "$pi_keybindings_path" \
+      "${task9PiKeybindingsPreflightScript}" absent
 
     write_pi() {
       value=$1

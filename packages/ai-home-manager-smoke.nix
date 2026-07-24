@@ -1304,6 +1304,44 @@ let
   expectedPiMcp = {
     mcpServers = lib.mapAttrs expectedPiMcpServer (selectFor "hera-pi" catalog.items.mcpServers);
   };
+  expectedPiKeybindings = {
+    "tui.editor.cursorUp" = [
+      "up"
+      "ctrl+p"
+    ];
+    "tui.editor.cursorDown" = [
+      "down"
+      "ctrl+n"
+    ];
+    "tui.editor.cursorLeft" = [
+      "left"
+      "ctrl+b"
+    ];
+    "tui.editor.cursorRight" = [
+      "right"
+      "ctrl+f"
+    ];
+    "tui.editor.cursorWordLeft" = [
+      "alt+left"
+      "alt+b"
+    ];
+    "tui.editor.cursorWordRight" = [
+      "alt+right"
+      "alt+f"
+    ];
+    "tui.editor.deleteCharForward" = [
+      "delete"
+      "ctrl+d"
+    ];
+    "tui.editor.deleteCharBackward" = [
+      "backspace"
+      "ctrl+h"
+    ];
+    "tui.input.newLine" = [
+      "shift+enter"
+      "ctrl+j"
+    ];
+  };
 
   expectedClaudeSettings =
     profileId:
@@ -1413,6 +1451,7 @@ let
         "${root}/extensions/pi-mcp-adapter"
         "${root}/extensions/pi-quiet"
         "${root}/extensions/pi-subagent"
+        "${root}/keybindings.json"
         "${root}/models.json"
       ]
     );
@@ -1835,6 +1874,13 @@ let
       file = path: render.files.${path};
     in
     [
+      {
+        kind = "json";
+        label = "${profileId} keybindings";
+        path = documentSource "${profileId}-keybindings.json" (file "${profile.root}/keybindings.json");
+        expected = expectedPiKeybindings;
+        forbidden = [ ];
+      }
       {
         kind = "json";
         label = "${profileId} models";
@@ -2648,6 +2694,7 @@ let
     ".pi/agent/extensions/pi-mcp-adapter"
     ".pi/agent/extensions/pi-quiet"
     ".pi/agent/extensions/pi-subagent"
+    ".pi/agent/keybindings.json"
     ".pi/agent/models.json"
   ];
   task9IsManagedHomePath =

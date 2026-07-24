@@ -56,6 +56,7 @@ let
     ".pi/agent/extensions/pi-mcp-adapter"
     ".pi/agent/extensions/pi-quiet"
     ".pi/agent/extensions/pi-subagent"
+    ".pi/agent/keybindings.json"
     ".pi/agent/models.json"
   ];
   validRelativePath =
