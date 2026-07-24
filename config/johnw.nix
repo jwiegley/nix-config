@@ -216,9 +216,9 @@ in
       nix-direnv.enable = true;
     };
 
-    git-ai = lib.mkIf vars.gitAiEnabled {
-      enable = false;
-      installHooks = true;
+    git-ai = {
+      enable = vars.gitAiEnabled;
+      installHooks = vars.gitAiEnabled;
       settings = {
         apiKeyFile = "${vars.home}/.git-ai/api-key";
 

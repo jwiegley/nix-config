@@ -3020,6 +3020,13 @@ let
   task9FlakeSource = builtins.readFile "${src}/flake.nix";
 
   task9Checks = [
+    (expectEqual "Task 9 Hera Git-AI remains disabled" task9JohnwHera.config.programs.git-ai.enable
+      false
+    )
+    (expectEqual "Task 9 Hera Git-AI hook installation remains disabled"
+      task9JohnwHera.config.programs.git-ai.installHooks
+      false
+    )
     (expectEqual "Task 9 direct raw Claude writer removed"
       (builtins.hasAttr ".local/bin/claude" task9JohnwHera.config.home.file)
       false
