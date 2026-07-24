@@ -7,6 +7,8 @@
 
 {
   inputs,
+  # Optional: use the portable config/ai flake's overlay in external consumers.
+  aiOverlay ? null,
   # Optional: path to the Vulcan private root CA. Only available on hosts
   # that have local access to the certificate file (i.e. hera, clio, vulcan).
   # Remote consumers of this repo (andoria, ovh-vps) pass `null` and skip the
@@ -16,7 +18,7 @@
 
 let
   overlayDir = ../overlays;
-  aiOverlays = import ../overlays/ai { inherit inputs; };
+  aiOverlays = if aiOverlay == null then import ../overlays/ai { inherit inputs; } else [ aiOverlay ];
   isImportableOverlay =
     n:
     n != "ai"

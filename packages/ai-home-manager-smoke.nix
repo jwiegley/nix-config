@@ -26,6 +26,16 @@ let
       resources = agentResources;
     };
   catalog = catalogFor modelData;
+  externalAiOverlay = _final: _prev: { external-ai-marker = true; };
+  externalOverlayProbe =
+    (builtins.head (
+      import "${src}/config/overlays.nix" {
+        inherit inputs;
+        aiOverlay = externalAiOverlay;
+      }
+    ))
+      { }
+      { };
 
   replaceAt =
     index: transform: values:
@@ -3590,6 +3600,10 @@ let
     ];
 
   contractChecks = [
+    (expectEqual "external AI overlay replaces local AI composition"
+      externalOverlayProbe.external-ai-marker
+      true
+    )
     (expectEqual "OpenCode bash-reviewer tool oracle" (builtins.hashString "sha256" (
       builtins.toJSON (expectedOpenCodeAgentMetadata catalog.items.agents.bash-reviewer)
     )) "27eaf3302a4ff6cd97d4a0f5a7027d57c121f362318c1b4d011b0fce691b3e1a")
