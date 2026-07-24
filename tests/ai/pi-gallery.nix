@@ -132,13 +132,25 @@ runCommand "pi-gallery-check"
     grep -F 'LEAN_CTX_BIN' ${gallery}/index.ts >/dev/null
 
     smoke="$TMPDIR/pi-gallery-smoke"
-    mkdir -p "$smoke/home" "$smoke/agent"
+    mkdir -p "$smoke/home" "$smoke/agent" "$smoke/project" "$smoke/sentinels"
+    printf '%s\n' '{"name":"lens-language-gate","private":true}' > "$smoke/project/package.json"
+    printf '%s\n' 'const answer: number = 42;' > "$smoke/project/probe.ts"
+    printf '%s\n' 'answer: int = 42' > "$smoke/project/probe.py"
+    for command in npm npx pip pip3 curl wget bun pnpm yarn; do
+      cat > "$smoke/sentinels/$command" <<'SH'
+    #!/bin/sh
+    printf '%s\n' "$0 $*" >> "$PI_GALLERY_INSTALLER_SENTINEL"
+    exit 97
+    SH
+      chmod +x "$smoke/sentinels/$command"
+    done
     (
-      cd "$smoke/home"
+      cd "$smoke/project"
       HOME="$smoke/home" \
       PI_CODING_AGENT_DIR="$smoke/agent" \
+      PI_GALLERY_INSTALLER_SENTINEL="$smoke/installer-invocations" \
       PI_OFFLINE=1 \
-      PATH=${
+      PATH="$smoke/sentinels":${
         lib.makeBinPath [
           piPackages.agent-browser
           piPackages.lean-ctx
@@ -156,6 +168,12 @@ runCommand "pi-gallery-check"
     }
     [ ! -e "$smoke/agent/settings.json" ] || fail "gallery wrote Pi settings"
     [ ! -e "$smoke/home/.npm" ] || fail "gallery invoked npm"
+    [ ! -e "$smoke/installer-invocations" ] || {
+      cat "$smoke/installer-invocations" >&2
+      fail "Lens invoked a runtime installer or downloader"
+    }
+    [ ! -e "$smoke/home/.pi-lens/bin" ] || fail "Lens populated its managed binary directory"
+    [ ! -e "$smoke/home/.pi-lens/tools" ] || fail "Lens populated its managed tool directory"
 
     quiet_smoke="$TMPDIR/pi-quiet-renderer-smoke"
     mkdir -p "$quiet_smoke/home" "$quiet_smoke/agent"
