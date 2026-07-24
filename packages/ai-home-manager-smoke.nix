@@ -1433,7 +1433,6 @@ let
     nix-gallery = "${piPkgs.pi-gallery}/share/pi-gallery/index.ts";
     pi-mcp-adapter = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter";
     pi-quiet = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-quiet";
-    pi-subagent = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-subagent";
   };
   expectedPiPaths =
     profileId:
@@ -1450,7 +1449,6 @@ let
         "${root}/extensions/nix-gallery/index.ts"
         "${root}/extensions/pi-mcp-adapter"
         "${root}/extensions/pi-quiet"
-        "${root}/extensions/pi-subagent"
         "${root}/keybindings.json"
         "${root}/models.json"
       ]
@@ -2167,10 +2165,6 @@ let
           render.files."${profile.root}/extensions/pi-mcp-adapter"
           { source = piExtensionSources.pi-mcp-adapter; }
         )
-        (expectEqual "${profileId} subagent extension link"
-          render.files."${profile.root}/extensions/pi-subagent"
-          { source = piExtensionSources.pi-subagent; }
-        )
         (expectEqual "${profileId} quiet extension link" render.files."${profile.root}/extensions/pi-quiet"
           { source = piExtensionSources.pi-quiet; }
         )
@@ -2179,7 +2173,6 @@ let
           "nix-gallery"
           "pi-mcp-adapter"
           "pi-quiet"
-          "pi-subagent"
         ])
         (expectEqual "${profileId} extension sources are unique" (builtins.length (
           lib.unique (builtins.attrValues piExtensionSources)
@@ -2440,7 +2433,7 @@ let
   expectedAdapterVersions = {
     mcp-remote = "0.1.38";
     pi-mcp-adapter = "2.11.0";
-    pi-subagent = "3.0.0";
+    pi-subagentura = "3.0.3";
   };
   expectedSecretRouting = {
     claude = {
@@ -2693,7 +2686,6 @@ let
     ".pi/agent/extensions/nix-gallery/index.ts"
     ".pi/agent/extensions/pi-mcp-adapter"
     ".pi/agent/extensions/pi-quiet"
-    ".pi/agent/extensions/pi-subagent"
     ".pi/agent/keybindings.json"
     ".pi/agent/models.json"
   ];
@@ -3020,6 +3012,13 @@ let
   task9FlakeSource = builtins.readFile "${src}/flake.nix";
 
   task9Checks = [
+    (expectEqual "Task 9 Hera has Node for Pi Subagentura"
+      (task9HeraHasPackage task9DarwinPkgs.nodejs_22)
+      true
+    )
+    (expectEqual "Task 9 Hera has tmux for Pi Subagentura" (task9HeraHasPackage task9DarwinPkgs.tmux)
+      true
+    )
     (expectEqual "Task 9 Hera Git-AI module evaluates disabled"
       task9JohnwHera.config.programs.git-ai.enable
       false
@@ -3936,8 +3935,6 @@ pkgs.runCommand "ai-home-manager-smoke"
     test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/zod"
     test -f "${piExtensionSources.pi-quiet}/package.json"
     test -f "${piExtensionSources.pi-quiet}/src/index.ts"
-    test -f "${piExtensionSources.pi-subagent}/package.json"
-    test -f "${piExtensionSources.pi-subagent}/index.ts"
 
 
     ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "aarch64-darwin") ''

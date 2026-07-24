@@ -1406,7 +1406,7 @@ let
     adapterVersions = {
       mcp-remote = "0.1.38";
       pi-mcp-adapter = "2.11.0";
-      pi-subagent = "3.0.0";
+      pi-subagentura = "3.0.3";
     };
 
     secretRouting = {

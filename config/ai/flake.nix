@@ -81,8 +81,23 @@
       flake = false;
     };
 
-    pi-subagent = {
-      url = "github:mjakl/pi-subagent/70248dcf7c8a5ca74497e817a699f009c55e6917";
+    pi-artifacts = {
+      url = "github:jakeryderv/pi-packages/9056b18bac35d01fa79d255911f0a74b919c46d2";
+      flake = false;
+    };
+
+    pi-btw = {
+      url = "github:dbachelder/pi-btw/4f858102706910ee9d520a9666832f3103631b61";
+      flake = false;
+    };
+
+    pi-insights = {
+      url = "github:ygncode/pi-insights/f2de4880e5d8b1f66f207e220269703b6ca38ecf";
+      flake = false;
+    };
+
+    pi-subagentura = {
+      url = "github:lmn451/pi-subagentura/e49e4d259a1b0186ac6924602b5faf673f61bee3";
       flake = false;
     };
 

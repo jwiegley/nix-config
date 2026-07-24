@@ -333,7 +333,6 @@ assert builtins.hasAttr "pi-gallery" pkgs;
       "${root}/extensions/nix-gallery/index.ts".source = "${pkgs.pi-gallery}/share/pi-gallery/index.ts";
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
       "${root}/extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
-      "${root}/extensions/pi-subagent".source = "${extensionRoot}/pi-subagent";
       "${root}/keybindings.json".source = json.generate "pi-${profile.id}-keybindings.json" keybindings;
       "${root}/models.json".source = json.generate "pi-${profile.id}-models.json" models;
       "${globalMcpPath}".source = json.generate "pi-${profile.id}-mcp.json" mcp;

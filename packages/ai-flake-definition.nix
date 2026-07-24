@@ -2154,12 +2154,16 @@ in
         bigpowers
         lean-ctx
         pi-agent-browser-native
+        pi-artifacts
+        pi-btw
         pi-dynamic-workflows
         pi-gallery
+        pi-insights
         pi-hashline-edit-pro
         pi-lean-ctx
         pi-lens
         pi-ponytail
+        pi-subagentura
         pi-web-access
         plasma-fractal
         plasma-wiki
@@ -2232,7 +2236,6 @@ in
         piMcpAdapter = pkgs.inputs.pi-mcp-adapter;
         piOpenaiServerCompaction = pkgs.inputs.pi-openai-server-compaction;
         piQuiet = pkgs.inputs.pi-quiet;
-        piSubagent = pkgs.inputs.pi-subagent;
         piPackage = patchAgentPackage pkgs "pi" pkgs.inputs.llm-agents.packages.${system}.pi;
       };
       agent-wrappers = pkgs.callPackage ../tests/ai/agent-wrappers.nix {
@@ -2252,12 +2255,16 @@ in
             bigpowers
             lean-ctx
             pi-agent-browser-native
+            pi-artifacts
+            pi-btw
             pi-dynamic-workflows
             pi-gallery
+            pi-insights
             pi-hashline-edit-pro
             pi-lean-ctx
             pi-lens
             pi-ponytail
+            pi-subagentura
             pi-web-access
             ;
         };

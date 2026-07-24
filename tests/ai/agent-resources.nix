@@ -8,7 +8,6 @@
   piMcpAdapter ? null,
   piOpenaiServerCompaction ? null,
   piQuiet ? null,
-  piSubagent ? null,
   piPackage,
 }:
 
@@ -38,8 +37,7 @@ let
   resources = pkgs.agent-resources;
   haveSources =
     bigpowers != null && ponytail != null && translate-tool != null && gitSurgeonSource != null;
-  havePiSources =
-    piMcpAdapter != null && piOpenaiServerCompaction != null && piQuiet != null && piSubagent != null;
+  havePiSources = piMcpAdapter != null && piOpenaiServerCompaction != null && piQuiet != null;
 
   piQuietFiles = [
     "package.json"
@@ -129,28 +127,10 @@ let
     "LICENSE"
   ];
 
-  piSubagentFiles = [
-    "index.ts"
-    "agents.ts"
-    "contract.ts"
-    "output.ts"
-    "runner.ts"
-    "runner-cli.js"
-    "runner-events.js"
-    "session-lock.ts"
-    "session-paths.ts"
-    "render.ts"
-    "types.ts"
-    "agents/oracle.md"
-    "README.md"
-    "LICENSE"
-  ];
-
   piMcpFileArgs = lib.escapeShellArgs ([ "package.json" ] ++ piMcpFiles);
   piQuietFileArgs = lib.escapeShellArgs piQuietFiles;
   piQuietPackagedFileArgs = lib.escapeShellArgs (piQuietFiles ++ [ "LICENSE" ]);
   piOpenaiServerCompactionFileArgs = lib.escapeShellArgs piOpenaiServerCompactionFiles;
-  piSubagentFileArgs = lib.escapeShellArgs ([ "package.json" ] ++ piSubagentFiles);
 
   expectedPins = [
     {
@@ -249,21 +229,6 @@ let
       name = "pi-quiet manifest hash";
       actual = builtins.hashFile "sha256" "${piQuiet}/packages/pi-quiet/package.json";
       expected = "1b370c62fdf7b3b5a9fb35b45ba0cf0e3ceefa35e037f7cd9911b816ad03e4fa";
-    }
-    {
-      name = "pi-subagent revision";
-      actual = piSubagent.rev or null;
-      expected = "70248dcf7c8a5ca74497e817a699f009c55e6917";
-    }
-    {
-      name = "pi-subagent NAR hash";
-      actual = piSubagent.narHash or null;
-      expected = "sha256-TyeqNoz5RLRlDWY4rcZbOY/UCHOMiNIjuGsW2xZoTEE=";
-    }
-    {
-      name = "pi-subagent lock hash";
-      actual = builtins.hashFile "sha256" "${piSubagent}/package-lock.json";
-      expected = "a7fbb2c6c10ee6af111dcf7a10064770cc360e818b6f424854c231ed6872d5ff";
     }
   ];
 
@@ -575,8 +540,10 @@ else
         || fail "Bigpowers prompt manifest differs"
 
       extensions=${resources}/share/agent-resources/pi-extensions
+      [ ! -e "$extensions/pi-subagent" ] && [ ! -L "$extensions/pi-subagent" ] \
+        || fail "retired pi-subagent root is still packaged"
       missing_extensions=
-      for name in pi-mcp-adapter pi-openai-server-compaction pi-quiet pi-subagent; do
+      for name in pi-mcp-adapter pi-openai-server-compaction pi-quiet; do
         if [ ! -d "$extensions/$name" ] || [ -L "$extensions/$name" ]; then
           missing_extensions="$missing_extensions $name"
         fi
@@ -592,12 +559,10 @@ else
         mcp="$extensions/pi-mcp-adapter"
         openai_compaction="$extensions/pi-openai-server-compaction"
         quiet="$extensions/pi-quiet"
-        subagent="$extensions/pi-subagent"
 
         validate_tree "$mcp"
         validate_tree "$openai_compaction"
         validate_tree "$quiet"
-        validate_tree "$subagent"
 
         quiet_expected="$TMPDIR/pi-quiet-expected"
         mkdir -p "$quiet_expected/src"
@@ -775,25 +740,6 @@ else
             || fail "modified pi-mcp-adapter file: $relative"
         done
 
-        printf '%s\0' ${piSubagentFileArgs} \
-          | sort -z >"$TMPDIR/expected-subagent-files"
-        find -P "$subagent" -mindepth 1 -type f -printf '%P\0' \
-          | sort -z >"$TMPDIR/actual-subagent-files"
-        cmp "$TMPDIR/expected-subagent-files" "$TMPDIR/actual-subagent-files" \
-          || fail "pi-subagent packaged file set differs"
-        printf 'agents\0' >"$TMPDIR/expected-subagent-dirs"
-        find -P "$subagent" -mindepth 1 -type d -printf '%P\0' \
-          | sort -z >"$TMPDIR/actual-subagent-dirs"
-        cmp "$TMPDIR/expected-subagent-dirs" "$TMPDIR/actual-subagent-dirs" \
-          || fail "pi-subagent directory set differs"
-
-        for relative in ${piSubagentFileArgs}; do
-          [ -f "$subagent/$relative" ] && [ ! -L "$subagent/$relative" ] \
-            || fail "missing regular pi-subagent file: $relative"
-          cmp ${lib.escapeShellArg "${piSubagent}"}/"$relative" "$subagent/$relative" \
-            || fail "modified pi-subagent file: $relative"
-        done
-
         jq -e '
           .name == "pi-mcp-adapter"
           and .version == "2.11.0"
@@ -805,35 +751,6 @@ else
             | not)
         ' "$mcp/package.json" >/dev/null \
           || fail "invalid pi-mcp-adapter package manifest"
-
-        jq -e '
-          .name == "@mjakl/pi-subagent"
-          and .version == "3.0.0"
-          and .type == "module"
-          and .main == "index.ts"
-          and .pi.extensions == ["./index.ts"]
-          and .peerDependencies == {
-            "@earendil-works/pi-agent-core": ">=0.80.5",
-            "@earendil-works/pi-ai": ">=0.80.5",
-            "@earendil-works/pi-coding-agent": ">=0.80.5",
-            "@earendil-works/pi-tui": ">=0.80.5",
-            "typebox": "*"
-          }
-          and ((.scripts // {})
-            | (has("preinstall") or has("install") or has("postinstall") or has("prepare"))
-            | not)
-        ' "$subagent/package.json" >/dev/null \
-          || fail "invalid pi-subagent package manifest"
-
-        jq -e '
-          .name == "@earendil-works/pi-coding-agent"
-          and .version == "0.81.1"
-          and .dependencies["@earendil-works/pi-agent-core"] == "^0.81.1"
-          and .dependencies["@earendil-works/pi-ai"] == "^0.81.1"
-          and .dependencies["@earendil-works/pi-tui"] == "^0.81.1"
-          and .dependencies.typebox == "1.1.38"
-        ' ${lib.escapeShellArg "${piPackage}/libexec/pi/package.json"} >/dev/null \
-          || fail "llm-agents Pi package does not satisfy pi-subagent peers"
 
         node --experimental-import-meta-resolve ${piClosureCheck} \
           "$mcp" ${lib.escapeShellArg "${piMcpAdapter}/package-lock.json"}

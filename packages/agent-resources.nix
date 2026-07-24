@@ -118,27 +118,6 @@ let
     '';
   };
 
-  piSubagentFiles = [
-    "package.json"
-    "index.ts"
-    "agents.ts"
-    "contract.ts"
-    "output.ts"
-    "runner.ts"
-    "runner-cli.js"
-    "runner-events.js"
-    "session-lock.ts"
-    "session-paths.ts"
-    "render.ts"
-    "types.ts"
-    "README.md"
-    "LICENSE"
-  ];
-
-  copyPiSubagentFiles = lib.concatMapStringsSep "\n" (relative: ''
-    cp -- ${lib.escapeShellArg "${inputs.pi-subagent}/${relative}"} \
-      "$pi_subagent"/${lib.escapeShellArg relative}
-  '') piSubagentFiles;
 in
 assert bigpowersSkills == bigpowers.names;
 assert bigpowersPrompts == bigpowers.names;
@@ -162,9 +141,6 @@ assert
 assert
   builtins.hashFile "sha256" "${inputs.pi-quiet}/packages/pi-quiet/package.json"
   == "1b370c62fdf7b3b5a9fb35b45ba0cf0e3ceefa35e037f7cd9911b816ad03e4fa";
-assert
-  builtins.hashFile "sha256" "${inputs.pi-subagent}/package-lock.json"
-  == "a7fbb2c6c10ee6af111dcf7a10064770cc360e818b6f424854c231ed6872d5ff";
 runCommand "agent-resources" { } ''
   set -euo pipefail
 
@@ -230,11 +206,4 @@ runCommand "agent-resources" { } ''
   mkdir "$pi_mcp"
   cp -R -- "$pi_mcp_source"/. "$pi_mcp"/
 
-  pi_subagent="$extensions/pi-subagent"
-  [ ! -e "$pi_subagent" ] && [ ! -L "$pi_subagent" ]
-  mkdir "$pi_subagent"
-  mkdir "$pi_subagent/agents"
-  ${copyPiSubagentFiles}
-  cp -- ${lib.escapeShellArg "${inputs.pi-subagent}/agents/oracle.md"} \
-    "$pi_subagent/agents/oracle.md"
 ''

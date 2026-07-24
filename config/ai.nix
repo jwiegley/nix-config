@@ -173,6 +173,7 @@ let
     gopls
     lean-ctx
     nil
+    nodejs_22
     pyright
     ruff
     rust-analyzer
@@ -180,6 +181,7 @@ let
     shfmt
     taplo
     terraform-ls
+    tmux
     typos
     typescript-language-server
     yaml-language-server

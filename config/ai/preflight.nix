@@ -55,7 +55,6 @@ let
     ".pi/agent/extensions/nix-gallery/index.ts"
     ".pi/agent/extensions/pi-mcp-adapter"
     ".pi/agent/extensions/pi-quiet"
-    ".pi/agent/extensions/pi-subagent"
     ".pi/agent/keybindings.json"
     ".pi/agent/models.json"
   ];

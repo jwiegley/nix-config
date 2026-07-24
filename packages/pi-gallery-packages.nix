@@ -2,6 +2,7 @@
   buildNpmPackage,
   buildPackages,
   chromium,
+  esbuild,
   fetchurl,
   findutils,
   inputs,
@@ -44,6 +45,22 @@ let
       url = "https://registry.npmjs.org/pi-lean-ctx/-/pi-lean-ctx-3.9.12.tgz";
       hash = "sha256-/DMfx45WnZU4/aFMBpg69T0WcNOtwxGcq/8habW6hpg=";
     };
+    pi-btw = fetchurl {
+      url = "https://registry.npmjs.org/pi-btw/-/pi-btw-0.4.1.tgz";
+      hash = "sha256-CHzdNUd6Jo+ZMF0YvVoOw6piB+VQl4FHTKImwPwU/GI=";
+    };
+    pi-artifacts = fetchurl {
+      url = "https://registry.npmjs.org/@jakeryderv/pi-artifacts/-/pi-artifacts-0.9.0.tgz";
+      hash = "sha256-ONiw6EtStwrB6LESSyyKUOjGGWQDbFAvXlOsnKbcWaU=";
+    };
+    pi-insights = fetchurl {
+      url = "https://registry.npmjs.org/@ygncode/pi-insights/-/pi-insights-1.0.1.tgz";
+      hash = "sha256-vMNgilZxwQ5QOxcheTNrcPLQycmXYf5kvkLcLivwWEU=";
+    };
+    pi-subagentura = fetchurl {
+      url = "https://registry.npmjs.org/pi-subagentura/-/pi-subagentura-3.0.3.tgz";
+      hash = "sha256-8nSPMdy4LlJ1BIckjWdqFsSCcDo4uC5R9QqK6XJSVzU=";
+    };
     agent-browser = fetchurl {
       url = "https://registry.npmjs.org/agent-browser/-/agent-browser-0.33.0.tgz";
       hash = "sha256-Zdcyp6DFLuT1kCXvBX7ztk2GqqdiYrpk9IrBF4iJz4M=";
@@ -65,6 +82,7 @@ let
       lens ? false,
       webAccess ? false,
       dynamicWorkflows ? false,
+      subagentura ? false,
     }:
     runCommand "${name}-release-source"
       {
@@ -108,6 +126,21 @@ let
             --replace-fail \
               'excludeSubagentTools: settings.excludeSubagentTools,' \
               'excludeSubagentTools: ["subagent", ...(settings.excludeSubagentTools ?? [])],'
+        ''}
+
+        ${lib.optionalString subagentura ''
+          substituteInPlace "$out/src/multiplexer.ts" \
+            --replace-fail 'execFileSync("/bin/sh", ["-lc",' \
+              'execFileSync("/bin/sh", ["-c",'
+          substituteInPlace "$out/src/interactive-tmux.ts" \
+            --replace-fail '"$ARTIFACT_DIR/cli.mjs" done 0' \
+              'node "$ARTIFACT_DIR/cli.mjs" done 0' \
+            --replace-fail '"$ARTIFACT_DIR/cli.mjs" error' \
+              'node "$ARTIFACT_DIR/cli.mjs" error' \
+            --replace-fail '`    "''${cliPath}" process-exit "$rc" || true`' \
+              '`    node "''${cliPath}" process-exit "$rc" || true`' \
+            --replace-fail '`"''${cliPath}" start`' \
+              '`node "''${cliPath}" start`'
         ''}
 
         ${lib.optionalString lens ''
@@ -165,6 +198,9 @@ let
       version,
       src,
       npmDepsHash,
+      bundleEntry ? null,
+      testBundleEntry ? null,
+      prepareBundle ? (_root: ""),
     }:
     buildNpmPackage {
       inherit
@@ -187,6 +223,40 @@ let
         root="$out/share/pi-packages/${pname}"
         mkdir -p "$root"
         cp -R -- . "$root"/
+        ${prepareBundle "$root"}
+        ${lib.optionalString (bundleEntry != null) ''
+          entry="$root/${bundleEntry}"
+          output="$(dirname "$entry")/nix-bundle.js"
+          ${esbuild}/bin/esbuild "$entry" \
+            --bundle \
+            --platform=node \
+            --format=esm \
+            --target=node22 \
+            --external:'@earendil-works/*' \
+            --external:typebox \
+            --outfile="$output"
+        ''}
+        ${lib.optionalString (testBundleEntry != null) ''
+          cat > "$NIX_BUILD_TOP/pi-subagentura-pi-ai-shim.mjs" <<'EOF'
+          export const getModel = () => undefined;
+          export const getProviders = () => [];
+          EOF
+          cat > "$NIX_BUILD_TOP/pi-subagentura-coding-agent-shim.mjs" <<'EOF'
+          export const createAgentSession = () => { throw new Error("unreachable SDK shim"); };
+          export class SessionManager {}
+          EOF
+          entry="$root/${testBundleEntry}"
+          output="$(dirname "$entry")/nix-tmux-test-bundle.js"
+          ${esbuild}/bin/esbuild "$entry" \
+            --bundle \
+            --platform=node \
+            --format=esm \
+            --target=node22 \
+            --alias:@earendil-works/pi-ai/compat="$NIX_BUILD_TOP/pi-subagentura-pi-ai-shim.mjs" \
+            --alias:@earendil-works/pi-coding-agent="$NIX_BUILD_TOP/pi-subagentura-coding-agent-shim.mjs" \
+            --external:typebox \
+            --outfile="$output"
+        ''}
         runHook postInstall
       '';
     };
@@ -216,6 +286,22 @@ let
     lockFile = ./pi-gallery-locks/pi-dynamic-workflows-package-lock.json;
     dynamicWorkflows = true;
   };
+  artifactsSource = mkReleaseSource {
+    name = "pi-artifacts";
+    tarball = releaseTarballs.pi-artifacts;
+    lockFile = ./pi-gallery-locks/pi-artifacts-package-lock.json;
+  };
+  insightsSource = mkReleaseSource {
+    name = "pi-insights";
+    tarball = releaseTarballs.pi-insights;
+    lockFile = ./pi-gallery-locks/pi-insights-package-lock.json;
+  };
+  subagenturaSource = mkReleaseSource {
+    name = "pi-subagentura";
+    tarball = releaseTarballs.pi-subagentura;
+    lockFile = ./pi-gallery-locks/pi-subagentura-package-lock.json;
+    subagentura = true;
+  };
 
   pi-hashline-edit-pro = mkNpmPackageRoot {
     pname = "pi-hashline-edit-pro";
@@ -241,6 +327,147 @@ let
     src = dynamicWorkflowsSource;
     npmDepsHash = "sha256-49v98jLmhF0K40OoVimaGy8DXpDrsWuhGsKuPbqsm1U=";
   };
+  pi-artifacts = mkNpmPackageRoot {
+    pname = "pi-artifacts";
+    version = "0.9.0";
+    src = artifactsSource;
+    npmDepsHash = "sha256-uEXAE4Hy6mAFWsb8kckPMlksGgGB93pekjs5mqwlAGk=";
+    bundleEntry = "extensions/index.ts";
+    prepareBundle = root: ''
+      ${python3}/bin/python3 - "${root}" <<'PY'
+      from pathlib import Path
+      import sys
+
+      root = Path(sys.argv[1])
+      markdown = root / "extensions/markdown.ts"
+      text = markdown.read_text()
+      text = text.replace(
+          'import { createRequire } from "node:module";\n\nimport * as katex from "katex";',
+          'import hljsImport from "highlight.js/lib/common";\n'
+          'import MarkdownItImport from "markdown-it";\n'
+          'import footnotePluginImport from "markdown-it-footnote";\n\n'
+          'import * as katex from "katex";',
+      )
+      text = text.replace('\nconst require = createRequire(import.meta.url);\n', '\n')
+      old = """const MarkdownIt = require("markdown-it") as MarkdownItConstructor;
+      // `lib/common` bundles the ~40 common grammars instead of all ~190.
+      const hljsModule = require("highlight.js/lib/common") as
+        | HighlightJsLike
+        | { default: HighlightJsLike };
+      const hljs = "default" in hljsModule ? hljsModule.default : hljsModule;
+      const footnotePlugin = require("markdown-it-footnote") as (
+        md: MarkdownItInstance,
+      ) => void;"""
+      new = """const MarkdownIt = MarkdownItImport as unknown as MarkdownItConstructor;
+      // `lib/common` bundles the ~40 common grammars instead of all ~190.
+      const hljsModule = hljsImport as unknown as
+        | HighlightJsLike
+        | { default: HighlightJsLike };
+      const hljs = "default" in hljsModule ? hljsModule.default : hljsModule;
+      const footnotePlugin = footnotePluginImport as unknown as (
+        md: MarkdownItInstance,
+      ) => void;"""
+      if old not in text:
+          raise SystemExit("pi-artifacts markdown require block drifted")
+      markdown.write_text(text.replace(old, new))
+
+      validation = root / "extensions/validation/html.ts"
+      text = validation.read_text()
+      text = text.replace(
+          'import { createRequire } from "node:module";\n\nimport prettier from "prettier";',
+          'import * as htmlhintModule from "htmlhint";\n\nimport prettier from "prettier";',
+      )
+      text = text.replace('\nconst require = createRequire(import.meta.url);\n', '\n')
+      old = 'const { HTMLHint } = require("htmlhint") as { HTMLHint: HtmlHintLike };'
+      new = (
+          'const HTMLHint = (htmlhintModule as unknown as { HTMLHint: HtmlHintLike })'
+          '.HTMLHint;'
+      )
+      if old not in text:
+          raise SystemExit("pi-artifacts HTMLHint require block drifted")
+      validation.write_text(text.replace(old, new))
+      PY
+
+      substituteInPlace "${root}/extensions/runtime.ts" \
+        --replace-fail 'dirname(require.resolve("katex/dist/katex.min.css"))' \
+          '"'"${root}/node_modules/katex/dist"'"' \
+        --replace-fail 'dirname(require.resolve("chart.js"))' \
+          '"'"${root}/node_modules/chart.js/dist"'"' \
+        --replace-fail 'dirname(require.resolve("highlight.js/styles/github.min.css"))' \
+          '"'"${root}/node_modules/highlight.js/styles"'"' \
+        --replace-fail 'dirname(require.resolve("mermaid/dist/mermaid.min.js"))' \
+          '"'"${root}/node_modules/mermaid/dist"'"' \
+        --replace-fail 'dirname(require.resolve("@picocss/pico/css/pico.classless.min.css"))' \
+          '"'"${root}/node_modules/@picocss/pico/css"'"'
+    '';
+  };
+  pi-insights = mkNpmPackageRoot {
+    pname = "pi-insights";
+    version = "1.0.1";
+    src = insightsSource;
+    npmDepsHash = "sha256-JaRVe4RXIsXHBIppE0dCJwsgBG3c2+N+8pM68pKkoFI=";
+  };
+  pi-subagentura = mkNpmPackageRoot {
+    pname = "pi-subagentura";
+    version = "3.0.3";
+    src = subagenturaSource;
+    npmDepsHash = "sha256-wx7BImm7rrpzamuZp9s5UD5kv0ENmAwTnknkR3Ja2jU=";
+    bundleEntry = "src/subagent.ts";
+    testBundleEntry = "src/multiplexer-tmux.ts";
+  };
+
+  subagenturaTestSource = runCommand "pi-subagentura-test-source" { nativeBuildInputs = [ jq ]; } ''
+    cp -R -- ${inputs.pi-subagentura}/. "$out"/
+    chmod -R u+w "$out"
+    ${jq}/bin/jq '.devDependencies.typebox = "1.1.37"' \
+      "$out/package.json" > "$out/package.json.tmp"
+    mv "$out/package.json.tmp" "$out/package.json"
+    ${jq}/bin/jq '.packages[""].devDependencies.typebox = "1.1.37"' \
+      "$out/package-lock.json" > "$out/package-lock.json.tmp"
+    mv "$out/package-lock.json.tmp" "$out/package-lock.json"
+    substituteInPlace "$out/src/multiplexer.ts" \
+      --replace-fail 'execFileSync("/bin/sh", ["-lc",' \
+        'execFileSync("/bin/sh", ["-c",'
+    substituteInPlace "$out/src/interactive-tmux.ts" \
+      --replace-fail '"$ARTIFACT_DIR/cli.mjs" done 0' \
+        'node "$ARTIFACT_DIR/cli.mjs" done 0' \
+      --replace-fail '"$ARTIFACT_DIR/cli.mjs" error' \
+        'node "$ARTIFACT_DIR/cli.mjs" error' \
+      --replace-fail '`    "''${cliPath}" process-exit "$rc" || true`' \
+        '`    node "''${cliPath}" process-exit "$rc" || true`' \
+      --replace-fail '`"''${cliPath}" start`' \
+        '`node "''${cliPath}" start`'
+    substituteInPlace "$out/tests/subagent-launch-script.test.ts" \
+      --replace-fail '`"''${join(artDir, "cli.mjs")}"' \
+        '`node "''${join(artDir, "cli.mjs")}"'
+    substituteInPlace \
+      "$out/tests/multiplexer-tmux.test.ts" \
+      "$out/tests/multiplexer-zellij.test.ts" \
+      --replace-fail 'args.includes("-lc")' 'args[0] === "-c"'
+  '';
+
+  subagenturaTests = buildNpmPackage {
+    pname = "pi-subagentura-tests";
+    version = "3.0.3";
+    src = subagenturaTestSource;
+    nodejs = buildPackages.nodejs_22;
+    npmDepsHash = "sha256-3VesSLfU89SNnv7LJ19bikkViL4++O1Rd7yTxOjBVuA=";
+    npmDepsFetcherVersion = 2;
+    npmInstallFlags = [
+      "--ignore-scripts"
+      "--legacy-peer-deps"
+    ];
+    dontNpmBuild = true;
+    doCheck = true;
+    checkPhase = ''
+      runHook preCheck
+      npm run test:unit
+      runHook postCheck
+    '';
+    installPhase = ''
+      touch "$out"
+    '';
+  };
 
   mkCopyRoot =
     {
@@ -261,6 +488,17 @@ let
       cp -R -- ${inputs.bigpowers}/.pi ${root}/
       cp -- ${inputs.bigpowers}/package.json ${inputs.bigpowers}/LICENSE \
         ${inputs.bigpowers}/README.md ${root}/
+    '';
+  };
+
+  pi-btw = mkCopyRoot {
+    pname = "pi-btw";
+    version = "0.4.1";
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-btw} -C ${root} --strip-components=1
+      mkdir -p ${root}/skills/btw
+      cp -- ${inputs.pi-btw}/skills/btw/SKILL.md ${root}/skills/btw/SKILL.md
+      cmp ${inputs.pi-btw}/extensions/btw.ts ${root}/extensions/btw.ts
     '';
   };
 
@@ -342,6 +580,10 @@ let
       '';
 
   roots = {
+    btw = packageRoot pi-btw "pi-btw";
+    artifacts = packageRoot pi-artifacts "pi-artifacts";
+    insights = packageRoot pi-insights "pi-insights";
+    subagentura = packageRoot pi-subagentura "pi-subagentura";
     hashline = packageRoot pi-hashline-edit-pro "pi-hashline-edit-pro";
     web = packageRoot pi-web-access "pi-web-access";
     lens = packageRoot pi-lens "pi-lens";
@@ -395,6 +637,29 @@ let
         version = "3.9.12";
         extensions = [ "${roots.lean}/extensions/index.ts" ];
       }
+      {
+        name = "pi-btw";
+        version = "0.4.1";
+        extensions = [ "${roots.btw}/extensions/btw.ts" ];
+        skills = [ "${roots.btw}/skills/btw" ];
+      }
+      {
+        name = "@jakeryderv/pi-artifacts";
+        version = "0.9.0";
+        extensions = [ "${roots.artifacts}/extensions/nix-bundle.js" ];
+        skills = [ "${roots.artifacts}/skills/artifacts-authoring" ];
+      }
+      {
+        name = "@ygncode/pi-insights";
+        version = "1.0.1";
+        extensions = [ "${roots.insights}/index.ts" ];
+      }
+      {
+        name = "pi-subagentura";
+        version = "3.0.3";
+        extensions = [ "${roots.subagentura}/src/nix-bundle.js" ];
+        skills = [ "${roots.subagentura}/skills/ralplan" ];
+      }
     ];
   };
 
@@ -402,18 +667,22 @@ let
     runCommand "pi-gallery"
       {
         passthru = {
-          inherit projection roots;
+          inherit projection roots subagenturaTests;
           packages = {
             inherit
               agent-browser
               bigpowers
               lean-ctx
               pi-agent-browser-native
+              pi-artifacts
+              pi-btw
               pi-dynamic-workflows
               pi-hashline-edit-pro
+              pi-insights
               pi-lean-ctx
               pi-lens
               pi-ponytail
+              pi-subagentura
               pi-web-access
               ;
           };
@@ -430,6 +699,10 @@ let
         import workflows from ${builtins.toJSON "${roots.workflows}/extensions/workflow.ts"};
         import browser from ${builtins.toJSON "${roots.browser}/dist/extensions/agent-browser/index.js"};
         import leanCtx from ${builtins.toJSON "${roots.lean}/extensions/index.ts"};
+        import btw from ${builtins.toJSON "${roots.btw}/extensions/btw.ts"};
+        import artifacts from ${builtins.toJSON "${roots.artifacts}/extensions/nix-bundle.js"};
+        import insights from ${builtins.toJSON "${roots.insights}/index.ts"};
+        import subagentura from ${builtins.toJSON "${roots.subagentura}/src/nix-bundle.js"};
 
         export default async function nixGallery(pi: unknown) {
           process.env.PI_WEB_ACCESS_PROVIDER = "perplexity";
@@ -437,7 +710,19 @@ let
           process.env.PI_LENS_AUTO_INSTALL = "0";
           process.env.LEAN_CTX_BIN = ${builtins.toJSON "${lean-ctx}/bin/lean-ctx"};
 
-          for (const extension of [hashline, webAccess, lens, ponytail, workflows, browser, leanCtx]) {
+          for (const extension of [
+            hashline,
+            webAccess,
+            lens,
+            ponytail,
+            workflows,
+            browser,
+            leanCtx,
+            btw,
+            artifacts,
+            insights,
+            subagentura,
+          ]) {
             await extension(pi as never);
           }
 
@@ -467,6 +752,14 @@ assert inputs.pi-dynamic-workflows.narHash == "sha256-lFb9rmmnywPwnZMBcfn5JusqAS
 assert inputs.pi-agent-browser-native.rev == "211a012c9b199d758768e8ba729f35e11e661f65";
 assert
   inputs.pi-agent-browser-native.narHash == "sha256-LMVvFkxiDN90lcTX54FmrwM0N/lLV+IJaCWzveHqpm8=";
+assert inputs.pi-btw.rev == "4f858102706910ee9d520a9666832f3103631b61";
+assert inputs.pi-btw.narHash == "sha256-tXcZUh20xYUTn80cubpd9BjFPAcLQK7CrEKxTnsdQ2s=";
+assert inputs.pi-artifacts.rev == "9056b18bac35d01fa79d255911f0a74b919c46d2";
+assert inputs.pi-artifacts.narHash == "sha256-g7jrO0JxpO3k3hPgZD87tCWkbUdbilOFQ8ASwvjejRk=";
+assert inputs.pi-insights.rev == "f2de4880e5d8b1f66f207e220269703b6ca38ecf";
+assert inputs.pi-insights.narHash == "sha256-JyoRf42spqt1Q3C20uFt559+2JYEvIS5ki/WD8WM4JQ=";
+assert inputs.pi-subagentura.rev == "e49e4d259a1b0186ac6924602b5faf673f61bee3";
+assert inputs.pi-subagentura.narHash == "sha256-87RxKFvnxJ9waIb3ehOazrCVYnsqEzjxeYIMUmgQdbk=";
 assert inputs.lean-ctx.rev == "54e0a66bcbb9a6695e45848d3ea97a491a0b5275";
 assert inputs.lean-ctx.narHash == "sha256-h0blm9mUezoMVZ7OaJDhfioTBKUiMk70KejC2gihgBc=";
 {
@@ -475,12 +768,16 @@ assert inputs.lean-ctx.narHash == "sha256-h0blm9mUezoMVZ7OaJDhfioTBKUiMk70KejC2g
     bigpowers
     lean-ctx
     pi-agent-browser-native
+    pi-artifacts
+    pi-btw
     pi-dynamic-workflows
     pi-gallery
     pi-hashline-edit-pro
+    pi-insights
     pi-lean-ctx
     pi-lens
     pi-ponytail
+    pi-subagentura
     pi-web-access
     ;
 }

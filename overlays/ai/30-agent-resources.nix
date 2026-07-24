@@ -5,6 +5,7 @@ let
       buildNpmPackage
       buildPackages
       chromium
+      esbuild
       fetchurl
       findutils
       jq

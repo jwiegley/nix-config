@@ -1,4 +1,5 @@
 {
+  bun,
   coreutils,
   jq,
   lib,
@@ -6,12 +7,17 @@
   piPackage,
   piPackages,
   runCommand,
+  tmux,
 }:
 
 let
   root = package: name: "${package}/share/pi-packages/${name}";
   roots = {
     bigpowers = root piPackages.bigpowers "bigpowers";
+    btw = root piPackages.pi-btw "pi-btw";
+    artifacts = root piPackages.pi-artifacts "pi-artifacts";
+    insights = root piPackages.pi-insights "pi-insights";
+    subagentura = root piPackages.pi-subagentura "pi-subagentura";
     hashline = root piPackages.pi-hashline-edit-pro "pi-hashline-edit-pro";
     web = root piPackages.pi-web-access "pi-web-access";
     lens = root piPackages.pi-lens "pi-lens";
@@ -28,9 +34,12 @@ assert (piPackage.toolRendererWrapperAbi or null) == 1;
 runCommand "pi-gallery-check"
   {
     nativeBuildInputs = [
+      bun
       coreutils
       jq
       nodejs_22
+      piPackages.pi-gallery.subagenturaTests
+      tmux
     ];
   }
   ''
@@ -49,6 +58,10 @@ runCommand "pi-gallery-check"
     }
 
     expect_version ${roots.bigpowers}/package.json 2.82.3
+    expect_version ${roots.btw}/package.json 0.4.1
+    expect_version ${roots.artifacts}/package.json 0.9.0
+    expect_version ${roots.insights}/package.json 1.0.1
+    expect_version ${roots.subagentura}/package.json 3.0.3
     expect_version ${roots.hashline}/package.json 0.17.5
     expect_version ${roots.web}/package.json 0.13.0
     expect_version ${roots.lens}/package.json 3.8.71
@@ -69,6 +82,33 @@ runCommand "pi-gallery-check"
 
     [ "$(find ${roots.bigpowers}/.pi/skills -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 80 ]
     [ "$(find ${roots.bigpowers}/.pi/prompts -mindepth 1 -maxdepth 1 -type f -name '*.md' | wc -l)" -eq 80 ]
+
+    [ -f ${roots.btw}/extensions/btw.ts ]
+    [ -f ${roots.btw}/skills/btw/SKILL.md ]
+    [ -f ${roots.artifacts}/extensions/index.ts ]
+    [ -f ${roots.artifacts}/extensions/nix-bundle.js ]
+    [ -f ${roots.artifacts}/skills/artifacts-authoring/SKILL.md ]
+    [ -d ${roots.artifacts}/node_modules/mermaid ]
+    [ -d ${roots.artifacts}/node_modules/markdown-it ]
+    [ -f ${roots.insights}/index.ts ]
+    [ -f ${roots.insights}/dist/index.html ]
+    [ -d ${roots.insights}/node_modules/react ]
+    [ -d ${roots.insights}/node_modules/recharts ]
+    [ -f ${roots.subagentura}/src/subagent.ts ]
+    [ -f ${roots.subagentura}/src/nix-bundle.js ]
+    [ -f ${roots.subagentura}/src/nix-tmux-test-bundle.js ]
+    [ -f ${roots.subagentura}/skills/ralplan/SKILL.md ]
+    [ -d ${roots.subagentura}/node_modules/is-path-inside ]
+    [ -d ${roots.subagentura}/node_modules/ndjson ]
+    [ ! -e ${roots.subagentura}/node_modules/@earendil-works ]
+    [ ! -e ${roots.subagentura}/node_modules/typebox ]
+
+    substitute ${./pi-subagentura-tmux.test.ts} "$TMPDIR/pi-subagentura-tmux.test.ts" \
+      --replace-fail '__SUBAGENTURA_ROOT__' ${roots.subagentura}
+    PI_SUBAGENTURA_TMUX_SOCKET="nix-gallery-$$" \
+      PATH=${lib.makeBinPath [ tmux ]}:$PATH \
+      bun "$TMPDIR/pi-subagentura-tmux.test.ts" \
+      | grep -Fx 'subagentura-tmux-contract-ok' >/dev/null
 
     [ -f ${roots.hashline}/index.ts ]
     [ ! -e ${roots.hashline}/node_modules/better-sqlite3 ]
@@ -113,8 +153,8 @@ runCommand "pi-gallery-check"
 
     [ -f ${gallery}/index.ts ]
     [ -f ${gallery}/projection.json ]
-    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq 7 ]
-    [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq 4 ]
+    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq 11 ]
+    [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq 7 ]
     jq -e '
       [.packages[].name] == [
         "pi-hashline-edit-pro",
@@ -123,7 +163,11 @@ runCommand "pi-gallery-check"
         "@dietrichgebert/ponytail",
         "@quintinshaw/pi-dynamic-workflows",
         "pi-agent-browser-native",
-        "pi-lean-ctx"
+        "pi-lean-ctx",
+        "pi-btw",
+        "@jakeryderv/pi-artifacts",
+        "@ygncode/pi-insights",
+        "pi-subagentura"
       ]
       and (.packages[] | select(.name == "@dietrichgebert/ponytail") | .skills == [])
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
@@ -136,6 +180,7 @@ runCommand "pi-gallery-check"
     printf '%s\n' '{"name":"lens-language-gate","private":true}' > "$smoke/project/package.json"
     printf '%s\n' 'const answer: number = 42;' > "$smoke/project/probe.ts"
     printf '%s\n' 'answer: int = 42' > "$smoke/project/probe.py"
+    printf '%s\n' '{"type":"get_commands"}' > "$smoke/input.jsonl"
     for command in npm npx pip pip3 curl wget bun pnpm yarn; do
       cat > "$smoke/sentinels/$command" <<'SH'
     #!/bin/sh
@@ -161,10 +206,32 @@ runCommand "pi-gallery-check"
         --mode rpc --no-session --offline \
         --no-extensions --no-skills --no-prompt-templates \
         --no-context-files --no-approve \
-        --extension ${gallery}/index.ts </dev/null >"$smoke/output.log" 2>&1
+        --extension ${gallery}/index.ts <"$smoke/input.jsonl" >"$smoke/output.log" 2>&1
     ) || {
       cat "$smoke/output.log" >&2
       fail "aggregate Pi gallery failed to load"
+    }
+    jq -s -e '
+      any(
+        .[];
+        .type == "response"
+        and .command == "get_commands"
+        and .success == true
+        and ([.data.commands[].name] as $names
+          | ([
+              "artifacts-clean",
+              "btw",
+              "btw:tangent",
+              "cancel-all-flows",
+              "insights",
+              "viewer",
+              "workflow",
+              "workflows"
+            ] - $names | length) == 0)
+      )
+    ' "$smoke/output.log" >/dev/null || {
+      cat "$smoke/output.log" >&2
+      fail "new Pi gallery commands were not registered"
     }
     [ ! -e "$smoke/agent/settings.json" ] || fail "gallery wrote Pi settings"
     [ ! -e "$smoke/home/.npm" ] || fail "gallery invoked npm"

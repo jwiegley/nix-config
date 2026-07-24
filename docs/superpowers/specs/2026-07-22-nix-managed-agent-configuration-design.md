@@ -212,7 +212,7 @@ The base `settings.json` remains mutable because it contains trusted folders and
 
 Pi is enabled only on Hera and uses Pi's native resource discovery rather than a promptdeploy runtime. Its exact owned paths and loading contracts are:
 
-- The 26 personal-selected agents render as `~/.pi/agent/agents/<name>.md` for `pi-subagent`.
+- The 26 personal-selected agents render as `~/.pi/agent/agents/<name>.md` for Pi's managed delegation and prompt surfaces.
 - The 59 personal-selected commands render as native `~/.pi/agent/prompts/<name>.md` templates.
 - The two pre-rendered prompts use the same native prompt directory.
 - Personal-selected shared skills remain under `~/.agents/skills/<name>/`; no skill tree is copied under `.pi`. This includes the six static Ponytail skills visible through Hera's Codex-owned shared root.
@@ -221,7 +221,7 @@ Pi is enabled only on Hera and uses Pi's native resource discovery rather than a
 - `~/.pi/agent/models.json` contains only the `litellm` provider, with model-level Hera selectors applied. Pi never falls back to a direct provider; models without a LiteLLM route are excluded.
 - Pi's mutable `settings.json` remains authoritative for its selected default; this design emits no Pi default provider/model.
 - `~/.config/mcp/mcp.json` is the Nix-owned Hera catalog for Ref, Anvil, Context Hub, Context7, DEVONthink, Drafts, Memory Vault, PAL, Perplexity, Sequential Thinking, and stock-trader. `~/.pi/agent/mcp.json` remains mutable only for adapter-level `settings`; global `mcpServers` and compatibility `imports` are forbidden because that higher-precedence file could shadow the Nix catalog. Migration and verification fail closed if either field appears. Adapter cache and OAuth state remain mutable.
-- `auto-compact-resume/index.ts`, `nix-gallery/index.ts`, `pi-mcp-adapter`, `pi-quiet`, and the current `pi-subagent` root are exact Home Manager leaves or links to immutable package roots and load through Pi's normal extension discovery. The later Subagentura work replaces, rather than co-installs with, `pi-subagent`.
+- `auto-compact-resume/index.ts`, `nix-gallery/index.ts`, `pi-mcp-adapter`, and `pi-quiet` are exact Home Manager leaves or links to immutable roots. The gallery loads Pi BTW, Artifacts, Insights, and Subagentura alongside the original package set; the retired `pi-subagent` root is not installed.
 
 Pi intentionally excludes hooks, marketplaces, and the `anvil-tools` tombstone. Global `/mcp setup`, imports, and server-definition toggles are unsupported; adapter-only settings may remain mutable. Trusted project `.mcp.json` and `.pi/mcp.json` additions retain their native project-local precedence and do not redefine the user-global source of truth.
 
@@ -229,7 +229,7 @@ Pi has no legacy promptdeploy target. Its acceptance oracle is therefore the exa
 
 ## External resources in the unified repository
 
-The root flake and portable `config/ai` subflake coordinate exact external pins for Bigpowers, Ponytail, git-surgeon from the llm-agents source, translate-tool glossary resources, the Pi gallery packages, `pi-mcp-adapter`, the current `pi-subagent`, and patched `mcp-remote` for Droid's static-header-only bridge.
+The root flake and portable `config/ai` subflake coordinate exact external pins for Bigpowers, Ponytail, git-surgeon from the llm-agents source, translate-tool glossary resources, all twelve Pi gallery packages, `pi-mcp-adapter`, and patched `mcp-remote` for Droid's static-header-only bridge.
 
 Repository-owned skill/extension resources remain immutable beneath `agent-resources`; the requested package gallery has separate immutable package roots and one generated `pi-gallery` projection. `config/ai.nix` chooses and links those outputs. There is no copied deployment bundle, promptdeploy receipt, runtime installer, or live dependency on a sibling `ai-nix` checkout.
 
@@ -245,7 +245,7 @@ Dormant Ponytail lifecycle hooks, ambient modes, status lines, runtime publicati
 
 ### Native contract references
 
-The Pi path and loading contracts follow its official [skills](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/skills.md), [settings](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/settings.md), and [models](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/models.md) documentation. The extension-specific paths follow [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) and [pi-subagent](https://github.com/mjakl/pi-subagent). Ref authentication uses its [documented header form](https://docs.ref.tools/context/install).
+The Pi path and loading contracts follow its official [skills](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/skills.md), [settings](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/settings.md), and [models](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/models.md) documentation. The extension-specific paths follow [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) and [pi-subagentura](https://github.com/lmn451/pi-subagentura). Ref authentication uses its [documented header form](https://docs.ref.tools/context/install).
 
 ## Secrets and runtime references
 
