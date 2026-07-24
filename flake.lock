@@ -180,11 +180,11 @@
     "bigpowers": {
       "flake": false,
       "locked": {
-        "lastModified": 1784923498,
-        "narHash": "sha256-ZhztIG7qH/lk6VMfD7foEKGNBhpHioV3Eo2kHVRYbYQ=",
+        "lastModified": 1784927122,
+        "narHash": "sha256-Nu38N6u9l6EMoZGDLQ01DkbxXdPqVNTPUHh90JCIAcg=",
         "owner": "danielvm-git",
         "repo": "bigpowers",
-        "rev": "5138e9ec17f5381d95d2d363f55b1e6e79ca6440",
+        "rev": "d1993d31437bfbdb5bda81e84650628215365754",
         "type": "github"
       },
       "original": {
@@ -6940,11 +6940,11 @@
     "pi-mcp-adapter": {
       "flake": false,
       "locked": {
-        "lastModified": 1784926228,
-        "narHash": "sha256-lQrjs90XwP0E14h2eEBoUvtvBL87AkzfX785yQyJoxc=",
+        "lastModified": 1784928166,
+        "narHash": "sha256-OVgR2wHKhlFjkio8SlrL5g/VPs77vCWQO4oohlIZU1I=",
         "owner": "nicobailon",
         "repo": "pi-mcp-adapter",
-        "rev": "9a9006007910b935283adb824037120ff95f7c8c",
+        "rev": "19d88da27ef82dc61b6e4041b3af7cd0669dbeb5",
         "type": "github"
       },
       "original": {
