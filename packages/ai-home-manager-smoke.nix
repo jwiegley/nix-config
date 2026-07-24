@@ -2,6 +2,7 @@
   pkgs,
   src,
   agentResources,
+  aiFlake,
   homeManagerLib,
   inputs,
   testPkgsFor,
@@ -2763,7 +2764,7 @@ let
     username = "johnw";
     system = "x86_64-linux";
   };
-  task9BridgeFor = system: inputs.ai-nix.packages.${system}.agent-http-header-bridge;
+  task9BridgeFor = system: aiFlake.packages.${system}.agent-http-header-bridge;
   task9HasBridge =
     system: evaluation:
     lib.any (
@@ -2941,7 +2942,7 @@ let
 
   task9DarwinPkgs = testPkgsFor.aarch64-darwin;
   task9WrappedClaude =
-    inputs.ai-nix.lib.patchAgentPackage task9DarwinPkgs "claude-code"
+    aiFlake.lib.patchAgentPackage task9DarwinPkgs "claude-code"
       inputs.llm-agents.packages.aarch64-darwin.claude-code;
   task9HeraBridge = task9BridgeFor "aarch64-darwin";
   task9HeraPackages =
@@ -3055,9 +3056,13 @@ let
       (task9HeraHasPackage task9DarwinPkgs.nix-scripts)
       true
     )
-    (expectEqual "Task 9 package path still calls ai-nix patching"
-      (lib.hasInfix "patchAgentPackage name agentPackages.\${name}" task9PackageSource)
-      true
+    (expectEqual "Task 9 package path uses canonical local AI patching" (
+      lib.hasInfix "patchAgentPackage name agentPackages.\${name}" task9PackageSource
+      && !(lib.hasInfix "inputs.ai-nix" task9PackageSource)
+    ) true)
+    (expectEqual "Task 9 root flake no longer declares the retired AI input"
+      (lib.hasInfix "ai-nix =" task9FlakeSource)
+      false
     )
     (expectEqual "Task 9 Claude package selection remains patched"
       (lib.hasInfix "++ optAgent \"claude-code\"" task9PackageSource)

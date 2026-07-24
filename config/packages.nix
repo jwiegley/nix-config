@@ -20,11 +20,8 @@ let
   optPkg = name: if pkgs ? ${name} then [ pkgs.${name} ] else [ ];
 
   agentPackages = inputs.llm-agents.packages.${sys} or { };
-  patchAgentPackage =
-    if inputs ? ai-nix && inputs.ai-nix ? lib && inputs.ai-nix.lib ? patchAgentPackage then
-      inputs.ai-nix.lib.patchAgentPackage pkgs
-    else
-      _name: package: package;
+  localAi = import ../packages/ai-flake-outputs.nix inputs;
+  patchAgentPackage = localAi.lib.patchAgentPackage pkgs;
   optAgent =
     name: if agentPackages ? ${name} then [ (patchAgentPackage name agentPackages.${name}) ] else [ ];
 
@@ -33,9 +30,9 @@ let
   # explicit handling below. On Linux, the conditional group also excludes
   # tools that are intentionally installed only on Darwin.
   nonUserPackageInputs = [
+    "self" # root outputs are selected explicitly, never auto-installed
     "darwin" # nix-darwin tooling
     "home-manager" # home-manager tooling
-    "ai-nix" # consumed via overlay
     "llm-agents" # multi-package; specific packages chosen below
     "dirscan" # consumed via 30-data-tools overlay
     "git-ai" # consumed via overlay / home-manager module

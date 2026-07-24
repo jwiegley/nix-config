@@ -5,6 +5,68 @@
     # nixpkgs.url = "git+file:///Users/johnw/Products/nixpkgs";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay/47759faaddf38fadaf172151ca9df8adae9c0b2e";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    mcp-servers-nix = {
+      url = "github:natsukium/mcp-servers-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    llm-agents.url = "github:numtide/llm-agents.nix";
+
+    superpowers = {
+      url = "github:obra/superpowers/d884ae04edebef577e82ff7c4e143debd0bbec99";
+      flake = false;
+    };
+
+    ponytail = {
+      url = "github:DietrichGebert/ponytail/16f29800fd2681bdf24f3eb4ccffe38be3baec6b";
+      flake = false;
+    };
+
+    translate-tool = {
+      url = "github:jwiegley/translate-tool/bffdb7ba3e5db603ea1390fee555354c1d45d642";
+      flake = false;
+    };
+
+    pi-mcp-adapter = {
+      url = "github:nicobailon/pi-mcp-adapter/82724dccc13a49310530898f922bafff12b7f3fe";
+      flake = false;
+    };
+
+    pi-openai-server-compaction = {
+      url = "github:algal/pi-openai-server-compaction/c6d593087709e9481223dc6c6c2269b371b5e055";
+      flake = false;
+    };
+
+    pi-quiet = {
+      url = "github:zenspc/pi-extensions/b281afef4e61188e7aa76aaa114ba505274fa7bc";
+      flake = false;
+    };
+
+    pi-subagent = {
+      url = "github:mjakl/pi-subagent/70248dcf7c8a5ca74497e817a699f009c55e6917";
+      flake = false;
+    };
+
+    mcp-remote = {
+      url = "github:geelen/mcp-remote/02619aff36e79803d7c894e8c8ae7b34b2d11f8c";
+      flake = false;
+    };
+
+    git-ai = {
+      url = "github:git-ai-project/git-ai";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    pal-mcp-server = {
+      url = "github:jwiegley/pal-mcp-server";
+      flake = false;
+    };
+
     darwin = {
       url = "github:lnl7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -14,19 +76,6 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    ai-nix = {
-      url = "github:jwiegley/ai-nix/main";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    mcp-servers-nix = {
-      url = "github:natsukium/mcp-servers-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    git-ai.follows = "ai-nix/git-ai";
-    llm-agents.follows = "ai-nix/llm-agents";
 
     ledger.url = "github:ledger/ledger";
     # ledger = {
@@ -83,12 +132,41 @@
     inputs:
     with inputs;
     let
-      forAllSystems = nixpkgs.lib.genAttrs [
+      rootSystems = [
         "aarch64-darwin"
         "x86_64-darwin"
         "aarch64-linux"
         "x86_64-linux"
       ];
+      aiSystems = [
+        "aarch64-darwin"
+        "aarch64-linux"
+        "x86_64-linux"
+      ];
+      forAllSystems = nixpkgs.lib.genAttrs rootSystems;
+      portableInputs = {
+        inherit (inputs)
+          git-ai
+          llm-agents
+          mcp-remote
+          mcp-servers-nix
+          nixpkgs
+          pal-mcp-server
+          pi-mcp-adapter
+          pi-openai-server-compaction
+          pi-quiet
+          pi-subagent
+          ponytail
+          rust-overlay
+          superpowers
+          translate-tool
+          ;
+      };
+      portableAiDefinition = import ./packages/ai-flake-outputs.nix portableInputs;
+      portableAi = import ./tests/ai/compatibility-check.nix {
+        inputs = portableInputs;
+        actual = portableAiDefinition;
+      };
       stockPkgsFor = forAllSystems (system: import nixpkgs { inherit system; });
       pkgsFor = forAllSystems (
         system:
@@ -150,26 +228,25 @@
 
       darwinPackages = darwinConfigurations."hera".pkgs;
 
-      packages = {
-        "aarch64-darwin" = {
-          anvil-mcp = pkgsFor."aarch64-darwin".callPackage ./packages/anvil-mcp { };
-          anvil-mcp-dedicated = pkgsFor."aarch64-darwin".callPackage ./packages/anvil-mcp {
+      packages = nixpkgs.lib.genAttrs aiSystems (
+        system:
+        portableAi.packages.${system}
+        // {
+          anvil-mcp = pkgsFor.${system}.callPackage ./packages/anvil-mcp { };
+        }
+        // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+          anvil-mcp-dedicated = pkgsFor.${system}.callPackage ./packages/anvil-mcp {
             useDedicatedDarwinEmacs = true;
           };
-        };
-        "aarch64-linux" = {
-          anvil-mcp = pkgsFor."aarch64-linux".callPackage ./packages/anvil-mcp { };
-          anvil-mcp-headless = pkgsFor."aarch64-linux".callPackage ./packages/anvil-mcp {
+        }
+        // nixpkgs.lib.optionalAttrs (nixpkgs.lib.hasSuffix "-linux" system) {
+          anvil-mcp-headless = pkgsFor.${system}.callPackage ./packages/anvil-mcp {
             useHeadlessEmacs = true;
           };
-        };
-        "x86_64-linux" = {
-          anvil-mcp = pkgsFor."x86_64-linux".callPackage ./packages/anvil-mcp { };
-          anvil-mcp-headless = pkgsFor."x86_64-linux".callPackage ./packages/anvil-mcp {
-            useHeadlessEmacs = true;
-          };
-        };
-      };
+        }
+      );
+
+      inherit (portableAi) apps;
 
       # Shared home-manager module for cross-platform use.
       # NixOS hosts import this via: inputs.nix-config (flake = false)
@@ -270,128 +347,140 @@
             ];
           };
         }
+        // nixpkgs.lib.optionalAttrs (builtins.elem system aiSystems) {
+          ai = portableAi.devShells.${system}.default;
+        }
       );
 
-      checks = forAllSystems (
-        system:
+      checks =
         let
-          pkgs = stockPkgsFor.${system};
-          src = builtins.path {
-            path = ./.;
-            name = "nix-config-src";
-            filter =
-              path: type:
-              let
-                baseName = baseNameOf path;
-              in
-              !(
-                baseName == "result"
-                || baseName == ".git"
-                || baseName == ".DS_Store"
-                || baseName == ".claude"
-                || baseName == ".worktrees"
-              );
-          };
+          rootChecks = forAllSystems (
+            system:
+            let
+              pkgs = stockPkgsFor.${system};
+              src = builtins.path {
+                path = ./.;
+                name = "nix-config-src";
+                filter =
+                  path: type:
+                  let
+                    baseName = baseNameOf path;
+                  in
+                  !(
+                    baseName == "result"
+                    || baseName == ".git"
+                    || baseName == ".DS_Store"
+                    || baseName == ".claude"
+                    || baseName == ".worktrees"
+                  );
+              };
+            in
+            {
+              formatting =
+                pkgs.runCommand "check-formatting"
+                  {
+                    nativeBuildInputs = with pkgs; [
+                      nixfmt
+                      shfmt
+                      findutils
+                    ];
+                  }
+                  ''
+                    echo "Checking Nix formatting..."
+                    find ${src} -name '*.nix' | xargs nixfmt --check
+                    echo "Checking shell formatting..."
+                    for f in $(find ${src}/bin -maxdepth 1 -type f) ${src}/build; do
+                      if head -1 "$f" | grep -q bash; then
+                        shfmt -i 4 -d "$f"
+                      fi
+                    done
+                    touch $out
+                  '';
+
+              linting =
+                pkgs.runCommand "check-linting"
+                  {
+                    nativeBuildInputs = with pkgs; [
+                      statix
+                      deadnix
+                      shellcheck
+                      ruff
+                      findutils
+                      python3
+                    ];
+                  }
+                  ''
+                    echo "Running statix..."
+                    statix check ${src}
+                    echo "Running deadnix..."
+                    deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail ${src}
+                    echo "Running shellcheck..."
+                    for f in $(find ${src}/bin -maxdepth 1 -type f) ${src}/build; do
+                      if head -1 "$f" | grep -q bash; then
+                        shellcheck --severity=warning "$f"
+                      fi
+                    done
+                    echo "Running ruff..."
+                    ruff check \
+                      ${src}/bin/agent-deck-litellm-env-test.py \
+                      ${src}/bin/codex-litellm-test.py \
+                      ${src}/bin/update-overlay \
+                      ${src}/bin/update-overlay-test.py \
+                      ${src}/packages/anvil-mcp
+                    echo "Running Agent Deck LiteLLM environment wrapper tests..."
+                    python3 ${src}/bin/agent-deck-litellm-env-test.py
+                    echo "Running codex-litellm tests..."
+                    python3 ${src}/bin/codex-litellm-test.py
+                    echo "Running update-overlay tests..."
+                    python3 ${src}/bin/update-overlay-test.py
+                    touch $out
+                  '';
+
+              ai-home-manager-smoke = pkgs.callPackage ./packages/ai-home-manager-smoke.nix {
+                inherit inputs src;
+                aiFlake = portableAi;
+                agentResources = agentTestPkgsFor.${system}.agent-resources;
+                homeManagerLib = home-manager.lib;
+                testPkgsFor = agentTestPkgsFor;
+              };
+              ai-managed-preflight-smoke = pkgs.callPackage ./packages/ai-managed-preflight-smoke.nix {
+                inherit src;
+                homeManagerLib = home-manager.lib;
+              };
+            }
+            // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux || system == "aarch64-darwin") {
+              anvil-home-manager = pkgs.callPackage ./packages/anvil-mcp/home-manager-smoke.nix {
+                homeManagerLib = home-manager.lib;
+                inherit inputs;
+                testPkgs = pkgsFor.${system};
+              };
+              anvil-mcp-persistent-soak = pkgs.callPackage ./packages/anvil-mcp/persistent-bridge-soak.nix {
+                anvilMcp =
+                  if pkgs.stdenv.isLinux then
+                    packages.${system}.anvil-mcp-headless
+                  else
+                    packages.${system}.anvil-mcp-dedicated;
+              };
+            }
+            // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
+              anvil-mcp = pkgs.callPackage ./packages/anvil-mcp/smoke.nix {
+                anvilMcp = packages.${system}.anvil-mcp;
+              };
+              anvil-mcp-headless = pkgs.callPackage ./packages/anvil-mcp/headless-smoke.nix {
+                anvilMcp = packages.${system}.anvil-mcp-headless;
+              };
+            }
+            // pkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+              anvil-mcp-dedicated = pkgs.callPackage ./packages/anvil-mcp/headless-smoke.nix {
+                anvilMcp = packages.${system}.anvil-mcp-dedicated;
+              };
+            }
+          );
         in
-        {
-          formatting =
-            pkgs.runCommand "check-formatting"
-              {
-                nativeBuildInputs = with pkgs; [
-                  nixfmt
-                  shfmt
-                  findutils
-                ];
-              }
-              ''
-                echo "Checking Nix formatting..."
-                find ${src} -name '*.nix' | xargs nixfmt --check
-                echo "Checking shell formatting..."
-                for f in $(find ${src}/bin -maxdepth 1 -type f) ${src}/build; do
-                  if head -1 "$f" | grep -q bash; then
-                    shfmt -i 4 -d "$f"
-                  fi
-                done
-                touch $out
-              '';
-
-          linting =
-            pkgs.runCommand "check-linting"
-              {
-                nativeBuildInputs = with pkgs; [
-                  statix
-                  deadnix
-                  shellcheck
-                  ruff
-                  findutils
-                  python3
-                ];
-              }
-              ''
-                echo "Running statix..."
-                statix check ${src}
-                echo "Running deadnix..."
-                deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail ${src}
-                echo "Running shellcheck..."
-                for f in $(find ${src}/bin -maxdepth 1 -type f) ${src}/build; do
-                  if head -1 "$f" | grep -q bash; then
-                    shellcheck --severity=warning "$f"
-                  fi
-                done
-                echo "Running ruff..."
-                ruff check \
-                  ${src}/bin/agent-deck-litellm-env-test.py \
-                  ${src}/bin/codex-litellm-test.py \
-                  ${src}/bin/update-overlay \
-                  ${src}/bin/update-overlay-test.py \
-                  ${src}/packages/anvil-mcp
-                echo "Running Agent Deck LiteLLM environment wrapper tests..."
-                python3 ${src}/bin/agent-deck-litellm-env-test.py
-                echo "Running codex-litellm tests..."
-                python3 ${src}/bin/codex-litellm-test.py
-                echo "Running update-overlay tests..."
-                python3 ${src}/bin/update-overlay-test.py
-                touch $out
-              '';
-
-          ai-home-manager-smoke = pkgs.callPackage ./packages/ai-home-manager-smoke.nix {
-            inherit inputs src;
-            agentResources = ai-nix.packages.${system}.agent-resources;
-            homeManagerLib = home-manager.lib;
-            testPkgsFor = agentTestPkgsFor;
-          };
-          ai-managed-preflight-smoke = pkgs.callPackage ./packages/ai-managed-preflight-smoke.nix {
-            inherit src;
-            homeManagerLib = home-manager.lib;
-          };
-        }
-        // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux || system == "aarch64-darwin") {
-          anvil-home-manager = pkgs.callPackage ./packages/anvil-mcp/home-manager-smoke.nix {
-            homeManagerLib = home-manager.lib;
-            inherit inputs;
-            testPkgs = pkgsFor.${system};
-          };
-          anvil-mcp-persistent-soak = pkgs.callPackage ./packages/anvil-mcp/persistent-bridge-soak.nix {
-            anvilMcp =
-              if pkgs.stdenv.isLinux then
-                packages.${system}.anvil-mcp-headless
-              else
-                packages.${system}.anvil-mcp-dedicated;
-          };
-        }
-        // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
-          anvil-mcp = pkgs.callPackage ./packages/anvil-mcp/smoke.nix {
-            anvilMcp = packages.${system}.anvil-mcp;
-          };
-          anvil-mcp-headless = pkgs.callPackage ./packages/anvil-mcp/headless-smoke.nix {
-            anvilMcp = packages.${system}.anvil-mcp-headless;
-          };
-        }
-        // pkgs.lib.optionalAttrs (system == "aarch64-darwin") {
-          anvil-mcp-dedicated = pkgs.callPackage ./packages/anvil-mcp/headless-smoke.nix {
-            anvilMcp = packages.${system}.anvil-mcp-dedicated;
-          };
-        }
-      );
+        forAllSystems (
+          system:
+          nixpkgs.lib.optionalAttrs (builtins.elem system aiSystems) portableAi.checks.${system}
+          // rootChecks.${system}
+        );
     };
 }

@@ -1,7 +1,6 @@
 args@{
   config,
   hostname,
-  inputs,
   lib,
   pkgs,
   ...
@@ -11,7 +10,7 @@ let
   nixManagedAiHomeClass = args.nixManagedAiHomeClass or null;
   inherit (pkgs.stdenv) isDarwin isLinux;
   system = pkgs.stdenv.hostPlatform.system;
-  resourcePackage = inputs.ai-nix.packages.${system}.agent-resources;
+  resourcePackage = pkgs.agent-resources;
   rendererPkgs = pkgs // {
     agent-resources = resourcePackage;
   };
@@ -169,10 +168,6 @@ in
 {
   assertions = [
     {
-      assertion = inputs ? ai-nix;
-      message = "nix-managed AI requires the ai-nix input";
-    }
-    {
       assertion = catalog.validate { };
       message = "nix-managed AI catalog validation failed";
     }
@@ -226,7 +221,7 @@ in
 
   home = {
     file = lib.mapAttrs (_: file: file // { force = true; }) mergedFiles;
-    packages = lib.optional droidSelected inputs.ai-nix.packages.${system}.agent-http-header-bridge;
+    packages = lib.optional droidSelected pkgs.agent-http-header-bridge;
     activation = {
       aiManagedPreflight = preflight.activation;
     }

@@ -14,31 +14,17 @@
   vulcan-crt ? null,
 }:
 
-assert
-  inputs ? ai-nix
-  || builtins.throw ''
-    nix-config now expects an `ai-nix` flake input.
-
-    Add it to the consuming flake, for example:
-
-      ai-nix = {
-        url = "github:jwiegley/ai-nix";
-        inputs.nixpkgs.follows = "nixpkgs";
-      };
-  '';
-
 let
   overlayDir = ../overlays;
+  aiOverlays = import ../overlays/ai { inherit inputs; };
   isImportableOverlay =
     n:
-    builtins.match ".*\\.nix" n != null
-    || builtins.pathExists (overlayDir + ("/" + n + "/default.nix"));
+    n != "ai"
+    && (
+      builtins.match ".*\\.nix" n != null || builtins.pathExists (overlayDir + ("/" + n + "/default.nix"))
+    );
 in
-[
-  inputs.ai-nix.overlays.default
-  # Restore this flake's inputs after ai-nix applies its own overlay stack.
-  (_final: _prev: { inherit inputs; })
-]
+aiOverlays
 ++ (
   # A merged CA bundle (system roots + Vulcan's private root CA), built as a
   # standalone derivation rather than overriding `cacert` itself. Overriding

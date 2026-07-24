@@ -1,6 +1,5 @@
 inputs@{
   nixpkgs,
-  mcp-servers-nix,
   llm-agents,
   git-ai,
   ...
@@ -16,52 +15,7 @@ let
 
   forAllSystems = lib.genAttrs systems;
 
-  overlays = [
-    (_final: _prev: { inherit inputs; })
-    (
-      _final: prev:
-      prev.lib.optionalAttrs
-        (
-          prev.stdenv.buildPlatform.system == "x86_64-linux"
-          && prev.stdenv.hostPlatform.system == "x86_64-linux"
-        )
-        (
-          let
-            rustPkgs = import inputs.nixpkgs {
-              system = "x86_64-linux";
-              overlays = [ inputs.rust-overlay.overlays.default ];
-            };
-            rust195 = rustPkgs.rust-bin.stable."1.95.0".minimal;
-            rustPlatform195 = prev.makeRustPlatform {
-              cargo = rust195;
-              rustc = rust195;
-            };
-          in
-          assert rust195.version == "1.95.0";
-          {
-            qdrant = prev.qdrant.override { rustPlatform = rustPlatform195; };
-          }
-        )
-    )
-    mcp-servers-nix.overlays.default
-    git-ai.overlays.default
-    (_final: prev: {
-      github-mcp-server =
-        prev.callPackage (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")
-          { };
-    })
-    (import ../overlays/ai/30-agent-resources.nix)
-    (import ../overlays/ai/30-agent-deck.nix)
-    (import ../overlays/ai/30-fractal.nix)
-    (import ../overlays/ai/30-ai-python.nix)
-    (import ../overlays/ai/30-ai-llm.nix)
-    (import ../overlays/ai/30-ai-mcp.nix)
-    (import ../overlays/ai/30-lazycodex.nix)
-    (import ../overlays/ai/30-agnix.nix)
-    (import ../overlays/ai/30-claude-vault.nix)
-    (import ../overlays/ai/30-sherlock-db.nix)
-    (import ../overlays/ai/30-vllm-mlx.nix)
-  ];
+  overlays = import ../overlays/ai { inherit inputs; };
 
   mkPkgs =
     system:
