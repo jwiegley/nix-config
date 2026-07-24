@@ -1,1 +1,1 @@
-inputs: (import ./ai-flake-definition.nix).outputs inputs
+inputs: import ./ai-flake-definition.nix inputs

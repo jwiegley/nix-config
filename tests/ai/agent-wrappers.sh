@@ -1030,6 +1030,12 @@ assert_codex_host_state() {
         fail "Codex did not seed host-local SQLite state"
     cmp "$seed" "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" ||
         fail "Codex altered the seeded SQLite file"
+    [ "$(stat -c %a "$CODEX_LOCAL_ROOT")" = 700 ] ||
+        fail "Codex local root does not have mode 0700"
+    [ "$(stat -c %a "$CODEX_LOCAL_ROOT/sqlite")" = 700 ] ||
+        fail "Codex SQLite root does not have mode 0700"
+    [ "$(stat -c %a "$CODEX_LOCAL_ROOT/log")" = 700 ] ||
+        fail "Codex log root does not have mode 0700"
     [ -L "$ROOT/log" ] || fail "Codex did not create the host-local log link"
     [ "$(readlink "$ROOT/log")" = "$CODEX_LOCAL_ROOT/log" ] ||
         fail "Codex log link has the wrong target"
@@ -1131,6 +1137,32 @@ test_codex_runtime_profile_rejections() {
     [ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a directory runtime profile"
     assert_upstream_not_invoked
     assert_bounded_redacted_error codex 0
+    finish_case codex
+}
+
+test_codex_host_state_rejections() {
+    new_case codex host-state-wrong-log-link
+    configure_state complete
+    mkdir -p "$CASE_DIR/wrong-log-target"
+    ln -s "$CASE_DIR/wrong-log-target" "$ROOT/log"
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a host-state log link with the wrong target"
+    assert_upstream_not_invoked
+    grep -F 'codex: refusing host-local log path' "$STDERR_FILE" >/dev/null ||
+        fail "Codex wrong-log-link failure was not reported at the host-state boundary"
+    finish_case codex
+
+    new_case codex host-state-log-migration-failure
+    configure_state complete
+    mkdir -p "$ROOT/log"
+    printf '%s\n' occupied >"$ROOT/log/entry"
+    chmod 500 "$ROOT"
+    invoke_agent codex 0 0 alpha
+    chmod 700 "$ROOT"
+    [ "$LAST_STATUS" -ne 0 ] || fail "Codex ignored a host-state log migration failure"
+    assert_upstream_not_invoked
+    grep -F 'codex: cannot migrate host-local log path' "$STDERR_FILE" >/dev/null ||
+        fail "Codex log migration failure was not reported at the host-state boundary"
     finish_case codex
 }
 
@@ -1319,6 +1351,7 @@ test_unset_home_bypass droid
 
 test_claude_real
 test_codex_host_state
+test_codex_host_state_rejections
 test_codex_runtime_profile
 test_codex_runtime_profile_rejections
 test_codex_command_scope
