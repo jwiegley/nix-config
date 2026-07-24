@@ -140,7 +140,7 @@ if [[ $run_switch == true ]]; then
     elif [[ -d /etc/nixos ]]; then
         with_nixos_build_lock sudo nixos-rebuild switch --flake "$config_dir#vulcan"
     else
-        u switch
+        sudo darwin-rebuild switch --flake "$config_dir#$(hostname -s)"
     fi
 fi
 
