@@ -30,8 +30,8 @@
 ### Task 1: Specify the lifecycle behavior with failing tests
 
 **Files:**
-- Create: `~/.pi/agent/extensions/auto-compact-resume/index.test.ts`
-- Test: `~/.pi/agent/extensions/auto-compact-resume/index.test.ts`
+- Create: `config/ai/extensions/auto-compact-resume/index.test.ts`
+- Test: `config/ai/extensions/auto-compact-resume/index.test.ts`
 
 **Interfaces:**
 - Consumes: Pi event names `session_start` and `turn_end`; context methods `getContextUsage()` and `compact()`.
@@ -46,7 +46,7 @@ Create a Bun test that dynamically imports `./index.ts`, converts a missing modu
 Run:
 
 ```bash
-cd ~/.pi/agent/extensions/auto-compact-resume
+cd config/ai/extensions/auto-compact-resume
 bun test index.test.ts
 ```
 
@@ -74,8 +74,8 @@ Run the same `bun test` command. Expected: failure remains attributable to the a
 ### Task 2: Implement the guarded global extension
 
 **Files:**
-- Create: `~/.pi/agent/extensions/auto-compact-resume/index.ts`
-- Test: `~/.pi/agent/extensions/auto-compact-resume/index.test.ts`
+- Create: `config/ai/extensions/auto-compact-resume/index.ts`
+- Test: `config/ai/extensions/auto-compact-resume/index.test.ts`
 
 **Interfaces:**
 - Produces: `calculateThreshold(contextWindow: number, maxTokens: number): number` and a default Pi extension factory.
@@ -127,7 +127,7 @@ On `session_start`, compact an already-large context without resuming unless its
 Run:
 
 ```bash
-cd ~/.pi/agent/extensions/auto-compact-resume
+cd config/ai/extensions/auto-compact-resume
 bun test index.test.ts
 ```
 
@@ -136,8 +136,9 @@ Expected: all 12 tests pass with no warnings or errors.
 ### Task 3: Verify installation against Pi
 
 **Files:**
-- Verify: `~/.pi/agent/extensions/auto-compact-resume/index.ts`
-- Verify: `~/.pi/agent/settings.json`
+- Verify: `config/ai/extensions/auto-compact-resume/index.ts`
+- Verify: `config/ai/renderers/pi.nix`
+- Verify after activation: `~/.pi/agent/extensions/auto-compact-resume/index.ts`
 
 **Interfaces:**
 - Consumes: Pi's global extension auto-discovery at `~/.pi/agent/extensions/*/index.ts`.
@@ -155,7 +156,7 @@ Expected: exit status zero, `gpt-5.6-sol` appears in output, and Pi reports no e
 
 - [ ] **Step 2: Reload the current Pi process**
 
-Run `/reload` in the interactive session, or restart Pi if external automation cannot submit the command to the current TUI. Because the extension is globally auto-discovered, no `settings.json` registration is required.
+Before the authorized Home Manager switch, verify the repository implementation and tests against the mutable originals, then move the old mutable extension directory to a timestamped backup rather than deleting it. Run the switch, then `/reload` in the interactive session, or restart Pi if external automation cannot submit the command to the current TUI. Because the extension is globally auto-discovered, no `settings.json` registration is required.
 
 - [ ] **Step 3: Verify persisted files and unrelated state**
 
@@ -164,7 +165,7 @@ Run:
 ```bash
 find ~/.pi/agent/extensions/auto-compact-resume -maxdepth 1 -type f -print | sort
 python3 -m json.tool ~/.pi/agent/settings.json >/dev/null
-git -C /Users/johnw/src/nix status --short --branch
+git status --short --branch
 ```
 
 Expected: the repository retains the design, plan, implementation, and test files; the installed extension directory contains only `index.ts`; settings remain valid JSON; and unrelated mutable Pi state is unchanged.

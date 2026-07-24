@@ -128,6 +128,9 @@ describe("auto compact and resume", () => {
       },
       options: { triggerTurn: true, deliverAs: "followUp" },
     });
+    expect(harness.sent[0].message.content).toContain(
+      "Continue the original user request immediately",
+    );
   });
 
   test("compacts a completed answer without manufacturing another turn", async () => {
@@ -215,6 +218,20 @@ describe("auto compact and resume", () => {
       context,
     );
     compactions[0].onError(new Error("Authentication failed: credentials expired"));
+
+    expect(harness.sent).toHaveLength(0);
+  });
+
+  test("does not loop after a terminal model failure", async () => {
+    const harness = await setup();
+    const { context, compactions } = makeContext(130_000);
+
+    await harness.emit(
+      "turn_end",
+      { message: assistantMessage({ toolCall: true }) },
+      context,
+    );
+    compactions[0].onError(new Error("model not found"));
 
     expect(harness.sent).toHaveLength(0);
   });

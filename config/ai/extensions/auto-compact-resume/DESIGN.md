@@ -71,4 +71,4 @@ Bun tests exercise the extension through a small fake Extension API and establis
 - sessions below the threshold remain untouched; and
 - a session ending at a compaction boundary is not immediately compacted again.
 
-An explicit Pi 0.81.1 loader smoke test confirms that the installed extension loads with extension auto-discovery disabled. Home Manager evaluation proves that the managed runtime directory contains only `index.ts`; repository tests and JSON checks confirm that unrelated mutable configuration remains untouched.
+An explicit Pi 0.81.1 loader smoke test confirms that the repository extension source loads with extension auto-discovery disabled. Home Manager evaluation separately proves that the managed runtime directory contains only `index.ts`; repository tests and JSON checks confirm that unrelated mutable configuration remains untouched.

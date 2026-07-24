@@ -35,7 +35,8 @@ function isTerminalCompactionError(error: unknown): boolean {
     /\b(?:authentication|credentials?|unauthori[sz]ed|forbidden)\b/i.test(message) ||
     /\b(?:api[ -]?key|billing|payment required|insufficient quota)\b/i.test(message) ||
     /\b(?:401|403)\b/.test(message) ||
-    /\bno model (?:is )?(?:selected|configured)\b/i.test(message)
+    /\bno model (?:is )?(?:selected|configured)\b/i.test(message) ||
+    /\b(?:(?:unknown|invalid|unsupported) model|model (?:does not exist|not found))\b/i.test(message)
   );
 }
 

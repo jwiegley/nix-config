@@ -12,7 +12,7 @@ Updated: 2026-07-23
 - The worktree has its own allowed direnv using copied ignored `.envrc` and `.envrc.cache`; no dependency was installed. Root and portable-subflake checks pass through that environment.
 - History anchor `5c996f45f0aa09f3398d2c916d92dc47146e2bf4` has the unified branch, standalone `main`, and divergent `feat/pi-extra-extensions` tips as parents with no first-parent tree delta. Every standalone branch tip is now reachable; the anchor passed an independent fess audit.
 - The target-side compatibility oracle was observed RED on missing `overlays.default`, then GREEN after the maintained overlays, patches, resources, wrappers, and substantive tests moved to root-owned paths. `config/ai/flake.lock` was regenerated at the prior immutable direct-input revisions rather than copied from the old repository.
-- `auto-compact-resume` source, 12-test Bun suite, and corrected design/plan now live under `config/ai/extensions/auto-compact-resume`. The Pi renderer and preflight own only `.pi/agent/extensions/auto-compact-resume/index.ts`; the focused Home Manager check and explicit Pi loader smoke pass.
+- `auto-compact-resume` source and corrected design/plan now live under `config/ai/extensions/auto-compact-resume`. The Pi renderer and preflight own only `.pi/agent/extensions/auto-compact-resume/index.ts`; the focused Home Manager check and explicit repository-source Pi loader smoke pass. Fess fixes add terminal-model handling and continuation-content coverage, bringing the Bun suite to 13/13, but their cleanup commit is staged and blocked on GPG pinentry.
 - Anvil is available through a dedicated Emacs daemon. Its modified-file buffer set was empty before this documentation batch; that does not prove a separate interactive Emacs has no unsaved buffers.
 
 ## Established findings
@@ -49,3 +49,4 @@ The existing password-store LiteLLM credential was mapped only in a temporary ch
 - Repeated build/test failure signature: none (0/3). The first Anvil lifecycle harness run had one harness-only stdin-liveness failure; after correcting the scratch harness, both lifecycle cases passed.
 - Unusable subagent output: none (0/2).
 - Destructive/irreversible action: none attempted. Standalone repository retirement remains gated and no shared history was rewritten or pushed.
+- GPG signing gate: 1 blocked commit attempt. `gpg` reported expired key records, launched pinentry, then returned `Operation cancelled`; do not retry repeatedly or bypass signing. Resume after the signing key/pinentry is unlocked or repaired.
