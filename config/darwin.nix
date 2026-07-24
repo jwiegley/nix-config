@@ -232,7 +232,6 @@ in
       "cardhop"
       "choosy"
       "claude"
-      "conductor"
       "corelocationcli"
       "cursor"
       "cursor-cli"
