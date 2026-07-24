@@ -59,7 +59,7 @@ runCommand "pi-gallery-check"
       [ "$actual" = "$expected" ] || fail "$manifest: expected $expected, got $actual"
     }
 
-    expect_version ${roots.bigpowers}/package.json 2.82.3
+    expect_version ${roots.bigpowers}/package.json 2.84.0
     expect_version ${roots.btw}/package.json 0.4.1
     expect_version ${roots.artifacts}/package.json 0.9.0
     expect_version ${roots.insights}/package.json 1.0.1

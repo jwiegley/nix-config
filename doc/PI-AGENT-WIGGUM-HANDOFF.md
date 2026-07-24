@@ -6,7 +6,7 @@ Updated: 2026-07-14
 
 ## Current state
 
-- Frozen target and done criteria: `docs/PI-AGENT-WIGGUM-PLAN.md`.
+- Frozen target and done criteria: `doc/PI-AGENT-WIGGUM-PLAN.md`.
 - Hera is `aarch64-darwin`; Pi was absent from the activated `PATH` at the
   start of this work.
 - The pinned `numtide/llm-agents.nix` input already exports `pi` 0.80.6 for

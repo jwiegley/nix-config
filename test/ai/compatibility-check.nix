@@ -28,6 +28,7 @@ let
     (actual.checks.${system}.coverage == actual.checks.${system}.tests)
     (actual.checks.${system}.fuzz == actual.checks.${system}.tests)
     (actual.checks.${system}.memory == actual.checks.${system}.tests)
+    (actual.checks.${system}.no-warnings == actual.checks.${system}.lint)
     (actual.checks.${system}.profile == actual.checks.${system}.build)
   ];
   checkSystem =

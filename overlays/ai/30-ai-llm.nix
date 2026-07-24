@@ -79,12 +79,12 @@ final: prev: {
   llama-cpp =
     if prev.stdenv.isDarwin then
       (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs (attrs: rec {
-        version = "10079";
+        version = "10107";
         src = prev.fetchFromGitHub {
           owner = "ggml-org";
           repo = "llama.cpp";
           tag = "b${version}";
-          hash = "sha256-zRry9dslXhV3cIcvkRxLbUmOINiobw6NJkm73jBlGok=";
+          hash = "sha256-79ENuzOpmyDam89LUksOf/acXEwwilGAvciN2OYtg30=";
         };
         postPatch = "";
         npmRoot = "tools/ui";
@@ -603,14 +603,14 @@ final: prev: {
     with final.python313Packages;
     buildPythonApplication rec {
       pname = "omlx";
-      version = "0.5.2";
+      version = "0.5.3";
       pyproject = true;
 
       src = fetchFromGitHub {
         owner = "jundot";
         repo = "omlx";
         tag = "v${version}";
-        hash = "sha256-SqatMdcQxsVw+O1x4CRdJB3aqNsxXxjhASObvY70h2Q=";
+        hash = "sha256-Q5rPYuHZtcPrdBhoRnXLnWIMYSJDzTu+RuTIH+lTpNM=";
       };
 
       # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git

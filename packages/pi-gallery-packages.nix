@@ -491,7 +491,7 @@ let
 
   bigpowers = mkCopyRoot {
     pname = "bigpowers";
-    version = "2.82.3";
+    version = "2.84.0";
     install = root: ''
       cp -R -- ${inputs.bigpowers}/.pi ${root}/
       cp -- ${inputs.bigpowers}/package.json ${inputs.bigpowers}/LICENSE \
@@ -798,27 +798,6 @@ assert inputs.agent-browser-source.narHash == "sha256-praWvAgWoDmWqXzh/kxdfQAPGk
 assert
   builtins.hashFile "sha256" "${inputs.agent-browser-source}/cli/Cargo.toml"
   == "6880ec45ed03e83ab22bd21ac63c4dbaf6c8accd4da840dcf7536e5e48b1f98d";
-assert inputs.pi-hashline-edit-pro.rev == "5d97f2a0d8aaa0e06a637583845263ed2ca455f1";
-assert inputs.pi-hashline-edit-pro.narHash == "sha256-UOAalDCmw/bnRWU76eIOP+sHBc43BmDXZF5D8J0v9G4=";
-assert inputs.pi-web-access.rev == "7bdc30a65cf77273eb9c0034647b373bda4060d7";
-assert inputs.pi-web-access.narHash == "sha256-TPtkurLY8Z9qxa597e0C5yWlNvgz4ywv2GdQstTB33A=";
-assert inputs.pi-lens.rev == "2ea8691a25e3a39bf944e0d1c5ed4178c50b55da";
-assert inputs.pi-lens.narHash == "sha256-lrBLV94SNHVFbt7leVjOY1dJV6HszjnOqTks8rFtfZk=";
-assert inputs.pi-dynamic-workflows.rev == "6d866e16396ca487dfde2591dd4d4e7ab04e9ba1";
-assert inputs.pi-dynamic-workflows.narHash == "sha256-lFb9rmmnywPwnZMBcfn5JusqASdaA1g7663s2znfS+o=";
-assert inputs.pi-agent-browser-native.rev == "211a012c9b199d758768e8ba729f35e11e661f65";
-assert
-  inputs.pi-agent-browser-native.narHash == "sha256-LMVvFkxiDN90lcTX54FmrwM0N/lLV+IJaCWzveHqpm8=";
-assert inputs.pi-btw.rev == "4f858102706910ee9d520a9666832f3103631b61";
-assert inputs.pi-btw.narHash == "sha256-tXcZUh20xYUTn80cubpd9BjFPAcLQK7CrEKxTnsdQ2s=";
-assert inputs.pi-artifacts.rev == "9056b18bac35d01fa79d255911f0a74b919c46d2";
-assert inputs.pi-artifacts.narHash == "sha256-g7jrO0JxpO3k3hPgZD87tCWkbUdbilOFQ8ASwvjejRk=";
-assert inputs.pi-insights.rev == "f2de4880e5d8b1f66f207e220269703b6ca38ecf";
-assert inputs.pi-insights.narHash == "sha256-JyoRf42spqt1Q3C20uFt559+2JYEvIS5ki/WD8WM4JQ=";
-assert inputs.pi-subagentura.rev == "e49e4d259a1b0186ac6924602b5faf673f61bee3";
-assert inputs.pi-subagentura.narHash == "sha256-87RxKFvnxJ9waIb3ehOazrCVYnsqEzjxeYIMUmgQdbk=";
-assert inputs.lean-ctx.rev == "54e0a66bcbb9a6695e45848d3ea97a491a0b5275";
-assert inputs.lean-ctx.narHash == "sha256-h0blm9mUezoMVZ7OaJDhfioTBKUiMk70KejC2gihgBc=";
 {
   inherit
     agent-browser

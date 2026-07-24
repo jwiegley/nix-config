@@ -4,7 +4,7 @@ Updated: 2026-07-14
 
 ## Completion contract
 
-- Frozen target and done criteria: `docs/AIPERF-WIGGUM-PLAN.md`.
+- Frozen target and done criteria: `doc/AIPERF-WIGGUM-PLAN.md`.
 - AIPerf must land as commits separate from the completed Pi work in both
   repositories.
 - Only AIPerf-related audit findings are in scope for this work.

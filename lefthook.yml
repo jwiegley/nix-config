@@ -37,6 +37,18 @@ pre-commit:
           bin/update-overlay \
           bin/update-overlay-test.py
         python3 -m unittest -v bin/update-overlay-test.py
-    # nix-check:
-    #   glob: "*.{nix,lock}"
-    #   run: nix flake check --no-warn-dirty 2>&1
+    nix-check:
+      glob: "*.{nix,lock}"
+      run: nix flake check ./config/ai --all-systems --no-build --no-warn-dirty
+
+pre-push:
+  commands:
+    agent-checks:
+      run: >-
+        nix build --no-link
+        .#checks.aarch64-darwin.agent-resources
+        .#checks.aarch64-darwin.agent-wrappers
+        .#checks.aarch64-darwin.ai-home-manager-smoke
+        .#checks.aarch64-darwin.pi-gallery
+    system-build:
+      run: ./build system

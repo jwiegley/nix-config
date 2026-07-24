@@ -3,7 +3,7 @@
 set -euo pipefail
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
-# shellcheck source=tests/ai/scripts/lib.sh
+# shellcheck source=test/ai/scripts/lib.sh
 . "$script_dir/lib.sh"
 
 enter_repo

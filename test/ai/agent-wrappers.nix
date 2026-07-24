@@ -173,9 +173,12 @@ let
     else
       pkgs.closureInfo { rootPaths = [ agentHttpHeaderBridge ]; };
 in
-assert (codexPackage.version or null) == "0.144.6";
+assert pkgs.lib.assertMsg (
+  (codexPackage.version or null) == "0.145.0"
+) "Codex version changed: revalidate test/ai/agent-wrappers.sh before updating the pin";
 pkgs.runCommand "agent-wrappers-check"
   {
+    __darwinAllowLocalNetworking = pkgs.stdenv.isDarwin;
     nativeBuildInputs = [
       pkgs.bash
       pkgs.coreutils

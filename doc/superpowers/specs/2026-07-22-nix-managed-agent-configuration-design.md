@@ -57,7 +57,7 @@ The live fleet has several constraints that the design treats as authoritative:
 - External consumers import nix-config with `flake = false`, so inputs declared only in the root nix-config flake do not propagate to them.
 - Existing Claude, Codex, and Droid base configuration files mix managed configuration with mutable client state and cannot be wholly replaced.
 
-The recorded shared-home failure in [`docs/ANVIL-NELISP-HANDOFF.md`](../../ANVIL-NELISP-HANDOFF.md) is a hard rollout constraint: shared-home links appeared on other machines before the referenced closure existed in their local stores. The rollout ordering below prevents that failure class.
+The recorded shared-home failure in [`doc/ANVIL-NELISP-HANDOFF.md`](../../ANVIL-NELISP-HANDOFF.md) is a hard rollout constraint: shared-home links appeared on other machines before the referenced closure existed in their local stores. The rollout ordering below prevents that failure class.
 
 ## Architecture
 

@@ -20,8 +20,10 @@ let
   optPkg = name: if pkgs ? ${name} then [ pkgs.${name} ] else [ ];
 
   agentPackages = inputs.llm-agents.packages.${sys} or { };
-  localAi = import ../packages/ai-flake-outputs.nix inputs;
-  patchAgentPackage = localAi.lib.patchAgentPackage pkgs;
+  localAi =
+    inputs.nix-ai or (if inputs ? git-ai then import ../packages/ai-flake-outputs.nix inputs else null);
+  patchAgentPackage =
+    if localAi == null then _name: package: package else localAi.lib.patchAgentPackage pkgs;
   optAgent =
     name: if agentPackages ? ${name} then [ (patchAgentPackage name agentPackages.${name}) ] else [ ];
 

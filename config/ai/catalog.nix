@@ -1398,14 +1398,14 @@ let
 
     clientVersions = {
       claude = "2.1.217";
-      codex = "0.144.6";
+      codex = "0.145.0";
       droid = "0.177.0";
       opencode = "1.18.4";
-      pi = "0.81.1";
+      pi = "0.82.0";
     };
     adapterVersions = {
       mcp-remote = "0.1.38";
-      pi-mcp-adapter = "2.11.0";
+      pi-mcp-adapter = "2.12.1";
       pi-model-router = "0.4.4";
       pi-provider-litellm = "2.0.0";
       pi-subagentura = "3.0.3";

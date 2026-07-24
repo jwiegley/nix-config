@@ -410,7 +410,7 @@ Run the merged tests on `main`. Confirm that LiteLLM and Fractal both recorded t
 ### Task 5: Record the gate result
 
 **Files:**
-- Modify: `docs/superpowers/specs/2026-07-22-fractal-agent-deck-pi-litellm-design.md`
+- Modify: `doc/superpowers/specs/2026-07-22-fractal-agent-deck-pi-litellm-design.md`
 
 **Interfaces:**
 - Consumes: observed pilot results.

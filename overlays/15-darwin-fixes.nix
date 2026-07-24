@@ -40,7 +40,7 @@ in
         patches = (oldAttrs.patches or [ ]) ++ [
           (prev.fetchpatch {
             url = "https://gitlab.freedesktop.org/poppler/poppler/-/commit/08f4bca6a669f9fce75dbab743db559a86591738.patch";
-            hash = "sha256-ploZV/lH9ZNeHzpGieDe49NcLvy7ii+fKzdzClJnlb8=";
+            hash = "sha256-+eWqVK/v3Ys9k2+z/dCoS2o82m039UER1StMUW4PIgM=";
           })
         ];
       })

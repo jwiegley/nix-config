@@ -97,9 +97,9 @@ let
 
   piMcpAdapter = buildNpmPackage {
     pname = "pi-mcp-adapter";
-    version = "2.11.0";
+    version = "2.12.1";
     src = inputs.pi-mcp-adapter;
-    npmDepsHash = "sha256-xIW2WTuVj6SeFGrJPEduzzVCT548i7tzlP5sq3ky/wI=";
+    npmDepsHash = "sha256-9Z6zdIQ9y1AQICj3KKZ2UB5qlHlYXIygEqD9OGEQgx8=";
     npmInstallFlags = [ "--omit=dev" ];
     dontNpmBuild = true;
     postPatch = ''
@@ -121,26 +121,6 @@ let
 in
 assert bigpowersSkills == bigpowers.names;
 assert bigpowersPrompts == bigpowers.names;
-assert inputs.bigpowers.rev == bigpowers.revision;
-assert inputs.bigpowers.narHash == bigpowers.narHash;
-assert
-  builtins.hashFile "sha256" "${inputs.bigpowers}/package.json"
-  == "b95b2a687178b1d7314cc5cd66f6655269565b54abd139bc7b314c096aa3ddfb";
-assert
-  builtins.hashFile "sha256" "${inputs.bigpowers}/.pi/package.json"
-  == "3546705df79cc06abfb92ca3f97b01592da4c30bb7d837db496551401c9979a2";
-assert
-  builtins.hashFile "sha256" "${inputs.bigpowers}/LICENSE"
-  == "ab5c332485a9ffad649f5a341d5ecfd35abff52249bf2a5c958f168a002ce376";
-assert
-  builtins.hashFile "sha256" "${inputs.pi-mcp-adapter}/package-lock.json"
-  == "156cd7b65090cb5600651b40563dea3974fbeeaa7dbb6346f3deb0e9e0528bd0";
-assert
-  builtins.hashFile "sha256" "${inputs.pi-openai-server-compaction}/package.json"
-  == "f9cf0b5aaa73c1a3cf4ed92ba55c4c9f2784e46ef39c29822b279f3410452110";
-assert
-  builtins.hashFile "sha256" "${inputs.pi-quiet}/packages/pi-quiet/package.json"
-  == "1b370c62fdf7b3b5a9fb35b45ba0cf0e3ceefa35e037f7cd9911b816ad03e4fa";
 runCommand "agent-resources" { } ''
   set -euo pipefail
 

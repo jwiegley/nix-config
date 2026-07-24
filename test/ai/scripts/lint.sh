@@ -3,7 +3,7 @@
 set -euo pipefail
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
-# shellcheck source=tests/ai/scripts/lib.sh
+# shellcheck source=test/ai/scripts/lib.sh
 . "$script_dir/lib.sh"
 
 enter_repo
@@ -17,11 +17,11 @@ portable_nix_paths=(
     packages/agent-resources.nix
     packages/ai-flake-definition.nix
     packages/ai-flake-outputs.nix
-    tests/ai
+    test/ai
 )
 
 for path in "${portable_nix_paths[@]}"; do
     statix check "$path"
 done
 deadnix --fail "${portable_nix_paths[@]}"
-find tests/ai -type f -name '*.sh' -print0 | xargs -0 -r shellcheck -x
+find test/ai -type f -name '*.sh' -print0 | xargs -0 -r shellcheck -x

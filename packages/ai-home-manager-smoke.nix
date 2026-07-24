@@ -27,15 +27,17 @@ let
     };
   catalog = catalogFor modelData;
   externalAiOverlay = _final: _prev: { external-ai-marker = true; };
-  externalOverlayProbe =
-    (builtins.head (
+  externalOverlayInputs = {
+    caller-input-marker = true;
+  };
+  externalOverlayProbe = lib.foldl' (previous: overlay: previous // (overlay { } previous)) { } (
+    lib.take 2 (
       import "${src}/config/overlays.nix" {
-        inherit inputs;
+        inputs = externalOverlayInputs;
         aiOverlay = externalAiOverlay;
       }
-    ))
-      { }
-      { };
+    )
+  );
 
   replaceAt =
     index: transform: values:
@@ -2524,14 +2526,14 @@ let
   };
   expectedClientVersions = {
     claude = "2.1.217";
-    codex = "0.144.6";
+    codex = "0.145.0";
     droid = "0.177.0";
     opencode = "1.18.4";
-    pi = "0.81.1";
+    pi = "0.82.0";
   };
   expectedAdapterVersions = {
     mcp-remote = "0.1.38";
-    pi-mcp-adapter = "2.11.0";
+    pi-mcp-adapter = "2.12.1";
     pi-model-router = "0.4.4";
     pi-provider-litellm = "2.0.0";
     pi-subagentura = "3.0.3";
@@ -3092,6 +3094,15 @@ let
     }).package-list;
   task9HeraHasPackage =
     package: lib.any (candidate: toString candidate == toString package) task9HeraPackages;
+  task9NoGitAiPackages =
+    (import "${src}/config/packages.nix" {
+      hostname = "hera";
+      inputs = builtins.removeAttrs inputs [ "git-ai" ];
+      pkgs = task9DarwinPkgs;
+    }).package-list;
+  task9NoGitAiHasUnpatchedClaude = lib.any (
+    candidate: toString candidate == toString inputs.llm-agents.packages.aarch64-darwin.claude-code
+  ) task9NoGitAiPackages;
   task9AgentDeckEvaluation = homeManagerLib.homeManagerConfiguration {
     pkgs = task9DarwinPkgs;
     modules = [
@@ -3222,6 +3233,7 @@ let
       (lib.hasInfix "++ optAgent \"claude-code\"" task9PackageSource)
       true
     )
+    (expectEqual "Task 9 agent packages degrade without git-ai" task9NoGitAiHasUnpatchedClaude true)
     (expectEqual "Task 9 personal Linux fixture is explicit"
       (lib.hasInfix "nixManagedAiHomeClass = \"personal-linux\"" task9FlakeSource)
       true
@@ -3602,6 +3614,10 @@ let
   contractChecks = [
     (expectEqual "external AI overlay replaces local AI composition"
       externalOverlayProbe.external-ai-marker
+      true
+    )
+    (expectEqual "external AI overlay restores caller inputs"
+      externalOverlayProbe.inputs.caller-input-marker
       true
     )
     (expectEqual "OpenCode bash-reviewer tool oracle" (builtins.hashString "sha256" (

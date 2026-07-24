@@ -33,7 +33,7 @@ in
 assert linuxResult.marker == "linux-upstream";
 assert darwinResult.marker == "darwin-override";
 assert darwinResult.args.nodejs_latest == "nodejs-22";
-assert darwinResult.attrs.version == "10079";
+assert darwinResult.attrs.version == "10107";
 assert darwinResult.attrs.npmRoot == "tools/ui";
 assert darwinResult.attrs.npmDeps.patches == [ "existing.patch" ];
 runCommand "llama-cpp-platform-compat" { } "touch $out"

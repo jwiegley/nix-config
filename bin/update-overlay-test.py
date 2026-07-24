@@ -132,9 +132,26 @@ class IntegratedWorkflowTests(unittest.TestCase):
             with self.subTest(retired=retired):
                 self.assertNotIn(retired, active)
 
-        self.assertIn("nix flake update\n", update_agents)
-        self.assertIn("nix flake update --flake ./config/ai", update_agents)
-        self.assertIn("python bin/update-overlay --all", update_agents)
+        self.assertIn('nix flake update "${ai_inputs[@]}"', update_agents)
+        self.assertNotIn("    nix flake update\n", update_agents)
+        for required_input in (
+            "agent-browser-source",
+            "bigpowers",
+            "git-ai",
+            "llm-agents",
+            "mcp-servers-nix",
+            "pi-subagentura",
+        ):
+            with self.subTest(required_input=required_input):
+                self.assertIn(required_input, update_agents)
+        self.assertIn(
+            'nix flake update --flake ./config/ai "${ai_inputs[@]}"', update_agents
+        )
+        self.assertNotIn("\n    nixpkgs\n", update_agents)
+        self.assertNotIn("\n    rust-overlay\n", update_agents)
+        self.assertIn(
+            "python bin/update-overlay --all --overlays-dir overlays/ai", update_agents
+        )
         self.assertEqual(update_agents.count('git_pull_clean "$config_dir"'), 1)
         self.assertNotIn("commit_and_push_if_changed", update_agents)
 

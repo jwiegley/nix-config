@@ -80,7 +80,7 @@ let
 
       col-highlight = compileEmacsWikiFile {
         name = "col-highlight.el";
-        sha256 = "0na8aimv5j66pzqi4hk2jw5kk00ki99zkxiykwcmjiy3h1r9311k";
+        sha256 = "sha256-3pWRFdYidBVb0gy18cnF3xOQE+bGIWCZdOYu763C+yo=";
         # date = 2025-10-02T08:31:56-0700;
 
         buildInputs = with eself; [ vline ];
@@ -88,7 +88,7 @@ let
 
       crosshairs = compileEmacsWikiFile {
         name = "crosshairs.el";
-        sha256 = "0ld30hwcxvyqfaqi80nvrlflpzrclnjcllcp457hn4ydbcf2is9r";
+        sha256 = "sha256-R/r5EDRwoHcQAVeEqfGPGx4dSmFF8wmVWEA2UNz/EAI=";
         # date = 2025-10-02T08:31:57-0700;
 
         buildInputs = with eself; [
@@ -130,7 +130,7 @@ let
 
       pp-c-l = compileEmacsWikiFile {
         name = "pp-c-l.el";
-        sha256 = "00509bv668wq8k0fa65xmlagkgris85g47f62ynqx7a39jgvca3g";
+        sha256 = "sha256-ilaNsDEa/LCu8fFMmbdLXuhfeZV+ucRO1DxxA5tThnw=";
         # date = 2025-10-02T08:32:02-0700;
       };
 
@@ -1001,8 +1001,8 @@ let
         src = fetchFromGitHub {
           owner = "manzaltu";
           repo = "claude-code-ide.el";
-          rev = "e3422540eee799547923ffcbaafb78b332bb7e94";
-          sha256 = "sha256-h7hC7GG2gLvrTGlZWMLBycXBNUvCD8I094z8290djv4=";
+          rev = "1de17bbadc650962a05fd68463fdff71697ec649";
+          sha256 = "sha256-jW0R4TqXqVIumHJB9DziqB7NPfMmIKbhsn2H1dLwT6A=";
         };
         buildInputs = with eself; [
           websocket

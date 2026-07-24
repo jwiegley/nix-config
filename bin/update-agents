@@ -45,6 +45,31 @@ else
     config_dir=${NIX_CONFIG_DIR:-$HOME/src/nix}
 fi
 
+ai_inputs=(
+    agent-browser-source
+    bigpowers
+    git-ai
+    lean-ctx
+    llm-agents
+    mcp-remote
+    mcp-servers-nix
+    pal-mcp-server
+    pi-agent-browser-native
+    pi-artifacts
+    pi-btw
+    pi-dynamic-workflows
+    pi-hashline-edit-pro
+    pi-insights
+    pi-lens
+    pi-mcp-adapter
+    pi-openai-server-compaction
+    pi-quiet
+    pi-subagentura
+    pi-web-access
+    ponytail
+    translate-tool
+)
+
 brew_pid=
 
 if [[ $run_brew == true ]] && command -v brew >/dev/null 2>&1; then
@@ -100,9 +125,9 @@ git_pull_clean "$config_dir"
 
 (
     cd "$config_dir"
-    nix flake update
-    nix flake update --flake ./config/ai
-    python bin/update-overlay --all
+    nix flake update "${ai_inputs[@]}"
+    nix flake update --flake ./config/ai "${ai_inputs[@]}"
+    python bin/update-overlay --all --overlays-dir overlays/ai
     nix run .#format
     nix flake check ./config/ai --all-systems --no-build
 )

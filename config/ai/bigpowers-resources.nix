@@ -1,8 +1,5 @@
 {
-  version = "2.82.3";
-  revision = "960ab5283e7b7766f02fbf8703da5bb6e997159d";
-  narHash = "sha256-+tf3MrlvbGqI9T/vE3wGJmpaQ59wg6FZG0PrYTYQUMg=";
-
+  version = "2.84.0";
   names = [
     "align-grid"
     "assess-impact"

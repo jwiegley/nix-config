@@ -85,18 +85,21 @@ let
     "state.ts"
     "utils.ts"
     "abort.ts"
+    "runtime-owner.ts"
     "tool-metadata.ts"
     "init.ts"
     "ui-session.ts"
     "proxy-modes.ts"
     "direct-tools.ts"
     "commands.ts"
+    "prompts.ts"
     "onboarding-state.ts"
     "mcp-setup-panel.ts"
     "types.ts"
     "ui-stream-types.ts"
     "config.ts"
     "server-manager.ts"
+    "session-recovery.ts"
     "sampling-handler.ts"
     "elicitation-handler.ts"
     "tool-registrar.ts"
@@ -134,101 +137,9 @@ let
 
   expectedPins = [
     {
-      name = "bigpowers revision";
-      actual = bigpowers.rev or null;
-      expected = bigpowersResources.revision;
-    }
-    {
-      name = "bigpowers NAR hash";
-      actual = bigpowers.narHash or null;
-      expected = bigpowersResources.narHash;
-    }
-    {
-      name = "bigpowers package manifest hash";
-      actual = builtins.hashFile "sha256" "${bigpowers}/package.json";
-      expected = "b95b2a687178b1d7314cc5cd66f6655269565b54abd139bc7b314c096aa3ddfb";
-    }
-    {
-      name = "bigpowers Pi manifest hash";
-      actual = builtins.hashFile "sha256" "${bigpowers}/.pi/package.json";
-      expected = "3546705df79cc06abfb92ca3f97b01592da4c30bb7d837db496551401c9979a2";
-    }
-    {
-      name = "bigpowers license hash";
-      actual = builtins.hashFile "sha256" "${bigpowers}/LICENSE";
-      expected = "ab5c332485a9ffad649f5a341d5ecfd35abff52249bf2a5c958f168a002ce376";
-    }
-    {
-      name = "ponytail revision";
-      actual = ponytail.rev or null;
-      expected = "16f29800fd2681bdf24f3eb4ccffe38be3baec6b";
-    }
-    {
-      name = "ponytail NAR hash";
-      actual = ponytail.narHash or null;
-      expected = "sha256-Y7d4s7uqjH6IbEXhqAiQ+yaxr6iiGcv2X64LuMtG1T8=";
-    }
-    {
-      name = "translate-tool revision";
-      actual = translate-tool.rev or null;
-      expected = "bffdb7ba3e5db603ea1390fee555354c1d45d642";
-    }
-    {
-      name = "translate-tool NAR hash";
-      actual = translate-tool.narHash or null;
-      expected = "sha256-P27Hvn8p1+BN8z6g/aFk91BFtL9SMQiMNFYayKn5xyY=";
-    }
-    {
       name = "llm-agents Pi version";
       actual = piPackage.version or null;
-      expected = "0.81.1";
-    }
-  ]
-  ++ lib.optionals havePiSources [
-    {
-      name = "pi-mcp-adapter revision";
-      actual = piMcpAdapter.rev or null;
-      expected = "82724dccc13a49310530898f922bafff12b7f3fe";
-    }
-    {
-      name = "pi-mcp-adapter NAR hash";
-      actual = piMcpAdapter.narHash or null;
-      expected = "sha256-JjYS9tPSoVuubdmHTqTNNYfDJOc9CBPvVbIxvdJWi7M=";
-    }
-    {
-      name = "pi-mcp-adapter lock hash";
-      actual = builtins.hashFile "sha256" "${piMcpAdapter}/package-lock.json";
-      expected = "156cd7b65090cb5600651b40563dea3974fbeeaa7dbb6346f3deb0e9e0528bd0";
-    }
-    {
-      name = "pi-openai-server-compaction revision";
-      actual = piOpenaiServerCompaction.rev or null;
-      expected = "c6d593087709e9481223dc6c6c2269b371b5e055";
-    }
-    {
-      name = "pi-openai-server-compaction NAR hash";
-      actual = piOpenaiServerCompaction.narHash or null;
-      expected = "sha256-SFGcISdYblxGonhipIHPAOons8MdwYtu+A+WbHnNSVg=";
-    }
-    {
-      name = "pi-openai-server-compaction manifest hash";
-      actual = builtins.hashFile "sha256" "${piOpenaiServerCompaction}/package.json";
-      expected = "f9cf0b5aaa73c1a3cf4ed92ba55c4c9f2784e46ef39c29822b279f3410452110";
-    }
-    {
-      name = "pi-quiet revision";
-      actual = piQuiet.rev or null;
-      expected = "b281afef4e61188e7aa76aaa114ba505274fa7bc";
-    }
-    {
-      name = "pi-quiet NAR hash";
-      actual = piQuiet.narHash or null;
-      expected = "sha256-CScA35fG/xSgtJrWGf36G5oEv3Y+P5sSHjsy4NXkL94=";
-    }
-    {
-      name = "pi-quiet manifest hash";
-      actual = builtins.hashFile "sha256" "${piQuiet}/packages/pi-quiet/package.json";
-      expected = "1b370c62fdf7b3b5a9fb35b45ba0cf0e3ceefa35e037f7cd9911b816ad03e4fa";
+      expected = "0.82.0";
     }
   ];
 
@@ -308,13 +219,10 @@ let
     }
 
     const expectedDirect = {
-      "@earendil-works/pi-ai": "0.74.2",
-      "@earendil-works/pi-tui": "0.74.2",
       "@modelcontextprotocol/ext-apps": "1.7.4",
       "@modelcontextprotocol/sdk": "1.29.0",
       "open": "10.2.0",
       "recheck": "4.5.0",
-      "typebox": "1.3.3",
       "zod": "4.4.3"
     };
     for (const [name, version] of Object.entries(expectedDirect)) {
@@ -324,10 +232,13 @@ let
       }
       if (!actual.has(key)) fail("missing direct runtime dependency: " + name);
     }
+    for (const peer of ["@earendil-works/pi-ai", "@earendil-works/pi-tui", "typebox"]) {
+      if (actual.has("node_modules/" + peer)) {
+        fail("Pi-provided peer leaked into closure: " + peer);
+      }
+    }
 
     const runtimeImports = [
-      "@earendil-works/pi-ai",
-      "@earendil-works/pi-tui",
       "@modelcontextprotocol/ext-apps/app-bridge",
       "@modelcontextprotocol/sdk/client/auth.js",
       "@modelcontextprotocol/sdk/client/index.js",
@@ -338,7 +249,6 @@ let
       "@modelcontextprotocol/sdk/validation/ajv",
       "open",
       "recheck",
-      "typebox",
       "zod"
     ];
     const parent = pathToFileURL(path.join(mcpRoot, "index.ts")).href;
@@ -742,7 +652,7 @@ else
 
         jq -e '
           .name == "pi-mcp-adapter"
-          and .version == "2.11.0"
+          and .version == "2.12.1"
           and .type == "module"
           and .bin == {"pi-mcp-adapter":"cli.js"}
           and .pi.extensions == ["./index.ts"]

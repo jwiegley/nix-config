@@ -8,6 +8,7 @@ import json
 import os
 import secrets
 import selectors
+import signal
 import ssl
 import subprocess
 import sys
@@ -176,13 +177,13 @@ def read_events(path: Path) -> list[dict[str, Any]]:
 
 
 def terminate(process: subprocess.Popen[bytes]) -> None:
-    if process.poll() is not None:
-        return
-    process.terminate()
+    with suppress(ProcessLookupError):
+        os.killpg(process.pid, signal.SIGTERM)
     try:
         process.wait(timeout=1)
     except subprocess.TimeoutExpired:
-        process.kill()
+        with suppress(ProcessLookupError):
+            os.killpg(process.pid, signal.SIGKILL)
         process.wait(timeout=1)
 
 
@@ -190,9 +191,8 @@ def collect(process: subprocess.Popen[bytes]) -> tuple[bytes, bytes]:
     if process.stdin is not None and not process.stdin.closed:
         with suppress(BrokenPipeError):
             process.stdin.close()
-    stdout = process.stdout.read() if process.stdout is not None else b""
-    stderr = process.stderr.read() if process.stderr is not None else b""
-    return stdout, stderr
+        process.stdin = None
+    return process.communicate(timeout=8)
 
 
 def invoke_bridge(
@@ -287,6 +287,7 @@ def invoke_bridge(
         env=environment,
         close_fds=True,
         cwd=case_root / "cwd",
+        start_new_session=True,
     )
     initialize = (
         json.dumps(
@@ -328,8 +329,9 @@ def invoke_bridge(
             ready = selector.select(timeout=8)
             selector.close()
             require(bool(ready), "bridge produced no initial MCP response")
-            first_line = process.stdout.readline()
+            first_line = os.read(process.stdout.fileno(), 64 * 1024)
             require(bool(first_line), "bridge closed before its initial MCP response")
+            require(b"\n" in first_line, "bridge returned a partial initial MCP response")
         if send_initialized:
             process.stdin.write(initialized)
             process.stdin.flush()

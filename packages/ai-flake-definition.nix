@@ -117,7 +117,9 @@ let
         meta = package.meta or { };
       }
     else if name == "codex" then
-      assert (package.version or null) == "0.144.6";
+      assert pkgs.lib.assertMsg (
+        (package.version or null) == "0.145.0"
+      ) "Codex version changed: revalidate the wrapper command table before updating the pin";
       let
         codexAppCommandCase = pkgs.lib.optionalString pkgs.stdenv.isDarwin " | app";
         codexSandboxDarwinValueCase = pkgs.lib.optionalString pkgs.stdenv.isDarwin " | --allow-unix-socket";
@@ -1834,21 +1836,23 @@ let
         meta = package.meta or { };
       }
     else if name == "pi" then
-      assert (package.version or null) == "0.81.1";
+      assert pkgs.lib.assertMsg (
+        (package.version or null) == "0.82.0"
+      ) "Pi version changed: rebase the renderer patch, refresh source digests, and update its tests";
       assert package ? overrideAttrs;
       package.overrideAttrs (old: {
         preInstall = ''
           cat > pi-tool-renderer-wrapper.sha256 <<'EOF'
-          2cb700fcef4f36f853a22e2e90394d11e90fc3c0868d5c116cbf6cd00a680ae4  dist/core/agent-session.js
+          dcc738a40b23c337a788422d370154299633a4770687190da3d05aa210f68968  dist/core/agent-session.js
           5ebc2b2d8e13e0d90d6279d34e016b6f441208af9e73f3d4e75975376eb8987c  dist/core/extensions/loader.js
-          5105a2d9097724972947860b81c5048109534fa909c07f7cc5495f3aaf30444b  dist/core/extensions/runner.js
+          05a9e39f5c1109d168e4b9327a7858243b77ea3bbe836961549e67d282b5a231  dist/core/extensions/runner.js
           b7878c503c0d4ef7a9ad878775b67a7e99ee8e56005d55e973c8aad4ca116b10  dist/core/extensions/runner.d.ts
-          ae5e0715c519006e744032ed50bb6552b9d4e3c17c600d046bf5c4d7160584ac  dist/core/extensions/types.d.ts
+          ef8c3924a72958b446ef1e88904a385ac974c7ffac32529db99dbe1d613c9e34  dist/core/extensions/types.d.ts
           EOF
           sha256sum -c pi-tool-renderer-wrapper.sha256
           patch -p1 --fuzz=0 < ${../overlays/ai/patches/pi-tool-renderer-wrapper.patch}
           ${pkgs.nodejs_22}/bin/node \
-            ${../tests/ai/pi-tool-renderer-wrapper.test.mjs} "$PWD"
+            ${../test/ai/pi-tool-renderer-wrapper.test.mjs} "$PWD"
         ''
         + (old.preInstall or "");
 
@@ -2068,7 +2072,7 @@ let
       );
   };
 
-  scriptRoot = ../tests/ai/scripts;
+  scriptRoot = ../test/ai/scripts;
 
   mkScriptPackage =
     pkgs: name: scriptName: runtimeInputs:
@@ -2216,14 +2220,23 @@ in
       llama-cpp-platform-compat = pkgs.callPackage ../overlays/tests/llama-cpp-platform-compat.nix { };
       llm-agents-nixpkgs-independent =
         let
-          lock = builtins.fromJSON (builtins.readFile ../config/ai/flake.lock);
-          llmAgentsNode = lock.nodes.${lock.nodes.root.inputs.llm-agents};
+          rootLock = builtins.fromJSON (builtins.readFile ../flake.lock);
+          portableLock = builtins.fromJSON (builtins.readFile ../config/ai/flake.lock);
+          llmAgentsNode = portableLock.nodes.${portableLock.nodes.root.inputs.llm-agents};
+          sharedInputs = builtins.attrNames portableLock.nodes.root.inputs;
+          lockedNode = lock: name: lock.nodes.${lock.nodes.root.inputs.${name}}.locked;
+          locksCoherent = builtins.all (
+            name:
+            builtins.hasAttr name rootLock.nodes.root.inputs
+            && (lockedNode rootLock name).rev == (lockedNode portableLock name).rev
+            && (lockedNode rootLock name).narHash == (lockedNode portableLock name).narHash
+          ) sharedInputs;
         in
-        if builtins.isString llmAgentsNode.inputs.nixpkgs then
+        if builtins.isString llmAgentsNode.inputs.nixpkgs && locksCoherent then
           pkgs.runCommand "llm-agents-nixpkgs-independent" { } "touch $out"
         else
-          throw "ai-nix llm-agents must retain its own nixpkgs input";
-      agent-resources = pkgs.callPackage ../tests/ai/agent-resources.nix {
+          throw "portable AI locks drifted or llm-agents follows the shared nixpkgs input";
+      agent-resources = pkgs.callPackage ../test/ai/agent-resources.nix {
         inherit (pkgs.inputs)
           bigpowers
           ponytail
@@ -2240,7 +2253,7 @@ in
         piQuiet = pkgs.inputs.pi-quiet;
         piPackage = patchAgentPackage pkgs "pi" pkgs.inputs.llm-agents.packages.${system}.pi;
       };
-      agent-wrappers = pkgs.callPackage ../tests/ai/agent-wrappers.nix {
+      agent-wrappers = pkgs.callPackage ../test/ai/agent-wrappers.nix {
         inherit patchAgentPackage;
         claudePackage = pkgs.inputs.llm-agents.packages.${system}.claude-code;
         codexPackage = pkgs.inputs.llm-agents.packages.${system}.codex;
@@ -2248,7 +2261,7 @@ in
         agentHttpHeaderBridgeOutput = pkgs.agent-http-header-bridge or null;
         mcpRemote = pkgs.inputs.mcp-remote or null;
       };
-      pi-gallery = pkgs.callPackage ../tests/ai/pi-gallery.nix {
+      pi-gallery = pkgs.callPackage ../test/ai/pi-gallery.nix {
         piPackage = patchAgentPackage pkgs "pi" pkgs.inputs.llm-agents.packages.${system}.pi;
         piPackages = {
           inherit (pkgs)
@@ -2282,7 +2295,7 @@ in
       profile = build;
       fuzz = tests;
       memory = tests;
-      no-warnings = check "no-warnings" "lint.sh" inputs.lint "";
+      no-warnings = lint;
     }
   );
 

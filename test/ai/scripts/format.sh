@@ -3,7 +3,7 @@
 set -euo pipefail
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
-# shellcheck source=tests/ai/scripts/lib.sh
+# shellcheck source=test/ai/scripts/lib.sh
 . "$script_dir/lib.sh"
 
 enter_repo
@@ -20,20 +20,20 @@ if [ "$#" -gt 0 ]; then
     done
 
     if [ "${#nix_files[@]}" -gt 0 ]; then
-        nixfmt --check "${nix_files[@]}"
+        nixfmt "${nix_files[@]}"
     fi
 
     if [ "${#shell_files[@]}" -gt 0 ]; then
-        shfmt -i 4 -d "${shell_files[@]}"
+        shfmt -i 4 -w "${shell_files[@]}"
     fi
 
     exit 0
 fi
 
 if has_nix_files; then
-    find_nix_files0 | xargs -0 -r nixfmt --check
+    find_nix_files0 | xargs -0 -r nixfmt
 fi
 
 if has_shell_files; then
-    find_shell_files0 | xargs -0 -r shfmt -i 4 -d
+    find_shell_files0 | xargs -0 -r shfmt -i 4 -w
 fi

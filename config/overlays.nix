@@ -19,6 +19,7 @@
 let
   overlayDir = ../overlays;
   aiOverlays = if aiOverlay == null then import ../overlays/ai { inherit inputs; } else [ aiOverlay ];
+  restoreCallerInputs = _final: _prev: { inherit inputs; };
   isImportableOverlay =
     n:
     n != "ai"
@@ -27,6 +28,7 @@ let
     );
 in
 aiOverlays
+++ [ restoreCallerInputs ]
 ++ (
   # A merged CA bundle (system roots + Vulcan's private root CA), built as a
   # standalone derivation rather than overriding `cacert` itself. Overriding

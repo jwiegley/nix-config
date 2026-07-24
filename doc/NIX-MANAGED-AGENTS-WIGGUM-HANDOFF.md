@@ -21,9 +21,9 @@ activating a host requires a separate explicit request.
 
 ## Reference artifacts and authority
 
-- Design: `docs/superpowers/specs/2026-07-22-nix-managed-agent-configuration-design.md`
-- Main implementation plan: `docs/superpowers/plans/2026-07-22-nix-managed-agent-configuration.md`
-- Model projection plan: `docs/superpowers/plans/2026-07-22-llm-setup-nix-model-registry.md`
+- Design: `doc/superpowers/specs/2026-07-22-nix-managed-agent-configuration-design.md`
+- Main implementation plan: `doc/superpowers/plans/2026-07-22-nix-managed-agent-configuration.md`
+- Model projection plan: `doc/superpowers/plans/2026-07-22-llm-setup-nix-model-registry.md`
 - Progress ledger: `.superpowers/sdd/progress.md`
 
 The design is authoritative only for the declarative architecture implemented by
@@ -69,7 +69,7 @@ feature branch was merged.
 - Git Surgeon, Superpowers skills, Fractal, Pi Quiet, Pi MCP adapter, and Pi subagent
   are present in the declarative closure. `pi-openai-server-compaction` exists once
   in the pinned resource closure but is intentionally not linked while its upstream
-  peer range excludes packaged Pi 0.81.1.
+  peer range excludes packaged Pi 0.82.0.
 - `trade-journal`, `org-jw`, `renamer`, `hours`, `pushme`, and
   `git-monitor` remain Darwin-only and are absent from Linux selections.
 - The smoke gate rejects reintroduction of `programs.promptdeploy`, and the current
