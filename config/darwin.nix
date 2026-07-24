@@ -257,7 +257,7 @@ in
       "launchbar"
       "lectrote"
       "ledger-wallet"
-      "libreoffice"
+      # "libreoffice"
       # "macfuse"
       "mactracker"
       "mellel"
