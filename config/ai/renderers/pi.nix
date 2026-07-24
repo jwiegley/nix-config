@@ -238,6 +238,7 @@ let
   xdgConfigRelative = lib.removePrefix "${homeDirectory}/" xdgConfigHome;
   globalMcpPath = "${xdgConfigRelative}/mcp/mcp.json";
   extensionRoot = "${pkgs.agent-resources}/share/agent-resources/pi-extensions";
+  autoCompactResumeSource = ../extensions/auto-compact-resume/index.ts;
 in
 assert profile.id == "hera-pi";
 assert profile.client == "pi";
@@ -271,6 +272,7 @@ assert builtins.hasAttr "agent-resources" pkgs;
     commandFiles
     promptFiles
     {
+      "${root}/extensions/auto-compact-resume/index.ts".source = autoCompactResumeSource;
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
       "${root}/extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
       "${root}/extensions/pi-subagent".source = "${extensionRoot}/pi-subagent";

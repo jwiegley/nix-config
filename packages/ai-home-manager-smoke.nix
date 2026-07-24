@@ -1389,6 +1389,7 @@ let
       ]
     );
   piExtensionSources = {
+    auto-compact-resume = "${../config/ai/extensions/auto-compact-resume/index.ts}";
     pi-mcp-adapter = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter";
     pi-quiet = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-quiet";
     pi-subagent = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-subagent";
@@ -1404,6 +1405,7 @@ let
       ++ map (name: "${root}/prompts/${name}.md") (selectedNames profileId "prompts")
       ++ [
         ".config/mcp/mcp.json"
+        "${root}/extensions/auto-compact-resume/index.ts"
         "${root}/extensions/pi-mcp-adapter"
         "${root}/extensions/pi-quiet"
         "${root}/extensions/pi-subagent"
@@ -2114,6 +2116,10 @@ let
         (expectEqual "${profileId} semantic MCP oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedPiMcp
         )) "03e18dfc387f1c07a8550ea3c997160e16c054819e4dc35aeeaa78c2ab5d9fdf")
+        (expectEqual "${profileId} auto compact extension leaf"
+          "${render.files."${profile.root}/extensions/auto-compact-resume/index.ts".source}"
+          piExtensionSources.auto-compact-resume
+        )
         (expectEqual "${profileId} MCP extension link"
           render.files."${profile.root}/extensions/pi-mcp-adapter"
           { source = piExtensionSources.pi-mcp-adapter; }
@@ -2126,6 +2132,7 @@ let
           { source = piExtensionSources.pi-quiet; }
         )
         (expectEqual "${profileId} exact extension names" (sortedNames piExtensionSources) [
+          "auto-compact-resume"
           "pi-mcp-adapter"
           "pi-quiet"
           "pi-subagent"
@@ -2638,6 +2645,7 @@ let
     ".config/factory/nix-managed-settings.json"
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
+    ".pi/agent/extensions/auto-compact-resume/index.ts"
     ".pi/agent/extensions/pi-mcp-adapter"
     ".pi/agent/extensions/pi-quiet"
     ".pi/agent/extensions/pi-subagent"
@@ -3858,6 +3866,7 @@ pkgs.runCommand "ai-home-manager-smoke"
   ''
     python3 "${src}/packages/statusline-command-test.py"
 
+    test -f "${piExtensionSources.auto-compact-resume}"
     test -f "${piExtensionSources.pi-mcp-adapter}/package.json"
     test -f "${piExtensionSources.pi-mcp-adapter}/index.ts"
     test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/@modelcontextprotocol/sdk"

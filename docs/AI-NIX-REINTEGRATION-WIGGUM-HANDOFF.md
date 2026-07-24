@@ -12,6 +12,7 @@ Updated: 2026-07-23
 - The worktree has its own allowed direnv using copied ignored `.envrc` and `.envrc.cache`; no dependency was installed. Root and portable-subflake checks pass through that environment.
 - History anchor `5c996f45f0aa09f3398d2c916d92dc47146e2bf4` has the unified branch, standalone `main`, and divergent `feat/pi-extra-extensions` tips as parents with no first-parent tree delta. Every standalone branch tip is now reachable; the anchor passed an independent fess audit.
 - The target-side compatibility oracle was observed RED on missing `overlays.default`, then GREEN after the maintained overlays, patches, resources, wrappers, and substantive tests moved to root-owned paths. `config/ai/flake.lock` was regenerated at the prior immutable direct-input revisions rather than copied from the old repository.
+- `auto-compact-resume` source, 12-test Bun suite, and corrected design/plan now live under `config/ai/extensions/auto-compact-resume`. The Pi renderer and preflight own only `.pi/agent/extensions/auto-compact-resume/index.ts`; the focused Home Manager check and explicit Pi loader smoke pass.
 - Anvil is available through a dedicated Emacs daemon. Its modified-file buffer set was empty before this documentation batch; that does not prove a separate interactive Emacs has no unsaved buffers.
 
 ## Established findings
@@ -38,7 +39,7 @@ The existing password-store LiteLLM credential was mapped only in a temporary ch
 
 1. Switch the root flake's shared inputs and output unions to the local portable implementation while preserving existing Anvil packages/checks and root-only `x86_64-darwin` behavior.
 2. Convert `config/overlays.nix`, package selection, Home Manager resources, and integrated smoke tests from `inputs.ai-nix` to the canonical local package/helper paths, applying each AI overlay exactly once.
-3. Package `auto-compact-resume` and implement MCP parity under failing renderer/selection tests, including a real Pi launch-time credential path for Ref and Perplexity rather than confusing lazy status with authentication success.
+3. Implement MCP selection/transport parity under failing renderer tests; preserve the now-tested Pi launch-time Ref and Perplexity credential path rather than confusing lazy status with authentication success.
 4. Collapse build/update scripts, CI, hooks, and documentation to one repository; then update every downstream flake and lock to the matching root-source and `dir=config/ai` revision.
 5. After implementation and consumer verification, start fresh tmux sessions for every applicable configured tool/host combination and write the comprehensive prompts/commands/agents/skills/MCP/extensions gap audit under `~/dl`, carrying forward the `pi-subagent` and missing `pi-btw` evidence.
 
