@@ -11,7 +11,7 @@
     },
     "claudeHaiku": {
       "provider": "positron-anthropic",
-      "model": "claude-sonnet-4-6"
+      "model": "claude-sonnet-5"
     },
     "claudeSubagent": {
       "provider": "positron-anthropic",
