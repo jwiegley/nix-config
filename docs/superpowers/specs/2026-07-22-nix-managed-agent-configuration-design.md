@@ -217,32 +217,25 @@ Pi is enabled only on Hera and uses Pi's native resource discovery rather than a
 - The two pre-rendered prompts use the same native prompt directory.
 - Personal-selected shared skills remain under `~/.agents/skills/<name>/`; no skill tree is copied under `.pi`. This includes the six static Ponytail skills visible through Hera's Codex-owned shared root.
 - Codex parity also places 59 `command-*` and two `prompt-*` skill projections in `~/.agents/skills`. Pi natively discovers those projections in addition to its prompt templates. This duplication of entry surfaces is explicit inventory, not a second file copy or a wrapper filter.
+- `~/.pi/agent/keybindings.json` is generated from the current nine-command Emacs-style map. The pre-existing mutable file remains untouched until a reversible backup immediately before the authorized activation.
 - `~/.pi/agent/models.json` contains only the `litellm` provider, with model-level Hera selectors applied. Pi never falls back to a direct provider; models without a LiteLLM route are excluded.
 - Pi's mutable `settings.json` remains authoritative for its selected default; this design emits no Pi default provider/model.
-- `~/.config/mcp/mcp.json` is the Nix-owned standard global catalog for Ref, context-hub, context7, `perplexity`, sequential-thinking, and Anvil. `~/.pi/agent/mcp.json` remains mutable only for adapter-level `settings`; global `mcpServers` and compatibility `imports` are forbidden because that higher-precedence file could shadow the Nix catalog. Migration and verification fail closed if either field appears. Adapter cache and OAuth state remain mutable.
-- `~/.pi/agent/extensions/pi-mcp-adapter` and `~/.pi/agent/extensions/pi-subagent` are exact Home Manager links to pinned `ai-nix` package roots and load through Pi's normal extension discovery.
+- `~/.config/mcp/mcp.json` is the Nix-owned Hera catalog for Ref, Anvil, Context Hub, Context7, DEVONthink, Drafts, Memory Vault, PAL, Perplexity, Sequential Thinking, and stock-trader. `~/.pi/agent/mcp.json` remains mutable only for adapter-level `settings`; global `mcpServers` and compatibility `imports` are forbidden because that higher-precedence file could shadow the Nix catalog. Migration and verification fail closed if either field appears. Adapter cache and OAuth state remain mutable.
+- `auto-compact-resume/index.ts`, `nix-gallery/index.ts`, `pi-mcp-adapter`, `pi-quiet`, and the current `pi-subagent` root are exact Home Manager leaves or links to immutable package roots and load through Pi's normal extension discovery. The later Subagentura work replaces, rather than co-installs with, `pi-subagent`.
 
-Pi intentionally excludes PAL, DEVONthink, Drafts, memory-vault, stock-trader, hooks, and marketplaces because their selectors restrict them to other clients. The `anvil-tools` tombstone is also excluded. Global `/mcp setup`, imports, and server-definition toggles are unsupported; adapter-only settings may remain mutable. Trusted project `.mcp.json` and `.pi/mcp.json` additions retain their native project-local precedence and do not redefine the user-global source of truth.
+Pi intentionally excludes hooks, marketplaces, and the `anvil-tools` tombstone. Global `/mcp setup`, imports, and server-definition toggles are unsupported; adapter-only settings may remain mutable. Trusted project `.mcp.json` and `.pi/mcp.json` additions retain their native project-local precedence and do not redefine the user-global source of truth.
 
-Pi has no legacy promptdeploy target. Its acceptance oracle is therefore the exact agent, template, shared-skill, Codex-projection, model, MCP, and extension inventory above, not a fabricated parity comparison. Prompt templates retain native `$ARGUMENTS` behavior. Models and MCP use their native environment-reference syntax.
+Pi has no legacy promptdeploy target. Its acceptance oracle is therefore the exact agent, template, shared-skill, Codex-projection, keybinding, model, MCP, and extension inventory above, not a fabricated parity comparison. Prompt templates retain native `$ARGUMENTS` behavior. Models and MCP use their native environment-reference syntax.
 
-## External resources and `ai-nix`
+## External resources in the unified repository
 
-`ai-nix` pins and packages every external resource needed by flake-false consumers:
+The root flake and portable `config/ai` subflake coordinate exact external pins for Bigpowers, Ponytail, git-surgeon from the llm-agents source, translate-tool glossary resources, the Pi gallery packages, `pi-mcp-adapter`, the current `pi-subagent`, and patched `mcp-remote` for Droid's static-header-only bridge.
 
-- Superpowers.
-- Ponytail.
-- git-surgeon from the llm-agents source.
-- translate-tool glossary and related resources.
-- `pi-mcp-adapter`.
-- `pi-subagent`.
-- Patched `mcp-remote` for Droid's static-header-only bridge.
+Repository-owned skill/extension resources remain immutable beneath `agent-resources`; the requested package gallery has separate immutable package roots and one generated `pi-gallery` projection. `config/ai.nix` chooses and links those outputs. There is no copied deployment bundle, promptdeploy receipt, runtime installer, or live dependency on a sibling `ai-nix` checkout.
 
-It exposes skill/extension resources as immutable trees beneath an `agent-resources` package/output and supplies the needed wrappers and pinned bridge. `config/ai.nix` chooses and links resources from that package. There is no copied deployment bundle, promptdeploy receipt, or dependence on transitive root flake inputs.
+Packaging does not imply selection. `catalog.nix` explicitly selects the complete Bigpowers release and git-surgeon for every enabled skill-capable client profile, selects translate-tool resources according to their current skill selectors, and applies Ponytail's static-skill contract below. Pi consumes selected shared skills through `~/.agents/skills`; the other clients receive their native skill leaves.
 
-Packaging does not imply selection. `catalog.nix` explicitly selects Superpowers and git-surgeon for every enabled skill-capable client profile, selects translate-tool resources according to their current skill selectors, and applies Ponytail's static-skill contract below. Pi consumes selected shared skills through `~/.agents/skills`; the other clients receive their native skill leaves.
-
-A skill name has one canonical source. When a pinned external tree supersedes a same-named local copy, the catalog references the external tree and removes the duplicate local entry; there is no precedence rule or last-writer behavior. Resource assembly rejects duplicate selected skill names before Home Manager constructs any destination. Upstream source pins live in `ai-nix`, where all consumers already obtain their package set.
+A skill name has one canonical source. When a pinned external tree supersedes a same-named local copy, the catalog references the external tree and removes the duplicate local entry; there is no precedence rule or last-writer behavior. Resource assembly rejects duplicate selected skill names before Home Manager constructs any destination. Upstream source pins are coordinated between the root and portable locks in one maintenance transaction.
 
 ### Ponytail static skills
 
