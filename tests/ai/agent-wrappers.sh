@@ -8,6 +8,7 @@ set -euo pipefail
 : "${CODEX_NON_DARWIN_BIN:?}"
 : "${CODEX_APP_IS_COMMAND:?}"
 : "${DROID_BIN:?}"
+: "${REAL_CLAUDE_BIN:?}"
 : "${REAL_CODEX_BIN:?}"
 : "${BRIDGE_BIN:?}"
 : "${NETWORK_GUARD_LIBRARY:?}"
@@ -257,7 +258,7 @@ assert_managed_argv() {
     local client=$1
     shift
     case "$client" in
-    claude) assert_argv "$ARGV_FILE" --settings "$FIRST" --mcp-config "$SECOND" "$@" ;;
+    claude) assert_argv "$ARGV_FILE" --settings "$FIRST" "--mcp-config=$SECOND" "$@" ;;
     codex) assert_argv "$ARGV_FILE" --profile nix-runtime "$@" ;;
     droid) assert_argv "$ARGV_FILE" --settings "$FIRST" "$@" ;;
     *) fail "unknown client: $client" ;;
@@ -1214,6 +1215,42 @@ raise SystemExit(0 if found == (expected == "present") else 1)
 PY
 }
 
+test_real_claude_mcp_list_contract() {
+    local claude_home="$work_root/real Claude MCP list"
+    local claude_root="$claude_home/.claude"
+    local network_guard_loaded="$claude_home/network-guard-loaded"
+    local network_hit="$claude_home/network-attempted"
+    local sentinel=nix-session-sentinel
+
+    mkdir -p "$claude_root"
+    printf '%s\n' '{}' >"$claude_root/nix-managed-settings.json"
+    printf '%s\n' \
+        "{\"mcpServers\":{\"$sentinel\":{\"command\":\"/usr/bin/false\",\"args\":[]}}}" \
+        >"$claude_root/nix-managed-mcp.json"
+
+    if env HOME="$claude_home" CLAUDE_CONFIG_DIR="$claude_root" \
+        TASK3_NETWORK_GUARD_LOADED_FILE="$network_guard_loaded" \
+        TASK3_NETWORK_ATTEMPT_FILE="$network_hit" \
+        "$NETWORK_GUARD_VARIABLE=$NETWORK_GUARD_LIBRARY" \
+        "$REAL_CLAUDE_BIN" mcp list \
+        >"$claude_home/stdout" 2>"$claude_home/stderr"; then
+        :
+    else
+        fail "pinned Claude failed to parse managed mcp list arguments"
+    fi
+    grep -F 'No MCP servers configured.' "$claude_home/stdout" >/dev/null ||
+        fail "pinned Claude persistent MCP listing changed unexpectedly"
+    ! grep -F -- "$sentinel" \
+        "$claude_home/stdout" "$claude_home/stderr" >/dev/null ||
+        fail "pinned Claude listed a session-only managed MCP as persistent"
+    ! grep -F 'MCP config file not found:' "$claude_home/stderr" >/dev/null ||
+        fail "pinned Claude parsed mcp/list as managed config filenames"
+    grep -Fx loaded "$network_guard_loaded" >/dev/null ||
+        fail "pinned Claude did not load the process-level network guard"
+    [ ! -e "$network_hit" ] ||
+        fail "pinned Claude attempted network access during mcp list"
+}
+
 test_real_codex_profile_contract() {
     local codex_home="$work_root/real Codex profile"
     local marker=NIX_MANAGED_PROFILE_SENTINEL
@@ -1356,5 +1393,6 @@ test_codex_runtime_profile
 test_codex_runtime_profile_rejections
 test_codex_command_scope
 test_codex_non_darwin_table
+test_real_claude_mcp_list_contract
 test_real_codex_profile_contract
 test_bridge_static_contract

@@ -1,6 +1,7 @@
 {
   pkgs,
   patchAgentPackage,
+  claudePackage,
   codexPackage,
   agentHttpHeaderBridge ? null,
   agentHttpHeaderBridgeOutput ? null,
@@ -66,6 +67,7 @@ let
     };
 
   wrappedClaude = patchAgentPackage testPkgs "claude-code" (fakeAgent "claude");
+  realWrappedClaude = patchAgentPackage pkgs "claude-code" claudePackage;
   wrappedCodex = patchAgentPackage testPkgs "codex" (
     (fakeAgent "codex") // { inherit (codexPackage) version; }
   );
@@ -188,6 +190,7 @@ pkgs.runCommand "agent-wrappers-check"
     CODEX_BIN = "${wrappedCodex}/bin/codex";
     CODEX_NON_DARWIN_BIN = "${wrappedNonDarwinCodex}/bin/codex";
     DROID_BIN = "${wrappedDroid}/bin/droid";
+    REAL_CLAUDE_BIN = "${realWrappedClaude}/bin/claude";
     REAL_CODEX_BIN = "${codexPackage}/bin/codex";
     CODEX_APP_IS_COMMAND = if pkgs.stdenv.isDarwin then "1" else "0";
     NETWORK_GUARD_LIBRARY = "${networkGuard}/lib/libagent-wrapper-network-guard.${networkGuardExtension}";

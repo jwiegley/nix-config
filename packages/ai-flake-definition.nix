@@ -89,7 +89,7 @@ let
                 esac
               done
               exec -a claude @claude_unwrapped@ \
-                --settings "$claude_settings" --mcp-config "$claude_mcp" "$@"
+                --settings "$claude_settings" "--mcp-config=$claude_mcp" "$@"
               ;;
             partial)
               printf 'claude: repair managed configuration artifacts: %s %s\n' \
@@ -2237,6 +2237,7 @@ in
       };
       agent-wrappers = pkgs.callPackage ../tests/ai/agent-wrappers.nix {
         inherit patchAgentPackage;
+        claudePackage = pkgs.inputs.llm-agents.packages.${system}.claude-code;
         codexPackage = pkgs.inputs.llm-agents.packages.${system}.codex;
         agentHttpHeaderBridge = pkgs.agent-http-header-bridge or null;
         agentHttpHeaderBridgeOutput = pkgs.agent-http-header-bridge or null;
