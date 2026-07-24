@@ -14,6 +14,7 @@ pre-commit:
       glob: "{bin/*,build,*.sh,*.bash}"
       run: |
         for f in bin/* build; do
+          [[ -f $f ]] || continue
           if head -1 "$f" | grep -q bash; then
             shellcheck --severity=warning "$f"
           fi
@@ -22,6 +23,7 @@ pre-commit:
       glob: "{bin/*,build,*.sh,*.bash}"
       run: |
         for f in bin/* build; do
+          [[ -f $f ]] || continue
           if head -1 "$f" | grep -q bash; then
             shfmt -i 4 -d "$f"
           fi
