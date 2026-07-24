@@ -9,7 +9,9 @@ Updated: 2026-07-23
 - The primary `/Users/johnw/src/nix` checkout has a concurrent, unrelated modification to `config/ai/model-registry.json`; do not stage, overwrite, or copy that file into this branch unless its owner commits it and the branch is deliberately updated.
 - The user approved the MCP/extension architecture and clarified that parity is the union of Claude Code and Codex MCPs per machine, applied to every other agent tool on that machine.
 - The mandatory PAL gate is resolved in favor of a thin portable `config/ai` subflake with one root-owned implementation tree.
-- The worktree has its own allowed direnv using copied ignored `.envrc` and `.envrc.cache`; no dependency was installed. A fresh `direnv exec . nix flake check --print-build-logs` passes at the baseline.
+- The worktree has its own allowed direnv using copied ignored `.envrc` and `.envrc.cache`; no dependency was installed. Root and portable-subflake checks pass through that environment.
+- History anchor `5c996f45f0aa09f3398d2c916d92dc47146e2bf4` has the unified branch, standalone `main`, and divergent `feat/pi-extra-extensions` tips as parents with no first-parent tree delta. Every standalone branch tip is now reachable; the anchor passed an independent fess audit.
+- The target-side compatibility oracle was observed RED on missing `overlays.default`, then GREEN after the maintained overlays, patches, resources, wrappers, and substantive tests moved to root-owned paths. `config/ai/flake.lock` was regenerated at the prior immutable direct-input revisions rather than copied from the old repository.
 - Anvil is available through a dedicated Emacs daemon. Its modified-file buffer set was empty before this documentation batch; that does not prove a separate interactive Emacs has no unsaved buffers.
 
 ## Established findings
@@ -24,6 +26,7 @@ Updated: 2026-07-23
 - `pi-btw` was planned in future-work documents but was never implemented or installed, including on the `feat/pi-extra-extensions` branch. Treat it as an explicit missing extension, not lost content.
 - Fresh tmux lifecycle evidence for the installed Anvil artifact is under `/tmp/wg-anvil-lifecycle/evidence-20260723T231407Z`: clean shutdown removed the test daemon and both instance trees in 1 second; SIGKILL of only the test client removed them in 5 seconds. Only empty mode-0600 session-gate locks remain, as designed. The live profile selects resilience artifact `39f9c59bfc51379db6243b1be20edca1ea783c2b`, although `main` still pins `01eecf6348e7e9e6462bddd89b1cbc03c157a7d6`. A pre-existing orphan stdio process from an older store artifact was observed and left untouched.
 - LiteLLM attribution is resolved without reading prompts or secrets. The apparent requester `10.0.2.100` is the synthetic `tap0` address inside each rootless Podman namespace, not another machine. The eight 2026-07-23 Opus 4.7 requests came from Vulcan's `stock-trader.service`, which is deliberately pinned to Claude Agent SDK 0.1.30 and that model route. Historical Haiku requests comprise four DEVONthink calls and 27 OpenCode calls outside the initially queried July 16-24 window. `hera_vibe_proxy_credential` is LiteLLM's outbound credential name on both model deployments; the inbound LiteLLM key alias was `default`.
+- Pi's `MCP: 1/6` display is a live-connection count under the adapter's default lazy lifecycle, not a configured-server count. A bounded probe connected Anvil, Context Hub, Context7, and Sequential Thinking. Ref returned 401 and Perplexity closed because live Pi processes lack `REF_API_KEY` and `PERPLEXITY_API_KEY`; credential injection is a real remaining parity defect.
 
 ## Architecture gate resolution
 
@@ -33,12 +36,11 @@ The existing password-store LiteLLM credential was mapped only in a temporary ch
 
 ## Exact resume point
 
-1. Commit only the two Wiggum documents as the architecture/baseline checkpoint; do not include the primary checkout's concurrent model-registry change.
-2. Start the red-green compatibility oracle work unit before migrating production Nix code. The oracle must capture the old `ai-nix` output/package contract, history ancestry, and one-repository command behavior.
-3. Import the standalone history through a real unrelated-history merge point, then move maintained content to the canonical root-owned implementation tree while retaining the portable `config/ai` export boundary.
-4. Keep the root on the old `ai-nix` input until the local portable subflake passes the compatibility oracle; then switch root composition and scripts.
-5. Package `auto-compact-resume` and implement MCP parity under failing renderer/selection tests before production changes.
-6. After implementation and consumer verification, start fresh tmux sessions for every applicable configured tool/host combination and write the comprehensive prompts/commands/agents/skills/MCP/extensions gap audit under `~/dl`, carrying forward the `pi-subagent` and missing `pi-btw` evidence.
+1. Switch the root flake's shared inputs and output unions to the local portable implementation while preserving existing Anvil packages/checks and root-only `x86_64-darwin` behavior.
+2. Convert `config/overlays.nix`, package selection, Home Manager resources, and integrated smoke tests from `inputs.ai-nix` to the canonical local package/helper paths, applying each AI overlay exactly once.
+3. Package `auto-compact-resume` and implement MCP parity under failing renderer/selection tests, including a real Pi launch-time credential path for Ref and Perplexity rather than confusing lazy status with authentication success.
+4. Collapse build/update scripts, CI, hooks, and documentation to one repository; then update every downstream flake and lock to the matching root-source and `dir=config/ai` revision.
+5. After implementation and consumer verification, start fresh tmux sessions for every applicable configured tool/host combination and write the comprehensive prompts/commands/agents/skills/MCP/extensions gap audit under `~/dl`, carrying forward the `pi-subagent` and missing `pi-btw` evidence.
 
 ## Stop-and-escalate counters
 
