@@ -338,28 +338,20 @@ let
     "perplexity"
     "sequential-thinking"
   ];
-  personalOpenCodeMcp = [
-    "Ref"
-    "anvil"
-    "context-hub"
-    "context7"
-    "devonthink"
-    "memory-vault"
-    "perplexity"
-    "sequential-thinking"
-    "stock-trader"
-  ];
+  personalOpenCodeMcp = claudePersonalMcp;
   vulcanOpenCodeMcp = [
     "Ref"
     "anvil"
     "context-hub"
     "context7"
+    "drafts-hera"
     "memory-vault"
+    "pal"
     "perplexity"
     "sequential-thinking"
     "stock-trader"
   ];
-  droidMcp = claudeMcp;
+  droidMcp = claudePersonalMcp;
   claudeHooks = [
     "agent-deck-claude"
     "claude-code"
@@ -543,7 +535,7 @@ let
       hasDefault = true;
     };
     "hera-pi" = {
-      mcpServers = baseMcp;
+      mcpServers = claudePersonalMcp;
       hooks = [ ];
       marketplaces = [ ];
       hasDefault = false;
@@ -561,7 +553,7 @@ let
       hasDefault = false;
     };
     "shared-work-opencode-positron" = {
-      mcpServers = baseMcp;
+      mcpServers = claudeMcp;
       hooks = [ ];
       marketplaces = [ ];
       hasDefault = true;
@@ -1207,6 +1199,13 @@ let
           transport.headers.${headerName}.env
         ];
       }
+    else if transport ? url then
+      assert headerNames == [ ];
+      {
+        type = "http";
+        disabled = false;
+        inherit (transport) url;
+      }
     else
       {
         type = "stdio";
@@ -1293,9 +1292,10 @@ let
     in
     if transport ? url then
       {
-        inherit (transport) url headers;
+        inherit (transport) url;
         oauth = false;
       }
+      // lib.optionalAttrs (transport ? headers) { inherit (transport) headers; }
     else
       {
         inherit (transport) command args;
@@ -1854,12 +1854,7 @@ let
         expected = expectedPiMcp;
         forbidden = [
           "anvil-tools"
-          "devonthink"
-          "drafts"
           "imports"
-          "memory-vault"
-          "pal"
-          "stock-trader"
           "?apiKey="
         ];
       }
@@ -1907,24 +1902,33 @@ let
   );
   openCodeRequiredEnvNames = {
     clio-opencode = [
+      "ANTHROPIC_API_KEY"
       "CONTEXT7_API_KEY"
+      "GEMINI_API_KEY"
       "LITELLM_API_KEY"
       "NVIDIA_API_KEY"
+      "OPENAI_API_KEY"
       "PERPLEXITY_API_KEY"
       "REF_API_KEY"
     ];
     hera-opencode = openCodeRequiredEnvNames.clio-opencode;
     shared-work-opencode-positron = openCodeRequiredEnvNames.clio-opencode;
     vulcan-opencode = [
+      "ANTHROPIC_API_KEY"
       "CONTEXT7_API_KEY"
+      "GEMINI_API_KEY"
       "NVIDIA_API_KEY"
+      "OPENAI_API_KEY"
       "PERPLEXITY_API_KEY"
       "REF_API_KEY"
     ];
   };
   piRequiredEnvNames = [
+    "ANTHROPIC_API_KEY"
     "CONTEXT7_API_KEY"
+    "GEMINI_API_KEY"
     "LITELLM_API_KEY"
+    "OPENAI_API_KEY"
     "PERPLEXITY_API_KEY"
     "REF_API_KEY"
   ];
@@ -2050,16 +2054,8 @@ let
         )
         (expectEqual "${profileId} semantic MCP oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedDroidMcp
-        )) "1c67464e875534e546c17d017253563f4875b871d827a059826a429e3eff4e29")
-        (expectEqual "${profileId} MCP set" (sortedNames expectedDroidMcp.mcpServers) [
-          "Ref"
-          "anvil"
-          "context-hub"
-          "context7"
-          "pal"
-          "perplexity"
-          "sequential-thinking"
-        ])
+        )) "aec840738b1a86d59cea27f30c76da0c35aa747cfdcc69f33163fc7afa9284f4")
+        (expectEqual "${profileId} MCP set" (sortedNames expectedDroidMcp.mcpServers) claudePersonalMcp)
       ]
       ++ lib.mapAttrsToList (
         name: item:
@@ -2109,17 +2105,10 @@ let
         (expectEqual "${profileId} selected models use only LiteLLM" (builtins.all (
           model: model.provider == "litellm"
         ) (builtins.attrValues (selectedModels profileId))) true)
-        (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) [
-          "Ref"
-          "anvil"
-          "context-hub"
-          "context7"
-          "perplexity"
-          "sequential-thinking"
-        ])
+        (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) claudePersonalMcp)
         (expectEqual "${profileId} semantic MCP oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedPiMcp
-        )) "03e18dfc387f1c07a8550ea3c997160e16c054819e4dc35aeeaa78c2ab5d9fdf")
+        )) "c74e7c84f094593ea2f3decec5f10093f8c13b466061eeabb849d7f4d6aa4c91")
         (expectEqual "${profileId} auto compact extension leaf"
           "${render.files."${profile.root}/extensions/auto-compact-resume/index.ts".source}"
           piExtensionSources.auto-compact-resume
@@ -3541,9 +3530,12 @@ let
     (expectEqual "renamed provider credential reaches required environment metadata"
       renamedCredentialOpenCode.requiredEnvNames
       [
+        "ANTHROPIC_API_KEY"
         "CONTEXT7_API_KEY"
+        "GEMINI_API_KEY"
         "LITELLM_API_KEY"
         "NVIDIA_RENAMED_API_KEY"
+        "OPENAI_API_KEY"
         "PERPLEXITY_API_KEY"
         "REF_API_KEY"
       ]

@@ -856,7 +856,9 @@ let
             "clio-claude-personal"
             "clio-opencode"
             "hera-claude-personal"
+            "hera-droid"
             "hera-opencode"
+            "hera-pi"
           ];
         };
 
@@ -870,7 +872,11 @@ let
         {
           profiles = [
             "clio-claude-personal"
+            "clio-opencode"
             "hera-claude-personal"
+            "hera-droid"
+            "hera-opencode"
+            "hera-pi"
           ];
         };
 
@@ -899,7 +905,12 @@ let
             "/etc/profiles/per-user/johnw/bin/drafts-mcp-server"
           ];
         }
-        { profiles = [ "vulcan-claude-personal" ]; };
+        {
+          profiles = [
+            "vulcan-claude-personal"
+            "vulcan-opencode"
+          ];
+        };
 
     memory-vault =
       mkMcp "memory-vault"
@@ -910,7 +921,9 @@ let
             "clio-claude-personal"
             "clio-opencode"
             "hera-claude-personal"
+            "hera-droid"
             "hera-opencode"
+            "hera-pi"
             "vulcan-claude-personal"
             "vulcan-opencode"
           ];
@@ -933,6 +946,8 @@ let
           clients = [
             "claude"
             "droid"
+            "opencode"
+            "pi"
           ];
         };
 
@@ -963,7 +978,9 @@ let
             "clio-claude-personal"
             "clio-opencode"
             "hera-claude-personal"
+            "hera-droid"
             "hera-opencode"
+            "hera-pi"
             "vulcan-opencode"
           ];
         };

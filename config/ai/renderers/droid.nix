@@ -69,12 +69,11 @@ let
       inherit (server) transport;
       literalEnv = lib.filterAttrs (_: value: !isTypedEnv value) (transport.env or { });
     in
-    if transport ? url then
+    if transport ? url && transport ? headers then
       assert builtins.elem name [
         "Ref"
         "context7"
       ];
-      assert transport ? headers;
       assert builtins.length (builtins.attrNames transport.headers) == 1;
       let
         headerName = builtins.head (builtins.attrNames transport.headers);
@@ -90,6 +89,13 @@ let
           headerName
           credential.env
         ];
+      }
+    else if transport ? url then
+      assert !(transport ? headers);
+      {
+        type = "http";
+        disabled = false;
+        inherit (transport) url;
       }
     else
       {

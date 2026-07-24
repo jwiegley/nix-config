@@ -19,8 +19,13 @@ let
     "anvil"
     "context-hub"
     "context7"
+    "devonthink"
+    "drafts"
+    "memory-vault"
+    "pal"
     "perplexity"
     "sequential-thinking"
+    "stock-trader"
   ];
   providerApis = {
     litellm = "openai-completions";
@@ -55,6 +60,13 @@ let
   providerRequiredEnvNames = lib.concatMap (
     provider: lib.optional (isTypedEnv provider.apiKey) provider.apiKey.env
   ) (builtins.attrValues modelData.providers);
+  mcpRequiredEnvNames = lib.concatMap (
+    server:
+    lib.concatMap (value: lib.optional (isTypedEnv value) value.env) (
+      builtins.attrValues (server.transport.env or { })
+      ++ builtins.attrValues (server.transport.headers or { })
+    )
+  ) (builtins.attrValues selected.mcpServers);
   renderEnv = name: "$" + "{" + name + "}";
   renderCredential =
     value:
@@ -135,18 +147,24 @@ let
       inherit (server) transport;
     in
     if transport ? url then
-      assert builtins.hasAttr name expectedHttpHeaders;
       assert hasOnlyKeys [
         "headers"
         "url"
       ] transport;
       assert isSafeUrl transport.url;
-      assert builtins.attrNames transport.headers == [ expectedHttpHeaders.${name} ];
-      assert isTypedEnv transport.headers.${expectedHttpHeaders.${name}};
+      assert
+        if transport ? headers then
+          builtins.hasAttr name expectedHttpHeaders
+          && builtins.attrNames transport.headers == [ expectedHttpHeaders.${name} ]
+          && isTypedEnv transport.headers.${expectedHttpHeaders.${name}}
+        else
+          !(builtins.hasAttr name expectedHttpHeaders);
       {
         inherit (transport) url;
-        headers = lib.mapAttrs (_: reference: renderEnv reference.env) transport.headers;
         oauth = false;
+      }
+      // lib.optionalAttrs (transport ? headers) {
+        headers = lib.mapAttrs (_: reference: renderEnv reference.env) transport.headers;
       }
     else
       assert !(builtins.hasAttr name expectedHttpHeaders);
@@ -292,6 +310,7 @@ assert builtins.hasAttr "pi-gallery" pkgs;
         "PERPLEXITY_API_KEY"
         "REF_API_KEY"
       ]
+      ++ mcpRequiredEnvNames
       ++ providerRequiredEnvNames
     )
   );
