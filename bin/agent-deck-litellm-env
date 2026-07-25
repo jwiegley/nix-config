@@ -36,8 +36,5 @@ load_credential() {
 load_credential litellm.vulcan.lan LITELLM_API_KEY LiteLLM
 load_credential api.ref.tools REF_API_KEY Ref
 load_credential api.perplexity.ai PERPLEXITY_API_KEY Perplexity
-load_credential positron/api.anthropic.com ANTHROPIC_API_KEY Anthropic
-load_credential positron/api.gemini.com GEMINI_API_KEY Gemini
-load_credential positron/api.openai.com OPENAI_API_KEY OpenAI
 
 exec "$@"
