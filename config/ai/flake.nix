@@ -41,31 +41,6 @@
       flake = false;
     };
 
-    pi-hashline-edit-pro = {
-      url = "github:YuGiMob/pi-hashline-edit-pro";
-      flake = false;
-    };
-
-    pi-web-access = {
-      url = "github:nicobailon/pi-web-access";
-      flake = false;
-    };
-
-    pi-lens = {
-      url = "github:apmantza/pi-lens";
-      flake = false;
-    };
-
-    pi-dynamic-workflows = {
-      url = "github:QuintinShaw/pi-dynamic-workflows";
-      flake = false;
-    };
-
-    pi-agent-browser-native = {
-      url = "github:fitchmultz/pi-agent-browser-native";
-      flake = false;
-    };
-
     pi-openai-server-compaction = {
       url = "github:algal/pi-openai-server-compaction";
       flake = false;
@@ -76,23 +51,13 @@
       flake = false;
     };
 
-    pi-artifacts = {
-      url = "github:jakeryderv/pi-packages";
-      flake = false;
-    };
-
     pi-btw = {
       url = "github:dbachelder/pi-btw";
       flake = false;
     };
 
-    pi-insights = {
-      url = "github:ygncode/pi-insights";
-      flake = false;
-    };
-
     pi-subagentura = {
-      url = "github:lmn451/pi-subagentura";
+      url = "github:jwiegley/pi-subagentura/main";
       flake = false;
     };
 

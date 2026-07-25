@@ -1521,7 +1521,7 @@ let
       ]
     );
   piExtensionSources = {
-    auto-compact-resume = "${../config/ai/extensions/auto-compact-resume/index.ts}";
+    auto-compact-resume = "${../../config/ai/extensions/auto-compact-resume/index.ts}";
     nix-gallery = "${piPkgs.pi-gallery}/share/pi-gallery/index.ts";
     pi-mcp-adapter = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter";
     pi-quiet = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-quiet";
@@ -2653,6 +2653,7 @@ let
     "REF_API_KEY"
   ];
 
+  # Managed Home contract: profile selection, path ownership, and Home Manager integration.
   task9AiModulePath = "${src}/config/ai.nix";
   task9PreflightPath = "${src}/config/ai/preflight.nix";
   task9AiModule =
@@ -3265,6 +3266,7 @@ let
   ++ task9PathChecks
   ++ task9IntegratedPathChecks;
 
+  # Model synchronization contract: safe, idempotent DEVONthink and iTerm updates.
   task10ModelSyncPath = "${src}/config/ai/model-sync.nix";
   task10ModelSyncSource =
     if builtins.pathExists task10ModelSyncPath then
@@ -3543,6 +3545,7 @@ let
               >/dev/null 2>&1'') 2)
   ];
 
+  # Package-selection contract: platform gates and optional AI tooling.
   task11DarwinOnlyPackageInputs = [
     "gitlib" # its default package is git-monitor
     "hours"
@@ -4070,7 +4073,7 @@ let
 in
 assert builtins.deepSeq contractChecks true;
 
-pkgs.runCommand "ai-home-manager-smoke"
+pkgs.runCommand "ai-home-manager-contract"
   {
     nativeBuildInputs = [
       pkgs.findutils
@@ -4079,7 +4082,7 @@ pkgs.runCommand "ai-home-manager-smoke"
     ];
   }
   ''
-    python3 "${src}/packages/statusline-command-test.py"
+    python3 "${src}/test/ai/statusline-command-test.py"
 
     test -f "${piExtensionSources.auto-compact-resume}"
     test -f "${piExtensionSources.nix-gallery}"
@@ -4259,7 +4262,7 @@ pkgs.runCommand "ai-home-manager-smoke"
             errors.append(f"{label}: unknown fixture kind {record['kind']!r}")
 
     if errors:
-        print("ai-home-manager-smoke: renderer document check failed:", file=sys.stderr)
+        print("ai-home-manager-contract: renderer document check failed:", file=sys.stderr)
         for error in errors:
             print(f"  {error}", file=sys.stderr)
         raise SystemExit(1)
@@ -4296,7 +4299,7 @@ pkgs.runCommand "ai-home-manager-smoke"
     if not statusline.is_file():
         missing.append("statusline")
     if missing:
-        print("ai-home-manager-smoke: missing asset categories:", file=sys.stderr)
+        print("ai-home-manager-contract: missing asset categories:", file=sys.stderr)
         for category in missing:
             print(f"  {category}", file=sys.stderr)
         raise SystemExit(1)
@@ -4342,7 +4345,7 @@ pkgs.runCommand "ai-home-manager-smoke"
             errors.append(f"dangling or escaping symlink: {path.relative_to(root)}: {error}")
 
     if errors:
-        print("ai-home-manager-smoke: asset check failed:", file=sys.stderr)
+        print("ai-home-manager-contract: asset check failed:", file=sys.stderr)
         for error in errors:
             print(f"  {error}", file=sys.stderr)
         raise SystemExit(1)
@@ -4472,7 +4475,7 @@ pkgs.runCommand "ai-home-manager-smoke"
             )
 
     if errors:
-        print("ai-home-manager-smoke: asset check failed:", file=sys.stderr)
+        print("ai-home-manager-contract: asset check failed:", file=sys.stderr)
         for error in errors:
             print(f"  {error}", file=sys.stderr)
         raise SystemExit(1)

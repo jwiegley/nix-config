@@ -83,7 +83,7 @@ feature branch was merged.
 - The registry exporter was run twice against the tracked Nix destination. Both runs
   preserved inode `1074660653`, mtime `1784780095`, size `20062`, and SHA-256
   `f590a61be069f84e8230854b04239219cc0dceb1863a57f8c91b31e939523164`.
-- Nix focused `ai-home-manager-smoke`, full `nix flake check -L path:.`, and
+- Nix focused `ai-home-manager-contract`, full `nix flake check -L path:.`, and
   `lefthook run pre-commit --all-files` passed.
 - `ai-nix`: focused resource check, all eight current Darwin flake checks, and
   lefthook passed. Native x86 CI was not restarted merely to rebuild GHC.

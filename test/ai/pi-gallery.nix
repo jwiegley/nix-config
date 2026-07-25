@@ -110,7 +110,6 @@ runCommand "pi-gallery-check"
     [ -f ${roots.subagentura}/skills/ralplan/SKILL.md ]
     [ -d ${roots.subagentura}/node_modules/is-path-inside ]
     [ -d ${roots.subagentura}/node_modules/ndjson ]
-    [ ! -e ${roots.subagentura}/node_modules/@earendil-works ]
     [ ! -e ${roots.subagentura}/node_modules/typebox ]
 
     [ -f ${roots.litellm}/dist/index.js ]
@@ -575,7 +574,10 @@ runCommand "pi-gallery-check"
     printf '%s\n' '{"name":"lens-language-gate","private":true}' > "$smoke/project/package.json"
     printf '%s\n' 'const answer: number = 42;' > "$smoke/project/probe.ts"
     printf '%s\n' 'answer: int = 42' > "$smoke/project/probe.py"
-    printf '%s\n' '{"type":"get_commands"}' > "$smoke/input.jsonl"
+    printf '%s\n' \
+      '{"id":"commands","type":"get_commands"}' \
+      '{"id":"ponytail","type":"prompt","message":"/ponytail ultra"}' \
+      '{"id":"entries","type":"get_entries"}' > "$smoke/input.jsonl"
     for command in npm npx pip pip3 curl wget bun pnpm yarn; do
       cat > "$smoke/sentinels/$command" <<'SH'
     #!/bin/sh
@@ -632,6 +634,7 @@ runCommand "pi-gallery-check"
               "btw:tangent",
               "cancel-all-flows",
               "insights",
+              "ponytail",
               "rewind",
               "router",
               "scroll",
@@ -643,6 +646,17 @@ runCommand "pi-gallery-check"
     ' "$smoke/output.log" >/dev/null || {
       cat "$smoke/output.log" >&2
       fail "new Pi gallery commands were not registered"
+    }
+    jq -s -e '
+      any(
+        .[];
+        .type == "entry_appended"
+        and .entry.customType == "ponytail-mode"
+        and .entry.data.mode == "ultra"
+      )
+    ' "$smoke/output.log" >/dev/null || {
+      cat "$smoke/output.log" >&2
+      fail "Ponytail command did not activate through the aggregate gallery"
     }
     while IFS= read -r skill; do
       jq -s -e --arg skill "$skill" '

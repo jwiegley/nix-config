@@ -94,7 +94,6 @@ let
       lens ? false,
       webAccess ? false,
       dynamicWorkflows ? false,
-      subagentura ? false,
     }:
     runCommand "${name}-release-source"
       {
@@ -140,25 +139,6 @@ let
               'excludeSubagentTools: ["subagent", ...(settings.excludeSubagentTools ?? [])],'
         ''}
 
-        ${lib.optionalString subagentura ''
-          substituteInPlace "$out/skills/ralplan/SKILL.md" \
-            --replace-fail \
-              "description: Consensus-driven implementation planning via strict Planner/Architect/Critic iteration. Use when the user needs a detailed spec and implementation plan before coding. Trigger with /ralplan or by saying 'ralplan'. Execution-agnostic: RALPLAN defines roles, workflow, and artifact formats only; the host environment provides agent execution via any available method." \
-              "description: >-
-              Consensus-driven implementation planning via strict Planner/Architect/Critic iteration. Use when the user needs a detailed spec and implementation plan before coding. Trigger with /ralplan or by saying 'ralplan'. Execution-agnostic: RALPLAN defines roles, workflow, and artifact formats only; the host environment provides agent execution via any available method."
-          substituteInPlace "$out/src/multiplexer.ts" \
-            --replace-fail 'execFileSync("/bin/sh", ["-lc",' \
-              'execFileSync("/bin/sh", ["-c",'
-          substituteInPlace "$out/src/interactive-tmux.ts" \
-            --replace-fail '"$ARTIFACT_DIR/cli.mjs" done 0' \
-              'node "$ARTIFACT_DIR/cli.mjs" done 0' \
-            --replace-fail '"$ARTIFACT_DIR/cli.mjs" error' \
-              'node "$ARTIFACT_DIR/cli.mjs" error' \
-            --replace-fail '`    "''${cliPath}" process-exit "$rc" || true`' \
-              '`    node "''${cliPath}" process-exit "$rc" || true`' \
-            --replace-fail '`"''${cliPath}" start`' \
-              '`node "''${cliPath}" start`'
-        ''}
 
         ${lib.optionalString lens ''
             ${python3}/bin/python3 - "$out" ${lib.escapeShellArg deniedNpx} <<'PY'
@@ -281,44 +261,61 @@ let
   hashlineSource = mkReleaseSource {
     name = "pi-hashline-edit-pro";
     tarball = releaseTarballs.pi-hashline-edit-pro;
-    lockFile = ./pi-gallery-locks/pi-hashline-edit-pro-package-lock.json;
+    lockFile = ./locks/pi-hashline-edit-pro-package-lock.json;
     hashline = true;
   };
   webAccessSource = mkReleaseSource {
     name = "pi-web-access";
     tarball = releaseTarballs.pi-web-access;
-    lockFile = ./pi-gallery-locks/pi-web-access-package-lock.json;
+    lockFile = ./locks/pi-web-access-package-lock.json;
     dropPeerMetadata = false;
     webAccess = true;
   };
   lensSource = mkReleaseSource {
     name = "pi-lens";
     tarball = releaseTarballs.pi-lens;
-    lockFile = ./pi-gallery-locks/pi-lens-package-lock.json;
+    lockFile = ./locks/pi-lens-package-lock.json;
     lens = true;
   };
   dynamicWorkflowsSource = mkReleaseSource {
     name = "pi-dynamic-workflows";
     tarball = releaseTarballs.pi-dynamic-workflows;
-    lockFile = ./pi-gallery-locks/pi-dynamic-workflows-package-lock.json;
+    lockFile = ./locks/pi-dynamic-workflows-package-lock.json;
     dynamicWorkflows = true;
   };
   artifactsSource = mkReleaseSource {
     name = "pi-artifacts";
     tarball = releaseTarballs.pi-artifacts;
-    lockFile = ./pi-gallery-locks/pi-artifacts-package-lock.json;
+    lockFile = ./locks/pi-artifacts-package-lock.json;
   };
   insightsSource = mkReleaseSource {
     name = "pi-insights";
     tarball = releaseTarballs.pi-insights;
-    lockFile = ./pi-gallery-locks/pi-insights-package-lock.json;
+    lockFile = ./locks/pi-insights-package-lock.json;
   };
-  subagenturaSource = mkReleaseSource {
-    name = "pi-subagentura";
-    tarball = releaseTarballs.pi-subagentura;
-    lockFile = ./pi-gallery-locks/pi-subagentura-package-lock.json;
-    subagentura = true;
-  };
+  subagenturaSource = runCommand "pi-subagentura-source" { } ''
+    mkdir -p "$out"
+    cp -R -- ${inputs.pi-subagentura}/. "$out"/
+    chmod -R u+w "$out"
+
+    substituteInPlace "$out/skills/ralplan/SKILL.md" \
+      --replace-fail \
+        "description: Consensus-driven implementation planning via strict Planner/Architect/Critic iteration. Use when the user needs a detailed spec and implementation plan before coding. Trigger with /ralplan or by saying 'ralplan'. Execution-agnostic: RALPLAN defines roles, workflow, and artifact formats only; the host environment provides agent execution via any available method." \
+        "description: >-
+        Consensus-driven implementation planning via strict Planner/Architect/Critic iteration. Use when the user needs a detailed spec and implementation plan before coding. Trigger with /ralplan or by saying 'ralplan'. Execution-agnostic: RALPLAN defines roles, workflow, and artifact formats only; the host environment provides agent execution via any available method."
+    substituteInPlace "$out/src/multiplexer.ts" \
+      --replace-fail 'execFileSync("/bin/sh", ["-lc",' \
+        'execFileSync("/bin/sh", ["-c",'
+    substituteInPlace "$out/src/interactive-tmux.ts" \
+      --replace-fail '"$ARTIFACT_DIR/cli.mjs" done 0' \
+        'node "$ARTIFACT_DIR/cli.mjs" done 0' \
+      --replace-fail '"$ARTIFACT_DIR/cli.mjs" error' \
+        'node "$ARTIFACT_DIR/cli.mjs" error' \
+      --replace-fail '`    "''${cliPath}" process-exit "$rc" || true`' \
+        '`    node "''${cliPath}" process-exit "$rc" || true`' \
+      --replace-fail '`"''${cliPath}" start`' \
+        '`node "''${cliPath}" start`'
+  '';
 
   pi-hashline-edit-pro = mkNpmPackageRoot {
     pname = "pi-hashline-edit-pro";
@@ -428,7 +425,7 @@ let
     pname = "pi-subagentura";
     version = "3.0.3";
     src = subagenturaSource;
-    npmDepsHash = "sha256-wx7BImm7rrpzamuZp9s5UD5kv0ENmAwTnknkR3Ja2jU=";
+    npmDepsHash = "sha256-qc43CxQTpNQG8DEAhbFh+tol8nbxEzONeUueMcQS6S0=";
     bundleEntry = "src/subagent.ts";
     testBundleEntry = "src/multiplexer-tmux.ts";
   };

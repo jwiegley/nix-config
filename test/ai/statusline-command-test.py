@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 STATUSLINE = ROOT / "config/ai/statusline-command.sh"
 
 
@@ -71,6 +71,7 @@ class StatuslineCommandTest(unittest.TestCase):
     def test_invokes_jq_once(self) -> None:
         real_jq = shutil.which("jq")
         self.assertIsNotNone(real_jq)
+        assert real_jq is not None
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             project_dir = Path(temporary_directory)

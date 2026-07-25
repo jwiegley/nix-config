@@ -233,38 +233,6 @@
         "type": "github"
       }
     },
-    "pi-agent-browser-native": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1784844978,
-        "narHash": "sha256-LMVvFkxiDN90lcTX54FmrwM0N/lLV+IJaCWzveHqpm8=",
-        "owner": "fitchmultz",
-        "repo": "pi-agent-browser-native",
-        "rev": "211a012c9b199d758768e8ba729f35e11e661f65",
-        "type": "github"
-      },
-      "original": {
-        "owner": "fitchmultz",
-        "repo": "pi-agent-browser-native",
-        "type": "github"
-      }
-    },
-    "pi-artifacts": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1784161997,
-        "narHash": "sha256-g7jrO0JxpO3k3hPgZD87tCWkbUdbilOFQ8ASwvjejRk=",
-        "owner": "jakeryderv",
-        "repo": "pi-packages",
-        "rev": "9056b18bac35d01fa79d255911f0a74b919c46d2",
-        "type": "github"
-      },
-      "original": {
-        "owner": "jakeryderv",
-        "repo": "pi-packages",
-        "type": "github"
-      }
-    },
     "pi-btw": {
       "flake": false,
       "locked": {
@@ -278,70 +246,6 @@
       "original": {
         "owner": "dbachelder",
         "repo": "pi-btw",
-        "type": "github"
-      }
-    },
-    "pi-dynamic-workflows": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1784782310,
-        "narHash": "sha256-Nr1DchpGkt5C5q2ufvAQf4Gv24l1obl6FW2y9Yj0G78=",
-        "owner": "QuintinShaw",
-        "repo": "pi-dynamic-workflows",
-        "rev": "b42994055797d1a975c02c95e6da6368a99c76c4",
-        "type": "github"
-      },
-      "original": {
-        "owner": "QuintinShaw",
-        "repo": "pi-dynamic-workflows",
-        "type": "github"
-      }
-    },
-    "pi-hashline-edit-pro": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1784925887,
-        "narHash": "sha256-9BfKK2dbmvlUvI7Brx1IYfggwqX1J2lX3wnKZizQ+4Q=",
-        "owner": "YuGiMob",
-        "repo": "pi-hashline-edit-pro",
-        "rev": "b44477fb62285491b3e23b6b6ac06685f90c5ccb",
-        "type": "github"
-      },
-      "original": {
-        "owner": "YuGiMob",
-        "repo": "pi-hashline-edit-pro",
-        "type": "github"
-      }
-    },
-    "pi-insights": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1779007408,
-        "narHash": "sha256-JyoRf42spqt1Q3C20uFt559+2JYEvIS5ki/WD8WM4JQ=",
-        "owner": "ygncode",
-        "repo": "pi-insights",
-        "rev": "f2de4880e5d8b1f66f207e220269703b6ca38ecf",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ygncode",
-        "repo": "pi-insights",
-        "type": "github"
-      }
-    },
-    "pi-lens": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1784885207,
-        "narHash": "sha256-17BXedZugrVDUiyHkX+noBYxqcTfOoABfqYCKAVzGJU=",
-        "owner": "apmantza",
-        "repo": "pi-lens",
-        "rev": "deed7751a8b2164d5de404d3052d31060d9aaa07",
-        "type": "github"
-      },
-      "original": {
-        "owner": "apmantza",
-        "repo": "pi-lens",
         "type": "github"
       }
     },
@@ -396,32 +300,17 @@
     "pi-subagentura": {
       "flake": false,
       "locked": {
-        "lastModified": 1784699925,
-        "narHash": "sha256-6Hy8xG7dqNP1dnODyoHl7fjxlH8owYkcFVnTx+LCb2I=",
-        "owner": "lmn451",
+        "lastModified": 1784958996,
+        "narHash": "sha256-ogj1OQNS+gJ8mZPctnPL+fxQhSCQ8o9iOCLdIt32/7c=",
+        "owner": "jwiegley",
         "repo": "pi-subagentura",
-        "rev": "f7f1c19432320a31505cbb4439ad9516adfcb174",
+        "rev": "f71281bce8f88741da0e2f9f7ba722964f19d4f0",
         "type": "github"
       },
       "original": {
-        "owner": "lmn451",
+        "owner": "jwiegley",
+        "ref": "main",
         "repo": "pi-subagentura",
-        "type": "github"
-      }
-    },
-    "pi-web-access": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1782373265,
-        "narHash": "sha256-TPtkurLY8Z9qxa597e0C5yWlNvgz4ywv2GdQstTB33A=",
-        "owner": "nicobailon",
-        "repo": "pi-web-access",
-        "rev": "7bdc30a65cf77273eb9c0034647b373bda4060d7",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nicobailon",
-        "repo": "pi-web-access",
         "type": "github"
       }
     },
@@ -451,18 +340,11 @@
         "mcp-servers-nix": "mcp-servers-nix",
         "nixpkgs": "nixpkgs_2",
         "pal-mcp-server": "pal-mcp-server",
-        "pi-agent-browser-native": "pi-agent-browser-native",
-        "pi-artifacts": "pi-artifacts",
         "pi-btw": "pi-btw",
-        "pi-dynamic-workflows": "pi-dynamic-workflows",
-        "pi-hashline-edit-pro": "pi-hashline-edit-pro",
-        "pi-insights": "pi-insights",
-        "pi-lens": "pi-lens",
         "pi-mcp-adapter": "pi-mcp-adapter",
         "pi-openai-server-compaction": "pi-openai-server-compaction",
         "pi-quiet": "pi-quiet",
         "pi-subagentura": "pi-subagentura",
-        "pi-web-access": "pi-web-access",
         "ponytail": "ponytail",
         "rust-overlay": "rust-overlay_2",
         "translate-tool": "translate-tool"

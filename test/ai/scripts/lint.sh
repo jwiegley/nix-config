@@ -14,9 +14,9 @@ portable_nix_paths=(
     overlays/tests/agent-deck-go-compat.nix
     overlays/tests/llama-cpp-platform-compat.nix
     overlays/tests/plasma-fractal-smoke.nix
+    flake-ai.nix
+    flake/ai.nix
     packages/agent-resources.nix
-    packages/ai-flake-definition.nix
-    packages/ai-flake-outputs.nix
     test/ai
 )
 

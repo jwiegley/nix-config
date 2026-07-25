@@ -13,6 +13,7 @@ let
     };
     inherit pkgs;
   };
+  # Managed-file preflight contract: collision, permission, and symlink safety.
   task9PreflightWithPi = preflightFactory {
     newPaths = [
       ".config/claude/personal/agents/new.md"
@@ -98,7 +99,7 @@ assert
 assert !invalidPreflightProbe.success;
 assert !sherlockAncestorProbe.success;
 
-pkgs.runCommand "ai-managed-preflight-smoke"
+pkgs.runCommand "ai-managed-preflight"
   {
     nativeBuildInputs = [
       pkgs.coreutils

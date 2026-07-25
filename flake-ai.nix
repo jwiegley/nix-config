@@ -7,4 +7,4 @@
 #   pal-mcp-server agent-browser-source bigpowers pi-btw
 #   pi-subagentura ponytail translate-tool pi-mcp-adapter
 #   pi-openai-server-compaction pi-quiet
-inputs: import ./packages/ai-flake-outputs.nix inputs
+inputs: import ./flake/ai.nix inputs

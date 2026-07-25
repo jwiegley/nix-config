@@ -1,6 +1,6 @@
 _final: prev:
 let
-  gallery = import ../../packages/pi-gallery-packages.nix {
+  gallery = import ../../packages/pi-gallery {
     inherit (prev)
       buildNpmPackage
       buildPackages

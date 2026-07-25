@@ -2245,7 +2245,7 @@ in
           translate-tool
           ;
         gitSurgeonSource = pkgs.inputs.llm-agents.packages.${system}.git-surgeon.src;
-        sourceOnlyResources = pkgs.callPackage ./agent-resources.nix {
+        sourceOnlyResources = pkgs.callPackage ../packages/agent-resources.nix {
           inputs = pkgs.inputs // {
             llm-agents = builtins.removeAttrs pkgs.inputs.llm-agents [ "packages" ];
           };
