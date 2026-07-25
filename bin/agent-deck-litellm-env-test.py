@@ -11,6 +11,9 @@ WRAPPER = Path(__file__).with_name("agent-deck-litellm-env")
 SYNTHETIC_SECRET = "synthetic-litellm-secret"
 SYNTHETIC_REF_SECRET = "synthetic-ref-secret"
 SYNTHETIC_PERPLEXITY_SECRET = "synthetic-perplexity-secret"
+SYNTHETIC_ANTHROPIC_SECRET = "synthetic-anthropic-secret"
+SYNTHETIC_GEMINI_SECRET = "synthetic-gemini-secret"
+SYNTHETIC_OPENAI_SECRET = "synthetic-openai-secret"
 
 
 def write_executable(path: Path, content: str) -> None:
@@ -36,6 +39,9 @@ case $1 in
   litellm.vulcan.lan) printf '%s\\n' '{SYNTHETIC_SECRET}' 'ignored-line' ;;
   api.ref.tools) printf '%s\\n' '{SYNTHETIC_REF_SECRET}' ;;
   api.perplexity.ai) printf '%s\\n' '{SYNTHETIC_PERPLEXITY_SECRET}' ;;
+  positron/api.anthropic.com) printf '%s\\n' '{SYNTHETIC_ANTHROPIC_SECRET}' ;;
+  positron/api.gemini.com) printf '%s\\n' '{SYNTHETIC_GEMINI_SECRET}' ;;
+  positron/api.openai.com) printf '%s\\n' '{SYNTHETIC_OPENAI_SECRET}' ;;
   *) exit 1 ;;
 esac
 """,
@@ -45,8 +51,7 @@ esac
                 """#!/usr/bin/env bash
 set -euo pipefail
 printf '%s\\0' "$@" >"$CAPTURE_ARGV"
-printf '%s\\n%s\\n%s' \
-  "$LITELLM_API_KEY" "$REF_API_KEY" "$PERPLEXITY_API_KEY" >"$CAPTURE_ENV"
+printf '%s\\n%s\\n%s\\n%s\\n%s\\n%s' "$LITELLM_API_KEY" "$REF_API_KEY" "$PERPLEXITY_API_KEY" "$ANTHROPIC_API_KEY" "$GEMINI_API_KEY" "$OPENAI_API_KEY" >"$CAPTURE_ENV"
 """,
             )
 
@@ -66,7 +71,14 @@ printf '%s\\n%s\\n%s' \
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(
                 env_path.read_text().splitlines(),
-                [SYNTHETIC_SECRET, SYNTHETIC_REF_SECRET, SYNTHETIC_PERPLEXITY_SECRET],
+                [
+                    SYNTHETIC_SECRET,
+                    SYNTHETIC_REF_SECRET,
+                    SYNTHETIC_PERPLEXITY_SECRET,
+                    SYNTHETIC_ANTHROPIC_SECRET,
+                    SYNTHETIC_GEMINI_SECRET,
+                    SYNTHETIC_OPENAI_SECRET,
+                ],
             )
             self.assertEqual(
                 [item.decode() for item in argv_path.read_bytes().split(b"\0") if item],
@@ -76,6 +88,9 @@ printf '%s\\n%s\\n%s' \
                 SYNTHETIC_SECRET,
                 SYNTHETIC_REF_SECRET,
                 SYNTHETIC_PERPLEXITY_SECRET,
+                SYNTHETIC_ANTHROPIC_SECRET,
+                SYNTHETIC_GEMINI_SECRET,
+                SYNTHETIC_OPENAI_SECRET,
             ):
                 self.assertNotIn(secret, result.stdout)
                 self.assertNotIn(secret, result.stderr)
@@ -86,6 +101,9 @@ printf '%s\\n%s\\n%s' \
             "litellm.vulcan.lan",
             "api.ref.tools",
             "api.perplexity.ai",
+            "positron/api.anthropic.com",
+            "positron/api.gemini.com",
+            "positron/api.openai.com",
         )
         for failure_mode in ("empty", "helper-failure"):
             for failing_entry in entries:
@@ -107,6 +125,9 @@ case $1 in
   litellm.vulcan.lan) printf '%s\\n' '{SYNTHETIC_SECRET}' ;;
   api.ref.tools) printf '%s\\n' '{SYNTHETIC_REF_SECRET}' ;;
   api.perplexity.ai) printf '%s\\n' '{SYNTHETIC_PERPLEXITY_SECRET}' ;;
+  positron/api.anthropic.com) printf '%s\\n' '{SYNTHETIC_ANTHROPIC_SECRET}' ;;
+  positron/api.gemini.com) printf '%s\\n' '{SYNTHETIC_GEMINI_SECRET}' ;;
+  positron/api.openai.com) printf '%s\\n' '{SYNTHETIC_OPENAI_SECRET}' ;;
   *) exit 1 ;;
 esac
 """,
@@ -131,11 +152,16 @@ esac
 
                         self.assertNotEqual(result.returncode, 0)
                         self.assertFalse(invoked_path.exists())
-                        self.assertIn("credential is unavailable or empty", result.stderr)
+                        self.assertIn(
+                            "credential is unavailable or empty", result.stderr
+                        )
                         for secret in (
                             SYNTHETIC_SECRET,
                             SYNTHETIC_REF_SECRET,
                             SYNTHETIC_PERPLEXITY_SECRET,
+                            SYNTHETIC_ANTHROPIC_SECRET,
+                            SYNTHETIC_GEMINI_SECRET,
+                            SYNTHETIC_OPENAI_SECRET,
                         ):
                             self.assertNotIn(secret, result.stdout)
                             self.assertNotIn(secret, result.stderr)
