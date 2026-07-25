@@ -119,8 +119,31 @@
 
   outputs =
     inputs:
+    let
+      portableInputs = {
+        inherit (inputs)
+          agent-browser-source
+          bigpowers
+          git-ai
+          lean-ctx
+          llm-agents
+          mcp-remote
+          mcp-servers-nix
+          nixpkgs
+          pal-mcp-server
+          pi-btw
+          pi-mcp-adapter
+          pi-openai-server-compaction
+          pi-quiet
+          pi-subagentura
+          ponytail
+          rust-overlay
+          translate-tool
+          ;
+      };
+    in
     import ../../test/ai/compatibility-check.nix {
-      inherit inputs;
-      actual = import ../../packages/ai-flake-outputs.nix inputs;
+      inputs = portableInputs;
+      actual = import ../../flake-ai.nix portableInputs;
     };
 }

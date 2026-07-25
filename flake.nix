@@ -267,24 +267,17 @@
           mcp-servers-nix
           nixpkgs
           pal-mcp-server
-          pi-agent-browser-native
-          pi-artifacts
           pi-btw
-          pi-dynamic-workflows
-          pi-hashline-edit-pro
-          pi-insights
-          pi-lens
           pi-mcp-adapter
           pi-openai-server-compaction
           pi-quiet
           pi-subagentura
-          pi-web-access
           ponytail
           rust-overlay
           translate-tool
           ;
       };
-      portableAiDefinition = import ./packages/ai-flake-outputs.nix portableInputs;
+      portableAiDefinition = import ./flake-ai.nix portableInputs;
       portableAi = import ./test/ai/compatibility-check.nix {
         inputs = portableInputs;
         actual = portableAiDefinition;
@@ -368,7 +361,7 @@
         }
       );
 
-      inherit (portableAi) apps;
+      inherit (portableAi) apps overlays;
 
       # Shared home-manager module for cross-platform use.
       # NixOS hosts import this via: inputs.nix-config (flake = false)
