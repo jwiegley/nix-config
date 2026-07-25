@@ -26,7 +26,10 @@ let
       resources = agentResources;
     };
   catalog = catalogFor modelData;
-  externalAiOverlay = _final: _prev: { external-ai-marker = true; };
+  externalAiOverlay = _final: _prev: {
+    external-ai-marker = true;
+    inputs.portable-input-marker = true;
+  };
   externalOverlayInputs = {
     caller-input-marker = true;
   };
@@ -3653,6 +3656,10 @@ let
     )
     (expectEqual "external AI overlay restores caller inputs"
       externalOverlayProbe.inputs.caller-input-marker
+      true
+    )
+    (expectEqual "external AI overlay preserves portable-only inputs"
+      externalOverlayProbe.inputs.portable-input-marker
       true
     )
     (expectEqual "OpenCode bash-reviewer tool oracle" (builtins.hashString "sha256" (

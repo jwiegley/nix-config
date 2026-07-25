@@ -19,7 +19,9 @@
 let
   overlayDir = ../overlays;
   aiOverlays = if aiOverlay == null then import ../overlays/ai { inherit inputs; } else [ aiOverlay ];
-  restoreCallerInputs = _final: _prev: { inherit inputs; };
+  restoreCallerInputs = _final: prev: {
+    inputs = (prev.inputs or { }) // inputs;
+  };
   isImportableOverlay =
     n:
     n != "ai"
