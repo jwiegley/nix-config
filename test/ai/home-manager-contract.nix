@@ -2857,6 +2857,13 @@ let
       system = "x86_64-linux";
       expectedClass = "vps";
     };
+    vps-override = {
+      hostname = "jw";
+      username = "ubuntu";
+      system = "aarch64-linux";
+      homeClass = "vps";
+      expectedClass = "vps";
+    };
     shared = {
       hostname = "vulcan";
       username = "jwiegley";
@@ -3494,6 +3501,7 @@ let
         shared = false;
         shared-synthetic = false;
         vps = false;
+        vps-override = false;
         vulcan = false;
       }
     )

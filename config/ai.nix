@@ -199,14 +199,9 @@ in
     {
       assertion =
         nixManagedAiHomeClass == null
-        || (
-          isLinux
-          && system == "aarch64-linux"
-          && config.home.username == "johnw"
-          && hostname == "linux"
-          && nixManagedAiHomeClass == "personal-linux"
-        );
-      message = "nixManagedAiHomeClass is reserved for the personal Linux test fixture";
+        || nixManagedAiHomeClass != "personal-linux"
+        || (isLinux && system == "aarch64-linux" && config.home.username == "johnw" && hostname == "linux");
+      message = "the personal-linux AI home class is reserved for its test fixture";
     }
     {
       assertion = builtins.all (
