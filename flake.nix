@@ -70,11 +70,6 @@
       flake = false;
     };
 
-    lean-ctx = {
-      url = "github:yvgude/lean-ctx";
-      flake = false;
-    };
-
     pi-openai-server-compaction = {
       url = "github:algal/pi-openai-server-compaction";
       flake = false;
@@ -261,7 +256,6 @@
           agent-browser-source
           bigpowers
           git-ai
-          lean-ctx
           llm-agents
           mcp-remote
           mcp-servers-nix

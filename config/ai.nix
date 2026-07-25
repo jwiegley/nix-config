@@ -171,7 +171,6 @@ let
     bash-language-server
     biome
     gopls
-    lean-ctx
     nil
     nodejs_22
     pyright

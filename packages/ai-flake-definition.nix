@@ -2158,7 +2158,6 @@ in
         agent-http-header-bridge
         agent-resources
         bigpowers
-        lean-ctx
         pi-agent-browser-native
         pi-artifacts
         pi-btw
@@ -2166,7 +2165,6 @@ in
         pi-gallery
         pi-insights
         pi-hashline-edit-pro
-        pi-lean-ctx
         pi-lens
         pi-model-router
         pi-ponytail
@@ -2272,7 +2270,6 @@ in
             agent-browser
             agent-resources
             bigpowers
-            lean-ctx
             pi-agent-browser-native
             pi-artifacts
             pi-btw
@@ -2280,7 +2277,6 @@ in
             pi-gallery
             pi-insights
             pi-hashline-edit-pro
-            pi-lean-ctx
             pi-lens
             pi-ponytail
             pi-subagentura

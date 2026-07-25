@@ -5224,22 +5224,6 @@
         "type": "github"
       }
     },
-    "lean-ctx": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1784874396,
-        "narHash": "sha256-gzaVsHb/u30Mv8ZaxYKr6TIPvMruhCIOvv9sdpXELQA=",
-        "owner": "yvgude",
-        "repo": "lean-ctx",
-        "rev": "fe36c06efb76df79f445035f28295771a11cd903",
-        "type": "github"
-      },
-      "original": {
-        "owner": "yvgude",
-        "repo": "lean-ctx",
-        "type": "github"
-      }
-    },
     "ledger": {
       "inputs": {
         "nixpkgs": "nixpkgs_2"
@@ -7115,7 +7099,6 @@
         "hakyll": "hakyll",
         "home-manager": "home-manager",
         "hours": "hours",
-        "lean-ctx": "lean-ctx",
         "ledger": "ledger",
         "llm-agents": "llm-agents",
         "mcp-remote": "mcp-remote",

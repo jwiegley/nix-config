@@ -41,10 +41,6 @@ let
       url = "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.2.72.tgz";
       hash = "sha256-3subgZHSxRN4wigNrM0KO6o2QmNSr8PtdrT4mg2kRlE=";
     };
-    pi-lean-ctx = fetchurl {
-      url = "https://registry.npmjs.org/pi-lean-ctx/-/pi-lean-ctx-3.9.12.tgz";
-      hash = "sha256-/DMfx45WnZU4/aFMBpg69T0WcNOtwxGcq/8habW6hpg=";
-    };
     pi-btw = fetchurl {
       url = "https://registry.npmjs.org/pi-btw/-/pi-btw-0.4.1.tgz";
       hash = "sha256-CHzdNUd6Jo+ZMF0YvVoOw6piB+VQl4FHTKImwPwU/GI=";
@@ -543,16 +539,6 @@ let
     '';
   };
 
-  pi-lean-ctx = mkCopyRoot {
-    pname = "pi-lean-ctx";
-    version = "3.9.12";
-    install = root: ''
-      tar -xzf ${releaseTarballs.pi-lean-ctx} -C ${root} \
-        --strip-components=1
-      cp -- ${inputs.lean-ctx}/LICENSE ${root}/LICENSE
-    '';
-  };
-
   pi-provider-litellm = mkCopyRoot {
     pname = "pi-provider-litellm";
     version = "2.0.0";
@@ -602,8 +588,6 @@ let
       tar -xzf ${releaseTarballs.pi-scroll} -C ${root} --strip-components=1
     '';
   };
-
-  lean-ctx = inputs.llm-agents.packages.${stdenv.hostPlatform.system}.lean-ctx;
 
   agent-browser =
     runCommand "agent-browser-0.33.0"
@@ -665,7 +649,6 @@ let
     ponytail = packageRoot pi-ponytail "pi-ponytail";
     workflows = packageRoot pi-dynamic-workflows "pi-dynamic-workflows";
     browser = packageRoot pi-agent-browser-native "pi-agent-browser-native";
-    lean = packageRoot pi-lean-ctx "pi-lean-ctx";
   };
 
   projection = {
@@ -706,11 +689,6 @@ let
         name = "pi-agent-browser-native";
         version = "0.2.72";
         extensions = [ "${roots.browser}/dist/extensions/agent-browser/index.js" ];
-      }
-      {
-        name = "pi-lean-ctx";
-        version = "3.9.12";
-        extensions = [ "${roots.lean}/extensions/index.ts" ];
       }
       {
         name = "pi-btw";
@@ -767,14 +745,12 @@ let
             inherit
               agent-browser
               bigpowers
-              lean-ctx
               pi-agent-browser-native
               pi-artifacts
               pi-btw
               pi-dynamic-workflows
               pi-hashline-edit-pro
               pi-insights
-              pi-lean-ctx
               pi-lens
               pi-ponytail
               pi-subagentura
@@ -797,7 +773,6 @@ let
         import ponytail from ${builtins.toJSON "${roots.ponytail}/pi-extension/index.js"};
         import workflows from ${builtins.toJSON "${roots.workflows}/extensions/workflow.ts"};
         import browser from ${builtins.toJSON "${roots.browser}/dist/extensions/agent-browser/index.js"};
-        import leanCtx from ${builtins.toJSON "${roots.lean}/extensions/index.ts"};
         import btw from ${builtins.toJSON "${roots.btw}/extensions/btw.ts"};
         import artifacts from ${builtins.toJSON "${roots.artifacts}/extensions/nix-bundle.js"};
         import insights from ${builtins.toJSON "${roots.insights}/index.ts"};
@@ -811,7 +786,6 @@ let
           process.env.PI_WEB_ACCESS_PROVIDER = "perplexity";
           process.env.PI_LENS_DISABLE_LSP_INSTALL = "1";
           process.env.PI_LENS_AUTO_INSTALL = "0";
-          process.env.LEAN_CTX_BIN = ${builtins.toJSON "${lean-ctx}/bin/lean-ctx"};
 
           for (const extension of [
             hashline,
@@ -820,7 +794,6 @@ let
             ponytail,
             workflows,
             browser,
-            leanCtx,
             btw,
             artifacts,
             insights,
@@ -852,7 +825,6 @@ assert
   inherit
     agent-browser
     bigpowers
-    lean-ctx
     pi-agent-browser-native
     pi-artifacts
     pi-btw
@@ -860,7 +832,6 @@ assert
     pi-gallery
     pi-hashline-edit-pro
     pi-insights
-    pi-lean-ctx
     pi-lens
     pi-ponytail
     pi-subagentura

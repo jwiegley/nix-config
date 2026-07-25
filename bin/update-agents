@@ -49,7 +49,6 @@ ai_inputs=(
     agent-browser-source
     bigpowers
     git-ai
-    lean-ctx
     llm-agents
     mcp-remote
     mcp-servers-nix

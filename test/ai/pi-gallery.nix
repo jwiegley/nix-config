@@ -28,7 +28,6 @@ let
     ponytail = root piPackages.pi-ponytail "pi-ponytail";
     workflows = root piPackages.pi-dynamic-workflows "pi-dynamic-workflows";
     browser = root piPackages.pi-agent-browser-native "pi-agent-browser-native";
-    lean = root piPackages.pi-lean-ctx "pi-lean-ctx";
   };
   gallery = "${piPackages.pi-gallery}/share/pi-gallery";
   quiet = "${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-quiet/src/index.ts";
@@ -80,7 +79,6 @@ runCommand "pi-gallery-check"
     expect_version ${roots.ponytail}/package.json 4.8.4
     expect_version ${roots.workflows}/package.json 3.4.1
     expect_version ${roots.browser}/package.json 0.2.72
-    expect_version ${roots.lean}/package.json 3.9.12
 
     for package_root in ${packageRoots}; do
       [ -f "$package_root/package.json" ] || fail "missing package manifest: $package_root"
@@ -181,18 +179,14 @@ runCommand "pi-gallery-check"
     [ "$(find ${roots.ponytail}/skills -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 6 ]
 
     [ -f ${roots.browser}/dist/extensions/agent-browser/index.js ]
-    [ -f ${roots.lean}/extensions/index.ts ]
-    [ -f ${roots.lean}/extensions/vendor/mcp-sdk.cjs ]
-    [ -f ${roots.lean}/LICENSE ]
 
     browser_version=$(${lib.getExe piPackages.agent-browser} --version)
     printf '%s\n' "$browser_version" | grep -F '0.33.0' >/dev/null \
       || fail "agent-browser version drifted: $browser_version"
-    [ "$(${lib.getExe piPackages.lean-ctx} --version | head -1 | grep -c '3.9.12')" -eq 1 ]
 
     [ -f ${gallery}/index.ts ]
     [ -f ${gallery}/projection.json ]
-    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq 15 ]
+    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq 14 ]
     [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq 7 ]
     jq -e '
       [.packages[].name] == [
@@ -202,7 +196,6 @@ runCommand "pi-gallery-check"
         "@dietrichgebert/ponytail",
         "@quintinshaw/pi-dynamic-workflows",
         "pi-agent-browser-native",
-        "pi-lean-ctx",
         "pi-btw",
         "@jakeryderv/pi-artifacts",
         "@ygncode/pi-insights",
@@ -216,7 +209,6 @@ runCommand "pi-gallery-check"
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
     grep -F 'PI_WEB_ACCESS_PROVIDER = "perplexity"' ${gallery}/index.ts >/dev/null
     grep -F 'PI_LENS_DISABLE_LSP_INSTALL = "1"' ${gallery}/index.ts >/dev/null
-    grep -F 'LEAN_CTX_BIN' ${gallery}/index.ts >/dev/null
     grep -F 'pi-provider-litellm' ${gallery}/index.ts >/dev/null
     grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
 
@@ -613,7 +605,6 @@ runCommand "pi-gallery-check"
       PATH="$smoke/sentinels":${
         lib.makeBinPath [
           piPackages.agent-browser
-          piPackages.lean-ctx
         ]
       }:$PATH \
         ${coreutils}/bin/timeout 120 \

@@ -127,22 +127,6 @@
         "type": "github"
       }
     },
-    "lean-ctx": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1784874396,
-        "narHash": "sha256-gzaVsHb/u30Mv8ZaxYKr6TIPvMruhCIOvv9sdpXELQA=",
-        "owner": "yvgude",
-        "repo": "lean-ctx",
-        "rev": "fe36c06efb76df79f445035f28295771a11cd903",
-        "type": "github"
-      },
-      "original": {
-        "owner": "yvgude",
-        "repo": "lean-ctx",
-        "type": "github"
-      }
-    },
     "llm-agents": {
       "inputs": {
         "bun2nix": "bun2nix",
@@ -462,7 +446,6 @@
         "agent-browser-source": "agent-browser-source",
         "bigpowers": "bigpowers",
         "git-ai": "git-ai",
-        "lean-ctx": "lean-ctx",
         "llm-agents": "llm-agents",
         "mcp-remote": "mcp-remote",
         "mcp-servers-nix": "mcp-servers-nix",
