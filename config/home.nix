@@ -5,8 +5,11 @@
 # the full user environment with platform conditionals.
 
 {
+  pkgs,
   lib,
+  config,
   hostname,
+  inputs,
   ...
 }@args:
 
