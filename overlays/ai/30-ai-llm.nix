@@ -77,7 +77,10 @@ final: prev: {
   # NOTE: As of b9190+, the webui was relocated from tools/server/webui
   # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
   llama-cpp =
-    if prev.stdenv.hostPlatform.isDarwin then
+    if
+      prev.stdenv.hostPlatform.isDarwin
+      && builtins.hasAttr "nodejs_latest" prev.llama-cpp.override.__functionArgs
+    then
       (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs (attrs: rec {
         version = "10107";
         src = prev.fetchFromGitHub {
@@ -304,7 +307,10 @@ final: prev: {
       # its prompt in the Darwin sandbox. Remove only Zsh from that one
       # cross-shell matrix; static Zsh tests and Bash/Fish behavior stay on.
       aiperfCyclopts =
-        if prev.stdenv.hostPlatform.isDarwin then
+        if
+          prev.stdenv.hostPlatform.isDarwin
+          && builtins.hasAttr "nodejs_latest" prev.llama-cpp.override.__functionArgs
+        then
           ps.cyclopts.overridePythonAttrs (old: {
             postPatch = (old.postPatch or "") + ''
               substituteInPlace tests/completion/test_behavior.py \

@@ -15,22 +15,38 @@ let
   darwinResult =
     (overlay { nodejs_22 = "nodejs-22"; } {
       stdenv.hostPlatform.isDarwin = true;
-      llama-cpp.override = args: {
-        overrideAttrs =
-          update:
-          let
-            attrs = update { patches = [ "existing.patch" ]; };
-          in
-          {
-            inherit args attrs;
-            marker = "darwin-override";
-          };
+      llama-cpp.override = {
+        __functionArgs.nodejs_latest = false;
+        __functor = _self: args: {
+          overrideAttrs =
+            update:
+            let
+              attrs = update { patches = [ "existing.patch" ]; };
+            in
+            {
+              inherit args attrs;
+              marker = "darwin-override";
+            };
+        };
       };
       fetchFromGitHub = args: args;
       fetchNpmDeps = args: args;
     }).llama-cpp;
+
+  legacyDarwinResult =
+    (overlay { } {
+      stdenv.hostPlatform.isDarwin = true;
+      llama-cpp = {
+        marker = "legacy-darwin-upstream";
+        override = {
+          __functionArgs = { };
+          __functor = _self: _: throw "legacy llama-cpp must not be overridden";
+        };
+      };
+    }).llama-cpp;
 in
 assert linuxResult.marker == "linux-upstream";
+assert legacyDarwinResult.marker == "legacy-darwin-upstream";
 assert darwinResult.marker == "darwin-override";
 assert darwinResult.args.nodejs_latest == "nodejs-22";
 assert darwinResult.attrs.version == "10107";
