@@ -1944,6 +1944,8 @@ let
       opt = optPkg pkgs;
       agent = optAgent pkgs;
       appleSilicon = pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64;
+      supportsGradio6 =
+        pkgs.python313Packages ? gradio && lib.versionAtLeast pkgs.python313Packages.gradio.version "6";
       gitAiPackages = git-ai.packages.${system} or { };
     in
     [
@@ -1964,9 +1966,9 @@ let
     ++ agent "mcporter"
     ++ agent "opencode"
     ++ agent "pi"
-    ++ lib.optionals (pkgs.python313Packages ? choreographer && pkgs.python313Packages ? logistro) (
-      opt "aiperf"
-    )
+    ++ lib.optionals (
+      pkgs.python313Packages ? choreographer && pkgs.python313Packages ? logistro && supportsGradio6
+    ) (opt "aiperf")
     ++ opt "agent-deck"
     ++ opt "plasma-wiki"
     ++ opt "plasma-fractal"
@@ -1991,7 +1993,8 @@ let
       (lib.hiPrio pkgs.mcp-server-sequential-thinking)
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin (opt "drafts-mcp-server")
-    ++ lib.optionals appleSilicon (opt "mlx-lm" ++ opt "mtplx" ++ opt "omlx" ++ opt "vllm-mlx");
+    ++ lib.optionals appleSilicon (opt "mlx-lm" ++ opt "mtplx" ++ opt "omlx")
+    ++ lib.optionals (appleSilicon && supportsGradio6) (opt "vllm-mlx");
 
   mkAiToolchain =
     pkgs:

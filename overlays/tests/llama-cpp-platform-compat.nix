@@ -36,6 +36,7 @@ let
   legacyDarwinResult =
     (overlay { } {
       stdenv.hostPlatform.isDarwin = true;
+      lib.warn = message: value: builtins.trace message value;
       llama-cpp = {
         marker = "legacy-darwin-upstream";
         override = {

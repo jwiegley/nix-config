@@ -13,7 +13,10 @@ let
     ;
   sys = pkgs.stdenv.hostPlatform.system;
   sourcePython313Packages = inputs.nixpkgs.legacyPackages.${sys}.python313Packages;
-  supportsAiperf = sourcePython313Packages ? choreographer && sourcePython313Packages ? logistro;
+  supportsGradio6 =
+    sourcePython313Packages ? gradio && lib.versionAtLeast sourcePython313Packages.gradio.version "6";
+  supportsAiperf =
+    sourcePython313Packages ? choreographer && sourcePython313Packages ? logistro && supportsGradio6;
 
   # Helper to conditionally include a package that may come from an overlay.
   # Returns a singleton list if the package exists in pkgs, empty list otherwise.
@@ -555,7 +558,7 @@ rec {
       terminal-notifier
       xquartz
     ]
-    ++ lib.optionals isDarwin (optPkg "vllm-mlx")
+    ++ lib.optionals (isDarwin && supportsGradio6) (optPkg "vllm-mlx")
     ++ lib.optionals isDarwin (optPkg "mtplx")
     ++ lib.optionals isDarwin (optPkg "omlx")
 

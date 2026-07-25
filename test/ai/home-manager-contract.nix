@@ -3587,19 +3587,35 @@ let
     (expectEqual "Task 11 AIPerf requires logistro" (task11SelectsAiperfFor {
       choreographer = true;
     }) false)
+    (expectEqual "Task 11 AIPerf requires Gradio" (task11SelectsAiperfFor {
+      choreographer = true;
+      logistro = true;
+    }) false)
+    (expectEqual "Task 11 AIPerf rejects Gradio 5" (task11SelectsAiperfFor {
+      choreographer = true;
+      logistro = true;
+      gradio.version = "5.49.1";
+    }) false)
     (expectEqual "Task 11 AIPerf selects complete source dependencies" (task11SelectsAiperfFor {
       choreographer = true;
       logistro = true;
+      gradio.version = "6.0.0";
     }) true)
     (expectEqual "Task 11 AI toolchain omits AIPerf with incomplete Python dependencies" (
       task11ToolchainSelectsAiperfFor
       { }
     ) false)
+    (expectEqual "Task 11 AI toolchain rejects Gradio 5" (task11ToolchainSelectsAiperfFor {
+      choreographer = true;
+      logistro = true;
+      gradio.version = "5.49.1";
+    }) false)
     (expectEqual "Task 11 AI toolchain retains AIPerf with complete Python dependencies" (
       task11ToolchainSelectsAiperfFor
       {
         choreographer = true;
         logistro = true;
+        gradio.version = "6.0.0";
       }
     ) true)
   ];

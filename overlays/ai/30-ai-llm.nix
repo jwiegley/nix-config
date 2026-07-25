@@ -115,6 +115,8 @@ final: prev: {
           hash = npmDepsHash;
         };
       })
+    else if prev.stdenv.hostPlatform.isDarwin then
+      prev.lib.warn "llama-cpp: Darwin pin inactive (no nodejs_latest override arg); using upstream llama-cpp" prev.llama-cpp
     else
       prev.llama-cpp;
 
@@ -307,10 +309,7 @@ final: prev: {
       # its prompt in the Darwin sandbox. Remove only Zsh from that one
       # cross-shell matrix; static Zsh tests and Bash/Fish behavior stay on.
       aiperfCyclopts =
-        if
-          prev.stdenv.hostPlatform.isDarwin
-          && builtins.hasAttr "nodejs_latest" prev.llama-cpp.override.__functionArgs
-        then
+        if prev.stdenv.hostPlatform.isDarwin then
           ps.cyclopts.overridePythonAttrs (old: {
             postPatch = (old.postPatch or "") + ''
               substituteInPlace tests/completion/test_behavior.py \
