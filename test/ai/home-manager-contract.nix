@@ -1271,27 +1271,8 @@ let
         max = null;
       };
     };
-  piLiteLLMApiKeyHelper = pkgs.writeShellScript "pi-litellm-api-key" ''
-    set -euo pipefail
-    set +x
-
-    pass_bin=''${PI_LITELLM_PASS_BIN:-${lib.getExe pkgs.pass}}
-    credential=""
-    if [[ ! -x $pass_bin ]] || ! credential="$("$pass_bin" litellm.vulcan.lan)"; then
-      echo "pi: LiteLLM credential is unavailable or empty" >&2
-      exit 1
-    fi
-    credential=''${credential%%$'\n'*}
-    if [[ -z $credential ]]; then
-      echo "pi: LiteLLM credential is unavailable or empty" >&2
-      exit 1
-    fi
-    printf '%s\n' "$credential"
-  '';
-  piLiteLLMApiKeyCommand = "!${piLiteLLMApiKeyHelper}";
   expectedPiProvider = providerName: provider: {
-    apiKey =
-      if providerName == "litellm" then piLiteLLMApiKeyCommand else renderPiCredential provider.apiKey;
+    apiKey = renderPiCredential provider.apiKey;
     inherit (provider) baseUrl;
     headers = {
       "x-litellm-tags" = "pi";
@@ -2076,6 +2057,7 @@ let
     "ANTHROPIC_API_KEY"
     "CONTEXT7_API_KEY"
     "GEMINI_API_KEY"
+    "LITELLM_API_KEY"
     "OPENAI_API_KEY"
     "PERPLEXITY_API_KEY"
     "REF_API_KEY"
@@ -4093,25 +4075,6 @@ pkgs.runCommand "ai-home-manager-contract"
     test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/zod"
     test -f "${piExtensionSources.pi-quiet}/package.json"
     test -f "${piExtensionSources.pi-quiet}/src/index.ts"
-
-    helper_test="$TMPDIR/pi-litellm-api-key-test"
-    mkdir -p "$helper_test"
-    cat > "$helper_test/pass" <<'SH'
-    #!/bin/sh
-    test "$#" -eq 1
-    test "$1" = litellm.vulcan.lan
-    printf 'synthetic-first-line\nignored metadata\n'
-    SH
-    chmod +x "$helper_test/pass"
-    PI_LITELLM_PASS_BIN="$helper_test/pass" ${piLiteLLMApiKeyHelper} \
-      > "$helper_test/output" 2> "$helper_test/error"
-    test "$(cat "$helper_test/output")" = synthetic-first-line
-    test ! -s "$helper_test/error"
-    PI_LITELLM_PASS_BIN="$helper_test/missing" ${piLiteLLMApiKeyHelper} \
-      > "$helper_test/missing-output" 2> "$helper_test/missing-error" && exit 1
-    test ! -s "$helper_test/missing-output"
-    grep -Fx 'pi: LiteLLM credential is unavailable or empty' \
-      "$helper_test/missing-error" >/dev/null
 
     ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "aarch64-darwin") ''
       profile_path="${task9JohnwHera.config.home.path}"

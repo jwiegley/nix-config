@@ -50,12 +50,8 @@ let
       "?apiKey="
     ];
   providerRequiredEnvNames = lib.concatMap (
-    providerName:
-    let
-      provider = modelData.providers.${providerName};
-    in
-    lib.optional (providerName != "litellm" && isTypedEnv provider.apiKey) provider.apiKey.env
-  ) (builtins.attrNames modelData.providers);
+    provider: lib.optional (isTypedEnv provider.apiKey) provider.apiKey.env
+  ) (builtins.attrValues modelData.providers);
   mcpRequiredEnvNames = lib.concatMap (
     server:
     lib.concatMap (value: lib.optional (isTypedEnv value) value.env) (
@@ -64,24 +60,6 @@ let
     )
   ) (builtins.attrValues selected.mcpServers);
   renderEnv = name: "$" + "{" + name + "}";
-  piLiteLLMApiKeyHelper = pkgs.writeShellScript "pi-litellm-api-key" ''
-    set -euo pipefail
-    set +x
-
-    pass_bin=''${PI_LITELLM_PASS_BIN:-${lib.getExe pkgs.pass}}
-    credential=""
-    if [[ ! -x $pass_bin ]] || ! credential="$("$pass_bin" litellm.vulcan.lan)"; then
-      echo "pi: LiteLLM credential is unavailable or empty" >&2
-      exit 1
-    fi
-    credential=''${credential%%$'\n'*}
-    if [[ -z $credential ]]; then
-      echo "pi: LiteLLM credential is unavailable or empty" >&2
-      exit 1
-    fi
-    printf '%s\n' "$credential"
-  '';
-  piLiteLLMApiKeyCommand = "!${piLiteLLMApiKeyHelper}";
 
   orderedValues =
     set: lib.sort (left: right: left.sourceOrder < right.sourceOrder) (builtins.attrValues set);
@@ -137,7 +115,7 @@ let
     providerName: provider:
     assert providerName == "litellm";
     {
-      apiKey = piLiteLLMApiKeyCommand;
+      apiKey = renderEnv provider.apiKey.env;
       inherit (provider) baseUrl;
       headers = {
         "x-litellm-tags" = "pi";
@@ -402,7 +380,6 @@ assert
   == [ ];
 assert builtins.hasAttr "agent-resources" pkgs;
 assert builtins.hasAttr "pi-gallery" pkgs;
-assert builtins.hasAttr "pass" pkgs;
 {
   files = mergeFiles [
     agentFiles
