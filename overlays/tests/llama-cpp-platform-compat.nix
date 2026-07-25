@@ -5,7 +5,7 @@ let
 
   linuxResult =
     (overlay { } {
-      stdenv.isDarwin = false;
+      stdenv.hostPlatform.isDarwin = false;
       llama-cpp = {
         marker = "linux-upstream";
         override = _: throw "llama-cpp must not be overridden on Linux";
@@ -14,7 +14,7 @@ let
 
   darwinResult =
     (overlay { nodejs_22 = "nodejs-22"; } {
-      stdenv.isDarwin = true;
+      stdenv.hostPlatform.isDarwin = true;
       llama-cpp.override = args: {
         overrideAttrs =
           update:
