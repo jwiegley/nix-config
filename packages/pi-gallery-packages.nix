@@ -145,6 +145,11 @@ let
         ''}
 
         ${lib.optionalString subagentura ''
+          substituteInPlace "$out/skills/ralplan/SKILL.md" \
+            --replace-fail \
+              "description: Consensus-driven implementation planning via strict Planner/Architect/Critic iteration. Use when the user needs a detailed spec and implementation plan before coding. Trigger with /ralplan or by saying 'ralplan'. Execution-agnostic: RALPLAN defines roles, workflow, and artifact formats only; the host environment provides agent execution via any available method." \
+              "description: >-
+              Consensus-driven implementation planning via strict Planner/Architect/Critic iteration. Use when the user needs a detailed spec and implementation plan before coding. Trigger with /ralplan or by saying 'ralplan'. Execution-agnostic: RALPLAN defines roles, workflow, and artifact formats only; the host environment provides agent execution via any available method."
           substituteInPlace "$out/src/multiplexer.ts" \
             --replace-fail 'execFileSync("/bin/sh", ["-lc",' \
               'execFileSync("/bin/sh", ["-c",'
@@ -561,7 +566,10 @@ let
           'const skillsEnabled = settings?.skills?.enabled === true;' \
         --replace-fail \
           'const mcpEnabled = isFeatureEnabled(settings, "mcp");' \
-          'const mcpEnabled = settings?.mcp?.enabled === true;'
+          'const mcpEnabled = settings?.mcp?.enabled === true;' \
+        --replace-fail \
+          'sessionId = getSessionIdFromFile(ctx.sessionManager.getSessionFile());' \
+          'sessionId = ctx.sessionManager.getSessionId() ?? getSessionIdFromFile(ctx.sessionManager.getSessionFile());'
       # The packaged Pi loader maps peer root exports, not these lazy subpaths.
       substituteInPlace ${root}/dist/provider.js \
         --replace-fail \

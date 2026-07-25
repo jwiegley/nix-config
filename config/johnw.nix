@@ -173,7 +173,8 @@ in
           set -euo pipefail
           uid=$(id -u)
           export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$uid}"
-          unset TMUX_TMPDIR
+          # Local and SSH agent-deck invocations must share one tmux socket parent.
+          export TMUX_TMPDIR="$XDG_RUNTIME_DIR"
           export CLAUDE_CONFIG_DIR="$HOME/.claude"
           exec "$HOME/.nix-profile/bin/agent-deck" "$@"
         '';

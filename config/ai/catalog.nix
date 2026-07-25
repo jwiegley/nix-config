@@ -1396,13 +1396,6 @@ let
       tombstones = [ "anvil-tools" ];
     };
 
-    clientVersions = {
-      claude = "2.1.217";
-      codex = "0.145.0";
-      droid = "0.177.0";
-      opencode = "1.18.4";
-      pi = "0.82.0";
-    };
     adapterVersions = {
       mcp-remote = "0.1.38";
       pi-mcp-adapter = "2.12.1";

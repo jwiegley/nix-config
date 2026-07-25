@@ -1293,6 +1293,10 @@ let
     apiKey =
       if providerName == "litellm" then piLiteLLMApiKeyCommand else renderPiCredential provider.apiKey;
     inherit (provider) baseUrl;
+    headers = {
+      "x-litellm-tags" = "pi";
+      "x-litellm-timeout" = "7200";
+    };
     models = map expectedPiModel (
       orderedValues (
         lib.filterAttrs (
@@ -1426,6 +1430,9 @@ let
       "shift+enter"
       "ctrl+j"
     ];
+    "app.model.select" = [ "ctrl+l" ];
+    "app.model.cycleForward" = [ ];
+    "app.model.cycleBackward" = [ ];
   };
 
   expectedClaudeSettings =
@@ -2524,13 +2531,6 @@ let
     positron-google.env = "GEMINI_API_KEY";
     positron-openai.env = "OPENAI_API_KEY";
   };
-  expectedClientVersions = {
-    claude = "2.1.217";
-    codex = "0.145.0";
-    droid = "0.177.0";
-    opencode = "1.18.4";
-    pi = "0.82.0";
-  };
   expectedAdapterVersions = {
     mcp-remote = "0.1.38";
     pi-mcp-adapter = "2.12.1";
@@ -3182,6 +3182,14 @@ let
       (builtins.hasAttr ".local/bin/agent-deck-remote-env" task9JohnwSharedSynthetic.config.home.file)
       true
     )
+    (expectEqual "Task 9 remote agent-deck shares the local tmux socket parent" (lib.hasInfix
+      ''export TMUX_TMPDIR="$XDG_RUNTIME_DIR"''
+      task9JohnwSharedSynthetic.config.home.file.".local/bin/agent-deck-remote-env".text
+    ) true)
+    (expectEqual "Task 9 remote agent-deck does not clear the tmux socket parent" (lib.hasInfix
+      "unset TMUX_TMPDIR"
+      task9JohnwSharedSynthetic.config.home.file.".local/bin/agent-deck-remote-env".text
+    ) false)
     (expectEqual "Task 9 managed profile precedes preserved PATH prefixes"
       (lib.take 3 task9JohnwHera.config.home.sessionPath)
       [
@@ -3569,6 +3577,17 @@ let
       };
     in
     builtins.elem fixturePkgs.aiperf selection.package-list;
+  task11ToolchainSelectsAiperfFor =
+    python313Packages:
+    builtins.elem "aiperf-sentinel" (
+      aiFlake.lib.aiPackagesFor (
+        testPkgsFor.x86_64-linux
+        // {
+          inherit python313Packages;
+          aiperf = "aiperf-sentinel";
+        }
+      )
+    );
   task11AiperfChecks = [
     (expectEqual "Task 11 AIPerf omits both missing source dependencies" (task11SelectsAiperfFor
       { }
@@ -3583,6 +3602,17 @@ let
       choreographer = true;
       logistro = true;
     }) true)
+    (expectEqual "Task 11 AI toolchain omits AIPerf with incomplete Python dependencies" (
+      task11ToolchainSelectsAiperfFor
+      { }
+    ) false)
+    (expectEqual "Task 11 AI toolchain retains AIPerf with complete Python dependencies" (
+      task11ToolchainSelectsAiperfFor
+      {
+        choreographer = true;
+        logistro = true;
+      }
+    ) true)
   ];
   task11PackageChecks =
     map
@@ -3937,7 +3967,6 @@ let
       inherit (server) transport;
       overrides = server.overrides or { };
     }) catalog.items.mcpServers) expectedMcpContracts)
-    (expectEqual "client versions" catalog.selectorCoverage.clientVersions expectedClientVersions)
     (expectEqual "adapter versions" catalog.selectorCoverage.adapterVersions expectedAdapterVersions)
     (expectEqual "secret routing" catalog.selectorCoverage.secretRouting expectedSecretRouting)
     (expectEqual "secret capability rows" catalog.selectorCoverage.secretCapabilities

@@ -139,6 +139,10 @@ let
     {
       apiKey = piLiteLLMApiKeyCommand;
       inherit (provider) baseUrl;
+      headers = {
+        "x-litellm-tags" = "pi";
+        "x-litellm-timeout" = "7200";
+      };
       models = map renderModel solModels;
     };
   routerProvider = {
@@ -290,6 +294,9 @@ let
       "shift+enter"
       "ctrl+j"
     ];
+    "app.model.select" = [ "ctrl+l" ];
+    "app.model.cycleForward" = [ ];
+    "app.model.cycleBackward" = [ ];
   };
 
   renderAgentTools =

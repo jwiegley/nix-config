@@ -33,10 +33,14 @@ let
   gallery = "${piPackages.pi-gallery}/share/pi-gallery";
   quiet = "${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-quiet/src/index.ts";
   packageRoots = lib.escapeShellArgs (builtins.attrValues roots);
+  skillPackageRoots = lib.escapeShellArgs (
+    builtins.attrValues (builtins.removeAttrs roots [ "bigpowers" ])
+  );
 in
 assert (piPackage.toolRendererWrapperAbi or null) == 1;
 runCommand "pi-gallery-check"
   {
+    __darwinAllowLocalNetworking = true;
     nativeBuildInputs = [
       bun
       coreutils
@@ -122,6 +126,11 @@ runCommand "pi-gallery-check"
     grep -F 'openAIResponsesApi } from "@earendil-works/pi-ai"' \
       ${roots.litellm}/dist/provider.js >/dev/null \
       || fail "LiteLLM provider does not use Pi's extension-safe root export"
+    grep -F 'sessionId = ctx.sessionManager.getSessionId() ?? getSessionIdFromFile' \
+      ${roots.litellm}/dist/index.js >/dev/null \
+      || fail "LiteLLM provider does not derive the Pi session ID"
+    grep -F 'next.litellm_session_id = sessionId' ${roots.litellm}/dist/index.js >/dev/null \
+      || fail "LiteLLM provider does not inject litellm_session_id"
     [ -f ${roots.router}/extensions/index.ts ]
     [ -f ${roots.router}/extensions/routing.ts ]
     [ ! -e ${roots.router}/node_modules ]
@@ -362,9 +371,66 @@ runCommand "pi-gallery-check"
 
     routing_smoke="$TMPDIR/pi-model-router-smoke"
     mkdir -p "$routing_smoke/home" "$routing_smoke/agent" "$routing_smoke/project"
-    cat > "$routing_smoke/agent/models.json" <<'JSON'
+    cat > "$routing_smoke/litellm-server.mjs" <<'JS'
+    import { writeFileSync } from "node:fs";
+    import { createServer } from "node:http";
+
+    const server = createServer((request, response) => {
+      let body = "";
+      request.setEncoding("utf8");
+      request.on("data", chunk => { body += chunk; });
+      request.on("end", () => {
+        const payload = JSON.parse(body);
+        if (request.headers["x-litellm-tags"] === "pi" && request.headers["x-litellm-timeout"] === "7200") {
+          writeFileSync(process.env.PI_LITELLM_HEADERS_MARKER, "ok\n");
+        }
+        if (typeof payload.litellm_session_id === "string" && payload.litellm_session_id.length > 0) {
+          writeFileSync(process.env.PI_LITELLM_SESSION_MARKER, "ok\n");
+        }
+        response.writeHead(200, { "content-type": "text/event-stream" });
+        response.write('data: {"id":"proof","object":"chat.completion.chunk","created":1,"model":"header-proof","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":null}]}\n\n');
+        response.write('data: {"id":"proof","object":"chat.completion.chunk","created":1,"model":"header-proof","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\n');
+        response.end("data: [DONE]\n\n");
+      });
+    });
+    server.listen(0, "127.0.0.1", () => {
+      writeFileSync(process.env.PI_LITELLM_PORT_FILE, String(server.address().port));
+    });
+    JS
+    PI_LITELLM_PORT_FILE="$routing_smoke/port" \
+    PI_LITELLM_HEADERS_MARKER="$routing_smoke/headers-ok" \
+    PI_LITELLM_SESSION_MARKER="$routing_smoke/session-ok" \
+      node "$routing_smoke/litellm-server.mjs" &
+    litellm_server_pid=$!
+    trap 'kill "$litellm_server_pid" 2>/dev/null || true' EXIT
+    for _ in $(seq 1 100); do
+      [ -s "$routing_smoke/port" ] && break
+      sleep 0.05
+    done
+    [ -s "$routing_smoke/port" ] || fail "LiteLLM request oracle did not start"
+    litellm_port=$(cat "$routing_smoke/port")
+
+    cat > "$routing_smoke/agent/models.json" <<JSON
     {
       "providers": {
+        "litellm": {
+          "api": "openai-completions",
+          "apiKey": "synthetic",
+          "baseUrl": "http://127.0.0.1:$litellm_port/v1",
+          "headers": {
+            "x-litellm-tags": "pi",
+            "x-litellm-timeout": "7200"
+          },
+          "models": [{
+            "id": "header-proof",
+            "name": "Header proof",
+            "reasoning": false,
+            "input": ["text"],
+            "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
+            "contextWindow": 128000,
+            "maxTokens": 16384
+          }]
+        },
         "router": {
           "api": "router-local-api",
           "apiKey": "pi-model-router",
@@ -464,6 +530,27 @@ runCommand "pi-gallery-check"
       });
     }
     TS
+    mkdir -p "$routing_smoke/sessions"
+    HOME="$routing_smoke/home" \
+    PI_CODING_AGENT_DIR="$routing_smoke/agent" \
+    PI_OFFLINE=1 \
+      ${coreutils}/bin/timeout 60 \
+      ${lib.getExe piPackage} \
+      --print --offline --session-dir "$routing_smoke/sessions" \
+      --session-id 11111111-1111-4111-8111-111111111111 --no-context-files \
+      --no-extensions --no-skills --no-prompt-templates --no-approve \
+      --extension ${gallery}/index.ts \
+      --extension "$routing_smoke/synthetic.ts" \
+      --provider litellm --model header-proof "verify metadata" \
+      </dev/null >"$routing_smoke/litellm-output" 2>"$routing_smoke/litellm-error" || {
+        cat "$routing_smoke/litellm-error" >&2
+        fail "LiteLLM request metadata smoke failed"
+      }
+    grep -Fx ok "$routing_smoke/headers-ok" >/dev/null \
+      || fail "LiteLLM request headers were not assembled"
+    grep -Fx ok "$routing_smoke/session-ok" >/dev/null \
+      || fail "LiteLLM session ID was not injected"
+
     while IFS='|' read -r prompt expected; do
       env -u LITELLM_API_KEY -u LITELLM_API_KEY_HELPER \
       HOME="$routing_smoke/home" \
@@ -505,6 +592,18 @@ runCommand "pi-gallery-check"
     SH
       chmod +x "$smoke/sentinels/$command"
     done
+    for package_root in ${skillPackageRoots}; do
+      [ ! -d "$package_root/skills" ] \
+        || find "$package_root/skills" -type f -name SKILL.md -print
+    done | sort -u > "$smoke/expected-skills"
+    jq -Rsc '[splits("\n") | select(length > 0) | sub("/SKILL.md$"; "")]' \
+      "$smoke/expected-skills" > "$smoke/skill-paths.json"
+    cat > "$smoke/all-skills.ts" <<EOF
+    const skillPaths: string[] = $(cat "$smoke/skill-paths.json");
+    export default function register(pi: any) {
+      pi.on("resources_discover", () => ({ skillPaths }));
+    }
+    EOF
     (
       cd "$smoke/project"
       HOME="$smoke/home" \
@@ -520,9 +619,11 @@ runCommand "pi-gallery-check"
         ${coreutils}/bin/timeout 120 \
         ${lib.getExe piPackage} \
         --mode rpc --no-session --offline \
-        --no-extensions --no-skills --no-prompt-templates \
+        --no-extensions --no-prompt-templates \
         --no-context-files --no-approve \
-        --extension ${gallery}/index.ts <"$smoke/input.jsonl" >"$smoke/output.log" 2>&1
+        --extension ${gallery}/index.ts \
+        --extension "$smoke/all-skills.ts" \
+        <"$smoke/input.jsonl" >"$smoke/output.log" 2>&1
     ) || {
       cat "$smoke/output.log" >&2
       fail "aggregate Pi gallery failed to load"
@@ -552,6 +653,18 @@ runCommand "pi-gallery-check"
       cat "$smoke/output.log" >&2
       fail "new Pi gallery commands were not registered"
     }
+    while IFS= read -r skill; do
+      jq -s -e --arg skill "$skill" '
+        any(
+          .[];
+          .type == "response"
+          and .command == "get_commands"
+          and .success == true
+          and any(.data.commands[]; .source == "skill" and .sourceInfo.path == $skill)
+        )
+      ' "$smoke/output.log" >/dev/null \
+        || fail "Pi did not parse packaged skill frontmatter: $skill"
+    done < "$smoke/expected-skills"
     [ ! -e "$smoke/agent/settings.json" ] || fail "gallery wrote Pi settings"
     [ ! -e "$smoke/home/.npm" ] || fail "gallery invoked npm"
     [ ! -e "$smoke/installer-invocations" ] || {

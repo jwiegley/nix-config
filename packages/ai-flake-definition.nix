@@ -1964,7 +1964,9 @@ let
     ++ agent "mcporter"
     ++ agent "opencode"
     ++ agent "pi"
-    ++ opt "aiperf"
+    ++ lib.optionals (pkgs.python313Packages ? choreographer && pkgs.python313Packages ? logistro) (
+      opt "aiperf"
+    )
     ++ opt "agent-deck"
     ++ opt "plasma-wiki"
     ++ opt "plasma-fractal"
