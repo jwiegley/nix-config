@@ -1,7 +1,7 @@
 # overlays/15-darwin-fixes.nix
 # Purpose: Fixes for packages that fail to build or test on macOS (Darwin)
 # Dependencies: None (uses only prev)
-final: prev:
+_final: prev:
 let
   useLld =
     package:
@@ -19,7 +19,7 @@ in
 
   # Fix libvirt test failure on macOS
   # qemucapabilitiestest fails with Linux-specific QEMU capability checks
-  libvirt = prev.libvirt.overrideAttrs (oldAttrs: {
+  libvirt = prev.libvirt.overrideAttrs (_oldAttrs: {
     doCheck = false;
   });
 
@@ -131,7 +131,7 @@ in
 
   # Fix z3 test failures on macOS
   # Tests fail with "Error: invalid argument" in api_polynomial test
-  z3 = prev.z3.overrideAttrs (oldAttrs: {
+  z3 = prev.z3.overrideAttrs (_oldAttrs: {
     doCheck = false;
   });
 
@@ -146,7 +146,7 @@ in
   # av and openai-whisper are pinned in 00-last-known-good.nix instead.
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
     (
-      pfinal: pprev:
+      _pfinal: pprev:
       (prev.lib.optionalAttrs (pprev ? fsspec) {
         fsspec = pprev.fsspec.overridePythonAttrs (_: {
           doCheck = false;

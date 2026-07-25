@@ -2,7 +2,7 @@
 # Purpose: cpx - Modern, fast file copy tool with progress bars and resume support
 # Dependencies: Rust, Linux-specific (copy_file_range syscall)
 # Packages: cpx
-final: prev:
+_final: prev:
 prev.lib.optionalAttrs prev.stdenv.isLinux {
 
   cpx =

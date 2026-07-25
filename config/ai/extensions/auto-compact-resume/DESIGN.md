@@ -47,7 +47,7 @@ A length-truncated answer also resumes when the context is below the compaction 
 
 An in-memory compaction guard permits only one compaction at a time, and a separate continuation guard permits only one replacement turn. Session startup resets both guards. A resumed session whose current leaf is already a compaction entry does not immediately attempt another compaction.
 
-Pi 0.81.1 applies its configured retry policy to compaction requests before invoking the extension's final `onError` callback. If compaction still fails, the extension clears its guard and defers another compaction attempt until context usage grows by 8,192 tokens. It does **not** defer unfinished work: it immediately queues the replacement continuation when the error is nonterminal. This specifically includes benign refusals such as `Nothing to compact (session too small)` and transient provider failures.
+Pi 0.82.0 applies its configured retry policy to compaction requests before invoking the extension's final `onError` callback. If compaction still fails, the extension clears its guard and defers another compaction attempt until context usage grows by 8,192 tokens. It does **not** defer unfinished work: it immediately queues the replacement continuation when the error is nonterminal. This specifically includes benign refusals such as `Nothing to compact (session too small)` and transient provider failures.
 
 Pi itself emits the visible `Compaction failed: …` event. The extension does not emit a second notification.
 
@@ -71,4 +71,4 @@ Bun tests exercise the extension through a small fake Extension API and establis
 - sessions below the threshold remain untouched; and
 - a session ending at a compaction boundary is not immediately compacted again.
 
-An explicit Pi 0.81.1 loader smoke test confirms that the repository extension source loads with extension auto-discovery disabled. Home Manager evaluation separately proves that the managed runtime directory contains only `index.ts`; repository tests and JSON checks confirm that unrelated mutable configuration remains untouched.
+An explicit Pi 0.82.0 loader smoke test confirms that the repository extension source loads with extension auto-discovery disabled. Home Manager evaluation separately proves that the managed runtime directory contains only `index.ts`; repository tests and JSON checks confirm that unrelated mutable configuration remains untouched.

@@ -108,7 +108,7 @@ in
 
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
     (
-      pfinal: pprev:
+      _pfinal: pprev:
       (prev.lib.optionalAttrs (pprev ? av) {
         inherit (lastGood.${pprev.python.pythonAttr}.pkgs) av;
       })

@@ -436,7 +436,7 @@
                 path = ./.;
                 name = "nix-config-src";
                 filter =
-                  path: type:
+                  path: _type:
                   let
                     baseName = baseNameOf path;
                   in

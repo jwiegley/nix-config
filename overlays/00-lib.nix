@@ -2,7 +2,7 @@
 # Purpose: Shared helper functions for overlay definitions.
 # Exposes pkgs.myLib.{mkScriptPackage, mkSimpleGitHubBinary}.
 # Loaded early (00-) so later overlays can access prev.myLib.
-final: prev:
+_final: prev:
 let
   inherit (prev) lib stdenv fetchFromGitHub;
 in

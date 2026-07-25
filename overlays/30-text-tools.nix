@@ -5,7 +5,7 @@
 # Notes:
 #   - hyperorg uses ./emacs/patches/hyperorg.patch
 #   - org2tc requires paths.org2tc
-final: prev:
+_final: prev:
 
 let
   paths = import ../config/paths.nix { inherit (prev) inputs; };

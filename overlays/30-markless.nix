@@ -2,7 +2,7 @@
 # Purpose: markless - Terminal markdown viewer with image support
 # Dependencies: Uses prev only
 # Packages: markless
-final: prev: {
+_final: prev: {
 
   markless =
     with prev;

@@ -3,7 +3,7 @@
 # Dependencies: prev.myLib (from 00-lib.nix) for git-scripts
 # Packages: tea (patched), git-scripts (local source)
 # Note: git-scripts requires paths.git-scripts
-final: prev:
+_final: prev:
 
 let
   paths = import ../config/paths.nix { inherit (prev) inputs; };

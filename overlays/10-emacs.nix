@@ -22,7 +22,7 @@ let
 
       withPatches =
         pkg: patches:
-        pkg.overrideAttrs (attrs: {
+        pkg.overrideAttrs (_attrs: {
           inherit patches;
         });
 

@@ -1,18 +1,18 @@
 # Automatic Compaction and Resumption Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status:** Completed. Workflow references below describe the original implementation sequence; current agent methodology is Bigpowers.
 
 **Goal:** Install a global Pi extension that compacts before the active model's safe request boundary and never strands unfinished work when compaction succeeds, fails transiently, or has nothing to compact.
 
 **Architecture:** One TypeScript extension calculates a model-specific threshold, observes `session_start` and `turn_end`, and invokes Pi's public `ctx.compact()` API under a one-operation guard. A hidden custom message with `triggerTurn: true` resumes only work that was demonstrably unfinished. Source, tests, and design stay in this repository; Home Manager installs only runtime `index.ts`.
 
-**Tech Stack:** Pi 0.81.1 extension API, TypeScript loaded by Pi through jiti, Bun's built-in test runner.
+**Tech Stack:** Pi 0.82.0 extension API, TypeScript loaded by Pi through jiti, Bun's built-in test runner.
 
 ## Global Constraints
 
 - Keep Pi's mutable profile outside Nix ownership except for the exact managed runtime leaf `extensions/auto-compact-resume/index.ts`.
 - Add no runtime or test dependency.
-- Use only public Pi 0.81.1 extension APIs.
+- Use only public Pi 0.82.0 extension APIs.
 - Leave 16,384 tokens beyond the active model's advertised maximum output.
 - Never manufacture another turn after a completed answer.
 - Never abandon unfinished work merely because manual compaction reports that there is nothing to compact or fails transiently.

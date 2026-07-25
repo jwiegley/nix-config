@@ -2,7 +2,7 @@
 # Purpose: Data processing and storage utilities
 # Dependencies: prev.myLib (from 00-lib.nix) for tsvutils
 # Packages: hashdb, dirscan, tsvutils
-final: prev:
+_final: prev:
 
 {
 

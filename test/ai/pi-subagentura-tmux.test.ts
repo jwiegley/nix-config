@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+// @ts-expect-error Nix substitutes this sentinel with the immutable package root.
 import { TmuxMultiplexer } from "__SUBAGENTURA_ROOT__/src/nix-tmux-test-bundle.js";
 
 const socket = process.env.PI_SUBAGENTURA_TMUX_SOCKET;
@@ -12,7 +13,6 @@ delete process.env.TMUX_PANE;
 const tmux = new TmuxMultiplexer();
 if (!tmux.isAvailable()) throw new Error("tmux is unavailable on the declarative PATH");
 
-let paneId: string | undefined;
 try {
   const pane = tmux.createPane({
     name: "Nix Integration",
@@ -20,7 +20,7 @@ try {
     background: true,
     id: "deadbeef",
   });
-  paneId = pane.paneId;
+  const paneId = pane.paneId;
   if (!paneId.startsWith("%") || !tmux.isPaneAlive(paneId)) {
     throw new Error(`tmux pane did not become live: ${paneId}`);
   }

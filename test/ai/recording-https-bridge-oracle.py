@@ -64,7 +64,7 @@ class RecordingServer(ThreadingHTTPServer):
 
 class RecordingHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
-    server: RecordingServer
+    server: RecordingServer  # pyright: ignore[reportIncompatibleVariableOverride]
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -319,24 +319,29 @@ def invoke_bridge(
 
     try:
         require(process.stdin is not None, "bridge stdin was not created")
-        process.stdin.write(initialize)
-        process.stdin.flush()
+        process.stdin.write(initialize)  # pyright: ignore[reportOptionalMemberAccess]
+        process.stdin.flush()  # pyright: ignore[reportOptionalMemberAccess]
         first_line = b""
         if expect_initial_response:
             require(process.stdout is not None, "bridge stdout was not created")
             selector = selectors.DefaultSelector()
-            selector.register(process.stdout, selectors.EVENT_READ)
+            selector.register(
+                process.stdout, selectors.EVENT_READ  # pyright: ignore[reportArgumentType]
+            )
             ready = selector.select(timeout=8)
             selector.close()
             require(bool(ready), "bridge produced no initial MCP response")
-            first_line = os.read(process.stdout.fileno(), 64 * 1024)
+            first_line = os.read(
+                process.stdout.fileno(),  # pyright: ignore[reportOptionalMemberAccess]
+                64 * 1024,
+            )
             require(bool(first_line), "bridge closed before its initial MCP response")
             require(b"\n" in first_line, "bridge returned a partial initial MCP response")
         if send_initialized:
-            process.stdin.write(initialized)
-            process.stdin.flush()
+            process.stdin.write(initialized)  # pyright: ignore[reportOptionalMemberAccess]
+            process.stdin.flush()  # pyright: ignore[reportOptionalMemberAccess]
         if expect_success:
-            process.stdin.close()
+            process.stdin.close()  # pyright: ignore[reportOptionalMemberAccess]
         process.wait(timeout=8)
         remaining_stdout, stderr = collect(process)
         stdout = first_line + remaining_stdout

@@ -1,6 +1,6 @@
 { lib, ... }:
 
-hosts: home: hostname:
+hosts: _home: hostname:
 let
   # Create an entry for each host with public keys of all other hosts
   makeKeyEntry =

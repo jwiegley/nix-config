@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 SCRIPT = Path(__file__).with_name("update-overlay")
-MODULE = runpy.run_path(SCRIPT)
+MODULE = runpy.run_path(str(SCRIPT))
 OverlayParser = MODULE["OverlayParser"]
 OverlayUpdater = MODULE["OverlayUpdater"]
 

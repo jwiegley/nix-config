@@ -4,7 +4,7 @@
 #               packages; everything else uses prev directly.
 # Packages: cmdperf, gogcli (bumped), hammer, linkdups, lipotell, sift, sshify, z
 # Note: pass-git-helper, yamale removed (now in nixpkgs)
-final: prev:
+_final: prev:
 let
   # gogcli 0.34.0 requires the Go 1.26.5 security release, one patch ahead
   # of the Go compiler in the currently locked nixpkgs.

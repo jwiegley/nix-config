@@ -534,7 +534,7 @@ def read_text(root: str, rel: str) -> str | None:
 
 
 def comment_id(path: str, start_line: int, text: str) -> str:
-    h = hashlib.sha1()
+    h = hashlib.sha256()
     norm = " ".join(text.split())
     h.update(f"{path}:{start_line}:{norm}".encode())
     return h.hexdigest()[:12]
