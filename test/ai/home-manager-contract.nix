@@ -3543,6 +3543,7 @@ let
     system:
     {
       llm-agents.packages.${system} = { };
+      nix-config-ai.packages.${system}.default = "ai-toolchain-sentinel";
       retained.packages.${system}.default = null;
     }
     // lib.genAttrs task11DarwinOnlyPackageInputs (_: {

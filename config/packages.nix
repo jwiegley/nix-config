@@ -38,6 +38,7 @@ let
     "darwin" # nix-darwin tooling
     "home-manager" # home-manager tooling
     "llm-agents" # multi-package; specific packages chosen below
+    "nix-config-ai" # portable overlay/package source; specific packages chosen below
     "dirscan" # consumed via 30-data-tools overlay
     "git-ai" # consumed via overlay / home-manager module
     "hakyll" # local dev source only, not installed
