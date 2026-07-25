@@ -385,7 +385,7 @@ runCommand "pi-gallery-check"
           writeFileSync(process.env.PI_LITELLM_HEADERS_MARKER, "ok\n");
         }
         if (typeof payload.litellm_session_id === "string" && payload.litellm_session_id.length > 0) {
-          writeFileSync(process.env.PI_LITELLM_SESSION_MARKER, "ok\n");
+          writeFileSync(process.env.PI_LITELLM_SESSION_MARKER, payload.litellm_session_id + "\n");
         }
         response.writeHead(200, { "content-type": "text/event-stream" });
         response.write('data: {"id":"proof","object":"chat.completion.chunk","created":1,"model":"header-proof","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":null}]}\n\n');
@@ -548,8 +548,8 @@ runCommand "pi-gallery-check"
       }
     grep -Fx ok "$routing_smoke/headers-ok" >/dev/null \
       || fail "LiteLLM request headers were not assembled"
-    grep -Fx ok "$routing_smoke/session-ok" >/dev/null \
-      || fail "LiteLLM session ID was not injected"
+    grep -Fx 11111111-1111-4111-8111-111111111111 "$routing_smoke/session-ok" >/dev/null \
+      || fail "LiteLLM session ID did not match the active Pi session"
 
     while IFS='|' read -r prompt expected; do
       env -u LITELLM_API_KEY -u LITELLM_API_KEY_HELPER \

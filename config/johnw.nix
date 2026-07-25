@@ -121,6 +121,9 @@ in
     // lib.optionalAttrs isLinux {
       FACTORY_AUTO_UPDATE = "false";
     }
+    // lib.optionalAttrs isPositronRemoteLinux {
+      TMUX_TMPDIR = "\${XDG_RUNTIME_DIR:-\"/run/user/$(id -u)\"}";
+    }
     // lib.optionalAttrs (!vars.gitAiEnabled) {
       GIT_AI_INSTALL_DEV_HOOKS = "0";
     };

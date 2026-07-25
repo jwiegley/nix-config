@@ -3178,6 +3178,10 @@ let
     (expectEqual "Task 9 shared synthetic exact AI paths" (task9AiPathsIn task9JohnwSharedSynthetic) (
       task9PathsForClass "shared-work"
     ))
+    (expectEqual "Task 9 shared local agent-deck tmux socket parent"
+      task9JohnwSharedSynthetic.config.home.sessionVariables.TMUX_TMPDIR
+      "\${XDG_RUNTIME_DIR:-\"/run/user/$(id -u)\"}"
+    )
     (expectEqual "Task 9 shared agent-deck helper preserved"
       (builtins.hasAttr ".local/bin/agent-deck-remote-env" task9JohnwSharedSynthetic.config.home.file)
       true
