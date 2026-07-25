@@ -397,8 +397,9 @@ in
     gpg-agent = {
       enable = true;
       enableSshSupport = true;
-      defaultCacheTtl = 86400;
-      maxCacheTtl = 86400;
+      # Keep approved PINs until gpg-agent is explicitly killed.
+      defaultCacheTtl = 2147483647;
+      maxCacheTtl = 2147483647;
       pinentry.package = pkgs.pinentry_mac;
     };
   };
