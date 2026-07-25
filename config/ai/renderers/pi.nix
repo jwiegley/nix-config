@@ -360,7 +360,7 @@ assert profile.root == root;
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";
 assert builtins.length (builtins.attrNames selected.agents) == 26;
-assert builtins.length (builtins.attrNames selected.commands) == 59;
+assert builtins.length (builtins.attrNames selected.commands) == 60;
 assert builtins.length (builtins.attrNames selected.prompts) == 82;
 assert builtins.length (builtins.attrNames selected.skills) == 104;
 assert selected.hooks == { };
