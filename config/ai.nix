@@ -106,11 +106,13 @@ let
     profileId:
     let
       profile = catalog.profiles.${profileId};
+      rendererModelData =
+        if profile.renderer == "codex" then modelData else selectedModelDataFor profileId;
     in
     renderers.${profile.renderer} {
       inherit profile;
       selected = selectedFor profileId;
-      modelData = selectedModelDataFor profileId;
+      modelData = rendererModelData;
       homeDirectory = config.home.homeDirectory;
       xdgConfigHome = config.xdg.configHome;
     };

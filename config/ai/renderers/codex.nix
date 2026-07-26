@@ -19,6 +19,44 @@ let
 
   sortedNames = set: lib.sort builtins.lessThan (builtins.attrNames set);
 
+  litellmSolId = "positron_openai/gpt-5.6-sol";
+  solModels = lib.filterAttrs (
+    _: model: model.provider == "positron-openai" && model.id == "gpt-5.6-sol"
+  ) modelData.models;
+  solModel =
+    assert builtins.length (builtins.attrValues solModels) == 1;
+    assert (builtins.head (builtins.attrValues solModels)).contextLimit == 1050000;
+    builtins.head (builtins.attrValues solModels);
+
+  codexSourceCatalog = builtins.fromJSON (
+    builtins.readFile "${pkgs.codex.src}/codex-rs/models-manager/models.json"
+  );
+  sourceSolModel = lib.findFirst (
+    model: model.slug == "gpt-5.6-sol"
+  ) (throw "Codex source catalog does not contain gpt-5.6-sol") codexSourceCatalog.models;
+  patchSolModel =
+    model:
+    model
+    // {
+      context_window = solModel.contextLimit;
+      max_context_window = solModel.contextLimit;
+      effective_context_window_percent = 95;
+    };
+  managedModelCatalog = {
+    models =
+      map (
+        model: if model.slug == "gpt-5.6-sol" then patchSolModel model else model
+      ) codexSourceCatalog.models
+      ++ [
+        (
+          (patchSolModel sourceSolModel)
+          // {
+            slug = litellmSolId;
+            display_name = "${solModel.displayName} via LiteLLM";
+          }
+        )
+      ];
+  };
   isTypedEnv =
     value:
     builtins.isAttrs value && builtins.attrNames value == [ "env" ] && builtins.isString value.env;
@@ -50,6 +88,9 @@ let
 
   hookItems = builtins.attrValues selected.hooks;
   managedConfig = {
+    model_catalog_json = "${homeDirectory}/${profile.root}/nix-managed-model-catalog.json";
+    model_context_window = solModel.contextLimit;
+    model_auto_compact_token_limit = 900000;
     notify = lib.concatMap (item: item.codex.notify or [ ]) hookItems;
     mcp_servers = lib.mapAttrs (_: renderMcpServer) selected.mcpServers;
   };
@@ -68,9 +109,20 @@ let
     + "Prompt:\n\n"
     + builtins.readFile source;
 
+  explicitOnlyPolicy = pkgs.writeTextDir "agents/openai.yaml" ''
+    policy:
+      allow_implicit_invocation: false
+  '';
+
   mkProjection =
     kind: name: metadata: source:
-    pkgs.writeTextDir "SKILL.md" (projectionText kind name metadata source);
+    pkgs.symlinkJoin {
+      name = "codex-${kind}-${name}";
+      paths = [
+        (pkgs.writeTextDir "SKILL.md" (projectionText kind name metadata source))
+        explicitOnlyPolicy
+      ];
+    };
 
   agentFiles = lib.mapAttrs' (
     name: item:
@@ -98,6 +150,7 @@ let
     }
   ) selected.commands;
 
+  codexPrompts = lib.filterAttrs (name: _: !(lib.hasPrefix "bigpowers-" name)) selected.prompts;
   promptFiles = lib.mapAttrs' (
     name: item:
     lib.nameValuePair ".agents/skills/prompt-${name}" {
@@ -106,7 +159,7 @@ let
         description = "Promptdeploy rendered prompt '${name}'.";
       } item.source;
     }
-  ) selected.prompts;
+  ) codexPrompts;
 
   managedPath = "${profile.root}/nix-managed.config.toml";
   hooksPath = "${profile.root}/hooks.json";
@@ -120,14 +173,16 @@ in
     {
       "${hooksPath}".source = json.generate "codex-hooks.json" managedHooks;
       "${managedPath}".source = toml.generate "codex-nix-managed.config.toml" managedConfig;
+      "${profile.root}/nix-managed-model-catalog.json".source =
+        json.generate "codex-nix-managed-model-catalog.json" managedModelCatalog;
     }
   ];
 
   companions = [
     hooksPath
     managedPath
+    "${profile.root}/nix-managed-model-catalog.json"
   ];
-
   requiredEnvNames = [
     "CONTEXT7_API_KEY"
     "PERPLEXITY_API_KEY"

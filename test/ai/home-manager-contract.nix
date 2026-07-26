@@ -668,6 +668,11 @@ let
   fixtureXdgConfigHome = "${fixtureHomeDirectory}/.config";
   selectedFor =
     profileId: lib.mapAttrs (_category: itemSet: selectFor profileId itemSet) catalog.items;
+  codexPromptsFor =
+    profileId:
+    lib.filterAttrs (name: _: !(lib.hasPrefix "bigpowers-" name)) (
+      selectFor profileId catalog.items.prompts
+    );
   selectedModelDataFor =
     profileId:
     {
@@ -1436,6 +1441,11 @@ let
       enabledPlugins = expectedEnabledPlugins;
     };
   expectedCodexManaged = profileId: {
+    model_catalog_json = "${fixtureHomeDirectory}/${
+      catalog.profiles.${profileId}.root
+    }/nix-managed-model-catalog.json";
+    model_context_window = 1050000;
+    model_auto_compact_token_limit = 900000;
     notify = [
       "agent-deck"
       "codex-notify"
@@ -1471,10 +1481,11 @@ let
       map (name: "${root}/agents/${name}.toml") (selectedNames profileId "agents")
       ++ map (name: ".agents/skills/${name}") (selectedNames profileId "skills")
       ++ map (name: ".agents/skills/command-${name}") (selectedNames profileId "commands")
-      ++ map (name: ".agents/skills/prompt-${name}") (selectedNames profileId "prompts")
+      ++ map (name: ".agents/skills/prompt-${name}") (sortedNames (codexPromptsFor profileId))
       ++ [
         "${root}/hooks.json"
         "${root}/nix-managed.config.toml"
+        "${root}/nix-managed-model-catalog.json"
       ]
     );
   expectedOpenCodePaths =
@@ -1533,7 +1544,7 @@ let
   piSharedSkillPaths = lib.sort builtins.lessThan (
     map (name: ".agents/skills/${name}") (selectedNames "hera-codex" "skills")
     ++ map (name: ".agents/skills/command-${name}") (selectedNames "hera-codex" "commands")
-    ++ map (name: ".agents/skills/prompt-${name}") (selectedNames "hera-codex" "prompts")
+    ++ map (name: ".agents/skills/prompt-${name}") (sortedNames (codexPromptsFor "hera-codex"))
   );
   forbiddenClaudePaths =
     profileId:
@@ -1806,6 +1817,14 @@ let
         path = documentSource "${profileId}-hooks.json" (file "${profile.root}/hooks.json");
         expected = expectedCodexHookFile;
       }
+      {
+        kind = "json";
+        label = "${profileId} model catalog";
+        path = documentSource "${profileId}-model-catalog.json" (
+          file "${profile.root}/nix-managed-model-catalog.json"
+        );
+        structuralOnly = true;
+      }
     ]
     ++ lib.mapAttrsToList (name: item: {
       kind = "toml";
@@ -1823,6 +1842,7 @@ let
       expectedText = codexProjectionText "command" name (codexProjectionMetadata "command" name
         item.metadata
       ) item.source;
+      explicitOnly = true;
     }) (selectFor profileId catalog.items.commands)
     ++ lib.mapAttrsToList (name: item: {
       kind = "text";
@@ -1833,7 +1853,8 @@ let
         name = "prompt-${name}";
         description = "Promptdeploy rendered prompt '${name}'.";
       } item.source;
-    }) (selectFor profileId catalog.items.prompts)
+      explicitOnly = true;
+    }) (codexPromptsFor profileId)
   ) codexProfileIds;
   codexMetadataProbeRecord = {
     kind = "toml";
@@ -2106,13 +2127,56 @@ let
         profile = catalog.profiles.${profileId};
         render = renderedCodex.${profileId};
         paths = sortedNames render.files;
+        modelCatalog = builtins.fromJSON (
+          builtins.readFile render.files."${profile.root}/nix-managed-model-catalog.json".source
+        );
+        solCatalogModels = builtins.filter (
+          model:
+          builtins.elem model.slug [
+            "gpt-5.6-sol"
+            "positron_openai/gpt-5.6-sol"
+          ]
+        ) modelCatalog.models;
+        solCatalogSummary = map (model: {
+          inherit (model)
+            slug
+            context_window
+            max_context_window
+            effective_context_window_percent
+            ;
+        }) solCatalogModels;
       in
       [
         (expectEqual "${profileId} selected resource paths" paths (expectedCodexPaths profileId))
         (expectEqual "${profileId} companions" render.companions [
           "${profile.root}/hooks.json"
           "${profile.root}/nix-managed.config.toml"
+          "${profile.root}/nix-managed-model-catalog.json"
         ])
+        (expectEqual "${profileId} complete model catalog" (builtins.length modelCatalog.models) (
+          builtins.length (builtins.fromJSON (
+            builtins.readFile "${pkgs.codex.src}/codex-rs/models-manager/models.json"
+          )).models
+          + 1
+        ))
+        (expectEqual "${profileId} Sol model catalog metadata" solCatalogSummary [
+          {
+            slug = "gpt-5.6-sol";
+            context_window = 1050000;
+            max_context_window = 1050000;
+            effective_context_window_percent = 95;
+          }
+          {
+            slug = "positron_openai/gpt-5.6-sol";
+            context_window = 1050000;
+            max_context_window = 1050000;
+            effective_context_window_percent = 95;
+          }
+        ])
+        (expectEqual "${profileId} omits duplicate Bigpowers prompt projections"
+          (builtins.filter (lib.hasPrefix ".agents/skills/prompt-bigpowers-") paths)
+          [ ]
+        )
         (expectEqual "${profileId} required environment" render.requiredEnvNames [
           "CONTEXT7_API_KEY"
           "PERPLEXITY_API_KEY"
@@ -2758,6 +2822,7 @@ let
     ".claude/nix-managed-settings.json"
     ".claude/statusline-command.sh"
     ".codex/nix-managed.config.toml"
+    ".codex/nix-managed-model-catalog.json"
     ".codex/hooks.json"
     ".config/claude/personal/nix-managed-mcp.json"
     ".config/claude/personal/nix-managed-settings.json"
@@ -2766,6 +2831,7 @@ let
     ".config/claude/positron/nix-managed-settings.json"
     ".config/claude/positron/statusline-command.sh"
     ".config/codex/nix-managed.config.toml"
+    ".config/codex/nix-managed-model-catalog.json"
     ".config/codex/hooks.json"
     ".config/factory/mcp.json"
     ".config/factory/nix-managed-settings.json"
@@ -4206,9 +4272,16 @@ pkgs.runCommand "ai-home-manager-contract"
                 errors.append(
                     f"{label}: projection source is not a directory: {source_directory}"
                 )
+            elif record.get("explicitOnly"):
+                if {entry.name for entry in source_directory.iterdir()} != {"SKILL.md", "agents"}:
+                    errors.append(f"{label}: explicit projection has unexpected entries")
+                policy = source_directory / "agents" / "openai.yaml"
+                if not policy.is_file() or policy.read_text() != (
+                    "policy:\n  allow_implicit_invocation: false\n"
+                ):
+                    errors.append(f"{label}: explicit-only policy is missing or incorrect")
             elif {entry.name for entry in source_directory.iterdir()} != {"SKILL.md"}:
                 errors.append(f"{label}: projection directory must contain only SKILL.md")
-
         for fragment in record.get("forbidden", []):
             if fragment in text:
                 errors.append(f"{label}: contains forbidden fragment {fragment!r}")
@@ -4225,7 +4298,7 @@ pkgs.runCommand "ai-home-manager-contract"
                 errors.append(f"{label}: jq rejected JSON: {parsed.stderr.strip()}")
                 continue
             actual = json.loads(text)
-            if actual != record["expected"]:
+            if not record.get("structuralOnly") and actual != record["expected"]:
                 errors.append(f"{label}: semantic JSON mismatch")
         elif record["kind"] == "toml":
             try:
