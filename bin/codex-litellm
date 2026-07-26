@@ -41,6 +41,8 @@ export LITELLM_API_KEY REF_API_KEY
 
 routed_model=positron_openai/gpt-5.6-sol
 short_model=gpt-5.6-sol
+codex_home=${CODEX_HOME:-${HOME:?}/.codex}
+model_catalog_path=${CODEX_LITELLM_MODEL_CATALOG:-${codex_home}/nix-managed-model-catalog.json}
 is_routed_model() {
     [[ $1 == "$routed_model" || $1 == "$short_model" ]]
 }
@@ -82,6 +84,9 @@ done
 litellm_args=(
     -c 'model="positron_openai/gpt-5.6-sol"'
     -c 'model_provider="litellm"'
+    -c "model_catalog_json=\"${model_catalog_path}\""
+    -c 'model_context_window=1050000'
+    -c 'model_auto_compact_token_limit=900000'
     -c 'model_providers.litellm.name="LiteLLM (Vulcan)"'
     -c 'model_providers.litellm.base_url="https://litellm.vulcan.lan/v1"'
     -c 'model_providers.litellm.env_key="LITELLM_API_KEY"'

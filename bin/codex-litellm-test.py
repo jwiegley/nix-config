@@ -57,6 +57,7 @@ printf '%s\\n%s' "$LITELLM_API_KEY" "$REF_API_KEY" >"$CAPTURE_ENV"
                 **os.environ,
                 "CODEX_LITELLM_PASS_BIN": str(pass_bin),
                 "CODEX_LITELLM_REAL_CODEX": str(codex_bin),
+                "CODEX_HOME": str(root / "codex-home"),
                 "CAPTURE_ARGV": str(argv_path),
                 "CAPTURE_ENV": str(env_path),
                 "CAPTURE_INVOKED": str(invoked_path),
@@ -99,6 +100,14 @@ printf '%s\\n%s' "$LITELLM_API_KEY" "$REF_API_KEY" >"$CAPTURE_ENV"
             self.assertIn('model="positron_openai/gpt-5.6-sol"', argv)
             self.assertEqual(argv.count('model="positron_openai/gpt-5.6-sol"'), 1)
             self.assertIn('model_provider="litellm"', argv)
+            self.assertIn(
+                f'model_catalog_json="{root}/codex-home/nix-managed-model-catalog.json"',
+                argv,
+            )
+            self.assertEqual(argv.count("model_context_window=1050000"), 1)
+            self.assertEqual(
+                argv.count("model_auto_compact_token_limit=900000"), 1
+            )
             self.assertIn(
                 'model_providers.litellm.base_url="https://litellm.vulcan.lan/v1"',
                 argv,
