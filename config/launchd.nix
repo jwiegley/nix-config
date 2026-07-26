@@ -225,6 +225,28 @@ in
       };
     }
     // lib.optionalAttrs (hostname == "hera") {
+      nix-temproots-cleanup = {
+        # Root discovery removes only unlocked stale temproot records (and
+        # broken automatic GC-root links); it never deletes store contents.
+        script = ''
+          exec /nix/var/nix/profiles/default/bin/nix-store --gc --print-roots
+        '';
+        serviceConfig = {
+          RunAtLoad = false;
+          KeepAlive = false;
+          StartCalendarInterval = {
+            Hour = 4;
+            Minute = 30;
+          };
+          Nice = 10;
+          LowPriorityIO = true;
+          LowPriorityBackgroundIO = true;
+          ProcessType = "Background";
+          StandardOutPath = "/dev/null";
+          StandardErrorPath = "/dev/null";
+        };
+      };
+
       "sysctl-vram-limit" = {
         script = ''
           # This leaves 64 GB of working memory remaining
