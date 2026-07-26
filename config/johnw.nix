@@ -273,6 +273,7 @@ in
         {
           add_newline = true;
           scan_timeout = lib.mkDefault 50;
+          follow_symlinks = false;
           command_timeout = lib.mkDefault 1000;
 
           format = lib.concatStrings [
