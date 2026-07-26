@@ -546,6 +546,9 @@
               };
             }
             // pkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+              gpg-agent-handoff = pkgs.callPackage ./test/darwin/gpg-agent-handoff.nix {
+                inherit darwinConfigurations;
+              };
               anvil-mcp-dedicated = pkgs.callPackage ./packages/anvil-mcp/headless-smoke.nix {
                 anvilMcp = packages.${system}.anvil-mcp-dedicated;
               };

@@ -28,35 +28,47 @@ let
     assert (builtins.head (builtins.attrValues solModels)).contextLimit == 1050000;
     builtins.head (builtins.attrValues solModels);
 
-  codexSourceCatalog = builtins.fromJSON (
-    builtins.readFile "${pkgs.codex.src}/codex-rs/models-manager/models.json"
-  );
-  sourceSolModel = lib.findFirst (
-    model: model.slug == "gpt-5.6-sol"
-  ) (throw "Codex source catalog does not contain gpt-5.6-sol") codexSourceCatalog.models;
-  patchSolModel =
-    model:
-    model
-    // {
-      context_window = solModel.contextLimit;
-      max_context_window = solModel.contextLimit;
-      effective_context_window_percent = 95;
-    };
-  managedModelCatalog = {
-    models =
-      map (
-        model: if model.slug == "gpt-5.6-sol" then patchSolModel model else model
-      ) codexSourceCatalog.models
-      ++ [
-        (
-          (patchSolModel sourceSolModel)
-          // {
-            slug = litellmSolId;
-            display_name = "${solModel.displayName} via LiteLLM";
-          }
-        )
-      ];
-  };
+  system = pkgs.stdenv.hostPlatform.system;
+  codexSourceCatalog = "${
+    pkgs.inputs.llm-agents.packages.${system}.codex.src
+  }/codex-rs/models-manager/models.json";
+  managedModelCatalog =
+    pkgs.runCommand "codex-nix-managed-model-catalog.json"
+      {
+        nativeBuildInputs = [ pkgs.jq ];
+      }
+      ''
+        ${lib.getExe pkgs.jq} \
+          --arg litellm_sol_id ${lib.escapeShellArg litellmSolId} \
+          --arg litellm_display_name ${lib.escapeShellArg "${solModel.displayName} via LiteLLM"} \
+          --argjson context_window ${toString solModel.contextLimit} \
+          '
+            def patched_sol:
+              .context_window = $context_window
+              | .max_context_window = $context_window
+              | .effective_context_window_percent = 95;
+
+            .models as $models
+            | [ $models[] | select(.slug == "gpt-5.6-sol") ] as $native_sol_models
+            | if ($native_sol_models | length) != 1 then
+                error("Codex source catalog must contain exactly one native gpt-5.6-sol model")
+              else
+                .models =
+                  (
+                    ($models | map(if .slug == "gpt-5.6-sol" then patched_sol else . end))
+                    + [
+                      (
+                        $native_sol_models[0]
+                        | patched_sol
+                        | .slug = $litellm_sol_id
+                        | .display_name = $litellm_display_name
+                      )
+                    ]
+                  )
+              end
+          ' \
+          ${lib.escapeShellArg codexSourceCatalog} > "$out"
+      '';
   isTypedEnv =
     value:
     builtins.isAttrs value && builtins.attrNames value == [ "env" ] && builtins.isString value.env;
@@ -173,8 +185,7 @@ in
     {
       "${hooksPath}".source = json.generate "codex-hooks.json" managedHooks;
       "${managedPath}".source = toml.generate "codex-nix-managed.config.toml" managedConfig;
-      "${profile.root}/nix-managed-model-catalog.json".source =
-        json.generate "codex-nix-managed-model-catalog.json" managedModelCatalog;
+      "${profile.root}/nix-managed-model-catalog.json".source = managedModelCatalog;
     }
   ];
 

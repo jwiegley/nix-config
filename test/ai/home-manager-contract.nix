@@ -14,6 +14,9 @@ let
 
   assetCheckPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
   registryPath = "${src}/config/ai/model-registry.json";
+  codexSourceCatalogPath = "${
+    inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex.src
+  }/codex-rs/models-manager/models.json";
   rawModelRegistry = builtins.fromJSON (builtins.readFile registryPath);
   modelPolicy = import "${src}/config/ai/model-policy.nix";
   loadModelData = args: import "${src}/config/ai/models.nix" args;
@@ -699,7 +702,12 @@ let
       throw "Task 6 RED: config/ai/renderers/claude.nix is missing";
   codexRenderer =
     if builtins.pathExists codexRendererPath then
-      import codexRendererPath { inherit lib pkgs; }
+      import codexRendererPath {
+        inherit lib;
+        pkgs = pkgs // {
+          inherit inputs;
+        };
+      }
     else
       throw "Task 6 RED: config/ai/renderers/codex.nix is missing";
   openCodeRenderer =
@@ -1824,6 +1832,24 @@ let
           file "${profile.root}/nix-managed-model-catalog.json"
         );
         structuralOnly = true;
+        catalogContract = {
+          sourcePath = codexSourceCatalogPath;
+          nativeSlug = "gpt-5.6-sol";
+          expectedModels = [
+            {
+              slug = "gpt-5.6-sol";
+              context_window = 1050000;
+              max_context_window = 1050000;
+              effective_context_window_percent = 95;
+            }
+            {
+              slug = "positron_openai/gpt-5.6-sol";
+              context_window = 1050000;
+              max_context_window = 1050000;
+              effective_context_window_percent = 95;
+            }
+          ];
+        };
       }
     ]
     ++ lib.mapAttrsToList (name: item: {
@@ -2127,24 +2153,6 @@ let
         profile = catalog.profiles.${profileId};
         render = renderedCodex.${profileId};
         paths = sortedNames render.files;
-        modelCatalog = builtins.fromJSON (
-          builtins.readFile render.files."${profile.root}/nix-managed-model-catalog.json".source
-        );
-        solCatalogModels = builtins.filter (
-          model:
-          builtins.elem model.slug [
-            "gpt-5.6-sol"
-            "positron_openai/gpt-5.6-sol"
-          ]
-        ) modelCatalog.models;
-        solCatalogSummary = map (model: {
-          inherit (model)
-            slug
-            context_window
-            max_context_window
-            effective_context_window_percent
-            ;
-        }) solCatalogModels;
       in
       [
         (expectEqual "${profileId} selected resource paths" paths (expectedCodexPaths profileId))
@@ -2153,26 +2161,7 @@ let
           "${profile.root}/nix-managed.config.toml"
           "${profile.root}/nix-managed-model-catalog.json"
         ])
-        (expectEqual "${profileId} complete model catalog" (builtins.length modelCatalog.models) (
-          builtins.length (builtins.fromJSON (
-            builtins.readFile "${pkgs.codex.src}/codex-rs/models-manager/models.json"
-          )).models
-          + 1
-        ))
-        (expectEqual "${profileId} Sol model catalog metadata" solCatalogSummary [
-          {
-            slug = "gpt-5.6-sol";
-            context_window = 1050000;
-            max_context_window = 1050000;
-            effective_context_window_percent = 95;
-          }
-          {
-            slug = "positron_openai/gpt-5.6-sol";
-            context_window = 1050000;
-            max_context_window = 1050000;
-            effective_context_window_percent = 95;
-          }
-        ])
+
         (expectEqual "${profileId} omits duplicate Bigpowers prompt projections"
           (builtins.filter (lib.hasPrefix ".agents/skills/prompt-bigpowers-") paths)
           [ ]
@@ -4300,6 +4289,56 @@ pkgs.runCommand "ai-home-manager-contract"
             actual = json.loads(text)
             if not record.get("structuralOnly") and actual != record["expected"]:
                 errors.append(f"{label}: semantic JSON mismatch")
+
+            catalog_contract = record.get("catalogContract")
+            if catalog_contract:
+                source_path = Path(catalog_contract["sourcePath"])
+                try:
+                    source_catalog = json.loads(source_path.read_text())
+                except (OSError, json.JSONDecodeError) as error:
+                    errors.append(f"{label}: invalid locked source catalog: {error}")
+                    continue
+
+                source_models = (
+                    source_catalog.get("models")
+                    if isinstance(source_catalog, dict)
+                    else None
+                )
+                actual_models = actual.get("models") if isinstance(actual, dict) else None
+                if not isinstance(source_models, list):
+                    errors.append(f"{label}: locked source catalog has no models list")
+                    continue
+                if not isinstance(actual_models, list):
+                    errors.append(f"{label}: rendered catalog has no models list")
+                    continue
+
+                native_slug = catalog_contract["nativeSlug"]
+                native_models = [
+                    model
+                    for model in source_models
+                    if isinstance(model, dict) and model.get("slug") == native_slug
+                ]
+                if len(native_models) != 1:
+                    errors.append(
+                        f"{label}: locked source catalog contains {len(native_models)} "
+                        f"native {native_slug!r} models, expected exactly one"
+                    )
+                if len(actual_models) != len(source_models) + 1:
+                    errors.append(
+                        f"{label}: rendered catalog model count is {len(actual_models)}, "
+                        f"expected {len(source_models) + 1}"
+                    )
+
+                expected_models = catalog_contract["expectedModels"]
+                expected_slugs = {model["slug"] for model in expected_models}
+                metadata_keys = tuple(expected_models[0])
+                actual_sol_models = [
+                    {key: model.get(key) for key in metadata_keys}
+                    for model in actual_models
+                    if isinstance(model, dict) and model.get("slug") in expected_slugs
+                ]
+                if actual_sol_models != expected_models:
+                    errors.append(f"{label}: Sol model catalog metadata mismatch")
         elif record["kind"] == "toml":
             try:
                 actual = tomllib.loads(text)

@@ -1092,17 +1092,18 @@ index f5b9439c..9e3d4d64 100644
  func (s *StateDB) ReadAllStatuses() (map[string]StatusRow, error) {
  	rows, err := s.db.Query("SELECT id, status, tool, acknowledged FROM instances")
 diff --git a/internal/tmux/tmux.go b/internal/tmux/tmux.go
-index 9569688b..45c4f14e 100644
+index 9569688b..fde1c7f9 100644
 --- a/internal/tmux/tmux.go
 +++ b/internal/tmux/tmux.go
-@@ -5352,6 +5352,38 @@ func ListAgentDeckSessions() ([]string, error) {
+@@ -5352,6 +5352,61 @@ func ListAgentDeckSessions() ([]string, error) {
  	return sessions, nil
  }
  
-+// ListAgentDeckCodexSessionIDs returns one ownership snapshot using a single
-+// tmux subprocess. CODEX_SESSION_ID is a session-environment format variable,
-+// so list-sessions can batch it with the session name instead of spawning
-+// show-environment once per session. The caller owns the deadline.
++// ListAgentDeckCodexSessionIDs returns one ownership snapshot using one batched
++// session read plus one global-environment read. tmux format expansion falls
++// back to a server-global CODEX_SESSION_ID when a session has no local value,
++// so matching global values must be discarded. This still avoids spawning
++// show-environment once per session. The caller owns the shared deadline.
 +func ListAgentDeckCodexSessionIDs(ctx context.Context) (map[string]string, error) {
 +	cmd := tmuxExecContext(ctx, DefaultSocketName(), "list-sessions", "-F", "#{session_name}\t#{CODEX_SESSION_ID}")
 +	cmd.WaitDelay = 100 * time.Millisecond
@@ -1118,12 +1119,34 @@ index 9569688b..45c4f14e 100644
 +		return nil, fmt.Errorf("failed to list Codex session ownership: %w", err)
 +	}
 +
++	globalCmd := tmuxExecContext(ctx, DefaultSocketName(), "show-environment", "-g", "CODEX_SESSION_ID")
++	globalCmd.WaitDelay = 100 * time.Millisecond
++	globalOutput, globalErr := globalCmd.CombinedOutput()
++	globalID := ""
++	if globalErr != nil {
++		if ctx.Err() != nil {
++			return nil, ctx.Err()
++		}
++		// An unset global variable is the normal case. Other failures make the
++		// snapshot incomplete because the batched format values are then
++		// impossible to distinguish from global fallbacks.
++		if !strings.Contains(strings.ToLower(string(globalOutput)), "unknown variable") {
++			return nil, fmt.Errorf("failed to read global Codex session environment: %w", globalErr)
++		}
++	} else {
++		const prefix = "CODEX_SESSION_ID="
++		line := strings.TrimSpace(string(globalOutput))
++		if strings.HasPrefix(line, prefix) {
++			globalID = strings.TrimPrefix(line, prefix)
++		}
++	}
++
 +	idsByTmux := make(map[string]string)
 +	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
 +		name, id, ok := strings.Cut(line, "\t")
 +		name = strings.TrimSpace(name)
 +		id = strings.TrimSpace(id)
-+		if !ok || !strings.HasPrefix(name, SessionPrefix) || id == "" {
++		if !ok || !strings.HasPrefix(name, SessionPrefix) || id == "" || id == globalID {
 +			continue
 +		}
 +		idsByTmux[name] = id
