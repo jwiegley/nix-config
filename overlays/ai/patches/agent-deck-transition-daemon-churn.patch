@@ -1,0 +1,1241 @@
+diff --git a/cmd/agent-deck/mcp_cmd.go b/cmd/agent-deck/mcp_cmd.go
+index cbc2c0eb..bd62375a 100644
+--- a/cmd/agent-deck/mcp_cmd.go
++++ b/cmd/agent-deck/mcp_cmd.go
+@@ -468,13 +468,17 @@ func handleMCPAttach(profile string, args []string) {
+ 	// Restart if requested
+ 	restarted := false
+ 	if *restart && inst.SupportsMCPAgentRestart() {
+-		if err := inst.Restart(); err != nil {
++		restartErr, persistenceWarning := normalizeRestartResult(inst.Restart())
++		if restartErr != nil {
+ 			// Don't fail the whole operation, just warn
+ 			if !*jsonOutput && !quietMode {
+-				fmt.Fprintf(os.Stderr, "Warning: failed to restart session: %v\n", err)
++				fmt.Fprintf(os.Stderr, "Warning: failed to restart session: %v\n", restartErr)
+ 			}
+ 		} else {
+ 			restarted = true
++			if persistenceWarning != "" && !*jsonOutput && !quietMode {
++				fmt.Fprintf(os.Stderr, "Warning: %s\n", persistenceWarning)
++			}
+ 			// Auto-continue: wait for the agent to initialize, then send continue message.
+ 			time.Sleep(2 * time.Second)
+ 			if tmuxSess := inst.GetTmuxSession(); tmuxSess != nil && inst.Tool != "cursor" {
+@@ -629,13 +633,17 @@ func handleMCPDetach(profile string, args []string) {
+ 	// Restart if requested
+ 	restarted := false
+ 	if *restart && inst.SupportsMCPAgentRestart() {
+-		if err := inst.Restart(); err != nil {
++		restartErr, persistenceWarning := normalizeRestartResult(inst.Restart())
++		if restartErr != nil {
+ 			// Don't fail the whole operation, just warn
+ 			if !*jsonOutput && !quietMode {
+-				fmt.Fprintf(os.Stderr, "Warning: failed to restart session: %v\n", err)
++				fmt.Fprintf(os.Stderr, "Warning: failed to restart session: %v\n", restartErr)
+ 			}
+ 		} else {
+ 			restarted = true
++			if persistenceWarning != "" && !*jsonOutput && !quietMode {
++				fmt.Fprintf(os.Stderr, "Warning: %s\n", persistenceWarning)
++			}
+ 			// Auto-continue: wait for the agent to initialize, then send continue message.
+ 			time.Sleep(2 * time.Second)
+ 			if tmuxSess := inst.GetTmuxSession(); tmuxSess != nil && inst.Tool != "cursor" {
+diff --git a/cmd/agent-deck/plugin_cmd.go b/cmd/agent-deck/plugin_cmd.go
+index 26dc4d60..c501c586 100644
+--- a/cmd/agent-deck/plugin_cmd.go
++++ b/cmd/agent-deck/plugin_cmd.go
+@@ -240,10 +240,14 @@ func pluginAttachOrDetach(profile string, args []string, op string) {
+ 			return
+ 		}
+ 		fmt.Println("Restarting session to apply enabledPlugins...")
+-		if err := inst.Restart(); err != nil {
+-			out.Error(fmt.Sprintf("restart failed: %s", err.Error()), ErrCodeNotFound)
++		restartErr, persistenceWarning := normalizeRestartResult(inst.Restart())
++		if restartErr != nil {
++			out.Error(fmt.Sprintf("restart failed: %s", restartErr.Error()), ErrCodeNotFound)
+ 			os.Exit(1)
+ 		}
++		if persistenceWarning != "" {
++			fmt.Fprintf(os.Stderr, "Warning: %s\n", persistenceWarning)
++		}
+ 	}
+ }
+ 
+diff --git a/cmd/agent-deck/restart_result.go b/cmd/agent-deck/restart_result.go
+new file mode 100644
+index 00000000..65b78c95
+--- /dev/null
++++ b/cmd/agent-deck/restart_result.go
+@@ -0,0 +1,23 @@
++package main
++
++import "github.com/asheshgoplani/agent-deck/internal/session"
++
++// normalizeRestartResult separates a real spawn/restart failure from a
++// completed restart whose durability write failed. The latter must never send
++// callers down rollback/retry paths; it remains an operator-visible warning.
++func normalizeRestartResult(err error) (failure error, warning string) {
++	if session.IsRestartPartialSuccess(err) {
++		return nil, err.Error()
++	}
++	return err, ""
++}
++
++func mergeRestartWarnings(first, second string) string {
++	if first == "" {
++		return second
++	}
++	if second == "" {
++		return first
++	}
++	return first + "; " + second
++}
+diff --git a/cmd/agent-deck/session_cmd.go b/cmd/agent-deck/session_cmd.go
+index 487fe528..c17fbd47 100644
+--- a/cmd/agent-deck/session_cmd.go
++++ b/cmd/agent-deck/session_cmd.go
+@@ -723,14 +723,15 @@ func handleSessionRestart(profile string, args []string) {
+ 	}
+ 
+ 	// Restart the session
+-	if err := inst.RestartWithEnv(envFlags); err != nil {
+-		out.Error(fmt.Sprintf("failed to restart session: %v", err), ErrCodeInvalidOperation)
++	restartErr, persistenceWarning := normalizeRestartResult(inst.RestartWithEnv(envFlags))
++	if restartErr != nil {
++		out.Error(fmt.Sprintf("failed to restart session: %v", restartErr), ErrCodeInvalidOperation)
+ 		os.Exit(1)
+ 	}
+ 	// Stamp the persisted freshness marker so subsequent watchdog ticks see
+ 	// this session as "just started" and skip (issue #30).
+ 	inst.LastStartedAt = time.Now()
+-	warning := inst.ConsumeCodexRestartWarning()
++	warning := mergeRestartWarnings(inst.ConsumeCodexRestartWarning(), persistenceWarning)
+ 	if warning != "" && !*jsonOutput {
+ 		fmt.Fprintf(os.Stderr, "Warning: %s\n", warning)
+ 	}
+@@ -785,8 +786,9 @@ func restartAllSessions(out *CLIOutput, storage *session.Storage, instances []*s
+ 			fmt.Printf("Restarting %s...\n", inst.Title)
+ 		}
+ 
+-		if err := inst.RestartWithEnv(env); err != nil {
+-			errMsg := fmt.Sprintf("failed to restart session '%s': %v", inst.Title, err)
++		restartErr, persistenceWarning := normalizeRestartResult(inst.RestartWithEnv(env))
++		if restartErr != nil {
++			errMsg := fmt.Sprintf("failed to restart session '%s': %v", inst.Title, restartErr)
+ 			if !out.jsonMode {
+ 				fmt.Fprintf(os.Stderr, "  Error: %s\n", errMsg)
+ 			}
+@@ -798,7 +800,7 @@ func restartAllSessions(out *CLIOutput, storage *session.Storage, instances []*s
+ 		}
+ 		inst.LastStartedAt = time.Now()
+ 
+-		warning := inst.ConsumeCodexRestartWarning()
++		warning := mergeRestartWarnings(inst.ConsumeCodexRestartWarning(), persistenceWarning)
+ 		if warning != "" && !out.jsonMode {
+ 			fmt.Fprintf(os.Stderr, "  Warning: %s\n", warning)
+ 		}
+diff --git a/cmd/agent-deck/session_move.go b/cmd/agent-deck/session_move.go
+index 2239c8ac..06963254 100644
+--- a/cmd/agent-deck/session_move.go
++++ b/cmd/agent-deck/session_move.go
+@@ -149,10 +149,14 @@ func handleSessionMove(profile string, args []string) {
+ 
+ 	restarted := false
+ 	if !*noRestart && inst.Exists() {
+-		if err := inst.Restart(); err != nil {
+-			out.Error(fmt.Sprintf("session moved, but restart failed: %v", err), ErrCodeInvalidOperation)
++		restartErr, persistenceWarning := normalizeRestartResult(inst.Restart())
++		if restartErr != nil {
++			out.Error(fmt.Sprintf("session moved, but restart failed: %v", restartErr), ErrCodeInvalidOperation)
+ 			os.Exit(1)
+ 		}
++		if persistenceWarning != "" && !*quiet {
++			fmt.Fprintf(os.Stderr, "Warning: %s\n", persistenceWarning)
++		}
+ 		if session.IsClaudeCompatible(inst.Tool) && inst.ClaudeSessionID == "" {
+ 			inst.PostStartSync(3 * time.Second)
+ 		}
+diff --git a/cmd/agent-deck/skill_cmd.go b/cmd/agent-deck/skill_cmd.go
+index 56529198..26cd320f 100644
+--- a/cmd/agent-deck/skill_cmd.go
++++ b/cmd/agent-deck/skill_cmd.go
+@@ -21,12 +21,16 @@ func restartProjectSkillsSession(inst *session.Instance, jsonOutput, quietMode b
+ 	if inst == nil || !session.ShouldRestartProjectSkills(inst.Tool) {
+ 		return false
+ 	}
+-	if err := inst.Restart(); err != nil {
++	restartErr, persistenceWarning := normalizeRestartResult(inst.Restart())
++	if restartErr != nil {
+ 		if !jsonOutput && !quietMode {
+-			fmt.Fprintf(os.Stderr, "Warning: failed to restart session: %v\n", err)
++			fmt.Fprintf(os.Stderr, "Warning: failed to restart session: %v\n", restartErr)
+ 		}
+ 		return false
+ 	}
++	if persistenceWarning != "" && !jsonOutput && !quietMode {
++		fmt.Fprintf(os.Stderr, "Warning: %s\n", persistenceWarning)
++	}
+ 	if session.IsClaudeCompatible(inst.Tool) {
+ 		time.Sleep(2 * time.Second)
+ 		if tmuxSess := inst.GetTmuxSession(); tmuxSess != nil {
+diff --git a/internal/session/instance.go b/internal/session/instance.go
+index aad073c9..c6b753f1 100644
+--- a/internal/session/instance.go
++++ b/internal/session/instance.go
+@@ -102,10 +102,7 @@ const (
+ 	// timestamp on every received line, so 30s of silence means the stream
+ 	// (and likely the process) is gone — fall back to tmux polling.
+ 	opencodeSSEFreshnessWindow = 30 * time.Second
+-	// codexProbeScanInterval rate-limits process-file probing to avoid
+-	// repeated /proc and lsof scans on every status tick.
+-	codexProbeScanInterval    = 2 * time.Second
+-	codexProbeMissingSentinel = "__AGENT_DECK_MISSING_TOOL__"
++	codexProbeMissingSentinel  = "__AGENT_DECK_MISSING_TOOL__"
+ 	// codexLsofProbeTimeout hard-caps a single lsof invocation so a slow or
+ 	// hung child can never stall the shared status pass. lsof is also run with
+ 	// -n -P (no host/port name resolution) to avoid reverse-DNS PTR lookups on
+@@ -402,6 +399,11 @@ type Instance struct {
+ 	ToolOptionsJSON json.RawMessage `json:"tool_options,omitempty"`
+ 
+ 	tmuxSession *tmux.Session // Internal tmux session
++	// owningDB is the profile database that loaded or saved this instance.
++	// Restart durability must not depend on the process-global DB: CLI/MCP/plugin
++	// paths can restart immediately after a profile load, before main installs it.
++	// Guarded by mu after the Instance becomes shared.
++	owningDB *statedb.StateDB
+ 
+ 	// Hook-based status detection (set by StatusFileWatcher from Claude Code hooks)
+ 	hookStatus     string    // running, idle, waiting, dead (empty = no hook data)
+@@ -427,7 +429,8 @@ type Instance struct {
+ 
+ 	// lastErrorCheck tracks when we last confirmed the session doesn't exist
+ 	// Used to skip expensive Exists() checks for ghost sessions (sessions in JSON but not in tmux)
+-	// Not serialized - resets on load, but that's fine since we'll recheck on first poll
++	// Not serialized; long-lived pollers that reload instances must carry it in
++	// process so the recheck interval survives the reload.
+ 	lastErrorCheck time.Time
+ 
+ 	// Tiered polling: skip expensive checks for idle sessions with no activity
+@@ -472,6 +475,176 @@ type Instance struct {
+ 	hermesGatewayOK        bool
+ }
+ 
++// instancePollingState is process-local status machinery that must survive a
++// long-lived poller's storage reload. It deliberately excludes durable session
++// data: SQLite remains authoritative for that on every pass.
++type instancePollingIdentity struct {
++	tool          string
++	createdAt     time.Time
++	lastStartedAt time.Time
++
++	claudeSessionID   string
++	geminiSessionID   string
++	openCodeSessionID string
++	codexSessionID    string
++	copilotSessionID  string
++}
++
++func (identity instancePollingIdentity) equal(other instancePollingIdentity) bool {
++	return identity.tool == other.tool &&
++		identity.createdAt.Equal(other.createdAt) &&
++		identity.lastStartedAt.Equal(other.lastStartedAt) &&
++		identity.claudeSessionID == other.claudeSessionID &&
++		identity.geminiSessionID == other.geminiSessionID &&
++		identity.openCodeSessionID == other.openCodeSessionID &&
++		identity.codexSessionID == other.codexSessionID &&
++		identity.copilotSessionID == other.copilotSessionID
++}
++
++type instancePollingState struct {
++	identity instancePollingIdentity
++
++	tmuxSession *tmux.Session
++
++	lastOpenCodeScanAt time.Time
++	lastCodexScanAt    time.Time
++	lastCodexProbeAt   time.Time
++	lastPromptModTime  time.Time
++	lastJSONLSize      int64
++	lastJSONLPath      string
++	cachedPrompt       string
++
++	lastErrorCheck             time.Time
++	lastIdleCheck              time.Time
++	lastKnownActivity          int64
++	tmuxFlipFromRunningPending bool
++	lastSessionMetaSync        time.Time
++
++	hermesGatewayCheckedAt time.Time
++	hermesGatewayOK        bool
++}
++
++func (i *Instance) pollingIdentity() instancePollingIdentity {
++	i.mu.RLock()
++	defer i.mu.RUnlock()
++	return i.pollingIdentityLocked()
++}
++
++func (i *Instance) setOwningDB(db *statedb.StateDB) {
++	i.mu.Lock()
++	i.owningDB = db
++	i.mu.Unlock()
++}
++
++func (i *Instance) restartPersistenceDB() *statedb.StateDB {
++	i.mu.RLock()
++	db := i.owningDB
++	i.mu.RUnlock()
++	if db != nil {
++		return db
++	}
++	return statedb.GetGlobal()
++}
++
++func (i *Instance) pollingIdentityLocked() instancePollingIdentity {
++	return instancePollingIdentity{
++		tool:              i.Tool,
++		createdAt:         i.CreatedAt,
++		lastStartedAt:     i.LastStartedAt,
++		claudeSessionID:   i.ClaudeSessionID,
++		geminiSessionID:   i.GeminiSessionID,
++		openCodeSessionID: i.OpenCodeSessionID,
++		codexSessionID:    i.CodexSessionID,
++		copilotSessionID:  i.CopilotSessionID,
++	}
++}
++
++func (i *Instance) pollingState() instancePollingState {
++	return i.pollingStateForIdentity(i.pollingIdentity())
++}
++
++func (i *Instance) pollingStateForIdentity(identity instancePollingIdentity) instancePollingState {
++	i.mu.RLock()
++	defer i.mu.RUnlock()
++	return instancePollingState{
++		identity:                   identity,
++		tmuxSession:                i.tmuxSession,
++		lastOpenCodeScanAt:         i.lastOpenCodeScanAt,
++		lastCodexScanAt:            i.lastCodexScanAt,
++		lastCodexProbeAt:           i.lastCodexProbeAt,
++		lastPromptModTime:          i.lastPromptModTime,
++		lastJSONLSize:              i.lastJSONLSize,
++		lastJSONLPath:              i.lastJSONLPath,
++		cachedPrompt:               i.cachedPrompt,
++		lastErrorCheck:             i.lastErrorCheck,
++		lastIdleCheck:              i.lastIdleCheck,
++		lastKnownActivity:          i.lastKnownActivity,
++		tmuxFlipFromRunningPending: i.tmuxFlipFromRunningPending,
++		lastSessionMetaSync:        i.lastSessionMetaSync,
++		hermesGatewayCheckedAt:     i.hermesGatewayCheckedAt,
++		hermesGatewayOK:            i.hermesGatewayOK,
++	}
++}
++
++func (i *Instance) restorePollingState(state instancePollingState) bool {
++	i.mu.Lock()
++	defer i.mu.Unlock()
++
++	// A replaced row that reuses an ID is a new runtime identity. Let it start
++	// cold rather than inheriting another tool/session's throttle decisions.
++	// A restart or durable tool-session rebind is also a new runtime: cached tmux
++	// environment, status trackers, and probe backoffs all describe the old pane.
++	if !state.identity.equal(i.pollingIdentityLocked()) {
++		return false
++	}
++
++	if (i.tmuxSession == nil) != (state.tmuxSession == nil) {
++		return false
++	}
++	if i.tmuxSession != nil {
++		if !tmuxRuntimeCompatible(i.tmuxSession, state.tmuxSession) {
++			return false
++		}
++		// ReconnectSessionLazy creates a fresh wrapper on every DB load. Reusing
++		// the compatible prior wrapper preserves its env cache, pane cache, and
++		// status tracker, which otherwise restart cold and shell out every poll.
++		i.tmuxSession = state.tmuxSession
++	}
++
++	i.lastOpenCodeScanAt = state.lastOpenCodeScanAt
++	i.lastCodexScanAt = state.lastCodexScanAt
++	i.lastCodexProbeAt = state.lastCodexProbeAt
++	i.lastPromptModTime = state.lastPromptModTime
++	i.lastJSONLSize = state.lastJSONLSize
++	i.lastJSONLPath = state.lastJSONLPath
++	i.cachedPrompt = state.cachedPrompt
++	i.lastErrorCheck = state.lastErrorCheck
++	i.lastIdleCheck = state.lastIdleCheck
++	i.lastKnownActivity = state.lastKnownActivity
++	i.tmuxFlipFromRunningPending = state.tmuxFlipFromRunningPending
++	i.lastSessionMetaSync = state.lastSessionMetaSync
++	i.hermesGatewayCheckedAt = state.hermesGatewayCheckedAt
++	i.hermesGatewayOK = state.hermesGatewayOK
++	return true
++}
++
++func tmuxRuntimeCompatible(current, previous *tmux.Session) bool {
++	if current == nil || previous == nil {
++		return false
++	}
++	return current.Name == previous.Name &&
++		current.DisplayName == previous.DisplayName &&
++		current.WorkDir == previous.WorkDir &&
++		current.Command == previous.Command &&
++		current.InstanceID == previous.InstanceID &&
++		current.SocketName == previous.SocketName &&
++		maps.Equal(current.OptionOverrides, previous.OptionOverrides) &&
++		current.RunCommandAsInitialProcess == previous.RunCommandAsInitialProcess &&
++		current.VimMode == previous.VimMode &&
++		current.LaunchInUserScope == previous.LaunchInUserScope &&
++		current.LaunchAs == previous.LaunchAs
++}
++
+ // SandboxConfig holds per-session Docker sandbox settings.
+ type SandboxConfig struct {
+ 	// Enabled indicates the session runs inside a container.
+@@ -2180,7 +2353,9 @@ func (i *Instance) detectCodexSessionAsync() {
+ 
+ 		sessionID, _ := i.queryCodexSessionFromProcessFiles()
+ 		if sessionID == "" {
+-			sessionID = i.queryCodexSession(i.collectOtherCodexSessionIDs(), true)
++			if exclusions, fresh := i.collectOtherCodexSessionIDs(); fresh {
++				sessionID = i.queryCodexSession(exclusions, true)
++			}
+ 		}
+ 		if sessionID != "" {
+ 			i.CodexSessionID = sessionID
+@@ -2276,11 +2451,32 @@ func runWithTimeout(timeout time.Duration, op func()) bool {
+ // while still preventing indefinite hangs.
+ const codexWalkDirTimeout = 5 * time.Second
+ 
++// codexSessionExclusions is a read-only view used by the fallback disk walk.
++// Explicit caller maps preserve the public UpdateCodexSession contract. Shared
++// ownership snapshots carry owner counts so the current tmux session's ID can
++// be allowed without accidentally allowing a duplicate owned by a sibling.
++type codexSessionExclusions struct {
++	explicit map[string]bool
++	ownedIDs map[string]int
++	ownID    string
++}
++
++func (e codexSessionExclusions) contains(id string) bool {
++	if e.explicit != nil {
++		return e.explicit[id]
++	}
++	owners := e.ownedIDs[id]
++	if id == e.ownID && owners == 1 {
++		return false
++	}
++	return owners > 0
++}
++
+ // queryCodexSession scans Codex sessions and returns the best candidate.
+ // Selection strategy:
+ //  1. Prefer sessions whose JSONL metadata matches this instance's project path.
+ //  2. Optionally allow unscoped fallback (no cwd metadata) for initial bootstrap.
+-func (i *Instance) queryCodexSession(excludeIDs map[string]bool, allowUnscoped bool) string {
++func (i *Instance) queryCodexSession(exclusions codexSessionExclusions, allowUnscoped bool) string {
+ 	sessionsDir := filepath.Join(i.getCodexHomeDir(), "sessions")
+ 	if _, err := os.Stat(sessionsDir); os.IsNotExist(err) {
+ 		return ""
+@@ -2310,7 +2506,7 @@ func (i *Instance) queryCodexSession(excludeIDs map[string]bool, allowUnscoped b
+ 			if sessionID == "" {
+ 				return nil
+ 			}
+-			if excludeIDs != nil && excludeIDs[sessionID] {
++			if exclusions.contains(sessionID) {
+ 				return nil
+ 			}
+ 
+@@ -2473,43 +2669,118 @@ func decodeJSONStringField(raw map[string]json.RawMessage, key string) string {
+ 	return strings.TrimSpace(s)
+ }
+ 
+-// collectOtherCodexSessionIDs enumerates other managed tmux sessions and returns
+-// the CODEX_SESSION_ID values they currently own.
+-func (i *Instance) collectOtherCodexSessionIDs() map[string]bool {
+-	exclude := make(map[string]bool)
++type codexOwnershipSnapshotData struct {
++	loadedAt  time.Time
++	sourceKey string
++	idsByTmux map[string]string
++	ownedIDs  map[string]int
++	complete  bool
++}
+ 
+-	tmuxSessions, err := tmux.ListAgentDeckSessions()
+-	if err != nil {
+-		return exclude
++const codexOwnershipRefreshTimeout = 750 * time.Millisecond
++
++var (
++	codexOwnershipSnapshot atomic.Pointer[codexOwnershipSnapshotData]
++	codexOwnershipRefresh  atomic.Bool
++)
++
++func codexOwnershipExclusions(snapshot *codexOwnershipSnapshotData, myTmuxName string) codexSessionExclusions {
++	if snapshot == nil {
++		return codexSessionExclusions{}
+ 	}
++	return codexSessionExclusions{
++		ownedIDs: snapshot.ownedIDs,
++		ownID:    snapshot.idsByTmux[myTmuxName],
++	}
++}
+ 
++func refreshCodexOwnershipSnapshot(sourceKey string, stale *codexOwnershipSnapshotData) *codexOwnershipSnapshotData {
++	ctx, cancel := context.WithTimeout(context.Background(), codexOwnershipRefreshTimeout)
++	defer cancel()
++
++	idsByTmux, err := tmux.ListAgentDeckCodexSessionIDs(ctx)
++	complete := err == nil
++	if err != nil {
++		idsByTmux = map[string]string{}
++		if stale != nil {
++			idsByTmux = stale.idsByTmux
++		}
++	}
++	ownedIDs := make(map[string]int, len(idsByTmux))
++	for _, id := range idsByTmux {
++		ownedIDs[id]++
++	}
++	return &codexOwnershipSnapshotData{
++		loadedAt:  time.Now(),
++		sourceKey: sourceKey,
++		idsByTmux: idsByTmux,
++		ownedIDs:  ownedIDs,
++		complete:  complete,
++	}
++}
++
++func launchCodexOwnershipRefresh(sourceKey string, stale *codexOwnershipSnapshotData) {
++	go func() {
++		// The context-bounded subprocess below must never strand the refresh gate.
++		// Recover as a final containment boundary: a future parser/runtime panic
++		// should preserve the prior immutable snapshot and allow the next poll to
++		// retry rather than permanently disabling refreshes.
++		defer codexOwnershipRefresh.Store(false)
++		defer func() {
++			if recover() != nil {
++				sessionLog.Warn("codex_ownership_refresh_panicked")
++			}
++		}()
++
++		refreshed := refreshCodexOwnershipSnapshot(sourceKey, stale)
++		codexOwnershipSnapshot.Store(refreshed)
++	}()
++}
++
++// collectOtherCodexSessionIDs returns a read-only view plus whether it is a
++// complete, fresh snapshot for the current tmux source. The CAS winner launches
++// a bounded batch refresh asynchronously; every caller immediately returns.
++// Callers MUST NOT use exclusions for binding unless fresh is true.
++func (i *Instance) collectOtherCodexSessionIDs() (exclusions codexSessionExclusions, fresh bool) {
+ 	myTmuxName := ""
+ 	if i.tmuxSession != nil {
+ 		myTmuxName = i.tmuxSession.Name
+ 	}
+ 
+-	for _, sessName := range tmuxSessions {
+-		if sessName == myTmuxName {
+-			continue
+-		}
+-		other := &tmux.Session{Name: sessName}
+-		if id, err := other.GetEnvironment("CODEX_SESSION_ID"); err == nil && id != "" {
+-			exclude[id] = true
+-		}
++	sourceKey := os.Getenv("PATH") + "\x00" + tmux.DefaultSocketName()
++	snapshot := codexOwnershipSnapshot.Load()
++	if snapshot != nil && snapshot.sourceKey == sourceKey && snapshot.complete &&
++		time.Since(snapshot.loadedAt) < codexBootstrapScanInterval {
++		return codexOwnershipExclusions(snapshot, myTmuxName), true
+ 	}
+ 
+-	return exclude
++	stale := snapshot
++	if stale != nil && stale.sourceKey != sourceKey {
++		stale = nil
++	}
++	shouldRefresh := stale == nil || time.Since(stale.loadedAt) >= codexBootstrapScanInterval
++	if shouldRefresh && codexOwnershipRefresh.CompareAndSwap(false, true) {
++		launchCodexOwnershipRefresh(sourceKey, stale)
++	}
++	return codexOwnershipExclusions(stale, myTmuxName), false
++}
++
++func codexSessionScanInterval(allowUnscoped bool) time.Duration {
++	if allowUnscoped {
++		return codexBootstrapScanInterval
++	}
++	return codexRotationScanInterval
++}
++
++func (i *Instance) codexSessionScanDue(allowUnscoped bool) bool {
++	return i.lastCodexScanAt.IsZero() ||
++		time.Since(i.lastCodexScanAt) >= codexSessionScanInterval(allowUnscoped)
+ }
+ 
+ // shouldScanCodexSession returns whether we should run an expensive filesystem
+ // scan for Codex session rotation right now.
+ func (i *Instance) shouldScanCodexSession(allowUnscoped bool) bool {
+-	interval := codexRotationScanInterval
+-	if allowUnscoped {
+-		interval = codexBootstrapScanInterval
+-	}
+-
+-	if !i.lastCodexScanAt.IsZero() && time.Since(i.lastCodexScanAt) < interval {
++	if !i.codexSessionScanDue(allowUnscoped) {
+ 		return false
+ 	}
+ 
+@@ -2525,7 +2796,14 @@ func (i *Instance) shouldRunCodexProcessProbe(force bool) bool {
+ 		return true
+ 	}
+ 
+-	if !i.lastCodexProbeAt.IsZero() && time.Since(i.lastCodexProbeAt) < codexProbeScanInterval {
++	// Keep the fast cadence only while bootstrapping an unknown ID. Once an ID
++	// is known, hooks and the tmux environment are the primary rotation signals;
++	// the process-file probe (ps+lsof on macOS) is a 30-second safety net.
++	interval := codexBootstrapScanInterval
++	if i.CodexSessionID != "" {
++		interval = codexRotationScanInterval
++	}
++	if !i.lastCodexProbeAt.IsZero() && time.Since(i.lastCodexProbeAt) < interval {
+ 		return false
+ 	}
+ 
+@@ -2893,20 +3171,24 @@ func (i *Instance) updateCodexSession(excludeIDs map[string]bool, forceProbe boo
+ 
+ 	// Only allow unscoped fallback when we don't have a known session ID yet.
+ 	allowUnscoped := envSessionID == "" && i.CodexSessionID == "" && i.CodexStartedAt > 0
+-	if !i.shouldScanCodexSession(allowUnscoped) {
++	if !i.codexSessionScanDue(allowUnscoped) {
+ 		return missingProbeDep
+ 	}
+ 
+-	// When we already have a session ID and the process probe didn't find a
+-	// running process, add our current ID to the exclude set so the disk scan
+-	// won't reassign it to another instance that shares the same project path.
+-	// The disk scan should only discover *new* sessions (e.g. after /new rotation),
+-	// not re-discover the same ID we already own.
+-	if i.CodexSessionID != "" && excludeIDs != nil {
+-		excludeIDs[i.CodexSessionID] = true
++	// Ownership exclusions are only relevant to the historical disk fallback.
++	// Defer their fleet-wide tmux snapshot until the live-process probe failed
++	// and the fallback cooldown says a scan will actually run.
++	exclusions := codexSessionExclusions{explicit: excludeIDs}
++	if excludeIDs == nil {
++		var fresh bool
++		exclusions, fresh = i.collectOtherCodexSessionIDs()
++		if !fresh {
++			return missingProbeDep
++		}
+ 	}
++	i.lastCodexScanAt = time.Now()
+ 
+-	if sessionID := i.queryCodexSession(excludeIDs, allowUnscoped); sessionID != "" {
++	if sessionID := i.queryCodexSession(exclusions, allowUnscoped); sessionID != "" {
+ 		// queryCodexSession already filters subagent rollouts out of candidacy
+ 		// (incident 2026-07-15), so sessionID here is always a user thread.
+ 		changed := sessionID != i.CodexSessionID
+@@ -4454,12 +4736,7 @@ func (i *Instance) UpdateStatus() error {
+ 
+ 			// Update Codex session tracking (non-blocking, best-effort)
+ 			if IsCodexCompatible(i.Tool) {
+-				// Always collect other instances' session IDs to prevent the
+-				// disk scan from assigning a session that belongs to another
+-				// instance. Without this, instances that share the same
+-				// project_path can all claim the same Codex session file.
+-				exclude := i.collectOtherCodexSessionIDs()
+-				i.UpdateCodexSession(exclude)
++				i.UpdateCodexSession(nil)
+ 			}
+ 
+ 			// Update OpenCode session tracking (non-blocking, best-effort).
+@@ -6390,7 +6667,21 @@ func (i *Instance) RestartWithEnv(env map[string]string) error {
+ 	return i.restart(env)
+ }
+ 
+-func (i *Instance) restart(env map[string]string) error {
++func (i *Instance) restart(env map[string]string) (err error) {
++	// Every successful branch below represents a new pane/runtime generation,
++	// including the spawnedSince fast path where another caller won the restart.
++	// Stamp centrally so respawn-pane and recreate paths cannot drift apart.
++	defer func() {
++		if err == nil {
++			i.markStarted()
++			if db := i.restartPersistenceDB(); db != nil {
++				if persistErr := db.WriteLastStartedAt(i.ID, i.LastStartedAt); persistErr != nil {
++					err = &RestartPartialSuccessError{InstanceID: i.ID, Err: persistErr}
++				}
++			}
++		}
++	}()
++
+ 	beforeLock := nowFn()
+ 	release, lockErr := acquireInstanceSpawnLock(i.ID)
+ 	if lockErr != nil {
+@@ -6614,7 +6905,7 @@ func (i *Instance) restart(env map[string]string) error {
+ 		i.mu.Lock()
+ 		i.pendingCodexRestartWarning = ""
+ 		i.mu.Unlock()
+-		if missingDep := i.updateCodexSession(i.collectOtherCodexSessionIDs(), true); missingDep != "" {
++		if missingDep := i.updateCodexSession(nil, true); missingDep != "" {
+ 			i.mu.Lock()
+ 			i.pendingCodexRestartWarning = codexProbeMissingWarning(missingDep)
+ 			i.mu.Unlock()
+diff --git a/internal/session/restart_result.go b/internal/session/restart_result.go
+new file mode 100644
+index 00000000..6181d278
+--- /dev/null
++++ b/internal/session/restart_result.go
+@@ -0,0 +1,34 @@
++package session
++
++import (
++	"errors"
++	"fmt"
++)
++
++// RestartPartialSuccessError means the replacement pane/runtime is already
++// live, but persisting its runtime generation failed. Retrying or rolling back
++// the restart is destructive; callers should keep the completed runtime and
++// surface this as a durability warning.
++type RestartPartialSuccessError struct {
++	InstanceID string
++	Err        error
++}
++
++func (e *RestartPartialSuccessError) Error() string {
++	return fmt.Sprintf("restart completed for %s but runtime generation persistence failed: %v", e.InstanceID, e.Err)
++}
++
++func (e *RestartPartialSuccessError) Unwrap() error { return e.Err }
++
++func (e *RestartPartialSuccessError) RestartCompleted() bool { return true }
++
++// IsRestartPartialSuccess recognizes both the production error and compatible
++// wrappers used by orchestration layers/tests without coupling them to its
++// concrete type.
++func IsRestartPartialSuccess(err error) bool {
++	if err == nil {
++		return false
++	}
++	var completed interface{ RestartCompleted() bool }
++	return errors.As(err, &completed) && completed.RestartCompleted()
++}
+diff --git a/internal/session/runtime_generation_persist.go b/internal/session/runtime_generation_persist.go
+new file mode 100644
+index 00000000..c110429f
+--- /dev/null
++++ b/internal/session/runtime_generation_persist.go
+@@ -0,0 +1,40 @@
++package session
++
++import (
++	"encoding/json"
++	"time"
++)
++
++const toolDataLastStartedAtKey = "last_started_at"
++
++// writeLastStartedAtToToolData keeps the durable runtime generation in the
++// extensible tool_data blob, avoiding a schema migration for an additive field.
++// A zero timestamp removes the key so legacy rows retain their old shape.
++func writeLastStartedAtToToolData(td json.RawMessage, at time.Time) json.RawMessage {
++	m := map[string]json.RawMessage{}
++	if len(td) > 0 {
++		_ = json.Unmarshal(td, &m)
++	}
++	if at.IsZero() {
++		delete(m, toolDataLastStartedAtKey)
++	} else {
++		raw, _ := json.Marshal(at.UTC())
++		m[toolDataLastStartedAtKey] = raw
++	}
++	out, _ := json.Marshal(m)
++	return out
++}
++
++// readLastStartedAtFromToolData returns zero for legacy or malformed rows.
++func readLastStartedAtFromToolData(td json.RawMessage) time.Time {
++	if len(td) == 0 {
++		return time.Time{}
++	}
++	var blob struct {
++		LastStartedAt time.Time `json:"last_started_at"`
++	}
++	if err := json.Unmarshal(td, &blob); err != nil {
++		return time.Time{}
++	}
++	return blob.LastStartedAt
++}
+diff --git a/internal/session/selfheal_pass.go b/internal/session/selfheal_pass.go
+index e5b63d96..ac2f3f97 100644
+--- a/internal/session/selfheal_pass.go
++++ b/internal/session/selfheal_pass.go
+@@ -51,6 +51,21 @@ func (r *selfHealRegistry) engineFor(profile string, caps selfheal.Caps) *selfhe
+ 	return e
+ }
+ 
++func (r *selfHealRegistry) pruneProfiles(active map[string]bool) {
++	r.mu.Lock()
++	defer r.mu.Unlock()
++	for profile := range r.engines {
++		if !active[profile] {
++			delete(r.engines, profile)
++		}
++	}
++	for profile := range r.sinks {
++		if !active[profile] {
++			delete(r.sinks, profile)
++		}
++	}
++}
++
+ // capsFromSettings maps the config dials onto selfheal.Caps, falling back to the
+ // trusted defaults for any unset field.
+ func capsFromSettings(s SelfHealSettings) selfheal.Caps {
+diff --git a/internal/session/storage.go b/internal/session/storage.go
+index 3c7e8bb7..5ee30a53 100644
+--- a/internal/session/storage.go
++++ b/internal/session/storage.go
+@@ -53,6 +53,7 @@ type InstanceData struct {
+ 	Tool                string    `json:"tool"`
+ 	Status              Status    `json:"status"`
+ 	CreatedAt           time.Time `json:"created_at"`
++	LastStartedAt       time.Time `json:"last_started_at,omitempty"`
+ 	LastAccessedAt      time.Time `json:"last_accessed_at,omitempty"`
+ 	ArchivedAt          time.Time `json:"archived_at,omitempty"`
+ 	TmuxSession         string    `json:"tmux_session"`
+@@ -325,6 +326,7 @@ func (s *Storage) SaveWithGroups(instances []*Instance, groupTree *GroupTree) er
+ 	// Convert instances to database rows
+ 	rows := make([]*statedb.InstanceRow, len(instances))
+ 	for i, inst := range instances {
++		inst.setOwningDB(s.db)
+ 		row, err := instanceToRow(inst)
+ 		if err != nil {
+ 			return err
+@@ -593,6 +595,7 @@ func (s *Storage) InsertSessionAndVerify(newInstance *Instance, groupTree *Group
+ 	if newInstance == nil {
+ 		return fmt.Errorf("nil instance")
+ 	}
++	newInstance.setOwningDB(s.db)
+ 	row, err := instanceToRow(newInstance)
+ 	if err != nil {
+ 		return err
+@@ -845,6 +848,7 @@ func instanceToRow(inst *Instance) (*statedb.InstanceRow, error) {
+ 	// the positional MarshalToolData signature so legacy binaries that don't
+ 	// know the key preserve it via MergeToolDataExtras.
+ 	toolData = WriteIdleTimeoutSecsToToolData(toolData, inst.IdleTimeoutSecs)
++	toolData = writeLastStartedAtToToolData(toolData, inst.LastStartedAt)
+ 
+ 	return &statedb.InstanceRow{
+ 		ID:                  inst.ID,
+@@ -978,6 +982,7 @@ func (s *Storage) LoadLite() ([]*InstanceData, []*GroupData, error) {
+ 			Tool:                      r.Tool,
+ 			Status:                    Status(r.Status),
+ 			CreatedAt:                 r.CreatedAt,
++			LastStartedAt:             readLastStartedAtFromToolData(r.ToolData),
+ 			LastAccessedAt:            r.LastAccessed,
+ 			ArchivedAt:                r.ArchivedAt,
+ 			TmuxSession:               r.TmuxSession,
+@@ -1097,6 +1102,7 @@ func (s *Storage) LoadWithGroups() ([]*Instance, []*GroupData, error) {
+ 			Tool:                      r.Tool,
+ 			Status:                    Status(r.Status),
+ 			CreatedAt:                 r.CreatedAt,
++			LastStartedAt:             readLastStartedAtFromToolData(r.ToolData),
+ 			LastAccessedAt:            r.LastAccessed,
+ 			ArchivedAt:                r.ArchivedAt,
+ 			TmuxSession:               r.TmuxSession,
+@@ -1352,6 +1358,7 @@ func (s *Storage) convertToInstances(data *StorageData) ([]*Instance, []*GroupDa
+ 			Tool:                      instData.Tool,
+ 			Status:                    instData.Status,
+ 			CreatedAt:                 instData.CreatedAt,
++			LastStartedAt:             instData.LastStartedAt,
+ 			LastAccessedAt:            instData.LastAccessedAt,
+ 			ArchivedAt:                instData.ArchivedAt,
+ 			WorktreePath:              instData.WorktreePath,
+@@ -1389,6 +1396,7 @@ func (s *Storage) convertToInstances(data *StorageData) ([]*Instance, []*GroupDa
+ 			AdditionalPaths:           instData.AdditionalPaths,
+ 			MultiRepoTempDir:          instData.MultiRepoTempDir,
+ 			tmuxSession:               tmuxSess,
++			owningDB:                  s.db,
+ 		}
+ 		// Convert multi-repo worktree data
+ 		for _, wt := range instData.MultiRepoWorktrees {
+diff --git a/internal/session/transition_daemon.go b/internal/session/transition_daemon.go
+index 1b065d59..624b11d9 100644
+--- a/internal/session/transition_daemon.go
++++ b/internal/session/transition_daemon.go
+@@ -10,6 +10,8 @@ import (
+ 	"strings"
+ 	"sync/atomic"
+ 	"time"
++
++	"github.com/asheshgoplani/agent-deck/internal/tmux"
+ )
+ 
+ const (
+@@ -71,6 +73,12 @@ type TransitionDaemon struct {
+ 	// logs at most once per probeStallLogInterval instead of flooding the log
+ 	// every few seconds. Accessed only from the single-threaded Run loop.
+ 	lastProbeStall map[string]time.Time
++
++	// pollState carries process-local status caches and throttles across
++	// LoadWithGroups calls. Each load constructs fresh Instance and tmux.Session
++	// values; without this bridge every profile poll starts cold and repeats
++	// tmux, ps, lsof, metadata, and gateway probes.
++	pollState map[string]map[string]instancePollingState
+ }
+ 
+ func NewTransitionDaemon() *TransitionDaemon {
+@@ -82,6 +90,7 @@ func NewTransitionDaemon() *TransitionDaemon {
+ 		lastDone:       map[string]map[string]DoneSignal{},
+ 		lastDoneScan:   map[string]map[string]time.Time{},
+ 		lastProbeStall: map[string]time.Time{},
++		pollState:      map[string]map[string]instancePollingState{},
+ 	}
+ }
+ 
+@@ -111,11 +120,20 @@ func (d *TransitionDaemon) Run(ctx context.Context) error {
+ // SyncOnce performs one full monitoring pass and returns the recommended delay
+ // until the next pass.
+ func (d *TransitionDaemon) SyncOnce(_ context.Context) time.Duration {
+-	profiles := profilesForTransitionDaemon()
++	profiles, err := profilesForTransitionDaemon()
++	if err != nil {
++		return notifyPollSlow
++	}
++	d.pruneDeletedProfiles(profiles)
+ 	if len(profiles) == 0 {
+ 		return notifyPollSlow
+ 	}
+ 
++	// Match the TUI, web, and CLI status paths: warm each shared tmux cache
++	// once for the whole pass, not once per profile or instance.
++	tmux.RefreshExistingSessions()
++	tmux.RefreshPaneInfoCache()
++
+ 	nextInterval := notifyPollSlow
+ 	for _, profile := range profiles {
+ 		interval := d.syncProfile(profile)
+@@ -309,13 +327,68 @@ func notifierProbeStallLogPath() string {
+ 	return path
+ }
+ 
+-func profilesForTransitionDaemon() []string {
++func profilesForTransitionDaemon() ([]string, error) {
+ 	profiles, err := ListProfiles()
+-	if err != nil || len(profiles) == 0 {
+-		return nil
++	if err != nil {
++		return nil, err
+ 	}
+ 	sort.Strings(profiles)
+-	return profiles
++	return profiles, nil
++}
++
++// pruneDeletedProfiles releases profile resources and process-local poll state
++// only after ListProfiles completed successfully. A transient listing error
++// must not make the daemon forget live profiles; a successful list is the
++// authoritative snapshot and lets deleted profiles be retired immediately.
++func (d *TransitionDaemon) pruneDeletedProfiles(profiles []string) {
++	active := make(map[string]bool, len(profiles))
++	for _, profile := range profiles {
++		active[profile] = true
++	}
++
++	for profile, storage := range d.storages {
++		if active[profile] {
++			continue
++		}
++		if storage != nil {
++			_ = storage.Close()
++		}
++		delete(d.storages, profile)
++	}
++	for profile := range d.lastStatus {
++		if !active[profile] {
++			delete(d.lastStatus, profile)
++		}
++	}
++	for profile := range d.initialized {
++		if !active[profile] {
++			delete(d.initialized, profile)
++		}
++	}
++	for profile := range d.lastDone {
++		if !active[profile] {
++			delete(d.lastDone, profile)
++		}
++	}
++	for profile := range d.lastDoneScan {
++		if !active[profile] {
++			delete(d.lastDoneScan, profile)
++		}
++	}
++	for profile := range d.pollState {
++		if !active[profile] {
++			delete(d.pollState, profile)
++		}
++	}
++	for key := range d.lastProbeStall {
++		profile, _, ok := strings.Cut(key, "|")
++		if ok && !active[profile] {
++			delete(d.lastProbeStall, key)
++		}
++	}
++	if d.selfheal != nil {
++		d.selfheal.pruneProfiles(active)
++	}
+ }
+ 
+ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
+@@ -328,6 +401,13 @@ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
+ 	if err != nil {
+ 		return notifyPollSlow
+ 	}
++	identities := make(map[string]instancePollingIdentity, len(instances))
++	for _, inst := range instances {
++		if inst != nil {
++			identities[inst.ID] = inst.pollingIdentity()
++		}
++	}
++	d.restorePollingState(profile, instances)
+ 
+ 	byID := make(map[string]*Instance, len(instances))
+ 	hookCandidates := make(map[string]hookTransitionCandidate, len(instances))
+@@ -411,6 +491,7 @@ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
+ 				statuses[inst.ID] = previousStatus
+ 				continue
+ 			}
++			d.rememberPollingState(profile, inst, identities[inst.ID])
+ 			status := normalizeStatusString(string(inst.GetStatusThreadSafe()))
+ 			statuses[inst.ID] = status
+ 			if db != nil && status != previousStatus {
+@@ -470,6 +551,32 @@ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
+ 	return choosePollInterval(statuses)
+ }
+ 
++// restorePollingState hydrates process-local status machinery after the
++// daemon's per-pass storage reload. Rebuilding the profile map also drops state
++// for deleted instances.
++func (d *TransitionDaemon) restorePollingState(profile string, instances []*Instance) {
++	previous := d.pollState[profile]
++	current := make(map[string]instancePollingState, len(instances))
++	for _, inst := range instances {
++		if inst == nil {
++			continue
++		}
++		if state, ok := previous[inst.ID]; ok {
++			if inst.restorePollingState(state) {
++				current[inst.ID] = state
++			}
++		}
++	}
++	if d.pollState == nil {
++		d.pollState = make(map[string]map[string]instancePollingState)
++	}
++	d.pollState[profile] = current
++}
++
++func (d *TransitionDaemon) rememberPollingState(profile string, inst *Instance, identity instancePollingIdentity) {
++	d.pollState[profile][inst.ID] = inst.pollingStateForIdentity(identity)
++}
++
+ // emitDoneSignals turns a worker-printed completion sentinel (persisted into
+ // the hook status file by the Stop-hook handler, issue #1186) into a distinct
+ // "finished" event delivered to the parent. Per-task idempotency is enforced
+diff --git a/internal/statedb/statedb.go b/internal/statedb/statedb.go
+index f5b9439c..9e3d4d64 100644
+--- a/internal/statedb/statedb.go
++++ b/internal/statedb/statedb.go
+@@ -1442,6 +1442,36 @@ func (s *StateDB) WriteGeminiSessionBinding(id, sessionID string, detectedAt tim
+ 	})
+ }
+ 
++// WriteLastStartedAt persists the runtime generation stamped by a successful
++// Restart without rewriting the rest of the instance row. Direct restart
++// callers (web/TUI mutators) do not necessarily run SaveInstances afterward;
++// keeping this targeted prevents the transition daemon from reloading the old
++// generation and reattaching pre-restart tmux/status/backoff caches.
++func (s *StateDB) WriteLastStartedAt(id string, startedAt time.Time) error {
++	value := startedAt.UTC().Format(time.RFC3339Nano)
++	return withBusyRetry(func() error {
++		result, err := s.db.Exec(
++			`UPDATE instances
++			   SET tool_data = json_set(
++			         COALESCE(tool_data, '{}'),
++			         '$.last_started_at', ?)
++			 WHERE id = ?`,
++			value, id,
++		)
++		if err != nil {
++			return err
++		}
++		rows, err := result.RowsAffected()
++		if err != nil {
++			return fmt.Errorf("read last_started_at rows affected: %w", err)
++		}
++		if rows != 1 {
++			return fmt.Errorf("persist last_started_at for %s: updated %d rows, want 1", id, rows)
++		}
++		return nil
++	})
++}
++
+ // ReadAllStatuses returns status + acknowledged flag for every instance.
+ func (s *StateDB) ReadAllStatuses() (map[string]StatusRow, error) {
+ 	rows, err := s.db.Query("SELECT id, status, tool, acknowledged FROM instances")
+diff --git a/internal/tmux/tmux.go b/internal/tmux/tmux.go
+index 9569688b..45c4f14e 100644
+--- a/internal/tmux/tmux.go
++++ b/internal/tmux/tmux.go
+@@ -5352,6 +5352,38 @@ func ListAgentDeckSessions() ([]string, error) {
+ 	return sessions, nil
+ }
+ 
++// ListAgentDeckCodexSessionIDs returns one ownership snapshot using a single
++// tmux subprocess. CODEX_SESSION_ID is a session-environment format variable,
++// so list-sessions can batch it with the session name instead of spawning
++// show-environment once per session. The caller owns the deadline.
++func ListAgentDeckCodexSessionIDs(ctx context.Context) (map[string]string, error) {
++	cmd := tmuxExecContext(ctx, DefaultSocketName(), "list-sessions", "-F", "#{session_name}\t#{CODEX_SESSION_ID}")
++	cmd.WaitDelay = 100 * time.Millisecond
++	output, err := cmd.CombinedOutput()
++	if err != nil {
++		if ctx.Err() != nil {
++			return nil, ctx.Err()
++		}
++		lower := strings.ToLower(string(output))
++		if strings.Contains(lower, "no server running") || strings.Contains(lower, "no sessions") {
++			return map[string]string{}, nil
++		}
++		return nil, fmt.Errorf("failed to list Codex session ownership: %w", err)
++	}
++
++	idsByTmux := make(map[string]string)
++	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
++		name, id, ok := strings.Cut(line, "\t")
++		name = strings.TrimSpace(name)
++		id = strings.TrimSpace(id)
++		if !ok || !strings.HasPrefix(name, SessionPrefix) || id == "" {
++			continue
++		}
++		idsByTmux[name] = id
++	}
++	return idsByTmux, nil
++}
++
+ // SetStatusLeft sets the left side of tmux status bar for a session.
+ // Used by NotificationManager to display waiting session notifications.
+ func SetStatusLeft(sessionName, text string) error {
+diff --git a/internal/ui/home.go b/internal/ui/home.go
+index 8852ad30..b1e537bd 100644
+--- a/internal/ui/home.go
++++ b/internal/ui/home.go
+@@ -5657,6 +5657,7 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 		return h, nil
+ 
+ 	case sessionRestoredMsg:
++		msg.err, msg.warning = normalizeRestartResult(msg.err, msg.warning)
+ 		h.reloadMu.Lock()
+ 		reloading := h.isReloading
+ 		h.reloadMu.Unlock()
+@@ -5738,6 +5739,7 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 		return h, nil
+ 
+ 	case sessionRestartedMsg:
++		msg.err, msg.warning = normalizeRestartResult(msg.err, msg.warning)
+ 		if msg.err != nil {
+ 			// Restart failed - clear resuming animation immediately so user can retry.
+ 			delete(h.resumingSessions, msg.sessionID)
+@@ -5776,6 +5778,10 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 		return h, nil
+ 
+ 	case mcpRestartedMsg:
++		if session.IsRestartPartialSuccess(msg.err) {
++			h.setError(fmt.Errorf("%s", msg.err))
++			msg.err = nil
++		}
+ 		if msg.err != nil {
+ 			h.setError(fmt.Errorf("failed to restart session for MCP changes: %w", msg.err))
+ 			return h, nil
+@@ -5951,8 +5957,12 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 		inst := h.instanceByID[msg.instanceID]
+ 		h.instancesMu.RUnlock()
+ 		if inst != nil {
+-			if err := inst.SetGeminiModel(msg.model); err != nil {
+-				h.err = fmt.Errorf("failed to set model: %w", err)
++			restartErr, warning := normalizeRestartResult(inst.SetGeminiModel(msg.model), "")
++			if restartErr != nil {
++				h.err = fmt.Errorf("failed to set model: %w", restartErr)
++				h.errTime = time.Now()
++			} else if warning != "" {
++				h.err = fmt.Errorf("%s", warning)
+ 				h.errTime = time.Now()
+ 			}
+ 			// Force save to persist the model change
+@@ -12569,6 +12579,16 @@ type sessionRestartedMsg struct {
+ 	unarchived bool
+ }
+ 
++func normalizeRestartResult(err error, warning string) (error, string) {
++	if !session.IsRestartPartialSuccess(err) {
++		return err, warning
++	}
++	if warning != "" {
++		warning += "; "
++	}
++	return nil, warning + err.Error()
++}
++
+ // mcpRestartedMsg signals that an MCP-triggered restart completed and should auto-attach
+ type mcpRestartedMsg struct {
+ 	session *session.Instance
+@@ -12595,6 +12615,9 @@ func restartWithArchiveTransition(
+ 	}
+ 
+ 	if err := restart(); err != nil {
++		if session.IsRestartPartialSuccess(err) {
++			return true, err
++		}
+ 		inst.ArchivedAt = archivedAt
+ 		if rollbackErr := persist(inst); rollbackErr != nil {
+ 			return false, fmt.Errorf("restart failed: %w; restoring archive state failed: %v", err, rollbackErr)
+diff --git a/internal/ui/web_mutator.go b/internal/ui/web_mutator.go
+index 43e93df2..e8c1431f 100644
+--- a/internal/ui/web_mutator.go
++++ b/internal/ui/web_mutator.go
+@@ -181,7 +181,12 @@ func (m *WebMutator) RestartSession(id string) error {
+ 	if inst == nil {
+ 		return fmt.Errorf("session not found: %s", id)
+ 	}
+-	return inst.Restart()
++	restartErr := inst.Restart()
++	restartErr, warning := normalizeRestartResult(restartErr, "")
++	if warning != "" {
++		uiLog.Warn("web_restart_partial_success", "warning", warning, "instance_id", inst.ID)
++	}
++	return restartErr
+ }
+ 
+ // DeleteSession kills a session and removes it from persistent storage.
+@@ -328,8 +333,11 @@ func (m *WebMutator) UndoDelete() (string, error) {
+ 	// tool (e.g. a tool the user has since uninstalled). Bubble the
+ 	// error up so the handler returns 500; the entry has already been
+ 	// popped, mirroring the TUI's ctrl+z semantics.
+-	if err := entry.instance.Restart(); err != nil {
+-		return "", fmt.Errorf("restart session: %w", err)
++	if restartErr := entry.instance.Restart(); restartErr != nil {
++		if !session.IsRestartPartialSuccess(restartErr) {
++			return "", fmt.Errorf("restart session: %w", restartErr)
++		}
++		uiLog.Warn("web_undo_restart_partial_success", "warning", restartErr.Error(), "instance_id", entry.instance.ID)
+ 	}
+ 
+ 	// #1397: hydrate + serialize before reading/persisting the in-memory list so

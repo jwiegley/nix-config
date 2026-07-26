@@ -156,15 +156,6 @@ in
   launchd = {
     # System daemons run as background services
     daemons = {
-      limits = {
-        script = ''
-          /bin/launchctl limit maxfiles 524288 524288
-          /bin/launchctl limit maxproc 8192 8192
-        '';
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = false;
-      };
-
       mssql-server = {
         script = ''
           # Wait for Docker to be ready

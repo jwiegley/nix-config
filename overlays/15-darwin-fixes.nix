@@ -47,6 +47,33 @@ in
     else
       prev.poppler;
 
+  # node_exporter's Darwin filesystem collector asks Foundation for
+  # NSURLVolumeAvailableCapacityForImportantUsageKey for every mount on every
+  # scrape. CacheDelete rejects several system mounts and floods the unified
+  # log. Keep the ordinary statfs metrics, but omit this optional metric by
+  # using the collector's existing negative "unavailable" sentinel.
+  prometheus-node-exporter = prev.prometheus-node-exporter.overrideAttrs (
+    oldAttrs:
+    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+      patches = (oldAttrs.patches or [ ]) ++ [
+        ./patches/prometheus-node-exporter-disable-darwin-purgeable.patch
+      ];
+    }
+  );
+
+  # scdaemon normally wakes twice per second while monitoring smart-card
+  # readers. On Darwin that needless polling is costly, so reduce it to once
+  # every five seconds without changing the interval on other platforms.
+  gnupg =
+    if prev.stdenv.isDarwin then
+      prev.gnupg.overrideAttrs (oldAttrs: {
+        patches = (oldAttrs.patches or [ ]) ++ [
+          ./patches/gnupg-darwin-scdaemon-poll-interval.patch
+        ];
+      })
+    else
+      prev.gnupg;
+
   # Fix zsh-5.9 lost-SIGCHLD hang after the 2026-04-18 darwin stdenv reshuffle
   # (nixpkgs PR #508474, "darwin: migrate source releases from apple-sdk to
   # darwin"). On the new stdenv, zsh's runtime autoconf probe in configure.ac

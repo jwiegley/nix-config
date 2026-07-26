@@ -1,0 +1,58 @@
+diff --git a/collector/filesystem_macos.go b/collector/filesystem_macos.go
+index 933e20f..bf5bdef 100644
+--- a/collector/filesystem_macos.go
++++ b/collector/filesystem_macos.go
+@@ -17,34 +17,8 @@ package collector
+ 
+ /*
+-#cgo CFLAGS: -x objective-c
+-#cgo LDFLAGS: -framework Foundation
+-#import <Foundation/Foundation.h>
+ #include <sys/param.h>
+ #include <sys/ucred.h>
+ #include <sys/mount.h>
+-#include <stdio.h>
+-
+-double purgeable(char *path) {
+-  double value = -1.0f;
+-
+-  @autoreleasepool {
+-    NSError *error = nil;
+-    NSString *str = [NSString stringWithUTF8String:path];
+-    NSURL *fileURL = [[NSURL alloc] initFileURLWithPath:str];
+-
+-    NSDictionary *results = [fileURL resourceValuesForKeys:@[NSURLVolumeAvailableCapacityForImportantUsageKey] error:&error];
+-    if (results) {
+-      CFNumberRef tmp = CFDictionaryGetValue((CFDictionaryRef)results, NSURLVolumeAvailableCapacityForImportantUsageKey);
+-      if (tmp != NULL) {
+-        CFNumberGetValue(tmp, kCFNumberFloat64Type, &value);
+-      }
+-    }
+-
+-    [fileURL release];
+-  }
+-
+-  return value;
+-}
+ */
+ import "C"
+ 
+@@ -88,9 +62,6 @@ func (c *filesystemCollector) GetStats() (stats []filesystemStats, err error) {
+ 			ro = 1
+ 		}
+ 
+-		mountpointCString := C.CString(mountpoint)
+-		defer C.free(unsafe.Pointer(mountpointCString))
+-
+ 		stats = append(stats, filesystemStats{
+ 			labels: filesystemLabels{
+ 				device:     device,
+@@ -102,7 +73,7 @@ func (c *filesystemCollector) GetStats() (stats []filesystemStats, err error) {
+ 			avail:     float64(mnt[i].f_bavail) * float64(mnt[i].f_bsize),
+ 			files:     float64(mnt[i].f_files),
+ 			filesFree: float64(mnt[i].f_ffree),
+-			purgeable: float64(C.purgeable(mountpointCString)),
++			purgeable: -1,
+ 			ro:        ro,
+ 		})
+ 	}

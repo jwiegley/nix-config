@@ -1,0 +1,19 @@
+diff --git a/scd/scdaemon.c b/scd/scdaemon.c
+--- a/scd/scdaemon.c
++++ b/scd/scdaemon.c
+@@ -239,10 +239,15 @@
+    changes but that requires a native thread because there is no way
+    to make the underlying PC/SC card change function block using a Npth
+    mechanism.  Given that a native thread could only be used under W32
+    we don't do that at all.  */
++#ifdef __APPLE__
++# define TIMERTICK_INTERVAL_SEC     (5)
++# define TIMERTICK_INTERVAL_USEC    (0)
++#else
+ #define TIMERTICK_INTERVAL_SEC     (0)
+ #define TIMERTICK_INTERVAL_USEC    (500000)
++#endif
+ 
+ /* Flag to indicate that a shutdown was requested. */
+ static int shutdown_pending;
+ 

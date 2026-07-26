@@ -21,6 +21,7 @@ _final: prev: {
 
       patches = [
         ./patches/agent-deck-discord-typing-best-effort.patch
+        ./patches/agent-deck-transition-daemon-churn.patch
       ];
 
       # Only the user-facing TUI/CLI. cmd/agent-deck-test-server is a test helper

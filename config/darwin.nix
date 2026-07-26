@@ -132,6 +132,14 @@ in
     };
   };
 
+  # Start GnuPG through its canonical sockets at login. The bootstrap exits
+  # after gpg-agent daemonizes, so launchd never supervises or crash-loops it.
+  launchd.user.agents.gnupg-agent.serviceConfig = {
+    EnvironmentVariables.GNUPGHOME = "${xdg_configHome}/gnupg";
+    KeepAlive = lib.mkForce false;
+    RunAtLoad = lib.mkForce true;
+  };
+
   services = {
     # SSH daemon configuration to prevent connection slowness
     openssh = {

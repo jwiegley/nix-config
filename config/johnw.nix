@@ -394,6 +394,11 @@ in
     };
   };
 
+  launchd.agents = lib.mkIf isDarwin {
+    # Preserve Home Manager's GPG configuration while nix-darwin owns startup.
+    gpg-agent.enable = lib.mkForce false;
+  };
+
   services = lib.mkIf isDarwin {
     gpg-agent = {
       enable = true;

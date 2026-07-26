@@ -618,6 +618,8 @@ final: prev: {
         hash = "sha256-Q5rPYuHZtcPrdBhoRnXLnWIMYSJDzTu+RuTIH+lTpNM=";
       };
 
+      patches = [ ./patches/omlx-host-vm-info64-count.patch ];
+
       # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git
       # commits via PEP 508 direct references, which fail in the Nix sandbox.
       # Strip the URLs (targeted replacements so an upstream format change
@@ -702,16 +704,21 @@ final: prev: {
         (markitdown.override { speechrecognition = null; })
       ];
 
-      doCheck = false;
+      # Python packages route doCheck through installCheckPhase; setting
+      # doInstallCheck directly is ignored by mk-python-derivation.
+      doCheck = true;
       pythonImportsCheck = [ "omlx" ];
 
       # Smoke test that the wrapped entry point runs. omlx's CLI uses
       # subcommands (serve/launch/diagnose) and has no --version flag, so
       # exercise --help, which builds the full argparse tree and exits 0.
-      doInstallCheck = true;
+      # Also exercise the installed Mach adapter with fake libc responses for
+      # the current ABI count and a bounded future-kernel retry.
       installCheckPhase = ''
         runHook preInstallCheck
         $out/bin/omlx --help > /dev/null
+        PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
+          ${python.interpreter} ${../tests/omlx-host-vm-info64-count.py}
         runHook postInstallCheck
       '';
 
