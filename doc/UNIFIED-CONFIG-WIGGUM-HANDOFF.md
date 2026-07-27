@@ -258,12 +258,85 @@ currently behind the core by 9 commits. This publish-fanout is a direct
 contributor to the "confusion and difficulty" in the original request, and the
 target design must state a single publish path.
 
-**F11 — `vps` is an uninventoried third consumer pattern.** Its configuration
-exists only on the VPS at `/etc/nixos`; `~/src/nixos/hosts/` contains `vulcan`
-only. Per project memory it uses a thin `johnw.nix` wrapper importing
-`${inputs.nix-config}/config/johnw.nix`. Its actual coupling surface has **not**
-been read in this session and must be inventoried on the host before migration.
-Recorded as an open question, not a verified finding.
+**F11 — `vps` inventoried (correction: it is local, at `~/src/vps`).** The earlier
+assumption that this configuration existed only at `/etc/nixos` on the host was
+**wrong** — the user pointed to a local checkout at `~/src/vps` (~3,000 lines of
+Nix, `nixosConfigurations.ovh-vps`, x86_64-linux). No SSH was needed. It is the
+**third** independent consumer, and it repeats every defect already catalogued:
+
+- **Dual fetch (F2), third instance.** `flake.nix:29-31`
+  `nix-config = github:jwiegley/nix-config?ref=main` with `flake = false`, plus
+  `flake.nix:19-21` `nix-config-ai = ...?dir=config/ai&ref=main` as a real flake.
+- **Overlay internal-reach (F1), third instance.** `overlays/default.nix:17-18`
+  cherry-picks from `30-user-scripts.nix` while manually re-injecting
+  `00-lib.nix` into `prev` — the same implicit ordering contract vulcan
+  reconstructs by hand. **All three consumers independently reproduce it.**
+- **The `git-ai` stub problem (F6), stated outright in the source.**
+  `flake.nix:41-44` keeps `git-ai` as a *full flake input* with the comment:
+  "Kept as input so the shared johnw.nix config can import its HM module (the
+  `programs.git-ai` options are defined unconditionally in the shared config).
+  Disabled via mkForce in the VPS home-manager wrapper." So this host pays an
+  entire flake input, and its `nixpkgs` follows, purely to satisfy an
+  *unconditional* assignment for an *optional* feature it then force-disables.
+  Vulcan solves the identical problem with a fake freeform option stub. **Two
+  hosts, two different workarounds, one root cause.**
+- **HM version skew (F6), third instance and the most expensive.** vps pins
+  `home-manager/release-25.11` while the core targets master-only
+  `programs.ssh.settings`, so it **vendors 920 lines of upstream home-manager
+  verbatim** (`modules/home-manager/ssh-rfc42.nix`, a copy of master's
+  `modules/programs/ssh.nix`) and swaps it in via `sharedModules` +
+  `disabledModules`. Vulcan solved the same skew by writing a translation shim.
+  The core's use of a master-only API is costing two hosts two separate,
+  substantial workarounds.
+
+**F12 — The real "closure" problem is inside the home-manager core, not in the
+flake structure. This is the most important finding for the user's stated goal.**
+
+The `flake.nix` / `flake-ai.nix` split exists because "we don't want to realize all
+artifacts on all systems." That instinct identifies a **real** problem — but the
+fix was applied at the wrong layer. Flake outputs are lazy (verified), so the
+split buys nothing. Meanwhile the actual closure bloat lives in the shared HM
+module, which is written for a fat workstation and unconditionally pulls
+heavyweight dependencies that every lean host must surgically undo.
+
+`~/src/vps/modules/users/home-manager/johnw.nix` contains **35 `lib.mkForce`
+uses**, and most of its ~200 lines are closure surgery with the sizes named in its
+own comments:
+
+| Undone by the VPS | Cost cited |
+|---|---|
+| `programs.git-ai.enable` | ~2.3 GB Rust toolchain |
+| `programs.vim.enable` | vim-full + GTK3, ~500 MB |
+| `programs.password-store.enable` | ~432 MB |
+| `programs.info.enable` | 123 MB |
+| `xdg.configFile."aspell/config"` | ~110 MB |
+| `programs.browserpass.enable`, `programs.gpg.enable` | pass ecosystem |
+| `programs.git.package` → `gitMinimal` | avoids git-ai |
+
+Worse, because `vars.gitPkg` is **string-interpolated into option values**, the VPS
+must rewrite them one by one: **12 `programs.git.settings` overrides** (7 aliases,
+2 `filter "media"` entries, credential helper, editor) and **5 `programs.zsh.shellAliases`**,
+each replacing an embedded `gitPkg` store path with `gitMinimal`. Three
+`sessionVariables` are blanked with the explicit reason that "their string
+interpolations pull those packages into the closure."
+
+Override-debt tally across all three consumers: **46 `mkForce` uses** (vps 35,
+vulcan 6, andoria 5) **plus 920 vendored lines**. Nearly all of it exists to
+subtract from a core that assumes a workstation.
+
+> **Design consequence.** The core needs a *lean/full capability switch* — a
+> profile dimension so servers opt *in* to heavyweight features rather than
+> `mkForce`-ing them off one at a time — and heavyweight package references must
+> stop being baked into interpolated strings, so that disabling a feature actually
+> removes it instead of requiring per-alias surgery. This single change would
+> delete most of the 46 overrides and is the highest-leverage item in the
+> migration. There are also **three** package strategies in play today (full
+> `packages.package-list` on darwin/vulcan/andoria, a curated list on vps), which
+> the profile dimension should subsume.
+
+vps also uses **sops-nix** (`.sops.yaml`, `secrets.yaml`, and a git credential
+helper reading `/run/secrets/nix/git-credentials`), so sops-nix is already in use
+on **both** NixOS hosts — reinforcing it as the continuity choice.
 
 ## How to resume
 
