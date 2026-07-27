@@ -10,6 +10,11 @@ let
 in
 {
   config = lib.mkIf enabled {
+    home.packages = lib.optionals (pkgs ? plasma-fractal && pkgs ? plasma-wiki) [
+      pkgs.plasma-fractal
+      pkgs.plasma-wiki
+    ];
+
     home.file = {
       ".local/bin/agent-deck-litellm-env".source = ../bin/agent-deck-litellm-env;
       ".local/bin/codex".source = ../bin/codex-litellm;

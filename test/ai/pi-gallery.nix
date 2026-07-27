@@ -12,23 +12,17 @@
 
 let
   root = package: name: "${package}/share/pi-packages/${name}";
-  roots = {
+  manifest = piPackages.pi-gallery.manifest;
+  roots = lib.mapAttrs (_: member: root member.package member.attrName) manifest.members // {
     bigpowers = root piPackages.bigpowers "bigpowers";
-    btw = root piPackages.pi-btw "pi-btw";
-    artifacts = root piPackages.pi-artifacts "pi-artifacts";
-    insights = root piPackages.pi-insights "pi-insights";
-    subagentura = root piPackages.pi-subagentura "pi-subagentura";
-    litellm = root piPackages.pi-provider-litellm "pi-provider-litellm";
-    router = root piPackages.pi-model-router "pi-model-router";
-    rewind = root piPackages.pi-rewind "pi-rewind";
-    scroll = root piPackages.pi-scroll "pi-scroll";
-    hashline = root piPackages.pi-hashline-edit-pro "pi-hashline-edit-pro";
-    web = root piPackages.pi-web-access "pi-web-access";
-    lens = root piPackages.pi-lens "pi-lens";
-    ponytail = root piPackages.pi-ponytail "pi-ponytail";
-    workflows = root piPackages.pi-dynamic-workflows "pi-dynamic-workflows";
-    browser = root piPackages.pi-agent-browser-native "pi-agent-browser-native";
   };
+  manifestPackagesMatch = builtins.all (
+    id:
+    let
+      member = manifest.members.${id};
+    in
+    piPackages.${member.attrName} == member.package && member.package.version == member.version
+  ) manifest.order;
   gallery = "${piPackages.pi-gallery}/share/pi-gallery";
   quiet = "${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-quiet/src/index.ts";
   packageRoots = lib.escapeShellArgs (builtins.attrValues roots);
@@ -36,6 +30,9 @@ let
     builtins.attrValues (builtins.removeAttrs roots [ "bigpowers" ])
   );
 in
+assert builtins.length manifest.order == 14;
+assert builtins.length (builtins.attrNames manifest.members) == builtins.length manifest.order;
+assert manifestPackagesMatch;
 assert (piPackage.toolRendererWrapperAbi or null) == 1;
 runCommand "pi-gallery-check"
   {

@@ -3097,6 +3097,9 @@ let
     _: spec: mkTask9JohnwEvaluation (builtins.removeAttrs spec [ "expectedClass" ])
   ) task9FixtureSpecs;
   task9JohnwHera = task9JohnwEvaluations.hera;
+  task9EvaluationHasPackage =
+    evaluation: package:
+    lib.any (candidate: toString candidate == toString package) evaluation.config.home.packages;
   task9JohnwPersonalSynthetic = task9JohnwEvaluations.personal-synthetic;
   task9JohnwSharedSynthetic = task9JohnwEvaluations.shared-synthetic;
   task9AiPathsIn =
@@ -3120,6 +3123,19 @@ let
         false
       )
     ];
+  task9FeaturePackageChecks = lib.mapAttrsToList (
+    name: spec:
+    let
+      evaluation = task9JohnwEvaluations.${name};
+      featurePkgs = testPkgsFor.${spec.system};
+      ownsAll = builtins.all (task9EvaluationHasPackage evaluation) [
+        featurePkgs.agent-deck
+        featurePkgs.plasma-fractal
+        featurePkgs.plasma-wiki
+      ];
+    in
+    expectEqual "Task 9 ${name} feature package ownership" ownsAll (name == "hera")
+  ) task9FixtureSpecs;
   task9ClaudeMemData = task9JohnwHera.config.home.activation.claudeMemRealClaude.data;
 
   task9DarwinPkgs = testPkgsFor.aarch64-darwin;
@@ -3304,7 +3320,8 @@ let
   ]
   ++ task9FixtureChecks
   ++ task9PathChecks
-  ++ task9IntegratedPathChecks;
+  ++ task9IntegratedPathChecks
+  ++ task9FeaturePackageChecks;
 
   # Model synchronization contract: safe, idempotent DEVONthink and iTerm updates.
   task10ModelSyncPath = "${src}/config/ai/model-sync.nix";
@@ -3683,16 +3700,16 @@ let
     map
       (
         system:
-        expectEqual "Task 11 ${system} keeps only the unrelated auto package"
+        expectEqual "Task 11 ${system} ignores package-shaped infrastructure inputs"
           (task11UserPackageInputNamesFor system)
-          [ "retained" ]
+          [ ]
       )
       [
         "aarch64-linux"
         "x86_64-linux"
       ]
     ++ [
-      (expectEqual "Task 11 Darwin retains the Darwin-only auto packages"
+      (expectEqual "Task 11 Darwin selects only explicitly allowed source applications"
         (task11UserPackageInputNamesFor "aarch64-darwin")
         [
           "gitlib"
@@ -3700,7 +3717,6 @@ let
           "org-jw"
           "pushme"
           "renamer"
-          "retained"
           "trade-journal"
         ]
       )

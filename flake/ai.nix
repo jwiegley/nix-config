@@ -1914,6 +1914,8 @@ let
     in
     if agentPackages ? ${name} then [ (patchAgentPackage pkgs name agentPackages.${name}) ] else [ ];
 
+  aiPackagePolicy = import ../packages/ai-package-policy.nix { inherit lib; };
+
   pythonAiEnv =
     pkgs:
     pkgs.python3.withPackages (
@@ -1942,10 +1944,10 @@ let
       system = pkgs.stdenv.hostPlatform.system;
       inherit (pkgs) lib;
       opt = optPkg pkgs;
+      optMany = names: lib.concatMap opt names;
       agent = optAgent pkgs;
       appleSilicon = pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64;
-      supportsGradio6 =
-        pkgs.python313Packages ? gradio && lib.versionAtLeast pkgs.python313Packages.gradio.version "6";
+      supportsGradio6 = aiPackagePolicy.supportsGradio6 pkgs.python313Packages;
       gitAiPackages = git-ai.packages.${system} or { };
     in
     [
@@ -1966,29 +1968,8 @@ let
     ++ agent "mcporter"
     ++ agent "opencode"
     ++ agent "pi"
-    ++ lib.optionals (
-      pkgs.python313Packages ? choreographer && pkgs.python313Packages ? logistro && supportsGradio6
-    ) (opt "aiperf")
-    ++ opt "agent-deck"
-    ++ opt "plasma-wiki"
-    ++ opt "plasma-fractal"
-    ++ opt "agnix"
-    ++ opt "claude-replay"
-    ++ opt "claude-vault"
-    ++ opt "context-hub"
-    ++ opt "context7-mcp"
-    ++ opt "gguf-tools"
-    ++ opt "github-mcp-server"
-    ++ opt "guidellm"
-    ++ opt "hfdownloader"
-    ++ opt "lazycodex-ai"
-    ++ opt "llama-swap"
-    ++ opt "openai-whisper"
-    ++ opt "pal-mcp-server"
-    ++ opt "playwright-mcp"
-    ++ opt "qdrant-web-ui"
-    ++ opt "rustdocs-mcp-server"
-    ++ opt "sherlock-db"
+    ++ lib.optionals (aiPackagePolicy.supportsAiperf pkgs.python313Packages) (opt "aiperf")
+    ++ optMany (aiPackagePolicy.groups.common ++ aiPackagePolicy.groups.portableOnly)
     ++ lib.optionals (pkgs ? mcp-server-sequential-thinking) [
       (lib.hiPrio pkgs.mcp-server-sequential-thinking)
     ]

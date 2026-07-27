@@ -7,7 +7,7 @@ Updated: 2026-07-26
 - Wiggum mode is active for `doc/ARCHITECTURE-REMEDIATION-WIGGUM-PLAN.md`.
 - Audit authority: `~/doc/obsidian/Nix Configuration Architecture and Maintainability Audit 2026-07-26.md`.
 - Baseline commit: `a36d3f51d92158e4e055e3baca85044f575e25a6` on clean `main` aligned with `origin/main`.
-- Current work unit: WU3 — signed implementation `a3cc3843`; fess and partner corrections verified, signed cleanup commit pending.
+- Current work unit: WU4a — explicit package selection and single Pi gallery authority; implementation/gates in progress.
 - PAL was explicitly waived by the user.
 - Anvil: available in dedicated Emacs mode; modified repository buffers: none at last checkpoint.
 - Direnv: loaded successfully; 110 exported names observed without exposing values.
@@ -23,10 +23,11 @@ Updated: 2026-07-26
 - Partner observations for Agent Deck socket persistence and sudo lock safety were resolved and independently reviewed PASS.
 - WU1 completed through `74ecc3a6`: root authority, safe command interfaces, prompt composition, and 2,571 lines of verified debris removed; unresolved security/Vulcan debt remains explicit.
 - WU2 completed through `5ce2e91f`: 125-target inventory, fail-safe repository transaction, signed side-effect gates, one update owner, and partner cleanup.
+- WU3 completed through `f5c0e1f0`: platform/overlay isolation, no `pkgs.inputs`, native Linux package proof, and partial-input MCP composition.
 
 ## In progress
 
-- WU3 implementation is signed as `a3cc3843`. Fess publisher/handoff corrections and both partner observations are resolved; native Linux builds prove the intended stock test policy, and partial MCP-input composition preserves unrelated packages.
+- WU4a explicit package allowlist, Hera feature ownership, shared AI package policy, and manifest-derived 14-member Pi gallery pass focused contracts; full gate pending.
 - Inventory is now 126 targets: 102 executable and 24 pending WU4 gallery/Anvil/fixed-input executors; explicit Eask ownership added one independently discoverable overlay target.
 - Root all-system no-build still exposes the contextless `builtins.path` check-source defect assigned to WU6/WU8; focused root checks build successfully.
 
@@ -38,7 +39,7 @@ Updated: 2026-07-26
 
 ## Remaining
 
-- Commit the verified WU3 fess/partner cleanup, then complete WU4 through WU10 in the frozen plan.
+- Complete/commit/fess WU4a, then finish WU4 package locality/update executors and WU5 through WU10.
 
 ## Attempt counters
 
@@ -46,8 +47,8 @@ Updated: 2026-07-26
 |---|---:|---|
 | Baseline gate | 1 | PASS at `a36d3f51`: updater tests, portable evaluation, core AI contracts, Darwin build |
 | Workflow synthesis | 2 | Abandoned after demonstrated runtime/budget failures; replaced by frozen coordinator plan |
-| Current work-unit focused gate | 4 | WU3 PASS: format/static, 10 tests, portable eval, Linux parity, core contracts |
-| Current work-unit full gate | 1 | Hera `./build system` PASS; root all-system no-build deferred to WU6/WU8 source-context fix |
+| Current work-unit focused gate | 2 | WU4a Home Manager + gallery contracts PASS; full gate pending |
+| Current work-unit full gate | 0 | Not started |
 
 ## Resume exactly
 

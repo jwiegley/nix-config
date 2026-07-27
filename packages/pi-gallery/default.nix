@@ -20,64 +20,38 @@
 let
   packageRoot = package: name: "${package}/share/pi-packages/${name}";
 
-  releaseTarballs = {
-    pi-hashline-edit-pro = fetchurl {
-      url = "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.17.5.tgz";
-      hash = "sha256-WrPRKhBNUJc6l4u1v4k8dftGUQA2Pj754zE07h3QTxU=";
-    };
-    pi-web-access = fetchurl {
-      url = "https://registry.npmjs.org/pi-web-access/-/pi-web-access-0.13.0.tgz";
-      hash = "sha256-GmPsueJdqj4Ny+fxlwMWRVnehe4bv1GeiBo0i5uAQAA=";
-    };
-    pi-lens = fetchurl {
-      url = "https://registry.npmjs.org/pi-lens/-/pi-lens-3.8.71.tgz";
-      hash = "sha256-YoBaBtZx5dz3QOtGharxOyVG/qlcmOTbAFVrlJ4fhqw=";
-    };
-    pi-dynamic-workflows = fetchurl {
-      url = "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.4.1.tgz";
-      hash = "sha256-5bCDyn+yzRr3rUxDzHT+bGbGxYrv8gSl7S3YhN+pZ0U=";
-    };
-    pi-agent-browser-native = fetchurl {
-      url = "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.2.72.tgz";
-      hash = "sha256-3subgZHSxRN4wigNrM0KO6o2QmNSr8PtdrT4mg2kRlE=";
-    };
-    pi-btw = fetchurl {
-      url = "https://registry.npmjs.org/pi-btw/-/pi-btw-0.4.1.tgz";
-      hash = "sha256-CHzdNUd6Jo+ZMF0YvVoOw6piB+VQl4FHTKImwPwU/GI=";
-    };
-    pi-artifacts = fetchurl {
-      url = "https://registry.npmjs.org/@jakeryderv/pi-artifacts/-/pi-artifacts-0.9.0.tgz";
-      hash = "sha256-ONiw6EtStwrB6LESSyyKUOjGGWQDbFAvXlOsnKbcWaU=";
-    };
-    pi-insights = fetchurl {
-      url = "https://registry.npmjs.org/@ygncode/pi-insights/-/pi-insights-1.0.1.tgz";
-      hash = "sha256-vMNgilZxwQ5QOxcheTNrcPLQycmXYf5kvkLcLivwWEU=";
-    };
-    pi-subagentura = fetchurl {
-      url = "https://registry.npmjs.org/pi-subagentura/-/pi-subagentura-3.0.3.tgz";
-      hash = "sha256-8nSPMdy4LlJ1BIckjWdqFsSCcDo4uC5R9QqK6XJSVzU=";
-    };
-    pi-provider-litellm = fetchurl {
-      url = "https://registry.npmjs.org/pi-provider-litellm/-/pi-provider-litellm-2.0.0.tgz";
-      hash = "sha256-icmK1hCeZMU9ZINgg9fN0DZL8e/fS2Nbq6oJ4AKgVRU=";
-    };
-    pi-model-router = fetchurl {
-      url = "https://registry.npmjs.org/@yeliu84/pi-model-router/-/pi-model-router-0.4.4.tgz";
-      hash = "sha256-i5vZzLamyFEbyy+rZas4euSEneB8emIYPR6OoR7oasg=";
-    };
-    pi-rewind = fetchurl {
-      url = "https://registry.npmjs.org/pi-rewind/-/pi-rewind-0.5.0.tgz";
-      hash = "sha256-1XufSO8QPfqZdmyWaeuwUptyipn8FT0AcH9zgIIvwTo=";
-    };
-    pi-scroll = fetchurl {
-      url = "https://registry.npmjs.org/pi-scroll/-/pi-scroll-0.1.2.tgz";
-      hash = "sha256-LfiA6Wz3888uO7ATZ4oiVS8p4+LqUccxfSxQT7tmt3Q=";
-    };
-    agent-browser = fetchurl {
-      url = "https://registry.npmjs.org/agent-browser/-/agent-browser-0.33.0.tgz";
-      hash = "sha256-Zdcyp6DFLuT1kCXvBX7ztk2GqqdiYrpk9IrBF4iJz4M=";
+  manifest = import ./manifest.nix {
+    inherit inputs;
+    packages = {
+      inherit
+        pi-agent-browser-native
+        pi-artifacts
+        pi-btw
+        pi-dynamic-workflows
+        pi-hashline-edit-pro
+        pi-insights
+        pi-lens
+        pi-model-router
+        pi-ponytail
+        pi-provider-litellm
+        pi-rewind
+        pi-scroll
+        pi-subagentura
+        pi-web-access
+        ;
     };
   };
+  inherit (manifest) members order supportSources;
+  sourceRecords = members // supportSources;
+  releaseTarballs = lib.listToAttrs (
+    lib.concatMap (
+      id:
+      let
+        member = sourceRecords.${id};
+      in
+      lib.optional (member ? source) (lib.nameValuePair member.attrName (fetchurl member.source))
+    ) (order ++ [ "agent-browser" ])
+  );
 
   deniedNpx = writeShellScript "pi-lens-npx-disabled" ''
     echo "pi-lens: runtime package downloads are disabled; provide the tool through Nix or PATH" >&2
@@ -318,32 +292,32 @@ let
   '';
 
   pi-hashline-edit-pro = mkNpmPackageRoot {
-    pname = "pi-hashline-edit-pro";
-    version = "0.17.5";
+    pname = members.hashline.attrName;
+    version = members.hashline.version;
     src = hashlineSource;
     npmDepsHash = "sha256-sk7mvBP3/SwAFt3GYN1OL2SwNk1s5nC47UUsT1cxB2Y=";
   };
   pi-web-access = mkNpmPackageRoot {
-    pname = "pi-web-access";
-    version = "0.13.0";
+    pname = members.web.attrName;
+    version = members.web.version;
     src = webAccessSource;
     npmDepsHash = "sha256-8onTvv7nUrTXMGvwkMkPEYc+mtpxolzF6Z9EuuB9pbs=";
   };
   pi-lens = mkNpmPackageRoot {
-    pname = "pi-lens";
-    version = "3.8.71";
+    pname = members.lens.attrName;
+    version = members.lens.version;
     src = lensSource;
     npmDepsHash = "sha256-QZClnuBwVYZ+h5lb4YqsJ6VzgWyQQdnTMa05UdzcB78=";
   };
   pi-dynamic-workflows = mkNpmPackageRoot {
-    pname = "pi-dynamic-workflows";
-    version = "3.4.1";
+    pname = members.workflows.attrName;
+    version = members.workflows.version;
     src = dynamicWorkflowsSource;
     npmDepsHash = "sha256-49v98jLmhF0K40OoVimaGy8DXpDrsWuhGsKuPbqsm1U=";
   };
   pi-artifacts = mkNpmPackageRoot {
-    pname = "pi-artifacts";
-    version = "0.9.0";
+    pname = members.artifacts.attrName;
+    version = members.artifacts.version;
     src = artifactsSource;
     npmDepsHash = "sha256-uEXAE4Hy6mAFWsb8kckPMlksGgGB93pekjs5mqwlAGk=";
     bundleEntry = "extensions/index.ts";
@@ -416,14 +390,14 @@ let
     '';
   };
   pi-insights = mkNpmPackageRoot {
-    pname = "pi-insights";
-    version = "1.0.1";
+    pname = members.insights.attrName;
+    version = members.insights.version;
     src = insightsSource;
     npmDepsHash = "sha256-JaRVe4RXIsXHBIppE0dCJwsgBG3c2+N+8pM68pKkoFI=";
   };
   pi-subagentura = mkNpmPackageRoot {
-    pname = "pi-subagentura";
-    version = "3.0.3";
+    pname = members.subagentura.attrName;
+    version = members.subagentura.version;
     src = subagenturaSource;
     npmDepsHash = "sha256-qc43CxQTpNQG8DEAhbFh+tol8nbxEzONeUueMcQS6S0=";
     bundleEntry = "src/subagent.ts";
@@ -462,7 +436,7 @@ let
 
   subagenturaTests = buildNpmPackage {
     pname = "pi-subagentura-tests";
-    version = "3.0.3";
+    version = members.subagentura.version;
     src = subagenturaTestSource;
     nodejs = buildPackages.nodejs_22;
     npmDepsHash = "sha256-3VesSLfU89SNnv7LJ19bikkViL4++O1Rd7yTxOjBVuA=";
@@ -506,8 +480,8 @@ let
   };
 
   pi-btw = mkCopyRoot {
-    pname = "pi-btw";
-    version = "0.4.1";
+    pname = members.btw.attrName;
+    version = members.btw.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-btw} -C ${root} --strip-components=1
       mkdir -p ${root}/skills/btw
@@ -517,8 +491,8 @@ let
   };
 
   pi-ponytail = mkCopyRoot {
-    pname = "pi-ponytail";
-    version = "4.8.4";
+    pname = members.ponytail.attrName;
+    version = members.ponytail.version;
     install = root: ''
       cp -R -- ${inputs.ponytail}/pi-extension ${inputs.ponytail}/hooks \
         ${inputs.ponytail}/skills ${root}/
@@ -528,8 +502,8 @@ let
   };
 
   pi-agent-browser-native = mkCopyRoot {
-    pname = "pi-agent-browser-native";
-    version = "0.2.72";
+    pname = members.browser.attrName;
+    version = members.browser.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-agent-browser-native} -C ${root} \
         --strip-components=1
@@ -537,8 +511,8 @@ let
   };
 
   pi-provider-litellm = mkCopyRoot {
-    pname = "pi-provider-litellm";
-    version = "2.0.0";
+    pname = members.litellm.attrName;
+    version = members.litellm.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-provider-litellm} -C ${root} \
         --strip-components=1
@@ -562,8 +536,8 @@ let
   };
 
   pi-model-router = mkCopyRoot {
-    pname = "pi-model-router";
-    version = "0.4.4";
+    pname = members.router.attrName;
+    version = members.router.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-model-router} -C ${root} \
         --strip-components=1
@@ -571,30 +545,30 @@ let
   };
 
   pi-rewind = mkCopyRoot {
-    pname = "pi-rewind";
-    version = "0.5.0";
+    pname = members.rewind.attrName;
+    version = members.rewind.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-rewind} -C ${root} --strip-components=1
     '';
   };
 
   pi-scroll = mkCopyRoot {
-    pname = "pi-scroll";
-    version = "0.1.2";
+    pname = members.scroll.attrName;
+    version = members.scroll.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-scroll} -C ${root} --strip-components=1
     '';
   };
 
   agent-browser =
-    runCommand "agent-browser-0.33.0"
+    runCommand "agent-browser-${supportSources.agent-browser.version}"
       {
         nativeBuildInputs = [
           findutils
           makeWrapper
         ]
         ++ lib.optional stdenv.hostPlatform.isLinux patchelf;
-        passthru.version = "0.33.0";
+        passthru.version = supportSources.agent-browser.version;
         meta.mainProgram = "agent-browser";
       }
       ''
@@ -631,153 +605,52 @@ let
           --set-default AGENT_BROWSER_EXECUTABLE_PATH "$browser_executable"
       '';
 
-  roots = {
-    btw = packageRoot pi-btw "pi-btw";
-    artifacts = packageRoot pi-artifacts "pi-artifacts";
-    insights = packageRoot pi-insights "pi-insights";
-    subagentura = packageRoot pi-subagentura "pi-subagentura";
-    litellm = packageRoot pi-provider-litellm "pi-provider-litellm";
-    router = packageRoot pi-model-router "pi-model-router";
-    rewind = packageRoot pi-rewind "pi-rewind";
-    scroll = packageRoot pi-scroll "pi-scroll";
-    hashline = packageRoot pi-hashline-edit-pro "pi-hashline-edit-pro";
-    web = packageRoot pi-web-access "pi-web-access";
-    lens = packageRoot pi-lens "pi-lens";
-    ponytail = packageRoot pi-ponytail "pi-ponytail";
-    workflows = packageRoot pi-dynamic-workflows "pi-dynamic-workflows";
-    browser = packageRoot pi-agent-browser-native "pi-agent-browser-native";
-  };
-
+  roots = lib.mapAttrs (_: member: packageRoot member.package member.attrName) members;
   projection = {
-    packages = [
+    packages = map (
+      id:
+      let
+        member = members.${id};
+      in
       {
-        name = "pi-hashline-edit-pro";
-        version = "0.17.5";
-        extensions = [ "${roots.hashline}/index.ts" ];
+        name = member.publicName;
+        version = member.projectionVersion or member.version;
+        extensions = [ "${roots.${id}}/${member.extension}" ];
       }
-      {
-        name = "pi-web-access";
-        version = "0.13.0";
-        extensions = [ "${roots.web}/index.ts" ];
-        skills = [ "${roots.web}/skills" ];
+      // lib.optionalAttrs (member ? skills) {
+        skills = map (path: "${roots.${id}}/${path}") member.skills;
       }
-      {
-        name = "pi-lens";
-        version = "3.8.71";
-        extensions = [ "${roots.lens}/dist/index.js" ];
-        skills = [ "${roots.lens}/skills" ];
-      }
-      {
-        name = "@dietrichgebert/ponytail";
-        version = "4.8.4+${builtins.substring 0 7 inputs.ponytail.rev}";
-        extensions = [ "${roots.ponytail}/pi-extension/index.js" ];
-        skills = [ ];
-      }
-      {
-        name = "@quintinshaw/pi-dynamic-workflows";
-        version = "3.4.1";
-        extensions = [ "${roots.workflows}/extensions/workflow.ts" ];
-        skills = [
-          "${roots.workflows}/skills/workflow-authoring"
-          "${roots.workflows}/skills/workflow-patterns"
-        ];
-      }
-      {
-        name = "pi-agent-browser-native";
-        version = "0.2.72";
-        extensions = [ "${roots.browser}/dist/extensions/agent-browser/index.js" ];
-      }
-      {
-        name = "pi-btw";
-        version = "0.4.1";
-        extensions = [ "${roots.btw}/extensions/btw.ts" ];
-        skills = [ "${roots.btw}/skills/btw" ];
-      }
-      {
-        name = "@jakeryderv/pi-artifacts";
-        version = "0.9.0";
-        extensions = [ "${roots.artifacts}/extensions/nix-bundle.js" ];
-        skills = [ "${roots.artifacts}/skills/artifacts-authoring" ];
-      }
-      {
-        name = "@ygncode/pi-insights";
-        version = "1.0.1";
-        extensions = [ "${roots.insights}/index.ts" ];
-      }
-      {
-        name = "pi-subagentura";
-        version = "3.0.3";
-        extensions = [ "${roots.subagentura}/src/nix-bundle.js" ];
-        skills = [ "${roots.subagentura}/skills/ralplan" ];
-      }
-      {
-        name = "pi-provider-litellm";
-        version = "2.0.0";
-        extensions = [ "${roots.litellm}/dist/index.js" ];
-      }
-      {
-        name = "@yeliu84/pi-model-router";
-        version = "0.4.4";
-        extensions = [ "${roots.router}/extensions/index.ts" ];
-      }
-      {
-        name = "pi-rewind";
-        version = "0.5.0";
-        extensions = [ "${roots.rewind}/src/index.ts" ];
-      }
-      {
-        name = "pi-scroll";
-        version = "0.1.2";
-        extensions = [ "${roots.scroll}/extensions/scroll.ts" ];
-      }
-    ];
+    ) order;
   };
+  memberPackages = lib.listToAttrs (
+    map (id: lib.nameValuePair members.${id}.attrName members.${id}.package) order
+  );
+  galleryPackages = memberPackages // {
+    inherit agent-browser bigpowers;
+  };
+  galleryImports = lib.concatMapStringsSep "\n" (
+    id: "import ${id} from ${builtins.toJSON "${roots.${id}}/${members.${id}.extension}"};"
+  ) order;
+  galleryRegistrations = lib.concatMapStringsSep ",\n" (id: "            ${id}") order;
 
   pi-gallery =
     runCommand "pi-gallery"
       {
         passthru = {
-          inherit projection roots subagenturaTests;
-          packages = {
-            inherit
-              agent-browser
-              bigpowers
-              pi-agent-browser-native
-              pi-artifacts
-              pi-btw
-              pi-dynamic-workflows
-              pi-hashline-edit-pro
-              pi-insights
-              pi-lens
-              pi-ponytail
-              pi-subagentura
-              pi-provider-litellm
-              pi-model-router
-              pi-rewind
-              pi-scroll
-              pi-web-access
-              ;
-          };
+          inherit
+            manifest
+            projection
+            roots
+            subagenturaTests
+            ;
+          packages = galleryPackages;
         };
       }
       ''
         root="$out/share/pi-gallery"
         mkdir -p "$root"
         cat > "$root/index.ts" <<'TS'
-        import hashline from ${builtins.toJSON "${roots.hashline}/index.ts"};
-        import webAccess from ${builtins.toJSON "${roots.web}/index.ts"};
-        import lens from ${builtins.toJSON "${roots.lens}/dist/index.js"};
-        import ponytail from ${builtins.toJSON "${roots.ponytail}/pi-extension/index.js"};
-        import workflows from ${builtins.toJSON "${roots.workflows}/extensions/workflow.ts"};
-        import browser from ${builtins.toJSON "${roots.browser}/dist/extensions/agent-browser/index.js"};
-        import btw from ${builtins.toJSON "${roots.btw}/extensions/btw.ts"};
-        import artifacts from ${builtins.toJSON "${roots.artifacts}/extensions/nix-bundle.js"};
-        import insights from ${builtins.toJSON "${roots.insights}/index.ts"};
-        import subagentura from ${builtins.toJSON "${roots.subagentura}/src/nix-bundle.js"};
-        import litellm from ${builtins.toJSON "${roots.litellm}/dist/index.js"};
-        import router from ${builtins.toJSON "${roots.router}/extensions/index.ts"};
-        import rewind from ${builtins.toJSON "${roots.rewind}/src/index.ts"};
-        import scroll from ${builtins.toJSON "${roots.scroll}/extensions/scroll.ts"};
+        ${galleryImports}
 
         export default async function nixGallery(pi: unknown) {
           process.env.PI_WEB_ACCESS_PROVIDER = "perplexity";
@@ -785,20 +658,7 @@ let
           process.env.PI_LENS_AUTO_INSTALL = "0";
 
           for (const extension of [
-            hashline,
-            webAccess,
-            lens,
-            ponytail,
-            workflows,
-            browser,
-            btw,
-            artifacts,
-            insights,
-            subagentura,
-            litellm,
-            router,
-            rewind,
-            scroll,
+        ${galleryRegistrations}
           ]) {
             await extension(pi as never);
           }
@@ -818,24 +678,4 @@ assert inputs.agent-browser-source.narHash == "sha256-praWvAgWoDmWqXzh/kxdfQAPGk
 assert
   builtins.hashFile "sha256" "${inputs.agent-browser-source}/cli/Cargo.toml"
   == "6880ec45ed03e83ab22bd21ac63c4dbaf6c8accd4da840dcf7536e5e48b1f98d";
-{
-  inherit
-    agent-browser
-    bigpowers
-    pi-agent-browser-native
-    pi-artifacts
-    pi-btw
-    pi-dynamic-workflows
-    pi-gallery
-    pi-hashline-edit-pro
-    pi-insights
-    pi-lens
-    pi-ponytail
-    pi-subagentura
-    pi-provider-litellm
-    pi-model-router
-    pi-rewind
-    pi-scroll
-    pi-web-access
-    ;
-}
+galleryPackages // { inherit pi-gallery; }

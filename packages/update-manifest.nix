@@ -1,153 +1,93 @@
 # Update targets that cannot be discovered from ordinary overlay package blocks.
-# Keep this data declarative: bin/update-overlay evaluates it as JSON and WU4
-# derives package/gallery projections from the same records.
+let
+  gallery = import ./pi-gallery/manifest.nix {
+    inputs.ponytail.rev = "0000000";
+    packages = { };
+  };
+  commonGalleryFiles = [
+    "packages/pi-gallery/manifest.nix"
+    "packages/pi-gallery/default.nix"
+    "test/ai/pi-gallery.nix"
+  ];
+  galleryOverrides = {
+    hashline.files = [ "packages/pi-gallery/locks/pi-hashline-edit-pro-package-lock.json" ];
+    web.files = [ "packages/pi-gallery/locks/pi-web-access-package-lock.json" ];
+    lens.files = [ "packages/pi-gallery/locks/pi-lens-package-lock.json" ];
+    workflows.files = [ "packages/pi-gallery/locks/pi-dynamic-workflows-package-lock.json" ];
+    browser = { };
+    btw = {
+      kind = "npm-release+flake-input";
+      flakeInput = "pi-btw";
+      files = [
+        "flake.lock"
+        "config/ai/flake.lock"
+      ];
+    };
+    artifacts.files = [ "packages/pi-gallery/locks/pi-artifacts-package-lock.json" ];
+    insights.files = [ "packages/pi-gallery/locks/pi-insights-package-lock.json" ];
+    subagentura = {
+      kind = "npm-release+flake-input";
+      flakeInput = "pi-subagentura";
+      files = [
+        "flake.lock"
+        "config/ai/flake.lock"
+        "config/ai/catalog.nix"
+        "test/ai/home-manager-contract.nix"
+      ];
+    };
+    litellm.files = [
+      "config/ai/catalog.nix"
+      "test/ai/home-manager-contract.nix"
+    ];
+    router.files = [
+      "config/ai/catalog.nix"
+      "test/ai/home-manager-contract.nix"
+    ];
+    rewind = { };
+    scroll = { };
+    ponytail = {
+      targetName = "ponytail";
+      kind = "flake-input+copy";
+      flakeInput = "ponytail";
+      files = [
+        "flake.lock"
+        "config/ai/flake.lock"
+      ];
+    };
+  };
+  galleryTargets = builtins.listToAttrs (
+    map (
+      id:
+      let
+        member = gallery.members.${id};
+        override = galleryOverrides.${id};
+      in
+      {
+        name = override.targetName or member.attrName;
+        value = {
+          kind = override.kind or "npm-release";
+          package = member.publicName;
+          inherit (member) version;
+          files = commonGalleryFiles ++ (override.files or [ ]);
+        }
+        // builtins.removeAttrs override [
+          "files"
+          "targetName"
+        ];
+      }
+    ) gallery.order
+  );
+  agentBrowser = gallery.supportSources.agent-browser;
+in
 {
   schemaVersion = 1;
 
-  targets = {
-    pi-hashline-edit-pro = {
-      kind = "npm-release";
-      package = "pi-hashline-edit-pro";
-      version = "0.17.5";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "packages/pi-gallery/locks/pi-hashline-edit-pro-package-lock.json"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-web-access = {
-      kind = "npm-release";
-      package = "pi-web-access";
-      version = "0.13.0";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "packages/pi-gallery/locks/pi-web-access-package-lock.json"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-lens = {
-      kind = "npm-release";
-      package = "pi-lens";
-      version = "3.8.71";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "packages/pi-gallery/locks/pi-lens-package-lock.json"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-dynamic-workflows = {
-      kind = "npm-release";
-      package = "@quintinshaw/pi-dynamic-workflows";
-      version = "3.4.1";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "packages/pi-gallery/locks/pi-dynamic-workflows-package-lock.json"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-agent-browser-native = {
-      kind = "npm-release";
-      package = "pi-agent-browser-native";
-      version = "0.2.72";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-btw = {
-      kind = "npm-release+flake-input";
-      package = "pi-btw";
-      flakeInput = "pi-btw";
-      version = "0.4.1";
-      files = [
-        "flake.lock"
-        "config/ai/flake.lock"
-        "packages/pi-gallery/default.nix"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-artifacts = {
-      kind = "npm-release";
-      package = "@jakeryderv/pi-artifacts";
-      version = "0.9.0";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "packages/pi-gallery/locks/pi-artifacts-package-lock.json"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-insights = {
-      kind = "npm-release";
-      package = "@ygncode/pi-insights";
-      version = "1.0.1";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "packages/pi-gallery/locks/pi-insights-package-lock.json"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-subagentura = {
-      kind = "npm-release+flake-input";
-      package = "pi-subagentura";
-      flakeInput = "pi-subagentura";
-      version = "3.0.3";
-      files = [
-        "flake.lock"
-        "config/ai/flake.lock"
-        "packages/pi-gallery/default.nix"
-        "config/ai/catalog.nix"
-        "test/ai/home-manager-contract.nix"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-provider-litellm = {
-      kind = "npm-release";
-      package = "pi-provider-litellm";
-      version = "2.0.0";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "config/ai/catalog.nix"
-        "test/ai/home-manager-contract.nix"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-model-router = {
-      kind = "npm-release";
-      package = "@yeliu84/pi-model-router";
-      version = "0.4.4";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "config/ai/catalog.nix"
-        "test/ai/home-manager-contract.nix"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-rewind = {
-      kind = "npm-release";
-      package = "pi-rewind";
-      version = "0.5.0";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    pi-scroll = {
-      kind = "npm-release";
-      package = "pi-scroll";
-      version = "0.1.2";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
+  targets = galleryTargets // {
     agent-browser = {
       kind = "npm-release";
-      package = "agent-browser";
-      version = "0.33.0";
-      files = [
-        "packages/pi-gallery/default.nix"
-        "test/ai/pi-gallery.nix"
-      ];
+      package = agentBrowser.attrName;
+      inherit (agentBrowser) version;
+      files = commonGalleryFiles;
     };
 
     pi-mcp-adapter = {
@@ -171,17 +111,6 @@
         "flake.lock"
         "config/ai/flake.lock"
         "config/ai/bigpowers-resources.nix"
-        "packages/pi-gallery/default.nix"
-        "test/ai/pi-gallery.nix"
-      ];
-    };
-    ponytail = {
-      kind = "flake-input+copy";
-      flakeInput = "ponytail";
-      version = "4.8.4";
-      files = [
-        "flake.lock"
-        "config/ai/flake.lock"
         "packages/pi-gallery/default.nix"
         "test/ai/pi-gallery.nix"
       ];

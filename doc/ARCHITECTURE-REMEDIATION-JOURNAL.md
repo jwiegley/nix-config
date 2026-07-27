@@ -111,3 +111,12 @@ Append-only durable learnings for the architecture-remediation Wiggum loop. Deci
 - Observation `.504Z` requested optional PAL/mcp-remote inputs. Accepted, but first implementation gated unrelated MCP packages with mcp-remote. Independent review caught the over-broad gate.
 - Final implementation gates only `pal-mcp-server` and `agent-http-header-bridge` on their respective sources. Composition-path tests remove each input independently and prove every unrelated MCP package remains present.
 - Portable all-system evaluation, both Linux isolation checks, Darwin agent-resources/Home Manager contracts, and 10 structural/updater tests pass.
+
+## 2026-07-27 — WU4a package selection and gallery authority
+
+- Replaced package-shaped flake input discovery/denylisting with a six-name Darwin source-application allowlist. Synthetic package inputs are ignored on every platform; missing allowlisted inputs remain valid.
+- Removed Agent Deck, Plasma Fractal, and Plasma Wiki from global package availability selection. Their Hera-only Home Manager modules now own installation, with all eight host/role fixtures asserting exact ownership.
+- Added `packages/ai-package-policy.nix` as the shared owner for AIPerf/Gradio capability gates and optional AI package groups used by both Home Manager and the portable toolchain.
+- Added `packages/pi-gallery/manifest.nix` as the 14-member authority for source tarballs/hashes, package/public names, versions, extension/skill paths, and registration order. Default construction now derives tarballs, roots, projection, package exports, passthru, TypeScript imports, and registration from it.
+- `packages/update-manifest.nix` now derives gallery target identity/version/file ownership from the same manifest; repeated gallery target blocks were removed.
+- Gallery tests derive roots from the manifest and assert every member package/version matches. The 14-package runtime/projection contract passes unchanged.

@@ -39,6 +39,8 @@ in
       }
     ];
 
+    home.packages = [ agentDeck ];
+
     # agent-deck prefers this conventional path when it renders its own plist.
     # The directory is a Nix Python environment, not a mutable virtualenv.
     xdg.dataFile."agent-deck/conductor/venv".source = bridgePython;

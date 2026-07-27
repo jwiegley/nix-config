@@ -13,14 +13,13 @@ let
     ;
   sys = pkgs.stdenv.hostPlatform.system;
   sourcePython313Packages = inputs.nixpkgs.legacyPackages.${sys}.python313Packages;
-  supportsGradio6 =
-    sourcePython313Packages ? gradio && lib.versionAtLeast sourcePython313Packages.gradio.version "6";
-  supportsAiperf =
-    sourcePython313Packages ? choreographer && sourcePython313Packages ? logistro && supportsGradio6;
+  aiPackagePolicy = import ../packages/ai-package-policy.nix { inherit lib; };
+  inherit (aiPackagePolicy) supportsAiperf supportsGradio6;
 
   # Helper to conditionally include a package that may come from an overlay.
   # Returns a singleton list if the package exists in pkgs, empty list otherwise.
   optPkg = name: if pkgs ? ${name} then [ pkgs.${name} ] else [ ];
+  optPkgs = names: lib.concatMap optPkg names;
 
   agentPackages = inputs.llm-agents.packages.${sys} or { };
   localAi = inputs.nix-ai or (if inputs ? git-ai then import ../flake-ai.nix inputs else null);
@@ -29,38 +28,24 @@ let
   optAgent =
     name: if agentPackages ? ${name} then [ (patchAgentPackage name agentPackages.${name}) ] else [ ];
 
-  # Flake inputs whose default package should NOT be auto-installed.
-  # The first group is consumed through tooling, overlays, modules, or
-  # explicit handling below. On Linux, the conditional group also excludes
-  # tools that are intentionally installed only on Darwin.
-  nonUserPackageInputs = [
-    "self" # root outputs are selected explicitly, never auto-installed
-    "darwin" # nix-darwin tooling
-    "home-manager" # home-manager tooling
-    "llm-agents" # multi-package; specific packages chosen below
-    "nix-config-ai" # portable overlay/package source; specific packages chosen below
-    "dirscan" # consumed via 30-data-tools overlay
-    "git-ai" # consumed via overlay / home-manager module
-    "hakyll" # local dev source only, not installed
-  ]
-  ++ lib.optionals isLinux [
-    "gitlib" # its default package is git-monitor
+  # Only these source-project inputs are user applications. Adding a flake
+  # input must never change a profile unless its name is added here. Missing
+  # inputs remain valid for downstream flakes with reduced input sets.
+  userPackageInputAllowlist = lib.optionals isDarwin [
+    "gitlib"
     "hours"
     "org-jw"
     "pushme"
     "renamer"
     "trade-journal"
   ];
-
-  # Auto-install every flake input that exposes packages.${sys}.default
-  # and isn't in the block-list above. Tolerates hosts (e.g. NixOS) that
-  # import this file with a smaller set of inputs.
-  userPackageInputs = lib.filterAttrs (
-    name: v: !(lib.elem name nonUserPackageInputs) && v ? packages.${sys}.default
-  ) inputs;
+  userPackageInputNames = lib.filter (
+    name: inputs ? ${name} && inputs.${name} ? packages.${sys}.default
+  ) userPackageInputAllowlist;
+  userPackageInputs = map (name: inputs.${name}.packages.${sys}.default) userPackageInputNames;
 in
 rec {
-  userPackageInputNames = builtins.attrNames userPackageInputs;
+  inherit userPackageInputNames;
 
   exe = if stdenv.targetPlatform.isx86_64 then haskell.lib.justStaticExecutables else lib.id;
 
@@ -97,8 +82,8 @@ rec {
       (exe haskellPackages.pointfree)
     ]
 
-    # ── Custom Flake Inputs (auto-discovered) ────────────────────────
-    ++ lib.mapAttrsToList (_: v: v.packages.${sys}.default) userPackageInputs
+    # ── Explicit user applications from source-project inputs ───────
+    ++ userPackageInputs
 
     # ── Shell & Terminal Utilities ───────────────────────────────────
     ++ [
@@ -488,18 +473,8 @@ rec {
       openmpi
       qdrant
     ]
-    ++ optPkg "plasma-wiki"
-    ++ optPkg "plasma-fractal"
-    ++ lib.optionals supportsAiperf (optPkg "aiperf")
-    ++ optPkg "guidellm"
-    ++ optPkg "llama-swap"
-    ++ optPkg "lazycodex-ai"
-    ++ optPkg "gguf-tools"
-    ++ optPkg "qdrant-web-ui"
-    ++ optPkg "agent-deck"
-    ++ optPkg "agnix"
-    ++ optPkg "claude-vault"
-    ++ optPkg "claude-replay"
+    ++ lib.optionals (supportsAiperf sourcePython313Packages) (optPkg "aiperf")
+    ++ optPkgs (aiPackagePolicy.groups.common ++ aiPackagePolicy.groups.homeOnly)
     ++ optAgent "claude-code"
     ++ optAgent "ccusage"
     ++ optAgent "ccstatusline"
@@ -511,14 +486,6 @@ rec {
     # ++ optAgent "gemini-cli"
 
     # ── MCP Servers & Agent Tools ────────────────────────────────────
-    ++ optPkg "sherlock-db"
-    ++ optPkg "pal-mcp-server"
-    ++ optPkg "rustdocs-mcp-server"
-    ++ optPkg "context-hub"
-    ++ optPkg "context7-mcp"
-    ++ optPkg "playwright-mcp"
-    ++ optPkg "github-mcp-server"
-    ++ optPkg "stock-trader-mcp"
     # drafts-mcp-server is macOS-only (drives Drafts.app via AppleScript)
     ++ lib.optionals isDarwin (optPkg "drafts-mcp-server")
     ++ (
@@ -559,7 +526,7 @@ rec {
       terminal-notifier
       xquartz
     ]
-    ++ lib.optionals (isDarwin && supportsGradio6) (optPkg "vllm-mlx")
+    ++ lib.optionals (isDarwin && supportsGradio6 sourcePython313Packages) (optPkg "vllm-mlx")
     ++ lib.optionals isDarwin (optPkg "mtplx")
     ++ lib.optionals isDarwin (optPkg "omlx")
 

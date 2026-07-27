@@ -72,6 +72,8 @@ Nix owns generated leaves, not mutable roots. Auth, history, sessions, caches, r
 
 `config/overlays.nix` is the full-host overlay authority. It lists four phases explicitly: foundation, optional Vulcan CA, feature packages, and AI packages. Darwin pins and repairs are wrapped at the composition boundary, while the cross-platform Eask package has its own overlay. Input-consuming overlays are factories receiving only their declared sources; flake inputs are never published through `pkgs.inputs`. Tests require every numbered root and AI overlay to appear exactly once in its manifest and compare Darwin-only package behavior with stock nixpkgs on both Linux systems.
 
+Package selection is explicit. `config/packages.nix` allows only named source-project inputs; package-shaped infrastructure inputs cannot enter a user profile. Hera-only Agent Deck and Fractal packages are selected by their owning Home Manager modules. `packages/ai-package-policy.nix` owns shared AI capability gates and optional package groups. `packages/pi-gallery/manifest.nix` owns the immutable gallery's member identity, source, version, extension, skills, projection, and registration order.
+
 Package rules:
 
 1. New independent derivations live under `packages/`.
