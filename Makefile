@@ -35,14 +35,14 @@ help:
 	@printf '%s\n' \
 	  'Usage: make TARGET' \
 	  '' \
-	  'Safe targets:' \
+	  'Non-mutating targets:' \
 	  '  help             Show this help (default)' \
 	  '  build            Build the current Darwin system without switching' \
 	  '  test             Build the core repository contracts' \
-	  '  format           Format tracked Nix and shell sources' \
 	  '  verify-inputs    Check local flake inputs for NAR hazards' \
 	  '' \
 	  'Mutating targets (explicit only):' \
+	  '  format           Rewrite tracked Nix and shell sources' \
 	  '  switch           Re-lock local inputs and switch nix-darwin' \
 	  '  update           Update the root lock and Homebrew metadata' \
 	  '  upgrade          Update, switch, and run upgrade tasks' \
@@ -135,7 +135,7 @@ lock-local: verify-inputs
 build:
 	$(call announce,darwin-rebuild build --flake .#$(HOSTNAME))
 	@sudo darwin-rebuild build --flake .#$(HOSTNAME) $(NIXOPTS)
-	@rm -f result*
+	@rm -f result
 
 switch: lock-local
 	$(call announce,darwin-rebuild switch --flake .#$(HOSTNAME))

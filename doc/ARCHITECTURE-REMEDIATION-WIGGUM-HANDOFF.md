@@ -26,7 +26,8 @@ Updated: 2026-07-26
 
 - WU0 baseline gate passed: updater tests, portable all-system evaluation, four core AI contracts, and Darwin system build.
 - Partner observation batch is fully addressed and reviewed PASS; remove the untracked observation before cleanup commit.
-- Commit the fess/partner cleanup, then begin WU1.
+- WU1a operating interface commit `2ddca506` passed implementation gates; its four fess findings are fixed and pending a signed fess-fix commit.
+- Continue WU1b proven deletions after the fess-fix checkpoint.
 
 ## Authorization
 
@@ -44,7 +45,7 @@ Updated: 2026-07-26
 |---|---:|---|
 | Baseline gate | 1 | PASS at `a36d3f51`: updater tests, portable evaluation, core AI contracts, Darwin build |
 | Workflow synthesis | 2 | Abandoned after demonstrated runtime/budget failures; replaced by frozen coordinator plan |
-| Current work-unit focused gate | 1 | Partner cleanup PASS: Home Manager contract and Agent Deck package build |
+| Current work-unit focused gate | 2 | WU1a PASS: shell checks, command behavior, core contracts, Darwin build |
 | Current work-unit full gate | 0 | Not started |
 
 ## Resume exactly

@@ -41,7 +41,7 @@ System and Home Manager switches are owned by each authoritative checkout. Build
 
 ## Updates
 
-- `bin/update-agents` coordinates the root and portable AI locks and AI overlays.
+- `bin/update-agents` is currently incomplete: it still names retired flake inputs and, by default, commits, switches, and pushes. Do not run it until WU2 repairs and transaction-tests it.
 - Root-only flake updates use `nix flake update`; review both lock boundaries before committing.
 - Package pins outside overlays are being consolidated under the frozen architecture-remediation plan; do not assume `bin/update-overlay --all` covers them yet.
 

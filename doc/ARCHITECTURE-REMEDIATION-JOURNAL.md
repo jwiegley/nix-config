@@ -27,3 +27,16 @@ Append-only durable learnings for the architecture-remediation Wiggum loop. Deci
 - Partner observation `2026-07-27T00:28:18.461Z` restored a previously lost TMUX socket-parent finding. Resolution: disable Home Manager `programs.tmux.secureSocket`, remove global `TMUX_TMPDIR`, default the Agent Deck package and remote helper to `/tmp`, retain `AGENTDECK_TMUX_TMPDIR` as calibration override, and remove all `/run/user/$uid`/linger dependence.
 - Verification: focused `ai-home-manager-contract` passed; `darwinConfigurations.hera.pkgs.agent-deck` built; independent partner-cleanup reviewer returned PASS.
 - The first package build command used a nonexistent root `packages.aarch64-darwin.agent-deck` output after the contract had passed. This was a verification-command error, not a code failure; the correct Darwin package attribute passed on the next attempt.
+
+## 2026-07-26 — WU1a operating interface fess audit
+
+- Fess audit target: signed commit `2ddca506` (`refactor: establish repository operating interface`).
+- Auditor verdict: FAIL with four findings. Disposition: all accepted—README now marks `update-agents` incomplete and mutating; CLAUDE requires authorization for all activation; `make build` removes only the exact `result` link; `make format` is listed as mutating.
+- Original verification before audit: shfmt/shellcheck, `./build` help/error cases, non-mutating default `make`, root document/link checks, `make test`, and Darwin system build all passed.
+- Fess-fix verification repeats command-interface checks and diff hygiene; per Wiggum the fess-fix commit is not recursively audited.
+
+## 2026-07-27 — WU1a partner follow-up
+
+- Partner observation `2026-07-27T01:20:44.318Z` found that root documentation consolidation dropped the critical prohibition against `sudo nix flake update/lock` and its NAR-mismatch recovery path.
+- Resolution: root CLAUDE now explains root/user fetcher-cache divergence, forbids sudo lock/update, and names regular-user `make verify-inputs` then `make lock-local` recovery. Activation remains separately authorization-gated.
+- Independent partner-cleanup reviewer verdict: PASS.

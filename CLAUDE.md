@@ -34,6 +34,8 @@ lefthook run pre-commit --all-files
 
 Never use `nix develop` to run commands for agent work. Do not install dependencies ad hoc. Add missing tools to the Nix environment, regenerate it with `de`, and reload direnv.
 
+Never run `nix flake update` or `nix flake lock` under `sudo`; root and user fetcher caches can diverge and produce local-input NAR hash mismatches during activation. Run `make verify-inputs`, then `make lock-local` as the regular user to repair local locks. Only the final system activation command uses root.
+
 ## Architecture invariants
 
 - Root implementation is owned here; portable AI is the `config/ai` subflake from the same revision.
@@ -57,7 +59,7 @@ Never use `nix develop` to run commands for agent work. Do not install dependenc
 - Stage explicit paths; never hide unrelated work with reset/restore/clean/stash shortcuts.
 - Do not bypass hooks.
 - Build and verify before activation.
-- Push, force-push, remote activation, and history rewrite require explicit authorization for that action.
+- Push, force-push, every system/Home Manager activation (local or remote), and history rewrite require explicit authorization for that action.
 - For long work, follow Wiggum: one logical unit, signed commit, independent fess audit, partner-observation cleanup, local currency checkpoint, durable handoff update.
 
 ## Security
