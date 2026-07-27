@@ -76,6 +76,7 @@ let
     {
       hostname,
       moduleInputs ? inputs,
+      homeClass ? null,
       username ? "anvil-test",
     }:
     homeManagerLib.homeManagerConfiguration {
@@ -83,6 +84,9 @@ let
       extraSpecialArgs = {
         inherit hostname;
         inputs = moduleInputs;
+      }
+      // lib.optionalAttrs (homeClass != null) {
+        nixManagedAiHomeClass = homeClass;
       };
       modules = [
         ../../config/johnw.nix
@@ -141,11 +145,13 @@ let
     evaluateJohnw {
       inherit hostname;
       username = if builtins.elem hostname sharedLinuxHostnames then "jwiegley" else "johnw";
+      homeClass = if builtins.elem hostname sharedLinuxHostnames then "shared-work" else null;
     }
   );
   positronRemoteLinux = evaluateJohnw {
     hostname = "andoria-08";
     username = "jwiegley";
+    homeClass = "shared-work";
   };
   expectedPositronNixConfig = ''
     cores = 32

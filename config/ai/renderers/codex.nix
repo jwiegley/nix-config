@@ -109,6 +109,7 @@ let
     model_auto_compact_token_limit = 900000;
     notify = lib.concatMap (item: item.codex.notify or [ ]) hookItems;
     mcp_servers = lib.mapAttrs (_: renderMcpServer) selected.mcpServers;
+    shell_environment_policy.ignore_default_excludes = false;
   };
   managedHooks = {
     hooks = lib.zipAttrsWith (_: bodies: lib.concatLists bodies) (
