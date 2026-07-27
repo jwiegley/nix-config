@@ -2,22 +2,23 @@
 # Purpose: claude-vault - Archive Claude Code conversations into searchable SQLite
 # Dependencies: Uses prev only
 # Packages: claude-vault
-_final: prev: {
+_final: prev:
+let
+  source = (import ../../packages/source-catalog.nix "ai").claude-vault;
+in
+{
 
   claude-vault =
     with prev;
     rustPlatform.buildRustPackage rec {
       pname = "claude-vault";
-      version = "0.1.3";
+      inherit (source) version;
 
-      src = fetchFromGitHub {
-        owner = "kuroko1t";
-        repo = "claude-vault";
-        tag = "v${version}";
-        hash = "sha256-Och7ISW88DN4ZWTCDT84HD2E2tVOPWeTFjodrCDFzD4=";
-      };
+      src =
+        assert source.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub source.source.args;
 
-      cargoHash = "sha256-BX35eHAvC8GUCaByJVCkNz6xAVHBOxAPeeuDNmHAphc=";
+      cargoHash = source.hashes.cargoHash;
 
       # Upstream tagged v0.1.3 but never bumped the crate version from 0.1.0
       # (both Cargo.toml and Cargo.lock still declare 0.1.0), so clap's

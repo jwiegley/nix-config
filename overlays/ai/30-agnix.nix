@@ -2,22 +2,23 @@
 # Purpose: agnix - Linter and LSP for AI coding assistant config files
 # Dependencies: Uses prev only
 # Packages: agnix
-_final: prev: {
+_final: prev:
+let
+  source = (import ../../packages/source-catalog.nix "ai").agnix;
+in
+{
 
   agnix =
     with prev;
     rustPlatform.buildRustPackage rec {
       pname = "agnix";
-      version = "0.40.0";
+      inherit (source) version;
 
-      src = fetchFromGitHub {
-        owner = "avifenesh";
-        repo = "agnix";
-        tag = "v${version}";
-        hash = "sha256-klJ+xd7d7Lhi3pYfZg/x25ctsJOzngT/oCQl0nsifZ4=";
-      };
+      src =
+        assert source.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub source.source.args;
 
-      cargoHash = "sha256-/08DILiKWyTalA1Tg/tPcP/+Hm3aH6o9mEJH2BMzDEA=";
+      cargoHash = source.hashes.cargoHash;
 
       # Build all workspace binaries (CLI, LSP, MCP server)
       cargoBuildFlags = [

@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "sources": {
+    "agent-deck": {
+      "hashes": {
+        "vendorHash": "sha256-XOhLr599GEMwJNdGD4/C28zZNmTD4hGTsFN2mGvUDXA="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-7JDWo/FKZdlr88ZCetWOWnPRgNzLbB4f1hOPIddA6Pg=",
+          "owner": "asheshgoplani",
+          "repo": "agent-deck",
+          "tag": "v1.10.10"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/asheshgoplani/agent-deck"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "1.10.10"
+    },
+    "agnix": {
+      "hashes": {
+        "cargoHash": "sha256-/08DILiKWyTalA1Tg/tPcP/+Hm3aH6o9mEJH2BMzDEA="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-klJ+xd7d7Lhi3pYfZg/x25ctsJOzngT/oCQl0nsifZ4=",
+          "owner": "avifenesh",
+          "repo": "agnix",
+          "tag": "v0.40.0"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/avifenesh/agnix"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "0.40.0"
+    },
+    "browser-control-mcp": {
+      "hashes": {
+        "npmDepsHash": "sha256-NT0r3WHqg6ENVO4aPldUgs2doDJD+EEJcp78nNfbBnQ="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-P0ZYjaHArngobtOf4C3j3LpuwfT4vZdJnoZnzeNoIWo=",
+          "owner": "eyalzh",
+          "repo": "browser-control-mcp",
+          "tag": "v1.5.1"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/eyalzh/browser-control-mcp"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "1.5.1"
+    },
+    "claude-replay": {
+      "hashes": {
+        "npmDepsHash": "sha256-sZ0/4cx6MvDX+D85hpdL0QdNfLJ2QuQmVPWoG14C1wc="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-4tJmt3/a2YpDXWo9cVr6crshesudqrPtYmZbCn6ob6Y=",
+          "owner": "es617",
+          "repo": "claude-replay",
+          "tag": "v0.10.0"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/es617/claude-replay"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "0.10.0"
+    },
+    "claude-vault": {
+      "hashes": {
+        "cargoHash": "sha256-BX35eHAvC8GUCaByJVCkNz6xAVHBOxAPeeuDNmHAphc="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-Och7ISW88DN4ZWTCDT84HD2E2tVOPWeTFjodrCDFzD4=",
+          "owner": "kuroko1t",
+          "repo": "claude-vault",
+          "tag": "v0.1.3"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/kuroko1t/claude-vault"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "0.1.3"
+    },
+    "context-hub": {
+      "hashes": {
+        "npmDepsHash": "sha256-AIjQTnfeXt8ROhHcS2vuYQ2HbXdI/MFa4/wnuQknjKA="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-iUibrCUVgO3U41x6NEchJRsST++PE92Hz3J0gbGt7p0=",
+          "owner": "andrewyng",
+          "repo": "context-hub",
+          "rev": "67dcbeb2eb42c808549f08397920ad58be7c2206"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/andrewyng/context-hub"
+      },
+      "update": {
+        "branch": "main",
+        "kind": "github-commit"
+      },
+      "version": "67dcbeb2"
+    },
+    "drafts-mcp-server": {
+      "hashes": {
+        "npmDepsHash": "sha256-nypoTffI8WIF9Et2GWLe/3odNJka9MSYuaP7xtLIoyg="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-SZp//UKyFfwJyu7Cn5pG3Rp7P9l+4ElDZO7vYp78WzY=",
+          "owner": "agiletortoise",
+          "repo": "drafts-mcp-server",
+          "tag": "v1.0.12"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/agiletortoise/drafts-mcp-server"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "1.0.12"
+    },
+    "gguf-tools": {
+      "source": {
+        "args": {
+          "owner": "antirez",
+          "repo": "gguf-tools",
+          "rev": "fdfafbed766db0a1e9019b07994cd88f133d1aab",
+          "sha256": "sha256-nkt/JbpeVb3AxSkDVhiwWfQF+r3orhzauq9T/y038CY="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/antirez/gguf-tools"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      },
+      "version": "fdfafbed"
+    },
+    "hfdownloader": {
+      "hashes": {
+        "vendorHash": "sha256-DUALCwhuwQZ94uOVjw5wyY8z3fYr9WyDwVc89U34ytM="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-XSyAOfh4BrVxcaqB7+1E9gRkTBM6CHNsG2V2BtITv4g=",
+          "owner": "bodaay",
+          "repo": "HuggingFaceModelDownloader",
+          "rev": "v3.2.0"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/bodaay/HuggingFaceModelDownloader"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "3.2.0"
+    },
+    "lazycodex-ai": {
+      "source": {
+        "args": {
+          "hash": "sha512-/dh+qUgK6EBhhwxoc0M/PFGRnBwSz1/UdNld1q2LHACwh6YxY1luEVmV4tbkDQ+SGPSvQH6du84O1JJuI456ww==",
+          "url": "https://registry.npmjs.org/lazycodex-ai/-/lazycodex-ai-4.19.1.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/lazycodex-ai/-/lazycodex-ai-4.19.1.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "lazycodex-ai"
+      },
+      "version": "4.19.1"
+    },
+    "llama-cpp": {
+      "hashes": {
+        "npmDepsHash": "sha256-B7uEynAG70a3xauBKc20RuFa9cnWaWzVBCh+LPLBnIM="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-79ENuzOpmyDam89LUksOf/acXEwwilGAvciN2OYtg30=",
+          "owner": "ggml-org",
+          "repo": "llama.cpp",
+          "tag": "b10107"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/ggml-org/llama.cpp"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "b"
+      },
+      "version": "10107"
+    },
+    "llama-swap": {
+      "hashes": {
+        "npmDepsHash": "sha256-cAdFKDhmyaYCoKqSYEuAhu29rBxs7i8uTmU2SHwTLnY=",
+        "vendorHash": "sha256-jQRnFGqQvk6my7ejnesv1pylCmEXLs9GKbQJEZdsaYg="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-n8npW8LXlnZZwKAx/WCZ3m+0cD3YCjwvUUXYT5VT4A4=",
+          "owner": "mostlygeek",
+          "repo": "llama-swap",
+          "rev": "v241"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/mostlygeek/llama-swap"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "241"
+    },
+    "llm-mlx": {
+      "source": {
+        "args": {
+          "hash": "sha256-9SGbvhuNeKgMYGa0ZiOLm+H/JbNpvFWBcUL4De5xO4o=",
+          "owner": "simonw",
+          "repo": "llm-mlx",
+          "tag": "0.4"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/simonw/llm-mlx"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": ""
+      },
+      "version": "0.4"
+    },
+    "omlx": {
+      "source": {
+        "args": {
+          "hash": "sha256-Q5rPYuHZtcPrdBhoRnXLnWIMYSJDzTu+RuTIH+lTpNM=",
+          "owner": "jundot",
+          "repo": "omlx",
+          "tag": "v0.5.3"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jundot/omlx"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "0.5.3"
+    },
+    "rustdocs-mcp-server": {
+      "hashes": {
+        "cargoHash": "sha256-iw7dRzwH42HBj2r9y5IHHKLmER7QkyFzLjh7Q+dNMao="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-jSa4qKZEtZZvYfoRReGDDqH039RH/7Dimo3jmcnnwak=",
+          "owner": "Govcraft",
+          "repo": "rust-docs-mcp-server",
+          "rev": "v1.3.1"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/Govcraft/rust-docs-mcp-server"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "1.3.1"
+    }
+  }
+}

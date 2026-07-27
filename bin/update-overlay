@@ -839,8 +839,13 @@ def build_inventory(
     packages = []
     unsupported = []
     seen = set()
+    catalog_names = {
+        name for name, target in explicit_targets.items() if target.get("source") == "catalog"
+    }
     for source in sources:
         for name, owner_files in source.parser.find_package_owners().items():
+            if name in catalog_names:
+                continue
             definitions = [
                 info for path in owner_files
                 if (info := source.parser._parse_file_for_package(path, name)) is not None

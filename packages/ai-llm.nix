@@ -1,21 +1,20 @@
 # Independent LLM application packages.
 { final, prev }:
 
+let
+  sources = import ./source-catalog.nix "ai";
+in
 {
   # GGUF file manipulation tools
   gguf-tools =
     with prev;
     stdenv.mkDerivation rec {
       name = "gguf-tools-${version}";
-      version = "fdfafbed";
+      version = sources.gguf-tools.version;
 
-      src = fetchFromGitHub {
-        owner = "antirez";
-        repo = "gguf-tools";
-        rev = "fdfafbed766db0a1e9019b07994cd88f133d1aab";
-        sha256 = "sha256-nkt/JbpeVb3AxSkDVhiwWfQF+r3orhzauq9T/y038CY=";
-        # date = 2025-08-28T16:35:01+02:00;
-      };
+      src =
+        assert sources.gguf-tools.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.gguf-tools.source.args;
 
       installPhase = ''
         mkdir -p $out/bin
@@ -34,16 +33,13 @@
     with prev;
     buildGoModule rec {
       pname = "hfdownloader";
-      version = "3.2.0";
-      vendorHash = "sha256-DUALCwhuwQZ94uOVjw5wyY8z3fYr9WyDwVc89U34ytM=";
+      version = sources.hfdownloader.version;
+      vendorHash = sources.hfdownloader.hashes.vendorHash;
       doCheck = false; # Tests include timing-sensitive server cancellation checks.
 
-      src = fetchFromGitHub {
-        owner = "bodaay";
-        repo = "HuggingFaceModelDownloader";
-        rev = "v${version}";
-        hash = "sha256-XSyAOfh4BrVxcaqB7+1E9gRkTBM6CHNsG2V2BtITv4g=";
-      };
+      src =
+        assert sources.hfdownloader.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.hfdownloader.source.args;
 
       meta = with lib; {
         description = "The HuggingFace Model Downloader is a utility tool for downloading models and datasets from the HuggingFace website";
@@ -55,14 +51,11 @@
   # llama-swap - Model swapping for llama.cpp
   llama-swap =
     let
-      version = "241";
+      version = sources.llama-swap.version;
 
-      src = prev.fetchFromGitHub {
-        owner = "mostlygeek";
-        repo = "llama-swap";
-        rev = "v${version}";
-        hash = "sha256-n8npW8LXlnZZwKAx/WCZ3m+0cD3YCjwvUUXYT5VT4A4=";
-      };
+      src =
+        assert sources.llama-swap.source.fetcher == "fetchFromGitHub";
+        prev.fetchFromGitHub sources.llama-swap.source.args;
 
       ui =
         with prev;
@@ -84,7 +77,7 @@
 
           sourceRoot = "source/ui-svelte";
 
-          npmDepsHash = "sha256-cAdFKDhmyaYCoKqSYEuAhu29rBxs7i8uTmU2SHwTLnY=";
+          npmDepsHash = sources.llama-swap.hashes.npmDepsHash;
 
           postInstall = ''
             rm -rf $out/lib
@@ -100,7 +93,7 @@
     with prev;
     prev.llama-swap.overrideAttrs (_attrs: rec {
       inherit version src;
-      vendorHash = "sha256-jQRnFGqQvk6my7ejnesv1pylCmEXLs9GKbQJEZdsaYg=";
+      vendorHash = sources.llama-swap.hashes.vendorHash;
       preBuild = ''
         # llama-swap 219 serves the web UI from internal/server/ui_dist
         # (//go:embed in internal/server/ui.go, where the main binary reads
@@ -510,15 +503,12 @@
     with final.python313Packages;
     buildPythonApplication rec {
       pname = "omlx";
-      version = "0.5.3";
+      version = sources.omlx.version;
       pyproject = true;
 
-      src = fetchFromGitHub {
-        owner = "jundot";
-        repo = "omlx";
-        tag = "v${version}";
-        hash = "sha256-Q5rPYuHZtcPrdBhoRnXLnWIMYSJDzTu+RuTIH+lTpNM=";
-      };
+      src =
+        assert sources.omlx.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.omlx.source.args;
 
       patches = [ ../overlays/ai/patches/omlx-host-vm-info64-count.patch ];
 

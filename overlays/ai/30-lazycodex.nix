@@ -1,19 +1,22 @@
 # overlays/30-lazycodex.nix
 # Purpose: LazyCodex installer and Codex agent harness tooling
 # Packages: lazycodex-ai
-_final: prev: {
+_final: prev:
+let
+  source = (import ../../packages/source-catalog.nix "ai").lazycodex-ai;
+in
+{
 
   lazycodex-ai =
     with prev;
     stdenvNoCC.mkDerivation rec {
       pname = "lazycodex-ai";
-      version = "4.19.1";
+      inherit (source) version;
       npmPackage = "lazycodex-ai";
 
-      src = fetchurl {
-        url = "https://registry.npmjs.org/${npmPackage}/-/${npmPackage}-${version}.tgz";
-        hash = "sha512-/dh+qUgK6EBhhwxoc0M/PFGRnBwSz1/UdNld1q2LHACwh6YxY1luEVmV4tbkDQ+SGPSvQH6du84O1JJuI456ww==";
-      };
+      src =
+        assert source.source.fetcher == "fetchurl";
+        fetchurl source.source.args;
 
       sourceRoot = "package";
 

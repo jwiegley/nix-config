@@ -2,22 +2,23 @@
 # Purpose: agent-deck - Terminal (tmux) session manager for AI coding agents
 # Dependencies: Uses prev only; Go 1.26 satisfies the upstream module floor
 # Packages: agent-deck
-_final: prev: {
+_final: prev:
+let
+  source = (import ../../packages/source-catalog.nix "ai").agent-deck;
+in
+{
 
   agent-deck =
     with prev;
     buildGo126Module rec {
       pname = "agent-deck";
-      version = "1.10.10";
+      inherit (source) version;
 
-      src = fetchFromGitHub {
-        owner = "asheshgoplani";
-        repo = "agent-deck";
-        tag = "v${version}";
-        hash = "sha256-7JDWo/FKZdlr88ZCetWOWnPRgNzLbB4f1hOPIddA6Pg=";
-      };
+      src =
+        assert source.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub source.source.args;
 
-      vendorHash = "sha256-XOhLr599GEMwJNdGD4/C28zZNmTD4hGTsFN2mGvUDXA=";
+      vendorHash = source.hashes.vendorHash;
 
       patches = [
         ./patches/agent-deck-discord-typing-best-effort.patch

@@ -1,6 +1,9 @@
 # LLM package exposure and compatibility overrides.
 final: prev:
 
+let
+  sources = import ../../packages/source-catalog.nix "ai";
+in
 (import ../../packages/ai-llm.nix { inherit final prev; })
 // {
   # Node 26.3.1 has two fs.cp socket tests that fail under the macOS Nix
@@ -31,13 +34,10 @@ final: prev:
       && builtins.hasAttr "nodejs_latest" prev.llama-cpp.override.__functionArgs
     then
       (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs (attrs: rec {
-        version = "10107";
-        src = prev.fetchFromGitHub {
-          owner = "ggml-org";
-          repo = "llama.cpp";
-          tag = "b${version}";
-          hash = "sha256-79ENuzOpmyDam89LUksOf/acXEwwilGAvciN2OYtg30=";
-        };
+        version = sources.llama-cpp.version;
+        src =
+          assert sources.llama-cpp.source.fetcher == "fetchFromGitHub";
+          prev.fetchFromGitHub sources.llama-cpp.source.args;
         postPatch = "";
         npmRoot = "tools/ui";
         preConfigure = ''
@@ -55,7 +55,7 @@ final: prev:
           }
           popd
         '';
-        npmDepsHash = "sha256-B7uEynAG70a3xauBKc20RuFa9cnWaWzVBCh+LPLBnIM=";
+        npmDepsHash = sources.llama-cpp.hashes.npmDepsHash;
         npmDeps = prev.fetchNpmDeps {
           name = "llama-cpp-${version}-npm-deps";
           inherit src;

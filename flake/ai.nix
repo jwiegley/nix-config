@@ -2078,6 +2078,7 @@ let
       ../packages/llm-mlx.nix
       ../packages/pi-gallery
       ../packages/source-catalog.nix
+      ../sources/ai.json
       ../sources/pi.json
       ../test/ai/scripts
       ../test/ai/agent-resources.nix

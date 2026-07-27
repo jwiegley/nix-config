@@ -8,6 +8,9 @@
   mcpRemote ? null,
 }:
 
+let
+  sources = import ./source-catalog.nix "ai";
+in
 prev.lib.optionalAttrs (palMcpServer != null) {
 
   # PAL MCP Server - Provider Abstraction Layer for multi-model AI collaboration
@@ -157,16 +160,13 @@ prev.lib.optionalAttrs (palMcpServer != null) {
     with prev;
     rustPlatform.buildRustPackage rec {
       pname = "rustdocs-mcp-server";
-      version = "1.3.1";
+      version = sources.rustdocs-mcp-server.version;
 
-      src = fetchFromGitHub {
-        owner = "Govcraft";
-        repo = "rust-docs-mcp-server";
-        rev = "v${version}";
-        hash = "sha256-jSa4qKZEtZZvYfoRReGDDqH039RH/7Dimo3jmcnnwak=";
-      };
+      src =
+        assert sources.rustdocs-mcp-server.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.rustdocs-mcp-server.source.args;
 
-      cargoHash = "sha256-iw7dRzwH42HBj2r9y5IHHKLmER7QkyFzLjh7Q+dNMao=";
+      cargoHash = sources.rustdocs-mcp-server.hashes.cargoHash;
 
       nativeBuildInputs = [
         pkg-config
@@ -189,18 +189,15 @@ prev.lib.optionalAttrs (palMcpServer != null) {
   # Browser control MCP server
   browser-control-mcp =
     with prev;
-    buildNpmPackage (finalAttrs: {
+    buildNpmPackage (_finalAttrs: {
       pname = "browser-control-mcp";
-      version = "1.5.1";
+      version = sources.browser-control-mcp.version;
 
-      src = fetchFromGitHub {
-        owner = "eyalzh";
-        repo = "browser-control-mcp";
-        tag = "v${finalAttrs.version}";
-        hash = "sha256-P0ZYjaHArngobtOf4C3j3LpuwfT4vZdJnoZnzeNoIWo=";
-      };
+      src =
+        assert sources.browser-control-mcp.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.browser-control-mcp.source.args;
 
-      npmDepsHash = "sha256-NT0r3WHqg6ENVO4aPldUgs2doDJD+EEJcp78nNfbBnQ=";
+      npmDepsHash = sources.browser-control-mcp.hashes.npmDepsHash;
 
       makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
 
@@ -222,18 +219,15 @@ prev.lib.optionalAttrs (palMcpServer != null) {
   # claude-replay - Convert Claude Code transcripts to HTML replays
   claude-replay =
     with prev;
-    buildNpmPackage (finalAttrs: {
+    buildNpmPackage (_finalAttrs: {
       pname = "claude-replay";
-      version = "0.10.0";
+      version = sources.claude-replay.version;
 
-      src = fetchFromGitHub {
-        owner = "es617";
-        repo = "claude-replay";
-        tag = "v${finalAttrs.version}";
-        hash = "sha256-4tJmt3/a2YpDXWo9cVr6crshesudqrPtYmZbCn6ob6Y=";
-      };
+      src =
+        assert sources.claude-replay.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.claude-replay.source.args;
 
-      npmDepsHash = "sha256-sZ0/4cx6MvDX+D85hpdL0QdNfLJ2QuQmVPWoG14C1wc=";
+      npmDepsHash = sources.claude-replay.hashes.npmDepsHash;
 
       makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
 
@@ -251,16 +245,13 @@ prev.lib.optionalAttrs (palMcpServer != null) {
     with prev;
     buildNpmPackage (_finalAttrs: {
       pname = "context-hub";
-      version = "67dcbeb2";
+      version = sources.context-hub.version;
 
-      src = fetchFromGitHub {
-        owner = "andrewyng";
-        repo = "context-hub";
-        rev = "67dcbeb2eb42c808549f08397920ad58be7c2206";
-        hash = "sha256-iUibrCUVgO3U41x6NEchJRsST++PE92Hz3J0gbGt7p0=";
-      };
+      src =
+        assert sources.context-hub.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.context-hub.source.args;
 
-      npmDepsHash = "sha256-AIjQTnfeXt8ROhHcS2vuYQ2HbXdI/MFa4/wnuQknjKA=";
+      npmDepsHash = sources.context-hub.hashes.npmDepsHash;
 
       npmWorkspace = "cli";
 
@@ -291,18 +282,15 @@ prev.lib.optionalAttrs (palMcpServer != null) {
   # TypeScript source is compiled to dist/ by `tsc` (npm run build).
   drafts-mcp-server =
     with prev;
-    buildNpmPackage (finalAttrs: {
+    buildNpmPackage (_finalAttrs: {
       pname = "drafts-mcp-server";
-      version = "1.0.12";
+      version = sources.drafts-mcp-server.version;
 
-      src = fetchFromGitHub {
-        owner = "agiletortoise";
-        repo = "drafts-mcp-server";
-        tag = "v${finalAttrs.version}";
-        hash = "sha256-SZp//UKyFfwJyu7Cn5pG3Rp7P9l+4ElDZO7vYp78WzY=";
-      };
+      src =
+        assert sources.drafts-mcp-server.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.drafts-mcp-server.source.args;
 
-      npmDepsHash = "sha256-nypoTffI8WIF9Et2GWLe/3odNJka9MSYuaP7xtLIoyg=";
+      npmDepsHash = sources.drafts-mcp-server.hashes.npmDepsHash;
 
       makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
 

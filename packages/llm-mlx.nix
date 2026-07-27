@@ -13,18 +13,18 @@
   writableTmpDirAsHomeHook,
 }:
 
+let
+  sources = import ./source-catalog.nix "ai";
+in
 {
   llm-mlx = buildPythonPackage rec {
     pname = "llm-mlx";
-    version = "0.4";
+    version = sources.llm-mlx.version;
     pyproject = true;
 
-    src = fetchFromGitHub {
-      owner = "simonw";
-      repo = "llm-mlx";
-      tag = version;
-      hash = "sha256-9SGbvhuNeKgMYGa0ZiOLm+H/JbNpvFWBcUL4De5xO4o=";
-    };
+    src =
+      assert sources.llm-mlx.source.fetcher == "fetchFromGitHub";
+      fetchFromGitHub sources.llm-mlx.source.args;
 
     build-system = [
       setuptools

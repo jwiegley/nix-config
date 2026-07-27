@@ -423,12 +423,17 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertTrue(all(item["inventoried"] for item in inventory["packages"]))
         by_name = {item["name"]: item for item in inventory["packages"]}
         relocated = {
+            "agent-deck",
+            "agnix",
             "browser-control-mcp",
             "claude-replay",
+            "claude-vault",
             "context-hub",
             "drafts-mcp-server",
             "gguf-tools",
             "hfdownloader",
+            "lazycodex-ai",
+            "llama-cpp",
             "llama-swap",
             "llm-mlx",
             "omlx",
@@ -437,9 +442,13 @@ class UpdateInventoryTests(unittest.TestCase):
         package_owned = {
             item["name"] for item in inventory["packages"] if item["source"] == "packages"
         }
+        catalog_owned = {
+            item["name"] for item in inventory["packages"] if item["source"] == "catalog"
+        }
         self.assertGreater(len(inventory["packages"]), 100)
         self.assertGreaterEqual(sum(item["managed"] for item in inventory["packages"]), 100)
-        self.assertEqual(package_owned, relocated)
+        self.assertFalse(package_owned & relocated)
+        self.assertTrue(relocated <= catalog_owned)
         self.assertTrue(all(by_name[name]["managed"] for name in relocated))
         self.assertTrue(by_name["git-ai"]["managed"])
         self.assertEqual(
