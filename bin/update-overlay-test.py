@@ -28,7 +28,6 @@ GitHubClient = MODULE["GitHubClient"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
 load_source_catalog = MODULE["load_source_catalog"]
-catalog_executor = MODULE["_catalog_executor"]
 update_catalog_target = MODULE["update_catalog_target"]
 build_inventory = MODULE["build_inventory"]
 
@@ -377,6 +376,54 @@ class UpdateInventoryTests(unittest.TestCase):
                 json.loads(path.read_text())["sources"]["example"]["source"]["args"]["sha256"],
                 "new-hash",
             )
+            with contextlib.redirect_stdout(io.StringIO()):
+                rejected = update_catalog_target(
+                    "example",
+                    load_source_catalog(root)["example"],
+                    SimpleNamespace(version="2.0.0", dry_run=False),
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    SimpleNamespace(
+                        compute_native_hash=lambda _source, _replacements: "ignored"
+                    ),
+                    SourceTransaction(),
+                )
+            self.assertEqual(rejected, "failed")
+
+    def test_native_hash_uses_locked_fetcher_and_preserves_encoding(self):
+        calls = []
+
+        def fake_run(command, **_kwargs):
+            calls.append(command)
+            if command[1:3] == ["hash", "convert"]:
+                return SimpleNamespace(returncode=0, stdout="nix32-new\n", stderr="")
+            return SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr="got: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n",
+            )
+
+        real_run = subprocess.run
+        subprocess.run = fake_run
+        try:
+            value = MODULE["HashComputer"](Path("/repo")).compute_native_hash(
+                {
+                    "fetcher": "fetchurl",
+                    "url": "https://example.invalid/tool",
+                    "args": {
+                        "url": "https://example.invalid/tool",
+                        "sha256": "old-nix32",
+                    },
+                },
+                {},
+            )
+        finally:
+            subprocess.run = real_run
+
+        self.assertEqual(value, "nix32-new")
+        self.assertIn("nix-config-ai.inputs.nixpkgs", calls[0][-1])
+        self.assertEqual(calls[1][1:3], ["hash", "convert"])
 
     def test_catalog_npm_update_rewrites_source_and_dependent_hash_atomically(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -408,6 +455,9 @@ class UpdateInventoryTests(unittest.TestCase):
                     return "2.0.0", "sha512-new"
 
             class FakeHashComputer:
+                def compute_native_hash(self, _source, _replacements):
+                    return "sha512-new"
+
                 def _compute_fod_hash(self, _package, hash_type):
                     self.hash_type = hash_type
                     return "sha256-new"
@@ -433,13 +483,32 @@ class UpdateInventoryTests(unittest.TestCase):
             self.assertIn("example-2.0.0.tgz", record["source"]["args"]["url"])
             self.assertEqual(record["hashes"]["npmDepsHash"], "sha256-new")
 
+            no_op_target = load_source_catalog(root)["example"]
+            no_op_transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                no_op = update_catalog_target(
+                    "example",
+                    no_op_target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(),
+                    FakeNpmClient(),
+                    SimpleNamespace(),
+                    FakeHashComputer(),
+                    no_op_transaction,
+                )
+            no_op_transaction.commit()
+            self.assertEqual(no_op, "skipped")
+
             before_failure = path.read_text()
             failing_target = load_source_catalog(root)["example"]
             failing_transaction = SourceTransaction()
             failing_npm = SimpleNamespace(
                 get_version=lambda _package, _requested=None: ("3.0.0", "sha512-next")
             )
-            failing_hashes = SimpleNamespace(_compute_fod_hash=lambda _package, _kind: None)
+            failing_hashes = SimpleNamespace(
+                compute_native_hash=lambda _source, _replacements: "sha512-next",
+                _compute_fod_hash=lambda _package, _kind: None,
+            )
             with contextlib.redirect_stdout(io.StringIO()):
                 status = update_catalog_target(
                     "example",
@@ -622,8 +691,31 @@ class UpdateInventoryTests(unittest.TestCase):
         catalog_owned = {
             item["name"] for item in inventory["packages"] if item["source"] == "catalog"
         }
-        self.assertGreater(len(inventory["packages"]), 100)
-        self.assertGreaterEqual(sum(item["managed"] for item in inventory["packages"]), 100)
+        pending = {
+            "agent-browser-source",
+            "bigpowers",
+            "cohere-melody",
+            "hf-xet",
+            "mlx",
+            "nelisp",
+            "pi-artifacts",
+            "pi-btw",
+            "pi-dynamic-workflows",
+            "pi-hashline-edit-pro",
+            "pi-insights",
+            "pi-lens",
+            "pi-mcp-adapter",
+            "pi-ponytail",
+            "pi-web-access",
+            "rust-overlay",
+            "sherlock-db",
+            "ws",
+        }
+        self.assertEqual(len(inventory["packages"]), 188)
+        self.assertEqual(
+            {item["name"] for item in inventory["packages"] if not item["managed"]},
+            pending,
+        )
         self.assertFalse(package_owned & relocated)
         self.assertTrue(relocated <= catalog_owned)
         self.assertTrue(all(by_name[name]["managed"] for name in relocated))
