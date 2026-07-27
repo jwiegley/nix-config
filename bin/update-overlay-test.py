@@ -130,7 +130,14 @@ class UpdateInventoryTests(unittest.TestCase):
     def test_source_catalog_is_data_only_unique_and_consumed(self):
         root = SCRIPT.parent.parent
         catalog = load_source_catalog(root)
-        self.assertEqual(set(catalog), {"anvil-ide", "anvil-mcp"})
+        self.assertIn("anvil-ide", catalog)
+        self.assertIn("anvil-mcp", catalog)
+        anvil_document = json.loads((root / "sources/anvil.json").read_text())
+        self.assertEqual(anvil_document["sources"]["anvil-ide"]["update"]["branch"], "main")
+        self.assertEqual(
+            anvil_document["sources"]["anvil-mcp"]["update"]["branch"],
+            "fix/anvil-root-resilience",
+        )
         self.assertTrue(all(path.suffix == ".json" for path in (root / "sources").iterdir()))
         self.assertFalse((root / "packages/anvil-mcp/source.nix").exists())
         self.assertIn('import ../source-catalog.nix "anvil"', (root / "packages/anvil-mcp/default.nix").read_text())
@@ -143,6 +150,27 @@ class UpdateInventoryTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "duplicate JSON key: same"):
                 load_source_catalog(temp)
+            (temp / "sources/bad.json").unlink()
+            (temp / "sources/multi.json").write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {
+                    "multi": {
+                        "fetcher": "fetchurl",
+                        "hash": "sha256-main",
+                        "url": "https://example.invalid/main",
+                        "hashes": {"cargoHash": "sha256-cargo"},
+                        "artifacts": {
+                            "docs": {
+                                "fetcher": "fetchurl",
+                                "hash": "sha256-docs",
+                                "url": "https://example.invalid/docs",
+                            }
+                        },
+                        "update": {"kind": "url-release", "policy": "automatic"},
+                    }
+                },
+            }))
+            self.assertIn("multi", load_source_catalog(temp))
 
     def test_manifest_and_cli_inventory_cover_hidden_update_targets(self):
         root = SCRIPT.parent.parent
@@ -210,6 +238,10 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertEqual(package_owned, relocated)
         self.assertTrue(all(by_name[name]["managed"] for name in relocated))
         self.assertTrue(by_name["git-ai"]["managed"])
+        self.assertEqual(
+            by_name["anvil-ide"]["version"],
+            "0e6130457ac2bdc6c6db2eebeba67a5223231190",
+        )
         self.assertEqual(by_name["git-ai"]["executor"], "update-agents")
         self.assertFalse(by_name["pi-lens"]["managed"])
         self.assertIsNone(by_name["pi-lens"]["executor"])

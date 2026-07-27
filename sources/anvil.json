@@ -9,7 +9,7 @@
       "repo": "anvil-ide.el",
       "rev": "0e6130457ac2bdc6c6db2eebeba67a5223231190",
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       },
       "url": "https://github.com/zawatton/anvil-ide.el"
@@ -22,7 +22,7 @@
       "repo": "anvil.el",
       "rev": "39f9c59bfc51379db6243b1be20edca1ea783c2b",
       "update": {
-        "branch": "master",
+        "branch": "fix/anvil-root-resilience",
         "kind": "github-commit"
       },
       "url": "https://github.com/jwiegley/anvil.el",

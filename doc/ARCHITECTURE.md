@@ -84,7 +84,7 @@ Package rules:
 
 ## Source catalog
 
-All hand-maintained coordinates for Internet-fetched, future-upgraded package sources live in data-only JSON files under `sources/`. Category-local derivations keep their native Nix fetcher and build logic; they load records through `packages/source-catalog.nix`.
+The migration target is for all hand-maintained coordinates for Internet-fetched, future-upgraded package sources to live in data-only JSON files under `sources/`. Anvil is the first migrated category; remaining categories are tracked in GitHub issue #15. Category-local derivations keep their native Nix fetcher and build logic; they load records through `packages/source-catalog.nix`.
 
 A record uses `schemaVersion = 1` at the category-file level and contains a stable ID with `fetcher`, canonical `url`, fetcher coordinates (`owner`, `repo`, `rev` as applicable), `hash`, optional `version`/`date`, and a closed `update.kind`. To add a source:
 
