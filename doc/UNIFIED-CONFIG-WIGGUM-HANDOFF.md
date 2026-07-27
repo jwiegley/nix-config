@@ -175,6 +175,31 @@ undoes core defaults: GPG signing disabled on vulcan, vps, and andoria;
 `EDITOR`, `gh` editor, and git editor re-forced to vim on servers. The core
 defaults to workstation behavior and every server fights it.
 
+**F3a — Both real-flake blockers are removable; the fix for the harder one is a
+one-liner.** Traced to the exact lock nodes:
+
+- `obr` is `github:jwiegley/obr/fcbbce29`, but **its own committed `flake.lock`**
+  pins `org2jsonl` to `file:///Users/johnw/src/org2jsonl` at rev `5ea75860`. The
+  root repo's own `org2jsonl` is `github:jwiegley/org2jsonl` at a *different* rev,
+  `59521f99`. `obr` is referenced in exactly one place —
+  `config/packages.nix:37`, inside `userPackageInputAllowlist` — so it contributes
+  a single user package and is low-risk to redirect.
+  **Local fix:** `inputs.obr.inputs.org2jsonl.follows = "org2jsonl";` in the root
+  `flake.nix`, which overrides `obr`'s lock entry with the github-pinned node.
+  **Durable fix:** update `jwiegley/obr`'s own `flake.lock` upstream so every
+  consumer stops inheriting a laptop-local path. Prefer the durable fix; the
+  `follows` unblocks immediately without waiting on it.
+  *Caveat from research:* Nix issue #14339 documents that *removing* a `follows`
+  later does not respect the dependency's own lock, so this should be treated as a
+  permanent declaration, not a temporary patch.
+- `stock-trader` is a **root** input at `git+ssh://gitea/johnw/stock-trader.git`
+  (LAN-only). It feeds only `overlays/30-stock-trader-mcp.nix`, which already
+  tolerates absence via `inputs.stock-trader or null`. So it can move behind the
+  optional/narrowed surface rather than being a hard blocker.
+
+Neither blocker is architectural. This is the key feasibility precondition for
+retiring `flake = false`, and it holds.
+
 **F9 — The no-external-filesystem invariant test is one level too shallow.**
 `bin/update-overlay-test.py:872` (`test_root_inputs_do_not_reference_external_filesystems`)
 iterates only `lock["nodes"]["root"]["inputs"]`, so it validates *root* inputs
