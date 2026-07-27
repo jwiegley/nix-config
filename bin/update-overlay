@@ -640,19 +640,27 @@ def _unique_object(pairs):
     return result
 
 
-def _validate_fetch_record(name: str, record: dict) -> None:
+def _validate_fetch_record(name: str, source: dict) -> None:
+    if not isinstance(source, dict) or source.keys() - {"args", "fetcher", "url"}:
+        raise RuntimeError(f"invalid source object for {name}")
+    args = source.get("args")
+    if not isinstance(args, dict):
+        raise RuntimeError(f"source catalog record has no fetcher args: {name}")
     fetch_required = {
         "fetchFromGitHub": {"owner", "repo", "rev"},
         "fetchgit": {"rev"},
         "fetchurl": set(),
-        "fetchPypi": {"package", "version"},
+        "fetchzip": set(),
+        "fetchpatch": set(),
+        "fetchPypi": {"pname", "version"},
         "fetchTree": {"owner", "repo", "rev"},
     }
-    fetcher = record.get("fetcher")
+    fetcher = source.get("fetcher")
     if fetcher not in fetch_required:
         raise RuntimeError(f"unknown source fetcher for {name}: {fetcher}")
-    missing = ({"fetcher", "hash", "url"} | fetch_required[fetcher]) - record.keys()
-    if missing or not record["url"].startswith("https://"):
+    missing = fetch_required[fetcher] - args.keys()
+    has_hash = bool({"hash", "sha256", "narHash"} & args.keys())
+    if missing or not has_hash or not source.get("url", "").startswith("https://"):
         raise RuntimeError(f"invalid source catalog record {name}: missing {sorted(missing)}")
 
 
@@ -661,13 +669,13 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
     catalog_dir = nix_dir / "sources"
     targets = {}
     allowed = {
-        "artifacts", "date", "fetcher", "format", "hash", "hashes",
-        "owner", "package", "repo", "rev", "update", "url", "version",
+        "artifacts", "date", "hashes", "source", "update", "version",
     }
     update_allowed = {"branch", "input", "kind", "lockFiles", "package", "policy", "tagPrefix"}
     update_kinds = {
         "explicit-rev", "fixed-flake-input", "flake-input", "github-commit",
-        "github-release", "npm-release", "pypi-release", "url-release",
+        "github-release", "github-release-asset", "npm-release", "pypi-release",
+        "url-release",
     }
     for path in sorted(catalog_dir.glob("*.json")):
         payload = json.loads(path.read_text(), object_pairs_hook=_unique_object)
@@ -679,7 +687,7 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             unknown = record.keys() - allowed
             if unknown:
                 raise RuntimeError(f"unknown source catalog fields for {name}: {sorted(unknown)}")
-            _validate_fetch_record(name, record)
+            _validate_fetch_record(name, record.get("source"))
             for artifact, fetch in (record.get("artifacts") or {}).items():
                 _validate_fetch_record(f"{name}.{artifact}", fetch)
             hashes = record.get("hashes") or {}
@@ -694,7 +702,7 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 raise RuntimeError(f"invalid update strategy for source catalog record: {name}")
             targets[name] = {
                 "kind": update["kind"],
-                "version": record.get("version", record.get("rev", "unversioned")),
+                "version": record.get("version", record["source"]["args"].get("rev", "unversioned")),
                 "files": [str(path.relative_to(nix_dir))],
                 "source": "catalog",
             }

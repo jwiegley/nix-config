@@ -42,9 +42,9 @@ let
   nelispRev = "f753209d53b372933b829345fe4373acad67bcb5";
   standaloneAnvilVersion = "1.1.1";
   standaloneAnvilRev = "d50ce32b71c5fa46da3aa661481c8be44fee4f97";
-  currentAnvilHash = anvilSource.hash;
-  currentAnvilOwner = anvilSource.owner;
-  currentAnvilRev = anvilSource.rev;
+  currentAnvilHash = anvilSource.source.args.hash;
+  currentAnvilOwner = anvilSource.source.args.owner;
+  currentAnvilRev = anvilSource.source.args.rev;
   currentAnvilVersion = anvilSource.version;
   anvilIdeSource = anvilSources.anvil-ide;
 
@@ -133,23 +133,9 @@ let
     hash = "sha256-88fItj7oPUnV1mWF8RFMcJJ1WbxLECmJ2yyd520cFWk=";
   };
 
-  currentAnvilSrc = fetchFromGitHub {
-    inherit (anvilSource)
-      hash
-      owner
-      repo
-      rev
-      ;
-  };
+  currentAnvilSrc = fetchFromGitHub anvilSource.source.args;
 
-  anvilIdeSrc = fetchFromGitHub {
-    inherit (anvilIdeSource)
-      hash
-      owner
-      repo
-      rev
-      ;
-  };
+  anvilIdeSrc = fetchFromGitHub anvilIdeSource.source.args;
 
   dedicatedDirenvNeutral = runCommand "anvil-direnv-neutral" { } ''
     mkdir -p "$out"

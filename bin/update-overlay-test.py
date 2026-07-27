@@ -155,15 +155,17 @@ class UpdateInventoryTests(unittest.TestCase):
                 "schemaVersion": 1,
                 "sources": {
                     "multi": {
-                        "fetcher": "fetchurl",
-                        "hash": "sha256-main",
-                        "url": "https://example.invalid/main",
+                        "source": {
+                            "fetcher": "fetchurl",
+                            "url": "https://example.invalid/main",
+                            "args": {"url": "https://example.invalid/main", "hash": "sha256-main"},
+                        },
                         "hashes": {"cargoHash": "sha256-cargo"},
                         "artifacts": {
                             "docs": {
                                 "fetcher": "fetchurl",
-                                "hash": "sha256-docs",
                                 "url": "https://example.invalid/docs",
+                                "args": {"url": "https://example.invalid/docs", "hash": "sha256-docs"},
                             }
                         },
                         "update": {"kind": "url-release", "policy": "automatic"},

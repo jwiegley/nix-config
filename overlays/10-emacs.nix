@@ -170,14 +170,7 @@ let
       anvil =
         (compileEmacsFiles {
           name = "anvil";
-          src = fetchFromGitHub {
-            inherit (anvilSource)
-              hash
-              owner
-              repo
-              rev
-              ;
-          };
+          src = fetchFromGitHub anvilSource.source.args;
         }).overrideAttrs
           (attrs: {
             # anvil-server-commands.el resolves anvil-stdio.sh (the MCP stdio
@@ -198,14 +191,7 @@ let
 
       anvil-ide = compileEmacsFiles {
         name = "anvil-ide";
-        src = fetchFromGitHub {
-          inherit (anvilIdeSource)
-            hash
-            owner
-            repo
-            rev
-            ;
-        };
+        src = fetchFromGitHub anvilIdeSource.source.args;
         propagatedBuildInputs = with eself; [
           anvil
         ];
