@@ -2050,8 +2050,25 @@ let
       ../flake-ai.nix
       ../overlays/ai
       ../overlays/tests
-      ../packages
-      ../test/ai
+      ../packages/agent-resources.nix
+      ../packages/ai-package-policy.nix
+      ../packages/ai-llm.nix
+      ../packages/ai-mcp.nix
+      ../packages/ai-python-extensions.nix
+      ../packages/llm-mlx.nix
+      ../packages/pi-gallery
+      ../test/ai/scripts
+      ../test/ai/agent-resources.nix
+      ../test/ai/agent-wrappers.nix
+      ../test/ai/agent-wrappers.sh
+      ../test/ai/compatibility-check.nix
+      ../test/ai/compatibility-contract.nix
+      ../test/ai/node-runtime-guard.cjs
+      ../test/ai/pi-gallery.nix
+      ../test/ai/pi-subagentura-tmux.test.ts
+      ../test/ai/pi-tool-renderer-wrapper.test.mjs
+      ../test/ai/recording-https-bridge-oracle.py
+      ../test/ai/run-bridge-oracle.sh
     ];
   };
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import contextlib
+import copy
 import io
 import json
 import os
@@ -561,10 +562,44 @@ echo overlay-change >> overlays/ai/package.nix
         self.assertIn("nix-config-ai", root_node["inputs"])
         root_ai = root_lock["nodes"][root_node["inputs"]["nix-config-ai"]]
         self.assertEqual(set(root_ai["inputs"]), shared_names)
-        for name in shared_names:
-            root_locked = root_lock["nodes"][root_ai["inputs"][name]]["locked"]
-            portable_locked = portable_lock["nodes"][portable_root["inputs"][name]]["locked"]
-            self.assertEqual(root_locked, portable_locked, name)
+
+        def follow_node(lock, path):
+            node_name = "root"
+            for input_name in path:
+                reference = lock["nodes"][node_name]["inputs"][input_name]
+                node_name = reference if isinstance(reference, str) else follow_node(lock, reference)
+            return node_name
+
+        def canonical_reference(lock, reference):
+            name = reference if isinstance(reference, str) else follow_node(lock, reference)
+            return canonical_node(lock, name)
+
+        def canonical_node(lock, name):
+            node = lock["nodes"][name]
+            return {
+                "flake": node.get("flake", True),
+                "locked": node.get("locked"),
+                "inputs": {
+                    child: canonical_reference(lock, reference)
+                    for child, reference in node.get("inputs", {}).items()
+                },
+            }
+
+        def canonical_inputs(lock, node):
+            return {
+                name: canonical_reference(lock, reference)
+                for name, reference in node.get("inputs", {}).items()
+            }
+
+        root_graph = canonical_inputs(root_lock, root_ai)
+        portable_graph = canonical_inputs(portable_lock, portable_root)
+        self.assertEqual(root_graph, portable_graph)
+
+        drifted = copy.deepcopy(portable_lock)
+        llm_node = drifted["nodes"][drifted["nodes"]["root"]["inputs"]["llm-agents"]]
+        llm_nixpkgs = llm_node["inputs"]["nixpkgs"]
+        drifted["nodes"][llm_nixpkgs]["locked"]["rev"] = "transitive-drift"
+        self.assertNotEqual(root_graph, canonical_inputs(drifted, drifted["nodes"]["root"]))
 
         root_flake = (root / "flake.nix").read_text()
         self.assertIn('nix-config-ai.url = "path:./config/ai"', root_flake)
