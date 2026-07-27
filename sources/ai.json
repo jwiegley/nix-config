@@ -496,7 +496,6 @@
         "url": "https://github.com/huggingface/xet-core"
       },
       "update": {
-        "build": "python",
         "kind": "github-release",
         "policy": "manual",
         "tagPrefix": "v"

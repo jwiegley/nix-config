@@ -15,14 +15,11 @@ import argparse
 import atexit
 import base64
 import copy
-import io
 import json
 import os
 import re
 import subprocess
 import sys
-import tarfile
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -474,14 +471,6 @@ class GitHubClient:
         except OSError:
             return None
 
-    def get_file(self, owner: str, repo: str, rev: str, path: str) -> Optional[str]:
-        try:
-            url = f"https://raw.githubusercontent.com/{owner}/{repo}/{rev}/{path}"
-            with urlopen(url, timeout=60) as response:
-                return response.read().decode()
-        except (OSError, UnicodeDecodeError):
-            return None
-
 
 class NpmRegistryClient:
     """Client for npm registry metadata using only the Python standard library."""
@@ -512,44 +501,6 @@ class NpmRegistryClient:
             return None
 
         return version, integrity
-
-    def write_package_lock(self, tarball_url: str, target: Path) -> bool:
-        """Regenerate a package lock from the published package manifest."""
-        try:
-            with urlopen(tarball_url, timeout=60) as response:
-                archive = response.read()
-            with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as tar:
-                member = tar.getmember("package/package.json")
-                package_json = tar.extractfile(member)
-                if package_json is None:
-                    return False
-                manifest = package_json.read()
-            with tempfile.TemporaryDirectory() as temp_dir:
-                root = Path(temp_dir)
-                (root / "package.json").write_bytes(manifest)
-                env = {**os.environ, "HOME": temp_dir, "npm_config_cache": str(root / ".npm")}
-                result = subprocess.run(
-                    [
-                        "npm", "install", "--package-lock-only", "--ignore-scripts",
-                        "--no-audit", "--no-fund",
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=600,
-                    cwd=root,
-                    env=env,
-                )
-                if result.returncode != 0:
-                    return False
-                lock = json.loads((root / "package-lock.json").read_text())
-            target.write_text(json.dumps(lock, indent=2) + "\n")
-            return True
-        except (
-            OSError, ValueError, KeyError, json.JSONDecodeError,
-            tarfile.TarError, subprocess.TimeoutExpired,
-        ) as error:
-            print(f"  Error regenerating package lock: {error}", file=sys.stderr)
-            return False
 
 
 class PypiClient:
@@ -689,9 +640,7 @@ in
         """Compute npmDepsHash by attempting a build with fake hash."""
         return self._compute_fod_hash(package_name, "npmDepsHash")
 
-    def _compute_fod_hash(
-        self, package_name: str, hash_type: str, build_target: str = "pkg"
-    ) -> Optional[str]:
+    def _compute_fod_hash(self, package_name: str, hash_type: str) -> Optional[str]:
         """Compute a fixed-output derivation hash by parsing build failure."""
         print(f"  Computing {hash_type} (this may take a while)...")
 
@@ -699,7 +648,7 @@ in
         try:
             build_script = self.repo_dir / "build"
             if build_script.is_file() and os.access(build_script, os.X_OK):
-                command = ["./build", build_target, package_name]
+                command = ["./build", "pkg", package_name]
             else:
                 expr = f"""
 let
@@ -881,34 +830,19 @@ def _validate_fetch_record(name: str, source: dict) -> None:
 
 def _catalog_executor(record: dict) -> Optional[str]:
     update = record["update"]
-    kind = update["kind"]
     expected_fetchers = {
         "explicit-rev": {"fetchgit", "fetchpatch", "fetchTree", "fetchurl"},
         "github-commit": {"fetchFromGitHub"},
         "github-release": {"fetchFromGitHub"},
-        "github-release-asset": {"fetchurl"},
-        "npm-release": {"fetchurl", "fetchzip"},
+        "npm-release": {"fetchurl"},
         "pypi-release": {"fetchPypi", "fetchurl"},
         "url-release": {"fetchurl"},
-    }.get(kind, set())
-    update_artifacts = update.get("artifacts", [])
-    supported_update_artifacts = (
-        not update_artifacts
-        or (kind == "npm-release" and all(path.endswith("package-lock.json") for path in update_artifacts))
-        or (kind == "github-commit" and update_artifacts == ["packages/anvil-mcp/Cargo.lock"])
-    )
-    fetched_artifacts = record.get("artifacts", {}).values()
-    supported_fetched_artifacts = (
-        not record.get("artifacts")
-        or (kind == "pypi-release" and all(item["fetcher"] in {"fetchPypi", "fetchurl"} for item in fetched_artifacts))
-        or (kind == "github-release-asset" and all(item["fetcher"] == "fetchurl" for item in fetched_artifacts))
-    )
+    }.get(update["kind"], set())
     if (
         record["source"]["fetcher"] in expected_fetchers
-        and supported_update_artifacts
-        and supported_fetched_artifacts
-        and set(record.get("hashes", {}))
-        <= {"cargoHash", "cargoDepsHash", "npmDepsHash", "vendorHash"}
+        and not update.get("artifacts")
+        and not record.get("artifacts")
+        and set(record.get("hashes", {})) <= {"cargoHash", "npmDepsHash", "vendorHash"}
     ):
         return "update-overlay"
     return None
@@ -921,7 +855,7 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
     allowed = {
         "artifacts", "commit", "date", "hashes", "source", "update", "version",
     }
-    common_update_fields = {"artifacts", "build", "kind", "policy", "reason"}
+    common_update_fields = {"artifacts", "kind", "policy", "reason"}
     update_schema = {
         "explicit-rev": (common_update_fields | {"branch"}, set()),
         "fixed-flake-input": (common_update_fields | {"input"}, {"input"}),
@@ -972,8 +906,6 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 raise RuntimeError(f"invalid update policy for source catalog record: {name}")
             if "reason" in update and (not isinstance(update["reason"], str) or not update["reason"]):
                 raise RuntimeError(f"invalid update reason for source catalog record: {name}")
-            if update.get("build", "pkg") not in {"pkg", "python"}:
-                raise RuntimeError(f"invalid update build target for source catalog record: {name}")
             kind = update["kind"]
             source_args = record["source"]["args"]
             source_fetcher = record["source"]["fetcher"]
@@ -987,10 +919,7 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 raise RuntimeError(f"github-commit requires a native rev field: {name}")
             if kind == "npm-release":
                 package = update["package"]
-                if (
-                    source_fetcher not in {"fetchurl", "fetchzip"}
-                    or f"/{package}/-/" not in source_args["url"]
-                ):
+                if source_fetcher != "fetchurl" or f"/{package}/-/" not in source_args["url"]:
                     raise RuntimeError(f"npm source identity does not match update package: {name}")
             if kind == "pypi-release" and source_fetcher == "fetchPypi":
                 if _normalized_package_name(source_args["pname"]) != _normalized_package_name(
@@ -1218,7 +1147,6 @@ def update_catalog_target(
     new_version = None
     new_hash = None
     new_url = None
-    artifact_updates = {}
 
     display = f"{Colors.BOLD}catalog/{name}{Colors.RESET} {Colors.DIM}{old_version}{Colors.RESET}"
     print(display, end=" ")
@@ -1235,23 +1163,6 @@ def update_catalog_target(
             new_version, artifact_url, new_hash = candidate
             new_url = artifact_url if source["fetcher"] == "fetchurl" else None
             new_ref = new_version
-            for artifact_name, artifact in record.get("artifacts", {}).items():
-                artifact_record = {
-                    "version": artifact["args"]["version"],
-                    "source": artifact,
-                }
-                artifact_candidate = pypi_client.get_release(
-                    artifact["args"]["pname"], artifact_record, new_version
-                )
-                if artifact_candidate is None:
-                    new_version = None
-                    break
-                artifact_version, artifact_url, artifact_hash = artifact_candidate
-                artifact_updates[artifact_name] = {
-                    "version": artifact_version,
-                    "url": artifact_url if artifact["fetcher"] == "fetchurl" else None,
-                    "hash": artifact_hash,
-                }
     elif kind == "github-commit":
         if args.version:
             new_ref = args.version
@@ -1282,39 +1193,6 @@ def update_catalog_target(
             new_ref = github_client.get_latest_release(source_args["owner"], source_args["repo"])
         if new_ref:
             new_version = extract_version_number(new_ref, prefix)
-    elif kind == "github-release-asset":
-        parsed = urlsplit(current_url)
-        parts = [part for part in parsed.path.split("/") if part]
-        if parsed.netloc.lower() != "github.com" or len(parts) < 6 or parts[2:4] != ["releases", "download"]:
-            print(f"{Colors.RED}✗ invalid GitHub release asset URL{Colors.RESET}")
-            return "failed"
-        current_tag = parts[4]
-        prefix = update.get("tagPrefix", "")
-        if args.version:
-            new_tag = args.version if args.version.startswith(prefix) else f"{prefix}{args.version}"
-        else:
-            new_tag = github_client.get_latest_release(parts[0], parts[1])
-        if new_tag:
-            new_version = extract_version_number(new_tag, prefix)
-            if current_url.count(f"/{current_tag}/") != 1:
-                new_version = None
-            else:
-                new_url = current_url.replace(f"/{current_tag}/", f"/{new_tag}/", 1)
-                new_hash = hash_computer.compute_native_hash(source, {"url": new_url})
-            for artifact_name, artifact in record.get("artifacts", {}).items():
-                artifact_url = artifact["args"]["url"]
-                if artifact_url.count(f"/{current_tag}/") != 1:
-                    new_version = None
-                    break
-                next_url = artifact_url.replace(f"/{current_tag}/", f"/{new_tag}/", 1)
-                next_hash = hash_computer.compute_native_hash(artifact, {"url": next_url})
-                if next_hash is None:
-                    new_version = None
-                    break
-                artifact_updates[artifact_name] = {
-                    "url": next_url,
-                    "hash": next_hash,
-                }
     elif kind == "explicit-rev":
         if not args.version:
             print(f"{Colors.RED}✗ explicit --version required{Colors.RESET}")
@@ -1357,35 +1235,16 @@ def update_catalog_target(
         replacements["tag" if "tag" in source_args else "rev"] = new_ref
     if new_url is not None:
         replacements["url"] = new_url
-    if kind not in {"pypi-release", "github-release-asset"}:
+    if kind != "pypi-release":
         new_hash = hash_computer.compute_native_hash(source, replacements)
     if not new_hash:
         print(f"{Colors.RED}✗ hash failed{Colors.RESET}")
         return "failed"
 
-    artifacts_unchanged = True
-    for artifact_name, artifact_update in artifact_updates.items():
-        artifact_args = record["artifacts"][artifact_name]["args"]
-        artifact_hash_name = next(
-            iter({"hash", "sha256", "narHash"} & artifact_args.keys())
-        )
-        artifacts_unchanged = artifacts_unchanged and (
-            artifact_args[artifact_hash_name] == artifact_update["hash"]
-            and (artifact_update.get("url") is None or artifact_args.get("url") == artifact_update["url"])
-            and (
-                "version" not in artifact_update
-                or artifact_args.get("version") == artifact_update["version"]
-            )
-        )
     same_location = (new_ref is None or new_ref == current_ref) and (
         new_url is None or new_url == current_url
     )
-    if (
-        new_version == old_version
-        and same_location
-        and new_hash == old_hash
-        and artifacts_unchanged
-    ):
+    if new_version == old_version and same_location and new_hash == old_hash:
         print(f"{Colors.GREEN}✓ up-to-date{Colors.RESET}")
         return "skipped"
 
@@ -1405,36 +1264,6 @@ def update_catalog_target(
         source_args["version"] = new_version
     if new_ref and current_ref:
         source_args["tag" if "tag" in source_args else "rev"] = new_ref
-    for artifact_name, artifact_update in artifact_updates.items():
-        artifact = record["artifacts"][artifact_name]
-        artifact_args = artifact["args"]
-        artifact_hash_name = next(iter({"hash", "sha256", "narHash"} & artifact_args.keys()))
-        artifact_args[artifact_hash_name] = artifact_update["hash"]
-        if "version" in artifact_update:
-            artifact_args["version"] = artifact_update["version"]
-        if artifact_update.get("url") is not None:
-            artifact_args["url"] = artifact_update["url"]
-            artifact["url"] = artifact_update["url"]
-
-    repo_root = target["_path"].parent.parent
-    for relative in update.get("artifacts", []):
-        artifact_path = repo_root / relative
-        transaction.watch(artifact_path)
-        if relative.endswith("package-lock.json"):
-            if not npm_client.write_package_lock(new_url, artifact_path):
-                print(f" {Colors.RED}✗ package lock failed{Colors.RESET}")
-                return "failed"
-        elif relative == "packages/anvil-mcp/Cargo.lock":
-            cargo_lock = github_client.get_file(
-                source_args["owner"], source_args["repo"], new_ref, "Cargo.lock"
-            )
-            if not cargo_lock:
-                print(f" {Colors.RED}✗ Cargo.lock failed{Colors.RESET}")
-                return "failed"
-            artifact_path.write_text(cargo_lock)
-        else:
-            print(f" {Colors.RED}✗ unsupported artifact projection{Colors.RESET}")
-            return "failed"
     if kind == "explicit-rev" and "commit" in record:
         resolved = subprocess.run(
             ["git", "ls-remote", source["url"], new_ref, f"{new_ref}^{{}}"],
@@ -1453,9 +1282,7 @@ def update_catalog_target(
     for hash_type, old_dependent_hash in record.get("hashes", {}).items():
         record["hashes"][hash_type] = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
         _write_catalog_target(target)
-        new_dependent_hash = hash_computer._compute_fod_hash(
-            name, hash_type, update.get("build", "pkg")
-        )
+        new_dependent_hash = hash_computer._compute_fod_hash(name, hash_type)
         if not new_dependent_hash:
             record["hashes"][hash_type] = old_dependent_hash
             _write_catalog_target(target)
