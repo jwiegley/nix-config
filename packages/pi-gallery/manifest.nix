@@ -131,6 +131,7 @@ in
       package = packages.pi-subagentura or null;
       version = "3.0.3";
       publicName = "pi-subagentura";
+      enabled = false;
       source = npm "https://registry.npmjs.org/pi-subagentura/-/pi-subagentura-3.0.3.tgz" "sha256-8nSPMdy4LlJ1BIckjWdqFsSCcDo4uC5R9QqK6XJSVzU=";
       extension = "src/nix-bundle.js";
       skills = [ "skills/ralplan" ];

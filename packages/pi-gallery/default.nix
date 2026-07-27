@@ -606,6 +606,7 @@ let
       '';
 
   roots = lib.mapAttrs (_: member: packageRoot member.package member.attrName) members;
+  extensionOrder = builtins.filter (id: members.${id}.enabled or true) order;
   projection = {
     packages = map (
       id:
@@ -615,7 +616,7 @@ let
       {
         name = member.publicName;
         version = member.projectionVersion or member.version;
-        extensions = [ "${roots.${id}}/${member.extension}" ];
+        extensions = lib.optional (member.enabled or true) "${roots.${id}}/${member.extension}";
       }
       // lib.optionalAttrs (member ? skills) {
         skills = map (path: "${roots.${id}}/${path}") member.skills;
@@ -630,8 +631,8 @@ let
   };
   galleryImports = lib.concatMapStringsSep "\n" (
     id: "import ${id} from ${builtins.toJSON "${roots.${id}}/${members.${id}.extension}"};"
-  ) order;
-  galleryRegistrations = lib.concatMapStringsSep ",\n" (id: "            ${id}") order;
+  ) extensionOrder;
+  galleryRegistrations = lib.concatMapStringsSep ",\n" (id: "            ${id}") extensionOrder;
 
   pi-gallery =
     runCommand "pi-gallery"

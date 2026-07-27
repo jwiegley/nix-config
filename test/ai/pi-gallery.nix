@@ -202,11 +202,14 @@ runCommand "pi-gallery-check"
         "pi-scroll"
       ]
       and (.packages[] | select(.name == "@dietrichgebert/ponytail") | .skills == [])
+      and (.packages[] | select(.name == "pi-subagentura") | .extensions == [])
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
     grep -F 'PI_WEB_ACCESS_PROVIDER = "perplexity"' ${gallery}/index.ts >/dev/null
     grep -F 'PI_LENS_DISABLE_LSP_INSTALL = "1"' ${gallery}/index.ts >/dev/null
     grep -F 'pi-provider-litellm' ${gallery}/index.ts >/dev/null
     grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
+    ! grep -F 'import subagentura' ${gallery}/index.ts >/dev/null \
+      || fail "disabled Subagentura extension remains registered"
 
     provider_smoke="$TMPDIR/pi-provider-router-smoke"
     mkdir -p "$provider_smoke/home" "$provider_smoke/agent" "$provider_smoke/project"
@@ -629,16 +632,16 @@ runCommand "pi-gallery-check"
               "artifacts-clean",
               "btw",
               "btw:tangent",
-              "cancel-all-flows",
               "insights",
               "ponytail",
               "rewind",
               "router",
               "scroll",
               "viewer",
-              "workflow",
               "workflows"
-            ] - $names | length) == 0)
+            ] - $names | length) == 0
+          and ($names | index("cancel-all-flows")) == null
+          and ($names | index("workflow")) == null)
       )
     ' "$smoke/output.log" >/dev/null || {
       cat "$smoke/output.log" >&2
