@@ -35,7 +35,8 @@
 }:
 
 let
-  anvilSource = import ./source.nix;
+  anvilSources = import ../source-catalog.nix "anvil";
+  anvilSource = anvilSources.anvil-mcp;
   boundedSyncSeconds = 120;
   nelispVersion = "0.5.1";
   nelispRev = "f753209d53b372933b829345fe4373acad67bcb5";
@@ -45,7 +46,7 @@ let
   currentAnvilOwner = anvilSource.owner;
   currentAnvilRev = anvilSource.rev;
   currentAnvilVersion = anvilSource.version;
-  anvilIdeSource = anvilSource.ide;
+  anvilIdeSource = anvilSources.anvil-ide;
 
   # One ordered policy spans client startup, synchronous dispatch, the root
   # watchdog, the stdio bridge, and isolated async children.  The packaged

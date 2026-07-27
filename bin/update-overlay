@@ -631,6 +631,53 @@ def make_overlay_sources(args, nix_dir: Path) -> list[OverlaySource]:
     ]
 
 
+def _unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
+def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
+    """Load data-only package source records from sources/*.json."""
+    catalog_dir = nix_dir / "sources"
+    targets = {}
+    base_required = {"fetcher", "hash", "update", "url"}
+    fetch_required = {
+        "fetchFromGitHub": {"owner", "repo", "rev"},
+        "fetchgit": {"rev"},
+        "fetchurl": set(),
+        "fetchPypi": {"package", "version"},
+        "fetchTree": {"owner", "repo", "rev"},
+    }
+    for path in sorted(catalog_dir.glob("*.json")):
+        payload = json.loads(path.read_text(), object_pairs_hook=_unique_object)
+        if payload.get("schemaVersion") != 1 or not isinstance(payload.get("sources"), dict):
+            raise RuntimeError(f"invalid source catalog schema: {path}")
+        for name, record in payload["sources"].items():
+            if name in targets:
+                raise RuntimeError(f"duplicate source catalog id: {name}")
+            fetcher = record.get("fetcher")
+            missing = base_required - record.keys()
+            if fetcher not in fetch_required:
+                raise RuntimeError(f"unknown source fetcher for {name}: {fetcher}")
+            missing |= fetch_required[fetcher] - record.keys()
+            if missing or not record["url"].startswith("https://"):
+                raise RuntimeError(f"invalid source catalog record {name}: missing {sorted(missing)}")
+            update = record["update"]
+            if not isinstance(update, dict) or not update.get("kind"):
+                raise RuntimeError(f"source catalog record has no update strategy: {name}")
+            targets[name] = {
+                "kind": update["kind"],
+                "version": record.get("version", record.get("rev", "unversioned")[:12]),
+                "files": [str(path.relative_to(nix_dir))],
+                "source": "catalog",
+            }
+    return targets
+
+
 def load_update_manifest(nix_dir: Path) -> dict[str, dict]:
     """Evaluate and validate explicit update targets outside ordinary overlays."""
     manifest_path = nix_dir / "packages" / "update-manifest.nix"
@@ -694,7 +741,7 @@ def build_inventory(
         executor = target.get("executor")
         packages.append({
             "name": name,
-            "source": "manifest",
+            "source": target.get("source", "manifest"),
             "kind": target["kind"],
             "version": target.get("version", target.get("rev", "")),
             "files": target["files"],
@@ -1040,6 +1087,11 @@ Examples:
     nix_dir = Path(__file__).parent.parent.resolve()
     sources = make_overlay_sources(args, nix_dir)
     explicit_targets = load_update_manifest(nix_dir)
+    catalog_targets = load_source_catalog(nix_dir)
+    duplicates = explicit_targets.keys() & catalog_targets.keys()
+    if duplicates:
+        raise RuntimeError(f"source catalog duplicates update manifest: {sorted(duplicates)}")
+    explicit_targets.update(catalog_targets)
     if args.inventory:
         print_inventory(build_inventory(sources, explicit_targets, nix_dir), args.json_output)
         return 0

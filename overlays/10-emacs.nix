@@ -11,8 +11,9 @@
 final: prev:
 
 let
-  anvilSource = import ../packages/anvil-mcp/source.nix;
-  anvilIdeSource = anvilSource.ide;
+  anvilSources = import ../packages/source-catalog.nix "anvil";
+  anvilSource = anvilSources.anvil-mcp;
+  anvilIdeSource = anvilSources.anvil-ide;
 
   myEmacsPackageOverrides =
     eself: esuper:

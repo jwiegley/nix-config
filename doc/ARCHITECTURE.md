@@ -82,6 +82,18 @@ Package rules:
 4. Package availability is not installation policy; owning feature/host modules select packages explicitly.
 5. Updateable sources have one version/hash/update authority.
 
+## Source catalog
+
+All hand-maintained coordinates for Internet-fetched, future-upgraded package sources live in data-only JSON files under `sources/`. Category-local derivations keep their native Nix fetcher and build logic; they load records through `packages/source-catalog.nix`.
+
+A record uses `schemaVersion = 1` at the category-file level and contains a stable ID with `fetcher`, canonical `url`, fetcher coordinates (`owner`, `repo`, `rev` as applicable), `hash`, optional `version`/`date`, and a closed `update.kind`. To add a source:
+
+1. Add its record to the appropriate `sources/<category>.json` file, or create that JSON category file.
+2. In the derivation, load the category with `import ../source-catalog.nix "category"` (adjusting the relative path) and pass the record's existing fields to the same native fetcher.
+3. Run `bin/update-overlay --inventory`, the updater unit tests, and an exact pre/post derivation-path comparison.
+
+Do not add package builders, patches, platform policy, gallery projections, shell commands, or runtime service URLs to the catalog. Generated npm/Cargo/flake locks remain beside their consumers as updater-owned projections. `bin/update-overlay` validates duplicate IDs, schema, fetcher-specific fields, HTTPS upstream identity, hashes, and update strategy before inventory or network work.
+
 ## State boundaries
 
 - Agent Deck and tmux use `/tmp` as the persistent fleet socket parent; this avoids PAM/logind lifetime coupling.

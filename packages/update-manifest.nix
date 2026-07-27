@@ -77,21 +77,6 @@ in
       files = [ "packages/agent-resources.nix" ];
     };
 
-    anvil-mcp = {
-      kind = "github-commit";
-      owner = "jwiegley";
-      repo = "anvil.el";
-      version = "1.3.0";
-      rev = "39f9c59bfc51379db6243b1be20edca1ea783c2b";
-      files = [ "packages/anvil-mcp/source.nix" ];
-    };
-    anvil-ide = {
-      kind = "github-commit";
-      owner = "zawatton";
-      repo = "anvil-ide.el";
-      rev = "0e6130457ac2bdc6c6db2eebeba67a5223231190";
-      files = [ "packages/anvil-mcp/source.nix" ];
-    };
     nelisp = {
       kind = "github-commit";
       owner = "zawatton";

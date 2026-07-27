@@ -25,6 +25,7 @@ OverlayParser = MODULE["OverlayParser"]
 OverlayUpdater = MODULE["OverlayUpdater"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
+load_source_catalog = MODULE["load_source_catalog"]
 build_inventory = MODULE["build_inventory"]
 
 VENDOR_HASH = "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
@@ -126,10 +127,28 @@ class OverlayParserTests(unittest.TestCase):
 
 
 class UpdateInventoryTests(unittest.TestCase):
+    def test_source_catalog_is_data_only_unique_and_consumed(self):
+        root = SCRIPT.parent.parent
+        catalog = load_source_catalog(root)
+        self.assertEqual(set(catalog), {"anvil-ide", "anvil-mcp"})
+        self.assertTrue(all(path.suffix == ".json" for path in (root / "sources").iterdir()))
+        self.assertFalse((root / "packages/anvil-mcp/source.nix").exists())
+        self.assertIn('import ../source-catalog.nix "anvil"', (root / "packages/anvil-mcp/default.nix").read_text())
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            (temp / "sources").mkdir()
+            (temp / "sources/bad.json").write_text(
+                '{"schemaVersion":1,"sources":{"same":{},"same":{}}}'
+            )
+            with self.assertRaisesRegex(ValueError, "duplicate JSON key: same"):
+                load_source_catalog(temp)
+
     def test_manifest_and_cli_inventory_cover_hidden_update_targets(self):
         root = SCRIPT.parent.parent
         try:
             manifest = load_update_manifest(root)
+            manifest.update(load_source_catalog(root))
         except (RuntimeError, subprocess.SubprocessError, ValueError) as error:
             self.fail(f"manifest evaluation failed: {error}")
         required = {
