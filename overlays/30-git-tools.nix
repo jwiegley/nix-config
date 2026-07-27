@@ -8,6 +8,9 @@
 }:
 _final: prev:
 
+let
+  sources = import ../packages/source-catalog.nix "tools";
+in
 {
 
   # go-git v5 lowercases extension names on read but the allowlist maps use
@@ -34,13 +37,10 @@ _final: prev:
   # fix, still pins ==0.7.0 in setup.py) and relax the pin. Drop this if
   # upstream ever cuts a release and nixpkgs picks it up.
   git-branchstack = prev.git-branchstack.overrideAttrs (old: {
-    version = "94563ec5";
-    src = prev.fetchFromGitHub {
-      owner = "krobelus";
-      repo = "git-branchstack";
-      rev = "94563ec53ead302a3eca9edccfafa0af6c3c43c0";
-      hash = "sha256-d8PQTxkPOHA/OE085dGTnI8tJmiac5f8Q7VHirQ6Yho=";
-    };
+    inherit (sources.git-branchstack) version;
+    src =
+      assert sources.git-branchstack.source.fetcher == "fetchFromGitHub";
+      prev.fetchFromGitHub sources.git-branchstack.source.args;
     pythonRelaxDeps = (old.pythonRelaxDeps or [ ]) ++ [ "git-revise" ];
   });
 

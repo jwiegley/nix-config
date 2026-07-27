@@ -4,19 +4,19 @@
 }:
 _final: prev:
 
+let
+  sources = import ../packages/source-catalog.nix "tools";
+in
 {
   hashdb =
     with prev;
     python3Packages.buildPythonApplication {
       pname = "hashdb";
-      version = "3586458b";
+      inherit (sources.hashdb) version;
 
-      src = fetchFromGitHub {
-        owner = "jwiegley";
-        repo = "hashdb";
-        rev = "3586458b01e7f61c6254d9a5220fc2fa6b4d217e";
-        sha256 = "sha256-nu4TMw3Jn1HEVqH244JovG8zN6CbgMg3TC/T0We59l8=";
-      };
+      src =
+        assert sources.hashdb.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.hashdb.source.args;
 
       pyproject = true;
       build-system = [ python3Packages.setuptools ];
@@ -30,13 +30,10 @@ _final: prev:
     };
 
   tsvutils = prev.myLib.mkScriptPackage {
-    name = "tsvutils-a286c817";
-    src = prev.fetchFromGitHub {
-      owner = "brendano";
-      repo = "tsvutils";
-      rev = "a286c8179342285803871834bb92c39cd52e516d";
-      sha256 = "sha256-0dLLB8ckSN5XxOOCpmp2d2T4pPuRgjJSl7zePZkZL8s=";
-    };
+    name = "tsvutils-${sources.tsvutils.version}";
+    src =
+      assert sources.tsvutils.source.fetcher == "fetchFromGitHub";
+      prev.fetchFromGitHub sources.tsvutils.source.args;
     description = "Utilities for processing tab-separated files";
     homepage = "https://github.com/brendano/tsvutils";
   };

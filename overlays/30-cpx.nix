@@ -3,22 +3,22 @@
 # Dependencies: Rust, Linux-specific (copy_file_range syscall)
 # Packages: cpx
 _final: prev:
+let
+  source = (import ../packages/source-catalog.nix "tools").cpx;
+in
 prev.lib.optionalAttrs prev.stdenv.isLinux {
 
   cpx =
     with prev;
     rustPlatform.buildRustPackage rec {
       pname = "cpx";
-      version = "0.1.4";
+      inherit (source) version;
 
-      src = fetchFromGitHub {
-        owner = "11happy";
-        repo = "cpx";
-        tag = "v${version}";
-        hash = "sha256-1TjUlV0l4JnSSmmCprEy6wT1v7RPdsuhrnuKbkHiMkw=";
-      };
+      src =
+        assert source.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub source.source.args;
 
-      cargoHash = "sha256-zc2R9cm/dDJqDVp2osLXxY0O0MK6gLVG0bxt40bl9wY=";
+      cargoHash = source.hashes.cargoHash;
 
       # cpx is currently Linux-only (uses copy_file_range syscall)
       # Skip build on Darwin

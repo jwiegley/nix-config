@@ -10,6 +10,7 @@ let
   inherit (vars) isDarwin isLinux gitPkg;
 
   dotDir = "${config.xdg.configHome}/zsh";
+  itermSource = (import ../packages/source-catalog.nix "tools").iterm2-shell-integration;
 in
 {
   programs.bash = {
@@ -197,10 +198,9 @@ in
     plugins = lib.optionals isDarwin [
       {
         name = "iterm2_shell_integration";
-        src = pkgs.fetchurl {
-          url = "https://iterm2.com/shell_integration/zsh";
-          sha256 = "0yhfnaigim95sk1idrc3hpwii8hfhjl5m3lyc0ip3vi1a9npq0li";
-        };
+        src =
+          assert itermSource.source.fetcher == "fetchurl";
+          pkgs.fetchurl itermSource.source.args;
       }
     ];
   };

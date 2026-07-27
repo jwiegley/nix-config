@@ -52,15 +52,14 @@ in
     mkSimpleGitHubBinary =
       args@{
         pname,
-        version,
-        rev,
-        sha256,
+        source,
         description,
         ...
       }:
       let
-        owner = args.owner or "jwiegley";
-        repo = args.repo or pname;
+        inherit (source) version;
+        owner = source.source.args.owner;
+        repo = source.source.args.repo;
         binName = args.binName or pname;
         homepage = args.homepage or "https://github.com/${owner}/${repo}";
         license = args.license or lib.licenses.mit;
@@ -68,14 +67,9 @@ in
       stdenv.mkDerivation {
         name = "${pname}-${version}";
         inherit version;
-        src = fetchFromGitHub {
-          inherit
-            owner
-            repo
-            rev
-            sha256
-            ;
-        };
+        src =
+          assert source.source.fetcher == "fetchFromGitHub";
+          fetchFromGitHub source.source.args;
         phases = [
           "unpackPhase"
           "installPhase"

@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "sources": {
+    "cmdperf": {
+      "hashes": { "vendorHash": "sha256-k0dvd34KiPNb/wViaaSUQy04LSIsxQHWNwLM5blfDMo=" },
+      "source": {
+        "args": { "hash": "sha256-KNPf9LI1rUD6NY+gO1maTZwMPq/kCDl2tL2dMd5DOhc=", "owner": "miklosn", "repo": "cmdperf", "tag": "v0.1.4" },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/miklosn/cmdperf"
+      },
+      "update": { "kind": "github-release", "tagPrefix": "v" },
+      "version": "0.1.4"
+    },
+    "cpx": {
+      "hashes": { "cargoHash": "sha256-zc2R9cm/dDJqDVp2osLXxY0O0MK6gLVG0bxt40bl9wY=" },
+      "source": {
+        "args": { "hash": "sha256-1TjUlV0l4JnSSmmCprEy6wT1v7RPdsuhrnuKbkHiMkw=", "owner": "11happy", "repo": "cpx", "tag": "v0.1.4" },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/11happy/cpx"
+      },
+      "update": { "kind": "github-release", "tagPrefix": "v" },
+      "version": "0.1.4"
+    },
+    "eask-cli": {
+      "hashes": { "npmDepsHash": "sha256-Xj68un97I8xtAY3RXEq8PNC8ZOZ+NWg6SblnmKzHGMo=" },
+      "source": {
+        "args": { "hash": "sha256-jYdx+MYgUop01MzcKPxtm+ZW6lsy9eCqH00uQd8imRw=", "owner": "emacs-eask", "repo": "cli", "rev": "0.12.9" },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/emacs-eask/cli"
+      },
+      "update": { "kind": "github-release", "tagPrefix": "" },
+      "version": "0.12.9"
+    },
+    "filetags": {
+      "source": {
+        "args": { "owner": "novoid", "repo": "filetags", "rev": "89b9d704cb8d663936b99e17f296f9e4d8a30c5b", "sha256": "sha256-z1kiwms85p8JjI4H4HuWxjUk0NbTYD+jo8JNCXKXN9k=" },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/novoid/filetags"
+      },
+      "update": { "branch": "master", "kind": "github-commit" },
+      "version": "89b9d704"
+    },
+    "git-branchstack": {
+      "source": {
+        "args": { "hash": "sha256-d8PQTxkPOHA/OE085dGTnI8tJmiac5f8Q7VHirQ6Yho=", "owner": "krobelus", "repo": "git-branchstack", "rev": "94563ec53ead302a3eca9edccfafa0af6c3c43c0" },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/krobelus/git-branchstack"
+      },
+      "update": { "branch": "master", "kind": "github-commit" },
+      "version": "94563ec5"
+    },
+    "go-1.26.5": {
+      "source": {
+        "args": { "hash": "sha256-SVvkvIcXasVnOS5bQRar2YRm0z17SdQedkzMaXay3EI=", "url": "https://go.dev/dl/go1.26.5.src.tar.gz" },
+        "fetcher": "fetchurl",
+        "url": "https://go.dev/dl/go1.26.5.src.tar.gz"
+      },
+      "update": { "kind": "url-release", "policy": "manual" },
+      "version": "1.26.5"
+    },
+    "gogcli": {
+      "hashes": { "vendorHash": "sha256-MAbbCLdoOLWer7HO3+RZJuN10gLeTgN6/CbNn6pzGwQ=" },
+      "source": {
+        "args": { "hash": "sha256-ocC+A63GLrZQA3mXEPjIfsM7Af9NiYjGF8DZI/2yNS0=", "owner": "openclaw", "repo": "gogcli", "tag": "v0.34.1" },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/openclaw/gogcli"
+      },
+      "update": { "kind": "github-release", "tagPrefix": "v" },
+      "version": "0.34.1"
+    },
+    "hammer": {
+      "source": {
+        "args": { "owner": "jwiegley", "repo": "hammer", "rev": "b5a7543b4741d9b54dad49ecfca8908a4aedf124", "sha256": "sha256-SGHB8UTJ9cT/hZiv4V/rc3GwKlB6r9WCYsMXFA+Iw4c=" },
+        "fetcher": "fetchFromGitHub", "url": "https://github.com/jwiegley/hammer"
+      },
+      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" },
+      "version": "b5a7543b"
+    },
+    "hashdb": {
+      "source": {
+        "args": { "owner": "jwiegley", "repo": "hashdb", "rev": "3586458b01e7f61c6254d9a5220fc2fa6b4d217e", "sha256": "sha256-nu4TMw3Jn1HEVqH244JovG8zN6CbgMg3TC/T0We59l8=" },
+        "fetcher": "fetchFromGitHub", "url": "https://github.com/jwiegley/hashdb"
+      },
+      "update": { "branch": "master", "kind": "github-commit" },
+      "version": "3586458b"
+    },
+    "hyperorg": {
+      "source": {
+        "args": { "rev": "f9fc6a164cd94df4d146c69fc7e48aeb143afe16", "sha256": "0cr16p6z0spr9xdabw4da77hrsmn4dzvfxd15kllva8w28xqsbl6", "url": "https://codeberg.org/buhtz/hyperorg.git" },
+        "fetcher": "fetchgit", "url": "https://codeberg.org/buhtz/hyperorg.git"
+      },
+      "update": { "kind": "explicit-rev", "policy": "manual" },
+      "version": "a814c4bf5e"
+    },
+    "iterm2-shell-integration": {
+      "source": {
+        "args": { "sha256": "0yhfnaigim95sk1idrc3hpwii8hfhjl5m3lyc0ip3vi1a9npq0li", "url": "https://iterm2.com/shell_integration/zsh" },
+        "fetcher": "fetchurl", "url": "https://iterm2.com/shell_integration/zsh"
+      },
+      "update": { "kind": "url-release", "policy": "manual" }
+    },
+    "linkdups": {
+      "source": { "args": { "owner": "jwiegley", "repo": "linkdups", "rev": "e1d5b82da048300a78f2fc7d62f200bbfc5d973b", "sha256": "sha256-N0MAdqn8yHrEvAbbtfHhToa9Kefs6LSwA/tVPUzWOSs=" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/jwiegley/linkdups" },
+      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" }, "version": "e1d5b82d"
+    },
+    "lipotell": {
+      "source": { "args": { "owner": "jwiegley", "repo": "lipotell", "rev": "1502a4753f42618efcf2d0d561c818af377b0d92", "sha256": "sha256-TnaiGFXRzc4hwSgKvmxHJcCQW6H9Qh7VWQL+RoFb024=" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/jwiegley/lipotell" },
+      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" }, "version": "1502a475"
+    },
+    "markless": {
+      "hashes": { "cargoHash": "sha256-kMMglmIsc3HkCx24Zir3NtZitwrxYwa7FgLgAZ2/ffo=" },
+      "source": { "args": { "hash": "sha256-orjJ++948WEJ031c5Dcvmfyqw2JMRJRjoBsGU+A+B4w=", "owner": "jvanderberg", "repo": "markless", "tag": "v0.9.29" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/jvanderberg/markless" },
+      "update": { "kind": "github-release", "tagPrefix": "v" }, "version": "0.9.29"
+    },
+    "sift": {
+      "source": { "args": { "owner": "jwiegley", "repo": "sift", "rev": "c823f340be8818cc7aa970f9da4c81247f5b5535", "sha256": "1yadjgjcghi2fhyayl3ry67w3cz6f7w0ibni9dikdp3vnxp94y58" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/jwiegley/sift" },
+      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" }, "version": "c823f340"
+    },
+    "sshify": {
+      "source": { "args": { "owner": "jwiegley", "repo": "sshify", "rev": "a6fb0d529ec01158dd031431099b0ba8c8d64eb6", "sha256": "sha256-wl2BZhVIpIFrcReQrMbkbxkrPA7vKKdkPfAYo5IlbIs=" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/jwiegley/sshify" },
+      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" }, "version": "a6fb0d52"
+    },
+    "tsvutils": {
+      "source": { "args": { "owner": "brendano", "repo": "tsvutils", "rev": "a286c8179342285803871834bb92c39cd52e516d", "sha256": "sha256-0dLLB8ckSN5XxOOCpmp2d2T4pPuRgjJSl7zePZkZL8s=" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/brendano/tsvutils" },
+      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" }, "version": "a286c817"
+    },
+    "z": {
+      "source": { "args": { "owner": "rupa", "repo": "z", "rev": "d37a763a6a30e1b32766fecc3b8ffd6127f8a0fd", "sha256": "10azqw3da1mamfxhx6r0x481gsnjjipcfv6q91vp2bhsi22l35hy" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/rupa/z" },
+      "update": { "branch": "master", "kind": "github-commit" }, "version": "d37a763a"
+    }
+  }
+}

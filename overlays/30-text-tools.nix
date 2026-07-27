@@ -10,6 +10,9 @@
 }:
 _final: prev:
 
+let
+  sources = import ../packages/source-catalog.nix "tools";
+in
 {
 
   # Manage tags in filenames
@@ -18,17 +21,13 @@ _final: prev:
     with python3Packages;
     buildPythonPackage rec {
       pname = "filetags";
-      version = "89b9d704";
+      inherit (sources.filetags) version;
       name = "${pname}-${version}";
       pyproject = false;
 
-      src = fetchFromGitHub {
-        owner = "novoid";
-        repo = "filetags";
-        rev = "89b9d704cb8d663936b99e17f296f9e4d8a30c5b";
-        sha256 = "sha256-z1kiwms85p8JjI4H4HuWxjUk0NbTYD+jo8JNCXKXN9k=";
-        # date = "2025-09-15T13:27:03+02:00";
-      };
+      src =
+        assert sources.filetags.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.filetags.source.args;
 
       propagatedBuildInputs = [
         colorama
@@ -55,15 +54,12 @@ _final: prev:
     with python3Packages;
     buildPythonPackage {
       pname = "hyperorg";
-      version = "a814c4bf5e";
+      inherit (sources.hyperorg) version;
       pyproject = true;
 
-      src = fetchgit {
-        url = "https://codeberg.org/buhtz/hyperorg.git";
-        rev = "f9fc6a164cd94df4d146c69fc7e48aeb143afe16";
-        sha256 = "0cr16p6z0spr9xdabw4da77hrsmn4dzvfxd15kllva8w28xqsbl6";
-        # date = 2025-08-31T09:48:06+02:00;
-      };
+      src =
+        assert sources.hyperorg.source.fetcher == "fetchgit";
+        fetchgit sources.hyperorg.source.args;
 
       patches = [ ./emacs/patches/hyperorg.patch ];
 

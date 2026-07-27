@@ -2,22 +2,23 @@
 # Purpose: markless - Terminal markdown viewer with image support
 # Dependencies: Uses prev only
 # Packages: markless
-_final: prev: {
+_final: prev:
+let
+  source = (import ../packages/source-catalog.nix "tools").markless;
+in
+{
 
   markless =
     with prev;
     rustPlatform.buildRustPackage rec {
       pname = "markless";
-      version = "0.9.29";
+      inherit (source) version;
 
-      src = fetchFromGitHub {
-        owner = "jvanderberg";
-        repo = "markless";
-        tag = "v${version}";
-        hash = "sha256-orjJ++948WEJ031c5Dcvmfyqw2JMRJRjoBsGU+A+B4w=";
-      };
+      src =
+        assert source.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub source.source.args;
 
-      cargoHash = "sha256-kMMglmIsc3HkCx24Zir3NtZitwrxYwa7FgLgAZ2/ffo=";
+      cargoHash = source.hashes.cargoHash;
 
       doCheck = false;
 

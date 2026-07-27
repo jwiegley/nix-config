@@ -6,14 +6,14 @@
 # Note: pass-git-helper, yamale removed (now in nixpkgs)
 _final: prev:
 let
+  sources = import ../packages/source-catalog.nix "tools";
   # gogcli 0.34.0 requires the Go 1.26.5 security release, one patch ahead
   # of the Go compiler in the currently locked nixpkgs.
   go_1_26_5 = prev.buildPackages.go_1_26.overrideAttrs {
-    version = "1.26.5";
-    src = prev.fetchurl {
-      url = "https://go.dev/dl/go1.26.5.src.tar.gz";
-      hash = "sha256-SVvkvIcXasVnOS5bQRar2YRm0z17SdQedkzMaXay3EI=";
-    };
+    version = sources."go-1.26.5".version;
+    src =
+      assert sources."go-1.26.5".source.fetcher == "fetchurl";
+      prev.fetchurl sources."go-1.26.5".source.args;
   };
   buildGo1265Module = prev.buildGo126Module.override { go = go_1_26_5; };
 in
@@ -24,16 +24,13 @@ in
   # default ldflags stamp main.version.
   cmdperf = prev.buildGoModule (finalAttrs: {
     pname = "cmdperf";
-    version = "0.1.4";
+    version = sources.cmdperf.version;
 
-    src = prev.fetchFromGitHub {
-      owner = "miklosn";
-      repo = "cmdperf";
-      tag = "v${finalAttrs.version}";
-      hash = "sha256-KNPf9LI1rUD6NY+gO1maTZwMPq/kCDl2tL2dMd5DOhc=";
-    };
+    src =
+      assert sources.cmdperf.source.fetcher == "fetchFromGitHub";
+      prev.fetchFromGitHub sources.cmdperf.source.args;
 
-    vendorHash = "sha256-k0dvd34KiPNb/wViaaSUQy04LSIsxQHWNwLM5blfDMo=";
+    vendorHash = sources.cmdperf.hashes.vendorHash;
 
     subPackages = [ "cmd/cmdperf" ];
 
@@ -57,14 +54,11 @@ in
   # Upstream moved to openclaw/gogcli; Go module path is unchanged.
   gogcli = (prev.gogcli.override { buildGoModule = buildGo1265Module; }).overrideAttrs (
     finalAttrs: _oldAttrs: {
-      version = "0.34.1";
-      src = prev.fetchFromGitHub {
-        owner = "openclaw";
-        repo = "gogcli";
-        tag = "v${finalAttrs.version}";
-        hash = "sha256-ocC+A63GLrZQA3mXEPjIfsM7Af9NiYjGF8DZI/2yNS0=";
-      };
-      vendorHash = "sha256-MAbbCLdoOLWer7HO3+RZJuN10gLeTgN6/CbNn6pzGwQ=";
+      version = sources.gogcli.version;
+      src =
+        assert sources.gogcli.source.fetcher == "fetchFromGitHub";
+        prev.fetchFromGitHub sources.gogcli.source.args;
+      vendorHash = sources.gogcli.hashes.vendorHash;
     }
   );
 
@@ -84,41 +78,31 @@ in
 
   hammer = prev.myLib.mkSimpleGitHubBinary {
     pname = "hammer";
-    version = "b5a7543b";
-    rev = "b5a7543b4741d9b54dad49ecfca8908a4aedf124";
-    sha256 = "sha256-SGHB8UTJ9cT/hZiv4V/rc3GwKlB6r9WCYsMXFA+Iw4c=";
+    source = sources.hammer;
     description = "A tool for fixing broken symlinks";
   };
 
   linkdups = prev.myLib.mkSimpleGitHubBinary {
     pname = "linkdups";
-    version = "e1d5b82d";
-    rev = "e1d5b82da048300a78f2fc7d62f200bbfc5d973b";
-    sha256 = "sha256-N0MAdqn8yHrEvAbbtfHhToa9Kefs6LSwA/tVPUzWOSs=";
+    source = sources.linkdups;
     description = "A tool for hard-linking duplicate files";
   };
 
   lipotell = prev.myLib.mkSimpleGitHubBinary {
     pname = "lipotell";
-    version = "1502a475";
-    rev = "1502a4753f42618efcf2d0d561c818af377b0d92";
-    sha256 = "sha256-TnaiGFXRzc4hwSgKvmxHJcCQW6H9Qh7VWQL+RoFb024=";
+    source = sources.lipotell;
     description = "A tool to find large files within a directory";
   };
 
   sift = prev.myLib.mkSimpleGitHubBinary {
     pname = "sift";
-    version = "c823f340";
-    rev = "c823f340be8818cc7aa970f9da4c81247f5b5535";
-    sha256 = "1yadjgjcghi2fhyayl3ry67w3cz6f7w0ibni9dikdp3vnxp94y58";
+    source = sources.sift;
     description = "A tool for sifting apart large patch files";
   };
 
   sshify = prev.myLib.mkSimpleGitHubBinary {
     pname = "sshify";
-    version = "a6fb0d52";
-    rev = "a6fb0d529ec01158dd031431099b0ba8c8d64eb6";
-    sha256 = "sha256-wl2BZhVIpIFrcReQrMbkbxkrPA7vKKdkPfAYo5IlbIs=";
+    source = sources.sshify;
     description = "A tool for installing SSH authorized_key on remote servers";
   };
 
@@ -127,15 +111,11 @@ in
     with prev;
     stdenv.mkDerivation rec {
       name = "z-${version}";
-      version = "d37a763a";
+      version = sources.z.version;
 
-      src = fetchFromGitHub {
-        owner = "rupa";
-        repo = "z";
-        rev = "d37a763a6a30e1b32766fecc3b8ffd6127f8a0fd";
-        sha256 = "10azqw3da1mamfxhx6r0x481gsnjjipcfv6q91vp2bhsi22l35hy";
-        # date = 2023-12-09T17:41:33-05:00;
-      };
+      src =
+        assert sources.z.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.z.source.args;
 
       phases = [
         "unpackPhase"
