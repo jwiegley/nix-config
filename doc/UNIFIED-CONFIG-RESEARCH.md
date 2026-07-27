@@ -43,6 +43,42 @@ This is the most important research result, because the current architecture res
 on a conflation. There are three distinct costs, and the subflake split addresses
 only one of them.
 
+### Locally verified, 2026-07-27 — not taken on faith
+
+Claims (a) and (b) below were confirmed empirically on `hera` rather than accepted
+from the sources. A throwaway flake was built in the scratchpad with two outputs,
+one of which is `throw "LANDMINE EVALUATED"`:
+
+```nix
+packages.aarch64-darwin.good     = runCommand "good" { } "echo ok > $out";
+packages.aarch64-darwin.landmine = throw "LANDMINE EVALUATED -- outputs are NOT lazy";
+```
+
+- `nix build --no-link '.#good'` → **succeeded**, building `good.drv`. The sibling
+  `landmine` was never forced. **Flake outputs are lazy: confirmed.** A Linux host
+  building its own `homeConfigurations` attribute genuinely never evaluates
+  `darwinConfigurations.hera`.
+- `nix flake check` → **failed** with `error: LANDMINE EVALUATED`. **`nix flake
+  check` forces every output: confirmed.**
+
+Environment, also verified directly (and *correcting* a stale project-memory note
+that recorded 3.11.2 / Nix 2.31.1):
+
+```
+nix (Determinate Nix 3.21.7) 2.34.8
+lazy-trees = true
+eval-cache = true
+```
+
+`lazy-trees = true` is active, so the source-tree ingestion cost in (b) is
+definitively obsolete on this fleet.
+
+> **Net:** the closure/evaluation justification for splitting `flake.nix` from
+> `flake-ai.nix`, and for consuming the root repo as `flake = false`, is
+> **refuted**. The one real monorepo cost is that `nix flake check` evaluates
+> everything — which is a check-scoping problem with known solutions, not a reason
+> to fragment the repository.
+
 ### (a) Evaluating hosts you don't need — NOT a problem; no subflake required
 
 Flake outputs are a lazy attribute set. `darwin-rebuild switch --flake .#hera`
