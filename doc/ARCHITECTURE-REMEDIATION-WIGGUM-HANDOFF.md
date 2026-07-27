@@ -7,7 +7,7 @@ Updated: 2026-07-26
 - Wiggum mode is active for `doc/ARCHITECTURE-REMEDIATION-WIGGUM-PLAN.md`.
 - Audit authority: `~/doc/obsidian/Nix Configuration Architecture and Maintainability Audit 2026-07-26.md`.
 - Baseline commit: `a36d3f51d92158e4e055e3baca85044f575e25a6` on clean `main` aligned with `origin/main`.
-- Current work unit: WU3 — platform and overlay isolation; implementation/gates complete, signed commit pending.
+- Current work unit: WU3 — signed implementation `a3cc3843`; fess and partner corrections verified, signed cleanup commit pending.
 - PAL was explicitly waived by the user.
 - Anvil: available in dedicated Emacs mode; modified repository buffers: none at last checkpoint.
 - Direnv: loaded successfully; 110 exported names observed without exposing values.
@@ -26,7 +26,7 @@ Updated: 2026-07-26
 
 ## In progress
 
-- WU3 explicit composition, Darwin boundary gates, input factories, Linux parity checks, and `pkgs.inputs` removal pass focused/core/native Hera gates; signed implementation commit pending.
+- WU3 implementation is signed as `a3cc3843`. Fess publisher/handoff corrections and both partner observations are resolved; native Linux builds prove the intended stock test policy, and partial MCP-input composition preserves unrelated packages.
 - Inventory is now 126 targets: 102 executable and 24 pending WU4 gallery/Anvil/fixed-input executors; explicit Eask ownership added one independently discoverable overlay target.
 - Root all-system no-build still exposes the contextless `builtins.path` check-source defect assigned to WU6/WU8; focused root checks build successfully.
 
@@ -38,7 +38,7 @@ Updated: 2026-07-26
 
 ## Remaining
 
-- Commit/fess/partner-review WU3, then complete WU4 through WU10 in the frozen plan.
+- Commit the verified WU3 fess/partner cleanup, then complete WU4 through WU10 in the frozen plan.
 
 ## Attempt counters
 

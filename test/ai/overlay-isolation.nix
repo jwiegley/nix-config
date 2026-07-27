@@ -1,4 +1,8 @@
-{ pkgs, configured }:
+{
+  pkgs,
+  configured,
+  inputs,
+}:
 
 let
   inherit (pkgs) lib;
@@ -57,6 +61,18 @@ let
   changedPython = lib.filter (
     name: pkgs.python3Packages.${name}.drvPath != configured.python3Packages.${name}.drvPath
   ) comparablePython;
+  optionalMcpPackages = (import ../../overlays/ai/30-ai-mcp.nix { }) configured configured;
+  aiPkgsWithout =
+    inputName:
+    import inputs.nixpkgs {
+      system = pkgs.stdenv.hostPlatform.system;
+      config.allowUnfree = true;
+      overlays = import ../../overlays/ai {
+        inputs = builtins.removeAttrs inputs [ inputName ];
+      };
+    };
+  withoutPal = aiPkgsWithout "pal-mcp-server";
+  withoutRemote = aiPkgsWithout "mcp-remote";
 in
 assert
   changedTop == [ ]
@@ -72,6 +88,19 @@ assert
   (configured.python3Packages.gradio.doInstallCheck or false)
   == (pkgs.python3Packages.gradio.doInstallCheck or false)
   || throw "Darwin-only Gradio install-check suppression active on Linux";
+assert
+  !(optionalMcpPackages ? pal-mcp-server) && !(optionalMcpPackages ? agent-http-header-bridge)
+  || throw "optional MCP inputs must omit their packages when absent";
+assert
+  !(withoutPal ? pal-mcp-server)
+  && withoutPal ? agent-http-header-bridge
+  && withoutPal ? rustdocs-mcp-server
+  || throw "missing PAL input removed unrelated AI MCP packages";
+assert
+  withoutRemote ? pal-mcp-server
+  && !(withoutRemote ? agent-http-header-bridge)
+  && withoutRemote ? rustdocs-mcp-server
+  || throw "missing mcp-remote input removed unrelated AI MCP packages";
 assert
   !(configured ? inputs) || throw "overlay composition leaked flake inputs through pkgs.inputs";
 pkgs.runCommand "darwin-overrides-inactive" { } "touch $out"

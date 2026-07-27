@@ -421,11 +421,18 @@ echo overlay-change >> overlays/ai/package.nix
         self.assertEqual(sorted(ai_declared), sorted(ai_actual))
 
         production_nix = [
+            root / "flake.nix",
             *root.glob("config/**/*.nix"),
             *root.glob("flake/**/*.nix"),
             *root.glob("overlays/**/*.nix"),
         ]
-        forbidden = ("pkgs.inputs", "prev.inputs", "final.inputs", "inherit (prev) inputs")
+        forbidden = (
+            "pkgs.inputs",
+            "prev.inputs",
+            "final.inputs",
+            "inherit (prev) inputs",
+            "(_final: _prev: { inherit inputs; })",
+        )
         for path in production_nix:
             text = path.read_text()
             for expression in forbidden:

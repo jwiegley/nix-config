@@ -95,3 +95,19 @@ Append-only durable learnings for the architecture-remediation Wiggum loop. Deci
 - Strict mode remains active for the host update/build/sign phase. `set +e` and `set +u` now mark the workspace boundary pending WU5's result-aggregating runner.
 - Independent review found the runtime boundary correct but requested stronger regression assertions. Tests now prove strict mode precedes the host case/updater and both relaxations occur after host completion but before the first project block.
 - Current inventory is 126 total / 102 executable / 24 pending after the explicit Eask overlay became independently discoverable.
+
+## 2026-07-27 — WU3 fess audit
+
+- Audited signed commit: `a3cc3843bf15fdf6f327dd4297efa4c6f351b14e`.
+- Independent verdict: FAIL with two findings; both accepted.
+- Medium: `flake.nix` retained one unused `inputs` publisher in the Darwin-only `pkgsFor` import, while the static regression scan omitted root `flake.nix`. Removed the publisher and added root flake coverage plus its exact forbidden form.
+- Low: handoff still described WU3 as uncommitted. Corrected resume state to name the signed implementation and pending fess-fix commit.
+- Auditor independently confirmed P0-2 and P1-6 resolved, both Linux isolation checks, portable evaluation, formatting/static checks, all 10 tests, and Ledger runtime/Python output behavior.
+- Per Wiggum, this fess-fix commit is not recursively audited.
+
+## 2026-07-27 — WU3 partner observations
+
+- Observation `.497Z` reported that top-level Darwin gating re-enabled six Linux test suites. Disposition: intended, not a defect. This is the approved P0-2 resolution and the Linux parity check's purpose. Native aarch64-linux builds of configured z3, libvirt, kvazaar, fsspec, Gradio, and Mirakuru all completed successfully; an independent reviewer accepted the disposition.
+- Observation `.504Z` requested optional PAL/mcp-remote inputs. Accepted, but first implementation gated unrelated MCP packages with mcp-remote. Independent review caught the over-broad gate.
+- Final implementation gates only `pal-mcp-server` and `agent-http-header-bridge` on their respective sources. Composition-path tests remove each input independently and prove every unrelated MCP package remains present.
+- Portable all-system evaluation, both Linux isolation checks, Darwin agent-resources/Home Manager contracts, and 10 structural/updater tests pass.

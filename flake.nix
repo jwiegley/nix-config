@@ -254,7 +254,6 @@
           import nixpkgs {
             inherit system;
             overlays = [
-              (_final: _prev: { inherit inputs; })
               ((import ./overlays/10-emacs.nix) {
                 hours = inputs.hours or null;
                 emacsSrc = inputs.emacs-src or null;
@@ -548,6 +547,7 @@
             }
             // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
               darwin-overrides-inactive = pkgs.callPackage ./test/ai/overlay-isolation.nix {
+                inherit inputs;
                 configured = agentTestPkgsFor.${system};
               };
               anvil-mcp = pkgs.callPackage ./packages/anvil-mcp/smoke.nix {
