@@ -28,6 +28,7 @@ GitHubClient = MODULE["GitHubClient"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
 load_source_catalog = MODULE["load_source_catalog"]
+catalog_executor = MODULE["_catalog_executor"]
 update_catalog_target = MODULE["update_catalog_target"]
 build_inventory = MODULE["build_inventory"]
 
@@ -332,6 +333,51 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertEqual("repos/example/project", calls[1][2])
         self.assertIn("commits/topic", calls[2][2])
 
+    def test_manual_url_target_has_targeted_executor(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/tools.json"
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {
+                    "example": {
+                        "source": {
+                            "fetcher": "fetchurl",
+                            "url": "https://example.invalid/tool",
+                            "args": {
+                                "url": "https://example.invalid/tool",
+                                "sha256": "old-hash",
+                            },
+                        },
+                        "update": {"kind": "url-release", "policy": "manual"},
+                    }
+                },
+            }))
+            target = load_source_catalog(root)["example"]
+            self.assertEqual(target["executor"], "update-overlay")
+
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_catalog_target(
+                    "example",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    SimpleNamespace(
+                        compute_native_hash=lambda _source, _replacements: "new-hash"
+                    ),
+                    transaction,
+                )
+            transaction.commit()
+            self.assertEqual(status, "updated")
+            self.assertEqual(
+                json.loads(path.read_text())["sources"]["example"]["source"]["args"]["sha256"],
+                "new-hash",
+            )
+
     def test_catalog_npm_update_rewrites_source_and_dependent_hash_atomically(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -437,7 +483,7 @@ class UpdateInventoryTests(unittest.TestCase):
 
             github = SimpleNamespace(get_latest_release=lambda _owner, _repo: "v2.0.0")
             hashes = SimpleNamespace(
-                compute_src_hash=lambda _owner, _repo, _rev: "sha256-new"
+                compute_native_hash=lambda _source, _replacements: "sha256-new"
             )
             transaction = SourceTransaction()
             with contextlib.redirect_stdout(io.StringIO()):

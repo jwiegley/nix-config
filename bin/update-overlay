@@ -14,6 +14,7 @@ Examples:
 import argparse
 import atexit
 import base64
+import copy
 import json
 import os
 import re
@@ -567,6 +568,66 @@ class HashComputer:
             print(f"  Error computing src hash: {e}", file=sys.stderr)
         return None
 
+    def compute_native_hash(self, source: dict, replacements: dict) -> Optional[str]:
+        """Hash through the repository-locked native fetcher with exact arguments."""
+        args = copy.deepcopy(source["args"])
+        args.update(replacements)
+        hash_name = next(iter({"hash", "sha256", "narHash"} & args.keys()))
+        old_hash = args[hash_name]
+        fetcher = source["fetcher"]
+
+        try:
+            if fetcher == "fetchTree":
+                args.pop("narHash")
+                expression = (
+                    f"(builtins.fetchTree (builtins.fromJSON "
+                    f"{json.dumps(json.dumps(args))})).narHash"
+                )
+                result = subprocess.run(
+                    ["nix", "eval", "--impure", "--json", "--expr", expression],
+                    capture_output=True,
+                    text=True,
+                    timeout=600,
+                    cwd=self.repo_dir,
+                )
+                if result.returncode == 0:
+                    return json.loads(result.stdout)
+                return None
+
+            args[hash_name] = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+            expression = f"""
+let
+  flake = builtins.getFlake (toString {json.dumps(str(self.repo_dir))});
+  pkgs = import flake.inputs.nix-config-ai.inputs.nixpkgs {{ system = builtins.currentSystem; }};
+  args = builtins.fromJSON {json.dumps(json.dumps(args))};
+in
+  pkgs.{fetcher} args
+"""
+            result = subprocess.run(
+                ["nix", "build", "--impure", "--no-link", "--expr", expression],
+                capture_output=True,
+                text=True,
+                timeout=600,
+                cwd=self.repo_dir,
+            )
+            match = re.search(r"got:\s+(sha256-[A-Za-z0-9+/=]+)", result.stdout + result.stderr)
+            if not match:
+                return None
+            value = match.group(1)
+            if old_hash.startswith("sha256-"):
+                return value
+            converted = subprocess.run(
+                ["nix", "hash", "convert", "--hash-algo", "sha256", "--to", "nix32", value],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=self.repo_dir,
+            )
+            return converted.stdout.strip() if converted.returncode == 0 else None
+        except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as error:
+            print(f"  Error computing native source hash: {error}", file=sys.stderr)
+            return None
+
     def compute_vendor_hash(self, package_name: str) -> Optional[str]:
         """Compute vendorHash by attempting a build with fake hash."""
         return self._compute_fod_hash(package_name, "vendorHash")
@@ -593,7 +654,7 @@ class HashComputer:
 let
   flake = builtins.getFlake "path:{self.repo_dir}";
   system = builtins.currentSystem;
-  pkgs = import flake.inputs.nixpkgs {{
+  pkgs = import flake.inputs.nix-config-ai.inputs.nixpkgs {{
     inherit system;
     overlays = [ flake.overlays.default ];
     config.allowUnfree = true;
@@ -769,16 +830,16 @@ def _validate_fetch_record(name: str, source: dict) -> None:
 
 def _catalog_executor(record: dict) -> Optional[str]:
     update = record["update"]
-    source = record["source"]
     expected_fetchers = {
+        "explicit-rev": {"fetchgit", "fetchpatch", "fetchTree", "fetchurl"},
         "github-commit": {"fetchFromGitHub"},
         "github-release": {"fetchFromGitHub"},
         "npm-release": {"fetchurl"},
         "pypi-release": {"fetchPypi", "fetchurl"},
+        "url-release": {"fetchurl"},
     }.get(update["kind"], set())
     if (
-        source["fetcher"] in expected_fetchers
-        and update.get("policy", "automatic") == "automatic"
+        record["source"]["fetcher"] in expected_fetchers
         and not update.get("artifacts")
         and not record.get("artifacts")
         and set(record.get("hashes", {})) <= {"cargoHash", "npmDepsHash", "vendorHash"}
@@ -1069,26 +1130,41 @@ def update_catalog_target(
     pypi_client: PypiClient,
     hash_computer: HashComputer,
     transaction,
-) -> str:
+ ) -> str:
     record = target["_record"]
     source = record["source"]
     source_args = source["args"]
     update = record["update"]
-    old_version = record.get("version", source_args.get("rev", source_args.get("tag")))
+    kind = update["kind"]
+    old_version = record.get(
+        "version", source_args.get("rev", source_args.get("tag", "unversioned"))
+    )
+    hash_name = next(iter({"hash", "sha256", "narHash"} & source_args.keys()))
+    old_hash = source_args[hash_name]
+    current_ref = source_args.get("tag", source_args.get("rev"))
+    current_url = source_args.get("url")
     new_ref = None
     new_version = None
     new_hash = None
     new_url = None
 
-    if update["kind"] == "npm-release":
+    display = f"{Colors.BOLD}catalog/{name}{Colors.RESET} {Colors.DIM}{old_version}{Colors.RESET}"
+    print(display, end=" ")
+
+    if kind == "npm-release":
         candidate = npm_client.get_version(update["package"], args.version)
         if candidate:
             new_version, new_hash = candidate
-    elif update["kind"] == "pypi-release":
+            new_ref = new_version
+            if old_version and current_url and current_url.count(old_version) == 1:
+                new_url = current_url.replace(old_version, new_version, 1)
+    elif kind == "pypi-release":
         candidate = pypi_client.get_release(update["package"], record, args.version)
         if candidate:
-            new_version, new_url, new_hash = candidate
-    elif update["kind"] == "github-commit":
+            new_version, artifact_url, new_hash = candidate
+            new_url = artifact_url if source["fetcher"] == "fetchurl" else None
+            new_ref = new_version
+    elif kind == "github-commit":
         if args.version:
             new_ref = args.version
         else:
@@ -1099,48 +1175,73 @@ def update_catalog_target(
                 new_ref = candidate[0]
         if new_ref:
             current_version = record.get("version")
-            current_ref = source_args["rev"]
             new_version = (
                 new_ref[: len(current_version)]
                 if current_version and current_ref.startswith(current_version)
                 else current_version or new_ref
             )
-    elif update["kind"] == "github-release":
-        current_ref = source_args.get("tag", source_args.get("rev"))
+    elif kind == "github-release":
         prefix = update.get("tagPrefix")
         if prefix is None:
-            prefix = current_ref[: -len(old_version)] if old_version and current_ref.endswith(old_version) else ""
+            prefix = (
+                current_ref[: -len(old_version)]
+                if old_version and current_ref and current_ref.endswith(old_version)
+                else ""
+            )
         if args.version:
             new_ref = args.version if args.version.startswith(prefix) else f"{prefix}{args.version}"
         else:
             new_ref = github_client.get_latest_release(source_args["owner"], source_args["repo"])
         if new_ref:
             new_version = extract_version_number(new_ref, prefix)
+    elif kind == "explicit-rev":
+        if not args.version:
+            print(f"{Colors.RED}✗ explicit --version required{Colors.RESET}")
+            return "failed"
+        if current_ref:
+            prefix = (
+                current_ref[: -len(old_version)]
+                if old_version and current_ref.endswith(old_version)
+                else ""
+            )
+            new_ref = args.version if args.version.startswith(prefix) else f"{prefix}{args.version}"
+            new_version = extract_version_number(new_ref, prefix) if prefix else args.version
+        elif current_url:
+            match = re.search(r"[0-9a-fA-F]{40}", current_url)
+            new_ref = args.version
+            new_version = record.get("version", new_ref)
+            new_url = current_url.replace(match.group(0), new_ref, 1) if match else current_url
+    elif kind == "url-release":
+        new_version = args.version or old_version
+        if args.version and record.get("version") and current_url.count(old_version) == 1:
+            new_url = current_url.replace(old_version, args.version, 1)
+        else:
+            new_url = current_url
 
-    display = f"{Colors.BOLD}catalog/{name}{Colors.RESET} {Colors.DIM}{old_version}{Colors.RESET}"
-    print(display, end=" ")
     if new_version is None:
         print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
         return "failed"
-    if new_ref is None and update["kind"] in {"npm-release", "pypi-release"}:
-        new_ref = new_version
-    current_ref = source_args.get("tag", source_args.get("rev", old_version))
-    if new_version == old_version and new_ref == current_ref:
-        print(f"{Colors.GREEN}✓ up-to-date{Colors.RESET}")
-        return "skipped"
+    if kind == "npm-release" and new_url is None:
+        print(f"{Colors.RED}✗ URL rewrite failed{Colors.RESET}")
+        return "failed"
 
-    if update["kind"] not in {"npm-release", "pypi-release"}:
-        new_hash = hash_computer.compute_src_hash(source_args["owner"], source_args["repo"], new_ref)
+    replacements = {}
+    if new_ref and current_ref:
+        replacements["tag" if "tag" in source_args else "rev"] = new_ref
+    if new_url is not None:
+        replacements["url"] = new_url
+    if kind not in {"npm-release", "pypi-release"}:
+        new_hash = hash_computer.compute_native_hash(source, replacements)
     if not new_hash:
         print(f"{Colors.RED}✗ hash failed{Colors.RESET}")
         return "failed"
 
-    if update["kind"] == "npm-release":
-        old_url = source_args["url"]
-        if not old_version or old_url.count(old_version) != 1:
-            print(f"{Colors.RED}✗ URL rewrite failed{Colors.RESET}")
-            return "failed"
-        new_url = old_url.replace(old_version, new_version, 1)
+    same_location = (new_ref is None or new_ref == current_ref) and (
+        new_url is None or new_url == current_url
+    )
+    if new_version == old_version and same_location and new_hash == old_hash:
+        print(f"{Colors.GREEN}✓ up-to-date{Colors.RESET}")
+        return "skipped"
 
     print(f"{Colors.YELLOW}→ {new_version}{Colors.RESET}", end="")
     if args.dry_run:
@@ -1150,29 +1251,35 @@ def update_catalog_target(
     transaction.watch(target["_path"])
     if "version" in record:
         record["version"] = new_version
-    hash_name = next(iter({"hash", "sha256", "narHash"} & source_args.keys()))
     source_args[hash_name] = new_hash
-    if update["kind"] == "npm-release":
+    if new_url is not None:
         source_args["url"] = new_url
         source["url"] = new_url
-    elif update["kind"] == "pypi-release":
-        if source["fetcher"] == "fetchurl":
-            source_args["url"] = new_url
-            source["url"] = new_url
-        else:
-            source_args["version"] = new_version
-    else:
-        ref_name = "tag" if "tag" in source_args else "rev"
-        source_args[ref_name] = new_ref
+    if kind == "pypi-release" and source["fetcher"] == "fetchPypi":
+        source_args["version"] = new_version
+    if new_ref and current_ref:
+        source_args["tag" if "tag" in source_args else "rev"] = new_ref
+    if kind == "explicit-rev" and "commit" in record:
+        resolved = subprocess.run(
+            ["git", "ls-remote", source["url"], new_ref, f"{new_ref}^{{}}"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        commits = [line.split()[0] for line in resolved.stdout.splitlines() if line.split()]
+        if resolved.returncode != 0 or not commits:
+            print(f" {Colors.RED}✗ commit resolution failed{Colors.RESET}")
+            return "failed"
+        record["commit"] = commits[-1]
     _write_catalog_target(target)
 
     computed = []
-    for hash_type, old_hash in record.get("hashes", {}).items():
+    for hash_type, old_dependent_hash in record.get("hashes", {}).items():
         record["hashes"][hash_type] = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
         _write_catalog_target(target)
         new_dependent_hash = hash_computer._compute_fod_hash(name, hash_type)
         if not new_dependent_hash:
-            record["hashes"][hash_type] = old_hash
+            record["hashes"][hash_type] = old_dependent_hash
             _write_catalog_target(target)
             print(f" {Colors.RED}✗ {hash_type} failed{Colors.RESET}")
             return "failed"
@@ -1363,16 +1470,14 @@ class OverlayUpdater:
 
 
 def extract_version_number(tag: str, prefix: str = "") -> str:
-    """Extract version number from a tag, removing common prefixes."""
-    version = tag
+    """Extract a version number using the declared prefix exactly."""
+    if prefix and tag.startswith(prefix):
+        return tag[len(prefix):]
 
-    # Remove common prefixes
-    for p in ["v", "b", "release-", "version-"]:
-        if version.startswith(p):
-            version = version[len(p):]
-            break
-
-    return version
+    for candidate in ("v", "b", "release-", "version-"):
+        if tag.startswith(candidate):
+            return tag[len(candidate):]
+    return tag
 
 
 def main():
@@ -1464,7 +1569,12 @@ Examples:
     skipped_count = 0
 
     selected_catalog_names = (
-        [name for name in sorted(catalog_targets) if not args.packages or name in args.packages]
+        [
+            name for name in sorted(catalog_targets)
+            if catalog_targets[name]["_record"]["update"].get("policy", "automatic")
+            == "automatic"
+            and (not args.packages or name in args.packages)
+        ]
         if args.all
         else [name for name in args.packages if name in catalog_targets]
     )
