@@ -398,6 +398,145 @@ each machine with no wrapper needed. This confirms replacing the single hardcode
 `hostname = "andoria-08"` with four real per-host configurations is the
 well-supported path.
 
+### Independently corroborated and extended, from a second code path
+
+A follow-up research pass reached the same conclusion from a **different file** —
+the activation script rather than the CLI — and added three findings the CLI read
+alone did not surface. Source: `modules/lib-bash/activation-init.sh`, function
+`setupVars()`, which `modules/home-environment.nix` inlines via
+`builtins.readFile`:
+
+```bash
+declare -r stateHome="${XDG_STATE_HOME:-$HOME/.local/state}"
+declare -r userNixStateDir="$stateHome/nix"
+declare -gr hmStatePath="$stateHome/home-manager"
+declare -r hmGcrootsDir="$hmStatePath/gcroots"
+declare -r globalNixStateDir="${NIX_STATE_DIR:-/nix/var/nix}"
+declare -gr newGenPath="@GENERATION_DIR@";
+declare -gr currentGenGcPath="$hmGcrootsDir/current-home"
+declare -gr genProfilePath="$profilesDir/home-manager"
+```
+
+The only build-time substitution is `newGenPath="@GENERATION_DIR@"`, the store path
+being rooted. Every root *location* is a runtime `${VAR:-default}` shell expansion.
+So both the CLI and the activation script are env-keyed — the conclusion is
+confirmed from two independent code paths.
+
+**New finding 1 — a silent two-sources-of-truth divergence.** The *evaluated*
+option `home.profileDirectory` in `modules/home-environment.nix` is
+`if config.nix.useXdg then "${config.xdg.stateHome}/nix/profile" else homeDirectory
++ "/.nix-profile"` — it **does** read the evaluated `config.xdg.stateHome`. So
+setting the option *without* also setting the environment variable makes
+`home.profileDirectory` (which feeds session `PATH`) point at one location while
+the CLI and activation actually write the profile and gcroot somewhere else. Two
+sources of truth that disagree with no error. The environment variable governs
+real state.
+
+**New finding 2 — the concrete data-loss mechanism.** Per the Nix 2.35.2 manual
+(`command-ref/nix-store/realise`), `nix-store --add-root PATH` creates the symlink
+at `PATH` **and** registers a uniquely-named symlink in
+`/nix/var/nix/gcroots/auto/` — indirect rooting is the default, no `--indirect`
+needed. Activation runs
+`nix-store --realise "$newGenPath" --add-root "$currentGenGcPath"`. The live chain
+is therefore:
+
+```
+/nix/var/nix/gcroots/auto/<hash>          (host-local, in /nix)
+  -> $XDG_STATE_HOME/home-manager/gcroots/current-home   (NFS-SHARED, stable name,
+                                                          overwritten every
+                                                          activation: last writer wins)
+    -> store path
+```
+
+The `auto` entry's hash derives from the (identical) NFS target path, so **every
+host's local auto-root points at the same NFS symlink**. When host B activates,
+`current-home` now resolves to B's closure — and host A's *own* local GC root
+silently begins protecting B's closure instead of A's. If A then runs
+`nix-collect-garbage`, A's live paths are no longer rooted through that chain.
+
+**Honestly bounded.** Whether A's older generation survives depends on whether
+individual generation links are protected. For profiles under the standard
+`/nix/var/nix/profiles`, `/nix/var/nix/gcroots/profiles` recursively roots all
+generations; for a profile under the XDG/NFS path that automatic recursive rooting
+does **not** obviously apply. **The Nix garbage-collector documentation is silent
+on per-generation protection for non-standard profile locations**, so this step is
+reasoned from verified `--add-root` mechanics, not from explicit documentation.
+There is **no published incident report** of GC destroying a live standalone-HM
+profile this way. Treat it as a real hazard, not a proven certainty. A further
+trace of `src/libstore/gc.cc` / `profiles.cc` is in flight to close this gap; the
+remedy below is the same either way, so no design decision waits on it.
+
+**New finding 3 — correction to the `use-xdg-base-directories` reading.** With the
+flag `false` (the default), `~/.nix-profile` remains the *link* but **targets
+`$XDG_STATE_HOME/nix/profiles/profile`**; with the flag `true` the link itself
+moves to `$XDG_STATE_HOME/nix/profile`. The flag changes where the *link* lives,
+**not** where the profile store lives. On modern Nix the store is
+`$XDG_STATE_HOME/nix/profiles` either way — which defaults to NFS
+`~/.local/state`, so it is shared and colliding by default. **The flag does not
+help; only the environment variable does.**
+
+**Version caveat, to verify empirically per machine.** Which `profilesDir` branch
+HM takes depends on whether `~/.local/state/nix/profiles` *exists*, which is
+Nix-version-dependent. On older Nix it may be absent, so HM falls back to the
+host-local `/nix/var/nix/profiles/per-user/$USER` and is *accidentally safe*. On
+current Nix it exists and is NFS-shared. Before trusting either behaviour, check on
+each Ubuntu host: `readlink ~/.nix-profile`, `ls -la ~/.local/state/nix/profiles`,
+`nix --version`.
+
+### Failure modes, ranked
+
+1. **Data-loss class — GC reaping a live closure**, via the redirected auto-root
+   chain above. Bounded as described; hazard, not certainty.
+2. **Generation interleaving and wrong rollback.** `home-manager generations` globs
+   `home-manager-*-link` in the shared profile dir and marks whatever the
+   `home-manager` symlink resolves to as "(current)". A shared profile means one
+   interleaved counter across all four hosts, listings that mix every host's
+   builds, and `--rollback` that can move host A onto a generation built by host B.
+   Not store data-loss, but loss of coherent per-host history and silently wrong
+   rollbacks.
+3. **Stale or foreign "current" pointer.** Mostly confusing; it is the on-ramp to (1).
+4. **Dangling or foreign `~/.nix-profile`.** Usually a stale `PATH` rather than a
+   truly broken link. Annoying, not dangerous.
+
+### What the source forces on the design
+
+- Point HM/Nix state at **host-local, persistent** storage via the **environment**,
+  before activation: export `XDG_STATE_HOME` (and ideally `NIX_STATE_DIR`) to a
+  per-host path **outside** the NFS `$HOME` — via login-shell profile, PAM
+  `environment`, or a wrapper — **not** via `xdg.stateHome`. This makes
+  `current-home`, the profile, and every generation link host-local, eliminating
+  all four failure modes at once.
+- **The host-local directory must be persistent. Do not use `/tmp` or `/var/tmp`:**
+  systemd-tmpfiles age-cleans `/var/tmp` (30 days by default), which would delete
+  gcroots and re-introduce the GC hazard. **This pattern already has a live
+  foothold in this fleet** — `~/src/andoria/flake.nix` sets
+  `xdg.cacheHome = "/var/tmp/jwiegley/xdg-cache"`. That is *cache only*, so it is
+  survivable today (caches regenerate), but the precedent is established and would
+  be actively dangerous if extended to state.
+- Keep `$HOME` shared, but treat `~/.local/state`, `~/.cache`, and any SQLite or
+  lockfile state as must-be-host-local. Sockets are already safe under
+  `$XDG_RUNTIME_DIR`.
+- **Delete any username-only `homeConfigurations.jwiegley` fallback.** That
+  attribute is precisely the current trap: all four machines match it and silently
+  share one configuration. Define the four `jwiegley@<host>` attributes, invoke
+  `home-manager switch --flake .#jwiegley@<host>` explicitly, and let a mismatch
+  fail loudly rather than silently serving the wrong host's config. Note
+  `hostname -f` depends on DNS/`/etc/hosts` and can hang or return a shared FQDN;
+  `hostname -s` is the most robust discriminator.
+
+### There is no published safe precedent
+
+Three targeted searches found only discussion, never a working recipe:
+Discourse #35880 (asks the question; answers are high-level — systemd-homed,
+single-user `/nix/store` sharing, "nix-env is an anti-pattern here"), Discourse
+#68227 and #69500 (per-host config *selection*, not shared-home *state*), and
+`github.com/tiredofit/home` (portable, one machine at a time).
+
+> **Stated plainly as a decision input: N machines sharing one NFS `$HOME`, each
+> running standalone home-manager, is unsupported, DIY territory with no published
+> safe pattern.** The design must therefore treat this as an invariant it asserts
+> and tests itself, not as a configuration it can rely on upstream to keep working.
+
 ---
 
 ## 7. Secrets across mixed activation contexts
