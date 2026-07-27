@@ -9,7 +9,7 @@
 # Host-specific settings use lib.mkIf (hostname == "...").
 # Values that may need per-host override use lib.mkDefault.
 
-{
+args@{
   pkgs,
   lib,
   config,
@@ -19,7 +19,8 @@
 }:
 let
   inherit (pkgs.stdenv) isDarwin isLinux;
-  isPositronRemoteLinux = isLinux && config.home.username == "jwiegley";
+  nixManagedAiHomeClass = args.nixManagedAiHomeClass or null;
+  isPositronRemoteLinux = isLinux && nixManagedAiHomeClass == "shared-work";
   anvilHosts = import ./anvil-hosts.nix;
   dedicatedAnvilLinuxHosts = anvilHosts.dedicatedLinux;
 

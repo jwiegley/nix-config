@@ -2917,6 +2917,7 @@ let
       hostname = "vulcan";
       username = "jwiegley";
       system = "x86_64-linux";
+      homeClass = "shared-work";
       expectedClass = "shared-work";
     };
     personal-synthetic = {
@@ -2930,6 +2931,7 @@ let
       hostname = "linux";
       username = "jwiegley";
       system = "x86_64-linux";
+      homeClass = "shared-work";
       expectedClass = "shared-work";
     };
   };
@@ -3181,6 +3183,8 @@ let
     "${task9AgentDeckEvaluation.config.home.profileDirectory}/bin:"
     + "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin";
   task9PackageSource = builtins.readFile "${src}/config/packages.nix";
+  task9RoleSources =
+    builtins.readFile "${src}/config/ai.nix" + builtins.readFile "${src}/config/johnw.nix";
   task9FlakeSource = builtins.readFile "${src}/flake.nix";
 
   task9Checks = [
@@ -3308,6 +3312,14 @@ let
     (expectEqual "Task 9 personal Linux fixture is explicit"
       (lib.hasInfix "nixManagedAiHomeClass = \"personal-linux\"" task9FlakeSource)
       true
+    )
+    (expectEqual "Task 9 shared-work fixture is explicit"
+      (lib.hasInfix "nixManagedAiHomeClass = \"shared-work\"" task9FlakeSource)
+      true
+    )
+    (expectEqual "Task 9 role selection does not infer from username"
+      (lib.hasInfix "config.home.username == \"jwiegley\"" task9RoleSources)
+      false
     )
     (expectReject "Task 9 personal Linux fixture accepted wrong user" task9InvalidPersonalSynthetic.activationPackage.drvPath)
     (expectReject "Task 9 unknown home class accepted" task9UnknownHomeClass.activationPackage.drvPath)

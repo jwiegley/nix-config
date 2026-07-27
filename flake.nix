@@ -406,6 +406,7 @@
             username = "jwiegley";
             hostname = "linux";
             system = "x86_64-linux";
+            nixManagedAiHomeClass = "shared-work";
           };
         };
 

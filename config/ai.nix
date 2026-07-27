@@ -44,42 +44,11 @@ let
     };
   };
 
-  profilesByHomeClass = {
-    hera = [
-      "hera-claude-personal"
-      "hera-claude-positron"
-      "hera-codex"
-      "hera-opencode"
-      "hera-droid"
-      "hera-pi"
-    ];
-    clio = [
-      "clio-claude-personal"
-      "clio-claude-positron"
-      "clio-codex"
-      "clio-opencode"
-    ];
-    vulcan = [
-      "vulcan-claude-personal"
-      "vulcan-opencode"
-    ];
-    vps = [ "vps-claude-personal" ];
-    shared-work = [
-      "shared-work-claude-positron"
-      "shared-work-codex"
-      "shared-work-opencode-positron"
-    ];
-    personal-linux = [ "vps-claude-personal" ];
-  };
-  homeClass =
-    if isLinux && config.home.username == "jwiegley" then
-      "shared-work"
-    else if nixManagedAiHomeClass != null then
-      nixManagedAiHomeClass
-    else
-      hostname;
-  homeClassKnown = builtins.hasAttr homeClass profilesByHomeClass;
-  profileIds = if homeClassKnown then profilesByHomeClass.${homeClass} else [ ];
+  homeClass = if nixManagedAiHomeClass != null then nixManagedAiHomeClass else hostname;
+  profileHost = if homeClass == "personal-linux" then "vps" else homeClass;
+  profilesForHome = lib.filterAttrs (_: profile: profile.host == profileHost) catalog.profiles;
+  homeClassKnown = profilesForHome != { };
+  profileIds = lib.sort builtins.lessThan (builtins.attrNames profilesForHome);
 
   selectedFor =
     profileId:
