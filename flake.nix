@@ -2,167 +2,91 @@
   description = "Darwin configuration";
 
   inputs = {
-    agent-browser-source = {
-      url = "github:vercel-labs/agent-browser/1ed371f3af472cc0d6cd8fdaea75d1a085ff7534";
-      flake = false;
-    };
-
-    # nixpkgs.url = "git+file:///Users/johnw/Products/nixpkgs";
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay/47759faaddf38fadaf172151ca9df8adae9c0b2e";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    mcp-servers-nix = {
-      url = "github:natsukium/mcp-servers-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    llm-agents = {
-      url = "github:numtide/llm-agents.nix";
-      # inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    bigpowers = {
-      url = "github:danielvm-git/bigpowers";
-      flake = false;
-    };
-
-    ponytail = {
-      url = "github:DietrichGebert/ponytail";
-      flake = false;
-    };
-
-    translate-tool = {
-      url = "github:jwiegley/translate-tool";
-      flake = false;
-    };
-
-    pi-mcp-adapter = {
-      url = "github:nicobailon/pi-mcp-adapter";
-      flake = false;
-    };
-
-    pi-openai-server-compaction = {
-      url = "github:algal/pi-openai-server-compaction";
-      flake = false;
-    };
-
-    pi-quiet = {
-      url = "github:zenspc/pi-extensions";
-      flake = false;
-    };
-
-    pi-btw = {
-      url = "github:dbachelder/pi-btw";
-      flake = false;
-    };
-
-    pi-subagentura = {
-      url = "github:jwiegley/pi-subagentura/main";
-      flake = false;
-    };
-
-    mcp-remote = {
-      url = "github:geelen/mcp-remote";
-      flake = false;
-    };
-
-    git-ai = {
-      url = "github:git-ai-project/git-ai";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    pal-mcp-server = {
-      url = "github:jwiegley/pal-mcp-server";
-      flake = false;
-    };
+    nix-config-ai.url = "path:./config/ai";
 
     darwin = {
       url = "github:lnl7/nix-darwin";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     home-manager = {
       url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     ledger = {
       url = "github:ledger/ledger";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     org-jw = {
       url = "github:jwiegley/org-jw";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     rag-client = {
       url = "github:jwiegley/rag-client";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     git-all = {
       url = "git+file:///Users/johnw/src/git-all";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     gitlib = {
       url = "git+file:///Users/johnw/src/gitlib?submodules=0";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     hakyll = {
       url = "git+file:///Users/johnw/src/hakyll";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     hours = {
       url = "git+file:///Users/johnw/src/hours";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     pushme = {
       url = "git+file:///Users/johnw/src/pushme";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     renamer = {
       url = "git+file:///Users/johnw/src/renamer";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     sizes = {
       url = "git+file:///Users/johnw/src/sizes";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     trade-journal = {
       url = "git+file:///Users/johnw/src/trade-journal";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     una = {
       url = "git+file:///Users/johnw/src/una";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     gh-to-org = {
       url = "git+file:///Users/johnw/src/gh-to-org";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     obr = {
       url = "git+file:///Users/johnw/src/obr";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     org2jsonl = {
       url = "git+file:///Users/johnw/src/org2jsonl";
-      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     scripts = {
@@ -177,7 +101,7 @@
 
     dirscan = {
       url = "git+file:///Users/johnw/src/dirscan";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     emacs-src = {
@@ -202,7 +126,11 @@
   };
 
   outputs =
-    inputs:
+    rootInputs:
+    let
+      portableInputs = rootInputs.nix-config-ai.lib.inputSet;
+      inputs = rootInputs // portableInputs;
+    in
     with inputs;
     let
       rootSystems = [
@@ -216,26 +144,6 @@
         "x86_64-linux"
       ];
       forAllSystems = nixpkgs.lib.genAttrs rootSystems;
-      portableInputs = {
-        inherit (inputs)
-          agent-browser-source
-          bigpowers
-          git-ai
-          llm-agents
-          mcp-remote
-          mcp-servers-nix
-          nixpkgs
-          pal-mcp-server
-          pi-btw
-          pi-mcp-adapter
-          pi-openai-server-compaction
-          pi-quiet
-          pi-subagentura
-          ponytail
-          rust-overlay
-          translate-tool
-          ;
-      };
       portableAiDefinition = import ./flake-ai.nix portableInputs;
       portableAi = import ./test/ai/compatibility-check.nix {
         inputs = portableInputs;
@@ -441,22 +349,7 @@
             system:
             let
               pkgs = stockPkgsFor.${system};
-              src = builtins.path {
-                path = ./.;
-                name = "nix-config-src";
-                filter =
-                  path: _type:
-                  let
-                    baseName = baseNameOf path;
-                  in
-                  !(
-                    baseName == "result"
-                    || baseName == ".git"
-                    || baseName == ".DS_Store"
-                    || baseName == ".claude"
-                    || baseName == ".worktrees"
-                  );
-              };
+              src = self.outPath;
             in
             {
               formatting =
@@ -529,6 +422,7 @@
                 piGallery = agentTestPkgsFor.${system}.pi-gallery;
                 testPkgsFor = agentTestPkgsFor;
               };
+              ai-lock-coherence = pkgs.callPackage ./test/ai/lock-coherence.nix { inherit src; };
               ai-managed-preflight = pkgs.callPackage ./test/ai/managed-preflight.nix {
                 inherit src;
                 homeManagerLib = home-manager.lib;

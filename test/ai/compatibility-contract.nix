@@ -1,3 +1,6 @@
+let
+  portableLock = builtins.fromJSON (builtins.readFile ../../config/ai/flake.lock);
+in
 {
   systems = [
     "aarch64-darwin"
@@ -5,24 +8,7 @@
     "x86_64-linux"
   ];
 
-  inputs = [
-    "agent-browser-source"
-    "bigpowers"
-    "git-ai"
-    "llm-agents"
-    "mcp-remote"
-    "mcp-servers-nix"
-    "nixpkgs"
-    "pal-mcp-server"
-    "pi-btw"
-    "pi-mcp-adapter"
-    "pi-openai-server-compaction"
-    "pi-quiet"
-    "pi-subagentura"
-    "ponytail"
-    "rust-overlay"
-    "translate-tool"
-  ];
+  inputs = builtins.attrNames portableLock.nodes.root.inputs;
 
   topLevel = [
     [

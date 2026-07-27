@@ -351,7 +351,8 @@ echo overlay-change >> overlays/ai/package.nix
             with self.subTest(retired=retired):
                 self.assertNotIn(retired, active)
 
-        self.assertIn('nix flake update "${ai_inputs[@]}"', update_agents)
+        self.assertNotIn('nix flake update "${ai_inputs[@]}"', update_agents)
+        self.assertIn("nix flake update nix-config-ai", update_agents)
         for required_input in (
             "git-ai",
             "llm-agents",
@@ -399,7 +400,7 @@ echo overlay-change >> overlays/ai/package.nix
         self.assertNotIn("commit_and_push_if_changed", update_agents)
         self.assertIn("bin/update-agents --all-inputs --brew", makefile)
         self.assertIn("if [[ $run_all_inputs == true ]]", update_agents)
-        self.assertIn("        nix flake update\n", update_agents)
+        self.assertIn("nix flake update --flake ./config/ai", update_agents)
         manifest = load_update_manifest(root)
         expected_inputs = {
             name for name, target in manifest.items()
@@ -548,6 +549,26 @@ echo overlay-change >> overlays/ai/package.nix
                 "comparable-build.log", "rag-client-build.log", "hf-build.log", "ledger-build.log",
             }
             self.assertEqual({path.name for path in logs.iterdir()}, expected_logs)
+
+    def test_root_consumes_portable_input_authority_transitively(self):
+        root = SCRIPT.parent.parent
+        root_lock = json.loads((root / "flake.lock").read_text())
+        portable_lock = json.loads((root / "config/ai/flake.lock").read_text())
+        root_node = root_lock["nodes"]["root"]
+        portable_root = portable_lock["nodes"]["root"]
+        shared_names = set(portable_root["inputs"])
+        self.assertFalse(shared_names & set(root_node["inputs"]))
+        self.assertIn("nix-config-ai", root_node["inputs"])
+        root_ai = root_lock["nodes"][root_node["inputs"]["nix-config-ai"]]
+        self.assertEqual(set(root_ai["inputs"]), shared_names)
+        for name in shared_names:
+            root_locked = root_lock["nodes"][root_ai["inputs"][name]]["locked"]
+            portable_locked = portable_lock["nodes"][portable_root["inputs"][name]]["locked"]
+            self.assertEqual(root_locked, portable_locked, name)
+
+        root_flake = (root / "flake.nix").read_text()
+        self.assertIn('nix-config-ai.url = "path:./config/ai"', root_flake)
+        self.assertNotIn("agent-browser-source = {", root_flake)
 
     def test_host_routing_table_covers_system_and_shared_consumers(self):
         routing = SCRIPT.parent / "lib" / "host-routing.sh"

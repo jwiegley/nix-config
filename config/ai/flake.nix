@@ -80,29 +80,18 @@
   outputs =
     inputs:
     let
-      portableInputs = {
-        inherit (inputs)
-          agent-browser-source
-          bigpowers
-          git-ai
-          llm-agents
-          mcp-remote
-          mcp-servers-nix
-          nixpkgs
-          pal-mcp-server
-          pi-btw
-          pi-mcp-adapter
-          pi-openai-server-compaction
-          pi-quiet
-          pi-subagentura
-          ponytail
-          rust-overlay
-          translate-tool
-          ;
+      portableInputs = builtins.removeAttrs inputs [ "self" ];
+      actual = import ../../flake-ai.nix portableInputs;
+      checked = import ../../test/ai/compatibility-check.nix {
+        inputs = portableInputs;
+        inherit actual;
       };
     in
-    import ../../test/ai/compatibility-check.nix {
-      inputs = portableInputs;
-      actual = import ../../flake-ai.nix portableInputs;
+    checked
+    // {
+      lib = checked.lib // {
+        inputSet = portableInputs;
+        inputNames = builtins.attrNames portableInputs;
+      };
     };
 }

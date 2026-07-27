@@ -2042,20 +2042,17 @@ let
       ]);
   };
 
-  sourceForChecks = lib.cleanSourceWith {
-    src = ../.;
-    filter =
-      path: _type:
-      let
-        name = builtins.baseNameOf path;
-      in
-      !(
-        name == ".git"
-        || name == ".direnv"
-        || name == "build"
-        || name == "result"
-        || lib.hasPrefix "result-" name
-      );
+  sourceForChecks = lib.fileset.toSource {
+    root = ../.;
+    fileset = lib.fileset.unions [
+      ../config/ai
+      ../flake
+      ../flake-ai.nix
+      ../overlays/ai
+      ../overlays/tests
+      ../packages
+      ../test/ai
+    ];
   };
 
   scriptRoot = ../test/ai/scripts;
@@ -2206,22 +2203,13 @@ in
       llama-cpp-platform-compat = pkgs.callPackage ../overlays/tests/llama-cpp-platform-compat.nix { };
       llm-agents-nixpkgs-independent =
         let
-          rootLock = builtins.fromJSON (builtins.readFile ../flake.lock);
           portableLock = builtins.fromJSON (builtins.readFile ../config/ai/flake.lock);
           llmAgentsNode = portableLock.nodes.${portableLock.nodes.root.inputs.llm-agents};
-          sharedInputs = builtins.attrNames portableLock.nodes.root.inputs;
-          lockedNode = lock: name: lock.nodes.${lock.nodes.root.inputs.${name}}.locked;
-          locksCoherent = builtins.all (
-            name:
-            builtins.hasAttr name rootLock.nodes.root.inputs
-            && (lockedNode rootLock name).rev == (lockedNode portableLock name).rev
-            && (lockedNode rootLock name).narHash == (lockedNode portableLock name).narHash
-          ) sharedInputs;
         in
-        if builtins.isString llmAgentsNode.inputs.nixpkgs && locksCoherent then
+        if builtins.isString llmAgentsNode.inputs.nixpkgs then
           pkgs.runCommand "llm-agents-nixpkgs-independent" { } "touch $out"
         else
-          throw "portable AI locks drifted or llm-agents follows the shared nixpkgs input";
+          throw "llm-agents must retain its independent nixpkgs input";
       agent-resources = pkgs.callPackage ../test/ai/agent-resources.nix {
         inherit (inputs)
           bigpowers
