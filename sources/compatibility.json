@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "sources": {
+    "mitmproxy-macos-wheel": {
+      "version": "0.12.8",
+      "source": {
+        "args": {
+          "pname": "mitmproxy_macos",
+          "version": "0.12.8",
+          "format": "wheel",
+          "dist": "py3",
+          "python": "py3",
+          "hash": "sha256-baAfEY4hEN3wOEicgE53gY71IX003JYFyyZaNJ7U8UA="
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/mitmproxy-macos"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "mitmproxy_macos",
+        "policy": "manual",
+        "reason": "PyPI republished this Darwin wheel without changing its version"
+      }
+    },
+    "nixpkgs-last-good": {
+      "source": {
+        "args": {
+          "type": "github",
+          "owner": "NixOS",
+          "repo": "nixpkgs",
+          "rev": "b86751bc4085f48661017fa226dee99fab6c651b",
+          "narHash": "sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw="
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/NixOS/nixpkgs"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "Hold the last closure where the affected Darwin packages build and test"
+      }
+    },
+    "nixpkgs-pre-mesa-26-1": {
+      "source": {
+        "args": {
+          "type": "github",
+          "owner": "NixOS",
+          "repo": "nixpkgs",
+          "rev": "f77951fcf0348ac9a4a5fc6c44c104d1387042d4",
+          "narHash": "sha256-h+evAmhKoLk1hA7vUnuRq+AorRZXlv7u473XyW5yOhw="
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/NixOS/nixpkgs"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "Hold mesa and its consumers before the uncached Darwin 26.1 closure"
+      }
+    },
+    "nixpkgs-pre-rclone-fuse3": {
+      "source": {
+        "args": {
+          "type": "github",
+          "owner": "NixOS",
+          "repo": "nixpkgs",
+          "rev": "6dedf69f94d03cbe7bdde106f2d4c23ae2a853bf",
+          "narHash": "sha256-gOTcX/9MZVMUE0Xvb4IEcv+0TQJkZFNEnL757ljU360="
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/NixOS/nixpkgs"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "Hold rclone before its Darwin FUSE support regression"
+      }
+    },
+    "nixpkgs-pre-toc-depth-removal": {
+      "source": {
+        "args": {
+          "type": "github",
+          "owner": "NixOS",
+          "repo": "nixpkgs",
+          "rev": "9e92285f211dad236540fd617d7e30e0b99bc0e1",
+          "narHash": "sha256-AXmz9ho4Lud5CsbrZsuSVwpQZ4o5FgZ1chxBn5cJ8+0="
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/NixOS/nixpkgs"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "Hold nixos-render-docs until nix-darwin stops using --toc-depth"
+      }
+    },
+    "poppler-darwin-mutex-patch": {
+      "source": {
+        "args": {
+          "url": "https://gitlab.freedesktop.org/poppler/poppler/-/commit/08f4bca6a669f9fce75dbab743db559a86591738.patch",
+          "hash": "sha256-+eWqVK/v3Ys9k2+z/dCoS2o82m039UER1StMUW4PIgM="
+        },
+        "fetcher": "fetchpatch",
+        "url": "https://gitlab.freedesktop.org/poppler/poppler/-/commit/08f4bca6a669f9fce75dbab743db559a86591738.patch"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "Apply the unreleased constructor fix for Poppler mutexes on Darwin"
+      }
+    }
+  }
+}

@@ -24,6 +24,7 @@ BUILD = Path(__file__).parent.parent / "build"
 MODULE = runpy.run_path(str(SCRIPT))
 OverlayParser = MODULE["OverlayParser"]
 OverlayUpdater = MODULE["OverlayUpdater"]
+GitHubClient = MODULE["GitHubClient"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
 load_source_catalog = MODULE["load_source_catalog"]
@@ -135,6 +136,16 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertIn("anvil-ide", catalog)
         self.assertIn("anvil-mcp", catalog)
         self.assertIn("pi-lens", catalog)
+        for name in (
+            "ascii",
+            "gptel-got",
+            "mitmproxy-macos-wheel",
+            "nixpkgs-last-good",
+            "org",
+            "poppler-darwin-mutex-patch",
+            "vterm-tmux",
+        ):
+            self.assertIn(name, catalog)
         pi_manifest = (root / "packages/pi-gallery/manifest.nix").read_text()
         self.assertIn('member "pi-lens"', pi_manifest)
         self.assertNotIn("version =", pi_manifest)
@@ -145,6 +156,15 @@ class UpdateInventoryTests(unittest.TestCase):
             anvil_document["sources"]["anvil-mcp"]["update"]["branch"],
             "fix/anvil-root-resilience",
         )
+        self.assertEqual(
+            json.loads((root / "sources/emacs.json").read_text())["sources"]["org"]["commit"],
+            "cdc16898fd46a30d7187c0a5830b2b898ffbd2de",
+        )
+        self.assertIn(
+            'source-catalog.nix "compatibility"',
+            (root / "overlays/00-last-known-good.nix").read_text(),
+        )
+        self.assertIn('gitSource "org"', (root / "overlays/10-emacs.nix").read_text())
         self.assertTrue(all(path.suffix == ".json" for path in (root / "sources").iterdir()))
         self.assertFalse((root / "packages/anvil-mcp/source.nix").exists())
         self.assertIn('import ../source-catalog.nix "anvil"', (root / "packages/anvil-mcp/default.nix").read_text())
@@ -210,6 +230,7 @@ class UpdateInventoryTests(unittest.TestCase):
         tag = copy.deepcopy(valid)
         tag.pop("version")
         tag["source"]["args"]["tag"] = tag["source"]["args"].pop("rev")
+        tag["update"] = {"kind": "github-release"}
         self.assertEqual(load(tag)["example"]["version"], "deadbeef")
 
         invalid = []
@@ -249,6 +270,18 @@ class UpdateInventoryTests(unittest.TestCase):
         insecure_fetch_url["source"]["args"]["url"] = "http://example.invalid/archive.tgz"
         invalid.append(insecure_fetch_url)
 
+        commit_tag = copy.deepcopy(valid)
+        commit_tag["source"]["args"]["tag"] = commit_tag["source"]["args"].pop("rev")
+        invalid.append(commit_tag)
+
+        unsafe_artifact = copy.deepcopy(valid)
+        unsafe_artifact["update"]["artifacts"] = ["../outside"]
+        invalid.append(unsafe_artifact)
+
+        empty_reason = copy.deepcopy(valid)
+        empty_reason["update"]["reason"] = ""
+        invalid.append(empty_reason)
+
         for record in invalid:
             with self.subTest(record=record):
                 with self.assertRaises(RuntimeError):
@@ -256,6 +289,26 @@ class UpdateInventoryTests(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "document fields"):
             load(valid, {"unexpected": True})
+
+    def test_github_client_does_not_change_declared_selection_strategy(self):
+        calls = []
+
+        def failed_run(command, **_kwargs):
+            calls.append(command)
+            return SimpleNamespace(returncode=1, stdout="")
+
+        real_run = subprocess.run
+        subprocess.run = failed_run
+        try:
+            client = GitHubClient()
+            self.assertIsNone(client.get_latest_release("example", "project"))
+            self.assertIsNone(client.get_latest_commit("example", "project", "topic"))
+        finally:
+            subprocess.run = real_run
+
+        self.assertEqual(len(calls), 2)
+        self.assertIn("releases/latest", calls[0][2])
+        self.assertIn("commits/topic", calls[1][2])
 
     def test_catalog_npm_update_rewrites_source_and_dependent_hash_atomically(self):
         with tempfile.TemporaryDirectory() as temp_dir:

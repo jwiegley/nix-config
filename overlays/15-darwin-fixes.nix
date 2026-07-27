@@ -3,6 +3,8 @@
 # Dependencies: None (uses only prev)
 _final: prev:
 let
+  compatibilitySources = import ../packages/source-catalog.nix "compatibility";
+  popplerPatch = compatibilitySources.poppler-darwin-mutex-patch;
   useLld =
     package:
     if prev.stdenv.isDarwin then
@@ -38,10 +40,10 @@ in
     if prev.stdenv.isDarwin then
       prev.poppler.overrideAttrs (oldAttrs: {
         patches = (oldAttrs.patches or [ ]) ++ [
-          (prev.fetchpatch {
-            url = "https://gitlab.freedesktop.org/poppler/poppler/-/commit/08f4bca6a669f9fce75dbab743db559a86591738.patch";
-            hash = "sha256-+eWqVK/v3Ys9k2+z/dCoS2o82m039UER1StMUW4PIgM=";
-          })
+          (
+            assert popplerPatch.source.fetcher == "fetchpatch";
+            prev.fetchpatch popplerPatch.source.args
+          )
         ];
       })
     else

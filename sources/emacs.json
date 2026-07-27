@@ -1232,6 +1232,235 @@
         "branch": "master",
         "kind": "github-commit"
       }
+    },
+    "ascii": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/ascii.el",
+          "sha256": "sha256-DmRLaRFU5Pt4TtkS6w8Fi33CRWOznbpJgmo5Msa0V8Y="
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/ascii.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "col-highlight": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/col-highlight.el",
+          "sha256": "sha256-3pWRFdYidBVb0gy18cnF3xOQE+bGIWCZdOYu763C+yo="
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/col-highlight.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "crosshairs": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/crosshairs.el",
+          "sha256": "sha256-R/r5EDRwoHcQAVeEqfGPGx4dSmFF8wmVWEA2UNz/EAI="
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/crosshairs.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "cursor-chg": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/cursor-chg.el",
+          "sha256": "1zmwh0z4g6khb04lbgga263pqa51mfvs0wfj3y85j7b08f2lqnqn"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/cursor-chg.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "erc-highlight-nicknames": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/erc-highlight-nicknames.el",
+          "sha256": "01r184q86aha4gs55r2vy3rygq1qnxh1bj9qmlz97b2yh8y17m50"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/erc-highlight-nicknames.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "gptel-got": {
+      "source": {
+        "args": {
+          "url": "https://codeberg.org/bajsicki/gptel-got.git",
+          "rev": "a87fb723c30b217b5883208c0784c06e93944ab2",
+          "sha256": "0pyv2rjv36drdv4q9q57pyp09zh2x11xw4qh42wqlg59z85qgb2v"
+        },
+        "fetcher": "fetchgit",
+        "url": "https://codeberg.org/bajsicki/gptel-got.git"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual"
+      }
+    },
+    "highlight-cl": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/highlight-cl.el",
+          "sha256": "0r3kzs2fsi3kl5gqmsv75dc7lgfl4imrrqhg09ij6kq1ri8gjxjw"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/highlight-cl.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "hl-line+": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/hl-line+.el",
+          "sha256": "1ns064l1c5g3dnhx5d2sn43w9impn58msrywsgq0bdyzikg7wwh2"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/hl-line+.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "org": {
+      "version": "9.8.7",
+      "commit": "cdc16898fd46a30d7187c0a5830b2b898ffbd2de",
+      "source": {
+        "args": {
+          "url": "https://git.savannah.gnu.org/git/emacs/org-mode.git",
+          "rev": "refs/tags/release_9.8.7",
+          "sha256": "sha256-7ZmwAkVjEf+a8I9zBE9IMdGdvTdDwM8DXFkG+f1oHZo="
+        },
+        "fetcher": "fetchgit",
+        "url": "https://git.savannah.gnu.org/git/emacs/org-mode.git"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual"
+      }
+    },
+    "org-checklist": {
+      "source": {
+        "args": {
+          "url": "https://git.sr.ht/~bzg/org-contrib/blob/master/lisp/org-checklist.el",
+          "sha256": "03z9cklpcrnc0s0igi7jxz0aw7c97m9cwz7b1d8nfz29fws25cx9"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://git.sr.ht/~bzg/org-contrib/blob/master/lisp/org-checklist.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "popup-ruler": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/popup-ruler.el",
+          "sha256": "0fszl969savcibmksfkanaq11d047xbnrfxd84shf9z9z2i3dr43"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/popup-ruler.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "pp-c-l": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/pp-c-l.el",
+          "sha256": "sha256-ilaNsDEa/LCu8fFMmbdLXuhfeZV+ucRO1DxxA5tThnw="
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/pp-c-l.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "tidy": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/tidy.el",
+          "sha256": "0psci55a3angwv45z9i8wz8jw634rxg1xawkrb57m878zcxxddwa"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/tidy.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "vterm-tmux": {
+      "source": {
+        "args": {
+          "url": "https://codeberg.org/olivermead/vterm-tmux.git",
+          "rev": "cbb1641beb799efb994de4cd95e47384fac3fe5d",
+          "sha256": "07b18ij10zld5wv5k7f612gkb3y27i653inq3i905va45v1axvqm"
+        },
+        "fetcher": "fetchgit",
+        "url": "https://codeberg.org/olivermead/vterm-tmux.git"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual"
+      }
+    },
+    "xray": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/xray.el",
+          "sha256": "1s25z9iiwpm1sp3yj9mniw4dq7dn0krk4678bgqh464k5yvn6lyk"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/xray.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
+    },
+    "yaoddmuse": {
+      "source": {
+        "args": {
+          "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/yaoddmuse.el",
+          "sha256": "1ahcshphziqi1hhrhv52jdmqp9q1w1b3qxl007xrjp3nmz0sbdjr"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/yaoddmuse.el"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual"
+      }
     }
   }
 }

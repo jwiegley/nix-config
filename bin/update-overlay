@@ -433,49 +433,31 @@ class GitHubClient:
     """Client for GitHub API operations using gh CLI."""
 
     def get_latest_release(self, owner: str, repo: str) -> Optional[str]:
-        """Get the latest release version from GitHub."""
+        """Get the latest GitHub release tag without changing strategy."""
         try:
-            # Try latest release first
             result = subprocess.run(
                 ["gh", "api", f"repos/{owner}/{repo}/releases/latest"],
                 capture_output=True, text=True
             )
-            if result.returncode == 0:
-                data = json.loads(result.stdout)
-                tag = data.get("tag_name", "")
-                return tag
-        except Exception:
-            pass
+            if result.returncode != 0:
+                return None
+            return json.loads(result.stdout).get("tag_name") or None
+        except (OSError, ValueError, json.JSONDecodeError):
+            return None
 
-        # Fall back to tags if no release
+    def get_latest_commit(self, owner: str, repo: str, branch: str) -> Optional[tuple[str, str]]:
+        """Get the latest commit SHA from exactly the declared branch."""
         try:
             result = subprocess.run(
-                ["gh", "api", f"repos/{owner}/{repo}/tags", "--jq", ".[0].name"],
+                ["gh", "api", f"repos/{owner}/{repo}/commits/{branch}", "--jq", ".sha"],
                 capture_output=True, text=True
             )
-            if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.strip()
-        except Exception:
-            pass
-
-        return None
-
-    def get_latest_commit(self, owner: str, repo: str, branch: str = "master") -> Optional[tuple[str, str]]:
-        """Get the latest commit SHA and short SHA from a branch. Returns (full_sha, short_sha)."""
-        # Try master first, then main
-        for br in [branch, "master", "main"]:
-            try:
-                result = subprocess.run(
-                    ["gh", "api", f"repos/{owner}/{repo}/commits/{br}", "--jq", ".sha"],
-                    capture_output=True, text=True
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    full_sha = result.stdout.strip()
-                    short_sha = full_sha[:8]
-                    return (full_sha, short_sha)
-            except Exception:
-                pass
-        return None
+            if result.returncode != 0 or not result.stdout.strip():
+                return None
+            full_sha = result.stdout.strip()
+            return full_sha, full_sha[:8]
+        except OSError:
+            return None
 
 
 class NpmRegistryClient:
@@ -698,6 +680,10 @@ def _same_git_url(left: str, right: str) -> bool:
     return canonical(left) == canonical(right)
 
 
+def _normalized_package_name(value: str) -> str:
+    return re.sub(r"[-_.]+", "-", value).lower()
+
+
 def _validate_fetch_record(name: str, source: dict) -> None:
     if not isinstance(source, dict) or set(source) != {"args", "fetcher", "url"}:
         raise RuntimeError(f"invalid source object for {name}")
@@ -773,6 +759,7 @@ def _catalog_executor(record: dict) -> Optional[str]:
         source["fetcher"] in expected_fetchers
         and update.get("policy", "automatic") == "automatic"
         and not update.get("artifacts")
+        and not record.get("artifacts")
         and set(record.get("hashes", {})) <= {"cargoHash", "npmDepsHash", "vendorHash"}
     ):
         return "update-overlay"
@@ -784,23 +771,24 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
     catalog_dir = nix_dir / "sources"
     targets = {}
     allowed = {
-        "artifacts", "date", "hashes", "source", "update", "version",
+        "artifacts", "commit", "date", "hashes", "source", "update", "version",
     }
+    common_update_fields = {"artifacts", "kind", "policy", "reason"}
     update_schema = {
-        "explicit-rev": ({"artifacts", "kind", "branch", "policy"}, set()),
-        "fixed-flake-input": ({"artifacts", "kind", "input", "policy"}, {"input"}),
-        "flake-input": ({"artifacts", "kind", "input", "policy"}, {"input"}),
-        "flake-input+copy": ({"artifacts", "kind", "input", "policy"}, {"input"}),
-        "github-commit": ({"artifacts", "kind", "branch", "policy"}, {"branch"}),
-        "github-release": ({"artifacts", "kind", "policy", "tagPrefix"}, set()),
-        "github-release-asset": ({"artifacts", "kind", "policy", "tagPrefix"}, set()),
-        "npm-release": ({"artifacts", "kind", "package", "policy"}, {"package"}),
+        "explicit-rev": (common_update_fields | {"branch"}, set()),
+        "fixed-flake-input": (common_update_fields | {"input"}, {"input"}),
+        "flake-input": (common_update_fields | {"input"}, {"input"}),
+        "flake-input+copy": (common_update_fields | {"input"}, {"input"}),
+        "github-commit": (common_update_fields | {"branch"}, {"branch"}),
+        "github-release": (common_update_fields | {"tagPrefix"}, set()),
+        "github-release-asset": (common_update_fields | {"tagPrefix"}, set()),
+        "npm-release": (common_update_fields | {"package"}, {"package"}),
         "npm-release+flake-input": (
-            {"artifacts", "kind", "input", "package", "policy"},
+            common_update_fields | {"input", "package"},
             {"input", "package"},
         ),
-        "pypi-release": ({"artifacts", "kind", "package", "policy"}, {"package"}),
-        "url-release": ({"artifacts", "kind", "policy"}, set()),
+        "pypi-release": (common_update_fields | {"package"}, {"package"}),
+        "url-release": (common_update_fields, set()),
     }
     for path in sorted(catalog_dir.glob("*.json")):
         payload = json.loads(path.read_text(), object_pairs_hook=_unique_object)
@@ -814,10 +802,9 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             unknown = record.keys() - allowed
             if unknown:
                 raise RuntimeError(f"unknown source catalog fields for {name}: {sorted(unknown)}")
-            if "version" in record and (not isinstance(record["version"], str) or not record["version"]):
-                raise RuntimeError(f"invalid source catalog version: {name}")
-            if "date" in record and (not isinstance(record["date"], str) or not record["date"]):
-                raise RuntimeError(f"invalid source catalog date: {name}")
+            for field in ("version", "date", "commit"):
+                if field in record and (not isinstance(record[field], str) or not record[field]):
+                    raise RuntimeError(f"invalid source catalog {field}: {name}")
             _validate_fetch_record(name, record.get("source"))
             artifacts = record.get("artifacts", {})
             if not isinstance(artifacts, dict):
@@ -835,12 +822,42 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 raise RuntimeError(f"invalid update strategy fields for source catalog record: {name}")
             if update.get("policy", "automatic") not in {"automatic", "manual"}:
                 raise RuntimeError(f"invalid update policy for source catalog record: {name}")
+            if "reason" in update and (not isinstance(update["reason"], str) or not update["reason"]):
+                raise RuntimeError(f"invalid update reason for source catalog record: {name}")
+            kind = update["kind"]
+            source_args = record["source"]["args"]
+            source_fetcher = record["source"]["fetcher"]
+            if kind == "github-commit" and (
+                source_fetcher != "fetchFromGitHub"
+                or "rev" not in source_args
+                or "tag" in source_args
+            ):
+                raise RuntimeError(f"github-commit requires a native rev field: {name}")
+            if kind == "npm-release":
+                package = update["package"]
+                if source_fetcher != "fetchurl" or f"/{package}/-/" not in source_args["url"]:
+                    raise RuntimeError(f"npm source identity does not match update package: {name}")
+            if kind == "pypi-release" and source_fetcher == "fetchPypi":
+                if _normalized_package_name(source_args["pname"]) != _normalized_package_name(
+                    update["package"]
+                ):
+                    raise RuntimeError(f"PyPI source identity does not match update package: {name}")
             update_artifacts = update.get("artifacts", [])
             if (
                 not isinstance(update_artifacts, list)
                 or not all(isinstance(value, str) and value for value in update_artifacts)
             ):
                 raise RuntimeError(f"invalid update artifacts for source catalog record: {name}")
+            catalog_root = nix_dir.resolve()
+            invalid_artifacts = [
+                value for value in update_artifacts
+                if Path(value).is_absolute()
+                or not (nix_dir / value).resolve().is_relative_to(catalog_root)
+            ]
+            if invalid_artifacts:
+                raise RuntimeError(
+                    f"source catalog record {name} references unsafe artifacts: {invalid_artifacts}"
+                )
             missing_artifacts = [value for value in update_artifacts if not (nix_dir / value).is_file()]
             if missing_artifacts:
                 raise RuntimeError(f"source catalog record {name} references missing artifacts: {missing_artifacts}")

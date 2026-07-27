@@ -3,20 +3,16 @@
 _final: prev:
 
 let
+  sources = import ../packages/source-catalog.nix "compatibility";
   nixpkgs =
-    {
-      rev,
-      narHash,
-    }:
-    import
-      (builtins.fetchTree {
-        type = "github";
-        owner = "NixOS";
-        repo = "nixpkgs";
-        inherit rev narHash;
-      }).outPath
-      { localSystem = prev.stdenv.hostPlatform.system; };
-
+    name:
+    let
+      source = sources.${name}.source;
+    in
+    assert source.fetcher == "fetchTree";
+    import (builtins.fetchTree source.args).outPath {
+      localSystem = prev.stdenv.hostPlatform.system;
+    };
   # Last good nixpkgs rev before the 2026-04-23 bump (rev 01fbdeef...)
   # broke several Darwin builds:
   #   - ntp: configure can't find pthreads on Darwin SDK 14.4
@@ -27,10 +23,7 @@ let
   #   - folly: UninitializedMemoryHacksTest.cpp.o fails to compile with
   #     `__sanitizer_annotate_contiguous_container` undeclared under
   #     clang-21 + libc++ in SDK 14.4 (regression in folly 2026.01.19.00)
-  lastGood = nixpkgs {
-    rev = "b86751bc4085f48661017fa226dee99fab6c651b";
-    narHash = "sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw=";
-  };
+  lastGood = nixpkgs "nixpkgs-last-good";
 
   # Last good nixpkgs rev before nixpkgs PR 517610 (merged 2026-05-07)
   # bumped mesa 26.0.6 -> 26.1.0 without verifying Darwin builds. The new
@@ -39,10 +32,7 @@ let
   # + SPIRV-LLVM-Translator-21, making a local rebuild slow and fragile.
   # Pin mesa together with its xorg-server/xquartz consumers so the closure
   # stays self-consistent. Drop these once Hydra is green on aarch64-darwin.
-  preMesa26_1 = nixpkgs {
-    rev = "f77951fcf0348ac9a4a5fc6c44c104d1387042d4";
-    narHash = "sha256-h+evAmhKoLk1hA7vUnuRq+AorRZXlv7u473XyW5yOhw=";
-  };
+  preMesa26_1 = nixpkgs "nixpkgs-pre-mesa-26-1";
 
   # Last good nixpkgs rev (== prior flake.lock pin, 2026-05-22) before the
   # 2026-05-25 nixpkgs bump (rev f9d8b659...) shipped rclone 1.74.2, which
@@ -53,10 +43,7 @@ let
   #       fatal error: 'fuse.h' file not found
   # 1.74.1 from this rev still uses macfuse-stubs and builds cleanly on
   # aarch64-darwin. Drop this once nixpkgs restores the Darwin code path.
-  preRcloneFuse3Break = nixpkgs {
-    rev = "6dedf69f94d03cbe7bdde106f2d4c23ae2a853bf";
-    narHash = "sha256-gOTcX/9MZVMUE0Xvb4IEcv+0TQJkZFNEnL757ljU360=";
-  };
+  preRcloneFuse3Break = nixpkgs "nixpkgs-pre-rclone-fuse3";
 
   # Last good nixpkgs rev (== prior flake.lock pin, 2026-07-02) before the
   # 2026-07-05 bump (rev 19a8a1e6...) shipped a nixos-render-docs that
@@ -64,10 +51,7 @@ let
   # (a1fa429, currently upstream HEAD) still passes --toc-depth when
   # building darwin-manual-html, so the manual and darwin-help fail. Drop
   # this once nix-darwin switches to --sidebar-depth.
-  preTocDepthRemoval = nixpkgs {
-    rev = "9e92285f211dad236540fd617d7e30e0b99bc0e1";
-    narHash = "sha256-AXmz9ho4Lud5CsbrZsuSVwpQZ4o5FgZ1chxBn5cJ8+0=";
-  };
+  preTocDepthRemoval = nixpkgs "nixpkgs-pre-toc-depth-removal";
 in
 {
   # Meta/Facebook C++ libraries must be pinned together for closure

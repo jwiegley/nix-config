@@ -15,22 +15,21 @@ let
   anvilSource = anvilSources.anvil-mcp;
   anvilIdeSource = anvilSources.anvil-ide;
   emacsSources = import ../packages/source-catalog.nix "emacs";
-  githubSource =
-    name:
+  sourceArgs =
+    fetcher: name:
     let
-      source = emacsSources.${name};
+      source = emacsSources.${name}.source;
     in
-    assert source.source.fetcher == "fetchFromGitHub";
-    prev.fetchFromGitHub source.source.args;
+    assert source.fetcher == fetcher;
+    source.args;
+  githubSource = name: prev.fetchFromGitHub (sourceArgs "fetchFromGitHub" name);
+  gitSource = name: prev.fetchgit (sourceArgs "fetchgit" name);
+  urlSource = name: prev.fetchurl (sourceArgs "fetchurl" name);
 
   myEmacsPackageOverrides =
     eself: esuper:
     let
-      inherit (prev)
-        fetchurl
-        fetchgit
-        fetchFromGitHub
-        ;
+      inherit (prev) fetchFromGitHub;
 
       withPatches =
         pkg: patches:
@@ -47,28 +46,15 @@ let
           src = ./emacs + ("/" + name);
         };
 
-      fetchFromEmacsWiki = prev.callPackage (
-        {
-          fetchurl,
-          name,
-          sha256,
-        }:
-        fetchurl {
-          inherit sha256;
-          url = "https://raw.githubusercontent.com/emacsmirror/emacswiki.org/master/" + name;
-        }
-      );
-
       compileEmacsWikiFile =
         {
           name,
-          sha256,
           buildInputs ? [ ],
           patches ? [ ],
         }:
         compileEmacsFiles {
           inherit name buildInputs patches;
-          src = fetchFromEmacsWiki { inherit name sha256; };
+          src = urlSource (prev.lib.removeSuffix ".el" name);
         };
 
     in
@@ -86,13 +72,11 @@ let
 
       ascii = compileEmacsWikiFile {
         name = "ascii.el";
-        sha256 = "sha256-DmRLaRFU5Pt4TtkS6w8Fi33CRWOznbpJgmo5Msa0V8Y=";
         # date = 2025-10-02T08:31:55-0700;
       };
 
       col-highlight = compileEmacsWikiFile {
         name = "col-highlight.el";
-        sha256 = "sha256-3pWRFdYidBVb0gy18cnF3xOQE+bGIWCZdOYu763C+yo=";
         # date = 2025-10-02T08:31:56-0700;
 
         buildInputs = with eself; [ vline ];
@@ -100,7 +84,6 @@ let
 
       crosshairs = compileEmacsWikiFile {
         name = "crosshairs.el";
-        sha256 = "sha256-R/r5EDRwoHcQAVeEqfGPGx4dSmFF8wmVWEA2UNz/EAI=";
         # date = 2025-10-02T08:31:57-0700;
 
         buildInputs = with eself; [
@@ -112,55 +95,46 @@ let
 
       cursor-chg = compileEmacsWikiFile {
         name = "cursor-chg.el";
-        sha256 = "1zmwh0z4g6khb04lbgga263pqa51mfvs0wfj3y85j7b08f2lqnqn";
         # date = 2025-10-02T08:31:58-0700;
       };
 
       erc-highlight-nicknames = compileEmacsWikiFile {
         name = "erc-highlight-nicknames.el";
-        sha256 = "01r184q86aha4gs55r2vy3rygq1qnxh1bj9qmlz97b2yh8y17m50";
         # date = 2025-10-02T08:31:59-0700;
       };
 
       highlight-cl = compileEmacsWikiFile {
         name = "highlight-cl.el";
-        sha256 = "0r3kzs2fsi3kl5gqmsv75dc7lgfl4imrrqhg09ij6kq1ri8gjxjw";
         # date = 2025-10-02T08:31:59-0700;
       };
 
       hl-line-plus = compileEmacsWikiFile {
         name = "hl-line+.el";
-        sha256 = "1ns064l1c5g3dnhx5d2sn43w9impn58msrywsgq0bdyzikg7wwh2";
         # date = 2025-10-02T08:32:00-0700;
       };
 
       popup-ruler = compileEmacsWikiFile {
         name = "popup-ruler.el";
-        sha256 = "0fszl969savcibmksfkanaq11d047xbnrfxd84shf9z9z2i3dr43";
         # date = 2025-10-02T08:32:01-0700;
       };
 
       pp-c-l = compileEmacsWikiFile {
         name = "pp-c-l.el";
-        sha256 = "sha256-ilaNsDEa/LCu8fFMmbdLXuhfeZV+ucRO1DxxA5tThnw=";
         # date = 2025-10-02T08:32:02-0700;
       };
 
       tidy = compileEmacsWikiFile {
         name = "tidy.el";
-        sha256 = "0psci55a3angwv45z9i8wz8jw634rxg1xawkrb57m878zcxxddwa";
         # date = 2025-10-02T08:32:03-0700;
       };
 
       xray = compileEmacsWikiFile {
         name = "xray.el";
-        sha256 = "1s25z9iiwpm1sp3yj9mniw4dq7dn0krk4678bgqh464k5yvn6lyk";
         # date = 2025-10-02T08:32:04-0700;
       };
 
       yaoddmuse = compileEmacsWikiFile {
         name = "yaoddmuse.el";
-        sha256 = "1ahcshphziqi1hhrhv52jdmqp9q1w1b3qxl007xrjp3nmz0sbdjr";
         # date = 2025-10-02T08:32:05-0700;
       };
 
@@ -385,12 +359,7 @@ let
 
       vterm-tmux = compileEmacsFiles {
         name = "vterm-tmux";
-        src = fetchgit {
-          url = "https://codeberg.org/olivermead/vterm-tmux.git";
-          rev = "cbb1641beb799efb994de4cd95e47384fac3fe5d";
-          sha256 = "07b18ij10zld5wv5k7f612gkb3y27i653inq3i905va45v1axvqm";
-          # date = 2023-05-26T15:48:10+01:00;
-        };
+        src = gitSource "vterm-tmux";
         buildInputs = with eself; [
           vterm
           multi-vterm
@@ -421,12 +390,7 @@ let
 
       gptel-got = compileEmacsFiles {
         name = "gptel-got";
-        src = fetchgit {
-          url = "https://codeberg.org/bajsicki/gptel-got.git";
-          rev = "a87fb723c30b217b5883208c0784c06e93944ab2";
-          sha256 = "0pyv2rjv36drdv4q9q57pyp09zh2x11xw4qh42wqlg59z85qgb2v";
-          # date = 2025-06-27T16:25:27+02:00;
-        };
+        src = gitSource "gptel-got";
         buildInputs = with eself; [ gptel ];
         preBuild = ''
           rm -f gptel-got-qol.el
@@ -461,14 +425,9 @@ let
       # them relative to the installed oc.el/ox-odt.el.
       org = esuper.melpaBuild {
         pname = "org";
-        version = "9.8.7";
-        src = fetchgit {
-          url = "https://git.savannah.gnu.org/git/emacs/org-mode.git";
-          rev = "refs/tags/release_9.8.7";
-          sha256 = "sha256-7ZmwAkVjEf+a8I9zBE9IMdGdvTdDwM8DXFkG+f1oHZo=";
-          # date = 2026-07-04T07:34:28+02:00;
-        };
-        commit = "cdc16898fd46a30d7187c0a5830b2b898ffbd2de";
+        inherit (emacsSources.org) version;
+        src = gitSource "org";
+        inherit (emacsSources.org) commit;
         files = ''
           ("lisp/*.el"
            ("etc" "etc/ORG-NEWS")
@@ -494,11 +453,7 @@ let
 
       org-checklist = compileEmacsFiles {
         name = "org-checklist.el";
-        src = fetchurl {
-          url = "https://git.sr.ht/~bzg/org-contrib/blob/master/lisp/org-checklist.el";
-          sha256 = "03z9cklpcrnc0s0igi7jxz0aw7c97m9cwz7b1d8nfz29fws25cx9";
-          # date = "2025-10-02T08:32:29-0700";
-        };
+        src = urlSource "org-checklist";
       };
 
       org-extra-emphasis = compileEmacsFiles {

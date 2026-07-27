@@ -3,21 +3,19 @@
 
 let
   sources = import ./source-catalog.nix "ai";
+  compatibilitySources = import ./source-catalog.nix "compatibility";
+  mitmproxyMacosWheel = compatibilitySources.mitmproxy-macos-wheel;
 in
 [
   (
     pfinal: pprev:
     prev.lib.optionalAttrs prev.stdenv.isDarwin {
       # Fix hash mismatch for mitmproxy-macos wheel (PyPI republished the package)
-      mitmproxy-macos = pprev.mitmproxy-macos.overridePythonAttrs (oldAttrs: {
-        src = pfinal.fetchPypi {
-          pname = "mitmproxy_macos";
-          inherit (oldAttrs) version;
-          format = "wheel";
-          dist = "py3";
-          python = "py3";
-          hash = "sha256-baAfEY4hEN3wOEicgE53gY71IX003JYFyyZaNJ7U8UA=";
-        };
+      mitmproxy-macos = pprev.mitmproxy-macos.overridePythonAttrs (_oldAttrs: {
+        inherit (mitmproxyMacosWheel) version;
+        src =
+          assert mitmproxyMacosWheel.source.fetcher == "fetchPypi";
+          pfinal.fetchPypi mitmproxyMacosWheel.source.args;
       });
 
       # accelerate 1.13.0 added test_env_var_device, which mocks
