@@ -14,6 +14,14 @@ let
   anvilSources = import ../packages/source-catalog.nix "anvil";
   anvilSource = anvilSources.anvil-mcp;
   anvilIdeSource = anvilSources.anvil-ide;
+  emacsSources = import ../packages/source-catalog.nix "emacs";
+  githubSource =
+    name:
+    let
+      source = emacsSources.${name};
+    in
+    assert source.source.fetcher == "fetchFromGitHub";
+    prev.fetchFromGitHub source.source.args;
 
   myEmacsPackageOverrides =
     eself: esuper:
@@ -202,12 +210,7 @@ let
 
       ecard = compileEmacsFiles {
         name = "ecard";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "ecard";
-          rev = "e79cd68c49466f132142b5ce1a4eaa4fbb47fb8c";
-          sha256 = "sha256-2c7xlowQBOZqtqtZ/s2BBvKFX33SheTkFYdKoJhBbR8=";
-        };
+        src = githubSource "ecard";
         preBuild = ''
           rm -f *-test.el *-examples.el ecard-benchmark.el ecard-carddav-mock.el
         '';
@@ -215,35 +218,17 @@ let
 
       awesome-tray = compileEmacsFiles {
         name = "awesome-tray";
-        src = fetchFromGitHub {
-          owner = "manateelazycat";
-          repo = "awesome-tray";
-          rev = "448366baf76a46bfa280c49c4a57c7a5e53ebbe5";
-          sha256 = "sha256-fL66Lp16qb+8sg2k79WU0dZzRMl2ga/n6oNaGljvYgE=";
-          # date = 2025-12-24T22:59:47+08:00;
-        };
+        src = githubSource "awesome-tray";
       };
 
       bookmark-plus = compileEmacsFiles {
         name = "bookmark-plus";
-        src = fetchFromGitHub {
-          owner = "emacsmirror";
-          repo = "bookmark-plus";
-          rev = "892cc0a314ef353e800b6ff9da03b0bfd55e4763";
-          sha256 = "sha256-1Pd0e+FxYq1bORf+YS3lsrbA25CVH7zrqwPUPNnXVLE=";
-          # date = 2025-08-20T23:33:58+02:00;
-        };
+        src = githubSource "bookmark-plus";
       };
 
       consult-omni = compileEmacsFiles {
         name = "consult-omni";
-        src = fetchFromGitHub {
-          owner = "armindarvish";
-          repo = "consult-omni";
-          rev = "3a126ee54479755408faed10da945dbc2366303b";
-          sha256 = "sha256-8Koe6IO2+/HvDb2IE1dc/DY3hGmNWcEMAfz6d0gdT7k=";
-          # date = "2025-09-27T22:49:03-07:00";
-        };
+        src = githubSource "consult-omni";
         propagatedBuildInputs = with eself; [
           browser-hist
           elfeed
@@ -272,36 +257,18 @@ let
 
       doxymacs = compileEmacsFiles {
         name = "doxymacs";
-        src = fetchFromGitHub {
-          owner = "dpom";
-          repo = "doxymacs";
-          rev = "a843eebe0f53c939d9792df3bbfca95661d31ece";
-          sha256 = "sha256-mIXL2MacwYH9Tpg9cVKyAWgPqcFT62oN16Xnh+kDxl8=";
-          # date = 2017-06-25T20:09:07+03:00;
-        };
+        src = githubSource "doxymacs";
       };
 
       eager-state = compileEmacsFiles {
         name = "eager-state";
-        src = fetchFromGitHub {
-          owner = "meedstrom";
-          repo = "eager-state";
-          rev = "53282709833021dfbe8605c9eadaa0fffe5da349";
-          sha256 = "sha256-XkQKw8Kq5F2OYoVji49GkJGHbR5r39Z/zFk6kxbvRtc=";
-          # date = 2024-08-23T16:09:59+02:00;
-        };
+        src = githubSource "eager-state";
         buildInputs = with eself; [ llama ];
       };
 
       eglot-booster = compileEmacsFiles {
         name = "eglot-booster";
-        src = fetchFromGitHub {
-          owner = "jdtsmith";
-          repo = "eglot-booster";
-          rev = "510f579409627c333ef0e9157db713b1004da842";
-          sha256 = "sha256-HhWR40j/WFcorp8QttXtOz5yxL1B4JUXL+9IuNpoND0=";
-          # date = 2025-07-16T14:21:52-04:00;
-        };
+        src = githubSource "eglot-booster";
         propagatedBuildInputs = [
           (prev.emacs-lsp-booster.override { inherit (eself) emacs; })
         ];
@@ -309,47 +276,23 @@ let
 
       eww-plz = compileEmacsFiles {
         name = "eww-plz";
-        src = fetchFromGitHub {
-          owner = "9viz";
-          repo = "eww-plz.el";
-          rev = "c239ee08c594d5b32d73cd44cfd8a58313adc9b5";
-          sha256 = "sha256-WZC8LU0Vr3yugqMKc12XMh3E+IsvbzKQa/3hJrgDR04=";
-          # date = 2025-02-10T14:44:32+05:30;
-        };
+        src = githubSource "eww-plz";
         buildInputs = with eself; [ plz ];
       };
 
       fence-edit = compileEmacsFiles {
         name = "fence-edit";
-        src = fetchFromGitHub {
-          owner = "aaronbieber";
-          repo = "fence-edit.el";
-          rev = "fab7cee16e91c2d8f9c24e2b08e934fa0813a774";
-          sha256 = "sha256-O/8Qmgil1brgT2DPLRdoggW53LrO0ugpb5GT733Z65s=";
-          # date = 2023-05-10T06:39:55-04:00;
-        };
+        src = githubSource "fence-edit";
       };
 
       gnus-harvest = compileEmacsFiles {
         name = "gnus-harvest";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "gnus-harvest";
-          rev = "29b406e1ed5a934fad0ae9701bbde1b284e4d939";
-          sha256 = "sha256-dy3b4JLsvbloAvY5N/y0Ih//Uj6NIYNwmqaFZ9kDJgg=";
-          # date = 2018-02-08T11:20:21-08:00;
-        };
+        src = githubSource "gnus-harvest";
       };
 
       indent-shift = compileEmacsFiles {
         name = "indent-shift";
-        src = fetchFromGitHub {
-          owner = "ryuslash";
-          repo = "indent-shift";
-          rev = "292993d61d88d80c4a4429aa97856f612e0402b2";
-          sha256 = "sha256-v3TVYlZkMEnEj87NWsUoujXG+veE448MXI+J0i9nUI8=";
-          # date = 2014-06-04T02:04:46+02:00;
-        };
+        src = githubSource "indent-shift";
         patches = [ ./emacs/patches/indent-shift.patch ];
       };
 
@@ -366,13 +309,7 @@ let
 
       lasgun = compileEmacsFiles {
         name = "lasgun";
-        src = fetchFromGitHub {
-          owner = "aatmunbaxi";
-          repo = "lasgun.el";
-          rev = "fb65580a713c017a0b5229f1dd5664f1464fade4";
-          sha256 = "sha256-VcP6HDDh9/YZOYEI1bpWONfrqk39GjyWK/nzApREhkQ=";
-          # date = 2024-09-20T15:03:32-05:00;
-        };
+        src = githubSource "lasgun";
         buildInputs = with eself; [
           avy
           multiple-cursors
@@ -381,13 +318,7 @@ let
 
       magit-gt = compileEmacsFiles {
         name = "magit-gt";
-        src = fetchFromGitHub {
-          owner = "ajbt200128";
-          repo = "magit-gt";
-          rev = "9ae3737a8563ad2b4f4956b39abd3cf3ee4c23b0";
-          sha256 = "sha256-yguceZ/OormX+2MhUHZ/QF3xmRJ07LXOBr0XNpjxvA8=";
-          # date = 2025-04-09T17:08:09Z;
-        };
+        src = githubSource "magit-gt";
         # magit-gt does (require 'magit) at top level; the builder runs
         # `emacs -Q`, so magit plus the deps it pulls in at byte-compile
         # time must be listed explicitly to be on the load path.
@@ -405,105 +336,51 @@ let
 
       moccur-edit = compileEmacsFiles {
         name = "moccur-edit";
-        src = fetchFromGitHub {
-          owner = "myuhe";
-          repo = "moccur-edit.el";
-          rev = "026f5dd4159bd1b68c430ab385757157ba01a361";
-          sha256 = "sha256-/YM0gSB3hNBz1m9PzhY7Ev5l0ssSsoX+lR//ZDTOM+I=";
-          # date = 2015-03-01T18:04:32+09:00;
-        };
+        src = githubSource "moccur-edit";
         buildInputs = with eself; [ color-moccur ];
       };
 
       pgmacs = compileEmacsFiles {
         name = "pgmacs";
-        src = fetchFromGitHub {
-          owner = "emarsden";
-          repo = "pgmacs";
-          rev = "fdc5a6f5c2e49c9316dde78185475ce8cdb66d67";
-          sha256 = "sha256-yjsjhsBx6CQVDBR9z1rnLoEgWxpOaLC/Rv0vZYw9ji0=";
-          # date = 2025-09-29T11:18:24+02:00;
-        };
+        src = githubSource "pgmacs";
         buildInputs = with eself; [ pg ];
       };
 
       onepassword-el = compileEmacsFiles {
         name = "onepassword-el";
-        src = fetchFromGitHub {
-          owner = "justinbarclay";
-          repo = "1password.el";
-          rev = "8c3e35808ed21332e5eb054a495cce6f0c8f5b25";
-          sha256 = "sha256-RC3/fLSdH7H78f2wjXnXoOIi1zIZNG4EW/rBwGEXEz0=";
-          # date = 2025-06-21T15:35:42-07:00;
-        };
+        src = githubSource "onepassword-el";
         buildInputs = with eself; [ aio ];
       };
 
       sdcv-mode = compileEmacsFiles {
         name = "sdcv-mode";
-        src = fetchFromGitHub {
-          owner = "gucong";
-          repo = "emacs-sdcv";
-          rev = "c51569ebf3fd1f8c02c33c289d229996bf2ff186";
-          sha256 = "sha256-GPm9loJlsXvZDyIPnAeDVvJ8hXf95J9/uWnnq+JVe2I=";
-          # date = 2012-01-28T14:08:32-06:00;
-        };
+        src = githubSource "sdcv-mode";
       };
 
       sky-color-clock = compileEmacsFiles {
         name = "sky-color-clock";
-        src = fetchFromGitHub {
-          owner = "zk-phi";
-          repo = "sky-color-clock";
-          rev = "525122ffb94ae4ac160de72c2ee0ade331d2e80a";
-          sha256 = "sha256-mLtJZHGgedPqBkaKDeK6Br2m2eKrTMlmcIuczDFLsJQ=";
-          # date = 2021-03-06T13:28:31+09:00;
-        };
+        src = githubSource "sky-color-clock";
         patches = [ ./emacs/patches/sky-color-clock.patch ];
       };
 
       tla-mode = compileEmacsFiles {
         name = "tla-mode";
-        src = fetchFromGitHub {
-          owner = "ratish-punnoose";
-          repo = "tla-mode";
-          rev = "28c915aa49e043358a29bde045a68357027d96de";
-          sha256 = "sha256-MzkD7gPeKbTsoZpM7rY7P5LjuOmT6GA5tFLgBlVRcO8=";
-          # date = 2019-06-03T00:38:56-07:00;
-        };
+        src = githubSource "tla-mode";
       };
 
       typo = compileEmacsFiles {
         name = "typo";
-        src = fetchFromGitHub {
-          owner = "jorgenschaefer";
-          repo = "typoel";
-          rev = "173ebe4fc7ac38f344b16e6eaf41f79e38f20d57";
-          sha256 = "sha256-yHiI08rFJdQ9u5uo4wQUVjBsCzhU2vQvLX717+gvAyU=";
-          # date = 2020-07-06T19:14:52+02:00;
-        };
+        src = githubSource "typo";
       };
 
       ultra-scroll-mac = compileEmacsFiles {
         name = "ultra-scroll-mac";
-        src = fetchFromGitHub {
-          owner = "jdtsmith";
-          repo = "ultra-scroll-mac";
-          rev = "5be267d2d92c230b4347e0769f584c71aec53589";
-          sha256 = "sha256-N8+ITu25WLtw6sqYxFR2LvfQQCV4ASTYVwDTYN5m/lM=";
-          # date = 2025-07-25T13:45:38-04:00;
-        };
+        src = githubSource "ultra-scroll-mac";
       };
 
       vcard-mode = compileEmacsFiles {
         name = "vcard-mode";
-        src = fetchFromGitHub {
-          owner = "dochang";
-          repo = "vcard-mode";
-          rev = "ab1a2885a5720d7fb02d9b6583ee908ba2260b78";
-          sha256 = "sha256-HKjPPcw1bnBHwT+O4F/mciovrh+vpmsJrEjO3lJXhHA=";
-          # date = 2019-01-29T00:54:40+08:00;
-        };
+        src = githubSource "vcard-mode";
       };
 
       vterm-tmux = compileEmacsFiles {
@@ -522,13 +399,7 @@ let
 
       wikipedia = compileEmacsFiles {
         name = "wikipedia";
-        src = fetchFromGitHub {
-          owner = "benthamite";
-          repo = "wikipedia";
-          rev = "d7219cd453a93b93598a339d20927bdf60eded8d";
-          sha256 = "sha256-+gLcdDb3xZJS47dzScBT3ZkR+ZXaUhWt9bZvE1MDO7M=";
-          # date = 2026-04-20T14:13:55Z;
-        };
+        src = githubSource "wikipedia";
         # transient, gptel, and llama are loaded at byte-compile time; the
         # builder runs `emacs -Q` so transitive deps must be listed explicitly.
         buildInputs = with eself; [
@@ -543,13 +414,7 @@ let
 
       word-count-mode = compileEmacsFiles {
         name = "word-count-mode";
-        src = fetchFromGitHub {
-          owner = "tomaszskutnik";
-          repo = "word-count-mode";
-          rev = "6267c98e0d9a3951e667da9bace5aaf5033f4906";
-          sha256 = "sha256-0ILbae6W3yhwxZ0TW2AaPIyJc2mBktZQA5VfU5vxfN8=";
-          # date = 2015-07-16T22:37:17+02:00;
-        };
+        src = githubSource "word-count-mode";
       };
 
       ########################################################################
@@ -570,25 +435,13 @@ let
 
       gptel-quick = compileEmacsFiles {
         name = "gptel-quick";
-        src = fetchFromGitHub {
-          owner = "karthink";
-          repo = "gptel-quick";
-          rev = "36fe296e016449433fa1213f4b89cb8dc7d4db5e";
-          sha256 = "sha256-W2cEtjhoXxAhMxycLAg0qe2Ehpgn1L/m1VcpZu/Trsw=";
-          # date = 2025-06-01T11:07:58-07:00;
-        };
+        src = githubSource "gptel-quick";
         buildInputs = with eself; [ gptel ];
       };
 
       macher = compileEmacsFiles {
         name = "macher";
-        src = fetchFromGitHub {
-          owner = "kmontag";
-          repo = "macher";
-          rev = "b6e51cb9a01c87e36d8920d947ed171bf21c8287";
-          sha256 = "sha256-f3G4EmOpmHWakfGQC5eaCDtSmBmZB4OxgYglyec/qvM=";
-          # date = 2025-08-20T19:15:22-07:00;
-        };
+        src = githubSource "macher";
         buildInputs = with eself; [ gptel ];
       };
 
@@ -630,24 +483,12 @@ let
 
       org-annotate = compileEmacsFiles {
         name = "org-annotate";
-        src = fetchFromGitHub {
-          owner = "girzel";
-          repo = "org-annotate";
-          rev = "0297290f1cb1d31b264632e3f4cb4013956b5b94";
-          sha256 = "sha256-rheGSlaDbEh473lEyRKzcd83yXBkmqwX1pudFgj5cOE=";
-          # date = 2022-02-08T09:29:08-08:00;
-        };
+        src = githubSource "org-annotate";
       };
 
       ob-emamux = compileEmacsFiles {
         name = "ob-emamux";
-        src = fetchFromGitHub {
-          owner = "jackkamm";
-          repo = "ob-emamux";
-          rev = "397760d24905ef1f00090586ea38556e6f680780";
-          sha256 = "sha256-CY9fojI11+Bu4CAK22bMSrhnEV6spOIQttkLZIYTmag=";
-          # date = 2019-05-22T22:30:29-07:00;
-        };
+        src = githubSource "ob-emamux";
         buildInputs = with eself; [ emamux ];
       };
 
@@ -662,36 +503,18 @@ let
 
       org-extra-emphasis = compileEmacsFiles {
         name = "org-extra-emphasis";
-        src = fetchFromGitHub {
-          owner = "QiangF";
-          repo = "org-extra-emphasis";
-          rev = "bc6119226ebd84e7f2efd429a03601f563c9bb4f";
-          sha256 = "sha256-qCgbmBipJF9ZdwPuxyB9sfJVAvzi7pJ9H42ymuE95LE=";
-          # date = 2023-12-01T08:29:06+05:30;
-        };
+        src = githubSource "org-extra-emphasis";
       };
 
       org-margin = compileEmacsFiles {
         name = "org-margin";
-        src = fetchFromGitHub {
-          owner = "rougier";
-          repo = "org-margin";
-          rev = "4013b59ff829903a7ab86b95593be71aa5c9b87d";
-          sha256 = "sha256-2w9jc8Jd1McdyItqWJ+XXc62RIxsJ+Gro6Fi55EppY8=";
-          # date = 2024-01-15T11:05:11+01:00;
-        };
+        src = githubSource "org-margin";
         buildInputs = with eself; [ org ];
       };
 
       org-mem = compileEmacsFiles {
         name = "org-mem";
-        src = fetchFromGitHub {
-          owner = "meedstrom";
-          repo = "org-mem";
-          rev = "07094dac902e452d59533e4d01e8177afaa0cfd1";
-          sha256 = "sha256-TGuuoaCABgLTHDPfx0/MmHN7JoS4c2M+eAiJ8X3SgiU=";
-          # date = 2025-10-01T20:50:56+02:00;
-        };
+        src = githubSource "org-mem";
         buildInputs = with eself; [
           org
           llama
@@ -701,13 +524,7 @@ let
 
       org-node = compileEmacsFiles {
         name = "org-node";
-        src = fetchFromGitHub {
-          owner = "meedstrom";
-          repo = "org-node";
-          rev = "10ea878528a24ae9bf6903da198f347d093f2b11";
-          sha256 = "sha256-uK0VN0ABA+iOpTMFqXW2vxnWtjp/S7vEVH2s/FS0bus=";
-          # date = 2025-10-01T20:55:21+02:00;
-        };
+        src = githubSource "org-node";
         buildInputs = with eself; [
           org
           org-mem
@@ -719,25 +536,13 @@ let
 
       org-pretty-table = compileEmacsFiles {
         name = "org-pretty-table";
-        src = fetchFromGitHub {
-          owner = "Fuco1";
-          repo = "org-pretty-table";
-          rev = "38e4354bbf7a8d08294babd067fac697038119b1";
-          sha256 = "sha256-IeHnoB9hpISwuzI+pKiU+5wvGvz9YJrG5amGg6DGgq4=";
-          # date = 2023-03-19T15:52:27+01:00;
-        };
+        src = githubSource "org-pretty-table";
         buildInputs = with eself; [ org ];
       };
 
       org-quick-peek = compileEmacsFiles {
         name = "org-quick-peek";
-        src = fetchFromGitHub {
-          owner = "alphapapa";
-          repo = "org-quick-peek";
-          rev = "564e39bec72cba7b20c0373b946b8e58afcb1f43";
-          sha256 = "sha256-/wL4NOd1xHY81eF+njdWcLUqlemjlNhCYnzBsWISFUY=";
-          # date = 2022-10-05T20:37:38-05:00;
-        };
+        src = githubSource "org-quick-peek";
         buildInputs = with eself; [
           quick-peek
           dash
@@ -747,13 +552,7 @@ let
 
       org-recoll = compileEmacsFiles {
         name = "org-recoll";
-        src = fetchFromGitHub {
-          owner = "alraban";
-          repo = "org-recoll";
-          rev = "1e21fbc70b5e31b746257c12d00acba3dcc1dd5c";
-          sha256 = "sha256-bAiQsPESYnxz+gDVU4R/ZYzP2uQclAWVZvr4iejvcSU=";
-          # date = "2020-06-28T15:19:50-04:00";
-        };
+        src = githubSource "org-recoll";
         buildInputs = with eself; [
           quick-peek
           dash
@@ -763,13 +562,7 @@ let
 
       org-srs = compileEmacsFiles {
         name = "org-srs";
-        src = fetchFromGitHub {
-          owner = "bohonghuang";
-          repo = "org-srs";
-          rev = "e6e5fbfcb8beb520141edac647ccb76af9b71df6";
-          sha256 = "sha256-0PzJ58nCcRnOldvrAW0Wl2ns1xmH3XbzgmalPyNgOKU=";
-          # date = 2025-09-21T19:33:28+08:00;
-        };
+        src = githubSource "org-srs";
         buildInputs = with eself; [
           org
           fsrs
@@ -778,36 +571,18 @@ let
 
       org-table-highlight = compileEmacsFiles {
         name = "org-table-highlight";
-        src = fetchFromGitHub {
-          owner = "llcc";
-          repo = "org-table-highlight";
-          rev = "62139dfef47d6e44dccc2ae76ea74d7b03d00641";
-          sha256 = "sha256-DiW6EBRvAYN1rvLnEAdxMhKen6xlhriqW4s40Z91E6Y=";
-          # date = 2025-07-27T13:44:43+08:00;
-        };
+        src = githubSource "org-table-highlight";
         buildInputs = with eself; [ org ];
       };
 
       ox-texinfo-plus = compileEmacsFiles {
         name = "ox-texinfo-plus";
-        src = fetchFromGitHub {
-          owner = "tarsius";
-          repo = "ox-texinfo-plus";
-          rev = "1dfe1c01d34a979ce870269d2c964007f50449d5";
-          sha256 = "sha256-gDObdPjXweJ1FizpDZwVMxe633W19CFAnvxnOwz44kM=";
-          # date = 2022-03-05T23:47:11+01:00;
-        };
+        src = githubSource "ox-texinfo-plus";
       };
 
       ox-whatsapp = compileEmacsFiles {
         name = "ox-whatsapp";
-        src = fetchFromGitHub {
-          owner = "Hugo-Heagren";
-          repo = "ox-whatsapp";
-          rev = "9cdff80f3f8bb4dd5d70d772d489a8de575561af";
-          sha256 = "sha256-GYuhuDFO2VH5lG3VcRXGoZxsJY0PSx/9k1maLRn4JBM=";
-          # date = 2024-03-03T14:54:20Z;
-        };
+        src = githubSource "ox-whatsapp";
       };
 
       # ########################################################################
@@ -886,40 +661,20 @@ let
       # only the src swapped; personal/unpublished ones use compileEmacsFiles.
 
       alert = esuper.alert.overrideAttrs (_: {
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "alert";
-          rev = "31fc56855289d0846e73d7ca9b84b628aeac16a0";
-          sha256 = "sha256-i4aEOsUTsNKpRrztk0uY9+zxK7QCqUP6+Qc/h7H1AOw=";
-        };
+        src = githubSource "alert";
       });
 
       chess = compileEmacsFiles {
         name = "chess";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "emacs-chess";
-          rev = "e51e89fa22159988139e5a03dc29ea20e5f9b501";
-          sha256 = "sha256-Cdk81K0KU6q7NIJnsD5D8bY+7fCzjQ+h6HhyWFw/vOI=";
-        };
+        src = githubSource "chess";
       };
 
       elisp-dev-mcp = esuper.elisp-dev-mcp.overrideAttrs (_: {
-        src = fetchFromGitHub {
-          owner = "laurynas-biveinis";
-          repo = "elisp-mcp-dev";
-          rev = "d70a8f38ededefb7e3d11f3e2b519bf754a54d1a";
-          sha256 = "sha256-7DewDcG9q61N6aMoGwyUFMkt/HNKf5LGxoocMe73pk4=";
-        };
+        src = githubSource "elisp-dev-mcp";
       });
 
       git-undo = esuper.git-undo.overrideAttrs (_: {
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "git-undo-el";
-          rev = "1e94d2dad39ffa168005dee182dde5694416d9c9";
-          sha256 = "sha256-EppewewNPWVbQN76LVoebtKu+FOFCnWDhDeUognPmAo=";
-        };
+        src = githubSource "git-undo";
       });
 
       # gptel pinned to the rev formerly checked out in ~/.emacs.d/lisp/gptel,
@@ -930,49 +685,24 @@ let
       # version) cannot satisfy. The rev's Package-Requires is only transient +
       # compat, so the stock propagatedBuildInputs already suffice.
       gptel = esuper.gptel.overrideAttrs (_: {
-        src = fetchFromGitHub {
-          owner = "karthink";
-          repo = "gptel";
-          rev = "ebf0f3d8e9932e0ac6de82542220864cc17f6784";
-          sha256 = "sha256-GN9O9leU1CNbB27gVVzzCP8RtaPtZxspnirbxCk+/xU=";
-        };
+        src = githubSource "gptel";
       });
 
       ledger-mode = esuper.ledger-mode.overrideAttrs (_: {
-        src = fetchFromGitHub {
-          owner = "ledger";
-          repo = "ledger-mode";
-          rev = "b43c9d04e03048763cf37696a63ee2232ac88567";
-          sha256 = "sha256-obLSghymXakHNMz5RmCpHZhune1oYLU6ME3GzDpLwOA=";
-        };
+        src = githubSource "ledger-mode";
       });
 
       mcp-server-lib = esuper.mcp-server-lib.overrideAttrs (_: {
-        src = fetchFromGitHub {
-          owner = "laurynas-biveinis";
-          repo = "mcp-server-lib.el";
-          rev = "dec55e6405987250256a81efe92d65bdfa8a140c";
-          sha256 = "sha256-zaeysvqWmRGheDkILGI/0F4+lz9VYunHVXJzK4zkhsM=";
-        };
+        src = githubSource "mcp-server-lib";
       });
 
       org-autolist = esuper.org-autolist.overrideAttrs (_: {
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "org-autolist";
-          rev = "c37e390de4874eab06f6343e6e8dc6cf35f35a8e";
-          sha256 = "sha256-ox4DTLEys8OpKdF4TOA//KJByk8DOD65nq3bmpZpp0U=";
-        };
+        src = githubSource "org-autolist";
       });
 
       vulpea = compileEmacsFiles {
         name = "vulpea";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "vulpea";
-          rev = "ea5d6e551115ed2d6b6aedc14e3aaf2f28283310";
-          sha256 = "sha256-okgbgzQRG18yIaxePoTI1uFP6b4j/mB22tYlaEhd0wk=";
-        };
+        src = githubSource "vulpea";
         buildInputs = with eself; [
           org-roam
           dash
@@ -988,12 +718,7 @@ let
 
       claude-code-ide = compileEmacsFiles {
         name = "claude-code-ide";
-        src = fetchFromGitHub {
-          owner = "manzaltu";
-          repo = "claude-code-ide.el";
-          rev = "1de17bbadc650962a05fd68463fdff71697ec649";
-          sha256 = "sha256-jW0R4TqXqVIumHJB9DziqB7NPfMmIKbhsn2H1dLwT6A=";
-        };
+        src = githubSource "claude-code-ide";
         buildInputs = with eself; [
           websocket
           web-server
@@ -1007,22 +732,12 @@ let
 
       copy-code = compileEmacsFiles {
         name = "copy-code";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "emacs-copy-code";
-          rev = "0a122d04caab1e1cd903b9287f21884d210b13a2";
-          sha256 = "sha256-lgnWn+o6IRKvK9NQfm7bUUe/z2CsZIeKt9tZpSn1phk=";
-        };
+        src = githubSource "copy-code";
       };
 
       gptel-emacs-tools = compileEmacsFiles {
         name = "gptel-emacs-tools";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "gptel-emacs-tools";
-          rev = "1ae5e496ea7fe8d3eacf7a6ffe5f5c2eb6a5e756";
-          sha256 = "sha256-K0EZc2aei5PNCQ7ZsgLo012xUWGVaqlQZHWAlMPOxeA=";
-        };
+        src = githubSource "gptel-emacs-tools";
         buildInputs = with eself; [
           gptel
           transient
@@ -1032,12 +747,7 @@ let
 
       gptel-litellm = compileEmacsFiles {
         name = "gptel-litellm";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "gptel-litellm";
-          rev = "c6b8603816dd72ab9ee0aaf8c8382f0fcaefe15b";
-          sha256 = "sha256-MEkkjI3BFCXkVbc5PidNwqef1KMKZvonTcLCGozjBmA=";
-        };
+        src = githubSource "gptel-litellm";
         buildInputs = with eself; [
           gptel
           transient
@@ -1048,12 +758,7 @@ let
 
       gptel-prompts = compileEmacsFiles {
         name = "gptel-prompts";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "gptel-prompts";
-          rev = "be29a9aa471e5f398cb5e1c2ce9f40a9f2b36281";
-          sha256 = "sha256-a853fJjP4O2Jn7UPHI00W3AcUEDXShoePeE2aO3C4kw=";
-        };
+        src = githubSource "gptel-prompts";
         buildInputs = with eself; [
           gptel
           transient
@@ -1063,12 +768,7 @@ let
 
       gptel-rag = compileEmacsFiles {
         name = "gptel-rag";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "gptel-rag";
-          rev = "eadf31e78ffcb2923eacb85492e681755035e462";
-          sha256 = "sha256-aA9HjDfxwmxRMdMWjCpjNNaCpuJWKB4wIu/kGTsw00c=";
-        };
+        src = githubSource "gptel-rag";
         buildInputs = with eself; [
           gptel
           transient
@@ -1078,22 +778,12 @@ let
 
       hash-store = compileEmacsFiles {
         name = "hash-store";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "hash-store";
-          rev = "2074c01f051733600e94b26809f4c3ba1f26086e";
-          sha256 = "sha256-bKjiStot9Plja5I+ZpOVQOlx4StxGlviMWU7YPuPHEg=";
-        };
+        src = githubSource "hash-store";
       };
 
       haskell-config = compileEmacsFiles {
         name = "haskell-config";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "haskell-config";
-          rev = "9f42695fc99aeb6251e5394103d97ad00e2bf0dc";
-          sha256 = "sha256-uj11pONsDv5L8xAKv5kEWNbbPus+4TmpDrtf91lb8Sc=";
-        };
+        src = githubSource "haskell-config";
         buildInputs = with eself; [
           proof-general
         ];
@@ -1101,53 +791,28 @@ let
 
       initsplit = compileEmacsFiles {
         name = "initsplit";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "initsplit";
-          rev = "e488e8f95661a8daf9c66241ce58bb6650d91751";
-          sha256 = "sha256-+OXdyAFCLwQhpyCsu94lAhVEeCwi7hc/xcmC3frtc+M=";
-        };
+        src = githubSource "initsplit";
       };
 
       llm-tool-collection = compileEmacsFiles {
         name = "llm-tool-collection";
-        src = fetchFromGitHub {
-          owner = "skissue";
-          repo = "llm-tool-collection";
-          rev = "b9fd45bedf3e0fb07d289730991199ae18785157";
-          sha256 = "sha256-40BSMoM25tdgXeH5+labLYqCPCK4SEuAWovOeJxnzNo=";
-        };
+        src = githubSource "llm-tool-collection";
       };
 
       loeb = compileEmacsFiles {
         name = "loeb";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "emacs-loeb";
-          rev = "5e66a400102e2ae3e958dc6922436019ffaa18c9";
-          sha256 = "sha256-ajiNxKP8ycjQ1JufqM9Fu6mFW95Jbn1Y3pJzvO7ru8Y=";
-        };
+        src = githubSource "loeb";
       };
 
       lzw = compileEmacsFiles {
         name = "lzw";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "emacs-lzw";
-          rev = "27f4c8ed656dba8d90764a1669b0abe25d52d327";
-          sha256 = "sha256-llQvVnsRkLU/fHu5Yi/HLSdR4Qtq6Uqck+kVlxpQ5dc=";
-        };
+        src = githubSource "lzw";
       };
 
       machines =
         (compileEmacsFiles {
           name = "machines";
-          src = fetchFromGitHub {
-            owner = "jwiegley";
-            repo = "machines";
-            rev = "ba64481bfbe20b76ad1df89f2d5b116bdb81c78e";
-            sha256 = "sha256-R6eoASGGXIcu4CWiX+KPPF93juFcRG2eNJFNFRvtlso=";
-          };
+          src = githubSource "machines";
           # m-gptel.el (require 'gptel-curl) no longer compiles: gptel dropped
           # gptel-curl.el, so this optional integration is dead in the source
           # checkout too (nothing loads it — m.el is the only feature). Ship it
@@ -1164,12 +829,7 @@ let
 
       magit-ai = compileEmacsFiles {
         name = "magit-ai";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "magit-ai";
-          rev = "3f7fce8ebb0ff5f2bbfaaea502231b3c62c1bbe2";
-          sha256 = "sha256-AL3ehGl6+b/mQXBRt8RN12xPfJYZ8V45xECETFO1ksc=";
-        };
+        src = githubSource "magit-ai";
         buildInputs = with eself; [
           magit
           transient
@@ -1184,12 +844,7 @@ let
 
       ob-gptel = compileEmacsFiles {
         name = "ob-gptel";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "ob-gptel";
-          rev = "71584eb30e8317cf36104cec78b6d53c4433cae7";
-          sha256 = "sha256-cSbhEeAOitGbbq5Ep8axypALc0ueuVKwk/uIfrXaG1g=";
-        };
+        src = githubSource "ob-gptel";
         buildInputs = with eself; [
           gptel
           transient
@@ -1201,32 +856,17 @@ let
 
       org-agenda-overlay = compileEmacsFiles {
         name = "org-agenda-overlay";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "org-agenda-overlay";
-          rev = "a8e6a0052e91e3a8582fd073436b005711a10307";
-          sha256 = "sha256-tsCH2TGz+BfV2uMC17LPktemgcHdlJmZ/f1kN/HkE7Y=";
-        };
+        src = githubSource "org-agenda-overlay";
       };
 
       org-context = compileEmacsFiles {
         name = "org-context";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "org-context";
-          rev = "de0da4e8f000d7a9078d056749c3b8ebfa6b6547";
-          sha256 = "sha256-zsH6dOMbE+hdWFOY6rJmDegQhlu+pu42nOX9DRnvLl4=";
-        };
+        src = githubSource "org-context";
       };
 
       org-devonthink = compileEmacsFiles {
         name = "org-devonthink";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "org-devonthink";
-          rev = "37314ea676f1349125efbe89a890a586298b1687";
-          sha256 = "sha256-UTY2PnYnT3GAQWBf7WH8Djl6llTjj+ip5kCuvlhZ5Iw=";
-        };
+        src = githubSource "org-devonthink";
         buildInputs = with eself; [
           org-roam
           dash
@@ -1242,12 +882,7 @@ let
 
       org-drafts = compileEmacsFiles {
         name = "org-drafts";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "org-drafts";
-          rev = "b9302b746fcfce7365ec525a63112700999baa6e";
-          sha256 = "sha256-HaeAK4Vq+A38k6d0xoz1gU1zFtAN0EMWk/MwOzPpTVQ=";
-        };
+        src = githubSource "org-drafts";
         buildInputs = with eself; [
           copy-as-format
           pretty-hydra
@@ -1260,22 +895,12 @@ let
 
       org-hash = compileEmacsFiles {
         name = "org-hash";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "org-hash";
-          rev = "53a7474d93e0fad888538fc51eb0ebf9cfa7b20d";
-          sha256 = "sha256-34PW7WQOLEZN4SvHXS1x7i3Q2IvhwZKhK2cXxNOGxYQ=";
-        };
+        src = githubSource "org-hash";
       };
 
       org-table-loeb = compileEmacsFiles {
         name = "org-table-loeb";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "org-table-loeb";
-          rev = "f90f334bfe77470f7cb0d945231c04de637ce11e";
-          sha256 = "sha256-9XyQnYiAEjl7UW7IAMWLnSQoaauwZLa4d07F+go0kAE=";
-        };
+        src = githubSource "org-table-loeb";
         preBuild = ''
           rm -f test-*.el *-test*.el
         '';
@@ -1283,12 +908,7 @@ let
 
       org-wiki = compileEmacsFiles {
         name = "org-wiki";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "org-wiki";
-          rev = "1c8f21ef5eed00c744199d225bb902f064b50a70";
-          sha256 = "sha256-yOss7m6a5Gbfot/4SzqhhuHMwbkbNAgHJ8r9xNM/Evk=";
-        };
+        src = githubSource "org-wiki";
         buildInputs = with eself; [
           mcp-server-lib
           org-roam
@@ -1306,12 +926,7 @@ let
 
       pending = compileEmacsFiles {
         name = "pending";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "pending";
-          rev = "b3192937905bdcfff3d3eed0b94aabae5bbfbc14";
-          sha256 = "sha256-pQSlOF+MI/xBOifenI0XyIXc58fHetH1ybQTj3BX/Yo=";
-        };
+        src = githubSource "pending";
         buildInputs = with eself; [
           aio
         ];
@@ -1319,22 +934,12 @@ let
 
       pl = compileEmacsFiles {
         name = "pl";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "emacs-pl";
-          rev = "c5ee5646a49efd3a27f78ba6e139067fbd67f99d";
-          sha256 = "sha256-OAwJzXoIonmEIOdL6v+Lq8qlsUTCivKFm+qs5WDNk9w=";
-        };
+        src = githubSource "pl";
       };
 
       springboard = compileEmacsFiles {
         name = "springboard";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "springboard";
-          rev = "012c44daa6d487d29fe265d92082fda7c2e03c6c";
-          sha256 = "sha256-AGx373prCFCrfsIE5gMMe/2Jf/Mc+PZubDPMpnFgXoo=";
-        };
+        src = githubSource "springboard";
         buildInputs = with eself; [
           helm
           async
@@ -1346,22 +951,12 @@ let
 
       stock-quote = compileEmacsFiles {
         name = "stock-quote";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "stock-quote";
-          rev = "8e3fc578fcbb8468104a43438c748e2a4f9ee0d6";
-          sha256 = "sha256-qgHToyKuJd1MwkgDMIBqaQOrdifbm+Cj1yV8WjIJ6nk=";
-        };
+        src = githubSource "stock-quote";
       };
 
       vulpea-field = compileEmacsFiles {
         name = "vulpea-field";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "vulpea-field";
-          rev = "dfb6d9032d771fd9bd87f35db8fa0af6c7355931";
-          sha256 = "sha256-1xKPIDHSyi0yOvyUfjxGXA1gobg2K1hUqtJlGgor3vg=";
-        };
+        src = githubSource "vulpea-field";
         buildInputs = with eself; [
           vulpea
           org-roam
@@ -1378,12 +973,7 @@ let
 
       wombag = compileEmacsFiles {
         name = "wombag";
-        src = fetchFromGitHub {
-          owner = "karthink";
-          repo = "wombag";
-          rev = "62f8e7ae8c8f26a834a66fb5a179693bd8078839";
-          sha256 = "sha256-YhjOXbqfnlwoZ6Hu/DLDTz7ErWcWALiYlvmQMCmJj0k=";
-        };
+        src = githubSource "wombag";
         buildInputs = with eself; [
           compat
           emacsql
@@ -1393,12 +983,7 @@ let
 
       z3 = compileEmacsFiles {
         name = "z3";
-        src = fetchFromGitHub {
-          owner = "jwiegley";
-          repo = "emacs-z3";
-          rev = "ce2d19772ac8fd8e1d17238238dc9a152eddc25f";
-          sha256 = "sha256-wU556v+oarKug/Sx86HjLglOt48RfkBMNUwR7xre5Z8=";
-        };
+        src = githubSource "z3";
       };
 
     };

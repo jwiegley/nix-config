@@ -1,0 +1,1237 @@
+{
+  "schemaVersion": 1,
+  "sources": {
+    "alert": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "alert",
+          "rev": "31fc56855289d0846e73d7ca9b84b628aeac16a0",
+          "sha256": "sha256-i4aEOsUTsNKpRrztk0uY9+zxK7QCqUP6+Qc/h7H1AOw="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/alert"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "awesome-tray": {
+      "source": {
+        "args": {
+          "owner": "manateelazycat",
+          "repo": "awesome-tray",
+          "rev": "448366baf76a46bfa280c49c4a57c7a5e53ebbe5",
+          "sha256": "sha256-fL66Lp16qb+8sg2k79WU0dZzRMl2ga/n6oNaGljvYgE="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/manateelazycat/awesome-tray"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "bookmark-plus": {
+      "source": {
+        "args": {
+          "owner": "emacsmirror",
+          "repo": "bookmark-plus",
+          "rev": "892cc0a314ef353e800b6ff9da03b0bfd55e4763",
+          "sha256": "sha256-1Pd0e+FxYq1bORf+YS3lsrbA25CVH7zrqwPUPNnXVLE="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/emacsmirror/bookmark-plus"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "chess": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "emacs-chess",
+          "rev": "e51e89fa22159988139e5a03dc29ea20e5f9b501",
+          "sha256": "sha256-Cdk81K0KU6q7NIJnsD5D8bY+7fCzjQ+h6HhyWFw/vOI="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/emacs-chess"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "claude-code-ide": {
+      "source": {
+        "args": {
+          "owner": "manzaltu",
+          "repo": "claude-code-ide.el",
+          "rev": "1de17bbadc650962a05fd68463fdff71697ec649",
+          "sha256": "sha256-jW0R4TqXqVIumHJB9DziqB7NPfMmIKbhsn2H1dLwT6A="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/manzaltu/claude-code-ide.el"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "consult-omni": {
+      "source": {
+        "args": {
+          "owner": "armindarvish",
+          "repo": "consult-omni",
+          "rev": "3a126ee54479755408faed10da945dbc2366303b",
+          "sha256": "sha256-8Koe6IO2+/HvDb2IE1dc/DY3hGmNWcEMAfz6d0gdT7k="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/armindarvish/consult-omni"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "copy-code": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "emacs-copy-code",
+          "rev": "0a122d04caab1e1cd903b9287f21884d210b13a2",
+          "sha256": "sha256-lgnWn+o6IRKvK9NQfm7bUUe/z2CsZIeKt9tZpSn1phk="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/emacs-copy-code"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "doxymacs": {
+      "source": {
+        "args": {
+          "owner": "dpom",
+          "repo": "doxymacs",
+          "rev": "a843eebe0f53c939d9792df3bbfca95661d31ece",
+          "sha256": "sha256-mIXL2MacwYH9Tpg9cVKyAWgPqcFT62oN16Xnh+kDxl8="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/dpom/doxymacs"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "eager-state": {
+      "source": {
+        "args": {
+          "owner": "meedstrom",
+          "repo": "eager-state",
+          "rev": "53282709833021dfbe8605c9eadaa0fffe5da349",
+          "sha256": "sha256-XkQKw8Kq5F2OYoVji49GkJGHbR5r39Z/zFk6kxbvRtc="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/meedstrom/eager-state"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "ecard": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "ecard",
+          "rev": "e79cd68c49466f132142b5ce1a4eaa4fbb47fb8c",
+          "sha256": "sha256-2c7xlowQBOZqtqtZ/s2BBvKFX33SheTkFYdKoJhBbR8="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/ecard"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "eglot-booster": {
+      "source": {
+        "args": {
+          "owner": "jdtsmith",
+          "repo": "eglot-booster",
+          "rev": "510f579409627c333ef0e9157db713b1004da842",
+          "sha256": "sha256-HhWR40j/WFcorp8QttXtOz5yxL1B4JUXL+9IuNpoND0="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jdtsmith/eglot-booster"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "elisp-dev-mcp": {
+      "source": {
+        "args": {
+          "owner": "laurynas-biveinis",
+          "repo": "elisp-mcp-dev",
+          "rev": "d70a8f38ededefb7e3d11f3e2b519bf754a54d1a",
+          "sha256": "sha256-7DewDcG9q61N6aMoGwyUFMkt/HNKf5LGxoocMe73pk4="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/laurynas-biveinis/elisp-mcp-dev"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "eww-plz": {
+      "source": {
+        "args": {
+          "owner": "9viz",
+          "repo": "eww-plz.el",
+          "rev": "c239ee08c594d5b32d73cd44cfd8a58313adc9b5",
+          "sha256": "sha256-WZC8LU0Vr3yugqMKc12XMh3E+IsvbzKQa/3hJrgDR04="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/9viz/eww-plz.el"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "fence-edit": {
+      "source": {
+        "args": {
+          "owner": "aaronbieber",
+          "repo": "fence-edit.el",
+          "rev": "fab7cee16e91c2d8f9c24e2b08e934fa0813a774",
+          "sha256": "sha256-O/8Qmgil1brgT2DPLRdoggW53LrO0ugpb5GT733Z65s="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/aaronbieber/fence-edit.el"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "git-undo": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "git-undo-el",
+          "rev": "1e94d2dad39ffa168005dee182dde5694416d9c9",
+          "sha256": "sha256-EppewewNPWVbQN76LVoebtKu+FOFCnWDhDeUognPmAo="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/git-undo-el"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "gnus-harvest": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "gnus-harvest",
+          "rev": "29b406e1ed5a934fad0ae9701bbde1b284e4d939",
+          "sha256": "sha256-dy3b4JLsvbloAvY5N/y0Ih//Uj6NIYNwmqaFZ9kDJgg="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/gnus-harvest"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "gptel": {
+      "source": {
+        "args": {
+          "owner": "karthink",
+          "repo": "gptel",
+          "rev": "ebf0f3d8e9932e0ac6de82542220864cc17f6784",
+          "sha256": "sha256-GN9O9leU1CNbB27gVVzzCP8RtaPtZxspnirbxCk+/xU="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/karthink/gptel"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "gptel-emacs-tools": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "gptel-emacs-tools",
+          "rev": "1ae5e496ea7fe8d3eacf7a6ffe5f5c2eb6a5e756",
+          "sha256": "sha256-K0EZc2aei5PNCQ7ZsgLo012xUWGVaqlQZHWAlMPOxeA="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/gptel-emacs-tools"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "gptel-litellm": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "gptel-litellm",
+          "rev": "c6b8603816dd72ab9ee0aaf8c8382f0fcaefe15b",
+          "sha256": "sha256-MEkkjI3BFCXkVbc5PidNwqef1KMKZvonTcLCGozjBmA="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/gptel-litellm"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "gptel-prompts": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "gptel-prompts",
+          "rev": "be29a9aa471e5f398cb5e1c2ce9f40a9f2b36281",
+          "sha256": "sha256-a853fJjP4O2Jn7UPHI00W3AcUEDXShoePeE2aO3C4kw="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/gptel-prompts"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "gptel-quick": {
+      "source": {
+        "args": {
+          "owner": "karthink",
+          "repo": "gptel-quick",
+          "rev": "36fe296e016449433fa1213f4b89cb8dc7d4db5e",
+          "sha256": "sha256-W2cEtjhoXxAhMxycLAg0qe2Ehpgn1L/m1VcpZu/Trsw="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/karthink/gptel-quick"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "gptel-rag": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "gptel-rag",
+          "rev": "eadf31e78ffcb2923eacb85492e681755035e462",
+          "sha256": "sha256-aA9HjDfxwmxRMdMWjCpjNNaCpuJWKB4wIu/kGTsw00c="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/gptel-rag"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "hash-store": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "hash-store",
+          "rev": "2074c01f051733600e94b26809f4c3ba1f26086e",
+          "sha256": "sha256-bKjiStot9Plja5I+ZpOVQOlx4StxGlviMWU7YPuPHEg="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/hash-store"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "haskell-config": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "haskell-config",
+          "rev": "9f42695fc99aeb6251e5394103d97ad00e2bf0dc",
+          "sha256": "sha256-uj11pONsDv5L8xAKv5kEWNbbPus+4TmpDrtf91lb8Sc="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/haskell-config"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "indent-shift": {
+      "source": {
+        "args": {
+          "owner": "ryuslash",
+          "repo": "indent-shift",
+          "rev": "292993d61d88d80c4a4429aa97856f612e0402b2",
+          "sha256": "sha256-v3TVYlZkMEnEj87NWsUoujXG+veE448MXI+J0i9nUI8="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/ryuslash/indent-shift"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "initsplit": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "initsplit",
+          "rev": "e488e8f95661a8daf9c66241ce58bb6650d91751",
+          "sha256": "sha256-+OXdyAFCLwQhpyCsu94lAhVEeCwi7hc/xcmC3frtc+M="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/initsplit"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "lasgun": {
+      "source": {
+        "args": {
+          "owner": "aatmunbaxi",
+          "repo": "lasgun.el",
+          "rev": "fb65580a713c017a0b5229f1dd5664f1464fade4",
+          "sha256": "sha256-VcP6HDDh9/YZOYEI1bpWONfrqk39GjyWK/nzApREhkQ="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/aatmunbaxi/lasgun.el"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "ledger-mode": {
+      "source": {
+        "args": {
+          "owner": "ledger",
+          "repo": "ledger-mode",
+          "rev": "b43c9d04e03048763cf37696a63ee2232ac88567",
+          "sha256": "sha256-obLSghymXakHNMz5RmCpHZhune1oYLU6ME3GzDpLwOA="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/ledger/ledger-mode"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "llm-tool-collection": {
+      "source": {
+        "args": {
+          "owner": "skissue",
+          "repo": "llm-tool-collection",
+          "rev": "b9fd45bedf3e0fb07d289730991199ae18785157",
+          "sha256": "sha256-40BSMoM25tdgXeH5+labLYqCPCK4SEuAWovOeJxnzNo="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/skissue/llm-tool-collection"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "loeb": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "emacs-loeb",
+          "rev": "5e66a400102e2ae3e958dc6922436019ffaa18c9",
+          "sha256": "sha256-ajiNxKP8ycjQ1JufqM9Fu6mFW95Jbn1Y3pJzvO7ru8Y="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/emacs-loeb"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "lzw": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "emacs-lzw",
+          "rev": "27f4c8ed656dba8d90764a1669b0abe25d52d327",
+          "sha256": "sha256-llQvVnsRkLU/fHu5Yi/HLSdR4Qtq6Uqck+kVlxpQ5dc="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/emacs-lzw"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "macher": {
+      "source": {
+        "args": {
+          "owner": "kmontag",
+          "repo": "macher",
+          "rev": "b6e51cb9a01c87e36d8920d947ed171bf21c8287",
+          "sha256": "sha256-f3G4EmOpmHWakfGQC5eaCDtSmBmZB4OxgYglyec/qvM="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/kmontag/macher"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "machines": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "machines",
+          "rev": "ba64481bfbe20b76ad1df89f2d5b116bdb81c78e",
+          "sha256": "sha256-R6eoASGGXIcu4CWiX+KPPF93juFcRG2eNJFNFRvtlso="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/machines"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "magit-ai": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "magit-ai",
+          "rev": "3f7fce8ebb0ff5f2bbfaaea502231b3c62c1bbe2",
+          "sha256": "sha256-AL3ehGl6+b/mQXBRt8RN12xPfJYZ8V45xECETFO1ksc="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/magit-ai"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "magit-gt": {
+      "source": {
+        "args": {
+          "owner": "ajbt200128",
+          "repo": "magit-gt",
+          "rev": "9ae3737a8563ad2b4f4956b39abd3cf3ee4c23b0",
+          "sha256": "sha256-yguceZ/OormX+2MhUHZ/QF3xmRJ07LXOBr0XNpjxvA8="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/ajbt200128/magit-gt"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "mcp-server-lib": {
+      "source": {
+        "args": {
+          "owner": "laurynas-biveinis",
+          "repo": "mcp-server-lib.el",
+          "rev": "dec55e6405987250256a81efe92d65bdfa8a140c",
+          "sha256": "sha256-zaeysvqWmRGheDkILGI/0F4+lz9VYunHVXJzK4zkhsM="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/laurynas-biveinis/mcp-server-lib.el"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "moccur-edit": {
+      "source": {
+        "args": {
+          "owner": "myuhe",
+          "repo": "moccur-edit.el",
+          "rev": "026f5dd4159bd1b68c430ab385757157ba01a361",
+          "sha256": "sha256-/YM0gSB3hNBz1m9PzhY7Ev5l0ssSsoX+lR//ZDTOM+I="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/myuhe/moccur-edit.el"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "ob-emamux": {
+      "source": {
+        "args": {
+          "owner": "jackkamm",
+          "repo": "ob-emamux",
+          "rev": "397760d24905ef1f00090586ea38556e6f680780",
+          "sha256": "sha256-CY9fojI11+Bu4CAK22bMSrhnEV6spOIQttkLZIYTmag="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jackkamm/ob-emamux"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "ob-gptel": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "ob-gptel",
+          "rev": "71584eb30e8317cf36104cec78b6d53c4433cae7",
+          "sha256": "sha256-cSbhEeAOitGbbq5Ep8axypALc0ueuVKwk/uIfrXaG1g="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/ob-gptel"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "onepassword-el": {
+      "source": {
+        "args": {
+          "owner": "justinbarclay",
+          "repo": "1password.el",
+          "rev": "8c3e35808ed21332e5eb054a495cce6f0c8f5b25",
+          "sha256": "sha256-RC3/fLSdH7H78f2wjXnXoOIi1zIZNG4EW/rBwGEXEz0="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/justinbarclay/1password.el"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-agenda-overlay": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "org-agenda-overlay",
+          "rev": "a8e6a0052e91e3a8582fd073436b005711a10307",
+          "sha256": "sha256-tsCH2TGz+BfV2uMC17LPktemgcHdlJmZ/f1kN/HkE7Y="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/org-agenda-overlay"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-annotate": {
+      "source": {
+        "args": {
+          "owner": "girzel",
+          "repo": "org-annotate",
+          "rev": "0297290f1cb1d31b264632e3f4cb4013956b5b94",
+          "sha256": "sha256-rheGSlaDbEh473lEyRKzcd83yXBkmqwX1pudFgj5cOE="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/girzel/org-annotate"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-autolist": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "org-autolist",
+          "rev": "c37e390de4874eab06f6343e6e8dc6cf35f35a8e",
+          "sha256": "sha256-ox4DTLEys8OpKdF4TOA//KJByk8DOD65nq3bmpZpp0U="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/org-autolist"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-context": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "org-context",
+          "rev": "de0da4e8f000d7a9078d056749c3b8ebfa6b6547",
+          "sha256": "sha256-zsH6dOMbE+hdWFOY6rJmDegQhlu+pu42nOX9DRnvLl4="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/org-context"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-devonthink": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "org-devonthink",
+          "rev": "37314ea676f1349125efbe89a890a586298b1687",
+          "sha256": "sha256-UTY2PnYnT3GAQWBf7WH8Djl6llTjj+ip5kCuvlhZ5Iw="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/org-devonthink"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-drafts": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "org-drafts",
+          "rev": "b9302b746fcfce7365ec525a63112700999baa6e",
+          "sha256": "sha256-HaeAK4Vq+A38k6d0xoz1gU1zFtAN0EMWk/MwOzPpTVQ="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/org-drafts"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-extra-emphasis": {
+      "source": {
+        "args": {
+          "owner": "QiangF",
+          "repo": "org-extra-emphasis",
+          "rev": "bc6119226ebd84e7f2efd429a03601f563c9bb4f",
+          "sha256": "sha256-qCgbmBipJF9ZdwPuxyB9sfJVAvzi7pJ9H42ymuE95LE="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/QiangF/org-extra-emphasis"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-hash": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "org-hash",
+          "rev": "53a7474d93e0fad888538fc51eb0ebf9cfa7b20d",
+          "sha256": "sha256-34PW7WQOLEZN4SvHXS1x7i3Q2IvhwZKhK2cXxNOGxYQ="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/org-hash"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-margin": {
+      "source": {
+        "args": {
+          "owner": "rougier",
+          "repo": "org-margin",
+          "rev": "4013b59ff829903a7ab86b95593be71aa5c9b87d",
+          "sha256": "sha256-2w9jc8Jd1McdyItqWJ+XXc62RIxsJ+Gro6Fi55EppY8="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/rougier/org-margin"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-mem": {
+      "source": {
+        "args": {
+          "owner": "meedstrom",
+          "repo": "org-mem",
+          "rev": "07094dac902e452d59533e4d01e8177afaa0cfd1",
+          "sha256": "sha256-TGuuoaCABgLTHDPfx0/MmHN7JoS4c2M+eAiJ8X3SgiU="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/meedstrom/org-mem"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-node": {
+      "source": {
+        "args": {
+          "owner": "meedstrom",
+          "repo": "org-node",
+          "rev": "10ea878528a24ae9bf6903da198f347d093f2b11",
+          "sha256": "sha256-uK0VN0ABA+iOpTMFqXW2vxnWtjp/S7vEVH2s/FS0bus="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/meedstrom/org-node"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-pretty-table": {
+      "source": {
+        "args": {
+          "owner": "Fuco1",
+          "repo": "org-pretty-table",
+          "rev": "38e4354bbf7a8d08294babd067fac697038119b1",
+          "sha256": "sha256-IeHnoB9hpISwuzI+pKiU+5wvGvz9YJrG5amGg6DGgq4="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/Fuco1/org-pretty-table"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-quick-peek": {
+      "source": {
+        "args": {
+          "owner": "alphapapa",
+          "repo": "org-quick-peek",
+          "rev": "564e39bec72cba7b20c0373b946b8e58afcb1f43",
+          "sha256": "sha256-/wL4NOd1xHY81eF+njdWcLUqlemjlNhCYnzBsWISFUY="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/alphapapa/org-quick-peek"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-recoll": {
+      "source": {
+        "args": {
+          "owner": "alraban",
+          "repo": "org-recoll",
+          "rev": "1e21fbc70b5e31b746257c12d00acba3dcc1dd5c",
+          "sha256": "sha256-bAiQsPESYnxz+gDVU4R/ZYzP2uQclAWVZvr4iejvcSU="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/alraban/org-recoll"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-srs": {
+      "source": {
+        "args": {
+          "owner": "bohonghuang",
+          "repo": "org-srs",
+          "rev": "e6e5fbfcb8beb520141edac647ccb76af9b71df6",
+          "sha256": "sha256-0PzJ58nCcRnOldvrAW0Wl2ns1xmH3XbzgmalPyNgOKU="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/bohonghuang/org-srs"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-table-highlight": {
+      "source": {
+        "args": {
+          "owner": "llcc",
+          "repo": "org-table-highlight",
+          "rev": "62139dfef47d6e44dccc2ae76ea74d7b03d00641",
+          "sha256": "sha256-DiW6EBRvAYN1rvLnEAdxMhKen6xlhriqW4s40Z91E6Y="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/llcc/org-table-highlight"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-table-loeb": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "org-table-loeb",
+          "rev": "f90f334bfe77470f7cb0d945231c04de637ce11e",
+          "sha256": "sha256-9XyQnYiAEjl7UW7IAMWLnSQoaauwZLa4d07F+go0kAE="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/org-table-loeb"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "org-wiki": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "org-wiki",
+          "rev": "1c8f21ef5eed00c744199d225bb902f064b50a70",
+          "sha256": "sha256-yOss7m6a5Gbfot/4SzqhhuHMwbkbNAgHJ8r9xNM/Evk="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/org-wiki"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "ox-texinfo-plus": {
+      "source": {
+        "args": {
+          "owner": "tarsius",
+          "repo": "ox-texinfo-plus",
+          "rev": "1dfe1c01d34a979ce870269d2c964007f50449d5",
+          "sha256": "sha256-gDObdPjXweJ1FizpDZwVMxe633W19CFAnvxnOwz44kM="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/tarsius/ox-texinfo-plus"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "ox-whatsapp": {
+      "source": {
+        "args": {
+          "owner": "Hugo-Heagren",
+          "repo": "ox-whatsapp",
+          "rev": "9cdff80f3f8bb4dd5d70d772d489a8de575561af",
+          "sha256": "sha256-GYuhuDFO2VH5lG3VcRXGoZxsJY0PSx/9k1maLRn4JBM="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/Hugo-Heagren/ox-whatsapp"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "pending": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "pending",
+          "rev": "b3192937905bdcfff3d3eed0b94aabae5bbfbc14",
+          "sha256": "sha256-pQSlOF+MI/xBOifenI0XyIXc58fHetH1ybQTj3BX/Yo="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/pending"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "pgmacs": {
+      "source": {
+        "args": {
+          "owner": "emarsden",
+          "repo": "pgmacs",
+          "rev": "fdc5a6f5c2e49c9316dde78185475ce8cdb66d67",
+          "sha256": "sha256-yjsjhsBx6CQVDBR9z1rnLoEgWxpOaLC/Rv0vZYw9ji0="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/emarsden/pgmacs"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "pl": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "emacs-pl",
+          "rev": "c5ee5646a49efd3a27f78ba6e139067fbd67f99d",
+          "sha256": "sha256-OAwJzXoIonmEIOdL6v+Lq8qlsUTCivKFm+qs5WDNk9w="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/emacs-pl"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "sdcv-mode": {
+      "source": {
+        "args": {
+          "owner": "gucong",
+          "repo": "emacs-sdcv",
+          "rev": "c51569ebf3fd1f8c02c33c289d229996bf2ff186",
+          "sha256": "sha256-GPm9loJlsXvZDyIPnAeDVvJ8hXf95J9/uWnnq+JVe2I="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/gucong/emacs-sdcv"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "sky-color-clock": {
+      "source": {
+        "args": {
+          "owner": "zk-phi",
+          "repo": "sky-color-clock",
+          "rev": "525122ffb94ae4ac160de72c2ee0ade331d2e80a",
+          "sha256": "sha256-mLtJZHGgedPqBkaKDeK6Br2m2eKrTMlmcIuczDFLsJQ="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/zk-phi/sky-color-clock"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "springboard": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "springboard",
+          "rev": "012c44daa6d487d29fe265d92082fda7c2e03c6c",
+          "sha256": "sha256-AGx373prCFCrfsIE5gMMe/2Jf/Mc+PZubDPMpnFgXoo="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/springboard"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "stock-quote": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "stock-quote",
+          "rev": "8e3fc578fcbb8468104a43438c748e2a4f9ee0d6",
+          "sha256": "sha256-qgHToyKuJd1MwkgDMIBqaQOrdifbm+Cj1yV8WjIJ6nk="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/stock-quote"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "tla-mode": {
+      "source": {
+        "args": {
+          "owner": "ratish-punnoose",
+          "repo": "tla-mode",
+          "rev": "28c915aa49e043358a29bde045a68357027d96de",
+          "sha256": "sha256-MzkD7gPeKbTsoZpM7rY7P5LjuOmT6GA5tFLgBlVRcO8="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/ratish-punnoose/tla-mode"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "typo": {
+      "source": {
+        "args": {
+          "owner": "jorgenschaefer",
+          "repo": "typoel",
+          "rev": "173ebe4fc7ac38f344b16e6eaf41f79e38f20d57",
+          "sha256": "sha256-yHiI08rFJdQ9u5uo4wQUVjBsCzhU2vQvLX717+gvAyU="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jorgenschaefer/typoel"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "ultra-scroll-mac": {
+      "source": {
+        "args": {
+          "owner": "jdtsmith",
+          "repo": "ultra-scroll-mac",
+          "rev": "5be267d2d92c230b4347e0769f584c71aec53589",
+          "sha256": "sha256-N8+ITu25WLtw6sqYxFR2LvfQQCV4ASTYVwDTYN5m/lM="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jdtsmith/ultra-scroll-mac"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "vcard-mode": {
+      "source": {
+        "args": {
+          "owner": "dochang",
+          "repo": "vcard-mode",
+          "rev": "ab1a2885a5720d7fb02d9b6583ee908ba2260b78",
+          "sha256": "sha256-HKjPPcw1bnBHwT+O4F/mciovrh+vpmsJrEjO3lJXhHA="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/dochang/vcard-mode"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "vulpea": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "vulpea",
+          "rev": "ea5d6e551115ed2d6b6aedc14e3aaf2f28283310",
+          "sha256": "sha256-okgbgzQRG18yIaxePoTI1uFP6b4j/mB22tYlaEhd0wk="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/vulpea"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "vulpea-field": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "vulpea-field",
+          "rev": "dfb6d9032d771fd9bd87f35db8fa0af6c7355931",
+          "sha256": "sha256-1xKPIDHSyi0yOvyUfjxGXA1gobg2K1hUqtJlGgor3vg="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/vulpea-field"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "wikipedia": {
+      "source": {
+        "args": {
+          "owner": "benthamite",
+          "repo": "wikipedia",
+          "rev": "d7219cd453a93b93598a339d20927bdf60eded8d",
+          "sha256": "sha256-+gLcdDb3xZJS47dzScBT3ZkR+ZXaUhWt9bZvE1MDO7M="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/benthamite/wikipedia"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "wombag": {
+      "source": {
+        "args": {
+          "owner": "karthink",
+          "repo": "wombag",
+          "rev": "62f8e7ae8c8f26a834a66fb5a179693bd8078839",
+          "sha256": "sha256-YhjOXbqfnlwoZ6Hu/DLDTz7ErWcWALiYlvmQMCmJj0k="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/karthink/wombag"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "word-count-mode": {
+      "source": {
+        "args": {
+          "owner": "tomaszskutnik",
+          "repo": "word-count-mode",
+          "rev": "6267c98e0d9a3951e667da9bace5aaf5033f4906",
+          "sha256": "sha256-0ILbae6W3yhwxZ0TW2AaPIyJc2mBktZQA5VfU5vxfN8="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/tomaszskutnik/word-count-mode"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    },
+    "z3": {
+      "source": {
+        "args": {
+          "owner": "jwiegley",
+          "repo": "emacs-z3",
+          "rev": "ce2d19772ac8fd8e1d17238238dc9a152eddc25f",
+          "sha256": "sha256-wU556v+oarKug/Sx86HjLglOt48RfkBMNUwR7xre5Z8="
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/emacs-z3"
+      },
+      "update": {
+        "branch": "master",
+        "kind": "github-commit"
+      }
+    }
+  }
+}
