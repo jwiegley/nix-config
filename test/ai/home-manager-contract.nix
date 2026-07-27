@@ -1452,7 +1452,10 @@ let
       "codex-notify"
     ];
     mcp_servers = expectedCodexMcp profileId;
-    shell_environment_policy.exclude = [ "REF_API_KEY" ];
+    shell_environment_policy = {
+      ignore_default_excludes = false;
+      exclude = [ "REF_API_KEY" ];
+    };
   };
   expectedCodexHookFile = {
     hooks = expectedCodexHooks;
