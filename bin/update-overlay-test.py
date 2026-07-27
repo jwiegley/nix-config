@@ -458,7 +458,7 @@ class UpdateInventoryTests(unittest.TestCase):
                 def compute_native_hash(self, _source, _replacements):
                     return "sha512-new"
 
-                def _compute_fod_hash(self, _package, hash_type):
+                def _compute_fod_hash(self, _package, hash_type, _build_target="pkg"):
                     self.hash_type = hash_type
                     return "sha256-new"
 
@@ -507,7 +507,7 @@ class UpdateInventoryTests(unittest.TestCase):
             )
             failing_hashes = SimpleNamespace(
                 compute_native_hash=lambda _source, _replacements: "sha512-next",
-                _compute_fod_hash=lambda _package, _kind: None,
+                _compute_fod_hash=lambda _package, _kind, _build_target="pkg": None,
             )
             with contextlib.redirect_stdout(io.StringIO()):
                 status = update_catalog_target(
@@ -523,6 +523,66 @@ class UpdateInventoryTests(unittest.TestCase):
             self.assertEqual(status, "failed")
             self.assertEqual(failing_transaction.rollback(), 1)
             self.assertEqual(path.read_text(), before_failure)
+
+    def test_catalog_npm_update_regenerates_declared_package_lock(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            (root / "locks").mkdir()
+            lock = root / "locks/package-lock.json"
+            lock.write_text("old lock\n")
+            catalog = root / "sources/pi.json"
+            catalog.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {
+                    "example": {
+                        "version": "1.0.0",
+                        "source": {
+                            "fetcher": "fetchurl",
+                            "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                            "args": {
+                                "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                                "hash": "sha256-old",
+                            },
+                        },
+                        "update": {
+                            "kind": "npm-release",
+                            "package": "example",
+                            "artifacts": ["locks/package-lock.json"],
+                        },
+                    }
+                },
+            }))
+
+            class FakeNpm:
+                def get_version(self, _package, _requested=None):
+                    return "2.0.0", "ignored"
+
+                def write_package_lock(self, _url, target):
+                    target.write_text("new lock\n")
+                    return True
+
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_catalog_target(
+                    "example",
+                    load_source_catalog(root)["example"],
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(),
+                    FakeNpm(),
+                    SimpleNamespace(),
+                    SimpleNamespace(
+                        compute_native_hash=lambda _source, _replacements: "sha256-new"
+                    ),
+                    transaction,
+                )
+            transaction.commit()
+            self.assertEqual(status, "updated")
+            self.assertEqual(lock.read_text(), "new lock\n")
+            self.assertEqual(
+                json.loads(catalog.read_text())["sources"]["example"]["version"],
+                "2.0.0",
+            )
 
     def test_catalog_github_release_preserves_native_tag_field(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -694,21 +754,10 @@ class UpdateInventoryTests(unittest.TestCase):
         pending = {
             "agent-browser-source",
             "bigpowers",
-            "cohere-melody",
-            "hf-xet",
-            "mlx",
-            "nelisp",
-            "pi-artifacts",
             "pi-btw",
-            "pi-dynamic-workflows",
-            "pi-hashline-edit-pro",
-            "pi-insights",
-            "pi-lens",
             "pi-mcp-adapter",
             "pi-ponytail",
-            "pi-web-access",
             "rust-overlay",
-            "sherlock-db",
             "ws",
         }
         self.assertEqual(len(inventory["packages"]), 188)
@@ -725,8 +774,8 @@ class UpdateInventoryTests(unittest.TestCase):
             "0e6130457ac2bdc6c6db2eebeba67a5223231190",
         )
         self.assertEqual(by_name["git-ai"]["executor"], "update-agents")
-        self.assertFalse(by_name["pi-lens"]["managed"])
-        self.assertIsNone(by_name["pi-lens"]["executor"])
+        self.assertTrue(by_name["pi-lens"]["managed"])
+        self.assertEqual(by_name["pi-lens"]["executor"], "update-overlay")
         for item in inventory["packages"]:
             for path in item["files"]:
                 self.assertTrue((root / path).is_file(), (item["name"], path))
