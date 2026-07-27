@@ -166,7 +166,7 @@ in
     }
     {
       assertion = homeClassKnown;
-      message = "nix-managed AI home class is not recognized";
+      message = "set nixManagedAiHomeClass to one of clio, hera, shared-work, vps, vulcan, or personal-linux";
     }
     {
       assertion =

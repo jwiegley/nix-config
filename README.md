@@ -14,6 +14,17 @@ Personal, multi-host Nix configuration for Darwin, standalone Home Manager, NixO
 
 The external checkouts own their locks and activation. Do not overwrite them from a secondary local clone.
 
+Shared-work Home Manager consumers must declare their role explicitly when importing `config/johnw.nix`:
+
+```nix
+extraSpecialArgs = {
+  inherit hostname inputs;
+  nixManagedAiHomeClass = "shared-work";
+};
+```
+
+Accepted classes are `clio`, `hera`, `shared-work`, `vps`, `vulcan`, and the synthetic `personal-linux` fixture. Ordinary named hosts fall back to their hostname; shared-work checkouts must pass the class because their machine hostnames are intentionally not profile identities.
+
 ## Common commands
 
 Run commands from this repository with its direnv loaded. Do not use `nix develop` as an ad-hoc command wrapper.

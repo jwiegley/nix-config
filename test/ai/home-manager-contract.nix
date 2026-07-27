@@ -3185,6 +3185,7 @@ let
   task9PackageSource = builtins.readFile "${src}/config/packages.nix";
   task9RoleSources =
     builtins.readFile "${src}/config/ai.nix" + builtins.readFile "${src}/config/johnw.nix";
+  task9ReadmeSource = builtins.readFile "${src}/README.md";
   task9FlakeSource = builtins.readFile "${src}/flake.nix";
 
   task9Checks = [
@@ -3320,6 +3321,14 @@ let
     (expectEqual "Task 9 role selection does not infer from username"
       (lib.hasInfix "config.home.username == \"jwiegley\"" task9RoleSources)
       false
+    )
+    (expectEqual "Task 9 shared-work consumer argument is documented"
+      (lib.hasInfix "nixManagedAiHomeClass = \"shared-work\"" task9ReadmeSource)
+      true
+    )
+    (expectEqual "Task 9 unknown-class assertion names the argument"
+      (lib.hasInfix "set nixManagedAiHomeClass to one of" task9RoleSources)
+      true
     )
     (expectReject "Task 9 personal Linux fixture accepted wrong user" task9InvalidPersonalSynthetic.activationPackage.drvPath)
     (expectReject "Task 9 unknown home class accepted" task9UnknownHomeClass.activationPackage.drvPath)
