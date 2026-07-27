@@ -4,12 +4,12 @@
 # Packages: filetags, hyperorg, org2tc
 # Notes:
 #   - hyperorg uses ./emacs/patches/hyperorg.patch
-#   - org2tc requires paths.org2tc
+#   - org2tc requires org2tc
+{
+  org2tc ? null,
+}:
 _final: prev:
 
-let
-  paths = import ../config/paths.nix { inherit (prev) inputs; };
-in
 {
 
   # Manage tags in filenames
@@ -89,17 +89,17 @@ in
     };
 
 }
-// prev.lib.optionalAttrs (paths.org2tc != null) {
+// prev.lib.optionalAttrs (org2tc != null) {
 
   # Convert org-mode to timeclock format
-  # Note: Requires paths.org2tc
+  # Note: Requires org2tc
   org2tc =
     with prev;
     stdenv.mkDerivation rec {
       name = "org2tc-${version}";
       version = "7d52a20";
 
-      src = paths.org2tc;
+      src = org2tc;
 
       phases = [
         "unpackPhase"

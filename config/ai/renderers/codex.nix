@@ -1,4 +1,8 @@
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  llmAgents,
+}:
 
 {
   profile,
@@ -30,7 +34,7 @@ let
 
   system = pkgs.stdenv.hostPlatform.system;
   codexSourceCatalog = "${
-    pkgs.inputs.llm-agents.packages.${system}.codex.src
+    llmAgents.packages.${system}.codex.src
   }/codex-rs/models-manager/models.json";
   managedModelCatalog =
     pkgs.runCommand "codex-nix-managed-model-catalog.json"

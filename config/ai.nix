@@ -28,6 +28,7 @@ let
     codex = import ./ai/renderers/codex.nix {
       inherit lib;
       pkgs = rendererPkgs;
+      llmAgents = args.inputs.llm-agents;
     };
     droid = import ./ai/renderers/droid.nix {
       inherit lib;

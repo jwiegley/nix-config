@@ -4,11 +4,13 @@
 # Packages: nix-scripts, my-scripts
 # Notes:
 #   - nix-scripts from this repository's bin/ directory
-#   - my-scripts requires paths.scripts
+#   - my-scripts requires scripts
+{
+  scripts ? null,
+}:
 final: prev:
 
 let
-  paths = import ../config/paths.nix { inherit (prev) inputs; };
   inherit (prev.myLib) mkScriptPackage;
 in
 {
@@ -20,11 +22,11 @@ in
   };
 
 }
-// prev.lib.optionalAttrs (paths.scripts != null) {
+// prev.lib.optionalAttrs (scripts != null) {
 
   my-scripts = mkScriptPackage {
     name = "my-scripts";
-    src = paths.scripts;
+    src = scripts;
     description = "John Wiegley's various scripts";
     extraInstall = ''
       ${final.perl}/bin/perl -i -pe \

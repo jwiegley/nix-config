@@ -7,7 +7,7 @@ Updated: 2026-07-26
 - Wiggum mode is active for `doc/ARCHITECTURE-REMEDIATION-WIGGUM-PLAN.md`.
 - Audit authority: `~/doc/obsidian/Nix Configuration Architecture and Maintainability Audit 2026-07-26.md`.
 - Baseline commit: `a36d3f51d92158e4e055e3baca85044f575e25a6` on clean `main` aligned with `origin/main`.
-- Current work unit: WU1 — navigation, authority, and proven deletions.
+- Current work unit: WU3 — platform and overlay isolation; implementation/gates complete, signed commit pending.
 - PAL was explicitly waived by the user.
 - Anvil: available in dedicated Emacs mode; modified repository buffers: none at last checkpoint.
 - Direnv: loaded successfully; 110 exported names observed without exposing values.
@@ -22,12 +22,13 @@ Updated: 2026-07-26
 - Independent fess findings for `4f25975f`, `2ddca506`, and `205f4827` were accepted and resolved in signed follow-up commits.
 - Partner observations for Agent Deck socket persistence and sudo lock safety were resolved and independently reviewed PASS.
 - WU1 completed through `74ecc3a6`: root authority, safe command interfaces, prompt composition, and 2,571 lines of verified debris removed; unresolved security/Vulcan debt remains explicit.
+- WU2 completed through `5ce2e91f`: 125-target inventory, fail-safe repository transaction, signed side-effect gates, one update owner, and partner cleanup.
 
 ## In progress
 
-- WU2a commit `233279de` established inventory/overlay rollback; all seven fess findings and two partner observations are fixed and pending one signed cleanup commit.
-- Inventory: 125 targets, 101 executable, 24 pending WU4 gallery/Anvil/fixed-input executors.
-- Repository-level lock/source rollback, signed-commit gating, duplicate-source detection, one update owner, fail-fast upgrade caller, and honest status pass focused/core gates.
+- WU3 explicit composition, Darwin boundary gates, input factories, Linux parity checks, and `pkgs.inputs` removal pass focused/core/native Hera gates; signed implementation commit pending.
+- Inventory is now 126 targets: 102 executable and 24 pending WU4 gallery/Anvil/fixed-input executors; explicit Eask ownership added one independently discoverable overlay target.
+- Root all-system no-build still exposes the contextless `builtins.path` check-source defect assigned to WU6/WU8; focused root checks build successfully.
 
 ## Authorization
 
@@ -37,7 +38,7 @@ Updated: 2026-07-26
 
 ## Remaining
 
-- Complete WU2 fess fixes and manifest executor work, then WU3 through WU10 in the frozen plan.
+- Commit/fess/partner-review WU3, then complete WU4 through WU10 in the frozen plan.
 
 ## Attempt counters
 
@@ -45,8 +46,8 @@ Updated: 2026-07-26
 |---|---:|---|
 | Baseline gate | 1 | PASS at `a36d3f51`: updater tests, portable evaluation, core AI contracts, Darwin build |
 | Workflow synthesis | 2 | Abandoned after demonstrated runtime/budget failures; replaced by frozen coordinator plan |
-| Current work-unit focused gate | 7 | WU2a fess/partner cleanup PASS: shell/Ruff, 9 tests, inventory, core contracts |
-| Current work-unit full gate | 0 | Not started |
+| Current work-unit focused gate | 4 | WU3 PASS: format/static, 10 tests, portable eval, Linux parity, core contracts |
+| Current work-unit full gate | 1 | Hera `./build system` PASS; root all-system no-build deferred to WU6/WU8 source-context fix |
 
 ## Resume exactly
 

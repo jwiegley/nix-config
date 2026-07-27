@@ -241,7 +241,13 @@
         inputs = portableInputs;
         actual = portableAiDefinition;
       };
-      stockPkgsFor = forAllSystems (system: import nixpkgs { inherit system; });
+      stockPkgsFor = forAllSystems (
+        system:
+        import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+        }
+      );
       pkgsFor = forAllSystems (
         system:
         if system == "aarch64-darwin" then
@@ -249,7 +255,10 @@
             inherit system;
             overlays = [
               (_final: _prev: { inherit inputs; })
-              (import ./overlays/10-emacs.nix)
+              ((import ./overlays/10-emacs.nix) {
+                hours = inputs.hours or null;
+                emacsSrc = inputs.emacs-src or null;
+              })
             ];
           }
         else
@@ -538,6 +547,9 @@
               };
             }
             // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
+              darwin-overrides-inactive = pkgs.callPackage ./test/ai/overlay-isolation.nix {
+                configured = agentTestPkgsFor.${system};
+              };
               anvil-mcp = pkgs.callPackage ./packages/anvil-mcp/smoke.nix {
                 anvilMcp = packages.${system}.anvil-mcp;
               };

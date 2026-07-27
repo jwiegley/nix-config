@@ -31,19 +31,14 @@ let
   catalog = catalogFor modelData;
   externalAiOverlay = _final: _prev: {
     external-ai-marker = true;
-    inputs.portable-input-marker = true;
   };
-  externalOverlayInputs = {
-    caller-input-marker = true;
+  externalOverlayProbe = import inputs.nixpkgs {
+    system = pkgs.stdenv.hostPlatform.system;
+    overlays = import "${src}/config/overlays.nix" {
+      inputs = { };
+      aiOverlay = externalAiOverlay;
+    };
   };
-  externalOverlayProbe = lib.foldl' (previous: overlay: previous // (overlay { } previous)) { } (
-    lib.take 2 (
-      import "${src}/config/overlays.nix" {
-        inputs = externalOverlayInputs;
-        aiOverlay = externalAiOverlay;
-      }
-    )
-  );
 
   replaceAt =
     index: transform: values:
@@ -703,10 +698,8 @@ let
   codexRenderer =
     if builtins.pathExists codexRendererPath then
       import codexRendererPath {
-        inherit lib;
-        pkgs = pkgs // {
-          inherit inputs;
-        };
+        inherit lib pkgs;
+        llmAgents = inputs.llm-agents;
       }
     else
       throw "Task 6 RED: config/ai/renderers/codex.nix is missing";
@@ -3718,14 +3711,9 @@ let
       externalOverlayProbe.external-ai-marker
       true
     )
-    (expectEqual "external AI overlay restores caller inputs"
-      externalOverlayProbe.inputs.caller-input-marker
-      true
-    )
-    (expectEqual "external AI overlay preserves portable-only inputs"
-      externalOverlayProbe.inputs.portable-input-marker
-      true
-    )
+    (expectEqual "overlay composition does not publish input provenance through pkgs" (
+      externalOverlayProbe ? inputs
+    ) false)
     (expectEqual "OpenCode bash-reviewer tool oracle" (builtins.hashString "sha256" (
       builtins.toJSON (expectedOpenCodeAgentMetadata catalog.items.agents.bash-reviewer)
     )) "27eaf3302a4ff6cd97d4a0f5a7027d57c121f362318c1b4d011b0fce691b3e1a")

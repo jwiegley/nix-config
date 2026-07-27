@@ -3,13 +3,16 @@
 # Dependencies: Uses final for emacs cross-references; uses prev for nixpkgs
 # Packages: emacs, emacs30-macport, emacs30, emacsHEAD, emacsPackages, and
 #           40+ custom Emacs packages (jobhours, gptel-*, org-*, etc.)
-# Note: Uses ./emacs/builder.nix, ./emacs/patches/*, and paths.hours
+# Note: Uses ./emacs/builder.nix, ./emacs/patches/*, and hours
+{
+  hours ? null,
+  emacsSrc ? null,
+}:
 final: prev:
 
 let
   anvilSource = import ../packages/anvil-mcp/source.nix;
   anvilIdeSource = anvilSource.ide;
-  paths = import ../config/paths.nix { inherit (prev) inputs; };
 
   myEmacsPackageOverrides =
     eself: esuper:
@@ -153,10 +156,10 @@ let
       };
 
       jobhours =
-        if paths.hours != null then
+        if hours != null then
           compileEmacsFiles {
             name = "jobhours";
-            src = paths.hours;
+            src = hours;
           }
         else
           null;
@@ -1505,7 +1508,7 @@ in
     };
 
 }
-// prev.lib.optionalAttrs (paths.emacs-src != null) {
+// prev.lib.optionalAttrs (emacsSrc != null) {
 
   ##########################################################################
 
@@ -1528,7 +1531,7 @@ in
           NATIVE_FULL_AOT = "1";
           LIBRARY_PATH = lib.concatStringsSep ":" libGccJitLibraryPaths;
         };
-        src = paths.emacs-src;
+        src = emacsSrc;
         patches = [
           (builtins.path {
             name = "inhibit-lexical-cookie-warning-67916.patch";

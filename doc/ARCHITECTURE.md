@@ -70,7 +70,7 @@ Nix owns generated leaves, not mutable roots. Auth, history, sessions, caches, r
 
 ## Package and overlay flow
 
-The current full-host composition begins with the explicit AI overlay list, restores caller inputs, optionally adds the Vulcan CA bundle, then discovers root overlays by filename. Numbered filenames therefore do not currently describe the whole execution order. The architecture-remediation plan replaces this with an explicit ordered manifest and explicit overlay input factories.
+`config/overlays.nix` is the full-host overlay authority. It lists four phases explicitly: foundation, optional Vulcan CA, feature packages, and AI packages. Darwin pins and repairs are wrapped at the composition boundary, while the cross-platform Eask package has its own overlay. Input-consuming overlays are factories receiving only their declared sources; flake inputs are never published through `pkgs.inputs`. Tests require every numbered root and AI overlay to appear exactly once in its manifest and compare Darwin-only package behavior with stock nixpkgs on both Linux systems.
 
 Package rules:
 

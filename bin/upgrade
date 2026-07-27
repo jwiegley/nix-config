@@ -46,6 +46,11 @@ clio)
     ;;
 esac
 
+# Host deployment is strict; the legacy workspace sweep remains best-effort
+# until WU5 replaces it with a result-aggregating project runner.
+set +e
+set +u
+
 echo '┌────────────────────────────────────────────────────────────────────────────┐'
 echo '│ >>> upgrade .config/projects                                               │'
 echo '└────────────────────────────────────────────────────────────────────────────┘'

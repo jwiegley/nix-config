@@ -390,9 +390,47 @@ echo overlay-change >> overlays/ai/package.nix
         self.assertIn("trap rollback_transaction EXIT", update_agents)
         self.assertNotIn('commit_if_changed "$config_dir" "Update AI agents" || true', update_agents)
         self.assertIn("refusing external action without a newly signed commit", update_agents)
-        self.assertIn("set -euo pipefail", upgrade)
+        strict = upgrade.index("set -euo pipefail")
+        host_case = upgrade.index("case $HOST")
+        updater = upgrade.index("./bin/update-agents --commit")
+        host_end = upgrade.index("esac")
+        workspace = upgrade.index("### Coq projects")
+        self.assertLess(strict, host_case)
+        self.assertLess(host_case, updater)
+        self.assertLess(updater, host_end)
+        self.assertLess(host_end, upgrade.index("set +e"))
+        self.assertLess(host_end, upgrade.index("set +u"))
+        self.assertLess(upgrade.index("set +e"), workspace)
+        self.assertLess(upgrade.index("set +u"), workspace)
         self.assertRegex(upgrade, r"(?m)^\s*\./bin/update-agents --commit\s*$")
         self.assertNotIn("./bin/update-agents --no-switch --no-brew", upgrade)
+
+    def test_overlay_manifests_are_explicit_and_inputs_do_not_leak_through_pkgs(self):
+        root = SCRIPT.parent.parent
+        composition = (root / "config/overlays.nix").read_text()
+        root_declared = re.findall(r"\.\./overlays/([0-9][^/\s]+\.nix)", composition)
+        root_actual = [path.name for path in (root / "overlays").glob("[0-9]*.nix")]
+        self.assertEqual(len(root_declared), len(set(root_declared)))
+        self.assertEqual(sorted(root_declared), sorted(root_actual))
+        self.assertNotIn("readDir", composition)
+
+        ai_composition = (root / "overlays/ai/default.nix").read_text()
+        ai_declared = re.findall(r"import \./([0-9][^/\s]+\.nix)", ai_composition)
+        ai_actual = [path.name for path in (root / "overlays/ai").glob("[0-9]*.nix")]
+        self.assertEqual(len(ai_declared), len(set(ai_declared)))
+        self.assertEqual(sorted(ai_declared), sorted(ai_actual))
+
+        production_nix = [
+            *root.glob("config/**/*.nix"),
+            *root.glob("flake/**/*.nix"),
+            *root.glob("overlays/**/*.nix"),
+        ]
+        forbidden = ("pkgs.inputs", "prev.inputs", "final.inputs", "inherit (prev) inputs")
+        for path in production_nix:
+            text = path.read_text()
+            for expression in forbidden:
+                with self.subTest(path=path.relative_to(root), expression=expression):
+                    self.assertNotIn(expression, text)
 
 
 if __name__ == "__main__":

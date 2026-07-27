@@ -2,12 +2,12 @@
 # Purpose: Git-related tools and extensions
 # Dependencies: prev.myLib (from 00-lib.nix) for git-scripts
 # Packages: tea (patched), git-scripts (local source)
-# Note: git-scripts requires paths.git-scripts
+# Note: git-scripts requires gitScripts
+{
+  gitScripts ? null,
+}:
 _final: prev:
 
-let
-  paths = import ../config/paths.nix { inherit (prev) inputs; };
-in
 {
 
   # go-git v5 lowercases extension names on read but the allowlist maps use
@@ -45,11 +45,11 @@ in
   });
 
 }
-// prev.lib.optionalAttrs (paths.git-scripts != null) {
+// prev.lib.optionalAttrs (gitScripts != null) {
 
   git-scripts = prev.myLib.mkScriptPackage {
     name = "git-scripts";
-    src = paths.git-scripts;
+    src = gitScripts;
     description = "John Wiegley's git scripts";
     homepage = "https://github.com/jwiegley/git-scripts";
     excludeFiles = [ "git-merge-changelog" ];

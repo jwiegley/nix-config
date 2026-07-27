@@ -77,3 +77,21 @@ Append-only durable learnings for the architecture-remediation Wiggum loop. Deci
 - Partner observation `.362Z` found stale README claims against `233279de`; the in-progress fess correction already replaced them with accurate safe-default/inventory status.
 - Independent reviewer accepted the README fix and requested exact invocation testing for upgrade; that test now passes.
 - Full WU2a correction gate: shellcheck/shfmt, Ruff, Nix formatting/evaluation, 9 updater tests, inventory 125/101/24 contract, and four core checks PASS.
+
+## 2026-07-27 — WU3 platform and overlay isolation
+
+- Replaced filename discovery and AI-first composition with one explicit `config/overlays.nix` phase manifest; Python tests require every numbered root/AI overlay exactly once.
+- Wrapped `00-last-known-good.nix` and `15-darwin-fixes.nix` at the Darwin boundary. Moved cross-platform Eask to `10-eask-cli.nix`.
+- Removed the `pkgs.inputs` publication/restoration bus. Every input-consuming overlay is now a factory receiving explicit sources; portable checks/renderers use their actual flake inputs directly.
+- Removed now-orphaned `config/paths.nix` pass-through registry.
+- Added Linux isolation checks for all available Darwin-pinned/fixed top-level and Python packages, specific ImageIO/Gradio test policy, and absence of `pkgs.inputs`; x86_64-linux and aarch64-linux builds pass.
+- Explicit Ledger input evaluation exposed an obsolete Python-install relocation against Ledger's new split output. Removed the stale hook; the native Darwin Home Manager contract rebuild passes.
+- Verification PASS: Nix formatting, Statix, Deadnix, Ruff, 10 updater/structure tests, portable all-system evaluation, both Linux isolation builds, four core AI contracts, and native Hera `./build system`.
+- Known gate debt: root `nix flake check --all-systems --no-build` still hits the pre-existing contextless `builtins.path` source failure in root Home Manager/preflight checks; focused builds succeed. This maps to WU6/WU8 portable/check-source ownership and is not treated as WU3 evidence.
+
+## 2026-07-27 — WU3 pre-commit partner cleanup
+
+- Late observation `.296Z` against `5ce2e91f` correctly found that global `set -euo pipefail` broke `bin/upgrade`'s intentionally best-effort legacy workspace sweep.
+- Strict mode remains active for the host update/build/sign phase. `set +e` and `set +u` now mark the workspace boundary pending WU5's result-aggregating runner.
+- Independent review found the runtime boundary correct but requested stronger regression assertions. Tests now prove strict mode precedes the host case/updater and both relaxations occur after host completion but before the first project block.
+- Current inventory is 126 total / 102 executable / 24 pending after the explicit Eask overlay became independently discoverable.

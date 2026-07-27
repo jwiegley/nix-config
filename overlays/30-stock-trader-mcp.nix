@@ -1,6 +1,9 @@
+{
+  stockTrader ? null,
+}:
 final: prev:
 
-prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? stock-trader) {
+prev.lib.optionalAttrs (stockTrader != null) {
   stock-trader-mcp =
     let
       pyEnv = final.python3.withPackages (ps: [
@@ -8,7 +11,7 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? stock-trader) {
         ps.requests
       ]);
       script = final.writeText "stock-trader-mcp.py" (
-        builtins.readFile "${prev.inputs.stock-trader}/scripts/stock-trader-mcp.py"
+        builtins.readFile "${stockTrader}/scripts/stock-trader-mcp.py"
       );
       caBundle =
         if prev ? ca-bundle-with-vulcan then

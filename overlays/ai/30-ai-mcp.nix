@@ -2,9 +2,10 @@
 # Purpose: Model Context Protocol (MCP) servers and Claude Code tools
 # Dependencies: Uses final for python3Packages; uses prev elsewhere
 # Includes MCP servers, Claude Code tools, and agent-http-header-bridge.
+{ palMcpServer, mcpRemote }:
 final: prev:
 
-prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
+{
 
   # PAL MCP Server - Provider Abstraction Layer for multi-model AI collaboration
   # NOTE: Using 'final' because python3Packages may be modified by
@@ -17,7 +18,7 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
       version = "1.2.1";
       pyproject = true;
 
-      src = prev.inputs.pal-mcp-server;
+      src = palMcpServer;
 
       build-system = [
         setuptools
@@ -50,7 +51,7 @@ prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? pal-mcp-server) {
 
   agent-http-header-bridge =
     let
-      source = prev.inputs.mcp-remote;
+      source = mcpRemote;
       sourcePackage = builtins.fromJSON (builtins.readFile "${source}/package.json");
       lockHash = builtins.hashFile "sha256" "${source}/pnpm-lock.yaml";
       pnpm = prev.pnpm_10.override { nodejs-slim = prev.nodejs_22; };

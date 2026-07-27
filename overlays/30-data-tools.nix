@@ -1,12 +1,10 @@
-# overlays/30-data-tools.nix
-# Purpose: Data processing and storage utilities
-# Dependencies: prev.myLib (from 00-lib.nix) for tsvutils
-# Packages: hashdb, dirscan, tsvutils
+# Data processing and storage utilities.
+{
+  dirscan ? null,
+}:
 _final: prev:
 
 {
-
-  # File checksum database for duplicate detection
   hashdb =
     with prev;
     python3Packages.buildPythonApplication {
@@ -31,16 +29,6 @@ _final: prev:
       };
     };
 
-}
-// prev.lib.optionalAttrs (prev ? inputs && prev.inputs ? dirscan) {
-
-  # Stateful directory scanning utility (from dirscan flake)
-  dirscan = prev.inputs.dirscan.packages.${prev.stdenv.hostPlatform.system}.default;
-
-}
-// {
-
-  # Utilities for processing tab-separated files
   tsvutils = prev.myLib.mkScriptPackage {
     name = "tsvutils-a286c817";
     src = prev.fetchFromGitHub {
@@ -52,5 +40,7 @@ _final: prev:
     description = "Utilities for processing tab-separated files";
     homepage = "https://github.com/brendano/tsvutils";
   };
-
+}
+// prev.lib.optionalAttrs (dirscan != null) {
+  dirscan = dirscan.packages.${prev.stdenv.hostPlatform.system}.default;
 }

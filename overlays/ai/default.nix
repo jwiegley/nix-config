@@ -1,6 +1,5 @@
 { inputs }:
 [
-  (_final: _prev: { inherit inputs; })
   (
     _final: prev:
     prev.lib.optionalAttrs
@@ -33,12 +32,15 @@
       prev.callPackage (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")
         { };
   })
-  (import ./30-agent-resources.nix)
+  ((import ./30-agent-resources.nix) { inherit inputs; })
   (import ./30-agent-deck.nix)
   (import ./30-fractal.nix)
   (import ./30-ai-python.nix)
   (import ./30-ai-llm.nix)
-  (import ./30-ai-mcp.nix)
+  ((import ./30-ai-mcp.nix) {
+    palMcpServer = inputs.pal-mcp-server;
+    mcpRemote = inputs.mcp-remote;
+  })
   (import ./30-lazycodex.nix)
   (import ./30-agnix.nix)
   (import ./30-claude-vault.nix)

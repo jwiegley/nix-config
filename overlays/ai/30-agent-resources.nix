@@ -1,3 +1,4 @@
+{ inputs }:
 _final: prev:
 let
   gallery = import ../../packages/pi-gallery {
@@ -18,10 +19,10 @@ let
       stdenv
       writeShellScript
       ;
-    inherit (prev) inputs;
+    inherit inputs;
   };
 in
 gallery
 // {
-  agent-resources = prev.callPackage ../../packages/agent-resources.nix { };
+  agent-resources = prev.callPackage ../../packages/agent-resources.nix { inherit inputs; };
 }

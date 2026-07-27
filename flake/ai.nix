@@ -2186,25 +2186,25 @@ in
     system:
     let
       pkgs = mkPkgs system;
-      inputs = qualityInputs pkgs;
+      qualityDeps = qualityInputs pkgs;
       app =
         name: scriptName: runtimeInputs:
         mkScriptApp pkgs name scriptName runtimeInputs;
     in
     rec {
-      format = app "format" "format.sh" inputs.format;
-      format-check = app "format-check" "format-check.sh" inputs.format;
-      lint = app "lint" "lint.sh" inputs.lint;
-      test = app "test" "test.sh" inputs.test;
-      build-check = app "build-check" "build-check.sh" inputs.build;
-      no-warnings = app "no-warnings" "no-warnings.sh" inputs.build;
+      format = app "format" "format.sh" qualityDeps.format;
+      format-check = app "format-check" "format-check.sh" qualityDeps.format;
+      lint = app "lint" "lint.sh" qualityDeps.lint;
+      test = app "test" "test.sh" qualityDeps.test;
+      build-check = app "build-check" "build-check.sh" qualityDeps.build;
+      no-warnings = app "no-warnings" "no-warnings.sh" qualityDeps.build;
       coverage = test;
       coverage-check = test;
       profile = build-check;
       profile-check = build-check;
       fuzz = test;
       memory-check = test;
-      check = app "check" "check.sh" inputs.all;
+      check = app "check" "check.sh" qualityDeps.all;
       default = check;
     }
   );
@@ -2213,7 +2213,7 @@ in
     system:
     let
       pkgs = mkPkgs system;
-      inputs = qualityInputs pkgs;
+      qualityDeps = qualityInputs pkgs;
       check =
         name: scriptName: runtimeInputs: extraEnv:
         mkScriptCheck pkgs name scriptName runtimeInputs extraEnv;
@@ -2242,32 +2242,32 @@ in
         else
           throw "portable AI locks drifted or llm-agents follows the shared nixpkgs input";
       agent-resources = pkgs.callPackage ../test/ai/agent-resources.nix {
-        inherit (pkgs.inputs)
+        inherit (inputs)
           bigpowers
           ponytail
           translate-tool
           ;
-        gitSurgeonSource = pkgs.inputs.llm-agents.packages.${system}.git-surgeon.src;
+        gitSurgeonSource = inputs.llm-agents.packages.${system}.git-surgeon.src;
         sourceOnlyResources = pkgs.callPackage ../packages/agent-resources.nix {
-          inputs = pkgs.inputs // {
-            llm-agents = builtins.removeAttrs pkgs.inputs.llm-agents [ "packages" ];
+          inputs = inputs // {
+            llm-agents = builtins.removeAttrs inputs.llm-agents [ "packages" ];
           };
         };
-        piMcpAdapter = pkgs.inputs.pi-mcp-adapter;
-        piOpenaiServerCompaction = pkgs.inputs.pi-openai-server-compaction;
-        piQuiet = pkgs.inputs.pi-quiet;
-        piPackage = patchAgentPackage pkgs "pi" pkgs.inputs.llm-agents.packages.${system}.pi;
+        piMcpAdapter = inputs.pi-mcp-adapter;
+        piOpenaiServerCompaction = inputs.pi-openai-server-compaction;
+        piQuiet = inputs.pi-quiet;
+        piPackage = patchAgentPackage pkgs "pi" inputs.llm-agents.packages.${system}.pi;
       };
       agent-wrappers = pkgs.callPackage ../test/ai/agent-wrappers.nix {
         inherit patchAgentPackage;
-        claudePackage = pkgs.inputs.llm-agents.packages.${system}.claude-code;
-        codexPackage = pkgs.inputs.llm-agents.packages.${system}.codex;
+        claudePackage = inputs.llm-agents.packages.${system}.claude-code;
+        codexPackage = inputs.llm-agents.packages.${system}.codex;
         agentHttpHeaderBridge = pkgs.agent-http-header-bridge or null;
         agentHttpHeaderBridgeOutput = pkgs.agent-http-header-bridge or null;
-        mcpRemote = pkgs.inputs.mcp-remote or null;
+        mcpRemote = inputs.mcp-remote or null;
       };
       pi-gallery = pkgs.callPackage ../test/ai/pi-gallery.nix {
-        piPackage = patchAgentPackage pkgs "pi" pkgs.inputs.llm-agents.packages.${system}.pi;
+        piPackage = patchAgentPackage pkgs "pi" inputs.llm-agents.packages.${system}.pi;
         piPackages = {
           inherit (pkgs)
             agent-browser
@@ -2291,9 +2291,9 @@ in
             ;
         };
       };
-      format = check "format" "format-check.sh" inputs.format "";
-      lint = check "lint" "lint.sh" inputs.lint "";
-      tests = check "tests" "test.sh" inputs.test ''
+      format = check "format" "format-check.sh" qualityDeps.format "";
+      lint = check "lint" "lint.sh" qualityDeps.lint "";
+      tests = check "tests" "test.sh" qualityDeps.test ''
         export AI_NIX_TEST_SOURCE_ONLY=1
       '';
       coverage = tests;
