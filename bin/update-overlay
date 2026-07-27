@@ -724,20 +724,20 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
         "artifacts", "date", "hashes", "source", "update", "version",
     }
     update_schema = {
-        "explicit-rev": ({"kind", "branch", "policy"}, set()),
-        "fixed-flake-input": ({"kind", "input", "lockFiles", "policy"}, {"input"}),
-        "flake-input": ({"kind", "input", "lockFiles", "policy"}, {"input"}),
-        "flake-input+copy": ({"kind", "input", "lockFiles", "policy"}, {"input"}),
-        "github-commit": ({"kind", "branch", "policy"}, {"branch"}),
-        "github-release": ({"kind", "policy", "tagPrefix"}, set()),
-        "github-release-asset": ({"kind", "policy", "tagPrefix"}, set()),
-        "npm-release": ({"kind", "lockFiles", "package", "policy"}, {"package"}),
+        "explicit-rev": ({"artifacts", "kind", "branch", "policy"}, set()),
+        "fixed-flake-input": ({"artifacts", "kind", "input", "policy"}, {"input"}),
+        "flake-input": ({"artifacts", "kind", "input", "policy"}, {"input"}),
+        "flake-input+copy": ({"artifacts", "kind", "input", "policy"}, {"input"}),
+        "github-commit": ({"artifacts", "kind", "branch", "policy"}, {"branch"}),
+        "github-release": ({"artifacts", "kind", "policy", "tagPrefix"}, set()),
+        "github-release-asset": ({"artifacts", "kind", "policy", "tagPrefix"}, set()),
+        "npm-release": ({"artifacts", "kind", "package", "policy"}, {"package"}),
         "npm-release+flake-input": (
-            {"kind", "input", "lockFiles", "package", "policy"},
+            {"artifacts", "kind", "input", "package", "policy"},
             {"input", "package"},
         ),
-        "pypi-release": ({"kind", "package", "policy"}, {"package"}),
-        "url-release": ({"kind", "policy"}, set()),
+        "pypi-release": ({"artifacts", "kind", "package", "policy"}, {"package"}),
+        "url-release": ({"artifacts", "kind", "policy"}, set()),
     }
     for path in sorted(catalog_dir.glob("*.json")):
         payload = json.loads(path.read_text(), object_pairs_hook=_unique_object)
@@ -770,15 +770,19 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             update_allowed, update_required = update_schema[update["kind"]]
             if update.keys() - update_allowed or update_required - update.keys():
                 raise RuntimeError(f"invalid update strategy fields for source catalog record: {name}")
-            if "lockFiles" in update and (
-                not isinstance(update["lockFiles"], list)
-                or not all(isinstance(value, str) and value for value in update["lockFiles"])
+            update_artifacts = update.get("artifacts", [])
+            if (
+                not isinstance(update_artifacts, list)
+                or not all(isinstance(value, str) and value for value in update_artifacts)
             ):
-                raise RuntimeError(f"invalid update lock files for source catalog record: {name}")
+                raise RuntimeError(f"invalid update artifacts for source catalog record: {name}")
+            missing_artifacts = [value for value in update_artifacts if not (nix_dir / value).is_file()]
+            if missing_artifacts:
+                raise RuntimeError(f"source catalog record {name} references missing artifacts: {missing_artifacts}")
             targets[name] = {
                 "kind": update["kind"],
                 "version": record.get("version", record["source"]["args"].get("rev", record["source"]["args"].get("tag", "unversioned"))),
-                "files": [str(path.relative_to(nix_dir))],
+                "files": [str(path.relative_to(nix_dir)), *update_artifacts],
                 "source": "catalog",
             }
     return targets

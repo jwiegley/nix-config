@@ -24,6 +24,8 @@ let
     inherit inputs;
     packages = {
       inherit
+        agent-browser
+        bigpowers
         pi-agent-browser-native
         pi-artifacts
         pi-btw
@@ -36,7 +38,6 @@ let
         pi-provider-litellm
         pi-rewind
         pi-scroll
-        pi-subagentura
         pi-web-access
         ;
     };
@@ -49,8 +50,10 @@ let
       let
         member = sourceRecords.${id};
       in
-      lib.optional (member ? source) (lib.nameValuePair member.attrName (fetchurl member.source))
-    ) (order ++ [ "agent-browser" ])
+      lib.optional (member.source.fetcher == "fetchurl") (
+        lib.nameValuePair member.attrName (fetchurl member.source.args)
+      )
+    ) (order ++ builtins.attrNames supportSources)
   );
 
   deniedNpx = writeShellScript "pi-lens-npx-disabled" ''
@@ -208,11 +211,11 @@ let
             --outfile="$output"
         ''}
         ${lib.optionalString (testBundleEntry != null) ''
-          cat > "$NIX_BUILD_TOP/pi-subagentura-pi-ai-shim.mjs" <<'EOF'
+          cat > "$NIX_BUILD_TOP/pi-package-pi-ai-shim.mjs" <<'EOF'
           export const getModel = () => undefined;
           export const getProviders = () => [];
           EOF
-          cat > "$NIX_BUILD_TOP/pi-subagentura-coding-agent-shim.mjs" <<'EOF'
+          cat > "$NIX_BUILD_TOP/pi-package-coding-agent-shim.mjs" <<'EOF'
           export const createAgentSession = () => { throw new Error("unreachable SDK shim"); };
           export class SessionManager {}
           EOF
@@ -223,8 +226,8 @@ let
             --platform=node \
             --format=esm \
             --target=node22 \
-            --alias:@earendil-works/pi-ai/compat="$NIX_BUILD_TOP/pi-subagentura-pi-ai-shim.mjs" \
-            --alias:@earendil-works/pi-coding-agent="$NIX_BUILD_TOP/pi-subagentura-coding-agent-shim.mjs" \
+            --alias:@earendil-works/pi-ai/compat="$NIX_BUILD_TOP/pi-package-pi-ai-shim.mjs" \
+            --alias:@earendil-works/pi-coding-agent="$NIX_BUILD_TOP/pi-package-coding-agent-shim.mjs" \
             --external:typebox \
             --outfile="$output"
         ''}
@@ -267,59 +270,36 @@ let
     tarball = releaseTarballs.pi-insights;
     lockFile = ./locks/pi-insights-package-lock.json;
   };
-  subagenturaSource = runCommand "pi-subagentura-source" { } ''
-    mkdir -p "$out"
-    cp -R -- ${inputs.pi-subagentura}/. "$out"/
-    chmod -R u+w "$out"
-
-    substituteInPlace "$out/skills/ralplan/SKILL.md" \
-      --replace-fail \
-        "description: Consensus-driven implementation planning via strict Planner/Architect/Critic iteration. Use when the user needs a detailed spec and implementation plan before coding. Trigger with /ralplan or by saying 'ralplan'. Execution-agnostic: RALPLAN defines roles, workflow, and artifact formats only; the host environment provides agent execution via any available method." \
-        "description: >-
-        Consensus-driven implementation planning via strict Planner/Architect/Critic iteration. Use when the user needs a detailed spec and implementation plan before coding. Trigger with /ralplan or by saying 'ralplan'. Execution-agnostic: RALPLAN defines roles, workflow, and artifact formats only; the host environment provides agent execution via any available method."
-    substituteInPlace "$out/src/multiplexer.ts" \
-      --replace-fail 'execFileSync("/bin/sh", ["-lc",' \
-        'execFileSync("/bin/sh", ["-c",'
-    substituteInPlace "$out/src/interactive-tmux.ts" \
-      --replace-fail '"$ARTIFACT_DIR/cli.mjs" done 0' \
-        'node "$ARTIFACT_DIR/cli.mjs" done 0' \
-      --replace-fail '"$ARTIFACT_DIR/cli.mjs" error' \
-        'node "$ARTIFACT_DIR/cli.mjs" error' \
-      --replace-fail '`    "''${cliPath}" process-exit "$rc" || true`' \
-        '`    node "''${cliPath}" process-exit "$rc" || true`' \
-      --replace-fail '`"''${cliPath}" start`' \
-        '`node "''${cliPath}" start`'
-  '';
 
   pi-hashline-edit-pro = mkNpmPackageRoot {
     pname = members.hashline.attrName;
     version = members.hashline.version;
     src = hashlineSource;
-    npmDepsHash = "sha256-sk7mvBP3/SwAFt3GYN1OL2SwNk1s5nC47UUsT1cxB2Y=";
+    npmDepsHash = members.hashline.hashes.npmDepsHash;
   };
   pi-web-access = mkNpmPackageRoot {
     pname = members.web.attrName;
     version = members.web.version;
     src = webAccessSource;
-    npmDepsHash = "sha256-8onTvv7nUrTXMGvwkMkPEYc+mtpxolzF6Z9EuuB9pbs=";
+    npmDepsHash = members.web.hashes.npmDepsHash;
   };
   pi-lens = mkNpmPackageRoot {
     pname = members.lens.attrName;
     version = members.lens.version;
     src = lensSource;
-    npmDepsHash = "sha256-QZClnuBwVYZ+h5lb4YqsJ6VzgWyQQdnTMa05UdzcB78=";
+    npmDepsHash = members.lens.hashes.npmDepsHash;
   };
   pi-dynamic-workflows = mkNpmPackageRoot {
     pname = members.workflows.attrName;
     version = members.workflows.version;
     src = dynamicWorkflowsSource;
-    npmDepsHash = "sha256-49v98jLmhF0K40OoVimaGy8DXpDrsWuhGsKuPbqsm1U=";
+    npmDepsHash = members.workflows.hashes.npmDepsHash;
   };
   pi-artifacts = mkNpmPackageRoot {
     pname = members.artifacts.attrName;
     version = members.artifacts.version;
     src = artifactsSource;
-    npmDepsHash = "sha256-uEXAE4Hy6mAFWsb8kckPMlksGgGB93pekjs5mqwlAGk=";
+    npmDepsHash = members.artifacts.hashes.npmDepsHash;
     bundleEntry = "extensions/index.ts";
     prepareBundle = root: ''
       ${python3}/bin/python3 - "${root}" <<'PY'
@@ -393,68 +373,7 @@ let
     pname = members.insights.attrName;
     version = members.insights.version;
     src = insightsSource;
-    npmDepsHash = "sha256-JaRVe4RXIsXHBIppE0dCJwsgBG3c2+N+8pM68pKkoFI=";
-  };
-  pi-subagentura = mkNpmPackageRoot {
-    pname = members.subagentura.attrName;
-    version = members.subagentura.version;
-    src = subagenturaSource;
-    npmDepsHash = "sha256-qc43CxQTpNQG8DEAhbFh+tol8nbxEzONeUueMcQS6S0=";
-    bundleEntry = "src/subagent.ts";
-    testBundleEntry = "src/multiplexer-tmux.ts";
-  };
-
-  subagenturaTestSource = runCommand "pi-subagentura-test-source" { nativeBuildInputs = [ jq ]; } ''
-    cp -R -- ${inputs.pi-subagentura}/. "$out"/
-    chmod -R u+w "$out"
-    ${jq}/bin/jq '.devDependencies.typebox = "1.1.37"' \
-      "$out/package.json" > "$out/package.json.tmp"
-    mv "$out/package.json.tmp" "$out/package.json"
-    ${jq}/bin/jq '.packages[""].devDependencies.typebox = "1.1.37"' \
-      "$out/package-lock.json" > "$out/package-lock.json.tmp"
-    mv "$out/package-lock.json.tmp" "$out/package-lock.json"
-    substituteInPlace "$out/src/multiplexer.ts" \
-      --replace-fail 'execFileSync("/bin/sh", ["-lc",' \
-        'execFileSync("/bin/sh", ["-c",'
-    substituteInPlace "$out/src/interactive-tmux.ts" \
-      --replace-fail '"$ARTIFACT_DIR/cli.mjs" done 0' \
-        'node "$ARTIFACT_DIR/cli.mjs" done 0' \
-      --replace-fail '"$ARTIFACT_DIR/cli.mjs" error' \
-        'node "$ARTIFACT_DIR/cli.mjs" error' \
-      --replace-fail '`    "''${cliPath}" process-exit "$rc" || true`' \
-        '`    node "''${cliPath}" process-exit "$rc" || true`' \
-      --replace-fail '`"''${cliPath}" start`' \
-        '`node "''${cliPath}" start`'
-    substituteInPlace "$out/tests/subagent-launch-script.test.ts" \
-      --replace-fail '`"''${join(artDir, "cli.mjs")}"' \
-        '`node "''${join(artDir, "cli.mjs")}"'
-    substituteInPlace \
-      "$out/tests/multiplexer-tmux.test.ts" \
-      "$out/tests/multiplexer-zellij.test.ts" \
-      --replace-fail 'args.includes("-lc")' 'args[0] === "-c"'
-  '';
-
-  subagenturaTests = buildNpmPackage {
-    pname = "pi-subagentura-tests";
-    version = members.subagentura.version;
-    src = subagenturaTestSource;
-    nodejs = buildPackages.nodejs_22;
-    npmDepsHash = "sha256-3VesSLfU89SNnv7LJ19bikkViL4++O1Rd7yTxOjBVuA=";
-    npmDepsFetcherVersion = 2;
-    npmInstallFlags = [
-      "--ignore-scripts"
-      "--legacy-peer-deps"
-    ];
-    dontNpmBuild = true;
-    doCheck = true;
-    checkPhase = ''
-      runHook preCheck
-      npm run test:unit
-      runHook postCheck
-    '';
-    installPhase = ''
-      touch "$out"
-    '';
+    npmDepsHash = members.insights.hashes.npmDepsHash;
   };
 
   mkCopyRoot =
@@ -471,7 +390,7 @@ let
 
   bigpowers = mkCopyRoot {
     pname = "bigpowers";
-    version = "2.84.0";
+    version = supportSources.bigpowers.version;
     install = root: ''
       cp -R -- ${inputs.bigpowers}/.pi ${root}/
       cp -- ${inputs.bigpowers}/package.json ${inputs.bigpowers}/LICENSE \
@@ -606,7 +525,6 @@ let
       '';
 
   roots = lib.mapAttrs (_: member: packageRoot member.package member.attrName) members;
-  extensionOrder = builtins.filter (id: members.${id}.enabled or true) order;
   projection = {
     packages = map (
       id:
@@ -616,7 +534,7 @@ let
       {
         name = member.publicName;
         version = member.projectionVersion or member.version;
-        extensions = lib.optional (member.enabled or true) "${roots.${id}}/${member.extension}";
+        extensions = [ "${roots.${id}}/${member.extension}" ];
       }
       // lib.optionalAttrs (member ? skills) {
         skills = map (path: "${roots.${id}}/${path}") member.skills;
@@ -626,13 +544,14 @@ let
   memberPackages = lib.listToAttrs (
     map (id: lib.nameValuePair members.${id}.attrName members.${id}.package) order
   );
-  galleryPackages = memberPackages // {
-    inherit agent-browser bigpowers;
-  };
+  supportPackages = lib.mapAttrs' (
+    _: member: lib.nameValuePair member.attrName member.package
+  ) supportSources;
+  galleryPackages = memberPackages // supportPackages;
   galleryImports = lib.concatMapStringsSep "\n" (
     id: "import ${id} from ${builtins.toJSON "${roots.${id}}/${members.${id}.extension}"};"
-  ) extensionOrder;
-  galleryRegistrations = lib.concatMapStringsSep ",\n" (id: "            ${id}") extensionOrder;
+  ) order;
+  galleryRegistrations = lib.concatMapStringsSep ",\n" (id: "            ${id}") order;
 
   pi-gallery =
     runCommand "pi-gallery"
@@ -642,7 +561,6 @@ let
             manifest
             projection
             roots
-            subagenturaTests
             ;
           packages = galleryPackages;
         };
@@ -674,8 +592,17 @@ let
         JSON
       '';
 in
-assert inputs.agent-browser-source.rev == "1ed371f3af472cc0d6cd8fdaea75d1a085ff7534";
-assert inputs.agent-browser-source.narHash == "sha256-praWvAgWoDmWqXzh/kxdfQAPGkVS4qkb0pPYtMWO/N8=";
+assert
+  inputs.agent-browser-source.rev == manifest.sourceCatalog.agent-browser-source.source.args.rev;
+assert
+  inputs.agent-browser-source.narHash
+  == manifest.sourceCatalog.agent-browser-source.source.args.narHash;
+assert inputs.bigpowers.rev == supportSources.bigpowers.source.args.rev;
+assert inputs.bigpowers.narHash == supportSources.bigpowers.source.args.narHash;
+assert inputs.pi-btw.rev == members.btw.artifacts.flakeInput.args.rev;
+assert inputs.pi-btw.narHash == members.btw.artifacts.flakeInput.args.narHash;
+assert inputs.ponytail.rev == members.ponytail.source.args.rev;
+assert inputs.ponytail.narHash == members.ponytail.source.args.narHash;
 assert
   builtins.hashFile "sha256" "${inputs.agent-browser-source}/cli/Cargo.toml"
   == "6880ec45ed03e83ab22bd21ac63c4dbaf6c8accd4da840dcf7536e5e48b1f98d";

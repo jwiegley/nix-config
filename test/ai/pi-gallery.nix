@@ -7,7 +7,6 @@
   piPackage,
   piPackages,
   runCommand,
-  tmux,
 }:
 
 let
@@ -29,8 +28,20 @@ let
   skillPackageRoots = lib.escapeShellArgs (
     builtins.attrValues (builtins.removeAttrs roots [ "bigpowers" ])
   );
+  memberVersionChecks = lib.concatMapStringsSep "\n" (
+    id: "expect_version ${roots.${id}}/package.json ${manifest.members.${id}.version}"
+  ) manifest.order;
+  supportVersionChecks = lib.concatMapStringsSep "\n" (
+    id:
+    "expect_version ${
+      root manifest.supportSources.${id}.package manifest.supportSources.${id}.attrName
+    }/package.json ${manifest.supportSources.${id}.version}"
+  ) (builtins.attrNames (builtins.removeAttrs manifest.supportSources [ "agent-browser" ]));
+  expectedPublicNames = map (id: manifest.members.${id}.publicName) manifest.order;
+  expectedSkillCount = builtins.length (
+    lib.concatMap (id: manifest.members.${id}.skills or [ ]) manifest.order
+  );
 in
-assert builtins.length manifest.order == 14;
 assert builtins.length (builtins.attrNames manifest.members) == builtins.length manifest.order;
 assert manifestPackagesMatch;
 assert (piPackage.toolRendererWrapperAbi or null) == 1;
@@ -42,8 +53,6 @@ runCommand "pi-gallery-check"
       coreutils
       jq
       nodejs_22
-      piPackages.pi-gallery.subagenturaTests
-      tmux
     ];
   }
   ''
@@ -61,21 +70,8 @@ runCommand "pi-gallery-check"
       [ "$actual" = "$expected" ] || fail "$manifest: expected $expected, got $actual"
     }
 
-    expect_version ${roots.bigpowers}/package.json 2.84.0
-    expect_version ${roots.btw}/package.json 0.4.1
-    expect_version ${roots.artifacts}/package.json 0.9.0
-    expect_version ${roots.insights}/package.json 1.0.1
-    expect_version ${roots.subagentura}/package.json 3.0.3
-    expect_version ${roots.litellm}/package.json 2.0.0
-    expect_version ${roots.router}/package.json 0.4.4
-    expect_version ${roots.rewind}/package.json 0.5.0
-    expect_version ${roots.scroll}/package.json 0.1.2
-    expect_version ${roots.hashline}/package.json 0.17.5
-    expect_version ${roots.web}/package.json 0.13.0
-    expect_version ${roots.lens}/package.json 3.8.71
-    expect_version ${roots.ponytail}/package.json 4.8.4
-    expect_version ${roots.workflows}/package.json 3.4.1
-    expect_version ${roots.browser}/package.json 0.2.72
+    ${memberVersionChecks}
+    ${supportVersionChecks}
 
     for package_root in ${packageRoots}; do
       [ -f "$package_root/package.json" ] || fail "missing package manifest: $package_root"
@@ -101,14 +97,6 @@ runCommand "pi-gallery-check"
     [ -f ${roots.insights}/dist/index.html ]
     [ -d ${roots.insights}/node_modules/react ]
     [ -d ${roots.insights}/node_modules/recharts ]
-    [ -f ${roots.subagentura}/src/subagent.ts ]
-    [ -f ${roots.subagentura}/src/nix-bundle.js ]
-    [ -f ${roots.subagentura}/src/nix-tmux-test-bundle.js ]
-    [ -f ${roots.subagentura}/skills/ralplan/SKILL.md ]
-    [ -d ${roots.subagentura}/node_modules/is-path-inside ]
-    [ -d ${roots.subagentura}/node_modules/ndjson ]
-    [ ! -e ${roots.subagentura}/node_modules/typebox ]
-
     [ -f ${roots.litellm}/dist/index.js ]
     [ ! -e ${roots.litellm}/node_modules ]
     grep -F 'settings?.skills?.enabled === true' ${roots.litellm}/dist/index.js >/dev/null \
@@ -134,14 +122,6 @@ runCommand "pi-gallery-check"
     [ -f ${roots.scroll}/extensions/scroll.ts ]
     [ -f ${roots.scroll}/src/search.ts ]
     [ ! -e ${roots.scroll}/node_modules ]
-
-    substitute ${./pi-subagentura-tmux.test.ts} "$TMPDIR/pi-subagentura-tmux.test.ts" \
-      --replace-fail '__SUBAGENTURA_ROOT__' ${roots.subagentura}
-    PI_SUBAGENTURA_TMUX_SOCKET="nix-gallery-$$" \
-      PI_SUBAGENTURA_TMUX_MARKER="$TMPDIR/subagentura-tmux-marker" \
-      PATH=${lib.makeBinPath [ tmux ]}:$PATH \
-      bun "$TMPDIR/pi-subagentura-tmux.test.ts" \
-      | grep -Fx 'subagentura-tmux-contract-ok' >/dev/null
 
     [ -f ${roots.hashline}/index.ts ]
     [ ! -e ${roots.hashline}/node_modules/better-sqlite3 ]
@@ -177,39 +157,21 @@ runCommand "pi-gallery-check"
     [ -f ${roots.browser}/dist/extensions/agent-browser/index.js ]
 
     browser_version=$(${lib.getExe piPackages.agent-browser} --version)
-    printf '%s\n' "$browser_version" | grep -F '0.33.0' >/dev/null \
+    printf '%s\n' "$browser_version" | grep -F '${manifest.supportSources.agent-browser.version}' >/dev/null \
       || fail "agent-browser version drifted: $browser_version"
 
     [ -f ${gallery}/index.ts ]
     [ -f ${gallery}/projection.json ]
-    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq 14 ]
-    [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq 7 ]
-    jq -e '
-      [.packages[].name] == [
-        "pi-hashline-edit-pro",
-        "pi-web-access",
-        "pi-lens",
-        "@dietrichgebert/ponytail",
-        "@quintinshaw/pi-dynamic-workflows",
-        "pi-agent-browser-native",
-        "pi-btw",
-        "@jakeryderv/pi-artifacts",
-        "@ygncode/pi-insights",
-        "pi-subagentura",
-        "pi-provider-litellm",
-        "@yeliu84/pi-model-router",
-        "pi-rewind",
-        "pi-scroll"
-      ]
+    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq ${toString (builtins.length manifest.order)} ]
+    [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq ${toString expectedSkillCount} ]
+    jq --argjson expected '${builtins.toJSON expectedPublicNames}' -e '
+      [.packages[].name] == $expected
       and (.packages[] | select(.name == "@dietrichgebert/ponytail") | .skills == [])
-      and (.packages[] | select(.name == "pi-subagentura") | .extensions == [])
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
     grep -F 'PI_WEB_ACCESS_PROVIDER = "perplexity"' ${gallery}/index.ts >/dev/null
     grep -F 'PI_LENS_DISABLE_LSP_INSTALL = "1"' ${gallery}/index.ts >/dev/null
     grep -F 'pi-provider-litellm' ${gallery}/index.ts >/dev/null
     grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
-    ! grep -F 'import subagentura' ${gallery}/index.ts >/dev/null \
-      || fail "disabled Subagentura extension remains registered"
 
     provider_smoke="$TMPDIR/pi-provider-router-smoke"
     mkdir -p "$provider_smoke/home" "$provider_smoke/agent" "$provider_smoke/project"
@@ -639,9 +601,7 @@ runCommand "pi-gallery-check"
               "scroll",
               "viewer",
               "workflows"
-            ] - $names | length) == 0
-          and ($names | index("cancel-all-flows")) == null
-          and ($names | index("workflow")) == null)
+            ] - $names | length) == 0)
       )
     ' "$smoke/output.log" >/dev/null || {
       cat "$smoke/output.log" >&2

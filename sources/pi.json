@@ -1,0 +1,321 @@
+{
+  "schemaVersion": 1,
+  "sources": {
+    "agent-browser": {
+      "source": {
+        "args": {
+          "hash": "sha256-Zdcyp6DFLuT1kCXvBX7ztk2GqqdiYrpk9IrBF4iJz4M=",
+          "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.33.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.33.0.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "agent-browser"
+      },
+      "version": "0.33.0"
+    },
+    "agent-browser-source": {
+      "source": {
+        "args": {
+          "narHash": "sha256-praWvAgWoDmWqXzh/kxdfQAPGkVS4qkb0pPYtMWO/N8=",
+          "owner": "vercel-labs",
+          "repo": "agent-browser",
+          "rev": "1ed371f3af472cc0d6cd8fdaea75d1a085ff7534",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/vercel-labs/agent-browser"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock",
+          "config/ai/flake.nix"
+        ],
+        "input": "agent-browser-source",
+        "kind": "fixed-flake-input"
+      }
+    },
+    "bigpowers": {
+      "source": {
+        "args": {
+          "narHash": "sha256-Nu38N6u9l6EMoZGDLQ01DkbxXdPqVNTPUHh90JCIAcg=",
+          "owner": "danielvm-git",
+          "repo": "bigpowers",
+          "rev": "d1993d31437bfbdb5bda81e84650628215365754",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/danielvm-git/bigpowers"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock",
+          "config/ai/bigpowers-resources.nix"
+        ],
+        "input": "bigpowers",
+        "kind": "flake-input+copy"
+      },
+      "version": "2.84.0"
+    },
+    "pi-agent-browser-native": {
+      "source": {
+        "args": {
+          "hash": "sha256-3subgZHSxRN4wigNrM0KO6o2QmNSr8PtdrT4mg2kRlE=",
+          "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.2.72.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.2.72.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "pi-agent-browser-native"
+      },
+      "version": "0.2.72"
+    },
+    "pi-artifacts": {
+      "hashes": {
+        "npmDepsHash": "sha256-uEXAE4Hy6mAFWsb8kckPMlksGgGB93pekjs5mqwlAGk="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-ONiw6EtStwrB6LESSyyKUOjGGWQDbFAvXlOsnKbcWaU=",
+          "url": "https://registry.npmjs.org/@jakeryderv/pi-artifacts/-/pi-artifacts-0.9.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/@jakeryderv/pi-artifacts/-/pi-artifacts-0.9.0.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-artifacts-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "package": "@jakeryderv/pi-artifacts"
+      },
+      "version": "0.9.0"
+    },
+    "pi-btw": {
+      "artifacts": {
+        "flakeInput": {
+          "args": {
+            "narHash": "sha256-tXcZUh20xYUTn80cubpd9BjFPAcLQK7CrEKxTnsdQ2s=",
+            "owner": "dbachelder",
+            "repo": "pi-btw",
+            "rev": "4f858102706910ee9d520a9666832f3103631b61",
+            "type": "github"
+          },
+          "fetcher": "fetchTree",
+          "url": "https://github.com/dbachelder/pi-btw"
+        }
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-CHzdNUd6Jo+ZMF0YvVoOw6piB+VQl4FHTKImwPwU/GI=",
+          "url": "https://registry.npmjs.org/pi-btw/-/pi-btw-0.4.1.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-btw/-/pi-btw-0.4.1.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "pi-btw",
+        "kind": "npm-release+flake-input",
+        "package": "pi-btw"
+      },
+      "version": "0.4.1"
+    },
+    "pi-dynamic-workflows": {
+      "hashes": {
+        "npmDepsHash": "sha256-49v98jLmhF0K40OoVimaGy8DXpDrsWuhGsKuPbqsm1U="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-5bCDyn+yzRr3rUxDzHT+bGbGxYrv8gSl7S3YhN+pZ0U=",
+          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.4.1.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.4.1.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-dynamic-workflows-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "package": "@quintinshaw/pi-dynamic-workflows"
+      },
+      "version": "3.4.1"
+    },
+    "pi-hashline-edit-pro": {
+      "hashes": {
+        "npmDepsHash": "sha256-sk7mvBP3/SwAFt3GYN1OL2SwNk1s5nC47UUsT1cxB2Y="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-WrPRKhBNUJc6l4u1v4k8dftGUQA2Pj754zE07h3QTxU=",
+          "url": "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.17.5.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.17.5.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-hashline-edit-pro-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "package": "pi-hashline-edit-pro"
+      },
+      "version": "0.17.5"
+    },
+    "pi-insights": {
+      "hashes": {
+        "npmDepsHash": "sha256-JaRVe4RXIsXHBIppE0dCJwsgBG3c2+N+8pM68pKkoFI="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-vMNgilZxwQ5QOxcheTNrcPLQycmXYf5kvkLcLivwWEU=",
+          "url": "https://registry.npmjs.org/@ygncode/pi-insights/-/pi-insights-1.0.1.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/@ygncode/pi-insights/-/pi-insights-1.0.1.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-insights-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "package": "@ygncode/pi-insights"
+      },
+      "version": "1.0.1"
+    },
+    "pi-lens": {
+      "hashes": {
+        "npmDepsHash": "sha256-QZClnuBwVYZ+h5lb4YqsJ6VzgWyQQdnTMa05UdzcB78="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-YoBaBtZx5dz3QOtGharxOyVG/qlcmOTbAFVrlJ4fhqw=",
+          "url": "https://registry.npmjs.org/pi-lens/-/pi-lens-3.8.71.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-lens/-/pi-lens-3.8.71.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-lens-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "package": "pi-lens"
+      },
+      "version": "3.8.71"
+    },
+    "pi-model-router": {
+      "source": {
+        "args": {
+          "hash": "sha256-i5vZzLamyFEbyy+rZas4euSEneB8emIYPR6OoR7oasg=",
+          "url": "https://registry.npmjs.org/@yeliu84/pi-model-router/-/pi-model-router-0.4.4.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/@yeliu84/pi-model-router/-/pi-model-router-0.4.4.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "@yeliu84/pi-model-router"
+      },
+      "version": "0.4.4"
+    },
+    "pi-ponytail": {
+      "source": {
+        "args": {
+          "narHash": "sha256-Y7d4s7uqjH6IbEXhqAiQ+yaxr6iiGcv2X64LuMtG1T8=",
+          "owner": "DietrichGebert",
+          "repo": "ponytail",
+          "rev": "16f29800fd2681bdf24f3eb4ccffe38be3baec6b",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/DietrichGebert/ponytail"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "ponytail",
+        "kind": "flake-input+copy"
+      },
+      "version": "4.8.4"
+    },
+    "pi-provider-litellm": {
+      "source": {
+        "args": {
+          "hash": "sha256-icmK1hCeZMU9ZINgg9fN0DZL8e/fS2Nbq6oJ4AKgVRU=",
+          "url": "https://registry.npmjs.org/pi-provider-litellm/-/pi-provider-litellm-2.0.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-provider-litellm/-/pi-provider-litellm-2.0.0.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "pi-provider-litellm"
+      },
+      "version": "2.0.0"
+    },
+    "pi-rewind": {
+      "source": {
+        "args": {
+          "hash": "sha256-1XufSO8QPfqZdmyWaeuwUptyipn8FT0AcH9zgIIvwTo=",
+          "url": "https://registry.npmjs.org/pi-rewind/-/pi-rewind-0.5.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-rewind/-/pi-rewind-0.5.0.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "pi-rewind"
+      },
+      "version": "0.5.0"
+    },
+    "pi-scroll": {
+      "source": {
+        "args": {
+          "hash": "sha256-LfiA6Wz3888uO7ATZ4oiVS8p4+LqUccxfSxQT7tmt3Q=",
+          "url": "https://registry.npmjs.org/pi-scroll/-/pi-scroll-0.1.2.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-scroll/-/pi-scroll-0.1.2.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "pi-scroll"
+      },
+      "version": "0.1.2"
+    },
+    "pi-web-access": {
+      "hashes": {
+        "npmDepsHash": "sha256-8onTvv7nUrTXMGvwkMkPEYc+mtpxolzF6Z9EuuB9pbs="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-GmPsueJdqj4Ny+fxlwMWRVnehe4bv1GeiBo0i5uAQAA=",
+          "url": "https://registry.npmjs.org/pi-web-access/-/pi-web-access-0.13.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-web-access/-/pi-web-access-0.13.0.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-web-access-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "package": "pi-web-access"
+      },
+      "version": "0.13.0"
+    }
+  }
+}

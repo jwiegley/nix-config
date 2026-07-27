@@ -1,48 +1,8 @@
 # Update targets that cannot be discovered from ordinary overlay package blocks.
-let
-  gallery = import ./pi-gallery/manifest.nix {
-    inputs.ponytail.rev = "0000000";
-    packages = { };
-  };
-  commonGalleryFiles = [
-    "packages/pi-gallery/manifest.nix"
-    "packages/pi-gallery/default.nix"
-    "test/ai/pi-gallery.nix"
-  ];
-  galleryTargets = builtins.listToAttrs (
-    map (
-      id:
-      let
-        member = gallery.members.${id};
-        override = member.update or { };
-      in
-      {
-        name = override.targetName or member.attrName;
-        value = {
-          kind = override.kind or "npm-release";
-          package = member.publicName;
-          inherit (member) version;
-          files = commonGalleryFiles ++ (override.files or [ ]);
-        }
-        // builtins.removeAttrs override [
-          "files"
-          "targetName"
-        ];
-      }
-    ) gallery.order
-  );
-  agentBrowser = gallery.supportSources.agent-browser;
-in
 {
   schemaVersion = 1;
 
-  targets = galleryTargets // {
-    agent-browser = {
-      kind = "npm-release";
-      package = agentBrowser.attrName;
-      inherit (agentBrowser) version;
-      files = commonGalleryFiles;
-    };
+  targets = {
 
     pi-mcp-adapter = {
       kind = "flake-input+build";
@@ -55,18 +15,6 @@ in
         "config/ai/catalog.nix"
         "test/ai/agent-resources.nix"
         "test/ai/home-manager-contract.nix"
-      ];
-    };
-    bigpowers = {
-      kind = "flake-input+copy";
-      flakeInput = "bigpowers";
-      version = "2.84.0";
-      files = [
-        "flake.lock"
-        "config/ai/flake.lock"
-        "config/ai/bigpowers-resources.nix"
-        "packages/pi-gallery/default.nix"
-        "test/ai/pi-gallery.nix"
       ];
     };
 
@@ -170,16 +118,6 @@ in
       ];
     };
 
-    agent-browser-source = {
-      kind = "fixed-flake-input";
-      flakeInput = "agent-browser-source";
-      rev = "1ed371f3af472cc0d6cd8fdaea75d1a085ff7534";
-      files = [
-        "flake.nix"
-        "config/ai/flake.nix"
-        "packages/pi-gallery/default.nix"
-      ];
-    };
     rust-overlay = {
       kind = "fixed-flake-input";
       flakeInput = "rust-overlay";

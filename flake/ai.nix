@@ -2077,6 +2077,8 @@ let
       ../packages/ai-python-extensions.nix
       ../packages/llm-mlx.nix
       ../packages/pi-gallery
+      ../packages/source-catalog.nix
+      ../sources/pi.json
       ../test/ai/scripts
       ../test/ai/agent-resources.nix
       ../test/ai/agent-wrappers.nix
@@ -2085,7 +2087,6 @@ let
       ../test/ai/compatibility-contract.nix
       ../test/ai/node-runtime-guard.cjs
       ../test/ai/pi-gallery.nix
-      ../test/ai/pi-subagentura-tmux.test.ts
       ../test/ai/pi-tool-renderer-wrapper.test.mjs
       ../test/ai/recording-https-bridge-oracle.py
       ../test/ai/run-bridge-oracle.sh
@@ -2172,29 +2173,14 @@ in
     {
       default = mkAiToolchain pkgs;
       inherit (pkgs)
-        agent-browser
         agent-http-header-bridge
         agent-resources
-        bigpowers
-        pi-agent-browser-native
-        pi-artifacts
-        pi-btw
-        pi-dynamic-workflows
         pi-gallery
-        pi-insights
-        pi-hashline-edit-pro
-        pi-lens
-        pi-model-router
-        pi-ponytail
-        pi-provider-litellm
-        pi-rewind
-        pi-scroll
-        pi-subagentura
-        pi-web-access
         plasma-fractal
         plasma-wiki
         ;
     }
+    // pkgs.pi-gallery.packages
   );
 
   apps = forAllSystems (
@@ -2274,27 +2260,8 @@ in
       };
       pi-gallery = pkgs.callPackage ../test/ai/pi-gallery.nix {
         piPackage = patchAgentPackage pkgs "pi" inputs.llm-agents.packages.${system}.pi;
-        piPackages = {
-          inherit (pkgs)
-            agent-browser
-            agent-resources
-            bigpowers
-            pi-agent-browser-native
-            pi-artifacts
-            pi-btw
-            pi-dynamic-workflows
-            pi-gallery
-            pi-insights
-            pi-hashline-edit-pro
-            pi-lens
-            pi-ponytail
-            pi-subagentura
-            pi-provider-litellm
-            pi-model-router
-            pi-rewind
-            pi-scroll
-            pi-web-access
-            ;
+        piPackages = pkgs.pi-gallery.packages // {
+          inherit (pkgs) agent-resources pi-gallery;
         };
       };
       format = check "format" "format-check.sh" qualityDeps.format "";

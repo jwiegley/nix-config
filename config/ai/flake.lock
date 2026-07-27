@@ -297,23 +297,6 @@
         "type": "github"
       }
     },
-    "pi-subagentura": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1784958996,
-        "narHash": "sha256-ogj1OQNS+gJ8mZPctnPL+fxQhSCQ8o9iOCLdIt32/7c=",
-        "owner": "jwiegley",
-        "repo": "pi-subagentura",
-        "rev": "f71281bce8f88741da0e2f9f7ba722964f19d4f0",
-        "type": "github"
-      },
-      "original": {
-        "owner": "jwiegley",
-        "ref": "main",
-        "repo": "pi-subagentura",
-        "type": "github"
-      }
-    },
     "ponytail": {
       "flake": false,
       "locked": {
@@ -344,7 +327,6 @@
         "pi-mcp-adapter": "pi-mcp-adapter",
         "pi-openai-server-compaction": "pi-openai-server-compaction",
         "pi-quiet": "pi-quiet",
-        "pi-subagentura": "pi-subagentura",
         "ponytail": "ponytail",
         "rust-overlay": "rust-overlay_2",
         "translate-tool": "translate-tool"

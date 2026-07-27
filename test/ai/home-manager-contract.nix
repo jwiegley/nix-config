@@ -19,6 +19,7 @@ let
   }/codex-rs/models-manager/models.json";
   rawModelRegistry = builtins.fromJSON (builtins.readFile registryPath);
   modelPolicy = import "${src}/config/ai/model-policy.nix";
+  piSources = import "${src}/packages/source-catalog.nix" "pi";
   loadModelData = args: import "${src}/config/ai/models.nix" args;
   modelData = loadModelData { };
   catalogFor =
@@ -2569,9 +2570,8 @@ let
   expectedAdapterVersions = {
     mcp-remote = "0.1.38";
     pi-mcp-adapter = "2.12.1";
-    pi-model-router = "0.4.4";
-    pi-provider-litellm = "2.0.0";
-    pi-subagentura = "3.0.3";
+    pi-model-router = piSources.pi-model-router.version;
+    pi-provider-litellm = piSources.pi-provider-litellm.version;
   };
   expectedSecretRouting = {
     claude = {

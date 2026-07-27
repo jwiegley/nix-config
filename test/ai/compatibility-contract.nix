@@ -1,4 +1,11 @@
 let
+  gallery = import ../../packages/pi-gallery/manifest.nix {
+    inputs.ponytail.rev = "0000000";
+    packages = { };
+  };
+  galleryPackages =
+    map (id: gallery.members.${id}.attrName) gallery.order
+    ++ map (source: source.attrName) (builtins.attrValues gallery.supportSources);
   portableLock = builtins.fromJSON (builtins.readFile ../../config/ai/flake.lock);
 in
 {
@@ -25,30 +32,17 @@ in
     ]
   ];
 
-  packages = [
-    "agent-browser"
-    "agent-http-header-bridge"
-    "agent-resources"
-    "bigpowers"
-    "default"
-    "pi-agent-browser-native"
-    "pi-artifacts"
-    "pi-btw"
-    "pi-dynamic-workflows"
-    "pi-gallery"
-    "pi-hashline-edit-pro"
-    "pi-insights"
-    "pi-lens"
-    "pi-model-router"
-    "pi-ponytail"
-    "pi-provider-litellm"
-    "pi-rewind"
-    "pi-scroll"
-    "pi-subagentura"
-    "pi-web-access"
-    "plasma-fractal"
-    "plasma-wiki"
-  ];
+  packages = builtins.sort builtins.lessThan (
+    [
+      "agent-http-header-bridge"
+      "agent-resources"
+      "default"
+      "pi-gallery"
+      "plasma-fractal"
+      "plasma-wiki"
+    ]
+    ++ galleryPackages
+  );
 
   apps = [
     "build-check"

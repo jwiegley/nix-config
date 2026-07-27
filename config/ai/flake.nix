@@ -56,11 +56,6 @@
       flake = false;
     };
 
-    pi-subagentura = {
-      url = "github:jwiegley/pi-subagentura/main";
-      flake = false;
-    };
-
     mcp-remote = {
       url = "github:geelen/mcp-remote";
       flake = false;

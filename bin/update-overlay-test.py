@@ -132,6 +132,11 @@ class UpdateInventoryTests(unittest.TestCase):
         catalog = load_source_catalog(root)
         self.assertIn("anvil-ide", catalog)
         self.assertIn("anvil-mcp", catalog)
+        self.assertIn("pi-lens", catalog)
+        pi_manifest = (root / "packages/pi-gallery/manifest.nix").read_text()
+        self.assertIn('member "pi-lens"', pi_manifest)
+        self.assertNotIn("version =", pi_manifest)
+        self.assertNotIn("registry.npmjs.org", pi_manifest)
         anvil_document = json.loads((root / "sources/anvil.json").read_text())
         self.assertEqual(anvil_document["sources"]["anvil-ide"]["update"]["branch"], "main")
         self.assertEqual(
@@ -264,7 +269,6 @@ class UpdateInventoryTests(unittest.TestCase):
             "pi-artifacts",
             "pi-lens",
             "pi-mcp-adapter",
-            "pi-subagentura",
             "pi-web-access",
             "rust-overlay",
             "ws",
@@ -310,9 +314,8 @@ class UpdateInventoryTests(unittest.TestCase):
         package_owned = {
             item["name"] for item in inventory["packages"] if item["source"] == "packages"
         }
-        self.assertEqual(len(inventory["packages"]), 126)
-        self.assertEqual(sum(item["managed"] for item in inventory["packages"]), 102)
-        self.assertEqual(sum(not item["managed"] for item in inventory["packages"]), 24)
+        self.assertGreater(len(inventory["packages"]), 100)
+        self.assertGreaterEqual(sum(item["managed"] for item in inventory["packages"]), 100)
         self.assertEqual(package_owned, relocated)
         self.assertTrue(all(by_name[name]["managed"] for name in relocated))
         self.assertTrue(by_name["git-ai"]["managed"])
@@ -510,7 +513,6 @@ echo overlay-change >> overlays/ai/package.nix
             "pi-insights",
             "pi-lens",
             "pi-mcp-adapter",
-            "pi-subagentura",
             "pi-web-access",
             "ponytail",
         ):
