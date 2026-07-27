@@ -131,13 +131,12 @@ in
 
       crick = ps.buildPythonPackage rec {
         pname = "crick";
-        version = "0.0.8";
+        inherit (sources.crick) version;
         pyproject = true;
 
-        src = ps.fetchPypi {
-          inherit pname version;
-          hash = "sha256-lzuDFf3XK961/fTWsvREdT/A69Y4Dzj44ROPj/h5fZk=";
-        };
+        src =
+          assert sources.crick.source.fetcher == "fetchPypi";
+          ps.fetchPypi sources.crick.source.args;
 
         build-system = [
           ps.setuptools
@@ -166,13 +165,12 @@ in
 
       kaleido = ps.buildPythonPackage rec {
         pname = "kaleido";
-        version = "1.2.0";
+        inherit (sources.kaleido) version;
         format = "wheel";
 
-        src = prev.fetchurl {
-          url = "https://files.pythonhosted.org/packages/4b/97/f6de8d4af54d6401d6581a686cce3e3e2371a79ba459a449104e026c08bc/kaleido-${version}-py3-none-any.whl";
-          hash = "sha256-wn7YK1Hfa5I9DmVv6sIhNDoNvNL7m8fmsduX9h6aFRM=";
-        };
+        src =
+          assert sources.kaleido.source.fetcher == "fetchurl";
+          prev.fetchurl sources.kaleido.source.args;
 
         dependencies = [
           ps.choreographer
@@ -222,13 +220,12 @@ in
     in
     ps.buildPythonApplication rec {
       pname = "aiperf";
-      version = "0.11.0";
+      inherit (sources.aiperf) version;
       format = "wheel";
 
-      src = prev.fetchurl {
-        url = "https://files.pythonhosted.org/packages/a7/89/38715fbd81e36e54b0d7913204a29e419795b3cf613703ec0c3bdc470a9d/aiperf-${version}-py3-none-any.whl";
-        hash = "sha256-Fjjyk9BdQmFCXKiBQCoQAxNrbecrrHKpUEKPMrbhkmA=";
-      };
+      src =
+        assert sources.aiperf.source.fetcher == "fetchurl";
+        prev.fetchurl sources.aiperf.source.args;
 
       dependencies =
         (with ps; [
@@ -367,17 +364,13 @@ in
     with final.python3Packages;
     buildPythonApplication rec {
       pname = "guidellm";
-      version = "0.5.3";
+      inherit (sources.guidellm) version;
       pyproject = null;
       format = "wheel";
 
-      src = fetchPypi {
-        inherit pname version;
-        format = "wheel";
-        dist = "py3";
-        python = "py3";
-        hash = "sha256-yoS5xDPeDIu4Qn6BjM9FMypLt/IBgwjrs669WVYVNXo=";
-      };
+      src =
+        assert sources.guidellm.source.fetcher == "fetchPypi";
+        fetchPypi sources.guidellm.source.args;
 
       dependencies = [
         click
@@ -437,17 +430,13 @@ in
         with final.python3Packages;
         buildPythonPackage rec {
           pname = "mtplx";
-          version = "0.3.7";
+          inherit (sources.mtplx) version;
           pyproject = null;
           format = "wheel";
 
-          src = fetchPypi {
-            inherit pname version;
-            format = "wheel";
-            dist = "py3";
-            python = "py3";
-            hash = "sha256-246JJhnR6ssBr1qPetgFXrjoMLW3BwR+Ud+f3c6LMzY=";
-          };
+          src =
+            assert sources.mtplx.source.fetcher == "fetchPypi";
+            fetchPypi sources.mtplx.source.args;
 
           # nixpkgs ships slightly older fastapi (0.128) and uvicorn (0.40);
           # mtplx pins >=0.136 / >=0.46 but works fine with these versions.

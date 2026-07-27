@@ -726,6 +726,7 @@ def _catalog_executor(record: dict) -> Optional[str]:
     }.get(update["kind"])
     if (
         expected_fetcher == source["fetcher"]
+        and update.get("policy", "automatic") == "automatic"
         and not update.get("artifacts")
         and set(record.get("hashes", {})) <= {"cargoHash", "npmDepsHash", "vendorHash"}
     ):
@@ -787,6 +788,8 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             update_allowed, update_required = update_schema[update["kind"]]
             if update.keys() - update_allowed or update_required - update.keys():
                 raise RuntimeError(f"invalid update strategy fields for source catalog record: {name}")
+            if update.get("policy", "automatic") not in {"automatic", "manual"}:
+                raise RuntimeError(f"invalid update policy for source catalog record: {name}")
             update_artifacts = update.get("artifacts", [])
             if (
                 not isinstance(update_artifacts, list)

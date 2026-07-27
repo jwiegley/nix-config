@@ -7,6 +7,7 @@ final: prev:
 let
   inherit (prev) lib;
   ps = final.python3Packages;
+  sources = import ../../packages/source-catalog.nix "ai";
 
   wikiRuntime = [
     prev.bash
@@ -18,17 +19,12 @@ let
 
   plasmaWiki = ps.buildPythonApplication rec {
     pname = "plasma-wiki";
-    version = "1.1.0";
+    inherit (sources.plasma-wiki) version;
     format = "wheel";
 
-    src = ps.fetchPypi {
-      pname = "plasma_wiki";
-      inherit version;
-      format = "wheel";
-      dist = "py3";
-      python = "py3";
-      hash = "sha256-kZ5f3RrBoxK6GXs5xm+Ug7LcyS91XCY0CHkdkKssZys=";
-    };
+    src =
+      assert sources.plasma-wiki.source.fetcher == "fetchPypi";
+      ps.fetchPypi sources.plasma-wiki.source.args;
 
     dependencies = [ ps.typer ];
     nativeBuildInputs = [
@@ -89,17 +85,12 @@ in
 
   plasma-fractal = ps.buildPythonApplication rec {
     pname = "plasma-fractal";
-    version = "1.0.0";
+    inherit (sources.plasma-fractal) version;
     format = "wheel";
 
-    src = ps.fetchPypi {
-      pname = "plasma_fractal";
-      inherit version;
-      format = "wheel";
-      dist = "py3";
-      python = "py3";
-      hash = "sha256-ROekeFUmslh7y2h/cOMv7d2CCAc8PGxiJ7zNvr7pDoA=";
-    };
+    src =
+      assert sources.plasma-fractal.source.fetcher == "fetchPypi";
+      ps.fetchPypi sources.plasma-fractal.source.args;
 
     dependencies = [
       plasmaWiki

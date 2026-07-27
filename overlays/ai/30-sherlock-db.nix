@@ -5,17 +5,12 @@
 _final: prev:
 
 let
-  version = "1.4.0";
+  source = (import ../../packages/source-catalog.nix "ai").sherlock-db;
+  inherit (source) version;
 
   srcs = {
-    aarch64-darwin = {
-      url = "https://github.com/michaelbromley/sherlock/releases/download/v${version}/sherlock-darwin-arm64";
-      hash = "sha256-k43lSCVvcMnqN1tf+lY02JfkhrKPHc4OZJVAxghqink=";
-    };
-    x86_64-linux = {
-      url = "https://github.com/michaelbromley/sherlock/releases/download/v${version}/sherlock-linux-x64";
-      hash = "sha256-+AfcIZIp7rJP+tDSSjb3Xt0kY3dkmN3oKOWiDX7SPg4=";
-    };
+    aarch64-darwin = source.source.args;
+    x86_64-linux = source.artifacts.x86_64-linux.args;
   };
 
   platformSrc = srcs.${prev.stdenv.hostPlatform.system} or null;
@@ -138,6 +133,8 @@ let
   '';
 
 in
+assert source.source.fetcher == "fetchurl";
+assert source.artifacts.x86_64-linux.fetcher == "fetchurl";
 prev.lib.optionalAttrs (platformSrc != null) {
 
   sherlock-db = prev.stdenv.mkDerivation {

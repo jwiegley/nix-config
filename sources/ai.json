@@ -287,6 +287,565 @@
         "tagPrefix": "v"
       },
       "version": "1.3.1"
+    },
+    "aiologic": {
+      "source": {
+        "args": {
+          "dist": "py3",
+          "format": "wheel",
+          "hash": "sha256-4Azl9oxWB8hk0mrsmcCjOoO9+CN6pzEv+7loBa9n2LY=",
+          "pname": "aiologic",
+          "python": "py3",
+          "version": "0.16.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/aiologic"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "aiologic"
+      },
+      "version": "0.16.0"
+    },
+    "aiperf": {
+      "source": {
+        "args": {
+          "hash": "sha256-Fjjyk9BdQmFCXKiBQCoQAxNrbecrrHKpUEKPMrbhkmA=",
+          "url": "https://files.pythonhosted.org/packages/a7/89/38715fbd81e36e54b0d7913204a29e419795b3cf613703ec0c3bdc470a9d/aiperf-0.11.0-py3-none-any.whl"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://files.pythonhosted.org/packages/a7/89/38715fbd81e36e54b0d7913204a29e419795b3cf613703ec0c3bdc470a9d/aiperf-0.11.0-py3-none-any.whl"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "aiperf"
+      },
+      "version": "0.11.0"
+    },
+    "cohere-melody": {
+      "artifacts": {
+        "cp311": {
+          "args": {
+            "abi": "cp311",
+            "dist": "cp311",
+            "format": "wheel",
+            "hash": "sha256-4J4083no3JSGfKd8vWOIWQoLmICaEwrXDKIfhqU3sxo=",
+            "platform": "macosx_11_0_arm64",
+            "pname": "cohere_melody",
+            "python": "cp311",
+            "version": "0.9.0"
+          },
+          "fetcher": "fetchPypi",
+          "url": "https://pypi.org/project/cohere-melody"
+        },
+        "cp312": {
+          "args": {
+            "abi": "cp312",
+            "dist": "cp312",
+            "format": "wheel",
+            "hash": "sha256-82DpFigLhoT/KQTVZk4/AnlVqO7hwGCSMjlulsfQB6o=",
+            "platform": "macosx_11_0_arm64",
+            "pname": "cohere_melody",
+            "python": "cp312",
+            "version": "0.9.0"
+          },
+          "fetcher": "fetchPypi",
+          "url": "https://pypi.org/project/cohere-melody"
+        },
+        "cp314": {
+          "args": {
+            "abi": "cp314",
+            "dist": "cp314",
+            "format": "wheel",
+            "hash": "sha256-YHOU39HJ+Noyu7tbD0W0quP3ghXRzYHok4TER5V3Ggc=",
+            "platform": "macosx_11_0_arm64",
+            "pname": "cohere_melody",
+            "python": "cp314",
+            "version": "0.9.0"
+          },
+          "fetcher": "fetchPypi",
+          "url": "https://pypi.org/project/cohere-melody"
+        }
+      },
+      "source": {
+        "args": {
+          "abi": "cp313",
+          "dist": "cp313",
+          "format": "wheel",
+          "hash": "sha256-gU6PlYufxOy6AnmNlHsdIQrP8wnISRl2+AIR0wV5jac=",
+          "platform": "macosx_11_0_arm64",
+          "pname": "cohere_melody",
+          "python": "cp313",
+          "version": "0.9.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/cohere-melody"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "cohere-melody",
+        "policy": "manual"
+      },
+      "version": "0.9.0"
+    },
+    "crick": {
+      "source": {
+        "args": {
+          "hash": "sha256-lzuDFf3XK961/fTWsvREdT/A69Y4Dzj44ROPj/h5fZk=",
+          "pname": "crick",
+          "version": "0.0.8"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/crick"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "crick"
+      },
+      "version": "0.0.8"
+    },
+    "culsans": {
+      "source": {
+        "args": {
+          "dist": "py3",
+          "format": "wheel",
+          "hash": "sha256-6DLJY1q3AWz2JWXeKUJp9HCM2SIA0A2v3S5aGUNYfy4=",
+          "pname": "culsans",
+          "python": "py3",
+          "version": "0.10.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/culsans"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "culsans"
+      },
+      "version": "0.10.0"
+    },
+    "dflash-mlx": {
+      "source": {
+        "args": {
+          "hash": "sha256-qhbmkL0Ay9aF1tjZP5bLbqh33969hE6rA41XlaB2Vvs=",
+          "owner": "bstnxbt",
+          "repo": "dflash-mlx",
+          "rev": "9ca002898b48e14c9727dec17299f497e8467870"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/bstnxbt/dflash-mlx"
+      },
+      "update": {
+        "branch": "main",
+        "kind": "github-commit",
+        "policy": "manual"
+      },
+      "version": "0.1.10"
+    },
+    "espeakng-loader": {
+      "source": {
+        "args": {
+          "abi": "none",
+          "dist": "py3",
+          "format": "wheel",
+          "hash": "sha256-0nzcoxESIm5ymdhWLoidPjih5IBVye44G0XWaQcu5Z8=",
+          "platform": "macosx_11_0_arm64",
+          "pname": "espeakng_loader",
+          "python": "py3",
+          "version": "0.2.4"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/espeakng-loader"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "espeakng-loader"
+      },
+      "version": "0.2.4"
+    },
+    "guidellm": {
+      "source": {
+        "args": {
+          "dist": "py3",
+          "format": "wheel",
+          "hash": "sha256-yoS5xDPeDIu4Qn6BjM9FMypLt/IBgwjrs669WVYVNXo=",
+          "pname": "guidellm",
+          "python": "py3",
+          "version": "0.5.3"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/guidellm"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "guidellm"
+      },
+      "version": "0.5.3"
+    },
+    "hf-xet": {
+      "hashes": {
+        "cargoDepsHash": "sha256-pwHUIkx+Dk8fGOVxRJKLswLjQB+sKzpyOOeqV6+Xyxo="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-TqSErydAOaHzCN7qglO/aqMF8BWYXvEv09adhxTwny0=",
+          "owner": "huggingface",
+          "repo": "xet-core",
+          "tag": "v1.5.1"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/huggingface/xet-core"
+      },
+      "update": {
+        "kind": "github-release",
+        "policy": "manual",
+        "tagPrefix": "v"
+      },
+      "version": "1.5.1"
+    },
+    "huggingface-hub": {
+      "source": {
+        "args": {
+          "hash": "sha256-gFOeYwsZTlXSgnuYsUqLv2OB8rsiI5QIeZFY8mH+Ke8=",
+          "owner": "huggingface",
+          "repo": "huggingface_hub",
+          "tag": "v1.19.0"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/huggingface/huggingface_hub"
+      },
+      "update": {
+        "kind": "github-release",
+        "policy": "manual",
+        "tagPrefix": "v"
+      },
+      "version": "1.19.0"
+    },
+    "kaleido": {
+      "source": {
+        "args": {
+          "hash": "sha256-wn7YK1Hfa5I9DmVv6sIhNDoNvNL7m8fmsduX9h6aFRM=",
+          "url": "https://files.pythonhosted.org/packages/4b/97/f6de8d4af54d6401d6581a686cce3e3e2371a79ba459a449104e026c08bc/kaleido-1.2.0-py3-none-any.whl"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://files.pythonhosted.org/packages/4b/97/f6de8d4af54d6401d6581a686cce3e3e2371a79ba459a449104e026c08bc/kaleido-1.2.0-py3-none-any.whl"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "kaleido"
+      },
+      "version": "1.2.0"
+    },
+    "mlx": {
+      "artifacts": {
+        "cp311": {
+          "args": {
+            "abi": "cp311",
+            "dist": "cp311",
+            "format": "wheel",
+            "hash": "sha256-csYFNo0UXHVodwV9fjxU8WnJiZ/h+DIyv7OmNCVh4jQ=",
+            "platform": "macosx_14_0_arm64",
+            "pname": "mlx",
+            "python": "cp311",
+            "version": "0.32.0"
+          },
+          "fetcher": "fetchPypi",
+          "url": "https://pypi.org/project/mlx"
+        },
+        "cp312": {
+          "args": {
+            "abi": "cp312",
+            "dist": "cp312",
+            "format": "wheel",
+            "hash": "sha256-6lpZQ1XInACV6rpBP9OdTKqGQvoTQy37DJNU0UEEZGc=",
+            "platform": "macosx_14_0_arm64",
+            "pname": "mlx",
+            "python": "cp312",
+            "version": "0.32.0"
+          },
+          "fetcher": "fetchPypi",
+          "url": "https://pypi.org/project/mlx"
+        },
+        "cp314": {
+          "args": {
+            "abi": "cp314",
+            "dist": "cp314",
+            "format": "wheel",
+            "hash": "sha256-LuebH4wsKjKa/JXs59zgvnmNQ/PedxpjcNK5+XArvZo=",
+            "platform": "macosx_14_0_arm64",
+            "pname": "mlx",
+            "python": "cp314",
+            "version": "0.32.0"
+          },
+          "fetcher": "fetchPypi",
+          "url": "https://pypi.org/project/mlx"
+        },
+        "metal": {
+          "args": {
+            "dist": "py3",
+            "format": "wheel",
+            "hash": "sha256-W2SyCsJLDEAfSJ3gHoIJ7cTTchJSAfGTFObznjhTIqo=",
+            "platform": "macosx_14_0_arm64",
+            "pname": "mlx_metal",
+            "python": "py3",
+            "version": "0.32.0"
+          },
+          "fetcher": "fetchPypi",
+          "url": "https://pypi.org/project/mlx-metal"
+        }
+      },
+      "source": {
+        "args": {
+          "abi": "cp313",
+          "dist": "cp313",
+          "format": "wheel",
+          "hash": "sha256-q7eG7h6WOHWb6CWDIi/H0JxWUO+QrSt8XafRkxqGdtw=",
+          "platform": "macosx_14_0_arm64",
+          "pname": "mlx",
+          "python": "cp313",
+          "version": "0.32.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/mlx"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "mlx",
+        "policy": "manual"
+      },
+      "version": "0.32.0"
+    },
+    "mlx-audio": {
+      "source": {
+        "args": {
+          "hash": "sha256-2MbcOFk/lx1UNqFlyxYl03cL8yFUprZdgcb6eo5SX6w=",
+          "owner": "Blaizzy",
+          "repo": "mlx-audio",
+          "rev": "51753266e0a4f766fd5e6fbc46652224efc23981"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/Blaizzy/mlx-audio"
+      },
+      "update": {
+        "branch": "main",
+        "kind": "github-commit",
+        "policy": "manual"
+      },
+      "version": "0.4.3"
+    },
+    "mlx-embeddings": {
+      "source": {
+        "args": {
+          "hash": "sha256-P+H+qnhtO1RszYkJ9rTCK9O8zgl2FvzoMXPt7dMOZjA=",
+          "url": "https://files.pythonhosted.org/packages/78/18/05a341c811c9ee04f227cdbc064a635b84202cb8f85471adfdeebe0da32d/mlx_embeddings-0.1.0-py2.py3-none-any.whl"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://files.pythonhosted.org/packages/78/18/05a341c811c9ee04f227cdbc064a635b84202cb8f85471adfdeebe0da32d/mlx_embeddings-0.1.0-py2.py3-none-any.whl"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "mlx-embeddings"
+      },
+      "version": "0.1.0"
+    },
+    "mlx-lm": {
+      "source": {
+        "args": {
+          "hash": "sha256-C8KF9q/gxR+YTH8Pg9qmQ/mFnVHQ30vl4BBUQl8IPP4=",
+          "owner": "ml-explore",
+          "repo": "mlx-lm",
+          "rev": "ab1806e8f5d6aa035973af194a1b9198ab4754dc"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/ml-explore/mlx-lm"
+      },
+      "update": {
+        "branch": "main",
+        "kind": "github-commit",
+        "policy": "manual"
+      },
+      "version": "0.31.3-unstable-2026-07-07"
+    },
+    "mlx-speech": {
+      "source": {
+        "args": {
+          "hash": "sha256-083qJM0aXQmc0Yu+MW8a9MuzCDiye9AZHghP0Pgmr2s=",
+          "owner": "appautomaton",
+          "repo": "mlx-speech",
+          "rev": "d7bb3d79fe7b6cf545a79ca6ebfb0c22c221f6ad"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/appautomaton/mlx-speech"
+      },
+      "update": {
+        "branch": "main",
+        "kind": "github-commit",
+        "policy": "manual"
+      },
+      "version": "0-unstable-2025-03-30"
+    },
+    "mlx-vlm": {
+      "source": {
+        "args": {
+          "hash": "sha256-JEECMpjP7YK2Y59g54KVWtBKZsfB+rOK4dQlPabLjF8=",
+          "owner": "Blaizzy",
+          "repo": "mlx-vlm",
+          "rev": "78b96eb5462141447b9a6b4943ef553891da56dd"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/Blaizzy/mlx-vlm"
+      },
+      "update": {
+        "branch": "main",
+        "kind": "github-commit",
+        "policy": "manual"
+      },
+      "version": "0.6.3"
+    },
+    "mtplx": {
+      "source": {
+        "args": {
+          "dist": "py3",
+          "format": "wheel",
+          "hash": "sha256-246JJhnR6ssBr1qPetgFXrjoMLW3BwR+Ud+f3c6LMzY=",
+          "pname": "mtplx",
+          "python": "py3",
+          "version": "0.3.7"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/mtplx"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "mtplx"
+      },
+      "version": "0.3.7"
+    },
+    "phonemizer-fork": {
+      "source": {
+        "args": {
+          "hash": "sha256-EOFugn0EQ7CHBi4htV6AXACYnPE0Oy6B5zTK5fbAz2k=",
+          "pname": "phonemizer_fork",
+          "version": "3.3.2"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/phonemizer-fork"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "phonemizer-fork"
+      },
+      "version": "3.3.2"
+    },
+    "pyloudnorm": {
+      "source": {
+        "args": {
+          "hash": "sha256-i/WXZY6k4ZdcJ1rfSQ9t61Np6kCfKQH5OZFe+ktoGxY=",
+          "pname": "pyloudnorm",
+          "version": "0.2.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/pyloudnorm"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "pyloudnorm"
+      },
+      "version": "0.2.0"
+    },
+    "standard-distutils": {
+      "source": {
+        "args": {
+          "hash": "sha256-N9bJ8PAyHtPJySPlSw/br6PXv1VoId5V/YFY1/RA3rU=",
+          "pname": "standard_distutils",
+          "version": "3.11.9"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/standard-distutils"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "standard-distutils"
+      },
+      "version": "3.11.9"
+    },
+    "plasma-fractal": {
+      "source": {
+        "args": {
+          "dist": "py3",
+          "format": "wheel",
+          "hash": "sha256-ROekeFUmslh7y2h/cOMv7d2CCAc8PGxiJ7zNvr7pDoA=",
+          "pname": "plasma_fractal",
+          "python": "py3",
+          "version": "1.0.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/plasma-fractal"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "plasma-fractal"
+      },
+      "version": "1.0.0"
+    },
+    "plasma-wiki": {
+      "source": {
+        "args": {
+          "dist": "py3",
+          "format": "wheel",
+          "hash": "sha256-kZ5f3RrBoxK6GXs5xm+Ug7LcyS91XCY0CHkdkKssZys=",
+          "pname": "plasma_wiki",
+          "python": "py3",
+          "version": "1.1.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/plasma-wiki"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "plasma-wiki"
+      },
+      "version": "1.1.0"
+    },
+    "sherlock-db": {
+      "artifacts": {
+        "x86_64-linux": {
+          "args": {
+            "hash": "sha256-+AfcIZIp7rJP+tDSSjb3Xt0kY3dkmN3oKOWiDX7SPg4=",
+            "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.4.0/sherlock-linux-x64"
+          },
+          "fetcher": "fetchurl",
+          "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.4.0/sherlock-linux-x64"
+        }
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-k43lSCVvcMnqN1tf+lY02JfkhrKPHc4OZJVAxghqink=",
+          "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.4.0/sherlock-darwin-arm64"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.4.0/sherlock-darwin-arm64"
+      },
+      "update": {
+        "kind": "github-release-asset",
+        "policy": "manual",
+        "tagPrefix": "v"
+      },
+      "version": "1.4.0"
+    },
+    "vllm-mlx": {
+      "source": {
+        "args": {
+          "hash": "sha256-RTmXt4qKx8d2XOXdL7/JrgEEkuUCGuif8Lb8RK9VK/I=",
+          "url": "https://files.pythonhosted.org/packages/54/e5/04730159e337b288e26b0957ee6a8e5647b47fb5e14f98e6d229565c1daf/vllm_mlx-0.2.8-py3-none-any.whl"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://files.pythonhosted.org/packages/54/e5/04730159e337b288e26b0957ee6a8e5647b47fb5e14f98e6d229565c1daf/vllm_mlx-0.2.8-py3-none-any.whl"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "vllm-mlx"
+      },
+      "version": "0.2.8"
     }
   }
 }

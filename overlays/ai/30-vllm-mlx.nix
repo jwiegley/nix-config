@@ -2,7 +2,11 @@
 # Purpose: vLLM-like inference for Apple Silicon via MLX
 # Dependencies: Uses final for python3Packages (needs mlx, mlx-embeddings from extensions)
 # Packages: vllm-mlx
-final: prev: {
+final: prev:
+let
+  source = (import ../../packages/source-catalog.nix "ai").vllm-mlx;
+in
+{
 
   vllm-mlx =
     let
@@ -26,14 +30,13 @@ final: prev: {
     with python3Packages;
     buildPythonApplication rec {
       pname = "vllm-mlx";
-      version = "0.2.8";
+      inherit (source) version;
       pyproject = null;
       format = "wheel";
 
-      src = prev.fetchurl {
-        url = "https://files.pythonhosted.org/packages/54/e5/04730159e337b288e26b0957ee6a8e5647b47fb5e14f98e6d229565c1daf/vllm_mlx-${version}-py3-none-any.whl";
-        hash = "sha256-RTmXt4qKx8d2XOXdL7/JrgEEkuUCGuif8Lb8RK9VK/I=";
-      };
+      src =
+        assert source.source.fetcher == "fetchurl";
+        prev.fetchurl source.source.args;
 
       # opencv-python is provided by opencv4 in nixpkgs (same cv2 module)
       pythonRemoveDeps = [ "opencv-python" ];
