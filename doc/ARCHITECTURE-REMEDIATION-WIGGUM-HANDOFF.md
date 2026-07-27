@@ -17,13 +17,22 @@ Updated: 2026-07-26
 
 - Whole-repository audit and independently cross-checked report.
 - 22 findings mapped to WU1–WU9.
-- Frozen Definition of Done, work-unit order, deployment matrix, and stop criteria written.
+- Frozen Definition of Done, corrected work-unit prerequisites, authorization state, deployment matrix, and stop criteria written.
+- WU0 fleet baseline recorded: Hera `4f25975f` / HM 41; Clio `a36d3f5` / HM 220; shared-work `ae0156cd` / HM 192; Vulcan `a999d89b`.
+- Independent fess audit of `4f25975f` produced seven findings; all are addressed in the cleanup now pending commit.
+- Partner observation `2026-07-27T00:28:18.461Z` was valid; Agent Deck now uses `/tmp` at package/helper/tmux policy seams and focused checks pass.
 
 ## In progress
 
 - WU0 baseline gate passed: updater tests, portable all-system evaluation, four core AI contracts, and Darwin system build.
-- Partner observation inventory is empty.
-- Durable plan/handoff/journal are ready for the first signed checkpoint commit.
+- Partner observation batch is fully addressed and reviewed PASS; remove the untracked observation before cleanup commit.
+- Commit the fess/partner cleanup, then begin WU1.
+
+## Authorization
+
+- Local implementation, signed commits, tests, native builds, and reversible tracked-file cleanup: authorized.
+- Push, remote activation, and system/Home Manager switch: not authorized by the current invocation.
+- Destructive/shared-history operations: prohibited.
 
 ## Remaining
 
@@ -35,7 +44,7 @@ Updated: 2026-07-26
 |---|---:|---|
 | Baseline gate | 1 | PASS at `a36d3f51`: updater tests, portable evaluation, core AI contracts, Darwin build |
 | Workflow synthesis | 2 | Abandoned after demonstrated runtime/budget failures; replaced by frozen coordinator plan |
-| Current work-unit focused gate | 0 | WU1 not started |
+| Current work-unit focused gate | 1 | Partner cleanup PASS: Home Manager contract and Agent Deck package build |
 | Current work-unit full gate | 0 | Not started |
 
 ## Resume exactly
@@ -48,4 +57,4 @@ Updated: 2026-07-26
 
 ## Stop/escalate state
 
-No active stop condition. PAL waiver is explicit. External consumer uncertainty is a deletion gate, not permission to guess.
+No active stop condition. PAL waiver is explicit. External consumer uncertainty is a deletion gate, not permission to guess. Push/activation remain human-gated.

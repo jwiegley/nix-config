@@ -62,6 +62,7 @@ _final: prev: {
       # exec.LookPath and degrades gracefully, so those are left to the user PATH.
       postInstall = ''
         wrapProgram $out/bin/agent-deck \
+          --set-default TMUX_TMPDIR /tmp \
           --suffix PATH : ${
             lib.makeBinPath [
               tmux

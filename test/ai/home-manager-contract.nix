@@ -3226,20 +3226,20 @@ let
     (expectEqual "Task 9 shared synthetic exact AI paths" (task9AiPathsIn task9JohnwSharedSynthetic) (
       task9PathsForClass "shared-work"
     ))
-    (expectEqual "Task 9 shared local agent-deck tmux socket parent"
-      task9JohnwSharedSynthetic.config.home.sessionVariables.TMUX_TMPDIR
-      "\${XDG_RUNTIME_DIR:-\"/run/user/$(id -u)\"}"
+    (expectEqual "Task 9 shared local agent-deck leaves tmux socket policy to the package"
+      (builtins.hasAttr "TMUX_TMPDIR" task9JohnwSharedSynthetic.config.home.sessionVariables)
+      false
     )
     (expectEqual "Task 9 shared agent-deck helper preserved"
       (builtins.hasAttr ".local/bin/agent-deck-remote-env" task9JohnwSharedSynthetic.config.home.file)
       true
     )
-    (expectEqual "Task 9 remote agent-deck shares the local tmux socket parent" (lib.hasInfix
-      ''export TMUX_TMPDIR="$XDG_RUNTIME_DIR"''
+    (expectEqual "Task 9 remote agent-deck uses the persistent tmux socket parent" (lib.hasInfix
+      ''export TMUX_TMPDIR="''${AGENTDECK_TMUX_TMPDIR:-/tmp}"''
       task9JohnwSharedSynthetic.config.home.file.".local/bin/agent-deck-remote-env".text
     ) true)
-    (expectEqual "Task 9 remote agent-deck does not clear the tmux socket parent" (lib.hasInfix
-      "unset TMUX_TMPDIR"
+    (expectEqual "Task 9 remote agent-deck does not depend on a logind runtime directory" (lib.hasInfix
+      "/run/user/"
       task9JohnwSharedSynthetic.config.home.file.".local/bin/agent-deck-remote-env".text
     ) false)
     (expectEqual "Task 9 managed profile precedes preserved PATH prefixes"

@@ -121,9 +121,6 @@ in
     // lib.optionalAttrs isLinux {
       FACTORY_AUTO_UPDATE = "false";
     }
-    // lib.optionalAttrs isPositronRemoteLinux {
-      TMUX_TMPDIR = "\${XDG_RUNTIME_DIR:-\"/run/user/$(id -u)\"}";
-    }
     // lib.optionalAttrs (!vars.gitAiEnabled) {
       GIT_AI_INSTALL_DEV_HOOKS = "0";
     };
@@ -174,10 +171,8 @@ in
         text = ''
           #!/usr/bin/env bash
           set -euo pipefail
-          uid=$(id -u)
-          export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$uid}"
-          # Local and SSH agent-deck invocations must share one tmux socket parent.
-          export TMUX_TMPDIR="$XDG_RUNTIME_DIR"
+          # /tmp is tmux's native socket parent and survives non-PAM SSH sessions.
+          export TMUX_TMPDIR="''${AGENTDECK_TMUX_TMPDIR:-/tmp}"
           export CLAUDE_CONFIG_DIR="$HOME/.claude"
           exec "$HOME/.nix-profile/bin/agent-deck" "$@"
         '';
@@ -296,6 +291,8 @@ in
 
     tmux = {
       enable = true;
+      # Detached fleet sessions must survive logout and non-PAM SSH invocations.
+      secureSocket = false;
       mouse = lib.mkDefault true;
       terminal = "tmux-256color";
       escapeTime = 0;

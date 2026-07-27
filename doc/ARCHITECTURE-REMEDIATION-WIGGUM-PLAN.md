@@ -4,7 +4,7 @@ Status: FROZEN on 2026-07-26. Criteria may be clarified but never reduced.
 
 ## Authority
 
-- Audit: `/Users/johnw/doc/obsidian/Nix Configuration Architecture and Maintainability Audit 2026-07-26.md`
+- Audit: `/Users/johnw/doc/obsidian/Nix Configuration Architecture and Maintainability Audit 2026-07-26.md`; approved for implementation by the user on 2026-07-26.
 - Repository baseline: `a36d3f51d92158e4e055e3baca85044f575e25a6`
 - PAL: explicitly waived by the user for this effort.
 - Saved read-only planning workflow: `nix-architecture-remediation`.
@@ -13,7 +13,7 @@ Status: FROZEN on 2026-07-26. Criteria may be clarified but never reduced.
 
 All conditions require fresh evidence:
 
-1. Every audit finding P0-1 through P2-22 has one implemented or evidence-backed retained disposition in the coverage matrix.
+1. All 22 finding IDs listed in the coverage matrix have one implemented or evidence-backed retained disposition.
 2. Package updates have one discoverable, complete, atomic authority covering overlays, Pi gallery, Anvil, agent resources, fixed input URLs, locks, and synchronized tests.
 3. Darwin-only pins/fixes are inactive on Linux, proven by derivation parity checks.
 4. Overlay ordering and input provenance are explicit; `pkgs.inputs` is not a configuration bus.
@@ -21,7 +21,7 @@ All conditions require fresh evidence:
 6. Root and portable AI input membership, package groups, and Pi gallery membership each have one source of truth while retaining separate locks.
 7. Root README/CLAUDE and one current architecture/work authority make repository purpose, hosts, commands, authorization, and deployment ownership discoverable.
 8. Concrete Claude/Codex/Droid wrapper implementations and Anvil runtime programs have client/language-local ownership without adding speculative public interfaces.
-9. Quality policy has one authority; names represent real evidence; CI executes the documented contract subset; long resilience soaks are explicit scheduled/release gates.
+9. Quality policy has one authority; names represent real evidence; CI executes updater tests, agent resources/wrappers, catalog/renderers, Home integration, model sync, package selection, native Pi gallery, and Linux Anvil unit/protocol contracts; platform runtime contracts remain native gates; long resilience soaks are explicit scheduled/release gates.
 10. Home Manager, model-sync, package-selection, wrapper, and Anvil checks have focused cache/failure boundaries without weakened behavioral, security, concurrency, or lifecycle coverage.
 11. Verified dead/superseded surfaces are removed. Conditional compatibility surfaces are removed only after external-consumer evidence proves them unused; otherwise their retained contract is documented and tested.
 12. Root checks pass on aarch64-darwin, aarch64-linux, and x86_64-linux. Native fleet builds pass for Hera, Clio, Andoria shared-work, and Vulcan.
@@ -113,6 +113,7 @@ Primary findings: P1-7, P1-9, P1-17.
 
 - Centralize portable input declarations/membership while retaining dual locks.
 - Move root/portable coherence and host checks to root; give portable checks an explicit fileset and target.
+- First split the wrapper contract gate needed to preserve behavior and failure ownership.
 - Keep `patchAgentPackage` only as a small dispatcher; move concrete client implementations and version contracts to client-owned modules.
 - Preserve public compatibility only where consumer evidence proves it live.
 
@@ -120,6 +121,7 @@ Primary findings: P1-7, P1-9, P1-17.
 
 Primary finding: P1-13. Secondary: test recommendations.
 
+- First expose focused Anvil unit/protocol gates needed to preserve behavior and failure ownership.
 - Move six named embedded Python/Elisp programs to language-native files loaded by the package composition root.
 - Preserve timeoutPolicy and workerSpecs as single test-visible policy owners.
 - No behavioral redesign in the extraction commit.
@@ -131,7 +133,7 @@ Primary findings: P1-10, P1-11, P1-12.
 - One quality authority delegated to by Make, lefthook, CI, and flake apps.
 - Remove fake evidence aliases after consumer audit.
 - Split catalog/renderers, Home integration, model-sync, and package-selection checks.
-- Split Anvil focused/unit, protocol, lifecycle, and scheduled soak gates; preserve all valuable behavior.
+- Complete the remaining Anvil lifecycle/scheduled-soak wiring after WU7's prerequisite focused gates; preserve all valuable behavior.
 - Wire existing focused extension tests and executed updater transaction tests.
 - Bound diagnostics and report structural diffs.
 
@@ -176,9 +178,15 @@ Primary findings: P2-19 and remaining conditional P2 dispositions.
 | P2-18 | WU1/WU4 |
 | P2-19 | WU9 |
 
+## Authorization state
+
+- Repository edits, signed local commits, tests, native builds, and reversible tracked-file deletions requested by the audit are authorized.
+- Pushes, remote switches, and system/Home Manager activations are **not authorized by this invocation**; keep them as final human-gated steps unless a separate standing authorization is re-established.
+- Force-push, shared-history rewrite, data deletion, secret changes, and unverified compatibility deletion remain prohibited.
+
 ## Deployment matrix
 
-| Consumer | Build authority | Activation authority | Required evidence |
+| Consumer | Build authority | Activation mechanism | Required evidence |
 |---|---|---|---|
 | Hera | root `nix-config` | nix-darwin | clean commit, system build, switch, second-switch generation parity |
 | Clio | root `nix-config` on Clio | nix-darwin | native build, switch, parity; unreachable is blocker |
@@ -191,7 +199,7 @@ Primary findings: P2-19 and remaining conditional P2 dispositions.
 2. Anvil modified-buffer/status checkpoint.
 3. Implement one unit; run focused tests and full impacted gate.
 4. Review diff; create signed atomic commit.
-5. Independent fess audit; verify and fix real findings.
+5. Independent fess audit; record audited commit hash, auditor/verdict, findings disposition, and verification evidence in the journal; verify and fix real findings.
 6. Drain `doc/observations/` through partner cleanup.
 7. Rebase/restack locally before the next independent unit.
 8. Update handoff and append journal learning.
