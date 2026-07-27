@@ -26,6 +26,7 @@ OverlayUpdater = MODULE["OverlayUpdater"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
 load_source_catalog = MODULE["load_source_catalog"]
+update_catalog_target = MODULE["update_catalog_target"]
 build_inventory = MODULE["build_inventory"]
 
 VENDOR_HASH = "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
@@ -254,6 +255,128 @@ class UpdateInventoryTests(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "document fields"):
             load(valid, {"unexpected": True})
+
+    def test_catalog_npm_update_rewrites_source_and_dependent_hash_atomically(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/ai.json"
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {
+                    "example": {
+                        "version": "1.0.0",
+                        "source": {
+                            "fetcher": "fetchurl",
+                            "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                            "args": {
+                                "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                                "hash": "sha512-old",
+                            },
+                        },
+                        "hashes": {"npmDepsHash": "sha256-old"},
+                        "update": {"kind": "npm-release", "package": "example"},
+                    }
+                },
+            }))
+            target = load_source_catalog(root)["example"]
+
+            class FakeNpmClient:
+                def get_version(self, _package, _requested=None):
+                    return "2.0.0", "sha512-new"
+
+            class FakeHashComputer:
+                def _compute_fod_hash(self, _package, hash_type):
+                    self.hash_type = hash_type
+                    return "sha256-new"
+
+            transaction = SourceTransaction()
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                status = update_catalog_target(
+                    "example",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(),
+                    FakeNpmClient(),
+                    FakeHashComputer(),
+                    transaction,
+                )
+            transaction.commit()
+            record = json.loads(path.read_text())["sources"]["example"]
+            self.assertEqual(status, "updated")
+            self.assertEqual(record["version"], "2.0.0")
+            self.assertEqual(record["source"]["args"]["hash"], "sha512-new")
+            self.assertIn("example-2.0.0.tgz", record["source"]["args"]["url"])
+            self.assertEqual(record["hashes"]["npmDepsHash"], "sha256-new")
+
+            before_failure = path.read_text()
+            failing_target = load_source_catalog(root)["example"]
+            failing_transaction = SourceTransaction()
+            failing_npm = SimpleNamespace(
+                get_version=lambda _package, _requested=None: ("3.0.0", "sha512-next")
+            )
+            failing_hashes = SimpleNamespace(_compute_fod_hash=lambda _package, _kind: None)
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_catalog_target(
+                    "example",
+                    failing_target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(),
+                    failing_npm,
+                    failing_hashes,
+                    failing_transaction,
+                )
+            self.assertEqual(status, "failed")
+            self.assertEqual(failing_transaction.rollback(), 1)
+            self.assertEqual(path.read_text(), before_failure)
+
+    def test_catalog_github_release_preserves_native_tag_field(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/ai.json"
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {
+                    "example": {
+                        "version": "1.0.0",
+                        "source": {
+                            "fetcher": "fetchFromGitHub",
+                            "url": "https://github.com/example/project",
+                            "args": {
+                                "owner": "example",
+                                "repo": "project",
+                                "tag": "v1.0.0",
+                                "hash": "sha256-old",
+                            },
+                        },
+                        "update": {"kind": "github-release", "tagPrefix": "v"},
+                    }
+                },
+            }))
+            target = load_source_catalog(root)["example"]
+
+            github = SimpleNamespace(get_latest_release=lambda _owner, _repo: "v2.0.0")
+            hashes = SimpleNamespace(
+                compute_src_hash=lambda _owner, _repo, _rev: "sha256-new"
+            )
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_catalog_target(
+                    "example",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    github,
+                    SimpleNamespace(),
+                    hashes,
+                    transaction,
+                )
+            transaction.commit()
+            record = json.loads(path.read_text())["sources"]["example"]
+            self.assertEqual(status, "updated")
+            self.assertEqual(record["source"]["args"]["tag"], "v2.0.0")
+            self.assertNotIn("rev", record["source"]["args"] )
 
     def test_manifest_and_cli_inventory_cover_hidden_update_targets(self):
         root = SCRIPT.parent.parent

@@ -716,6 +716,23 @@ def _validate_fetch_record(name: str, source: dict) -> None:
             raise RuntimeError(f"source identity does not match fetcher args: {name}")
 
 
+def _catalog_executor(record: dict) -> Optional[str]:
+    update = record["update"]
+    source = record["source"]
+    expected_fetcher = {
+        "github-commit": "fetchFromGitHub",
+        "github-release": "fetchFromGitHub",
+        "npm-release": "fetchurl",
+    }.get(update["kind"])
+    if (
+        expected_fetcher == source["fetcher"]
+        and not update.get("artifacts")
+        and set(record.get("hashes", {})) <= {"cargoHash", "npmDepsHash", "vendorHash"}
+    ):
+        return "update-overlay"
+    return None
+
+
 def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
     """Load data-only package source records from sources/*.json."""
     catalog_dir = nix_dir / "sources"
@@ -784,6 +801,10 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 "version": record.get("version", record["source"]["args"].get("rev", record["source"]["args"].get("tag", "unversioned"))),
                 "files": [str(path.relative_to(nix_dir)), *update_artifacts],
                 "source": "catalog",
+                "executor": _catalog_executor(record),
+                "_document": payload,
+                "_path": path,
+                "_record": record,
             }
     return targets
 
@@ -881,14 +902,17 @@ def print_inventory(inventory: dict, json_output: bool) -> None:
     )
 
 
-def collect_targets(args, sources: list[OverlaySource]) -> list[tuple[OverlaySource, str]]:
+def collect_targets(
+    args, sources: list[OverlaySource], skip_names: set[str] | None = None
+) -> list[tuple[OverlaySource, str]]:
     """Collect package update targets across all configured overlay trees."""
+    skip_names = skip_names or set()
     targets: list[tuple[OverlaySource, str]] = []
 
     if args.all:
         total = 0
         for source in sources:
-            packages = source.parser.find_all_packages()
+            packages = [p for p in source.parser.find_all_packages() if p not in skip_names]
             if args.packages:
                 packages = [p for p in packages if p in args.packages]
             total += len(packages)
@@ -898,6 +922,8 @@ def collect_targets(args, sources: list[OverlaySource]) -> list[tuple[OverlaySou
         return targets
 
     for package in args.packages:
+        if package in skip_names:
+            continue
         matches = [
             source for source in sources
             if source.parser.find_package(package) is not None
@@ -935,6 +961,123 @@ class SourceTransaction:
     def rollback_unless_committed(self) -> None:
         if not self.committed:
             self.rollback()
+
+
+def _write_catalog_target(target: dict) -> None:
+    target["_path"].write_text(json.dumps(target["_document"], indent=2) + "\n")
+
+
+def update_catalog_target(
+    name: str,
+    target: dict,
+    args,
+    github_client: GitHubClient,
+    npm_client: NpmRegistryClient,
+    hash_computer: HashComputer,
+    transaction,
+) -> str:
+    record = target["_record"]
+    source = record["source"]
+    source_args = source["args"]
+    update = record["update"]
+    old_version = record.get("version", source_args.get("rev", source_args.get("tag")))
+    new_ref = None
+    new_version = None
+    new_hash = None
+
+    if update["kind"] == "npm-release":
+        candidate = npm_client.get_version(update["package"], args.version)
+        if candidate:
+            new_version, new_hash = candidate
+    elif update["kind"] == "github-commit":
+        if args.version:
+            new_ref = args.version
+        else:
+            candidate = github_client.get_latest_commit(
+                source_args["owner"], source_args["repo"], update["branch"]
+            )
+            if candidate:
+                new_ref = candidate[0]
+        if new_ref:
+            current_version = record.get("version")
+            current_ref = source_args["rev"]
+            new_version = (
+                new_ref[: len(current_version)]
+                if current_version and current_ref.startswith(current_version)
+                else current_version or new_ref
+            )
+    elif update["kind"] == "github-release":
+        current_ref = source_args.get("tag", source_args.get("rev"))
+        prefix = update.get("tagPrefix")
+        if prefix is None:
+            prefix = current_ref[: -len(old_version)] if old_version and current_ref.endswith(old_version) else ""
+        if args.version:
+            new_ref = args.version if args.version.startswith(prefix) else f"{prefix}{args.version}"
+        else:
+            new_ref = github_client.get_latest_release(source_args["owner"], source_args["repo"])
+        if new_ref:
+            new_version = extract_version_number(new_ref, prefix)
+
+    display = f"{Colors.BOLD}catalog/{name}{Colors.RESET} {Colors.DIM}{old_version}{Colors.RESET}"
+    print(display, end=" ")
+    if new_version is None:
+        print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
+        return "failed"
+    if new_ref is None and update["kind"] == "npm-release":
+        new_ref = new_version
+    current_ref = source_args.get("tag", source_args.get("rev", old_version))
+    if new_version == old_version and new_ref == current_ref:
+        print(f"{Colors.GREEN}✓ up-to-date{Colors.RESET}")
+        return "skipped"
+
+    if update["kind"] != "npm-release":
+        new_hash = hash_computer.compute_src_hash(source_args["owner"], source_args["repo"], new_ref)
+    if not new_hash:
+        print(f"{Colors.RED}✗ hash failed{Colors.RESET}")
+        return "failed"
+
+    new_url = None
+    if update["kind"] == "npm-release":
+        old_url = source_args["url"]
+        if not old_version or old_url.count(old_version) != 1:
+            print(f"{Colors.RED}✗ URL rewrite failed{Colors.RESET}")
+            return "failed"
+        new_url = old_url.replace(old_version, new_version, 1)
+
+    print(f"{Colors.YELLOW}→ {new_version}{Colors.RESET}", end="")
+    if args.dry_run:
+        print(f" {Colors.CYAN}(dry-run){Colors.RESET}")
+        return "updated"
+
+    transaction.watch(target["_path"])
+    if "version" in record:
+        record["version"] = new_version
+    hash_name = next(iter({"hash", "sha256", "narHash"} & source_args.keys()))
+    source_args[hash_name] = new_hash
+    if update["kind"] == "npm-release":
+        source_args["url"] = new_url
+        source["url"] = new_url
+    else:
+        ref_name = "tag" if "tag" in source_args else "rev"
+        source_args[ref_name] = new_ref
+    _write_catalog_target(target)
+
+    computed = []
+    for hash_type, old_hash in record.get("hashes", {}).items():
+        record["hashes"][hash_type] = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        _write_catalog_target(target)
+        new_dependent_hash = hash_computer._compute_fod_hash(name, hash_type)
+        if not new_dependent_hash:
+            record["hashes"][hash_type] = old_hash
+            _write_catalog_target(target)
+            print(f" {Colors.RED}✗ {hash_type} failed{Colors.RESET}")
+            return "failed"
+        record["hashes"][hash_type] = new_dependent_hash
+        computed.append(hash_type)
+    _write_catalog_target(target)
+    suffix = f" +{','.join(computed)}" if computed else ""
+    print(f" {Colors.GREEN}✓{Colors.RESET}{suffix}")
+    return "updated"
 
 
 class OverlayUpdater:
@@ -1211,11 +1354,35 @@ Examples:
     updater = OverlayUpdater()
     transaction = SourceTransaction()
     atexit.register(transaction.rollback_unless_committed)
-    targets = collect_targets(args, sources)
-
     success_count = 0
     fail_count = 0
     skipped_count = 0
+
+    selected_catalog_names = (
+        [name for name in sorted(catalog_targets) if not args.packages or name in args.packages]
+        if args.all
+        else [name for name in args.packages if name in catalog_targets]
+    )
+    catalog_hash_computer = HashComputer(nix_dir)
+    for name in selected_catalog_names:
+        target = catalog_targets[name]
+        if target.get("executor") != "update-overlay":
+            if args.all:
+                if args.verbose:
+                    print(f"{Colors.DIM}catalog/{name}: skipped (no executor){Colors.RESET}")
+                skipped_count += 1
+            else:
+                print(f"{Colors.RED}{name}: catalog target has no update executor{Colors.RESET}")
+                fail_count += 1
+            continue
+        status = update_catalog_target(
+            name, target, args, github_client, npm_client, catalog_hash_computer, transaction
+        )
+        success_count += status == "updated"
+        skipped_count += status == "skipped"
+        fail_count += status == "failed"
+
+    targets = collect_targets(args, sources, set(catalog_targets))
     for source, package_name in targets:
         # Find package in overlays
         info = source.parser.find_package(package_name)
