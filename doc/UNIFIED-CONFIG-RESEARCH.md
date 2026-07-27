@@ -1,0 +1,1020 @@
+# Unified Fleet Configuration — External Research Findings
+
+**Gathered:** 2026-07-27, via two `web-searcher` agents.
+**Tooling caveat:** the Perplexity search API returned 401 for the entire session,
+so both agents worked by direct `WebFetch` against primary sources rather than
+broad discovery search. Reddit and `ajimenez.dev` were unreachable (blocked / 403)
+and their claims were corroborated elsewhere. Confidence labels below are the
+researchers' own, preserved rather than flattened.
+
+---
+
+## 1. Repository topology: consensus is one flake per repo
+
+**Consensus.** The prevailing recommendation is a single flake per repository,
+split internally by directory and modules — *not* nested flakes referencing one
+another.
+
+- NixOS Discourse, "Including flakes in the same repo" (Oct 2023): nesting flakes
+  is "not very well-supported, and in general the right number of flakes per repo
+  is 1", with an explicit warning against parent/child flake references.
+  <https://discourse.nixos.org/t/including-flakes-in-the-same-repo/34119>
+- Nix has no native support for multiple flake files per repo — open feature
+  request Nix issue #12320. Multi-flake-in-one-repo fights the tool.
+
+Reported failure modes when a flake consumes a *local* flake as an input:
+
+1. **Relative-path narHash drift.** Sub-flakes referencing a parent via
+   `path:../` produce a narHash that differs between machines at the same commit,
+   yielding `cannot fetch input 'path:../?...narHash=...' because it uses a
+   relative path`. (Discourse 34119.) This is the lock-drift mode directly.
+2. **`follows` explosion.** Importing flakes pulls duplicate transitive `nixpkgs`
+   copies (`nixpkgs`, `nixpkgs_2`, …) unless `inputs.X.follows` is threaded
+   through every input. Nix issue #6549; Discourse #71174; Zakaria, "Automatic Nix
+   flake follows" (2024-07-31) <https://fzakaria.com/2024/07/31/automatic-nix-flake-follows>.
+   Sharp edge: Nix issue #14339 — removing `follows` doesn't respect the
+   dependency's own lock.
+
+---
+
+## 2. The decisive correction: "closure" conflates three separate things
+
+This is the most important research result, because the current architecture rests
+on a conflation. There are three distinct costs, and the subflake split addresses
+only one of them.
+
+### Locally verified, 2026-07-27 — not taken on faith
+
+Claims (a) and (b) below were confirmed empirically on `hera` rather than accepted
+from the sources. A throwaway flake was built in the scratchpad with two outputs,
+one of which is `throw "LANDMINE EVALUATED"`:
+
+```nix
+packages.aarch64-darwin.good     = runCommand "good" { } "echo ok > $out";
+packages.aarch64-darwin.landmine = throw "LANDMINE EVALUATED -- outputs are NOT lazy";
+```
+
+- `nix build --no-link '.#good'` → **succeeded**, building `good.drv`. The sibling
+  `landmine` was never forced. **Flake outputs are lazy: confirmed.** A Linux host
+  building its own `homeConfigurations` attribute genuinely never evaluates
+  `darwinConfigurations.hera`.
+- `nix flake check` → **failed** with `error: LANDMINE EVALUATED`. **`nix flake
+  check` forces every output: confirmed.**
+
+Environment, also verified directly (and *correcting* a stale project-memory note
+that recorded 3.11.2 / Nix 2.31.1):
+
+```
+nix (Determinate Nix 3.21.7) 2.34.8
+lazy-trees = true
+eval-cache = true
+```
+
+`lazy-trees = true` is active, so the source-tree ingestion cost in (b) is
+definitively obsolete on this fleet.
+
+> **Net:** the closure/evaluation justification for splitting `flake.nix` from
+> `flake-ai.nix`, and for consuming the root repo as `flake = false`, is
+> **refuted**. The one real monorepo cost is that `nix flake check` evaluates
+> everything — which is a check-scoping problem with known solutions, not a reason
+> to fragment the repository.
+
+### The `flake check` cost, measured — and why this fleet is already immune
+
+Since `nix flake check` cost is the only serious objection to consolidating eight
+hosts into one flake, it was measured rather than assumed. Two further scratch
+flakes were built on `hera`.
+
+**Test 1 — are host-configuration outputs forced at all?** With
+`homeConfigurations`, `darwinConfigurations`, and `nixosConfigurations` set to bare
+`throw`s alongside one passing check, `nix flake check --no-build` **failed**:
+`error: FORCED: darwinConfigurations`, raised "while evaluating an attribute for
+caching". So yes, these outputs are forced.
+
+**Test 2 — how deeply?** This is the question that decides the cost. Top-level
+attributes were made cheap valid attrsets, with only the *expensive* part behind a
+throw:
+
+```nix
+darwinConfigurations.hostA       = { config.system.build.toplevel = throw "DEEP: darwin toplevel"; };
+homeConfigurations."alice@hostA" = { activationPackage = throw "DEEP: hm activationPackage"; };
+nixosConfigurations.hostB        = { config.system.build.toplevel = throw "DEEP: nixos toplevel"; };
+```
+
+`nix flake check --no-build` **failed with `error: DEEP: hm activationPackage`** —
+a *nested* attribute. **`nix flake check` recurses into host-configuration outputs
+and evaluates the expensive closures.** So consolidating eight hosts genuinely
+would make a root-level `nix flake check` evaluate all eight system closures. The
+cost is real, not theoretical.
+
+**But this fleet's existing gates are already structured to avoid it**, which
+resolves the objection without any design change:
+
+- The `lefthook` pre-commit gate is `nix flake check ./config/ai --all-systems
+  --no-build --no-warn-dirty` — **scoped to the subflake**, and `config/ai/flake.nix`
+  declares **zero** host configurations (verified: no `darwinConfigurations`,
+  `nixosConfigurations`, or `homeConfigurations`). Consolidating hosts into the
+  *root* flake therefore cannot slow this hook at all.
+- The pre-push gate uses **targeted attribute builds** —
+  `nix build --no-link .#checks.aarch64-darwin.{agent-resources,agent-wrappers,ai-home-manager-contract,pi-gallery}`
+  plus `./build system` — not a root `nix flake check`.
+
+So the repository already practises the recommended pattern: narrow subflake checks
+for fast feedback, targeted attribute builds for the expensive gates, and no
+routine root-level `nix flake check`.
+
+> **Design rule, derived rather than assumed:** consolidation is safe *provided*
+> this discipline is preserved. The design must not introduce a root-level
+> `nix flake check` as a routine or pre-commit gate, and should state that
+> explicitly so the property is not lost later by someone "simplifying" the hooks.
+> `nix flake check` on the root remains useful as an occasional, deliberate,
+> full-fleet evaluation — just not on every commit.
+
+#### Determinate Nix diverges from upstream here, and the eval cache is not why
+
+A source read of upstream NixOS/nix **master** `src/nix/flake.cc`
+`CmdFlakeCheck::run` **contradicts** the measurement above. Upstream forces only
+`nixosConfigurations` — via `checkNixOSConfiguration`, which does
+`findAlongAttrPath("config.system.build.toplevel")` then `forceValue` (deep module
+eval, but no `queryDrvPath`) — while `darwinConfigurations` and
+`homeConfigurations` sit in an explicit no-op branch commented
+"Known but unchecked community attribute". On upstream, the `DEEP: hm
+activationPackage` throw would never fire.
+
+The discrepancy was investigated rather than left standing. The proposed
+explanation was the flake eval cache, since Test 1's error arose "while evaluating
+an attribute for caching" and this host has `eval-cache = true`. **That hypothesis
+was tested and eliminated:** re-running with `--option eval-cache false`, and again
+on an isolated flake containing only `homeConfigurations` plus
+`darwinConfigurations`, still fails with `error: HOME FORCED`. Deep forcing occurs
+with the eval cache **disabled**.
+
+**Conclusion.** Determinate Nix 3.21.7 (libnix 2.34.8) genuinely deep-forces
+`darwinConfigurations` and `homeConfigurations`, which upstream master does not.
+The measurement is authoritative *for this fleet*; the behaviour is **not** a Nix
+invariant. The precise Determinate mechanism remains **unconfirmed** — its
+`flake.cc` could not be fetched — but the eval cache has been ruled out.
+
+Magnitude, stated both ways so the concern is not over-weighted:
+
+| Implementation | Hosts forced by a root `nix flake check` |
+|---|---|
+| Determinate 2.34.8 (this fleet, today) | **all 8** — 2 darwin + 4 home + 2 nixos |
+| Upstream Nix master | **2** — `nixosConfigurations` only |
+
+So the fleet's exposure could shrink on a future Determinate rebase. The design rule
+holds under either implementation, which is why it does not depend on resolving the
+mechanism.
+
+#### Two flag semantics that matter, from the same source read
+
+- **`--no-build` does not reduce evaluation cost.** It sets `readOnlyMode` and
+  disables import-from-derivation, but every `check*` lambda still calls
+  `forceValue` / `forceAttrs`. It skips **realisation** only. So the existing
+  `--no-build` in the pre-commit gate is not a cost mitigation for eval.
+- **`--all-systems` is irrelevant to `nixosConfigurations`.** `checkSystemType`
+  gates only the per-system outputs (`packages`, `checks`, `devShells`, `apps`);
+  `nixosConfigurations` never calls it, so **every** NixOS configuration is
+  evaluated regardless. A root `nix flake check` run on a darwin host will
+  cross-evaluate the Linux NixOS toplevels even *without* `--all-systems`.
+
+#### There is no built-in way to exclude outputs
+
+Nix issue **#11818** ("flake-check: add support for disabling certain outputs",
+opened 2024-11-06) is **closed with no comments, no linked PR, and no implemented
+mechanism**. Whether it was closed as won't-fix or stale is undocumented. Core Nix
+therefore offers **no** blocklist or exclusion flag for `nix flake check`;
+flake-parts provides its own `checks` scoping, but that is not core behaviour.
+
+#### What the community actually uses for large fleets
+
+Consensus: large multi-host configurations **do not** gate on a blanket
+`nix flake check`. They use per-attribute parallel evaluation and build.
+
+- **`nix-eval-jobs`** (nix-community) is the foundational tool, and its README
+  contrasts itself with flake check directly: `nix flake check` "evaluates serially
+  and fails the entire jobset on any error", whereas nix-eval-jobs evaluates
+  attributes in parallel, streams per-attribute JSON (`drvPath`, `system`), and
+  restarts workers over `--max-memory-size` (default 4 GiB) to bound RAM —
+  "useful for time and memory intensive evaluations such as NixOS machines".
+  `--check-cache-status` marks each derivation `local` / `cached` / `notBuilt`,
+  which is the accepted idiom for "build only what changed";
+  `--select` / `--apply` target specific roots such as
+  `nixosConfigurations.<host>.config.system.build.toplevel`.
+- **`nix-fast-build`** (Mic92) wraps nix-eval-jobs to evaluate and build in
+  parallel, starting builds as attributes finish. It is the de-facto CI driver for
+  large configurations.
+- The **NixOS Wiki "Continuous Integration"** page (edited 2025-11-30) recommends
+  **nix-fast-build** for multi-output flakes and mentions **garnix**; it makes **no
+  recommendation of `nix flake check`**.
+
+> **Refined design rule.** Keep the existing discipline — no root-level
+> `nix flake check` in a routine or pre-commit gate. If a routine *full-fleet* gate
+> is ever wanted, build it on **nix-eval-jobs / nix-fast-build** over the explicit
+> toplevel and `activationPackage` attributes with `--check-cache-status`
+> selection, **not** on `nix flake check`, which has no exclusion mechanism, gains
+> nothing from `--no-build`, and ignores `--all-systems` for NixOS hosts.
+
+*Not individually verified:* the CI configuration of each named public repository
+(Misterio77, wimpysworld, Mic92, numtide). The characterisation above rests on the
+tools those maintainers author and on the wiki, not on an audit of their CI YAML.
+
+### (a) Evaluating hosts you don't need — NOT a problem; no subflake required
+
+Flake outputs are a lazy attribute set. `darwin-rebuild switch --flake .#hera`
+evaluates only that attribute path; `nix build` deliberately does not recurse into
+sibling attributes (Nix issue #13470; corroborated by Discourse #32156 and the
+nix-book outputs chapter).
+
+**But** `nix flake check` and `nix flake show` *do* force all outputs — that is
+their purpose. Nix issue #11818 (Nov 2024) is a feature request to blocklist
+outputs precisely because `flake check` evaluates impure, host-specific
+configurations and breaks CI. `nix flake check` evaluates only the *current*
+system unless `--all-systems` is passed.
+
+> Design consequence: a monorepo does not make any host build more, but it does
+> make `nix flake check --all-systems` cost more. That cost is real and must be
+> managed deliberately, not discovered later.
+
+### (b) Source-tree ingestion — historically real, now obsolete *on this fleet*
+
+Old behavior: Nix copied/checksummed the whole top-level git tree for any
+operation, even `nix flake show`; a ~2 GB monorepo saw 90 s evaluations, and
+scoping with `path://$PWD` cut 90 s → 8 s (Discourse #21282, 2022).
+
+Modern fix: **lazy trees**, merged in Determinate Nix 3.5.1 (feature preview),
+default-on from ~3.5.2, roughly 3× faster (12 s → 3.5 s).
+<https://docs.determinate.systems/determinate-nix/lazy-trees/>, Discourse #64350.
+
+> This fleet runs **Determinate Nix 3.11.2**, so lazy trees are already active.
+> Splitting a subflake for ingestion speed is obsolete here.
+
+### (c) Lock/input propagation to external consumers — the one legitimate reason
+
+A subflake in a subdirectory has its **own** `flake.lock`; its inputs are never
+visible to the parent's lock, and downstream consumers of the parent do not
+inherit them. figsoda, "Developing Nix Libraries with Subflakes" (2023)
+<https://figsoda.github.io/posts/2023/developing-nix-libraries-with-subflakes/>.
+Documented trade-offs: two lockfiles; `../.` path access requires a git repo;
+consuming parent-as-input causes lock churn (mitigable with `call-flake`).
+
+> **This is exactly the `config/ai` case.** The existing subflake, and the paired
+> root + `?dir=config/ai` consumer inputs, are the *justified* pattern — not the
+> misconception. What is **not** justified by any of (a), (b), or (c) is the
+> `flake.nix` / `flake-ai.nix` split and the `flake = false` consumption of the
+> root repository.
+
+### flake-parts isolation mechanisms, for reference
+
+`perSystem` + `systems` (unlisted systems are never evaluated); outputs typed as
+lazy attribute sets; `perInput` / `inputs'.<name>` to read a dependency's
+per-system attributes without evaluating all of its systems. <https://flake.parts/>
+
+`specialArgs` / `extraSpecialArgs` inject values needed during import resolution
+and can therefore *gate imports*; `_module.args` injects values only after module
+evaluation begins and so cannot select imports. This distinction matters for any
+design that wants host metadata to choose which modules load.
+
+---
+
+## 3. Framework landscape, 2026
+
+| Framework | State | Verdict |
+|---|---|---|
+| **flake-parts** | De facto standard, actively maintained, own NixOS Wiki page | Recommended *if* flake pieces will be factored into reusable modules; "otherwise likely unnecessary" |
+| **snowfall-lib** | **Parked / stagnating** | Not recommended for new configurations in 2026 |
+| **flakelight** | Niche but alive (~407 stars, no formal releases) | Good for simple/package flakes, not large heterogeneous fleets |
+| **Hand-rolled** (`genAttrs` + `forAllSystems`) | Still respectable and common; Misterio77/nix-config uses it with no framework | Valid choice |
+
+The honest middle position: adopt flake-parts only when module reuse actually pays
+off — mccurdyc, 2026-02-01,
+<https://www.mccurdyc.dev/posts/2026/02/nix-flake-parts-flake-utils-or-neither/>.
+
+**Emerging trend, flagged with caution.** The "dendritic pattern" (Shahar Or /
+`@mightyiam`) builds on flake-parts + `import-tree`: every non-entry file is an
+auto-imported flake-parts module, and `deferredModule` lets one feature file
+contribute NixOS + darwin + home-manager fragments at once, eliminating
+`specialArgs` pass-through. <https://github.com/mightyiam/dendritic>. Adopters
+include vic, Pol Dellaiera, and Gaétan Lepage; MatthiasBenaets/nix-config is a
+concrete NixOS + darwin + standalone-HM example.
+
+> **Tension worth naming:** the community anti-patterns document calls "magic
+> auto-discovery" (importing via `builtins.readDir` scanning) an anti-pattern
+> because it hides load order and dependencies — and dendritic's `import-tree` is
+> exactly that mechanism. Given that this fleet's single worst defect is an
+> *implicit overlay ordering contract*, adopting a pattern that further hides load
+> order would be moving in the wrong direction.
+
+**Genuine disagreement exists** between a "frameworks are unnecessary indirection"
+camp (hand-rolled `genAttrs`) and the flake-parts/dendritic camp. This is not
+settled.
+
+---
+
+## 4. Sharing a home-manager core across three activation contexts
+
+Three converged strategies:
+
+1. **Shared module tree + explicit builders.** The cleanest documented example is
+   The One Nix: `lib/mkHost.nix` (NixOS), `mkDarwin.nix`, `mkHome.nix`
+   (standalone) all import the same `home/shared/` tree, with a `standaloneUsers`
+   list driving the output factory.
+   <https://frankper.gitlab.io/the-one-nix/project-info/repo-structure/>
+
+   **Key correctness insight:** it *gates context-sensitive modules*. Keyboard and
+   locale are gated to `hmContext == "standalone" && isLinux` and made **inert**
+   under NixOS/darwin, because the system layer owns those concerns there. This
+   avoids double-application.
+
+2. **Broadcast-and-gate.** wimpysworld/nix-config imports every module into every
+   host in its layer; each module self-gates on host metadata
+   (`lib.mkIf config.<ns>.host.is.workstation`). Host facts live in
+   `registry-systems.toml` promoted to typed options.
+   <https://github.com/wimpysworld/nix-config>
+
+3. **Dendritic module pool.** One `config.flake.modules.homeManager` pool imported
+   by all three contexts; OS specifics isolated at host level.
+
+**Merging mechanism.** Use `imports` (which merges and de-duplicates). Do **not**
+use the `import` builtin for composition, and do not use attrset-merge operators.
+`lib.mkMerge` is the fallback but is "not recommended" — Discourse #77580 (May
+2026), users waffle8946 / NobbZ.
+<https://discourse.nixos.org/t/a-shared-home-manager-configuration-between-nixos-and-nix-darwin/77580>
+
+**What breaks across contexts:**
+
+- `home.homeDirectory`: `/Users/$USER` vs `/home/$USER`. Under NixOS/darwin modules
+  HM can infer it; standalone usually must set it.
+- **systemd vs launchd**: HM `services.*` are mostly systemd-user units and thus
+  Linux-only. On darwin HM emits launchd agents, and many `services.*` modules have
+  no darwin support. Gate with `lib.mkIf pkgs.stdenv.isLinux` or use per-platform
+  module directories.
+- `programs.*` availability varies by platform; keep behind guards.
+- **`targets.genericLinux.enable`** — concrete effects, read from HM
+  `modules/targets/generic-linux.nix`: appends distro paths to
+  `xdg.systemDirs.data` (`/usr/share`, `/usr/local/share`, `/usr/share/ubuntu`,
+  `/var/lib/snapd/desktop`) so `.desktop` files and icons resolve; sets
+  `XCURSOR_PATH`; sources `nix.sh` and `hm-session-vars.sh` in bash init and resets
+  `TERM`; extends zsh `fpath` with Debian/vendor completions; sets
+  `NIX_PATH`/`TERMINFO_DIRS` for the systemd user session. Non-NixOS also typically
+  needs `glibcLocales` + `LOCALE_ARCHIVE` and `nix-ld` for FHS binaries.
+  **Enable ONLY on the standalone-foreign-distro path**; it should be a no-op and
+  is not appropriate under NixOS or darwin.
+- **Entry point differs**, and double-management is a known footgun — the
+  gpg-agent launchd double-registration this fleet already hit is exactly this
+  class of bug.
+
+---
+
+## 5. Modeling host variance — and the anti-patterns to avoid
+
+**Override priority ladder** (Discourse #9028): `mkOptionDefault` 1500 →
+`mkDefault` 1000 → plain 100 → `mkForce` 50 → `mkVMOverride` 10; lower wins.
+
+**Design rule.** Put overridable values behind `mkDefault` in base modules and
+expose real options for anything that varies per host, so per-host files *set*
+values at normal priority rather than *fighting* base values with `mkForce`.
+`mkForce` sprinkled per host is the smell that an option is missing.
+
+**Explicitly named anti-patterns** (community NixOS anti-patterns document,
+`nixos.freundcloud.com/NIXOS-ANTI-PATTERNS`), all directly relevant:
+
+- **Unnecessary template functions.** One *parameterized* `mkSystem { hostname;
+  profile; }` is good; a zoo of `mkWorkstation` / `mkServer` / `mkDevelopment`
+  wrappers that each save one line is an anti-pattern. Call the base with
+  parameters instead.
+- **Magic auto-discovery.** Importing modules by scanning `builtins.readDir` hides
+  load order and dependencies; prefer explicit `imports = [ ./core ./desktop ];`.
+- **Trivial function wrappers.** Re-exporting `lib.mkIf` and friends adds nothing.
+  *But* typed option helpers with defaults and descriptions (hlissner's
+  `mkBoolOpt`) are generally accepted as adding real value.
+- **Reading secrets during evaluation.** `builtins.readFile secret` lands
+  cleartext in the store.
+
+**Is a custom `options.mine.*` namespace worth it?** Genuine tension, not settled:
+
+- *Pro* (hlissner, Misterio77): scales to many near-identical hosts; per-host
+  files reduce to short lists of `mine.foo.enable = true`; avoids `mkForce`.
+- *Con* (rochecompaan, thiscute): "The point of this refactor is not to make the
+  config clever. The point is to make future changes obvious." Every custom
+  `mkOption` without `description`/`example`/`type` is an opaque private API.
+- *Practical synthesis:* introduce an option only when a setting varies across
+  ≥ 2 hosts **and** toggling it pulls in a bundle of related configuration; keep it
+  a thin layer over `lib`; document each option; do not build role-constructor
+  functions on top. For per-host identity scalars (username, email, GPG key id),
+  the dominant idiom is `specialArgs`/`extraSpecialArgs` or a small
+  `mine.identity` submodule — **not** `mkForce`.
+
+---
+
+## 6. The NFS-shared-home hazard — highest-severity finding
+
+From home-manager's standalone-mode internals
+(<https://deepwiki.com/nix-community/home-manager/3.3-standalone-mode>):
+
+- The profile resolves to `~/.nix-profile` (legacy) or
+  `~/.local/state/nix/profiles/profile` (Nix ≥ 2.14 with
+  `use-xdg-base-directories`).
+- The GC root is a **single** symlink at
+  `~/.local/state/home-manager/gcroots/current-home`, and generation links
+  (`home-manager-N-link`) are numbered sequentially in the profile directory.
+- Quoted: *"activating from machine B overwrites machine A's root… two machines
+  writing to the same HM_PROFILE_DIR would create conflicting or overwritten
+  generation entries… the entire state model assumes one active writer per home
+  directory."*
+- Recommended mitigation: **per-machine `$XDG_STATE_HOME`** or separate profile
+  directories.
+- Useful: `setFlakeAttribute()` already auto-tries hostname variants
+  (`username@hostname`), so per-host *config selection* works out of the box. It
+  is the on-disk *state* that collides.
+
+Corroborated by Discourse "Nix with network-mounted home directories" (#35880),
+where `~/.nix-profile` and channel/state metadata are flagged as "machine-specific
+but shared". That thread produced **no clean recipe**, confirming this is
+under-documented territory.
+
+**Host-local idioms:**
+
+- `XDG_RUNTIME_DIR` = `/run/user/UID`, a per-login tmpfs from `pam_systemd`,
+  **guaranteed host-local, never NFS**. Canonical home for sockets, locks, PIDs.
+- Redirect state and cache off NFS via `xdg.stateHome` / `xdg.cacheHome` to a
+  host-local path (`/var/tmp/$USER`, `/local/$USER`, or hostname-suffixed). State
+  **must** be host-local for correctness; cache for performance and locking.
+- SQLite-backed state and any lockfile: NFS byte-range locking is unreliable —
+  force these to host-local paths.
+- **gpg-agent sockets are already safe:** the agent picks a socket dir from
+  `/run/gnupg`, `/run`, `/var/run/gnupg`, `/var/run` with UID inserted, giving
+  `/run/user/UID/gnupg` — host-local, not `~/.gnupg`. So an NFS-shared `~/.gnupg`
+  still gets host-local sockets on systemd Ubuntu. Only when `/run/user/UID` is
+  absent does it fall back to a hash-named dir in the home directory, which is the
+  classic NFS breakage. (trustica.cz 2024-12-19; `wiki.gnupg.org/NFS`)
+
+### Resolved from source, 2026-07-27 — the environment is authoritative, not the option
+
+Read directly from the pinned home-manager CLI
+(`home-manager/home-manager`, rev `deeb6b7eb7e0c44ae1819c051ce175bd92a85100`,
+which is what this fleet's `flake.lock` pins), lines 157-176:
+
+```bash
+declare -r globalNixStateDir="${NIX_STATE_DIR:-/nix/var/nix}"
+declare -r globalProfilesDir="$globalNixStateDir/profiles/per-user/$USER"
+declare -r globalGcrootsDir="$globalNixStateDir/gcroots/per-user/$USER"
+
+declare -r stateHome="${XDG_STATE_HOME:-$HOME/.local/state}"
+declare -r userNixStateDir="$stateHome/nix"
+
+declare -gr HM_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/home-manager"
+declare -gr HM_STATE_DIR="$stateHome/home-manager"
+declare -gr HM_GCROOT_LEGACY_PATH="$globalGcrootsDir/current-home"
+
+if [[ -d $userNixStateDir/profiles ]]; then
+    declare -gr HM_PROFILE_DIR="$userNixStateDir/profiles"
+elif [[ -d $globalProfilesDir ]]; then
+    declare -gr HM_PROFILE_DIR="$globalProfilesDir"
+else
+    _iError 'Could not find suitable profile directory, tried %s and %s' ...
+```
+
+**1. Setting `xdg.stateHome` as a home-manager option does NOT relocate
+home-manager's own state.** `HM_STATE_DIR` and `HM_PROFILE_DIR` derive from
+`stateHome="${XDG_STATE_HOME:-$HOME/.local/state}"` inside the CLI *shell script*,
+resolved before and independently of Nix evaluation. The chicken-and-egg concern
+was correct.
+
+**2. The data flow is environment → option, not option → state.** At lines 386-387
+the CLI *injects* the variable into the generated configuration:
+
+```bash
+if [[ -v XDG_STATE_HOME && $XDG_STATE_HOME != "$HOME/.local/state" ]]; then
+    xdgVars="$xdgVars  xdg.stateHome = \"$XDG_STATE_HOME\";$nl"
+```
+
+That is conclusive: `$XDG_STATE_HOME` is the source of truth and the option is
+downstream of it. **Per-host state isolation therefore cannot be purely
+declarative** — the environment variable must be set before `home-manager switch`
+runs. Any design that relies on `xdg.stateHome` alone is broken.
+
+**3. Mitigating detail — the legacy gcroot does NOT collide.**
+`HM_GCROOT_LEGACY_PATH` lives under `$globalNixStateDir`
+(`/nix/var/nix/gcroots/per-user/$USER`), a *system* path that is host-local on
+each machine and not in `$HOME`. So the specific "GC deletes another host's live
+paths" fear is **not** triggered through this path. This is materially less
+alarming than the deepwiki summary implies.
+
+**4. The real hazard is worse in kind, though: `HM_PROFILE_DIR` selection is
+stateful and order-dependent.** The `if [[ -d ... ]]` chain prefers
+`$stateHome/nix/profiles` **only when that directory already exists**, otherwise
+falling back to the host-local `/nix/var/nix/profiles/per-user/$USER`. On four
+machines sharing one NFS `$HOME`:
+
+- If `~/.local/state/nix/profiles` does **not** exist, each machine independently
+  uses its own host-local `/nix/var/nix/profiles/per-user/$USER` — **no collision**.
+- The moment **any one** machine creates `~/.local/state/nix/profiles` in the
+  shared home, **all four** silently switch onto that single NFS profile
+  directory — and then share one sequentially-numbered generation series.
+
+So the collision is not a constant condition but a **latent trap armed by a
+directory appearing in the shared home**, with no error and no warning at the
+moment the behaviour changes for every host at once. That is worse than a
+permanent collision, because it is invisible until it bites. This must be an
+explicit, asserted invariant in the design, not left to chance.
+
+**5. Per-host config selection is well supported** (lines 205-218):
+
+```bash
+local name="$USER"
+for n in "$USER@$(hostname -f)" "$USER@$(hostname)" "$USER@$(hostname -s)"; do
+    if [[ "$(nix eval "$flake#homeConfigurations" --apply "x: x ? \"$n\"")" == "true" ]]; then
+        name="$n"
+    fi
+done
+```
+
+It probes FQDN, then `hostname`, then short name, defaulting to bare `$USER`.
+Note the loop has **no `break`**, so the *last* successful match wins — meaning
+`$USER@$(hostname -s)` effectively takes precedence. Declaring
+`homeConfigurations."jwiegley@andoria-t2"` and siblings will be auto-selected on
+each machine with no wrapper needed. This confirms replacing the single hardcoded
+`hostname = "andoria-08"` with four real per-host configurations is the
+well-supported path.
+
+### Independently corroborated and extended, from a second code path
+
+A follow-up research pass reached the same conclusion from a **different file** —
+the activation script rather than the CLI — and added three findings the CLI read
+alone did not surface. Source: `modules/lib-bash/activation-init.sh`, function
+`setupVars()`, which `modules/home-environment.nix` inlines via
+`builtins.readFile`:
+
+```bash
+declare -r stateHome="${XDG_STATE_HOME:-$HOME/.local/state}"
+declare -r userNixStateDir="$stateHome/nix"
+declare -gr hmStatePath="$stateHome/home-manager"
+declare -r hmGcrootsDir="$hmStatePath/gcroots"
+declare -r globalNixStateDir="${NIX_STATE_DIR:-/nix/var/nix}"
+declare -gr newGenPath="@GENERATION_DIR@";
+declare -gr currentGenGcPath="$hmGcrootsDir/current-home"
+declare -gr genProfilePath="$profilesDir/home-manager"
+```
+
+The only build-time substitution is `newGenPath="@GENERATION_DIR@"`, the store path
+being rooted. Every root *location* is a runtime `${VAR:-default}` shell expansion.
+So both the CLI and the activation script are env-keyed — the conclusion is
+confirmed from two independent code paths.
+
+**New finding 1 — a silent two-sources-of-truth divergence.** The *evaluated*
+option `home.profileDirectory` in `modules/home-environment.nix` is
+`if config.nix.useXdg then "${config.xdg.stateHome}/nix/profile" else homeDirectory
++ "/.nix-profile"` — it **does** read the evaluated `config.xdg.stateHome`. So
+setting the option *without* also setting the environment variable makes
+`home.profileDirectory` (which feeds session `PATH`) point at one location while
+the CLI and activation actually write the profile and gcroot somewhere else. Two
+sources of truth that disagree with no error. The environment variable governs
+real state.
+
+**New finding 2 — the concrete data-loss mechanism.** Per the Nix 2.35.2 manual
+(`command-ref/nix-store/realise`), `nix-store --add-root PATH` creates the symlink
+at `PATH` **and** registers a uniquely-named symlink in
+`/nix/var/nix/gcroots/auto/` — indirect rooting is the default, no `--indirect`
+needed. Activation runs
+`nix-store --realise "$newGenPath" --add-root "$currentGenGcPath"`. The live chain
+is therefore:
+
+```
+/nix/var/nix/gcroots/auto/<hash>          (host-local, in /nix)
+  -> $XDG_STATE_HOME/home-manager/gcroots/current-home   (NFS-SHARED, stable name,
+                                                          overwritten every
+                                                          activation: last writer wins)
+    -> store path
+```
+
+The `auto` entry's hash derives from the (identical) NFS target path, so **every
+host's local auto-root points at the same NFS symlink**. When host B activates,
+`current-home` now resolves to B's closure — and host A's *own* local GC root
+silently begins protecting B's closure instead of A's. If A then runs
+`nix-collect-garbage`, A's live paths are no longer rooted through that chain.
+
+**RESOLVED from Nix C++ source — and the above framing was too strong.** A
+follow-up trace of `src/libstore/{gc,profiles,local-store}.cc` closed this gap and
+**corrected** it. The `current-home` last-writer-wins problem is real, but it is
+**not** the store-collection cause. Superseded conclusion, kept visible so the
+correction is traceable rather than silently rewritten.
+
+**Plain garbage collection is SAFE.** Every home-manager generation link is
+**individually** GC-rooted at creation, independent of profile location.
+`profiles.cc` `createGeneration`:
+
+```cpp
+auto generation = makeName(profile, num + 1);
+store.addPermRoot(outPath, generation.string());
+```
+
+and `gc.cc` `addIndirectRoot` gives each link its own auto-root:
+
+```cpp
+std::string hash = hashString(HashAlgorithm::SHA1, path.string()).to_string(...);
+auto realRoot = canonPath(config->stateDir.get() / gcRootsDir / "auto" / hash);
+makeSymlink(realRoot, path);
+```
+
+So each `home-manager-N-link` has its own `/nix/var/nix/gcroots/auto/<sha1>` entry,
+created on and local to the host that built it. A new activation elsewhere creates
+a **new-numbered** link (`num + 1`) and never touches existing links. A host's live
+generation therefore stays rooted, and `current-home` being overwritten does not
+endanger it. Protection is destroyed only by *deleting* the link.
+
+Also settled: generation protection does **not** depend on a
+`gcroots/profiles` recursive symlink — `local-store.cc` only `createDirs` those
+paths, with no `createSymlink`. And it would not matter if one existed, because
+`gc.cc` `findRoots` recurses only into **real** directories, testing each entry by
+its *unresolved* type (`i.symlink_status().type()`), so a symlink-to-directory
+takes the symlink branch and is never descended. Indirect roots are followed
+exactly **one** hop: `gcroots/auto/<hash>` → user path → store path, two hops max,
+with dangling `auto/` entries auto-pruned via `tryUnlink`.
+
+**The real hazard is narrower, and it is confirmed rather than inferred.**
+`profiles.cc` `deleteOldGenerations` keeps **only** the current generation:
+
+```cpp
+for (auto & i : gens) if (i.number != curGen) deleteGeneration2(profile, i.number, dryRun);
+// deleteGeneration:
+std::filesystem::path generation = makeName(profile, gen); unlinkIfExists(generation);
+```
+
+and `curGen = parseName(profileName, readLink(profile))` — i.e. whatever the shared
+profile symlink currently points at, which is **the last writer**. So expiring old
+generations on a shared profile deletes the links every *other* host is live on,
+removing their auto-roots; the next store GC then collects those closures.
+
+**Triggering commands** (these are the dangerous ones while the profile is shared):
+
+- `nix-collect-garbage -d` / `--delete-old`. Per the Nix 2.35.2 manual, `-d`
+  expires the default profile locations — for a regular user that is
+  `$XDG_STATE_HOME/nix/profiles`, **the very directory holding `home-manager`**.
+- `home-manager expire-generations <time>` / `--delete-older-than`.
+- `nix profile wipe-history`, `nix-env --profile <shared> --delete-generations`.
+- Automatic GC with delete-old (systemd timer, `nix.gc.automatic` with
+  `deleteOlderThan`) — same trigger, unattended.
+
+**Not triggers:** plain `nix-collect-garbage` (no `-d`) and `nix store gc`. These
+delete unreachable store paths but do not delete generations, so nothing is
+unrooted.
+
+> **Accurate statement of the hazard:** sharing the home-manager profile over NFS
+> is a **documented, conditional** data-loss hazard. Running `nix-collect-garbage
+> -d` or `home-manager expire-generations` from any of the four hosts deletes the
+> generations the *other* hosts are live on, and the next store GC reaps those
+> closures. **Plain GC is safe.** No published incident report was found. The
+> host-local-state fix removes the sharing and eliminates this entirely.
+
+**Standing caveats.** This analysis assumes `/nix/store` and `/nix/var/nix` are
+**host-local**, which is normal but should be confirmed on the four Ubuntu boxes —
+if `/nix` itself were NFS-shared the whole analysis changes. Source was read from
+NixOS/nix master plus the 2.35.2 manual while the fleet runs the Determinate fork
+(2.34.8); the fork's `nix-collect-garbage.cc` could not be byte-confirmed (404),
+though the mechanisms involved (per-generation `addPermRoot`, keep-current
+expiry, one-level indirect roots) are long-standing and stable.
+
+**New finding 3 — correction to the `use-xdg-base-directories` reading.** With the
+flag `false` (the default), `~/.nix-profile` remains the *link* but **targets
+`$XDG_STATE_HOME/nix/profiles/profile`**; with the flag `true` the link itself
+moves to `$XDG_STATE_HOME/nix/profile`. The flag changes where the *link* lives,
+**not** where the profile store lives. On modern Nix the store is
+`$XDG_STATE_HOME/nix/profiles` either way — which defaults to NFS
+`~/.local/state`, so it is shared and colliding by default. **The flag does not
+help; only the environment variable does.**
+
+**Version caveat, to verify empirically per machine.** Which `profilesDir` branch
+HM takes depends on whether `~/.local/state/nix/profiles` *exists*, which is
+Nix-version-dependent. On older Nix it may be absent, so HM falls back to the
+host-local `/nix/var/nix/profiles/per-user/$USER` and is *accidentally safe*. On
+current Nix it exists and is NFS-shared. Before trusting either behaviour, check on
+each Ubuntu host: `readlink ~/.nix-profile`, `ls -la ~/.local/state/nix/profiles`,
+`nix --version`.
+
+### Failure modes, ranked
+
+1. **Data-loss class — GC reaping a live closure, but only via generation
+   expiry.** Confirmed from source: `nix-collect-garbage -d`,
+   `home-manager expire-generations`, `nix profile wipe-history`, or automatic
+   GC-with-delete-old, run from **any** of the four hosts, deletes the generation
+   links the others are live on; the next store GC then collects those closures.
+   Plain `nix-collect-garbage` and `nix store gc` are safe. **Operationally: do
+   not run generation-expiry commands on these four machines until the profile is
+   host-local**, and check for any automatic GC timer with a delete-old setting.
+2. **Generation interleaving and wrong rollback.** `home-manager generations` globs
+   `home-manager-*-link` in the shared profile dir and marks whatever the
+   `home-manager` symlink resolves to as "(current)". A shared profile means one
+   interleaved counter across all four hosts, listings that mix every host's
+   builds, and `--rollback` that can move host A onto a generation built by host B.
+   Not store data-loss, but loss of coherent per-host history and silently wrong
+   rollbacks.
+3. **Stale or foreign "current" pointer.** Mostly confusing; it is the on-ramp to (1).
+4. **Dangling or foreign `~/.nix-profile`.** Usually a stale `PATH` rather than a
+   truly broken link. Annoying, not dangerous.
+
+### What the source forces on the design
+
+- Point HM/Nix state at **host-local, persistent** storage via the **environment**,
+  before activation: export `XDG_STATE_HOME` (and ideally `NIX_STATE_DIR`) to a
+  per-host path **outside** the NFS `$HOME` — via login-shell profile, PAM
+  `environment`, or a wrapper — **not** via `xdg.stateHome`. This makes
+  `current-home`, the profile, and every generation link host-local, eliminating
+  all four failure modes at once.
+- **The host-local directory must be persistent. Do not use `/tmp` or `/var/tmp`:**
+  systemd-tmpfiles age-cleans `/var/tmp` (30 days by default), which would delete
+  gcroots and re-introduce the GC hazard. **This pattern already has a live
+  foothold in this fleet** — `~/src/andoria/flake.nix` sets
+  `xdg.cacheHome = "/var/tmp/jwiegley/xdg-cache"`. That is *cache only*, so it is
+  survivable today (caches regenerate), but the precedent is established and would
+  be actively dangerous if extended to state.
+- Keep `$HOME` shared, but treat `~/.local/state`, `~/.cache`, and any SQLite or
+  lockfile state as must-be-host-local. Sockets are already safe under
+  `$XDG_RUNTIME_DIR`.
+- **Delete any username-only `homeConfigurations.jwiegley` fallback.** That
+  attribute is precisely the current trap: all four machines match it and silently
+  share one configuration. Define the four `jwiegley@<host>` attributes, invoke
+  `home-manager switch --flake .#jwiegley@<host>` explicitly, and let a mismatch
+  fail loudly rather than silently serving the wrong host's config. Note
+  `hostname -f` depends on DNS/`/etc/hosts` and can hang or return a shared FQDN;
+  `hostname -s` is the most robust discriminator.
+
+### There is no published safe precedent
+
+Three targeted searches found only discussion, never a working recipe:
+Discourse #35880 (asks the question; answers are high-level — systemd-homed,
+single-user `/nix/store` sharing, "nix-env is an anti-pattern here"), Discourse
+#68227 and #69500 (per-host config *selection*, not shared-home *state*), and
+`github.com/tiredofit/home` (portable, one machine at a time).
+
+> **Stated plainly as a decision input: N machines sharing one NFS `$HOME`, each
+> running standalone home-manager, is unsupported, DIY territory with no published
+> safe pattern.** The design must therefore treat this as an invariant it asserts
+> and tests itself, not as a configuration it can rely on upstream to keep working.
+
+### The systemd-unit collision — a trap inside the obvious fix
+
+This is the most consequential single finding, because it invalidates the naive
+version of the recommendation above.
+
+Home-manager's generated systemd **user units** live under
+`~/.config/systemd/user/` — on the NFS-shared `$HOME` — as **symlinks into the
+host-local `/nix` store**. Each machine has its own `/nix`.
+
+- **Today this works by accident of uniformity.** All four work machines build the
+  *one* `homeConfigurations.jwiegley` derivation, so those symlinks resolve to
+  identical store paths and every host can follow them.
+- **Adding four per-host configurations breaks it.** Each host's activation would
+  write `~/.config/systemd/user/*.service` as last-writer-wins symlinks into *its
+  own* store paths — which the other three hosts may never have built. The result
+  is dangling unit symlinks and user services that fail to load on whichever hosts
+  did not activate last.
+
+So **per-host divergence is not achievable by adding per-host configurations
+alone.** The shared `$HOME` defeats it at the config layer, not just the state
+layer. This is a trap in the otherwise-correct "declare four `jwiegley@<host>`
+attributes" fix, and any migration must handle both together or it will regress
+working services.
+
+**Consequent architectural position.** Treat the NFS `$HOME` as a **data** home,
+not a **config** home. Redirect all four XDG base directories —
+`XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME` — to
+host-local *persistent* storage via the environment, and let the NFS `$HOME` carry
+only genuinely shared data: documents, `~/src`, mail. Home-manager then owns a
+fully host-local surface per machine, per-host divergence becomes correct rather
+than hazardous, and the four failure modes above are eliminated at the root.
+
+### REFUTED — the XDG-redirect architecture does not work
+
+The verification above came back and **defeats the position stated in the previous
+paragraph.** Recording it in place, because being wrong here cheaply is the entire
+point of having asked.
+
+**Home-manager's file linker is `$HOME`-anchored. Redirecting the XDG environment
+variables does not relocate where home-manager *links* managed config.** Verified
+from source:
+
+- `modules/files.nix`: `type = fileType "home.file" "{env}`HOME`" homeDirectory;`
+  Activation places files at `targetPath="$HOME/$relativePath"` and *errors* with
+  `Error installing file '<x>' outside $HOME`.
+- `modules/misc/xdg/default.nix`: `xdg.configFile` / `dataFile` / `stateFile` /
+  `cacheFile` are built **on top of** `home.file` by bare string concatenation —
+  `lib.mapAttrs' (name: file: lib.nameValuePair "${cfg.configHome}/${name}" file)`
+  — with no relativization and no assertion that `configHome` is under `$HOME`.
+
+**The fatal flaw in the proposal:** the XDG *environment variables* control where
+applications look at **runtime**; they do not change where home-manager **links**
+its files. Redirect the variable while HM still links into `~/.config`, and
+applications look host-local and never see HM's files at all. Decoupling the two
+breaks delivery rather than isolating it.
+
+**A hard core of managed files has no XDG escape whatsoever**, and lands in the
+shared NFS `$HOME` regardless of any XDG setting:
+
+| File | Escapable? |
+|---|---|
+| `~/.ssh/config` | **No** — `programs.ssh` writes `home.file.".ssh/config"`, fixed path, no relocation option |
+| `~/.gnupg/*` | Partly — `programs.gpg.homedir` exists, but still routed through `home.file` |
+| `.bashrc`, `.profile` | **No** |
+| `.zshrc` | Yes — `programs.zsh.dotDir` |
+| any `home.file` dotfile | **No** |
+| `~/.nix-profile` | Yes — moves to `${xdg.stateHome}/nix/profile` when `nix.useXdg = true` |
+
+**What XDG redirection *does* cleanly relocate**, and is still worth doing: HM's
+own mutable **state** — gcroots, profile, and generation links all follow the
+`XDG_STATE_HOME` *environment variable* — plus applications' own cache and state.
+
+*Undocumented, and deliberately not relied upon:* whether `xdg.configHome` can
+point outside `$HOME` at all (error versus misplacement). The module concatenates
+without a guard, but the underlying linker is `$HOME`-anchored; HM issue #3500 and
+Discourse #24018 show `xdg.configFile."../"` escapes broke and are unsupported.
+The decision below does not depend on resolving this.
+
+### The decision actually turns on whether generated files diverge
+
+Since the `$HOME`-direct files have no XDG escape, "no HM-managed config in the
+shared `$HOME`" is unreachable by XDG redirection. What matters instead is whether
+the four work machines produce **identical** or **divergent** generated files.
+
+**Option A — generated files identical (matches the user's own description:
+"configured more or less identically").** Keep the shared NFS `$HOME`. Make only
+HM *state* host-local by exporting `XDG_STATE_HOME` to a persistent host-local
+path (via login env / PAM, **not** the option) and setting `nix.useXdg = true` so
+the profile link follows. Identical config files and symlinks in a shared `$HOME`
+are harmless and idempotent, and the systemd-unit symlinks resolve because every
+host builds the *same* store paths. This is the minimal, low-risk fix.
+
+**Option B — generated files diverge.** Divergent files collide last-writer-wins,
+and unit symlinks point into store paths only the last writer built, giving
+dangling units and failed services. **XDG redirection cannot fix this.** The
+robust fix is the *inverse* of the refuted proposal: give each machine a
+**host-local `$HOME`** (or a host-local overlay of the HM-managed subtree) and
+mount or symlink the genuinely shared data — `~/src`, documents, mail — **from**
+NFS **into** it. Local `$HOME` plus NFS-mounted data is the long-standing way
+NFS-home environments keep per-host state clean, and `XDG_STATE_HOME` then sits
+naturally under the local `$HOME`.
+
+### Why this reframes the current design's "workaround"
+
+This inverts an earlier reading. The runtime `hostname` detection in
+`~/src/andoria/flake.nix` (the agent-deck wrapper, `agentDeckHostLocalState`,
+`hostLocalXdgCache`) is not merely a hack compensating for missing build-time
+identity — it is **load-bearing**. By resolving per-host paths at *runtime*, it
+keeps the *built derivation* byte-identical across all four machines, and that
+uniformity is exactly what makes the shared `$HOME` safe today.
+
+So the "obvious" fix of declaring four per-host configurations would **break a
+property the current design is quietly relying on**. Any migration must either
+preserve generated-file uniformity (Option A) or move to host-local `$HOME`
+(Option B). It must not simply add per-host configs on a shared `$HOME`.
+
+Assessed against the current code: every divergence in
+`~/src/andoria/flake.nix` today is runtime-derived, and `xdg.cacheHome` is
+`/var/tmp/jwiegley/xdg-cache` — keyed on `$USER`, not the host, so identical on all
+four. The current generated configuration is therefore uniform **by
+construction**, which places the fleet in Option A today.
+
+> **This is a genuine fork requiring the user's decision**, because Option B needs
+> a change to how `$HOME` is mounted on four work machines, which may not be under
+> the user's control. Recorded in the plan's open questions with a recommendation.
+
+### systemd user lingering — an irreducibly imperative step
+
+Both secret modules decrypt via a systemd **user** service and place plaintext in
+`$XDG_RUNTIME_DIR`, so availability is bounded by whether the user systemd manager
+is running and `/run/user/UID` exists.
+
+- Per `pam_systemd(8)` (systemd 261~rc1): `/run/user/$UID` is created at login,
+  and "if the last concurrent session of a user ends, the user runtime directory
+  `/run/user/$UID` and all its contents are removed, too."
+- Per `loginctl(1)` (`enable-linger`, added v233): lingering means "a user manager
+  is spawned for the user at boot" and "kept around after logouts", allowing
+  users who are not logged in to run long-running services.
+
+**Is linger required?** If secrets are consumed only *within* an interactive
+session, no — login provisions everything, and it is torn down at last logout. If
+secrets must exist before or without an interactive login, or must survive logout,
+**yes**. Since this fleet keeps long-lived tmux sessions that the repository's own
+rules require preserving, **linger is the correct default.**
+
+Three practical constraints:
+
+1. **Linger cannot be set from standalone home-manager.**
+   `users.users.<name>.linger` is a *NixOS* option and does not exist in standalone
+   HM. It must be set imperatively as root — `sudo loginctl enable-linger jwiegley`
+   — on **each** machine. It is host-local system state (under `/var/lib`), so it
+   does **not** propagate through the shared NFS home. This is an irreducibly
+   imperative per-machine provisioning step and the design should say so plainly
+   rather than pretend it is declarative.
+2. **`home-manager switch` needs a live user session** when it restarts a secret
+   service: `systemctl --user restart sops-nix` requires the user systemd manager
+   and user D-Bus reachable, i.e. `XDG_RUNTIME_DIR` and
+   `DBUS_SESSION_BUS_ADDRESS` set. Switching from a bare `sudo` or cron context
+   fails that step. Corroborated by Discourse #43834 (2024), where the fix was a
+   DAG activation step plus `After = [ "sops-nix.service" ]` on dependents.
+3. **Dependent user services must order after the secret unit**, or they may start
+   before decryption completes.
+
+**Good news on the NFS interaction:** decrypted secrets land in `/run/user/UID`, a
+host-local tmpfs, so unlike the profile and gcroot problem there is **no NFS
+collision** for the plaintext itself.
+
+**Key-material consequence:** sops-nix's age key
+(`~/.config/sops/age/keys.txt`, or an SSH key at `~/.ssh/id_ed25519`) and agenix's
+`age.identityPaths` all live on the shared NFS home, so **one decryption identity
+is shared across all four hosts**. That is fine if the four are treated as a single
+trust domain — every machine can decrypt everything. If per-host keys are ever
+wanted, the key file must itself be host-local and each secret encrypted to all
+four recipients. This is a deliberate trust-domain decision for the user, recorded
+as an open question rather than assumed.
+
+---
+
+## 7. Secrets across mixed activation contexts
+
+**Corrected misconception.** Both sops-nix and agenix HM modules require a systemd
+**user service** on Linux; **neither** has a plain `home.activation` fallback.
+Verified from source:
+
+- sops-nix `modules/home-manager/sops.nix`: systemd user service `sops-nix` gated
+  on `pkgs.stdenv.hostPlatform.isLinux`; launchd agent
+  `org.nix-community.home.sops-nix` defined unconditionally. Darwin is
+  first-class (logs to `~/Library/Logs/SopsNix/`).
+- agenix `modules/age-home.nix`: Linux = systemd user service `agenix`
+  (`Type=oneshot`, `WantedBy=default.target`); macOS = launchd agent
+  `activate-agenix` (`RunAtLoad=true`). Explicitly **no** `home.activation` path —
+  "non-systemd Linux systems get nothing."
+
+Consequences for the four Ubuntu standalone-HM machines:
+
+- Both work **if** a systemd user session exists. Headless/always-on use needs
+  `loginctl enable-linger $USER`, or secrets are absent until first login.
+- Both resolve secret paths from `$XDG_RUNTIME_DIR` at **runtime**. If
+  `home-manager switch` runs where `$XDG_RUNTIME_DIR` is unset (some `su`, cron,
+  or CI shells), path expansion breaks.
+- Dependent user services must order after the secrets unit.
+- Eval-time secret use is impossible in both — decryption is activation-time only.
+
+**NFS path hazard, and the one concrete difference between the tools:**
+
+- **sops-nix** stages decrypted secrets in `$XDG_RUNTIME_DIR/secrets.d`
+  (host-local, good) but the *symlink* `path` defaults under `xdg.configHome` →
+  `~/.config/sops-nix/secrets/<name>`. On a shared `$HOME`, four machines write
+  symlinks into the same NFS directory, each targeting its own
+  `$XDG_RUNTIME_DIR`, so from any other host the link dangles. **Fix:** set `path`
+  with the `%r` placeholder (`%r` = `$XDG_RUNTIME_DIR` on Linux,
+  `getconf DARWIN_USER_TEMP_DIR` on darwin), e.g. `path = "%r/secrets/foo"`.
+- **agenix** defaults `secretsDir` *and* `path` to `$XDG_RUNTIME_DIR/agenix/<name>`
+  — host-local out of the box. This is agenix's one concrete edge for a
+  shared-home fleet, and sops-nix matches it once `%r` is set.
+
+**Keeping key material out of the store:**
+
+- agenix `age.identityPaths` entries must be **strings**
+  (`"/home/johnw/.ssh/id_ed25519"`), never Nix path literals — a path literal
+  copies the private key into the world-readable store.
+- sops-nix supports age (including `ssh-to-age` from an existing
+  `~/.ssh/id_ed25519`, so no extra keyfile), PGP, and YubiKey via GnuPG. On NixOS
+  it can auto-import the SSH host key. agenix uses SSH keys directly but has **no
+  ssh-agent support**, so password-protected SSH keys "do not work well".
+- **Per-host signing identity is not a secrets problem.** The public signing key
+  id, email, and `user.signingkey` are not secrets — parameterize them per host
+  via options or `specialArgs`. The private key stays in `~/.gnupg` / `~/.ssh` or
+  is delivered to `/run`, never the store. On the NFS fleet an identical
+  `~/.gnupg` across the four machines is fine (same keys); only git config
+  (`user.email`, `user.signingkey`, `commit.gpgsign`) diverges, and that is plain
+  per-host configuration.
+
+**Environment-only tokens** (Stapelberg, 2025-08-24,
+<https://michael.stapelberg.ch/posts/2025-08-24-secret-management-with-sops-nix/>):
+
+1. **`EnvironmentFile`** — store a whole `KEY=value` block as one secret and
+   reference `EnvironmentFile = [ config.sops.secrets."svc/env".path ]`. Keeps
+   values out of the store *and* out of `argv`.
+2. **Dedicated `*File` / `keyFile` options** — prefer wherever a module offers one.
+3. **systemd `LoadCredential`** — the service reads
+   `/run/credentials/<unit>/<name>`, avoiding environment variables entirely.
+   systemd's own documentation says environment variables are "not suitable for
+   passing secrets" (Discourse #71102). Best option on NixOS hosts.
+
+**sops-nix `templates`** render a config file interpolating a secret into a
+non-secret template at a runtime path, never the store. Per the NixOS wiki this is
+the only *major* tool with templating (agenix has none).
+
+**Community split is real, with no consensus winner.** NixOS Wiki "Comparison of
+secret managing schemes" (edited 2026-05-20) is neutral and calls both "the most
+popular". Pro-sops-nix: Stapelberg. Pro-agenix: fzakaria (2024-07-12, "focus
+solely on agenix"), Andreas Gohr — appeal is fewer moving parts and no GnuPG
+(sops-nix's own README warns GnuPG "might break in hilarious ways").
+
+**Researcher's read for this fleet:** sops-nix edges it — one tool covering NixOS
+(systemd, `LoadCredential`, `EnvironmentFile`), darwin (launchd, first-class), and
+Ubuntu standalone HM, plus templating — provided the HM `path` is redirected to
+`%r` on the NFS machines. **This also happens to be what Vulcan already uses**, so
+it is the continuity choice as well.
+
+**Stated caveats:** agenix's README notes it is unaudited and that age is not
+post-quantum safe (harvest-now-decrypt-later); the latter applies to sops-nix too,
+since sops + age shares the primitive. The NixOS Wiki comparison does **not**
+cover the HM / darwin / standalone dimensions — those findings came from reading
+module source directly.
