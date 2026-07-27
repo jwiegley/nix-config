@@ -40,10 +40,5 @@
       "plasma-wiki"
     ];
 
-    featureOwned = [
-      "agent-deck"
-      "plasma-fractal"
-      "plasma-wiki"
-    ];
   };
 }

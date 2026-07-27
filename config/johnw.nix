@@ -39,6 +39,7 @@ in
   imports =
     # Extracted sub-modules for better organization
     [
+      ./agent-deck.nix
       ./ai.nix
       ./anvil.nix
       ./fractal.nix

@@ -9,58 +9,12 @@ let
     "packages/pi-gallery/default.nix"
     "test/ai/pi-gallery.nix"
   ];
-  galleryOverrides = {
-    hashline.files = [ "packages/pi-gallery/locks/pi-hashline-edit-pro-package-lock.json" ];
-    web.files = [ "packages/pi-gallery/locks/pi-web-access-package-lock.json" ];
-    lens.files = [ "packages/pi-gallery/locks/pi-lens-package-lock.json" ];
-    workflows.files = [ "packages/pi-gallery/locks/pi-dynamic-workflows-package-lock.json" ];
-    browser = { };
-    btw = {
-      kind = "npm-release+flake-input";
-      flakeInput = "pi-btw";
-      files = [
-        "flake.lock"
-        "config/ai/flake.lock"
-      ];
-    };
-    artifacts.files = [ "packages/pi-gallery/locks/pi-artifacts-package-lock.json" ];
-    insights.files = [ "packages/pi-gallery/locks/pi-insights-package-lock.json" ];
-    subagentura = {
-      kind = "npm-release+flake-input";
-      flakeInput = "pi-subagentura";
-      files = [
-        "flake.lock"
-        "config/ai/flake.lock"
-        "config/ai/catalog.nix"
-        "test/ai/home-manager-contract.nix"
-      ];
-    };
-    litellm.files = [
-      "config/ai/catalog.nix"
-      "test/ai/home-manager-contract.nix"
-    ];
-    router.files = [
-      "config/ai/catalog.nix"
-      "test/ai/home-manager-contract.nix"
-    ];
-    rewind = { };
-    scroll = { };
-    ponytail = {
-      targetName = "ponytail";
-      kind = "flake-input+copy";
-      flakeInput = "ponytail";
-      files = [
-        "flake.lock"
-        "config/ai/flake.lock"
-      ];
-    };
-  };
   galleryTargets = builtins.listToAttrs (
     map (
       id:
       let
         member = gallery.members.${id};
-        override = galleryOverrides.${id};
+        override = member.update or { };
       in
       {
         name = override.targetName or member.attrName;

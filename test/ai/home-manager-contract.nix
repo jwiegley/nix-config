@@ -1452,6 +1452,7 @@ let
       "codex-notify"
     ];
     mcp_servers = expectedCodexMcp profileId;
+    shell_environment_policy.exclude = [ "REF_API_KEY" ];
   };
   expectedCodexHookFile = {
     hooks = expectedCodexHooks;
@@ -3128,13 +3129,14 @@ let
     let
       evaluation = task9JohnwEvaluations.${name};
       featurePkgs = testPkgsFor.${spec.system};
-      ownsAll = builtins.all (task9EvaluationHasPackage evaluation) [
+      expected = [
         featurePkgs.agent-deck
         featurePkgs.plasma-fractal
         featurePkgs.plasma-wiki
       ];
+      actual = builtins.filter (task9EvaluationHasPackage evaluation) expected;
     in
-    expectEqual "Task 9 ${name} feature package ownership" ownsAll (name == "hera")
+    expectEqual "Task 9 ${name} exact feature package ownership" actual expected
   ) task9FixtureSpecs;
   task9ClaudeMemData = task9JohnwHera.config.home.activation.claudeMemRealClaude.data;
 
@@ -3604,6 +3606,16 @@ let
   ];
 
   # Package-selection contract: platform gates and optional AI tooling.
+  task11CommonPackageInputs = [
+    "gh-to-org"
+    "git-all"
+    "obr"
+    "org2jsonl"
+    "rag-client"
+    "rust-overlay"
+    "sizes"
+    "una"
+  ];
   task11DarwinOnlyPackageInputs = [
     "gitlib" # its default package is git-monitor
     "hours"
@@ -3619,7 +3631,7 @@ let
       nix-config-ai.packages.${system}.default = "ai-toolchain-sentinel";
       retained.packages.${system}.default = null;
     }
-    // lib.genAttrs task11DarwinOnlyPackageInputs (_: {
+    // lib.genAttrs (task11CommonPackageInputs ++ task11DarwinOnlyPackageInputs) (_: {
       packages.${system}.default = null;
     });
   task11UserPackageInputNamesFor =
@@ -3702,7 +3714,7 @@ let
         system:
         expectEqual "Task 11 ${system} ignores package-shaped infrastructure inputs"
           (task11UserPackageInputNamesFor system)
-          [ ]
+          task11CommonPackageInputs
       )
       [
         "aarch64-linux"
@@ -3712,12 +3724,20 @@ let
       (expectEqual "Task 11 Darwin selects only explicitly allowed source applications"
         (task11UserPackageInputNamesFor "aarch64-darwin")
         [
+          "gh-to-org"
+          "git-all"
           "gitlib"
           "hours"
+          "obr"
           "org-jw"
+          "org2jsonl"
           "pushme"
+          "rag-client"
           "renamer"
+          "rust-overlay"
+          "sizes"
           "trade-journal"
+          "una"
         ]
       )
     ];

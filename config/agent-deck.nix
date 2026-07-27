@@ -7,7 +7,7 @@
 
 let
   cfg = config.johnw.agentDeck;
-  agentDeck = pkgs.agent-deck;
+  agentDeck = pkgs.agent-deck or null;
   bridgePython = pkgs.python3.withPackages (
     pythonPackages: with pythonPackages; [
       discordpy
@@ -31,74 +31,79 @@ in
     the agent-deck conductor Discord bridge and transition notifier
   '';
 
-  config = lib.mkIf cfg.enableConductorDiscordBridge {
-    assertions = [
-      {
-        assertion = pkgs.stdenv.isDarwin;
-        message = "The agent-deck conductor Discord bridge currently requires launchd";
-      }
-    ];
+  config = lib.mkMerge [
+    { home.packages = lib.optional (agentDeck != null) agentDeck; }
+    (lib.mkIf cfg.enableConductorDiscordBridge {
+      assertions = [
+        {
+          assertion = agentDeck != null;
+          message = "The Agent Deck conductor requires the agent-deck package";
+        }
+        {
+          assertion = pkgs.stdenv.isDarwin;
+          message = "The agent-deck conductor Discord bridge currently requires launchd";
+        }
+      ];
 
-    home.packages = [ agentDeck ];
+      # agent-deck prefers this conventional path when it renders its own plist.
+      # The directory is a Nix Python environment, not a mutable virtualenv.
+      xdg.dataFile."agent-deck/conductor/venv".source = bridgePython;
 
-    # agent-deck prefers this conventional path when it renders its own plist.
-    # The directory is a Nix Python environment, not a mutable virtualenv.
-    xdg.dataFile."agent-deck/conductor/venv".source = bridgePython;
+      # launchd opens log files before starting a job. Ensure both parents exist
+      # after Home Manager links the Python environment and before it bootstraps
+      # the agents.
+      home.activation.prepareAgentDeckConductorDirectories =
+        lib.hm.dag.entryBetween [ "setupLaunchAgents" ] [ "linkGeneration" ]
+          ''
+            run ${pkgs.coreutils}/bin/install -d -m 0700 \
+              ${lib.escapeShellArg conductorDirectory} \
+              ${lib.escapeShellArg logDirectory}
+          '';
 
-    # launchd opens log files before starting a job. Ensure both parents exist
-    # after Home Manager links the Python environment and before it bootstraps
-    # the agents.
-    home.activation.prepareAgentDeckConductorDirectories =
-      lib.hm.dag.entryBetween [ "setupLaunchAgents" ] [ "linkGeneration" ]
-        ''
-          run ${pkgs.coreutils}/bin/install -d -m 0700 \
-            ${lib.escapeShellArg conductorDirectory} \
-            ${lib.escapeShellArg logDirectory}
-        '';
-
-    launchd.agents = {
-      agent-deck-conductor-bridge = {
-        enable = true;
-        domain = "gui";
-        config = {
-          Label = "com.agentdeck.conductor-bridge";
-          ProgramArguments = [
-            "${conductorDirectory}/venv/bin/python3"
-            "${conductorDirectory}/bridge.py"
-          ];
-          EnvironmentVariables = commonEnvironment // {
-            AGENT_DECK_CONDUCTOR_DIR = conductorDirectory;
-            PYTHONNOUSERSITE = "1";
-            PYTHONUNBUFFERED = "1";
+      launchd.agents = {
+        agent-deck-conductor-bridge = {
+          enable = true;
+          domain = "gui";
+          config = {
+            Label = "com.agentdeck.conductor-bridge";
+            ProgramArguments = [
+              "${conductorDirectory}/venv/bin/python3"
+              "${conductorDirectory}/bridge.py"
+            ];
+            EnvironmentVariables = commonEnvironment // {
+              AGENT_DECK_CONDUCTOR_DIR = conductorDirectory;
+              PYTHONNOUSERSITE = "1";
+              PYTHONUNBUFFERED = "1";
+            };
+            WorkingDirectory = homeDirectory;
+            RunAtLoad = true;
+            KeepAlive.PathState."${conductorDirectory}/bridge.py" = true;
+            StandardOutPath = "${conductorDirectory}/bridge.log";
+            StandardErrorPath = "${conductorDirectory}/bridge.log";
+            ThrottleInterval = 10;
+            LowPriorityIO = true;
           };
-          WorkingDirectory = homeDirectory;
-          RunAtLoad = true;
-          KeepAlive.PathState."${conductorDirectory}/bridge.py" = true;
-          StandardOutPath = "${conductorDirectory}/bridge.log";
-          StandardErrorPath = "${conductorDirectory}/bridge.log";
-          ThrottleInterval = 10;
-          LowPriorityIO = true;
         };
-      };
 
-      agent-deck-transition-notifier = {
-        enable = true;
-        domain = "gui";
-        config = {
-          Label = "com.agentdeck.transition-notifier";
-          ProgramArguments = [
-            "${agentDeck}/bin/agent-deck"
-            "notify-daemon"
-          ];
-          EnvironmentVariables = commonEnvironment;
-          WorkingDirectory = homeDirectory;
-          RunAtLoad = true;
-          KeepAlive = true;
-          StandardOutPath = "${logDirectory}/transition-notifier.log";
-          StandardErrorPath = "${logDirectory}/transition-notifier.log";
-          ThrottleInterval = 5;
+        agent-deck-transition-notifier = {
+          enable = true;
+          domain = "gui";
+          config = {
+            Label = "com.agentdeck.transition-notifier";
+            ProgramArguments = [
+              "${agentDeck}/bin/agent-deck"
+              "notify-daemon"
+            ];
+            EnvironmentVariables = commonEnvironment;
+            WorkingDirectory = homeDirectory;
+            RunAtLoad = true;
+            KeepAlive = true;
+            StandardOutPath = "${logDirectory}/transition-notifier.log";
+            StandardErrorPath = "${logDirectory}/transition-notifier.log";
+            ThrottleInterval = 5;
+          };
         };
       };
-    };
-  };
+    })
+  ];
 }

@@ -31,7 +31,17 @@ let
   # Only these source-project inputs are user applications. Adding a flake
   # input must never change a profile unless its name is added here. Missing
   # inputs remain valid for downstream flakes with reduced input sets.
-  userPackageInputAllowlist = lib.optionals isDarwin [
+  userPackageInputAllowlist = [
+    "gh-to-org"
+    "git-all"
+    "obr"
+    "org2jsonl"
+    "rag-client"
+    "rust-overlay"
+    "sizes"
+    "una"
+  ]
+  ++ lib.optionals isDarwin [
     "gitlib"
     "hours"
     "org-jw"
@@ -39,9 +49,11 @@ let
     "renamer"
     "trade-journal"
   ];
-  userPackageInputNames = lib.filter (
-    name: inputs ? ${name} && inputs.${name} ? packages.${sys}.default
-  ) userPackageInputAllowlist;
+  userPackageInputNames = lib.sort builtins.lessThan (
+    lib.filter (
+      name: inputs ? ${name} && inputs.${name} ? packages.${sys}.default
+    ) userPackageInputAllowlist
+  );
   userPackageInputs = map (name: inputs.${name}.packages.${sys}.default) userPackageInputNames;
 in
 rec {

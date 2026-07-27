@@ -29,6 +29,7 @@ in
       publicName = "pi-hashline-edit-pro";
       source = npm "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.17.5.tgz" "sha256-WrPRKhBNUJc6l4u1v4k8dftGUQA2Pj754zE07h3QTxU=";
       extension = "index.ts";
+      update.files = [ "packages/pi-gallery/locks/pi-hashline-edit-pro-package-lock.json" ];
     };
     web = {
       attrName = "pi-web-access";
@@ -38,6 +39,7 @@ in
       source = npm "https://registry.npmjs.org/pi-web-access/-/pi-web-access-0.13.0.tgz" "sha256-GmPsueJdqj4Ny+fxlwMWRVnehe4bv1GeiBo0i5uAQAA=";
       extension = "index.ts";
       skills = [ "skills" ];
+      update.files = [ "packages/pi-gallery/locks/pi-web-access-package-lock.json" ];
     };
     lens = {
       attrName = "pi-lens";
@@ -47,6 +49,7 @@ in
       source = npm "https://registry.npmjs.org/pi-lens/-/pi-lens-3.8.71.tgz" "sha256-YoBaBtZx5dz3QOtGharxOyVG/qlcmOTbAFVrlJ4fhqw=";
       extension = "dist/index.js";
       skills = [ "skills" ];
+      update.files = [ "packages/pi-gallery/locks/pi-lens-package-lock.json" ];
     };
     ponytail = {
       attrName = "pi-ponytail";
@@ -56,6 +59,15 @@ in
       publicName = "@dietrichgebert/ponytail";
       extension = "pi-extension/index.js";
       skills = [ ];
+      update = {
+        targetName = "ponytail";
+        kind = "flake-input+copy";
+        flakeInput = "ponytail";
+        files = [
+          "flake.lock"
+          "config/ai/flake.lock"
+        ];
+      };
     };
     workflows = {
       attrName = "pi-dynamic-workflows";
@@ -68,6 +80,7 @@ in
         "skills/workflow-authoring"
         "skills/workflow-patterns"
       ];
+      update.files = [ "packages/pi-gallery/locks/pi-dynamic-workflows-package-lock.json" ];
     };
     browser = {
       attrName = "pi-agent-browser-native";
@@ -85,6 +98,14 @@ in
       source = npm "https://registry.npmjs.org/pi-btw/-/pi-btw-0.4.1.tgz" "sha256-CHzdNUd6Jo+ZMF0YvVoOw6piB+VQl4FHTKImwPwU/GI=";
       extension = "extensions/btw.ts";
       skills = [ "skills/btw" ];
+      update = {
+        kind = "npm-release+flake-input";
+        flakeInput = "pi-btw";
+        files = [
+          "flake.lock"
+          "config/ai/flake.lock"
+        ];
+      };
     };
     artifacts = {
       attrName = "pi-artifacts";
@@ -94,6 +115,7 @@ in
       source = npm "https://registry.npmjs.org/@jakeryderv/pi-artifacts/-/pi-artifacts-0.9.0.tgz" "sha256-ONiw6EtStwrB6LESSyyKUOjGGWQDbFAvXlOsnKbcWaU=";
       extension = "extensions/nix-bundle.js";
       skills = [ "skills/artifacts-authoring" ];
+      update.files = [ "packages/pi-gallery/locks/pi-artifacts-package-lock.json" ];
     };
     insights = {
       attrName = "pi-insights";
@@ -102,6 +124,7 @@ in
       publicName = "@ygncode/pi-insights";
       source = npm "https://registry.npmjs.org/@ygncode/pi-insights/-/pi-insights-1.0.1.tgz" "sha256-vMNgilZxwQ5QOxcheTNrcPLQycmXYf5kvkLcLivwWEU=";
       extension = "index.ts";
+      update.files = [ "packages/pi-gallery/locks/pi-insights-package-lock.json" ];
     };
     subagentura = {
       attrName = "pi-subagentura";
@@ -111,6 +134,16 @@ in
       source = npm "https://registry.npmjs.org/pi-subagentura/-/pi-subagentura-3.0.3.tgz" "sha256-8nSPMdy4LlJ1BIckjWdqFsSCcDo4uC5R9QqK6XJSVzU=";
       extension = "src/nix-bundle.js";
       skills = [ "skills/ralplan" ];
+      update = {
+        kind = "npm-release+flake-input";
+        flakeInput = "pi-subagentura";
+        files = [
+          "flake.lock"
+          "config/ai/flake.lock"
+          "config/ai/catalog.nix"
+          "test/ai/home-manager-contract.nix"
+        ];
+      };
     };
     litellm = {
       attrName = "pi-provider-litellm";
@@ -119,6 +152,10 @@ in
       publicName = "pi-provider-litellm";
       source = npm "https://registry.npmjs.org/pi-provider-litellm/-/pi-provider-litellm-2.0.0.tgz" "sha256-icmK1hCeZMU9ZINgg9fN0DZL8e/fS2Nbq6oJ4AKgVRU=";
       extension = "dist/index.js";
+      update.files = [
+        "config/ai/catalog.nix"
+        "test/ai/home-manager-contract.nix"
+      ];
     };
     router = {
       attrName = "pi-model-router";
@@ -127,6 +164,10 @@ in
       publicName = "@yeliu84/pi-model-router";
       source = npm "https://registry.npmjs.org/@yeliu84/pi-model-router/-/pi-model-router-0.4.4.tgz" "sha256-i5vZzLamyFEbyy+rZas4euSEneB8emIYPR6OoR7oasg=";
       extension = "extensions/index.ts";
+      update.files = [
+        "config/ai/catalog.nix"
+        "test/ai/home-manager-contract.nix"
+      ];
     };
     rewind = {
       attrName = "pi-rewind";

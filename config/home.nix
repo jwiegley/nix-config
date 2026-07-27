@@ -17,10 +17,7 @@ let
   packages = import ./packages.nix args;
 in
 {
-  imports = [
-    ./agent-deck.nix
-    ./johnw.nix
-  ];
+  imports = [ ./johnw.nix ];
 
   # Run one Discord gateway client. Enabling this on Clio as well would
   # make both hosts compete for the same bot connection.

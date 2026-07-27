@@ -488,6 +488,8 @@
                       shellcheck
                       ruff
                       findutils
+                      git
+                      nix
                       python3
                     ];
                   }
