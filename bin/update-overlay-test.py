@@ -16,6 +16,7 @@ from types import SimpleNamespace
 
 SCRIPT = Path(__file__).with_name("update-overlay")
 UPDATE_AGENTS = Path(__file__).with_name("update-agents")
+UPGRADE_PROJECTS = Path(__file__).with_name("upgrade-projects")
 MODULE = runpy.run_path(str(SCRIPT))
 OverlayParser = MODULE["OverlayParser"]
 OverlayUpdater = MODULE["OverlayUpdater"]
@@ -331,7 +332,10 @@ echo overlay-change >> overlays/ai/package.nix
         build = (root / "build").read_text()
         makefile = (root / "Makefile").read_text()
         upgrade = (root / "bin" / "upgrade").read_text()
-        active = "\n".join((update_agents, build, makefile, upgrade))
+        upgrade_projects = (root / "bin" / "upgrade-projects").read_text()
+        switch = (root / "bin" / "switch").read_text()
+        update_remote = (root / "bin" / "update-remote").read_text()
+        active = "\n".join((update_agents, build, makefile, upgrade, upgrade_projects, switch, update_remote))
 
         for retired in (
             "AI_NIX_DIR",
@@ -410,19 +414,18 @@ echo overlay-change >> overlays/ai/package.nix
         self.assertIn("trap rollback_transaction EXIT", update_agents)
         self.assertNotIn('commit_if_changed "$config_dir" "Update AI agents" || true', update_agents)
         self.assertIn("refusing external action without a newly signed commit", update_agents)
-        strict = upgrade.index("set -euo pipefail")
-        host_case = upgrade.index("case $HOST")
-        updater = upgrade.index("./bin/update-agents --commit")
-        host_end = upgrade.index("esac")
-        workspace = upgrade.index("### Coq projects")
-        self.assertLess(strict, host_case)
-        self.assertLess(host_case, updater)
-        self.assertLess(updater, host_end)
-        self.assertLess(host_end, upgrade.index("set +e"))
-        self.assertLess(host_end, upgrade.index("set +u"))
-        self.assertLess(upgrade.index("set +e"), workspace)
-        self.assertLess(upgrade.index("set +u"), workspace)
+        self.assertIn("set -euo pipefail", upgrade)
         self.assertRegex(upgrade, r"(?m)^\s*\./bin/update-agents --commit\s*$")
+        self.assertIn('exec "$script_dir/upgrade-projects"', upgrade)
+        self.assertNotIn("set +e", upgrade)
+        self.assertNotIn("if [[ $?", upgrade_projects)
+        self.assertIn("if (run_project_body", upgrade_projects)
+        self.assertIn("failures=$((failures + 1))", upgrade_projects)
+        self.assertIn("exit 1", upgrade_projects)
+        self.assertIn('nix_flake_output_for_host "$host"', switch)
+        self.assertIn('nixos-rebuild switch --flake ".#$output"', switch)
+        self.assertNotIn("nixos-rebuild switch", update_remote)
+        self.assertIn("&& switch", update_remote)
         self.assertNotIn("./bin/update-agents --no-switch --no-brew", upgrade)
 
     def test_overlay_manifests_are_explicit_and_inputs_do_not_leak_through_pkgs(self):
@@ -458,6 +461,81 @@ echo overlay-change >> overlays/ai/package.nix
             for expression in forbidden:
                 with self.subTest(path=path.relative_to(root), expression=expression):
                     self.assertNotIn(expression, text)
+
+    def test_upgrade_projects_continues_and_returns_aggregate_failure(self):
+        projects = (
+            "src/category-theory/master",
+            "src/ltl/coq",
+            "src/notes/haskell",
+            "src/org-jw",
+            "src/pushme",
+            "src/gitlib",
+            "src/hours",
+            "src/renamer",
+            "src/simple-amount",
+            "src/sizes",
+            "src/three-partition",
+            "src/trade-journal",
+            "src/una",
+            "src/comparable",
+            "src/rag-client",
+            "src/hf",
+            "src/ledger/main",
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            home = temp / "home"
+            fake_bin = temp / "bin"
+            logs = temp / "logs"
+            fake_bin.mkdir()
+            for project in projects:
+                directory = home / project
+                directory.mkdir(parents=True)
+                (directory / ".envrc").write_text("")
+            for command in ("cabal", "cargo", "rag-client", "huggingface-cli"):
+                path = fake_bin / command
+                path.write_text("#!/usr/bin/env bash\nexit 0\n")
+                path.chmod(0o700)
+            nix = fake_bin / "nix"
+            nix.write_text(
+                "#!/usr/bin/env bash\n"
+                "[[ $PWD != */org-jw ]] || exit 19\n"
+                "exit 0\n"
+            )
+            nix.chmod(0o700)
+            result = subprocess.run(
+                [str(UPGRADE_PROJECTS)],
+                capture_output=True,
+                text=True,
+                check=False,
+                env={
+                    **os.environ,
+                    "HOME": str(home),
+                    "PATH": f"{fake_bin}:{os.environ['PATH']}",
+                    "UPGRADE_LOG_DIR": str(logs),
+                },
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(result.stdout.splitlines().count("FAIL"), 1)
+            self.assertTrue((logs / "ledger-build.log").is_file())
+            self.assertIn("1 project(s) failed", result.stderr)
+
+    def test_host_routing_table_covers_system_and_shared_consumers(self):
+        routing = SCRIPT.parent / "lib" / "host-routing.sh"
+        result = subprocess.run(
+            [
+                "bash",
+                "-c",
+                'source "$1"; normalize_nix_host Andoria-08; '
+                'nix_flake_output_for_host vps; nix_flake_output_for_host vulcan',
+                "host-routing-test",
+                str(routing),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        self.assertEqual(result.stdout.splitlines(), ["shared-work", "ovh-vps", "vulcan"])
 
     def test_independent_ai_packages_are_owned_under_packages(self):
         root = SCRIPT.parent.parent

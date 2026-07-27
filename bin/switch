@@ -1,15 +1,29 @@
 #!/usr/bin/env bash
 
-set -eou pipefail
+set -euo pipefail
 
-if [[ "$(uname -s)" == "Darwin" ]]; then
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+routing=$script_dir/lib/host-routing.sh
+[[ -r $routing ]] || routing=$script_dir/../libexec/nix-scripts/host-routing.sh
+# shellcheck source=bin/lib/host-routing.sh
+source "$routing"
+
+raw_host=$(hostname -s)
+[[ ! -d /etc/srp-next ]] || raw_host=vps
+host=$(normalize_nix_host "$raw_host") || {
+    echo "switch: unknown host: $raw_host" >&2
+    exit 2
+}
+
+if [[ $(uname -s) == Darwin ]]; then
     exec u switch
 elif [[ -d /etc/nixos ]]; then
+    output=$(nix_flake_output_for_host "$host")
     cd /etc/nixos
-    exec sudo nixos-rebuild switch --flake ".#$(hostname)"
-elif [[ -d ~/.config/home-manager ]]; then
-    cd ~/.config/home-manager
+    exec sudo nixos-rebuild switch --flake ".#$output"
+elif [[ -d $HOME/.config/home-manager ]]; then
+    cd "$HOME/.config/home-manager"
     exec nix run home-manager/master -- switch
 else
-    exec u "$(hostname)" switch
+    exec u "$host" switch
 fi

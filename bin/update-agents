@@ -2,6 +2,12 @@
 
 set -euo pipefail
 
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+routing=$script_dir/lib/host-routing.sh
+[[ -r $routing ]] || routing=$script_dir/../libexec/nix-scripts/host-routing.sh
+# shellcheck source=bin/lib/host-routing.sh
+source "$routing"
+
 run_all_inputs=false
 run_pull=false
 run_commit=false
@@ -209,12 +215,16 @@ fi
 transaction_complete=true
 
 if [[ $run_switch == true ]]; then
-    if [[ -d /etc/srp-next ]]; then
-        with_nixos_build_lock sudo nixos-rebuild switch --flake "$config_dir#ovh-vps"
-    elif [[ -d /etc/nixos ]]; then
-        with_nixos_build_lock sudo nixos-rebuild switch --flake "$config_dir#vulcan"
+    raw_host=$(hostname -s)
+    [[ ! -d /etc/srp-next ]] || raw_host=vps
+    output=$(nix_flake_output_for_host "$raw_host") || {
+        echo "update-agents: no flake output for host: $raw_host" >&2
+        exit 2
+    }
+    if [[ -d /etc/nixos || -d /etc/srp-next ]]; then
+        with_nixos_build_lock sudo nixos-rebuild switch --flake "$config_dir#$output"
     else
-        sudo darwin-rebuild switch --flake "$config_dir#$(hostname -s)"
+        sudo darwin-rebuild switch --flake "$config_dir#$output"
     fi
 fi
 

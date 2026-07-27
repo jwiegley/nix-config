@@ -19,6 +19,10 @@ in
     name = "nix-scripts";
     src = ../bin;
     description = "Nix configuration scripts";
+    extraInstall = ''
+      mkdir -p $out/libexec/nix-scripts
+      cp -R ${../bin/lib}/. $out/libexec/nix-scripts/
+    '';
   };
 
 }

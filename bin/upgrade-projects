@@ -3,6 +3,8 @@
 set -uo pipefail
 
 failures=0
+log_dir=${UPGRADE_LOG_DIR:-/tmp}
+mkdir -p "$log_dir"
 
 run_project_body() {
     local directory=$1
@@ -12,22 +14,22 @@ run_project_body() {
     cd "$directory" || return
     printf '%s\n' "$directory"
     # shellcheck disable=SC1091
-    source .envrc
-    nix develop -c echo hello
+    source .envrc || return
+    nix develop -c echo hello || return
 
     case $kind in
     basic) ;;
     haskell-tests)
-        cabal v2-update
+        cabal v2-update || return
         cabal v2-configure --enable-tests \
-            --disable-profiling --disable-executable-profiling
+            --disable-profiling --disable-executable-profiling || return
         ;;
     haskell-no-tests)
-        cabal v2-update
+        cabal v2-update || return
         cabal v2-configure --disable-tests \
-            --disable-profiling --disable-executable-profiling
+            --disable-profiling --disable-executable-profiling || return
         ;;
-    rust) cargo update ;;
+    rust) cargo update || return ;;
     *) return 2 ;;
     esac
 }
@@ -60,7 +62,7 @@ echo '└───────────────────────�
 
 while IFS='|' read -r directory logfile kind; do
     [[ -n $directory ]] || continue
-    run_project "$HOME/$directory" "/tmp/$logfile" "$kind"
+    run_project "$HOME/$directory" "$log_dir/$logfile" "$kind"
 done <<'PROJECTS'
 src/category-theory/master|category-theory-build.log|basic
 src/ltl/coq|ltl-coq-build.log|basic
@@ -79,7 +81,7 @@ src/comparable|comparable-build.log|rust
 PROJECTS
 
 rm -rf -- "$HOME/Library/Caches/pip" "$HOME/.cache/uv"
-rag_log=/tmp/rag-client-build.log
+rag_log=$log_dir/rag-client-build.log
 if rag-client --help >"$rag_log" 2>&1 &&
     huggingface-cli --help >>"$rag_log" 2>&1; then
     run_project "$HOME/src/rag-client" "$rag_log" basic append
@@ -88,10 +90,11 @@ else
     echo FAIL
     failures=$((failures + 1))
 fi
-run_project "$HOME/src/hf" /tmp/hf-build.log basic append
-run_project "$HOME/src/ledger/main" /tmp/ledger-build.log basic append
+run_project "$HOME/src/hf" "$log_dir/hf-build.log" basic append
+run_project "$HOME/src/ledger/main" "$log_dir/ledger-build.log" basic append
 
 if ((failures)); then
-    printf 'upgrade-projects: %d project(s) failed; inspect /tmp/*-build.log\n' "$failures" >&2
+    printf 'upgrade-projects: %d project(s) failed; inspect %s/*-build.log\n' \
+        "$failures" "$log_dir" >&2
     exit 1
 fi

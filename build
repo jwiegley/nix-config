@@ -2,6 +2,12 @@
 
 set -euo pipefail
 
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+routing=$script_dir/bin/lib/host-routing.sh
+[[ -r $routing ]] || routing=$script_dir/../libexec/nix-scripts/host-routing.sh
+# shellcheck source=bin/lib/host-routing.sh
+source "$routing"
+
 usage() {
     cat <<'EOF'
 Usage: ./build MODE [PACKAGE] [NIX_BUILD_ARGS...]
@@ -15,12 +21,23 @@ Modes:
 EOF
 }
 
+host_name=$(command -v myhost >/dev/null 2>&1 && myhost || hostname -s)
+host_output=$(nix_flake_output_for_host "$host_name") || {
+    echo "build: no flake output for host: $host_name" >&2
+    exit 2
+}
+
 mode=${1:-}
 case $mode in
 system)
     shift
+    case $host_output in hera | clio) ;; *)
+        echo "build: system mode supports Darwin outputs only" >&2
+        exit 2
+        ;;
+    esac
     nix build --max-jobs 8 --cores 8 \
-        ".#darwinConfigurations.$(myhost).system" \
+        ".#darwinConfigurations.$host_output.system" \
         "$@" --keep-going --show-trace
     ;;
 pkg | emacs | python | haskell)
@@ -37,7 +54,7 @@ pkg | emacs | python | haskell)
     python) attribute="pkgs.python3Packages.$package" ;;
     haskell) attribute="pkgs.haskellPackages.$package" ;;
     esac
-    nix build --cores 24 ".#darwinConfigurations.$(myhost).$attribute" "$@"
+    nix build --cores 24 ".#darwinConfigurations.$host_output.$attribute" "$@"
     ;;
 -h | --help)
     usage
