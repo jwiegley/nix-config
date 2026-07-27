@@ -44,8 +44,10 @@ final: prev:
           prependToVar cmakeFlags "-DLLAMA_BUILD_COMMIT:STRING=b${version}"
           pushd tools/ui
           # node 24.15.0's libuv has a kqueue assertion bug that triggers
-          # SIGABRT on exit. Vite writes the final output first, so accept the
-          # non-zero exit only when the expected file exists.
+          # SIGABRT on exit (`Assertion failed: (errno == EINTR), function
+          # uv__io_poll, file kqueue.c, line 279`). The vite plugin writes
+          # the final dist/index.html before the abort, so accept the
+          # non-zero exit only when the expected output actually exists.
           npm run build || true
           [[ -f dist/index.html ]] || {
             echo "ERROR: tools/ui/dist/index.html not produced — npm run build genuinely failed" >&2

@@ -166,6 +166,26 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertTrue(required <= set(names))
         self.assertTrue(all(item["inventoried"] for item in inventory["packages"]))
         by_name = {item["name"]: item for item in inventory["packages"]}
+        relocated = {
+            "browser-control-mcp",
+            "claude-replay",
+            "context-hub",
+            "drafts-mcp-server",
+            "gguf-tools",
+            "hfdownloader",
+            "llama-swap",
+            "llm-mlx",
+            "omlx",
+            "rustdocs-mcp-server",
+        }
+        package_owned = {
+            item["name"] for item in inventory["packages"] if item["source"] == "packages"
+        }
+        self.assertEqual(len(inventory["packages"]), 126)
+        self.assertEqual(sum(item["managed"] for item in inventory["packages"]), 102)
+        self.assertEqual(sum(not item["managed"] for item in inventory["packages"]), 24)
+        self.assertEqual(package_owned, relocated)
+        self.assertTrue(all(by_name[name]["managed"] for name in relocated))
         self.assertTrue(by_name["git-ai"]["managed"])
         self.assertEqual(by_name["git-ai"]["executor"], "update-agents")
         self.assertFalse(by_name["pi-lens"]["managed"])
@@ -443,7 +463,7 @@ echo overlay-change >> overlays/ai/package.nix
         root = SCRIPT.parent.parent
         ownership = {
             "30-ai-mcp.nix": ("ai-mcp.nix", ["pal-mcp-server", "rustdocs-mcp-server"]),
-            "30-ai-python.nix": ("llm-mlx.nix", ["llm-mlx"]),
+            "30-ai-python.nix": ("ai-python-extensions.nix", []),
             "30-ai-llm.nix": ("ai-llm.nix", ["aiperf", "guidellm", "omlx"]),
         }
         for overlay_name, (package_name, package_names) in ownership.items():
@@ -454,6 +474,29 @@ echo overlay-change >> overlays/ai/package.nix
                 with self.subTest(overlay=overlay_name, package=name):
                     self.assertIn(f'pname = "{name}"', package)
                     self.assertNotIn(f'pname = "{name}"', overlay)
+
+        python_overlay = (root / "overlays/ai/30-ai-python.nix").read_text()
+        python_packages = (root / "packages/ai-python-extensions.nix").read_text()
+        llm_mlx_package = (root / "packages/llm-mlx.nix").read_text()
+        self.assertIn("./llm-mlx.nix", python_packages)
+        self.assertIn('pname = "llm-mlx"', llm_mlx_package)
+        self.assertNotIn('pname = "llm-mlx"', python_overlay)
+        for name in (
+            "mlx-speech",
+            "mlx-embeddings",
+            "dflash-mlx",
+            "pyloudnorm",
+            "phonemizer-fork",
+            "espeakng-loader",
+            "cohere-melody",
+            "mlx-audio",
+            "standard-distutils",
+            "aiologic",
+            "culsans",
+        ):
+            with self.subTest(overlay="30-ai-python.nix", package=name):
+                self.assertIn(f'pname = "{name}"', python_packages)
+                self.assertNotIn(f'pname = "{name}"', python_overlay)
 
 
 if __name__ == "__main__":

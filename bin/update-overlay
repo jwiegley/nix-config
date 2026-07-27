@@ -119,15 +119,26 @@ class OverlayParser:
         'paths',  # Local path import, not a package
     }
 
-    def __init__(self, overlays_dir: Path):
+    def __init__(
+        self,
+        overlays_dir: Path,
+        include_files: tuple[str, ...] | None = None,
+    ):
         self.overlays_dir = overlays_dir
+        self.include_files = include_files
 
     def _overlay_files(self) -> list[Path]:
         """Return production overlay files, including the integrated AI subtree."""
+        candidates = (
+            (self.overlays_dir / relative for relative in self.include_files)
+            if self.include_files is not None
+            else self.overlays_dir.rglob("*.nix")
+        )
         return sorted(
             path
-            for path in self.overlays_dir.rglob("*.nix")
-            if path.name not in self.SKIP_FILES
+            for path in candidates
+            if path.is_file()
+            and path.name not in self.SKIP_FILES
             and "tests" not in path.relative_to(self.overlays_dir).parts
         )
 
@@ -594,6 +605,7 @@ in
 def make_overlay_sources(args, nix_dir: Path) -> list[OverlaySource]:
     """Create the single integrated overlay tree to update."""
     local_overlays_dir = args.overlays_dir.resolve()
+    package_dir = nix_dir / "packages"
     return [
         OverlaySource(
             name="nix",
@@ -601,7 +613,21 @@ def make_overlay_sources(args, nix_dir: Path) -> list[OverlaySource]:
             overlays_dir=local_overlays_dir,
             parser=OverlayParser(local_overlays_dir),
             hash_computer=HashComputer(nix_dir),
-        )
+        ),
+        OverlaySource(
+            name="packages",
+            repo_dir=nix_dir,
+            overlays_dir=package_dir,
+            parser=OverlayParser(
+                package_dir,
+                include_files=(
+                    "ai-llm.nix",
+                    "ai-mcp.nix",
+                    "llm-mlx.nix",
+                ),
+            ),
+            hash_computer=HashComputer(nix_dir),
+        ),
     ]
 
 
