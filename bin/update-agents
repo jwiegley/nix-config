@@ -2,24 +2,47 @@
 
 set -euo pipefail
 
-run_switch=true
-run_brew=true
+run_pull=false
+run_commit=false
+run_switch=false
+run_push=false
+run_brew=false
 
 usage() {
     cat <<'EOF'
-usage: update-agents [--no-switch] [--no-brew]
+usage: update-agents [--pull] [--commit] [--switch] [--push] [--brew]
 
-Update the integrated AI inputs, both repository locks, and local overlays;
-commit once; optionally switch the host; then push the repository.
+Update integrated AI inputs, both repository locks, and local overlays.
+By default, leave reviewed working-tree changes without external side effects.
 
 Options:
-  --no-switch  Skip the final NixOS/nix-darwin switch
-  --no-brew    Skip the background Homebrew update/upgrade
+  --pull       Fast-forward the clean repository before updating
+  --commit     Create one signed commit of updater-owned paths
+  --switch     Switch the host after a successful signed commit
+  --push       Push after a successful signed commit
+  --brew       Update/upgrade Homebrew in the background
+  --no-switch  Compatibility spelling; switching is already off by default
+  --no-brew    Compatibility spelling; Homebrew is already off by default
 EOF
 }
 
 while (($#)); do
     case $1 in
+    --pull)
+        run_pull=true
+        ;;
+    --commit)
+        run_commit=true
+        ;;
+    --switch)
+        run_switch=true
+        ;;
+    --push)
+        run_push=true
+        ;;
+    --brew)
+        run_brew=true
+        ;;
     --no-switch)
         run_switch=false
         ;;
@@ -46,25 +69,17 @@ else
 fi
 
 ai_inputs=(
-    agent-browser-source
     bigpowers
     git-ai
     llm-agents
     mcp-remote
     mcp-servers-nix
     pal-mcp-server
-    pi-agent-browser-native
-    pi-artifacts
     pi-btw
-    pi-dynamic-workflows
-    pi-hashline-edit-pro
-    pi-insights
-    pi-lens
     pi-mcp-adapter
     pi-openai-server-compaction
     pi-quiet
     pi-subagentura
-    pi-web-access
     ponytail
     translate-tool
 )
@@ -79,12 +94,17 @@ if [[ $run_brew == true ]] && command -v brew >/dev/null 2>&1; then
     brew_pid=$!
 fi
 
-git_pull_clean() {
+require_clean() {
     local repo=$1
     if [[ -n $(git -C "$repo" status --porcelain) ]]; then
-        echo "update-agents: refusing to auto-update dirty repo: $repo" >&2
+        echo "update-agents: refusing to update dirty repo: $repo" >&2
         exit 1
     fi
+}
+
+git_pull_clean() {
+    local repo=$1
+    require_clean "$repo"
     git -C "$repo" pull --ff-only
 }
 
@@ -96,8 +116,11 @@ commit_if_changed() {
         return 1
     fi
 
-    git -C "$repo" add -A
-    git -C "$repo" commit -m "$message"
+    git -C "$repo" add -- \
+        flake.lock config/ai/flake.lock overlays/ai \
+        packages/pi-gallery packages/agent-resources.nix \
+        config/ai/bigpowers-resources.nix
+    git -C "$repo" commit -S -m "$message"
     return 0
 }
 
@@ -120,7 +143,16 @@ with_nixos_build_lock() {
     exit 1
 }
 
-git_pull_clean "$config_dir"
+if [[ $run_pull == true ]]; then
+    git_pull_clean "$config_dir"
+else
+    require_clean "$config_dir"
+fi
+
+if [[ $run_switch == true || $run_push == true ]] && [[ $run_commit != true ]]; then
+    echo "update-agents: --switch/--push require --commit" >&2
+    exit 2
+fi
 
 (
     cd "$config_dir"
@@ -131,7 +163,9 @@ git_pull_clean "$config_dir"
     nix flake check ./config/ai --all-systems --no-build
 )
 
-commit_if_changed "$config_dir" "Update AI agents" || true
+if [[ $run_commit == true ]]; then
+    commit_if_changed "$config_dir" "Update AI agents" || true
+fi
 
 if [[ $run_switch == true ]]; then
     if [[ -d /etc/srp-next ]]; then
@@ -143,7 +177,9 @@ if [[ $run_switch == true ]]; then
     fi
 fi
 
-git -C "$config_dir" push
+if [[ $run_push == true ]]; then
+    git -C "$config_dir" push
+fi
 
 if [[ -n $brew_pid ]]; then
     wait "$brew_pid"

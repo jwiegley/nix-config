@@ -12,6 +12,7 @@ Examples:
 """
 
 import argparse
+import atexit
 import json
 import os
 import re
@@ -598,6 +599,84 @@ def make_overlay_sources(args, nix_dir: Path) -> list[OverlaySource]:
     ]
 
 
+def load_update_manifest(nix_dir: Path) -> dict[str, dict]:
+    """Evaluate and validate explicit update targets outside ordinary overlays."""
+    manifest_path = nix_dir / "packages" / "update-manifest.nix"
+    result = subprocess.run(
+        ["nix", "eval", "--json", "--file", str(manifest_path)],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"failed to evaluate {manifest_path}: {result.stderr.strip()}")
+    payload = json.loads(result.stdout)
+    if payload.get("schemaVersion") != 1 or not isinstance(payload.get("targets"), dict):
+        raise RuntimeError(f"invalid update manifest schema: {manifest_path}")
+    for name, target in payload["targets"].items():
+        if not isinstance(target, dict) or not target.get("kind") or not target.get("files"):
+            raise RuntimeError(f"invalid update target: {name}")
+        missing = [path for path in target["files"] if not (nix_dir / path).is_file()]
+        if missing:
+            raise RuntimeError(f"update target {name} references missing files: {missing}")
+    return payload["targets"]
+
+
+def build_inventory(
+    sources: list[OverlaySource], explicit_targets: dict[str, dict], nix_dir: Path
+) -> dict:
+    """Return every supported update target and separately list non-package attrs."""
+    packages = []
+    unsupported = []
+    seen = set()
+    for source in sources:
+        for name in source.parser.find_all_packages():
+            info = source.parser.find_package(name)
+            if info is None:
+                unsupported.append(f"{source.name}/{name}")
+                continue
+            if name in seen:
+                raise RuntimeError(f"duplicate update target: {name}")
+            seen.add(name)
+            packages.append({
+                "name": name,
+                "source": source.name,
+                "kind": f"overlay-{info.source_type}",
+                "version": info.version,
+                "files": [str(info.file_path.relative_to(nix_dir))],
+                "managed": True,
+            })
+    for name, target in explicit_targets.items():
+        if name in seen:
+            raise RuntimeError(f"duplicate manifest/overlay update target: {name}")
+        seen.add(name)
+        packages.append({
+            "name": name,
+            "source": "manifest",
+            "kind": target["kind"],
+            "version": target.get("version", target.get("rev", "")),
+            "files": target["files"],
+            "managed": True,
+        })
+    return {
+        "schemaVersion": 1,
+        "packages": sorted(packages, key=lambda item: item["name"]),
+        "unsupportedOverlayAttributes": sorted(unsupported),
+    }
+
+
+def print_inventory(inventory: dict, json_output: bool) -> None:
+    if json_output:
+        print(json.dumps(inventory, indent=2, sort_keys=True))
+        return
+    for package in inventory["packages"]:
+        print(f"{package['name']}\t{package['kind']}\t{package['version']}")
+    print(
+        f"{len(inventory['packages'])} managed update targets; "
+        f"{len(inventory['unsupportedOverlayAttributes'])} non-package overlay attributes"
+    )
+
+
 def collect_targets(args, sources: list[OverlaySource]) -> list[tuple[OverlaySource, str]]:
     """Collect package update targets across all configured overlay trees."""
     targets: list[tuple[OverlaySource, str]] = []
@@ -625,6 +704,33 @@ def collect_targets(args, sources: list[OverlaySource]) -> list[tuple[OverlaySou
             targets.append((sources[0], package))
 
     return targets
+
+
+class SourceTransaction:
+    """Restore every watched source file unless the invocation commits."""
+
+    def __init__(self) -> None:
+        self.original: dict[Path, str] = {}
+        self.committed = False
+
+    def watch(self, path: Path) -> None:
+        self.original.setdefault(path, path.read_text())
+
+    def rollback(self) -> int:
+        restored = 0
+        for path, content in self.original.items():
+            if path.read_text() != content:
+                path.write_text(content)
+                restored += 1
+        self.committed = True
+        return restored
+
+    def commit(self) -> None:
+        self.committed = True
+
+    def rollback_unless_committed(self) -> None:
+        if not self.committed:
+            self.rollback()
 
 
 class OverlayUpdater:
@@ -861,20 +967,41 @@ Examples:
         "--verbose", "-v", action="store_true",
         help="Show skipped packages (no supported source)"
     )
+    parser.add_argument(
+        "--inventory", action="store_true",
+        help="List every managed update target without network access"
+    )
+    parser.add_argument(
+        "--json", dest="json_output", action="store_true",
+        help="Emit inventory as JSON (with --inventory)"
+    )
     args = parser.parse_args()
 
     # Validate arguments
-    if not args.all and not args.packages:
-        parser.error("Please specify package names or use --all")
+    if not args.inventory and not args.all and not args.packages:
+        parser.error("Please specify package names, --all, or --inventory")
+
+    if args.inventory and (args.all or args.packages or args.version):
+        parser.error("--inventory cannot be combined with package updates")
+
+    if args.json_output and not args.inventory:
+        parser.error("--json requires --inventory")
 
     if args.all and args.version:
         parser.error("Cannot use --version with --all")
 
     nix_dir = Path(__file__).parent.parent.resolve()
     sources = make_overlay_sources(args, nix_dir)
+    explicit_targets = load_update_manifest(nix_dir)
+    if args.inventory:
+        print_inventory(build_inventory(sources, explicit_targets, nix_dir), args.json_output)
+        return 0
+
     github_client = GitHubClient()
     npm_client = NpmRegistryClient()
     updater = OverlayUpdater()
+    transaction = SourceTransaction()
+    atexit.register(transaction.rollback_unless_committed)
     targets = collect_targets(args, sources)
 
     success_count = 0
@@ -986,7 +1113,9 @@ Examples:
             continue
 
         # Update the overlay file with new version and src hash first
-        # This is needed so we can compute the other hashes
+        # This is needed so we can compute the other hashes. Watch the source
+        # before any mutation so one failed target rolls back the whole command.
+        transaction.watch(info.file_path)
         updater.update_package(
             info, new_version, new_src_hash,
             new_full_rev=new_full_rev,
@@ -1070,6 +1199,13 @@ Examples:
             print(f" {Colors.CYAN}(dry-run){Colors.RESET}")
         else:
             print(f" {Colors.GREEN}✓{Colors.RESET}{extra_info}")
+
+    if fail_count and not args.dry_run:
+        restored = transaction.rollback()
+        if restored:
+            print(f"Rolled back {restored} source file(s) after update failure")
+    else:
+        transaction.commit()
 
     # Colored summary
     updated_str = f"{Colors.GREEN}{success_count} updated{Colors.RESET}" if success_count else f"{success_count} updated"

@@ -50,3 +50,12 @@ Append-only durable learnings for the architecture-remediation Wiggum loop. Deci
 - Local Beads merge driver, role, and exclude entry were removed. Two Beads refs are intentionally preserved pending WU9 history-retention evidence.
 - Verified deletions that remain: superseded Nix-managed/Pi capsules, empty tracked Beads JSONL files, orphan Emacs site-start, duplicated command body, and stale CI literals.
 - Per Wiggum, this fess-fix commit is verified but not recursively audited.
+
+## 2026-07-27 — WU2a update inventory and transaction boundary
+
+- Added `packages/update-manifest.nix` with 23 non-overlay targets: immutable Pi releases, agent resources, Bigpowers/Ponytail copies, Anvil sources, and fixed-revision flake inputs.
+- `bin/update-overlay --inventory --json` now reports 116 unique managed targets and 83 non-package overlay attributes without network access.
+- `SourceTransaction` snapshots every source before mutation and rolls back the whole invocation on dependent-hash failure or abnormal process exit. An end-to-end fake-hash test proves version/source changes are byte-identically restored.
+- `update-agents` no longer names retired inputs. Pull, signed commit, switch, push, and Homebrew are explicit; switch/push require commit; staging is limited to updater-owned paths.
+- `make update` now updates both locks and evaluates the portable boundary.
+- Verification: shellcheck/shfmt, Ruff, 7 updater tests, inventory contract, portable all-system evaluation, and four core AI contracts passed.
