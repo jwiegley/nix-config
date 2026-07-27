@@ -128,6 +128,7 @@ let
         codexSandboxDarwinFlagCase = pkgs.lib.optionalString pkgs.stdenv.isDarwin " | --log-denials";
         codexWrapper = pkgs.writeShellScript "codex" ''
           set -euo pipefail
+          set +x
           umask 077
 
           # $HOME (and so ~/.codex) is shared over NFS across hosts.
@@ -544,6 +545,24 @@ let
               return 2
             fi
             trap - EXIT INT TERM
+          }
+
+          # Carry the pre-Nix Ref credential into Codex's native environment-header carrier.
+          codex_import_legacy_ref_api_key() {
+            local codex_ref_api_key codex_ref_line
+
+            [ -z "''${REF_API_KEY:-}" ] || return 0
+            while IFS= read -r codex_ref_line; do
+              case "$codex_ref_line" in
+                "  url: https://api.ref.tools/mcp?apiKey="*)
+                  codex_ref_api_key="''${codex_ref_line#*apiKey=}"
+                  [[ "$codex_ref_api_key" =~ ^ref-[A-Za-z0-9_-]+$ ]] || return 0
+                  REF_API_KEY=$codex_ref_api_key
+                  export REF_API_KEY
+                  return 0
+                  ;;
+              esac
+            done < <(@codex_unwrapped@ mcp get Ref 2>/dev/null || true)
           }
 
           if [ "''${AI_NIX_BYPASS_MANAGED_CONFIG:-}" != 1 ]; then
@@ -1762,6 +1781,7 @@ let
                   fi
                   if [ "$codex_recognized" -eq 1 ]; then
                     codex_prepare_runtime_profile
+                    codex_import_legacy_ref_api_key
                     exec -a codex @codex_unwrapped@ --profile nix-runtime "$@"
                   fi
                 fi

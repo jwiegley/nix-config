@@ -116,21 +116,11 @@ printf '%s\\n%s' "$LITELLM_API_KEY" "$REF_API_KEY" >"$CAPTURE_ENV"
                 'model_providers.litellm.env_key="LITELLM_API_KEY"', argv
             )
             self.assertIn('model_providers.litellm.wire_api="responses"', argv)
-            self.assertIn(
-                'shell_environment_policy.filters.LITELLM_API_KEY="exclude"',
-                argv,
-            )
-            self.assertIn(
-                'shell_environment_policy.set.LITELLM_API_KEY=""',
-                argv,
-            )
-            self.assertIn(
-                'shell_environment_policy.filters.REF_API_KEY="exclude"',
-                argv,
-            )
-            self.assertIn(
-                'shell_environment_policy.set.REF_API_KEY=""',
-                argv,
+            self.assertEqual(
+                argv.count(
+                    'shell_environment_policy.exclude=["LITELLM_API_KEY","REF_API_KEY"]'
+                ),
+                1,
             )
             exec_index = argv.index("exec")
             provider_index = argv.index('model_provider="litellm"')

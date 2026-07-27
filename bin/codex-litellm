@@ -92,10 +92,7 @@ litellm_args=(
     -c 'model_providers.litellm.env_key="LITELLM_API_KEY"'
     -c 'model_providers.litellm.wire_api="responses"'
     -c 'model_reasoning_effort="ultra"'
-    -c 'shell_environment_policy.filters.LITELLM_API_KEY="exclude"'
-    -c 'shell_environment_policy.set.LITELLM_API_KEY=""'
-    -c 'shell_environment_policy.filters.REF_API_KEY="exclude"'
-    -c 'shell_environment_policy.set.REF_API_KEY=""'
+    -c 'shell_environment_policy.exclude=["LITELLM_API_KEY","REF_API_KEY"]'
 )
 
 if [[ ${forward_args[0]:-} == exec ]]; then

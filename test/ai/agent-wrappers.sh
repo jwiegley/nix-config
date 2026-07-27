@@ -175,6 +175,13 @@ invoke_agent() {
         "AGENT_TEST_UID=$AGENT_TEST_UID"
     )
 
+    if [ -n "${AGENT_TEST_REF_MCP_SCENARIO:-}" ]; then
+        command_env+=("AGENT_TEST_REF_MCP_SCENARIO=$AGENT_TEST_REF_MCP_SCENARIO")
+    fi
+    if [ "${AGENT_TEST_INHERIT_XTRACE:-0}" = 1 ]; then
+        command_env+=("SHELLOPTS=xtrace")
+    fi
+
     case "$client" in
     claude)
         binary=$CLAUDE_BIN
@@ -1102,6 +1109,32 @@ test_codex_runtime_profile() {
     finish_case codex
 }
 
+test_codex_legacy_ref_auth() {
+    local secret=ref-synthetic-api-key
+    local scenario
+
+    new_case codex legacy-ref-auth
+    configure_state complete
+    AGENT_TEST_REF_MCP_SCENARIO=valid AGENT_TEST_INHERIT_XTRACE=1 invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -eq 0 ] || fail "managed Codex legacy Ref launch failed"
+    assert_managed_argv codex alpha
+    assert_env "REF_API_KEY=$secret"
+    ! grep -aF -- "$secret" \
+        "$ARGV_FILE" "$STDOUT_FILE" "$STDERR_FILE" "$CODEX_RUNTIME_FILE" >/dev/null ||
+        fail "Codex exposed the legacy Ref credential outside its environment"
+    finish_case codex
+
+    for scenario in bad-url bad-token; do
+        new_case codex "legacy-ref-$scenario"
+        configure_state complete
+        AGENT_TEST_REF_MCP_SCENARIO=$scenario invoke_agent codex 0 0 alpha
+        [ "$LAST_STATUS" -eq 0 ] || fail "managed Codex rejected malformed legacy Ref output safely"
+        ! grep -azF -- 'REF_API_KEY=' "$ENV_FILE" >/dev/null ||
+            fail "Codex imported a malformed legacy Ref credential"
+        finish_case codex
+    done
+}
+
 test_codex_runtime_profile_rejections() {
     new_case codex runtime-link-regular
     configure_state complete
@@ -1255,6 +1288,8 @@ test_real_codex_profile_contract() {
     local codex_home="$work_root/real Codex profile"
     local marker=NIX_MANAGED_PROFILE_SENTINEL
     local strict_marker=task_3_nix_managed_strict_marker
+    local valid_network_guard_loaded="$codex_home/valid-network-guard-loaded"
+    local valid_network_hit="$codex_home/valid-network-attempted"
     local network_guard_loaded="$codex_home/network-guard-loaded"
     local network_hit="$codex_home/network-attempted"
 
@@ -1285,6 +1320,35 @@ test_real_codex_profile_contract() {
     assert_codex_developer_marker \
         "$codex_home/with-profile.json" "$marker" present ||
         fail "pinned Codex did not load the managed developer instructions"
+
+    {
+        printf 'model_provider = "task3-oracle"\n'
+        printf '[shell_environment_policy]\n'
+        printf 'ignore_default_excludes = false\n'
+        printf 'exclude = ["REF_API_KEY"]\n'
+        printf '[model_providers.task3-oracle]\n'
+        printf 'name = "Task 3 network oracle"\n'
+        printf 'base_url = "http://127.0.0.1:9/v1"\n'
+        printf 'env_key = "TASK3_ORACLE_API_KEY"\n'
+        printf 'wire_api = "responses"\n'
+        printf 'requires_openai_auth = false\n'
+    } >"$codex_home/nix-runtime.config.toml"
+    if env HOME="$codex_home" CODEX_HOME="$codex_home" \
+        CODEX_SQLITE_HOME="$codex_home/sqlite" \
+        REF_API_KEY=ref-synthetic-api-key \
+        TASK3_ORACLE_API_KEY=not-a-real-key \
+        TASK3_NETWORK_GUARD_LOADED_FILE="$valid_network_guard_loaded" \
+        TASK3_NETWORK_ATTEMPT_FILE="$valid_network_hit" \
+        "$NETWORK_GUARD_VARIABLE=$NETWORK_GUARD_LIBRARY" \
+        "$REAL_CODEX_BIN" --profile nix-runtime --strict-config \
+        exec --skip-git-repo-check hello \
+        >"$codex_home/valid-strict.stdout" 2>"$codex_home/valid-strict.stderr"; then
+        fail "pinned Codex unexpectedly completed the strict network oracle"
+    fi
+    grep -Fx loaded "$valid_network_guard_loaded" >/dev/null ||
+        fail "pinned Codex did not load the strict-profile network guard"
+    grep -Fx network "$valid_network_hit" >/dev/null ||
+        fail "pinned Codex did not accept the managed shell environment policy"
 
     {
         printf 'model_provider = "task3-oracle"\n'
@@ -1390,6 +1454,7 @@ test_claude_real
 test_codex_host_state
 test_codex_host_state_rejections
 test_codex_runtime_profile
+test_codex_legacy_ref_auth
 test_codex_runtime_profile_rejections
 test_codex_command_scope
 test_codex_non_darwin_table
