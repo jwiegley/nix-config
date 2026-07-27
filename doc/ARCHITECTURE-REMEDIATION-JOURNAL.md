@@ -40,3 +40,13 @@ Append-only durable learnings for the architecture-remediation Wiggum loop. Deci
 - Partner observation `2026-07-27T01:20:44.318Z` found that root documentation consolidation dropped the critical prohibition against `sudo nix flake update/lock` and its NAR-mismatch recovery path.
 - Resolution: root CLAUDE now explains root/user fetcher-cache divergence, forbids sudo lock/update, and names regular-user `make verify-inputs` then `make lock-local` recovery. Activation remains separately authorization-gated.
 - Independent partner-cleanup reviewer verdict: PASS.
+
+## 2026-07-27 — WU1b deletion fess audit
+
+- Fess audit target: signed commit `205f4827` (`refactor: remove superseded repository surfaces`).
+- Auditor verdict: FAIL. Four findings accepted.
+- Root `LICENSE.txt` now carries the prior 2014–2026 New Artisans BSD notice; the conflicting secondary file remains deleted.
+- `doc/SECURITY-REVIEW.md` and `doc/VULCAN-SSH-TIMEOUT-ANALYSIS.md` were restored with explicit historical/debt status. Their unresolved dispositions are assigned to WU1/WU5/WU9 before later retirement.
+- Local Beads merge driver, role, and exclude entry were removed. Two Beads refs are intentionally preserved pending WU9 history-retention evidence.
+- Verified deletions that remain: superseded Nix-managed/Pi capsules, empty tracked Beads JSONL files, orphan Emacs site-start, duplicated command body, and stale CI literals.
+- Per Wiggum, this fess-fix commit is verified but not recursively audited.

@@ -26,8 +26,9 @@ Updated: 2026-07-26
 
 - WU0 baseline gate passed: updater tests, portable all-system evaluation, four core AI contracts, and Darwin system build.
 - Partner observation batch is fully addressed and reviewed PASS; remove the untracked observation before cleanup commit.
-- WU1a operating interface commit `2ddca506` passed implementation gates; its four fess findings are fixed and pending a signed fess-fix commit.
-- Continue WU1b proven deletions after the fess-fix checkpoint.
+- WU1a operating interface commit `2ddca506` passed implementation gates; fess/partner corrections landed in `be781086`.
+- WU1b deletion commit `205f4827` passed portable/core gates but its fess audit found four over-deletions/local residues; all are fixed and pending a signed fess-fix commit.
+- Continue WU1 authority consolidation after the fess-fix checkpoint.
 
 ## Authorization
 
@@ -45,7 +46,7 @@ Updated: 2026-07-26
 |---|---:|---|
 | Baseline gate | 1 | PASS at `a36d3f51`: updater tests, portable evaluation, core AI contracts, Darwin build |
 | Workflow synthesis | 2 | Abandoned after demonstrated runtime/budget failures; replaced by frozen coordinator plan |
-| Current work-unit focused gate | 2 | WU1a PASS: shell checks, command behavior, core contracts, Darwin build |
+| Current work-unit focused gate | 3 | WU1b PASS: YAML, portable all-system evaluation, core contracts |
 | Current work-unit full gate | 0 | Not started |
 
 ## Resume exactly
