@@ -338,6 +338,47 @@ vps also uses **sops-nix** (`.sops.yaml`, `secrets.yaml`, and a git credential
 helper reading `/run/secrets/nix/git-credentials`), so sops-nix is already in use
 on **both** NixOS hosts — reinforcing it as the continuity choice.
 
+## Open questions requiring the user's decision
+
+**Q1 — NFS `$HOME` branch (user's stated preference recorded, not yet ratified).**
+When asked, the user selected **"Keep shared `$HOME`, state host-local"** but then
+paused to clarify, so the selection is recorded as a *preference*, not approval.
+It is also the correct call on the evidence: the four machines' generated
+configuration is uniform by construction today, so this is where the fleet already
+is, and it needs no change to how `$HOME` is mounted. The alternative —
+host-local `$HOME` with NFS data mounted in — is more robust and is the only branch
+permitting genuinely divergent per-host generated files, but requires sysadmin
+changes on four work machines that may not be under the user's control. **Both
+branches to be costed in the design; recommend the former; user ratifies at
+review.**
+
+**Q2 — Persistent host-local path for `XDG_STATE_HOME` on the four Ubuntu hosts.**
+Must be persistent and **not** age-cleaned: not `/tmp`, and specifically **not
+`/var/tmp`**, which systemd-tmpfiles reaps at 30 days, deleting gcroots. Asked
+whether those machines have a conventional local scratch path; unanswered. Design
+uses a clearly-marked placeholder until answered.
+
+**Q3 — Trust domain for the four work machines.** The sops/age decryption identity
+lives on the shared NFS home, so all four hosts currently share one identity. Fine
+if they are one trust domain. Per-host keys would require host-local key files and
+every secret encrypted to four recipients. Recorded, not assumed.
+
+**Q4 — Integration of this branch.** `design/unified-fleet` is deliberately not
+merged; another autonomous session is committing in `~/src/nix`. Merge timing and
+method are the user's call.
+
+**Q5 — Confirm `/nix` is host-local on the four Ubuntu machines.** The entire GC
+analysis assumes `/nix/store` and `/nix/var/nix` are per-machine, which is normal
+but unverified here. If `/nix` were itself NFS-shared, the analysis changes
+materially. Cheap to check on each host.
+
+**Operational warning to convey regardless of the above (see research doc):**
+while the home-manager profile is shared over NFS, **do not run generation-expiry
+commands on the four work machines** — `nix-collect-garbage -d`/`--delete-old`,
+`home-manager expire-generations`, `nix profile wipe-history`,
+`nix-env --delete-generations` — and check for any automatic GC timer with a
+delete-old setting. Plain `nix-collect-garbage` and `nix store gc` are safe.
+
 ## How to resume
 
 1. Re-read `doc/UNIFIED-CONFIG-WIGGUM-PLAN.md` and this file in full.
