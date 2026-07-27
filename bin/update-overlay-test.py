@@ -17,6 +17,8 @@ from types import SimpleNamespace
 SCRIPT = Path(__file__).with_name("update-overlay")
 UPDATE_AGENTS = Path(__file__).with_name("update-agents")
 UPGRADE_PROJECTS = Path(__file__).with_name("upgrade-projects")
+UPGRADE = Path(__file__).with_name("upgrade")
+BUILD = Path(__file__).parent.parent / "build"
 MODULE = runpy.run_path(str(SCRIPT))
 OverlayParser = MODULE["OverlayParser"]
 OverlayUpdater = MODULE["OverlayUpdater"]
@@ -487,6 +489,7 @@ echo overlay-change >> overlays/ai/package.nix
             home = temp / "home"
             fake_bin = temp / "bin"
             logs = temp / "logs"
+            trace = temp / "trace"
             fake_bin.mkdir()
             for project in projects:
                 directory = home / project
@@ -494,11 +497,17 @@ echo overlay-change >> overlays/ai/package.nix
                 (directory / ".envrc").write_text("")
             for command in ("cabal", "cargo", "rag-client", "huggingface-cli"):
                 path = fake_bin / command
-                path.write_text("#!/usr/bin/env bash\nexit 0\n")
+                path.write_text(
+                    "#!/usr/bin/env bash\n"
+                    "printf '%s|%s|%s\\n' \"$(basename \"$0\")\" \"$PWD\" \"$*\" >> \"$UPGRADE_TRACE\"\n"
+                    "[[ $(basename \"$0\") != rag-client ]] || exit 23\n"
+                    "exit 0\n"
+                )
                 path.chmod(0o700)
             nix = fake_bin / "nix"
             nix.write_text(
                 "#!/usr/bin/env bash\n"
+                "printf 'nix|%s|%s\\n' \"$PWD\" \"$*\" >> \"$UPGRADE_TRACE\"\n"
                 "[[ $PWD != */org-jw ]] || exit 19\n"
                 "exit 0\n"
             )
@@ -513,12 +522,32 @@ echo overlay-change >> overlays/ai/package.nix
                     "HOME": str(home),
                     "PATH": f"{fake_bin}:{os.environ['PATH']}",
                     "UPGRADE_LOG_DIR": str(logs),
+                    "UPGRADE_TRACE": str(trace),
                 },
             )
             self.assertEqual(result.returncode, 1)
-            self.assertEqual(result.stdout.splitlines().count("FAIL"), 1)
-            self.assertTrue((logs / "ledger-build.log").is_file())
-            self.assertIn("1 project(s) failed", result.stderr)
+            self.assertEqual(sum(line.endswith("FAIL") for line in result.stdout.splitlines()), 2)
+            self.assertIn("2 failure(s)", result.stderr)
+
+            events = [line.split("|", 2) for line in trace.read_text().splitlines()]
+            nix_directories = {directory for command, directory, _ in events if command == "nix"}
+            self.assertEqual(nix_directories, {str(home / project) for project in projects})
+            command_counts = {
+                command: sum(event[0] == command for event in events)
+                for command in ("nix", "cabal", "cargo", "rag-client", "huggingface-cli")
+            }
+            self.assertEqual(
+                command_counts,
+                {"nix": 17, "cabal": 22, "cargo": 1, "rag-client": 1, "huggingface-cli": 1},
+            )
+            expected_logs = {
+                "category-theory-build.log", "ltl-coq-build.log", "notes-haskell-build.log",
+                "org-jw-build.log", "pushme-build.log", "gitlib-build.log", "hours-build.log",
+                "renamer-build.log", "simple-amount-build.log", "sizes-build.log",
+                "three-partition-build.log", "trade-journal-build.log", "una-build.log",
+                "comparable-build.log", "rag-client-build.log", "hf-build.log", "ledger-build.log",
+            }
+            self.assertEqual({path.name for path in logs.iterdir()}, expected_logs)
 
     def test_host_routing_table_covers_system_and_shared_consumers(self):
         routing = SCRIPT.parent / "lib" / "host-routing.sh"
@@ -536,6 +565,22 @@ echo overlay-change >> overlays/ai/package.nix
             check=True,
         )
         self.assertEqual(result.stdout.splitlines(), ["shared-work", "ovh-vps", "vulcan"])
+
+        minimal_env = {**os.environ, "PATH": "/usr/bin:/bin"}
+        build_help = subprocess.run(
+            [str(BUILD), "--help"], capture_output=True, text=True, env=minimal_env, check=False
+        )
+        self.assertEqual(build_help.returncode, 0, build_help.stderr)
+        self.assertIn("Usage: ./build", build_help.stdout)
+        conflict = subprocess.run(
+            [str(UPGRADE), "--host-only", "--projects-only"],
+            capture_output=True,
+            text=True,
+            env=minimal_env,
+            check=False,
+        )
+        self.assertEqual(conflict.returncode, 2)
+        self.assertIn("mutually exclusive", conflict.stderr)
 
     def test_independent_ai_packages_are_owned_under_packages(self):
         root = SCRIPT.parent.parent

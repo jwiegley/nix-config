@@ -33,12 +33,17 @@ while (($#)); do
     shift
 done
 
-host=$(normalize_nix_host "$raw_host") || {
-    echo "upgrade: unknown host: $raw_host" >&2
+if [[ $run_host != true && $run_projects != true ]]; then
+    echo "upgrade: --host-only and --projects-only are mutually exclusive" >&2
+    usage
     exit 2
-}
+fi
 
 if [[ $run_host == true ]]; then
+    host=$(normalize_nix_host "$raw_host") || {
+        echo "upgrade: unknown host: $raw_host" >&2
+        exit 2
+    }
     if [[ $(uname -s) == Darwin ]]; then
         sudo /bin/launchctl limit maxfiles 524288 524288
         ulimit -n 65536

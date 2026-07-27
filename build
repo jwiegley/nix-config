@@ -21,15 +21,19 @@ Modes:
 EOF
 }
 
-host_name=$(command -v myhost >/dev/null 2>&1 && myhost || hostname -s)
-host_output=$(nix_flake_output_for_host "$host_name") || {
-    echo "build: no flake output for host: $host_name" >&2
-    exit 2
+resolve_host_output() {
+    local host_name
+    host_name=$(command -v myhost >/dev/null 2>&1 && myhost || hostname -s)
+    nix_flake_output_for_host "$host_name" || {
+        echo "build: no flake output for host: $host_name" >&2
+        return 2
+    }
 }
 
 mode=${1:-}
 case $mode in
 system)
+    host_output=$(resolve_host_output)
     shift
     case $host_output in hera | clio) ;; *)
         echo "build: system mode supports Darwin outputs only" >&2
@@ -46,6 +50,7 @@ pkg | emacs | python | haskell)
         usage >&2
         exit 2
     fi
+    host_output=$(resolve_host_output)
     package=$2
     shift 2
     case $mode in

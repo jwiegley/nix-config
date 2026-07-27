@@ -9,29 +9,32 @@ mkdir -p "$log_dir"
 run_project_body() {
     local directory=$1
     local kind=$2
+    local status=0
 
     set +u
     cd "$directory" || return
     printf '%s\n' "$directory"
     # shellcheck disable=SC1091
-    source .envrc || return
-    nix develop -c echo hello || return
+    source .envrc || status=1
+    nix develop -c echo hello || status=1
 
     case $kind in
     basic) ;;
     haskell-tests)
-        cabal v2-update || return
+        cabal v2-update || status=1
         cabal v2-configure --enable-tests \
-            --disable-profiling --disable-executable-profiling || return
+            --disable-profiling --disable-executable-profiling || status=1
         ;;
     haskell-no-tests)
-        cabal v2-update || return
+        cabal v2-update || status=1
         cabal v2-configure --disable-tests \
-            --disable-profiling --disable-executable-profiling || return
+            --disable-profiling --disable-executable-profiling || status=1
         ;;
-    rust) cargo update || return ;;
+    rust) cargo update || status=1 ;;
     *) return 2 ;;
     esac
+
+    return "$status"
 }
 
 run_project() {
@@ -82,19 +85,21 @@ PROJECTS
 
 rm -rf -- "$HOME/Library/Caches/pip" "$HOME/.cache/uv"
 rag_log=$log_dir/rag-client-build.log
-if rag-client --help >"$rag_log" 2>&1 &&
-    huggingface-cli --help >>"$rag_log" 2>&1; then
-    run_project "$HOME/src/rag-client" "$rag_log" basic append
-else
-    echo "$HOME/src/rag-client"
-    echo FAIL
+: >"$rag_log"
+if ! rag-client --help >>"$rag_log" 2>&1; then
+    echo "rag-client --help: FAIL"
     failures=$((failures + 1))
 fi
+if ! huggingface-cli --help >>"$rag_log" 2>&1; then
+    echo "huggingface-cli --help: FAIL"
+    failures=$((failures + 1))
+fi
+run_project "$HOME/src/rag-client" "$rag_log" basic append
 run_project "$HOME/src/hf" "$log_dir/hf-build.log" basic append
 run_project "$HOME/src/ledger/main" "$log_dir/ledger-build.log" basic append
 
 if ((failures)); then
-    printf 'upgrade-projects: %d project(s) failed; inspect %s/*-build.log\n' \
+    printf 'upgrade-projects: %d failure(s); inspect %s/*-build.log\n' \
         "$failures" "$log_dir" >&2
     exit 1
 fi
