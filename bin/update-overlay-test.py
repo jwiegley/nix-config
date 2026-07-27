@@ -439,6 +439,22 @@ echo overlay-change >> overlays/ai/package.nix
                 with self.subTest(path=path.relative_to(root), expression=expression):
                     self.assertNotIn(expression, text)
 
+    def test_independent_ai_packages_are_owned_under_packages(self):
+        root = SCRIPT.parent.parent
+        ownership = {
+            "30-ai-mcp.nix": ("ai-mcp.nix", ["pal-mcp-server", "rustdocs-mcp-server"]),
+            "30-ai-python.nix": ("llm-mlx.nix", ["llm-mlx"]),
+            "30-ai-llm.nix": ("ai-llm.nix", ["aiperf", "guidellm", "omlx"]),
+        }
+        for overlay_name, (package_name, package_names) in ownership.items():
+            overlay = (root / "overlays/ai" / overlay_name).read_text()
+            package = (root / "packages" / package_name).read_text()
+            self.assertIn(f"packages/{package_name}", overlay)
+            for name in package_names:
+                with self.subTest(overlay=overlay_name, package=name):
+                    self.assertIn(f'pname = "{name}"', package)
+                    self.assertNotIn(f'pname = "{name}"', overlay)
+
 
 if __name__ == "__main__":
     unittest.main()
