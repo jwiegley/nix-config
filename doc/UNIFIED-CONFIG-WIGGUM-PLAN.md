@@ -91,6 +91,35 @@ Exit only when all hold, each with cited evidence rather than assertion:
 
 | Gate | Attempts | Status |
 |---|---|---|
-| `nix flake check ./config/ai` | 0 | not yet run |
-| `nix fmt` clean | 0 | not yet run |
+| `nix flake check ./config/ai` | 2 | **PASS** (both runs, exit 0) |
+| `bin/update-overlay-test.py` | 2 | **PASS** 20/20 (also re-run independently by the audit) |
+| Flake laziness verification | 1 | **PASS** (empirical, see research doc) |
+| `nix fmt` clean | 0 | not run — no `.nix` file has been modified on this branch |
 | PAL consensus | 0 | not yet run |
+
+### DoD-7 evidence
+
+`nix flake check ./config/ai --all-systems --no-build`, run in
+`/Users/johnw/src/nix-design` on 2026-07-27, **exit code 0**. Every check passed
+across all three systems; representative tail:
+
+```
+✅ checks.aarch64-darwin.fractal-smoke
+✅ checks.aarch64-linux.no-warnings
+✅ checks.aarch64-linux.llm-agents-nixpkgs-independent
+✅ checks.x86_64-linux.format
+✅ checks.{aarch64-darwin,aarch64-linux,x86_64-linux}.agent-wrappers
+✅ checks.{aarch64-darwin,aarch64-linux,x86_64-linux}.agent-resources
+✅ checks.{aarch64-darwin,aarch64-linux,x86_64-linux}.pi-gallery
+✅ checks.{aarch64-darwin,aarch64-linux,x86_64-linux}.compatibility-contract
+✅ devShells.{aarch64-darwin,aarch64-linux,x86_64-linux}.default (build skipped)
+✅ formatter.{aarch64-darwin,aarch64-linux,x86_64-linux} (build skipped)
+warning: The following flake outputs are unchecked: lib.
+```
+
+`python3 -m unittest bin/update-overlay-test.py` → `Ran 20 tests ... OK`.
+
+`nix fmt` is listed as not run and that is correct rather than a gap: this branch
+has modified only Markdown under `doc/`, so there is no Nix formatting to check.
+The `lefthook` pre-commit `nix-format` hook confirms this by reporting
+`(skip) no matching staged files` on every commit here.

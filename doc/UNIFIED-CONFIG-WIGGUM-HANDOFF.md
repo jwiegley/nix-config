@@ -74,6 +74,18 @@ Read-only analysis and design work continues safely and is unaffected.
 
 ### Done
 
+- **DoD-7 baseline verification — PASSED, output shown.**
+  `nix flake check ./config/ai --all-systems --no-build` exit 0, all checks green
+  across `aarch64-darwin`, `aarch64-linux`, `x86_64-linux`; captured output is
+  reproduced under "DoD-7 evidence" in the plan. `bin/update-overlay-test.py`
+  20/20, independently re-run by the `fess` audit with a clean tree before and
+  after. `nix fmt` is not applicable — this branch modifies only Markdown.
+- External research complete (two `web-searcher` agents) — see
+  `doc/UNIFIED-CONFIG-RESEARCH.md`.
+- Flake laziness verified empirically; the closure rationale is refuted.
+- Both real-flake blockers traced and proven removable (F3a).
+- The NFS home-manager state question resolved from home-manager source.
+- `fess` audit of `b8fd05f3` complete; its findings folded in.
 - Baseline recon of all three repositories.
 - Confirmed cross-repo coupling inventory (see Findings below).
 - Launched two `web-searcher` agents: flake/monorepo patterns, and host-variance
@@ -82,21 +94,26 @@ Read-only analysis and design work continues safely and is unaffected.
 
 ### In flight
 
-- `web-searcher` research (2 agents).
+- Analysis workflow `wf_fa028b6d-0e0` (`unified-fleet-config-design`): all five
+  dimension analyses returned; three adversarial claim verifiers running; then
+  three design proposals → three judge lenses → synthesis + completeness critic.
+  Script and transcripts under the session's `workflows/` directory; resume with
+  `Workflow({scriptPath, resumeFromRunId: "wf_fa028b6d-0e0"})`.
+- Secondary follow-up to `research-variance-secrets` on systemd-user lingering
+  for the NFS Ubuntu hosts (whether `loginctl enable-linger` is required for
+  sops-nix/agenix secrets to exist before first interactive login).
 
 ### Not started
 
-- Deep per-dimension analysis workflow.
-- PAL consensus.
-- Design document.
-- Migration plan.
-- Baseline verification run (DoD-7).
+- PAL consensus (DoD-4).
+- Design document (DoD-5).
+- Staged migration plan (DoD-6).
 
 ## Findings so far (evidence-backed)
 
 **F1 — `flake = false` erases the module API.** Both consumers reach into
 `nix-config` internals by string path:
-- `~/src/nixos/modules/users/home-manager/johnw.nix:24` hand-calls
+- `~/src/nixos/modules/users/home-manager/johnw.nix:26` hand-calls
   `import "${inputs.nix-config}/config/packages.nix"` with hand-assembled args.
 - `~/src/nixos/overlays/default.nix:31,298,303,306` and
   `~/src/nixos/flake.nix:313,326` cherry-pick attributes out of *individual
@@ -104,8 +121,8 @@ Read-only analysis and design work continues safely and is unaffected.
   `overlays/00-lib.nix` is an undocumented prerequisite of `30-misc-tools.nix`.
   Overlay composition order is an implicit contract the consumer reproduces by
   hand.
-- `~/src/andoria/flake.nix:406,432` does the same for `johnw.nix` and
-  `packages.nix`.
+- `~/src/andoria/flake.nix:410` and `:431` do the same for `johnw.nix` and
+  `packages.nix` respectively.
 
 **F2 — Each consumer fetches `nix-config` twice, with independently drifting
 revisions.** Once as `flake = false` (whole tree) and once as a real flake at
@@ -117,7 +134,13 @@ inside `nix-config` itself — the consumers have no such check.
 
 **F3 — The stated closure rationale is largely stale, and the real constraint is
 different.** `flake.lock` has 431 nodes: 426 `github:`, **1** `git+file://`,
-**1** `git+ssh://`, 2 `path:`. The single `git+file://`
+**1** `git+ssh://`, 2 `path:`. Those four buckets sum to 430; the 431st is the
+`root` node, which has no `locked` field and so falls into none of them. The two
+`path:` nodes are the internal relative subflakes `./config/ai` and
+`./config/certs`, correctly not blockers. Counts were independently recounted and
+confirmed exact by the `fess` audit, which also verified the identical
+431/426/2/2/1 split in `~/src/nix/flake.lock` — the other session has not touched
+the lock. The single `git+file://`
 (`file:///Users/johnw/src/org2jsonl`) is **transitive**, leaked by the `obr`
 input's own lock — the root's own `org2jsonl` is `github:`. `stock-trader` is
 `git+ssh://gitea` (LAN-only). So consuming `nix-config` as a *real flake* is
@@ -131,8 +154,9 @@ research — DoD-2.)*
 hardcodes `hostname = "andoria-08"` and exports a single
 `homeConfigurations.jwiegley`, yet serves four machines. True identity is
 recovered at *runtime* by shelling out to `hostname` (agent-deck wrapper at
-`flake.nix:371`, activation at `:529`). `config/johnw.nix:63` acknowledges this:
-the comment states the shared flake "supplies `andoria-08` on every NFS client".
+`flake.nix:371`, activation at `:529`). `config/johnw.nix:60-61` acknowledges this:
+the comment states the shared flake "supplies `andoria-08` on every NFS client"
+(line 63 is the `useHeadlessEmacs` code itself).
 
 The build-time decision
 `johnw.anvil.useHeadlessEmacs = lib.mkDefault (lib.elem hostname dedicatedAnvilLinuxHosts)`
