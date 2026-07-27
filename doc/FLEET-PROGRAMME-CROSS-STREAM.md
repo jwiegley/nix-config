@@ -149,9 +149,86 @@ Three separate streams each demand native builds and then activation on the same
 | Fleet redesign Stages 3–5 | vulcan, vps, then the four work machines as one atomic unit |
 
 These must become **one** verification and activation programme, not three. Running them
-separately would triple the activation risk on hosts that share a profile link, and the
-shared-work case cannot be done three times independently — it has one profile link for four
-machines.
+separately would triple the activation risk, and the shared-work case cannot be done three
+times independently.
+
+### X6a — The work-fleet rollout procedure, corrected
+
+**The config is shared; the four local Nix stores are not.** That asymmetry, not the profile
+link, is what governs the rollout. It yields one hard invariant:
+
+> **Every store path referenced by the shared `$HOME` symlinks must already exist in all four
+> local stores before *any* machine writes those symlinks.**
+
+Because `$HOME` is shared, the instant one machine activates, all four see the new symlinks.
+Any machine whose local store lacks those paths has dangling links until it catches up. So a
+naive "switch andoria-08, then the others in turn" opens a breakage window on three machines
+lasting until the last switch completes.
+
+**Copy-only is insufficient.** Verified against `~/src/andoria/flake.nix`: three of the four
+activation steps have genuine per-host effects — `hostLocalXdgCache` (`:561`) runs
+`mkdir -p /var/tmp/$USER/xdg-cache/nix`, creating a **host-local** directory that the shared
+`~/.cache/nix` symlink then points at; `agentDeckHostLocalState` (`:528`) creates
+`$HOME/.local/share/agent-deck-hosts/$(hostname -s)`, keyed per host; and
+`checkNoLocalPasswdEntry` (`:468`) greps the *local* `/etc/passwd` and is meaningless unless
+run per machine. Only `materializeHostSshConfig` (`:512`) is a write into shared `$HOME` that
+one run satisfies. Copying store paths alone would leave three machines with a
+`~/.cache/nix` symlink pointing at a directory that does not exist locally.
+
+**So the two options combine rather than compete:** the copy is the *enabler*, and the
+per-host switch is still *required*.
+
+```bash
+# 1. Realize the candidate ONCE, then pre-populate the other three stores.
+#    Pull-based and parallel: no push credentials, no hub dependency, and
+#    --substitute-on-destination lets each host take what it can from a cache
+#    so only the delta crosses the network.
+CAND=$(nix build --no-link --print-out-paths .#homeConfigurations."<attr>".activationPackage)
+for h in andoria-t2 delphi-3bd4 gpu-server; do
+  ssh "$h" nix copy --from ssh://andoria-08 --substitute-on-destination "$CAND" &
+done; wait
+
+# 2. Prove the closure is resident on all four BEFORE any activation.
+for h in andoria-08 andoria-t2 delphi-3bd4 gpu-server; do
+  ssh "$h" nix path-info -r "$CAND" >/dev/null && echo "$h OK"
+done
+
+# 3. Pin the PREVIOUS closure on all four so rollback survives GC.
+#    Essential given the generation-deletion hazard: without a gcroot, the
+#    rollback target can be collected out from under you.
+for h in andoria-08 andoria-t2 delphi-3bd4 gpu-server; do
+  ssh "$h" nix build --out-link /var/lib/jwiegley/rollback-prev "$PREV"
+done
+
+# 4. NOW switch, per machine, in order. Each switch is fast and local: no
+#    downloads, and it cannot fail for missing paths. It exists to run the
+#    per-host activation steps, not to realize the closure.
+```
+
+**Why this is both more efficient and more robust.** Efficient: the derivation is
+byte-identical across all four, so the paths are the same and pre-population is pure
+transfer with no rebuild; only one machine substitutes from the network. Robust: the
+breakage window disappears entirely, because by the time the first symlink is written every
+machine can already resolve it — and each subsequent switch is a local, no-download
+operation that cannot fail partway for a missing path.
+
+**This corrects an earlier over-broad claim in the design plan.** The four machines were
+described as one indivisible unit whose rollback is group-level only. More precisely:
+
+- **Store realization** is *not* atomic and should be deliberately staged — that is the
+  whole point of pre-population.
+- **The shared-`$HOME` symlink write** is effectively atomic, since one activation changes
+  what all four see.
+- **Rollback granularity depends on where the profile link lives**, which is currently
+  **undetermined** and is one of the outstanding host-side checks
+  (`readlink ~/.nix-profile; ls -la ~/.local/state/nix/profiles`). If the profile is shared
+  (today's likely state, since nothing sets `xdg.stateHome` or `nix.useXdg` and
+  `XDG_STATE_HOME` therefore defaults into the NFS home), rollback is **group-level**: one
+  link move affects all four. Once decision Q2 moves state to `/var/lib/jwiegley`, each
+  machine gains its own profile and generation series, and **state rollback becomes
+  per-host** — a real improvement, and another reason to sequence the state relocation early.
+- **Byte-identity remains load-bearing in both regimes**, because HM's `$HOME`-anchored
+  links stay shared no matter where the state lives.
 
 Known constraints, from the issue-15 status document: Clio connectivity has previously timed
 out; Andoria's configured route previously attempted invalid x86-on-ARM QEMU; Vulcan's factory
