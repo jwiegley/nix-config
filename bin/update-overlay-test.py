@@ -174,6 +174,82 @@ class UpdateInventoryTests(unittest.TestCase):
             }))
             self.assertIn("multi", load_source_catalog(temp))
 
+
+    def test_source_catalog_rejects_ambiguous_native_fetcher_shapes(self):
+        valid = {
+            "version": "1.0.0",
+            "source": {
+                "fetcher": "fetchFromGitHub",
+                "url": "https://github.com/example/project",
+                "args": {
+                    "owner": "example",
+                    "repo": "project",
+                    "rev": "deadbeef",
+                    "hash": "sha256-source",
+                },
+            },
+            "update": {"kind": "github-commit", "branch": "main"},
+        }
+
+        def load(record, document_extra=None):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                root = Path(temp_dir)
+                (root / "sources").mkdir()
+                document = {"schemaVersion": 1, "sources": {"example": record}}
+                document.update(document_extra or {})
+                (root / "sources/test.json").write_text(json.dumps(document))
+                return load_source_catalog(root)
+
+        tag = copy.deepcopy(valid)
+        tag.pop("version")
+        tag["source"]["args"]["tag"] = tag["source"]["args"].pop("rev")
+        self.assertEqual(load(tag)["example"]["version"], "deadbeef")
+
+        invalid = []
+        both_refs = copy.deepcopy(valid)
+        both_refs["source"]["args"]["tag"] = "v1.0.0"
+        invalid.append(both_refs)
+
+        both_hashes = copy.deepcopy(valid)
+        both_hashes["source"]["args"]["sha256"] = "sha256-other"
+        invalid.append(both_hashes)
+
+        wrong_identity = copy.deepcopy(valid)
+        wrong_identity["source"]["url"] = "https://github.com/other/project"
+        invalid.append(wrong_identity)
+
+        wrong_update_field = copy.deepcopy(valid)
+        wrong_update_field["update"]["package"] = "project"
+        invalid.append(wrong_update_field)
+
+        bad_artifacts = copy.deepcopy(valid)
+        bad_artifacts["artifacts"] = []
+        invalid.append(bad_artifacts)
+
+        bad_hashes = copy.deepcopy(valid)
+        bad_hashes["hashes"] = []
+        invalid.append(bad_hashes)
+
+        fetchurl_without_url = copy.deepcopy(valid)
+        fetchurl_without_url["source"] = {
+            "fetcher": "fetchurl",
+            "url": "https://example.invalid/archive.tgz",
+            "args": {"hash": "sha256-source"},
+        }
+        invalid.append(fetchurl_without_url)
+
+        insecure_fetch_url = copy.deepcopy(fetchurl_without_url)
+        insecure_fetch_url["source"]["args"]["url"] = "http://example.invalid/archive.tgz"
+        invalid.append(insecure_fetch_url)
+
+        for record in invalid:
+            with self.subTest(record=record):
+                with self.assertRaises(RuntimeError):
+                    load(record)
+
+        with self.assertRaisesRegex(RuntimeError, "document fields"):
+            load(valid, {"unexpected": True})
+
     def test_manifest_and_cli_inventory_cover_hidden_update_targets(self):
         root = SCRIPT.parent.parent
         try:

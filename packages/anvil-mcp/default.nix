@@ -4846,6 +4846,8 @@ let
         };
       });
 in
+assert anvilSource.source.fetcher == "fetchFromGitHub";
+assert anvilIdeSource.source.fetcher == "fetchFromGitHub";
 if stdenv.isLinux then
   if useHeadlessEmacs then dedicatedPackage else standalonePackage
 else if stdenv.isDarwin then

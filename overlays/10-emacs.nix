@@ -1425,6 +1425,8 @@ let
     );
 
 in
+assert anvilSource.source.fetcher == "fetchFromGitHub";
+assert anvilIdeSource.source.fetcher == "fetchFromGitHub";
 {
 
   # NOTE: Using 'final' for emacs aliases because they reference

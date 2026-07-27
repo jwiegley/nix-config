@@ -21,7 +21,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from urllib.request import urlopen
 
 
@@ -640,28 +640,80 @@ def _unique_object(pairs):
     return result
 
 
+def _validate_https(name: str, value: object) -> str:
+    if not isinstance(value, str) or not value.startswith("https://"):
+        raise RuntimeError(f"source catalog URL must use HTTPS: {name}")
+    return value
+
+
+def _same_git_url(left: str, right: str) -> bool:
+    def canonical(value: str) -> tuple[str, str]:
+        parsed = urlsplit(value)
+        return parsed.netloc.lower(), parsed.path.rstrip("/").removesuffix(".git")
+
+    return canonical(left) == canonical(right)
+
+
 def _validate_fetch_record(name: str, source: dict) -> None:
-    if not isinstance(source, dict) or source.keys() - {"args", "fetcher", "url"}:
+    if not isinstance(source, dict) or set(source) != {"args", "fetcher", "url"}:
         raise RuntimeError(f"invalid source object for {name}")
-    args = source.get("args")
+    args = source["args"]
     if not isinstance(args, dict):
         raise RuntimeError(f"source catalog record has no fetcher args: {name}")
-    fetch_required = {
-        "fetchFromGitHub": {"owner", "repo", "rev"},
+
+    fetcher = source["fetcher"]
+    required = {
+        "fetchFromGitHub": {"owner", "repo"},
         "fetchgit": {"rev"},
         "fetchurl": set(),
         "fetchzip": set(),
         "fetchpatch": set(),
         "fetchPypi": {"pname", "version"},
-        "fetchTree": {"owner", "repo", "rev"},
+        "fetchTree": {"owner", "repo", "rev", "type"},
     }
-    fetcher = source.get("fetcher")
-    if fetcher not in fetch_required:
+    if fetcher not in required:
         raise RuntimeError(f"unknown source fetcher for {name}: {fetcher}")
-    missing = fetch_required[fetcher] - args.keys()
-    has_hash = bool({"hash", "sha256", "narHash"} & args.keys())
-    if missing or not has_hash or not source.get("url", "").startswith("https://"):
+    missing = required[fetcher] - args.keys()
+    if missing:
         raise RuntimeError(f"invalid source catalog record {name}: missing {sorted(missing)}")
+
+    identity_url = _validate_https(name, source["url"])
+    hash_fields = {"hash", "sha256", "narHash"} & args.keys()
+    allowed_hashes = {"narHash"} if fetcher == "fetchTree" else {"hash", "sha256"}
+    if len(hash_fields) != 1 or not hash_fields <= allowed_hashes:
+        raise RuntimeError(f"source catalog record must have exactly one native hash: {name}")
+    hash_value = args[next(iter(hash_fields))]
+    if not isinstance(hash_value, str) or not hash_value:
+        raise RuntimeError(f"invalid source hash for {name}")
+
+    if fetcher == "fetchFromGitHub":
+        refs = {"rev", "tag"} & args.keys()
+        if len(refs) != 1:
+            raise RuntimeError(f"fetchFromGitHub record must have exactly one rev or tag: {name}")
+        expected = f"https://github.com/{args['owner']}/{args['repo']}"
+        if not _same_git_url(identity_url, expected):
+            raise RuntimeError(f"GitHub identity does not match fetcher args: {name}")
+    elif fetcher == "fetchTree":
+        if args["type"] != "github":
+            raise RuntimeError(f"unsupported fetchTree type for {name}: {args['type']}")
+        expected = f"https://github.com/{args['owner']}/{args['repo']}"
+        if not _same_git_url(identity_url, expected):
+            raise RuntimeError(f"GitHub identity does not match fetcher args: {name}")
+    elif fetcher in {"fetchgit", "fetchurl", "fetchzip", "fetchpatch"}:
+        locators = {"url", "urls"} & args.keys()
+        if len(locators) != 1:
+            raise RuntimeError(f"source catalog record must have exactly one url or urls: {name}")
+        values = [args["url"]] if "url" in args else args["urls"]
+        if not isinstance(values, list) or not values:
+            raise RuntimeError(f"invalid source URLs for {name}")
+        actual_urls = [_validate_https(name, value) for value in values]
+        matches = (
+            any(_same_git_url(identity_url, value) for value in actual_urls)
+            if fetcher == "fetchgit"
+            else identity_url in actual_urls
+        )
+        if not matches:
+            raise RuntimeError(f"source identity does not match fetcher args: {name}")
 
 
 def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
@@ -671,14 +723,26 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
     allowed = {
         "artifacts", "date", "hashes", "source", "update", "version",
     }
-    update_allowed = {"branch", "input", "kind", "lockFiles", "package", "policy", "tagPrefix"}
-    update_kinds = {
-        "explicit-rev", "fixed-flake-input", "flake-input", "github-commit",
-        "github-release", "github-release-asset", "npm-release", "pypi-release",
-        "url-release",
+    update_schema = {
+        "explicit-rev": ({"kind", "branch", "policy"}, set()),
+        "fixed-flake-input": ({"kind", "input", "lockFiles", "policy"}, {"input"}),
+        "flake-input": ({"kind", "input", "lockFiles", "policy"}, {"input"}),
+        "flake-input+copy": ({"kind", "input", "lockFiles", "policy"}, {"input"}),
+        "github-commit": ({"kind", "branch", "policy"}, {"branch"}),
+        "github-release": ({"kind", "policy", "tagPrefix"}, set()),
+        "github-release-asset": ({"kind", "policy", "tagPrefix"}, set()),
+        "npm-release": ({"kind", "lockFiles", "package", "policy"}, {"package"}),
+        "npm-release+flake-input": (
+            {"kind", "input", "lockFiles", "package", "policy"},
+            {"input", "package"},
+        ),
+        "pypi-release": ({"kind", "package", "policy"}, {"package"}),
+        "url-release": ({"kind", "policy"}, set()),
     }
     for path in sorted(catalog_dir.glob("*.json")):
         payload = json.loads(path.read_text(), object_pairs_hook=_unique_object)
+        if set(payload) != {"schemaVersion", "sources"}:
+            raise RuntimeError(f"invalid source catalog document fields: {path}")
         if payload.get("schemaVersion") != 1 or not isinstance(payload.get("sources"), dict):
             raise RuntimeError(f"invalid source catalog schema: {path}")
         for name, record in payload["sources"].items():
@@ -687,22 +751,33 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             unknown = record.keys() - allowed
             if unknown:
                 raise RuntimeError(f"unknown source catalog fields for {name}: {sorted(unknown)}")
+            if "version" in record and (not isinstance(record["version"], str) or not record["version"]):
+                raise RuntimeError(f"invalid source catalog version: {name}")
+            if "date" in record and (not isinstance(record["date"], str) or not record["date"]):
+                raise RuntimeError(f"invalid source catalog date: {name}")
             _validate_fetch_record(name, record.get("source"))
-            for artifact, fetch in (record.get("artifacts") or {}).items():
+            artifacts = record.get("artifacts", {})
+            if not isinstance(artifacts, dict):
+                raise RuntimeError(f"invalid source artifacts for source catalog record: {name}")
+            for artifact, fetch in artifacts.items():
                 _validate_fetch_record(f"{name}.{artifact}", fetch)
-            hashes = record.get("hashes") or {}
-            if not isinstance(hashes, dict) or not all(isinstance(value, str) for value in hashes.values()):
+            hashes = record.get("hashes", {})
+            if not isinstance(hashes, dict) or not all(isinstance(value, str) and value for value in hashes.values()):
                 raise RuntimeError(f"invalid dependent hashes for source catalog record: {name}")
             update = record.get("update")
-            if (
-                not isinstance(update, dict)
-                or update.get("kind") not in update_kinds
-                or update.keys() - update_allowed
-            ):
+            if not isinstance(update, dict) or update.get("kind") not in update_schema:
                 raise RuntimeError(f"invalid update strategy for source catalog record: {name}")
+            update_allowed, update_required = update_schema[update["kind"]]
+            if update.keys() - update_allowed or update_required - update.keys():
+                raise RuntimeError(f"invalid update strategy fields for source catalog record: {name}")
+            if "lockFiles" in update and (
+                not isinstance(update["lockFiles"], list)
+                or not all(isinstance(value, str) and value for value in update["lockFiles"])
+            ):
+                raise RuntimeError(f"invalid update lock files for source catalog record: {name}")
             targets[name] = {
                 "kind": update["kind"],
-                "version": record.get("version", record["source"]["args"].get("rev", "unversioned")),
+                "version": record.get("version", record["source"]["args"].get("rev", record["source"]["args"].get("tag", "unversioned"))),
                 "files": [str(path.relative_to(nix_dir))],
                 "source": "catalog",
             }
