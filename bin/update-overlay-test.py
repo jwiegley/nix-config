@@ -299,6 +299,7 @@ class UpdateInventoryTests(unittest.TestCase):
                     SimpleNamespace(version=None, dry_run=False),
                     SimpleNamespace(),
                     FakeNpmClient(),
+                    SimpleNamespace(),
                     FakeHashComputer(),
                     transaction,
                 )
@@ -324,6 +325,7 @@ class UpdateInventoryTests(unittest.TestCase):
                     SimpleNamespace(version=None, dry_run=False),
                     SimpleNamespace(),
                     failing_npm,
+                    SimpleNamespace(),
                     failing_hashes,
                     failing_transaction,
                 )
@@ -369,6 +371,7 @@ class UpdateInventoryTests(unittest.TestCase):
                     SimpleNamespace(version=None, dry_run=False),
                     github,
                     SimpleNamespace(),
+                    SimpleNamespace(),
                     hashes,
                     transaction,
                 )
@@ -377,6 +380,58 @@ class UpdateInventoryTests(unittest.TestCase):
             self.assertEqual(status, "updated")
             self.assertEqual(record["source"]["args"]["tag"], "v2.0.0")
             self.assertNotIn("rev", record["source"]["args"] )
+
+    def test_catalog_pypi_update_preserves_fetchpypi_arguments(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/ai.json"
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {
+                    "example": {
+                        "version": "1.0.0",
+                        "source": {
+                            "fetcher": "fetchPypi",
+                            "url": "https://pypi.org/project/example",
+                            "args": {
+                                "pname": "example",
+                                "version": "1.0.0",
+                                "hash": "sha256-old",
+                            },
+                        },
+                        "update": {"kind": "pypi-release", "package": "example"},
+                    }
+                },
+            }))
+            target = load_source_catalog(root)["example"]
+            pypi = SimpleNamespace(
+                get_release=lambda _package, _record, _requested=None: (
+                    "2.0.0",
+                    "https://files.pythonhosted.org/example-2.0.0.tar.gz",
+                    "sha256-new",
+                )
+            )
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_catalog_target(
+                    "example",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    pypi,
+                    SimpleNamespace(),
+                    transaction,
+                )
+            transaction.commit()
+            record = json.loads(path.read_text())["sources"]["example"]
+            self.assertEqual(status, "updated")
+            self.assertEqual(record["version"], "2.0.0")
+            self.assertEqual(record["source"]["args"]["version"], "2.0.0")
+            self.assertEqual(record["source"]["args"]["hash"], "sha256-new")
+            self.assertNotIn("url", record["source"]["args"] )
+            self.assertEqual(record["source"]["url"], "https://pypi.org/project/example")
 
     def test_manifest_and_cli_inventory_cover_hidden_update_targets(self):
         root = SCRIPT.parent.parent

@@ -13,6 +13,7 @@ Examples:
 
 import argparse
 import atexit
+import base64
 import json
 import os
 import re
@@ -508,6 +509,49 @@ class NpmRegistryClient:
         return version, integrity
 
 
+class PypiClient:
+    """Resolve the exact PyPI artifact selected by native fetcher arguments."""
+
+    def get_release(
+        self, package_name: str, record: dict, requested_version: Optional[str] = None
+    ) -> Optional[tuple[str, str, str]]:
+        try:
+            with urlopen(f"https://pypi.org/pypi/{quote(package_name, safe='')}/json", timeout=30) as response:
+                data = json.load(response)
+        except Exception as error:
+            print(f"  Error fetching PyPI metadata: {error}", file=sys.stderr)
+            return None
+
+        version = requested_version or data.get("info", {}).get("version")
+        if not version:
+            return None
+        source = record["source"]
+        args = source["args"]
+        old_version = record["version"]
+        if source["fetcher"] == "fetchPypi":
+            if args.get("format", "setuptools") == "wheel":
+                filename = (
+                    f"{args['pname']}-{version}-{args.get('python', 'py2.py3')}-"
+                    f"{args.get('abi', 'none')}-{args.get('platform', 'any')}.whl"
+                )
+            else:
+                filename = f"{args['pname']}-{version}.{args.get('extension', 'tar.gz')}"
+        else:
+            current_filename = Path(urlsplit(args["url"]).path).name
+            if current_filename.count(old_version) != 1:
+                return None
+            filename = current_filename.replace(old_version, version, 1)
+
+        artifact = next(
+            (item for item in data.get("releases", {}).get(version, []) if item.get("filename") == filename),
+            None,
+        )
+        if artifact is None or not artifact.get("digests", {}).get("sha256"):
+            return None
+        digest = base64.b64encode(bytes.fromhex(artifact["digests"]["sha256"])).decode()
+        return version, artifact["url"], f"sha256-{digest}"
+
+
 class HashComputer:
     """Compute Nix hashes for various package types."""
 
@@ -719,13 +763,14 @@ def _validate_fetch_record(name: str, source: dict) -> None:
 def _catalog_executor(record: dict) -> Optional[str]:
     update = record["update"]
     source = record["source"]
-    expected_fetcher = {
-        "github-commit": "fetchFromGitHub",
-        "github-release": "fetchFromGitHub",
-        "npm-release": "fetchurl",
-    }.get(update["kind"])
+    expected_fetchers = {
+        "github-commit": {"fetchFromGitHub"},
+        "github-release": {"fetchFromGitHub"},
+        "npm-release": {"fetchurl"},
+        "pypi-release": {"fetchPypi", "fetchurl"},
+    }.get(update["kind"], set())
     if (
-        expected_fetcher == source["fetcher"]
+        source["fetcher"] in expected_fetchers
         and update.get("policy", "automatic") == "automatic"
         and not update.get("artifacts")
         and set(record.get("hashes", {})) <= {"cargoHash", "npmDepsHash", "vendorHash"}
@@ -981,6 +1026,7 @@ def update_catalog_target(
     args,
     github_client: GitHubClient,
     npm_client: NpmRegistryClient,
+    pypi_client: PypiClient,
     hash_computer: HashComputer,
     transaction,
 ) -> str:
@@ -992,11 +1038,16 @@ def update_catalog_target(
     new_ref = None
     new_version = None
     new_hash = None
+    new_url = None
 
     if update["kind"] == "npm-release":
         candidate = npm_client.get_version(update["package"], args.version)
         if candidate:
             new_version, new_hash = candidate
+    elif update["kind"] == "pypi-release":
+        candidate = pypi_client.get_release(update["package"], record, args.version)
+        if candidate:
+            new_version, new_url, new_hash = candidate
     elif update["kind"] == "github-commit":
         if args.version:
             new_ref = args.version
@@ -1031,20 +1082,19 @@ def update_catalog_target(
     if new_version is None:
         print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
         return "failed"
-    if new_ref is None and update["kind"] == "npm-release":
+    if new_ref is None and update["kind"] in {"npm-release", "pypi-release"}:
         new_ref = new_version
     current_ref = source_args.get("tag", source_args.get("rev", old_version))
     if new_version == old_version and new_ref == current_ref:
         print(f"{Colors.GREEN}✓ up-to-date{Colors.RESET}")
         return "skipped"
 
-    if update["kind"] != "npm-release":
+    if update["kind"] not in {"npm-release", "pypi-release"}:
         new_hash = hash_computer.compute_src_hash(source_args["owner"], source_args["repo"], new_ref)
     if not new_hash:
         print(f"{Colors.RED}✗ hash failed{Colors.RESET}")
         return "failed"
 
-    new_url = None
     if update["kind"] == "npm-release":
         old_url = source_args["url"]
         if not old_version or old_url.count(old_version) != 1:
@@ -1065,6 +1115,12 @@ def update_catalog_target(
     if update["kind"] == "npm-release":
         source_args["url"] = new_url
         source["url"] = new_url
+    elif update["kind"] == "pypi-release":
+        if source["fetcher"] == "fetchurl":
+            source_args["url"] = new_url
+            source["url"] = new_url
+        else:
+            source_args["version"] = new_version
     else:
         ref_name = "tag" if "tag" in source_args else "rev"
         source_args[ref_name] = new_ref
@@ -1359,6 +1415,7 @@ Examples:
 
     github_client = GitHubClient()
     npm_client = NpmRegistryClient()
+    pypi_client = PypiClient()
     updater = OverlayUpdater()
     transaction = SourceTransaction()
     atexit.register(transaction.rollback_unless_committed)
@@ -1384,7 +1441,7 @@ Examples:
                 fail_count += 1
             continue
         status = update_catalog_target(
-            name, target, args, github_client, npm_client, catalog_hash_computer, transaction
+            name, target, args, github_client, npm_client, pypi_client, catalog_hash_computer, transaction
         )
         success_count += status == "updated"
         skipped_count += status == "skipped"
