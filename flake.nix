@@ -90,7 +90,7 @@
     };
 
     scripts = {
-      url = "github:jwiegley/scripts/be3ceb73c56303b0874d53be15fa8c0aed15c1ac";
+      url = "github:jwiegley/scripts/bee915f2ba745a76f682193e501a75d89e083d44";
       flake = false;
     };
 

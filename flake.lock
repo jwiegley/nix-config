@@ -7144,17 +7144,17 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1785029264,
-        "narHash": "sha256-qfVtBN00tJfuD92FjR3DqCenWxQb83GRe4UxfkNHYoQ=",
+        "lastModified": 1785184439,
+        "narHash": "sha256-LfaJxTi3ueFlMWDYt6trmRLIdoKED9tZUOmb9HcZGZc=",
         "owner": "jwiegley",
         "repo": "scripts",
-        "rev": "be3ceb73c56303b0874d53be15fa8c0aed15c1ac",
+        "rev": "bee915f2ba745a76f682193e501a75d89e083d44",
         "type": "github"
       },
       "original": {
         "owner": "jwiegley",
         "repo": "scripts",
-        "rev": "be3ceb73c56303b0874d53be15fa8c0aed15c1ac",
+        "rev": "bee915f2ba745a76f682193e501a75d89e083d44",
         "type": "github"
       }
     },
