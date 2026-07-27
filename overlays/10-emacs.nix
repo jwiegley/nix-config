@@ -436,7 +436,7 @@ let
            ("etc/schema" "etc/schema/*"))
         '';
         preBuild = ''
-          make autoloads ORGVERSION=9.8.7 GITVERSION=release_9.8.7
+          make autoloads ORGVERSION=${emacsSources.org.version} GITVERSION=release_${emacsSources.org.version}
         '';
       };
 

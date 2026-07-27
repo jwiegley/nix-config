@@ -445,6 +445,17 @@ class GitHubClient:
         except (OSError, ValueError, json.JSONDecodeError):
             return None
 
+    def get_default_branch(self, owner: str, repo: str) -> Optional[str]:
+        """Get the repository's declared default branch."""
+        try:
+            result = subprocess.run(
+                ["gh", "api", f"repos/{owner}/{repo}", "--jq", ".default_branch"],
+                capture_output=True, text=True
+            )
+            return result.stdout.strip() if result.returncode == 0 and result.stdout.strip() else None
+        except OSError:
+            return None
+
     def get_latest_commit(self, owner: str, repo: str, branch: str) -> Optional[tuple[str, str]]:
         """Get the latest commit SHA from exactly the declared branch."""
         try:
@@ -729,6 +740,16 @@ def _validate_fetch_record(name: str, source: dict) -> None:
         expected = f"https://github.com/{args['owner']}/{args['repo']}"
         if not _same_git_url(identity_url, expected):
             raise RuntimeError(f"GitHub identity does not match fetcher args: {name}")
+    elif fetcher == "fetchPypi":
+        parsed = urlsplit(identity_url)
+        parts = [part for part in parsed.path.split("/") if part]
+        if (
+            parsed.netloc.lower() != "pypi.org"
+            or len(parts) != 2
+            or parts[0] != "project"
+            or _normalized_package_name(parts[1]) != _normalized_package_name(args["pname"])
+        ):
+            raise RuntimeError(f"PyPI identity does not match fetcher args: {name}")
     elif fetcher in {"fetchgit", "fetchurl", "fetchzip", "fetchpatch"}:
         locators = {"url", "urls"} & args.keys()
         if len(locators) != 1:
@@ -827,6 +848,8 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             kind = update["kind"]
             source_args = record["source"]["args"]
             source_fetcher = record["source"]["fetcher"]
+            if source_fetcher == "fetchPypi" and record.get("version") != source_args["version"]:
+                raise RuntimeError(f"PyPI source version does not match catalog version: {name}")
             if kind == "github-commit" and (
                 source_fetcher != "fetchFromGitHub"
                 or "rev" not in source_args
@@ -1530,30 +1553,26 @@ Examples:
                 latest_tag = f"{info.version_prefix}{args.version}"
             new_version = extract_version_number(latest_tag, info.version_prefix)
         elif info.uses_commit:
-            # Package uses commit-based versioning, fetch latest commit
-            commit_info = github_client.get_latest_commit(info.owner, info.repo)
+            # Legacy regex targets follow the repository's declared default branch.
+            branch = github_client.get_default_branch(info.owner, info.repo)
+            commit_info = (
+                github_client.get_latest_commit(info.owner, info.repo, branch)
+                if branch
+                else None
+            )
             if not commit_info:
                 print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
                 fail_count += 1
                 continue
             new_full_rev, new_version = commit_info
-            latest_tag = new_full_rev  # Use full rev for hash computation
+            latest_tag = new_full_rev
         else:
             latest_tag = github_client.get_latest_release(info.owner, info.repo)
             if not latest_tag:
-                # Try falling back to commits
-                commit_info = github_client.get_latest_commit(info.owner, info.repo)
-                if commit_info:
-                    new_full_rev, new_version = commit_info
-                    latest_tag = new_full_rev
-                    info.uses_commit = True  # Switch to commit mode
-                else:
-                    print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
-                    fail_count += 1
-                    continue
-            else:
-                new_version = extract_version_number(latest_tag, info.version_prefix)
-
+                print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
+                fail_count += 1
+                continue
+            new_version = extract_version_number(latest_tag, info.version_prefix)
         if new_version == info.version:
             print(f"{Colors.GREEN}✓ up-to-date{Colors.RESET}")
             skipped_count += 1

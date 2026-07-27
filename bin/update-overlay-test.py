@@ -282,6 +282,26 @@ class UpdateInventoryTests(unittest.TestCase):
         empty_reason["update"]["reason"] = ""
         invalid.append(empty_reason)
 
+        bad_pypi_identity = {
+            "version": "1.0.0",
+            "source": {
+                "fetcher": "fetchPypi",
+                "url": "https://pypi.org/project/other",
+                "args": {
+                    "pname": "example",
+                    "version": "1.0.0",
+                    "hash": "sha256-source",
+                },
+            },
+            "update": {"kind": "pypi-release", "package": "example"},
+        }
+        invalid.append(bad_pypi_identity)
+
+        bad_pypi_version = copy.deepcopy(bad_pypi_identity)
+        bad_pypi_version["source"]["url"] = "https://pypi.org/project/example"
+        bad_pypi_version["version"] = "2.0.0"
+        invalid.append(bad_pypi_version)
+
         for record in invalid:
             with self.subTest(record=record):
                 with self.assertRaises(RuntimeError):
@@ -302,13 +322,15 @@ class UpdateInventoryTests(unittest.TestCase):
         try:
             client = GitHubClient()
             self.assertIsNone(client.get_latest_release("example", "project"))
+            self.assertIsNone(client.get_default_branch("example", "project"))
             self.assertIsNone(client.get_latest_commit("example", "project", "topic"))
         finally:
             subprocess.run = real_run
 
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls), 3)
         self.assertIn("releases/latest", calls[0][2])
-        self.assertIn("commits/topic", calls[1][2])
+        self.assertEqual("repos/example/project", calls[1][2])
+        self.assertIn("commits/topic", calls[2][2])
 
     def test_catalog_npm_update_rewrites_source_and_dependent_hash_atomically(self):
         with tempfile.TemporaryDirectory() as temp_dir:
