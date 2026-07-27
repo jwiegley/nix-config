@@ -644,13 +644,99 @@ only genuinely shared data: documents, `~/src`, mail. Home-manager then owns a
 fully host-local surface per machine, per-host divergence becomes correct rather
 than hazardous, and the four failure modes above are eliminated at the root.
 
-*Open verification, requested and pending:* whether home-manager writes anything
-meaningful **directly under `$HOME`, outside the XDG directories**, that would
-still collide — specifically `~/.nix-profile`, `~/.ssh`, `~/.gnupg`, dotfiles
-placed via `home.file`, and anything in `modules/home-environment.nix` that
-hardcodes `homeDirectory` rather than an XDG path. That last category is what
-would defeat the approach, so the design does not depend on this conclusion until
-it is confirmed.
+### REFUTED — the XDG-redirect architecture does not work
+
+The verification above came back and **defeats the position stated in the previous
+paragraph.** Recording it in place, because being wrong here cheaply is the entire
+point of having asked.
+
+**Home-manager's file linker is `$HOME`-anchored. Redirecting the XDG environment
+variables does not relocate where home-manager *links* managed config.** Verified
+from source:
+
+- `modules/files.nix`: `type = fileType "home.file" "{env}`HOME`" homeDirectory;`
+  Activation places files at `targetPath="$HOME/$relativePath"` and *errors* with
+  `Error installing file '<x>' outside $HOME`.
+- `modules/misc/xdg/default.nix`: `xdg.configFile` / `dataFile` / `stateFile` /
+  `cacheFile` are built **on top of** `home.file` by bare string concatenation —
+  `lib.mapAttrs' (name: file: lib.nameValuePair "${cfg.configHome}/${name}" file)`
+  — with no relativization and no assertion that `configHome` is under `$HOME`.
+
+**The fatal flaw in the proposal:** the XDG *environment variables* control where
+applications look at **runtime**; they do not change where home-manager **links**
+its files. Redirect the variable while HM still links into `~/.config`, and
+applications look host-local and never see HM's files at all. Decoupling the two
+breaks delivery rather than isolating it.
+
+**A hard core of managed files has no XDG escape whatsoever**, and lands in the
+shared NFS `$HOME` regardless of any XDG setting:
+
+| File | Escapable? |
+|---|---|
+| `~/.ssh/config` | **No** — `programs.ssh` writes `home.file.".ssh/config"`, fixed path, no relocation option |
+| `~/.gnupg/*` | Partly — `programs.gpg.homedir` exists, but still routed through `home.file` |
+| `.bashrc`, `.profile` | **No** |
+| `.zshrc` | Yes — `programs.zsh.dotDir` |
+| any `home.file` dotfile | **No** |
+| `~/.nix-profile` | Yes — moves to `${xdg.stateHome}/nix/profile` when `nix.useXdg = true` |
+
+**What XDG redirection *does* cleanly relocate**, and is still worth doing: HM's
+own mutable **state** — gcroots, profile, and generation links all follow the
+`XDG_STATE_HOME` *environment variable* — plus applications' own cache and state.
+
+*Undocumented, and deliberately not relied upon:* whether `xdg.configHome` can
+point outside `$HOME` at all (error versus misplacement). The module concatenates
+without a guard, but the underlying linker is `$HOME`-anchored; HM issue #3500 and
+Discourse #24018 show `xdg.configFile."../"` escapes broke and are unsupported.
+The decision below does not depend on resolving this.
+
+### The decision actually turns on whether generated files diverge
+
+Since the `$HOME`-direct files have no XDG escape, "no HM-managed config in the
+shared `$HOME`" is unreachable by XDG redirection. What matters instead is whether
+the four work machines produce **identical** or **divergent** generated files.
+
+**Option A — generated files identical (matches the user's own description:
+"configured more or less identically").** Keep the shared NFS `$HOME`. Make only
+HM *state* host-local by exporting `XDG_STATE_HOME` to a persistent host-local
+path (via login env / PAM, **not** the option) and setting `nix.useXdg = true` so
+the profile link follows. Identical config files and symlinks in a shared `$HOME`
+are harmless and idempotent, and the systemd-unit symlinks resolve because every
+host builds the *same* store paths. This is the minimal, low-risk fix.
+
+**Option B — generated files diverge.** Divergent files collide last-writer-wins,
+and unit symlinks point into store paths only the last writer built, giving
+dangling units and failed services. **XDG redirection cannot fix this.** The
+robust fix is the *inverse* of the refuted proposal: give each machine a
+**host-local `$HOME`** (or a host-local overlay of the HM-managed subtree) and
+mount or symlink the genuinely shared data — `~/src`, documents, mail — **from**
+NFS **into** it. Local `$HOME` plus NFS-mounted data is the long-standing way
+NFS-home environments keep per-host state clean, and `XDG_STATE_HOME` then sits
+naturally under the local `$HOME`.
+
+### Why this reframes the current design's "workaround"
+
+This inverts an earlier reading. The runtime `hostname` detection in
+`~/src/andoria/flake.nix` (the agent-deck wrapper, `agentDeckHostLocalState`,
+`hostLocalXdgCache`) is not merely a hack compensating for missing build-time
+identity — it is **load-bearing**. By resolving per-host paths at *runtime*, it
+keeps the *built derivation* byte-identical across all four machines, and that
+uniformity is exactly what makes the shared `$HOME` safe today.
+
+So the "obvious" fix of declaring four per-host configurations would **break a
+property the current design is quietly relying on**. Any migration must either
+preserve generated-file uniformity (Option A) or move to host-local `$HOME`
+(Option B). It must not simply add per-host configs on a shared `$HOME`.
+
+Assessed against the current code: every divergence in
+`~/src/andoria/flake.nix` today is runtime-derived, and `xdg.cacheHome` is
+`/var/tmp/jwiegley/xdg-cache` — keyed on `$USER`, not the host, so identical on all
+four. The current generated configuration is therefore uniform **by
+construction**, which places the fleet in Option A today.
+
+> **This is a genuine fork requiring the user's decision**, because Option B needs
+> a change to how `$HOME` is mounted on four work machines, which may not be under
+> the user's control. Recorded in the plan's open questions with a recommendation.
 
 ### systemd user lingering — an irreducibly imperative step
 
