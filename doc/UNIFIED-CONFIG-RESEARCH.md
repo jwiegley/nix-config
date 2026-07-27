@@ -79,6 +79,57 @@ definitively obsolete on this fleet.
 > everything — which is a check-scoping problem with known solutions, not a reason
 > to fragment the repository.
 
+### The `flake check` cost, measured — and why this fleet is already immune
+
+Since `nix flake check` cost is the only serious objection to consolidating eight
+hosts into one flake, it was measured rather than assumed. Two further scratch
+flakes were built on `hera`.
+
+**Test 1 — are host-configuration outputs forced at all?** With
+`homeConfigurations`, `darwinConfigurations`, and `nixosConfigurations` set to bare
+`throw`s alongside one passing check, `nix flake check --no-build` **failed**:
+`error: FORCED: darwinConfigurations`, raised "while evaluating an attribute for
+caching". So yes, these outputs are forced.
+
+**Test 2 — how deeply?** This is the question that decides the cost. Top-level
+attributes were made cheap valid attrsets, with only the *expensive* part behind a
+throw:
+
+```nix
+darwinConfigurations.hostA       = { config.system.build.toplevel = throw "DEEP: darwin toplevel"; };
+homeConfigurations."alice@hostA" = { activationPackage = throw "DEEP: hm activationPackage"; };
+nixosConfigurations.hostB        = { config.system.build.toplevel = throw "DEEP: nixos toplevel"; };
+```
+
+`nix flake check --no-build` **failed with `error: DEEP: hm activationPackage`** —
+a *nested* attribute. **`nix flake check` recurses into host-configuration outputs
+and evaluates the expensive closures.** So consolidating eight hosts genuinely
+would make a root-level `nix flake check` evaluate all eight system closures. The
+cost is real, not theoretical.
+
+**But this fleet's existing gates are already structured to avoid it**, which
+resolves the objection without any design change:
+
+- The `lefthook` pre-commit gate is `nix flake check ./config/ai --all-systems
+  --no-build --no-warn-dirty` — **scoped to the subflake**, and `config/ai/flake.nix`
+  declares **zero** host configurations (verified: no `darwinConfigurations`,
+  `nixosConfigurations`, or `homeConfigurations`). Consolidating hosts into the
+  *root* flake therefore cannot slow this hook at all.
+- The pre-push gate uses **targeted attribute builds** —
+  `nix build --no-link .#checks.aarch64-darwin.{agent-resources,agent-wrappers,ai-home-manager-contract,pi-gallery}`
+  plus `./build system` — not a root `nix flake check`.
+
+So the repository already practises the recommended pattern: narrow subflake checks
+for fast feedback, targeted attribute builds for the expensive gates, and no
+routine root-level `nix flake check`.
+
+> **Design rule, derived rather than assumed:** consolidation is safe *provided*
+> this discipline is preserved. The design must not introduce a root-level
+> `nix flake check` as a routine or pre-commit gate, and should state that
+> explicitly so the property is not lost later by someone "simplifying" the hooks.
+> `nix flake check` on the root remains useful as an occasional, deliberate,
+> full-fleet evaluation — just not on every commit.
+
 ### (a) Evaluating hosts you don't need — NOT a problem; no subflake required
 
 Flake outputs are a lazy attribute set. `darwin-rebuild switch --flake .#hera`
