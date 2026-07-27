@@ -30,82 +30,82 @@
     };
 
     git-all = {
-      url = "git+file:///Users/johnw/src/git-all";
+      url = "github:jwiegley/git-all/a3dc16f5a45dbd7fda347d9b58dd713b654a7031";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     gitlib = {
-      url = "git+file:///Users/johnw/src/gitlib?submodules=0";
+      url = "github:jwiegley/gitlib/119009b2cf1866e0c776f8e9ebcfed46f914d314?submodules=0";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     hakyll = {
-      url = "git+file:///Users/johnw/src/hakyll";
+      url = "github:jwiegley/hakyll/023b4124ab791e3b436b554434be42f2f86a2f7b";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     hours = {
-      url = "git+file:///Users/johnw/src/hours";
+      url = "github:jwiegley/hours/a5874f56f7c62ad841d8830176e9c4a54710f43a";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     pushme = {
-      url = "git+file:///Users/johnw/src/pushme";
+      url = "github:jwiegley/pushme/f8ea0cc7c47a7ea8e6d3755f58284b0b8a9ad42d";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     renamer = {
-      url = "git+file:///Users/johnw/src/renamer";
+      url = "github:jwiegley/renamer/971df26662ef4af621dafce1f9527c0c97c080b0";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     sizes = {
-      url = "git+file:///Users/johnw/src/sizes";
+      url = "github:jwiegley/sizes/821d3d5d4fd071ffd49d3a499a4140712ea610c9";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     trade-journal = {
-      url = "git+file:///Users/johnw/src/trade-journal";
+      url = "github:jwiegley/trade-journal/4531503f65cad5c7a744cc382188b71cf3fc21a1";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     una = {
-      url = "git+file:///Users/johnw/src/una";
+      url = "github:jwiegley/una/745f2efc7a9e9fe0981017eeff7500eaaf7fd320";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     gh-to-org = {
-      url = "git+file:///Users/johnw/src/gh-to-org";
+      url = "github:jwiegley/gh-to-org/4126e800315afabdaa5c5821e3c4fc54824bc123";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     obr = {
-      url = "git+file:///Users/johnw/src/obr";
+      url = "github:jwiegley/obr/fcbbce29aef9605e9e07c3031a013cbb64ee0c04";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     org2jsonl = {
-      url = "git+file:///Users/johnw/src/org2jsonl";
+      url = "github:jwiegley/org2jsonl/59521f99a490703d4d02f9b0f312a92ec9135ba8";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     scripts = {
-      url = "git+file:///Users/johnw/src/scripts";
+      url = "github:jwiegley/scripts/be3ceb73c56303b0874d53be15fa8c0aed15c1ac";
       flake = false;
     };
 
     git-scripts = {
-      url = "git+file:///Users/johnw/src/git-scripts";
+      url = "github:jwiegley/git-scripts/27614fb2b4937aab09ca2701e8dd0a0f7c760fb7";
       flake = false;
     };
 
     dirscan = {
-      url = "git+file:///Users/johnw/src/dirscan";
+      url = "github:jwiegley/dirscan/8e03e1bbd32d2f924deb858070f9c6a152e8e319";
       inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     emacs-src = {
-      url = "git+file:///Users/johnw/Databases/emacs";
+      url = "github:emacs-mirror/emacs/0f086c307c12b74aeedfba07cfe5b57ef2f99808";
       flake = false;
     };
 
@@ -115,12 +115,12 @@
     };
 
     stock-trader = {
-      url = "git+file:///Users/johnw/src/stock-trader";
+      url = "git+ssh://gitea/johnw/stock-trader.git?rev=51d7895348a44681d8a450d8e21a725278eecfe5";
       flake = false;
     };
 
     vulcan-crt = {
-      url = "file:///Users/johnw/.config/curl/vulcan-root-ca.crt";
+      url = "path:./config/certs";
       flake = false;
     };
   };

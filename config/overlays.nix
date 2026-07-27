@@ -13,7 +13,7 @@ let
   caOverlay = _final: prev: {
     ca-bundle-with-vulcan = prev.runCommand "ca-bundle-with-vulcan" { } ''
       mkdir -p $out/etc/ssl/certs
-      cat ${prev.cacert}/etc/ssl/certs/ca-bundle.crt ${vulcan-crt} \
+      cat ${prev.cacert}/etc/ssl/certs/ca-bundle.crt ${vulcan-crt}/vulcan-root-ca.crt \
         > $out/etc/ssl/certs/ca-bundle.crt
     '';
   };

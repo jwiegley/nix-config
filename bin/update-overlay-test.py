@@ -869,6 +869,21 @@ echo overlay-change >> overlays/ai/package.nix
             }
             self.assertEqual({path.name for path in logs.iterdir()}, expected_logs)
 
+    def test_root_inputs_do_not_reference_external_filesystems(self):
+        root = SCRIPT.parent.parent
+        flake_text = (root / "flake.nix").read_text()
+        self.assertNotIn("git+file:", flake_text)
+        self.assertNotRegex(flake_text, r"file:///|path:/")
+
+        lock = json.loads((root / "flake.lock").read_text())
+        for name, node_ref in lock["nodes"]["root"]["inputs"].items():
+            node_name = node_ref if isinstance(node_ref, str) else node_ref[0]
+            locked = lock["nodes"][node_name]["locked"]
+            locator = locked.get("url", locked.get("path", ""))
+            with self.subTest(input=name):
+                self.assertNotIn("file:///", locator)
+                self.assertFalse(locator.startswith("/"), locator)
+
     def test_root_consumes_portable_input_authority_transitively(self):
         root = SCRIPT.parent.parent
         root_lock = json.loads((root / "flake.lock").read_text())

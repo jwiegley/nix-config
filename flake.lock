@@ -826,15 +826,16 @@
       "locked": {
         "lastModified": 1779905182,
         "narHash": "sha256-ddGTzrFdc4+rdPr5l4tJcxc5l1eeNWTIWIWDLqRkIKU=",
-        "ref": "refs/heads/master",
+        "owner": "jwiegley",
+        "repo": "dirscan",
         "rev": "8e03e1bbd32d2f924deb858070f9c6a152e8e319",
-        "revCount": 45,
-        "type": "git",
-        "url": "file:///Users/johnw/src/dirscan"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/dirscan"
+        "owner": "jwiegley",
+        "repo": "dirscan",
+        "rev": "8e03e1bbd32d2f924deb858070f9c6a152e8e319",
+        "type": "github"
       }
     },
     "emacs-src": {
@@ -842,15 +843,16 @@
       "locked": {
         "lastModified": 1784368740,
         "narHash": "sha256-h7/imI+H117NztZXOpZcFVu9uVkeGk1w3M/XH9kmNI0=",
-        "ref": "refs/heads/master",
+        "owner": "emacs-mirror",
+        "repo": "emacs",
         "rev": "0f086c307c12b74aeedfba07cfe5b57ef2f99808",
-        "revCount": 182867,
-        "type": "git",
-        "url": "file:///Users/johnw/Databases/emacs"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/Databases/emacs"
+        "owner": "emacs-mirror",
+        "repo": "emacs",
+        "rev": "0f086c307c12b74aeedfba07cfe5b57ef2f99808",
+        "type": "github"
       }
     },
     "flake-compat": {
@@ -1359,15 +1361,16 @@
       "locked": {
         "lastModified": 1773692255,
         "narHash": "sha256-wlO0b9ZnM6x30tUkvuDwiL0YpK/6/Kh7npe+nWm3j0I=",
-        "ref": "refs/heads/main",
+        "owner": "jwiegley",
+        "repo": "gh-to-org",
         "rev": "4126e800315afabdaa5c5821e3c4fc54824bc123",
-        "revCount": 8,
-        "type": "git",
-        "url": "file:///Users/johnw/src/gh-to-org"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/gh-to-org"
+        "owner": "jwiegley",
+        "repo": "gh-to-org",
+        "rev": "4126e800315afabdaa5c5821e3c4fc54824bc123",
+        "type": "github"
       }
     },
     "git-ai": {
@@ -1406,15 +1409,16 @@
       "locked": {
         "lastModified": 1773726441,
         "narHash": "sha256-cuGdV2UHLeWYjqlKiOP6EVla1jj1Y0YtGQLA83wvP8M=",
-        "ref": "refs/heads/master",
+        "owner": "jwiegley",
+        "repo": "git-all",
         "rev": "a3dc16f5a45dbd7fda347d9b58dd713b654a7031",
-        "revCount": 50,
-        "type": "git",
-        "url": "file:///Users/johnw/src/git-all"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/git-all"
+        "owner": "jwiegley",
+        "repo": "git-all",
+        "rev": "a3dc16f5a45dbd7fda347d9b58dd713b654a7031",
+        "type": "github"
       }
     },
     "git-scripts": {
@@ -1422,15 +1426,16 @@
       "locked": {
         "lastModified": 1770177994,
         "narHash": "sha256-eMy5Rje0rOr6/GSfvNuK0aIdm3sAlCBdH0iDrg5J/R8=",
-        "ref": "refs/heads/master",
+        "owner": "jwiegley",
+        "repo": "git-scripts",
         "rev": "27614fb2b4937aab09ca2701e8dd0a0f7c760fb7",
-        "revCount": 279,
-        "type": "git",
-        "url": "file:///Users/johnw/src/git-scripts"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/git-scripts"
+        "owner": "jwiegley",
+        "repo": "git-scripts",
+        "rev": "27614fb2b4937aab09ca2701e8dd0a0f7c760fb7",
+        "type": "github"
       }
     },
     "gitlib": {
@@ -1447,17 +1452,16 @@
       "locked": {
         "lastModified": 1765582321,
         "narHash": "sha256-9/ZJNKVNK803zJ3YhAxIjoRVVCv9URosVUEZJajqmxk=",
-        "ref": "refs/heads/master",
+        "owner": "jwiegley",
+        "repo": "gitlib",
         "rev": "119009b2cf1866e0c776f8e9ebcfed46f914d314",
-        "revCount": 980,
-        "submodules": false,
-        "type": "git",
-        "url": "file:///Users/johnw/src/gitlib"
+        "type": "github"
       },
       "original": {
-        "submodules": false,
-        "type": "git",
-        "url": "file:///Users/johnw/src/gitlib"
+        "owner": "jwiegley",
+        "repo": "gitlib",
+        "rev": "119009b2cf1866e0c776f8e9ebcfed46f914d314",
+        "type": "github"
       }
     },
     "hackage": {
@@ -1963,15 +1967,16 @@
       "locked": {
         "lastModified": 1777496198,
         "narHash": "sha256-Jp/OI4mvH+2lBMMyxa/6Ouy0d6h4MgVxgvqLwKF5LN8=",
-        "ref": "refs/heads/master",
+        "owner": "jwiegley",
+        "repo": "hakyll",
         "rev": "023b4124ab791e3b436b554434be42f2f86a2f7b",
-        "revCount": 2124,
-        "type": "git",
-        "url": "file:///Users/johnw/src/hakyll"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/hakyll"
+        "owner": "jwiegley",
+        "repo": "hakyll",
+        "rev": "023b4124ab791e3b436b554434be42f2f86a2f7b",
+        "type": "github"
       }
     },
     "haskellNix": {
@@ -4892,15 +4897,16 @@
       "locked": {
         "lastModified": 1774901266,
         "narHash": "sha256-8Q17bFw7kI4aWUmJ+e1FaR6k7Rmr3wYSImSVvrX19c0=",
-        "ref": "refs/heads/master",
+        "owner": "jwiegley",
+        "repo": "hours",
         "rev": "a5874f56f7c62ad841d8830176e9c4a54710f43a",
-        "revCount": 189,
-        "type": "git",
-        "url": "file:///Users/johnw/src/hours"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/hours"
+        "owner": "jwiegley",
+        "repo": "hours",
+        "rev": "a5874f56f7c62ad841d8830176e9c4a54710f43a",
+        "type": "github"
       }
     },
     "hpc-coveralls": {
@@ -6565,15 +6571,16 @@
       "locked": {
         "lastModified": 1773692632,
         "narHash": "sha256-IB9aviyzBX9mxa0UbTI8o72D0gA21j4RMi2e6rbYnMA=",
-        "ref": "refs/heads/main",
+        "owner": "jwiegley",
+        "repo": "obr",
         "rev": "fcbbce29aef9605e9e07c3031a013cbb64ee0c04",
-        "revCount": 598,
-        "type": "git",
-        "url": "file:///Users/johnw/src/obr"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/obr"
+        "owner": "jwiegley",
+        "repo": "obr",
+        "rev": "fcbbce29aef9605e9e07c3031a013cbb64ee0c04",
+        "type": "github"
       }
     },
     "old-ghc-nix": {
@@ -6804,15 +6811,16 @@
       "locked": {
         "lastModified": 1773854790,
         "narHash": "sha256-mWeouJ5jYN5Cfk5ofb82uIyne7A9SMydpvGszeicHhI=",
-        "ref": "refs/heads/main",
+        "owner": "jwiegley",
+        "repo": "org2jsonl",
         "rev": "59521f99a490703d4d02f9b0f312a92ec9135ba8",
-        "revCount": 30,
-        "type": "git",
-        "url": "file:///Users/johnw/src/org2jsonl"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/org2jsonl"
+        "owner": "jwiegley",
+        "repo": "org2jsonl",
+        "rev": "59521f99a490703d4d02f9b0f312a92ec9135ba8",
+        "type": "github"
       }
     },
     "org2tc": {
@@ -6940,15 +6948,16 @@
       "locked": {
         "lastModified": 1782595559,
         "narHash": "sha256-Mz9tFaXAidtYSThs3OwtKUwnoEyfFCT39bB1If78giQ=",
-        "ref": "refs/heads/master",
+        "owner": "jwiegley",
+        "repo": "pushme",
         "rev": "f8ea0cc7c47a7ea8e6d3755f58284b0b8a9ad42d",
-        "revCount": 230,
-        "type": "git",
-        "url": "file:///Users/johnw/src/pushme"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/pushme"
+        "owner": "jwiegley",
+        "repo": "pushme",
+        "rev": "f8ea0cc7c47a7ea8e6d3755f58284b0b8a9ad42d",
+        "type": "github"
       }
     },
     "rag-client": {
@@ -6983,15 +6992,16 @@
       "locked": {
         "lastModified": 1774901269,
         "narHash": "sha256-qiWav1b3mmzwyt+T9KjMUXY/XZNN3Och3SWod35K7IY=",
-        "ref": "refs/heads/main",
+        "owner": "jwiegley",
+        "repo": "renamer",
         "rev": "971df26662ef4af621dafce1f9527c0c97c080b0",
-        "revCount": 133,
-        "type": "git",
-        "url": "file:///Users/johnw/src/renamer"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/renamer"
+        "owner": "jwiegley",
+        "repo": "renamer",
+        "rev": "971df26662ef4af621dafce1f9527c0c97c080b0",
+        "type": "github"
       }
     },
     "root": {
@@ -7136,15 +7146,16 @@
       "locked": {
         "lastModified": 1785029264,
         "narHash": "sha256-qfVtBN00tJfuD92FjR3DqCenWxQb83GRe4UxfkNHYoQ=",
-        "ref": "refs/heads/main",
+        "owner": "jwiegley",
+        "repo": "scripts",
         "rev": "be3ceb73c56303b0874d53be15fa8c0aed15c1ac",
-        "revCount": 1464,
-        "type": "git",
-        "url": "file:///Users/johnw/src/scripts"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/scripts"
+        "owner": "jwiegley",
+        "repo": "scripts",
+        "rev": "be3ceb73c56303b0874d53be15fa8c0aed15c1ac",
+        "type": "github"
       }
     },
     "sizes": {
@@ -7160,15 +7171,16 @@
       "locked": {
         "lastModified": 1784070824,
         "narHash": "sha256-X8nCS0EkrmUtFkS9+V76XI0DaaNvgDHPCaUxFeJB1SA=",
-        "ref": "refs/heads/master",
+        "owner": "jwiegley",
+        "repo": "sizes",
         "rev": "821d3d5d4fd071ffd49d3a499a4140712ea610c9",
-        "revCount": 97,
-        "type": "git",
-        "url": "file:///Users/johnw/src/sizes"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/sizes"
+        "owner": "jwiegley",
+        "repo": "sizes",
+        "rev": "821d3d5d4fd071ffd49d3a499a4140712ea610c9",
+        "type": "github"
       }
     },
     "stackage": {
@@ -7340,11 +7352,12 @@
         "rev": "51d7895348a44681d8a450d8e21a725278eecfe5",
         "revCount": 209,
         "type": "git",
-        "url": "file:///Users/johnw/src/stock-trader"
+        "url": "ssh://gitea/johnw/stock-trader.git"
       },
       "original": {
+        "rev": "51d7895348a44681d8a450d8e21a725278eecfe5",
         "type": "git",
-        "url": "file:///Users/johnw/src/stock-trader"
+        "url": "ssh://gitea/johnw/stock-trader.git"
       }
     },
     "systems": {
@@ -7630,15 +7643,16 @@
       "locked": {
         "lastModified": 1773881149,
         "narHash": "sha256-JswCDDWuICoAmtAiMHNWNqQm74kfFuwfVy/q8TF//CU=",
-        "ref": "refs/heads/master",
+        "owner": "jwiegley",
+        "repo": "trade-journal",
         "rev": "4531503f65cad5c7a744cc382188b71cf3fc21a1",
-        "revCount": 227,
-        "type": "git",
-        "url": "file:///Users/johnw/src/trade-journal"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/trade-journal"
+        "owner": "jwiegley",
+        "repo": "trade-journal",
+        "rev": "4531503f65cad5c7a744cc382188b71cf3fc21a1",
+        "type": "github"
       }
     },
     "translate-tool": {
@@ -7692,28 +7706,29 @@
       "locked": {
         "lastModified": 1773692812,
         "narHash": "sha256-WLkjWikI2xbPIoUcaA3LvqqMLMQRCejl2CnKbQyzrZ0=",
-        "ref": "refs/heads/master",
+        "owner": "jwiegley",
+        "repo": "una",
         "rev": "745f2efc7a9e9fe0981017eeff7500eaaf7fd320",
-        "revCount": 85,
-        "type": "git",
-        "url": "file:///Users/johnw/src/una"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/johnw/src/una"
+        "owner": "jwiegley",
+        "repo": "una",
+        "rev": "745f2efc7a9e9fe0981017eeff7500eaaf7fd320",
+        "type": "github"
       }
     },
     "vulcan-crt": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-Ka18IPs5a5bZJGw8OP3Wn3x58FegZEuzhihaNe/xslI=",
-        "type": "file",
-        "url": "file:///Users/johnw/.config/curl/vulcan-root-ca.crt"
+        "path": "./config/certs",
+        "type": "path"
       },
       "original": {
-        "type": "file",
-        "url": "file:///Users/johnw/.config/curl/vulcan-root-ca.crt"
-      }
+        "path": "./config/certs",
+        "type": "path"
+      },
+      "parent": []
     }
   },
   "root": "root",
