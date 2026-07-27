@@ -338,6 +338,94 @@ vps also uses **sops-nix** (`.sops.yaml`, `secrets.yaml`, and a git credential
 helper reading `/run/secrets/nix/git-credentials`), so sops-nix is already in use
 on **both** NixOS hosts — reinforcing it as the continuity choice.
 
+## F13 — URGENT: two hosts are armed for a hard eval failure on their next lock bump
+
+Surfaced by the analysis workflow, then verified independently here. This is the
+most actionable finding in the investigation and is worth acting on **before** any
+migration.
+
+Commit `a3cc3843` ("refactor(overlays): isolate platform and input ownership",
+2026-07-26) changed several overlays from two-level `final: prev:` functions to
+**three-level** `{ arg ? null, }: final: prev:` functions. Verified signatures at
+HEAD:
+
+| Overlay | Signature | Positional call |
+|---|---|---|
+| `30-misc-tools.nix` | `_final: prev:` | works |
+| `30-markless.nix` | `_final: prev:` | works |
+| `30-data-tools.nix` | `{ dirscan ? null, }: _final: prev:` | **breaks** |
+| `30-text-tools.nix` | `{ org2tc ? null, }: _final: prev:` | **breaks** |
+| `30-user-scripts.nix` | `{ scripts ? null, }: final: prev:` | **breaks** |
+| `30-git-tools.nix` | `{ gitScripts ? null, }: _final: prev:` | **breaks** |
+
+The three-level forms take a **strict** argument set with no `...`. Consumers that
+call these files *positionally* pass `final` — the entire package set — where
+`{ dirscan ? null, }` is expected, and Nix rejects it with
+`function called with unexpected argument`.
+
+**Armed call sites, verified:**
+
+- **vulcan** — `~/src/nixos/overlays/default.nix` cherry-picks positionally at
+  three now-incompatible sites: `30-data-tools.nix` (`tsvutils`),
+  `30-text-tools.nix` (`filetags`), `30-user-scripts.nix` (`nix-scripts`). Its two
+  calls into `30-misc-tools.nix` and `30-markless.nix` remain fine.
+- **vps** — `~/src/vps/overlays/default.nix:17-18` cherry-picks
+  `30-user-scripts.nix` positionally for `nix-scripts`, which *is* in johnw's
+  package list on that host.
+
+**Current lock positions (verified against this branch's history):**
+
+| Consumer | Locked `nix-config` rev | Relative to `a3cc3843` | Status |
+|---|---|---|---|
+| vulcan | `a36d3f51` | **9 commits before** | not yet broken; **breaks on next bump** |
+| vps | `1b71b192` | **19 commits before** | not yet broken; **breaks on next bump** |
+| andoria | `269b518e` | **at/after** | **unaffected** |
+
+**Why andoria is unaffected, and why that matters.** andoria is already *past* the
+breaking commit yet works fine, because it does not cherry-pick overlay files at
+all — it calls the maintained aggregator,
+`import "${inputs.nix-config}/config/overlays.nix" { inherit inputs; aiOverlay = ...; }`,
+which owns both the 00→30 ordering and the per-overlay argument sets
+(`config/overlays.nix:21-51`). This is a natural experiment: **the consumer using
+the supported entry point survived a breaking change to the internals; the two
+consumers reaching past it are armed to fail.** It is the strongest available
+evidence for the central thesis — that the fix is a stable public API, not more
+careful path interpolation.
+
+**Interim mitigation, independent of the migration:** point vulcan's and vps's
+overlay cherry-picks at `config/overlays.nix` as andoria already does, or pass the
+argument sets explicitly. Either removes the armed failure without waiting on any
+architectural work.
+
+Also verified: `nix-config` and `nix-config-ai` are currently locked to the **same**
+revision in all three consumers, so the F2/D4 drift hazard is real but has **not**
+manifested today.
+
+## F14 — The work identity does not exist; work hosts author commits as the personal identity
+
+Verified, and a live correctness issue rather than a stylistic one.
+
+`config/vars.nix:15-18` binds identity as `let` constants
+(`userName = "John Wiegley"`, `userEmail = "johnw@newartisans.com"`, plus
+`master_key` and `signing_key`). `config/git.nix:141-142` then assigns
+`name = userName; email = userEmail;` at **plain priority** — notable because the
+same file deliberately uses `lib.mkDefault` two lines later for `editor`
+(`:146`), and for `commit.gpgsign` (`:155`) and `credential.helper` (`:158`). So
+the identity is *not* overridable by a consumer's `mkDefault`; only `mkForce`
+would work.
+
+A grep across all three consumer repositories found **no** override of `user.email`
+or `user.name` for johnw/jwiegley anywhere. The only hits are unrelated: vulcan's
+`radicale` service identity, and vps's separate `srashidi` user configuration
+(which does parameterize its own email — demonstrating the pattern that johnw's
+config lacks).
+
+**Consequence:** the four work machines author git commits as
+`John Wiegley <johnw@newartisans.com>`. `jwiegley@positron.ai` exists only as a
+Fastmail *alias* in `config/email.nix:24`, not as a git identity. The fleet's second
+identity is therefore unexpressible today, which is exactly the parameterization
+gap R2 asks the design to close.
+
 ## Open questions requiring the user's decision
 
 **Q1 — NFS `$HOME` branch (user's stated preference recorded, not yet ratified).**
