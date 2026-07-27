@@ -59,3 +59,21 @@ Append-only durable learnings for the architecture-remediation Wiggum loop. Deci
 - `update-agents` no longer names retired inputs. Pull, signed commit, switch, push, and Homebrew are explicit; switch/push require commit; staging is limited to updater-owned paths.
 - `make update` now updates both locks and evaluates the portable boundary.
 - Verification: shellcheck/shfmt, Ruff, 7 updater tests, inventory contract, portable all-system evaluation, and four core AI contracts passed.
+
+## 2026-07-27 — WU2a fess corrections
+
+- Fess audit target: signed commit `233279de` (`refactor(updates): establish atomic package inventory`).
+- Auditor verdict: FAIL with seven findings; all accepted.
+- `update-agents` now snapshots and restores both locks and every changed tracked source on failed update/check, blocks switch/push unless a new signed commit exists, and is the sole owner used by `make update --all-inputs`.
+- Manifest expanded from 23 to 32 explicit targets, including eight pure shared inputs, six gallery lock files, adapter ledgers/tests, Nelisp Cargo lock, and the independent `ws` pin.
+- Inventory now distinguishes `inventoried` from `managed/executable`: 125 total targets, 101 executable (93 overlays + 8 pure inputs), 24 pending WU4 executors.
+- Duplicate overlay validation now rejects multiple updateable source definitions while allowing intentional later overrides such as `z3`.
+- Verification: shellcheck/shfmt, Ruff, Nix formatting/evaluation, 9 updater tests including full lock+overlay rollback, inventory counts/status, and four core contracts passed.
+- Per Wiggum, the fess-fix commit is not recursively audited.
+
+## 2026-07-27 — WU2a partner cleanup
+
+- Partner observation `.356Z` found that `bin/upgrade` still passed no-op legacy updater flags and could leave a dirty tree while continuing. Resolution: upgrade is fail-fast and invokes exactly `./bin/update-agents --commit`; tests reject appended switch/push/brew flags.
+- Partner observation `.362Z` found stale README claims against `233279de`; the in-progress fess correction already replaced them with accurate safe-default/inventory status.
+- Independent reviewer accepted the README fix and requested exact invocation testing for upgrade; that test now passes.
+- Full WU2a correction gate: shellcheck/shfmt, Ruff, Nix formatting/evaluation, 9 updater tests, inventory 125/101/24 contract, and four core checks PASS.

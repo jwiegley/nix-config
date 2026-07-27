@@ -131,12 +131,18 @@ class OverlayParser:
             and "tests" not in path.relative_to(self.overlays_dir).parts
         )
 
+    def find_package_owners(self) -> dict[str, list[Path]]:
+        """Return every discovered package name with all defining overlay files."""
+        owners: dict[str, list[Path]] = {}
+        for overlay_file in self._overlay_files():
+            for name in self._find_packages_in_file(overlay_file):
+                if name not in self.SKIP_PACKAGES:
+                    owners.setdefault(name, []).append(overlay_file)
+        return owners
+
     def find_all_packages(self) -> list[str]:
         """Find all package names defined in overlay files."""
-        packages = []
-        for overlay_file in self._overlay_files():
-            packages.extend(self._find_packages_in_file(overlay_file))
-        return sorted(set(packages) - self.SKIP_PACKAGES)
+        return sorted(self.find_package_owners())
 
     def _find_packages_in_file(self, file_path: Path) -> list[str]:
         """Find all package names defined in a single overlay file."""
@@ -630,11 +636,18 @@ def build_inventory(
     unsupported = []
     seen = set()
     for source in sources:
-        for name in source.parser.find_all_packages():
-            info = source.parser.find_package(name)
-            if info is None:
+        for name, owner_files in source.parser.find_package_owners().items():
+            definitions = [
+                info for path in owner_files
+                if (info := source.parser._parse_file_for_package(path, name)) is not None
+            ]
+            if len(definitions) > 1:
+                owners = [str(info.file_path.relative_to(nix_dir)) for info in definitions]
+                raise RuntimeError(f"duplicate overlay owners for {name}: {owners}")
+            if not definitions:
                 unsupported.append(f"{source.name}/{name}")
                 continue
+            info = definitions[0]
             if name in seen:
                 raise RuntimeError(f"duplicate update target: {name}")
             seen.add(name)
@@ -644,19 +657,24 @@ def build_inventory(
                 "kind": f"overlay-{info.source_type}",
                 "version": info.version,
                 "files": [str(info.file_path.relative_to(nix_dir))],
+                "inventoried": True,
                 "managed": True,
+                "executor": "update-overlay",
             })
     for name, target in explicit_targets.items():
         if name in seen:
             raise RuntimeError(f"duplicate manifest/overlay update target: {name}")
         seen.add(name)
+        executor = target.get("executor")
         packages.append({
             "name": name,
             "source": "manifest",
             "kind": target["kind"],
             "version": target.get("version", target.get("rev", "")),
             "files": target["files"],
-            "managed": True,
+            "inventoried": True,
+            "managed": executor is not None,
+            "executor": executor,
         })
     return {
         "schemaVersion": 1,
@@ -671,8 +689,11 @@ def print_inventory(inventory: dict, json_output: bool) -> None:
         return
     for package in inventory["packages"]:
         print(f"{package['name']}\t{package['kind']}\t{package['version']}")
+    managed = sum(package["managed"] for package in inventory["packages"])
+    pending = len(inventory["packages"]) - managed
     print(
-        f"{len(inventory['packages'])} managed update targets; "
+        f"{len(inventory['packages'])} inventoried targets; {managed} executable; "
+        f"{pending} pending executors; "
         f"{len(inventory['unsupportedOverlayAttributes'])} non-package overlay attributes"
     )
 

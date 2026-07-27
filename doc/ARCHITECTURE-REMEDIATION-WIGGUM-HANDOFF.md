@@ -19,16 +19,15 @@ Updated: 2026-07-26
 - 22 findings mapped to WU1–WU9.
 - Frozen Definition of Done, corrected work-unit prerequisites, authorization state, deployment matrix, and stop criteria written.
 - WU0 fleet baseline recorded: Hera `4f25975f` / HM 41; Clio `a36d3f5` / HM 220; shared-work `ae0156cd` / HM 192; Vulcan `a999d89b`.
-- Independent fess audit of `4f25975f` produced seven findings; all are addressed in the cleanup now pending commit.
-- Partner observation `2026-07-27T00:28:18.461Z` was valid; Agent Deck now uses `/tmp` at package/helper/tmux policy seams and focused checks pass.
+- Independent fess findings for `4f25975f`, `2ddca506`, and `205f4827` were accepted and resolved in signed follow-up commits.
+- Partner observations for Agent Deck socket persistence and sudo lock safety were resolved and independently reviewed PASS.
+- WU1 completed through `74ecc3a6`: root authority, safe command interfaces, prompt composition, and 2,571 lines of verified debris removed; unresolved security/Vulcan debt remains explicit.
 
 ## In progress
 
-- WU0 baseline gate passed: updater tests, portable all-system evaluation, four core AI contracts, and Darwin system build.
-- Partner observation batch is fully addressed and reviewed PASS; remove the untracked observation before cleanup commit.
-- WU1a operating interface commit `2ddca506` passed implementation gates; fess/partner corrections landed in `be781086`.
-- WU1 is complete through deletion fess-fix commit `74ecc3a6`; security/Vulcan debt reports remain explicitly live for later disposition.
-- WU2a manifest/inventory/atomic-rollback implementation and updater safety defaults pass focused/full gates and are pending a signed commit.
+- WU2a commit `233279de` established inventory/overlay rollback; all seven fess findings and two partner observations are fixed and pending one signed cleanup commit.
+- Inventory: 125 targets, 101 executable, 24 pending WU4 gallery/Anvil/fixed-input executors.
+- Repository-level lock/source rollback, signed-commit gating, duplicate-source detection, one update owner, fail-fast upgrade caller, and honest status pass focused/core gates.
 
 ## Authorization
 
@@ -38,7 +37,7 @@ Updated: 2026-07-26
 
 ## Remaining
 
-- WU1 through WU10 in the frozen plan.
+- Complete WU2 fess fixes and manifest executor work, then WU3 through WU10 in the frozen plan.
 
 ## Attempt counters
 
@@ -46,7 +45,7 @@ Updated: 2026-07-26
 |---|---:|---|
 | Baseline gate | 1 | PASS at `a36d3f51`: updater tests, portable evaluation, core AI contracts, Darwin build |
 | Workflow synthesis | 2 | Abandoned after demonstrated runtime/budget failures; replaced by frozen coordinator plan |
-| Current work-unit focused gate | 4 | WU2a PASS: shell/Ruff, 7 updater tests, inventory, portable/core contracts |
+| Current work-unit focused gate | 7 | WU2a fess/partner cleanup PASS: shell/Ruff, 9 tests, inventory, core contracts |
 | Current work-unit full gate | 0 | Not started |
 
 ## Resume exactly
@@ -55,7 +54,7 @@ Updated: 2026-07-26
 2. Probe Anvil and check modified buffers/status.
 3. Read direnv structurally; do not print secret values.
 4. Run the baseline commands from WU0.
-5. Record results and begin WU1 only if baseline is green or failures are classified pre-existing.
+5. Resume the current work unit named above; do not restart completed WU0/WU1 work.
 
 ## Stop/escalate state
 

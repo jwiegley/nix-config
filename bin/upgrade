@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 if [[ "$(uname -s)" == "Darwin" ]]; then
     sudo /bin/launchctl limit maxfiles 524288 524288
     ulimit -n 65536
@@ -23,7 +25,7 @@ hera)
     ulimit -n 65536
     cd ~/src/nix || exit
     update-and-pull
-    ./bin/update-agents --no-switch --no-brew
+    ./bin/update-agents --commit
     u hera update
     ./build system
     u hera upgrade-tasks sign # check

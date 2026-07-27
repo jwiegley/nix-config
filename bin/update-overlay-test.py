@@ -3,20 +3,25 @@
 import contextlib
 import io
 import json
+import os
+import re
 import runpy
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 
 SCRIPT = Path(__file__).with_name("update-overlay")
+UPDATE_AGENTS = Path(__file__).with_name("update-agents")
 MODULE = runpy.run_path(str(SCRIPT))
 OverlayParser = MODULE["OverlayParser"]
 OverlayUpdater = MODULE["OverlayUpdater"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
+build_inventory = MODULE["build_inventory"]
 
 VENDOR_HASH = "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
 HELPER_LINE = "  buildGoHelper = prev.buildGoModule.override { go = prev.go; };"
@@ -133,8 +138,16 @@ class UpdateInventoryTests(unittest.TestCase):
             "pi-subagentura",
             "pi-web-access",
             "rust-overlay",
+            "ws",
+            "git-ai",
+            "llm-agents",
+            "translate-tool",
         }
         self.assertTrue(required <= manifest.keys())
+        self.assertIn("packages/pi-gallery/locks/pi-lens-package-lock.json", manifest["pi-lens"]["files"])
+        self.assertIn("config/ai/catalog.nix", manifest["pi-mcp-adapter"]["files"])
+        self.assertIn("packages/anvil-mcp/Cargo.lock", manifest["nelisp"]["files"])
+        self.assertEqual(manifest["ws"]["package"], "ws")
 
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "--inventory", "--json"],
@@ -144,14 +157,31 @@ class UpdateInventoryTests(unittest.TestCase):
             cwd=root,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        inventory = json.loads(result.stdout)
+        try:
+            inventory = json.loads(result.stdout)
+        except json.JSONDecodeError as error:
+            self.fail(f"inventory returned invalid JSON: {error}")
         names = [item["name"] for item in inventory["packages"]]
         self.assertEqual(len(names), len(set(names)))
         self.assertTrue(required <= set(names))
-        self.assertTrue(all(item["managed"] for item in inventory["packages"]))
+        self.assertTrue(all(item["inventoried"] for item in inventory["packages"]))
+        by_name = {item["name"]: item for item in inventory["packages"]}
+        self.assertTrue(by_name["git-ai"]["managed"])
+        self.assertEqual(by_name["git-ai"]["executor"], "update-agents")
+        self.assertFalse(by_name["pi-lens"]["managed"])
+        self.assertIsNone(by_name["pi-lens"]["executor"])
         for item in inventory["packages"]:
             for path in item["files"]:
                 self.assertTrue((root / path).is_file(), (item["name"], path))
+
+    def test_inventory_rejects_duplicate_overlay_owners(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "one.nix").write_text(OVERLAY)
+            (root / "two.nix").write_text(OVERLAY)
+            source = SimpleNamespace(name="test", parser=OverlayParser(root))
+            with self.assertRaisesRegex(RuntimeError, "duplicate overlay owners for actual"):
+                build_inventory([source], {}, root)
 
     def test_source_transaction_rolls_back_and_commit_preserves(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -214,6 +244,67 @@ class UpdateInventoryTests(unittest.TestCase):
 
 
 class IntegratedWorkflowTests(unittest.TestCase):
+    def test_update_agents_rolls_back_failed_lock_and_source_transaction(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "repo"
+            fake_bin = Path(temp_dir) / "bin"
+            (root / "config/ai").mkdir(parents=True)
+            (root / "overlays/ai").mkdir(parents=True)
+            fake_bin.mkdir()
+            for relative in (
+                "flake.lock",
+                "config/ai/flake.lock",
+                "overlays/ai/package.nix",
+            ):
+                path = root / relative
+                path.write_text(f"original {relative}\n")
+
+            def executable(name, text):
+                path = fake_bin / name
+                path.write_text(text)
+                path.chmod(0o700)
+
+            executable("nix", """#!/usr/bin/env bash
+set -euo pipefail
+if [[ $1 == flake && $2 == update ]]; then
+  if [[ ${3:-} == --flake ]]; then
+    echo portable-change >> config/ai/flake.lock
+  else
+    echo root-change >> flake.lock
+  fi
+elif [[ $1 == flake && $2 == check ]]; then
+  exit 23
+fi
+""")
+            executable("python", """#!/usr/bin/env bash
+set -euo pipefail
+echo overlay-change >> overlays/ai/package.nix
+""")
+            executable("nixfmt", "#!/usr/bin/env bash\nexit 0\n")
+
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(
+                ["git", "-C", str(root), "-c", "user.name=Test",
+                 "-c", "user.email=test@example.invalid", "commit", "-qm", "baseline"],
+                check=True,
+            )
+            env = {
+                **os.environ,
+                "NIX_CONFIG_DIR": str(root),
+                "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            }
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)], capture_output=True, text=True, env=env, check=False
+            )
+            self.assertEqual(result.returncode, 23)
+            self.assertIn("rolled back incomplete source transaction", result.stderr)
+            status = subprocess.run(
+                ["git", "-C", str(root), "status", "--porcelain"],
+                capture_output=True, text=True, check=True,
+            )
+            self.assertEqual(status.stdout, "")
+
     def test_active_commands_have_one_repository_update_transaction(self):
         root = SCRIPT.parent.parent
         update_agents = (root / "bin" / "update-agents").read_text()
@@ -235,15 +326,15 @@ class IntegratedWorkflowTests(unittest.TestCase):
                 self.assertNotIn(retired, active)
 
         self.assertIn('nix flake update "${ai_inputs[@]}"', update_agents)
-        self.assertNotIn("    nix flake update\n", update_agents)
         for required_input in (
-            "bigpowers",
             "git-ai",
             "llm-agents",
+            "mcp-remote",
             "mcp-servers-nix",
-            "pi-btw",
-            "pi-mcp-adapter",
-            "pi-subagentura",
+            "pal-mcp-server",
+            "pi-openai-server-compaction",
+            "pi-quiet",
+            "translate-tool",
         ):
             with self.subTest(required_input=required_input):
                 self.assertIn(required_input, update_agents)
@@ -254,13 +345,17 @@ class IntegratedWorkflowTests(unittest.TestCase):
         self.assertNotIn("\n    rust-overlay\n", update_agents)
         for manifest_only in (
             "agent-browser-source",
+            "bigpowers",
             "pi-agent-browser-native",
             "pi-artifacts",
             "pi-dynamic-workflows",
             "pi-hashline-edit-pro",
             "pi-insights",
             "pi-lens",
+            "pi-mcp-adapter",
+            "pi-subagentura",
             "pi-web-access",
+            "ponytail",
         ):
             with self.subTest(manifest_only=manifest_only):
                 self.assertNotIn(f"\n    {manifest_only}\n", update_agents)
@@ -276,7 +371,28 @@ class IntegratedWorkflowTests(unittest.TestCase):
         self.assertIn("--switch/--push require --commit", update_agents)
         self.assertNotIn("git -C \"$repo\" add -A", update_agents)
         self.assertNotIn("commit_and_push_if_changed", update_agents)
-        self.assertIn("nix flake update --flake ./config/ai", makefile)
+        self.assertIn("bin/update-agents --all-inputs --brew", makefile)
+        self.assertIn("if [[ $run_all_inputs == true ]]", update_agents)
+        self.assertIn("        nix flake update\n", update_agents)
+        manifest = load_update_manifest(root)
+        expected_inputs = {
+            name for name, target in manifest.items()
+            if target.get("executor") == "update-agents"
+        }
+        block = re.search(r"ai_inputs=\((.*?)\n\)", update_agents, re.DOTALL)
+        if block is None:
+            self.fail("update-agents has no ai_inputs array")
+        declared_inputs = {
+            line.strip() for line in block.group(1).splitlines() if line.strip()
+        }
+        self.assertEqual(declared_inputs, expected_inputs)
+        self.assertIn("transaction_baseline=", update_agents)
+        self.assertIn("trap rollback_transaction EXIT", update_agents)
+        self.assertNotIn('commit_if_changed "$config_dir" "Update AI agents" || true', update_agents)
+        self.assertIn("refusing external action without a newly signed commit", update_agents)
+        self.assertIn("set -euo pipefail", upgrade)
+        self.assertRegex(upgrade, r"(?m)^\s*\./bin/update-agents --commit\s*$")
+        self.assertNotIn("./bin/update-agents --no-switch --no-brew", upgrade)
 
 
 if __name__ == "__main__":

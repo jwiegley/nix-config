@@ -2,6 +2,7 @@
 
 set -euo pipefail
 
+run_all_inputs=false
 run_pull=false
 run_commit=false
 run_switch=false
@@ -10,12 +11,13 @@ run_brew=false
 
 usage() {
     cat <<'EOF'
-usage: update-agents [--pull] [--commit] [--switch] [--push] [--brew]
+usage: update-agents [--all-inputs] [--pull] [--commit] [--switch] [--push] [--brew]
 
 Update integrated AI inputs, both repository locks, and local overlays.
 By default, leave reviewed working-tree changes without external side effects.
 
 Options:
+  --all-inputs  Update every root and portable flake input
   --pull       Fast-forward the clean repository before updating
   --commit     Create one signed commit of updater-owned paths
   --switch     Switch the host after a successful signed commit
@@ -28,6 +30,9 @@ EOF
 
 while (($#)); do
     case $1 in
+    --all-inputs)
+        run_all_inputs=true
+        ;;
     --pull)
         run_pull=true
         ;;
@@ -69,30 +74,17 @@ else
 fi
 
 ai_inputs=(
-    bigpowers
     git-ai
     llm-agents
     mcp-remote
     mcp-servers-nix
     pal-mcp-server
-    pi-btw
-    pi-mcp-adapter
     pi-openai-server-compaction
     pi-quiet
-    pi-subagentura
-    ponytail
     translate-tool
 )
 
 brew_pid=
-
-if [[ $run_brew == true ]] && command -v brew >/dev/null 2>&1; then
-    (
-        brew update
-        brew upgrade --greedy --yes
-    ) &>/tmp/brew.log &
-    brew_pid=$!
-fi
 
 require_clean() {
     local repo=$1
@@ -122,6 +114,23 @@ commit_if_changed() {
         config/ai/bigpowers-resources.nix
     git -C "$repo" commit -S -m "$message"
     return 0
+}
+
+rollback_transaction() {
+    if [[ ${transaction_complete:-false} == true || -z ${transaction_baseline:-} ]]; then
+        return
+    fi
+
+    while IFS= read -r -d '' path; do
+        mkdir -p "$config_dir/$(dirname "$path")"
+        if git -C "$config_dir" cat-file -e "$transaction_baseline:$path" 2>/dev/null; then
+            git -C "$config_dir" show "$transaction_baseline:$path" >"$config_dir/$path"
+        else
+            rm -f -- "$config_dir/$path"
+        fi
+    done < <(git -C "$config_dir" diff --name-only -z "$transaction_baseline" --)
+    git -C "$config_dir" read-tree "$transaction_baseline"
+    echo "update-agents: rolled back incomplete source transaction" >&2
 }
 
 with_nixos_build_lock() {
@@ -154,18 +163,50 @@ if [[ $run_switch == true || $run_push == true ]] && [[ $run_commit != true ]]; 
     exit 2
 fi
 
+transaction_baseline=$(git -C "$config_dir" rev-parse HEAD)
+transaction_complete=false
+trap rollback_transaction EXIT
+
+if [[ $run_brew == true ]] && command -v brew >/dev/null 2>&1; then
+    (
+        brew update
+        brew upgrade --greedy --yes
+    ) &>/tmp/brew.log &
+    brew_pid=$!
+fi
+
 (
     cd "$config_dir"
-    nix flake update "${ai_inputs[@]}"
-    nix flake update --flake ./config/ai "${ai_inputs[@]}"
+    if [[ $run_all_inputs == true ]]; then
+        nix flake update
+        nix flake update --flake ./config/ai
+    else
+        nix flake update "${ai_inputs[@]}"
+        nix flake update --flake ./config/ai "${ai_inputs[@]}"
+    fi
     python bin/update-overlay --all --overlays-dir overlays/ai
-    nix run .#format
+    mapfile -t changed_nix < <(git diff --name-only -- '*.nix')
+    if ((${#changed_nix[@]})); then
+        nixfmt "${changed_nix[@]}"
+    fi
     nix flake check ./config/ai --all-systems --no-build
 )
 
+commit_created=false
 if [[ $run_commit == true ]]; then
-    commit_if_changed "$config_dir" "Update AI agents" || true
+    if commit_if_changed "$config_dir" "Update AI agents"; then
+        commit_created=true
+    else
+        echo "update-agents: no changes; no signed commit created"
+    fi
 fi
+
+if [[ $run_switch == true || $run_push == true ]] && [[ $commit_created != true ]]; then
+    echo "update-agents: refusing external action without a newly signed commit" >&2
+    exit 1
+fi
+
+transaction_complete=true
 
 if [[ $run_switch == true ]]; then
     if [[ -d /etc/srp-next ]]; then
