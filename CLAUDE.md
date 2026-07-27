@@ -5,9 +5,7 @@ This file provides guidance to coding agents working in this repository.
 ## Start here
 
 1. Read `README.md` and `doc/ARCHITECTURE.md`.
-2. Read the active plan/handoff named by the task. For architecture remediation, use:
-   - `doc/ARCHITECTURE-REMEDIATION-WIGGUM-PLAN.md`
-   - `doc/ARCHITECTURE-REMEDIATION-WIGGUM-HANDOFF.md`
+2. Read the active work item named by the task. Architecture remediation is tracked exclusively in [GitHub issue #15](https://github.com/jwiegley/nix-config/issues/15).
 3. Confirm `git status` and load the current direnv environment.
 4. Use Anvil when advertised; its dedicated backend does not prove a separate interactive Emacs has no modified buffers.
 

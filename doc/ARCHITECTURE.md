@@ -72,7 +72,7 @@ Nix owns generated leaves, not mutable roots. Auth, history, sessions, caches, r
 
 `config/overlays.nix` is the full-host overlay authority. It lists four phases explicitly: foundation, optional Vulcan CA, feature packages, and AI packages. Darwin pins and repairs are wrapped at the composition boundary, while the cross-platform Eask package has its own overlay. Input-consuming overlays are factories receiving only their declared sources; flake inputs are never published through `pkgs.inputs`. Tests require every numbered root and AI overlay to appear exactly once in its manifest and compare Darwin-only package behavior with stock nixpkgs on both Linux systems.
 
-Package selection is explicit. `config/packages.nix` allows only named source-project inputs; package-shaped infrastructure inputs cannot enter a user profile. Hera-only Agent Deck and Fractal packages are selected by their owning Home Manager modules. `packages/ai-package-policy.nix` owns shared AI capability gates and optional package groups. `packages/pi-gallery/manifest.nix` owns the immutable gallery's member identity, source, version, extension, skills, projection, and registration order.
+Package selection is explicit. `config/packages.nix` allows only named source-project inputs; package-shaped infrastructure inputs cannot enter a user profile. Agent Deck, Plasma Fractal, and Plasma Wiki remain installed on every profile where they were previously available, but their owning Home Manager modules make that selection explicit. Only the Agent Deck Discord bridge and Hera-specific Fractal wrappers/skill projections are Hera-only. `packages/ai-package-policy.nix` owns shared AI capability gates and optional package groups. `packages/pi-gallery/manifest.nix` owns the immutable gallery's member identity, source, version, extension, skills, projection, and registration order.
 
 Package rules:
 
@@ -111,4 +111,4 @@ Names must represent distinct evidence. A coverage/fuzz/memory/soak label may ex
 
 ## Current remediation
 
-The frozen implementation plan is `ARCHITECTURE-REMEDIATION-WIGGUM-PLAN.md`; resume state is `ARCHITECTURE-REMEDIATION-WIGGUM-HANDOFF.md`.
+[GitHub issue #15](https://github.com/jwiegley/nix-config/issues/15) is the sole task list, progress log, evidence record, and handoff authority for the 2026 architecture remediation.

@@ -56,9 +56,9 @@ System and Home Manager switches are owned by each authoritative checkout. Build
 | `packages/` | Package implementations, immutable Pi gallery, and Anvil runtime |
 | `test/` | Root, portable, wrapper, renderer, and activation contracts |
 | `bin/` | Operator and maintenance commands |
-| `doc/` | Current architecture, frozen plans/handoffs, and historical evidence |
+| `doc/` | Durable architecture and historical evidence |
 
-See [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) for ownership and data flow. Active remediation state is in [`doc/ARCHITECTURE-REMEDIATION-WIGGUM-HANDOFF.md`](doc/ARCHITECTURE-REMEDIATION-WIGGUM-HANDOFF.md).
+See [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) for ownership and data flow. Architecture remediation status, task lists, evidence, and handoff state live in [GitHub issue #15](https://github.com/jwiegley/nix-config/issues/15).
 
 ## Safety
 
