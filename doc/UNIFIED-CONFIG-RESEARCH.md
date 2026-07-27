@@ -309,11 +309,94 @@ under-documented territory.
   absent does it fall back to a hash-named dir in the home directory, which is the
   classic NFS breakage. (trustica.cz 2024-12-19; `wiki.gnupg.org/NFS`)
 
-> A targeted follow-up is in flight to establish whether `xdg.stateHome` set as an
-> *option* actually relocates home-manager's own gcroot and profile, or whether the
-> activation script reads the *environment's* `$XDG_STATE_HOME` instead — which
-> would mean per-host isolation cannot be purely declarative. Design decisions
-> depending on this are deferred until answered.
+### Resolved from source, 2026-07-27 — the environment is authoritative, not the option
+
+Read directly from the pinned home-manager CLI
+(`home-manager/home-manager`, rev `deeb6b7eb7e0c44ae1819c051ce175bd92a85100`,
+which is what this fleet's `flake.lock` pins), lines 157-176:
+
+```bash
+declare -r globalNixStateDir="${NIX_STATE_DIR:-/nix/var/nix}"
+declare -r globalProfilesDir="$globalNixStateDir/profiles/per-user/$USER"
+declare -r globalGcrootsDir="$globalNixStateDir/gcroots/per-user/$USER"
+
+declare -r stateHome="${XDG_STATE_HOME:-$HOME/.local/state}"
+declare -r userNixStateDir="$stateHome/nix"
+
+declare -gr HM_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/home-manager"
+declare -gr HM_STATE_DIR="$stateHome/home-manager"
+declare -gr HM_GCROOT_LEGACY_PATH="$globalGcrootsDir/current-home"
+
+if [[ -d $userNixStateDir/profiles ]]; then
+    declare -gr HM_PROFILE_DIR="$userNixStateDir/profiles"
+elif [[ -d $globalProfilesDir ]]; then
+    declare -gr HM_PROFILE_DIR="$globalProfilesDir"
+else
+    _iError 'Could not find suitable profile directory, tried %s and %s' ...
+```
+
+**1. Setting `xdg.stateHome` as a home-manager option does NOT relocate
+home-manager's own state.** `HM_STATE_DIR` and `HM_PROFILE_DIR` derive from
+`stateHome="${XDG_STATE_HOME:-$HOME/.local/state}"` inside the CLI *shell script*,
+resolved before and independently of Nix evaluation. The chicken-and-egg concern
+was correct.
+
+**2. The data flow is environment → option, not option → state.** At lines 386-387
+the CLI *injects* the variable into the generated configuration:
+
+```bash
+if [[ -v XDG_STATE_HOME && $XDG_STATE_HOME != "$HOME/.local/state" ]]; then
+    xdgVars="$xdgVars  xdg.stateHome = \"$XDG_STATE_HOME\";$nl"
+```
+
+That is conclusive: `$XDG_STATE_HOME` is the source of truth and the option is
+downstream of it. **Per-host state isolation therefore cannot be purely
+declarative** — the environment variable must be set before `home-manager switch`
+runs. Any design that relies on `xdg.stateHome` alone is broken.
+
+**3. Mitigating detail — the legacy gcroot does NOT collide.**
+`HM_GCROOT_LEGACY_PATH` lives under `$globalNixStateDir`
+(`/nix/var/nix/gcroots/per-user/$USER`), a *system* path that is host-local on
+each machine and not in `$HOME`. So the specific "GC deletes another host's live
+paths" fear is **not** triggered through this path. This is materially less
+alarming than the deepwiki summary implies.
+
+**4. The real hazard is worse in kind, though: `HM_PROFILE_DIR` selection is
+stateful and order-dependent.** The `if [[ -d ... ]]` chain prefers
+`$stateHome/nix/profiles` **only when that directory already exists**, otherwise
+falling back to the host-local `/nix/var/nix/profiles/per-user/$USER`. On four
+machines sharing one NFS `$HOME`:
+
+- If `~/.local/state/nix/profiles` does **not** exist, each machine independently
+  uses its own host-local `/nix/var/nix/profiles/per-user/$USER` — **no collision**.
+- The moment **any one** machine creates `~/.local/state/nix/profiles` in the
+  shared home, **all four** silently switch onto that single NFS profile
+  directory — and then share one sequentially-numbered generation series.
+
+So the collision is not a constant condition but a **latent trap armed by a
+directory appearing in the shared home**, with no error and no warning at the
+moment the behaviour changes for every host at once. That is worse than a
+permanent collision, because it is invisible until it bites. This must be an
+explicit, asserted invariant in the design, not left to chance.
+
+**5. Per-host config selection is well supported** (lines 205-218):
+
+```bash
+local name="$USER"
+for n in "$USER@$(hostname -f)" "$USER@$(hostname)" "$USER@$(hostname -s)"; do
+    if [[ "$(nix eval "$flake#homeConfigurations" --apply "x: x ? \"$n\"")" == "true" ]]; then
+        name="$n"
+    fi
+done
+```
+
+It probes FQDN, then `hostname`, then short name, defaulting to bare `$USER`.
+Note the loop has **no `break`**, so the *last* successful match wins — meaning
+`$USER@$(hostname -s)` effectively takes precedence. Declaring
+`homeConfigurations."jwiegley@andoria-t2"` and siblings will be auto-selected on
+each machine with no wrapper needed. This confirms replacing the single hardcoded
+`hostname = "andoria-08"` with four real per-host configurations is the
+well-supported path.
 
 ---
 
