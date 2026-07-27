@@ -537,6 +537,96 @@ single-user `/nix/store` sharing, "nix-env is an anti-pattern here"), Discourse
 > safe pattern.** The design must therefore treat this as an invariant it asserts
 > and tests itself, not as a configuration it can rely on upstream to keep working.
 
+### The systemd-unit collision — a trap inside the obvious fix
+
+This is the most consequential single finding, because it invalidates the naive
+version of the recommendation above.
+
+Home-manager's generated systemd **user units** live under
+`~/.config/systemd/user/` — on the NFS-shared `$HOME` — as **symlinks into the
+host-local `/nix` store**. Each machine has its own `/nix`.
+
+- **Today this works by accident of uniformity.** All four work machines build the
+  *one* `homeConfigurations.jwiegley` derivation, so those symlinks resolve to
+  identical store paths and every host can follow them.
+- **Adding four per-host configurations breaks it.** Each host's activation would
+  write `~/.config/systemd/user/*.service` as last-writer-wins symlinks into *its
+  own* store paths — which the other three hosts may never have built. The result
+  is dangling unit symlinks and user services that fail to load on whichever hosts
+  did not activate last.
+
+So **per-host divergence is not achievable by adding per-host configurations
+alone.** The shared `$HOME` defeats it at the config layer, not just the state
+layer. This is a trap in the otherwise-correct "declare four `jwiegley@<host>`
+attributes" fix, and any migration must handle both together or it will regress
+working services.
+
+**Consequent architectural position.** Treat the NFS `$HOME` as a **data** home,
+not a **config** home. Redirect all four XDG base directories —
+`XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME` — to
+host-local *persistent* storage via the environment, and let the NFS `$HOME` carry
+only genuinely shared data: documents, `~/src`, mail. Home-manager then owns a
+fully host-local surface per machine, per-host divergence becomes correct rather
+than hazardous, and the four failure modes above are eliminated at the root.
+
+*Open verification, requested and pending:* whether home-manager writes anything
+meaningful **directly under `$HOME`, outside the XDG directories**, that would
+still collide — specifically `~/.nix-profile`, `~/.ssh`, `~/.gnupg`, dotfiles
+placed via `home.file`, and anything in `modules/home-environment.nix` that
+hardcodes `homeDirectory` rather than an XDG path. That last category is what
+would defeat the approach, so the design does not depend on this conclusion until
+it is confirmed.
+
+### systemd user lingering — an irreducibly imperative step
+
+Both secret modules decrypt via a systemd **user** service and place plaintext in
+`$XDG_RUNTIME_DIR`, so availability is bounded by whether the user systemd manager
+is running and `/run/user/UID` exists.
+
+- Per `pam_systemd(8)` (systemd 261~rc1): `/run/user/$UID` is created at login,
+  and "if the last concurrent session of a user ends, the user runtime directory
+  `/run/user/$UID` and all its contents are removed, too."
+- Per `loginctl(1)` (`enable-linger`, added v233): lingering means "a user manager
+  is spawned for the user at boot" and "kept around after logouts", allowing
+  users who are not logged in to run long-running services.
+
+**Is linger required?** If secrets are consumed only *within* an interactive
+session, no — login provisions everything, and it is torn down at last logout. If
+secrets must exist before or without an interactive login, or must survive logout,
+**yes**. Since this fleet keeps long-lived tmux sessions that the repository's own
+rules require preserving, **linger is the correct default.**
+
+Three practical constraints:
+
+1. **Linger cannot be set from standalone home-manager.**
+   `users.users.<name>.linger` is a *NixOS* option and does not exist in standalone
+   HM. It must be set imperatively as root — `sudo loginctl enable-linger jwiegley`
+   — on **each** machine. It is host-local system state (under `/var/lib`), so it
+   does **not** propagate through the shared NFS home. This is an irreducibly
+   imperative per-machine provisioning step and the design should say so plainly
+   rather than pretend it is declarative.
+2. **`home-manager switch` needs a live user session** when it restarts a secret
+   service: `systemctl --user restart sops-nix` requires the user systemd manager
+   and user D-Bus reachable, i.e. `XDG_RUNTIME_DIR` and
+   `DBUS_SESSION_BUS_ADDRESS` set. Switching from a bare `sudo` or cron context
+   fails that step. Corroborated by Discourse #43834 (2024), where the fix was a
+   DAG activation step plus `After = [ "sops-nix.service" ]` on dependents.
+3. **Dependent user services must order after the secret unit**, or they may start
+   before decryption completes.
+
+**Good news on the NFS interaction:** decrypted secrets land in `/run/user/UID`, a
+host-local tmpfs, so unlike the profile and gcroot problem there is **no NFS
+collision** for the plaintext itself.
+
+**Key-material consequence:** sops-nix's age key
+(`~/.config/sops/age/keys.txt`, or an SSH key at `~/.ssh/id_ed25519`) and agenix's
+`age.identityPaths` all live on the shared NFS home, so **one decryption identity
+is shared across all four hosts**. That is fine if the four are treated as a single
+trust domain — every machine can decrypt everything. If per-host keys are ever
+wanted, the key file must itself be host-local and each secret encrypted to all
+four recipients. This is a deliberate trust-domain decision for the user, recorded
+as an open question rather than assumed.
+
 ---
 
 ## 7. Secrets across mixed activation contexts
