@@ -25,26 +25,6 @@
       files = [ "packages/agent-resources.nix" ];
     };
 
-    nelisp = {
-      kind = "github-commit";
-      owner = "zawatton";
-      repo = "nelisp";
-      version = "0.5.1";
-      rev = "f753209d53b372933b829345fe4373acad67bcb5";
-      files = [
-        "packages/anvil-mcp/default.nix"
-        "packages/anvil-mcp/Cargo.lock"
-      ];
-    };
-    standalone-anvil = {
-      kind = "github-commit";
-      owner = "zawatton";
-      repo = "anvil.el";
-      version = "1.1.1";
-      rev = "d50ce32b71c5fa46da3aa661481c8be44fee4f97";
-      files = [ "packages/anvil-mcp/default.nix" ];
-    };
-
     git-ai = {
       kind = "flake-input";
       flakeInput = "git-ai";

@@ -38,10 +38,12 @@ let
   anvilSources = import ../source-catalog.nix "anvil";
   anvilSource = anvilSources.anvil-mcp;
   boundedSyncSeconds = 120;
-  nelispVersion = "0.5.1";
-  nelispRev = "f753209d53b372933b829345fe4373acad67bcb5";
-  standaloneAnvilVersion = "1.1.1";
-  standaloneAnvilRev = "d50ce32b71c5fa46da3aa661481c8be44fee4f97";
+  nelispSource = anvilSources.nelisp;
+  nelispVersion = nelispSource.version;
+  nelispRev = nelispSource.source.args.rev;
+  standaloneAnvilSource = anvilSources.standalone-anvil;
+  standaloneAnvilVersion = standaloneAnvilSource.version;
+  standaloneAnvilRev = standaloneAnvilSource.source.args.rev;
   currentAnvilHash = anvilSource.source.args.hash;
   currentAnvilOwner = anvilSource.source.args.owner;
   currentAnvilRev = anvilSource.source.args.rev;
@@ -114,24 +116,14 @@ let
     name: "--worker-name=${lib.escapeShellArg name}"
   ) workerNames;
 
-  nelispSrc = fetchFromGitHub {
-    owner = "zawatton";
-    repo = "nelisp";
-    rev = nelispRev;
-    hash = "sha256-m90HzB7fNnibaIDFaPr8RufhMS86PQJWTEHKopxh32Q=";
-  };
+  nelispSrc = fetchFromGitHub nelispSource.source.args;
 
   nelispLispSrc = runCommand "nelisp-${nelispVersion}-lisp" { } ''
     mkdir -p "$out"
     cp -R ${nelispSrc}/src/. "$out/"
   '';
 
-  standaloneAnvilSrc = fetchFromGitHub {
-    owner = "zawatton";
-    repo = "anvil.el";
-    rev = standaloneAnvilRev;
-    hash = "sha256-88fItj7oPUnV1mWF8RFMcJJ1WbxLECmJ2yyd520cFWk=";
-  };
+  standaloneAnvilSrc = fetchFromGitHub standaloneAnvilSource.source.args;
 
   currentAnvilSrc = fetchFromGitHub anvilSource.source.args;
 
@@ -4848,6 +4840,8 @@ let
 in
 assert anvilSource.source.fetcher == "fetchFromGitHub";
 assert anvilIdeSource.source.fetcher == "fetchFromGitHub";
+assert nelispSource.source.fetcher == "fetchFromGitHub";
+assert standaloneAnvilSource.source.fetcher == "fetchFromGitHub";
 if stdenv.isLinux then
   if useHeadlessEmacs then dedicatedPackage else standalonePackage
 else if stdenv.isDarwin then
