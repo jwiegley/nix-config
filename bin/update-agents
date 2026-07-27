@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+unset GIT_INDEX_FILE
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 routing=$script_dir/lib/host-routing.sh
@@ -14,6 +15,14 @@ run_commit=false
 run_switch=false
 run_push=false
 run_brew=false
+
+candidate_dir=
+transaction_dir=
+transaction_patch=
+transaction_paths=
+transaction_lock=
+publication_applied=false
+transaction_complete=false
 
 usage() {
     cat <<'EOF'
@@ -106,37 +115,36 @@ git_pull_clean() {
     git -C "$repo" pull --ff-only
 }
 
-commit_if_changed() {
-    local repo=$1
-    local message=$2
+cleanup_transaction() {
+    local status=$?
+    local rollback_failed=false
+    set +e
 
-    if [[ -z $(git -C "$repo" status --porcelain) ]]; then
-        return 1
-    fi
-
-    git -C "$repo" add -- \
-        flake.lock config/ai/flake.lock overlays/ai \
-        packages/pi-gallery packages/agent-resources.nix \
-        config/ai/bigpowers-resources.nix
-    git -C "$repo" commit -S -m "$message"
-    return 0
-}
-
-rollback_transaction() {
-    if [[ ${transaction_complete:-false} == true || -z ${transaction_baseline:-} ]]; then
-        return
-    fi
-
-    while IFS= read -r -d '' path; do
-        mkdir -p "$config_dir/$(dirname "$path")"
-        if git -C "$config_dir" cat-file -e "$transaction_baseline:$path" 2>/dev/null; then
-            git -C "$config_dir" show "$transaction_baseline:$path" >"$config_dir/$path"
+    if [[ $publication_applied == true && $transaction_complete != true ]]; then
+        if git -C "$config_dir" apply --reverse "$transaction_patch" \
+            && git -C "$config_dir" read-tree "$transaction_baseline"; then
+            echo "update-agents: rolled back incomplete source transaction" >&2
         else
-            rm -f -- "$config_dir/$path"
+            echo "update-agents: failed to roll back incomplete source transaction" >&2
+            rollback_failed=true
         fi
-    done < <(git -C "$config_dir" diff --name-only -z "$transaction_baseline" --)
-    git -C "$config_dir" read-tree "$transaction_baseline"
-    echo "update-agents: rolled back incomplete source transaction" >&2
+    fi
+
+    if [[ -n $candidate_dir && -e $candidate_dir/.git ]]; then
+        git -C "$config_dir" worktree remove --force "$candidate_dir" >/dev/null 2>&1 || true
+    fi
+    if [[ -n $transaction_dir ]]; then
+        rm -f -- "$transaction_patch" "$transaction_paths" \
+            "$transaction_dir/inventory.json" "$transaction_dir/allowed-paths"
+        rmdir "$transaction_dir" 2>/dev/null || true
+    fi
+    [[ -z $transaction_lock ]] || rmdir "$transaction_lock" 2>/dev/null || true
+
+    if [[ $rollback_failed == true ]]; then
+        status=1
+    fi
+    trap - EXIT
+    exit "$status"
 }
 
 with_nixos_build_lock() {
@@ -170,8 +178,18 @@ if [[ $run_switch == true || $run_push == true ]] && [[ $run_commit != true ]]; 
 fi
 
 transaction_baseline=$(git -C "$config_dir" rev-parse HEAD)
-transaction_complete=false
-trap rollback_transaction EXIT
+git_common_dir=$(git -C "$config_dir" rev-parse --path-format=absolute --git-common-dir)
+transaction_lock=$git_common_dir/update-agents.lock
+if ! mkdir "$transaction_lock" 2>/dev/null; then
+    echo "update-agents: another update transaction is active" >&2
+    exit 1
+fi
+trap cleanup_transaction EXIT
+transaction_dir=$(mktemp -d "${TMPDIR:-/tmp}/update-agents.XXXXXX")
+candidate_dir=$transaction_dir/candidate
+transaction_patch=$transaction_dir/update.patch
+transaction_paths=$transaction_dir/paths
+git -C "$config_dir" worktree add --quiet --detach "$candidate_dir" "$transaction_baseline"
 
 if [[ $run_brew == true ]] && command -v brew >/dev/null 2>&1; then
     (
@@ -182,30 +200,91 @@ if [[ $run_brew == true ]] && command -v brew >/dev/null 2>&1; then
 fi
 
 (
-    cd "$config_dir"
+    cd "$candidate_dir"
+    python3 bin/update-overlay --inventory --json >"$transaction_dir/inventory.json"
+    {
+        jq -r '.packages[].files[]' "$transaction_dir/inventory.json"
+        printf '%s\n' flake.lock config/ai/flake.lock
+    } | sort -u >"$transaction_dir/allowed-paths"
+
     if [[ $run_all_inputs == true ]]; then
         nix flake update --flake ./config/ai
+        nix flake update
     else
         nix flake update --flake ./config/ai "${ai_inputs[@]}"
+        # The root consumes the portable subflake transitively; refresh its nested
+        # nodes only after the portable lock is complete.
+        nix flake update nix-config-ai
     fi
-    # The root consumes the portable subflake transitively; refresh its nested
-    # nodes only after the portable lock is complete.
-    nix flake update nix-config-ai
     python bin/update-overlay --all --overlays-dir overlays/ai
     mapfile -t changed_nix < <(git diff --name-only -- '*.nix')
     if ((${#changed_nix[@]})); then
         nixfmt "${changed_nix[@]}"
     fi
     nix flake check ./config/ai --all-systems --no-build
-)
+    nix flake check --no-build
+
+    declare -A allowed=()
+    while IFS= read -r path; do
+        if [[ -z $path || $path == /* || $path == ../* || $path == */../* ]]; then
+            echo "update-agents: unsafe updater path: $path" >&2
+            exit 1
+        fi
+        allowed["$path"]=1
+    done <"$transaction_dir/allowed-paths"
+
+    mapfile -d '' -t changed < <(
+        {
+            git diff --name-only -z HEAD --
+            git ls-files --others --exclude-standard -z
+        } | sort -zu
+    )
+    for path in "${changed[@]}"; do
+        if [[ ! ${allowed[$path]+present} ]]; then
+            echo "update-agents: undeclared updater mutation: $path" >&2
+            exit 1
+        fi
+    done
+
+    if ((${#changed[@]})); then
+        git add -- "${changed[@]}"
+    fi
+    git diff --cached --name-only -z HEAD -- >"$transaction_paths"
+    git diff --cached --binary --full-index HEAD -- >"$transaction_patch"
+    if ! git diff --quiet || [[ -n $(git ls-files --others --exclude-standard) ]]; then
+        echo "update-agents: candidate tree has unstaged mutations" >&2
+        exit 1
+    fi
+    git diff --cached --check
+ )
 
 commit_created=false
-if [[ $run_commit == true ]]; then
-    if commit_if_changed "$config_dir" "Update AI agents"; then
-        commit_created=true
-    else
-        echo "update-agents: no changes; no signed commit created"
+if [[ $run_commit == true && -s $transaction_patch ]]; then
+    commit_baseline=$(git -C "$candidate_dir" rev-parse HEAD)
+    if ! git -C "$candidate_dir" commit -S -m "Update AI agents"; then
+        echo "update-agents: signed commit failed" >&2
+        exit 1
     fi
+    committed_head=$(git -C "$candidate_dir" rev-parse HEAD)
+    if [[ $committed_head == "$commit_baseline" ]] \
+        || ! git -C "$candidate_dir" verify-commit "$committed_head" >/dev/null 2>&1 \
+        || [[ -n $(git -C "$candidate_dir" status --porcelain) ]]; then
+        echo "update-agents: signed commit did not capture the complete transaction" >&2
+        exit 1
+    fi
+    if [[ $(git -C "$config_dir" rev-parse HEAD) != "$transaction_baseline" ]] \
+        || [[ -n $(git -C "$config_dir" status --porcelain) ]] \
+        || ! git -C "$config_dir" merge --ff-only "$committed_head"; then
+        echo "update-agents: live repository changed before publication" >&2
+        exit 1
+    fi
+    commit_created=true
+elif [[ $run_commit == true ]]; then
+    echo "update-agents: no changes; no signed commit created"
+elif [[ -s $transaction_patch ]]; then
+    git -C "$config_dir" apply --index "$transaction_patch"
+    git -C "$config_dir" read-tree "$transaction_baseline"
+    publication_applied=true
 fi
 
 if [[ $run_switch == true || $run_push == true ]] && [[ $commit_created != true ]]; then

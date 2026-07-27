@@ -7,6 +7,7 @@ import json
 import os
 import re
 import runpy
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -587,20 +588,19 @@ class UpdateInventoryTests(unittest.TestCase):
 
 
 class IntegratedWorkflowTests(unittest.TestCase):
-    def test_update_agents_rolls_back_failed_lock_and_source_transaction(self):
+    def test_update_agents_discards_failed_candidate_transaction(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir) / "repo"
             fake_bin = Path(temp_dir) / "bin"
+            (root / "bin").mkdir(parents=True)
             (root / "config/ai").mkdir(parents=True)
             (root / "overlays/ai").mkdir(parents=True)
             fake_bin.mkdir()
-            for relative in (
-                "flake.lock",
-                "config/ai/flake.lock",
-                "overlays/ai/package.nix",
-            ):
-                path = root / relative
-                path.write_text(f"original {relative}\n")
+            (root / "bin/update-overlay").write_text(SCRIPT.read_text())
+            (root / "bin/update-overlay").chmod(0o700)
+            (root / "flake.lock").write_text("original root lock\n")
+            (root / "config/ai/flake.lock").write_text("original portable lock\n")
+            (root / "overlays/ai/package.nix").write_text(OVERLAY)
 
             def executable(name, text):
                 path = fake_bin / name
@@ -609,7 +609,9 @@ class IntegratedWorkflowTests(unittest.TestCase):
 
             executable("nix", """#!/usr/bin/env bash
 set -euo pipefail
-if [[ $1 == flake && $2 == update ]]; then
+if [[ $1 == eval ]]; then
+  printf '{"schemaVersion":1,"targets":{}}\n'
+elif [[ $1 == flake && $2 == update ]]; then
   if [[ ${3:-} == --flake ]]; then
     echo portable-change >> config/ai/flake.lock
   else
@@ -632,6 +634,10 @@ echo overlay-change >> overlays/ai/package.nix
                  "-c", "user.email=test@example.invalid", "commit", "-qm", "baseline"],
                 check=True,
             )
+            baseline = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                capture_output=True, text=True, check=True,
+            ).stdout.strip()
             env = {
                 **os.environ,
                 "NIX_CONFIG_DIR": str(root),
@@ -641,12 +647,144 @@ echo overlay-change >> overlays/ai/package.nix
                 [str(UPDATE_AGENTS)], capture_output=True, text=True, env=env, check=False
             )
             self.assertEqual(result.returncode, 23)
-            self.assertIn("rolled back incomplete source transaction", result.stderr)
             status = subprocess.run(
                 ["git", "-C", str(root), "status", "--porcelain"],
                 capture_output=True, text=True, check=True,
             )
             self.assertEqual(status.stdout, "")
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True, text=True, check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            worktrees = subprocess.run(
+                ["git", "-C", str(root), "worktree", "list", "--porcelain"],
+                capture_output=True, text=True, check=True,
+            ).stdout
+            self.assertEqual(worktrees.count("worktree "), 1)
+            self.assertFalse((root / ".git/update-agents.lock").exists())
+
+    def test_update_agents_never_pushes_after_failed_signed_commit(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "repo"
+            fake_bin = Path(temp_dir) / "bin"
+            push_marker = Path(temp_dir) / "push-called"
+            (root / "bin").mkdir(parents=True)
+            (root / "config/ai").mkdir(parents=True)
+            (root / "overlays/ai").mkdir(parents=True)
+            fake_bin.mkdir()
+            (root / "bin/update-overlay").write_text(SCRIPT.read_text())
+            (root / "bin/update-overlay").chmod(0o700)
+            (root / "flake.lock").write_text("original root lock\n")
+            (root / "config/ai/flake.lock").write_text("original portable lock\n")
+            (root / "overlays/ai/package.nix").write_text(OVERLAY)
+
+            real_git = shutil.which("git") or "/usr/bin/git"
+
+            def executable(name, text):
+                path = fake_bin / name
+                path.write_text(text)
+                path.chmod(0o700)
+
+            executable("nix", """#!/usr/bin/env bash
+set -euo pipefail
+if [[ $1 == eval ]]; then
+  printf '{"schemaVersion":1,"targets":{}}\n'
+elif [[ $1 == flake && $2 == update ]]; then
+  if [[ ${3:-} == --flake ]]; then
+    echo portable-change >> config/ai/flake.lock
+  else
+    echo root-change >> flake.lock
+  fi
+elif [[ $1 == flake && $2 == check ]]; then
+  exit 0
+fi
+""")
+            executable("python", """#!/usr/bin/env bash
+set -euo pipefail
+echo overlay-change >> overlays/ai/package.nix
+""")
+            executable("nixfmt", "#!/usr/bin/env bash\nexit 0\n")
+            executable("git", """#!/usr/bin/env bash
+set -euo pipefail
+for arg in "$@"; do
+  if [[ $arg == commit ]]; then exit 42; fi
+  if [[ $arg == push ]]; then : > "$PUSH_MARKER"; exit 0; fi
+done
+exec "$REAL_GIT" "$@"
+""")
+
+            subprocess.run([real_git, "init", "-q", str(root)], check=True)
+            subprocess.run([real_git, "-C", str(root), "add", "."], check=True)
+            subprocess.run(
+                [real_git, "-C", str(root), "-c", "user.name=Test",
+                 "-c", "user.email=test@example.invalid", "commit", "-qm", "baseline"],
+                check=True,
+            )
+            baseline = subprocess.run(
+                [real_git, "-C", str(root), "rev-parse", "HEAD"],
+                capture_output=True, text=True, check=True,
+            ).stdout.strip()
+            env = {
+                **os.environ,
+                "NIX_CONFIG_DIR": str(root),
+                "PATH": f"{fake_bin}:{os.environ['PATH']}",
+                "PUSH_MARKER": str(push_marker),
+                "REAL_GIT": real_git,
+            }
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--commit", "--push"],
+                capture_output=True, text=True, env=env, check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("signed commit failed", result.stderr)
+            self.assertFalse(push_marker.exists())
+            self.assertEqual(
+                subprocess.run(
+                    [real_git, "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True, text=True, check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            self.assertEqual(
+                subprocess.run(
+                    [real_git, "-C", str(root), "status", "--porcelain"],
+                    capture_output=True, text=True, check=True,
+                ).stdout,
+                "",
+            )
+
+    def test_update_agents_rejects_concurrent_transaction(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "repo"
+            root.mkdir()
+            (root / "tracked").write_text("baseline\n")
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "add", "tracked"], check=True)
+            subprocess.run(
+                ["git", "-C", str(root), "-c", "user.name=Test",
+                 "-c", "user.email=test@example.invalid", "commit", "-qm", "baseline"],
+                check=True,
+            )
+            (root / ".git/update-agents.lock").mkdir()
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env={**os.environ, "NIX_CONFIG_DIR": str(root)},
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("another update transaction is active", result.stderr)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "status", "--porcelain"],
+                    capture_output=True, text=True, check=True,
+                ).stdout,
+                "",
+            )
 
     def test_active_commands_have_one_repository_update_transaction(self):
         root = SCRIPT.parent.parent
@@ -713,7 +851,7 @@ echo overlay-change >> overlays/ai/package.nix
         self.assertIn("run_switch=false", update_agents)
         self.assertIn("run_push=false", update_agents)
         self.assertIn("run_brew=false", update_agents)
-        self.assertIn('commit -S -m "$message"', update_agents)
+        self.assertIn('commit -S -m "Update AI agents"', update_agents)
         self.assertIn("--switch/--push require --commit", update_agents)
         self.assertNotIn("git -C \"$repo\" add -A", update_agents)
         self.assertNotIn("commit_and_push_if_changed", update_agents)
@@ -733,8 +871,11 @@ echo overlay-change >> overlays/ai/package.nix
         }
         self.assertEqual(declared_inputs, expected_inputs)
         self.assertIn("transaction_baseline=", update_agents)
-        self.assertIn("trap rollback_transaction EXIT", update_agents)
-        self.assertNotIn('commit_if_changed "$config_dir" "Update AI agents" || true', update_agents)
+        self.assertIn("trap cleanup_transaction EXIT", update_agents)
+        self.assertIn('git -C "$config_dir" worktree add', update_agents)
+        self.assertIn('git -C "$config_dir" merge --ff-only', update_agents)
+        self.assertIn("nix flake check --no-build", update_agents)
+        self.assertNotIn("rollback_transaction", update_agents)
         self.assertIn("refusing external action without a newly signed commit", update_agents)
         self.assertIn("set -euo pipefail", upgrade)
         self.assertRegex(upgrade, r"(?m)^\s*\./bin/update-agents --commit\s*$")
