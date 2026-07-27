@@ -445,19 +445,55 @@ than a `follows` patch:** keep both out of the *portable* subflake's inputs
 entirely, so they can never enter a remote consumer's lock. The `follows` fix
 remains useful as root hygiene.
 
-**`OPEN` — topology choice.** The portable subflake must be an ancestor of
-`config/ai` to reach it via a *downward* path input (upward `path:../` flake inputs
-are unproven and to be avoided). Two candidates:
+**`VERIFIED` — topology decided: promote the existing subflake, renamed
+`config/fleet`.** A hermetic 3-level nest settled this by measurement rather than
+argument.
 
-| Option | Total locks | Note |
+| Option | Locks | Measured outcome |
 |---|---|---|
-| **A** — promote `config/ai` itself to the portable fleet subflake | **2** | Reuses the existing clean 24-node github lock and the `?dir=config/ai` contract all three consumers already use. Fewest moving parts. |
-| **B** — add a new `config/` subflake taking `ai = path:./ai` | **3** | An adversarial critic verified hermetically that the middle lock **re-records** the child's inputs, creating a *third* independent pin of the AI graph. Also **fails outright without a committed `config/flake.lock`**. |
+| **A** — the existing subflake *becomes* the fleet core | **2** | Two is the floor and cannot go lower: root must own a lock as hera/clio's top flake, and a consumer-facing subflake must own one to be fetched as a real typed flake. This subflake already *is* that, with a clean 24-node github lock. |
+| **B** — add a new `config/` level taking `ai = path:./ai` | **3** | The middle lock **re-records** the child's inputs. Measured node lists: child `['real','root']`, mid `['child','real','root']`, root `['child','mid','real','root']` — the same rev written independently into all three. Your real root lock already flattens the AI graph this way (`pal-mcp-server`, `pi-btw`, `llm-agents`, `mcp-remote`, `git-ai` are all root nodes), so B would be a *third* copy. |
 
-**Recommendation: A.** Issue #15's P1-7 deliberately settled on *two* coherent locks
-with a drift oracle; option B reopens that decision and adds a drift surface the
-repo already built a check to police. This needs your ratification because it
-determines whether `config/ai` grows beyond AI concerns.
+**The clincher.** The subflake's lock contains **none** of `obr`,
+`org2jsonl` (`file://`), or `stock-trader` (`git+ssh`). Consumers entering through
+it therefore sidestep **both** real-flake blockers for free — something root
+consumption cannot do. The `obr` follows-fix drops from precondition to optional
+hygiene.
+
+Two operational facts, both measured:
+
+- **A committed subflake lock is mandatory.** Remote `?dir=` **hard-errors**
+  without one — `cannot write modified lock file` — *both offline and online*,
+  because the blocker is the write, not the fetch. The only bypass,
+  `--no-write-lock-file`, re-resolves inputs fresh on every eval and is not viable
+  for fleet activation.
+- **A trap that would have produced a false pass.** A `git+file://` local path is
+  treated as **mutable**: Nix silently wrote the lock back into the test worktree,
+  masking the failure entirely. Only a read-only tarball reproduced the real
+  behaviour. Any verification of this topology must use an immutable fetcher.
+
+**Drift is real, not theoretical.** A controlled moving-upstream test: with a fresh
+middle lock Nix *inherits* the child's pin, but an **independent** update diverges —
+`nix flake update` on the child alone leaves the middle pinned to the old rev, so
+the same logical input resolves differently depending on which lock you enter
+through. The subflake has ~20 inputs with **no `rev` in `original`** (moving refs),
+so every lock copy drifts on its own cadence. Hence the single-writer rule in §8.2.
+
+**Renamed to `config/fleet`.** Once the subflake hosts the whole fleet core, `ai` is
+the wrong name. This is a deliberate break of the `?dir=config/ai` contract named in
+`CLAUDE.md`, chosen for honesty over continuity, and it touches three local
+consumers **and both remotes**.
+
+- **Prerequisite.** `CLAUDE.md` requires that obsolete compatibility be deleted only
+  after all maintained consumers are searched, and issue #15's **P2-19** already
+  mandates that inventory. So a consumer search precedes the rename — Stage 0.
+- **Fail loudly, not obscurely.** Leave a `config/ai/flake.nix` that `throw`s a
+  message pointing at `config/fleet`. A flake with no inputs adds no lock, so this
+  costs nothing and turns a stale URL into a clear error instead of "not a flake".
+- **Constraint to respect.** The subflake imports `../../flake-ai.nix` and
+  `../../test/ai/compatibility-check.nix`, so it can only ever be consumed as
+  `?dir=` *of the whole repo*, never as a standalone fetch of the subtree. That is
+  true today and works in production; it just must stay true.
 
 ### 6.3 The host registry
 
@@ -513,7 +549,7 @@ in
     evalId = "andoria";
     sharedHome = {
       members = [ "andoria-08" "andoria-t2" "delphi-3bd4" "gpu-server" ];
-      localStateRoot = "/PLACEHOLDER";   # OPEN — see §9, Q2
+      localStateRoot = "/var/lib/jwiegley";   # decided — §10 Q2
     };
   };
 }
@@ -621,27 +657,68 @@ four work machines. Costed in §9, Q1.
 **1 — One configuration, group-labelled.** Exactly one derivation for the group,
 `evalId = "andoria"`. Never a machine name.
 
-**2 — State host-local via the environment.** Export `XDG_STATE_HOME` (and
-`NIX_STATE_DIR`) to a **persistent** host-local path in the login environment or PAM,
-*not* via `xdg.stateHome`; set `nix.useXdg = true` so `~/.nix-profile` follows.
+**2 — State host-local via the environment, at `/var/lib/jwiegley`.** Export
+`XDG_STATE_HOME` (and `NIX_STATE_DIR`) in the login environment or PAM, *not* via
+`xdg.stateHome`; set `nix.useXdg = true` so `~/.nix-profile` follows.
+
+```
+/var/lib/jwiegley/          # persistent, host-local, 0700, never tmpfiles-reaped
+  state/                    # XDG_STATE_HOME — HM profile + gcroots
+  cache/                    # XDG_CACHE_HOME — SQLite and lockfiles off NFS
+  nix-local/profile         # gpu-server's second profile (§7.7)
+  sops-age.key              # decryption identity, 0700 (§8.3)
+```
+
+`/var/lib` needs one-time root creation per machine — which folds into the same
+provisioning step as `loginctl enable-linger`, so it adds no new class of work.
 
 > **Not `/var/tmp`.** systemd-tmpfiles age-cleans it at 30 days, which would delete
-> gcroots. This pattern already has a foothold —
-> `~/src/andoria/flake.nix` sets `xdg.cacheHome = "/var/tmp/jwiegley/xdg-cache"`.
-> Cache-only, so survivable today since caches regenerate, but dangerous if extended
-> to state.
+> gcroots *and*, under the old plan, the age key with them. This pattern already has
+> a foothold — `~/src/andoria/flake.nix:526` sets
+> `xdg.cacheHome = "/var/tmp/jwiegley/xdg-cache"`. Cache-only, so survivable today
+> since caches regenerate, but it must not be extended to state, and moving it is a
+> free improvement while we are there.
 
-**3 — Per-host values at runtime, in every context.** Shell exports reach only
-shells. The four machines run **systemd user services**, and a unit's
-`Environment=` cannot evaluate `$(hostname -s)` — it becomes a literal string, and
-all four collide again. Every context needs its own mechanism:
+**3 — Per-host values at runtime, in every context.** A unit's `Environment=`
+genuinely cannot evaluate `$(hostname -s)` — systemd never invokes a shell for unit
+directives, so it stores the literal string, and `$` in `Environment=` supports only
+`${OTHER_VAR}` references. **But systemd has a native specifier that solves this
+outright**, which is better than the wrapper this plan first proposed.
+
+**`READ`** from systemd source: `specifier.c` `specifier_short_hostname()` calls
+`gethostname_short_malloc()` — a **live** lookup at expansion time, not at build or
+registration. `COMMON_SYSTEM_SPECIFIERS` maps `%l` (short host), `%H` (hostname),
+`%m` (machine id). And `load-fragment.c` `config_parse_environ` calls
+`unit_env_printf`, while `config_parse_exec` calls `unit_path_printf` /
+`unit_full_printf` — all of which include those specifiers. So **`%l` expands in
+`Environment=`, `ExecStart=`, `WorkingDirectory=`, and path directives** of user
+units, to the live value, at unit-load time.
+
+**In-repo precedent proves the mechanism is already live:**
+`~/src/andoria/flake.nix:585` and `:599` already use `%h` in `ExecStart`. Home-manager
+writes `%` verbatim and systemd expands it — `%l` is the identical mechanism.
 
 | Context | Mechanism |
 |---|---|
-| login / non-login shell | `zshenv` / `profileExtra` export |
-| systemd user unit | generated **`ExecStart` wrapper** computing `hostname -s` at exec — never `Environment=` |
-| h-m activation script | `$(hostname -s)` at activation, as `agentDeckHostLocalState` already does |
-| anything launched outside a shell | wrapper script at exec time |
+| login shell | `export HOSTNAME="$(hostname -s)"` in `initExtra` (zsh: `$HOST`) — the rc snippet embeds the *command*, so the derivation stays identical |
+| non-login / non-interactive | read the shell-populated live `$HOSTNAME` / `$HOST`, or call `hostname -s` |
+| h-m activation script | `host="$(hostname -s)"` in the script body — as `agentDeckHostLocalState` already does correctly |
+| **systemd user unit** | **the `%l` specifier directly** — e.g. `ExecStart = "${pkg}/bin/foo --state-dir %h/.local/share/foo-hosts/%l"`. No wrapper, byte-identical store path, each host's user manager fills its own name |
+| wrapper packages | `hostname -s` at exec, as the agent-deck wrapper already does |
+
+**Two live bugs this fixes.** `config/johnw.nix:89` sets `HOSTNAME = hostname`,
+baking `"andoria-08"` into `hm-session-vars.sh` **and clobbering bash's own live
+`$HOSTNAME`** — so interactive shells see the wrong host while non-interactive ones
+see the right one. Deleting that constant removes the split-brain. Separately,
+`config/ssh.nix:28` bakes `IdentityFile = id_${hostname}` → `id_andoria-08` into
+`~/.ssh/config` on all four machines; intentional or not, it should become an
+explicit registry field rather than a hostname accident.
+
+**`OPEN`, cheaply closable:** the specifier chain is verified from systemd source
+(main branch) plus the running in-repo `%h` units, not from a live
+`systemctl --user show -p Environment,ExecStart <unit>` on an Ubuntu host. The
+specifiers are many years old so the risk is negligible, but one command on any work
+machine after a switch would close it for good.
 
 **4 — A second, separate systemd hazard.** h-m's generated units live in NFS-shared
 `~/.config/systemd/user/` as symlinks into the **host-local** `/nix` store. That
@@ -649,8 +726,46 @@ works only while the derivation is uniform — which is another reason uniformit
 an asserted invariant, not a nicety.
 
 **5 — Assert and test it.** A check that evaluates the group's `activationPackage`
-`drvPath` under different injected host names and **fails if it varies**. Since no
-published precedent exists (§5.4), this invariant must be self-policed.
+`drvPath` under each of the four intended host names and **fails if it varies**.
+Since no published precedent exists (§5.4), this invariant must be self-policed.
+
+This gate is not hypothetical — it has a proven canary. Injecting the real
+per-machine hostnames **was measured to diverge** the ssh-config derivation (two
+distinct hashes). So the check has a known-failing input to validate itself against,
+which is exactly what you want from an invariant gate.
+
+**`VERIFIED` — the invariant holds today, by construction.** `andoria/flake.nix:70-71`
+pins `system` and `hostname` as `let` constants and the flake reads **nothing** from
+the build environment — no `builtins.getEnv`, no impure hostname. Four machines, one
+`flake.nix` and one `flake.lock` over NFS, therefore one identical evaluation.
+Divergence is impossible without an eval-time impurity, and there is none.
+
+**7 — Per-host packages without breaking uniformity.** `gpu-server` needs nothing
+extra today — `grep -rniE 'cuda|nvidia|torch|rocm|tensorrt|cudaSupport'` across the
+andoria and core configs returns **zero** real hits, and the host has no
+host-specific gating at all. When it does need something, use a **host-local second
+profile** rather than diverging the build:
+
+```nix
+# In the shared config — a byte-identical constant string on all four machines.
+home.sessionPath = [ "/var/lib/jwiegley/nix-local/profile/bin" ];
+```
+
+```bash
+# On gpu-server only. Empty dir on the other three, so no effect there.
+nix profile install --profile /var/lib/jwiegley/nix-local/profile <gpu packages>
+```
+
+Zero eval divergence, zero impact on the shared generation. The second profile is
+self-gc-rooted via `addPermRoot`, so plain GC is safe; only generation-deletion *on
+gpu-server* touches it. It must live on the host-local path — `nix profile`'s default
+location is `XDG_STATE_HOME`-anchored and would land on the shared home and collide.
+
+> **The fragility worth naming.** Byte-identity is not a property of the
+> configuration; it is a property of pinning the hostname to a constant. The moment
+> anyone adds a build-time decision distinguishing the four — or wires a real
+> per-machine hostname into any `home.file` or `sessionVariable` — it breaks silently,
+> with no error. That is precisely why item 5 is a gate and not a comment.
 
 **6 — Selection must fail loudly.** **`READ`:** the h-m CLI probes
 `$USER@$(hostname -f)`, `$USER@$(hostname)`, `$USER@$(hostname -s)` with **no
@@ -744,13 +859,32 @@ Non-negotiables:
   because your long-lived tmux sessions mean secrets must survive logout. The design
   should state this as an imperative provisioning step rather than pretend it is
   declarative.
-- **The age key needs a real home.** It must live on a persistent, `0700`,
-  non-swept host-local path — and how it gets onto each of four machines is an
-  out-of-band runbook that must exist. A decryption key in a reboot-wiped
-  `/var/tmp` is both an availability failure and a hygiene problem.
+- **The age key lives at `/var/lib/jwiegley/sops-age.key`, mode `0700`.** Persistent,
+  host-local, never swept. Today it sits on the **shared NFS home** — a decryption
+  key on a network filesystem — so relocating it is a security improvement
+  independent of everything else here. Getting it onto each of four machines is
+  necessarily out-of-band; that runbook is a Stage-5 deliverable, not an
+  afterthought.
 
-**`OPEN`:** the identity currently lives on the shared home, so all four hosts share
-one decryption identity. Fine if they are one trust domain — §9, Q3.
+**Trust domain: one identity now, structured to split later.** The four machines are
+treated as a single trust domain — one age recipient, one key, relocated off NFS.
+But `.sops.yaml` is written with a **named group** from day one, so moving to
+per-host keys is a recipient-list change plus `sops updatekeys`, never a
+re-architecture:
+
+```yaml
+keys:
+  - &work_group age1...        # one key today; four entries later
+creation_rules:
+  - path_regex: work/.*
+    key_groups:
+      - age: [ *work_group ]
+```
+
+The trade-off accepted: any one machine compromised exposes the group's secrets.
+Revocation is all-or-nothing until the split happens. That is the right call while
+all four are equally yours and equally exposed — and `/var/lib/jwiegley` is what
+makes the split practical whenever that stops being true.
 
 ---
 
@@ -773,7 +907,7 @@ graph LR
 
 | # | Stage | Verify | Rollback |
 |---|---|---|---|
-| **0** | **Unarm §3** — route vulcan + vps overlay consumption through `config/overlays.nix`; bump their locks. **Fact-find:** does `gpu-server` need packages the other three lack? Is `/nix` host-local on all four? Is `localStateRoot` swept? | `nix build` each host's HM activationPackage at the *new* lock; the three previously-armed packages still resolve | Revert the two consumer commits; locks return to `a36d3f51` / `1b71b192` |
+| **0** | **Unarm §3** — route vulcan + vps overlay consumption through `config/overlays.nix`; bump their locks. **Fact-find:** `/nix` host-local on all four? auto-GC timer with delete-old? which profile branch h-m takes? **Inventory `?dir=config/ai` consumers** (issue #15 P2-19) before the rename. *(gpu-server divergence: already answered — none)* | `nix build` each host's HM activationPackage at the *new* lock; the three previously-armed packages still resolve | Revert the two consumer commits; locks return to `a36d3f51` / `1b71b192` |
 | **1** | Create the portable subflake per §6.2 with a 100%-fetchable lock; deepen the purity check to the whole closure | Purity check passes; `nix flake metadata` + a trivial `nix eval` of the remote URL **from a clean store**, over *both* real fetchers (github tarball **and** `git+ssh://gitea`) | Delete the subflake; no consumer points at it yet |
 | **2** | Registry, roles, capability flags, lean/full switch. Refactor-only — no consumer moves | **drvPath parity**: `hera`, `clio`, and the work group must hash identically to a baseline captured *before any edit*. If parity fails, bisect by re-introducing overlay list-vs-composed application and `specialArgs` names one at a time | Revert; parity baseline proves the pre-state |
 | **3** | vulcan consumes typed outputs; delete its cherry-picks and `prevWithMyLib` | Native aarch64-linux build; package set diffed against baseline; `tsvutils`/`filetags`/`nix-scripts` present | Restore `flake = false` input; vulcan's lock is authoritative in its own checkout |
@@ -802,17 +936,30 @@ already move as a unit.
 
 ---
 
-## 10. Decisions I need from you
+## 10. Decisions taken
 
-| # | Question | Recommendation |
+All seven resolved 2026-07-27. Where evidence settled a question rather than
+preference, the evidence is named.
+
+| # | Question | Decision | Basis |
+|---|---|---|---|
+| **Q1** | Shared `$HOME`, or host-local `$HOME` with NFS data mounted in? | **Shared `$HOME`; only h-m *state* goes host-local.** | Evidence, not preference. Byte-identity holds by construction (§7.5), and the second-profile pattern covers the one case that would have forced host-local `$HOME`. |
+| **Q2** | Where does host-local state live? | **`/var/lib/jwiegley`** — `state/`, `cache/`, `nix-local/`, `sops-age.key`. | Persistent, never tmpfiles-reaped, `0700`-able. One-time root creation folds into the `enable-linger` provisioning step. |
+| **Q3** | Are the four work machines one trust domain? | **One identity now, `.sops.yaml` structured to split later.** Key moves off NFS to `/var/lib/jwiegley/sops-age.key`. | Splitting becomes a recipient-list change, not a re-architecture. Accepts group-wide blast radius while all four are equally exposed. |
+| **Q4** | Does `gpu-server` need packages the others lack? | **No.** Zero GPU/CUDA hits anywhere; no host-specific gating. Future needs go to a **host-local second profile**. | `grep -rniE 'cuda\|nvidia\|torch\|rocm\|tensorrt\|cudaSupport'` returns no real hits. Injecting real hostnames was *measured* to diverge the ssh-config drv — so uniformity must be preserved, not "fixed". |
+| **Q5** | Two locks or three? | **Two — the existing subflake becomes the fleet core.** | Hermetic proof: a middle level re-records the child's inputs (measured node lists). The subflake's lock also contains none of the two real-flake blockers, so consumers sidestep them for free. |
+| **Q5a** | Keep the `config/ai` name or rename? | **Rename to `config/fleet`**, accepting URL churn across three consumers and both remotes. Honesty over continuity. | Deliberate break of the `CLAUDE.md` contract. Gated on the P2-19 consumer inventory; stale URLs get a `throw`ing stub so they fail loudly. |
+| **Q6** | One publish remote or dual push? | **Scripted dual push**; both remotes stay authoritative. | Preserves vulcan's LAN-only path. Live proof of need: during this session `main` reached **7 ahead of gitea but 19 ahead of github**, so the work fleet was 19 behind while vulcan was 7 behind. |
+| **Q7** | Merge `design/unified-fleet`? | **Merged to `main` locally, not pushed.** | Docs-only, conflict-free, signed. Rollback point `3a478b13`. Pushing remains separately authorized per `CLAUDE.md`. |
+
+### Still to confirm on a host — cheap, and nothing blocks on them
+
+| Check | Why it matters | Command |
 |---|---|---|
-| **Q1** | Shared `$HOME` with host-local state, or host-local `$HOME` with NFS data mounted in? | **Shared `$HOME`.** You selected this already; recording it as a preference rather than approval. It matches the machines' actual uniformity and needs no mount changes. Revisit only if Q4 shows real divergence. |
-| **Q2** | The persistent host-local path for `XDG_STATE_HOME`. Must not be swept — **not `/var/tmp`**. | Tell me the conventional local scratch path on those boxes; the registry carries `"/PLACEHOLDER"` until then. |
-| **Q3** | Are the four work machines one trust domain? | **Yes, most likely** — one shared decryption identity is simplest. Per-host keys need host-local key files and every secret encrypted to four recipients. |
-| **Q4** | Does `gpu-server` need packages the other three lack? | Fact-find in Stage 0. If yes, design a **host-local second profile** outside the shared h-m generation rather than breaking uniformity. |
-| **Q5** | Topology: promote `config/ai` (2 locks) or add `config/` (3 locks)? | **Promote `config/ai`** — §6.2. Fewest locks, reuses the contract all three consumers already have, and does not reopen issue #15's P1-7 decision. |
-| **Q6** | One publish remote, or scripted dual push? | Either, but pick one. Today `main` is 9 commits ahead of *both* gitea and github. |
-| **Q7** | Merge `design/unified-fleet` into `main`? | Your call — another autonomous session is committing in `~/src/nix`, which is why this work is isolated in a worktree. |
+| `%l` expansion in a *user* unit | The specifier chain is verified from systemd source and from the running in-repo `%h` units, but not from a live query | `systemctl --user show -p Environment,ExecStart <unit>` |
+| `/nix` is host-local | The entire GC analysis assumes `/nix/store` and `/nix/var/nix` are per-machine | `findmnt /nix` |
+| Which profile branch h-m takes | Existence-gated and version-dependent; determines whether the four already share a profile | `readlink ~/.nix-profile; ls -la ~/.local/state/nix/profiles; nix --version` |
+| No automatic GC with delete-old | Same trigger as the manual hazard, but unattended | `systemctl list-timers \| grep -i nix` |
 
 ---
 
