@@ -133,9 +133,29 @@ hardcodes `hostname = "andoria-08"` and exports a single
 recovered at *runtime* by shelling out to `hostname` (agent-deck wrapper at
 `flake.nix:371`, activation at `:529`). `config/johnw.nix:63` acknowledges this:
 the comment states the shared flake "supplies `andoria-08` on every NFS client".
-Consequently the build-time decision
+
+The build-time decision
 `johnw.anvil.useHeadlessEmacs = lib.mkDefault (lib.elem hostname dedicatedAnvilLinuxHosts)`
-is evaluated against a knowingly wrong hostname on 3 of 4 work machines.
+is therefore evaluated against a knowingly wrong hostname on three of the four
+work machines. **Correction on the consequence:** `config/anvil-hosts.nix`
+lists all four work machines (`andoria-08`, `andoria-t2`, `delphi-3bd4`,
+`gpu-server`) in `dedicatedLinux`, so the membership test returns `true`
+regardless of which of them is being built. This decision is thus *accidentally
+correct*, not currently broken. The hazard is latent rather than live: the
+moment any one work machine needs to differ on a host-keyed decision, the shared
+hostname silently yields the wrong answer with no error. Treat this as a
+structural defect, not an outage.
+
+**F4a — `lib.inputSet` is an existing, good partial answer to F5.**
+`config/ai/flake.nix:87-90` exports `lib.inputSet = portableInputs` and
+`lib.inputNames`, and the root flake consumes it at `flake.nix` via
+`portableInputs = rootInputs.nix-config-ai.lib.inputSet;
+inputs = rootInputs // portableInputs;`. The subflake therefore owns the
+authoritative input set and re-exports it instead of the root duplicating those
+declarations, an invariant enforced by
+`bin/update-overlay-test.py:887` (`test_root_consumes_portable_input_authority_transitively`).
+This "input authority" idea is the right shape and the target design should
+generalize it rather than discard it.
 
 **F5 — `inputs` is an unchecked, duck-typed contract.** The core accepts the
 consumer's entire `inputs` attrset and probes it (`inputs ? git-ai`,
@@ -169,6 +189,32 @@ carries ~250 lines of overlay fixes (git-branchless, libsecret, qdrant,
 eternal-terminal, graphite-cli FHS, mitmproxy, optuna, pytest-postgresql,
 mlx-speech). Most are **x86_64-linux** fixes, not andoria-specific, so any other
 Linux host needing the same Python env would have to duplicate them.
+
+**F10 — The core has a two-remote publish dependency, and consumers split across
+both.** `nix-config` has two remotes: `origin` = `gitea@gitea:johnw/nix-config.git`
+(LAN-only) and `github` = `git@github.com:jwiegley/nix-config.git`. Consumers do
+not agree on which to use:
+
+- `~/src/nixos` (vulcan) → `git+ssh://gitea/johnw/nix-config` (and
+  `?dir=config/ai` likewise on gitea)
+- `~/src/andoria` (4 work machines) → `github:jwiegley/nix-config?ref=main`
+- `vps` → `github:jwiegley/nix-config?ref=main` (per project memory; the host's
+  config lives only at `/etc/nixos` on the VPS and is not present locally)
+
+So a core change is invisible to some hosts until pushed to **both** remotes, and
+"which hosts have my change" depends on which remote received it. At session start
+`main` was **8** commits ahead of both remotes; it reached **9** during this
+session as the other autonomous agent committed. Every consumer is therefore
+currently behind the core by 9 commits. This publish-fanout is a direct
+contributor to the "confusion and difficulty" in the original request, and the
+target design must state a single publish path.
+
+**F11 — `vps` is an uninventoried third consumer pattern.** Its configuration
+exists only on the VPS at `/etc/nixos`; `~/src/nixos/hosts/` contains `vulcan`
+only. Per project memory it uses a thin `johnw.nix` wrapper importing
+`${inputs.nix-config}/config/johnw.nix`. Its actual coupling surface has **not**
+been read in this session and must be inventoried on the host before migration.
+Recorded as an open question, not a verified finding.
 
 ## How to resume
 
