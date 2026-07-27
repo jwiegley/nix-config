@@ -2,25 +2,49 @@
 
 set -euo pipefail
 
-if [[ $1 == system ]]; then
+usage() {
+    cat <<'EOF'
+Usage: ./build MODE [PACKAGE] [NIX_BUILD_ARGS...]
+
+Modes:
+  system             Build the current Darwin system
+  pkg PACKAGE        Build a package from the current Darwin package set
+  emacs PACKAGE      Build an Emacs package
+  python PACKAGE     Build a Python package
+  haskell PACKAGE    Build a Haskell package
+EOF
+}
+
+mode=${1:-}
+case $mode in
+system)
     shift
     nix build --max-jobs 8 --cores 8 \
         ".#darwinConfigurations.$(myhost).system" \
         "$@" --keep-going --show-trace
-elif [[ $1 == pkg ]]; then
-    pkg=$2
+    ;;
+pkg | emacs | python | haskell)
+    if (($# < 2)); then
+        echo "build: $mode requires PACKAGE" >&2
+        usage >&2
+        exit 2
+    fi
+    package=$2
     shift 2
-    nix build --cores 24 ".#darwinConfigurations.$(myhost).pkgs.$pkg" "$@"
-elif [[ $1 == emacs ]]; then
-    pkg=$2
-    shift 2
-    nix build --cores 24 ".#darwinConfigurations.$(myhost).pkgs.emacs30MacPortPackages.$pkg" "$@"
-elif [[ $1 == python ]]; then
-    pkg=$2
-    shift 2
-    nix build --cores 24 ".#darwinConfigurations.$(myhost).pkgs.python3Packages.$pkg" "$@"
-elif [[ $1 == haskell ]]; then
-    pkg=$2
-    shift 2
-    nix build --cores 24 ".#darwinConfigurations.$(myhost).pkgs.haskellPackages.$pkg" "$@"
-fi
+    case $mode in
+    pkg) attribute="pkgs.$package" ;;
+    emacs) attribute="pkgs.emacs30MacPortPackages.$package" ;;
+    python) attribute="pkgs.python3Packages.$package" ;;
+    haskell) attribute="pkgs.haskellPackages.$package" ;;
+    esac
+    nix build --cores 24 ".#darwinConfigurations.$(myhost).$attribute" "$@"
+    ;;
+-h | --help)
+    usage
+    ;;
+*)
+    [[ -n $mode ]] && echo "build: unknown mode: $mode" >&2
+    usage >&2
+    exit 2
+    ;;
+esac

@@ -3,6 +3,9 @@ REMOTES	   = clio
 GIT_REMOTE = jwiegley
 MAX_AGE	   = 28
 NIX_CONF   = $(HOME)/src/nix
+SYSTEM     ?= $(shell nix eval --impure --raw --expr builtins.currentSystem)
+
+.DEFAULT_GOAL := help
 NIXOPTS	   =
 PROJECTS   = $(HOME)/.config/projects
 
@@ -10,7 +13,7 @@ ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 
-.PHONY: all verify-inputs lock-local build switch update update-projects upgrade-tasks upgrade \
+.PHONY: help all verify-inputs lock-local build switch update update-projects upgrade-tasks upgrade \
 	changes copy check sizes clean purge sign travel-ready test tools repl
 
 all: switch
@@ -28,8 +31,29 @@ define announce
 	@echo '└────────────────────────────────────────────────────────────────────────────┘'
 endef
 
+help:
+	@printf '%s\n' \
+	  'Usage: make TARGET' \
+	  '' \
+	  'Safe targets:' \
+	  '  help             Show this help (default)' \
+	  '  build            Build the current Darwin system without switching' \
+	  '  test             Build the core repository contracts' \
+	  '  format           Format tracked Nix and shell sources' \
+	  '  verify-inputs    Check local flake inputs for NAR hazards' \
+	  '' \
+	  'Mutating targets (explicit only):' \
+	  '  switch           Re-lock local inputs and switch nix-darwin' \
+	  '  update           Update the root lock and Homebrew metadata' \
+	  '  upgrade          Update, switch, and run upgrade tasks' \
+	  '  clean / purge    Delete old Nix generations and store paths'
+
 test:
-	$(call announce,this is a test)
+	nix build --no-link \
+	  .#checks.$(SYSTEM).agent-resources \
+	  .#checks.$(SYSTEM).agent-wrappers \
+	  .#checks.$(SYSTEM).ai-home-manager-contract \
+	  .#checks.$(SYSTEM).pi-gallery
 
 tools:
 	@echo HOSTNAME=$(HOSTNAME)
