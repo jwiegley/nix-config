@@ -130,6 +130,95 @@ routine root-level `nix flake check`.
 > `nix flake check` on the root remains useful as an occasional, deliberate,
 > full-fleet evaluation — just not on every commit.
 
+#### Determinate Nix diverges from upstream here, and the eval cache is not why
+
+A source read of upstream NixOS/nix **master** `src/nix/flake.cc`
+`CmdFlakeCheck::run` **contradicts** the measurement above. Upstream forces only
+`nixosConfigurations` — via `checkNixOSConfiguration`, which does
+`findAlongAttrPath("config.system.build.toplevel")` then `forceValue` (deep module
+eval, but no `queryDrvPath`) — while `darwinConfigurations` and
+`homeConfigurations` sit in an explicit no-op branch commented
+"Known but unchecked community attribute". On upstream, the `DEEP: hm
+activationPackage` throw would never fire.
+
+The discrepancy was investigated rather than left standing. The proposed
+explanation was the flake eval cache, since Test 1's error arose "while evaluating
+an attribute for caching" and this host has `eval-cache = true`. **That hypothesis
+was tested and eliminated:** re-running with `--option eval-cache false`, and again
+on an isolated flake containing only `homeConfigurations` plus
+`darwinConfigurations`, still fails with `error: HOME FORCED`. Deep forcing occurs
+with the eval cache **disabled**.
+
+**Conclusion.** Determinate Nix 3.21.7 (libnix 2.34.8) genuinely deep-forces
+`darwinConfigurations` and `homeConfigurations`, which upstream master does not.
+The measurement is authoritative *for this fleet*; the behaviour is **not** a Nix
+invariant. The precise Determinate mechanism remains **unconfirmed** — its
+`flake.cc` could not be fetched — but the eval cache has been ruled out.
+
+Magnitude, stated both ways so the concern is not over-weighted:
+
+| Implementation | Hosts forced by a root `nix flake check` |
+|---|---|
+| Determinate 2.34.8 (this fleet, today) | **all 8** — 2 darwin + 4 home + 2 nixos |
+| Upstream Nix master | **2** — `nixosConfigurations` only |
+
+So the fleet's exposure could shrink on a future Determinate rebase. The design rule
+holds under either implementation, which is why it does not depend on resolving the
+mechanism.
+
+#### Two flag semantics that matter, from the same source read
+
+- **`--no-build` does not reduce evaluation cost.** It sets `readOnlyMode` and
+  disables import-from-derivation, but every `check*` lambda still calls
+  `forceValue` / `forceAttrs`. It skips **realisation** only. So the existing
+  `--no-build` in the pre-commit gate is not a cost mitigation for eval.
+- **`--all-systems` is irrelevant to `nixosConfigurations`.** `checkSystemType`
+  gates only the per-system outputs (`packages`, `checks`, `devShells`, `apps`);
+  `nixosConfigurations` never calls it, so **every** NixOS configuration is
+  evaluated regardless. A root `nix flake check` run on a darwin host will
+  cross-evaluate the Linux NixOS toplevels even *without* `--all-systems`.
+
+#### There is no built-in way to exclude outputs
+
+Nix issue **#11818** ("flake-check: add support for disabling certain outputs",
+opened 2024-11-06) is **closed with no comments, no linked PR, and no implemented
+mechanism**. Whether it was closed as won't-fix or stale is undocumented. Core Nix
+therefore offers **no** blocklist or exclusion flag for `nix flake check`;
+flake-parts provides its own `checks` scoping, but that is not core behaviour.
+
+#### What the community actually uses for large fleets
+
+Consensus: large multi-host configurations **do not** gate on a blanket
+`nix flake check`. They use per-attribute parallel evaluation and build.
+
+- **`nix-eval-jobs`** (nix-community) is the foundational tool, and its README
+  contrasts itself with flake check directly: `nix flake check` "evaluates serially
+  and fails the entire jobset on any error", whereas nix-eval-jobs evaluates
+  attributes in parallel, streams per-attribute JSON (`drvPath`, `system`), and
+  restarts workers over `--max-memory-size` (default 4 GiB) to bound RAM —
+  "useful for time and memory intensive evaluations such as NixOS machines".
+  `--check-cache-status` marks each derivation `local` / `cached` / `notBuilt`,
+  which is the accepted idiom for "build only what changed";
+  `--select` / `--apply` target specific roots such as
+  `nixosConfigurations.<host>.config.system.build.toplevel`.
+- **`nix-fast-build`** (Mic92) wraps nix-eval-jobs to evaluate and build in
+  parallel, starting builds as attributes finish. It is the de-facto CI driver for
+  large configurations.
+- The **NixOS Wiki "Continuous Integration"** page (edited 2025-11-30) recommends
+  **nix-fast-build** for multi-output flakes and mentions **garnix**; it makes **no
+  recommendation of `nix flake check`**.
+
+> **Refined design rule.** Keep the existing discipline — no root-level
+> `nix flake check` in a routine or pre-commit gate. If a routine *full-fleet* gate
+> is ever wanted, build it on **nix-eval-jobs / nix-fast-build** over the explicit
+> toplevel and `activationPackage` attributes with `--check-cache-status`
+> selection, **not** on `nix flake check`, which has no exclusion mechanism, gains
+> nothing from `--no-build`, and ignores `--all-systems` for NixOS hosts.
+
+*Not individually verified:* the CI configuration of each named public repository
+(Misterio77, wimpysworld, Mic92, numtide). The characterisation above rests on the
+tools those maintainers author and on the wiki, not on an audit of their CI YAML.
+
 ### (a) Evaluating hosts you don't need — NOT a problem; no subflake required
 
 Flake outputs are a lazy attribute set. `darwin-rebuild switch --flake .#hera`
