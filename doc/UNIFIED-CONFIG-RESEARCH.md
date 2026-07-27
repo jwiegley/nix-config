@@ -454,17 +454,86 @@ host's local auto-root points at the same NFS symlink**. When host B activates,
 silently begins protecting B's closure instead of A's. If A then runs
 `nix-collect-garbage`, A's live paths are no longer rooted through that chain.
 
-**Honestly bounded.** Whether A's older generation survives depends on whether
-individual generation links are protected. For profiles under the standard
-`/nix/var/nix/profiles`, `/nix/var/nix/gcroots/profiles` recursively roots all
-generations; for a profile under the XDG/NFS path that automatic recursive rooting
-does **not** obviously apply. **The Nix garbage-collector documentation is silent
-on per-generation protection for non-standard profile locations**, so this step is
-reasoned from verified `--add-root` mechanics, not from explicit documentation.
-There is **no published incident report** of GC destroying a live standalone-HM
-profile this way. Treat it as a real hazard, not a proven certainty. A further
-trace of `src/libstore/gc.cc` / `profiles.cc` is in flight to close this gap; the
-remedy below is the same either way, so no design decision waits on it.
+**RESOLVED from Nix C++ source — and the above framing was too strong.** A
+follow-up trace of `src/libstore/{gc,profiles,local-store}.cc` closed this gap and
+**corrected** it. The `current-home` last-writer-wins problem is real, but it is
+**not** the store-collection cause. Superseded conclusion, kept visible so the
+correction is traceable rather than silently rewritten.
+
+**Plain garbage collection is SAFE.** Every home-manager generation link is
+**individually** GC-rooted at creation, independent of profile location.
+`profiles.cc` `createGeneration`:
+
+```cpp
+auto generation = makeName(profile, num + 1);
+store.addPermRoot(outPath, generation.string());
+```
+
+and `gc.cc` `addIndirectRoot` gives each link its own auto-root:
+
+```cpp
+std::string hash = hashString(HashAlgorithm::SHA1, path.string()).to_string(...);
+auto realRoot = canonPath(config->stateDir.get() / gcRootsDir / "auto" / hash);
+makeSymlink(realRoot, path);
+```
+
+So each `home-manager-N-link` has its own `/nix/var/nix/gcroots/auto/<sha1>` entry,
+created on and local to the host that built it. A new activation elsewhere creates
+a **new-numbered** link (`num + 1`) and never touches existing links. A host's live
+generation therefore stays rooted, and `current-home` being overwritten does not
+endanger it. Protection is destroyed only by *deleting* the link.
+
+Also settled: generation protection does **not** depend on a
+`gcroots/profiles` recursive symlink — `local-store.cc` only `createDirs` those
+paths, with no `createSymlink`. And it would not matter if one existed, because
+`gc.cc` `findRoots` recurses only into **real** directories, testing each entry by
+its *unresolved* type (`i.symlink_status().type()`), so a symlink-to-directory
+takes the symlink branch and is never descended. Indirect roots are followed
+exactly **one** hop: `gcroots/auto/<hash>` → user path → store path, two hops max,
+with dangling `auto/` entries auto-pruned via `tryUnlink`.
+
+**The real hazard is narrower, and it is confirmed rather than inferred.**
+`profiles.cc` `deleteOldGenerations` keeps **only** the current generation:
+
+```cpp
+for (auto & i : gens) if (i.number != curGen) deleteGeneration2(profile, i.number, dryRun);
+// deleteGeneration:
+std::filesystem::path generation = makeName(profile, gen); unlinkIfExists(generation);
+```
+
+and `curGen = parseName(profileName, readLink(profile))` — i.e. whatever the shared
+profile symlink currently points at, which is **the last writer**. So expiring old
+generations on a shared profile deletes the links every *other* host is live on,
+removing their auto-roots; the next store GC then collects those closures.
+
+**Triggering commands** (these are the dangerous ones while the profile is shared):
+
+- `nix-collect-garbage -d` / `--delete-old`. Per the Nix 2.35.2 manual, `-d`
+  expires the default profile locations — for a regular user that is
+  `$XDG_STATE_HOME/nix/profiles`, **the very directory holding `home-manager`**.
+- `home-manager expire-generations <time>` / `--delete-older-than`.
+- `nix profile wipe-history`, `nix-env --profile <shared> --delete-generations`.
+- Automatic GC with delete-old (systemd timer, `nix.gc.automatic` with
+  `deleteOlderThan`) — same trigger, unattended.
+
+**Not triggers:** plain `nix-collect-garbage` (no `-d`) and `nix store gc`. These
+delete unreachable store paths but do not delete generations, so nothing is
+unrooted.
+
+> **Accurate statement of the hazard:** sharing the home-manager profile over NFS
+> is a **documented, conditional** data-loss hazard. Running `nix-collect-garbage
+> -d` or `home-manager expire-generations` from any of the four hosts deletes the
+> generations the *other* hosts are live on, and the next store GC reaps those
+> closures. **Plain GC is safe.** No published incident report was found. The
+> host-local-state fix removes the sharing and eliminates this entirely.
+
+**Standing caveats.** This analysis assumes `/nix/store` and `/nix/var/nix` are
+**host-local**, which is normal but should be confirmed on the four Ubuntu boxes —
+if `/nix` itself were NFS-shared the whole analysis changes. Source was read from
+NixOS/nix master plus the 2.35.2 manual while the fleet runs the Determinate fork
+(2.34.8); the fork's `nix-collect-garbage.cc` could not be byte-confirmed (404),
+though the mechanisms involved (per-generation `addPermRoot`, keep-current
+expiry, one-level indirect roots) are long-standing and stable.
 
 **New finding 3 — correction to the `use-xdg-base-directories` reading.** With the
 flag `false` (the default), `~/.nix-profile` remains the *link* but **targets
@@ -485,8 +554,14 @@ each Ubuntu host: `readlink ~/.nix-profile`, `ls -la ~/.local/state/nix/profiles
 
 ### Failure modes, ranked
 
-1. **Data-loss class — GC reaping a live closure**, via the redirected auto-root
-   chain above. Bounded as described; hazard, not certainty.
+1. **Data-loss class — GC reaping a live closure, but only via generation
+   expiry.** Confirmed from source: `nix-collect-garbage -d`,
+   `home-manager expire-generations`, `nix profile wipe-history`, or automatic
+   GC-with-delete-old, run from **any** of the four hosts, deletes the generation
+   links the others are live on; the next store GC then collects those closures.
+   Plain `nix-collect-garbage` and `nix store gc` are safe. **Operationally: do
+   not run generation-expiry commands on these four machines until the profile is
+   host-local**, and check for any automatic GC timer with a delete-old setting.
 2. **Generation interleaving and wrong rollback.** `home-manager generations` globs
    `home-manager-*-link` in the shared profile dir and marks whatever the
    `home-manager` symlink resolves to as "(current)". A shared profile means one
