@@ -1434,6 +1434,357 @@ exec "$REAL_GIT" "$@"
         offenders = self._closure_impurities(synthetic)
         self.assertIn("shared", offenders)
 
+
+    # ---- production source-coordinate completeness gate ----------------
+    #
+    # Issue #25 (DoD item 3): every production Internet source coordinate must
+    # be catalog-owned (sources/*.json, resolved as `<fetcher> X.source.args`)
+    # or a validated flake-declaration projection -- never a bare fetch literal
+    # inlined into a package body. The catalog LOADER already validates records
+    # it is given (load_source_catalog / _validate_fetch_record); what it cannot
+    # see is a NEW inline literal that never became a record. This walks the
+    # production seams and rejects exactly that, with an EXACT-SET allowlist so a
+    # stale exception fails as loudly as a new leak (as with
+    # KNOWN_UNFETCHABLE_ROOT_NODES above).
+
+    # Production seams: flake.nix plus every .nix under these roots. `test`/
+    # `tests` path components are excluded to match OverlayParser's own
+    # production rule (bin/update-overlay:144); doc/ and the top-level test/
+    # tree are simply not roots. sources/*.json is catalog DATA, not a seam.
+    _SEAM_ROOTS = ("overlays", "packages", "config", "flake")
+
+    # Fetchers whose inline argument attrset is a package-source coordinate.
+    # Bare and qualified (prev./final./pkgs./builtins.) call forms are both
+    # recognized, so a catalog bypass cannot hide behind a `prev.` prefix.
+    # builtins.fetchTree/fetchGit/fetchTarball are here because a pinned flake
+    # or tarball URL is a source coordinate too. Deliberately NOT covered, and
+    # why: fetchNpmDeps / npmDepsHash / cargoHash / vendorHash (dependency-hash
+    # mechanisms, not the `src` coordinate); bare filesystem `src = /path`
+    # literals and flake INPUT locators (owned by the external-filesystem and
+    # whole-closure purity checks above -- one mechanism, per cross-stream X4);
+    # and arbitrary URL strings that are not a fetcher argument (runtime/service
+    # endpoints, lockfile-patch strings) -- see the runtime-URL positive control.
+    _FETCHERS = (
+        "fetchFromGitHub", "fetchFromGitLab", "fetchFromGitiles", "fetchgit",
+        "fetchurl", "fetchzip", "fetchpatch", "fetchPypi", "fetchTree",
+        "fetchTarball", "fetchCrate", "fetchsvn", "fetchhg", "fetchGit",
+    )
+    _FETCH_TOKEN = re.compile(
+        r"(?<![\w\"'])(?:[A-Za-z_][\w'-]*\.)?(" + "|".join(_FETCHERS) + r")\b"
+    )
+    # A coordinate field bound to a string literal (also the first element of a
+    # `urls = [ "..." ]` list). Its presence in an inline `{ .. }` is what makes
+    # the attrset a literal source coordinate rather than a reference.
+    _COORD_FIELD = re.compile(
+        r"\b(owner|repo|url|urls|rev|tag|hash|sha256|sha512|pname|domain)\s*=\s*"
+        r'(?:"([^"]*)"|\[\s*"([^"]*)")'
+    )
+
+    # Known inline source-coordinate literals, tolerated transitionally. EXACT
+    # SET: a removed entry (e.g. once migrated to sources/*.json) fails just as
+    # loudly as a new inline literal. The key embeds the coordinate, so a version
+    # bump to the tolerated source re-surfaces it for re-review -- the intended
+    # pressure toward catalog ownership. Every entry names its owning issue.
+    KNOWN_INLINE_SOURCE_LITERALS: dict[str, str] = {
+        "packages/agent-resources.nix: fetchzip "
+        "url=https://registry.npmjs.org/ws/-/ws-8.18.3.tgz":
+            "npm `ws` tarball; tracked by packages/update-manifest.nix "
+            "(kind=npm-release, target `ws`) but not catalog-owned. Migration "
+            "to sources/*.json is issue #43 (E2-WU4C-ZERO-PENDING / 1.8).",
+    }
+
+    # Root flake inputs whose coordinate is neither a fetchable remote nor a
+    # repo-internal path. Empty: all current inputs are github:/git+ssh:/path:.
+    KNOWN_UNCLASSIFIED_FLAKE_INPUTS: dict[str, str] = {}
+
+    @staticmethod
+    def _mask_nix(text):
+        """Blank comment and string bytes, preserving length and newlines.
+
+        Structural scans run on the mask so a fetcher name or brace inside a
+        comment or string literal is invisible. Line comments (#..), block
+        comments (/* */), double-quoted ("..") and Nix indented ('' .. '')
+        strings are handled. Antiquotation (${..}) inside a string is blanked
+        whole rather than re-entered as code -- a conservative limitation;
+        fetchers are never invoked inside string antiquotation in this tree.
+        """
+        out = list(text)
+        i, n = 0, len(text)
+        while i < n:
+            c = text[i]
+            two = text[i:i + 2]
+            if c == "#":
+                while i < n and text[i] != "\n":
+                    out[i] = " "
+                    i += 1
+                continue
+            if two == "/*":
+                while i < n and text[i:i + 2] != "*/":
+                    if text[i] != "\n":
+                        out[i] = " "
+                    i += 1
+                for _ in range(min(2, n - i)):
+                    out[i] = " "
+                    i += 1
+                continue
+            if two == "''":
+                out[i] = out[i + 1] = " "
+                i += 2
+                while i < n:
+                    if text[i:i + 2] == "''":
+                        out[i] = out[i + 1] = " "
+                        i += 2
+                        break
+                    if text[i] != "\n":
+                        out[i] = " "
+                    i += 1
+                continue
+            if c == '"':
+                out[i] = " "
+                i += 1
+                while i < n and text[i] != '"':
+                    if text[i] == "\\" and i + 1 < n:
+                        out[i] = out[i + 1] = " "
+                        i += 2
+                        continue
+                    if text[i] != "\n":
+                        out[i] = " "
+                    i += 1
+                if i < n:
+                    out[i] = " "
+                    i += 1
+                continue
+            i += 1
+        return "".join(out)
+
+    @staticmethod
+    def _match_brace(mask, open_idx):
+        """Index just past the '}' matching the '{' at open_idx, in the mask."""
+        depth = 0
+        for j in range(open_idx, len(mask)):
+            if mask[j] == "{":
+                depth += 1
+            elif mask[j] == "}":
+                depth -= 1
+                if depth == 0:
+                    return j + 1
+        return len(mask)
+
+    @classmethod
+    def _inline_fetcher_offenders(cls, text):
+        """Inline fetcher-literal coordinates in one seam's text.
+
+        Returns [(line, fetcher, locator)]. A hit is a fetcher applied directly
+        to an inline `{ .. }` that binds a coordinate field to a string literal.
+        A fetcher applied to an expression (`prev.fetchFromGitHub
+        source.source.args`) has no following `{` and is not a hit -- that is the
+        sanctioned catalog-resolved form.
+        """
+        mask = cls._mask_nix(text)
+        hits = []
+        for m in cls._FETCH_TOKEN.finditer(mask):
+            fetcher = m.group(1)
+            j = m.end()
+            while j < len(mask) and mask[j] in " \t\n\r":
+                j += 1
+            if j >= len(mask) or mask[j] != "{":
+                continue
+            block = text[j:cls._match_brace(mask, j)]
+            coord = cls._COORD_FIELD.search(block)
+            if not coord:
+                continue
+            owner = re.search(r'\bowner\s*=\s*"([^"]*)"', block)
+            repo = re.search(r'\brepo\s*=\s*"([^"]*)"', block)
+            if owner and repo:
+                locator = f"{owner.group(1)}/{repo.group(1)}"
+            else:
+                value = coord.group(2) if coord.group(2) is not None else coord.group(3)
+                locator = f"{coord.group(1)}={value}"
+            hits.append((text.count("\n", 0, j) + 1, fetcher, locator))
+        return hits
+
+    @classmethod
+    def _iter_production_seams(cls, root):
+        """Yield (relpath, text) for each production .nix seam under root."""
+        paths = [root / "flake.nix"]
+        for name in cls._SEAM_ROOTS:
+            paths.extend((root / name).rglob("*.nix"))
+        for path in sorted(set(paths)):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(root)
+            if any(part in ("test", "tests") for part in rel.parts):
+                continue
+            yield rel, path.read_text()
+
+    @classmethod
+    def _production_inline_offenders(cls, root):
+        """Stable offender key -> (relpath, line) across all production seams."""
+        offenders = {}
+        for rel, text in cls._iter_production_seams(root):
+            for line, fetcher, locator in cls._inline_fetcher_offenders(text):
+                offenders[f"{rel}: {fetcher} {locator}"] = (str(rel), line)
+        return offenders
+
+    @staticmethod
+    def _classify_flake_input_url(url):
+        """Classify a flake input coordinate.
+
+        repo-internal-path : path:./x or path:x (repo-local)      -> allowed
+        external-filesystem: path:/abs, file://, git+file://       -> reject
+        remote             : github:/git+ssh:/git+https:/https:... -> allowed
+        unknown            : anything else                         -> reject
+        """
+        if url.startswith("git+file:") or url.startswith("file:"):
+            return "external-filesystem"
+        if url.startswith("path:"):
+            rest = url[len("path:"):]
+            return "external-filesystem" if rest.startswith("/") else "repo-internal-path"
+        if re.match(r"[a-z][a-z0-9+.-]*:", url):
+            return "remote"
+        return "unknown"
+
+    def test_production_seams_have_no_undeclared_inline_source_coordinates(self):
+        """No production .nix body inlines a fetch coordinate off-catalog.
+
+        Named for what it proves: every fetcher in a production seam is either
+        applied to a catalog record (`<fetcher> X.source.args`) or listed, with a
+        reason and owning issue, in KNOWN_INLINE_SOURCE_LITERALS. It does NOT
+        prove those catalog records are themselves fetchable -- load_source_catalog
+        validates their shape; the closure-purity tests cover locator hygiene.
+        """
+        root = SCRIPT.parent.parent
+        offenders = self._production_inline_offenders(root)
+        self.assertEqual(
+            set(offenders),
+            set(self.KNOWN_INLINE_SOURCE_LITERALS),
+            "production inline source-coordinate set changed; offenders: %s"
+            % {k: "%s:%d" % v for k, v in sorted(offenders.items())},
+        )
+
+    def test_inline_source_gate_flags_each_fetcher_kind(self):
+        """Negative fixture per source kind + positive controls.
+
+        Each undeclared inline literal is flagged; each sanctioned form
+        (catalog-resolved application, commented-out fetcher, a `fetcher ==
+        "..."` string, and a runtime/service URL that is not a fetcher argument)
+        is not -- the gate does not confuse runtime endpoints with sources.
+        """
+        header = "final: prev: {\n  broken = prev.stdenv.mkDerivation {\n    "
+        footer = "\n  };\n}\n"
+        rejected = {
+            "fetchFromGitHub":
+                'src = prev.fetchFromGitHub {\n      owner = "evil";\n'
+                '      repo = "sneak"; rev = "v1"; hash = "sha256-A";\n    };',
+            "fetchgit":
+                'src = fetchgit {\n      url = "https://x.invalid/r.git";\n'
+                '      rev = "abc"; hash = "sha256-B";\n    };',
+            "fetchurl":
+                'src = fetchurl {\n      url = "https://x.invalid/a.tar.gz";\n'
+                '      hash = "sha256-C";\n    };',
+            "fetchzip":
+                'src = fetchzip {\n      url = "https://x.invalid/a.zip";\n'
+                '      hash = "sha256-D";\n    };',
+            "fetchpatch":
+                'p = fetchpatch {\n      url = "https://x.invalid/p.patch";\n'
+                '      hash = "sha256-E";\n    };',
+            "fetchPypi":
+                'src = fetchPypi {\n      pname = "evil"; version = "1.0";\n'
+                '      hash = "sha256-F";\n    };',
+            "fetchTree (pinned flake URL)":
+                'src = builtins.fetchTree {\n      type = "github";\n'
+                '      owner = "evil"; repo = "flake"; rev = "dead";\n    };',
+        }
+        for kind, body in rejected.items():
+            with self.subTest(reject=kind):
+                hits = self._inline_fetcher_offenders(header + body + footer)
+                self.assertEqual(len(hits), 1, hits)
+        allowed = {
+            "catalog-resolved":
+                "src = prev.fetchFromGitHub sources.foo.source.args;",
+            "catalog-resolved-paren":
+                'src = prev.fetchFromGitHub (sourceArgs "fetchFromGitHub" n);',
+            "commented-out":
+                '# src = fetchFromGitHub { owner = "a"; repo = "b"; };',
+            "block-commented":
+                '/* src = fetchurl { url = "https://x"; hash = "y"; }; */',
+            "fetcher-string-compare":
+                'assert source.source.fetcher == "fetchFromGitHub";',
+            "runtime-service-url":
+                'services.x.endpoint = "https://api.example.com/v1";',
+            "lockfile-patch-url":
+                'substituteInPlace lock --replace-fail '
+                '"https://registry.npmjs.org/ws/-/ws-1.0.0.tgz" "x";',
+        }
+        for kind, body in allowed.items():
+            with self.subTest(allow=kind):
+                hits = self._inline_fetcher_offenders(header + body + footer)
+                self.assertEqual(hits, [], hits)
+
+    def test_inline_source_gate_exact_set_rejects_new_and_stale(self):
+        """The exact-set comparison discriminates in both directions.
+
+        A newly introduced inline literal appears in the offender set (so the
+        real-tree assertEqual would fail); a stale allowlist entry that no longer
+        matches any offender also breaks equality. Neither can be papered over.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            (temp / "overlays").mkdir()
+            (temp / "overlays/30-injected.nix").write_text(
+                "final: prev: {\n"
+                "  malware = prev.stdenv.mkDerivation {\n"
+                '    pname = "malware";\n'
+                "    src = prev.fetchFromGitHub {\n"
+                '      owner = "attacker"; repo = "backdoor";\n'
+                '      rev = "0"; hash = "sha256-Z";\n'
+                "    };\n  };\n}\n"
+            )
+            offenders = self._production_inline_offenders(temp)
+            key = "overlays/30-injected.nix: fetchFromGitHub attacker/backdoor"
+            self.assertIn(key, offenders)
+            # New literal, empty allowlist -> sets differ (would fail the gate).
+            self.assertNotEqual(set(offenders), set())
+            # Stale entry not matching any offender -> also breaks equality.
+            self.assertNotEqual(set(offenders), set(offenders) | {"stale/entry"})
+
+    def test_flake_input_coordinates_are_internal_or_declared(self):
+        """Flake input coordinates are repo-internal paths or fetchable remotes.
+
+        Confirms the allowed classes the gate must tolerate (issue #25): the
+        repo-internal path inputs and the stock-trader git+ssh remote. Synthetic
+        filesystem coordinates are rejected. This complements -- does not
+        duplicate -- test_root_inputs_do_not_reference_external_filesystems and
+        the whole-closure purity walk, which own the lock/text leak dimension.
+        """
+        root = SCRIPT.parent.parent
+        rejected = {}
+        for rel in ("flake.nix", "config/ai/flake.nix"):
+            text = (root / rel).read_text()
+            for url in re.findall(r'\burl\s*=\s*"([^"]*)"', text):
+                kind = self._classify_flake_input_url(url)
+                if kind not in ("remote", "repo-internal-path"):
+                    rejected[f"{rel}: {url}"] = kind
+        self.assertEqual(
+            set(rejected),
+            set(self.KNOWN_UNCLASSIFIED_FLAKE_INPUTS),
+            "flake input coordinate classification changed: %s" % rejected,
+        )
+        classify = self._classify_flake_input_url
+        self.assertEqual(classify("path:./config/ai"), "repo-internal-path")
+        self.assertEqual(classify("path:./config/certs"), "repo-internal-path")
+        self.assertEqual(
+            classify("git+ssh://gitea/johnw/stock-trader.git?rev=51d789"),
+            "remote",
+        )
+        self.assertEqual(classify("github:owner/repo/deadbeef"), "remote")
+        for bad in (
+            "git+file:///Users/johnw/src/x",
+            "path:/Users/johnw/src/x",
+            "file:///tmp/x",
+        ):
+            with self.subTest(bad=bad):
+                self.assertEqual(classify(bad), "external-filesystem")
     def test_root_consumes_portable_input_authority_transitively(self):
         root = SCRIPT.parent.parent
         root_lock = json.loads((root / "flake.lock").read_text())
