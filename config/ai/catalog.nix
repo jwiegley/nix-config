@@ -261,6 +261,10 @@ let
     };
   };
   commandMetadata = {
+    "alexey" = {
+      "description" =
+        "Spawn a read-only subagent to review a pull request with the review discipline of Alexey -- correctness verified by construction, benchmarks read first, prose audited for truth, tests interrogated for meaning, scope policed -- reporting findings only, never modifying the PR or posting comments.";
+    };
     "assess" = {
       "description" =
         "Deeply analyze co-worker comments on the current PR and present findings plus an approach for responding";
@@ -296,7 +300,7 @@ let
     };
     "deep-review" = {
       "allowed-tools" =
-        "Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(wc:*), Bash(gh pr diff:*), Task";
+        "Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(wc:*), Bash(gh pr diff:*), Skill, Task";
       "argument-hint" = [
         "files"
         "directories"
@@ -720,6 +724,7 @@ let
   bigpowers = import ./bigpowers-resources.nix;
 
   localBroadSkills = [
+    "alexey-review"
     "anvil"
     "caveman"
     "comment-audit"
