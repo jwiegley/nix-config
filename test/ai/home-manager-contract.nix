@@ -168,6 +168,17 @@ let
     "vulcan-claude-personal"
     "vulcan-opencode"
   ];
+  positronPyTorchSkills = [
+    "add-uint-support"
+    "at-dispatch-v2"
+    "docstring"
+  ];
+  personalOnlyProfileIds = builtins.filter (
+    profileId: catalog.profiles.${profileId}.audiences == [ "personal" ]
+  ) expectedProfileIds;
+  positronProfileIds = builtins.filter (
+    profileId: builtins.elem "positron" catalog.profiles.${profileId}.audiences
+  ) expectedProfileIds;
   expectedProfileRoots = {
     clio-claude-personal = ".config/claude/personal";
     clio-claude-positron = ".config/claude/positron";
@@ -640,6 +651,20 @@ let
         sortedNames modelData.models
       ))
     ];
+
+  positronPyTorchSkillSelectionChecks =
+    map (
+      profileId:
+      expectEqual "${profileId} excludes positron PyTorch skills" (builtins.filter (
+        name: builtins.elem name positronPyTorchSkills
+      ) (selectedNames profileId "skills")) [ ]
+    ) personalOnlyProfileIds
+    ++ map (
+      profileId:
+      expectEqual "${profileId} includes positron PyTorch skills" (builtins.filter (
+        name: builtins.elem name positronPyTorchSkills
+      ) (selectedNames profileId "skills")) positronPyTorchSkills
+    ) positronProfileIds;
 
   claudeProfileIds = [
     "clio-claude-personal"
@@ -3813,6 +3838,7 @@ let
     (expectEqual "positron Claude skills" (selectedNames "hera-claude-positron" "skills") (
       lib.sort builtins.lessThan (
         (selectedNames "hera-codex" "skills")
+        ++ positronPyTorchSkills
         ++ [
           "forge"
           "retest"
@@ -3820,7 +3846,9 @@ let
       )
     ))
     (expectEqual "shared Codex skills" (selectedNames "shared-work-codex" "skills") (
-      lib.sort builtins.lessThan ((selectedNames "hera-codex" "skills") ++ [ "retest" ])
+      lib.sort builtins.lessThan (
+        (selectedNames "hera-codex" "skills") ++ positronPyTorchSkills ++ [ "retest" ]
+      )
     ))
     (expectEqual "registry schema version" rawModelRegistry.schemaVersion 2)
     (expectEqual "registry top-level keys" (sortedNames rawModelRegistry) [
@@ -4182,6 +4210,7 @@ let
   ]
   ++ profileChecks
   ++ reachabilityChecks
+  ++ positronPyTorchSkillSelectionChecks
   ++ rendererChecks
   ++ task9Checks
   ++ task10Checks

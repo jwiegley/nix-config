@@ -747,6 +747,11 @@ let
     "ponytail-review"
     "translate-en"
   ];
+  positronPyTorchSkills = [
+    "add-uint-support"
+    "at-dispatch-v2"
+    "docstring"
+  ];
   resourceSkills = resources + "/share/agent-resources/skills";
 
   mkSkill = sourceRoot: name: selectors: {
@@ -765,10 +770,14 @@ let
   bigpowersSkillItems = lib.genAttrs bigpowers.names (
     name: mkSkill resourceSkills name { clients = contentClients; }
   );
+  positronPyTorchSkillItems = lib.genAttrs positronPyTorchSkills (
+    name: mkSkill ./skills name { audiences = [ "positron" ]; }
+  );
   skills =
     broadLocalSkillItems
     // broadExternalSkillItems
     // bigpowersSkillItems
+    // positronPyTorchSkillItems
     // {
       forge = mkSkill ./skills "forge" { clients = [ "claude" ]; };
       retest = mkSkill ./skills "retest" { audiences = [ "positron" ]; };
