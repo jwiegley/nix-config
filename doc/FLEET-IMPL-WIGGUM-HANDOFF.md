@@ -156,3 +156,44 @@ journal (`wf_eeaf009d-c1e`), extracted per-issue under the session scratchpad.
   earlier report of 6/47 unpushed was from stale tracking refs and is corrected.
 - **No activation**, on any host. `~/src/nixos` and `~/src/vps` carry signed commits
   that have not been synced to their authoritative `/etc/nixos` checkouts.
+
+## Audit corrections that could not be amended into their commits
+
+An independent audit of `601c7cf7`, `71805147` and `9d00d47e` found two numeric
+errors in the commit messages' own `bin/quality` evidence blocks. Both commits are
+already merged into `main`, and rewriting merged history requires explicit
+authorization per `CLAUDE.md`, so the corrections are recorded here instead of
+amended away.
+
+| commit | claimed | **actual at that tree** |
+|---|---|---|
+| `601c7cf7` | 32 shell files | **34** |
+| `9d00d47e` | 94 nix files | **93** |
+
+The cause is consistent and worth naming, because it will recur otherwise: in each
+commit the **one dimension that changed** is reported at its pre-change value while
+every unchanged dimension is correct. I ran `bin/quality` *before* `git add`, and
+`bin/quality` discovers scope via `git ls-files`, which cannot see untracked files.
+So the evidence block measured the parent tree and was then presented as proof of
+the commit's own state.
+
+The suites do pass at the committed states — this is misattributed evidence rather
+than a failing gate — but presenting a parent-tree measurement as a commit's
+proof-of-green is exactly the overstatement this programme rejects.
+
+**Rule going forward: stage first, then measure.** An evidence block must be
+captured after `git add`, or it describes a tree that was never committed.
+
+Two smaller corrections from the same audit:
+
+- **"Fully offline" was wrong** in the #22 closing comment. `--offline` is opt-in
+  via `CONSUMER_EVAL_OFFLINE=1`; the wired `bin/quality consumer-eval` does not set
+  it. Corrected on the issue.
+- **The vacuous-green tally is inconsistent** across messages — "four times" in one,
+  "five times" in another. Five is right, and the count is now: the shfmt loop, the
+  stdin-reading formatter, the eleven aliased outputs, the subshell accumulator, and
+  the routing test called with the wrong input shape. A sixth has since been added
+  by me and fixed: the null-`repoHead` check I verified with a flag that does not
+  exist.
+- `601c7cf7`'s "166 = 125 + 22 + 8 + 7" sums to 162. Each figure is right; the
+  enumeration omits the 4 `flake-ai-internal-consumer` references.

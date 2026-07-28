@@ -24,7 +24,9 @@ What it asserts, all without a single nix evaluation:
   the ``--write`` double ``git rev-parse`` bug produced;
 * ``packageCount`` equals ``len(packages)`` on every target, so a hand-edited
   count can never drift from the list it summarises;
-* the recorded derivation command still matches ``bin/parity-baseline`` -- a
+* the recorded derivation command's KEYS and SHAPE are present
+      (drift against the live tool is NOT asserted: that test skips until
+      bin/parity-baseline gains a --commands mode -- see the skip reason)
   command that has drifted from the tool derives a different oracle than the one
   a later gate would;
 * provenance: any recorded history chain is well-formed and its tail is the
