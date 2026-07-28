@@ -197,3 +197,63 @@ Two smaller corrections from the same audit:
   exist.
 - `601c7cf7`'s "166 = 125 + 22 + 8 + 7" sums to 162. Each figure is right; the
   enumeration omits the 4 `flake-ai-internal-consumer` references.
+
+
+## Session state as of `91af9ad0`
+
+**20 closed** in nix-config; 50 open; 4 open in nixos-config. `main` at `91af9ad0`,
+all commits signed, 6 python suites / 97 tests green, `nix flake check ./config/ai
+--all-systems` green on all three systems. Unpushed: 15 to each remote.
+
+Closed this session: #16 #17 #18 #19 #20 #21 #22 #25 #26 #27 #29 #30 #31 #35 #36
+#37 #46 #48 #52 + #15 retired.
+
+Open with work landed and a status comment naming the gate: #23 (public-key
+decision), #28 (live verdict pending), `nixos-config#1` (needs vulcan sync).
+
+### Blocked, with evidence recorded on the issue — do not re-attempt without clearing
+
+- **#42** lean profile — `optAgent "pi"` is still at `config/packages.nix:497` and
+  `config/ai.nix` owns pi's *renderer* but not its *package*. Removing it would drop
+  pi from every profile. Chain: #32 → #66 → #42.
+- **#43** transitional authority — the "zero unmanaged targets" gate is false.
+  Ground truth is 198/176/22, not the issue's 188/170/18. `cymbal` and `rtk` are
+  `explicit-rev` multi-platform assets and **no sibling issue owns an executor for
+  that kind**. Required order recorded on the issue.
+- **#34** root-input projections — the 15 records are derived and lock-verified, but
+  `_catalog_executor` returns `None` for `fixed-flake-input`, so committing them
+  lands **+15 pending** and pushes #43 further from zero. Needs the executor/count
+  decision (Q3 in `doc/FLEET-DECISIONS.md`).
+
+### Anvil
+
+Available on this host, **dedicated** backend. Its buffer view cannot prove a
+separate interactive Emacs has no unsaved copy, so no such claim is made. One
+`file-batch` call failed with a handler error; fell back for that operation only,
+per the bounded-recovery policy, and continued using its structured git queries.
+
+### Attempt counters
+
+| Gate | Attempts | Status |
+|---|---|---|
+| `bin/quality` all fast suites | 9 | **PASS** |
+| `nix flake check ./config/ai --all-systems` | 6 | **PASS** |
+| `bin/gates-test.py` | 5 | **PASS** 11 tests, 1 conditional skip |
+| ssh rendered-config parity | 2 | **PASS** byte-identical |
+| `home-manager-release-skew` | 2 | **PASS** positive + negative |
+| parity multiset vs `e0ed94fa` | 3 | **PASS** identical on all 7 targets |
+
+### The one lesson that keeps recurring
+
+Six defects this session were gates that reported success while covering nothing,
+and **four of the six were mine**. None was found by reading code; every one was
+found by asking "does this fail when it should?" The two worst were subtle:
+
+- I verified a null-`repoHead` refusal using a `--repo-head` flag that does not
+  exist, so the tool died on "unknown argument" and I recorded that exit 1 as the
+  guard working.
+- I explained moved host drvPaths as "additive `bin/` change" long after measuring
+  that `vulcan-crt`'s whole-tree hash moves them on *every* commit.
+
+Both were caught by an independent evaluator, not by me. That is the argument for
+`doc/INDEPENDENT-EVALUATOR.md` being a real gate rather than a document.
