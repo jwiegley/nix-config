@@ -54,6 +54,7 @@ SUITES=(
     python-lint
     python-test
     portable-eval
+    consumer-eval
     signatures
 )
 
@@ -241,6 +242,24 @@ run_python_test() {
     fi
 }
 
+# Unlike every other suite, this one does not read the local tree with a per-file
+# tool. It evaluates the fleet's CONSUMERS (vulcan, vps, shared-work) against THIS
+# working tree, eval-only, so an overlay or shared-config change here that would
+# break a consumer fails at pre-push instead of at the consumer's next lock bump —
+# which is how vulcan's evaluation stayed broken for weeks.
+#
+# bin/cross-consumer-eval is the authority for what that means; it reports every
+# consumer before exiting non-zero, so this suite only records the verdict.
+# Targeted but expensive: wired into pre-push, deliberately NOT pre-commit.
+run_consumer_eval() {
+    need nix consumer-eval || return
+    if bin/cross-consumer-eval; then
+        note "consumer-eval: OK"
+    else
+        fail "consumer-eval: bin/cross-consumer-eval reported a failing consumer"
+    fi
+}
+
 run_signatures() {
     need git signatures || return
     need gpg signatures || return
@@ -324,6 +343,7 @@ for suite in "${want[@]}"; do
     python-lint) run_python_lint ;;
     python-test) run_python_test ;;
     portable-eval) run_portable_eval ;;
+    consumer-eval) run_consumer_eval ;;
     signatures) run_signatures ;;
     esac
 done

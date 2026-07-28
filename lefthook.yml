@@ -43,6 +43,12 @@ pre-commit:
 
 pre-push:
   commands:
+    # Evaluates vulcan, vps and the shared-work class against THIS tree, so a
+    # change here that would break a consumer fails before it is published rather
+    # than at the consumer's next lock bump. Deliberately pre-push and not
+    # pre-commit: it is targeted but still costs real nix eval time.
+    consumer-eval:
+      run: bin/quality consumer-eval
     agent-checks:
       run: >-
         nix build --no-link

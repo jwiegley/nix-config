@@ -1,0 +1,245 @@
+#!/usr/bin/env bash
+# bin/cross-consumer-eval — evaluate the fleet's nix-config CONSUMERS against
+# THIS working tree, eval-only, so a change here that would break a consumer's
+# evaluation fails at pre-push in nix-config instead of weeks later at the
+# consumer's next lock bump.
+#
+# Why this exists. nix-config is consumed, not just built: vulcan and vps pull
+# it in as a `flake = false` input and cherry-pick packages out of its INTERNAL
+# overlay files (overlays/00-lib.nix, overlays/30-*.nix); the four shared-work
+# machines import config/johnw.nix + config/packages.nix. None of that is a
+# supported API, and none of nix-config's own gates evaluate it. Commit a3cc3843
+# converted several two-level `final: prev:` overlays into three-level factories
+# taking a strict argument set; the consumers still called them positionally, so
+# their entire evaluation began failing with
+#
+#     error: function 'anonymous lambda' called with unexpected argument 'system'
+#
+# — and every gate in this repo stayed green. The break only surfaced weeks
+# later, when a consumer's lock crossed the offending commit. This gate closes
+# that window: it evaluates each consumer against the working tree BEFORE the
+# revision can become their next lock target.
+#
+# What it proves, precisely (see jwiegley/nix-config#22 and the NOTES for the
+# full honesty accounting — this is not the same depth for every consumer):
+#
+#   shared-work  This repo's own homeConfigurations."jwiegley@x86_64-linux"
+#                activationPackage evaluates. That fixture imports the exact
+#                config/johnw.nix + config/packages.nix + config/overlays.nix
+#                surface the four work machines import, at hostname "linux".
+#                Proxy for that surface; NOT for their host-gated branches.
+#
+#   vps          ovh-vps's full system.build.toplevel evaluates against the
+#                working tree (nix-config overridden in). This is the real
+#                toplevel and reaches the overlay cherry-pick AND vps's own
+#                home-manager import of config/johnw.nix.
+#
+#   vulcan       The full toplevel is NOT reachable from a non-vulcan host — it
+#                needs vulcan-local `git+file:///etc/nixos/{firmware,secrets,
+#                nagios}` inputs and pulls an un-cached import-from-derivation.
+#                So vulcan's target is its OWN nix-config-reachin-compat check,
+#                evaluated against the working tree. That reuses vulcan's
+#                authoritative reach-in set (no hand-maintained list here) and
+#                forces every cherry-picked package's derivation, which is
+#                exactly the a3cc3843 seam. It does NOT evaluate vulcan's
+#                modules/services. Named "reach-in", not "toplevel".
+#
+# What this ADDS over the consumers' in-repo canaries: those same canaries run
+# at each CONSUMER's own `nix flake check`, against the nix-config revision that
+# consumer has ALREADY locked. This runs them (and more, for vps) against
+# nix-config's WORKING TREE, before a push — the window a lock-time canary
+# structurally cannot cover.
+#
+# Eval-only. Every target is forced to .drvPath: instantiation, never a build.
+# A NixOS toplevel can still trigger import-from-derivation, which builds; that
+# is inherent to the consumer's config, not a choice of this gate. The vulcan
+# reach-in target is IFD-free by construction (script-package derivations).
+#
+# Never a root-level `nix flake check`: that deeply forces every host config and
+# is forbidden in routine gates (GOV-16 / FLEET-DESIGN-PLAN §8.1). This forces
+# exactly one attribute per consumer, respecting Nix's lazy flake outputs.
+#
+# Consumer locks are never written: --no-write-lock-file on every eval. The
+# --override-input is in-memory only.
+#
+# Usage:
+#   bin/cross-consumer-eval                     # every discoverable consumer
+#   bin/cross-consumer-eval vulcan vps          # a subset
+#   bin/cross-consumer-eval --list              # print the consumer set, exit
+#
+# Environment:
+#   NIX_CONFIG_TREE          nix-config revision under test
+#                            (default: this checkout, from the script's location)
+#   VULCAN_CHECKOUT          vulcan (jwiegley/nixos-config) checkout
+#                            (default: ~/src/nixos)
+#   VPS_CHECKOUT             vps checkout (default: ~/src/vps)
+#   CONSUMER_EVAL_OFFLINE=1  add --offline to every eval; use where the
+#                            consumers' inputs are already realized in the store
+#   CONSUMER_EVAL_STRICT=1   a missing consumer checkout is a FAILURE, not a
+#                            skip (use where the checkouts are guaranteed, e.g.
+#                            a pre-push hook on hera/clio)
+#
+# Refs: jwiegley/nix-config#22.
+
+set -uo pipefail
+
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
+tree=${NIX_CONFIG_TREE:-$repo_root}
+vulcan_checkout=${VULCAN_CHECKOUT:-$HOME/src/nixos}
+vps_checkout=${VPS_CHECKOUT:-$HOME/src/vps}
+
+CONSUMERS=(shared-work vps vulcan)
+
+# ---- reporting ----------------------------------------------------------
+
+failures=()
+ran=0
+skipped=0
+
+note() { printf 'cross-consumer-eval: %s\n' "$*"; }
+fail() {
+    printf 'cross-consumer-eval: FAIL %s\n' "$*" >&2
+    failures+=("$*")
+}
+
+# Common flags for every eval. --no-write-lock-file guarantees a consumer's lock
+# is never modified by this gate; --no-warn-dirty silences the working-tree
+# notice (a dirty tree is the normal, intended input here).
+nix_common=(--no-write-lock-file --no-warn-dirty)
+if [[ ${CONSUMER_EVAL_OFFLINE:-0} == 1 ]]; then
+    nix_common+=(--offline)
+fi
+
+# Evaluate one target to a store path, accumulating (never aborting) on failure
+# so every consumer is reported before the gate exits — the same rule bin/quality
+# enforces for its per-file suites.
+eval_target() {
+    local name=$1
+    shift
+    local -a cmd=(nix eval "${nix_common[@]}" "$@")
+    note "$name: ${cmd[*]}"
+    ran=$((ran + 1))
+    local out rc
+    out=$("${cmd[@]}" 2>&1)
+    rc=$?
+    if [[ $rc -eq 0 ]]; then
+        local drv
+        drv=$(printf '%s\n' "$out" | grep -oE '/nix/store/[a-z0-9]{32}-[^ ]*\.drv' | tr '\n' ' ')
+        note "$name: OK  ${drv:-(evaluated)}"
+    else
+        fail "$name: evaluation failed against $tree"
+        printf '%s\n' "$out" | sed 's/^/      /' >&2
+    fi
+}
+
+# Skip a consumer whose checkout is absent — loudly, and as a failure under
+# CONSUMER_EVAL_STRICT. A skip is NEVER counted as a pass.
+skip_or_fail() {
+    local name=$1 reason=$2
+    if [[ ${CONSUMER_EVAL_STRICT:-0} == 1 ]]; then
+        fail "$name: $reason (CONSUMER_EVAL_STRICT is set)"
+    else
+        note "$name: SKIPPED — $reason"
+        skipped=$((skipped + 1))
+    fi
+}
+
+# ---- consumers ----------------------------------------------------------
+
+run_shared_work() {
+    # This repo's own fixture; evaluated directly against the tree under test,
+    # no override needed because it IS that tree.
+    eval_target "shared-work [jwiegley@x86_64-linux]" \
+        --raw \
+        "$tree#homeConfigurations.\"jwiegley@x86_64-linux\".activationPackage.drvPath"
+}
+
+run_vps() {
+    if [[ ! -f $vps_checkout/flake.nix ]]; then
+        skip_or_fail "vps [ovh-vps toplevel]" "no flake.nix at $vps_checkout (set VPS_CHECKOUT)"
+        return
+    fi
+    eval_target "vps [ovh-vps toplevel]" \
+        --raw --override-input nix-config "$tree" \
+        "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
+}
+
+run_vulcan() {
+    if [[ ! -f $vulcan_checkout/flake.nix ]]; then
+        skip_or_fail "vulcan [reach-in canary]" "no flake.nix at $vulcan_checkout (set VULCAN_CHECKOUT)"
+        return
+    fi
+    eval_target "vulcan [reach-in canary]" \
+        --raw --override-input nix-config "$tree" \
+        "$vulcan_checkout#checks.aarch64-linux.nix-config-reachin-compat.drvPath"
+}
+
+# ---- argument parsing ---------------------------------------------------
+
+want=()
+while [[ $# -gt 0 ]]; do
+    case $1 in
+    --list)
+        printf '%s\n' "${CONSUMERS[@]}"
+        exit 0
+        ;;
+    -h | --help)
+        sed -n '2,/^set -uo/p' "$0" | sed 's/^# \{0,1\}//; $d'
+        exit 0
+        ;;
+    all) want=("${CONSUMERS[@]}") ;;
+    -*)
+        printf 'cross-consumer-eval: unknown option: %s\n' "$1" >&2
+        exit 1
+        ;;
+    *)
+        # shellcheck disable=SC2076  # literal membership test is intended
+        if [[ " ${CONSUMERS[*]} " =~ " $1 " ]]; then
+            want+=("$1")
+        else
+            printf 'cross-consumer-eval: unknown consumer: %s (try --list)\n' "$1" >&2
+            exit 1
+        fi
+        ;;
+    esac
+    shift
+done
+
+[[ ${#want[@]} -gt 0 ]] || want=("${CONSUMERS[@]}")
+
+need_nix() {
+    command -v nix >/dev/null 2>&1 && return 0
+    printf 'cross-consumer-eval: required tool '\''nix'\'' not found in PATH\n' >&2
+    exit 1
+}
+need_nix
+
+note "nix-config tree under test: $tree"
+
+for consumer in "${want[@]}"; do
+    case $consumer in
+    shared-work) run_shared_work ;;
+    vps) run_vps ;;
+    vulcan) run_vulcan ;;
+    esac
+done
+
+# ---- summary ------------------------------------------------------------
+
+if [[ ${#failures[@]} -gt 0 ]]; then
+    printf '\n' >&2
+    printf 'cross-consumer-eval: %d consumer(s) failed:\n' "${#failures[@]}" >&2
+    printf '  - %s\n' "${failures[@]}" >&2
+    exit 1
+fi
+
+# A gate that evaluated nothing must not report success — the same failure mode
+# as a formatter that exits 0 having formatted nothing (jwiegley/nix-config#48).
+if [[ $ran -eq 0 ]]; then
+    printf 'cross-consumer-eval: evaluated nothing (%d skipped); refusing to report success\n' \
+        "$skipped" >&2
+    exit 1
+fi
+
+note "all evaluated consumers passed ($ran ran, $skipped skipped: ${want[*]})"
