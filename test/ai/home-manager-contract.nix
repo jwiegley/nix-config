@@ -1323,6 +1323,7 @@ let
   };
   expectedPiModels = {
     providers = lib.mapAttrs expectedPiProvider (selectedProviders "hera-pi") // {
+      openai-codex.modelOverrides."gpt-5.6-sol".contextWindow = 1050000;
       router = {
         api = "router-local-api";
         apiKey = "pi-model-router";
@@ -2310,6 +2311,7 @@ let
         (expectReject "Pi non-Hera/non-Pi profile accepted" piWrongProfileProbe.companions)
         (expectEqual "${profileId} provider set" (sortedNames expectedPiModels.providers) [
           "litellm"
+          "openai-codex"
           "router"
         ])
         (expectEqual "${profileId} static Pi LiteLLM model set" (map (

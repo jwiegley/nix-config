@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Long tool-driven Pi runs can cross a model's usable context boundary before Pi's built-in post-run compaction check executes. With `openai/gpt-5.6-sol`, Pi deliberately uses the 272,000-token short-context tier while the model permits as many as 128,000 output tokens. A request issued too near that boundary can therefore end with `stopReason: "length"` before the work is complete.
+Long tool-driven Pi runs can cross a model's usable context boundary before Pi's built-in post-run compaction check executes. The generated `models.json` raises `openai-codex/gpt-5.6-sol` to its 1,050,000-token context tier, and this extension compacts at 90% usage so another provider request is not started against a nearly full context.
 
 This extension compacts at a turn boundary before Pi issues the next model request. When compaction interrupts unfinished work, it starts a continuation turn immediately and requires no user response.
 
@@ -14,18 +14,16 @@ The policy derives its threshold from the active model rather than naming GPT-5.
 
 ## Trigger policy
 
-For an active model, define the safe request threshold as:
+For an active model, define the compaction threshold as:
 
 ```text
-contextWindow - maxTokens - 16,384
+floor(contextWindow × 0.90)
 ```
-
-The final term is a safety margin for context-estimation error and request framing. The threshold has a floor of 16,384 tokens for models whose advertised maximum output approaches their complete context window.
 
 For `gpt-5.6-sol`, the calculation is:
 
 ```text
-272,000 - 128,000 - 16,384 = 127,616 tokens
+floor(1,050,000 × 0.90) = 945,000 tokens
 ```
 
 After each `turn_end`, the extension obtains Pi's current context estimate, including trailing tool results. Once the estimate reaches the threshold, compaction begins before another provider request is made. The same check runs on `session_start`, allowing an already-large resumed session to compact while idle.
@@ -59,7 +57,7 @@ No local extension can continue through process termination or an unavailable pr
 
 Bun tests exercise the extension through a small fake Extension API and establish that:
 
-- GPT-5.6 Sol receives the expected 127,616-token threshold;
+- GPT-5.6 Sol receives the expected 945,000-token threshold;
 - unfinished tool work compacts at the threshold;
 - successful compaction emits exactly one hidden continuation turn;
 - completed answers compact without continuation;

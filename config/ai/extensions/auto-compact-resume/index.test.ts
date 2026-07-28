@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 const modulePath = "./index.ts";
+const CONTEXT_WINDOW = 1_050_000;
+const COMPACTION_THRESHOLD = 945_000;
 
 type Handler = (event: any, context: any) => void | Promise<void>;
 
@@ -52,8 +54,8 @@ function makeContext(
       sessionManager: { getBranch: () => branch },
       getContextUsage: () => ({
         tokens: currentTokens,
-        contextWindow: 272_000,
-        percent: currentTokens === null ? null : (currentTokens / 272_000) * 100,
+        contextWindow: CONTEXT_WINDOW,
+        percent: currentTokens === null ? null : (currentTokens / CONTEXT_WINDOW) * 100,
       }),
       compact(options: any) {
         compactions.push(options);
@@ -79,14 +81,14 @@ function assistantMessage(options: { toolCall?: boolean; stopReason?: string } =
 }
 
 describe("auto compact and resume", () => {
-  test("reserves the full GPT-5.6 Sol output budget plus a safety margin", async () => {
+  test("compacts at 90% of the active context window", async () => {
     const { extension } = await setup();
-    expect(extension.calculateThreshold(272_000, 128_000)).toBe(127_616);
+    expect(extension.calculateThreshold(CONTEXT_WINDOW)).toBe(COMPACTION_THRESHOLD);
   });
 
   test("leaves contexts below the safe threshold untouched", async () => {
     const harness = await setup();
-    const { context, compactions } = makeContext(127_615);
+    const { context, compactions } = makeContext(COMPACTION_THRESHOLD - 1);
 
     await harness.emit(
       "turn_end",
@@ -97,20 +99,22 @@ describe("auto compact and resume", () => {
     expect(compactions).toHaveLength(0);
   });
 
-  test("compacts unfinished tool work once at the safe threshold", async () => {
+  test("keeps extension-owned compaction guarded until its callback", async () => {
     const harness = await setup();
-    const { context, compactions } = makeContext(127_616);
+    const { context, compactions } = makeContext(COMPACTION_THRESHOLD);
     const event = { message: assistantMessage({ toolCall: true }) };
 
     await harness.emit("turn_end", event, context);
+    await harness.emit("session_compact", {}, context);
     await harness.emit("turn_end", event, context);
 
     expect(compactions).toHaveLength(1);
+    compactions[0].onComplete({});
   });
 
   test("resumes unfinished work invisibly after successful compaction", async () => {
     const harness = await setup();
-    const { context, compactions } = makeContext(130_000);
+    const { context, compactions } = makeContext(COMPACTION_THRESHOLD);
 
     await harness.emit(
       "turn_end",
@@ -135,7 +139,7 @@ describe("auto compact and resume", () => {
 
   test("compacts a completed answer without manufacturing another turn", async () => {
     const harness = await setup();
-    const { context, compactions } = makeContext(130_000);
+    const { context, compactions } = makeContext(COMPACTION_THRESHOLD);
 
     await harness.emit("turn_end", { message: assistantMessage() }, context);
     compactions[0].onComplete({});
@@ -146,7 +150,7 @@ describe("auto compact and resume", () => {
 
   test("resumes a response stopped by the output-length cutoff", async () => {
     const harness = await setup();
-    const { context, compactions } = makeContext(269_000);
+    const { context, compactions } = makeContext(CONTEXT_WINDOW - 3_000);
 
     await harness.emit(
       "turn_end",
@@ -174,7 +178,7 @@ describe("auto compact and resume", () => {
 
   test("resumes unfinished work when there is nothing to compact and defers another attempt", async () => {
     const harness = await setup();
-    const { context, compactions, notifications, setTokens } = makeContext(130_000);
+    const { context, compactions, notifications, setTokens } = makeContext(COMPACTION_THRESHOLD);
     const event = { message: assistantMessage({ toolCall: true }) };
 
     await harness.emit("turn_end", event, context);
@@ -187,7 +191,7 @@ describe("auto compact and resume", () => {
     await harness.emit("turn_end", event, context);
     expect(compactions).toHaveLength(1);
 
-    setTokens(130_000 + harness.extension.RETRY_GROWTH_TOKENS);
+    setTokens(COMPACTION_THRESHOLD + harness.extension.RETRY_GROWTH_TOKENS);
     await harness.emit("turn_start", {}, context);
     await harness.emit("turn_end", event, context);
     expect(compactions).toHaveLength(2);
@@ -195,7 +199,7 @@ describe("auto compact and resume", () => {
 
   test("resumes unfinished work after a transient compaction failure without a duplicate error", async () => {
     const harness = await setup();
-    const { context, compactions, notifications } = makeContext(130_000);
+    const { context, compactions, notifications } = makeContext(COMPACTION_THRESHOLD);
 
     await harness.emit(
       "turn_end",
@@ -210,7 +214,7 @@ describe("auto compact and resume", () => {
 
   test("does not loop after a terminal authentication failure", async () => {
     const harness = await setup();
-    const { context, compactions } = makeContext(130_000);
+    const { context, compactions } = makeContext(COMPACTION_THRESHOLD);
 
     await harness.emit(
       "turn_end",
@@ -224,7 +228,7 @@ describe("auto compact and resume", () => {
 
   test("does not loop after a terminal model failure", async () => {
     const harness = await setup();
-    const { context, compactions } = makeContext(130_000);
+    const { context, compactions } = makeContext(COMPACTION_THRESHOLD);
 
     await harness.emit(
       "turn_end",
@@ -238,7 +242,7 @@ describe("auto compact and resume", () => {
 
   test("compacts an already-large resumed session without starting work", async () => {
     const harness = await setup();
-    const { context, compactions } = makeContext(130_000);
+    const { context, compactions } = makeContext(COMPACTION_THRESHOLD);
 
     await harness.emit("session_start", { reason: "resume" }, context);
     compactions[0].onComplete({});
@@ -249,7 +253,7 @@ describe("auto compact and resume", () => {
 
   test("does not immediately recompact a session whose leaf is a compaction", async () => {
     const harness = await setup();
-    const { context, compactions } = makeContext(130_000, [
+    const { context, compactions } = makeContext(COMPACTION_THRESHOLD, [
       { type: "compaction", id: "compaction-1" },
     ]);
 

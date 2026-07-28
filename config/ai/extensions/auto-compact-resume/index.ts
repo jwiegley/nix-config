@@ -1,13 +1,13 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-export const SAFETY_TOKENS = 16_384;
+export const COMPACTION_RATIO = 0.9;
 export const RETRY_GROWTH_TOKENS = 8_192;
 
 const CONTINUATION_MESSAGE =
   "Context handling interrupted work that is still in progress. Continue the original user request immediately. Do not ask for confirmation or merely report status; proceed with the next unfinished action unless genuine user input is required.";
 
-export function calculateThreshold(contextWindow: number, maxTokens: number): number {
-  return Math.max(SAFETY_TOKENS, contextWindow - Math.max(0, maxTokens) - SAFETY_TOKENS);
+export function calculateThreshold(contextWindow: number): number {
+  return Math.floor(contextWindow * COMPACTION_RATIO);
 }
 
 function continuationReason(message: unknown): "length" | "tool" | null {
@@ -69,10 +69,9 @@ export default function autoCompactResume(pi: ExtensionAPI) {
     if (compacting) return true;
 
     const usage = ctx.getContextUsage();
-    const maxTokens = ctx.model?.maxTokens ?? 0;
-    if (usage?.tokens == null || maxTokens <= 0) return false;
+    if (usage?.tokens == null) return false;
     if (usage.tokens < deferCompactionUntil) return false;
-    if (usage.tokens < calculateThreshold(usage.contextWindow, maxTokens)) return false;
+    if (usage.tokens < calculateThreshold(usage.contextWindow)) return false;
 
     compacting = true;
     ctx.compact({
@@ -107,7 +106,6 @@ export default function autoCompactResume(pi: ExtensionAPI) {
   });
 
   pi.on("session_compact", () => {
-    compacting = false;
     deferCompactionUntil = 0;
   });
 
