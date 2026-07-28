@@ -6,9 +6,11 @@
 # Why this exists. Before it, the same checks were defined in four places and had
 # already drifted apart in ways that made CI strictly weaker than the local hook:
 #
-#   * CI shell-checks named 9 files by hand; lefthook globbed all of bin/* and
-#     found 19. CI was blind to 10 real scripts, including bin/switch,
-#     bin/update-remote and bin/upgrade-all.
+#   * CI shell-checks named 9 files by hand; lefthook globbed the non-recursive
+#     bin/* plus build and found 18. CI was blind to 9 real scripts, including
+#     bin/switch, bin/update-remote and bin/upgrade-all. (An audit corrected this
+#     from "19 / blind to 10": the extra file was bin/quality itself, already in
+#     the working tree when the measurement was taken.)
 #   * Both hardcoded the same 4 Python files while the tree tracks 35. The other
 #     31 — the whole packages/anvil-mcp suite among them — were never linted.
 #   * Worse, both looped over files WITHOUT propagating failure: no `set -e`, no
