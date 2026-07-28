@@ -84,7 +84,7 @@ Package rules:
 
 ## Source catalog
 
-The migration target is for all hand-maintained coordinates for Internet-fetched, future-upgraded package sources to live in data-only JSON files under `sources/`. Anvil is the first migrated category; remaining categories are tracked in GitHub issue #15. Category-local derivations keep their native Nix fetcher and build logic; they load records through `packages/source-catalog.nix`.
+The migration target is for all hand-maintained coordinates for Internet-fetched, future-upgraded package sources to live in data-only JSON files under `sources/`. Anvil is the first migrated category; remaining categories are tracked per-category in the [Fleet Configuration Programme](https://github.com/users/jwiegley/projects/9) under the `epic:2-update-authority` label. Category-local derivations keep their native Nix fetcher and build logic; they load records through `packages/source-catalog.nix`.
 
 A record uses `schemaVersion = 1` at the category-file level and contains a stable ID with `fetcher`, canonical `url`, fetcher coordinates (`owner`, `repo`, `rev` as applicable), `hash`, optional `version`/`date`, and a closed `update.kind`. To add a source:
 
@@ -123,4 +123,4 @@ Names must represent distinct evidence. A coverage/fuzz/memory/soak label may ex
 
 ## Current remediation
 
-[GitHub issue #15](https://github.com/jwiegley/nix-config/issues/15) is the sole task list, progress log, evidence record, and handoff authority for the 2026 architecture remediation.
+Fleet and architecture work is tracked issue-by-issue in the [Fleet Configuration Programme](https://github.com/users/jwiegley/projects/9). Each issue owns its own evidence, acceptance criteria, verification commands, rollback, and authorization boundary. [GitHub issue #15](https://github.com/jwiegley/nix-config/issues/15) is the archived 2026-audit record: it retains the completed findings, the per-work-unit signed-commit evidence, the audit baseline, and the deliberate `a88a77ba`/`a98385b9` revert evidence. It is historical evidence, not current authority. Issues concerning only vulcan's NixOS configuration are filed in [jwiegley/nixos-config](https://github.com/jwiegley/nixos-config/issues).

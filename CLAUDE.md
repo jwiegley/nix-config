@@ -5,7 +5,7 @@ This file provides guidance to coding agents working in this repository.
 ## Start here
 
 1. Read `README.md` and `doc/ARCHITECTURE.md`.
-2. Read the active work item named by the task. Architecture remediation is tracked exclusively in [GitHub issue #15](https://github.com/jwiegley/nix-config/issues/15).
+2. Read the active work item named by the task. Fleet and architecture work is tracked issue-by-issue in the [Fleet Configuration Programme](https://github.com/users/jwiegley/projects/9); each issue carries its own evidence, acceptance criteria, verification commands, rollback, and authorization. [GitHub issue #15](https://github.com/jwiegley/nix-config/issues/15) is the archived 2026-audit record — historical evidence, not current authority. Issues concerning only vulcan's NixOS configuration live in [jwiegley/nixos-config](https://github.com/jwiegley/nixos-config/issues).
 3. Confirm `git status` and load the current direnv environment.
 4. Use Anvil when advertised; its dedicated backend does not prove a separate interactive Emacs has no modified buffers.
 

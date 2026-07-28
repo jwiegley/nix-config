@@ -69,7 +69,7 @@ System and Home Manager switches are owned by each authoritative checkout. Build
 | `bin/` | Operator and maintenance commands |
 | `doc/` | Durable architecture and historical evidence |
 
-See [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) for ownership and data flow. Architecture remediation status, task lists, evidence, and handoff state live in [GitHub issue #15](https://github.com/jwiegley/nix-config/issues/15).
+See [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) for ownership and data flow. Fleet and architecture work is tracked issue-by-issue in the [Fleet Configuration Programme](https://github.com/users/jwiegley/projects/9); [GitHub issue #15](https://github.com/jwiegley/nix-config/issues/15) is the archived 2026-audit record, retained as historical evidence. The programme's design corpus is [`doc/FLEET-DESIGN-PLAN.md`](doc/FLEET-DESIGN-PLAN.md) and [`doc/FLEET-PROGRAMME-CROSS-STREAM.md`](doc/FLEET-PROGRAMME-CROSS-STREAM.md).
 
 ## Safety
 
