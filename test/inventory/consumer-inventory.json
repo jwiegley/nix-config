@@ -1,0 +1,2139 @@
+{
+ "schemaVersion": 1,
+ "artifact": "consumer-inventory",
+ "generatedBy": "bin/consumer-inventory",
+ "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
+ "repoHead": "94a2724d5eabc2f501c372f89a0fe38c5f0de601",
+ "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in bin/consumer-inventory.",
+ "classificationScheme": {
+  "rename-now": "Reference to the literal config/ai path inside nix-config's own tree; #47 rewrites it in the rename commit.",
+  "stub-covered": "External consumer edge resolving through the config/ai subflake (?dir input, its llm-agents follows, its overlays.default use). Recommendation ASSUMES #47 leaves a transitional config/ai->config/fleet stub; if Q4/GAP-DECISIONS declines the stub, reclassify as a coordinated consumer-side URL rename.",
+  "retire": "Consumer reach-in into nix-config internal overlay files (${inputs.nix-config}/overlays/*.nix) and the attributes cherry-picked from them; not a supported API (this class broke vulcan at a3cc3843). Delete once the consumer moves to typed config/fleet outputs.",
+  "retain-with-owner": "Keep as-is with owner + retirement trigger: the four flake-ai.nix internal imports (GAP-FLAKEAI-INTERNAL), the supported config/*.nix portable surface, root flake=false nix-config inputs, and the ai-nix/node-red/global-Anvil compat surfaces (EPIC 7)."
+ },
+ "derivation": {
+  "internalConfigAiRefs": "grep -rIn --exclude-dir=.git --include='*.nix' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -F -e 'config/ai' <repo_root>",
+  "internalConfigAiFiles": "grep -rIl --exclude-dir=.git --include='*.nix' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -F -e 'config/ai' <repo_root>",
+  "flakeAiInternalConsumers": "grep -rIn --exclude-dir=.git --include='*.nix' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -E -e 'flake-ai\\.nix' <repo_root>  # keep .nix, non-comment, path-import lines",
+  "compatSurfaces": [
+   "grep -rIn --exclude-dir=.git --include='*.nix' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -E -e 'ai-nix' <repo_root>",
+   "grep -rIn --exclude-dir=.git --include='*.nix' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -E -e 'node-red' <repo_root>",
+   "grep -rIn --exclude-dir=.git --include='*.nix' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -E -e 'global.*[Aa]nvil' <repo_root>"
+  ],
+  "consumerInputs": "parse <consumer>/flake.lock for nodes referencing nix-config (dir='' repo-root input, dir='config/ai' subflake input); locate each url=\"...nix-config...\" line in <consumer>/flake.nix",
+  "consumerReachins": "scan every *.nix under <consumer>/ for '${inputs.nix-config}/PATH' interpolations, for 'inherit (import \"${inputs.nix-config}/...\") ATTR ;' cherry-picks, and for 'inputs.nix-config-ai.overlays' uses",
+  "remoteChecks": [
+   "gh search code 'dir=config/ai nix-config' --owner jwiegley --limit 30",
+   "gh search code 'dir=config/ai' --owner positron-ai --limit 30",
+   "gh api repos/jwiegley/nix-config --jq .default_branch"
+  ]
+ },
+ "remoteChecks": {
+  "commands": [
+   "gh search code 'dir=config/ai nix-config' --owner jwiegley --limit 30",
+   "gh search code 'dir=config/ai' --owner positron-ai --limit 30",
+   "gh api repos/jwiegley/nix-config --jq .default_branch"
+  ],
+  "finding": "github (gh search code): no external config/ai consumer beyond the three inventoried; the only owner:jwiegley hits are inside nix-config itself. gitea is LAN-only and not code-searchable via gh; its sole consumer (vulcan, ssh://gitea/johnw/nix-config?dir=config/ai) is inventoried from the local checkout. nix-config default branch = main.",
+  "note": "re-run the commands (needs network + gh auth) to refresh; not run inside derive() to keep the artifact reproducible offline."
+ },
+ "summary": {
+  "totalReferences": 166,
+  "internalConfigAiRefCount": 125,
+  "internalConfigAiFileCount": 31,
+  "internalConfigAiFiles": [
+   ".github/workflows/ci.yml",
+   "CLAUDE.md",
+   "README.md",
+   "config/ai/extensions/auto-compact-resume/DESIGN.md",
+   "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
+   "doc/AI-NIX-REINTEGRATION-WIGGUM-PLAN.md",
+   "doc/AI-UPDATE-FOLLOWUPS-2026-07-24.md",
+   "doc/ARCHITECTURE.md",
+   "doc/FLEET-DESIGN-PLAN.md",
+   "doc/FLEET-IMPL-WIGGUM-HANDOFF.md",
+   "doc/FLEET-IMPL-WIGGUM-PLAN.md",
+   "doc/FLEET-PROGRAMME-CROSS-STREAM.md",
+   "doc/PARITY-ORACLE-REFRESH.md",
+   "doc/UNIFIED-CONFIG-RESEARCH.md",
+   "doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md",
+   "doc/UNIFIED-CONFIG-WIGGUM-PLAN.md",
+   "doc/superpowers/plans/2026-07-22-llm-setup-nix-model-registry.md",
+   "doc/superpowers/plans/2026-07-23-fleet-model-defaults.md",
+   "flake.nix",
+   "flake/ai.nix",
+   "packages/agent-resources.nix",
+   "packages/update-manifest.nix",
+   "test/ai/agent-resources.nix",
+   "test/ai/compatibility-contract.nix",
+   "test/ai/home-manager-contract.nix",
+   "test/ai/lock-coherence.nix",
+   "test/ai/managed-preflight.nix",
+   "test/ai/scripts/build-check.sh",
+   "test/ai/scripts/lint.sh",
+   "test/ai/scripts/test.sh"
+  ],
+  "flakeAiInternalConsumerCount": 4,
+  "flakeAiMentionCount": 12,
+  "byClassification": {
+   "rename-now": 125,
+   "retain-with-owner": 13,
+   "retire": 18,
+   "stub-covered": 10
+  },
+  "byKind": {
+   "config-import": 6,
+   "flake-ai-internal-consumer": 4,
+   "flake-input": 6,
+   "input-follows": 3,
+   "internal-config-ai-ref": 125,
+   "reach-in-attr": 8,
+   "reach-in-path": 10,
+   "subflake-overlay-use": 4
+  }
+ },
+ "consumers": [
+  {
+   "name": "vulcan",
+   "type": "nixos",
+   "resolved": true,
+   "provisional": false,
+   "source": "local-checkout",
+   "root": "/Users/johnw/src/nixos",
+   "authoritativeHostPath": "/etc/nixos on vulcan",
+   "lockedRev": "03b5eeccae6689a7c7051756ac4ea020f69008ed",
+   "referenceCount": 22,
+   "verifyCommand": "on vulcan (read-only): grep -nE 'nix-config|config/ai|follows.*nix-config|\\$\\{inputs\\.nix-config\\}' /etc/nixos/flake.nix /etc/nixos/overlays/*.nix",
+   "note": "rows derived from the local checkout; the live build tree is /etc/nixos on vulcan (its lock may differ)"
+  },
+  {
+   "name": "vps",
+   "type": "nixos",
+   "resolved": true,
+   "provisional": false,
+   "source": "local-checkout",
+   "root": "/Users/johnw/src/vps",
+   "authoritativeHostPath": "/etc/nixos on ovh-vps",
+   "lockedRev": "e0ed94fabbc054e36e08f2684123f248bffcf932",
+   "referenceCount": 8,
+   "verifyCommand": "on ovh-vps (read-only): grep -nE 'nix-config|config/ai|follows.*nix-config|\\$\\{inputs\\.nix-config\\}' /etc/nixos/flake.nix /etc/nixos/overlays/*.nix",
+   "note": "rows derived from the local checkout; the live build tree is /etc/nixos on ovh-vps (its lock may differ)"
+  },
+  {
+   "name": "shared-work",
+   "type": "home-manager",
+   "resolved": false,
+   "provisional": true,
+   "source": "proxy-checkout",
+   "root": "/Users/johnw/src/andoria",
+   "authoritativeHostPath": "~/.config/home-manager on andoria-08 / andoria-t2 / delphi-3bd4 / gpu-server (shared NFS home; NOT present on this machine)",
+   "lockedRev": "269b518e70bbe676e329cb9f7f92dcffb46a028d",
+   "referenceCount": 7,
+   "verifyCommand": "on a work machine, e.g. andoria-08 (read-only): grep -nE 'nix-config|config/ai|follows.*nix-config|\\$\\{inputs\\.nix-config\\}' ~/.config/home-manager/flake.nix; and: nix eval --raw ~/.config/home-manager#homeConfigurations.jwiegley.activationPackage.drvPath >/dev/null",
+   "note": "rows derived from the ~/src/andoria PROXY; the live tree is unverified"
+  }
+ ],
+ "compatSurfaces": [
+  {
+   "surface": "ai-nix",
+   "pattern": "ai-nix",
+   "matchCount": 47,
+   "files": [
+    "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
+    "doc/AI-NIX-REINTEGRATION-WIGGUM-PLAN.md",
+    "doc/AI-UPDATE-FOLLOWUPS-2026-07-24.md",
+    "doc/AIPERF-WIGGUM-HANDOFF.md",
+    "doc/AIPERF-WIGGUM-PLAN.md",
+    "doc/SECURITY-REVIEW.md",
+    "doc/migrations/nix-managed-agent-oracle.md",
+    "doc/superpowers/plans/2026-07-22-fractal-codex-litellm-pilot.md",
+    "doc/superpowers/plans/2026-07-23-fleet-model-defaults.md",
+    "flake/ai.nix",
+    "test/ai/compatibility-check.nix",
+    "test/ai/home-manager-contract.nix",
+    "test/ai/scripts/lib.sh"
+   ],
+   "classification": "retain-with-owner",
+   "owner": "EPIC 7 (compat-retirement review)",
+   "trigger": "EPIC 7 disposition",
+   "note": "surfaced for EPIC 7; not part of the config/ai path rename. Re-derive with the recorded pattern."
+  },
+  {
+   "surface": "node-red",
+   "pattern": "node-red",
+   "matchCount": 87,
+   "files": [
+    "config/ai/catalog.nix",
+    "config/ai/skills/node-red/SKILL.md",
+    "config/ai/skills/node-red/references/api_reference.md",
+    "config/ai/skills/node-red/references/event_logging.md",
+    "config/ai/skills/node-red/references/patterns.md",
+    "config/ai/skills/node-red/references/plugins.md",
+    "doc/migrations/nix-managed-agent-oracle.md"
+   ],
+   "classification": "retain-with-owner",
+   "owner": "EPIC 7 (compat-retirement review)",
+   "trigger": "EPIC 7 disposition",
+   "note": "surfaced for EPIC 7; not part of the config/ai path rename. Re-derive with the recorded pattern."
+  },
+  {
+   "surface": "global-anvil",
+   "pattern": "global.*[Aa]nvil",
+   "matchCount": 2,
+   "files": [
+    "config/ai/skills/anvil/references/tools.md",
+    "doc/migrations/nix-managed-agent-oracle.md"
+   ],
+   "classification": "retain-with-owner",
+   "owner": "EPIC 7 (compat-retirement review)",
+   "trigger": "EPIC 7 disposition",
+   "note": "surfaced for EPIC 7; not part of the config/ai path rename. Re-derive with the recorded pattern."
+  }
+ ],
+ "references": [
+  {
+   "consumer": "internal",
+   "kind": "flake-ai-internal-consumer",
+   "classification": "retain-with-owner",
+   "file": "config/ai/flake.nix",
+   "line": 79,
+   "text": "actual = import ../../flake-ai.nix portableInputs;",
+   "owner": "GAP-FLAKEAI-INTERNAL",
+   "trigger": "separate migration of flake-ai.nix's internal imports; explicitly out of scope for #47"
+  },
+  {
+   "consumer": "internal",
+   "kind": "flake-ai-internal-consumer",
+   "classification": "retain-with-owner",
+   "file": "config/packages.nix",
+   "line": 25,
+   "text": "localAi = inputs.nix-ai or (if inputs ? git-ai then import ../flake-ai.nix inputs else null);",
+   "owner": "GAP-FLAKEAI-INTERNAL",
+   "trigger": "separate migration of flake-ai.nix's internal imports; explicitly out of scope for #47"
+  },
+  {
+   "consumer": "internal",
+   "kind": "flake-ai-internal-consumer",
+   "classification": "retain-with-owner",
+   "file": "flake.nix",
+   "line": 163,
+   "text": "portableAiDefinition = import ./flake-ai.nix portableInputs;",
+   "owner": "GAP-FLAKEAI-INTERNAL",
+   "trigger": "separate migration of flake-ai.nix's internal imports; explicitly out of scope for #47"
+  },
+  {
+   "consumer": "internal",
+   "kind": "flake-ai-internal-consumer",
+   "classification": "retain-with-owner",
+   "file": "flake/ai.nix",
+   "line": 2070,
+   "text": "../flake-ai.nix",
+   "owner": "GAP-FLAKEAI-INTERNAL",
+   "trigger": "separate migration of flake-ai.nix's internal imports; explicitly out of scope for #47"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": ".github/workflows/ci.yml",
+   "line": 79,
+   "text": "run: nix build --no-link \"./config/ai#checks.${{ matrix.system }}.pi-gallery\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "CLAUDE.md",
+   "line": 17,
+   "text": "nix flake check ./config/ai --all-systems --no-build",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "CLAUDE.md",
+   "line": 39,
+   "text": "- Root implementation is owned here; portable AI is the `config/ai` subflake from the same revision.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "CLAUDE.md",
+   "line": 40,
+   "text": "- External consumers use paired root and `?dir=config/ai` inputs. Their locks and switch commands remain authoritative in their own checkout.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "CLAUDE.md",
+   "line": 41,
+   "text": "- `config/ai/catalog.nix` owns profiles/resources/selection; `config/ai/renderers/` are concrete client adapters.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "README.md",
+   "line": 11,
+   "text": "| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired `nix-config` source and `nix-config?dir=config/ai` inputs |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "README.md",
+   "line": 45,
+   "text": "nix flake check ./config/ai --all-systems --no-build",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "README.md",
+   "line": 65,
+   "text": "| `config/ai/` | Portable AI subflake, models, profiles, resources, and client adapters |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/DESIGN.md",
+   "line": 11,
+   "text": "The extension source, tests, and design records live under `config/ai/extensions/auto-compact-resume`. Home Manager owns only the runtime leaf `~/.pi/agent/extensions/auto-compact-resume/index.ts`; tests and documentation are not installed into Pi's profile. The extension uses only Pi's public API and has no external dependencies. Pi's other mutable profile state remains outside Nix ownership.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 25,
+   "text": "- `config/ai/extensions/auto-compact-resume/index.ts`: threshold policy and Pi lifecycle integration; the only installed runtime file.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 26,
+   "text": "- `config/ai/extensions/auto-compact-resume/index.test.ts`: executable behavior tests using Bun and a minimal fake Extension API.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 27,
+   "text": "- `config/ai/extensions/auto-compact-resume/DESIGN.md`: approved behavioral specification.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 28,
+   "text": "- `config/ai/extensions/auto-compact-resume/PLAN.md`: this implementation plan.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 33,
+   "text": "- Create: `config/ai/extensions/auto-compact-resume/index.test.ts`",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 34,
+   "text": "- Test: `config/ai/extensions/auto-compact-resume/index.test.ts`",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 49,
+   "text": "cd config/ai/extensions/auto-compact-resume",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 77,
+   "text": "- Create: `config/ai/extensions/auto-compact-resume/index.ts`",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 78,
+   "text": "- Test: `config/ai/extensions/auto-compact-resume/index.test.ts`",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 130,
+   "text": "cd config/ai/extensions/auto-compact-resume",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 139,
+   "text": "- Verify: `config/ai/extensions/auto-compact-resume/index.ts`",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "config/ai/extensions/auto-compact-resume/PLAN.md",
+   "line": 140,
+   "text": "- Verify: `config/ai/renderers/pi.nix`",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
+   "line": 11,
+   "text": "- The mandatory PAL gate is resolved in favor of a thin portable `config/ai` subflake with one root-owned implementation tree.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
+   "line": 14,
+   "text": "- The target-side compatibility oracle was observed RED on missing `overlays.default`, then GREEN after the maintained overlays, patches, resources, wrappers, and substantive tests moved to root-owned paths. `config/ai/flake.lock` was regenerated at the prior immutable direct-input revisions rather than copied from the old repository.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
+   "line": 15,
+   "text": "- `auto-compact-resume` source and corrected design/plan now live under `config/ai/extensions/auto-compact-resume`. The Pi renderer and preflight own only `.pi/agent/extensions/auto-compact-resume/index.ts`; the focused Home Manager check and explicit repository-source Pi loader smoke pass. Terminal-model handling and continuation-content coverage bring the committed Bun suite to 13/13.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
+   "line": 31,
+   "text": "- The root retains host-only `git+file:///Users/johnw/...` inputs and the private local CA, while the portable `config/ai` subflake remains the remote-safe output boundary. The root now consumes the canonical local implementation directly rather than an external `ai-nix` input.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
+   "line": 55,
+   "text": "3. Update Vulcan, Andoria, VPS, and auxiliary consumers to paired root-source and `dir=config/ai` inputs at one reachable revision; regenerate every lock through its checkout's direnv.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/AI-NIX-REINTEGRATION-WIGGUM-PLAN.md",
+   "line": 17,
+   "text": "7. Move `auto-compact-resume` source, tests, and corrected design documentation under `config/ai/extensions/auto-compact-resume`; Nix installs only runtime `index.ts` at `~/.pi/agent/extensions/auto-compact-resume`.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/AI-NIX-REINTEGRATION-WIGGUM-PLAN.md",
+   "line": 69,
+   "text": "Use a thin portable subflake under `config/ai` within this repository. Remote AI consumers use the repository directory flake, while the host-local root flake and the portable subflake import one canonical implementation tree. The subflake is an export and input boundary only: it must not acquire a separate package inventory, implementation copy, CI workflow, documentation hierarchy, or update workflow. Its lock records only portable AI inputs; the root lock remains authoritative for Hera and Clio host configuration.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/AI-UPDATE-FOLLOWUPS-2026-07-24.md",
+   "line": 14,
+   "text": "`nix-config?dir=config/ai` input, regenerate their locks, and build/switch.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/AI-UPDATE-FOLLOWUPS-2026-07-24.md",
+   "line": 64,
+   "text": "to paired `nix-config` source and `nix-config?dir=config/ai` revisions.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/ARCHITECTURE.md",
+   "line": 17,
+   "text": "-> config/ai.nix",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/ARCHITECTURE.md",
+   "line": 25,
+   "text": "config/ai/flake.nix",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/ARCHITECTURE.md",
+   "line": 39,
+   "text": "nix-config-ai  = same revision, dir=config/ai",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/ARCHITECTURE.md",
+   "line": 49,
+   "text": "| `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/ARCHITECTURE.md",
+   "line": 50,
+   "text": "| `config/ai/renderers/*` | One client's generated documents | Global resource selection |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/ARCHITECTURE.md",
+   "line": 51,
+   "text": "| `config/ai.nix` | Home Manager composition/ownership guards | Package implementation |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 71,
+   "text": "| P1-7 (WU6) | `config/ai/inputs.nix` is the single URL/membership authority; **dual locks retained deliberately**, with a transitive-drift oracle |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 261,
+   "text": "`flake = false`, plus `?dir=config/ai` as a real flake. Two lock nodes for one",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 404,
+   "text": "N2 -.\"flake=false<br/>+ ?dir=config/ai\".-> N1",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 405,
+   "text": "N3 -.\"flake=false<br/>+ ?dir=config/ai\".-> N1",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 406,
+   "text": "N4 -.\"flake=false<br/>+ ?dir=config/ai\".-> N1",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 483,
+   "text": "the wrong name. This is a deliberate break of the `?dir=config/ai` contract named in",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 490,
+   "text": "- **Fail loudly, not obscurely.** Leave a `config/ai/flake.nix` that `throw`s a",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 854,
+   "text": "scoped to `./config/ai`, which declares **zero** host configurations; pre-push uses",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 959,
+   "text": "| **0** | **Unarm \u00a73** \u2014 route vulcan + vps overlay consumption through `config/overlays.nix`; bump their locks. **Fact-find:** `/nix` host-local on all four? auto-GC timer with delete-old? which profile branch h-m takes? **Inventory `?dir=config/ai` consumers** (issue #15 P2-19) before the rename. *(gpu-server divergence: already answered \u2014 none)* | `nix build` each host's HM activationPackage at the *new* lock; the three previously-armed packages still resolve | Revert the two consumer commits; locks return to `a36d3f51` / `1b71b192` |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 982,
+   "text": "- **Not** relocating `config/ai` in a way that breaks the `?dir=config/ai` contract.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 1000,
+   "text": "| **Q5a** | Keep the `config/ai` name or rename? | **Rename to `config/fleet`**, accepting URL churn across three consumers and both remotes. Honesty over continuity. | Deliberate break of the `CLAUDE.md` contract. Gated on the P2-19 consumer inventory; stale URLs get a `throw`ing stub so they fail loudly. |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-DESIGN-PLAN.md",
+   "line": 1042,
+   "text": "on `design/unified-fleet`. Baseline green throughout: `nix flake check ./config/ai",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-IMPL-WIGGUM-HANDOFF.md",
+   "line": 145,
+   "text": "| `nix flake check ./config/ai --all-systems --no-build` | 2 | **PASS** both |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-IMPL-WIGGUM-PLAN.md",
+   "line": 70,
+   "text": "4. **DoD-4 \u2014 Gates pass, output shown.** `nix flake check ./config/ai",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-IMPL-WIGGUM-PLAN.md",
+   "line": 103,
+   "text": "| `nix flake check ./config/ai --all-systems --no-build` | 0 | not yet run this phase |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-PROGRAMME-CROSS-STREAM.md",
+   "line": 76,
+   "text": "touches only `config/ai/catalog.nix`, `config/ai/renderers/pi.nix`, and `sources/ai.json`.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-PROGRAMME-CROSS-STREAM.md",
+   "line": 104,
+   "text": "> repository-internal path inputs remain allowed (`path:./config/ai`, `path:./config/certs`)",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-PROGRAMME-CROSS-STREAM.md",
+   "line": 106,
+   "text": "The redesign renames `config/ai` \u2192 `config/fleet` (decision Q5a). So the rename must also",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/PARITY-ORACLE-REFRESH.md",
+   "line": 147,
+   "text": "| The recorded derivation **command diverges** from `bin/parity-baseline` | FAIL \u2014 the oracle would be derived by a different command than a later gate uses (for example, after the `#47` `config/ai` \u2192 `config/fleet` rename). |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-RESEARCH.md",
+   "line": 113,
+   "text": "- The `lefthook` pre-commit gate is `nix flake check ./config/ai --all-systems",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-RESEARCH.md",
+   "line": 114,
+   "text": "--no-build --no-warn-dirty` \u2014 **scoped to the subflake**, and `config/ai/flake.nix`",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-RESEARCH.md",
+   "line": 261,
+   "text": "> **This is exactly the `config/ai` case.** The existing subflake, and the paired",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-RESEARCH.md",
+   "line": 262,
+   "text": "> root + `?dir=config/ai` consumer inputs, are the *justified* pattern \u2014 not the",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md",
+   "line": 78,
+   "text": "`nix flake check ./config/ai --all-systems --no-build` exit 0, all checks green",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md",
+   "line": 129,
+   "text": "`?dir=config/ai`:",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md",
+   "line": 139,
+   "text": "`path:` nodes are the internal relative subflakes `./config/ai` and",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md",
+   "line": 174,
+   "text": "`config/ai/flake.nix:87-90` exports `lib.inputSet = portableInputs` and",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md",
+   "line": 248,
+   "text": "`?dir=config/ai` likewise on gitea)",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md",
+   "line": 269,
+   "text": "`flake.nix:19-21` `nix-config-ai = ...?dir=config/ai&ref=main` as a real flake.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md",
+   "line": 473,
+   "text": "2. Re-run baseline: `nix flake check ./config/ai --all-systems --no-build`.",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-WIGGUM-PLAN.md",
+   "line": 69,
+   "text": "7. **DoD-7 \u2014 Baseline integrity.** `nix flake check ./config/ai",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-WIGGUM-PLAN.md",
+   "line": 94,
+   "text": "| `nix flake check ./config/ai` | 2 | **PASS** (both runs, exit 0) |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/UNIFIED-CONFIG-WIGGUM-PLAN.md",
+   "line": 102,
+   "text": "`nix flake check ./config/ai --all-systems --no-build`, run in",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/superpowers/plans/2026-07-22-llm-setup-nix-model-registry.md",
+   "line": 12,
+   "text": "`config/ai/model-registry.json`. Nix validates that projection, derives source order",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/superpowers/plans/2026-07-23-fleet-model-defaults.md",
+   "line": 12,
+   "text": "pretty JSON to `nix/config/ai/model-registry.json`. Shared Nix validates and",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/superpowers/plans/2026-07-23-fleet-model-defaults.md",
+   "line": 40,
+   "text": "- Modify: `/Users/johnw/src/nix/config/ai/model-registry.json`",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/superpowers/plans/2026-07-23-fleet-model-defaults.md",
+   "line": 58,
+   "text": "- Modify: `/Users/johnw/src/nix/config/ai/catalog.nix`",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/superpowers/plans/2026-07-23-fleet-model-defaults.md",
+   "line": 77,
+   "text": "- Modify: `/Users/johnw/src/nix/config/ai/preflight.nix`",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/superpowers/plans/2026-07-23-fleet-model-defaults.md",
+   "line": 110,
+   "text": "- Consumes `inputs.nix-config/config/ai/models.nix` and",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "flake.nix",
+   "line": 5,
+   "text": "nix-config-ai.url = \"path:./config/ai\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "flake/ai.nix",
+   "line": 2068,
+   "text": "../config/ai",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "flake/ai.nix",
+   "line": 2224,
+   "text": "portableLock = builtins.fromJSON (builtins.readFile ../config/ai/flake.lock);",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/agent-resources.nix",
+   "line": 12,
+   "text": "bigpowers = import ../config/ai/bigpowers-resources.nix;",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/update-manifest.nix",
+   "line": 13,
+   "text": "\"config/ai/flake.lock\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/update-manifest.nix",
+   "line": 15,
+   "text": "\"config/ai/catalog.nix\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/update-manifest.nix",
+   "line": 34,
+   "text": "\"config/ai/flake.lock\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/update-manifest.nix",
+   "line": 43,
+   "text": "\"config/ai/flake.lock\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/update-manifest.nix",
+   "line": 52,
+   "text": "\"config/ai/flake.lock\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/update-manifest.nix",
+   "line": 61,
+   "text": "\"config/ai/flake.lock\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/update-manifest.nix",
+   "line": 70,
+   "text": "\"config/ai/flake.lock\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/update-manifest.nix",
+   "line": 79,
+   "text": "\"config/ai/flake.lock\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/update-manifest.nix",
+   "line": 88,
+   "text": "\"config/ai/flake.lock\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/update-manifest.nix",
+   "line": 97,
+   "text": "\"config/ai/flake.lock\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "packages/update-manifest.nix",
+   "line": 107,
+   "text": "\"config/ai/flake.nix\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/agent-resources.nix",
+   "line": 17,
+   "text": "bigpowersResources = import ../../config/ai/bigpowers-resources.nix;",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/compatibility-contract.nix",
+   "line": 9,
+   "text": "portableLock = builtins.fromJSON (builtins.readFile ../../config/ai/flake.lock);",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 16,
+   "text": "registryPath = \"${src}/config/ai/model-registry.json\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 21,
+   "text": "modelPolicy = import \"${src}/config/ai/model-policy.nix\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 23,
+   "text": "loadModelData = args: import \"${src}/config/ai/models.nix\" args;",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 27,
+   "text": "import \"${src}/config/ai/catalog.nix\" {",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 685,
+   "text": "claudeRendererPath = \"${src}/config/ai/renderers/claude.nix\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 686,
+   "text": "codexRendererPath = \"${src}/config/ai/renderers/codex.nix\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 687,
+   "text": "openCodeRendererPath = \"${src}/config/ai/renderers/opencode.nix\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 688,
+   "text": "droidRendererPath = \"${src}/config/ai/renderers/droid.nix\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 689,
+   "text": "piRendererPath = \"${src}/config/ai/renderers/pi.nix\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 698,
+   "text": "throw \"Task 6 RED: config/ai/renderers/claude.nix is missing\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 706,
+   "text": "throw \"Task 6 RED: config/ai/renderers/codex.nix is missing\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 711,
+   "text": "throw \"Task 7 RED: config/ai/renderers/opencode.nix is missing\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 755,
+   "text": "throw \"Task 7 RED: config/ai/renderers/droid.nix is missing\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 763,
+   "text": "throw \"Task 8 RED: config/ai/renderers/pi.nix is missing\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 1525,
+   "text": "auto-compact-resume = \"${../../config/ai/extensions/auto-compact-resume/index.ts}\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 1775,
+   "text": "expectedText = builtins.readFile \"${src}/config/ai/statusline-command.sh\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 2692,
+   "text": "task9AiModulePath = \"${src}/config/ai.nix\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 2693,
+   "text": "task9PreflightPath = \"${src}/config/ai/preflight.nix\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 2698,
+   "text": "throw \"Task 9 RED: config/ai.nix and config/ai/preflight.nix are missing\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 3190,
+   "text": "builtins.readFile \"${src}/config/ai.nix\" + builtins.readFile \"${src}/config/johnw.nix\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 3353,
+   "text": "task10ModelSyncPath = \"${src}/config/ai/model-sync.nix\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 3358,
+   "text": "throw \"Task 10 RED: config/ai/model-sync.nix is missing\";",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 4426,
+   "text": "python3 -I - \"${src}/config/ai\" <<'PY'",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/home-manager-contract.nix",
+   "line": 4464,
+   "text": "errors.append(\"config/ai must not be a symlink\")",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/lock-coherence.nix",
+   "line": 5,
+   "text": "portableLock = builtins.fromJSON (builtins.readFile \"${src}/config/ai/flake.lock\");",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/managed-preflight.nix",
+   "line": 10,
+   "text": "preflightFactory = import \"${src}/config/ai/preflight.nix\" {",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/scripts/build-check.sh",
+   "line": 13,
+   "text": "NIX_CONF_DIR=\"$nix_conf_dir\" nix --option warn-dirty false build --no-link --print-build-logs ./config/ai#default",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/scripts/lint.sh",
+   "line": 12,
+   "text": "config/ai/flake.nix",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/scripts/test.sh",
+   "line": 24,
+   "text": "\"${nix_cmd[@]}\" flake show ./config/ai --no-write-lock-file >/dev/null",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/scripts/test.sh",
+   "line": 25,
+   "text": "\"${nix_cmd[@]}\" eval --raw \"./config/ai#packages.${system}.default.name\" >/dev/null",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/scripts/test.sh",
+   "line": 26,
+   "text": "\"${nix_cmd[@]}\" eval --raw \"./config/ai#devShells.${system}.default.name\" >/dev/null",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/scripts/test.sh",
+   "line": 27,
+   "text": "test \"$(\"${nix_cmd[@]}\" eval --raw \"./config/ai#packages.${system}.plasma-wiki.version\")\" = \"1.1.0\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/ai/scripts/test.sh",
+   "line": 28,
+   "text": "test \"$(\"${nix_cmd[@]}\" eval --raw \"./config/ai#packages.${system}.plasma-fractal.version\")\" = \"1.0.0\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "config-import",
+   "classification": "retain-with-owner",
+   "file": "modules/users/home-manager/johnw.nix",
+   "line": 26,
+   "text": "packages = import \"${inputs.nix-config}/config/packages.nix\" {",
+   "targetPath": "config/packages.nix",
+   "owner": "nix-config shared-config API (config/johnw.nix, config/packages.nix, config/overlays.nix)",
+   "trigger": "none (stable portable API; not on the config/ai path)",
+   "note": "import of the SUPPORTED portable config/*.nix surface",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "config-import",
+   "classification": "retain-with-owner",
+   "file": "modules/users/home-manager/johnw.nix",
+   "line": 33,
+   "text": "\"${inputs.nix-config}/config/johnw.nix\"",
+   "targetPath": "config/johnw.nix",
+   "owner": "nix-config shared-config API (config/johnw.nix, config/packages.nix, config/overlays.nix)",
+   "trigger": "none (stable portable API; not on the config/ai path)",
+   "note": "import of the SUPPORTED portable config/*.nix surface",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "flake-input",
+   "classification": "stub-covered",
+   "file": "flake.nix",
+   "line": 54,
+   "text": "url = \"git+ssh://gitea/johnw/nix-config?dir=config/ai\";",
+   "node": "nix-config-ai",
+   "declaredUrl": "git+ssh://gitea/johnw/nix-config?dir=config/ai",
+   "dir": "config/ai",
+   "flakeFalse": false,
+   "lockedRev": "03b5eeccae6689a7c7051756ac4ea020f69008ed",
+   "lockedRef": "refs/heads/main",
+   "owner": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
+   "trigger": "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its ?dir=config/ai input to config/fleet before then",
+   "note": "?dir=config/ai subflake input; breaks on rename unless #47 leaves a config/ai stub (feeds Q4/GAP-DECISIONS)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "flake-input",
+   "classification": "retain-with-owner",
+   "file": "flake.nix",
+   "line": 117,
+   "text": "url = \"git+ssh://gitea/johnw/nix-config\";",
+   "node": "nix-config",
+   "declaredUrl": "git+ssh://gitea/johnw/nix-config",
+   "dir": null,
+   "flakeFalse": true,
+   "lockedRev": "03b5eeccae6689a7c7051756ac4ea020f69008ed",
+   "lockedRef": "refs/heads/main",
+   "owner": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
+   "trigger": "none (points at the repo root, not the config/ai path)",
+   "note": "repo-root input (flake=false); unaffected by the config/ai path rename",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "input-follows",
+   "classification": "stub-covered",
+   "file": "flake.nix",
+   "line": 58,
+   "text": "llm-agents.follows = \"nix-config-ai/llm-agents\";",
+   "inputName": "llm-agents",
+   "followsTarget": "nix-config-ai/llm-agents",
+   "owner": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
+   "trigger": "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its ?dir=config/ai input to config/fleet before then",
+   "note": "resolves through the nix-config-ai subflake input",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-attr",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 321,
+   "text": "hammer",
+   "attr": "hammer",
+   "srcOverlays": [
+    "overlays/30-misc-tools.nix"
+   ],
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
+   "note": "attribute cherry-picked out of a nix-config internal overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-attr",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 322,
+   "text": "linkdups",
+   "attr": "linkdups",
+   "srcOverlays": [
+    "overlays/30-misc-tools.nix"
+   ],
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
+   "note": "attribute cherry-picked out of a nix-config internal overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-attr",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 323,
+   "text": "lipotell",
+   "attr": "lipotell",
+   "srcOverlays": [
+    "overlays/30-misc-tools.nix"
+   ],
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
+   "note": "attribute cherry-picked out of a nix-config internal overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-attr",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 326,
+   "text": "markless",
+   "attr": "markless",
+   "srcOverlays": [
+    "overlays/30-markless.nix"
+   ],
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
+   "note": "attribute cherry-picked out of a nix-config internal overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-attr",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 332,
+   "text": "tsvutils",
+   "attr": "tsvutils",
+   "srcOverlays": [
+    "overlays/30-data-tools.nix"
+   ],
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
+   "note": "attribute cherry-picked out of a nix-config internal overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-attr",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 338,
+   "text": "filetags",
+   "attr": "filetags",
+   "srcOverlays": [
+    "overlays/30-text-tools.nix"
+   ],
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
+   "note": "attribute cherry-picked out of a nix-config internal overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-attr",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 344,
+   "text": "nix-scripts",
+   "attr": "nix-scripts",
+   "srcOverlays": [
+    "overlays/30-user-scripts.nix"
+   ],
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
+   "note": "attribute cherry-picked out of a nix-config internal overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-path",
+   "classification": "retire",
+   "file": "flake.nix",
+   "line": 322,
+   "text": "(import \"${inputs.nix-config}/overlays/00-lib.nix\")",
+   "targetPath": "overlays/00-lib.nix",
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
+   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-path",
+   "classification": "retire",
+   "file": "flake.nix",
+   "line": 336,
+   "text": "(import \"${inputs.nix-config}/overlays/30-misc-tools.nix\")",
+   "targetPath": "overlays/30-misc-tools.nix",
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
+   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-path",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 31,
+   "text": "myLibOverlay = import \"${inputs.nix-config}/overlays/00-lib.nix\";",
+   "targetPath": "overlays/00-lib.nix",
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
+   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-path",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 320,
+   "text": "inherit (import \"${inputs.nix-config}/overlays/30-misc-tools.nix\" final prevWithMyLib)",
+   "targetPath": "overlays/30-misc-tools.nix",
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
+   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-path",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 325,
+   "text": "inherit (import \"${inputs.nix-config}/overlays/30-markless.nix\" final (prev // { inherit inputs; }))",
+   "targetPath": "overlays/30-markless.nix",
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
+   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-path",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 329,
+   "text": "(import \"${inputs.nix-config}/overlays/30-data-tools.nix\" {",
+   "targetPath": "overlays/30-data-tools.nix",
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
+   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-path",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 335,
+   "text": "(import \"${inputs.nix-config}/overlays/30-text-tools.nix\" {",
+   "targetPath": "overlays/30-text-tools.nix",
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
+   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "reach-in-path",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 341,
+   "text": "(import \"${inputs.nix-config}/overlays/30-user-scripts.nix\" {",
+   "targetPath": "overlays/30-user-scripts.nix",
+   "owner": "jwiegley/nixos-config#4",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
+   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "subflake-overlay-use",
+   "classification": "stub-covered",
+   "file": "flake.nix",
+   "line": 164,
+   "text": "inputs.nix-config-ai.overlays.default",
+   "owner": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
+   "trigger": "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its ?dir=config/ai input to config/fleet before then",
+   "note": "consumes the config/ai subflake's exported overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "subflake-overlay-use",
+   "classification": "stub-covered",
+   "file": "flake.nix",
+   "line": 312,
+   "text": "inputs.nix-config-ai.overlays.default",
+   "owner": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
+   "trigger": "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its ?dir=config/ai input to config/fleet before then",
+   "note": "consumes the config/ai subflake's exported overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vps",
+   "kind": "config-import",
+   "classification": "retain-with-owner",
+   "file": "modules/users/home-manager/johnw.nix",
+   "line": 31,
+   "text": "imports = [ \"${inputs.nix-config}/config/johnw.nix\" ];",
+   "targetPath": "config/johnw.nix",
+   "owner": "nix-config shared-config API (config/johnw.nix, config/packages.nix, config/overlays.nix)",
+   "trigger": "none (stable portable API; not on the config/ai path)",
+   "note": "import of the SUPPORTED portable config/*.nix surface",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/vps"
+   }
+  },
+  {
+   "consumer": "vps",
+   "kind": "flake-input",
+   "classification": "stub-covered",
+   "file": "flake.nix",
+   "line": 20,
+   "text": "url = \"github:jwiegley/nix-config?dir=config/ai&ref=main\";",
+   "node": "nix-config-ai",
+   "declaredUrl": "github:jwiegley/nix-config?dir=config/ai&ref=main",
+   "dir": "config/ai",
+   "flakeFalse": false,
+   "lockedRev": "e0ed94fabbc054e36e08f2684123f248bffcf932",
+   "lockedRef": "main",
+   "owner": "vps consumer (read from ~/src/vps; live build tree /etc/nixos on ovh-vps)",
+   "trigger": "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its ?dir=config/ai input to config/fleet before then",
+   "note": "?dir=config/ai subflake input; breaks on rename unless #47 leaves a config/ai stub (feeds Q4/GAP-DECISIONS)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/vps"
+   }
+  },
+  {
+   "consumer": "vps",
+   "kind": "flake-input",
+   "classification": "retain-with-owner",
+   "file": "flake.nix",
+   "line": 30,
+   "text": "url = \"github:jwiegley/nix-config?ref=main\";",
+   "node": "nix-config",
+   "declaredUrl": "github:jwiegley/nix-config?ref=main",
+   "dir": null,
+   "flakeFalse": true,
+   "lockedRev": "e0ed94fabbc054e36e08f2684123f248bffcf932",
+   "lockedRef": "main",
+   "owner": "vps consumer (read from ~/src/vps; live build tree /etc/nixos on ovh-vps)",
+   "trigger": "none (points at the repo root, not the config/ai path)",
+   "note": "repo-root input (flake=false); unaffected by the config/ai path rename",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/vps"
+   }
+  },
+  {
+   "consumer": "vps",
+   "kind": "input-follows",
+   "classification": "stub-covered",
+   "file": "flake.nix",
+   "line": 12,
+   "text": "llm-agents.follows = \"nix-config-ai/llm-agents\";",
+   "inputName": "llm-agents",
+   "followsTarget": "nix-config-ai/llm-agents",
+   "owner": "vps consumer (read from ~/src/vps; live build tree /etc/nixos on ovh-vps)",
+   "trigger": "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its ?dir=config/ai input to config/fleet before then",
+   "note": "resolves through the nix-config-ai subflake input",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/vps"
+   }
+  },
+  {
+   "consumer": "vps",
+   "kind": "reach-in-attr",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 36,
+   "text": "nix-scripts;",
+   "attr": "nix-scripts",
+   "srcOverlays": [
+    "overlays/30-user-scripts.nix",
+    "overlays/00-lib.nix"
+   ],
+   "owner": "jwiegley/nix-config#69",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
+   "note": "attribute cherry-picked out of a nix-config internal overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/vps"
+   }
+  },
+  {
+   "consumer": "vps",
+   "kind": "reach-in-path",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 32,
+   "text": "(import \"${inputs.nix-config}/overlays/30-user-scripts.nix\"",
+   "targetPath": "overlays/30-user-scripts.nix",
+   "owner": "jwiegley/nix-config#69",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
+   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/vps"
+   }
+  },
+  {
+   "consumer": "vps",
+   "kind": "reach-in-path",
+   "classification": "retire",
+   "file": "overlays/default.nix",
+   "line": 35,
+   "text": "(prev // { inherit inputs; } // (import \"${inputs.nix-config}/overlays/00-lib.nix\" final prev)))",
+   "targetPath": "overlays/00-lib.nix",
+   "owner": "jwiegley/nix-config#69",
+   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
+   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/vps"
+   }
+  },
+  {
+   "consumer": "vps",
+   "kind": "subflake-overlay-use",
+   "classification": "stub-covered",
+   "file": "flake.nix",
+   "line": 76,
+   "text": "inputs.nix-config-ai.overlays.default",
+   "owner": "vps consumer (read from ~/src/vps; live build tree /etc/nixos on ovh-vps)",
+   "trigger": "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its ?dir=config/ai input to config/fleet before then",
+   "note": "consumes the config/ai subflake's exported overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/vps"
+   }
+  },
+  {
+   "consumer": "shared-work",
+   "kind": "config-import",
+   "classification": "retain-with-owner",
+   "file": "flake.nix",
+   "line": 76,
+   "text": "(import \"${inputs.nix-config}/config/overlays.nix\" {",
+   "targetPath": "config/overlays.nix",
+   "owner": "nix-config shared-config API (config/johnw.nix, config/packages.nix, config/overlays.nix)",
+   "trigger": "none (stable portable API; not on the config/ai path)",
+   "note": "import of the SUPPORTED portable config/*.nix surface",
+   "source": {
+    "kind": "proxy-checkout",
+    "path": "/Users/johnw/src/andoria",
+    "warning": "proxy of live ~/.config/home-manager on andoria-08 / andoria-t2 / delphi-3bd4 / gpu-server (shared NFS home; NOT present on this machine); reconfirm via verifyCommand"
+   }
+  },
+  {
+   "consumer": "shared-work",
+   "kind": "config-import",
+   "classification": "retain-with-owner",
+   "file": "flake.nix",
+   "line": 410,
+   "text": "\"${inputs.nix-config}/config/johnw.nix\"",
+   "targetPath": "config/johnw.nix",
+   "owner": "nix-config shared-config API (config/johnw.nix, config/packages.nix, config/overlays.nix)",
+   "trigger": "none (stable portable API; not on the config/ai path)",
+   "note": "import of the SUPPORTED portable config/*.nix surface",
+   "source": {
+    "kind": "proxy-checkout",
+    "path": "/Users/johnw/src/andoria",
+    "warning": "proxy of live ~/.config/home-manager on andoria-08 / andoria-t2 / delphi-3bd4 / gpu-server (shared NFS home; NOT present on this machine); reconfirm via verifyCommand"
+   }
+  },
+  {
+   "consumer": "shared-work",
+   "kind": "config-import",
+   "classification": "retain-with-owner",
+   "file": "flake.nix",
+   "line": 431,
+   "text": "packages = import \"${inputs.nix-config}/config/packages.nix\" {",
+   "targetPath": "config/packages.nix",
+   "owner": "nix-config shared-config API (config/johnw.nix, config/packages.nix, config/overlays.nix)",
+   "trigger": "none (stable portable API; not on the config/ai path)",
+   "note": "import of the SUPPORTED portable config/*.nix surface",
+   "source": {
+    "kind": "proxy-checkout",
+    "path": "/Users/johnw/src/andoria",
+    "warning": "proxy of live ~/.config/home-manager on andoria-08 / andoria-t2 / delphi-3bd4 / gpu-server (shared NFS home; NOT present on this machine); reconfirm via verifyCommand"
+   }
+  },
+  {
+   "consumer": "shared-work",
+   "kind": "flake-input",
+   "classification": "retain-with-owner",
+   "file": "flake.nix",
+   "line": 15,
+   "text": "url = \"github:jwiegley/nix-config?ref=main\";",
+   "node": "nix-config",
+   "declaredUrl": "github:jwiegley/nix-config?ref=main",
+   "dir": null,
+   "flakeFalse": true,
+   "lockedRev": "269b518e70bbe676e329cb9f7f92dcffb46a028d",
+   "lockedRef": "main",
+   "owner": "shared-work home-manager (live ~/.config/home-manager on the four work machines; ~/src/andoria is a developer proxy of it)",
+   "trigger": "none (points at the repo root, not the config/ai path)",
+   "note": "repo-root input (flake=false); unaffected by the config/ai path rename",
+   "source": {
+    "kind": "proxy-checkout",
+    "path": "/Users/johnw/src/andoria",
+    "warning": "proxy of live ~/.config/home-manager on andoria-08 / andoria-t2 / delphi-3bd4 / gpu-server (shared NFS home; NOT present on this machine); reconfirm via verifyCommand"
+   }
+  },
+  {
+   "consumer": "shared-work",
+   "kind": "flake-input",
+   "classification": "stub-covered",
+   "file": "flake.nix",
+   "line": 31,
+   "text": "url = \"github:jwiegley/nix-config?dir=config/ai&ref=main\";",
+   "node": "nix-config-ai",
+   "declaredUrl": "github:jwiegley/nix-config?dir=config/ai&ref=main",
+   "dir": "config/ai",
+   "flakeFalse": false,
+   "lockedRev": "269b518e70bbe676e329cb9f7f92dcffb46a028d",
+   "lockedRef": "main",
+   "owner": "shared-work home-manager (live ~/.config/home-manager on the four work machines; ~/src/andoria is a developer proxy of it)",
+   "trigger": "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its ?dir=config/ai input to config/fleet before then",
+   "note": "?dir=config/ai subflake input; breaks on rename unless #47 leaves a config/ai stub (feeds Q4/GAP-DECISIONS)",
+   "source": {
+    "kind": "proxy-checkout",
+    "path": "/Users/johnw/src/andoria",
+    "warning": "proxy of live ~/.config/home-manager on andoria-08 / andoria-t2 / delphi-3bd4 / gpu-server (shared NFS home; NOT present on this machine); reconfirm via verifyCommand"
+   }
+  },
+  {
+   "consumer": "shared-work",
+   "kind": "input-follows",
+   "classification": "stub-covered",
+   "file": "flake.nix",
+   "line": 45,
+   "text": "llm-agents.follows = \"nix-config-ai/llm-agents\";",
+   "inputName": "llm-agents",
+   "followsTarget": "nix-config-ai/llm-agents",
+   "owner": "shared-work home-manager (live ~/.config/home-manager on the four work machines; ~/src/andoria is a developer proxy of it)",
+   "trigger": "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its ?dir=config/ai input to config/fleet before then",
+   "note": "resolves through the nix-config-ai subflake input",
+   "source": {
+    "kind": "proxy-checkout",
+    "path": "/Users/johnw/src/andoria",
+    "warning": "proxy of live ~/.config/home-manager on andoria-08 / andoria-t2 / delphi-3bd4 / gpu-server (shared NFS home; NOT present on this machine); reconfirm via verifyCommand"
+   }
+  },
+  {
+   "consumer": "shared-work",
+   "kind": "subflake-overlay-use",
+   "classification": "stub-covered",
+   "file": "flake.nix",
+   "line": 78,
+   "text": "aiOverlay = inputs.nix-config-ai.overlays.default;",
+   "owner": "shared-work home-manager (live ~/.config/home-manager on the four work machines; ~/src/andoria is a developer proxy of it)",
+   "trigger": "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its ?dir=config/ai input to config/fleet before then",
+   "note": "consumes the config/ai subflake's exported overlay",
+   "source": {
+    "kind": "proxy-checkout",
+    "path": "/Users/johnw/src/andoria",
+    "warning": "proxy of live ~/.config/home-manager on andoria-08 / andoria-t2 / delphi-3bd4 / gpu-server (shared NFS home; NOT present on this machine); reconfirm via verifyCommand"
+   }
+  }
+ ]
+}

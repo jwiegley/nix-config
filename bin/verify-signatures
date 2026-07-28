@@ -1,0 +1,282 @@
+#!/usr/bin/env bash
+# Verify that every commit in a range carries a good cryptographic signature.
+#
+# CLAUDE.md is unambiguous: "Signed commits only." Nothing mechanically enforced
+# it, so an unsigned commit could reach a branch and no gate would notice. This is
+# that gate. It is a deliberate sibling of bin/publish and reuses its two hard-won
+# lessons verbatim -- the commit range and the accepted validity codes -- because
+# getting either wrong yields a check that is silently useless.
+#
+# WHAT IT PROVES
+#   For every commit in the resolved range, `git log --pretty=%G?` must report:
+#       G  good signature
+#       U  good signature, unknown validity -- the signer's key is present but not
+#          web-of-trust-trusted. CI runners and fresh clones legitimately have no
+#          trust web, so a cryptographically valid signature lands on U, not G.
+#          Tolerating U is the entire reason this can work in CI at all.
+#   Everything else is rejected:
+#       X expired signature   Y expired key   R revoked key
+#       E cannot check (no public key available)   B bad   N none (unsigned)
+#   bin/publish once accepted G|U|X|Y and was tightened to G|U: a signature that no
+#   longer verifies does not satisfy "signed commits only". We start where that
+#   ended -- G|U and nothing else.
+#
+# WHAT IT CANNOT PROVE
+#   * It cannot prove WHO signed a commit beyond "a key in the verifying keyring".
+#     Identity is bounded by which public keys the keyring holds; restrict the
+#     keyring to the authorised signer(s) to bound it to them (see KEYRING).
+#   * It cannot verify anything the keyring cannot check. With NO public key for a
+#     signed commit, %G? is E, which is rejected -- so the failure mode is a false
+#     RED (over-strict), never a false GREEN. That direction is chosen on purpose:
+#     a gate that reports success while checking nothing is worse than no gate.
+#
+# KEYRING (public material only -- never a private key, token, or secret)
+#   OpenPGP-signed commits verify only against the signer's PUBLIC key. A fresh CI
+#   runner has no keyring, so every signed commit would report E and the job would
+#   be RED for everyone. To make the job a true signal rather than a blanket RED:
+#     * commit the signer's ASCII-armored PUBLIC key(s) under .github/signing-keys/
+#       (default; override with --keys-dir or SIGVERIFY_KEYS_DIR), and
+#     * this script imports them into an EPHEMERAL, throwaway GNUPGHOME and verifies
+#       against that keyring alone. It never reads or writes the caller's real
+#       keyring, and it removes the throwaway home on exit.
+#   An imported-but-untrusted key yields U, which is accepted; no ownertrust marking
+#   is needed or wanted. If the directory is absent the script falls back to the
+#   caller's ambient keyring: correct for a developer's machine (they already hold
+#   the key) and fail-closed for CI (no key -> E -> RED).
+#
+# RANGE (see bin/publish for the archaeology)
+#   The set of commits to check is "what this push or PR introduces", never the
+#   whole repository. bin/publish learned that a bare revision means ALL history and
+#   flagged decade-old already-published commits as unsigned; we do not repeat it.
+#     --range A..B / SIGVERIFY_RANGE      explicit; wins over everything.
+#     --base/--head or SIGVERIFY_BASE/SIGVERIFY_HEAD    check BASE..HEAD. This is the
+#         CI path: the workflow passes github.event.{pull_request.base.sha||before}
+#         and {pull_request.head.sha||after}. Passing the real head SHA -- not the
+#         checked-out ref -- sidesteps the synthetic, unsigned merge commit GitHub
+#         materialises for pull_request events, which would otherwise fail the gate.
+#     A zero/empty BASE (first push of a brand-new branch) is NOT read as "all
+#         history"; the range becomes HEAD minus the default branch, or, failing
+#         that, HEAD minus every remote-tracking ref -- "what is not already
+#         published", exactly bin/publish's rule.
+#     With none of the above, the local default is `HEAD --not --remotes`: the
+#         commits no remote has yet, i.e. what a `git push` would introduce. That
+#         makes a bare invocation a correct local pre-push guard.
+#
+# EXIT CODES
+#   0  every commit in range is G or U (or the range is empty)
+#   1  at least one commit is unsigned or otherwise not-good
+#   2  usage or range-resolution error (loud -- never silently green)
+#   3  a required tool (git, gpg) is missing
+#
+# Usage:
+#   bin/verify-signatures                       # local: check unpushed commits
+#   bin/verify-signatures --range A..B
+#   bin/verify-signatures --base <sha> --head <sha>
+#   bin/verify-signatures --keys-dir DIR        # public keyring source
+#   SIGVERIFY_BASE=.. SIGVERIFY_HEAD=.. bin/verify-signatures   # the CI contract
+#
+# Refs: jwiegley/nix-config#23 (GOV-10); sibling of bin/publish.
+
+set -euo pipefail
+
+prog=verify-signatures
+
+say() { printf '%s: %s\n' "$prog" "$*"; }
+warn() { printf '%s: %s\n' "$prog" "$*" >&2; }
+die() {
+    printf '%s: %s\n' "$prog" "$*" >&2
+    exit 2
+}
+need() {
+    command -v "$1" >/dev/null 2>&1 && return 0
+    printf '%s: required tool not found in PATH: %s\n' "$prog" "$1" >&2
+    exit 3
+}
+
+# A throwaway GNUPGHOME, created only when we build a keyring from committed public
+# keys. Cleaned up unconditionally so we never leak a keyring or a stray agent.
+ephemeral_gnupg=""
+cleanup() {
+    [[ -n $ephemeral_gnupg && -d $ephemeral_gnupg ]] || return 0
+    gpgconf --homedir "$ephemeral_gnupg" --kill all >/dev/null 2>&1 || true
+    rm -rf -- "$ephemeral_gnupg"
+}
+trap cleanup EXIT INT TERM
+
+# ---- arguments ----------------------------------------------------------
+
+range=${SIGVERIFY_RANGE:-}
+base=${SIGVERIFY_BASE:-}
+head_rev=${SIGVERIFY_HEAD:-}
+keys_dir=${SIGVERIFY_KEYS_DIR:-.github/signing-keys}
+default_branch=${SIGVERIFY_DEFAULT_BRANCH:-}
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+    --range)
+        [[ -n ${2-} ]] || die "--range needs an A..B argument"
+        range=$2
+        shift
+        ;;
+    --base)
+        [[ -n ${2-} ]] || die "--base needs a revision"
+        base=$2
+        shift
+        ;;
+    --head)
+        [[ -n ${2-} ]] || die "--head needs a revision"
+        head_rev=$2
+        shift
+        ;;
+    --keys-dir)
+        [[ -n ${2-} ]] || die "--keys-dir needs a directory"
+        keys_dir=$2
+        shift
+        ;;
+    -h | --help)
+        sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//; $d'
+        exit 0
+        ;;
+    *) die "unknown argument: $1 (try --help)" ;;
+    esac
+    shift
+done
+
+need git
+repo_root=$(git rev-parse --show-toplevel) || die "not in a git repository"
+cd "$repo_root" || die "cannot cd to repository root: $repo_root"
+
+# ---- keyring ------------------------------------------------------------
+# Build a hermetic verification keyring from committed PUBLIC keys, if present.
+# Otherwise leave the ambient keyring in place.
+setup_keyring() {
+    if [[ ! -d $keys_dir ]]; then
+        say "no committed keyring at '$keys_dir'; using the ambient GPG keyring"
+        return 0
+    fi
+    local -a keyfiles=()
+    local f
+    while IFS= read -r -d '' f; do
+        keyfiles+=("$f")
+    done < <(find "$keys_dir" -type f \
+        \( -name '*.asc' -o -name '*.gpg' -o -name '*.pgp' -o -name '*.key' \) \
+        -print0 2>/dev/null)
+    if [[ ${#keyfiles[@]} -eq 0 ]]; then
+        warn "keyring dir '$keys_dir' holds no public-key files; using the ambient keyring"
+        return 0
+    fi
+    need gpg
+    ephemeral_gnupg=$(mktemp -d "${TMPDIR:-/tmp}/sigverify-gnupg.XXXXXX") ||
+        die "could not create a temporary GNUPGHOME"
+    chmod 700 "$ephemeral_gnupg"
+    export GNUPGHOME=$ephemeral_gnupg
+    local imported=0
+    for f in "${keyfiles[@]}"; do
+        if gpg --batch --quiet --import "$f" >/dev/null 2>&1; then
+            imported=$((imported + 1))
+        else
+            warn "could not import public-key file: $f"
+        fi
+    done
+    [[ $imported -gt 0 ]] || die "no public keys could be imported from '$keys_dir'"
+    say "built a hermetic keyring from $imported public-key file(s) in '$keys_dir'"
+}
+
+# ---- range --------------------------------------------------------------
+# Populate the global array rev_args with the arguments to `git log`.
+resolve_range() {
+    if [[ -n $range ]]; then
+        rev_args=("$range")
+        say "range: explicit '$range'"
+        return 0
+    fi
+
+    if [[ -n $head_rev || -n $base ]]; then
+        [[ -n $head_rev ]] || die "a head revision is required when a base is given"
+        local head_sha
+        head_sha=$(git rev-parse --verify --quiet "$head_rev^{commit}") ||
+            die "cannot resolve head revision: $head_rev"
+
+        if [[ -z $base || $base =~ ^0+$ ]]; then
+            # Brand-new branch: base is the all-zero sentinel. Do NOT fall back to
+            # the whole repository. Subtract the default branch if we can find one,
+            # else every remote-tracking ref -- "what is not already published".
+            say "range: no base ref (new branch); checking only what is not already published"
+            local -a excludes=()
+            local ref
+            for ref in "$default_branch" origin/master origin/main master main; do
+                [[ -n $ref ]] || continue
+                if git rev-parse --verify --quiet "$ref^{commit}" >/dev/null; then
+                    excludes=("^$ref")
+                    break
+                fi
+            done
+            if [[ ${#excludes[@]} -gt 0 ]]; then
+                rev_args=("$head_sha" "${excludes[@]}")
+            else
+                warn "no default branch to exclude; checking full history of $head_rev (bootstrap)"
+                rev_args=("$head_sha" --not --remotes)
+            fi
+            return 0
+        fi
+
+        local base_sha
+        base_sha=$(git rev-parse --verify --quiet "$base^{commit}") ||
+            die "cannot resolve base revision: $base"
+        rev_args=("$base_sha..$head_sha")
+        say "range: ${base_sha:0:12}..${head_sha:0:12}"
+        return 0
+    fi
+
+    if [[ -n ${GITHUB_BASE_REF:-} ]]; then
+        local base_ref="origin/$GITHUB_BASE_REF"
+        git rev-parse --verify --quiet "$base_ref^{commit}" >/dev/null ||
+            die "PR base '$base_ref' not found; the workflow must fetch it (fetch-depth: 0)"
+        rev_args=("$base_ref..HEAD")
+        say "range: $base_ref..HEAD (pull_request)"
+        return 0
+    fi
+
+    rev_args=(HEAD --not --remotes)
+    say "range: HEAD --not --remotes (local unpushed commits)"
+}
+
+# ---- verify -------------------------------------------------------------
+
+declare -a rev_args=()
+setup_keyring
+resolve_range
+
+# Capture git's output and its exit status FIRST. A `git log` failure must abort
+# loudly (exit 2), never degrade to an empty range that passes silently -- that is
+# the exact vacuous-green failure this gate exists to prevent.
+if ! log_output=$(git log --no-color --pretty='%G? %H %s' "${rev_args[@]}" 2>&1); then
+    die "git log failed for range (${rev_args[*]}):
+$log_output"
+fi
+
+unsigned=0
+checked=0
+while read -r sig sha subject; do
+    [[ -n $sig ]] || continue
+    checked=$((checked + 1))
+    case $sig in
+    G | U) : ;;
+    *)
+        warn "REJECTED [$sig] $sha $subject"
+        unsigned=1
+        ;;
+    esac
+done <<<"$log_output"
+
+if [[ $unsigned -ne 0 ]]; then
+    warn "one or more commits in range lack a good signature (see above)"
+    exit 1
+fi
+
+if [[ $checked -eq 0 ]]; then
+    say "no commits in range; nothing to verify"
+else
+    say "all $checked commit(s) in range carry a good signature (G or U)"
+fi
+exit 0

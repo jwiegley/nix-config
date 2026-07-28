@@ -54,6 +54,7 @@ SUITES=(
     python-lint
     python-test
     portable-eval
+    signatures
 )
 
 fix=0
@@ -240,6 +241,24 @@ run_python_test() {
     fi
 }
 
+run_signatures() {
+    need git signatures || return
+    need gpg signatures || return
+    # verify-signatures owns the range logic and the %G? policy. It resolves the
+    # CI push/PR range from SIGVERIFY_BASE/SIGVERIFY_HEAD, or when run bare the
+    # local "not yet on any remote" set, and requires %G? in {G,U} for every
+    # commit. It imports only PUBLIC keys from .github/signing-keys into a
+    # throwaway keyring; no secret material is read or written.
+    #
+    # Unlike every other suite this one operates on a COMMIT RANGE rather than a
+    # `git ls-files` file set, so it has no --files arm.
+    if bin/verify-signatures; then
+        note "signatures: every commit in range carries a good signature"
+    else
+        fail "signatures: unsigned or bad-signature commit(s) in range"
+    fi
+}
+
 run_portable_eval() {
     need nix portable-eval || return
     if nix flake check ./config/ai --all-systems --no-build --no-warn-dirty; then
@@ -305,6 +324,7 @@ for suite in "${want[@]}"; do
     python-lint) run_python_lint ;;
     python-test) run_python_test ;;
     portable-eval) run_portable_eval ;;
+    signatures) run_signatures ;;
     esac
 done
 

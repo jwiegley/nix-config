@@ -1,0 +1,660 @@
+#!/usr/bin/env bash
+# Derive the merged consumer inventory: one classified record per reference from
+# every consumer of nix-config into nix-config, across the internal tree and the
+# external consumer checkouts.
+#
+# Why this exists: the planned config/ai -> config/fleet rename (jwiegley/nix-config#47)
+# is only complete if EVERY reference to the config/ai contract is known first,
+# yet no artifact owned the inventory (issue #17, critique H4). Four separate
+# inventory passes (narrow ?dir URLs, rename-verification, all compat surfaces,
+# flake-ai.nix compat) are the same read-only sweep under different lenses. This
+# script IS that sweep. #47 (the rename) and #63 (post-rename stragglers) consume
+# its JSON mechanically, so the schema is stable and every record carries
+# consumer, kind, classification, file, line, and the exact source text.
+#
+# The output is stored evidence, not a Nix-generated leaf, so it is committed as
+# a tracked data file (bin/consumer-inventory --write).
+#
+# CLASSIFICATION SCHEME (issue #17). Every reference is exactly one of:
+#
+#   rename-now       A reference to the literal "config/ai" path inside
+#                    nix-config's own tree. #47 rewrites it in the rename commit.
+#
+#   stub-covered     An external consumer edge that resolves through the config/ai
+#                    subflake: the ?dir=config/ai input, its llm-agents follows,
+#                    and its overlays.default use. Recommended disposition ASSUMES
+#                    #47 leaves a transitional config/ai -> config/fleet stub so
+#                    these keep building until each consumer migrates its own URL.
+#                    If Q4/GAP-DECISIONS declines the stub, reclassify these as a
+#                    coordinated consumer-side URL rename. Owner + trigger recorded.
+#
+#   retire           A consumer reach-in into nix-config INTERNAL overlay files
+#                    (${inputs.nix-config}/overlays/*.nix) and the attributes
+#                    cherry-picked from them. Not a supported API; this class is
+#                    what broke vulcan when a3cc3843 changed overlay signatures.
+#                    Delete once the consumer moves to typed config/fleet outputs.
+#
+#   retain-with-owner  Keep as-is; owner + retirement trigger recorded. Covers the
+#                    four flake-ai.nix internal imports (GAP-FLAKEAI-INTERNAL, out
+#                    of scope for #47), the supported config/*.nix portable surface,
+#                    the root flake=false nix-config inputs, and the
+#                    ai-nix/node-red/global-Anvil compat surfaces routed to EPIC 7.
+#
+# Determinism contract: for a fixed working tree and fixed consumer locks, every
+# record below is a pure function of on-disk files. The internal reference set is
+# DERIVED by grep (never asserted), matching issue #17's verification command
+# byte-for-byte; the count falls out of the derived list. Remote checks (gh) are
+# recorded as commands plus a documented finding rather than run inside derive(),
+# so the artifact reproduces offline.
+#
+# Usage:
+#   bin/consumer-inventory                 # derive, print JSON to stdout
+#   bin/consumer-inventory --print         # same
+#   bin/consumer-inventory --write [FILE]  # derive, write FILE
+#                                          #   (default test/inventory/consumer-inventory.json)
+#
+# Environment overrides (all optional; defaults mirror bin/parity-baseline's
+# BASH_SOURCE-relative root detection and the ~/src sibling-checkout layout):
+#   CONSUMER_INVENTORY_REPO_ROOT      nix-config repo root
+#   CONSUMER_INVENTORY_CONSUMER_BASE  directory holding the sibling consumer checkouts
+#   CONSUMER_INVENTORY_REPO_HEAD      repo HEAD sha to record (default: resolve from
+#                                     REPO_ROOT/.git via pure file reads, no git binary;
+#                                     empty string records null)
+#
+# Refs: jwiegley/nix-config#17 (this inventory); #47 (E3-RENAME) and #63 consume it.
+
+set -euo pipefail
+
+repo_root=${CONSUMER_INVENTORY_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
+consumer_base=${CONSUMER_INVENTORY_CONSUMER_BASE:-$(cd "$repo_root/.." && pwd)}
+repo_head=${CONSUMER_INVENTORY_REPO_HEAD-__auto__}
+
+die() {
+    printf 'consumer-inventory: %s\n' "$*" >&2
+    exit 1
+}
+
+# All derivation lives in one Python program: it shells out to grep for the
+# repo-wide internal sweep (to reproduce issue #17's verification command
+# exactly) and reads the consumer flake.nix / flake.lock / *.nix files directly.
+derive() {
+    python3 - "$repo_root" "$consumer_base" "$repo_head" <<'PY'
+import json
+import os
+import re
+import subprocess
+import sys
+
+repo_root, consumer_base, repo_head_arg = sys.argv[1], sys.argv[2], sys.argv[3]
+home = os.path.expanduser("~")
+
+SCHEMA_VERSION = 1
+
+# The include globs and patterns are recorded verbatim in the artifact so a later
+# consumer re-derives identically instead of inventing its own query. They match
+# issue #17's Verification block.
+INCLUDE_GLOBS = ["*.nix", "*.yml", "*.yaml", "*.md", "*.sh"]
+CONFIG_AI = "config/ai"
+FLAKE_AI_RE = re.compile(r"flake-ai\.nix")
+# A load-bearing flake-ai.nix import is a relative/interpolated path in a .nix
+# file that is not a comment; doc/lint mentions are counted but not classified.
+FLAKE_AI_IMPORT_RE = re.compile(r"(\.\.?/)+[\w./-]*flake-ai\.nix|\$\{inputs\.nix-config\}/flake-ai\.nix")
+COMPAT_SURFACES = [
+    ("ai-nix", r"ai-nix"),
+    ("node-red", r"node-red"),
+    ("global-anvil", r"global.*[Aa]nvil"),
+]
+
+# References into nix-config from a consumer file.
+NC_PATH_RE = re.compile(r"\$\{inputs\.nix-config\}/([^\"'\s)]+)")
+URL_RE = re.compile(r'url\s*=\s*"([^"]*nix-config[^"]*)"')
+FOLLOWS_RE = re.compile(r'([\w][\w-]*)\.follows\s*=\s*"(nix-config[^"]*)"')
+OVERLAY_USE_RE = re.compile(r"inputs\.nix-config-ai\.overlays[.\w]*")
+
+
+def rel(path):
+    try:
+        return os.path.relpath(path, repo_root)
+    except ValueError:
+        return path
+
+
+def resolve_head():
+    """Best-effort repo HEAD via pure file reads (no git binary). Returns None on
+    any failure or if the gitdir resolves outside repo_root (a worktree pointing
+    at another repo) so the sweep never reads into a tree it does not own."""
+    if repo_head_arg != "__auto__":
+        return repo_head_arg or None
+    try:
+        dotgit = os.path.join(repo_root, ".git")
+        if os.path.isfile(dotgit):
+            line = open(dotgit).read().strip()
+            if not line.startswith("gitdir:"):
+                return None
+            gitdir = os.path.normpath(os.path.join(repo_root, line.split("gitdir:", 1)[1].strip()))
+        elif os.path.isdir(dotgit):
+            gitdir = dotgit
+        else:
+            return None
+        # A LINKED WORKTREE's gitdir legitimately lives outside repo_root — it
+        # points at <main>/.git/worktrees/<name>. Declining that case made this
+        # emit `repoHead: null` for every run in a worktree, which is how this
+        # programme normally works, and a committed inventory that cannot say
+        # which tree it describes is uninterpretable. The `gitdir:` pointer came
+        # from repo_root's own .git file, so it is by construction this repo's
+        # gitdir; there is nothing to protect against here.
+        commondir = gitdir
+        cdf = os.path.join(gitdir, "commondir")
+        if os.path.exists(cdf):
+            commondir = os.path.normpath(os.path.join(gitdir, open(cdf).read().strip()))
+        head = open(os.path.join(gitdir, "HEAD")).read().strip()
+        if not head.startswith("ref:"):
+            return head
+        ref = head.split("ref:", 1)[1].strip()
+        for base in (gitdir, commondir):
+            p = os.path.join(base, ref)
+            if os.path.exists(p):
+                return open(p).read().strip()
+        pr = os.path.join(commondir, "packed-refs")
+        if os.path.exists(pr):
+            for l in open(pr):
+                l = l.strip()
+                if l and not l.startswith(("#", "^")) and l.endswith(ref):
+                    return l.split()[0]
+    except Exception:
+        return None
+    return None
+
+
+def grep(pattern, root, fixed=False):
+    """grep -rIn over the issue's include globs. Returns [(relpath, lineno, text)].
+    Missing matches (grep rc 1) are not an error; anything else is."""
+    cmd = ["grep", "-rIn", "--exclude-dir=.git"]
+    for g in INCLUDE_GLOBS:
+        cmd.append("--include=" + g)
+    cmd.append("-F" if fixed else "-E")
+    cmd += ["-e", pattern, root]
+    out = subprocess.run(cmd, capture_output=True, text=True)
+    if out.returncode not in (0, 1):
+        raise RuntimeError("grep failed (%d): %s" % (out.returncode, out.stderr.strip()))
+    rows = []
+    for line in out.stdout.splitlines():
+        # format: PATH:LINENO:TEXT
+        m = re.match(r"^(.*?):(\d+):(.*)$", line)
+        if not m:
+            continue
+        rows.append((rel(m.group(1)), int(m.group(2)), m.group(3)))
+    return rows
+
+
+def nix_files(root):
+    files = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in (".git",)]
+        for fn in filenames:
+            if fn.endswith(".nix"):
+                files.append(os.path.join(dirpath, fn))
+    return sorted(files)
+
+
+def line_of(text, idx):
+    return text.count("\n", 0, idx) + 1
+
+
+def scan_reachins(path, consumer_root):
+    """Yield reference dicts for every ${inputs.nix-config}/PATH interpolation and
+    every attribute cherry-picked via `inherit (import "${inputs.nix-config}/..." )`."""
+    text = open(path).read()
+    lines = text.splitlines()
+    relf = os.path.relpath(path, consumer_root)
+    refs = []
+
+    # 1) path interpolations into nix-config internals / supported surface.
+    for m in NC_PATH_RE.finditer(text):
+        sub = m.group(1)
+        ln = line_of(text, m.start())
+        refs.append({
+            "_kind": "config-import" if sub.startswith("config/") else (
+                "reach-in-path" if sub.startswith("overlays/") else "nix-config-path"),
+            "file": relf,
+            "line": ln,
+            "text": lines[ln - 1].strip(),
+            "targetPath": sub,
+        })
+
+    # 2) inherit (import "${inputs.nix-config}/...") ATTR ... ; -> cherry-picked attrs.
+    for im in re.finditer(r"\binherit\b", text):
+        k = im.end()
+        while k < len(text) and text[k].isspace():
+            k += 1
+        if k >= len(text) or text[k] != "(":
+            continue  # `inherit foo;` (no from-set) is not a reach-in
+        depth, p = 0, k
+        while p < len(text):
+            if text[p] == "(":
+                depth += 1
+            elif text[p] == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            p += 1
+        group = text[k:p + 1]
+        if "inputs.nix-config}" not in group:
+            continue
+        src_paths = NC_PATH_RE.findall(group)
+        semi = text.find(";", p + 1)
+        attrs = [a for a in re.split(r"\s+", text[p + 1:semi].strip()) if a]
+        for a in attrs:
+            aidx = text.find(a, p + 1)
+            aln = line_of(text, aidx)
+            refs.append({
+                "_kind": "reach-in-attr",
+                "file": relf,
+                "line": aln,
+                "text": lines[aln - 1].strip(),
+                "attr": a,
+                "srcOverlays": src_paths,
+            })
+    return refs
+
+
+def load_lock_nc_nodes(root):
+    """Map dir-key -> node info for every flake.lock node referencing nix-config.
+    Key is '' for the repo-root input and 'config/ai' for the subflake input."""
+    lock_path = os.path.join(root, "flake.lock")
+    if not os.path.isfile(lock_path):
+        return {}
+    lock = json.load(open(lock_path))
+    out = {}
+    for name, node in lock.get("nodes", {}).items():
+        locked = node.get("locked", {}) or {}
+        orig = node.get("original", {}) or {}
+        blob = json.dumps(orig) + json.dumps(locked)
+        if (locked.get("repo") == "nix-config" or orig.get("repo") == "nix-config"
+                or "nix-config" in (locked.get("url") or "") or "nix-config" in (orig.get("url") or "")):
+            if "nix-config" not in blob:
+                continue
+            key = locked.get("dir") or orig.get("dir") or ""
+            out[key] = {
+                "node": name,
+                "rev": locked.get("rev"),
+                "flake": node.get("flake", True),
+                "dir": locked.get("dir") or orig.get("dir"),
+                "ref": locked.get("ref") or orig.get("ref"),
+                "original": orig,
+            }
+    return out
+
+
+# --- consumer table -------------------------------------------------------
+# Each consumer lists candidate roots in priority order. vulcan/vps read from
+# the local ~/src checkout the sweep was pointed at; their authoritative BUILD
+# tree is /etc/nixos on the host (locks there may differ). shared-work has NO
+# authoritative copy on this machine: its live config is ~/.config/home-manager
+# on the four work machines' shared NFS home. ~/src/andoria is a developer
+# PROXY of that config (issue #17 cites it by line number); when only the proxy
+# is present the consumer is reported unresolved (resolved=false, provisional)
+# and its rows are tagged as proxy-derived, to force reconfirmation via the
+# verifyCommand rather than being mistaken for the live tree.
+CONSUMERS = [
+    {
+        "name": "vulcan",
+        "type": "nixos",
+        "candidates": [(os.path.join(consumer_base, "nixos"), "local-checkout")],
+        "authoritativeHostPath": "/etc/nixos on vulcan",
+        "ownerId": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
+        "reachinRetireOwner": "jwiegley/nixos-config#4",
+        "verifyCommand": (
+            "on vulcan (read-only): grep -nE "
+            "'nix-config|config/ai|follows.*nix-config|\\$\\{inputs\\.nix-config\\}' "
+            "/etc/nixos/flake.nix /etc/nixos/overlays/*.nix"),
+    },
+    {
+        "name": "vps",
+        "type": "nixos",
+        "candidates": [(os.path.join(consumer_base, "vps"), "local-checkout")],
+        "authoritativeHostPath": "/etc/nixos on ovh-vps",
+        "ownerId": "vps consumer (read from ~/src/vps; live build tree /etc/nixos on ovh-vps)",
+        "reachinRetireOwner": "jwiegley/nix-config#69",
+        "verifyCommand": (
+            "on ovh-vps (read-only): grep -nE "
+            "'nix-config|config/ai|follows.*nix-config|\\$\\{inputs\\.nix-config\\}' "
+            "/etc/nixos/flake.nix /etc/nixos/overlays/*.nix"),
+    },
+    {
+        "name": "shared-work",
+        "type": "home-manager",
+        "candidates": [
+            (os.path.join(home, ".config", "home-manager"), "authoritative-live"),
+            (os.path.join(consumer_base, "andoria"), "proxy-checkout"),
+        ],
+        "authoritativeHostPath": (
+            "~/.config/home-manager on andoria-08 / andoria-t2 / delphi-3bd4 / gpu-server "
+            "(shared NFS home; NOT present on this machine)"),
+        "ownerId": (
+            "shared-work home-manager (live ~/.config/home-manager on the four work machines; "
+            "~/src/andoria is a developer proxy of it)"),
+        "reachinRetireOwner": None,
+        "verifyCommand": (
+            "on a work machine, e.g. andoria-08 (read-only): grep -nE "
+            "'nix-config|config/ai|follows.*nix-config|\\$\\{inputs\\.nix-config\\}' "
+            "~/.config/home-manager/flake.nix; "
+            "and: nix eval --raw ~/.config/home-manager#homeConfigurations.jwiegley.activationPackage.drvPath >/dev/null"),
+    },
+]
+
+STUB_TRIGGER = (
+    "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its "
+    "?dir=config/ai input to config/fleet before then")
+
+
+def classify_input(consumer, dir_key):
+    if dir_key == "config/ai":
+        return ("stub-covered", consumer["ownerId"], STUB_TRIGGER,
+                "?dir=config/ai subflake input; breaks on rename unless #47 leaves a config/ai stub (feeds Q4/GAP-DECISIONS)")
+    return ("retain-with-owner", consumer["ownerId"],
+            "none (points at the repo root, not the config/ai path)",
+            "repo-root input (flake=false); unaffected by the config/ai path rename")
+
+
+references = []
+consumer_records = []
+
+
+def add(consumer_name, order, kind, classification, file, line, text, **extra):
+    rec = {
+        "consumer": consumer_name,
+        "_order": order,
+        "kind": kind,
+        "classification": classification,
+        "file": file,
+        "line": line,
+        "text": text,
+    }
+    rec.update(extra)
+    references.append(rec)
+
+
+# --- internal references (consumer = the nix-config repo itself) ----------
+internal_config_ai = grep(CONFIG_AI, repo_root, fixed=True)
+for f, ln, tx in internal_config_ai:
+    add("internal", 0, "internal-config-ai-ref", "rename-now", f, ln, tx.strip(),
+        owner="jwiegley/nix-config#47 (E3-RENAME)",
+        trigger="rewritten in the config/ai -> config/fleet rename commit")
+internal_config_ai_files = sorted({f for f, _, _ in internal_config_ai})
+
+# The four load-bearing flake-ai.nix internal imports (issue #17 acceptance item),
+# separated from doc/lint mentions.
+flake_ai_all = grep(r"flake-ai\.nix", repo_root)
+flake_ai_consumers = []
+flake_ai_mentions = []
+for f, ln, tx in flake_ai_all:
+    stripped = tx.strip()
+    if f.endswith(".nix") and not stripped.startswith("#") and FLAKE_AI_IMPORT_RE.search(tx):
+        flake_ai_consumers.append((f, ln, stripped))
+    else:
+        flake_ai_mentions.append((f, ln, stripped))
+for f, ln, tx in flake_ai_consumers:
+    add("internal", 0, "flake-ai-internal-consumer", "retain-with-owner", f, ln, tx,
+        owner="GAP-FLAKEAI-INTERNAL",
+        trigger="separate migration of flake-ai.nix's internal imports; explicitly out of scope for #47")
+
+# Compat surfaces -> summarized (not one row per line): these are EPIC 7 inputs,
+# and most matches are the bare token in comments/catalog/doc prose.
+compat_surfaces = []
+for surface, pat in COMPAT_SURFACES:
+    rows = grep(pat, repo_root)
+    compat_surfaces.append({
+        "surface": surface,
+        "pattern": pat,
+        "matchCount": len(rows),
+        "files": sorted({f for f, _, _ in rows}),
+        "classification": "retain-with-owner",
+        "owner": "EPIC 7 (compat-retirement review)",
+        "trigger": "EPIC 7 disposition",
+        "note": "surfaced for EPIC 7; not part of the config/ai path rename. Re-derive with the recorded pattern.",
+    })
+
+# --- external consumer references -----------------------------------------
+for idx, c in enumerate(CONSUMERS, start=1):
+    root = None
+    source = None
+    for cand, kind in c["candidates"]:
+        if os.path.isdir(cand):
+            root = cand
+            source = kind
+            break
+
+    if root is None:
+        consumer_records.append({
+            "name": c["name"],
+            "type": c["type"],
+            "resolved": False,
+            "provisional": True,
+            "source": None,
+            "root": None,
+            "authoritativeHostPath": c["authoritativeHostPath"],
+            "lockedRev": None,
+            "referenceCount": 0,
+            "verifyCommand": c["verifyCommand"],
+            "note": "UNRESOLVED: no readable checkout on this machine. Fill in with verifyCommand.",
+        })
+        continue
+
+    provisional = (source == "proxy-checkout")
+    resolved = (source in ("local-checkout", "authoritative-live"))
+    row_source = {"kind": source, "path": root}
+    if provisional:
+        row_source["warning"] = ("proxy of live " + c["authoritativeHostPath"]
+                                  + "; reconfirm via verifyCommand")
+
+    nc_nodes = load_lock_nc_nodes(root)
+    locked_rev = None
+    if "config/ai" in nc_nodes:
+        locked_rev = nc_nodes["config/ai"]["rev"]
+    elif "" in nc_nodes:
+        locked_rev = nc_nodes[""]["rev"]
+
+    count_before = len(references)
+    flake_nix = os.path.join(root, "flake.nix")
+
+    # flake inputs pointing at nix-config (declared URL + ?dir + flake=false + rev)
+    if os.path.isfile(flake_nix):
+        ftext = open(flake_nix).read().splitlines()
+        for i, line in enumerate(ftext, start=1):
+            for m in URL_RE.finditer(line):
+                url = m.group(1)
+                dir_key = "config/ai" if "config/ai" in url else ""
+                node = nc_nodes.get(dir_key, {})
+                cls, owner, trig, note = classify_input(c, dir_key)
+                add(c["name"], idx, "flake-input", cls, "flake.nix", i, line.strip(),
+                    node=node.get("node"),
+                    declaredUrl=url,
+                    dir=(dir_key or None),
+                    flakeFalse=(node.get("flake", True) is False),
+                    lockedRev=node.get("rev"),
+                    lockedRef=node.get("ref"),
+                    owner=owner, trigger=trig, note=note, source=row_source)
+            for m in FOLLOWS_RE.finditer(line):
+                add(c["name"], idx, "input-follows", "stub-covered", "flake.nix", i, line.strip(),
+                    inputName=m.group(1), followsTarget=m.group(2),
+                    owner=c["ownerId"], trigger=STUB_TRIGGER,
+                    note="resolves through the nix-config-ai subflake input", source=row_source)
+
+    # every ${inputs.nix-config}/... interpolation and cherry-picked attr, plus
+    # every inputs.nix-config-ai.overlays use, across all *.nix in the checkout.
+    for path in nix_files(root):
+        relf = os.path.relpath(path, root)
+        for r in scan_reachins(path, root):
+            k = r.pop("_kind")
+            if k == "reach-in-path":
+                add(c["name"], idx, "reach-in-path", "retire", r["file"], r["line"], r["text"],
+                    targetPath=r["targetPath"], owner=c["reachinRetireOwner"],
+                    trigger="consumer migrates to typed config/fleet outputs; delete this reach-in",
+                    note="reach-in into a nix-config INTERNAL overlay file (not a supported API)",
+                    source=row_source)
+            elif k == "reach-in-attr":
+                add(c["name"], idx, "reach-in-attr", "retire", r["file"], r["line"], r["text"],
+                    attr=r["attr"], srcOverlays=r["srcOverlays"], owner=c["reachinRetireOwner"],
+                    trigger="consumer migrates to typed config/fleet outputs; delete this cherry-pick",
+                    note="attribute cherry-picked out of a nix-config internal overlay",
+                    source=row_source)
+            elif k == "config-import":
+                add(c["name"], idx, "config-import", "retain-with-owner", r["file"], r["line"], r["text"],
+                    targetPath=r["targetPath"],
+                    owner="nix-config shared-config API (config/johnw.nix, config/packages.nix, config/overlays.nix)",
+                    trigger="none (stable portable API; not on the config/ai path)",
+                    note="import of the SUPPORTED portable config/*.nix surface", source=row_source)
+            else:
+                add(c["name"], idx, "nix-config-path", "retain-with-owner", r["file"], r["line"], r["text"],
+                    targetPath=r["targetPath"], owner=c["ownerId"],
+                    trigger="review", note="other path interpolation into nix-config", source=row_source)
+        # subflake overlay use (inputs.nix-config-ai.overlays.default)
+        text = open(path).read().splitlines()
+        for i, line in enumerate(text, start=1):
+            if OVERLAY_USE_RE.search(line):
+                add(c["name"], idx, "subflake-overlay-use", "stub-covered", relf, i, line.strip(),
+                    owner=c["ownerId"], trigger=STUB_TRIGGER,
+                    note="consumes the config/ai subflake's exported overlay", source=row_source)
+
+    consumer_records.append({
+        "name": c["name"],
+        "type": c["type"],
+        "resolved": resolved,
+        "provisional": provisional,
+        "source": source,
+        "root": root,
+        "authoritativeHostPath": c["authoritativeHostPath"],
+        "lockedRev": locked_rev,
+        "referenceCount": len(references) - count_before,
+        "verifyCommand": c["verifyCommand"],
+        "note": ("rows derived from the ~/src/andoria PROXY; the live tree is unverified"
+                 if provisional else
+                 "rows derived from the local checkout; the live build tree is "
+                 + c["authoritativeHostPath"] + " (its lock may differ)"),
+    })
+
+# --- assemble -------------------------------------------------------------
+references.sort(key=lambda r: (r["_order"], r["consumer"], r["kind"], r["file"], r["line"]))
+for r in references:
+    del r["_order"]
+
+
+def tally(key):
+    out = {}
+    for r in references:
+        out[r[key]] = out.get(r[key], 0) + 1
+    return dict(sorted(out.items()))
+
+
+commands = {
+    "internalConfigAiRefs": (
+        "grep -rIn --exclude-dir=.git "
+        + " ".join("--include='%s'" % g for g in INCLUDE_GLOBS)
+        + " -F -e 'config/ai' <repo_root>"),
+    "internalConfigAiFiles": (
+        "grep -rIl --exclude-dir=.git "
+        + " ".join("--include='%s'" % g for g in INCLUDE_GLOBS)
+        + " -F -e 'config/ai' <repo_root>"),
+    "flakeAiInternalConsumers": (
+        "grep -rIn --exclude-dir=.git "
+        + " ".join("--include='%s'" % g for g in INCLUDE_GLOBS)
+        + " -E -e 'flake-ai\\.nix' <repo_root>  # keep .nix, non-comment, path-import lines"),
+    "compatSurfaces": [
+        "grep -rIn --exclude-dir=.git "
+        + " ".join("--include='%s'" % g for g in INCLUDE_GLOBS)
+        + " -E -e '%s' <repo_root>" % pat for _, pat in COMPAT_SURFACES],
+    "consumerInputs": (
+        "parse <consumer>/flake.lock for nodes referencing nix-config "
+        "(dir='' repo-root input, dir='config/ai' subflake input); locate each "
+        "url=\"...nix-config...\" line in <consumer>/flake.nix"),
+    "consumerReachins": (
+        "scan every *.nix under <consumer>/ for '${inputs.nix-config}/PATH' "
+        "interpolations, for 'inherit (import \"${inputs.nix-config}/...\") ATTR ;' "
+        "cherry-picks, and for 'inputs.nix-config-ai.overlays' uses"),
+    "remoteChecks": [
+        "gh search code 'dir=config/ai nix-config' --owner jwiegley --limit 30",
+        "gh search code 'dir=config/ai' --owner positron-ai --limit 30",
+        "gh api repos/jwiegley/nix-config --jq .default_branch",
+    ],
+}
+
+out = {
+    "schemaVersion": SCHEMA_VERSION,
+    "artifact": "consumer-inventory",
+    "generatedBy": "bin/consumer-inventory",
+    "purpose": (
+        "Merged, classified inventory of every reference from every consumer into "
+        "nix-config, so the config/ai -> config/fleet rename (#47) and its straggler "
+        "sweep (#63) know exactly who breaks. One record per reference."),
+    # Deliberately NOT the absolute repo_root / consumer_base. This artifact is
+    # committed, so machine-specific paths in it are false for every other reader
+    # and would churn the file on any checkout with a different layout. The
+    # revision is what makes it interpretable; the paths are an input, not a
+    # finding. Per-reference `file` values are already repo-relative.
+    "repoHead": resolve_head(),
+    "consumerLayout": (
+        "nix-config at the repository root; consumer checkouts as siblings "
+        "(nixos, vps, andoria). Absolute paths are intentionally omitted: see "
+        "the comment at this key in bin/consumer-inventory."),
+    "classificationScheme": {
+        "rename-now": "Reference to the literal config/ai path inside nix-config's own tree; #47 rewrites it in the rename commit.",
+        "stub-covered": "External consumer edge resolving through the config/ai subflake (?dir input, its llm-agents follows, its overlays.default use). Recommendation ASSUMES #47 leaves a transitional config/ai->config/fleet stub; if Q4/GAP-DECISIONS declines the stub, reclassify as a coordinated consumer-side URL rename.",
+        "retire": "Consumer reach-in into nix-config internal overlay files (${inputs.nix-config}/overlays/*.nix) and the attributes cherry-picked from them; not a supported API (this class broke vulcan at a3cc3843). Delete once the consumer moves to typed config/fleet outputs.",
+        "retain-with-owner": "Keep as-is with owner + retirement trigger: the four flake-ai.nix internal imports (GAP-FLAKEAI-INTERNAL), the supported config/*.nix portable surface, root flake=false nix-config inputs, and the ai-nix/node-red/global-Anvil compat surfaces (EPIC 7).",
+    },
+    "derivation": commands,
+    "remoteChecks": {
+        "commands": commands["remoteChecks"],
+        "finding": (
+            "github (gh search code): no external config/ai consumer beyond the three "
+            "inventoried; the only owner:jwiegley hits are inside nix-config itself. "
+            "gitea is LAN-only and not code-searchable via gh; its sole consumer "
+            "(vulcan, ssh://gitea/johnw/nix-config?dir=config/ai) is inventoried from "
+            "the local checkout. nix-config default branch = main."),
+        "note": "re-run the commands (needs network + gh auth) to refresh; not run inside derive() to keep the artifact reproducible offline.",
+    },
+    "summary": {
+        "totalReferences": len(references),
+        "internalConfigAiRefCount": len(internal_config_ai),
+        "internalConfigAiFileCount": len(internal_config_ai_files),
+        "internalConfigAiFiles": internal_config_ai_files,
+        "flakeAiInternalConsumerCount": len(flake_ai_consumers),
+        "flakeAiMentionCount": len(flake_ai_mentions),
+        "byClassification": tally("classification"),
+        "byKind": tally("kind"),
+    },
+    "consumers": consumer_records,
+    "compatSurfaces": compat_surfaces,
+    "references": references,
+}
+print(json.dumps(out, indent=1, sort_keys=False))
+PY
+}
+
+case ${1-} in
+"" | --print)
+    derive
+    ;;
+--write)
+    dest=${2:-"$repo_root/test/inventory/consumer-inventory.json"}
+    mkdir -p "$(dirname "$dest")"
+    tmp=$(mktemp "${TMPDIR:-/tmp}/consumer-inventory.XXXXXX") || die "cannot create a temporary file"
+    derive >"$tmp"
+    # Refuse to commit an artifact that cannot say which tree it describes. A
+    # null repoHead is not a smaller artifact, it is an uninterpretable one: every
+    # per-reference line number is meaningless without the revision it was read
+    # at. Fail loudly instead of writing a plausible-looking file.
+    if ! python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("repoHead") else 1)' "$tmp"; then
+        rm -f "$tmp"
+        die "refusing to write: repoHead could not be resolved.
+    Pass --repo-head <rev> explicitly, or run from a checkout whose HEAD is readable."
+    fi
+    mv "$tmp" "$dest"
+    printf 'consumer-inventory: wrote %s\n' "$dest" >&2
+    printf '%s\n' "$dest"
+    ;;
+*)
+    die "unknown argument: $1 (want --print, or --write [FILE])"
+    ;;
+esac
