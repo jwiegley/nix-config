@@ -1,0 +1,244 @@
+#!/usr/bin/env bash
+# Publish one revision to BOTH core remotes, or to neither.
+#
+# The core has two remotes and they are not interchangeable:
+#
+#   origin  gitea@gitea:johnw/nix-config.git    LAN-only; vulcan's only path
+#   github  git@github.com:jwiegley/nix-config.git   vps and the four work machines
+#
+# A core change is invisible to whichever hosts read the remote that did not
+# receive it. During one session main reached 7 ahead of gitea but 19 ahead of
+# github, so the work fleet was 19 commits behind while vulcan was 7 behind, and
+# nothing reported it. This tool exists so that state cannot arise silently.
+#
+# On atomicity, stated honestly: two independent git pushes cannot be made a
+# single transaction. What this does instead is push nothing until BOTH remotes
+# have proven, via a real `git push --dry-run`, that they would accept the update.
+# That collapses the partial-failure window to a network fault between the two
+# real pushes — and if that happens, the failure is loud and names exactly which
+# remote diverged and the one command that reconciles it. A silent half-push is
+# the failure mode being engineered out; a reported half-push is acceptable.
+#
+# Never force-pushes. Never embeds a credential: authentication is whatever ssh
+# already provides, so this works only where the operator's keys already work.
+#
+# Usage:
+#   bin/publish --dry-run           # pre-flight only, mutate nothing (default-safe)
+#   bin/publish                     # publish HEAD's branch to both remotes
+#   bin/publish --rev REV           # publish a specific revision
+#   bin/publish --branch NAME       # publish a branch other than the current one
+#
+# Pushing is a human-gated action per CLAUDE.md. Building this tool is not
+# authorization to run it; running it without --dry-run performs a real publish.
+#
+# Refs: jwiegley/nix-config#18; FLEET-DESIGN-PLAN §4.5, §10 Q6.
+
+set -euo pipefail
+
+REMOTES=(origin github)
+
+dry_run=0
+rev=""
+branch=""
+
+die() {
+    printf 'publish: %s\n' "$*" >&2
+    exit 1
+}
+say() { printf 'publish: %s\n' "$*"; }
+warn() { printf 'publish: %s\n' "$*" >&2; }
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+    --dry-run) dry_run=1 ;;
+    --rev)
+        [[ -n ${2-} ]] || die "--rev needs a revision"
+        rev=$2
+        shift
+        ;;
+    --branch)
+        [[ -n ${2-} ]] || die "--branch needs a name"
+        branch=$2
+        shift
+        ;;
+    --force | -f | --force-with-lease)
+        die "refusing to force-push. This tool never rewrites published history.
+    If you genuinely need to, do it deliberately by hand, with explicit
+    authorization for that specific action (CLAUDE.md)."
+        ;;
+    -h | --help)
+        sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//; $d'
+        exit 0
+        ;;
+    *) die "unknown argument: $1" ;;
+    esac
+    shift
+done
+
+repo_root=$(git rev-parse --show-toplevel) || die "not in a git repository"
+cd "$repo_root"
+
+[[ -n $branch ]] || branch=$(git symbolic-ref --quiet --short HEAD) ||
+    die "detached HEAD and no --branch given; say which branch to publish"
+
+if [[ -n $rev ]]; then
+    rev=$(git rev-parse --verify "$rev^{commit}") || die "cannot resolve rev: $rev"
+else
+    rev=$(git rev-parse --verify "refs/heads/$branch^{commit}") ||
+        die "no such branch: $branch"
+fi
+short=${rev:0:12}
+
+say "branch $branch at $short"
+
+# ---- Pre-flight ---------------------------------------------------------
+# Everything checkable without mutating anything. Each failure here is cheap;
+# a failure after the first real push is not.
+
+for r in "${REMOTES[@]}"; do
+    git remote get-url "$r" >/dev/null 2>&1 ||
+        die "remote '$r' is not configured. Both remotes are required: publishing
+    to one of them is the exact divergence this tool prevents."
+done
+
+# The revision must actually be on the branch being published, or the push would
+# publish something other than what was verified.
+git merge-base --is-ancestor "$rev" "refs/heads/$branch" ||
+    die "$short is not an ancestor of $branch; refusing to publish a revision
+    that is not on the branch you named"
+
+# Remote state first, then signatures.
+#
+# The order matters and is not merely about failing fast. The set of commits this
+# push would newly publish is computed with `--not --remotes=<r>`, which reads
+# LOCAL remote-tracking refs. Those go stale, so checking signatures before
+# refreshing them would gate the wrong set of commits — too many if the tracking
+# ref lags, too few if a branch was deleted upstream. Establish remote truth,
+# then decide what is actually being published, then check its signatures.
+declare -a need_push=()
+declare -a already=()
+for r in "${REMOTES[@]}"; do
+    if ! git ls-remote --exit-code "$r" >/dev/null 2>&1; then
+        die "remote '$r' is unreachable.
+    origin is gitea on the LAN — if you are off the LAN, publishing github alone
+    would create exactly the divergence this tool exists to prevent. Reconnect,
+    or accept the divergence deliberately by pushing by hand."
+    fi
+    # Refresh tracking refs before any range computation depends on them.
+    git fetch --quiet "$r" 2>/dev/null || true
+    remote_sha=$(git ls-remote "$r" "refs/heads/$branch" 2>/dev/null | awk '{print $1}')
+    if [[ $remote_sha == "$rev" ]]; then
+        say "  $r already at $short"
+        already+=("$r")
+        continue
+    fi
+    if [[ -n $remote_sha ]]; then
+        # Fast-forward only. A non-ff push here would be a rewrite of published
+        # history, which this tool must never do.
+        if ! git merge-base --is-ancestor "$remote_sha" "$rev" 2>/dev/null; then
+            die "$r/$branch is at ${remote_sha:0:12}, which is NOT an ancestor of
+    $short. Publishing would rewrite published history. Rebase onto the remote
+    first, then publish. This tool will not force."
+        fi
+        say "  $r at ${remote_sha:0:12}, fast-forward to $short"
+    else
+        say "  $r has no $branch yet, would create it"
+    fi
+    need_push+=("$r")
+done
+
+if [[ ${#need_push[@]} -eq 0 ]]; then
+    say "both remotes already at $short; nothing to do"
+    exit 0
+fi
+
+# Signed commits only (CLAUDE.md). Check every commit that would become newly
+# published, not just the tip — an unsigned commit in the middle still lands.
+#
+# The range is "what this remote does not already have", `--not --remotes=<r>`,
+# NOT `<remote>/<branch>..<rev>`. The latter silently degrades to the entire
+# repository when the branch does not exist on the remote yet, which then flags
+# decade-old commits that are already published as ancestors of main. Publishing
+# a new branch must not be gated on history it does not introduce.
+say "checking signatures on commits to be published"
+unsigned=0
+checked=0
+for r in "${need_push[@]}"; do
+    while read -r sig sha subject; do
+        [[ -n $sha ]] || continue
+        checked=$((checked + 1))
+        case $sig in
+        G | U | X | Y) : ;; # good, or good-with-caveats (expired/revoked key)
+        *)
+            warn "UNSIGNED or bad signature ($sig) $sha ${subject:-}"
+            unsigned=1
+            ;;
+        esac
+    done < <(git log --pretty='%G? %h %s' "$rev" --not --remotes="$r" 2>/dev/null || true)
+done
+[[ $unsigned -eq 0 ]] || die "refusing to publish unsigned commits (see above)"
+say "  all signed ($checked commit-remote pairs checked)"
+
+# Prove BOTH remotes would accept the update before mutating either one. This is
+# the step that makes a partial push unlikely rather than merely detectable.
+say "pre-flight: dry-run push to every remote that needs it"
+for r in "${need_push[@]}"; do
+    if git push --dry-run "$r" "$rev:refs/heads/$branch" >/dev/null 2>&1; then
+        say "  $r would accept"
+    else
+        printf '\n' >&2
+        git push --dry-run "$r" "$rev:refs/heads/$branch" >&2 || true
+        die "$r rejected the dry-run (output above). Nothing was pushed anywhere."
+    fi
+done
+
+if [[ $dry_run -eq 1 ]]; then
+    say "--dry-run: both remotes would accept $short on $branch. Nothing pushed."
+    exit 0
+fi
+
+# ---- Publish ------------------------------------------------------------
+# Push, then independently verify each remote actually holds the revision.
+# `git push` exiting 0 is not proof; re-reading the remote ref is.
+
+declare -a pushed=()
+declare -a failed=()
+for r in "${need_push[@]}"; do
+    say "pushing to $r"
+    if ! git push "$r" "$rev:refs/heads/$branch"; then
+        failed+=("$r")
+        continue
+    fi
+    confirm=$(git ls-remote "$r" "refs/heads/$branch" 2>/dev/null | awk '{print $1}')
+    if [[ $confirm == "$rev" ]]; then
+        say "  $r confirmed at $short"
+        pushed+=("$r")
+    else
+        warn "  $r reported success but reads back ${confirm:-<nothing>}"
+        failed+=("$r")
+    fi
+done
+
+if [[ ${#failed[@]} -eq 0 ]]; then
+    say "published $short on $branch to: ${pushed[*]} ${already[*]-}"
+    exit 0
+fi
+
+# Partial publish. This is the state the tool exists to make impossible to miss.
+printf '\n' >&2
+warn "=============================================================="
+warn "PARTIAL PUBLISH — the remotes have DIVERGED"
+warn "=============================================================="
+warn "revision : $short on $branch"
+[[ ${#pushed[@]} -gt 0 ]] && warn "published: ${pushed[*]}"
+[[ ${#already[@]} -gt 0 ]] && warn "already  : ${already[*]}"
+warn "FAILED   : ${failed[*]}"
+warn ""
+warn "Hosts reading the failed remote are now behind. Reconcile with:"
+for r in "${failed[@]}"; do
+    warn "    git push $r $short:refs/heads/$branch"
+done
+warn ""
+warn "Do not work around this by pointing a consumer at the remote that"
+warn "did succeed — that is how the two remotes drift apart for weeks."
+exit 1
