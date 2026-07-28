@@ -15,10 +15,32 @@
 # must reproduce the artifact byte-for-byte; that is the whole point, and
 # `--check` asserts it.
 #
+# The two recorded quantities answer DIFFERENT questions, and a gate that
+# conflates them will either cry wolf or miss a regression:
+#
+#   packageCount + packages  — the parity invariant. A refactor must never add
+#       or drop a package. If this multiset moves, something real changed.
+#
+#   drvPath  — sensitive to derivation inputs, which includes source files. A
+#       pure refactor that leaves every derivation input identical leaves
+#       drvPath identical, which is what makes it a sharp refactor oracle. But
+#       an ADDITIVE change moves it legitimately: adding a file under bin/
+#       changes the nix-scripts source, so every host toplevel that contains
+#       nix-scripts gets a new drvPath while its package multiset is untouched.
+#       Measured: adding bin/quality and bin/parity-baseline moved all four host
+#       drvPaths and moved no multiset (386/414/367/368 unchanged). The portable
+#       drvPaths did not move, since config/ai does not depend on bin/.
+#
+# So: "drvPath moved" is a question to answer, not automatically a failure.
+# "multiset moved" during a refactor is a failure. Use --compare to see which.
+#
 # Usage:
 #   bin/parity-baseline                     # derive, print JSON to stdout
 #   bin/parity-baseline --write             # derive, write test/baseline/parity-<rev>.json
-#   bin/parity-baseline --check FILE        # re-derive and diff against FILE
+#   bin/parity-baseline --check FILE        # strict: re-derive at the SAME rev,
+#                                           #   require byte-identical (determinism)
+#   bin/parity-baseline --compare FILE      # cross-rev: report multiset drift
+#                                           #   separately from drvPath drift
 #
 # Refs: jwiegley/nix-config#19 (capture), #31 (refresh as main advances).
 
@@ -194,10 +216,69 @@ case ${1-} in
         exit 1
     fi
     ;;
+--compare)
+    # Cross-revision comparison. Unlike --check this does NOT require the same
+    # rev, because its job is to say WHICH kind of drift happened rather than
+    # to assert there was none. Multiset drift fails; drvPath-only drift is
+    # reported and exits 0, since an additive source change moves drvPath
+    # legitimately (see the header).
+    [[ -n ${2-} ]] || die "--compare needs a baseline file"
+    [[ -f $2 ]] || die "no such baseline file: $2"
+    tmp_now=$(mktemp)
+    trap 'rm -f "$tmp_now"' EXIT
+    derive >"$tmp_now"
+    python3 - "$2" "$tmp_now" <<'PY'
+import json, sys
+old = json.load(open(sys.argv[1]))
+new = json.load(open(sys.argv[2]))
+o = {(t["kind"], t["target"]): t for t in old["targets"]}
+n = {(t["kind"], t["target"]): t for t in new["targets"]}
+
+print("baseline %s -> current %s" % (old["baselineRev"][:12], new["baselineRev"][:12]))
+missing = sorted(set(o) - set(n))
+added = sorted(set(n) - set(o))
+if missing:
+    print("  TARGETS GONE:  %s" % (missing,))
+if added:
+    print("  TARGETS ADDED: %s" % (added,))
+
+multiset_drift, drv_drift = [], []
+for k in sorted(set(o) & set(n)):
+    a, b = o[k], n[k]
+    if a["packages"] != b["packages"]:
+        lost = sorted(set(a["packages"]) - set(b["packages"]))
+        gained = sorted(set(b["packages"]) - set(a["packages"]))
+        multiset_drift.append((k, len(a["packages"]), len(b["packages"]), lost, gained))
+    elif a.get("drvPath") != b.get("drvPath"):
+        drv_drift.append(k)
+
+print()
+if multiset_drift:
+    print("PACKAGE MULTISET DRIFT — this is a parity failure:")
+    for k, na, nb, lost, gained in multiset_drift:
+        print("  %s/%s  %d -> %d" % (k[0], k[1], na, nb))
+        if lost:
+            print("      lost:   %s" % ", ".join(lost[:12]))
+        if gained:
+            print("      gained: %s" % ", ".join(gained[:12]))
+else:
+    print("package multisets: IDENTICAL on every target")
+
+if drv_drift:
+    print()
+    print("drvPath moved with an identical multiset on: %s"
+          % ", ".join("%s/%s" % k for k in drv_drift))
+    print("  Expected for an additive source change (a new file under bin/ moves")
+    print("  nix-scripts, hence every host toplevel containing it). NOT expected")
+    print("  for a pure refactor — if this was meant to be one, investigate.")
+
+sys.exit(1 if (multiset_drift or missing) else 0)
+PY
+    ;;
 "" | --print)
     derive
     ;;
 *)
-    die "unknown argument: $1 (want --write, --check FILE, or no argument)"
+    die "unknown argument: $1 (want --write, --check FILE, --compare FILE, or no argument)"
     ;;
 esac
