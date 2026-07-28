@@ -191,7 +191,13 @@ PY
 case ${1-} in
 --write)
     out=$(derive)
-    rev=$(git rev-parse HEAD)
+    # Take the revision FROM the derived artifact, never by asking git a second
+    # time. HEAD can move between derive() and here (it did, during this tool's
+    # own development), which produced a file named for one revision while
+    # recording another inside. A baseline whose filename disagrees with its
+    # contents is worse than no baseline.
+    rev=$(printf '%s' "$out" |
+        python3 -c 'import json,sys; print(json.load(sys.stdin)["baselineRev"])')
     dest="test/baseline/parity-${rev:0:12}.json"
     mkdir -p test/baseline
     printf '%s\n' "$out" >"$dest"

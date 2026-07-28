@@ -93,6 +93,14 @@ files_python() {
 }
 
 # unittest suites, by the repo's bin/<name>-test.py convention.
+#
+# Scope boundary, stated rather than left to be discovered: this is deliberately
+# narrower than files_python. The tree also tracks 11 packages/anvil-mcp/*-test.py
+# suites and test/ai/statusline-command-test.py. Those are LINTED by python-lint
+# but not EXECUTED here, because several drive a live Emacs or a long soak and are
+# not safe to run unattended in a pre-commit hook. They have their own flake
+# checks. Widening this glob without first tiering those suites would make every
+# commit wait on them.
 files_python_tests() { git ls-files -- 'bin/*-test.py'; }
 
 # ---- reporting ----------------------------------------------------------

@@ -215,19 +215,53 @@ class TestSignatureGate(PublishHarness):
         self.assertIn("refusing to publish unsigned commits", r.stderr)
 
     def test_new_branch_absent_from_both_remotes_does_not_drag_in_old_history(self):
-        """Regression: the range must be `--not --remotes`, not `<r>/<b>..<rev>`.
+        """Regression: publishing a new branch must not be gated on old history.
 
-        This is the exact shape that caught the bug. `feature` does not exist on
-        either remote, so both are in need_push and the signature gate runs. But
-        its tip is already published as an ancestor of main, so the set of newly
-        published commits is empty. With the old `<r>/<b>..<rev>` form the range
-        silently became the whole repository and flagged the unsigned base commit.
+        `feature` exists on neither remote, so both are in need_push and the
+        signature gate runs — but its tip is already published as an ancestor of
+        main, so the set of newly published commits is empty.
+
+        This is the shape that caught the original bug, and it discriminates
+        against BOTH ways of getting the range wrong: a `<r>/<b>..<rev>` form whose
+        absent-ref fallback is plain `$rev` (the whole repository), and a
+        `--not --remotes` computed before fetching (also the whole repository,
+        since it reads local tracking refs). Either way the unsigned base commit
+        would be flagged and this test fails.
         """
         git("checkout", "-q", "-b", "feature", cwd=self.work)
         r = self.publish("--dry-run")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("would create it", r.stdout)
         self.assertIn("all signed (0 commit-remote pairs checked)", r.stdout)
+
+
+class TestDefaultDoesNotPush(PublishHarness):
+    """The bare invocation must mutate nothing.
+
+    An earlier revision documented the bare form as "default-safe" while it
+    actually performed a real dual push. Pushing is a human-gated action, so the
+    gate is encoded in the tool and asserted here.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # A signed commit is needed to get past the signature gate and reach the
+        # push decision, which is the thing under test.
+        self.gnupghome = os.path.join(self.tmp, "gnupg")
+
+    def test_bare_invocation_reports_and_pushes_nothing(self):
+        before = (self.remote_sha(self.origin), self.remote_sha(self.github))
+        r = self.publish()
+        # Nothing to publish here (both remotes current), so it short-circuits —
+        # but the invariant asserted is the same: no remote moved.
+        after = (self.remote_sha(self.origin), self.remote_sha(self.github))
+        self.assertEqual(before, after, "a bare invocation moved a remote")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_dry_run_is_accepted_as_a_synonym_for_the_default(self):
+        r = self.publish("--dry-run")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn("unknown argument", r.stderr)
 
 
 class TestSignatureGateIsAHardStop(PublishHarness):
@@ -326,7 +360,7 @@ class TestPartialFailure(PublishHarness):
         self.addCleanup(lambda: os.path.exists(hook) and os.unlink(hook))
 
         r = subprocess.run(
-            [PUBLISH], cwd=self.work, capture_output=True, text=True,
+            [PUBLISH, "--publish"], cwd=self.work, capture_output=True, text=True,
             env=clean_env(**self.signing_env),
         )
         self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)

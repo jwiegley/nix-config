@@ -23,13 +23,19 @@
 # already provides, so this works only where the operator's keys already work.
 #
 # Usage:
-#   bin/publish --dry-run           # pre-flight only, mutate nothing (default-safe)
-#   bin/publish                     # publish HEAD's branch to both remotes
-#   bin/publish --rev REV           # publish a specific revision
-#   bin/publish --branch NAME       # publish a branch other than the current one
+#   bin/publish                     # pre-flight only. Mutates NOTHING. The default.
+#   bin/publish --publish           # actually push HEAD's branch to both remotes
+#   bin/publish --rev REV           # operate on a specific revision
+#   bin/publish --branch NAME       # operate on a branch other than the current one
 #
-# Pushing is a human-gated action per CLAUDE.md. Building this tool is not
-# authorization to run it; running it without --dry-run performs a real publish.
+# Pushing is a human-gated action per CLAUDE.md, so the gate is encoded here: a
+# bare invocation reports what WOULD happen and exits. Only --publish pushes.
+# Building this tool was never authorization to run it, and an earlier revision of
+# this header wrongly described the bare form as "default-safe" while the bare form
+# actually published. That claim is now true rather than deleted.
+#
+# --dry-run is accepted as a synonym for the default, so existing muscle memory
+# and any caller written against the old interface stay correct.
 #
 # Refs: jwiegley/nix-config#18; FLEET-DESIGN-PLAN §4.5, §10 Q6.
 
@@ -37,7 +43,8 @@ set -euo pipefail
 
 REMOTES=(origin github)
 
-dry_run=0
+# Default to NOT pushing. --publish opts in.
+do_publish=0
 rev=""
 branch=""
 
@@ -50,7 +57,8 @@ warn() { printf 'publish: %s\n' "$*" >&2; }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-    --dry-run) dry_run=1 ;;
+    --dry-run) : ;; # accepted; already the default
+    --publish) do_publish=1 ;;
     --rev)
         [[ -n ${2-} ]] || die "--rev needs a revision"
         rev=$2
@@ -155,11 +163,19 @@ fi
 # Signed commits only (CLAUDE.md). Check every commit that would become newly
 # published, not just the tip — an unsigned commit in the middle still lands.
 #
-# The range is "what this remote does not already have", `--not --remotes=<r>`,
-# NOT `<remote>/<branch>..<rev>`. The latter silently degrades to the entire
-# repository when the branch does not exist on the remote yet, which then flags
-# decade-old commits that are already published as ancestors of main. Publishing
-# a new branch must not be gated on history it does not introduce.
+# The range is "what this remote does not already have", `--not --remotes=<r>`.
+#
+# Getting this wrong is easy in two different ways, and a draft of this script hit
+# both. `<remote>/<branch>..<rev>` cannot be used directly, because when the branch
+# does not exist on the remote yet git aborts with "unknown revision" — so that
+# form needs a fallback, and the obvious fallback of plain `$rev` means the ENTIRE
+# repository. That is what flagged decade-old already-published commits as unsigned
+# when publishing a new branch. And `--not --remotes=<r>` reads LOCAL
+# remote-tracking refs, so computing it before fetching lists everything too, for a
+# different reason.
+#
+# Hence: fetch first (above), then compute the range. Publishing a new branch must
+# never be gated on history it does not introduce.
 say "checking signatures on commits to be published"
 unsigned=0
 checked=0
@@ -192,8 +208,9 @@ for r in "${need_push[@]}"; do
     fi
 done
 
-if [[ $dry_run -eq 1 ]]; then
-    say "--dry-run: both remotes would accept $short on $branch. Nothing pushed."
+if [[ $do_publish -eq 0 ]]; then
+    say "both remotes would accept $short on $branch. Nothing pushed."
+    say "re-run with --publish to actually publish."
     exit 0
 fi
 

@@ -1378,6 +1378,27 @@ exec "$REAL_GIT" "$@"
             ],
         )
 
+        # And an unknown host must still be refused rather than silently routed to
+        # a default. The positive case above cannot show this: every one of the
+        # eight resolves, so the failure branch is never taken.
+        unknown = subprocess.run(
+            [
+                "bash",
+                "-c",
+                'source "$1"; nix_flake_output_for_host "$2"',
+                "host-routing-test",
+                str(routing),
+                "definitely-not-a-fleet-host",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertNotEqual(
+            unknown.returncode, 0, "an unknown host was routed instead of refused"
+        )
+        self.assertEqual(unknown.stdout, "")
+
         minimal_env = {**os.environ, "PATH": "/usr/bin:/bin"}
         build_help = subprocess.run(
             [str(BUILD), "--help"], capture_output=True, text=True, env=minimal_env, check=False
