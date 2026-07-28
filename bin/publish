@@ -183,8 +183,18 @@ for r in "${need_push[@]}"; do
     while read -r sig sha subject; do
         [[ -n $sha ]] || continue
         checked=$((checked + 1))
+        # Only genuinely-valid signatures pass.
+        #   G  good signature
+        #   U  good signature, unknown validity — the key is not in the local
+        #      trust web. Accepted because CI and fresh checkouts legitimately
+        #      lack the web of trust, and the signature is still cryptographically
+        #      valid.
+        # Everything else is rejected, including the cases a previous revision of
+        # this script waved through: X (expired signature), Y (expired key),
+        # R (revoked key), E (cannot check), B (bad), N (none). "Signed commits
+        # only" is not satisfied by a signature that no longer verifies.
         case $sig in
-        G | U | X | Y) : ;; # good, or good-with-caveats (expired/revoked key)
+        G | U) : ;;
         *)
             warn "UNSIGNED or bad signature ($sig) $sha ${subject:-}"
             unsigned=1

@@ -1557,6 +1557,37 @@ exec "$REAL_GIT" "$@"
             ],
         )
 
+        # Normalization must be IDEMPOTENT, because nix_flake_output_for_host
+        # normalizes its argument and bin/switch passes a value it already
+        # normalized. hera/clio/vulcan/vps survived a second pass only by
+        # accident of their glob patterns; shared-work did not, so bin/switch
+        # failed for every work machine. Testing the function with raw hostnames
+        # (above) cannot catch that — this exercises the real call path.
+        idempotent = subprocess.run(
+            [
+                "bash",
+                "-c",
+                'source "$1"; shift; for h in "$@"; do '
+                'once=$(normalize_nix_host "$h") || { echo "UNNORM:$h"; exit 1; }; '
+                'twice=$(normalize_nix_host "$once") || { echo "NOTIDEMPOTENT:$once"; exit 1; }; '
+                '[ "$once" = "$twice" ] || { echo "DRIFT:$once->$twice"; exit 1; }; '
+                'nix_flake_output_for_host "$once" >/dev/null || '
+                '{ echo "UNROUTED-AFTER-NORMALIZE:$once"; exit 1; }; done',
+                "host-routing-test",
+                str(routing),
+                *every_host,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(
+            idempotent.returncode,
+            0,
+            "normalization is not idempotent, or a normalized label does not "
+            "route: %s%s" % (idempotent.stdout, idempotent.stderr),
+        )
+
         # And an unknown host must still be refused rather than silently routed to
         # a default. The positive case above cannot show this: every one of the
         # eight resolves, so the failure branch is never taken.

@@ -132,17 +132,24 @@ each_file() {
     local suite=$1 desc=$2
     shift 2
     local -a cmd=("$@")
-    local f bad=0 count=0
+    local f bad=0 count=0 out
+    # mktemp, not /tmp/quality.$$: a predictable path in a world-writable
+    # directory can be pre-created as a symlink by another user, which would
+    # redirect this write.
+    out=$(mktemp "${TMPDIR:-/tmp}/quality.XXXXXX") || {
+        fail "$suite: could not create a temporary file"
+        return
+    }
     while IFS= read -r f; do
         [[ -n $f ]] || continue
         count=$((count + 1))
-        if ! "${cmd[@]}" "$f" >/tmp/quality.$$ 2>&1; then
+        if ! "${cmd[@]}" "$f" >"$out" 2>&1; then
             bad=$((bad + 1))
             printf '  --- %s\n' "$f" >&2
-            sed 's/^/      /' /tmp/quality.$$ >&2
+            sed 's/^/      /' "$out" >&2
         fi
     done
-    rm -f /tmp/quality.$$
+    rm -f "$out"
     if [[ $bad -gt 0 ]]; then
         fail "$suite: $bad of $count file(s) failed ($desc)"
     else

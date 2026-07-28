@@ -235,35 +235,6 @@ class TestSignatureGate(PublishHarness):
         self.assertIn("all signed (0 commit-remote pairs checked)", r.stdout)
 
 
-class TestDefaultDoesNotPush(PublishHarness):
-    """The bare invocation must mutate nothing.
-
-    An earlier revision documented the bare form as "default-safe" while it
-    actually performed a real dual push. Pushing is a human-gated action, so the
-    gate is encoded in the tool and asserted here.
-    """
-
-    def setUp(self):
-        super().setUp()
-        # A signed commit is needed to get past the signature gate and reach the
-        # push decision, which is the thing under test.
-        self.gnupghome = os.path.join(self.tmp, "gnupg")
-
-    def test_bare_invocation_reports_and_pushes_nothing(self):
-        before = (self.remote_sha(self.origin), self.remote_sha(self.github))
-        r = self.publish()
-        # Nothing to publish here (both remotes current), so it short-circuits —
-        # but the invariant asserted is the same: no remote moved.
-        after = (self.remote_sha(self.origin), self.remote_sha(self.github))
-        self.assertEqual(before, after, "a bare invocation moved a remote")
-        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-
-    def test_dry_run_is_accepted_as_a_synonym_for_the_default(self):
-        r = self.publish("--dry-run")
-        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertNotIn("unknown argument", r.stderr)
-
-
 class TestSignatureGateIsAHardStop(PublishHarness):
     def test_unsigned_commit_stops_before_any_remote_is_touched(self):
         head = self._commit("x\n", "an unsigned commit")
@@ -331,6 +302,39 @@ class TestPartialFailure(PublishHarness):
         git("add", "signed.txt", cwd=self.work, env=self.signing_env)
         git("commit", "-q", "-S", "-m", message, cwd=self.work, env=self.signing_env)
         return git("rev-parse", "HEAD", cwd=self.work).stdout.strip()
+
+    def test_default_does_not_push_but_reports_what_it_would_do(self):
+        """The bare invocation must reach the push decision and decline it.
+
+        This replaces an earlier version of this test that lived in the
+        unsigned harness, where both remotes were already current so publish
+        short-circuited at "nothing to do" before the push gate was ever
+        consulted — it passed whether or not --publish was required, which is
+        exactly the vacuous-negative-test problem this suite exists to avoid.
+        Here there IS something to publish and the signature gate is satisfied,
+        so declining to push is a real observation.
+        """
+        head = self._signed_commit("s\n", "a signed commit")
+        before = (self.remote_sha(self.origin), self.remote_sha(self.github))
+        r = subprocess.run(
+            [PUBLISH], cwd=self.work, capture_output=True, text=True,
+            env=clean_env(**self.signing_env),
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("re-run with --publish", r.stdout)
+        after = (self.remote_sha(self.origin), self.remote_sha(self.github))
+        self.assertEqual(before, after, "a bare invocation moved a remote")
+        self.assertNotIn(head, [x for x in after if x])
+
+    def test_dry_run_is_still_accepted_as_a_synonym(self):
+        self._signed_commit("s\n", "a signed commit")
+        r = subprocess.run(
+            [PUBLISH, "--dry-run"], cwd=self.work, capture_output=True, text=True,
+            env=clean_env(**self.signing_env),
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn("unknown argument", r.stderr)
+        self.assertIn("re-run with --publish", r.stdout)
 
     def test_signed_commit_passes_the_gate(self):
         self._signed_commit("s\n", "a signed commit")
