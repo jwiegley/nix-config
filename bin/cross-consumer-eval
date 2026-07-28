@@ -95,6 +95,7 @@ CONSUMERS=(shared-work vps vulcan)
 
 failures=()
 ran=0
+evaluated=0
 skipped=0
 
 note() { printf 'cross-consumer-eval: %s\n' "$*"; }
@@ -120,6 +121,7 @@ eval_target() {
     local -a cmd=(nix eval "${nix_common[@]}" "$@")
     note "$name: ${cmd[*]}"
     ran=$((ran + 1))
+    evaluated=$((evaluated + 1))
     local out rc
     out=$("${cmd[@]}" 2>&1)
     rc=$?
@@ -293,15 +295,16 @@ fi
 
 # A gate that evaluated nothing must not report success — the same failure mode
 # as a formatter that exits 0 having formatted nothing (jwiegley/nix-config#48).
-if [[ $ran -eq 0 ]]; then
+# Reading a consumer lock is an auxiliary check, not a consumer evaluation.
+if [[ $evaluated -eq 0 ]]; then
     printf 'cross-consumer-eval: evaluated nothing (%d skipped); refusing to report success\n' \
         "$skipped" >&2
     exit 1
 fi
 
 # A FULL run that managed only shared-work is barely better than evaluating
-# nothing, and the ran==0 guard above cannot catch it: shared-work is this repo's
-# own fixture, so it always runs and always leaves ran >= 1.
+# nothing, and the evaluated==0 guard above cannot catch it: shared-work is this
+# repo's own fixture, so it always leaves evaluated >= 1.
 #
 # That matters because shared-work is a MODERATE proxy by its own description --
 # pinned to hostname="linux", so it exercises the shared config files but not
@@ -310,7 +313,7 @@ fi
 # about vulcan or vps. An independent audit found exactly this hole.
 #
 # A named subset is exempt: asking for shared-work alone is a deliberate choice.
-if [[ ${#want[@]} -eq ${#CONSUMERS[@]} && $ran -eq 1 && $skipped -gt 0 ]]; then
+if [[ ${#want[@]} -eq ${#CONSUMERS[@]} && $evaluated -eq 1 && $skipped -gt 0 ]]; then
     printf 'cross-consumer-eval: a full run evaluated ONLY shared-work (%d skipped).\n' \
         "$skipped" >&2
     printf '    shared-work is this repo own fixture and a moderate proxy; it says\n' >&2

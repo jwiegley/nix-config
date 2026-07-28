@@ -250,6 +250,33 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
         )
         self.assertIn("ONLY shared-work", combined)
 
+    def test_full_run_refuses_when_only_consumer_locks_were_checked(self):
+        """Parsing coherent locks must not count as evaluating reach-in consumers."""
+        with tempfile.TemporaryDirectory(prefix="gates-lock-only-") as tmp:
+            lock = """{
+              "nodes": {
+                "nix-config": {"locked": {"rev": "aaaaaaaaaaaaaaaa"}},
+                "nix-config-ai": {"locked": {"rev": "aaaaaaaaaaaaaaaa"}}
+              }
+            }"""
+            vps = Path(tmp) / "vps"
+            vulcan = Path(tmp) / "vulcan"
+            for checkout in (vps, vulcan):
+                checkout.mkdir()
+                (checkout / "flake.lock").write_text(lock)
+
+            r = self.run_tool(VPS_CHECKOUT=str(vps), VULCAN_CHECKOUT=str(vulcan))
+
+        combined = r.stdout + r.stderr
+        self.assertNotEqual(
+            r.returncode,
+            0,
+            f"a full run passed after reading locks but no consumer flakes:\n{combined}",
+        )
+        self.assertIn("[lock coherence]: OK", combined)
+        self.assertIn("ONLY shared-work", combined)
+        self.assertNotIn("all evaluated consumers passed", combined)
+
     def test_strict_mode_turns_a_skip_into_a_failure(self):
         r = self.run_tool(
             "vps", CONSUMER_EVAL_STRICT="1", VPS_CHECKOUT=self.nowhere
