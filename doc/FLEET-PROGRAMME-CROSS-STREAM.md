@@ -252,7 +252,74 @@ currently implied by any stream.**
 
 ---
 
-## X8 — Vulcan's documentation sweep is a fourth, unreadable stream
+## X9 — RESOLVED and RE-SCOPED: vulcan is live-broken but still builds
+
+Superseded X8 below. `~/src/nixos` is now synced to `37ef31aa` and clean, matching
+vulcan's `/etc/nixos`. The sweep landed as `cbe33f25 docs: make comments and
+documentation describe the running system`; the full delta from `334e8525` is 7 commits,
+265 files, +6365/−1597.
+
+**The armed breakage is no longer latent — vulcan's lock crossed the line.** Verified:
+vulcan now locks `nix-config` and `nix-config-ai` at `03b5eecc`
+("refactor(emacs): move package sources into catalog"), which is **29 commits *after***
+`a3cc3843`. Previously it was `a36d3f51`, 9 commits *before*. The sweep's two
+`flake.lock: Update` commits carried it across.
+
+**And the positional cherry-picks were not fixed.** `overlays/default.nix` did change
+(+24/−11) but the delta is **purely comment rewrites**; the positional calls survive at
+`:307`, `:311`, `:314`.
+
+**Measured on vulcan, read-only:**
+
+| Attribute | Result |
+|---|---|
+| `tsvutils` | **FAIL** — `function 'anonymous lambda' called with unexpected argument 'system'` |
+| `filetags` | **FAIL** — same |
+| `nix-scripts` | **OK** — resolves (likely shadowed by the real `nix-config-ai` overlay output) |
+| `nixosConfigurations.vulcan.config.system.build.toplevel.drvPath` | **EVALUATES OK** → `/nix/store/fw99q3zny1n0zvxbzkjbxy5d0dfqlk6i-nixos-system-vulcan-25.11.…drv` |
+
+**Severity correction, in both directions.** My earlier prediction that vulcan "breaks on
+its next lock bump" was directionally right, but the consequence is **narrower** than
+stated: the bump has already happened, two overlay attributes are genuinely broken *now*,
+yet **vulcan can still rebuild**, because nothing in its configuration consumes `tsvutils`
+or `filetags` — a repo-wide grep finds no reference outside `overlays/default.nix` itself.
+They are defined-but-unused, so laziness never forces them.
+
+So the accurate statement is: **a live defect, not an outage.** It does not block rebuilds
+today. It does mean (a) anything that starts consuming those attributes fails immediately,
+and (b) because both vulcan inputs remain **floating with no `?rev`**
+(`flake.nix:53-55`, `:116-118`), the surrounding state can shift under it at any
+`nix flake update` with no warning.
+
+**Revised priority.** Still first, but for a different reason: not "prevent an imminent
+outage" but "stop a floating input from silently widening a known defect." The cheapest
+mitigation that ships immediately — and needs no coordination with any other stream — is
+**pinning vulcan's two inputs to an explicit `?rev`**. Routing the cherry-picks through
+`config/overlays.nix` remains the real fix.
+
+## X10 — The sweep is an asset: it documents which overrides are now inert
+
+The sweep's value is not merely that it landed. `cbe33f25` systematically annotates
+overrides with their *current* truth, and several annotations are directly actionable for
+compatibility retirement (Epic 7) and the vulcan consumer migration:
+
+- `check_systemd`: *"NOTE 2026-07-27: inert — nixos-25.11 renamed the top-level attribute
+  to `nagiosPlugins.check_systemd`, which is what Nagios actually invokes, so the
+  reload-notify patch is not in effect."* An override proven to have no effect — a
+  zero-consumer surface, removable under the "prove zero usage" rule.
+- `immich`: *"STATUS 2026-07-27: that condition is now MET — the locked nixpkgs-unstable
+  (241313f4) evaluates immich to 3.0.3, so this dedicated pin is currently holding immich
+  **down** at 3.0.1."* A pin that has inverted its purpose and is now a regression.
+- `opower`: version note corrected from 0.18.0 to 0.18.6.
+- Python: stable and unstable *"are no longer even on the same minor"* (3.13.12 vs 3.14.6).
+
+**Consequence for the programme:** vulcan has effectively self-produced part of the
+compatibility inventory that Epic 7 and issue #15's Phase 5 / WU9 require. Those
+annotations should be harvested as inputs to the retirement decisions rather than
+rediscovered. This also means the vulcan doc-sweep absorption issue is not a merge-conflict
+chore — it is a source of evidence.
+
+## X8 — SUPERSEDED by X9/X10: vulcan's documentation sweep as an unreadable stream
 
 As of writing, `vulcan:/etc/nixos` is at `13f6d6b` — two commits ahead of `~/src/nixos`
 (`334e8525`), both flake-lock updates — with **264 uncommitted modified files**: a large
