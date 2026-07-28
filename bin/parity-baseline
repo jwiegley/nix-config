@@ -24,9 +24,11 @@
 #   drvPath  — sensitive to derivation inputs, which includes source files. A
 #       pure refactor that leaves every derivation input identical leaves
 #       drvPath identical, which is what makes it a sharp refactor oracle. But
-#       an ADDITIVE change moves it legitimately: adding a file under bin/
-#       changes the nix-scripts source, so every host toplevel that contains
-#       nix-scripts gets a new drvPath while its package multiset is untouched.
+#       in practice EVERY commit moves it: vulcan-crt is path:./config/certs,
+#       which resolves to <whole-flake-source>/config/certs and therefore carries
+#       the hash of the entire tree. Measured: adding one unrelated file moves it.
+#       Adding a file under bin/ additionally moves the nix-scripts source. So a
+#       moved host drvPath is uninformative here; the multiset is the signal.
 #       Measured: adding bin/quality and bin/parity-baseline moved all four host
 #       drvPaths and moved no multiset (386/414/367/368 unchanged). The portable
 #       drvPaths did not move, since config/ai does not depend on bin/.
@@ -274,9 +276,13 @@ if drv_drift:
     print()
     print("drvPath moved with an identical multiset on: %s"
           % ", ".join("%s/%s" % k for k in drv_drift))
-    print("  Expected for an additive source change (a new file under bin/ moves")
-    print("  nix-scripts, hence every host toplevel containing it). NOT expected")
-    print("  for a pure refactor — if this was meant to be one, investigate.")
+    print("  Host drvPaths move on ANY commit, not only additive ones: vulcan-crt is")
+    print("  path:./config/certs, which resolves to <whole-flake-source>/config/certs")
+    print("  and so carries the hash of the ENTIRE tree. Adding one unrelated file")
+    print("  was measured to move it identically. A new file under bin/ also moves")
+    print("  nix-scripts, but that is a second cause, not the only one.")
+    print("  So drvPath movement here is uninformative. The multiset above is the")
+    print("  signal: investigate only if a MULTISET moved.")
 
 sys.exit(1 if (multiset_drift or missing) else 0)
 PY

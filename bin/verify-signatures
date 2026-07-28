@@ -238,6 +238,22 @@ resolve_range() {
     fi
 
     rev_args=(HEAD --not --remotes)
+    # `HEAD --not --remotes` means "what no remote has yet" only if remote-tracking
+    # refs EXIST. With none -- a repo with no remotes, or a fresh clone before any
+    # fetch -- the exclusion set is empty and this degrades to the ENTIRE history.
+    # That is precisely the bug bin/publish hit, which the header above claims not
+    # to repeat; a partner observation caught that it was repeated here anyway.
+    # Verified: in a 3-commit repo with no remotes, all 3 were listed.
+    #
+    # "I cannot determine what is unpublished" is not the same as "everything is
+    # unpublished", so refuse instead of guessing. An explicit --range/--base/--head
+    # still works, which is the CI path.
+    if [[ -z $(git for-each-ref --count=1 refs/remotes 2>/dev/null) ]]; then
+        printf 'verify-signatures: no remote-tracking refs, so "unpushed" cannot be\n' >&2
+        printf '    determined and the default range would degrade to ALL history.\n' >&2
+        printf '    Pass --range A..B, or --base/--head, to say what to verify.\n' >&2
+        exit 2
+    fi
     say "range: HEAD --not --remotes (local unpushed commits)"
 }
 
