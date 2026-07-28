@@ -767,6 +767,55 @@ location is `XDG_STATE_HOME`-anchored and would land on the shared home and coll
 > per-machine hostname into any `home.file` or `sessionVariable` — it breaks silently,
 > with no error. That is precisely why item 5 is a gate and not a comment.
 
+**8 — Rollout: the config is shared, but the four local Nix stores are not.** That
+asymmetry governs the procedure, and it yields one hard invariant:
+
+> Every store path referenced by the shared `$HOME` symlinks must already exist in
+> **all four** local stores before *any* machine writes those symlinks.
+
+Because `$HOME` is shared, the instant one machine activates, all four see the new
+symlinks — and any machine whose store lacks those paths has dangling links until it
+catches up. A naive "switch one, then the others in turn" therefore opens a breakage
+window on three machines lasting until the last switch finishes.
+
+**Copy-only is not sufficient either.** Three of the four activation steps have real
+per-host effects: `hostLocalXdgCache` (`andoria/flake.nix:561`) runs
+`mkdir -p /var/tmp/$USER/xdg-cache/nix`, creating a **host-local** directory that the
+shared `~/.cache/nix` symlink then targets; `agentDeckHostLocalState` (`:528`) creates
+`$HOME/.local/share/agent-deck-hosts/$(hostname -s)`; and `checkNoLocalPasswdEntry`
+(`:468`) greps the *local* `/etc/passwd`. Copying paths alone would leave three machines
+with `~/.cache/nix` pointing at a directory that does not exist there.
+
+So pre-population is the **enabler** and the per-host switch is still **required**:
+
+```bash
+# 1. Realize once, then pre-populate the other three. Pull-based and parallel:
+#    no push credentials, no hub dependency, and --substitute-on-destination
+#    means only the delta crosses the network.
+CAND=$(nix build --no-link --print-out-paths .#homeConfigurations."<attr>".activationPackage)
+for h in andoria-t2 delphi-3bd4 gpu-server; do
+  ssh "$h" nix copy --from ssh://andoria-08 --substitute-on-destination "$CAND" &
+done; wait
+
+# 2. Prove residency on all four BEFORE activating anything.
+for h in andoria-08 andoria-t2 delphi-3bd4 gpu-server; do
+  ssh "$h" nix path-info -r "$CAND" >/dev/null && echo "$h OK"
+done
+
+# 3. Pin the PREVIOUS closure on all four so rollback survives GC.
+for h in andoria-08 andoria-t2 delphi-3bd4 gpu-server; do
+  ssh "$h" nix build --out-link /var/lib/jwiegley/rollback-prev "$PREV"
+done
+
+# 4. Only now switch, per machine. Each switch is local and download-free, and
+#    exists to run the per-host activation steps — not to realize the closure.
+```
+
+Efficient because the derivation is byte-identical, so the paths match and
+pre-population is pure transfer with no rebuild — only one machine substitutes from the
+network. Robust because the breakage window disappears: by the time the first symlink is
+written, every machine can already resolve it.
+
 **6 — Selection must fail loudly.** **`READ`:** the h-m CLI probes
 `$USER@$(hostname -f)`, `$USER@$(hostname)`, `$USER@$(hostname -s)` with **no
 `break`**, so the last match wins, then falls back to bare `$USER`. That bare
@@ -912,7 +961,7 @@ graph LR
 | **2** | Registry, roles, capability flags, lean/full switch. Refactor-only — no consumer moves | **drvPath parity**: `hera`, `clio`, and the work group must hash identically to a baseline captured *before any edit*. If parity fails, bisect by re-introducing overlay list-vs-composed application and `specialArgs` names one at a time | Revert; parity baseline proves the pre-state |
 | **3** | vulcan consumes typed outputs; delete its cherry-picks and `prevWithMyLib` | Native aarch64-linux build; package set diffed against baseline; `tsvutils`/`filetags`/`nix-scripts` present | Restore `flake = false` input; vulcan's lock is authoritative in its own checkout |
 | **4** | vps likewise; adopt `server-lean` role, delete 35 `mkForce` and the 920 vendored lines | Native x86_64-linux build; package multiset diffed; closure size compared — must not grow | As Stage 3 |
-| **5** | **The four work machines, as ONE atomic unit.** Not per-host. | Drain all four; switch serially; verify each `~/.nix-profile` resolves and each unit symlink is live before releasing the next. Remove the old `~/.config/home-manager` entry point **in the same step** so a straggler cannot re-activate over the new symlinks. Then relocate state per §7 and **verify across a reboot** — or a simulated wipe of `localStateRoot` — with `home-manager generations` plus a no-op switch | **Group-level only.** Reverting one machine is impossible: the shared `$HOME` means all four share generation state and symlinks. Rollback = revert all four together |
+| **5** | **The four work machines. Pre-populate all four stores, THEN switch each.** See §7.8 — the config is shared but the four local Nix stores are not, so store realization is staged deliberately while the shared-symlink write is effectively atomic. | Prove the candidate closure is resident in **all four** stores (`nix path-info -r`) and the previous closure is gcroot-pinned on all four, *before* any activation. Then switch per machine; verify each `~/.nix-profile` resolves and each unit symlink is live before releasing the next. Remove the old `~/.config/home-manager` entry point **in the same step** so a straggler cannot re-activate over the new symlinks. Then relocate state per §7 and **verify across a reboot** — or a simulated wipe of `localStateRoot` — with `home-manager generations` plus a no-op switch | **Depends on where the profile link lives.** While it is shared (today), rollback is **group-level**: one link move affects all four. After state moves to `/var/lib/jwiegley`, each machine has its own profile and generation series, so **state rollback becomes per-host**. Either way the pinned previous closure must exist on all four first |
 | **6** | The skew gate (§6.5); retire vulcan's shim and vps's vendored module; inventory `flake-ai.nix` consumers per issue #15 P2-19 | Core evaluates against both h-m libs in CI; both hosts build with the shims deleted | Re-add the shims; they are additive |
 
 **Why Stage 5 cannot be per-host.** The shared `$HOME` means you cannot have
