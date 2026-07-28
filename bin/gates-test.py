@@ -136,7 +136,9 @@ class TestVerifySignaturesRejects(unittest.TestCase):
         head = self._commit("b", "second")
         raw = git("cat-file", "commit", head, cwd=self.repo).stdout
         lines = raw.split("\n")
-        insert_at = next(i for i, line in enumerate(lines) if line.startswith("committer"))
+        insert_at = next(
+            i for i, line in enumerate(lines) if line.startswith("committer")
+        )
         fake = [
             "gpgsig -----BEGIN PGP SIGNATURE-----",
             " ",
@@ -153,7 +155,9 @@ class TestVerifySignaturesRejects(unittest.TestCase):
             env=clean_env(),
         )
         if r.returncode != 0:
-            self.skipTest("could not fabricate a signed commit object: %s" % r.stderr[:200])
+            self.skipTest(
+                "could not fabricate a signed commit object: %s" % r.stderr[:200]
+            )
         forged = r.stdout.strip()
         git("update-ref", "refs/heads/main", forged, cwd=self.repo)
 
@@ -208,7 +212,9 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
 
     def setUp(self):
         self.nowhere = os.path.join(tempfile.gettempdir(), "gates-no-such-checkout")
-        self.assertFalse(os.path.exists(self.nowhere), "fixture path unexpectedly exists")
+        self.assertFalse(
+            os.path.exists(self.nowhere), "fixture path unexpectedly exists"
+        )
 
     def run_tool(self, *args, **env):
         return subprocess.run(
@@ -278,9 +284,7 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
         self.assertNotIn("all evaluated consumers passed", combined)
 
     def test_strict_mode_turns_a_skip_into_a_failure(self):
-        r = self.run_tool(
-            "vps", CONSUMER_EVAL_STRICT="1", VPS_CHECKOUT=self.nowhere
-        )
+        r = self.run_tool("vps", CONSUMER_EVAL_STRICT="1", VPS_CHECKOUT=self.nowhere)
         self.assertNotEqual(
             r.returncode,
             0,
