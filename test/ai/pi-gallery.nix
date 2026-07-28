@@ -180,6 +180,10 @@ runCommand "pi-gallery-check"
     [ ! -e ${roots.rtk-optimizer}/node_modules ]
     [ -f ${roots.cymbal-extension}/dist/index.ts ]
     [ ! -e ${roots.cymbal-extension}/node_modules ]
+    [ -f ${roots.dynamic-workflows}/extensions/workflow.ts ]
+    [ -d ${roots.dynamic-workflows}/node_modules/acorn ]
+    [ -f ${roots.dynamic-workflows}/skills/workflow-authoring/SKILL.md ]
+    [ -f ${roots.dynamic-workflows}/skills/workflow-patterns/SKILL.md ]
     [ -f ${roots.subagents}/index.ts ]
     [ -d ${roots.subagents}/node_modules/jiti ]
     [ -d ${roots.subagents}/node_modules/yaml ]
@@ -685,9 +689,9 @@ runCommand "pi-gallery-check"
           "subagents-fleet",
           "subagents-models",
           "subagents-watchdog",
-          "viewer"
+          "viewer",
+          "workflows"
         ] - [.data.commands[].name] | length) == 0
-        and ([.data.commands[].name] | index("workflows") | not)
         and ([.data.commands[].name | select(startswith("sidebar"))] | length) == 0
       )
     ' "$smoke/output.log" >/dev/null || {
@@ -716,10 +720,10 @@ runCommand "pi-gallery-check"
         "cymbal_trace",
         "preview_export",
         "subagent",
-        "subagent_supervisor"
+        "subagent_supervisor",
+        "workflow",
+        "workflow_control"
       ] - . | length) == 0
-      and (index("workflow") | not)
-      and (index("workflow_control") | not)
     ' "$smoke/active-tools.json" >/dev/null || {
       cat "$smoke/active-tools.json" >&2
       fail "new Pi gallery tools were not registered or a removed extension remained active"

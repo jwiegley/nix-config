@@ -38,6 +38,7 @@ in
     "rtk-optimizer"
     "cymbal-extension"
     "subagents"
+    "dynamic-workflows"
   ];
 
   members = {
@@ -168,6 +169,16 @@ in
       extension = "index.ts";
       skills = [ "skills" ];
       prompts = [ "prompts" ];
+    };
+    dynamic-workflows = member "pi-dynamic-workflows" {
+      attrName = "pi-dynamic-workflows";
+      package = packages.pi-dynamic-workflows or null;
+      publicName = "@quintinshaw/pi-dynamic-workflows";
+      extension = "extensions/workflow.ts";
+      skills = [
+        "skills/workflow-authoring"
+        "skills/workflow-patterns"
+      ];
     };
   };
 

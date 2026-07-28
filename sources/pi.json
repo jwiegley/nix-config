@@ -246,6 +246,27 @@
       },
       "version": "0.5.2"
     },
+    "pi-dynamic-workflows": {
+      "hashes": {
+        "npmDepsHash": "sha256-OMccbPF5tgix7nVn9BUUULr/WEKHpKxpUim9EgEIVt0="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-5bCDyn+yzRr3rUxDzHT+bGbGxYrv8gSl7S3YhN+pZ0U=",
+          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.4.1.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.4.1.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-dynamic-workflows-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "package": "@quintinshaw/pi-dynamic-workflows"
+      },
+      "version": "3.4.1"
+    },
     "pi-hashline-edit-pro": {
       "hashes": {
         "npmDepsHash": "sha256-sk7mvBP3/SwAFt3GYN1OL2SwNk1s5nC47UUsT1cxB2Y="

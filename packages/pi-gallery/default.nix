@@ -35,6 +35,7 @@ let
         pi-btw
         pi-caveman
         pi-cymbal
+        pi-dynamic-workflows
         pi-markdown-preview
         pi-retry
         pi-rtk-optimizer
@@ -279,6 +280,11 @@ let
     tarball = releaseTarballs.pi-insights;
     lockFile = ./locks/pi-insights-package-lock.json;
   };
+  dynamicWorkflowsSource = mkReleaseSource {
+    name = "pi-dynamic-workflows";
+    tarball = releaseTarballs.pi-dynamic-workflows;
+    lockFile = ./locks/pi-dynamic-workflows-package-lock.json;
+  };
   subagentsSource = mkReleaseSource {
     name = "pi-subagents";
     tarball = releaseTarballs.pi-subagents;
@@ -309,6 +315,12 @@ let
     version = members.markdown-preview.version;
     src = markdownPreviewSource;
     npmDepsHash = members.markdown-preview.hashes.npmDepsHash;
+  };
+  pi-dynamic-workflows = mkNpmPackageRoot {
+    pname = members.dynamic-workflows.attrName;
+    version = members.dynamic-workflows.version;
+    src = dynamicWorkflowsSource;
+    npmDepsHash = members.dynamic-workflows.hashes.npmDepsHash;
   };
   pi-subagents = mkNpmPackageRoot {
     pname = members.subagents.attrName;

@@ -702,6 +702,7 @@ class UpdateInventoryTests(unittest.TestCase):
             "nelisp",
             "pi-artifacts",
             "pi-btw",
+            "pi-dynamic-workflows",
             "pi-hashline-edit-pro",
             "pi-insights",
             "pi-lens",
@@ -715,7 +716,7 @@ class UpdateInventoryTests(unittest.TestCase):
             "sherlock-db",
             "ws",
         }
-        self.assertEqual(len(inventory["packages"]), 198)
+        self.assertEqual(len(inventory["packages"]), 199)
         self.assertEqual(
             {item["name"] for item in inventory["packages"] if not item["managed"]},
             pending,
