@@ -30,7 +30,7 @@ in
     syntaxHighlighting.enable = true;
 
     history = {
-      size = 50000;
+      size = 500000;
       save = 500000;
       path = "${config.xdg.configHome}/zsh/history";
       ignoreDups = true;
