@@ -16,5 +16,5 @@ let
 in
 assert result.builder == "go-1.26";
 assert result.pname == "agent-deck";
-assert result.version == "1.10.10";
+assert result.version == "1.10.11";
 runCommand "agent-deck-go-compat" { } "touch $out"

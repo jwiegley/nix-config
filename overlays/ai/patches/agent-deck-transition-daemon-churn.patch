@@ -93,10 +93,10 @@ index 00000000..65b78c95
 +	return first + "; " + second
 +}
 diff --git a/cmd/agent-deck/session_cmd.go b/cmd/agent-deck/session_cmd.go
-index 487fe528..c17fbd47 100644
+index a3e90ca6..1beb1be7 100644
 --- a/cmd/agent-deck/session_cmd.go
 +++ b/cmd/agent-deck/session_cmd.go
-@@ -723,14 +723,15 @@ func handleSessionRestart(profile string, args []string) {
+@@ -732,14 +732,15 @@ func handleSessionRestart(profile string, args []string) {
  	}
  
  	// Restart the session
@@ -115,7 +115,7 @@ index 487fe528..c17fbd47 100644
  	if warning != "" && !*jsonOutput {
  		fmt.Fprintf(os.Stderr, "Warning: %s\n", warning)
  	}
-@@ -785,8 +786,9 @@ func restartAllSessions(out *CLIOutput, storage *session.Storage, instances []*s
+@@ -804,18 +805,19 @@ func restartAllSessions(out *CLIOutput, storage *session.Storage, instances []*s
  			fmt.Printf("Restarting %s...\n", inst.Title)
  		}
  
@@ -127,7 +127,10 @@ index 487fe528..c17fbd47 100644
  			if !out.jsonMode {
  				fmt.Fprintf(os.Stderr, "  Error: %s\n", errMsg)
  			}
-@@ -798,7 +800,7 @@ func restartAllSessions(out *CLIOutput, storage *session.Storage, instances []*s
+ 			result["success"] = false
+ 			result["error"] = errMsg
+-			return err
++			return restartErr
  		}
  		inst.LastStartedAt = time.Now()
  
@@ -181,22 +184,10 @@ index 56529198..26cd320f 100644
  		time.Sleep(2 * time.Second)
  		if tmuxSess := inst.GetTmuxSession(); tmuxSess != nil {
 diff --git a/internal/session/instance.go b/internal/session/instance.go
-index aad073c9..c6b753f1 100644
+index 5816114e..5b838879 100644
 --- a/internal/session/instance.go
 +++ b/internal/session/instance.go
-@@ -102,10 +102,7 @@ const (
- 	// timestamp on every received line, so 30s of silence means the stream
- 	// (and likely the process) is gone — fall back to tmux polling.
- 	opencodeSSEFreshnessWindow = 30 * time.Second
--	// codexProbeScanInterval rate-limits process-file probing to avoid
--	// repeated /proc and lsof scans on every status tick.
--	codexProbeScanInterval    = 2 * time.Second
--	codexProbeMissingSentinel = "__AGENT_DECK_MISSING_TOOL__"
-+	codexProbeMissingSentinel  = "__AGENT_DECK_MISSING_TOOL__"
- 	// codexLsofProbeTimeout hard-caps a single lsof invocation so a slow or
- 	// hung child can never stall the shared status pass. lsof is also run with
- 	// -n -P (no host/port name resolution) to avoid reverse-DNS PTR lookups on
-@@ -402,6 +399,11 @@ type Instance struct {
+@@ -407,6 +407,11 @@ type Instance struct {
  	ToolOptionsJSON json.RawMessage `json:"tool_options,omitempty"`
  
  	tmuxSession *tmux.Session // Internal tmux session
@@ -206,9 +197,9 @@ index aad073c9..c6b753f1 100644
 +	// Guarded by mu after the Instance becomes shared.
 +	owningDB *statedb.StateDB
  
- 	// Hook-based status detection (set by StatusFileWatcher from Claude Code hooks)
- 	hookStatus     string    // running, idle, waiting, dead (empty = no hook data)
-@@ -427,7 +429,8 @@ type Instance struct {
+ 	paneDeadExitStatusForTest func() (int, bool) // nil uses tmuxSession.PaneDeadExitStatus
+ 
+@@ -434,7 +439,8 @@ type Instance struct {
  
  	// lastErrorCheck tracks when we last confirmed the session doesn't exist
  	// Used to skip expensive Exists() checks for ghost sessions (sessions in JSON but not in tmux)
@@ -218,7 +209,7 @@ index aad073c9..c6b753f1 100644
  	lastErrorCheck time.Time
  
  	// Tiered polling: skip expensive checks for idle sessions with no activity
-@@ -472,6 +475,176 @@ type Instance struct {
+@@ -493,6 +499,176 @@ type Instance struct {
  	hermesGatewayOK        bool
  }
  
@@ -395,7 +386,7 @@ index aad073c9..c6b753f1 100644
  // SandboxConfig holds per-session Docker sandbox settings.
  type SandboxConfig struct {
  	// Enabled indicates the session runs inside a container.
-@@ -2180,7 +2353,9 @@ func (i *Instance) detectCodexSessionAsync() {
+@@ -2251,7 +2427,9 @@ func (i *Instance) detectCodexSessionAsync() {
  
  		sessionID, _ := i.queryCodexSessionFromProcessFiles()
  		if sessionID == "" {
@@ -406,7 +397,7 @@ index aad073c9..c6b753f1 100644
  		}
  		if sessionID != "" {
  			i.CodexSessionID = sessionID
-@@ -2276,11 +2451,32 @@ func runWithTimeout(timeout time.Duration, op func()) bool {
+@@ -2347,11 +2525,32 @@ func runWithTimeout(timeout time.Duration, op func()) bool {
  // while still preventing indefinite hangs.
  const codexWalkDirTimeout = 5 * time.Second
  
@@ -440,7 +431,7 @@ index aad073c9..c6b753f1 100644
  	sessionsDir := filepath.Join(i.getCodexHomeDir(), "sessions")
  	if _, err := os.Stat(sessionsDir); os.IsNotExist(err) {
  		return ""
-@@ -2310,7 +2506,7 @@ func (i *Instance) queryCodexSession(excludeIDs map[string]bool, allowUnscoped b
+@@ -2381,7 +2580,7 @@ func (i *Instance) queryCodexSession(excludeIDs map[string]bool, allowUnscoped b
  			if sessionID == "" {
  				return nil
  			}
@@ -449,7 +440,7 @@ index aad073c9..c6b753f1 100644
  				return nil
  			}
  
-@@ -2473,43 +2669,118 @@ func decodeJSONStringField(raw map[string]json.RawMessage, key string) string {
+@@ -2544,43 +2743,118 @@ func decodeJSONStringField(raw map[string]json.RawMessage, key string) string {
  	return strings.TrimSpace(s)
  }
  
@@ -590,23 +581,7 @@ index aad073c9..c6b753f1 100644
  		return false
  	}
  
-@@ -2525,7 +2796,14 @@ func (i *Instance) shouldRunCodexProcessProbe(force bool) bool {
- 		return true
- 	}
- 
--	if !i.lastCodexProbeAt.IsZero() && time.Since(i.lastCodexProbeAt) < codexProbeScanInterval {
-+	// Keep the fast cadence only while bootstrapping an unknown ID. Once an ID
-+	// is known, hooks and the tmux environment are the primary rotation signals;
-+	// the process-file probe (ps+lsof on macOS) is a 30-second safety net.
-+	interval := codexBootstrapScanInterval
-+	if i.CodexSessionID != "" {
-+		interval = codexRotationScanInterval
-+	}
-+	if !i.lastCodexProbeAt.IsZero() && time.Since(i.lastCodexProbeAt) < interval {
- 		return false
- 	}
- 
-@@ -2893,20 +3171,24 @@ func (i *Instance) updateCodexSession(excludeIDs map[string]bool, forceProbe boo
+@@ -2976,20 +3250,24 @@ func (i *Instance) updateCodexSession(excludeIDs map[string]bool, forceProbe boo
  
  	// Only allow unscoped fallback when we don't have a known session ID yet.
  	allowUnscoped := envSessionID == "" && i.CodexSessionID == "" && i.CodexStartedAt > 0
@@ -640,7 +615,7 @@ index aad073c9..c6b753f1 100644
  		// queryCodexSession already filters subagent rollouts out of candidacy
  		// (incident 2026-07-15), so sessionID here is always a user thread.
  		changed := sessionID != i.CodexSessionID
-@@ -4454,12 +4736,7 @@ func (i *Instance) UpdateStatus() error {
+@@ -4627,12 +4905,7 @@ func (i *Instance) UpdateStatus() error {
  
  			// Update Codex session tracking (non-blocking, best-effort)
  			if IsCodexCompatible(i.Tool) {
@@ -654,7 +629,7 @@ index aad073c9..c6b753f1 100644
  			}
  
  			// Update OpenCode session tracking (non-blocking, best-effort).
-@@ -6390,7 +6667,21 @@ func (i *Instance) RestartWithEnv(env map[string]string) error {
+@@ -6601,7 +6874,21 @@ func (i *Instance) RestartWithEnv(env map[string]string) error {
  	return i.restart(env)
  }
  
@@ -677,7 +652,7 @@ index aad073c9..c6b753f1 100644
  	beforeLock := nowFn()
  	release, lockErr := acquireInstanceSpawnLock(i.ID)
  	if lockErr != nil {
-@@ -6614,7 +6905,7 @@ func (i *Instance) restart(env map[string]string) error {
+@@ -6825,7 +7112,7 @@ func (i *Instance) restart(env map[string]string) error {
  		i.mu.Lock()
  		i.pendingCodexRestartWarning = ""
  		i.mu.Unlock()
@@ -773,7 +748,7 @@ index 00000000..c110429f
 +	return blob.LastStartedAt
 +}
 diff --git a/internal/session/selfheal_pass.go b/internal/session/selfheal_pass.go
-index e5b63d96..ac2f3f97 100644
+index 4259bd30..09e864c6 100644
 --- a/internal/session/selfheal_pass.go
 +++ b/internal/session/selfheal_pass.go
 @@ -51,6 +51,21 @@ func (r *selfHealRegistry) engineFor(profile string, caps selfheal.Caps) *selfhe
@@ -799,7 +774,7 @@ index e5b63d96..ac2f3f97 100644
  // trusted defaults for any unset field.
  func capsFromSettings(s SelfHealSettings) selfheal.Caps {
 diff --git a/internal/session/storage.go b/internal/session/storage.go
-index 3c7e8bb7..5ee30a53 100644
+index 22bfd1f1..b2f74599 100644
 --- a/internal/session/storage.go
 +++ b/internal/session/storage.go
 @@ -53,6 +53,7 @@ type InstanceData struct {
@@ -826,7 +801,7 @@ index 3c7e8bb7..5ee30a53 100644
  	row, err := instanceToRow(newInstance)
  	if err != nil {
  		return err
-@@ -845,6 +848,7 @@ func instanceToRow(inst *Instance) (*statedb.InstanceRow, error) {
+@@ -923,6 +926,7 @@ func instanceToRow(inst *Instance) (*statedb.InstanceRow, error) {
  	// the positional MarshalToolData signature so legacy binaries that don't
  	// know the key preserve it via MergeToolDataExtras.
  	toolData = WriteIdleTimeoutSecsToToolData(toolData, inst.IdleTimeoutSecs)
@@ -834,7 +809,7 @@ index 3c7e8bb7..5ee30a53 100644
  
  	return &statedb.InstanceRow{
  		ID:                  inst.ID,
-@@ -978,6 +982,7 @@ func (s *Storage) LoadLite() ([]*InstanceData, []*GroupData, error) {
+@@ -1056,6 +1060,7 @@ func (s *Storage) LoadLite() ([]*InstanceData, []*GroupData, error) {
  			Tool:                      r.Tool,
  			Status:                    Status(r.Status),
  			CreatedAt:                 r.CreatedAt,
@@ -842,7 +817,7 @@ index 3c7e8bb7..5ee30a53 100644
  			LastAccessedAt:            r.LastAccessed,
  			ArchivedAt:                r.ArchivedAt,
  			TmuxSession:               r.TmuxSession,
-@@ -1097,6 +1102,7 @@ func (s *Storage) LoadWithGroups() ([]*Instance, []*GroupData, error) {
+@@ -1175,6 +1180,7 @@ func (s *Storage) LoadWithGroups() ([]*Instance, []*GroupData, error) {
  			Tool:                      r.Tool,
  			Status:                    Status(r.Status),
  			CreatedAt:                 r.CreatedAt,
@@ -850,7 +825,7 @@ index 3c7e8bb7..5ee30a53 100644
  			LastAccessedAt:            r.LastAccessed,
  			ArchivedAt:                r.ArchivedAt,
  			TmuxSession:               r.TmuxSession,
-@@ -1352,6 +1358,7 @@ func (s *Storage) convertToInstances(data *StorageData) ([]*Instance, []*GroupDa
+@@ -1430,6 +1436,7 @@ func (s *Storage) convertToInstances(data *StorageData) ([]*Instance, []*GroupDa
  			Tool:                      instData.Tool,
  			Status:                    instData.Status,
  			CreatedAt:                 instData.CreatedAt,
@@ -858,7 +833,7 @@ index 3c7e8bb7..5ee30a53 100644
  			LastAccessedAt:            instData.LastAccessedAt,
  			ArchivedAt:                instData.ArchivedAt,
  			WorktreePath:              instData.WorktreePath,
-@@ -1389,6 +1396,7 @@ func (s *Storage) convertToInstances(data *StorageData) ([]*Instance, []*GroupDa
+@@ -1467,6 +1474,7 @@ func (s *Storage) convertToInstances(data *StorageData) ([]*Instance, []*GroupDa
  			AdditionalPaths:           instData.AdditionalPaths,
  			MultiRepoTempDir:          instData.MultiRepoTempDir,
  			tmuxSession:               tmuxSess,
@@ -867,7 +842,7 @@ index 3c7e8bb7..5ee30a53 100644
  		// Convert multi-repo worktree data
  		for _, wt := range instData.MultiRepoWorktrees {
 diff --git a/internal/session/transition_daemon.go b/internal/session/transition_daemon.go
-index 1b065d59..624b11d9 100644
+index 9cccb8a8..a6586f14 100644
 --- a/internal/session/transition_daemon.go
 +++ b/internal/session/transition_daemon.go
 @@ -10,6 +10,8 @@ import (
@@ -1092,10 +1067,10 @@ index f5b9439c..9e3d4d64 100644
  func (s *StateDB) ReadAllStatuses() (map[string]StatusRow, error) {
  	rows, err := s.db.Query("SELECT id, status, tool, acknowledged FROM instances")
 diff --git a/internal/tmux/tmux.go b/internal/tmux/tmux.go
-index 9569688b..fde1c7f9 100644
+index 2342a1be..fa6aae9f 100644
 --- a/internal/tmux/tmux.go
 +++ b/internal/tmux/tmux.go
-@@ -5352,6 +5352,61 @@ func ListAgentDeckSessions() ([]string, error) {
+@@ -5636,6 +5636,61 @@ func ListAgentDeckSessions() ([]string, error) {
  	return sessions, nil
  }
  
@@ -1158,10 +1133,10 @@ index 9569688b..fde1c7f9 100644
  // Used by NotificationManager to display waiting session notifications.
  func SetStatusLeft(sessionName, text string) error {
 diff --git a/internal/ui/home.go b/internal/ui/home.go
-index 8852ad30..b1e537bd 100644
+index 50f123f6..4c90b355 100644
 --- a/internal/ui/home.go
 +++ b/internal/ui/home.go
-@@ -5657,6 +5657,7 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -5700,6 +5700,7 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
  		return h, nil
  
  	case sessionRestoredMsg:
@@ -1169,7 +1144,7 @@ index 8852ad30..b1e537bd 100644
  		h.reloadMu.Lock()
  		reloading := h.isReloading
  		h.reloadMu.Unlock()
-@@ -5738,6 +5739,7 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -5781,6 +5782,7 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
  		return h, nil
  
  	case sessionRestartedMsg:
@@ -1177,7 +1152,7 @@ index 8852ad30..b1e537bd 100644
  		if msg.err != nil {
  			// Restart failed - clear resuming animation immediately so user can retry.
  			delete(h.resumingSessions, msg.sessionID)
-@@ -5776,6 +5778,10 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -5819,6 +5821,10 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
  		return h, nil
  
  	case mcpRestartedMsg:
@@ -1188,7 +1163,7 @@ index 8852ad30..b1e537bd 100644
  		if msg.err != nil {
  			h.setError(fmt.Errorf("failed to restart session for MCP changes: %w", msg.err))
  			return h, nil
-@@ -5951,8 +5957,12 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -5994,8 +6000,12 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
  		inst := h.instanceByID[msg.instanceID]
  		h.instancesMu.RUnlock()
  		if inst != nil {
@@ -1203,7 +1178,7 @@ index 8852ad30..b1e537bd 100644
  				h.errTime = time.Now()
  			}
  			// Force save to persist the model change
-@@ -12569,6 +12579,16 @@ type sessionRestartedMsg struct {
+@@ -12615,6 +12625,16 @@ type sessionRestartedMsg struct {
  	unarchived bool
  }
  
@@ -1220,7 +1195,7 @@ index 8852ad30..b1e537bd 100644
  // mcpRestartedMsg signals that an MCP-triggered restart completed and should auto-attach
  type mcpRestartedMsg struct {
  	session *session.Instance
-@@ -12595,6 +12615,9 @@ func restartWithArchiveTransition(
+@@ -12641,6 +12661,9 @@ func restartWithArchiveTransition(
  	}
  
  	if err := restart(); err != nil {
@@ -1231,10 +1206,10 @@ index 8852ad30..b1e537bd 100644
  		if rollbackErr := persist(inst); rollbackErr != nil {
  			return false, fmt.Errorf("restart failed: %w; restoring archive state failed: %v", err, rollbackErr)
 diff --git a/internal/ui/web_mutator.go b/internal/ui/web_mutator.go
-index 43e93df2..e8c1431f 100644
+index 19c0de93..7af1777d 100644
 --- a/internal/ui/web_mutator.go
 +++ b/internal/ui/web_mutator.go
-@@ -181,7 +181,12 @@ func (m *WebMutator) RestartSession(id string) error {
+@@ -186,7 +186,12 @@ func (m *WebMutator) RestartSession(id string) error {
  	if inst == nil {
  		return fmt.Errorf("session not found: %s", id)
  	}
@@ -1248,7 +1223,7 @@ index 43e93df2..e8c1431f 100644
  }
  
  // DeleteSession kills a session and removes it from persistent storage.
-@@ -328,8 +333,11 @@ func (m *WebMutator) UndoDelete() (string, error) {
+@@ -333,8 +338,11 @@ func (m *WebMutator) UndoDelete() (string, error) {
  	// tool (e.g. a tool the user has since uninstalled). Bubble the
  	// error up so the handler returns 500; the entry has already been
  	// popped, mirroring the TUI's ctrl+z semantics.
@@ -1262,3 +1237,82 @@ index 43e93df2..e8c1431f 100644
  	}
  
  	// #1397: hydrate + serialize before reading/persisting the in-memory list so
+diff --git a/internal/fleet/recover.go b/internal/fleet/recover.go
+index ae5057b..e332f5a 100644
+--- a/internal/fleet/recover.go
++++ b/internal/fleet/recover.go
+@@ -262,21 +262,32 @@ func (r *Recoverer) Recover(as Assessment) Summary {
+ 		attempts++
+ 		sum.Attempted++
+ 
+-		if err := r.restart(c.Instance); err != nil {
++		restartErr := r.restart(c.Instance)
++		if session.IsRestartPartialSuccess(restartErr) {
++			// The replacement pane is already live; retrying would destroy it.
++			if r.Log != nil {
++				r.Log.Warn("fleet_recover_restart_persistence_warning",
++					slog.String("instance_id", c.ID()),
++					slog.String("title", c.Title()),
++					slog.String("warning", restartErr.Error()))
++			}
++			restartErr = nil
++		}
++		if restartErr != nil {
+ 			res.Outcome = OutcomeFailed
+-			res.Err = err
++			res.Err = restartErr
+ 			sum.Failed++
+ 			consecutiveFailures++
+-			r.logf("fleet_recover_restart_failed", c, slog.String("error", err.Error()))
++			r.logf("fleet_recover_restart_failed", c, slog.String("error", restartErr.Error()))
+ 			if r.AuthGate != nil {
+-				r.AuthGate.Observe(c.Instance, VerifyReport{}, err)
++				r.AuthGate.Observe(c.Instance, VerifyReport{}, restartErr)
+ 			}
+ 			sum.Results = append(sum.Results, res)
+ 			if consecutiveFailures >= r.maxFailures() {
+ 				sum.Halted = true
+ 				sum.HaltReason = fmt.Sprintf(
+ 					"%d consecutive restarts failed — halting instead of failing through the rest of the fleet (last error: %v)",
+-					consecutiveFailures, err)
++					consecutiveFailures, restartErr)
+ 				r.logHalt(sum.HaltReason)
+ 			}
+ 			continue
+diff --git a/internal/fleet/recover_test.go b/internal/fleet/recover_test.go
+index 5824f01..2674496 100644
+--- a/internal/fleet/recover_test.go
++++ b/internal/fleet/recover_test.go
+@@ -275,6 +275,32 @@ func TestRecoverHaltsAfterConsecutiveRestartFailures(t *testing.T) {
+ 	}
+ }
+ 
++func TestRecoverContinuesAfterRestartPartialSuccess(t *testing.T) {
++	r := &recorder{}
++	rec := newTestRecoverer(r, func(*session.Instance) VerifyReport { return bootedReport() })
++	rec.Restart = func(inst *session.Instance) error {
++		r.restarts = append(r.restarts, inst.Title)
++		r.log("restart %s", inst.Title)
++		return &session.RestartPartialSuccessError{
++			InstanceID: inst.ID,
++			Err:        errors.New("database is locked"),
++		}
++	}
++	rec.MaxFailures = 1
++
++	sum := rec.Recover(downAssessment("a", "b"))
++
++	if sum.Failed != 0 || sum.Halted {
++		t.Fatalf("summary = %+v, want no failed restarts and no halt", sum)
++	}
++	if sum.Recovered != 2 {
++		t.Fatalf("Recovered = %d, want both completed restarts verified", sum.Recovered)
++	}
++	if len(r.verified) != 2 || len(r.persists) != 4 {
++		t.Fatalf("verified = %v, persists = %v, want both partial successes verified and persisted", r.verified, r.persists)
++	}
++}
++
+ func TestRecoverSuccessResetsTheFailureRun(t *testing.T) {
+ 	r := &recorder{}
+ 	rec := newTestRecoverer(r, func(*session.Instance) VerifyReport { return bootedReport() })
