@@ -7,7 +7,12 @@
   ...
 }:
 let
-  inherit (vars) isDarwin isLinux gitPkg;
+  inherit (vars) isDarwin isLinux;
+
+  # Derived from the option, not from a `let` constant — see the rationale at
+  # options.johnw.git.package in config/git.nix. Setting that one option
+  # retargets these aliases too.
+  gitPkg = config.johnw.git.package;
 
   dotDir = "${config.xdg.configHome}/zsh";
   itermSource = (import ../packages/source-catalog.nix "tools").iterm2-shell-integration;

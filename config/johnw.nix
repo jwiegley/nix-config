@@ -44,6 +44,7 @@ in
       ./ai.nix
       ./anvil.nix
       ./fractal.nix
+      ./git-options.nix
       ./git.nix
       ./ssh.nix
       ./zsh.nix
