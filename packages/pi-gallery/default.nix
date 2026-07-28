@@ -46,7 +46,7 @@ let
         pi-provider-litellm
         pi-rewind
         pi-scroll
-        pi-sidebar
+        pi-subagents
         pi-web-access
         rtk
         ;
@@ -79,6 +79,7 @@ let
       dropPeerMetadata ? true,
       hashline ? false,
       lens ? false,
+      subagents ? false,
       webAccess ? false,
     }:
     runCommand "${name}-release-source"
@@ -101,6 +102,7 @@ let
           ${lib.optionalString lens ''
             | del(.dependencies["@earendil-works/pi-tui"], .dependencies.typebox)
           ''}
+          ${lib.optionalString subagents "| del(.dependencies.typebox)"}
         ' "$out/package.json" > "$out/package.json.normalized"
         mv "$out/package.json.normalized" "$out/package.json"
         cp ${lockFile} "$out/package-lock.json"
@@ -277,6 +279,12 @@ let
     tarball = releaseTarballs.pi-insights;
     lockFile = ./locks/pi-insights-package-lock.json;
   };
+  subagentsSource = mkReleaseSource {
+    name = "pi-subagents";
+    tarball = releaseTarballs.pi-subagents;
+    lockFile = ./locks/pi-subagents-package-lock.json;
+    subagents = true;
+  };
 
   pi-hashline-edit-pro = mkNpmPackageRoot {
     pname = members.hashline.attrName;
@@ -301,6 +309,12 @@ let
     version = members.markdown-preview.version;
     src = markdownPreviewSource;
     npmDepsHash = members.markdown-preview.hashes.npmDepsHash;
+  };
+  pi-subagents = mkNpmPackageRoot {
+    pname = members.subagents.attrName;
+    version = members.subagents.version;
+    src = subagentsSource;
+    npmDepsHash = members.subagents.hashes.npmDepsHash;
   };
   betterwright = mkNpmPackageRoot {
     pname = members.betterwright.attrName;
@@ -516,14 +530,6 @@ let
     '';
   };
 
-  pi-sidebar = mkCopyRoot {
-    pname = members.sidebar.attrName;
-    version = members.sidebar.version;
-    install = root: ''
-      tar -xzf ${releaseTarballs.pi-sidebar} -C ${root} --strip-components=1
-    '';
-  };
-
   pi-rtk-optimizer = mkCopyRoot {
     pname = members.rtk-optimizer.attrName;
     version = members.rtk-optimizer.version;
@@ -651,6 +657,9 @@ let
       // lib.optionalAttrs (member ? skills) {
         skills = map (path: "${roots.${id}}/${path}") member.skills;
       }
+      // lib.optionalAttrs (member ? prompts) {
+        prompts = map (path: "${roots.${id}}/${path}") member.prompts;
+      }
     ) order;
   };
   memberPackages = lib.listToAttrs (
@@ -707,6 +716,7 @@ let
 
           (pi as { on: (event: string, handler: () => unknown) => void }).on("resources_discover", () => ({
             skillPaths: ${builtins.toJSON (lib.concatMap (item: item.skills or [ ]) projection.packages)},
+            promptPaths: ${builtins.toJSON (lib.concatMap (item: item.prompts or [ ]) projection.packages)},
           }));
         }
         TS

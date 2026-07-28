@@ -53,6 +53,9 @@ let
   expectedSkillCount = builtins.length (
     lib.concatMap (id: manifest.members.${id}.skills or [ ]) manifest.order
   );
+  expectedPromptCount = builtins.length (
+    lib.concatMap (id: manifest.members.${id}.prompts or [ ]) manifest.order
+  );
 in
 assert builtins.length (builtins.attrNames manifest.members) == builtins.length manifest.order;
 assert manifestPackagesMatch;
@@ -170,9 +173,6 @@ runCommand "pi-gallery-check"
     [ ! -e ${roots.retry}/node_modules ]
     [ -f ${roots.markdown-preview}/index.ts ]
     [ -d ${roots.markdown-preview}/node_modules/puppeteer-core ]
-    [ -f ${roots.sidebar}/extensions/sidebar.ts ]
-    [ -f ${roots.sidebar}/skills/pi-sidebar-ui-helper/SKILL.md ]
-    [ ! -e ${roots.sidebar}/node_modules ]
     [ -f ${roots.betterwright}/dist/src/pi-extension.js ]
     [ -d ${roots.betterwright}/node_modules/playwright-core ]
     [ -d ${roots.betterwright}/node_modules/cloakbrowser ]
@@ -180,6 +180,13 @@ runCommand "pi-gallery-check"
     [ ! -e ${roots.rtk-optimizer}/node_modules ]
     [ -f ${roots.cymbal-extension}/dist/index.ts ]
     [ ! -e ${roots.cymbal-extension}/node_modules ]
+    [ -f ${roots.subagents}/index.ts ]
+    [ -d ${roots.subagents}/node_modules/jiti ]
+    [ -d ${roots.subagents}/node_modules/yaml ]
+    [ ! -e ${roots.subagents}/node_modules/typebox ]
+    [ "$(find ${roots.subagents}/agents -maxdepth 1 -type f -name '*.md' | wc -l)" -eq 9 ]
+    [ -f ${roots.subagents}/skills/pi-subagents/SKILL.md ]
+    [ "$(find ${roots.subagents}/prompts -maxdepth 1 -type f -name '*.md' | wc -l)" -eq 7 ]
 
     cymbal_version=$(${lib.getExe piPackages.cymbal} --version)
     printf '%s\n' "$cymbal_version" | grep -F '${manifest.supportSources.cymbal.version}' >/dev/null \
@@ -203,6 +210,7 @@ runCommand "pi-gallery-check"
     [ -f ${gallery}/projection.json ]
     [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq ${toString (builtins.length manifest.order)} ]
     [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq ${toString expectedSkillCount} ]
+    [ "$(jq '[.packages[].prompts // [] | length] | add' ${gallery}/projection.json)" -eq ${toString expectedPromptCount} ]
     jq --argjson expected '${builtins.toJSON expectedPublicNames}' -e '
       [.packages[].name] == $expected
       and (.packages[] | select(.name == "@dietrichgebert/ponytail") | .skills == [])
@@ -651,24 +659,36 @@ runCommand "pi-gallery-check"
           "btw",
           "btw:tangent",
           "caveman",
+          "chain",
           "cymbal:remind",
+          "gather-context-and-clarify",
           "insights",
+          "parallel",
+          "parallel-cleanup",
+          "parallel-context-build",
+          "parallel-handoff-plan",
+          "parallel-research",
+          "parallel-review",
           "ponytail",
           "preview",
           "preview-browser",
           "preview-clear-cache",
           "preview-pdf",
+          "review-loop",
           "rewind",
           "router",
           "rtk",
+          "run",
           "scroll",
-          "sidebar",
-          "sidebar-git-detail",
-          "sidebar-panels",
-          "sidebar-refresh",
+          "subagents",
+          "subagents-doctor",
+          "subagents-fleet",
+          "subagents-models",
+          "subagents-watchdog",
           "viewer"
         ] - [.data.commands[].name] | length) == 0
         and ([.data.commands[].name] | index("workflows") | not)
+        and ([.data.commands[].name | select(startswith("sidebar"))] | length) == 0
       )
     ' "$smoke/output.log" >/dev/null || {
       cat "$smoke/output.log" >&2
@@ -694,13 +714,15 @@ runCommand "pi-gallery-check"
         "cymbal_show",
         "cymbal_structure",
         "cymbal_trace",
-        "preview_export"
+        "preview_export",
+        "subagent",
+        "subagent_supervisor"
       ] - . | length) == 0
       and (index("workflow") | not)
       and (index("workflow_control") | not)
     ' "$smoke/active-tools.json" >/dev/null || {
       cat "$smoke/active-tools.json" >&2
-      fail "new Pi gallery tools were not registered or Dynamic Workflows remained active"
+      fail "new Pi gallery tools were not registered or a removed extension remained active"
     }
     jq -s -e '
       any(

@@ -708,6 +708,7 @@ class UpdateInventoryTests(unittest.TestCase):
             "pi-markdown-preview",
             "pi-mcp-adapter",
             "pi-ponytail",
+            "pi-subagents",
             "pi-web-access",
             "rust-overlay",
             "rtk",

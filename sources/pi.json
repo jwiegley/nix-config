@@ -442,20 +442,26 @@
       },
       "version": "0.1.2"
     },
-    "pi-sidebar": {
+    "pi-subagents": {
+      "hashes": {
+        "npmDepsHash": "sha256-otpHOnxdt0C5VWI1fADE2SrCbj6NOTbnwo7ElZcXI/c="
+      },
       "source": {
         "args": {
-          "hash": "sha256-C182ulnhAHmJkVwZmZc2bcf4cp3nQySuRhiXlhJ5a+E=",
-          "url": "https://registry.npmjs.org/@esso0428/pi-sidebar/-/pi-sidebar-0.1.35.tgz"
+          "hash": "sha256-/exbHMFxgZaiLQgm310/iXKS68ZbxnVpwAfvKqneQ1g=",
+          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.37.1.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@esso0428/pi-sidebar/-/pi-sidebar-0.1.35.tgz"
+        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.37.1.tgz"
       },
       "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-subagents-package-lock.json"
+        ],
         "kind": "npm-release",
-        "package": "@esso0428/pi-sidebar"
+        "package": "pi-subagents"
       },
-      "version": "0.1.35"
+      "version": "0.37.1"
     },
     "pi-web-access": {
       "hashes": {

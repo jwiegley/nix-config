@@ -34,10 +34,10 @@ in
     "retry"
     "markdown-preview"
     "caveman"
-    "sidebar"
     "betterwright"
     "rtk-optimizer"
     "cymbal-extension"
+    "subagents"
   ];
 
   members = {
@@ -143,13 +143,6 @@ in
       publicName = "pi-caveman";
       extension = "extensions/caveman.ts";
     };
-    sidebar = member "pi-sidebar" {
-      attrName = "pi-sidebar";
-      package = packages.pi-sidebar or null;
-      publicName = "@esso0428/pi-sidebar";
-      extension = "extensions/sidebar.ts";
-      skills = [ "skills" ];
-    };
     betterwright = member "betterwright" {
       attrName = "betterwright";
       package = packages.betterwright or null;
@@ -167,6 +160,14 @@ in
       package = packages.pi-cymbal or null;
       publicName = "pi-cymbal";
       extension = "dist/index.ts";
+    };
+    subagents = member "pi-subagents" {
+      attrName = "pi-subagents";
+      package = packages.pi-subagents or null;
+      publicName = "pi-subagents";
+      extension = "index.ts";
+      skills = [ "skills" ];
+      prompts = [ "prompts" ];
     };
   };
 
