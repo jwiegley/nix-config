@@ -28,7 +28,6 @@ in
       ".kube".source = mkLink "${config.xdg.configHome}/kube";
       ".mitmproxy".source = mkLink "${config.xdg.configHome}/mitmproxy";
       ".parallel".source = mkLink "${config.xdg.configHome}/parallel";
-      ".pi".source = mkLink "${config.xdg.configHome}/pi";
       ".sage".source = mkLink "${config.xdg.configHome}/sage";
 
       ".diffusionbee".source = mkLink "${config.xdg.dataHome}/diffusionbee";
