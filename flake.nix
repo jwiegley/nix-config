@@ -14,6 +14,17 @@
       inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
+    # Pinned OLDER home-manager, used only by the release-skew gate
+    # (checks.<system>.home-manager-release-skew). The shared core must evaluate
+    # against both this and master; consumers pin release-25.11 while this repo
+    # tracks master, and that asymmetry is what made vulcan carry a local ssh
+    # compat shim. Follows the same nixpkgs, so it adds one lock node and no
+    # second nixpkgs. See jwiegley/nix-config#29.
+    home-manager-release = {
+      url = "github:nix-community/home-manager/release-25.11";
+      inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
+    };
+
     ledger = {
       url = "github:ledger/ledger";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
@@ -525,6 +536,10 @@
                 testPkgsFor = agentTestPkgsFor;
               };
               ai-lock-coherence = pkgs.callPackage ./test/ai/lock-coherence.nix { inherit src; };
+              home-manager-release-skew = pkgs.callPackage ./test/home-manager-release-skew.nix {
+                inherit src;
+                homeManagerReleaseLib = home-manager-release.lib;
+              };
               ai-managed-preflight = pkgs.callPackage ./test/ai/managed-preflight.nix {
                 inherit src;
                 homeManagerLib = home-manager.lib;

@@ -4851,6 +4851,28 @@
         "type": "github"
       }
     },
+    "home-manager-release": {
+      "inputs": {
+        "nixpkgs": [
+          "nix-config-ai",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1779506708,
+        "narHash": "sha256-QOD/CNm196nCJRheux/URi4/HE66fthdOMqCJoPP1Y0=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "3ee51fbdac8c8bdfe1e7e1fcaba6520a563f394f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "ref": "release-25.11",
+        "repo": "home-manager",
+        "type": "github"
+      }
+    },
     "hours": {
       "inputs": {
         "flake-utils": "flake-utils_6",
@@ -6960,6 +6982,7 @@
         "gitlib": "gitlib",
         "hakyll": "hakyll",
         "home-manager": "home-manager",
+        "home-manager-release": "home-manager-release",
         "hours": "hours",
         "ledger": "ledger",
         "nix-config-ai": "nix-config-ai",
