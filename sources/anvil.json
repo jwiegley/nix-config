@@ -69,7 +69,7 @@
         "url": "https://github.com/zawatton/anvil.el"
       },
       "update": {
-        "branch": "main",
+        "branch": "master",
         "kind": "github-commit",
         "policy": "manual"
       },

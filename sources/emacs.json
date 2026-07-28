@@ -77,7 +77,7 @@
         "url": "https://github.com/manzaltu/claude-code-ide.el"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -93,7 +93,7 @@
         "url": "https://github.com/armindarvish/consult-omni"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -109,7 +109,7 @@
         "url": "https://github.com/jwiegley/emacs-copy-code"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -141,7 +141,7 @@
         "url": "https://github.com/meedstrom/eager-state"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -157,7 +157,7 @@
         "url": "https://github.com/jwiegley/ecard"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -173,7 +173,7 @@
         "url": "https://github.com/jdtsmith/eglot-booster"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -189,7 +189,7 @@
         "url": "https://github.com/laurynas-biveinis/elisp-mcp-dev"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -285,7 +285,7 @@
         "url": "https://github.com/jwiegley/gptel-emacs-tools"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -301,7 +301,7 @@
         "url": "https://github.com/jwiegley/gptel-litellm"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -317,7 +317,7 @@
         "url": "https://github.com/jwiegley/gptel-prompts"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -349,7 +349,7 @@
         "url": "https://github.com/jwiegley/gptel-rag"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -365,7 +365,7 @@
         "url": "https://github.com/jwiegley/hash-store"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -461,7 +461,7 @@
         "url": "https://github.com/skissue/llm-tool-collection"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -477,7 +477,7 @@
         "url": "https://github.com/jwiegley/emacs-loeb"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -493,7 +493,7 @@
         "url": "https://github.com/jwiegley/emacs-lzw"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -509,7 +509,7 @@
         "url": "https://github.com/kmontag/macher"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -525,7 +525,7 @@
         "url": "https://github.com/jwiegley/machines"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -541,7 +541,7 @@
         "url": "https://github.com/jwiegley/magit-ai"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -557,7 +557,7 @@
         "url": "https://github.com/ajbt200128/magit-gt"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -573,7 +573,7 @@
         "url": "https://github.com/laurynas-biveinis/mcp-server-lib.el"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -621,7 +621,7 @@
         "url": "https://github.com/jwiegley/ob-gptel"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -637,7 +637,7 @@
         "url": "https://github.com/justinbarclay/1password.el"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -653,7 +653,7 @@
         "url": "https://github.com/jwiegley/org-agenda-overlay"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -701,7 +701,7 @@
         "url": "https://github.com/jwiegley/org-context"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -717,7 +717,7 @@
         "url": "https://github.com/jwiegley/org-devonthink"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -733,7 +733,7 @@
         "url": "https://github.com/jwiegley/org-drafts"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -749,7 +749,7 @@
         "url": "https://github.com/QiangF/org-extra-emphasis"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -765,7 +765,7 @@
         "url": "https://github.com/jwiegley/org-hash"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -797,7 +797,7 @@
         "url": "https://github.com/meedstrom/org-mem"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -813,7 +813,7 @@
         "url": "https://github.com/meedstrom/org-node"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -893,7 +893,7 @@
         "url": "https://github.com/llcc/org-table-highlight"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -909,7 +909,7 @@
         "url": "https://github.com/jwiegley/org-table-loeb"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -925,7 +925,7 @@
         "url": "https://github.com/jwiegley/org-wiki"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -973,7 +973,7 @@
         "url": "https://github.com/jwiegley/pending"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -989,7 +989,7 @@
         "url": "https://github.com/emarsden/pgmacs"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -1069,7 +1069,7 @@
         "url": "https://github.com/jwiegley/stock-quote"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -1117,7 +1117,7 @@
         "url": "https://github.com/jdtsmith/ultra-scroll-mac"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -1165,7 +1165,7 @@
         "url": "https://github.com/jwiegley/vulpea-field"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -1181,7 +1181,7 @@
         "url": "https://github.com/benthamite/wikipedia"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
@@ -1229,7 +1229,7 @@
         "url": "https://github.com/jwiegley/emacs-z3"
       },
       "update": {
-        "branch": "master",
+        "branch": "main",
         "kind": "github-commit"
       }
     },
