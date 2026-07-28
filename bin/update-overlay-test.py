@@ -1326,6 +1326,58 @@ exec "$REAL_GIT" "$@"
         )
         self.assertEqual(result.stdout.splitlines(), ["shared-work", "ovh-vps", "vulcan"])
 
+        # Every one of the eight fleet hosts must route to a switch target. The
+        # table used to normalize all eight but resolve an output for only four,
+        # so the shared-work group fell through to `return 1` and bin/switch
+        # silently used a floating `home-manager/master` instead.
+        #
+        # shared-work resolves to `jwiegley`, unqualified — the attribute the work
+        # machines' own ~/.config/home-manager flake exports (confirmed live on
+        # andoria-08). Not `jwiegley@x86_64-linux`, which is this repo's synthetic
+        # CI fixture pinned to hostname="linux".
+        every_host = [
+            "hera",
+            "clio",
+            "vulcan",
+            "vps",
+            "andoria-08",
+            "andoria-t2",
+            "delphi-3bd4",
+            "gpu-server",
+        ]
+        routed = subprocess.run(
+            [
+                "bash",
+                "-c",
+                'source "$1"; shift; for h in "$@"; do '
+                'nix_flake_output_for_host "$h" || { echo "UNROUTED:$h"; exit 1; }; done',
+                "host-routing-test",
+                str(routing),
+                *every_host,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(
+            routed.returncode,
+            0,
+            "a fleet host has no switch target: %s%s" % (routed.stdout, routed.stderr),
+        )
+        self.assertEqual(
+            routed.stdout.splitlines(),
+            [
+                "hera",
+                "clio",
+                "vulcan",
+                "ovh-vps",
+                "jwiegley",
+                "jwiegley",
+                "jwiegley",
+                "jwiegley",
+            ],
+        )
+
         minimal_env = {**os.environ, "PATH": "/usr/bin:/bin"}
         build_help = subprocess.run(
             [str(BUILD), "--help"], capture_output=True, text=True, env=minimal_env, check=False

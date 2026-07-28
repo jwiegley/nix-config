@@ -318,7 +318,93 @@
           };
         };
 
-      formatter = forAllSystems (system: stockPkgsFor.${system}.nixfmt);
+      # `nix fmt` must format the tree, not read stdin.
+      #
+      # This was previously the raw `nixfmt` package. `nix fmt` execs the
+      # formatter verbatim without injecting any paths, so with no arguments
+      # nixfmt fell back to reading stdin: a bare `nix fmt` formatted nothing,
+      # and `nix fmt -- --check` died with "unexpected end of input". The gate
+      # only ever passed because lefthook and CI called nixfmt directly with a
+      # file list, never through `nix fmt`.
+      #
+      # With no path arguments this delegates to bin/quality, so `nix fmt`,
+      # `make format` and the pre-commit hook are the same operation over the
+      # same discovered file set (jwiegley/nix-config#46). It deliberately runs
+      # the working tree's bin/quality rather than a store copy: a formatter
+      # should use the tool as it currently exists in the tree it is formatting,
+      # and a store copy would silently format with a stale version after an
+      # edit. With explicit path arguments it dispatches by extension, matching
+      # the portable subflake's format.sh.
+      formatter = forAllSystems (
+        system:
+        let
+          pkgs = stockPkgsFor.${system};
+        in
+        pkgs.writeShellApplication {
+          name = "nix-config-format";
+          runtimeInputs = with pkgs; [
+            nixfmt
+            shfmt
+            git
+          ];
+          text = ''
+            # Whole-tree modes, both delegated so there is one discovery.
+            #   nix fmt              → rewrite
+            #   nix fmt -- --check   → check only, rewrite nothing
+            mode=--fix
+            if [ "$#" -eq 1 ] && [ "$1" = "--check" ]; then
+              mode=--check-only
+              shift
+            fi
+
+            if [ "$#" -gt 0 ]; then
+              nix_files=()
+              shell_files=()
+              for path in "$@"; do
+                case "$path" in
+                # An unrecognized flag must NOT be silently ignored. Exiting 0
+                # having formatted nothing is a fake pass, and a formatter that
+                # lies about success is worse than one that is merely broken.
+                -*)
+                  echo "nix fmt: unrecognized option: $path" >&2
+                  echo "         Supported: no arguments (format the tree)," >&2
+                  echo "         --check (check the tree), or explicit paths." >&2
+                  exit 2
+                  ;;
+                *.nix) nix_files+=("$path") ;;
+                *.sh | *.bash) shell_files+=("$path") ;;
+                *)
+                  echo "nix fmt: no formatter for: $path" >&2
+                  exit 2
+                  ;;
+                esac
+              done
+              if [ "''${#nix_files[@]}" -gt 0 ]; then
+                nixfmt "''${nix_files[@]}"
+              fi
+              if [ "''${#shell_files[@]}" -gt 0 ]; then
+                shfmt -i 4 -w "''${shell_files[@]}"
+              fi
+              exit 0
+            fi
+
+            root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+              echo "nix fmt: not inside a git work tree, and no paths were given." >&2
+              echo "         Pass explicit paths, or run from the repository." >&2
+              exit 2
+            }
+            cd "$root"
+            [ -x bin/quality ] || {
+              echo "nix fmt: $root/bin/quality is missing or not executable." >&2
+              exit 2
+            }
+            if [ "$mode" = --fix ]; then
+              exec bin/quality --fix nix-format shell-format
+            fi
+            exec bin/quality nix-format shell-format
+          '';
+        }
+      );
 
       devShells = forAllSystems (
         system:
