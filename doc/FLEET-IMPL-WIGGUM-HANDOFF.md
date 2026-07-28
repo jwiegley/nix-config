@@ -60,8 +60,9 @@ rather than `(bare)`.
 | `6b7582fa` | Reverted the `~/.pi` symlink; hera builds again |
 
 **Parity across every commit so far: package multisets IDENTICAL on all seven targets**
-(`bin/parity-baseline --compare`, baseline `e0ed94fa` → `c5029775`). drvPath moved only
-on the four host toplevels, for the expected additive reason.
+(`bin/parity-baseline --compare`, baseline `e0ed94fa` → `c5029775`). The four host
+drvPaths moved, which is uninformative: `vulcan-crt`'s whole-tree hash moves them on
+every commit. The identical multisets are the result.
 
 ### The `bin/switch` bug is the one to learn from
 
@@ -103,11 +104,14 @@ the way I had been flagging in other people's specs.
 
 **The parity oracle's two quantities answer different questions.** Measured: adding
 `bin/quality` and `bin/parity-baseline` moved **all four host drvPaths** and moved
-**no package multiset** (386/414/367/368 unchanged), because `nix-scripts` packages
-`bin/`. The portable drvPaths did not move. So a gate must treat *multiset drift* as
-a parity failure and *drvPath-only drift* as a question — additive source changes move
-drvPath legitimately, while a pure refactor should not. `--check` is strict same-rev
-determinism; `--compare` separates the two categories.
+**no package multiset** (386/414/367/368 unchanged). The portable drvPaths did not
+move. A gate must treat *multiset drift* as a parity failure — that is the signal.
+*drvPath-only drift on a host target is not a signal here*: `vulcan-crt` is
+`path:./config/certs`, which resolves within the whole flake source and carries its
+hash, so every commit moves it. A file added under `bin/` moves `nix-scripts` as a
+second cause, not the only one. Do not read a moved host drvPath as evidence that a
+refactor was impure. `--check` is strict same-rev determinism; `--compare` separates
+the two categories.
 
 **The derived baseline contradicts the corpus's asserted counts.** hera is **414**,
 not 412; the portable systems are **30/30/30**, not 43/37/38. The derived values are
