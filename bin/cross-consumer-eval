@@ -145,6 +145,59 @@ skip_or_fail() {
     fi
 }
 
+# ---- lock coherence ------------------------------------------------------
+#
+# Each consumer takes TWO inputs from this repository: `nix-config` (the whole
+# tree, flake = false, for path-imported modules) and `nix-config-ai` (the
+# portable subflake, for typed outputs). If those two resolve to DIFFERENT
+# revisions, the consumer is split-brained: its modules come from one tree and
+# its fleet outputs from another, and nothing tells it so.
+#
+# That is not hypothetical. vulcan's evaluation broke because a single input
+# crossed a commit its call sites were not ready for; two inputs drifting apart
+# is the same class of failure with a harder-to-read symptom.
+#
+# Checked from the consumer's own committed lock, read-only. Nothing here
+# depends on the rename (jwiegley/nix-config#47) having landed.
+check_lock_coherence() {
+    local name=$1 checkout=$2
+    local lock=$checkout/flake.lock
+    if [[ ! -f $lock ]]; then
+        skip_or_fail "$name [lock coherence]" "no flake.lock at $checkout"
+        return
+    fi
+    local out
+    if ! out=$(
+        python3 - "$lock" <<'PYEOF'
+import json, sys
+
+nodes = json.load(open(sys.argv[1]))["nodes"]
+revs = {}
+for key in ("nix-config", "nix-config-ai"):
+    node = nodes.get(key)
+    if node is None:
+        print("MISSING %s" % key)
+        raise SystemExit(1)
+    revs[key] = node.get("locked", {}).get("rev")
+if None in revs.values():
+    print("NOREV %s" % revs)
+    raise SystemExit(1)
+if len(set(revs.values())) != 1:
+    print(
+        "SKEW nix-config=%s nix-config-ai=%s"
+        % (revs["nix-config"][:12], revs["nix-config-ai"][:12])
+    )
+    raise SystemExit(1)
+print(next(iter(revs.values()))[:12])
+PYEOF
+    ); then
+        fail "$name [lock coherence]: $out"
+        return
+    fi
+    ran=$((ran + 1))
+    note "$name [lock coherence]: OK  both inputs at $out"
+}
+
 # ---- consumers ----------------------------------------------------------
 
 run_shared_work() {
@@ -156,6 +209,7 @@ run_shared_work() {
 }
 
 run_vps() {
+    check_lock_coherence "vps" "$vps_checkout"
     if [[ ! -f $vps_checkout/flake.nix ]]; then
         skip_or_fail "vps [ovh-vps toplevel]" "no flake.nix at $vps_checkout (set VPS_CHECKOUT)"
         return
@@ -167,6 +221,7 @@ run_vps() {
 }
 
 run_vulcan() {
+    check_lock_coherence "vulcan" "$vulcan_checkout"
     if [[ ! -f $vulcan_checkout/flake.nix ]]; then
         skip_or_fail "vulcan [reach-in canary]" "no flake.nix at $vulcan_checkout (set VULCAN_CHECKOUT)"
         return
