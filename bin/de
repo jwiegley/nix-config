@@ -96,6 +96,7 @@ keep_vars                                       \
 
 source <(direnv apply_dump .envrc.cache)
 source <(reset_kept)
+[[ ! -v TMPDIR || -d $TMPDIR ]] || unset TMPDIR
 
 watch_file .envrc
 watch_file .envrc.cache
@@ -160,7 +161,8 @@ SCRIPT="unset         \
     STARSHIP_SESSION_KEY \
     STARSHIP_SHELL    \
     TERM              \
-    TERM_SESSION_ID;  \
+    TERM_SESSION_ID   \
+    TMPDIR;           \
 if [[ -f .env ]]; then set -a; source .env; set +a; fi; \
 direnv dump > .envrc.cache"
 
