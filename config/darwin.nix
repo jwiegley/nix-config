@@ -29,7 +29,10 @@ let
   );
 in
 {
-  imports = [ ./launchd.nix ];
+  imports = [
+    ./launchd.nix
+    ./host-options.nix
+  ];
 
   users = {
     # List of users and groups that nix-darwin is allowed to create/manage

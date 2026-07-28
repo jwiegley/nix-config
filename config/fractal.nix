@@ -1,4 +1,5 @@
 {
+  config,
   hostname,
   lib,
   pkgs,

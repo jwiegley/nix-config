@@ -45,6 +45,7 @@ in
       ./anvil.nix
       ./fractal.nix
       ./git-options.nix
+      ./host-options.nix
       ./git.nix
       ./ssh.nix
       ./zsh.nix
