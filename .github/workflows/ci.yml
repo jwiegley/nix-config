@@ -1,30 +1,34 @@
 name: CI
 
+# Every lint/format/test job delegates to bin/quality, the single quality
+# authority. Do NOT inline a tool invocation or a hand-maintained file list here.
+#
+# This file used to name 9 shell scripts explicitly while lefthook globbed all of
+# bin/* and found 19, so CI was blind to 10 real scripts including bin/switch,
+# bin/update-remote and bin/upgrade-all — CI was strictly weaker than the local
+# hook. Both also hardcoded the same 4 Python files while the tree tracks 35, and
+# neither propagated failure out of its per-file loop.
+#
+# Scope lives in one place now: `git ls-files`, inside bin/quality.
+#
+# Refs: jwiegley/nix-config#46.
+
 on:
   push:
     branches: [main, master]
   pull_request:
 
 jobs:
-  nix-format:
+  nix-checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Check Nix formatting
-        run: nix shell nixpkgs#nixfmt -c bash -c 'find . -name "*.nix" -not -path "./result/*" | xargs nixfmt --check'
-
-  nix-lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Lint Nix (statix)
-        run: nix shell nixpkgs#statix -c statix check .
-      - name: Check dead Nix code
-        run: nix shell nixpkgs#deadnix -c deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail .
+      - name: Nix format, lint and dead code
+        run: |
+          nix shell nixpkgs#nixfmt nixpkgs#statix nixpkgs#deadnix \
+            -c bin/quality nix-format nix-lint nix-deadcode
 
   shell-checks:
     runs-on: ubuntu-latest
@@ -32,38 +36,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Lint shell scripts
+      - name: Shell lint and format
         run: |
-          nix shell nixpkgs#shellcheck -c bash -c '
-            for f in bin/de bin/u bin/upgrade bin/update-agents bin/myhost bin/git-sha \
-                     bin/persona bin/yubikey-switch build; do
-              shellcheck --severity=warning "$f"
-            done
-          '
-      - name: Check shell formatting
-        run: |
-          nix shell nixpkgs#shfmt -c bash -c '
-            for f in bin/de bin/u bin/upgrade bin/update-agents bin/myhost bin/git-sha \
-                     bin/persona bin/yubikey-switch build; do
-              shfmt -i 4 -d "$f"
-            done
-          '
+          nix shell nixpkgs#shellcheck nixpkgs#shfmt \
+            -c bin/quality shell-lint shell-format
 
-  python-lint:
+  python-checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Lint Python
-        run: |
-          nix shell nixpkgs#ruff -c ruff check \
-            bin/agent-deck-litellm-env-test.py \
-            bin/codex-litellm-test.py \
-            bin/update-overlay \
-            bin/update-overlay-test.py
-      - name: Run focused Python tests
-        run: python3 -m unittest -v bin/update-overlay-test.py
+      - name: Python lint and focused tests
+        run: nix shell nixpkgs#ruff -c bin/quality python-lint python-test
 
   portable-eval:
     runs-on: ubuntu-latest
@@ -72,7 +57,7 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Evaluate every portable AI system
-        run: nix flake check ./config/ai --all-systems --no-build
+        run: bin/quality portable-eval
 
   portable-native:
     strategy:

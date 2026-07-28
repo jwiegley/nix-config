@@ -1,45 +1,45 @@
+# Every command here delegates to bin/quality, the single quality authority.
+#
+# Do NOT inline a tool invocation or a file list in this file. That is how these
+# hooks and .github/workflows/ci.yml drifted apart badly enough that CI checked 9
+# shell scripts while this file checked 19, and how a 45-line shfmt diff in
+# bin/update-agents passed every gate: the old loops here did not propagate
+# failure, so the loop exited with the status of its last iteration and a bad file
+# in the middle was invisible.
+#
+# Scope now lives in exactly one place — `git ls-files`, inside bin/quality. The
+# globs below only decide *when* a suite runs; what it covers is bin/quality's
+# business, so a newly tracked file is in scope without editing anything here.
+#
+# Refs: jwiegley/nix-config#46.
+
 pre-commit:
   parallel: true
   commands:
     nix-format:
       glob: "*.nix"
-      run: find . -name '*.nix' -not -path './result/*' | xargs nixfmt --check
+      run: bin/quality nix-format
     nix-lint:
       glob: "*.nix"
-      run: statix check .
+      run: bin/quality nix-lint
     nix-deadcode:
       glob: "*.nix"
-      run: deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail .
+      run: bin/quality nix-deadcode
     shell-lint:
       glob: "{bin/*,build,*.sh,*.bash}"
-      run: |
-        for f in bin/* build; do
-          [[ -f $f ]] || continue
-          if head -1 "$f" | grep -q bash; then
-            shellcheck --severity=warning "$f"
-          fi
-        done
+      run: bin/quality shell-lint
     shell-format:
       glob: "{bin/*,build,*.sh,*.bash}"
-      run: |
-        for f in bin/* build; do
-          [[ -f $f ]] || continue
-          if head -1 "$f" | grep -q bash; then
-            shfmt -i 4 -d "$f"
-          fi
-        done
+      run: bin/quality shell-format
     python-lint:
       glob: "{*.py,bin/update-overlay}"
-      run: |
-        ruff check \
-          bin/agent-deck-litellm-env-test.py \
-          bin/codex-litellm-test.py \
-          bin/update-overlay \
-          bin/update-overlay-test.py
-        python3 -m unittest -v bin/update-overlay-test.py
+      run: bin/quality python-lint
+    python-test:
+      glob: "{*.py,bin/update-overlay}"
+      run: bin/quality python-test
     nix-check:
       glob: "*.{nix,lock}"
-      run: nix flake check ./config/ai --all-systems --no-build --no-warn-dirty
+      run: bin/quality portable-eval
 
 pre-push:
   commands:

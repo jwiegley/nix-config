@@ -14,7 +14,7 @@ NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 
 .PHONY: help all verify-inputs lock-local build switch update update-projects upgrade-tasks upgrade \
-	changes copy check sizes clean purge sign travel-ready test tools repl
+	changes copy check sizes clean purge sign travel-ready test tools repl format lint
 
 all: switch
 
@@ -43,6 +43,7 @@ help:
 	  '' \
 	  'Mutating targets (explicit only):' \
 	  '  format           Rewrite tracked Nix and shell sources' \
+	  '  lint             Run every quality suite (bin/quality)' \
 	  '  switch           Re-lock local inputs and switch nix-darwin' \
 	  '  update           Update the root lock and Homebrew metadata' \
 	  '  upgrade          Update, switch, and run upgrade tasks' \
@@ -258,9 +259,17 @@ sign:
 	$(call announce,nix store sign -k "<key>" --all)
 	@nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
 
+# Delegates to bin/quality, the single quality authority. Do not inline nixfmt or
+# a find/prune expression here: that duplication is what let this target's own
+# help text claim it rewrote "Nix and shell sources" while it only ever ran
+# nixfmt. See jwiegley/nix-config#46.
 format:
-	$(call announce,nixfmt)
-	find . -name '*.nix' -not -path './result/*' | xargs nixfmt
+	$(call announce,quality --fix)
+	bin/quality --fix nix-format shell-format
+
+lint:
+	$(call announce,quality)
+	bin/quality
 
 travel-ready:
 	$(call announce,travel-ready)

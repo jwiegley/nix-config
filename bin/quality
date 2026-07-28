@@ -1,0 +1,301 @@
+#!/usr/bin/env bash
+# The single quality authority. lefthook, GitHub Actions and the Makefile all
+# delegate here rather than each keeping their own copy of "which files, which
+# tool, which flags".
+#
+# Why this exists. Before it, the same checks were defined in four places and had
+# already drifted apart in ways that made CI strictly weaker than the local hook:
+#
+#   * CI shell-checks named 9 files by hand; lefthook globbed all of bin/* and
+#     found 19. CI was blind to 10 real scripts, including bin/switch,
+#     bin/update-remote and bin/upgrade-all.
+#   * Both hardcoded the same 4 Python files while the tree tracks 35. The other
+#     31 — the whole packages/anvil-mcp suite among them — were never linted.
+#   * Worse, both looped over files WITHOUT propagating failure: no `set -e`, no
+#     accumulation, so the loop exited with the status of its last iteration. A
+#     misformatted file in the middle passed silently. bin/update-agents had a
+#     45-line shfmt diff and every gate reported success.
+#
+# So the two rules this script exists to enforce:
+#
+#   1. Scope comes from `git ls-files`, never from a hand-maintained list. A new
+#      file is in scope the moment it is tracked; nothing has to be remembered.
+#   2. Every file is checked and EVERY failure is reported, then the suite exits
+#      non-zero. Never stop at the first failure, never lose one to $?.
+#
+# Usage:
+#   bin/quality                      # run every suite (same as `all`)
+#   bin/quality nix-format           # one suite
+#   bin/quality shell-format --fix   # rewrite instead of check, where meaningful
+#   bin/quality --list               # print every suite
+#   bin/quality --files shell        # print the discovered file set and exit
+#
+# Suites: nix-format nix-lint nix-deadcode shell-lint shell-format
+#         python-lint python-test portable-eval
+#
+# Refs: jwiegley/nix-config#46.
+
+set -uo pipefail
+
+repo_root=$(git rev-parse --show-toplevel) || {
+    printf 'quality: not in a git repository\n' >&2
+    exit 1
+}
+cd "$repo_root" || exit 1
+
+SUITES=(
+    nix-format
+    nix-lint
+    nix-deadcode
+    shell-lint
+    shell-format
+    python-lint
+    python-test
+    portable-eval
+)
+
+fix=0
+want=()
+
+# ---- file discovery -----------------------------------------------------
+# Tracked files only. This is deliberate: it excludes result/ symlinks, build
+# artifacts and anything gitignored without needing a prune list, and it means
+# "in scope" and "in the repository" are the same statement.
+
+files_nix() { git ls-files -- '*.nix'; }
+
+# Interpreter detection by shebang rather than by extension, because the repo's
+# operational scripts carry no extension (bin/u, bin/de, build) and one Python
+# program is likewise extensionless (bin/update-overlay).
+_shebang_is() {
+    local pat=$1 f=$2
+    [[ -f $f ]] || return 1
+    IFS= read -r first <"$f" 2>/dev/null || return 1
+    [[ $first == '#!'* && $first == *"$pat"* ]]
+}
+
+files_shell() {
+    local f
+    while IFS= read -r f; do
+        _shebang_is bash "$f" && printf '%s\n' "$f"
+    done < <(git ls-files)
+}
+
+files_python() {
+    local f
+    while IFS= read -r f; do
+        if [[ $f == *.py ]]; then
+            printf '%s\n' "$f"
+        elif _shebang_is python "$f"; then
+            printf '%s\n' "$f"
+        fi
+    done < <(git ls-files)
+}
+
+# unittest suites, by the repo's bin/<name>-test.py convention.
+files_python_tests() { git ls-files -- 'bin/*-test.py'; }
+
+# ---- reporting ----------------------------------------------------------
+
+failures=()
+
+note() { printf 'quality: %s\n' "$*"; }
+fail() {
+    printf 'quality: FAIL %s\n' "$*" >&2
+    failures+=("$*")
+}
+
+need() {
+    command -v "$1" >/dev/null 2>&1 && return 0
+    fail "$2: required tool '$1' not found in PATH"
+    return 1
+}
+
+# Run a per-file check over every file, accumulating failures. This function is
+# the whole point of the script: it is the thing the old shell loops got wrong.
+#
+# MUST be fed by redirect — `each_file ... < <(files_x)` — never by a pipeline.
+# `files_x | each_file ...` puts this function in a subshell, so its appends to
+# `failures` are discarded and the final summary silently undercounts. That is
+# the same class of bug as the loops this script replaces, one level up.
+each_file() {
+    local suite=$1 desc=$2
+    shift 2
+    local -a cmd=("$@")
+    local f bad=0 count=0
+    while IFS= read -r f; do
+        [[ -n $f ]] || continue
+        count=$((count + 1))
+        if ! "${cmd[@]}" "$f" >/tmp/quality.$$ 2>&1; then
+            bad=$((bad + 1))
+            printf '  --- %s\n' "$f" >&2
+            sed 's/^/      /' /tmp/quality.$$ >&2
+        fi
+    done
+    rm -f /tmp/quality.$$
+    if [[ $bad -gt 0 ]]; then
+        fail "$suite: $bad of $count file(s) failed ($desc)"
+    else
+        note "$suite: $count file(s) OK"
+    fi
+}
+
+# ---- suites -------------------------------------------------------------
+
+run_nix_format() {
+    need nixfmt nix-format || return
+    if [[ $fix -eq 1 ]]; then
+        files_nix | xargs -r nixfmt
+        note "nix-format: rewrote $(files_nix | wc -l | tr -d ' ') file(s)"
+    else
+        each_file nix-format "nixfmt --check" nixfmt --check < <(files_nix)
+    fi
+}
+
+run_nix_lint() {
+    need statix nix-lint || return
+    if statix check .; then
+        note "nix-lint: statix OK"
+    else
+        fail "nix-lint: statix reported findings"
+    fi
+}
+
+run_nix_deadcode() {
+    need deadnix nix-deadcode || return
+    if deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail .; then
+        note "nix-deadcode: deadnix OK"
+    else
+        fail "nix-deadcode: deadnix reported findings"
+    fi
+}
+
+run_shell_lint() {
+    need shellcheck shell-lint || return
+    each_file shell-lint "shellcheck --severity=warning" \
+        shellcheck --severity=warning < <(files_shell)
+}
+
+run_shell_format() {
+    need shfmt shell-format || return
+    if [[ $fix -eq 1 ]]; then
+        local n=0 f
+        while IFS= read -r f; do
+            shfmt -i 4 -w "$f" && n=$((n + 1))
+        done < <(files_shell)
+        note "shell-format: rewrote $n file(s)"
+    else
+        each_file shell-format "shfmt -i 4 -d" shfmt -i 4 -d < <(files_shell)
+    fi
+}
+
+run_python_lint() {
+    need ruff python-lint || return
+    local -a py=()
+    while IFS= read -r f; do py+=("$f"); done < <(files_python)
+    if [[ ${#py[@]} -eq 0 ]]; then
+        note "python-lint: no files"
+        return
+    fi
+    # ruff reports every file in one pass and exits non-zero on any finding, so
+    # a single invocation already satisfies the accumulate-everything rule.
+    if ruff check "${py[@]}"; then
+        note "python-lint: ${#py[@]} file(s) OK"
+    else
+        fail "python-lint: ruff reported findings across ${#py[@]} file(s)"
+    fi
+}
+
+run_python_test() {
+    local f bad=0 count=0
+    while IFS= read -r f; do
+        [[ -n $f ]] || continue
+        count=$((count + 1))
+        note "python-test: $f"
+        if ! python3 -m unittest "$f"; then
+            bad=$((bad + 1))
+        fi
+    done < <(files_python_tests)
+    if [[ $bad -gt 0 ]]; then
+        fail "python-test: $bad of $count suite(s) failed"
+    else
+        note "python-test: $count suite(s) OK"
+    fi
+}
+
+run_portable_eval() {
+    need nix portable-eval || return
+    if nix flake check ./config/ai --all-systems --no-build --no-warn-dirty; then
+        note "portable-eval: OK"
+    else
+        fail "portable-eval: nix flake check ./config/ai failed"
+    fi
+}
+
+# ---- argument parsing ---------------------------------------------------
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+    --fix) fix=1 ;;
+    --list)
+        printf '%s\n' "${SUITES[@]}"
+        exit 0
+        ;;
+    --files)
+        case ${2-} in
+        nix) files_nix ;;
+        shell) files_shell ;;
+        python) files_python ;;
+        python-tests) files_python_tests ;;
+        *)
+            printf 'quality: --files needs one of: nix shell python python-tests\n' >&2
+            exit 1
+            ;;
+        esac
+        exit 0
+        ;;
+    -h | --help)
+        sed -n '2,/^set -uo/p' "$0" | sed 's/^# \{0,1\}//; $d'
+        exit 0
+        ;;
+    all) want=("${SUITES[@]}") ;;
+    -*)
+        printf 'quality: unknown option: %s\n' "$1" >&2
+        exit 1
+        ;;
+    *)
+        # shellcheck disable=SC2076  # literal match is intended here
+        if [[ " ${SUITES[*]} " =~ " $1 " ]]; then
+            want+=("$1")
+        else
+            printf 'quality: unknown suite: %s (try --list)\n' "$1" >&2
+            exit 1
+        fi
+        ;;
+    esac
+    shift
+done
+
+[[ ${#want[@]} -gt 0 ]] || want=("${SUITES[@]}")
+
+for suite in "${want[@]}"; do
+    case $suite in
+    nix-format) run_nix_format ;;
+    nix-lint) run_nix_lint ;;
+    nix-deadcode) run_nix_deadcode ;;
+    shell-lint) run_shell_lint ;;
+    shell-format) run_shell_format ;;
+    python-lint) run_python_lint ;;
+    python-test) run_python_test ;;
+    portable-eval) run_portable_eval ;;
+    esac
+done
+
+if [[ ${#failures[@]} -gt 0 ]]; then
+    printf '\n' >&2
+    printf 'quality: %d suite(s) failed:\n' "${#failures[@]}" >&2
+    printf '  - %s\n' "${failures[@]}" >&2
+    exit 1
+fi
+
+note "all requested suites passed (${want[*]})"

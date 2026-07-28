@@ -1,0 +1,203 @@
+#!/usr/bin/env bash
+# Derive the fleet parity oracle: per-host toplevel drvPath plus the sorted
+# selected-package multiset.
+#
+# Why this exists: nearly every parity gate in the Fleet Configuration Programme
+# says "byte-identical to baseline", but until this script there was no committed
+# baseline artifact and no single recorded way to derive one. Two gates comparing
+# against differently-derived numbers are not comparing anything.
+#
+# The output is stored evidence, not a Nix-generated leaf, so it is committed as
+# a tracked data file under test/baseline/.
+#
+# Determinism contract: for a fixed revision and a fixed nixpkgs lock, every
+# value below is a pure function of the flake. Re-running at the same revision
+# must reproduce the artifact byte-for-byte; that is the whole point, and
+# `--check` asserts it.
+#
+# Usage:
+#   bin/parity-baseline                     # derive, print JSON to stdout
+#   bin/parity-baseline --write             # derive, write test/baseline/parity-<rev>.json
+#   bin/parity-baseline --check FILE        # re-derive and diff against FILE
+#
+# Refs: jwiegley/nix-config#19 (capture), #31 (refresh as main advances).
+
+set -euo pipefail
+
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "$repo_root"
+
+# The oracle is only satisfiable if it postdates the overlay-factory refactor.
+# a36d3f51 predates a3cc3843, so demanding byte-identity against it can never be
+# met by post-a3cc3843 work. Assert the capture revision is a descendant.
+ARMED_REFACTOR=a3cc3843
+
+# Darwin hosts: (attr, home-manager username)
+DARWIN_HOSTS=(
+    "hera:johnw"
+    "clio:johnw"
+)
+
+# Standalone Home Manager configurations, by flake attribute name.
+HM_CONFIGS=(
+    "johnw@aarch64-linux"
+    "jwiegley@x86_64-linux"
+)
+
+# Portable subflake systems. Becomes ./config/fleet after #47; until then the
+# path is ./config/ai and changing it here is the single edit that follows.
+PORTABLE_DIR=./config/ai
+PORTABLE_SYSTEMS=(aarch64-darwin aarch64-linux x86_64-linux)
+
+# Sort package names rather than trusting attribute or list order: a reordering
+# that leaves the multiset identical is not a parity change, and treating it as
+# one would make the gate cry wolf.
+SORT_NAMES='ps: builtins.sort builtins.lessThan (map (p: p.pname or p.name) ps)'
+SORT_ATTRS='ps: builtins.sort builtins.lessThan (builtins.attrNames ps)'
+
+die() {
+    printf 'parity-baseline: %s\n' "$*" >&2
+    exit 1
+}
+
+# Record every command verbatim in the artifact so a later "vs baseline" gate
+# re-derives identically instead of inventing its own query.
+commands_json() {
+    python3 - "$SORT_NAMES" "$SORT_ATTRS" "$PORTABLE_DIR" <<'PY'
+import json, sys
+names, attrs, portable = sys.argv[1], sys.argv[2], sys.argv[3]
+print(json.dumps({
+    "darwinDrvPath":
+        'nix eval --raw ".#darwinConfigurations.<host>.config.system.build.toplevel.drvPath"',
+    "darwinPackages":
+        'nix eval --json ".#darwinConfigurations.<host>.config.home-manager.users.<user>'
+        '.home.packages" --apply %r' % names,
+    "hmDrvPath":
+        'nix eval --raw ".#homeConfigurations.\\"<attr>\\".activationPackage.drvPath"',
+    "hmPackages":
+        'nix eval --json ".#homeConfigurations.\\"<attr>\\".config.home.packages" --apply %r' % names,
+    "portablePackages":
+        'nix eval --json "%s#packages.<system>" --apply %r' % (portable, attrs),
+}, indent=1))
+PY
+}
+
+derive() {
+    local rev
+    rev=$(git rev-parse HEAD)
+
+    git merge-base --is-ancestor "$ARMED_REFACTOR" "$rev" ||
+        die "capture rev $rev does not descend from $ARMED_REFACTOR; the oracle would be unsatisfiable"
+
+    # A dirty tree means the artifact would describe something that is not the
+    # recorded revision. Refuse rather than silently mislabel it.
+    if [[ -n $(git status --porcelain -- . ':!test/baseline') ]]; then
+        printf 'parity-baseline: WARNING tree is dirty; values may not match rev %s\n' \
+            "${rev:0:12}" >&2
+    fi
+
+    local tmp
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' RETURN
+
+    : >"$tmp/targets.jsonl"
+
+    local spec host user attr system drv pkgs
+    for spec in "${DARWIN_HOSTS[@]}"; do
+        host=${spec%%:*}
+        user=${spec##*:}
+        printf 'parity-baseline: deriving darwin %s\n' "$host" >&2
+        drv=$(nix eval --raw ".#darwinConfigurations.$host.config.system.build.toplevel.drvPath")
+        pkgs=$(nix eval --json \
+            ".#darwinConfigurations.$host.config.home-manager.users.$user.home.packages" \
+            --apply "$SORT_NAMES")
+        python3 -c '
+import json, sys
+print(json.dumps({"kind": "darwin", "target": sys.argv[1], "user": sys.argv[2],
+                  "drvPath": sys.argv[3], "packages": json.loads(sys.argv[4])}))
+' "$host" "$user" "$drv" "$pkgs" >>"$tmp/targets.jsonl"
+    done
+
+    for attr in "${HM_CONFIGS[@]}"; do
+        printf 'parity-baseline: deriving home-manager %s\n' "$attr" >&2
+        drv=$(nix eval --raw ".#homeConfigurations.\"$attr\".activationPackage.drvPath")
+        pkgs=$(nix eval --json ".#homeConfigurations.\"$attr\".config.home.packages" \
+            --apply "$SORT_NAMES")
+        python3 -c '
+import json, sys
+print(json.dumps({"kind": "home-manager", "target": sys.argv[1],
+                  "drvPath": sys.argv[2], "packages": json.loads(sys.argv[3])}))
+' "$attr" "$drv" "$pkgs" >>"$tmp/targets.jsonl"
+    done
+
+    for system in "${PORTABLE_SYSTEMS[@]}"; do
+        printf 'parity-baseline: deriving portable %s\n' "$system" >&2
+        pkgs=$(nix eval --json "$PORTABLE_DIR#packages.$system" --apply "$SORT_ATTRS")
+        python3 -c '
+import json, sys
+print(json.dumps({"kind": "portable", "target": sys.argv[1],
+                  "packages": json.loads(sys.argv[2])}))
+' "$system" "$pkgs" >>"$tmp/targets.jsonl"
+    done
+
+    commands_json >"$tmp/commands.json"
+
+    python3 - "$rev" "$tmp/targets.jsonl" "$tmp/commands.json" <<'PY'
+import json, sys
+rev, targets_path, commands_path = sys.argv[1], sys.argv[2], sys.argv[3]
+targets = [json.loads(l) for l in open(targets_path) if l.strip()]
+for t in targets:
+    # Length is derived here rather than asserted anywhere, so a gate can never
+    # compare against a hand-maintained count that has drifted from the list.
+    t["packageCount"] = len(t["packages"])
+out = {
+    "schema": "fleet-parity-oracle/1",
+    "baselineRev": rev,
+    "armedRefactorAncestor": "a3cc3843",
+    "note": (
+        "Stored evidence for the Fleet Configuration Programme parity gates. "
+        "Package counts are derived from the lists in this file, never asserted "
+        "separately. Re-derive with bin/parity-baseline --check <this file>."
+    ),
+    "commands": json.load(open(commands_path)),
+    "targets": sorted(targets, key=lambda t: (t["kind"], t["target"])),
+}
+print(json.dumps(out, indent=1, sort_keys=False))
+PY
+}
+
+case ${1-} in
+--write)
+    out=$(derive)
+    rev=$(git rev-parse HEAD)
+    dest="test/baseline/parity-${rev:0:12}.json"
+    mkdir -p test/baseline
+    printf '%s\n' "$out" >"$dest"
+    printf 'parity-baseline: wrote %s\n' "$dest" >&2
+    printf '%s\n' "$dest"
+    ;;
+--check)
+    [[ -n ${2-} ]] || die "--check needs a baseline file"
+    [[ -f $2 ]] || die "no such baseline file: $2"
+    want_rev=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["baselineRev"])' "$2")
+    have_rev=$(git rev-parse HEAD)
+    if [[ $want_rev != "$have_rev" ]]; then
+        die "baseline was captured at ${want_rev:0:12} but HEAD is ${have_rev:0:12};
+    a mismatch here means the comparison is meaningless, not that parity broke.
+    Re-point at the recorded rev, or refresh the oracle (see #31)."
+    fi
+    if diff -u "$2" <(derive) >/dev/null; then
+        printf 'parity-baseline: MATCH %s\n' "$2"
+    else
+        printf 'parity-baseline: DRIFT against %s\n' "$2" >&2
+        diff -u "$2" <(derive) >&2 || true
+        exit 1
+    fi
+    ;;
+"" | --print)
+    derive
+    ;;
+*)
+    die "unknown argument: $1 (want --write, --check FILE, or no argument)"
+    ;;
+esac

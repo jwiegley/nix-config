@@ -19,8 +19,50 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PUBLISH = os.path.join(HERE, "publish")
 
 
-def git(*args, cwd, check=True, env=None):
+# Git environment variables that point git at a specific repository. These MUST
+# be scrubbed before running git in a throwaway directory.
+#
+# This is not hypothetical tidiness. When this suite runs from inside a git hook —
+# which is exactly what lefthook's pre-commit does — the hook environment carries
+# GIT_DIR and GIT_INDEX_FILE for the REAL repository. Inheriting them makes every
+# git call below operate on the real repo regardless of `cwd`, so
+# `git init --bare` set `core.bare = true` on the actual nix-config repository and
+# broke every linked worktree in it, including a concurrent session's.
+#
+# `cwd=` is not protection: an explicit GIT_DIR beats the working directory.
+_GIT_LOCATION_VARS = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_COMMON_DIR",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_PREFIX",
+    "GIT_CONFIG",
+    "GIT_CONFIG_GLOBAL",
+    "GIT_CONFIG_SYSTEM",
+    "GIT_CONFIG_COUNT",
+    "GIT_INTERNAL_SUPER_PREFIX",
+    "GIT_CEILING_DIRECTORIES",
+)
+
+
+def clean_env(**extra):
+    """os.environ with every repository-pointing git variable removed.
+
+    Use this for ANY subprocess that may invoke git, including bin/publish
+    itself - not just the git() helper. Under a git hook the inherited GIT_DIR
+    would otherwise redirect the child at the real repository.
+    """
     e = dict(os.environ)
+    for var in _GIT_LOCATION_VARS:
+        e.pop(var, None)
+    e.update(extra)
+    return e
+
+
+def git(*args, cwd, check=True, env=None):
+    e = clean_env()
     # Deterministic, signature-free commits by default; individual tests opt in
     # to signing behaviour by rewriting %G? expectations instead.
     e.update(
@@ -80,7 +122,11 @@ class PublishHarness(unittest.TestCase):
 
     def publish(self, *args):
         return subprocess.run(
-            [PUBLISH, *args], cwd=self.work, capture_output=True, text=True
+            [PUBLISH, *args],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=clean_env(),
         )
 
     def remote_sha(self, bare, branch="main"):
@@ -221,17 +267,22 @@ class TestPartialFailure(PublishHarness):
                 "ed25519", "sign", "never",
             ],
             capture_output=True, text=True,
-            env={**os.environ, "GNUPGHOME": self.gnupghome},
+            env=clean_env(GNUPGHOME=self.gnupghome),
         )
         if r.returncode != 0:
             self.skipTest("could not generate an ephemeral gpg key: %s" % r.stderr[:200])
         keyid = subprocess.run(
             ["gpg", "--batch", "--list-secret-keys", "--with-colons"],
             capture_output=True, text=True,
-            env={**os.environ, "GNUPGHOME": self.gnupghome},
+            env=clean_env(GNUPGHOME=self.gnupghome),
         ).stdout
         fpr = next(
-            (l.split(":")[9] for l in keyid.splitlines() if l.startswith("fpr:")), None
+            (
+                line.split(":")[9]
+                for line in keyid.splitlines()
+                if line.startswith("fpr:")
+            ),
+            None,
         )
         self.assertIsNotNone(fpr, "no fingerprint from generated key")
         self.signing_env = {"GNUPGHOME": self.gnupghome}
@@ -251,7 +302,7 @@ class TestPartialFailure(PublishHarness):
         self._signed_commit("s\n", "a signed commit")
         r = subprocess.run(
             [PUBLISH, "--dry-run"], cwd=self.work, capture_output=True, text=True,
-            env={**os.environ, **self.signing_env},
+            env=clean_env(**self.signing_env),
         )
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("all signed", r.stdout)
@@ -276,7 +327,7 @@ class TestPartialFailure(PublishHarness):
 
         r = subprocess.run(
             [PUBLISH], cwd=self.work, capture_output=True, text=True,
-            env={**os.environ, **self.signing_env},
+            env=clean_env(**self.signing_env),
         )
         self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
         combined = r.stdout + r.stderr
@@ -290,10 +341,65 @@ class TestPartialFailure(PublishHarness):
         self.assertNotEqual(self.remote_sha(self.github), head)
 
 
+class TestDoesNotEscapeItsSandbox(unittest.TestCase):
+    """Regression: the suite must never touch the repository it is run from.
+
+    Running these tests under lefthook's pre-commit hook once set
+    `core.bare = true` on the real nix-config repository, because the hook
+    environment exports GIT_DIR and the harness inherited it — so
+    `git init --bare` in a temp dir reconfigured the real repo and broke every
+    linked worktree in it. `cwd=` does not protect against that; an explicit
+    GIT_DIR wins. This test simulates the hook environment and proves the scrub.
+    """
+
+    def test_inherited_git_dir_does_not_reach_the_outer_repository(self):
+        outer = tempfile.mkdtemp(prefix="publish-test-outer-")
+        self.addCleanup(shutil.rmtree, outer, ignore_errors=True)
+        subprocess.run(
+            ["git", "init", "--quiet", "--initial-branch=main", outer],
+            check=True, capture_output=True, env=clean_env(),
+        )
+        outer_config = os.path.join(outer, ".git", "config")
+        with open(outer_config) as fh:
+            before = fh.read()
+
+        # Exactly what a git hook hands its children.
+        hostile = {
+            "GIT_DIR": os.path.join(outer, ".git"),
+            "GIT_INDEX_FILE": os.path.join(outer, ".git", "index"),
+            "GIT_WORK_TREE": outer,
+        }
+        with_hostile = dict(os.environ)
+        with_hostile.update(hostile)
+
+        # Run the harness setup under that environment, in a separate process so
+        # the poisoned variables are genuinely inherited rather than simulated.
+        r = subprocess.run(
+            [
+                "python3", "-m", "unittest",
+                "publish-test.TestNoop.test_both_already_current_is_a_noop_and_succeeds",
+            ],
+            cwd=HERE, capture_output=True, text=True, env=with_hostile,
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+        with open(outer_config) as fh:
+            after = fh.read()
+        self.assertEqual(
+            before, after,
+            "the suite rewrote the outer repository's config; the GIT_* scrub in "
+            "clean_env() is not holding:\n--- before ---\n%s\n--- after ---\n%s"
+            % (before, after),
+        )
+        self.assertNotIn("bare = true", after)
+
+
 class TestSelfConsistency(unittest.TestCase):
     def test_publish_is_executable_and_syntactically_valid(self):
         self.assertTrue(os.access(PUBLISH, os.X_OK), "bin/publish is not executable")
-        r = subprocess.run(["bash", "-n", PUBLISH], capture_output=True, text=True)
+        r = subprocess.run(
+            ["bash", "-n", PUBLISH], capture_output=True, text=True, env=clean_env()
+        )
         self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_never_embeds_a_credential(self):

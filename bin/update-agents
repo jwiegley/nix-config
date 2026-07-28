@@ -121,8 +121,8 @@ cleanup_transaction() {
     set +e
 
     if [[ $publication_applied == true && $transaction_complete != true ]]; then
-        if git -C "$config_dir" apply --reverse "$transaction_patch" \
-            && git -C "$config_dir" read-tree "$transaction_baseline"; then
+        if git -C "$config_dir" apply --reverse "$transaction_patch" &&
+            git -C "$config_dir" read-tree "$transaction_baseline"; then
             echo "update-agents: rolled back incomplete source transaction" >&2
         else
             echo "update-agents: failed to roll back incomplete source transaction" >&2
@@ -256,7 +256,7 @@ fi
         exit 1
     fi
     git diff --cached --check
- )
+)
 
 commit_created=false
 if [[ $run_commit == true && -s $transaction_patch ]]; then
@@ -266,15 +266,15 @@ if [[ $run_commit == true && -s $transaction_patch ]]; then
         exit 1
     fi
     committed_head=$(git -C "$candidate_dir" rev-parse HEAD)
-    if [[ $committed_head == "$commit_baseline" ]] \
-        || ! git -C "$candidate_dir" verify-commit "$committed_head" >/dev/null 2>&1 \
-        || [[ -n $(git -C "$candidate_dir" status --porcelain) ]]; then
+    if [[ $committed_head == "$commit_baseline" ]] ||
+        ! git -C "$candidate_dir" verify-commit "$committed_head" >/dev/null 2>&1 ||
+        [[ -n $(git -C "$candidate_dir" status --porcelain) ]]; then
         echo "update-agents: signed commit did not capture the complete transaction" >&2
         exit 1
     fi
-    if [[ $(git -C "$config_dir" rev-parse HEAD) != "$transaction_baseline" ]] \
-        || [[ -n $(git -C "$config_dir" status --porcelain) ]] \
-        || ! git -C "$config_dir" merge --ff-only "$committed_head"; then
+    if [[ $(git -C "$config_dir" rev-parse HEAD) != "$transaction_baseline" ]] ||
+        [[ -n $(git -C "$config_dir" status --porcelain) ]] ||
+        ! git -C "$config_dir" merge --ff-only "$committed_head"; then
         echo "update-agents: live repository changed before publication" >&2
         exit 1
     fi
