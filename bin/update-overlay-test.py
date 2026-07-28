@@ -1255,6 +1255,185 @@ exec "$REAL_GIT" "$@"
                 self.assertNotIn("file:///", locator)
                 self.assertFalse(locator.startswith("/"), locator)
 
+    # ---- whole-closure lock purity -------------------------------------
+    #
+    # The check above inspects only the root flake's DIRECT inputs, which is
+    # precisely why a real leak went unnoticed: `obr` committed its own
+    # flake.lock pinning org2jsonl at `git+file:///Users/johnw/src/org2jsonl`,
+    # Nix folded that transitive lock into this repo's closure, and the
+    # root-inputs-only walk never reached depth 2. An external consumer could
+    # not fetch this lock, and nothing said so.
+    #
+    # These helpers walk the entire closure. They are kept separate from the
+    # check above rather than replacing it: that one also asserts things about
+    # flake.nix text and about direct inputs specifically, and narrowing it
+    # would trade one blind spot for another.
+
+    @staticmethod
+    def _closure_routes(lock):
+        """Every node reachable from root, mapped to the shortest route to it.
+
+        A lock's `inputs` values are either a node name or a list describing a
+        `follows` path; both forms are followed, or a `follows` edge would hide
+        whatever it points at.
+        """
+        nodes = lock["nodes"]
+
+        def resolve(reference, depth=0):
+            """Resolve an `inputs` value to a node name.
+
+            A list-valued reference is a `follows` path anchored at ROOT, not at
+            the node that declares it — e.g. `["nix-config-ai", "nixpkgs"]` means
+            root's nix-config-ai input, then its nixpkgs. Resolving it relative to
+            the declaring node instead recurses forever on a real lock, because
+            follows chains readily point back through nodes already being walked.
+            """
+            if isinstance(reference, str):
+                return reference
+            if depth > 64:
+                return None  # pathological lock; refuse to hang
+            current = "root"
+            for step in reference:
+                nxt = (nodes.get(current, {}).get("inputs") or {}).get(step)
+                if nxt is None:
+                    return None
+                current = nxt if isinstance(nxt, str) else resolve(nxt, depth + 1)
+                if current is None:
+                    return None
+            return current
+
+        routes = {"root": ("root",)}
+        queue = [("root", ("root",))]
+        while queue:
+            name, route = queue.pop(0)
+            for input_name, reference in (nodes.get(name, {}).get("inputs") or {}).items():
+                target = resolve(reference)
+                if target is None or target in routes:
+                    continue
+                routes[target] = route + (input_name,)
+                queue.append((target, route + (input_name,)))
+        return routes
+
+    @classmethod
+    def _closure_impurities(cls, lock):
+        """Closure nodes an external consumer could not fetch.
+
+        Returns {node_name: (route, locator)}. A locator is unfetchable when it
+        names this machine's filesystem: a file:// URL, a `path` node with an
+        absolute path, or a bare absolute path.
+        """
+        nodes = lock["nodes"]
+        offenders = {}
+        for name, route in cls._closure_routes(lock).items():
+            if name == "root":
+                continue
+            locked = nodes.get(name, {}).get("locked") or {}
+            locator = locked.get("url") or locked.get("path") or ""
+            unfetchable = (
+                "file://" in locator
+                or locator.startswith("/")
+                or (locked.get("type") == "path" and locator.startswith("/"))
+            )
+            if unfetchable:
+                offenders[name] = ("/".join(route[1:]) or "root", locator)
+        return offenders
+
+    # Nodes knowingly tolerated as unfetchable. Every entry needs a reason and an
+    # owning issue. The assertion below is an EXACT-SET comparison, so a stale
+    # entry fails just as loudly as a new leak — an allowlist that silently
+    # outlives its cause is how the original blind spot survived.
+    KNOWN_UNFETCHABLE_ROOT_NODES: dict[str, str] = {}
+
+    def test_root_lock_closure_has_no_unfetchable_locators(self):
+        """Named for what it proves: no locator points at this filesystem.
+
+        It does NOT attempt a fetch, so it cannot prove the closure is
+        retrievable — only that nothing in it is local-only. Overstating that
+        would be the false-evidence pattern removed under #48.
+        """
+        root = SCRIPT.parent.parent
+        lock = json.loads((root / "flake.lock").read_text())
+        offenders = self._closure_impurities(lock)
+        self.assertEqual(
+            set(offenders),
+            set(self.KNOWN_UNFETCHABLE_ROOT_NODES),
+            "root lock closure impurities changed; routes: %s"
+            % {k: v[0] for k, v in sorted(offenders.items())},
+        )
+
+    def test_portable_lock_closure_has_no_unfetchable_locators(self):
+        root = SCRIPT.parent.parent
+        lock = json.loads((root / "config/ai/flake.lock").read_text())
+        offenders = self._closure_impurities(lock)
+        self.assertEqual(
+            offenders,
+            {},
+            "portable lock closure must stay fetchable; external consumers "
+            "depend on it directly",
+        )
+
+    def test_closure_walk_descends_past_direct_inputs(self):
+        """The negative test, and the reason the deepened walk exists.
+
+        A synthetic lock places a file:// leak at depth 2 — reachable only
+        through an intermediate node, exactly like the real obr -> org2jsonl
+        case. The old root-inputs-only walk cannot see it, so this fails if the
+        walk is ever narrowed back.
+        """
+        synthetic = {
+            "nodes": {
+                "root": {"inputs": {"intermediate": "intermediate"}},
+                "intermediate": {
+                    "inputs": {"leaky": "leaky"},
+                    "locked": {"type": "github", "url": "https://example.invalid/ok"},
+                },
+                "leaky": {
+                    "locked": {"type": "git", "url": "file:///Users/someone/local"},
+                },
+            },
+            "root": "root",
+            "version": 7,
+        }
+        offenders = self._closure_impurities(synthetic)
+        self.assertIn("leaky", offenders, "depth-2 leak not detected")
+        self.assertEqual(offenders["leaky"][0], "intermediate/leaky")
+        self.assertNotIn("intermediate", offenders)
+
+        # Prove the same lock is invisible to a root-inputs-only walk, so this
+        # test genuinely discriminates rather than passing either way.
+        shallow = {}
+        for name, ref in synthetic["nodes"]["root"]["inputs"].items():
+            node = synthetic["nodes"][ref if isinstance(ref, str) else ref[0]]
+            locator = node.get("locked", {}).get("url", "")
+            if "file://" in locator:
+                shallow[name] = locator
+        self.assertEqual(shallow, {}, "the shallow walk should miss a depth-2 leak")
+
+    def test_closure_walk_follows_follows_edges(self):
+        """A `follows` edge must not hide what it resolves to.
+
+        This is what #24's fix relies on: obr's org2jsonl was redirected via
+        `follows`, and if the walk ignored follows edges it would report a clean
+        closure without having looked.
+        """
+        synthetic = {
+            "nodes": {
+                "root": {"inputs": {"a": "a", "shared": "shared"}},
+                "a": {
+                    # Root-anchored follows path, as Nix writes them.
+                    "inputs": {"dep": ["shared"]},
+                    "locked": {"type": "github", "url": "https://example.invalid/a"},
+                },
+                "shared": {"locked": {"type": "git", "url": "file:///local/shared"}},
+            },
+            "root": "root",
+            "version": 7,
+        }
+        routes = self._closure_routes(synthetic)
+        self.assertIn("shared", routes)
+        offenders = self._closure_impurities(synthetic)
+        self.assertIn("shared", offenders)
+
     def test_root_consumes_portable_input_authority_transitively(self):
         root = SCRIPT.parent.parent
         root_lock = json.loads((root / "flake.lock").read_text())
