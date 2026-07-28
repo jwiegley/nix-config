@@ -33,9 +33,11 @@ rather than `(bare)`.
 | `nix-config#18` | `bin/publish` — dual-remote guard, 15 tests, real ephemeral-GPG signing and a `pre-receive` fault injection for the partial-publish path |
 | `nix-config#19` | `bin/parity-baseline` + `test/baseline/parity-e0ed94fabbc0.json` |
 | `nix-config#21` | Four host facts confirmed live; two new findings (Nix skew, `id -un`) |
-| `nix-config#30` | Bare `nix fmt` fixed; delegates to `bin/quality`; unknown flags now exit 2 instead of fake-passing |
+| `nix-config#24` | Transitive lock leak closed via `follows` on the obr input; closure `file://` nodes 1 → 0 |
+| `nix-config#30` | Bare `nix fmt` fixed; delegates to `bin/quality`; unknown flags exit 2 instead of fake-passing |
+| `nix-config#36` | Purity check walks the whole closure; empty allowlist compared as an exact set |
 | `nix-config#37` | All eight hosts route; `bin/switch` no longer activates via floating `home-manager/master` |
-| `nix-config#46` | `bin/quality` is now the single authority for lefthook, CI and the Makefile |
+| `nix-config#46` | `bin/quality` is the single authority for lefthook, CI and the Makefile |
 | `nix-config#48` | Eleven false-evidence aliases deleted; contract unfrozen but still catching drift |
 
 ## Open with work landed — read the issue comment for the gate
@@ -47,6 +49,55 @@ rather than `(bare)`.
   policy question put to the user. Remaining: sync the two commits to vulcan's
   `/etc/nixos` and run the native toplevel build. Forcing `toplevel` from hera fails
   only on `/etc/nixos/firmware`, a vulcan-local path.
+
+## Landed after the first merge
+
+| Change | What |
+|---|---|
+| `0dc8625b` | 42 catalog `update.branch` values corrected — all 98 now resolve |
+| `ffe0ec8e` | #24 + #36 together: leak closed, purity deepened to the closure |
+| `8dc3dd92` | Four partner observations fixed, one a live activation bug |
+| `6b7582fa` | Reverted the `~/.pi` symlink; hera builds again |
+
+**Parity across every commit so far: package multisets IDENTICAL on all seven targets**
+(`bin/parity-baseline --compare`, baseline `e0ed94fa` → `c5029775`). drvPath moved only
+on the four host toplevels, for the expected additive reason.
+
+### The `bin/switch` bug is the one to learn from
+
+The #37 routing fix *broke the thing it fixed*. `nix_flake_output_for_host` normalizes
+its argument, and `bin/switch` passes a value it already normalized.
+`hera`/`clio`/`vulcan`/`vps` survive a second pass only by accident of their glob
+patterns; `shared-work` did not, so every work machine got a bare `return 1`.
+
+My test missed it because it called the function with **raw hostnames** — never the
+normalized label the real caller passes. Normalization is now idempotent by
+construction, and the test walks the actual call path.
+
+Generalize this: a test written by whoever wrote the fix tends to exercise the path
+they were thinking about, not the path the caller takes. Two of the four partner
+observations were of that shape, including a test of mine that was vacuous in exactly
+the way I had been flagging in other people's specs.
+
+## Consumer-side state
+
+- `~/src/nixos`: `95198d91` — routing fix + reach-in canary, signed, **not synced to
+  vulcan's `/etc/nixos`**. `nixos-config#1`'s last acceptance box needs that.
+- `~/src/vps`: `e670518` — unarm + lock bump + canary, signed, not synced.
+- `andoria-08` (`~/.config/home-manager`, shared NFS home): `ae65f7a`, unsigned to match
+  that repo's own convention. Two pre-existing faults fixed — the missing
+  `nixManagedAiHomeClass`, and a `pythonRelaxDeps` boolean where nixpkgs now wants a
+  list. Builds; **not switched**. Switching there repoints the profile for all four
+  machines at once, so #70 must run first.
+
+## Open decisions blocking specific issues
+
+1. **#78** — `update` is already on PATH from `my-scripts`. The rename collides. Needs
+   your call: rename one, retire one, or pick another name.
+2. **nixos-config#1** — whether vulcan's inputs should carry `?rev=` pins at all. The
+   canary plus #22's gate address the actual failure; a pin is a separate policy.
+3. Several issues' acceptance criteria name `./config/fleet`, which does not exist —
+   the rename (#47) has not landed. Flagged on #46/#48 rather than silently rewritten.
 
 ## Findings worth carrying forward
 
