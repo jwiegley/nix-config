@@ -275,6 +275,14 @@ if [[ $unsigned -ne 0 ]]; then
 fi
 
 if [[ $checked -eq 0 ]]; then
+    # Exiting 0 here is defensible -- there genuinely is nothing to check -- but
+    # it is the same "passed having checked nothing" shape this programme is
+    # strict about elsewhere. SIGVERIFY_STRICT=1 turns it into a failure, for CI
+    # or any caller that needs "verified something" rather than "found nothing".
+    if [[ ${SIGVERIFY_STRICT:-0} == 1 ]]; then
+        printf 'verify-signatures: no commits in range and SIGVERIFY_STRICT is set; refusing to report success\n' >&2
+        exit 1
+    fi
     say "no commits in range; nothing to verify"
 else
     say "all $checked commit(s) in range carry a good signature (G or U)"

@@ -648,7 +648,9 @@ case ${1-} in
     if ! python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("repoHead") else 1)' "$tmp"; then
         rm -f "$tmp"
         die "refusing to write: repoHead could not be resolved.
-    Pass --repo-head <rev> explicitly, or run from a checkout whose HEAD is readable."
+    Set CONSUMER_INVENTORY_REPO_HEAD=<rev>, or run from a checkout whose HEAD is
+    readable. There is no --repo-head flag; the override is the environment
+    variable."
     fi
     mv "$tmp" "$dest"
     printf 'consumer-inventory: wrote %s\n' "$dest" >&2

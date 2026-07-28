@@ -242,4 +242,24 @@ if [[ $ran -eq 0 ]]; then
     exit 1
 fi
 
+# A FULL run that managed only shared-work is barely better than evaluating
+# nothing, and the ran==0 guard above cannot catch it: shared-work is this repo's
+# own fixture, so it always runs and always leaves ran >= 1.
+#
+# That matters because shared-work is a MODERATE proxy by its own description --
+# pinned to hostname="linux", so it exercises the shared config files but not
+# hostname-gated behaviour. With both real consumer checkouts missing, a full run
+# would otherwise report "all evaluated consumers passed" having verified nothing
+# about vulcan or vps. An independent audit found exactly this hole.
+#
+# A named subset is exempt: asking for shared-work alone is a deliberate choice.
+if [[ ${#want[@]} -eq ${#CONSUMERS[@]} && $ran -eq 1 && $skipped -gt 0 ]]; then
+    printf 'cross-consumer-eval: a full run evaluated ONLY shared-work (%d skipped).\n' \
+        "$skipped" >&2
+    printf '    shared-work is this repo own fixture and a moderate proxy; it says\n' >&2
+    printf '    nothing about vulcan or vps. Point VPS_CHECKOUT / VULCAN_CHECKOUT at\n' >&2
+    printf '    real checkouts, or name a subset to acknowledge the narrower scope.\n' >&2
+    exit 1
+fi
+
 note "all evaluated consumers passed ($ran ran, $skipped skipped: ${want[*]})"
