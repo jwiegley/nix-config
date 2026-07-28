@@ -1,0 +1,295 @@
+{
+  "schemaVersion": 1,
+  "reviewedSource": {
+    "repository": "https://github.com/jwiegley/promptdeploy",
+    "commit": "8d09f9f7bf5c72b6614f576b5277ce4d33df4064",
+    "tree": "457ba9588d3af003f5f399159b62c24ae83872e8",
+    "commitDate": "2026-07-22T22:13:17-07:00",
+    "worktreeState": "clean",
+    "untrackedResourcePaths": []
+  },
+  "inventory": {
+    "agents": [
+      "bash-reviewer",
+      "coq-reviewer",
+      "cpp-pro",
+      "cpp-reviewer",
+      "elisp-reviewer",
+      "emacs-lisp-pro",
+      "fess-auditor",
+      "haskell-pro",
+      "haskell-reviewer",
+      "nix-pro",
+      "nix-reviewer",
+      "perf-reviewer",
+      "persian-translator",
+      "prd-architect",
+      "prompt-engineer",
+      "python-pro",
+      "python-reviewer",
+      "rocq-pro",
+      "rust-pro",
+      "rust-reviewer",
+      "security-reviewer",
+      "sql-pro",
+      "task-breakdown",
+      "typescript-pro",
+      "typescript-reviewer",
+      "web-searcher"
+    ],
+    "commands": [
+      "alexey",
+      "assess",
+      "bankruptcy",
+      "breakdown",
+      "bugbot",
+      "bugbot-stack",
+      "capture",
+      "cleanup",
+      "code-review",
+      "commit",
+      "deep-review",
+      "discover-bundles",
+      "eliminate-dead-code",
+      "expense-report",
+      "fess",
+      "fix",
+      "fix-alert",
+      "fix-ci",
+      "fix-github-issue",
+      "fix-integration",
+      "fix-transcript",
+      "flaky-rust",
+      "forge",
+      "gravity",
+      "halt",
+      "heavy",
+      "infer-tasks",
+      "initialize",
+      "install-service",
+      "journal",
+      "lefthook",
+      "markdown",
+      "medium",
+      "meeting-notes",
+      "narrative",
+      "nix-rebuild",
+      "partner-cleanup",
+      "partner-collaborator",
+      "partner-reviewer",
+      "prepare-with",
+      "process-checklist",
+      "productize",
+      "proofread",
+      "push",
+      "query-builder",
+      "quick-review",
+      "rebase",
+      "rebase-and-fix",
+      "recommit",
+      "remove-service",
+      "report",
+      "resolve",
+      "respond",
+      "restack",
+      "retest",
+      "retest-categorical",
+      "review-github-pr",
+      "run-orchestrator",
+      "sec-audit",
+      "sitrep",
+      "smooth",
+      "teams",
+      "transcribe-image",
+      "tron-debug",
+      "webfix",
+      "wiggum"
+    ],
+    "skills": [
+      "add-uint-support",
+      "alexey-review",
+      "anvil",
+      "at-dispatch-v2",
+      "caveman",
+      "comment-audit",
+      "docstring",
+      "eliminate-dead-code",
+      "fix-all",
+      "fix-transcript",
+      "forge",
+      "it-voice",
+      "johnw",
+      "nixos",
+      "node-red",
+      "parallelize",
+      "persian",
+      "retest",
+      "skill-creator",
+      "swiftui",
+      "toolkit",
+      "translate-en",
+      "wiggum"
+    ],
+    "prompts": [
+      "emacs",
+      "spanish"
+    ]
+  },
+  "selectors": {
+    "commandAudiences": {
+      "personal": [
+        "capture",
+        "expense-report",
+        "fix-alert",
+        "fix-integration",
+        "install-service",
+        "remove-service",
+        "webfix"
+      ],
+      "positron": [
+        "cleanup",
+        "forge",
+        "heavy",
+        "retest",
+        "retest-categorical",
+        "tron-debug"
+      ]
+    },
+    "commandExtraClients": {
+      "droid": [
+        "discover-bundles",
+        "restack"
+      ]
+    },
+    "skillAudiences": {
+      "positron": [
+        "add-uint-support",
+        "at-dispatch-v2",
+        "docstring",
+        "retest"
+      ]
+    },
+    "skillClients": {
+      "claude": [
+        "forge"
+      ]
+    }
+  },
+  "nixOnly": {
+    "commands": [
+      "heavy-review"
+    ]
+  },
+  "postFrozenDelta": [
+    {
+      "path": ".agnix.toml",
+      "disposition": "Promptdeploy-only lint exclusion for ignored .superpowers artifacts; no deployable resource or Nix equivalent."
+    },
+    {
+      "path": "commands/alexey.md",
+      "disposition": "Cataloged as alexey; deployment frontmatter is reconstructed by Nix renderers."
+    },
+    {
+      "path": "commands/deep-review.md",
+      "disposition": "Reconciled into deep-review with mandatory Alexey, Ponytail, dead-code, comment, and performance perspectives plus explicit incomplete-pass reporting."
+    },
+    {
+      "path": "flake.nix",
+      "disposition": "Promptdeploy-only deployment and development-shell checks changed for the recovered resources and Ponytail test source; retired with Promptdeploy, with relevant selection and rendered-content behavior covered by the Nix Home Manager contract."
+    },
+    {
+      "path": "models.yaml",
+      "disposition": "Compared provider-aware; current model ownership remains llm-setup.el and config/ai/model-registry.json."
+    },
+    {
+      "path": "skills/add-uint-support/SKILL.md",
+      "disposition": "Cataloged for Positron; testing guidance adapted to require repository-defined focused checks and report unavailable checks."
+    },
+    {
+      "path": "skills/alexey-review/SKILL.md",
+      "disposition": "Cataloged as a broad content skill."
+    },
+    {
+      "path": "skills/alexey-review/references/engineering-principles.md",
+      "disposition": "Cataloged in the alexey-review skill tree."
+    },
+    {
+      "path": "skills/alexey-review/references/stance.md",
+      "disposition": "Cataloged in the alexey-review skill tree."
+    },
+    {
+      "path": "skills/at-dispatch-v2/SKILL.md",
+      "disposition": "Cataloged for Positron; testing guidance adapted to require repository-defined focused checks and report unavailable checks."
+    },
+    {
+      "path": "skills/docstring/SKILL.md",
+      "disposition": "Cataloged for Positron with deployment-only frontmatter removed."
+    },
+    {
+      "path": "tests/test_source.py",
+      "disposition": "Promptdeploy discovery regressions changed for the recovered commands, skills, references, and Positron scope; retired with Promptdeploy and covered by the Nix catalog and profile-selection contract."
+    }
+  ],
+  "models": {
+    "authority": "llm-setup.el through config/ai/model-registry.json",
+    "default": {
+      "provider": "litellm",
+      "model": "hera/omlx/Qwen3.6-27B-oQ4e-mtp"
+    },
+    "sourceOnlyStaleTuples": [
+      {
+        "provider": "litellm",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      {
+        "provider": "litellm",
+        "model": "anthropic/claude-sonnet-4-6"
+      },
+      {
+        "provider": "litellm",
+        "model": "hera/claude-opus-4-7"
+      },
+      {
+        "provider": "litellm",
+        "model": "hera/claude-opus-4-7-thinking-32000"
+      },
+      {
+        "provider": "litellm",
+        "model": "hera/claude-sonnet-4-6"
+      },
+      {
+        "provider": "litellm",
+        "model": "hera/claude-sonnet-4-6-thinking-32000"
+      },
+      {
+        "provider": "litellm",
+        "model": "positron_anthropic/claude-opus-4-7"
+      },
+      {
+        "provider": "litellm",
+        "model": "positron_anthropic/claude-sonnet-4-6"
+      },
+      {
+        "provider": "positron-anthropic",
+        "model": "claude-opus-4-7"
+      },
+      {
+        "provider": "positron-anthropic",
+        "model": "claude-sonnet-4-6"
+      }
+    ],
+    "sourceOnlyDisposition": "Not imported: these Claude 4.6/4.7 routes are superseded by current llm-setup.el-owned Claude Opus 4.8 and Sonnet 5 routes."
+  },
+  "unchangedSourceSurfaces": [
+    "agents",
+    "bundles",
+    "deploy",
+    "hooks",
+    "marketplaces",
+    "mcp",
+    "prompts",
+    "settings",
+    "statusline"
+  ],
+  "documentationDisposition": "Promptdeploy CLAUDE.md and README.md describe Claude model injection as default-off; PROMPTDEPLOY.md also says default-off but retains a stale example claiming active global injection. Nix does not inherit that claim or Promptdeploy model ownership."
+}

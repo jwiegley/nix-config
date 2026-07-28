@@ -535,6 +535,51 @@ The table is generated from the private extraction report and records extraction
 | statusline-command.sh | 0755 | 4271 | 7cb1fcb475bc94fb61b7324ab6ff2f349e3bfe86fdca775e19842fd74dd28729 |
 
 
+## Post-retirement reconciliation addendum
+
+The frozen source authority above remains the historical migration oracle. A later
+currency review reconciled it with clean Promptdeploy commit
+`8d09f9f7bf5c72b6614f576b5277ce4d33df4064` (tree
+`457ba9588d3af003f5f399159b62c24ae83872e8`, committed
+`2026-07-22T22:13:17-07:00`). No untracked resource-shaped paths were present.
+The checked-in semantic inventory and dispositions are recorded in
+`promptdeploy-reconciliation.json`; the Home Manager contract binds that record
+to the Nix catalog, selectors, current model authority, and rendered profile
+selections without restoring Promptdeploy as a source, runtime, or build dependency.
+
+The reviewed source inventory comprises 26 agents, 66 commands, 23 local skills,
+and two prompts. Filename audience tags were translated into catalog selectors;
+deployment-only command and skill frontmatter remains renderer-owned. The sole
+Nix-only command is `heavy-review`. Agents, bundles, deploy metadata, hooks,
+marketplaces, MCP definitions, prompts, settings, and the source statusline had no
+post-freeze content delta.
+
+The exact post-freeze Git delta comprised `.agnix.toml`, `commands/alexey.md`,
+`commands/deep-review.md`, `flake.nix`, `models.yaml`,
+`skills/add-uint-support/SKILL.md`, `skills/alexey-review/SKILL.md`,
+`skills/alexey-review/references/engineering-principles.md`,
+`skills/alexey-review/references/stance.md`, `skills/at-dispatch-v2/SKILL.md`,
+`skills/docstring/SKILL.md`, and `tests/test_source.py`. The three non-resource
+changes maintained Promptdeploy's source-lint exclusions, deployment and development
+checks, and discovery regressions; they were retired with Promptdeploy rather than
+imported as Nix source, runtime, or build dependencies. Alexey and the three Positron
+skills are cataloged; `deep-review` is reconciled with all required perspectives and
+explicit incomplete-pass reporting. The two PyTorch implementation skills intentionally
+require repository-defined focused tests and explicit reporting when a check is
+unavailable, rather than delegating or forbidding testing.
+
+Model identities remain owned by `llm-setup.el` through
+`config/ai/model-registry.json`. Ten source-only Claude 4.6/4.7 tuples are
+explicitly retired in favor of current Claude Opus 4.8 and Sonnet 5 routes; the
+Promptdeploy default still matches the Nix default. Promptdeploy's stale example
+claiming active global Claude injection is not inherited: its own README and
+operator guidance define that injection as default-off.
+
+Any future Promptdeploy comparison must update the reviewed commit, complete
+resource-name inventory, selector mapping, delta dispositions, and untracked-path
+evidence together. Changing only catalog content or only the manifest fails the
+Home Manager contract.
+
 ## Acceptance boundary
 
 This document authorizes only the imported canonical assets and later pure Nix renderers described by the approved plan. It does not authorize host activation, collision adoption, rollback-window closure, or Promptdeploy retirement. Those operations remain separately gated.

@@ -14,6 +14,8 @@ let
 
   assetCheckPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
   registryPath = "${src}/config/ai/model-registry.json";
+  promptdeployReconciliationPath = "${src}/doc/migrations/promptdeploy-reconciliation.json";
+  promptdeployReconciliation = builtins.fromJSON (builtins.readFile promptdeployReconciliationPath);
   codexSourceCatalogPath = "${
     inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex.src
   }/codex-rs/models-manager/models.json";
@@ -665,6 +667,292 @@ let
         name: builtins.elem name positronPyTorchSkills
       ) (selectedNames profileId "skills")) positronPyTorchSkills
     ) positronProfileIds;
+
+  promptdeployInventory = promptdeployReconciliation.inventory;
+  promptdeploySelectorNames = mapping: lib.concatLists (builtins.attrValues mapping);
+  promptdeploySelectorKeysFor =
+    mapping: name:
+    builtins.filter (key: builtins.elem name mapping.${key}) (builtins.attrNames mapping);
+  promptdeployUniqueSelectorKeyFor =
+    mapping: name:
+    let
+      keys = promptdeploySelectorKeysFor mapping name;
+    in
+    if keys == [ ] then
+      null
+    else if builtins.length keys == 1 then
+      builtins.head keys
+    else
+      throw "Promptdeploy reconciliation maps ${name} to multiple selectors: ${builtins.toJSON keys}";
+  promptdeployContentClients = [
+    "claude"
+    "codex"
+    "opencode"
+    "droid"
+    "pi"
+  ];
+  promptdeployCommandClients = [
+    "claude"
+    "codex"
+    "opencode"
+    "pi"
+  ];
+  expectedPromptdeployCommandSelectors =
+    name:
+    let
+      audience = promptdeployUniqueSelectorKeyFor promptdeployReconciliation.selectors.commandAudiences name;
+      extraClients = promptdeploySelectorKeysFor promptdeployReconciliation.selectors.commandExtraClients name;
+    in
+    {
+      clients = promptdeployCommandClients ++ extraClients;
+    }
+    // lib.optionalAttrs (audience != null) { audiences = [ audience ]; };
+  expectedPromptdeploySkillSelectors =
+    name:
+    let
+      audience = promptdeployUniqueSelectorKeyFor promptdeployReconciliation.selectors.skillAudiences name;
+      clients = promptdeploySelectorKeysFor promptdeployReconciliation.selectors.skillClients name;
+    in
+    if audience != null then
+      { audiences = [ audience ]; }
+    else
+      {
+        clients = if clients == [ ] then promptdeployContentClients else clients;
+      };
+  expectedPromptdeployReviewedSource = {
+    repository = "https://github.com/jwiegley/promptdeploy";
+    commit = "8d09f9f7bf5c72b6614f576b5277ce4d33df4064";
+    tree = "457ba9588d3af003f5f399159b62c24ae83872e8";
+    commitDate = "2026-07-22T22:13:17-07:00";
+    worktreeState = "clean";
+    untrackedResourcePaths = [ ];
+  };
+  expectedPromptdeployDeltaPaths = [
+    ".agnix.toml"
+    "commands/alexey.md"
+    "commands/deep-review.md"
+    "flake.nix"
+    "models.yaml"
+    "skills/add-uint-support/SKILL.md"
+    "skills/alexey-review/SKILL.md"
+    "skills/alexey-review/references/engineering-principles.md"
+    "skills/alexey-review/references/stance.md"
+    "skills/at-dispatch-v2/SKILL.md"
+    "skills/docstring/SKILL.md"
+    "tests/test_source.py"
+  ];
+  expectedPromptdeployStaleModelTuples = [
+    {
+      provider = "litellm";
+      model = "anthropic/claude-opus-4-7";
+    }
+    {
+      provider = "litellm";
+      model = "anthropic/claude-sonnet-4-6";
+    }
+    {
+      provider = "litellm";
+      model = "hera/claude-opus-4-7";
+    }
+    {
+      provider = "litellm";
+      model = "hera/claude-opus-4-7-thinking-32000";
+    }
+    {
+      provider = "litellm";
+      model = "hera/claude-sonnet-4-6";
+    }
+    {
+      provider = "litellm";
+      model = "hera/claude-sonnet-4-6-thinking-32000";
+    }
+    {
+      provider = "litellm";
+      model = "positron_anthropic/claude-opus-4-7";
+    }
+    {
+      provider = "litellm";
+      model = "positron_anthropic/claude-sonnet-4-6";
+    }
+    {
+      provider = "positron-anthropic";
+      model = "claude-opus-4-7";
+    }
+    {
+      provider = "positron-anthropic";
+      model = "claude-sonnet-4-6";
+    }
+  ];
+  currentModelTuples = map (model: {
+    inherit (model) provider;
+    model = model.id;
+  }) (builtins.attrValues modelData.models);
+  promptdeploySourceItemChecks =
+    map (
+      name:
+      expectEqual "Promptdeploy agent selector ${name}" (catalog.items.agents.${name}.selectors or null) {
+        clients = promptdeployContentClients;
+      }
+    ) promptdeployInventory.agents
+    ++ map (
+      name:
+      expectEqual "Promptdeploy command selector ${name}" (catalog.items.commands.${name}.selectors
+        or null
+      ) (expectedPromptdeployCommandSelectors name)
+    ) promptdeployInventory.commands
+    ++ map (
+      name:
+      expectEqual "Promptdeploy skill selector ${name}" (catalog.items.skills.${name}.selectors or null) (
+        expectedPromptdeploySkillSelectors name
+      )
+    ) promptdeployInventory.skills
+    ++ map (
+      name:
+      expectEqual "Promptdeploy prompt selector ${name}" (catalog.items.prompts.${name}.selectors or null
+      ) { clients = promptdeployContentClients; }
+    ) promptdeployInventory.prompts;
+  promptdeployCapabilitySelectionChecks =
+    lib.concatMap (
+      profileId:
+      let
+        supportsCommands = catalog.profiles.${profileId}.client != "droid";
+      in
+      [
+        (expectEqual "${profileId} Alexey command selection" (builtins.elem "alexey" (
+          selectedNames profileId "commands"
+        )) supportsCommands)
+        (expectEqual "${profileId} Alexey skill selection" (builtins.elem "alexey-review" (
+          selectedNames profileId "skills"
+        )) true)
+        (expectEqual "${profileId} deep-review selection" (builtins.elem "deep-review" (
+          selectedNames profileId "commands"
+        )) supportsCommands)
+      ]
+    ) expectedProfileIds
+    ++ [
+      (expectEqual "deep-review exposes required skill behavior" (builtins.all
+        (fragment: lib.hasInfix fragment (builtins.readFile catalog.items.commands.deep-review.source))
+        [
+          "`alexey-review`"
+          "`ponytail`"
+          "`eliminate-dead-code`"
+          "`comment-audit`"
+          "`perf-reviewer`"
+          "Retry a failed pass once"
+          "label the report"
+        ]
+      ) true)
+      (expectEqual "deep-review permits Skill dispatch" (lib.hasInfix "Skill"
+        catalog.items.commands.deep-review.metadata."allowed-tools"
+      ) true)
+    ];
+  promptdeployReconciliationChecks = [
+    (expectEqual "Promptdeploy reconciliation schema" promptdeployReconciliation.schemaVersion 1)
+    (expectEqual "Promptdeploy reviewed source" promptdeployReconciliation.reviewedSource
+      expectedPromptdeployReviewedSource
+    )
+    (expectEqual "Promptdeploy inventory categories" (builtins.attrNames promptdeployInventory) [
+      "agents"
+      "commands"
+      "prompts"
+      "skills"
+    ])
+    (expectEqual "Promptdeploy inventories are sorted and unique" (lib.mapAttrs (
+      _: names: lib.sort builtins.lessThan (lib.unique names)
+    ) promptdeployInventory) promptdeployInventory)
+    (expectEqual "Promptdeploy agent inventory" (sortedNames catalog.items.agents)
+      promptdeployInventory.agents
+    )
+    (expectEqual "Promptdeploy command inventory and Nix-only additions"
+      (sortedNames catalog.items.commands)
+      (
+        lib.sort builtins.lessThan (
+          promptdeployInventory.commands ++ promptdeployReconciliation.nixOnly.commands
+        )
+      )
+    )
+    (expectEqual "Promptdeploy Nix-only disposition" promptdeployReconciliation.nixOnly {
+      commands = [ "heavy-review" ];
+    })
+    (expectEqual "Promptdeploy selector sections"
+      (builtins.attrNames promptdeployReconciliation.selectors)
+      [
+        "commandAudiences"
+        "commandExtraClients"
+        "skillAudiences"
+        "skillClients"
+      ]
+    )
+    (expectEqual "Promptdeploy command selector names are inventoried" (builtins.filter
+      (name: !(builtins.elem name promptdeployInventory.commands))
+      (
+        (promptdeploySelectorNames promptdeployReconciliation.selectors.commandAudiences)
+        ++ (promptdeploySelectorNames promptdeployReconciliation.selectors.commandExtraClients)
+      )
+    ) [ ])
+    (expectEqual "Promptdeploy skill selector names are inventoried" (builtins.filter
+      (name: !(builtins.elem name promptdeployInventory.skills))
+      (
+        (promptdeploySelectorNames promptdeployReconciliation.selectors.skillAudiences)
+        ++ (promptdeploySelectorNames promptdeployReconciliation.selectors.skillClients)
+      )
+    ) [ ])
+    (expectEqual "Promptdeploy skill selector dimensions do not overlap"
+      (lib.intersectLists (promptdeploySelectorNames promptdeployReconciliation.selectors.skillAudiences) (
+        promptdeploySelectorNames promptdeployReconciliation.selectors.skillClients
+      ))
+      [ ]
+    )
+    (expectEqual "Promptdeploy post-freeze delta paths" (map (
+      entry: entry.path
+    ) promptdeployReconciliation.postFrozenDelta) expectedPromptdeployDeltaPaths)
+    (expectEqual "Promptdeploy post-freeze delta entries are dispositioned" (builtins.all (
+      entry:
+      builtins.attrNames entry == [
+        "disposition"
+        "path"
+      ]
+      && builtins.isString entry.disposition
+      && entry.disposition != ""
+    ) promptdeployReconciliation.postFrozenDelta) true)
+    (expectEqual "Promptdeploy default model remains current" promptdeployReconciliation.models.default
+      rawModelRegistry.selections.default
+    )
+    (expectEqual "Promptdeploy stale model tuple inventory"
+      promptdeployReconciliation.models.sourceOnlyStaleTuples
+      expectedPromptdeployStaleModelTuples
+    )
+    (expectEqual "Promptdeploy stale model tuples remain retired" (builtins.filter (
+      tuple: builtins.elem tuple currentModelTuples
+    ) promptdeployReconciliation.models.sourceOnlyStaleTuples) [ ])
+    (expectEqual "Promptdeploy model authority" promptdeployReconciliation.models.authority
+      "llm-setup.el through config/ai/model-registry.json"
+    )
+    (expectEqual "Promptdeploy stale model disposition is recorded" (
+      builtins.isString promptdeployReconciliation.models.sourceOnlyDisposition
+      && promptdeployReconciliation.models.sourceOnlyDisposition != ""
+    ) true)
+    (expectEqual "Promptdeploy unchanged source surfaces"
+      promptdeployReconciliation.unchangedSourceSurfaces
+      [
+        "agents"
+        "bundles"
+        "deploy"
+        "hooks"
+        "marketplaces"
+        "mcp"
+        "prompts"
+        "settings"
+        "statusline"
+      ]
+    )
+    (expectEqual "Promptdeploy documentation contradiction is dispositioned" (
+      builtins.isString promptdeployReconciliation.documentationDisposition
+      && promptdeployReconciliation.documentationDisposition != ""
+    ) true)
+  ]
+  ++ promptdeploySourceItemChecks
+  ++ promptdeployCapabilitySelectionChecks;
 
   claudeProfileIds = [
     "clio-claude-personal"
@@ -4213,6 +4501,7 @@ let
   ++ profileChecks
   ++ reachabilityChecks
   ++ positronPyTorchSkillSelectionChecks
+  ++ promptdeployReconciliationChecks
   ++ rendererChecks
   ++ task9Checks
   ++ task10Checks
