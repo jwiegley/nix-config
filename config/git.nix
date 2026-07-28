@@ -291,6 +291,7 @@ in
       ".ghc.environment.*"
       ".makefile"
       ".pact-history"
+      ".pi-subagents/"
       "TAGS"
       "cabal.project.local*"
       "settings.local.json"
