@@ -44,39 +44,37 @@ in
     ++ galleryPackages
   );
 
+  # Only names whose output executes what the name says. `no-warnings` stays: it
+  # is a real app running no-warnings.sh, not an alias. See #48.
   apps = [
     "build-check"
     "check"
-    "coverage"
-    "coverage-check"
     "default"
     "format"
     "format-check"
-    "fuzz"
     "lint"
-    "memory-check"
     "no-warnings"
-    "profile"
-    "profile-check"
     "test"
   ];
 
+  # `compatibility-contract` is deliberately absent: this list is compared against
+  # the flake DEFINITION (flake.nix:150 passes actual = portableAiDefinition),
+  # before that check is grafted on, so including it would never match.
+  #
+  # The five removed entries (coverage, fuzz, memory, no-warnings, profile) were
+  # aliases of tests/lint/build that produced no evidence of their own. Genuine
+  # no-warnings evidence survives as the app. See #48.
   checks = [
     "agent-deck-go-compat"
     "agent-resources"
     "agent-wrappers"
     "build"
-    "coverage"
     "format"
     "fractal-smoke"
-    "fuzz"
     "lint"
     "llama-cpp-platform-compat"
     "llm-agents-nixpkgs-independent"
-    "memory"
-    "no-warnings"
     "pi-gallery"
-    "profile"
     "tests"
   ];
 }

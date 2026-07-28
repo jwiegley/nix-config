@@ -2200,12 +2200,6 @@ in
       test = app "test" "test.sh" qualityDeps.test;
       build-check = app "build-check" "build-check.sh" qualityDeps.build;
       no-warnings = app "no-warnings" "no-warnings.sh" qualityDeps.build;
-      coverage = test;
-      coverage-check = test;
-      profile = build-check;
-      profile-check = build-check;
-      fuzz = test;
-      memory-check = test;
       check = app "check" "check.sh" qualityDeps.all;
       default = check;
     }
@@ -2270,11 +2264,6 @@ in
       tests = check "tests" "test.sh" qualityDeps.test ''
         export AI_NIX_TEST_SOURCE_ONLY=1
       '';
-      coverage = tests;
-      profile = build;
-      fuzz = tests;
-      memory = tests;
-      no-warnings = lint;
     }
   );
 

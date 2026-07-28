@@ -17,19 +17,14 @@ let
     "overlays"
     "packages"
   ];
+  # `default == check` is the only alias worth pinning: it is a convention, and it
+  # claims no evidence of its own. The eleven pins removed here did the opposite —
+  # they froze names like `coverage`, `fuzz`, `memory` and `profile` to whatever
+  # they aliased (tests/build), guaranteeing the names could never start meaning
+  # what they said. A contract that forbids a lie from being corrected is worse
+  # than no contract. See jwiegley/nix-config#48.
   aliasesMatch = system: [
     (actual.apps.${system}.default == actual.apps.${system}.check)
-    (actual.apps.${system}.coverage == actual.apps.${system}.test)
-    (actual.apps.${system}.coverage-check == actual.apps.${system}.test)
-    (actual.apps.${system}.fuzz == actual.apps.${system}.test)
-    (actual.apps.${system}.memory-check == actual.apps.${system}.test)
-    (actual.apps.${system}.profile == actual.apps.${system}.build-check)
-    (actual.apps.${system}.profile-check == actual.apps.${system}.build-check)
-    (actual.checks.${system}.coverage == actual.checks.${system}.tests)
-    (actual.checks.${system}.fuzz == actual.checks.${system}.tests)
-    (actual.checks.${system}.memory == actual.checks.${system}.tests)
-    (actual.checks.${system}.no-warnings == actual.checks.${system}.lint)
-    (actual.checks.${system}.profile == actual.checks.${system}.build)
   ];
   checkSystem =
     system:
