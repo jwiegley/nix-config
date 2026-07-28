@@ -693,25 +693,28 @@ class UpdateInventoryTests(unittest.TestCase):
         }
         pending = {
             "agent-browser-source",
+            "betterwright",
             "bigpowers",
             "cohere-melody",
+            "cymbal",
             "hf-xet",
             "mlx",
             "nelisp",
             "pi-artifacts",
             "pi-btw",
-            "pi-dynamic-workflows",
             "pi-hashline-edit-pro",
             "pi-insights",
             "pi-lens",
+            "pi-markdown-preview",
             "pi-mcp-adapter",
             "pi-ponytail",
             "pi-web-access",
             "rust-overlay",
+            "rtk",
             "sherlock-db",
             "ws",
         }
-        self.assertEqual(len(inventory["packages"]), 188)
+        self.assertEqual(len(inventory["packages"]), 198)
         self.assertEqual(
             {item["name"] for item in inventory["packages"] if not item["managed"]},
             pending,
@@ -801,6 +804,19 @@ class UpdateInventoryTests(unittest.TestCase):
 
 
 class IntegratedWorkflowTests(unittest.TestCase):
+    def setUp(self):
+        local_vars = subprocess.run(
+            ["git", "rev-parse", "--local-env-vars"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.splitlines()
+        self._git_local_env = {
+            name: os.environ.pop(name) for name in local_vars if name in os.environ
+        }
+
+    def tearDown(self):
+        os.environ.update(self._git_local_env)
     def test_update_agents_discards_failed_candidate_transaction(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir) / "repo"

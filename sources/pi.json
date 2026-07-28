@@ -38,6 +38,43 @@
         "kind": "fixed-flake-input"
       }
     },
+    "betterwright": {
+      "hashes": {
+        "npmDepsHash": "sha256-GaWzEjyMTolRN8Y2S/jpaoqxW1LVn0N/l0IjDeGDDBY="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-NEYEHCZoEKV8AeItyZluJfQnZQJAE06w2F7XBnBmSYo=",
+          "url": "https://registry.npmjs.org/betterwright/-/betterwright-1.5.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/betterwright/-/betterwright-1.5.0.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/betterwright-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "package": "betterwright"
+      },
+      "version": "1.5.0"
+    },
+    "betterwright-chromium": {
+      "source": {
+        "args": {
+          "hash": "sha256-B0zvvemozxDy7hXN2xrGdhPr2jsVSeiUitnur75SKtY=",
+          "url": "https://github.com/BetterWright/betterwright/releases/download/chromium-150.0.7871.129/betterwright-chromium-mac-arm64.zip"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://github.com/BetterWright/betterwright/releases/download/chromium-150.0.7871.129/betterwright-chromium-mac-arm64.zip"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "BetterWright pins this browser build and its archive checksum in the extension release"
+      },
+      "version": "150.0.7871.129"
+    },
     "bigpowers": {
       "source": {
         "args": {
@@ -60,6 +97,40 @@
         "kind": "flake-input+copy"
       },
       "version": "2.84.0"
+    },
+    "cymbal": {
+      "artifacts": {
+        "aarch64-linux": {
+          "args": {
+            "hash": "sha256-jeDVCVVxOltfkCSjubNIinnK0Aki6Gg/cCuOJ/CQRng=",
+            "url": "https://github.com/1broseidon/cymbal/releases/download/v0.14.0/cymbal_v0.14.0_linux_arm64.tar.gz"
+          },
+          "fetcher": "fetchurl",
+          "url": "https://github.com/1broseidon/cymbal/releases/download/v0.14.0/cymbal_v0.14.0_linux_arm64.tar.gz"
+        },
+        "x86_64-linux": {
+          "args": {
+            "hash": "sha256-v8lRcit3O18Hw6KRUwaE6nN7ASrYZlBcaXGpLWvZgQ0=",
+            "url": "https://github.com/1broseidon/cymbal/releases/download/v0.14.0/cymbal_v0.14.0_linux_x86_64.tar.gz"
+          },
+          "fetcher": "fetchurl",
+          "url": "https://github.com/1broseidon/cymbal/releases/download/v0.14.0/cymbal_v0.14.0_linux_x86_64.tar.gz"
+        }
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-oiUAn2UJbmPgexIZjI+E3pBUPqPsKOrTG5K3OM7jars=",
+          "url": "https://github.com/1broseidon/cymbal/releases/download/v0.14.0/cymbal_v0.14.0_darwin_arm64.tar.gz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://github.com/1broseidon/cymbal/releases/download/v0.14.0/cymbal_v0.14.0_darwin_arm64.tar.gz"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "Cymbal publishes a coordinated multi-platform release asset set"
+      },
+      "version": "0.14.0"
     },
     "pi-agent-browser-native": {
       "source": {
@@ -97,6 +168,21 @@
       },
       "version": "0.9.0"
     },
+    "pi-blackhole": {
+      "source": {
+        "args": {
+          "hash": "sha256-3LXpb6Y2yAd/73fevpLsKDo8sno3BQ890ejBxROPdkg=",
+          "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.2.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.2.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "pi-blackhole"
+      },
+      "version": "0.4.2"
+    },
     "pi-btw": {
       "artifacts": {
         "flakeInput": {
@@ -130,26 +216,35 @@
       },
       "version": "0.4.1"
     },
-    "pi-dynamic-workflows": {
-      "hashes": {
-        "npmDepsHash": "sha256-49v98jLmhF0K40OoVimaGy8DXpDrsWuhGsKuPbqsm1U="
-      },
+    "pi-caveman": {
       "source": {
         "args": {
-          "hash": "sha256-5bCDyn+yzRr3rUxDzHT+bGbGxYrv8gSl7S3YhN+pZ0U=",
-          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.4.1.tgz"
+          "hash": "sha256-uM65rViCdpOxZSVsQ88GADKvPS4zjaxW3vst4iHKuq4=",
+          "url": "https://registry.npmjs.org/pi-caveman/-/pi-caveman-1.0.7.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.4.1.tgz"
+        "url": "https://registry.npmjs.org/pi-caveman/-/pi-caveman-1.0.7.tgz"
       },
       "update": {
-        "artifacts": [
-          "packages/pi-gallery/locks/pi-dynamic-workflows-package-lock.json"
-        ],
         "kind": "npm-release",
-        "package": "@quintinshaw/pi-dynamic-workflows"
+        "package": "pi-caveman"
       },
-      "version": "3.4.1"
+      "version": "1.0.7"
+    },
+    "pi-cymbal": {
+      "source": {
+        "args": {
+          "hash": "sha256-b62djVl+/tMrFJqLohZVJ9Wjxys9t2cc6oPh90sPZbc=",
+          "url": "https://registry.npmjs.org/pi-cymbal/-/pi-cymbal-0.5.2.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-cymbal/-/pi-cymbal-0.5.2.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "pi-cymbal"
+      },
+      "version": "0.5.2"
     },
     "pi-hashline-edit-pro": {
       "hashes": {
@@ -214,6 +309,27 @@
       },
       "version": "3.8.71"
     },
+    "pi-markdown-preview": {
+      "hashes": {
+        "npmDepsHash": "sha256-OqMYNSceOnbr16g2/GDKUw2hYf+SpB/dwdRPXYg5h1A="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-oR+bCvYM7DlkYmiCDghhAgYayU94duEOBflXBa83pBs=",
+          "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.10.1.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.10.1.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-markdown-preview-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "package": "pi-markdown-preview"
+      },
+      "version": "0.10.1"
+    },
     "pi-model-router": {
       "source": {
         "args": {
@@ -266,6 +382,36 @@
       },
       "version": "2.0.0"
     },
+    "pi-retry": {
+      "source": {
+        "args": {
+          "hash": "sha256-lMNZpMGf1a11uTjoMQLYUp5aDK8mW0gBfPQJgesFPsY=",
+          "url": "https://registry.npmjs.org/@narumitw/pi-retry/-/pi-retry-0.31.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/@narumitw/pi-retry/-/pi-retry-0.31.0.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "@narumitw/pi-retry"
+      },
+      "version": "0.31.0"
+    },
+    "pi-rtk-optimizer": {
+      "source": {
+        "args": {
+          "hash": "sha256-T3xtmO2QqZne7ntaT4MVvQ/Rf5nSECKw0LZPd7wR08g=",
+          "url": "https://registry.npmjs.org/pi-rtk-optimizer/-/pi-rtk-optimizer-0.9.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-rtk-optimizer/-/pi-rtk-optimizer-0.9.0.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "pi-rtk-optimizer"
+      },
+      "version": "0.9.0"
+    },
     "pi-rewind": {
       "source": {
         "args": {
@@ -296,6 +442,21 @@
       },
       "version": "0.1.2"
     },
+    "pi-sidebar": {
+      "source": {
+        "args": {
+          "hash": "sha256-C182ulnhAHmJkVwZmZc2bcf4cp3nQySuRhiXlhJ5a+E=",
+          "url": "https://registry.npmjs.org/@esso0428/pi-sidebar/-/pi-sidebar-0.1.35.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/@esso0428/pi-sidebar/-/pi-sidebar-0.1.35.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "@esso0428/pi-sidebar"
+      },
+      "version": "0.1.35"
+    },
     "pi-web-access": {
       "hashes": {
         "npmDepsHash": "sha256-8onTvv7nUrTXMGvwkMkPEYc+mtpxolzF6Z9EuuB9pbs="
@@ -316,6 +477,40 @@
         "package": "pi-web-access"
       },
       "version": "0.13.0"
+    },
+    "rtk": {
+      "artifacts": {
+        "aarch64-linux": {
+          "args": {
+            "hash": "sha256-SL4uvmMyzrZzAZCRJeogo/VXsHp8ZhTe/tKfm/jh0HQ=",
+            "url": "https://github.com/rtk-ai/rtk/releases/download/v0.44.0/rtk-aarch64-unknown-linux-gnu.tar.gz"
+          },
+          "fetcher": "fetchurl",
+          "url": "https://github.com/rtk-ai/rtk/releases/download/v0.44.0/rtk-aarch64-unknown-linux-gnu.tar.gz"
+        },
+        "x86_64-linux": {
+          "args": {
+            "hash": "sha256-PDMWz8Bo43JDK0Ffrqtz1G+AR3UNSI3ZTQHY2fAWoqE=",
+            "url": "https://github.com/rtk-ai/rtk/releases/download/v0.44.0/rtk-x86_64-unknown-linux-musl.tar.gz"
+          },
+          "fetcher": "fetchurl",
+          "url": "https://github.com/rtk-ai/rtk/releases/download/v0.44.0/rtk-x86_64-unknown-linux-musl.tar.gz"
+        }
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-L2SS/8bFovNVsVmu8X8w5bslCr2AMp3AOgmbVBFjixw=",
+          "url": "https://github.com/rtk-ai/rtk/releases/download/v0.44.0/rtk-aarch64-apple-darwin.tar.gz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://github.com/rtk-ai/rtk/releases/download/v0.44.0/rtk-aarch64-apple-darwin.tar.gz"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "RTK publishes a coordinated multi-platform release asset set"
+      },
+      "version": "0.44.0"
     }
   }
 }

@@ -7,6 +7,7 @@
   piPackage,
   piPackages,
   runCommand,
+  stdenv,
 }:
 
 let
@@ -31,12 +32,23 @@ let
   memberVersionChecks = lib.concatMapStringsSep "\n" (
     id: "expect_version ${roots.${id}}/package.json ${manifest.members.${id}.version}"
   ) manifest.order;
-  supportVersionChecks = lib.concatMapStringsSep "\n" (
-    id:
-    "expect_version ${
-      root manifest.supportSources.${id}.package manifest.supportSources.${id}.attrName
-    }/package.json ${manifest.supportSources.${id}.version}"
-  ) (builtins.attrNames (builtins.removeAttrs manifest.supportSources [ "agent-browser" ]));
+  supportVersionChecks =
+    lib.concatMapStringsSep "\n"
+      (
+        id:
+        "expect_version ${
+          root manifest.supportSources.${id}.package manifest.supportSources.${id}.attrName
+        }/package.json ${manifest.supportSources.${id}.version}"
+      )
+      (
+        builtins.attrNames (
+          builtins.removeAttrs manifest.supportSources [
+            "agent-browser"
+            "cymbal"
+            "rtk"
+          ]
+        )
+      );
   expectedPublicNames = map (id: manifest.members.${id}.publicName) manifest.order;
   expectedSkillCount = builtins.length (
     lib.concatMap (id: manifest.members.${id}.skills or [ ]) manifest.order
@@ -145,16 +157,43 @@ runCommand "pi-gallery-check"
     ! grep -R -E '"npx(\.cmd)?"' ${roots.lens}/dist >/dev/null \
       || fail "Lens still contains a live npx fallback"
 
-    grep -F 'excludeSubagentTools: ["subagent"' \
-      ${roots.workflows}/extensions/workflow.ts >/dev/null \
-      || fail "Dynamic Workflows can recurse through the managed subagent tool"
-    [ -f ${roots.workflows}/skills/workflow-authoring/SKILL.md ]
-    [ -f ${roots.workflows}/skills/workflow-patterns/SKILL.md ]
 
     [ -f ${roots.ponytail}/pi-extension/index.js ]
     [ "$(find ${roots.ponytail}/skills -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 6 ]
 
     [ -f ${roots.browser}/dist/extensions/agent-browser/index.js ]
+    [ -f ${roots.blackhole}/index.ts ]
+    [ ! -e ${roots.blackhole}/node_modules ]
+    [ -f ${roots.caveman}/extensions/caveman.ts ]
+    [ ! -e ${roots.caveman}/node_modules ]
+    [ -f ${roots.retry}/src/index.ts ]
+    [ ! -e ${roots.retry}/node_modules ]
+    [ -f ${roots.markdown-preview}/index.ts ]
+    [ -d ${roots.markdown-preview}/node_modules/puppeteer-core ]
+    [ -f ${roots.sidebar}/extensions/sidebar.ts ]
+    [ -f ${roots.sidebar}/skills/pi-sidebar-ui-helper/SKILL.md ]
+    [ ! -e ${roots.sidebar}/node_modules ]
+    [ -f ${roots.betterwright}/dist/src/pi-extension.js ]
+    [ -d ${roots.betterwright}/node_modules/playwright-core ]
+    [ -d ${roots.betterwright}/node_modules/cloakbrowser ]
+    [ -f ${roots.rtk-optimizer}/index.ts ]
+    [ ! -e ${roots.rtk-optimizer}/node_modules ]
+    [ -f ${roots.cymbal-extension}/dist/index.ts ]
+    [ ! -e ${roots.cymbal-extension}/node_modules ]
+
+    cymbal_version=$(${lib.getExe piPackages.cymbal} --version)
+    printf '%s\n' "$cymbal_version" | grep -F '${manifest.supportSources.cymbal.version}' >/dev/null \
+      || fail "Cymbal version drifted: $cymbal_version"
+
+    rtk_version=$(${lib.getExe piPackages.rtk} --version)
+    printf '%s\n' "$rtk_version" | grep -F '${manifest.supportSources.rtk.version}' >/dev/null \
+      || fail "RTK version drifted: $rtk_version"
+
+    ${lib.optionalString stdenv.hostPlatform.isDarwin ''
+      betterwright_browser_version=$(${lib.getExe piPackages.pi-gallery.betterwrightBrowser} --version)
+      printf '%s\n' "$betterwright_browser_version" | grep -F '${manifest.sourceCatalog.betterwright-chromium.version}' >/dev/null \
+        || fail "BetterWright browser version drifted: $betterwright_browser_version"
+    ''}
 
     browser_version=$(${lib.getExe piPackages.agent-browser} --version)
     printf '%s\n' "$browser_version" | grep -F '${manifest.supportSources.agent-browser.version}' >/dev/null \
@@ -217,10 +256,12 @@ runCommand "pi-gallery-check"
       }
     }
     JSON
+    catalog_timestamp=$(date +%s)000
     cat > "$provider_smoke/agent/models-store.json" <<JSON
     {
       "litellm": {
-        "checkedAt": $(date +%s)000,
+        "checkedAt": $catalog_timestamp,
+        "lastModified": $catalog_timestamp,
         "models": [{
           "id": "native-provider-proof",
           "name": "Native provider proof",
@@ -281,7 +322,7 @@ runCommand "pi-gallery-check"
       || fail "native LiteLLM provider did not expose positron_openai/gpt-5.6-sol"
     grep -F 'litellm' "$provider_smoke/models.log" | \
       grep -F 'native-provider-proof' >/dev/null \
-      || fail "LiteLLM native provider did not load its cached dynamic catalog"
+      || fail "LiteLLM native provider did not load its fresh cached dynamic catalog"
     grep -F 'router' "$provider_smoke/models.log" | grep -F 'sol' >/dev/null \
       || fail "model router did not expose router/sol"
 
@@ -560,15 +601,26 @@ runCommand "pi-gallery-check"
       pi.on("resources_discover", () => ({ skillPaths }));
     }
     EOF
+    cat > "$smoke/active-tools.ts" <<'EOF'
+    import { writeFileSync } from "node:fs";
+    export default function activeTools(pi: any) {
+      pi.on("session_start", () => {
+        writeFileSync(process.env.PI_GALLERY_ACTIVE_TOOLS!, JSON.stringify(pi.getActiveTools().sort()));
+      });
+    }
+    EOF
     (
       cd "$smoke/project"
       HOME="$smoke/home" \
       PI_CODING_AGENT_DIR="$smoke/agent" \
+      PI_GALLERY_ACTIVE_TOOLS="$smoke/active-tools.json" \
       PI_GALLERY_INSTALLER_SENTINEL="$smoke/installer-invocations" \
       PI_OFFLINE=1 \
       PATH="$smoke/sentinels":${
         lib.makeBinPath [
           piPackages.agent-browser
+          piPackages.cymbal
+          piPackages.rtk
         ]
       }:$PATH \
         ${coreutils}/bin/timeout 120 \
@@ -578,9 +630,11 @@ runCommand "pi-gallery-check"
         --no-context-files --no-approve \
         --extension ${gallery}/index.ts \
         --extension "$smoke/all-skills.ts" \
-        <"$smoke/input.jsonl" >"$smoke/output.log" 2>&1
+        --extension "$smoke/active-tools.ts" \
+        <"$smoke/input.jsonl" >"$smoke/output.log" 2>"$smoke/error.log"
     ) || {
       cat "$smoke/output.log" >&2
+      cat "$smoke/error.log" >&2
       fail "aggregate Pi gallery failed to load"
     }
     jq -s -e '
@@ -589,23 +643,64 @@ runCommand "pi-gallery-check"
         .type == "response"
         and .command == "get_commands"
         and .success == true
-        and ([.data.commands[].name] as $names
-          | ([
-              "artifacts-clean",
-              "btw",
-              "btw:tangent",
-              "insights",
-              "ponytail",
-              "rewind",
-              "router",
-              "scroll",
-              "viewer",
-              "workflows"
-            ] - $names | length) == 0)
+        and ([
+          "artifacts-clean",
+          "blackhole",
+          "blackhole-memory",
+          "blackhole-recall",
+          "btw",
+          "btw:tangent",
+          "caveman",
+          "cymbal:remind",
+          "insights",
+          "ponytail",
+          "preview",
+          "preview-browser",
+          "preview-clear-cache",
+          "preview-pdf",
+          "rewind",
+          "router",
+          "rtk",
+          "scroll",
+          "sidebar",
+          "sidebar-git-detail",
+          "sidebar-panels",
+          "sidebar-refresh",
+          "viewer"
+        ] - [.data.commands[].name] | length) == 0
+        and ([.data.commands[].name] | index("workflows") | not)
       )
     ' "$smoke/output.log" >/dev/null || {
       cat "$smoke/output.log" >&2
       fail "new Pi gallery commands were not registered"
+    }
+    jq -e '
+      ([
+        "browser",
+        "browser_download",
+        "browser_evidence",
+        "cymbal_changed",
+        "cymbal_context",
+        "cymbal_diff",
+        "cymbal_impact",
+        "cymbal_impls",
+        "cymbal_importers",
+        "cymbal_index",
+        "cymbal_investigate",
+        "cymbal_map",
+        "cymbal_outline",
+        "cymbal_refs",
+        "cymbal_search",
+        "cymbal_show",
+        "cymbal_structure",
+        "cymbal_trace",
+        "preview_export"
+      ] - . | length) == 0
+      and (index("workflow") | not)
+      and (index("workflow_control") | not)
+    ' "$smoke/active-tools.json" >/dev/null || {
+      cat "$smoke/active-tools.json" >&2
+      fail "new Pi gallery tools were not registered or Dynamic Workflows remained active"
     }
     jq -s -e '
       any(

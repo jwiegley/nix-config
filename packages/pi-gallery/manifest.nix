@@ -22,7 +22,6 @@ in
     "web"
     "lens"
     "ponytail"
-    "workflows"
     "browser"
     "btw"
     "artifacts"
@@ -31,6 +30,14 @@ in
     "router"
     "rewind"
     "scroll"
+    "blackhole"
+    "retry"
+    "markdown-preview"
+    "caveman"
+    "sidebar"
+    "betterwright"
+    "rtk-optimizer"
+    "cymbal-extension"
   ];
 
   members = {
@@ -61,16 +68,6 @@ in
       publicName = "@dietrichgebert/ponytail";
       extension = "pi-extension/index.js";
       skills = [ ];
-    };
-    workflows = member "pi-dynamic-workflows" {
-      attrName = "pi-dynamic-workflows";
-      package = packages.pi-dynamic-workflows or null;
-      publicName = "@quintinshaw/pi-dynamic-workflows";
-      extension = "extensions/workflow.ts";
-      skills = [
-        "skills/workflow-authoring"
-        "skills/workflow-patterns"
-      ];
     };
     browser = member "pi-agent-browser-native" {
       attrName = "pi-agent-browser-native";
@@ -122,6 +119,55 @@ in
       publicName = "pi-scroll";
       extension = "extensions/scroll.ts";
     };
+    blackhole = member "pi-blackhole" {
+      attrName = "pi-blackhole";
+      package = packages.pi-blackhole or null;
+      publicName = "pi-blackhole";
+      extension = "index.ts";
+    };
+    retry = member "pi-retry" {
+      attrName = "pi-retry";
+      package = packages.pi-retry or null;
+      publicName = "@narumitw/pi-retry";
+      extension = "src/index.ts";
+    };
+    markdown-preview = member "pi-markdown-preview" {
+      attrName = "pi-markdown-preview";
+      package = packages.pi-markdown-preview or null;
+      publicName = "pi-markdown-preview";
+      extension = "index.ts";
+    };
+    caveman = member "pi-caveman" {
+      attrName = "pi-caveman";
+      package = packages.pi-caveman or null;
+      publicName = "pi-caveman";
+      extension = "extensions/caveman.ts";
+    };
+    sidebar = member "pi-sidebar" {
+      attrName = "pi-sidebar";
+      package = packages.pi-sidebar or null;
+      publicName = "@esso0428/pi-sidebar";
+      extension = "extensions/sidebar.ts";
+      skills = [ "skills" ];
+    };
+    betterwright = member "betterwright" {
+      attrName = "betterwright";
+      package = packages.betterwright or null;
+      publicName = "betterwright";
+      extension = "dist/src/pi-extension.js";
+    };
+    rtk-optimizer = member "pi-rtk-optimizer" {
+      attrName = "pi-rtk-optimizer";
+      package = packages.pi-rtk-optimizer or null;
+      publicName = "pi-rtk-optimizer";
+      extension = "index.ts";
+    };
+    cymbal-extension = member "pi-cymbal" {
+      attrName = "pi-cymbal";
+      package = packages.pi-cymbal or null;
+      publicName = "pi-cymbal";
+      extension = "dist/index.ts";
+    };
   };
 
   supportSources = {
@@ -132,6 +178,14 @@ in
     bigpowers = member "bigpowers" {
       attrName = "bigpowers";
       package = packages.bigpowers or null;
+    };
+    rtk = member "rtk" {
+      attrName = "rtk";
+      package = packages.rtk or null;
+    };
+    cymbal = member "cymbal" {
+      attrName = "cymbal";
+      package = packages.cymbal or null;
     };
   };
 }

@@ -14,6 +14,7 @@
   python3,
   runCommand,
   stdenv,
+  unzip,
   writeShellScript,
 }:
 
@@ -25,11 +26,18 @@ let
     packages = {
       inherit
         agent-browser
+        betterwright
         bigpowers
+        cymbal
         pi-agent-browser-native
         pi-artifacts
+        pi-blackhole
         pi-btw
-        pi-dynamic-workflows
+        pi-caveman
+        pi-cymbal
+        pi-markdown-preview
+        pi-retry
+        pi-rtk-optimizer
         pi-hashline-edit-pro
         pi-insights
         pi-lens
@@ -38,7 +46,9 @@ let
         pi-provider-litellm
         pi-rewind
         pi-scroll
+        pi-sidebar
         pi-web-access
+        rtk
         ;
     };
   };
@@ -70,7 +80,6 @@ let
       hashline ? false,
       lens ? false,
       webAccess ? false,
-      dynamicWorkflows ? false,
     }:
     runCommand "${name}-release-source"
       {
@@ -109,12 +118,6 @@ let
               '(process.env.PI_WEB_ACCESS_PROVIDER ?? loadConfig().provider)'
         ''}
 
-        ${lib.optionalString dynamicWorkflows ''
-          substituteInPlace "$out/extensions/workflow.ts" \
-            --replace-fail \
-              'excludeSubagentTools: settings.excludeSubagentTools,' \
-              'excludeSubagentTools: ["subagent", ...(settings.excludeSubagentTools ?? [])],'
-        ''}
 
 
         ${lib.optionalString lens ''
@@ -254,11 +257,15 @@ let
     lockFile = ./locks/pi-lens-package-lock.json;
     lens = true;
   };
-  dynamicWorkflowsSource = mkReleaseSource {
-    name = "pi-dynamic-workflows";
-    tarball = releaseTarballs.pi-dynamic-workflows;
-    lockFile = ./locks/pi-dynamic-workflows-package-lock.json;
-    dynamicWorkflows = true;
+  markdownPreviewSource = mkReleaseSource {
+    name = "pi-markdown-preview";
+    tarball = releaseTarballs.pi-markdown-preview;
+    lockFile = ./locks/pi-markdown-preview-package-lock.json;
+  };
+  betterwrightSource = mkReleaseSource {
+    name = "betterwright";
+    tarball = releaseTarballs.betterwright;
+    lockFile = ./locks/betterwright-package-lock.json;
   };
   artifactsSource = mkReleaseSource {
     name = "pi-artifacts";
@@ -289,11 +296,17 @@ let
     src = lensSource;
     npmDepsHash = members.lens.hashes.npmDepsHash;
   };
-  pi-dynamic-workflows = mkNpmPackageRoot {
-    pname = members.workflows.attrName;
-    version = members.workflows.version;
-    src = dynamicWorkflowsSource;
-    npmDepsHash = members.workflows.hashes.npmDepsHash;
+  pi-markdown-preview = mkNpmPackageRoot {
+    pname = members.markdown-preview.attrName;
+    version = members.markdown-preview.version;
+    src = markdownPreviewSource;
+    npmDepsHash = members.markdown-preview.hashes.npmDepsHash;
+  };
+  betterwright = mkNpmPackageRoot {
+    pname = members.betterwright.attrName;
+    version = members.betterwright.version;
+    src = betterwrightSource;
+    npmDepsHash = members.betterwright.hashes.npmDepsHash;
   };
   pi-artifacts = mkNpmPackageRoot {
     pname = members.artifacts.attrName;
@@ -429,6 +442,30 @@ let
     '';
   };
 
+  pi-blackhole = mkCopyRoot {
+    pname = members.blackhole.attrName;
+    version = members.blackhole.version;
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-blackhole} -C ${root} --strip-components=1
+    '';
+  };
+
+  pi-caveman = mkCopyRoot {
+    pname = members.caveman.attrName;
+    version = members.caveman.version;
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-caveman} -C ${root} --strip-components=1
+    '';
+  };
+
+  pi-retry = mkCopyRoot {
+    pname = members.retry.attrName;
+    version = members.retry.version;
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-retry} -C ${root} --strip-components=1
+    '';
+  };
+
   pi-provider-litellm = mkCopyRoot {
     pname = members.litellm.attrName;
     version = members.litellm.version;
@@ -478,6 +515,81 @@ let
       tar -xzf ${releaseTarballs.pi-scroll} -C ${root} --strip-components=1
     '';
   };
+
+  pi-sidebar = mkCopyRoot {
+    pname = members.sidebar.attrName;
+    version = members.sidebar.version;
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-sidebar} -C ${root} --strip-components=1
+    '';
+  };
+
+  pi-rtk-optimizer = mkCopyRoot {
+    pname = members.rtk-optimizer.attrName;
+    version = members.rtk-optimizer.version;
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-rtk-optimizer} -C ${root} --strip-components=1
+    '';
+  };
+
+  pi-cymbal = mkCopyRoot {
+    pname = members.cymbal-extension.attrName;
+    version = members.cymbal-extension.version;
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-cymbal} -C ${root} --strip-components=1
+    '';
+  };
+
+  mkBinaryTool =
+    pname: member:
+    let
+      archive =
+        if stdenv.hostPlatform.isDarwin then
+          releaseTarballs.${member.attrName}
+        else
+          fetchurl member.artifacts.${stdenv.hostPlatform.system}.args;
+    in
+    runCommand "${pname}-${member.version}"
+      {
+        passthru.version = member.version;
+        meta.mainProgram = pname;
+      }
+      ''
+        mkdir -p "$out/bin" "$TMPDIR/unpack"
+        tar -xzf ${archive} -C "$TMPDIR/unpack"
+        binary=$(${findutils}/bin/find "$TMPDIR/unpack" -type f -name ${lib.escapeShellArg pname} -print -quit)
+        test -n "$binary"
+        install -m 0755 "$binary" "$out/bin/${pname}"
+        ${lib.optionalString stdenv.hostPlatform.isLinux ''
+          if ${patchelf}/bin/patchelf --print-interpreter "$out/bin/${pname}" >/dev/null 2>&1; then
+            ${patchelf}/bin/patchelf \
+              --set-interpreter ${stdenv.cc.bintools.dynamicLinker} \
+              --set-rpath ${lib.makeLibraryPath [ stdenv.cc.cc.lib ]} \
+              "$out/bin/${pname}"
+          fi
+        ''}
+      '';
+
+  rtk = mkBinaryTool "rtk" supportSources.rtk;
+  cymbal = mkBinaryTool "cymbal" supportSources.cymbal;
+
+  betterwrightBrowser =
+    runCommand "betterwright-browser-${manifest.sourceCatalog.betterwright-chromium.version}"
+      {
+        nativeBuildInputs = [
+          makeWrapper
+          unzip
+        ];
+        passthru.version = manifest.sourceCatalog.betterwright-chromium.version;
+        meta.mainProgram = "betterwright-chromium";
+      }
+      ''
+        mkdir -p "$out/bin"
+        unzip -q ${fetchurl manifest.sourceCatalog.betterwright-chromium.source.args} -d "$out"
+        binary="$out/mac-arm64/Chromium.app/Contents/MacOS/Chromium"
+        test -x "$binary"
+        makeWrapper "$binary" "$out/bin/betterwright-chromium"
+      '';
 
   agent-browser =
     runCommand "agent-browser-${supportSources.agent-browser.version}"
@@ -548,10 +660,14 @@ let
     _: member: lib.nameValuePair member.attrName member.package
   ) supportSources;
   galleryPackages = memberPackages // supportPackages;
+  galleryIdentifier = id: lib.replaceStrings [ "-" ] [ "_" ] id;
   galleryImports = lib.concatMapStringsSep "\n" (
-    id: "import ${id} from ${builtins.toJSON "${roots.${id}}/${members.${id}.extension}"};"
+    id:
+    "import ${galleryIdentifier id} from ${builtins.toJSON "${roots.${id}}/${members.${id}.extension}"};"
   ) order;
-  galleryRegistrations = lib.concatMapStringsSep ",\n" (id: "            ${id}") order;
+  galleryRegistrations = lib.concatMapStringsSep ",\n" (
+    id: "            ${galleryIdentifier id}"
+  ) order;
 
   pi-gallery =
     runCommand "pi-gallery"
@@ -563,6 +679,9 @@ let
             roots
             ;
           packages = galleryPackages;
+        }
+        // lib.optionalAttrs stdenv.hostPlatform.isDarwin {
+          inherit betterwrightBrowser;
         };
       }
       ''
@@ -575,6 +694,10 @@ let
           process.env.PI_WEB_ACCESS_PROVIDER = "perplexity";
           process.env.PI_LENS_DISABLE_LSP_INSTALL = "1";
           process.env.PI_LENS_AUTO_INSTALL = "0";
+          ${lib.optionalString stdenv.hostPlatform.isDarwin ''
+            process.env.BETTERWRIGHT_CHROMIUM_PATH ??= ${builtins.toJSON "${betterwrightBrowser}/mac-arm64/Chromium.app/Contents/MacOS/Chromium"};
+            process.env.PUPPETEER_EXECUTABLE_PATH ??= process.env.BETTERWRIGHT_CHROMIUM_PATH;
+          ''}
 
           for (const extension of [
         ${galleryRegistrations}

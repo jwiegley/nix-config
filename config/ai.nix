@@ -142,12 +142,14 @@ let
     ast-grep
     bash-language-server
     biome
+    cymbal
     gopls
     nil
     nodejs_22
     pyright
     ruff
     rust-analyzer
+    rtk
     shellcheck
     shfmt
     taplo
