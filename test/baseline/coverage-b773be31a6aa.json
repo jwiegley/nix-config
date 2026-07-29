@@ -12,7 +12,7 @@
     "VPS, Vulcan, and shared-work consumer evidence depends on local or LAN consumer roots and is not GitHub-hosted CI evidence.",
     "readFile, readDir, hashFile, pathExists, copied paths, and some scoped imports are invisible to file-reach diagnostics."
   ],
-  "manifestDigest": "18904ba4eb7a87f8d4641cc0d85973d6b761fb2100c0492abd09ba76488d30fd",
+  "manifestDigest": "00be670a253e57280cda54b7cef497882cd8b52258270b5b930cf70a0e5a3eb6",
   "measurements": {
     "assertionCallReach": {
       "reason": "not measured by structural collection",
@@ -780,7 +780,7 @@
           "budgetSeconds": 180,
           "host": "hera",
           "platform": "darwin-arm64",
-          "seconds": 53.371,
+          "seconds": 51.985,
           "tier": "pre-commit-core"
         }
       ],
@@ -910,9 +910,9 @@
     "kind": "declared-command-recipe"
   },
   "schema": "fleet-coverage/1",
-  "sourceBaseRev": "8dbf5a9dd722dec9ff813deee1b304682a151c34",
-  "sourceProjectionDigest": "d4f046c8669ea3f968eda6ea61e964030063d3420599dfda9d58f48fd580e9da",
-  "sourceTree": "89f8bed236af81eeb5c349395d8970e5536a10eb",
+  "sourceBaseRev": "e6758b353696f5a622773c9ba0116d03613fed56",
+  "sourceProjectionDigest": "89892da1c36ae80bfcaad72c8f1f98587f35d87e9014583b2cfc0937d679fd84",
+  "sourceTree": "6fce5fb57672a262e36551a3d0e864004b130e47",
   "structural": {
     "budgetsSeconds": {
       "ci-on-demand": 1800,
@@ -1851,6 +1851,7 @@
             "pi-lens",
             "pi-markdown-preview",
             "pi-model-router",
+            "pi-multi-pass",
             "pi-ponytail",
             "pi-provider-litellm",
             "pi-retry",

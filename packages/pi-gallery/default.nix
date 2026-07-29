@@ -44,6 +44,7 @@ let
         pi-insights
         pi-lens
         pi-model-router
+        pi-multi-pass
         pi-ponytail
         pi-provider-litellm
         pi-rewind
@@ -564,6 +565,14 @@ let
         --replace-fail \
           $'import { createProvider } from "@earendil-works/pi-ai";\nimport { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";\nimport { openAIResponsesApi } from "@earendil-works/pi-ai/api/openai-responses.lazy";' \
           'import { createProvider, openAICompletionsApi, openAIResponsesApi } from "@earendil-works/pi-ai";'
+    '';
+  };
+
+  pi-multi-pass = mkCopyRoot {
+    pname = members.multi-pass.attrName;
+    version = members.multi-pass.version;
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-multi-pass} -C ${root} --strip-components=1
     '';
   };
 

@@ -128,6 +128,8 @@ runCommand "pi-gallery-check"
       || fail "LiteLLM provider does not derive the Pi session ID"
     grep -F 'next.litellm_session_id = sessionId' ${roots.litellm}/dist/index.js >/dev/null \
       || fail "LiteLLM provider does not inject litellm_session_id"
+    [ -f ${roots.multi-pass}/extensions/multi-sub.ts ]
+    [ ! -e ${roots.multi-pass}/node_modules ]
     [ -f ${roots.router}/extensions/index.ts ]
     [ -f ${roots.router}/extensions/routing.ts ]
     [ ! -e ${roots.router}/node_modules ]
@@ -706,6 +708,9 @@ runCommand "pi-gallery-check"
           "sisyphus",
           "sisyphus-set",
           "insights",
+          "mp-preset",
+          "pool",
+          "subs",
           "parallel",
           "parallel-cleanup",
           "parallel-context-build",

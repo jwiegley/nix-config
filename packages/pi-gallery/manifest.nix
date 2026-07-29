@@ -28,6 +28,7 @@ in
     "artifacts"
     "insights"
     "litellm"
+    "multi-pass"
     "router"
     "rewind"
     "scroll"
@@ -108,6 +109,12 @@ in
       package = packages.pi-provider-litellm or null;
       publicName = "pi-provider-litellm";
       extension = "dist/index.js";
+    };
+    multi-pass = member "pi-multi-pass" {
+      attrName = "pi-multi-pass";
+      package = packages.pi-multi-pass or null;
+      publicName = "pi-multi-pass";
+      extension = "extensions/multi-sub.ts";
     };
     router = member "pi-model-router" {
       attrName = "pi-model-router";
