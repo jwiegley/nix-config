@@ -736,5 +736,14 @@ the post-gate tree check, one real-push `--no-verify`, or the explicit gate made
 paired regression fail. The restored full staged `bin/quality` passes every suite:
 30 publish tests, 19 gate tests, portable evaluation, consumer evaluation 5 ran / 0
 skipped, and signature verification for all nine local commits. Remaining: signed
-fess-fix commit, issue/project closeout, and observation cleanup. No real repository
-push was run or authorized.
+fess-fix commit, issue/project closeout, and observation cleanup at that pre-commit
+boundary. No real repository push was run or authorized.
+
+Signed fess-fix `f04418e8` landed with the unbypassed pre-commit hook passing all seven
+Python suites and affected lint/format checks; `%G? = G`. #89 is CLOSED/COMPLETED,
+all three acceptance boxes are checked, and both project cards are Done. The evidence
+comment is `#issuecomment-5116220697`. No partner-observation Markdown remains.
+
+Next ordered unit is the A4 follow-through: commit the Darwin value-surface backstop
+that #50 and #85 relied on. Local `main` remains unpushed; no push, activation, or
+history rewrite is authorized.
