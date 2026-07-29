@@ -150,7 +150,12 @@ class TestEmptyRangePrePush(PublishHarness):
         config = os.path.join(self.work, "lefthook.yml")
 
         def write_config(with_tree_scope):
-            scope = "  files: git ls-files\n" if with_tree_scope else ""
+            scope = (
+                "  files: '{ git ls-files; printf \"%s\\n\" "
+                "lefthook.yml; }'\n"
+                if with_tree_scope
+                else ""
+            )
             command = (
                 ': {files}; printf ran >>"$EMPTY_RANGE_MARKER"'
                 if with_tree_scope
@@ -199,6 +204,27 @@ class TestEmptyRangePrePush(PublishHarness):
         )
         self.assertEqual(forced.returncode, 0, forced.stdout + forced.stderr)
         self.assertTrue(os.path.exists(marker), forced.stdout + forced.stderr)
+        with open(marker) as fh:
+            self.assertEqual(fh.read(), "ran")
+
+        # A custom-file command that only runs `git ls-files` is still empty for
+        # an empty index. Prove the sentinel also makes that raw-hook case run.
+        os.unlink(marker)
+        git("rm", "-q", "file.txt", cwd=self.work)
+        git("commit", "-q", "--no-gpg-sign", "-m", "empty tree", cwd=self.work)
+        self.assertEqual(git("ls-files", cwd=self.work).stdout, "")
+        git("push", "-q", "--no-verify", "origin", "main", cwd=self.work)
+        empty_index = git(
+            "push",
+            "origin",
+            "main",
+            cwd=self.work,
+            check=False,
+            env={"EMPTY_RANGE_MARKER": marker},
+        )
+        self.assertEqual(
+            empty_index.returncode, 0, empty_index.stdout + empty_index.stderr
+        )
         with open(marker) as fh:
             self.assertEqual(fh.read(), "ran")
 
@@ -258,7 +284,31 @@ class TestRefusals(PublishHarness):
         git("checkout", "-q", "main", cwd=self.work)
         r = self.publish("--rev", side, "--branch", "main")
         self.assertNotEqual(r.returncode, 0)
-        self.assertIn("not an ancestor of main", r.stderr)
+        self.assertIn("must equal the current main branch tip", r.stderr)
+
+    def test_older_revision_is_refused_before_gating_another_tree(self):
+        old_tip = git("rev-parse", "HEAD", cwd=self.work).stdout.strip()
+        new_tip = self._commit("new\n", "new branch tip")
+        before = (self.remote_sha(self.origin), self.remote_sha(self.github))
+
+        r = self.publish("--rev", old_tip, "--branch", "main")
+
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("must equal the current main branch tip", r.stderr)
+        self.assertEqual((self.remote_sha(self.origin), self.remote_sha(self.github)), before)
+        self.assertNotIn(new_tip, before)
+
+    def test_non_current_named_branch_is_refused_before_gating(self):
+        git("checkout", "-q", "-b", "side", cwd=self.work)
+        side_tip = self._commit("side\n", "side branch tip")
+        git("checkout", "-q", "main", cwd=self.work)
+        before = (self.remote_sha(self.origin), self.remote_sha(self.github))
+
+        r = self.publish("--rev", side_tip, "--branch", "side")
+
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("branch 'side' is not checked out", r.stderr)
+        self.assertEqual((self.remote_sha(self.origin), self.remote_sha(self.github)), before)
 
     def test_unknown_argument_is_refused(self):
         r = self.publish("--yolo")
@@ -358,10 +408,20 @@ class TestPartialFailure(PublishHarness):
             fh.write(
                 """#!/bin/sh
 printf '%s\n' "$*" >>"$PUBLISH_GATE_LOG"
+if [ "${PUBLISH_GATE_MUTATE:-}" = dirty ]; then
+    printf dirty >>file.txt
+fi
 exit "${PUBLISH_GATE_EXIT:-0}"
 """
             )
         os.chmod(lefthook, 0o755)
+
+        # Exercise Git's actual pre-push hook path. bin/publish must suppress
+        # these duplicate invocations because it runs the same authority once.
+        hook = os.path.join(self.work, ".git", "hooks", "pre-push")
+        with open(hook, "w") as fh:
+            fh.write("#!/bin/sh\nlefthook run pre-push --force\n")
+        os.chmod(hook, 0o755)
         self.signing_env = {
             "GNUPGHOME": self.gnupghome,
             "PATH": f"{gate_bin}:{os.environ['PATH']}",
@@ -553,6 +613,48 @@ exec "$REAL_GIT" "$@"
         self.assertEqual(before, after)
         self.assertNotIn(head, after)
 
+    def test_dirty_tracked_tree_is_refused_before_the_gate(self):
+        head = self._signed_commit("s\n", "a signed commit")
+        before = (self.remote_sha(self.origin), self.remote_sha(self.github))
+        with open(os.path.join(self.work, "file.txt"), "a") as fh:
+            fh.write("dirty\n")
+
+        r = subprocess.run(
+            [PUBLISH, "--publish"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=clean_env(**self.signing_env),
+        )
+
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("tracked working tree or index is dirty", r.stderr)
+        self.assertFalse(os.path.exists(self.gate_log))
+        self.assertEqual((self.remote_sha(self.origin), self.remote_sha(self.github)), before)
+        self.assertNotIn(head, before)
+
+    def test_gate_mutation_is_refused_before_hooks_are_bypassed(self):
+        head = self._signed_commit("s\n", "a signed commit")
+        before = (self.remote_sha(self.origin), self.remote_sha(self.github))
+
+        r = subprocess.run(
+            [PUBLISH, "--publish"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=clean_env(
+                **{**self.signing_env, "PUBLISH_GATE_MUTATE": "dirty"}
+            ),
+        )
+
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("post-gate: tracked working tree or index is dirty", r.stderr)
+        with open(self.gate_log) as fh:
+            invocations = [line.strip() for line in fh if line.strip()]
+        self.assertEqual(invocations, ["run pre-push --force"])
+        self.assertEqual((self.remote_sha(self.origin), self.remote_sha(self.github)), before)
+        self.assertNotIn(head, before)
+
     def test_mirror_race_already_at_target_is_success(self):
         head = self._signed_commit("s\n", "a signed commit")
         r = subprocess.run(
@@ -740,7 +842,8 @@ class TestSelfConsistency(unittest.TestCase):
         with open(os.path.join(os.path.dirname(HERE), "lefthook.yml")) as fh:
             config = fh.read()
         pre_push = config.split("\npre-push:\n", 1)[1]
-        self.assertIn("  files: git ls-files", pre_push)
+        self.assertIn("git ls-files", pre_push)
+        self.assertIn('printf "%s\\n" lefthook.yml', pre_push)
         self.assertEqual(pre_push.count(": {files};"), 4)
 
 

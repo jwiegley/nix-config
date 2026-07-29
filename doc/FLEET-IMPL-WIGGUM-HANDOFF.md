@@ -705,26 +705,36 @@ push was performed or authorized.
 
 ---
 
-## 2026-07-29 — #89 empty-range pre-push coverage implemented, audit pending
+## 2026-07-29 — #89 empty-range pre-push coverage, fess fixes pending commit
 
-The chosen engineering behavior is revision/tree scope. `lefthook.yml` supplies the
-tracked tree through a custom `files: git ls-files` source, and each pre-push command
-consumes `{files}` through a harmless `:` prefix. A raw push with an empty remote range
-therefore runs all four gates rather than silently skipping them.
+Signed implementation `0e1cf684` chose revision/tree scope. `lefthook.yml` supplied
+the tracked tree through a custom `files` source, and `bin/publish` ran that same
+tracked pre-push group explicitly once after both remote dry-runs. Its focused 26-test
+suite and full staged quality gate passed.
 
-`bin/publish` runs the tracked pre-push group explicitly once with Lefthook's `--force`
-after both remote dry-runs succeed. Only after that proof do its dry-run/real Git push
-commands suppress duplicate hook invocation. A failed explicit gate leaves both
-remotes untouched. The safety authority is still the tracked `pre-push` group; the
-tool does not copy its commands.
+Independent fess found that the explicit gate still evaluated the mutable current
+checkout while `--rev` and `--branch` could name a different commit, that the
+exact-once test had no real Git hook to expose duplicate invocations, and that plain
+`git ls-files` could still produce an empty custom-file set for an empty index.
 
-The test suite performs real empty-range pushes in a throwaway repository: the old
-configuration produces no marker, while the tracked-tree `{files}` configuration runs
-the marker exactly once. Separate tests prove one publish invokes the tracked group
-exactly once and a failing group prevents both real pushes. Removing the explicit gate
-was watched failing both properties, then restored.
+The bounded fix restricts publishing to the exact clean tip of the currently checked
+out branch. `bin/publish` checks that binding before pre-flight and again after the
+explicit gates, so dirty tracked state, an older revision, another branch, a gate
+mutation, or a ref advance cannot make it gate one tree and push another. Untracked
+state remains allowed. Git hooks are suppressed only on the dry-run and real pushes
+after this explicit authority; no gate command is copied into the publisher.
 
-Focused verification: Lefthook config validates; shell/Python lint pass; 26 publish
-tests pass. Remaining: full staged `bin/quality`, signed commit, independent fess,
-issue/project closeout, and observation cleanup. No real repository push was run or
-authorized.
+The custom-file command now appends the existing `lefthook.yml` path, guaranteeing a
+nonempty result even with an empty index. The raw-hook integration test performs both
+ordinary and empty-index empty-range pushes. The signed-publish harness installs a
+real pre-push hook, proving the explicit group runs exactly once across both remotes.
+New refusals cover dirty tracked state, older `--rev`, non-current `--branch`, and a
+gate that dirties the checkout.
+
+Four watched-fail mutations were run and restored: removing the nonempty sentinel,
+the post-gate tree check, one real-push `--no-verify`, or the explicit gate made its
+paired regression fail. The restored full staged `bin/quality` passes every suite:
+30 publish tests, 19 gate tests, portable evaluation, consumer evaluation 5 ran / 0
+skipped, and signature verification for all nine local commits. Remaining: signed
+fess-fix commit, issue/project closeout, and observation cleanup. No real repository
+push was run or authorized.

@@ -44,9 +44,11 @@
 # --dry-run is accepted as a synonym for the default, so existing muscle memory
 # and any caller written against the old interface stay correct.
 #
-# The tracked pre-push group is run explicitly ONCE before any real push. Git's
-# --no-verify then suppresses duplicate hook invocations for the already-verified
-# revision across two dry-runs and two real remotes; it does not skip the gate.
+# The tracked pre-push group is run explicitly ONCE before any real push. The
+# revision is required to be the clean checked-out branch tip both before
+# pre-flight and after the gates. Git's --no-verify then suppresses duplicate hook
+# invocations for that exact verified revision across dry-runs and real remotes;
+# it does not skip the gate.
 # Raw `git push` still runs the installed hook, whose tracked-tree file scope keeps
 # empty remote ranges from turning every command into a silent no-op.
 #
@@ -111,6 +113,34 @@ fi
 short=${rev:0:12}
 
 say "branch $branch at $short"
+
+# Lefthook evaluates the current checkout, whereas Git pushes an object named by
+# $rev. Keep those two trees identical: publication is deliberately restricted to
+# the clean tip of the checked-out branch. Re-checking this after the gates catches
+# a gate that changes tracked state or advances the ref before hooks are bypassed.
+# Untracked files are irrelevant to the committed tree and remain allowed.
+assert_publish_tree() {
+    local phase=$1 current branch_tip tracked_state
+
+    current=$(git symbolic-ref --quiet --short HEAD) ||
+        die "$phase: detached HEAD cannot be matched to the tree being gated"
+    [[ $current == "$branch" ]] ||
+        die "$phase: branch '$branch' is not checked out (current branch: '$current')"
+
+    branch_tip=$(git rev-parse --verify "refs/heads/$branch^{commit}") ||
+        die "$phase: no such branch: $branch"
+    [[ $branch_tip == "$rev" ]] ||
+        die "$phase: revision $short must equal the current $branch branch tip
+    (${branch_tip:0:12}); refusing to gate one tree and publish another"
+
+    tracked_state=$(git status --porcelain=v1 --untracked-files=no) ||
+        die "$phase: could not inspect tracked working-tree state"
+    [[ -z $tracked_state ]] ||
+        die "$phase: tracked working tree or index is dirty; commit or restore it
+    before publishing so the gated tree is exactly $short"
+}
+
+assert_publish_tree "pre-flight"
 
 # ---- Pre-flight ---------------------------------------------------------
 # Everything checkable without mutating anything. Each failure here is cheap;
@@ -249,6 +279,7 @@ say "pre-push: running tracked gates once for $short"
 if ! lefthook run pre-push --force; then
     die "pre-push gates failed. Nothing was pushed anywhere."
 fi
+assert_publish_tree "post-gate"
 say "pre-push: all tracked gates passed once"
 
 # ---- Publish ------------------------------------------------------------

@@ -45,7 +45,9 @@ pre-push:
   # Pre-push gates validate the revision's complete tree, not the diff that happens
   # to remain against one remote. A push-mirror can make {push_files} empty before
   # this hook runs; using the tracked tree keeps the gate non-vacuous in that case.
-  files: git ls-files
+  # The existing config path keeps the custom-file command non-empty even for an
+  # empty index. It is consumed by the leading `:` and is never read as an input.
+  files: '{ git ls-files; printf "%s\n" lefthook.yml; }'
   commands:
     # Evaluates vulcan, vps and the shared-work class against THIS tree, so a
     # change here that would break a consumer fails before it is published rather
