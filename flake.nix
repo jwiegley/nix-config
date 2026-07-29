@@ -527,7 +527,31 @@
                     touch $out
                   '';
 
-              ai-home-manager-contract = pkgs.callPackage ./test/ai/home-manager-contract.nix {
+              ai-home-manager-catalog-renderers = pkgs.callPackage ./test/ai/home-manager-catalog-renderers.nix {
+                inherit inputs src;
+                aiFlake = portableAi;
+                agentResources = agentTestPkgsFor.${system}.agent-resources;
+                homeManagerLib = home-manager.lib;
+                piGallery = agentTestPkgsFor.${system}.pi-gallery;
+                testPkgsFor = agentTestPkgsFor;
+              };
+              ai-home-manager-integration = pkgs.callPackage ./test/ai/home-manager-integration.nix {
+                inherit inputs src;
+                aiFlake = portableAi;
+                agentResources = agentTestPkgsFor.${system}.agent-resources;
+                homeManagerLib = home-manager.lib;
+                piGallery = agentTestPkgsFor.${system}.pi-gallery;
+                testPkgsFor = agentTestPkgsFor;
+              };
+              ai-home-manager-model-sync = pkgs.callPackage ./test/ai/home-manager-model-sync.nix {
+                inherit inputs src;
+                aiFlake = portableAi;
+                agentResources = agentTestPkgsFor.${system}.agent-resources;
+                homeManagerLib = home-manager.lib;
+                piGallery = agentTestPkgsFor.${system}.pi-gallery;
+                testPkgsFor = agentTestPkgsFor;
+              };
+              ai-home-manager-package-selection = pkgs.callPackage ./test/ai/home-manager-package-selection.nix {
                 inherit inputs src;
                 aiFlake = portableAi;
                 agentResources = agentTestPkgsFor.${system}.agent-resources;

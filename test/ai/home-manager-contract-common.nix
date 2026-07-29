@@ -3884,7 +3884,10 @@ let
     "openssl dgst"
   ];
 
-  task10Checks = [
+  # Split by #65 so the five activation-wiring checks -- the only task10
+  # assertions that force a Home Manager host closure -- can be routed to the
+  # integration check instead of dragging that closure into model-sync.
+  task10FactoryChecksHead = [
     (expectEqual "Task 10 factory output shape" (sortedNames task10Sync) [
       "activation"
       "digest"
@@ -3893,6 +3896,9 @@ let
     (expectEqual "Task 10 tool seam is exact" (sortedNames task10FakeTools) task10ToolNames)
     (expectEqual "Task 10 factory DAG edge" task10Sync.activation.after [ "linkGeneration" ])
     (expectEqual "Task 10 factory has no before edge" task10Sync.activation.before [ ])
+  ];
+
+  task10ActivationWiringChecks = [
     (expectEqual "Task 10 Hera activation exists" (task10HasActivation task9Evaluations.hera) true)
     (expectEqual "Task 10 Clio activation is absent" (task10HasActivation task9Evaluations.clio) false)
     (expectEqual "Task 10 Linux activations are absent"
@@ -3918,6 +3924,9 @@ let
       task9Evaluations.hera.config.home.activation.aiManagedModelSync.after
       [ "linkGeneration" ]
     )
+  ];
+
+  task10FactoryChecksTail = [
     (expectEqual "Task 10 digest oracle" task10Sync.digest task10Digest)
     (expectEqual "Task 10 changed digest oracle" task10ChangedSync.digest task10ChangedDigest)
     (expectEqual "Task 10 digest changes with selection" (task10Digest != task10ChangedDigest) true)
@@ -3943,6 +3952,12 @@ let
               -a "OpenAI API Key for iTerm2" \
               >/dev/null 2>&1'') 2)
   ];
+
+  task10FactoryChecks = task10FactoryChecksHead ++ task10FactoryChecksTail;
+
+  # The original name is preserved so the parity aggregate below and any other
+  # reader see exactly the list they saw before the split.
+  task10Checks = task10FactoryChecks ++ task10ActivationWiringChecks;
 
   # Package-selection contract: platform gates and optional AI tooling.
   task11CommonPackageInputs = [
@@ -4081,7 +4096,7 @@ let
       )
     ];
 
-  contractChecks = [
+  contractInlineChecks = [
     (expectEqual "external AI overlay replaces local AI composition"
       externalOverlayProbe.external-ai-marker
       true
@@ -4497,726 +4512,61 @@ let
     (expectReject "missing renderer accepted" (validateWithProfiles missingRendererProfiles))
     (expectReject "filtered default accepted" (validateWithModels filteredDefaultModels))
     (expectReject "anvil-tools accepted" (validateWithItems anvilToolsItems))
-  ]
-  ++ profileChecks
-  ++ reachabilityChecks
-  ++ positronPyTorchSkillSelectionChecks
-  ++ promptdeployReconciliationChecks
-  ++ rendererChecks
-  ++ task9Checks
-  ++ task10Checks
-  ++ task11PackageChecks
-  ++ task11AiperfChecks;
+  ];
+
+  contractChecks =
+    contractInlineChecks
+    ++ profileChecks
+    ++ reachabilityChecks
+    ++ positronPyTorchSkillSelectionChecks
+    ++ promptdeployReconciliationChecks
+    ++ rendererChecks
+    ++ task9Checks
+    ++ task10Checks
+    ++ task11PackageChecks
+    ++ task11AiperfChecks;
+
 in
-assert builtins.deepSeq contractChecks true;
+{
+  # concern 1 -- catalog / renderers
+  inherit
+    contractInlineChecks
+    profileChecks
+    reachabilityChecks
+    rendererChecks
+    positronPyTorchSkillSelectionChecks
+    promptdeployReconciliationChecks
+    assetCheckPython
+    rendererDocumentManifest
+    piExtensionSources
+    piPkgs
+    ;
 
-pkgs.runCommand "ai-home-manager-contract"
-  {
-    nativeBuildInputs = [
-      pkgs.findutils
-      pkgs.jq
-      assetCheckPython
-    ];
-  }
-  ''
-    python3 "${src}/test/ai/statusline-command-test.py"
+  # concern 2 -- home integration & ownership
+  inherit
+    task9Checks
+    task10ActivationWiringChecks
+    task9JohnwHera
+    task9WrappedClaude
+    task9HeraBridge
+    task9Evaluations
+    ;
 
-    test -f "${piExtensionSources.auto-compact-resume}"
-    test -f "${piExtensionSources.nix-gallery}"
-    test -f "${piPkgs.pi-gallery}/share/pi-gallery/projection.json"
-    test -f "${piExtensionSources.pi-mcp-adapter}/package.json"
-    test -f "${piExtensionSources.pi-mcp-adapter}/index.ts"
-    test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/@modelcontextprotocol/sdk"
-    test -d "${piExtensionSources.pi-mcp-adapter}/node_modules/zod"
-    test -f "${piExtensionSources.pi-quiet}/package.json"
-    test -f "${piExtensionSources.pi-quiet}/src/index.ts"
+  # concern 3 -- model synchronization
+  inherit
+    task10FactoryChecks
+    task10Script
+    task10ChangedScript
+    task10Digest
+    task10ChangedDigest
+    modelData
+    alternateModelData
+    ;
 
-    ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "aarch64-darwin") ''
-      profile_path="${task9JohnwHera.config.home.path}"
-      test -x "$profile_path/bin/claude"
-      test -x "$profile_path/bin/claude-real"
-      test -x "$profile_path/bin/agent-http-header-bridge"
-      test -x "$profile_path/bin/persona"
-      grep -Fq 'classify_managed_artifacts' "$profile_path/bin/claude"
-      ! grep -Fq 'classify_managed_artifacts' "$profile_path/bin/claude-real"
-      test "$(readlink -e "$profile_path/bin/claude")" \
-        = "$(readlink -e "${task9WrappedClaude}/bin/claude")"
-      test "$(readlink -e "$profile_path/bin/claude-real")" \
-        = "$(readlink -e "${task9WrappedClaude}/bin/claude-real")"
-      test "$(readlink -e "$profile_path/bin/agent-http-header-bridge")" \
-        = "$(readlink -e "${task9HeraBridge}/bin/agent-http-header-bridge")"
-      test "$(readlink "${task9JohnwHera.config.home.file.".codex".source}")" \
-        = "${task9JohnwHera.config.xdg.configHome}/codex"
-      test "$(readlink "${task9JohnwHera.config.home.file.".factory".source}")" \
-        = "${task9JohnwHera.config.xdg.configHome}/factory"
-      test -f "${task9JohnwHera.config.home.file.".claude/skills/sherlock/SKILL.md".source}"
+  # concern 4 -- package selection
+  inherit task11PackageChecks task11AiperfChecks;
 
-      droid_command="$("${pkgs.jq}/bin/jq" -er '.mcpServers.Ref.command' \
-        "${task9JohnwHera.config.home.file.".config/factory/mcp.json".source}")"
-      test "$droid_command" = agent-http-header-bridge
+  # parity and helpers
+  inherit contractChecks lib;
 
-      fixture_home="${task9JohnwHera.config.home.homeDirectory}"
-      profile_dir="${task9JohnwHera.config.home.profileDirectory}"
-      legacy_bin="$fixture_home/src/scripts"
-      rm -rf "$fixture_home"
-      mkdir -p "$legacy_bin" "$fixture_home/.config/zsh"
-      printf '#!/bin/sh\necho legacy-claude\n' > "$legacy_bin/claude"
-      chmod +x "$legacy_bin/claude"
-      ln -s "$profile_path" "$profile_dir"
-      ln -s "${task9JohnwHera.config.home.file.".zshenv".source}" "$fixture_home/.zshenv"
-      ln -s "${task9JohnwHera.config.home.file.".config/zsh/.zshenv".source}" \
-        "$fixture_home/.config/zsh/.zshenv"
-      ln -s "${task9JohnwHera.config.home.file.".config/zsh/.zprofile".source}" \
-        "$fixture_home/.config/zsh/.zprofile"
-      env -u __HM_SESS_VARS_SOURCED \
-        -u __HM_ZSH_SESS_VARS_SOURCED \
-        -u ZDOTDIR \
-        TASK9_PROFILE="$profile_dir" \
-        TASK9_DROID_COMMAND="$droid_command" \
-        HOME="$fixture_home" \
-        PATH="/usr/bin:/bin" \
-        TERM=dumb \
-        "${task9JohnwHera.config.programs.zsh.package}/bin/zsh" -l -c '
-          set -eo pipefail
-          case "$PATH" in
-            "${task9JohnwHera.config.home.profileDirectory}/bin":*) ;;
-            *) exit 1 ;;
-          esac
-          test "$(command -v claude)" = "$TASK9_PROFILE/bin/claude"
-          test "$(command -v claude-real)" = "$TASK9_PROFILE/bin/claude-real"
-          test "$(command -v "$TASK9_DROID_COMMAND")" \
-            = "$TASK9_PROFILE/bin/$TASK9_DROID_COMMAND"
-          test "$(command -v persona)" = "$TASK9_PROFILE/bin/persona"
-        '
-      rm -rf "${task9JohnwHera.config.home.homeDirectory}"
-
-      activation="${task9Evaluations.hera.activationPackage}/activate"
-      preflight_line="$(grep -nF '_iNote "Activating %s" "aiManagedPreflight"' "$activation" | head -1 | cut -d: -f1)"
-      collision_line="$(grep -nF '_iNote "Activating %s" "checkLinkTargets"' "$activation" | head -1 | cut -d: -f1)"
-      boundary_line="$(grep -nF '_iNote "Activating %s" "writeBoundary"' "$activation" | head -1 | cut -d: -f1)"
-      links_line="$(grep -nF '_iNote "Activating %s" "linkGeneration"' "$activation" | head -1 | cut -d: -f1)"
-      test -n "$preflight_line"
-      test "$preflight_line" -lt "$collision_line"
-      test "$collision_line" -lt "$boundary_line"
-      test "$boundary_line" -lt "$links_line"
-    ''}
-
-    python3 -I - "${rendererDocumentManifest}" <<'PY'
-    import json
-    import subprocess
-    import sys
-    import tomllib
-    from pathlib import Path
-
-    records = json.loads(Path(sys.argv[1]).read_text())
-    errors = []
-
-    for record in records:
-        label = record["label"]
-        document = record["path"]
-        if isinstance(document, dict):
-            text = document["inlineText"]
-        else:
-            path = Path(document)
-            if not path.is_file():
-                errors.append(f"{label}: not a regular file: {path}")
-                continue
-            text = path.read_text()
-
-        if "sourceDirectory" in record:
-            source_directory = Path(record["sourceDirectory"])
-            if not source_directory.is_dir():
-                errors.append(
-                    f"{label}: projection source is not a directory: {source_directory}"
-                )
-            elif record.get("explicitOnly"):
-                if {entry.name for entry in source_directory.iterdir()} != {"SKILL.md", "agents"}:
-                    errors.append(f"{label}: explicit projection has unexpected entries")
-                policy = source_directory / "agents" / "openai.yaml"
-                if not policy.is_file() or policy.read_text() != (
-                    "policy:\n  allow_implicit_invocation: false\n"
-                ):
-                    errors.append(f"{label}: explicit-only policy is missing or incorrect")
-            elif {entry.name for entry in source_directory.iterdir()} != {"SKILL.md"}:
-                errors.append(f"{label}: projection directory must contain only SKILL.md")
-        for fragment in record.get("forbidden", []):
-            if fragment in text:
-                errors.append(f"{label}: contains forbidden fragment {fragment!r}")
-
-        if record["kind"] == "json":
-            parsed = subprocess.run(
-                ["jq", "-e", "."],
-                check=False,
-                capture_output=True,
-                input=text,
-                text=True,
-            )
-            if parsed.returncode:
-                errors.append(f"{label}: jq rejected JSON: {parsed.stderr.strip()}")
-                continue
-            actual = json.loads(text)
-            if not record.get("structuralOnly") and actual != record["expected"]:
-                errors.append(f"{label}: semantic JSON mismatch")
-
-            catalog_contract = record.get("catalogContract")
-            if catalog_contract:
-                source_path = Path(catalog_contract["sourcePath"])
-                try:
-                    source_catalog = json.loads(source_path.read_text())
-                except (OSError, json.JSONDecodeError) as error:
-                    errors.append(f"{label}: invalid locked source catalog: {error}")
-                    continue
-
-                source_models = (
-                    source_catalog.get("models")
-                    if isinstance(source_catalog, dict)
-                    else None
-                )
-                actual_models = actual.get("models") if isinstance(actual, dict) else None
-                if not isinstance(source_models, list):
-                    errors.append(f"{label}: locked source catalog has no models list")
-                    continue
-                if not isinstance(actual_models, list):
-                    errors.append(f"{label}: rendered catalog has no models list")
-                    continue
-
-                native_slug = catalog_contract["nativeSlug"]
-                native_models = [
-                    model
-                    for model in source_models
-                    if isinstance(model, dict) and model.get("slug") == native_slug
-                ]
-                if len(native_models) != 1:
-                    errors.append(
-                        f"{label}: locked source catalog contains {len(native_models)} "
-                        f"native {native_slug!r} models, expected exactly one"
-                    )
-                if len(actual_models) != len(source_models) + 1:
-                    errors.append(
-                        f"{label}: rendered catalog model count is {len(actual_models)}, "
-                        f"expected {len(source_models) + 1}"
-                    )
-
-                expected_models = catalog_contract["expectedModels"]
-                expected_slugs = {model["slug"] for model in expected_models}
-                metadata_keys = tuple(expected_models[0])
-                actual_sol_models = [
-                    {key: model.get(key) for key in metadata_keys}
-                    for model in actual_models
-                    if isinstance(model, dict) and model.get("slug") in expected_slugs
-                ]
-                if actual_sol_models != expected_models:
-                    errors.append(f"{label}: Sol model catalog metadata mismatch")
-        elif record["kind"] == "toml":
-            try:
-                actual = tomllib.loads(text)
-            except tomllib.TOMLDecodeError as error:
-                errors.append(f"{label}: tomllib rejected TOML: {error}")
-                continue
-            if actual != record["expected"]:
-                errors.append(f"{label}: semantic TOML mismatch")
-        elif record["kind"] == "text":
-            if text != record["expectedText"]:
-                errors.append(f"{label}: exact text mismatch")
-        elif record["kind"] == "frontmatter":
-            if text.startswith("---\n"):
-                try:
-                    metadata_text, body = text[4:].split("\n---\n", 1)
-                    metadata = json.loads(metadata_text)
-                except (ValueError, json.JSONDecodeError) as error:
-                    errors.append(f"{label}: invalid frontmatter: {error}")
-                    continue
-            else:
-                metadata = {}
-                body = text
-            if metadata != record["expectedMetadata"]:
-                errors.append(f"{label}: semantic frontmatter mismatch")
-            if body != record["expectedBody"]:
-                errors.append(f"{label}: exact body mismatch")
-        else:
-            errors.append(f"{label}: unknown fixture kind {record['kind']!r}")
-
-    if errors:
-        print("ai-home-manager-contract: renderer document check failed:", file=sys.stderr)
-        for error in errors:
-            print(f"  {error}", file=sys.stderr)
-        raise SystemExit(1)
-    PY
-
-    python3 -I - "${src}/config/ai" <<'PY'
-    import os
-    import re
-    import stat
-    import sys
-    import yaml
-    from pathlib import Path
-
-    root = Path(sys.argv[1])
-
-    missing = [
-        category
-        for category in ("agents", "commands", "skills", "prompts")
-        if not (root / category).is_dir()
-    ]
-    missing.extend(
-        name
-        for name in (
-            "catalog.nix",
-            "model-policy.nix",
-            "model-registry.json",
-            "model-sync.nix",
-            "models.nix",
-            "preflight.nix",
-        )
-        if not (root / name).is_file()
-    )
-    statusline = root / "statusline-command.sh"
-    if not statusline.is_file():
-        missing.append("statusline")
-    if missing:
-        print("ai-home-manager-contract: missing asset categories:", file=sys.stderr)
-        for category in missing:
-            print(f"  {category}", file=sys.stderr)
-        raise SystemExit(1)
-
-    errors = []
-    if root.is_symlink():
-        errors.append("config/ai must not be a symlink")
-
-    paths = []
-    for directory, directories, files in os.walk(root, followlinks=False):
-        directories.sort()
-        files.sort()
-        base = Path(directory)
-        paths.extend(base / name for name in directories)
-        paths.extend(base / name for name in files)
-
-    resolved_root = root.resolve(strict=True)
-    canonical_roots = {
-        "agents",
-        "commands",
-        "skills",
-        "prompts",
-        "statusline-command.sh",
-    }
-    asset_paths = [
-        path
-        for path in paths
-        if path.relative_to(root).parts[0] in canonical_roots
-    ]
-
-    for path in asset_paths:
-        mode = path.lstat().st_mode
-        if not (stat.S_ISDIR(mode) or stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
-            errors.append(f"unsupported file type: {path.relative_to(root)}")
-
-    for path in paths:
-        if not path.is_symlink():
-            continue
-        try:
-            target = path.resolve(strict=True)
-            target.relative_to(resolved_root)
-        except (OSError, RuntimeError, ValueError) as error:
-            errors.append(f"dangling or escaping symlink: {path.relative_to(root)}: {error}")
-
-    if errors:
-        print("ai-home-manager-contract: asset check failed:", file=sys.stderr)
-        for error in errors:
-            print(f"  {error}", file=sys.stderr)
-        raise SystemExit(1)
-
-    for path in paths:
-        name = path.name.lower()
-        if (
-            name.startswith(".promptdeploy")
-            or name.startswith(".env")
-            or "manifest" in name
-            or "receipt" in name
-            or (name.endswith(".json") and "selector" in name)
-        ):
-            errors.append(f"forbidden committed artifact: {path.relative_to(root)}")
-
-    renderers = root / "renderers"
-    if not renderers.is_dir():
-        errors.append("not a renderer directory: renderers")
-    else:
-        required_renderers = {
-            "claude.nix",
-            "codex.nix",
-            "droid.nix",
-            "merge-files.nix",
-            "opencode.nix",
-            "pi.nix",
-        }
-        for name in required_renderers:
-            if not (renderers / name).is_file():
-                errors.append(f"not a regular renderer: renderers/{name}")
-
-    for category in ("agents", "commands", "prompts"):
-        entries = list((root / category).iterdir())
-        if not entries:
-            errors.append(f"empty asset category: {category}")
-        for entry in entries:
-            if entry.suffix.lower() != ".md" or not entry.is_file():
-                errors.append(f"not a Markdown asset: {entry.relative_to(root)}")
-
-    skill_entries = sorted((root / "skills").iterdir(), key=lambda path: path.name)
-    if not skill_entries:
-        errors.append("empty asset category: skills")
-    for skill in skill_entries:
-        if not skill.is_dir():
-            errors.append(f"not a skill tree: {skill.relative_to(root)}")
-            continue
-
-        skill_document = skill / "SKILL.md"
-        if not skill_document.is_file():
-            errors.append(f"missing SKILL.md: {skill.relative_to(root)}")
-            continue
-
-        try:
-            lines = skill_document.read_text(encoding="utf-8").splitlines()
-        except (OSError, UnicodeError) as error:
-            errors.append(
-                f"cannot read UTF-8 skill {skill_document.relative_to(root)}: {error}"
-            )
-            continue
-        if not lines or lines[0].strip() != "---":
-            errors.append(f"missing frontmatter: {skill_document.relative_to(root)}")
-            continue
-        try:
-            end = next(
-                index
-                for index, line in enumerate(lines[1:], start=1)
-                if line.strip() == "---"
-            )
-        except StopIteration:
-            errors.append(f"unterminated frontmatter: {skill_document.relative_to(root)}")
-            continue
-        try:
-            metadata = yaml.safe_load("\n".join(lines[1:end]))
-        except yaml.YAMLError as error:
-            errors.append(
-                f"malformed YAML frontmatter: {skill_document.relative_to(root)}: {error}"
-            )
-            continue
-        if not isinstance(metadata, dict):
-            errors.append(
-                f"frontmatter is not a mapping: {skill_document.relative_to(root)}"
-            )
-            continue
-
-        name = metadata.get("name")
-        description = metadata.get("description")
-        if not isinstance(name, str) or not name.strip():
-            errors.append(f"missing skill name: {skill_document.relative_to(root)}")
-        elif name != skill.name:
-            errors.append(
-                f"skill name {name!r} does not match directory {skill.name!r}: "
-                f"{skill_document.relative_to(root)}"
-            )
-        if not isinstance(description, str) or not description.strip():
-            errors.append(f"missing skill description: {skill_document.relative_to(root)}")
-
-    if not os.access(statusline, os.X_OK):
-        errors.append("statusline-command.sh is not executable")
-
-    deployment_field = re.compile(
-        r"(?:^|[,{])\s*['\"]?(only|except|droid_deploy)['\"]?\s*:",
-        re.MULTILINE,
-    )
-    for path in paths:
-        if path.suffix.lower() != ".md" or not path.is_file():
-            continue
-        try:
-            lines = path.read_text(encoding="utf-8").splitlines()
-        except (OSError, UnicodeError) as error:
-            errors.append(f"cannot read UTF-8 Markdown {path.relative_to(root)}: {error}")
-            continue
-        if not lines or lines[0].strip() != "---":
-            continue
-        try:
-            end = next(
-                index
-                for index, line in enumerate(lines[1:], start=1)
-                if line.strip() == "---"
-            )
-        except StopIteration:
-            errors.append(f"unterminated frontmatter: {path.relative_to(root)}")
-            continue
-        match = deployment_field.search("\n".join(lines[1:end]))
-        if match:
-            errors.append(
-                f"deployment field {match.group(1)!r}: {path.relative_to(root)}"
-            )
-
-    if errors:
-        print("ai-home-manager-contract: asset check failed:", file=sys.stderr)
-        for error in errors:
-            print(f"  {error}", file=sys.stderr)
-        raise SystemExit(1)
-    PY
-
-    task10_root="$TMPDIR/task10-model-sync"
-    task10_sentinel='TASK10-CREDENTIAL-SENTINEL-DO-NOT-LEAK'
-    mkdir -p "$task10_root"
-
-    task10_new_case() {
-      label=$1
-      task10_case="$task10_root/$label"
-      rm -rf "$task10_case"
-      mkdir -p "$task10_case/fake/prefs" "$task10_case/xdg-state"
-      export TASK10_FAKE_STATE="$task10_case/fake"
-      export TASK10_LOG="$task10_case/invocations.log"
-      export XDG_STATE_HOME="$task10_case/xdg-state"
-      export TASK10_EXPECTED_MODEL='${modelData.syncInputs.model}'
-      export TASK10_EXPECTED_URL='${modelData.syncInputs.chatUrl}'
-      unset TASK10_FAIL_AT
-      : > "$TASK10_LOG"
-      : > "$task10_case/stdout"
-      : > "$task10_case/stderr"
-      printf '%s' "$task10_sentinel" > "$TASK10_FAKE_STATE/devonthink-credential"
-      : > "$TASK10_FAKE_STATE/iterm-key-metadata"
-      task10_stamp="$XDG_STATE_HOME/nix-managed-ai/model-sync-v1.sha256"
-    }
-
-    task10_assert_redacted() {
-      for output in "$TASK10_LOG" "$task10_case/stdout" "$task10_case/stderr"; do
-        ! grep -Fq "$task10_sentinel" "$output"
-      done
-      test '${task10Digest}' != "$task10_sentinel"
-      test '${task10ChangedDigest}' != "$task10_sentinel"
-      if [ -e "$task10_stamp" ] && [ ! -d "$task10_stamp" ]; then
-        ! grep -Fq "$task10_sentinel" "$task10_stamp"
-      fi
-      ! find "$TASK10_FAKE_STATE/prefs" -type f -exec grep -Fq "$task10_sentinel" {} \; \
-        -print | grep -q .
-    }
-
-    task10_run_ok() {
-      "$1" > "$task10_case/stdout" 2> "$task10_case/stderr"
-      task10_assert_redacted
-    }
-
-    task10_run_fail() {
-      if "$1" > "$task10_case/stdout" 2> "$task10_case/stderr"; then
-        echo "Task 10 expected failure: $task10_case" >&2
-        exit 1
-      fi
-      task10_assert_redacted
-    }
-
-    task10_assert_exact_app_calls() {
-      ${pkgs.python3}/bin/python3 - \
-        "$TASK10_LOG" "$TASK10_EXPECTED_MODEL" "$TASK10_EXPECTED_URL" <<'PY'
-    import os
-    import sys
-
-    log_path, model, url = sys.argv[1:]
-    with open(log_path, encoding="utf-8") as stream:
-        calls = [tuple(line.rstrip("\n").split("\t")) for line in stream]
-
-    defaults = sorted(call[1:] for call in calls if call[0] == "defaults")
-    devon = "com.devon-technologies.think"
-    iterm = "com.googlecode.iterm2"
-    writes = [
-        ("write", devon, "ChatEngine", "-int", "2"),
-        ("write", devon, "ChatModel-OpenAI (Compatible)", "-string", model),
-        ("write", devon, "OpenAI (Compatible)URL", "-string", url),
-        ("write", devon, "ChatSummaryEngine", "-int", "2"),
-        ("write", devon, "ChatSummaryModel", "-string", model),
-        ("write", iterm, "UseRecommendedAIModel", "-bool", "false"),
-        ("write", iterm, "AiModel", "-string", model),
-        ("write", iterm, "AITermAPI", "-int", "1"),
-        ("write", iterm, "AitermURL", "-string", url),
-        ("write", iterm, "AIVendor", "-int", "2"),
-    ]
-    expected_defaults = sorted(
-        writes + [("read", domain, key) for _, domain, key, _, _ in writes]
-    )
-    if defaults != expected_defaults:
-        raise SystemExit(
-            f"defaults allowlist mismatch:\nactual={defaults!r}\n"
-            f"expected={expected_defaults!r}"
-        )
-
-    expected_security = (
-        "find-generic-password",
-        "-s",
-        "iTerm2 API Keys",
-        "-a",
-        "OpenAI API Key for iTerm2",
-    )
-    security = [call[1:] for call in calls if call[0] == "security"]
-    if security != [expected_security, expected_security]:
-        raise SystemExit(f"security metadata calls mismatch: {security!r}")
-
-    probes = [call[1:] for call in calls if call[0] == "devonthinkKeyPresent"]
-    if probes != [(), ()]:
-        raise SystemExit(f"DEVONthink Boolean probes mismatch: {probes!r}")
-
-    pgrep = [call[1:] for call in calls if call[0] == "pgrep"]
-    expected_pgrep = [
-        ("-x", "DEVONthink"),
-        ("-x", "DEVONthink 3"),
-        ("-x", "iTerm2"),
-    ]
-    if pgrep != expected_pgrep:
-        raise SystemExit(f"process guard calls mismatch: {pgrep!r}")
-
-    state_dir = os.path.join(os.environ["XDG_STATE_HOME"], "nix-managed-ai")
-    stamp = os.path.join(state_dir, "model-sync-v1.sha256")
-    expected_exact = {
-        "mkdir": [("-p", "--", state_dir)],
-        "mktemp": [(stamp + ".tmp.XXXXXX",)],
-        "rm": [],
-    }
-    for tool, expected in expected_exact.items():
-        actual = [call[1:] for call in calls if call[0] == tool]
-        if actual != expected:
-            raise SystemExit(f"{tool} calls mismatch: {actual!r}")
-
-    moves = [call[1:] for call in calls if call[0] == "mv"]
-    if len(moves) != 1:
-        raise SystemExit(f"mv call count mismatch: {moves!r}")
-    move = moves[0]
-    if (
-        len(move) != 4
-        or move[:2] != ("-fT", "--")
-        or not move[2].startswith(stamp + ".tmp.")
-        or move[3] != stamp
-    ):
-        raise SystemExit(f"atomic mv shape mismatch: {move!r}")
-
-    expected_tools = {
-        "defaults",
-        "devonthinkKeyPresent",
-        "mkdir",
-        "mktemp",
-        "mv",
-        "pgrep",
-        "security",
-    }
-    actual_tools = {call[0] for call in calls}
-    if actual_tools != expected_tools:
-        raise SystemExit(f"successful tool inventory mismatch: {actual_tools!r}")
-    PY
-    }
-
-    # First run writes only the ten approved fields, verifies them, and stamps.
-    task10_new_case first
-    task10_run_ok '${task10Script}'
-    test "$(cat "$task10_stamp")" = '${task10Digest}'
-    task10_assert_exact_app_calls
-    test -z "$(find "$(dirname "$task10_stamp")" -name 'model-sync-v1.sha256.tmp.*' -print)"
-
-    # The digest fast path invokes no parameterized tool at all.
-    : > "$TASK10_LOG"
-    task10_run_ok '${task10Script}'
-    test ! -s "$TASK10_LOG"
-    test "$(cat "$task10_stamp")" = '${task10Digest}'
-
-    # A corrupt multi-line stamp is never accepted as an unchanged digest.
-    printf '%s\n' corrupt-trailing-line >> "$task10_stamp"
-    : > "$TASK10_LOG"
-    task10_run_ok '${task10Script}'
-    test "$(cat "$task10_stamp")" = '${task10Digest}'
-    task10_assert_exact_app_calls
-
-    # A changed nonsecret selection updates once and replaces the digest.
-    : > "$TASK10_LOG"
-    export TASK10_EXPECTED_MODEL='${alternateModelData.syncInputs.model}'
-    export TASK10_EXPECTED_URL='${alternateModelData.syncInputs.chatUrl}'
-    task10_run_ok '${task10ChangedScript}'
-    test "$(cat "$task10_stamp")" = '${task10ChangedDigest}'
-    task10_assert_exact_app_calls
-
-    # Every guarded process independently defers before credentials or writes.
-    task10_process_index=0
-    for process_name in DEVONthink 'DEVONthink 3' iTerm2; do
-      task10_process_index=$((task10_process_index + 1))
-      task10_new_case "running-$task10_process_index"
-      printf '%s' "$process_name" > "$TASK10_FAKE_STATE/running"
-      task10_run_ok '${task10Script}'
-      test ! -e "$task10_stamp"
-      grep -Fq \
-        'nix-managed model sync: deferred while DEVONthink or iTerm2 is running' \
-        "$task10_case/stderr"
-      ! grep -Eq $'^(defaults|devonthinkKeyPresent|security)\t' "$TASK10_LOG"
-      grep -Fq "pgrep	-x	$process_name" "$TASK10_LOG"
-    done
-
-    # An indeterminate process check fails closed.
-    task10_new_case pgrep-error
-    export TASK10_FAIL_AT=pgrep-error
-    task10_run_fail '${task10Script}'
-    test ! -e "$task10_stamp"
-    ! grep -Eq $'^(defaults|devonthinkKeyPresent|security)\t' "$TASK10_LOG"
-
-    # Missing credential-presence metadata blocks before any preference write.
-    task10_new_case missing-devonthink-key
-    rm "$TASK10_FAKE_STATE/devonthink-credential"
-    task10_run_fail '${task10Script}'
-    test ! -e "$task10_stamp"
-    ! grep -Fq $'defaults\twrite\t' "$TASK10_LOG"
-
-    task10_new_case missing-iterm-key
-    rm "$TASK10_FAKE_STATE/iterm-key-metadata"
-    task10_run_fail '${task10Script}'
-    test ! -e "$task10_stamp"
-    ! grep -Fq $'defaults\twrite\t' "$TASK10_LOG"
-
-    # Failure in the first updater never starts the second updater or stamps.
-    task10_new_case first-updater-failure
-    export TASK10_FAIL_AT=devonthink-update
-    task10_run_fail '${task10Script}'
-    test ! -e "$task10_stamp"
-    ! grep -Fq $'defaults\twrite\tcom.googlecode.iterm2\t' "$TASK10_LOG"
-
-    # Failure in the second updater preserves the old stamp; retry succeeds.
-    task10_new_case second-updater-failure
-    mkdir -p "$(dirname "$task10_stamp")"
-    printf '%s' stale-digest > "$task10_stamp"
-    export TASK10_FAIL_AT=iterm-update
-    task10_run_fail '${task10Script}'
-    test "$(cat "$task10_stamp")" = stale-digest
-    grep -Fq $'defaults\twrite\tcom.devon-technologies.think\t' "$TASK10_LOG"
-    grep -Fq $'defaults\twrite\tcom.googlecode.iterm2\t' "$TASK10_LOG"
-    unset TASK10_FAIL_AT
-    : > "$TASK10_LOG"
-    task10_run_ok '${task10Script}'
-    test "$(cat "$task10_stamp")" = '${task10Digest}'
-    task10_assert_exact_app_calls
-
-    # Readback failure also preserves the old digest and retries cleanly.
-    task10_new_case verification-failure
-    mkdir -p "$(dirname "$task10_stamp")"
-    printf '%s' old-digest > "$task10_stamp"
-    export TASK10_FAIL_AT=iterm-verify
-    task10_run_fail '${task10Script}'
-    test "$(cat "$task10_stamp")" = old-digest
-    unset TASK10_FAIL_AT
-    : > "$TASK10_LOG"
-    task10_run_ok '${task10Script}'
-    test "$(cat "$task10_stamp")" = '${task10Digest}'
-
-    # Failed atomic replacement preserves the old stamp and removes its temp.
-    task10_new_case rename-failure
-    mkdir -p "$(dirname "$task10_stamp")"
-    printf '%s' '${task10Digest}' > "$task10_stamp"
-    export TASK10_EXPECTED_MODEL='${alternateModelData.syncInputs.model}'
-    export TASK10_EXPECTED_URL='${alternateModelData.syncInputs.chatUrl}'
-    export TASK10_FAIL_AT=rename
-    task10_run_fail '${task10ChangedScript}'
-    test "$(cat "$task10_stamp")" = '${task10Digest}'
-    test -z "$(find "$(dirname "$task10_stamp")" -name 'model-sync-v1.sha256.tmp.*' -print)"
-    grep -Fq $'mv\t-fT\t--\t' "$TASK10_LOG"
-    grep -Fq $'rm\t-f\t--\t' "$TASK10_LOG"
-
-    unset TASK10_FAIL_AT
-    : > "$TASK10_LOG"
-    task10_run_ok '${task10ChangedScript}'
-    test "$(cat "$task10_stamp")" = '${task10ChangedDigest}'
-    test -z "$(find "$(dirname "$task10_stamp")" -name 'model-sync-v1.sha256.tmp.*' -print)"
-
-    touch "$out"
-  ''
+}
