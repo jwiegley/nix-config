@@ -742,7 +742,7 @@ let
     "import ${galleryIdentifier id} from ${builtins.toJSON "${roots.${id}}/${members.${id}.extension}"};"
   ) order;
   galleryRegistrations = lib.concatMapStringsSep ",\n" (
-    id: "            ${galleryIdentifier id}"
+    id: "            [${builtins.toJSON id}, ${galleryIdentifier id}]"
   ) order;
 
   pi-gallery =
@@ -764,6 +764,8 @@ let
         root="$out/share/pi-gallery"
         mkdir -p "$root"
         cat > "$root/index.ts" <<'TS'
+        import { writeFileSync } from "node:fs";
+
         ${galleryImports}
 
         export default async function nixGallery(pi: unknown) {
@@ -775,16 +777,48 @@ let
             process.env.PUPPETEER_EXECUTABLE_PATH ??= process.env.BETTERWRIGHT_CHROMIUM_PATH;
           ''}
 
-          for (const extension of [
+          const toolOwnersFile = process.env.PI_GALLERY_TOOL_OWNERS_FILE;
+          const toolOwners: Record<string, string[]> = {};
+          for (const [owner, extension] of [
         ${galleryRegistrations}
-          ]) {
-            await extension(pi as never);
+          ] as const) {
+            const extensionApi = toolOwnersFile
+              ? new Proxy(pi as object, {
+                  get(target, property) {
+                    const value = Reflect.get(target, property, target);
+                    if (property !== "registerTool") {
+                      return typeof value === "function" ? value.bind(target) : value;
+                    }
+                    if (typeof value !== "function") {
+                      throw new Error("Pi registerTool API is not callable");
+                    }
+                    return (...args: unknown[]) => {
+                      const tool = args[0] as { name?: unknown } | undefined;
+                      if (typeof tool?.name !== "string") {
+                        throw new Error(`Gallery member ''${owner} registered an unnamed tool`);
+                      }
+                      (toolOwners[tool.name] ??= []).push(owner);
+                      return Reflect.apply(value, target, args);
+                    };
+                  },
+                  set(target, property, value) {
+                    return Reflect.set(target, property, value, target);
+                  },
+                })
+              : pi;
+            await extension(extensionApi as never);
           }
 
-          (pi as { on: (event: string, handler: () => unknown) => void }).on("resources_discover", () => ({
+          const extensionApi = pi as { on: (event: string, handler: () => unknown) => void };
+          extensionApi.on("resources_discover", () => ({
             skillPaths: ${builtins.toJSON (lib.concatMap (item: item.skills or [ ]) projection.packages)},
             promptPaths: ${builtins.toJSON (lib.concatMap (item: item.prompts or [ ]) projection.packages)},
           }));
+          if (toolOwnersFile) {
+            extensionApi.on("session_start", () => {
+              writeFileSync(toolOwnersFile, JSON.stringify(toolOwners));
+            });
+          }
         }
         TS
         cat > "$root/projection.json" <<'JSON'

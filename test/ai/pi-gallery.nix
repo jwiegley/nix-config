@@ -646,6 +646,7 @@ runCommand "pi-gallery-check"
       HOME="$smoke/home" \
       PI_CODING_AGENT_DIR="$smoke/agent" \
       PI_GALLERY_ACTIVE_TOOLS="$smoke/active-tools.json" \
+      PI_GALLERY_TOOL_OWNERS_FILE="$smoke/tool-owners.json" \
       PI_GALLERY_INSTALLER_SENTINEL="$smoke/installer-invocations" \
       PI_OFFLINE=1 \
       PATH="$smoke/sentinels":${
@@ -735,12 +736,15 @@ runCommand "pi-gallery-check"
       cat "$smoke/output.log" >&2
       fail "new Pi gallery commands were not registered"
     }
-    jq -e '
-      ([
+    cat > "$smoke/expected-active-tools.json" <<'JSON'
+      [
+        "agent_browser",
+        "bash",
         "batch_web_fetch",
         "browser",
         "browser_download",
         "browser_evidence",
+        "browser_login",
         "cymbal_changed",
         "cymbal_context",
         "cymbal_diff",
@@ -756,20 +760,80 @@ runCommand "pi-gallery-check"
         "cymbal_show",
         "cymbal_structure",
         "cymbal_trace",
+        "delete_artifact",
+        "delete_artifacts",
+        "edit",
+        "export_artifact",
         "get_goal",
-        "propose_goal_draft",
+        "intercom",
+        "lens_diagnostics",
+        "list_artifacts",
+        "lsp_diagnostics",
+        "module_report",
+        "pi_lens_activate_tools",
         "preview_export",
+        "propose_goal_draft",
+        "read",
+        "read_enclosing",
+        "read_symbol",
+        "recall",
+        "render_artifact",
+        "replace",
+        "scaffold_artifact",
         "subagent",
         "subagent_supervisor",
+        "subagent_wait",
+        "symbol_search",
+        "undo_last_replace",
+        "web_fetch",
+        "web_search",
         "workflow",
         "workflow_control",
-        "web_fetch",
-        "web_search"
-      ] - . | length) == 0
-    ' "$smoke/active-tools.json" >/dev/null || {
+        "write"
+      ]
+    JSON
+    validate_active_tools() {
+      jq -e --slurpfile expected "$smoke/expected-active-tools.json" '
+        . as $actual
+        | (($actual | sort) == ($expected[0] | sort))
+          and (($actual | length) == ($actual | unique | length))
+      ' "$1" >/dev/null
+    }
+    validate_active_tools "$smoke/active-tools.json" || {
       cat "$smoke/active-tools.json" >&2
       fail "new Pi gallery tools were not registered or a removed extension remained active"
     }
+    jq '. + ["unexpected_gallery_tool"]' "$smoke/active-tools.json" \
+      > "$smoke/active-tools-extra.json"
+    if validate_active_tools "$smoke/active-tools-extra.json"; then
+      fail "active-tools gate accepted an undeclared tool"
+    fi
+    jq '. + ["web_search"]' "$smoke/active-tools.json" \
+      > "$smoke/active-tools-duplicate.json"
+    if validate_active_tools "$smoke/active-tools-duplicate.json"; then
+      fail "active-tools gate accepted a duplicate registration"
+    fi
+    validate_web_tool_owners() {
+      jq -e '
+        .batch_web_fetch == ["smart-fetch"]
+        and .web_fetch == ["smart-fetch"]
+        and .web_search == ["smart-web-search"]
+      ' "$1" >/dev/null
+    }
+    validate_web_tool_owners "$smoke/tool-owners.json" || {
+      cat "$smoke/tool-owners.json" >&2
+      fail "Pi gallery web tools do not have exactly one declared owner"
+    }
+    jq '.web_search += ["smart-fetch"]' "$smoke/tool-owners.json" \
+      > "$smoke/tool-owners-duplicate.json"
+    if validate_web_tool_owners "$smoke/tool-owners-duplicate.json"; then
+      fail "tool-ownership gate accepted a second web_search owner"
+    fi
+    jq '.web_fetch = ["smart-web-search"]' "$smoke/tool-owners.json" \
+      > "$smoke/tool-owners-wrong.json"
+    if validate_web_tool_owners "$smoke/tool-owners-wrong.json"; then
+      fail "tool-ownership gate accepted the wrong web_fetch owner"
+    fi
     jq -s -e '
       any(
         .[];
