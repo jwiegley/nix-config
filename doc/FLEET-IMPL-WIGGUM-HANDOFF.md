@@ -747,3 +747,51 @@ comment is `#issuecomment-5116220697`. No partner-observation Markdown remains.
 Next ordered unit is the A4 follow-through: commit the Darwin value-surface backstop
 that #50 and #85 relied on. Local `main` remains unpushed; no push, activation, or
 history rewrite is authorized.
+
+---
+
+## 2026-07-29 — A4 Darwin value-surface backstop implemented, audit pending
+
+The original off-repository `darwin-surface.nix` and `dsurf-diff.py` were recovered
+from the surviving Claude temporary workspace and re-derived against current Hera and
+Clio values. They were not copied blindly: review found that their `nix.enable = false`
+branch reduced S20-S22 to `{ enable = false; }`, omitting max-jobs and builders.
+
+The committed projection covers exactly seven top-level surfaces on both hosts:
+`users`, `environment`, `services`, `homebrew`, `nix`, `system`, and `launchd`.
+Disabled-Nix settings and build machines come from the module option values; all
+`system.defaults` domains are forced individually under `tryEval`; and all three
+launchd paths remain visible, including the deliberately empty legacy
+`launchd.agents`. Full service configurations are retained. Launchd scripts are
+hashed only after embedded Nix store hashes are normalized, so script changes remain
+visible without persisting command-line credential text or whole-tree hash churn.
+
+`test/baseline/darwin-surface-72de730a0b27.json` records both hosts at signed pre-A4
+tip `72de730a0b27e74acff0117a70d331060927caa6`. A temporary detached worktree at that
+exact revision reproduced both host surfaces as `IDENTICAL`; the worktree was removed.
+The artifact has no raw store hashes or common credential markers. Its nonvacuity
+facts are explicit: launchd user/daemon/legacy counts are Hera 12/6/0 and Clio 5/3/0,
+`alf` is the named unreadable defaults domain on both, max-jobs is 8/4, and each host
+has one configured builder despite `nix.enable = false`.
+
+The check is exposed as `checks.<system>.darwin-value-surface` and delegated through
+`bin/quality darwin-surface` from pre-push, CI, and `make test`; it is deliberately not
+pre-commit because the full value evaluation takes minutes. Twelve focused differ and
+artifact tests pass, and the live flake-backed quality suite matches both hosts.
+
+Watched negatives were run and restored: a Dock value tamper and derivation rename
+both produced leaf-level drift; selecting empty `launchd.agents` for user agents was
+rejected for both hosts; removing per-domain `tryEval` reproduced the removed `alf`
+option failure; collapsing disabled Nix settings/builders was rejected as vacuous;
+masking derivation names failed two unit tests; and removing quality/CI wiring failed
+registration tests.
+
+The first full gate correctly rejected the stale consumer inventory after the CI line
+moved. Regeneration through `bin/consumer-inventory` changed only its `repoHead`
+(`6d045a73` to signed `72de730a`) and that reference's line (79 to 88); no consumer
+edge or classification changed. The restored full staged `bin/quality` passes every
+suite: 103 Nix files, 35 shell scripts, 41 Python files, eight Python suites (including
+20 gate and 12 Darwin tests), portable evaluation, the Darwin surface check, consumer
+evaluation 5 ran / 0 skipped, and signatures for all 11 local commits. Remaining:
+signed implementation, independent fess, and tracker closeout. No push, host
+activation, or history rewrite was performed or authorized.

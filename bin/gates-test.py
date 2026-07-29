@@ -35,6 +35,7 @@ REPO = Path(__file__).resolve().parent.parent
 VERIFY_SIGNATURES = BIN / "verify-signatures"
 CROSS_CONSUMER_EVAL = BIN / "cross-consumer-eval"
 CONSUMER_INVENTORY = BIN / "consumer-inventory"
+DARWIN_SURFACE_DIFF = BIN / "darwin-surface-diff"
 
 # Repository-pointing git variables. A test that shells out to git in a temp
 # directory MUST scrub these: under a git hook they name the REAL repository and
@@ -472,20 +473,38 @@ class TestGatesAreRegistered(unittest.TestCase):
     """A gate nothing invokes is not a gate."""
 
     def test_every_gate_script_is_executable(self):
-        for tool in (VERIFY_SIGNATURES, CROSS_CONSUMER_EVAL, CONSUMER_INVENTORY):
+        for tool in (
+            VERIFY_SIGNATURES,
+            CROSS_CONSUMER_EVAL,
+            CONSUMER_INVENTORY,
+            DARWIN_SURFACE_DIFF,
+        ):
             self.assertTrue(os.access(tool, os.X_OK), "%s is not executable" % tool)
 
     def test_quality_registers_the_gate_suites(self):
         body = (BIN / "quality").read_text()
-        for suite in ("signatures", "consumer-eval"):
+        for suite in ("signatures", "consumer-eval", "darwin-surface"):
             self.assertIn(
                 "%s) run_%s ;;" % (suite, suite.replace("-", "_")),
                 body,
                 "bin/quality has no dispatch arm for %s" % suite,
             )
 
+    def test_darwin_surface_gate_is_wired_to_every_expensive_tier_entrypoint(self):
+        for path in (REPO / "lefthook.yml", REPO / "Makefile", REPO / ".github/workflows/ci.yml"):
+            self.assertIn(
+                "bin/quality darwin-surface",
+                path.read_text(),
+                "%s does not delegate the Darwin surface gate to bin/quality" % path,
+            )
+
     def test_no_gate_embeds_a_credential(self):
-        for tool in (VERIFY_SIGNATURES, CROSS_CONSUMER_EVAL, CONSUMER_INVENTORY):
+        for tool in (
+            VERIFY_SIGNATURES,
+            CROSS_CONSUMER_EVAL,
+            CONSUMER_INVENTORY,
+            DARWIN_SURFACE_DIFF,
+        ):
             body = tool.read_text()
             for pattern in ("ghp_", "github_pat_", "PRIVATE KEY", "password="):
                 self.assertNotIn(

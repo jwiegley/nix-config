@@ -3,7 +3,7 @@
  "artifact": "consumer-inventory",
  "generatedBy": "bin/consumer-inventory",
  "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
- "repoHead": "6d045a7316fd5eb851dd54f03f3ddeb4d64d0bf5",
+ "repoHead": "72de730a0b27e74acff0117a70d331060927caa6",
  "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in bin/consumer-inventory.",
  "classificationScheme": {
   "rename-now": "Reference to the literal config/ai path inside nix-config's own tree; #47 rewrites it in the rename commit.",
@@ -276,7 +276,7 @@
    "kind": "internal-config-ai-ref",
    "classification": "rename-now",
    "file": ".github/workflows/ci.yml",
-   "line": 79,
+   "line": 88,
    "text": "run: nix build --no-link \"./config/ai#checks.${{ matrix.system }}.pi-gallery\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
    "trigger": "rewritten in the config/ai -> config/fleet rename commit",

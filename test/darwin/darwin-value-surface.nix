@@ -1,0 +1,102 @@
+{
+  darwinConfigurations,
+  pkgs,
+}:
+
+let
+  inherit (pkgs) lib;
+  schema = "darwin-value-surface/1";
+  hosts = [
+    "hera"
+    "clio"
+  ];
+  surfaces = [
+    "environment"
+    "homebrew"
+    "launchd"
+    "nix"
+    "services"
+    "system"
+    "users"
+  ];
+  unreadable = "<unreadable: removed or throwing option>";
+  project = import ./darwin-surface.nix;
+  actualHosts = lib.genAttrs hosts (host: project darwinConfigurations.${host});
+
+  baselineDir = ../baseline;
+  baselineNames = builtins.filter (
+    name: lib.hasPrefix "darwin-surface-" name && lib.hasSuffix ".json" name
+  ) (builtins.attrNames (builtins.readDir baselineDir));
+  baselineName =
+    if builtins.length baselineNames == 1 then
+      builtins.head baselineNames
+    else
+      throw "expected exactly one test/baseline/darwin-surface-*.json, found ${builtins.toJSON baselineNames}";
+  baseline = builtins.fromJSON (builtins.readFile (baselineDir + "/${baselineName}"));
+
+  checks = [
+    {
+      ok = (baseline.schema or null) == schema;
+      message = "baseline schema must be ${schema}";
+    }
+    {
+      ok = builtins.attrNames (baseline.hosts or { }) == builtins.sort builtins.lessThan hosts;
+      message = "baseline must contain exactly hera and clio";
+    }
+  ]
+  ++ lib.concatMap (
+    host:
+    let
+      surface = actualHosts.${host};
+    in
+    [
+      {
+        ok = builtins.attrNames surface == surfaces;
+        message = "${host} must project exactly the seven Darwin surfaces";
+      }
+      {
+        ok = surface.launchd.userAgentNames != [ ];
+        message = "${host} launchd.user.agents projection is empty (wrong launchd path?)";
+      }
+      {
+        ok = surface.launchd.daemonNames != [ ];
+        message = "${host} launchd.daemons projection is empty";
+      }
+      {
+        ok = surface.launchd.agentNames == [ ];
+        message = "${host} legacy launchd.agents tripwire unexpectedly changed";
+      }
+      {
+        ok = (surface.system.defaults.alf or null) == unreadable;
+        message = "${host} must record the unreadable system.defaults.alf domain";
+      }
+      {
+        ok = surface.nix.maxJobs != null && surface.nix.buildMachines != [ ];
+        message = "${host} disabled-Nix settings/builders projection is vacuous";
+      }
+    ]
+  ) hosts;
+  failures = map (check: check.message) (builtins.filter (check: !check.ok) checks);
+  structuralChecks =
+    if failures == [ ] then
+      true
+    else
+      throw "Darwin value-surface structural checks failed:\n${lib.concatStringsSep "\n" failures}";
+
+  expectedFile = pkgs.writeText "darwin-value-surface-expected.json" (builtins.toJSON baseline.hosts);
+  actualFile = pkgs.writeText "darwin-value-surface-actual.json" (
+    builtins.unsafeDiscardStringContext (builtins.toJSON actualHosts)
+  );
+in
+assert structuralChecks;
+pkgs.runCommand "check-darwin-value-surface"
+  {
+    nativeBuildInputs = [ pkgs.python3 ];
+  }
+  ''
+    ${pkgs.python3}/bin/python3 ${../../bin/darwin-surface-diff} \
+      --normalize-store \
+      ${expectedFile} \
+      ${actualFile}
+    touch "$out"
+  ''

@@ -59,6 +59,15 @@ jobs:
       - name: Evaluate every portable AI system
         run: bin/quality portable-eval
 
+  darwin-surface:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Compare Darwin values with the committed surface baseline
+        run: bin/quality darwin-surface
+
   portable-native:
     strategy:
       fail-fast: false

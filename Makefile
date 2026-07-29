@@ -50,6 +50,7 @@ help:
 	  '  clean / purge    Delete old Nix generations and store paths'
 
 test:
+	bin/quality darwin-surface
 	nix build --no-link \
 	  .#checks.$(SYSTEM).agent-resources \
 	  .#checks.$(SYSTEM).agent-wrappers \

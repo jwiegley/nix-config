@@ -844,7 +844,7 @@ class TestSelfConsistency(unittest.TestCase):
         pre_push = config.split("\npre-push:\n", 1)[1]
         self.assertIn("git ls-files", pre_push)
         self.assertIn('printf "%s\\n" lefthook.yml', pre_push)
-        self.assertEqual(pre_push.count(": {files};"), 4)
+        self.assertEqual(pre_push.count(": {files};"), pre_push.count("      run:"))
 
 
 if __name__ == "__main__":

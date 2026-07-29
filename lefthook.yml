@@ -75,5 +75,7 @@ pre-push:
         .#checks.aarch64-darwin.ai-home-manager-model-sync
         .#checks.aarch64-darwin.ai-home-manager-package-selection
         .#checks.aarch64-darwin.pi-gallery
+    darwin-surface:
+      run: ": {files}; bin/quality darwin-surface"
     system-build:
       run: ": {files}; ./build system"

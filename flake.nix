@@ -564,6 +564,9 @@
                 inherit src;
                 homeManagerReleaseLib = home-manager-release.lib;
               };
+              darwin-value-surface = pkgs.callPackage ./test/darwin/darwin-value-surface.nix {
+                inherit darwinConfigurations;
+              };
               ai-managed-preflight = pkgs.callPackage ./test/ai/managed-preflight.nix {
                 inherit src;
                 homeManagerLib = home-manager.lib;
