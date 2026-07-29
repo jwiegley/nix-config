@@ -17,12 +17,26 @@ run_push=false
 run_brew=false
 
 candidate_dir=
+candidate_git_dir=
 transaction_dir=
 transaction_patch=
 transaction_paths=
+transaction_committed_paths=
+transaction_live_untracked_baseline=
+transaction_live_untracked_current=
 transaction_lock=
-publication_applied=false
+transaction_lock_acquired=false
+transaction_head_ref=
+committed_head=
+expected_candidate_tree=
+publication_kind=
 transaction_complete=false
+transaction_signal_status=0
+declare -A publication_baseline_git_mode=()
+declare -A publication_baseline_kind=()
+declare -A publication_baseline_mode=()
+declare -A publication_baseline_object=()
+declare -A publication_baseline_parent_exists=()
 
 usage() {
     cat <<'EOF'
@@ -41,6 +55,224 @@ Options:
   --no-switch  Compatibility spelling; switching is already off by default
   --no-brew    Compatibility spelling; Homebrew is already off by default
 EOF
+}
+
+capture_publication_metadata() {
+    local path stage mode git_mode object_type object_hash _ignored parent
+    while IFS= read -r -d '' path; do
+        if ! stage=$(git -C "$config_dir" ls-tree "$transaction_baseline" -- "$path"); then
+            return 1
+        fi
+        if [[ -n $stage ]]; then
+            read -r git_mode object_type object_hash _ignored <<<"$stage"
+            if [[ $object_type != blob || -z $object_hash ]]; then
+                echo "update-agents: unsupported baseline Git object: $path" >&2
+                return 1
+            fi
+            publication_baseline_git_mode["$path"]=$git_mode
+            publication_baseline_object["$path"]=$object_hash
+        else
+            publication_baseline_git_mode["$path"]=
+            publication_baseline_object["$path"]=
+        fi
+        if [[ -L $config_dir/$path ]]; then
+            publication_baseline_kind["$path"]=symlink
+        elif [[ -f $config_dir/$path ]]; then
+            publication_baseline_kind["$path"]=regular
+            if ! mode=$(stat -c '%a' "$config_dir/$path" 2>/dev/null || stat -f '%Lp' "$config_dir/$path"); then
+                return 1
+            fi
+            publication_baseline_mode["$path"]=$mode
+        elif [[ ! -e $config_dir/$path ]]; then
+            publication_baseline_kind["$path"]=missing
+            parent=${path%/*}
+            while [[ $parent != "$path" && $parent != . ]]; do
+                if [[ -d $config_dir/$parent && ! -L $config_dir/$parent ]]; then
+                    publication_baseline_parent_exists["$parent"]=true
+                    break
+                fi
+                if [[ -e $config_dir/$parent || -L $config_dir/$parent ]]; then
+                    echo "update-agents: unsupported authoritative parent type: $parent" >&2
+                    return 1
+                fi
+                publication_baseline_parent_exists["$parent"]=false
+                path=$parent
+                parent=${path%/*}
+            done
+        else
+            echo "update-agents: unsupported authoritative path type: $path" >&2
+            return 1
+        fi
+    done <"$transaction_paths"
+}
+
+normalize_publication_paths() {
+    local state=$1 path stage mode expected_mode kind
+    while IFS= read -r -d '' path; do
+        if [[ $state == baseline ]]; then
+            kind=${publication_baseline_kind[$path]}
+            case $kind in
+            missing)
+                if [[ -e $config_dir/$path || -L $config_dir/$path ]]; then
+                    echo "update-agents: rollback retained created path: $path" >&2
+                    return 1
+                fi
+                ;;
+            regular)
+                if [[ ! -f $config_dir/$path || -L $config_dir/$path ]]; then
+                    echo "update-agents: rollback path is not a regular file: $path" >&2
+                    return 1
+                fi
+                chmod "${publication_baseline_mode[$path]}" "$config_dir/$path" || return 1
+                ;;
+            symlink)
+                if [[ ! -L $config_dir/$path ]]; then
+                    echo "update-agents: rollback path is not a symlink: $path" >&2
+                    return 1
+                fi
+                ;;
+            *)
+                echo "update-agents: missing rollback metadata: $path" >&2
+                return 1
+                ;;
+            esac
+            continue
+        fi
+
+        if ! stage=$(git -C "$config_dir" ls-files --stage -- "$path"); then
+            return 1
+        fi
+        [[ -n $stage ]] || continue
+        mode=${stage%% *}
+        case $mode in
+        100644)
+            if [[ ! -f $config_dir/$path || -L $config_dir/$path ]]; then
+                echo "update-agents: published path is not a regular file: $path" >&2
+                return 1
+            fi
+            expected_mode=0644
+            if [[ ${publication_baseline_kind[$path]} == regular &&
+                ${publication_baseline_git_mode[$path]} == "$mode" ]]; then
+                expected_mode=${publication_baseline_mode[$path]}
+            fi
+            chmod "$expected_mode" "$config_dir/$path" || return 1
+            ;;
+        100755)
+            if [[ ! -f $config_dir/$path || -L $config_dir/$path ]]; then
+                echo "update-agents: published executable is not a regular file: $path" >&2
+                return 1
+            fi
+            expected_mode=0755
+            if [[ ${publication_baseline_kind[$path]} == regular &&
+                ${publication_baseline_git_mode[$path]} == "$mode" ]]; then
+                expected_mode=${publication_baseline_mode[$path]}
+            fi
+            chmod "$expected_mode" "$config_dir/$path" || return 1
+            ;;
+        120000)
+            if [[ ! -L $config_dir/$path ]]; then
+                echo "update-agents: published path is not a symlink: $path" >&2
+                return 1
+            fi
+            ;;
+        *)
+            echo "update-agents: unsupported published Git mode $mode: $path" >&2
+            return 1
+            ;;
+        esac
+    done <"$transaction_paths"
+}
+
+restore_publication_baseline() {
+    local path kind parent removed=true
+    local -a paths=()
+    mapfile -d '' -t paths <"$transaction_paths"
+    while IFS= read -r -d '' path; do
+        kind=${publication_baseline_kind[$path]}
+        case $kind in
+        missing)
+            if [[ -d $config_dir/$path && ! -L $config_dir/$path ]]; then
+                echo "update-agents: refusing to remove rollback directory: $path" >&2
+                return 1
+            fi
+            rm -f -- "$config_dir/$path" || return 1
+            git -C "$config_dir" update-index --force-remove -- "$path" || return 1
+            ;;
+        regular | symlink)
+            if ! git -C "$config_dir" restore \
+                --source="$transaction_baseline" --staged --worktree -- "$path"; then
+                git -C "$config_dir" update-index --add --cacheinfo \
+                    "${publication_baseline_git_mode[$path]}" \
+                    "${publication_baseline_object[$path]}" "$path" ||
+                    return 1
+                git -C "$config_dir" checkout-index --force -- "$path" || return 1
+            fi
+            ;;
+        *)
+            echo "update-agents: missing restore metadata: $path" >&2
+            return 1
+            ;;
+        esac
+    done <"$transaction_paths"
+    while [[ $removed == true ]]; do
+        removed=false
+        for parent in "${!publication_baseline_parent_exists[@]}"; do
+            if [[ ${publication_baseline_parent_exists[$parent]} == false &&
+                -d $config_dir/$parent && ! -L $config_dir/$parent ]] &&
+                rmdir "$config_dir/$parent" 2>/dev/null; then
+                removed=true
+            fi
+        done
+    done
+    for parent in "${!publication_baseline_parent_exists[@]}"; do
+        if [[ ${publication_baseline_parent_exists[$parent]} == false &&
+            (-e $config_dir/$parent || -L $config_dir/$parent) ]]; then
+            echo "update-agents: rollback retained created directory: $parent" >&2
+            return 1
+        fi
+    done
+    normalize_publication_paths baseline || return 1
+    git -C "$config_dir" diff --quiet -- "${paths[@]}" &&
+        git -C "$config_dir" diff --cached --quiet \
+            "$transaction_baseline" -- "${paths[@]}"
+}
+
+rollback_commit_publication() {
+    local current_head
+    current_head=$(git -C "$config_dir" rev-parse HEAD)
+    if [[ $current_head == "$transaction_baseline" ]]; then
+        restore_publication_baseline
+        return
+    fi
+    if [[ $current_head != "$committed_head" ]]; then
+        echo "update-agents: live HEAD changed during commit rollback" >&2
+        return 1
+    fi
+    git -C "$config_dir" update-ref \
+        "$transaction_head_ref" "$transaction_baseline" "$committed_head" &&
+        restore_publication_baseline
+}
+
+candidate_untracked_paths() {
+    {
+        git ls-files --others --exclude-standard -z
+        git ls-files --others --ignored --exclude-standard -z
+    } | sort -zu
+}
+
+authoritative_untracked_paths() {
+    {
+        git -C "$config_dir" ls-files --others --exclude-standard -z
+        git -C "$config_dir" ls-files --others --ignored --exclude-standard -z
+    } | sort -zu
+}
+
+live_repository_matches_baseline() {
+    authoritative_untracked_paths >"$transaction_live_untracked_current" &&
+        [[ $(git -C "$config_dir" rev-parse HEAD) == "$transaction_baseline" ]] &&
+        [[ -z $(git -C "$config_dir" status --porcelain) ]] &&
+        cmp -s "$transaction_live_untracked_baseline" \
+            "$transaction_live_untracked_current"
 }
 
 while (($#)); do
@@ -117,12 +349,19 @@ git_pull_clean() {
 
 cleanup_transaction() {
     local status=$?
+    local rollback_status=0
     local rollback_failed=false
+    local worktree_list=
     set +e
+    trap - HUP INT TERM
 
-    if [[ $publication_applied == true && $transaction_complete != true ]]; then
-        if git -C "$config_dir" apply --reverse "$transaction_patch" &&
-            git -C "$config_dir" read-tree "$transaction_baseline"; then
+    if [[ -n $publication_kind && $transaction_complete != true ]]; then
+        if [[ $publication_kind == commit ]]; then
+            rollback_commit_publication || rollback_status=$?
+        else
+            restore_publication_baseline || rollback_status=$?
+        fi
+        if [[ $rollback_status -eq 0 ]]; then
             echo "update-agents: rolled back incomplete source transaction" >&2
         else
             echo "update-agents: failed to roll back incomplete source transaction" >&2
@@ -130,15 +369,63 @@ cleanup_transaction() {
         fi
     fi
 
-    if [[ -n $candidate_dir && -e $candidate_dir/.git ]]; then
-        git -C "$config_dir" worktree remove --force "$candidate_dir" >/dev/null 2>&1 || true
+    if [[ -n $candidate_dir ]]; then
+        if ! git -C "$config_dir" worktree remove --force "$candidate_dir" >/dev/null 2>&1; then
+            if [[ -z $candidate_git_dir && -f $candidate_dir/.git ]]; then
+                candidate_git_dir=$(
+                    git -C "$candidate_dir" rev-parse --path-format=absolute --git-dir \
+                        2>/dev/null
+                )
+            fi
+            if [[ -e $candidate_dir ]]; then
+                if [[ $candidate_dir == "$transaction_dir/candidate" ]]; then
+                    rm -rf -- "$candidate_dir"
+                else
+                    echo "update-agents: refusing unsafe candidate cleanup" >&2
+                    rollback_failed=true
+                fi
+            fi
+            if [[ -n $candidate_git_dir ]]; then
+                case $candidate_git_dir in
+                "$git_common_dir"/worktrees/*) rm -rf -- "$candidate_git_dir" ;;
+                *)
+                    echo "update-agents: refusing unsafe worktree metadata cleanup" >&2
+                    rollback_failed=true
+                    ;;
+                esac
+            fi
+            if [[ -e $candidate_dir ]]; then
+                echo "update-agents: failed to remove candidate worktree" >&2
+                rollback_failed=true
+            fi
+        fi
+        if [[ -n $candidate_git_dir && -e $candidate_git_dir ]]; then
+            echo "update-agents: failed to remove candidate worktree metadata" >&2
+            rollback_failed=true
+        fi
+        if ! worktree_list=$(git -C "$config_dir" worktree list --porcelain); then
+            echo "update-agents: failed to verify candidate worktree removal" >&2
+            rollback_failed=true
+        elif awk -v target="$candidate_dir" '
+                $1 == "worktree" && substr($0, 10) == target { found = 1 }
+                END { exit(found ? 0 : 1) }
+            ' <<<"$worktree_list"; then
+            echo "update-agents: candidate remains registered" >&2
+            rollback_failed=true
+        fi
     fi
     if [[ -n $transaction_dir ]]; then
         rm -f -- "$transaction_patch" "$transaction_paths" \
+            "$transaction_committed_paths" \
+            "$transaction_live_untracked_baseline" \
+            "$transaction_live_untracked_current" \
             "$transaction_dir/inventory.json" "$transaction_dir/allowed-paths"
         rmdir "$transaction_dir" 2>/dev/null || true
     fi
-    [[ -z $transaction_lock ]] || rmdir "$transaction_lock" 2>/dev/null || true
+    if [[ $transaction_lock_acquired == true ]] && ! rmdir "$transaction_lock" 2>/dev/null; then
+        echo "update-agents: failed to release transaction lock" >&2
+        rollback_failed=true
+    fi
 
     if [[ $rollback_failed == true ]]; then
         status=1
@@ -180,16 +467,32 @@ fi
 transaction_baseline=$(git -C "$config_dir" rev-parse HEAD)
 git_common_dir=$(git -C "$config_dir" rev-parse --path-format=absolute --git-common-dir)
 transaction_lock=$git_common_dir/update-agents.lock
-if ! mkdir "$transaction_lock" 2>/dev/null; then
+trap cleanup_transaction EXIT
+trap 'transaction_signal_status=129' HUP
+trap 'transaction_signal_status=130' INT
+trap 'transaction_signal_status=143' TERM
+if mkdir "$transaction_lock" 2>/dev/null; then
+    transaction_lock_acquired=true
+else
     echo "update-agents: another update transaction is active" >&2
     exit 1
 fi
-trap cleanup_transaction EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+if [[ $transaction_signal_status -ne 0 ]]; then
+    exit "$transaction_signal_status"
+fi
 transaction_dir=$(mktemp -d "${TMPDIR:-/tmp}/update-agents.XXXXXX")
 candidate_dir=$transaction_dir/candidate
 transaction_patch=$transaction_dir/update.patch
 transaction_paths=$transaction_dir/paths
+transaction_committed_paths=$transaction_dir/committed-paths
+transaction_live_untracked_baseline=$transaction_dir/live-untracked-baseline
+transaction_live_untracked_current=$transaction_dir/live-untracked-current
+authoritative_untracked_paths >"$transaction_live_untracked_baseline"
 git -C "$config_dir" worktree add --quiet --detach "$candidate_dir" "$transaction_baseline"
+candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --git-dir)
 
 if [[ $run_brew == true ]] && command -v brew >/dev/null 2>&1; then
     (
@@ -201,6 +504,7 @@ fi
 
 (
     cd "$candidate_dir"
+    export UPDATE_AGENTS_CANDIDATE=1
     python3 bin/update-overlay --inventory --json >"$transaction_dir/inventory.json"
     {
         jq -r '.packages[].files[]' "$transaction_dir/inventory.json"
@@ -216,9 +520,9 @@ fi
         # nodes only after the portable lock is complete.
         nix flake update nix-config-ai
     fi
-    UPDATE_AGENTS_CANDIDATE=1 python bin/update-overlay --sync-flake-projections
+    python bin/update-overlay --sync-flake-projections
     python bin/update-overlay --all --overlays-dir overlays/ai
-    mapfile -t changed_nix < <(git diff --name-only -- '*.nix')
+    mapfile -t changed_nix < <(git diff --no-renames --name-only -- '*.nix')
     if ((${#changed_nix[@]})); then
         nixfmt "${changed_nix[@]}"
     fi
@@ -236,8 +540,8 @@ fi
 
     mapfile -d '' -t changed < <(
         {
-            git diff --name-only -z HEAD --
-            git ls-files --others --exclude-standard -z
+            git diff --no-renames --name-only -z HEAD --
+            candidate_untracked_paths
         } | sort -zu
     )
     for path in "${changed[@]}"; do
@@ -250,14 +554,24 @@ fi
     if ((${#changed[@]})); then
         git add -- "${changed[@]}"
     fi
-    git diff --cached --name-only -z HEAD -- >"$transaction_paths"
-    git diff --cached --binary --full-index HEAD -- >"$transaction_patch"
-    if ! git diff --quiet || [[ -n $(git ls-files --others --exclude-standard) ]]; then
+    git diff --cached --no-renames --name-only -z HEAD -- >"$transaction_paths"
+    git diff --cached --no-renames --binary --full-index HEAD -- >"$transaction_patch"
+    mapfile -d '' -t remaining_untracked < <(candidate_untracked_paths)
+    if ! git diff --quiet || ((${#remaining_untracked[@]})); then
         echo "update-agents: candidate tree has unstaged mutations" >&2
         exit 1
     fi
     git diff --cached --check
 )
+
+if [[ -s $transaction_patch ]]; then
+    expected_candidate_tree=$(git -C "$candidate_dir" write-tree)
+fi
+
+if [[ -s $transaction_patch ]] && ! live_repository_matches_baseline; then
+    echo "update-agents: live repository changed before publication" >&2
+    exit 1
+fi
 
 commit_created=false
 if [[ $run_commit == true && -s $transaction_patch ]]; then
@@ -267,25 +581,55 @@ if [[ $run_commit == true && -s $transaction_patch ]]; then
         exit 1
     fi
     committed_head=$(git -C "$candidate_dir" rev-parse HEAD)
+    commit_record=$(git -C "$candidate_dir" rev-list --parents -n 1 "$committed_head")
+    read -r commit_id committed_parent committed_extra <<<"$commit_record"
+    committed_tree=$(git -C "$candidate_dir" rev-parse "$committed_head^{tree}")
+    git -C "$candidate_dir" diff-tree --no-commit-id --name-only -r -z \
+        --no-renames "$transaction_baseline" "$committed_head" \
+        >"$transaction_committed_paths"
     if [[ $committed_head == "$commit_baseline" ]] ||
+        [[ $commit_id != "$committed_head" ]] ||
+        [[ $committed_parent != "$transaction_baseline" ]] ||
+        [[ -n $committed_extra ]] ||
+        [[ $committed_tree != "$expected_candidate_tree" ]] ||
+        ! cmp -s "$transaction_paths" "$transaction_committed_paths" ||
         ! git -C "$candidate_dir" verify-commit "$committed_head" >/dev/null 2>&1 ||
         [[ -n $(git -C "$candidate_dir" status --porcelain) ]]; then
         echo "update-agents: signed commit did not capture the complete transaction" >&2
         exit 1
     fi
-    if [[ $(git -C "$config_dir" rev-parse HEAD) != "$transaction_baseline" ]] ||
-        [[ -n $(git -C "$config_dir" status --porcelain) ]] ||
-        ! git -C "$config_dir" merge --ff-only "$committed_head"; then
+    if ! live_repository_matches_baseline; then
         echo "update-agents: live repository changed before publication" >&2
         exit 1
     fi
+    capture_publication_metadata
+    publication_kind="commit"
+    transaction_head_ref=$(git -C "$config_dir" symbolic-ref -q HEAD || printf HEAD)
+    if ! git -C "$config_dir" -c core.hooksPath=/dev/null \
+        merge --ff-only "$committed_head"; then
+        echo "update-agents: live repository changed before publication" >&2
+        exit 1
+    fi
+    normalize_publication_paths candidate
+    authoritative_untracked_paths >"$transaction_live_untracked_current"
+    if [[ $(git -C "$config_dir" rev-parse HEAD) != "$committed_head" ]] ||
+        [[ $(git -C "$config_dir" write-tree) != "$expected_candidate_tree" ]] ||
+        ! git -C "$config_dir" diff --quiet -- ||
+        ! cmp -s "$transaction_live_untracked_baseline" \
+            "$transaction_live_untracked_current"; then
+        echo "update-agents: published commit differs from validated candidate" >&2
+        exit 1
+    fi
+    transaction_complete=true
     commit_created=true
 elif [[ $run_commit == true ]]; then
     echo "update-agents: no changes; no signed commit created"
 elif [[ -s $transaction_patch ]]; then
+    capture_publication_metadata
+    publication_kind="patch"
     git -C "$config_dir" apply --index "$transaction_patch"
+    normalize_publication_paths candidate
     git -C "$config_dir" read-tree "$transaction_baseline"
-    publication_applied=true
 fi
 
 if [[ $run_switch == true || $run_push == true ]] && [[ $commit_created != true ]]; then

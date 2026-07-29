@@ -8,6 +8,7 @@ import os
 import re
 import runpy
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -1083,6 +1084,887 @@ class IntegratedWorkflowTests(unittest.TestCase):
 
     def tearDown(self):
         os.environ.update(self._git_local_env)
+
+    def _create_update_agents_fixture(self, temporary: str):
+        root = Path(temporary) / "repo"
+        fake_bin = Path(temporary) / "bin"
+        (root / "bin").mkdir(parents=True)
+        (root / "config/ai").mkdir(parents=True)
+        (root / "overlays/ai").mkdir(parents=True)
+        fake_bin.mkdir()
+
+        empty_lock = json.dumps(
+            {"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7}
+        )
+        (root / "flake.lock").write_text(empty_lock + "\n")
+        (root / "config/ai/flake.lock").write_text(empty_lock + "\n")
+        (root / ".gitignore").write_text("ignored.tmp\n")
+        (root / "tracked.txt").write_text("before\n")
+        (root / "tracked.txt").chmod(0o640)
+        (root / "mode.sh").write_text("#!/bin/sh\nexit 0\n")
+        (root / "mode.sh").chmod(0o644)
+        (root / "binary.bin").write_bytes(b"\x00before\xff\n")
+        (root / "binary.bin").chmod(0o644)
+        (root / "format.nix").write_text("{ }\n")
+        (root / "format.nix").chmod(0o644)
+        (root / "projection.json").write_text("{}\n")
+        (root / "projection.json").chmod(0o644)
+        (root / "target-old").write_text("old target\n")
+        (root / "target-new").write_text("new target\n")
+        (root / "link").symlink_to("target-old")
+        (root / "regular-to-link").write_text("regular before\n")
+        (root / "regular-to-link").chmod(0o644)
+        (root / "link-to-regular").symlink_to("target-old")
+        (root / "renamed-old.txt").write_text("rename payload\n")
+        (root / "renamed-old.txt").chmod(0o644)
+        (root / "undeclared-rename-source.txt").write_text("undeclared rename\n")
+        (root / "undeclared-rename-source.txt").chmod(0o644)
+        (root / "deleted.txt").write_text("delete me\n")
+        (root / "deleted.txt").chmod(0o604)
+
+        updater = root / "bin/update-overlay"
+        updater.write_text(
+            """#!/usr/bin/env python3
+import json
+import os
+import signal
+import sys
+from pathlib import Path
+
+root = Path(__file__).resolve().parent.parent
+arguments = sys.argv[1:]
+declared = [
+    "tracked.txt", "mode.sh", "binary.bin", "format.nix", "projection.json", "link",
+    "regular-to-link", "link-to-regular", "renamed-old.txt", "renamed-new.txt",
+    "deleted.txt", "created.txt", "new-directory/generated-lock.json"
+]
+if "--inventory" in arguments:
+    print(json.dumps({
+        "schemaVersion": 1,
+        "packages": [{
+            "name": "fixture",
+            "files": declared,
+            "inventoried": True,
+            "managed": True,
+            "executor": "update-overlay",
+        }],
+        "unsupportedOverlayAttributes": [],
+    }))
+elif "--sync-flake-projections" in arguments:
+    (root / "projection.json").write_text('{"projected": true}\\n')
+    if os.environ.get("UPDATE_TEST_SIGNAL_PHASE") == "candidate-projection":
+        Path(os.environ["UPDATE_TEST_SIGNAL_MARKER"]).touch()
+        os.kill(os.getppid(), signal.SIGTERM)
+    if os.environ.get("UPDATE_TEST_FAILURE_PHASE") == "candidate-projection":
+        raise SystemExit(71)
+else:
+    if os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
+        print("compound update requires update-agents candidate", file=sys.stderr)
+        raise SystemExit(77)
+    (root / "tracked.txt").write_text("after\\n")
+    (root / "binary.bin").write_bytes(b"\\x00after\\xfe\\n")
+    (root / "format.nix").write_text("{ changed = true; }\\n")
+    os.chmod(root / "mode.sh", 0o755)
+    (root / "link").unlink()
+    (root / "link").symlink_to("target-new")
+    (root / "regular-to-link").unlink()
+    (root / "regular-to-link").symlink_to("target-new")
+    (root / "link-to-regular").unlink()
+    (root / "link-to-regular").write_text("regular after\\n")
+    (root / "renamed-old.txt").rename(root / "renamed-new.txt")
+    (root / "deleted.txt").unlink()
+    if os.environ.get("UPDATE_TEST_RENAME_UNDECLARED") == "1":
+        (root / "undeclared-rename-source.txt").rename(root / "created.txt")
+    else:
+        (root / "created.txt").write_text("created\\n")
+    (root / "new-directory").mkdir()
+    (root / "new-directory/generated-lock.json").write_text("{}\\n")
+    if os.environ.get("UPDATE_TEST_MUTATE_UNDECLARED") == "1":
+        (root / "unexpected.txt").write_text("unexpected\\n")
+    if os.environ.get("UPDATE_TEST_MUTATE_IGNORED") == "1":
+        (root / "ignored.tmp").write_text("ignored\\n")
+    if os.environ.get("UPDATE_TEST_SIGNAL_PHASE") == "candidate-update":
+        Path(os.environ["UPDATE_TEST_SIGNAL_MARKER"]).touch()
+        os.kill(os.getppid(), signal.SIGTERM)
+    if os.environ.get("UPDATE_TEST_FAILURE_PHASE") == "candidate-update":
+        raise SystemExit(71)
+"""
+        )
+        updater.chmod(0o700)
+
+        def executable(name, text):
+            path = fake_bin / name
+            path.write_text(text)
+            path.chmod(0o700)
+
+        executable(
+            "nix",
+            """#!/usr/bin/env bash
+set -euo pipefail
+signal_phase() {
+  if [[ ${UPDATE_TEST_SIGNAL_PHASE:-} == "$1" \
+    && ! -e ${UPDATE_TEST_SIGNAL_MARKER:-/nonexistent} ]]; then
+    : >"$UPDATE_TEST_SIGNAL_MARKER"
+    kill -TERM "$PPID"
+  fi
+}
+fail_phase() {
+  if [[ ${UPDATE_TEST_FAILURE_PHASE:-} == "$1" ]]; then exit 71; fi
+}
+mutate_phase() {
+  if [[ ${UPDATE_TEST_SIGNAL_PHASE:-} == "$1" \
+    || ${UPDATE_TEST_FAILURE_PHASE:-} == "$1" ]]; then
+    printf '%s\n' "$1" >>"$2"
+  fi
+}
+if [[ $1 == flake && $2 == update ]]; then
+  if [[ ${3:-} == --flake ]]; then
+    mutate_phase candidate-portable-lock config/ai/flake.lock
+    signal_phase candidate-portable-lock
+    fail_phase candidate-portable-lock
+  else
+    mutate_phase candidate-root-lock flake.lock
+    signal_phase candidate-root-lock
+    fail_phase candidate-root-lock
+  fi
+elif [[ $1 == flake && $2 == check ]]; then
+  if [[ ${UPDATE_TEST_MUTATE_LIVE:-} == 1 ]]; then
+    printf 'external\n' >>"$NIX_CONFIG_DIR/external.txt"
+  fi
+  if [[ ${3:-} == ./config/ai ]]; then
+    signal_phase candidate-portable-validation
+    fail_phase candidate-portable-validation
+  else
+    signal_phase candidate-root-validation
+    fail_phase candidate-root-validation
+  fi
+else
+  exit 2
+fi
+""",
+        )
+        executable("python", '#!/usr/bin/env bash\nexec python3 "$@"\n')
+        executable(
+            "nixfmt",
+            """#!/usr/bin/env bash
+set -euo pipefail
+if [[ ${UPDATE_TEST_SIGNAL_PHASE:-} == candidate-format \
+  || ${UPDATE_TEST_FAILURE_PHASE:-} == candidate-format ]]; then
+  printf '# formatted\n' >>"$1"
+fi
+if [[ ${UPDATE_TEST_SIGNAL_PHASE:-} == candidate-format \
+  && ! -e ${UPDATE_TEST_SIGNAL_MARKER:-/nonexistent} ]]; then
+  : >"$UPDATE_TEST_SIGNAL_MARKER"
+  kill -TERM "$PPID"
+fi
+if [[ ${UPDATE_TEST_FAILURE_PHASE:-} == candidate-format ]]; then exit 71; fi
+""",
+        )
+        real_git = shutil.which("git") or "/usr/bin/git"
+        real_chmod = shutil.which("chmod") or "/bin/chmod"
+        real_mkdir = shutil.which("mkdir") or "/bin/mkdir"
+        executable(
+            "git",
+            """#!/usr/bin/env bash
+set -euo pipefail
+phase=${UPDATE_TEST_SIGNAL_PHASE:-}
+marker=${UPDATE_TEST_SIGNAL_MARKER:-}
+for argument in "$@"; do
+  if [[ $argument == verify-commit ]]; then
+    if [[ ${UPDATE_TEST_MUTATE_LIVE_DURING_VERIFY:-} == 1 ]]; then
+      printf 'verify edit\n' >"$NIX_CONFIG_DIR/verify-external.txt"
+    fi
+    exit 0
+  fi
+done
+if [[ " $* " == *" commit -S "* ]]; then
+  filtered=()
+  candidate=
+  previous=
+  for argument in "$@"; do
+    if [[ $previous == -C ]]; then candidate=$argument; fi
+    previous=$argument
+    [[ $argument == -S ]] || filtered+=("$argument")
+  done
+  if [[ ${UPDATE_TEST_HOOK_INJECT:-} == 1 ]]; then
+    printf 'hook injection\n' >"$candidate/hook-extra.txt"
+    "$REAL_GIT" -C "$candidate" add -- hook-extra.txt
+  fi
+  exec "$REAL_GIT" -c user.name=Test -c user.email=test@example.invalid \
+    -c commit.gpgsign=false "${filtered[@]}"
+fi
+if [[ $phase == merge-failure && " $* " == *" merge --ff-only "* ]]; then
+  "$REAL_GIT" "$@"
+  : >"$marker"
+  exit 71
+fi
+if [[ $phase == merge-partial-failure && " $* " == *" merge --ff-only "* ]]; then
+  printf 'partial merge\n' >"$NIX_CONFIG_DIR/tracked.txt"
+  "$REAL_GIT" -C "$NIX_CONFIG_DIR" add -- tracked.txt
+  : >"$marker"
+  exit 71
+fi
+if [[ $phase == merge-sigterm && " $* " == *" merge --ff-only "* ]]; then
+  "$REAL_GIT" "$@"
+  : >"$marker"
+  kill -TERM "$PPID"
+  exit 0
+fi
+if [[ $phase == merge-untracked || $phase == merge-ignored ]] \
+  && [[ " $* " == *" merge --ff-only "* ]]; then
+  "$REAL_GIT" "$@"
+  if [[ $phase == merge-ignored ]]; then
+    printf 'post merge\n' >"$NIX_CONFIG_DIR/ignored.tmp"
+  else
+    printf 'post merge\n' >"$NIX_CONFIG_DIR/post-merge.tmp"
+  fi
+  exit 0
+fi
+if [[ $phase == worktree-remove-failure \
+  && " $* " == *" worktree remove --force "* ]]; then
+  : >"$marker"
+  exit 71
+fi
+if [[ $phase == worktree-list-failure \
+  && " $* " == *" worktree list --porcelain "* ]]; then
+  exit 71
+fi
+if [[ $phase == partial-apply-failure && " $* " == *" apply --index "* ]]; then
+  printf 'partial\n' >"$NIX_CONFIG_DIR/tracked.txt"
+  "$REAL_GIT" -C "$NIX_CONFIG_DIR" add -- tracked.txt
+  : >"$marker"
+  exit 71
+fi
+if [[ ${UPDATE_TEST_FAIL_RESTORE:-} == 1 && " $* " == *" restore --source="* \
+  && ! -e ${UPDATE_TEST_RESTORE_FAILURE_MARKER:-/nonexistent} ]]; then
+  : >"$UPDATE_TEST_RESTORE_FAILURE_MARKER"
+  exit 71
+fi
+if [[ $phase == after-apply && " $* " == *" apply --index "* ]]; then
+  "$REAL_GIT" "$@"
+  if [[ ! -e $marker ]]; then : >"$marker"; kill -TERM "$PPID"; fi
+  exit 0
+fi
+if [[ $phase == after-read-tree && " $* " == *" read-tree "* ]]; then
+  "$REAL_GIT" "$@"
+  if [[ ! -e $marker ]]; then : >"$marker"; kill -TERM "$PPID"; fi
+  exit 0
+fi
+exec "$REAL_GIT" "$@"
+            """,
+        )
+        executable(
+            "chmod",
+            """#!/usr/bin/env bash
+set -euo pipefail
+"$REAL_CHMOD" "$@"
+if [[ ${UPDATE_TEST_SIGNAL_PHASE:-} == after-normalize \
+  && ! -e ${UPDATE_TEST_SIGNAL_MARKER:-/nonexistent} ]]; then
+  : >"$UPDATE_TEST_SIGNAL_MARKER"
+  kill -TERM "$PPID"
+fi
+            """,
+        )
+        executable(
+            "mkdir",
+            """#!/usr/bin/env bash
+set -euo pipefail
+"$REAL_MKDIR" "$@"
+if [[ ${UPDATE_TEST_SIGNAL_PHASE:-} == lock-acquisition \
+  && ${*: -1} == */update-agents.lock ]]; then
+  : >"$UPDATE_TEST_SIGNAL_MARKER"
+  kill -TERM "$PPID"
+fi
+""",
+        )
+
+        subprocess.run([real_git, "init", "-q", str(root)], check=True)
+        subprocess.run(
+            [real_git, "-C", str(root), "config", "core.fileMode", "true"],
+            check=True,
+        )
+        subprocess.run(
+            [real_git, "-C", str(root), "config", "diff.renames", "copies"],
+            check=True,
+        )
+        subprocess.run([real_git, "-C", str(root), "add", "."], check=True)
+        subprocess.run(
+            [
+                real_git,
+                "-C",
+                str(root),
+                "-c",
+                "user.name=Test",
+                "-c",
+                "user.email=test@example.invalid",
+                "commit",
+                "-qm",
+                "baseline",
+            ],
+            check=True,
+        )
+        baseline = subprocess.run(
+            [real_git, "-C", str(root), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        environment = {
+            **os.environ,
+            "NIX_CONFIG_DIR": str(root),
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "REAL_CHMOD": real_chmod,
+            "REAL_GIT": real_git,
+            "REAL_MKDIR": real_mkdir,
+            "TMPDIR": temporary,
+        }
+        return root, environment, baseline
+
+    @staticmethod
+    def _update_agents_projection(root: Path):
+        projection = {}
+        for current, directories, files in os.walk(root, topdown=True, followlinks=False):
+            current_path = Path(current)
+            if current_path == root:
+                directories[:] = [name for name in directories if name != ".git"]
+            directories.sort()
+            files.sort()
+            for entry in [*directories, *files]:
+                path = current_path / entry
+                name = path.relative_to(root).as_posix()
+                if path.is_symlink():
+                    projection[name] = ("symlink", os.readlink(path))
+                elif path.is_dir():
+                    projection[name] = (
+                        "directory",
+                        stat.S_IMODE(path.stat().st_mode),
+                    )
+                elif path.is_file():
+                    info = path.stat()
+                    projection[name] = (
+                        "file",
+                        stat.S_IMODE(info.st_mode),
+                        path.read_bytes(),
+                    )
+                else:
+                    projection[name] = ("missing",)
+        return projection
+
+    def _assert_update_agents_unchanged(
+        self, root: Path, baseline: str, projection
+    ) -> None:
+        self.assertEqual(
+            subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip(),
+            baseline,
+        )
+        self.assertEqual(
+            subprocess.run(
+                ["git", "-C", str(root), "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout,
+            "",
+        )
+        self.assertEqual(self._update_agents_projection(root), projection)
+        worktrees = subprocess.run(
+            ["git", "-C", str(root), "worktree", "list", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+        self.assertEqual(worktrees.count("worktree "), 1)
+        self.assertFalse((root / ".git/update-agents.lock").exists())
+        self.assertEqual(list(root.parent.glob("update-agents.*")), [])
+
+    def test_update_agents_publishes_declared_filesystem_identities(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            projection = self._update_agents_projection(root)
+            self.assertEqual(projection["tracked.txt"], ("file", 0o640, b"after\n"))
+            self.assertEqual(projection["mode.sh"], ("file", 0o755, b"#!/bin/sh\nexit 0\n"))
+            self.assertEqual(projection["binary.bin"], ("file", 0o644, b"\x00after\xfe\n"))
+            self.assertEqual(
+                projection["format.nix"],
+                ("file", 0o644, b"{ changed = true; }\n"),
+            )
+            self.assertEqual(
+                projection["projection.json"],
+                ("file", 0o644, b'{"projected": true}\n'),
+            )
+            self.assertEqual(projection["link"], ("symlink", "target-new"))
+            self.assertEqual(
+                projection["regular-to-link"], ("symlink", "target-new")
+            )
+            self.assertEqual(
+                projection["link-to-regular"],
+                ("file", 0o644, b"regular after\n"),
+            )
+            self.assertNotIn("renamed-old.txt", projection)
+            self.assertEqual(
+                projection["renamed-new.txt"],
+                ("file", 0o644, b"rename payload\n"),
+            )
+            self.assertEqual(
+                projection["undeclared-rename-source.txt"],
+                ("file", 0o644, b"undeclared rename\n"),
+            )
+            self.assertNotIn("deleted.txt", projection)
+            self.assertEqual(projection["created.txt"], ("file", 0o644, b"created\n"))
+            self.assertEqual(projection["new-directory"][0], "directory")
+            self.assertEqual(
+                projection["new-directory/generated-lock.json"],
+                ("file", 0o644, b"{}\n"),
+            )
+            self.assertFalse((root / ".git/update-agents.lock").exists())
+            self.assertEqual(list(root.parent.glob("update-agents.*")), [])
+
+    def test_update_agents_rejects_undeclared_candidate_mutation(self):
+        for environment_name in (
+            "UPDATE_TEST_MUTATE_UNDECLARED",
+            "UPDATE_TEST_MUTATE_IGNORED",
+            "UPDATE_TEST_RENAME_UNDECLARED",
+        ):
+            with (
+                self.subTest(environment_name=environment_name),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                root, environment, baseline = self._create_update_agents_fixture(
+                    temp_dir
+                )
+                before = self._update_agents_projection(root)
+                environment[environment_name] = "1"
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS)],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("undeclared updater mutation", result.stderr)
+                self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_sigterm_rolls_back_every_publication_phase(self):
+        for phase in ("after-apply", "after-normalize", "after-read-tree"):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
+                root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+                before = self._update_agents_projection(root)
+                marker = Path(temp_dir) / "signal-delivered"
+                environment.update(
+                    {
+                        "UPDATE_TEST_SIGNAL_PHASE": phase,
+                        "UPDATE_TEST_SIGNAL_MARKER": str(marker),
+                    }
+                )
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS)],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertTrue(marker.is_file())
+                self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_partial_apply_failure_restores_baseline(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            marker = Path(temp_dir) / "partial-apply-injected"
+            environment.update(
+                {
+                    "UPDATE_TEST_SIGNAL_PHASE": "partial-apply-failure",
+                    "UPDATE_TEST_SIGNAL_MARKER": str(marker),
+                }
+            )
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertTrue(marker.is_file())
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_restore_fallback_recovers_baseline(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            signal_marker = Path(temp_dir) / "signal-delivered"
+            restore_marker = Path(temp_dir) / "restore-failure-injected"
+            environment.update(
+                {
+                    "UPDATE_TEST_SIGNAL_PHASE": "after-apply",
+                    "UPDATE_TEST_SIGNAL_MARKER": str(signal_marker),
+                    "UPDATE_TEST_FAIL_RESTORE": "1",
+                    "UPDATE_TEST_RESTORE_FAILURE_MARKER": str(restore_marker),
+                }
+            )
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertTrue(signal_marker.is_file())
+            self.assertTrue(restore_marker.is_file())
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_rolls_back_interrupted_commit_publication(self):
+        for phase in ("merge-failure", "merge-partial-failure", "merge-sigterm"):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
+                root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+                before = self._update_agents_projection(root)
+                marker = Path(temp_dir) / "merge-interrupted"
+                environment.update(
+                    {
+                        "UPDATE_TEST_SIGNAL_PHASE": phase,
+                        "UPDATE_TEST_SIGNAL_MARKER": str(marker),
+                    }
+                )
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS), "--commit"],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertTrue(marker.is_file())
+                self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_successful_commit_preserves_filesystem_identities(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--commit"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            head = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            self.assertNotEqual(head, baseline)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "status", "--porcelain"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout,
+                "",
+            )
+            projection = self._update_agents_projection(root)
+            self.assertEqual(projection["tracked.txt"], ("file", 0o640, b"after\n"))
+            self.assertEqual(projection["mode.sh"][1], 0o755)
+            self.assertEqual(projection["link"], ("symlink", "target-new"))
+            self.assertNotIn("deleted.txt", projection)
+            self.assertFalse((root / ".git/update-agents.lock").exists())
+            self.assertEqual(list(root.parent.glob("update-agents.*")), [])
+
+    def test_update_agents_rejects_post_merge_untracked_mutation(self):
+        for phase, path_name in (
+            ("merge-untracked", "post-merge.tmp"),
+            ("merge-ignored", "ignored.tmp"),
+        ):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
+                root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+                before = self._update_agents_projection(root)
+                environment["UPDATE_TEST_SIGNAL_PHASE"] = phase
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS), "--commit"],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(
+                    "published commit differs from validated candidate", result.stderr
+                )
+                self.assertEqual((root / path_name).read_text(), "post merge\n")
+                after = self._update_agents_projection(root)
+                external = after.pop(path_name)
+                self.assertEqual(external[0], "file")
+                self.assertEqual(after, before)
+                self.assertEqual(
+                    subprocess.run(
+                        ["git", "-C", str(root), "rev-parse", "HEAD"],
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    ).stdout.strip(),
+                    baseline,
+                )
+                self.assertFalse((root / ".git/update-agents.lock").exists())
+
+    def test_update_agents_revalidates_after_commit_verification(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment["UPDATE_TEST_MUTATE_LIVE_DURING_VERIFY"] = "1"
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--commit"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("live repository changed before publication", result.stderr)
+            self.assertEqual((root / "verify-external.txt").read_text(), "verify edit\n")
+            after = self._update_agents_projection(root)
+            external = after.pop("verify-external.txt")
+            self.assertEqual(external[0], "file")
+            self.assertEqual(after, before)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            self.assertFalse((root / ".git/update-agents.lock").exists())
+
+    def test_update_agents_rejects_commit_hook_tree_mutation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment["UPDATE_TEST_HOOK_INJECT"] = "1"
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--commit"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("signed commit did not capture the complete transaction", result.stderr)
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_sigterm_during_lock_acquisition_releases_lock(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            marker = Path(temp_dir) / "lock-created"
+            environment.update(
+                {
+                    "UPDATE_TEST_SIGNAL_PHASE": "lock-acquisition",
+                    "UPDATE_TEST_SIGNAL_MARKER": str(marker),
+                }
+            )
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertTrue(marker.is_file())
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_prunes_failed_candidate_removal(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
+            real_git = environment["REAL_GIT"]
+            unrelated = Path(temp_dir) / "unrelated-worktree"
+            subprocess.run(
+                [real_git, "-C", str(root), "worktree", "add", "--detach", str(unrelated)],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            unrelated_git_dir = Path(
+                subprocess.run(
+                    [
+                        real_git,
+                        "-C",
+                        str(unrelated),
+                        "rev-parse",
+                        "--path-format=absolute",
+                        "--git-dir",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip()
+            )
+            shutil.rmtree(unrelated)
+            self.assertTrue(unrelated_git_dir.is_dir())
+            marker = Path(temp_dir) / "remove-failure-injected"
+            environment.update(
+                {
+                    "UPDATE_TEST_SIGNAL_PHASE": "worktree-remove-failure",
+                    "UPDATE_TEST_SIGNAL_MARKER": str(marker),
+                }
+            )
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(marker.is_file())
+            worktrees = subprocess.run(
+                ["git", "-C", str(root), "worktree", "list", "--porcelain"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+            self.assertEqual(worktrees.count("worktree "), 2)
+            self.assertTrue(unrelated_git_dir.is_dir())
+            self.assertNotIn("/candidate\n", worktrees)
+            self.assertFalse((root / ".git/update-agents.lock").exists())
+            self.assertEqual(list(root.parent.glob("update-agents.*")), [])
+
+    def test_update_agents_fails_closed_when_worktree_verification_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
+            environment["UPDATE_TEST_SIGNAL_PHASE"] = "worktree-list-failure"
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("failed to verify candidate worktree removal", result.stderr)
+            self.assertFalse((root / ".git/update-agents.lock").exists())
+            self.assertEqual(list(root.parent.glob("update-agents.*")), [])
+
+    def test_update_agents_sigterm_discards_every_candidate_phase(self):
+        for phase in (
+            "candidate-portable-lock",
+            "candidate-root-lock",
+            "candidate-projection",
+            "candidate-update",
+            "candidate-format",
+            "candidate-portable-validation",
+            "candidate-root-validation",
+        ):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
+                root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+                before = self._update_agents_projection(root)
+                marker = Path(temp_dir) / "signal-delivered"
+                environment.update(
+                    {
+                        "UPDATE_TEST_SIGNAL_PHASE": phase,
+                        "UPDATE_TEST_SIGNAL_MARKER": str(marker),
+                    }
+                )
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS)],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertTrue(marker.is_file())
+                self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_failure_discards_every_candidate_phase(self):
+        for phase in (
+            "candidate-portable-lock",
+            "candidate-root-lock",
+            "candidate-projection",
+            "candidate-update",
+            "candidate-format",
+            "candidate-portable-validation",
+            "candidate-root-validation",
+        ):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
+                root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+                before = self._update_agents_projection(root)
+                environment["UPDATE_TEST_FAILURE_PHASE"] = phase
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS)],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_refuses_concurrent_live_edit_before_publication(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment["UPDATE_TEST_MUTATE_LIVE"] = "1"
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("live repository changed before publication", result.stderr)
+            self.assertEqual((root / "external.txt").read_text(), "external\nexternal\n")
+            after = self._update_agents_projection(root)
+            external = after.pop("external.txt")
+            self.assertEqual(external[0], "file")
+            self.assertEqual(external[2], b"external\nexternal\n")
+            self.assertEqual(after, before)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            worktrees = subprocess.run(
+                ["git", "-C", str(root), "worktree", "list", "--porcelain"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+            self.assertEqual(worktrees.count("worktree "), 1)
+            self.assertFalse((root / ".git/update-agents.lock").exists())
+
     def test_update_agents_discards_failed_candidate_transaction(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir) / "repo"
@@ -1363,13 +2245,21 @@ exec "$REAL_GIT" "$@"
         }
         self.assertEqual(declared_inputs, expected_inputs)
         self.assertIn(
+            "export UPDATE_AGENTS_CANDIDATE=1",
+            update_agents,
+        )
+        self.assertNotIn(
             "UPDATE_AGENTS_CANDIDATE=1 python bin/update-overlay --sync-flake-projections",
             update_agents,
         )
         self.assertIn("transaction_baseline=", update_agents)
         self.assertIn("trap cleanup_transaction EXIT", update_agents)
         self.assertIn('git -C "$config_dir" worktree add', update_agents)
-        self.assertIn('git -C "$config_dir" merge --ff-only', update_agents)
+        self.assertIn(
+            'git -C "$config_dir" -c core.hooksPath=/dev/null',
+            update_agents,
+        )
+        self.assertIn('merge --ff-only "$committed_head"', update_agents)
         self.assertIn("nix flake check --no-build", update_agents)
         self.assertNotIn("rollback_transaction", update_agents)
         self.assertIn("refusing external action without a newly signed commit", update_agents)
