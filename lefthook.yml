@@ -42,13 +42,17 @@ pre-commit:
       run: bin/quality portable-eval
 
 pre-push:
+  # Pre-push gates validate the revision's complete tree, not the diff that happens
+  # to remain against one remote. A push-mirror can make {push_files} empty before
+  # this hook runs; using the tracked tree keeps the gate non-vacuous in that case.
+  files: git ls-files
   commands:
     # Evaluates vulcan, vps and the shared-work class against THIS tree, so a
     # change here that would break a consumer fails before it is published rather
     # than at the consumer's next lock bump. Deliberately pre-push and not
     # pre-commit: it is targeted but still costs real nix eval time.
     consumer-eval:
-      run: bin/quality consumer-eval
+      run: ": {files}; bin/quality consumer-eval"
     # The local mirror of CI's signatures job (#23). Pre-push, because that is
     # the last moment an unsigned commit can be caught before it becomes someone
     # else's problem -- and it costs a few git calls, not a build.
@@ -57,9 +61,10 @@ pre-push:
     # authority CI invokes, and bin/verify-signatures refuses rather than guessing
     # when it cannot determine what is unpublished.
     signatures:
-      run: bin/quality signatures
+      run: ": {files}; bin/quality signatures"
     agent-checks:
       run: >-
+        : {files};
         nix build --no-link
         .#checks.aarch64-darwin.agent-resources
         .#checks.aarch64-darwin.agent-wrappers
@@ -69,4 +74,4 @@ pre-push:
         .#checks.aarch64-darwin.ai-home-manager-package-selection
         .#checks.aarch64-darwin.pi-gallery
     system-build:
-      run: ./build system
+      run: ": {files}; ./build system"

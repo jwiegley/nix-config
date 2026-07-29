@@ -702,3 +702,29 @@ unbypassed hook passed all affected suites. Both #88 commits verify `%G? = G`.
 #88 is closed and both project cards are Done. No partner-observation Markdown
 remains. Next ordered unit is **#89**, the empty-range pre-push gate defect. No real
 push was performed or authorized.
+
+---
+
+## 2026-07-29 — #89 empty-range pre-push coverage implemented, audit pending
+
+The chosen engineering behavior is revision/tree scope. `lefthook.yml` supplies the
+tracked tree through a custom `files: git ls-files` source, and each pre-push command
+consumes `{files}` through a harmless `:` prefix. A raw push with an empty remote range
+therefore runs all four gates rather than silently skipping them.
+
+`bin/publish` runs the tracked pre-push group explicitly once with Lefthook's `--force`
+after both remote dry-runs succeed. Only after that proof do its dry-run/real Git push
+commands suppress duplicate hook invocation. A failed explicit gate leaves both
+remotes untouched. The safety authority is still the tracked `pre-push` group; the
+tool does not copy its commands.
+
+The test suite performs real empty-range pushes in a throwaway repository: the old
+configuration produces no marker, while the tracked-tree `{files}` configuration runs
+the marker exactly once. Separate tests prove one publish invokes the tracked group
+exactly once and a failing group prevents both real pushes. Removing the explicit gate
+was watched failing both properties, then restored.
+
+Focused verification: Lefthook config validates; shell/Python lint pass; 26 publish
+tests pass. Remaining: full staged `bin/quality`, signed commit, independent fess,
+issue/project closeout, and observation cleanup. No real repository push was run or
+authorized.

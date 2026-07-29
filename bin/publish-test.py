@@ -143,6 +143,66 @@ class TestNoop(PublishHarness):
         self.assertIn("nothing to do", r.stdout)
 
 
+@unittest.skipUnless(shutil.which("lefthook"), "lefthook not available")
+class TestEmptyRangePrePush(PublishHarness):
+    def test_tracked_tree_scope_turns_empty_range_from_skip_into_run(self):
+        marker = os.path.join(self.tmp, "pre-push-ran")
+        config = os.path.join(self.work, "lefthook.yml")
+
+        def write_config(with_tree_scope):
+            scope = "  files: git ls-files\n" if with_tree_scope else ""
+            command = (
+                ': {files}; printf ran >>"$EMPTY_RANGE_MARKER"'
+                if with_tree_scope
+                else 'printf ran >>"$EMPTY_RANGE_MARKER"'
+            )
+            with open(config, "w") as fh:
+                fh.write(
+                    "pre-push:\n"
+                    + scope
+                    + "  commands:\n"
+                    + "    probe:\n"
+                    + "      run: '"
+                    + command
+                    + "'\n"
+                )
+
+        write_config(with_tree_scope=False)
+        installed = subprocess.run(
+            ["lefthook", "install", "--force"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=clean_env(),
+        )
+        self.assertEqual(installed.returncode, 0, installed.stdout + installed.stderr)
+
+        skipped = git(
+            "push",
+            "origin",
+            "main",
+            cwd=self.work,
+            check=False,
+            env={"EMPTY_RANGE_MARKER": marker},
+        )
+        self.assertEqual(skipped.returncode, 0, skipped.stdout + skipped.stderr)
+        self.assertFalse(os.path.exists(marker), "old empty-range behavior unexpectedly ran")
+
+        write_config(with_tree_scope=True)
+        forced = git(
+            "push",
+            "origin",
+            "main",
+            cwd=self.work,
+            check=False,
+            env={"EMPTY_RANGE_MARKER": marker},
+        )
+        self.assertEqual(forced.returncode, 0, forced.stdout + forced.stderr)
+        self.assertTrue(os.path.exists(marker), forced.stdout + forced.stderr)
+        with open(marker) as fh:
+            self.assertEqual(fh.read(), "ran")
+
+
 class TestRefusals(PublishHarness):
     def test_force_is_refused_outright(self):
         for flag in ("--force", "-f", "--force-with-lease"):
@@ -290,7 +350,23 @@ class TestPartialFailure(PublishHarness):
             None,
         )
         self.assertIsNotNone(fpr, "no fingerprint from generated key")
-        self.signing_env = {"GNUPGHOME": self.gnupghome}
+        gate_bin = os.path.join(self.tmp, "gate-bin")
+        os.makedirs(gate_bin)
+        self.gate_log = os.path.join(self.tmp, "pre-push-gates.log")
+        lefthook = os.path.join(gate_bin, "lefthook")
+        with open(lefthook, "w") as fh:
+            fh.write(
+                """#!/bin/sh
+printf '%s\n' "$*" >>"$PUBLISH_GATE_LOG"
+exit "${PUBLISH_GATE_EXIT:-0}"
+"""
+            )
+        os.chmod(lefthook, 0o755)
+        self.signing_env = {
+            "GNUPGHOME": self.gnupghome,
+            "PATH": f"{gate_bin}:{os.environ['PATH']}",
+            "PUBLISH_GATE_LOG": self.gate_log,
+        }
         git("config", "user.signingkey", fpr, cwd=self.work)
         git("config", "gpg.format", "openpgp", cwd=self.work)
         git("config", "commit.gpgsign", "true", cwd=self.work)
@@ -312,7 +388,7 @@ class TestPartialFailure(PublishHarness):
             fh.write(
                 """#!/usr/bin/env bash
 set -euo pipefail
-if [[ ${1:-} == push && ${2:-} == github ]]; then
+if [[ ${1:-} == push && " $* " == *" github "* && " $* " != *" --dry-run "* ]]; then
     "$REAL_GIT" --git-dir="$RACE_REMOTE" fetch --quiet "$PWD" "$RACE_SHA"
     "$REAL_GIT" --git-dir="$RACE_REMOTE" update-ref refs/heads/main "$RACE_SHA"
     echo "simulated mirror/ref race" >&2
@@ -322,13 +398,13 @@ exec "$REAL_GIT" "$@"
 """
             )
         os.chmod(wrapper, 0o755)
-        return clean_env(
+        return clean_env(**{
             **self.signing_env,
-            PATH=f"{fake_bin}:{os.environ['PATH']}",
-            REAL_GIT=real_git,
-            RACE_REMOTE=self.github,
-            RACE_SHA=raced_sha,
-        )
+            "PATH": f"{fake_bin}:{self.signing_env['PATH']}",
+            "REAL_GIT": real_git,
+            "RACE_REMOTE": self.github,
+            "RACE_SHA": raced_sha,
+        })
 
     def _readback_failure_env(self):
         fake_bin = os.path.join(self.tmp, "readback-bin")
@@ -340,7 +416,7 @@ exec "$REAL_GIT" "$@"
             fh.write(
                 """#!/usr/bin/env bash
 set -euo pipefail
-if [[ ${1:-} == push && ${2:-} == github ]]; then
+if [[ ${1:-} == push && " $* " == *" github "* && " $* " != *" --dry-run "* ]]; then
     if "$REAL_GIT" "$@"; then status=0; else status=$?; fi
     : >"$READBACK_FAIL_MARKER"
     exit "$status"
@@ -353,12 +429,12 @@ exec "$REAL_GIT" "$@"
 """
             )
         os.chmod(wrapper, 0o755)
-        return clean_env(
+        return clean_env(**{
             **self.signing_env,
-            PATH=f"{fake_bin}:{os.environ['PATH']}",
-            REAL_GIT=real_git,
-            READBACK_FAIL_MARKER=marker,
-        )
+            "PATH": f"{fake_bin}:{self.signing_env['PATH']}",
+            "REAL_GIT": real_git,
+            "READBACK_FAIL_MARKER": marker,
+        })
 
     def _successful_push_race_env(self, raced_sha):
         fake_bin = os.path.join(self.tmp, "success-race-bin")
@@ -369,7 +445,7 @@ exec "$REAL_GIT" "$@"
             fh.write(
                 """#!/usr/bin/env bash
 set -euo pipefail
-if [[ ${1:-} == push && ${2:-} == github ]]; then
+if [[ ${1:-} == push && " $* " == *" github "* && " $* " != *" --dry-run "* ]]; then
     if "$REAL_GIT" "$@"; then status=0; else status=$?; fi
     "$REAL_GIT" --git-dir="$RACE_REMOTE" update-ref refs/heads/main "$RACE_SHA"
     exit "$status"
@@ -378,13 +454,13 @@ exec "$REAL_GIT" "$@"
 """
             )
         os.chmod(wrapper, 0o755)
-        return clean_env(
+        return clean_env(**{
             **self.signing_env,
-            PATH=f"{fake_bin}:{os.environ['PATH']}",
-            REAL_GIT=real_git,
-            RACE_REMOTE=self.github,
-            RACE_SHA=raced_sha,
-        )
+            "PATH": f"{fake_bin}:{self.signing_env['PATH']}",
+            "REAL_GIT": real_git,
+            "RACE_REMOTE": self.github,
+            "RACE_SHA": raced_sha,
+        })
 
     def _third_remote_revision(self):
         other = os.path.join(self.tmp, "racer")
@@ -440,6 +516,42 @@ exec "$REAL_GIT" "$@"
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("all signed", r.stdout)
         self.assertIn("would accept", r.stdout)
+
+    def test_publish_runs_tracked_pre_push_group_exactly_once(self):
+        head = self._signed_commit("s\n", "a signed commit")
+        r = subprocess.run(
+            [PUBLISH, "--publish"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=clean_env(**self.signing_env),
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        with open(self.gate_log) as fh:
+            invocations = [line.strip() for line in fh if line.strip()]
+        self.assertEqual(invocations, ["run pre-push --force"])
+        self.assertIn("all tracked gates passed once", r.stdout)
+        self.assertEqual(self.remote_sha(self.origin), head)
+        self.assertEqual(self.remote_sha(self.github), head)
+
+    def test_failed_explicit_gate_stops_before_both_real_pushes(self):
+        head = self._signed_commit("s\n", "a signed commit")
+        before = (self.remote_sha(self.origin), self.remote_sha(self.github))
+        r = subprocess.run(
+            [PUBLISH, "--publish"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=clean_env(**{**self.signing_env, "PUBLISH_GATE_EXIT": "23"}),
+        )
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("pre-push gates failed", r.stderr)
+        with open(self.gate_log) as fh:
+            invocations = [line.strip() for line in fh if line.strip()]
+        self.assertEqual(invocations, ["run pre-push --force"])
+        after = (self.remote_sha(self.origin), self.remote_sha(self.github))
+        self.assertEqual(before, after)
+        self.assertNotIn(head, after)
 
     def test_mirror_race_already_at_target_is_success(self):
         head = self._signed_commit("s\n", "a signed commit")
@@ -623,6 +735,13 @@ class TestSelfConsistency(unittest.TestCase):
         with open(PUBLISH) as fh:
             body = fh.read()
         self.assertIn("REMOTES=(origin github)", body)
+
+    def test_pre_push_commands_use_tracked_tree_scope(self):
+        with open(os.path.join(os.path.dirname(HERE), "lefthook.yml")) as fh:
+            config = fh.read()
+        pre_push = config.split("\npre-push:\n", 1)[1]
+        self.assertIn("  files: git ls-files", pre_push)
+        self.assertEqual(pre_push.count(": {files};"), 4)
 
 
 if __name__ == "__main__":

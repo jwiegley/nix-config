@@ -44,7 +44,13 @@
 # --dry-run is accepted as a synonym for the default, so existing muscle memory
 # and any caller written against the old interface stay correct.
 #
-# Refs: jwiegley/nix-config#18, #88; FLEET-DESIGN-PLAN §4.5, §10 Q6.
+# The tracked pre-push group is run explicitly ONCE before any real push. Git's
+# --no-verify then suppresses duplicate hook invocations for the already-verified
+# revision across two dry-runs and two real remotes; it does not skip the gate.
+# Raw `git push` still runs the installed hook, whose tracked-tree file scope keeps
+# empty remote ranges from turning every command into a silent no-op.
+#
+# Refs: jwiegley/nix-config#18, #88, #89; FLEET-DESIGN-PLAN §4.5, §10 Q6.
 
 set -euo pipefail
 
@@ -221,11 +227,11 @@ say "  all signed ($checked commit-remote pairs checked)"
 # the step that makes a partial push unlikely rather than merely detectable.
 say "pre-flight: dry-run push to every remote that needs it"
 for r in "${need_push[@]}"; do
-    if git push --dry-run "$r" "$rev:refs/heads/$branch" >/dev/null 2>&1; then
+    if git push --dry-run --no-verify "$r" "$rev:refs/heads/$branch" >/dev/null 2>&1; then
         say "  $r would accept"
     else
         printf '\n' >&2
-        git push --dry-run "$r" "$rev:refs/heads/$branch" >&2 || true
+        git push --dry-run --no-verify "$r" "$rev:refs/heads/$branch" >&2 || true
         die "$r rejected the dry-run (output above). Nothing was pushed anywhere."
     fi
 done
@@ -236,6 +242,15 @@ if [[ $do_publish -eq 0 ]]; then
     exit 0
 fi
 
+# All remote pre-flight is complete. Run the tracked hook group once, forced so an
+# empty range cannot turn tree-validating commands into skips. Only this successful
+# proof permits the duplicate-suppressed pushes below.
+say "pre-push: running tracked gates once for $short"
+if ! lefthook run pre-push --force; then
+    die "pre-push gates failed. Nothing was pushed anywhere."
+fi
+say "pre-push: all tracked gates passed once"
+
 # ---- Publish ------------------------------------------------------------
 # Push, then independently verify each remote actually holds the revision.
 # `git push` exiting 0 is not proof; re-reading the remote ref is.
@@ -245,7 +260,7 @@ declare -a failed=()
 declare -A failed_state=()
 for r in "${need_push[@]}"; do
     say "pushing to $r"
-    if git push "$r" "$rev:refs/heads/$branch"; then
+    if git push --no-verify "$r" "$rev:refs/heads/$branch"; then
         push_succeeded=1
     else
         push_succeeded=0
