@@ -300,3 +300,46 @@ probe reached after three attempts, arrived at again from the other direction.
 Fix: W6 applied at `config/packages.nix`, with a comment recording why that
 file reads the registry rather than `config.johnw.host`. Both Linux configs
 evaluate; hera HM and darwin remain byte-identical.
+
+## Correction — what `13e69093` actually contains
+
+Partner observation `doc/observations/2026-07-28T23:11:20.640Z.md`, verified and
+accepted. `13e69093`'s subject reads "test(ai): land the in-flight positron
+audience and PyTorch-skill assertions" and its body describes adding
+`personalOnlyProfileIds`, `positronProfileIds` and `positronPyTorchSkills`. **It
+adds none of them** — those landed eight commits earlier in `0e819483`
+("feat(ai): add Positron PyTorch skills"). Measured: `git show 13e69093 --
+test/ai/home-manager-contract.nix | grep -E '^\+' | grep -c positronPyTorchSkills`
+is **0**.
+
+What `13e69093` actually adds is the **promptdeploy reconciliation**: 289 lines of
+`promptdeploy*` bindings in `test/ai/home-manager-contract.nix`, driven by the new
+295-line `doc/migrations/promptdeploy-reconciliation.json`, plus
+`doc/migrations/nix-managed-agent-oracle.md` (45 lines) — 629 insertions across
+three files, which is the whole diff.
+
+So, for anyone searching this handoff:
+
+- **promptdeploy reconciliation → `13e69093`.**
+- **positron audience / PyTorch skills → `0e819483`.**
+
+The message cannot be corrected in place: `13e69093` is in merged history, and
+rewriting it needs authorization that has not been given. This entry is the
+correction of record.
+
+**Policy adopted, since this recurred.** Committing another actor's unreviewed
+work to prevent its loss is the right call, and holding #65 back for it was right
+too. But the message for such a commit must say what the content *is*, not what
+the committer expected to find. Where the committer has not read the content,
+say so plainly — "289 lines of promptdeploy reconciliation assertions, committed
+unread to prevent loss; build verified, content not reviewed" — which is more
+useful to a later reader than a confident description of the wrong thing.
+
+The observation also noted the promptdeploy oracle had no rationale document,
+while the parity oracle of equal standing has `doc/PARITY-ORACLE-REFRESH.md`.
+Addressed: `doc/migrations/PROMPTDEPLOY-ORACLE.md` now records what the
+reconciliation reconciles, what each of its **nine** top-level keys means, and
+when it is frozen versus regenerated versus retired. The observation's own list
+named five keys; `models`, `selectors` and `schemaVersion` were missing from it
+and are documented too — a key table that omits keys is the same class of defect
+as the commit message that prompted it.
