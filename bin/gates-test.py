@@ -490,15 +490,22 @@ class TestGatesAreRegistered(unittest.TestCase):
                 "bin/quality has no dispatch arm for %s" % suite,
             )
 
-    def test_darwin_surface_gate_is_wired_to_every_expensive_tier_entrypoint(self):
-        for path in (REPO / "lefthook.yml", REPO / "Makefile", REPO / ".github/workflows/ci.yml"):
-            self.assertIn(
-                "bin/quality darwin-surface",
-                path.read_text(),
-                "%s does not delegate the Darwin surface gate to bin/quality" % path,
-            )
+    def test_darwin_surface_gate_is_wired_to_local_expensive_tier_entrypoints(self):
+        self.assertRegex(
+            (REPO / "lefthook.yml").read_text(),
+            r'(?m)^\s+run: ": \{files\}; bin/quality darwin-surface"$',
+        )
+        self.assertRegex(
+            (REPO / "Makefile").read_text(),
+            r"(?m)^\tbin/quality darwin-surface$",
+        )
 
-    def test_no_gate_embeds_a_credential(self):
+    def test_darwin_surface_is_not_wired_to_remote_ci_until_root_is_portable(self):
+        ci = (REPO / ".github/workflows/ci.yml").read_text()
+        self.assertNotRegex(ci, r"(?m)^\s+run: bin/quality darwin-surface$")
+        self.assertIn("LAN-only ssh://gitea stock-trader input", ci)
+
+    def test_no_gate_contains_common_credential_markers(self):
         for tool in (
             VERIFY_SIGNATURES,
             CROSS_CONSUMER_EVAL,

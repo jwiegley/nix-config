@@ -41,6 +41,30 @@ DIFF = load_tool()
 
 
 class DarwinSurfaceDiffTests(unittest.TestCase):
+    def test_nix_projection_keeps_name_and_rejects_unnamed_homebrew_objects(self):
+        expression = r'''
+          let
+            helpers = import ./test/darwin/surface-helpers.nix;
+          in {
+            names = [
+              (helpers.derivationName { pname = "same"; name = "package-1.0"; })
+              (helpers.derivationName { pname = "same"; name = "package-2.0"; })
+            ];
+            unnamedHomebrewSucceeds =
+              (builtins.tryEval (builtins.deepSeq (helpers.homebrewName "brew" { }) true)).success;
+          }
+        '''
+        process = subprocess.run(
+            ["nix", "eval", "--impure", "--json", "--expr", expression],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        result = json.loads(process.stdout)
+        self.assertEqual(result["names"], ["package-1.0", "package-2.0"])
+        self.assertFalse(result["unnamedHomebrewSucceeds"])
+
     def test_hash_only_change_is_ignored_but_name_is_retained(self):
         before = {"path": f"/nix/store/{HASH_A}-activation-johnw"}
         after = {"path": f"/nix/store/{HASH_B}-activation-johnw"}

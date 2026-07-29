@@ -20,6 +20,7 @@ let
     "users"
   ];
   unreadable = "<unreadable: removed or throwing option>";
+  helpers = import ./surface-helpers.nix;
   project = import ./darwin-surface.nix;
   actualHosts = lib.genAttrs hosts (host: project darwinConfigurations.${host});
 
@@ -42,6 +43,21 @@ let
     {
       ok = builtins.attrNames (baseline.hosts or { }) == builtins.sort builtins.lessThan hosts;
       message = "baseline must contain exactly hera and clio";
+    }
+    {
+      ok =
+        helpers.derivationName {
+          pname = "same";
+          name = "package-1.0";
+        } != helpers.derivationName {
+          pname = "same";
+          name = "package-2.0";
+        };
+      message = "package projection must preserve derivation names, not collapse to pname";
+    }
+    {
+      ok = !(builtins.tryEval (builtins.deepSeq (helpers.homebrewName "brew" { }) true)).success;
+      message = "unnamed Homebrew objects must fail closed instead of sharing a sentinel";
     }
   ]
   ++ lib.concatMap (

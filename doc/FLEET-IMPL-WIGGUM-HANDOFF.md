@@ -795,3 +795,31 @@ suite: 103 Nix files, 35 shell scripts, 41 Python files, eight Python suites (in
 evaluation 5 ran / 0 skipped, and signatures for all 11 local commits. Remaining:
 signed implementation, independent fess, and tracker closeout. No push, host
 activation, or history rewrite was performed or authorized.
+
+Signed implementation `6e8a94d0` landed with the unbypassed hook passing all eight
+Python suites and affected lint/evaluation lanes; `%G? = G`. Independent fess found
+two release-blocking defects: `environment.systemPackages` used `pname`, hiding
+derivation versions/names, and the GitHub job evaluated a root flake with the LAN-only
+`ssh://gitea/.../stock-trader.git` input. It also found that Homebrew objects missing a
+`name` silently collapsed to `"?"`.
+
+The fess fix uses a shared, fail-closed Nix helper: packages preserve strict `name`,
+and unsupported unnamed Homebrew objects throw. A behavioral Nix test proves two
+packages with the same `pname` but different `name` remain distinct and the unnamed
+object is rejected. The baseline now records versioned derivation names. The invalid
+GitHub job is removed; pre-push and `make test` remain the honest local expensive-tier
+entrypoints until the root flake has a remote-fetchable boundary. A local
+`checks.x86_64-linux.darwin-value-surface` build succeeded through the LAN builder,
+which verifies the check derivation but deliberately is not claimed as GitHub proof.
+
+Focused fess-fix verification passes 13 Darwin tests and the live host comparison.
+The inventory refresh advances `repoHead` to signed `6e8a94d0` and moves the unchanged
+CI consumer reference from line 88 to 83; no edge or classification changed.
+The corrected projection also replays `IDENTICAL` for both hosts from an exact detached
+worktree at baseline revision `72de730a`; the temporary worktree was removed. Remaining:
+full staged `bin/quality`, signed fess-fix, and tracker closeout at that boundary. The
+full fess-fix gate then passed every suite: 104 Nix files, 35 shell scripts, 41 Python
+files, eight Python suites (including 21 gate and 13 Darwin tests), portable evaluation,
+the Darwin surface check, consumer evaluation 5 ran / 0 skipped, and signatures for all
+12 local commits. Remaining: signed fess-fix and tracker closeout. No push, host
+activation, or history rewrite was performed or authorized.

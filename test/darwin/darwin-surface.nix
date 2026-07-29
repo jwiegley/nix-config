@@ -5,6 +5,7 @@ darwin:
 
 let
   c = darwin.config;
+  helpers = import ./surface-helpers.nix;
   sortNames = builtins.sort builtins.lessThan;
   unreadable = "<unreadable: removed or throwing option>";
 
@@ -39,8 +40,6 @@ let
         builtins.split "/nix/store/[0-9a-df-np-sv-z]{32}-" value
       )
     );
-  packageName =
-    package: if (package ? pname) && package.pname != null then package.pname else package.name;
 in
 {
   # S12-S14
@@ -60,7 +59,9 @@ in
 
   # S15-S16
   environment = {
-    systemPackages = sortNames (map packageName c.environment.systemPackages);
+    # Keep `name`, not `pname`: masking versions here would make derivation-name
+    # changes invisible even though only the store HASH is supposed to be ignored.
+    systemPackages = sortNames (map helpers.derivationName c.environment.systemPackages);
     etc = sortNames (builtins.attrNames c.environment.etc);
     variables = mapAttrs (_: toString) c.environment.variables;
     shells = map toString c.environment.shells;
@@ -78,9 +79,9 @@ in
   # S18-S19
   homebrew = {
     enable = c.homebrew.enable;
-    brews = map (brew: if builtins.isString brew then brew else (brew.name or "?")) c.homebrew.brews;
-    casks = map (cask: if builtins.isString cask then cask else (cask.name or "?")) c.homebrew.casks;
-    taps = map (tap: if builtins.isString tap then tap else (tap.name or "?")) c.homebrew.taps;
+    brews = map (helpers.homebrewName "brew") c.homebrew.brews;
+    casks = map (helpers.homebrewName "cask") c.homebrew.casks;
+    taps = map (helpers.homebrewName "tap") c.homebrew.taps;
     masApps = c.homebrew.masApps;
     # onActivation is a submodule with a __functor, so project its data fields.
     onActivation = {

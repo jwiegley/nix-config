@@ -37,16 +37,16 @@
         ],
         "shells": [],
         "systemPackages": [
-          "bash-interactive",
+          "bash-interactive-5.3p9",
           "darwin-manpages",
           "darwin-option",
           "darwin-rebuild",
           "darwin-version",
-          "eternal-terminal",
-          "gnupg",
-          "texinfo-interactive",
-          "zsh",
-          "zsh"
+          "eternal-terminal-6.2.11",
+          "gnupg-2.4.9",
+          "texinfo-interactive-7.2",
+          "zsh-5.9.2",
+          "zsh-5.9.2"
         ],
         "variables": {
           "EDITOR": "nano",
@@ -1088,16 +1088,16 @@
         ],
         "shells": [],
         "systemPackages": [
-          "bash-interactive",
+          "bash-interactive-5.3p9",
           "darwin-manpages",
           "darwin-option",
           "darwin-rebuild",
           "darwin-version",
-          "eternal-terminal",
-          "gnupg",
-          "texinfo-interactive",
-          "zsh",
-          "zsh"
+          "eternal-terminal-6.2.11",
+          "gnupg-2.4.9",
+          "texinfo-interactive-7.2",
+          "zsh-5.9.2",
+          "zsh-5.9.2"
         ],
         "variables": {
           "EDITOR": "nano",
