@@ -409,6 +409,20 @@ class UpdateInventoryTests(unittest.TestCase):
         )
         self.assertNotEqual(refused.returncode, 0)
         self.assertIn("restricted to the update-agents candidate", refused.stderr)
+        forged = subprocess.run(
+            [sys.executable, str(SCRIPT), "--sync-flake-projections"],
+            cwd=SCRIPT.parent.parent,
+            capture_output=True,
+            text=True,
+            env={
+                **env,
+                "UPDATE_AGENTS_CANDIDATE": "1",
+                "GIT_DIR": str(SCRIPT.parent.parent / ".git"),
+            },
+            check=False,
+        )
+        self.assertNotEqual(forged.returncode, 0)
+        self.assertIn("detached linked worktree", forged.stderr)
 
     def test_issue34_ws_uses_fetchzip_without_gaining_an_executor(self):
         record = {
@@ -1071,8 +1085,9 @@ class IntegratedWorkflowTests(unittest.TestCase):
             fake_bin.mkdir()
             (root / "bin/update-overlay").write_text(SCRIPT.read_text())
             (root / "bin/update-overlay").chmod(0o700)
-            (root / "flake.lock").write_text("original root lock\n")
-            (root / "config/ai/flake.lock").write_text("original portable lock\n")
+            empty_lock = json.dumps({"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7})
+            (root / "flake.lock").write_text(empty_lock + "\n")
+            (root / "config/ai/flake.lock").write_text(empty_lock + "\n")
             (root / "overlays/ai/package.nix").write_text(OVERLAY)
 
             def executable(name, text):
@@ -1085,17 +1100,14 @@ set -euo pipefail
 if [[ $1 == eval ]]; then
   printf '{"schemaVersion":1,"targets":{}}\n'
 elif [[ $1 == flake && $2 == update ]]; then
-  if [[ ${3:-} == --flake ]]; then
-    echo portable-change >> config/ai/flake.lock
-  else
-    echo root-change >> flake.lock
-  fi
+  :
 elif [[ $1 == flake && $2 == check ]]; then
   exit 23
 fi
 """)
             executable("python", """#!/usr/bin/env bash
 set -euo pipefail
+if [[ ${2:-} == --sync-flake-projections ]]; then exec python3 "$@"; fi
 echo overlay-change >> overlays/ai/package.nix
 """)
             executable("nixfmt", "#!/usr/bin/env bash\nexit 0\n")
@@ -1150,8 +1162,9 @@ echo overlay-change >> overlays/ai/package.nix
             fake_bin.mkdir()
             (root / "bin/update-overlay").write_text(SCRIPT.read_text())
             (root / "bin/update-overlay").chmod(0o700)
-            (root / "flake.lock").write_text("original root lock\n")
-            (root / "config/ai/flake.lock").write_text("original portable lock\n")
+            empty_lock = json.dumps({"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7})
+            (root / "flake.lock").write_text(empty_lock + "\n")
+            (root / "config/ai/flake.lock").write_text(empty_lock + "\n")
             (root / "overlays/ai/package.nix").write_text(OVERLAY)
 
             real_git = shutil.which("git") or "/usr/bin/git"
@@ -1166,17 +1179,14 @@ set -euo pipefail
 if [[ $1 == eval ]]; then
   printf '{"schemaVersion":1,"targets":{}}\n'
 elif [[ $1 == flake && $2 == update ]]; then
-  if [[ ${3:-} == --flake ]]; then
-    echo portable-change >> config/ai/flake.lock
-  else
-    echo root-change >> flake.lock
-  fi
+  :
 elif [[ $1 == flake && $2 == check ]]; then
   exit 0
 fi
 """)
             executable("python", """#!/usr/bin/env bash
 set -euo pipefail
+if [[ ${2:-} == --sync-flake-projections ]]; then exec python3 "$@"; fi
 echo overlay-change >> overlays/ai/package.nix
 """)
             executable("nixfmt", "#!/usr/bin/env bash\nexit 0\n")

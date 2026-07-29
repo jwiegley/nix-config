@@ -76,7 +76,8 @@ die() {
 
 # All derivation lives in one Python program: it shells out to grep for the
 # repo-wide internal sweep (to reproduce issue #17's verification command
-# exactly) and reads the consumer flake.nix / flake.lock / *.nix files directly.
+# exactly), scans the tracked internal file types above, and reads consumer
+# flake.nix / flake.lock / *.nix files directly.
 derive() {
     python3 - "$repo_root" "$consumer_base" "$repo_head" <<'PY'
 import collections
@@ -95,7 +96,8 @@ SCHEMA_VERSION = 1
 # The include globs and patterns are recorded verbatim in the artifact so a later
 # consumer re-derives identically instead of inventing its own query. They match
 # issue #17's Verification block.
-INCLUDE_GLOBS = ["*.nix", "*.yml", "*.yaml", "*.md", "*.sh"]
+INCLUDE_GLOBS = ["*.nix", "*.json", "*.yml", "*.yaml", "*.md", "*.sh"]
+EXCLUDED_INTERNAL_PATHS = {"test/inventory/consumer-inventory.json"}
 CONFIG_AI = "config/ai"
 FLAKE_AI_RE = re.compile(r"flake-ai\.nix")
 # A load-bearing flake-ai.nix import is a relative/interpolated path in a .nix
@@ -130,13 +132,15 @@ OVERLAY_USE_RE = re.compile(r"inputs\.nix-config-ai\.overlays[.\w]*")
 # load-bearing. That keeps two real traps on the safe side --
 #   test/ai/home-manager-contract-common.nix:929 reads like prose but is the expected
 #     value of an assertion, and
-#   the packages/update-manifest.nix entries look like message strings but are the
-#     update tooling's file list,
+#   the sources/*.json entries look like message strings but are the update
+#     tooling's artifact lists,
 # both of which a prose-detecting filter would wrongly demote.
 def ref_kind(path, text):
     stripped = text.strip()
     if path.endswith(".md"):
         return "doc-prose"
+    if path.endswith(".json"):
+        return "data"
     if stripped.startswith("#"):
         return "comment"
     # A whole-line quoted path is a list element: tooling DATA, load-bearing.
@@ -230,7 +234,10 @@ def tracked_files(root):
 
 
 def _matches_globs(path):
-    return any(fnmatch.fnmatch(os.path.basename(path), g) for g in INCLUDE_GLOBS)
+    return (
+        rel(path) not in EXCLUDED_INTERNAL_PATHS
+        and any(fnmatch.fnmatch(os.path.basename(path), g) for g in INCLUDE_GLOBS)
+    )
 
 
 def grep(pattern, root, fixed=False):
@@ -274,7 +281,10 @@ def grep(pattern, root, fixed=False):
         m = re.match(r"^(.*?):(\d+):(.*)$", line)
         if not m:
             continue
-        rows.append((rel(m.group(1)), int(m.group(2)), m.group(3)))
+        relative = rel(m.group(1))
+        if relative in EXCLUDED_INTERNAL_PATHS:
+            continue
+        rows.append((relative, int(m.group(2)), m.group(3)))
     return rows
 
 
@@ -657,6 +667,7 @@ commands = {
         "grep -rIl --exclude-dir=.git "
         + " ".join("--include='%s'" % g for g in INCLUDE_GLOBS)
         + " -F -e 'config/ai' <repo_root>"),
+    "internalConfigAiExcludedPaths": sorted(EXCLUDED_INTERNAL_PATHS),
     "flakeAiInternalConsumers": (
         "grep -rIn --exclude-dir=.git "
         + " ".join("--include='%s'" % g for g in INCLUDE_GLOBS)

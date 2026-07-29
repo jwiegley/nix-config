@@ -1075,6 +1075,24 @@ def sync_flake_projections(nix_dir: Path) -> int:
     return changed_records
 
 
+def require_detached_linked_worktree(nix_dir: Path) -> None:
+    """Refuse projection writes in the primary or any branch-attached worktree."""
+    dotgit = nix_dir / ".git"
+    if not dotgit.is_file():
+        raise RuntimeError("projection sync requires a detached linked worktree")
+    pointer = dotgit.read_text().strip()
+    if not pointer.startswith("gitdir:"):
+        raise RuntimeError("projection sync requires a detached linked worktree")
+    git_dir = Path(pointer.removeprefix("gitdir:").strip())
+    if not git_dir.is_absolute():
+        git_dir = (nix_dir / git_dir).resolve()
+    if not git_dir.is_dir() or not (git_dir / "commondir").is_file():
+        raise RuntimeError("projection sync requires a detached linked worktree")
+    head_path = git_dir / "HEAD"
+    if not head_path.is_file() or head_path.read_text().strip().startswith("ref:"):
+        raise RuntimeError("projection sync requires a detached linked worktree")
+
+
 def load_update_manifest(nix_dir: Path) -> dict[str, dict]:
     """Evaluate and validate explicit update targets outside ordinary overlays."""
     manifest_path = nix_dir / "packages" / "update-manifest.nix"
@@ -1691,6 +1709,7 @@ Examples:
 
     nix_dir = Path(__file__).parent.parent.resolve()
     if args.sync_flake_projections:
+        require_detached_linked_worktree(nix_dir)
         changed = sync_flake_projections(nix_dir)
         print(f"synchronized {changed} flake input projection(s)")
         return 0

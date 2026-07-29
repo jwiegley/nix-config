@@ -543,18 +543,56 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
         ]
         self.assertEqual(stray, [], "doc-prose applied outside a .md file")
 
-    def test_the_two_known_traps_stay_load_bearing(self):
-        """Both look like prose or messages and are neither.
+    def test_known_code_and_catalog_traps_stay_load_bearing(self):
+        """These look like prose or messages and are neither.
 
         home-manager-contract-common.nix carries expected VALUES of assertions;
-        update-manifest.nix carries the update tooling's file LIST. A prose-detecting
-        filter would wrongly drop both, which is why the rule is conservative.
+        sources/{ai,pi}.json carry the update tooling's artifact LISTS. A
+        prose-detecting filter would wrongly drop them, which is why the rule is
+        conservative.
         """
-        for needle in ("home-manager-contract-common.nix", "update-manifest.nix"):
+        for needle in ("home-manager-contract-common.nix", "sources/ai.json", "sources/pi.json"):
             hits = [r for r in self.faceted if needle in r["file"]]
             self.assertTrue(hits, "no faceted records for %s" % needle)
             bad = [(r["file"], r["line"]) for r in hits if r.get("loadBearing") is not True]
             self.assertEqual(bad, [], "%s references were demoted" % needle)
+        self.assertFalse(
+            [r for r in self.refs if r["file"] == "packages/update-manifest.nix"],
+            "empty transitional manifest retained ghost references",
+        )
+        self.assertFalse(
+            [r for r in self.refs if r["file"] == "test/inventory/consumer-inventory.json"],
+            "consumer inventory recursively inventoried itself",
+        )
+        derivation = self.inv["derivation"]
+        self.assertIn("--include='*.json'", derivation["internalConfigAiRefs"])
+        self.assertIn(
+            "test/inventory/consumer-inventory.json",
+            derivation["internalConfigAiExcludedPaths"],
+        )
+
+    def test_committed_internal_references_match_generator(self):
+        result = subprocess.run(
+            [str(CONSUMER_INVENTORY), "--print"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            env=clean_env(CONSUMER_INVENTORY_REPO_HEAD=self.inv["repoHead"]),
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        generated = json.loads(result.stdout)
+        expected_refs = [
+            record
+            for record in self.refs
+            if record.get("kind") == "internal-config-ai-ref"
+        ]
+        actual_refs = [
+            record
+            for record in generated["references"]
+            if record.get("kind") == "internal-config-ai-ref"
+        ]
+        self.assertEqual(actual_refs, expected_refs)
 
     def test_tallies_agree_with_the_records(self):
         """A summary that disagrees with its own records is worse than none."""

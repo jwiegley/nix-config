@@ -604,8 +604,9 @@ Implementation state:
 - `packages/update-manifest.nix` remains as an empty transitional schema for #43 to
   delete after its own dependencies are green.
 - The existing candidate transaction now synchronizes fetchTree projections after
-  lock refresh. Direct synchronization is refused outside an `update-agents`
-  candidate, preserving Q2's isolation decision.
+  lock refresh. The first implementation trusted a forgeable environment marker;
+  the fess fix additionally requires a detached linked Git worktree, which the live
+  primary checkout cannot satisfy even if the marker is forged.
 
 Measured inventory continuity across the edit:
 
@@ -616,8 +617,12 @@ Measured inventory continuity across the edit:
 | pending | 23 | 23 |
 
 The sorted target-name set is identical. For the 11 migrated identities, kind,
-executor, and managed state are identical; only `source` changes from `manifest` to
-`catalog`.
+executor, and managed state are identical, and `source` changes from `manifest` to
+`catalog`. File ownership also changes deliberately: the owning catalogue JSON now
+appears in each file list, direct readers removed their duplicated literals, and the
+stale root `flake.nix` artifact disappeared from `rust-overlay`. The eight floating
+records now display their locked revision as `version` instead of the manifest's empty
+string. These are representation/ownership changes, not full inventory-row parity.
 
 Permanent negative tests cover literal owner/repository drift, locked revision,
 locked NAR hash, the suffixed-node lookup trap, executor preservation, `fetchzip`
@@ -633,9 +638,19 @@ Verification completed before staging the final candidate:
 - `nix flake check ./config/ai --all-systems --no-build`: **PASS**, including
   `input-projection-parity` on all three systems.
 - `nix flake check --no-build`: **PASS** on the current system.
+- Staged `bin/quality`: **PASS**, all suites; consumer evaluation 5 ran / 0 skipped.
+- Signed commit `6d045a73`; its unbypassed pre-commit hook passed all eight commands
+  and all seven Python suites (`gates-test.py`: 18 tests in 673.567s;
+  `update-overlay-test.py`: 40 tests).
 - Decision gate: 8 Q entries, 14 answer slots, 11 unanswered slots; Q2/Q3/Q8 summary
   statuses corrected without changing any answer.
 
-Remaining for this unit: stage every explicit path, run the full `bin/quality` gate,
-commit signed, run the independent fess audit, resolve verified findings, register the
-closeout on #34/#38, and check `doc/observations/` again. No push is authorized.
+Independent fess audit of `6d045a73` accepted the core migration and found two real
+high-severity gaps: the forgeable candidate marker above, and a stale #47/#63 consumer
+inventory that retained deleted manifest rows while excluding new JSON references.
+Both are being fixed in the follow-up commit; the inventory generator now scans JSON,
+excludes its own generated artifact, and regenerates the committed evidence.
+
+Remaining for this unit: finish and verify the fess fixes, register the evidence-backed
+closeout on #34 and ownership correction on #38, and check `doc/observations/` again.
+No push is authorized.
