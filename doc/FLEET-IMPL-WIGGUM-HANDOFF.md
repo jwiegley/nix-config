@@ -835,3 +835,8 @@ Before A5 (#28), absorb the outstanding partner observation that `bin/publish --
 still describes `--rev` and `--branch` as selectors even though #89 deliberately made
 them exact-tip/current-branch assertions. Local `main` remains unpushed; no push, host
 activation, or history rewrite is authorized.
+
+The observation is absorbed: `bin/publish --help` now describes both flags as
+assertions and explains the clean checked-out-tip invariant. A focused test executes
+the real help path and rejects the stale selector wording. The partner observation
+Markdown is removed. Next ordered unit is A5 / #28. No push or activation occurred.

@@ -824,6 +824,18 @@ class TestSelfConsistency(unittest.TestCase):
         )
         self.assertEqual(r.returncode, 0, r.stderr)
 
+    def test_help_describes_rev_and_branch_as_assertions_not_selectors(self):
+        r = subprocess.run(
+            [PUBLISH, "--help"], capture_output=True, text=True, env=clean_env()
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("assert the revision", r.stdout)
+        self.assertIn("must equal the checked-out", r.stdout)
+        self.assertIn("assert the branch", r.stdout)
+        self.assertIn("must be currently checked out", r.stdout)
+        self.assertNotIn("operate on a specific revision", r.stdout)
+        self.assertNotIn("branch other than the current one", r.stdout)
+
     def test_never_embeds_a_credential(self):
         """Acceptance criterion: never embeds a credential or token."""
         with open(PUBLISH) as fh:

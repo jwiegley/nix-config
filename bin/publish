@@ -32,8 +32,13 @@
 # Usage:
 #   bin/publish                     # pre-flight only. Mutates NOTHING. The default.
 #   bin/publish --publish           # actually push HEAD's branch to both remotes
-#   bin/publish --rev REV           # operate on a specific revision
-#   bin/publish --branch NAME       # operate on a branch other than the current one
+#   bin/publish --rev REV           # assert the revision (must equal the checked-out
+#                                   # branch tip; refuses otherwise)
+#   bin/publish --branch NAME       # assert the branch (must be currently checked out)
+#
+# Publication is deliberately restricted to the clean tip of the checked-out branch:
+# Lefthook gates the current checkout while Git pushes the named object, and those
+# must be the same tree. Check out a different revision or branch before publishing it.
 #
 # Pushing is a human-gated action per CLAUDE.md, so the gate is encoded here: a
 # bare invocation reports what WOULD happen and exits. Only --publish pushes.
