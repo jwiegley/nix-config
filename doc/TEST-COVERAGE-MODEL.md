@@ -207,7 +207,7 @@ versioned artifact; they do not require those bare numbers forever. In particula
 | Tier | Content | Placement | Budget semantics |
 |---|---|---|---|
 | pre-commit | formatting/lint, genuinely bounded unit tests, portable bounded eval, structural/parent coverage regression | one supervised local quality tier | Wall-clock budget: **180 seconds** on Hera, enforced by one outer deadline. The artifact records the internally executed core duration; Python additionally reports planned/ran/failed/timed-out/killed/budget-exceeded/not-reached separately. |
-| pre-push | slow focused Python suites, live Nix-reach comparison, Darwin surface, consumers, signatures, system/agent checks | local hook | Initial planning ceiling: **900 seconds**; compliance is not yet claimed or enforced as one aggregate measurement. |
+| pre-push | slow focused Python suites, live Nix-reach comparison, Darwin surface, consumers, signatures, system/agent checks | local hook | Initial planning ceiling: **900 seconds**; compliance is not yet claimed or enforced as one aggregate measurement. The live probes are explicitly assigned here; configuration probes allow 600 seconds of contention headroom, bounded metadata probes 120–240 seconds. |
 | CI / on demand | seven-probe coverage refresh, coverage.py branch report, full output/schema sweep, unsafe/live/soak suites, optional nix-eval-jobs projection | remote-safe CI or authorized self-hosted runner | Initial **1800-second** planning ceiling; aggregate enforcement is future work. Tool/runner identity is recorded, and LAN-only root inputs are not presented as GitHub CI evidence. |
 
 The limits are policy ceilings. The hook itself runs `bin/quality --tier pre-commit`

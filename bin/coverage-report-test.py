@@ -527,6 +527,26 @@ class NixEventTests(RepositoryFixture):
                 manifest,
             )
 
+    def test_probe_tier_and_timeout_contracts_are_load_bearing(self) -> None:
+        manifest = coverage_report.validate_manifest(self.manifest)
+        probes = manifest["nixFileReach"]["probes"]
+        identifier, timeout_seconds = coverage_report.nix_probe_identity_and_timeout(
+            probes[0]["argv"]
+        )
+        self.assertEqual(identifier, "darwin-hera")
+        self.assertEqual(timeout_seconds, 600)
+        with self.assertRaisesRegex(coverage_report.CoverageError, "selected zero"):
+            coverage_report.collect_nix_file_reach(
+                self.repo,
+                probes,
+                ["flake.nix"],
+                manifest,
+                lambda argv, cwd, env: subprocess.CompletedProcess(
+                    argv, 0, stdout="", stderr=""
+                ),
+                tier="ci-on-demand",
+            )
+
     def test_internal_json_framing_and_level_drift_fail_closed(self) -> None:
         message = f"evaluating file '{self.repo / 'flake.nix'}'"
         bare = json.dumps({"action": "msg", "level": 4, "msg": message})

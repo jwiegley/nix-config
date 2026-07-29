@@ -43,7 +43,6 @@ EVALUATING_FILE_RE = re.compile(r"evaluating file '([^'\n]+)'\Z")
 TIERS = frozenset({"pre-commit", "pre-push", "ci-on-demand"})
 STATES = frozenset({"unknown", "observed", "failed", "skipped", "not-run"})
 PRE_COMMIT_CORE_ARGV = ["bin/quality", "--tier", "pre-commit-core"]
-NIX_PROBE_TIMEOUT_SECONDS = 240
 
 PYTHON_KINDS = frozenset({"product", "test"})
 SHELL_KINDS = frozenset({"library", "production", "test-driver"})
@@ -53,24 +52,28 @@ PROBE_CONTRACTS = {
         "normalForm": "One raw nix-darwin top-level drvPath string for Hera.",
         "roots": ["flake.nix"],
         "outputKind": "raw-drv-path",
+        "timeoutSeconds": 600,
     },
     "darwin-clio": {
         "target": ".#darwinConfigurations.clio.config.system.build.toplevel.drvPath",
         "normalForm": "One raw nix-darwin top-level drvPath string for Clio.",
         "roots": ["flake.nix"],
         "outputKind": "raw-drv-path",
+        "timeoutSeconds": 600,
     },
     "home-aarch64-linux": {
         "target": '.#homeConfigurations."johnw@aarch64-linux".activationPackage.drvPath',
         "normalForm": "One raw activation-package drvPath string for the ARM Linux fixture.",
         "roots": ["flake.nix"],
         "outputKind": "raw-drv-path",
+        "timeoutSeconds": 600,
     },
     "home-x86_64-linux": {
         "target": '.#homeConfigurations."jwiegley@x86_64-linux".activationPackage.drvPath',
         "normalForm": "One raw activation-package drvPath string for the shared-work proxy.",
         "roots": ["flake.nix"],
         "outputKind": "raw-drv-path",
+        "timeoutSeconds": 600,
     },
     "host-registry": {
         "target": "test/coverage/host-denominator.nix",
@@ -80,18 +83,21 @@ PROBE_CONTRACTS = {
             "config/hosts/registry.nix",
         ],
         "outputKind": "host-registry",
+        "timeoutSeconds": 120,
     },
     "root-checks": {
         "target": ".#checks",
         "normalForm": "JSON system-to-sorted-check-name sets for all declared systems; derivations are not built.",
         "roots": ["flake.nix"],
         "outputKind": "root-checks",
+        "timeoutSeconds": 240,
     },
     "root-packages": {
         "target": ".#packages",
         "normalForm": "JSON system-to-sorted-root-package-name sets for all declared systems; derivations are not built.",
         "roots": ["flake.nix"],
         "outputKind": "root-packages",
+        "timeoutSeconds": 240,
     },
 }
 REQUIRED_PROBE_IDS = frozenset(PROBE_CONTRACTS)
@@ -218,9 +224,21 @@ def run_command(
     )
 
 
+def nix_probe_identity_and_timeout(argv: Sequence[str]) -> tuple[str, int]:
+    matches = [
+        (identifier, contract["timeoutSeconds"])
+        for identifier, contract in PROBE_CONTRACTS.items()
+        if contract["target"] in argv
+    ]
+    if len(matches) != 1:
+        raise CoverageError("Nix probe argv does not identify exactly one contract")
+    return matches[0]
+
+
 def run_nix_probe_command(
     argv: Sequence[str], cwd: Path, env: Mapping[str, str]
 ) -> subprocess.CompletedProcess[str]:
+    identifier, timeout_seconds = nix_probe_identity_and_timeout(argv)
     try:
         return subprocess.run(
             list(argv),
@@ -229,11 +247,11 @@ def run_nix_probe_command(
             capture_output=True,
             text=True,
             check=False,
-            timeout=NIX_PROBE_TIMEOUT_SECONDS,
+            timeout=timeout_seconds,
         )
     except subprocess.TimeoutExpired as error:
         raise CoverageError(
-            f"Nix probe exceeded {NIX_PROBE_TIMEOUT_SECONDS}s; output redacted"
+            f"Nix probe {identifier!r} exceeded {timeout_seconds}s; output redacted"
         ) from error
 
 
@@ -1516,13 +1534,17 @@ def collect_nix_file_reach(
     nix_files: Sequence[str],
     manifest: Mapping[str, Any],
     runner: RunCommand = run_nix_probe_command,
+    tier: str | None = None,
 ) -> dict[str, Any]:
+    selected = [probe for probe in probes if tier is None or probe["tier"] == tier]
+    if tier is not None and not selected:
+        raise CoverageError(f"Nix probe tier {tier!r} selected zero probes")
     tracked = set(nix_files)
     union: set[str] = set()
     records: list[dict[str, Any]] = []
-    for index, probe in enumerate(probes, start=1):
+    for index, probe in enumerate(selected, start=1):
         print(
-            f"coverage-report: probe {probe['id']} ({index}/{len(probes)})",
+            f"coverage-report: probe {probe['id']} ({index}/{len(selected)})",
             file=sys.stderr,
             flush=True,
         )
@@ -1747,6 +1769,7 @@ def derive_report(
     pre_commit_timing: dict[str, Any] | None = None,
     runner: RunCommand = run_command,
     probe_runner: RunCommand = run_nix_probe_command,
+    probe_tier: str | None = None,
 ) -> dict[str, Any]:
     repo = repo.resolve()
     ensure_projected_worktree_matches_index(repo, runner)
@@ -1820,6 +1843,7 @@ def derive_report(
             files["nix"],
             manifest,
             probe_runner,
+            probe_tier,
         )
         if collect_nix_reach
         else unknown_nix_file_reach(manifest["nixFileReach"]["probes"], files["nix"])
@@ -2503,6 +2527,7 @@ def compare_live_coverage(
         collect_nix_reach=True,
         runner=runner,
         probe_runner=probe_runner,
+        probe_tier="pre-push",
     )
     validate_non_regression(current, baseline)
     return current

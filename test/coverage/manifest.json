@@ -784,7 +784,7 @@
     "probes": [
       {
         "id": "darwin-hera",
-        "tier": "ci-on-demand",
+        "tier": "pre-push",
         "argv": [
           "nix",
           "eval",
@@ -802,7 +802,7 @@
       },
       {
         "id": "darwin-clio",
-        "tier": "ci-on-demand",
+        "tier": "pre-push",
         "argv": [
           "nix",
           "eval",
@@ -820,7 +820,7 @@
       },
       {
         "id": "home-aarch64-linux",
-        "tier": "ci-on-demand",
+        "tier": "pre-push",
         "argv": [
           "nix",
           "eval",
@@ -838,7 +838,7 @@
       },
       {
         "id": "home-x86_64-linux",
-        "tier": "ci-on-demand",
+        "tier": "pre-push",
         "argv": [
           "nix",
           "eval",
@@ -856,7 +856,7 @@
       },
       {
         "id": "host-registry",
-        "tier": "ci-on-demand",
+        "tier": "pre-push",
         "argv": [
           "nix",
           "eval",
@@ -878,7 +878,7 @@
       },
       {
         "id": "root-checks",
-        "tier": "ci-on-demand",
+        "tier": "pre-push",
         "argv": [
           "nix",
           "eval",
@@ -898,7 +898,7 @@
       },
       {
         "id": "root-packages",
-        "tier": "ci-on-demand",
+        "tier": "pre-push",
         "argv": [
           "nix",
           "eval",
