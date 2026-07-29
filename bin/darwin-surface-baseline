@@ -33,8 +33,6 @@ BACKUP_NAME = ".darwin-surface-baseline.backup.json"
 LOCK_NAME = ".darwin-surface-baseline.lock"
 
 SCHEMA = "darwin-value-surface/2"
-LEGACY_SCHEMA = "darwin-value-surface/1"
-LEGACY_BASELINE_REVISION = "72de730a0b27e74acff0117a70d331060927caa6"
 HOSTS = ("clio", "hera")
 SURFACES = {
     "environment",
@@ -53,7 +51,6 @@ ARTIFACT_KEYS = {
     "projection",
     "hosts",
 }
-LEGACY_ARTIFACT_KEYS = ARTIFACT_KEYS - {"projection"}
 
 FULL_REVISION = re.compile(r"[0-9a-f]{40}\Z")
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
@@ -296,6 +293,9 @@ def evaluate_host(worktree: Path, host: str) -> dict[str, Any]:
         [
             "nix",
             "eval",
+            "--option",
+            "eval-cache",
+            "false",
             "--impure",
             "--json",
             f".#darwinConfigurations.{host}",
@@ -547,7 +547,7 @@ def baseline_candidates() -> list[Path]:
 
 
 def read_baseline(path: Path, *, require_candidate_name: bool = True) -> dict[str, Any]:
-    """Read and validate one current or narrowly bootstrapped artifact."""
+    """Read and validate one current artifact."""
     if path.is_symlink() or not path.is_file():
         invalid_baseline(f"unsafe path {path}")
     try:
@@ -563,18 +563,10 @@ def read_baseline(path: Path, *, require_candidate_name: bool = True) -> dict[st
         baseline_revision
     ):
         invalid_baseline(f"{path} has an invalid baselineRev")
-    is_bootstrap = (
-        schema == LEGACY_SCHEMA
-        and baseline_revision == LEGACY_BASELINE_REVISION
-        and set(existing) == LEGACY_ARTIFACT_KEYS
-    )
-    if schema != SCHEMA and not is_bootstrap:
-        invalid_baseline(
-            f"{path} has schema {schema!r}; only the known v1 bootstrap is accepted"
-        )
-    expected_keys = LEGACY_ARTIFACT_KEYS if is_bootstrap else ARTIFACT_KEYS
-    if set(existing) != expected_keys:
-        invalid_baseline(f"{path} does not have exactly {sorted(expected_keys)}")
+    if schema != SCHEMA:
+        invalid_baseline(f"{path} has schema {schema!r}; expected {SCHEMA!r}")
+    if set(existing) != ARTIFACT_KEYS:
+        invalid_baseline(f"{path} does not have exactly {sorted(ARTIFACT_KEYS)}")
 
     if require_candidate_name:
         match = BASELINE_NAME.fullmatch(path.name)
@@ -590,8 +582,7 @@ def read_baseline(path: Path, *, require_candidate_name: bool = True) -> dict[st
     for host, surface in hosts.items():
         validate_host_surface(host, surface)
     reject_sensitive_data(hosts)
-    if not is_bootstrap:
-        validate_projection(existing.get("projection"))
+    validate_projection(existing.get("projection"))
     return existing
 
 

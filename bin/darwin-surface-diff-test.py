@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Regression tests for the committed Darwin value-surface backstop."""
 
+import hashlib
 import importlib.machinery
 import importlib.util
 import json
@@ -155,7 +156,7 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
         baseline_rev = self.baseline.get("baselineRev", "")
         self.assertRegex(baseline_rev, r"^[0-9a-f]{40}$")
         self.assertEqual(self.path.stem, f"darwin-surface-{baseline_rev[:12]}")
-        self.assertEqual(self.baseline.get("schema"), "darwin-value-surface/1")
+        self.assertEqual(self.baseline.get("schema"), "darwin-value-surface/2")
         self.assertEqual(set(self.baseline.get("hosts", {})), {"hera", "clio"})
         for surface in self.baseline["hosts"].values():
             self.assertEqual(set(surface), SURFACES)
@@ -163,6 +164,16 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
             self.baseline["commands"].get("refresh"),
             "bin/darwin-surface-baseline --rev <rev> --write",
         )
+        expected_projection = {}
+        for relative in (
+            "test/darwin/darwin-surface.nix",
+            "test/darwin/surface-helpers.nix",
+            "bin/darwin-surface-diff",
+        ):
+            expected_projection[relative] = hashlib.sha256(
+                (REPO / relative).read_bytes()
+            ).hexdigest()
+        self.assertEqual(self.baseline.get("projection"), expected_projection)
 
     def test_baseline_encodes_both_nonvacuity_traps_and_nix_builders(self):
         expected_counts = {"hera": (12, 6, 8), "clio": (5, 3, 4)}
@@ -175,6 +186,14 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
             self.assertEqual(surface["system"]["defaults"]["alf"], UNREADABLE)
             self.assertEqual(surface["nix"]["maxJobs"], max_jobs)
             self.assertEqual(len(surface["nix"]["buildMachines"]), 1)
+            for group in ("userAgents", "daemons", "agents"):
+                for agent in launchd[group].values():
+                    self.assertEqual(
+                        set(agent), {"serviceConfigSha256", "scriptSha256"}
+                    )
+                    self.assertRegex(agent["serviceConfigSha256"], r"^[0-9a-f]{64}$")
+                    if agent["scriptSha256"] is not None:
+                        self.assertRegex(agent["scriptSha256"], r"^[0-9a-f]{64}$")
 
     def test_post_85_prometheus_entries_are_not_duplicated(self):
         hera_users = self.baseline["hosts"]["hera"]["users"]

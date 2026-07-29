@@ -762,17 +762,16 @@ The committed projection covers exactly seven top-level surfaces on both hosts:
 Disabled-Nix settings and build machines come from the module option values; all
 `system.defaults` domains are forced individually under `tryEval`; and all three
 launchd paths remain visible, including the deliberately empty legacy
-`launchd.agents`. Full service configurations are retained. Launchd scripts are
-hashed only after embedded Nix store hashes are normalized, so script changes remain
-visible without persisting command-line credential text or whole-tree hash churn.
+`launchd.agents`. Complete service configurations and scripts are hashed only after
+embedded Nix store hashes are normalized, so behavioral changes remain visible without
+persisting command-line credential text or whole-tree hash churn.
 
-`test/baseline/darwin-surface-72de730a0b27.json` records both hosts at signed pre-A4
-tip `72de730a0b27e74acff0117a70d331060927caa6`. A temporary detached worktree at that
-exact revision reproduced both host surfaces as `IDENTICAL`; the worktree was removed.
-The artifact has no raw store hashes or common credential markers. Its nonvacuity
-facts are explicit: launchd user/daemon/legacy counts are Hera 12/6/0 and Clio 5/3/0,
-`alf` is the named unreadable defaults domain on both, max-jobs is 8/4, and each host
-has one configured builder despite `nix.enable = false`.
+The initial v1 artifact recorded configuration from signed pre-A4 tip `72de730a`, but
+used the then-current projector; later clean-context audit correctly rejected calling
+that full exact-revision provenance. The final v2 artifact is described below. Its
+nonvacuity facts remain: launchd user/daemon/legacy counts are Hera 12/6/0 and Clio
+5/3/0, `alf` is the named unreadable defaults domain on both, max-jobs is 8/4, and each
+host has one configured builder despite `nix.enable = false`.
 
 The check is exposed as `checks.<system>.darwin-value-surface` and delegated through
 `bin/quality darwin-surface` from pre-push, CI, and `make test`; it is deliberately not
@@ -815,9 +814,10 @@ which verifies the check derivation but deliberately is not claimed as GitHub pr
 Focused fess-fix verification passes 13 Darwin tests and the live host comparison.
 The inventory refresh advances `repoHead` to signed `6e8a94d0` and moves the unchanged
 CI consumer reference from line 88 to 83; no edge or classification changed.
-The corrected projection also replays `IDENTICAL` for both hosts from an exact detached
-worktree at baseline revision `72de730a`; the temporary worktree was removed. Remaining:
-full staged `bin/quality`, signed fess-fix, and tracker closeout at that boundary. The
+The corrected projection replayed `IDENTICAL` for both hosts using configuration from
+`72de730a`, but the projector itself was still live-checkout state; that provenance
+overclaim is superseded below. Remaining at that boundary: full staged `bin/quality`,
+signed fess-fix, and tracker closeout. The
 full fess-fix gate then passed every suite: 104 Nix files, 35 shell scripts, 41 Python
 files, eight Python suites (including 21 gate and 13 Darwin tests), portable evaluation,
 the Darwin surface check, consumer evaluation 5 ran / 0 skipped, and signatures for all
@@ -892,3 +892,33 @@ suite passes: 104 Nix files, 35 shell scripts, 43 Python files, nine Python suit
 consumer evaluation 5 ran / 0 skipped, and signatures for all 16 local commits. The
 next commit must regenerate the artifact from this signed code commit before the unit
 can be called green.
+
+Signed code half `494feeeb` landed with nine Python suites and every affected hook lane
+green. The first exact regeneration attempt exposed shared Nix eval-cache contention;
+SIGTERM returned 143, removed the registered worktree, left the v1 artifact untouched,
+and left no child process. Detached baseline evaluation now disables that cache. The
+retry completed both hosts and transactionally replaced v1 with
+`test/baseline/darwin-surface-494feeebd43f.json`.
+
+The v2 artifact records exact SHA-256 identities for the projector, helper, and differ
+from `494feeeb`; its host payload is derived solely from that detached revision. It
+contains only hashed normalized launchd configuration/script values, has no raw store
+hashes or common credential markers, and the one-off v1 bootstrap path is removed from
+the generator. The outstanding projector-identity observation is therefore absorbed and
+its Markdown removed. Remaining: focused/live/full verification and signed baseline
+follow-up. No push or activation occurred.
+
+A final low-severity observation requested field-level attribution inside launchd
+`serviceConfig`. A4 deliberately retains whole-config hashes: agent-level drift remains
+visible while credential-bearing `ProgramArguments` and `EnvironmentVariables` never
+enter the artifact. The schema-v3 sensitive-subtree split is recorded explicitly on #80
+at `#issuecomment-5118084069`; it is a diagnostic refinement, not silently claimed
+current coverage. The observation Markdown is removed, leaving no unprocessed partner
+observation before final verification.
+
+The final staged `bin/quality` run passes every suite: 104 Nix files, 35 shell
+scripts, 43 Python files, nine Python suites (including 20 generator, 22 gate, and
+14 Darwin-tool tests), portable evaluation, the exact v2 Darwin surface check,
+consumer evaluation 5 ran / 0 skipped, and signatures for all 17 local commits.
+Remaining: signed baseline follow-up and A5 tracker closeout. No push or activation
+occurred.
