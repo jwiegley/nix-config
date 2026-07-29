@@ -3,7 +3,7 @@
  "artifact": "consumer-inventory",
  "generatedBy": "bin/consumer-inventory",
  "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
- "repoHead": "b471ca28adb35c0978f6098f9b7ee48d98273bf4",
+ "repoHead": "cd02efb654c47800839d0d2d80248074c2f57b82",
  "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in bin/consumer-inventory.",
  "classificationScheme": {
   "rename-now": "Reference to the literal config/ai path inside nix-config's own tree; #47 rewrites it in the rename commit.",
@@ -38,8 +38,8 @@
   "note": "re-run the commands (needs network + gh auth) to refresh; not run inside derive() to keep the artifact reproducible offline."
  },
  "summary": {
-  "totalReferences": 264,
-  "internalConfigAiRefCount": 223,
+  "totalReferences": 267,
+  "internalConfigAiRefCount": 226,
   "internalConfigAiFileCount": 46,
   "internalConfigAiFiles": [
    ".github/workflows/ci.yml",
@@ -92,7 +92,7 @@
   "flakeAiInternalConsumerCount": 4,
   "flakeAiMentionCount": 21,
   "byClassification": {
-   "rename-now": 223,
+   "rename-now": 226,
    "retain-with-owner": 13,
    "retire": 18,
    "stub-covered": 10
@@ -102,10 +102,23 @@
    "flake-ai-internal-consumer": 4,
    "flake-input": 6,
    "input-follows": 3,
-   "internal-config-ai-ref": 223,
+   "internal-config-ai-ref": 226,
    "reach-in-attr": 8,
    "reach-in-path": 10,
    "subflake-overlay-use": 4
+  },
+  "byLoadBearing": {
+   "false": 174,
+   "n/a": 41,
+   "true": 52
+  },
+  "byRefKind": {
+   "comment": 10,
+   "data": 12,
+   "doc-prose": 164,
+   "import": 31,
+   "n/a": 41,
+   "path": 9
   }
  },
  "consumers": [
@@ -257,7 +270,9 @@
    "line": 79,
    "text": "run: nix build --no-link \"./config/ai#checks.${{ matrix.system }}.pi-gallery\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -267,7 +282,9 @@
    "line": 17,
    "text": "nix flake check ./config/ai --all-systems --no-build",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -277,7 +294,9 @@
    "line": 39,
    "text": "- Root implementation is owned here; portable AI is the `config/ai` subflake from the same revision.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -287,7 +306,9 @@
    "line": 40,
    "text": "- External consumers use paired root and `?dir=config/ai` inputs. Their locks and switch commands remain authoritative in their own checkout.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -297,7 +318,9 @@
    "line": 41,
    "text": "- `config/ai/catalog.nix` owns profiles/resources/selection; `config/ai/renderers/` are concrete client adapters.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -307,7 +330,9 @@
    "line": 11,
    "text": "| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired `nix-config` source and `nix-config?dir=config/ai` inputs |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -317,7 +342,9 @@
    "line": 45,
    "text": "nix flake check ./config/ai --all-systems --no-build",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -327,7 +354,9 @@
    "line": 65,
    "text": "| `config/ai/` | Portable AI subflake, models, profiles, resources, and client adapters |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -337,7 +366,9 @@
    "line": 170,
    "text": "#     at config/ai.nix:225:27",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "comment",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -347,7 +378,9 @@
    "line": 11,
    "text": "The extension source, tests, and design records live under `config/ai/extensions/auto-compact-resume`. Home Manager owns only the runtime leaf `~/.pi/agent/extensions/auto-compact-resume/index.ts`; tests and documentation are not installed into Pi's profile. The extension uses only Pi's public API and has no external dependencies. Pi's other mutable profile state remains outside Nix ownership.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -357,7 +390,9 @@
    "line": 25,
    "text": "- `config/ai/extensions/auto-compact-resume/index.ts`: threshold policy and Pi lifecycle integration; the only installed runtime file.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -367,7 +402,9 @@
    "line": 26,
    "text": "- `config/ai/extensions/auto-compact-resume/index.test.ts`: executable behavior tests using Bun and a minimal fake Extension API.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -377,7 +414,9 @@
    "line": 27,
    "text": "- `config/ai/extensions/auto-compact-resume/DESIGN.md`: approved behavioral specification.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -387,7 +426,9 @@
    "line": 28,
    "text": "- `config/ai/extensions/auto-compact-resume/PLAN.md`: this implementation plan.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -397,7 +438,9 @@
    "line": 33,
    "text": "- Create: `config/ai/extensions/auto-compact-resume/index.test.ts`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -407,7 +450,9 @@
    "line": 34,
    "text": "- Test: `config/ai/extensions/auto-compact-resume/index.test.ts`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -417,7 +462,9 @@
    "line": 49,
    "text": "cd config/ai/extensions/auto-compact-resume",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -427,7 +474,9 @@
    "line": 77,
    "text": "- Create: `config/ai/extensions/auto-compact-resume/index.ts`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -437,7 +486,9 @@
    "line": 78,
    "text": "- Test: `config/ai/extensions/auto-compact-resume/index.test.ts`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -447,7 +498,9 @@
    "line": 130,
    "text": "cd config/ai/extensions/auto-compact-resume",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -457,7 +510,9 @@
    "line": 139,
    "text": "- Verify: `config/ai/extensions/auto-compact-resume/index.ts`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -467,7 +522,9 @@
    "line": 140,
    "text": "- Verify: `config/ai/renderers/pi.nix`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -477,7 +534,9 @@
    "line": 15,
    "text": "# is exactly what happened to config/ai.nix (#50 stage 2, fixed in e139c62c).",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "comment",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -487,7 +546,9 @@
    "line": 42,
    "text": "# config/ai.nix computes its home class from this same optional specialArg",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "comment",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -497,7 +558,9 @@
    "line": 129,
    "text": "# `nixManagedAiHomeClass` override that config/ai.nix already uses (see its",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "comment",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -507,7 +570,9 @@
    "line": 155,
    "text": "# Mirror config/ai.nix:47 exactly: the explicit class wins, else the name.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "comment",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -517,7 +582,9 @@
    "line": 156,
    "text": "# is exactly what happened to config/ai.nix (#50 stage 2, fixed in e139c62c).",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "comment",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -527,7 +594,9 @@
    "line": 335,
    "text": "# is exactly what happened to config/ai.nix (#50 stage 2, fixed in e139c62c).",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "comment",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -537,7 +606,9 @@
    "line": 17,
    "text": "# is exactly what happened to config/ai.nix (#50 stage 2, fixed in e139c62c).",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "comment",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -547,7 +618,9 @@
    "line": 23,
    "text": "# is exactly what happened to config/ai.nix (#50 stage 2, fixed in e139c62c).",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "comment",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -557,7 +630,9 @@
    "line": 11,
    "text": "- The mandatory PAL gate is resolved in favor of a thin portable `config/ai` subflake with one root-owned implementation tree.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -567,7 +642,9 @@
    "line": 14,
    "text": "- The target-side compatibility oracle was observed RED on missing `overlays.default`, then GREEN after the maintained overlays, patches, resources, wrappers, and substantive tests moved to root-owned paths. `config/ai/flake.lock` was regenerated at the prior immutable direct-input revisions rather than copied from the old repository.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -577,7 +654,9 @@
    "line": 15,
    "text": "- `auto-compact-resume` source and corrected design/plan now live under `config/ai/extensions/auto-compact-resume`. The Pi renderer and preflight own only `.pi/agent/extensions/auto-compact-resume/index.ts`; the focused Home Manager check and explicit repository-source Pi loader smoke pass. Terminal-model handling and continuation-content coverage bring the committed Bun suite to 13/13.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -587,7 +666,9 @@
    "line": 31,
    "text": "- The root retains host-only `git+file:///Users/johnw/...` inputs and the private local CA, while the portable `config/ai` subflake remains the remote-safe output boundary. The root now consumes the canonical local implementation directly rather than an external `ai-nix` input.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -597,7 +678,9 @@
    "line": 55,
    "text": "3. Update Vulcan, Andoria, VPS, and auxiliary consumers to paired root-source and `dir=config/ai` inputs at one reachable revision; regenerate every lock through its checkout's direnv.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -607,7 +690,9 @@
    "line": 17,
    "text": "7. Move `auto-compact-resume` source, tests, and corrected design documentation under `config/ai/extensions/auto-compact-resume`; Nix installs only runtime `index.ts` at `~/.pi/agent/extensions/auto-compact-resume`.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -617,7 +702,9 @@
    "line": 69,
    "text": "Use a thin portable subflake under `config/ai` within this repository. Remote AI consumers use the repository directory flake, while the host-local root flake and the portable subflake import one canonical implementation tree. The subflake is an export and input boundary only: it must not acquire a separate package inventory, implementation copy, CI workflow, documentation hierarchy, or update workflow. Its lock records only portable AI inputs; the root lock remains authoritative for Hera and Clio host configuration.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -627,7 +714,9 @@
    "line": 14,
    "text": "`nix-config?dir=config/ai` input, regenerate their locks, and build/switch.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -637,7 +726,9 @@
    "line": 64,
    "text": "to paired `nix-config` source and `nix-config?dir=config/ai` revisions.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -647,7 +738,9 @@
    "line": 17,
    "text": "-> config/ai.nix",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -657,7 +750,9 @@
    "line": 25,
    "text": "config/ai/flake.nix",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -667,7 +762,9 @@
    "line": 39,
    "text": "nix-config-ai  = same revision, dir=config/ai",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -677,7 +774,9 @@
    "line": 49,
    "text": "| `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -687,7 +786,9 @@
    "line": 50,
    "text": "| `config/ai/renderers/*` | One client's generated documents | Global resource selection |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -697,7 +798,9 @@
    "line": 51,
    "text": "| `config/ai.nix` | Home Manager composition/ownership guards | Package implementation |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -707,7 +810,9 @@
    "line": 120,
    "text": "- **Date:** _______  **Decided by:** _______  **Follow-up:** record the per-input classification in #34; confirm the 1.7 allowlist (#25) matches; note the X4 coupling \u2014 the `path:./config/ai` allowlist literal must move with the rename (S2/#47).",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -717,7 +822,9 @@
    "line": 205,
    "text": "S2. `config/ai` is renamed to `config/fleet`, with a throwing stub left at `config/ai`.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -727,7 +834,9 @@
    "line": 206,
    "text": "- **Settled** in `FLEET-DESIGN-PLAN.md` \u00a710 Q5a (\"honesty over continuity\"), owned by [#47](https://github.com/jwiegley/nix-config/issues/47) (`E3-RENAME`). **Not yet implemented:** `config/fleet` does not exist; the subflake is still `config/ai`. Consequence flagged on the (closed) [#46](https://github.com/jwiegley/nix-config/issues/46)/[#48](https://github.com/jwiegley/nix-config/issues/48): their verification commands reference `./config/fleet`, a path that will not exist until #47 lands. This is a **sequencing note, not a new decision** \u2014 the rename decision is made; only its execution is pending, and #63 tracks post-rename stragglers before the stub can be retired.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -737,7 +846,9 @@
    "line": 71,
    "text": "| P1-7 (WU6) | `config/ai/inputs.nix` is the single URL/membership authority; **dual locks retained deliberately**, with a transitive-drift oracle |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -747,7 +858,9 @@
    "line": 261,
    "text": "`flake = false`, plus `?dir=config/ai` as a real flake. Two lock nodes for one",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -757,7 +870,9 @@
    "line": 404,
    "text": "N2 -.\"flake=false<br/>+ ?dir=config/ai\".-> N1",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -767,7 +882,9 @@
    "line": 405,
    "text": "N3 -.\"flake=false<br/>+ ?dir=config/ai\".-> N1",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -777,7 +894,9 @@
    "line": 406,
    "text": "N4 -.\"flake=false<br/>+ ?dir=config/ai\".-> N1",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -787,7 +906,9 @@
    "line": 483,
    "text": "the wrong name. This is a deliberate break of the `?dir=config/ai` contract named in",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -797,7 +918,9 @@
    "line": 490,
    "text": "- **Fail loudly, not obscurely.** Leave a `config/ai/flake.nix` that `throw`s a",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -807,7 +930,9 @@
    "line": 854,
    "text": "scoped to `./config/ai`, which declares **zero** host configurations; pre-push uses",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -817,7 +942,9 @@
    "line": 959,
    "text": "| **0** | **Unarm \u00a73** \u2014 route vulcan + vps overlay consumption through `config/overlays.nix`; bump their locks. **Fact-find:** `/nix` host-local on all four? auto-GC timer with delete-old? which profile branch h-m takes? **Inventory `?dir=config/ai` consumers** (issue #15 P2-19) before the rename. *(gpu-server divergence: already answered \u2014 none)* | `nix build` each host's HM activationPackage at the *new* lock; the three previously-armed packages still resolve | Revert the two consumer commits; locks return to `a36d3f51` / `1b71b192` |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -827,7 +954,9 @@
    "line": 982,
    "text": "- **Not** relocating `config/ai` in a way that breaks the `?dir=config/ai` contract.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -837,7 +966,9 @@
    "line": 1000,
    "text": "| **Q5a** | Keep the `config/ai` name or rename? | **Rename to `config/fleet`**, accepting URL churn across three consumers and both remotes. Honesty over continuity. | Deliberate break of the `CLAUDE.md` contract. Gated on the P2-19 consumer inventory; stale URLs get a `throw`ing stub so they fail loudly. |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -847,7 +978,9 @@
    "line": 1042,
    "text": "on `design/unified-fleet`. Baseline green throughout: `nix flake check ./config/ai",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -857,7 +990,9 @@
    "line": 149,
    "text": "| `nix flake check ./config/ai --all-systems --no-build` | 2 | **PASS** both |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -867,7 +1002,9 @@
    "line": 209,
    "text": "all commits signed, 6 python suites / 97 tests green, `nix flake check ./config/ai",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -877,7 +1014,9 @@
    "line": 221,
    "text": "`config/ai.nix` owns pi's *renderer* but not its *package*. Removing it would drop",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -887,7 +1026,45 @@
    "line": 244,
    "text": "| `nix flake check ./config/ai --all-systems` | 6 | **PASS** |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-IMPL-WIGGUM-HANDOFF.md",
+   "line": 355,
+   "text": "| `e139c62c` | `config/ai.nix` declares `johnw.host` (fixes a #50 stage 2 regression) |",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-IMPL-WIGGUM-HANDOFF.md",
+   "line": 380,
+   "text": "every one reaches `config/ai.nix` *through* `config/johnw.nix`, the single import",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "doc/FLEET-IMPL-WIGGUM-HANDOFF.md",
+   "line": 454,
+   "text": "`e139c62c` mention `config/ai.nix`, and the literal substring `config/ai` makes each",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -897,7 +1074,9 @@
    "line": 70,
    "text": "4. **DoD-4 \u2014 Gates pass, output shown.** `nix flake check ./config/ai",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -907,7 +1086,9 @@
    "line": 103,
    "text": "| `nix flake check ./config/ai --all-systems --no-build` | 0 | not yet run this phase |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -917,7 +1098,9 @@
    "line": 76,
    "text": "touches only `config/ai/catalog.nix`, `config/ai/renderers/pi.nix`, and `sources/ai.json`.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -927,7 +1110,9 @@
    "line": 104,
    "text": "> repository-internal path inputs remain allowed (`path:./config/ai`, `path:./config/certs`)",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -937,7 +1122,9 @@
    "line": 106,
    "text": "The redesign renames `config/ai` \u2192 `config/fleet` (decision Q5a). So the rename must also",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -947,7 +1134,9 @@
    "line": 37,
    "text": "3. **model synchronization** \u2014 the `config/ai/model-sync.nix` factory and its",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -957,7 +1146,9 @@
    "line": 39,
    "text": "4. **package selection** \u2014 `config/ai`/`config/packages.nix` input gating",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -967,7 +1158,9 @@
    "line": 89,
    "text": "mirrors how `config/ai/renderers/` is already a directory of shared modules.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -977,7 +1170,9 @@
    "line": 213,
    "text": "the committed on-disk `config/ai` asset layout (modes, symlink containment,",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -987,7 +1182,9 @@
    "line": 235,
    "text": "- **catalog-renderers**: in `config/ai/agents/bash-reviewer.md`, change any field",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -997,7 +1194,9 @@
    "line": 242,
    "text": "`classify_managed_artifacts` patch) in `config/ai.nix` \u2192 the runtime assertion",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1007,7 +1206,9 @@
    "line": 247,
    "text": "`config/ai/model-sync.nix` \u2192 `task10_assert_exact_app_calls` reports",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1017,7 +1218,9 @@
    "line": 285,
    "text": "| `:4426-4637` | `config/ai` asset walk python (modes, symlink containment, skill frontmatter, forbidden artifacts, deployment fields) | **catalog-renderers** |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1027,7 +1230,9 @@
    "line": 312,
    "text": "runtime reads `${src}` (statusline test + `config/ai` walk) and the",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1037,7 +1242,9 @@
    "line": 336,
    "text": "asset walk reads all of `config/ai`. So editing an unrelated file still rebuilds",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1047,7 +1254,9 @@
    "line": 339,
    "text": "`{config/ai, test/ai/statusline-command-test.py}` (config/ai has **zero**",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1057,7 +1266,9 @@
    "line": 167,
    "text": "| The recorded derivation **command diverges** from `bin/parity-baseline` | FAIL \u2014 the oracle would be derived by a different command than a later gate uses (for example, after the `#47` `config/ai` \u2192 `config/fleet` rename). |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1067,7 +1278,9 @@
    "line": 1,
    "text": "# RENAME-ROLLBACK \u2014 dual-remote rollback of `config/ai` \u2192 `config/fleet`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1077,7 +1290,9 @@
    "line": 24,
    "text": "`config/ai` again, but the commit that introduced the stub is not deleted \u2014 it is",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1087,7 +1302,9 @@
    "line": 40,
    "text": "| `RENAME_REV` | The nix-config commit from #47 that `git mv`s `config/ai`\u2192`config/fleet`, adds the throwing stub at `config/ai`, moves `config/ai/flake.lock`\u2192`config/fleet/flake.lock`, and rewrites the internal references (`flake.nix`, `config/packages.nix`, the `flake-ai.nix` up-import path, `README.md`, `doc/ARCHITECTURE.md`). This is what you are rolling back. |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1097,7 +1314,9 @@
    "line": 41,
    "text": "| `REVERT_REV` | The **new** commit produced by `git revert RENAME_REV`. It restores `config/ai` as a real subflake, restores the committed `config/ai/flake.lock`, removes the stub, and restores the internal references \u2014 all in one commit, forward. This is what you publish. |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1107,7 +1326,9 @@
    "line": 63,
    "text": "`nix-config-ai` subflake input carries `?dir=config/ai`; the rollback touches nothing",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1117,7 +1338,9 @@
    "line": 65,
    "text": "`overlays/*.nix` reach-ins point at the tree root, not at `config/ai`, and are",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1127,7 +1350,9 @@
    "line": 70,
    "text": "| **vulcan** | **gitea** (`origin`) | `nixos/flake.nix:54` `git+ssh://gitea/johnw/nix-config?dir=config/ai` \u2014 **FLOATING** (no `?ref`, no `?rev`) | `03b5eecc\u2026` | `~/src/nixos` | `/etc/nixos` on vulcan |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1137,7 +1362,9 @@
    "line": 71,
    "text": "| **vps** | **github** | `vps/flake.nix:20` `github:jwiegley/nix-config?dir=config/ai&ref=main` | `e0ed94fa\u2026` | `~/src/vps` | `/etc/nixos` on ovh-vps |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1147,7 +1374,9 @@
    "line": 72,
    "text": "| **shared-work** | **github** | `andoria/flake.nix:31` `github:jwiegley/nix-config?dir=config/ai&ref=main` | `269b518e\u2026` | `~/src/andoria` (**PROXY**) | `~/.config/home-manager` on andoria-08 / andoria-t2 / delphi-3bd4 / gpu-server \u2014 **one shared NFS `$HOME`, one profile symlink** |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1157,7 +1386,9 @@
    "line": 98,
    "text": "github:jwiegley/nix-config?dir=config/ai&rev=<REVERT_REV>",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1167,7 +1398,9 @@
    "line": 100,
    "text": "git+ssh://gitea/johnw/nix-config?dir=config/ai&rev=<REVERT_REV>",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1177,7 +1410,9 @@
    "line": 108,
    "text": "> `config/ai` imports `../../flake-ai.nix` and `../../test/ai/compatibility-check.nix`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1187,7 +1422,9 @@
    "line": 109,
    "text": "> (`config/ai/flake.nix:79-80`). It is only ever consumable as `?dir=` **of the whole",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1197,7 +1434,9 @@
    "line": 138,
    "text": "RENAME_REV=<the config/ai->config/fleet commit sha>",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1207,7 +1446,9 @@
    "line": 155,
    "text": "if [ -d config/fleet ] && grep -q 'throw' config/ai/flake.nix 2>/dev/null; then",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1217,7 +1458,9 @@
    "line": 156,
    "text": "echo \"rename APPLIED locally (config/fleet exists; config/ai is a stub)\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1227,7 +1470,9 @@
    "line": 188,
    "text": "| applied | HAS | HAS | every consumer still `dir=config/ai` **and** `rev` \u2264 `RENAME_REV` | **State C** \u2014 published, no consumer bumped |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1237,7 +1482,9 @@
    "line": 189,
    "text": "| applied | HAS | HAS | some consumer shows `dir=config/fleet`, or `dir=config/ai` with `rev` \u2265 `RENAME_REV` (the stub is firing) | **State D** \u2014 some consumers bumped |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1247,7 +1494,9 @@
    "line": 200,
    "text": "|| echo \"below rename (still resolves real config/ai)\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1257,7 +1506,9 @@
    "line": 203,
    "text": "A consumer that is **still `dir=config/ai` and below `RENAME_REV`** has not migrated",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1267,7 +1518,9 @@
    "line": 204,
    "text": "and never saw the stub \u2014 the easy case. A consumer that is **`dir=config/ai` and",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1277,7 +1530,9 @@
    "line": 213,
    "text": "The stub is a `config/ai/flake.nix` that `throw`s a message naming `config/fleet` and",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1287,7 +1542,9 @@
    "line": 217,
    "text": "commit deletes the stub and restores `config/ai` to the real subflake with its",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1297,7 +1554,9 @@
    "line": 219,
    "text": "- **If you instead move the directory by hand** (`git mv config/fleet config/ai`),",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1307,7 +1566,9 @@
    "line": 220,
    "text": "git will refuse because `config/ai/` already exists (the stub lives there). You must",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1317,7 +1578,9 @@
    "line": 221,
    "text": "first `git rm -r config/ai` (the stub) and only then `git mv config/fleet config/ai`.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1327,7 +1590,9 @@
    "line": 224,
    "text": "- **Do not leave the stub in place \"just in case.\"** With `config/ai` restored as a",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1337,7 +1602,9 @@
    "line": 270,
    "text": "## 7. Shared sub-procedure: restore `config/ai`, revert a consumer, verify it immutably",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1347,7 +1614,9 @@
    "line": 272,
    "text": "### 7a. Restore `config/ai` in nix-config (once, before any consumer work)",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1357,7 +1626,9 @@
    "line": 276,
    "text": "git revert --no-edit \"$RENAME_REV\"        # produces REVERT_REV; restores config/ai + lock, drops the stub",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1367,7 +1638,9 @@
    "line": 280,
    "text": "test -f config/ai/flake.lock && ! grep -q 'throw' config/ai/flake.nix && echo \"config/ai restored\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1377,7 +1650,9 @@
    "line": 281,
    "text": "nix flake check ./config/ai --all-systems --no-build       # green = real subflake again",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1387,7 +1662,9 @@
    "line": 303,
    "text": "# \u2192 github:jwiegley/nix-config?dir=config/ai&ref=main",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1397,7 +1674,9 @@
    "line": 314,
    "text": "# \u2192 git+ssh://gitea/johnw/nix-config?dir=config/ai&rev=<REVERT_REV>",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1407,7 +1686,9 @@
    "line": 329,
    "text": "nix flake metadata \"github:jwiegley/nix-config?dir=config/ai&rev=$REVERT_REV\" --json \\",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1417,7 +1698,9 @@
    "line": 332,
    "text": "nix flake metadata \"git+ssh://gitea/johnw/nix-config?dir=config/ai&rev=$REVERT_REV\" --json \\",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1427,7 +1710,9 @@
    "line": 341,
    "text": "assert n[\"original\"].get(\"dir\") == \"config/ai\", \"URL not reverted: \"+str(n[\"original\"])",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1437,7 +1722,9 @@
    "line": 343,
    "text": "print(\"  OK  dir=config/ai  type=\"+loc[\"type\"]+\"  rev=\"+loc[\"rev\"][:12])'",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1447,7 +1734,9 @@
    "line": 373,
    "text": "**Verify:** \u00a77a's \"config/ai restored\" checks pass; `bin/publish` (bare) still shows",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1457,7 +1746,9 @@
    "line": 397,
    "text": "\u2014 that history stays; the tree it resolves is `config/ai` again.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1467,7 +1758,9 @@
    "line": 408,
    "text": "The rename is on both remotes, but every consumer still locks `dir=config/ai` at a rev",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1477,7 +1770,9 @@
    "line": 413,
    "text": "`dir=config/ai` with `rev` below `RENAME_REV` (ancestry check in \u00a74).",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1487,7 +1782,9 @@
    "line": 418,
    "text": "floating gitea consumer (vulcan) to land back on `config/ai` at their **next**",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1497,7 +1794,9 @@
    "line": 419,
    "text": "`nix flake update` \u2014 because their URLs still say `dir=config/ai` and the tree at",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1507,7 +1806,9 @@
    "line": 420,
    "text": "`REVERT_REV` has `config/ai` again.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1517,7 +1818,9 @@
    "line": 426,
    "text": "**Verify:** \u00a77c for all three consumers; each shows `dir=config/ai`, an immutable",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1527,7 +1830,9 @@
    "line": 436,
    "text": "- **`dir=config/ai` at/past `RENAME_REV`** \u2014 it is *already failing* against the",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1537,7 +1842,9 @@
    "line": 443,
    "text": "`dir=config/fleet` or `dir=config/ai` at/past `RENAME_REV`.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1547,7 +1854,9 @@
    "line": 446,
    "text": "1. \u00a77a + \u00a76 first \u2014 `config/ai` must be restored and `REVERT_REV` on both remotes",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1557,7 +1866,9 @@
    "line": 449,
    "text": "- **vulcan (gitea):** revert `nixos/flake.nix:54` to `?dir=config/ai` **and pin",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1567,7 +1878,9 @@
    "line": 452,
    "text": "- **vps (github):** revert `vps/flake.nix:20` to `?dir=config/ai&ref=main`.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1577,7 +1890,9 @@
    "line": 455,
    "text": "`?dir=config/ai&ref=main` **in the authoritative `~/.config/home-manager`**, not",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1587,7 +1902,9 @@
    "line": 462,
    "text": "`config/ai` automatically; re-pin vulcan).",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1597,7 +1914,9 @@
    "line": 493,
    "text": "`config/ai`, which is explicitly authorization-gated and not granted by this runbook.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1607,7 +1926,9 @@
    "line": 508,
    "text": "**Verify:** on each host, the running generation resolves `config/ai` (its",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1617,7 +1938,9 @@
    "line": 518,
    "text": "- \u00a77c passes for all three consumers: each locks `dir=config/ai`, via an immutable",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1627,7 +1950,9 @@
    "line": 520,
    "text": "- `config/ai` is a real subflake again (`nix flake check ./config/ai --all-systems",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1637,7 +1962,9 @@
    "line": 524,
    "text": "there is no stub to retire once `config/ai` is real again.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1647,7 +1974,9 @@
    "line": 558,
    "text": "- Source lines: `config/ai/flake.nix:79-80` (whole-tree up-import);",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1657,7 +1986,9 @@
    "line": 113,
    "text": "- The `lefthook` pre-commit gate is `nix flake check ./config/ai --all-systems",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1667,7 +1998,9 @@
    "line": 114,
    "text": "--no-build --no-warn-dirty` \u2014 **scoped to the subflake**, and `config/ai/flake.nix`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1677,7 +2010,9 @@
    "line": 261,
    "text": "> **This is exactly the `config/ai` case.** The existing subflake, and the paired",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1687,7 +2022,9 @@
    "line": 262,
    "text": "> root + `?dir=config/ai` consumer inputs, are the *justified* pattern \u2014 not the",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1697,7 +2034,9 @@
    "line": 78,
    "text": "`nix flake check ./config/ai --all-systems --no-build` exit 0, all checks green",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1707,7 +2046,9 @@
    "line": 129,
    "text": "`?dir=config/ai`:",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1717,7 +2058,9 @@
    "line": 139,
    "text": "`path:` nodes are the internal relative subflakes `./config/ai` and",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1727,7 +2070,9 @@
    "line": 174,
    "text": "`config/ai/flake.nix:87-90` exports `lib.inputSet = portableInputs` and",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1737,7 +2082,9 @@
    "line": 248,
    "text": "`?dir=config/ai` likewise on gitea)",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1747,7 +2094,9 @@
    "line": 269,
    "text": "`flake.nix:19-21` `nix-config-ai = ...?dir=config/ai&ref=main` as a real flake.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1757,7 +2106,9 @@
    "line": 473,
    "text": "2. Re-run baseline: `nix flake check ./config/ai --all-systems --no-build`.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1767,7 +2118,9 @@
    "line": 69,
    "text": "7. **DoD-7 \u2014 Baseline integrity.** `nix flake check ./config/ai",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1777,7 +2130,9 @@
    "line": 94,
    "text": "| `nix flake check ./config/ai` | 2 | **PASS** (both runs, exit 0) |",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1787,7 +2142,9 @@
    "line": 102,
    "text": "`nix flake check ./config/ai --all-systems --no-build`, run in",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1797,7 +2154,9 @@
    "line": 24,
    "text": "`config/ai/` **subflake** dir \u2192 `config/fleet/`; it does NOT rename the core",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1807,7 +2166,9 @@
    "line": 26,
    "text": "across #47; only the `nix flake check` path changes (`./config/ai` \u2192",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1817,7 +2178,9 @@
    "line": 273,
    "text": "### S4 \u2014 `config/ai.nix:177`  (leave ai.nix:47 `homeClass` untouched)",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1827,7 +2190,9 @@
    "line": 282,
    "text": "### S5 \u2014 `config/ai.nix:220`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1837,7 +2202,9 @@
    "line": 830,
    "text": "#50 depends on #47, but #47 renames the `config/ai/` **subflake** directory to",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1847,7 +2214,9 @@
    "line": 834,
    "text": "`nix flake check ./config/ai` \u2192 `./config/fleet` (and `bin/parity-baseline`'s",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1857,7 +2226,9 @@
    "line": 836,
    "text": "lands first, use `./config/ai`; if after #47, `./config/fleet`.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1867,7 +2238,9 @@
    "line": 972,
    "text": "# `nixManagedAiHomeClass` override that config/ai.nix already uses (see its",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1877,7 +2250,9 @@
    "line": 998,
    "text": "# Mirror config/ai.nix:47 exactly: the explicit class wins, else the name.",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1887,7 +2262,9 @@
    "line": 1068,
    "text": "# config/ai.nix computes its home class from this same optional specialArg",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1897,7 +2274,9 @@
    "line": 572,
    "text": "`config/ai/model-registry.json`. Ten source-only Claude 4.6/4.7 tuples are",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1907,7 +2286,9 @@
    "line": 12,
    "text": "`config/ai/model-registry.json`. Nix validates that projection, derives source order",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1917,7 +2298,9 @@
    "line": 12,
    "text": "pretty JSON to `nix/config/ai/model-registry.json`. Shared Nix validates and",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1927,7 +2310,9 @@
    "line": 40,
    "text": "- Modify: `/Users/johnw/src/nix/config/ai/model-registry.json`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1937,7 +2322,9 @@
    "line": 58,
    "text": "- Modify: `/Users/johnw/src/nix/config/ai/catalog.nix`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1947,7 +2334,9 @@
    "line": 77,
    "text": "- Modify: `/Users/johnw/src/nix/config/ai/preflight.nix`",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1957,7 +2346,9 @@
    "line": 110,
    "text": "- Consumes `inputs.nix-config/config/ai/models.nix` and",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -1967,7 +2358,9 @@
    "line": 5,
    "text": "nix-config-ai.url = \"path:./config/ai\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -1977,7 +2370,9 @@
    "line": 2068,
    "text": "../config/ai",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -1987,7 +2382,9 @@
    "line": 2224,
    "text": "portableLock = builtins.fromJSON (builtins.readFile ../config/ai/flake.lock);",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -1997,7 +2394,9 @@
    "line": 12,
    "text": "bigpowers = import ../config/ai/bigpowers-resources.nix;",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2007,7 +2406,9 @@
    "line": 13,
    "text": "\"config/ai/flake.lock\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2017,7 +2418,9 @@
    "line": 15,
    "text": "\"config/ai/catalog.nix\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2027,7 +2430,9 @@
    "line": 34,
    "text": "\"config/ai/flake.lock\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2037,7 +2442,9 @@
    "line": 43,
    "text": "\"config/ai/flake.lock\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2047,7 +2454,9 @@
    "line": 52,
    "text": "\"config/ai/flake.lock\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2057,7 +2466,9 @@
    "line": 61,
    "text": "\"config/ai/flake.lock\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2067,7 +2478,9 @@
    "line": 70,
    "text": "\"config/ai/flake.lock\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2077,7 +2490,9 @@
    "line": 79,
    "text": "\"config/ai/flake.lock\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2087,7 +2502,9 @@
    "line": 88,
    "text": "\"config/ai/flake.lock\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2097,7 +2514,9 @@
    "line": 97,
    "text": "\"config/ai/flake.lock\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2107,7 +2526,9 @@
    "line": 107,
    "text": "\"config/ai/flake.nix\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2117,7 +2538,9 @@
    "line": 17,
    "text": "bigpowersResources = import ../../config/ai/bigpowers-resources.nix;",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2127,7 +2550,9 @@
    "line": 9,
    "text": "portableLock = builtins.fromJSON (builtins.readFile ../../config/ai/flake.lock);",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2137,7 +2562,9 @@
    "line": 201,
    "text": "python3 -I - \"${src}/config/ai\" <<'PY'",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2147,7 +2574,9 @@
    "line": 239,
    "text": "errors.append(\"config/ai must not be a symlink\")",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "path",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2157,7 +2586,9 @@
    "line": 16,
    "text": "registryPath = \"${src}/config/ai/model-registry.json\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2167,7 +2598,9 @@
    "line": 23,
    "text": "modelPolicy = import \"${src}/config/ai/model-policy.nix\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2177,7 +2610,9 @@
    "line": 25,
    "text": "loadModelData = args: import \"${src}/config/ai/models.nix\" args;",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2187,7 +2622,9 @@
    "line": 29,
    "text": "import \"${src}/config/ai/catalog.nix\" {",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2197,7 +2634,9 @@
    "line": 929,
    "text": "\"llm-setup.el through config/ai/model-registry.json\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2207,7 +2646,9 @@
    "line": 998,
    "text": "claudeRendererPath = \"${src}/config/ai/renderers/claude.nix\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2217,7 +2658,9 @@
    "line": 999,
    "text": "codexRendererPath = \"${src}/config/ai/renderers/codex.nix\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2227,7 +2670,9 @@
    "line": 1000,
    "text": "openCodeRendererPath = \"${src}/config/ai/renderers/opencode.nix\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2237,7 +2682,9 @@
    "line": 1001,
    "text": "droidRendererPath = \"${src}/config/ai/renderers/droid.nix\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2247,7 +2694,9 @@
    "line": 1002,
    "text": "piRendererPath = \"${src}/config/ai/renderers/pi.nix\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2257,7 +2706,9 @@
    "line": 1011,
    "text": "throw \"Task 6 RED: config/ai/renderers/claude.nix is missing\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "path",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2267,7 +2718,9 @@
    "line": 1019,
    "text": "throw \"Task 6 RED: config/ai/renderers/codex.nix is missing\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "path",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2277,7 +2730,9 @@
    "line": 1024,
    "text": "throw \"Task 7 RED: config/ai/renderers/opencode.nix is missing\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "path",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2287,7 +2742,9 @@
    "line": 1068,
    "text": "throw \"Task 7 RED: config/ai/renderers/droid.nix is missing\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "path",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2297,7 +2754,9 @@
    "line": 1076,
    "text": "throw \"Task 8 RED: config/ai/renderers/pi.nix is missing\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "path",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2307,7 +2766,9 @@
    "line": 1839,
    "text": "auto-compact-resume = \"${../../config/ai/extensions/auto-compact-resume/index.ts}\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2317,7 +2778,9 @@
    "line": 2089,
    "text": "expectedText = builtins.readFile \"${src}/config/ai/statusline-command.sh\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2327,7 +2790,9 @@
    "line": 3007,
    "text": "task9AiModulePath = \"${src}/config/ai.nix\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2337,7 +2802,9 @@
    "line": 3008,
    "text": "task9PreflightPath = \"${src}/config/ai/preflight.nix\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2347,7 +2814,9 @@
    "line": 3013,
    "text": "throw \"Task 9 RED: config/ai.nix and config/ai/preflight.nix are missing\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "path",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2357,7 +2826,9 @@
    "line": 3505,
    "text": "builtins.readFile \"${src}/config/ai.nix\" + builtins.readFile \"${src}/config/johnw.nix\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2367,7 +2838,9 @@
    "line": 3668,
    "text": "task10ModelSyncPath = \"${src}/config/ai/model-sync.nix\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2377,7 +2850,9 @@
    "line": 3673,
    "text": "throw \"Task 10 RED: config/ai/model-sync.nix is missing\";",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "path",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2387,7 +2862,9 @@
    "line": 26,
    "text": "# Input gating for config/ai and config/packages.nix. Pure evaluation with",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "comment",
+   "loadBearing": false
   },
   {
    "consumer": "internal",
@@ -2397,7 +2874,9 @@
    "line": 5,
    "text": "portableLock = builtins.fromJSON (builtins.readFile \"${src}/config/ai/flake.lock\");",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2407,7 +2886,9 @@
    "line": 10,
    "text": "preflightFactory = import \"${src}/config/ai/preflight.nix\" {",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2417,7 +2898,9 @@
    "line": 13,
    "text": "NIX_CONF_DIR=\"$nix_conf_dir\" nix --option warn-dirty false build --no-link --print-build-logs ./config/ai#default",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2427,7 +2910,9 @@
    "line": 12,
    "text": "config/ai/flake.nix",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "path",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2437,7 +2922,9 @@
    "line": 24,
    "text": "\"${nix_cmd[@]}\" flake show ./config/ai --no-write-lock-file >/dev/null",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2447,7 +2934,9 @@
    "line": 25,
    "text": "\"${nix_cmd[@]}\" eval --raw \"./config/ai#packages.${system}.default.name\" >/dev/null",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2457,7 +2946,9 @@
    "line": 26,
    "text": "\"${nix_cmd[@]}\" eval --raw \"./config/ai#devShells.${system}.default.name\" >/dev/null",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2467,7 +2958,9 @@
    "line": 27,
    "text": "test \"$(\"${nix_cmd[@]}\" eval --raw \"./config/ai#packages.${system}.plasma-wiki.version\")\" = \"1.1.0\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
@@ -2477,7 +2970,9 @@
    "line": 28,
    "text": "test \"$(\"${nix_cmd[@]}\" eval --raw \"./config/ai#packages.${system}.plasma-fractal.version\")\" = \"1.0.0\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit"
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "vulcan",

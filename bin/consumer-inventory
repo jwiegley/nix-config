@@ -79,6 +79,7 @@ die() {
 # exactly) and reads the consumer flake.nix / flake.lock / *.nix files directly.
 derive() {
     python3 - "$repo_root" "$consumer_base" "$repo_head" <<'PY'
+import collections
 import json
 import fnmatch
 import os
@@ -111,6 +112,43 @@ NC_PATH_RE = re.compile(r"\$\{inputs\.nix-config\}/([^\"'\s)]+)")
 URL_RE = re.compile(r'url\s*=\s*"([^"]*nix-config[^"]*)"')
 FOLLOWS_RE = re.compile(r'([\w][\w-]*)\.follows\s*=\s*"(nix-config[^"]*)"')
 OVERLAY_USE_RE = re.compile(r"inputs\.nix-config-ai\.overlays[.\w]*")
+
+
+# A derived syntactic facet on each internal reference. #47 needs two different
+# numbers from this artifact and the flat rename-now count gives only one: the
+# COMPLETE set (verified by re-grepping to zero) and the LOAD-BEARING subset (verified
+# by the build). 223 records collapsed into one bucket mixes ~43 references that break
+# evaluation with ~180 comments and doc lines that a mechanical rename must still
+# rewrite but which cannot break anything.
+#
+# Records are never dropped and never reclassified out of rename-now. This is metadata
+# only, so a misjudgement here yields a mislabelled-but-present record rather than a
+# silent miss -- which is the whole reason the artifact exists (issue #17 critique H4).
+#
+# The rule is deliberately CONSERVATIVE and mirrors the one this script already applies
+# to flake-ai a few lines below (`.nix and not startswith("#")`): anything in code is
+# load-bearing. That keeps two real traps on the safe side --
+#   test/ai/home-manager-contract-common.nix:929 reads like prose but is the expected
+#     value of an assertion, and
+#   the packages/update-manifest.nix entries look like message strings but are the
+#     update tooling's file list,
+# both of which a prose-detecting filter would wrongly demote.
+def ref_kind(path, text):
+    stripped = text.strip()
+    if path.endswith(".md"):
+        return "doc-prose"
+    if stripped.startswith("#"):
+        return "comment"
+    # A whole-line quoted path is a list element: tooling DATA, load-bearing.
+    if re.fullmatch(r'"[^"]*"\s*,?', stripped):
+        return "data"
+    if re.search(r"(import\s|inputs\.|\$\{|\./|\.\./)", stripped):
+        return "import"
+    return "path"
+
+
+def load_bearing(kind):
+    return kind not in ("doc-prose", "comment")
 
 
 def rel(path):
@@ -213,7 +251,16 @@ def grep(pattern, root, fixed=False):
             cmd.append("--include=" + g)
         targets = [root]
     else:
-        targets = [p for p in tracked if _matches_globs(p)]
+        # The index is not always what is on disk -- a staged rename or deletion
+        # leaves the old path tracked and gone, and lefthook's pre-commit stash
+        # creates exactly that state during a partial commit. grep exits 2 when a
+        # named file cannot be opened, and the returncode check below turns that
+        # into a RuntimeError for the ENTIRE run: one path mid-rename in any of the
+        # four roots this walks would abort the whole inventory.
+        #
+        # This is the guard bin/quality got in d6b3cf3d. Adopting that file's scope
+        # rule without its companion guard was taking half the pattern.
+        targets = [p for p in tracked if _matches_globs(p) and os.path.exists(p)]
         if not targets:
             return []
     cmd.append("-F" if fixed else "-E")
@@ -235,7 +282,11 @@ def nix_files(root):
     """Every .nix file git tracks under `root`; see tracked_files for why."""
     tracked = tracked_files(root)
     if tracked is not None:
-        return sorted(p for p in tracked if p.endswith(".nix"))
+        # os.path.exists for the same reason as in grep(): callers READ these paths,
+        # so a tracked-but-absent one raises FileNotFoundError rather than grep's rc 2.
+        return sorted(
+            p for p in tracked if p.endswith(".nix") and os.path.exists(p)
+        )
     files = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in (".git",)]
@@ -426,9 +477,11 @@ def add(consumer_name, order, kind, classification, file, line, text, **extra):
 # --- internal references (consumer = the nix-config repo itself) ----------
 internal_config_ai = grep(CONFIG_AI, repo_root, fixed=True)
 for f, ln, tx in internal_config_ai:
+    _kind = ref_kind(f, tx)
     add("internal", 0, "internal-config-ai-ref", "rename-now", f, ln, tx.strip(),
         owner="jwiegley/nix-config#47 (E3-RENAME)",
-        trigger="rewritten in the config/ai -> config/fleet rename commit")
+        trigger="rewritten in the config/ai -> config/fleet rename commit",
+        refKind=_kind, loadBearing=load_bearing(_kind))
 internal_config_ai_files = sorted({f for f, _, _ in internal_config_ai})
 
 # The four load-bearing flake-ai.nix internal imports (issue #17 acceptance item),
@@ -671,6 +724,28 @@ out = {
         "flakeAiMentionCount": len(flake_ai_mentions),
         "byClassification": tally("classification"),
         "byKind": tally("kind"),
+        # The two numbers #47 actually needs, alongside the flat count rather than
+        # replacing it: the load-bearing subset it can verify by building, and the
+        # complete set it verifies by re-grepping to zero. Only internal references
+        # carry the facet; records without it are counted under "n/a" rather than
+        # silently folded into either bucket.
+        "byLoadBearing": {
+            str(k): v
+            for k, v in sorted(
+                collections.Counter(
+                    "n/a" if "loadBearing" not in r else str(bool(r["loadBearing"])).lower()
+                    for r in references
+                ).items()
+            )
+        },
+        "byRefKind": {
+            str(k): v
+            for k, v in sorted(
+                collections.Counter(
+                    r.get("refKind", "n/a") for r in references
+                ).items()
+            )
+        },
     },
     "consumers": consumer_records,
     "compatSurfaces": compat_surfaces,
