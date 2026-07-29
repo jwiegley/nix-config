@@ -17,7 +17,13 @@ let
   packages = import ./packages.nix args;
 in
 {
-  imports = [ ./johnw.nix ];
+  # ./johnw.nix already imports ./host-options.nix, so johnw.host resolves today.
+  # Declared explicitly anyway: this module reads config.johnw.host, and its
+  # correctness should not depend on a sibling's import list staying as it is.
+  imports = [
+    ./johnw.nix
+    ./host-options.nix
+  ];
 
   # Run one Discord gateway client. Enabling this on Clio as well would
   # make both hosts compete for the same bot connection.
