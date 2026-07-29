@@ -1,6 +1,6 @@
 # Automatic Compaction and Resumption Implementation Plan
 
-> **Status:** Completed. Workflow references below describe the original implementation sequence; current agent methodology is Bigpowers.
+> **Status:** Completed. Workflow references below describe the original implementation sequence; Bigpowers was the agent methodology when this plan completed. Signed commit `5e605918` later removed that live bundle, so this historical plan makes no claim about the current methodology.
 
 **Goal:** Install a global Pi extension that compacts before the active model's safe request boundary and never strands unfinished work when compaction succeeds, fails transiently, or has nothing to compact.
 

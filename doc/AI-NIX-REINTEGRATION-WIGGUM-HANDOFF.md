@@ -67,3 +67,8 @@ The existing password-store LiteLLM credential was mapped only in a temporary ch
 - Destructive/irreversible action: none attempted. Standalone repository retirement remains gated and no shared history was rewritten or pushed.
 - GPG signing gate: cleared with the user present. Final recording commits `d4261c1` and `455c615a4`, plus authoritative signed merges `a84214c` and `e62574909`, all carry good signatures; no signing bypass was used.
 - Expanded Pi gallery verification: Darwin and genuine ARM64 Linux pass all fourteen package/load checks, native LiteLLM cached-catalog composition, command-credential resolution with the inherited LiteLLM environment explicitly absent, exact Sol and router model exposure, real Pi low/medium/xhigh per-turn delegation through the aggregate gallery, all 1,022 upstream Subagentura unit tests, command registration, and isolated tmux pane creation/liveness/cancellation/cleanup. The provider package uses Pi's extension-safe root API exports; its optional MCP and Skills gateways are explicit opt-ins. The Subagentura package patches `/bin/sh -lc` probing to inherited-path `sh -c` and invokes artifact CLIs through declarative Node so noexec workspaces remain supported.
+
+## Supersession note (2026-07-29)
+
+- The Bigpowers and Web Access statements above describe the 2026-07-24 handoff snapshot. Signed maintainer commit `5e605918` later removed the live BigPowers bundle. Signed commit `81d1ed41` replaced `pi-web-access` with immutable `pi-smart-fetch` 0.3.17 and `pi-smart-web-search` 0.4.0 so web-tool registration remains singular.
+- `doc/AI-NIX-REINTEGRATION-WIGGUM-PLAN.md` records the matching explicit Definition-of-Done amendment. No earlier evidence line is rewritten as if the old run used the later package set.
