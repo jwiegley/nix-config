@@ -48,8 +48,9 @@ let
         pi-provider-litellm
         pi-rewind
         pi-scroll
+        pi-smart-fetch
+        pi-smart-web-search
         pi-subagents
-        pi-web-access
         rtk
         ;
     };
@@ -82,7 +83,7 @@ let
       hashline ? false,
       lens ? false,
       subagents ? false,
-      webAccess ? false,
+      smartFetch ? false,
     }:
     runCommand "${name}-release-source"
       {
@@ -104,6 +105,9 @@ let
           ${lib.optionalString lens ''
             | del(.dependencies["@earendil-works/pi-tui"], .dependencies.typebox)
           ''}
+          ${lib.optionalString smartFetch ''
+            | del(.dependencies["@earendil-works/pi-tui"], .dependencies["@sinclair/typebox"])
+          ''}
           ${lib.optionalString subagents "| del(.dependencies.typebox)"}
         ' "$out/package.json" > "$out/package.json.normalized"
         mv "$out/package.json.normalized" "$out/package.json"
@@ -116,11 +120,6 @@ let
               $'async function tryLoadBetter(): Promise<boolean> {\n  // Bun standalone aborts before the native import can fall back.\n  return false;'
         ''}
 
-        ${lib.optionalString webAccess ''
-          substituteInPlace "$out/index.ts" \
-            --replace-fail 'loadConfig().provider' \
-              '(process.env.PI_WEB_ACCESS_PROVIDER ?? loadConfig().provider)'
-        ''}
 
 
 
@@ -256,12 +255,16 @@ let
     lockFile = ./locks/pi-hashline-edit-pro-package-lock.json;
     hashline = true;
   };
-  webAccessSource = mkReleaseSource {
-    name = "pi-web-access";
-    tarball = releaseTarballs.pi-web-access;
-    lockFile = ./locks/pi-web-access-package-lock.json;
-    dropPeerMetadata = false;
-    webAccess = true;
+  smartFetchSource = mkReleaseSource {
+    name = "pi-smart-fetch";
+    tarball = releaseTarballs.pi-smart-fetch;
+    lockFile = ./locks/pi-smart-fetch-package-lock.json;
+    smartFetch = true;
+  };
+  smartWebSearchSource = mkReleaseSource {
+    name = "pi-smart-web-search";
+    tarball = releaseTarballs.pi-smart-web-search;
+    lockFile = ./locks/pi-smart-web-search-package-lock.json;
   };
   lensSource = mkReleaseSource {
     name = "pi-lens";
@@ -307,11 +310,17 @@ let
     src = hashlineSource;
     npmDepsHash = members.hashline.hashes.npmDepsHash;
   };
-  pi-web-access = mkNpmPackageRoot {
-    pname = members.web.attrName;
-    version = members.web.version;
-    src = webAccessSource;
-    npmDepsHash = members.web.hashes.npmDepsHash;
+  pi-smart-fetch = mkNpmPackageRoot {
+    pname = members.smart-fetch.attrName;
+    version = members.smart-fetch.version;
+    src = smartFetchSource;
+    npmDepsHash = members.smart-fetch.hashes.npmDepsHash;
+  };
+  pi-smart-web-search = mkNpmPackageRoot {
+    pname = members.smart-web-search.attrName;
+    version = members.smart-web-search.version;
+    src = smartWebSearchSource;
+    npmDepsHash = members.smart-web-search.hashes.npmDepsHash;
   };
   pi-lens = mkNpmPackageRoot {
     pname = members.lens.attrName;
@@ -760,7 +769,6 @@ let
         ${galleryImports}
 
         export default async function nixGallery(pi: unknown) {
-          process.env.PI_WEB_ACCESS_PROVIDER = "perplexity";
           process.env.PONYTAIL_HIDE_STATUS = "1";
           process.env.PI_LENS_DISABLE_LSP_INSTALL = "1";
           process.env.PI_LENS_AUTO_INSTALL = "0";

@@ -19,7 +19,8 @@ in
 
   order = [
     "hashline"
-    "web"
+    "smart-fetch"
+    "smart-web-search"
     "lens"
     "ponytail"
     "browser"
@@ -49,12 +50,17 @@ in
       publicName = "pi-hashline-edit-pro";
       extension = "index.ts";
     };
-    web = member "pi-web-access" {
-      attrName = "pi-web-access";
-      package = packages.pi-web-access or null;
-      publicName = "pi-web-access";
+    smart-fetch = member "pi-smart-fetch" {
+      attrName = "pi-smart-fetch";
+      package = packages.pi-smart-fetch or null;
+      publicName = "pi-smart-fetch";
+      extension = "dist/index.js";
+    };
+    smart-web-search = member "pi-smart-web-search" {
+      attrName = "pi-smart-web-search";
+      package = packages.pi-smart-web-search or null;
+      publicName = "pi-smart-web-search";
       extension = "index.ts";
-      skills = [ "skills" ];
     };
     lens = member "pi-lens" {
       attrName = "pi-lens";

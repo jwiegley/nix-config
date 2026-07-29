@@ -478,6 +478,48 @@
       },
       "version": "0.1.2"
     },
+    "pi-smart-fetch": {
+      "hashes": {
+        "npmDepsHash": "sha256-8JecsgKULFKSA4WTpHgjaQuFhhJKZLYt9qgH1Ju1cJ8="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-ujbAQf5SDAvyc9qI3oXkuYLyipTpQTngKMfOTUtY78w=",
+          "url": "https://registry.npmjs.org/pi-smart-fetch/-/pi-smart-fetch-0.3.17.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-smart-fetch/-/pi-smart-fetch-0.3.17.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-smart-fetch-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "package": "pi-smart-fetch"
+      },
+      "version": "0.3.17"
+    },
+    "pi-smart-web-search": {
+      "hashes": {
+        "npmDepsHash": "sha256-bi9zy63Ff3KmLUuKy8Sc9buJ0IbUzWI7mB/dggOST7I="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-2U9IUJkhqqqQgbAbYAcxhJWaHVkI+xkoubfC5uAUzgQ=",
+          "url": "https://registry.npmjs.org/pi-smart-web-search/-/pi-smart-web-search-0.4.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-smart-web-search/-/pi-smart-web-search-0.4.0.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-smart-web-search-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "package": "pi-smart-web-search"
+      },
+      "version": "0.4.0"
+    },
     "pi-subagents": {
       "hashes": {
         "npmDepsHash": "sha256-otpHOnxdt0C5VWI1fADE2SrCbj6NOTbnwo7ElZcXI/c="
@@ -498,27 +540,6 @@
         "package": "pi-subagents"
       },
       "version": "0.37.1"
-    },
-    "pi-web-access": {
-      "hashes": {
-        "npmDepsHash": "sha256-8onTvv7nUrTXMGvwkMkPEYc+mtpxolzF6Z9EuuB9pbs="
-      },
-      "source": {
-        "args": {
-          "hash": "sha256-GmPsueJdqj4Ny+fxlwMWRVnehe4bv1GeiBo0i5uAQAA=",
-          "url": "https://registry.npmjs.org/pi-web-access/-/pi-web-access-0.13.0.tgz"
-        },
-        "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-web-access/-/pi-web-access-0.13.0.tgz"
-      },
-      "update": {
-        "artifacts": [
-          "packages/pi-gallery/locks/pi-web-access-package-lock.json"
-        ],
-        "kind": "npm-release",
-        "package": "pi-web-access"
-      },
-      "version": "0.13.0"
     },
     "rtk": {
       "artifacts": {

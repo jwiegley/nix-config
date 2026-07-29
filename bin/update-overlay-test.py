@@ -886,7 +886,8 @@ class UpdateInventoryTests(unittest.TestCase):
             "pi-artifacts",
             "pi-lens",
             "pi-mcp-adapter",
-            "pi-web-access",
+            "pi-smart-fetch",
+            "pi-smart-web-search",
             "rust-overlay",
             "ws",
             "git-ai",
@@ -895,6 +896,14 @@ class UpdateInventoryTests(unittest.TestCase):
         }
         self.assertTrue(required <= manifest.keys())
         self.assertIn("packages/pi-gallery/locks/pi-lens-package-lock.json", manifest["pi-lens"]["files"])
+        self.assertIn(
+            "packages/pi-gallery/locks/pi-smart-fetch-package-lock.json",
+            manifest["pi-smart-fetch"]["files"],
+        )
+        self.assertIn(
+            "packages/pi-gallery/locks/pi-smart-web-search-package-lock.json",
+            manifest["pi-smart-web-search"]["files"],
+        )
         self.assertIn("sources/pi.json", manifest["pi-mcp-adapter"]["files"])
         self.assertNotIn("config/ai/catalog.nix", manifest["pi-mcp-adapter"]["files"])
         self.assertIn("packages/anvil-mcp/Cargo.lock", manifest["nelisp"]["files"])
@@ -959,7 +968,8 @@ class UpdateInventoryTests(unittest.TestCase):
             "pi-mcp-adapter",
             "pi-ponytail",
             "pi-subagents",
-            "pi-web-access",
+            "pi-smart-fetch",
+            "pi-smart-web-search",
             "rust-overlay",
             "rtk",
             "sherlock-db",
@@ -1321,7 +1331,8 @@ exec "$REAL_GIT" "$@"
             "pi-insights",
             "pi-lens",
             "pi-mcp-adapter",
-            "pi-web-access",
+            "pi-smart-fetch",
+            "pi-smart-web-search",
             "ponytail",
         ):
             with self.subTest(manifest_only=manifest_only):

@@ -1017,6 +1017,7 @@
           "pi-cymbal",
           "pi-dynamic-workflows",
           "pi-gallery",
+          "pi-goal-x",
           "pi-hashline-edit-pro",
           "pi-insights",
           "pi-lens",
@@ -1029,7 +1030,8 @@
           "pi-rtk-optimizer",
           "pi-scroll",
           "pi-subagents",
-          "pi-web-access",
+          "pi-smart-fetch",
+          "pi-smart-web-search",
           "plasma-fractal",
           "plasma-wiki",
           "rtk"

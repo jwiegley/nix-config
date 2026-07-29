@@ -150,10 +150,17 @@ runCommand "pi-gallery-check"
     grep -F 'Bun standalone aborts before the native import can fall back' \
       ${roots.hashline}/src/hash-store.ts >/dev/null
 
-    [ -f ${roots.web}/index.ts ]
-    [ -f ${roots.web}/skills/librarian/SKILL.md ]
-    grep -F 'PI_WEB_ACCESS_PROVIDER' ${roots.web}/index.ts >/dev/null \
-      || fail "Web Access lacks the process-local provider policy"
+    [ -f ${roots.smart-fetch}/dist/index.js ]
+    [ -d ${roots.smart-fetch}/node_modules/defuddle ]
+    [ -d ${roots.smart-fetch}/node_modules/linkedom ]
+    [ -d ${roots.smart-fetch}/node_modules/wreq-js ]
+    [ ! -e ${roots.smart-fetch}/node_modules/@earendil-works ]
+    [ ! -e ${roots.smart-fetch}/node_modules/@sinclair/typebox ]
+    [ -f ${roots.smart-web-search}/index.ts ]
+    [ -f ${roots.smart-web-search}/markdown.ts ]
+    [ -d ${roots.smart-web-search}/node_modules/defuddle ]
+    [ -d ${roots.smart-web-search}/node_modules/linkedom ]
+    [ -d ${roots.smart-web-search}/node_modules/wreq-js ]
 
     [ -f ${roots.lens}/dist/index.js ]
     [ "$(find ${roots.lens}/skills -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 4 ]
@@ -237,7 +244,6 @@ runCommand "pi-gallery-check"
       [.packages[].name] == $expected
       and (.packages[] | select(.name == "@dietrichgebert/ponytail") | .skills == [])
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
-    grep -F 'PI_WEB_ACCESS_PROVIDER = "perplexity"' ${gallery}/index.ts >/dev/null
     grep -F 'PONYTAIL_HIDE_STATUS = "1"' ${gallery}/index.ts >/dev/null
     grep -F 'PI_LENS_DISABLE_LSP_INSTALL = "1"' ${gallery}/index.ts >/dev/null
     grep -F 'pi-provider-litellm' ${gallery}/index.ts >/dev/null
@@ -733,6 +739,7 @@ runCommand "pi-gallery-check"
     }
     jq -e '
       ([
+        "batch_web_fetch",
         "browser",
         "browser_download",
         "browser_evidence",
@@ -757,7 +764,9 @@ runCommand "pi-gallery-check"
         "subagent",
         "subagent_supervisor",
         "workflow",
-        "workflow_control"
+        "workflow_control",
+        "web_fetch",
+        "web_search"
       ] - . | length) == 0
     ' "$smoke/active-tools.json" >/dev/null || {
       cat "$smoke/active-tools.json" >&2
