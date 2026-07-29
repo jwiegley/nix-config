@@ -132,8 +132,16 @@ let
           ${pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
             # Agent Deck sessions can inherit macOS's 256-descriptor soft
             # limit from an older tmux daemon.  Raise Codex and every MCP
-            # descendant without rebuilding the upstream package.
-            ulimit -Sn 65536
+            # descendant as far as the inherited hard limit permits, without
+            # rebuilding the upstream package or turning a constrained launch
+            # into a total failure.
+            codex_open_file_hard_limit="$(ulimit -Hn)"
+            codex_open_file_limit=65536
+            if [ "$codex_open_file_hard_limit" != unlimited ] \
+              && [ "$codex_open_file_hard_limit" -lt "$codex_open_file_limit" ]; then
+              codex_open_file_limit="$codex_open_file_hard_limit"
+            fi
+            ulimit -Sn "$codex_open_file_limit"
           ''}
           umask 077
 

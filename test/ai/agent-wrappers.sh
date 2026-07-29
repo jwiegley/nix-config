@@ -1001,12 +1001,16 @@ test_codex_open_file_limit_case() {
     local binary=$2
     local bypass=$3
     local expected=$4
+    local hard_limit=${5:-}
 
     new_case codex "$label"
     configure_state zero
     (
         CODEX_BIN=$binary
         ulimit -Sn 256
+        if [ -n "$hard_limit" ]; then
+            ulimit -Hn "$hard_limit"
+        fi
         invoke_agent codex "$bypass" 0 alpha
         [ "$LAST_STATUS" -eq 0 ] || fail "Codex open-file limit case failed: $label"
         assert_argv "$ARGV_FILE" alpha
@@ -1019,6 +1023,8 @@ test_codex_open_file_limit() {
     local expected=256
     if [ "$CODEX_RAISES_OPEN_FILE_LIMIT" = 1 ]; then
         expected=65536
+        test_codex_open_file_limit_case finite-hard-limit \
+            "$CODEX_BIN" 0 4096 4096
     fi
     test_codex_open_file_limit_case primary-limit "$CODEX_BIN" 0 "$expected"
     test_codex_open_file_limit_case primary-bypass-limit "$CODEX_BIN" 1 "$expected"
