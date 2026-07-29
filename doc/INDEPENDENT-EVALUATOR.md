@@ -134,6 +134,28 @@ contents (§5) apply.
    `fess` rubric) with that snapshot and the §4 additional mandate.
 4. Receive the verdict and record it per §5 before acting on any finding.
 
+### Live acceptance demonstration — 2026-07-29
+
+Issue #28's clean-context mechanism was exercised end to end on real commit
+`64064f0c` (Darwin surface baseline generator):
+
+- a `fess-auditor` was spawned with `fork_turns=none` and therefore inherited no
+  implementing-agent conversation;
+- its only input was the exact requirements, commit/range and changed files, plus
+  the maker's stated claims and numbers;
+- it returned **request changes**, re-derived the claimed 104 Nix / 35 shell / 42
+  Python files, eight suites, 22 gate tests and 14 Darwin tests, and found substantive
+  provenance, credential-boundary, Git-environment, transaction and test gaps;
+- each finding was verified rather than obeyed blindly, then fixed in signed code
+  commit `494feeeb` plus exact schema-v2 baseline follow-up `7f9b00f4`;
+- the final paired state passed every `bin/quality` suite with nine Python suites,
+  live Darwin comparison and consumer evaluation 5 ran / 0 skipped.
+
+No PAL path or credential was used or needed. This is the acceptance example for
+option (b): a clean evaluator was able to say no, its quantitative claims were checked,
+and its verdict changed the delivered artifact. Per §6, the finding-fix commits were
+verified directly rather than recursively spawning audits of audits.
+
 ---
 
 ## 4. What the evaluator must check

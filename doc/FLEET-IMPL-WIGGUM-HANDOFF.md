@@ -922,3 +922,14 @@ scripts, 43 Python files, nine Python suites (including 20 generator, 22 gate, a
 consumer evaluation 5 ran / 0 skipped, and signatures for all 17 local commits.
 Remaining: signed baseline follow-up and A5 tracker closeout. No push or activation
 occurred.
+
+Signed baseline follow-up `7f9b00f4` landed with all nine Python suites green in the
+unbypassed hook; paired code commit `494feeeb` also verifies `%G? = G`. #28 is now
+CLOSED/COMPLETED under its corrected title, all five acceptance boxes are checked, and
+both project cards are Done. The clean-context verdict, re-derived counts, findings and
+fix disposition are recorded at `#issuecomment-5118228204` and in
+`doc/INDEPENDENT-EVALUATOR.md`. No partner-observation Markdown or temporary generator
+worktree remains.
+
+Next ordered unit is A6 / #80, measurable tiered coverage. Local `main` remains
+unpushed; no push, host activation, or history rewrite is authorized.
