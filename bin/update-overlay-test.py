@@ -55,6 +55,7 @@ ISSUE34_UPDATE_AGENTS = frozenset({
     "pal-mcp-server",
     "pi-openai-server-compaction",
     "pi-quiet",
+    "rust-overlay",
     "translate-tool",
 })
 
@@ -291,7 +292,7 @@ class UpdateInventoryTests(unittest.TestCase):
         )
         self.assertEqual(
             {name for name in ISSUE34_TARGETS if catalog[name]["executor"] is None},
-            {"pi-mcp-adapter", "rust-overlay"},
+            {"pi-mcp-adapter"},
         )
         self.assertEqual(
             {name for name in ISSUE34_TARGETS if catalog[name]["_record"]["source"]["fetcher"] == "fetchTree"},
@@ -449,6 +450,171 @@ class UpdateInventoryTests(unittest.TestCase):
             (root / "sources/test.json").write_text(json.dumps(document))
             with self.assertRaisesRegex(RuntimeError, "npm source identity"):
                 load_source_catalog(root)
+
+    def test_fixed_flake_input_rewrites_literal_and_rolls_back_atomically(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            (root / "config/ai").mkdir(parents=True)
+            catalog_path = root / "sources/test.json"
+            flake_path = root / "config/ai/flake.nix"
+            old_rev = "a" * 40
+            new_rev = "b" * 40
+            old_hash = "sha256-old"
+            new_hash = "sha256-new"
+
+            def write_old_state():
+                catalog_path.write_text(json.dumps({
+                    "schemaVersion": 1,
+                    "sources": {
+                        "example": {
+                            "source": {
+                                "fetcher": "fetchTree",
+                                "url": "https://github.com/example/project",
+                                "args": {
+                                    "owner": "example",
+                                    "repo": "project",
+                                    "rev": old_rev,
+                                    "narHash": old_hash,
+                                    "type": "github",
+                                },
+                            },
+                            "update": {
+                                "artifacts": ["config/ai/flake.nix"],
+                                "input": "example",
+                                "kind": "fixed-flake-input",
+                            },
+                        }
+                    },
+                }, indent=2) + "\n")
+                flake_path.write_text(
+                    '{ inputs.example.url = "github:example/project/' + old_rev + '"; }\n'
+                )
+
+            def load_target():
+                document = json.loads(catalog_path.read_text())
+                record = document["sources"]["example"]
+                return {
+                    "_document": document,
+                    "_path": catalog_path,
+                    "_record": record,
+                    "kind": "fixed-flake-input",
+                    "version": record["source"]["args"]["rev"],
+                }
+
+            class FakeGitHubClient:
+                def get_default_branch(self, owner, repo):
+                    self.identity = (owner, repo)
+                    return "main"
+
+                def get_latest_commit(self, owner, repo, branch):
+                    self.request = (owner, repo, branch)
+                    return new_rev, new_rev[:12]
+
+            class FakeHashComputer:
+                def compute_native_hash(self, source, replacements):
+                    self.source = source
+                    self.replacements = replacements
+                    return new_hash
+
+            def update(transaction):
+                github = FakeGitHubClient()
+                hashes = FakeHashComputer()
+                with contextlib.redirect_stdout(io.StringIO()):
+                    status = update_catalog_target(
+                        "example",
+                        load_target(),
+                        SimpleNamespace(version=None, dry_run=False),
+                        github,
+                        SimpleNamespace(),
+                        SimpleNamespace(),
+                        hashes,
+                        transaction,
+                    )
+                self.assertEqual(status, "updated")
+                self.assertEqual(github.identity, ("example", "project"))
+                self.assertEqual(github.request, ("example", "project", "main"))
+                self.assertEqual(hashes.replacements, {"rev": new_rev})
+                return status
+
+            write_old_state()
+            rolled_back = SourceTransaction()
+            self.assertEqual(update(rolled_back), "updated")
+            self.assertIn(new_rev, catalog_path.read_text())
+            self.assertIn(new_rev, flake_path.read_text())
+            self.assertEqual(rolled_back.rollback(), 2)
+            self.assertIn(old_rev, catalog_path.read_text())
+            self.assertIn(old_rev, flake_path.read_text())
+
+            committed = SourceTransaction()
+            self.assertEqual(update(committed), "updated")
+            committed.commit()
+            record = json.loads(catalog_path.read_text())["sources"]["example"]
+            self.assertEqual(record["source"]["args"]["rev"], new_rev)
+            self.assertEqual(record["source"]["args"]["narHash"], new_hash)
+            self.assertIn(new_rev, flake_path.read_text())
+            self.assertNotIn(old_rev, flake_path.read_text())
+
+    def test_fixed_flake_input_direct_invocation_delegates_to_update_agents(self):
+        calls = []
+
+        def fake_delegate(nix_dir, names, args):
+            calls.append((nix_dir, names, args.version, args.dry_run))
+            return 17
+
+        globals_ = MODULE["main"].__globals__
+        real_delegate = globals_["delegate_to_update_agents"]
+        old_argv = sys.argv
+        try:
+            globals_["delegate_to_update_agents"] = fake_delegate
+            sys.argv = [
+                str(SCRIPT),
+                "agent-browser-source",
+                "--version",
+                "b" * 40,
+                "--dry-run",
+            ]
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = MODULE["main"]()
+        finally:
+            globals_["delegate_to_update_agents"] = real_delegate
+            sys.argv = old_argv
+
+        self.assertEqual(status, 17)
+        self.assertEqual(len(calls), 1)
+        nix_dir, names, version, dry_run = calls[0]
+        self.assertEqual(nix_dir, SCRIPT.parent.parent.resolve())
+        self.assertEqual(names, ["agent-browser-source"])
+        self.assertEqual(version, "b" * 40)
+        self.assertTrue(dry_run)
+
+        runner_calls = []
+
+        def fake_runner(command, **kwargs):
+            runner_calls.append((command, kwargs))
+            return SimpleNamespace(returncode=23)
+
+        delegated = MODULE["delegate_to_update_agents"](
+            Path("/repo"),
+            ["agent-browser-source"],
+            SimpleNamespace(version="b" * 40, dry_run=True),
+            runner=fake_runner,
+        )
+        self.assertEqual(delegated, 23)
+        command, kwargs = runner_calls[0]
+        self.assertEqual(
+            command[1:],
+            [
+                "--target",
+                "agent-browser-source",
+                "--version",
+                "b" * 40,
+                "--dry-run",
+            ],
+        )
+        self.assertEqual(kwargs["cwd"], Path("/repo"))
+        self.assertEqual(kwargs["env"]["NIX_CONFIG_DIR"], "/repo")
+        self.assertFalse(kwargs["check"])
 
 
     def test_source_catalog_rejects_ambiguous_native_fetcher_shapes(self):
@@ -969,7 +1135,6 @@ class UpdateInventoryTests(unittest.TestCase):
             item["name"] for item in inventory["packages"] if item["source"] == "catalog"
         }
         pending = {
-            "agent-browser-source",
             "betterwright",
             "cohere-melody",
             "cymbal",
@@ -988,7 +1153,6 @@ class UpdateInventoryTests(unittest.TestCase):
             "pi-subagents",
             "pi-smart-fetch",
             "pi-smart-web-search",
-            "rust-overlay",
             "rtk",
             "sherlock-db",
         }
@@ -1128,6 +1292,8 @@ class IntegratedWorkflowTests(unittest.TestCase):
         (root / "format.nix").chmod(0o644)
         (root / "projection.json").write_text("{}\n")
         (root / "projection.json").chmod(0o644)
+        (root / "fixed.txt").write_text("fixed before\n")
+        (root / "config/ai/flake.nix").write_text("{ }\n")
         (root / "target-old").write_text("old target\n")
         (root / "target-new").write_text("new target\n")
         (root / "link").symlink_to("target-old")
@@ -1155,20 +1321,37 @@ arguments = sys.argv[1:]
 declared = [
     "tracked.txt", "mode.sh", "binary.bin", "format.nix", "projection.json", "link",
     "regular-to-link", "link-to-regular", "renamed-old.txt", "renamed-new.txt",
-    "deleted.txt", "created.txt", "new-directory/generated-lock.json"
+    "deleted.txt", "created.txt", "fixed.txt", "new-directory/generated-lock.json"
 ]
 if "--inventory" in arguments:
+    packages = [{
+        "name": "fixture",
+        "files": declared,
+        "inventoried": True,
+        "managed": True,
+        "executor": "update-overlay",
+    }]
+    if os.environ.get("UPDATE_TEST_FIXED_TARGET") == "1":
+        packages.append({
+            "name": "fixed",
+            "files": ["fixed.txt", "config/ai/flake.nix"],
+            "input": "fixed-input",
+            "inventoried": True,
+            "kind": "fixed-flake-input",
+            "managed": True,
+            "executor": "update-agents",
+            "policy": "manual",
+        })
     print(json.dumps({
         "schemaVersion": 1,
-        "packages": [{
-            "name": "fixture",
-            "files": declared,
-            "inventoried": True,
-            "managed": True,
-            "executor": "update-overlay",
-        }],
+        "packages": packages,
         "unsupportedOverlayAttributes": [],
     }))
+elif "--prepare-fixed-inputs" in arguments:
+    if arguments != ["--prepare-fixed-inputs", "fixed"]:
+        print(f"unexpected fixed preparation: {arguments}", file=sys.stderr)
+        raise SystemExit(78)
+    (root / "fixed.txt").write_text("fixed after\\n")
 elif "--sync-flake-projections" in arguments:
     (root / "projection.json").write_text('{"projected": true}\\n')
     if os.environ.get("UPDATE_TEST_SIGNAL_PHASE") == "candidate-projection":
@@ -1220,6 +1403,9 @@ else:
             "nix",
             """#!/usr/bin/env bash
 set -euo pipefail
+if [[ -n ${UPDATE_TEST_COMMAND_LOG:-} ]]; then
+  printf '%s\n' "$*" >>"$UPDATE_TEST_COMMAND_LOG"
+fi
 signal_phase() {
   if [[ ${UPDATE_TEST_SIGNAL_PHASE:-} == "$1" \
     && ! -e ${UPDATE_TEST_SIGNAL_MARKER:-/nonexistent} ]]; then
@@ -1559,6 +1745,52 @@ fi
             )
             self.assertFalse((root / ".git/update-agents.lock").exists())
             self.assertEqual(list(root.parent.glob("update-agents.*")), [])
+
+    def test_update_agents_runs_one_fixed_input_without_unrelated_updates(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            command_log = Path(temp_dir) / "commands.log"
+            environment["UPDATE_TEST_FIXED_TARGET"] = "1"
+            environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "fixed"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            self.assertEqual((root / "fixed.txt").read_text(), "fixed after\n")
+            self.assertEqual((root / "tracked.txt").read_text(), "before\n")
+            self.assertEqual((root / "projection.json").read_text(), '{"projected": true}\n')
+            commands = command_log.read_text().splitlines()
+            self.assertIn("flake update --flake ./config/ai fixed-input", commands)
+            self.assertIn("flake update nix-config-ai", commands)
+            self.assertFalse(any("git-ai" in command for command in commands))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment["UPDATE_TEST_FIXED_TARGET"] = "1"
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "fixed", "--dry-run"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("authoritative tree unchanged", result.stdout)
+            self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_rejects_undeclared_candidate_mutation(self):
         for environment_name in (
@@ -2216,7 +2448,8 @@ exec "$REAL_GIT" "$@"
             with self.subTest(required_input=required_input):
                 self.assertIn(required_input, update_agents)
         self.assertIn(
-            'nix flake update --flake ./config/ai "${ai_inputs[@]}"', update_agents
+            'nix flake update --flake ./config/ai "${ai_inputs[@]}" "${lock_target_inputs[@]}"',
+            update_agents,
         )
         self.assertNotIn("\n    nixpkgs\n", update_agents)
         self.assertNotIn("\n    rust-overlay\n", update_agents)
@@ -2255,6 +2488,7 @@ exec "$REAL_GIT" "$@"
         expected_inputs = {
             name for name, target in manifest.items()
             if target.get("executor") == "update-agents"
+            and target.get("kind") == "flake-input"
         }
         block = re.search(r"ai_inputs=\((.*?)\n\)", update_agents, re.DOTALL)
         if block is None:
@@ -2263,6 +2497,7 @@ exec "$REAL_GIT" "$@"
             line.strip() for line in block.group(1).splitlines() if line.strip()
         }
         self.assertEqual(declared_inputs, expected_inputs)
+        self.assertIn("--prepare-fixed-inputs", update_agents)
         self.assertIn(
             "export UPDATE_AGENTS_CANDIDATE=1",
             update_agents,

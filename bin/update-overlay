@@ -896,7 +896,7 @@ def _validate_fetch_record(name: str, source: dict) -> None:
 
 def _catalog_executor(record: dict) -> Optional[str]:
     update = record["update"]
-    if update["kind"] == "flake-input":
+    if update["kind"] in {"fixed-flake-input", "flake-input"}:
         return "update-agents"
     expected_fetchers = {
         "explicit-rev": {"fetchgit", "fetchpatch", "fetchTree", "fetchurl"},
@@ -1159,7 +1159,7 @@ def build_inventory(
             raise RuntimeError(f"duplicate manifest/overlay update target: {name}")
         seen.add(name)
         executor = target.get("executor")
-        packages.append({
+        package = {
             "name": name,
             "source": target.get("source", "manifest"),
             "kind": target["kind"],
@@ -1168,7 +1168,13 @@ def build_inventory(
             "inventoried": True,
             "managed": executor is not None,
             "executor": executor,
-        })
+        }
+        if target.get("source") == "catalog":
+            update = target["_record"]["update"]
+            package["policy"] = update.get("policy", "automatic")
+            if "input" in update:
+                package["input"] = update["input"]
+        packages.append(package)
     return {
         "schemaVersion": 1,
         "packages": sorted(packages, key=lambda item: item["name"]),
@@ -1225,6 +1231,19 @@ def collect_targets(
     return targets
 
 
+def delegate_to_update_agents(nix_dir: Path, names: list[str], args, runner=subprocess.run) -> int:
+    command = [str(Path(__file__).with_name("update-agents"))]
+    for name in names:
+        command.extend(["--target", name])
+    if args.version:
+        command.extend(["--version", args.version])
+    if args.dry_run:
+        command.append("--dry-run")
+    environment = {**os.environ, "NIX_CONFIG_DIR": str(nix_dir)}
+    result = runner(command, cwd=nix_dir, env=environment, check=False)
+    return result.returncode
+
+
 class SourceTransaction:
     """Restore every watched source file unless the invocation commits."""
 
@@ -1254,6 +1273,21 @@ class SourceTransaction:
 
 def _write_catalog_target(target: dict) -> None:
     target["_path"].write_text(json.dumps(target["_document"], indent=2) + "\n")
+
+
+def _rewrite_fixed_flake_input(target: dict, old_rev: str, new_rev: str) -> Path:
+    record = target["_record"]
+    source_args = record["source"]["args"]
+    flake_path = target["_path"].parent.parent / "config" / "ai" / "flake.nix"
+    old_url = f"github:{source_args['owner']}/{source_args['repo']}/{old_rev}"
+    new_url = f"github:{source_args['owner']}/{source_args['repo']}/{new_rev}"
+    text = flake_path.read_text()
+    if text.count(old_url) != 1:
+        raise RuntimeError(
+            f"fixed flake input {record['update']['input']} has no unique literal revision"
+        )
+    flake_path.write_text(text.replace(old_url, new_url, 1))
+    return flake_path
 
 
 def update_catalog_target(
@@ -1286,7 +1320,25 @@ def update_catalog_target(
     display = f"{Colors.BOLD}catalog/{name}{Colors.RESET} {Colors.DIM}{old_version}{Colors.RESET}"
     print(display, end=" ")
 
-    if kind == "npm-release":
+    if kind == "fixed-flake-input":
+        if args.version:
+            new_ref = args.version
+        else:
+            branch = github_client.get_default_branch(
+                source_args["owner"], source_args["repo"]
+            )
+            candidate = (
+                github_client.get_latest_commit(
+                    source_args["owner"], source_args["repo"], branch
+                )
+                if branch
+                else None
+            )
+            if candidate:
+                new_ref = candidate[0]
+        if new_ref:
+            new_version = new_ref
+    elif kind == "npm-release":
         candidate = npm_client.get_version(update["package"], args.version)
         if candidate:
             new_version, _registry_integrity = candidate
@@ -1389,6 +1441,9 @@ def update_catalog_target(
         return "updated"
 
     transaction.watch(target["_path"])
+    if kind == "fixed-flake-input":
+        flake_path = target["_path"].parent.parent / "config" / "ai" / "flake.nix"
+        transaction.watch(flake_path)
     if "version" in record:
         record["version"] = new_version
     source_args[hash_name] = new_hash
@@ -1399,6 +1454,8 @@ def update_catalog_target(
         source_args["version"] = new_version
     if new_ref and current_ref:
         source_args["tag" if "tag" in source_args else "rev"] = new_ref
+    if kind == "fixed-flake-input":
+        _rewrite_fixed_flake_input(target, current_ref, new_ref)
     if kind == "explicit-rev" and "commit" in record:
         resolved = subprocess.run(
             ["git", "ls-remote", source["url"], new_ref, f"{new_ref}^{{}}"],
@@ -1675,10 +1732,19 @@ Examples:
         "--sync-flake-projections", action="store_true",
         help="Refresh catalog fetchTree projections from config/ai/flake.lock"
     )
+    parser.add_argument(
+        "--prepare-fixed-inputs", action="store_true", help=argparse.SUPPRESS
+    )
     args = parser.parse_args()
 
     # Validate arguments
-    if not args.inventory and not args.all and not args.packages and not args.sync_flake_projections:
+    if (
+        not args.inventory
+        and not args.all
+        and not args.packages
+        and not args.sync_flake_projections
+        and not args.prepare_fixed_inputs
+    ):
         parser.error(
             "Please specify package names, --all, --inventory, or --sync-flake-projections"
         )
@@ -1695,8 +1761,22 @@ Examples:
     ):
         parser.error("--sync-flake-projections cannot be combined with another operation")
 
+    if args.prepare_fixed_inputs and (
+        args.inventory
+        or args.all
+        or args.sync_flake_projections
+        or args.dry_run
+        or args.no_build
+        or args.verbose
+        or args.json_output
+    ):
+        parser.error("--prepare-fixed-inputs cannot be combined with another operation")
+
     if args.sync_flake_projections and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--sync-flake-projections is restricted to the update-agents candidate")
+
+    if args.prepare_fixed_inputs and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
+        parser.error("--prepare-fixed-inputs is restricted to the update-agents candidate")
 
     if args.inventory and (args.all or args.packages or args.version):
         parser.error("--inventory cannot be combined with package updates")
@@ -1706,6 +1786,9 @@ Examples:
 
     if args.all and args.version:
         parser.error("Cannot use --version with --all")
+
+    if args.prepare_fixed_inputs and args.version and len(args.packages) != 1:
+        parser.error("--version with --prepare-fixed-inputs requires exactly one target")
 
     nix_dir = Path(__file__).parent.parent.resolve()
     if args.sync_flake_projections:
@@ -1724,6 +1807,22 @@ Examples:
         print_inventory(build_inventory(sources, explicit_targets, nix_dir), args.json_output)
         return 0
 
+    if args.prepare_fixed_inputs:
+        require_detached_linked_worktree(nix_dir)
+    elif args.packages:
+        delegated_names = [
+            name
+            for name in args.packages
+            if name in catalog_targets
+            and catalog_targets[name].get("executor") == "update-agents"
+        ]
+        if delegated_names:
+            if len(delegated_names) != len(args.packages):
+                parser.error("update-agents targets cannot be mixed with direct targets")
+            if args.no_build or args.verbose:
+                parser.error("update-agents targets do not accept --no-build or --verbose")
+            return delegate_to_update_agents(nix_dir, delegated_names, args)
+
     github_client = GitHubClient()
     npm_client = NpmRegistryClient()
     pypi_client = PypiClient()
@@ -1734,20 +1833,37 @@ Examples:
     fail_count = 0
     skipped_count = 0
 
-    selected_catalog_names = (
-        [
+    if args.prepare_fixed_inputs:
+        selected_catalog_names = (
+            args.packages
+            or [
+                name
+                for name in sorted(catalog_targets)
+                if catalog_targets[name]["kind"] == "fixed-flake-input"
+                and catalog_targets[name]["_record"]["update"].get(
+                    "policy", "automatic"
+                )
+                == "automatic"
+            ]
+        )
+    elif args.all:
+        selected_catalog_names = [
             name for name in sorted(catalog_targets)
             if catalog_targets[name]["_record"]["update"].get("policy", "automatic")
             == "automatic"
             and (not args.packages or name in args.packages)
         ]
-        if args.all
-        else [name for name in args.packages if name in catalog_targets]
-    )
+    else:
+        selected_catalog_names = [
+            name for name in args.packages if name in catalog_targets
+        ]
     catalog_hash_computer = HashComputer(nix_dir)
     for name in selected_catalog_names:
         target = catalog_targets[name]
-        if target.get("executor") != "update-overlay":
+        expected_executor = "update-agents" if args.prepare_fixed_inputs else "update-overlay"
+        if target.get("executor") != expected_executor or (
+            args.prepare_fixed_inputs and target["kind"] != "fixed-flake-input"
+        ):
             if args.all:
                 if args.verbose:
                     print(f"{Colors.DIM}catalog/{name}: skipped (no executor){Colors.RESET}")
@@ -1762,6 +1878,13 @@ Examples:
         success_count += status == "updated"
         skipped_count += status == "skipped"
         fail_count += status == "failed"
+
+    if args.prepare_fixed_inputs:
+        if fail_count:
+            transaction.rollback()
+        else:
+            transaction.commit()
+        return 0 if fail_count == 0 else 1
 
     targets = collect_targets(args, sources, set(catalog_targets))
     for source, package_name in targets:

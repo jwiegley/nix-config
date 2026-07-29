@@ -15,6 +15,9 @@ run_commit=false
 run_switch=false
 run_push=false
 run_brew=false
+run_dry_run=false
+requested_version=
+declare -a requested_targets=()
 
 candidate_dir=
 candidate_git_dir=
@@ -40,13 +43,17 @@ declare -A publication_baseline_parent_exists=()
 
 usage() {
     cat <<'EOF'
-usage: update-agents [--all-inputs] [--pull] [--commit] [--switch] [--push] [--brew]
+usage: update-agents [--all-inputs] [--target NAME] [--version REV] [--dry-run]
+                     [--pull] [--commit] [--switch] [--push] [--brew]
 
 Update integrated AI inputs, both repository locks, and local overlays.
 By default, leave reviewed working-tree changes without external side effects.
 
 Options:
   --all-inputs  Update every root and portable flake input
+  --target NAME Update one catalog target through this transaction (repeatable)
+  --version REV Force the revision for one fixed-input target
+  --dry-run     Validate the candidate without publishing it
   --pull       Fast-forward the clean repository before updating
   --commit     Create one signed commit of updater-owned paths
   --switch     Switch the host after a successful signed commit
@@ -280,6 +287,25 @@ while (($#)); do
     --all-inputs)
         run_all_inputs=true
         ;;
+    --target)
+        [[ $# -ge 2 && -n $2 ]] || {
+            echo "update-agents: --target requires a name" >&2
+            exit 2
+        }
+        requested_targets+=("$2")
+        shift
+        ;;
+    --version)
+        [[ $# -ge 2 && -n $2 ]] || {
+            echo "update-agents: --version requires a revision" >&2
+            exit 2
+        }
+        requested_version=$2
+        shift
+        ;;
+    --dry-run)
+        run_dry_run=true
+        ;;
     --pull)
         run_pull=true
         ;;
@@ -453,6 +479,21 @@ with_nixos_build_lock() {
     exit 1
 }
 
+if [[ $run_all_inputs == true && ${#requested_targets[@]} -ne 0 ]]; then
+    echo "update-agents: --all-inputs cannot be combined with --target" >&2
+    exit 2
+fi
+if [[ -n $requested_version && ${#requested_targets[@]} -ne 1 ]]; then
+    echo "update-agents: --version requires exactly one --target" >&2
+    exit 2
+fi
+if [[ $run_dry_run == true ]] &&
+    [[ $run_pull == true || $run_commit == true || $run_switch == true ||
+        $run_push == true || $run_brew == true ]]; then
+    echo "update-agents: --dry-run cannot be combined with external actions" >&2
+    exit 2
+fi
+
 if [[ $run_pull == true ]]; then
     git_pull_clean "$config_dir"
 else
@@ -511,17 +552,81 @@ fi
         printf '%s\n' flake.lock config/ai/flake.lock
     } | sort -u >"$transaction_dir/allowed-paths"
 
+    declare -a fixed_target_names=()
+    declare -a lock_target_inputs=()
+    if ((${#requested_targets[@]})); then
+        declare -A seen_targets=()
+        for target_name in "${requested_targets[@]}"; do
+            if [[ ${seen_targets[$target_name]+present} ]]; then
+                echo "update-agents: duplicate target: $target_name" >&2
+                exit 2
+            fi
+            seen_targets["$target_name"]=1
+            if ! target_row=$(jq -er --arg name "$target_name" '
+                .packages[]
+                | select(.name == $name)
+                | [.kind, .executor, (.input // "")] | @tsv
+            ' "$transaction_dir/inventory.json"); then
+                echo "update-agents: unknown target: $target_name" >&2
+                exit 2
+            fi
+            IFS=$'\t' read -r target_kind target_executor target_input <<<"$target_row"
+            if [[ $target_executor != update-agents || -z $target_input ]] ||
+                [[ $target_kind != fixed-flake-input && $target_kind != flake-input ]]; then
+                echo "update-agents: target is not owned by this transaction: $target_name" >&2
+                exit 2
+            fi
+            if [[ -n $requested_version && $target_kind != fixed-flake-input ]]; then
+                echo "update-agents: --version requires a fixed-flake-input target" >&2
+                exit 2
+            fi
+            lock_target_inputs+=("$target_input")
+            if [[ $target_kind == fixed-flake-input ]]; then
+                fixed_target_names+=("$target_name")
+            fi
+        done
+    else
+        while IFS=$'\t' read -r target_name target_input; do
+            [[ -n $target_name && -n $target_input ]] || continue
+            fixed_target_names+=("$target_name")
+            lock_target_inputs+=("$target_input")
+        done < <(
+            jq -r --arg include_manual "$run_all_inputs" '
+                .packages[]
+                | select(
+                    .kind == "fixed-flake-input"
+                    and .executor == "update-agents"
+                    and ($include_manual == "true" or .policy == "automatic")
+                )
+                | [.name, .input] | @tsv
+            ' "$transaction_dir/inventory.json"
+        )
+    fi
+
+    if ((${#fixed_target_names[@]})); then
+        prepare_args=(--prepare-fixed-inputs)
+        if [[ -n $requested_version ]]; then
+            prepare_args+=(--version "$requested_version")
+        fi
+        python3 bin/update-overlay "${prepare_args[@]}" "${fixed_target_names[@]}"
+    fi
+
     if [[ $run_all_inputs == true ]]; then
         nix flake update --flake ./config/ai
         nix flake update
+    elif ((${#requested_targets[@]})); then
+        nix flake update --flake ./config/ai "${lock_target_inputs[@]}"
+        nix flake update nix-config-ai
     else
-        nix flake update --flake ./config/ai "${ai_inputs[@]}"
+        nix flake update --flake ./config/ai "${ai_inputs[@]}" "${lock_target_inputs[@]}"
         # The root consumes the portable subflake transitively; refresh its nested
         # nodes only after the portable lock is complete.
         nix flake update nix-config-ai
     fi
     python bin/update-overlay --sync-flake-projections
-    python bin/update-overlay --all --overlays-dir overlays/ai
+    if ((${#requested_targets[@]} == 0)); then
+        python bin/update-overlay --all --overlays-dir overlays/ai
+    fi
     mapfile -t changed_nix < <(git diff --no-renames --name-only -- '*.nix')
     if ((${#changed_nix[@]})); then
         nixfmt "${changed_nix[@]}"
@@ -574,7 +679,14 @@ if [[ -s $transaction_patch ]] && ! live_repository_matches_baseline; then
 fi
 
 commit_created=false
-if [[ $run_commit == true && -s $transaction_patch ]]; then
+if [[ $run_dry_run == true ]]; then
+    if [[ -s $transaction_patch ]]; then
+        git -C "$candidate_dir" diff --cached --stat HEAD --
+        echo "update-agents: dry-run candidate validated; authoritative tree unchanged"
+    else
+        echo "update-agents: dry-run candidate has no changes"
+    fi
+elif [[ $run_commit == true && -s $transaction_patch ]]; then
     commit_baseline=$(git -C "$candidate_dir" rev-parse HEAD)
     if ! git -C "$candidate_dir" commit -S -m "Update AI agents"; then
         echo "update-agents: signed commit failed" >&2
