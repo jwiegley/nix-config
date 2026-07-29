@@ -667,12 +667,27 @@ class UpdateInventoryTests(unittest.TestCase):
                 },
                 {},
             )
+            zip_value = MODULE["HashComputer"](Path("/repo")).compute_native_hash(
+                {
+                    "fetcher": "fetchzip",
+                    "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                    "args": {
+                        "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                        "hash": "sha256-old",
+                    },
+                },
+                {"url": "https://registry.npmjs.org/example/-/example-2.0.0.tgz"},
+            )
         finally:
             subprocess.run = real_run
 
         self.assertEqual(value, "nix32-new")
         self.assertIn("nix-config-ai.inputs.nixpkgs", calls[0][-1])
         self.assertEqual(calls[1][1:3], ["hash", "convert"])
+        self.assertEqual(zip_value, "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+        self.assertIn("pkgs.fetchzip", calls[2][-1])
+        self.assertIn("example-2.0.0.tgz", calls[2][-1])
+        self.assertNotIn("example-1.0.0.tgz", calls[2][-1])
 
     def test_catalog_npm_update_rewrites_source_and_dependent_hash_atomically(self):
         with tempfile.TemporaryDirectory() as temp_dir:
