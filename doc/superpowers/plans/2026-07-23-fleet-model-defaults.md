@@ -17,8 +17,8 @@ legacy service shape without a second generated model file.
 
 ## Global Constraints
 
-- Claude primary is exactly `claude-opus-4-8[1m]`.
-- Claude subagents use exactly `claude-opus-4-8`.
+- Claude primary is exactly `claude-opus-5[1m]`.
+- Claude subagents use exactly `claude-opus-5`.
 - Claude Haiku selection remains unchanged.
 - `llm-setup-reset` must not write `models.yaml`, invoke Nix, commit, push, or
   contact hosts.
