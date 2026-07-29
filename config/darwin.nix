@@ -37,11 +37,21 @@ in
   users = {
     # List of users and groups that nix-darwin is allowed to create/manage
     # CRITICAL: Users/groups must be in these lists for nix-darwin to create them
-    knownUsers = [
-      "johnw"
-    ]
-    ++ lib.optionals (!config.johnw.host.isClio) [ "_prometheus-node-exporter" ];
-    knownGroups = lib.optionals (!config.johnw.host.isClio) [ "_prometheus-node-exporter" ];
+    # Only johnw. `_prometheus-node-exporter` is registered by nix-darwin itself --
+    # modules/services/monitoring/prometheus-node-exporter.nix:95-96 sets both
+    # users.knownUsers and users.knownGroups, gated on `mkIf cfg.enable` (:80).
+    #
+    # Our exporter's enable is `!config.johnw.host.isClio` (see services below), which
+    # is the SAME condition the removed guard used, so the two registrations were
+    # provably coextensive and ours was pure duplication: hera's merged lists read
+    # ['_prometheus-node-exporter', 'johnw', '_prometheus-node-exporter'] and
+    # ['_prometheus-node-exporter', '_prometheus-node-exporter'].
+    #
+    # knownUsers is what authorizes nix-darwin to CREATE and DELETE accounts, so this
+    # was verified rather than assumed: clio, where the exporter is disabled, carried
+    # neither copy (knownUsers ['johnw'], knownGroups []), confirming the module's
+    # registration is gated on exactly what ours was.
+    knownUsers = [ "johnw" ];
 
     users = {
       johnw = {
