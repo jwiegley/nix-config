@@ -1344,11 +1344,13 @@ class WatchdogLifecycleTests(WatchdogTestCase):
         with tempfile.TemporaryDirectory(prefix="a-", dir="/tmp") as raw:
             runtime = Path(raw)
             runtime.chmod(0o700)
-            first, entry = prepare(str(runtime))
+            first, _entry = prepare(str(runtime))
             first.close()
             second, second_entry = prepare(str(runtime))
             try:
-                self.assertNotEqual(entry[1], second_entry[1])
+                wrong_identity = (second_entry[1][0], second_entry[1][1] + 1)
+                self.assertFalse(unlink(second_entry[0], wrong_identity))
+                self.assertTrue(Path(second_entry[0]).exists())
                 self.assertTrue(unlink(second_entry[0], second_entry[1]))
                 self.assertFalse(Path(second_entry[0]).exists())
             finally:

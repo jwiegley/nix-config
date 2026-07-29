@@ -4759,8 +4759,20 @@ except BaseException:
             owner_start_identity=stale_owner_identity,
             generation=generation,
         )
-        stale_runtime_identity = stale.runtime_dir.lstat()
-        stale_state_identity = stale.state_dir.lstat()
+        stale_runtime_descriptor = os.open(
+            stale.runtime_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        )
+        self.addCleanup(os.close, stale_runtime_descriptor)
+        stale_state_descriptor = os.open(
+            stale.state_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        )
+        self.addCleanup(os.close, stale_state_descriptor)
+        stale_runtime_identity = os.fstat(stale_runtime_descriptor)
+        stale_state_identity = os.fstat(stale_state_descriptor)
+        stale_runtime_sentinel = stale.runtime_dir / "stale-runtime-sentinel"
+        stale_state_sentinel = stale.state_dir / "stale-state-sentinel"
+        stale_runtime_sentinel.write_text("stale\n")
+        stale_state_sentinel.write_text("stale\n")
         stale_owner = next(
             process
             for process in self.owner_processes
@@ -4860,6 +4872,8 @@ except BaseException:
         self.assertTrue(runtime_dir.is_dir())
         self.assertTrue(state_dir.is_dir())
         self.assertTrue(lease.is_file())
+        self.assertFalse(os.path.lexists(stale_runtime_sentinel))
+        self.assertFalse(os.path.lexists(stale_state_sentinel))
         self.assertNotEqual(
             (runtime_dir.lstat().st_dev, runtime_dir.lstat().st_ino),
             (stale_runtime_identity.st_dev, stale_runtime_identity.st_ino),

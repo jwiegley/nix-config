@@ -4375,6 +4375,38 @@ let
 
     (require 'json)
 
+    (defun anvil-watchdog-capability--descriptor-identity (descriptor)
+      "Return a tagged kernel identity for DESCRIPTOR, or nil when it is unrelated."
+      (cond
+       ((eq system-type 'gnu/linux)
+        (let ((target
+               (ignore-errors
+                 (file-symlink-p (format "/proc/self/fd/%d" descriptor)))))
+          (when (and (stringp target)
+                     (string-match
+                      "\\`\\(socket\\|pipe\\):\\[\\([0-9]+\\)\\]\\'"
+                      target))
+            (list (match-string 1 target)
+                  (string-to-number (match-string 2 target))))))
+       ((eq system-type 'darwin)
+        (let* ((attributes
+                (ignore-errors
+                  (file-attributes (format "/dev/fd/%d" descriptor) 'string)))
+               (modes (and attributes (file-attribute-modes attributes))))
+          (when (and (stringp modes)
+                     (> (length modes) 0)
+                     (memq (aref modes 0) '(?s ?p)))
+            (let ((identity (file-attribute-file-identifier attributes)))
+              (list (if (eq (aref modes 0) ?s) "socket" "pipe")
+                    (nth 0 identity)
+                    (nth 1 identity))))))
+       (t
+        (error "Unsupported descriptor identity platform: %S" system-type))))
+
+    (when (and (eq system-type 'gnu/linux)
+               (not (file-directory-p "/proc/self/fd")))
+      (error "Linux descriptor identity requires /proc/self/fd"))
+
     (let ((result (getenv "ANVIL_TEST_DESCENDANT_RESULT"))
           (root-socket-identities
            (json-parse-string
@@ -4394,20 +4426,17 @@ let
         (error "Missing absolute descendant result path"))
       (dotimes (offset 1021)
         (let* ((descriptor (+ 3 offset))
-               (attributes
-                (ignore-errors
-                  (file-attributes (format "/dev/fd/%d" descriptor) 'string)))
-               (modes (and attributes (file-attribute-modes attributes))))
-          (when (and (stringp modes) (> (length modes) 0))
-            (let ((identity (file-attribute-file-identifier attributes)))
-              (cond
-               ((eq (aref modes 0) ?p)
-                (when (= (nth 0 identity) event-pipe-inode)
-                  (push descriptor inherited-event-pipe-fds)))
-               ((eq (aref modes 0) ?s)
-                (when (member (list (nth 0 identity) (nth 1 identity))
-                              root-socket-identities)
-                  (push descriptor inherited-root-socket-fds))))))))
+               (identity
+                (anvil-watchdog-capability--descriptor-identity descriptor)))
+          (cond
+           ((and identity
+                 (equal (car identity) "pipe")
+                 (= (nth 1 identity) event-pipe-inode))
+            (push descriptor inherited-event-pipe-fds))
+           ((and identity
+                 (equal (car identity) "socket")
+                 (member identity root-socket-identities))
+            (push descriptor inherited-root-socket-fds)))))
       (with-temp-file result
         (insert
          (json-serialize
@@ -4427,26 +4456,53 @@ let
   watchdogCapabilityRootInit = writeText "anvil-watchdog-capability-root.el" ''
     ;;; anvil-watchdog-capability-root.el --- Test the real root boundary -*- lexical-binding: t; -*-
 
-    (load "${dedicatedTelemetryInit}" nil nil t)
-    (unless (process-live-p anvil-headless--watchdog-telemetry-process)
-      (error "Root telemetry socket did not connect"))
-    (let (socket-identities)
-      (dotimes (offset 1021)
-        (let* ((descriptor (+ 3 offset))
-               (attributes
+    (defun anvil-watchdog-capability--descriptor-identity (descriptor)
+      "Return a tagged kernel identity for DESCRIPTOR, or nil when it is unrelated."
+      (cond
+       ((eq system-type 'gnu/linux)
+        (let ((target
+               (ignore-errors
+                 (file-symlink-p (format "/proc/self/fd/%d" descriptor)))))
+          (when (and (stringp target)
+                     (string-match
+                      "\\`\\(socket\\|pipe\\):\\[\\([0-9]+\\)\\]\\'"
+                      target))
+            (list (match-string 1 target)
+                  (string-to-number (match-string 2 target))))))
+       ((eq system-type 'darwin)
+        (let* ((attributes
                 (ignore-errors
                   (file-attributes (format "/dev/fd/%d" descriptor) 'string)))
                (modes (and attributes (file-attribute-modes attributes))))
           (when (and (stringp modes)
                      (> (length modes) 0)
-                     (eq (aref modes 0) ?s))
+                     (memq (aref modes 0) '(?s ?p)))
             (let ((identity (file-attribute-file-identifier attributes)))
-              (push (vector (nth 0 identity) (nth 1 identity))
-                    socket-identities)))))
+              (list (if (eq (aref modes 0) ?s) "socket" "pipe")
+                    (nth 0 identity)
+                    (nth 1 identity))))))
+       (t
+        (error "Unsupported descriptor identity platform: %S" system-type))))
+
+    (when (and (eq system-type 'gnu/linux)
+               (not (file-directory-p "/proc/self/fd")))
+      (error "Linux descriptor identity requires /proc/self/fd"))
+
+    (load "${dedicatedTelemetryInit}" nil nil t)
+    (unless (process-live-p anvil-headless--watchdog-telemetry-process)
+      (error "Root telemetry socket did not connect"))
+    (let (socket-identities)
+      (dotimes (offset 1021)
+        (let ((identity
+               (anvil-watchdog-capability--descriptor-identity (+ 3 offset))))
+          (when (and identity (equal (car identity) "socket"))
+            (push identity socket-identities))))
       (unless socket-identities
         (error "Root telemetry connection exposed no socket identity"))
       (setenv "ANVIL_TEST_ROOT_SOCKET_IDENTITIES"
-              (json-serialize (vconcat socket-identities)))
+              (json-serialize
+               (vconcat (mapcar (lambda (identity) (vconcat identity))
+                                socket-identities))))
       (with-temp-buffer
         (let ((status
                (call-process
