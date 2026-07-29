@@ -53,6 +53,8 @@ pkgs.runCommand "ai-home-manager-catalog-renderers"
     test -f "${common.piExtensionSources.pi-mcp-adapter}/index.ts"
     test -d "${common.piExtensionSources.pi-mcp-adapter}/node_modules/@modelcontextprotocol/sdk"
     test -d "${common.piExtensionSources.pi-mcp-adapter}/node_modules/zod"
+    grep -F 'let status = `🔌 MCP: ''${connectedCount}/''${enabledCount}`;' \
+      "${common.piExtensionSources.pi-mcp-adapter}/init.ts" >/dev/null
     test -f "${common.piExtensionSources.pi-quiet}/package.json"
     test -f "${common.piExtensionSources.pi-quiet}/src/index.ts"
 

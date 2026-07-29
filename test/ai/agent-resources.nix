@@ -641,11 +641,21 @@ else
         cmp "$TMPDIR/expected-mcp-top-level" "$TMPDIR/actual-mcp-top-level" \
           || fail "pi-mcp-adapter packaged file set differs"
 
+        mcp_init_expected="$TMPDIR/pi-mcp-init.ts"
+        cp ${lib.escapeShellArg "${piMcpAdapter}/init.ts"} "$mcp_init_expected"
+        chmod u+w "$mcp_init_expected"
+        substituteInPlace "$mcp_init_expected" \
+          --replace-fail \
+            'let status = `🔌 MCP: ''${connectedCount}/''${enabledCount} servers`;' \
+            'let status = `🔌 MCP: ''${connectedCount}/''${enabledCount}`;'
+
         for relative in ${piMcpFileArgs}; do
           [ -f "$mcp/$relative" ] && [ ! -L "$mcp/$relative" ] \
             || fail "missing regular pi-mcp-adapter file: $relative"
-          cmp ${lib.escapeShellArg "${piMcpAdapter}"}/"$relative" "$mcp/$relative" \
-            || fail "modified pi-mcp-adapter file: $relative"
+          expected_mcp_file=${lib.escapeShellArg "${piMcpAdapter}"}/"$relative"
+          [ "$relative" != init.ts ] || expected_mcp_file=$mcp_init_expected
+          cmp "$expected_mcp_file" "$mcp/$relative" \
+            || fail "unexpected pi-mcp-adapter file: $relative"
         done
 
         jq -e '

@@ -113,6 +113,10 @@ let
         --replace-fail \
           '"resolved": "https://registry.npmjs.org/@earendil-works/pi-tui/-/pi-tui-0.79.10.tgz",' \
           $'"resolved": "https://registry.npmjs.org/@earendil-works/pi-tui/-/pi-tui-0.79.10.tgz",\n      "integrity": "sha512-FUVOjDn1DVwM1uHD5MNYboXQrXjIDbSt+BQ3py7nQWCY62tKfxgiM1OBMxTcwRWLfSdZHUPpV0hm1loIdUJnPw==",'
+      substituteInPlace init.ts \
+        --replace-fail \
+          'let status = `🔌 MCP: ''${connectedCount}/''${enabledCount} servers`;' \
+          'let status = `🔌 MCP: ''${connectedCount}/''${enabledCount}`;'
     '';
   };
 

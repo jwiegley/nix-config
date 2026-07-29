@@ -267,6 +267,21 @@
       },
       "version": "3.4.1"
     },
+    "pi-goal-x": {
+      "source": {
+        "args": {
+          "hash": "sha256-BWQhLz6K+0zZAxGFamByctim+b6sUghAgQh6Bi9vTqU=",
+          "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.19.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.19.0.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "pi-goal-x"
+      },
+      "version": "0.19.0"
+    },
     "pi-hashline-edit-pro": {
       "hashes": {
         "npmDepsHash": "sha256-sk7mvBP3/SwAFt3GYN1OL2SwNk1s5nC47UUsT1cxB2Y="

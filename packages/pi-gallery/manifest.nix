@@ -39,6 +39,7 @@ in
     "cymbal-extension"
     "subagents"
     "dynamic-workflows"
+    "goal"
   ];
 
   members = {
@@ -179,6 +180,12 @@ in
         "skills/workflow-authoring"
         "skills/workflow-patterns"
       ];
+    };
+    goal = member "pi-goal-x" {
+      attrName = "pi-goal-x";
+      package = packages.pi-goal-x or null;
+      publicName = "pi-goal-x";
+      extension = "extensions/goal.ts";
     };
   };
 

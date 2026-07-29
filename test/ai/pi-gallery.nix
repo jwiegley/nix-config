@@ -133,6 +133,11 @@ runCommand "pi-gallery-check"
     [ ! -e ${roots.router}/node_modules ]
     [ -f ${roots.rewind}/src/index.ts ]
     [ -f ${roots.rewind}/src/core.ts ]
+    [ -f ${roots.rewind}/src/ui.ts ]
+    ! grep -F 'state.checkpoints.size' ${roots.rewind}/src/ui.ts >/dev/null \
+      || fail "Rewind still computes the footer checkpoint count"
+    ! grep -F 'checkpoint count' ${roots.rewind}/src/ui.ts >/dev/null \
+      || fail "Rewind still describes a footer checkpoint count"
     [ ! -e ${roots.rewind}/node_modules ]
     [ -f ${roots.scroll}/extensions/scroll.ts ]
     [ -f ${roots.scroll}/src/search.ts ]
@@ -159,6 +164,9 @@ runCommand "pi-gallery-check"
       || fail "Lens installer policy patch is missing"
     ! grep -R -E '"npx(\.cmd)?"' ${roots.lens}/dist >/dev/null \
       || fail "Lens still contains a live npx fallback"
+    grep -F 'setStatus("pi-lens-lsp", activeIds.length > 0 ? theme.bold("LSP") : theme.fg("dim", "LSP"));' \
+      ${roots.lens}/dist/index.js >/dev/null \
+      || fail "Lens footer status is not compact"
 
 
     [ -f ${roots.ponytail}/pi-extension/index.js ]
@@ -169,6 +177,16 @@ runCommand "pi-gallery-check"
     [ ! -e ${roots.blackhole}/node_modules ]
     [ -f ${roots.caveman}/extensions/caveman.ts ]
     [ ! -e ${roots.caveman}/node_modules ]
+    grep -F 'ctx.ui.setStatus("caveman", undefined);' \
+      ${roots.caveman}/extensions/caveman.ts >/dev/null \
+      || fail "Caveman footer status is not disabled"
+    ! grep -F 'caveman level:' ${roots.caveman}/extensions/caveman.ts >/dev/null \
+      || fail "Caveman footer still renders the level lighter"
+    [ -f ${roots.goal}/extensions/goal.ts ]
+    [ ! -e ${roots.goal}/node_modules ]
+    grep -F 'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;' \
+      ${roots.goal}/extensions/goal-core.ts >/dev/null \
+      || fail "Goal footer still repeats the objective"
     [ -f ${roots.retry}/src/index.ts ]
     [ ! -e ${roots.retry}/node_modules ]
     [ -f ${roots.markdown-preview}/index.ts ]
@@ -220,6 +238,7 @@ runCommand "pi-gallery-check"
       and (.packages[] | select(.name == "@dietrichgebert/ponytail") | .skills == [])
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
     grep -F 'PI_WEB_ACCESS_PROVIDER = "perplexity"' ${gallery}/index.ts >/dev/null
+    grep -F 'PONYTAIL_HIDE_STATUS = "1"' ${gallery}/index.ts >/dev/null
     grep -F 'PI_LENS_DISABLE_LSP_INSTALL = "1"' ${gallery}/index.ts >/dev/null
     grep -F 'pi-provider-litellm' ${gallery}/index.ts >/dev/null
     grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
@@ -666,6 +685,20 @@ runCommand "pi-gallery-check"
           "chain",
           "cymbal:remind",
           "gather-context-and-clarify",
+          "goal",
+          "goal-abort",
+          "goal-clear",
+          "goal-focus",
+          "goal-list",
+          "goal-pause",
+          "goal-resume",
+          "goal-settings",
+          "goal-status",
+          "goal-tweak",
+          "goals",
+          "goals-set",
+          "sisyphus",
+          "sisyphus-set",
           "insights",
           "parallel",
           "parallel-cleanup",
@@ -718,6 +751,8 @@ runCommand "pi-gallery-check"
         "cymbal_show",
         "cymbal_structure",
         "cymbal_trace",
+        "get_goal",
+        "propose_goal_draft",
         "preview_export",
         "subagent",
         "subagent_supervisor",

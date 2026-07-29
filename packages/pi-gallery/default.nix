@@ -36,6 +36,7 @@ let
         pi-caveman
         pi-cymbal
         pi-dynamic-workflows
+        pi-goal-x
         pi-markdown-preview
         pi-retry
         pi-rtk-optimizer
@@ -168,6 +169,14 @@ let
                   path.write_text(new)
           if replaced != 9:
               raise SystemExit(f"unexpected pi-lens npx file count: {replaced}")
+
+          bundle = root / "dist/index.js"
+          text = bundle.read_text()
+          old = r'setStatus("pi-lens-lsp", parts.length > 0 ? parts.join(" \xB7 ") : theme.fg("dim", "LSP Inactive"));'
+          new = 'setStatus("pi-lens-lsp", activeIds.length > 0 ? theme.bold("LSP") : theme.fg("dim", "LSP"));'
+          if text.count(old) != 1:
+              raise SystemExit("unexpected pi-lens status formatter")
+          bundle.write_text(text.replace(old, new))
           PY
         ''}
       '';
@@ -481,6 +490,38 @@ let
     version = members.caveman.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-caveman} -C ${root} --strip-components=1
+      ${python3}/bin/python3 - ${root}/extensions/caveman.ts <<'PY'
+      from pathlib import Path
+      import sys
+
+      source = Path(sys.argv[1])
+      text = source.read_text()
+      signature = '\tfunction syncStatus(ctx: Pick<ExtensionContext, "ui">) {'
+      marker = "\n\t// -- Restore state on session load --"
+      if text.count(signature) != 1 or text.count(marker) != 1:
+          raise SystemExit("unexpected caveman status renderer")
+      start = text.index(signature)
+      end = text.index(marker, start)
+      replacement = (
+          '\tfunction syncStatus(ctx: Pick<ExtensionContext, "ui">) {\n'
+          '\t\tstopAnimation();\n'
+          '\t\tctx.ui.setStatus("caveman", undefined);\n'
+          '\t}\n'
+      )
+      source.write_text(text[:start] + replacement + text[end:])
+      PY
+    '';
+  };
+
+  pi-goal-x = mkCopyRoot {
+    pname = members.goal.attrName;
+    version = members.goal.version;
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-goal-x} -C ${root} --strip-components=1
+      substituteInPlace ${root}/extensions/goal-core.ts \
+        --replace-fail \
+          'return `''${prefix}: ''${statusLabel(goal)}''${usage} - ''${truncateText(goal.objective, 60)}`;' \
+          'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;'
     '';
   };
 
@@ -531,6 +572,13 @@ let
     version = members.rewind.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-rewind} -C ${root} --strip-components=1
+      substituteInPlace ${root}/src/ui.ts \
+        --replace-fail \
+          '/** Update footer status with checkpoint count */' \
+          '/** Keep rewind out of the footer. */' \
+        --replace-fail \
+          $'  const theme = ctx.ui.theme;\n  const count = state.checkpoints.size;\n  ctx.ui.setStatus(\n    STATUS_KEY,\n    theme.fg("dim", "◆ ") + theme.fg("muted", `''${count} checkpoint''${count === 1 ? "" : "s"}`),\n  );' \
+          '  ctx.ui.setStatus(STATUS_KEY, undefined);'
     '';
   };
 
@@ -713,6 +761,7 @@ let
 
         export default async function nixGallery(pi: unknown) {
           process.env.PI_WEB_ACCESS_PROVIDER = "perplexity";
+          process.env.PONYTAIL_HIDE_STATUS = "1";
           process.env.PI_LENS_DISABLE_LSP_INSTALL = "1";
           process.env.PI_LENS_AUTO_INSTALL = "0";
           ${lib.optionalString stdenv.hostPlatform.isDarwin ''
