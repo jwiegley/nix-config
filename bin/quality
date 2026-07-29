@@ -144,6 +144,16 @@ each_file() {
     }
     while IFS= read -r f; do
         [[ -n $f ]] || continue
+        # `git ls-files` lists what the INDEX tracks, which is not always what is
+        # on disk. A staged rename or deletion leaves the old path tracked and
+        # absent, and lefthook's pre-commit stash creates exactly that state
+        # during a partial commit (`git commit -- <path>` while a rename is
+        # staged). Running a formatter on it produced
+        #     nixfmt: <path>: openFile: does not exist
+        # reported as "1 of 96 file(s) failed" -- a formatting failure that does
+        # not exist, which also hides whether anything real failed. A path that is
+        # gone cannot be checked, so skip it rather than manufacture a failure.
+        [[ -e $f ]] || continue
         count=$((count + 1))
         if ! "${cmd[@]}" "$f" >"$out" 2>&1; then
             bad=$((bad + 1))
