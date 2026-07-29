@@ -456,3 +456,97 @@ one a `rename-now` reference.** Prose now weighs the same as an import in an
 inventory that #47 will read as a work estimate. Committed with that documented
 rather than silently filtered — narrowing what counts is how a baseline stops
 meaning anything — but #47 should know before trusting the number.
+
+---
+
+## 2026-07-29 — HALT. Resume point for a fresh session
+
+### State, verified at halt
+
+| | |
+|---|---|
+| `~/src/nix` HEAD | `e62867de` — **pushed**; local == origin == github |
+| `~/src/nixos` | **ahead 2, behind 0** — rebased, signed, **NOT pushed** (never authorized) |
+| full local gate | green: 7 python suites + nix-format/lint/deadcode + shell-lint/format |
+| worktree | clean apart from `doc/observations/` |
+
+Both remotes carry the 23-commit series plus the maintainer's `e62867de`.
+
+### Decisions recorded this session (`doc/FLEET-DECISIONS.md`)
+
+- **Q8** — public key **not** committed. Implemented as (b) local-only enforcement in
+  `91cba729`. (c) GitHub's verification API remains open and needs no committed key.
+- **Q2** — (a) `update-overlay` **delegates** to `update-agents`' candidate-worktree
+  transaction. (c) is ruled out by the code; (a) over (b) was ratification.
+- **Q3** — **narrow**: catalogue only the 11 `packages/update-manifest.nix` records.
+
+Slots: 14 total, **11 unanswered**. **Q1, Q4, Q5, Q6, Q7 remain and gate most of the
+rest of the programme.** Q5 is operational information not derivable from the repo.
+
+### The key-material incident — read this before touching history again
+
+`aeef544b`/`d8fc36c1` committed the maintainer's public GPG key **without consulting
+Q8**, which reserves that decision in two places. The answer, once asked, was no.
+
+Worse, the first revert was insufficient: removing a file at HEAD does **not**
+un-publish it, because `git push` publishes objects, not the tip tree. Five commits
+still carried the blob. A partner observation caught this; I had treated "gone from
+HEAD" as "never published".
+
+Rewrite performed (authorized): `filter-branch --index-filter` stripped
+`.github/signing-keys/` and `doc/keys/` from `6dad69b6..HEAD`, then
+`git rebase --force-rebase --gpg-sign` re-signed, because filter-branch drops
+signatures. Verified: tree **identical** to the pre-rewrite backup, no key path in any
+commit, no PGP block at HEAD, **23/23 commits signed**. `cd02efb6` was pruned as empty
+(README-only); its X/Y content survives in `bin/verify-signatures:18` and `2bec8f8a`'s
+message. The maintainer's previously **unsigned** `model-registry` commit was re-signed
+as a side effect — `bin/publish` would have refused it.
+
+**Nothing was ever published with the key.** Backups: `pre-key-rewrite-backup`
+(nix-config), `pre-rebase-backup` (nixos).
+
+### The through-line: four failures, one cause
+
+Not four unrelated slips. Each was **acting where the surrounding system had already
+written down what to do**:
+
+1. Committed the key without reading Q8, which named the owner twice.
+2. Hand-rolled `gpg --import` into the runner's keyring when `bin/verify-signatures`
+   builds an **ephemeral** one from `.github/signing-keys/` by default — documented in
+   its own header, in the file I was editing.
+3. Passed no range to the CI job when the same header states the contract at lines
+   52-53. The job would have gone **red on its first run** — fixed in `008f7bb0`.
+4. Documented the gate as rejecting `X` when a key expiry reports **`Y`**. The
+   distinction is at `bin/verify-signatures:18`. The file headed "read this before
+   debugging a sudden CI failure" would have sent the reader after the wrong letter.
+
+Earlier in the session the shape was the mirror image — gates that verified what I
+built and ignored what I broke (#65 left five stale references, two of them live
+breakage including a **blocked `git push`**). Combined rule now in force:
+
+> Before building alongside an existing mechanism, read what it already does. Before
+> declaring a rename done, run `git ls-files | xargs grep -l '<old-name>'`.
+
+### Where to resume
+
+**#34 is unblocked** by Q3 and is the next unit. Two defects in its acceptance criteria
+must be fixed first (both recorded on the issue):
+- its NAR-hash-parity criterion is **unsatisfiable** — a `github:` rev literal carries
+  no hash; the hash lives in `flake.lock`;
+- `hakyll` (`flake.nix:53-54`) is consumed nowhere — dead-input cleanup, not a
+  classification subject.
+
+Then, none needing a decision: **#28, #80, #83, #59, #51, #58, #62**, plus the two new
+push-path defects **#88** and **#89**.
+
+### Tooling still outside the repository
+
+`scratchpad/darwin-surface.nix` and `scratchpad/dsurf-diff.py --normalize-store` are
+the **only** value-level backstop the nix-darwin layer has, and #50/#85 both closed
+relying on them. Recorded on #80. Store hashes must be masked (`vulcan-crt` is
+`path:./config/certs`, so a comment-only edit moves three store paths) while derivation
+**names** are kept; that combination was tested against a real value change, a renamed
+derivation, and two different hosts.
+
+`scratchpad/gen65.py` re-derives the #65 split; its `SRC` points at the pre-split
+monolith, which no longer exists, so re-deriving needs that path checked out first.
