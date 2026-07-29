@@ -49,6 +49,15 @@ pre-push:
     # pre-commit: it is targeted but still costs real nix eval time.
     consumer-eval:
       run: bin/quality consumer-eval
+    # The local mirror of CI's signatures job (#23). Pre-push, because that is
+    # the last moment an unsigned commit can be caught before it becomes someone
+    # else's problem -- and it costs a few git calls, not a build.
+    #
+    # This does NOT bypass anything: it runs bin/quality signatures, the same
+    # authority CI invokes, and bin/verify-signatures refuses rather than guessing
+    # when it cannot determine what is unpublished.
+    signatures:
+      run: bin/quality signatures
     agent-checks:
       run: >-
         nix build --no-link

@@ -77,3 +77,50 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Build and load the Pi extension gallery
         run: nix build --no-link "./config/ai#checks.${{ matrix.system }}.pi-gallery"
+
+  # Enforces CLAUDE.md's "Signed commits only". Delegates to bin/verify-signatures
+  # rather than inlining git plumbing, for the same reason every other job here
+  # delegates to bin/quality: one authority, not two that drift.
+  #
+  # THREE ways this job could pass while proving nothing. All three were measured
+  # on this repository before the job was written, not reasoned about after:
+  #
+  # 1. A fresh runner has an EMPTY keyring, and %G? reports E for perfectly good
+  #    commits there -- measured: the same commits report G locally and E under an
+  #    empty GNUPGHOME. The tempting fix, widening the accepted codes to include E,
+  #    would destroy the gate: E means "signature could not be CHECKED", so every
+  #    commit would pass. Importing the public key turns E into U, which
+  #    bin/verify-signatures accepts by design. Measured with a keyring holding
+  #    only doc/keys/signing-public.asc: E -> U.
+  #
+  # 2. actions/checkout defaults to fetch-depth: 1. A shallow clone leaves no range
+  #    to verify, so the job would succeed having checked zero commits.
+  #    fetch-depth: 0 is load-bearing here, not hygiene.
+  #
+  # 3. An empty range is indistinguishable from a passing one unless it is an
+  #    error. SIGVERIFY_STRICT=1 makes it fail: in CI an empty range means the range
+  #    computation is wrong, never that there was nothing to check.
+  #
+  # No secret material: verification needs the public half only. There is no token,
+  # no private key, and no repository secret referenced anywhere in this job.
+  #
+  # Refs: jwiegley/nix-config#23.
+  signatures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # See note 2. Without this, the job checks nothing and says it passed.
+          fetch-depth: 0
+
+      - name: Import the signing public key
+        run: gpg --batch --quiet --import doc/keys/signing-public.asc
+
+      # Fails closed on an empty range; see note 3. bin/verify-signatures resolves
+      # the range from the GitHub event itself (push base..head, or
+      # origin/$GITHUB_BASE_REF..HEAD for a pull_request) and refuses rather than
+      # guessing when it cannot -- so no range is passed here.
+      - name: Verify every commit in the range carries a good signature
+        env:
+          SIGVERIFY_STRICT: "1"
+        run: bin/verify-signatures

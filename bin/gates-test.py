@@ -28,6 +28,9 @@ import unittest
 from pathlib import Path
 
 BIN = Path(__file__).parent
+# The real checkout. Used only to READ a genuine signature blob for the
+# unverifiable-signature test; never mutated.
+REPO = Path(__file__).resolve().parent.parent
 VERIFY_SIGNATURES = BIN / "verify-signatures"
 CROSS_CONSUMER_EVAL = BIN / "cross-consumer-eval"
 CONSUMER_INVENTORY = BIN / "consumer-inventory"
@@ -139,13 +142,38 @@ class TestVerifySignaturesRejects(unittest.TestCase):
         insert_at = next(
             i for i, line in enumerate(lines) if line.startswith("committer")
         )
-        fake = [
-            "gpgsig -----BEGIN PGP SIGNATURE-----",
-            " ",
-            " bm90YXNpZ25hdHVyZQ==",
-            " -----END PGP SIGNATURE-----",
-        ]
-        lines[insert_at + 1 : insert_at + 1] = fake
+        # A REAL signature blob, harvested from this repository's own HEAD, plus an
+        # empty keyring. Both halves are load-bearing and were measured:
+        #
+        #   fabricated garbage ("bm90YXNpZ25hdHVyZQ==")  -> git reports N (unsigned),
+        #       so this test skipped and the E path was never exercised at all.
+        #   a real signature blob + empty keyring        -> git reports E.
+        #
+        # E is the CI shape: a runner with no keyring sees E for every signed commit,
+        # and accepting E would make the job permanently green while verifying
+        # nothing. The signature will not match this fabricated commit's content, but
+        # that is irrelevant -- with no key present, git cannot get far enough to
+        # care, which is exactly the condition under test.
+        #
+        # Harvesting from HEAD is deterministic here because this repository's policy
+        # IS signed commits only. If HEAD carries no signature that is a policy
+        # violation, so the assertion below fails rather than skips.
+        real = git("cat-file", "commit", "HEAD", cwd=REPO).stdout.split("\n")
+        sig = []
+        for line in real:
+            if line.startswith("gpgsig"):
+                sig.append(line)
+            elif sig:
+                if line.startswith(" "):
+                    sig.append(line)
+                else:
+                    break
+        self.assertTrue(
+            sig,
+            "this repository's HEAD carries no signature; 'signed commits only' is "
+            "already violated, which is a finding rather than a reason to skip",
+        )
+        lines[insert_at + 1 : insert_at + 1] = sig
         r = subprocess.run(
             ["git", "hash-object", "-t", "commit", "-w", "--stdin"],
             cwd=self.repo,
@@ -161,11 +189,29 @@ class TestVerifySignaturesRejects(unittest.TestCase):
         forged = r.stdout.strip()
         git("update-ref", "refs/heads/main", forged, cwd=self.repo)
 
-        status = git("log", "--pretty=%G?", "-1", forged, cwd=self.repo).stdout.strip()
-        if status not in ("E", "B"):
-            self.skipTest("git reported %r, not an unverifiable status" % status)
+        empty_home = os.path.join(self.tmp, "empty-gnupg")
+        os.makedirs(empty_home, exist_ok=True)
+        os.chmod(empty_home, 0o700)
+        env = clean_env()
+        env["GNUPGHOME"] = empty_home
+        status = subprocess.run(
+            ["git", "log", "--pretty=%G?", "-1", forged],
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+            env=env,
+        ).stdout.strip()
+        self.assertIn(
+            status,
+            ("E", "B"),
+            "expected an unverifiable status from a real signature under an empty "
+            "keyring, got %r; without one this test cannot exercise the E path that "
+            "is the whole point" % status,
+        )
 
-        out = self.run_tool(SIGVERIFY_BASE=base, SIGVERIFY_HEAD=forged)
+        out = self.run_tool(
+            SIGVERIFY_BASE=base, SIGVERIFY_HEAD=forged, GNUPGHOME=empty_home
+        )
         self.assertNotEqual(
             out.returncode,
             0,
