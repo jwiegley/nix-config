@@ -11,10 +11,7 @@ let
   xdg_configHome = "${home}/.config";
   xdg_cacheHome = "${home}/.cache";
   recordingCaBundle = "${pkgs.ca-bundle-with-vulcan or pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-  runsEternalTerminal = lib.elem hostname [
-    "hera"
-    "clio"
-  ];
+  runsEternalTerminal = config.johnw.host.isDarwinWorkstation;
   eternalTerminalConfig = pkgs.writeText "et.cfg" ''
     ; et.cfg : Config file for Eternal Terminal
     ;
@@ -225,7 +222,7 @@ in
         };
       };
     }
-    // lib.optionalAttrs (hostname == "hera") {
+    // lib.optionalAttrs config.johnw.host.isHera {
       nix-temproots-cleanup = {
         # Root discovery removes only unlocked stale temproot records (and
         # broken automatic GC-root links); it never deletes store contents.
@@ -380,7 +377,7 @@ in
         };
       };
     }
-    // lib.optionalAttrs (hostname == "hera") {
+    // lib.optionalAttrs config.johnw.host.isHera {
       cleanup = {
         serviceConfig = {
           EnvironmentVariables.PYTHONPATH = "${pkgs.dirscan}/${pkgs.python3.sitePackages}";
@@ -457,7 +454,7 @@ in
     # which exists only where the flake provides a `scripts` input. Guard the
     # whole agent so a Darwin consumer without that input still evaluates
     # (mirrors the config/ssh.nix guard).
-    // lib.optionalAttrs ((hostname == "hera") && (pkgs ? my-scripts)) {
+    // lib.optionalAttrs (config.johnw.host.isHera && (pkgs ? my-scripts)) {
 
       flatten-recordings = {
         script = ''

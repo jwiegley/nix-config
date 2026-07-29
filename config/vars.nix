@@ -18,11 +18,6 @@ let
   signing_key = "12D70076AB504679";
 
   gitAiEnabled = false;
-  #  (inputs ? git-ai)
-  #  && !(builtins.elem hostname [
-  #    "hera"
-  #    "jw"
-  #  ]);
 
   gitPkg =
     if gitAiEnabled then

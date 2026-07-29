@@ -6,7 +6,7 @@
 #   - NixOS/Linux hosts (vulcan, vps, andoria) via their own thin wrappers
 #
 # Platform-specific settings use lib.mkIf pkgs.stdenv.isDarwin / isLinux.
-# Host-specific settings use lib.mkIf (hostname == "...").
+# Host-specific settings key off typed capability flags (config.johnw.host.*).
 # Values that may need per-host override use lib.mkDefault.
 
 args@{

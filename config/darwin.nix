@@ -37,8 +37,11 @@ in
   users = {
     # List of users and groups that nix-darwin is allowed to create/manage
     # CRITICAL: Users/groups must be in these lists for nix-darwin to create them
-    knownUsers = [ "johnw" ] ++ lib.optionals (hostname != "clio") [ "_prometheus-node-exporter" ];
-    knownGroups = lib.optionals (hostname != "clio") [ "_prometheus-node-exporter" ];
+    knownUsers = [
+      "johnw"
+    ]
+    ++ lib.optionals (!config.johnw.host.isClio) [ "_prometheus-node-exporter" ];
+    knownGroups = lib.optionals (!config.johnw.host.isClio) [ "_prometheus-node-exporter" ];
 
     users = {
       johnw = {
@@ -67,7 +70,7 @@ in
       };
 
     }
-    // lib.optionalAttrs (hostname != "clio") {
+    // lib.optionalAttrs (!config.johnw.host.isClio) {
       # Prometheus node exporter user - match existing system user's home directory
       # On macOS, /var is a symlink to /private/var, but the user was created with
       # the canonical path, so we must force override the module's default
@@ -99,16 +102,11 @@ in
   environment = {
     systemPackages =
       with pkgs;
-      lib.optionals
-        (lib.elem hostname [
-          "hera"
-          "clio"
-        ])
-        [
-          eternal-terminal
-        ];
+      lib.optionals config.johnw.host.isDarwinWorkstation [
+        eternal-terminal
+      ];
 
-    etc = lib.mkIf (hostname == "hera") {
+    etc = lib.mkIf config.johnw.host.isHera {
       # ZFS configuration for OpenZFS on macOS (hera only)
       # Sets ARC (Adaptive Replacement Cache) max to 32 GiB
       # "zfs/zsysctl.conf".text = ''
@@ -159,7 +157,7 @@ in
     };
 
     prometheus.exporters.node = {
-      enable = hostname != "clio";
+      enable = !config.johnw.host.isClio;
       port = 9100;
       listenAddress = "0.0.0.0"; # Allow remote Prometheus to scrape
       enabledCollectors = [
@@ -315,7 +313,7 @@ in
         greedy = true;
       }
     ]
-    ++ lib.optionals (hostname == "hera") [
+    ++ lib.optionals config.johnw.host.isHera [
       "elgato-stream-deck"
       "fujitsu-scansnap-home"
       "gzdoom"
@@ -324,7 +322,7 @@ in
       "thunderbird"
       "utm"
     ]
-    ++ lib.optionals (hostname == "clio") [
+    ++ lib.optionals config.johnw.host.isClio [
       "aldente"
       "betterdisplay"
       "wifi-explorer"
@@ -440,7 +438,7 @@ in
           "@builders"
           "johnw"
         ];
-        max-jobs = if (hostname == "clio") then 4 else 8;
+        max-jobs = if config.johnw.host.isClio then 4 else 8;
         cores = 10;
 
         trusted-substituters = [
@@ -458,8 +456,8 @@ in
 
       distributedBuilds = true;
       buildMachines =
-        (if hostname == "clio" then [ hera ] else [ ])
-        ++ (if hostname == "hera" then [ vulcan-builder ] else [ ]);
+        (if config.johnw.host.isClio then [ hera ] else [ ])
+        ++ (if config.johnw.host.isHera then [ vulcan-builder ] else [ ]);
 
       extraOptions = ''
         gc-keep-derivations = true
@@ -513,7 +511,7 @@ in
     # System Settings or `pmset` from another shell. disksleep/displaysleep
     # are intentionally left unmanaged so they can still be tuned via the
     # Settings app.
-    activationScripts.postActivation.text = lib.mkIf (hostname == "hera") ''
+    activationScripts.postActivation.text = lib.mkIf config.johnw.host.isHera ''
       /usr/bin/pmset -a sleep 0
     '';
 
@@ -528,7 +526,7 @@ in
         NSNavPanelExpandedStateForSaveMode = true;
         NSNavPanelExpandedStateForSaveMode2 = true;
         "com.apple.keyboard.fnState" = true;
-        _HIHideMenuBar = hostname != "clio";
+        _HIHideMenuBar = !config.johnw.host.isClio;
         "com.apple.mouse.tapBehavior" = 1;
         "com.apple.sound.beep.volume" = 0.0;
         "com.apple.sound.beep.feedback" = 0;
@@ -596,7 +594,7 @@ in
 
       dock = {
         autohide = true;
-        orientation = if hostname == "clio" then "left" else "right";
+        orientation = if config.johnw.host.isClio then "left" else "right";
         launchanim = false;
         show-process-indicators = true;
         show-recents = false;
