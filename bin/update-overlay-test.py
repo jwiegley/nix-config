@@ -291,7 +291,7 @@ class UpdateInventoryTests(unittest.TestCase):
         )
         self.assertEqual(
             {name for name in ISSUE34_TARGETS if catalog[name]["executor"] is None},
-            {"pi-mcp-adapter", "rust-overlay", "ws"},
+            {"pi-mcp-adapter", "rust-overlay"},
         )
         self.assertEqual(
             {name for name in ISSUE34_TARGETS if catalog[name]["_record"]["source"]["fetcher"] == "fetchTree"},
@@ -299,6 +299,7 @@ class UpdateInventoryTests(unittest.TestCase):
         )
         self.assertEqual(catalog["ws"]["_record"]["source"]["fetcher"], "fetchzip")
         self.assertEqual(catalog["ws"]["_record"]["update"]["package"], "ws")
+        self.assertEqual(catalog["ws"]["executor"], "update-overlay")
         self.assertNotIn("flake.nix", catalog["rust-overlay"]["files"])
         self.assertIn("config/ai/flake.nix", catalog["rust-overlay"]["files"])
 
@@ -425,7 +426,7 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertNotEqual(forged.returncode, 0)
         self.assertIn("detached linked worktree", forged.stderr)
 
-    def test_issue34_ws_uses_fetchzip_without_gaining_an_executor(self):
+    def test_issue38_ws_uses_fetchzip_with_an_executor(self):
         record = {
             "version": "8.18.3",
             "source": {
@@ -443,7 +444,7 @@ class UpdateInventoryTests(unittest.TestCase):
             (root / "sources").mkdir()
             document = {"schemaVersion": 1, "sources": {"ws": record}}
             (root / "sources/test.json").write_text(json.dumps(document))
-            self.assertIsNone(load_source_catalog(root)["ws"]["executor"])
+            self.assertEqual(load_source_catalog(root)["ws"]["executor"], "update-overlay")
             document["sources"]["ws"]["update"]["package"] = "other"
             (root / "sources/test.json").write_text(json.dumps(document))
             with self.assertRaisesRegex(RuntimeError, "npm source identity"):
@@ -684,7 +685,7 @@ class UpdateInventoryTests(unittest.TestCase):
                     "example": {
                         "version": "1.0.0",
                         "source": {
-                            "fetcher": "fetchurl",
+                            "fetcher": "fetchzip",
                             "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
                             "args": {
                                 "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
@@ -703,14 +704,16 @@ class UpdateInventoryTests(unittest.TestCase):
                     return "2.0.0", "sha512-new"
 
             class FakeHashComputer:
-                def compute_native_hash(self, _source, _replacements):
-                    return "sha512-new"
+                def compute_native_hash(self, source, _replacements):
+                    self.source_fetcher = source["fetcher"]
+                    return "sha256-native"
 
                 def _compute_fod_hash(self, _package, hash_type):
                     self.hash_type = hash_type
                     return "sha256-new"
 
             transaction = SourceTransaction()
+            hash_computer = FakeHashComputer()
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
                 status = update_catalog_target(
@@ -720,16 +723,17 @@ class UpdateInventoryTests(unittest.TestCase):
                     SimpleNamespace(),
                     FakeNpmClient(),
                     SimpleNamespace(),
-                    FakeHashComputer(),
+                    hash_computer,
                     transaction,
                 )
             transaction.commit()
             record = json.loads(path.read_text())["sources"]["example"]
             self.assertEqual(status, "updated")
             self.assertEqual(record["version"], "2.0.0")
-            self.assertEqual(record["source"]["args"]["hash"], "sha512-new")
+            self.assertEqual(record["source"]["args"]["hash"], "sha256-native")
             self.assertIn("example-2.0.0.tgz", record["source"]["args"]["url"])
             self.assertEqual(record["hashes"]["npmDepsHash"], "sha256-new")
+            self.assertEqual(hash_computer.source_fetcher, "fetchzip")
 
             no_op_target = load_source_catalog(root)["example"]
             no_op_transaction = SourceTransaction()
@@ -972,7 +976,6 @@ class UpdateInventoryTests(unittest.TestCase):
             "rust-overlay",
             "rtk",
             "sherlock-db",
-            "ws",
         }
         self.assertEqual(
             {item["name"] for item in inventory["packages"] if not item["managed"]},
@@ -995,6 +998,7 @@ class UpdateInventoryTests(unittest.TestCase):
             "0e6130457ac2bdc6c6db2eebeba67a5223231190",
         )
         self.assertEqual(by_name["git-ai"]["executor"], "update-agents")
+        self.assertEqual(by_name["ws"]["executor"], "update-overlay")
         self.assertFalse(by_name["pi-lens"]["managed"])
         self.assertIsNone(by_name["pi-lens"]["executor"])
         for item in inventory["packages"]:

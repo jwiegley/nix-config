@@ -902,7 +902,7 @@ def _catalog_executor(record: dict) -> Optional[str]:
         "explicit-rev": {"fetchgit", "fetchpatch", "fetchTree", "fetchurl"},
         "github-commit": {"fetchFromGitHub"},
         "github-release": {"fetchFromGitHub"},
-        "npm-release": {"fetchurl"},
+        "npm-release": {"fetchurl", "fetchzip"},
         "pypi-release": {"fetchPypi", "fetchurl"},
         "url-release": {"fetchurl"},
     }.get(update["kind"], set())
