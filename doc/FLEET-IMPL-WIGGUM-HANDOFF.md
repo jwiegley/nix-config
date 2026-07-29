@@ -1,6 +1,6 @@
 # Fleet Programme Implementation — Handoff
 
-**Updated:** 2026-07-28
+**Updated:** 2026-07-29
 **Plan:** `doc/FLEET-IMPL-WIGGUM-PLAN.md` (frozen)
 **Branch:** `impl/fleet-programme` in the worktree `/Users/johnw/src/nix-impl`
 **Tracking:** [project 9](https://github.com/users/jwiegley/projects/9)
@@ -497,13 +497,42 @@ Rewrite performed (authorized): `filter-branch --index-filter` stripped
 `.github/signing-keys/` and `doc/keys/` from `6dad69b6..HEAD`, then
 `git rebase --force-rebase --gpg-sign` re-signed, because filter-branch drops
 signatures. Verified: tree **identical** to the pre-rewrite backup, no key path in any
-commit, no PGP block at HEAD, **23/23 commits signed**. `cd02efb6` was pruned as empty
+commit, no PGP block at HEAD, **23/23 rewritten commits signed at that point**.
+`cd02efb6` was pruned as empty
 (README-only); its X/Y content survives in `bin/verify-signatures:18` and `2bec8f8a`'s
 message. The maintainer's previously **unsigned** `model-registry` commit was re-signed
 as a side effect — `bin/publish` would have refused it.
 
 **Nothing was ever published with the key.** Backups: `pre-key-rewrite-backup`
 (nix-config), `pre-rebase-backup` (nixos).
+
+### Resume correction — `e62867de` was published unsigned
+
+The rewrite claim above is scoped to the rewritten span at rewrite time. The later
+maintainer commit `e62867de` (`Update model name`) is unsigned (`%G? = N`) and is the
+current tip of both `origin/main` and `github/main`. The signed handoff commit
+`e8db5c52` remains local and unpushed. This was verified at resume rather than inferred
+from tracking refs.
+
+The local pre-push gate would reject the offending range:
+
+```bash
+bin/verify-signatures --range 9226c781..origin/main  # REJECTED [N] e62867de
+```
+
+Its default invocation is nevertheless green now because `HEAD --not --remotes`
+correctly excludes already-published commits. The repository also had a local
+`.git/config` override `commit.gpgsign=false`, despite `config/git.nix` already making
+signing the managed default. The override was set to `true` during resume; the next
+ordinary commit must prove the default by landing signed without an explicit `-S`.
+
+This records the published-history violation; it does not repair it. No history
+rewrite or force-push is authorized, and none was attempted. Issue #23's GitHub
+verification-API option remains unchosen; selecting a non-bypassable server-side gate
+is a maintainer decision, not an agent default. Do not use
+`$(git merge-base origin/main HEAD)..origin/main` as a retrospective audit here: with
+local `HEAD` descended from `origin/main`, that range is empty and would pass
+vacuously.
 
 ### The through-line: four failures, one cause
 
