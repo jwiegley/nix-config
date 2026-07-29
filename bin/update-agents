@@ -216,6 +216,7 @@ fi
         # nodes only after the portable lock is complete.
         nix flake update nix-config-ai
     fi
+    UPDATE_AGENTS_CANDIDATE=1 python bin/update-overlay --sync-flake-projections
     python bin/update-overlay --all --overlays-dir overlays/ai
     mapfile -t changed_nix < <(git diff --name-only -- '*.nix')
     if ((${#changed_nix[@]})); then

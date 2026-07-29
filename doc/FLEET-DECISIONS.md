@@ -6,12 +6,13 @@ rather than defaulted into by whoever next touches the code. It is the artifact
 called for by [issue #20](https://github.com/jwiegley/nix-config/issues/20)
 (`E1-GAP-DECISIONS`).
 
-Two kinds of entry appear below:
+Two families of entry appear below:
 
-- **Open decisions** (`Q1`…`Q8`) — genuinely undecided. Each carries the question,
-  what breaks if it is defaulted, the real options, a recommendation *only where
-  there is evidence for one*, and an **empty answer slot**. No answer is pre-filled;
-  the answer is a human input, not an agent choice.
+- **Programme decisions** (`Q1`…`Q8`) — Q1/Q4/Q5/Q6/Q7 remain unanswered;
+  Q2/Q3/Q8 have human answers recorded in place. Each carries the question, what
+  breaks if it is defaulted, the real options, and a recommendation *only where
+  there is evidence for one*. An unanswered slot is human input, never an agent
+  choice.
 - **Settled decisions** (`S1`…`S8`) — already decided, recorded here as context so
   they are not silently re-opened. Each names where it was settled and on what
   basis. These are **not** open slots.
@@ -19,11 +20,11 @@ Two kinds of entry appear below:
 ## Gate invariant (machine-checkable)
 
 ```
-OPEN_DECISION_COUNT: 8
+DECISION_ENTRY_COUNT: 8
 ```
 
 ```bash
-# Number of open decisions awaiting a human answer:
+# Number of Q decision entries, answered or unanswered:
 grep -cE '^Q[0-9]+' doc/FLEET-DECISIONS.md      # == 8
 
 # Total answer slots. FIXED at 14 (Q4 and Q5 carry per-subject sub-slots), so this
@@ -40,7 +41,7 @@ grep -cE '^- \*\*Answer.*_\(unanswered\)_' doc/FLEET-DECISIONS.md  # falls to 0
 grep -cE '^S[0-9]+' doc/FLEET-DECISIONS.md      # == 8
 ```
 
-Every open decision line begins `Q<n>.` at column 0; every settled line begins
+Every programme decision line begins `Q<n>.` at column 0; every settled line begins
 `S<n>.`. Verbatim quotations of the original questions live inside a table (lines
 beginning `|`) so they are **not** counted by the `^Q` grep.
 
@@ -56,7 +57,7 @@ and the live programme has surfaced three further open decisions that issue #20
 never contained.
 
 > Note on numbering: these `I15-Q*` labels are the *original* handoff numbers. This
-> gate re-numbers its open slots `Q1…Q8` for a clean, countable set. `FLEET-DESIGN-PLAN.md`
+> gate re-numbers its decision entries `Q1…Q8` for a clean, countable set. `FLEET-DESIGN-PLAN.md`
 > §10 also uses `Q1…Q7`, for a **different** set (the taken architecture decisions);
 > those appear here as `S1`–`S5`. The three schemes are distinct — cross-references
 > are always given explicitly.
@@ -70,16 +71,17 @@ never contained.
 | I15-Q5 | When will native Clio, Andoria, Vulcan, and VPS routes be available? | **Open → Q5** (scheduling, not a design fork) |
 | I15-Q6 | Will activation be separately authorized after native evidence is complete? | **Settled → S1** (standing policy: yes, always) |
 
-Three further live decisions, absent from issue #20 but each explicitly flagged
-"needs a decision / your call" in its own issue, are added below as **Q6, Q7, Q8**.
+Three further decisions, absent from issue #20 and originally flagged "needs a
+decision / your call" in their own issues, were added as **Q6, Q7, Q8**. Q8 has
+since been answered; Q6 and Q7 remain open.
 
 ---
 
-# Open decisions — a human answer is required
+# Programme decisions — unanswered slots require a human answer
 
 Each slot records: **Answer**, **Date**, **Decided by**, and **Follow-up** (the
-downstream item(s) to update once answered). Leave the slot exactly as printed until
-a decision is made; do not substitute a recommendation for an answer.
+downstream item(s) to update once answered). Leave an unanswered slot exactly as
+printed until a decision is made; do not substitute a recommendation for an answer.
 
 ---
 
@@ -243,13 +245,13 @@ S8. The outstanding host facts are confirmed, not open.
 | Gate ID | Decision | Owner issue(s) | Blocks / unblocks | Status |
 |---|---|---|---|---|
 | Q1 | npm normalization authority | #39 | before Pi WU6/WU8 (#61/#66) | open |
-| Q2 | compound update isolation ownership | #33 | WU4c 1.2–1.5 | open |
-| Q3 | fixed-input partition | #34, gate to #25 | 1.6 → 1.7 | open (policy half = S6) |
+| Q2 | compound update isolation ownership | #33 | WU4c 1.2–1.5 | answered: delegate to `update-agents` |
+| Q3 | fixed-input partition | #34, gate to #25 | 1.6 → 1.7 | answered: narrow 11-record catalogue |
 | Q4 | compat keep/retire | #53, #60 (input #17) | EPIC 7; #60 needs #54 first | open |
 | Q5 | native route schedule | EPIC 9 (#74/#70/#71) | activation (S1) | open |
 | Q6 | `update-agents`→`update` collision | #78 | the rename; ease after #43 | open |
 | Q7 | Vulcan `?rev=` pins | nixos-config#1 | float protection | open |
-| Q8 | commit public signing key | #23 | fail-closed CI job (key+job together) | open |
+| Q8 | commit public signing key | #23 | fail-closed CI job (key+job together) | answered: local-only enforcement |
 | S1 | activation always re-authorized | policy / §10 Q7 | — | settled |
 | S2 | rename to `config/fleet` | #47 (stragglers #63) | — | settled, not landed |
 | S3 | two locks / fleet core | #44 | — | settled |

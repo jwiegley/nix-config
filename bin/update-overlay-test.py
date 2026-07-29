@@ -28,8 +28,34 @@ GitHubClient = MODULE["GitHubClient"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
 load_source_catalog = MODULE["load_source_catalog"]
+sync_flake_projections = MODULE["sync_flake_projections"]
 update_catalog_target = MODULE["update_catalog_target"]
 build_inventory = MODULE["build_inventory"]
+
+ISSUE34_TARGETS = frozenset({
+    "pi-mcp-adapter",
+    "ws",
+    "git-ai",
+    "llm-agents",
+    "mcp-remote",
+    "mcp-servers-nix",
+    "pal-mcp-server",
+    "pi-openai-server-compaction",
+    "pi-quiet",
+    "translate-tool",
+    "rust-overlay",
+})
+ISSUE34_FLAKE_PROJECTIONS = ISSUE34_TARGETS - {"ws"}
+ISSUE34_UPDATE_AGENTS = frozenset({
+    "git-ai",
+    "llm-agents",
+    "mcp-remote",
+    "mcp-servers-nix",
+    "pal-mcp-server",
+    "pi-openai-server-compaction",
+    "pi-quiet",
+    "translate-tool",
+})
 
 VENDOR_HASH = "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
 HELPER_LINE = "  buildGoHelper = prev.buildGoModule.override { go = prev.go; };"
@@ -200,6 +226,213 @@ class UpdateInventoryTests(unittest.TestCase):
                 },
             }))
             self.assertIn("multi", load_source_catalog(temp))
+
+    @staticmethod
+    def _write_projection_fixture(root, mutate=None):
+        (root / "sources").mkdir()
+        (root / "config/ai").mkdir(parents=True)
+        record = {
+            "source": {
+                "args": {
+                    "narHash": "sha256-selected",
+                    "owner": "example",
+                    "repo": "project",
+                    "rev": "a" * 40,
+                    "type": "github",
+                },
+                "fetcher": "fetchTree",
+                "url": "https://github.com/example/project",
+            },
+            "update": {"input": "example", "kind": "flake-input"},
+        }
+        selected = {
+            "locked": copy.deepcopy(record["source"]["args"]),
+            "original": {
+                "owner": "example",
+                "repo": "project",
+                "type": "github",
+            },
+        }
+        lock = {
+            "nodes": {
+                "root": {"inputs": {"example": "selected"}},
+                "selected": selected,
+                # A matching decoy proves validation follows root.inputs instead
+                # of assuming the node key is the input name.
+                "example": copy.deepcopy(selected),
+            },
+            "root": "root",
+            "version": 7,
+        }
+        document = {"schemaVersion": 1, "sources": {"example": record}}
+        if mutate is not None:
+            mutate(document, lock)
+        (root / "sources/test.json").write_text(json.dumps(document, indent=2) + "\n")
+        (root / "config/ai/flake.lock").write_text(json.dumps(lock, indent=2) + "\n")
+        (root / "config/ai/flake.nix").write_text(
+            '{\n  inputs = {\n    example.url = "github:example/project";\n  };\n}\n'
+        )
+        return document, lock
+
+    def test_issue34_manifest_records_are_catalog_owned(self):
+        root = SCRIPT.parent.parent
+        manifest = load_update_manifest(root)
+        catalog = load_source_catalog(root)
+        self.assertEqual(manifest, {})
+        self.assertTrue(ISSUE34_TARGETS <= catalog.keys())
+        self.assertEqual(
+            {name for name in ISSUE34_TARGETS if catalog[name]["source"] == "catalog"},
+            ISSUE34_TARGETS,
+        )
+        self.assertEqual(
+            {name for name in ISSUE34_TARGETS if catalog[name]["executor"] == "update-agents"},
+            ISSUE34_UPDATE_AGENTS,
+        )
+        self.assertEqual(
+            {name for name in ISSUE34_TARGETS if catalog[name]["executor"] is None},
+            {"pi-mcp-adapter", "rust-overlay", "ws"},
+        )
+        self.assertEqual(
+            {name for name in ISSUE34_TARGETS if catalog[name]["_record"]["source"]["fetcher"] == "fetchTree"},
+            ISSUE34_FLAKE_PROJECTIONS,
+        )
+        self.assertEqual(catalog["ws"]["_record"]["source"]["fetcher"], "fetchzip")
+        self.assertEqual(catalog["ws"]["_record"]["update"]["package"], "ws")
+        self.assertNotIn("flake.nix", catalog["rust-overlay"]["files"])
+        self.assertIn("config/ai/flake.nix", catalog["rust-overlay"]["files"])
+
+        ai_names = set(json.loads((root / "sources/ai.json").read_text())["sources"])
+        pi_names = set(json.loads((root / "sources/pi.json").read_text())["sources"])
+        self.assertEqual(ISSUE34_TARGETS & ai_names, {
+            "git-ai", "llm-agents", "mcp-remote", "mcp-servers-nix",
+            "pal-mcp-server", "rust-overlay", "translate-tool",
+        })
+        self.assertEqual(ISSUE34_TARGETS & pi_names, {
+            "pi-mcp-adapter", "pi-openai-server-compaction", "pi-quiet", "ws",
+        })
+        consumer_text = "\n".join(
+            (root / path).read_text()
+            for path in (
+                "packages/agent-resources.nix",
+                "config/ai/catalog.nix",
+                "test/ai/agent-resources.nix",
+                "test/ai/home-manager-contract-common.nix",
+            )
+        )
+        for duplicate in (
+            "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz",
+            "sha256-+o96RaViEX6JAoRI5JCLDJDcIXj+XbaH0+wSM9F2pBw=",
+            "sha256-Mxt5yq4UGxwVSIIC9B+fG2SS4BUNseyAL806Eb1I9YM=",
+        ):
+            self.assertNotIn(duplicate, consumer_text)
+
+    def test_issue34_projection_parity_uses_selected_lock_nodes(self):
+        root = SCRIPT.parent.parent
+        catalog = load_source_catalog(root)
+        lock = json.loads((root / "config/ai/flake.lock").read_text())
+        root_inputs = lock["nodes"][lock["root"]]["inputs"]
+        for name in ISSUE34_FLAKE_PROJECTIONS:
+            record = catalog[name]["_record"]
+            input_name = record["update"]["input"]
+            node_name = root_inputs[input_name]
+            self.assertIsInstance(node_name, str)
+            locked = lock["nodes"][node_name]["locked"]
+            self.assertEqual(
+                {field: record["source"]["args"][field] for field in ("type", "owner", "repo", "rev", "narHash")},
+                {field: locked[field] for field in ("type", "owner", "repo", "rev", "narHash")},
+            )
+        self.assertEqual(root_inputs["rust-overlay"], "rust-overlay_2")
+        self.assertNotEqual(root_inputs["rust-overlay"], "rust-overlay")
+
+    def test_issue34_projection_mutations_fail_for_the_named_field(self):
+        mutations = {
+            "owner does not match declared input":
+                lambda _document, lock: lock["nodes"]["selected"]["original"].update(owner="other"),
+            "rev does not match portable lock":
+                lambda _document, lock: lock["nodes"]["selected"]["locked"].update(rev="b" * 40),
+            "narHash does not match portable lock":
+                lambda _document, lock: lock["nodes"]["selected"]["locked"].update(narHash="sha256-other"),
+        }
+        for expected, mutate in mutations.items():
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temp_dir:
+                root = Path(temp_dir)
+                self._write_projection_fixture(root, mutate)
+                with self.assertRaisesRegex(RuntimeError, expected):
+                    load_source_catalog(root)
+
+    def test_issue34_projection_does_not_use_input_name_as_lock_node(self):
+        def drift_selected(_document, lock):
+            lock["nodes"]["selected"]["locked"]["rev"] = "b" * 40
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_projection_fixture(root, drift_selected)
+            with self.assertRaisesRegex(RuntimeError, "rev does not match portable lock"):
+                load_source_catalog(root)
+
+    def test_issue34_projection_rejects_literal_url_drift(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_projection_fixture(root)
+            (root / "config/ai/flake.nix").write_text(
+                '{\n  inputs = {\n    example.url = "github:other/project";\n  };\n}\n'
+            )
+            with self.assertRaisesRegex(RuntimeError, "owner does not match flake literal"):
+                load_source_catalog(root)
+
+    def test_issue34_sync_refreshes_selected_lock_projection(self):
+        def make_stale(document, _lock):
+            source = document["sources"]["example"]["source"]
+            source["args"]["rev"] = "0" * 40
+            source["args"]["narHash"] = "sha256-stale"
+            source["url"] = "https://github.com/stale/project"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_projection_fixture(root, make_stale)
+            self.assertEqual(sync_flake_projections(root), 1)
+            target = load_source_catalog(root)["example"]
+            args = target["_record"]["source"]["args"]
+            self.assertEqual(args["rev"], "a" * 40)
+            self.assertEqual(args["narHash"], "sha256-selected")
+            self.assertEqual(target["_record"]["source"]["url"], "https://github.com/example/project")
+
+        env = os.environ.copy()
+        env.pop("UPDATE_AGENTS_CANDIDATE", None)
+        refused = subprocess.run(
+            [sys.executable, str(SCRIPT), "--sync-flake-projections"],
+            cwd=SCRIPT.parent.parent,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn("restricted to the update-agents candidate", refused.stderr)
+
+    def test_issue34_ws_uses_fetchzip_without_gaining_an_executor(self):
+        record = {
+            "version": "8.18.3",
+            "source": {
+                "args": {
+                    "hash": "sha256-ws",
+                    "url": "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz",
+                },
+                "fetcher": "fetchzip",
+                "url": "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz",
+            },
+            "update": {"kind": "npm-release", "package": "ws"},
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            document = {"schemaVersion": 1, "sources": {"ws": record}}
+            (root / "sources/test.json").write_text(json.dumps(document))
+            self.assertIsNone(load_source_catalog(root)["ws"]["executor"])
+            document["sources"]["ws"]["update"]["package"] = "other"
+            (root / "sources/test.json").write_text(json.dumps(document))
+            with self.assertRaisesRegex(RuntimeError, "npm source identity"):
+                load_source_catalog(root)
 
 
     def test_source_catalog_rejects_ambiguous_native_fetcher_shapes(self):
@@ -628,6 +861,7 @@ class UpdateInventoryTests(unittest.TestCase):
         root = SCRIPT.parent.parent
         try:
             manifest = load_update_manifest(root)
+            self.assertEqual(manifest, {})
             manifest.update(load_source_catalog(root))
         except (RuntimeError, subprocess.SubprocessError, ValueError) as error:
             self.fail(f"manifest evaluation failed: {error}")
@@ -647,9 +881,10 @@ class UpdateInventoryTests(unittest.TestCase):
         }
         self.assertTrue(required <= manifest.keys())
         self.assertIn("packages/pi-gallery/locks/pi-lens-package-lock.json", manifest["pi-lens"]["files"])
-        self.assertIn("config/ai/catalog.nix", manifest["pi-mcp-adapter"]["files"])
+        self.assertIn("sources/pi.json", manifest["pi-mcp-adapter"]["files"])
+        self.assertNotIn("config/ai/catalog.nix", manifest["pi-mcp-adapter"]["files"])
         self.assertIn("packages/anvil-mcp/Cargo.lock", manifest["nelisp"]["files"])
-        self.assertEqual(manifest["ws"]["package"], "ws")
+        self.assertEqual(manifest["ws"]["_record"]["update"]["package"], "ws")
 
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "--inventory", "--json"],
@@ -716,7 +951,6 @@ class UpdateInventoryTests(unittest.TestCase):
             "sherlock-db",
             "ws",
         }
-        self.assertEqual(len(inventory["packages"]), 199)
         self.assertEqual(
             {item["name"] for item in inventory["packages"] if not item["managed"]},
             pending,
@@ -725,6 +959,14 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertTrue(relocated <= catalog_owned)
         self.assertTrue(all(by_name[name]["managed"] for name in relocated))
         self.assertTrue(by_name["git-ai"]["managed"])
+        self.assertEqual(
+            {name for name in ISSUE34_TARGETS if by_name[name]["source"] == "catalog"},
+            ISSUE34_TARGETS,
+        )
+        self.assertEqual(
+            {name for name in ISSUE34_TARGETS if by_name[name]["executor"] == "update-agents"},
+            ISSUE34_UPDATE_AGENTS,
+        )
         self.assertEqual(
             by_name["anvil-ide"]["version"],
             "0e6130457ac2bdc6c6db2eebeba67a5223231190",
@@ -1090,6 +1332,7 @@ exec "$REAL_GIT" "$@"
         self.assertIn("if [[ $run_all_inputs == true ]]", update_agents)
         self.assertIn("nix flake update --flake ./config/ai", update_agents)
         manifest = load_update_manifest(root)
+        manifest.update(load_source_catalog(root))
         expected_inputs = {
             name for name, target in manifest.items()
             if target.get("executor") == "update-agents"
@@ -1101,6 +1344,10 @@ exec "$REAL_GIT" "$@"
             line.strip() for line in block.group(1).splitlines() if line.strip()
         }
         self.assertEqual(declared_inputs, expected_inputs)
+        self.assertIn(
+            "UPDATE_AGENTS_CANDIDATE=1 python bin/update-overlay --sync-flake-projections",
+            update_agents,
+        )
         self.assertIn("transaction_baseline=", update_agents)
         self.assertIn("trap cleanup_transaction EXIT", update_agents)
         self.assertIn('git -C "$config_dir" worktree add', update_agents)
@@ -1486,13 +1733,7 @@ exec "$REAL_GIT" "$@"
     # loudly as a new inline literal. The key embeds the coordinate, so a version
     # bump to the tolerated source re-surfaces it for re-review -- the intended
     # pressure toward catalog ownership. Every entry names its owning issue.
-    KNOWN_INLINE_SOURCE_LITERALS: dict[str, str] = {
-        "packages/agent-resources.nix: fetchzip "
-        "url=https://registry.npmjs.org/ws/-/ws-8.18.3.tgz":
-            "npm `ws` tarball; tracked by packages/update-manifest.nix "
-            "(kind=npm-release, target `ws`) but not catalog-owned. Migration "
-            "to sources/*.json is issue #43 (E2-WU4C-ZERO-PENDING / 1.8).",
-    }
+    KNOWN_INLINE_SOURCE_LITERALS: dict[str, str] = {}
 
     # Root flake inputs whose coordinate is neither a fetchable remote nor a
     # repo-internal path. Empty: all current inputs are github:/git+ssh:/path:.

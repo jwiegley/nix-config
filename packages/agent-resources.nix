@@ -10,6 +10,7 @@
 let
   gitSurgeonSource = (callPackage "${inputs.llm-agents}/packages/git-surgeon/package.nix" { }).src;
   bigpowers = import ../config/ai/bigpowers-resources.nix;
+  piSources = import ./source-catalog.nix "pi";
   bigpowersSkills = builtins.attrNames (
     lib.filterAttrs (_name: type: type == "directory") (
       builtins.readDir "${inputs.bigpowers}/.pi/skills"
@@ -90,16 +91,13 @@ let
       "$pi_openai_server_compaction"/${lib.escapeShellArg relative}
   '') piOpenaiServerCompactionFiles;
 
-  wsSource = fetchzip {
-    url = "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz";
-    hash = "sha256-+o96RaViEX6JAoRI5JCLDJDcIXj+XbaH0+wSM9F2pBw=";
-  };
+  wsSource = fetchzip piSources.ws.source.args;
 
   piMcpAdapter = buildNpmPackage {
     pname = "pi-mcp-adapter";
-    version = "2.12.1";
+    version = piSources.pi-mcp-adapter.version;
     src = inputs.pi-mcp-adapter;
-    npmDepsHash = "sha256-Mxt5yq4UGxwVSIIC9B+fG2SS4BUNseyAL806Eb1I9YM=";
+    npmDepsHash = piSources.pi-mcp-adapter.hashes.npmDepsHash;
     npmInstallFlags = [ "--omit=dev" ];
     dontNpmBuild = true;
     postPatch = ''

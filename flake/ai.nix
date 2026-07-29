@@ -2086,6 +2086,7 @@ let
       ../test/ai/agent-wrappers.sh
       ../test/ai/compatibility-check.nix
       ../test/ai/compatibility-contract.nix
+      ../test/ai/input-projection-parity.nix
       ../test/ai/node-runtime-guard.cjs
       ../test/ai/pi-gallery.nix
       ../test/ai/pi-tool-renderer-wrapper.test.mjs
@@ -2218,6 +2219,9 @@ in
       build = mkAiToolchain pkgs;
       agent-deck-go-compat = pkgs.callPackage ../overlays/tests/agent-deck-go-compat.nix { };
       fractal-smoke = pkgs.callPackage ../overlays/tests/plasma-fractal-smoke.nix { };
+      input-projection-parity = pkgs.callPackage ../test/ai/input-projection-parity.nix {
+        inherit inputs;
+      };
       llama-cpp-platform-compat = pkgs.callPackage ../overlays/tests/llama-cpp-platform-compat.nix { };
       llm-agents-nixpkgs-independent =
         let

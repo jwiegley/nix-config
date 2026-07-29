@@ -579,3 +579,63 @@ derivation, and two different hosts.
 
 `scratchpad/gen65.py` re-derives the #65 split; its `SRC` points at the pre-split
 monolith, which no longer exists, so re-deriving needs that path checked out first.
+
+---
+
+## 2026-07-29 — #34 catalogue migration implemented, audit pending
+
+The live #34 title/body now record the answered Q3 contract rather than the stale
+15-root-input framing: exactly the 11 `packages/update-manifest.nix` records move to
+catalogue ownership; NAR hashes come from the selected `config/ai/flake.lock` nodes;
+`hakyll` is excluded as dead-input cleanup; inventory acceptance is before/after
+equality rather than a literal total.
+
+Implementation state:
+
+- Seven records live in `sources/ai.json`; four live in `sources/pi.json`.
+- Ten flake projections validate the retained `config/ai/flake.nix` literal, the
+  portable lock's `root.inputs`-selected node (including `rust-overlay_2`), and the
+  evaluated input revision/NAR hash. `ws` retains native `fetchzip` semantics.
+- `packages/agent-resources.nix` and both value-level tests derive the `ws` and
+  `pi-mcp-adapter` coordinates from the Pi catalogue; their former literals are gone.
+- The eight floating `flake-input` records remain managed by `update-agents`.
+  `pi-mcp-adapter`, `rust-overlay`, and `ws` deliberately remain pending; #38 owns
+  their compound executors. No pending count was manufactured away in #34.
+- `packages/update-manifest.nix` remains as an empty transitional schema for #43 to
+  delete after its own dependencies are green.
+- The existing candidate transaction now synchronizes fetchTree projections after
+  lock refresh. Direct synchronization is refused outside an `update-agents`
+  candidate, preserving Q2's isolation decision.
+
+Measured inventory continuity across the edit:
+
+| | Before | After |
+|---|---:|---:|
+| total targets | 199 | 199 |
+| managed | 176 | 176 |
+| pending | 23 | 23 |
+
+The sorted target-name set is identical. For the 11 migrated identities, kind,
+executor, and managed state are identical; only `source` changes from `manifest` to
+`catalog`.
+
+Permanent negative tests cover literal owner/repository drift, locked revision,
+locked NAR hash, the suffixed-node lookup trap, executor preservation, `fetchzip`
+admission, and projection synchronization. Watched-fail evidence was run separately:
+disabling Python parity produced four failures; disabling executor/synchronizer guards
+produced two; reverting `fetchzip` admission failed `ws`; a changed catalogue NAR hash
+made the exported Nix check fail with `input projection git-ai locked narHash
+mismatch`. Every mutation was restored and its focused check returned green.
+
+Verification completed before staging the final candidate:
+
+- `python3 -m unittest -v bin/update-overlay-test.py`: **PASS**, 40 tests.
+- `nix flake check ./config/ai --all-systems --no-build`: **PASS**, including
+  `input-projection-parity` on all three systems.
+- `nix flake check --no-build`: **PASS** on the current system.
+- Decision gate: 8 Q entries, 14 answer slots, 11 unanswered slots; Q2/Q3/Q8 summary
+  statuses corrected without changing any answer.
+
+Remaining for this unit: stage every explicit path, run the full `bin/quality` gate,
+commit signed, run the independent fess audit, resolve verified findings, register the
+closeout on #34/#38, and check `doc/observations/` again. No push is authorized.

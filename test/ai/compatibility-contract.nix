@@ -71,6 +71,7 @@ in
     "build"
     "format"
     "fractal-smoke"
+    "input-projection-parity"
     "lint"
     "llama-cpp-platform-compat"
     "llm-agents-nixpkgs-independent"

@@ -15,6 +15,7 @@ let
   inherit (pkgs) lib;
 
   bigpowersResources = import ../../config/ai/bigpowers-resources.nix;
+  piSources = import ../../packages/source-catalog.nix "pi";
   bigpowersSkills = bigpowersResources.names;
 
   ponytailSkills = [
@@ -72,10 +73,7 @@ let
     "src/stream-message-shared.ts"
   ];
 
-  wsSource = pkgs.fetchzip {
-    url = "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz";
-    hash = "sha256-+o96RaViEX6JAoRI5JCLDJDcIXj+XbaH0+wSM9F2pBw=";
-  };
+  wsSource = pkgs.fetchzip piSources.ws.source.args;
 
   piMcpFiles = [
     "cli.js"
@@ -552,7 +550,7 @@ else
 
         jq -e '
           .name == "ws"
-          and .version == "8.18.3"
+          and .version == ${builtins.toJSON piSources.ws.version}
           and .license == "MIT"
           and .engines.node == ">=10.0.0"
           and (.dependencies // {}) == {}
@@ -652,7 +650,7 @@ else
 
         jq -e '
           .name == "pi-mcp-adapter"
-          and .version == "2.12.1"
+          and .version == ${builtins.toJSON piSources.pi-mcp-adapter.version}
           and .type == "module"
           and .bin == {"pi-mcp-adapter":"cli.js"}
           and .pi.extensions == ["./index.ts"]

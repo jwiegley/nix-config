@@ -538,6 +538,90 @@
         "reason": "RTK publishes a coordinated multi-platform release asset set"
       },
       "version": "0.44.0"
+    },
+    "pi-mcp-adapter": {
+      "hashes": {
+        "npmDepsHash": "sha256-Mxt5yq4UGxwVSIIC9B+fG2SS4BUNseyAL806Eb1I9YM="
+      },
+      "source": {
+        "args": {
+          "narHash": "sha256-OVgR2wHKhlFjkio8SlrL5g/VPs77vCWQO4oohlIZU1I=",
+          "owner": "nicobailon",
+          "repo": "pi-mcp-adapter",
+          "rev": "19d88da27ef82dc61b6e4041b3af7cd0669dbeb5",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/nicobailon/pi-mcp-adapter"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "pi-mcp-adapter",
+        "kind": "flake-input+build",
+        "policy": "manual"
+      },
+      "version": "2.12.1"
+    },
+    "pi-openai-server-compaction": {
+      "source": {
+        "args": {
+          "narHash": "sha256-HFzG+GMriPhoMinjji+3sklQ7Nq0yRHCz/t9Re/TksU=",
+          "owner": "algal",
+          "repo": "pi-openai-server-compaction",
+          "rev": "8a3de2f3b0c178fdd6f73f2f94172dfc3943e466",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/algal/pi-openai-server-compaction"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "pi-openai-server-compaction",
+        "kind": "flake-input"
+      }
+    },
+    "pi-quiet": {
+      "source": {
+        "args": {
+          "narHash": "sha256-x5gCwTiMAG9mrI5IVmN7oJgjS1PW0y3ACTUE8K22ONw=",
+          "owner": "zenspc",
+          "repo": "pi-extensions",
+          "rev": "43e6756823a8f77985bec69b86f294c9ef55e8b7",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/zenspc/pi-extensions"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "pi-quiet",
+        "kind": "flake-input"
+      }
+    },
+    "ws": {
+      "source": {
+        "args": {
+          "hash": "sha256-+o96RaViEX6JAoRI5JCLDJDcIXj+XbaH0+wSM9F2pBw=",
+          "url": "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz"
+        },
+        "fetcher": "fetchzip",
+        "url": "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "ws",
+        "policy": "manual"
+      },
+      "version": "8.18.3"
     }
   }
 }

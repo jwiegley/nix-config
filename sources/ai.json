@@ -846,6 +846,155 @@
         "package": "vllm-mlx"
       },
       "version": "0.2.8"
+    },
+    "git-ai": {
+      "source": {
+        "args": {
+          "narHash": "sha256-DX6miCunjNnQ35IZgfe3gg2fvokIChhDq78CbSmPNk8=",
+          "owner": "git-ai-project",
+          "repo": "git-ai",
+          "rev": "16ebfc032814a1acb5286508c3fb3194d61d9983",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/git-ai-project/git-ai"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "git-ai",
+        "kind": "flake-input"
+      }
+    },
+    "llm-agents": {
+      "source": {
+        "args": {
+          "narHash": "sha256-a7pt7G6/gXzp569dsGKtZRlpXjwtA4I4dsYjpAE9bcs=",
+          "owner": "numtide",
+          "repo": "llm-agents.nix",
+          "rev": "e12f1c0df7ef59f57089bf9e80a96f9b1e419b06",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/numtide/llm-agents.nix"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "llm-agents",
+        "kind": "flake-input"
+      }
+    },
+    "mcp-remote": {
+      "source": {
+        "args": {
+          "narHash": "sha256-+oNI2Uq7gW3sLzJS4ky2+BXhTmo44+WpcdYgieGPpmI=",
+          "owner": "geelen",
+          "repo": "mcp-remote",
+          "rev": "02619aff36e79803d7c894e8c8ae7b34b2d11f8c",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/geelen/mcp-remote"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "mcp-remote",
+        "kind": "flake-input"
+      }
+    },
+    "mcp-servers-nix": {
+      "source": {
+        "args": {
+          "narHash": "sha256-p0Qo2hUtOeCqjLZ8pIDCW8P69LkQHQAgEV4StIRiCPQ=",
+          "owner": "natsukium",
+          "repo": "mcp-servers-nix",
+          "rev": "f87c14091dccea78d4e3ee4c29af4184215cc28d",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/natsukium/mcp-servers-nix"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "mcp-servers-nix",
+        "kind": "flake-input"
+      }
+    },
+    "pal-mcp-server": {
+      "source": {
+        "args": {
+          "narHash": "sha256-atrpDdkikaq+A8akggcWCGagfejBrq9OVkyY6CQB6EY=",
+          "owner": "jwiegley",
+          "repo": "pal-mcp-server",
+          "rev": "89f05d7cc5ecacaf527d2d6fbacc68a6b6a7534d",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/jwiegley/pal-mcp-server"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "pal-mcp-server",
+        "kind": "flake-input"
+      }
+    },
+    "rust-overlay": {
+      "source": {
+        "args": {
+          "narHash": "sha256-DK+AmC9SQ9hmOFNIMu1l05gJtsmKyYsfJnuFtt1TnAU=",
+          "owner": "oxalica",
+          "repo": "rust-overlay",
+          "rev": "47759faaddf38fadaf172151ca9df8adae9c0b2e",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/oxalica/rust-overlay"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock",
+          "config/ai/flake.nix"
+        ],
+        "input": "rust-overlay",
+        "kind": "fixed-flake-input",
+        "policy": "manual"
+      }
+    },
+    "translate-tool": {
+      "source": {
+        "args": {
+          "narHash": "sha256-P27Hvn8p1+BN8z6g/aFk91BFtL9SMQiMNFYayKn5xyY=",
+          "owner": "jwiegley",
+          "repo": "translate-tool",
+          "rev": "bffdb7ba3e5db603ea1390fee555354c1d45d642",
+          "type": "github"
+        },
+        "fetcher": "fetchTree",
+        "url": "https://github.com/jwiegley/translate-tool"
+      },
+      "update": {
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "translate-tool",
+        "kind": "flake-input"
+      }
     }
   }
 }

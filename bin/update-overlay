@@ -756,6 +756,72 @@ def _normalized_package_name(value: str) -> str:
     return re.sub(r"[-_.]+", "-", value).lower()
 
 
+def _lock_input_node(lock: dict, input_name: str, catalog_name: str) -> dict:
+    nodes = lock.get("nodes")
+    root_name = lock.get("root", "root")
+    if not isinstance(nodes, dict) or not isinstance(nodes.get(root_name), dict):
+        raise RuntimeError("invalid portable flake lock structure")
+    reference = nodes[root_name].get("inputs", {}).get(input_name)
+    if not isinstance(reference, str) or not isinstance(nodes.get(reference), dict):
+        raise RuntimeError(
+            f"flake input projection has no selected lock node: {catalog_name} ({input_name})"
+        )
+    return nodes[reference]
+
+
+def _flake_input_literal(nix_dir: Path, input_name: str, catalog_name: str) -> dict[str, str]:
+    flake_path = nix_dir / "config" / "ai" / "flake.nix"
+    if not flake_path.is_file():
+        raise RuntimeError(f"flake input projection requires config/ai/flake.nix: {catalog_name}")
+    text = flake_path.read_text()
+    escaped = re.escape(input_name)
+    urls = re.findall(rf'(?m)^\s*{escaped}\.url\s*=\s*"([^"]+)"\s*;', text)
+    for match in re.finditer(rf"(?ms)^\s*{escaped}\s*=\s*\{{(.*?)^\s*\}};", text):
+        urls.extend(re.findall(r'(?m)^\s*url\s*=\s*"([^"]+)"\s*;', match.group(1)))
+    if len(urls) != 1 or not urls[0].startswith("github:"):
+        raise RuntimeError(f"flake input projection has no unique github literal: {catalog_name}")
+    parts = urls[0].removeprefix("github:").split("/")
+    if len(parts) not in {2, 3} or not all(parts):
+        raise RuntimeError(f"flake input projection has an invalid github literal: {catalog_name}")
+    literal = {"type": "github", "owner": parts[0], "repo": parts[1]}
+    if len(parts) == 3:
+        literal["rev"] = parts[2]
+    return literal
+
+
+def _validate_flake_projection(
+    nix_dir: Path, name: str, record: dict, portable_lock: Optional[dict]
+) -> None:
+    update = record["update"]
+    source = record["source"]
+    if source["fetcher"] != "fetchTree" or "input" not in update:
+        return
+    if portable_lock is None:
+        raise RuntimeError(f"flake input projection requires config/ai/flake.lock: {name}")
+
+    node = _lock_input_node(portable_lock, update["input"], name)
+    locked = node.get("locked")
+    original = node.get("original")
+    if not isinstance(locked, dict) or not isinstance(original, dict):
+        raise RuntimeError(f"flake input projection has no locked/original source: {name}")
+
+    args = source["args"]
+    for field in ("type", "owner", "repo", "rev", "narHash"):
+        if args.get(field) != locked.get(field):
+            raise RuntimeError(f"flake input projection {name} {field} does not match portable lock")
+    for field in ("type", "owner", "repo"):
+        if args.get(field) != original.get(field):
+            raise RuntimeError(f"flake input projection {name} {field} does not match declared input")
+    if "rev" in original and args.get("rev") != original["rev"]:
+        raise RuntimeError(f"flake input projection {name} rev does not match declared input")
+    literal = _flake_input_literal(nix_dir, update["input"], name)
+    for field in ("type", "owner", "repo"):
+        if args.get(field) != literal.get(field):
+            raise RuntimeError(f"flake input projection {name} {field} does not match flake literal")
+    if "rev" in literal and args.get("rev") != literal["rev"]:
+        raise RuntimeError(f"flake input projection {name} rev does not match flake literal")
+
+
 def _validate_fetch_record(name: str, source: dict) -> None:
     if not isinstance(source, dict) or set(source) != {"args", "fetcher", "url"}:
         raise RuntimeError(f"invalid source object for {name}")
@@ -830,6 +896,8 @@ def _validate_fetch_record(name: str, source: dict) -> None:
 
 def _catalog_executor(record: dict) -> Optional[str]:
     update = record["update"]
+    if update["kind"] == "flake-input":
+        return "update-agents"
     expected_fetchers = {
         "explicit-rev": {"fetchgit", "fetchpatch", "fetchTree", "fetchurl"},
         "github-commit": {"fetchFromGitHub"},
@@ -860,6 +928,7 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
         "explicit-rev": (common_update_fields | {"branch"}, set()),
         "fixed-flake-input": (common_update_fields | {"input"}, {"input"}),
         "flake-input": (common_update_fields | {"input"}, {"input"}),
+        "flake-input+build": (common_update_fields | {"input"}, {"input"}),
         "flake-input+copy": (common_update_fields | {"input"}, {"input"}),
         "github-commit": (common_update_fields | {"branch"}, {"branch"}),
         "github-release": (common_update_fields | {"tagPrefix"}, set()),
@@ -872,6 +941,8 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
         "pypi-release": (common_update_fields | {"package"}, {"package"}),
         "url-release": (common_update_fields, set()),
     }
+    portable_lock_path = nix_dir / "config" / "ai" / "flake.lock"
+    portable_lock = None
     for path in sorted(catalog_dir.glob("*.json")):
         payload = json.loads(path.read_text(), object_pairs_hook=_unique_object)
         if set(payload) != {"schemaVersion", "sources"}:
@@ -909,6 +980,11 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             kind = update["kind"]
             source_args = record["source"]["args"]
             source_fetcher = record["source"]["fetcher"]
+            if source_fetcher == "fetchTree" and "input" in update and portable_lock is None:
+                if not portable_lock_path.is_file():
+                    raise RuntimeError(f"flake input projection requires config/ai/flake.lock: {name}")
+                portable_lock = json.loads(portable_lock_path.read_text())
+            _validate_flake_projection(nix_dir, name, record, portable_lock)
             if source_fetcher == "fetchPypi" and record.get("version") != source_args["version"]:
                 raise RuntimeError(f"PyPI source version does not match catalog version: {name}")
             if kind == "github-commit" and (
@@ -919,7 +995,10 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 raise RuntimeError(f"github-commit requires a native rev field: {name}")
             if kind == "npm-release":
                 package = update["package"]
-                if source_fetcher != "fetchurl" or f"/{package}/-/" not in source_args["url"]:
+                if (
+                    source_fetcher not in {"fetchurl", "fetchzip"}
+                    or f"/{package}/-/" not in source_args["url"]
+                ):
                     raise RuntimeError(f"npm source identity does not match update package: {name}")
             if kind == "pypi-release" and source_fetcher == "fetchPypi":
                 if _normalized_package_name(source_args["pname"]) != _normalized_package_name(
@@ -956,6 +1035,44 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 "_record": record,
             }
     return targets
+
+
+def sync_flake_projections(nix_dir: Path) -> int:
+    """Refresh catalog fetchTree projections from the selected portable lock nodes."""
+    lock_path = nix_dir / "config" / "ai" / "flake.lock"
+    if not lock_path.is_file():
+        raise RuntimeError("flake projection sync requires config/ai/flake.lock")
+    portable_lock = json.loads(lock_path.read_text())
+    changed_records = 0
+    for path in sorted((nix_dir / "sources").glob("*.json")):
+        payload = json.loads(path.read_text(), object_pairs_hook=_unique_object)
+        changed_document = False
+        for name, record in payload.get("sources", {}).items():
+            source = record.get("source", {})
+            update = record.get("update", {})
+            if source.get("fetcher") != "fetchTree" or not isinstance(update.get("input"), str):
+                continue
+            node = _lock_input_node(portable_lock, update["input"], name)
+            locked = node.get("locked")
+            if not isinstance(locked, dict):
+                raise RuntimeError(f"flake input projection has no locked source: {name}")
+            args = source.get("args")
+            if not isinstance(args, dict):
+                raise RuntimeError(f"flake input projection has no fetchTree args: {name}")
+            projected = {
+                **args,
+                **{field: locked[field] for field in ("type", "owner", "repo", "rev", "narHash")},
+            }
+            projected_url = f"https://github.com/{locked['owner']}/{locked['repo']}"
+            if projected != args or source.get("url") != projected_url:
+                source["args"] = projected
+                source["url"] = projected_url
+                changed_document = True
+                changed_records += 1
+        if changed_document:
+            path.write_text(json.dumps(payload, indent=2) + "\n")
+    load_source_catalog(nix_dir)
+    return changed_records
 
 
 def load_update_manifest(nix_dir: Path) -> dict[str, dict]:
@@ -1536,11 +1653,32 @@ Examples:
         "--json", dest="json_output", action="store_true",
         help="Emit inventory as JSON (with --inventory)"
     )
+    parser.add_argument(
+        "--sync-flake-projections", action="store_true",
+        help="Refresh catalog fetchTree projections from config/ai/flake.lock"
+    )
     args = parser.parse_args()
 
     # Validate arguments
-    if not args.inventory and not args.all and not args.packages:
-        parser.error("Please specify package names, --all, or --inventory")
+    if not args.inventory and not args.all and not args.packages and not args.sync_flake_projections:
+        parser.error(
+            "Please specify package names, --all, --inventory, or --sync-flake-projections"
+        )
+
+    if args.sync_flake_projections and (
+        args.inventory
+        or args.all
+        or args.packages
+        or args.version
+        or args.dry_run
+        or args.no_build
+        or args.verbose
+        or args.json_output
+    ):
+        parser.error("--sync-flake-projections cannot be combined with another operation")
+
+    if args.sync_flake_projections and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
+        parser.error("--sync-flake-projections is restricted to the update-agents candidate")
 
     if args.inventory and (args.all or args.packages or args.version):
         parser.error("--inventory cannot be combined with package updates")
@@ -1552,6 +1690,10 @@ Examples:
         parser.error("Cannot use --version with --all")
 
     nix_dir = Path(__file__).parent.parent.resolve()
+    if args.sync_flake_projections:
+        changed = sync_flake_projections(nix_dir)
+        print(f"synchronized {changed} flake input projection(s)")
+        return 0
     sources = make_overlay_sources(args, nix_dir)
     explicit_targets = load_update_manifest(nix_dir)
     catalog_targets = load_source_catalog(nix_dir)
