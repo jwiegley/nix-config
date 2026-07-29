@@ -90,9 +90,15 @@ REFRESH_DELTAS=$'lost darwin/clio: gopls' \
   bin/parity-baseline --refresh test/baseline/parity-<old>.json
 
 # 3. Stage the new artifact and the removal of the old one, then commit (signed).
-git add test/baseline/parity-<new>.json
-git rm  test/baseline/parity-<old>.json
+#    --refresh already deleted the superseded file from the working tree, so this
+#    stages one addition and one deletion. The path is explicit and scoped to the
+#    oracle directory; it never picks up unrelated work.
+git add -A test/baseline/
 ```
+
+A cheap `--commands` mode prints the derivation commands without evaluating
+anything, which is how `bin/oracle-currency-test.py` asserts that the oracle's
+recorded command still matches the tool.
 
 `--refresh` re-derives at HEAD with the command already recorded in the oracle,
 refuses if the multiset moved without an explanation, and writes the new artifact
@@ -123,11 +129,25 @@ own `baselineRev`. Landing #31 means the committed oracle reaches schema `/2` wi
 a non-empty history: this is exactly the issue's `jq -e '.history | length >= 1'`
 pass condition.
 
+Alongside the human-supplied `intentional_deltas`, each entry also carries
+`observed_deltas`, measured by `--refresh` from the two artifacts. The two are
+recorded separately on purpose: a later reader can check the explanation against
+the measurement instead of taking the prose on trust.
+
 Provenance is deliberately **inline** in the artifact rather than in a sibling
 log, so a single file is the whole truth. The one consequence is that a literal
-`--check` would see the `schema`/`history` fields as "drift"; Block 3 of the
-accompanying `parity-baseline.additions` handles that by comparing the derived
-core only, and is optional (see that file for the tradeoff).
+whole-file `--check` would see the `schema` and `history` fields as "drift" —
+they are present in a refreshed oracle and absent from `derive()`'s output — so
+every `--check` would fail permanently from the first advance onward. `--check`
+therefore compares the **derived core**, dropping those two fields; they are not
+derived quantities, and `bin/oracle-currency-test.py` validates them instead.
+
+> **Corrected 2026-07-28.** This paragraph previously deferred the problem to
+> "Block 3 of the accompanying `parity-baseline.additions`". That file never
+> existed, and neither did `--refresh` — this document specified a procedure in
+> imperative detail that nothing implemented, so anyone following step 2 got
+> `unknown argument: --refresh`. Both are now implemented in
+> `bin/parity-baseline`. See jwiegley/nix-config#31, reopened for exactly this.
 
 
 ## Enforcement — what happens when the policy is violated

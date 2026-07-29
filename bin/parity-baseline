@@ -43,6 +43,10 @@
 #                                           #   require byte-identical (determinism)
 #   bin/parity-baseline --compare FILE      # cross-rev: report multiset drift
 #                                           #   separately from drvPath drift
+#   REFRESH_REASON=... [REFRESH_DELTAS=...] \
+#     bin/parity-baseline --refresh FILE    # advance the oracle to HEAD, appending
+#                                           #   a provenance entry; refuses a moved
+#                                           #   multiset unless REFRESH_DELTAS names it
 #
 # Refs: jwiegley/nix-config#19 (capture), #31 (refresh as main advances).
 
@@ -104,6 +108,45 @@ print(json.dumps({
         'nix eval --json "%s#packages.<system>" --apply %r' % (portable, attrs),
 }, indent=1))
 PY
+}
+
+# Two guards that make a "vs baseline" comparison meaningful, both required by
+# #31. Neither existed when #31 was first closed: the refresh POLICY was written
+# but nothing enforced it, so the policy could be read as satisfied while the
+# comparison it governs was still free to be nonsense.
+#
+#   1. The stored oracle rev must be an ancestor of HEAD. If it is not, the
+#      oracle was captured on a branch that current work does not descend from,
+#      and "drift" between them conflates divergence with regression.
+#
+#   2. The recorded derivation commands must equal the ones this script would
+#      issue now. The artifact has always RECORDED them (so a reader can
+#      re-derive by hand) but nothing COMPARED them, so changing PORTABLE_DIR or
+#      a --apply expression would silently redefine what the numbers mean while
+#      the file still claimed to be the same oracle.
+guard_oracle_compatible() {
+    local file=$1 want_rev
+    want_rev=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["baselineRev"])' "$file")
+
+    git merge-base --is-ancestor "$want_rev" HEAD || die "\
+oracle rev ${want_rev:0:12} is NOT an ancestor of HEAD $(git rev-parse --short HEAD).
+    The oracle describes a revision this checkout does not descend from, so any
+    difference measures divergence, not regression. Re-point at an oracle on
+    this history, or re-capture (#19)."
+
+    local recorded current
+    recorded=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))["commands"], sort_keys=True))' "$file")
+    current=$(commands_json | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin), sort_keys=True))')
+    if [[ $recorded != "$current" ]]; then
+        printf 'parity-baseline: DERIVATION COMMAND DIVERGENCE against %s\n' "$file" >&2
+        diff -u <(printf '%s\n' "$recorded" | python3 -m json.tool) \
+            <(printf '%s\n' "$current" | python3 -m json.tool) >&2 || true
+        die "\
+the oracle was derived by different commands than this script now issues, so the
+    two sets of numbers do not answer the same question. Either restore the
+    recorded commands or re-capture the oracle (#19) -- do not compare across a
+    changed derivation."
+    fi
 }
 
 derive() {
@@ -209,6 +252,7 @@ case ${1-} in
 --check)
     [[ -n ${2-} ]] || die "--check needs a baseline file"
     [[ -f $2 ]] || die "no such baseline file: $2"
+    guard_oracle_compatible "$2"
     want_rev=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["baselineRev"])' "$2")
     have_rev=$(git rev-parse HEAD)
     if [[ $want_rev != "$have_rev" ]]; then
@@ -216,11 +260,31 @@ case ${1-} in
     a mismatch here means the comparison is meaningless, not that parity broke.
     Re-point at the recorded rev, or refresh the oracle (see #31)."
     fi
-    if diff -u "$2" <(derive) >/dev/null; then
-        printf 'parity-baseline: MATCH %s\n' "$2"
+    # Compare the DERIVED CORE only. Provenance is inline in the artifact, so
+    # `schema` and `history` are present in a refreshed oracle and absent from
+    # derive()'s output; a literal whole-file diff would call that "drift" and
+    # every --check would fail permanently the moment the oracle first advanced.
+    # Those two fields are not derived quantities and are validated separately by
+    # bin/oracle-currency-test.py, which is where they belong.
+    core() {
+        python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+for k in ("schema", "history"):
+    d.pop(k, None)
+print(json.dumps(d, indent=1, sort_keys=False))
+'
+    }
+    tmp_want=$(mktemp)
+    tmp_have=$(mktemp)
+    trap 'rm -f "$tmp_want" "$tmp_have"' EXIT
+    core <"$2" >"$tmp_want"
+    derive | core >"$tmp_have"
+    if diff -u "$tmp_want" "$tmp_have" >/dev/null; then
+        printf 'parity-baseline: MATCH %s (derived core)\n' "$2"
     else
         printf 'parity-baseline: DRIFT against %s\n' "$2" >&2
-        diff -u "$2" <(derive) >&2 || true
+        diff -u "$tmp_want" "$tmp_have" >&2 || true
         exit 1
     fi
     ;;
@@ -232,6 +296,7 @@ case ${1-} in
     # legitimately (see the header).
     [[ -n ${2-} ]] || die "--compare needs a baseline file"
     [[ -f $2 ]] || die "no such baseline file: $2"
+    guard_oracle_compatible "$2"
     tmp_now=$(mktemp)
     trap 'rm -f "$tmp_now"' EXIT
     derive >"$tmp_now"
@@ -287,10 +352,126 @@ if drv_drift:
 sys.exit(1 if (multiset_drift or missing) else 0)
 PY
     ;;
+--refresh)
+    # Advance the oracle to HEAD, per doc/PARITY-ORACLE-REFRESH.md. This is the
+    # mechanism that policy describes; it did not exist when #31 was closed.
+    #
+    # REFRESH_REASON is always mandatory: an oracle that advanced for no recorded
+    # reason is indistinguishable from one that was quietly overwritten to make a
+    # failing gate pass, which is precisely what the policy exists to prevent.
+    #
+    # REFRESH_DELTAS is mandatory only when the multiset actually moved. Refusing
+    # without it is the anti-laundering rule: a multiset move must be named by a
+    # human before it is recorded as accepted.
+    [[ -n ${2-} ]] || die "--refresh needs the current baseline file"
+    [[ -f $2 ]] || die "no such baseline file: $2"
+    [[ -n ${REFRESH_REASON-} ]] ||
+        die "REFRESH_REASON is mandatory (see doc/PARITY-ORACLE-REFRESH.md)"
+    guard_oracle_compatible "$2"
+
+    tmp_new=$(mktemp)
+    trap 'rm -f "$tmp_new"' EXIT
+    derive >"$tmp_new"
+
+    python3 - "$2" "$tmp_new" "${REFRESH_DELTAS-}" "$REFRESH_REASON" <<'PY'
+import json, os, subprocess, sys
+
+old_path, new_path, deltas, reason = sys.argv[1:5]
+old = json.load(open(old_path))
+new = json.load(open(new_path))
+
+o = {(t["kind"], t["target"]): t for t in old["targets"]}
+n = {(t["kind"], t["target"]): t for t in new["targets"]}
+
+moved = []
+for k in sorted(set(o) & set(n)):
+    if o[k]["packages"] != n[k]["packages"]:
+        lost = sorted(set(o[k]["packages"]) - set(n[k]["packages"]))
+        gained = sorted(set(n[k]["packages"]) - set(o[k]["packages"]))
+        moved.append((k, lost, gained))
+for k in sorted(set(o) - set(n)):
+    moved.append((k, ["<target removed>"], []))
+for k in sorted(set(n) - set(o)):
+    moved.append((k, [], ["<target added>"]))
+
+if moved and not deltas.strip():
+    sys.stderr.write(
+        "parity-baseline: the multiset MOVED, so REFRESH_DELTAS is mandatory.\n"
+        "    A refresh records an ACCEPTED result; it never launders an\n"
+        "    unexplained delta (doc/PARITY-ORACLE-REFRESH.md).  Observed:\n")
+    for (kind, target), lost, gained in moved:
+        for p in lost:
+            sys.stderr.write("      lost   %s/%s: %s\n" % (kind, target, p))
+        for p in gained:
+            sys.stderr.write("      gained %s/%s: %s\n" % (kind, target, p))
+    sys.exit(1)
+
+# Record what actually moved alongside the human's explanation, so a later
+# reader can check the explanation against the measurement instead of taking
+# the prose on trust.
+observed = ["%s %s/%s: %s" % (w, k[0], k[1], p)
+            for k, lost, gained in moved
+            for w, ps in (("lost", lost), ("gained", gained))
+            for p in ps]
+
+entry = {
+    "old_rev": old["baselineRev"],
+    "new_rev": new["baselineRev"],
+    "reason": reason,
+    "intentional_deltas": [d for d in deltas.splitlines() if d.strip()],
+    "observed_deltas": observed,
+}
+
+# On the FIRST advance, synthesize the genesis link so the chain is auditable
+# from birth rather than from first advance -- the oracle's own capture is a link
+# in its lineage, not a precondition of it. Without this the history would begin
+# mid-story, and a reader could not tell the genesis rev from a lost entry.
+prior = old.get("history")
+if not prior:
+    prior = [{
+        "old_rev": None,
+        "new_rev": old["baselineRev"],
+        "reason": "genesis capture (jwiegley/nix-config#19)",
+        "intentional_deltas": [],
+        "observed_deltas": [],
+    }]
+
+new["schema"] = "fleet-parity-oracle/2"
+new["history"] = prior + [entry]
+# Reassemble so schema/baselineRev/history read first rather than wherever
+# dict update happened to put them.
+order = ["schema", "baselineRev", "armedRefactorAncestor", "note", "history",
+         "commands", "targets"]
+out = {k: new[k] for k in order if k in new}
+out.update({k: v for k, v in new.items() if k not in out})
+
+dest = "test/baseline/parity-%s.json" % new["baselineRev"][:12]
+with open(dest, "w") as fh:
+    fh.write(json.dumps(out, indent=1, sort_keys=False) + "\n")
+
+# Exactly one oracle is ever tracked; Git is the archive.
+if os.path.abspath(dest) != os.path.abspath(old_path):
+    os.unlink(old_path)
+    sys.stderr.write("parity-baseline: superseded %s (removed; Git is the archive)\n" % old_path)
+sys.stderr.write("parity-baseline: advanced oracle to %s\n" % dest)
+if observed:
+    sys.stderr.write("parity-baseline: recorded %d accepted multiset delta(s)\n" % len(observed))
+print(dest)
+PY
+    ;;
+--commands)
+    # Cheap: print the derivation commands WITHOUT evaluating anything, so the
+    # currency guard can assert the oracle's recorded command still matches this
+    # tool. Until this mode existed, that assertion could only skip -- see
+    # bin/oracle-currency-test.py::test_recorded_command_matches_the_tool, which
+    # has always called `--commands` and skipped on its non-zero exit. A gate
+    # that skips is a gate that reports success while covering nothing.
+    commands_json
+    ;;
 "" | --print)
     derive
     ;;
 *)
-    die "unknown argument: $1 (want --write, --check FILE, --compare FILE, or no argument)"
+    die "unknown argument: $1 (want --write, --check FILE, --compare FILE, --refresh FILE, --commands, or no argument)"
     ;;
 esac
