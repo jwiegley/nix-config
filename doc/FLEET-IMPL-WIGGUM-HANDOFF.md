@@ -933,3 +933,9 @@ worktree remains.
 
 Next ordered unit is A6 / #80, measurable tiered coverage. Local `main` remains
 unpushed; no push, host activation, or history rewrite is authorized.
+
+Post-close independent test-gap review added five replayable generator failures:
+same-name atomic replacement failure preserves original bytes, `--write` refuses before
+derivation when no baseline exists, Git revision failure is surfaced, projection digest
+key/format drift is rejected, and failed worktree creation still attempts narrow cleanup.
+The generator harness is now 25 tests; production behavior is unchanged.

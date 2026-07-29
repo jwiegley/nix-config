@@ -170,6 +170,16 @@ class MainModeTests(TemporaryBaselineTestCase):
         self.assertIn("invalid full revision", stderr.getvalue())
         derive.assert_not_called()
 
+    def test_revision_resolution_rejects_git_failure(self) -> None:
+        failed = subprocess.CompletedProcess(
+            ["git", "rev-parse"], 128, "", "unknown revision"
+        )
+        with (
+            mock.patch.object(GENERATOR.subprocess, "run", return_value=failed),
+            self.assertRaisesRegex(GENERATOR.OperationalError, "unknown revision"),
+        ):
+            GENERATOR.resolve_revision("missing")
+
     def test_sigterm_request_has_conventional_nonzero_exit(self) -> None:
         stderr = io.StringIO()
         with (
@@ -308,6 +318,44 @@ class ExistingBaselineValidationTests(TemporaryBaselineTestCase):
         with self.assertRaisesRegex(GENERATOR.OperationalError, "has schema"):
             GENERATOR.validate_existing_baseline()
 
+    def test_write_rejects_missing_baseline_before_derivation(self) -> None:
+        stderr = io.StringIO()
+
+        @contextlib.contextmanager
+        def write_lock():
+            yield
+
+        with (
+            mock.patch.object(GENERATOR, "resolve_revision", return_value=REVISION_A),
+            mock.patch.object(
+                GENERATOR, "baseline_write_lock", return_value=write_lock()
+            ),
+            mock.patch.object(GENERATOR, "recover_interrupted_write"),
+            mock.patch.object(GENERATOR, "derive_hosts") as derive,
+            mock.patch.object(GENERATOR, "write_artifact") as write,
+            contextlib.redirect_stderr(stderr),
+        ):
+            status = GENERATOR.main(["--write"])
+
+        self.assertEqual(status, 2)
+        self.assertIn("exactly one existing", stderr.getvalue())
+        derive.assert_not_called()
+        write.assert_not_called()
+
+    def test_projection_validation_rejects_key_and_digest_drift(self) -> None:
+        mutations = (
+            {**projection(), "extra": "a" * 64},
+            {key: value for key, value in projection().items() if key != PROJECTION_PATHS[0]},
+            {**projection(), PROJECTION_PATHS[0]: "A" * 64},
+            {**projection(), PROJECTION_PATHS[0]: "a" * 63},
+            {**projection(), PROJECTION_PATHS[0]: 7},
+        )
+        for value in mutations:
+            with self.subTest(value=value), self.assertRaises(
+                GENERATOR.OperationalError
+            ):
+                GENERATOR.validate_projection(value)
+
 
 class SensitiveDataTests(unittest.TestCase):
     def test_rejects_sensitive_shapes_but_allows_null_password_toggle(self) -> None:
@@ -399,6 +447,22 @@ class ArtifactReplacementTests(TemporaryBaselineTestCase):
         self.assertEqual(temporary_path.parent, existing.parent)
         self.assertTrue(temporary_path.name.startswith(f".{existing.name}."))
 
+    def test_same_revision_replace_failure_preserves_original_bytes(self) -> None:
+        existing, _ = self.write_baseline(REVISION_A)
+        original = existing.read_bytes()
+        replacement = GENERATOR.artifact(REVISION_A, hosts(8.25), projection())
+
+        with (
+            mock.patch.object(
+                GENERATOR.os, "replace", side_effect=OSError("injected replace failure")
+            ),
+            self.assertRaisesRegex(GENERATOR.OperationalError, "atomically write"),
+        ):
+            GENERATOR.write_artifact(existing, replacement)
+
+        self.assertEqual(existing.read_bytes(), original)
+        self.assertEqual(list(self.baseline_directory.iterdir()), [existing])
+
     def test_recovery_restores_hidden_backup_when_no_candidate_exists(self) -> None:
         value = GENERATOR.artifact(REVISION_A, hosts(), projection())
         backup = GENERATOR.baseline_backup_path()
@@ -476,6 +540,28 @@ class ArtifactReplacementTests(TemporaryBaselineTestCase):
 
 
 class WorktreeCleanupTests(unittest.TestCase):
+    def test_worktree_add_failure_still_attempts_narrow_cleanup(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix="darwin-surface-cleanup-test-"
+        ) as temporary_directory:
+            worktree = Path(temporary_directory) / "source"
+            with (
+                mock.patch.object(
+                    GENERATOR,
+                    "run",
+                    side_effect=GENERATOR.OperationalError("add failed"),
+                ),
+                mock.patch.object(
+                    GENERATOR, "remove_worktree", return_value=None
+                ) as remove,
+                self.assertRaisesRegex(GENERATOR.OperationalError, "add failed"),
+            ):
+                GENERATOR.derive_hosts_in_temporary_directory(
+                    REVISION_A, temporary_directory
+                )
+
+        remove.assert_called_once_with(worktree)
+
     def test_cleanup_is_called_after_success(self) -> None:
         with tempfile.TemporaryDirectory(
             prefix="darwin-surface-cleanup-test-"
