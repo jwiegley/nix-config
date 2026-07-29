@@ -1,8 +1,32 @@
 {
- "schema": "fleet-parity-oracle/1",
- "baselineRev": "e0ed94fabbc054e36e08f2684123f248bffcf932",
+ "schema": "fleet-parity-oracle/2",
+ "baselineRev": "3f5f425f378859b3c43b2f26c1750d274b236965",
  "armedRefactorAncestor": "a3cc3843",
  "note": "Stored evidence for the Fleet Configuration Programme parity gates. Package counts are derived from the lists in this file, never asserted separately. Re-derive with bin/parity-baseline --check <this file>.",
+ "history": [
+  {
+   "old_rev": null,
+   "new_rev": "e0ed94fabbc054e36e08f2684123f248bffcf932",
+   "reason": "genesis capture (jwiegley/nix-config#19)",
+   "intentional_deltas": [],
+   "observed_deltas": []
+  },
+  {
+   "old_rev": "e0ed94fabbc054e36e08f2684123f248bffcf932",
+   "new_rev": "3f5f425f378859b3c43b2f26c1750d274b236965",
+   "reason": "#50 host-registry refactor landed parity-clean; oracle catches up to 777fe62b, which added the pi-dynamic-workflows gallery member to the portable subflake (#31)",
+   "intentional_deltas": [
+    "gained portable/aarch64-darwin: pi-dynamic-workflows (777fe62b, intended)",
+    "gained portable/aarch64-linux: pi-dynamic-workflows (777fe62b, intended)",
+    "gained portable/x86_64-linux: pi-dynamic-workflows (777fe62b, intended)"
+   ],
+   "observed_deltas": [
+    "gained portable/aarch64-darwin: pi-dynamic-workflows",
+    "gained portable/aarch64-linux: pi-dynamic-workflows",
+    "gained portable/x86_64-linux: pi-dynamic-workflows"
+   ]
+  }
+ ],
  "commands": {
   "darwinDrvPath": "nix eval --raw \".#darwinConfigurations.<host>.config.system.build.toplevel.drvPath\"",
   "darwinPackages": "nix eval --json \".#darwinConfigurations.<host>.config.home-manager.users.<user>.home.packages\" --apply 'ps: builtins.sort builtins.lessThan (map (p: p.pname or p.name) ps)'",
@@ -15,7 +39,7 @@
    "kind": "darwin",
    "target": "clio",
    "user": "johnw",
-   "drvPath": "/nix/store/98aa5c12iymi0a72hi0rp44nar9yi3dn-darwin-system-26.11.57a3171.drv",
+   "drvPath": "/nix/store/3vfch4h798zbki35dw4kx2cyc52j2jcp-darwin-system-26.11.57a3171.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -410,7 +434,7 @@
    "kind": "darwin",
    "target": "hera",
    "user": "johnw",
-   "drvPath": "/nix/store/awhs1mh283ysdyclxgycsbdmxq051dz0-darwin-system-26.11.57a3171.drv",
+   "drvPath": "/nix/store/mwsrn5w4rb797g3qw8a5gj37dnd68ifz-darwin-system-26.11.57a3171.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -832,7 +856,7 @@
   {
    "kind": "home-manager",
    "target": "johnw@aarch64-linux",
-   "drvPath": "/nix/store/y62wf90wm8cgr2wkmxv7dhbrwlihqm1d-home-manager-generation.drv",
+   "drvPath": "/nix/store/7zlwhnwr2rwlli5h1sk4bbs4d950fyi5-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1207,7 +1231,7 @@
   {
    "kind": "home-manager",
    "target": "jwiegley@x86_64-linux",
-   "drvPath": "/nix/store/5wqv7990425i1hdd8453ijzr0f5cmwzn-home-manager-generation.drv",
+   "drvPath": "/nix/store/r5g3ws7lq8r3mwvwki9vj6k0xr99q1h0-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1597,6 +1621,7 @@
     "pi-btw",
     "pi-caveman",
     "pi-cymbal",
+    "pi-dynamic-workflows",
     "pi-gallery",
     "pi-hashline-edit-pro",
     "pi-insights",
@@ -1615,7 +1640,7 @@
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 30
+   "packageCount": 31
   },
   {
    "kind": "portable",
@@ -1634,6 +1659,7 @@
     "pi-btw",
     "pi-caveman",
     "pi-cymbal",
+    "pi-dynamic-workflows",
     "pi-gallery",
     "pi-hashline-edit-pro",
     "pi-insights",
@@ -1652,7 +1678,7 @@
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 30
+   "packageCount": 31
   },
   {
    "kind": "portable",
@@ -1671,6 +1697,7 @@
     "pi-btw",
     "pi-caveman",
     "pi-cymbal",
+    "pi-dynamic-workflows",
     "pi-gallery",
     "pi-hashline-edit-pro",
     "pi-insights",
@@ -1689,7 +1716,7 @@
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 30
+   "packageCount": 31
   }
  ]
 }
