@@ -7,6 +7,7 @@ set -euo pipefail
 : "${CODEX_BIN:?}"
 : "${CODEX_NON_DARWIN_BIN:?}"
 : "${CODEX_APP_IS_COMMAND:?}"
+: "${CODEX_RAISES_OPEN_FILE_LIMIT:?}"
 : "${DROID_BIN:?}"
 : "${REAL_CLAUDE_BIN:?}"
 : "${REAL_CODEX_BIN:?}"
@@ -995,6 +996,48 @@ test_codex_non_darwin_table() {
     CODEX_BIN=$current_codex_bin
 }
 
+test_codex_open_file_limit_case() {
+    local label=$1
+    local binary=$2
+    local bypass=$3
+    local expected=$4
+
+    new_case codex "$label"
+    configure_state zero
+    (
+        CODEX_BIN=$binary
+        ulimit -Sn 256
+        invoke_agent codex "$bypass" 0 alpha
+        [ "$LAST_STATUS" -eq 0 ] || fail "Codex open-file limit case failed: $label"
+        assert_argv "$ARGV_FILE" alpha
+        assert_env "AGENT_TEST_OPEN_FILE_LIMIT=$expected"
+    )
+    finish_case codex
+}
+
+test_codex_open_file_limit() {
+    local expected=256
+    if [ "$CODEX_RAISES_OPEN_FILE_LIMIT" = 1 ]; then
+        expected=65536
+    fi
+    test_codex_open_file_limit_case primary-limit "$CODEX_BIN" 0 "$expected"
+    test_codex_open_file_limit_case primary-bypass-limit "$CODEX_BIN" 1 "$expected"
+
+    new_case codex primary-managed-limit
+    configure_state complete
+    (
+        ulimit -Sn 256
+        invoke_agent codex 0 0 alpha
+        [ "$LAST_STATUS" -eq 0 ] || fail "Codex managed open-file limit case failed"
+        assert_managed_argv codex alpha
+        assert_env "AGENT_TEST_OPEN_FILE_LIMIT=$expected"
+    )
+    finish_case codex
+
+    test_codex_open_file_limit_case non-darwin-limit \
+        "$CODEX_NON_DARWIN_BIN" 0 256
+}
+
 test_exit_propagation() {
     local client=$1
 
@@ -1458,6 +1501,7 @@ test_codex_legacy_ref_auth
 test_codex_runtime_profile_rejections
 test_codex_command_scope
 test_codex_non_darwin_table
+test_codex_open_file_limit
 test_real_claude_mcp_list_contract
 test_real_codex_profile_contract
 test_bridge_static_contract

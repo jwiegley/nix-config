@@ -129,6 +129,12 @@ let
         codexWrapper = pkgs.writeShellScript "codex" ''
           set -euo pipefail
           set +x
+          ${pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
+            # Agent Deck sessions can inherit macOS's 256-descriptor soft
+            # limit from an older tmux daemon.  Raise Codex and every MCP
+            # descendant without rebuilding the upstream package.
+            ulimit -Sn 65536
+          ''}
           umask 077
 
           # $HOME (and so ~/.codex) is shared over NFS across hosts.

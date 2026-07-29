@@ -70,6 +70,8 @@ let
         for argument in "$@"; do
           printf '%s\0' "$argument" >>"$AGENT_TEST_ARGV"
         done
+        AGENT_TEST_OPEN_FILE_LIMIT="$(ulimit -Sn)"
+        export AGENT_TEST_OPEN_FILE_LIMIT
         env -0 | sort -z >"$AGENT_TEST_ENV"
         exit "''${AGENT_TEST_EXIT:-0}"
       '';
@@ -205,6 +207,7 @@ pkgs.runCommand "agent-wrappers-check"
     REAL_CLAUDE_BIN = "${realWrappedClaude}/bin/claude";
     REAL_CODEX_BIN = "${codexPackage}/bin/codex";
     CODEX_APP_IS_COMMAND = if pkgs.stdenv.isDarwin then "1" else "0";
+    CODEX_RAISES_OPEN_FILE_LIMIT = if pkgs.stdenv.isDarwin then "1" else "0";
     NETWORK_GUARD_LIBRARY = "${networkGuard}/lib/libagent-wrapper-network-guard.${networkGuardExtension}";
     NETWORK_GUARD_VARIABLE = if pkgs.stdenv.isDarwin then "DYLD_INSERT_LIBRARIES" else "LD_PRELOAD";
 
