@@ -1,0 +1,562 @@
+import ctypes
+import errno
+import os
+import re
+import select
+import signal
+import sys
+import time
+
+EXIT_SOFTWARE = 70
+READY_TIMEOUT_SECONDS = @PARENT_GUARD_READY_SECONDS@.0
+GUARDED_OWNER_PID_ENV = "ANVIL_MCP_GUARDED_OWNER_PID"
+GUARDED_OWNER_START_ENV = "ANVIL_MCP_GUARDED_OWNER_START_IDENTITY"
+LINUX_BOOT_ID_PATTERN = re.compile(
+    r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-"
+    r"[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
+)
+
+
+def fail(message):
+    print(f"anvil-mcp: parent guard: {message}", file=sys.stderr)
+    raise SystemExit(EXIT_SOFTWARE)
+
+
+def close_lock_fds():
+    for descriptor in (8, 9):
+        try:
+            os.close(descriptor)
+        except OSError as error:
+            if error.errno != errno.EBADF:
+                fail(f"cannot close lock fd {descriptor}: {error}")
+
+
+def validate_parent_pid(raw):
+    if not raw or not raw.isascii() or not raw.isdecimal():
+        fail("ANVIL_HEADLESS_PARENT_PID must be a decimal PID")
+    parent_pid = int(raw)
+    if parent_pid <= 1:
+        fail("ANVIL_HEADLESS_PARENT_PID must be greater than one")
+    if os.getppid() != parent_pid:
+        fail(
+            f"expected owner pid {parent_pid}, "
+            f"found parent pid {os.getppid()}"
+        )
+    return parent_pid
+
+
+def validate_bridge_pid(raw):
+    if raw is None:
+        return None
+    if not raw or not raw.isascii() or not raw.isdecimal():
+        fail("ANVIL_HEADLESS_BRIDGE_PID must be a decimal PID")
+    bridge_pid = int(raw)
+    if bridge_pid <= 1:
+        fail("ANVIL_HEADLESS_BRIDGE_PID must be greater than one")
+    return bridge_pid
+
+
+class DarwinBSDInfo(ctypes.Structure):
+    _fields_ = [
+        ("pbi_flags", ctypes.c_uint32),
+        ("pbi_status", ctypes.c_uint32),
+        ("pbi_xstatus", ctypes.c_uint32),
+        ("pbi_pid", ctypes.c_uint32),
+        ("pbi_ppid", ctypes.c_uint32),
+        ("pbi_uid", ctypes.c_uint32),
+        ("pbi_gid", ctypes.c_uint32),
+        ("pbi_ruid", ctypes.c_uint32),
+        ("pbi_rgid", ctypes.c_uint32),
+        ("pbi_svuid", ctypes.c_uint32),
+        ("pbi_svgid", ctypes.c_uint32),
+        ("pbi_rfu_1", ctypes.c_uint32),
+        ("pbi_comm", ctypes.c_char * 16),
+        ("pbi_name", ctypes.c_char * 32),
+        ("pbi_nfiles", ctypes.c_uint32),
+        ("pbi_pgid", ctypes.c_uint32),
+        ("pbi_pjobc", ctypes.c_uint32),
+        ("e_tdev", ctypes.c_uint32),
+        ("e_tpgid", ctypes.c_uint32),
+        ("pbi_nice", ctypes.c_int32),
+        ("pbi_start_tvsec", ctypes.c_uint64),
+        ("pbi_start_tvusec", ctypes.c_uint64),
+    ]
+
+
+def linux_process_start_identity(pid):
+    try:
+        with open(
+            "/proc/sys/kernel/random/boot_id", encoding="ascii"
+        ) as stream:
+            boot_id = stream.read().strip()
+        with open(f"/proc/{pid}/stat", encoding="ascii") as stream:
+            raw = stream.read()
+    except (FileNotFoundError, ProcessLookupError, OSError, UnicodeError):
+        return None
+    if LINUX_BOOT_ID_PATTERN.fullmatch(boot_id) is None:
+        return None
+    closing = raw.rfind(")")
+    if closing < 0:
+        return None
+    fields = raw[closing + 2 :].split()
+    if (
+        len(fields) <= 19
+        or not fields[19].isdecimal()
+        or fields[0] in ("Z", "X")
+    ):
+        return None
+    return f"linux:{boot_id.lower()}:{fields[19]}"
+
+
+def darwin_process_start_identity(pid):
+    try:
+        library = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
+        proc_pidinfo = library.proc_pidinfo
+        proc_pidinfo.argtypes = [
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_uint64,
+            ctypes.c_void_p,
+            ctypes.c_int,
+        ]
+        proc_pidinfo.restype = ctypes.c_int
+        info = DarwinBSDInfo()
+        ctypes.set_errno(0)
+        result = proc_pidinfo(
+            pid,
+            3,
+            0,
+            ctypes.byref(info),
+            ctypes.sizeof(info),
+        )
+    except (OSError, AttributeError):
+        return None
+    if (
+        result != ctypes.sizeof(info)
+        or info.pbi_pid != pid
+        or info.pbi_status == 5
+        or (info.pbi_start_tvsec == 0 and info.pbi_start_tvusec == 0)
+    ):
+        return None
+    return f"darwin:{info.pbi_start_tvsec}:{info.pbi_start_tvusec}"
+
+
+def process_start_identity(pid):
+    if pid <= 1:
+        return None
+    if sys.platform.startswith("linux"):
+        return linux_process_start_identity(pid)
+    if sys.platform == "darwin":
+        return darwin_process_start_identity(pid)
+    return None
+
+
+def install_linux_parent_death_signal(expected_parent):
+    libc = ctypes.CDLL(None, use_errno=True)
+    if libc.prctl(1, signal.SIGKILL, 0, 0, 0) != 0:
+        error = ctypes.get_errno()
+        fail(f"prctl(PR_SET_PDEATHSIG) failed: {os.strerror(error)}")
+    if os.getppid() != expected_parent:
+        os.kill(os.getpid(), signal.SIGKILL)
+
+
+def terminate_group(target_pid):
+    try:
+        # The PGID remains allocated while any non-detached member
+        # survives, even after the shell leader itself has exited.
+        os.killpg(target_pid, signal.SIGKILL)
+    except OSError:
+        pass
+
+
+def terminate_target(target_pid, group, state):
+    if group and state["committed"]:
+        # The guard itself anchors this PGID after the R/C/A handshake, so
+        # it cannot disappear or be reused when the target leader exits.
+        terminate_group(target_pid)
+        return
+    # Before commitment the target is blocked before exec and has no
+    # program descendants, so only its exact PID is safe to signal.
+    try:
+        os.kill(target_pid, signal.SIGKILL)
+    except OSError:
+        pass
+
+
+def close_guard_descriptors(ready_fd, commit_fd):
+    preserved = sorted({ready_fd, commit_fd})
+    null_fd = os.open(os.devnull, os.O_RDWR)
+    for descriptor in (0, 1, 2):
+        os.dup2(null_fd, descriptor)
+    if null_fd > 2 and null_fd not in preserved:
+        os.close(null_fd)
+    try:
+        descriptor_limit = int(os.sysconf("SC_OPEN_MAX"))
+    except (OSError, TypeError, ValueError):
+        descriptor_limit = 65536
+    descriptor_limit = max(256, min(descriptor_limit, 1048576))
+    first = 3
+    for descriptor in preserved:
+        if first < descriptor:
+            os.closerange(first, descriptor)
+        first = descriptor + 1
+    os.closerange(first, descriptor_limit)
+
+
+def install_guard_signal_handlers(target_pid, group, state):
+    handled = (signal.SIGINT, signal.SIGHUP, signal.SIGTERM)
+    if hasattr(signal, "pthread_sigmask"):
+        signal.pthread_sigmask(signal.SIG_UNBLOCK, handled)
+
+    def stop_guard(_signum, _frame):
+        terminate_target(target_pid, group, state)
+        os._exit(0)
+
+    for signum in handled:
+        signal.signal(signum, stop_guard)
+
+
+def acknowledge_group_commit(target_pid, group, ready_fd, commit_fd, state):
+    try:
+        marker = os.read(commit_fd, 1)
+    except OSError as error:
+        raise RuntimeError(f"cannot read group commitment: {error}") from error
+    if marker != b"C":
+        raise RuntimeError("target did not commit its process group")
+    if group and os.getpgrp() != target_pid:
+        raise RuntimeError("guard did not enter the committed target group")
+    state["committed"] = group
+    try:
+        os.write(ready_fd, b"A")
+    except OSError as error:
+        raise RuntimeError(f"cannot acknowledge group commitment: {error}") from error
+    os.close(commit_fd)
+    os.close(ready_fd)
+
+
+def guard_linux(
+    root_pid,
+    target_pid,
+    bridge_pid,
+    group,
+    ready_fd,
+    commit_fd,
+    state,
+):
+    root_fd = os.pidfd_open(root_pid, 0)
+    target_fd = os.pidfd_open(target_pid, 0)
+    bridge_fd = os.pidfd_open(bridge_pid, 0) if bridge_pid is not None else None
+    poller = select.poll()
+    poller.register(root_fd, select.POLLIN)
+    poller.register(target_fd, select.POLLIN)
+    if bridge_fd is not None:
+        poller.register(bridge_fd, select.POLLIN)
+    poller.register(commit_fd, select.POLLIN | select.POLLHUP | select.POLLERR)
+    lifecycle_fds = {root_fd, target_fd}
+    if bridge_fd is not None:
+        lifecycle_fds.add(bridge_fd)
+    if any(
+        descriptor in lifecycle_fds
+        for descriptor, _event in poller.poll(0)
+    ):
+        raise RuntimeError(
+            "bridge, root, or target exited before guard readiness"
+        )
+    install_guard_signal_handlers(target_pid, group, state)
+    os.write(ready_fd, b"R")
+    while True:
+        events = poller.poll()
+        if any(descriptor in lifecycle_fds for descriptor, _event in events):
+            terminate_target(target_pid, group, state)
+            os._exit(0)
+        if any(descriptor == commit_fd for descriptor, _event in events):
+            poller.unregister(commit_fd)
+            acknowledge_group_commit(
+                target_pid,
+                group,
+                ready_fd,
+                commit_fd,
+                state,
+            )
+
+
+def guard_darwin(
+    root_pid,
+    target_pid,
+    bridge_pid,
+    group,
+    ready_fd,
+    commit_fd,
+    state,
+):
+    queue = select.kqueue()
+    flags = select.KQ_EV_ADD | select.KQ_EV_ENABLE
+    lifecycle_pids = {root_pid, target_pid}
+    if bridge_pid is not None:
+        lifecycle_pids.add(bridge_pid)
+    changes = [
+        select.kevent(
+            process_pid,
+            filter=select.KQ_FILTER_PROC,
+            flags=flags,
+            fflags=select.KQ_NOTE_EXIT,
+        )
+        for process_pid in lifecycle_pids
+    ] + [
+        select.kevent(
+            commit_fd,
+            filter=select.KQ_FILTER_READ,
+            flags=flags,
+        ),
+    ]
+    queue.control(changes, 0, 0)
+    initial = queue.control(None, len(changes), 0)
+    if any(
+        event.filter == select.KQ_FILTER_PROC
+        and event.ident in lifecycle_pids
+        for event in initial
+    ):
+        raise RuntimeError(
+            "bridge, root, or target exited before guard readiness"
+        )
+    install_guard_signal_handlers(target_pid, group, state)
+    os.write(ready_fd, b"R")
+    while True:
+        events = queue.control(None, len(changes), None)
+        if any(
+            event.filter == select.KQ_FILTER_PROC
+            and event.ident in lifecycle_pids
+            for event in events
+        ):
+            terminate_target(target_pid, group, state)
+            os._exit(0)
+        if any(
+            event.filter == select.KQ_FILTER_READ
+            and event.ident == commit_fd
+            for event in events
+        ):
+            queue.control(
+                [
+                    select.kevent(
+                        commit_fd,
+                        filter=select.KQ_FILTER_READ,
+                        flags=select.KQ_EV_DELETE,
+                    )
+                ],
+                0,
+                0,
+            )
+            acknowledge_group_commit(
+                target_pid,
+                group,
+                ready_fd,
+                commit_fd,
+                state,
+            )
+
+
+def run_guard(
+    root_pid,
+    target_pid,
+    bridge_pid,
+    group,
+    ready_fd,
+    commit_fd,
+):
+    state = {"committed": False}
+    try:
+        # close_lock_fds() already ran before os.pipe(); calling it again
+        # could close a protocol FD that reused descriptor 8 or 9.
+        close_guard_descriptors(ready_fd, commit_fd)
+        if sys.platform.startswith("linux"):
+            guard_linux(
+                root_pid,
+                target_pid,
+                bridge_pid,
+                group,
+                ready_fd,
+                commit_fd,
+                state,
+            )
+        elif sys.platform == "darwin":
+            guard_darwin(
+                root_pid,
+                target_pid,
+                bridge_pid,
+                group,
+                ready_fd,
+                commit_fd,
+                state,
+            )
+        else:
+            raise RuntimeError(f"unsupported platform: {sys.platform}")
+    except BaseException:
+        terminate_target(target_pid, group, state)
+        for descriptor in (ready_fd, commit_fd):
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        os._exit(EXIT_SOFTWARE)
+
+
+if len(sys.argv) < 3 or sys.argv[1] not in (
+    "exact",
+    "group",
+    "external-group",
+):
+    fail(
+        "usage: anvil-parent-guard.py "
+        "exact|group|external-group PROGRAM [ARG ...]"
+    )
+
+signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+close_lock_fds()
+mode = sys.argv[1]
+external_owner = mode == "external-group"
+program_argv = sys.argv[2:]
+target_pid = os.getpid()
+os.environ.pop(GUARDED_OWNER_PID_ENV, None)
+os.environ.pop(GUARDED_OWNER_START_ENV, None)
+root_pid = validate_parent_pid(
+    os.environ.pop("ANVIL_HEADLESS_PARENT_PID", None)
+)
+root_start_identity = (
+    process_start_identity(root_pid) if external_owner else None
+)
+if external_owner and root_start_identity is None:
+    fail("cannot identify external owner process generation")
+if os.getppid() != root_pid:
+    os.kill(os.getpid(), signal.SIGKILL)
+bridge_pid = validate_bridge_pid(
+    os.environ.pop("ANVIL_HEADLESS_BRIDGE_PID", None)
+)
+
+if sys.platform.startswith("linux"):
+    if not hasattr(os, "pidfd_open"):
+        fail("Linux requires pidfd_open")
+    # PR_SET_PDEATHSIG tracks the particular parent thread which created
+    # this process. That is correct for our single-threaded Python daemon
+    # parents, but not for multithreaded Codex/Tokio. External owners use
+    # the guard's pidfd for process-wide death notification instead.
+    if not external_owner:
+        install_linux_parent_death_signal(root_pid)
+elif sys.platform != "darwin" or not hasattr(select, "kqueue"):
+    fail(f"unsupported platform: {sys.platform}")
+
+group = mode in ("group", "external-group")
+ready_read, ready_write = os.pipe()
+commit_read, commit_write = os.pipe()
+handshake_deadline = time.monotonic() + READY_TIMEOUT_SECONDS
+try:
+    guard_pid = os.fork()
+except OSError as error:
+    for descriptor in (ready_read, ready_write, commit_read, commit_write):
+        os.close(descriptor)
+    fail(f"cannot fork guard: {error}")
+
+if guard_pid == 0:
+    os.close(ready_read)
+    os.close(commit_write)
+    run_guard(
+        root_pid,
+        target_pid,
+        bridge_pid,
+        group,
+        ready_write,
+        commit_read,
+    )
+    os._exit(0)
+
+os.close(ready_write)
+os.close(commit_read)
+
+def read_handshake_marker():
+    remaining = handshake_deadline - time.monotonic()
+    if remaining <= 0:
+        return b""
+    readable, _, _ = select.select([ready_read], [], [], remaining)
+    if not readable or time.monotonic() >= handshake_deadline:
+        return b""
+    marker = os.read(ready_read, 1)
+    if time.monotonic() >= handshake_deadline:
+        return b""
+    return marker
+
+def reap_guard_until_handshake_deadline():
+    while True:
+        try:
+            waited, _status = os.waitpid(guard_pid, os.WNOHANG)
+        except ChildProcessError:
+            return
+        except InterruptedError:
+            continue
+        if waited == guard_pid:
+            return
+        remaining = handshake_deadline - time.monotonic()
+        if remaining <= 0:
+            return
+        time.sleep(min(0.01, remaining))
+
+def abort_guard(message):
+    for descriptor in (ready_read, commit_write):
+        try:
+            os.close(descriptor)
+        except OSError:
+            pass
+    terminate_target(guard_pid, False, {"committed": False})
+    reap_guard_until_handshake_deadline()
+    fail(message)
+
+ready = read_handshake_marker()
+if ready != b"R":
+    abort_guard("guard did not become ready")
+if os.getppid() != root_pid:
+    os.kill(os.getpid(), signal.SIGKILL)
+
+# The target cannot exec until the monitor acknowledges commitment.  The
+# monitor starts in this process's inherited group, so it remains movable
+# by its exact unreaped parent until it joins and anchors target_pid.
+if group and os.getpgrp() != target_pid:
+    try:
+        os.setpgid(0, 0)
+    except OSError as error:
+        abort_guard(f"cannot establish target process group: {error}")
+if group and os.getpgrp() != target_pid:
+    abort_guard("target is not its process-group leader")
+if group:
+    try:
+        os.setpgid(guard_pid, target_pid)
+        guard_group = os.getpgid(guard_pid)
+    except OSError as error:
+        abort_guard(f"cannot anchor target process group: {error}")
+    if guard_group != target_pid:
+        abort_guard("guard did not anchor the target process group")
+
+try:
+    written = os.write(commit_write, b"C")
+except OSError as error:
+    abort_guard(f"cannot commit target process group: {error}")
+os.close(commit_write)
+if written != 1:
+    abort_guard("target process-group commitment was incomplete")
+
+acknowledged = read_handshake_marker()
+os.close(ready_read)
+if acknowledged != b"A":
+    abort_guard("guard did not acknowledge target process group")
+if os.getppid() != root_pid:
+    os.kill(os.getpid(), signal.SIGKILL)
+if external_owner:
+    if process_start_identity(root_pid) != root_start_identity:
+        os.kill(os.getpid(), signal.SIGKILL)
+    if os.getppid() != root_pid:
+        os.kill(os.getpid(), signal.SIGKILL)
+    os.environ[GUARDED_OWNER_PID_ENV] = str(root_pid)
+    os.environ[GUARDED_OWNER_START_ENV] = root_start_identity
+
+try:
+    os.execvpe(program_argv[0], program_argv, os.environ)
+except OSError as error:
+    terminate_target(guard_pid, False, {"committed": False})
+    fail(f"cannot exec {program_argv[0]}: {error}")

@@ -107,7 +107,7 @@ files_shell() {
 files_python() {
     local f
     while IFS= read -r f; do
-        if [[ $f == *.py ]]; then
+        if [[ $f == *.py || $f == *.py.in ]]; then
             printf '%s\n' "$f"
         elif _shebang_is python "$f"; then
             printf '%s\n' "$f"
@@ -337,18 +337,42 @@ run_shell_format() {
 
 run_python_lint() {
     need ruff python-lint || return
-    local -a py=()
-    while IFS= read -r f; do py+=("$f"); done < <(files_python)
-    if [[ ${#py[@]} -eq 0 ]]; then
+    need python3 python-lint || return
+    local f bad=0
+    local -a py=() templates=()
+    while IFS= read -r f; do
+        if [[ $f == *.py.in ]]; then
+            templates+=("$f")
+        else
+            py+=("$f")
+        fi
+    done < <(files_python)
+    if [[ ${#py[@]} -eq 0 && ${#templates[@]} -eq 0 ]]; then
         note "python-lint: no files"
         return
     fi
-    # ruff reports every file in one pass and exits non-zero on any finding, so
-    # a single invocation already satisfies the accumulate-everything rule.
-    if ruff check "${py[@]}"; then
-        note "python-lint: ${#py[@]} file(s) OK"
+    if [[ ${#py[@]} -gt 0 ]] && ! ruff check "${py[@]}"; then
+        bad=1
+    fi
+    for f in "${templates[@]}"; do
+        if ! python3 - "$f" <<'PY' | ruff check --stdin-filename "${f%.in}" -; then
+import re
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1]).read_text(encoding="utf-8")
+rendered, count = re.subn(r"@[A-Z][A-Z0-9_]*@", "1", source)
+if count == 0:
+    raise SystemExit(f"quality: Python template has no placeholders: {sys.argv[1]}")
+sys.stdout.write(rendered)
+PY
+            bad=1
+        fi
+    done
+    if [[ $bad -eq 0 ]]; then
+        note "python-lint: $((${#py[@]} + ${#templates[@]})) file(s) OK (${#templates[@]} rendered template(s))"
     else
-        fail "python-lint: ruff reported findings across ${#py[@]} file(s)"
+        fail "python-lint: ruff reported findings across $((${#py[@]} + ${#templates[@]})) file(s)"
     fi
 }
 

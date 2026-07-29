@@ -334,6 +334,20 @@
       "gap": null
     },
     {
+      "path": "packages/anvil-mcp/lock-launcher.py.in",
+      "kind": "product",
+      "tier": "ci-on-demand",
+      "evidence": ["python-lint renders placeholders before Ruff; Anvil dedicated/headless checks execute the packaged program"],
+      "gap": "Dynamic coverage is not collected from the substituted packaged program."
+    },
+    {
+      "path": "packages/anvil-mcp/parent-guard.py.in",
+      "kind": "product",
+      "tier": "ci-on-demand",
+      "evidence": ["python-lint renders placeholders before Ruff; Anvil dedicated/headless checks execute the packaged program"],
+      "gap": "Dynamic coverage is not collected from the substituted packaged program."
+    },
+    {
       "path": "packages/anvil-mcp/persistent-bridge-soak-test.py",
       "kind": "test",
       "tier": "ci-on-demand",
@@ -346,6 +360,13 @@
       "tier": "ci-on-demand",
       "evidence": ["checks.*.anvil-mcp-persistent-soak executes this long-lived reliability harness"],
       "gap": "The name lacks -test but the file is a test harness; in-derivation coverage is required."
+    },
+    {
+      "path": "packages/anvil-mcp/safe-emacsclient.py",
+      "kind": "product",
+      "tier": "ci-on-demand",
+      "evidence": ["packages/anvil-mcp/safe-emacsclient-test.py exercises the extracted runtime program"],
+      "gap": "Packaged-path behavior is exercised by the Anvil dedicated/headless checks; dynamic coverage is not collected."
     },
     {
       "path": "packages/anvil-mcp/safe-emacsclient-test.py",

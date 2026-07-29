@@ -103,6 +103,26 @@ class QualityEachFileTests(unittest.TestCase):
         p.write_text(text)
         return p
 
+    def test_python_template_is_discovered(self):
+        self.write("template.py.in", "VALUE = @VALUE@\n")
+        self.git("add", "template.py.in")
+        proc = self.quality("--files", "python")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout.splitlines(), ["template.py.in"])
+
+    @unittest.skipUnless(have("ruff"), "ruff is not on PATH")
+    def test_python_template_is_rendered_for_lint(self):
+        self.write("template.py.in", "VALUE = @VALUE@\n")
+        self.git("add", "template.py.in")
+        proc = self.quality("python-lint")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("1 rendered template(s)", proc.stderr + proc.stdout)
+
+        self.write("template.py.in", "if @VALUE@\n    pass\n")
+        proc = self.quality("python-lint")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("template.py", proc.stderr + proc.stdout)
+
     # --- positive control -------------------------------------------------
     # Without this, a suite that skipped EVERYTHING would satisfy every
     # "passes" assertion below. This proves the harness can see a real file

@@ -311,11 +311,26 @@ class InventoryTests(RepositoryFixture):
     def test_inventory_is_git_tracked_and_sees_staged_files(self) -> None:
         self.write("staged.py", "value = 1\n")
         self.git("add", "staged.py")
+        self.write("template.py.in", "value = @VALUE@\n")
+        self.git("add", "template.py.in")
         self.write("untracked.py", "value = 2\n")
         files = coverage_report.discover_files(self.repo)
         self.assertIn("staged.py", files["python"])
+        self.assertIn("template.py.in", files["python"])
         self.assertNotIn("untracked.py", files["python"])
         self.assertEqual(files["pythonTests"], ["bin/sample-test.py"])
+        static = coverage_report.discover_python_static(
+            self.repo, ["template.py.in"]
+        )
+        self.assertEqual(static, {"assertionCalls": [], "testCases": []})
+
+    def test_python_template_without_placeholder_is_rejected(self) -> None:
+        self.write("template.py.in", "value = 1\n")
+        self.git("add", "template.py.in")
+        with self.assertRaisesRegex(
+            coverage_report.CoverageError, "contains no substitution placeholders"
+        ):
+            coverage_report.discover_python_static(self.repo, ["template.py.in"])
 
     def test_report_refuses_index_worktree_source_divergence(self) -> None:
         self.write("tool.py", "def value():\n    return 99\n")
