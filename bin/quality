@@ -153,7 +153,17 @@ each_file() {
         # reported as "1 of 96 file(s) failed" -- a formatting failure that does
         # not exist, which also hides whether anything real failed. A path that is
         # gone cannot be checked, so skip it rather than manufacture a failure.
-        [[ -e $f ]] || continue
+        #
+        # `-L` is deliberate, not redundant: `-e` follows symlinks, so a tracked
+        # DANGLING symlink would also be skipped by `-e` alone. Those two cases
+        # deserve opposite treatment. A staged rename is benign bookkeeping; a
+        # tracked symlink whose target is missing is a real repository defect that
+        # nothing else in this tool would catch, so it must reach the checker and
+        # fail loudly rather than vanish into a silent skip. (This repository
+        # currently tracks zero symlinks, so the choice is free today -- which is
+        # exactly why it is worth fixing the semantics now rather than inheriting
+        # whichever behaviour `-e` happened to give.)
+        [[ -e $f || -L $f ]] || continue
         count=$((count + 1))
         if ! "${cmd[@]}" "$f" >"$out" 2>&1; then
             bad=$((bad + 1))
