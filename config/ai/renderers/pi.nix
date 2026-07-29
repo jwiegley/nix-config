@@ -121,6 +121,10 @@ let
         "x-litellm-tags" = "pi";
         "x-litellm-timeout" = "7200";
       };
+      modelOverrides."openrouter/z-ai/glm-5.2".compat = {
+        sendSessionAffinityHeaders = true;
+        sessionAffinityFormat = "openrouter";
+      };
       models = map renderModel solModels;
     };
   routerProvider = {
