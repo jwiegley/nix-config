@@ -74,10 +74,10 @@ die() {
     exit 1
 }
 
-# All derivation lives in one Python program: it shells out to grep for the
-# repo-wide internal sweep (to reproduce issue #17's verification command
-# exactly), scans the tracked internal file types above, and reads consumer
-# flake.nix / flake.lock / *.nix files directly.
+# All derivation lives in one Python program: it scopes repository scans through
+# git ls-files, shells out to grep over those tracked paths, and reads tracked
+# consumer flake.nix / flake.lock / *.nix files directly (with a labeled
+# filesystem fallback only when a consumer is not a Git checkout).
 derive() {
     python3 - "$repo_root" "$consumer_base" "$repo_head" <<'PY'
 import collections
@@ -667,19 +667,18 @@ commands = {
         "derive unique file names from internalConfigAiRefs"),
     "internalConfigAiExcludedPaths": sorted(EXCLUDED_INTERNAL_PATHS),
     "flakeAiInternalConsumers": (
-        "grep -rIn --exclude-dir=.git "
-        + " ".join("--include='%s'" % g for g in INCLUDE_GLOBS)
-        + " -E -e 'flake-ai\\.nix' <repo_root>  # keep .nix, non-comment, path-import lines"),
+        "reuse git-ls-files-scoped tracked paths; grep -In -E -e "
+        "'flake-ai\\.nix' <existing-tracked-files>  # keep .nix, non-comment, path-import lines"),
     "compatSurfaces": [
-        "grep -rIn --exclude-dir=.git "
-        + " ".join("--include='%s'" % g for g in INCLUDE_GLOBS)
-        + " -E -e '%s' <repo_root>" % pat for _, pat in COMPAT_SURFACES],
+        "reuse git-ls-files-scoped tracked paths; grep -In -E -e '%s' "
+        "<existing-tracked-files>" % pat for _, pat in COMPAT_SURFACES],
     "consumerInputs": (
         "parse <consumer>/flake.lock for nodes referencing nix-config "
         "(dir='' repo-root input, dir='config/ai' subflake input); locate each "
         "url=\"...nix-config...\" line in <consumer>/flake.nix"),
     "consumerReachins": (
-        "scan every *.nix under <consumer>/ for '${inputs.nix-config}/PATH' "
+        "scan every tracked *.nix under <consumer>/ (filesystem fallback if non-Git) "
+        "for '${inputs.nix-config}/PATH' "
         "interpolations, for 'inherit (import \"${inputs.nix-config}/...\") ATTR ;' "
         "cherry-picks, and for 'inputs.nix-config-ai.overlays' uses"),
     "remoteChecks": [

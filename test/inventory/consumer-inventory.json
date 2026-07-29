@@ -3,7 +3,7 @@
  "artifact": "consumer-inventory",
  "generatedBy": "bin/consumer-inventory",
  "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
- "repoHead": "b6a57c4920b7759d605f527b2cc962f2727a1081",
+ "repoHead": "c6e8c4154ef61b04493a419e3ded974adeec32ea",
  "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in bin/consumer-inventory.",
  "classificationScheme": {
   "rename-now": "Reference to the literal config/ai path inside nix-config's own tree; #47 rewrites it in the rename commit.",
@@ -17,14 +17,14 @@
   "internalConfigAiExcludedPaths": [
    "test/inventory/consumer-inventory.json"
   ],
-  "flakeAiInternalConsumers": "grep -rIn --exclude-dir=.git --include='*.nix' --include='*.json' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -E -e 'flake-ai\\.nix' <repo_root>  # keep .nix, non-comment, path-import lines",
+  "flakeAiInternalConsumers": "reuse git-ls-files-scoped tracked paths; grep -In -E -e 'flake-ai\\.nix' <existing-tracked-files>  # keep .nix, non-comment, path-import lines",
   "compatSurfaces": [
-   "grep -rIn --exclude-dir=.git --include='*.nix' --include='*.json' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -E -e 'ai-nix' <repo_root>",
-   "grep -rIn --exclude-dir=.git --include='*.nix' --include='*.json' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -E -e 'node-red' <repo_root>",
-   "grep -rIn --exclude-dir=.git --include='*.nix' --include='*.json' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -E -e 'global.*[Aa]nvil' <repo_root>"
+   "reuse git-ls-files-scoped tracked paths; grep -In -E -e 'ai-nix' <existing-tracked-files>",
+   "reuse git-ls-files-scoped tracked paths; grep -In -E -e 'node-red' <existing-tracked-files>",
+   "reuse git-ls-files-scoped tracked paths; grep -In -E -e 'global.*[Aa]nvil' <existing-tracked-files>"
   ],
   "consumerInputs": "parse <consumer>/flake.lock for nodes referencing nix-config (dir='' repo-root input, dir='config/ai' subflake input); locate each url=\"...nix-config...\" line in <consumer>/flake.nix",
-  "consumerReachins": "scan every *.nix under <consumer>/ for '${inputs.nix-config}/PATH' interpolations, for 'inherit (import \"${inputs.nix-config}/...\") ATTR ;' cherry-picks, and for 'inputs.nix-config-ai.overlays' uses",
+  "consumerReachins": "scan every tracked *.nix under <consumer>/ (filesystem fallback if non-Git) for '${inputs.nix-config}/PATH' interpolations, for 'inherit (import \"${inputs.nix-config}/...\") ATTR ;' cherry-picks, and for 'inputs.nix-config-ai.overlays' uses",
   "remoteChecks": [
    "gh search code 'dir=config/ai nix-config' --owner jwiegley --limit 30",
    "gh search code 'dir=config/ai' --owner positron-ai --limit 30",
