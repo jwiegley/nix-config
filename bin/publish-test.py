@@ -330,6 +330,62 @@ exec "$REAL_GIT" "$@"
             RACE_SHA=raced_sha,
         )
 
+    def _readback_failure_env(self):
+        fake_bin = os.path.join(self.tmp, "readback-bin")
+        os.makedirs(fake_bin, exist_ok=True)
+        real_git = shutil.which("git") or "/usr/bin/git"
+        marker = os.path.join(self.tmp, "github-pushed")
+        wrapper = os.path.join(fake_bin, "git")
+        with open(wrapper, "w") as fh:
+            fh.write(
+                """#!/usr/bin/env bash
+set -euo pipefail
+if [[ ${1:-} == push && ${2:-} == github ]]; then
+    if "$REAL_GIT" "$@"; then status=0; else status=$?; fi
+    : >"$READBACK_FAIL_MARKER"
+    exit "$status"
+fi
+if [[ ${1:-} == ls-remote && ${2:-} == github && -e $READBACK_FAIL_MARKER ]]; then
+    echo "simulated readback network failure" >&2
+    exit 1
+fi
+exec "$REAL_GIT" "$@"
+"""
+            )
+        os.chmod(wrapper, 0o755)
+        return clean_env(
+            **self.signing_env,
+            PATH=f"{fake_bin}:{os.environ['PATH']}",
+            REAL_GIT=real_git,
+            READBACK_FAIL_MARKER=marker,
+        )
+
+    def _successful_push_race_env(self, raced_sha):
+        fake_bin = os.path.join(self.tmp, "success-race-bin")
+        os.makedirs(fake_bin, exist_ok=True)
+        real_git = shutil.which("git") or "/usr/bin/git"
+        wrapper = os.path.join(fake_bin, "git")
+        with open(wrapper, "w") as fh:
+            fh.write(
+                """#!/usr/bin/env bash
+set -euo pipefail
+if [[ ${1:-} == push && ${2:-} == github ]]; then
+    if "$REAL_GIT" "$@"; then status=0; else status=$?; fi
+    "$REAL_GIT" --git-dir="$RACE_REMOTE" update-ref refs/heads/main "$RACE_SHA"
+    exit "$status"
+fi
+exec "$REAL_GIT" "$@"
+"""
+            )
+        os.chmod(wrapper, 0o755)
+        return clean_env(
+            **self.signing_env,
+            PATH=f"{fake_bin}:{os.environ['PATH']}",
+            REAL_GIT=real_git,
+            RACE_REMOTE=self.github,
+            RACE_SHA=raced_sha,
+        )
+
     def _third_remote_revision(self):
         other = os.path.join(self.tmp, "racer")
         git("clone", "-q", self.github, other, cwd=self.tmp)
@@ -416,7 +472,47 @@ exec "$REAL_GIT" "$@"
         combined = r.stdout + r.stderr
         self.assertIn("PARTIAL PUBLISH", combined)
         self.assertIn("github", combined)
+        self.assertIn("github observed: %s" % third, combined)
+        self.assertIn("git fetch github main", combined)
+        self.assertIn("git merge-base --is-ancestor %s %s" % (third, head), combined)
         self.assertIn("git push github %s:refs/heads/main" % head[:12], combined)
+        self.assertNotIn("now behind", combined)
+        self.assertEqual(self.remote_sha(self.origin), head)
+        self.assertEqual(self.remote_sha(self.github), third)
+
+    def test_post_push_readback_failure_is_loud_partial_publish(self):
+        head = self._signed_commit("s\n", "a signed commit")
+        r = subprocess.run(
+            [PUBLISH, "--publish"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=self._readback_failure_env(),
+        )
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        combined = r.stdout + r.stderr
+        self.assertIn("push readback failed", combined)
+        self.assertIn("PARTIAL PUBLISH", combined)
+        self.assertIn("github observed: <unreadable>", combined)
+        self.assertIn("git ls-remote github refs/heads/main", combined)
+        self.assertEqual(self.remote_sha(self.origin), head)
+        self.assertEqual(self.remote_sha(self.github), head)
+
+    def test_successful_push_then_third_readback_is_partial_publish(self):
+        third = self._third_remote_revision()
+        head = self._signed_commit("s\n", "a signed commit")
+        r = subprocess.run(
+            [PUBLISH, "--publish"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=self._successful_push_race_env(third),
+        )
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        combined = r.stdout + r.stderr
+        self.assertIn("reported success but reads back", combined)
+        self.assertIn("PARTIAL PUBLISH", combined)
+        self.assertIn("github observed: %s" % third, combined)
         self.assertEqual(self.remote_sha(self.origin), head)
         self.assertEqual(self.remote_sha(self.github), third)
 

@@ -668,7 +668,7 @@ no push, activation, or history rewrite is authorized.
 
 ---
 
-## 2026-07-29 — #88 mirror-race reconciliation implemented, audit pending
+## 2026-07-29 — #88 mirror-race reconciliation, fess fixes pending commit
 
 `bin/publish` now documents Gitea's push-mirror relationship and always reads a
 remote ref after the real push attempt. A rejected push whose readback already equals
@@ -683,6 +683,17 @@ failure. Watched-fail evidence was run separately: refusing target recovery made
 mirror test fail with false `PARTIAL PUBLISH`; accepting any nonempty readback made
 the third-revision test falsely succeed. Both mutations were restored.
 
-Focused verification: 20 publish tests pass; shell and Python lint pass. Remaining:
-full staged `bin/quality`, signed commit, independent fess audit, issue/project
-closeout, and observation cleanup. No real push was performed or authorized.
+Signed implementation `f6d08301` passed the full staged quality gate and all hooks.
+Independent fess found two real gaps: post-push `ls-remote` failure exited under
+`pipefail` before the loud diagnostic, and a third revision was inaccurately called
+\"behind\" with a retry that could only reject again.
+
+The fess fix guards readback failure, records each observed remote state, and emits
+distinct safe guidance for unreadable, missing, fast-forwardable, and non-ancestor
+states. New tests cover readback network failure and successful-push/third-readback in
+addition to the rejected-push races. Removing the readback guard and observed-state
+recording was watched failing, then restored. Focused verification: 22 publish tests;
+shell and Python lint pass.
+
+Remaining: full staged `bin/quality`, signed fess-fix commit, issue/project closeout,
+and observation cleanup. No real push was performed or authorized.

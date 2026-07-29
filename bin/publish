@@ -242,6 +242,7 @@ fi
 
 declare -a pushed=()
 declare -a failed=()
+declare -A failed_state=()
 for r in "${need_push[@]}"; do
     say "pushing to $r"
     if git push "$r" "$rev:refs/heads/$branch"; then
@@ -249,7 +250,13 @@ for r in "${need_push[@]}"; do
     else
         push_succeeded=0
     fi
-    confirm=$(git ls-remote "$r" "refs/heads/$branch" 2>/dev/null | awk '{print $1}')
+    if confirm=$(git ls-remote "$r" "refs/heads/$branch" 2>/dev/null | awk '{print $1}'); then
+        observed=${confirm:-<missing>}
+    else
+        warn "  $r push readback failed; remote state is unverified"
+        confirm=""
+        observed="<unreadable>"
+    fi
     if [[ $confirm == "$rev" ]]; then
         if [[ $push_succeeded -eq 1 ]]; then
             say "  $r confirmed at $short"
@@ -261,8 +268,10 @@ for r in "${need_push[@]}"; do
     elif [[ $push_succeeded -eq 1 ]]; then
         warn "  $r reported success but reads back ${confirm:-<nothing>}"
         failed+=("$r")
+        failed_state["$r"]=$observed
     else
         failed+=("$r")
+        failed_state["$r"]=$observed
     fi
 done
 
@@ -281,9 +290,26 @@ warn "revision : $short on $branch"
 [[ ${#already[@]} -gt 0 ]] && warn "already  : ${already[*]}"
 warn "FAILED   : ${failed[*]}"
 warn ""
-warn "Hosts reading the failed remote are now behind. Reconcile with:"
+warn "Failed remotes are not verified at the target revision. Reconcile safely:"
 for r in "${failed[@]}"; do
-    warn "    git push $r $short:refs/heads/$branch"
+    observed=${failed_state[$r]-<unreadable>}
+    warn "  $r observed: $observed (target $short)"
+    case $observed in
+    "<unreadable>")
+        warn "    git ls-remote $r refs/heads/$branch"
+        warn "    # Inspect the remote state, then retry bin/publish --publish."
+        ;;
+    "<missing>")
+        warn "    git push $r $short:refs/heads/$branch"
+        ;;
+    *)
+        warn "    git fetch $r $branch"
+        warn "    if git merge-base --is-ancestor $observed $rev; then"
+        warn "        git push $r $short:refs/heads/$branch"
+        warn "    else # rebase/investigate; never force"
+        warn "    fi"
+        ;;
+    esac
 done
 warn ""
 warn "Do not work around this by pointing a consumer at the remote that"
