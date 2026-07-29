@@ -2,6 +2,11 @@
 
 **Status:** A6 / issue #80 research and design authority, 2026-07-29.
 
+**Implementation boundary:** at the research commits, no coverage collector, artifact,
+or `bin/quality coverage` suite exists yet. Present-tense requirements below describe
+the binding implementation contract unless a paragraph explicitly labels a live
+measurement. Achieved evidence begins only when later commits and their gates are named.
+
 ## Decision
 
 Stock Nix 2.34/2.35 exposes no statement-, expression-, branch-, or line-coverage
