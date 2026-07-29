@@ -695,5 +695,10 @@ addition to the rejected-push races. Removing the readback guard and observed-st
 recording was watched failing, then restored. Focused verification: 22 publish tests;
 shell and Python lint pass.
 
-Remaining: full staged `bin/quality`, signed fess-fix commit, issue/project closeout,
-and observation cleanup. No real push was performed or authorized.
+Signed fess-fix `22055e0f` landed with 22 publish tests. Its staged `bin/quality` run
+passed every suite, including consumer evaluation 5 ran / 0 skipped, and its
+unbypassed hook passed all affected suites. Both #88 commits verify `%G? = G`.
+
+#88 is closed and both project cards are Done. No partner-observation Markdown
+remains. Next ordered unit is **#89**, the empty-range pre-push gate defect. No real
+push was performed or authorized.
