@@ -192,7 +192,7 @@ pkgs.runCommand "ai-home-manager-catalog-renderers"
             errors.append(f"{label}: unknown fixture kind {record['kind']!r}")
 
     if errors:
-        print("ai-home-manager-contract: renderer document check failed:", file=sys.stderr)
+        print("ai-home-manager-catalog-renderers: renderer document check failed:", file=sys.stderr)
         for error in errors:
             print(f"  {error}", file=sys.stderr)
         raise SystemExit(1)
@@ -229,7 +229,7 @@ pkgs.runCommand "ai-home-manager-catalog-renderers"
     if not statusline.is_file():
         missing.append("statusline")
     if missing:
-        print("ai-home-manager-contract: missing asset categories:", file=sys.stderr)
+        print("ai-home-manager-catalog-renderers: missing asset categories:", file=sys.stderr)
         for category in missing:
             print(f"  {category}", file=sys.stderr)
         raise SystemExit(1)
@@ -275,7 +275,7 @@ pkgs.runCommand "ai-home-manager-catalog-renderers"
             errors.append(f"dangling or escaping symlink: {path.relative_to(root)}: {error}")
 
     if errors:
-        print("ai-home-manager-contract: asset check failed:", file=sys.stderr)
+        print("ai-home-manager-catalog-renderers: asset check failed:", file=sys.stderr)
         for error in errors:
             print(f"  {error}", file=sys.stderr)
         raise SystemExit(1)
@@ -405,7 +405,7 @@ pkgs.runCommand "ai-home-manager-catalog-renderers"
             )
 
     if errors:
-        print("ai-home-manager-contract: asset check failed:", file=sys.stderr)
+        print("ai-home-manager-catalog-renderers: asset check failed:", file=sys.stderr)
         for error in errors:
             print(f"  {error}", file=sys.stderr)
         raise SystemExit(1)

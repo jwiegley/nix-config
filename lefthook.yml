@@ -54,7 +54,10 @@ pre-push:
         nix build --no-link
         .#checks.aarch64-darwin.agent-resources
         .#checks.aarch64-darwin.agent-wrappers
-        .#checks.aarch64-darwin.ai-home-manager-contract
+        .#checks.aarch64-darwin.ai-home-manager-catalog-renderers
+        .#checks.aarch64-darwin.ai-home-manager-integration
+        .#checks.aarch64-darwin.ai-home-manager-model-sync
+        .#checks.aarch64-darwin.ai-home-manager-package-selection
         .#checks.aarch64-darwin.pi-gallery
     system-build:
       run: ./build system

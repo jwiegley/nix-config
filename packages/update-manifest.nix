@@ -14,7 +14,7 @@
         "packages/agent-resources.nix"
         "config/ai/catalog.nix"
         "test/ai/agent-resources.nix"
-        "test/ai/home-manager-contract.nix"
+        "test/ai/home-manager-contract-common.nix"
       ];
     };
 

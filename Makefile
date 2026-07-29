@@ -53,7 +53,10 @@ test:
 	nix build --no-link \
 	  .#checks.$(SYSTEM).agent-resources \
 	  .#checks.$(SYSTEM).agent-wrappers \
-	  .#checks.$(SYSTEM).ai-home-manager-contract \
+	  .#checks.$(SYSTEM).ai-home-manager-catalog-renderers \
+	  .#checks.$(SYSTEM).ai-home-manager-integration \
+	  .#checks.$(SYSTEM).ai-home-manager-model-sync \
+	  .#checks.$(SYSTEM).ai-home-manager-package-selection \
 	  .#checks.$(SYSTEM).pi-gallery
 
 tools:
