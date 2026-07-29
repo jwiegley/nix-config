@@ -26,9 +26,15 @@ OPEN_DECISION_COUNT: 8
 # Number of open decisions awaiting a human answer:
 grep -cE '^Q[0-9]+' doc/FLEET-DECISIONS.md      # == 8
 
-# Number of still-unanswered slots (14 total; Q4 and Q5 carry per-subject
-# sub-slots). This count must fall to 0 as decisions are recorded:
-grep -cE '^- \*\*Answer.*_\(unanswered\)_' doc/FLEET-DECISIONS.md   # == 14 until answers land
+# Total answer slots. FIXED at 14 (Q4 and Q5 carry per-subject sub-slots), so this
+# is a real invariant: it changes only when a decision is added or removed.
+grep -cE '^- \*\*Answer' doc/FLEET-DECISIONS.md                      # == 14
+
+# Still-unanswered slots. This is a PROGRESS counter, not an invariant -- it must
+# fall monotonically to 0 and is not pinned to any number. Pinning it (it once read
+# "== 14") makes the check fail the moment an answer lands, which trains a reader to
+# ignore it.
+grep -cE '^- \*\*Answer.*_\(unanswered\)_' doc/FLEET-DECISIONS.md  # falls to 0
 
 # Settled entries carried as context (not counted as open):
 grep -cE '^S[0-9]+' doc/FLEET-DECISIONS.md      # == 8
@@ -81,7 +87,14 @@ Q1. What single mechanism should own npm manifest normalization, so the Nix pack
 
 - **Origin / unblocks:** I15-Q1 → [#39](https://github.com/jwiegley/nix-config/issues/39) (`E2-WU4C-NPM`, WU4c-1.2). Cross-stream coupling X2: Pi-fleet WU6/WU8 ([#61](https://github.com/jwiegley/nix-config/issues/61)/[#66](https://github.com/jwiegley/nix-config/issues/66)) assert identity against the manifest/lock pairing, so this must land **before** them or those assertions become meaningless.
 - **Type:** engineering. The *direction* is already settled — there must be exactly one shared authority, and it is computed inside the isolated candidate transaction (see the reverted-unsafe `a88a77ba` / revert `a98385b9`, and Q2). What is open is **where that one authority lives**.
-- **Why it matters if defaulted:** the six Pi npm targets do not build from the raw upstream `package.json`; the derivation first *normalizes* it (strips dev/peer deps, applies per-package removals) and pairs it with a committed `package-lock.json`. The reverted attempt generated locks from the *published* manifest, which is not what the derivation builds — a silent drift that ships a lock inconsistent with the package. If the next implementer re-derives normalization independently in the updater, the drift returns.
+- **Why it matters if defaulted:** the **nine** Pi npm targets do not build from the raw upstream `package.json`
+  (corrected 2026-07-29: this said "six". Measured — nine committed locks exist under
+  `packages/pi-gallery/locks/`, and all nine are `pending` with no executor: betterwright,
+  pi-artifacts, pi-dynamic-workflows, pi-hashline-edit-pro, pi-insights, pi-lens,
+  pi-markdown-preview, pi-subagents, pi-web-access. `betterwright`, `pi-markdown-preview`
+  and `pi-subagents` landed in `04af0e22`/`e0ed94fa` and `pi-dynamic-workflows` in
+  `777fe62b`, all after this text was written. Whatever authority Q1 chooses must cover
+  all nine or the three omitted keep exactly the drift Q1 exists to remove.); the derivation first *normalizes* it (strips dev/peer deps, applies per-package removals) and pairs it with a committed `package-lock.json`. The reverted attempt generated locks from the *published* manifest, which is not what the derivation builds — a silent drift that ships a lock inconsistent with the package. If the next implementer re-derives normalization independently in the updater, the drift returns.
 - **Options:**
   - **(a) Extract the derivation's inline normalization** (`packages/pi-gallery/default.nix`) into one importable module that *both* the build and `bin/update-overlay` consume. One source of truth; both paths provably identical.
   - **(b) Have the updater invoke the derivation's own normalization** at update time (no extraction), treating the build as the authority. Avoids a new module but couples the updater to derivation internals.
@@ -102,8 +115,8 @@ Q2. Should `bin/update-overlay` **delegate** compound work to the isolated `upda
   - **(b) A single shared transaction helper** factored out of `update-agents`, called by both entry points. Same one-implementation guarantee, but neither command is subordinate to the other.
   - **(c) `update-overlay` gains its own candidate mode** mirroring the discipline. Independent, but duplicates the safety-critical code.
 - **Recommendation (evidence-based, not a decision):** (a) or (b) over (c). The programme's stated rule is "fix root causes at the narrowest shared seam"; two copies of interruption-safe transaction code violates it. No evidence distinguishes (a) from (b); that choice is genuinely open.
-- **Answer:** _(unanswered)_
-- **Date:** _______  **Decided by:** _______  **Follow-up:** record the chosen ownership in #33; ensure 1.2–1.5 (#39/#40/#41/#38) build on it.
+- **Answer:** **(a)** — `bin/update-overlay` delegates all compound work to `bin/update-agents`' existing detached-candidate-worktree transaction. A direct `update-overlay <compound-target>` refuses and routes rather than computing in the authoritative tree. Option (c) is ruled out by the code, not by preference: `update-overlay`'s own `SourceTransaction` (`bin/update-overlay:1093`) is a soft in-process restore, so the only interruption-safe isolation is `update-agents`' worktree (`:192`), repo-scoped lock (`:183`), inventory-derived allowlist (`:227-247`) and ff-merge-only publish (`:275-288`); reimplementing that in Python duplicates safety-critical logic. (a) over (b) is the maintainer's ratification, not a code verdict — the bash/Python boundary is neutral between them, since under both a Python entry point ends up invoking bash transaction code.
+- **Date:** 2026-07-29  **Decided by:** John Wiegley  **Follow-up:** record in #33/#38; the known cost is that `update-agents`' transaction also refreshes both flake locks, runs nixfmt and two flake checks and creates a signed commit, so a narrow source-hash bump needs either that whole pipeline or a narrower entry point inside `update-agents` (switch/push stay gated).
 
 ---
 
@@ -116,8 +129,8 @@ Q3. Which fixed root inputs are **package-producing policy pins** (to be catalog
   - **(a) Catalog every hand-pinned, package-producing remote** (fixed rev + NAR hash) as a validated projection asserting URL/rev/hash parity against the literal declaration, retaining the literal for Nix evaluation; leave only genuinely lock-owned, unpinned infrastructure lock-owned.
   - **(b) Draw a narrower line** — catalog only those inputs the updater is expected to bump, and add a documented gate exception for the rest.
 - **Recommendation:** none on the exact partition — this requires a per-input judgement about which pins are *policy* (deliberately held, updater-owned) versus incidental infrastructure, which is the user's call over their own inputs. The *mechanism* (validated projection retaining the literal declaration; no dynamic flake-input generation) is already fixed by #34's scope.
-- **Answer:** _(unanswered)_
-- **Date:** _______  **Decided by:** _______  **Follow-up:** record the per-input classification in #34; confirm the 1.7 allowlist (#25) matches; note the X4 coupling — the `path:./config/ai` allowlist literal must move with the rename (S2/#47).
+- **Answer:** **narrow** — catalogue only the inputs the updater is expected to bump: the **11 records currently in `packages/update-manifest.nix`**, so #43 can delete that file. The remaining rev-pinned root inputs stay as bare `flake.nix` literals with no parity assertion. Accepted cost: an input left as a literal has no catalogued version/hash owner. **Two framing errors in this question were corrected before it was answered, so the answer is not a response to the original premise.** (1) The "why it matters" text said an uncataloged input would be rejected by the completeness gate or need silencing; that is counterfactual — #25's gate *deliberately* scopes flake-input locators out (`bin/update-overlay-test.py:1465-1466`: "Deliberately NOT covered … flake INPUT locators (owned by the external-filesystem and whole-closure purity checks above — one mechanism, per cross-stream X4)"). Nothing is being rejected today; the forcing function is purely #43's deletion. (2) The question calls the manifest pins "fixed **root** inputs"; they are portable `config/ai` subflake inputs — `rust-overlay` appears 0 times in `flake.nix` and twice in `config/ai/flake.nix`.
+- **Date:** 2026-07-29  **Decided by:** John Wiegley  **Follow-up:** record on #34 and #43. Two defects to fix in #34 before implementing: its criterion asks each record to assert "URL/rev/**NAR-hash** parity against the literal declaration", but a `github:` rev literal in `flake.nix` carries no NAR hash — it lives in `flake.lock` — so that criterion is unsatisfiable as written; and `hakyll` (`flake.nix:53-54`) is consumed nowhere in the tree, making it dead-input cleanup rather than a classification subject.
 
 ---
 
@@ -188,8 +201,8 @@ Q8. Should the public GPG key be committed at `.github/signing-keys/jwiegley.asc
   - **(b) Local-only enforcement** — `bin/quality signatures` already works against the local keyring; no CI job, so CI never verifies signatures.
   - **(c) Use GitHub's own verification API** instead of a committed keyring — a different trust model (relies on GitHub-registered keys for pushed commits).
 - **Recommendation:** none on which option — committing personal key material into a public repository is the user's call. The fail-closed coupling (key + job in one change) is a fact to honor whichever option is chosen.
-- **Answer:** _(unanswered)_
-- **Date:** _______  **Decided by:** _______  **Follow-up:** record in #23; if (a), land the key and workflow in a single signed commit.
+- **Answer:** **(a) rejected** — the public key is **not** to be committed to this repository. Recorded verbatim: "I do not want the key committed." Implemented as **(b) local-only enforcement** in `1aea36cd`, which removed `.github/signing-keys/johnw.asc` and the CI `signatures` job together (Q8's own coupling constraint: key and job land or leave in one change). The pre-push `signatures` hook still runs `bin/quality signatures` against the developer's ambient keyring. **(c)** — GitHub's own verification API, a different trust model — remains available and unchosen; it needs no committed key, so it can be adopted later without revisiting this answer.
+- **Date:** 2026-07-29  **Decided by:** John Wiegley  **Follow-up:** recorded on #23. Note for whoever revisits: `aeef544b`/`d8fc36c1` had already committed the key without consulting this gate; `1aea36cd` reverted it before any push, so the key was never published. `bin/verify-signatures`' `--keys-dir` support is retained as an unused capability.
 
 ---
 
