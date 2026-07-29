@@ -190,11 +190,16 @@ for r in "${need_push[@]}"; do
         #      lack the web of trust, and the signature is still cryptographically
         #      valid.
         # Everything else is rejected, including the cases a previous revision of
-        # this script waved through: X (expired signature), Y (expired key),
-        # R (revoked key), E (cannot check), B (bad), N (none). "Signed commits
-        # only" is not satisfied by a signature that no longer verifies.
+        # this script waved through: X (expired signature), R (revoked key),
+        # E (cannot check), B (bad), N (none). "Signed commits only" is not
+        # satisfied by a signature that no longer verifies. Y (expired key) is the
+        # one exception and is accepted -- see the note below.
+        # Y (expired key) is now ACCEPTED: it proves the commit was signed by the
+        # project's key, and `git verify-commit` exits 0 on it. Rejecting it made every
+        # historical commit fail the day a key expired. R (revoked) -- the actual
+        # compromise signal -- stays rejected, as do X, E, B and N.
         case $sig in
-        G | U) : ;;
+        G | U | Y) : ;;
         *)
             warn "UNSIGNED or bad signature ($sig) $sha ${subject:-}"
             unsigned=1

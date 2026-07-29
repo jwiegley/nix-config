@@ -277,7 +277,19 @@ while read -r sig sha subject; do
     [[ -n $sig ]] || continue
     checked=$((checked + 1))
     case $sig in
-    G | U) : ;;
+    # Y is accepted: it means "good signature made by a key that has since EXPIRED",
+    # which still proves the commit was signed by the project's key. `git verify-commit`
+    # exits 0 on Y. Compromise is signalled by R (revoked), which stays rejected -- so
+    # accepting Y is not a security downgrade, it is declining to conflate "the key
+    # lapsed" with "the signature is untrustworthy".
+    #
+    # Rejecting Y instead creates a recurring cliff: on the day a key expires, EVERY
+    # historical commit starts failing at once, discovered live in CI rather than by
+    # this suite. The signing key here expires 2026-11-25, which is what surfaced it.
+    #
+    # X stays rejected and is a different condition -- the SIGNATURE itself carried an
+    # expiration (bin/verify-signatures:18: "X expired signature   Y expired key").
+    G | U | Y) : ;;
     *)
         warn "REJECTED [$sig] $sha $subject"
         unsigned=1

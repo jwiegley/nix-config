@@ -20,6 +20,7 @@ repository, a real remote, or a real consumer checkout.
 Run: python3 -m unittest -v bin/gates-test.py
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -219,6 +220,90 @@ class TestVerifySignaturesRejects(unittest.TestCase):
         )
         self.assertIn("REJECTED", out.stdout + out.stderr)
 
+    def test_expired_key_signature_is_accepted_not_rejected(self):
+        """Y (good signature, expired key) must PASS; R/E/B/N must not.
+
+        Y proves the commit was signed by the project's key -- `git verify-commit`
+        exits 0 on it -- and compromise is signalled by R (revoked), which stays
+        rejected. Rejecting Y created a recurring cliff: on the day a key expired,
+        every historical commit failed at once. The signing key here expires
+        2026-11-25, which is what surfaced it.
+
+        Built with a REAL key that really expires: generate one with a few seconds of
+        life, sign while it is valid, wait past expiry, verify. No fabrication, so the
+        code path under test is the one git actually takes.
+        """
+        import time
+
+        gnupg = os.path.join(self.tmp, "gnupg-expiring")
+        os.makedirs(gnupg, exist_ok=True)
+        os.chmod(gnupg, 0o700)
+        env = clean_env()
+        env["GNUPGHOME"] = gnupg
+
+        gen = subprocess.run(
+            [
+                "gpg", "--batch", "--quiet", "--passphrase", "", "--pinentry-mode",
+                "loopback", "--quick-generate-key", "Expiry Probe <probe@example.invalid>",
+                "default", "sign", "seconds=6",
+            ],
+            capture_output=True, text=True, env=env,
+        )
+        if gen.returncode != 0:
+            self.skipTest("could not generate an expiring key: %s" % gen.stderr[:200])
+
+        keyid = subprocess.run(
+            ["gpg", "--batch", "--list-keys", "--with-colons", "probe@example.invalid"],
+            capture_output=True, text=True, env=env,
+        ).stdout
+        fpr = next(
+            (ln.split(":")[9] for ln in keyid.splitlines() if ln.startswith("fpr")),
+            None,
+        )
+        self.assertTrue(fpr, "generated key has no fingerprint")
+
+        base = self._commit("a", "base")
+        # Sign WHILE the key is valid.
+        with open(os.path.join(self.repo, "signed"), "w") as fh:
+            fh.write("x\n")
+        git("add", "signed", cwd=self.repo)
+        signed = subprocess.run(
+            ["git", "-c", "user.signingkey=" + fpr, "-c", "commit.gpgsign=true",
+             "-c", "gpg.program=gpg", "commit", "-q", "-m", "signed while valid"],
+            cwd=self.repo, capture_output=True, text=True, env=env,
+        )
+        if signed.returncode != 0:
+            self.skipTest("could not sign with the probe key: %s" % signed.stderr[:200])
+        head = git("rev-parse", "HEAD", cwd=self.repo).stdout.strip()
+
+        # Confirm it is G before expiry, so a later Y is attributable to the expiry
+        # and not to a broken signature.
+        before = subprocess.run(
+            ["git", "log", "--pretty=%G?", "-1", head],
+            cwd=self.repo, capture_output=True, text=True, env=env,
+        ).stdout.strip()
+        self.assertEqual(before, "G", "probe commit did not verify as G while valid")
+
+        time.sleep(8)  # outlive the key
+
+        after = subprocess.run(
+            ["git", "log", "--pretty=%G?", "-1", head],
+            cwd=self.repo, capture_output=True, text=True, env=env,
+        ).stdout.strip()
+        self.assertEqual(
+            after, "Y", "expected Y after the key expired, got %r" % after
+        )
+
+        out = self.run_tool(
+            SIGVERIFY_BASE=base, SIGVERIFY_HEAD=head, GNUPGHOME=gnupg
+        )
+        self.assertEqual(
+            out.returncode, 0,
+            "Y (expired key) must be accepted; rejecting it makes every historical "
+            "commit fail the day a key expires:\n%s\n%s" % (out.stdout, out.stderr),
+        )
+        self.assertNotIn("REJECTED", out.stdout + out.stderr)
+
     def test_empty_range_is_explicit_about_having_checked_nothing(self):
         """An empty range exits 0, and must SAY that it verified nothing.
 
@@ -410,3 +495,76 @@ class TestGatesAreRegistered(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
+    """The facet must never demote a real reference.
+
+    #47 needs two numbers from this artifact: the LOAD-BEARING subset it verifies by
+    building, and the COMPLETE set it verifies by re-grepping to zero. The facet adds
+    the first without dropping any of the second, so its correctness property is
+    one-sided -- misjudging prose as code is harmless, the reverse is a silent miss.
+
+    These assertions run against the COMMITTED artifact, because that is the file #47
+    and #63 consume; re-deriving would test the code and not the data.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        path = REPO / "test" / "inventory" / "consumer-inventory.json"
+        if not path.exists():
+            raise unittest.SkipTest("no committed consumer inventory")
+        cls.inv = json.loads(path.read_text())
+        cls.refs = cls.inv.get("references", [])
+        cls.faceted = [r for r in cls.refs if "loadBearing" in r]
+
+    def test_facet_is_present_on_internal_references(self):
+        internal = [r for r in self.refs if r.get("kind") == "internal-config-ai-ref"]
+        self.assertTrue(internal, "no internal references to check")
+        missing = [r for r in internal if "loadBearing" not in r or "refKind" not in r]
+        self.assertEqual(missing, [], "internal references lack the facet")
+
+    def test_no_code_reference_is_demoted(self):
+        """A non-comment .nix line is load-bearing. This is the one-sided property."""
+        demoted = [
+            (r["file"], r["line"], r.get("refKind"))
+            for r in self.faceted
+            if r["file"].endswith(".nix")
+            and r.get("refKind") != "comment"
+            and r.get("loadBearing") is not True
+        ]
+        self.assertEqual(demoted, [], "non-comment .nix references were demoted")
+
+    def test_doc_prose_only_ever_comes_from_markdown(self):
+        stray = [
+            (r["file"], r["line"])
+            for r in self.faceted
+            if r.get("refKind") == "doc-prose" and not r["file"].endswith(".md")
+        ]
+        self.assertEqual(stray, [], "doc-prose applied outside a .md file")
+
+    def test_the_two_known_traps_stay_load_bearing(self):
+        """Both look like prose or messages and are neither.
+
+        home-manager-contract-common.nix carries expected VALUES of assertions;
+        update-manifest.nix carries the update tooling's file LIST. A prose-detecting
+        filter would wrongly drop both, which is why the rule is conservative.
+        """
+        for needle in ("home-manager-contract-common.nix", "update-manifest.nix"):
+            hits = [r for r in self.faceted if needle in r["file"]]
+            self.assertTrue(hits, "no faceted records for %s" % needle)
+            bad = [(r["file"], r["line"]) for r in hits if r.get("loadBearing") is not True]
+            self.assertEqual(bad, [], "%s references were demoted" % needle)
+
+    def test_tallies_agree_with_the_records(self):
+        """A summary that disagrees with its own records is worse than none."""
+        by_lb = self.inv["summary"]["byLoadBearing"]
+        true_n = sum(1 for r in self.faceted if r["loadBearing"] is True)
+        false_n = sum(1 for r in self.faceted if r["loadBearing"] is False)
+        self.assertEqual(by_lb.get("true", 0), true_n)
+        self.assertEqual(by_lb.get("false", 0), false_n)
+        self.assertEqual(
+            true_n + false_n,
+            self.inv["summary"]["byClassification"].get("rename-now", 0),
+            "faceted records should account for exactly the rename-now class",
+        )
