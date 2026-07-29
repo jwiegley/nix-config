@@ -823,3 +823,15 @@ files, eight Python suites (including 21 gate and 13 Darwin tests), portable eva
 the Darwin surface check, consumer evaluation 5 ran / 0 skipped, and signatures for all
 12 local commits. Remaining: signed fess-fix and tracker closeout. No push, host
 activation, or history rewrite was performed or authorized.
+
+Signed fess-fix `d96caa3c` landed with the unbypassed hook passing all eight Python
+suites and affected lint/evaluation lanes; `%G? = G`. #85 is CLOSED/COMPLETED, all
+four acceptance boxes are checked, and both project cards are Done; closeout evidence
+is `#issuecomment-5117274034`. #80 remains open/In Progress for the wider coverage
+programme, with A4 registered at `#issuecomment-5117278974` and the remote-CI boundary
+recorded explicitly.
+
+Before A5 (#28), absorb the outstanding partner observation that `bin/publish --help`
+still describes `--rev` and `--branch` as selectors even though #89 deliberately made
+them exact-tip/current-branch assertions. Local `main` remains unpushed; no push, host
+activation, or history rewrite is authorized.
