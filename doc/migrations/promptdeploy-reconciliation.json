@@ -278,7 +278,7 @@
         "model": "claude-sonnet-4-6"
       }
     ],
-    "sourceOnlyDisposition": "Not imported: these Claude 4.6/4.7 routes are superseded by current llm-setup.el-owned Claude Opus 4.8 and Sonnet 5 routes."
+    "sourceOnlyDisposition": "Not imported: these Claude 4.6/4.7 routes are superseded under llm-setup.el authority; current Nix routes use Claude Opus 5 and Sonnet 5."
   },
   "unchangedSourceSurfaces": [
     "agents",

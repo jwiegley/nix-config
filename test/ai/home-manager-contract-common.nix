@@ -669,7 +669,42 @@ let
     ) positronProfileIds;
 
   promptdeployInventory = promptdeployReconciliation.inventory;
+  promptdeployInventoriesNonEmpty =
+    inventory: builtins.all (names: names != [ ]) (builtins.attrValues inventory);
+  expectedPromptdeployInventoryCounts = {
+    agents = 26;
+    commands = 66;
+    prompts = 2;
+    skills = 23;
+  };
+  promptdeployInventoryCounts = inventory: lib.mapAttrs (_: names: builtins.length names) inventory;
+  promptdeployInventoryCountsMatch =
+    inventory: promptdeployInventoryCounts inventory == expectedPromptdeployInventoryCounts;
   promptdeploySelectorNames = mapping: lib.concatLists (builtins.attrValues mapping);
+  expectedPromptdeploySelectorKeys = {
+    commandAudiences = [
+      "personal"
+      "positron"
+    ];
+    commandExtraClients = [ "droid" ];
+    skillAudiences = [ "positron" ];
+    skillClients = [ "claude" ];
+  };
+  promptdeploySelectorKeysMatch =
+    selectors:
+    lib.mapAttrs (_: mapping: builtins.attrNames mapping) selectors == expectedPromptdeploySelectorKeys;
+  promptdeploySelectorListsSortedUnique =
+    selectors:
+    builtins.all (
+      mapping: lib.mapAttrs (_: names: lib.sort builtins.lessThan (lib.unique names)) mapping == mapping
+    ) (builtins.attrValues selectors);
+  promptdeploySelectorBucketsNonEmpty =
+    selectors:
+    builtins.all (mapping: builtins.all (names: names != [ ]) (builtins.attrValues mapping)) (
+      builtins.attrValues selectors
+    );
+  promptdeployNonBlank =
+    value: builtins.isString value && builtins.match ".*[^[:space:]].*" value != null;
   promptdeploySelectorKeysFor =
     mapping: name:
     builtins.filter (key: builtins.elem name mapping.${key}) (builtins.attrNames mapping);
@@ -783,6 +818,10 @@ let
       model = "claude-sonnet-4-6";
     }
   ];
+  expectedPromptdeployDefaultModel = {
+    provider = "litellm";
+    model = "hera/omlx/Qwen3.6-27B-oQ4e-mtp";
+  };
   currentModelTuples = map (model: {
     inherit (model) provider;
     model = model.id;
@@ -848,6 +887,20 @@ let
     ];
   promptdeployReconciliationChecks = [
     (expectEqual "Promptdeploy reconciliation schema" promptdeployReconciliation.schemaVersion 1)
+    (expectEqual "Promptdeploy reconciliation top-level keys"
+      (builtins.attrNames promptdeployReconciliation)
+      [
+        "documentationDisposition"
+        "inventory"
+        "models"
+        "nixOnly"
+        "postFrozenDelta"
+        "reviewedSource"
+        "schemaVersion"
+        "selectors"
+        "unchangedSourceSurfaces"
+      ]
+    )
     (expectEqual "Promptdeploy reviewed source" promptdeployReconciliation.reviewedSource
       expectedPromptdeployReviewedSource
     )
@@ -860,6 +913,26 @@ let
     (expectEqual "Promptdeploy inventories are sorted and unique" (lib.mapAttrs (
       _: names: lib.sort builtins.lessThan (lib.unique names)
     ) promptdeployInventory) promptdeployInventory)
+    (expectEqual "Promptdeploy inventories are non-empty"
+      (promptdeployInventoriesNonEmpty promptdeployInventory)
+      true
+    )
+    (expectEqual "Promptdeploy non-vacuity guard rejects an empty inventory category" (
+      promptdeployInventoriesNonEmpty
+      (promptdeployInventory // { skills = [ ]; })
+    ) false)
+    (expectEqual "Promptdeploy inventory counts" (promptdeployInventoryCounts promptdeployInventory)
+      expectedPromptdeployInventoryCounts
+    )
+    (expectEqual "Promptdeploy inventory count guard rejects a partial inventory" (
+      promptdeployInventoryCountsMatch
+      (
+        promptdeployInventory
+        // {
+          skills = builtins.tail promptdeployInventory.skills;
+        }
+      )
+    ) false)
     (expectEqual "Promptdeploy agent inventory" (sortedNames catalog.items.agents)
       promptdeployInventory.agents
     )
@@ -883,6 +956,39 @@ let
         "skillClients"
       ]
     )
+    (expectEqual "Promptdeploy selector keys"
+      (promptdeploySelectorKeysMatch promptdeployReconciliation.selectors)
+      true
+    )
+    (expectEqual "Promptdeploy selector lists are sorted and unique"
+      (promptdeploySelectorListsSortedUnique promptdeployReconciliation.selectors)
+      true
+    )
+    (expectEqual "Promptdeploy selector buckets are non-empty"
+      (promptdeploySelectorBucketsNonEmpty promptdeployReconciliation.selectors)
+      true
+    )
+    (expectEqual "Promptdeploy selector schema rejects an unknown bucket" (promptdeploySelectorKeysMatch
+      (
+        promptdeployReconciliation.selectors
+        // {
+          skillClients = promptdeployReconciliation.selectors.skillClients // {
+            unused = [ "forge" ];
+          };
+        }
+      )
+    ) false)
+    (expectEqual "Promptdeploy selector non-vacuity rejects an empty expected bucket" (
+      promptdeploySelectorBucketsNonEmpty
+      (
+        promptdeployReconciliation.selectors
+        // {
+          skillClients = promptdeployReconciliation.selectors.skillClients // {
+            claude = [ ];
+          };
+        }
+      )
+    ) false)
     (expectEqual "Promptdeploy command selector names are inventoried" (builtins.filter
       (name: !(builtins.elem name promptdeployInventory.commands))
       (
@@ -912,12 +1018,17 @@ let
         "disposition"
         "path"
       ]
-      && builtins.isString entry.disposition
-      && entry.disposition != ""
+      && promptdeployNonBlank entry.disposition
     ) promptdeployReconciliation.postFrozenDelta) true)
-    (expectEqual "Promptdeploy default model remains current" promptdeployReconciliation.models.default
-      rawModelRegistry.selections.default
+    (expectEqual "Promptdeploy frozen default model" promptdeployReconciliation.models.default
+      expectedPromptdeployDefaultModel
     )
+    (expectEqual "Promptdeploy model schema" (builtins.attrNames promptdeployReconciliation.models) [
+      "authority"
+      "default"
+      "sourceOnlyDisposition"
+      "sourceOnlyStaleTuples"
+    ])
     (expectEqual "Promptdeploy stale model tuple inventory"
       promptdeployReconciliation.models.sourceOnlyStaleTuples
       expectedPromptdeployStaleModelTuples
@@ -928,10 +1039,11 @@ let
     (expectEqual "Promptdeploy model authority" promptdeployReconciliation.models.authority
       "llm-setup.el through config/ai/model-registry.json"
     )
-    (expectEqual "Promptdeploy stale model disposition is recorded" (
-      builtins.isString promptdeployReconciliation.models.sourceOnlyDisposition
-      && promptdeployReconciliation.models.sourceOnlyDisposition != ""
-    ) true)
+    (expectEqual "Promptdeploy stale model disposition is recorded"
+      (promptdeployNonBlank promptdeployReconciliation.models.sourceOnlyDisposition)
+      true
+    )
+    (expectEqual "Promptdeploy non-blank guard rejects whitespace" (promptdeployNonBlank "   ") false)
     (expectEqual "Promptdeploy unchanged source surfaces"
       promptdeployReconciliation.unchangedSourceSurfaces
       [
@@ -946,10 +1058,10 @@ let
         "statusline"
       ]
     )
-    (expectEqual "Promptdeploy documentation contradiction is dispositioned" (
-      builtins.isString promptdeployReconciliation.documentationDisposition
-      && promptdeployReconciliation.documentationDisposition != ""
-    ) true)
+    (expectEqual "Promptdeploy documentation contradiction is dispositioned"
+      (promptdeployNonBlank promptdeployReconciliation.documentationDisposition)
+      true
+    )
   ]
   ++ promptdeploySourceItemChecks
   ++ promptdeployCapabilitySelectionChecks;

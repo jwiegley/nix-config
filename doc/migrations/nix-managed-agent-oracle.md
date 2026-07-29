@@ -570,8 +570,9 @@ unavailable, rather than delegating or forbidding testing.
 
 Model identities remain owned by `llm-setup.el` through
 `config/ai/model-registry.json`. Ten source-only Claude 4.6/4.7 tuples are
-explicitly retired in favor of current Claude Opus 4.8 and Sonnet 5 routes; the
-Promptdeploy default still matches the Nix default. Promptdeploy's stale example
+explicitly retired under `llm-setup.el` authority; current Nix routes use Claude
+Opus 5 and Sonnet 5. The frozen Promptdeploy default is recorded and currently
+matches the Nix default, but is not a live-default equality constraint. Promptdeploy's stale example
 claiming active global Claude injection is not inherited: its own README and
 operator guidance define that injection as default-off.
 

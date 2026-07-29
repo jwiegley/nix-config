@@ -2,14 +2,15 @@
 
 `doc/migrations/promptdeploy-reconciliation.json` is a committed expectation
 artifact: 295 lines of recorded inventory that drive 115+ generated assertions in
-`test/ai/home-manager-contract.nix`. It has the same standing as
+`test/ai/home-manager-contract-common.nix`, consumed by
+`test/ai/home-manager-catalog-renderers.nix`. It has the same standing as
 `test/baseline/parity-<rev>.json`, and until now it had no equivalent of
 `doc/PARITY-ORACLE-REFRESH.md` — the assertions were present but not
 maintainable, because nothing said what they encode or when the encoding may
 change.
 
-Written in response to a partner observation on `13e69093`
-(`doc/observations/2026-07-28T23:11:20.640Z.md`).
+Written in response to the review of `13e69093`, with the durable correction of
+record in `9f26f24` and jwiegley/nix-config#83.
 
 
 ## What it reconciles
@@ -36,13 +37,13 @@ defect as the commit message that prompted this document:
 |---|---|
 | `schemaVersion` | Currently `1`. Bump when the *shape* changes, so a reader can tell a shape change from a content refresh. |
 | `reviewedSource` | The promptdeploy `{repository, commit, tree, commitDate, worktreeState}` a human actually read to produce this file. The provenance anchor: without it the inventory is an unattributable assertion. Recording `tree` as well as `commit` means a dirty worktree cannot masquerade as a clean revision. |
-| `inventory` | The transcribed source inventory, by surface. Currently `agents: 26`, `commands: 66`, `skills: 23`, `prompts: 2`. Non-empty per key is what makes the generated checks non-vacuous. |
+| `inventory` | The transcribed source inventory, by surface. Currently `agents: 26`, `commands: 66`, `skills: 23`, `prompts: 2`. Exact counts and non-empty keys are contract assertions, so a partial or empty transcription cannot erase its own generated checks. |
 | `selectors` | The audience/client partitioning the source applied — `commandAudiences`, `commandExtraClients`, `skillAudiences`, `skillClients`. This is what lets the contract assert *who* each item was deployed to, not merely that it existed. |
-| `models` | Model routing as the source had it: `authority`, `default`, `sourceOnlyDisposition`, `sourceOnlyStaleTuples`. `sourceOnlyStaleTuples` records model pins that exist only in the source and are known stale — recorded so they are not mistaken for Nix-side omissions. |
-| `postFrozenDelta` | Changes observed in promptdeploy *after* `reviewedSource` was frozen, recorded rather than silently folded in, so the freeze stays honest. |
+| `models` | Model routing as the source had it: `authority`, `default`, `sourceOnlyDisposition`, `sourceOnlyStaleTuples`. The contract pins the frozen source default but does not require the live Nix default to remain equal; `llm-setup.el` owns current routing. `sourceOnlyStaleTuples` records source-only stale pins so they are not mistaken for Nix omissions. |
+| `postFrozenDelta` | The exact 12-path delta from the original migration oracle `7a12b54` to reviewed source `8d09f9f`, each with an explicit disposition. It records what reconciliation added beyond the stale migration freeze; it is not a claim about changes after `8d09f9f`. |
 | `nixOnly` | Surfaces Nix owns that promptdeploy never had. Expected asymmetry; listing them prevents a reader from reading their absence as a gap. |
 | `unchangedSourceSurfaces` | Surfaces deliberately left as-is. Distinguishes "reconciled and equal" from "not yet examined". |
-| `documentationDisposition` | Per-item decision about the prose that accompanied each promptdeploy surface: migrated, superseded, or dropped. |
+| `documentationDisposition` | Aggregate rationale for the conflicting prose that accompanied Promptdeploy model injection and why Nix does not inherit it. |
 
 
 ## When it is refreshed, and when it is frozen
@@ -56,30 +57,31 @@ the parity oracle.
 **Regenerate only when** the promptdeploy source itself is re-read by a human and
 `reviewedSource` advances with it. That is a deliberate act with a recorded
 provenance change, exactly like a parity-oracle refresh. `postFrozenDelta` exists
-so that a known-but-not-yet-transcribed source change can be recorded without
-forcing a full re-read.
+to preserve the fully reviewed difference between the original migration freeze
+and the current reviewed source.
 
-**Retire** when promptdeploy ownership is fully transferred and #83 closes: at
-that point the reconciliation has served its purpose and the assertions become
-history rather than a live gate. Retirement is a decision to record on #83, not a
-cleanup to perform silently.
+**Closing #83 freezes the external refresh obligation; it does not delete the
+regression checks.** Retire the manifest-backed assertions only when an explicitly
+recorded replacement provides equivalent currency evidence. Retirement is a
+separate decision, not cleanup implied by issue closure.
 
 
 ## Where the assertions are wired
 
-`test/ai/home-manager-contract.nix` — `promptdeploySourceItemChecks` and
-`promptdeployCapabilitySelectionChecks` feed `promptdeployReconciliationChecks`,
-which is consumed alongside the rest of the contract. Verify non-vacuity before
+`test/ai/home-manager-contract-common.nix` defines
+`promptdeploySourceItemChecks`, `promptdeployCapabilitySelectionChecks`, and
+`promptdeployReconciliationChecks`; `test/ai/home-manager-catalog-renderers.nix`
+consumes them alongside the catalog/renderer contract. Verify non-vacuity before
 trusting a green result:
 
 ```bash
 python3 -c "import json; d=json.load(open('doc/migrations/promptdeploy-reconciliation.json')); print({k: len(v) for k, v in d['inventory'].items()})"
-nix build --no-link .#checks.aarch64-darwin.ai-home-manager-contract
+nix build --no-link .#checks.aarch64-darwin.ai-home-manager-catalog-renderers
 ```
 
-An empty inventory key generates zero checks and still passes — the count above is
-the guard against that, and it is the reason this file says "non-empty per key"
-rather than "the checks pass".
+Historically, an empty inventory key generated zero per-item checks. The contract
+now asserts exact `26/66/23/2` counts, non-empty keys, and committed inline
+empty/partial mutation checks before trusting the generated checks.
 
 
 ## Serves
