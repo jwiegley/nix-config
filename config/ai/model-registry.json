@@ -7,7 +7,7 @@
     },
     "claudeDefault": {
       "provider": "positron-anthropic",
-      "model": "claude-opus-4-8[1m]"
+      "model": "claude-opus-5[1m]"
     },
     "claudeHaiku": {
       "provider": "positron-anthropic",
@@ -15,7 +15,7 @@
     },
     "claudeSubagent": {
       "provider": "positron-anthropic",
-      "model": "claude-opus-4-8"
+      "model": "claude-opus-5"
     }
   },
   "providers": [
@@ -92,43 +92,43 @@
       "provider": "positron-anthropic",
       "id": "claude-fable-5",
       "displayName": "Claude Fable 5",
-      "maxOutputTokens": 32768
+      "maxOutputTokens": 81920
     },
     {
       "provider": "positron-anthropic",
       "id": "claude-fable-5[1m]",
       "displayName": "Claude Fable 5[1M]",
-      "maxOutputTokens": 32768
+      "maxOutputTokens": 81920
     },
     {
       "provider": "positron-anthropic",
       "id": "claude-haiku-4-5-20251001",
       "displayName": "Claude Haiku 4.5",
-      "maxOutputTokens": 32768
+      "maxOutputTokens": 81920
     },
     {
       "provider": "positron-anthropic",
-      "id": "claude-opus-4-8",
-      "displayName": "Claude Opus 4.8",
-      "maxOutputTokens": 32768
+      "id": "claude-opus-5",
+      "displayName": "Claude Opus 5",
+      "maxOutputTokens": 81920
     },
     {
       "provider": "positron-anthropic",
-      "id": "claude-opus-4-8[1m]",
-      "displayName": "Claude Opus 4.8",
-      "maxOutputTokens": 32768
+      "id": "claude-opus-5[1m]",
+      "displayName": "Claude Opus 5[1M]",
+      "maxOutputTokens": 81920
     },
     {
       "provider": "positron-anthropic",
       "id": "claude-sonnet-5",
       "displayName": "Claude Sonnet 5",
-      "maxOutputTokens": 32768
+      "maxOutputTokens": 81920
     },
     {
       "provider": "positron-anthropic",
       "id": "claude-sonnet-5[1m]",
       "displayName": "Claude Sonnet 5[1M]",
-      "maxOutputTokens": 32768
+      "maxOutputTokens": 81920
     },
     {
       "provider": "positron-google",
@@ -146,13 +146,13 @@
       "provider": "positron-openai",
       "id": "gpt-5.5",
       "displayName": "ChatGPT 5.5",
-      "maxOutputTokens": 32000
+      "maxOutputTokens": 81920
     },
     {
       "provider": "positron-openai",
       "id": "gpt-5.6-luna",
       "displayName": "Gpt 5.6 Luna",
-      "maxOutputTokens": 32000
+      "maxOutputTokens": 81920
     },
     {
       "provider": "positron-openai",
@@ -166,7 +166,7 @@
       "provider": "positron-openai",
       "id": "gpt-5.6-terra",
       "displayName": "Gpt 5.6 Terra",
-      "maxOutputTokens": 32000
+      "maxOutputTokens": 81920
     },
     {
       "provider": "nvidia",
@@ -248,40 +248,40 @@
     },
     {
       "provider": "litellm",
-      "id": "hera/claude-opus-4-8-thinking-32000",
-      "displayName": "Claude Opus 4.8 (Thinking)",
+      "id": "hera/claude-opus-5-thinking-32000",
+      "displayName": "Claude Opus 5 (Thinking)",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536
     },
     {
       "provider": "litellm",
-      "id": "hera/claude-opus-4-8",
-      "displayName": "Claude Opus 4.8",
+      "id": "hera/claude-opus-5",
+      "displayName": "Claude Opus 5",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536
     },
     {
       "provider": "litellm",
-      "id": "positron_anthropic/claude-opus-4-8",
-      "displayName": "Claude Opus 4.8",
+      "id": "positron_anthropic/claude-opus-5",
+      "displayName": "Claude Opus 5",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536
     },
     {
       "provider": "litellm",
-      "id": "positron_anthropic/claude-opus-4-8[1m]",
-      "displayName": "Claude Opus 4.8",
+      "id": "positron_anthropic/claude-opus-5[1m]",
+      "displayName": "Claude Opus 5",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536
     },
     {
       "provider": "litellm",
-      "id": "anthropic/claude-opus-4-8",
-      "displayName": "Claude Opus 4.8",
+      "id": "anthropic/claude-opus-5",
+      "displayName": "Claude Opus 5",
       "maxOutputTokens": 65536,
       "contextLimit": 262144,
       "outputLimit": 65536
