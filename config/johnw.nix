@@ -21,8 +21,6 @@ let
   inherit (pkgs.stdenv) isDarwin isLinux;
   nixManagedAiHomeClass = args.nixManagedAiHomeClass or null;
   isPositronRemoteLinux = isLinux && nixManagedAiHomeClass == "shared-work";
-  anvilHosts = import ./anvil-hosts.nix;
-  dedicatedAnvilLinuxHosts = anvilHosts.dedicatedLinux;
 
   # Shared variables - also imported by sub-modules
   vars = import ./vars.nix {
@@ -62,7 +60,7 @@ in
   # The shared Andoria Home Manager flake currently supplies "andoria-08" on
   # every NFS client; the runtime still derives the real host name for sockets.
   johnw.anvil = lib.mkIf isLinux {
-    useHeadlessEmacs = lib.mkDefault (lib.elem hostname dedicatedAnvilLinuxHosts);
+    useHeadlessEmacs = lib.mkDefault config.johnw.host.isDedicatedAnvilLinux;
     usePerAgentDaemon = lib.mkDefault true;
   };
 

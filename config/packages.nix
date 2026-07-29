@@ -7,6 +7,11 @@
 }:
 with pkgs;
 let
+  # packages.nix is NOT a module -- it is `import`ed as a plain function and one
+  # of its two call sites passes it neither `config` nor `lib`. So it reads
+  # capabilities from the PURE registry rather than from `config.johnw.host`.
+  registry = import ./hosts/registry.nix;
+  caps = registry.capabilitiesFor { inherit hostname; };
   inherit (stdenv)
     isDarwin
     isLinux
@@ -549,7 +554,7 @@ rec {
     # ++ lib.optionals isLinux (optPkg "cpx")
 
     # ── Host-Specific Packages (hera) ────────────────────────────────
-    ++ lib.optionals (hostname == "hera") (
+    ++ lib.optionals caps.isHera (
       [
         himalaya
         openai-whisper

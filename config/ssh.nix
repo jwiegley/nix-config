@@ -105,7 +105,7 @@ let
 
       gitea = controlMastered (withIdentity {
         User = "gitea";
-        HostName = if hostname == "vulcan" then "localhost" else "192.168.1.2";
+        HostName = if config.johnw.host.isVulcan then "localhost" else "192.168.1.2";
         Port = 2222;
         Compression = false;
       });

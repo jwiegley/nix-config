@@ -261,3 +261,42 @@ found by asking "does this fail when it should?" The two worst were subtle:
 
 Both were caught by an independent evaluator, not by me. That is the argument for
 `doc/INDEPENDENT-EVALUATOR.md` being a real gate rather than a document.
+
+## 2026-07-28 — #50 stage 2, and a seventh instance of the recurring defect
+
+Stage 2 applied all 12 Home Manager descriptors (S1-S11 + the deferred W2) and
+the hera HM and darwin surfaces came back byte-identical. Then the two Linux
+`homeConfigurations` failed to evaluate:
+
+```
+error: attribute 'isHera' missing
+at config/packages.nix:552:22
+```
+
+Root cause: **W6 was never applied.** Stage 1's edit list was W1/W3/W4/W5 — I
+omitted W6, which is the `let` binding that gives `config/packages.nix` its
+`caps` value. `packages.nix` is not a module; it is `import`ed as a plain
+function and one of its two call sites passes it neither `config` nor `lib`, so
+it must read `capabilitiesFor` from the pure registry directly. S11 in stage 2
+was the first line to reference `caps` in that file, so the omission stayed
+invisible for a whole stage.
+
+This is the seventh instance this session of **a gate reporting success while
+covering nothing** — and the mechanism is now familiar enough to name:
+
+> Stage 1's byte-identical result was *caused by* the bug. The binding was
+> missing AND unused, so evaluation was unaffected. A "no change in output"
+> gate cannot distinguish "my refactor was faithful" from "my refactor did not
+> take effect."
+
+The lesson generalizes past this issue: **when the acceptance criterion is
+"output is unchanged," it proves nothing until something in the tree actually
+consumes the new code path.** For a staged refactor that means every stage
+which only *adds* a definition must be paired with at least one consumer in the
+same stage, or else carry an explicit check that the definition is reachable
+(force it, don't just define it) — the same conclusion the #50 loud-failure
+probe reached after three attempts, arrived at again from the other direction.
+
+Fix: W6 applied at `config/packages.nix`, with a comment recording why that
+file reads the registry rather than `config.johnw.host`. Both Linux configs
+evaluate; hera HM and darwin remain byte-identical.

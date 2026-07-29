@@ -139,7 +139,7 @@ in
 
           fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
 
-          ${lib.optionalString (hostname == "hera") ''
+          ${lib.optionalString config.johnw.host.isHera ''
             # OpenClaw Completion
             [[ -f "${vars.home}/.openclaw/completions/openclaw.zsh" ]] && \
               source "${vars.home}/.openclaw/completions/openclaw.zsh"

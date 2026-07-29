@@ -56,12 +56,12 @@ in
 
       "News".source = mkLink "${config.xdg.dataHome}/gnus/News";
     }
-    // lib.optionalAttrs (isDarwin && hostname == "hera") {
+    // lib.optionalAttrs (isDarwin && config.johnw.host.isHera) {
       "Archives".source = mkLink "/Volumes/ext/Archives";
       "Audio".source = mkLink "/Volumes/ext/Audio";
       "Photos".source = mkLink "/Volumes/ext/Photos";
     }
-    // lib.optionalAttrs (isDarwin && (hostname == "hera" || hostname == "clio")) {
+    // lib.optionalAttrs (isDarwin && config.johnw.host.isDarwinWorkstation) {
       "org".source = mkLink "${home}/doc/org";
 
       "Mobile".source = mkLink "${home}/Library/Mobile Documents/com~apple~CloudDocs/Plain Org";

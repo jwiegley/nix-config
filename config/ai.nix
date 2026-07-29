@@ -174,7 +174,12 @@ in
       assertion =
         nixManagedAiHomeClass == null
         || nixManagedAiHomeClass != "personal-linux"
-        || (isLinux && system == "aarch64-linux" && config.home.username == "johnw" && hostname == "linux");
+        || (
+          isLinux
+          && system == "aarch64-linux"
+          && config.home.username == "johnw"
+          && config.johnw.host.isCiFixture
+        );
       message = "the personal-linux AI home class is reserved for its test fixture";
     }
     {
@@ -217,7 +222,7 @@ in
     activation = {
       aiManagedPreflight = preflight.activation;
     }
-    // lib.optionalAttrs (hostname == "hera" && isDarwin) {
+    // lib.optionalAttrs (config.johnw.host.isHera && isDarwin) {
       aiManagedModelSync = modelSync.activation;
     };
   };

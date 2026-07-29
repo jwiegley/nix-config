@@ -21,13 +21,10 @@ in
 
   # Run one Discord gateway client. Enabling this on Clio as well would
   # make both hosts compete for the same bot connection.
-  johnw.agentDeck.enableConductorDiscordBridge = hostname == "hera";
+  johnw.agentDeck.enableConductorDiscordBridge = config.johnw.host.isHera;
 
   johnw.anvil = {
-    useDedicatedDarwinEmacs = lib.elem hostname [
-      "hera"
-      "clio"
-    ];
+    useDedicatedDarwinEmacs = config.johnw.host.isDarwinWorkstation;
     # The code is ready on both hosts; deploy and prove Hera before Clio.
     usePerAgentDaemon = true;
   };

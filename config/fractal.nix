@@ -7,7 +7,7 @@
 }:
 
 let
-  enabled = hostname == "hera";
+  enabled = config.johnw.host.isHera;
 in
 {
   config = {
