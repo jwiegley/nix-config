@@ -340,10 +340,13 @@ while (($#)); do
     shift
 done
 
-if [[ -d /etc/nixos ]]; then
-    config_dir=/etc/nixos
+system_config_dir=${UPDATE_AGENTS_SYSTEM_CONFIG_DIR:-/etc/nixos}
+if [[ -n ${NIX_CONFIG_DIR:-} ]]; then
+    config_dir=$NIX_CONFIG_DIR
+elif [[ -d $system_config_dir ]]; then
+    config_dir=$system_config_dir
 else
-    config_dir=${NIX_CONFIG_DIR:-$HOME/src/nix}
+    config_dir=$HOME/src/nix
 fi
 
 ai_inputs=(

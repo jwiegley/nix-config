@@ -1750,8 +1750,11 @@ fi
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
             command_log = Path(temp_dir) / "commands.log"
+            system_config_dir = Path(temp_dir) / "system-config"
+            system_config_dir.mkdir()
             environment["UPDATE_TEST_FIXED_TARGET"] = "1"
             environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            environment["UPDATE_AGENTS_SYSTEM_CONFIG_DIR"] = str(system_config_dir)
             result = subprocess.run(
                 [str(UPDATE_AGENTS), "--target", "fixed"],
                 capture_output=True,
@@ -1773,9 +1776,15 @@ fi
             self.assertEqual((root / "tracked.txt").read_text(), "before\n")
             self.assertEqual((root / "projection.json").read_text(), '{"projected": true}\n')
             commands = command_log.read_text().splitlines()
-            self.assertIn("flake update --flake ./config/ai fixed-input", commands)
-            self.assertIn("flake update nix-config-ai", commands)
-            self.assertFalse(any("git-ai" in command for command in commands))
+            self.assertEqual(
+                commands,
+                [
+                    "flake update --flake ./config/ai fixed-input",
+                    "flake update nix-config-ai",
+                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check --no-build",
+                ],
+            )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
