@@ -6,6 +6,13 @@
 #   origin  gitea@gitea:johnw/nix-config.git    LAN-only; vulcan's only path
 #   github  git@github.com:jwiegley/nix-config.git   vps and the four work machines
 #
+# Gitea also push-mirrors origin to github. After origin accepts a revision the
+# mirror may advance github before this process's second push. Git's ref update is
+# compare-and-swap, so that push can be rejected because github is ALREADY at the
+# requested revision. A rejected push is therefore read back: target == success
+# (likely the mirror); any other value remains a loud partial publish. The push is
+# still ordinary fast-forward-only -- never weaken this by adding force.
+#
 # A core change is invisible to whichever hosts read the remote that did not
 # receive it. During one session main reached 7 ahead of gitea but 19 ahead of
 # github, so the work fleet was 19 commits behind while vulcan was 7 behind, and
@@ -37,7 +44,7 @@
 # --dry-run is accepted as a synonym for the default, so existing muscle memory
 # and any caller written against the old interface stay correct.
 #
-# Refs: jwiegley/nix-config#18; FLEET-DESIGN-PLAN §4.5, §10 Q6.
+# Refs: jwiegley/nix-config#18, #88; FLEET-DESIGN-PLAN §4.5, §10 Q6.
 
 set -euo pipefail
 
@@ -237,16 +244,24 @@ declare -a pushed=()
 declare -a failed=()
 for r in "${need_push[@]}"; do
     say "pushing to $r"
-    if ! git push "$r" "$rev:refs/heads/$branch"; then
-        failed+=("$r")
-        continue
+    if git push "$r" "$rev:refs/heads/$branch"; then
+        push_succeeded=1
+    else
+        push_succeeded=0
     fi
     confirm=$(git ls-remote "$r" "refs/heads/$branch" 2>/dev/null | awk '{print $1}')
     if [[ $confirm == "$rev" ]]; then
-        say "  $r confirmed at $short"
-        pushed+=("$r")
-    else
+        if [[ $push_succeeded -eq 1 ]]; then
+            say "  $r confirmed at $short"
+            pushed+=("$r")
+        else
+            say "  $r already at $short after rejected push (likely Gitea push mirror)"
+            already+=("$r")
+        fi
+    elif [[ $push_succeeded -eq 1 ]]; then
         warn "  $r reported success but reads back ${confirm:-<nothing>}"
+        failed+=("$r")
+    else
         failed+=("$r")
     fi
 done

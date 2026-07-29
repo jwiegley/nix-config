@@ -665,3 +665,24 @@ and atomicity work. No partner-observation Markdown remains.
 Next ordered unblocked unit is **#88** (publish mirror-race reconciliation), followed
 by #89 and the committed Darwin value-surface backstop. Local `main` remains unpushed;
 no push, activation, or history rewrite is authorized.
+
+---
+
+## 2026-07-29 — #88 mirror-race reconciliation implemented, audit pending
+
+`bin/publish` now documents Gitea's push-mirror relationship and always reads a
+remote ref after the real push attempt. A rejected push whose readback already equals
+the target is reported as already-current (likely the mirror) and succeeds; a readback
+at any other revision remains a loud `PARTIAL PUBLISH` with the reconcile command.
+The ordinary fast-forward compare-and-swap push remains intact; no force behavior was
+added.
+
+`bin/publish-test.py` uses a Git wrapper over local bare repositories to inject the
+race after pre-flight. It covers both mirror-at-target success and a third-revision
+failure. Watched-fail evidence was run separately: refusing target recovery made the
+mirror test fail with false `PARTIAL PUBLISH`; accepting any nonempty readback made
+the third-revision test falsely succeed. Both mutations were restored.
+
+Focused verification: 20 publish tests pass; shell and Python lint pass. Remaining:
+full staged `bin/quality`, signed commit, independent fess audit, issue/project
+closeout, and observation cleanup. No real push was performed or authorized.

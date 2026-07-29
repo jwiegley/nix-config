@@ -303,6 +303,45 @@ class TestPartialFailure(PublishHarness):
         git("commit", "-q", "-S", "-m", message, cwd=self.work, env=self.signing_env)
         return git("rev-parse", "HEAD", cwd=self.work).stdout.strip()
 
+    def _race_env(self, raced_sha):
+        fake_bin = os.path.join(self.tmp, "race-bin")
+        os.makedirs(fake_bin, exist_ok=True)
+        real_git = shutil.which("git") or "/usr/bin/git"
+        wrapper = os.path.join(fake_bin, "git")
+        with open(wrapper, "w") as fh:
+            fh.write(
+                """#!/usr/bin/env bash
+set -euo pipefail
+if [[ ${1:-} == push && ${2:-} == github ]]; then
+    "$REAL_GIT" --git-dir="$RACE_REMOTE" fetch --quiet "$PWD" "$RACE_SHA"
+    "$REAL_GIT" --git-dir="$RACE_REMOTE" update-ref refs/heads/main "$RACE_SHA"
+    echo "simulated mirror/ref race" >&2
+    exit 1
+fi
+exec "$REAL_GIT" "$@"
+"""
+            )
+        os.chmod(wrapper, 0o755)
+        return clean_env(
+            **self.signing_env,
+            PATH=f"{fake_bin}:{os.environ['PATH']}",
+            REAL_GIT=real_git,
+            RACE_REMOTE=self.github,
+            RACE_SHA=raced_sha,
+        )
+
+    def _third_remote_revision(self):
+        other = os.path.join(self.tmp, "racer")
+        git("clone", "-q", self.github, other, cwd=self.tmp)
+        git("config", "commit.gpgsign", "false", cwd=other)
+        with open(os.path.join(other, "race.txt"), "w") as fh:
+            fh.write("third revision\n")
+        git("add", "race.txt", cwd=other)
+        git("commit", "-q", "--no-gpg-sign", "-m", "racing writer", cwd=other)
+        third = git("rev-parse", "HEAD", cwd=other).stdout.strip()
+        git("push", "-q", "origin", f"{third}:refs/heads/race-object", cwd=other)
+        return third
+
     def test_default_does_not_push_but_reports_what_it_would_do(self):
         """The bare invocation must reach the push decision and decline it.
 
@@ -345,6 +384,41 @@ class TestPartialFailure(PublishHarness):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("all signed", r.stdout)
         self.assertIn("would accept", r.stdout)
+
+    def test_mirror_race_already_at_target_is_success(self):
+        head = self._signed_commit("s\n", "a signed commit")
+        r = subprocess.run(
+            [PUBLISH, "--publish"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=self._race_env(head),
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        combined = r.stdout + r.stderr
+        self.assertIn("already at", combined)
+        self.assertIn("push mirror", combined)
+        self.assertNotIn("PARTIAL PUBLISH", combined)
+        self.assertEqual(self.remote_sha(self.origin), head)
+        self.assertEqual(self.remote_sha(self.github), head)
+
+    def test_race_to_third_revision_is_still_partial_publish(self):
+        third = self._third_remote_revision()
+        head = self._signed_commit("s\n", "a signed commit")
+        r = subprocess.run(
+            [PUBLISH, "--publish"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=self._race_env(third),
+        )
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        combined = r.stdout + r.stderr
+        self.assertIn("PARTIAL PUBLISH", combined)
+        self.assertIn("github", combined)
+        self.assertIn("git push github %s:refs/heads/main" % head[:12], combined)
+        self.assertEqual(self.remote_sha(self.origin), head)
+        self.assertEqual(self.remote_sha(self.github), third)
 
     def test_partial_push_exits_nonzero_and_names_the_divergent_remote(self):
         """A remote that passes pre-flight then fails the real push.
