@@ -5,7 +5,7 @@
 
 let
   inherit (pkgs) lib;
-  schema = "darwin-value-surface/1";
+  schema = "darwin-value-surface/2";
   hosts = [
     "hera"
     "clio"
@@ -22,6 +22,11 @@ let
   unreadable = "<unreadable: removed or throwing option>";
   helpers = import ./surface-helpers.nix;
   project = import ./darwin-surface.nix;
+  projection = {
+    "test/darwin/darwin-surface.nix" = builtins.hashFile "sha256" ./darwin-surface.nix;
+    "test/darwin/surface-helpers.nix" = builtins.hashFile "sha256" ./surface-helpers.nix;
+    "bin/darwin-surface-diff" = builtins.hashFile "sha256" ../../bin/darwin-surface-diff;
+  };
   actualHosts = lib.genAttrs hosts (host: project darwinConfigurations.${host});
 
   baselineDir = ../baseline;
@@ -39,6 +44,10 @@ let
     {
       ok = (baseline.schema or null) == schema;
       message = "baseline schema must be ${schema}";
+    }
+    {
+      ok = (baseline.projection or { }) == projection;
+      message = "baseline projector/normalizer identity is stale; regenerate it";
     }
     {
       ok = builtins.attrNames (baseline.hosts or { }) == builtins.sort builtins.lessThan hosts;

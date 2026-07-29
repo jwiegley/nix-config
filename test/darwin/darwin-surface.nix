@@ -40,6 +40,21 @@ let
         builtins.split "/nix/store/[0-9a-df-np-sv-z]{32}-" value
       )
     );
+  normalizeStoreValue =
+    value:
+    if builtins.isString value then
+      normalizeStoreString value
+    else if builtins.isList value then
+      map normalizeStoreValue value
+    else if builtins.isAttrs value then
+      builtins.mapAttrs (_: normalizeStoreValue) value
+    else
+      value;
+  hashJsonValue =
+    value:
+    builtins.hashString "sha256" (
+      builtins.unsafeDiscardStringContext (builtins.toJSON (normalizeStoreValue value))
+    );
 in
 {
   # S12-S14
@@ -118,13 +133,13 @@ in
 
   # S26-S29. launchd.agents is empty on both hosts. The real repository services
   # are launchd.user.agents and launchd.daemons, so retain all three as a tripwire.
-  # Capture complete serviceConfig data rather than a hand-picked subset. Hash
-  # script text so same-named behavior changes remain visible without committing
-  # command-line credentials that a launchd script may contain.
+  # Hash complete serviceConfig and script data after store-path normalization.
+  # This keeps every behavioral change visible without committing credentials
+  # that launchd command arguments or environment variables may contain.
   launchd =
     let
       project = agent: {
-        serviceConfig = jsonValue agent.serviceConfig;
+        serviceConfigSha256 = hashJsonValue agent.serviceConfig;
         scriptSha256 =
           let
             script = agent.script or null;

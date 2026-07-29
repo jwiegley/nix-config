@@ -849,18 +849,46 @@ singular wording was corrected by absorbing them rather than merely editing the 
   python` and requires each local Python hook block to name it, so the next such tool
   cannot silently skip lint/tests.
 - New executable `bin/darwin-surface-baseline` regenerates the schema-versioned artifact
-  at an exact Git revision in a temporary detached worktree, delegates normalization to
-  the differ, validates the single existing artifact, and supports safe print or atomic
-  write modes. `make darwin-surface-baseline` is the explicit write entrypoint.
+  in a temporary detached worktree, delegates normalization to the differ, validates the
+  single existing artifact, and supports safe print or explicit write modes.
+  `make darwin-surface-baseline` is the write entrypoint.
 
-The generator was run end-to-end at `72de730a`; it cleanly removed its worktree and
-changed only the baseline note plus a committed refresh command (host values were
-byte-identical). Focused tests cover its executable/help contract and the refresh
-metadata. All three superseded partner-observation Markdown files are removed. A5 / #28
-is the next ordered unit after this cleanup is audited.
+The initial generator run at `72de730a` cleanly removed its worktree and changed only
+the baseline note plus a refresh command (host values were byte-identical). That run
+pinned the historical configuration, but not the projector/normalizer: the latter came
+from the live checkout. The exact-revision wording above was therefore an overclaim,
+corrected by the clean-context audit below rather than preserved as evidence.
 
 The full staged `bin/quality` run passes every suite: 104 Nix files, 35 shell scripts,
 42 Python files, eight Python suites (including 22 gate and 14 Darwin tests), portable
 evaluation, the Darwin surface check, consumer evaluation 5 ran / 0 skipped, and
 signatures for all 15 local commits. Remaining: signed cleanup commit and independent
 fess. No push or activation occurred.
+
+## 2026-07-29 — A5 clean-context demonstration found A4 generator defects
+
+A genuinely context-free `fess-auditor` (`fork_turns=none`) received only requirements,
+commit `64064f0c`, changed files, and claims. Its verdict was **request changes** and
+re-derived the claimed counts (104/35/42 files, eight suites, 22 gate tests, 14 Darwin
+tests). It found six real defects: raw launchd service configurations could persist
+credentials; `--rev` still used the live projector/differ; cross-revision replacement
+was not atomic as advertised; Git selector variables were inherited; generator behavior
+had no committed tests; and hook coverage used substring rather than exact glob tokens.
+
+The verified fix is a paired local transaction. First, make generation self-contained
+in the requested revision, hash complete normalized launchd service configuration,
+record schema-v2 projection identities, scrub Git selectors, add locking/rollback and
+SIGTERM cleanup, replace lexical hook evidence with exact token coverage, and add fault-
+injection tests. That code commit necessarily makes the old v1 baseline stale. Then
+regenerate a v2 baseline from that signed code commit and restore the live gate in a
+separate follow-up. The first commit is not publishable on its own; no push is
+authorized before the pair is green.
+
+The code half is now verified. Removing the old v1 artifact from consideration makes
+the live Darwin gate red for exactly two reasons: schema must be
+`darwin-value-surface/2`, and projector/normalizer identity is stale. Every other staged
+suite passes: 104 Nix files, 35 shell scripts, 43 Python files, nine Python suites
+(including 20 generator, 22 gate, and 14 Darwin-tool tests), portable evaluation,
+consumer evaluation 5 ran / 0 skipped, and signatures for all 16 local commits. The
+next commit must regenerate the artifact from this signed code commit before the unit
+can be called green.

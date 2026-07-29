@@ -4,25 +4,36 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import functools
+import hashlib
+import io
 import json
 import os
 import re
 import runpy
+import signal
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
-from typing import Any, Callable, NoReturn, Sequence
+from types import FrameType
+from typing import Any, Callable, Iterator, NoReturn, Sequence
 
 
 PROGRAM = "darwin-surface-baseline"
 REPOSITORY = Path(__file__).resolve().parent.parent
 BASELINE_DIRECTORY = REPOSITORY / "test" / "baseline"
-PROJECTOR = REPOSITORY / "test" / "darwin" / "darwin-surface.nix"
-DIFFER = REPOSITORY / "bin" / "darwin-surface-diff"
+PROJECTOR_RELATIVE = Path("test/darwin/darwin-surface.nix")
+HELPER_RELATIVE = Path("test/darwin/surface-helpers.nix")
+DIFFER_RELATIVE = Path("bin/darwin-surface-diff")
+PROJECTION_PATHS = (PROJECTOR_RELATIVE, HELPER_RELATIVE, DIFFER_RELATIVE)
+BACKUP_NAME = ".darwin-surface-baseline.backup.json"
+LOCK_NAME = ".darwin-surface-baseline.lock"
 
-SCHEMA = "darwin-value-surface/1"
+SCHEMA = "darwin-value-surface/2"
+LEGACY_SCHEMA = "darwin-value-surface/1"
 LEGACY_BASELINE_REVISION = "72de730a0b27e74acff0117a70d331060927caa6"
 HOSTS = ("clio", "hera")
 SURFACES = {
@@ -34,10 +45,45 @@ SURFACES = {
     "system",
     "users",
 }
-ARTIFACT_KEYS = {"schema", "baselineRev", "note", "commands", "hosts"}
+ARTIFACT_KEYS = {
+    "schema",
+    "baselineRev",
+    "note",
+    "commands",
+    "projection",
+    "hosts",
+}
+LEGACY_ARTIFACT_KEYS = ARTIFACT_KEYS - {"projection"}
 
 FULL_REVISION = re.compile(r"[0-9a-f]{40}\Z")
+SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 BASELINE_NAME = re.compile(r"darwin-surface-([0-9a-f]{12})\.json\Z")
+SENSITIVE_KEY = re.compile(r"password|token|secret|credential", re.IGNORECASE)
+SENSITIVE_ASSIGNMENT = re.compile(
+    r"(?:password|token|secret|credential)[A-Za-z0-9_.-]*\s*[:=]",
+    re.IGNORECASE,
+)
+SAFE_NULL_SENSITIVE_KEYS = {"askforpassword", "askforpassworddelay"}
+
+# Git repository/config selectors override cwd and can retarget commands at an
+# unrelated checkout when this program runs from a hook. Transport variables
+# such as GIT_SSH_COMMAND are intentionally retained for locked flake inputs.
+GIT_REPOSITORY_VARIABLES = {
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_CEILING_DIRECTORIES",
+    "GIT_COMMON_DIR",
+    "GIT_CONFIG",
+    "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_GLOBAL",
+    "GIT_CONFIG_SYSTEM",
+    "GIT_DIR",
+    "GIT_INDEX_FILE",
+    "GIT_INTERNAL_SUPER_PREFIX",
+    "GIT_NAMESPACE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_PREFIX",
+    "GIT_WORK_TREE",
+}
 
 HOST_SURFACE_COMMAND = (
     "nix eval --impure --json '.#darwinConfigurations.<host>' "
@@ -45,15 +91,23 @@ HOST_SURFACE_COMMAND = (
 )
 COMPARE_COMMAND = "bin/darwin-surface-diff --normalize-store <before.json> <after.json>"
 REFRESH_COMMAND = "bin/darwin-surface-baseline --rev <rev> --write"
-LEGACY_COMMANDS = {
+COMMANDS = {
     "hostSurface": HOST_SURFACE_COMMAND,
     "compare": COMPARE_COMMAND,
+    "refresh": REFRESH_COMMAND,
 }
-COMMANDS = {**LEGACY_COMMANDS, "refresh": REFRESH_COMMAND}
 
 
 class OperationalError(Exception):
     """An expected command, data, or filesystem operation failed."""
+
+
+class TerminationRequested(BaseException):
+    """A termination signal requested an orderly worktree cleanup."""
+
+    def __init__(self, signum: int) -> None:
+        super().__init__(signum)
+        self.signum = signum
 
 
 def parser() -> argparse.ArgumentParser:
@@ -77,7 +131,7 @@ def parser() -> argparse.ArgumentParser:
         dest="mode",
         action="store_const",
         const="write",
-        help="atomically replace the single committed Darwin baseline",
+        help="replace the single baseline with locking and rollback protection",
     )
     result.set_defaults(mode="print")
     return result
@@ -89,6 +143,15 @@ def command_error(description: str, result: subprocess.CompletedProcess[str]) ->
     if not detail:
         detail = f"command exited with status {result.returncode}"
     return f"{description}: {detail}"
+
+
+def clean_environment() -> dict[str, str]:
+    """Return the process environment without Git repository selectors."""
+    return {
+        name: value
+        for name, value in os.environ.items()
+        if name not in GIT_REPOSITORY_VARIABLES and not name.startswith("GIT_CONFIG_")
+    }
 
 
 def run(
@@ -105,7 +168,10 @@ def run(
             check=False,
             capture_output=True,
             text=True,
+            env=clean_environment(),
         )
+    except subprocess.TimeoutExpired as error:
+        raise OperationalError(f"{description} timed out") from error
     except FileNotFoundError as error:
         raise OperationalError(f"required command not found: {command[0]}") from error
     except OSError as error:
@@ -136,28 +202,35 @@ def resolve_revision(revision: str) -> str:
     return resolved
 
 
-@functools.lru_cache(maxsize=1)
-def store_normalizer() -> Callable[[Any], Any]:
-    """Load the differ's recursive normalizer as the single repository authority."""
+@functools.lru_cache(maxsize=8)
+def store_normalizer(differ: Path) -> Callable[[Any], Any]:
+    """Load one revision's differ as the normalization authority."""
+    captured_stdout = io.StringIO()
+    captured_stderr = io.StringIO()
     try:
-        namespace = runpy.run_path(
-            str(DIFFER), run_name="_darwin_surface_diff_normalization_authority"
-        )
-    except (OSError, ImportError, SyntaxError) as error:
+        with redirect_stdout(captured_stdout), redirect_stderr(captured_stderr):
+            namespace = runpy.run_path(
+                str(differ), run_name="_darwin_surface_diff_normalization_authority"
+            )
+    except (Exception, SystemExit) as error:
         raise OperationalError(
-            f"could not load normalization authority {DIFFER}: {error}"
+            f"could not load normalization authority {differ}: {error}"
         ) from error
+    if captured_stdout.getvalue() or captured_stderr.getvalue():
+        raise OperationalError(
+            f"normalization authority emitted output while loading: {differ}"
+        )
     normalizer = namespace.get("normalize_store")
     if not callable(normalizer):
         raise OperationalError(
-            f"normalization authority has no normalize_store: {DIFFER}"
+            f"normalization authority has no normalize_store: {differ}"
         )
     return normalizer
 
 
-def normalize_store(value: Any) -> Any:
+def normalize_store(value: Any, differ: Path) -> Any:
     """Normalize through the differ so generation and comparison cannot drift."""
-    return store_normalizer()(value)
+    return store_normalizer(differ)(value)
 
 
 def validate_host_surface(host: str, value: Any) -> dict[str, Any]:
@@ -174,12 +247,50 @@ def validate_host_surface(host: str, value: Any) -> dict[str, Any]:
             f"projector returned the wrong surfaces for {host}; "
             f"missing={missing}, extra={extra}"
         )
-    return normalize_store(value)
+    return value
+
+
+def revision_tools(worktree: Path) -> tuple[Path, Path]:
+    """Validate and return executable projection tools from the revision."""
+    projector = worktree / PROJECTOR_RELATIVE
+    helper = worktree / HELPER_RELATIVE
+    differ = worktree / DIFFER_RELATIVE
+    paths = (projector, helper, differ)
+    missing = [path.relative_to(worktree) for path in paths if not path.is_file()]
+    unsafe = [path.relative_to(worktree) for path in paths if path.is_symlink()]
+    if missing or unsafe:
+        details = []
+        if missing:
+            details.append(f"missing={list(map(str, missing))}")
+        if unsafe:
+            details.append(f"symlinks={list(map(str, unsafe))}")
+        raise OperationalError(
+            "requested revision does not contain safe Darwin baseline tools: "
+            + ", ".join(details)
+        )
+    return projector, differ
+
+
+def projection_identity(worktree: Path) -> dict[str, str]:
+    """Hash every committed source that defines projection semantics."""
+    revision_tools(worktree)
+    identity = {}
+    for relative in PROJECTION_PATHS:
+        path = worktree / relative
+        try:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError as error:
+            raise OperationalError(
+                f"could not hash projection source {relative}: {error}"
+            ) from error
+        identity[str(relative)] = digest
+    return identity
 
 
 def evaluate_host(worktree: Path, host: str) -> dict[str, Any]:
-    """Evaluate one historical host with the current repository projector."""
-    projector_string = json.dumps(str(PROJECTOR))
+    """Evaluate one host using only tools from its detached revision."""
+    projector, differ = revision_tools(worktree)
+    projector_string = json.dumps(str(projector))
     apply_expression = f"darwin: import (builtins.toPath {projector_string}) darwin"
     result = run(
         [
@@ -200,11 +311,12 @@ def evaluate_host(worktree: Path, host: str) -> dict[str, Any]:
         raise OperationalError(
             f"nix returned invalid JSON for {host}: {error}"
         ) from error
-    return validate_host_surface(host, value)
+    surface = validate_host_surface(host, value)
+    return normalize_store(surface, differ)
 
 
-def remove_worktree(path: Path) -> OperationalError | None:
-    """Remove a temporary worktree and report, rather than hide, cleanup failure."""
+def _remove_worktree(path: Path) -> OperationalError | None:
+    """Run the actual worktree removal while termination is deferred."""
     try:
         result = subprocess.run(
             ["git", "worktree", "remove", str(path)],
@@ -212,7 +324,10 @@ def remove_worktree(path: Path) -> OperationalError | None:
             check=False,
             capture_output=True,
             text=True,
+            env=clean_environment(),
         )
+    except subprocess.TimeoutExpired:
+        return OperationalError(f"temporary worktree cleanup timed out: {path}")
     except (FileNotFoundError, OSError) as error:
         return OperationalError(f"could not remove temporary worktree {path}: {error}")
     if result.returncode == 0:
@@ -226,7 +341,10 @@ def remove_worktree(path: Path) -> OperationalError | None:
             check=False,
             capture_output=True,
             text=True,
+            env=clean_environment(),
         )
+    except subprocess.TimeoutExpired as error:
+        return OperationalError(f"{clean_error}; forced cleanup timed out: {error}")
     except (FileNotFoundError, OSError) as error:
         return OperationalError(f"{clean_error}; forced cleanup could not run: {error}")
     if forced.returncode != 0:
@@ -235,10 +353,28 @@ def remove_worktree(path: Path) -> OperationalError | None:
     return OperationalError(f"{clean_error}; removed only with --force")
 
 
+def remove_worktree(path: Path) -> OperationalError | None:
+    """Remove a worktree before delivering any pending SIGTERM."""
+    try:
+        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
+    except (AttributeError, OSError, ValueError) as error:
+        cleanup_error = _remove_worktree(path)
+        mask_error = OperationalError(
+            f"could not defer SIGTERM during worktree cleanup: {error}"
+        )
+        if cleanup_error is not None:
+            return OperationalError(f"{mask_error}; additionally, {cleanup_error}")
+        return mask_error
+    try:
+        return _remove_worktree(path)
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+
+
 def derive_hosts_in_temporary_directory(
     revision: str, temporary_directory: str
-) -> dict[str, dict[str, Any]]:
-    """Evaluate both hosts within an already-created temporary directory."""
+) -> tuple[dict[str, dict[str, Any]], dict[str, str]]:
+    """Evaluate hosts and projection identity in one detached worktree."""
     worktree = Path(temporary_directory) / "source"
     try:
         run(
@@ -262,7 +398,9 @@ def derive_hosts_in_temporary_directory(
 
     failure: BaseException | None = None
     hosts: dict[str, dict[str, Any]] = {}
+    projection: dict[str, str] = {}
     try:
+        projection = projection_identity(worktree)
         for host in HOSTS:
             print(f"{PROGRAM}: evaluating {host} at {revision[:12]}", file=sys.stderr)
             hosts[host] = evaluate_host(worktree, host)
@@ -274,10 +412,12 @@ def derive_hosts_in_temporary_directory(
         raise_after_cleanup(failure, cleanup_error)
     if cleanup_error is not None:
         raise cleanup_error
-    return hosts
+    return hosts, projection
 
 
-def derive_hosts(revision: str) -> dict[str, dict[str, Any]]:
+def derive_hosts(
+    revision: str,
+) -> tuple[dict[str, dict[str, Any]], dict[str, str]]:
     """Evaluate both hosts in a detached worktree and always unregister it."""
     try:
         with tempfile.TemporaryDirectory(prefix=f"{PROGRAM}-") as temporary_directory:
@@ -303,20 +443,87 @@ def raise_after_cleanup(
     raise failure
 
 
-def artifact(revision: str, hosts: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def reject_sensitive_data(value: Any, path: str = "hosts") -> None:
+    """Refuse credential-shaped projected data without echoing its value."""
+    if isinstance(value, dict):
+        for key, item in value.items():
+            child = f"{path}.{key}"
+            key_text = str(key)
+            safe_null = key_text.lower() in SAFE_NULL_SENSITIVE_KEYS and item is None
+            if SENSITIVE_KEY.search(key_text) and not safe_null:
+                raise OperationalError(
+                    f"refusing to persist sensitive key name at {child}"
+                )
+            reject_sensitive_data(item, child)
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            reject_sensitive_data(item, f"{path}[{index}]")
+    elif isinstance(value, str) and SENSITIVE_ASSIGNMENT.search(value):
+        raise OperationalError(
+            f"refusing to persist credential assignment marker at {path}"
+        )
+
+
+def validate_projection(projection: Any) -> dict[str, str]:
+    """Require exact lower-case SHA-256 identities for all projection sources."""
+    expected = {str(path) for path in PROJECTION_PATHS}
+    if not isinstance(projection, dict) or set(projection) != expected:
+        raise OperationalError(
+            "projection identity must contain exactly " + ", ".join(sorted(expected))
+        )
+    for path, digest in projection.items():
+        if not isinstance(digest, str) or not SHA256.fullmatch(digest):
+            raise OperationalError(
+                f"projection identity has invalid SHA-256 for {path}"
+            )
+    return projection
+
+
+def validate_current_artifact(value: Any) -> dict[str, Any]:
+    """Validate a newly generated artifact before any output boundary."""
+    if not isinstance(value, dict) or set(value) != ARTIFACT_KEYS:
+        raise OperationalError(
+            f"generated artifact must contain exactly {sorted(ARTIFACT_KEYS)}"
+        )
+    if value.get("schema") != SCHEMA:
+        raise OperationalError(
+            f"generated artifact has invalid schema {value.get('schema')!r}"
+        )
+    revision = value.get("baselineRev")
+    if not isinstance(revision, str) or not FULL_REVISION.fullmatch(revision):
+        raise OperationalError("generated artifact has invalid baselineRev")
+    if not isinstance(value.get("note"), str) or value.get("commands") != COMMANDS:
+        raise OperationalError("generated artifact has invalid metadata")
+    hosts = value.get("hosts")
+    if not isinstance(hosts, dict) or set(hosts) != set(HOSTS):
+        raise OperationalError("generated artifact must contain exactly clio and hera")
+    for host, surface in hosts.items():
+        validate_host_surface(host, surface)
+    reject_sensitive_data(hosts)
+    validate_projection(value.get("projection"))
+    return value
+
+
+def artifact(
+    revision: str,
+    hosts: dict[str, dict[str, Any]],
+    projection: dict[str, str],
+) -> dict[str, Any]:
     """Assemble the stable, reviewable baseline schema."""
-    return {
+    value = {
         "schema": SCHEMA,
         "baselineRev": revision,
         "note": (
             "Seven nix-darwin value surfaces at the recorded revision. Only "
             "32-character /nix/store hash prefixes are masked; derivation names "
             "remain. Launchd scripts are hashed after that normalization, so their "
-            "text and credentials are not persisted."
+            "text is not persisted; sensitive keys and assignments are refused."
         ),
         "commands": dict(COMMANDS),
+        "projection": dict(projection),
         "hosts": hosts,
     }
+    return validate_current_artifact(value)
 
 
 def encode(value: dict[str, Any]) -> str:
@@ -329,55 +536,75 @@ def invalid_baseline(message: str) -> NoReturn:
     raise OperationalError(f"invalid existing Darwin baseline: {message}")
 
 
-def validate_existing_baseline() -> Path:
-    """Require exactly one well-formed, narrowly named existing artifact."""
+def baseline_candidates() -> list[Path]:
+    """Return only public Darwin baseline candidates."""
     try:
-        matches = sorted(BASELINE_DIRECTORY.glob("darwin-surface-*.json"))
+        return sorted(BASELINE_DIRECTORY.glob("darwin-surface-*.json"))
     except OSError as error:
         raise OperationalError(
             f"could not inspect {BASELINE_DIRECTORY}: {error}"
         ) from error
-    if len(matches) != 1:
-        raise OperationalError(
-            "--write requires exactly one existing "
-            f"{BASELINE_DIRECTORY}/darwin-surface-*.json; found {len(matches)}"
-        )
 
-    path = matches[0]
-    match = BASELINE_NAME.fullmatch(path.name)
-    if match is None or path.is_symlink() or not path.is_file():
+
+def read_baseline(path: Path, *, require_candidate_name: bool = True) -> dict[str, Any]:
+    """Read and validate one current or narrowly bootstrapped artifact."""
+    if path.is_symlink() or not path.is_file():
         invalid_baseline(f"unsafe path {path}")
     try:
         existing = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         invalid_baseline(f"could not read {path}: {error}")
-    if not isinstance(existing, dict) or set(existing) != ARTIFACT_KEYS:
-        invalid_baseline(f"{path} does not have exactly {sorted(ARTIFACT_KEYS)}")
-    if existing.get("schema") != SCHEMA:
-        invalid_baseline(f"{path} has schema {existing.get('schema')!r}")
+    if not isinstance(existing, dict):
+        invalid_baseline(f"{path} is not an object")
+
+    schema = existing.get("schema")
     baseline_revision = existing.get("baselineRev")
     if not isinstance(baseline_revision, str) or not FULL_REVISION.fullmatch(
         baseline_revision
     ):
         invalid_baseline(f"{path} has an invalid baselineRev")
-    if match.group(1) != baseline_revision[:12]:
-        invalid_baseline(f"{path} does not match its baselineRev")
+    is_bootstrap = (
+        schema == LEGACY_SCHEMA
+        and baseline_revision == LEGACY_BASELINE_REVISION
+        and set(existing) == LEGACY_ARTIFACT_KEYS
+    )
+    if schema != SCHEMA and not is_bootstrap:
+        invalid_baseline(
+            f"{path} has schema {schema!r}; only the known v1 bootstrap is accepted"
+        )
+    expected_keys = LEGACY_ARTIFACT_KEYS if is_bootstrap else ARTIFACT_KEYS
+    if set(existing) != expected_keys:
+        invalid_baseline(f"{path} does not have exactly {sorted(expected_keys)}")
+
+    if require_candidate_name:
+        match = BASELINE_NAME.fullmatch(path.name)
+        if match is None or match.group(1) != baseline_revision[:12]:
+            invalid_baseline(f"{path} does not match its baselineRev")
     if not isinstance(existing.get("note"), str):
         invalid_baseline(f"{path} has a non-string note")
-    commands = existing.get("commands")
-    legacy_commands_allowed = (
-        baseline_revision == LEGACY_BASELINE_REVISION and commands == LEGACY_COMMANDS
-    )
-    if commands != COMMANDS and not legacy_commands_allowed:
-        invalid_baseline(
-            f"{path} has invalid derivation commands; only the known pre-generator "
-            "artifact may omit the refresh command"
-        )
+    if existing.get("commands") != COMMANDS:
+        invalid_baseline(f"{path} has invalid derivation commands")
     hosts = existing.get("hosts")
     if not isinstance(hosts, dict) or set(hosts) != set(HOSTS):
         invalid_baseline(f"{path} does not contain exactly {sorted(HOSTS)}")
     for host, surface in hosts.items():
         validate_host_surface(host, surface)
+    reject_sensitive_data(hosts)
+    if not is_bootstrap:
+        validate_projection(existing.get("projection"))
+    return existing
+
+
+def validate_existing_baseline() -> Path:
+    """Require exactly one well-formed, narrowly named existing artifact."""
+    matches = baseline_candidates()
+    if len(matches) != 1:
+        raise OperationalError(
+            "--write requires exactly one existing "
+            f"{BASELINE_DIRECTORY}/darwin-surface-*.json; found {len(matches)}"
+        )
+    path = matches[0]
+    read_baseline(path)
     return path
 
 
@@ -420,45 +647,265 @@ def atomic_write(path: Path, contents: str) -> None:
         raise cleanup_error
 
 
-def write_artifact(existing: Path, value: dict[str, Any]) -> Path:
-    """Install the revision-named artifact, then remove only its predecessor."""
-    revision = value["baselineRev"]
-    destination = BASELINE_DIRECTORY / f"darwin-surface-{revision[:12]}.json"
-    atomic_write(destination, encode(value))
-    if existing != destination:
+def git_common_directory() -> Path:
+    """Resolve the repository's shared Git directory under a scrubbed environment."""
+    result = run(
+        ["git", "rev-parse", "--git-common-dir"],
+        cwd=REPOSITORY,
+        description="could not resolve the Git common directory",
+    )
+    raw = result.stdout.strip()
+    if not raw:
+        raise OperationalError("git returned an empty common directory")
+    common = Path(raw)
+    if not common.is_absolute():
+        common = REPOSITORY / common
+    try:
+        common = common.resolve(strict=True)
+    except OSError as error:
+        raise OperationalError(
+            f"could not resolve Git common directory {common}: {error}"
+        ) from error
+    if not common.is_dir():
+        raise OperationalError(f"Git common directory is not a directory: {common}")
+    return common
+
+
+def close_write_lock(handle: Any, locked: bool) -> OperationalError | None:
+    """Release and close a baseline lock, retaining every failure."""
+    failures = []
+    if locked:
         try:
-            existing.unlink()
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        except OSError as error:
+            failures.append(f"unlock failed: {error}")
+    if handle is not None:
+        try:
+            handle.close()
+        except OSError as error:
+            failures.append(f"close failed: {error}")
+    if failures:
+        return OperationalError("baseline write lock cleanup: " + "; ".join(failures))
+    return None
+
+
+@contextmanager
+def baseline_write_lock() -> Iterator[None]:
+    """Serialize baseline validation, derivation, recovery, and replacement."""
+    lock_path = git_common_directory() / LOCK_NAME
+    descriptor: int | None = None
+    handle = None
+    locked = False
+    try:
+        descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+        handle = os.fdopen(descriptor, "a+")
+        descriptor = None
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        locked = True
+    except BaseException as failure:
+        if isinstance(failure, OSError):
+            failure = OperationalError(
+                f"could not acquire baseline write lock {lock_path}: {failure}"
+            )
+        cleanup_error = close_write_lock(handle, locked)
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError as error:
+                descriptor_error = OperationalError(
+                    f"baseline write lock descriptor cleanup failed: {error}"
+                )
+                if cleanup_error is None:
+                    cleanup_error = descriptor_error
+                else:
+                    cleanup_error = OperationalError(
+                        f"{cleanup_error}; additionally, {descriptor_error}"
+                    )
+        raise_after_cleanup(failure, cleanup_error)
+
+    failure: BaseException | None = None
+    try:
+        yield
+    except BaseException as error:
+        failure = error
+    cleanup_error = close_write_lock(handle, locked)
+    if failure is not None:
+        raise_after_cleanup(failure, cleanup_error)
+    if cleanup_error is not None:
+        raise cleanup_error
+
+
+def baseline_backup_path() -> Path:
+    """Return the deterministic hidden recovery path outside the public glob."""
+    return BASELINE_DIRECTORY / BACKUP_NAME
+
+
+def path_present(path: Path) -> bool:
+    """Detect regular entries and broken symlinks without following them."""
+    return path.exists() or path.is_symlink()
+
+
+def recover_interrupted_write() -> None:
+    """Restore or retire the hidden backup left by an interrupted transaction."""
+    backup = baseline_backup_path()
+    if not path_present(backup):
+        return
+    backup_value = read_baseline(backup, require_candidate_name=False)
+    candidates = baseline_candidates()
+    if not candidates:
+        revision = backup_value["baselineRev"]
+        restored = BASELINE_DIRECTORY / f"darwin-surface-{revision[:12]}.json"
+        if path_present(restored):
+            raise OperationalError(
+                f"cannot restore hidden baseline backup; destination exists: {restored}"
+            )
+        try:
+            os.replace(backup, restored)
         except OSError as error:
             raise OperationalError(
-                f"wrote {destination}, but could not remove old baseline {existing}: "
-                f"{error}"
+                f"could not restore interrupted baseline transaction from {backup}: {error}"
             ) from error
+        print(
+            f"{PROGRAM}: restored interrupted baseline {restored.name}", file=sys.stderr
+        )
+        return
+    if len(candidates) != 1:
+        raise OperationalError(
+            f"hidden baseline backup {backup} coexists with {len(candidates)} candidates"
+        )
+    read_baseline(candidates[0])
+    try:
+        backup.unlink()
+    except OSError as error:
+        raise OperationalError(
+            f"could not retire hidden baseline backup {backup}: {error}"
+        ) from error
+    print(f"{PROGRAM}: retired completed transaction backup", file=sys.stderr)
+
+
+def rollback_revision_change(
+    existing: Path, destination: Path, backup: Path
+) -> OperationalError | None:
+    """Restore the prior candidate without ever exposing two public candidates."""
+    if path_present(destination):
+        try:
+            destination.unlink()
+        except OSError as error:
+            return OperationalError(
+                f"could not remove incomplete destination {destination}: {error}; "
+                f"prior baseline remains hidden at {backup}"
+            )
+    try:
+        os.replace(backup, existing)
+    except OSError as error:
+        return OperationalError(
+            f"could not restore prior baseline {existing} from {backup}: {error}"
+        )
+    return None
+
+
+def write_artifact(existing: Path, value: dict[str, Any]) -> Path:
+    """Install one artifact without exposing two public candidate names."""
+    validate_current_artifact(value)
+    revision = value["baselineRev"]
+    destination = BASELINE_DIRECTORY / f"darwin-surface-{revision[:12]}.json"
+    if existing == destination:
+        atomic_write(destination, encode(value))
+        return destination
+
+    backup = baseline_backup_path()
+    if path_present(destination):
+        raise OperationalError(
+            f"refusing to replace existing destination {destination}"
+        )
+    if path_present(backup):
+        raise OperationalError(
+            f"hidden baseline backup requires recovery before writing: {backup}"
+        )
+    try:
+        os.replace(existing, backup)
+    except OSError as error:
+        raise OperationalError(
+            f"could not hide prior baseline {existing}: {error}"
+        ) from error
+    try:
+        atomic_write(destination, encode(value))
+    except BaseException as failure:
+        rollback_error = rollback_revision_change(existing, destination, backup)
+        raise_after_cleanup(failure, rollback_error)
+    try:
+        backup.unlink()
+    except OSError as error:
+        raise OperationalError(
+            f"wrote {destination}, but hidden recovery backup remains at {backup}: {error}"
+        ) from error
     return destination
+
+
+def request_termination(signum: int, _frame: FrameType | None) -> NoReturn:
+    """Turn SIGTERM into an exception so active cleanup paths execute."""
+    raise TerminationRequested(signum)
+
+
+@contextmanager
+def termination_guard() -> Iterator[None]:
+    """Install and reliably restore the SIGTERM cleanup handler."""
+    try:
+        previous = signal.getsignal(signal.SIGTERM)
+        signal.signal(signal.SIGTERM, request_termination)
+    except (OSError, ValueError) as error:
+        raise OperationalError(
+            f"could not install SIGTERM cleanup handler: {error}"
+        ) from error
+
+    failure: BaseException | None = None
+    try:
+        yield
+    except BaseException as error:
+        failure = error
+    cleanup_error = None
+    try:
+        signal.signal(signal.SIGTERM, previous)
+    except (OSError, ValueError) as error:
+        cleanup_error = OperationalError(f"could not restore SIGTERM handler: {error}")
+    if failure is not None:
+        raise_after_cleanup(failure, cleanup_error)
+    if cleanup_error is not None:
+        raise cleanup_error
+
+
+def execute(args: argparse.Namespace) -> None:
+    """Derive and emit or transactionally replace one artifact."""
+    revision = resolve_revision(args.rev)
+    if args.mode == "write":
+        with baseline_write_lock():
+            recover_interrupted_write()
+            existing = validate_existing_baseline()
+            hosts, projection = derive_hosts(revision)
+            value = artifact(revision, hosts, projection)
+            destination = write_artifact(existing, value)
+            relative = destination.relative_to(REPOSITORY)
+            print(relative)
+            print(f"{PROGRAM}: wrote {relative}", file=sys.stderr)
+        return
+
+    hosts, projection = derive_hosts(revision)
+    value = artifact(revision, hosts, projection)
+    sys.stdout.write(encode(value))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the baseline generator."""
     args = parser().parse_args(argv)
     try:
-        existing = validate_existing_baseline() if args.mode == "write" else None
-        if not PROJECTOR.is_file():
-            raise OperationalError(f"current projector does not exist: {PROJECTOR}")
-        revision = resolve_revision(args.rev)
-        value = artifact(revision, derive_hosts(revision))
-        if args.mode == "write":
-            if existing is None:
-                raise OperationalError(
-                    "internal error: existing baseline was not validated"
-                )
-            destination = write_artifact(existing, value)
-            relative = destination.relative_to(REPOSITORY)
-            print(relative)
-            print(f"{PROGRAM}: wrote {relative}", file=sys.stderr)
-        else:
-            sys.stdout.write(encode(value))
+        with termination_guard():
+            execute(args)
     except OperationalError as error:
         print(f"{PROGRAM}: {error}", file=sys.stderr)
         return 2
+    except TerminationRequested as error:
+        print(f"{PROGRAM}: terminated by signal {error.signum}", file=sys.stderr)
+        return 128 + error.signum
     except KeyboardInterrupt:
         print(f"{PROGRAM}: interrupted", file=sys.stderr)
         return 130

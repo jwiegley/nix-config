@@ -523,13 +523,20 @@ class TestGatesAreRegistered(unittest.TestCase):
                 rf"(?m)^    {command}:\n(?P<body>(?:^      [^\n]*\n)+)", config
             )
             self.assertIsNotNone(match, "%s hook is missing" % command)
-            for path in extensionless:
-                self.assertIn(
-                    path,
-                    match.group("body"),
-                    "%s does not trigger for extensionless Python tool %s"
-                    % (command, path),
-                )
+            glob = re.search(
+                r'^      glob: "\{(?P<items>[^\"]+)\}"$',
+                match.group("body"),
+                re.MULTILINE,
+            )
+            self.assertIsNotNone(glob, "%s hook has no simple brace glob" % command)
+            actual = set(glob.group("items").split(","))
+            expected = {"*.py", *extensionless}
+            self.assertEqual(
+                actual,
+                expected,
+                "%s trigger glob must exactly cover Python files plus every "
+                "extensionless Python tool" % command,
+            )
 
     def test_no_gate_contains_common_credential_markers(self):
         for tool in (
