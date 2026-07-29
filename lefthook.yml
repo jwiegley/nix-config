@@ -32,10 +32,10 @@ pre-commit:
       glob: "{bin/*,build,*.sh,*.bash}"
       run: bin/quality shell-format
     python-lint:
-      glob: "{*.py,bin/update-overlay}"
+      glob: "{*.py,bin/update-overlay,bin/darwin-surface-diff,bin/darwin-surface-baseline}"
       run: bin/quality python-lint
     python-test:
-      glob: "{*.py,bin/update-overlay}"
+      glob: "{*.py,bin/update-overlay,bin/darwin-surface-diff,bin/darwin-surface-baseline}"
       run: bin/quality python-test
     nix-check:
       glob: "*.{nix,lock}"

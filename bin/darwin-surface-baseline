@@ -1,0 +1,469 @@
+#!/usr/bin/env python3
+"""Derive the committed Darwin value-surface baseline at an exact revision."""
+
+from __future__ import annotations
+
+import argparse
+import functools
+import json
+import os
+import re
+import runpy
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any, Callable, NoReturn, Sequence
+
+
+PROGRAM = "darwin-surface-baseline"
+REPOSITORY = Path(__file__).resolve().parent.parent
+BASELINE_DIRECTORY = REPOSITORY / "test" / "baseline"
+PROJECTOR = REPOSITORY / "test" / "darwin" / "darwin-surface.nix"
+DIFFER = REPOSITORY / "bin" / "darwin-surface-diff"
+
+SCHEMA = "darwin-value-surface/1"
+LEGACY_BASELINE_REVISION = "72de730a0b27e74acff0117a70d331060927caa6"
+HOSTS = ("clio", "hera")
+SURFACES = {
+    "environment",
+    "homebrew",
+    "launchd",
+    "nix",
+    "services",
+    "system",
+    "users",
+}
+ARTIFACT_KEYS = {"schema", "baselineRev", "note", "commands", "hosts"}
+
+FULL_REVISION = re.compile(r"[0-9a-f]{40}\Z")
+BASELINE_NAME = re.compile(r"darwin-surface-([0-9a-f]{12})\.json\Z")
+
+HOST_SURFACE_COMMAND = (
+    "nix eval --impure --json '.#darwinConfigurations.<host>' "
+    "--apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'"
+)
+COMPARE_COMMAND = "bin/darwin-surface-diff --normalize-store <before.json> <after.json>"
+REFRESH_COMMAND = "bin/darwin-surface-baseline --rev <rev> --write"
+LEGACY_COMMANDS = {
+    "hostSurface": HOST_SURFACE_COMMAND,
+    "compare": COMPARE_COMMAND,
+}
+COMMANDS = {**LEGACY_COMMANDS, "refresh": REFRESH_COMMAND}
+
+
+class OperationalError(Exception):
+    """An expected command, data, or filesystem operation failed."""
+
+
+def parser() -> argparse.ArgumentParser:
+    """Build the command-line parser."""
+    result = argparse.ArgumentParser(description=__doc__)
+    result.add_argument(
+        "--rev",
+        default="HEAD",
+        help="commit whose Darwin configurations to evaluate (default: HEAD)",
+    )
+    output = result.add_mutually_exclusive_group()
+    output.add_argument(
+        "--print",
+        dest="mode",
+        action="store_const",
+        const="print",
+        help="print the derived artifact to stdout (default)",
+    )
+    output.add_argument(
+        "--write",
+        dest="mode",
+        action="store_const",
+        const="write",
+        help="atomically replace the single committed Darwin baseline",
+    )
+    result.set_defaults(mode="print")
+    return result
+
+
+def command_error(description: str, result: subprocess.CompletedProcess[str]) -> str:
+    """Format a concise subprocess failure without echoing evaluated JSON."""
+    detail = result.stderr.strip()
+    if not detail:
+        detail = f"command exited with status {result.returncode}"
+    return f"{description}: {detail}"
+
+
+def run(
+    command: Sequence[str],
+    *,
+    cwd: Path,
+    description: str,
+) -> subprocess.CompletedProcess[str]:
+    """Run a required command and turn environmental failures into CLI errors."""
+    try:
+        result = subprocess.run(
+            command,
+            cwd=cwd,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError as error:
+        raise OperationalError(f"required command not found: {command[0]}") from error
+    except OSError as error:
+        raise OperationalError(f"could not run {description}: {error}") from error
+    if result.returncode != 0:
+        raise OperationalError(command_error(description, result))
+    return result
+
+
+def resolve_revision(revision: str) -> str:
+    """Resolve REVISION to one unambiguous full commit ID."""
+    result = run(
+        [
+            "git",
+            "rev-parse",
+            "--verify",
+            "--end-of-options",
+            f"{revision}^{{commit}}",
+        ],
+        cwd=REPOSITORY,
+        description=f"could not resolve revision {revision!r}",
+    )
+    resolved = result.stdout.strip()
+    if not FULL_REVISION.fullmatch(resolved):
+        raise OperationalError(
+            f"git returned an invalid full revision for {revision!r}: {resolved!r}"
+        )
+    return resolved
+
+
+@functools.lru_cache(maxsize=1)
+def store_normalizer() -> Callable[[Any], Any]:
+    """Load the differ's recursive normalizer as the single repository authority."""
+    try:
+        namespace = runpy.run_path(
+            str(DIFFER), run_name="_darwin_surface_diff_normalization_authority"
+        )
+    except (OSError, ImportError, SyntaxError) as error:
+        raise OperationalError(
+            f"could not load normalization authority {DIFFER}: {error}"
+        ) from error
+    normalizer = namespace.get("normalize_store")
+    if not callable(normalizer):
+        raise OperationalError(
+            f"normalization authority has no normalize_store: {DIFFER}"
+        )
+    return normalizer
+
+
+def normalize_store(value: Any) -> Any:
+    """Normalize through the differ so generation and comparison cannot drift."""
+    return store_normalizer()(value)
+
+
+def validate_host_surface(host: str, value: Any) -> dict[str, Any]:
+    """Reject vacuous or schema-changing projector output."""
+    if not isinstance(value, dict):
+        raise OperationalError(
+            f"projector returned {type(value).__name__} for {host}, expected an object"
+        )
+    keys = set(value)
+    if keys != SURFACES:
+        missing = sorted(SURFACES - keys)
+        extra = sorted(keys - SURFACES)
+        raise OperationalError(
+            f"projector returned the wrong surfaces for {host}; "
+            f"missing={missing}, extra={extra}"
+        )
+    return normalize_store(value)
+
+
+def evaluate_host(worktree: Path, host: str) -> dict[str, Any]:
+    """Evaluate one historical host with the current repository projector."""
+    projector_string = json.dumps(str(PROJECTOR))
+    apply_expression = f"darwin: import (builtins.toPath {projector_string}) darwin"
+    result = run(
+        [
+            "nix",
+            "eval",
+            "--impure",
+            "--json",
+            f".#darwinConfigurations.{host}",
+            "--apply",
+            apply_expression,
+        ],
+        cwd=worktree,
+        description=f"could not evaluate Darwin surface for {host}",
+    )
+    try:
+        value = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise OperationalError(
+            f"nix returned invalid JSON for {host}: {error}"
+        ) from error
+    return validate_host_surface(host, value)
+
+
+def remove_worktree(path: Path) -> OperationalError | None:
+    """Remove a temporary worktree and report, rather than hide, cleanup failure."""
+    try:
+        result = subprocess.run(
+            ["git", "worktree", "remove", str(path)],
+            cwd=REPOSITORY,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, OSError) as error:
+        return OperationalError(f"could not remove temporary worktree {path}: {error}")
+    if result.returncode == 0:
+        return None
+
+    clean_error = command_error(f"could not cleanly remove worktree {path}", result)
+    try:
+        forced = subprocess.run(
+            ["git", "worktree", "remove", "--force", str(path)],
+            cwd=REPOSITORY,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, OSError) as error:
+        return OperationalError(f"{clean_error}; forced cleanup could not run: {error}")
+    if forced.returncode != 0:
+        forced_error = command_error("forced cleanup also failed", forced)
+        return OperationalError(f"{clean_error}; {forced_error}")
+    return OperationalError(f"{clean_error}; removed only with --force")
+
+
+def derive_hosts_in_temporary_directory(
+    revision: str, temporary_directory: str
+) -> dict[str, dict[str, Any]]:
+    """Evaluate both hosts within an already-created temporary directory."""
+    worktree = Path(temporary_directory) / "source"
+    try:
+        run(
+            [
+                "git",
+                "worktree",
+                "add",
+                "--detach",
+                "--quiet",
+                str(worktree),
+                revision,
+            ],
+            cwd=REPOSITORY,
+            description=f"could not create detached worktree at {revision}",
+        )
+    except BaseException as failure:
+        # A checkout failure can occur after Git registered the worktree.
+        # Attempt the same narrow cleanup even when `worktree add` failed.
+        cleanup_error = remove_worktree(worktree)
+        raise_after_cleanup(failure, cleanup_error)
+
+    failure: BaseException | None = None
+    hosts: dict[str, dict[str, Any]] = {}
+    try:
+        for host in HOSTS:
+            print(f"{PROGRAM}: evaluating {host} at {revision[:12]}", file=sys.stderr)
+            hosts[host] = evaluate_host(worktree, host)
+    except BaseException as error:
+        failure = error
+
+    cleanup_error = remove_worktree(worktree)
+    if failure is not None:
+        raise_after_cleanup(failure, cleanup_error)
+    if cleanup_error is not None:
+        raise cleanup_error
+    return hosts
+
+
+def derive_hosts(revision: str) -> dict[str, dict[str, Any]]:
+    """Evaluate both hosts in a detached worktree and always unregister it."""
+    try:
+        with tempfile.TemporaryDirectory(prefix=f"{PROGRAM}-") as temporary_directory:
+            return derive_hosts_in_temporary_directory(revision, temporary_directory)
+    except OperationalError:
+        raise
+    except OSError as error:
+        raise OperationalError(
+            f"could not create or clean temporary worktree directory: {error}"
+        ) from error
+
+
+def raise_after_cleanup(
+    failure: BaseException, cleanup_error: OperationalError | None
+) -> NoReturn:
+    """Re-raise a primary failure without hiding a paired cleanup failure."""
+    if cleanup_error is not None:
+        if isinstance(failure, OperationalError):
+            raise OperationalError(
+                f"{failure}; additionally, {cleanup_error}"
+            ) from failure
+        print(f"{PROGRAM}: additionally, {cleanup_error}", file=sys.stderr)
+    raise failure
+
+
+def artifact(revision: str, hosts: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Assemble the stable, reviewable baseline schema."""
+    return {
+        "schema": SCHEMA,
+        "baselineRev": revision,
+        "note": (
+            "Seven nix-darwin value surfaces at the recorded revision. Only "
+            "32-character /nix/store hash prefixes are masked; derivation names "
+            "remain. Launchd scripts are hashed after that normalization, so their "
+            "text and credentials are not persisted."
+        ),
+        "commands": dict(COMMANDS),
+        "hosts": hosts,
+    }
+
+
+def encode(value: dict[str, Any]) -> str:
+    """Encode artifacts deterministically, including one trailing newline."""
+    return json.dumps(value, indent=2, ensure_ascii=False) + "\n"
+
+
+def invalid_baseline(message: str) -> NoReturn:
+    """Raise a consistently worded existing-baseline validation error."""
+    raise OperationalError(f"invalid existing Darwin baseline: {message}")
+
+
+def validate_existing_baseline() -> Path:
+    """Require exactly one well-formed, narrowly named existing artifact."""
+    try:
+        matches = sorted(BASELINE_DIRECTORY.glob("darwin-surface-*.json"))
+    except OSError as error:
+        raise OperationalError(
+            f"could not inspect {BASELINE_DIRECTORY}: {error}"
+        ) from error
+    if len(matches) != 1:
+        raise OperationalError(
+            "--write requires exactly one existing "
+            f"{BASELINE_DIRECTORY}/darwin-surface-*.json; found {len(matches)}"
+        )
+
+    path = matches[0]
+    match = BASELINE_NAME.fullmatch(path.name)
+    if match is None or path.is_symlink() or not path.is_file():
+        invalid_baseline(f"unsafe path {path}")
+    try:
+        existing = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        invalid_baseline(f"could not read {path}: {error}")
+    if not isinstance(existing, dict) or set(existing) != ARTIFACT_KEYS:
+        invalid_baseline(f"{path} does not have exactly {sorted(ARTIFACT_KEYS)}")
+    if existing.get("schema") != SCHEMA:
+        invalid_baseline(f"{path} has schema {existing.get('schema')!r}")
+    baseline_revision = existing.get("baselineRev")
+    if not isinstance(baseline_revision, str) or not FULL_REVISION.fullmatch(
+        baseline_revision
+    ):
+        invalid_baseline(f"{path} has an invalid baselineRev")
+    if match.group(1) != baseline_revision[:12]:
+        invalid_baseline(f"{path} does not match its baselineRev")
+    if not isinstance(existing.get("note"), str):
+        invalid_baseline(f"{path} has a non-string note")
+    commands = existing.get("commands")
+    legacy_commands_allowed = (
+        baseline_revision == LEGACY_BASELINE_REVISION and commands == LEGACY_COMMANDS
+    )
+    if commands != COMMANDS and not legacy_commands_allowed:
+        invalid_baseline(
+            f"{path} has invalid derivation commands; only the known pre-generator "
+            "artifact may omit the refresh command"
+        )
+    hosts = existing.get("hosts")
+    if not isinstance(hosts, dict) or set(hosts) != set(HOSTS):
+        invalid_baseline(f"{path} does not contain exactly {sorted(HOSTS)}")
+    for host, surface in hosts.items():
+        validate_host_surface(host, surface)
+    return path
+
+
+def atomic_write(path: Path, contents: str) -> None:
+    """Replace PATH atomically with a fully flushed regular file."""
+    temporary_path: Path | None = None
+    failure: BaseException | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            delete=False,
+        ) as handle:
+            temporary_path = Path(handle.name)
+            handle.write(contents)
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary_path.chmod(0o644)
+        os.replace(temporary_path, path)
+        temporary_path = None
+    except OSError as error:
+        failure = OperationalError(f"could not atomically write {path}: {error}")
+    except BaseException as error:
+        failure = error
+
+    cleanup_error = None
+    if temporary_path is not None:
+        try:
+            temporary_path.unlink(missing_ok=True)
+        except OSError as error:
+            cleanup_error = OperationalError(
+                f"could not remove temporary artifact {temporary_path}: {error}"
+            )
+    if failure is not None:
+        raise_after_cleanup(failure, cleanup_error)
+    if cleanup_error is not None:
+        raise cleanup_error
+
+
+def write_artifact(existing: Path, value: dict[str, Any]) -> Path:
+    """Install the revision-named artifact, then remove only its predecessor."""
+    revision = value["baselineRev"]
+    destination = BASELINE_DIRECTORY / f"darwin-surface-{revision[:12]}.json"
+    atomic_write(destination, encode(value))
+    if existing != destination:
+        try:
+            existing.unlink()
+        except OSError as error:
+            raise OperationalError(
+                f"wrote {destination}, but could not remove old baseline {existing}: "
+                f"{error}"
+            ) from error
+    return destination
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run the baseline generator."""
+    args = parser().parse_args(argv)
+    try:
+        existing = validate_existing_baseline() if args.mode == "write" else None
+        if not PROJECTOR.is_file():
+            raise OperationalError(f"current projector does not exist: {PROJECTOR}")
+        revision = resolve_revision(args.rev)
+        value = artifact(revision, derive_hosts(revision))
+        if args.mode == "write":
+            if existing is None:
+                raise OperationalError(
+                    "internal error: existing baseline was not validated"
+                )
+            destination = write_artifact(existing, value)
+            relative = destination.relative_to(REPOSITORY)
+            print(relative)
+            print(f"{PROGRAM}: wrote {relative}", file=sys.stderr)
+        else:
+            sys.stdout.write(encode(value))
+    except OperationalError as error:
+        print(f"{PROGRAM}: {error}", file=sys.stderr)
+        return 2
+    except KeyboardInterrupt:
+        print(f"{PROGRAM}: interrupted", file=sys.stderr)
+        return 130
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

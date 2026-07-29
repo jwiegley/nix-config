@@ -1,10 +1,11 @@
 {
   "schema": "darwin-value-surface/1",
   "baselineRev": "72de730a0b27e74acff0117a70d331060927caa6",
-  "note": "Seven nix-darwin value surfaces at the signed pre-A4 tip. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text and credentials are not persisted.",
+  "note": "Seven nix-darwin value surfaces at the recorded revision. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text and credentials are not persisted.",
   "commands": {
     "hostSurface": "nix eval --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
-    "compare": "bin/darwin-surface-diff --normalize-store <before.json> <after.json>"
+    "compare": "bin/darwin-surface-diff --normalize-store <before.json> <after.json>",
+    "refresh": "bin/darwin-surface-baseline --rev <rev> --write"
   },
   "hosts": {
     "clio": {

@@ -14,6 +14,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 TOOL = HERE / "darwin-surface-diff"
+BASELINE_TOOL = HERE / "darwin-surface-baseline"
 BASELINE_DIR = REPO / "test" / "baseline"
 HASH_A = "0123456789abcdfghijklmnpqrsvwxyz"
 HASH_B = "zyxwvsrqpnmlkjihgfdcba9876543210"
@@ -127,6 +128,19 @@ class DarwinSurfaceDiffTests(unittest.TestCase):
             self.assertEqual(drift.returncode, 1, drift.stdout + drift.stderr)
             self.assertEqual(broken.returncode, 2, broken.stdout + broken.stderr)
 
+    def test_baseline_generator_is_executable_and_documents_safe_modes(self):
+        self.assertTrue(BASELINE_TOOL.is_file())
+        self.assertTrue(BASELINE_TOOL.stat().st_mode & 0o111)
+        help_result = subprocess.run(
+            [str(BASELINE_TOOL), "--help"], capture_output=True, text=True
+        )
+        self.assertEqual(
+            help_result.returncode, 0, help_result.stdout + help_result.stderr
+        )
+        self.assertIn("--rev REV", help_result.stdout)
+        self.assertIn("--print", help_result.stdout)
+        self.assertIn("--write", help_result.stdout)
+
 
 class CommittedDarwinSurfaceTests(unittest.TestCase):
     @classmethod
@@ -145,6 +159,10 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
         self.assertEqual(set(self.baseline.get("hosts", {})), {"hera", "clio"})
         for surface in self.baseline["hosts"].values():
             self.assertEqual(set(surface), SURFACES)
+        self.assertEqual(
+            self.baseline["commands"].get("refresh"),
+            "bin/darwin-surface-baseline --rev <rev> --write",
+        )
 
     def test_baseline_encodes_both_nonvacuity_traps_and_nix_builders(self):
         expected_counts = {"hera": (12, 6, 8), "clio": (5, 3, 4)}

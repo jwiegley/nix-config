@@ -22,6 +22,7 @@ Run: python3 -m unittest -v bin/gates-test.py
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -36,6 +37,7 @@ VERIFY_SIGNATURES = BIN / "verify-signatures"
 CROSS_CONSUMER_EVAL = BIN / "cross-consumer-eval"
 CONSUMER_INVENTORY = BIN / "consumer-inventory"
 DARWIN_SURFACE_DIFF = BIN / "darwin-surface-diff"
+DARWIN_SURFACE_BASELINE = BIN / "darwin-surface-baseline"
 
 # Repository-pointing git variables. A test that shells out to git in a temp
 # directory MUST scrub these: under a git hook they name the REAL repository and
@@ -478,6 +480,7 @@ class TestGatesAreRegistered(unittest.TestCase):
             CROSS_CONSUMER_EVAL,
             CONSUMER_INVENTORY,
             DARWIN_SURFACE_DIFF,
+            DARWIN_SURFACE_BASELINE,
         ):
             self.assertTrue(os.access(tool, os.X_OK), "%s is not executable" % tool)
 
@@ -505,12 +508,36 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertNotRegex(ci, r"(?m)^\s+run: bin/quality darwin-surface$")
         self.assertIn("LAN-only ssh://gitea stock-trader input", ci)
 
+    def test_every_extensionless_python_tool_triggers_local_python_hooks(self):
+        discovered = subprocess.run(
+            [str(BIN / "quality"), "--files", "python"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.splitlines()
+        extensionless = [path for path in discovered if not path.endswith(".py")]
+        config = (REPO / "lefthook.yml").read_text()
+        for command in ("python-lint", "python-test"):
+            match = re.search(
+                rf"(?m)^    {command}:\n(?P<body>(?:^      [^\n]*\n)+)", config
+            )
+            self.assertIsNotNone(match, "%s hook is missing" % command)
+            for path in extensionless:
+                self.assertIn(
+                    path,
+                    match.group("body"),
+                    "%s does not trigger for extensionless Python tool %s"
+                    % (command, path),
+                )
+
     def test_no_gate_contains_common_credential_markers(self):
         for tool in (
             VERIFY_SIGNATURES,
             CROSS_CONSUMER_EVAL,
             CONSUMER_INVENTORY,
             DARWIN_SURFACE_DIFF,
+            DARWIN_SURFACE_BASELINE,
         ):
             body = tool.read_text()
             for pattern in ("ghp_", "github_pat_", "PRIVATE KEY", "password="):

@@ -14,7 +14,7 @@ NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 
 .PHONY: help all verify-inputs lock-local build switch update update-projects upgrade-tasks upgrade \
-	changes copy check sizes clean purge sign travel-ready test tools repl format lint
+	changes copy check sizes clean purge sign travel-ready test darwin-surface-baseline tools repl format lint
 
 all: switch
 
@@ -43,6 +43,7 @@ help:
 	  '' \
 	  'Mutating targets (explicit only):' \
 	  '  format           Rewrite tracked Nix and shell sources' \
+	  '  darwin-surface-baseline  Regenerate the exact-commit Darwin value baseline' \
 	  '  lint             Run every quality suite (bin/quality)' \
 	  '  switch           Re-lock local inputs and switch nix-darwin' \
 	  '  update           Update the root lock and Homebrew metadata' \
@@ -59,6 +60,9 @@ test:
 	  .#checks.$(SYSTEM).ai-home-manager-model-sync \
 	  .#checks.$(SYSTEM).ai-home-manager-package-selection \
 	  .#checks.$(SYSTEM).pi-gallery
+
+darwin-surface-baseline:
+	bin/darwin-surface-baseline --write
 
 tools:
 	@echo HOSTNAME=$(HOSTNAME)

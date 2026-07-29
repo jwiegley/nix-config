@@ -840,3 +840,27 @@ The observation is absorbed: `bin/publish --help` now describes both flags as
 assertions and explains the clean checked-out-tip invariant. A focused test executes
 the real help path and rejects the stale selector wording. The partner observation
 Markdown is removed. Next ordered unit is A5 / #28. No push or activation occurred.
+
+Two A4 observations created before that closeout were also still queued, so the earlier
+singular wording was corrected by absorbing them rather than merely editing the count:
+
+- Both pre-commit Python globs now include the extensionless Darwin differ and baseline
+  generator. A gate derives every extensionless Python tool from `bin/quality --files
+  python` and requires each local Python hook block to name it, so the next such tool
+  cannot silently skip lint/tests.
+- New executable `bin/darwin-surface-baseline` regenerates the schema-versioned artifact
+  at an exact Git revision in a temporary detached worktree, delegates normalization to
+  the differ, validates the single existing artifact, and supports safe print or atomic
+  write modes. `make darwin-surface-baseline` is the explicit write entrypoint.
+
+The generator was run end-to-end at `72de730a`; it cleanly removed its worktree and
+changed only the baseline note plus a committed refresh command (host values were
+byte-identical). Focused tests cover its executable/help contract and the refresh
+metadata. All three superseded partner-observation Markdown files are removed. A5 / #28
+is the next ordered unit after this cleanup is audited.
+
+The full staged `bin/quality` run passes every suite: 104 Nix files, 35 shell scripts,
+42 Python files, eight Python suites (including 22 gate and 14 Darwin tests), portable
+evaluation, the Darwin surface check, consumer evaluation 5 ran / 0 skipped, and
+signatures for all 15 local commits. Remaining: signed cleanup commit and independent
+fess. No push or activation occurred.
