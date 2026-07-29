@@ -80,6 +80,7 @@ die() {
 derive() {
     python3 - "$repo_root" "$consumer_base" "$repo_head" <<'PY'
 import json
+import fnmatch
 import os
 import re
 import subprocess
@@ -166,14 +167,57 @@ def resolve_head():
     return None
 
 
+def tracked_files(root):
+    """Paths git tracks under `root`, or None when `root` is not a git checkout.
+
+    Scope must come from git, not from walking the filesystem. Measured: this
+    inventory was derived by `grep -r` over the working tree, so once
+    `.pi-subagents/artifacts/` appeared -- untracked scratch output from Pi
+    subagent runs -- regenerating the artifact grew it from 166 references to 325,
+    with 83 of the new ones being prose in transient files that merely MENTION a
+    path. A tracked data file whose contents depend on whatever scratch
+    directories happen to exist is not a baseline; it cannot be reproduced, and a
+    real reference appearing or vanishing is invisible in the noise.
+
+    This is the rule bin/quality states in its own header -- "Scope lives in one
+    place now: `git ls-files`" -- applied to the other inventory that had not
+    adopted it.
+    """
+    out = subprocess.run(
+        ["git", "-C", root, "ls-files", "-z"], capture_output=True, text=True
+    )
+    if out.returncode != 0:
+        return None
+    return [os.path.join(root, p) for p in out.stdout.split("\0") if p]
+
+
+def _matches_globs(path):
+    return any(fnmatch.fnmatch(os.path.basename(path), g) for g in INCLUDE_GLOBS)
+
+
 def grep(pattern, root, fixed=False):
-    """grep -rIn over the issue's include globs. Returns [(relpath, lineno, text)].
+    """grep -In over the issue's include globs. Returns [(relpath, lineno, text)].
     Missing matches (grep rc 1) are not an error; anything else is."""
-    cmd = ["grep", "-rIn", "--exclude-dir=.git"]
-    for g in INCLUDE_GLOBS:
-        cmd.append("--include=" + g)
+    cmd = ["grep", "-In"]
+    tracked = tracked_files(root)
+    if tracked is None:
+        # Not a git checkout: fall back to walking, and say so rather than
+        # silently producing a differently-scoped result.
+        sys.stderr.write(
+            "consumer-inventory: %s is not a git checkout; scanning the "
+            "filesystem instead of tracked files\n" % root
+        )
+        cmd.append("-r")
+        cmd.append("--exclude-dir=.git")
+        for g in INCLUDE_GLOBS:
+            cmd.append("--include=" + g)
+        targets = [root]
+    else:
+        targets = [p for p in tracked if _matches_globs(p)]
+        if not targets:
+            return []
     cmd.append("-F" if fixed else "-E")
-    cmd += ["-e", pattern, root]
+    cmd += ["-e", pattern, *targets]
     out = subprocess.run(cmd, capture_output=True, text=True)
     if out.returncode not in (0, 1):
         raise RuntimeError("grep failed (%d): %s" % (out.returncode, out.stderr.strip()))
@@ -188,6 +232,10 @@ def grep(pattern, root, fixed=False):
 
 
 def nix_files(root):
+    """Every .nix file git tracks under `root`; see tracked_files for why."""
+    tracked = tracked_files(root)
+    if tracked is not None:
+        return sorted(p for p in tracked if p.endswith(".nix"))
     files = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in (".git",)]
