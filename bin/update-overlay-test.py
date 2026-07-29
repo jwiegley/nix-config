@@ -30,6 +30,7 @@ SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
 load_source_catalog = MODULE["load_source_catalog"]
 sync_flake_projections = MODULE["sync_flake_projections"]
+resolve_flake_input_version = MODULE.get("resolve_flake_input_version")
 update_catalog_target = MODULE["update_catalog_target"]
 build_inventory = MODULE["build_inventory"]
 
@@ -426,6 +427,52 @@ class UpdateInventoryTests(unittest.TestCase):
         )
         self.assertNotEqual(forged.returncode, 0)
         self.assertIn("detached linked worktree", forged.stderr)
+
+    def test_flake_input_copy_syncs_projected_package_version(self):
+        def make_copy_stale(document, _lock):
+            record = document["sources"]["example"]
+            record["version"] = "1.0.0"
+            record["update"]["kind"] = "flake-input+copy"
+            record["source"]["args"]["rev"] = "0" * 40
+            record["source"]["args"]["narHash"] = "sha256-stale"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_projection_fixture(root, make_copy_stale)
+            seen = []
+            self.assertEqual(
+                sync_flake_projections(
+                    root,
+                    version_resolver=lambda _root, input_name: (
+                        seen.append(input_name) or "2.0.0"
+                    ),
+                ),
+                1,
+            )
+            record = json.loads((root / "sources/test.json").read_text())["sources"][
+                "example"
+            ]
+            self.assertEqual(seen, ["example"])
+            self.assertEqual(record["version"], "2.0.0")
+            self.assertEqual(record["source"]["args"]["rev"], "a" * 40)
+            self.assertEqual(record["source"]["args"]["narHash"], "sha256-selected")
+
+    def test_flake_input_version_resolver_reads_locked_package_manifest(self):
+        calls = []
+
+        def fake_run(command, **kwargs):
+            calls.append((command, kwargs))
+            return SimpleNamespace(returncode=0, stdout="4.9.0\n", stderr="")
+
+        version = resolve_flake_input_version(
+            Path("/repo"), "ponytail", runner=fake_run
+        )
+        self.assertEqual(version, "4.9.0")
+        command, kwargs = calls[0]
+        self.assertEqual(command[:5], ["nix", "eval", "--impure", "--raw", "--expr"])
+        self.assertIn('builtins.getAttr "ponytail" flake.inputs', command[-1])
+        self.assertIn('input.outPath + "/package.json"', command[-1])
+        self.assertEqual(kwargs["cwd"], Path("/repo"))
 
     def test_issue38_ws_uses_fetchzip_with_an_executor(self):
         record = {
@@ -1149,7 +1196,6 @@ class UpdateInventoryTests(unittest.TestCase):
             "pi-lens",
             "pi-markdown-preview",
             "pi-mcp-adapter",
-            "pi-ponytail",
             "pi-subagents",
             "pi-smart-fetch",
             "pi-smart-web-search",
@@ -1177,6 +1223,7 @@ class UpdateInventoryTests(unittest.TestCase):
             "0e6130457ac2bdc6c6db2eebeba67a5223231190",
         )
         self.assertEqual(by_name["git-ai"]["executor"], "update-agents")
+        self.assertEqual(by_name["pi-ponytail"]["executor"], "update-agents")
         self.assertEqual(by_name["ws"]["executor"], "update-overlay")
         self.assertFalse(by_name["pi-lens"]["managed"])
         self.assertIsNone(by_name["pi-lens"]["executor"])
@@ -1341,6 +1388,17 @@ if "--inventory" in arguments:
             "managed": True,
             "executor": "update-agents",
             "policy": "manual",
+        })
+    if os.environ.get("UPDATE_TEST_COPY_TARGET") == "1":
+        packages.append({
+            "name": "copy",
+            "files": ["projection.json"],
+            "input": "copy-input",
+            "inventoried": True,
+            "kind": "flake-input+copy",
+            "managed": True,
+            "executor": "update-agents",
+            "policy": "automatic",
         })
     print(json.dumps({
         "schemaVersion": 1,
@@ -1800,6 +1858,42 @@ fi
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("authoritative tree unchanged", result.stdout)
             self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_routes_flake_input_copy_through_named_locks(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            command_log = Path(temp_dir) / "commands.log"
+            environment["UPDATE_TEST_COPY_TARGET"] = "1"
+            environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "copy"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            self.assertEqual((root / "fixed.txt").read_text(), "fixed before\n")
+            self.assertEqual((root / "tracked.txt").read_text(), "before\n")
+            self.assertEqual((root / "projection.json").read_text(), '{"projected": true}\n')
+            self.assertEqual(
+                command_log.read_text().splitlines(),
+                [
+                    "flake update --flake ./config/ai copy-input",
+                    "flake update nix-config-ai",
+                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check --no-build",
+                ],
+            )
 
     def test_update_agents_rejects_undeclared_candidate_mutation(self):
         for environment_name in (

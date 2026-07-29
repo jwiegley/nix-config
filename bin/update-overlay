@@ -896,7 +896,11 @@ def _validate_fetch_record(name: str, source: dict) -> None:
 
 def _catalog_executor(record: dict) -> Optional[str]:
     update = record["update"]
-    if update["kind"] in {"fixed-flake-input", "flake-input"}:
+    if update["kind"] in {
+        "fixed-flake-input",
+        "flake-input",
+        "flake-input+copy",
+    }:
         return "update-agents"
     expected_fetchers = {
         "explicit-rev": {"fetchgit", "fetchpatch", "fetchTree", "fetchurl"},
@@ -1037,7 +1041,33 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
     return targets
 
 
-def sync_flake_projections(nix_dir: Path) -> int:
+def resolve_flake_input_version(
+    nix_dir: Path, input_name: str, runner=subprocess.run
+) -> str:
+    expression = f"""
+let
+  flake = builtins.getFlake (toString {json.dumps(str(nix_dir / "config" / "ai"))});
+  input = builtins.getAttr {json.dumps(input_name)} flake.inputs;
+  package = builtins.fromJSON (builtins.readFile (input.outPath + "/package.json"));
+in
+  package.version
+"""
+    result = runner(
+        ["nix", "eval", "--impure", "--raw", "--expr", expression],
+        capture_output=True,
+        text=True,
+        timeout=600,
+        cwd=nix_dir,
+    )
+    version = result.stdout.strip()
+    if result.returncode != 0 or not version:
+        raise RuntimeError(f"failed to resolve flake input package version: {input_name}")
+    return version
+
+
+def sync_flake_projections(
+    nix_dir: Path, version_resolver=resolve_flake_input_version
+) -> int:
     """Refresh catalog fetchTree projections from the selected portable lock nodes."""
     lock_path = nix_dir / "config" / "ai" / "flake.lock"
     if not lock_path.is_file():
@@ -1064,9 +1094,17 @@ def sync_flake_projections(nix_dir: Path) -> int:
                 **{field: locked[field] for field in ("type", "owner", "repo", "rev", "narHash")},
             }
             projected_url = f"https://github.com/{locked['owner']}/{locked['repo']}"
+            record_changed = False
             if projected != args or source.get("url") != projected_url:
                 source["args"] = projected
                 source["url"] = projected_url
+                record_changed = True
+            if update["kind"] == "flake-input+copy":
+                projected_version = version_resolver(nix_dir, update["input"])
+                if record.get("version") != projected_version:
+                    record["version"] = projected_version
+                    record_changed = True
+            if record_changed:
                 changed_document = True
                 changed_records += 1
         if changed_document:
