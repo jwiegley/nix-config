@@ -2240,7 +2240,6 @@ in
           throw "llm-agents must retain its independent nixpkgs input";
       agent-resources = pkgs.callPackage ../test/ai/agent-resources.nix {
         inherit (inputs)
-          bigpowers
           ponytail
           translate-tool
           ;

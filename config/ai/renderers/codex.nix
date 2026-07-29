@@ -170,7 +170,6 @@ let
     }
   ) selected.commands;
 
-  codexPrompts = lib.filterAttrs (name: _: !(lib.hasPrefix "bigpowers-" name)) selected.prompts;
   promptFiles = lib.mapAttrs' (
     name: item:
     lib.nameValuePair ".agents/skills/prompt-${name}" {
@@ -179,7 +178,7 @@ let
         description = "Promptdeploy rendered prompt '${name}'.";
       } item.source;
     }
-  ) codexPrompts;
+  ) selected.prompts;
 
   managedPath = "${profile.root}/nix-managed.config.toml";
   hooksPath = "${profile.root}/hooks.json";

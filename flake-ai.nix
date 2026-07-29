@@ -4,7 +4,7 @@
 #   import "${inputs.nix-config}/flake-ai.nix" inputs
 # Requires ONLY the AI/agent inputs (NOT this repo's Darwin git+file inputs):
 #   nixpkgs llm-agents git-ai rust-overlay mcp-servers-nix mcp-remote
-#   pal-mcp-server agent-browser-source bigpowers pi-btw
+#   pal-mcp-server agent-browser-source pi-btw
 #   ponytail translate-tool pi-mcp-adapter
 #   pi-openai-server-compaction pi-quiet
 inputs: import ./flake/ai.nix inputs

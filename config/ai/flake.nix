@@ -21,11 +21,6 @@
 
     llm-agents.url = "github:numtide/llm-agents.nix";
 
-    bigpowers = {
-      url = "github:danielvm-git/bigpowers";
-      flake = false;
-    };
-
     ponytail = {
       url = "github:DietrichGebert/ponytail";
       flake = false;

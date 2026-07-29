@@ -27,7 +27,6 @@ let
       inherit
         agent-browser
         betterwright
-        bigpowers
         cymbal
         pi-agent-browser-native
         pi-artifacts
@@ -446,16 +445,6 @@ let
       ${install "$root"}
     '';
 
-  bigpowers = mkCopyRoot {
-    pname = "bigpowers";
-    version = supportSources.bigpowers.version;
-    install = root: ''
-      cp -R -- ${inputs.bigpowers}/.pi ${root}/
-      cp -- ${inputs.bigpowers}/package.json ${inputs.bigpowers}/LICENSE \
-        ${inputs.bigpowers}/README.md ${root}/
-    '';
-  };
-
   pi-btw = mkCopyRoot {
     pname = members.btw.attrName;
     version = members.btw.version;
@@ -808,8 +797,6 @@ assert
 assert
   inputs.agent-browser-source.narHash
   == manifest.sourceCatalog.agent-browser-source.source.args.narHash;
-assert inputs.bigpowers.rev == supportSources.bigpowers.source.args.rev;
-assert inputs.bigpowers.narHash == supportSources.bigpowers.source.args.narHash;
 assert inputs.pi-btw.rev == members.btw.artifacts.flakeInput.args.rev;
 assert inputs.pi-btw.narHash == members.btw.artifacts.flakeInput.args.narHash;
 assert inputs.ponytail.rev == members.ponytail.source.args.rev;

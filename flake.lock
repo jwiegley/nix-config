@@ -177,22 +177,6 @@
         "type": "github"
       }
     },
-    "bigpowers": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1784927122,
-        "narHash": "sha256-Nu38N6u9l6EMoZGDLQ01DkbxXdPqVNTPUHh90JCIAcg=",
-        "owner": "danielvm-git",
-        "repo": "bigpowers",
-        "rev": "d1993d31437bfbdb5bda81e84650628215365754",
-        "type": "github"
-      },
-      "original": {
-        "owner": "danielvm-git",
-        "repo": "bigpowers",
-        "type": "github"
-      }
-    },
     "bun2nix": {
       "inputs": {
         "flake-parts": [
@@ -5325,7 +5309,6 @@
     "nix-config-ai": {
       "inputs": {
         "agent-browser-source": "agent-browser-source",
-        "bigpowers": "bigpowers",
         "git-ai": "git-ai",
         "llm-agents": "llm-agents",
         "mcp-remote": "mcp-remote",

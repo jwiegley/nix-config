@@ -207,10 +207,6 @@ in
       attrName = "agent-browser";
       package = packages.agent-browser or null;
     };
-    bigpowers = member "bigpowers" {
-      attrName = "bigpowers";
-      package = packages.bigpowers or null;
-    };
     rtk = member "rtk" {
       attrName = "rtk";
       package = packages.rtk or null;

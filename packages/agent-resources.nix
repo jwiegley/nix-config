@@ -9,20 +9,7 @@
 
 let
   gitSurgeonSource = (callPackage "${inputs.llm-agents}/packages/git-surgeon/package.nix" { }).src;
-  bigpowers = import ../config/ai/bigpowers-resources.nix;
   piSources = import ./source-catalog.nix "pi";
-  bigpowersSkills = builtins.attrNames (
-    lib.filterAttrs (_name: type: type == "directory") (
-      builtins.readDir "${inputs.bigpowers}/.pi/skills"
-    )
-  );
-  bigpowersPrompts = map (lib.removeSuffix ".md") (
-    builtins.attrNames (
-      lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".md" name) (
-        builtins.readDir "${inputs.bigpowers}/.pi/prompts"
-      )
-    )
-  );
 
   ponytailSkills = [
     "ponytail"
@@ -32,16 +19,6 @@ let
     "ponytail-gain"
     "ponytail-help"
   ];
-
-  copyBigpowersSkills = lib.concatMapStringsSep "\n" (name: ''
-    copy_skill ${lib.escapeShellArg "${inputs.bigpowers}/.pi/skills/${name}"} \
-      ${lib.escapeShellArg name} ${lib.escapeShellArg "${inputs.bigpowers}/LICENSE"}
-  '') bigpowers.names;
-
-  copyBigpowersPrompts = lib.concatMapStringsSep "\n" (name: ''
-    cp -- ${lib.escapeShellArg "${inputs.bigpowers}/.pi/prompts/${name}.md"} \
-      "$prompts"/${lib.escapeShellArg "${name}.md"}
-  '') bigpowers.names;
 
   copyPonytailSkills = lib.concatMapStringsSep "\n" (name: ''
     copy_skill ${lib.escapeShellArg "${inputs.ponytail}/skills/${name}"} \
@@ -121,8 +98,6 @@ let
   };
 
 in
-assert bigpowersSkills == bigpowers.names;
-assert bigpowersPrompts == bigpowers.names;
 runCommand "agent-resources" { } ''
   set -euo pipefail
 
@@ -147,7 +122,6 @@ runCommand "agent-resources" { } ''
     fi
   }
 
-  ${copyBigpowersSkills}
   ${copyPonytailSkills}
   copy_skill ${lib.escapeShellArg "${gitSurgeonSource}/skills/git-surgeon"} \
     git-surgeon ${lib.escapeShellArg "${gitSurgeonSource}/LICENSE"}
@@ -159,10 +133,6 @@ runCommand "agent-resources" { } ''
     "$translate/SKILL.md"
   cp -- ${lib.escapeShellArg "${inputs.translate-tool}/glossary.csv"} \
     "$translate/GLOSSARY.csv"
-
-  prompts="$out/share/agent-resources/prompts/bigpowers"
-  mkdir -p "$prompts"
-  ${copyBigpowersPrompts}
 
   extensions="$out/share/agent-resources/pi-extensions"
   mkdir "$extensions"

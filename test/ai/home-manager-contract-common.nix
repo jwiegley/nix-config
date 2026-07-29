@@ -1092,11 +1092,7 @@ let
   fixtureXdgConfigHome = "${fixtureHomeDirectory}/.config";
   selectedFor =
     profileId: lib.mapAttrs (_category: itemSet: selectFor profileId itemSet) catalog.items;
-  codexPromptsFor =
-    profileId:
-    lib.filterAttrs (name: _: !(lib.hasPrefix "bigpowers-" name)) (
-      selectFor profileId catalog.items.prompts
-    );
+  codexPromptsFor = profileId: selectFor profileId catalog.items.prompts;
   selectedModelDataFor =
     profileId:
     {
@@ -2586,10 +2582,6 @@ let
           "${profile.root}/nix-managed-model-catalog.json"
         ])
 
-        (expectEqual "${profileId} omits duplicate Bigpowers prompt projections"
-          (builtins.filter (lib.hasPrefix ".agents/skills/prompt-bigpowers-") paths)
-          [ ]
-        )
         (expectEqual "${profileId} required environment" render.requiredEnvNames [
           "CONTEXT7_API_KEY"
           "PERPLEXITY_API_KEY"

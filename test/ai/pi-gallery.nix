@@ -13,9 +13,7 @@
 let
   root = package: name: "${package}/share/pi-packages/${name}";
   manifest = piPackages.pi-gallery.manifest;
-  roots = lib.mapAttrs (_: member: root member.package member.attrName) manifest.members // {
-    bigpowers = root piPackages.bigpowers "bigpowers";
-  };
+  roots = lib.mapAttrs (_: member: root member.package member.attrName) manifest.members;
   manifestPackagesMatch = builtins.all (
     id:
     let
@@ -26,9 +24,7 @@ let
   gallery = "${piPackages.pi-gallery}/share/pi-gallery";
   quiet = "${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-quiet/src/index.ts";
   packageRoots = lib.escapeShellArgs (builtins.attrValues roots);
-  skillPackageRoots = lib.escapeShellArgs (
-    builtins.attrValues (builtins.removeAttrs roots [ "bigpowers" ])
-  );
+  skillPackageRoots = packageRoots;
   memberVersionChecks = lib.concatMapStringsSep "\n" (
     id: "expect_version ${roots.${id}}/package.json ${manifest.members.${id}.version}"
   ) manifest.order;
@@ -97,9 +93,6 @@ runCommand "pi-gallery-check"
         fi
       fi
     done
-
-    [ "$(find ${roots.bigpowers}/.pi/skills -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 80 ]
-    [ "$(find ${roots.bigpowers}/.pi/prompts -mindepth 1 -maxdepth 1 -type f -name '*.md' | wc -l)" -eq 80 ]
 
     [ -f ${roots.btw}/extensions/btw.ts ]
     [ -f ${roots.btw}/skills/btw/SKILL.md ]

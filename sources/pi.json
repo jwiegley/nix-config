@@ -75,29 +75,6 @@
       },
       "version": "150.0.7871.129"
     },
-    "bigpowers": {
-      "source": {
-        "args": {
-          "narHash": "sha256-Nu38N6u9l6EMoZGDLQ01DkbxXdPqVNTPUHh90JCIAcg=",
-          "owner": "danielvm-git",
-          "repo": "bigpowers",
-          "rev": "d1993d31437bfbdb5bda81e84650628215365754",
-          "type": "github"
-        },
-        "fetcher": "fetchTree",
-        "url": "https://github.com/danielvm-git/bigpowers"
-      },
-      "update": {
-        "artifacts": [
-          "flake.lock",
-          "config/ai/flake.lock",
-          "config/ai/bigpowers-resources.nix"
-        ],
-        "input": "bigpowers",
-        "kind": "flake-input+copy"
-      },
-      "version": "2.84.0"
-    },
     "cymbal": {
       "artifacts": {
         "aarch64-linux": {

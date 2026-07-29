@@ -721,8 +721,6 @@ let
   });
   commands = mkDocumentItems ./commands "commands" ".md" commandMetadata commandSelectors;
 
-  bigpowers = import ./bigpowers-resources.nix;
-
   localBroadSkills = [
     "alexey-review"
     "anvil"
@@ -772,16 +770,12 @@ let
   broadExternalSkillItems = lib.genAttrs externalBroadSkills (
     name: mkSkill resourceSkills name { clients = contentClients; }
   );
-  bigpowersSkillItems = lib.genAttrs bigpowers.names (
-    name: mkSkill resourceSkills name { clients = contentClients; }
-  );
   positronPyTorchSkillItems = lib.genAttrs positronPyTorchSkills (
     name: mkSkill ./skills name { audiences = [ "positron" ]; }
   );
   skills =
     broadLocalSkillItems
     // broadExternalSkillItems
-    // bigpowersSkillItems
     // positronPyTorchSkillItems
     // {
       forge = mkSkill ./skills "forge" { clients = [ "claude" ]; };
@@ -794,18 +788,7 @@ let
     targetPaths = [ "prompts/${name}.md" ];
     selectors.clients = contentClients;
   });
-  bigpowersPrompts = lib.listToAttrs (
-    map (
-      resourceName:
-      lib.nameValuePair "bigpowers-${resourceName}" {
-        name = "bigpowers-${resourceName}";
-        source = resources + "/share/agent-resources/prompts/bigpowers/${resourceName}.md";
-        targetPaths = [ "prompts/bigpowers-${resourceName}.md" ];
-        selectors.clients = contentClients;
-      }
-    ) bigpowers.names
-  );
-  prompts = builtInPrompts // bigpowersPrompts;
+  prompts = builtInPrompts;
 
   typedEnv = env: { inherit env; };
   baseMcpSelectors = {

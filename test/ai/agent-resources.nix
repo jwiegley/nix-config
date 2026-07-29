@@ -1,6 +1,5 @@
 {
   pkgs,
-  bigpowers ? null,
   ponytail ? null,
   translate-tool ? null,
   gitSurgeonSource ? null,
@@ -13,10 +12,7 @@
 
 let
   inherit (pkgs) lib;
-
-  bigpowersResources = import ../../config/ai/bigpowers-resources.nix;
   piSources = import ../../packages/source-catalog.nix "pi";
-  bigpowersSkills = bigpowersResources.names;
 
   ponytailSkills = [
     "ponytail"
@@ -27,17 +23,13 @@ let
     "ponytail-help"
   ];
 
-  expectedSkills =
-    bigpowersSkills
-    ++ ponytailSkills
-    ++ [
-      "git-surgeon"
-      "translate-en"
-    ];
+  expectedSkills = ponytailSkills ++ [
+    "git-surgeon"
+    "translate-en"
+  ];
 
   resources = pkgs.agent-resources;
-  haveSources =
-    bigpowers != null && ponytail != null && translate-tool != null && gitSurgeonSource != null;
+  haveSources = ponytail != null && translate-tool != null && gitSurgeonSource != null;
   havePiSources = piMcpAdapter != null && piOpenaiServerCompaction != null && piQuiet != null;
 
   piQuietFiles = [
@@ -147,14 +139,7 @@ let
   ) badPins;
 
   expectedSkillArgs = lib.escapeShellArgs expectedSkills;
-  bigpowersSkillArgs = lib.escapeShellArgs bigpowersSkills;
   ponytailSkillArgs = lib.escapeShellArgs ponytailSkills;
-
-  copyBigpowersExpected = lib.concatMapStringsSep "\n" (name: ''
-    copy_expected_tree ${lib.escapeShellArg "${bigpowers}/.pi/skills/${name}"} "$expected/${name}"
-    cp -a -- ${lib.escapeShellArg "${bigpowers}/LICENSE"} "$expected/${name}/LICENSE"
-    chmod --reference=${lib.escapeShellArg "${bigpowers}/.pi/skills/${name}"} "$expected/${name}"
-  '') bigpowersSkills;
 
   copyPonytailExpected = lib.concatMapStringsSep "\n" (name: ''
     copy_expected_tree ${lib.escapeShellArg "${ponytail}/skills/${name}"} "$expected/${name}"
@@ -365,7 +350,6 @@ else
         done < <(find -P "$tree" -mindepth 1 -print0 | sort -z)
       }
 
-      ${copyBigpowersExpected}
       ${copyPonytailExpected}
       copy_expected_tree \
         ${lib.escapeShellArg "${gitSurgeonSource}/skills/git-surgeon"} \
@@ -392,7 +376,7 @@ else
       find -P "$actual" -mindepth 1 -maxdepth 1 -printf '%f\0' \
         | sort -z >"$TMPDIR/actual-names"
       cmp "$TMPDIR/expected-names" "$TMPDIR/actual-names" \
-        || fail "skill name set differs from the expected Bigpowers replacement set"
+        || fail "skill name set differs from the expected managed skill set"
 
       for name in ${expectedSkillArgs}; do
         [ -d "$actual/$name" ] && [ ! -L "$actual/$name" ] \
@@ -401,7 +385,7 @@ else
           || fail "missing regular SKILL.md: $name"
       done
 
-      for name in ${bigpowersSkillArgs} git-surgeon; do
+      for name in git-surgeon; do
         [ -f "$actual/$name/LICENSE" ] && [ ! -L "$actual/$name/LICENSE" ] \
           || fail "missing regular injected LICENSE: $name"
       done
@@ -435,17 +419,8 @@ else
       cmp "$TMPDIR/expected.manifest" "$TMPDIR/actual.manifest" \
         || fail "framed path/type/mode/link/content manifests differ"
 
-      actual_prompts=${resources}/share/agent-resources/prompts/bigpowers
-      expected_prompts="$TMPDIR/expected-prompts"
-      mkdir "$expected_prompts"
-      for name in ${bigpowersSkillArgs}; do
-        cp -a -- ${lib.escapeShellArg "${bigpowers}/.pi/prompts"}/"$name.md" \
-          "$expected_prompts/$name.md"
-      done
-      write_manifest "$expected_prompts" "$TMPDIR/expected-prompts.manifest"
-      write_manifest "$actual_prompts" "$TMPDIR/actual-prompts.manifest"
-      cmp "$TMPDIR/expected-prompts.manifest" "$TMPDIR/actual-prompts.manifest" \
-        || fail "Bigpowers prompt manifest differs"
+      [ ! -e ${resources}/share/agent-resources/prompts/bigpowers ] \
+        || fail "retired BigPowers prompt root is still packaged"
 
       extensions=${resources}/share/agent-resources/pi-extensions
       [ ! -e "$extensions/pi-subagent" ] && [ ! -L "$extensions/pi-subagent" ] \

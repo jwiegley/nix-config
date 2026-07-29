@@ -882,7 +882,6 @@ class UpdateInventoryTests(unittest.TestCase):
         required = {
             "agent-browser-source",
             "anvil-mcp",
-            "bigpowers",
             "pi-artifacts",
             "pi-lens",
             "pi-mcp-adapter",
@@ -952,7 +951,6 @@ class UpdateInventoryTests(unittest.TestCase):
         pending = {
             "agent-browser-source",
             "betterwright",
-            "bigpowers",
             "cohere-melody",
             "cymbal",
             "hf-xet",
@@ -1323,7 +1321,6 @@ exec "$REAL_GIT" "$@"
         self.assertNotIn("\n    rust-overlay\n", update_agents)
         for manifest_only in (
             "agent-browser-source",
-            "bigpowers",
             "pi-agent-browser-native",
             "pi-artifacts",
             "pi-dynamic-workflows",
