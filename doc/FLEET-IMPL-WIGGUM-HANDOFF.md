@@ -582,7 +582,7 @@ monolith, which no longer exists, so re-deriving needs that path checked out fir
 
 ---
 
-## 2026-07-29 — #34 catalogue migration implemented, audit pending
+## 2026-07-29 — #34 catalogue migration complete locally, unpushed
 
 The live #34 title/body now record the answered Q3 contract rather than the stale
 15-root-input framing: exactly the 11 `packages/update-manifest.nix` records move to
@@ -648,9 +648,20 @@ Verification completed before staging the final candidate:
 Independent fess audit of `6d045a73` accepted the core migration and found two real
 high-severity gaps: the forgeable candidate marker above, and a stale #47/#63 consumer
 inventory that retained deleted manifest rows while excluding new JSON references.
-Both are being fixed in the follow-up commit; the inventory generator now scans JSON,
-excludes its own generated artifact, and regenerates the committed evidence.
+Both landed in signed fess-fix `18819ab3`: projection writes now require a detached
+linked worktree even with forged environment/Git markers, and the inventory generator
+scans tracked JSON, excludes its own artifact, and gates the committed internal rows
+against fresh derivation. Removing either guard was watched failing, then restored.
 
-Remaining for this unit: finish and verify the fess fixes, register the evidence-backed
-closeout on #34 and ownership correction on #38, and check `doc/observations/` again.
-No push is authorized.
+The fess-fix staged `bin/quality` run passed every suite: 19 gate tests, 40 updater
+tests, portable evaluation, consumer evaluation 5 ran / 0 skipped, and signatures.
+Its unbypassed pre-commit hook passed all affected suites. Both implementation commits
+verify `%G? = G`.
+
+Tracker closeout is live: #34 is closed and its Fleet Configuration Programme card is
+Done; #38 remains open with a comment assigning it only the seven compound executors
+and atomicity work. No partner-observation Markdown remains.
+
+Next ordered unblocked unit is **#88** (publish mirror-race reconciliation), followed
+by #89 and the committed Darwin value-surface backstop. Local `main` remains unpushed;
+no push, activation, or history rewrite is authorized.
