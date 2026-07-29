@@ -1042,12 +1042,15 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
 
 
 def resolve_flake_input_version(
-    nix_dir: Path, input_name: str, runner=subprocess.run
+    nix_dir: Path, input_name: str, locked: dict, runner=subprocess.run
 ) -> str:
+    fetch_args = {
+        field: locked[field]
+        for field in ("type", "owner", "repo", "rev", "narHash")
+    }
     expression = f"""
 let
-  flake = builtins.getFlake (toString {json.dumps(str(nix_dir / "config" / "ai"))});
-  input = builtins.getAttr {json.dumps(input_name)} flake.inputs;
+  input = builtins.fetchTree (builtins.fromJSON {json.dumps(json.dumps(fetch_args))});
   package = builtins.fromJSON (builtins.readFile (input.outPath + "/package.json"));
 in
   package.version
@@ -1100,7 +1103,9 @@ def sync_flake_projections(
                 source["url"] = projected_url
                 record_changed = True
             if update["kind"] == "flake-input+copy":
-                projected_version = version_resolver(nix_dir, update["input"])
+                projected_version = version_resolver(
+                    nix_dir, update["input"], locked
+                )
                 if record.get("version") != projected_version:
                     record["version"] = projected_version
                     record_changed = True

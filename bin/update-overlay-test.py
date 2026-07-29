@@ -443,7 +443,7 @@ class UpdateInventoryTests(unittest.TestCase):
             self.assertEqual(
                 sync_flake_projections(
                     root,
-                    version_resolver=lambda _root, input_name: (
+                    version_resolver=lambda _root, input_name, _locked: (
                         seen.append(input_name) or "2.0.0"
                     ),
                 ),
@@ -464,13 +464,21 @@ class UpdateInventoryTests(unittest.TestCase):
             calls.append((command, kwargs))
             return SimpleNamespace(returncode=0, stdout="4.9.0\n", stderr="")
 
+        locked = {
+            "type": "github",
+            "owner": "example",
+            "repo": "ponytail",
+            "rev": "a" * 40,
+            "narHash": "sha256-source",
+        }
         version = resolve_flake_input_version(
-            Path("/repo"), "ponytail", runner=fake_run
+            Path("/repo"), "ponytail", locked, runner=fake_run
         )
         self.assertEqual(version, "4.9.0")
         command, kwargs = calls[0]
         self.assertEqual(command[:5], ["nix", "eval", "--impure", "--raw", "--expr"])
-        self.assertIn('builtins.getAttr "ponytail" flake.inputs', command[-1])
+        self.assertIn("builtins.fetchTree", command[-1])
+        self.assertIn('\\"repo\\": \\"ponytail\\"', command[-1])
         self.assertIn('input.outPath + "/package.json"', command[-1])
         self.assertEqual(kwargs["cwd"], Path("/repo"))
 
