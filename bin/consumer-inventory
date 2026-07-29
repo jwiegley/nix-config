@@ -98,6 +98,7 @@ SCHEMA_VERSION = 1
 # issue #17's Verification block.
 INCLUDE_GLOBS = ["*.nix", "*.json", "*.yml", "*.yaml", "*.md", "*.sh"]
 EXCLUDED_INTERNAL_PATHS = {"test/inventory/consumer-inventory.json"}
+EXCLUDED_INTERNAL_PREFIXES = ("test/baseline/",)
 CONFIG_AI = "config/ai"
 FLAKE_AI_RE = re.compile(r"flake-ai\.nix")
 # A load-bearing flake-ai.nix import is a relative/interpolated path in a .nix
@@ -233,9 +234,16 @@ def tracked_files(root):
     return [os.path.join(root, p) for p in out.stdout.split("\0") if p]
 
 
+def _excluded_internal(path):
+    relative = rel(path)
+    return relative in EXCLUDED_INTERNAL_PATHS or any(
+        relative.startswith(prefix) for prefix in EXCLUDED_INTERNAL_PREFIXES
+    )
+
+
 def _matches_globs(path):
     return (
-        rel(path) not in EXCLUDED_INTERNAL_PATHS
+        not _excluded_internal(path)
         and any(fnmatch.fnmatch(os.path.basename(path), g) for g in INCLUDE_GLOBS)
     )
 
@@ -282,7 +290,7 @@ def grep(pattern, root, fixed=False):
         if not m:
             continue
         relative = rel(m.group(1))
-        if relative in EXCLUDED_INTERNAL_PATHS:
+        if _excluded_internal(relative):
             continue
         rows.append((relative, int(m.group(2)), m.group(3)))
     return rows
@@ -666,6 +674,7 @@ commands = {
     "internalConfigAiFiles": (
         "derive unique file names from internalConfigAiRefs"),
     "internalConfigAiExcludedPaths": sorted(EXCLUDED_INTERNAL_PATHS),
+    "internalConfigAiExcludedPrefixes": sorted(EXCLUDED_INTERNAL_PREFIXES),
     "flakeAiInternalConsumers": (
         "reuse git-ls-files-scoped tracked paths; grep -In -E -e "
         "'flake-ai\\.nix' <existing-tracked-files>  # keep .nix, non-comment, path-import lines"),

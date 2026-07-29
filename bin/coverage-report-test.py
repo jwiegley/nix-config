@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from unittest import mock
 
 
@@ -457,12 +457,15 @@ class NixEventTests(RepositoryFixture):
 
         manifest = coverage_report.validate_manifest(self.manifest)
         probes = manifest["nixFileReach"]["probes"]
-        result = coverage_report.collect_nix_file_reach(
-            self.repo, probes, ["flake.nix"], manifest, runner
-        )
+        progress = io.StringIO()
+        with redirect_stderr(progress):
+            result = coverage_report.collect_nix_file_reach(
+                self.repo, probes, ["flake.nix"], manifest, runner
+            )
         self.assertEqual(result["state"], "observed")
         self.assertEqual(result["evidenceKind"], "file-evaluation-start")
         self.assertEqual(result["reached"], ["flake.nix"])
+        self.assertIn("probe darwin-hera (1/1)", progress.getvalue())
 
     def test_success_with_no_local_events_fails_closed(self) -> None:
         drv = "/nix/store/" + "0" * 32 + "-fixture.drv"
@@ -787,6 +790,30 @@ class ArtifactTests(RepositoryFixture):
         self.git("add", path.relative_to(self.repo).as_posix())
         with self.assertRaisesRegex(coverage_report.CoverageError, "reach regressed"):
             coverage_report.check_artifact(self.repo)
+
+    def test_ratio_regression_is_deletion_aware_but_rejects_new_unreached_file(
+        self,
+    ) -> None:
+        previous = self.ready_report()
+        previous_reach = previous["measurements"]["nixFileReach"]
+        previous_reach["denominator"] = ["a.nix", "b.nix"]
+        previous_reach["reached"] = ["a.nix"]
+        previous_reach["unreached"] = ["b.nix"]
+
+        deleted = copy.deepcopy(previous)
+        deleted_reach = deleted["measurements"]["nixFileReach"]
+        deleted_reach["denominator"] = ["b.nix"]
+        deleted_reach["reached"] = []
+        deleted_reach["unreached"] = ["b.nix"]
+        coverage_report.validate_non_regression(deleted, previous)
+
+        expanded = copy.deepcopy(previous)
+        expanded_reach = expanded["measurements"]["nixFileReach"]
+        expanded_reach["denominator"] = ["a.nix", "b.nix", "c.nix"]
+        expanded_reach["reached"] = ["a.nix"]
+        expanded_reach["unreached"] = ["b.nix", "c.nix"]
+        with self.assertRaisesRegex(coverage_report.CoverageError, "ratio regressed"):
+            coverage_report.validate_non_regression(expanded, previous)
 
     def test_live_comparison_recollects_before_accepting_baseline(self) -> None:
         baseline = self.ready_report()

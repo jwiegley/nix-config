@@ -698,6 +698,10 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
             ],
             "consumer inventory recursively inventoried itself",
         )
+        self.assertFalse(
+            [r for r in self.refs if r["file"].startswith("test/baseline/")],
+            "consumer inventory classified generated baselines as rename work",
+        )
         derivation = self.inv["derivation"]
         self.assertIn("git -C <repo_root> ls-files", derivation["internalConfigAiRefs"])
         self.assertIn("existing-tracked-files", derivation["internalConfigAiRefs"])
@@ -705,6 +709,7 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
             "test/inventory/consumer-inventory.json",
             derivation["internalConfigAiExcludedPaths"],
         )
+        self.assertIn("test/baseline/", derivation["internalConfigAiExcludedPrefixes"])
 
     def test_committed_internal_references_match_generator(self):
         result = subprocess.run(

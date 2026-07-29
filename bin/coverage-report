@@ -1520,7 +1520,12 @@ def collect_nix_file_reach(
     tracked = set(nix_files)
     union: set[str] = set()
     records: list[dict[str, Any]] = []
-    for probe in probes:
+    for index, probe in enumerate(probes, start=1):
+        print(
+            f"coverage-report: probe {probe['id']} ({index}/{len(probes)})",
+            file=sys.stderr,
+            flush=True,
+        )
         proc = runner(probe["argv"], repo, clean_environment())
         if proc.returncode != 0:
             raise CoverageError(
@@ -2385,13 +2390,16 @@ def validate_non_regression(
     lost = sorted((previous_reached & current_denominator) - current_reached)
     if lost:
         raise CoverageError(f"Nix file reach regressed for paths: {lost}")
-    if len(current_reached) * len(previous_denominator) < len(previous_reached) * len(
-        current_denominator
-    ):
+    common_denominator = previous_denominator & current_denominator
+    previous_reached_common = previous_reached & common_denominator
+    if len(current_reached) * len(common_denominator) < len(
+        previous_reached_common
+    ) * len(current_denominator):
         raise CoverageError(
             "Nix file-reach ratio regressed: "
             f"{len(current_reached)}/{len(current_denominator)} < "
-            f"{len(previous_reached)}/{len(previous_denominator)}"
+            f"{len(previous_reached_common)}/{len(common_denominator)} "
+            "on the shared denominator"
         )
     current_structural = _expect_object(
         current.get("structural"), "artifact.structural"
