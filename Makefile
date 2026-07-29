@@ -51,7 +51,7 @@ help:
 	  '  clean / purge    Delete old Nix generations and store paths'
 
 test:
-	bin/quality darwin-surface
+	bin/quality --python-tier pre-push python-test coverage darwin-surface
 	nix build --no-link \
 	  .#checks.$(SYSTEM).agent-resources \
 	  .#checks.$(SYSTEM).agent-wrappers \

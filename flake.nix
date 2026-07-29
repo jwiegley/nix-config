@@ -447,6 +447,7 @@
               shellcheck
               shfmt
               ruff
+              (python3.withPackages (ps: [ ps.coverage ]))
               lefthook
             ];
           };

@@ -38,6 +38,7 @@ CROSS_CONSUMER_EVAL = BIN / "cross-consumer-eval"
 CONSUMER_INVENTORY = BIN / "consumer-inventory"
 DARWIN_SURFACE_DIFF = BIN / "darwin-surface-diff"
 DARWIN_SURFACE_BASELINE = BIN / "darwin-surface-baseline"
+COVERAGE_REPORT = BIN / "coverage-report"
 
 # Repository-pointing git variables. A test that shells out to git in a temp
 # directory MUST scrub these: under a git hook they name the REAL repository and
@@ -246,18 +247,31 @@ class TestVerifySignaturesRejects(unittest.TestCase):
 
         gen = subprocess.run(
             [
-                "gpg", "--batch", "--quiet", "--passphrase", "", "--pinentry-mode",
-                "loopback", "--quick-generate-key", "Expiry Probe <probe@example.invalid>",
-                "default", "sign", "seconds=6",
+                "gpg",
+                "--batch",
+                "--quiet",
+                "--passphrase",
+                "",
+                "--pinentry-mode",
+                "loopback",
+                "--quick-generate-key",
+                "Expiry Probe <probe@example.invalid>",
+                "default",
+                "sign",
+                "seconds=6",
             ],
-            capture_output=True, text=True, env=env,
+            capture_output=True,
+            text=True,
+            env=env,
         )
         if gen.returncode != 0:
             self.skipTest("could not generate an expiring key: %s" % gen.stderr[:200])
 
         keyid = subprocess.run(
             ["gpg", "--batch", "--list-keys", "--with-colons", "probe@example.invalid"],
-            capture_output=True, text=True, env=env,
+            capture_output=True,
+            text=True,
+            env=env,
         ).stdout
         fpr = next(
             (ln.split(":")[9] for ln in keyid.splitlines() if ln.startswith("fpr")),
@@ -271,9 +285,23 @@ class TestVerifySignaturesRejects(unittest.TestCase):
             fh.write("x\n")
         git("add", "signed", cwd=self.repo)
         signed = subprocess.run(
-            ["git", "-c", "user.signingkey=" + fpr, "-c", "commit.gpgsign=true",
-             "-c", "gpg.program=gpg", "commit", "-q", "-m", "signed while valid"],
-            cwd=self.repo, capture_output=True, text=True, env=env,
+            [
+                "git",
+                "-c",
+                "user.signingkey=" + fpr,
+                "-c",
+                "commit.gpgsign=true",
+                "-c",
+                "gpg.program=gpg",
+                "commit",
+                "-q",
+                "-m",
+                "signed while valid",
+            ],
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+            env=env,
         )
         if signed.returncode != 0:
             self.skipTest("could not sign with the probe key: %s" % signed.stderr[:200])
@@ -283,7 +311,10 @@ class TestVerifySignaturesRejects(unittest.TestCase):
         # and not to a broken signature.
         before = subprocess.run(
             ["git", "log", "--pretty=%G?", "-1", head],
-            cwd=self.repo, capture_output=True, text=True, env=env,
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+            env=env,
         ).stdout.strip()
         self.assertEqual(before, "G", "probe commit did not verify as G while valid")
 
@@ -291,17 +322,17 @@ class TestVerifySignaturesRejects(unittest.TestCase):
 
         after = subprocess.run(
             ["git", "log", "--pretty=%G?", "-1", head],
-            cwd=self.repo, capture_output=True, text=True, env=env,
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+            env=env,
         ).stdout.strip()
-        self.assertEqual(
-            after, "Y", "expected Y after the key expired, got %r" % after
-        )
+        self.assertEqual(after, "Y", "expected Y after the key expired, got %r" % after)
 
-        out = self.run_tool(
-            SIGVERIFY_BASE=base, SIGVERIFY_HEAD=head, GNUPGHOME=gnupg
-        )
+        out = self.run_tool(SIGVERIFY_BASE=base, SIGVERIFY_HEAD=head, GNUPGHOME=gnupg)
         self.assertEqual(
-            out.returncode, 0,
+            out.returncode,
+            0,
             "Y (expired key) must be accepted; rejecting it makes every historical "
             "commit fail the day a key expires:\n%s\n%s" % (out.stdout, out.stderr),
         )
@@ -481,17 +512,67 @@ class TestGatesAreRegistered(unittest.TestCase):
             CONSUMER_INVENTORY,
             DARWIN_SURFACE_DIFF,
             DARWIN_SURFACE_BASELINE,
+            COVERAGE_REPORT,
         ):
             self.assertTrue(os.access(tool, os.X_OK), "%s is not executable" % tool)
 
     def test_quality_registers_the_gate_suites(self):
         body = (BIN / "quality").read_text()
-        for suite in ("signatures", "consumer-eval", "darwin-surface"):
+        for suite in (
+            "signatures",
+            "consumer-eval",
+            "darwin-surface",
+            "coverage",
+            "coverage-live",
+        ):
             self.assertIn(
                 "%s) run_%s ;;" % (suite, suite.replace("-", "_")),
                 body,
                 "bin/quality has no dispatch arm for %s" % suite,
             )
+
+    def test_coverage_gate_delegates_from_every_invocation_surface(self):
+        hook = (REPO / "lefthook.yml").read_text()
+        self.assertRegex(
+            hook,
+            r"(?m)^    quality-tier:\n      run: bin/quality --tier pre-commit$",
+        )
+        self.assertRegex(
+            hook,
+            r'(?m)^      run: ": \{files\}; bin/quality --python-tier pre-push python-test coverage"$',
+        )
+        self.assertRegex(
+            hook,
+            r'(?m)^      run: ": \{files\}; bin/quality coverage-live"$',
+        )
+
+        ci = (REPO / ".github/workflows/ci.yml").read_text()
+        self.assertRegex(
+            ci,
+            r"(?m)^        run: nix shell nixpkgs#ruff -c bin/quality python-lint python-test coverage$",
+        )
+
+        makefile = (REPO / "Makefile").read_text()
+        self.assertRegex(
+            makefile,
+            r"(?m)^\tbin/quality --python-tier pre-push python-test coverage darwin-surface$",
+        )
+
+    def test_python_tiers_are_wired_without_a_second_quality_authority(self):
+        hook = (REPO / "lefthook.yml").read_text()
+        self.assertRegex(
+            hook,
+            r"(?m)^      run: bin/quality --tier pre-commit$",
+        )
+        suites = subprocess.run(
+            [str(BIN / "quality"), "--list"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.splitlines()
+        self.assertEqual(suites.count("python-test"), 1)
+        self.assertNotIn("python-test-pre-push", suites)
 
     def test_darwin_surface_gate_is_wired_to_local_expensive_tier_entrypoints(self):
         self.assertRegex(
@@ -500,7 +581,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         )
         self.assertRegex(
             (REPO / "Makefile").read_text(),
-            r"(?m)^\tbin/quality darwin-surface$",
+            r"(?m)^\tbin/quality --python-tier pre-push python-test coverage darwin-surface$",
         )
 
     def test_darwin_surface_is_not_wired_to_remote_ci_until_root_is_portable(self):
@@ -508,35 +589,18 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertNotRegex(ci, r"(?m)^\s+run: bin/quality darwin-surface$")
         self.assertIn("LAN-only ssh://gitea stock-trader input", ci)
 
-    def test_every_extensionless_python_tool_triggers_local_python_hooks(self):
-        discovered = subprocess.run(
-            [str(BIN / "quality"), "--files", "python"],
-            cwd=REPO,
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.splitlines()
-        extensionless = [path for path in discovered if not path.endswith(".py")]
+    def test_precommit_tier_always_runs_python_authorities(self):
         config = (REPO / "lefthook.yml").read_text()
-        for command in ("python-lint", "python-test"):
-            match = re.search(
-                rf"(?m)^    {command}:\n(?P<body>(?:^      [^\n]*\n)+)", config
-            )
-            self.assertIsNotNone(match, "%s hook is missing" % command)
-            glob = re.search(
-                r'^      glob: "\{(?P<items>[^\"]+)\}"$',
-                match.group("body"),
-                re.MULTILINE,
-            )
-            self.assertIsNotNone(glob, "%s hook has no simple brace glob" % command)
-            actual = set(glob.group("items").split(","))
-            expected = {"*.py", *extensionless}
-            self.assertEqual(
-                actual,
-                expected,
-                "%s trigger glob must exactly cover Python files plus every "
-                "extensionless Python tool" % command,
-            )
+        self.assertRegex(
+            config,
+            r"(?m)^    quality-tier:\n      run: bin/quality --tier pre-commit$",
+        )
+        self.assertNotRegex(config, r"(?m)^      glob:")
+        quality = (BIN / "quality").read_text()
+        core = re.search(r"(?ms)^PRE_COMMIT_CORE_SUITES=\(\n(?P<body>.*?)^\)$", quality)
+        self.assertIsNotNone(core)
+        for suite in ("python-lint", "python-test", "portable-eval"):
+            self.assertRegex(core.group("body"), rf"(?m)^    {suite}$")
 
     def test_no_gate_contains_common_credential_markers(self):
         for tool in (
@@ -611,21 +675,32 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
         prose-detecting filter would wrongly drop them, which is why the rule is
         conservative.
         """
-        for needle in ("home-manager-contract-common.nix", "sources/ai.json", "sources/pi.json"):
+        for needle in (
+            "home-manager-contract-common.nix",
+            "sources/ai.json",
+            "sources/pi.json",
+        ):
             hits = [r for r in self.faceted if needle in r["file"]]
             self.assertTrue(hits, "no faceted records for %s" % needle)
-            bad = [(r["file"], r["line"]) for r in hits if r.get("loadBearing") is not True]
+            bad = [
+                (r["file"], r["line"]) for r in hits if r.get("loadBearing") is not True
+            ]
             self.assertEqual(bad, [], "%s references were demoted" % needle)
         self.assertFalse(
             [r for r in self.refs if r["file"] == "packages/update-manifest.nix"],
             "empty transitional manifest retained ghost references",
         )
         self.assertFalse(
-            [r for r in self.refs if r["file"] == "test/inventory/consumer-inventory.json"],
+            [
+                r
+                for r in self.refs
+                if r["file"] == "test/inventory/consumer-inventory.json"
+            ],
             "consumer inventory recursively inventoried itself",
         )
         derivation = self.inv["derivation"]
-        self.assertIn("--include='*.json'", derivation["internalConfigAiRefs"])
+        self.assertIn("git -C <repo_root> ls-files", derivation["internalConfigAiRefs"])
+        self.assertIn("existing-tracked-files", derivation["internalConfigAiRefs"])
         self.assertIn(
             "test/inventory/consumer-inventory.json",
             derivation["internalConfigAiExcludedPaths"],
@@ -653,6 +728,29 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
             if record.get("kind") == "internal-config-ai-ref"
         ]
         self.assertEqual(actual_refs, expected_refs)
+
+    def test_repo_head_contains_every_inventoried_internal_file(self):
+        revision = self.inv.get("repoHead")
+        self.assertRegex(revision or "", r"^[0-9a-f]{40}$")
+        for path in sorted(
+            {
+                record["file"]
+                for record in self.refs
+                if record.get("kind") == "internal-config-ai-ref"
+            }
+        ):
+            probe = subprocess.run(
+                ["git", "cat-file", "-e", f"{revision}:{path}"],
+                cwd=REPO,
+                capture_output=True,
+                text=True,
+                env=clean_env(),
+            )
+            self.assertEqual(
+                probe.returncode,
+                0,
+                f"consumer inventory repoHead does not contain {path}",
+            )
 
     def test_tallies_agree_with_the_records(self):
         """A summary that disagrees with its own records is worse than none."""

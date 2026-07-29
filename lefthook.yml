@@ -14,32 +14,9 @@
 # Refs: jwiegley/nix-config#46.
 
 pre-commit:
-  parallel: true
   commands:
-    nix-format:
-      glob: "*.nix"
-      run: bin/quality nix-format
-    nix-lint:
-      glob: "*.nix"
-      run: bin/quality nix-lint
-    nix-deadcode:
-      glob: "*.nix"
-      run: bin/quality nix-deadcode
-    shell-lint:
-      glob: "{bin/*,build,*.sh,*.bash}"
-      run: bin/quality shell-lint
-    shell-format:
-      glob: "{bin/*,build,*.sh,*.bash}"
-      run: bin/quality shell-format
-    python-lint:
-      glob: "{*.py,bin/update-overlay,bin/darwin-surface-diff,bin/darwin-surface-baseline}"
-      run: bin/quality python-lint
-    python-test:
-      glob: "{*.py,bin/update-overlay,bin/darwin-surface-diff,bin/darwin-surface-baseline}"
-      run: bin/quality python-test
-    nix-check:
-      glob: "*.{nix,lock}"
-      run: bin/quality portable-eval
+    quality-tier:
+      run: bin/quality --tier pre-commit
 
 pre-push:
   # Pre-push gates validate the revision's complete tree, not the diff that happens
@@ -64,6 +41,10 @@ pre-push:
     # when it cannot determine what is unpublished.
     signatures:
       run: ": {files}; bin/quality signatures"
+    python-coverage:
+      run: ": {files}; bin/quality --python-tier pre-push python-test coverage"
+    coverage-live:
+      run: ": {files}; bin/quality coverage-live"
     agent-checks:
       run: >-
         : {files};

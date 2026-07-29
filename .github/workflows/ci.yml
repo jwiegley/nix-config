@@ -51,8 +51,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Python lint and focused tests
-        run: nix shell nixpkgs#ruff -c bin/quality python-lint python-test
+      - name: Python lint, tests, and coverage regression
+        run: nix shell nixpkgs#ruff -c bin/quality python-lint python-test coverage
 
   portable-eval:
     runs-on: ubuntu-latest

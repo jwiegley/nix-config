@@ -3,7 +3,7 @@
  "artifact": "consumer-inventory",
  "generatedBy": "bin/consumer-inventory",
  "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
- "repoHead": "6e8a94d08bd573e45f5f8052856fec24404ef436",
+ "repoHead": "b773be31a6aaaba070f333e4a3686b5f6ee24ffb",
  "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in bin/consumer-inventory.",
  "classificationScheme": {
   "rename-now": "Reference to the literal config/ai path inside nix-config's own tree; #47 rewrites it in the rename commit.",
@@ -12,8 +12,8 @@
   "retain-with-owner": "Keep as-is with owner + retirement trigger: the four flake-ai.nix internal imports (GAP-FLAKEAI-INTERNAL), the supported config/*.nix portable surface, root flake=false nix-config inputs, and the ai-nix/node-red/global-Anvil compat surfaces (EPIC 7)."
  },
  "derivation": {
-  "internalConfigAiRefs": "grep -rIn --exclude-dir=.git --include='*.nix' --include='*.json' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -F -e 'config/ai' <repo_root>",
-  "internalConfigAiFiles": "grep -rIl --exclude-dir=.git --include='*.nix' --include='*.json' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.sh' -F -e 'config/ai' <repo_root>",
+  "internalConfigAiRefs": "git -C <repo_root> ls-files -z | select tracked *.nix,*.json,*.yml,*.yaml,*.md,*.sh paths; grep -In -F -e 'config/ai' <existing-tracked-files>",
+  "internalConfigAiFiles": "derive unique file names from internalConfigAiRefs",
   "internalConfigAiExcludedPaths": [
    "test/inventory/consumer-inventory.json"
   ],
@@ -41,9 +41,9 @@
   "note": "re-run the commands (needs network + gh auth) to refresh; not run inside derive() to keep the artifact reproducible offline."
  },
  "summary": {
-  "totalReferences": 280,
-  "internalConfigAiRefCount": 239,
-  "internalConfigAiFileCount": 50,
+  "totalReferences": 290,
+  "internalConfigAiRefCount": 249,
+  "internalConfigAiFileCount": 52,
   "internalConfigAiFiles": [
    ".github/workflows/ci.yml",
    "CLAUDE.md",
@@ -70,6 +70,7 @@
    "doc/HM-CONTRACT-SPLIT-PLAN.md",
    "doc/PARITY-ORACLE-REFRESH.md",
    "doc/RENAME-ROLLBACK.md",
+   "doc/TEST-COVERAGE-MODEL.md",
    "doc/UNIFIED-CONFIG-RESEARCH.md",
    "doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md",
    "doc/UNIFIED-CONFIG-WIGGUM-PLAN.md",
@@ -94,12 +95,13 @@
    "test/ai/scripts/build-check.sh",
    "test/ai/scripts/lint.sh",
    "test/ai/scripts/test.sh",
-   "test/baseline/parity-3f5f425f3788.json"
+   "test/baseline/parity-3f5f425f3788.json",
+   "test/coverage/manifest.json"
   ],
   "flakeAiInternalConsumerCount": 4,
   "flakeAiMentionCount": 21,
   "byClassification": {
-   "rename-now": 239,
+   "rename-now": 249,
    "retain-with-owner": 13,
    "retire": 18,
    "stub-covered": 10
@@ -109,20 +111,20 @@
    "flake-ai-internal-consumer": 4,
    "flake-input": 6,
    "input-follows": 3,
-   "internal-config-ai-ref": 239,
+   "internal-config-ai-ref": 249,
    "reach-in-attr": 8,
    "reach-in-path": 10,
    "subflake-overlay-use": 4
   },
   "byLoadBearing": {
-   "false": 177,
+   "false": 178,
    "n/a": 41,
-   "true": 62
+   "true": 71
   },
   "byRefKind": {
    "comment": 10,
-   "data": 21,
-   "doc-prose": 167,
+   "data": 30,
+   "doc-prose": 168,
    "import": 32,
    "n/a": 41,
    "path": 9
@@ -198,7 +200,7 @@
   {
    "surface": "node-red",
    "pattern": "node-red",
-   "matchCount": 91,
+   "matchCount": 99,
    "files": [
     "config/ai/catalog.nix",
     "config/ai/skills/node-red/SKILL.md",
@@ -208,7 +210,8 @@
     "config/ai/skills/node-red/references/patterns.md",
     "config/ai/skills/node-red/references/plugins.md",
     "doc/migrations/nix-managed-agent-oracle.md",
-    "doc/migrations/promptdeploy-reconciliation.json"
+    "doc/migrations/promptdeploy-reconciliation.json",
+    "test/coverage/manifest.json"
    ],
    "classification": "retain-with-owner",
    "owner": "EPIC 7 (compat-retirement review)",
@@ -2027,6 +2030,18 @@
    "consumer": "internal",
    "kind": "internal-config-ai-ref",
    "classification": "rename-now",
+   "file": "doc/TEST-COVERAGE-MODEL.md",
+   "line": 62,
+   "text": "The Nix probes deliberately use `.#...` and `./config/ai#...`, never explicit `path:`",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "doc-prose",
+   "loadBearing": false
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
    "file": "doc/UNIFIED-CONFIG-RESEARCH.md",
    "line": 113,
    "text": "- The `lefthook` pre-commit gate is `nix flake check ./config/ai --all-systems",
@@ -3134,6 +3149,114 @@
    "file": "test/baseline/parity-3f5f425f3788.json",
    "line": 35,
    "text": "\"portablePackages\": \"nix eval --json \\\"./config/ai#packages.<system>\\\" --apply 'ps: builtins.sort builtins.lessThan (builtins.attrNames ps)'\"",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/coverage/manifest.json",
+   "line": 204,
+   "text": "\"path\": \"config/ai/skills/comment-audit/scripts/inventory_comments.py\",",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/coverage/manifest.json",
+   "line": 211,
+   "text": "\"path\": \"config/ai/skills/node-red/scripts/create_flow_template.py\",",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/coverage/manifest.json",
+   "line": 218,
+   "text": "\"path\": \"config/ai/skills/node-red/scripts/generate_uuid.py\",",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/coverage/manifest.json",
+   "line": 225,
+   "text": "\"path\": \"config/ai/skills/node-red/scripts/validate_flow.py\",",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/coverage/manifest.json",
+   "line": 232,
+   "text": "\"path\": \"config/ai/skills/node-red/scripts/wire_nodes.py\",",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/coverage/manifest.json",
+   "line": 239,
+   "text": "\"path\": \"config/ai/skills/skill-creator/scripts/init_skill.py\",",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/coverage/manifest.json",
+   "line": 246,
+   "text": "\"path\": \"config/ai/skills/skill-creator/scripts/package_skill.py\",",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/coverage/manifest.json",
+   "line": 253,
+   "text": "\"path\": \"config/ai/skills/skill-creator/scripts/quick_validate.py\",",
+   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
+   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "refKind": "data",
+   "loadBearing": true
+  },
+  {
+   "consumer": "internal",
+   "kind": "internal-config-ai-ref",
+   "classification": "rename-now",
+   "file": "test/coverage/manifest.json",
+   "line": 591,
+   "text": "\"path\": \"config/ai/statusline-command.sh\",",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
    "trigger": "rewritten in the config/ai -> config/fleet rename commit",
    "refKind": "data",

@@ -28,12 +28,14 @@
 # Usage:
 #   bin/quality                      # run every suite (same as `all`)
 #   bin/quality nix-format           # one suite
+#   bin/quality --python-tier pre-commit python-test
 #   bin/quality shell-format --fix   # rewrite instead of check, where meaningful
 #   bin/quality --list               # print every suite
 #   bin/quality --files shell        # print the discovered file set and exit
 #
 # Suites: nix-format nix-lint nix-deadcode shell-lint shell-format
-#         python-lint python-test portable-eval darwin-surface
+#         python-lint python-test portable-eval darwin-surface consumer-eval
+#         signatures coverage coverage-live
 #
 # Refs: jwiegley/nix-config#46.
 
@@ -43,6 +45,7 @@ repo_root=$(git rev-parse --show-toplevel) || {
     printf 'quality: not in a git repository\n' >&2
     exit 1
 }
+quality_program=$repo_root/bin/quality
 cd "$repo_root" || exit 1
 
 SUITES=(
@@ -57,10 +60,25 @@ SUITES=(
     darwin-surface
     consumer-eval
     signatures
+    coverage
+    coverage-live
 )
 
 fix=0
+python_tier=all
+quality_tier=""
 want=()
+
+PRE_COMMIT_CORE_SUITES=(
+    nix-format
+    nix-lint
+    nix-deadcode
+    shell-lint
+    shell-format
+    python-lint
+    python-test
+    portable-eval
+)
 
 # ---- file discovery -----------------------------------------------------
 # Tracked files only. This is deliberate: it excludes result/ symlinks, build
@@ -100,13 +118,101 @@ files_python() {
 # unittest suites, by the repo's bin/<name>-test.py convention.
 #
 # Scope boundary, stated rather than left to be discovered: this is deliberately
-# narrower than files_python. The tree also tracks 11 packages/anvil-mcp/*-test.py
+# narrower than files_python. The tree also tracks 12 packages/anvil-mcp/*-test.py
 # suites and test/ai/statusline-command-test.py. Those are LINTED by python-lint
 # but not EXECUTED here, because several drive a live Emacs or a long soak and are
 # not safe to run unattended in a pre-commit hook. They have their own flake
 # checks. Widening this glob without first tiering those suites would make every
 # commit wait on them.
 files_python_tests() { git ls-files -- 'bin/*-test.py'; }
+
+# Tier assignment is data, not another filename glob. The manifest owns the
+# assignment and this selector intersects it with the live tracked test set. A
+# missing, duplicate, non-test, or empty assignment is a refusal: otherwise a new
+# test could silently disappear from every invocation surface while the hook stays
+# green. `all` preserves the historical `bin/quality python-test` behavior.
+files_python_tests_for_tier() {
+    local tier=$1
+    python3 - "$repo_root" "$tier" <<'PY'
+import json
+import subprocess
+import sys
+from collections import Counter
+from pathlib import Path
+
+repo = Path(sys.argv[1])
+tier = sys.argv[2]
+allowed = {"pre-commit", "pre-push", "ci-on-demand", "all"}
+if tier not in allowed:
+    raise SystemExit(f"quality: invalid Python test tier: {tier}")
+
+manifest_path = repo / "test" / "coverage" / "manifest.json"
+try:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+except (OSError, json.JSONDecodeError) as error:
+    raise SystemExit(f"quality: cannot read Python tier manifest: {error}")
+
+tracked_run = subprocess.run(
+    ["git", "ls-files", "--", "bin/*-test.py"],
+    cwd=repo,
+    capture_output=True,
+    text=True,
+    check=False,
+)
+if tracked_run.returncode != 0:
+    raise SystemExit("quality: could not discover tracked Python test suites")
+tracked = sorted(path for path in tracked_run.stdout.splitlines() if path)
+tracked_set = set(tracked)
+
+entries = [
+    entry
+    for entry in manifest.get("pythonInventory", [])
+    if isinstance(entry, dict) and entry.get("path") in tracked_set
+]
+counts = Counter(entry.get("path") for entry in entries)
+missing = sorted(tracked_set - set(counts))
+duplicates = sorted(path for path, count in counts.items() if count != 1)
+invalid = sorted(
+    entry.get("path", "<missing-path>")
+    for entry in entries
+    if entry.get("kind") != "test"
+    or entry.get("tier") not in {"pre-commit", "pre-push", "ci-on-demand"}
+)
+if missing or duplicates or invalid:
+    raise SystemExit(
+        "quality: Python tier ownership is invalid; "
+        f"missing={missing}, duplicates={duplicates}, invalid={invalid}"
+    )
+
+by_path = {entry["path"]: entry for entry in entries}
+selected = tracked if tier == "all" else [
+    path for path in tracked if by_path[path]["tier"] == tier
+]
+if not selected:
+    raise SystemExit(f"quality: Python test tier {tier!r} selected zero suites")
+print("\n".join(selected))
+PY
+}
+
+python_test_budget() {
+    local tier=$1
+    [[ $tier == all ]] && tier=ci-on-demand
+    python3 - "$repo_root/test/coverage/manifest.json" "$tier" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+try:
+    value = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))[
+        "budgetsSeconds"
+    ][sys.argv[2]]
+except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+    raise SystemExit(f"quality: cannot read Python tier budget: {error}")
+if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+    raise SystemExit("quality: Python tier budget must be a positive integer")
+print(value)
+PY
+}
 
 # ---- reporting ----------------------------------------------------------
 
@@ -247,19 +353,62 @@ run_python_lint() {
 }
 
 run_python_test() {
-    local f bad=0 count=0
+    need python3 python-test || return
+    need timeout python-test || return
+    local selection budget start elapsed remaining status
+    local f bad=0 ran=0 timed_out=0 killed=0 budget_exceeded=0 not_reached=0
+    local -a tests=()
+    selection=$(mktemp "${TMPDIR:-/tmp}/quality-python-tests.XXXXXX") || {
+        fail "python-test: could not create a tier-selection file"
+        return
+    }
+    if ! files_python_tests_for_tier "$python_tier" >"$selection"; then
+        rm -f "$selection"
+        fail "python-test: tier selection failed"
+        return
+    fi
     while IFS= read -r f; do
-        [[ -n $f ]] || continue
-        count=$((count + 1))
+        [[ -n $f ]] && tests+=("$f")
+    done <"$selection"
+    rm -f "$selection"
+    if ! budget=$(python_test_budget "$python_tier"); then
+        fail "python-test: tier budget discovery failed"
+        return
+    fi
+
+    start=$SECONDS
+    note "python-test: tier=$python_tier planned=${#tests[@]} budget=${budget}s"
+    for f in "${tests[@]}"; do
+        elapsed=$((SECONDS - start))
+        remaining=$((budget - elapsed))
+        if [[ $remaining -le 0 ]]; then
+            not_reached=$((${#tests[@]} - ran))
+            break
+        fi
         note "python-test: $f"
-        if ! python3 -m unittest "$f"; then
+        timeout --signal=TERM --kill-after=5 "$remaining" python3 -m unittest "$f"
+        status=$?
+        ran=$((ran + 1))
+        if [[ $status -eq 124 ]]; then
+            timed_out=$((timed_out + 1))
+            not_reached=$((${#tests[@]} - ran))
+            break
+        elif [[ $status -eq 137 ]]; then
+            killed=$((killed + 1))
+            not_reached=$((${#tests[@]} - ran))
+            break
+        elif [[ $status -ne 0 ]]; then
             bad=$((bad + 1))
         fi
-    done < <(files_python_tests)
-    if [[ $bad -gt 0 ]]; then
-        fail "python-test: $bad of $count suite(s) failed"
+    done
+    elapsed=$((SECONDS - start))
+    if [[ $elapsed -gt $budget && $timed_out -eq 0 && $killed -eq 0 ]]; then
+        budget_exceeded=1
+    fi
+    if [[ $bad -gt 0 || $timed_out -gt 0 || $killed -gt 0 || $budget_exceeded -gt 0 || $not_reached -gt 0 ]]; then
+        fail "python-test: tier=$python_tier planned=${#tests[@]} ran=$ran failed=$bad timed-out=$timed_out killed=$killed budget-exceeded=$budget_exceeded not-reached=$not_reached elapsed=${elapsed}s budget=${budget}s"
     else
-        note "python-test: $count suite(s) OK"
+        note "python-test: tier=$python_tier planned=${#tests[@]} ran=$ran failed=0 timed-out=0 killed=0 budget-exceeded=0 not-reached=0 elapsed=${elapsed}s budget=${budget}s"
     fi
 }
 
@@ -326,11 +475,60 @@ run_darwin_surface() {
     fi
 }
 
+# Cheap regression authority. Expensive measurements are refreshed explicitly;
+# this verifies that the committed artifact still matches live structural
+# denominators and refuses missing, stale, malformed, or duplicate artifacts.
+run_coverage() {
+    if [[ ! -x bin/coverage-report ]]; then
+        fail "coverage: bin/coverage-report is missing or not executable"
+        return
+    fi
+    if bin/coverage-report --check; then
+        note "coverage: committed artifact matches live structural inventories"
+    else
+        fail "coverage: bin/coverage-report rejected the committed artifact"
+    fi
+}
+
+run_coverage_live() {
+    if [[ ! -x bin/coverage-report ]]; then
+        fail "coverage-live: bin/coverage-report is missing or not executable"
+        return
+    fi
+    if bin/coverage-report --compare-live; then
+        note "coverage-live: current Nix reach does not regress from the artifact"
+    else
+        fail "coverage-live: current Nix reach regressed or collection failed"
+    fi
+}
+
 # ---- argument parsing ---------------------------------------------------
 
 while [[ $# -gt 0 ]]; do
     case $1 in
     --fix) fix=1 ;;
+    --python-tier)
+        shift
+        python_tier=${1-}
+        case $python_tier in
+        pre-commit | pre-push | ci-on-demand | all) ;;
+        *)
+            printf 'quality: --python-tier needs one of: pre-commit pre-push ci-on-demand all\n' >&2
+            exit 1
+            ;;
+        esac
+        ;;
+    --tier)
+        shift
+        quality_tier=${1-}
+        case $quality_tier in
+        pre-commit | pre-commit-core) ;;
+        *)
+            printf 'quality: --tier needs one of: pre-commit pre-commit-core\n' >&2
+            exit 1
+            ;;
+        esac
+        ;;
     --list)
         printf '%s\n' "${SUITES[@]}"
         exit 0
@@ -370,6 +568,44 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+if [[ -n $quality_tier ]]; then
+    if [[ ${#want[@]} -gt 0 || $fix -eq 1 ]]; then
+        printf 'quality: --tier cannot be combined with suites or --fix\n' >&2
+        exit 1
+    fi
+    command -v timeout >/dev/null 2>&1 || {
+        printf "quality: tier supervisor requires GNU 'timeout'\n" >&2
+        exit 1
+    }
+    budget=$(python_test_budget pre-commit) || exit 1
+    tier_suites=("${PRE_COMMIT_CORE_SUITES[@]}")
+    if [[ $quality_tier == pre-commit ]]; then
+        tier_suites+=(coverage)
+    fi
+    note "tier: $quality_tier planned=${#tier_suites[@]} budget=${budget}s"
+    timeout --signal=TERM --kill-after=5 "$budget" \
+        "$quality_program" --python-tier pre-commit "${tier_suites[@]}"
+    tier_status=$?
+    case $tier_status in
+    0)
+        note "tier: $quality_tier passed inside ${budget}s"
+        exit 0
+        ;;
+    124)
+        printf 'quality: FAIL tier: %s timed out after %ss\n' "$quality_tier" "$budget" >&2
+        exit 1
+        ;;
+    137)
+        printf 'quality: FAIL tier: %s exited 137 (SIGKILL; deadline escalation, OOM, or external kill)\n' "$quality_tier" >&2
+        exit 1
+        ;;
+    *)
+        printf 'quality: FAIL tier: %s failed with exit %s\n' "$quality_tier" "$tier_status" >&2
+        exit 1
+        ;;
+    esac
+fi
+
 [[ ${#want[@]} -gt 0 ]] || want=("${SUITES[@]}")
 
 for suite in "${want[@]}"; do
@@ -385,6 +621,8 @@ for suite in "${want[@]}"; do
     darwin-surface) run_darwin_surface ;;
     consumer-eval) run_consumer_eval ;;
     signatures) run_signatures ;;
+    coverage) run_coverage ;;
+    coverage-live) run_coverage_live ;;
     esac
 done
 

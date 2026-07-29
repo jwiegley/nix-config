@@ -21,6 +21,7 @@ and breaking five worktrees at once. `bin/quality` resolves its scope with
 checkout and these tests would silently assert against the wrong tree.
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -239,6 +240,168 @@ class QualityExitPropagationTests(unittest.TestCase):
         )
         self.assertNotEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("bad.nix", proc.stderr)
+
+
+class QualityPythonTierTests(unittest.TestCase):
+    """Tier selection must be exact, complete, and budgeted."""
+
+    def setUp(self):
+        self.env = clean_env()
+        self.tmp = tempfile.mkdtemp(prefix="quality-tier-")
+        self.repo = Path(self.tmp) / "r"
+        self.repo.mkdir()
+        subprocess.run(
+            ["git", "init", "-q", "."],
+            cwd=self.repo,
+            env=self.env,
+            check=True,
+        )
+        self.tests = {
+            "bin/a-fast-test.py": "pre-commit",
+            "bin/b-push-test.py": "pre-push",
+            "bin/c-demand-test.py": "ci-on-demand",
+        }
+        for path in self.tests:
+            target = self.repo / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(
+                "import unittest\n"
+                "class T(unittest.TestCase):\n"
+                "    def test_ok(self): self.assertTrue(True)\n",
+                encoding="utf-8",
+            )
+        shutil.copy2(QUALITY, self.repo / "bin/quality")
+        self.write_manifest()
+        subprocess.run(["git", "add", "."], cwd=self.repo, env=self.env, check=True)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def write_manifest(self, *, omit=(), budgets=None):
+        entries = [
+            {
+                "path": path,
+                "kind": "test",
+                "tier": tier,
+                "evidence": ["fixture"],
+                "gap": None,
+            }
+            for path, tier in self.tests.items()
+            if path not in omit
+        ]
+        target = self.repo / "test" / "coverage" / "manifest.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            json.dumps(
+                {
+                    "pythonInventory": entries,
+                    "budgetsSeconds": budgets
+                    or {"pre-commit": 180, "pre-push": 900, "ci-on-demand": 1800},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def quality(self, *args, env=None, cwd=None):
+        return subprocess.run(
+            [str(QUALITY), *args],
+            cwd=self.repo if cwd is None else cwd,
+            env=self.env if env is None else env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
+    def test_pre_commit_selects_only_pre_commit_suite(self):
+        proc = self.quality("--python-tier", "pre-commit", "python-test")
+        combined = proc.stdout + proc.stderr
+        self.assertEqual(proc.returncode, 0, combined)
+        self.assertIn("bin/a-fast-test.py", combined)
+        self.assertNotIn("bin/b-push-test.py", combined)
+        self.assertNotIn("bin/c-demand-test.py", combined)
+        self.assertIn("planned=1 ran=1", combined)
+
+    @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
+    def test_default_preserves_all_tracked_suites(self):
+        proc = self.quality("python-test")
+        combined = proc.stdout + proc.stderr
+        self.assertEqual(proc.returncode, 0, combined)
+        for path in self.tests:
+            self.assertIn(path, combined)
+        self.assertIn("tier=all planned=3 ran=3", combined)
+
+    def test_missing_manifest_assignment_refuses(self):
+        self.write_manifest(omit={"bin/b-push-test.py"})
+        proc = self.quality("--python-tier", "pre-push", "python-test")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("missing=['bin/b-push-test.py']", proc.stdout + proc.stderr)
+
+    def test_invalid_tier_refuses_before_execution(self):
+        proc = self.quality("--python-tier", "fast", "python-test")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("--python-tier needs one of", proc.stderr)
+
+    def test_whole_tier_supervisor_reports_timeout_and_forced_kill(self):
+        fakebin = self.repo / "fakebin"
+        fakebin.mkdir()
+        timeout = fakebin / "timeout"
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        for status, expected in (
+            (124, "timed out after 180s"),
+            (137, "exited 137 (SIGKILL; deadline escalation, OOM, or external kill)"),
+        ):
+            timeout.write_text(
+                f"#!/usr/bin/env bash\nexit {status}\n", encoding="utf-8"
+            )
+            timeout.chmod(0o755)
+            proc = self.quality("--tier", "pre-commit", env=env)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn(expected, proc.stderr)
+
+    def test_tier_supervisor_recurses_through_repo_absolute_quality_path(self):
+        fakebin = self.repo / "fakebin"
+        fakebin.mkdir()
+        timeout = fakebin / "timeout"
+        expected = (self.repo / "bin/quality").resolve()
+        timeout.write_text(
+            f"#!/usr/bin/env bash\n[[ $4 == {expected!s} ]] || exit 99\nexit 124\n",
+            encoding="utf-8",
+        )
+        timeout.chmod(0o755)
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        subdir = self.repo / "doc"
+        subdir.mkdir()
+        proc = self.quality("--tier", "pre-commit-core", env=env, cwd=subdir)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("timed out after 180s", proc.stderr)
+
+    @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
+    def test_budget_timeout_names_not_reached_suites(self):
+        (self.repo / "bin/a-fast-test.py").write_text(
+            "import time, unittest\n"
+            "class T(unittest.TestCase):\n"
+            "    def test_slow(self): time.sleep(5)\n",
+            encoding="utf-8",
+        )
+        self.tests["bin/z-never-test.py"] = "pre-commit"
+        (self.repo / "bin/z-never-test.py").write_text(
+            "import unittest\n"
+            "class T(unittest.TestCase):\n"
+            "    def test_never(self): self.fail('must not run')\n",
+            encoding="utf-8",
+        )
+        self.write_manifest(
+            budgets={"pre-commit": 1, "pre-push": 900, "ci-on-demand": 1800}
+        )
+        subprocess.run(["git", "add", "."], cwd=self.repo, env=self.env, check=True)
+        proc = self.quality("--python-tier", "pre-commit", "python-test")
+        combined = proc.stdout + proc.stderr
+        self.assertNotEqual(proc.returncode, 0, combined)
+        self.assertIn("timed-out=1", combined)
+        self.assertIn("not-reached=1", combined)
 
 
 class GitScrubRegressionTest(unittest.TestCase):

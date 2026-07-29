@@ -40,10 +40,10 @@
 #                    the root flake=false nix-config inputs, and the
 #                    ai-nix/node-red/global-Anvil compat surfaces routed to EPIC 7.
 #
-# Determinism contract: for a fixed working tree and fixed consumer locks, every
-# record below is a pure function of on-disk files. The internal reference set is
-# DERIVED by grep (never asserted), matching issue #17's verification command
-# byte-for-byte; the count falls out of the derived list. Remote checks (gh) are
+# Determinism contract: for a fixed tracked working tree and fixed consumer locks,
+# every record below is a pure function of on-disk tracked files. The internal
+# reference set is DERIVED by git-ls-files-scoped grep (never asserted); the count
+# falls out of the derived list. Remote checks (gh) are
 # recorded as commands plus a documented finding rather than run inside derive(),
 # so the artifact reproduces offline.
 #
@@ -660,13 +660,11 @@ def tally(key):
 
 commands = {
     "internalConfigAiRefs": (
-        "grep -rIn --exclude-dir=.git "
-        + " ".join("--include='%s'" % g for g in INCLUDE_GLOBS)
-        + " -F -e 'config/ai' <repo_root>"),
+        "git -C <repo_root> ls-files -z | select tracked "
+        + ",".join(INCLUDE_GLOBS)
+        + " paths; grep -In -F -e 'config/ai' <existing-tracked-files>"),
     "internalConfigAiFiles": (
-        "grep -rIl --exclude-dir=.git "
-        + " ".join("--include='%s'" % g for g in INCLUDE_GLOBS)
-        + " -F -e 'config/ai' <repo_root>"),
+        "derive unique file names from internalConfigAiRefs"),
     "internalConfigAiExcludedPaths": sorted(EXCLUDED_INTERNAL_PATHS),
     "flakeAiInternalConsumers": (
         "grep -rIn --exclude-dir=.git "

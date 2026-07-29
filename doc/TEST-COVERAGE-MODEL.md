@@ -1,11 +1,14 @@
 # Test Coverage Model
 
-**Status:** A6 / issue #80 research and design authority, 2026-07-29.
+**Status:** A6 / issue #80 research, implementation, and evidence authority,
+2026-07-29.
 
-**Implementation boundary:** at the research commits, no coverage collector, artifact,
-or `bin/quality coverage` suite exists yet. Present-tense requirements below describe
-the binding implementation contract unless a paragraph explicitly labels a live
-measurement. Achieved evidence begins only when later commits and their gates are named.
+**Implementation boundary:** `fleet-coverage/1` implements structural denominators,
+tier ownership, Nix file-evaluation-start reach, pre-commit timing, a credential-safe
+artifact, and `bin/quality coverage`. Output, host, option-value, dynamic-Python,
+shell-line, and negative-gate execution measurements remain explicit `unknown` in
+schema 1. Their inventories/contracts are present, but schema validity never promotes
+an unmeasured component to pass.
 
 ## Decision
 
@@ -29,6 +32,37 @@ No aggregate score may erase a failed or unmeasured component. Every denominator
 derived independently of the execution path it measures, so unreachable declarations
 cannot disappear from both sides. A missing measurement is `unknown`, never zero and
 never pass.
+
+## Delivered evidence
+
+The implementation derives rather than embeds its denominators. On the first complete
+Hera collection after tiering:
+
+- the initial six-probe safety run reached **77 of 104** tracked Nix files; the
+  committed authority adds a seventh registry-derived host probe and its tracked Nix
+  helper, with every reached/unreached path still named;
+- the pre-supervisor all-files hook completed in **26.33 seconds** against the
+  **180-second** budget; the delivered hook now has one outer deadline and the current
+  core measurement is executed and stored by the artifact refresh rather than copied
+  from this historical observation;
+- the complete Nix refresh took 442.4 seconds on Hera, inside the 1800-second
+  CI/on-demand ceiling;
+- `gates-test.py` measured 522.331 seconds and `publish-test.py` 23.274 seconds, so
+  both retain invocation in the pre-push selector rather than the fast tier;
+- the artifact independently inventories 45 Python paths, 10 tracked `bin/*-test.py`
+  suites, 35 Bash paths, 13 quality authorities, and 83 system-qualified flake checks.
+
+A locked coverage.py 7.15.2 spike ran the pre-tier nine-suite set over an independent
+20-file product denominator. It observed 1,207/8,263 statements and 436/3,052 branches
+(14.5205% combined), but only three product files had any hits and one slow gate test
+failed on a busy shared Nix SQLite database. This is useful measured evidence, not a
+committed regression metric: `pythonDynamic` therefore remains `unknown` in schema 1
+instead of laundering a partial/flaky run into pass.
+
+The Nix probes deliberately use `.#...` and `./config/ai#...`, never explicit `path:`
+flake references. On installed Nix 2.34.8 an explicit `path:` source copies untracked
+files and `.git` into the world-readable store; the manifest validator carries a
+replayable negative that rejects that form.
 
 ## Prior Art
 
@@ -101,18 +135,19 @@ derivation path without building it.
 The expensive tier composes:
 
 ```sh
-nix flake show --all-systems --json path:.
-nix flake check --all-systems --build-all --no-build --keep-going path:.
+nix flake show --all-systems --json .
+nix flake check --all-systems --build-all --no-build --keep-going .
 ```
 
-with a committed output-kind/system applicability manifest. The collector rejects
-unknown outputs, missing systems, omitted expected attr paths, and error records.
-Schema-described derivation paths are forced; arbitrary lazy values are not. Each
-custom probe therefore states its normal-form contract (`drvPath`, attr-name set,
-JSON-safe value, or explicit `deepSeq`). Custom outputs must gain schemas or such a
-bounded probe. The Nix implementation and flake-schema revision are part of the
-artifact identity because Determinate schema forcing and upstream Nix 2.34's hardcoded
-flake-check traversal are different mechanisms.
+with a committed output-kind/system applicability manifest. Schema 1 validates the
+exact system-qualified root-check and root-package name sets emitted by its probes;
+the broader schema sweep above remains future `outputReach` work and is therefore
+`unknown`, not claimed as delivered. Schema-described derivation paths are forced only
+when that sweep runs; arbitrary lazy values are not. Each implemented custom probe
+states and validates its normal-form contract (`drvPath`, attr-name set, or JSON-safe
+host rows). The observed Nix identity is part of the artifact gate because Determinate
+schema forcing and upstream Nix traversal are different mechanisms; flake-schema
+identity remains explicit `unknown` in schema 1.
 
 ## Metric definitions
 
@@ -144,11 +179,11 @@ hostname-gated behavior. Aliases point to one root result so counts cannot doubl
 
 ## Derived baseline — never copy these as policy literals
 
-As of 2026-07-29 the authorities derive:
+As of the A6 implementation on 2026-07-29 the authorities derive:
 
-- 104 tracked Nix files;
-- 43 tracked/shebang Python files and 9 currently pre-commit-selected
-  `bin/*-test.py` suites (selection does not imply speed);
+- 105 tracked Nix files after adding the registry-denominator probe helper;
+- 45 tracked/shebang Python files and 10 `bin/*-test.py` suites: eight pre-commit and
+  two pre-push;
 - 35 tracked Bash scripts;
 - 14 `johnw.*` option paths in the static/evaluated union (the old “4 options” note is
   stale; live value forcing remains a collector task);
@@ -171,32 +206,36 @@ versioned artifact; they do not require those bare numbers forever. In particula
 
 | Tier | Content | Placement | Budget semantics |
 |---|---|---|---|
-| pre-commit | formatting/lint, genuinely bounded unit tests, portable bounded eval | local hook | Initial wall-clock budget: **180 seconds** on Hera. Failure/timeout is red; current compliance is `unknown` until the timing artifact is recorded, and slow suites must move without losing invocation coverage. |
-| pre-push | file/output/host/option collection, Darwin surface, consumers, signatures, system/agent checks | local hook | Initial wall-clock budget: **900 seconds** on Hera; every named target reports ran/pass, never silent skip. |
-| CI / on demand | coverage.py branch report, full output/schema sweep, unsafe/live/soak suites, optional nix-eval-jobs projection | remote-safe CI or authorized self-hosted runner | Initial per-job budget: **1800 seconds**; tool/runner identity recorded; LAN-only root inputs must not be presented as GitHub CI evidence. |
+| pre-commit | formatting/lint, genuinely bounded unit tests, portable bounded eval, structural/parent coverage regression | one supervised local quality tier | Wall-clock budget: **180 seconds** on Hera, enforced by one outer deadline. The artifact records the internally executed core duration; Python additionally reports planned/ran/failed/timed-out/killed/budget-exceeded/not-reached separately. |
+| pre-push | slow focused Python suites, live Nix-reach comparison, Darwin surface, consumers, signatures, system/agent checks | local hook | Initial planning ceiling: **900 seconds**; compliance is not yet claimed or enforced as one aggregate measurement. |
+| CI / on demand | seven-probe coverage refresh, coverage.py branch report, full output/schema sweep, unsafe/live/soak suites, optional nix-eval-jobs projection | remote-safe CI or authorized self-hosted runner | Initial **1800-second** planning ceiling; aggregate enforcement is future work. Tool/runner identity is recorded, and LAN-only root inputs are not presented as GitHub CI evidence. |
 
-The initial limits are policy ceilings, not claims about current performance. Durations
-are measured on a named revision/host, stored in the artifact, and compared to the
-limits. A timing regression is a concern even when correctness remains green.
-Pre-commit cannot claim compliance until measurement completes and any slow
-`gates-test.py`/GPG paths are assigned to an appropriate tier without losing their
-invocation.
+The limits are policy ceilings. The hook itself runs `bin/quality --tier pre-commit`
+under the 180-second supervisor. Artifact refresh independently executes and records
+the same core tier without the self-referential coverage check; the external all-files
+hook measurement above includes that check. A timing regression is a concern even when
+correctness remains green. The two measured slow suites retain pre-push invocation;
+default `bin/quality python-test` still selects all tracked `bin/*-test.py` suites, so
+tiering cannot silently delete them.
 
 ## Artifact and regression policy
 
 The committed coverage artifact records:
 
-- schema and source revision;
-- Nix/flake-schema/coverage.py versions;
+- schema, reachable base revision, and a SHA-256 projection over every tracked regular
+  file's path, mode, and bytes except the artifact itself;
+- observed collector/Python/Nix identities, with flake-schema and coverage.py identity
+  explicit `unknown` until those measurements actually execute;
 - complete denominators and observed path/attr sets, not counts alone;
 - denominator provenance (`static-declaration`, registry, quality discovery, manifest)
   independently from runtime observation;
-- target/tier/test-case status including `ran`, `passed`, `failed`, `skipped`,
-  `not-run`, duration and evidence kind;
+- structural target/tier/test-case denominators; runtime status is recorded only for
+  implemented measurements and remains `unknown` elsewhere;
 - assertion-call or named-assertion states where instrumentation exists; otherwise
   explicit `unknown`, never inheritance from process success;
 - blind spots and unknown measurements;
-- provenance commands.
+- allowlisted command recipes, explicitly labeled as declared recipes rather than an
+  independently authenticated execution transcript.
 
 Persistence is default-deny. Raw option values, environment variables, command
 arguments, credentials, activation scripts and service configuration are forbidden.
@@ -205,10 +244,22 @@ after the same normalization/security boundary used by the Darwin surface. Prove
 commands are argv arrays from an allowlisted command schema, not captured shell strings
 or environments. A recursive sensitive-key/assignment scan runs before print/write.
 
-The gate re-derives structural inventories cheaply on every pre-commit. Expensive
-measurements are refreshed deliberately and must not regress without an explicit,
-reviewable artifact update. A missing target, parser-schema change, duplicated tier
-assignment, skipped assertion, or unexplained decrease is failure.
+At refresh, the artifact hashes every tracked regular file's path, mode, and indexed
+bytes, excluding only itself; this binds the expensive observation to one immutable
+snapshot. The index tree and index/worktree equality are checked before and after
+timing/probes, so concurrent mutation refuses the artifact. The fast gate does not
+demand a 442-second refresh for an ordinary byte edit:
+it re-derives structural inventories, checks runtime tool identity, and compares a
+staged refresh with the parent artifact. Pre-push separately recollects live Nix reach
+and compares it with the committed baseline, so a content-only edit cannot publish a
+reach regression merely because the fast gate retained the historical artifact. It
+requires Nix file reach and core timing to
+be `observed`; schema-valid but unknown/failed/skipped/not-run mandatory evidence is
+red. Surviving reached paths, the reach ratio, host IDs, and system-qualified flake
+gates may not regress. A missing target, parser-schema change, duplicated tier
+assignment, skipped assertion, or unexplained decrease is failure. The signed Git
+commit is the repository attestation for the artifact; the stored command recipe alone
+is not one.
 
 ## Implementation order
 
@@ -226,11 +277,15 @@ Selected prior art is mapped explicitly:
 - **reject** an evaluator fork, shell coverage dependency, or blanket deep forcing for
   A6.
 
-1. Commit this research/design record.
+1. Commit this research/design record. **Delivered.**
 2. Build a read-only collector plus schema-versioned artifact and negative tests.
+   **Delivered in `fleet-coverage/1`.**
 3. Add `bin/quality coverage` as the only suite authority; hooks/CI delegate to it.
+   **Delivered.**
 4. Measure and enforce tier timing, then split slow tests without deleting coverage.
-5. Correct #39/#43 bodies to derived-before/after wording.
+   **Delivered for the pre-commit/pre-push split; dynamic Python remains explicit
+   unknown.**
+5. Correct #39/#43 bodies to derived-before/after wording. **Delivered on the issues.**
 6. Run full verification, independent clean-context fess, and tracker closeout.
 
 No host activation, package update, or credential provisioning is part of A6.
