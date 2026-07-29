@@ -29,6 +29,7 @@ GitHubClient = MODULE["GitHubClient"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
 load_source_catalog = MODULE["load_source_catalog"]
+require_detached_linked_worktree = MODULE["require_detached_linked_worktree"]
 sync_flake_projections = MODULE["sync_flake_projections"]
 resolve_flake_input_version = MODULE.get("resolve_flake_input_version")
 update_catalog_target = MODULE["update_catalog_target"]
@@ -413,20 +414,11 @@ class UpdateInventoryTests(unittest.TestCase):
         )
         self.assertNotEqual(refused.returncode, 0)
         self.assertIn("restricted to the update-agents candidate", refused.stderr)
-        forged = subprocess.run(
-            [sys.executable, str(SCRIPT), "--sync-flake-projections"],
-            cwd=SCRIPT.parent.parent,
-            capture_output=True,
-            text=True,
-            env={
-                **env,
-                "UPDATE_AGENTS_CANDIDATE": "1",
-                "GIT_DIR": str(SCRIPT.parent.parent / ".git"),
-            },
-            check=False,
-        )
-        self.assertNotEqual(forged.returncode, 0)
-        self.assertIn("detached linked worktree", forged.stderr)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            primary = Path(temp_dir)
+            (primary / ".git").mkdir()
+            with self.assertRaisesRegex(RuntimeError, "detached linked worktree"):
+                require_detached_linked_worktree(primary)
 
     def test_flake_input_copy_syncs_projected_package_version(self):
         def make_copy_stale(document, lock):
@@ -1192,7 +1184,6 @@ class UpdateInventoryTests(unittest.TestCase):
             item["name"] for item in inventory["packages"] if item["source"] == "catalog"
         }
         pending = {
-            "betterwright",
             "cohere-melody",
             "cymbal",
             "hf-xet",

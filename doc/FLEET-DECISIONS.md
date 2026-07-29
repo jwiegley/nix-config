@@ -90,13 +90,12 @@ Q1. What single mechanism should own npm manifest normalization, so the Nix pack
 - **Origin / unblocks:** I15-Q1 → [#39](https://github.com/jwiegley/nix-config/issues/39) (`E2-WU4C-NPM`, WU4c-1.2). Cross-stream coupling X2: Pi-fleet WU6/WU8 ([#61](https://github.com/jwiegley/nix-config/issues/61)/[#66](https://github.com/jwiegley/nix-config/issues/66)) assert identity against the manifest/lock pairing, so this must land **before** them or those assertions become meaningless.
 - **Type:** engineering. The *direction* is already settled — there must be exactly one shared authority, and it is computed inside the isolated candidate transaction (see the reverted-unsafe `a88a77ba` / revert `a98385b9`, and Q2). What is open is **where that one authority lives**.
 - **Why it matters if defaulted:** the **nine** Pi npm targets do not build from the raw upstream `package.json`
-  (corrected 2026-07-29: this said "six". Measured — nine committed locks exist under
-  `packages/pi-gallery/locks/`, and all nine are `pending` with no executor: betterwright,
-  pi-artifacts, pi-dynamic-workflows, pi-hashline-edit-pro, pi-insights, pi-lens,
-  pi-markdown-preview, pi-subagents, pi-web-access. `betterwright`, `pi-markdown-preview`
-  and `pi-subagents` landed in `04af0e22`/`e0ed94fa` and `pi-dynamic-workflows` in
-  `777fe62b`, all after this text was written. Whatever authority Q1 chooses must cover
-  all nine or the three omitted keep exactly the drift Q1 exists to remove.); the derivation first *normalizes* it (strips dev/peer deps, applies per-package removals) and pairs it with a committed `package-lock.json`. The reverted attempt generated locks from the *published* manifest, which is not what the derivation builds — a silent drift that ships a lock inconsistent with the package. If the next implementer re-derives normalization independently in the updater, the drift returns.
+  (updated 2026-07-29: nine committed locks exist under `packages/pi-gallery/locks/`,
+  and all nine are `pending` with no executor: pi-artifacts, pi-dynamic-workflows,
+  pi-hashline-edit-pro, pi-insights, pi-lens, pi-markdown-preview, pi-smart-fetch,
+  pi-smart-web-search, and pi-subagents. Whatever authority Q1 chooses must cover
+  all nine or any omitted target keeps exactly the drift Q1 exists to remove.); the
+  derivation first *normalizes* it (strips dev/peer deps, applies per-package removals) and pairs it with a committed `package-lock.json`. The reverted attempt generated locks from the *published* manifest, which is not what the derivation builds — a silent drift that ships a lock inconsistent with the package. If the next implementer re-derives normalization independently in the updater, the drift returns.
 - **Options:**
   - **(a) Extract the derivation's inline normalization** (`packages/pi-gallery/default.nix`) into one importable module that *both* the build and `bin/update-overlay` consume. One source of truth; both paths provably identical.
   - **(b) Have the updater invoke the derivation's own normalization** at update time (no extraction), treating the build as the authority. Avoids a new module but couples the updater to derivation internals.

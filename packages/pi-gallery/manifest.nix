@@ -36,7 +36,6 @@ in
     "retry"
     "markdown-preview"
     "caveman"
-    "betterwright"
     "rtk-optimizer"
     "cymbal-extension"
     "subagents"
@@ -157,12 +156,6 @@ in
       package = packages.pi-caveman or null;
       publicName = "pi-caveman";
       extension = "extensions/caveman.ts";
-    };
-    betterwright = member "betterwright" {
-      attrName = "betterwright";
-      package = packages.betterwright or null;
-      publicName = "betterwright";
-      extension = "dist/src/pi-extension.js";
     };
     rtk-optimizer = member "pi-rtk-optimizer" {
       attrName = "pi-rtk-optimizer";

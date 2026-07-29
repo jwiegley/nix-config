@@ -193,9 +193,6 @@ runCommand "pi-gallery-check"
     [ ! -e ${roots.retry}/node_modules ]
     [ -f ${roots.markdown-preview}/index.ts ]
     [ -d ${roots.markdown-preview}/node_modules/puppeteer-core ]
-    [ -f ${roots.betterwright}/dist/src/pi-extension.js ]
-    [ -d ${roots.betterwright}/node_modules/playwright-core ]
-    [ -d ${roots.betterwright}/node_modules/cloakbrowser ]
     [ -f ${roots.rtk-optimizer}/index.ts ]
     [ ! -e ${roots.rtk-optimizer}/node_modules ]
     [ -f ${roots.cymbal-extension}/dist/index.ts ]
@@ -220,11 +217,6 @@ runCommand "pi-gallery-check"
     printf '%s\n' "$rtk_version" | grep -F '${manifest.supportSources.rtk.version}' >/dev/null \
       || fail "RTK version drifted: $rtk_version"
 
-    ${lib.optionalString stdenv.hostPlatform.isDarwin ''
-      betterwright_browser_version=$(${lib.getExe piPackages.pi-gallery.betterwrightBrowser} --version)
-      printf '%s\n' "$betterwright_browser_version" | grep -F '${manifest.sourceCatalog.betterwright-chromium.version}' >/dev/null \
-        || fail "BetterWright browser version drifted: $betterwright_browser_version"
-    ''}
 
     browser_version=$(${lib.getExe piPackages.agent-browser} --version)
     printf '%s\n' "$browser_version" | grep -F '${manifest.supportSources.agent-browser.version}' >/dev/null \
@@ -741,10 +733,6 @@ runCommand "pi-gallery-check"
         "agent_browser",
         "bash",
         "batch_web_fetch",
-        "browser",
-        "browser_download",
-        "browser_evidence",
-        "browser_login",
         "cymbal_changed",
         "cymbal_context",
         "cymbal_diff",
