@@ -1430,7 +1430,11 @@ def _catalog_executor(record: dict) -> Optional[str]:
     return None
 
 
-def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
+def load_source_catalog(
+    nix_dir: Path,
+    *,
+    validate_flake_projections: bool = True,
+) -> dict[str, dict]:
     """Load data-only package source records from sources/*.json."""
     catalog_dir = nix_dir / "sources"
     targets = {}
@@ -1547,31 +1551,35 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 raise RuntimeError(
                     f"GitHub dependent-hash projection requires fetchFromGitHub: {name}"
                 )
-            if (
-                source_fetcher == "fetchTree" or kind == "npm-release+flake-input"
-            ) and "input" in update and portable_lock is None:
-                if not portable_lock_path.is_file():
-                    raise RuntimeError(f"flake input projection requires config/ai/flake.lock: {name}")
-                portable_lock = json.loads(portable_lock_path.read_text())
-            _validate_flake_projection(nix_dir, name, record, portable_lock)
-            if kind == "npm-release+flake-input":
-                flake_input = artifacts.get("flakeInput")
-                if not isinstance(flake_input, dict):
-                    raise RuntimeError(
-                        f"npm flake input record has no flakeInput artifact: {name}"
-                    )
-                _validate_flake_projection(
-                    nix_dir,
-                    name,
-                    {
-                        "source": flake_input,
-                        "update": {
-                            "input": update["input"],
-                            "kind": "fixed-flake-input",
+            if validate_flake_projections:
+                if (
+                    source_fetcher == "fetchTree"
+                    or kind == "npm-release+flake-input"
+                ) and "input" in update and portable_lock is None:
+                    if not portable_lock_path.is_file():
+                        raise RuntimeError(
+                            f"flake input projection requires config/ai/flake.lock: {name}"
+                        )
+                    portable_lock = json.loads(portable_lock_path.read_text())
+                _validate_flake_projection(nix_dir, name, record, portable_lock)
+                if kind == "npm-release+flake-input":
+                    flake_input = artifacts.get("flakeInput")
+                    if not isinstance(flake_input, dict):
+                        raise RuntimeError(
+                            f"npm flake input record has no flakeInput artifact: {name}"
+                        )
+                    _validate_flake_projection(
+                        nix_dir,
+                        name,
+                        {
+                            "source": flake_input,
+                            "update": {
+                                "input": update["input"],
+                                "kind": "fixed-flake-input",
+                            },
                         },
-                    },
-                    portable_lock,
-                )
+                        portable_lock,
+                    )
             if source_fetcher == "fetchPypi" and record.get("version") != source_args["version"]:
                 raise RuntimeError(f"PyPI source version does not match catalog version: {name}")
             if kind == "github-commit" and (
@@ -2981,7 +2989,19 @@ Examples:
         changed = sync_flake_projections(nix_dir)
         print(f"synchronized {changed} flake input projection(s)")
         return 0
-    catalog_targets = load_source_catalog(nix_dir)
+    internal_prepare = any(
+        (
+            args.prepare_fixed_inputs,
+            args.prepare_npm_flake_inputs,
+            args.prepare_npm_locks,
+            args.prepare_pypi_artifacts,
+            args.prepare_github_projections,
+        )
+    )
+    catalog_targets = load_source_catalog(
+        nix_dir,
+        validate_flake_projections=not internal_prepare,
+    )
     unknown_names = sorted(set(args.packages) - catalog_targets.keys())
     if unknown_names:
         parser.error(f"unknown catalog target ID(s): {', '.join(unknown_names)}")

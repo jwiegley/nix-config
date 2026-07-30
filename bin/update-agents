@@ -762,6 +762,10 @@ fi
         python3 bin/update-overlay "${prepare_args[@]}" \
             "${npm_lock_target_names[@]}"
     fi
+    # Internal preparation may temporarily put catalog projections ahead of
+    # their locks. Re-establish the strict catalog/lock invariant before any
+    # generic update, validation, or publication step.
+    python3 bin/update-overlay --inventory --json >/dev/null
     if ((${#requested_targets[@]} == 0)); then
         python bin/update-overlay --all
     fi

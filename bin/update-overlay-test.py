@@ -199,7 +199,7 @@ class UpdateCliTests(unittest.TestCase):
 
         globals_ = MODULE["main"].__globals__
         replacements = {
-            "load_source_catalog": lambda _root: catalog,
+            "load_source_catalog": lambda _root, **_kwargs: catalog,
             "snapshot_catalog_record_isolation": lambda *_args: {},
             "update_catalog_target": fake_update,
         }
@@ -453,6 +453,11 @@ class UpdateInventoryTests(unittest.TestCase):
                 self._write_projection_fixture(root, mutate)
                 with self.assertRaisesRegex(RuntimeError, expected):
                     load_source_catalog(root)
+                deferred = load_source_catalog(
+                    root,
+                    validate_flake_projections=False,
+                )
+                self.assertIn("example", deferred)
 
     def test_issue34_projection_does_not_use_input_name_as_lock_node(self):
         def drift_selected(_document, lock):
@@ -3811,7 +3816,7 @@ got: sha256-requested
 
             globals_ = MODULE["main"].__globals__
             replacements = {
-                "load_source_catalog": lambda _root: {"selected": target},
+                "load_source_catalog": lambda _root, **_kwargs: {"selected": target},
                 "require_detached_linked_worktree": lambda _root: None,
                 "update_npm_lock_target": mutate_sibling,
             }
@@ -4844,10 +4849,18 @@ fi
             root_lock = events.index("nix flake update")
             projection_sync = events.index("overlay --sync-flake-projections")
             npm_locks = events.index("overlay --prepare-npm-locks npm-lock")
+            inventory_checks = [
+                index
+                for index, event in enumerate(events)
+                if event == "overlay --inventory --json"
+            ]
             generic_update = events.index("overlay --all")
+            self.assertEqual(len(inventory_checks), 2)
             self.assertLess(portable_lock, projection_sync)
             self.assertLess(root_lock, projection_sync)
             self.assertLess(projection_sync, npm_locks)
+            self.assertLess(npm_locks, inventory_checks[-1])
+            self.assertLess(inventory_checks[-1], generic_update)
             self.assertLess(npm_locks, generic_update)
             self.assertEqual((root / "npm-lock.txt").read_text(), "npm lock after\n")
 
