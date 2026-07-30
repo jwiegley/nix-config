@@ -14,25 +14,39 @@ SPEC.loader.exec_module(MODULE)
 
 class NormalizeStatusTests(unittest.TestCase):
     def test_legacy_status_is_compacted(self):
-        source = f"before\n{MODULE.LEGACY_STATUS}\nafter\n"
+        legacy = "  let status = `🔌 MCP: ${connectedCount}/${enabledCount} servers`;"
+        compact = "  let status = `🔌 MCP: ${connectedCount}/${enabledCount}`;"
+        source = f"before\n{legacy}\nafter\n"
         result = MODULE.normalize_status(source)
-        self.assertIn(MODULE.COMPACT_LEGACY_STATUS, result)
-        self.assertNotIn(MODULE.LEGACY_STATUS, result)
+        self.assertIn(compact, result)
+        self.assertNotIn(legacy, result)
 
     def test_modern_status_is_compacted_without_dropping_disabled_count(self):
+        modern = (
+            '  let status = `${enabledCount} ${enabledCount === 1 ? "server" : '
+            '"servers"} enabled`;\n'
+            '  if (connectedCount > 0) status += ` (${connectedCount} connected)`;'
+        )
+        compact = "  let status = `${connectedCount}/${enabledCount}`;"
         source = (
-            f"before\n{MODULE.MODERN_STATUS}\n"
+            f"before\n{modern}\n"
             "  if (disabledCount > 0) status += ` (${disabledCount} disabled)`;\n"
             "  const formattedStatus = formatMcpStatus(state.config, status);\n"
         )
         result = MODULE.normalize_status(source)
-        self.assertIn(MODULE.COMPACT_MODERN_STATUS, result)
-        self.assertNotIn(MODULE.MODERN_STATUS, result)
+        self.assertIn(compact, result)
+        self.assertNotIn(modern, result)
         self.assertIn("disabledCount", result)
         self.assertIn("formatMcpStatus(state.config, status)", result)
 
     def test_unknown_or_ambiguous_status_is_rejected(self):
-        for source in ("no status\n", f"{MODULE.LEGACY_STATUS}\n{MODULE.MODERN_STATUS}\n"):
+        legacy = "  let status = `🔌 MCP: ${connectedCount}/${enabledCount} servers`;"
+        modern = (
+            '  let status = `${enabledCount} ${enabledCount === 1 ? "server" : '
+            '"servers"} enabled`;\n'
+            '  if (connectedCount > 0) status += ` (${connectedCount} connected)`;'
+        )
+        for source in ("no status\n", f"{legacy}\n{modern}\n"):
             with self.subTest(source=source), self.assertRaisesRegex(
                 RuntimeError, "exactly one known shape"
             ):

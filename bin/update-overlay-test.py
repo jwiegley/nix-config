@@ -501,6 +501,7 @@ class UpdateInventoryTests(unittest.TestCase):
             root = Path(temp_dir)
             self._write_projection_fixture(root, make_build_stale)
             hash_calls = []
+            build_calls = []
 
             def resolve_hash(_root, package, hash_type):
                 on_disk = json.loads((root / "sources/test.json").read_text())[
@@ -515,11 +516,19 @@ class UpdateInventoryTests(unittest.TestCase):
                 )
                 return "sha256-new"
 
+            def validate_build(_root, package):
+                on_disk = json.loads((root / "sources/test.json").read_text())[
+                    "sources"
+                ]["example"]
+                build_calls.append(package)
+                self.assertEqual(on_disk["hashes"]["npmDepsHash"], "sha256-new")
+
             self.assertEqual(
                 sync_flake_projections(
                     root,
                     version_resolver=lambda _root, _input, _locked: "2.0.0",
                     dependent_hash_resolver=resolve_hash,
+                    build_validator=validate_build,
                 ),
                 1,
             )
@@ -527,9 +536,22 @@ class UpdateInventoryTests(unittest.TestCase):
                 "example"
             ]
             self.assertEqual(hash_calls, [("agent-resources", "npmDepsHash")])
+            self.assertEqual(build_calls, ["agent-resources"])
             self.assertEqual(record["version"], "2.0.0")
             self.assertEqual(record["source"]["args"]["rev"], "a" * 40)
             self.assertEqual(record["hashes"]["npmDepsHash"], "sha256-new")
+
+    def test_fod_hash_parser_requires_the_injected_dummy_pair(self):
+        parse = MODULE["HashComputer"]._parse_dummy_hash_mismatch
+        unrelated = """specified: sha256-old
+got: sha256-unrelated
+"""
+        requested = f"""specified: {MODULE['DUMMY_SRI_HASH']}
+got: sha256-requested
+"""
+        self.assertIsNone(parse(unrelated))
+        self.assertEqual(parse(unrelated + requested), "sha256-requested")
+        self.assertIsNone(parse(requested + requested.replace("requested", "second")))
 
     def test_issue38_ws_uses_fetchzip_with_an_executor(self):
         record = {

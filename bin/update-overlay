@@ -50,6 +50,8 @@ class Colors:
 if not sys.stdout.isatty():
     Colors.disable()
 
+DUMMY_SRI_HASH = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+
 
 @dataclass
 class PackageInfo:
@@ -640,17 +642,11 @@ in
         """Compute npmDepsHash by attempting a build with fake hash."""
         return self._compute_fod_hash(package_name, "npmDepsHash")
 
-    def _compute_fod_hash(self, package_name: str, hash_type: str) -> Optional[str]:
-        """Compute a fixed-output derivation hash by parsing build failure."""
-        print(f"  Computing {hash_type} (this may take a while)...")
-
-        # Build the package and capture the error with the correct hash
-        try:
-            build_script = self.repo_dir / "build"
-            if build_script.is_file() and os.access(build_script, os.X_OK):
-                command = ["./build", "pkg", package_name]
-            else:
-                expr = f"""
+    def _package_build_command(self, package_name: str) -> list[str]:
+        build_script = self.repo_dir / "build"
+        if build_script.is_file() and os.access(build_script, os.X_OK):
+            return ["./build", "pkg", package_name]
+        expression = f"""
 let
   flake = builtins.getFlake "path:{self.repo_dir}";
   system = builtins.currentSystem;
@@ -662,42 +658,45 @@ let
 in
   pkgs.{json.dumps(package_name)}
 """
-                command = [
-                    "nix",
-                    "build",
-                    "--impure",
-                    "--no-link",
-                    "--expr",
-                    expr,
-                ]
+        return ["nix", "build", "--impure", "--no-link", "--expr", expression]
 
-            result = subprocess.run(
-                command,
-                capture_output=True, text=True, timeout=600,
-                cwd=self.repo_dir
-            )
+    def _run_package_build(self, package_name: str):
+        return subprocess.run(
+            self._package_build_command(package_name),
+            capture_output=True,
+            text=True,
+            timeout=600,
+            cwd=self.repo_dir,
+        )
 
-            # Even if build succeeds, we might need the hash from output
-            output = result.stdout + result.stderr
+    @staticmethod
+    def _parse_dummy_hash_mismatch(output: str) -> Optional[str]:
+        pairs = re.findall(
+            r"specified:\s+(sha256-[A-Za-z0-9+/=]+)\s+"
+            r"got:\s+(sha256-[A-Za-z0-9+/=]+)",
+            output,
+        )
+        matching = [got for specified, got in pairs if specified == DUMMY_SRI_HASH]
+        return matching[0] if len(matching) == 1 else None
 
-            # Look for the hash mismatch error
-            # Pattern: "got: sha256-..."
-            hash_match = re.search(r'got:\s+(sha256-[A-Za-z0-9+/=]+)', output)
-            if hash_match:
-                return hash_match.group(1)
-
-            # Also try: "got:    sha256-..."
-            hash_match = re.search(r'got:\s+sha256:([A-Za-z0-9+/=]+)', output)
-            if hash_match:
-                # Convert to SRI format
-                return f"sha256-{hash_match.group(1)}"
-
+    def _compute_fod_hash(self, package_name: str, hash_type: str) -> Optional[str]:
+        """Compute a fixed-output derivation hash from our injected mismatch."""
+        print(f"  Computing {hash_type} (this may take a while)...")
+        try:
+            result = self._run_package_build(package_name)
+            return self._parse_dummy_hash_mismatch(result.stdout + result.stderr)
         except subprocess.TimeoutExpired:
             print(f"  Timeout computing {hash_type}", file=sys.stderr)
         except Exception as e:
             print(f"  Error computing {hash_type}: {e}", file=sys.stderr)
-
         return None
+
+    def validate_package_build(self, package_name: str) -> bool:
+        try:
+            return self._run_package_build(package_name).returncode == 0
+        except (OSError, subprocess.TimeoutExpired) as error:
+            print(f"  Error validating {package_name}: {error}", file=sys.stderr)
+            return False
 
 
 def make_overlay_sources(args, nix_dir: Path) -> list[OverlaySource]:
@@ -1091,10 +1090,16 @@ def resolve_flake_input_dependent_hash(
     return value
 
 
+def validate_flake_input_build(nix_dir: Path, package_name: str) -> None:
+    if not HashComputer(nix_dir).validate_package_build(package_name):
+        raise RuntimeError(f"flake input package validation failed: {package_name}")
+
+
 def sync_flake_projections(
     nix_dir: Path,
     version_resolver=resolve_flake_input_version,
     dependent_hash_resolver=resolve_flake_input_dependent_hash,
+    build_validator=validate_flake_input_build,
 ) -> int:
     """Refresh catalog fetchTree projections from the selected portable lock nodes."""
     lock_path = nix_dir / "config" / "ai" / "flake.lock"
@@ -1141,13 +1146,13 @@ def sync_flake_projections(
                         f"flake input build has no dependent hashes: {name}"
                     )
                 for hash_type in dependent_hashes:
-                    dependent_hashes[hash_type] = (
-                        "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-                    )
+                    dependent_hashes[hash_type] = DUMMY_SRI_HASH
                     path.write_text(json.dumps(payload, indent=2) + "\n")
                     dependent_hashes[hash_type] = dependent_hash_resolver(
                         nix_dir, update["buildPackage"], hash_type
                     )
+                path.write_text(json.dumps(payload, indent=2) + "\n")
+                build_validator(nix_dir, update["buildPackage"])
             if record_changed:
                 changed_document = True
                 changed_records += 1
