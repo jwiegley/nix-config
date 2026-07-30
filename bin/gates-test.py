@@ -522,8 +522,15 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
             env=clean_env(
                 CONSUMER_INVENTORY_REPO_ROOT=str(self.root),
                 CONSUMER_INVENTORY_CONSUMER_BASE=self.temp.name,
+                TMPDIR=self.temp.name,
                 **environment,
             ),
+        )
+
+    def assert_no_temporary_inventory(self):
+        self.assertEqual(
+            list(Path(self.temp.name).glob("consumer-inventory.*")),
+            [],
         )
 
     def test_write_refuses_when_repo_head_is_unresolvable(self):
@@ -548,11 +555,13 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
             "refused but still left a file behind, which is worse than either",
         )
         self.assertIn("repoHead", r.stdout + r.stderr)
+        self.assert_no_temporary_inventory()
 
     def test_write_stamps_clean_head_and_refuses_dirty_tree(self):
         clean_dest = Path(self.temp.name) / "clean.json"
         result = self.run_write(clean_dest)
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_no_temporary_inventory()
         actual_head = subprocess.run(
             ["git", "-C", str(self.root), "rev-parse", "HEAD"],
             check=True,
@@ -562,12 +571,70 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
         ).stdout.strip()
         self.assertEqual(json.loads(clean_dest.read_text())["repoHead"], actual_head)
 
+        mismatch_dest = Path(self.temp.name) / "mismatch.json"
+        result = self.run_write(
+            mismatch_dest,
+            CONSUMER_INVENTORY_REPO_HEAD="0" * 40,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("override does not match HEAD", result.stdout + result.stderr)
+        self.assertFalse(mismatch_dest.exists())
+        self.assert_no_temporary_inventory()
+
+        fake_python_bin = Path(self.temp.name) / "fake-python-bin"
+        fake_python_bin.mkdir()
+        fake_python = fake_python_bin / "python3"
+        fake_python.write_text("#!/bin/sh\nexit 42\n")
+        fake_python.chmod(0o755)
+        derive_failure_dest = Path(self.temp.name) / "derive-failure.json"
+        result = self.run_write(
+            derive_failure_dest,
+            PATH=f"{fake_python_bin}{os.pathsep}{os.environ['PATH']}",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(derive_failure_dest.exists())
+        self.assert_no_temporary_inventory()
+
+        real_git = shutil.which("git")
+        self.assertIsNotNone(real_git)
+        fake_bin = Path(self.temp.name) / "fake-bin"
+        fake_bin.mkdir()
+        counter = Path(self.temp.name) / "rev-parse-count"
+        fake_git = fake_bin / "git"
+        fake_git.write_text(
+            "#!/usr/bin/env python3\n"
+            "import os, sys\n"
+            f"counter = {str(counter)!r}\n"
+            "args = sys.argv[1:]\n"
+            "if args[-3:] == ['rev-parse', '--verify', 'HEAD']:\n"
+            "    try:\n"
+            "        count = int(open(counter).read()) + 1\n"
+            "    except (FileNotFoundError, ValueError):\n"
+            "        count = 1\n"
+            "    open(counter, 'w').write(str(count))\n"
+            "    if count == 2:\n"
+            "        print('0' * 40)\n"
+            "        raise SystemExit(0)\n"
+            f"os.execv({real_git!r}, [{real_git!r}, *args])\n"
+        )
+        fake_git.chmod(0o755)
+        race_dest = Path(self.temp.name) / "race.json"
+        result = self.run_write(
+            race_dest,
+            PATH=f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("changed during derivation", result.stdout + result.stderr)
+        self.assertFalse(race_dest.exists())
+        self.assert_no_temporary_inventory()
+
         self.sample.rename(self.root / "moved.nix")
         dirty_dest = Path(self.temp.name) / "dirty.json"
         result = self.run_write(dirty_dest)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("tracked files differ from HEAD", result.stdout + result.stderr)
         self.assertFalse(dirty_dest.exists())
+        self.assert_no_temporary_inventory()
 
 
 class TestGatesAreRegistered(unittest.TestCase):

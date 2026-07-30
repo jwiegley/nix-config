@@ -1266,6 +1266,13 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 )
             source_args = record["source"]["args"]
             source_fetcher = record["source"]["fetcher"]
+            tag_prefix = update.get("tagPrefix")
+            if kind == "github-release" and tag_prefix is not None and not isinstance(
+                tag_prefix, str
+            ):
+                raise RuntimeError(
+                    f"invalid GitHub release tag prefix for source catalog record: {name}"
+                )
             if build_mode is not None and kind in {
                 "github-commit",
                 "github-release",
@@ -1401,6 +1408,10 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             missing_artifacts = [value for value in update_artifacts if not (nix_dir / value).is_file()]
             if missing_artifacts:
                 raise RuntimeError(f"source catalog record {name} references missing artifacts: {missing_artifacts}")
+            if build_mode is not None and (artifacts or update_artifacts):
+                raise RuntimeError(
+                    f"dependent-hash projection cannot also declare artifacts: {name}"
+                )
             artifact_sources = update.get("artifactSources")
             if artifact_sources is not None or (
                 kind == "github-commit" and update_artifacts

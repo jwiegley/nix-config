@@ -1974,6 +1974,42 @@ got: sha256-requested
             ):
                 load_source_catalog(root)
 
+            wrong_prefix_type = copy.deepcopy(record)
+            wrong_prefix_type["update"]["tagPrefix"] = 7
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"python-project": wrong_prefix_type},
+            }))
+            with self.assertRaisesRegex(RuntimeError, "tag prefix"):
+                load_source_catalog(root)
+
+            fetch_artifact = copy.deepcopy(record)
+            fetch_artifact["artifacts"] = {
+                "linux": copy.deepcopy(record["source"])
+            }
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"python-project": fetch_artifact},
+            }))
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "cannot also declare artifacts",
+            ):
+                load_source_catalog(root)
+
+            local_artifact = copy.deepcopy(record)
+            local_artifact["update"]["artifacts"] = ["projection.lock"]
+            (root / "projection.lock").write_text("old\n")
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"python-project": local_artifact},
+            }))
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "cannot also declare artifacts",
+            ):
+                load_source_catalog(root)
+
     def test_github_commit_build_mode_uses_generic_projection_dispatch(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -2062,7 +2098,7 @@ got: sha256-requested
             }))
             with self.assertRaisesRegex(
                 RuntimeError,
-                "cannot also declare dependent hashes",
+                "cannot also declare artifacts",
             ):
                 load_source_catalog(root)
 

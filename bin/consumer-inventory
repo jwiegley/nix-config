@@ -78,7 +78,7 @@ verify_write_source() {
     local actual_head
     actual_head=$(git -C "$repo_root" rev-parse --verify HEAD 2>/dev/null) ||
         die "refusing to write: repoHead cannot be verified from a Git checkout"
-    if [[ $repo_head != __auto__ && $repo_head != "$actual_head" ]]; then
+    if [[ $repo_head != __auto__ && -n $repo_head && $repo_head != "$actual_head" ]]; then
         die "refusing to write: repoHead override does not match HEAD $actual_head"
     fi
     git -C "$repo_root" diff --quiet HEAD -- ||
@@ -793,6 +793,7 @@ case ${1-} in
     write_head=$(verify_write_source)
     mkdir -p "$(dirname "$dest")"
     tmp=$(mktemp "${TMPDIR:-/tmp}/consumer-inventory.XXXXXX") || die "cannot create a temporary file"
+    trap 'rm -f "$tmp"' EXIT
     derive >"$tmp"
     # Refuse to commit an artifact that cannot say which tree it describes. A
     # null repoHead is not a smaller artifact, it is an uninterpretable one: every
