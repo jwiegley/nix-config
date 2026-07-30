@@ -61,21 +61,41 @@ in
         shell = pkgs.zsh;
 
         openssh.authorizedKeys = {
-          keys = [
-            # GnuPG auth key stored on Yubikeys
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJAj2IzkXyXEl+ReCg9H+t55oa6GIiumPWeufcYCWy3F cardno:31_768_527"
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb cardno:14_476_831"
+          keys =
+            let
+              modelMetadataExtract = pkgs.writeShellScript "model-metadata-extract" ''
+                exec ${pkgs.gawk}/bin/awk '
+                  BEGIN{IGNORECASE=1}
+                  /api.?key|token|secret|password|bearer/ { next }
+                  /^[[:space:]]{2,4}[^[:space:]#][^:]*:[[:space:]]*$/ {
+                    k=$0; sub(/:[[:space:]]*$/,"",k); gsub(/^[[:space:]]+/,"",k); print "MODEL\t" k; next }
+                  {
+                    for(i=1;i<=NF;i++){
+                      if($i=="--ctx-size"||$i=="-c")   print "CTX\t"  $(i+1)+0
+                      else if($i=="--n-predict")       print "NPRED\t" $(i+1)+0
+                      else if($i=="--jinja")           print "FLAG\tjinja"
+                      else if($i=="--reasoning-format")print "FLAG\treasoning-format=" $(i+1)
+                      else if($i=="--embeddings")      print "FLAG\tembeddings"
+                      else if($i=="--pooling")         print "FLAG\tpooling"
+                    }
+                  }' /Users/johnw/Models/llama-swap.yaml
+              '';
+            in
+            [
+              # GnuPG auth key stored on Yubikeys
+              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJAj2IzkXyXEl+ReCg9H+t55oa6GIiumPWeufcYCWy3F cardno:31_768_527"
+              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb cardno:14_476_831"
 
-            # Vulcan data server
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZYNrQfHWNV09OQz7uMhjQKflCWKwLG4pp1tJb2QRRq vulcan-model-metadata"
+              # Vulcan data server
+              ''restrict,command="${modelMetadataExtract}" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZYNrQfHWNV09OQz7uMhjQKflCWKwLG4pp1tJb2QRRq vulcan-model-metadata''
 
-            # drafts-mcp bridge (vulcan drafts-mcp.service) — pinned to exec
-            # drafts-mcp-server ONLY; SSH_ORIGINAL_COMMAND is ignored by the
-            # forced command. `restrict` disables pty/forwarding/X11/agent.
-            # This is the per-key least-privilege gate (NOT key-files.nix,
-            # which grants an unrestricted login shell).
-            "command=\"/etc/profiles/per-user/johnw/bin/drafts-mcp-server\",restrict,no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfhC6rPhjkSucPkTuL+On43E4udAss806oVAqNso3Qy drafts-bridge@vulcan"
-          ];
+              # drafts-mcp bridge (vulcan drafts-mcp.service) — pinned to exec
+              # drafts-mcp-server ONLY; SSH_ORIGINAL_COMMAND is ignored by the
+              # forced command. `restrict` disables pty/forwarding/X11/agent.
+              # This is the per-key least-privilege gate (NOT key-files.nix,
+              # which grants an unrestricted login shell).
+              "command=\"/etc/profiles/per-user/johnw/bin/drafts-mcp-server\",restrict,no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfhC6rPhjkSucPkTuL+On43E4udAss806oVAqNso3Qy drafts-bridge@vulcan"
+            ];
           keyFiles =
             # Each machine accepts SSH key authentication from the rest
             import ./key-files.nix { inherit (pkgs) lib; } [ "hera" "clio" ] home hostname;
