@@ -66,6 +66,9 @@ in
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJAj2IzkXyXEl+ReCg9H+t55oa6GIiumPWeufcYCWy3F cardno:31_768_527"
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb cardno:14_476_831"
 
+            # Vulcan data server
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs johnw@vulcan"
+
             # drafts-mcp bridge (vulcan drafts-mcp.service) — pinned to exec
             # drafts-mcp-server ONLY; SSH_ORIGINAL_COMMAND is ignored by the
             # forced command. `restrict` disables pty/forwarding/X11/agent.
