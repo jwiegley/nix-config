@@ -118,6 +118,7 @@ let
       apiKey = renderEnv provider.apiKey.env;
       inherit (provider) baseUrl;
       headers = {
+        "x-litellm-stream-timeout" = "7200";
         "x-litellm-tags" = "pi";
         "x-litellm-timeout" = "7200";
       };
