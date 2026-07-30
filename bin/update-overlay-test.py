@@ -66,6 +66,31 @@ enforce_catalog_record_isolation = MODULE.get(
 
 ISSUE40_TARGETS = frozenset({"cohere-melody", "mlx"})
 ISSUE41_TARGETS = frozenset({"hf-xet", "nelisp", "sherlock-db"})
+ISSUE45_TARGETS = frozenset({
+    "anvil-ide",
+    "anvil-mcp",
+    "nelisp",
+    "standalone-anvil",
+})
+ISSUE45_BRANCHES = {
+    "anvil-ide": "main",
+    "anvil-mcp": "fix/anvil-root-resilience",
+    "nelisp": "main",
+    "standalone-anvil": "master",
+}
+ISSUE45_EXECUTORS = {
+    "anvil-ide": "update-overlay",
+    "anvil-mcp": "update-overlay",
+    "nelisp": "update-agents",
+    "standalone-anvil": "update-overlay",
+}
+ISSUE45_POLICIES = {
+    "anvil-ide": "automatic",
+    "anvil-mcp": "automatic",
+    "nelisp": "manual",
+    "standalone-anvil": "manual",
+}
+ISSUE45_ARTIFACT = "packages/anvil-mcp/Cargo.lock"
 ISSUE39_TARGETS = frozenset(
     json.loads(
         (SCRIPT.parent.parent / "packages/pi-gallery/normalization-policy.json").read_text()
@@ -269,6 +294,54 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertEqual(
             anvil_document["sources"]["anvil-mcp"]["update"]["branch"],
             "fix/anvil-root-resilience",
+        )
+        self.assertTrue(ISSUE45_TARGETS <= catalog.keys())
+        self.assertEqual(
+            {name: catalog[name]["source"] for name in ISSUE45_TARGETS},
+            {name: "catalog" for name in ISSUE45_TARGETS},
+        )
+        self.assertEqual(
+            {name: catalog[name]["executor"] for name in ISSUE45_TARGETS},
+            ISSUE45_EXECUTORS,
+        )
+        self.assertEqual(
+            {
+                name: catalog[name]["_record"]["update"].get(
+                    "policy", "automatic"
+                )
+                for name in ISSUE45_TARGETS
+            },
+            ISSUE45_POLICIES,
+        )
+        self.assertEqual(
+            {
+                name: catalog[name]["_record"]["update"]["branch"]
+                for name in ISSUE45_TARGETS
+            },
+            ISSUE45_BRANCHES,
+        )
+        self.assertEqual(
+            {
+                name: catalog[name]["_record"]["update"]["kind"]
+                for name in ISSUE45_TARGETS
+            },
+            {name: "github-commit" for name in ISSUE45_TARGETS},
+        )
+        self.assertEqual(
+            catalog["nelisp"]["_record"]["update"]["artifacts"],
+            [ISSUE45_ARTIFACT],
+        )
+        self.assertEqual(
+            catalog["nelisp"]["_record"]["update"]["artifactSources"],
+            {ISSUE45_ARTIFACT: "Cargo.lock"},
+        )
+        self.assertEqual(
+            {
+                name
+                for name in ISSUE45_TARGETS
+                if catalog[name]["_record"]["update"].get("artifactSources")
+            },
+            {"nelisp"},
         )
         self.assertEqual(
             json.loads((root / "sources/emacs.json").read_text())["sources"]["org"]["commit"],
@@ -3336,6 +3409,149 @@ got: sha256-requested
                         "hash": "sha256-source-old",
                     },
                 },
+                "update": {
+                    "branch": "main",
+                    "kind": "github-commit",
+                },
+            }
+            path.write_text(
+                json.dumps(
+                    {"schemaVersion": 1, "sources": {"project": record}},
+                    indent=2,
+                )
+                + "\n"
+            )
+            before = path.read_bytes()
+            self.assertEqual(
+                load_source_catalog(root)["project"]["executor"],
+                "update-overlay",
+            )
+
+            class FakeGitHub:
+                def __init__(self, candidate):
+                    self.candidate = candidate
+                    self.calls = []
+
+                def get_latest_commit(self, owner, repo, branch):
+                    self.calls.append((owner, repo, branch))
+                    return self.candidate
+
+            class FakeSimpleHashes:
+                def __init__(self, result):
+                    self.result = result
+                    self.calls = []
+
+                def compute_native_hash(self, source, replacements):
+                    self.calls.append(
+                        (source["args"]["rev"], copy.deepcopy(replacements))
+                    )
+                    return self.result
+
+            def run_simple(github, hashes):
+                transaction = SourceTransaction()
+                with contextlib.redirect_stdout(io.StringIO()):
+                    status = update_github_projection_target(
+                        "project",
+                        load_source_catalog(root)["project"],
+                        SimpleNamespace(version=None, dry_run=False),
+                        github,
+                        SimpleNamespace(),
+                        SimpleNamespace(),
+                        hashes,
+                        transaction,
+                    )
+                return status, transaction
+
+            lookup_failure = FakeGitHub(None)
+            unused_hashes = FakeSimpleHashes("must-not-be-used")
+            status, transaction = run_simple(lookup_failure, unused_hashes)
+            self.assertEqual(status, "failed")
+            self.assertEqual(
+                lookup_failure.calls,
+                [("example", "project", "main")],
+            )
+            self.assertEqual(unused_hashes.calls, [])
+            self.assertEqual(path.read_bytes(), before)
+            self.assertEqual(transaction.original, {})
+            self.assertEqual(transaction.rollback(), 0)
+
+            hash_failure = FakeGitHub((new_ref, new_ref[:8]))
+            missing_hash = FakeSimpleHashes(None)
+            status, transaction = run_simple(hash_failure, missing_hash)
+            self.assertEqual(status, "failed")
+            self.assertEqual(
+                hash_failure.calls,
+                [("example", "project", "main")],
+            )
+            self.assertEqual(missing_hash.calls, [(old_ref, {"rev": new_ref})])
+            self.assertEqual(path.read_bytes(), before)
+            self.assertEqual(transaction.original, {})
+            self.assertEqual(transaction.rollback(), 0)
+
+            rollback_github = FakeGitHub((new_ref, new_ref[:8]))
+            rollback_hashes = FakeSimpleHashes("sha256-source-new")
+            status, transaction = run_simple(rollback_github, rollback_hashes)
+            self.assertEqual(status, "updated")
+            self.assertEqual(
+                rollback_github.calls,
+                [("example", "project", "main")],
+            )
+            self.assertEqual(
+                rollback_hashes.calls,
+                [(old_ref, {"rev": new_ref})],
+            )
+            rolled_back_update = json.loads(path.read_text())["sources"]["project"]
+            self.assertEqual(rolled_back_update["version"], new_ref[:8])
+            self.assertEqual(rolled_back_update["source"]["args"]["rev"], new_ref)
+            self.assertEqual(
+                rolled_back_update["source"]["args"]["hash"],
+                "sha256-source-new",
+            )
+            self.assertNotEqual(path.read_bytes(), before)
+            self.assertEqual(transaction.rollback(), 1)
+            self.assertEqual(path.read_bytes(), before)
+
+            commit_github = FakeGitHub((new_ref, new_ref[:8]))
+            commit_hashes = FakeSimpleHashes("sha256-source-new")
+            status, transaction = run_simple(commit_github, commit_hashes)
+            self.assertEqual(status, "updated")
+            self.assertEqual(
+                commit_github.calls,
+                [("example", "project", "main")],
+            )
+            self.assertEqual(
+                commit_hashes.calls,
+                [(old_ref, {"rev": new_ref})],
+            )
+            transaction.commit()
+            transaction.rollback_unless_committed()
+            committed_update = json.loads(path.read_text())["sources"]["project"]
+            self.assertEqual(committed_update["version"], new_ref[:8])
+            self.assertEqual(committed_update["source"]["args"]["rev"], new_ref)
+            self.assertEqual(
+                committed_update["source"]["args"]["hash"],
+                "sha256-source-new",
+            )
+            self.assertNotEqual(path.read_bytes(), before)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/tools.json"
+            old_ref = "1" * 40
+            new_ref = "2" * 40
+            record = {
+                "version": old_ref[:8],
+                "source": {
+                    "fetcher": "fetchFromGitHub",
+                    "url": "https://github.com/example/project",
+                    "args": {
+                        "owner": "example",
+                        "repo": "project",
+                        "rev": old_ref,
+                        "hash": "sha256-source-old",
+                    },
+                },
                 "hashes": {"cargoDepsHash": "sha256-cargo-old"},
                 "update": {
                     "branch": "main",
@@ -3442,29 +3658,53 @@ got: sha256-requested
                     "kind": "github-commit",
                 },
             }
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"project": record},
-            }))
-            target = load_source_catalog(root)["project"]
-            self.assertEqual(target["executor"], "update-agents")
+            path.write_text(
+                json.dumps(
+                    {"schemaVersion": 1, "sources": {"project": record}},
+                    indent=2,
+                )
+                + "\n"
+            )
+            before_source = path.read_bytes()
+            before_lock = lock_path.read_bytes()
+            self.assertEqual(
+                load_source_catalog(root)["project"]["executor"],
+                "update-agents",
+            )
 
-            requested_files = []
+            expected_commit_request = ("example", "project", "main")
+            expected_file_request = ("example", "project", new_ref, "Cargo.lock")
+            expected_validation = (
+                "https://github.com/example/project",
+                new_ref,
+                "Cargo.lock",
+                new_lock,
+            )
 
             class FakeGitHub:
-                def get_latest_commit(self, _owner, _repo, _branch):
+                def __init__(self, content):
+                    self.content = content
+                    self.commit_requests = []
+                    self.file_requests = []
+
+                def get_latest_commit(self, owner, repo, branch):
+                    self.commit_requests.append((owner, repo, branch))
                     return new_ref, new_ref[:8]
 
                 def get_file(self, owner, repo, rev, remote):
-                    requested_files.append((owner, repo, rev, remote))
-                    return "not a Cargo lock"
+                    self.file_requests.append((owner, repo, rev, remote))
+                    return self.content
 
             class FakeHashes:
                 def __init__(self, lock_valid=True):
                     self.lock_valid = lock_valid
+                    self.hash_requests = []
                     self.validations = []
 
-                def compute_native_hash(self, _source, replacements):
+                def compute_native_hash(self, source, replacements):
+                    self.hash_requests.append(
+                        (source["args"]["rev"], copy.deepcopy(replacements))
+                    )
                     return (
                         "sha256-source-new"
                         if replacements == {"rev": new_ref}
@@ -3479,77 +3719,114 @@ got: sha256-requested
                     )
                     return self.lock_valid
 
-            before = path.read_text()
-            transaction = SourceTransaction()
-            with contextlib.redirect_stdout(io.StringIO()):
-                status = update_github_commit_artifact_target(
-                    "project",
-                    target,
-                    SimpleNamespace(version=None, dry_run=False),
-                    FakeGitHub(),
-                    FakeHashes(),
-                    transaction,
-                )
-            self.assertEqual(status, "failed")
-            self.assertEqual(path.read_text(), before)
-            self.assertEqual(lock_path.read_text(), old_lock)
-            self.assertEqual(transaction.original, {})
+            def run_update(github, hashes):
+                transaction = SourceTransaction()
+                with contextlib.redirect_stdout(io.StringIO()):
+                    status = update_github_commit_artifact_target(
+                        "project",
+                        load_source_catalog(root)["project"],
+                        SimpleNamespace(version=None, dry_run=False),
+                        github,
+                        hashes,
+                        transaction,
+                    )
+                return status, transaction
 
-            github = FakeGitHub()
-            github.get_file = lambda owner, repo, rev, remote: (
-                requested_files.append((owner, repo, rev, remote)) or new_lock
+            def assert_failure_is_atomic(transaction):
+                self.assertEqual(transaction.original, {})
+                self.assertEqual(path.read_bytes(), before_source)
+                self.assertEqual(lock_path.read_bytes(), before_lock)
+                self.assertEqual(transaction.rollback(), 0)
+
+            invalid_content_github = FakeGitHub("not a Cargo lock")
+            invalid_content_hashes = FakeHashes()
+            status, transaction = run_update(
+                invalid_content_github,
+                invalid_content_hashes,
             )
-            invalid_source_lock = FakeHashes(lock_valid=False)
-            transaction = SourceTransaction()
-            with contextlib.redirect_stdout(io.StringIO()):
-                status = update_github_commit_artifact_target(
-                    "project",
-                    target,
-                    SimpleNamespace(version=None, dry_run=False),
-                    github,
-                    invalid_source_lock,
-                    transaction,
-                )
             self.assertEqual(status, "failed")
-            self.assertEqual(path.read_text(), before)
-            self.assertEqual(lock_path.read_text(), old_lock)
-            self.assertEqual(transaction.original, {})
+            self.assertEqual(
+                invalid_content_github.commit_requests,
+                [expected_commit_request],
+            )
+            self.assertEqual(
+                invalid_content_github.file_requests,
+                [expected_file_request],
+            )
+            self.assertEqual(
+                invalid_content_hashes.hash_requests,
+                [(old_ref, {"rev": new_ref})],
+            )
+            self.assertEqual(invalid_content_hashes.validations, [])
+            assert_failure_is_atomic(transaction)
+
+            invalid_source_github = FakeGitHub(new_lock)
+            invalid_source_lock = FakeHashes(lock_valid=False)
+            status, transaction = run_update(
+                invalid_source_github,
+                invalid_source_lock,
+            )
+            self.assertEqual(status, "failed")
+            self.assertEqual(
+                invalid_source_github.commit_requests,
+                [expected_commit_request],
+            )
+            self.assertEqual(
+                invalid_source_github.file_requests,
+                [expected_file_request],
+            )
+            self.assertEqual(
+                invalid_source_lock.hash_requests,
+                [(old_ref, {"rev": new_ref})],
+            )
             self.assertEqual(
                 invalid_source_lock.validations,
-                [
-                    (
-                        "https://github.com/example/project",
-                        new_ref,
-                        "Cargo.lock",
-                        new_lock,
-                    )
-                ],
+                [expected_validation],
             )
+            assert_failure_is_atomic(transaction)
 
-            valid_source_lock = FakeHashes()
-            transaction = SourceTransaction()
-            with contextlib.redirect_stdout(io.StringIO()):
-                status = update_github_commit_artifact_target(
-                    "project",
-                    target,
-                    SimpleNamespace(version=None, dry_run=False),
-                    github,
-                    valid_source_lock,
-                    transaction,
-                )
-            transaction.commit()
+            rollback_github = FakeGitHub(new_lock)
+            rollback_hashes = FakeHashes()
+            status, transaction = run_update(rollback_github, rollback_hashes)
             self.assertEqual(status, "updated")
-            self.assertEqual(requested_files[-1], (
-                "example",
-                "project",
-                new_ref,
-                "Cargo.lock",
-            ))
+            self.assertEqual(rollback_github.commit_requests, [expected_commit_request])
+            self.assertEqual(rollback_github.file_requests, [expected_file_request])
+            self.assertEqual(
+                rollback_hashes.hash_requests,
+                [(old_ref, {"rev": new_ref})],
+            )
+            self.assertEqual(rollback_hashes.validations, [expected_validation])
             updated = json.loads(path.read_text())["sources"]["project"]
             self.assertEqual(updated["source"]["args"]["rev"], new_ref)
             self.assertEqual(updated["source"]["args"]["hash"], "sha256-source-new")
             self.assertEqual(lock_path.read_text(), new_lock)
-            self.assertEqual(len(valid_source_lock.validations), 1)
+            self.assertEqual(set(transaction.original), {path, lock_path})
+            self.assertEqual(transaction.rollback(), 2)
+            self.assertEqual(path.read_bytes(), before_source)
+            self.assertEqual(lock_path.read_bytes(), before_lock)
+
+            commit_github = FakeGitHub(new_lock)
+            commit_hashes = FakeHashes()
+            status, transaction = run_update(commit_github, commit_hashes)
+            self.assertEqual(status, "updated")
+            transaction.commit()
+            transaction.rollback_unless_committed()
+            self.assertEqual(commit_github.commit_requests, [expected_commit_request])
+            self.assertEqual(commit_github.file_requests, [expected_file_request])
+            self.assertEqual(
+                commit_hashes.hash_requests,
+                [(old_ref, {"rev": new_ref})],
+            )
+            self.assertEqual(commit_hashes.validations, [expected_validation])
+            committed = json.loads(path.read_text())["sources"]["project"]
+            self.assertEqual(committed["source"]["args"]["rev"], new_ref)
+            self.assertEqual(
+                committed["source"]["args"]["hash"],
+                "sha256-source-new",
+            )
+            self.assertEqual(lock_path.read_text(), new_lock)
+            self.assertNotEqual(path.read_bytes(), before_source)
+            self.assertNotEqual(lock_path.read_bytes(), before_lock)
 
     def test_catalog_and_cli_inventory_cover_all_update_targets(self):
         root = SCRIPT.parent.parent
