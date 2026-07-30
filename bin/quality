@@ -29,6 +29,7 @@
 #   bin/quality                      # run every suite (same as `all`)
 #   bin/quality nix-format           # one suite
 #   bin/quality --python-tier pre-commit python-test
+#   bin/quality --tier expensive      # low-frequency exhaustive assurance
 #   bin/quality shell-format --fix   # rewrite instead of check, where meaningful
 #   bin/quality --list               # print every suite
 #   bin/quality --files shell        # print the discovered file set and exit
@@ -77,7 +78,16 @@ PRE_COMMIT_CORE_SUITES=(
     shell-format
     python-lint
     python-test
+)
+
+EXPENSIVE_SUITES=(
+    python-test
     portable-eval
+    consumer-eval
+    signatures
+    coverage
+    coverage-live
+    darwin-surface
 )
 
 # ---- file discovery -----------------------------------------------------
@@ -546,9 +556,9 @@ while [[ $# -gt 0 ]]; do
         shift
         quality_tier=${1-}
         case $quality_tier in
-        pre-commit | pre-commit-core) ;;
+        pre-commit | pre-commit-core | expensive) ;;
         *)
-            printf 'quality: --tier needs one of: pre-commit pre-commit-core\n' >&2
+            printf 'quality: --tier needs one of: pre-commit pre-commit-core expensive\n' >&2
             exit 1
             ;;
         esac
@@ -601,14 +611,29 @@ if [[ -n $quality_tier ]]; then
         printf "quality: tier supervisor requires GNU 'timeout'\n" >&2
         exit 1
     }
-    budget=$(python_test_budget pre-commit) || exit 1
-    tier_suites=("${PRE_COMMIT_CORE_SUITES[@]}")
+    case $quality_tier in
+    pre-commit | pre-commit-core)
+        budget=$(python_test_budget pre-commit) || exit 1
+        python_tier=pre-commit
+        tier_suites=("${PRE_COMMIT_CORE_SUITES[@]}")
+        ;;
+    expensive)
+        budget=$(python_test_budget ci-on-demand) || exit 1
+        python_tier=all
+        tier_suites=("${EXPENSIVE_SUITES[@]}")
+        ;;
+    esac
     if [[ $quality_tier == pre-commit ]]; then
         tier_suites+=(coverage)
     fi
-    note "tier: $quality_tier planned=${#tier_suites[@]} budget=${budget}s"
-    timeout --signal=TERM --kill-after=5 "$budget" \
-        "$quality_program" --python-tier pre-commit "${tier_suites[@]}"
+    term_after=$((budget - 5))
+    if [[ $term_after -le 0 ]]; then
+        printf 'quality: tier budget must exceed the 5s kill grace\n' >&2
+        exit 1
+    fi
+    note "tier: $quality_tier planned=${#tier_suites[@]} budget=${budget}s term-after=${term_after}s kill-grace=5s"
+    timeout --signal=TERM --kill-after=5 "$term_after" \
+        "$quality_program" --python-tier "$python_tier" "${tier_suites[@]}"
     tier_status=$?
     case $tier_status in
     0)

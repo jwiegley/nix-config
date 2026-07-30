@@ -316,7 +316,7 @@ class QualityPythonTierTests(unittest.TestCase):
                 {
                     "pythonInventory": entries,
                     "budgetsSeconds": budgets
-                    or {"pre-commit": 180, "pre-push": 900, "ci-on-demand": 1800},
+                    or {"pre-commit": 120, "pre-push": 900, "ci-on-demand": 1800},
                 }
             ),
             encoding="utf-8",
@@ -369,7 +369,7 @@ class QualityPythonTierTests(unittest.TestCase):
         env = dict(self.env)
         env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
         for status, expected in (
-            (124, "timed out after 180s"),
+            (124, "timed out after 120s"),
             (137, "exited 137 (SIGKILL; deadline escalation, OOM, or external kill)"),
         ):
             timeout.write_text(
@@ -386,7 +386,12 @@ class QualityPythonTierTests(unittest.TestCase):
         timeout = fakebin / "timeout"
         expected = (self.repo / "bin/quality").resolve()
         timeout.write_text(
-            f"#!/usr/bin/env bash\n[[ $4 == {expected!s} ]] || exit 99\nexit 124\n",
+            f"#!/usr/bin/env bash\n"
+            "[[ $1 == --signal=TERM ]] || exit 96\n"
+            "[[ $2 == --kill-after=5 ]] || exit 97\n"
+            "[[ $3 == 115 ]] || exit 98\n"
+            f"[[ $4 == {expected!s} ]] || exit 99\n"
+            "exit 124\n",
             encoding="utf-8",
         )
         timeout.chmod(0o755)
@@ -396,7 +401,50 @@ class QualityPythonTierTests(unittest.TestCase):
         subdir.mkdir()
         proc = self.quality("--tier", "pre-commit-core", env=env, cwd=subdir)
         self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("timed out after 180s", proc.stderr)
+        self.assertIn("timed out after 120s", proc.stderr)
+
+    def test_tier_membership_keeps_expensive_work_out_of_pre_commit(self):
+        fakebin = self.repo / "fakebin"
+        fakebin.mkdir()
+        timeout = fakebin / "timeout"
+        log = self.repo / "timeout-args"
+        timeout.write_text(
+            f"#!/usr/bin/env bash\nprintf '%s\\n' \"$*\" >{log!s}\nexit 124\n",
+            encoding="utf-8",
+        )
+        timeout.chmod(0o755)
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+
+        pre_commit = self.quality("--tier", "pre-commit", env=env)
+        self.assertNotEqual(pre_commit.returncode, 0)
+        pre_commit_args = log.read_text()
+        self.assertIn("--python-tier pre-commit", pre_commit_args)
+        self.assertIn("python-test", pre_commit_args)
+        self.assertIn("coverage", pre_commit_args)
+        self.assertNotIn("portable-eval", pre_commit_args)
+
+        expensive = self.quality("--tier", "expensive", env=env)
+        self.assertNotEqual(expensive.returncode, 0)
+        expensive_args = log.read_text()
+        self.assertIn("--kill-after=5 1795", expensive_args)
+        self.assertIn("--python-tier all", expensive_args)
+        self.assertIn("python-test", expensive_args)
+        self.assertIn("portable-eval", expensive_args)
+        self.assertIn("consumer-eval", expensive_args)
+        self.assertIn("signatures", expensive_args)
+        self.assertIn("coverage", expensive_args)
+        self.assertIn("coverage-live", expensive_args)
+        self.assertIn("darwin-surface", expensive_args)
+
+    @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
+    def test_whole_tier_budget_must_include_kill_grace(self):
+        self.write_manifest(
+            budgets={"pre-commit": 5, "pre-push": 900, "ci-on-demand": 1800}
+        )
+        proc = self.quality("--tier", "pre-commit")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("tier budget must exceed the 5s kill grace", proc.stderr)
 
     @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
     def test_budget_timeout_names_not_reached_suites(self):

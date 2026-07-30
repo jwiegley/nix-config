@@ -939,3 +939,43 @@ same-name atomic replacement failure preserves original bytes, `--write` refuses
 derivation when no baseline exists, Git revision failure is surfaced, projection digest
 key/format drift is rejected, and failed worktree creation still attempts narrow cleanup.
 The generator harness is now 25 tests; production behavior is unchanged.
+
+---
+
+## 2026-07-29 — #80 reopened for the two-minute ordinary gate
+
+The maintainer superseded the original 180-second pre-commit policy: an ordinary
+commit now has a hard **120-second maximum**, while exhaustive integration and
+portable-native verification move to a named low-frequency tier run at most a few
+times daily.
+
+The old policy was measurably noncompliant: the last committed core record was
+`164.603/180s`.  Work is isolated on `impl/fleet-programme` in
+`/Users/johnw/src/nix-impl`; concurrent Pi edits remain in the shared `main`
+worktree and are not part of this unit.
+
+Current staged design:
+
+- `bin/update-overlay-essential-test.py` runs every parser/catalog unit plus 16
+  bounded routing, purity, and negative-gate integration cases.  It resolves 47
+  tests at the current tree and ran in **5.4s**; it asserts it remains a strict
+  subset of the unfiltered updater suite.
+- `bin/quality --tier pre-commit` keeps all static checks, the essential Python
+  tier, and structural coverage.  It removes portable all-system evaluation and
+  the full temporary-Git updater workflow matrix from every commit.
+- `bin/quality --tier expensive` runs every tracked top-level Python suite
+  unfiltered, portable all-system evaluation, consumer/signature gates,
+  structural/live coverage, and the Darwin value surface under the existing
+  CI/on-demand ceiling.  Because some full Python cases intentionally
+  exercise LAN-only consumers, `.github/workflows/expensive.yml` schedules only
+  the remote-safe portable evaluation/native subset twice daily and supports
+  manual dispatch; the complete tier remains a local/manual authority.
+- The supervisor uses TERM at 115 seconds plus a five-second kill grace.  The
+  first staged core measurement completed in **41.61s**; the refreshed artifact
+  records **42.139/120s**, and the exact hook including structural coverage
+  completed in **44.91s**.  The stale coverage artifact was watched failing the
+  exact ordinary gate before regeneration as required.
+
+Remaining for this unit: verify the expensive selector, commit signed, fess, and
+close #80 again.  #41 is preserved but paused.  No activation or push was
+performed by this programme lane.

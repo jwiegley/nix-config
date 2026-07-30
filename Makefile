@@ -14,7 +14,7 @@ NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 
 .PHONY: help all verify-inputs lock-local build switch update update-projects upgrade-tasks upgrade \
-	changes copy check sizes clean purge sign travel-ready test darwin-surface-baseline tools repl format lint
+	changes copy check sizes clean purge sign travel-ready test expensive darwin-surface-baseline tools repl format lint
 
 all: switch
 
@@ -38,6 +38,7 @@ help:
 	  'Non-mutating targets:' \
 	  '  help             Show this help (default)' \
 	  '  build            Build the current Darwin system without switching' \
+	  '  expensive        Run the low-frequency exhaustive assurance tier' \
 	  '  test             Build the core repository contracts' \
 	  '  verify-inputs    Check local flake inputs for NAR hazards' \
 	  '' \
@@ -60,6 +61,9 @@ test:
 	  .#checks.$(SYSTEM).ai-home-manager-model-sync \
 	  .#checks.$(SYSTEM).ai-home-manager-package-selection \
 	  .#checks.$(SYSTEM).pi-gallery
+
+expensive:
+	bin/quality --tier expensive
 
 darwin-surface-baseline:
 	bin/darwin-surface-baseline --write

@@ -163,7 +163,7 @@
       "kind": "test",
       "tier": "pre-push",
       "evidence": ["quality:python-test executes replayable gate mutations and refusal fixtures"],
-      "gap": "Measured at 522.331 seconds on Hera because two cases perform full shared-work evaluations; the pre-push selector preserves invocation outside the 180-second pre-commit tier."
+      "gap": "Measured at 522.331 seconds on Hera because two cases perform full shared-work evaluations; the pre-push and expensive selectors preserve invocation outside the 120-second pre-commit tier."
     },
     {
       "path": "bin/oracle-currency-test.py",
@@ -201,11 +201,18 @@
       "gap": "Network, hash, and update execution remains on-demand and is mocked in unit coverage."
     },
     {
-      "path": "bin/update-overlay-test.py",
+      "path": "bin/update-overlay-essential-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes the suite"],
-      "gap": null
+      "evidence": ["quality:python-test executes every updater parser/catalog test plus the bounded routing, purity, and negative-gate integration plan"],
+      "gap": "The complete temporary-Git publication, signal, and rollback matrix remains in the expensive tier."
+    },
+    {
+      "path": "bin/update-overlay-test.py",
+      "kind": "test",
+      "tier": "pre-push",
+      "evidence": ["quality:python-test executes the unfiltered suite in the pre-push and expensive tiers"],
+      "gap": "Ordinary commits use bin/update-overlay-essential-test.py instead of the expensive temporary-Git workflow matrix."
     },
     {
       "path": "packages/pi-mcp-adapter-normalize.py",
@@ -1079,7 +1086,7 @@
     ]
   },
   "budgetsSeconds": {
-    "pre-commit": 180,
+    "pre-commit": 120,
     "pre-push": 900,
     "ci-on-demand": 1800
   },
@@ -1092,7 +1099,7 @@
     "VPS, Vulcan, and shared-work consumer evidence depends on local or LAN consumer roots and is not GitHub-hosted CI evidence.",
     "Python inventory assignment and linting are not dynamic line or branch coverage; subprocess and alternate-interpreter execution require explicit coverage.py handling.",
     "No portable mandatory shell line-coverage backend exists in the locked environment; static lint evidence is not behavioral evidence.",
-    "Only pre-commit has one enforced whole-tier deadline; pre-push and CI/on-demand values are selector limits and planning ceilings.",
+    "Pre-commit has a hard 120-second envelope including its five-second kill grace; expensive consumes the CI/on-demand ceiling, while pre-push remains a selector and planning ceiling.",
     "Flake schemas and bounded custom probes force only declared normal forms; arbitrary lazy values outside those contracts remain unknown.",
     "No raw option values, environments, credentials, activation scripts, or service configuration may be persisted in a coverage artifact."
   ]

@@ -41,10 +41,11 @@ Hera collection after tiering:
 - the initial six-probe safety run reached **77 of 104** tracked Nix files; the
   committed authority adds a seventh registry-derived host probe and its tracked Nix
   helper, with every reached/unreached path still named;
-- the pre-supervisor all-files hook completed in **26.33 seconds** against the
-  **180-second** budget; the delivered hook now has one outer deadline and the current
-  core measurement is executed and stored by the artifact refresh rather than copied
-  from this historical observation;
+- the superseded pre-commit core reached **164.603 seconds** against a
+  **180-second** budget; the ordinary hook is now hard-capped at 120 seconds and
+  runs the bounded updater authority rather than its temporary-Git workflow matrix;
+  the refreshed artifact measures that core at **42.139/120s**, and the exact
+  hook including structural coverage completed in **44.91s**;
 - the complete Nix refresh took 442.4 seconds on Hera, inside the 1800-second
   CI/on-demand ceiling;
 - `gates-test.py` measured 522.331 seconds and `publish-test.py` 23.274 seconds, so
@@ -206,17 +207,18 @@ versioned artifact; they do not require those bare numbers forever. In particula
 
 | Tier | Content | Placement | Budget semantics |
 |---|---|---|---|
-| pre-commit | formatting/lint, genuinely bounded unit tests, portable bounded eval, structural/parent coverage regression | one supervised local quality tier | Wall-clock budget: **180 seconds** on Hera, enforced by one outer deadline. The artifact records the internally executed core duration; Python additionally reports planned/ran/failed/timed-out/killed/budget-exceeded/not-reached separately. |
+| pre-commit | formatting/lint, bounded unit tests, the essential updater parser/catalog/routing/negative plan, structural coverage regression | one supervised local quality tier | Hard wall-clock envelope: **120 seconds**, implemented as TERM at 115 seconds plus a five-second kill grace. The complete updater matrix and portable all-system evaluation are excluded here but remain mandatory in the expensive tier. |
 | pre-push | slow focused Python suites, live Nix-reach comparison, Darwin surface, consumers, signatures, system/agent checks | local hook | Initial planning ceiling: **900 seconds**; compliance is not yet claimed or enforced as one aggregate measurement. The live probes are explicitly assigned here; configuration probes allow 600 seconds of contention headroom, bounded metadata probes 120–240 seconds. |
-| CI / on demand | seven-probe coverage refresh, coverage.py branch report, full output/schema sweep, unsafe/live/soak suites, optional nix-eval-jobs projection | remote-safe CI or authorized self-hosted runner | Initial **1800-second** planning ceiling; aggregate enforcement is future work. Tool/runner identity is recorded, and LAN-only root inputs are not presented as GitHub CI evidence. |
+| expensive | unfiltered tracked Python integration, portable all-system evaluation, consumer/signature gates, structural/live coverage, Darwin value surface, and portable-native gallery builds | `bin/quality --tier expensive` locally; its remote-safe portable evaluation/native subset runs twice daily on GitHub plus manual dispatch | **1800-second** local quality ceiling; scheduled remote-safe checks run at most twice daily rather than per commit. Platform-specific native builds have a separate 60-minute workflow bound. LAN-only root tests remain local and are not presented as GitHub evidence. |
 
 The limits are policy ceilings. The hook itself runs `bin/quality --tier pre-commit`
-under the 180-second supervisor. Artifact refresh independently executes and records
-the same core tier without the self-referential coverage check; the external all-files
-hook measurement above includes that check. A timing regression is a concern even when
-correctness remains green. The two measured slow suites retain pre-push invocation;
-default `bin/quality python-test` still selects all tracked `bin/*-test.py` suites, so
-tiering cannot silently delete them.
+under the 120-second supervisor. Artifact refresh independently executes and records
+the same core tier without the self-referential coverage check. Full updater
+integration and portable evaluation run through `bin/quality --tier expensive`, which
+selects every tracked `bin/*-test.py` suite unfiltered. A timing regression is a
+concern even when correctness remains green; tiering cannot silently delete a test
+because manifest ownership is exact and the expensive selector always loads all
+tracked test programs.
 
 ## Artifact and regression policy
 

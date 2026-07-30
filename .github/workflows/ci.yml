@@ -14,6 +14,9 @@ name: CI
 # `bin/quality darwin-surface` is deliberately local/pre-push for now. The root
 # flake still consumes a LAN-only ssh://gitea stock-trader input, so a GitHub
 # runner cannot evaluate that check honestly until a remote-safe boundary exists.
+# Full Python integration, portable all-system evaluation, and portable-native
+# builds live in expensive.yml (twice daily plus manual dispatch), not on every
+# push or pull request.
 #
 # Refs: jwiegley/nix-config#46.
 
@@ -51,33 +54,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Python lint, tests, and coverage regression
-        run: nix shell nixpkgs#ruff -c bin/quality python-lint python-test coverage
-
-  portable-eval:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Evaluate every portable AI system
-        run: bin/quality portable-eval
-
-  portable-native:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: macos-14
-            system: aarch64-darwin
-          - runner: ubuntu-24.04-arm
-            system: aarch64-linux
-          - runner: ubuntu-latest
-            system: x86_64-linux
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Build and load the Pi extension gallery
-        run: nix build --no-link "./config/ai#checks.${{ matrix.system }}.pi-gallery"
+      - name: Python lint, essential tests, and coverage regression
+        run: >-
+          nix shell nixpkgs#ruff
+          -c bin/quality --python-tier pre-commit
+          python-lint python-test coverage

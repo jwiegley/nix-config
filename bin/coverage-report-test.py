@@ -180,7 +180,7 @@ def manifest_for(paths: dict[str, list[str]]) -> dict[str, object]:
             ],
         },
         "budgetsSeconds": {
-            "pre-commit": 180,
+            "pre-commit": 120,
             "pre-push": 900,
             "ci-on-demand": 1800,
         },
@@ -284,7 +284,7 @@ class RepositoryFixture(unittest.TestCase):
         def timed_runner(argv, cwd, env, timeout):
             return subprocess.CompletedProcess(argv, 0, stdout="", stderr=""), 1.0
 
-        timing = coverage_report.collect_pre_commit_timing(self.repo, 180, timed_runner)
+        timing = coverage_report.collect_pre_commit_timing(self.repo, 120, timed_runner)
         report = coverage_report.derive_report(self.repo, pre_commit_timing=timing)
         reach = report["measurements"]["nixFileReach"]
         reach["state"] = "observed"
@@ -709,24 +709,24 @@ class ArtifactTests(RepositoryFixture):
         def measured(argv, cwd, env, timeout):
             return subprocess.CompletedProcess(argv, 0, stdout="", stderr=""), 26.33
 
-        timing = coverage_report.collect_pre_commit_timing(self.repo, 180, measured)
+        timing = coverage_report.collect_pre_commit_timing(self.repo, 120, measured)
         report = coverage_report.derive_report(self.repo, pre_commit_timing=timing)
         timing = report["measurements"]["timing"]
         self.assertEqual(timing["state"], "observed")
         self.assertEqual(timing["records"][0]["seconds"], 26.33)
-        self.assertEqual(timing["records"][0]["budgetSeconds"], 180)
+        self.assertEqual(timing["records"][0]["budgetSeconds"], 120)
 
         def exceeded(argv, cwd, env, timeout):
-            return subprocess.CompletedProcess(argv, 0, stdout="", stderr=""), 180.001
+            return subprocess.CompletedProcess(argv, 0, stdout="", stderr=""), 120.001
 
         with self.assertRaisesRegex(coverage_report.CoverageError, "exceeding"):
-            coverage_report.collect_pre_commit_timing(self.repo, 180, exceeded)
+            coverage_report.collect_pre_commit_timing(self.repo, 120, exceeded)
 
         def timed_out(argv, cwd, env, timeout):
             raise subprocess.TimeoutExpired(argv, timeout)
 
         with self.assertRaisesRegex(coverage_report.CoverageError, "deadline"):
-            coverage_report.collect_pre_commit_timing(self.repo, 180, timed_out)
+            coverage_report.collect_pre_commit_timing(self.repo, 120, timed_out)
 
     def test_artifact_summary_reports_named_counts_and_unknowns(self) -> None:
         report = self.ready_report()
@@ -736,7 +736,7 @@ class ArtifactTests(RepositoryFixture):
         self.assertIn("nix-file-evaluation-start=1/1", summary)
         self.assertIn("python-inventory=3", summary)
         self.assertIn("shell-inventory=2", summary)
-        self.assertIn("pre-commit-core=1.0/180s", summary)
+        self.assertIn("pre-commit-core=1.0/120s", summary)
         self.assertIn("pythonDynamic", summary)
 
     def test_source_projection_digest_records_staged_source_change(self) -> None:

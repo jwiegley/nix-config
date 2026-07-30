@@ -1,0 +1,50 @@
+name: Expensive assurance
+
+# Exhaustive integration and portable Nix checks intentionally do not run for
+# every commit.  The ordinary commit gate is hard-capped at two minutes; this
+# authority runs twice daily and remains manually dispatchable for releases or
+# incident verification.
+on:
+  schedule:
+    - cron: "17 2,14 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: expensive-assurance
+  cancel-in-progress: false
+
+jobs:
+  portable-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      # The full expensive tier includes LAN-only consumer checks and remains a
+      # local/manual authority.  GitHub runs only its remote-safe portable part.
+      - name: Evaluate every portable AI system
+        run: bin/quality portable-eval
+
+  portable-native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            system: aarch64-darwin
+          - runner: ubuntu-24.04-arm
+            system: aarch64-linux
+          - runner: ubuntu-latest
+            system: x86_64-linux
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Build and load the Pi extension gallery
+        run: nix build --no-link "./config/ai#checks.${{ matrix.system }}.pi-gallery"

@@ -547,10 +547,8 @@ class TestGatesAreRegistered(unittest.TestCase):
         )
 
         ci = (REPO / ".github/workflows/ci.yml").read_text()
-        self.assertRegex(
-            ci,
-            r"(?m)^        run: nix shell nixpkgs#ruff -c bin/quality python-lint python-test coverage$",
-        )
+        self.assertIn("--python-tier pre-commit", ci)
+        self.assertIn("python-lint python-test coverage", ci)
 
         makefile = (REPO / "Makefile").read_text()
         self.assertRegex(
@@ -599,8 +597,39 @@ class TestGatesAreRegistered(unittest.TestCase):
         quality = (BIN / "quality").read_text()
         core = re.search(r"(?ms)^PRE_COMMIT_CORE_SUITES=\(\n(?P<body>.*?)^\)$", quality)
         self.assertIsNotNone(core)
-        for suite in ("python-lint", "python-test", "portable-eval"):
+        for suite in ("python-lint", "python-test"):
             self.assertRegex(core.group("body"), rf"(?m)^    {suite}$")
+        self.assertNotRegex(core.group("body"), r"(?m)^    portable-eval$")
+        expensive = re.search(
+            r"(?ms)^EXPENSIVE_SUITES=\(\n(?P<body>.*?)^\)$", quality
+        )
+        self.assertIsNotNone(expensive)
+        for suite in (
+            "python-test",
+            "portable-eval",
+            "consumer-eval",
+            "signatures",
+            "coverage",
+            "coverage-live",
+            "darwin-surface",
+        ):
+            self.assertRegex(expensive.group("body"), rf"(?m)^    {suite}$")
+
+    def test_expensive_assurance_is_low_frequency_and_manual(self):
+        workflow = (REPO / ".github/workflows/expensive.yml").read_text()
+        self.assertIn('cron: "17 2,14 * * *"', workflow)
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertNotRegex(workflow, r"(?m)^  (push|pull_request):")
+        self.assertIn("bin/quality portable-eval", workflow)
+        self.assertIn("full expensive tier includes LAN-only consumer checks", workflow)
+        self.assertIn("portable-native:", workflow)
+
+        regular_ci = (REPO / ".github/workflows/ci.yml").read_text()
+        self.assertNotIn("  portable-eval:", regular_ci)
+        self.assertNotIn("  portable-native:", regular_ci)
+
+        makefile = (REPO / "Makefile").read_text()
+        self.assertRegex(makefile, r"(?m)^expensive:\n\tbin/quality --tier expensive$")
 
     def test_no_gate_contains_common_credential_markers(self):
         for tool in (
