@@ -645,7 +645,7 @@ in
     def _package_build_command(self, package_name: str) -> list[str]:
         build_script = self.repo_dir / "build"
         if build_script.is_file() and os.access(build_script, os.X_OK):
-            return ["./build", "pkg", package_name]
+            return ["./build", "pkg", package_name, "--no-link"]
         expression = f"""
 let
   flake = builtins.getFlake "path:{self.repo_dir}";

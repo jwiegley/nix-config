@@ -553,6 +553,20 @@ got: sha256-requested
         self.assertEqual(parse(unrelated + requested), "sha256-requested")
         self.assertIsNone(parse(requested + requested.replace("requested", "second")))
 
+    def test_package_hash_build_never_creates_a_result_link(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            build = root / "build"
+            build.write_text("#!/bin/sh\nexit 0\n")
+            build.chmod(0o755)
+            command = MODULE["HashComputer"](root)._package_build_command(
+                "agent-resources"
+            )
+            self.assertEqual(
+                command,
+                ["./build", "pkg", "agent-resources", "--no-link"],
+            )
+
     def test_issue38_ws_uses_fetchzip_with_an_executor(self):
         record = {
             "version": "8.18.3",
