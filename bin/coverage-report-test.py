@@ -803,6 +803,19 @@ class ArtifactTests(RepositoryFixture):
         with self.assertRaisesRegex(coverage_report.CoverageError, "regress"):
             coverage_report.check_artifact(self.repo)
 
+    def test_check_allows_content_only_drift_until_expensive_refresh(self) -> None:
+        report = self.ready_report()
+        artifact = self.write_json("test/baseline/coverage-fixture.json", report)
+        self.git("add", artifact.relative_to(self.repo).as_posix())
+        self.git("commit", "-qm", "coverage artifact")
+        self.write("tool.py", "def value():\n    return 99\n")
+        self.git("add", "tool.py")
+        self.assertNotEqual(
+            coverage_report.derive_report(self.repo)["sourceProjectionDigest"],
+            report["sourceProjectionDigest"],
+        )
+        coverage_report.check_artifact(self.repo)
+
     def test_check_rejects_nix_reach_regression_against_head_artifact(self) -> None:
         self.write("b.nix", "{ value = 2; }\n")
         self.git("add", "b.nix")

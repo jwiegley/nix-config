@@ -67,7 +67,9 @@ SUITES=(
 
 fix=0
 python_tier=all
+python_tier_seen=0
 quality_tier=""
+quality_tier_seen=0
 want=()
 
 PRE_COMMIT_CORE_SUITES=(
@@ -389,9 +391,13 @@ PY
 run_python_test() {
     need python3 python-test || return
     need timeout python-test || return
+    [[ -x $repo_root/bin/unittest-strict.py ]] || {
+        fail "python-test: bin/unittest-strict.py is missing or not executable"
+        return
+    }
     local selection budget start elapsed remaining status
     local f bad=0 ran=0 timed_out=0 killed=0 budget_exceeded=0 not_reached=0
-    local -a tests=()
+    local -a tests=() timeout_args=()
     selection=$(mktemp "${TMPDIR:-/tmp}/quality-python-tests.XXXXXX") || {
         fail "python-test: could not create a tier-selection file"
         return
@@ -420,7 +426,12 @@ run_python_test() {
             break
         fi
         note "python-test: $f"
-        timeout --signal=TERM --kill-after=5 "$remaining" python3 -m unittest "$f"
+        timeout_args=(--signal=TERM --kill-after=5)
+        if [[ ${QUALITY_TIER_SUPERVISED:-0} == 1 ]]; then
+            timeout_args+=(--foreground)
+        fi
+        timeout "${timeout_args[@]}" "$remaining" \
+            "$repo_root/bin/unittest-strict.py" "$f"
         status=$?
         ran=$((ran + 1))
         if [[ $status -eq 124 ]]; then
@@ -542,6 +553,11 @@ while [[ $# -gt 0 ]]; do
     case $1 in
     --fix) fix=1 ;;
     --python-tier)
+        if [[ $python_tier_seen -eq 1 ]]; then
+            printf 'quality: --python-tier may be specified only once\n' >&2
+            exit 1
+        fi
+        python_tier_seen=1
         shift
         python_tier=${1-}
         case $python_tier in
@@ -553,6 +569,11 @@ while [[ $# -gt 0 ]]; do
         esac
         ;;
     --tier)
+        if [[ $quality_tier_seen -eq 1 ]]; then
+            printf 'quality: --tier may be specified only once\n' >&2
+            exit 1
+        fi
+        quality_tier_seen=1
         shift
         quality_tier=${1-}
         case $quality_tier in
@@ -603,12 +624,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -n $quality_tier ]]; then
+    if [[ $python_tier_seen -eq 1 ]]; then
+        printf 'quality: --tier cannot be combined with --python-tier\n' >&2
+        exit 1
+    fi
     if [[ ${#want[@]} -gt 0 || $fix -eq 1 ]]; then
         printf 'quality: --tier cannot be combined with suites or --fix\n' >&2
         exit 1
     fi
-    command -v timeout >/dev/null 2>&1 || {
-        printf "quality: tier supervisor requires GNU 'timeout'\n" >&2
+    deadline_supervisor=$repo_root/bin/deadline-supervisor.py
+    [[ -x $deadline_supervisor ]] || {
+        printf 'quality: bin/deadline-supervisor.py is missing or not executable\n' >&2
         exit 1
     }
     case $quality_tier in
@@ -626,13 +652,14 @@ if [[ -n $quality_tier ]]; then
     if [[ $quality_tier == pre-commit ]]; then
         tier_suites+=(coverage)
     fi
-    term_after=$((budget - 5))
+    term_after=$((budget - 15))
     if [[ $term_after -le 0 ]]; then
-        printf 'quality: tier budget must exceed the 5s kill grace\n' >&2
+        printf 'quality: tier budget must exceed supervision headroom\n' >&2
         exit 1
     fi
-    note "tier: $quality_tier planned=${#tier_suites[@]} budget=${budget}s term-after=${term_after}s kill-grace=5s"
-    timeout --signal=TERM --kill-after=5 "$term_after" \
+    note "tier: $quality_tier planned=${#tier_suites[@]} budget=${budget}s term-after=${term_after}s kill-grace=5s report-headroom=10s"
+    QUALITY_TIER_SUPERVISED=1 "$deadline_supervisor" \
+        --term-after "$term_after" --kill-after 5 -- \
         "$quality_program" --python-tier "$python_tier" "${tier_suites[@]}"
     tier_status=$?
     case $tier_status in
@@ -641,7 +668,7 @@ if [[ -n $quality_tier ]]; then
         exit 0
         ;;
     124)
-        printf 'quality: FAIL tier: %s timed out after %ss\n' "$quality_tier" "$budget" >&2
+        printf 'quality: FAIL tier: %s exceeded its %ss work deadline inside the %ss envelope\n' "$quality_tier" "$term_after" "$budget" >&2
         exit 1
         ;;
     137)

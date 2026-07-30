@@ -74,9 +74,18 @@ def load_tests(loader, _standard_tests, _pattern):
     ids = list(_test_ids(suite))
     if not ids or len(ids) != len(set(ids)):
         raise RuntimeError("essential updater test plan is empty or contains duplicates")
+    full_classes = sorted(
+        (
+            value
+            for value in TARGET_MODULE.values()
+            if isinstance(value, type)
+            and issubclass(value, unittest.TestCase)
+            and value.__module__ == "<run_path>"
+        ),
+        key=lambda value: value.__name__,
+    )
     full_suite = unittest.TestSuite(
-        loader.loadTestsFromTestCase(TARGET_MODULE[class_name])
-        for class_name in (*COMPLETE_CLASSES, "IntegratedWorkflowTests")
+        loader.loadTestsFromTestCase(test_class) for test_class in full_classes
     )
     full_ids = set(_test_ids(full_suite))
     if not set(ids) < full_ids:

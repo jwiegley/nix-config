@@ -21,8 +21,10 @@ and breaking five worktrees at once. `bin/quality` resolves its scope with
 checkout and these tests would silently assert against the wrong tree.
 """
 
+import hashlib
 import json
 import os
+import runpy
 import shutil
 import subprocess
 import tempfile
@@ -30,6 +32,11 @@ import unittest
 from pathlib import Path
 
 QUALITY = Path(__file__).resolve().parent / "quality"
+DEADLINE_SUPERVISOR = Path(__file__).resolve().parent / "deadline-supervisor.py"
+UNITTEST_STRICT = Path(__file__).resolve().parent / "unittest-strict.py"
+UPDATER_ESSENTIAL = (
+    Path(__file__).resolve().parent / "update-overlay-essential-test.py"
+)
 
 # Every variable git consults for location or identity. A test that shells out to
 # git must start from a known-empty set of these, not from whatever the caller had.
@@ -291,6 +298,8 @@ class QualityPythonTierTests(unittest.TestCase):
                 encoding="utf-8",
             )
         shutil.copy2(QUALITY, self.repo / "bin/quality")
+        shutil.copy2(DEADLINE_SUPERVISOR, self.repo / "bin/deadline-supervisor.py")
+        shutil.copy2(UNITTEST_STRICT, self.repo / "bin/unittest-strict.py")
         self.write_manifest()
         subprocess.run(["git", "add", "."], cwd=self.repo, env=self.env, check=True)
 
@@ -363,88 +372,95 @@ class QualityPythonTierTests(unittest.TestCase):
         self.assertIn("--python-tier needs one of", proc.stderr)
 
     def test_whole_tier_supervisor_reports_timeout_and_forced_kill(self):
-        fakebin = self.repo / "fakebin"
-        fakebin.mkdir()
-        timeout = fakebin / "timeout"
-        env = dict(self.env)
-        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        supervisor = self.repo / "bin/deadline-supervisor.py"
         for status, expected in (
-            (124, "timed out after 120s"),
+            (124, "exceeded its 105s work deadline inside the 120s envelope"),
             (137, "exited 137 (SIGKILL; deadline escalation, OOM, or external kill)"),
         ):
-            timeout.write_text(
+            supervisor.write_text(
                 f"#!/usr/bin/env bash\nexit {status}\n", encoding="utf-8"
             )
-            timeout.chmod(0o755)
-            proc = self.quality("--tier", "pre-commit", env=env)
+            supervisor.chmod(0o755)
+            proc = self.quality("--tier", "pre-commit")
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn(expected, proc.stderr)
 
     def test_tier_supervisor_recurses_through_repo_absolute_quality_path(self):
-        fakebin = self.repo / "fakebin"
-        fakebin.mkdir()
-        timeout = fakebin / "timeout"
+        supervisor = self.repo / "bin/deadline-supervisor.py"
         expected = (self.repo / "bin/quality").resolve()
-        timeout.write_text(
+        supervisor.write_text(
             f"#!/usr/bin/env bash\n"
-            "[[ $1 == --signal=TERM ]] || exit 96\n"
-            "[[ $2 == --kill-after=5 ]] || exit 97\n"
-            "[[ $3 == 115 ]] || exit 98\n"
-            f"[[ $4 == {expected!s} ]] || exit 99\n"
+            "[[ $1 == --term-after ]] || exit 95\n"
+            "[[ $2 == 105 ]] || exit 96\n"
+            "[[ $3 == --kill-after ]] || exit 97\n"
+            "[[ $4 == 5 && $5 == -- ]] || exit 98\n"
+            f"[[ $6 == {expected!s} ]] || exit 99\n"
             "exit 124\n",
             encoding="utf-8",
         )
-        timeout.chmod(0o755)
-        env = dict(self.env)
-        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        supervisor.chmod(0o755)
         subdir = self.repo / "doc"
         subdir.mkdir()
-        proc = self.quality("--tier", "pre-commit-core", env=env, cwd=subdir)
+        proc = self.quality("--tier", "pre-commit-core", cwd=subdir)
         self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("timed out after 120s", proc.stderr)
+        self.assertIn("exceeded its 105s work deadline", proc.stderr)
 
     def test_tier_membership_keeps_expensive_work_out_of_pre_commit(self):
-        fakebin = self.repo / "fakebin"
-        fakebin.mkdir()
-        timeout = fakebin / "timeout"
-        log = self.repo / "timeout-args"
-        timeout.write_text(
-            f"#!/usr/bin/env bash\nprintf '%s\\n' \"$*\" >{log!s}\nexit 124\n",
+        supervisor = self.repo / "bin/deadline-supervisor.py"
+        log = self.repo / "supervisor-args"
+        supervisor.write_text(
+            f"#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" >{log!s}\nexit 124\n",
             encoding="utf-8",
         )
-        timeout.chmod(0o755)
-        env = dict(self.env)
-        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        supervisor.chmod(0o755)
+        quality = str((self.repo / "bin/quality").resolve())
 
-        pre_commit = self.quality("--tier", "pre-commit", env=env)
+        pre_commit = self.quality("--tier", "pre-commit")
         self.assertNotEqual(pre_commit.returncode, 0)
-        pre_commit_args = log.read_text()
-        self.assertIn("--python-tier pre-commit", pre_commit_args)
-        self.assertIn("python-test", pre_commit_args)
-        self.assertIn("coverage", pre_commit_args)
-        self.assertNotIn("portable-eval", pre_commit_args)
+        self.assertEqual(
+            log.read_text().splitlines(),
+            [
+                "--term-after", "105", "--kill-after", "5", "--", quality,
+                "--python-tier", "pre-commit", "nix-format", "nix-lint",
+                "nix-deadcode", "shell-lint", "shell-format", "python-lint",
+                "python-test", "coverage",
+            ],
+        )
 
-        expensive = self.quality("--tier", "expensive", env=env)
+        expensive = self.quality("--tier", "expensive")
         self.assertNotEqual(expensive.returncode, 0)
-        expensive_args = log.read_text()
-        self.assertIn("--kill-after=5 1795", expensive_args)
-        self.assertIn("--python-tier all", expensive_args)
-        self.assertIn("python-test", expensive_args)
-        self.assertIn("portable-eval", expensive_args)
-        self.assertIn("consumer-eval", expensive_args)
-        self.assertIn("signatures", expensive_args)
-        self.assertIn("coverage", expensive_args)
-        self.assertIn("coverage-live", expensive_args)
-        self.assertIn("darwin-surface", expensive_args)
+        self.assertEqual(
+            log.read_text().splitlines(),
+            [
+                "--term-after", "1785", "--kill-after", "5", "--", quality,
+                "--python-tier", "all", "python-test", "portable-eval",
+                "consumer-eval", "signatures", "coverage", "coverage-live",
+                "darwin-surface",
+            ],
+        )
 
-    @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
     def test_whole_tier_budget_must_include_kill_grace(self):
         self.write_manifest(
             budgets={"pre-commit": 5, "pre-push": 900, "ci-on-demand": 1800}
         )
         proc = self.quality("--tier", "pre-commit")
         self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("tier budget must exceed the 5s kill grace", proc.stderr)
+        self.assertIn("tier budget must exceed supervision headroom", proc.stderr)
+
+    def test_tier_selector_conflicts_refuse(self):
+        for args in (
+            ("--tier",),
+            ("--tier", "fast"),
+            ("--tier", "pre-commit", "--tier", "expensive"),
+            ("--python-tier", "all", "--tier", "pre-commit"),
+            ("--tier", "pre-commit", "--python-tier", "all"),
+            ("--python-tier", "all", "--python-tier", "pre-commit", "python-test"),
+            ("--tier", "pre-commit", "python-test"),
+            ("--tier", "pre-commit", "--fix"),
+        ):
+            with self.subTest(args=args):
+                proc = self.quality(*args)
+                self.assertNotEqual(proc.returncode, 0)
 
     @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
     def test_budget_timeout_names_not_reached_suites(self):
@@ -470,6 +486,88 @@ class QualityPythonTierTests(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0, combined)
         self.assertIn("timed-out=1", combined)
         self.assertIn("not-reached=1", combined)
+
+    def test_supervised_python_timeout_stays_in_outer_process_group(self):
+        fakebin = self.repo / "fakebin"
+        fakebin.mkdir()
+        timeout = fakebin / "timeout"
+        log = self.repo / "timeout-args"
+        timeout.write_text(
+            f"#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" >{log!s}\nexit 124\n",
+            encoding="utf-8",
+        )
+        timeout.chmod(0o755)
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        env["QUALITY_TIER_SUPERVISED"] = "1"
+        proc = self.quality(
+            "--python-tier", "pre-commit", "python-test", env=env
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        supervised = log.read_text().splitlines()
+        self.assertEqual(
+            supervised[:3], ["--signal=TERM", "--kill-after=5", "--foreground"]
+        )
+        self.assertEqual(
+            supervised[-2:],
+            [str((self.repo / "bin/unittest-strict.py").resolve()), "bin/a-fast-test.py"],
+        )
+
+        env.pop("QUALITY_TIER_SUPERVISED")
+        proc = self.quality(
+            "--python-tier", "pre-commit", "python-test", env=env
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        unsupervised = log.read_text().splitlines()
+        self.assertEqual(unsupervised[:2], ["--signal=TERM", "--kill-after=5"])
+        self.assertNotIn("--foreground", unsupervised)
+
+
+class UpdaterEssentialPlanTests(unittest.TestCase):
+    def test_safety_plan_cannot_silently_shrink(self):
+        plan = runpy.run_path(str(UPDATER_ESSENTIAL))
+        self.assertEqual(
+            plan["COMPLETE_CLASSES"],
+            ("OverlayParserTests", "UpdateInventoryTests"),
+        )
+        self.assertEqual(
+            plan["INTEGRATION_METHODS"],
+            (
+                "test_active_commands_have_one_repository_update_transaction",
+                "test_overlay_manifests_are_explicit_and_inputs_do_not_leak_through_pkgs",
+                "test_upgrade_projects_continues_and_returns_aggregate_failure",
+                "test_root_inputs_do_not_reference_external_filesystems",
+                "test_root_lock_closure_has_no_unfetchable_locators",
+                "test_portable_lock_closure_has_no_unfetchable_locators",
+                "test_closure_walk_descends_past_direct_inputs",
+                "test_closure_walk_follows_follows_edges",
+                "test_production_seams_have_no_undeclared_inline_source_coordinates",
+                "test_inline_source_gate_flags_each_fetcher_kind",
+                "test_inline_source_gate_exact_set_rejects_new_and_stale",
+                "test_flake_input_coordinates_are_internal_or_declared",
+                "test_root_consumes_portable_input_authority_transitively",
+                "test_profile_symlinked_scripts_find_packaged_routing_library",
+                "test_host_routing_table_covers_system_and_shared_consumers",
+                "test_independent_ai_packages_are_owned_under_packages",
+            ),
+        )
+        suite = plan["load_tests"](
+            unittest.TestLoader(), unittest.TestSuite(), None
+        )
+
+        def test_ids(current):
+            for test in current:
+                if isinstance(test, unittest.TestSuite):
+                    yield from test_ids(test)
+                else:
+                    yield test.id()
+
+        resolved = sorted(test_ids(suite))
+        self.assertEqual(len(resolved), 47)
+        self.assertEqual(
+            hashlib.sha256("\n".join(resolved).encode()).hexdigest(),
+            "86d87c8f30840c80d8c40ceaca69e2fdc71592a7d4d7643c409c763a47c2bd76",
+        )
 
 
 class GitScrubRegressionTest(unittest.TestCase):

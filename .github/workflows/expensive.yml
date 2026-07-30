@@ -1,9 +1,9 @@
 name: Expensive assurance
 
-# Exhaustive integration and portable Nix checks intentionally do not run for
-# every commit.  The ordinary commit gate is hard-capped at two minutes; this
-# authority runs twice daily and remains manually dispatchable for releases or
-# incident verification.
+# Remote-safe portable Nix checks intentionally do not run for every commit.
+# The ordinary commit gate is hard-capped at two minutes; this subset runs twice
+# daily and remains manually dispatchable.  LAN-only exhaustive integration
+# stays available through the local `bin/quality --tier expensive` authority.
 on:
   schedule:
     - cron: "17 2,14 * * *"
@@ -34,7 +34,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-14
+          - runner: macos-15
             system: aarch64-darwin
           - runner: ubuntu-24.04-arm
             system: aarch64-linux
@@ -46,5 +46,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
+        if: runner.os != 'macOS'
       - name: Build and load the Pi extension gallery
         run: nix build --no-link "./config/ai#checks.${{ matrix.system }}.pi-gallery"

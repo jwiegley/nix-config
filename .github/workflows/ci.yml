@@ -14,9 +14,10 @@ name: CI
 # `bin/quality darwin-surface` is deliberately local/pre-push for now. The root
 # flake still consumes a LAN-only ssh://gitea stock-trader input, so a GitHub
 # runner cannot evaluate that check honestly until a remote-safe boundary exists.
-# Full Python integration, portable all-system evaluation, and portable-native
-# builds live in expensive.yml (twice daily plus manual dispatch), not on every
-# push or pull request.
+# Full Python integration remains available through the local/manual expensive
+# tier.  Its remote-safe portable evaluation and native builds live in
+# expensive.yml (twice daily plus manual dispatch), not on every push or pull
+# request.
 #
 # Refs: jwiegley/nix-config#46.
 
@@ -56,6 +57,6 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Python lint, essential tests, and coverage regression
         run: >-
-          nix shell nixpkgs#ruff
+          nix shell nixpkgs#ruff nixpkgs#nixfmt nixpkgs#coreutils
           -c bin/quality --python-tier pre-commit
           python-lint python-test coverage

@@ -547,8 +547,14 @@ class TestGatesAreRegistered(unittest.TestCase):
         )
 
         ci = (REPO / ".github/workflows/ci.yml").read_text()
-        self.assertIn("--python-tier pre-commit", ci)
-        self.assertIn("python-lint python-test coverage", ci)
+        self.assertRegex(
+            ci,
+            r"(?m)^          -c bin/quality --python-tier pre-commit$",
+        )
+        self.assertRegex(
+            ci,
+            r"(?m)^          python-lint python-test coverage$",
+        )
 
         makefile = (REPO / "Makefile").read_text()
         self.assertRegex(
@@ -614,15 +620,37 @@ class TestGatesAreRegistered(unittest.TestCase):
             "darwin-surface",
         ):
             self.assertRegex(expensive.group("body"), rf"(?m)^    {suite}$")
+        registered = set(
+            subprocess.run(
+                [str(BIN / "quality"), "--list"],
+                cwd=REPO,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.splitlines()
+        )
+        pre_commit = set(core.group("body").split()) | {"coverage"}
+        expensive_set = set(expensive.group("body").split())
+        self.assertEqual(pre_commit | expensive_set, registered)
+        self.assertEqual(pre_commit & expensive_set, {"python-test", "coverage"})
 
     def test_expensive_assurance_is_low_frequency_and_manual(self):
         workflow = (REPO / ".github/workflows/expensive.yml").read_text()
         self.assertIn('cron: "17 2,14 * * *"', workflow)
         self.assertIn("workflow_dispatch:", workflow)
         self.assertNotRegex(workflow, r"(?m)^  (push|pull_request):")
-        self.assertIn("bin/quality portable-eval", workflow)
-        self.assertIn("full expensive tier includes LAN-only consumer checks", workflow)
+        self.assertRegex(
+            workflow, r"(?m)^        run: bin/quality portable-eval$"
+        )
+        self.assertNotRegex(
+            workflow, r"(?m)^\s+run: bin/quality --tier expensive$"
+        )
         self.assertIn("portable-native:", workflow)
+        self.assertIn("runner: macos-15", workflow)
+        self.assertRegex(
+            workflow,
+            r"(?m)^      - uses: DeterminateSystems/magic-nix-cache-action@main\n        if: runner\.os != 'macOS'$",
+        )
 
         regular_ci = (REPO / ".github/workflows/ci.yml").read_text()
         self.assertNotIn("  portable-eval:", regular_ci)

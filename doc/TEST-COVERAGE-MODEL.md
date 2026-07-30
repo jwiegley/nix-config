@@ -50,8 +50,9 @@ Hera collection after tiering:
   CI/on-demand ceiling;
 - `gates-test.py` measured 522.331 seconds and `publish-test.py` 23.274 seconds, so
   both retain invocation in the pre-push selector rather than the fast tier;
-- the artifact independently inventories 45 Python paths, 10 tracked `bin/*-test.py`
-  suites, 35 Bash paths, 13 quality authorities, and 83 system-qualified flake checks.
+- the artifact independently inventories 55 Python paths, 14 tracked `bin/*-test.py`
+  suites (11 pre-commit, 3 pre-push), 35 Bash paths, 13 quality authorities, and
+  83 system-qualified flake checks.
 
 A locked coverage.py 7.15.2 spike ran the pre-tier nine-suite set over an independent
 20-file product denominator. It observed 1,207/8,263 statements and 436/3,052 branches
@@ -133,7 +134,7 @@ it does not prove that a missing system was declared. Unknown outputs only warn.
 `--no-build` skips realisation; `--build-all --no-build` forces every schema-described
 derivation path without building it.
 
-The expensive tier composes:
+A future output-reach collector may compose:
 
 ```sh
 nix flake show --all-systems --json .
@@ -183,8 +184,8 @@ hostname-gated behavior. Aliases point to one root result so counts cannot doubl
 As of the A6 implementation on 2026-07-29 the authorities derive:
 
 - 105 tracked Nix files after adding the registry-denominator probe helper;
-- 45 tracked/shebang Python files and 10 `bin/*-test.py` suites: eight pre-commit and
-  two pre-push;
+- 55 tracked/shebang Python files and 14 `bin/*-test.py` suites: 11 pre-commit and
+  three pre-push;
 - 35 tracked Bash scripts;
 - 14 `johnw.*` option paths in the static/evaluated union (the old “4 options” note is
   stale; live value forcing remains a collector task);
@@ -207,9 +208,9 @@ versioned artifact; they do not require those bare numbers forever. In particula
 
 | Tier | Content | Placement | Budget semantics |
 |---|---|---|---|
-| pre-commit | formatting/lint, bounded unit tests, the essential updater parser/catalog/routing/negative plan, structural coverage regression | one supervised local quality tier | Hard wall-clock envelope: **120 seconds**, implemented as TERM at 115 seconds plus a five-second kill grace. The complete updater matrix and portable all-system evaluation are excluded here but remain mandatory in the expensive tier. |
+| pre-commit | formatting/lint, bounded unit tests, the essential updater parser/catalog/routing/negative plan, structural coverage regression | one supervised local quality tier | Hard wall-clock envelope: **120 seconds**, implemented as TERM at 105 seconds, five seconds of kill grace, and ten seconds reserved for supervisor startup, post-KILL verification, and reporting. The complete updater matrix and portable all-system evaluation are excluded here but remain mandatory in the expensive tier. |
 | pre-push | slow focused Python suites, live Nix-reach comparison, Darwin surface, consumers, signatures, system/agent checks | local hook | Initial planning ceiling: **900 seconds**; compliance is not yet claimed or enforced as one aggregate measurement. The live probes are explicitly assigned here; configuration probes allow 600 seconds of contention headroom, bounded metadata probes 120–240 seconds. |
-| expensive | unfiltered tracked Python integration, portable all-system evaluation, consumer/signature gates, structural/live coverage, Darwin value surface, and portable-native gallery builds | `bin/quality --tier expensive` locally; its remote-safe portable evaluation/native subset runs twice daily on GitHub plus manual dispatch | **1800-second** local quality ceiling; scheduled remote-safe checks run at most twice daily rather than per commit. Platform-specific native builds have a separate 60-minute workflow bound. LAN-only root tests remain local and are not presented as GitHub evidence. |
+| expensive | Local authority: unfiltered tracked Python integration, portable all-system evaluation, consumer/signature gates, structural/live coverage, and Darwin value surface. Remote companion: portable evaluation plus three portable-native gallery builds. | `bin/quality --tier expensive` locally; the distinct remote-safe companion runs twice daily on GitHub plus manual dispatch | **1800-second** local quality ceiling; scheduled remote-safe checks run at most twice daily rather than per commit. Platform-specific native builds have a separate 60-minute workflow bound. LAN-only root tests remain local and are not presented as GitHub evidence. |
 
 The limits are policy ceilings. The hook itself runs `bin/quality --tier pre-commit`
 under the 120-second supervisor. Artifact refresh independently executes and records
@@ -262,6 +263,15 @@ gates may not regress. A missing target, parser-schema change, duplicated tier
 assignment, skipped assertion, or unexplained decrease is failure. The signed Git
 commit is the repository attestation for the artifact; the stored command recipe alone
 is not one.
+
+`sourceProjectionDigest` names the snapshot that was actually measured; it is not an
+every-commit freshness requirement. `coverage --check` intentionally permits later
+content-only drift while requiring the artifact revision to remain an ancestor and
+the live manifest, structural inventory, tools, and non-regression comparisons to
+match. A commit that *refreshes* the artifact must stage all source changes before
+collection and make no further source edits before committing, so that commit attests
+the measured projection. Later content changes are covered structurally at ordinary
+commit cadence and dynamically by the low-frequency expensive/pre-push refresh.
 
 ## Implementation order
 

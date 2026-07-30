@@ -117,6 +117,20 @@
       "gap": null
     },
     {
+      "path": "bin/deadline-supervisor.py",
+      "kind": "product",
+      "tier": "pre-commit",
+      "evidence": ["bin/deadline-supervisor-test.py executes success, TERM, KILL, owned process-group cleanup, and early-leader-exit behavior"],
+      "gap": null
+    },
+    {
+      "path": "bin/deadline-supervisor-test.py",
+      "kind": "test",
+      "tier": "pre-commit",
+      "evidence": ["quality:python-test executes real shortened process-group deadline fixtures"],
+      "gap": null
+    },
+    {
       "path": "bin/coverage-report",
       "kind": "product",
       "tier": "pre-commit",
@@ -197,7 +211,7 @@
       "path": "bin/update-overlay",
       "kind": "product",
       "tier": "pre-commit",
-      "evidence": ["bin/update-overlay-test.py imports and executes inventory, refusal, and update behavior"],
+      "evidence": ["bin/update-overlay-essential-test.py executes inventory, refusal, update, routing, and purity behavior on every commit", "bin/update-overlay-test.py executes the unfiltered temporary-Git matrix in pre-push and expensive tiers"],
       "gap": "Network, hash, and update execution remains on-demand and is mocked in unit coverage."
     },
     {
@@ -213,6 +227,20 @@
       "tier": "pre-push",
       "evidence": ["quality:python-test executes the unfiltered suite in the pre-push and expensive tiers"],
       "gap": "Ordinary commits use bin/update-overlay-essential-test.py instead of the expensive temporary-Git workflow matrix."
+    },
+    {
+      "path": "bin/unittest-strict.py",
+      "kind": "product",
+      "tier": "pre-commit",
+      "evidence": ["bin/unittest-strict-test.py proves pass/fail and treats skipped tests as non-pass"],
+      "gap": null
+    },
+    {
+      "path": "bin/unittest-strict-test.py",
+      "kind": "test",
+      "tier": "pre-commit",
+      "evidence": ["quality:python-test executes pass, failure, skip, and missing-name fixtures"],
+      "gap": null
     },
     {
       "path": "packages/pi-mcp-adapter-normalize.py",
