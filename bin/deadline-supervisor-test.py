@@ -102,18 +102,20 @@ class DeadlineSupervisorTests(unittest.TestCase):
             self.assertFalse(process_exists(child_pid), "background child survived")
 
     def test_external_term_and_hup_clean_the_owned_process_group(self):
-        for sig in (signal.SIGTERM, signal.SIGHUP):
+        for sig in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
             with self.subTest(signal=sig), tempfile.TemporaryDirectory() as temp_dir:
                 pid_path = Path(temp_dir) / "child.pid"
                 child = (
                     "import signal,time; "
                     "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
-                    "signal.signal(signal.SIGHUP, signal.SIG_IGN); time.sleep(30)"
+                    "signal.signal(signal.SIGHUP, signal.SIG_IGN); "
+                    "signal.signal(signal.SIGINT, signal.SIG_IGN); time.sleep(30)"
                 )
                 command = (
                     "import pathlib,signal,subprocess,sys,time; "
                     "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
                     "signal.signal(signal.SIGHUP, signal.SIG_IGN); "
+                    "signal.signal(signal.SIGINT, signal.SIG_IGN); "
                     f"p=subprocess.Popen([sys.executable,'-c',{child!r}]); "
                     f"pathlib.Path({str(pid_path)!r}).write_text(str(p.pid)); "
                     "time.sleep(30)"
@@ -151,32 +153,38 @@ class DeadlineSupervisorTests(unittest.TestCase):
                 self.assertFalse(process_exists(child_pid), "signal left child alive")
 
     def test_signal_during_process_creation_cannot_orphan_group(self):
-        child_pid = None
+        for sig in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            with self.subTest(signal=sig):
+                child_pid = None
 
-        def injected_popen(argv, **kwargs):
-            nonlocal child_pid
-            process = subprocess.Popen(argv, **kwargs)
-            child_pid = process.pid
-            os.kill(os.getpid(), signal.SIGTERM)
-            return process
+                def injected_popen(argv, **kwargs):
+                    nonlocal child_pid
+                    process = subprocess.Popen(argv, **kwargs)
+                    child_pid = process.pid
+                    os.kill(os.getpid(), sig)
+                    return process
 
-        child = (
-            "import signal,time; "
-            "signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(30)"
-        )
-        status = SUPERVISOR_MODULE["run"](
-            [sys.executable, "-c", child],
-            30,
-            0.2,
-            popen=injected_popen,
-        )
-        self.assertEqual(status, 143)
-        self.assertIsNotNone(child_pid)
-        for _attempt in range(50):
-            if not process_exists(child_pid):
-                break
-            time.sleep(0.02)
-        self.assertFalse(process_exists(child_pid), "startup signal left child alive")
+                child = (
+                    "import signal,time; "
+                    "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+                    "signal.signal(signal.SIGHUP, signal.SIG_IGN); "
+                    "signal.signal(signal.SIGINT, signal.SIG_IGN); time.sleep(30)"
+                )
+                status = SUPERVISOR_MODULE["run"](
+                    [sys.executable, "-c", child],
+                    30,
+                    0.2,
+                    popen=injected_popen,
+                )
+                self.assertEqual(status, 128 + sig)
+                self.assertIsNotNone(child_pid)
+                for _attempt in range(50):
+                    if not process_exists(child_pid):
+                        break
+                    time.sleep(0.02)
+                self.assertFalse(
+                    process_exists(child_pid), "startup signal left child alive"
+                )
 
     def test_nonfinite_deadlines_refuse(self):
         for value in ("nan", "inf", "-inf", "1e309"):

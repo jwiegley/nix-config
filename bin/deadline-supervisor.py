@@ -63,7 +63,7 @@ def run(
     *,
     popen=subprocess.Popen,
 ) -> int:
-    handled_signals = {signal.SIGHUP, signal.SIGTERM}
+    handled_signals = {signal.SIGHUP, signal.SIGINT, signal.SIGTERM}
     previous_handlers = {sig: signal.getsignal(sig) for sig in handled_signals}
     process: subprocess.Popen[bytes] | None = None
     forwarded_signal: int | None = None

@@ -44,7 +44,7 @@ Hera collection after tiering:
 - the superseded pre-commit core reached **164.603 seconds** against a
   **180-second** budget; the ordinary hook is now hard-capped at 120 seconds and
   runs the bounded updater authority rather than its temporary-Git workflow matrix;
-  the refreshed artifact measures that core at **42.139/120s**, and the exact
+  the refreshed artifact measures that core at **45.575/120s**, and the exact
   hook including structural coverage completed in **44.91s**;
 - the complete Nix refresh took 442.4 seconds on Hera, inside the 1800-second
   CI/on-demand ceiling;
@@ -183,7 +183,7 @@ hostname-gated behavior. Aliases point to one root result so counts cannot doubl
 
 As of the A6 implementation on 2026-07-29 the authorities derive:
 
-- 105 tracked Nix files after adding the registry-denominator probe helper;
+- 104 tracked Nix files after adding the registry-denominator probe helper;
 - 55 tracked/shebang Python files and 14 `bin/*-test.py` suites: 11 pre-commit and
   three pre-push;
 - 35 tracked Bash scripts;
