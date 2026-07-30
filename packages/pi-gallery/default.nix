@@ -54,7 +54,79 @@ let
     };
   };
   inherit (manifest) members order supportSources;
+  piCatalogRecords = manifest.sourceCatalog;
   sourceRecords = members // supportSources;
+  normalizationContract = builtins.fromJSON (builtins.readFile ./normalization-policy.json);
+  normalizationTargets = lib.sort builtins.lessThan (
+    builtins.attrNames normalizationContract.targets
+  );
+  lockBearingTargets = lib.sort builtins.lessThan (
+    lib.filter (
+      id:
+      let
+        record = piCatalogRecords.${id};
+      in
+      (record.update.kind or null) == "npm-release"
+      && (record.update.artifacts or [ ]) != [ ]
+      && record.hashes ? npmDepsHash
+    ) (builtins.attrNames piCatalogRecords)
+  );
+  galleryLockBearingTargets = lib.sort builtins.lessThan (
+    map (id: sourceRecords.${id}.attrName) (
+      lib.filter (id: (sourceRecords.${id}.update.normalizer or null) == "pi-gallery-v1") (
+        builtins.attrNames sourceRecords
+      )
+    )
+  );
+  stringList =
+    value:
+    builtins.isList value
+    && lib.all (item: builtins.isString item && item != "") value
+    && builtins.length value == builtins.length (lib.unique value);
+  policyKeys = [
+    "forbidDependencies"
+    "removeTopLevel"
+  ];
+  policyValid =
+    value:
+    builtins.isAttrs value
+    && lib.sort builtins.lessThan (builtins.attrNames value) == policyKeys
+    && stringList value.forbidDependencies
+    && stringList value.removeTopLevel;
+  normalizationContractValid =
+    lib.sort builtins.lessThan (builtins.attrNames normalizationContract) == [
+      "common"
+      "npmDependencyFlags"
+      "schemaVersion"
+      "targets"
+    ]
+    && normalizationContract.schemaVersion == 1
+    &&
+      normalizationContract.npmDependencyFlags == [
+        "--ignore-scripts"
+        "--omit=dev"
+        "--omit=peer"
+        "--legacy-peer-deps"
+      ]
+    && policyValid normalizationContract.common
+    && lib.all policyValid (builtins.attrValues normalizationContract.targets)
+    && lib.all (
+      policy:
+      lib.intersectLists (normalizationContract.common.removeTopLevel ++ policy.removeTopLevel) [
+        "name"
+        "version"
+        "dependencies"
+        "optionalDependencies"
+      ] == [ ]
+    ) (builtins.attrValues normalizationContract.targets);
+  lockFileFor =
+    member:
+    let
+      artifacts = member.update.artifacts or [ ];
+      expected = "packages/pi-gallery/locks/${member.attrName}-package-lock.json";
+    in
+    assert artifacts == [ expected ];
+    ../.. + "/${builtins.head artifacts}";
   releaseTarballs = lib.listToAttrs (
     lib.concatMap (
       id:
@@ -77,11 +149,10 @@ let
       name,
       tarball,
       lockFile,
-      dropPeerMetadata ? true,
+      expectedName,
+      expectedVersion,
       hashline ? false,
       lens ? false,
-      subagents ? false,
-      smartFetch ? false,
     }:
     runCommand "${name}-release-source"
       {
@@ -94,20 +165,13 @@ let
         mkdir -p "$out"
         tar -xzf ${tarball} -C "$out" --strip-components=1
 
-        ${jq}/bin/jq '
-          del(.devDependencies)
-          ${lib.optionalString dropPeerMetadata "| del(.peerDependencies, .peerDependenciesMeta)"}
-          ${lib.optionalString hashline ''
-            | del(.dependencies["better-sqlite3"], .allowScripts)
-          ''}
-          ${lib.optionalString lens ''
-            | del(.dependencies["@earendil-works/pi-tui"], .dependencies.typebox)
-          ''}
-          ${lib.optionalString smartFetch ''
-            | del(.dependencies["@earendil-works/pi-tui"], .dependencies["@sinclair/typebox"])
-          ''}
-          ${lib.optionalString subagents "| del(.dependencies.typebox)"}
-        ' "$out/package.json" > "$out/package.json.normalized"
+        ${jq}/bin/jq \
+          --arg target ${lib.escapeShellArg name} \
+          --arg expectedName ${lib.escapeShellArg expectedName} \
+          --arg expectedVersion ${lib.escapeShellArg expectedVersion} \
+          --slurpfile policy ${./normalization-policy.json} \
+          -f ${./normalize-manifest.jq} \
+          "$out/package.json" > "$out/package.json.normalized"
         mv "$out/package.json.normalized" "$out/package.json"
         cp ${lockFile} "$out/package-lock.json"
 
@@ -178,6 +242,19 @@ let
         ''}
       '';
 
+  mkMemberReleaseSource =
+    member: extra:
+    mkReleaseSource (
+      {
+        name = member.attrName;
+        tarball = releaseTarballs.${member.attrName};
+        lockFile = lockFileFor member;
+        expectedName = member.update.package;
+        expectedVersion = member.version;
+      }
+      // extra
+    );
+
   mkNpmPackageRoot =
     {
       pname,
@@ -196,12 +273,7 @@ let
         npmDepsHash
         ;
       nodejs = buildPackages.nodejs_22;
-      npmInstallFlags = [
-        "--ignore-scripts"
-        "--omit=dev"
-        "--omit=peer"
-        "--legacy-peer-deps"
-      ];
+      npmInstallFlags = normalizationContract.npmDependencyFlags;
       dontNpmBuild = true;
       makeCacheWritable = true;
       installPhase = ''
@@ -247,55 +319,19 @@ let
       '';
     };
 
-  hashlineSource = mkReleaseSource {
-    name = "pi-hashline-edit-pro";
-    tarball = releaseTarballs.pi-hashline-edit-pro;
-    lockFile = ./locks/pi-hashline-edit-pro-package-lock.json;
+  hashlineSource = mkMemberReleaseSource members.hashline {
     hashline = true;
   };
-  smartFetchSource = mkReleaseSource {
-    name = "pi-smart-fetch";
-    tarball = releaseTarballs.pi-smart-fetch;
-    lockFile = ./locks/pi-smart-fetch-package-lock.json;
-    smartFetch = true;
-  };
-  smartWebSearchSource = mkReleaseSource {
-    name = "pi-smart-web-search";
-    tarball = releaseTarballs.pi-smart-web-search;
-    lockFile = ./locks/pi-smart-web-search-package-lock.json;
-  };
-  lensSource = mkReleaseSource {
-    name = "pi-lens";
-    tarball = releaseTarballs.pi-lens;
-    lockFile = ./locks/pi-lens-package-lock.json;
+  smartFetchSource = mkMemberReleaseSource members.smart-fetch { };
+  smartWebSearchSource = mkMemberReleaseSource members.smart-web-search { };
+  lensSource = mkMemberReleaseSource members.lens {
     lens = true;
   };
-  markdownPreviewSource = mkReleaseSource {
-    name = "pi-markdown-preview";
-    tarball = releaseTarballs.pi-markdown-preview;
-    lockFile = ./locks/pi-markdown-preview-package-lock.json;
-  };
-  artifactsSource = mkReleaseSource {
-    name = "pi-artifacts";
-    tarball = releaseTarballs.pi-artifacts;
-    lockFile = ./locks/pi-artifacts-package-lock.json;
-  };
-  insightsSource = mkReleaseSource {
-    name = "pi-insights";
-    tarball = releaseTarballs.pi-insights;
-    lockFile = ./locks/pi-insights-package-lock.json;
-  };
-  dynamicWorkflowsSource = mkReleaseSource {
-    name = "pi-dynamic-workflows";
-    tarball = releaseTarballs.pi-dynamic-workflows;
-    lockFile = ./locks/pi-dynamic-workflows-package-lock.json;
-  };
-  subagentsSource = mkReleaseSource {
-    name = "pi-subagents";
-    tarball = releaseTarballs.pi-subagents;
-    lockFile = ./locks/pi-subagents-package-lock.json;
-    subagents = true;
-  };
+  markdownPreviewSource = mkMemberReleaseSource members.markdown-preview { };
+  artifactsSource = mkMemberReleaseSource members.artifacts { };
+  insightsSource = mkMemberReleaseSource members.insights { };
+  dynamicWorkflowsSource = mkMemberReleaseSource members.dynamic-workflows { };
+  subagentsSource = mkMemberReleaseSource members.subagents { };
 
   pi-hashline-edit-pro = mkNpmPackageRoot {
     pname = members.hashline.attrName;
@@ -804,6 +840,9 @@ let
         JSON
       '';
 in
+assert normalizationContractValid;
+assert normalizationTargets == lockBearingTargets;
+assert normalizationTargets == galleryLockBearingTargets;
 assert
   inputs.agent-browser-source.rev == manifest.sourceCatalog.agent-browser-source.source.args.rev;
 assert

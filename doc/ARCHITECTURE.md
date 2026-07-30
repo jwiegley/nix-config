@@ -74,6 +74,14 @@ Nix owns generated leaves, not mutable roots. Auth, history, sessions, caches, r
 
 Package selection is explicit. `config/packages.nix` allows only named source-project inputs; package-shaped infrastructure inputs cannot enter a user profile. Agent Deck, Plasma Fractal, and Plasma Wiki remain installed on every profile where they were previously available, but their owning Home Manager modules make that selection explicit. Only the Agent Deck Discord bridge and Hera-specific Fractal wrappers/skill projections are Hera-only. `packages/ai-package-policy.nix` owns shared AI capability gates and optional package groups. `packages/pi-gallery/manifest.nix` owns the immutable gallery's member identity, source, version, extension, skills, projection, and registration order.
 
+Pi gallery npm normalization has one executable contract:
+`packages/pi-gallery/normalization-policy.json` supplies the complete fail-closed
+target policy and ordered dependency-shaping npm flags, while
+`packages/pi-gallery/normalize-manifest.jq`
+executes that policy. The Nix build and candidate-only updater call the same jq
+program; Python never reimplements package-specific removals. Generated locks
+remain catalog-owned artifacts and normalized manifests remain transient.
+
 Package rules:
 
 1. New independent derivations live under `packages/`.

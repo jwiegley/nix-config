@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "npmDependencyFlags": [
+    "--ignore-scripts",
+    "--omit=dev",
+    "--omit=peer",
+    "--legacy-peer-deps"
+  ],
+  "common": {
+    "removeTopLevel": [
+      "devDependencies",
+      "peerDependencies",
+      "peerDependenciesMeta"
+    ],
+    "forbidDependencies": []
+  },
+  "targets": {
+    "pi-artifacts": {
+      "removeTopLevel": [],
+      "forbidDependencies": []
+    },
+    "pi-dynamic-workflows": {
+      "removeTopLevel": [],
+      "forbidDependencies": []
+    },
+    "pi-hashline-edit-pro": {
+      "removeTopLevel": [
+        "allowScripts"
+      ],
+      "forbidDependencies": [
+        "better-sqlite3"
+      ]
+    },
+    "pi-insights": {
+      "removeTopLevel": [],
+      "forbidDependencies": []
+    },
+    "pi-lens": {
+      "removeTopLevel": [],
+      "forbidDependencies": [
+        "@earendil-works/pi-tui",
+        "typebox"
+      ]
+    },
+    "pi-markdown-preview": {
+      "removeTopLevel": [],
+      "forbidDependencies": []
+    },
+    "pi-smart-fetch": {
+      "removeTopLevel": [],
+      "forbidDependencies": [
+        "@earendil-works/pi-tui",
+        "@sinclair/typebox"
+      ]
+    },
+    "pi-smart-web-search": {
+      "removeTopLevel": [],
+      "forbidDependencies": []
+    },
+    "pi-subagents": {
+      "removeTopLevel": [],
+      "forbidDependencies": [
+        "typebox"
+      ]
+    }
+  }
+}

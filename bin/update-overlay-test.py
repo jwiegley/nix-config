@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 
+import base64
 import contextlib
 import copy
+import hashlib
 import io
 import json
 import os
 import re
 import runpy
 import shutil
+import socket
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from urllib.parse import urlsplit
 
 
 SCRIPT = Path(__file__).with_name("update-overlay")
@@ -32,6 +37,16 @@ PypiClient = MODULE["PypiClient"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
 load_source_catalog = MODULE["load_source_catalog"]
+load_pi_normalization_contract = MODULE.get("load_pi_normalization_contract")
+pi_npm_lock_flags = MODULE.get("pi_npm_lock_flags")
+normalize_pi_manifest = MODULE.get("normalize_pi_manifest")
+validate_npm_manifest_lock = MODULE.get("validate_npm_manifest_lock")
+generate_npm_lock = MODULE.get("generate_npm_lock")
+npm_lock_documents_equal = MODULE.get("npm_lock_documents_equal")
+read_npm_tarball_manifest = MODULE.get("read_npm_tarball_manifest")
+verify_npm_integrity = MODULE.get("verify_npm_integrity")
+registry_only_proxy = MODULE.get("registry_only_proxy")
+update_npm_lock_target = MODULE.get("update_npm_lock_target")
 require_detached_linked_worktree = MODULE["require_detached_linked_worktree"]
 sync_flake_projections = MODULE["sync_flake_projections"]
 resolve_flake_input_version = MODULE.get("resolve_flake_input_version")
@@ -45,6 +60,11 @@ build_inventory = MODULE["build_inventory"]
 
 ISSUE40_TARGETS = frozenset({"cohere-melody", "mlx"})
 ISSUE41_TARGETS = frozenset({"hf-xet", "nelisp", "sherlock-db"})
+ISSUE39_TARGETS = frozenset(
+    json.loads(
+        (SCRIPT.parent.parent / "packages/pi-gallery/normalization-policy.json").read_text()
+    )["targets"]
+)
 
 ISSUE34_TARGETS = frozenset({
     "pi-mcp-adapter",
@@ -597,6 +617,1005 @@ got: sha256-requested
                 "sha256-cHl0aG9u",
             )
             self.assertEqual(build_calls, [("hf-xet", "python")])
+
+            tool_output = root / "jq-output"
+            (tool_output / "bin").mkdir(parents=True)
+            jq_tool = tool_output / "bin/jq"
+            jq_tool.write_text("#!/bin/sh\nexit 0\n")
+            jq_tool.chmod(0o755)
+            resolver_calls = []
+
+            def resolved_tool(command, **kwargs):
+                resolver_calls.append((command, kwargs))
+                return SimpleNamespace(
+                    returncode=0,
+                    stdout=f"{tool_output}\n",
+                    stderr="",
+                )
+
+            resolver = HashComputer(root)
+            self.assertEqual(
+                resolver.resolve_build_tool("jq", "jq", runner=resolved_tool),
+                jq_tool,
+            )
+            self.assertEqual(
+                resolver.resolve_build_tool(
+                    "jq",
+                    "jq",
+                    runner=lambda *_args, **_kwargs: self.fail(
+                        "cached tool resolution invoked Nix twice"
+                    ),
+                ),
+                jq_tool,
+            )
+            self.assertEqual(len(resolver_calls), 1)
+
+            def resolution(stdout, returncode=0):
+                return lambda _command, **_kwargs: SimpleNamespace(
+                    returncode=returncode,
+                    stdout=stdout,
+                    stderr="",
+                )
+
+            for label, runner in (
+                ("nonzero", resolution("", returncode=1)),
+                ("empty", resolution("")),
+                ("multiple", resolution(f"{tool_output}\n{tool_output}\n")),
+                ("relative", resolution("relative-output\n")),
+                ("missing executable", resolution(f"{root / 'missing'}\n")),
+            ):
+                with self.subTest(tool_resolution=label):
+                    self.assertIsNone(
+                        HashComputer(root).resolve_build_tool(
+                            "jq", "jq", runner=runner
+                        )
+                    )
+            self.assertIsNone(
+                HashComputer(root).resolve_build_tool(
+                    "jq; builtins.abort", "jq", runner=resolved_tool
+                )
+            )
+
+    def test_pi_manifest_normalizer_is_shared_complete_and_fail_closed(self):
+        root = SCRIPT.parent.parent
+        contract = load_pi_normalization_contract(root)
+        self.assertEqual(set(contract["targets"]), ISSUE39_TARGETS)
+        jq = shutil.which("jq")
+        self.assertIsNotNone(jq)
+        manifest = {
+            "name": "example",
+            "version": "1.0.0",
+            "dependencies": {
+                "keep": "1",
+                "better-sqlite3": "1",
+                "@earendil-works/pi-tui": "1",
+                "@sinclair/typebox": "1",
+                "typebox": "1",
+            },
+            "optionalDependencies": {
+                "optional-keep": "1",
+                "better-sqlite3": "1",
+                "@earendil-works/pi-tui": "1",
+                "@sinclair/typebox": "1",
+                "typebox": "1",
+            },
+            "devDependencies": {"dev": "1"},
+            "peerDependencies": {"peer": "1"},
+            "peerDependenciesMeta": {"peer": {"optional": True}},
+            "allowScripts": {"better-sqlite3": True},
+        }
+        special = {
+            "pi-hashline-edit-pro": {
+                "better-sqlite3",
+            },
+            "pi-lens": {
+                "@earendil-works/pi-tui",
+                "typebox",
+            },
+            "pi-smart-fetch": {
+                "@earendil-works/pi-tui",
+                "@sinclair/typebox",
+            },
+            "pi-subagents": {"typebox"},
+        }
+        all_special_dependencies = set().union(*special.values())
+        for target in sorted(ISSUE39_TARGETS):
+            with self.subTest(target=target):
+                normalized_text = normalize_pi_manifest(
+                    root,
+                    target,
+                    "example",
+                    "1.0.0",
+                    json.dumps(manifest),
+                    Path(jq),
+                )
+                self.assertIsNotNone(normalized_text)
+                normalized = json.loads(normalized_text)
+                self.assertNotIn("devDependencies", normalized)
+                self.assertNotIn("peerDependencies", normalized)
+                self.assertNotIn("peerDependenciesMeta", normalized)
+                self.assertEqual(normalized["dependencies"]["keep"], "1")
+                self.assertEqual(
+                    normalized["optionalDependencies"]["optional-keep"], "1"
+                )
+                for dependency in special.get(target, set()):
+                    self.assertNotIn(dependency, normalized["dependencies"])
+                    self.assertNotIn(
+                        dependency, normalized["optionalDependencies"]
+                    )
+                for dependency in (
+                    all_special_dependencies - special.get(target, set())
+                ):
+                    self.assertIn(dependency, normalized["dependencies"])
+                    self.assertIn(
+                        dependency, normalized["optionalDependencies"]
+                    )
+                if target == "pi-hashline-edit-pro":
+                    self.assertNotIn("allowScripts", normalized)
+                else:
+                    self.assertIn("allowScripts", normalized)
+        self.assertIsNone(
+            normalize_pi_manifest(
+                root,
+                "unknown-target",
+                "example",
+                "1.0.0",
+                json.dumps(manifest),
+                Path(jq),
+            )
+        )
+        self.assertIsNone(
+            normalize_pi_manifest(
+                root,
+                "pi-artifacts",
+                "wrong-name",
+                "1.0.0",
+                json.dumps(manifest),
+                Path(jq),
+            )
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temporary_root = Path(temp_dir)
+            gallery = temporary_root / "packages/pi-gallery"
+            gallery.mkdir(parents=True)
+            shutil.copy(root / "packages/pi-gallery/normalize-manifest.jq", gallery)
+
+            def rejected_by_both(label, mutate):
+                malformed = copy.deepcopy(contract)
+                mutate(malformed)
+                policy = gallery / "normalization-policy.json"
+                policy.write_text(json.dumps(malformed))
+                with self.subTest(label=label):
+                    with self.assertRaises(RuntimeError):
+                        load_pi_normalization_contract(temporary_root)
+                    result = subprocess.run(
+                        [
+                            jq,
+                            "--arg",
+                            "target",
+                            "pi-artifacts",
+                            "--arg",
+                            "expectedName",
+                            "example",
+                            "--arg",
+                            "expectedVersion",
+                            "1.0.0",
+                            "--slurpfile",
+                            "policy",
+                            str(policy),
+                            "-f",
+                            str(gallery / "normalize-manifest.jq"),
+                        ],
+                        input=json.dumps(manifest),
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+                    self.assertNotEqual(result.returncode, 0)
+
+            rejected_by_both(
+                "scripts enabled",
+                lambda value: value["npmDependencyFlags"].remove(
+                    "--ignore-scripts"
+                ),
+            )
+            rejected_by_both(
+                "unknown contract field",
+                lambda value: value.update(unexpected=True),
+            )
+            rejected_by_both(
+                "duplicate removal",
+                lambda value: value["common"]["removeTopLevel"].append(
+                    "devDependencies"
+                ),
+            )
+        default_nix = (root / "packages/pi-gallery/default.nix").read_text()
+        self.assertIn("-f ${./normalize-manifest.jq}", default_nix)
+        self.assertIn("normalizationContract.npmDependencyFlags", default_nix)
+        self.assertNotIn("del(.devDependencies)", default_nix)
+        source_records = json.loads((root / "sources/pi.json").read_text())["sources"]
+        self.assertEqual(
+            {
+                name
+                for name, record in source_records.items()
+                if record["update"].get("normalizer") == "pi-gallery-v1"
+            },
+            ISSUE39_TARGETS,
+        )
+        environment = dict(os.environ)
+        environment.pop("UPDATE_AGENTS_CANDIDATE", None)
+        refused = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                "--prepare-npm-locks",
+                "pi-artifacts",
+            ],
+            capture_output=True,
+            text=True,
+            env=environment,
+            check=False,
+        )
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn("restricted to the update-agents candidate", refused.stderr)
+        environment["UPDATE_AGENTS_CANDIDATE"] = "1"
+        attached = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                "--prepare-npm-locks",
+                "pi-artifacts",
+            ],
+            capture_output=True,
+            text=True,
+            env=environment,
+            check=False,
+        )
+        self.assertNotEqual(attached.returncode, 0)
+        self.assertIn("detached linked worktree", attached.stderr)
+
+    def test_npm_lock_generation_and_pairing_are_frozen(self):
+        manifest = {
+            "name": "example",
+            "version": "1.0.0",
+            "dependencies": {"keep": "1"},
+            "optionalDependencies": {"optional": "1"},
+        }
+        manifest_text = json.dumps(manifest, indent=2) + "\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_path = Path(temp_dir) / "package.tgz"
+            payload = manifest_text.encode()
+            with tarfile.open(archive_path, "w:gz") as archive:
+                member = tarfile.TarInfo("package/package.json")
+                member.size = len(payload)
+                archive.addfile(member, io.BytesIO(payload))
+            raw_manifest, raw_document = read_npm_tarball_manifest(archive_path)
+            self.assertEqual(raw_manifest, manifest_text)
+            self.assertEqual(raw_document, manifest)
+            normalizer_globals = read_npm_tarball_manifest.__globals__
+            old_compressed_limit = normalizer_globals["MAX_NPM_TARBALL_BYTES"]
+            normalizer_globals["MAX_NPM_TARBALL_BYTES"] = (
+                archive_path.stat().st_size - 1
+            )
+            try:
+                with self.assertRaisesRegex(RuntimeError, "256 MiB"):
+                    read_npm_tarball_manifest(archive_path)
+            finally:
+                normalizer_globals["MAX_NPM_TARBALL_BYTES"] = old_compressed_limit
+            digest = hashlib.sha512(archive_path.read_bytes()).digest()
+            integrity = f"sha512-{base64.b64encode(digest).decode()}"
+            self.assertTrue(verify_npm_integrity(archive_path, integrity))
+            self.assertFalse(
+                verify_npm_integrity(archive_path, "sha512-AAAAAAAA")
+            )
+            sha1 = base64.b64encode(
+                hashlib.sha1(archive_path.read_bytes()).digest()
+            ).decode()
+            wrong_sha512 = base64.b64encode(b"x" * 64).decode()
+            self.assertFalse(
+                verify_npm_integrity(
+                    archive_path,
+                    f"sha1-{sha1} sha512-{wrong_sha512}",
+                )
+            )
+            self.assertTrue(
+                verify_npm_integrity(
+                    archive_path,
+                    f"sha1-AAAAAAAA sha512-{base64.b64encode(digest).decode()}",
+                )
+            )
+
+            duplicate = Path(temp_dir) / "duplicate.tgz"
+            with tarfile.open(duplicate, "w:gz") as archive:
+                for _index in range(2):
+                    member = tarfile.TarInfo("package/package.json")
+                    member.size = len(payload)
+                    archive.addfile(member, io.BytesIO(payload))
+            with self.assertRaisesRegex(RuntimeError, "one bounded"):
+                read_npm_tarball_manifest(duplicate)
+
+            linked = Path(temp_dir) / "linked.tgz"
+            with tarfile.open(linked, "w:gz") as archive:
+                member = tarfile.TarInfo("package/package.json")
+                member.type = tarfile.SYMTYPE
+                member.linkname = "elsewhere"
+                archive.addfile(member)
+            with self.assertRaisesRegex(RuntimeError, "regular file"):
+                read_npm_tarball_manifest(linked)
+
+            oversized = Path(temp_dir) / "oversized.tgz"
+            oversized_payload = b"x" * (1024 * 1024 + 1)
+            with tarfile.open(oversized, "w:gz") as archive:
+                member = tarfile.TarInfo("package/package.json")
+                member.size = len(oversized_payload)
+                archive.addfile(member, io.BytesIO(oversized_payload))
+            with self.assertRaisesRegex(RuntimeError, "1 MiB"):
+                read_npm_tarball_manifest(oversized)
+
+            declared_oversized = Path(temp_dir) / "declared-oversized.tgz"
+            with tarfile.open(declared_oversized, "w:gz") as archive:
+                member = tarfile.TarInfo("package/large.bin")
+                member.size = 1025
+                archive.addfile(member, io.BytesIO(b"x" * 1025))
+                manifest_member = tarfile.TarInfo("package/package.json")
+                manifest_member.size = len(payload)
+                archive.addfile(manifest_member, io.BytesIO(payload))
+            old_member_limit = normalizer_globals["MAX_NPM_TAR_MEMBER_BYTES"]
+            normalizer_globals["MAX_NPM_TAR_MEMBER_BYTES"] = 1024
+            try:
+                with self.assertRaisesRegex(RuntimeError, "member exceeds"):
+                    read_npm_tarball_manifest(declared_oversized)
+            finally:
+                normalizer_globals["MAX_NPM_TAR_MEMBER_BYTES"] = old_member_limit
+
+            cumulative = Path(temp_dir) / "cumulative.tgz"
+            with tarfile.open(cumulative, "w:gz") as archive:
+                for name in ("package/one", "package/two"):
+                    member = tarfile.TarInfo(name)
+                    member.size = 800
+                    archive.addfile(member, io.BytesIO(b"x" * 800))
+            old_declared_limit = normalizer_globals["MAX_NPM_TAR_DECLARED_BYTES"]
+            normalizer_globals["MAX_NPM_TAR_DECLARED_BYTES"] = 1500
+            try:
+                with self.assertRaisesRegex(RuntimeError, "declared-size"):
+                    read_npm_tarball_manifest(cumulative)
+            finally:
+                normalizer_globals["MAX_NPM_TAR_DECLARED_BYTES"] = old_declared_limit
+
+            too_many = Path(temp_dir) / "too-many.tgz"
+            with tarfile.open(too_many, "w:gz") as archive:
+                for name in ("package/one", "package/package.json"):
+                    content = payload if name.endswith("package.json") else b"x"
+                    member = tarfile.TarInfo(name)
+                    member.size = len(content)
+                    archive.addfile(member, io.BytesIO(content))
+            old_member_count = normalizer_globals["MAX_NPM_TAR_MEMBERS"]
+            normalizer_globals["MAX_NPM_TAR_MEMBERS"] = 1
+            try:
+                with self.assertRaisesRegex(RuntimeError, "member-count"):
+                    read_npm_tarball_manifest(too_many)
+            finally:
+                normalizer_globals["MAX_NPM_TAR_MEMBERS"] = old_member_count
+
+            for unsafe_name in (
+                "/package/package.json",
+                "../package/package.json",
+            ):
+                unsafe = Path(temp_dir) / (
+                    "absolute.tgz" if unsafe_name.startswith("/") else "traversal.tgz"
+                )
+                with tarfile.open(unsafe, "w:gz") as archive:
+                    member = tarfile.TarInfo(unsafe_name)
+                    member.size = len(payload)
+                    archive.addfile(member, io.BytesIO(payload))
+                with self.assertRaisesRegex(RuntimeError, "unsafe member path"):
+                    read_npm_tarball_manifest(unsafe)
+
+            pax = Path(temp_dir) / "pax.tgz"
+            with tarfile.open(pax, "w:gz", format=tarfile.PAX_FORMAT) as archive:
+                member = tarfile.TarInfo("package/package.json")
+                member.pax_headers = {"comment": "x" * 2048}
+                member.size = len(payload)
+                archive.addfile(member, io.BytesIO(payload))
+            with self.assertRaisesRegex(RuntimeError, "extended headers"):
+                read_npm_tarball_manifest(pax)
+
+            gnu_longname = Path(temp_dir) / "gnu-longname.tgz"
+            with tarfile.open(
+                gnu_longname, "w:gz", format=tarfile.GNU_FORMAT
+            ) as archive:
+                long_member = tarfile.TarInfo("package/" + ("x" * 120))
+                long_member.size = 1
+                archive.addfile(long_member, io.BytesIO(b"x"))
+                manifest_member = tarfile.TarInfo("package/package.json")
+                manifest_member.size = len(payload)
+                archive.addfile(manifest_member, io.BytesIO(payload))
+            with self.assertRaisesRegex(RuntimeError, "extended headers"):
+                read_npm_tarball_manifest(gnu_longname)
+
+            gnu_longlink = Path(temp_dir) / "gnu-longlink.tgz"
+            with tarfile.open(
+                gnu_longlink, "w:gz", format=tarfile.GNU_FORMAT
+            ) as archive:
+                link = tarfile.TarInfo("package/link")
+                link.type = tarfile.SYMTYPE
+                link.linkname = "x" * 200
+                archive.addfile(link)
+                manifest_member = tarfile.TarInfo("package/package.json")
+                manifest_member.size = len(payload)
+                archive.addfile(manifest_member, io.BytesIO(payload))
+            with self.assertRaisesRegex(RuntimeError, "extended headers"):
+                read_npm_tarball_manifest(gnu_longlink)
+        prior_lock = json.dumps({
+            "name": "example",
+            "version": "1.0.0",
+            "lockfileVersion": 3,
+            "packages": {"": manifest},
+        }, indent=2) + "\n"
+        calls = []
+
+        def fake_npm(command, **kwargs):
+            calls.append((command, kwargs))
+            root = Path(kwargs["cwd"])
+            current = json.loads((root / "package.json").read_text())
+            generated = {
+                "name": current["name"],
+                "version": current["version"],
+                "lockfileVersion": 3,
+                "packages": {
+                    "": current,
+                    "node_modules/keep": {
+                        "version": "1.0.0",
+                        "resolved": "https://registry.npmjs.org/keep/-/keep-1.0.0.tgz",
+                        "integrity": VENDOR_HASH,
+                    },
+                    "node_modules/optional": {
+                        "version": "1.0.0",
+                        "resolved": (
+                            "https://registry.npmjs.org/optional/-/optional-1.0.0.tgz"
+                        ),
+                        "integrity": VENDOR_HASH,
+                    },
+                },
+            }
+            (root / "package-lock.json").write_text(
+                json.dumps(generated, indent=2) + "\n"
+            )
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        flags = pi_npm_lock_flags(
+            load_pi_normalization_contract(SCRIPT.parent.parent)
+        )
+        with registry_only_proxy() as proxy:
+            parsed_proxy = urlsplit(proxy)
+            with socket.create_connection(
+                (parsed_proxy.hostname, parsed_proxy.port), timeout=5
+            ) as client:
+                client.sendall(
+                    b"CONNECT example.invalid:443 HTTP/1.1\r\n"
+                    b"Host: example.invalid:443\r\n\r\n"
+                )
+                self.assertIn(b"403 Forbidden", client.recv(4096))
+        generated = generate_npm_lock(
+            manifest_text,
+            prior_lock,
+            Path("/nix/store/fake-node/bin/npm"),
+            flags,
+            runner=fake_npm,
+        )
+        self.assertIsNotNone(generated)
+        self.assertTrue(validate_npm_manifest_lock(manifest_text, generated))
+        generated_with_requires = json.loads(generated)
+        generated_with_requires["requires"] = True
+        self.assertTrue(
+            npm_lock_documents_equal(
+                generated,
+                json.dumps(generated_with_requires),
+            )
+        )
+        generated_with_requires["requires"] = False
+        self.assertFalse(
+            npm_lock_documents_equal(
+                generated,
+                json.dumps(generated_with_requires),
+            )
+        )
+        raw = copy.deepcopy(manifest)
+        raw["devDependencies"] = {"raw-only": "1"}
+        self.assertFalse(
+            validate_npm_manifest_lock(json.dumps(raw), generated)
+        )
+        generated_document = json.loads(generated)
+        for label, mutate in (
+            (
+                "off-registry",
+                lambda value: value["packages"]["node_modules/keep"].update(
+                    resolved="https://example.invalid/keep.tgz"
+                ),
+            ),
+            (
+                "missing integrity",
+                lambda value: value["packages"]["node_modules/keep"].pop(
+                    "integrity"
+                ),
+            ),
+            (
+                "malformed integrity",
+                lambda value: value["packages"]["node_modules/keep"].update(
+                    integrity="not-sri"
+                ),
+            ),
+            (
+                "link package",
+                lambda value: value["packages"]["node_modules/keep"].update(
+                    link=True
+                ),
+            ),
+            (
+                "root identity",
+                lambda value: value["packages"][""].update(name="wrong"),
+            ),
+        ):
+            malformed = copy.deepcopy(generated_document)
+            mutate(malformed)
+            with self.subTest(lock_mutation=label):
+                self.assertFalse(
+                    validate_npm_manifest_lock(
+                        manifest_text,
+                        json.dumps(malformed),
+                    )
+                )
+        optional_mismatch = copy.deepcopy(manifest)
+        optional_mismatch["optionalDependencies"]["optional"] = "2"
+        self.assertFalse(
+            validate_npm_manifest_lock(
+                json.dumps(optional_mismatch), generated
+            )
+        )
+        peer_mismatch = copy.deepcopy(manifest)
+        peer_mismatch["peerDependencies"] = {"peer": "1"}
+        self.assertFalse(
+            validate_npm_manifest_lock(json.dumps(peer_mismatch), generated)
+        )
+        command, kwargs = calls[0]
+        self.assertEqual(command, ["/nix/store/fake-node/bin/npm", "install", *flags])
+        self.assertEqual(kwargs["env"]["CI"], "true")
+        self.assertNotEqual(kwargs["env"]["HOME"], os.environ.get("HOME"))
+        self.assertIn("npm_config_userconfig", kwargs["env"])
+        self.assertEqual(
+            kwargs["env"]["PATH"], "/nix/store/fake-node/bin"
+        )
+        self.assertEqual(
+            kwargs["env"]["npm_config_registry"],
+            "https://registry.npmjs.org",
+        )
+        self.assertEqual(kwargs["env"]["NODE_OPTIONS"], "")
+        self.assertEqual(kwargs["env"]["GIT_SSH_COMMAND"], "/usr/bin/false")
+        self.assertNotIn("SSH_AUTH_SOCK", kwargs["env"])
+        self.assertRegex(kwargs["env"]["HTTPS_PROXY"], r"^http://127[.]0[.]0[.]1:")
+        self.assertEqual(
+            kwargs["env"]["npm_config_https_proxy"],
+            kwargs["env"]["HTTPS_PROXY"],
+        )
+
+        for label, hostile_manifest in (
+            (
+                "git dependency",
+                {**manifest, "dependencies": {"bad": "git+ssh://example/repo"}},
+            ),
+            (
+                "file dependency",
+                {**manifest, "dependencies": {"bad": "file:/tmp/repo"}},
+            ),
+            (
+                "dot dependency",
+                {**manifest, "dependencies": {"bad": "."}},
+            ),
+            (
+                "whitespace dependency",
+                {**manifest, "dependencies": {"bad": " ^1.0.0 "}},
+            ),
+            (
+                "remote dependency",
+                {**manifest, "dependencies": {"bad": "https://example.invalid/a.tgz"}},
+            ),
+            (
+                "overrides",
+                {**manifest, "overrides": {"keep": "2.0.0"}},
+            ),
+        ):
+            before_calls = len(calls)
+            with self.subTest(hostile_manifest=label):
+                self.assertIsNone(
+                    generate_npm_lock(
+                        json.dumps(hostile_manifest),
+                        prior_lock,
+                        Path("/nix/store/fake-node/bin/npm"),
+                        flags,
+                        runner=fake_npm,
+                    )
+                )
+                self.assertEqual(len(calls), before_calls)
+
+        def mutating_npm(_command, **kwargs):
+            (Path(kwargs["cwd"]) / "package.json").write_text("{}\n")
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        self.assertIsNone(
+            generate_npm_lock(
+                manifest_text,
+                prior_lock,
+                Path("/nix/store/fake-node/bin/npm"),
+                flags,
+                runner=mutating_npm,
+            )
+        )
+
+    def test_pi_npm_lock_projection_updates_atomically(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            lock_dir = root / "packages/pi-gallery/locks"
+            lock_dir.mkdir(parents=True)
+            policy_path = root / "packages/pi-gallery/normalization-policy.json"
+            policy_path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "npmDependencyFlags": [
+                    "--ignore-scripts",
+                    "--omit=dev",
+                    "--omit=peer",
+                    "--legacy-peer-deps",
+                ],
+                "common": {
+                    "removeTopLevel": [],
+                    "forbidDependencies": [],
+                },
+                "targets": {
+                    "project": {
+                        "removeTopLevel": [],
+                        "forbidDependencies": [],
+                    }
+                },
+            }))
+            (root / "packages/pi-gallery/normalize-manifest.jq").write_text(".\n")
+            lock_path = lock_dir / "project-package-lock.json"
+            old_manifest = {"name": "project", "version": "1.0.0"}
+            old_lock = json.dumps({
+                "name": "project",
+                "version": "1.0.0",
+                "lockfileVersion": 3,
+                "packages": {"": old_manifest},
+            }, indent=2) + "\n"
+            lock_path.write_text(old_lock)
+            catalog_path = root / "sources/pi.json"
+            catalog_path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {
+                    "project": {
+                        "version": "1.0.0",
+                        "source": {
+                            "fetcher": "fetchurl",
+                            "url": "https://registry.npmjs.org/project/-/project-1.0.0.tgz",
+                            "args": {
+                                "url": "https://registry.npmjs.org/project/-/project-1.0.0.tgz",
+                                "hash": "sha256-source-old",
+                            },
+                        },
+                        "hashes": {"npmDepsHash": "sha256-npm-old"},
+                        "update": {
+                            "artifacts": [
+                                "packages/pi-gallery/locks/project-package-lock.json"
+                            ],
+                            "kind": "npm-release",
+                            "normalizer": "pi-gallery-v1",
+                            "package": "project",
+                        },
+                    }
+                },
+            }))
+            target = load_source_catalog(root)["project"]
+            self.assertEqual(target["executor"], "update-agents")
+            valid_catalog = catalog_path.read_text()
+
+            wrong_path = json.loads(valid_catalog)
+            wrong_path["sources"]["project"]["update"]["artifacts"] = [
+                "packages/pi-gallery/locks/wrong-package-lock.json"
+            ]
+            (lock_dir / "wrong-package-lock.json").write_text(old_lock)
+            catalog_path.write_text(json.dumps(wrong_path))
+            with self.assertRaisesRegex(
+                RuntimeError, "invalid Pi npm normalization projection"
+            ):
+                load_source_catalog(root)
+
+            future = json.loads(valid_catalog)
+            future_record = copy.deepcopy(future["sources"]["project"])
+            future_record["update"].pop("normalizer")
+            future_record["update"]["package"] = "future"
+            future_record["update"]["artifacts"] = [
+                "packages/pi-gallery/locks/future-package-lock.json"
+            ]
+            future_record["source"]["url"] = (
+                "https://registry.npmjs.org/future/-/future-1.0.0.tgz"
+            )
+            future_record["source"]["args"]["url"] = future_record["source"][
+                "url"
+            ]
+            future["sources"]["future"] = future_record
+            (lock_dir / "future-package-lock.json").write_text(old_lock)
+            catalog_path.write_text(json.dumps(future))
+            with self.assertRaisesRegex(RuntimeError, "target set differs"):
+                load_source_catalog(root)
+
+            catalog_path.write_text(valid_catalog)
+            real_lock = lock_dir / "project-package-lock.real"
+            lock_path.rename(real_lock)
+            lock_path.symlink_to(real_lock.name)
+            with self.assertRaisesRegex(RuntimeError, "missing artifacts"):
+                load_source_catalog(root)
+            lock_path.unlink()
+            real_lock.rename(lock_path)
+            catalog_path.write_text(valid_catalog)
+
+            class FakeHashes:
+                def __init__(self, valid=True):
+                    self.valid = valid
+                    self.calls = []
+
+                def compute_native_hash(self, _source, replacements):
+                    self.calls.append(("source", replacements))
+                    return "sha256-source-new"
+
+                def realize_native_source(self, _source, replacements):
+                    self.calls.append(("realize", replacements))
+                    return root / "source.tgz"
+
+                def resolve_build_tool(self, package, executable):
+                    self.calls.append(("tool", package, executable))
+                    return Path(f"/nix/store/fake-{package}/bin/{executable}")
+
+                def _compute_fod_hash(self, package, hash_type):
+                    self.calls.append(("dependent", package, hash_type))
+                    return "sha256-npm-new"
+
+                def validate_package_build(self, package):
+                    self.calls.append(("validate", package))
+                    return self.valid
+
+            normalized = json.dumps({
+                "name": "project",
+                "version": "2.0.0",
+                "dependencies": {"keep": "1"},
+            }, indent=2) + "\n"
+            new_lock = json.dumps({
+                "name": "project",
+                "version": "2.0.0",
+                "lockfileVersion": 3,
+                "packages": {
+                    "": {
+                        "name": "project",
+                        "version": "2.0.0",
+                        "dependencies": {"keep": "1"},
+                    }
+                },
+            }, indent=2) + "\n"
+            observed = []
+
+            def fake_normalizer(
+                _root, target_name, expected_name, version, raw, jq
+            ):
+                observed.append(
+                    ("normalize", target_name, expected_name, version, raw, jq)
+                )
+                return normalized
+
+            def fake_lock_generator(manifest, prior, npm, flags):
+                observed.append(("lock", manifest, prior, npm, tuple(flags)))
+                return new_lock
+
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_npm_lock_target(
+                    "project",
+                    target,
+                    SimpleNamespace(version="2.0.0", dry_run=False),
+                    SimpleNamespace(
+                        get_version_metadata=lambda _package, requested: {
+                            "version": requested,
+                            "integrity": "sha512-wrong",
+                            "tarball": (
+                                "https://registry.npmjs.org/project/-/"
+                                f"project-{requested}.tgz"
+                            ),
+                        }
+                    ),
+                    FakeHashes(),
+                    transaction,
+                    manifest_reader=lambda _path: self.fail(
+                        "manifest read preceded integrity validation"
+                    ),
+                    integrity_verifier=lambda _path, _integrity: False,
+                )
+            self.assertEqual(status, "failed")
+            self.assertEqual(transaction.original, {})
+            self.assertEqual(catalog_path.read_text(), valid_catalog)
+            self.assertEqual(lock_path.read_text(), old_lock)
+
+            hashes = FakeHashes()
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_npm_lock_target(
+                    "project",
+                    target,
+                    SimpleNamespace(version="2.0.0", dry_run=False),
+                    SimpleNamespace(
+                        get_version_metadata=lambda _package, requested: {
+                            "version": requested,
+                            "integrity": "sha512-integrity",
+                            "tarball": (
+                                "https://registry.npmjs.org/project/-/"
+                                f"project-{requested}.tgz"
+                            ),
+                        }
+                    ),
+                    hashes,
+                    transaction,
+                    manifest_reader=lambda _path: (
+                        '{"name":"project","version":"2.0.0"}',
+                        {"name": "project", "version": "2.0.0"},
+                    ),
+                    manifest_normalizer=fake_normalizer,
+                    lock_generator=fake_lock_generator,
+                    integrity_verifier=lambda _path, _integrity: True,
+                )
+            transaction.commit()
+            self.assertEqual(status, "updated")
+            updated = json.loads(catalog_path.read_text())["sources"]["project"]
+            self.assertEqual(updated["version"], "2.0.0")
+            self.assertEqual(updated["source"]["args"]["hash"], "sha256-source-new")
+            self.assertEqual(updated["hashes"]["npmDepsHash"], "sha256-npm-new")
+            self.assertEqual(lock_path.read_text(), new_lock)
+            self.assertEqual(
+                [call[0] for call in hashes.calls],
+                ["source", "realize", "tool", "tool", "dependent", "validate"],
+            )
+            self.assertEqual([item[0] for item in observed], ["normalize", "lock"])
+
+            current_target = load_source_catalog(root)["project"]
+            current_hashes = FakeHashes()
+            current_hashes.compute_native_hash = lambda _source, _replacements: (
+                "sha256-source-new"
+            )
+            transaction = SourceTransaction()
+            semantic_lock = json.loads(new_lock)
+            semantic_lock["requires"] = True
+            semantic_lock_text = json.dumps(
+                semantic_lock, sort_keys=True, separators=(",", ":")
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_npm_lock_target(
+                    "project",
+                    current_target,
+                    SimpleNamespace(version="2.0.0", dry_run=False),
+                    SimpleNamespace(
+                        get_version_metadata=lambda _package, requested: {
+                            "version": requested,
+                            "integrity": "sha512-integrity",
+                            "tarball": (
+                                "https://registry.npmjs.org/project/-/"
+                                f"project-{requested}.tgz"
+                            ),
+                        }
+                    ),
+                    current_hashes,
+                    transaction,
+                    manifest_reader=lambda _path: (
+                        '{"name":"project","version":"2.0.0"}',
+                        {"name": "project", "version": "2.0.0"},
+                    ),
+                    manifest_normalizer=fake_normalizer,
+                    lock_generator=lambda _manifest, _prior, _npm, _flags: (
+                        semantic_lock_text
+                    ),
+                    integrity_verifier=lambda _path, _integrity: True,
+                )
+            self.assertEqual(status, "skipped")
+            self.assertEqual(transaction.original, {})
+            self.assertEqual(lock_path.read_text(), new_lock)
+
+            stale_document = json.loads(catalog_path.read_text())
+            stale_document["sources"]["project"]["hashes"]["npmDepsHash"] = (
+                "sha256-stale"
+            )
+            catalog_path.write_text(json.dumps(stale_document))
+            repair_target = load_source_catalog(root)["project"]
+
+            class RepairHashes(FakeHashes):
+                def __init__(self):
+                    super().__init__()
+                    self.validation_results = iter((False, True))
+
+                def validate_package_build(self, package):
+                    self.calls.append(("validate", package))
+                    return next(self.validation_results)
+
+            repair_hashes = RepairHashes()
+            repair_hashes.compute_native_hash = lambda _source, _replacements: (
+                "sha256-source-new"
+            )
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_npm_lock_target(
+                    "project",
+                    repair_target,
+                    SimpleNamespace(version="2.0.0", dry_run=False),
+                    SimpleNamespace(
+                        get_version_metadata=lambda _package, requested: {
+                            "version": requested,
+                            "integrity": "sha512-integrity",
+                            "tarball": (
+                                "https://registry.npmjs.org/project/-/"
+                                f"project-{requested}.tgz"
+                            ),
+                        }
+                    ),
+                    repair_hashes,
+                    transaction,
+                    manifest_reader=lambda _path: (
+                        '{"name":"project","version":"2.0.0"}',
+                        {"name": "project", "version": "2.0.0"},
+                    ),
+                    manifest_normalizer=fake_normalizer,
+                    lock_generator=lambda _manifest, _prior, _npm, _flags: new_lock,
+                    integrity_verifier=lambda _path, _integrity: True,
+                )
+            transaction.commit()
+            self.assertEqual(status, "updated")
+            repaired = json.loads(catalog_path.read_text())["sources"]["project"]
+            self.assertEqual(repaired["hashes"]["npmDepsHash"], "sha256-npm-new")
+            self.assertEqual(
+                [call for call in repair_hashes.calls if call[0] == "validate"],
+                [("validate", "project"), ("validate", "project")],
+            )
+
+            before_catalog = catalog_path.read_text()
+            before_lock = lock_path.read_text()
+            failing_target = load_source_catalog(root)["project"]
+            failing_hashes = FakeHashes(valid=False)
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_npm_lock_target(
+                    "project",
+                    failing_target,
+                    SimpleNamespace(version="3.0.0", dry_run=False),
+                    SimpleNamespace(
+                        get_version_metadata=lambda _package, requested: {
+                            "version": requested,
+                            "integrity": "sha512-integrity",
+                            "tarball": (
+                                "https://registry.npmjs.org/project/-/"
+                                f"project-{requested}.tgz"
+                            ),
+                        }
+                    ),
+                    failing_hashes,
+                    transaction,
+                    manifest_reader=lambda _path: (
+                        '{"name":"project","version":"3.0.0"}',
+                        {"name": "project", "version": "3.0.0"},
+                    ),
+                    manifest_normalizer=lambda *_args: normalized.replace(
+                        "2.0.0", "3.0.0"
+                    ),
+                    lock_generator=lambda *_args: new_lock.replace(
+                        "2.0.0", "3.0.0"
+                    ),
+                    integrity_verifier=lambda _path, _integrity: True,
+                )
+            self.assertEqual(status, "failed")
+            self.assertEqual(transaction.rollback(), 2)
+            self.assertEqual(catalog_path.read_text(), before_catalog)
+            self.assertEqual(lock_path.read_text(), before_lock)
 
     def test_issue38_ws_uses_fetchzip_with_an_executor(self):
         record = {
@@ -2323,20 +3342,16 @@ got: sha256-requested
         }
         pending = {
             "cymbal",
-            "pi-artifacts",
-            "pi-dynamic-workflows",
-            "pi-hashline-edit-pro",
-            "pi-insights",
-            "pi-lens",
-            "pi-markdown-preview",
-            "pi-subagents",
-            "pi-smart-fetch",
-            "pi-smart-web-search",
             "rtk",
         }
         self.assertEqual(
             {item["name"] for item in inventory["packages"] if not item["managed"]},
             pending,
+        )
+        self.assertEqual(len(inventory["packages"]), 199)
+        self.assertEqual(
+            len([item for item in inventory["packages"] if item["managed"]]),
+            197,
         )
         self.assertFalse(package_owned & relocated)
         self.assertTrue(relocated <= catalog_owned)
@@ -2379,8 +3394,25 @@ got: sha256-requested
             {name for name in ISSUE41_TARGETS if by_name[name]["executor"] == "update-agents"},
             ISSUE41_TARGETS,
         )
-        self.assertFalse(by_name["pi-lens"]["managed"])
-        self.assertIsNone(by_name["pi-lens"]["executor"])
+        self.assertEqual(
+            {name for name in ISSUE39_TARGETS if by_name[name]["managed"]},
+            ISSUE39_TARGETS,
+        )
+        self.assertEqual(
+            {
+                name
+                for name in ISSUE39_TARGETS
+                if by_name[name]["executor"] == "update-agents"
+            },
+            ISSUE39_TARGETS,
+        )
+        self.assertTrue(
+            all(
+                manifest[name]["_record"]["update"].get("normalizer")
+                == "pi-gallery-v1"
+                for name in ISSUE39_TARGETS
+            )
+        )
         for item in inventory["packages"]:
             for path in item["files"]:
                 self.assertTrue((root / path).is_file(), (item["name"], path))
@@ -2494,6 +3526,8 @@ class IntegratedWorkflowTests(unittest.TestCase):
         (root / "projection.json").write_text("{}\n")
         (root / "projection.json").chmod(0o644)
         (root / "fixed.txt").write_text("fixed before\n")
+        (root / "npm-lock.txt").write_text("npm lock before\n")
+        (root / "npm-lock-second.txt").write_text("npm lock second before\n")
         (root / "pypi.txt").write_text("pypi before\n")
         (root / "github.txt").write_text("github before\n")
         (root / "config/ai/flake.nix").write_text("{ }\n")
@@ -2521,10 +3555,22 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 arguments = sys.argv[1:]
+internal_modes = {
+    "--prepare-fixed-inputs",
+    "--prepare-npm-flake-inputs",
+    "--prepare-npm-locks",
+    "--prepare-pypi-artifacts",
+    "--prepare-github-projections",
+    "--sync-flake-projections",
+}
+if internal_modes.intersection(arguments) and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
+    print("internal update requires update-agents candidate", file=sys.stderr)
+    raise SystemExit(77)
 declared = [
     "tracked.txt", "mode.sh", "binary.bin", "format.nix", "projection.json", "link",
     "regular-to-link", "link-to-regular", "renamed-old.txt", "renamed-new.txt",
-    "deleted.txt", "created.txt", "fixed.txt", "pypi.txt", "github.txt",
+    "deleted.txt", "created.txt", "fixed.txt", "npm-lock.txt", "npm-lock-second.txt",
+    "pypi.txt", "github.txt",
     "new-directory/generated-lock.json"
 ]
 if "--inventory" in arguments:
@@ -2538,7 +3584,7 @@ if "--inventory" in arguments:
     if os.environ.get("UPDATE_TEST_FIXED_TARGET") == "1":
         packages.append({
             "name": "fixed",
-            "files": ["fixed.txt", "config/ai/flake.nix"],
+            "files": ["fixed.txt", "projection.json", "config/ai/flake.nix"],
             "input": "fixed-input",
             "inventoried": True,
             "kind": "fixed-flake-input",
@@ -2571,7 +3617,7 @@ if "--inventory" in arguments:
     if os.environ.get("UPDATE_TEST_NPM_FLAKE_TARGET") == "1":
         packages.append({
             "name": "npm-flake",
-            "files": ["fixed.txt", "config/ai/flake.nix"],
+            "files": ["fixed.txt", "projection.json", "config/ai/flake.nix"],
             "input": "npm-flake-input",
             "inventoried": True,
             "kind": "npm-release+flake-input",
@@ -2585,6 +3631,26 @@ if "--inventory" in arguments:
             "files": ["pypi.txt"],
             "inventoried": True,
             "kind": "pypi-release",
+            "managed": True,
+            "executor": "update-agents",
+            "policy": "manual",
+        })
+    if os.environ.get("UPDATE_TEST_NPM_LOCK_TARGET") == "1":
+        packages.append({
+            "name": "npm-lock",
+            "files": ["npm-lock.txt"],
+            "inventoried": True,
+            "kind": "npm-release",
+            "managed": True,
+            "executor": "update-agents",
+            "policy": "manual",
+        })
+    if os.environ.get("UPDATE_TEST_NPM_LOCK_SECOND_TARGET") == "1":
+        packages.append({
+            "name": "npm-lock-second",
+            "files": ["npm-lock-second.txt"],
+            "inventoried": True,
+            "kind": "npm-release",
             "managed": True,
             "executor": "update-agents",
             "policy": "manual",
@@ -2614,6 +3680,20 @@ elif "--prepare-npm-flake-inputs" in arguments:
         print(f"unexpected npm flake preparation: {arguments}", file=sys.stderr)
         raise SystemExit(79)
     (root / "fixed.txt").write_text("npm flake after\\n")
+elif "--prepare-npm-locks" in arguments:
+    if arguments not in (
+        ["--prepare-npm-locks", "npm-lock"],
+        ["--prepare-npm-locks", "npm-lock", "npm-lock-second"],
+    ):
+        print(f"unexpected npm lock preparation: {arguments}", file=sys.stderr)
+        raise SystemExit(82)
+    (root / "npm-lock.txt").write_text("npm lock after\\n")
+    if "npm-lock-second" in arguments:
+        (root / "npm-lock-second.txt").write_text("npm lock second after\\n")
+        if os.environ.get("UPDATE_TEST_NPM_LOCK_SECOND_FAIL") == "1":
+            raise SystemExit(83)
+    if os.environ.get("UPDATE_TEST_MUTATE_OTHER_DECLARED") == "1":
+        (root / "github.txt").write_text("cross-target mutation\\n")
 elif "--prepare-pypi-artifacts" in arguments:
     if arguments != ["--prepare-pypi-artifacts", "pypi"]:
         print(f"unexpected PyPI preparation: {arguments}", file=sys.stderr)
@@ -3281,6 +4361,96 @@ fi
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("authoritative tree unchanged", result.stdout)
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_routes_npm_lock_projection_without_lock_updates(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            command_log = Path(temp_dir) / "commands.log"
+            environment["UPDATE_TEST_NPM_LOCK_TARGET"] = "1"
+            environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "npm-lock"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            self.assertEqual((root / "npm-lock.txt").read_text(), "npm lock after\n")
+            self.assertEqual((root / "projection.json").read_text(), "{}\n")
+            self.assertEqual(
+                command_log.read_text().splitlines(),
+                [
+                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check --no-build",
+                ],
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment["UPDATE_TEST_NPM_LOCK_TARGET"] = "1"
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "npm-lock", "--dry-run"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("authoritative tree unchanged", result.stdout)
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment.update(
+                UPDATE_TEST_NPM_LOCK_TARGET="1",
+                UPDATE_TEST_MUTATE_OTHER_DECLARED="1",
+            )
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "npm-lock"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("undeclared updater mutation", result.stderr)
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment.update(
+                UPDATE_TEST_NPM_LOCK_TARGET="1",
+                UPDATE_TEST_NPM_LOCK_SECOND_TARGET="1",
+                UPDATE_TEST_NPM_LOCK_SECOND_FAIL="1",
+            )
+            result = subprocess.run(
+                [
+                    str(UPDATE_AGENTS),
+                    "--target",
+                    "npm-lock",
+                    "--target",
+                    "npm-lock-second",
+                ],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
             self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_routes_github_projection_without_lock_updates(self):

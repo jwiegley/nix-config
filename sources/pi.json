@@ -104,6 +104,7 @@
           "packages/pi-gallery/locks/pi-artifacts-package-lock.json"
         ],
         "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
         "package": "@jakeryderv/pi-artifacts"
       },
       "version": "0.9.0"
@@ -204,6 +205,7 @@
           "packages/pi-gallery/locks/pi-dynamic-workflows-package-lock.json"
         ],
         "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
         "package": "@quintinshaw/pi-dynamic-workflows"
       },
       "version": "3.4.1"
@@ -240,6 +242,7 @@
           "packages/pi-gallery/locks/pi-hashline-edit-pro-package-lock.json"
         ],
         "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
         "package": "pi-hashline-edit-pro"
       },
       "version": "0.17.5"
@@ -261,6 +264,7 @@
           "packages/pi-gallery/locks/pi-insights-package-lock.json"
         ],
         "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
         "package": "@ygncode/pi-insights"
       },
       "version": "1.0.1"
@@ -282,6 +286,7 @@
           "packages/pi-gallery/locks/pi-lens-package-lock.json"
         ],
         "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
         "package": "pi-lens"
       },
       "version": "3.8.71"
@@ -303,6 +308,7 @@
           "packages/pi-gallery/locks/pi-markdown-preview-package-lock.json"
         ],
         "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
         "package": "pi-markdown-preview"
       },
       "version": "0.10.1"
@@ -451,6 +457,7 @@
           "packages/pi-gallery/locks/pi-smart-fetch-package-lock.json"
         ],
         "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
         "package": "pi-smart-fetch"
       },
       "version": "0.3.17"
@@ -472,6 +479,7 @@
           "packages/pi-gallery/locks/pi-smart-web-search-package-lock.json"
         ],
         "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
         "package": "pi-smart-web-search"
       },
       "version": "0.4.0"
@@ -493,6 +501,7 @@
           "packages/pi-gallery/locks/pi-subagents-package-lock.json"
         ],
         "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
         "package": "pi-subagents"
       },
       "version": "0.37.1"

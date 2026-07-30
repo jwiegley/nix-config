@@ -15,16 +15,24 @@ import argparse
 import atexit
 import base64
 import binascii
+import contextlib
 import copy
+import gzip
+import hashlib
+import hmac
 import json
 import os
 import re
+import select
+import socket
+import socketserver
 import subprocess
 import sys
 import tempfile
+import threading
 import tomllib
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Optional
 from urllib.parse import quote, urlsplit
 from urllib.request import urlopen
@@ -54,6 +62,90 @@ if not sys.stdout.isatty():
     Colors.disable()
 
 DUMMY_SRI_HASH = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+PI_NORMALIZATION_POLICY = Path("packages/pi-gallery/normalization-policy.json")
+PI_NORMALIZER = Path("packages/pi-gallery/normalize-manifest.jq")
+PI_NPM_REQUIRED_DEPENDENCY_FLAGS = (
+    "--ignore-scripts",
+    "--omit=dev",
+    "--omit=peer",
+    "--legacy-peer-deps",
+)
+PI_NPM_LOCK_EXTRA_FLAGS = (
+    "--package-lock-only",
+    "--no-audit",
+    "--no-fund",
+)
+MAX_NPM_TARBALL_BYTES = 256 * 1024 * 1024
+MAX_NPM_TAR_MEMBER_BYTES = 64 * 1024 * 1024
+MAX_NPM_TAR_DECLARED_BYTES = 256 * 1024 * 1024
+MAX_NPM_TAR_MEMBERS = 10000
+
+
+class _RegistryProxyServer(socketserver.ThreadingTCPServer):
+    allow_reuse_address = False
+    daemon_threads = True
+
+
+class _RegistryProxyHandler(socketserver.BaseRequestHandler):
+    def handle(self) -> None:
+        client = self.request
+        client.settimeout(30)
+        request = b""
+        try:
+            while b"\r\n\r\n" not in request and len(request) <= 65536:
+                chunk = client.recv(8192)
+                if not chunk:
+                    return
+                request += chunk
+            header, separator, remainder = request.partition(b"\r\n\r\n")
+            if not separator:
+                client.sendall(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+                return
+            parts = header.splitlines()[0].decode("ascii", "strict").split()
+            if (
+                len(parts) != 3
+                or parts[0].upper() != "CONNECT"
+                or parts[1].lower() != "registry.npmjs.org:443"
+            ):
+                client.sendall(b"HTTP/1.1 403 Forbidden\r\n\r\n")
+                return
+            upstream = socket.create_connection(("registry.npmjs.org", 443), 30)
+            try:
+                client.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+                if remainder:
+                    upstream.sendall(remainder)
+                sockets = (client, upstream)
+                while True:
+                    readable, _writable, _errors = select.select(sockets, [], [], 60)
+                    if not readable:
+                        return
+                    for source in readable:
+                        data = source.recv(65536)
+                        if not data:
+                            return
+                        destination = upstream if source is client else client
+                        destination.sendall(data)
+            finally:
+                upstream.close()
+        except (OSError, UnicodeError):
+            try:
+                client.sendall(b"HTTP/1.1 502 Bad Gateway\r\n\r\n")
+            except OSError:
+                pass
+
+
+@contextlib.contextmanager
+def registry_only_proxy():
+    server = _RegistryProxyServer(("127.0.0.1", 0), _RegistryProxyHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        host, port = server.server_address
+        yield f"http://{host}:{port}"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
 
 
 @dataclass
@@ -536,11 +628,22 @@ class NpmRegistryClient:
             return None
 
         version_info = data.get("versions", {}).get(version, {})
-        integrity = version_info.get("dist", {}).get("integrity")
-        if not integrity:
+        distribution = version_info.get("dist", {})
+        integrity = distribution.get("integrity")
+        tarball = distribution.get("tarball")
+        if (
+            not isinstance(integrity, str)
+            or not integrity
+            or not isinstance(tarball, str)
+            or not tarball.startswith("https://registry.npmjs.org/")
+        ):
             return None
 
-        metadata = {"version": version, "integrity": integrity}
+        metadata = {
+            "version": version,
+            "integrity": integrity,
+            "tarball": tarball,
+        }
         git_head = version_info.get("gitHead")
         if isinstance(git_head, str) and git_head:
             metadata["gitHead"] = git_head
@@ -671,6 +774,95 @@ class HashComputer:
 
     def __init__(self, repo_dir: Path):
         self.repo_dir = repo_dir
+        self._tool_paths: dict[tuple[str, str], Path] = {}
+
+    def _realize_nix_expression(
+        self,
+        expression: str,
+        *,
+        timeout: int = 600,
+        runner=subprocess.run,
+    ) -> Optional[Path]:
+        try:
+            result = runner(
+                [
+                    "nix",
+                    "build",
+                    "--impure",
+                    "--no-link",
+                    "--print-out-paths",
+                    "--expr",
+                    expression,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=self.repo_dir,
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            print(f"  Error realizing Nix input: {error}", file=sys.stderr)
+            return None
+        outputs = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        if result.returncode != 0 or len(outputs) != 1:
+            return None
+        output = Path(outputs[0])
+        return output if output.is_absolute() else None
+
+    def resolve_build_tool(
+        self,
+        package: str,
+        executable: str,
+        *,
+        runner=subprocess.run,
+    ) -> Optional[Path]:
+        """Resolve one executable from the repository-locked build package set."""
+        if (
+            re.fullmatch(r"[A-Za-z0-9_+-]+", package) is None
+            or Path(executable).name != executable
+            or not executable
+        ):
+            return None
+        key = package, executable
+        if key in self._tool_paths:
+            return self._tool_paths[key]
+        expression = f"""
+let
+  flake = builtins.getFlake (toString {json.dumps(str(self.repo_dir))});
+  pkgs = import flake.inputs.nix-config-ai.inputs.nixpkgs {{
+    system = builtins.currentSystem;
+  }};
+in
+  pkgs.lib.getBin pkgs.buildPackages.{package}
+"""
+        package_path = self._realize_nix_expression(expression, runner=runner)
+        if package_path is None:
+            return None
+        tool = package_path / "bin" / executable
+        if not tool.is_file() or not os.access(tool, os.X_OK):
+            return None
+        self._tool_paths[key] = tool
+        return tool
+
+    def realize_native_source(
+        self, source: dict, replacements: dict
+    ) -> Optional[Path]:
+        """Realize exact native fetcher bytes after their hash is known."""
+        args = copy.deepcopy(source["args"])
+        args.update(replacements)
+        fetcher = source["fetcher"]
+        if fetcher not in {"fetchurl", "fetchzip"}:
+            return None
+        expression = f"""
+let
+  flake = builtins.getFlake (toString {json.dumps(str(self.repo_dir))});
+  pkgs = import flake.inputs.nix-config-ai.inputs.nixpkgs {{
+    system = builtins.currentSystem;
+  }};
+  args = builtins.fromJSON {json.dumps(json.dumps(args))};
+in
+  pkgs.{fetcher} args
+"""
+        return self._realize_nix_expression(expression)
 
     def compute_src_hash(self, owner: str, repo: str, rev: str) -> Optional[str]:
         """Compute source hash using nix-prefetch-github."""
@@ -972,6 +1164,466 @@ def _unique_object(pairs):
     return result
 
 
+def _string_list(value: object, label: str) -> list[str]:
+    if (
+        not isinstance(value, list)
+        or not all(isinstance(item, str) and item for item in value)
+        or len(value) != len(set(value))
+    ):
+        raise RuntimeError(f"{label} must be a unique list of nonempty strings")
+    return value
+
+
+def load_pi_normalization_contract(nix_dir: Path) -> dict:
+    path = nix_dir / PI_NORMALIZATION_POLICY
+    normalizer = nix_dir / PI_NORMALIZER
+    if (
+        path.is_symlink()
+        or not path.is_file()
+        or normalizer.is_symlink()
+        or not normalizer.is_file()
+    ):
+        raise RuntimeError("Pi npm normalization contract files are missing or unsafe")
+    try:
+        contract = json.loads(path.read_text(), object_pairs_hook=_unique_object)
+    except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"cannot load Pi npm normalization contract: {error}") from error
+    if not isinstance(contract, dict) or set(contract) != {
+        "schemaVersion",
+        "npmDependencyFlags",
+        "common",
+        "targets",
+    }:
+        raise RuntimeError("invalid Pi npm normalization contract fields")
+    if contract["schemaVersion"] != 1:
+        raise RuntimeError("unsupported Pi npm normalization contract schema")
+    dependency_flags = _string_list(
+        contract["npmDependencyFlags"], "Pi npm dependency flags"
+    )
+    if tuple(dependency_flags) != PI_NPM_REQUIRED_DEPENDENCY_FLAGS:
+        raise RuntimeError("Pi npm dependency flags omit required safety policy")
+
+    def validate_policy(value: object, label: str) -> None:
+        if not isinstance(value, dict) or set(value) != {
+            "removeTopLevel",
+            "forbidDependencies",
+        }:
+            raise RuntimeError(f"invalid {label} fields")
+        _string_list(value["removeTopLevel"], f"{label}.removeTopLevel")
+        _string_list(value["forbidDependencies"], f"{label}.forbidDependencies")
+
+    validate_policy(contract["common"], "Pi npm common normalization policy")
+    targets = contract["targets"]
+    if not isinstance(targets, dict) or not targets:
+        raise RuntimeError("Pi npm normalization targets must be a nonempty object")
+    for name, policy in targets.items():
+        if not isinstance(name, str) or re.fullmatch(r"[a-z0-9][a-z0-9-]*", name) is None:
+            raise RuntimeError("invalid Pi npm normalization target name")
+        validate_policy(policy, f"Pi npm normalization target {name}")
+        removed = set(contract["common"]["removeTopLevel"]) | set(
+            policy["removeTopLevel"]
+        )
+        if removed & {"name", "version", "dependencies", "optionalDependencies"}:
+            raise RuntimeError(
+                f"Pi npm normalization target removes a protected field: {name}"
+            )
+    return contract
+
+
+def pi_npm_lock_flags(contract: dict) -> list[str]:
+    return [
+        PI_NPM_LOCK_EXTRA_FLAGS[0],
+        *contract["npmDependencyFlags"],
+        *PI_NPM_LOCK_EXTRA_FLAGS[1:],
+    ]
+
+
+def verify_npm_integrity(path: Path, integrity: str) -> bool:
+    candidates: list[tuple[str, str]] = []
+    for token in integrity.split():
+        algorithm, separator, encoded = token.partition("-")
+        if separator and algorithm in {"sha1", "sha256", "sha384", "sha512"}:
+            candidates.append((algorithm, encoded))
+    if not candidates or not path.is_file() or path.is_symlink():
+        return False
+    strength = {"sha1": 1, "sha256": 2, "sha384": 3, "sha512": 4}
+    strongest = max(candidates, key=lambda item: strength[item[0]])[0]
+    strongest_candidates = [
+        (algorithm, encoded)
+        for algorithm, encoded in candidates
+        if algorithm == strongest
+    ]
+    digest = hashlib.new(strongest)
+    try:
+        with path.open("rb") as stream:
+            while chunk := stream.read(1024 * 1024):
+                digest.update(chunk)
+    except OSError:
+        return False
+    actual = base64.b64encode(digest.digest()).decode()
+    return any(
+        hmac.compare_digest(actual, encoded)
+        for _algorithm, encoded in strongest_candidates
+    )
+
+
+def read_npm_tarball_manifest(path: Path) -> tuple[str, dict]:
+    """Read package/package.json with bounded raw tar-header processing."""
+
+    def read_exact(stream, length: int) -> bytes:
+        chunks = []
+        remaining = length
+        while remaining:
+            chunk = stream.read(min(remaining, 1024 * 1024))
+            if not chunk:
+                raise RuntimeError("npm tarball ended before the declared member size")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        return b"".join(chunks)
+
+    def parse_octal(field: bytes, label: str) -> int:
+        if field and field[0] & 0x80:
+            raise RuntimeError(f"npm tarball uses unsupported base-256 {label}")
+        value = field.rstrip(b"\0 ").lstrip(b" ") or b"0"
+        if re.fullmatch(rb"[0-7]+", value) is None:
+            raise RuntimeError(f"npm tarball has invalid {label}")
+        return int(value, 8)
+
+    try:
+        if path.stat().st_size > MAX_NPM_TARBALL_BYTES:
+            raise RuntimeError("npm tarball exceeds the 256 MiB safety limit")
+        manifests = []
+        declared_size = 0
+        with gzip.open(path, mode="rb") as archive:
+            for count in range(1, MAX_NPM_TAR_MEMBERS + 2):
+                header = read_exact(archive, 512)
+                if header == b"\0" * 512:
+                    break
+                if count > MAX_NPM_TAR_MEMBERS:
+                    raise RuntimeError("npm tarball exceeds the member-count safety limit")
+                stored_checksum = parse_octal(header[148:156], "header checksum")
+                calculated_checksum = sum(header[:148]) + (8 * ord(" ")) + sum(
+                    header[156:]
+                )
+                if stored_checksum != calculated_checksum:
+                    raise RuntimeError("npm tarball header checksum is invalid")
+                size = parse_octal(header[124:136], "member size")
+                if size > MAX_NPM_TAR_MEMBER_BYTES:
+                    raise RuntimeError("npm tarball member exceeds the size safety limit")
+                declared_size += size
+                if declared_size > MAX_NPM_TAR_DECLARED_BYTES:
+                    raise RuntimeError("npm tarball exceeds the declared-size safety limit")
+                typeflag = header[156:157]
+                if typeflag in {b"x", b"g", b"L", b"K"}:
+                    raise RuntimeError("npm tarball extended headers are unsupported")
+                name = header[0:100].split(b"\0", 1)[0]
+                prefix = header[345:500].split(b"\0", 1)[0]
+                encoded_path = b"/".join(part for part in (prefix, name) if part)
+                member_path = PurePosixPath(encoded_path.decode("utf-8"))
+                if member_path.is_absolute() or ".." in member_path.parts:
+                    raise RuntimeError("npm tarball contains an unsafe member path")
+                payload = read_exact(archive, size)
+                padding = (-size) % 512
+                if padding:
+                    read_exact(archive, padding)
+                parts = tuple(part for part in member_path.parts if part != ".")
+                if parts == ("package", "package.json"):
+                    if typeflag not in {b"", b"0"}:
+                        raise RuntimeError(
+                            "npm tarball package.json must be a regular file"
+                        )
+                    if size > 1024 * 1024:
+                        raise RuntimeError(
+                            "npm tarball package.json exceeds the 1 MiB safety limit"
+                        )
+                    manifests.append(payload)
+            else:
+                raise RuntimeError("npm tarball has no end marker")
+        if len(manifests) != 1:
+            raise RuntimeError("npm tarball must contain one bounded package/package.json")
+        raw = manifests[0].decode("utf-8")
+    except (OSError, UnicodeError, EOFError, gzip.BadGzipFile) as error:
+        raise RuntimeError(f"cannot read npm tarball manifest: {error}") from error
+    try:
+        manifest = json.loads(raw, object_pairs_hook=_unique_object)
+    except (ValueError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"npm tarball package.json is invalid: {error}") from error
+    if not isinstance(manifest, dict):
+        raise RuntimeError("npm tarball package.json must be an object")
+    return raw, manifest
+
+
+def normalize_pi_manifest(
+    nix_dir: Path,
+    target: str,
+    expected_name: str,
+    expected_version: str,
+    raw_manifest: str,
+    jq: Path,
+    runner=subprocess.run,
+) -> Optional[str]:
+    contract = load_pi_normalization_contract(nix_dir)
+    if target not in contract["targets"]:
+        return None
+    command = [
+        str(jq),
+        "--arg",
+        "target",
+        target,
+        "--arg",
+        "expectedName",
+        expected_name,
+        "--arg",
+        "expectedVersion",
+        expected_version,
+        "--slurpfile",
+        "policy",
+        str(nix_dir / PI_NORMALIZATION_POLICY),
+        "-f",
+        str(nix_dir / PI_NORMALIZER),
+    ]
+    try:
+        result = runner(
+            command,
+            input=raw_manifest,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            cwd=nix_dir,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0 or not result.stdout:
+        return None
+    try:
+        normalized = json.loads(result.stdout, object_pairs_hook=_unique_object)
+    except (ValueError, json.JSONDecodeError):
+        return None
+    if (
+        not isinstance(normalized, dict)
+        or normalized.get("name") != expected_name
+        or normalized.get("version") != expected_version
+    ):
+        return None
+    return result.stdout
+
+
+def validate_npm_manifest_lock(manifest_text: str, lock_text: str) -> bool:
+    try:
+        manifest = json.loads(manifest_text, object_pairs_hook=_unique_object)
+        lock = json.loads(lock_text, object_pairs_hook=_unique_object)
+    except (ValueError, json.JSONDecodeError):
+        return False
+    if not isinstance(manifest, dict) or not isinstance(lock, dict):
+        return False
+    packages = lock.get("packages")
+    root = packages.get("") if isinstance(packages, dict) else None
+    if (
+        lock.get("lockfileVersion") != 3
+        or not isinstance(root, dict)
+        or lock.get("name") != manifest.get("name")
+        or lock.get("version") != manifest.get("version")
+        or root.get("name") != manifest.get("name")
+        or root.get("version") != manifest.get("version")
+    ):
+        return False
+    for field in (
+        "dependencies",
+        "devDependencies",
+        "optionalDependencies",
+        "peerDependencies",
+        "peerDependenciesMeta",
+    ):
+        manifest_value = manifest.get(field, {})
+        root_value = root.get(field, {})
+        if not isinstance(manifest_value, dict) or not isinstance(root_value, dict):
+            return False
+        if manifest_value != root_value:
+            return False
+    for package_path, descriptor in packages.items():
+        if package_path == "":
+            continue
+        if not isinstance(descriptor, dict) or descriptor.get("link") is True:
+            return False
+        resolved = descriptor.get("resolved")
+        integrity = descriptor.get("integrity")
+        integrity_match = (
+            re.fullmatch(r"(sha(?:1|256|384|512))-([A-Za-z0-9+/=]+)", integrity)
+            if isinstance(integrity, str)
+            else None
+        )
+        try:
+            integrity_bytes = (
+                base64.b64decode(integrity_match.group(2), validate=True)
+                if integrity_match is not None
+                else b""
+            )
+        except (ValueError, binascii.Error):
+            integrity_bytes = b""
+        if (
+            not isinstance(resolved, str)
+            or not resolved.startswith("https://registry.npmjs.org/")
+            or integrity_match is None
+            or len(integrity_bytes)
+            != hashlib.new(integrity_match.group(1)).digest_size
+        ):
+            return False
+    return True
+
+
+def npm_lock_documents_equal(left: str, right: str) -> bool:
+    try:
+        documents = [
+            json.loads(value, object_pairs_hook=_unique_object)
+            for value in (left, right)
+        ]
+    except (ValueError, json.JSONDecodeError):
+        return False
+    for document in documents:
+        if (
+            isinstance(document, dict)
+            and document.get("lockfileVersion") == 3
+            and document.get("requires") is True
+        ):
+            document.pop("requires")
+    return documents[0] == documents[1]
+
+
+def validate_npm_resolution_manifest(manifest_text: str) -> bool:
+    try:
+        manifest = json.loads(manifest_text, object_pairs_hook=_unique_object)
+    except (ValueError, json.JSONDecodeError):
+        return False
+    if not isinstance(manifest, dict):
+        return False
+    if any(
+        manifest.get(field) not in (None, {}, [])
+        for field in (
+            "bundleDependencies",
+            "bundledDependencies",
+            "overrides",
+            "resolutions",
+            "workspaces",
+        )
+    ):
+        return False
+    package_name = re.compile(
+        r"(?:@[a-z0-9._-]+/[a-z0-9._-]+|[a-z0-9._-]+)", re.IGNORECASE
+    )
+    registry_spec = re.compile(r"[A-Za-z0-9*<>=~^| .+_-]+")
+
+    def safe_spec(value: object) -> bool:
+        if (
+            not isinstance(value, str)
+            or not value
+            or value.strip() != value
+            or value in {".", ".."}
+            or value.startswith(("./", "../", "/"))
+        ):
+            return False
+        if value.startswith("npm:"):
+            alias = value.removeprefix("npm:")
+            package, separator, version = alias.rpartition("@")
+            return bool(
+                separator
+                and package_name.fullmatch(package)
+                and registry_spec.fullmatch(version)
+            )
+        return registry_spec.fullmatch(value) is not None
+
+    for field in ("dependencies", "optionalDependencies"):
+        dependencies = manifest.get(field, {})
+        if not isinstance(dependencies, dict):
+            return False
+        if not all(
+            isinstance(name, str)
+            and package_name.fullmatch(name)
+            and safe_spec(specification)
+            for name, specification in dependencies.items()
+        ):
+            return False
+    return True
+
+
+def generate_npm_lock(
+    normalized_manifest: str,
+    previous_lock: str,
+    npm: Path,
+    flags: list[str],
+    runner=subprocess.run,
+    proxy_factory=registry_only_proxy,
+) -> Optional[str]:
+    if not validate_npm_resolution_manifest(normalized_manifest):
+        return None
+    with tempfile.TemporaryDirectory(prefix="update-overlay-npm-lock-") as temp_dir:
+        root = Path(temp_dir)
+        manifest_path = root / "package.json"
+        lock_path = root / "package-lock.json"
+        manifest_path.write_text(normalized_manifest)
+        lock_path.write_text(previous_lock)
+        user_npmrc = root / "user.npmrc"
+        global_npmrc = root / "global.npmrc"
+        user_npmrc.write_text("")
+        global_npmrc.write_text("")
+        home = root / "home"
+        cache = root / "cache"
+        home.mkdir()
+        cache.mkdir()
+        environment = {
+            key: os.environ[key]
+            for key in (
+                "LANG",
+                "LC_ALL",
+                "NIX_SSL_CERT_FILE",
+                "SSL_CERT_FILE",
+                "TZ",
+            )
+            if key in os.environ
+        }
+        environment.update(
+            HOME=str(home),
+            CI="true",
+            PATH=str(npm.parent),
+            GIT_CONFIG_GLOBAL="/dev/null",
+            GIT_CONFIG_NOSYSTEM="1",
+            GIT_SSH_COMMAND="/usr/bin/false",
+            NODE_OPTIONS="",
+            NODE_PATH="",
+            npm_config_cache=str(cache),
+            npm_config_git="/usr/bin/false",
+            npm_config_userconfig=str(user_npmrc),
+            npm_config_globalconfig=str(global_npmrc),
+            npm_config_registry="https://registry.npmjs.org",
+            npm_config_update_notifier="false",
+        )
+        try:
+            with proxy_factory() as proxy:
+                environment.update(
+                    ALL_PROXY=proxy,
+                    HTTP_PROXY=proxy,
+                    HTTPS_PROXY=proxy,
+                    NO_PROXY="",
+                    npm_config_https_proxy=proxy,
+                    npm_config_proxy=proxy,
+                )
+                result = runner(
+                    [str(npm), "install", *flags],
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                    cwd=root,
+                    env=environment,
+                )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if result.returncode != 0 or manifest_path.read_text() != normalized_manifest:
+            return None
+        if lock_path.is_symlink() or not lock_path.is_file() or lock_path.stat().st_size > 20 * 1024 * 1024:
+            return None
+        generated = lock_path.read_text()
+        return generated if validate_npm_manifest_lock(normalized_manifest, generated) else None
+
+
 def _validate_https(name: str, value: object) -> str:
     if not isinstance(value, str) or not value.startswith("https://"):
         raise RuntimeError(f"source catalog URL must use HTTPS: {name}")
@@ -1139,6 +1791,8 @@ def _validate_fetch_record(name: str, source: dict) -> None:
 
 def _catalog_executor(record: dict) -> Optional[str]:
     update = record["update"]
+    if update["kind"] == "npm-release" and update.get("normalizer") == "pi-gallery-v1":
+        return "update-agents"
     if update["kind"] == "github-release-asset" or update.get("buildMode") or update.get(
         "artifactSources"
     ):
@@ -1179,6 +1833,15 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
     """Load data-only package source records from sources/*.json."""
     catalog_dir = nix_dir / "sources"
     targets = {}
+    normalization_path = nix_dir / PI_NORMALIZATION_POLICY
+    pi_normalization = (
+        load_pi_normalization_contract(nix_dir)
+        if normalization_path.is_file()
+        else None
+    )
+    pi_npm_targets: set[str] = set()
+    pi_lock_shape_targets: set[str] = set()
+    pi_lock_owners: dict[str, str] = {}
     allowed = {
         "artifacts", "commit", "date", "hashes", "source", "update", "version",
     }
@@ -1204,7 +1867,10 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             common_update_fields | {"assets", "owner", "repo", "tagPrefix"},
             {"assets", "owner", "repo", "tagPrefix"},
         ),
-        "npm-release": (common_update_fields | {"package"}, {"package"}),
+        "npm-release": (
+            common_update_fields | {"normalizer", "package"},
+            {"package"},
+        ),
         "npm-release+flake-input": (
             common_update_fields | {"input", "package"},
             {"input", "package"},
@@ -1405,9 +2071,47 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 raise RuntimeError(
                     f"source catalog record {name} references unsafe artifacts: {invalid_artifacts}"
                 )
-            missing_artifacts = [value for value in update_artifacts if not (nix_dir / value).is_file()]
+            missing_artifacts = [
+                value
+                for value in update_artifacts
+                if not (nix_dir / value).is_file()
+                or (nix_dir / value).is_symlink()
+            ]
             if missing_artifacts:
                 raise RuntimeError(f"source catalog record {name} references missing artifacts: {missing_artifacts}")
+            pi_lock_shape = (
+                path.name == "pi.json"
+                and kind == "npm-release"
+                and bool(update_artifacts)
+                and set(hashes) == {"npmDepsHash"}
+            )
+            if pi_lock_shape:
+                pi_lock_shape_targets.add(name)
+            normalizer = update.get("normalizer")
+            if normalizer is not None:
+                canonical_lock = (
+                    f"packages/pi-gallery/locks/{name}-package-lock.json"
+                )
+                if (
+                    normalizer != "pi-gallery-v1"
+                    or kind != "npm-release"
+                    or path.name != "pi.json"
+                    or pi_normalization is None
+                    or name not in pi_normalization["targets"]
+                    or source_fetcher != "fetchurl"
+                    or artifacts
+                    or update_artifacts != [canonical_lock]
+                    or set(hashes) != {"npmDepsHash"}
+                ):
+                    raise RuntimeError(
+                        f"invalid Pi npm normalization projection: {name}"
+                    )
+                pi_npm_targets.add(name)
+                previous_owner = pi_lock_owners.setdefault(canonical_lock, name)
+                if previous_owner != name:
+                    raise RuntimeError(
+                        f"Pi npm lock artifact has multiple owners: {canonical_lock}"
+                    )
             if build_mode is not None and (artifacts or update_artifacts):
                 raise RuntimeError(
                     f"dependent-hash projection cannot also declare artifacts: {name}"
@@ -1445,6 +2149,12 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 "_path": path,
                 "_record": record,
             }
+    if pi_normalization is not None:
+        policy_targets = set(pi_normalization["targets"])
+        if pi_lock_shape_targets != policy_targets or pi_npm_targets != policy_targets:
+            raise RuntimeError(
+                "Pi npm normalization target set differs from catalog projections"
+            )
     return targets
 
 
@@ -1854,6 +2564,130 @@ def update_npm_flake_target(
     git_args["narHash"] = new_git_hash
     _rewrite_npm_flake_input_literal(target, new_rev)
     _write_catalog_target(target)
+    print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
+    return "updated"
+
+
+def update_npm_lock_target(
+    name: str,
+    target: dict,
+    args,
+    npm_client: NpmRegistryClient,
+    hash_computer: HashComputer,
+    transaction,
+    *,
+    manifest_reader=read_npm_tarball_manifest,
+    manifest_normalizer=normalize_pi_manifest,
+    lock_generator=generate_npm_lock,
+    integrity_verifier=verify_npm_integrity,
+) -> str:
+    """Regenerate one Pi npm lock from the shared normalized manifest."""
+    record = target["_record"]
+    source = record["source"]
+    source_args = source["args"]
+    update = record["update"]
+    old_version = record["version"]
+    metadata = npm_client.get_version_metadata(update["package"], args.version)
+    if metadata is None:
+        print(f"catalog/{name} {Colors.RED}✗ npm lookup failed{Colors.RESET}")
+        return "failed"
+    new_version = metadata["version"]
+    registry_integrity = metadata["integrity"]
+    new_url = metadata["tarball"]
+    current_url = source_args["url"]
+    if current_url.count(old_version) != 1:
+        print(f"catalog/{name} {Colors.RED}✗ source URL rewrite failed{Colors.RESET}")
+        return "failed"
+    if current_url.replace(old_version, new_version, 1) != new_url:
+        print(f"catalog/{name} {Colors.RED}✗ registry tarball mismatch{Colors.RESET}")
+        return "failed"
+    hash_name = next(iter({"hash", "sha256"} & source_args.keys()))
+    new_source_hash = hash_computer.compute_native_hash(source, {"url": new_url})
+    if not new_source_hash:
+        print(f"catalog/{name} {Colors.RED}✗ source hash failed{Colors.RESET}")
+        return "failed"
+    source_path = hash_computer.realize_native_source(
+        source,
+        {"url": new_url, hash_name: new_source_hash},
+    )
+    jq = hash_computer.resolve_build_tool("jq", "jq")
+    npm = hash_computer.resolve_build_tool("nodejs_22", "npm")
+    if source_path is None or jq is None or npm is None:
+        print(f"catalog/{name} {Colors.RED}✗ locked toolchain failed{Colors.RESET}")
+        return "failed"
+    if not integrity_verifier(source_path, registry_integrity):
+        print(f"catalog/{name} {Colors.RED}✗ registry integrity mismatch{Colors.RESET}")
+        return "failed"
+    try:
+        raw_manifest, _raw_document = manifest_reader(source_path)
+    except RuntimeError as error:
+        print(f"catalog/{name} {Colors.RED}✗ {error}{Colors.RESET}")
+        return "failed"
+    normalized_manifest = manifest_normalizer(
+        target["_path"].parent.parent,
+        name,
+        update["package"],
+        new_version,
+        raw_manifest,
+        jq,
+    )
+    if normalized_manifest is None:
+        print(f"catalog/{name} {Colors.RED}✗ normalization failed{Colors.RESET}")
+        return "failed"
+    lock_relative = update["artifacts"][0]
+    lock_path = target["_path"].parent.parent / lock_relative
+    previous_lock = lock_path.read_text()
+    contract = load_pi_normalization_contract(target["_path"].parent.parent)
+    generated_lock = lock_generator(
+        normalized_manifest,
+        previous_lock,
+        npm,
+        pi_npm_lock_flags(contract),
+    )
+    if generated_lock is None or not validate_npm_manifest_lock(
+        normalized_manifest, generated_lock
+    ):
+        print(f"catalog/{name} {Colors.RED}✗ lock generation failed{Colors.RESET}")
+        return "failed"
+
+    final_lock = (
+        previous_lock
+        if npm_lock_documents_equal(generated_lock, previous_lock)
+        else generated_lock
+    )
+    changed = (
+        record["version"] != new_version
+        or source_args["url"] != new_url
+        or source_args[hash_name] != new_source_hash
+        or final_lock != previous_lock
+    )
+    if not changed:
+        if hash_computer.validate_package_build(name):
+            print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
+            return "skipped"
+        changed = True
+    if args.dry_run:
+        print(f"catalog/{name} {Colors.CYAN}→ {new_version} (dry-run){Colors.RESET}")
+        return "updated"
+
+    transaction.watch(target["_path"])
+    transaction.watch(lock_path)
+    record["version"] = new_version
+    source["url"] = new_url
+    source_args["url"] = new_url
+    source_args[hash_name] = new_source_hash
+    lock_path.write_text(final_lock)
+    record["hashes"]["npmDepsHash"] = DUMMY_SRI_HASH
+    _write_catalog_target(target)
+    new_npm_hash = hash_computer._compute_fod_hash(name, "npmDepsHash")
+    if not new_npm_hash:
+        print(f"catalog/{name} {Colors.RED}✗ npmDepsHash failed{Colors.RESET}")
+        return "failed"
+    record["hashes"]["npmDepsHash"] = new_npm_hash
+    _write_catalog_target(target)
+    if not hash_computer.validate_package_build(name):
+        print(f"catalog/{name} {Colors.RED}✗ final package build failed{Colors.RESET}")
+        return "failed"
     print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
     return "updated"
 
@@ -2577,6 +3411,9 @@ Examples:
         "--prepare-npm-flake-inputs", action="store_true", help=argparse.SUPPRESS
     )
     parser.add_argument(
+        "--prepare-npm-locks", action="store_true", help=argparse.SUPPRESS
+    )
+    parser.add_argument(
         "--prepare-pypi-artifacts", action="store_true", help=argparse.SUPPRESS
     )
     parser.add_argument(
@@ -2592,6 +3429,7 @@ Examples:
         and not args.sync_flake_projections
         and not args.prepare_fixed_inputs
         and not args.prepare_npm_flake_inputs
+        and not args.prepare_npm_locks
         and not args.prepare_pypi_artifacts
         and not args.prepare_github_projections
     ):
@@ -2608,6 +3446,7 @@ Examples:
         or args.no_build
         or args.verbose
         or args.json_output
+        or args.prepare_npm_locks
         or args.prepare_pypi_artifacts
         or args.prepare_github_projections
     ):
@@ -2617,6 +3456,7 @@ Examples:
         args.inventory
         or args.all
         or args.sync_flake_projections
+        or args.prepare_npm_locks
         or args.dry_run
         or args.no_build
         or args.verbose
@@ -2629,6 +3469,7 @@ Examples:
         or args.all
         or args.sync_flake_projections
         or args.prepare_fixed_inputs
+        or args.prepare_npm_locks
         or args.dry_run
         or args.no_build
         or args.verbose
@@ -2644,6 +3485,7 @@ Examples:
         or args.sync_flake_projections
         or args.prepare_fixed_inputs
         or args.prepare_npm_flake_inputs
+        or args.prepare_npm_locks
         or args.dry_run
         or args.no_build
         or args.verbose
@@ -2658,6 +3500,7 @@ Examples:
         or args.sync_flake_projections
         or args.prepare_fixed_inputs
         or args.prepare_npm_flake_inputs
+        or args.prepare_npm_locks
         or args.prepare_pypi_artifacts
         or args.dry_run
         or args.no_build
@@ -2665,6 +3508,21 @@ Examples:
         or args.json_output
     ):
         parser.error("--prepare-github-projections cannot be combined with another operation")
+
+    if args.prepare_npm_locks and (
+        args.inventory
+        or args.all
+        or args.sync_flake_projections
+        or args.prepare_fixed_inputs
+        or args.prepare_npm_flake_inputs
+        or args.prepare_pypi_artifacts
+        or args.prepare_github_projections
+        or args.dry_run
+        or args.no_build
+        or args.verbose
+        or args.json_output
+    ):
+        parser.error("--prepare-npm-locks cannot be combined with another operation")
 
     if args.sync_flake_projections and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--sync-flake-projections is restricted to the update-agents candidate")
@@ -2674,6 +3532,9 @@ Examples:
 
     if args.prepare_npm_flake_inputs and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--prepare-npm-flake-inputs is restricted to the update-agents candidate")
+
+    if args.prepare_npm_locks and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
+        parser.error("--prepare-npm-locks is restricted to the update-agents candidate")
 
     if args.prepare_pypi_artifacts and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--prepare-pypi-artifacts is restricted to the update-agents candidate")
@@ -2694,6 +3555,8 @@ Examples:
         parser.error("--version with --prepare-fixed-inputs requires exactly one target")
     if args.prepare_npm_flake_inputs and args.version and len(args.packages) != 1:
         parser.error("--version with --prepare-npm-flake-inputs requires exactly one target")
+    if args.prepare_npm_locks and args.version and len(args.packages) != 1:
+        parser.error("--version with --prepare-npm-locks requires exactly one target")
     if args.prepare_pypi_artifacts and args.version and len(args.packages) != 1:
         parser.error("--version with --prepare-pypi-artifacts requires exactly one target")
     if args.prepare_github_projections and args.version and len(args.packages) != 1:
@@ -2719,6 +3582,7 @@ Examples:
     if (
         args.prepare_fixed_inputs
         or args.prepare_npm_flake_inputs
+        or args.prepare_npm_locks
         or args.prepare_pypi_artifacts
         or args.prepare_github_projections
     ):
@@ -2773,6 +3637,21 @@ Examples:
                 == "automatic"
             ]
         )
+    elif args.prepare_npm_locks:
+        selected_catalog_names = (
+            args.packages
+            or [
+                name
+                for name in sorted(catalog_targets)
+                if catalog_targets[name]["kind"] == "npm-release"
+                and catalog_targets[name]["_record"]["update"].get("normalizer")
+                == "pi-gallery-v1"
+                and catalog_targets[name]["_record"]["update"].get(
+                    "policy", "automatic"
+                )
+                == "automatic"
+            ]
+        )
     elif args.prepare_pypi_artifacts:
         selected_catalog_names = args.packages
     elif args.prepare_github_projections:
@@ -2796,6 +3675,7 @@ Examples:
             if (
                 args.prepare_fixed_inputs
                 or args.prepare_npm_flake_inputs
+                or args.prepare_npm_locks
                 or args.prepare_pypi_artifacts
                 or args.prepare_github_projections
             )
@@ -2806,6 +3686,13 @@ Examples:
         ) or (
             args.prepare_npm_flake_inputs
             and target["kind"] != "npm-release+flake-input"
+        ) or (
+            args.prepare_npm_locks
+            and (
+                target["kind"] != "npm-release"
+                or target["_record"]["update"].get("normalizer")
+                != "pi-gallery-v1"
+            )
         ) or (
             args.prepare_pypi_artifacts and target["kind"] != "pypi-release"
         ) or (
@@ -2823,6 +3710,10 @@ Examples:
             continue
         if args.prepare_npm_flake_inputs:
             status = update_npm_flake_target(
+                name, target, args, npm_client, catalog_hash_computer, transaction
+            )
+        elif args.prepare_npm_locks:
+            status = update_npm_lock_target(
                 name, target, args, npm_client, catalog_hash_computer, transaction
             )
         elif args.prepare_pypi_artifacts:
@@ -2858,6 +3749,7 @@ Examples:
     if (
         args.prepare_fixed_inputs
         or args.prepare_npm_flake_inputs
+        or args.prepare_npm_locks
         or args.prepare_pypi_artifacts
         or args.prepare_github_projections
     ):

@@ -8,7 +8,7 @@ called for by [issue #20](https://github.com/jwiegley/nix-config/issues/20)
 
 Two families of entry appear below:
 
-- **Programme decisions** (`Q1`…`Q8`) — Q1/Q4/Q5/Q6/Q7 remain unanswered;
+- **Programme decisions** (`Q1`…`Q8`) — Q4/Q5/Q6/Q7 remain unanswered;
   Q2/Q3/Q8 have human answers recorded in place. Each carries the question, what
   breaks if it is defaulted, the real options, and a recommendation *only where
   there is evidence for one*. An unanswered slot is human input, never an agent
@@ -64,7 +64,7 @@ never contained.
 
 | Original | Question (verbatim) | Classification in this gate |
 |---|---|---|
-| I15-Q1 | What single mechanism should own npm manifest normalization so Nix packaging and lock generation cannot drift? | **Open → Q1** |
+| I15-Q1 | What single mechanism should own npm manifest normalization so Nix packaging and lock generation cannot drift? | **Settled → Q1(a)** |
 | I15-Q2 | Should direct `bin/update-overlay` always delegate compound work to the isolated `update-agents` candidate transaction, or should the catalog command itself gain an equivalent candidate mode? | **Open → Q2** |
 | I15-Q3 | Which fixed root inputs are package-producing policy pins versus ordinary lock-owned infrastructure? | **Open → Q3** (private-remote/`file://` policy already **settled**, S6) |
 | I15-Q4 | Which external consumers still require global Anvil mode, Node-RED templates, `flake-ai.nix`, or fallback imports? | **Open → Q4** |
@@ -101,8 +101,19 @@ Q1. What single mechanism should own npm manifest normalization, so the Nix pack
   - **(b) Have the updater invoke the derivation's own normalization** at update time (no extraction), treating the build as the authority. Avoids a new module but couples the updater to derivation internals.
   - **(c) Declare the normalized manifest itself a committed catalog artifact** the updater regenerates and the derivation consumes verbatim. Most explicit, but adds a generated file per target.
 - **Recommendation (evidence-based, not a decision):** (a). The normalization policy already exists inline in the derivation and the recorded hazard was precisely the updater using a *different* manifest; a single extracted authority both sides import is the narrowest seam that makes drift structurally impossible. No evidence favors (b) or (c) over (a).
-- **Answer:** _(unanswered)_
-- **Date:** _______  **Decided by:** _______  **Follow-up:** update #39 acceptance to name the chosen authority; confirm #61/#66 assert against it.
+- **Answer:** **(a)** — extract Pi npm manifest normalization into one pure,
+  fail-closed executable contract under `packages/pi-gallery/`. The Nix source
+  derivation and the candidate-only npm-lock updater both execute that exact
+  implementation against `package.json` from the exact catalog tarball, keyed
+  by the stable catalog target. The contract covers every current and future
+  lock-bearing Pi npm target and owns the ordered dependency-shaping flags;
+  the updater derives only the fixed lock-only safety flags and uses the same
+  Nix-pinned Node/npm toolchain as the derivation. No Python copy
+  of package-specific normalization policy is permitted. Normalized manifests
+  remain transient rather than becoming committed artifacts.
+- **Date:** 2026-07-30  **Decided by:** John Wiegley  **Follow-up:** update #39
+  acceptance and implement the shared authority; confirm #61/#66 assert against
+  the resulting manifest/lock contract.
 
 ---
 
@@ -243,7 +254,7 @@ S8. The outstanding host facts are confirmed, not open.
 
 | Gate ID | Decision | Owner issue(s) | Blocks / unblocks | Status |
 |---|---|---|---|---|
-| Q1 | npm normalization authority | #39 | before Pi WU6/WU8 (#61/#66) | open |
+| Q1 | npm normalization authority | #39 | before Pi WU6/WU8 (#61/#66) | answered: (a) |
 | Q2 | compound update isolation ownership | #33 | WU4c 1.2–1.5 | answered: delegate to `update-agents` |
 | Q3 | fixed-input partition | #34, gate to #25 | 1.6 → 1.7 | answered: narrow 11-record catalogue |
 | Q4 | compat keep/retire | #53, #60 (input #17) | EPIC 7; #60 needs #54 first | open |

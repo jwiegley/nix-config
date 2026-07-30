@@ -551,13 +551,10 @@ fi
     cd "$candidate_dir"
     export UPDATE_AGENTS_CANDIDATE=1
     python3 bin/update-overlay --inventory --json >"$transaction_dir/inventory.json"
-    {
-        jq -r '.packages[].files[]' "$transaction_dir/inventory.json"
-        printf '%s\n' flake.lock config/ai/flake.lock
-    } | sort -u >"$transaction_dir/allowed-paths"
 
     declare -a fixed_target_names=()
     declare -a npm_flake_target_names=()
+    declare -a npm_lock_target_names=()
     declare -a pypi_target_names=()
     declare -a github_projection_target_names=()
     declare -a lock_target_inputs=()
@@ -582,12 +579,14 @@ fi
                 [[ $target_kind != fixed-flake-input && $target_kind != flake-input &&
                     $target_kind != flake-input+build &&
                     $target_kind != flake-input+copy &&
+                    $target_kind != npm-release &&
                     $target_kind != npm-release+flake-input &&
                     $target_kind != pypi-release &&
                     $target_kind != github-commit &&
                     $target_kind != github-release &&
                     $target_kind != github-release-asset ]] ||
-                [[ $target_kind != pypi-release &&
+                [[ $target_kind != npm-release &&
+                    $target_kind != pypi-release &&
                     $target_kind != github-commit &&
                     $target_kind != github-release &&
                     $target_kind != github-release-asset &&
@@ -596,6 +595,7 @@ fi
                 exit 2
             fi
             if [[ -n $requested_version && $target_kind != fixed-flake-input &&
+                $target_kind != npm-release &&
                 $target_kind != npm-release+flake-input &&
                 $target_kind != pypi-release &&
                 $target_kind != github-commit &&
@@ -609,6 +609,8 @@ fi
             fi
             if [[ $target_kind == fixed-flake-input ]]; then
                 fixed_target_names+=("$target_name")
+            elif [[ $target_kind == npm-release ]]; then
+                npm_lock_target_names+=("$target_name")
             elif [[ $target_kind == npm-release+flake-input ]]; then
                 npm_flake_target_names+=("$target_name")
             elif [[ $target_kind == pypi-release ]]; then
@@ -653,6 +655,17 @@ fi
                 | .name
             ' "$transaction_dir/inventory.json"
         )
+        mapfile -t npm_lock_target_names < <(
+            jq -r '
+                .packages[]
+                | select(
+                    .kind == "npm-release"
+                    and .executor == "update-agents"
+                    and .policy == "automatic"
+                )
+                | .name
+            ' "$transaction_dir/inventory.json"
+        )
         mapfile -t github_projection_target_names < <(
             jq -r '
                 .packages[]
@@ -670,6 +683,26 @@ fi
         )
     fi
 
+    if ((${#requested_targets[@]})); then
+        requested_targets_json=$(printf '%s\n' "${requested_targets[@]}" |
+            jq -Rsc 'split("\n")[:-1]')
+        {
+            jq -r --argjson names "$requested_targets_json" '
+                .packages[]
+                | select(.name as $name | $names | index($name))
+                | .files[]
+            ' "$transaction_dir/inventory.json"
+            if ((${#lock_target_inputs[@]})); then
+                printf '%s\n' flake.lock config/ai/flake.lock
+            fi
+        } | sort -u >"$transaction_dir/allowed-paths"
+    else
+        {
+            jq -r '.packages[].files[]' "$transaction_dir/inventory.json"
+            printf '%s\n' flake.lock config/ai/flake.lock
+        } | sort -u >"$transaction_dir/allowed-paths"
+    fi
+
     if ((${#fixed_target_names[@]})); then
         prepare_args=(--prepare-fixed-inputs)
         if [[ -n $requested_version ]]; then
@@ -684,6 +717,14 @@ fi
         fi
         python3 bin/update-overlay "${prepare_args[@]}" \
             "${npm_flake_target_names[@]}"
+    fi
+    if ((${#npm_lock_target_names[@]})); then
+        prepare_args=(--prepare-npm-locks)
+        if [[ -n $requested_version ]]; then
+            prepare_args+=(--version "$requested_version")
+        fi
+        python3 bin/update-overlay "${prepare_args[@]}" \
+            "${npm_lock_target_names[@]}"
     fi
     if ((${#pypi_target_names[@]})); then
         prepare_args=(--prepare-pypi-artifacts)

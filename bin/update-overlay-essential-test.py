@@ -38,6 +38,7 @@ INTEGRATION_METHODS = (
     "test_profile_symlinked_scripts_find_packaged_routing_library",
     "test_host_routing_table_covers_system_and_shared_consumers",
     "test_independent_ai_packages_are_owned_under_packages",
+    "test_update_agents_routes_npm_lock_projection_without_lock_updates",
     "test_update_agents_routes_github_projection_without_lock_updates",
 )
 

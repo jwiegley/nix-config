@@ -66,12 +66,13 @@ a88a77ba feat(sources): execute compound catalog updates
 Initially feared as a file collision; measurement shows otherwise, which materially
 simplifies sequencing.
 
-- **Issue #15 Phase 1.2** owns npm manifest normalization. The policy is inline at
-  `packages/pi-gallery/default.nix:87-97` (`del(.devDependencies)`, conditional
-  `del(.peerDependencies, .peerDependenciesMeta)` under `dropPeerMetadata`, then pairing
-  `${lockFile}`), with per-package locks at `packages/pi-gallery/locks/*.json`. Its six named
-  records — `pi-artifacts`, `pi-dynamic-workflows`, `pi-hashline-edit-pro`, `pi-insights`,
-  `pi-lens`, `pi-web-access` — all live in `sources/pi.json`.
+- **Issue #15 Phase 1.2** owns npm manifest normalization. Q1(a) makes one
+  fail-closed executable contract under `packages/pi-gallery/` authoritative for
+  both the Nix build and updater, with per-package locks at
+  `packages/pi-gallery/locks/*.json`. Its nine records — `pi-artifacts`,
+  `pi-dynamic-workflows`, `pi-hashline-edit-pro`, `pi-insights`, `pi-lens`,
+  `pi-markdown-preview`, `pi-smart-fetch`, `pi-smart-web-search`, and
+  `pi-subagents` — all live in `sources/pi.json`.
 - **Pi fleet** does **not** touch `packages/pi-gallery/` at all. Its diff against its base
   touches only `config/ai/catalog.nix`, `config/ai/renderers/pi.nix`, and `sources/ai.json`.
 
