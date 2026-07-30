@@ -66,9 +66,17 @@
         "url": "https://github.com/1broseidon/cymbal/releases/download/v0.14.0/cymbal_v0.14.0_darwin_arm64.tar.gz"
       },
       "update": {
-        "kind": "explicit-rev",
+        "assets": {
+          "aarch64-linux": "cymbal_v{version}_linux_arm64.tar.gz",
+          "source": "cymbal_v{version}_darwin_arm64.tar.gz",
+          "x86_64-linux": "cymbal_v{version}_linux_x86_64.tar.gz"
+        },
+        "kind": "github-release-asset",
+        "owner": "1broseidon",
         "policy": "manual",
-        "reason": "Cymbal publishes a coordinated multi-platform release asset set"
+        "repo": "cymbal",
+        "reason": "Cymbal publishes a coordinated multi-platform release asset set",
+        "tagPrefix": "v"
       },
       "version": "0.14.0"
     },
@@ -534,9 +542,17 @@
         "url": "https://github.com/rtk-ai/rtk/releases/download/v0.44.0/rtk-aarch64-apple-darwin.tar.gz"
       },
       "update": {
-        "kind": "explicit-rev",
+        "assets": {
+          "aarch64-linux": "rtk-aarch64-unknown-linux-gnu.tar.gz",
+          "source": "rtk-aarch64-apple-darwin.tar.gz",
+          "x86_64-linux": "rtk-x86_64-unknown-linux-musl.tar.gz"
+        },
+        "kind": "github-release-asset",
+        "owner": "rtk-ai",
         "policy": "manual",
-        "reason": "RTK publishes a coordinated multi-platform release asset set"
+        "repo": "rtk",
+        "reason": "RTK publishes a coordinated multi-platform release asset set",
+        "tagPrefix": "v"
       },
       "version": "0.44.0"
     },

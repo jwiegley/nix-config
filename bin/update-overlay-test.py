@@ -2857,13 +2857,19 @@ got: sha256-requested
 
             record = {
                 "version": "1.0.0",
-                "source": asset("tool-darwin-arm64", "sha256-darwin-old"),
+                "source": asset(
+                    "tool-1.0.0-darwin-arm64", "sha256-darwin-old"
+                ),
                 "artifacts": {
+                    "aarch64-linux": asset(
+                        "tool-1.0.0-linux-arm64", "sha256-arm-old"
+                    ),
                     "x86_64-linux": asset("tool-linux-x64", "sha256-linux-old")
                 },
                 "update": {
                     "assets": {
-                        "source": "tool-darwin-arm64",
+                        "aarch64-linux": "tool-{version}-linux-arm64",
+                        "source": "tool-{version}-darwin-arm64",
                         "x86_64-linux": "tool-linux-x64",
                     },
                     "kind": "github-release-asset",
@@ -2902,14 +2908,29 @@ got: sha256-requested
             self.assertEqual(status, "failed")
             self.assertEqual(path.read_text(), before)
             self.assertEqual(transaction.original, {})
-            self.assertEqual(len(calls), 2)
+            self.assertEqual(
+                calls,
+                [
+                    "https://github.com/example/tool/releases/download/v2.0.0/tool-2.0.0-darwin-arm64",
+                    "https://github.com/example/tool/releases/download/v2.0.0/tool-2.0.0-linux-arm64",
+                    "https://github.com/example/tool/releases/download/v2.0.0/tool-linux-x64",
+                ],
+            )
 
+            build_calls = []
             hashes = SimpleNamespace(
                 compute_native_hash=lambda _source, replacements: (
                     "sha256-linux"
                     if replacements["url"].endswith("tool-linux-x64")
-                    else "sha256-darwin"
-                )
+                    else (
+                        "sha256-arm"
+                        if replacements["url"].endswith("linux-arm64")
+                        else "sha256-darwin"
+                    )
+                ),
+                validate_package_build=lambda package: (
+                    build_calls.append(package) or True
+                ),
             )
             transaction = SourceTransaction()
             with contextlib.redirect_stdout(io.StringIO()):
@@ -2923,13 +2944,21 @@ got: sha256-requested
                 )
             transaction.commit()
             self.assertEqual(status, "updated")
+            self.assertEqual(build_calls, ["tool"])
             updated = json.loads(path.read_text())["sources"]["tool"]
             self.assertEqual(updated["version"], "2.0.0")
             self.assertEqual(
                 updated["source"]["args"],
                 {
-                    "url": "https://github.com/example/tool/releases/download/v2.0.0/tool-darwin-arm64",
+                    "url": "https://github.com/example/tool/releases/download/v2.0.0/tool-2.0.0-darwin-arm64",
                     "hash": "sha256-darwin",
+                },
+            )
+            self.assertEqual(
+                updated["artifacts"]["aarch64-linux"]["args"],
+                {
+                    "url": "https://github.com/example/tool/releases/download/v2.0.0/tool-2.0.0-linux-arm64",
+                    "hash": "sha256-arm",
                 },
             )
             self.assertEqual(
@@ -2940,10 +2969,32 @@ got: sha256-requested
                 },
             )
 
+            replay_builds = []
+            replay_before = path.read_text()
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_github_release_asset_target(
+                    "tool",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    github,
+                    SimpleNamespace(
+                        compute_native_hash=hashes.compute_native_hash,
+                        validate_package_build=lambda package: (
+                            replay_builds.append(package) or True
+                        ),
+                    ),
+                    transaction,
+                )
+            self.assertEqual(status, "skipped")
+            self.assertEqual(replay_builds, ["tool"])
+            self.assertEqual(path.read_text(), replay_before)
+            self.assertEqual(transaction.original, {})
+
             source_only = copy.deepcopy(record)
             source_only.pop("artifacts")
             source_only["update"]["assets"] = {
-                "source": "tool-darwin-arm64"
+                "source": "tool-{version}-darwin-arm64"
             }
             path.write_text(json.dumps({
                 "schemaVersion": 1,
@@ -2962,7 +3013,8 @@ got: sha256-requested
                     SimpleNamespace(
                         compute_native_hash=lambda _source, _replacements: (
                             "sha256-source-only"
-                        )
+                        ),
+                        validate_package_build=lambda _package: True,
                     ),
                     transaction,
                 )
@@ -2971,6 +3023,62 @@ got: sha256-requested
             source_only_updated = json.loads(path.read_text())["sources"]["tool"]
             self.assertEqual(source_only_updated["version"], "3.0.0")
             self.assertNotIn("artifacts", source_only_updated)
+            self.assertEqual(
+                source_only_updated["source"]["args"]["url"],
+                "https://github.com/example/tool/releases/download/v3.0.0/tool-3.0.0-darwin-arm64",
+            )
+
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"tool": record},
+            }))
+            failing_target = load_source_catalog(root)["tool"]
+            failing_before = path.read_text()
+            failing_builds = []
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_github_release_asset_target(
+                    "tool",
+                    failing_target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(
+                        get_latest_release=lambda _owner, _repo: "v4.0.0"
+                    ),
+                    SimpleNamespace(
+                        compute_native_hash=hashes.compute_native_hash,
+                        validate_package_build=lambda package: (
+                            failing_builds.append(package) or False
+                        ),
+                    ),
+                    transaction,
+                )
+            self.assertEqual(status, "failed")
+            self.assertEqual(failing_builds, ["tool"])
+            self.assertNotEqual(path.read_text(), failing_before)
+            self.assertEqual(transaction.rollback(), 1)
+            self.assertEqual(path.read_text(), failing_before)
+
+            invalid_asset_templates = {
+                "empty": ("", "1.0.0"),
+                "slash": ("nested/tool", "1.0.0"),
+                "backslash": (r"nested\tool", "1.0.0"),
+                "unknown-braces": ("tool-{release}", "1.0.0"),
+                "repeated-token": ("tool-{version}-{version}", "1.0.0"),
+                "unsafe-version": ("tool-{version}", "../1.0.0"),
+            }
+            for case, (template, version) in invalid_asset_templates.items():
+                with self.subTest(case=case):
+                    invalid = copy.deepcopy(record)
+                    invalid["version"] = version
+                    invalid["update"]["assets"]["source"] = template
+                    path.write_text(json.dumps({
+                        "schemaVersion": 1,
+                        "sources": {"tool": invalid},
+                    }))
+                    with self.assertRaisesRegex(
+                        RuntimeError, "invalid GitHub release asset projection"
+                    ):
+                        load_source_catalog(root)
 
             missing_prefix = copy.deepcopy(record)
             del missing_prefix["update"]["tagPrefix"]
@@ -3468,18 +3576,14 @@ got: sha256-requested
         catalog_owned = {
             item["name"] for item in inventory["packages"] if item["source"] == "catalog"
         }
-        pending = {
-            "cymbal",
-            "rtk",
-        }
         self.assertEqual(
             {item["name"] for item in inventory["packages"] if not item["managed"]},
-            pending,
+            set(),
         )
         self.assertEqual(len(inventory["packages"]), 199)
         self.assertEqual(
             len([item for item in inventory["packages"] if item["managed"]]),
-            197,
+            199,
         )
         self.assertFalse(package_owned & relocated)
         self.assertTrue(relocated <= catalog_owned)
@@ -3498,6 +3602,11 @@ got: sha256-requested
             "0e6130457ac2bdc6c6db2eebeba67a5223231190",
         )
         self.assertEqual(by_name["git-ai"]["executor"], "update-agents")
+        for name in ("cymbal", "rtk"):
+            self.assertTrue(by_name[name]["managed"])
+            self.assertEqual(by_name[name]["kind"], "github-release-asset")
+            self.assertEqual(by_name[name]["executor"], "update-agents")
+            self.assertEqual(by_name[name]["policy"], "manual")
         self.assertEqual(by_name["pi-ponytail"]["executor"], "update-agents")
         self.assertEqual(by_name["pi-mcp-adapter"]["executor"], "update-agents")
         self.assertEqual(by_name["pi-btw"]["executor"], "update-agents")
@@ -3909,7 +4018,7 @@ if "--inventory" in arguments:
             "name": "github",
             "files": ["github.txt"],
             "inventoried": True,
-            "kind": "github-release",
+            "kind": "github-release-asset",
             "managed": True,
             "executor": "update-agents",
             "policy": "manual",

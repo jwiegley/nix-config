@@ -1651,6 +1651,44 @@ def _github_release_asset_url(
     )
 
 
+def _render_github_release_asset(
+    template: object, version: object
+) -> str:
+    """Render one closed release-asset basename template."""
+    token = "{version}"
+    if not isinstance(template, str) or not template:
+        raise ValueError("release asset template must be a non-empty string")
+    if "/" in template or "\\" in template:
+        raise ValueError("release asset template must be a basename")
+    token_count = template.count(token)
+    remainder = template.replace(token, "")
+    if token_count > 1 or "{" in remainder or "}" in remainder:
+        raise ValueError("release asset template has invalid placeholders")
+    if not isinstance(version, str) or not version:
+        raise ValueError("release asset version must be a non-empty string")
+    if token_count and (
+        "/" in version
+        or "\\" in version
+        or "{" in version
+        or "}" in version
+        or version in {".", ".."}
+        or any(ord(character) < 32 or ord(character) == 127 for character in version)
+    ):
+        raise ValueError("release asset version is unsafe for a basename")
+    rendered = template.replace(token, version)
+    if (
+        not rendered
+        or "/" in rendered
+        or "\\" in rendered
+        or "{" in rendered
+        or "}" in rendered
+        or rendered in {".", ".."}
+        or any(ord(character) < 32 or ord(character) == 127 for character in rendered)
+    ):
+        raise ValueError("rendered release asset is not a safe basename")
+    return rendered
+
+
 def _lock_input_node(lock: dict, input_name: str, catalog_name: str) -> dict:
     nodes = lock.get("nodes")
     root_name = lock.get("root", "root")
@@ -1994,12 +2032,6 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                     or "source" in artifacts
                     or set(assets) != expected_asset_labels
                     or bool(hashes)
-                    or not all(
-                        isinstance(asset, str)
-                        and asset
-                        and "/" not in asset
-                        for asset in assets.values()
-                    )
                     or any(fetch["fetcher"] != "fetchurl" for fetch in fetches.values())
                 ):
                     raise RuntimeError(
@@ -2013,8 +2045,16 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                     )
                 tag = f"{prefix}{version}"
                 for label, fetch in fetches.items():
+                    try:
+                        asset = _render_github_release_asset(
+                            assets[label], version
+                        )
+                    except ValueError as error:
+                        raise RuntimeError(
+                            f"invalid GitHub release asset projection: {name}"
+                        ) from error
                     expected_url = _github_release_asset_url(
-                        owner, repo, tag, assets[label]
+                        owner, repo, tag, asset
                     )
                     if (
                         fetch["url"] != expected_url
@@ -2859,8 +2899,17 @@ def update_github_release_asset_target(
     resolved: dict[str, tuple[str, str]] = {}
     for label, source in fetches.items():
         asset_label = label.removeprefix("artifact:")
+        try:
+            asset = _render_github_release_asset(
+                update["assets"][asset_label], new_version
+            )
+        except ValueError:
+            print(
+                f"catalog/{name} {Colors.RED}✗ invalid release asset{Colors.RESET}"
+            )
+            return "failed"
         new_url = _github_release_asset_url(
-            update["owner"], update["repo"], new_tag, update["assets"][asset_label]
+            update["owner"], update["repo"], new_tag, asset
         )
         new_hash = hash_computer.compute_native_hash(source, {"url": new_url})
         if not new_hash:
@@ -2876,6 +2925,9 @@ def update_github_release_asset_target(
         changed = changed or source_args["url"] != new_url
         changed = changed or source_args[hash_name] != new_hash
     if not changed:
+        if not hash_computer.validate_package_build(name):
+            print(f"catalog/{name} {Colors.RED}✗ package build failed{Colors.RESET}")
+            return "failed"
         print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
         return "skipped"
     if args.dry_run:
@@ -2892,6 +2944,9 @@ def update_github_release_asset_target(
         source_args["url"] = new_url
         source_args[hash_name] = new_hash
     _write_catalog_target(target)
+    if not hash_computer.validate_package_build(name):
+        print(f"catalog/{name} {Colors.RED}✗ final package build failed{Colors.RESET}")
+        return "failed"
     print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
     return "updated"
 
