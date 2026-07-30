@@ -1048,7 +1048,8 @@ class TestGatesAreRegistered(unittest.TestCase):
         )
         self.assertRegex(
             (REPO / "Makefile").read_text(),
-            r"(?m)^\tbin/quality --python-tier pre-push python-test coverage darwin-surface$",
+            r"(?m)^test:\n\tset -e\n"
+            r"\tbin/quality --python-tier pre-push python-test coverage darwin-surface$",
         )
 
     def test_darwin_surface_is_not_wired_to_remote_ci_until_root_is_portable(self):
