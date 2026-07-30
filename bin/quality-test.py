@@ -550,6 +550,7 @@ class UpdaterEssentialPlanTests(unittest.TestCase):
                 "test_profile_symlinked_scripts_find_packaged_routing_library",
                 "test_host_routing_table_covers_system_and_shared_consumers",
                 "test_independent_ai_packages_are_owned_under_packages",
+                "test_update_agents_routes_github_projection_without_lock_updates",
             ),
         )
         suite = plan["load_tests"](
@@ -564,10 +565,12 @@ class UpdaterEssentialPlanTests(unittest.TestCase):
                     yield test.id()
 
         resolved = sorted(test_ids(suite))
-        self.assertEqual(len(resolved), 47)
+        resolved_listing = "\n" + "\n".join(resolved)
+        self.assertEqual(len(resolved), 53, resolved_listing)
         self.assertEqual(
             hashlib.sha256("\n".join(resolved).encode()).hexdigest(),
-            "86d87c8f30840c80d8c40ceaca69e2fdc71592a7d4d7643c409c763a47c2bd76",
+            "b26163ff18ca5d1d4278c44aec4339a41e242b0d132cd86361edfb366fd13e60",
+            resolved_listing,
         )
 
 

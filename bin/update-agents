@@ -53,7 +53,7 @@ By default, leave reviewed working-tree changes without external side effects.
 Options:
   --all-inputs  Update every root and portable flake input
   --target NAME Update one catalog target through this transaction (repeatable)
-  --version VALUE  Force the revision or release for one fixed/npm-flake/PyPI target
+  --version VALUE  Force the revision or release for one named projection target
   --dry-run     Validate the candidate without publishing it
   --pull       Fast-forward the clean repository before updating
   --commit     Create one signed commit of updater-owned paths
@@ -559,6 +559,7 @@ fi
     declare -a fixed_target_names=()
     declare -a npm_flake_target_names=()
     declare -a pypi_target_names=()
+    declare -a github_projection_target_names=()
     declare -a lock_target_inputs=()
     if ((${#requested_targets[@]})); then
         declare -A seen_targets=()
@@ -582,15 +583,25 @@ fi
                     $target_kind != flake-input+build &&
                     $target_kind != flake-input+copy &&
                     $target_kind != npm-release+flake-input &&
-                    $target_kind != pypi-release ]] ||
-                [[ $target_kind != pypi-release && -z $target_input ]]; then
+                    $target_kind != pypi-release &&
+                    $target_kind != github-commit &&
+                    $target_kind != github-release &&
+                    $target_kind != github-release-asset ]] ||
+                [[ $target_kind != pypi-release &&
+                    $target_kind != github-commit &&
+                    $target_kind != github-release &&
+                    $target_kind != github-release-asset &&
+                    -z $target_input ]]; then
                 echo "update-agents: target is not owned by this transaction: $target_name" >&2
                 exit 2
             fi
             if [[ -n $requested_version && $target_kind != fixed-flake-input &&
                 $target_kind != npm-release+flake-input &&
-                $target_kind != pypi-release ]]; then
-                echo "update-agents: --version requires a fixed, npm-flake, or PyPI target" >&2
+                $target_kind != pypi-release &&
+                $target_kind != github-commit &&
+                $target_kind != github-release &&
+                $target_kind != github-release-asset ]]; then
+                echo "update-agents: --version is unsupported for this target" >&2
                 exit 2
             fi
             if [[ -n $target_input ]]; then
@@ -602,6 +613,9 @@ fi
                 npm_flake_target_names+=("$target_name")
             elif [[ $target_kind == pypi-release ]]; then
                 pypi_target_names+=("$target_name")
+            elif [[ $target_kind == github-commit || $target_kind == github-release ||
+                $target_kind == github-release-asset ]]; then
+                github_projection_target_names+=("$target_name")
             fi
         done
     else
@@ -639,6 +653,21 @@ fi
                 | .name
             ' "$transaction_dir/inventory.json"
         )
+        mapfile -t github_projection_target_names < <(
+            jq -r '
+                .packages[]
+                | select(
+                    (
+                        .kind == "github-commit"
+                        or .kind == "github-release"
+                        or .kind == "github-release-asset"
+                    )
+                    and .executor == "update-agents"
+                    and .policy == "automatic"
+                )
+                | .name
+            ' "$transaction_dir/inventory.json"
+        )
     fi
 
     if ((${#fixed_target_names[@]})); then
@@ -663,6 +692,14 @@ fi
         fi
         python3 bin/update-overlay "${prepare_args[@]}" \
             "${pypi_target_names[@]}"
+    fi
+    if ((${#github_projection_target_names[@]})); then
+        prepare_args=(--prepare-github-projections)
+        if [[ -n $requested_version ]]; then
+            prepare_args+=(--version "$requested_version")
+        fi
+        python3 bin/update-overlay "${prepare_args[@]}" \
+            "${github_projection_target_names[@]}"
     fi
 
     if [[ $run_all_inputs == true ]]; then

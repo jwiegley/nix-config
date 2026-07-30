@@ -27,6 +27,7 @@ MODULE = runpy.run_path(str(SCRIPT))
 OverlayParser = MODULE["OverlayParser"]
 OverlayUpdater = MODULE["OverlayUpdater"]
 GitHubClient = MODULE["GitHubClient"]
+HashComputer = MODULE["HashComputer"]
 PypiClient = MODULE["PypiClient"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
@@ -37,9 +38,13 @@ resolve_flake_input_version = MODULE.get("resolve_flake_input_version")
 update_catalog_target = MODULE["update_catalog_target"]
 update_npm_flake_target = MODULE.get("update_npm_flake_target")
 update_pypi_artifact_target = MODULE.get("update_pypi_artifact_target")
+update_github_release_asset_target = MODULE.get("update_github_release_asset_target")
+update_github_commit_artifact_target = MODULE.get("update_github_commit_artifact_target")
+update_github_projection_target = MODULE.get("update_github_projection_target")
 build_inventory = MODULE["build_inventory"]
 
 ISSUE40_TARGETS = frozenset({"cohere-melody", "mlx"})
+ISSUE41_TARGETS = frozenset({"hf-xet", "nelisp", "sherlock-db"})
 
 ISSUE34_TARGETS = frozenset({
     "pi-mcp-adapter",
@@ -564,6 +569,12 @@ got: sha256-requested
                 command,
                 ["./build", "pkg", "agent-resources", "--no-link"],
             )
+            self.assertEqual(
+                MODULE["HashComputer"](root)._package_build_command(
+                    "hf-xet", "python"
+                ),
+                ["./build", "python", "hf-xet", "--no-link"],
+            )
 
     def test_issue38_ws_uses_fetchzip_with_an_executor(self):
         record = {
@@ -1053,13 +1064,129 @@ got: sha256-requested
             self.assertIsNone(client.get_latest_release("example", "project"))
             self.assertIsNone(client.get_default_branch("example", "project"))
             self.assertIsNone(client.get_latest_commit("example", "project", "topic"))
+            self.assertIsNone(
+                client.get_file("example", "project", "a" * 40, "Cargo.lock")
+            )
         finally:
             subprocess.run = real_run
 
-        self.assertEqual(len(calls), 3)
+        self.assertEqual(len(calls), 4)
         self.assertIn("releases/latest", calls[0][2])
         self.assertEqual("repos/example/project", calls[1][2])
         self.assertIn("commits/topic", calls[2][2])
+        self.assertEqual(calls[3][0:4], [
+            "gh",
+            "api",
+            "-H",
+            "Accept: application/vnd.github.raw+json",
+        ])
+        self.assertIn(f"contents/Cargo.lock?ref={'a' * 40}", calls[3][4])
+
+        successful_calls = []
+
+        def successful_run(command, **kwargs):
+            successful_calls.append((command, kwargs))
+            return SimpleNamespace(returncode=0, stdout="exact contents\n")
+
+        subprocess.run = successful_run
+        try:
+            content = GitHubClient().get_file(
+                "example", "project", "b" * 40, "locks/Cargo lock"
+            )
+        finally:
+            subprocess.run = real_run
+        self.assertEqual(content, "exact contents\n")
+        self.assertEqual(len(successful_calls), 1)
+        command, kwargs = successful_calls[0]
+        self.assertEqual(command[:4], [
+            "gh",
+            "api",
+            "-H",
+            "Accept: application/vnd.github.raw+json",
+        ])
+        self.assertIn(
+            f"contents/locks/Cargo%20lock?ref={'b' * 40}", command[4]
+        )
+        self.assertEqual(kwargs["timeout"], 60)
+
+    def test_cargo_lock_validation_uses_exact_checkout(self):
+        revision = "c" * 40
+        lock = (
+            "version = 4\n\n"
+            "[[package]]\n"
+            'name = "project"\n'
+            'version = "1.0.0"\n'
+        )
+        calls = []
+        cargo_succeeds = True
+
+        def fake_run(command, **kwargs):
+            calls.append((command, kwargs))
+            if command[:3] == ["git", "init", "--quiet"]:
+                Path(command[3]).mkdir(parents=True)
+            elif command[0] == "git" and "checkout" in command:
+                checkout = Path(command[2])
+                (checkout / "Cargo.toml").write_text(
+                    '[package]\nname = "project"\nversion = "1.0.0"\n'
+                )
+                (checkout / "Cargo.lock").write_text(lock)
+            if command[0] == "git" and command[-2:] == ["rev-parse", "HEAD"]:
+                return SimpleNamespace(returncode=0, stdout=f"{revision}\n")
+            if command[0] == "cargo":
+                return SimpleNamespace(
+                    returncode=0 if cargo_succeeds else 1,
+                    stdout="",
+                )
+            return SimpleNamespace(returncode=0, stdout="")
+
+        real_run = subprocess.run
+        subprocess.run = fake_run
+        try:
+            computer = HashComputer(Path.cwd())
+            self.assertTrue(
+                computer.validate_cargo_lock(
+                    "https://github.com/example/project",
+                    revision,
+                    "Cargo.lock",
+                    lock,
+                )
+            )
+            cargo_succeeds = False
+            self.assertFalse(
+                computer.validate_cargo_lock(
+                    "https://github.com/example/project",
+                    revision,
+                    "Cargo.lock",
+                    lock,
+                )
+            )
+            before_unsafe = len(calls)
+            self.assertFalse(
+                computer.validate_cargo_lock(
+                    "https://github.com/example/project",
+                    revision,
+                    "../Cargo.lock",
+                    lock,
+                )
+            )
+            self.assertEqual(len(calls), before_unsafe)
+        finally:
+            subprocess.run = real_run
+
+        first_fetch = next(
+            command for command, _kwargs in calls if command[0] == "git" and "fetch" in command
+        )
+        self.assertEqual(first_fetch[-2:], [
+            "https://github.com/example/project",
+            revision,
+        ])
+        cargo_command, cargo_kwargs = next(
+            (command, kwargs) for command, kwargs in calls if command[0] == "cargo"
+        )
+        self.assertIn("--locked", cargo_command)
+        self.assertIn("--offline", cargo_command)
+        self.assertIn("--no-deps", cargo_command)
+        self.assertEqual(cargo_kwargs["env"]["CARGO_NET_OFFLINE"], "true")
 
     def test_manual_url_target_has_targeted_executor(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1521,6 +1648,440 @@ got: sha256-requested
             ):
                 load_source_catalog(root)
 
+    def test_github_release_assets_resolve_as_one_projection(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/ai.json"
+
+            def asset(filename, hash_value):
+                url = f"https://github.com/example/tool/releases/download/v1.0.0/{filename}"
+                return {
+                    "fetcher": "fetchurl",
+                    "url": url,
+                    "args": {"url": url, "hash": hash_value},
+                }
+
+            record = {
+                "version": "1.0.0",
+                "source": asset("tool-darwin-arm64", "sha256-darwin-old"),
+                "artifacts": {
+                    "x86_64-linux": asset("tool-linux-x64", "sha256-linux-old")
+                },
+                "update": {
+                    "assets": {
+                        "source": "tool-darwin-arm64",
+                        "x86_64-linux": "tool-linux-x64",
+                    },
+                    "kind": "github-release-asset",
+                    "owner": "example",
+                    "repo": "tool",
+                    "tagPrefix": "v",
+                },
+            }
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"tool": record},
+            }))
+            target = load_source_catalog(root)["tool"]
+            self.assertEqual(target["executor"], "update-agents")
+            github = SimpleNamespace(
+                get_latest_release=lambda _owner, _repo: "v2.0.0"
+            )
+
+            calls = []
+
+            def incomplete_hash(_source, replacements):
+                calls.append(replacements["url"])
+                return None if replacements["url"].endswith("tool-linux-x64") else "sha256-darwin"
+
+            before = path.read_text()
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_github_release_asset_target(
+                    "tool",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    github,
+                    SimpleNamespace(compute_native_hash=incomplete_hash),
+                    transaction,
+                )
+            self.assertEqual(status, "failed")
+            self.assertEqual(path.read_text(), before)
+            self.assertEqual(transaction.original, {})
+            self.assertEqual(len(calls), 2)
+
+            hashes = SimpleNamespace(
+                compute_native_hash=lambda _source, replacements: (
+                    "sha256-linux"
+                    if replacements["url"].endswith("tool-linux-x64")
+                    else "sha256-darwin"
+                )
+            )
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_github_release_asset_target(
+                    "tool",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    github,
+                    hashes,
+                    transaction,
+                )
+            transaction.commit()
+            self.assertEqual(status, "updated")
+            updated = json.loads(path.read_text())["sources"]["tool"]
+            self.assertEqual(updated["version"], "2.0.0")
+            self.assertEqual(
+                updated["source"]["args"],
+                {
+                    "url": "https://github.com/example/tool/releases/download/v2.0.0/tool-darwin-arm64",
+                    "hash": "sha256-darwin",
+                },
+            )
+            self.assertEqual(
+                updated["artifacts"]["x86_64-linux"]["args"],
+                {
+                    "url": "https://github.com/example/tool/releases/download/v2.0.0/tool-linux-x64",
+                    "hash": "sha256-linux",
+                },
+            )
+
+            updated["update"]["assets"]["source"] = "wrong-name"
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"tool": updated},
+            }))
+            with self.assertRaisesRegex(RuntimeError, "asset URL does not match"):
+                load_source_catalog(root)
+
+    def test_python_dependent_hash_uses_declared_build_mode(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/ai.json"
+            record = {
+                "version": "1.0.0",
+                "source": {
+                    "fetcher": "fetchFromGitHub",
+                    "url": "https://github.com/example/project",
+                    "args": {
+                        "owner": "example",
+                        "repo": "project",
+                        "tag": "v1.0.0",
+                        "hash": "sha256-source-old",
+                    },
+                },
+                "hashes": {"cargoDepsHash": "sha256-cargo-old"},
+                "update": {
+                    "buildMode": "python",
+                    "kind": "github-release",
+                    "tagPrefix": "v",
+                },
+            }
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"python-project": record},
+            }))
+            target = load_source_catalog(root)["python-project"]
+            self.assertEqual(target["executor"], "update-agents")
+
+            class FakeHashes:
+                def __init__(self, valid=True):
+                    self.calls = []
+                    self.valid = valid
+
+                def compute_native_hash(self, _source, replacements):
+                    self.calls.append(("source", replacements))
+                    return "sha256-source-new"
+
+                def _compute_fod_hash(self, package, hash_type, build_mode):
+                    self.calls.append(("dependent", package, hash_type, build_mode))
+                    return "sha256-cargo-new"
+
+                def validate_package_build(self, package, build_mode):
+                    self.calls.append(("validate", package, build_mode))
+                    return self.valid
+
+            github = SimpleNamespace(
+                get_latest_release=lambda _owner, _repo: "v2.0.0"
+            )
+            hashes = FakeHashes()
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_catalog_target(
+                    "python-project",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    github,
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    hashes,
+                    transaction,
+                )
+            transaction.commit()
+            self.assertEqual(status, "updated")
+            self.assertIn(
+                ("dependent", "python-project", "cargoDepsHash", "python"),
+                hashes.calls,
+            )
+            self.assertIn(("validate", "python-project", "python"), hashes.calls)
+            updated = json.loads(path.read_text())["sources"]["python-project"]
+            self.assertEqual(updated["hashes"]["cargoDepsHash"], "sha256-cargo-new")
+
+            before_failure = path.read_text()
+            failing_target = load_source_catalog(root)["python-project"]
+            failing = FakeHashes(valid=False)
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_catalog_target(
+                    "python-project",
+                    failing_target,
+                    SimpleNamespace(version="3.0.0", dry_run=False),
+                    github,
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    failing,
+                    transaction,
+                )
+            self.assertEqual(status, "failed")
+            self.assertEqual(transaction.rollback(), 1)
+            self.assertEqual(path.read_text(), before_failure)
+
+    def test_github_commit_build_mode_uses_generic_projection_dispatch(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/tools.json"
+            old_ref = "1" * 40
+            new_ref = "2" * 40
+            record = {
+                "version": old_ref[:8],
+                "source": {
+                    "fetcher": "fetchFromGitHub",
+                    "url": "https://github.com/example/project",
+                    "args": {
+                        "owner": "example",
+                        "repo": "project",
+                        "rev": old_ref,
+                        "hash": "sha256-source-old",
+                    },
+                },
+                "hashes": {"cargoDepsHash": "sha256-cargo-old"},
+                "update": {
+                    "branch": "main",
+                    "buildMode": "python",
+                    "kind": "github-commit",
+                },
+            }
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"project": record},
+            }))
+            target = load_source_catalog(root)["project"]
+            self.assertEqual(target["executor"], "update-agents")
+
+            class FakeHashes:
+                def __init__(self):
+                    self.calls = []
+
+                def compute_native_hash(self, _source, replacements):
+                    self.calls.append(("source", replacements))
+                    return "sha256-source-new"
+
+                def _compute_fod_hash(self, package, hash_type, build_mode):
+                    self.calls.append(("dependent", package, hash_type, build_mode))
+                    return "sha256-cargo-new"
+
+                def validate_package_build(self, package, build_mode):
+                    self.calls.append(("validate", package, build_mode))
+                    return True
+
+            hashes = FakeHashes()
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_github_projection_target(
+                    "project",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(
+                        get_latest_commit=lambda _owner, _repo, _branch: (
+                            new_ref,
+                            new_ref[:8],
+                        )
+                    ),
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    hashes,
+                    transaction,
+                )
+            transaction.commit()
+            self.assertEqual(status, "updated")
+            self.assertIn(("source", {"rev": new_ref}), hashes.calls)
+            self.assertIn(
+                ("dependent", "project", "cargoDepsHash", "python"),
+                hashes.calls,
+            )
+            updated = json.loads(path.read_text())["sources"]["project"]
+            self.assertEqual(updated["source"]["args"]["rev"], new_ref)
+            self.assertEqual(updated["hashes"]["cargoDepsHash"], "sha256-cargo-new")
+
+            combined = copy.deepcopy(record)
+            combined["update"]["artifacts"] = ["Cargo.lock"]
+            combined["update"]["artifactSources"] = {"Cargo.lock": "Cargo.lock"}
+            (root / "Cargo.lock").write_text("version = 4\n")
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"project": combined},
+            }))
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "cannot also declare dependent hashes",
+            ):
+                load_source_catalog(root)
+
+    def test_github_commit_fetches_lock_from_exact_selected_revision(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            (root / "packages/anvil-mcp").mkdir(parents=True)
+            lock_path = root / "packages/anvil-mcp/Cargo.lock"
+            old_lock = 'version = 4\n\n[[package]]\nname = "old"\nversion = "1.0.0"\n'
+            new_lock = 'version = 4\n\n[[package]]\nname = "new"\nversion = "2.0.0"\n'
+            lock_path.write_text(old_lock)
+            path = root / "sources/anvil.json"
+            old_ref = "1" * 40
+            new_ref = "2" * 40
+            record = {
+                "version": "1.0.0",
+                "source": {
+                    "fetcher": "fetchFromGitHub",
+                    "url": "https://github.com/example/project",
+                    "args": {
+                        "owner": "example",
+                        "repo": "project",
+                        "rev": old_ref,
+                        "hash": "sha256-source-old",
+                    },
+                },
+                "update": {
+                    "artifacts": ["packages/anvil-mcp/Cargo.lock"],
+                    "artifactSources": {
+                        "packages/anvil-mcp/Cargo.lock": "Cargo.lock"
+                    },
+                    "branch": "main",
+                    "kind": "github-commit",
+                },
+            }
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"project": record},
+            }))
+            target = load_source_catalog(root)["project"]
+            self.assertEqual(target["executor"], "update-agents")
+
+            requested_files = []
+
+            class FakeGitHub:
+                def get_latest_commit(self, _owner, _repo, _branch):
+                    return new_ref, new_ref[:8]
+
+                def get_file(self, owner, repo, rev, remote):
+                    requested_files.append((owner, repo, rev, remote))
+                    return "not a Cargo lock"
+
+            class FakeHashes:
+                def __init__(self, lock_valid=True):
+                    self.lock_valid = lock_valid
+                    self.validations = []
+
+                def compute_native_hash(self, _source, replacements):
+                    return (
+                        "sha256-source-new"
+                        if replacements == {"rev": new_ref}
+                        else None
+                    )
+
+                def validate_cargo_lock(
+                    self, source_url, revision, remote, content
+                ):
+                    self.validations.append(
+                        (source_url, revision, remote, content)
+                    )
+                    return self.lock_valid
+
+            before = path.read_text()
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_github_commit_artifact_target(
+                    "project",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    FakeGitHub(),
+                    FakeHashes(),
+                    transaction,
+                )
+            self.assertEqual(status, "failed")
+            self.assertEqual(path.read_text(), before)
+            self.assertEqual(lock_path.read_text(), old_lock)
+            self.assertEqual(transaction.original, {})
+
+            github = FakeGitHub()
+            github.get_file = lambda owner, repo, rev, remote: (
+                requested_files.append((owner, repo, rev, remote)) or new_lock
+            )
+            invalid_source_lock = FakeHashes(lock_valid=False)
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_github_commit_artifact_target(
+                    "project",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    github,
+                    invalid_source_lock,
+                    transaction,
+                )
+            self.assertEqual(status, "failed")
+            self.assertEqual(path.read_text(), before)
+            self.assertEqual(lock_path.read_text(), old_lock)
+            self.assertEqual(transaction.original, {})
+            self.assertEqual(
+                invalid_source_lock.validations,
+                [
+                    (
+                        "https://github.com/example/project",
+                        new_ref,
+                        "Cargo.lock",
+                        new_lock,
+                    )
+                ],
+            )
+
+            valid_source_lock = FakeHashes()
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_github_commit_artifact_target(
+                    "project",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    github,
+                    valid_source_lock,
+                    transaction,
+                )
+            transaction.commit()
+            self.assertEqual(status, "updated")
+            self.assertEqual(requested_files[-1], (
+                "example",
+                "project",
+                new_ref,
+                "Cargo.lock",
+            ))
+            updated = json.loads(path.read_text())["sources"]["project"]
+            self.assertEqual(updated["source"]["args"]["rev"], new_ref)
+            self.assertEqual(updated["source"]["args"]["hash"], "sha256-source-new")
+            self.assertEqual(lock_path.read_text(), new_lock)
+            self.assertEqual(len(valid_source_lock.validations), 1)
+
     def test_manifest_and_cli_inventory_cover_hidden_update_targets(self):
         root = SCRIPT.parent.parent
         try:
@@ -1600,8 +2161,6 @@ got: sha256-requested
         }
         pending = {
             "cymbal",
-            "hf-xet",
-            "nelisp",
             "pi-artifacts",
             "pi-dynamic-workflows",
             "pi-hashline-edit-pro",
@@ -1612,7 +2171,6 @@ got: sha256-requested
             "pi-smart-fetch",
             "pi-smart-web-search",
             "rtk",
-            "sherlock-db",
         }
         self.assertEqual(
             {item["name"] for item in inventory["packages"] if not item["managed"]},
@@ -1650,6 +2208,14 @@ got: sha256-requested
         self.assertEqual(
             {name for name in ISSUE40_TARGETS if by_name[name]["executor"] == "update-agents"},
             ISSUE40_TARGETS,
+        )
+        self.assertEqual(
+            {name for name in ISSUE41_TARGETS if by_name[name]["managed"]},
+            ISSUE41_TARGETS,
+        )
+        self.assertEqual(
+            {name for name in ISSUE41_TARGETS if by_name[name]["executor"] == "update-agents"},
+            ISSUE41_TARGETS,
         )
         self.assertFalse(by_name["pi-lens"]["managed"])
         self.assertIsNone(by_name["pi-lens"]["executor"])
@@ -1767,6 +2333,7 @@ class IntegratedWorkflowTests(unittest.TestCase):
         (root / "projection.json").chmod(0o644)
         (root / "fixed.txt").write_text("fixed before\n")
         (root / "pypi.txt").write_text("pypi before\n")
+        (root / "github.txt").write_text("github before\n")
         (root / "config/ai/flake.nix").write_text("{ }\n")
         (root / "target-old").write_text("old target\n")
         (root / "target-new").write_text("new target\n")
@@ -1795,7 +2362,7 @@ arguments = sys.argv[1:]
 declared = [
     "tracked.txt", "mode.sh", "binary.bin", "format.nix", "projection.json", "link",
     "regular-to-link", "link-to-regular", "renamed-old.txt", "renamed-new.txt",
-    "deleted.txt", "created.txt", "fixed.txt", "pypi.txt",
+    "deleted.txt", "created.txt", "fixed.txt", "pypi.txt", "github.txt",
     "new-directory/generated-lock.json"
 ]
 if "--inventory" in arguments:
@@ -1860,6 +2427,16 @@ if "--inventory" in arguments:
             "executor": "update-agents",
             "policy": "manual",
         })
+    if os.environ.get("UPDATE_TEST_GITHUB_TARGET") == "1":
+        packages.append({
+            "name": "github",
+            "files": ["github.txt"],
+            "inventoried": True,
+            "kind": "github-release",
+            "managed": True,
+            "executor": "update-agents",
+            "policy": "manual",
+        })
     print(json.dumps({
         "schemaVersion": 1,
         "packages": packages,
@@ -1880,6 +2457,11 @@ elif "--prepare-pypi-artifacts" in arguments:
         print(f"unexpected PyPI preparation: {arguments}", file=sys.stderr)
         raise SystemExit(80)
     (root / "pypi.txt").write_text("pypi after\\n")
+elif "--prepare-github-projections" in arguments:
+    if arguments != ["--prepare-github-projections", "github"]:
+        print(f"unexpected GitHub preparation: {arguments}", file=sys.stderr)
+        raise SystemExit(81)
+    (root / "github.txt").write_text("github after\\n")
 elif "--sync-flake-projections" in arguments:
     (root / "projection.json").write_text('{"projected": true}\\n')
     if os.environ.get("UPDATE_TEST_SIGNAL_PHASE") == "candidate-projection":
@@ -2530,6 +3112,54 @@ fi
             environment["UPDATE_TEST_PYPI_TARGET"] = "1"
             result = subprocess.run(
                 [str(UPDATE_AGENTS), "--target", "pypi", "--dry-run"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("authoritative tree unchanged", result.stdout)
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_routes_github_projection_without_lock_updates(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            command_log = Path(temp_dir) / "commands.log"
+            environment["UPDATE_TEST_GITHUB_TARGET"] = "1"
+            environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "github"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            self.assertEqual((root / "github.txt").read_text(), "github after\n")
+            self.assertEqual((root / "projection.json").read_text(), "{}\n")
+            self.assertEqual(
+                command_log.read_text().splitlines(),
+                [
+                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check --no-build",
+                ],
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment["UPDATE_TEST_GITHUB_TARGET"] = "1"
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "github", "--dry-run"],
                 capture_output=True,
                 text=True,
                 env=environment,

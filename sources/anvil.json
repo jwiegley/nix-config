@@ -51,6 +51,9 @@
         "artifacts": [
           "packages/anvil-mcp/Cargo.lock"
         ],
+        "artifactSources": {
+          "packages/anvil-mcp/Cargo.lock": "Cargo.lock"
+        },
         "branch": "main",
         "kind": "github-commit",
         "policy": "manual"

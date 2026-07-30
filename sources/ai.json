@@ -496,6 +496,7 @@
         "url": "https://github.com/huggingface/xet-core"
       },
       "update": {
+        "buildMode": "python",
         "kind": "github-release",
         "policy": "manual",
         "tagPrefix": "v"
@@ -826,8 +827,14 @@
         "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.4.0/sherlock-darwin-arm64"
       },
       "update": {
+        "assets": {
+          "source": "sherlock-darwin-arm64",
+          "x86_64-linux": "sherlock-linux-x64"
+        },
         "kind": "github-release-asset",
+        "owner": "michaelbromley",
         "policy": "manual",
+        "repo": "sherlock",
         "tagPrefix": "v"
       },
       "version": "1.4.0"
