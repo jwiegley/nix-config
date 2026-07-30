@@ -1050,6 +1050,11 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                     or f"/{package}/-/" not in source_args["url"]
                 ):
                     raise RuntimeError(f"npm source identity does not match update package: {name}")
+                version = record.get("version")
+                if not isinstance(version, str) or source_args["url"].count(version) != 1:
+                    raise RuntimeError(
+                        f"npm source URL does not match catalog version: {name}"
+                    )
             if kind == "pypi-release" and source_fetcher == "fetchPypi":
                 if _normalized_package_name(source_args["pname"]) != _normalized_package_name(
                     update["package"]
@@ -1451,13 +1456,14 @@ def update_npm_flake_target(
     old_version = record["version"]
     new_version = metadata["version"]
     old_url = source_args["url"]
-    if old_version == new_version:
-        new_url = old_url
-    elif old_url.count(old_version) == 1:
-        new_url = old_url.replace(old_version, new_version, 1)
-    else:
+    if old_url.count(old_version) != 1:
         print(f"{Colors.RED}{name}: npm URL has no unique version coordinate{Colors.RESET}")
         return "failed"
+    new_url = (
+        old_url
+        if old_version == new_version
+        else old_url.replace(old_version, new_version, 1)
+    )
     new_rev = metadata["gitHead"]
     new_tar_hash = hash_computer.compute_native_hash(source, {"url": new_url})
     new_git_hash = hash_computer.compute_native_hash(git_source, {"rev": new_rev})

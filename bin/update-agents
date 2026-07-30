@@ -43,7 +43,7 @@ declare -A publication_baseline_parent_exists=()
 
 usage() {
     cat <<'EOF'
-usage: update-agents [--all-inputs] [--target NAME] [--version REV] [--dry-run]
+usage: update-agents [--all-inputs] [--target NAME] [--version VALUE] [--dry-run]
                      [--pull] [--commit] [--switch] [--push] [--brew]
 
 Update integrated AI inputs, both repository locks, and local overlays.
@@ -52,7 +52,7 @@ By default, leave reviewed working-tree changes without external side effects.
 Options:
   --all-inputs  Update every root and portable flake input
   --target NAME Update one catalog target through this transaction (repeatable)
-  --version REV Force the revision for one fixed-input target
+  --version VALUE  Force the revision or npm version for one fixed/npm-flake target
   --dry-run     Validate the candidate without publishing it
   --pull       Fast-forward the clean repository before updating
   --commit     Create one signed commit of updater-owned paths

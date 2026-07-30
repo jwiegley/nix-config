@@ -583,6 +583,11 @@ got: sha256-requested
             (root / "sources/test.json").write_text(json.dumps(document))
             with self.assertRaisesRegex(RuntimeError, "npm source identity"):
                 load_source_catalog(root)
+            document["sources"]["ws"]["update"]["package"] = "ws"
+            document["sources"]["ws"]["version"] = "8.18.4"
+            (root / "sources/test.json").write_text(json.dumps(document))
+            with self.assertRaisesRegex(RuntimeError, "URL does not match catalog version"):
+                load_source_catalog(root)
 
     def test_fixed_flake_input_rewrites_literal_and_rolls_back_atomically(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -896,6 +901,23 @@ got: sha256-requested
                     load_target(),
                     SimpleNamespace(version=None, dry_run=False),
                     missing_git_head,
+                    FakeHashComputer(),
+                    SourceTransaction(),
+                )
+            self.assertEqual(refused, "failed")
+            self.assertEqual(catalog_path.read_text(), before_catalog)
+            self.assertEqual(flake_path.read_text(), before_flake)
+
+            drifted = json.loads(catalog_path.read_text())
+            drifted["sources"]["example"]["version"] = "2.0.0"
+            catalog_path.write_text(json.dumps(drifted, indent=2) + "\n")
+            before_catalog = catalog_path.read_text()
+            with contextlib.redirect_stdout(io.StringIO()):
+                refused = update_npm_flake_target(
+                    "example",
+                    load_target(),
+                    SimpleNamespace(version=None, dry_run=False),
+                    FakeNpmClient(),
                     FakeHashComputer(),
                     SourceTransaction(),
                 )
@@ -2166,7 +2188,7 @@ fi
             )
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            _root, environment, _baseline = self._create_update_agents_fixture(
+            root, environment, _baseline = self._create_update_agents_fixture(
                 temp_dir
             )
             command_log = Path(temp_dir) / "commands.log"
@@ -2274,7 +2296,7 @@ fi
             )
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            _root, environment, _baseline = self._create_update_agents_fixture(
+            root, environment, _baseline = self._create_update_agents_fixture(
                 temp_dir
             )
             command_log = Path(temp_dir) / "commands.log"
@@ -2288,6 +2310,7 @@ fi
                 check=False,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual((root / "fixed.txt").read_text(), "npm flake after\n")
             self.assertIn("npm-flake-input", command_log.read_text().splitlines()[0])
 
     def test_update_agents_rejects_undeclared_candidate_mutation(self):
