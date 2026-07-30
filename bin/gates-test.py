@@ -483,7 +483,7 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
             env=clean_env(),
         )
         self.sample = self.root / "sample.nix"
-        self.sample.write_text("{ }\n")
+        self.sample.write_text("# config/ai\n")
         subprocess.run(
             ["git", "-C", str(self.root), "add", "--", "sample.nix"],
             check=True,
@@ -512,6 +512,35 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
             text=True,
             env=clean_env(),
         )
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self.root),
+                "-c",
+                "user.name=Inventory Test",
+                "-c",
+                "user.email=inventory@example.invalid",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "--quiet",
+                "--allow-empty",
+                "-m",
+                "same-tree head",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=clean_env(),
+        )
+        self.previous_head = subprocess.run(
+            ["git", "-C", str(self.root), "rev-parse", "HEAD^"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=clean_env(),
+        ).stdout.strip()
 
     def run_write(self, dest, **environment):
         return subprocess.run(
@@ -529,7 +558,8 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
 
     def assert_no_temporary_inventory(self):
         self.assertEqual(
-            list(Path(self.temp.name).glob("consumer-inventory.*")),
+            list(Path(self.temp.name).glob("consumer-inventory.*"))
+            + list(Path(self.temp.name).glob("consumer-inventory-tree.*")),
             [],
         )
 
@@ -569,7 +599,17 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
             text=True,
             env=clean_env(),
         ).stdout.strip()
-        self.assertEqual(json.loads(clean_dest.read_text())["repoHead"], actual_head)
+        clean_inventory = json.loads(clean_dest.read_text())
+        self.assertEqual(clean_inventory["repoHead"], actual_head)
+        singleton = [
+            record
+            for record in clean_inventory["references"]
+            if record.get("kind") == "internal-config-ai-ref"
+        ]
+        self.assertEqual(
+            [(record["file"], record["line"], record["text"]) for record in singleton],
+            [("sample.nix", 1, "# config/ai")],
+        )
 
         mismatch_dest = Path(self.temp.name) / "mismatch.json"
         result = self.run_write(
@@ -613,7 +653,7 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
             "        count = 1\n"
             "    open(counter, 'w').write(str(count))\n"
             "    if count == 2:\n"
-            "        print('0' * 40)\n"
+            f"        print({self.previous_head!r})\n"
             "        raise SystemExit(0)\n"
             f"os.execv({real_git!r}, [{real_git!r}, *args])\n"
         )
@@ -626,6 +666,44 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("changed during derivation", result.stdout + result.stderr)
         self.assertFalse(race_dest.exists())
+        self.assert_no_temporary_inventory()
+
+        real_grep = shutil.which("grep")
+        self.assertIsNotNone(real_grep)
+        aba_bin = Path(self.temp.name) / "aba-bin"
+        aba_bin.mkdir()
+        fake_grep = aba_bin / "grep"
+        fake_grep.write_text(
+            "#!/usr/bin/env python3\n"
+            "import os, subprocess, sys\n"
+            f"sample = {str(self.sample)!r}\n"
+            f"real_grep = {real_grep!r}\n"
+            "original = open(sample).read()\n"
+            "open(sample, 'w').write('# config/ai transient\\n')\n"
+            "try:\n"
+            "    result = subprocess.run([real_grep, *sys.argv[1:]])\n"
+            "finally:\n"
+            "    open(sample, 'w').write(original)\n"
+            "raise SystemExit(result.returncode)\n"
+        )
+        fake_grep.chmod(0o755)
+        aba_dest = Path(self.temp.name) / "aba.json"
+        result = self.run_write(
+            aba_dest,
+            PATH=f"{aba_bin}{os.pathsep}{os.environ['PATH']}",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.sample.read_text(), "# config/ai\n")
+        aba_inventory = json.loads(aba_dest.read_text())
+        aba_records = [
+            record
+            for record in aba_inventory["references"]
+            if record.get("kind") == "internal-config-ai-ref"
+        ]
+        self.assertEqual(
+            [(record["file"], record["line"], record["text"]) for record in aba_records],
+            [("sample.nix", 1, "# config/ai")],
+        )
         self.assert_no_temporary_inventory()
 
         self.sample.rename(self.root / "moved.nix")

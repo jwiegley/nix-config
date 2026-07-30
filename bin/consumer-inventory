@@ -81,9 +81,14 @@ verify_write_source() {
     if [[ $repo_head != __auto__ && -n $repo_head && $repo_head != "$actual_head" ]]; then
         die "refusing to write: repoHead override does not match HEAD $actual_head"
     fi
-    git -C "$repo_root" diff --quiet HEAD -- ||
+    git -C "$repo_root" diff --quiet "$actual_head" -- ||
         die "refusing to write: tracked files differ from HEAD, so repoHead would not describe the scanned content"
     printf '%s\n' "$actual_head"
+}
+
+cleanup_write_temps() {
+    [[ -z ${tmp:-} ]] || rm -f -- "$tmp"
+    [[ -z ${snapshot_root:-} ]] || rm -rf -- "$snapshot_root"
 }
 
 # All derivation lives in one Python program: it scopes repository scans through
@@ -91,7 +96,9 @@ verify_write_source() {
 # consumer flake.nix / flake.lock / *.nix files directly (with a labeled
 # filesystem fallback only when a consumer is not a Git checkout).
 derive() {
-    python3 - "$repo_root" "$consumer_base" "$repo_head" <<'PY'
+    local derive_root=${1:-$repo_root}
+    local derive_head=${2-$repo_head}
+    python3 - "$derive_root" "$consumer_base" "$derive_head" <<'PY'
 import collections
 import json
 import fnmatch
@@ -263,7 +270,7 @@ def _matches_globs(path):
 def grep(pattern, root, fixed=False):
     """grep -In over the issue's include globs. Returns [(relpath, lineno, text)].
     Missing matches (grep rc 1) are not an error; anything else is."""
-    cmd = ["grep", "-In"]
+    cmd = ["grep", "-HIn"]
     tracked = tracked_files(root)
     if tracked is None:
         # Not a git checkout: fall back to walking, and say so rather than
@@ -792,9 +799,22 @@ case ${1-} in
     dest=${2:-"$repo_root/test/inventory/consumer-inventory.json"}
     write_head=$(verify_write_source)
     mkdir -p "$(dirname "$dest")"
+    tmp=
+    snapshot_root=
+    trap cleanup_write_temps EXIT
     tmp=$(mktemp "${TMPDIR:-/tmp}/consumer-inventory.XXXXXX") || die "cannot create a temporary file"
-    trap 'rm -f "$tmp"' EXIT
-    derive >"$tmp"
+    snapshot_root=$(mktemp -d "${TMPDIR:-/tmp}/consumer-inventory-tree.XXXXXX") ||
+        die "cannot create an immutable inventory snapshot"
+    snapshot_repo=$snapshot_root/repo
+    git clone --quiet --no-hardlinks --no-checkout "$repo_root" "$snapshot_repo" ||
+        die "cannot clone the captured inventory source"
+    git -C "$snapshot_repo" checkout --quiet --detach "$write_head" ||
+        die "cannot check out the captured inventory source"
+    write_derive_head=$write_head
+    if [[ $repo_head != __auto__ ]]; then
+        write_derive_head=$repo_head
+    fi
+    derive "$snapshot_repo" "$write_derive_head" >"$tmp"
     # Refuse to commit an artifact that cannot say which tree it describes. A
     # null repoHead is not a smaller artifact, it is an uninterpretable one: every
     # per-reference line number is meaningless without the revision it was read
@@ -813,6 +833,7 @@ variable."
         die "refusing to write: repoHead or tracked source changed during derivation"
     fi
     mv "$tmp" "$dest"
+    tmp=
     printf 'consumer-inventory: wrote %s\n' "$dest" >&2
     printf '%s\n' "$dest"
     ;;
