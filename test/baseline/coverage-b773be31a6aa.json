@@ -774,7 +774,7 @@
           "budgetSeconds": 120,
           "host": "hera",
           "platform": "darwin-arm64",
-          "seconds": 46.14,
+          "seconds": 48.358,
           "tier": "pre-commit-core"
         }
       ],
@@ -904,9 +904,9 @@
     "kind": "declared-command-recipe"
   },
   "schema": "fleet-coverage/1",
-  "sourceBaseRev": "15b831cfe111f5dc631af59564f73bd3a0d600ce",
-  "sourceProjectionDigest": "51b084035acd2269d97eb7cb397e82d4e773f8648a2a950fec4521fc99b45f04",
-  "sourceTree": "b39283b1e33835509e8bd2acf2db34b7903a9c77",
+  "sourceBaseRev": "c699e9b1f79ed556255e2e42dffcd58cd808d413",
+  "sourceProjectionDigest": "9ca91b924f93740e6c9b78f4954489412a3b24ae487d4cba6b1f59749515361f",
+  "sourceTree": "f62c33e2a7f16d162d9cce6435f361e461cf8482",
   "structural": {
     "budgetsSeconds": {
       "ci-on-demand": 1800,
