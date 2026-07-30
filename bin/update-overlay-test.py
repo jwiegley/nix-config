@@ -21,6 +21,7 @@ SCRIPT = Path(__file__).with_name("update-overlay")
 UPDATE_AGENTS = Path(__file__).with_name("update-agents")
 UPGRADE_PROJECTS = Path(__file__).with_name("upgrade-projects")
 UPGRADE = Path(__file__).with_name("upgrade")
+SWITCH = Path(__file__).with_name("switch")
 BUILD = Path(__file__).parent.parent / "build"
 MODULE = runpy.run_path(str(SCRIPT))
 OverlayParser = MODULE["OverlayParser"]
@@ -3988,6 +3989,72 @@ exec "$REAL_GIT" "$@"
         root_flake = (root / "flake.nix").read_text()
         self.assertIn('nix-config-ai.url = "path:./config/ai"', root_flake)
         self.assertNotIn("agent-browser-source = {", root_flake)
+
+    def test_profile_symlinked_scripts_find_packaged_routing_library(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            closure_bin = root / "closure/bin"
+            closure_lib = root / "closure/libexec/nix-scripts"
+            profile_bin = root / "profile/bin"
+            fake_bin = root / "fake-bin"
+            for directory in (closure_bin, closure_lib, profile_bin, fake_bin):
+                directory.mkdir(parents=True)
+            (fake_bin / "bash").symlink_to(shutil.which("bash") or "/bin/bash")
+
+            shutil.copy2(SCRIPT.parent / "lib/host-routing.sh", closure_lib)
+            for source in (SWITCH, UPGRADE, UPDATE_AGENTS):
+                target = closure_bin / source.name
+                shutil.copy2(source, target)
+                (profile_bin / source.name).symlink_to(target)
+
+            def executable(name, text):
+                path = fake_bin / name
+                path.write_text(text)
+                path.chmod(0o755)
+
+            executable("hostname", "#!/bin/sh\nprintf 'hera\\n'\n")
+            executable("uname", "#!/bin/sh\nprintf 'Darwin\\n'\n")
+            executable(
+                "u",
+                '#!/bin/sh\nprintf "%s\\n" "$*" >"$PROFILE_TEST_LOG"\n',
+            )
+            log = root / "u.log"
+            environment = {
+                **os.environ,
+                "HOME": str(root),
+                "PATH": f"{fake_bin}:/usr/bin:/bin",
+                "PROFILE_TEST_LOG": str(log),
+            }
+
+            switched = subprocess.run(
+                [str(profile_bin / "switch")],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(switched.returncode, 0, switched.stderr)
+            self.assertEqual(log.read_text(), "switch\n")
+
+            update_help = subprocess.run(
+                [str(profile_bin / "update-agents"), "--help"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(update_help.returncode, 0, update_help.stderr)
+            self.assertIn("usage: update-agents", update_help.stdout)
+
+            conflict = subprocess.run(
+                [str(profile_bin / "upgrade"), "--host-only", "--projects-only"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(conflict.returncode, 2, conflict.stderr)
+            self.assertIn("mutually exclusive", conflict.stderr)
 
     def test_host_routing_table_covers_system_and_shared_consumers(self):
         routing = SCRIPT.parent / "lib" / "host-routing.sh"
