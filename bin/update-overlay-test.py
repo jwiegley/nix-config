@@ -26,6 +26,7 @@ MODULE = runpy.run_path(str(SCRIPT))
 OverlayParser = MODULE["OverlayParser"]
 OverlayUpdater = MODULE["OverlayUpdater"]
 GitHubClient = MODULE["GitHubClient"]
+PypiClient = MODULE["PypiClient"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
 load_source_catalog = MODULE["load_source_catalog"]
@@ -34,7 +35,10 @@ sync_flake_projections = MODULE["sync_flake_projections"]
 resolve_flake_input_version = MODULE.get("resolve_flake_input_version")
 update_catalog_target = MODULE["update_catalog_target"]
 update_npm_flake_target = MODULE.get("update_npm_flake_target")
+update_pypi_artifact_target = MODULE.get("update_pypi_artifact_target")
 build_inventory = MODULE["build_inventory"]
+
+ISSUE40_TARGETS = frozenset({"cohere-melody", "mlx"})
 
 ISSUE34_TARGETS = frozenset({
     "pi-mcp-adapter",
@@ -1366,6 +1370,117 @@ got: sha256-requested
             self.assertNotIn("url", record["source"]["args"] )
             self.assertEqual(record["source"]["url"], "https://pypi.org/project/example")
 
+    def test_compound_pypi_resolves_every_artifact_before_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/ai.json"
+
+            def wheel(pname, python, abi, project):
+                return {
+                    "fetcher": "fetchPypi",
+                    "url": f"https://pypi.org/project/{project}",
+                    "args": {
+                        "pname": pname,
+                        "version": "1.0.0",
+                        "format": "wheel",
+                        "python": python,
+                        "abi": abi,
+                        "platform": "macosx_14_0_arm64",
+                        "hash": "sha256-old",
+                    },
+                }
+
+            record = {
+                "version": "1.0.0",
+                "source": wheel("example", "cp313", "cp313", "example"),
+                "artifacts": {
+                    "cp311": wheel("example", "cp311", "cp311", "example"),
+                    "metal": wheel("example_metal", "py3", "none", "example-metal"),
+                },
+                "update": {"kind": "pypi-release", "package": "example"},
+            }
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"example": record},
+            }))
+            target = load_source_catalog(root)["example"]
+            self.assertEqual(target["executor"], "update-agents")
+
+            def artifact(filename, byte):
+                return {
+                    "filename": filename,
+                    "url": f"https://files.pythonhosted.org/{filename}",
+                    "digests": {"sha256": byte * 64},
+                }
+
+            documents = {
+                "example": {
+                    "info": {"version": "2.0.0"},
+                    "releases": {"2.0.0": [
+                        artifact("example-2.0.0-cp311-cp311-macosx_14_0_arm64.whl", "1"),
+                        artifact("example-2.0.0-cp313-cp313-macosx_14_0_arm64.whl", "2"),
+                    ]},
+                },
+                "example-metal": {
+                    "info": {"version": "2.0.0"},
+                    "releases": {"2.0.0": [
+                        artifact("example_metal-2.0.0-py3-none-macosx_14_0_arm64.whl", "3"),
+                    ]},
+                },
+            }
+
+            missing = PypiClient()
+            missing_documents = copy.deepcopy(documents)
+            missing_documents["example-metal"]["releases"]["2.0.0"] = []
+            missing._get_metadata = lambda package: missing_documents.get(package)
+            before = path.read_text()
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_pypi_artifact_target(
+                    "example",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    missing,
+                    transaction,
+                )
+            self.assertEqual(status, "failed")
+            self.assertEqual(path.read_text(), before)
+            self.assertEqual(transaction.original, {})
+
+            calls = []
+            client = PypiClient()
+            client._get_metadata = lambda package: (
+                calls.append(package) or documents.get(package)
+            )
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_pypi_artifact_target(
+                    "example",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    client,
+                    transaction,
+                )
+            transaction.commit()
+            self.assertEqual(status, "updated")
+            self.assertEqual(calls, ["example", "example-metal"])
+            updated = json.loads(path.read_text())["sources"]["example"]
+            self.assertEqual(updated["version"], "2.0.0")
+            for fetch in [updated["source"], *updated["artifacts"].values()]:
+                self.assertEqual(fetch["args"]["version"], "2.0.0")
+                self.assertRegex(fetch["args"]["hash"], r"^sha256-[A-Za-z0-9+/]+=*$")
+
+            updated["artifacts"]["cp311"]["args"]["version"] = "1.0.0"
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"example": updated},
+            }))
+            with self.assertRaisesRegex(
+                RuntimeError, "compound PyPI artifact version does not match"
+            ):
+                load_source_catalog(root)
+
     def test_manifest_and_cli_inventory_cover_hidden_update_targets(self):
         root = SCRIPT.parent.parent
         try:
@@ -1444,10 +1559,8 @@ got: sha256-requested
             item["name"] for item in inventory["packages"] if item["source"] == "catalog"
         }
         pending = {
-            "cohere-melody",
             "cymbal",
             "hf-xet",
-            "mlx",
             "nelisp",
             "pi-artifacts",
             "pi-dynamic-workflows",
@@ -1490,6 +1603,14 @@ got: sha256-requested
             "agent-resources",
         )
         self.assertEqual(by_name["ws"]["executor"], "update-overlay")
+        self.assertEqual(
+            {name for name in ISSUE40_TARGETS if by_name[name]["managed"]},
+            ISSUE40_TARGETS,
+        )
+        self.assertEqual(
+            {name for name in ISSUE40_TARGETS if by_name[name]["executor"] == "update-agents"},
+            ISSUE40_TARGETS,
+        )
         self.assertFalse(by_name["pi-lens"]["managed"])
         self.assertIsNone(by_name["pi-lens"]["executor"])
         for item in inventory["packages"]:
@@ -1605,6 +1726,7 @@ class IntegratedWorkflowTests(unittest.TestCase):
         (root / "projection.json").write_text("{}\n")
         (root / "projection.json").chmod(0o644)
         (root / "fixed.txt").write_text("fixed before\n")
+        (root / "pypi.txt").write_text("pypi before\n")
         (root / "config/ai/flake.nix").write_text("{ }\n")
         (root / "target-old").write_text("old target\n")
         (root / "target-new").write_text("new target\n")
@@ -1633,7 +1755,8 @@ arguments = sys.argv[1:]
 declared = [
     "tracked.txt", "mode.sh", "binary.bin", "format.nix", "projection.json", "link",
     "regular-to-link", "link-to-regular", "renamed-old.txt", "renamed-new.txt",
-    "deleted.txt", "created.txt", "fixed.txt", "new-directory/generated-lock.json"
+    "deleted.txt", "created.txt", "fixed.txt", "pypi.txt",
+    "new-directory/generated-lock.json"
 ]
 if "--inventory" in arguments:
     packages = [{
@@ -1687,6 +1810,16 @@ if "--inventory" in arguments:
             "executor": "update-agents",
             "policy": "automatic",
         })
+    if os.environ.get("UPDATE_TEST_PYPI_TARGET") == "1":
+        packages.append({
+            "name": "pypi",
+            "files": ["pypi.txt"],
+            "inventoried": True,
+            "kind": "pypi-release",
+            "managed": True,
+            "executor": "update-agents",
+            "policy": "manual",
+        })
     print(json.dumps({
         "schemaVersion": 1,
         "packages": packages,
@@ -1702,6 +1835,11 @@ elif "--prepare-npm-flake-inputs" in arguments:
         print(f"unexpected npm flake preparation: {arguments}", file=sys.stderr)
         raise SystemExit(79)
     (root / "fixed.txt").write_text("npm flake after\\n")
+elif "--prepare-pypi-artifacts" in arguments:
+    if arguments != ["--prepare-pypi-artifacts", "pypi"]:
+        print(f"unexpected PyPI preparation: {arguments}", file=sys.stderr)
+        raise SystemExit(80)
+    (root / "pypi.txt").write_text("pypi after\\n")
 elif "--sync-flake-projections" in arguments:
     (root / "projection.json").write_text('{"projected": true}\\n')
     if os.environ.get("UPDATE_TEST_SIGNAL_PHASE") == "candidate-projection":
@@ -2312,6 +2450,54 @@ fi
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual((root / "fixed.txt").read_text(), "npm flake after\n")
             self.assertIn("npm-flake-input", command_log.read_text().splitlines()[0])
+
+    def test_update_agents_routes_compound_pypi_without_lock_updates(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            command_log = Path(temp_dir) / "commands.log"
+            environment["UPDATE_TEST_PYPI_TARGET"] = "1"
+            environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "pypi"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            self.assertEqual((root / "pypi.txt").read_text(), "pypi after\n")
+            self.assertEqual((root / "projection.json").read_text(), "{}\n")
+            self.assertEqual(
+                command_log.read_text().splitlines(),
+                [
+                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check --no-build",
+                ],
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment["UPDATE_TEST_PYPI_TARGET"] = "1"
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "pypi", "--dry-run"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("authoritative tree unchanged", result.stdout)
+            self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_rejects_undeclared_candidate_mutation(self):
         for environment_name in (

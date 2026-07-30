@@ -522,22 +522,22 @@ class NpmRegistryClient:
 class PypiClient:
     """Resolve the exact PyPI artifact selected by native fetcher arguments."""
 
-    def get_release(
-        self, package_name: str, record: dict, requested_version: Optional[str] = None
-    ) -> Optional[tuple[str, str, str]]:
+    def _get_metadata(self, package_name: str) -> Optional[dict]:
         try:
-            with urlopen(f"https://pypi.org/pypi/{quote(package_name, safe='')}/json", timeout=30) as response:
-                data = json.load(response)
+            with urlopen(
+                f"https://pypi.org/pypi/{quote(package_name, safe='')}/json",
+                timeout=30,
+            ) as response:
+                return json.load(response)
         except Exception as error:
             print(f"  Error fetching PyPI metadata: {error}", file=sys.stderr)
             return None
 
-        version = requested_version or data.get("info", {}).get("version")
-        if not version:
-            return None
-        source = record["source"]
+    @staticmethod
+    def _resolve_artifact(
+        data: dict, source: dict, version: str, old_version: str
+    ) -> Optional[tuple[str, str]]:
         args = source["args"]
-        old_version = record["version"]
         if source["fetcher"] == "fetchPypi":
             if args.get("format", "setuptools") == "wheel":
                 filename = (
@@ -553,13 +553,79 @@ class PypiClient:
             filename = current_filename.replace(old_version, version, 1)
 
         artifact = next(
-            (item for item in data.get("releases", {}).get(version, []) if item.get("filename") == filename),
+            (
+                item
+                for item in data.get("releases", {}).get(version, [])
+                if item.get("filename") == filename
+            ),
             None,
         )
         if artifact is None or not artifact.get("digests", {}).get("sha256"):
             return None
-        digest = base64.b64encode(bytes.fromhex(artifact["digests"]["sha256"])).decode()
-        return version, artifact["url"], f"sha256-{digest}"
+        digest = base64.b64encode(
+            bytes.fromhex(artifact["digests"]["sha256"])
+        ).decode()
+        return artifact["url"], f"sha256-{digest}"
+
+    def get_release(
+        self, package_name: str, record: dict, requested_version: Optional[str] = None
+    ) -> Optional[tuple[str, str, str]]:
+        data = self._get_metadata(package_name)
+        if data is None:
+            return None
+
+        version = requested_version or data.get("info", {}).get("version")
+        if not version:
+            return None
+        resolved = self._resolve_artifact(
+            data, record["source"], version, record["version"]
+        )
+        if resolved is None:
+            return None
+        artifact_url, artifact_hash = resolved
+        return version, artifact_url, artifact_hash
+
+    def get_release_artifacts(
+        self, package_name: str, record: dict, requested_version: Optional[str] = None
+    ) -> Optional[tuple[str, dict[str, tuple[str, str]]]]:
+        """Resolve a compound PyPI release completely before returning it."""
+        documents: dict[str, dict] = {}
+
+        def metadata(project: str) -> Optional[dict]:
+            key = _normalized_package_name(project)
+            if key not in documents:
+                document = self._get_metadata(project)
+                if document is None:
+                    return None
+                documents[key] = document
+            return documents[key]
+
+        primary = metadata(package_name)
+        if primary is None:
+            return None
+        version = requested_version or primary.get("info", {}).get("version")
+        if not version:
+            return None
+
+        fetches = {"source": record["source"]}
+        fetches.update(
+            {f"artifact:{name}": source for name, source in record["artifacts"].items()}
+        )
+        resolved: dict[str, tuple[str, str]] = {}
+        for label, source in fetches.items():
+            parts = [part for part in urlsplit(source["url"]).path.split("/") if part]
+            if len(parts) != 2 or parts[0] != "project":
+                return None
+            document = metadata(parts[1])
+            if document is None:
+                return None
+            artifact = self._resolve_artifact(
+                document, source, version, record["version"]
+            )
+            if artifact is None:
+                return None
+            resolved[label] = artifact
+        return version, resolved
 
 
 class HashComputer:
@@ -909,6 +975,12 @@ def _validate_fetch_record(name: str, source: dict) -> None:
 
 def _catalog_executor(record: dict) -> Optional[str]:
     update = record["update"]
+    if (
+        update["kind"] == "pypi-release"
+        and record.get("artifacts")
+        and not record.get("hashes")
+    ):
+        return "update-agents"
     if update["kind"] in {
         "fixed-flake-input",
         "flake-input",
@@ -1060,6 +1132,21 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                     update["package"]
                 ):
                     raise RuntimeError(f"PyPI source identity does not match update package: {name}")
+            if kind == "pypi-release" and artifacts:
+                fetches = [record["source"], *artifacts.values()]
+                if source_fetcher != "fetchPypi" or any(
+                    fetch["fetcher"] != "fetchPypi" for fetch in artifacts.values()
+                ):
+                    raise RuntimeError(
+                        f"compound PyPI record requires native fetchPypi artifacts: {name}"
+                    )
+                version = record.get("version")
+                if not isinstance(version, str) or any(
+                    fetch["args"]["version"] != version for fetch in fetches
+                ):
+                    raise RuntimeError(
+                        f"compound PyPI artifact version does not match catalog version: {name}"
+                    )
             update_artifacts = update.get("artifacts", [])
             if (
                 not isinstance(update_artifacts, list)
@@ -1497,6 +1584,60 @@ def update_npm_flake_target(
     git_args["rev"] = new_rev
     git_args["narHash"] = new_git_hash
     _rewrite_npm_flake_input_literal(target, new_rev)
+    _write_catalog_target(target)
+    print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
+    return "updated"
+
+
+def update_pypi_artifact_target(
+    name: str,
+    target: dict,
+    args,
+    pypi_client: PypiClient,
+    transaction,
+) -> str:
+    """Resolve and write one compound PyPI record as an indivisible projection."""
+    record = target["_record"]
+    old_version = record["version"]
+    resolved = pypi_client.get_release_artifacts(
+        record["update"]["package"], record, args.version
+    )
+    if resolved is None:
+        print(f"catalog/{name} {Colors.RED}✗ artifact resolution failed{Colors.RESET}")
+        return "failed"
+
+    new_version, artifacts = resolved
+    fetches = {"source": record["source"]}
+    fetches.update(
+        {f"artifact:{key}": source for key, source in record["artifacts"].items()}
+    )
+    changed = new_version != old_version
+    for label, source in fetches.items():
+        artifact_url, artifact_hash = artifacts[label]
+        source_args = source["args"]
+        hash_name = next(iter({"hash", "sha256"} & source_args.keys()))
+        changed = changed or source_args["version"] != new_version
+        changed = changed or source_args[hash_name] != artifact_hash
+        if source["fetcher"] == "fetchurl":
+            changed = changed or source_args["url"] != artifact_url
+
+    if not changed:
+        print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
+        return "skipped"
+    if args.dry_run:
+        print(f"catalog/{name} {Colors.CYAN}→ {new_version} (dry-run){Colors.RESET}")
+        return "updated"
+
+    transaction.watch(target["_path"])
+    record["version"] = new_version
+    for label, source in fetches.items():
+        artifact_url, artifact_hash = artifacts[label]
+        source_args = source["args"]
+        hash_name = next(iter({"hash", "sha256"} & source_args.keys()))
+        source_args["version"] = new_version
+        source_args[hash_name] = artifact_hash
+        if source["fetcher"] == "fetchurl":
+            source_args["url"] = artifact_url
     _write_catalog_target(target)
     print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
     return "updated"
@@ -1950,6 +2091,9 @@ Examples:
     parser.add_argument(
         "--prepare-npm-flake-inputs", action="store_true", help=argparse.SUPPRESS
     )
+    parser.add_argument(
+        "--prepare-pypi-artifacts", action="store_true", help=argparse.SUPPRESS
+    )
     args = parser.parse_args()
 
     # Validate arguments
@@ -1960,6 +2104,7 @@ Examples:
         and not args.sync_flake_projections
         and not args.prepare_fixed_inputs
         and not args.prepare_npm_flake_inputs
+        and not args.prepare_pypi_artifacts
     ):
         parser.error(
             "Please specify package names, --all, --inventory, or --sync-flake-projections"
@@ -1974,6 +2119,7 @@ Examples:
         or args.no_build
         or args.verbose
         or args.json_output
+        or args.prepare_pypi_artifacts
     ):
         parser.error("--sync-flake-projections cannot be combined with another operation")
 
@@ -1997,8 +2143,22 @@ Examples:
         or args.no_build
         or args.verbose
         or args.json_output
+        or args.prepare_pypi_artifacts
     ):
         parser.error("--prepare-npm-flake-inputs cannot be combined with another operation")
+
+    if args.prepare_pypi_artifacts and (
+        args.inventory
+        or args.all
+        or args.sync_flake_projections
+        or args.prepare_fixed_inputs
+        or args.prepare_npm_flake_inputs
+        or args.dry_run
+        or args.no_build
+        or args.verbose
+        or args.json_output
+    ):
+        parser.error("--prepare-pypi-artifacts cannot be combined with another operation")
 
     if args.sync_flake_projections and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--sync-flake-projections is restricted to the update-agents candidate")
@@ -2008,6 +2168,9 @@ Examples:
 
     if args.prepare_npm_flake_inputs and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--prepare-npm-flake-inputs is restricted to the update-agents candidate")
+
+    if args.prepare_pypi_artifacts and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
+        parser.error("--prepare-pypi-artifacts is restricted to the update-agents candidate")
 
     if args.inventory and (args.all or args.packages or args.version):
         parser.error("--inventory cannot be combined with package updates")
@@ -2022,6 +2185,8 @@ Examples:
         parser.error("--version with --prepare-fixed-inputs requires exactly one target")
     if args.prepare_npm_flake_inputs and args.version and len(args.packages) != 1:
         parser.error("--version with --prepare-npm-flake-inputs requires exactly one target")
+    if args.prepare_pypi_artifacts and args.version and len(args.packages) != 1:
+        parser.error("--version with --prepare-pypi-artifacts requires exactly one target")
 
     nix_dir = Path(__file__).parent.parent.resolve()
     if args.sync_flake_projections:
@@ -2040,7 +2205,11 @@ Examples:
         print_inventory(build_inventory(sources, explicit_targets, nix_dir), args.json_output)
         return 0
 
-    if args.prepare_fixed_inputs or args.prepare_npm_flake_inputs:
+    if (
+        args.prepare_fixed_inputs
+        or args.prepare_npm_flake_inputs
+        or args.prepare_pypi_artifacts
+    ):
         require_detached_linked_worktree(nix_dir)
     elif args.packages:
         delegated_names = [
@@ -2092,6 +2261,8 @@ Examples:
                 == "automatic"
             ]
         )
+    elif args.prepare_pypi_artifacts:
+        selected_catalog_names = args.packages
     elif args.all:
         selected_catalog_names = [
             name for name in sorted(catalog_targets)
@@ -2108,7 +2279,11 @@ Examples:
         target = catalog_targets[name]
         expected_executor = (
             "update-agents"
-            if args.prepare_fixed_inputs or args.prepare_npm_flake_inputs
+            if (
+                args.prepare_fixed_inputs
+                or args.prepare_npm_flake_inputs
+                or args.prepare_pypi_artifacts
+            )
             else "update-overlay"
         )
         if target.get("executor") != expected_executor or (
@@ -2116,6 +2291,8 @@ Examples:
         ) or (
             args.prepare_npm_flake_inputs
             and target["kind"] != "npm-release+flake-input"
+        ) or (
+            args.prepare_pypi_artifacts and target["kind"] != "pypi-release"
         ):
             if args.all:
                 if args.verbose:
@@ -2128,6 +2305,10 @@ Examples:
         if args.prepare_npm_flake_inputs:
             status = update_npm_flake_target(
                 name, target, args, npm_client, catalog_hash_computer, transaction
+            )
+        elif args.prepare_pypi_artifacts:
+            status = update_pypi_artifact_target(
+                name, target, args, pypi_client, transaction
             )
         else:
             status = update_catalog_target(
@@ -2144,7 +2325,11 @@ Examples:
         skipped_count += status == "skipped"
         fail_count += status == "failed"
 
-    if args.prepare_fixed_inputs or args.prepare_npm_flake_inputs:
+    if (
+        args.prepare_fixed_inputs
+        or args.prepare_npm_flake_inputs
+        or args.prepare_pypi_artifacts
+    ):
         if fail_count:
             transaction.rollback()
         else:

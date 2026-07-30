@@ -52,7 +52,7 @@ By default, leave reviewed working-tree changes without external side effects.
 Options:
   --all-inputs  Update every root and portable flake input
   --target NAME Update one catalog target through this transaction (repeatable)
-  --version VALUE  Force the revision or npm version for one fixed/npm-flake target
+  --version VALUE  Force the revision or release for one fixed/npm-flake/PyPI target
   --dry-run     Validate the candidate without publishing it
   --pull       Fast-forward the clean repository before updating
   --commit     Create one signed commit of updater-owned paths
@@ -557,6 +557,7 @@ fi
 
     declare -a fixed_target_names=()
     declare -a npm_flake_target_names=()
+    declare -a pypi_target_names=()
     declare -a lock_target_inputs=()
     if ((${#requested_targets[@]})); then
         declare -A seen_targets=()
@@ -575,24 +576,31 @@ fi
                 exit 2
             fi
             IFS=$'\t' read -r target_kind target_executor target_input <<<"$target_row"
-            if [[ $target_executor != update-agents || -z $target_input ]] ||
+            if [[ $target_executor != update-agents ]] ||
                 [[ $target_kind != fixed-flake-input && $target_kind != flake-input &&
                     $target_kind != flake-input+build &&
                     $target_kind != flake-input+copy &&
-                    $target_kind != npm-release+flake-input ]]; then
+                    $target_kind != npm-release+flake-input &&
+                    $target_kind != pypi-release ]] ||
+                [[ $target_kind != pypi-release && -z $target_input ]]; then
                 echo "update-agents: target is not owned by this transaction: $target_name" >&2
                 exit 2
             fi
             if [[ -n $requested_version && $target_kind != fixed-flake-input &&
-                $target_kind != npm-release+flake-input ]]; then
-                echo "update-agents: --version requires a fixed or npm-flake target" >&2
+                $target_kind != npm-release+flake-input &&
+                $target_kind != pypi-release ]]; then
+                echo "update-agents: --version requires a fixed, npm-flake, or PyPI target" >&2
                 exit 2
             fi
-            lock_target_inputs+=("$target_input")
+            if [[ -n $target_input ]]; then
+                lock_target_inputs+=("$target_input")
+            fi
             if [[ $target_kind == fixed-flake-input ]]; then
                 fixed_target_names+=("$target_name")
             elif [[ $target_kind == npm-release+flake-input ]]; then
                 npm_flake_target_names+=("$target_name")
+            elif [[ $target_kind == pypi-release ]]; then
+                pypi_target_names+=("$target_name")
             fi
         done
     else
@@ -619,6 +627,17 @@ fi
                 | [.name, .input, .kind] | @tsv
             ' "$transaction_dir/inventory.json"
         )
+        mapfile -t pypi_target_names < <(
+            jq -r '
+                .packages[]
+                | select(
+                    .kind == "pypi-release"
+                    and .executor == "update-agents"
+                    and .policy == "automatic"
+                )
+                | .name
+            ' "$transaction_dir/inventory.json"
+        )
     fi
 
     if ((${#fixed_target_names[@]})); then
@@ -636,20 +655,32 @@ fi
         python3 bin/update-overlay "${prepare_args[@]}" \
             "${npm_flake_target_names[@]}"
     fi
+    if ((${#pypi_target_names[@]})); then
+        prepare_args=(--prepare-pypi-artifacts)
+        if [[ -n $requested_version ]]; then
+            prepare_args+=(--version "$requested_version")
+        fi
+        python3 bin/update-overlay "${prepare_args[@]}" \
+            "${pypi_target_names[@]}"
+    fi
 
     if [[ $run_all_inputs == true ]]; then
         nix flake update --flake ./config/ai
         nix flake update
     elif ((${#requested_targets[@]})); then
-        nix flake update --flake ./config/ai "${lock_target_inputs[@]}"
-        nix flake update nix-config-ai
+        if ((${#lock_target_inputs[@]})); then
+            nix flake update --flake ./config/ai "${lock_target_inputs[@]}"
+            nix flake update nix-config-ai
+        fi
     else
         nix flake update --flake ./config/ai "${ai_inputs[@]}" "${lock_target_inputs[@]}"
         # The root consumes the portable subflake transitively; refresh its nested
         # nodes only after the portable lock is complete.
         nix flake update nix-config-ai
     fi
-    python bin/update-overlay --sync-flake-projections
+    if ((${#requested_targets[@]} == 0 || ${#lock_target_inputs[@]})); then
+        python bin/update-overlay --sync-flake-projections
+    fi
     if ((${#requested_targets[@]} == 0)); then
         python bin/update-overlay --all --overlays-dir overlays/ai
     fi
