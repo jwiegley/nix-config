@@ -424,7 +424,7 @@ class QualityPythonTierTests(unittest.TestCase):
                 "--term-after", "105", "--kill-after", "5", "--", quality,
                 "--python-tier", "pre-commit", "nix-format", "nix-lint",
                 "nix-deadcode", "shell-lint", "shell-format", "python-lint",
-                "python-test", "coverage",
+                "python-test",
             ],
         )
 
