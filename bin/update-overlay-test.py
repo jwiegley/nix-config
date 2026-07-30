@@ -1370,12 +1370,20 @@ got: sha256-requested
                     "kind": "url-release",
                 },
             }
-            for sibling_document in ("a.json", "z.json"):
+            canonical_lock = (
+                "packages/pi-gallery/locks/project-package-lock.json"
+            )
+            for sibling_document, artifact_alias in (
+                ("a.json", canonical_lock),
+                ("z.json", f"./{canonical_lock}"),
+            ):
                 with self.subTest(sibling_document=sibling_document):
                     sibling_path = root / "sources" / sibling_document
+                    sibling_record = copy.deepcopy(shared_record)
+                    sibling_record["update"]["artifacts"] = [artifact_alias]
                     sibling_path.write_text(json.dumps({
                         "schemaVersion": 1,
-                        "sources": {"sibling": shared_record},
+                        "sources": {"sibling": sibling_record},
                     }))
                     with self.assertRaisesRegex(
                         RuntimeError, "exactly its normalizer target as owner"
@@ -3607,6 +3615,75 @@ got: sha256-requested
             ):
                 enforce_catalog_record_isolation(snapshots, failing)
             self.assertEqual(path.read_text(), before_sibling_attempt)
+
+    def test_prepare_npm_locks_wiring_rejects_and_rolls_back_sibling_record(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "shared.json"
+            initial = {
+                "schemaVersion": 1,
+                "sources": {
+                    "selected": {"version": "1.0.0"},
+                    "sibling": {"version": "1.0.0"},
+                },
+            }
+            before = json.dumps(initial, indent=2) + "\n"
+            path.write_text(before)
+            target = {
+                "kind": "npm-release",
+                "executor": "update-agents",
+                "_path": path,
+                "_record": {
+                    "update": {
+                        "kind": "npm-release",
+                        "normalizer": "pi-gallery-v1",
+                        "package": "selected",
+                    }
+                },
+            }
+
+            def mutate_sibling(*_args, **_kwargs):
+                document = json.loads(path.read_text())
+                document["sources"]["selected"]["version"] = "2.0.0"
+                document["sources"]["sibling"]["version"] = "9.0.0"
+                path.write_text(json.dumps(document, indent=2) + "\n")
+                return "updated"
+
+            globals_ = MODULE["main"].__globals__
+            replacements = {
+                "load_source_catalog": lambda _root: {"selected": target},
+                "load_update_manifest": lambda _root: {},
+                "make_overlay_sources": lambda _args, _root: [],
+                "require_detached_linked_worktree": lambda _root: None,
+                "update_npm_lock_target": mutate_sibling,
+            }
+            originals = {name: globals_[name] for name in replacements}
+            old_argv = sys.argv
+            old_candidate = os.environ.get("UPDATE_AGENTS_CANDIDATE")
+            try:
+                globals_.update(replacements)
+                os.environ["UPDATE_AGENTS_CANDIDATE"] = "1"
+                sys.argv = [
+                    str(SCRIPT),
+                    "--prepare-npm-locks",
+                    "selected",
+                ]
+                stderr = io.StringIO()
+                with (
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(stderr),
+                ):
+                    status = MODULE["main"]()
+            finally:
+                globals_.update(originals)
+                sys.argv = old_argv
+                if old_candidate is None:
+                    os.environ.pop("UPDATE_AGENTS_CANDIDATE", None)
+                else:
+                    os.environ["UPDATE_AGENTS_CANDIDATE"] = old_candidate
+
+            self.assertEqual(status, 1)
+            self.assertIn("changed unselected data", stderr.getvalue())
+            self.assertEqual(path.read_text(), before)
 
     def test_failed_dependent_hash_rolls_back_complete_update(self):
         class FakeGitHubClient:

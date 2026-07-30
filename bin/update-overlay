@@ -1841,7 +1841,7 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
     )
     pi_npm_targets: set[str] = set()
     pi_lock_shape_targets: set[str] = set()
-    artifact_owners: dict[str, set[str]] = {}
+    artifact_owners: dict[Path, set[str]] = {}
     allowed = {
         "artifacts", "commit", "date", "hashes", "source", "update", "version",
     }
@@ -2080,7 +2080,7 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             if missing_artifacts:
                 raise RuntimeError(f"source catalog record {name} references missing artifacts: {missing_artifacts}")
             for artifact in update_artifacts:
-                artifact_owners.setdefault(artifact, set()).add(name)
+                artifact_owners.setdefault((nix_dir / artifact).resolve(), set()).add(name)
             pi_lock_shape = (
                 path.name == "pi.json"
                 and kind == "npm-release"
@@ -2156,7 +2156,8 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             canonical_lock = (
                 f"packages/pi-gallery/locks/{name}-package-lock.json"
             )
-            if artifact_owners.get(canonical_lock, set()) != {name}:
+            canonical_path = (nix_dir / canonical_lock).resolve()
+            if artifact_owners.get(canonical_path, set()) != {name}:
                 raise RuntimeError(
                     "Pi npm lock artifact must have exactly its normalizer target "
                     f"as owner: {canonical_lock}"
