@@ -33,6 +33,7 @@ require_detached_linked_worktree = MODULE["require_detached_linked_worktree"]
 sync_flake_projections = MODULE["sync_flake_projections"]
 resolve_flake_input_version = MODULE.get("resolve_flake_input_version")
 update_catalog_target = MODULE["update_catalog_target"]
+update_npm_flake_target = MODULE.get("update_npm_flake_target")
 build_inventory = MODULE["build_inventory"]
 
 ISSUE34_TARGETS = frozenset({
@@ -748,6 +749,160 @@ got: sha256-requested
         self.assertEqual(kwargs["env"]["NIX_CONFIG_DIR"], "/repo")
         self.assertFalse(kwargs["check"])
 
+    def test_npm_flake_input_couples_registry_and_git_coordinates(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            (root / "config/ai").mkdir(parents=True)
+            catalog_path = root / "sources/test.json"
+            flake_path = root / "config/ai/flake.nix"
+            old_rev = "a" * 40
+            new_rev = "b" * 40
+
+            def write_old_state():
+                catalog_path.write_text(json.dumps({
+                    "schemaVersion": 1,
+                    "sources": {
+                        "example": {
+                            "version": "1.0.0",
+                            "source": {
+                                "fetcher": "fetchurl",
+                                "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                                "args": {
+                                    "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                                    "hash": "sha256-tar-old",
+                                },
+                            },
+                            "artifacts": {
+                                "flakeInput": {
+                                    "fetcher": "fetchTree",
+                                    "url": "https://github.com/example/project",
+                                    "args": {
+                                        "owner": "example",
+                                        "repo": "project",
+                                        "rev": old_rev,
+                                        "narHash": "sha256-git-old",
+                                        "type": "github",
+                                    },
+                                }
+                            },
+                            "update": {
+                                "artifacts": ["config/ai/flake.nix"],
+                                "input": "example",
+                                "kind": "npm-release+flake-input",
+                                "package": "example",
+                            },
+                        }
+                    },
+                }, indent=2) + "\n")
+                flake_path.write_text(
+                    '{ inputs.example.url = "github:example/project"; }\n'
+                )
+
+            def load_target():
+                document = json.loads(catalog_path.read_text())
+                record = document["sources"]["example"]
+                return {
+                    "_document": document,
+                    "_path": catalog_path,
+                    "_record": record,
+                    "kind": "npm-release+flake-input",
+                    "version": record["version"],
+                }
+
+            class FakeNpmClient:
+                def get_version_metadata(self, package, requested):
+                    self.request = (package, requested)
+                    return {
+                        "version": "2.0.0",
+                        "integrity": "sha512-registry",
+                        "gitHead": new_rev,
+                    }
+
+            class FakeHashComputer:
+                def __init__(self):
+                    self.calls = []
+
+                def compute_native_hash(self, source, replacements):
+                    self.calls.append((source["fetcher"], replacements))
+                    return {
+                        "fetchurl": "sha256-tar-new",
+                        "fetchTree": "sha256-git-new",
+                    }[source["fetcher"]]
+
+            def update(transaction):
+                npm = FakeNpmClient()
+                hashes = FakeHashComputer()
+                with contextlib.redirect_stdout(io.StringIO()):
+                    status = update_npm_flake_target(
+                        "example",
+                        load_target(),
+                        SimpleNamespace(version=None, dry_run=False),
+                        npm,
+                        hashes,
+                        transaction,
+                    )
+                self.assertEqual(npm.request, ("example", None))
+                self.assertEqual(
+                    hashes.calls,
+                    [
+                        (
+                            "fetchurl",
+                            {
+                                "url": "https://registry.npmjs.org/example/-/example-2.0.0.tgz"
+                            },
+                        ),
+                        ("fetchTree", {"rev": new_rev}),
+                    ],
+                )
+                return status
+
+            write_old_state()
+            rolled_back = SourceTransaction()
+            self.assertEqual(update(rolled_back), "updated")
+            self.assertIn(new_rev, catalog_path.read_text())
+            self.assertIn(new_rev, flake_path.read_text())
+            self.assertEqual(rolled_back.rollback(), 2)
+            self.assertIn(old_rev, catalog_path.read_text())
+            self.assertNotIn(new_rev, flake_path.read_text())
+
+            committed = SourceTransaction()
+            self.assertEqual(update(committed), "updated")
+            committed.commit()
+            record = json.loads(catalog_path.read_text())["sources"]["example"]
+            self.assertEqual(record["version"], "2.0.0")
+            self.assertEqual(record["source"]["args"]["hash"], "sha256-tar-new")
+            self.assertEqual(
+                record["artifacts"]["flakeInput"]["args"]["rev"], new_rev
+            )
+            self.assertEqual(
+                record["artifacts"]["flakeInput"]["args"]["narHash"],
+                "sha256-git-new",
+            )
+            self.assertIn(new_rev, flake_path.read_text())
+
+            write_old_state()
+            before_catalog = catalog_path.read_text()
+            before_flake = flake_path.read_text()
+            missing_git_head = SimpleNamespace(
+                get_version_metadata=lambda _package, _requested: {
+                    "version": "2.0.0",
+                    "integrity": "sha512-registry",
+                }
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                refused = update_npm_flake_target(
+                    "example",
+                    load_target(),
+                    SimpleNamespace(version=None, dry_run=False),
+                    missing_git_head,
+                    FakeHashComputer(),
+                    SourceTransaction(),
+                )
+            self.assertEqual(refused, "failed")
+            self.assertEqual(catalog_path.read_text(), before_catalog)
+            self.assertEqual(flake_path.read_text(), before_flake)
+
 
     def test_source_catalog_rejects_ambiguous_native_fetcher_shapes(self):
         valid = {
@@ -1273,7 +1428,6 @@ got: sha256-requested
             "mlx",
             "nelisp",
             "pi-artifacts",
-            "pi-btw",
             "pi-dynamic-workflows",
             "pi-hashline-edit-pro",
             "pi-insights",
@@ -1308,6 +1462,7 @@ got: sha256-requested
         self.assertEqual(by_name["git-ai"]["executor"], "update-agents")
         self.assertEqual(by_name["pi-ponytail"]["executor"], "update-agents")
         self.assertEqual(by_name["pi-mcp-adapter"]["executor"], "update-agents")
+        self.assertEqual(by_name["pi-btw"]["executor"], "update-agents")
         self.assertEqual(
             manifest["pi-mcp-adapter"]["_record"]["update"]["buildPackage"],
             "agent-resources",
@@ -1499,6 +1654,17 @@ if "--inventory" in arguments:
             "executor": "update-agents",
             "policy": "manual",
         })
+    if os.environ.get("UPDATE_TEST_NPM_FLAKE_TARGET") == "1":
+        packages.append({
+            "name": "npm-flake",
+            "files": ["fixed.txt", "config/ai/flake.nix"],
+            "input": "npm-flake-input",
+            "inventoried": True,
+            "kind": "npm-release+flake-input",
+            "managed": True,
+            "executor": "update-agents",
+            "policy": "automatic",
+        })
     print(json.dumps({
         "schemaVersion": 1,
         "packages": packages,
@@ -1509,6 +1675,11 @@ elif "--prepare-fixed-inputs" in arguments:
         print(f"unexpected fixed preparation: {arguments}", file=sys.stderr)
         raise SystemExit(78)
     (root / "fixed.txt").write_text("fixed after\\n")
+elif "--prepare-npm-flake-inputs" in arguments:
+    if arguments != ["--prepare-npm-flake-inputs", "npm-flake"]:
+        print(f"unexpected npm flake preparation: {arguments}", file=sys.stderr)
+        raise SystemExit(79)
+    (root / "fixed.txt").write_text("npm flake after\\n")
 elif "--sync-flake-projections" in arguments:
     (root / "projection.json").write_text('{"projected": true}\\n')
     if os.environ.get("UPDATE_TEST_SIGNAL_PHASE") == "candidate-projection":
@@ -2066,6 +2237,58 @@ fi
             )
             self.assertNotEqual(result.returncode, 0)
             self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_routes_npm_flake_input_as_one_named_transaction(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            command_log = Path(temp_dir) / "commands.log"
+            environment["UPDATE_TEST_NPM_FLAKE_TARGET"] = "1"
+            environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "npm-flake"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            self.assertEqual((root / "fixed.txt").read_text(), "npm flake after\n")
+            self.assertEqual((root / "tracked.txt").read_text(), "before\n")
+            self.assertEqual(
+                command_log.read_text().splitlines(),
+                [
+                    "flake update --flake ./config/ai npm-flake-input",
+                    "flake update nix-config-ai",
+                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check --no-build",
+                ],
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _root, environment, _baseline = self._create_update_agents_fixture(
+                temp_dir
+            )
+            command_log = Path(temp_dir) / "commands.log"
+            environment["UPDATE_TEST_NPM_FLAKE_TARGET"] = "1"
+            environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("npm-flake-input", command_log.read_text().splitlines()[0])
 
     def test_update_agents_rejects_undeclared_candidate_mutation(self):
         for environment_name in (

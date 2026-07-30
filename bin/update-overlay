@@ -477,12 +477,12 @@ class GitHubClient:
 class NpmRegistryClient:
     """Client for npm registry metadata using only the Python standard library."""
 
-    def get_version(
+    def get_version_metadata(
         self,
         package_name: str,
         requested_version: Optional[str] = None,
-    ) -> Optional[tuple[str, str]]:
-        """Return an npm version and tarball integrity hash."""
+    ) -> Optional[dict[str, str]]:
+        """Return npm version metadata needed by simple and Git-coupled updates."""
         encoded = quote(package_name, safe="@")
         url = f"https://registry.npmjs.org/{encoded}"
 
@@ -502,7 +502,21 @@ class NpmRegistryClient:
         if not integrity:
             return None
 
-        return version, integrity
+        metadata = {"version": version, "integrity": integrity}
+        git_head = version_info.get("gitHead")
+        if isinstance(git_head, str) and git_head:
+            metadata["gitHead"] = git_head
+        return metadata
+
+    def get_version(
+        self,
+        package_name: str,
+        requested_version: Optional[str] = None,
+    ) -> Optional[tuple[str, str]]:
+        metadata = self.get_version_metadata(package_name, requested_version)
+        if metadata is None:
+            return None
+        return metadata["version"], metadata["integrity"]
 
 
 class PypiClient:
@@ -900,6 +914,7 @@ def _catalog_executor(record: dict) -> Optional[str]:
         "flake-input",
         "flake-input+build",
         "flake-input+copy",
+        "npm-release+flake-input",
     }:
         return "update-agents"
     expected_fetchers = {
@@ -995,11 +1010,31 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 )
             source_args = record["source"]["args"]
             source_fetcher = record["source"]["fetcher"]
-            if source_fetcher == "fetchTree" and "input" in update and portable_lock is None:
+            if (
+                source_fetcher == "fetchTree" or kind == "npm-release+flake-input"
+            ) and "input" in update and portable_lock is None:
                 if not portable_lock_path.is_file():
                     raise RuntimeError(f"flake input projection requires config/ai/flake.lock: {name}")
                 portable_lock = json.loads(portable_lock_path.read_text())
             _validate_flake_projection(nix_dir, name, record, portable_lock)
+            if kind == "npm-release+flake-input":
+                flake_input = artifacts.get("flakeInput")
+                if not isinstance(flake_input, dict):
+                    raise RuntimeError(
+                        f"npm flake input record has no flakeInput artifact: {name}"
+                    )
+                _validate_flake_projection(
+                    nix_dir,
+                    name,
+                    {
+                        "source": flake_input,
+                        "update": {
+                            "input": update["input"],
+                            "kind": "fixed-flake-input",
+                        },
+                    },
+                    portable_lock,
+                )
             if source_fetcher == "fetchPypi" and record.get("version") != source_args["version"]:
                 raise RuntimeError(f"PyPI source version does not match catalog version: {name}")
             if kind == "github-commit" and (
@@ -1008,7 +1043,7 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 or "tag" in source_args
             ):
                 raise RuntimeError(f"github-commit requires a native rev field: {name}")
-            if kind == "npm-release":
+            if kind in {"npm-release", "npm-release+flake-input"}:
                 package = update["package"]
                 if (
                     source_fetcher not in {"fetchurl", "fetchzip"}
@@ -1375,6 +1410,90 @@ def _rewrite_fixed_flake_input(target: dict, old_rev: str, new_rev: str) -> Path
         )
     flake_path.write_text(text.replace(old_url, new_url, 1))
     return flake_path
+
+
+def _rewrite_npm_flake_input_literal(target: dict, new_rev: str) -> Path:
+    record = target["_record"]
+    update = record["update"]
+    git_args = record["artifacts"]["flakeInput"]["args"]
+    flake_path = target["_path"].parent.parent / "config" / "ai" / "flake.nix"
+    base_url = f"github:{git_args['owner']}/{git_args['repo']}"
+    pattern = re.compile(rf'{re.escape(base_url)}(?:/[0-9a-f]{{40}})?(?=")')
+    text = flake_path.read_text()
+    matches = pattern.findall(text)
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"npm flake input {update['input']} has no unique literal revision"
+        )
+    flake_path.write_text(pattern.sub(f"{base_url}/{new_rev}", text, count=1))
+    return flake_path
+
+
+def update_npm_flake_target(
+    name: str,
+    target: dict,
+    args,
+    npm_client: NpmRegistryClient,
+    hash_computer: HashComputer,
+    transaction,
+) -> str:
+    record = target["_record"]
+    source = record["source"]
+    source_args = source["args"]
+    update = record["update"]
+    git_source = record["artifacts"]["flakeInput"]
+    git_args = git_source["args"]
+    metadata = npm_client.get_version_metadata(update["package"], args.version)
+    if metadata is None or re.fullmatch(r"[0-9a-f]{40}", metadata.get("gitHead", "")) is None:
+        print(f"{Colors.RED}{name}: npm release has no exact gitHead{Colors.RESET}")
+        return "failed"
+
+    old_version = record["version"]
+    new_version = metadata["version"]
+    old_url = source_args["url"]
+    if old_version == new_version:
+        new_url = old_url
+    elif old_url.count(old_version) == 1:
+        new_url = old_url.replace(old_version, new_version, 1)
+    else:
+        print(f"{Colors.RED}{name}: npm URL has no unique version coordinate{Colors.RESET}")
+        return "failed"
+    new_rev = metadata["gitHead"]
+    new_tar_hash = hash_computer.compute_native_hash(source, {"url": new_url})
+    new_git_hash = hash_computer.compute_native_hash(git_source, {"rev": new_rev})
+    if not new_tar_hash or not new_git_hash:
+        print(f"{Colors.RED}{name}: source hash failed{Colors.RESET}")
+        return "failed"
+
+    flake_path = target["_path"].parent.parent / "config" / "ai" / "flake.nix"
+    exact_literal = f"github:{git_args['owner']}/{git_args['repo']}/{new_rev}"
+    changed = (
+        new_version != old_version
+        or new_url != old_url
+        or new_tar_hash != source_args["hash"]
+        or new_rev != git_args["rev"]
+        or new_git_hash != git_args["narHash"]
+        or exact_literal not in flake_path.read_text()
+    )
+    if not changed:
+        print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
+        return "skipped"
+    if args.dry_run:
+        print(f"catalog/{name} {Colors.CYAN}→ {new_version} (dry-run){Colors.RESET}")
+        return "updated"
+
+    transaction.watch(target["_path"])
+    transaction.watch(flake_path)
+    record["version"] = new_version
+    source_args["url"] = new_url
+    source_args["hash"] = new_tar_hash
+    source["url"] = new_url
+    git_args["rev"] = new_rev
+    git_args["narHash"] = new_git_hash
+    _rewrite_npm_flake_input_literal(target, new_rev)
+    _write_catalog_target(target)
+    print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
+    return "updated"
 
 
 def update_catalog_target(
@@ -1822,6 +1941,9 @@ Examples:
     parser.add_argument(
         "--prepare-fixed-inputs", action="store_true", help=argparse.SUPPRESS
     )
+    parser.add_argument(
+        "--prepare-npm-flake-inputs", action="store_true", help=argparse.SUPPRESS
+    )
     args = parser.parse_args()
 
     # Validate arguments
@@ -1831,6 +1953,7 @@ Examples:
         and not args.packages
         and not args.sync_flake_projections
         and not args.prepare_fixed_inputs
+        and not args.prepare_npm_flake_inputs
     ):
         parser.error(
             "Please specify package names, --all, --inventory, or --sync-flake-projections"
@@ -1859,11 +1982,26 @@ Examples:
     ):
         parser.error("--prepare-fixed-inputs cannot be combined with another operation")
 
+    if args.prepare_npm_flake_inputs and (
+        args.inventory
+        or args.all
+        or args.sync_flake_projections
+        or args.prepare_fixed_inputs
+        or args.dry_run
+        or args.no_build
+        or args.verbose
+        or args.json_output
+    ):
+        parser.error("--prepare-npm-flake-inputs cannot be combined with another operation")
+
     if args.sync_flake_projections and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--sync-flake-projections is restricted to the update-agents candidate")
 
     if args.prepare_fixed_inputs and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--prepare-fixed-inputs is restricted to the update-agents candidate")
+
+    if args.prepare_npm_flake_inputs and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
+        parser.error("--prepare-npm-flake-inputs is restricted to the update-agents candidate")
 
     if args.inventory and (args.all or args.packages or args.version):
         parser.error("--inventory cannot be combined with package updates")
@@ -1876,6 +2014,8 @@ Examples:
 
     if args.prepare_fixed_inputs and args.version and len(args.packages) != 1:
         parser.error("--version with --prepare-fixed-inputs requires exactly one target")
+    if args.prepare_npm_flake_inputs and args.version and len(args.packages) != 1:
+        parser.error("--version with --prepare-npm-flake-inputs requires exactly one target")
 
     nix_dir = Path(__file__).parent.parent.resolve()
     if args.sync_flake_projections:
@@ -1894,7 +2034,7 @@ Examples:
         print_inventory(build_inventory(sources, explicit_targets, nix_dir), args.json_output)
         return 0
 
-    if args.prepare_fixed_inputs:
+    if args.prepare_fixed_inputs or args.prepare_npm_flake_inputs:
         require_detached_linked_worktree(nix_dir)
     elif args.packages:
         delegated_names = [
@@ -1933,6 +2073,19 @@ Examples:
                 == "automatic"
             ]
         )
+    elif args.prepare_npm_flake_inputs:
+        selected_catalog_names = (
+            args.packages
+            or [
+                name
+                for name in sorted(catalog_targets)
+                if catalog_targets[name]["kind"] == "npm-release+flake-input"
+                and catalog_targets[name]["_record"]["update"].get(
+                    "policy", "automatic"
+                )
+                == "automatic"
+            ]
+        )
     elif args.all:
         selected_catalog_names = [
             name for name in sorted(catalog_targets)
@@ -1947,9 +2100,16 @@ Examples:
     catalog_hash_computer = HashComputer(nix_dir)
     for name in selected_catalog_names:
         target = catalog_targets[name]
-        expected_executor = "update-agents" if args.prepare_fixed_inputs else "update-overlay"
+        expected_executor = (
+            "update-agents"
+            if args.prepare_fixed_inputs or args.prepare_npm_flake_inputs
+            else "update-overlay"
+        )
         if target.get("executor") != expected_executor or (
             args.prepare_fixed_inputs and target["kind"] != "fixed-flake-input"
+        ) or (
+            args.prepare_npm_flake_inputs
+            and target["kind"] != "npm-release+flake-input"
         ):
             if args.all:
                 if args.verbose:
@@ -1959,14 +2119,26 @@ Examples:
                 print(f"{Colors.RED}{name}: catalog target has no update executor{Colors.RESET}")
                 fail_count += 1
             continue
-        status = update_catalog_target(
-            name, target, args, github_client, npm_client, pypi_client, catalog_hash_computer, transaction
-        )
+        if args.prepare_npm_flake_inputs:
+            status = update_npm_flake_target(
+                name, target, args, npm_client, catalog_hash_computer, transaction
+            )
+        else:
+            status = update_catalog_target(
+                name,
+                target,
+                args,
+                github_client,
+                npm_client,
+                pypi_client,
+                catalog_hash_computer,
+                transaction,
+            )
         success_count += status == "updated"
         skipped_count += status == "skipped"
         fail_count += status == "failed"
 
-    if args.prepare_fixed_inputs:
+    if args.prepare_fixed_inputs or args.prepare_npm_flake_inputs:
         if fail_count:
             transaction.rollback()
         else:

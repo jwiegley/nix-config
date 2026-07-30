@@ -148,7 +148,8 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/ai/flake.lock",
+          "config/ai/flake.nix"
         ],
         "input": "pi-btw",
         "kind": "npm-release+flake-input",

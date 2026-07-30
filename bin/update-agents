@@ -556,6 +556,7 @@ fi
     } | sort -u >"$transaction_dir/allowed-paths"
 
     declare -a fixed_target_names=()
+    declare -a npm_flake_target_names=()
     declare -a lock_target_inputs=()
     if ((${#requested_targets[@]})); then
         declare -A seen_targets=()
@@ -577,17 +578,21 @@ fi
             if [[ $target_executor != update-agents || -z $target_input ]] ||
                 [[ $target_kind != fixed-flake-input && $target_kind != flake-input &&
                     $target_kind != flake-input+build &&
-                    $target_kind != flake-input+copy ]]; then
+                    $target_kind != flake-input+copy &&
+                    $target_kind != npm-release+flake-input ]]; then
                 echo "update-agents: target is not owned by this transaction: $target_name" >&2
                 exit 2
             fi
-            if [[ -n $requested_version && $target_kind != fixed-flake-input ]]; then
-                echo "update-agents: --version requires a fixed-flake-input target" >&2
+            if [[ -n $requested_version && $target_kind != fixed-flake-input &&
+                $target_kind != npm-release+flake-input ]]; then
+                echo "update-agents: --version requires a fixed or npm-flake target" >&2
                 exit 2
             fi
             lock_target_inputs+=("$target_input")
             if [[ $target_kind == fixed-flake-input ]]; then
                 fixed_target_names+=("$target_name")
+            elif [[ $target_kind == npm-release+flake-input ]]; then
+                npm_flake_target_names+=("$target_name")
             fi
         done
     else
@@ -596,12 +601,18 @@ fi
             lock_target_inputs+=("$target_input")
             if [[ $target_kind == fixed-flake-input ]]; then
                 fixed_target_names+=("$target_name")
+            elif [[ $target_kind == npm-release+flake-input ]]; then
+                npm_flake_target_names+=("$target_name")
             fi
         done < <(
             jq -r --arg include_manual "$run_all_inputs" '
                 .packages[]
                 | select(
-                    (.kind == "fixed-flake-input" or .kind == "flake-input+copy")
+                    (
+                        .kind == "fixed-flake-input"
+                        or .kind == "flake-input+copy"
+                        or .kind == "npm-release+flake-input"
+                    )
                     and .executor == "update-agents"
                     and ($include_manual == "true" or .policy == "automatic")
                 )
@@ -616,6 +627,14 @@ fi
             prepare_args+=(--version "$requested_version")
         fi
         python3 bin/update-overlay "${prepare_args[@]}" "${fixed_target_names[@]}"
+    fi
+    if ((${#npm_flake_target_names[@]})); then
+        prepare_args=(--prepare-npm-flake-inputs)
+        if [[ -n $requested_version ]]; then
+            prepare_args+=(--version "$requested_version")
+        fi
+        python3 bin/update-overlay "${prepare_args[@]}" \
+            "${npm_flake_target_names[@]}"
     fi
 
     if [[ $run_all_inputs == true ]]; then
