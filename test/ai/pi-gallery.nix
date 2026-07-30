@@ -1,6 +1,7 @@
 {
   bun,
   coreutils,
+  fetchurl,
   jq,
   lib,
   nodejs_22,
@@ -45,6 +46,41 @@ let
           ]
         )
       );
+  normalizationPolicy = builtins.fromJSON (
+    builtins.readFile ../../packages/pi-gallery/normalization-policy.json
+  );
+  normalizationTargets = builtins.attrNames normalizationPolicy.targets;
+  normalizationMemberFor =
+    target:
+    let
+      matches = lib.filter (id: manifest.members.${id}.attrName == target) manifest.order;
+    in
+    assert builtins.length matches == 1;
+    manifest.members.${builtins.head matches};
+  normalizationParityChecks = lib.concatMapStringsSep "\n" (
+    target:
+    let
+      member = normalizationMemberFor target;
+      rawTarball = fetchurl member.source.args;
+    in
+    ''
+      normalization_dir="$TMPDIR/pi-normalization/${target}"
+      mkdir -p "$normalization_dir/raw"
+      tar -xzf ${rawTarball} -C "$normalization_dir/raw"
+      ${jq}/bin/jq \
+        --arg target ${lib.escapeShellArg target} \
+        --arg expectedName ${lib.escapeShellArg member.update.package} \
+        --arg expectedVersion ${lib.escapeShellArg member.version} \
+        --slurpfile policy ${../../packages/pi-gallery/normalization-policy.json} \
+        -f ${../../packages/pi-gallery/normalize-manifest.jq} \
+        "$normalization_dir/raw/package/package.json" \
+        > "$normalization_dir/updater-package.json"
+      cmp -s \
+        "$normalization_dir/updater-package.json" \
+        ${member.package.src}/package.json \
+        || fail "shared normalizer drifted for ${target}"
+    ''
+  ) normalizationTargets;
   expectedPublicNames = map (id: manifest.members.${id}.publicName) manifest.order;
   expectedSkillCount = builtins.length (
     lib.concatMap (id: manifest.members.${id}.skills or [ ]) manifest.order
@@ -55,6 +91,7 @@ let
 in
 assert builtins.length (builtins.attrNames manifest.members) == builtins.length manifest.order;
 assert manifestPackagesMatch;
+assert builtins.length normalizationTargets == 9;
 assert (piPackage.toolRendererWrapperAbi or null) == 1;
 runCommand "pi-gallery-check"
   {
@@ -83,6 +120,7 @@ runCommand "pi-gallery-check"
 
     ${memberVersionChecks}
     ${supportVersionChecks}
+    ${normalizationParityChecks}
 
     for package_root in ${packageRoots}; do
       [ -f "$package_root/package.json" ] || fail "missing package manifest: $package_root"

@@ -34,6 +34,7 @@ OverlayUpdater = MODULE["OverlayUpdater"]
 GitHubClient = MODULE["GitHubClient"]
 HashComputer = MODULE["HashComputer"]
 PypiClient = MODULE["PypiClient"]
+NpmRegistryClient = MODULE["NpmRegistryClient"]
 SourceTransaction = MODULE["SourceTransaction"]
 load_update_manifest = MODULE["load_update_manifest"]
 load_source_catalog = MODULE["load_source_catalog"]
@@ -57,6 +58,15 @@ update_github_release_asset_target = MODULE.get("update_github_release_asset_tar
 update_github_commit_artifact_target = MODULE.get("update_github_commit_artifact_target")
 update_github_projection_target = MODULE.get("update_github_projection_target")
 build_inventory = MODULE["build_inventory"]
+snapshot_catalog_record_isolation = MODULE.get(
+    "snapshot_catalog_record_isolation"
+)
+validate_catalog_record_isolation = MODULE.get(
+    "validate_catalog_record_isolation"
+)
+enforce_catalog_record_isolation = MODULE.get(
+    "enforce_catalog_record_isolation"
+)
 
 ISSUE40_TARGETS = frozenset({"cohere-melody", "mlx"})
 ISSUE41_TARGETS = frozenset({"hf-xet", "nelisp", "sherlock-db"})
@@ -1251,6 +1261,32 @@ got: sha256-requested
             )
         )
 
+    def test_generic_npm_metadata_does_not_impose_pi_tarball_host_policy(self):
+        payload = {
+            "dist-tags": {"latest": "2.0.0"},
+            "versions": {
+                "2.0.0": {
+                    "dist": {
+                        "integrity": VENDOR_HASH,
+                        "tarball": "cdn-specific-metadata-value",
+                    }
+                }
+            },
+        }
+        metadata_globals = NpmRegistryClient.get_version_metadata.__globals__
+        original_urlopen = metadata_globals["urlopen"]
+        metadata_globals["urlopen"] = lambda *_args, **_kwargs: contextlib.nullcontext(
+            io.StringIO(json.dumps(payload))
+        )
+        try:
+            metadata = NpmRegistryClient().get_version_metadata("project")
+        finally:
+            metadata_globals["urlopen"] = original_urlopen
+        self.assertEqual(
+            metadata["tarball"],
+            payload["versions"]["2.0.0"]["dist"]["tarball"],
+        )
+
     def test_pi_npm_lock_projection_updates_atomically(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -1317,6 +1353,66 @@ got: sha256-requested
             self.assertEqual(target["executor"], "update-agents")
             valid_catalog = catalog_path.read_text()
 
+            shared_record = {
+                "version": "1.0.0",
+                "source": {
+                    "fetcher": "fetchurl",
+                    "url": "https://example.invalid/shared-1.0.0.tgz",
+                    "args": {
+                        "url": "https://example.invalid/shared-1.0.0.tgz",
+                        "hash": "sha256-shared",
+                    },
+                },
+                "update": {
+                    "artifacts": [
+                        "packages/pi-gallery/locks/project-package-lock.json"
+                    ],
+                    "kind": "url-release",
+                },
+            }
+            for sibling_document in ("a.json", "z.json"):
+                with self.subTest(sibling_document=sibling_document):
+                    sibling_path = root / "sources" / sibling_document
+                    sibling_path.write_text(json.dumps({
+                        "schemaVersion": 1,
+                        "sources": {"sibling": shared_record},
+                    }))
+                    with self.assertRaisesRegex(
+                        RuntimeError, "exactly its normalizer target as owner"
+                    ):
+                        load_source_catalog(root)
+                    sibling_path.unlink()
+
+            (root / "flake.lock").write_text("{}\n")
+            shared_flake_path = root / "sources/shared-flake.json"
+            shared_flake_path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {
+                    f"shared-{index}": {
+                        **copy.deepcopy(shared_record),
+                        "source": {
+                            "fetcher": "fetchurl",
+                            "url": f"https://example.invalid/shared-{index}-1.0.0.tgz",
+                            "args": {
+                                "url": (
+                                    "https://example.invalid/"
+                                    f"shared-{index}-1.0.0.tgz"
+                                ),
+                                "hash": f"sha256-shared-{index}",
+                            },
+                        },
+                        "update": {
+                            "artifacts": ["flake.lock"],
+                            "kind": "url-release",
+                        },
+                    }
+                    for index in (1, 2)
+                },
+            }))
+            shared_targets = load_source_catalog(root)
+            self.assertTrue({"shared-1", "shared-2"} <= set(shared_targets))
+            shared_flake_path.unlink()
+
             wrong_path = json.loads(valid_catalog)
             wrong_path["sources"]["project"]["update"]["artifacts"] = [
                 "packages/pi-gallery/locks/wrong-package-lock.json"
@@ -1381,6 +1477,30 @@ got: sha256-requested
                 def validate_package_build(self, package):
                     self.calls.append(("validate", package))
                     return self.valid
+
+            off_registry_hashes = FakeHashes()
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_npm_lock_target(
+                    "project",
+                    target,
+                    SimpleNamespace(version="2.0.0", dry_run=False),
+                    SimpleNamespace(
+                        get_version_metadata=lambda _package, requested: {
+                            "version": requested,
+                            "integrity": "sha512-integrity",
+                            "tarball": (
+                                "https://cdn.example.invalid/project-"
+                                f"{requested}.tgz"
+                            ),
+                        }
+                    ),
+                    off_registry_hashes,
+                    transaction,
+                )
+            self.assertEqual(status, "failed")
+            self.assertEqual(off_registry_hashes.calls, [])
+            self.assertEqual(transaction.original, {})
 
             normalized = json.dumps({
                 "name": "project",
@@ -3443,6 +3563,51 @@ got: sha256-requested
             committed.rollback_unless_committed()
             self.assertEqual(path.read_text(), "new\n")
 
+    def test_explicit_catalog_record_isolation_allows_selected_and_rolls_back_sibling(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "shared.json"
+            initial = {
+                "schemaVersion": 1,
+                "sources": {
+                    "selected": {"version": "1.0.0"},
+                    "sibling": {"version": "1.0.0"},
+                },
+            }
+            path.write_text(json.dumps(initial, indent=2) + "\n")
+            targets = {
+                "selected": {"_path": path},
+                "sibling": {"_path": path},
+            }
+
+            successful = SourceTransaction()
+            snapshots = snapshot_catalog_record_isolation(
+                ["selected"], targets, successful
+            )
+            selected_only = copy.deepcopy(initial)
+            selected_only["sources"]["selected"]["version"] = "2.0.0"
+            path.write_text(json.dumps(selected_only, indent=2) + "\n")
+            validate_catalog_record_isolation(snapshots)
+            successful.commit()
+            self.assertEqual(
+                json.loads(path.read_text())["sources"]["selected"]["version"],
+                "2.0.0",
+            )
+
+            before_sibling_attempt = path.read_text()
+            failing = SourceTransaction()
+            snapshots = snapshot_catalog_record_isolation(
+                ["selected"], targets, failing
+            )
+            sibling_mutation = json.loads(before_sibling_attempt)
+            sibling_mutation["sources"]["selected"]["version"] = "3.0.0"
+            sibling_mutation["sources"]["sibling"]["version"] = "9.0.0"
+            path.write_text(json.dumps(sibling_mutation, indent=2) + "\n")
+            with self.assertRaisesRegex(
+                RuntimeError, "changed unselected data.*sibling"
+            ):
+                enforce_catalog_record_isolation(snapshots, failing)
+            self.assertEqual(path.read_text(), before_sibling_attempt)
+
     def test_failed_dependent_hash_rolls_back_complete_update(self):
         class FakeGitHubClient:
             def get_latest_release(self, _owner, _repo):
@@ -3555,6 +3720,9 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 arguments = sys.argv[1:]
+if os.environ.get("UPDATE_TEST_INTERLEAVING_LOG"):
+    with open(os.environ["UPDATE_TEST_INTERLEAVING_LOG"], "a") as log:
+        log.write("overlay " + " ".join(arguments) + "\\n")
 internal_modes = {
     "--prepare-fixed-inputs",
     "--prepare-npm-flake-inputs",
@@ -3643,7 +3811,11 @@ if "--inventory" in arguments:
             "kind": "npm-release",
             "managed": True,
             "executor": "update-agents",
-            "policy": "manual",
+            "policy": (
+                "automatic"
+                if os.environ.get("UPDATE_TEST_NPM_LOCK_AUTOMATIC") == "1"
+                else "manual"
+            ),
         })
     if os.environ.get("UPDATE_TEST_NPM_LOCK_SECOND_TARGET") == "1":
         packages.append({
@@ -3757,6 +3929,9 @@ else:
 set -euo pipefail
 if [[ -n ${UPDATE_TEST_COMMAND_LOG:-} ]]; then
   printf '%s\n' "$*" >>"$UPDATE_TEST_COMMAND_LOG"
+fi
+if [[ -n ${UPDATE_TEST_INTERLEAVING_LOG:-} ]]; then
+  printf 'nix %s\n' "$*" >>"$UPDATE_TEST_INTERLEAVING_LOG"
 fi
 signal_phase() {
   if [[ ${UPDATE_TEST_SIGNAL_PHASE:-} == "$1" \
@@ -4452,6 +4627,39 @@ fi
             )
             self.assertNotEqual(result.returncode, 0)
             self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_all_inputs_prepares_npm_locks_after_lock_sync_before_generic_update(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, _baseline = self._create_update_agents_fixture(
+                temp_dir
+            )
+            interleaving_log = Path(temp_dir) / "interleaving.log"
+            environment.update(
+                UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
+                UPDATE_TEST_NPM_LOCK_AUTOMATIC="1",
+                UPDATE_TEST_NPM_LOCK_TARGET="1",
+            )
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--all-inputs"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            events = interleaving_log.read_text().splitlines()
+            portable_lock = events.index("nix flake update --flake ./config/ai")
+            root_lock = events.index("nix flake update")
+            projection_sync = events.index("overlay --sync-flake-projections")
+            npm_locks = events.index("overlay --prepare-npm-locks npm-lock")
+            generic_update = events.index(
+                "overlay --all --overlays-dir overlays/ai"
+            )
+            self.assertLess(portable_lock, projection_sync)
+            self.assertLess(root_lock, projection_sync)
+            self.assertLess(projection_sync, npm_locks)
+            self.assertLess(npm_locks, generic_update)
+            self.assertEqual((root / "npm-lock.txt").read_text(), "npm lock after\n")
 
     def test_update_agents_routes_github_projection_without_lock_updates(self):
         with tempfile.TemporaryDirectory() as temp_dir:

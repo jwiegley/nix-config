@@ -635,7 +635,7 @@ class NpmRegistryClient:
             not isinstance(integrity, str)
             or not integrity
             or not isinstance(tarball, str)
-            or not tarball.startswith("https://registry.npmjs.org/")
+            or not tarball
         ):
             return None
 
@@ -1841,7 +1841,7 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
     )
     pi_npm_targets: set[str] = set()
     pi_lock_shape_targets: set[str] = set()
-    pi_lock_owners: dict[str, str] = {}
+    artifact_owners: dict[str, set[str]] = {}
     allowed = {
         "artifacts", "commit", "date", "hashes", "source", "update", "version",
     }
@@ -2079,6 +2079,8 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             ]
             if missing_artifacts:
                 raise RuntimeError(f"source catalog record {name} references missing artifacts: {missing_artifacts}")
+            for artifact in update_artifacts:
+                artifact_owners.setdefault(artifact, set()).add(name)
             pi_lock_shape = (
                 path.name == "pi.json"
                 and kind == "npm-release"
@@ -2107,11 +2109,6 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                         f"invalid Pi npm normalization projection: {name}"
                     )
                 pi_npm_targets.add(name)
-                previous_owner = pi_lock_owners.setdefault(canonical_lock, name)
-                if previous_owner != name:
-                    raise RuntimeError(
-                        f"Pi npm lock artifact has multiple owners: {canonical_lock}"
-                    )
             if build_mode is not None and (artifacts or update_artifacts):
                 raise RuntimeError(
                     f"dependent-hash projection cannot also declare artifacts: {name}"
@@ -2155,6 +2152,15 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             raise RuntimeError(
                 "Pi npm normalization target set differs from catalog projections"
             )
+        for name in policy_targets:
+            canonical_lock = (
+                f"packages/pi-gallery/locks/{name}-package-lock.json"
+            )
+            if artifact_owners.get(canonical_lock, set()) != {name}:
+                raise RuntimeError(
+                    "Pi npm lock artifact must have exactly its normalizer target "
+                    f"as owner: {canonical_lock}"
+                )
     return targets
 
 
@@ -2464,6 +2470,74 @@ class SourceTransaction:
             self.rollback()
 
 
+def snapshot_catalog_record_isolation(
+    names: list[str],
+    targets: dict[str, dict],
+    transaction: SourceTransaction,
+) -> dict[Path, tuple[dict, set[str]]]:
+    """Snapshot shared catalog documents for an explicit target selection."""
+    selected_by_path: dict[Path, set[str]] = {}
+    for name in names:
+        selected_by_path.setdefault(targets[name]["_path"], set()).add(name)
+
+    snapshots = {}
+    for path, selected in selected_by_path.items():
+        transaction.watch(path)
+        snapshots[path] = (
+            json.loads(path.read_text(), object_pairs_hook=_unique_object),
+            selected,
+        )
+    return snapshots
+
+
+def validate_catalog_record_isolation(
+    snapshots: dict[Path, tuple[dict, set[str]]],
+) -> None:
+    """Allow changes only below .sources for explicitly selected records."""
+    for path, (before, selected) in snapshots.items():
+        try:
+            after = json.loads(path.read_text(), object_pairs_hook=_unique_object)
+        except (ValueError, json.JSONDecodeError) as error:
+            raise RuntimeError(
+                f"catalog update made shared document invalid: {path}"
+            ) from error
+        before_sources = before.get("sources")
+        after_sources = after.get("sources")
+        if (
+            not isinstance(before_sources, dict)
+            or not isinstance(after_sources, dict)
+            or set(before_sources) != set(after_sources)
+        ):
+            raise RuntimeError(
+                f"catalog update changed the record set in shared document: {path}"
+            )
+        unexpected = sorted(
+            name
+            for name in before_sources
+            if name not in selected and before_sources[name] != after_sources[name]
+        )
+        masked_after = copy.deepcopy(after)
+        for name in selected:
+            masked_after["sources"][name] = before_sources[name]
+        if unexpected or masked_after != before:
+            detail = f": {unexpected}" if unexpected else ""
+            raise RuntimeError(
+                f"catalog update changed unselected data in {path}{detail}"
+            )
+
+
+def enforce_catalog_record_isolation(
+    snapshots: dict[Path, tuple[dict, set[str]]],
+    transaction: SourceTransaction,
+) -> None:
+    """Validate explicit records and roll back the transaction on any escape."""
+    try:
+        validate_catalog_record_isolation(snapshots)
+    except RuntimeError:
+        transaction.rollback()
+        raise
+
+
 def _write_catalog_target(target: dict) -> None:
     target["_path"].write_text(json.dumps(target["_document"], indent=2) + "\n")
 
@@ -2594,6 +2668,9 @@ def update_npm_lock_target(
     new_version = metadata["version"]
     registry_integrity = metadata["integrity"]
     new_url = metadata["tarball"]
+    if not new_url.startswith("https://registry.npmjs.org/"):
+        print(f"catalog/{name} {Colors.RED}✗ unsupported npm tarball host{Colors.RESET}")
+        return "failed"
     current_url = source_args["url"]
     if current_url.count(old_version) != 1:
         print(f"catalog/{name} {Colors.RED}✗ source URL rewrite failed{Colors.RESET}")
@@ -3667,6 +3744,13 @@ Examples:
         selected_catalog_names = [
             name for name in args.packages if name in catalog_targets
         ]
+    catalog_record_snapshots = (
+        snapshot_catalog_record_isolation(
+            selected_catalog_names, catalog_targets, transaction
+        )
+        if args.packages and selected_catalog_names
+        else {}
+    )
     catalog_hash_computer = HashComputer(nix_dir)
     for name in selected_catalog_names:
         target = catalog_targets[name]
@@ -3745,6 +3829,15 @@ Examples:
         success_count += status == "updated"
         skipped_count += status == "skipped"
         fail_count += status == "failed"
+
+    if catalog_record_snapshots:
+        try:
+            enforce_catalog_record_isolation(
+                catalog_record_snapshots, transaction
+            )
+        except RuntimeError as error:
+            print(f"{Colors.RED}{error}{Colors.RESET}", file=sys.stderr)
+            fail_count += 1
 
     if (
         args.prepare_fixed_inputs

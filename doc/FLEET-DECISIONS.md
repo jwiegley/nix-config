@@ -9,7 +9,7 @@ called for by [issue #20](https://github.com/jwiegley/nix-config/issues/20)
 Two families of entry appear below:
 
 - **Programme decisions** (`Q1`…`Q8`) — Q4/Q5/Q6/Q7 remain unanswered;
-  Q2/Q3/Q8 have human answers recorded in place. Each carries the question, what
+  Q1/Q2/Q3/Q8 have human answers recorded in place. Each carries the question, what
   breaks if it is defaulted, the real options, and a recommendation *only where
   there is evidence for one*. An unanswered slot is human input, never an agent
   choice.

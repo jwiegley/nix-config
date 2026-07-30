@@ -551,6 +551,7 @@ class UpdaterEssentialPlanTests(unittest.TestCase):
                 "test_host_routing_table_covers_system_and_shared_consumers",
                 "test_independent_ai_packages_are_owned_under_packages",
                 "test_update_agents_routes_npm_lock_projection_without_lock_updates",
+                "test_all_inputs_prepares_npm_locks_after_lock_sync_before_generic_update",
                 "test_update_agents_routes_github_projection_without_lock_updates",
             ),
         )
@@ -567,10 +568,10 @@ class UpdaterEssentialPlanTests(unittest.TestCase):
 
         resolved = sorted(test_ids(suite))
         resolved_listing = "\n" + "\n".join(resolved)
-        self.assertEqual(len(resolved), 57, resolved_listing)
+        self.assertEqual(len(resolved), 60, resolved_listing)
         self.assertEqual(
             hashlib.sha256("\n".join(resolved).encode()).hexdigest(),
-            "f74d71d3c74fc725504be9181403cb6fe7626a233392c2d702f543bc8e80928e",
+            "a0272d84363daf585ea91c8d707126228b550bacca5ad6a8b32802945436dd43",
             resolved_listing,
         )
 

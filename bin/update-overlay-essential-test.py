@@ -39,6 +39,7 @@ INTEGRATION_METHODS = (
     "test_host_routing_table_covers_system_and_shared_consumers",
     "test_independent_ai_packages_are_owned_under_packages",
     "test_update_agents_routes_npm_lock_projection_without_lock_updates",
+    "test_all_inputs_prepares_npm_locks_after_lock_sync_before_generic_update",
     "test_update_agents_routes_github_projection_without_lock_updates",
 )
 
