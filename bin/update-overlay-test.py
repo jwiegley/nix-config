@@ -4687,6 +4687,54 @@ fi
             self.assertEqual((root / "fixed.txt").read_text(), "npm flake after\n")
             self.assertIn("npm-flake-input", command_log.read_text().splitlines()[0])
 
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(
+                temp_dir
+            )
+            before = self._update_agents_projection(root)
+            interleaving_log = Path(temp_dir) / "interleaving.log"
+            environment.update(
+                UPDATE_TEST_FIXED_TARGET="1",
+                UPDATE_TEST_GITHUB_TARGET="1",
+                UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
+                UPDATE_TEST_NPM_FLAKE_TARGET="1",
+                UPDATE_TEST_PYPI_TARGET="1",
+            )
+            result = subprocess.run(
+                [
+                    str(UPDATE_AGENTS),
+                    "--dry-run",
+                    "--target",
+                    "pypi",
+                    "--target",
+                    "github",
+                    "--target",
+                    "npm-flake",
+                    "--target",
+                    "fixed",
+                ],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            events = interleaving_log.read_text().splitlines()
+            ordered = [
+                "overlay --prepare-pypi-artifacts pypi",
+                "overlay --prepare-github-projections github",
+                "overlay --prepare-npm-flake-inputs npm-flake",
+                "overlay --prepare-fixed-inputs fixed",
+                "nix flake update --flake ./config/ai "
+                "npm-flake-input fixed-input",
+                "overlay --sync-flake-projections",
+            ]
+            positions = [events.index(event) for event in ordered]
+            self.assertEqual(positions, sorted(positions))
+            self.assertEqual(events.count("overlay --inventory --json"), 2)
+            self.assertIn("authoritative tree unchanged", result.stdout)
+            self._assert_update_agents_unchanged(root, baseline, before)
+
     def test_update_agents_routes_compound_pypi_without_lock_updates(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)

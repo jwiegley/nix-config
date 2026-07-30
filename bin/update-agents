@@ -703,21 +703,8 @@ fi
         } | sort -u >"$transaction_dir/allowed-paths"
     fi
 
-    if ((${#fixed_target_names[@]})); then
-        prepare_args=(--prepare-fixed-inputs)
-        if [[ -n $requested_version ]]; then
-            prepare_args+=(--version "$requested_version")
-        fi
-        python3 bin/update-overlay "${prepare_args[@]}" "${fixed_target_names[@]}"
-    fi
-    if ((${#npm_flake_target_names[@]})); then
-        prepare_args=(--prepare-npm-flake-inputs)
-        if [[ -n $requested_version ]]; then
-            prepare_args+=(--version "$requested_version")
-        fi
-        python3 bin/update-overlay "${prepare_args[@]}" \
-            "${npm_flake_target_names[@]}"
-    fi
+    # Resolve projections that need the currently locked package set before
+    # either flake.nix literal is moved ahead of config/ai/flake.lock.
     if ((${#pypi_target_names[@]})); then
         prepare_args=(--prepare-pypi-artifacts)
         if [[ -n $requested_version ]]; then
@@ -733,6 +720,23 @@ fi
         fi
         python3 bin/update-overlay "${prepare_args[@]}" \
             "${github_projection_target_names[@]}"
+    fi
+    if ((${#npm_flake_target_names[@]})); then
+        prepare_args=(--prepare-npm-flake-inputs)
+        if [[ -n $requested_version ]]; then
+            prepare_args+=(--version "$requested_version")
+        fi
+        python3 bin/update-overlay "${prepare_args[@]}" \
+            "${npm_flake_target_names[@]}"
+    fi
+    # Fixed fetchTree projection hashing is lock-independent, so it is the last
+    # preparation allowed to run while catalog projections are temporarily ahead.
+    if ((${#fixed_target_names[@]})); then
+        prepare_args=(--prepare-fixed-inputs)
+        if [[ -n $requested_version ]]; then
+            prepare_args+=(--version "$requested_version")
+        fi
+        python3 bin/update-overlay "${prepare_args[@]}" "${fixed_target_names[@]}"
     fi
 
     if [[ $run_all_inputs == true ]]; then
