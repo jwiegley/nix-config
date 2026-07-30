@@ -66,7 +66,7 @@ in
     };
 
     localVariables = {
-      RPROMPT = if isDarwin then "%F{cyan}[\\$PERSONA]%f %F{green}%~%f" else "%F{green}%~%f";
+      RPROMPT = if isDarwin then "%F{cyan}%f %F{green}%~%f" else "%F{green}%~%f";
       PROMPT = "%B%m %b%(!.#.$) ";
       PROMPT_DIRTRIM = "2";
     };
@@ -162,11 +162,6 @@ in
               print -Pn "\e]2;%~\a"
             fi
           }
-
-          # Auto-load persona environment on shell start
-          if [[ -f "$HOME/.config/persona/current" ]]; then
-            eval "$(command persona --env)"
-          fi
 
           autoload -Uz add-zsh-hook
           add-zsh-hook chpwd __update_terminal_title
