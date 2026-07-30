@@ -393,7 +393,7 @@
       "id": "hera/GLM-5.2",
       "displayName": "GLM 5.2",
       "maxOutputTokens": 65536,
-      "contextLimit": 200000,
+      "contextLimit": 1048576,
       "outputLimit": 65536
     },
     {
