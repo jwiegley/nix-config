@@ -118,12 +118,14 @@ let
       apiKey = renderEnv provider.apiKey.env;
       inherit (provider) baseUrl;
       headers = {
+        "x-litellm-stream-timeout" = "7200";
         "x-litellm-tags" = "pi";
         "x-litellm-timeout" = "7200";
       };
       modelOverrides = {
         "hera/GLM-5.2" = {
           contextWindow = 1048576;
+          headers."x-litellm-num-retries" = "0";
         };
         "openrouter/z-ai/glm-5.2".compat = {
           sendSessionAffinityHeaders = true;
@@ -396,6 +398,9 @@ assert builtins.hasAttr "pi-gallery" pkgs;
     commandFiles
     promptFiles
     {
+      ".pi-lens/config.json".source = json.generate "pi-${profile.id}-lens.json" {
+        widget.visible = false;
+      };
       "${root}/extensions/auto-compact-resume/index.ts".source = autoCompactResumeSource;
       "${root}/extensions/nix-gallery/index.ts".source = "${pkgs.pi-gallery}/share/pi-gallery/index.ts";
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";

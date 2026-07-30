@@ -1706,13 +1706,19 @@ let
     apiKey = renderPiCredential provider.apiKey;
     inherit (provider) baseUrl;
     headers = {
+      "x-litellm-stream-timeout" = "7200";
       "x-litellm-tags" = "pi";
       "x-litellm-timeout" = "7200";
     };
-    modelOverrides."hera/GLM-5.2".contextWindow = 1048576;
-    modelOverrides."openrouter/z-ai/glm-5.2".compat = {
-      sendSessionAffinityHeaders = true;
-      sessionAffinityFormat = "openrouter";
+    modelOverrides = {
+      "hera/GLM-5.2" = {
+        contextWindow = 1048576;
+        headers."x-litellm-num-retries" = "0";
+      };
+      "openrouter/z-ai/glm-5.2".compat = {
+        sendSessionAffinityHeaders = true;
+        sessionAffinityFormat = "openrouter";
+      };
     };
     models = map expectedPiModel (
       orderedValues (
@@ -1852,6 +1858,10 @@ let
     "app.model.cycleForward" = [ ];
     "app.model.cycleBackward" = [ ];
   };
+  expectedPiLens = {
+    widget.visible = false;
+  };
+
   expectedClaudeSettings =
     profileId:
     let
@@ -1964,6 +1974,7 @@ let
       ++ map (name: "${root}/prompts/${name}.md") (selectedNames profileId "prompts")
       ++ [
         ".config/mcp/mcp.json"
+        ".pi-lens/config.json"
         "${root}/extensions/auto-compact-resume/index.ts"
         "${root}/extensions/nix-gallery/index.ts"
         "${root}/extensions/pi-mcp-adapter"
@@ -2420,6 +2431,13 @@ let
       file = path: render.files.${path};
     in
     [
+      {
+        kind = "json";
+        label = "${profileId} lens";
+        path = documentSource "${profileId}-lens.json" (file ".pi-lens/config.json");
+        expected = expectedPiLens;
+        forbidden = [ ];
+      }
       {
         kind = "json";
         label = "${profileId} keybindings";
@@ -3246,6 +3264,7 @@ let
     ".config/factory/nix-managed-settings.json"
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
+    ".pi-lens/config.json"
     ".pi/agent/extensions/auto-compact-resume/index.ts"
     ".pi/agent/extensions/nix-gallery/index.ts"
     ".pi/agent/extensions/pi-mcp-adapter"

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -7,6 +7,23 @@ import { pathToFileURL } from "node:url";
 const source = process.argv[2];
 assert.ok(source, "patched Pi source path is required");
 const importFromSource = (relative) => import(pathToFileURL(join(source, relative)));
+
+const { DEFAULT_HTTP_IDLE_TIMEOUT_MS } = await importFromSource(
+  "dist/core/http-dispatcher.js",
+);
+assert.equal(DEFAULT_HTTP_IDLE_TIMEOUT_MS, 7_200_000);
+
+for (const relative of [
+  "node_modules/@earendil-works/pi-ai/dist/api/openai-completions.js",
+  "node_modules/@earendil-works/pi-ai/dist/api/openai-responses.js",
+]) {
+  const openAiApi = await readFile(join(source, relative), "utf8");
+  assert.match(
+    openAiApi,
+    /timeout: model\.provider === "litellm"[\s\S]*model\.id\.startsWith\("clio\/omlx\/"\)[\s\S]*model\.id\.startsWith\("hera\/"\)[\s\S]*!model\.id\.startsWith\("hera\/claude-"\)[\s\S]*\? 7_200_000/,
+    `${relative} must give local LiteLLM routes a two-hour OpenAI client timeout`,
+  );
+}
 
 const { applyToolRendererWrappers } = await importFromSource(
   "dist/core/extensions/tool-renderers.js",

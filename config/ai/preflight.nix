@@ -53,6 +53,7 @@ let
     ".config/factory/nix-managed-settings.json"
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
+    ".pi-lens/config.json"
     ".pi/agent/extensions/auto-compact-resume/index.ts"
     ".pi/agent/extensions/nix-gallery/index.ts"
     ".pi/agent/extensions/pi-mcp-adapter"
