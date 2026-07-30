@@ -619,10 +619,8 @@ else
         mcp_init_expected="$TMPDIR/pi-mcp-init.ts"
         cp ${lib.escapeShellArg "${piMcpAdapter}/init.ts"} "$mcp_init_expected"
         chmod u+w "$mcp_init_expected"
-        substituteInPlace "$mcp_init_expected" \
-          --replace-fail \
-            'let status = `🔌 MCP: ''${connectedCount}/''${enabledCount} servers`;' \
-            'let status = `🔌 MCP: ''${connectedCount}/''${enabledCount}`;'
+        ${pkgs.python3}/bin/python3 \
+          ${../../packages/pi-mcp-adapter-normalize.py} "$mcp_init_expected"
 
         for relative in ${piMcpFileArgs}; do
           [ -f "$mcp/$relative" ] && [ ! -L "$mcp/$relative" ] \
@@ -632,6 +630,12 @@ else
           cmp "$expected_mcp_file" "$mcp/$relative" \
             || fail "unexpected pi-mcp-adapter file: $relative"
         done
+
+        grep -F 'let status = `🔌 MCP: ''${connectedCount}/''${enabledCount}`;' \
+          "$mcp/init.ts" >/dev/null \
+          || grep -F 'let status = `''${connectedCount}/''${enabledCount}`;' \
+            "$mcp/init.ts" >/dev/null \
+          || fail "pi-mcp-adapter status renderer is not compact"
 
         jq -e '
           .name == "pi-mcp-adapter"

@@ -173,6 +173,13 @@
       "gap": "Expensive parity derivation is intentionally not part of this suite."
     },
     {
+      "path": "bin/pi-mcp-adapter-normalize-test.py",
+      "kind": "test",
+      "tier": "pre-commit",
+      "evidence": ["quality:python-test executes legacy, current, and refusal fixtures"],
+      "gap": null
+    },
+    {
       "path": "bin/publish-test.py",
       "kind": "test",
       "tier": "pre-push",
@@ -198,6 +205,13 @@
       "kind": "test",
       "tier": "pre-commit",
       "evidence": ["quality:python-test executes the suite"],
+      "gap": null
+    },
+    {
+      "path": "packages/pi-mcp-adapter-normalize.py",
+      "kind": "product",
+      "tier": "pre-commit",
+      "evidence": ["bin/pi-mcp-adapter-normalize-test.py executes both known upstream forms and rejects drift"],
       "gap": null
     },
     {

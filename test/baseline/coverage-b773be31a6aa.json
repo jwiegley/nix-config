@@ -12,7 +12,7 @@
     "VPS, Vulcan, and shared-work consumer evidence depends on local or LAN consumer roots and is not GitHub-hosted CI evidence.",
     "readFile, readDir, hashFile, pathExists, copied paths, and some scoped imports are invisible to file-reach diagnostics."
   ],
-  "manifestDigest": "e6c2066bfa2efe68867a7d9704f72e29934fea82a7e66bbecfa73e133512df1c",
+  "manifestDigest": "04cb384703e319a7f523c114ffe670da6d8ad8e789cac2ee9d25375d67b534b2",
   "measurements": {
     "assertionCallReach": {
       "reason": "not measured by structural collection",
@@ -774,7 +774,7 @@
           "budgetSeconds": 180,
           "host": "hera",
           "platform": "darwin-arm64",
-          "seconds": 121.151,
+          "seconds": 117.532,
           "tier": "pre-commit-core"
         }
       ],
@@ -904,9 +904,9 @@
     "kind": "declared-command-recipe"
   },
   "schema": "fleet-coverage/1",
-  "sourceBaseRev": "c22c7c2ffa68adff5be9fd65e5c90fbe97fe1049",
-  "sourceProjectionDigest": "a71b14295b86614877803c6f83582d88e8d580ee489610606d4e5d28f5b4cbcf",
-  "sourceTree": "67eb90399799d87c6e35fc83e0cbb23761969d8c",
+  "sourceBaseRev": "3edf594b6d7c13e6291e41dbb02455d4d3ee2200",
+  "sourceProjectionDigest": "a8896248941daf261e6649e64d5492e65579289e2623e93f151b526efb80d2ba",
+  "sourceTree": "6e7f0301a2e81e6bb173843cc0a6f40a0172e7b3",
   "structural": {
     "budgetsSeconds": {
       "ci-on-demand": 1800,
@@ -1031,6 +1031,7 @@
         "bin/darwin-surface-diff-test.py",
         "bin/gates-test.py",
         "bin/oracle-currency-test.py",
+        "bin/pi-mcp-adapter-normalize-test.py",
         "bin/publish-test.py",
         "bin/quality-test.py",
         "bin/update-overlay",
@@ -1067,6 +1068,7 @@
         "packages/anvil-mcp/timeout-ordering-test.py",
         "packages/anvil-mcp/watchdog-test-support.py",
         "packages/anvil-mcp/watchdog-test.py",
+        "packages/pi-mcp-adapter-normalize.py",
         "test/ai/recording-https-bridge-oracle.py",
         "test/ai/statusline-command-test.py"
       ],
@@ -1078,6 +1080,7 @@
         "bin/darwin-surface-diff-test.py",
         "bin/gates-test.py",
         "bin/oracle-currency-test.py",
+        "bin/pi-mcp-adapter-normalize-test.py",
         "bin/publish-test.py",
         "bin/quality-test.py",
         "bin/update-overlay-test.py"
@@ -1976,6 +1979,15 @@
         },
         {
           "evidence": [
+            "quality:python-test executes legacy, current, and refusal fixtures"
+          ],
+          "gap": null,
+          "kind": "test",
+          "path": "bin/pi-mcp-adapter-normalize-test.py",
+          "tier": "pre-commit"
+        },
+        {
+          "evidence": [
             "quality:python-test executes temporary-Git publication fixtures"
           ],
           "gap": "Measured at 23.274 seconds on Hera; unavailable GPG cases must report non-pass.",
@@ -2297,6 +2309,15 @@
           "kind": "test",
           "path": "packages/anvil-mcp/watchdog-test.py",
           "tier": "ci-on-demand"
+        },
+        {
+          "evidence": [
+            "bin/pi-mcp-adapter-normalize-test.py executes both known upstream forms and rejects drift"
+          ],
+          "gap": null,
+          "kind": "product",
+          "path": "packages/pi-mcp-adapter-normalize.py",
+          "tier": "pre-commit"
         },
         {
           "evidence": [
@@ -3031,6 +3052,13 @@
         "bin/oracle-currency-test.py:712:9:assertTrue",
         "bin/oracle-currency-test.py:736:9:assertTrue",
         "bin/oracle-currency-test.py:737:9:assertTrue",
+        "bin/pi-mcp-adapter-normalize-test.py:19:9:assertIn",
+        "bin/pi-mcp-adapter-normalize-test.py:20:9:assertNotIn",
+        "bin/pi-mcp-adapter-normalize-test.py:29:9:assertIn",
+        "bin/pi-mcp-adapter-normalize-test.py:30:9:assertNotIn",
+        "bin/pi-mcp-adapter-normalize-test.py:31:9:assertIn",
+        "bin/pi-mcp-adapter-normalize-test.py:32:9:assertIn",
+        "bin/pi-mcp-adapter-normalize-test.py:36:47:assertRaisesRegex",
         "bin/publish-test.py:141:9:assertEqual",
         "bin/publish-test.py:142:9:assertIn",
         "bin/publish-test.py:143:9:assertIn",
@@ -4705,6 +4733,9 @@
         "bin/oracle-currency-test.py::OracleGuardSelfTests.test_valid_advanced_oracle_with_history_is_clean",
         "bin/oracle-currency-test.py::OracleGuardSelfTests.test_valid_genesis_oracle_is_clean",
         "bin/oracle-currency-test.py::OracleGuardSelfTests.test_zero_baselines_rejected",
+        "bin/pi-mcp-adapter-normalize-test.py::NormalizeStatusTests.test_legacy_status_is_compacted",
+        "bin/pi-mcp-adapter-normalize-test.py::NormalizeStatusTests.test_modern_status_is_compacted_without_dropping_disabled_count",
+        "bin/pi-mcp-adapter-normalize-test.py::NormalizeStatusTests.test_unknown_or_ambiguous_status_is_rejected",
         "bin/publish-test.py::TestDoesNotEscapeItsSandbox.test_inherited_git_dir_does_not_reach_the_outer_repository",
         "bin/publish-test.py::TestEmptyRangePrePush.test_tracked_tree_scope_turns_empty_range_from_skip_into_run",
         "bin/publish-test.py::TestNoop.test_both_already_current_is_a_noop_and_succeeds",
